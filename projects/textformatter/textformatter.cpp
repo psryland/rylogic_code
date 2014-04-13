@@ -103,7 +103,7 @@ struct Main :pr::cmdline::IOptionReceiver
 			m_src.reset();
 		} std::cout << "done\n";
 
-		if (replace_infile && !pr::filesys::ReplaceFile(m_out_file, m_in_file))
+		if (replace_infile && !pr::filesys::RepFile(m_out_file, m_in_file))
 		{
 			DWORD last = GetLastError();
 			std::cout << "Failed to replace " << m_in_file << " with " << m_out_file << ". Error code: " << last << "\n";

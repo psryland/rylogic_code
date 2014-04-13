@@ -61,8 +61,8 @@ void ConstraintAccumulator::SetBufferSize(std::size_t constraint_buffer_size_in_
 	{
 		m_num_sets = 0;
 		uint estimated_num_pairs = static_cast<uint>(1 + constraint_buffer_size_in_bytes / (sizeof(ConstraintBlock) + sizeof(Constraint)));
-		m_buffer	= static_cast<uint8*>			(m_Allocate(constraint_buffer_size_in_bytes, meta::alignment_of<ConstraintBlock>::value));
-		m_pairs		= static_cast<ConstraintBlock**>(m_Allocate(estimated_num_pairs * sizeof(ConstraintBlock*), meta::alignment_of<ConstraintBlock*>::value));
+		m_buffer	= static_cast<uint8*>			(m_Allocate(constraint_buffer_size_in_bytes, std::alignment_of<ConstraintBlock>::value));
+		m_pairs		= static_cast<ConstraintBlock**>(m_Allocate(estimated_num_pairs * sizeof(ConstraintBlock*), std::alignment_of<ConstraintBlock*>::value));
 		m_buffer_end = m_buffer + constraint_buffer_size_in_bytes;
 		m_buffer_ptr = m_buffer;
 		m_num_pairs = 0;
@@ -102,7 +102,7 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 		// If there are too many constraint sets then solve the sets we have
 		if( m_num_sets == ConstraintSetMappingSize )
 			Solve();
-	
+
 		// Allocate a new constraint set
 		set_id = m_num_sets++;
 		m_map[set_id] = set_id;
@@ -114,7 +114,7 @@ ConstraintBlock& ConstraintAccumulator::AllocateConstraints(Rigidbody& rbA, Rigi
 	rbA .m_constraint_set = set_id;
 	rbB .m_constraint_set = set_id;
 	pair.m_constraint_set = set_id;
-	
+
 	// Initialise the pair
 	pair.m_objA = &rbA;
 	pair.m_objB = &rbB;
@@ -283,7 +283,7 @@ void ConstraintAccumulator::Solve()
 	// Begin threads for each set
 	// _beginthread(ConstraintAccumulator::SolveConstraintSet, 0, &params);
 	// Wait for all threads to complete.
-	
+
 	// Reset the buffers.
 	m_num_sets = 0;
 	m_buffer_ptr = m_buffer;
@@ -399,7 +399,7 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 	PR_EXPAND(PR_DBG_COLLISION, StringToFile("", "C:/DeleteMe/collision_desired_relvelocity.pr_script"));
 	PR_EXPAND(PR_DBG_COLLISION, StringToFile("", "C:/DeleteMe/collision_relvelocity.pr_script"));
 	PR_EXPAND(PR_DBG_COLLISION, std::string str);
-	
+
 	// Calculate the desired relative velocities.
 	uint solve = CalculateDesiredVelocities(pair, shock_propagation);
 	if( solve == pair.m_num_constraints )
@@ -438,7 +438,7 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 		// Apply the impulse to the objects
 		pair.m_objA->ApplyWSImpulse(-cons.m_impulse * objA_finite_mass, cons.m_pointA);
 		pair.m_objB->ApplyWSImpulse( cons.m_impulse * objB_finite_mass, cons.m_pointB);
-	
+
 		PR_EXPAND(PR_DBG_COLLISION, v4 new_rel_vel = pair.m_objB->VelocityAt(cons.m_pointB) - pair.m_objA->VelocityAt(cons.m_pointA));
 		PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF000080", pair.m_objA->Position() + cons.m_pointA, -new_rel_vel, str));
 		PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_relvelocity.pr_script", true); str.clear());
@@ -458,7 +458,7 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 								 - pair.m_objA->VelocityAt(cons.m_pointA);
 			PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF0000FF", pair.m_objA->Position() + cons.m_pointA, -relative_velocity, str));
 			PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_relvelocity.pr_script", true); str.clear());
-			
+
 			float vel_error_sq = Length3Sq(relative_velocity - cons.m_desired_final_rel_velocity);
 			if( vel_error_sq > max_error_sq )
 			{
@@ -524,7 +524,7 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 			float slip_thres = cons.m_static_friction * (rel_norm_speed - desired_norm_speed);
 			if( desired_tang_speed > slip_thres )
 			{
-				// The desired tangential speed depends on friction. Non-slip collisions 
+				// The desired tangential speed depends on friction. Non-slip collisions
 				// have a tangential speed of zero, no-friction collisions have a tangential
 				// speed equal to the incident tangential speed. Make up something that gives
 				// a simple friction model.
@@ -533,7 +533,7 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 				// If the tangential speed is now less than the static friction coeff the contact becomes sticky
 				if( desired_tang_speed > slip_thres )
 				{
-					v4 tangent = relative_velocity - rel_norm_speed * cons.m_normal;					
+					v4 tangent = relative_velocity - rel_norm_speed * cons.m_normal;
 					cons.m_desired_final_rel_velocity += (desired_tang_speed / rel_tang_speed) * tangent;
 				}
 			}
@@ -559,4 +559,3 @@ uint ConstraintAccumulator::CalculateDesiredVelocities(ConstraintBlock& pair, bo
 	}
 	return first_to_solve;
 }
-
