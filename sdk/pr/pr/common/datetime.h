@@ -14,6 +14,10 @@
 
 namespace pr
 {
+	// Julian year, these are not in the standard because of ambiguity over calender type
+	typedef std::chrono::duration<int, std::ratio<86400>> days;
+	typedef std::chrono::duration<int, std::ratio<31557600>> years;
+
 	namespace datetime
 	{
 		enum EMaxUnit { Years, Days, Hours, Minutes, Seconds };
@@ -74,15 +78,43 @@ namespace pr
 	struct Convert<std::string, std::chrono::duration<TRep,TPeriod> >
 	{
 		// To formatted string.
+		// Supported format specifiers:
+		//   %Y - years,        %y - years
+		//   %D - days,         %d - days % 365
+		//   %H - hours,        %h - hours % 24
+		//   %M - minutes       %m - minutes % 60
+		//   %S - seconds       %s - seconds % 60
+		//   %F - milliseconds  %f - milliseconds % 1000
+		//   %U - microseconds  %u - microseconds % 1000
+		//   %N - nanoseconds   %n - nanoseconds % 1000
+		// Use repeated format specifiers to indicate minimum characters
+		// e.g. %sss for 23seconds = 023
 		static std::string To(std::chrono::duration<TRep,TPeriod> duration, char const* fmt = "%s")
 		{
-			using namespace std::chrono;
-			return pr::FmtF(fmt, [=](char const* code)
+			return pr::FmtF(fmt, [=](char const*& code)
 				{
+					using namespace std::chrono;
+					int dp = 1;
+					for (auto start = code; *(code + 1) == *start; ++code) { ++dp; }
 					switch (*code)
 					{
 					default: throw std::exception("unknown string format code");
-					case 's': return std::to_string(duration_cast<seconds>(duration).count());
+					case 'Y': return pr::Fmt("%0*d", dp, duration_cast<years        >(duration).count()       );
+					case 'y': return pr::Fmt("%0*d", dp, duration_cast<years        >(duration).count()       );
+					case 'D': return pr::Fmt("%0*d", dp, duration_cast<days         >(duration).count()       );
+					case 'd': return pr::Fmt("%0*d", dp, duration_cast<days         >(duration).count() % 365 );
+					case 'H': return pr::Fmt("%0*d", dp, duration_cast<hours        >(duration).count()       );
+					case 'h': return pr::Fmt("%0*d", dp, duration_cast<hours        >(duration).count() % 24  );
+					case 'M': return pr::Fmt("%0*d", dp, duration_cast<minutes      >(duration).count()       );
+					case 'm': return pr::Fmt("%0*d", dp, duration_cast<minutes      >(duration).count() % 60  );
+					case 'S': return pr::Fmt("%0*d", dp, duration_cast<seconds      >(duration).count()       );
+					case 's': return pr::Fmt("%0*d", dp, duration_cast<seconds      >(duration).count() % 60  );
+					case 'F': return pr::Fmt("%0*d", dp, duration_cast<milliseconds >(duration).count()       );
+					case 'f': return pr::Fmt("%0*d", dp, duration_cast<milliseconds >(duration).count() % 1000);
+					case 'U': return pr::Fmt("%0*d", dp, duration_cast<microseconds >(duration).count()       );
+					case 'u': return pr::Fmt("%0*d", dp, duration_cast<microseconds >(duration).count() % 1000);
+					case 'N': return pr::Fmt("%0*d", dp, duration_cast<nanoseconds  >(duration).count()       );
+					case 'n': return pr::Fmt("%0*d", dp, duration_cast<nanoseconds  >(duration).count() % 1000);
 					}
 				});
 		}
@@ -215,7 +247,7 @@ namespace pr
 			if (err != 0) throw ::std::exception();
 			return t;
 		}
-		
+
 		static DateTime NowUTC() { return DateTime(time(nullptr), 0); }
 		static DateTime Now()
 		{
@@ -245,19 +277,18 @@ namespace pr
 	{
 		PRUnitTest(pr_common_datetime)
 		{
-			std::chrono::seconds sec(1234);
-			std::string s = pr::To<std::string>(sec, "%s seconds");
-			PR_CHECK(s == "1234 seconds", true);
-			
-	/*		auto nowutc = DateTime::NowUTC();
-			auto now    = DateTime::Now();
-			auto min    = DateTime::Min();
-			auto max    = DateTime::Max();
-			auto ttl    = DateTime::FromSeconds(3600);
+			using namespace std::chrono;
 
-			PR_CHECK(min < max, true);
-			PR_CHECK(min < now, true);
-			PR_CHECK(max > now, true);*/
+			{
+				auto t = seconds(1234);
+				auto s = pr::To<std::string>(t, "%S seconds");
+				PR_CHECK(s, "1234 seconds");
+			}
+			{
+				auto t = hours(1) + minutes(23) + seconds(45) + milliseconds(67);
+				auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
+				PR_CHECK(s, "01:23:45.067");
+			}
 		}
 	}
 }

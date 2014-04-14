@@ -52,6 +52,8 @@ namespace ldr
 		bool                      m_suspend_render;       // True to prevent rendering
 		StatusPri                 m_status_pri;           // Status priority buffer
 
+		static char const* AppName() { return ldr::AppTitleA(); }
+
 		MainGUI(LPTSTR cmdline);
 
 		BEGIN_MSG_MAP(x)

@@ -61,7 +61,7 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
 #endif
 
 // Initialise the dll
-VIEW3D_API EView3DResult::Type __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb)
+VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb)
 {
 	try
 	{
@@ -139,7 +139,7 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* 
 }
 
 // Create/Delete a draw set
-VIEW3D_API EView3DResult::Type __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
+VIEW3D_API EView3DResult __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
 {
 	drawset = new Drawset();
 	Rdr().m_drawset.insert(drawset);
@@ -416,7 +416,7 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DDrawset drawset, HWND par
 // Create/Delete objects ********************************************************
 // Create objects given in a file.
 // These objects will not have handles but can be deleted by their context id
-VIEW3D_API EView3DResult::Type __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
 {
 	try
 	{
@@ -431,7 +431,7 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_ObjectsCreateFromFile(char const
 }
 
 // If multiple objects are created, the handle returned is to the last object only
-VIEW3D_API EView3DResult::Type __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, View3DObject& object, BOOL async)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, View3DObject& object, BOOL async)
 {
 	try
 	{
@@ -477,8 +477,8 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	{
 		auto nug = model->m_nuggets.front();
 		auto mat = nug.m_draw;
-		model_type = static_cast<EView3DPrim::Type>(nug.m_prim_topo.value);
-		geom_type  = static_cast<EView3DGeom::Type>(mat.m_shader->m_geom_mask.value);
+		model_type = static_cast<EView3DPrim>(nug.m_prim_topo.value);
+		geom_type  = static_cast<EView3DGeom>(mat.m_shader->m_geom_mask.value);
 		v3dmat.m_diff_tex = mat.m_tex_diffuse.m_ptr;
 		v3dmat.m_env_map  = mat.m_tex_env_map.m_ptr;
 	}
@@ -493,7 +493,7 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 
 	// Update the material
 	pr::rdr::DrawMethod mat;
-	mat.m_shader = rdr.m_shdr_mgr.FindShaderFor(static_cast<pr::rdr::EGeom>(geom_type));
+	mat.m_shader = rdr.m_shdr_mgr.FindShaderFor(static_cast<pr::rdr::EGeom::Enum_>(geom_type));
 	mat.m_tex_diffuse = v3dmat.m_diff_tex;
 	mat.m_tex_env_map = v3dmat.m_env_map;
 
@@ -521,11 +521,11 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	vrange.resize(new_vcount);
 	irange.resize(new_icount);
 	model->DeleteNuggets();
-	model->CreateNugget(mat, static_cast<pr::rdr::EPrim>(model_type), &vrange, &irange);
+	model->CreateNugget(mat, static_cast<pr::rdr::EPrim::Enum_>(model_type), &vrange, &irange);
 }
 
 // Create an object via callback
-VIEW3D_API EView3DResult::Type __stdcall View3D_ObjectCreate(char const* name, pr::uint colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, pr::uint colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
 {
 	try
 	{
@@ -605,7 +605,7 @@ VIEW3D_API pr::BoundingBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
-VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex)
 {
 	try
 	{
@@ -621,14 +621,14 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreate(size_t width, size
 	}
 	catch (std::exception const& e)
 	{
-		//PR_LOGE(Exception, e, "Failed to create texture");
+		PR_LOGE(Rdr().m_log, Error, e, "Failed to create texture");
 		return EView3DResult::Failed;
 	}
 }
 
 // Load a texture from file
 // Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex)
 {
 	try
 	{
@@ -645,13 +645,13 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureCreateFromFile(char const
 	}
 	catch (std::exception& e)
 	{
-		//PR_LOGE(Exception, e, "Failed to create texture from file");
+		PR_LOGE(Rdr().m_log, Error, e, "Failed to create texture from file");
 		return EView3DResult::Failed;
 	}
 }
 
 // Load a texture surface from file
-VIEW3D_API EView3DResult::Type __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, pr::uint filter, pr::uint colour_key)
+VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, pr::uint filter, pr::uint colour_key)
 {
 	(void)tex;
 	(void)level;
@@ -668,7 +668,7 @@ VIEW3D_API EView3DResult::Type __stdcall View3D_TextureLoadSurface(View3DTexture
 	//}
 	//catch (std::exception const& e)
 	//{
-	//	PR_LOGE(Exception, e, "Failed to load texture surface from file");
+	//	PR_LOGE(Rdr().m_log, Exception, e, "Failed to load texture surface from file");
 	//	return EView3DResult::Failed;
 	//}
 }
@@ -693,7 +693,7 @@ VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageIn
 }
 
 // Read the properties of an image file
-VIEW3D_API EView3DResult::Type __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, View3DImageInfo& info)
+VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, View3DImageInfo& info)
 {
 	(void)tex_filepath;
 	(void)info;
@@ -815,12 +815,12 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 }
 
 // Get/Set the fill mode for a drawset
-VIEW3D_API EView3DFillMode::Type __stdcall View3D_FillMode(View3DDrawset drawset)
+VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DDrawset drawset)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 	return drawset->m_fill_mode;
 }
-VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillMode::Type mode)
+VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillMode mode)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
 	drawset->m_fill_mode = mode;

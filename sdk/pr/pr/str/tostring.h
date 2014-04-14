@@ -27,7 +27,7 @@ namespace pr
 	// Narrow
 	inline std::string Narrow(char const* from, std::size_t len = 0)
 	{
-		if (len == 0) len = strlen(from); 
+		if (len == 0) len = strlen(from);
 		return std::string(from, from+len);
 	}
 	inline std::string Narrow(wchar_t const* from, std::size_t len = 0)

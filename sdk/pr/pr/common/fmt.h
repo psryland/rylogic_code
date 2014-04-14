@@ -114,7 +114,7 @@ namespace pr
 	// Returns a formatted std::string/std::wstring where 'func' translates the format codes.
 	// Format codes should be '%?' where '?' is up to func to interpret.
 	// 'func' should take a pointer into the format string and return something
-	// that can be appended to a std::string. 'func' is allowed to advance 's'
+	// that can be appended to a std::basic_string<>. 'func' is allowed to advance 's'
 	// to the last character of the code e.g. "%3.3d foos", 's' = "3.3d...", func can advance 's' to the 'd'
 	template <typename TFunc, typename TChar> inline std::basic_string<TChar> FmtF(TChar const* format, TFunc func)
 	{
@@ -129,7 +129,7 @@ namespace pr
 		return str;
 	}
 
-	// Static, non-thread safe, use with caution, but fast string format
+	// Static, use with caution, but fast string format
 	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtX(TChar const* format, va_list arg_list)
 	{
 		thread_local static TChar buf[Sz];

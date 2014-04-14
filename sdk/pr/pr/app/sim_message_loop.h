@@ -141,7 +141,7 @@ namespace pr
 							auto time_skip = (frames_behind - 1) * ctx.m_ticks_per_frame;
 							ctx.m_last_time += time_skip;
 							elapsed -= time_skip;
-							//PR_LOG(Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
+							//PR_LOG(m_log, Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
 						}
 
 						// 'ctx' requires stepping
@@ -151,7 +151,7 @@ namespace pr
 							ctx.m_step(pr::rtc::ToSec(step_interval));
 							sw.stop();
 							//if (sw.period() > ctx.m_ticks_per_frame)
-							//	PR_LOG(Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
+								//PR_LOG(m_log, Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
 						}
 						ctx.m_last_time += step_interval;
 

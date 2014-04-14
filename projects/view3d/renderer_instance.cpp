@@ -30,6 +30,7 @@ RendererInstance::RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, Vie
 	:pr::events::IRecv<pr::ldr::Evt_Refresh>(false)
 	,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>(false)
 	,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>(false)
+	,m_log("view3d", pr::log::ToStdout())
 	,m_renderer(GetRdrSettings(hwnd))
 	,m_scene(m_renderer)
 	,m_obj_cont()

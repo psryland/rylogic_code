@@ -24,7 +24,7 @@
 #define PR_RDR_INST_INIT_COMPONENTS(ty,nm,em)   m_cpt[i++] = CompDesc::make(em, offsetof(inst_type, nm));
 
 #define PR_RDR_DEFINE_INSTANCE(name, fields)\
-	struct name\
+	struct name :pr::AlignTo<16>\
 	{\
 		pr::rdr::BaseInstance m_base;\
 		pr::rdr::CompDesc m_cpt[0 fields(PR_RDR_INST_MEMBER_COUNT)];\

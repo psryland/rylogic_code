@@ -46,6 +46,7 @@
 #include "pr/common/imposter.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
+#include "pr/common/new.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"

@@ -238,7 +238,6 @@ namespace pr
 		struct LdrObject
 			:RdrInstance
 			,pr::RefCount<LdrObject>
-			,pr::AlignTo<16>
 		{
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of

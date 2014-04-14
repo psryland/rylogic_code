@@ -9,6 +9,10 @@
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
 
+// 'vec4_t' should be typedef'd to the vector type before including this header
+// pr/maths/maths.h does not define a vector type for C
+// (same with fUNIT_LENGTH_INV)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,38 +21,38 @@ extern "C" {
 	{
 		static char buf[64];
 		if (!pos) return "";
-		return Fmt(buf, sizeof(buf), "*pos {%d %d %d}" ,pos->x ,pos->y ,pos->z);
+		return pr::FmtS(buf, sizeof(buf), "*pos {%d %d %d}" ,pos->x ,pos->y ,pos->z);
 	}
 
 	static __inline char const* Ldr_Scl(vec4_t const* scale)
 	{
 		static char buf[64];
 		if (!scale) return "";
-		return Fmt(buf, sizeof(buf), "*scale {%d %d %d}" ,scale->x ,scale->y ,scale->z);
+		return pr::FmtS(buf, sizeof(buf), "*scale {%d %d %d}" ,scale->x ,scale->y ,scale->z);
 	}
 
 	static __inline char const* Ldr_Quat(vec4_t const* quat)
 	{
 		static char buf[64];
-		return Fmt(buf, sizeof(buf), "*quat{%f %f %f %f}" ,quat->x*FUNIT_LENGTH_INV ,quat->y*FUNIT_LENGTH_INV ,quat->z*FUNIT_LENGTH_INV ,quat->w*FUNIT_LENGTH_INV);
+		return pr::FmtS(buf, sizeof(buf), "*quat{%f %f %f %f}" ,quat->x*fUNIT_LENGTH_INV ,quat->y*fUNIT_LENGTH_INV ,quat->z*fUNIT_LENGTH_INV ,quat->w*fUNIT_LENGTH_INV);
 	}
 
 	static __inline char const* Ldr_O2W(char const* txfm)
 	{
 		static char buf[64];
-		return Fmt(buf, sizeof(buf), "*o2w{%s}" ,txfm);
+		return pr::FmtS(buf, sizeof(buf), "*o2w{%s}" ,txfm);
 	}
 
 	static __inline char const* Ldr_O2W2(char const* txfm1, char const* txfm2)
 	{
 		static char buf[128];
-		return Fmt(buf, sizeof(buf), "*o2w{%s %s}" ,txfm1 ,txfm2);
+		return pr::FmtS(buf, sizeof(buf), "*o2w{%s %s}" ,txfm1 ,txfm2);
 	}
 
 	static __inline char const* Ldr_O2W3(char const* txfm1, char const* txfm2, char const* txfm3)
 	{
 		static char buf[192];
-		return Fmt(buf, sizeof(buf), "*o2w{%s %s %s}" ,txfm1 ,txfm2 ,txfm3);
+		return pr::FmtS(buf, sizeof(buf), "*o2w{%s %s %s}" ,txfm1 ,txfm2 ,txfm3);
 	}
 
 	static __inline void Ldr_Position(vec4_t const* pos, FILE* f)

@@ -22,12 +22,6 @@
 #include <atlapp.h>
 #include <atlwin.h>
 #include <atlctrls.h>
-//#include <atlmisc.h>
-//#include <atlddx.h>
-//#include <atlframe.h>
-//#include <atldlgs.h>
-//#include <windows.h>
-//#include <strsafe.h>
 
 #include "pr/common/fmt.h"
 #include "pr/common/log.h"

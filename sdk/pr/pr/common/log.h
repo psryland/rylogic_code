@@ -17,27 +17,30 @@
 
 #include <string>
 #include <sstream>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <chrono>
 #include <mutex>
 #include <thread>
 #include <cassert>
-#include <pr/common/fmt.h>
-#include <pr/str/prstring.h>
-#include <pr/threads/concurrent_queue.h>
-#include <pr/threads/name_thread.h>
+#include "pr/common/fmt.h"
+#include "pr/common/datetime.h"
+#include "pr/str/prstring.h"
+#include "pr/threads/concurrent_queue.h"
+#include "pr/threads/name_thread.h"
 
 namespace pr
 {
 	namespace log
 	{
-		//#if PR_LOGGING
-		//#define PR_LOG(level, message)          do { pr::log::Log::Write(pr::log::Level::level, __FILE__, __LINE__, (message), 0);       } while (0)
-		//#define PR_LOGE(level, except, message) do { pr::log::Log::Write(pr::log::Level::level, __FILE__, __LINE__, (message), &except); } while (0)
-		//#else
-		//#define PR_LOG(level, message)          do {} while (0)
-		//#define PR_LOGE(level, except, message) do { (void)(except); } while (0)
-		//#endif
+		#if PR_LOGGING
+		#define PR_LOG(logger, level, message)          do { logger.Write(pr::log::ELevel::level,         (message), __FILE__, __LINE__); } while (0)
+		#define PR_LOGE(logger, level, except, message) do { logger.Write(pr::log::ELevel::level, except, (message), __FILE__, __LINE__); } while (0)
+		#else
+		#define PR_LOG(logger, level, message)          do {} while (0)
+		#define PR_LOGE(logger, level, except, message) do { (void)(except); } while (0)
+		#endif
 
 		enum class ELevel
 		{
@@ -69,31 +72,102 @@ namespace pr
 		// An individual log event
 		struct Event
 		{
-			ELevel          m_level;
-			RTC::time_point m_timestamp;
-			string          m_context;
-			string          m_msg;
-			int             m_occurrences;
+			ELevel        m_level;
+			RTC::duration m_timestamp;
+			string        m_context;
+			string        m_msg;
+			string        m_file;
+			size_t        m_line;
+			int           m_occurrences;
 
-			Event() :m_level(ELevel::AssertionFailure) ,m_timestamp() ,m_context("") ,m_msg("") ,m_occurrences() {}
-			Event(ELevel level, string& ctx, string& msg)  :m_level(level) ,m_timestamp(RTC::now()) ,m_context(ctx) ,m_msg(msg)            ,m_occurrences(1) {}
-			Event(ELevel level, string& ctx, string&& msg) :m_level(level) ,m_timestamp(RTC::now()) ,m_context(ctx) ,m_msg(std::move(msg)) ,m_occurrences(1) {}
-			static bool Same(Event const& lhs, Event const& rhs) { return lhs.m_level == rhs.m_level &&lhs.m_context == rhs.m_context && lhs.m_msg == rhs.m_msg; }
+			Event()
+				:m_level(ELevel::AssertionFailure)
+				,m_timestamp()
+				,m_context()
+				,m_msg()
+				,m_file()
+				,m_line()
+				,m_occurrences()
+			{}
+			Event(ELevel level, RTC::time_point tzero, string& ctx, string& msg, string file, size_t line)
+				:m_level(level)
+				,m_timestamp(RTC::now() - tzero)
+				,m_context(ctx)
+				,m_msg(msg)
+				,m_file(file)
+				,m_line(line)
+				,m_occurrences(1)
+			{}
+			Event(ELevel level, RTC::time_point tzero, string& ctx, string&& msg, string file, size_t line)
+				:m_level(level)
+				,m_timestamp(RTC::now() - tzero)
+				,m_context(ctx)
+				,m_msg(std::move(msg))
+				,m_file(file)
+				,m_line(line)
+				,m_occurrences(1)
+			{}
+			static bool Same(Event const& lhs, Event const& rhs)
+			{
+				return
+					lhs.m_level == rhs.m_level &&
+					lhs.m_context == rhs.m_context &&
+					lhs.m_file == rhs.m_file &&
+					lhs.m_line == rhs.m_line &&
+					lhs.m_msg == rhs.m_msg;
+			}
 		};
 
 		// Producer/Consumer queue for log events
-		typedef pr::threads::ConcurrentQueue<Event> LogQueue;
+		typedef pr::threads::ConcurrentQueue<log::Event> LogQueue;
 
-		// Provides logging support
-		struct Logger
+		// Helper object for writing log output to a stdout
+		struct ToStdout
 		{
+			void operator ()(Event const& ev)
+			{
+				char delim[] = {0,0};
+				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
+				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim[0] = ' '; }
+				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim[0] = ' '; }
+				std::cout << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+			}
+		};
+
+		// Helper object for writing log output to a file
+		struct ToFile
+		{
+			std::ofstream m_outf;
+			ToFile(string filepath) :m_outf(filepath) {}
+			ToFile(ToFile&& rhs) :m_outf(std::move(rhs.m_outf)) {}
+			void operator ()(Event const& ev)
+			{
+				char delim[] = {0,0};
+				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
+				if (!ev.m_file.empty()) { m_outf << ev.m_file;                delim[0] = ' '; }
+				if (ev.m_line != -1)    { m_outf << "(" << ev.m_line << "):"; delim[0] = ' '; }
+				m_outf << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+			}
+
+		private:
+			ToFile(ToFile const&);
+			ToFile& operator =(ToFile const&);
+		};
+	}
+
+	// Provides logging support
+	struct Logger
+	{
 		private:
 
 			// Logger context. A single Context is shared by many instances of Logger
 			struct Context
 			{
+				// The time point when logging started
+				log::RTC::time_point const m_time_zero;
+
 				// Queue of log events to report
-				LogQueue m_queue;
+				log::LogQueue m_queue;
 
 				// A flag to indicate when the logger is idle
 				std::condition_variable m_cv_idle;
@@ -104,7 +178,8 @@ namespace pr
 
 				template <typename OutputCB>
 				Context(OutputCB log_cb, int occurrences_batch_size)
-					:m_queue()
+					:m_time_zero(log::RTC::now())
+					,m_queue()
 					,m_cv_idle()
 					,m_idle()
 					,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
@@ -116,29 +191,29 @@ namespace pr
 				}
 				void WaitTillIdle(bool idle)
 				{
-					LogQueue::MLock lock(m_queue.m_mutex);
+					log::LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.wait(lock, [&]{ return m_idle == idle; });
 				}
-				bool Dequeue(Event& ev)
+				bool Dequeue(log::Event& ev)
 				{
-					LogQueue::MLock lock(m_queue.m_mutex);
+					log::LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.notify_all();
 					m_idle = true;
 					auto r = m_queue.Dequeue(ev, lock);
 					m_idle = false;
 					return r;
 				}
-				void Enqueue(Event&& ev)
+				void Enqueue(log::Event&& ev)
 				{
-					LogQueue::MLock lock(m_queue.m_mutex);
+					log::LogQueue::MLock lock(m_queue.m_mutex);
 					m_cv_idle.notify_all();
 					m_idle = false;
-					m_queue.Enqueue(std::forward<Event>(ev), lock);
+					m_queue.Enqueue(std::forward<log::Event>(ev), lock);
 				}
 			};
 
 			// An id to use in log messages
-			string m_context_name;
+			log::string m_context_name;
 
 			// The logger that this instance references
 			std::shared_ptr<Context> m_context;
@@ -150,13 +225,12 @@ namespace pr
 				using namespace std::chrono;
 				try
 				{
-					pr::threads::SetCurrentThreadName("pr::log::Logger");
-					auto start_time = RTC::now();
+					pr::threads::SetCurrentThreadName("pr::Logger");
 
-					Event ev, last;
+					log::Event ev, last;
 					for (;ctx.Dequeue(ev);)
 					{
-						auto is_same = Event::Same(ev, last);
+						auto is_same = log::Event::Same(ev, last);
 
 						// Same event as last time? add it to the batch
 						if (is_same && last.m_occurrences < occurrences_batch_size)
@@ -169,8 +243,7 @@ namespace pr
 						// Have events been batched? Report them now
 						if (last.m_occurrences != 0)
 						{
-							milliseconds millis = duration_cast<milliseconds>(last.m_timestamp - start_time);
-							log_cb(last.m_level, millis.count(), last.m_context.c_str(), last.m_msg.c_str(), last.m_occurrences);
+							log_cb(last);
 							last.m_occurrences = 0;
 						}
 
@@ -182,9 +255,7 @@ namespace pr
 						}
 						else
 						{
-							milliseconds millis = duration_cast<milliseconds>(ev.m_timestamp - start_time);
-							log_cb(ev.m_level, millis.count(), ev.m_context.c_str(), ev.m_msg.c_str(), ev.m_occurrences);
-
+							log_cb(ev);
 							last = ev;
 							last.m_occurrences = 0;
 						}
@@ -198,27 +269,27 @@ namespace pr
 
 		public:
 
-			//void OutputCB(ELevel level, long long timestamp_ms, char const* ctx, char const* msg, int occurrences);
+			//void OutputCB(pr::log::Event const& ev);
 			template <typename OutputCB>
-			Logger(string context_name, OutputCB log_cb, int occurrences_batch_size = 0)
+			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size = 0)
 				:m_context_name(context_name)
 				,m_context(std::make_shared<Context>(log_cb, occurrences_batch_size))
 			{}
-			Logger(string context_name, Logger const& rhs)
+			Logger(Logger const& rhs, log::string context_name)
 				:m_context_name(context_name)
 				,m_context(rhs.m_context)
 			{}
 
 			// Log a message
-			void Write(ELevel level, string msg)
+			void Write(log::ELevel level, log::string msg, char const* file = "", int line = -1)
 			{
-				m_context->Enqueue(Event(level, m_context_name, msg));
+				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg, file, line));
 			}
 
 			// Log an exception with message 'msg'
-			void Write(ELevel level, std::exception const& ex, string msg)
+			void Write(log::ELevel level, std::exception const& ex, log::string msg, char const* file = "", int line = -1)
 			{
-				m_context->Enqueue(Event(level, m_context_name, msg + " - Exception: " + ex.what()));
+				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg + " - Exception: " + ex.what(), file, line));
 			}
 
 			// Block the caller until the logger is idle
@@ -226,11 +297,7 @@ namespace pr
 			{
 				m_context->WaitTillIdle(true);
 			}
-
-			void operator ()(ELevel level, string msg) { Write(level, msg); }
-			void operator ()(ELevel level, std::exception const& ex, string msg) { Write(level, ex, msg); }
 		};
-	}
 }
 
 #if PR_UNITTESTS
@@ -248,29 +315,29 @@ namespace pr
 
 			{// Single instance
 				str.resize(0);
-				Logger log("test", [&](ELevel level, long long, char const* ctx, char const* msg, int occurrences)
+				Logger log("test", [&](pr::log::Event const& ev)
 				{
 					std::stringstream s;
-					s << level << "," << ctx << ": " << msg << ',' << occurrences << std::endl;
+					s << ev.m_level << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
 				});
-				log(ELevel::Debug, "event 1");
+				log.Write(ELevel::Debug, "event 1");
 				log.Flush();
 				PR_CHECK(str, "Debug,test: event 1,1\n");
 			}
 			{// Copied instances
 				str.resize(0);
-				Logger log1("log1", [&](ELevel level, long long, char const* ctx, char const* msg, int occurrences)
+				Logger log1("log1", [&](pr::log::Event const& ev)
 				{
 					std::stringstream s;
-					s << level << "," << ctx << ": " << msg << ',' << occurrences << std::endl;
+					s << ev.m_level << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
 				});
-				Logger log2("log2", log1);
+				Logger log2(log1, "log2");
 
-				log1(ELevel::Info, "event 1");
-				log2(ELevel::Debug, "event 2");
-				log1(ELevel::Info, "event 3");
+				log1.Write(ELevel::Info, "event 1");
+				log2.Write(ELevel::Debug, "event 2");
+				log1.Write(ELevel::Info, "event 3");
 				log1.Flush();
 				PR_CHECK(str,
 					"Info,log1: event 1,1\n"

@@ -30,6 +30,7 @@ namespace pr
 			// so they can call: MyType(...) :base(..) {}
 			typedef MainGUI<DerivedGUI, Main, MessageLoop> base;
 
+			pr::Logger            m_log;          // App log
 			MessageLoop           m_msg_loop;     // The message pump
 			std::unique_ptr<Main> m_main;         // The app logic object
 			DWORD                 m_my_thread_id; // The thread this gui object was created on
@@ -37,7 +38,8 @@ namespace pr
 			bool                  m_nav_enabled;  // True to allow default mouse navigation
 
 			MainGUI()
-				:m_msg_loop()
+				:m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
+				,m_msg_loop()
 				,m_main(nullptr)
 				,m_my_thread_id(GetCurrentThreadId())
 				,m_resizing(false)
@@ -67,7 +69,7 @@ namespace pr
 				{
 					char const* err_msg = pr::FmtS("Failed to create application\nReturned error: %s", ex.what());
 					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					//PR_LOG(Error, err_msg);
+					PR_LOG(m_log, Error, err_msg);
 					CloseApp(E_FAIL);
 					return E_FAIL;
 				}
@@ -75,7 +77,7 @@ namespace pr
 				{
 					char const* err_msg = pr::FmtS("Failed to create application due to an unknown exception");
 					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					//PR_LOG(Error, err_msg);
+					PR_LOG(m_log, Error, err_msg);
 					CloseApp(E_FAIL);
 					return E_FAIL;
 				}
