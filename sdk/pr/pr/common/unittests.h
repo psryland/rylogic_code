@@ -123,7 +123,7 @@ namespace pr
 
 				auto T1 = high_resolution_clock::now();
 				if (failed == 0)
-					out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count() << "ms) ****" << std::endl;
+					out() << " **** UnitTest results: All " << (failed+passed) << " tests passed. (taking " << duration_cast<microseconds>(T1-T0).count()*0.001f << "ms) ****" << std::endl;
 				else
 					out() << " **** UnitTest results: " << failed << " of " << failed+passed << " failed. ****" << std::endl;
 				return failed == 0 ? 0 : -1;
@@ -261,4 +261,3 @@ namespace pr
 	pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
 
 #endif
-

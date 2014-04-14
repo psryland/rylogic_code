@@ -177,12 +177,20 @@ namespace pr
 				std::thread m_thread;
 
 				template <typename OutputCB>
-				Context(OutputCB log_cb, int occurrences_batch_size)
+				Context(OutputCB& log_cb, int occurrences_batch_size)
 					:m_time_zero(log::RTC::now())
 					,m_queue()
 					,m_cv_idle()
 					,m_idle()
-					,m_thread(LogConsumerThread<OutputCB>, std::ref(*this), log_cb, occurrences_batch_size)
+					,m_thread([&]{ LogConsumerThread(*this, log_cb, occurrences_batch_size); })
+				{}
+				template <typename OutputCB>
+				Context(OutputCB&& log_cb, int occurrences_batch_size)
+					:m_time_zero(log::RTC::now())
+					,m_queue()
+					,m_cv_idle()
+					,m_idle()
+					,m_thread([&]{ LogConsumerThread(*this, log_cb, occurrences_batch_size); })
 				{}
 				~Context()
 				{
@@ -220,7 +228,7 @@ namespace pr
 
 			// Thread for consuming log events
 			template <typename OutputCB>
-			static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size)
+			static void LogConsumerThread(Context& ctx, OutputCB& log_cb, int const occurrences_batch_size)
 			{
 				using namespace std::chrono;
 				try
@@ -271,9 +279,14 @@ namespace pr
 
 			//void OutputCB(pr::log::Event const& ev);
 			template <typename OutputCB>
-			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size = 0)
+			Logger(log::string context_name, OutputCB& log_cb, int occurrences_batch_size = 0)
 				:m_context_name(context_name)
-				,m_context(std::make_shared<Context>(log_cb, occurrences_batch_size))
+				,m_context(new Context(log_cb, occurrences_batch_size))
+			{}
+			template <typename OutputCB>
+			Logger(log::string context_name, OutputCB&& log_cb, int occurrences_batch_size = 0)
+				:m_context_name(context_name)
+				,m_context(std::make_shared<Context>(std::move(log_cb), occurrences_batch_size))
 			{}
 			Logger(Logger const& rhs, log::string context_name)
 				:m_context_name(context_name)
