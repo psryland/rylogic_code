@@ -47,18 +47,18 @@ namespace RyLogViewer
 			Icon = main.Icon;
 			HideOnClose = false;
 
-			var settings_path = Misc.ResolveAppPath(@"examples\example_settings.xml");
-
+			// Close the current log file, save the user settings
+			// and load the default settings
 			m_main = main;
 			m_main.CloseLogFile();
-			m_settings = settings;
-			m_settings_ui = new SettingsUI(m_main, m_settings, SettingsUI.ETab.Highlights){StartPosition = FormStartPosition.CenterParent, Owner = m_main};
-			m_settings_filepath = m_settings.Filepath;
+			m_settings_filepath = settings.Filepath;
 			m_page_index = ETutPage.First - 1;
-			m_current_page = new PageBase(this, m_main);
 
-			m_settings.Load(settings_path, false);
+			m_settings = new Settings();
 			m_main.ApplySettings();
+
+			m_settings_ui = new SettingsUI(m_main, m_settings, SettingsUI.ETab.Highlights){StartPosition = FormStartPosition.CenterParent, Owner = m_main};
+			m_current_page = new PageBase(this, m_main);
 
 			m_html.Navigate("about:blank");
 
@@ -71,6 +71,7 @@ namespace RyLogViewer
 				};
 			FormClosed += (s,a) =>
 				{
+					// Restore the user's settings
 					m_settings.Load(m_settings_filepath);
 					m_main.ApplySettings();
 				};

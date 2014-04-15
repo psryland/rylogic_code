@@ -327,7 +327,14 @@ namespace pr.common
 				if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
 
 				// Upgrade old settings
-				var vers = settings.Element(VersionKey) ?? new XElement(VersionKey);
+				var vers = settings.Element(VersionKey);
+				if (vers == null)
+				{
+					Log.Info(this,"Settings file {0} does not contain a version, using defaults".Fmt(filepath));
+					Reset();
+					return; // Reset will recursively call Load again
+				}
+				
 				vers.Remove();
 				if (vers.Value != Version)
 					Upgrade(settings, vers.Value);

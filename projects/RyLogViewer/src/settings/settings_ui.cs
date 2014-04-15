@@ -774,7 +774,19 @@ namespace RyLogViewer
 			if (res != DialogResult.Yes) return;
 
 			// Flatten the settings
-			try { m_settings.Reset(); Close(); }
+			try
+			{
+				// Reset the settings after the dialog has closed so that the save
+				// on close mechanism doesn't overwrite the default settings
+				EventHandler reset_on_close = null;
+				reset_on_close = (s,a) =>
+					{
+						m_settings.Reset();
+						Closed -= reset_on_close;
+					};
+				Closed += reset_on_close;
+				Close();
+			}
 			catch (Exception ex)
 			{
 				Log.Exception(this, ex, "Resetting settings to defaults");
