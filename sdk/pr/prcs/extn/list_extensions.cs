@@ -298,7 +298,7 @@ namespace pr.extn
 		public static int Partition<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
 		{
 			int i = left;
-			int j = right;
+			int j = right - 1;
 
 			// pick the pivot point and save it
 			T pivot = list[left];
@@ -353,32 +353,32 @@ namespace pr.extn
 			if (right > pivot) list.QuickSort(comparison, pivot + 1, right);
 		}
 
-		/// <summary>Return the k'th element in the list as if the list was sorted</summary>
-		public static T QuickSelect<T>(this IList<T> list, int k, Comparison<T> comparison, int left, int right)
+		/// <summary>Return the nth element in the list as if the list was sorted</summary>
+		public static T NthElement<T>(this IList<T> list, int n, Comparison<T> comparison, int left, int right)
 		{
 			// get pivot position
 			int pivot = list.Partition(comparison, left, right);
 
 			// if pivot is less that k, select from the right part
-			if (pivot < k) return list.QuickSelect(k, comparison, pivot + 1, right);
+			if (pivot < n) return list.NthElement(n, comparison, pivot + 1, right);
 
-			// if pivot is greater than k, select from the left side
-			if (pivot > k) return list.QuickSelect(k, comparison, left, pivot - 1);
+			// if pivot is greater than n, select from the left side
+			if (pivot > n) return list.NthElement(n, comparison, left, pivot - 1);
 
 			// if equal, return the value
 			return list[pivot];
 		}
-		public static T QuickSelect<T>(this IList<T> list, int k, Comparison<T> comparison)
+		public static T NthElement<T>(this IList<T> list, int n, Comparison<T> comparison)
 		{
-			return list.QuickSelect(k, comparison, 0, list.Count - 1);
+			return list.NthElement(n, comparison, 0, list.Count - 1);
 		}
-		public static T QuickSelect<T>(this IList<T> list, int k, IComparer<T> comparer)
+		public static T NthElement<T>(this IList<T> list, int n, IComparer<T> comparer)
 		{
-			return list.QuickSelect(k, comparer.Compare);
+			return list.NthElement(n, comparer.Compare);
 		}
-		public static T QuickSelect<T>(this IList<T> list, int k) where T : IComparable<T>
+		public static T NthElement<T>(this IList<T> list, int n) where T : IComparable<T>
 		{
-			return list.QuickSelect(k, (x, y) => x.CompareTo(y));
+			return list.NthElement(n, (x, y) => x.CompareTo(y));
 		}
 	}
 }

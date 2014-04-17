@@ -44,7 +44,7 @@ namespace pr.gfx
 		/// <summary>Create a rounded rectangle path that can be filled or drawn</summary>
 		public static GraphicsPath RoundedRectanglePath(Rectangle rect, float radius)
 		{
-			GraphicsPath gp = new GraphicsPath();
+			var gp = new GraphicsPath();
 			float d = radius * 2f;
 			gp.AddArc (rect.X                  ,rect.Y                   ,d      ,           d, 180 ,90);
 			gp.AddArc (rect.X + rect.Width - d ,rect.Y                   ,d      ,           d, 270 ,90);
@@ -54,7 +54,7 @@ namespace pr.gfx
 			return gp;
 		}
 
-			/// <summary>Helper for making radial gradient brushes</summary>
+		/// <summary>Helper for making radial gradient brushes</summary>
 		public static PathGradientBrush CreateRadialGradientBrush(Point centre, float radiusX, float radiusY, Color centre_color, Color boundary_color)
 		{
 			var path = new GraphicsPath();
@@ -64,6 +64,34 @@ namespace pr.gfx
 			brush.CenterPoint = centre;
 			brush.SurroundColors = new[]{boundary_color};
 			return brush;
+		}
+
+		public static void RectangleDropShadow(Graphics gfx, Rectangle rc, Color shadow_colour, int depth, int max_opacity)
+		{
+			// Generate a circle with dark centre and light outside
+			var bm = new Bitmap(2*depth, 2*depth);
+			using (var path = new GraphicsPath())
+			{
+				path.AddEllipse(0, 0, 2*depth, 2*depth);
+				using (var pgb = new PathGradientBrush(path))
+				{
+					pgb.CenterColor    = Color.FromArgb(max_opacity, shadow_colour);
+					pgb.SurroundColors = new Color[]{Color.FromArgb(0, shadow_colour)};
+					using (var g = Graphics.FromImage(bm))
+						g.FillEllipse(pgb, 0, 0, 2*depth, 2*depth);
+				}
+			}
+			using (var sb = new SolidBrush(Color.FromArgb(max_opacity, shadow_colour)))
+				gfx.FillRectangle(sb, rc.Left+depth, rc.Top+depth, rc.Width-(2*depth), rc.Height-(2*depth));
+
+			gfx.DrawImage(bm , new Rectangle(rc.Left          , rc.Top            , depth              , depth               ) , 0     , 0     , depth , depth , GraphicsUnit.Pixel); // Top left corner
+			gfx.DrawImage(bm , new Rectangle(rc.Left  + depth , rc.Top            , rc.Width - 2*depth , depth               ) , depth , 0     , 1     , depth , GraphicsUnit.Pixel); // Top side
+			gfx.DrawImage(bm , new Rectangle(rc.Right - depth , rc.Top            , depth              , depth               ) , depth , 0     , depth , depth , GraphicsUnit.Pixel); // Top right corner
+			gfx.DrawImage(bm , new Rectangle(rc.Right - depth , rc.Top    + depth , depth              , rc.Height - 2*depth ) , depth , depth , depth , 1     , GraphicsUnit.Pixel); // Right side
+			gfx.DrawImage(bm , new Rectangle(rc.Right - depth , rc.Bottom - depth , depth              , depth               ) , depth , depth , depth , depth , GraphicsUnit.Pixel); // Bottom left corner
+			gfx.DrawImage(bm , new Rectangle(rc.Left  + depth , rc.Bottom - depth , rc.Width - 2*depth , depth               ) , depth , depth , 1     , depth , GraphicsUnit.Pixel); // Bottom side
+			gfx.DrawImage(bm , new Rectangle(rc.Left          , rc.Bottom - depth , depth              , depth               ) , 0     , depth , depth , depth , GraphicsUnit.Pixel); // Bottom left corner
+			gfx.DrawImage(bm , new Rectangle(rc.Left          , rc.Top    + depth , depth              , rc.Height - 2*depth ) , 0     , depth , depth , 1     , GraphicsUnit.Pixel); // Left side
 		}
 	}
 }
