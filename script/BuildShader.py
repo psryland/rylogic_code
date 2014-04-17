@@ -35,8 +35,8 @@ try:
 	if trace: print("Output directory: " + outdir)
 
 	# The filepaths
-	tmp_h_filepath   = tempfile.mktemp() #outdir + "\\" + fname + ".h.tmp"
-	tmp_cso_filepath = tempfile.mktemp() #outdir + "\\" + fname + ".cso.tmp"
+	tmp_h_filepath   = tempfile.gettempdir() + "\\" + fname + ".h.tmp"
+	tmp_cso_filepath = tempfile.gettempdir() + "\\" + fname + ".cso.tmp"
 	h_filepath       = outdir + "\\" + fname + ".h"
 	cso_filepath     = outdir + "\\" + fname + ".cso"
 	pp_filepath      = outdir + "\\" + fname + ".pp"
