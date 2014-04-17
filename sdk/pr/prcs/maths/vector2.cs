@@ -70,13 +70,19 @@ namespace pr.maths
 		public override bool Equals(object o)                  { return o is v2 && (v2)o == this; }
 		public override int  GetHashCode()                     { unchecked { return x.GetHashCode() ^ y.GetHashCode(); } }
 
+		// Conversion
+		public static implicit operator v2(PointF p)           { return new v2(p.X, p.Y); }
+		public static implicit operator PointF(v2 p)           { return new PointF(p.x, p.y); }
+		public static implicit operator v2(SizeF s)           { return new v2(s.Width, s.Height); }
+		public static implicit operator SizeF(v2 s)           { return new SizeF(s.x, s.y); }
+
 		public static bool  FEqlZero2(v2 vec, float tol)        { return vec.Length2Sq < tol * tol; }
 		public static bool  FEqlZero2(v2 vec)                   { return FEqlZero2(vec, Maths.TinyF); }
 		public static bool  FEql2(v2 lhs, v2 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
 		public static bool  FEql2(v2 lhs, v2 rhs)               { return FEql2(lhs, rhs, Maths.TinyF); }
 		public static v2    Random2(Rand r, float z, float w)   { return new v2(r.Float(), r.Float()); }
 		public static v2    Random2(float z, float w)           { return Random2(new Rand(), z, w); }
-		
+
 		public static v2    Abs(v2 vec)                        { return new v2(Math.Abs(vec.x), Math.Abs(vec.y)); }
 		public static v2    Blend(v2 lhs, v2 rhs, float frac)  { return lhs * (1f - frac) + rhs * (frac); }
 		public static v2    Clamp2(v2 vec, v2 min, v2 max)     { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }

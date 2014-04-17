@@ -118,11 +118,11 @@ ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char 
 	return S_OK;
 }
 
-// Expand a m3x3
-ADDIN_API HRESULT WINAPI AddIn_m3x3(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
+// Expand a m3x4
+ADDIN_API HRESULT WINAPI AddIn_m3x4(DWORD, DbgHelper* pHelper, int, BOOL, char *pResult, size_t max, DWORD)
 {
 	ReentryGuard guard;
-	pr::m3x3 mat;
+	pr::m3x4 mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
 	float ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
 	_snprintf(pResult, max,
@@ -336,7 +336,7 @@ ADDIN_API HRESULT WINAPI AddIn_QuaternionAsMatrix(DWORD, DbgHelper* pHelper, int
 	pr::Quat q;
 	if (FAILED(pHelper->Read(q))) return E_FAIL;
 
-	pr::m3x3 mat = pr::m3x3::make(q);
+	pr::m3x4 mat = pr::m3x4::make(q);
 	_snprintf(pResult, max,
 		"\r\n%f\t%f\t%f"
 		"\r\n%f\t%f\t%f"

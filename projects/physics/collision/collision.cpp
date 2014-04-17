@@ -15,7 +15,7 @@ using namespace pr::ph::collision;
 // 'axis' is the axis to project the box onto.
 // 'point' is a point maximal in the direction of 'axis'
 // Returns the distance from the centre of the box to 'point' along 'axis'
-float pr::ph::ProjectBox(m3x3 const& box, v4 const& axis, collision::Point& point)
+float pr::ph::ProjectBox(m3x4 const& box, v4 const& axis, collision::Point& point)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, FEql(Length3(axis), 1.0f), "");
 	float const FaceToFaceTolerance = 0.01f;
@@ -50,7 +50,7 @@ float pr::ph::ProjectBox(m3x3 const& box, v4 const& axis, collision::Point& poin
 // 'axis' is the axis to project the triangle onto
 // 'point' is a point maximal in the direction of 'axis'
 // Returns the distance from the centre of the triangle to 'point' along 'axis'
-float pr::ph::ProjectTri(m3x3 const& tri, v4 const& axis, collision::Point& point)
+float pr::ph::ProjectTri(m3x4 const& tri, v4 const& axis, collision::Point& point)
 {
 	// Store the indices of the two verts if the point type is 'edge'
 	point.m_type		= EPointType_Point;

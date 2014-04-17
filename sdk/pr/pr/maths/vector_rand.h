@@ -99,10 +99,10 @@ namespace pr
 	inline m2x2 Random2x2(Rnd& rnd)                                                     { return Random2x2(rnd, 0.0f, maths::tau); }
 	inline m2x2 Random2x2()                                                             { return Random2x2(rand::Rand()); }
 	
-	inline m3x3 Random3x3(Rnd& rnd, v4 const& axis, float min_angle, float max_angle)   { return m3x3::make(axis, rnd.fltr(min_angle, max_angle)); }
-	inline m3x3 Random3x3(          v4 const& axis, float min_angle, float max_angle)   { return Random3x3(rand::Rand(), axis, min_angle, max_angle); }
-	inline m3x3 Random3x3(Rnd& rnd)                                                     { return Random3x3(Random3N(rnd, 0.0f), 0.0f, maths::tau); }
-	inline m3x3 Random3x3()                                                             { return Random3x3(rand::Rand()); }
+	inline m3x4 Random3x4(Rnd& rnd, v4 const& axis, float min_angle, float max_angle)   { return m3x4::make(axis, rnd.fltr(min_angle, max_angle)); }
+	inline m3x4 Random3x4(          v4 const& axis, float min_angle, float max_angle)   { return Random3x4(rand::Rand(), axis, min_angle, max_angle); }
+	inline m3x4 Random3x4(Rnd& rnd)                                                     { return Random3x4(Random3N(rnd, 0.0f), 0.0f, maths::tau); }
+	inline m3x4 Random3x4()                                                             { return Random3x4(rand::Rand()); }
 	
 	inline m4x4 Random4x4(Rnd& rnd, float min_value, float max_value)
 	{
@@ -114,7 +114,7 @@ namespace pr
 		return m;
 	}
 	inline m4x4 Random4x4(          float min_value, float max_value)                                                 { return Random4x4(rand::Rand(), min_value, max_value); }
-	inline m4x4 Random4x4(Rnd& rnd, v4 const& axis, float min_angle, float max_angle, v4 const& position)             { m4x4 m; cast_m3x3(m).set(axis, rnd.fltr(min_angle, max_angle)); m.pos = position; return m; }
+	inline m4x4 Random4x4(Rnd& rnd, v4 const& axis, float min_angle, float max_angle, v4 const& position)             { m4x4 m; cast_m3x4(m).set(axis, rnd.fltr(min_angle, max_angle)); m.pos = position; return m; }
 	inline m4x4 Random4x4(          v4 const& axis, float min_angle, float max_angle, v4 const& position)             { return Random4x4(rand::Rand(), axis, min_angle, max_angle, position); }
 	inline m4x4 Random4x4(Rnd& rnd, float min_angle, float max_angle, v4 const& position)                             { return Random4x4(Random3N(rnd, 0.0f), min_angle, max_angle, position); }
 	inline m4x4 Random4x4(          float min_angle, float max_angle, v4 const& position)                             { return Random4x4(rand::Rand(), min_angle, max_angle, position); }

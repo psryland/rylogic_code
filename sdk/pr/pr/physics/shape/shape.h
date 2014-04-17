@@ -76,11 +76,11 @@ namespace pr
 		// Mass properties for an object
 		struct MassProperties
 		{
-			m3x3	m_os_inertia_tensor;	// Object space inertia tensor
+			m3x4	m_os_inertia_tensor;	// Object space inertia tensor
 			v4		m_centre_of_mass;		// Offset to the object space centre of mass
 			float	m_mass;					// Mass in kg
 
-			MassProperties& set(m3x3 const& os_inertia_tensor, v4 const& centre_of_mass, float	mass) { m_os_inertia_tensor = os_inertia_tensor; m_centre_of_mass = centre_of_mass; m_mass = mass; return *this; }
+			MassProperties& set(m3x4 const& os_inertia_tensor, v4 const& centre_of_mass, float	mass) { m_os_inertia_tensor = os_inertia_tensor; m_centre_of_mass = centre_of_mass; m_mass = mass; return *this; }
 		};
 
 		// General shape functions

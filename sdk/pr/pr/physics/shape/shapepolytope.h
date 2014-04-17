@@ -83,7 +83,7 @@ namespace pr
 		v4				CalcCentreOfMass	(ShapePolytope const& shape);
 		void			ShiftCentre			(ShapePolytope& shape, v4& shift);
 		BoundingBox&	CalcBBox			(ShapePolytope const& shape, BoundingBox& bbox);
-		m3x3			CalcInertiaTensor	(ShapePolytope const& shape);
+		m3x4			CalcInertiaTensor	(ShapePolytope const& shape);
 		MassProperties& CalcMassProperties	(ShapePolytope const& shape, float density, MassProperties& mp);
 		v4				SupportVertex		(ShapePolytope const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);
 		void			GetAxis				(ShapePolytope const& shape, v4& direction, std::size_t hint_vertex_id, std::size_t& vert_id0, std::size_t& vert_id1, bool major);

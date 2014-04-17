@@ -5,7 +5,7 @@ EXPORTS
 	AddIn_v4
 	AddIn_iv4
 	AddIn_i64v4
-	AddIn_m3x3
+	AddIn_m3x4
 	AddIn_m4x4
 	AddIn_MAXMatrix3
 	AddIn_stdvector

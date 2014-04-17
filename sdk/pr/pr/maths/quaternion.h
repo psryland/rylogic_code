@@ -44,7 +44,7 @@ namespace pr
 		Quat&        set(float x_, float y_, float z_, float w_);
 		Quat&        set(v4 const& axis, float angle);
 		Quat&        set(float pitch, float yaw, float roll);
-		Quat&        set(m3x3 const& m);
+		Quat&        set(m3x4 const& m);
 		Quat&        set(m4x4 const& m);
 		Quat&        set(v4 const& from, v4 const& to);
 		float const* ToArray() const           { return reinterpret_cast<float const*>(this); }
@@ -55,7 +55,7 @@ namespace pr
 		static Quat  make(float x_, float y_, float z_, float w_)  { Quat q; return q.set(x_, y_, z_, w_); }
 		static Quat  make(v4 const& axis, float angle)             { Quat q; return q.set(axis, angle); }
 		static Quat  make(float pitch, float yaw, float roll)      { Quat q; return q.set(pitch, yaw, roll); }
-		static Quat  make(m3x3 const& m)                           { Quat q; return q.set(m); }
+		static Quat  make(m3x4 const& m)                           { Quat q; return q.set(m); }
 		static Quat  make(m4x4 const& m)                           { Quat q; return q.set(m); }
 		static Quat  make(v4 const& from, v4 const& to)            { Quat q; return q.set(from, to); }
 	};

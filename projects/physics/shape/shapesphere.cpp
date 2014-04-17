@@ -39,7 +39,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeSphere const& shape, float densi
 
 	mp.m_centre_of_mass = v4Zero;
 	mp.m_mass = volume * density;
-	mp.m_os_inertia_tensor		= m3x3Identity;	// Note for a shell, Ixx = Iyy = Izz = 2/3mr^2
+	mp.m_os_inertia_tensor		= m3x4Identity;	// Note for a shell, Ixx = Iyy = Izz = 2/3mr^2
 	mp.m_os_inertia_tensor.x.x	= (2.0f / 5.0f) * (shape.m_radius * shape.m_radius);	// (2/5)mr^2
 	mp.m_os_inertia_tensor.y.y	= mp.m_os_inertia_tensor.x.x;
 	mp.m_os_inertia_tensor.z.z	= mp.m_os_inertia_tensor.x.x;

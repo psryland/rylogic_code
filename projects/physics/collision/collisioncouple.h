@@ -25,8 +25,8 @@ namespace pr
 				m4x4 const&		m_a2w;
 				Shape const&	m_shapeB;
 				m4x4 const&		m_b2w;
-				m3x3			m_w2a;
-				m3x3			m_w2b;
+				m3x4			m_w2a;
+				m3x4			m_w2b;
 				Vert			m_vertex;				// The support vertex. Updated by calls to 'SupportVertex'
 				Simplex			m_simplex;				// A polytope with upto 4 vertices within the Minkowski difference
 

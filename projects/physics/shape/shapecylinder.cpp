@@ -40,7 +40,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeCylinder const& shape, float den
 
 	mp.m_centre_of_mass = v4Zero;
 	mp.m_mass = volume * density;
-	mp.m_os_inertia_tensor		= m3x3Identity;	// Note for shell, Ixx = Iyy = (1/2)mr^2 + (1/12)mL^2, Izz = mr^2
+	mp.m_os_inertia_tensor		= m3x4Identity;	// Note for shell, Ixx = Iyy = (1/2)mr^2 + (1/12)mL^2, Izz = mr^2
 	mp.m_os_inertia_tensor.x.x	= (1.0f / 4.0f) * (shape.m_radius * shape.m_radius) + (1.0f / 3.0f) * (shape.m_height * shape.m_height);	// (1/4)mr^2 + (1/12)mL^2
 	mp.m_os_inertia_tensor.y.y	= (1.0f / 2.0f) * (shape.m_radius * shape.m_radius);	// (1/2)mr^2
 	mp.m_os_inertia_tensor.z.z	= mp.m_os_inertia_tensor.x.x;

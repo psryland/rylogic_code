@@ -175,7 +175,7 @@ namespace pr
 	v4      CreateNotParallelTo(v4 const& v);
 	v4      Perpendicular(v4 const& v);
 	uint    Octant(v4 const& v);
-	v4      RotationVectorApprox(m3x3 const& from, m3x3 const& to);
+	v4      RotationVectorApprox(m3x4 const& from, m3x4 const& to);
 	v4      RotationVectorApprox(m4x4 const& from, m4x4 const& to);
 	float   CosAngle3(v4 const& lhs, v4 const& rhs);
 }

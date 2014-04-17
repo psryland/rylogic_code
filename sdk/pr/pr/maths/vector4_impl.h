@@ -184,12 +184,12 @@ namespace pr
 	}
 
 	// Return a vector representing the approximate rotation between two orthonormal transforms
-	inline v4 RotationVectorApprox(m3x3 const& from, m3x3 const& to)
+	inline v4 RotationVectorApprox(m3x4 const& from, m3x4 const& to)
 	{
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
-		m3x3 cpm_x_i2wR = to - from;
-		m3x3 w2iR = GetTranspose(from);
-		m3x3 cpm = cpm_x_i2wR * w2iR;
+		m3x4 cpm_x_i2wR = to - from;
+		m3x4 w2iR = GetTranspose(from);
+		m3x4 cpm = cpm_x_i2wR * w2iR;
 		return v4::make(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}
 	inline v4 RotationVectorApprox(m4x4 const& from, m4x4 const& to)

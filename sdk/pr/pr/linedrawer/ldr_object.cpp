@@ -250,7 +250,7 @@ void ParseTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 		{
 		default: reader.ReportError(pr::script::EResult::UnknownToken); break;
 		case pr::ldr::EKeyword::M4x4:      reader.ExtractMatrix4x4S(p2w); break;
-		case pr::ldr::EKeyword::M3x3:      reader.ExtractMatrix3x3S(pr::cast_m3x3(p2w)); break;
+		case pr::ldr::EKeyword::M3x3:      reader.ExtractMatrix3x3S(pr::cast_m3x4(p2w)); break;
 		case pr::ldr::EKeyword::Pos:       reader.ExtractVector3S(p2w.pos, 1.0f); break;
 		case pr::ldr::EKeyword::Direction:
 			{
@@ -259,13 +259,13 @@ void ParseTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 				reader.ExtractVector3(direction, 0.0f);
 				reader.ExtractInt(axis, 10);
 				reader.SectionEnd();
-				pr::OriFromDir(cast_m3x3(p2w), direction, axis, pr::v4YAxis);
+				pr::OriFromDir(cast_m3x4(p2w), direction, axis, pr::v4YAxis);
 			}break;
 		case pr::ldr::EKeyword::Quat:
 			{
 				pr::Quat quat;
 				reader.ExtractVector4S(pr::cast_v4(quat));
-				cast_m3x3(p2w).set(quat);
+				cast_m3x4(p2w).set(quat);
 			}break;
 		case pr::ldr::EKeyword::Rand4x4:
 			{
@@ -287,13 +287,13 @@ void ParseTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 			}break;
 		case pr::ldr::EKeyword::RandOri:
 			{
-				pr::cast_m3x3(p2w) = pr::Random3x3();
+				pr::cast_m3x4(p2w) = pr::Random3x4();
 			}break;
 		case pr::ldr::EKeyword::Euler:
 			{
 				pr::v4 angles;
 				reader.ExtractVector3S(angles, 0.0f);
-				pr::cast_m3x3(p2w) = pr::m3x3::make(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z));
+				pr::cast_m3x4(p2w) = pr::m3x4::make(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z));
 			}break;
 		case pr::ldr::EKeyword::Scale:
 			{
@@ -617,7 +617,7 @@ template <pr::ldr::ELdrObject::Enum_ LineType> void ParseLine(ParseParams& p)
 			}break;
 		case pr::ldr::ELdrObject::Matrix3x3:
 			{
-				pr::m4x4 basis; p.m_reader.ExtractMatrix3x3(cast_m3x3(basis));
+				pr::m4x4 basis; p.m_reader.ExtractMatrix3x3(cast_m3x4(basis));
 				linemesh = true;
 				pr::v4 pt[] = {{0,0,0,1}, basis.x, {0,0,0,1}, basis.y, {0,0,0,1}, basis.z};
 				pr::Colour32 col[] = {pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue};
@@ -1734,7 +1734,7 @@ std::string pr::ldr::CreateDemoScene()
 		"	{\n"
 		"		// An empty 'o2w' is equivalent to an identity transform\n"
 		"		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}  // *M4x4 {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major\n"
-		"		*M3x3 {1 0 0  0 1 0  0 0 1}                 // *M3x3 {xx xy xz  yx yy yz  zx zy zz} - i.e. row major\n"
+		"		*m3x4 {1 0 0  0 1 0  0 0 1}                 // *m3x4 {xx xy xz  yx yy yz  zx zy zz} - i.e. row major\n"
 		"		*Pos {0 1 0}                                // *Pos {x y z}\n"
 		"		*Direction {0 1 0 2}                        // *Direction {dx dy dz axis} - direction vector, and axis to align to that direction\n"
 		"		*Quat {0 1 0 0.3}                           // *Quat {x y z s} - quaternion\n"

@@ -101,12 +101,12 @@ void pr::ph::ImpulseResponse(Contact& contact, v4& ws_impulse)
 	// Say "inv_mass" = "inv_mass1" + "inv_mass2" then
 	// "inv_mass1" = [(1/MassA)*Identity - (pointA.CrossProductMatrix()*InvMassTensorWS()A*pointA.CrossProductMatrix())] and
 	// "inv_mass2" = [(1/MassB)*Identity - (pointB.CrossProductMatrix()*InvMassTensorWS()B*pointB.CrossProductMatrix())]
-	m3x3 cpmA = CrossProductMatrix3x3(contact.m_pointA - objA.Position());
-	m3x3 cpmB = CrossProductMatrix3x3(contact.m_pointB - objB.Position());
-	m3x3 inv_mass1	= objA.m_inv_mass * (m3x3Identity - (cpmA * objA.m_ws_inv_inertia_tensor * cpmA));
-	m3x3 inv_mass2	= objB.m_inv_mass * (m3x3Identity - (cpmB * objB.m_ws_inv_inertia_tensor * cpmB));
-	m3x3 inv_mass	= inv_mass1 + inv_mass2;
-	m3x3 mass		= inv_mass.GetInverse();
+	m3x4 cpmA = CrossProductMatrix3x3(contact.m_pointA - objA.Position());
+	m3x4 cpmB = CrossProductMatrix3x3(contact.m_pointB - objB.Position());
+	m3x4 inv_mass1	= objA.m_inv_mass * (m3x4Identity - (cpmA * objA.m_ws_inv_inertia_tensor * cpmA));
+	m3x4 inv_mass2	= objB.m_inv_mass * (m3x4Identity - (cpmB * objB.m_ws_inv_inertia_tensor * cpmB));
+	m3x4 inv_mass	= inv_mass1 + inv_mass2;
+	m3x4 mass		= inv_mass.GetInverse();
 
 	// Pi is the impulse required to reduce the normal component of rel_velocity to zero.
 	// Pii is the impulse to reduce rel_velocity to zero
@@ -172,7 +172,7 @@ void pr::ph::PushOut(Rigidbody& objA, Rigidbody& objB, Contact& contact)
 		//v4 radius = contact.m_pointA - objA.m_object_to_world.pos;
 		//v4 rot    = Cross3(radius, push)         / radius.Length3Sq();
 		//v4 trans  = Dot3(radius, push) * radius  / radius.Length3Sq();
-		//objA.m_object_to_world     += CrossProductMatrix3x3(rot) * objA.m_object_to_world.Getm3x3();
+		//objA.m_object_to_world     += CrossProductMatrix3x3(rot) * objA.m_object_to_world.Getm3x4();
 		//objA.m_object_to_world.pos += trans;
 		//if( rot.Length3Sq() > 0.01f ) objA.m_object_to_world.Orthonormalise();
 
@@ -199,7 +199,7 @@ void pr::ph::PushOut(Rigidbody& objA, Rigidbody& objB, Contact& contact)
 		//v4 radius = contact.m_pointB - objB.m_object_to_world.pos;
 		//v4 rot    = Cross3(radius, push)         / radius.Length3Sq();
 		//v4 trans  = Dot3(radius, push) * radius  / radius.Length3Sq();
-		//objB.m_object_to_world     += CrossProductMatrix3x3(rot) * objB.m_object_to_world.Getm3x3();
+		//objB.m_object_to_world     += CrossProductMatrix3x3(rot) * objB.m_object_to_world.Getm3x4();
 		//objB.m_object_to_world.pos += trans;
 		//if( rot.Length3Sq() > 0.01f ) objB.m_object_to_world.Orthonormalise();
 

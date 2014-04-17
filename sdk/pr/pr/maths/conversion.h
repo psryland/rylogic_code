@@ -50,10 +50,10 @@ namespace pr
 		static TTo To(v4&& from) { return pr::To<TTo>(v.x) + " " + pr::To<TTo>(v.y) + " " + pr::To<TTo>(v.z) + " " + pr::To<TTo>(v.w); }
 	};
 
-	// From<m3x3>
-	template <typename TTo> struct Convert<TTo,m3x3>
+	// From<m3x4>
+	template <typename TTo> struct Convert<TTo,m3x4>
 	{
-		static TTo To(m3x3&& from) { return pr::To<TTo>(v.x.xyz()) + " " + pr::To<TTo>(v.y.xyz()) + " " + pr::To<TTo>(v.z.xyz()); }
+		static TTo To(m3x4&& from) { return pr::To<TTo>(v.x.xyz()) + " " + pr::To<TTo>(v.y.xyz()) + " " + pr::To<TTo>(v.z.xyz()); }
 	};
 
 	// From<m4x4>
@@ -123,11 +123,11 @@ namespace pr
 
 	//template <typename ToType> inline ToType To(v3 const& v)   { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(v4 const& v)   { static_assert(false, "No conversion from to this type available"); }
-	//template <typename ToType> inline ToType To(m3x3 const& m) { static_assert(false, "No conversion from to this type available"); }
+	//template <typename ToType> inline ToType To(m3x4 const& m) { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(m4x4 const& m) { static_assert(false, "No conversion from to this type available"); }
 	//template <>                inline std::string To<std::string>(v3 const& v)   { return To<std::string>(v.x)       + " " + To<std::string>(v.y)       + " " + To<std::string>(v.z); }
 	//template <>                inline std::string To<std::string>(v4 const& v)   { return To<std::string>(v.xyz())   + " " + To<std::string>(v.w); }
-	//template <>                inline std::string To<std::string>(m3x3 const& m) { return To<std::string>(m.x.xyz()) + " " + To<std::string>(m.y.xyz()) + " " + To<std::string>(m.z.xyz()); }
+	//template <>                inline std::string To<std::string>(m3x4 const& m) { return To<std::string>(m.x.xyz()) + " " + To<std::string>(m.y.xyz()) + " " + To<std::string>(m.z.xyz()); }
 	//template <>                inline std::string To<std::string>(m4x4 const& m) { return To<std::string>(m.x)       + " " + To<std::string>(m.y)       + " " + To<std::string>(m.z)        + " " + To<std::string>(m.w); }
 	//
 	//template <typename ToType> inline ToType      To             (char const* s, char const** end, int radix = 10) { static_assert(false, "No conversion from to this type available"); } 

@@ -87,9 +87,9 @@ void Engine::ConstructCommon()
 	terrain_settings.m_mass_properties.m_mass	= maths::float_max;
 	m_terrain_object.Create(terrain_settings);
 	m_terrain_object.m_ws_bbox.m_radius			= v4Max;
-	m_terrain_object.m_os_inv_inertia_tensor	= m3x3Zero;
-	m_terrain_object.m_os_inertia_tensor		= m3x3Identity * maths::float_max;
-	m_terrain_object.m_ws_inv_inertia_tensor	= m3x3Zero;
+	m_terrain_object.m_os_inv_inertia_tensor	= m3x4Zero;
+	m_terrain_object.m_os_inertia_tensor		= m3x4Identity * maths::float_max;
+	m_terrain_object.m_ws_inv_inertia_tensor	= m3x4Zero;
 
 	m_stepping		= false;
 	m_frame_number	= 0;

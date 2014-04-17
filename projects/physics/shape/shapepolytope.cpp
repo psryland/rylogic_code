@@ -91,7 +91,7 @@ BoundingBox& pr::ph::CalcBBox(ShapePolytope const& shape, BoundingBox& bbox)
 // Note: The polytope must be in the correct space before calculating its inertia
 // (i.e. at the centre of mass, or not). Calculating the inertia then translating
 // it does not give the same result (with this code at least).
-m3x3 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
+m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 {
 	// Assume mass == 1.0, you can multiply by mass later.
 	// For improved accuracy the next 3 variables, the determinant vol, and its calculation should be changed to double
@@ -137,7 +137,7 @@ m3x3 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 	volume					/= 6.0f;
 	diagonal_integrals		/= volume * 60.0f;  // Divide by total volume
 	off_diagonal_integrals	/= volume * 120.0f;
-	return m3x3::make(
+	return m3x4::make(
 		v4::make(diagonal_integrals.y + diagonal_integrals.z  , -off_diagonal_integrals.z                   , -off_diagonal_integrals.y                 ,0),
 		v4::make(-off_diagonal_integrals.z                    , diagonal_integrals.x + diagonal_integrals.z , -off_diagonal_integrals.x                 ,0),
 		v4::make(-off_diagonal_integrals.y                    , -off_diagonal_integrals.x                   , diagonal_integrals.x+diagonal_integrals.y ,0)
@@ -514,7 +514,7 @@ bool pr::ph::Validate(ShapePolytope const& shape, bool check_com)
 	// Check the polytope is in centre of mass frame
 	if( check_com )
 	{
-		//m3x3 inertia = CalcInertiaTensor(shape);
+		//m3x4 inertia = CalcInertiaTensor(shape);
 	}
 
 	#endif//PR_DBG_PHYSICS

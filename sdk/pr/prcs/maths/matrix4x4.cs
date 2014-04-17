@@ -17,7 +17,7 @@ namespace pr.maths
 		[FieldOffset(32)] public v4   z;
 		[FieldOffset(48)] public v4   w;
 
-		[FieldOffset( 0)] public m3x3 r;
+		[FieldOffset( 0)] public m3x4 r;
 		[FieldOffset(48)] public v4   p;
 
 		public override string ToString() { return x + " \n" + y + " \n" + z + " \n" + w + " \n"; }
@@ -82,7 +82,7 @@ namespace pr.maths
 
 		public static void Transpose3x3(ref m4x4 m)
 		{
-			m3x3.Transpose3x3(ref m.r);
+			m3x4.Transpose3x3(ref m.r);
 		}
 		public static m4x4 Transpose3x3(m4x4 m)
 		{
@@ -122,7 +122,7 @@ namespace pr.maths
 
 		public static void Orthonormalise(ref m4x4 m)
 		{
-			m3x3.Orthonormalise(ref m.r);
+			m3x4.Orthonormalise(ref m.r);
 		}
 		public static m4x4 Orthonormalise(m4x4 m)
 		{
@@ -132,7 +132,7 @@ namespace pr.maths
 
 		public static bool IsOrthonormal(m4x4 m)
 		{
-			return	m3x3.IsOrthonormal(m.r);
+			return	m3x4.IsOrthonormal(m.r);
 		}
 
 		public static v4 operator * (m4x4 lhs, v4 rhs)
@@ -188,7 +188,7 @@ namespace pr.maths
 		public static m4x4 OrientationFromDirection(v4 direction, int axis, v4 preferred_up, v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4{r=m3x3.OrientationFromDirection(direction, axis, preferred_up), p=translation};
+			return new m4x4{r=m3x4.OrientationFromDirection(direction, axis, preferred_up), p=translation};
 		}
 		public static m4x4 OrientationFromDirection(v4 direction, int axis, v4 translation)
 		{
@@ -203,7 +203,7 @@ namespace pr.maths
 		public static m4x4 Translation(v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4{r=m3x3.Identity, p=translation};
+			return new m4x4{r=m3x4.Identity, p=translation};
 		}
 
 		// Create a rotation matrix

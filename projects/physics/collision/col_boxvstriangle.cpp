@@ -46,8 +46,8 @@ namespace pr
 				m4x4 const&				m_b2w;
 				v4						m_axis;				// Always from m_pointA to m_pointB
 				float					m_penetration;		// The depth of penetration. No contact if <= 0.0f
-				m3x3					m_box_radii;		// The radii of the box in world space
-				m3x3					m_tri_verts;		// The verts of the triangle in world space
+				m3x4					m_box_radii;		// The radii of the box in world space
+				m3x4					m_tri_verts;		// The verts of the triangle in world space
 				Point					m_pointA;			// The point of contact on object A
 				Point					m_pointB;			// The index of the vertex of the triangle, 
 			};

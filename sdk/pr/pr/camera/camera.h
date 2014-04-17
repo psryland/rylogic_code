@@ -392,7 +392,7 @@ namespace pr
 			}
 
 			// Translate
-			m_c2w.pos = m_base_c2w.pos + cast_m3x3(m_base_c2w) * v4::make(dx, dy, dz, 0.0f);
+			m_c2w.pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * v4::make(dx, dy, dz, 0.0f);
 
 			// Apply non-camera relative locking
 			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])

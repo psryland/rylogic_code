@@ -49,14 +49,14 @@ namespace pr
 		// 'axis' is the axis to project the box onto.
 		// 'point' is a point maximal in the direction of 'axis'
 		// Returns the distance from the centre of the box to 'point' along 'axis'
-		float ProjectBox(m3x3 const& box, v4 const& axis, collision::Point& point);
+		float ProjectBox(m3x4 const& box, v4 const& axis, collision::Point& point);
 
 		// Project a triangle onto 'axis'
 		// 'tri' is the three vertices of the triangle
 		// 'axis' is the axis to project the triangle onto
 		// 'point' is a point maximal in the direction of 'axis'
 		// Returns the distance from the centre of the triangle to 'point' along 'axis'
-		float ProjectTri(m3x3 const& tri, v4 const& axis, collision::Point& point);
+		float ProjectTri(m3x4 const& tri, v4 const& axis, collision::Point& point);
 	}
 }
 

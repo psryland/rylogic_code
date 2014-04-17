@@ -37,7 +37,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Create a quaternion from a rotation matrix</summary>
-		public static v4 Make(m3x3 m)
+		public static v4 Make(m3x4 m)
 		{
 			float trace = m.x.x + m.y.y + m.z.z;
 			if (trace >= 0.0f)

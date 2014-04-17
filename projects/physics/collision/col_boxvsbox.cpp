@@ -48,8 +48,8 @@ namespace pr
 				v4				m_axis;			// Always from m_pointA to m_pointB
 				Point			m_pointA;		// The point of contact on object A
 				Point			m_pointB;		// The point of contact on object B
-				m3x3			m_boxA;			// Radius vectors for box A
-				m3x3			m_boxB;			// Radius vectors for box B
+				m3x4			m_boxA;			// Radius vectors for box A
+				m3x4			m_boxB;			// Radius vectors for box B
 				float			m_penetration;	// The depth of penetration. No contact if <= 0.0f
 			};
 

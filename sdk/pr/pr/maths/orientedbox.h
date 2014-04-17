@@ -23,7 +23,7 @@ namespace pr
 		m4x4 m_box_to_world;
 		v4   m_radius;
 		
-		OrientedBox& set(v4 const& centre, v4 const& radii, m3x3 const& ori)    { m_box_to_world.set(ori, centre); m_radius = radii; return *this; }
+		OrientedBox& set(v4 const& centre, v4 const& radii, m3x4 const& ori)    { m_box_to_world.set(ori, centre); m_radius = radii; return *this; }
 		float        SizeX() const                                              { return 2.0f * m_radius.x; }
 		float        SizeY() const                                              { return 2.0f * m_radius.y; }
 		float        SizeZ() const                                              { return 2.0f * m_radius.z; }
@@ -31,7 +31,7 @@ namespace pr
 		float        DiametreSq() const                                         { return 4.0f * Length3Sq(m_radius); }
 		float        Diametre() const                                           { return Sqrt(DiametreSq()); }
 		
-		static OrientedBox  make(v4 const& centre, v4 const& radii, m3x3 const& ori) { OrientedBox bbox; return bbox.set(centre, radii, ori); }
+		static OrientedBox  make(v4 const& centre, v4 const& radii, m3x4 const& ori) { OrientedBox bbox; return bbox.set(centre, radii, ori); }
 	};
 	
 	OrientedBox const OBoxZero  = {m4x4Identity, v4Zero};

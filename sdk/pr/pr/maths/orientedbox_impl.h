@@ -125,7 +125,7 @@ namespace pr
 
 			// Compute common subexpressions. Add in an epsilon term to counteract arithmetic
 			// errors when two edges are parallel and their cross product is (near) null
-			m3x3 AbsR = Abs(cast_m3x3(R)) + maths::tiny;
+			m3x4 AbsR = Abs(cast_m3x4(R)) + maths::tiny;
 
 			float ra, rb, sp;
 

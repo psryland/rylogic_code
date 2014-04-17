@@ -24,7 +24,7 @@ namespace pr
 		typedef v4 Array[4];
 
 		static m4x4  make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		static m4x4  make(m3x3 const& ori, v4 const& translation);
+		static m4x4  make(m3x4 const& ori, v4 const& translation);
 		static m4x4  make(Quat const& quat, v4 const& translation);
 		static m4x4  make(v4 const& axis, float angle, v4 const& translation);
 		static m4x4  make(v4 const& angular_displacement, v4 const& translation);
@@ -32,7 +32,7 @@ namespace pr
 		static m4x4  make(float pitch,  float yaw, float roll, v4 const& translation);
 		static m4x4  make(float const* mat);
 		m4x4&        set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		m4x4&        set(m3x3 const& ori, v4 const& translation);
+		m4x4&        set(m3x4 const& ori, v4 const& translation);
 		m4x4&        set(Quat const& quat, v4 const& translation);
 		m4x4&        set(v4 const& axis, float angle, v4 const& translation);
 		m4x4&        set(v4 const& angular_displacement, v4 const& translation);
@@ -67,8 +67,8 @@ namespace pr
 	m4x4& operator -= (m4x4& lhs, m4x4 const& rhs);
 	m4x4& operator *= (m4x4& lhs, float s);
 	m4x4& operator /= (m4x4& lhs, float s);
-	m4x4& operator += (m4x4& lhs, m3x3 const& rhs);
-	m4x4& operator -= (m4x4& lhs, m3x3 const& rhs);
+	m4x4& operator += (m4x4& lhs, m3x4 const& rhs);
+	m4x4& operator -= (m4x4& lhs, m3x4 const& rhs);
 
 	// Binary operators
 	m4x4 operator + (m4x4 const& lhs, float rhs);
@@ -104,12 +104,12 @@ namespace pr
 	#endif
 
 	// Conversion functions between vector types
-	m3x3 const& cast_m3x3(m4x4 const& mat);
-	m3x3&       cast_m3x3(m4x4& mat);
+	m3x4 const& cast_m3x4(m4x4 const& mat);
+	m3x4&       cast_m3x4(m4x4& mat);
 
-	// Return a m4x4 from this m3x3
+	// Return a m4x4 from this m3x4
 	m4x4& Zero(m4x4& mat);
-	m4x4  Getm4x4(m3x3 const& mat);
+	m4x4  Getm4x4(m3x4 const& mat);
 	bool  IsFinite(m4x4 const& mat);
 	bool  IsFinite(m4x4 const& mat, float max_value);
 	bool  IsAffine(m4x4 const& mat);

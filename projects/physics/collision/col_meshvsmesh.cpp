@@ -38,8 +38,8 @@ namespace pr
 
 				ShapePolytope const& polyA = shape_cast<ShapePolytope>(shapeA);
 				ShapePolytope const& polyB = shape_cast<ShapePolytope>(shapeB);
-				m3x3 w2a = GetInverseFast(cast_m3x3(a2w));
-				m3x3 w2b = GetInverseFast(cast_m3x3(b2w));
+				m3x4 w2a = GetInverseFast(cast_m3x4(a2w));
+				m3x4 w2b = GetInverseFast(cast_m3x4(b2w));
 
 			//	if( a2w.pos == b2w.pos ) return false;
 
@@ -588,8 +588,8 @@ namespace pr
 					// Construct a rotation matrix that transforms 'new_r' onto the z axis
 					// This means all other 'r' can be projected into the XY place by rotating
 					// them, then dropping their z value
-					m3x3 M; RotationToZAxis(M, new_r);	
-					//m3x3 M;
+					m3x4 M; RotationToZAxis(M, new_r);	
+					//m3x4 M;
 					//{
 					//	float const& x = new_r.x;
 					//	float const& y = new_r.y;
@@ -597,7 +597,7 @@ namespace pr
 					//	float d = Sqrt(x*x + y*y);
 					//	if( FEql(d, 0.0f) )
 					//	{
-					//		M = m3x3Identity;	// Create an identity transform or a 180 degree rotation
+					//		M = m3x4Identity;	// Create an identity transform or a 180 degree rotation
 					//		M.x.x = new_r.z;	// about Y depending on the sign of 'new_r.z'
 					//		M.z.z = new_r.z;
 					//	}

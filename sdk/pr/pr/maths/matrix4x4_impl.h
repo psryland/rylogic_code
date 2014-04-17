@@ -12,7 +12,7 @@
 namespace pr
 {
 	inline m4x4 m4x4::make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)      { m4x4 m; return m.set(x_, y_, z_, w_); }
-	inline m4x4 m4x4::make(m3x3 const& ori, v4 const& translation)                      { m4x4 m; return m.set(ori, translation); }
+	inline m4x4 m4x4::make(m3x4 const& ori, v4 const& translation)                      { m4x4 m; return m.set(ori, translation); }
 	inline m4x4 m4x4::make(Quat const& quat, v4 const& translation)                     { m4x4 m; return m.set(quat, translation); }
 	inline m4x4 m4x4::make(v4 const& axis, float angle, v4 const& translation)          { m4x4 m; return m.set(axis, angle, translation); }
 	inline m4x4 m4x4::make(v4 const& angular_displacement, v4 const& translation)       { m4x4 m; return m.set(angular_displacement, translation); }
@@ -28,9 +28,9 @@ namespace pr
 		w = w_;
 		return *this;
 	}
-	inline m4x4& m4x4::set(m3x3 const& ori, v4 const& translation)
+	inline m4x4& m4x4::set(m3x4 const& ori, v4 const& translation)
 	{
-		cast_m3x3(*this) = ori;
+		cast_m3x4(*this) = ori;
 		pos = translation;
 		return *this;
 	}
@@ -41,7 +41,7 @@ namespace pr
 #if PR_MATHS_USE_DIRECTMATH
 		dxm4(*this) = DirectX::XMMatrixRotationQuaternion(quat.vec);
 #else
-		cast_m3x3(*this).set(quat);
+		cast_m3x4(*this).set(quat);
 #endif
 		pos = translation;
 		return *this;
@@ -52,14 +52,14 @@ namespace pr
 #if PR_MATHS_USE_DIRECTMATH
 		dxm4(*this) = DirectX::XMMatrixRotationNormal(axis.vec, angle);
 #else
-		cast_m3x3(*this).set(axis, angle);
+		cast_m3x4(*this).set(axis, angle);
 #endif
 		pos = translation;
 		return *this;
 	}
 	inline m4x4& m4x4::set(v4 const& angular_displacement, v4 const& translation)
 	{
-		cast_m3x3(*this).set(angular_displacement);
+		cast_m3x4(*this).set(angular_displacement);
 		pos = translation;
 		return *this;
 	}
@@ -84,14 +84,14 @@ namespace pr
 		{
 			v4 axis_sine_angle  = Cross3(from, to); // Axis multiplied by sine of the angle
 			v4 axis_norm        = Normalise3(axis_sine_angle);
-			cast_m3x3(*this).set(axis_norm, axis_sine_angle, cos_angle);
+			cast_m3x4(*this).set(axis_norm, axis_sine_angle, cos_angle);
 		}
 		pos = translation;
 		return *this;
 	}
 	inline m4x4& m4x4::set(float pitch,  float yaw, float roll, v4 const& translation)
 	{
-		cast_m3x3(*this).set(pitch, yaw, roll);
+		cast_m3x4(*this).set(pitch, yaw, roll);
 		pos = translation;
 		return *this;
 	}
@@ -114,8 +114,8 @@ namespace pr
 	inline m4x4& operator -= (m4x4& lhs, m4x4 const& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; lhs.w -= rhs.w; return lhs; }
 	inline m4x4& operator *= (m4x4& lhs, float s)              { lhs.x *= s; lhs.y *= s; lhs.z *= s; lhs.w *= s; return lhs; }
 	inline m4x4& operator /= (m4x4& lhs, float s)              { lhs.x /= s; lhs.y /= s; lhs.z /= s; lhs.w /= s; return lhs; }
-	inline m4x4& operator += (m4x4& lhs, m3x3 const& rhs)      { lhs.x += rhs.x; lhs.y += rhs.y; lhs.z += rhs.z; return lhs; }
-	inline m4x4& operator -= (m4x4& lhs, m3x3 const& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; return lhs; }
+	inline m4x4& operator += (m4x4& lhs, m3x4 const& rhs)      { lhs.x += rhs.x; lhs.y += rhs.y; lhs.z += rhs.z; return lhs; }
+	inline m4x4& operator -= (m4x4& lhs, m3x4 const& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; return lhs; }
 
 	// Binary operators
 	inline m4x4 operator + (m4x4 const& lhs, float rhs)        { m4x4 m = lhs; return m += rhs; }
@@ -182,8 +182,8 @@ namespace pr
 #endif
 
 	// Conversion functions between vector types
-	inline m3x3 const& cast_m3x3(m4x4 const& mat) { return reinterpret_cast<m3x3 const&>(mat); }
-	inline m3x3&       cast_m3x3(m4x4& mat)       { return reinterpret_cast<m3x3&>(mat); }
+	inline m3x4 const& cast_m3x4(m4x4 const& mat) { return reinterpret_cast<m3x4 const&>(mat); }
+	inline m3x4&       cast_m3x4(m4x4& mat)       { return reinterpret_cast<m3x4&>(mat); }
 
 	// Zero the matrix
 	inline m4x4& Zero(m4x4& mat)
@@ -191,8 +191,8 @@ namespace pr
 		return mat.zero();
 	}
 
-	// Return a m4x4 from this m3x3
-	inline m4x4 Getm4x4(m3x3 const& mat)
+	// Return a m4x4 from this m3x4
+	inline m4x4 Getm4x4(m3x4 const& mat)
 	{
 		return m4x4::make(mat.x, mat.y, mat.z, v4Origin);
 	}
@@ -557,7 +557,7 @@ namespace pr
 
 	inline m4x4& Shear4x4(m4x4& mat, float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& translation)
 	{
-		Shear3x3(cast_m3x3(mat), sxy, sxz, syx, syz, szx, szy);
+		Shear3x3(cast_m3x4(mat), sxy, sxz, syx, syz, szx, szy);
 		mat.pos = translation;
 		return mat;
 	}
@@ -676,7 +676,7 @@ namespace pr
 	// then a vector perpendicular to 'dir' will be choosen.
 	inline m4x4& OriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position)
 	{
-		OriFromDir(cast_m3x3(ori), dir, axis, up);
+		OriFromDir(cast_m3x4(ori), dir, axis, up);
 		ori.pos = position;
 		return ori;
 	}
@@ -690,7 +690,7 @@ namespace pr
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
 	inline m4x4& ScaledOriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position)
 	{
-		ScaledOriFromDir(cast_m3x3(ori), dir, axis, up);
+		ScaledOriFromDir(cast_m3x4(ori), dir, axis, up);
 		ori.pos = position;
 		return ori;
 	}

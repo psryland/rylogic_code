@@ -28,7 +28,7 @@ namespace pr
 		// Shape functions
 		BoundingBox&	CalcBBox			(ShapeTriangle const& shape, BoundingBox& bbox);
 		MassProperties& CalcMassProperties	(ShapeTriangle const& shape, float density, MassProperties& mp);
-		m3x3			CalcInertiaTensor	(ShapeTriangle const& shape);
+		m3x4			CalcInertiaTensor	(ShapeTriangle const& shape);
 		void			ShiftCentre			(ShapeTriangle& shape, v4& shift);
 		v4				SupportVertex		(ShapeTriangle const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);
 		void			ClosestPoint		(ShapeTriangle const& shape, v4 const& point, float& distance, v4& closest);

@@ -29,7 +29,7 @@ namespace pr
 		struct Constraint
 		{
 			// Collision matrix - Relates a change in velocity to an impulse
-			m3x3 m_mass;
+			m3x4 m_mass;
 
 			// The object relative world space contact points on objectA and objectB
 			// Add to the object positions to get world relative positions.

@@ -114,16 +114,16 @@ void ShapeBuilder::CalculateBoundingBox()
 // Calculates the inertia tensor for 'm_model'
 void ShapeBuilder::CalculateInertiaTensor()
 {
-	m_model.m_mp.m_os_inertia_tensor = m3x3Zero;
+	m_model.m_mp.m_os_inertia_tensor = m3x4Zero;
 	for( TPrimList::const_iterator p = m_model.m_prim_list.begin(), p_end = m_model.m_prim_list.end(); p != p_end; ++p )
 	{
 		Prim const& prim = *(*p).m_ptr;
 		PR_ASSERT(PR_DBG_PHYSICS, FEqlZero3(prim.m_mp.m_centre_of_mass), ""); // All primitives should be in their inertial frame
 
-		m3x3 primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
+		m3x4 primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
 
 		// Rotate the inertia tensor into object space
-		m3x3 prim_to_model		= cast_m3x3(prim.GetShape().m_shape_to_model);
+		m3x4 prim_to_model		= cast_m3x4(prim.GetShape().m_shape_to_model);
 		primitive_inertia		= prim_to_model * primitive_inertia * GetTranspose(prim_to_model);
 
 		// Translate the inertia tensor using the parallel axis theorem

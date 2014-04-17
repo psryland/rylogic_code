@@ -46,7 +46,7 @@ namespace pr
 	}
 
 	// Create a quaternion from a rotation matrix
-	inline Quat& Quat::set(m3x3 const& m)
+	inline Quat& Quat::set(m3x4 const& m)
 	{
 		float trace = m.x.x + m.y.y + m.z.z;
 		if (trace >= 0.0f)
@@ -78,7 +78,7 @@ namespace pr
 		dxv4(*this) = DirectX::XMQuaternionRotationMatrix(dxm4(m));
 		return *this;
 		#else
-		return set(cast_m3x3(m));
+		return set(cast_m3x4(m));
 		#endif
 	}
 

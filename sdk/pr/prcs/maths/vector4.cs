@@ -167,7 +167,7 @@ namespace pr.maths
 		public static v4 Rotate(v4 vec, v4 axis_norm, float angle)
 		{
 			// Rotate 'vec' about 'axis_norm' by 'angle'
-			return m3x3.Rotation(axis_norm, angle) * vec;
+			return m3x4.Rotation(axis_norm, angle) * vec;
 		}
 		public static float CosAngle3(v4 lhs, v4 rhs)
 		{

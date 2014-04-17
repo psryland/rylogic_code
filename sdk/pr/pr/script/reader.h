@@ -436,11 +436,11 @@ namespace pr
 			}
 
 			// Extract a 3x3 matrix from the source
-			bool ExtractMatrix3x3(pr::m3x3& transform)
+			bool ExtractMatrix3x3(pr::m3x4& transform)
 			{
 				return ExtractVector3(transform.x,0.0f) && ExtractVector3(transform.y,0.0f) && ExtractVector3(transform.z,0.0f);
 			}
-			bool ExtractMatrix3x3S(pr::m3x3& transform)
+			bool ExtractMatrix3x3S(pr::m3x4& transform)
 			{
 				return SectionStart() && ExtractMatrix3x3(transform) && SectionEnd();
 			}
@@ -558,7 +558,7 @@ namespace pr
 			float fval = 0.0f, farray[4];
 			pr::v4 vec = pr::v4Zero;
 			pr::Quat quat = pr::QuatIdentity;
-			pr::m3x3 mat3;
+			pr::m3x4 mat3;
 			pr::m4x4 mat4;
 
 			{// basic extract methods
@@ -608,7 +608,7 @@ namespace pr
 				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Quaternion");
 				PR_CHECK(reader.ExtractQuaternion(quat)   , true); PR_CHECK(pr::FEql4(quat, pr::Quat::make(0.0f, -1.0f, -2.0f, -3.0f)), true);
 				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M3x3");
-				PR_CHECK(reader.ExtractMatrix3x3(mat3)    , true); PR_CHECK(pr::FEql(mat3, pr::m3x3Identity), true);
+				PR_CHECK(reader.ExtractMatrix3x3(mat3)    , true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
 				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M4x4");
 				PR_CHECK(reader.ExtractMatrix4x4(mat4)    , true); PR_CHECK(pr::FEql(mat4, pr::m4x4Identity), true);
 				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Data");

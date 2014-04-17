@@ -92,7 +92,7 @@ namespace pr
 			ERigidbody      Type() const                            { return m_type; }
 			m4x4 const&     ObjectToWorld() const                   { return m_object_to_world; }
 			v4 const&       Position() const                        { return m_object_to_world.pos; }
-			m3x3 const&     Orientation() const                     { return cast_m3x3(m_object_to_world); }
+			m3x4 const&     Orientation() const                     { return cast_m3x4(m_object_to_world); }
 			Shape const*    GetShape() const                        { return m_shape; }
 			float           Mass() const                            { return m_mass; }
 			EMotion         MotionType() const                      { return m_motion_type; }
@@ -103,7 +103,7 @@ namespace pr
 			v4              VelocityAt(const v4& ws_offset) const   { return Velocity() + Cross3(AngVelocity(), ws_offset); }
 			BoundingBox     BBoxWS() const                          { return m_ws_bbox; }
 			BoundingBox     BBoxOS() const                          { return GetShape()->m_bbox; }
-			m3x3            InertiaOS() const                       { return m_os_inertia_tensor; }
+			m3x4            InertiaOS() const                       { return m_os_inertia_tensor; }
 			void*           UserData() const                        { return m_user_data; }
 			MassProperties  GetMassProperties() const               { MassProperties mp = {m_os_inertia_tensor, v4Zero, Mass()}; return mp; }
 			v4              Gravity() const                         { return GetGravitationalAcceleration(m_object_to_world.pos); }
@@ -119,7 +119,7 @@ namespace pr
 			// Write Access Functions ******************************
 			void            SetObjectToWorld(m4x4 const& o2w);
 			void            SetPosition(v4 const& position);
-			void            SetOrientation(m3x3 const& ori);
+			void            SetOrientation(m3x4 const& ori);
 			void            SetMass(float mass);
 			void            SetMassProperties(MassProperties const& mp);
 			void            SetMotionType(EMotion motion_type);
@@ -166,9 +166,9 @@ namespace pr
 			BoundingBox     m_ws_bbox;                  // World space bounding box. This is continuously updated for dynamic objects
 			
 			// Mass properties
-			m3x3            m_os_inertia_tensor;        // The object space inertia tensor
-			m3x3            m_os_inv_inertia_tensor;    // The object space inverse inertia tensor
-			m3x3            m_ws_inv_inertia_tensor;    // The world space inverse inertia tensor. Calculated per step
+			m3x4            m_os_inertia_tensor;        // The object space inertia tensor
+			m3x4            m_os_inv_inertia_tensor;    // The object space inverse inertia tensor
+			m3x4            m_ws_inv_inertia_tensor;    // The world space inverse inertia tensor. Calculated per step
 			float           m_mass;                     // The mass of the object
 			float           m_inv_mass;                 // The inverse mass
 			

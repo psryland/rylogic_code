@@ -65,7 +65,7 @@ namespace pr
 	struct v3;
 	struct v4;
 	struct m2x2;
-	struct m3x3;
+	struct m3x4;
 	struct m4x4;
 	struct Quat;
 	struct BoundingBox;

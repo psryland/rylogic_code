@@ -365,7 +365,7 @@ namespace pr
 			str += "}\n";
 			return str;
 		}
-		template <typename TStr> inline TStr& Axis(char const* name, uint colour, m3x3 const& basis, TStr& str)
+		template <typename TStr> inline TStr& Axis(char const* name, uint colour, m3x4 const& basis, TStr& str)
 		{
 			return Axis(name, colour, pr::m4x4::make(basis, pr::v4Origin), str);
 		}

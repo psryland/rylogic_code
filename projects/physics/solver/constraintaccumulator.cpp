@@ -152,16 +152,16 @@ void ConstraintAccumulator::SetCollisionMatrix(Constraint& cons, Rigidbody const
 	// Say "inv_mass" = "inv_mass1" + "inv_mass2" then
 	// "inv_mass1" = [(1/MassA)*Identity - (pointA.CrossProductMatrix()*InvMassTensorWS()A*pointA.CrossProductMatrix())] and
 	// "inv_mass2" = [(1/MassB)*Identity - (pointB.CrossProductMatrix()*InvMassTensorWS()B*pointB.CrossProductMatrix())]
-	m3x3 inv_mass = m3x3Zero;
+	m3x4 inv_mass = m3x4Zero;
 	if( mass_mask & 1 )
 	{
-		m3x3 cpmA = CrossProductMatrix3x3(pointA);	// pointA is object relative
-		inv_mass += rbA.m_inv_mass * (m3x3Identity - (cpmA * rbA.m_ws_inv_inertia_tensor * cpmA));
+		m3x4 cpmA = CrossProductMatrix3x3(pointA);	// pointA is object relative
+		inv_mass += rbA.m_inv_mass * (m3x4Identity - (cpmA * rbA.m_ws_inv_inertia_tensor * cpmA));
 	}
 	if( mass_mask & 2 )
 	{
-		m3x3 cpmB = CrossProductMatrix3x3(pointB);	// pointB is object relative
-		inv_mass += rbB.m_inv_mass * (m3x3Identity - (cpmB * rbB.m_ws_inv_inertia_tensor * cpmB));
+		m3x4 cpmB = CrossProductMatrix3x3(pointB);	// pointB is object relative
+		inv_mass += rbB.m_inv_mass * (m3x4Identity - (cpmB * rbB.m_ws_inv_inertia_tensor * cpmB));
 	}
 	cons.m_mass = GetInverse(inv_mass);
 }
