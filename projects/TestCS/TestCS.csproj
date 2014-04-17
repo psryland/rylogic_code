@@ -51,6 +51,9 @@
     <Compile Include="src\colour_wheel_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\diagram_control_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\graph_control_ui.cs">
       <SubType>Form</SubType>
     </Compile>
