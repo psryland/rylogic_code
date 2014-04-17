@@ -5,30 +5,30 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\script")
 import Rylogic as Tools
 import UserVars
 
-print(
-	"*************************************************************************\n"
-	"  Csex Deploy\n"
-	"    Copyright (C) Rylogic Limited 2013\n"
-	"*************************************************************************")
-
-Tools.CheckVersion(1)
-
-dstdir = UserVars.root + "\\bin"
-srcdir = UserVars.root + "\\projects\\Csex"
-symdir = UserVars.root + "\\local\\symbols"
-proj   = srcdir + "\\Csex_vs2012.csproj"
-config = "release"
-dst    = dstdir + "\\csex"
-sym    = symdir + "\\csex"
-bindir = srcdir + "\\bin\\" + config
-
-input(
-	"Deploy Settings:\n"
-	"    Destination: " + dst + "\n"
-	"  Configuration: " + config + "\n"
-	"Press enter to continue")
-
 try:
+	print(
+		"*************************************************************************\n"
+		"  Csex Deploy\n"
+		"    Copyright (C) Rylogic Limited 2013\n"
+		"*************************************************************************")
+
+	Tools.CheckVersion(1)
+
+	dstdir = UserVars.root + "\\bin"
+	srcdir = UserVars.root + "\\projects\\Csex"
+	symdir = UserVars.root + "\\local\\symbols"
+	proj   = srcdir + "\\Csex_vs2012.csproj"
+	config = "release"
+	dst    = dstdir + "\\csex"
+	sym    = symdir + "\\csex"
+	bindir = srcdir + "\\bin\\" + config
+
+	input(
+		"Deploy Settings:\n"
+		"    Destination: " + dst + "\n"
+		"  Configuration: " + config + "\n"
+		"Press enter to continue")
+
 	#Invoke MSBuild
 	print("Building the exe...")
 	Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration="+config+";Platform=AnyCPU"])

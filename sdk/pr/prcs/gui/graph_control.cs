@@ -2159,9 +2159,10 @@ namespace pr.gui
 			this.Name = "GraphControl";
 			this.ResumeLayout(false);
 		}
-		#endregion
 
 		public void BeginInit(){}
 		public void EndInit(){}
+
+		#endregion
 	}
 }
