@@ -17,23 +17,9 @@ namespace pr.container
 		ItemAdded   = 1 << 2,
 		ItemRemoved = 1 << 3,
 		ItemChanged = 1 << 4,
-		
+
 		ItemAddedOrRemoved = ItemAdded|ItemRemoved,
 		OrderChanged = ItemAdded|ItemRemoved|Reordered|Reset,
-	}
-	public class ListChgEvtArgs
-	{
-		/// <summary>The type of change made to the list</summary>
-		public ListChg ChgType {get;private set;}
-
-		/// <summary>The index of the item that was changed, or first index of a range of changed items</summary>
-		public int Index0 {get;private set;}
-
-		/// <summary>The index of a related changed item, or one passed the last index of a range of changed items</summary>
-		public int Index1 {get;private set;}
-
-		/// <summary>Constructor</summary>
-		public ListChgEvtArgs(ListChg chg_type, int index0, int index1) { ChgType = chg_type; Index0 = index0; Index1 = index1; }
 	}
 
 	// List wrapper with events
@@ -45,10 +31,36 @@ namespace pr.container
 		public ListEvt(IEnumerable<T> copy) :base(copy) {}
 
 		/// <summary>Occurs whenever an element is changed in the list</summary>
-		public event Action<ListEvt<T>, ListChgEvtArgs> ListChanged;//(list, chg_type)
+		public event EventHandler<ListChgEventArgs> ListChanged;//(list, chg_type)
+		public class ListChgEventArgs :EventArgs
+		{
+			/// <summary>The type of change made to the list</summary>
+			public ListChg ChgType { get; private set; }
+
+			/// <summary>The index of the item that was changed, or first index of a range of changed items</summary>
+			public int Index0 { get; private set; }
+
+			/// <summary>The index of a related changed item, or one passed the last index of a range of changed items</summary>
+			public int Index1 { get; private set; }
+
+			public ListChgEventArgs(ListChg chg_type, int index0, int index1)
+			{
+				ChgType = chg_type;
+				Index0 = index0;
+				Index1 = index1;
+			}
+		}
 
 		/// <summary>Occurs whenever an element in the list is changed</summary>
-		public event Action<ListEvt<T>, int> ItemChanged;//(list, index)
+		public event EventHandler<ItemChgEventArgs> ItemChanged;//(list, index)
+		public class ItemChgEventArgs :EventArgs
+		{
+			public int Index { get; private set; }
+			public ItemChgEventArgs(int index)
+			{
+				Index = index;
+			}
+		}
 
 		/// <summary>Allow the ListChanged event to be suspended</summary>
 		public bool RaiseListChangedEvents
@@ -62,7 +74,7 @@ namespace pr.container
 		{
 			bool notify = Count != 0;
 			base.Clear();
-			if (notify) RaiseListChanged(new ListChgEvtArgs(ListChg.Reset, 0, 0));
+			if (notify) ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reset, 0, 0));
 		}
 
 		/// <summary>Add an item to the list</summary>
@@ -70,7 +82,7 @@ namespace pr.container
 		{
 			int index = Count;
 			base.Add(item);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemAdded, index, index + 1));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, index + 1));
 		}
 		int IList.Add(object value)
 		{
@@ -83,14 +95,14 @@ namespace pr.container
 		{
 			int index = Count;
 			base.AddRange(collection);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemAdded, index, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, Count));
 		}
 
 		/// <summary>Insert an item into the list at position 'index'</summary>
 		public new void Insert(int index, T item)
 		{
 			base.Insert(index, item);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemAdded, index, index + 1));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, index + 1));
 		}
 		void IList.Insert(int index, object value)
 		{
@@ -102,7 +114,7 @@ namespace pr.container
 		{
 			int remaining = Count - index;
 			base.InsertRange(index, collection);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemAdded, index, Count - remaining));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, Count - remaining));
 		}
 
 		/// <summary>Remove an item from the list</summary>
@@ -120,21 +132,23 @@ namespace pr.container
 		public new void RemoveAll(Predicate<T> match)
 		{
 			int count = base.RemoveAll(match);
-			if (count != 0) RaiseListChanged(new ListChgEvtArgs(ListChg.ItemRemoved, 0, count));
+			if (count != 0)
+				ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, 0, count));
 		}
 
 		/// <summary>Remove an item by index</summary>
 		public new void RemoveAt(int index)
 		{
 			base.RemoveAt(index);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemRemoved, index, index + 1));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, index, index + 1));
 		}
 
 		/// <summary>Remove a range of items from the list</summary>
 		public new void RemoveRange(int index, int count)
 		{
 			base.RemoveRange(index, count);
-			if (count != 0) RaiseListChanged(new ListChgEvtArgs(ListChg.ItemRemoved, index, index + count));
+			if (count != 0)
+				ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, index, index + count));
 		}
 
 		/// <summary>Random access to elements in the list. ItemChanged signalled on assignment</summary>
@@ -153,38 +167,38 @@ namespace pr.container
 		public new void Reverse()
 		{
 			base.Reverse();
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 		public new void Reverse(int index, int count)
 		{
 			base.Reverse(index, count);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 
 		/// <summary>Sort the contents of the container</summary>
 		public new void Sort()
 		{
 			base.Sort();
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 		public new void Sort(Comparison<T> comparison)
 		{
 			base.Sort(comparison);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 		public new void Sort(IComparer<T> comparer)
 		{
 			base.Sort(comparer);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 		public new void Sort(int index, int count, IComparer<T> comparer)
 		{
 			base.Sort(index, count, comparer);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, 0, Count));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, 0, Count));
 		}
 
 		/// <summary>Force the ListChanged event to be fired</summary>
-		public void RaiseListChanged(ListChgEvtArgs chg)
+		public void RaiseListChanged(ListChgEventArgs chg)
 		{
 			ListChanged.Raise(this, chg);
 		}
@@ -192,8 +206,8 @@ namespace pr.container
 		/// <summary>Force the ItemChanged event to be fired</summary>
 		public void RaiseItemChanged(int index)
 		{
-			ItemChanged.Raise(this, index);
-			RaiseListChanged(new ListChgEvtArgs(ListChg.ItemChanged, index, index + 1));
+			ItemChanged.Raise(this, new ItemChgEventArgs(index));
+			ListChanged.Raise(this, new ListChgEventArgs(ListChg.ItemChanged, index, index + 1));
 		}
 
 		/// <summary>Swap elements in the list</summary>
@@ -208,7 +222,7 @@ namespace pr.container
 				base[index0] = base[index1];
 				base[index1] = tmp;
 				RaiseListChangedEvents = raise_events;
-				RaiseListChanged(new ListChgEvtArgs(ListChg.Reordered, index0, index1));
+				ListChanged.Raise(this, new ListChgEventArgs(ListChg.Reordered, index0, index1));
 			}
 			finally { RaiseListChangedEvents = raise_events; }
 		}
