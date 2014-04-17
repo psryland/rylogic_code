@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using pr.common;
 using pr.extn;
@@ -12,6 +13,10 @@ namespace RyLogViewer
 	{
 		private readonly List<Line> m_line_cache = new List<Line>();
 		private byte[]              m_line_buf   = new byte[512];
+
+		/// <summary>Cached graphics object for measuring text sizes</summary>
+		private Graphics m_gfx { get { return m_impl_gfx ?? (m_impl_gfx = CreateGraphics()); } }
+		private Graphics m_impl_gfx;
 
 		/// <summary>Initialise the line cache</summary>
 		private void InitCache()
@@ -47,7 +52,12 @@ namespace RyLogViewer
 				int read = m_file.Stream.Read(m_line_buf, 0, (int)rng.Size);
 				if (read != rng.Size) throw new IOException("failed to read file over range [{0},{1}) ({2} bytes). Read {3}/{2} bytes.".Fmt(rng.Begin, rng.End, rng.Size, read));
 
+				// Cache data for the line
 				line.Read(rng.Begin, m_line_buf, 0, read, m_encoding, m_col_delim, m_highlights, m_transforms);
+
+				// Save the text size
+				line.TextSize = m_gfx.MeasureString(line.RowText, m_grid.RowsDefaultCellStyle.Font);
+
 				return line;
 			}
 			catch (Exception ex)

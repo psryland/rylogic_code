@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Drawing;
 
 namespace RyLogViewer
 {
@@ -30,11 +31,14 @@ namespace RyLogViewer
 			}
 		}
 
+		/// <summary>The file offset for the start of this cached line</summary>
+		public long LineStartAddr { get; set; }
+
 		/// <summary>The string for the whole row</summary>
 		public string RowText { get; set; }
 
-		/// <summary>The file offset for the start of this cached line</summary>
-		public long LineStartAddr { get; set; }
+		/// <summary>The dimensions of the RowText</summary>
+		public SizeF TextSize { get; set; }
 
 		/// <summary>The columns for this row of log data</summary>
 		IEnumerable<ILogDataElement> ILogDataRow.Columns { get { return Column; } }

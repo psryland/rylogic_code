@@ -567,19 +567,14 @@ namespace RyLogViewer
 		/// <summary>Supply the height needed for the given row</summary>
 		private void RowHeightNeeded(object s, DataGridViewRowHeightInfoNeededEventArgs a)
 		{
-			var cs = RowCellStyle(a.RowIndex);
-			using (var gfx = CreateGraphics())
+			if (a.RowIndex >= 0 && a.RowIndex < m_line_index.Count)
 			{
-				if (a.RowIndex >= 0 && a.RowIndex < m_line_index.Count)
-				{
-					var line = ReadLine(a.RowIndex);
-					var sz = gfx.MeasureString(line.RowText, cs.Font);
-					a.Height = Math.Max(m_row_height, (int)(sz.Height + 0.5f));
-				}
-				else
-				{
-					a.Height = m_row_height;
-				}
+				var line = ReadLine(a.RowIndex);
+				a.Height = Math.Max(m_row_height, (int)(line.TextSize.Height + 0.5f));
+			}
+			else
+			{
+				a.Height = m_row_height;
 			}
 		}
 
@@ -1582,18 +1577,13 @@ namespace RyLogViewer
 				SelectedRowIndex = -1;
 				m_grid.ClearSelection();
 
+				// We need to set the row count even if it hasn't changed, because doing so
+				// has the side effect of the grid recalculating it's scroll bar sizes from
+				// the (now possibly different) row heights.
 				var row_diff = count - m_grid.RowCount;
-				if (row_diff < 0)
-				{
-					Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
-					m_grid.RowCount = 0;
-					m_grid.RowCount = count;
-				}
-				else if (row_diff > 0)
-				{
-					Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
-					m_grid.RowCount = count;
-				}
+				Log.Info(this, "RowCount changed {0} -> {1}.".Fmt(m_grid.RowCount, count));
+				m_grid.RowCount = 0;
+				m_grid.RowCount = count;
 
 				// If the number of rows added to the grid is not equal to the row delta
 				// then the oddness of grid row zero depends on the difference
@@ -1777,7 +1767,7 @@ namespace RyLogViewer
 
 		/// <summary>
 		/// Update the UI with the current line index.
-		/// This method should be called whenever a changes occurs that requires
+		/// This method should be called whenever a change occurs that requires
 		/// UI elements to be updated/redrawn. Note: it doesn't trigger a file reload.</summary>
 		private void UpdateUI(int row_delta = 0)
 		{
@@ -1785,8 +1775,7 @@ namespace RyLogViewer
 			using (Scope.Create(() => m_in_update_ui = true, () => m_in_update_ui = false))
 			{
 				Log.Info(this, "UpdateUI. Row delta {0}".Fmt(row_delta));
-
-				using (m_grid.SuspendRedraw(true))
+				using (m_grid.SuspendRedraw(true))//using (m_grid.SuspendLayout(true))
 				{
 					// Configure the grid
 					if (m_line_index.Count != 0)
@@ -1803,9 +1792,6 @@ namespace RyLogViewer
 					}
 					SetGridColumnSizes(false);
 				}
-				// Hack to fix ArgumentOutOfRangeException in DGV
-				m_grid.Invalidate();
-				m_grid.Refresh();
 
 				// Configure menus
 				bool file_open                            = FileOpen;

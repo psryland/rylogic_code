@@ -804,7 +804,7 @@ namespace RyLogViewer
 						break;
 					}
 				}
-				// Or append to the back and trim the start
+				// Or append to the end and trim the front
 				else if (scan_range.Begin > old_rng.Begin)
 				{
 					Log.Info(this, "Merging results tail. Results contain {0} lines. filepos {1}/{2}".Fmt(line_index.Count, filepos, fileend));
@@ -828,8 +828,9 @@ namespace RyLogViewer
 					}
 				}
 
-				// Invalidate the cache since the cached data may now be different
-				InvalidateCache(scan_range);
+				// Invalidate the cache over the memory range of the lines we've just added.
+				// This causes the log file data to be re-read for those lines.
+				InvalidateCache(new_rng);
 			}
 
 			// Save the new file position and length

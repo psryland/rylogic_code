@@ -190,8 +190,8 @@ namespace RyLogViewer
 			// m_tabctrl
 			// 
 			this.m_tabctrl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-			| System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_tabctrl.Controls.Add(this.m_tab_general);
 			this.m_tabctrl.Controls.Add(this.m_tab_logview);
 			this.m_tabctrl.Controls.Add(this.m_tab_highlight);
@@ -266,7 +266,7 @@ namespace RyLogViewer
 			// m_text_settings
 			// 
 			this.m_text_settings.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_text_settings.Location = new System.Drawing.Point(8, 16);
 			this.m_text_settings.Name = "m_text_settings";
 			this.m_text_settings.ReadOnly = true;
@@ -458,23 +458,23 @@ namespace RyLogViewer
 			// 
 			this.m_spinner_max_line_length.Location = new System.Drawing.Point(111, 79);
 			this.m_spinner_max_line_length.Maximum = new decimal(new int[] {
-			128,
-			0,
-			0,
-			0});
+            128,
+            0,
+            0,
+            0});
 			this.m_spinner_max_line_length.Minimum = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+            1,
+            0,
+            0,
+            0});
 			this.m_spinner_max_line_length.Name = "m_spinner_max_line_length";
 			this.m_spinner_max_line_length.Size = new System.Drawing.Size(44, 20);
 			this.m_spinner_max_line_length.TabIndex = 8;
 			this.m_spinner_max_line_length.Value = new decimal(new int[] {
-			100,
-			0,
-			0,
-			0});
+            100,
+            0,
+            0,
+            0});
 			// 
 			// m_lbl_max_line_length
 			// 
@@ -513,40 +513,40 @@ namespace RyLogViewer
 			// 
 			this.m_spinner_line_cache_count.Location = new System.Drawing.Point(45, 21);
 			this.m_spinner_line_cache_count.Maximum = new decimal(new int[] {
-			99999999,
-			0,
-			0,
-			0});
+            99999999,
+            0,
+            0,
+            0});
 			this.m_spinner_line_cache_count.Minimum = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+            1,
+            0,
+            0,
+            0});
 			this.m_spinner_line_cache_count.Name = "m_spinner_line_cache_count";
 			this.m_spinner_line_cache_count.Size = new System.Drawing.Size(68, 20);
 			this.m_spinner_line_cache_count.TabIndex = 0;
 			this.m_spinner_line_cache_count.Value = new decimal(new int[] {
-			99999999,
-			0,
-			0,
-			0});
+            99999999,
+            0,
+            0,
+            0});
 			// 
 			// m_spinner_max_mem_range
 			// 
 			this.m_spinner_max_mem_range.Location = new System.Drawing.Point(76, 50);
 			this.m_spinner_max_mem_range.Minimum = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+            1,
+            0,
+            0,
+            0});
 			this.m_spinner_max_mem_range.Name = "m_spinner_max_mem_range";
 			this.m_spinner_max_mem_range.Size = new System.Drawing.Size(44, 20);
 			this.m_spinner_max_mem_range.TabIndex = 1;
 			this.m_spinner_max_mem_range.Value = new decimal(new int[] {
-			100,
-			0,
-			0,
-			0});
+            100,
+            0,
+            0,
+            0});
 			// 
 			// m_lbl_max_scan_size0
 			// 
@@ -636,23 +636,23 @@ namespace RyLogViewer
 			// 
 			this.m_spinner_column_count.Location = new System.Drawing.Point(108, 99);
 			this.m_spinner_column_count.Maximum = new decimal(new int[] {
-			255,
-			0,
-			0,
-			0});
+            255,
+            0,
+            0,
+            0});
 			this.m_spinner_column_count.Minimum = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+            1,
+            0,
+            0,
+            0});
 			this.m_spinner_column_count.Name = "m_spinner_column_count";
 			this.m_spinner_column_count.Size = new System.Drawing.Size(65, 20);
 			this.m_spinner_column_count.TabIndex = 3;
 			this.m_spinner_column_count.Value = new decimal(new int[] {
-			1,
-			0,
-			0,
-			0});
+            1,
+            0,
+            0,
+            0});
 			// 
 			// m_check_ignore_blank_lines
 			// 
@@ -667,7 +667,7 @@ namespace RyLogViewer
 			// m_edit_col_delims
 			// 
 			this.m_edit_col_delims.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_col_delims.Location = new System.Drawing.Point(108, 73);
 			this.m_edit_col_delims.Name = "m_edit_col_delims";
 			this.m_edit_col_delims.Size = new System.Drawing.Size(131, 20);
@@ -685,7 +685,7 @@ namespace RyLogViewer
 			// m_edit_line_ends
 			// 
 			this.m_edit_line_ends.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_line_ends.Location = new System.Drawing.Point(108, 45);
 			this.m_edit_line_ends.Name = "m_edit_line_ends";
 			this.m_edit_line_ends.Size = new System.Drawing.Size(131, 20);
@@ -768,11 +768,11 @@ namespace RyLogViewer
 			// m_lbl_line2_example
 			// 
 			this.m_lbl_line2_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_line2_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line2_example.Location = new System.Drawing.Point(148, 75);
 			this.m_lbl_line2_example.Name = "m_lbl_line2_example";
-			this.m_lbl_line2_example.Size = new System.Drawing.Size(308, 21);
+			this.m_lbl_line2_example.Size = new System.Drawing.Size(165, 21);
 			this.m_lbl_line2_example.TabIndex = 3;
 			this.m_lbl_line2_example.Text = "Click here to modify colours";
 			this.m_lbl_line2_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -780,11 +780,11 @@ namespace RyLogViewer
 			// m_lbl_line1_example
 			// 
 			this.m_lbl_line1_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_line1_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_line1_example.Location = new System.Drawing.Point(98, 45);
 			this.m_lbl_line1_example.Name = "m_lbl_line1_example";
-			this.m_lbl_line1_example.Size = new System.Drawing.Size(308, 21);
+			this.m_lbl_line1_example.Size = new System.Drawing.Size(215, 21);
 			this.m_lbl_line1_example.TabIndex = 1;
 			this.m_lbl_line1_example.Text = "Click here to modify colours";
 			this.m_lbl_line1_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -808,11 +808,11 @@ namespace RyLogViewer
 			// m_lbl_selection_example
 			// 
 			this.m_lbl_selection_example.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_selection_example.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_selection_example.Location = new System.Drawing.Point(98, 16);
 			this.m_lbl_selection_example.Name = "m_lbl_selection_example";
-			this.m_lbl_selection_example.Size = new System.Drawing.Size(308, 21);
+			this.m_lbl_selection_example.Size = new System.Drawing.Size(215, 21);
 			this.m_lbl_selection_example.TabIndex = 0;
 			this.m_lbl_selection_example.Text = "Click here to modify colours";
 			this.m_lbl_selection_example.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -956,7 +956,7 @@ namespace RyLogViewer
 			// m_lbl_fs_edit_cached_colour
 			// 
 			this.m_lbl_fs_edit_cached_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_fs_edit_cached_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_fs_edit_cached_colour.Location = new System.Drawing.Point(98, 43);
 			this.m_lbl_fs_edit_cached_colour.Name = "m_lbl_fs_edit_cached_colour";
@@ -976,7 +976,7 @@ namespace RyLogViewer
 			// m_lbl_fs_edit_bookmark_colour
 			// 
 			this.m_lbl_fs_edit_bookmark_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_fs_edit_bookmark_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_fs_edit_bookmark_colour.Location = new System.Drawing.Point(98, 100);
 			this.m_lbl_fs_edit_bookmark_colour.Name = "m_lbl_fs_edit_bookmark_colour";
@@ -996,7 +996,7 @@ namespace RyLogViewer
 			// m_lbl_fs_edit_visible_colour
 			// 
 			this.m_lbl_fs_edit_visible_colour.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_lbl_fs_edit_visible_colour.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_lbl_fs_edit_visible_colour.Location = new System.Drawing.Point(98, 72);
 			this.m_lbl_fs_edit_visible_colour.Name = "m_lbl_fs_edit_visible_colour";
@@ -1007,7 +1007,7 @@ namespace RyLogViewer
 			// m_spinner_file_scroll_width
 			// 
 			this.m_spinner_file_scroll_width.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-			| System.Windows.Forms.AnchorStyles.Right)));
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_spinner_file_scroll_width.Location = new System.Drawing.Point(98, 17);
 			this.m_spinner_file_scroll_width.Name = "m_spinner_file_scroll_width";
 			this.m_spinner_file_scroll_width.Size = new System.Drawing.Size(55, 20);
@@ -1122,7 +1122,7 @@ namespace RyLogViewer
 			this.label2.Size = new System.Drawing.Size(313, 32);
 			this.label2.TabIndex = 2;
 			this.label2.Text = "A line in the log is highlighted based on the first match in this list.\r\nThe list" +
-	" order can be changed by dragging the rows.\r\n";
+    " order can be changed by dragging the rows.\r\n";
 			// 
 			// m_tab_filter
 			// 
@@ -1197,7 +1197,7 @@ namespace RyLogViewer
 			this.m_lbl_ft_grid_desc.Size = new System.Drawing.Size(293, 32);
 			this.m_lbl_ft_grid_desc.TabIndex = 3;
 			this.m_lbl_ft_grid_desc.Text = "A line in the log is filtered based on the first match in this list.\r\nThe list or" +
-	"der can be changed by dragging the rows.\r\n";
+    "der can be changed by dragging the rows.\r\n";
 			// 
 			// m_grid_filter
 			// 
@@ -1312,7 +1312,7 @@ namespace RyLogViewer
 			this.label4.Size = new System.Drawing.Size(259, 32);
 			this.label4.TabIndex = 4;
 			this.label4.Text = "Transforms are applied in the order given in this list.\r\nThe list order can be ch" +
-	"anged by dragging the rows.\r\n";
+    "anged by dragging the rows.\r\n";
 			// 
 			// m_grid_transform
 			// 
@@ -1414,7 +1414,7 @@ namespace RyLogViewer
 			this.label5.Size = new System.Drawing.Size(269, 32);
 			this.label5.TabIndex = 4;
 			this.label5.Text = "An action is applied based on the first match in this list.\r\nThe list order can b" +
-	"e changed by dragging the rows.\r\n";
+    "e changed by dragging the rows.\r\n";
 			// 
 			// m_grid_action
 			// 
