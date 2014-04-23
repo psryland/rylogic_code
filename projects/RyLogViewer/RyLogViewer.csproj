@@ -435,51 +435,51 @@
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\cripple_aggregate_files.html">
+    <None Include="Resources\cripple_aggregate_files.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>cripple_aggregate_files.htm</DependentUpon>
-    </Content>
+    </None>
     <None Include="Resources\cripple_css.include.htm" />
-    <Content Include="Resources\cripple_filtering.html">
+    <None Include="Resources\cripple_filtering.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>cripple_filtering.htm</DependentUpon>
-    </Content>
-    <Content Include="Resources\cripple_highlighting.html">
+    </None>
+    <None Include="Resources\cripple_highlighting.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>cripple_highlighting.htm</DependentUpon>
-    </Content>
-    <Content Include="Resources\firstrun.html">
+    </None>
+    <None Include="Resources\firstrun.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>firstrun.htm</DependentUpon>
-    </Content>
+    </None>
     <None Include="Resources\firstrun.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>firstrun.html</LastGenOutput>
     </None>
-    <Content Include="Resources\free_edition.html">
+    <None Include="Resources\free_edition.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>free_edition.htm</DependentUpon>
-    </Content>
-    <Content Include="Resources\swizzle_quick_ref.html">
+    </None>
+    <None Include="Resources\swizzle_quick_ref.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>swizzle_quick_ref.htm</DependentUpon>
-    </Content>
-    <Content Include="Resources\totd.html">
+    </None>
+    <None Include="Resources\totd.html">
       <DependentUpon>totd.htm</DependentUpon>
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-    </Content>
-    <Content Include="Resources\transform_quick_ref.html">
+    </None>
+    <None Include="Resources\transform_quick_ref.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>transform_quick_ref.htm</DependentUpon>
-    </Content>
+    </None>
     <None Include="docs\welcome.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>welcome.html</LastGenOutput>
@@ -521,11 +521,11 @@
     <Content Include="docs\pattern_wildcard.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\command_line_ref.html">
+    <None Include="Resources\command_line_ref.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>command_line_ref.htm</DependentUpon>
-    </Content>
+    </None>
     <None Include="Resources\quick_ref_css.include.htm" />
     <None Include="Resources\cripple_filtering.htm">
       <Generator>HtmlExpander</Generator>
@@ -563,11 +563,11 @@
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>transform_quick_ref.html</LastGenOutput>
     </None>
-    <Content Include="Resources\version_history.html">
+    <None Include="Resources\version_history.html">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>version_history.htm</DependentUpon>
-    </Content>
+    </None>
     <None Include="Resources\version_history.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>version_history.html</LastGenOutput>
@@ -708,7 +708,7 @@
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\book.png" />
+    <None Include="Resources\book.png" />
     <None Include="Resources\quick_filter.png" />
     <None Include="Resources\pencil.png" />
     <None Include="Resources\public_key.xml" />
@@ -720,7 +720,7 @@
     <Content Include="examples\example logfile.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\green_tick.png" />
+    <None Include="Resources\green_tick.png" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
