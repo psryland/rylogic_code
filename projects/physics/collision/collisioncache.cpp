@@ -16,8 +16,8 @@ namespace pr { namespace ph { namespace collision
 {
 	inline std::size_t Hash(Shape const* shapeA, Shape const* shapeB)
 	{
-		std::size_t a = byte_ptr(shapeA) - byte_ptr<Shape const>(0);
-		std::size_t b = byte_ptr(shapeB) - byte_ptr<Shape const>(0);
+		std::size_t a = byte_ptr(shapeA) - byte_ptr(nullptr);
+		std::size_t b = byte_ptr(shapeB) - byte_ptr(nullptr);
 		return (a ^ b) % CollisionCache::MaxEntries;
 	}
 }}}

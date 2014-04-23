@@ -18,20 +18,23 @@ namespace pr
 	// Use:
 	//   int* int_ptr = ...
 	//   byte* u8_ptr = byte_ptr(int_ptr);
+	// These are templates so that byte_ptr(0) does not require an extra cast
 	template <typename T> byte const* byte_ptr(T const* t) { return reinterpret_cast<byte const*>(t); }
 	template <typename T> byte*       byte_ptr(T*       t) { return reinterpret_cast<byte*      >(t); }
 	template <typename T> char const* char_ptr(T const* t) { return reinterpret_cast<char const*>(t); }
 	template <typename T> char*       char_ptr(T*       t) { return reinterpret_cast<char*      >(t); }
+	inline byte const* byte_ptr(nullptr_t) { return reinterpret_cast<byte const*>(0); }
+	inline char const* char_ptr(nullptr_t) { return reinterpret_cast<char const*>(0); }
 
 	// Cast from a void pointer to a pointer of type 'T' (checking alignment)
 	template <typename T> T const* type_ptr(void const* t)
 	{
-		assert(((static_cast<T const*>(t) - static_cast<T const*>(0)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
+		assert(((byte_ptr(t) - byte_ptr(nullptr)) % std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T const*>(t);
 	}
 	template <typename T> T* type_ptr(void* t)
 	{
-		assert(((static_cast<T*>(t) - static_cast<T*>(0)) & std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
+		assert(((byte_ptr(t) - byte_ptr(nullptr)) % std::alignment_of<T>::value) == 0 && "Point is not correctly aligned for type");
 		return static_cast<T*>(t);
 	}
 

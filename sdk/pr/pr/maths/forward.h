@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <thread>
 #include <cassert>
+#include <type_traits>
 
 #define PR_MATHS_USE_D3DX ERROR_FIX_PLEASE
 #define PR_MATHS_USE_OPEN_MP ERROR_FIX_PLEASE

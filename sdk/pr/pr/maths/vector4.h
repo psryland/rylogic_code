@@ -27,6 +27,8 @@ namespace pr
 			DirectX::XMVECTOR vec;
 			#elif PR_MATHS_USE_INTRINSICS
 			__m128 vec;
+			#else
+			std::aligned_storage_t<16,16>::type vec;
 			#endif
 		};
 		#pragma warning(pop)

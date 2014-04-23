@@ -26,6 +26,11 @@ namespace pr
 		void* __cdecl operator new(size_t count) { return _aligned_malloc(count, Alignment); }
 		void __cdecl operator delete (void* obj) { _aligned_free(obj); }
 	};
+
+	// Use when inheritance isn't desirable
+	#define PR_ALIGNED_OPERATOR_NEW(alignment)\
+		void* __cdecl operator new (size_t count) { return _aligned_malloc(count, alignment); }\
+		void  __cdecl operator delete (void* obj) { _aligned_free(obj); }
 }
 
 #if PR_UNITTESTS
