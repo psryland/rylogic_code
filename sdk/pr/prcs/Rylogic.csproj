@@ -69,6 +69,9 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>false</CodeAnalysisIgnoreBuiltInRules>
   </PropertyGroup>
+  <PropertyGroup>
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="nunit.framework">
@@ -203,6 +206,7 @@
     <Compile Include="gfx\hsv.cs" />
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
+    <Compile Include="gfx\view3d.cs" />
     <Compile Include="gui\colour_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -265,7 +269,7 @@
     <Compile Include="gui\tree_grid_view.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\view3d.cs">
+    <Compile Include="gui\view3d_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="gui\view_image_control.cs">
@@ -443,6 +447,26 @@
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\lib\x86\Debug\view3d.dll">
+      <Link>lib\x86\debug\view3d.dll</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\lib\x86\Release\view3d.dll">
+      <Link>lib\x86\release\view3d.dll</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\lib\x64\Debug\view3d.dll">
+      <Link>lib\x64\debug\view3d.dll</Link>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\lib\x64\Release\view3d.dll">
+      <Link>lib\x64\release\view3d.dll</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -601,6 +601,7 @@ VIEW3D_API pr::BoundingBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 }
 
 // Materials ***************************************************************
+
 // Create a texture from data in memory.
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
@@ -626,8 +627,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(size_t width, size_t hei
 	}
 }
 
-// Load a texture from file
-// Specify width == 0, height == 0 to use the dimensions of the file
+// Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
 VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex)
 {
 	try
@@ -711,12 +711,22 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 }
 
 // Rendering ***************************************************************
+
 // Redraw the last rendered drawset
 VIEW3D_API void __stdcall View3D_Refresh()
 {
 	if (!Dll().m_rdr) return;
 	if (Rdr().m_last_drawset)
 		View3D_Render(Rdr().m_last_drawset);
+}
+
+// Return the dimensions of the display area in screen space
+VIEW3D_API void __stdcall View3D_DisplayArea(int& width, int& height)
+{
+	if (!Dll().m_rdr) return;
+	auto area = Rdr().m_renderer.DisplayArea();
+	width     = area.x;
+	height    = area.y;
 }
 
 // Resize the viewport
@@ -729,8 +739,8 @@ VIEW3D_API void __stdcall View3D_Resize(int width, int height)
 
 	// Update the aspect ratio for all drawsets
 	float aspect = (width == 0 || height == 0) ? 1.0f : width / float(height);
-	for (DrawsetCont::iterator i = Rdr().m_drawset.begin(), i_end = Rdr().m_drawset.end(); i != i_end; ++i)
-		(*i)->m_camera.Aspect(aspect);
+	for (auto ds : Rdr().m_drawset)
+		ds->m_camera.Aspect(aspect);
 }
 
 // Render a drawset

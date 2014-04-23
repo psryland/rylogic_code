@@ -1,36 +1,22 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
-using pr.gfx;
 using pr.maths;
-using pr.util;
-using HWND = System.IntPtr;
 
+using HWND     = System.IntPtr;
 using HDrawset = System.IntPtr;
-using HObject = System.IntPtr;
+using HObject  = System.IntPtr;
 using HTexture = System.IntPtr;
 
-namespace pr.gui
+namespace pr.gfx
 {
-	public class View3D :UserControl
+	/// <summary>.NET wrapper for View3D.dll</summary>
+	public class View3d :IDisposable
 	{
-		// Notes:
-		//  Keyboard events:
-		//  Users should hook up to the KeyDown event with the handlers they want.
-		//  The View3D class has public methods for some common behaviours
-		//  E.g. "Refresh"
-		//   view3d.KeyDown += (s,a) =>
-		//       {
-		//           if (e.KeyCode == Keys.F5)
-		//               ReloadScene();
-		//       };
-
 		public const int DefaultContextId = 0;
 
 		#region Enumerations
@@ -208,18 +194,21 @@ namespace pr.gui
 			Point,
 			Spot
 		}
+
 		public enum EFillMode
 		{
 			Solid,
 			Wireframe,
 			SolidWire,
 		}
+
 		[Flags] public enum ENavBtn
 		{
 			Left   = 1 << 0,
 			Right  = 1 << 1,
 			Middle = 1 << 2
 		}
+
 		#endregion
 
 		#region Structs
@@ -304,6 +293,7 @@ namespace pr.gui
 			public Exception(string message, EResult code) :base(message) { m_code = code; }
 		}
 
+		/// <summary>Edit object callback function</summary>
 		public delegate void EditObjectCB(
 			int vcount,
 			int icount,
@@ -316,6 +306,33 @@ namespace pr.gui
 			ref Material mat,
 			IntPtr ctx);
 
+		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
+		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
+		private readonly List<DrawsetInterface> m_drawsets;
+
+		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
+		public View3d(HWND handle, ReportErrorCB error_cb = null)
+		{
+			m_error_cb = ErrorCB;
+			m_settings_changed_cb = SettingsChgCB;
+			m_drawsets = new List<DrawsetInterface>();
+			if (error_cb != null) OnError += error_cb;
+
+			// Initialise the renderer
+			var res = View3D_Initialise(handle, m_error_cb, m_settings_changed_cb);
+			if (res != EResult.Success) throw new Exception(res);
+
+			// Create a default drawset
+			Drawset = DrawsetCreate();
+		}
+		public void Dispose()
+		{
+			while (m_drawsets.Count != 0)
+				m_drawsets[0].Dispose();
+
+			View3D_Shutdown();
+		}
+
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
 		public delegate void ReportErrorCB(string msg);
@@ -324,255 +341,13 @@ namespace pr.gui
 		public event SettingsChangedCB OnSettingsChanged;
 		public delegate void SettingsChangedCB();
 
-		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
-
-		private IContainer components;                            // Required designer variable.
-		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
-		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
-		private readonly List<DrawsetInterface> m_drawsets;
-		private readonly EventBatcher m_eb_refresh;
-		private bool m_mouse_navigation;
-		private int m_mouse_down_at;
-
-		public View3D() :this(null) {}
-
-		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3D(ReportErrorCB error_cb)
-		{
-			if (Util.DesignTime) return;
-
-			InitializeComponent();
-
-			m_error_cb = ErrorCB;
-			m_settings_changed_cb = SettingsChgCB;
-			m_drawsets = new List<DrawsetInterface>();
-			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
-			if (error_cb != null) OnError += error_cb;
-
-			// Initialise the renderer
-			var res = View3D_Initialise(Handle, m_error_cb, m_settings_changed_cb);
-			if (res != EResult.Success) throw new Exception(res);
-
-			ClickTimeMS = 180;
-			MouseNavigation = true;
-			DefaultKeyboardShortcuts = true;
-
-			// Update the size of the control whenever we're added to a new parent
-			ParentChanged += (s,a) => View3D_Resize(Width-2, Height-2);
-
-			// Create a default drawset
-			Drawset = DrawsetCreate();
-		}
-
-		/// <summary>Clean up any resources being used.</summary>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing) Close();
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
-
-		/// <summary>Shutdown the renderer</summary>
-		public void Close()
-		{
-			while (m_drawsets.Count != 0)
-				m_drawsets[0].Dispose();
-
-			View3D_Shutdown();
-		}
-
-		/// <summary>Callback function from the Dll when an error occurs</summary>
-		private void ErrorCB(string msg)
-		{
-			if (OnError != null) OnError(msg);
-			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-		}
-
-		/// <summary>Callback function from the Dll whenever the settings are changed</summary>
-		private void SettingsChgCB()
-		{
-			// Forward changed settings notification to anyone that cares
-			if (OnSettingsChanged != null) OnSettingsChanged();
-		}
-
-		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-		public void SignalRefresh()
-		{
-			m_eb_refresh.Signal();
-		}
-
 		/// <summary>Get/Set the currently active drawset</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public DrawsetInterface Drawset
-		{
-			get { return m_current_drawset; }
-			set
-			{
-				MouseNavigation = false;
-
-				m_current_drawset = value;
-				if (value == null) return;
-
-				MouseNavigation = true;
-			}
-		}
-		private DrawsetInterface m_current_drawset;
-
-		/// <summary>Set the background colour of the control</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public override Color BackColor
-		{
-			get { return base.BackColor; }
-			set
-			{
-				base.BackColor = value;
-				foreach (var ds in m_drawsets)
-					ds.BackgroundColour = value;
-			}
-		}
-
-		/// <summary>Enable/Disable default keyboard shortcuts</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool DefaultKeyboardShortcuts
-		{
-			set
-			{
-				KeyDown -= TranslateKey;
-				if (value) KeyDown += TranslateKey;
-			}
-		}
-
-		/// <summary>The time between mouse down->up that is considered a mouse click</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public int ClickTimeMS { get; set; }
-
-		/// <summary>Hook up mouse navigation</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool MouseNavigation
-		{
-			get { return m_mouse_navigation; }
-			set
-			{
-				// Remove first to prevent duplicate handlers
-				MouseDown        -= OnMouseDown;
-				MouseUp          -= OnMouseUp;
-				MouseMove        -= OnMouseMove;
-				MouseWheel       -= OnMouseWheel;
-				MouseDoubleClick -= OnMouseDblClick;
-				if (value)
-				{
-					MouseDown        += OnMouseDown;
-					MouseUp          += OnMouseUp;
-					MouseWheel       += OnMouseWheel;
-					MouseDoubleClick += OnMouseDblClick;
-				}
-				m_mouse_navigation = value;
-			}
-		}
-
-		/// <summary>Mouse navigation - public to allow users to forward mouse calls to us.</summary>
-		public void OnMouseDown(object sender, MouseEventArgs e)
-		{
-			Cursor = Cursors.SizeAll;
-			MouseMove -= OnMouseMove;
-			MouseMove += OnMouseMove;
-			Capture = true;
-			Navigate(e.Location, e.Button, true);
-			m_mouse_down_at = Environment.TickCount;
-		}
-		public void OnMouseUp(object sender, MouseEventArgs e)
-		{
-			Cursor = Cursors.Default;
-			MouseMove -= OnMouseMove;
-			Capture = false;
-			Navigate(e.Location, 0, true);
-
-			// Short clicks bring up the context menu
-			if (e.Button == MouseButtons.Right && Environment.TickCount - m_mouse_down_at < ClickTimeMS)
-				ShowContextMenu();
-		}
-		public void OnMouseMove(object sender, MouseEventArgs e)
-		{
-			if (Drawset == null) return;
-			Navigate(e.Location, e.Button, false);
-			Drawset.Render();
-		}
-		public void OnMouseWheel(object sender, MouseEventArgs e)
-		{
-			if (Drawset == null) return;
-			NavigateZ(e.Delta / 120f);
-			Drawset.Render();
-		}
-		public void OnMouseDblClick(object sender, MouseEventArgs e)
-		{
-			if (Drawset == null) return;
-			var btn_state = ButtonState(e.Button);
-			if (Bit.AllSet(btn_state, (int)ENavBtn.Middle) || Bit.AllSet(btn_state, (int)(ENavBtn.Left|ENavBtn.Right)))
-				Drawset.ResetZoom();
-			Drawset.Render();
-		}
-
-		/// <summary>Direct X/Y navigation. 'point' is a point in client rect space.</summary>
-		public void Navigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
-		{
-			if (Drawset == null) return;
-			View3D_Navigate(Drawset.Handle, NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
-		}
-
-		/// <summary>Direct Z navigation</summary>
-		public void NavigateZ(float delta)
-		{
-			if (Drawset == null) return;
-			View3D_NavigateZ(Drawset.Handle, delta);
-		}
-
-		/// <summary>Standard keyboard shortcuts</summary>
-		public void TranslateKey(object sender, KeyEventArgs e)
-		{
-			if (Drawset == null) return;
-			switch (e.KeyCode)
-			{
-			case Keys.F7:
-				{
-					Drawset.Camera.ResetView();
-					Drawset.Render();
-					break;
-				}
-			case Keys.Space:
-				{
-					ShowObjectManager(true);
-					break;
-				}
-			case Keys.W:
-				{
-					if ((e.Modifiers & Keys.Control) != 0)
-					{
-						Drawset.FillMode = Enum<EFillMode>.Cycle(Drawset.FillMode);
-						Drawset.Render();
-					}
-					break;
-				}
-			}
-		}
+		public DrawsetInterface Drawset { get; set; }
 
 		/// <summary>Create a drawset. Sets the current drawset to the one created</summary>
 		public DrawsetInterface DrawsetCreate()
 		{
 			return new DrawsetInterface(this);
-		}
-
-		/// <summary>Show/Hide the object manager UI</summary>
-		public void ShowObjectManager(bool show)
-		{
-			View3D_ShowObjectManager(show);
 		}
 
 		/// <summary>Create multiple objects from a source file and associate them with 'context_id'</summary>
@@ -633,6 +408,70 @@ namespace pr.gui
 			//}
 		}
 
+		/// <summary>Show/Hide the object manager UI</summary>
+		public void ShowObjectManager(bool show)
+		{
+			View3D_ShowObjectManager(show);
+		}
+
+		/// <summary>Get/Set the size of the render target</summary>
+		public Size DisplayArea
+		{
+			get
+			{
+				int w,h;
+				View3D_DisplayArea(out w, out h);
+				return new Size(w,h);
+			}
+			set
+			{
+				View3D_Resize(value.Width, value.Height);
+			}
+		}
+
+		/// <summary>Direct X/Y navigation. 'point' is a point in client rect space.</summary>
+		public void Navigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
+		{
+			if (Drawset == null) return;
+			View3D_Navigate(Drawset.Handle, NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
+		}
+
+		/// <summary>Direct Z navigation</summary>
+		public void NavigateZ(float delta)
+		{
+			if (Drawset == null) return;
+			View3D_NavigateZ(Drawset.Handle, delta);
+		}
+
+		/// <summary>Standard keyboard shortcuts</summary>
+		public void TranslateKey(object sender, KeyEventArgs e)
+		{
+			if (Drawset == null) return;
+			switch (e.KeyCode)
+			{
+			case Keys.F7:
+				{
+					Drawset.Camera.ResetView();
+					Drawset.Render();
+					break;
+				}
+			case Keys.Space:
+				{
+					ShowObjectManager(true);
+					break;
+				}
+			case Keys.W:
+				{
+					if ((e.Modifiers & Keys.Control) != 0)
+					{
+						Drawset.FillMode = Enum<EFillMode>.Cycle(Drawset.FillMode);
+						Drawset.Render();
+					}
+					break;
+				}
+			}
+		}
+
 		/// <summary>Convert a button enum to a button state int</summary>
 		private static int ButtonState(MouseButtons button)
 		{
@@ -646,197 +485,22 @@ namespace pr.gui
 		/// <summary>Convert a screen space point to a normalised point</summary>
 		private v2 NormalisePoint(Point pt)
 		{
-			return new v2(2f * pt.X / Width - 1f, 1f - 2f * pt.Y / Height);
+			var da = DisplayArea;
+			return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
 		}
 
-		/// <summary>Show the view3D context menu</summary>
-		public void ShowContextMenu()
+		/// <summary>Callback function from the Dll when an error occurs</summary>
+		private void ErrorCB(string msg)
 		{
-			if (Drawset == null) return;
-			var context_menu = new ContextMenuStrip();
-			context_menu.Closed += (s,a) => Refresh();
-
-			{// View
-				var view_menu = new ToolStripMenuItem("View");
-				context_menu.Items.Add(view_menu);
-				{// Show focus
-					var show_focus_menu = new ToolStripMenuItem("Show Focus");
-					view_menu.DropDownItems.Add(show_focus_menu);
-					show_focus_menu.Checked = Drawset.FocusPointVisible;
-					show_focus_menu.Click += (s,a) => { Drawset.FocusPointVisible = !Drawset.FocusPointVisible; Refresh(); };
-				}
-				{// Show Origin
-					var show_origin_menu = new ToolStripMenuItem("Show Origin");
-					view_menu.DropDownItems.Add(show_origin_menu);
-					show_origin_menu.Checked = Drawset.OriginVisible;
-					show_origin_menu.Click += (s,a) => { Drawset.OriginVisible = !Drawset.OriginVisible; Refresh(); };
-				}
-				{// Show coords
-				}
-				{// Axis Views
-					var view_options = new ToolStripComboBox("Views");
-					view_menu.DropDownItems.Add(view_options);
-					view_options.Items.Add("Views");
-					view_options.Items.Add("Axis +X");
-					view_options.Items.Add("Axis -X");
-					view_options.Items.Add("Axis +Y");
-					view_options.Items.Add("Axis -Y");
-					view_options.Items.Add("Axis +Z");
-					view_options.Items.Add("Axis -Z");
-					view_options.Items.Add("Axis -X,-Y,-Z");
-					view_options.SelectedIndex = 0;
-					view_options.SelectedIndexChanged += delegate
-					{
-						var pos = Drawset.Camera.FocusPoint;
-						switch (view_options.SelectedIndex)
-						{
-						case 1: Drawset.Camera.ResetView( v4.XAxis); break;
-						case 2: Drawset.Camera.ResetView(-v4.XAxis); break;
-						case 3: Drawset.Camera.ResetView( v4.YAxis); break;
-						case 4: Drawset.Camera.ResetView(-v4.YAxis); break;
-						case 5: Drawset.Camera.ResetView( v4.ZAxis); break;
-						case 6: Drawset.Camera.ResetView(-v4.ZAxis); break;
-						case 7: Drawset.Camera.ResetView(-v4.XAxis-v4.YAxis-v4.ZAxis); break;
-						}
-						Drawset.Camera.FocusPoint = pos;
-						Refresh();
-					};
-				}
-				{// Object Manager UI
-					var obj_mgr_ui = new ToolStripMenuItem("Object Manager");
-					view_menu.DropDownItems.Add(obj_mgr_ui);
-					obj_mgr_ui.Click += delegate { ShowObjectManager(true); };
-				}
-			}
-			{// Navigation
-				var rdr_menu = new ToolStripMenuItem("Navigation");
-				context_menu.Items.Add(rdr_menu);
-				{// Reset View
-					var reset_menu = new ToolStripMenuItem("Reset View");
-					rdr_menu.DropDownItems.Add(reset_menu);
-					reset_menu.Click += delegate { Drawset.Camera.ResetView(); Refresh(); };
-				}
-				{// Align to
-					var align_menu = new ToolStripMenuItem("Align");
-					rdr_menu.DropDownItems.Add(align_menu);
-					{
-						var align_options = new ToolStripComboBox("Aligns");
-						align_menu.DropDownItems.Add(align_options);
-						align_options.Items.Add("None");
-						align_options.Items.Add("X");
-						align_options.Items.Add("Y");
-						align_options.Items.Add("Z");
-
-						var axis = Drawset.Camera.AlignAxis;
-						if      (v4.FEql3(axis, v4.XAxis)) align_options.SelectedIndex = 1;
-						else if (v4.FEql3(axis, v4.YAxis)) align_options.SelectedIndex = 2;
-						else if (v4.FEql3(axis, v4.ZAxis)) align_options.SelectedIndex = 3;
-						else                               align_options.SelectedIndex = 0;
-						align_options.SelectedIndexChanged += delegate
-						{
-							switch (align_options.SelectedIndex)
-							{
-							default: Drawset.Camera.AlignAxis = v4.Zero;  break;
-							case 1:  Drawset.Camera.AlignAxis = v4.XAxis; break;
-							case 2:  Drawset.Camera.AlignAxis = v4.YAxis; break;
-							case 3:  Drawset.Camera.AlignAxis = v4.ZAxis; break;
-							}
-							Refresh();
-						};
-					}
-				}
-				{// Motion lock
-				}
-				{// Orbit
-					var orbit_menu = new ToolStripMenuItem("Orbit");
-					rdr_menu.DropDownItems.Add(orbit_menu);
-					orbit_menu.Click += delegate {};
-				}
-			}
-			{// Tools
-				var tools_menu = new ToolStripMenuItem("Tools");
-				context_menu.Items.Add(tools_menu);
-				{// Measure
-					var option = new ToolStripMenuItem{Text = "Measure..."};
-					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { Drawset.ShowMeasureTool = true; };
-				}
-				{// Angle
-					var option = new ToolStripMenuItem{Text = "Angle..."};
-					tools_menu.DropDownItems.Add(option);
-					option.Click += delegate { Drawset.ShowAngleTool = true; };
-				}
-			}
-			{// Rendering
-				var rdr_menu = new ToolStripMenuItem("Rendering");
-				context_menu.Items.Add(rdr_menu);
-				{// Solid/Wireframe/Solid+Wire
-					var option = new ToolStripComboBox();
-					rdr_menu.DropDownItems.Add(option);
-					option.Items.AddRange(Enum<EFillMode>.Names.Cast<object>().ToArray());
-					option.SelectedIndex = (int)Drawset.FillMode;
-					option.SelectedIndexChanged += delegate { Drawset.FillMode = (EFillMode)option.SelectedIndex; Refresh(); };
-				}
-				{// Render2D
-					var option = new ToolStripMenuItem{Text = Drawset.Orthographic ? "Perspective" : "Orthographic"};
-					rdr_menu.DropDownItems.Add(option);
-					option.Click += delegate { var _2d = Drawset.Orthographic; Drawset.Orthographic = !_2d; option.Text = _2d ? "Perspective" : "Orthographic"; Refresh(); };
-				}
-				{// Lighting...
-					var lighting_menu = new ToolStripMenuItem("Lighting...");
-					rdr_menu.DropDownItems.Add(lighting_menu);
-					lighting_menu.Click += delegate { Drawset.ShowLightingDlg(ParentForm); };
-				}
-				{// Background colour
-					var bk_colour_menu = new ToolStripMenuItem("Background Colour");
-					rdr_menu.DropDownItems.Add(bk_colour_menu);
-					{
-						var option = new ToolStripButton(" ");
-						bk_colour_menu.DropDownItems.Add(option);
-						option.AutoToolTip = false;
-						option.BackColor = Drawset.BackgroundColour;
-						option.Click += delegate { var cd = new ColourUI(); if (cd.ShowDialog() == DialogResult.OK) option.BackColor = cd.Colour; };
-						option.BackColorChanged += delegate { Drawset.BackgroundColour = option.BackColor; Refresh(); };
-					}
-				}
-			}
-
-			// Allow users to add custom menu options to the context menu
-			if (CustomiseContextMenu != null)
-				CustomiseContextMenu(context_menu);
-
-			context_menu.Show(MousePosition);
+			if (OnError != null) OnError(msg);
+			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 
-		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
-		public event Action<ContextMenuStrip> CustomiseContextMenu;
-
-		/// <summary>On Resize</summary>
-		protected override void OnResize(EventArgs e)
+		/// <summary>Callback function from the Dll whenever the settings are changed</summary>
+		private void SettingsChgCB()
 		{
-			base.OnResize(e);
-			View3D_Resize(Width-2, Height-2);
-			Refresh();
-		}
-
-		/// <summary>Absorb PaintBackground events</summary>
-		protected override void OnPaintBackground(PaintEventArgs e)
-		{
-			if (Drawset == null) base.OnPaintBackground(e);
-		}
-
-		/// <summary>Paint the control</summary>
-		protected override void OnPaint(PaintEventArgs e)
-		{
-			// Render the control
-			if (Drawset == null) base.OnPaint(e);
-			else Drawset.Render();
-		}
-
-		/// <summary>Required method for Designer support - do not modify the contents of this method with the code editor.</summary>
-		private void InitializeComponent()
-		{
-			components = new Container();
+			// Forward changed settings notification to anyone that cares
+			if (OnSettingsChanged != null) OnSettingsChanged();
 		}
 
 		/// <summary>Namespace for the camera controls</summary>
@@ -931,9 +595,9 @@ namespace pr.gui
 		/// <summary>Methods for adding/removing objects from a drawset</summary>
 		public class DrawsetInterface :IDisposable
 		{
-			private readonly View3D m_view;
+			private readonly View3d m_view;
 			private readonly HDrawset m_ds;
-			public DrawsetInterface(View3D view)
+			public DrawsetInterface(View3d view)
 			{
 				m_view = view;
 				var res = View3D_DrawsetCreate(out m_ds);
@@ -1262,11 +926,11 @@ namespace pr.gui
 		private const string Dll = "view3d";
 		private static IntPtr m_module;
 
-		// A good idea is to add a static method in the class that is using this control
+		// A good idea is to add a static method in the class that is using this class
 		// e.g.
 		//  static MyThing()
 		//  {
-		//      View3D.SelectDll(System.Environment.Is64BitProcess
+		//      View3d.SelectDll(System.Environment.Is64BitProcess
 		//          ? @".\libs\x64\view3d.dll"
 		//          : @".\libs\x86\view3d.dll");
 		//  }
@@ -1348,6 +1012,7 @@ namespace pr.gui
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
 
 		// Rendering
+		[DllImport(Dll)] private static extern void              View3D_DisplayArea              (out int width, out int height);
 		[DllImport(Dll)] private static extern void              View3D_Resize                   (int width, int height);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HDrawset drawset);
 		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);

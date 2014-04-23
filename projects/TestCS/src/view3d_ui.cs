@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
+using pr.gfx;
 using pr.gui;
 using pr.maths;
 
@@ -7,20 +8,20 @@ namespace TestCS
 {
 	public class FormView3d : Form
 	{
-		private readonly View3D m_view3d;
-		private readonly View3D.Object m_obj0;
-		private readonly View3D.Object m_obj1;
+		private readonly View3dControl m_view3d;
+		private readonly View3d.Object m_obj0;
+		private readonly View3d.Object m_obj1;
 
 		static FormView3d()
 		{
-			View3D.SelectDll(Environment.Is64BitProcess
+			View3d.SelectDll(Environment.Is64BitProcess
 				? @"\sdk\pr\lib\x64\debug\view3d.dll"
 				: @"\sdk\pr\lib\x86\debug\view3d.dll");
 		}
 		public FormView3d()
 		{
 			InitializeComponent();
-			m_view3d = new View3D
+			m_view3d = new View3dControl
 			{
 				Name        = "m_view3d",
 				BorderStyle = BorderStyle.FixedSingle,
@@ -28,27 +29,27 @@ namespace TestCS
 			};
 			Controls.Add(m_view3d);
 
-			m_obj0 = new View3D.Object("*Box test FF00FF00 {1 2 3}");
+			m_obj0 = new View3d.Object("*Box test FFFF0000 {1 2 3}");
 			m_view3d.Drawset.AddObject(m_obj0);
 
-			m_obj1 = new View3D.Object("net", 0xFF0000FF, 20, 20,
-				(int vcount, int icount, View3D.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3D.EPrim prim_type, out View3D.EGeom geom_type, ref View3D.Material mat, IntPtr ctx) =>
+			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20,
+				(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx) =>
 				{
 					new_vcount = 0;
 					new_icount = 0;
 					for (int i = 0; i != 10; ++i)
 					{
-						verts[new_vcount++] = new View3D.Vertex(new v4(i,0,0,1f));
-						verts[new_vcount++] = new View3D.Vertex(new v4(0,0,9-i,1f));
+						verts[new_vcount++] = new View3d.Vertex(new v4(i,0,0,1f));
+						verts[new_vcount++] = new View3d.Vertex(new v4(0,0,9-i,1f));
 						indices[new_icount++] = (ushort)(new_vcount - 2);
 						indices[new_icount++] = (ushort)(new_vcount - 1);
 					}
-					prim_type = View3D.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-					geom_type = View3D.EGeom.Vert;
+					prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+					geom_type = View3d.EGeom.Vert;
 				});
 			m_view3d.Drawset.AddObject(m_obj1);
 
-			m_view3d.CreateDemoScene();
+			m_view3d.View3d.CreateDemoScene();
 			m_view3d.Drawset.Camera.ResetView();
 
 			m_view3d.Drawset.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);

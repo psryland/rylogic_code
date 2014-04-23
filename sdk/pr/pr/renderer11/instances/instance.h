@@ -58,30 +58,36 @@ namespace pr
 		struct BaseInstance
 		{
 			pr::uint m_cpt_count;
-			
+
 			static BaseInstance make(pr::uint cpt_count) { BaseInstance b = {cpt_count}; return b; }
-			
+
 			CompDesc const* begin() const { return pr::type_ptr<CompDesc>(this + 1); }
 			CompDesc*       begin()       { return pr::type_ptr<CompDesc>(this + 1); }
 			CompDesc const* end() const   { return begin() + m_cpt_count; }
 			CompDesc*       end()         { return begin() + m_cpt_count; }
-			
+
 			// Find the 'index'th component in this instance. Returns non-null if the component was found
 			template <typename Comp> Comp const* find(EInstComp comp, int index = 0) const
 			{
+				//for (auto c : *this)
+				//	if (c.m_type == comp && index-- == 0)
+				//		return pr::type_ptr<Comp>(pr::byte_ptr(this) + c.m_offset);
 				for (CompDesc const *i = begin(), *iend = end(); i != iend; ++i)
 					if (i->m_type == comp && index-- == 0)
 						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
-				return 0;
+				return nullptr;
 			}
 			template <typename Comp> Comp* find(EInstComp comp, int index = 0)
 			{
+				//for (auto c : *this)
+				//	if (c.m_type == comp && index-- == 0)
+				//		return pr::type_ptr<Comp>(pr::byte_ptr(this) + c.m_offset);
 				for (CompDesc *i = begin(), *iend = end(); i != iend; ++i)
 					if (i->m_type == comp && index-- == 0)
 						return pr::type_ptr<Comp>(pr::byte_ptr(this) + i->m_offset);
-				return 0;
+				return nullptr;
 			}
-			
+
 			// Get the 'index'th component in this instance
 			template <typename Comp> inline Comp const& get(EInstComp comp, int index = 0) const
 			{
@@ -98,7 +104,7 @@ namespace pr
 		};
 
 		// Helper Components/Functions **************************************
-		
+
 		// A component that gets an i2w transform via function pointer
 		struct m4x4Func
 		{
@@ -107,13 +113,13 @@ namespace pr
 			void*       m_context;
 			pr::m4x4 const& GetI2W() const { return m_get_i2w(m_context); }
 		};
-		
+
 		// Return a pointer to the model that this is an instance of
 		inline ModelPtr const& GetModel(BaseInstance const& inst)
 		{
 			return inst.get<ModelPtr>(EInstComp::ModelPtr);
 		}
-		
+
 		// Return the instance to world transform for an instance
 		// An instance must have an i2w transform or a shared i2w transform
 		inline pr::m4x4 const& GetO2W(BaseInstance const& inst)
@@ -122,7 +128,7 @@ namespace pr
 			m4x4 const* const* ppi2w = inst.find<m4x4 const*>(EInstComp::I2WTransformPtr);     if (ppi2w) return **ppi2w;
 			m4x4Func const&    pi2wf = inst.get<m4x4Func>    (EInstComp::I2WTransformFuncPtr); return pi2wf.GetI2W();
 		}
-		
+
 		// Look for a camera to screen (or instance specific projection) transform for an instance
 		inline bool FindC2S(BaseInstance const& inst, m4x4& camera_to_screen)
 		{

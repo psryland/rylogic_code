@@ -9,7 +9,7 @@
 using namespace view3d;
 
 // Return default settings for the renderer
-pr::rdr::RdrSettings GetRdrSettings(HWND hwnd)//pr::rdr::Allocator& allocator, D3DDEVTYPE device_type, pr::uint d3dcreate_flags)
+pr::rdr::RdrSettings GetRdrSettings(HWND hwnd)
 {
 	if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 	RECT rect; ::GetClientRect(hwnd, &rect);

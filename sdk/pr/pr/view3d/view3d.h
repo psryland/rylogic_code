@@ -192,6 +192,7 @@ extern "C"
 
 	// Rendering
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
+	VIEW3D_API void                    __stdcall View3D_DisplayArea              (int& width, int& height);
 	VIEW3D_API void                    __stdcall View3D_Resize                   (int width, int height);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DDrawset drawset);
 	VIEW3D_API EView3DFillMode         __stdcall View3D_FillMode                 (View3DDrawset drawset);
