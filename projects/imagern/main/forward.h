@@ -15,7 +15,8 @@
 // Change these values to use different versions
 #define _WTL_NO_CSTRING
 
-#include "pr/common/min_max_fix.h"
+#include <sstream>
+
 #include <atlbase.h>
 #include <atlapp.h>
 #include <atlwin.h>
@@ -27,11 +28,9 @@
 #include <atldlgs.h>
 #include <atlcrack.h>
 
-#include <d3d9.h>
-#include <d3dx9.h>
-#include <sstream>
 #include <knownfolders.h>
 
+#include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"
 #include "pr/common/exception.h"
@@ -45,9 +44,8 @@
 #include "pr/gui/misc.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/fileex.h"
-#include "pr/threads/thread.h"
 #include "pr/script/reader.h"
-#include "pr/renderer/renderer.h"
+#include "pr/renderer11/renderer.h"
 #include "pr/storage/sqlite.h"
 //#include "pr/renderer/materials/video/video_ctrl_dlg.h"
 
