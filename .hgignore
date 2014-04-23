@@ -62,3 +62,4 @@ sdk/pr/prcs/resources/*.html
 symbol_cache/*
 script/UserVars.py
 $RECYCLE.BIN*
+tools/HxDen/HxD.ini
