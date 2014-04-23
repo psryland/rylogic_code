@@ -10,8 +10,6 @@
     <IntDir>$(OutDir)</IntDir>
     <TargetExt>.dll</TargetExt>
     <LinkIncremental>true</LinkIncremental>
-    <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
-    <CustomBuildAfterTargets>Build;Rebuild</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
@@ -62,17 +60,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PostBuildEvent>
-      <Command>
-      </Command>
-      <Message>Deploy is done as a custom build step</Message>
-    </PostBuildEvent>
-    <CustomBuildStep>
       <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Publishing library</Message>
-      <Outputs>\sdk\pr\lib\$(PlatformTarget)\$(Configuration)\$(TargetFileName);%(Outputs)</Outputs>
-      <Inputs>\script\DeployLib.py</Inputs>
-    </CustomBuildStep>
+    </PostBuildEvent>
+    <CustomBuildStep />
+    <CustomBuildStep />
   </ItemDefinitionGroup>
 </Project>

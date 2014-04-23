@@ -13,7 +13,6 @@
   <PropertyGroup />
   <PropertyGroup>
     <TargetExt>.lib</TargetExt>
-    <CustomBuildAfterTargets>Build;Rebuild</CustomBuildAfterTargets>
     <CustomBuildBeforeTargets />
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -39,22 +38,14 @@
       <SDLCheck>true</SDLCheck>
     </ClCompile>
     <PostBuildEvent>
-      <Command>
-      </Command>
-      <Message>Deploy is done as a custom build step</Message>
+      <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
     </PostBuildEvent>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
     </Lib>
-    <CustomBuildStep>
-      <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
-    </CustomBuildStep>
-    <CustomBuildStep>
-      <Message>Publishing library</Message>
-      <Outputs>\sdk\pr\lib\$(PlatformTarget)\$(Configuration)\$(TargetFileName);%(Outputs)</Outputs>
-      <Inputs>\script\DeployLib.py</Inputs>
-    </CustomBuildStep>
+    <CustomBuildStep />
+    <CustomBuildStep />
   </ItemDefinitionGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">
