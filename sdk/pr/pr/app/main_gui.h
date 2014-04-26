@@ -45,6 +45,9 @@ namespace pr
 				,m_resizing(false)
 				,m_nav_enabled(false)
 			{
+				// Initialise common controls support
+				AtlInitCommonControls(IccClasses());
+
 				// Register this class for message filtering and idle updates
 				m_msg_loop.AddMessageFilter(this);
 				m_msg_loop.AddIdleHandler(this);
@@ -58,6 +61,29 @@ namespace pr
 			{
 				PR_ASSERT(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
 				pr::app::Module().RemoveMessageLoop();
+			}
+
+			// Return the common control classes to support
+			virtual DWORD IccClasses() const
+			{
+				return
+					ICC_LISTVIEW_CLASSES   | // listview, header
+					ICC_TREEVIEW_CLASSES   | // treeview, tooltips
+					ICC_BAR_CLASSES        | // toolbar, statusbar, trackbar, tooltips
+					ICC_TAB_CLASSES        | // tab, tooltips
+					ICC_UPDOWN_CLASS       | // updown
+					ICC_PROGRESS_CLASS     | // progress
+					ICC_HOTKEY_CLASS       | // hotkey
+					ICC_ANIMATE_CLASS      | // animate
+					ICC_WIN95_CLASSES      | //
+					ICC_DATE_CLASSES       | // month picker, date picker, time picker, updown
+					ICC_USEREX_CLASSES     | // comboex
+					ICC_COOL_CLASSES       | // rebar (coolbar) control
+					ICC_INTERNET_CLASSES   | //
+					ICC_PAGESCROLLER_CLASS | // page scroller
+					ICC_NATIVEFNTCTL_CLASS | // native font control
+					ICC_STANDARD_CLASSES   |
+					ICC_LINK_CLASS;
 			}
 
 			// Create/Destroy the main window

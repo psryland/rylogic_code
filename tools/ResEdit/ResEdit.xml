@@ -49,12 +49,11 @@
         <resourceHeader>
             <![CDATA[#define WINVER 0x0600
 
-//#include <atlres.h>
-//#include <commctrl.h>
-//#include <richedit.h>
-#include <winuser.rh>
+#include <windows.h>
+#include <commctrl.h>
+#include <richedit.h>
+#include <atlres.h>
 #include "%RESOURCE_HEADER%"
-
 %RESOURCES%]]>
 </resourceHeader>
     </codeGeneration>
