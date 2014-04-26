@@ -408,6 +408,8 @@ public:
 class CFileDialog : public CFileDialogImpl<CFileDialog>
 {
 public:
+	// PR: Careful with this class! It "seems" that CoInitialiseEx cannot be
+	// used with 'COINIT_MULTITHREADED' when using this class.
 	CFileDialog(BOOL bOpenFileDialog, // TRUE for FileOpen, FALSE for FileSaveAs
 		LPCTSTR lpszDefExt = NULL,
 		LPCTSTR lpszFileName = NULL,

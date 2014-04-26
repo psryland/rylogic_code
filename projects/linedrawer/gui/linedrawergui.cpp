@@ -7,7 +7,7 @@
 #include "linedrawer/gui/options_dlg.h"
 #include "linedrawer/gui/about_dlg.h"
 #include "linedrawer/gui/text_panel_dlg.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 #include "linedrawer/main/ldrexception.h"
 #include "linedrawer/plugin/plugin_manager_dlg.h"
 #include "linedrawer/utility/misc.h"
@@ -73,7 +73,7 @@ LRESULT ldr::MainGUI::OnCreate(LPCREATESTRUCT create)
 	SetMenu(hMenu);
 
 	// Load accelerators
-	m_hAccel = (HACCEL)::LoadAccelerators(create->hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR2));
+	m_hAccel = (HACCEL)::LoadAccelerators(create->hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR));
 
 	// Status bar
 	CreateSimpleStatusBar(TEXT(""), WS_CHILD|WS_VISIBLE|CCS_BOTTOM|CCS_ADJUSTABLE|SBARS_SIZEGRIP);
@@ -303,15 +303,13 @@ LRESULT ldr::MainGUI::OnFileNew(WORD, WORD, HWND, BOOL&)
 		pr::ldr::AddString(m_main->m_rdr, m_main->m_settings.m_NewObjectString.c_str(), m_main->m_store);
 		m_main->RenderNeeded();
 	}
-	catch (LdrException const& e)
+	catch (std::exception const& e)
 	{
-		switch (e.code())
-		{
-		default: throw;
-		case ELdrException::SourceScriptError:
-			pr::events::Send(ldr::Event_Error(pr::FmtS("Script error found while parsing source.\nError details: %s", e.m_msg.c_str())));
-			break;
-		}
+		pr::events::Send(ldr::Event_Error(pr::FmtS("Script error found while parsing source.\nError details: %s", e.what())));
+	}
+	catch (...)
+	{
+		pr::events::Send(ldr::Event_Error("Unknown exception thrown while parsing source."));
 	}
 	return S_OK;
 }
@@ -771,7 +769,7 @@ void ldr::MainGUI::MouseStatusUpdate(pr::v2 const& mouse_location)
 	{
 		// Display mouse coordinates
 		pr::v4 mouse_ss = pr::v4::make(mouse_location, m_main->m_nav.FocusDistance(), 0.0f);
-		pr::v4 mouse_ws = m_main->m_nav.WSPointFromScreenPoint(mouse_ss);
+		pr::v4 mouse_ws = m_main->m_nav.WSPointFromSSPoint(mouse_ss);
 		pr::v4 focus_ws = m_main->m_nav.FocusPoint();
 		status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f}"
 			,mouse_ws.x ,mouse_ws.y ,mouse_ws.z

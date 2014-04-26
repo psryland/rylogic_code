@@ -125,18 +125,21 @@ ADDIN_API HRESULT WINAPI AddIn_m3x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 	pr::m3x4 mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
 	float ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
-	_snprintf(pResult, max,
-		"\r\n%f \t%f \t%f "
-		"\r\n%f \t%f \t%f "
-		"\r\n%f \t%f \t%f "
-		"\r\nLen:%f \t%f \t%f "
-		"\r\nOrtho: %f Det: %f "
-		"\r\n"
-		,mat.x.x ,mat.y.x ,mat.z.x
-		,mat.x.y ,mat.y.y ,mat.z.y
-		,mat.x.z ,mat.y.z ,mat.z.z
-		,Length3(mat.x), Length3(mat.y), Length3(mat.z)
-		,ortho, Determinant3(mat));
+	if (mat == pr::m3x4Identity)
+		_snprintf(pResult, max, "identity 3x4");
+	else
+		_snprintf(pResult, max,
+			"\r\n%f \t%f \t%f "
+			"\r\n%f \t%f \t%f "
+			"\r\n%f \t%f \t%f "
+			"\r\nLen:%f \t%f \t%f "
+			"\r\nOrtho: %f Det: %f "
+			"\r\n"
+			,mat.x.x ,mat.y.x ,mat.z.x
+			,mat.x.y ,mat.y.y ,mat.z.y
+			,mat.x.z ,mat.y.z ,mat.z.z
+			,Length3(mat.x), Length3(mat.y), Length3(mat.z)
+			,ortho, Determinant3(mat));
 	return S_OK;
 }
 
@@ -147,20 +150,23 @@ ADDIN_API HRESULT WINAPI AddIn_m4x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 	pr::m4x4 mat;
 	if (FAILED(pHelper->Read(mat))) return E_FAIL;
 	float ortho = Length3(Cross3(Normalise3(mat.x), Normalise3(mat.y)) - Normalise3(mat.z));
-	_snprintf(pResult, max,
-		"\r\n%f \t%f \t%f \t%f "
-		"\r\n%f \t%f \t%f \t%f "
-		"\r\n%f \t%f \t%f \t%f "
-		"\r\n%f \t%f \t%f \t%f "
-		"\r\nLen:%f \t%f \t%f \t%f "
-		"\r\nOrtho: %f Det: %f "
-		"\r\n"
-		,mat.x.x ,mat.y.x ,mat.z.x ,mat.w.x
-		,mat.x.y ,mat.y.y ,mat.z.y ,mat.w.y
-		,mat.x.z ,mat.y.z ,mat.z.z ,mat.w.z
-		,mat.x.w ,mat.y.w ,mat.z.w ,mat.w.w
-		,Length3(mat.x), Length3(mat.y), Length3(mat.z) ,Length3(mat.w)
-		,ortho ,Determinant4(mat));
+	if (mat == m4x4Identity)
+		_snprintf(pResult, max, "identity 4x4");
+	else
+		_snprintf(pResult, max,
+			"\r\n%f \t%f \t%f \t%f "
+			"\r\n%f \t%f \t%f \t%f "
+			"\r\n%f \t%f \t%f \t%f "
+			"\r\n%f \t%f \t%f \t%f "
+			"\r\nLen:%f \t%f \t%f \t%f "
+			"\r\nOrtho: %f Det: %f "
+			"\r\n"
+			,mat.x.x ,mat.y.x ,mat.z.x ,mat.w.x
+			,mat.x.y ,mat.y.y ,mat.z.y ,mat.w.y
+			,mat.x.z ,mat.y.z ,mat.z.z ,mat.w.z
+			,mat.x.w ,mat.y.w ,mat.z.w ,mat.w.w
+			,Length3(mat.x), Length3(mat.y), Length3(mat.z) ,Length3(mat.w)
+			,ortho ,Determinant4(mat));
 	return S_OK;
 }
 

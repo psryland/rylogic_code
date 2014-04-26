@@ -82,8 +82,8 @@ PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 std::string pr::rdr::Light::Settings() const
 {
 	std::stringstream out;
-	out << "  *" << ELightKW::Pos  << "{" << m_position << "}\n"
-		<< "  *" << ELightKW::Dir  << "{" << m_direction << "}\n"
+	out << "  *" << ELightKW::Pos  << "{" << m_position.xyz() << "}\n"
+		<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz() << "}\n"
 		<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
 		<< std::hex
 		<< "  *" << ELightKW::Amb  << "{" << m_ambient.m_aarrggbb << "}\n"

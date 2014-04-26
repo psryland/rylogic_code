@@ -15,31 +15,21 @@
 
 namespace pr
 {
-	struct Quat
+	__declspec(align(16)) struct Quat
 	{
-		#if PR_MATHS_USE_INTRINSICS || PR_MATHS_USE_DIRECTMATH
 		#pragma warning(push)
-		#pragma warning(disable:4201)
-		union {
-			struct {
-				float x;
-				float y;
-				float z;
-				float w;
-			};
+		#pragma warning(disable:4201) // nameless struct
+		union
+		{
+			struct { float x,y,z,w; };
 			#if PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec;
-			#else
+			#elif PR_MATHS_USE_INTRINSICS
 			__m128 vec;
 			#endif
 		};
 		#pragma warning(pop)
-		#else
-		float x;
-		float y;
-		float z;
-		float w;
-		#endif
+		typedef float Array[4];
 
 		Quat&        set(float x_, float y_, float z_, float w_);
 		Quat&        set(v4 const& axis, float angle);
@@ -47,8 +37,8 @@ namespace pr
 		Quat&        set(m3x4 const& m);
 		Quat&        set(m4x4 const& m);
 		Quat&        set(v4 const& from, v4 const& to);
-		float const* ToArray() const           { return reinterpret_cast<float const*>(this); }
-		float*       ToArray()                 { return reinterpret_cast<float*>(this); }
+		Array const& ToArray() const           { return reinterpret_cast<Array const&>(*this); }
+		Array&       ToArray()                 { return reinterpret_cast<Array&>(*this); }
 		float const& operator [](int i) const  { assert(i < 4); return ToArray()[i]; }
 		float&       operator [](int i)        { assert(i < 4); return ToArray()[i]; }
 
@@ -59,6 +49,8 @@ namespace pr
 		static Quat  make(m4x4 const& m)                           { Quat q; return q.set(m); }
 		static Quat  make(v4 const& from, v4 const& to)            { Quat q; return q.set(from, to); }
 	};
+	static_assert(std::alignment_of<Quat>::value == 16, "Should have 16 byte alignment");
+	static_assert(std::is_pod<Quat>::value, "Should be a pod type");
 
 	Quat const QuatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
 	Quat const QuatIdentity = {0.0f, 0.0f, 0.0f, 1.0f};

@@ -26,8 +26,8 @@ namespace pr
 			size_t      m_size; // The compiled shader data size
 
 			ShaderDesc(void const* data, size_t size)
-			:m_data(data)
-			,m_size(size)
+				:m_data(data)
+				,m_size(size)
 			{}
 		};
 
@@ -40,17 +40,17 @@ namespace pr
 
 			// Initialise the shader description.
 			// 'Vert' should be a vertex type containing the minimum required fields for the VS
-			template <class Vert> VShaderDesc(Vert const&, void const* data, size_t size)
-			:ShaderDesc(data, size)
-			,m_iplayout(Vert::Layout())
-			,m_iplayout_count(sizeof(Vert::Layout())/sizeof(D3D11_INPUT_ELEMENT_DESC))
-			,m_geom_mask(Vert::GeomMask)
+			template <class Vert> VShaderDesc(void const* data, size_t size, Vert const&, pr::rdr::EGeom geom_mask = Vert::GeomMask)
+				:ShaderDesc(data, size)
+				,m_iplayout(Vert::Layout())
+				,m_iplayout_count(sizeof(Vert::Layout())/sizeof(D3D11_INPUT_ELEMENT_DESC))
+				,m_geom_mask(geom_mask)
 			{}
-			template <class Vert, size_t Sz> VShaderDesc(Vert const&, byte const (&data)[Sz])
-			:ShaderDesc(data, Sz)
-			,m_iplayout(Vert::Layout())
-			,m_iplayout_count(sizeof(Vert::Layout())/sizeof(D3D11_INPUT_ELEMENT_DESC))
-			,m_geom_mask(Vert::GeomMask)
+			template <class Vert, size_t Sz> VShaderDesc(byte const (&data)[Sz], Vert const&, pr::rdr::EGeom geom_mask = Vert::GeomMask)
+				:ShaderDesc(data, Sz)
+				,m_iplayout(Vert::Layout())
+				,m_iplayout_count(sizeof(Vert::Layout())/sizeof(D3D11_INPUT_ELEMENT_DESC))
+				,m_geom_mask(geom_mask)
 			{}
 		};
 

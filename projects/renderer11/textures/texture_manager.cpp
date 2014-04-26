@@ -204,14 +204,23 @@ void pr::rdr::TextureManager::CreateStockTextures()
 	}{
 		pr::uint const data[] =
 		{
-			0xFFFFFFFF, 0, 0xFFFFFFFF, 0,
-			0, 0xFFFFFFFF, 0, 0xFFFFFFFF,
-			0xFFFFFFFF, 0, 0xFFFFFFFF, 0,
-			0, 0xFFFFFFFF, 0, 0xFFFFFFFF
+			#define X 0xFFFFFFFF
+			#define O 0x00000000
+			X,X,O,O,X,X,O,O,
+			X,X,O,O,X,X,O,O,
+			O,O,X,X,O,O,X,X,
+			O,O,X,X,O,O,X,X,
+			X,X,O,O,X,X,O,O,
+			X,X,O,O,X,X,O,O,
+			O,O,X,X,O,O,X,X,
+			O,O,X,X,O,O,X,X,
+			#undef X
+			#undef O
 		};
-		Image src = Image::make(4, 4, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+		Image src = Image::make(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 		TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
-		m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, SamplerDesc::WrapSampler()));
+		auto sam = SamplerDesc::WrapSampler();
+		sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+		m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, sam));
 	}
 }
-

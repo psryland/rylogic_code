@@ -95,6 +95,9 @@ namespace pr
 					m_shown = true;
 					m_cv.notify_all();
 				}
+
+				// Start a timer to check for the thread being complete
+				SetTimer(1, 100, nullptr);
 				return TRUE;
 			}
 
@@ -138,6 +141,16 @@ namespace pr
 				r.top = r.bottom - btn_h;
 				r.left = r.right - btn_w;
 				m_btn.MoveWindow(Clamp(r));
+			}
+
+			// Check for the worker thread being complete
+			void OnTimer(UINT_PTR)
+			{
+				Lock lock(m_mutex);
+				if (m_done)
+					PostMessageA(WM_CLOSE);
+				else
+					SetTimer(1, 100, nullptr);
 			}
 
 			// Update the UI to the latest state
@@ -239,7 +252,6 @@ namespace pr
 						// Pass the dialog to the task function so that it can update progress.
 						// Pased as a pointer so that users have the option of passing nullptr
 						std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
-						//func(this, std::forward(args));
 
 						// Notify task complete
 						Lock lock(m_mutex);
@@ -260,7 +272,6 @@ namespace pr
 						assert(false && "Unhandled exception in task");
 					}
 					Progress(1.0f);
-					PostMessageA(WM_CLOSE);
 				});
 			}
 
@@ -268,9 +279,9 @@ namespace pr
 			// Returns IDOK if the dialog completed, IDCANCEL if the operation was cancelled
 			INT_PTR DoModal(int delay_ms = 0, HWND hWndParent = ::GetActiveWindow())
 			{
+				// Wait for up to 'delay_ms' in case no dialog is needed
 				auto done = false;
-
-				{// Wait for up to 'delay_ms' in case no dialog is needed
+				{
 					Lock lock(m_mutex);
 					done = m_cv.wait_for(lock, std::chrono::milliseconds(delay_ms), [&]{ return m_done; });
 				}
@@ -280,7 +291,8 @@ namespace pr
 					DlgBase::DoModal(hWndParent);
 
 				// Ensure the thread has ended
-				assert(!m_worker.joinable() && "worker thread still running");
+				if (m_worker.joinable())
+					m_worker.join();
 
 				// Return the result
 				if (m_result == IDABORT)
@@ -315,6 +327,7 @@ namespace pr
 				MSG_WM_DESTROY(OnDestroy)
 				MSG_WM_SIZE(OnSize)
 				MSG_WM_CLOSE(OnDone)
+				MSG_WM_TIMER(OnTimer)
 				MESSAGE_HANDLER_EX(WM_PROGRESS_UPDATE, OnProgressUpdate)
 				COMMAND_ID_HANDLER_EX(IDCANCEL ,OnCancel)
 			END_MSG_MAP()

@@ -282,7 +282,7 @@ namespace pr
 					}
 					break;
 				case EObjectBounds::Visible:
-					for (HTREEITEM i = m_tree.GetNextItem(0, TVGN_NEXT); i != 0; i = m_tree.GetNextItem(i, TVGN_NEXT))
+					for (HTREEITEM i = m_tree.GetRootItem(); i != 0; i = m_tree.GetNextItem(i, TVGN_NEXT))
 					{
 						pr::BoundingBox bb = GetLdrObject(i).BBoxWS(true, [](LdrObject const& obj) { return obj.m_visible; });
 						if (bb.IsValid()) pr::Encompass(bbox, bb);

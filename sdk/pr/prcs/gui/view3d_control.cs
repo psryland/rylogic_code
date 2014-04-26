@@ -32,7 +32,6 @@ namespace pr.gui
 	public class View3dControl :UserControl
 	{
 		private IContainer components;                            // Required designer variable.
-		private readonly EventBatcher m_eb_refresh;
 		private int m_mouse_down_at;
 
 		public View3dControl() :this(null) {}
@@ -41,18 +40,16 @@ namespace pr.gui
 		public View3dControl(View3d.ReportErrorCB error_cb)
 		{
 			if (Util.DesignTime) return;
+			View3d = new View3d(Handle, error_cb);
 
 			InitializeComponent();
-
-			View3d = new View3d(Handle, error_cb);
-			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
 
 			ClickTimeMS = 180;
 			MouseNavigation = true;
 			DefaultKeyboardShortcuts = true;
 
 			// Update the size of the control whenever we're added to a new parent
-			ParentChanged += (s,a) => View3d.DisplayArea = new Size(Width-2, Height-2);
+			ParentChanged += (s,a) => View3d.RenderTargetSize = new Size(Width-2, Height-2);
 		}
 
 		/// <summary>Clean up any resources being used.</summary>
@@ -81,14 +78,6 @@ namespace pr.gui
 		{
 			add    { View3d.OnSettingsChanged += value; }
 			remove { View3d.OnSettingsChanged -= value; }
-		}
-
-		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
-
-		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-		public void SignalRefresh()
-		{
-			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Get/Set the currently active drawset</summary>
@@ -442,8 +431,8 @@ namespace pr.gui
 		protected override void OnResize(EventArgs e)
 		{
 			base.OnResize(e);
-			View3d.DisplayArea = new Size(Width-2, Height-2);
-			Refresh();
+			View3d.RenderTargetSize = new Size(Width-2, Height-2);
+			//Refresh();
 		}
 
 		/// <summary>Absorb PaintBackground events</summary>

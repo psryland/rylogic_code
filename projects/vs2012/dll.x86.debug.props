@@ -31,6 +31,8 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <OpenMPSupport>true</OpenMPSupport>
       <SDLCheck>true</SDLCheck>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>
@@ -47,5 +49,8 @@
     </PostBuildEvent>
     <CustomBuildStep />
     <CustomBuildStep />
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\sdk\wtl\v9.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
 </Project>

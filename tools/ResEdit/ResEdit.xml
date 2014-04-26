@@ -1,6 +1,7 @@
 <!--ResEdit configuration file-->
 <config>
     <recentFiles>
+        <recentFile path="P:\projects\linedrawer\resources\linedrawer.rc" />
         <recentFile path="R:\software\PC\RexProductKeyGenerator\res\resources.rc" />
         <recentFile path="C:\Windows\System32\uxtheme.dll" />
         <recentFile path="C:\Windows\System32\comdlg32.dll" />
@@ -18,23 +19,25 @@
     </recentFiles>
     <language>English</language>
     <singleTabMode value="true" />
-    <wizard value="true" />
+    <wizard value="false" />
     <createProjectFolder value="true" />
     <defaultProjectPath value="C:\Users\Paul\ResEdit Projects\" />
     <headerName>%barefilename%.res.h</headerName>
     <includes>
+        <include path="P:\sdk\wtl\v9.0\Include\" />
+        <include path="d:\Program Files (x86)\Windows Kits\8.1\Include\um\" />
         <include path="D:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include\" />
     </includes>
     <display>
         <autoSaveLayout value="true" />
-        <maximized value="false" />
+        <maximized value="true" />
     </display>
     <codeGeneration>
         <unicode support="true" macro="" />
         <encoding value="0" />
         <defaultLanguage value="0" />
         <insertBom value="false" />
-        <generateLanguageStatements value="true" />
+        <generateLanguageStatements value="false" />
         <generateDlgFiles value="false" />
         <generateID value="true" />
         <generateControl value="false" />
@@ -44,9 +47,12 @@
         <menuEx value="false" />
         <askIncludes value="true" />
         <resourceHeader>
-            <![CDATA[#include <windows.h>
-#include <commctrl.h>
-#include <richedit.h>
+            <![CDATA[#define WINVER 0x0600
+
+//#include <atlres.h>
+//#include <commctrl.h>
+//#include <richedit.h>
+#include <winuser.rh>
 #include "%RESOURCE_HEADER%"
 
 %RESOURCES%]]>

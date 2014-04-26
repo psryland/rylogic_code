@@ -65,7 +65,7 @@ namespace pr
 		{
 			union { uint64 m_ui; char m_ch[8]; };
 			int m_len;
-			
+
 			Buf8() :m_ch() ,m_len(0) {}
 			explicit Buf8(char const* src, int n = -1) :m_ch() ,m_len(0) { for (;*src && n--; ++src) push_back(*src); }
 			template <typename Iter> explicit Buf8(Iter& src, int n = -1) :m_ch() ,m_len(0) { for (;*src && n--; ++src) push_back(*src); }
@@ -82,7 +82,7 @@ namespace pr
 			void pop_front()               { PR_ASSERT(PR_DBG, m_len > 0, ""); m_ui >>= 8; --m_len; }
 			char  operator [](int i) const { PR_ASSERT(PR_DBG, i < m_len, ""); return m_ch[i]; }
 			char& operator [](int i)       { PR_ASSERT(PR_DBG, i < m_len, ""); return m_ch[i]; }
-			
+
 			// This returns true if 'buf' _contains_ 'this'. i.e. buf1.match(buf2) != buf2.match(buf1) generally
 			//bool match(Buf8 const& buf) const { return m_ui != 0 && (m_ui & buf.m_ui) == m_ui; }
 		};
@@ -111,13 +111,13 @@ namespace pr
 				mutable uint i; NotIdChar() :i(0) {}
 				bool operator()(char ch) const { return !pr::str::IsIdentifier(ch, 0==i++); }
 			};
-			
+
 			// Generate the hash of the contents of a buffer
 			template <typename TBuf> static pr::hash::HashValue Buffer(TBuf const& buf)
 			{
 				return pr::hash::HashC(buf.begin(), buf.end());
 			}
-			
+
 			// Generate the hash of a string
 			static pr::hash::HashValue String(char const* str)
 			{
@@ -162,11 +162,12 @@ namespace pr
 		struct Exception :pr::Exception<pr::script::EResult>
 		{
 			Loc m_loc;
-			virtual Loc const& loc() const { return m_loc; }
-			string msg() const { return ErrMsg(code(), what(), loc()); }
+
 			Exception() :pr::Exception<EResult>() ,m_loc() {}
 			Exception(EResult result, Loc const& loc, char const* msg) :pr::Exception<EResult>(result, msg) ,m_loc(loc) {}
 			Exception(EResult result, Loc const& loc, string const& msg) :pr::Exception<EResult>(result, msg.c_str()) ,m_loc(loc) {}
+			string msg() const             { return ErrMsg(code(), what(), loc()); }
+			virtual Loc const& loc() const { return m_loc; }
 		};
 
 		// Debugging function to check the keyword hash codes

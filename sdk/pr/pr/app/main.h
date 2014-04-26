@@ -100,12 +100,12 @@ namespace pr
 			// Construct using a template setup object.
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
-			:m_settings(setup.UserSettings())
-			,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
-			,m_scene(m_rdr)
-			,m_cam()
-			,m_gui(gui)
-			,m_rdr_pending(false)
+				:m_settings(setup.UserSettings())
+				,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
+				,m_scene(m_rdr)
+				,m_cam()
+				,m_gui(gui)
+				,m_rdr_pending(false)
 			{
 				// Setup a simple default scene
 				// Derived apps will override this
@@ -141,7 +141,7 @@ namespace pr
 			// The size of the window has changed
 			virtual void Resize(pr::iv2 const& size)
 			{
-				m_rdr.Resize(size);
+				m_rdr.RenderTargetSize(size);
 				m_cam.Aspect(size.x / float(size.y));
 			}
 

@@ -135,7 +135,6 @@ namespace pr
 			// An iterator wrapper for applying a transform to 'points'
 			Transformer<TVertCIter> tx(points, o2w);
 			Props props = Boxes(num_boxes, tx, num_colours, colours, out_verts, out_indices);
-			props.m_bbox = o2w * props.m_bbox;
 			return props;
 		}
 

@@ -214,9 +214,9 @@ namespace pr
 			//ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
 			// Mesh *******************************************************************************
-			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, v4 const* normals = 0, v2 const* tex_coords = 0, DrawMethod const* mat = 0)
+			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, std::size_t num_normals = 0, v4 const* normals = 0, v2 const* tex_coords = 0, DrawMethod const* mat = 0)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, normals, tex_coords, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, num_normals, normals, tex_coords, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::MeshSize(num_verts, num_indices, vcount, icount);

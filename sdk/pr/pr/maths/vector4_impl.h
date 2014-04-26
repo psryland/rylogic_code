@@ -177,6 +177,15 @@ namespace pr
 		vec *= Length3(v) / Length3(vec);
 		return vec;
 	}
+	inline v4 Permute3(v4 const& v, int n)
+	{
+		switch (n%3)
+		{
+		default: return v;
+		case 1:  return v4::make(v.y, v.z, v.x, v.w);
+		case 2:  return v4::make(v.z, v.x, v.y, v.w);
+		}
+	}
 	inline uint Octant(v4 const& v)
 	{
 		// Returns a 3 bit bitmask of the octant the vector is in where X = 0x1, Y = 0x2, Z = 0x4

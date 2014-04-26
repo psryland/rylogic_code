@@ -58,7 +58,7 @@ namespace pr
 		inline char const* Write(pr::v2 const& t)       { return pr::FmtS("%f %f", t.x, t.y); }
 		inline char const* Write(pr::v4 const& t)       { return pr::FmtS("%f %f %f %f", t.x, t.y, t.z, t.w); }
 		inline char const* Write(pr::Colour32 t)        { return pr::FmtS("%08X", t.m_aarrggbb); }
-		inline std::string Write(std::string const& t)  { return pr::filesys::AddQuotesC(t); }
+		inline std::string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString<std::string>(t)); }
 
 		// Import function helper overloads
 		inline bool Read(pr::script::Reader& reader, bool& t)             { return reader.ExtractBoolS(t); }
@@ -69,7 +69,7 @@ namespace pr
 		inline bool Read(pr::script::Reader& reader, pr::v2& t)           { return reader.ExtractVector2S(t); }
 		inline bool Read(pr::script::Reader& reader, pr::v4& t)           { return reader.ExtractVector4S(t); }
 		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.ExtractIntS(t.m_aarrggbb, 16); }
-		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.ExtractStringS(t); }
+		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.ExtractCStringS(t); }
 
 		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Write(TEnum t)                             { return TEnum::ToString(t); }
 		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, bool>::type        Read(pr::script::Reader& reader, TEnum& t) { return reader.ExtractEnumS(t); }

@@ -7,7 +7,7 @@
 #define PR_LDR_ABOUTDLG_H
 
 #include "linedrawer/main/forward.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 
 class CAboutLineDrawer :public CDialogImpl<CAboutLineDrawer>
 {

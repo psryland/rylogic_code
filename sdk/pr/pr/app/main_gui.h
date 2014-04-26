@@ -123,8 +123,11 @@ namespace pr
 			{
 				return FALSE;
 			}
-			BOOL PreTranslateMessage(MSG*)
+			BOOL PreTranslateMessage(MSG* pMsg)
 			{
+				if (m_hAccel != 0 && ::TranslateAccelerator(m_hWnd, m_hAccel, pMsg) != 0)
+					return TRUE;
+
 				return FALSE;
 			}
 
@@ -191,11 +194,15 @@ namespace pr
 				SetMsgHandled(FALSE);
 				if (m_resizing)
 					return;
+
 				if (type != SIZE_MINIMIZED)
 				{
 					// Find the new client area
 					pr::IRect area = pr::ClientArea(m_hWnd);
-					if (m_hWndStatusBar) area.m_max.y -= pr::WindowBounds(m_hWndStatusBar).SizeY();
+
+					// Don't subtract these heights, client area already includes them
+					//if (m_hWndStatusBar) area.m_max.y -= pr::WindowBounds(m_hWndStatusBar).SizeY();
+					//if (m_hWndToolBar  ) area.m_max.y -= pr::WindowBounds(m_hWndToolBar).SizeY();
 
 					//SaveWindowBounds();
 					//UpdateUI();

@@ -9,7 +9,7 @@
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/linedrawer.h"
 #include "linedrawer/main/ldrevent.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 #include "linedrawer/utility/misc.h"
 
 namespace ldr
@@ -70,9 +70,9 @@ namespace ldr
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_EDITOR                ,OnEditSourceFiles)
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_PLUGINMGR             ,OnFilePluginMgr)
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_LIGHTING_DLG          ,OnShowLightingDlg)
-			COMMAND_ID_HANDLER(ID_FILE_NEW                          ,OnFileNew)
+			COMMAND_ID_HANDLER(ID_FILE_NEW1                         ,OnFileNew)
 			COMMAND_ID_HANDLER(ID_FILE_NEWSCRIPT                    ,OnFileNewScript)
-			COMMAND_ID_HANDLER(ID_FILE_OPEN                         ,OnFileOpen)
+			COMMAND_ID_HANDLER(ID_FILE_OPEN1                        ,OnFileOpen)
 			COMMAND_ID_HANDLER(ID_FILE_ADDITIVEOPEN                 ,OnFileOpenAdditive)
 			COMMAND_ID_HANDLER(ID_FILE_OPTIONS                      ,OnFileShowOptions)
 			COMMAND_ID_HANDLER(ID_FILE_PLUGINMGR                    ,OnFilePluginMgr)

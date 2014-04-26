@@ -7,7 +7,7 @@
 #define PR_LDR_TEXT_PANEL_DLG_H
 
 #include "linedrawer/main/forward.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 
 class CTextEntryDlg
 	:public CDialogImpl<CTextEntryDlg>

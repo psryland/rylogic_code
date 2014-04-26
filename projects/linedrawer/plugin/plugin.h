@@ -8,7 +8,7 @@
 
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/ldrevent.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 #include "pr/linedrawer/ldr_plugin_interface.h"
 
 namespace ldr

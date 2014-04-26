@@ -235,14 +235,6 @@ void pr::Renderer::FullScreenMode(bool on, pr::rdr::DisplayMode mode)
 	}
 }
 
-// Returns the size of the displayable area as known by the renderer
-pr::iv2 pr::Renderer::DisplayArea() const
-{
-	DXGI_SWAP_CHAIN_DESC desc;
-	pr::Throw(m_swap_chain->GetDesc(&desc));
-	return pr::iv2::make(desc.BufferDesc.Width, desc.BufferDesc.Height);
-}
-
 // The display mode of the main render target
 DXGI_FORMAT pr::Renderer::DisplayFormat() const
 {
@@ -251,8 +243,16 @@ DXGI_FORMAT pr::Renderer::DisplayFormat() const
 	return desc.BufferDesc.Format;
 }
 
+// Returns the size of the render target
+pr::iv2 pr::Renderer::RenderTargetSize() const
+{
+	DXGI_SWAP_CHAIN_DESC desc;
+	pr::Throw(m_swap_chain->GetDesc(&desc));
+	return pr::iv2::make(desc.BufferDesc.Width, desc.BufferDesc.Height);
+}
+
 // Called when the window size changes (e.g. from a WM_SIZE message)
-void pr::Renderer::Resize(pr::iv2 const& size)
+void pr::Renderer::RenderTargetSize(pr::iv2 const& size)
 {
 	// Applications can make some changes to make the transition from windowed to full screen more efficient.
 	// For example, on a WM_SIZE message, the application should release any outstanding swap-chain back buffers,
@@ -278,17 +278,15 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 	// rather than copying a full screen's worth of data around.
 
 	// Ignore resizes that aren't changes in size
-	auto area = DisplayArea();
+	auto area = RenderTargetSize();
 	if (size == area)
 		return;
 
-	// Ignore resizes to <= 0. Could report an error here, but what's the point? We handle it.
-	if (size.x <= 0 || size.y <= 0)
-		return;
+	PR_ASSERT(PR_DBG_RDR, size.x >= 0 && size.y >= 0, "Size should be positive definite");
 
 	// Notify that a resize of the swap chain is about to happen.
 	// Receivers need to ensure they don't have any outstanding references to the swap chain resources
-	pr::events::Send(Evt_Resize(false, area));
+	pr::events::Send(Evt_Resize(false, area)); // notify before changing the RT (with the old size)
 
 	// Drop the render targets from the immediate context
 	m_immediate->OMSetRenderTargets(0, 0, 0);
@@ -299,14 +297,15 @@ void pr::Renderer::Resize(pr::iv2 const& size)
 
 	// Get the swap chain to resize itself
 	// Pass 0 for width and height, DirectX gets them from the associated window
-	pr::Throw(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
+	pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
+	//pr::Throw(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
 
 	// Setup the render targets again
 	InitMainRT();
 
 	// Notify that the resize is done
-	area = DisplayArea();
-	pr::events::Send(Evt_Resize(true, area));
+	area = RenderTargetSize();
+	pr::events::Send(Evt_Resize(true, area)); // notify after changing the RT (with the new size)
 }
 
 // Flip the scene to the display

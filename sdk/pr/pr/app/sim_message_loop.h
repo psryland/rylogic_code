@@ -76,9 +76,8 @@ namespace pr
 
 	public:
 		SimMsgLoop()
-		:m_contexts()
+			:m_contexts()
 		{}
-
 		~SimMsgLoop()
 		{
 			for (auto i = begin(m_contexts), iend = end(m_contexts); i != iend; ++i)

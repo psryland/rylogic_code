@@ -28,6 +28,7 @@
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <SDLCheck>true</SDLCheck>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
     </ClCompile>
     <PostBuildEvent>
       <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
@@ -37,6 +38,9 @@
     </Lib>
     <CustomBuildStep />
     <CustomBuildStep />
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\sdk\wtl\v9.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <BuildMacro Include="TargetPlatform">

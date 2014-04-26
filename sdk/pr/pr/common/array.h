@@ -114,6 +114,27 @@ namespace pr
 			template <typename Type> inline typename miter<Type>::difference_type operator - (miter<Type> lhs, miter<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
 			template <typename Type> inline typename citer<Type>::difference_type operator - (citer<Type> lhs, miter<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
 			template <typename Type> inline typename citer<Type>::difference_type operator - (miter<Type> lhs, citer<Type> rhs) { return lhs.m_ptr - rhs.m_ptr; }
+
+			// std::aligned_type doesn't work for alignments > 8 on VC++
+			template <int Alignment> struct aligned_type {};
+
+			template <> struct aligned_type<1>   {                        struct type { char   a;      }; };
+			template <> struct aligned_type<2>   {                        struct type { short  a;      }; };
+			template <> struct aligned_type<4>   {                        struct type { int    a;      }; };
+			template <> struct aligned_type<8>   {                        struct type { double a;      }; };
+			template <> struct aligned_type<16>  { __declspec(align(16 )) struct type { char   a[16];  }; };
+			template <> struct aligned_type<32>  { __declspec(align(32 )) struct type { char   a[32];  }; };
+			template <> struct aligned_type<64>  { __declspec(align(64 )) struct type { char   a[64];  }; };
+			template <> struct aligned_type<128> { __declspec(align(128)) struct type { char   a[128]; }; };
+
+			template <int Size, int Alignment> struct aligned_storage
+			{
+				union type
+				{
+					unsigned char bytes[Size];
+					typename aligned_type<Alignment>::type aligner;
+				};
+			};
 		}
 	}
 
@@ -138,10 +159,11 @@ namespace pr
 
 		enum
 		{
-			LocalLength      = LocalCount,
-			LocalSizeInBytes = LocalCount * sizeof(value_type),
+			TypeSizeInBytes  = sizeof(Type),
 			TypeIsPod        = std::is_pod<Type>::value,
 			TypeAlignment    = std::alignment_of<Type>::value,
+			LocalLength      = LocalCount,
+			LocalSizeInBytes = LocalCount * TypeSizeInBytes,
 		};
 
 		// type specific traits
@@ -171,7 +193,9 @@ namespace pr
 		};
 
 	private:
-		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
+		typedef typename impl::arr::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
+		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage isn't aligned correctly");
+
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		Type*       m_ptr;                // Pointer to the array of data
 		size_type   m_capacity;           // The reserved space for elements. m_capacity * sizeof(Type) = size in bytes pointed to by m_ptr.

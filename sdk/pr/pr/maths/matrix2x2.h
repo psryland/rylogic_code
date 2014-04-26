@@ -34,6 +34,7 @@ namespace pr
 		v2 const&    operator [](uint i) const     { assert(i < 2); return ToArray()[i]; }
 		v2&          operator [](uint i)           { assert(i < 2); return ToArray()[i]; }
 	};
+	static_assert(std::is_pod<m2x2>::value, "Should be a pod type");
 
 	m2x2 const m2x2Zero     = {v2Zero, v2Zero};
 	m2x2 const m2x2Identity = {v2XAxis, v2YAxis};

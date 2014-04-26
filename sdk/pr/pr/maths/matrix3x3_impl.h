@@ -466,12 +466,16 @@ namespace pr
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be choosen.
-	inline m3x4& OriFromDir(m3x4& ori, v4 const& dir, int axis, v4 const& up)
+	inline m3x4& OriFromDir(m3x4& ori, v4 const& dir, int axis_id, v4 const& up)
 	{
+		assert(axis_id >= 0 && axis_id <= 2 && "axis_id out of range");
 		v4 up_ = pr::Parallel(up, dir) ? Perpendicular(dir) : up;
-		ori[ axis       ] = Normalise3(dir);
-		ori[(axis+1) % 3] = Normalise3(Cross3(up_, ori[axis]));
-		ori[(axis+2) % 3] = Cross3(ori[axis], ori[(axis+1)%3]);
+		auto _0 = (axis_id + 0) % 3;
+		auto _1 = (axis_id + 1) % 3;
+		auto _2 = (axis_id + 2) % 3;
+		ori[_0] = Normalise3(dir);
+		ori[_1] = Normalise3(Cross3(up_, ori[_0]));
+		ori[_2] = Cross3(ori[_0], ori[_1]);
 		return ori;
 	}
 	inline m3x4  OriFromDir(v4 const& dir, int axis, v4 const& up)

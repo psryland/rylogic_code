@@ -9,7 +9,7 @@
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/user_settings.h"
 #include "linedrawer/utility/misc.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 #include "pr/gui/wtl_tab_view_ctrl.h"
 
 namespace ldr

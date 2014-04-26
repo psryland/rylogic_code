@@ -92,6 +92,15 @@ namespace pr
 		assert(!IsZero3(lhs) && !IsZero3(rhs) && "CosAngle undefined for zero vectors");
 		return Clamp(Dot3(lhs,rhs) / Sqrt(Length3Sq(lhs) * Length3Sq(rhs)), -1.0f, 1.0f);
 	}
+	inline v3 Permute3(v3 const& v, int n)
+	{
+		switch (n%3)
+		{
+		default: return v;
+		case 1:  return v3::make(v.y, v.z, v.x);
+		case 2:  return v3::make(v.z, v.x, v.y);
+		}
+	}
 }
 
 #endif

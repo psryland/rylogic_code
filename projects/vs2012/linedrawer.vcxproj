@@ -129,6 +129,9 @@
     <ResourceCompile />
     <ProjectReference />
     <ProjectReference />
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>..\..\..\sdk\wtl\v9.0\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -270,7 +273,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\gui\recent_files.h" />
     <ClInclude Include="..\linedrawer\gui\text_panel_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\wtl_tab_view_ctrl.h" />
-    <ClInclude Include="..\linedrawer\resources\linedrawer.resources.h" />
+    <ClInclude Include="..\linedrawer\resources\linedrawer.res.h" />
     <ClInclude Include="..\linedrawer\utility\debug.h" />
     <ClInclude Include="..\linedrawer\utility\misc.h" />
     <ClInclude Include="..\linedrawer\input\keybindings.h" />

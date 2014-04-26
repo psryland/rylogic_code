@@ -107,6 +107,15 @@ struct View3DMaterial
 	View3DTexture m_diff_tex;
 	View3DTexture m_env_map;
 };
+struct View3DViewport
+{
+	float m_x;
+	float m_y;
+	float m_width;
+	float m_height;
+	float m_min_depth;
+	float m_max_depth;
+};
 
 typedef void (__stdcall *View3D_SettingsChanged)();
 typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
@@ -142,26 +151,28 @@ extern "C"
 	VIEW3D_API BOOL                    __stdcall View3D_DrawsetHasObject         (View3DDrawset drawset, View3DObject object);
 
 	// Camera
-	VIEW3D_API void                    __stdcall View3D_CameraToWorld            (View3DDrawset drawset, pr::m4x4& c2w);
-	VIEW3D_API void                    __stdcall View3D_SetCameraToWorld         (View3DDrawset drawset, pr::m4x4 const& c2w);
-	VIEW3D_API void                    __stdcall View3D_PositionCamera           (View3DDrawset drawset, pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up);
-	VIEW3D_API float                   __stdcall View3D_FocusDistance            (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetFocusDistance         (View3DDrawset drawset, float dist);
-	VIEW3D_API float                   __stdcall View3D_CameraAspect             (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetCameraAspect          (View3DDrawset drawset, float aspect);
-	VIEW3D_API float                   __stdcall View3D_CameraFovX               (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetCameraFovX            (View3DDrawset drawset, float fovX);
-	VIEW3D_API float                   __stdcall View3D_CameraFovY               (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_SetCameraFovY            (View3DDrawset drawset, float fovY);
-	VIEW3D_API void                    __stdcall View3D_Navigate                 (View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end);
-	VIEW3D_API void                    __stdcall View3D_NavigateZ                (View3DDrawset drawset, float delta);
-	VIEW3D_API void                    __stdcall View3D_ResetZoom                (View3DDrawset drawset);
-	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis          (View3DDrawset drawset, pr::v4& axis);
-	VIEW3D_API void                    __stdcall View3D_AlignCamera              (View3DDrawset drawset, pr::v4 const& axis);
-	VIEW3D_API void                    __stdcall View3D_ResetView                (View3DDrawset drawset, pr::v4 const& forward, pr::v4 const& up);
-	VIEW3D_API void                    __stdcall View3D_GetFocusPoint            (View3DDrawset drawset, pr::v4& position);
-	VIEW3D_API void                    __stdcall View3D_SetFocusPoint            (View3DDrawset drawset, pr::v4 const& position);
-	VIEW3D_API void                    __stdcall View3D_WSRayFromScreenPoint     (View3DDrawset drawset, pr::v2 screen, pr::v4& ws_point, pr::v4& ws_direction);
+	VIEW3D_API void                    __stdcall View3D_CameraToWorld          (View3DDrawset drawset, pr::m4x4& c2w);
+	VIEW3D_API void                    __stdcall View3D_SetCameraToWorld       (View3DDrawset drawset, pr::m4x4 const& c2w);
+	VIEW3D_API void                    __stdcall View3D_PositionCamera         (View3DDrawset drawset, pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up);
+	VIEW3D_API float                   __stdcall View3D_FocusDistance          (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetFocusDistance       (View3DDrawset drawset, float dist);
+	VIEW3D_API float                   __stdcall View3D_CameraAspect           (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetCameraAspect        (View3DDrawset drawset, float aspect);
+	VIEW3D_API float                   __stdcall View3D_CameraFovX             (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetCameraFovX          (View3DDrawset drawset, float fovX);
+	VIEW3D_API float                   __stdcall View3D_CameraFovY             (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_SetCameraFovY          (View3DDrawset drawset, float fovY);
+	VIEW3D_API void                    __stdcall View3D_Navigate               (View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end);
+	VIEW3D_API void                    __stdcall View3D_NavigateZ              (View3DDrawset drawset, float delta);
+	VIEW3D_API void                    __stdcall View3D_ResetZoom              (View3DDrawset drawset);
+	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis        (View3DDrawset drawset, pr::v4& axis);
+	VIEW3D_API void                    __stdcall View3D_AlignCamera            (View3DDrawset drawset, pr::v4 const& axis);
+	VIEW3D_API void                    __stdcall View3D_ResetView              (View3DDrawset drawset, pr::v4 const& forward, pr::v4 const& up);
+	VIEW3D_API void                    __stdcall View3D_GetFocusPoint          (View3DDrawset drawset, pr::v4& position);
+	VIEW3D_API void                    __stdcall View3D_SetFocusPoint          (View3DDrawset drawset, pr::v4 const& position);
+	VIEW3D_API pr::v4                  __stdcall View3D_WSPointFromNormSSPoint (View3DDrawset drawset, pr::v4 const& screen);
+	VIEW3D_API pr::v4                  __stdcall View3D_NormSSPointFromWSPoint (View3DDrawset drawset, pr::v4 const& world);
+	VIEW3D_API void                    __stdcall View3D_WSRayFromNormSSPoint   (View3DDrawset drawset, pr::v4 const& screen, pr::v4& ws_point, pr::v4& ws_direction);
 
 	// Lights
 	VIEW3D_API View3DLight             __stdcall View3D_LightProperties          (View3DDrawset drawset);
@@ -192,8 +203,10 @@ extern "C"
 
 	// Rendering
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
-	VIEW3D_API void                    __stdcall View3D_DisplayArea              (int& width, int& height);
-	VIEW3D_API void                    __stdcall View3D_Resize                   (int width, int height);
+	VIEW3D_API void                    __stdcall View3D_RenderTargetSize         (int& width, int& height);
+	VIEW3D_API void                    __stdcall View3D_SetRenderTargetSize      (int width, int height);
+	VIEW3D_API View3DViewport          __stdcall View3D_Viewport                 ();
+	VIEW3D_API void                    __stdcall View3D_SetViewport              (View3DViewport vp);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DDrawset drawset);
 	VIEW3D_API EView3DFillMode         __stdcall View3D_FillMode                 (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetFillMode              (View3DDrawset drawset, EView3DFillMode mode);

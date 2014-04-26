@@ -73,7 +73,7 @@ namespace ldr
 		// Return a point in world space corresponding to a screen space point.
 		// The x,y components of 'screen' should be in client area space
 		// The z component should be the world space distance from the camera
-		pr::v4 WSPointFromScreenPoint(pr::v4 const& screen) const;
+		pr::v4 WSPointFromSSPoint(pr::v4 const& screen) const;
 
 		// Orbit the camera about the current focus point
 		void OrbitCamera(float orbit_speed_rad_p_s);

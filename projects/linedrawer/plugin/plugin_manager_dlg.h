@@ -7,7 +7,7 @@
 #define PR_LDR_PLUGIN_MANAGER_DLG_H
 
 #include "linedrawer/main/forward.h"
-#include "linedrawer/resources/linedrawer.resources.h"
+#include "linedrawer/resources/linedrawer.res.h"
 
 namespace ldr
 {

@@ -63,9 +63,9 @@ void SetupDS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 
 	// Combine states in priority order
 	DSBlock dsb = draw.m_shader->m_dsb;
-	dsb |= draw.m_dsb;
-	if (inst_dsb) dsb |= *inst_dsb;
-	dsb |= scene.m_dsb;
+	dsb |= draw.m_dsb;              // default states from the draw method
+	dsb |= scene.m_dsb;             // scene-wide state overrides
+	if (inst_dsb) dsb |= *inst_dsb; // instance specific overrides
 
 	auto ptr = ds_mgr.State(dsb);
 	dc->OMSetDepthStencilState(ptr.m_ptr, 0);
@@ -80,9 +80,9 @@ void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 
 	// Combine states in priority order
 	RSBlock rsb = draw.m_shader->m_rsb;
-	rsb |= draw.m_rsb;
-	if (inst_rsb) rsb |= *inst_rsb;
-	rsb |= scene.m_rsb;
+	rsb |= draw.m_rsb;              // default states from the draw method
+	rsb |= scene.m_rsb;             // scene-wide state overrides
+	if (inst_rsb) rsb |= *inst_rsb; // instance specific overrides
 
 	auto ptr = rs_mgr.State(rsb);
 	dc->RSSetState(ptr.m_ptr);
@@ -97,9 +97,9 @@ void SetupBS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance
 
 	// Combine states in priority order
 	BSBlock bsb = draw.m_shader->m_bsb;
-	bsb |= draw.m_bsb;
-	if (inst_bsb) bsb |= *inst_bsb;
-	bsb |= scene.m_bsb;
+	bsb |= draw.m_bsb;              // default states from the draw method
+	bsb |= scene.m_bsb;             // scene-wide state overrides
+	if (inst_bsb) bsb |= *inst_bsb; // instance specific overrides
 
 	auto ptr = bs_mgr.State(bsb);
 	dc->OMSetBlendState(ptr.m_ptr, 0, 0xFFFFFFFF); // todo, the BlendFactor and SampleMask should really be part of the BSBlock

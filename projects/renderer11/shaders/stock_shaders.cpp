@@ -78,16 +78,16 @@ struct TxTint :BaseShader
 {
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
-		VShaderDesc vsdesc(VertP(), txfm_tint_vs); 
+		VShaderDesc vsdesc(txfm_tint_vs, VertP());
 		PShaderDesc psdesc(txfm_tint_ps);
-		
+
 		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTint>(EShader::TxTint, TxTint::Setup, &vsdesc, &psdesc, "txfm_tint");
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
 		//TxTint const* me = static_cast<TxTint const*>(nugget.m_draw.m_shader.m_ptr);
-		
+
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
@@ -106,16 +106,16 @@ struct TxTintPvc :BaseShader
 {
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
-		VShaderDesc vsdesc(VertPC(), txfm_tint_pvc_vs);
+		VShaderDesc vsdesc(txfm_tint_pvc_vs, VertPC());
 		PShaderDesc psdesc(txfm_tint_pvc_ps);
-		
+
 		pr::rdr::ShaderPtr shdr = sm.CreateShader<TxTintPvc>(EShader::TxTintPvc, TxTintPvc::Setup, &vsdesc, &psdesc, "txfm_tint_pvc");
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
 	static void Setup(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)
 	{
 		//TxTintPvc const* me = static_cast<TxTintPvc const*>(nugget.m_draw.m_shader.m_ptr);
-		
+
 		// Fill out the model constants buffer and bind it to the VS stage
 		CBufModel cb = {};
 		Txfm(inst, scene.m_view, cb);
@@ -133,16 +133,16 @@ struct TxTintPvc :BaseShader
 struct TxTintTex :BaseShader
 {
 	D3DPtr<ID3D11SamplerState> m_samp_state;
-	
+
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
 		// Create the shader
-		VShaderDesc vsdesc(VertPT(), txfm_tint_tex_vs);
+		VShaderDesc vsdesc(txfm_tint_tex_vs, VertPT());
 		PShaderDesc psdesc(txfm_tint_tex_ps);
-		
+
 		pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintTex>(EShader::TxTintTex, TxTintTex::Setup, &vsdesc, &psdesc, "txfm_tint_tex");
 		CreateCBufModel(device, shdr->m_cbuf);
-	
+
 		// Create a texture sampler
 		SamplerDesc sdesc;
 		pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_samp_state.m_ptr));
@@ -181,9 +181,9 @@ struct TxTintPvcLit :BaseShader
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
 		// Create the shader
-		VShaderDesc vsdesc(VertPCNT(), txfm_tint_pvc_lit_vs);
+		VShaderDesc vsdesc(txfm_tint_pvc_lit_vs, VertPCNT(), EGeom::Vert|EGeom::Colr|EGeom::Norm);
 		PShaderDesc psdesc(txfm_tint_pvc_lit_ps);
-		
+
 		auto shdr = sm.CreateShader<TxTintPvcLit>(EShader::TxTintPvcLit, TxTintPvcLit::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit");
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
@@ -210,9 +210,9 @@ struct TxTintPvcLitTex :BaseShader
 	static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
 	{
 		// Create the shader
-		VShaderDesc vsdesc(VertPCNT(), txfm_tint_pvc_lit_tex_vs);
+		VShaderDesc vsdesc(txfm_tint_pvc_lit_tex_vs, VertPCNT());
 		PShaderDesc psdesc(txfm_tint_pvc_lit_tex_ps);
-		
+
 		auto shdr = sm.CreateShader<TxTintPvcLitTex>(EShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, "txfm_tint_pvc_lit_tex");
 		CreateCBufModel(device, shdr->m_cbuf);
 	}
@@ -253,28 +253,26 @@ void pr::rdr::ShaderManager::CreateStockShaders()
 	TxTintPvcLitTex::Create(*this, m_device);
 }
 
-
-
 //// Setup this shader for rendering
 //void pr::rdr::Shader::Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, SceneView const& view)
 //{
 //	(void)view;
 //	(void)dle; //todo textures
-//	
+//
 //	// Configure the constants buffer for this shader
 ////todo	m_map(dc, m_constants, dle, view);
-//	
+//
 //	// Bind the constant buffer to the device
 ////todo	dc->VSSetConstantBuffers(0, 1, &m_constants.m_ptr);
-//	
+//
 //	// Apply the blend state if present
 //	if (m_blend_state)
 //		dc->OMSetBlendState(m_blend_state.m_ptr, 0, 0xffffffff);
-//	
+//
 //	// Apply the rasterizer state if present
 //	if (m_rast_state)
 //		dc->RSSetState(m_rast_state.m_ptr);
-//	
+//
 //	// Apply the depth buffer state if present
 //	if (m_depth_state)
 //		dc->OMSetDepthStencilState(m_depth_state.m_ptr, 0);

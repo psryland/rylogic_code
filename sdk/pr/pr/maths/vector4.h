@@ -17,18 +17,17 @@
 
 namespace pr
 {
-	struct v4
+	__declspec(align(16)) struct v4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct
-		union {
+		union
+		{
 			struct { float x,y,z,w; };
 			#if PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec;
 			#elif PR_MATHS_USE_INTRINSICS
 			__m128 vec;
-			#else
-			std::aligned_storage_t<16,16>::type vec;
 			#endif
 		};
 		#pragma warning(pop)
@@ -71,6 +70,8 @@ namespace pr
 		static v4                       normal3(float x, float y, float z, float w) { v4 vec; return Normalise3(vec.set(x, y, z, w)); }
 		static v4                       normal4(float x, float y, float z, float w) { v4 vec; return Normalise4(vec.set(x, y, z, w)); }
 	};
+	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
+	static_assert(std::is_pod<v4>::value, "Should be a pod type");
 
 	v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -176,6 +177,7 @@ namespace pr
 	bool    Parallel(v4 const& v0, v4 const& v1, float tol = 0.0f);
 	v4      CreateNotParallelTo(v4 const& v);
 	v4      Perpendicular(v4 const& v);
+	v4      Permute3(v4 const& v, int n);
 	uint    Octant(v4 const& v);
 	v4      RotationVectorApprox(m3x4 const& from, m3x4 const& to);
 	v4      RotationVectorApprox(m4x4 const& from, m4x4 const& to);

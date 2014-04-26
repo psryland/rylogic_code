@@ -250,19 +250,19 @@ namespace pr.gfx
 		[StructLayout(LayoutKind.Sequential)]
 		public struct View3DLight
 		{
-			public ELight       m_type;
-			public bool         m_on;
-			public v4           m_position;
-			public v4           m_direction;
-			public Colour32     m_ambient;
-			public Colour32     m_diffuse;
-			public Colour32     m_specular;
-			public float        m_specular_power;
-			public float        m_inner_cos_angle;
-			public float        m_outer_cos_angle;
-			public float        m_range;
-			public float        m_falloff;
-			public bool         m_cast_shadows;
+			public ELight   m_type;
+			public bool     m_on;
+			public v4       m_position;
+			public v4       m_direction;
+			public Colour32 m_ambient;
+			public Colour32 m_diffuse;
+			public Colour32 m_specular;
+			public float    m_specular_power;
+			public float    m_inner_cos_angle;
+			public float    m_outer_cos_angle;
+			public float    m_range;
+			public float    m_falloff;
+			public bool     m_cast_shadows;
 
 			/// <summary>Return properties for a directional light source</summary>
 			public static View3DLight Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
@@ -280,6 +280,23 @@ namespace pr.gfx
 					m_cast_shadows   = cast_shadows,
 				};
 			}
+		}
+
+		/// <summary>The viewport volume in rendertarget space (ie. screen coords, not normalised)</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct View3DViewport
+		{
+			public float m_x;
+			public float m_y;
+			public float m_width;
+			public float m_height;
+			public float m_min_depth;
+			public float m_max_depth;
+
+			public Size ToSize() { return new Size((int)Math.Round(m_width), (int)Math.Round(m_height)); }
+			public SizeF ToSizeF() { return new SizeF(m_width, m_height); }
+			public Rectangle ToRect() { return new Rectangle((int)m_x, (int)m_y, (int)Math.Round(m_width), (int)Math.Round(m_height)); }
+			public RectangleF ToRectF() { return new RectangleF(m_x, m_y, m_width, m_height); }
 		}
 
 		#endregion
@@ -306,9 +323,12 @@ namespace pr.gfx
 			ref Material mat,
 			IntPtr ctx);
 
+		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
+
 		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
-		private readonly List<DrawsetInterface> m_drawsets;
+		private readonly List<DrawsetInterface> m_drawsets;       // Groups of objects to render
+		private readonly EventBatcher m_eb_refresh;               // Batch refresh calls
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
 		public View3d(HWND handle, ReportErrorCB error_cb = null)
@@ -316,6 +336,7 @@ namespace pr.gfx
 			m_error_cb = ErrorCB;
 			m_settings_changed_cb = SettingsChgCB;
 			m_drawsets = new List<DrawsetInterface>();
+			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
 			if (error_cb != null) OnError += error_cb;
 
 			// Initialise the renderer
@@ -331,6 +352,16 @@ namespace pr.gfx
 				m_drawsets[0].Dispose();
 
 			View3D_Shutdown();
+		}
+
+		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
+		public void SignalRefresh()
+		{
+			m_eb_refresh.Signal();
+		}
+		public void Refresh()
+		{
+			View3D_Refresh();
 		}
 
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
@@ -414,19 +445,18 @@ namespace pr.gfx
 			View3D_ShowObjectManager(show);
 		}
 
-		/// <summary>Get/Set the size of the render target</summary>
-		public Size DisplayArea
+		/// <summary>Resize the render target</summary>
+		public Size RenderTargetSize
 		{
-			get
-			{
-				int w,h;
-				View3D_DisplayArea(out w, out h);
-				return new Size(w,h);
-			}
-			set
-			{
-				View3D_Resize(value.Width, value.Height);
-			}
+			get { int w,h; View3D_RenderTargetSize(out w, out h); return new Size(w,h); }
+			set { View3D_SetRenderTargetSize(value.Width, value.Height); }
+		}
+
+		/// <summary>Get/Set the size/position of the viewport within the render target</summary>
+		public View3DViewport Viewport
+		{
+			get { return View3D_Viewport(); }
+			set { View3D_SetViewport(value); }
 		}
 
 		/// <summary>Direct X/Y navigation. 'point' is a point in client rect space.</summary>
@@ -485,10 +515,22 @@ namespace pr.gfx
 		/// <summary>Convert a screen space point to a normalised point</summary>
 		private v2 NormalisePoint(Point pt)
 		{
-			var da = DisplayArea;
+			var da = RenderTargetSize;
 			return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
 		}
-
+		
+		/// <summary>Convert a normalised point into a screen space point</summary>
+		private PointF ScreenSpacePointF(v2 pt)
+		{
+			var da = RenderTargetSize;
+			return new PointF((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
+		}
+		private Point ScreenSpacePoint(v2 pt)
+		{
+			var p = ScreenSpacePointF(pt);
+			return new Point((int)Math.Round(p.X), (int)Math.Round(p.Y));
+		}
+		
 		/// <summary>Callback function from the Dll when an error occurs</summary>
 		private void ErrorCB(string msg)
 		{
@@ -590,6 +632,47 @@ namespace pr.gfx
 				var forward = up.z > up.y ? v4.YAxis : v4.ZAxis;
 				ResetView(forward, up);
 			}
+
+			/// <summary>
+			/// Return a point in world space corresponding to a normalised screen space point.
+			/// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+			/// The z component should be the world space distance from the camera.</summary>
+			public v4 WSPointFromNormSSPoint(v4 screen)
+			{
+				return View3D_WSPointFromNormSSPoint(m_ds.Handle, ref screen);
+			}
+			public v4 WSPointFromSSPoint(Point screen)
+			{
+				var nss = m_ds.View.NormalisePoint(screen);
+				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f));
+			}
+
+			/// <summary>
+			/// Return a point in normalised screen space corresponding to 'world'
+			/// The returned 'z' component will be the world space distance from the camera.</summary>
+			public v4 NormSSPointFromWSPoint(v4 world)
+			{
+				return View3D_NormSSPointFromWSPoint(m_ds.Handle, ref world);
+			}
+			public Point SSPointFromWSPoint(v4 world)
+			{
+				var nss = NormSSPointFromWSPoint(world);
+				return m_ds.View.ScreenSpacePoint(new v2(nss.x, nss.y));
+			}
+
+			/// <summary>
+			/// Convert a screen space point into a position and direction in world space.
+			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
+			/// The z component of 'screen' should be the world space distance from the camera</summary>
+			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
+			{
+				View3D_WSRayFromNormSSPoint(m_ds.Handle, ref screen, out ws_point, out ws_direction);
+			}
+			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
+			{
+				var nss = m_ds.View.NormalisePoint(screen);
+				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
+			}
 		}
 
 		/// <summary>Methods for adding/removing objects from a drawset</summary>
@@ -620,6 +703,9 @@ namespace pr.gfx
 				if (m_view.Drawset == this) m_view.Drawset = null;
 				View3D_DrawsetDelete(m_ds);
 			}
+
+			/// <summary>The associated view3d object</summary>
+			public View3d View { get { return m_view; } }
 
 			/// <summary>Get the native view3d handle for the drawset</summary>
 			public IntPtr Handle { get { return m_ds; } }
@@ -748,12 +834,6 @@ namespace pr.gfx
 			{
 				get { return View3D_AngleToolVisible(); }
 				set { View3D_ShowAngleTool(m_ds, value); }
-			}
-
-			/// <summary>Convert a screen space point into a position and direction in world space 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)</summary>
-			public void WSRayFromScreenPoint(v2 screen, out v4 ws_point, out v4 ws_direction)
-			{
-				View3D_WSRayFromScreenPoint(m_ds, ref screen, out ws_point, out ws_direction);
 			}
 
 			/// <summary>Get/Set orthographic rendering mode</summary>
@@ -964,26 +1044,28 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
 
 		// Camera
-		[DllImport(Dll)] private static extern void              View3D_CameraToWorld            (HDrawset drawset, out m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld         (HDrawset drawset, ref m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_PositionCamera           (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
-		[DllImport(Dll)] private static extern float             View3D_FocusDistance            (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusDistance         (HDrawset drawset, float dist);
-		[DllImport(Dll)] private static extern float             View3D_CameraAspect             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraAspect          (HDrawset drawset, float aspect);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovX               (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraFovX            (HDrawset drawset, float fovX);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovY               (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraFovY            (HDrawset drawset, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_Navigate                 (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern void              View3D_NavigateZ                (HDrawset drawset, float delta);
-		[DllImport(Dll)] private static extern void              View3D_ResetZoom                (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis          (HDrawset drawset, out v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_AlignCamera              (HDrawset drawset, ref v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_ResetView                (HDrawset drawset, ref v4 forward, ref v4 up);
-		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint            (HDrawset drawset, out v4 position);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint            (HDrawset drawset, ref v4 position);
-		[DllImport(Dll)] private static extern void              View3D_WSRayFromScreenPoint     (HDrawset drawset, ref v2 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HDrawset drawset, out m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HDrawset drawset, ref m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
+		[DllImport(Dll)] private static extern float             View3D_FocusDistance          (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusDistance       (HDrawset drawset, float dist);
+		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraAspect        (HDrawset drawset, float aspect);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraFovX          (HDrawset drawset, float fovX);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraFovY          (HDrawset drawset, float fovY);
+		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern void              View3D_NavigateZ              (HDrawset drawset, float delta);
+		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HDrawset drawset, out v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, ref v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_ResetView              (HDrawset drawset, ref v4 forward, ref v4 up);
+		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HDrawset drawset, out v4 position);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HDrawset drawset, ref v4 position);
+		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HDrawset drawset, ref v4 screen);
+		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HDrawset drawset, ref v4 world);
+		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HDrawset drawset, ref v4 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
 		[DllImport(Dll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
@@ -1012,13 +1094,16 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
 
 		// Rendering
-		[DllImport(Dll)] private static extern void              View3D_DisplayArea              (out int width, out int height);
-		[DllImport(Dll)] private static extern void              View3D_Resize                   (int width, int height);
+		[DllImport(Dll)] private static extern void              View3D_Refresh                  ();
+		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (out int width, out int height);
+		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (int width, int height);
+		[DllImport(Dll)] private static extern View3DViewport    View3D_Viewport                 ();
+		[DllImport(Dll)] private static extern void              View3D_SetViewport              (View3DViewport vp);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HDrawset drawset);
 		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
 		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
-		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
 		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
 

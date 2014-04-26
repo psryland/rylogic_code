@@ -1110,6 +1110,7 @@ public:
 class CMessageLoop
 {
 public:
+	virtual ~CMessageLoop() {}
 	ATL::CSimpleArray<CMessageFilter*> m_aMsgFilter;
 	ATL::CSimpleArray<CIdleHandler*> m_aIdleHandler;
 	MSG m_msg;
@@ -1152,7 +1153,7 @@ public:
 #endif // !_ATL_NO_OLD_NAMES
 
 // message loop
-	int Run()
+	virtual int Run()
 	{
 		BOOL bDoIdle = TRUE;
 		int nIdleCount = 0;
@@ -1262,7 +1263,7 @@ public:
 		::EnterCriticalSection(&ATL::_pModule->m_csStaticDataInit);
 		return S_OK;
 #endif // !(_ATL_VER >= 0x0700)
-	}
+	} // pr: A crash here means you need a CAppModule in your binary with 'Init' called in DllMain or WinMain
 
 	void Unlock()
 	{

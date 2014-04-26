@@ -39,6 +39,7 @@ namespace pr
 		template <typename T> static v2 make(T const* v)          { v2 vec; return vec.set(v); }
 		static v2                       normal2(float x, float y) { v2 vec; return Normalise2(vec.set(x,y)); }
 	};
+	static_assert(std::is_pod<v2>::value, "Should be a pod type");
 
 	v2 const v2Zero  = {0.0f, 0.0f};
 	v2 const v2One   = {1.0f, 1.0f};

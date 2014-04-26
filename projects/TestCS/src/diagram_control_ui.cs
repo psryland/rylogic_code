@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using pr.gui;
+using pr.gfx;
 using pr.maths;
 
 namespace TestCS
@@ -10,13 +11,25 @@ namespace TestCS
 	{
 		private DiagramControl m_diag;
 
+		static DiagramControlUI()
+		{
+			View3d.SelectDll(Environment.Is64BitProcess
+				? @"\sdk\pr\lib\x64\debug\view3d.dll"
+				: @"\sdk\pr\lib\x86\debug\view3d.dll");
+		}
 		public DiagramControlUI()
 		{
 			InitializeComponent();
 
-			ClientSize = new Size(400,500);
-			var node1 = new DiagramControl.BoxNode{Text = "Hello"};
-			m_diag.Nodes.Add(node1);
+			ClientSize = new Size(640,480);
+			
+			var node1 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(1,1,0)};
+			var node2 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(-1,-1,0)};
+			m_diag.Elements.Add(node1);
+			m_diag.Elements.Add(node2);
+
+			var connector1 = new DiagramControl.Connector(node1, node2);
+			m_diag.Elements.Add(connector1);
 		}
 
 		#region Windows Form Designer generated code

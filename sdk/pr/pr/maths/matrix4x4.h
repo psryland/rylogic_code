@@ -15,7 +15,7 @@
 
 namespace pr
 {
-	struct m4x4
+	__declspec(align(16)) struct m4x4
 	{
 		v4 x;
 		v4 y;
@@ -50,6 +50,8 @@ namespace pr
 		v4 const&    operator [] (int i) const              { assert(i < 4); return ToArray()[i]; }
 		v4&          operator [] (int i)                    { assert(i < 4); return ToArray()[i]; }
 	};
+	static_assert(std::alignment_of<m4x4>::value == 16, "Should be 16 byte aligned");
+	static_assert(std::is_pod<m4x4>::value, "Should be a pod type");
 
 	m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};
 	m4x4 const m4x4Identity = {v4XAxis, v4YAxis, v4ZAxis, v4Origin};

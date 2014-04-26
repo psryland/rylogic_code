@@ -160,9 +160,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h">
       <Filter>tools</Filter>
     </ClInclude>
-    <ClInclude Include="..\linedrawer\resources\linedrawer.resources.h">
-      <Filter>resources</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
       <Filter>objects</Filter>
     </ClInclude>
@@ -201,6 +198,9 @@
     </ClInclude>
     <ClInclude Include="..\linedrawer\main\ldrexception.h">
       <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\linedrawer\resources\linedrawer.res.h">
+      <Filter>resources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

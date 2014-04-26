@@ -173,7 +173,7 @@ namespace pr.maths
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
-		public static m4x4 PermuteRotation(m4x4 mat, int n)
+		public static m4x4 Permute(m4x4 mat, int n)
 		{
 			switch (n%3)
 			{

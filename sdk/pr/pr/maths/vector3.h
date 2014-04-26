@@ -46,6 +46,7 @@ namespace pr
 		template <typename T> static v3 make(T const* v)                   { v3 vec; return vec.set(v); }
 		static v3                       normal3(float x, float y, float z) { v3 vec; return Normalise3(vec.set(x,y,z)); }
 	};
+	static_assert(std::is_pod<v3>::value, "Should be a pod type");
 
 	v3 const v3Zero  = {0.0f, 0.0f, 0.0f};
 	v3 const v3One   = {1.0f, 1.0f, 1.0f};
@@ -131,6 +132,7 @@ namespace pr
 	v3    Lerp(v3 const& src, v3 const& dest, float frac);
 	v3    SLerp3(v3 const& src, v3 const& dest, float frac);
 	float CosAngle3(v3 const& lhs, v3 const& rhs);
+	v3    Permute3(v3 const& v, int n);
 }
 
 #endif

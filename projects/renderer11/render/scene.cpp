@@ -15,7 +15,7 @@ using namespace pr::rdr;
 // Make a scene
 pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
 	:m_rdr(&rdr)
-	,m_viewport(m_rdr->DisplayArea())
+	,m_viewport(m_rdr->RenderTargetSize())
 	,m_view(view)
 	,m_drawlist(rdr)
 	,m_background_colour(pr::ColourBlack)
@@ -174,7 +174,7 @@ pr::rdr::SceneDeferred::SceneDeferred(pr::Renderer& rdr, SceneView const& view)
 	:Scene(rdr, view)
 	,m_gbuffer()
 {
-	pr::iv2 area = m_rdr->DisplayArea();
+	pr::iv2 area = m_rdr->RenderTargetSize();
 	m_gbuffer.Init(m_rdr->Device(),area.x, area.y);
 }
 

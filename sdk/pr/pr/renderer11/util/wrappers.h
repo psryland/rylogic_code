@@ -406,10 +406,15 @@ namespace pr
 		// Viewport description
 		struct Viewport :D3D11_VIEWPORT
 		{
+			// Viewports are in rendertarget space
+			// e.g.
+			//  x,y          = 0,0 (not -0.5f,-0.5f)
+			//  width,height = 800,600 (not 1.0f,1.0f)
+			//  depth is normalised from 0.0f -> 1.0f
 			Viewport& set(float x, float y, float width, float height, float min_depth = 0.0f, float max_depth = 1.0f)
 			{
 				PR_ASSERT(PR_DBG_RDR, x >= D3D11_VIEWPORT_BOUNDS_MIN && x <= D3D11_VIEWPORT_BOUNDS_MAX, "X value out of range");
-				PR_ASSERT(PR_DBG_RDR, y >= D3D11_VIEWPORT_BOUNDS_MIN && y <= D3D11_VIEWPORT_BOUNDS_MAX, "X value out of range");
+				PR_ASSERT(PR_DBG_RDR, y >= D3D11_VIEWPORT_BOUNDS_MIN && y <= D3D11_VIEWPORT_BOUNDS_MAX, "Y value out of range");
 				PR_ASSERT(PR_DBG_RDR, width >= 0.0f , "Width value invalid");
 				PR_ASSERT(PR_DBG_RDR, height >= 0.0f, "Height value invalid");
 				PR_ASSERT(PR_DBG_RDR, x + width  <= D3D11_VIEWPORT_BOUNDS_MAX, "Width value out of range");

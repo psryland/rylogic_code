@@ -16,6 +16,7 @@ namespace pr
 {
 	// To<std::string>
 	template <> struct Convert<std::string,v2> { static std::string To(v2 const& x) { return pr::Fmt("%f %f",x.x,x.y); } };
+	template <> struct Convert<std::string,v3> { static std::string To(v3 const& x) { return pr::Fmt("%f %f %f",x.x,x.y,x.z); } };
 	template <> struct Convert<std::string,v4> { static std::string To(v4 const& x) { return pr::Fmt("%f %f %f %f",x.x,x.y,x.z,x.w); } };
 
 	// To<double>
@@ -120,7 +121,6 @@ namespace pr
 
 	#endif
 
-
 	//template <typename ToType> inline ToType To(v3 const& v)   { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(v4 const& v)   { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(m3x4 const& m) { static_assert(false, "No conversion from to this type available"); }
@@ -130,7 +130,7 @@ namespace pr
 	//template <>                inline std::string To<std::string>(m3x4 const& m) { return To<std::string>(m.x.xyz()) + " " + To<std::string>(m.y.xyz()) + " " + To<std::string>(m.z.xyz()); }
 	//template <>                inline std::string To<std::string>(m4x4 const& m) { return To<std::string>(m.x)       + " " + To<std::string>(m.y)       + " " + To<std::string>(m.z)        + " " + To<std::string>(m.w); }
 	//
-	//template <typename ToType> inline ToType      To             (char const* s, char const** end, int radix = 10) { static_assert(false, "No conversion from to this type available"); } 
+	//template <typename ToType> inline ToType      To             (char const* s, char const** end, int radix = 10) { static_assert(false, "No conversion from to this type available"); }
 	//template <>                inline double      To<double>     (char const* s, char const** end, int)            { return                       strtod (s, (char**)end); }
 	//template <>                inline double      To<double>     (char const* s)                                   { return To<double>(s, 0); }
 	//template <>                inline float       To<float>      (char const* s, char const** end, int)            { return static_cast<float>   (strtod (s, (char**)end)); }
@@ -164,31 +164,31 @@ namespace pr
 //	inline long GetY(POINT const& pt) { return pt.y; }
 //	inline long GetX(SIZE const& sz) { return sz.cx; }
 //	inline long GetY(SIZE const& sz) { return sz.cy; }
-//	
+//
 //	// Convert from pr::v2
 //	template <typename ToType> inline ToType    To         (pr::v2 const& pt);
 //	template <>                inline POINT     To<POINT>  (pr::v2 const& pt) { POINT p = {int(pt.x), int(pt.y)}; return p; }
-//	
+//
 //	// Convert from pr::iv2
 //	template <typename ToType> inline ToType    To         (pr::iv2 const& pt);
 //	template <>                inline POINT     To<POINT>  (pr::iv2 const& pt) { POINT p = {pt.x, pt.y}; return p; }
 //	template <>                inline SIZE      To<SIZE>   (pr::iv2 const& sz) { SIZE  s = {sz.x, sz.y}; return s; }
-//	
+//
 //	// Convert from pr::IRect
 //	template <typename ToType> inline ToType    To         (pr::IRect const& rect);
 //	template <>                inline RECT      To<RECT>   (pr::IRect const& rect) { RECT r = {rect.m_min.x, rect.m_min.y, rect.m_max.x, rect.m_max.y}; return r; }
-//	
+//
 //	// Convert from POINT
 //	template <typename ToType> inline ToType    To         (POINT const& pt);
 //	template <>                inline pr::iv2   To<pr::iv2>(POINT const& pt) { return pr::iv2::make(pt.x, pt.y); }
 //	template <>                inline SIZE      To<SIZE>   (POINT const& pt) { SIZE s = {pt.x, pt.y}; return s; }
-//	
+//
 //	// Convert from SIZE
 //	template <typename ToType> inline ToType    To         (SIZE const& pt);
 //	template <>                inline pr::iv2   To<pr::iv2>(SIZE const& sz) { return pr::iv2::make(sz.cx, sz.cy); }
 //	template <>                inline pr::v2    To<pr::v2> (SIZE const& sz) { return pr::v2::make(float(sz.cx), float(sz.cy)); }
 //	template <>                inline RECT      To<RECT>   (SIZE const& sz) { RECT r = {0, 0, sz.cx, sz.cy}; return r; }
-//	
+//
 //	// Convert from RECT
 //	template <typename ToType> inline ToType         To                 (RECT const& rect);
 //	template <>                inline pr::IRect      To<pr::IRect>      (RECT const& rect) { return pr::IRect::make(rect.left, rect.top, rect.right, rect.bottom); }
@@ -201,7 +201,6 @@ namespace pr
 //	template <>                inline RECT      To<RECT> (Gdiplus::Rect const& rect) { RECT r = {rect.X, rect.Y, rect.X + rect.Width, rect.Y + rect.Height}; return r; }
 //}
 
-
 	// Convert an integer to a string of binary
 	template <typename T> inline std::string ToBinary(T n)
 	{
@@ -211,11 +210,15 @@ namespace pr
 			str.push_back((n & Bit64(i)) ? '1' : '0');
 		return str;
 	}
-	
+
 	// Write a vector to a stream
 	template <typename Stream> inline Stream& operator << (Stream& out, pr::v2 const& vec)
 	{
 		return out << vec.x << " " << vec.y;
+	}
+	template <typename Stream> inline Stream& operator << (Stream& out, pr::v3 const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z;
 	}
 	template <typename Stream> inline Stream& operator << (Stream& out, pr::v4 const& vec)
 	{

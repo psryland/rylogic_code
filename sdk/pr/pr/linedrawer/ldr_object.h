@@ -50,7 +50,7 @@ namespace pr
 			x(LineBox          ,= 0x11d1a8c4)\
 			x(Spline           ,= 0x1f45c36e)\
 			x(Circle           ,= 0x015ed657)\
-			x(Ellipse          ,= 0x1dc7f472)\
+			x(Rect             ,= 0x12E8C1AD)\
 			x(Matrix3x3        ,= 0x1bd46252)\
 			x(Triangle         ,= 0x118ad8f6)\
 			x(Quad             ,= 0x083b7f24)\
@@ -61,9 +61,7 @@ namespace pr
 			x(FrustumWH        ,= 0x02f1f573)\
 			x(FrustumFA        ,= 0x14adfea2)\
 			x(Sphere           ,= 0x010cf039)\
-			x(SphereRxyz       ,= 0x146866ff)\
 			x(CylinderHR       ,= 0x0f3d4e07)\
-			x(ConeHR           ,= 0x14362856)\
 			x(ConeHA           ,= 0x1f093110)\
 			x(Mesh             ,= 0x07fb0d2b)\
 			x(ConvexHull       ,= 0x0a93b3d5)\
@@ -92,6 +90,9 @@ namespace pr
 			x(Normalise       ,= 0x01693558)\
 			x(Orthonormalise  ,= 0x1c2a9e41)\
 			x(Colour          ,= 0x08b2c176)\
+			x(Solid           ,= 0x0B6477F6)\
+			x(Facets          ,= 0x1C8FE1ED)\
+			x(CornerRadius    ,= 0x1C7A230A)\
 			x(RandColour      ,= 0x0cdef959)\
 			x(ColourMask      ,= 0x05dc4ca1)\
 			x(Animation       ,= 0x004c5336)\
@@ -150,6 +151,13 @@ namespace pr
 			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform   )\
 			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr       )
 		PR_RDR_DEFINE_INSTANCE(StockInstance, PR_RDR_INST);
+		#undef PR_RDR_INST
+
+		// An instance type for object bounding boxes
+		#define PR_RDR_INST(x)\
+			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform   )\
+			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr       )
+		PR_RDR_DEFINE_INSTANCE(BBoxInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
 		// An instance for passing to the renderer
@@ -242,21 +250,22 @@ namespace pr
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of
 			// object bounding boxes etc.
-			pr::m4x4            m_o2p;          // Object to parent transform (or object to world if this is a top level object)
-			ELdrObject          m_type;         // Object type
-			LdrObject*          m_parent;       // The parent of this object, 0 for top level instances.
-			ObjectCont          m_child;        // A container of pointers to child instances
-			std::string         m_name;         // A name for the object
-			ContextId           m_context_id;   // The id of the context this instance was created in
-			pr::Colour32        m_base_colour;  // The original colour of this object
-			pr::uint            m_colour_mask;  // A bit mask for applying the base colour to child objects
-			Animation           m_anim;         // Animation data
-			LdrObjectUIData     m_uidata;       // Data required to find this object in the ui
-			LdrObjectStepData   m_step;         // Step data for the object
-			bool                m_instanced;    // False if this instance should never be drawn (it's used for instancing only)
-			bool                m_visible;      // True if the instance should be rendered
-			bool                m_wireframe;    // True if this object is drawn in wireframe
-			void*               m_user_data;    // Custom data
+			pr::m4x4            m_o2p;           // Object to parent transform (or object to world if this is a top level object)
+			ELdrObject          m_type;          // Object type
+			LdrObject*          m_parent;        // The parent of this object, 0 for top level instances.
+			ObjectCont          m_child;         // A container of pointers to child instances
+			std::string         m_name;          // A name for the object
+			ContextId           m_context_id;    // The id of the context this instance was created in
+			pr::Colour32        m_base_colour;   // The original colour of this object
+			pr::uint            m_colour_mask;   // A bit mask for applying the base colour to child objects
+			Animation           m_anim;          // Animation data
+			LdrObjectUIData     m_uidata;        // Data required to find this object in the ui
+			LdrObjectStepData   m_step;          // Step data for the object
+			BBoxInstance        m_bbox_instance; // Used for rendering the bounding box for this instance
+			bool                m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
+			bool                m_visible;       // True if the instance should be rendered
+			bool                m_wireframe;     // True if this object is drawn in wireframe
+			void*               m_user_data;     // Custom data
 
 			// Predicate for matching this object by context id
 			struct MatchId
@@ -279,10 +288,9 @@ namespace pr
 			// render event and then call 'AddToScene' on all of the root objects only
 			void AddToScene(pr::rdr::Scene& scene, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
 
-			// ToDo, do this in a way that will actually work
-			//// Recursively add this object using 'bbox_model' instead of its
-			//// actual model, located and scaled to the transform and box of this object
-			//void AddBBoxToViewport(pr::rdr::Viewport& viewport, pr::rdr::ModelPtr bbox_model, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
+			// Recursively add the bounding box instance for this object using 'bbox_model'
+			// located and scaled to the transform and box of this object
+			void AddBBoxToScene(pr::rdr::Scene& scene, pr::rdr::ModelPtr bbox_model, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
 
 			// Change visibility for this object
 			void Visible(bool visible, bool include_children);
@@ -296,22 +304,24 @@ namespace pr
 			// Return the bounding box for this object in model space
 			// To convert this to parent space multiply by 'm_o2p'
 			// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-			template <typename Pred> pr::BoundingBox BBoxMS(bool include_children, Pred pred) const
+			template <typename Pred> pr::BoundingBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity) const
 			{
-				// Add the bbox for this object
+				auto i2w = *p2w * m_anim.Step(time_s);
+
+				// Start with the bbox for this object
 				pr::BoundingBox bbox = pr::BBoxReset;
 				if (m_model && pred(*this)) // Get the bbox from the graphics model
 				{
-					pr::BoundingBox const& bb = m_model->m_bbox;
+					auto bb = i2w * m_model->m_bbox;
 					if (bb.IsValid()) pr::Encompass(bbox, bb);
 				}
 				if (include_children) // Add the bounding boxes of the children
 				{
-					for (ObjectCont::const_iterator i = m_child.begin(), iend = m_child.end(); i != iend; ++i)
+					for (auto& child : m_child)
 					{
-						LdrObjectPtr const& child = *i;
-						pr::BoundingBox child_bbox = child->BBoxMS(include_children, pred);
-						if (child_bbox.IsValid()) pr::Encompass(bbox, child->m_o2p * child_bbox);
+						auto c2w = i2w * child->m_o2p;
+						auto cbbox = child->BBoxMS(include_children, pred, time_s, &c2w);
+						if (cbbox.IsValid()) pr::Encompass(bbox, cbbox);
 					}
 				}
 				return bbox;
@@ -324,16 +334,14 @@ namespace pr
 			// Return the bounding box for this object in world space.
 			// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 			// If not then, then the returned bbox will be transformed to the top level object space
-			template <typename Pred> pr::BoundingBox BBoxWS(bool include_children, Pred pred) const
+			template <typename Pred> pr::BoundingBox BBoxWS(bool include_children, Pred pred, float time_s = 0.0f) const
 			{
-				auto bbox = BBoxMS(include_children, pred);
-				if (bbox.IsValid())
-				{
-					bbox = m_o2p * bbox;
-					for (pr::ldr::LdrObject* parent = m_parent; parent; parent = parent->m_parent)
-						bbox = parent->m_o2p * bbox;
-				}
-				return bbox;
+				// Get the combined o2w transform;
+				pr::m4x4 o2w = m_o2p;
+				for (pr::ldr::LdrObject* parent = m_parent; parent; parent = parent->m_parent)
+					o2w = parent->m_o2p * parent->m_anim.Step(time_s) * o2w;
+
+				return BBoxMS(include_children, pred, time_s, &o2w);
 			}
 			pr::BoundingBox BBoxWS(bool include_children) const
 			{
@@ -409,8 +417,8 @@ namespace pr
 		{
 			pr::script::Reader reader;
 			pr::script::FileSrc src(filename);
-			reader.ErrorHandler() = script_error_handler;
-			reader.CodeHandler() = lua_code_handler;
+			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
+			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
 			reader.AddSource(src);
 			Add(rdr, reader, objects, context_id, async);
 		}
@@ -422,8 +430,8 @@ namespace pr
 			pr::script::Loc    loc("ldr_string", 0, 0);
 			pr::script::PtrSrc src(ldr_script, &loc);
 			pr::script::Reader reader;
-			reader.ErrorHandler() = script_error_handler;
-			reader.CodeHandler() = lua_code_handler;
+			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
+			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
 			reader.AddSource(src);
 			Add(rdr, reader, objects, context_id, async);
 		}
@@ -439,6 +447,7 @@ namespace pr
 			pr::v4 const* verts,
 			int ccount = 0,                         // 0, 1, or vcount
 			pr::Colour32 const* colours = nullptr,  // nullptr, 1, or vcount colours
+			int ncount = 0,                         // 0, 1, or vcount
 			pr::v4 const* normals = nullptr,        // nullptr or a pointer to vcount normals
 			pr::v2 const* tex_coords = nullptr,     // nullptr or a pointer to vcount tex coords
 			pr::ldr::ContextId context_id = DefaultContext);

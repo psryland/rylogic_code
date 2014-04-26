@@ -145,7 +145,7 @@ VIEW3D_API EView3DResult __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
 	Rdr().m_drawset.insert(drawset);
 
 	// Set the initial aspect ratio
-	pr::iv2 client_area = Rdr().m_renderer.DisplayArea();
+	pr::iv2 client_area = Rdr().m_renderer.RenderTargetSize();
 	float aspect = client_area.x / float(client_area.y);
 	drawset->m_camera.Aspect(aspect);
 
@@ -349,12 +349,30 @@ VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, pr::v4 con
 	drawset->m_camera.FocusPoint(position);
 }
 
-// Convert a screen space point into a position and direction in world space
-// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
-VIEW3D_API void __stdcall View3D_WSRayFromScreenPoint(View3DDrawset drawset, pr::v2 screen, pr::v4& ws_point, pr::v4& ws_direction)
+// Return a point in world space corresponding to a normalised screen space point.
+// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+// The z component should be the world space distance from the camera
+VIEW3D_API pr::v4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawset, pr::v4 const& screen)
 {
 	PR_ASSERT(PR_DBG, drawset != 0, "");
-	drawset->m_camera.WSRayFromScreenPoint(pr::v4::make(screen, 1.0f, 0.0f), ws_point, ws_direction);
+	return drawset->m_camera.WSPointFromNormSSPoint(screen);
+}
+
+// Return a point in normalised screen space corresponding to a world space point.
+// The returned z component will be the world space distance from the camera.
+VIEW3D_API pr::v4 __stdcall View3D_NormSSPointFromWSPoint (View3DDrawset drawset, pr::v4 const& world)
+{
+	PR_ASSERT(PR_DBG, drawset != 0, "");
+	return drawset->m_camera.NormSSPointFromWSPoint(world);
+}
+
+// Return a point and direction in world space corresponding to a normalised sceen space point.
+// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+// The z component should be the world space distance from the camera
+VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, pr::v4 const& screen, pr::v4& ws_point, pr::v4& ws_direction)
+{
+	PR_ASSERT(PR_DBG, drawset != 0, "");
+	drawset->m_camera.WSRayFromNormSSPoint(screen, ws_point, ws_direction);
 }
 
 // Lighting ********************************************************
@@ -720,27 +738,39 @@ VIEW3D_API void __stdcall View3D_Refresh()
 		View3D_Render(Rdr().m_last_drawset);
 }
 
-// Return the dimensions of the display area in screen space
-VIEW3D_API void __stdcall View3D_DisplayArea(int& width, int& height)
+// Get/Set the dimensions of the render target
+// In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
+VIEW3D_API void __stdcall View3D_RenderTargetSize(int& width, int& height)
 {
 	if (!Dll().m_rdr) return;
-	auto area = Rdr().m_renderer.DisplayArea();
+	auto area = Rdr().m_renderer.RenderTargetSize();
 	width     = area.x;
 	height    = area.y;
 }
-
-// Resize the viewport
-VIEW3D_API void __stdcall View3D_Resize(int width, int height)
+VIEW3D_API void __stdcall View3D_SetRenderTargetSize(int width, int height)
 {
 	if (!Dll().m_rdr) return;
 	if (width  < 0) width  = 0;
 	if (height < 0) height = 0;
-	Rdr().m_renderer.Resize(pr::iv2::make(width, height));
+	Rdr().m_renderer.RenderTargetSize(pr::iv2::make(width, height));
+	auto size = Rdr().m_renderer.RenderTargetSize();
 
 	// Update the aspect ratio for all drawsets
-	float aspect = (width == 0 || height == 0) ? 1.0f : width / float(height);
+	float aspect = (size.x == 0 || size.y == 0) ? 1.0f : size.x / float(size.y);
 	for (auto ds : Rdr().m_drawset)
 		ds->m_camera.Aspect(aspect);
+}
+
+// Get/Set the viewport within the render target
+VIEW3D_API View3DViewport __stdcall View3D_Viewport()
+{
+	PR_ASSERT(PR_DBG, Dll().m_rdr, "");
+	return reinterpret_cast<View3DViewport const&>(Rdr().m_scene.m_viewport);
+}
+VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
+{
+	if (!Dll().m_rdr) return;
+	Rdr().m_scene.m_viewport = reinterpret_cast<pr::rdr::Viewport const&>(vp);
 }
 
 // Render a drawset

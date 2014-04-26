@@ -30,6 +30,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/fmt.h"
+#include "pr/common/cast.h"
 #include "pr/common/stackdump.h"
 #include "pr/common/refcount.h"
 #include "pr/common/log.h"
@@ -286,7 +287,7 @@ namespace pr
 		struct Evt_Resize
 		{
 			bool    m_done;  // True when the swap chain has resized it's buffers
-			pr::iv2 m_area;  // The new size that the swap chain buffers (will) have
+			pr::iv2 m_area;  // The render target size before (m_done == false) or after (m_done == true) the swap chain buffer resize
 			Evt_Resize(bool done, pr::iv2 const& area) :m_done(done) ,m_area(area) {}
 		};
 		struct Evt_SceneRender

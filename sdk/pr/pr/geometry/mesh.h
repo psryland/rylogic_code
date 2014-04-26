@@ -21,11 +21,14 @@ namespace pr
 		}
 
 		// Generate a model from mesh data
-		// 'num_verts' is the number of verts available through the iterator 'verts'
-		// 'num_indices' is the number of indices available through the iterator 'indices'
+		// 'num_verts' - the number of verts available through the iterator 'verts'
+		// 'num_indices' - the number of indices available through the iterator 'indices'
 		// 'verts' and 'indices' are the basic model data
-		// 'num_colours' is the number of colours points to by 'colours', can be equal to 0, 1, or num_verts
-		// 'colours', 'normals', or 'tex_coords' must be null or point to 'num_verts' of each type
+		// 'num_colours' - the number of colours pointed to by 'colours', can be equal to 0, 1, or num_verts
+		// 'colours' - the array of colours of length 'num_colours'
+		// 'num_normals' - the number of normals pointed to by 'normals', can be equal to 0, 1, or num_verts
+		// 'normals' - the array of normals of length 'num_normals'
+		// 'tex_coords' - must be null or an array of length 'num_verts'
 		// Remember you can call "GenerateNormals()" to generate normals.
 		template <typename TVertCIter, typename TIdxCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
 		Props Mesh(
@@ -35,6 +38,7 @@ namespace pr
 			TIdxCIter  indices,
 			std::size_t num_colours,
 			Colour32 const* colours,
+			std::size_t num_normals,
 			TNormCIter normals,
 			v2 const* tex_coords,
 			TVertIter v_out, TIdxIter i_out)
@@ -43,7 +47,7 @@ namespace pr
 			ColourRepeater col(colours, num_colours, num_verts, pr::Colour32White);
 
 			// Normal iterator wrapper
-			auto norm = pr::CreateRepeater(normals, normals != 0 ? num_verts : 0, num_verts, pr::v4YAxis);
+			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4YAxis);
 
 			// UV iterator wrapper
 			auto uv = pr::CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, pr::v2Zero);

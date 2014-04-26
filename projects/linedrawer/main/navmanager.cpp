@@ -133,14 +133,12 @@ bool ldr::NavManager::MouseDblClick(pr::v2 const&, int button_state)
 // Return a point in world space corresponding to a screen space point.
 // The x,y components of 'screen' should be in client area space
 // The z component should be the world space distance from the camera
-pr::v4 ldr::NavManager::WSPointFromScreenPoint(pr::v4 const& screen) const
+pr::v4 ldr::NavManager::WSPointFromSSPoint(pr::v4 const& screen) const
 {
 	// Note: 'screen' can be outside of 'm_client_area' because we capture the mouse
 	float x = -1.0f + 2.0f * screen.x / m_view_size.x;
 	float y = +1.0f - 2.0f * screen.y / m_view_size.y;
-	x = pr::Clamp(x, -1.0f, 1.0f);
-	y = pr::Clamp(y, -1.0f, 1.0f);
-	return m_camera.WSPointFromScreenPoint(pr::v4::make(x, y, m_camera.FocusDist(), 0.0f));
+	return m_camera.WSPointFromNormSSPoint(pr::v4::make(x, y, m_camera.FocusDist(), 0.0f));
 }
 
 // Orbit the camera about the current focus point

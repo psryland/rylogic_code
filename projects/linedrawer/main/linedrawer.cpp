@@ -49,7 +49,7 @@ namespace ldr
 
 ldr::Main::Main(MainGUI& gui)
 	:base(ldr::Setup(), gui)
-	,m_nav(m_cam, m_rdr.DisplayArea(), m_settings.m_CameraAlignAxis)
+	,m_nav(m_cam, m_rdr.RenderTargetSize(), m_settings.m_CameraAlignAxis)
 	,m_store()
 	,m_plugin_mgr(this)
 	,m_lua_src()
@@ -151,15 +151,6 @@ void ldr::Main::DoRender(bool force)
 		m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
 	}
 
-	//// If model space bounding boxes are enabled render those
-	//if (m_settings.m_show_object_bboxes)
-	//{
-	//	m_scene.ClearDrawlist();
-	//	for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-	//		m_store[i]->AddBBoxToViewport(viewport, m_bbox_model.m_model);
-	//	m_scene.Render(false);
-	//}
-
 	m_rdr.Present();
 }
 
@@ -175,7 +166,7 @@ void ldr::Main::ReloadSourceData()
 		switch (e.code())
 		{
 		default:
-			pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while reloading source data.\nError details: %s", e.m_msg.c_str())));
+			pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while reloading source data.\nError details: %s", e.what())));
 			break;
 		case ELdrException::OperationCancelled:
 			pr::events::Send(ldr::Event_Info(pr::FmtS("Reloading data cancelled")));
@@ -200,8 +191,8 @@ void ldr::Main::CreateDemoScene()
 		std::string scene = pr::ldr::CreateDemoScene();
 		pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 	}
-	catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.m_msg.c_str()))); }
-	catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.m_msg.c_str()))); }
+	catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
+	catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 }
 
 // Test point methods
@@ -340,4 +331,11 @@ void ldr::Main::OnEvent(pr::rdr::Evt_SceneRender const& e)
 	// Add instances from the store
 	for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
 		m_store[i]->AddToScene(*e.m_scene);
+
+	// Add model bounding boxes
+	if (m_settings.m_ShowObjectBBoxes)
+	{
+		for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
+			m_store[i]->AddBBoxToScene(*e.m_scene, m_bbox_model.m_model);
+	}
 }

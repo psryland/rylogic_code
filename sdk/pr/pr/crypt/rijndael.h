@@ -1126,25 +1126,25 @@ namespace pr
 				// Last Round is special
 				Ker = m_Ke[m_rounds];
 				int tt = Ker[0];
-				result[0] = static_cast<char>(sm_S((t0 >> 24) & 0xFF) ^ (tt >> 24));
-				result[1] = static_cast<char>(sm_S((t1 >> 16) & 0xFF) ^ (tt >> 16));
-				result[2] = static_cast<char>(sm_S((t2 >>  8) & 0xFF) ^ (tt >>  8));
-				result[3] = static_cast<char>(sm_S((t3      ) & 0xFF) ^ (tt      ));
+				result[0] = static_cast<char>(0xff & (sm_S((t0 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[1] = static_cast<char>(0xff & (sm_S((t1 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[2] = static_cast<char>(0xff & (sm_S((t2 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[3] = static_cast<char>(0xff & (sm_S((t3      ) & 0xFF) ^ (tt      )));
 				tt = Ker[1];
-				result[4] = static_cast<char>(sm_S((t1 >> 24) & 0xFF) ^ (tt >> 24));
-				result[5] = static_cast<char>(sm_S((t2 >> 16) & 0xFF) ^ (tt >> 16));
-				result[6] = static_cast<char>(sm_S((t3 >>  8) & 0xFF) ^ (tt >>  8));
-				result[7] = static_cast<char>(sm_S((t0      ) & 0xFF) ^ (tt      ));
+				result[4] = static_cast<char>(0xff & (sm_S((t1 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[5] = static_cast<char>(0xff & (sm_S((t2 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[6] = static_cast<char>(0xff & (sm_S((t3 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[7] = static_cast<char>(0xff & (sm_S((t0      ) & 0xFF) ^ (tt      )));
 				tt = Ker[2];
-				result[8]  = static_cast<char>(sm_S((t2 >> 24) & 0xFF) ^ (tt >> 24));
-				result[9]  = static_cast<char>(sm_S((t3 >> 16) & 0xFF) ^ (tt >> 16));
-				result[10] = static_cast<char>(sm_S((t0 >>  8) & 0xFF) ^ (tt >>  8));
-				result[11] = static_cast<char>(sm_S((t1      ) & 0xFF) ^ (tt      ));
+				result[8]  = static_cast<char>(0xff & (sm_S((t2 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[9]  = static_cast<char>(0xff & (sm_S((t3 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[10] = static_cast<char>(0xff & (sm_S((t0 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[11] = static_cast<char>(0xff & (sm_S((t1      ) & 0xFF) ^ (tt      )));
 				tt = Ker[3];
-				result[12] = static_cast<char>(sm_S((t3 >> 24) & 0xFF) ^ (tt >> 24));
-				result[13] = static_cast<char>(sm_S((t0 >> 16) & 0xFF) ^ (tt >> 16));
-				result[14] = static_cast<char>(sm_S((t1 >>  8) & 0xFF) ^ (tt >>  8));
-				result[15] = static_cast<char>(sm_S((t2      ) & 0xFF) ^ (tt      ));
+				result[12] = static_cast<char>(0xff & (sm_S((t3 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[13] = static_cast<char>(0xff & (sm_S((t0 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[14] = static_cast<char>(0xff & (sm_S((t1 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[15] = static_cast<char>(0xff & (sm_S((t2      ) & 0xFF) ^ (tt      )));
 			}
 
 			// Convenience method to decrypt exactly one block of plaintext, assuming
@@ -1209,25 +1209,25 @@ namespace pr
 				//Last Round is special
 				Kdr = m_Kd[m_rounds];
 				int tt = Kdr[0];
-				result[ 0] = static_cast<char>(sm_Si((t0 >> 24) & 0xFF) ^ (tt >> 24));
-				result[ 1] = static_cast<char>(sm_Si((t3 >> 16) & 0xFF) ^ (tt >> 16));
-				result[ 2] = static_cast<char>(sm_Si((t2 >>  8) & 0xFF) ^ (tt >>  8));
-				result[ 3] = static_cast<char>(sm_Si((t1      ) & 0xFF) ^ (tt      ));
+				result[ 0] = static_cast<char>(0xff & (sm_Si((t0 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[ 1] = static_cast<char>(0xff & (sm_Si((t3 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[ 2] = static_cast<char>(0xff & (sm_Si((t2 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[ 3] = static_cast<char>(0xff & (sm_Si((t1      ) & 0xFF) ^ (tt      )));
 				tt = Kdr[1];
-				result[ 4] = static_cast<char>(sm_Si((t1 >> 24) & 0xFF) ^ (tt >> 24));
-				result[ 5] = static_cast<char>(sm_Si((t0 >> 16) & 0xFF) ^ (tt >> 16));
-				result[ 6] = static_cast<char>(sm_Si((t3 >>  8) & 0xFF) ^ (tt >>  8));
-				result[ 7] = static_cast<char>(sm_Si((t2      ) & 0xFF) ^ (tt      ));
+				result[ 4] = static_cast<char>(0xff & (sm_Si((t1 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[ 5] = static_cast<char>(0xff & (sm_Si((t0 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[ 6] = static_cast<char>(0xff & (sm_Si((t3 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[ 7] = static_cast<char>(0xff & (sm_Si((t2      ) & 0xFF) ^ (tt      )));
 				tt = Kdr[2];
-				result[ 8] = static_cast<char>(sm_Si((t2 >> 24) & 0xFF) ^ (tt >> 24));
-				result[ 9] = static_cast<char>(sm_Si((t1 >> 16) & 0xFF) ^ (tt >> 16));
-				result[10] = static_cast<char>(sm_Si((t0 >>  8) & 0xFF) ^ (tt >>  8));
-				result[11] = static_cast<char>(sm_Si((t3      ) & 0xFF) ^ (tt      ));
+				result[ 8] = static_cast<char>(0xff & (sm_Si((t2 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[ 9] = static_cast<char>(0xff & (sm_Si((t1 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[10] = static_cast<char>(0xff & (sm_Si((t0 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[11] = static_cast<char>(0xff & (sm_Si((t3      ) & 0xFF) ^ (tt      )));
 				tt = Kdr[3];
-				result[12] = static_cast<char>(sm_Si((t3 >> 24) & 0xFF) ^ (tt >> 24));
-				result[13] = static_cast<char>(sm_Si((t2 >> 16) & 0xFF) ^ (tt >> 16));
-				result[14] = static_cast<char>(sm_Si((t1 >>  8) & 0xFF) ^ (tt >>  8));
-				result[15] = static_cast<char>(sm_Si((t0      ) & 0xFF) ^ (tt      ));
+				result[12] = static_cast<char>(0xff & (sm_Si((t3 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[13] = static_cast<char>(0xff & (sm_Si((t2 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[14] = static_cast<char>(0xff & (sm_Si((t1 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[15] = static_cast<char>(0xff & (sm_Si((t0      ) & 0xFF) ^ (tt      )));
 			}
 
 		public:
@@ -1406,10 +1406,10 @@ namespace pr
 				for (size_t i = 0, j = 0; i != block_count_in_words; ++i)
 				{
 					int tt = m_Ke[m_rounds][i];
-					result[j++] = static_cast<char>(sm_S((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24));
-					result[j++] = static_cast<char>(sm_S((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16));
-					result[j++] = static_cast<char>(sm_S((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8));
-					result[j++] = static_cast<char>(sm_S((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      ));
+					result[j++] = static_cast<char>(0xff & (sm_S((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
+					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
+					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
+					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
 				}
 			}
 
@@ -1459,10 +1459,10 @@ namespace pr
 				for (size_t i = 0, j = 0; i < block_count_in_words; i++)
 				{
 					int tt = m_Kd[m_rounds][i];
-					result[j++] = static_cast<char>(sm_Si((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24));
-					result[j++] = static_cast<char>(sm_Si((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16));
-					result[j++] = static_cast<char>(sm_Si((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8));
-					result[j++] = static_cast<char>(sm_Si((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      ));
+					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
+					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
+					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
+					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
 				}
 			}
 

@@ -125,14 +125,16 @@ namespace pr
 		bool FullScreenMode() const;
 		void FullScreenMode(bool on, pr::rdr::DisplayMode mode);
 
-		// Returns the size of the displayable area as known by the renderer
-		pr::iv2 DisplayArea() const;
-
 		// The display mode of the main render target
 		DXGI_FORMAT DisplayFormat() const;
 
+		// Returns the size of the render target
+		pr::iv2 RenderTargetSize() const;
+
+		// Set the render target size.
+		// Passing iv2.Zero will cause the RT to get its size from the associated window
 		// Call when the window size changes (e.g. from a WM_SIZE message)
-		void Resize(pr::iv2 const& size);
+		void RenderTargetSize(pr::iv2 const& size);
 
 		// Rendering:
 		//  For each scene to be rendered:
