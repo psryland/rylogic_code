@@ -43,7 +43,7 @@ void ldr::Plugin::OnEvent(pr::rdr::Evt_SceneRender const& e)
 {
 	// Add instances from the store
 	for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-		m_store[i]->AddToScene(*e.m_scene);
+		m_store[i]->AddToScene(e.m_scene);
 }
 
 // Call 'm_pi_initialise' to start the plugin.

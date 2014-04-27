@@ -39,17 +39,17 @@ namespace sol
 		// Add to a viewport
 		void OnEvent(pr::rdr::Evt_SceneRender const& e)
 		{
-			e.m_scene->m_global_light.m_direction = e.m_scene->m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
+			e.m_rstep.as<pr::rdr::ForwardRender>().m_global_light.m_direction = e.m_scene.m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
 		}
 
 		void ToggleWireframe()
 		{
 			m_wireframe = !m_wireframe;
-			m_scene.m_rsb = m_wireframe ? pr::rdr::RSBlock::WireCullNone() : pr::rdr::RSBlock::SolidCullBack();
+			m_scene.RdrStep<pr::rdr::ForwardRender>().m_rsb = m_wireframe ? pr::rdr::RSBlock::WireCullNone() : pr::rdr::RSBlock::SolidCullBack();
 		}
 		void ToggleStereo()
 		{
-			m_scene.Stereoscopic(!m_scene.Stereoscopic(), 0.1f, false);
+			//m_scene.Stereoscopic(!m_scene.Stereoscopic(), 0.1f, false);
 		}
 	};
 }

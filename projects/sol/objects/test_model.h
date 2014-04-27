@@ -39,9 +39,9 @@ namespace sol
 		// Add to a viewport
 		void OnEvent(pr::rdr::Evt_SceneRender const& e)
 		{
-			float s = e.m_scene->m_view.m_centre_dist;
+			float s = e.m_scene.m_view.m_centre_dist;
 			m_inst.m_i2w = pr::Scale4x4(s,s,s, m_inst.m_i2w.pos);
-			e.m_scene->AddInstance(m_inst);
+			e.m_scene.AddInstance(m_inst);
 		}
 	};
 }

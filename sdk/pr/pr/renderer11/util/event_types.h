@@ -21,9 +21,13 @@ namespace pr
 		};
 		struct Evt_SceneRender
 		{
-			RenderStep* m_rsteps; // The render step that requires it's drawlist updated
-			Scene*      m_scene; // The scene that owns the render step
-			explicit Evt_SceneRender(RenderStep& rstep) :m_rsteps(&rstep) ,m_scene(rstep.m_scene) {}
+			RenderStep& m_rstep; // The render step that requires it's drawlist updated
+			Scene&      m_scene; // The scene that owns the render step
+			explicit Evt_SceneRender(RenderStep& rstep) :m_rstep(rstep) ,m_scene(*rstep.m_scene) {}
+
+		private:
+			Evt_SceneRender(Evt_SceneRender const&);
+			Evt_SceneRender& operator=(Evt_SceneRender const&);
 		};
 	}
 }

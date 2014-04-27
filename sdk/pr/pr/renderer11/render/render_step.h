@@ -35,6 +35,8 @@ namespace pr
 
 			// The type of render step this is
 			virtual ERenderStep Id() const = 0;
+			template <typename RStep> typename std::enable_if<std::is_base_of<RenderStep,RStep>::value, RStep>::type const& as() const { return *static_cast<RStep const*>(this); }
+			template <typename RStep> typename std::enable_if<std::is_base_of<RenderStep,RStep>::value, RStep>::type&       as()       { return *static_cast<RStep*>(this); }
 
 			// Reset/Populate the drawlist
 			void ClearDrawlist();

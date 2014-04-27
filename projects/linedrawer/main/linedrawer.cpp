@@ -323,25 +323,25 @@ namespace ldr
 
 		// Render the focus point
 		if (m_settings.m_ShowFocusPoint)
-			e.m_scene->AddInstance(m_focus_point);
+			e.m_scene.AddInstance(m_focus_point);
 
 		// Render the origin
 		if (m_settings.m_ShowOrigin)
-			e.m_scene->AddInstance(m_origin_point);
+			e.m_scene.AddInstance(m_origin_point);
 
 		// Render the test point
 		if (m_test_point_enable)
-			e.m_scene->AddInstance(m_test_point);
+			e.m_scene.AddInstance(m_test_point);
 
 		// Add instances from the store
 		for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-			m_store[i]->AddToScene(*e.m_scene);
+			m_store[i]->AddToScene(e.m_scene);
 
 		// Add model bounding boxes
 		if (m_settings.m_ShowObjectBBoxes)
 		{
 			for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-				m_store[i]->AddBBoxToScene(*e.m_scene, m_bbox_model.m_model);
+				m_store[i]->AddBBoxToScene(e.m_scene, m_bbox_model.m_model);
 		}
 	}
 }

@@ -861,13 +861,13 @@ void ldr::MainGUI::OnEvent(pr::rdr::Evt_SceneRender const& e)
 {
 	// Render the selection box
 	if (m_main->m_settings.m_ShowSelectionBox && m_store_ui.SelectedCount() != 0)
-		e.m_scene->AddInstance(m_main->m_selection_box);
+		e.m_scene.AddInstance(m_main->m_selection_box);
 
 	// Tools instances
 	if (m_measure_tool_ui.Gfx())
-		m_measure_tool_ui.Gfx()->AddToScene(*e.m_scene);
+		m_measure_tool_ui.Gfx()->AddToScene(e.m_scene);
 	if (m_angle_tool_ui.Gfx())
-		m_angle_tool_ui.Gfx()->AddToScene(*e.m_scene);
+		m_angle_tool_ui.Gfx()->AddToScene(e.m_scene);
 }
 
 // Handle refresh requests

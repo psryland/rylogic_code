@@ -70,10 +70,10 @@ namespace pr
 			// Add the skybox to a viewport
 			void OnEvent(pr::rdr::Evt_SceneRender const& e)
 			{
-				pr::rdr::SceneView const& view = e.m_scene->m_view;
+				pr::rdr::SceneView const& view = e.m_scene.m_view;
 				m_inst.m_i2w = m_i2w;
 				m_inst.m_i2w.pos = view.m_c2w.pos;
-				e.m_scene->AddInstance(m_inst);
+				e.m_scene.AddInstance(m_inst);
 			}
 
 		private:
