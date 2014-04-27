@@ -132,7 +132,7 @@ namespace pr
 				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::ClampSampler(), texpath.c_str());
 
 				// Create the render nugget
-				m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::TriList);
+				m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::TriList);
 			}
 
 			// Create a model for a 6-sided cube
@@ -200,7 +200,7 @@ namespace pr
 					// Create the render nugget for this face of the skybox
 					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);
 					pr::rdr::Range irange = pr::rdr::Range::make(i*6, (i+1)*6);
-					m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::TriList, &vrange, &irange);
+					m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::TriList, &vrange, &irange);
 				}
 			}
 		};

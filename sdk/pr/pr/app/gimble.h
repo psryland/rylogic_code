@@ -25,7 +25,7 @@ namespace pr
 			Instance m_inst;    // The gimble instance
 			pr::v4   m_ofs_pos; // The offset position from the camera focus point
 			float    m_scale;   // A model size scaler.
-			
+
 			// Constructs a gimble model and instance.
 			Gimble(pr::Renderer& rdr)
 			:m_inst()
@@ -34,7 +34,7 @@ namespace pr
 			{
 				InitModel(rdr);
 			}
-			
+
 			// Add the gimble to a viewport
 			void OnEvent(pr::rdr::Evt_SceneRender const& e)
 			{
@@ -42,9 +42,9 @@ namespace pr
 				m_inst.m_i2w = pr::Scale4x4(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
 				e.m_scene->AddInstance(m_inst);
 			}
-		
+
 		private:
-			
+
 			// Create a model for a 'gimble'
 			void InitModel(pr::Renderer& rdr)
 			{
@@ -61,17 +61,17 @@ namespace pr
 				{
 					0, 1, 2, 3, 4, 5
 				};
-				
+
 				// Create the gimble model
 				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "gimble"));
-				
+
 				pr::rdr::DrawMethod method;
-				
+
 				// Get a suitable shader
 				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPC>();
-				
+
 				// Create a render nugget
-				m_inst.m_model->CreateNugget(method, pr::rdr::EPrim::LineList);
+				m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::LineList);
 			}
 		};
 	}
