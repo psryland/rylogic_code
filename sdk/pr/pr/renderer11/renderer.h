@@ -74,6 +74,7 @@
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/lock.h"
 #include "pr/renderer11/util/stock_resources.h"
+#include "pr/renderer11/util/event_types.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE
 #endif

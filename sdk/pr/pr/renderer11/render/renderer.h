@@ -8,7 +8,6 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/config/config.h"
-#include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
@@ -24,21 +23,21 @@ namespace pr
 		// Settings for constructing the renderer
 		struct RdrSettings
 		{
-			pr::rdr::MemFuncs            m_mem;                // The manager of allocations/deallocations
-			HWND                         m_hwnd;               // The associated window
-			BOOL                         m_windowed;           // Windowed mode or full screen
-			DisplayMode                  m_mode;               // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
-			MultiSamp                    m_multisamp;          // Number of samples per pixel (AA/Multisampling)
-			UINT                         m_buffer_count;       // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
-			DXGI_SWAP_EFFECT             m_swap_effect;        // How to swap the back buffer to the front buffer
-			UINT                         m_swap_chain_flags;   // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
-			DXGI_FORMAT                  m_depth_format;       // Depth buffer format
-			D3DPtr<IDXGIAdapter>         m_adapter;            // The adapter to use. 0 means use the default
-			D3D_DRIVER_TYPE              m_driver_type;        // HAL, REF, etc
-			UINT                         m_device_layers;      // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
-			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;     // Features to support. Empty implies 9.1 -> 11.0
-			UINT                         m_vsync;              // Present SyncInterval value
-			bool                         m_allow_alt_enter;    // Allow switching to full screen with alt-enter
+			MemFuncs                     m_mem;              // The manager of allocations/deallocations
+			HWND                         m_hwnd;             // The associated window
+			BOOL                         m_windowed;         // Windowed mode or full screen
+			DisplayMode                  m_mode;             // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
+			MultiSamp                    m_multisamp;        // Number of samples per pixel (AA/Multisampling)
+			UINT                         m_buffer_count;     // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
+			DXGI_SWAP_EFFECT             m_swap_effect;      // How to swap the back buffer to the front buffer
+			UINT                         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
+			DXGI_FORMAT                  m_depth_format;     // Depth buffer format
+			D3DPtr<IDXGIAdapter>         m_adapter;          // The adapter to use. 0 means use the default
+			D3D_DRIVER_TYPE              m_driver_type;      // HAL, REF, etc
+			UINT                         m_device_layers;    // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
+			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;   // Features to support. Empty implies 9.1 -> 11.0
+			UINT                         m_vsync;            // Present SyncInterval value
+			bool                         m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 
 			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
 				:m_mem()
@@ -72,18 +71,17 @@ namespace pr
 		// Renderer state variables
 		struct RdrState
 		{
-			pr::rdr::RdrSettings           m_settings;
+			RdrSettings                    m_settings;
 			D3D_FEATURE_LEVEL              m_feature_level;
 			D3DPtr<ID3D11Device>           m_device;
 			D3DPtr<IDXGISwapChain>         m_swap_chain;
 			D3DPtr<ID3D11DeviceContext>    m_immediate;
 			D3DPtr<ID3D11RenderTargetView> m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView> m_main_dsv;
-			pr::rdr::ERenderMethod::Type   m_rdr_method;
-			pr::rdr::TextureDesc           m_bbdesc;  // The texture description of the back buffer
+			TextureDesc                    m_bbdesc;  // The texture description of the back buffer
 			bool                           m_idle;    // True while the window is occluded
 
-			RdrState(pr::rdr::RdrSettings const& settings);
+			RdrState(RdrSettings const& settings);
 			virtual ~RdrState() {}
 			void InitMainRT();
 		};
@@ -94,14 +92,14 @@ namespace pr
 	{
 	public:
 		// These manager classes form part of the public interface of the renderer
-		pr::rdr::ModelManager       m_mdl_mgr;
-		pr::rdr::ShaderManager      m_shdr_mgr;
-		pr::rdr::TextureManager     m_tex_mgr;
-		pr::rdr::BlendStateManager  m_bs_mgr;
-		pr::rdr::DepthStateManager  m_ds_mgr;
-		pr::rdr::RasterStateManager m_rs_mgr;
+		rdr::ModelManager       m_mdl_mgr;
+		rdr::ShaderManager      m_shdr_mgr;
+		rdr::TextureManager     m_tex_mgr;
+		rdr::BlendStateManager  m_bs_mgr;
+		rdr::DepthStateManager  m_ds_mgr;
+		rdr::RasterStateManager m_rs_mgr;
 
-		Renderer(pr::rdr::RdrSettings const& settings);
+		Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
 		// Return the d3d device
@@ -114,16 +112,16 @@ namespace pr
 		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return 0; };
 
 		// Returns an allocator object suitable for allocating instances of 'T'
-		template <class Type> pr::rdr::Allocator<Type> Allocator() const { return pr::rdr::Allocator<Type>(m_settings.m_mem); }
+		template <class Type> rdr::Allocator<Type> Allocator() const { return rdr::Allocator<Type>(m_settings.m_mem); }
 
 		// Read access to the initialisation settings
-		pr::rdr::RdrSettings const& Settings() const { return m_settings; }
+		rdr::RdrSettings const& Settings() const { return m_settings; }
 
 		// Get/Set full screen mode
 		// Don't use the automatic alt-enter system, it's too uncontrollable
 		// Handle WM_SYSKEYDOWN for VK_RETURN, then call FullScreenMode
 		bool FullScreenMode() const;
-		void FullScreenMode(bool on, pr::rdr::DisplayMode mode);
+		void FullScreenMode(bool on, rdr::DisplayMode mode);
 
 		// The display mode of the main render target
 		DXGI_FORMAT DisplayFormat() const;

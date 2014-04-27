@@ -5,140 +5,143 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/lights/light.h"
 
-using namespace pr;
-using namespace pr::rdr;
-
-pr::rdr::Light::Light()
-:m_position        (v4Origin)
-,m_direction       (v4::make(-0.577350f, -0.577350f, -0.577350f, 0.0f))
-,m_type            (ELight::Directional)
-,m_ambient         (Colour32::make(0.0f, 0.0f, 0.0f, 0.0f))
-,m_diffuse         (Colour32::make(0.5f, 0.5f, 0.5f, 1.0f))
-,m_specular        (Colour32::make(0.1f, 0.1f, 0.1f, 0.0f))
-,m_specular_power  (1000.0f)
-,m_inner_cos_angle (0.97f)
-,m_outer_cos_angle (0.92f)
-,m_range           (1000.0f)
-,m_falloff         (0.0f)
-,m_cast_shadows    (false)
-,m_on              (true)
-{}
-
-// Return true if this light is in a valid state
-bool pr::rdr::Light::IsValid() const
+namespace pr
 {
-	switch (m_type)
+	namespace rdr
 	{
-	default: return false;
-	case ELight::Ambient:     return true;
-	case ELight::Point:       return true;
-	case ELight::Spot:        return !pr::IsZero3(m_direction);
-	case ELight::Directional: return !pr::IsZero3(m_direction);
-	}
-}
+		Light::Light()
+			:m_position        (v4Origin)
+			,m_direction       (v4::make(-0.577350f, -0.577350f, -0.577350f, 0.0f))
+			,m_type            (ELight::Directional)
+			,m_ambient         (Colour32::make(0.0f, 0.0f, 0.0f, 0.0f))
+			,m_diffuse         (Colour32::make(0.5f, 0.5f, 0.5f, 1.0f))
+			,m_specular        (Colour32::make(0.1f, 0.1f, 0.1f, 0.0f))
+			,m_specular_power  (1000.0f)
+			,m_inner_cos_angle (0.97f)
+			,m_outer_cos_angle (0.92f)
+			,m_range           (1000.0f)
+			,m_falloff         (0.0f)
+			,m_cast_shadows    (false)
+			,m_on              (true)
+		{}
 
-// Returns a light to world transform appropriate for this light type and facing 'centre'
-pr::m4x4 pr::rdr::Light::LightToWorld(v4 const& centre, float centre_dist) const
-{
-	switch (m_type)
-	{
-	default:                  return pr::m4x4Identity;
-	case ELight::Directional: return pr::LookAt(centre - centre_dist*m_direction, centre, pr::Perpendicular(m_direction));
-	case ELight::Point:       return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
-	case ELight::Spot:        return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
-	}
-}
-
-// Returns a projection transform appropriate for this light type
-pr::m4x4 pr::rdr::Light::Projection(float centre_dist) const
-{
-	switch (m_type)
-	{
-	default:                  return pr::m4x4Identity;
-	case ELight::Directional: return pr::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-	case ELight::Point:       return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-	case ELight::Spot:        return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
-	}
-}
-
-#define PR_ENUM(x)\
-	x(Pos  ,= 0x13930DAF)\
-	x(Dir  ,= 0x1618B31F)\
-	x(Type ,= 0x19DA494A)\
-	x(Amb  ,= 0x1558CC98)\
-	x(Diff ,= 0x06868516)\
-	x(Spec ,= 0x1EEC863F)\
-	x(SPwr ,= 0x1C563FB0)\
-	x(InCA ,= 0x027932CE)\
-	x(OtCA ,= 0x178B4446)\
-	x(Rng  ,= 0x11F022C5)\
-	x(FOff ,= 0x1C689A1D)\
-	x(Shdw ,= 0x17CA424A)\
-	x(On   ,= 0x1E67B806)
-PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
-#undef PR_ENUM
-
-// Get/Set light settings
-std::string pr::rdr::Light::Settings() const
-{
-	std::stringstream out;
-	out << "  *" << ELightKW::Pos  << "{" << m_position.xyz() << "}\n"
-		<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz() << "}\n"
-		<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
-		<< std::hex
-		<< "  *" << ELightKW::Amb  << "{" << m_ambient.m_aarrggbb << "}\n"
-		<< "  *" << ELightKW::Diff << "{" << m_diffuse.m_aarrggbb << "}\n"
-		<< "  *" << ELightKW::Spec << "{" << m_specular.m_aarrggbb << "}\n"
-		<< std::dec
-		<< "  *" << ELightKW::SPwr << "{" << m_specular_power << "}\n"
-		<< "  *" << ELightKW::InCA << "{" << m_inner_cos_angle << "}\n"
-		<< "  *" << ELightKW::OtCA << "{" << m_outer_cos_angle << "}\n"
-		<< "  *" << ELightKW::Rng  << "{" << m_range << "}\n"
-		<< "  *" << ELightKW::FOff << "{" << m_falloff << "}\n"
-		<< "  *" << ELightKW::Shdw << "{" << m_cast_shadows << "}\n"
-		<< "  *" << ELightKW::On   << "{" << m_on << "}\n"
-		;
-	return out.str();
-}
-void pr::rdr::Light::Settings(char const* settings)
-{
-	try
-	{
-		// Parse the settings for light, if no errors are found update *this
-		Light light;
-
-		// Parse the settings
-		pr::script::Reader reader;
-		pr::script::PtrSrc src(settings);
-		reader.AddSource(src);
-
-		// Check the hash values are correct
-		PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>([&](char const* s) { return reader.HashKeyword(s); }));
-
-		ELightKW kw;
-		while (reader.NextKeywordH(kw))
+		// Return true if this light is in a valid state
+		bool Light::IsValid() const
 		{
-			switch (kw)
+			switch (m_type)
 			{
-			case ELightKW::Pos:  reader.ExtractVector3S(light.m_position, 1.0f); break;
-			case ELightKW::Dir:  reader.ExtractVector3S(light.m_direction, 0.0f); break;
-			case ELightKW::Type: reader.ExtractEnumS(light.m_type); break;
-			case ELightKW::Amb:  reader.ExtractIntS(light.m_ambient.m_aarrggbb, 16); break;
-			case ELightKW::Diff: reader.ExtractIntS(light.m_diffuse.m_aarrggbb, 16); break;
-			case ELightKW::Spec: reader.ExtractIntS(light.m_specular.m_aarrggbb, 16); break;
-			case ELightKW::SPwr: reader.ExtractRealS(light.m_specular_power); break;
-			case ELightKW::InCA: reader.ExtractRealS(light.m_inner_cos_angle); break;
-			case ELightKW::OtCA: reader.ExtractRealS(light.m_outer_cos_angle); break;
-			case ELightKW::Rng:  reader.ExtractRealS(light.m_range); break;
-			case ELightKW::FOff: reader.ExtractRealS(light.m_falloff); break;
-			case ELightKW::Shdw: reader.ExtractBoolS(light.m_cast_shadows); break;
-			case ELightKW::On:   reader.ExtractBoolS(light.m_on); break;
+			default: return false;
+			case ELight::Ambient:     return true;
+			case ELight::Point:       return true;
+			case ELight::Spot:        return !pr::IsZero3(m_direction);
+			case ELight::Directional: return !pr::IsZero3(m_direction);
 			}
 		}
-		*this = light;
-	}
-	catch (pr::script::Exception const& e)
-	{
-		throw pr::Exception<HRESULT>(E_INVALIDARG, e.what());
+
+		// Returns a light to world transform appropriate for this light type and facing 'centre'
+		pr::m4x4 Light::LightToWorld(v4 const& centre, float centre_dist) const
+		{
+			switch (m_type)
+			{
+			default:                  return pr::m4x4Identity;
+			case ELight::Directional: return pr::LookAt(centre - centre_dist*m_direction, centre, pr::Perpendicular(m_direction));
+			case ELight::Point:       return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
+			case ELight::Spot:        return pr::LookAt(m_position, centre, pr::Perpendicular(centre - m_position));
+			}
+		}
+
+		// Returns a projection transform appropriate for this light type
+		pr::m4x4 Light::Projection(float centre_dist) const
+		{
+			switch (m_type)
+			{
+			default:                  return pr::m4x4Identity;
+			case ELight::Directional: return pr::ProjectionOrthographic(10.0f, 10.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Point:       return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			case ELight::Spot:        return pr::ProjectionPerspectiveFOV(pr::maths::tau_by_8, 1.0f, centre_dist * 0.01f, centre_dist * 100.0f, true);
+			}
+		}
+
+		#define PR_ENUM(x)\
+			x(Pos  ,= 0x13930DAF)\
+			x(Dir  ,= 0x1618B31F)\
+			x(Type ,= 0x19DA494A)\
+			x(Amb  ,= 0x1558CC98)\
+			x(Diff ,= 0x06868516)\
+			x(Spec ,= 0x1EEC863F)\
+			x(SPwr ,= 0x1C563FB0)\
+			x(InCA ,= 0x027932CE)\
+			x(OtCA ,= 0x178B4446)\
+			x(Rng  ,= 0x11F022C5)\
+			x(FOff ,= 0x1C689A1D)\
+			x(Shdw ,= 0x17CA424A)\
+			x(On   ,= 0x1E67B806)
+		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
+		#undef PR_ENUM
+
+		// Get/Set light settings
+		std::string Light::Settings() const
+		{
+			std::stringstream out;
+			out << "  *" << ELightKW::Pos  << "{" << m_position.xyz() << "}\n"
+				<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz() << "}\n"
+				<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
+				<< std::hex
+				<< "  *" << ELightKW::Amb  << "{" << m_ambient.m_aarrggbb << "}\n"
+				<< "  *" << ELightKW::Diff << "{" << m_diffuse.m_aarrggbb << "}\n"
+				<< "  *" << ELightKW::Spec << "{" << m_specular.m_aarrggbb << "}\n"
+				<< std::dec
+				<< "  *" << ELightKW::SPwr << "{" << m_specular_power << "}\n"
+				<< "  *" << ELightKW::InCA << "{" << m_inner_cos_angle << "}\n"
+				<< "  *" << ELightKW::OtCA << "{" << m_outer_cos_angle << "}\n"
+				<< "  *" << ELightKW::Rng  << "{" << m_range << "}\n"
+				<< "  *" << ELightKW::FOff << "{" << m_falloff << "}\n"
+				<< "  *" << ELightKW::Shdw << "{" << m_cast_shadows << "}\n"
+				<< "  *" << ELightKW::On   << "{" << m_on << "}\n"
+				;
+			return out.str();
+		}
+		void Light::Settings(char const* settings)
+		{
+			try
+			{
+				// Parse the settings for light, if no errors are found update *this
+				Light light;
+
+				// Parse the settings
+				pr::script::Reader reader;
+				pr::script::PtrSrc src(settings);
+				reader.AddSource(src);
+
+				// Check the hash values are correct
+				PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>([&](char const* s) { return reader.HashKeyword(s); }));
+
+				ELightKW kw;
+				while (reader.NextKeywordH(kw))
+				{
+					switch (kw)
+					{
+					case ELightKW::Pos:  reader.ExtractVector3S(light.m_position, 1.0f); break;
+					case ELightKW::Dir:  reader.ExtractVector3S(light.m_direction, 0.0f); break;
+					case ELightKW::Type: reader.ExtractEnumS(light.m_type); break;
+					case ELightKW::Amb:  reader.ExtractIntS(light.m_ambient.m_aarrggbb, 16); break;
+					case ELightKW::Diff: reader.ExtractIntS(light.m_diffuse.m_aarrggbb, 16); break;
+					case ELightKW::Spec: reader.ExtractIntS(light.m_specular.m_aarrggbb, 16); break;
+					case ELightKW::SPwr: reader.ExtractRealS(light.m_specular_power); break;
+					case ELightKW::InCA: reader.ExtractRealS(light.m_inner_cos_angle); break;
+					case ELightKW::OtCA: reader.ExtractRealS(light.m_outer_cos_angle); break;
+					case ELightKW::Rng:  reader.ExtractRealS(light.m_range); break;
+					case ELightKW::FOff: reader.ExtractRealS(light.m_falloff); break;
+					case ELightKW::Shdw: reader.ExtractBoolS(light.m_cast_shadows); break;
+					case ELightKW::On:   reader.ExtractBoolS(light.m_on); break;
+					}
+				}
+				*this = light;
+			}
+			catch (pr::script::Exception const& e)
+			{
+				throw pr::Exception<HRESULT>(E_INVALIDARG, e.what());
+			}
+		}
 	}
 }

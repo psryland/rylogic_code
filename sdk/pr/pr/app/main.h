@@ -90,12 +90,12 @@ namespace pr
 			// so they can call: MyType(...) :base(..) {}
 			typedef Main<UserSettings,MainGUI> base;
 
-			UserSettings           m_settings;    // Application wide user settings
-			pr::Renderer           m_rdr;         // The renderer
-			pr::rdr::SceneForward  m_scene;       // The main view
-			pr::Camera             m_cam;         // A camera
-			MainGUI&               m_gui;         // The GUI that owns this app logic class
-			bool                   m_rdr_pending; // Render call batching, true if render has been called at least once
+			UserSettings   m_settings;    // Application wide user settings
+			pr::Renderer   m_rdr;         // The renderer
+			pr::rdr::Scene m_scene;       // The main view
+			pr::Camera     m_cam;         // A camera
+			MainGUI&       m_gui;         // The GUI that owns this app logic class
+			bool           m_rdr_pending; // Render call batching, true if render has been called at least once
 
 			// Construct using a template setup object.
 			template <typename Setup>
@@ -109,8 +109,8 @@ namespace pr
 			{
 				// Setup a simple default scene
 				// Derived apps will override this
-				m_scene.m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
-				m_scene.m_global_light.m_on = true;
+				m_scene.RdrStep<pr::rdr::ForwardRender>().m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
+				m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light.m_on = true;
 
 				// Position the camera
 				m_cam.Aspect(1.0f);
@@ -172,8 +172,8 @@ namespace pr
 				m_scene.SetView(m_cam);
 
 				// Reset and rebuild the drawlist
-				m_scene.ClearDrawlist();
-				m_scene.UpdateDrawlist();
+				m_scene.ClearDrawlists();
+				m_scene.UpdateDrawlists();
 
 				// Render the viewports
 				m_scene.Render();

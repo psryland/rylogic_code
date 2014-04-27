@@ -6,7 +6,6 @@
 #ifndef PR_RDR_RENDER_DRAW_LIST_ELEMENT_H
 #define PR_RDR_RENDER_DRAW_LIST_ELEMENT_H
 
-#include <type_traits>
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/models/nugget.h"
 
@@ -16,8 +15,8 @@ namespace pr
 	{
 		struct DrawListElement
 		{
-			SortKey               m_sort_key; // The key for this element
-			Nugget const*         m_nugget;   // The render nugget to draw
+			SortKey             m_sort_key; // The key for this element
+			Nugget const*       m_nugget;   // The render nugget to draw
 			BaseInstance const* m_instance; // Instance data for the model that this nugget belongs to
 		};
 		inline bool operator < (DrawListElement const& lhs, DrawListElement const& rhs) { return lhs.m_sort_key < rhs.m_sort_key; }

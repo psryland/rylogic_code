@@ -32,7 +32,7 @@ namespace pr
 		class ContextMenu;
 		struct ContextMenuStyle;
 		struct IContextMenuItem;
-		
+
 		// Helper functions
 		inline Gdiplus::Rect  ToRect (RECT const& rect)            { return Gdiplus::Rect(rect.left, rect.top, rect.right-rect.left, rect.bottom-rect.top); }
 		inline Gdiplus::Rect  ToRect (Gdiplus::RectF const& rect)  { return Gdiplus::Rect(int(rect.X), int(rect.Y), int(rect.Width), int(rect.Height)); }
@@ -51,7 +51,7 @@ namespace pr
 			::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0);
 			return metrics;
 		}
-		
+
 		// Menu item base class
 		struct IContextMenuItem
 		{
@@ -62,13 +62,13 @@ namespace pr
 			virtual void DrawItem   (ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di) = 0;
 			virtual void Selected   (ContextMenu* menu, RECT const& rect, MENUITEMINFO const& mii) = 0;
 		};
-		
+
 		// Reference counted pointers
-		typedef std::tr1::shared_ptr<IContextMenuItem> ItemPtr;
-		typedef std::tr1::shared_ptr<ContextMenuStyle> StylePtr;
-		typedef std::tr1::shared_ptr<Gdiplus::Bitmap>  BitmapPtr;
-		typedef std::tr1::shared_ptr<Gdiplus::Font>    FontPtr;
-		
+		typedef std::shared_ptr<IContextMenuItem> ItemPtr;
+		typedef std::shared_ptr<ContextMenuStyle> StylePtr;
+		typedef std::shared_ptr<Gdiplus::Bitmap>  BitmapPtr;
+		typedef std::shared_ptr<Gdiplus::Font>    FontPtr;
+
 		// Style object used to give menu items individual styles
 		struct ContextMenuStyle
 		{
@@ -82,7 +82,7 @@ namespace pr
 			Gdiplus::Color m_col_3dhi;      // The 3D effect highlighted colour
 			Gdiplus::Color m_col_3dlo;      // The 3D effect shadow colour
 			int            m_margin_left;   // The space to allow for bitmaps, check marks, etc
-			
+
 			ContextMenuStyle()
 			:m_metrics     (GetNonClientMetrics())
 			,m_font_text   (new Gdiplus::Font(::GetDC(0), &m_metrics.lfMenuFont))
@@ -94,7 +94,7 @@ namespace pr
 			,m_margin_left (20)
 			{}
 		};
-		
+
 		// Helper methods for drawing context menu items
 		struct ContextMenuItemDraw
 		{
@@ -115,7 +115,7 @@ namespace pr
 				Pen   pen_3dhi(ColAdj(col_bkgd, 10, 10, 10));
 				Pen   pen_3dlo(ColAdj(col_bkgd,-10,-10,-10));
 				SolidBrush bsh_bkgd(col_bkgd);
-				
+
 				gfx.FillRectangle(&bsh_bkgd, rect);
 				int x = rect.X + style->m_margin_left;
 				gfx.DrawLine(&pen_3dlo, x+0, rect.GetTop(), x+0, rect.GetBottom());
@@ -140,7 +140,7 @@ namespace pr
 				gfx.DrawString(tick, tick_len, style->m_font_marks.get(), pt, &bsh_text);
 			}
 		};
-		
+
 		// Helper dialog for hosting controls within the context menu
 		template <typename Ctrl> class ControlHost :public WTL::CIndirectDialogImpl<Ctrl>
 		{
@@ -152,7 +152,7 @@ namespace pr
 			BEGIN_CONTROLS_MAP()
 			END_CONTROLS_MAP()
 		};
-		
+
 		// A context menu
 		class ContextMenu
 			:public ControlHost<ContextMenu>
@@ -176,10 +176,10 @@ namespace pr
 				{
 					using namespace Gdiplus;
 					StylePtr const& style = menu->m_def_style;
-					
+
 					ContextMenuItemDraw::Bkgd(gfx, ToRect(di->rcItem), false, style);
 					Rect rect = ToRect(di->rcItem);
-					
+
 					Pen pen_3dhi(ColAdj(style->m_col_bkgd, 10, 10, 10));
 					Pen pen_3dlo(ColAdj(style->m_col_bkgd,-10,-10,-10));
 					int x0 = rect.X + style->m_margin_left + 1;
@@ -195,14 +195,14 @@ namespace pr
 			protected:
 				enum { BmpMargin = 1, TextMargin = 2 };
 				Gdiplus::Rect m_rect_text;    // The dimensions of the text
-				
+
 			public:
 				std::wstring m_text;          // The label text
 				UINT_PTR     m_id;            // An id for this item
 				int          m_check_state;   // 0-Unchecked, 1-checked, 2-unknown
 				StylePtr     m_style;         // The style to use to draw the menu item (null means use the default for the menu)
 				BitmapPtr    m_bitmap;        // A bitmap to draw next to the item (null means no bitmap)
-				
+
 				Label(wchar_t const* text = L"Menu item", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr(), BitmapPtr bm = BitmapPtr())
 				:m_text(text)
 				,m_id(id)
@@ -223,15 +223,15 @@ namespace pr
 				{
 					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
-					
+
 					// Measure the text size
 					Gdiplus::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
 					RectF text_sz; gfx.MeasureString(m_text.c_str(), int(m_text.size()), style->m_font_text.get(), PointF(), &fmt, &text_sz);
 					m_rect_text = ToRect(text_sz);
-					
+
 					// Measure the bitmap size
 					Rect bm_sz = ContextMenuItemDraw::MeasureBitmap(m_bitmap, style->m_margin_left - 2*BmpMargin);
-					
+
 					// Set item dimensions
 					Rect sz = m_rect_text; sz.Inflate(TextMargin, TextMargin);
 					mi->itemWidth  = style->m_margin_left + sz.Width;
@@ -244,12 +244,12 @@ namespace pr
 					bool selected = (di->itemState & ODS_SELECTED) != 0;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
 					Rect rect = ToRect(di->rcItem);
-					
+
 					// Draw background and left margin items
 					ContextMenuItemDraw::Bkgd  (gfx, rect, selected, style);
 					ContextMenuItemDraw::Bitmap(gfx, rect, m_bitmap, style);
 					ContextMenuItemDraw::Check (gfx, rect, m_check_state, disabled, style);
-					
+
 					// Draw the label text
 					SolidBrush bsh_text(disabled ? style->m_col_text_da : style->m_col_text);
 					Gdiplus::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
@@ -265,12 +265,12 @@ namespace pr
 				CEdit         m_edit;         // The hosted edit control
 				Gdiplus::Rect m_rect_value;   // The dimensions of the value text
 				CFont         m_font;         // The font to use in the edit control
-				
+
 			public:
 				std::wstring   m_value;       // The value to display in the edit box
 				FontPtr        m_value_font;  // The font to use for the value, if null the label font is used
 				int            m_min_width;   // The minimum width of the edit box
-				
+
 				Edit(wchar_t const* text = L"Menu item", wchar_t const* value = L"", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr(), BitmapPtr bm = BitmapPtr())
 				:Label(text, id, check_state, style, bm)
 				,m_edit()
@@ -292,15 +292,15 @@ namespace pr
 				{
 					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
-					
+
 					// Measure the label portion of the item
 					Label::MeasureItem(menu, gfx, mi);
-					
+
 					// Measure the edit box portion
 					RectF text_sz; gfx.MeasureString(m_value.c_str(), int(m_value.size()), style->m_font_text.get(), PointF(), 0, &text_sz);
 					m_rect_value = ToRect(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
-					
+
 					// Expand the item dimensions
 					Rect r = m_rect_value; r.Inflate(InnerMargin+OuterMargin, InnerMargin+OuterMargin);
 					mi->itemWidth += r.Width;
@@ -312,17 +312,17 @@ namespace pr
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
 					Rect rect = ToRect(di->rcItem);
-					
+
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
-					
+
 					// Draw edit box
 					Rect r = CtrlRect(rect, style->m_margin_left);
 					SolidBrush bsh_bkgd(disabled ? Color((ARGB)Color::LightGray) : Color((ARGB)Color::WhiteSmoke));
 					Pen        pen_brdr(Color((ARGB)Color::Black), 0);
 					gfx.FillRectangle(&bsh_bkgd, r);
 					gfx.DrawRectangle(&pen_brdr, r);
-					
+
 					// Write the edit box text
 					SolidBrush bsh_edittxt(style->m_col_text);
 					PointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
@@ -331,18 +331,18 @@ namespace pr
 				void Selected(ContextMenu* menu, RECT const& rect, MENUITEMINFO const&)
 				{
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
-					
+
 					// Set the font to use in the edit control
 					Gdiplus::Graphics gfx(menu->m_hWnd); LOGFONTW logfont;
 					FontPtr font = m_value_font ? m_value_font : style->m_font_text;
 					if (font && font->GetLogFontW(&gfx, &logfont) == Gdiplus::Ok) m_font = ::CreateFontIndirectW(&logfont);
-					
+
 					// Display the control
 					// 'rect' should be the position of the control in screen space
 					CRect r = ToRECT(CtrlRect(ToRect(rect), style->m_margin_left));
 					DoModal(menu->m_hWnd, (LPARAM)&r);
 				}
-				
+
 				BEGIN_MSG_MAP(Edit)
 					MSG_WM_INITDIALOG(OnInitDialog)
 					MSG_WM_COMMAND(OnCommand)
@@ -351,16 +351,16 @@ namespace pr
 				{
 					// 'rect' should be the position of the control in screen space
 					CRect const& rect = *(CRect const*)lparam;
-					
+
 					CRect winrect = rect;
 					AdjustWindowRect(&winrect, (DWORD)GetWindowLongPtr(GWL_STYLE), FALSE);
 					SetWindowPos(0, &winrect, SWP_NOZORDER);
-					
+
 					CRect r; GetClientRect(&r);
 					m_edit.Create(m_hWnd, &r, 0, WS_CHILD|WS_VISIBLE|WS_BORDER|ES_AUTOHSCROLL, 0);
 					if (!m_font.IsNull()) m_edit.SetFont(m_font);
 					::SetWindowTextW(m_edit, m_value.c_str());
-					
+
 					return TRUE;
 				}
 				void OnCommand(UINT, int nID, CWindow)
@@ -385,14 +385,14 @@ namespace pr
 				CComboBox     m_combo;         // The hosted combo control
 				Gdiplus::Rect m_rect_value;    // The dimensions of the largest value
 				CFont         m_font;          // The font used in the combo control
-				
+
 			public:
 				typedef std::vector<std::wstring> ValueCont;
 				ValueCont m_values;            // The items to display in the combo box
 				int       m_index;             // Index of the selected item
 				FontPtr   m_value_font;        // The font to use for text in the control
 				int       m_min_width;         // Minimum width of the text area in the combo box
-				
+
 				Combo(wchar_t const* text = L"Menu item", ValueCont const* values = 0, UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr(), BitmapPtr bm = BitmapPtr())
 				:Label(text, id, check_state, style, bm)
 				,m_combo()
@@ -419,10 +419,10 @@ namespace pr
 				{
 					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
-					
+
 					// Measure the label portion of the item
 					Label::MeasureItem(menu, gfx, mi);
-					
+
 					// Measure the combo box portion
 					RectF text_sz(0,0,0,0);
 					for (ValueCont::const_iterator i = m_values.begin(), iend = m_values.end(); i != iend; ++i)
@@ -432,7 +432,7 @@ namespace pr
 					}
 					m_rect_value = ToRect(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
-					
+
 					// Expand the item dimensions
 					Rect r = m_rect_value;
 					r.Inflate(InnerMargin, InnerMargin);
@@ -449,15 +449,15 @@ namespace pr
 					Rect rect = ToRect(di->rcItem);
 					Rect rect_ctrl = CtrlRect(rect, style->m_margin_left);
 					Rect rect_btn  = rect_ctrl; rect_btn.X = rect_btn.GetRight() - ArwBtnWidth; rect_btn.Width = ArwBtnWidth;
-					
+
 					SolidBrush bsh_edittxt(style->m_col_text);
 					SolidBrush bsh_bkgd(disabled ? Color((ARGB)Color::LightGray) : Color((ARGB)Color::WhiteSmoke));
 					SolidBrush bsh_bkgdarw(Color((ARGB)Color::LightGray));
 					Pen        pen_brdr(Color((ARGB)Color::Black), 0);
-					
+
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
-					
+
 					// Draw the combo box
 					wchar_t const* arw = L"6";
 					gfx.FillRectangle(&bsh_bkgd, rect_ctrl);
@@ -467,7 +467,7 @@ namespace pr
 					RectF rect_arw; gfx.MeasureString(arw, 1, style->m_font_marks.get(), PointF(), &rect_arw);
 					PointF pt(rect_btn.X + (rect_btn.Width - rect_arw.Width) * 0.5f, rect_btn.Y + (rect_btn.Height - rect_arw.Height) * 0.5f);
 					gfx.DrawString(arw, 1, style->m_font_marks.get(), pt, &bsh_edittxt);
-					
+
 					// Draw the selected value text
 					if (m_index < int(m_values.size()))
 					{
@@ -478,17 +478,17 @@ namespace pr
 				void Selected(ContextMenu* menu, RECT const& rect, MENUITEMINFO const&)
 				{
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
-					
+
 					// Set the font to use in the control
 					Gdiplus::Graphics gfx(menu->m_hWnd); LOGFONTW logfont;
 					FontPtr font = m_value_font ? m_value_font : style->m_font_text;
 					if (font && font->GetLogFontW(&gfx, &logfont) == Gdiplus::Ok) m_font = ::CreateFontIndirectW(&logfont);
-					
+
 					// Display the control
 					CRect r = ToRECT(CtrlRect(ToRect(rect), style->m_margin_left));
 					DoModal(menu->m_hWnd, (LPARAM)&r);
 				}
-				
+
 				BEGIN_MSG_MAP(Combo)
 					MSG_WM_INITDIALOG(OnInitDialog)
 					MSG_WM_COMMAND(OnCommand)
@@ -497,17 +497,17 @@ namespace pr
 				{
 					// 'rect' should be the position of the control in screen space
 					CRect const& rect = *(CRect const*)lparam;
-					
+
 					CRect winrect = rect;
 					AdjustWindowRect(&winrect, (DWORD)GetWindowLongPtr(GWL_STYLE), FALSE);
 					SetWindowPos(0, &winrect, SWP_NOZORDER);
-					
+
 					CRect r; GetClientRect(&r);
 					m_combo = ::CreateWindowExW(0, WC_COMBOBOXW, 0, WS_CHILD|WS_VISIBLE|WS_BORDER|CBS_DROPDOWNLIST|CBS_AUTOHSCROLL|CBS_HASSTRINGS, r.left, r.top, r.Width(), r.Height(), m_hWnd, 0, _AtlBaseModule.GetModuleInstance(), 0);
 					if (!m_font.IsNull()) m_combo.SetFont(m_font);
 					for (ValueCont::const_iterator i = m_values.begin(), iend = m_values.end(); i != iend; ++i)
 						m_combo.AddString((LPCTSTR)i->c_str());
-					
+
 					m_combo.SetCurSel(m_index);
 					return TRUE;
 				}
@@ -524,7 +524,7 @@ namespace pr
 					}
 				}
 			};
-			
+
 		protected:
 			struct Selection
 			{
@@ -534,18 +534,18 @@ namespace pr
 				CRect       m_rect;
 				Selection() :m_menu() ,m_flags(0) ,m_id(0) ,m_rect() {}
 			};
-			
+
 		protected:
 			typedef std::vector<ItemPtr> ItemCont;
 			ItemCont  m_items;    // The items in this menu
 			CMenu     m_root;     // The handle to the root menu
 			int       m_result;   // The id of the item selected
 			Selection m_sel;      // The menu item that was selected
-			
+
 		public:
 			StylePtr m_def_style; // A default style for when 'm_style' pointers are null
 			Label    m_label;     // The text for this menu (used when added as a submenu)
-			
+
 			ContextMenu(wchar_t const* text = L"Menu", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr())
 			:m_items()
 			,m_root(::CreatePopupMenu())
@@ -557,20 +557,20 @@ namespace pr
 			{
 				if (IsWindow()) DestroyWindow();
 			}
-			
+
 			// Add a context menu item to this menu
 			void AddItem(ItemPtr item)
 			{
 				m_items.push_back(item);
 			}
-			
+
 			// Add a context menu item to this menu, 'item' *MUST* be allocated using 'new'
 			template <typename Item> Item& AddItem(Item* item)
 			{
 				AddItem(ItemPtr(item));
 				return *item;
 			}
-			
+
 			// Show the context menu. Blocks until the menu is closed
 			// Returns the id of the item selected
 			int Show(HWND parent, int x, int y)
@@ -579,7 +579,7 @@ namespace pr
 				DoModal(parent, (LPARAM)&rect);
 				return m_result;
 			}
-			
+
 			BEGIN_MSG_MAP(ContextMenu)
 				MSG_WM_INITDIALOG(OnInitDialog)
 				MSG_WM_CAPTURECHANGED(OnCaptureChanged)
@@ -588,7 +588,7 @@ namespace pr
 				MSG_WM_MEASUREITEM(OnMeasureItem)
 				MSG_WM_DRAWITEM(OnDrawItem)
 			END_MSG_MAP()
-			
+
 		protected:
 			int ApplySelection()
 			{
@@ -610,7 +610,7 @@ namespace pr
 				int index = 0;
 				for (ItemCont::iterator i = m_items.begin(), iend = m_items.end(); i != iend; ++i)
 					(*i)->AddToMenu(m_root, index++);
-				
+
 				// This window is the parent because it handles the measure/draw item messages
 				m_result = 0;
 				CRect const& rect = *(CRect const*)lInitParam;
@@ -659,7 +659,7 @@ namespace pr
 				Gdiplus::Graphics gfx(di->hDC);
 				static_cast<IContextMenuItem*>((void*)(di->itemData))->DrawItem(this, gfx, di);
 			}
-			
+
 			// IContextMenuItem interface implementation
 			int  GetId() const { return m_label.GetId(); }
 			void AddToMenu(HMENU menu, int)
@@ -668,7 +668,7 @@ namespace pr
 				int index = 0;
 				for (ItemCont::iterator i = m_items.begin(), iend = m_items.end(); i != iend; ++i)
 					(*i)->AddToMenu(m_root, index++);
-				
+
 				IContextMenuItem* cmi = static_cast<IContextMenuItem*>(this);
 				::AppendMenuW(menu, MF_POPUP|MF_OWNERDRAW, UINT_PTR(m_root.m_hMenu), LPCWSTR(cmi));
 			}

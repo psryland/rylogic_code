@@ -1822,6 +1822,24 @@ namespace pr
 		// Note: this is done as a background thread while a progrss dialog is displayed
 		void Add(pr::Renderer& rdr, pr::script::Reader& reader, ObjectCont& objects, ContextId context_id, bool async)
 		{
+			// Helper object for forwarding LdrProgress events to a dialog
+			struct OnLdrProgress :pr::events::IRecv<Evt_LdrProgress>
+			{
+				pr::gui::ProgressDlg* m_dlg;
+				OnLdrProgress(pr::gui::ProgressDlg* dlg) :m_dlg(dlg) {}
+				void OnEvent(Evt_LdrProgress const& e)
+				{
+					if (m_dlg == nullptr) return;
+
+					// Adding objects generates progress events.
+					char const* type = e.m_obj ? ELdrObject::ToString(e.m_obj->m_type) : "";
+					std::string name = e.m_obj ? e.m_obj->m_name : "";
+					m_dlg->Progress(e.m_count / (float)e.m_total, (e.m_total == -1) ?
+						pr::FmtS("%s...\r\nObject count: %d\r\n%s %s" ,e.m_desc ,e.m_count ,type ,name.c_str()) :
+						pr::FmtS("%s...\r\nObject: %d of %d\r\n%s %s" ,e.m_desc ,e.m_count ,e.m_total ,type ,name.c_str()));
+				}
+			};
+
 			// Does the work of parsing objects and adds them to 'models'
 			// 'total' is the total number of objects added
 			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg)
@@ -1830,24 +1848,8 @@ namespace pr
 					pr::InitCom init_com;
 
 					ModelCont models;
-					std::size_t total;
-
-					// Helper object for forwarding LdrProgress events to the dialog
-					struct OnLdrProgress :pr::events::IRecv<Evt_LdrProgress>
-					{
-						pr::gui::ProgressDlg* m_dlg;
-						OnLdrProgress(pr::gui::ProgressDlg* dlg) :m_dlg(dlg) {}
-						void OnEvent(Evt_LdrProgress const& e)
-						{
-							// Adding objects generates progress events.
-							char const* type = e.m_obj ? ELdrObject::ToString(e.m_obj->m_type) : "";
-							std::string name = e.m_obj ? e.m_obj->m_name : "";
-							m_dlg->Progress(e.m_count / (float)e.m_total, (e.m_total == -1) ?
-								pr::FmtS("%s...\r\nObject count: %d\r\n%s %s" ,e.m_desc ,e.m_count ,type ,name.c_str()) :
-								pr::FmtS("%s...\r\nObject: %d of %d\r\n%s %s" ,e.m_desc ,e.m_count ,e.m_total ,type ,name.c_str()));
-						}
-					} on_ldr_progress(dlg);
-
+					std::size_t total = 0;
+					OnLdrProgress on_ldr_progress(dlg);
 					DWORD now = GetTickCount();
 
 					int initial = int(objects.size());

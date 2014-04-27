@@ -51,7 +51,7 @@ namespace pr
 				// Otherwise, create a default material
 				if (mat)
 				{
-					model->CreateNugget(*mat, topo);
+					model->CreateNugget(ERenderStep::ForwardRender, *mat, topo);
 				}
 				else
 				{
@@ -62,7 +62,7 @@ namespace pr
 					if (props.m_has_alpha)
 						pr::rdr::SetAlphaBlending(lmat, true);
 
-					model->CreateNugget(lmat, topo);
+					model->CreateNugget(ERenderStep::ForwardRender, lmat, topo);
 				}
 				return model;
 			}

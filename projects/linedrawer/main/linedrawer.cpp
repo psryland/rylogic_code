@@ -45,297 +45,303 @@ namespace ldr
 			return pr::rdr::RdrSettings(hwnd, TRUE, client_area);
 		}
 	};
-}
 
-ldr::Main::Main(MainGUI& gui)
-	:base(ldr::Setup(), gui)
-	,m_nav(m_cam, m_rdr.RenderTargetSize(), m_settings.m_CameraAlignAxis)
-	,m_store()
-	,m_plugin_mgr(this)
-	,m_lua_src()
-	,m_files(m_settings, m_rdr, m_store, m_lua_src)
-	,m_step_objects()
-	,m_focus_point()
-	,m_origin_point()
-	,m_selection_box()
-	,m_bbox_model()
-	,m_test_point()
-	,m_test_point_enable(false)
-{
-	// Configure the lighting
-	m_scene.m_global_light = m_settings.m_Light;
-
-	// Create stock models such as the focus point, origin, selection box, etc
-	CreateStockModels();
-}
-ldr::Main::~Main()
-{
-	m_settings.Save();
-}
-
-// Reset the camera to view all, selected, or visible objects
-void ldr::Main::ResetView(pr::ldr::EObjectBounds view_type)
-{
-	m_nav.ResetView(m_gui.m_store_ui.GetBBox(view_type));
-}
-
-// Update the display
-void ldr::Main::DoRender(bool force)
-{
-	// Only render if asked to
-	if (!m_rdr_pending && !force)
-		return;
-
-	// Allow new render requests now
-	m_rdr_pending = false;
-
-	// Ignore render calls if the user settings say rendering is disabled
-	if (!m_settings.m_RenderingEnabled)
-		return;
-
-	// Update the position of the focus point
-	if (m_settings.m_ShowFocusPoint)
+	Main::Main(MainGUI& gui)
+		:base(Setup(), gui)
+		,m_nav(m_cam, m_rdr.RenderTargetSize(), m_settings.m_CameraAlignAxis)
+		,m_store()
+		,m_plugin_mgr(this)
+		,m_lua_src()
+		,m_files(m_settings, m_rdr, m_store, m_lua_src)
+		,m_step_objects()
+		,m_focus_point()
+		,m_origin_point()
+		,m_selection_box()
+		,m_bbox_model()
+		,m_test_point()
+		,m_test_point_enable(false)
 	{
-		float scale = m_settings.m_FocusPointScale * m_nav.FocusDistance();
-		pr::Scale4x4(m_focus_point.m_i2w, scale, m_nav.FocusPoint());
+		// Configure the lighting
+		m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light = m_settings.m_Light;
+
+		// Create stock models such as the focus point, origin, selection box, etc
+		CreateStockModels();
+	}
+	Main::~Main()
+	{
+		m_settings.Save();
 	}
 
-	// Update the scale of the origin
-	if (m_settings.m_ShowOrigin)
+	// Reset the camera to view all, selected, or visible objects
+	void Main::ResetView(pr::ldr::EObjectBounds view_type)
 	{
-		float scale = m_settings.m_FocusPointScale * pr::Length3(m_cam.CameraToWorld().pos);
-		pr::Scale4x4(m_origin_point.m_i2w, scale, pr::v4Origin);
+		m_nav.ResetView(m_gui.m_store_ui.GetBBox(view_type));
 	}
 
-	// Allow the navigation manager to adjust the camera, ready for this frame
-	//m_nav.PositionCamera();
-
-	// Update the lighting. If lighting is camera relative, adjust the position and direction
-	m_scene.m_global_light = m_settings.m_Light;
-	if (m_settings.m_LightIsCameraRelative)
+	// Update the display
+	void Main::DoRender(bool force)
 	{
-		pr::rdr::Light& light = m_scene.m_global_light;
-		light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
-		light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
-	}
+		// Only render if asked to
+		if (!m_rdr_pending && !force)
+			return;
 
-	// Set the background colour
-	m_scene.m_background_colour = m_settings.m_BackgroundColour;
+		// Allow new render requests now
+		m_rdr_pending = false;
 
-	// Set the camera view
-	m_scene.SetView(m_cam);
+		// Ignore render calls if the user settings say rendering is disabled
+		if (!m_settings.m_RenderingEnabled)
+			return;
 
-	// Add objects to the viewport
-	m_scene.ClearDrawlist();
-	m_scene.UpdateDrawlist();
-
-	// Update the fill mode for the scene
-	switch (m_settings.m_GlobalRenderMode) {
-	case EGlobalRenderMode::Solid:        m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
-	case EGlobalRenderMode::Wireframe:    m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-	case EGlobalRenderMode::SolidAndWire: m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
-	}
-
-	// Render the scene
-	m_scene.Render();
-
-	// Render wire frame over solid
-	if (m_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
-	{
-		m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-		m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
-
-		m_scene.Render(false);
-
-		m_scene.m_rsb.Clear(pr::rdr::ERS::FillMode);
-		m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
-	}
-
-	m_rdr.Present();
-}
-
-// Reload all data
-void ldr::Main::ReloadSourceData()
-{
-	try
-	{
-		m_files.Reload();
-	}
-	catch (LdrException const& e)
-	{
-		switch (e.code())
+		// Update the position of the focus point
+		if (m_settings.m_ShowFocusPoint)
 		{
-		default:
-			pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while reloading source data.\nError details: %s", e.what())));
-			break;
-		case ELdrException::OperationCancelled:
-			pr::events::Send(ldr::Event_Info(pr::FmtS("Reloading data cancelled")));
-			break;
+			float scale = m_settings.m_FocusPointScale * m_nav.FocusDistance();
+			pr::Scale4x4(m_focus_point.m_i2w, scale, m_nav.FocusPoint());
+		}
+
+		// Update the scale of the origin
+		if (m_settings.m_ShowOrigin)
+		{
+			float scale = m_settings.m_FocusPointScale * pr::Length3(m_cam.CameraToWorld().pos);
+			pr::Scale4x4(m_origin_point.m_i2w, scale, pr::v4Origin);
+		}
+
+		// Allow the navigation manager to adjust the camera, ready for this frame
+		//m_nav.PositionCamera();
+
+		auto& fr = m_scene.RdrStep<pr::rdr::ForwardRender>();
+
+		// Update the lighting. If lighting is camera relative, adjust the position and direction
+		fr.m_global_light = m_settings.m_Light;
+		if (m_settings.m_LightIsCameraRelative)
+		{
+			pr::rdr::Light& light = fr.m_global_light;
+			light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
+			light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
+		}
+
+		// Set the background colour
+		fr.m_background_colour = m_settings.m_BackgroundColour;
+
+		// Set the camera view
+		m_scene.SetView(m_cam);
+
+		// Add objects to the viewport
+		m_scene.ClearDrawlists();
+		m_scene.UpdateDrawlists();
+
+		// Update the fill mode for the scene
+		switch (m_settings.m_GlobalRenderMode) {
+		case EGlobalRenderMode::Solid:        fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EGlobalRenderMode::Wireframe:    fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+		case EGlobalRenderMode::SolidAndWire: fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+		}
+
+		// Render the scene
+		m_scene.Render();
+
+		// Render wire frame over solid
+		if (m_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
+		{
+			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+			fr.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+			fr.m_clear_bb = false;
+
+			m_scene.Render();
+
+			fr.m_clear_bb = true;
+			fr.m_rsb.Clear(pr::rdr::ERS::FillMode);
+			fr.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+		}
+
+		m_rdr.Present();
+	}
+
+	// Reload all data
+	void Main::ReloadSourceData()
+	{
+		try
+		{
+			m_files.Reload();
+		}
+		catch (LdrException const& e)
+		{
+			switch (e.code())
+			{
+			default:
+				pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while reloading source data.\nError details: %s", e.what())));
+				break;
+			case ELdrException::OperationCancelled:
+				pr::events::Send(ldr::Event_Info(pr::FmtS("Reloading data cancelled")));
+				break;
+			}
 		}
 	}
-}
 
-// The size of the window has changed
-void ldr::Main::Resize(pr::iv2 const& size)
-{
-	base::Resize(size);
-	m_nav.SetViewSize(size);
-	m_settings.Save();
-}
-
-// Generate a scene containing the supported line drawer objects.
-void ldr::Main::CreateDemoScene()
-{
-	try
+	// The size of the window has changed
+	void Main::Resize(pr::iv2 const& size)
 	{
-		std::string scene = pr::ldr::CreateDemoScene();
-		pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+		base::Resize(size);
+		m_nav.SetViewSize(size);
+		m_settings.Save();
 	}
-	catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
-	catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
-}
 
-// Test point methods
-void ldr::Main::TestPoint_Enable(bool yes)
-{
-	m_test_point_enable = yes;
-}
-void ldr::Main::TestPoint_SetPosition(pr::v4 const& pos)
-{
-	m_test_point.m_i2w.pos = pos;
-}
-
-// Create stock models such as the focus point, origin, etc
-void ldr::Main::CreateStockModels()
-{
+	// Generate a scene containing the supported line drawer objects.
+	void Main::CreateDemoScene()
 	{
-		// Create the focus point models
-		pr::v4 verts[] =
+		try
 		{
-			pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-			pr::v4::make(1.0f,  0.0f,  0.0f, 1.0f),
-			pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-			pr::v4::make(0.0f,  1.0f,  0.0f, 1.0f),
-			pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
-			pr::v4::make(0.0f,  0.0f,  1.0f, 1.0f),
-		};
-		pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
-		pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
-		pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
-		m_focus_point .m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
-		m_focus_point .m_i2w   = pr::m4x4Identity;
-		m_origin_point.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
-		m_origin_point.m_i2w   = pr::m4x4Identity;
+			std::string scene = pr::ldr::CreateDemoScene();
+			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+		}
+		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
+		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 	}
+
+	// Test point methods
+	void Main::TestPoint_Enable(bool yes)
 	{
-		// Create the selection box model
-		pr::v4 verts[] =
-		{
-			pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f, -0.4f, 1.0f),
-			pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.5f, -0.4f, 1.0f),
-			pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.5f, -0.4f, 1.0f),
-			pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f, -0.4f, 1.0f),
-			pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f,  0.4f, 1.0f),
-			pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.5f,  0.4f, 1.0f),
-			pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.5f,  0.4f, 1.0f),
-			pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f,  0.4f, 1.0f),
-		};
-		pr::uint16 lines[] =
-		{
-			0,  1,  0,  2,  0,  3,
-			4,  5,  4,  6,  4,  7,
-			8,  9,  8, 10,  8, 11,
-			12, 13, 12, 14, 12, 15,
-			16, 17, 16, 18, 16, 19,
-			20, 21, 20, 22, 20, 23,
-			24, 25, 24, 26, 24, 27,
-			28, 29, 28, 30, 28, 31,
-		};
-		m_selection_box.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
-		m_selection_box.m_i2w   = pr::m4x4Identity;
+		m_test_point_enable = yes;
 	}
+	void Main::TestPoint_SetPosition(pr::v4 const& pos)
 	{
-		// Create a bounding box model
-		pr::v4 verts[] =
-		{
-			pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f),
-			pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f),
-			pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f),
-			pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f),
-			pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f),
-			pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f),
-			pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f),
-			pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f),
-		};
-		pr::uint16 lines[] =
-		{
-			0, 1, 1, 2, 2, 3, 3, 0,
-			4, 5, 5, 6, 6, 7, 7, 4,
-			0, 4, 1, 5, 2, 6, 3, 7
-		};
-		m_bbox_model.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
-		m_bbox_model.m_i2w   = pr::m4x4Identity;
+		m_test_point.m_i2w.pos = pos;
 	}
+
+	// Create stock models such as the focus point, origin, etc
+	void Main::CreateStockModels()
 	{
-		// Create a test point box model
-		m_test_point.m_model = pr::rdr::ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
-		m_test_point.m_i2w   = pr::m4x4Identity;
+		{
+			// Create the focus point models
+			pr::v4 verts[] =
+			{
+				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4::make(1.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4::make(0.0f,  1.0f,  0.0f, 1.0f),
+				pr::v4::make(0.0f,  0.0f,  0.0f, 1.0f),
+				pr::v4::make(0.0f,  0.0f,  1.0f, 1.0f),
+			};
+			pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
+			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
+			pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
+			m_focus_point .m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
+			m_focus_point .m_i2w   = pr::m4x4Identity;
+			m_origin_point.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
+			m_origin_point.m_i2w   = pr::m4x4Identity;
+		}
+		{
+			// Create the selection box model
+			pr::v4 verts[] =
+			{
+				pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f, -0.4f, 1.0f),
+				pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.5f, -0.4f, 1.0f),
+				pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.5f, -0.4f, 1.0f),
+				pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f, -0.4f, 1.0f),
+				pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f,  0.4f, 1.0f),
+				pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.5f,  0.4f, 1.0f),
+				pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.5f,  0.4f, 1.0f),
+				pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f,  0.4f, 1.0f),
+			};
+			pr::uint16 lines[] =
+			{
+				0,  1,  0,  2,  0,  3,
+				4,  5,  4,  6,  4,  7,
+				8,  9,  8, 10,  8, 11,
+				12, 13, 12, 14, 12, 15,
+				16, 17, 16, 18, 16, 19,
+				20, 21, 20, 22, 20, 23,
+				24, 25, 24, 26, 24, 27,
+				28, 29, 28, 30, 28, 31,
+			};
+			m_selection_box.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
+			m_selection_box.m_i2w   = pr::m4x4Identity;
+		}
+		{
+			// Create a bounding box model
+			pr::v4 verts[] =
+			{
+				pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f),
+				pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f),
+				pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f),
+				pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f),
+				pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f),
+				pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f),
+				pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f),
+				pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f),
+			};
+			pr::uint16 lines[] =
+			{
+				0, 1, 1, 2, 2, 3, 3, 0,
+				4, 5, 5, 6, 6, 7, 7, 4,
+				0, 4, 1, 5, 2, 6, 3, 7
+			};
+			m_bbox_model.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
+			m_bbox_model.m_i2w   = pr::m4x4Identity;
+		}
+		{
+			// Create a test point box model
+			m_test_point.m_model = pr::rdr::ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
+			m_test_point.m_i2w   = pr::m4x4Identity;
+		}
 	}
-}
 
-// User settings have been changed
-void ldr::Main::OnEvent(pr::ldr::Evt_SettingsChanged const&)
-{
-	m_settings.m_ObjectManagerSettings = m_gui.m_store_ui.Settings();
-}
-
-// An object has been added to the object manager
-void ldr::Main::OnEvent(pr::ldr::Evt_LdrObjectAdd const& e)
-{
-	pr::chain::Insert(m_step_objects, e.m_obj->m_step.m_link);
-}
-
-// An object has been deleted from the object manager
-void ldr::Main::OnEvent(pr::ldr::Evt_LdrObjectDelete const& e)
-{
-	pr::chain::Remove(e.m_obj->m_step.m_link);
-}
-
-// The selected objects have changed
-void ldr::Main::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
-{
-	// Update the transform of the selection box
-	pr::BoundingBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
-	pr::Scale4x4(m_selection_box.m_i2w, bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
-
-	// Request a refresh when the selection changes (if the selection box is visible)
-	if (m_settings.m_ShowSelectionBox)
-		pr::events::Send(ldr::Event_Refresh());
-}
-
-// Called when the viewport is being built
-void ldr::Main::OnEvent(pr::rdr::Evt_SceneRender const& e)
-{
-	// Render the focus point
-	if (m_settings.m_ShowFocusPoint)
-		e.m_scene->AddInstance(m_focus_point);
-
-	// Render the origin
-	if (m_settings.m_ShowOrigin)
-		e.m_scene->AddInstance(m_origin_point);
-
-	// Render the test point
-	if (m_test_point_enable)
-		e.m_scene->AddInstance(m_test_point);
-
-	// Add instances from the store
-	for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-		m_store[i]->AddToScene(*e.m_scene);
-
-	// Add model bounding boxes
-	if (m_settings.m_ShowObjectBBoxes)
+	// User settings have been changed
+	void Main::OnEvent(pr::ldr::Evt_SettingsChanged const&)
 	{
+		m_settings.m_ObjectManagerSettings = m_gui.m_store_ui.Settings();
+	}
+
+	// An object has been added to the object manager
+	void Main::OnEvent(pr::ldr::Evt_LdrObjectAdd const& e)
+	{
+		pr::chain::Insert(m_step_objects, e.m_obj->m_step.m_link);
+	}
+
+	// An object has been deleted from the object manager
+	void Main::OnEvent(pr::ldr::Evt_LdrObjectDelete const& e)
+	{
+		pr::chain::Remove(e.m_obj->m_step.m_link);
+	}
+
+	// The selected objects have changed
+	void Main::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
+	{
+		// Update the transform of the selection box
+		pr::BoundingBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
+		pr::Scale4x4(m_selection_box.m_i2w, bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
+
+		// Request a refresh when the selection changes (if the selection box is visible)
+		if (m_settings.m_ShowSelectionBox)
+			pr::events::Send(ldr::Event_Refresh());
+	}
+
+	// Called when the viewport is being built
+	void Main::OnEvent(pr::rdr::Evt_SceneRender const& e)
+	{
+		PR_ASSERT(PR_DBG_LDR, e.m_rsteps->Id() == pr::rdr::ERenderStep::ForwardRender, "Assuming only one render step");
+
+		// Render the focus point
+		if (m_settings.m_ShowFocusPoint)
+			e.m_scene->AddInstance(m_focus_point);
+
+		// Render the origin
+		if (m_settings.m_ShowOrigin)
+			e.m_scene->AddInstance(m_origin_point);
+
+		// Render the test point
+		if (m_test_point_enable)
+			e.m_scene->AddInstance(m_test_point);
+
+		// Add instances from the store
 		for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
-			m_store[i]->AddBBoxToScene(*e.m_scene, m_bbox_model.m_model);
+			m_store[i]->AddToScene(*e.m_scene);
+
+		// Add model bounding boxes
+		if (m_settings.m_ShowObjectBBoxes)
+		{
+			for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
+				m_store[i]->AddBBoxToScene(*e.m_scene, m_bbox_model.m_model);
+		}
 	}
 }

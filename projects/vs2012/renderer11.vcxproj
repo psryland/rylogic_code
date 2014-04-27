@@ -145,6 +145,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\render_step.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
@@ -158,10 +159,8 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_settings.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\nugget.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist_element.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\gbuffer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\renderer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\raster_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene.h" />
@@ -170,6 +169,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\demo_scene.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\event_types.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\lock.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\lookup.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\stock_resources.h" />
@@ -205,6 +205,7 @@
     <ClCompile Include="..\renderer11\directxtex\DirectXTexUtil.cpp" />
     <ClCompile Include="..\renderer11\directxtex\DirectXTexWIC.cpp" />
     <ClCompile Include="..\renderer11\lights\light.cpp" />
+    <ClCompile Include="..\renderer11\render\render_step.cpp" />
     <ClCompile Include="..\renderer11\render\scene_view.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
@@ -215,8 +216,6 @@
     <ClCompile Include="..\renderer11\models\model.cpp" />
     <ClCompile Include="..\renderer11\models\model_buffer.cpp" />
     <ClCompile Include="..\renderer11\models\model_manager.cpp" />
-    <ClCompile Include="..\renderer11\render\drawlist.cpp" />
-    <ClCompile Include="..\renderer11\render\gbuffer.cpp" />
     <ClCompile Include="..\renderer11\render\renderer.cpp" />
     <ClCompile Include="..\renderer11\render\scene.cpp" />
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp" />

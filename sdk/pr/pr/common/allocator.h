@@ -23,9 +23,9 @@ namespace pr
 		typedef ptrdiff_t difference_type;
 		enum
 		{
-			value_alignment = std::tr1::alignment_of<T>::value
+			value_alignment = std::alignment_of<T>::value
 		};
-		
+
 		// constructors
 		aligned_alloc() {}
 		aligned_alloc(aligned_alloc const&) {}
@@ -41,14 +41,13 @@ namespace pr
 		void          construct (pointer p)                       { new (p) T; }
 		void          construct (pointer p, const_reference val)  { new (p) T(val); }
 		void          destroy   (pointer p)                       { if (p) p->~T(); }
-		
+
 		// helpers
 		T*   New()        { pointer p = allocator(1); construct(p); return p; }
 		void Delete(T* p) { destroy(p); deallocate(p, 1); }
 	};
 	template <typename T, typename U> inline bool operator == (aligned_alloc<T> const& lhs, aligned_alloc<U> const& rhs) { return lhs.m_alloc == rhs.m_alloc && lhs.m_dealloc == rhs.m_dealloc; }
 	template <typename T, typename U> inline bool operator != (aligned_alloc<T> const& lhs, aligned_alloc<U> const& rhs) { return !(lhs == rhs); }
-
 
 	// Deprecated:
 

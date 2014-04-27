@@ -54,9 +54,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h">
       <Filter>util</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\sortkey.h">
       <Filter>render</Filter>
     </ClInclude>
@@ -65,9 +62,6 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h">
       <Filter>models</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\gbuffer.h">
-      <Filter>render</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_buffer.h">
       <Filter>models</Filter>
@@ -201,6 +195,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h">
       <Filter>textures</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\render_step.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\event_types.h">
+      <Filter>util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -213,12 +213,6 @@
       <Filter>config</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\render\scene.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
-    <ClCompile Include="..\renderer11\render\drawlist.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
-    <ClCompile Include="..\renderer11\render\gbuffer.cpp">
       <Filter>render</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\models\model_manager.cpp">
@@ -313,6 +307,9 @@
     </ClCompile>
     <ClCompile Include="..\renderer11\textures\wic_texture_loader.cpp">
       <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\render\render_step.cpp">
+      <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

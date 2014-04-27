@@ -22,13 +22,11 @@ namespace pr
 		struct LookupGenerator
 		{
 			typedef std::pair<const Key, Value> pair;
-			typedef pr::rdr::Allocator<pair>    alloc;
-			typedef ::std::tr1::hash<Key>       hasher;
+			typedef Allocator<pair>             alloc;
+			typedef ::std::hash<Key>            hasher;
 			typedef ::std::equal_to<Key>        keyeq;
-			
-			typedef std::tr1::unordered_map<Key, Value, hasher, keyeq, alloc> type;
-			//typedef stdext::hash_compare< Key, std::less<Key> >   compare;
-			//typedef stdext::hash_map<Key, Value, compare, alloc> type;
+
+			typedef std::unordered_map<Key, Value, hasher, keyeq, alloc> type;
 		};
 
 		template <typename Key, typename Value>
@@ -37,9 +35,9 @@ namespace pr
 			typedef LookupGenerator<Key, Value> generator;
 			typedef typename generator::type    base;
 			typedef typename generator::pair    pair;
-			
-			Lookup(pr::rdr::MemFuncs& mem)
-			:base(8, generator::hasher(), generator::keyeq(), generator::alloc(mem))
+
+			Lookup(MemFuncs& mem)
+				:base(8, generator::hasher(), generator::keyeq(), generator::alloc(mem))
 			{}
 		};
 	}

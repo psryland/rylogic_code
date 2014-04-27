@@ -23,8 +23,8 @@ namespace pr
 			DeallocFunc m_dealloc;
 
 			MemFuncs(AllocFunc alloc = _aligned_malloc, DeallocFunc dealloc = _aligned_free)
-			:m_alloc(alloc)
-			,m_dealloc(dealloc)
+				:m_alloc(alloc)
+				,m_dealloc(dealloc)
 			{}
 		};
 
@@ -40,11 +40,11 @@ namespace pr
 			typedef ptrdiff_t difference_type;
 			enum
 			{
-				value_alignment = std::tr1::alignment_of<T>::value
+				value_alignment = std::alignment_of<T>::value
 			};
 
 			// Constructers
-			Allocator(pr::rdr::MemFuncs funcs) :MemFuncs(funcs) {}
+			Allocator(MemFuncs funcs) :MemFuncs(funcs) {}
 			Allocator(Allocator const& rhs) :MemFuncs(rhs) {}
 			template <typename U> Allocator(Allocator<U> const& rhs) :MemFuncs(rhs) {}
 			template <typename U> struct rebind { typedef Allocator<U> other; };
@@ -66,28 +66,12 @@ namespace pr
 			T*   New(const_reference val) { pointer p = allocate(1); construct(p, val); return p; }
 			void Delete(T* p)             { destroy(p); deallocate(p, 1); }
 
-			// Overloads taking various numbers of parameters
-			#define PR_TN(n) typename U##n
-			#define PR_PARM1(n) U##n& parm##n
-			#define PR_PARM2(n) parm##n
-			#define PR_FUNC(n)\
-			template <PR_REPEAT(n,PR_TN,PR_COMMA)> T* New(PR_REPEAT(n,PR_PARM1,PR_COMMA))\
-			{\
-				pointer p = allocate(1);\
-				new (p) T(PR_REPEAT(n,PR_PARM2,PR_COMMA));\
-				return p;\
+			template <typename... Args> T* New(Args&&... args)
+			{
+				pointer p = allocate(1);
+				new (p) T(std::forward<Args>(args)...);
+				return p;
 			}
-			PR_FUNC(1)
-			PR_FUNC(2)
-			PR_FUNC(3)
-			PR_FUNC(4)
-			PR_FUNC(5)
-			PR_FUNC(6)
-			PR_FUNC(7)
-			#undef PR_TN
-			#undef PR_PARM1
-			#undef PR_PARM2
-			#undef PR_FUNC
 		};
 		template <typename T, typename U> inline bool operator == (Allocator<T> const& lhs, Allocator<U> const& rhs) { return lhs.m_alloc == rhs.m_alloc && lhs.m_dealloc == rhs.m_dealloc; }
 		template <typename T, typename U> inline bool operator != (Allocator<T> const& lhs, Allocator<U> const& rhs) { return !(lhs == rhs); }

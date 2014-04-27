@@ -7,8 +7,6 @@
 #define PR_RDR_RENDER_STEREO_H
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/render/drawlist.h"
-#include "pr/renderer11/render/gbuffer.h"
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/wrappers.h"
@@ -79,12 +77,12 @@ namespace pr
 				D3DPtr<ID3D11DeviceContext>    m_dc;
 				D3DPtr<ID3D11RenderTargetView> m_rtv;
 				D3DPtr<ID3D11DepthStencilView> m_dsv;
-	
+
 				RenderScope(std::shared_ptr<Stereo> stereo, D3DPtr<ID3D11DeviceContext> dc)
-				:m_stereo(stereo)
-				,m_dc(dc)
-				,m_rtv()
-				,m_dsv()
+					:m_stereo(stereo)
+					,m_dc(dc)
+					,m_rtv()
+					,m_dsv()
 				{
 					// Save the current render target views so we can restore them later
 					// and set the offscreen render target

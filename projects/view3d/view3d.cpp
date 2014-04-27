@@ -491,9 +491,9 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	View3DMaterial v3dmat = {0,0};
 
 	// If the model already has nuggets grab some defaults from it
-	if (!model->m_nuggets.empty())
+	if (!model->m_nmap[pr::rdr::ERenderStep::ForwardRender].empty())
 	{
-		auto nug = model->m_nuggets.front();
+		auto nug = model->m_nmap[pr::rdr::ERenderStep::ForwardRender].front();
 		auto mat = nug.m_draw;
 		model_type = static_cast<EView3DPrim>(nug.m_prim_topo.value);
 		geom_type  = static_cast<EView3DGeom>(mat.m_shader->m_geom_mask.value);
@@ -538,8 +538,8 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	// Re-create the render nuggets
 	vrange.resize(new_vcount);
 	irange.resize(new_icount);
-	model->DeleteNuggets();
-	model->CreateNugget(mat, static_cast<pr::rdr::EPrim::Enum_>(model_type), &vrange, &irange);
+	model->DeleteNuggets(pr::rdr::ERenderStep::ForwardRender);
+	model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, mat, static_cast<pr::rdr::EPrim::Enum_>(model_type), &vrange, &irange);
 }
 
 // Create an object via callback
@@ -608,8 +608,9 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, pr::uint c
 // Assign a texture to an object
 VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex)
 {
-	for (auto i = std::begin(object->m_model->m_nuggets), iend = std::end(object->m_model->m_nuggets); i != iend; ++i)
-		i->m_draw.m_tex_diffuse = tex;
+	auto& nuggets = object->m_model->m_nmap[pr::rdr::ERenderStep::ForwardRender];
+	for (auto& nug : nuggets)
+		nug.m_draw.m_tex_diffuse = tex;
 }
 
 // Return the model space bounding box for 'object'
@@ -783,7 +784,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	auto& scene = Rdr().m_scene;
 
 	// Reset the drawlist
-	scene.ClearDrawlist();
+	scene.ClearDrawlists();
 
 	// Add objects from the drawset to the viewport
 	for (auto& obj : drawset->m_objects)
@@ -818,22 +819,23 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	}
 
 	// Set the light source
-	scene.m_global_light = drawset->m_light;
+	auto& fr = scene.RdrStep<pr::rdr::ForwardRender>();
+	fr.m_global_light = drawset->m_light;
 	if (drawset->m_light_is_camera_relative)
 	{
-		pr::rdr::Light& light = scene.m_global_light;
+		pr::rdr::Light& light = fr.m_global_light;
 		light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
 		light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
 	}
 
 	// Set the background colour
-	scene.m_background_colour = drawset->m_background_colour;
+	fr.m_background_colour = drawset->m_background_colour;
 
 	// Set the global fill mode
 	switch (drawset->m_fill_mode) {
-	case EView3DFillMode::Solid:     scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
-	case EView3DFillMode::Wireframe: scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-	case EView3DFillMode::SolidWire: scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+	case EView3DFillMode::Solid:     fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
+	case EView3DFillMode::Wireframe: fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+	case EView3DFillMode::SolidWire: fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
 	}
 
 	// Render the scene
@@ -842,13 +844,15 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	// Render wire frame over solid for 'SolidWire' mode
 	if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
 	{
-		scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-		scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+		fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+		fr.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+		fr.m_clear_bb = false;
 
-		scene.Render(false);
+		scene.Render();
 
-		scene.m_rsb.Clear(pr::rdr::ERS::FillMode);
-		scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+		fr.m_clear_bb = true;
+		fr.m_rsb.Clear(pr::rdr::ERS::FillMode);
+		fr.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
 	}
 
 	Rdr().m_renderer.Present();

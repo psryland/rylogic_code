@@ -57,7 +57,7 @@ namespace view3d
 	{
 		pr::Logger                m_log;
 		pr::Renderer              m_renderer;
-		pr::rdr::SceneForward     m_scene;
+		pr::rdr::Scene            m_scene;
 		pr::ldr::ObjectCont       m_obj_cont;
 		pr::ldr::ObjectManagerDlg m_obj_cont_ui;
 		pr::ldr::MeasureDlg       m_measure_tool_ui;

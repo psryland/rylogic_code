@@ -12,8 +12,11 @@
 #include <string>
 #include <list>
 #include <new>
+#include <memory>
+#include <unordered_map>
 #include <algorithm>
 #include <functional>
+#include <type_traits>
 #include <intrin.h>
 #include <malloc.h>
 #include <sdkddkver.h>
@@ -135,14 +138,17 @@ namespace pr
 
 		// Models
 		class  ModelManager;
-		struct ModelBuffer;    typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
-		struct Model;          typedef pr::RefPtr<Model>       ModelPtr;
-		struct Nugget;         typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
+		struct ModelBuffer;
+		struct Model;
+		struct Nugget;
 		struct VertP;
 		struct VertPC;
 		struct VertPCT;
 		struct VertPCNT;
 		struct MdlSettings;
+		typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
+		typedef pr::RefPtr<Model> ModelPtr;
+		typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
 
 		// Instances
 		struct BaseInstance;
@@ -150,10 +156,12 @@ namespace pr
 		// Scenes
 		struct SceneView;
 		struct Scene;
+		struct RenderStep;
+		struct ForwardRender;
 		struct Stereo;
 		struct DrawMethod;
-		struct Drawlist;
 		struct DrawListElement;
+		typedef std::shared_ptr<RenderStep> RenderStepPtr;
 
 		// Rendering
 		struct BSBlock;
@@ -161,10 +169,6 @@ namespace pr
 		struct RSBlock;
 
 		// Enums
-		namespace ERenderMethod
-		{
-			enum Type { None, Forward, Deferred };
-		}
 		namespace EDbgRdrFlags
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
@@ -187,6 +191,12 @@ namespace pr
 			x(TriList   ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)\
 			x(TriStrip  ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
 		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
+		#undef PR_ENUM
+
+		// Ids for render steps
+		#define PR_ENUM(x)\
+			x(ForwardRender)
+		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
 		// EConstBuf
@@ -282,19 +292,6 @@ namespace pr
 //				Renderer,
 //			};
 //		}
-
-		// Events
-		struct Evt_Resize
-		{
-			bool    m_done;  // True when the swap chain has resized it's buffers
-			pr::iv2 m_area;  // The render target size before (m_done == false) or after (m_done == true) the swap chain buffer resize
-			Evt_Resize(bool done, pr::iv2 const& area) :m_done(done) ,m_area(area) {}
-		};
-		struct Evt_SceneRender
-		{
-			pr::rdr::Scene* m_scene; // The scene that's about to render
-			explicit Evt_SceneRender(pr::rdr::Scene* scene) :m_scene(scene) {}
-		};
 	}
 }
 

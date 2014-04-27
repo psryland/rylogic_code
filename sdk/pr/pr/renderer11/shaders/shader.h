@@ -17,7 +17,7 @@ namespace pr
 	namespace rdr
 	{
 		// User provided callback function for binding a shader to the device context
-		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene)> ShaderSetupFunc;
+		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)> ShaderSetupFunc;
 
 		// Initialisation data for a shader
 		struct ShaderDesc
@@ -58,10 +58,10 @@ namespace pr
 		struct PShaderDesc :ShaderDesc
 		{
 			PShaderDesc(void const* data, size_t size)
-			:ShaderDesc(data, size)
+				:ShaderDesc(data, size)
 			{}
 			template <size_t Sz> PShaderDesc(byte const (&data)[Sz])
-			:ShaderDesc(data, Sz)
+				:ShaderDesc(data, Sz)
 			{}
 		};
 
@@ -92,7 +92,7 @@ namespace pr
 			virtual ~BaseShader() {}
 
 			// Bind the shader to the device context in preparation for rendering
-			void Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, Scene const& scene);
+			void Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep);
 
 			// Ref counting cleanup function
 			static void RefCountZero(pr::RefCount<BaseShader>* doomed);
@@ -100,7 +100,7 @@ namespace pr
 		protected:
 			// Use the shader manager 'CreateShader'
 			// factory method to create new shaders
-			friend struct pr::rdr::Allocator<BaseShader>;
+			friend struct Allocator<BaseShader>;
 			BaseShader();
 		};
 

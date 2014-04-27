@@ -5,217 +5,111 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
-#include "pr/renderer11/render/draw_method.h"
-#include "pr/renderer11/util/lock.h"
-#include "renderer11/shaders/cbuffer.h"
-#include "renderer11/render/stereo.h"
+#include "pr/renderer11/instances/instance.h"
+//#include "pr/renderer11/render/draw_method.h"
+//#include "pr/renderer11/util/lock.h"
+//#include "renderer11/shaders/cbuffer.h"
+//#include "renderer11/render/stereo.h"
 
-using namespace pr::rdr;
-
-// Make a scene
-pr::rdr::Scene::Scene(pr::Renderer& rdr, SceneView const& view)
-	:m_rdr(&rdr)
-	,m_viewport(m_rdr->RenderTargetSize())
-	,m_view(view)
-	,m_drawlist(rdr)
-	,m_background_colour(pr::ColourBlack)
-	,m_global_light()
-	,m_cbuf_frame()
-	,m_bsb()
-	,m_rsb(RSBlock::SolidCullBack())
-	,m_dsb()
-	,m_stereo()
+namespace pr
 {
-	CBufFrame scene_constants = {};
-	scene_constants.m_c2w = view.m_c2w;
-	scene_constants.m_w2c = pr::GetInverseFast(view.m_c2w);
-	SubResourceData init(scene_constants);
-	CBufferDesc cbdesc(sizeof(CBufFrame));
-	pr::Throw(rdr.Device()->CreateBuffer(&cbdesc, &init, &m_cbuf_frame.m_ptr));
-	PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame"));
-
-	// Use line antialiasing if multisampling is enabled
-	if (m_rdr->Settings().m_multisamp.Count != 1)
+	namespace rdr
 	{
-		m_rsb.Set(ERS::MultisampleEnable, TRUE);
-	}
-}
-
-// Set stereoscopic rendering mode
-void pr::rdr::Scene::Stereoscopic(bool state, float eye_separation, bool swap_eyes)
-{
-	if (!state)
-	{
-		m_stereo = nullptr;
-		return;
-	}
-
-	// Create the stereo rendering helper
-	auto device = m_rdr->Device();
-	m_stereo.reset(new Stereo(device, m_viewport, m_rdr->DisplayFormat(), swap_eyes, eye_separation));
-}
-
-// Resize the viewport on back buffer resize
-void pr::rdr::Scene::OnEvent(pr::rdr::Evt_Resize const& evt)
-{
-	// Todo, this is assuming the viewport covers the entire back buffer
-	// it won't work for viewports that are sub regions of the screen
-	if (evt.m_done)
-		m_viewport = evt.m_area;
-}
-
-// Set the frame constant variables
-void BindFrameContants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer> const& cbuf_frame, SceneView const& view, Light const& global_light)
-{
-	CBufFrame buf;
-	buf.m_c2w                = view.m_c2w;
-	buf.m_w2c                = pr::GetInverse(view.m_c2w);
-	buf.m_w2s                = view.m_c2s * pr::GetInverseFast(view.m_c2w);
-	buf.m_global_lighting    = pr::v4::make(static_cast<float>(global_light.m_type),0.0f,0.0f,0.0f);
-	buf.m_ws_light_direction = global_light.m_direction;
-	buf.m_ws_light_position  = global_light.m_position;
-	buf.m_light_ambient      = global_light.m_ambient;
-	buf.m_light_colour       = global_light.m_diffuse;
-	buf.m_light_specular     = pr::Colour::make(global_light.m_specular, global_light.m_specular_power);
-	buf.m_spot               = pr::v4::make(global_light.m_inner_cos_angle, global_light.m_outer_cos_angle, global_light.m_range, global_light.m_falloff);
-	{
-		LockT<CBufFrame> lock(dc, cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
-		*lock.ptr() = buf;
-	}
-
-	// Bind the frame constants to the shaders
-	dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
-	dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
-}
-
-// Render the draw list for this viewport
-void pr::rdr::Scene::Render(bool clear_bb)
-{
-	D3DPtr<ID3D11DeviceContext> dc = m_rdr->ImmediateDC();
-	Render(dc, clear_bb);
-}
-void pr::rdr::Scene::Render(D3DPtr<ID3D11DeviceContext>& dc, bool clear_bb)
-{
-	// Sort the draw list if needed
-	m_drawlist.SortIfNeeded();
-
-	// Push states to the device
-	m_rdr->m_rs_mgr.Flush();
-	m_rdr->m_bs_mgr.Flush();
-
-	// Clear the back buffer and depth/stencil
-	if (clear_bb)
-	{
-		// Get the render target views
-		D3DPtr<ID3D11RenderTargetView> rtv;
-		D3DPtr<ID3D11DepthStencilView> dsv;
-		dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-		dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
-		dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
-	}
-
-	if (Stereoscopic())
-	{
-		// Create a scope that manages setup/teardown of the render target
-		Stereo::RenderScope stereo_render(m_stereo, dc);
-
-		// Generate the camera transforms for each eye
-		SceneView eye[EEye::NumberOf];
-		m_view.Stereo(m_stereo->m_eye_separation, eye);
-
-		// Render each eye
-		rdr::Viewport vp = m_viewport;
-		for (int i = 0; i != EEye::NumberOf; ++i, vp.TopLeftX += vp.Width)
+		// Make a scene
+		Scene::Scene(pr::Renderer& rdr, SceneView const& view)
+			:m_rdr(&rdr)
+			,m_view(view)
+			,m_viewport(rdr.RenderTargetSize())
+			,m_render_steps()
 		{
-			dc->RSSetViewports(1, &vp);
-			BindFrameContants(dc, m_cbuf_frame, eye[i], m_global_light);
-			DoRender(dc);
+			m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
+		}
+
+		// Access the render step by Id
+		RenderStep& Scene::operator[](ERenderStep::Enum_ id) const
+		{
+			for (auto& rs : m_render_steps)
+				if (rs->Id() == id)
+					return *rs.get();
+
+			PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ERenderStep::ToString(id)).c_str());
+			throw std::exception("Render step not part of this scene");
+		}
+
+		// Reset the drawlist for each render step
+		void Scene::ClearDrawlists()
+		{
+			for (auto& rs : m_render_steps)
+				rs->ClearDrawlist();
+		}
+
+		// Populate the drawlist for each render step
+		void Scene::UpdateDrawlists()
+		{
+			for (auto& rs : m_render_steps)
+				rs->UpdateDrawlist();
+		}
+
+		// Add an instance. The instance must be resident for the entire time that it is
+		// in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
+		// This method will add the instance to all render steps for which the model has appropriate nuggets.
+		// Instances can be added to render steps directly if finer control is needed
+		void Scene::AddInstance(BaseInstance const& inst)
+		{
+			ModelPtr const& model = GetModel(inst);
+			PR_ASSERT(PR_DBG_RDR, model != nullptr, "Null model pointer");
+			PR_ASSERT(PR_DBG_RDR, !model->m_nmap.empty(), FmtS("This model ('%s') has no render nuggets and won't be added to any render steps", model->m_name.c_str()));
+
+			PR_EXPAND(PR_DBG_RDR, bool at_least_one = false);
+			for (auto& rs : m_render_steps)
+			{
+				// Only add the model if has nuggets for the render step
+				if (model->m_nmap.count(rs->Id()) != 0)
+				{
+					rs->AddInstance(inst);
+					PR_EXPAND(PR_DBG_RDR, at_least_one = true);
+				}
+			}
+
+			#if PR_DBG_RDR
+			if (!at_least_one && !AllSet(model->m_dbg_flags, EDbgRdrFlags::WarnedNoRenderNuggets))
+			{
+				PR_INFO(PR_DBG_RDR, FmtS("This model ('%s') was not added to any render steps. No appropriate render nuggets\n", model->m_name.c_str()));
+				model->m_dbg_flags = SetBits(model->m_dbg_flags, EDbgRdrFlags::WarnedNoRenderNuggets, true);
+			}
+			#endif
+		}
+
+		// Remove an instance from the scene
+		void Scene::RemoveInstance(BaseInstance const& inst)
+		{
+			ModelPtr const& model = GetModel(inst);
+			PR_ASSERT(PR_DBG_RDR, model != nullptr, "Null model pointer");
+			PR_ASSERT(PR_DBG_RDR, !model->m_nmap.empty(), FmtS("This model ('%s') has no render nuggets and won't be added to any render steps", model->m_name.c_str()));
+
+			for (auto& rs : m_render_steps)
+			{
+				// Should only need to remove from this render step if there are appropriate nuggets
+				if (model->m_nmap.count(rs->Id()) != 0)
+					rs->RemoveInstance(inst);
+			}
+		}
+
+		// Render the scene
+		void Scene::Render()
+		{
+			// Invoke each render step in order
+			for (auto& rs : m_render_steps)
+				rs->Execute();
+		}
+
+		// Resize the viewport on back buffer resize
+		void Scene::OnEvent(Evt_Resize const& evt)
+		{
+			// Todo, this is assuming the viewport covers the entire back buffer
+			// it won't work for viewports that are sub regions of the screen
+			if (evt.m_done)
+				m_viewport = evt.m_area;
 		}
 	}
-	else
-	{
-		dc->RSSetViewports(1, &m_viewport);
-		BindFrameContants(dc, m_cbuf_frame, m_view, m_global_light);
-		DoRender(dc);
-	}
-}
-
-// SceneForward ***********************************************************
-
-pr::rdr::SceneForward::SceneForward(pr::Renderer& rdr, SceneView const& view)
-	:Scene(rdr, view)
-{}
-
-// Render the scene using the standard forward rendering technique
-void pr::rdr::SceneForward::DoRender(D3DPtr<ID3D11DeviceContext>& dc) const
-{
-	// Loop over the elements in the draw list
-	Drawlist::DLECont::const_iterator dle = m_drawlist.begin(), dle_end = m_drawlist.end();
-	for (;dle != dle_end; ++dle)
-	{
-		Nugget const&       nugget = *dle->m_nugget;
-		BaseInstance const& inst   = *dle->m_instance;
-		ShaderPtr const&    shader = nugget.m_draw.m_shader;
-
-		// Bind the shader to the device
-		shader->Bind(dc, nugget, inst, *this);
-
-		// Add the nugget to the device context
-		dc->DrawIndexed(
-			UINT(nugget.m_irange.size()),
-			UINT(nugget.m_irange.m_begin),
-			0);
-	}
-}
-
-// SceneDeferred ***********************************************************
-
-pr::rdr::SceneDeferred::SceneDeferred(pr::Renderer& rdr, SceneView const& view)
-	:Scene(rdr, view)
-	,m_gbuffer()
-{
-	pr::iv2 area = m_rdr->RenderTargetSize();
-	m_gbuffer.Init(m_rdr->Device(),area.x, area.y);
-}
-
-// Render the scene using the deferred rendering technique
-void pr::rdr::SceneDeferred::DoRender(D3DPtr<ID3D11DeviceContext>& dc) const
-{
-	(void)dc;
-	//// Clear the render targets
-	//if (clear_bb)
-	//{
-	//	//m_gbuffer.Clear(dc);
-	//}
-	//
-	//// Loop over the elements in the draw list
-	//Drawlist::DLECont::const_iterator element     = m_drawlist.begin();
-	//Drawlist::DLECont::const_iterator element_end = m_drawlist.end();
-	//while (element != element_end)
-	//{
-	//	//Material const& mat = element->Material();
-	//	++element;
-	//}
-
-	// Make Scene a base class, and derive ForwardRenderedScene and DeferredRenderedScene
-
-	// Use a light volumes drawlist, that contains instances of light volume models
-	// i.e. sphere = point light, full screen quad = directional light, cone = spot light, etc
-	// Each light volume is a triangle list containing position and light index.
-	// Light index is a lookup into a constants buffer describing light type, colour, position, direction, etc
-	// Draw the light volumes drawlist with back face culling (only front faces drawn).
-	// Output pixel is GBuffer pixel colour plus lighting for the light type
-	// Do directional, ambient occlusion/reflection, depth of field, etc as a single pass using a full screen quad
-	// after the other lights
-
-	// GBuffer Pass:
-	//  Build a render target containing position info for every visible pixel
-	//  Draw things in the drawlist from [0, first_alpha)
-
-	// Lighting Pass:
-	//  Set the GBuffer as a source texture
-	//  Draw the light volume draw list
-
-	// Full Screen Pass:
-	//  Draw a full screen quad and do final post-process pass
 }
