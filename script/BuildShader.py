@@ -9,15 +9,15 @@ import sys, os, tempfile
 import Rylogic as Tools
 import UserVars
 
-Tools.CheckVersion(1)
-
 try:
+	Tools.CheckVersion(1)
+
 	if len(sys.argv) < 2:
 		Tools.OnError("No shader filepath given")
 
 	fullpath = sys.argv[1]
 	trace = False
-	
+
 	# Check for optional parameters
 	pp = False
 	obj = False
@@ -55,7 +55,7 @@ try:
 	elif shdr == "gs": profile = "/Tgs_4_0"
 	else: Tools.OnError("ERROR: Unknown shader type: " + shdr)
 	if trace: print("Profile: " + profile)
-	
+
 	# Delete potentially left over temporary output
 	if os.path.exists(tmp_h_filepath):   os.remove(tmp_h_filepath)
 	if os.path.exists(tmp_cso_filepath): os.remove(tmp_cso_filepath)
@@ -79,8 +79,9 @@ try:
 	#options += ["/Od", "/Zi"]
  
 	# Build the shader
-	output = Tools.Run([UserVars.fxc, fullpath, profile, output, varname] + includes + defines + options, show_arguments=trace)
-	if trace: print(output)
+	success,output = Tools.Run([UserVars.fxc, fullpath, profile, output, varname] + includes + defines + options, show_arguments=trace)
+	if not success:
+		print(output)
 
 	# Compare the produced files with any existing ones, don't replace the files if they are identical
 	# This prevents VS rebuilding all the time.

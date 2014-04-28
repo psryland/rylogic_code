@@ -35,7 +35,7 @@ input(
 try:
 	#Invoke MSBuild
 	print("Building...")
-	Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration="+config])
+	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration="+config])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dstdir): shutil.rmtree(dstdir)

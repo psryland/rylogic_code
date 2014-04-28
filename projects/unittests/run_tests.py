@@ -9,9 +9,9 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\script")
 import Rylogic as Tools
 import UserVars
 
-Tools.CheckVersion(1)
-
 try:
+	Tools.CheckVersion(1)
+
 	tests_exe = sys.argv[1]
 	if os.path.exists(tests_exe):
 		Tools.Exec([tests_exe, "runtests"])

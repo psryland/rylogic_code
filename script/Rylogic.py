@@ -72,10 +72,12 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False):
 def Run(args, expected_return_code=0,show_arguments=False):
 	try:
 		if show_arguments: print(args)
-		return subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
+		outp = subprocess.check_output(args, universal_newlines=True, stderr=subprocess.STDOUT)
+		return True,outp
 	except subprocess.CalledProcessError as e:
-		if e.returncode == expected_return_code: return e.output
-		raise
+		if e.returncode == expected_return_code: return True,e.output
+		return False,e.output
+		#raise
 
 # Executes a program echoing its output to stdout
 def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):

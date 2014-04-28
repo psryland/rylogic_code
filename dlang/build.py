@@ -4,31 +4,31 @@
 # Builds the D tools and libs
 #
 import sys, os, shutil, subprocess
-
-sys.path.append("Q:/sdk/pr/python")
+sys.path.append("../../script")
 from pr import RylogicEnv
 from pr import UserVars
 
-print(
-	"*************************************************************************\n"
-	"DMD Build Toolchain\n"
-	"*************************************************************************")
-
-RylogicEnv.CheckVersion(1)
-
-dmdhead = UserVars.dmdroot + r"\..\head\dmd2"
-mk      = dmdhead + r"\windows\bin\make.exe"
-dmd     = dmdhead + r"\windows\bin\dmd.exe"
-
-input(
-	"Build Settings:\n"
-	" RootDir: " + dmdhead + "\n"
-	"Press enter to continue")
-
 try:
+	print(
+		"*************************************************************************\n"
+		"DMD Build Toolchain\n"
+		"*************************************************************************")
+
+	RylogicEnv.CheckVersion(1)
+
+	dmdhead = UserVars.dmdroot + r"\..\head\dmd2"
+	mk      = dmdhead + r"\windows\bin\make.exe"
+	dmd     = dmdhead + r"\windows\bin\dmd.exe"
+	proj    = dmdhead + r"\src\dmd\src\dmd_msc.vcxproj"
+	
+	input(
+		"Build Settings:\n"
+		" RootDir: " + dmdhead + "\n"
+		"Press enter to continue")
+
 	print("Building dmd.exe...")
-	RylogicEnv.Exec([UserVars.msbuild, dmdhead + r"\src\dmd\src\dmd_msc.vcxproj", "/t:Clean", "/p:Configuration=Release", "/p:Platform=x64"])
-	RylogicEnv.Exec([UserVars.msbuild, dmdhead + r"\src\dmd\src\dmd_msc.vcxproj", "/t:Build", "/p:Configuration=Release", "/p:Platform=x64"])
+	RylogicEnv.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Clean", "/p:Configuration=Release", "/p:Platform=x64"])
+	RylogicEnv.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Build", "/p:Configuration=Release", "/p:Platform=x64"])
 	RylogicEnv.Copy(dmdhead + r"\src\dmd\src\vcbuild\x64\Release\dmd_msc.exe", dmdhead + r"\windows\bin\dmd.exe", only_if_modified=False)
 
 	#cd "%dmdhead%\src\dmd\src"

@@ -9,36 +9,36 @@ import sys, os, subprocess
 import Rylogic as Tools
 import UserVars
 
-Tools.CheckVersion(1)
-
-# if 'cl' is not in the path, create a command that runs the vc_env script,
-# and recursively launches this script. The reason for this is no child
-# process can set env variables for a parent so we run ourself as a child.
 try:
-	subprocess.check_output(['cl.exe'], stderr=subprocess.STDOUT)
-except Exception as ex:
-	print("Loading Visual Studio Environment...")
-	subprocess.call([UserVars.vc_env, '&', os.path.realpath(__file__)] + sys.argv[1:])
-	sys.exit(0)
+	Tools.CheckVersion(1)
 
-vs_version = os.environ['VisualStudioVersion']
-filepath = sys.argv[1] if len(sys.argv) > 1 else ""
-outpath  = sys.argv[2] if len(sys.argv) > 2 else ""
-if filepath == "": Tools.OnError("ERROR: no input file provided")
-if outpath == "":
-	file,ext = os.path.splitext(filepath)
-	outpath = file + "_pp" + ext
+	# if 'cl' is not in the path, create a command that runs the vc_env script,
+	# and recursively launches this script. The reason for this is no child
+	# process can set env variables for a parent so we run ourself as a child.
+	try:
+		subprocess.check_output(['cl.exe'], stderr=subprocess.STDOUT)
+	except Exception as ex:
+		print("Loading Visual Studio Environment...")
+		subprocess.call([UserVars.vc_env, '&', os.path.realpath(__file__)] + sys.argv[1:])
+		sys.exit(0)
 
-input(
-	"Preprocessing:\n"
-	"  Source: " + filepath + "\n"
-	"  Destination: " + outpath + "\n"
-	"  Visual Studio Version: " + vs_version + "\n"
-	" Press enter to continue")
+	vs_version = os.environ['VisualStudioVersion']
+	filepath = sys.argv[1] if len(sys.argv) > 1 else ""
+	outpath  = sys.argv[2] if len(sys.argv) > 2 else ""
+	if filepath == "": Tools.OnError("ERROR: no input file provided")
+	if outpath == "":
+		file,ext = os.path.splitext(filepath)
+		outpath = file + "_pp" + ext
 
-trace = False
+	input(
+		"Preprocessing:\n"
+		"  Source: " + filepath + "\n"
+		"  Destination: " + outpath + "\n"
+		"  Visual Studio Version: " + vs_version + "\n"
+		" Press enter to continue")
 
-try:
+	trace = False
+
 	flags=[
 		'/P',
 		'/nologo',
@@ -88,7 +88,6 @@ try:
 	print("Showing output...")
 	Tools.Exec([UserVars.devenv, "/Edit", outpath], expected_return_code=0xffffffff)
 	#Tools.Exec([UserVars.textedit, outpath])
-
 
 	Tools.OnSuccess()
 

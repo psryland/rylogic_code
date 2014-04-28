@@ -5,31 +5,31 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\script")
 import RylogicEnv as Tools
 import UserVars
 
-print(
-	"*************************************************************************\n"
-	"  Whatever Deploy\n"
-	"    Copyright Rylogic Limited 2013\n"
-	"*************************************************************************")
-
-Tools.CheckVersion(1)
-
-#srcdir = UserVars.root + r"\projects\Csex"
-#dstdir = UserVars.root + r"\bin"
-#symdir = UserVars.root + r"\local\symbols"
-#sln_or_proj = srcdir + r"\Csex_vs2012.csproj"
-#config = input("Configuration (debug, release)? ")
-#dst    = dstdir + r"\csex"
-#sym    = symdir + r"\csex"
-#bindir = srcdir + r"\bin\" + config
-
-input(
-	"Deploy settings:\n"
-	"         Source: " + bindir + "\n"
-	"    Destination: " + dst + "\n"
-	"  Configuration: " + config + "\n"
-	"Press enter to continue")
-
 try:
+	print(
+		"*************************************************************************\n"
+		"  Whatever Deploy\n"
+		"    Copyright Rylogic Limited 2013\n"
+		"*************************************************************************")
+
+	Tools.CheckVersion(1)
+
+	#srcdir = UserVars.root + r"\projects\Csex"
+	#dstdir = UserVars.root + r"\bin"
+	#symdir = UserVars.root + r"\local\symbols"
+	#sln_or_proj = srcdir + r"\Csex_vs2012.csproj"
+	#config = input("Configuration (debug, release)? ")
+	#dst    = dstdir + r"\csex"
+	#sym    = symdir + r"\csex"
+	#bindir = srcdir + r"\bin\" + config
+
+	input(
+		"Deploy settings:\n"
+		"         Source: " + bindir + "\n"
+		"    Destination: " + dst + "\n"
+		"  Configuration: " + config + "\n"
+		"Press enter to continue")
+
 	#Invoke MSBuild
 	# To build projects within a solution use this format:
 	#  /t:"solution_folder\project_name:Rebuild";"solution_folder\project_name2:Clean";"project_name3"
@@ -37,7 +37,7 @@ try:
 	#  the ':Rebuild' is optional after the project name
 	#  projects with dots in the name should have the dots replaced with underscores
 	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, sln_or_proj, "/t:MyProject", "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
+	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln_or_proj, "/t:MyProject", "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)

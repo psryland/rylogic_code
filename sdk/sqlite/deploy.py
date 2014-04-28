@@ -1,48 +1,44 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
-# Use:
-#  BuildAllConfigs $(ProjectPath) [Rebuild|Clean]
-
 import sys, os, shutil, re
-sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\..\script")
+sys.path.append("../../script")
 import Rylogic as Tools
 import UserVars
 
 try:
+
 	print(
 		"*************************************************************************\n"
-		"Build All Configs\n"
-		"Copyright Rylogic Limited 2013\n"
+		"Sqlite3 Deploy\n"
 		"*************************************************************************")
 
 	Tools.CheckVersion(1)
 
-	proj = sys.argv[1]
-	target = sys.argv[2] if len(sys.argv) > 2 else ""
+	sln = UserVars.root + "\\sdk\\sqlite\\sqlite3.sln"
 	# e.g: "\"folder\proj_name:Rebuild\""
-
+	projects = [
+		"sqlite3dll"
+		]
+	
 	configs = [
 		"debug",
-		"release",
-		#"dev_debug",
-		#"dev_release",
+		"release"
 		]
 	platforms = [
 		"x86",
-		"x64",
-		#"win32",
+		"x64"
 		]
 
 	procs = []
 
 	parallel = True
-	same_window = False
+	same_window = True
 
 	#Invoke MSBuild
+	projs = ";".join(projects)
 	for platform in platforms:
 		for config in configs:
-			args = [UserVars.msbuild, UserVars.msbuild_props, proj, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
-			if target != "": args = args + ["/t:"+target]
+			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
 			if parallel:
 				procs.extend([Tools.Spawn(args, same_window=same_window)])
 			else:
@@ -61,4 +57,4 @@ try:
 	Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnException(ex)
+	Tools.OnError("ERROR: " + str(ex))

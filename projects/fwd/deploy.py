@@ -33,7 +33,7 @@ try:
 	for platform in platforms:
 		for config in configs:
 			print("\n *** " + platform + " - " + config + " ***\n")
-			Tools.Exec([UserVars.msbuild, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
+			Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
 
 	Tools.OnSuccess()
 

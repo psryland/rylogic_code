@@ -5,32 +5,32 @@ sys.path.append(os.path.dirname(os.path.realpath(__file__)) + r"\..\..\script")
 import Rylogic as Tools
 import UserVars
 
-print(
-	"*************************************************************************\n"
-	"RylogViewer Deploy\n"
-	"Copyright Rylogic Limited 2013\n"
-	"*************************************************************************")
-
-Tools.CheckVersion(1)
-
-srcdir = UserVars.root + "\\projects\\rylogviewer"
-dstdir = UserVars.root + "\\bin"
-symdir = UserVars.root + "\\local\\symbols"
-proj   = srcdir + "\\RylogViewer.sln"
-dst    = dstdir + "\\rylogviewer"
-sym    = symdir + "\\rylogviewer"
-config = input("Configuration (debug, release(default))? ")
-if config == "": config = "release"
-bindir = srcdir + "\\bin\\" + config
-
-input(
-	" Deploy Settings:\n"
-	"         Source: " + bindir + "\n"
-	"    Destination: " + dst + "\n"
-	"  Configuration: " + config + "\n"
-	"Press enter to continue")
-
 try:
+	print(
+		"*************************************************************************\n"
+		"RylogViewer Deploy\n"
+		"Copyright Rylogic Limited 2013\n"
+		"*************************************************************************")
+
+	Tools.CheckVersion(1)
+
+	srcdir = UserVars.root + "\\projects\\rylogviewer"
+	dstdir = UserVars.root + "\\bin"
+	symdir = UserVars.root + "\\local\\symbols"
+	proj   = srcdir + "\\RylogViewer.sln"
+	dst    = dstdir + "\\rylogviewer"
+	sym    = symdir + "\\rylogviewer"
+	config = input("Configuration (debug, release(default))? ")
+	if config == "": config = "release"
+	bindir = srcdir + "\\bin\\" + config
+
+	input(
+		" Deploy Settings:\n"
+		"         Source: " + bindir + "\n"
+		"    Destination: " + dst + "\n"
+		"  Configuration: " + config + "\n"
+		"Press enter to continue")
+
 	confirm = input(
 		"Is there an 'Upgrade Path' in the setup project and have you changed the Product GUID and version?\n"
 		"This is needed so that the new installer will replace the existing installation if there.\n"
@@ -51,7 +51,7 @@ try:
 
 	#Invoke MSBuild
 	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, proj, "/t:RyLogViewer:Rebuild", "/p:Configuration="+config])
+	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:RyLogViewer:Rebuild", "/p:Configuration="+config])
 
 	#Ensure directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)

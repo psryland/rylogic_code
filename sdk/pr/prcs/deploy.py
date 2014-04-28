@@ -29,10 +29,10 @@ try:
 	print("Building...")
 
 	if config == "debug" or config == "both":
-		Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration=Debug"])
+		Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration=Debug"])
 
 	if config == "release" or config == "both":
-		Tools.Exec([UserVars.msbuild, proj, "/t:Rebuild", "/p:Configuration=Release"])
+		Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration=Release"])
 
 	Tools.OnSuccess()
 
