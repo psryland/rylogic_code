@@ -18,15 +18,13 @@ namespace pr
 			// Create a transform for projecting a world space point to normalised texture space
 			static pr::m4x4 MakeTransform(pr::v4 const& eye, pr::v4 const& at, pr::v4 const& up, float aspect, float fovY, float Znear, float Zfar, bool orthographic)
 			{
-				float height = pr::ATan(fovY);
-
 				// world to projection origin
 				auto w2pt = pr::GetInverseFast(pr::LookAt(eye, at, up));
 
 				// Projection transform
-				// Ortho transform => height is calculated at '1' from the 'eye'
+				float height = 2.0f * pr::Tan(fovY * 0.5f); // Ortho transform => height is calculated at '1' from the 'eye'
 				auto proj = orthographic
-					? pr::ProjectionOrthographic(aspect * height, height, Znear, Zfar, true)
+					? pr::ProjectionOrthographic(height * aspect, height, Znear, Zfar, true)
 					: pr::ProjectionPerspectiveFOV(fovY, aspect, Znear, Zfar, true);
 
 				// Translate and scale to normalised texture coords

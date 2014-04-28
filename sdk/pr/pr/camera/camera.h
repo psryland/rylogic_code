@@ -153,9 +153,9 @@ namespace pr
 		// Return a perspective projection transform
 		m4x4 CameraToScreen(float near_clip, float far_clip) const
 		{
-			float half_height = m_focus_dist * pr::ATan(m_fovY * 0.5f);
+			float height = 2.0f * m_focus_dist * pr::Tan(m_fovY * 0.5f);
 			return m_orthographic
-				? ProjectionOrthographic(2.0f*half_height*m_aspect, 2.0f*half_height, near_clip, far_clip, true)
+				? ProjectionOrthographic(height*m_aspect, height, near_clip, far_clip, true)
 				: ProjectionPerspectiveFOV(m_fovY, m_aspect, near_clip, far_clip, true);
 		}
 		m4x4 CameraToScreen() const
@@ -184,7 +184,7 @@ namespace pr
 		// The z component should be the world space distance from the camera
 		pr::v4 WSPointFromNormSSPoint(pr::v4 const& screen) const
 		{
-			float half_height = m_focus_dist * pr::ATan(m_fovY * 0.5f);
+			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
 
 			// Calculate the point in camera space
 			pr::v4 point;
@@ -205,7 +205,7 @@ namespace pr
 		// The returned 'z' component will be the world space distance from the camera
 		pr::v4 NormSSPointFromWSPoint(pr::v4 const& world) const
 		{
-			float half_height = m_focus_dist * pr::ATan(m_fovY * 0.5f);
+			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
 			
 			// Get the point in camera space and project into normalised screen space
 			pr::v4 cam = GetInverseFast(m_c2w) * world;
