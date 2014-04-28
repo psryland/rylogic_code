@@ -70,7 +70,6 @@ namespace pr
 		}
 
 		// TxTint *************************************************************
-
 		struct TxTint :BaseShader
 		{
 			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)

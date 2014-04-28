@@ -25,7 +25,7 @@ namespace pr.gui
 		public interface IElement
 		{
 			/// <summary>The element to diagram transform</summary>
-			m4x4 E2D { get; }
+			m4x4 Position { get; }
 
 			/// <summary>An ldr string for the graphics of the element (not including any text) in element space.</summary>
 			string Graphics();
@@ -73,7 +73,7 @@ namespace pr.gui
 			{
 				Text  = string.Empty;
 				Style = new NodeStyle();
-				E2D   = m4x4.Identity;
+				Position   = m4x4.Identity;
 			}
 
 			/// <summary>Render the element (draw in diagram space, not screen space)</summary>
@@ -83,7 +83,7 @@ namespace pr.gui
 				using (ldr.Group())
 				{
 					ldr.Box("test", 0xFF00FF00);
-					ldr.Quad(0xFF)
+					//ldr.Quad(0xFF)
 					//gfx.SetClip(bounds.Inflated(5,5));
 
 					//using (var path = Gfx.RoundedRectanglePath(bounds, 5f))
@@ -112,6 +112,14 @@ namespace pr.gui
 		/// <summary>Simple contector between nodes</summary>
 		public class Connector :DiagramControl.IConnector
 		{
+			/// <summary>The element to diagram transform</summary>
+			public m4x4 Position { get; set; }
+
+			/// <summary>Render the element (draw in diagram space, not screen space)</summary>
+			public string Graphics()
+			{
+				return string.Empty;
+			}
 		}
 
 		#endregion

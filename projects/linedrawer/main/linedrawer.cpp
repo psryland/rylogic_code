@@ -193,6 +193,13 @@ namespace ldr
 		{
 			std::string scene = pr::ldr::CreateDemoScene();
 			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+
+			//{// hack
+			//	pr::rdr::ProjectedTexture pt;
+			//	pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
+			//	pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
+			//	m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
+			//}
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
@@ -319,7 +326,7 @@ namespace ldr
 	// Called when the viewport is being built
 	void Main::OnEvent(pr::rdr::Evt_SceneRender const& e)
 	{
-		PR_ASSERT(PR_DBG_LDR, e.m_rsteps->Id() == pr::rdr::ERenderStep::ForwardRender, "Assuming only one render step");
+		PR_ASSERT(PR_DBG_LDR, e.m_rstep.Id() == pr::rdr::ERenderStep::ForwardRender, "Assuming only one render step");
 
 		// Render the focus point
 		if (m_settings.m_ShowFocusPoint)

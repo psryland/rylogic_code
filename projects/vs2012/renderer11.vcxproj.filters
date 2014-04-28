@@ -192,14 +192,17 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h">
       <Filter>directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h">
-      <Filter>textures</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\render_step.h">
       <Filter>render</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\event_types.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\image.h">
+      <Filter>textures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

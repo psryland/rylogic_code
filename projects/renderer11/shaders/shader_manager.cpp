@@ -22,7 +22,7 @@ namespace pr
 			if (GetTickCount() - last_check < check_frequency_ms) return;
 			last_check = GetTickCount();
 
-			wchar_t const* shader_directory = L"Q:\\projects\\renderer11\\shaders\\compiled";
+			wchar_t const* shader_directory = L"P:\\projects\\renderer11\\shaders\\compiled";
 			time_t last_mod, newest = shader->m_last_modified;
 			wstring256 filepath;
 

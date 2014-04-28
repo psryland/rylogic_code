@@ -9,6 +9,8 @@
 #include "uber_defines.hlsl"
 #endif
 
+#define PR_RDR_MAX_PROJECTED_TEXTURES 1
+
 // Notes:
 // For efficiency, constant buffers need to be grouped by frequency of update
 // The C/C++ versions of the buffer structs should contain elements assuming
@@ -35,6 +37,10 @@ cbuffer CBufFrame :register(b0)
 	float4 m_light_colour       :packoffset(c16); // The colour of the directional light
 	float4 m_light_specular     :packoffset(c17); // The colour of the specular light. alpha channel is specular power
 	float4 m_spot               :packoffset(c18); // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+
+	// Projected textures
+	float4 m_proj_tex_count :packoffset(c19);
+	matrix m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES] :packoffset(c20);
 };
 #else
 struct CBufFrame
@@ -53,9 +59,12 @@ struct CBufFrame
 	pr::Colour m_light_colour;   // The colour of the directional light
 	pr::Colour m_light_specular; // The colour of the specular light. alpha channel is specular power
 	pr::v4 m_spot;               // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+
+	// Projected textures
+	pr::v4 m_proj_tex_count;
+	pr::m4x4 m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES];
 };
 #endif
-
 
 // 'CBufModel' is a cbuffer updated per render nugget.
 // Shaders can select components from this structure as needed
@@ -89,10 +98,16 @@ struct CBufModel
 };
 #endif
 
-// Texture2D /w sampler
 #if SHADER_BUILD
+
+// Texture2D /w sampler
 Texture2D<float4> m_texture0 :register(t0);
 SamplerState      m_sampler0 :register(s0);
+
+// Projected textures
+Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES];
+SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES];
+
 #endif
 
 #endif

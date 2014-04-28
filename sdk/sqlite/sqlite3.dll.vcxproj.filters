@@ -23,5 +23,6 @@
     <None Include="sqlite3.def">
       <Filter>src</Filter>
     </None>
+    <None Include="deploy.py" />
   </ItemGroup>
 </Project>

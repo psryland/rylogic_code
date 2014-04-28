@@ -71,6 +71,9 @@
 #ifndef PR_RDR_SHADER_LIGHTING
 #define PR_RDR_SHADER_LIGHTING PR_RDR_SHADER_DEFAULT
 #endif
+#ifndef PR_RDR_SHADER_PROJTEX
+#define PR_RDR_SHADER_PROJTEX PR_RDR_SHADER_DEFAULT
+#endif
 
 // Macro support
 #define   EXP0(exp)

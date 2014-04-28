@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security;
@@ -20,6 +21,43 @@ namespace pr.common
 {
 	public static class PathEx
 	{
+		/// <summary>True if 'filepath' is a valid filepath</summary>
+		public static bool IsValidFilepath(string filepath, bool require_rooted)
+		{
+			try
+			{
+				if (!filepath.HasValue()) return false;
+				var dir = Path.GetDirectoryName(filepath) ?? string.Empty;
+				var fname = Path.GetFileName(filepath) ?? string.Empty;
+				var invalid_chars = Path.GetInvalidFileNameChars();
+				return
+					fname.HasValue() &&
+					IsValidDirectory(dir, require_rooted) &&
+					fname.IndexOfAny(invalid_chars) == -1;
+			}
+			catch (Exception)
+			{
+				return false;
+			}
+		}
+
+		/// <summary>True if 'filepath' is a valid filepath</summary>
+		public static bool IsValidDirectory(string dir, bool require_rooted)
+		{
+			try
+			{
+				var invalid_chars = Path.GetInvalidPathChars().Concat(new[]{'*','?'}).ToArray();
+				return
+					dir != null &&
+					(!require_rooted || Path.IsPathRooted(dir)) &&
+					dir.IndexOfAny(invalid_chars) == -1;
+			}
+			catch (Exception)
+			{
+				return false;
+			}
+		}
+
 		/// <summary>A File.Exists() that doesn't throw if invalid path characters are used. Handles 'filepath' being null</summary>
 		public static bool FileExists(string filepath)
 		{
@@ -239,6 +277,22 @@ namespace pr
 	{
 		internal static partial class TestPathEx
 		{
+			[Test] public static void TestPathValidation()
+			{
+				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
+				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
+				Assert.IsTrue(PathEx.IsValidDirectory(@".\dir1\..\.\dir2", false));
+				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
+				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
+				Assert.IsTrue(PathEx.IsValidDirectory(@".\dir1\..\.\dir2\", false));
+				Assert.IsFalse(PathEx.IsValidDirectory(@".\dir1?\..\.\", false));
+
+				Assert.IsTrue(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
+				Assert.IsTrue(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
+				Assert.IsTrue(PathEx.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
+				Assert.IsFalse(PathEx.IsValidFilepath(@".\dir1\", false));
+				Assert.IsFalse(PathEx.IsValidFilepath(@".\dir1\file*.txt", false));
+			}
 			[Test] public static void TestPathNames()
 			{
 				string path;

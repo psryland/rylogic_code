@@ -12,6 +12,7 @@
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/lights/light.h"
+#include "pr/renderer11/textures/projected_texture.h"
 #include "pr/renderer11/util/wrappers.h"
 
 namespace pr
@@ -74,6 +75,9 @@ namespace pr
 			Light                m_global_light;      // The global light to use
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
+
+			typedef std::vector<ProjectedTexture> ProjTextCont;
+			ProjTextCont m_proj_tex;
 
 			ForwardRender(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
 

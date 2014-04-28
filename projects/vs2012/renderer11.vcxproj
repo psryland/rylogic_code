@@ -148,7 +148,8 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\Image.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\image.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h" />

@@ -249,6 +249,7 @@
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/image.h"
+#include "pr/renderer11/textures/projected_texture.h"
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/texture_manager.h"
 #include "pr/renderer11/textures/video.h"

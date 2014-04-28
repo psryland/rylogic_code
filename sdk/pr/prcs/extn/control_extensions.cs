@@ -152,8 +152,24 @@ namespace pr.extn
 			return GetChildAtScreenPointRec(ctrl, ctrl.PointToScreen(pt));
 		}
 
-		/// <summary>Returns a disposable object that preserves the current selected</summary>
+		/// <summary>Returns a disposable object that preserves the current selection</summary>
 		public static Scope SelectionScope(this TextBoxBase edit)
+		{
+			int start = 0, length = 0;
+			return Scope.Create(
+				() =>
+				{
+					start  = edit.SelectionStart;
+					length = edit.SelectionLength;
+				},
+				() =>
+				{
+					edit.Select(start, length);
+				});
+		}
+
+		/// <summary>Returns a disposable object that preserves the current selection</summary>
+		public static Scope SelectionScope(this ComboBox edit)
 		{
 			int start = 0, length = 0;
 			return Scope.Create(

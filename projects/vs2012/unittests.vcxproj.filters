@@ -59,6 +59,12 @@
     <Filter Include="pr\crypt">
       <UniqueIdentifier>{c50460bd-5fe1-465e-b37f-b74573df250c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\renderer11">
+      <UniqueIdentifier>{c542dbe3-26e9-4e3a-ae12-8facab33e382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\renderer11\textures">
+      <UniqueIdentifier>{203dae01-f4b1-454d-a93e-48daf8f28a4b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -839,6 +845,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\script\newline_strip.h">
       <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h">
+      <Filter>pr\renderer11\textures</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

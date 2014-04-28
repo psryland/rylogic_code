@@ -33,6 +33,7 @@
       <SDLCheck>true</SDLCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Lib>
       <TargetMachine>MachineX86</TargetMachine>

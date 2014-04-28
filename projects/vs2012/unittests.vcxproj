@@ -248,6 +248,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\tcpip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\newline_strip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\csv.h" />
     <ClInclude Include="..\..\sdk\pr\pr\storage\settings.h" />

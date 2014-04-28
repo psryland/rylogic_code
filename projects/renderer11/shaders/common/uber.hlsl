@@ -96,6 +96,9 @@ PS_OUTPUT main(PS_INPUT In)
 	// Texture2D (with transform)
 	EXPAND(Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0; , PR_RDR_SHADER_TEX0)
 
+	// Projected textures
+	//EXPAND(Out.diff0 = ProjTex(In.ws_pos, Out.diff0); , PR_RDR_SHADER_PROJTEX)
+
 	// Lighting
 	EXPAND(Out.diff0 = Illuminate(In.ws_pos, In.ws_norm, m_c2w[3], Out.diff0); , PR_RDR_SHADER_LIGHTING)
 

@@ -138,28 +138,30 @@ namespace pr
 				m_rsb.Set(ERS::MultisampleEnable, TRUE);
 		}
 
-		// Set the frame constant variables
-		void BindFrameContants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer> const& cbuf_frame, SceneView const& view, Light const& global_light)
+		// Projected textures
+		void SetProjectedTextures(D3DPtr<ID3D11DeviceContext>& dc, CBufFrame& buf, ForwardRender::ProjTextCont const& proj_tex)
 		{
-			CBufFrame buf;
-			buf.m_c2w                = view.m_c2w;
-			buf.m_w2c                = pr::GetInverse(view.m_c2w);
-			buf.m_w2s                = view.m_c2s * pr::GetInverseFast(view.m_c2w);
-			buf.m_global_lighting    = pr::v4::make(static_cast<float>(global_light.m_type),0.0f,0.0f,0.0f);
-			buf.m_ws_light_direction = global_light.m_direction;
-			buf.m_ws_light_position  = global_light.m_position;
-			buf.m_light_ambient      = global_light.m_ambient;
-			buf.m_light_colour       = global_light.m_diffuse;
-			buf.m_light_specular     = pr::Colour::make(global_light.m_specular, global_light.m_specular_power);
-			buf.m_spot               = pr::v4::make(global_light.m_inner_cos_angle, global_light.m_outer_cos_angle, global_light.m_range, global_light.m_falloff);
+			PR_ASSERT(PR_DBG_RDR, proj_tex.size() <= PR_RDR_MAX_PROJECTED_TEXTURES, "Too many projected textures for shader");
+
+			// Build a list of the projected texture pointers
+			auto texs = PR_ALLOCA_POD(ID3D11ShaderResourceView*, proj_tex.size());
+			auto samp = PR_ALLOCA_POD(ID3D11SamplerState*, proj_tex.size());
+
+			// Set the number of projected textures
+			auto pt_count = checked_cast<uint>(proj_tex.size());
+			buf.m_proj_tex_count = pr::v4::make(static_cast<float>(pt_count),0.0f,0.0f,0.0f);
+
+			// Set the PT transform and populate the textures/sampler arrays
+			for (uint i = 0; i != pt_count; ++i)
 			{
-				LockT<CBufFrame> lock(dc, cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				*lock.ptr() = buf;
+				buf.m_proj_tex[i] = proj_tex[i].m_o2w;
+				texs[i] = proj_tex[i].m_tex->m_srv.m_ptr;
+				samp[i] = proj_tex[i].m_tex->m_samp.m_ptr;
 			}
 
-			// Bind the frame constants to the shaders
-			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
-			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &cbuf_frame.m_ptr);
+			// Set the shader resource view of the texture and the texture sampler
+			dc->PSSetShaderResources(0, pt_count, texs);
+			dc->PSSetSamplers(0, pt_count, samp);
 		}
 
 		// Perform the render step
@@ -183,7 +185,32 @@ namespace pr
 
 			// Set the viewport
 			dc->RSSetViewports(1, &m_scene->m_viewport);
-			BindFrameContants(dc, m_cbuf_frame, m_scene->m_view, m_global_light);
+
+			// Set the frame constants
+			CBufFrame buf = {};
+			buf.m_c2w = m_scene->m_view.m_c2w;
+			buf.m_w2c = pr::GetInverse(m_scene->m_view.m_c2w);
+			buf.m_w2s = m_scene->m_view.m_c2s * pr::GetInverseFast(m_scene->m_view.m_c2w);
+
+			// Lighting
+			buf.m_global_lighting    = pr::v4::make(static_cast<float>(m_global_light.m_type),0.0f,0.0f,0.0f);
+			buf.m_ws_light_direction = m_global_light.m_direction;
+			buf.m_ws_light_position  = m_global_light.m_position;
+			buf.m_light_ambient      = m_global_light.m_ambient;
+			buf.m_light_colour       = m_global_light.m_diffuse;
+			buf.m_light_specular     = pr::Colour::make(m_global_light.m_specular, m_global_light.m_specular_power);
+			buf.m_spot               = pr::v4::make(m_global_light.m_inner_cos_angle, m_global_light.m_outer_cos_angle, m_global_light.m_range, m_global_light.m_falloff);
+
+			SetProjectedTextures(dc, buf, m_proj_tex);
+
+			{// Lock and write the constants
+				LockT<CBufFrame> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
+				*lock.ptr() = buf;
+			}
+
+			// Bind the frame constants to the shaders
+			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
+			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)

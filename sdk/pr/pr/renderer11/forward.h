@@ -125,6 +125,7 @@ namespace pr
 		struct Texture2D;
 		struct Image;
 		struct AllocPres;
+		struct ProjectedTexture;
 		//struct Video;
 		typedef pr::RefPtr<Texture2D> Texture2DPtr;
 		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
