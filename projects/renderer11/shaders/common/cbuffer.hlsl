@@ -21,7 +21,7 @@
 // It contains values constant for the whole frame.
 // It is defined for every shader because most will probably need it
 #if SHADER_BUILD
-cbuffer CBufFrame :register(b0)
+cbuffer CBufFrame_Forward :register(b0)
 {
 	// Camera transform
 	matrix m_c2w :packoffset(c0); // camera to world
@@ -43,7 +43,7 @@ cbuffer CBufFrame :register(b0)
 	matrix m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES] :packoffset(c20);
 };
 #else
-struct CBufFrame
+struct CBufFrame_Forward
 {
 	// Camera transform
 	pr::m4x4 m_c2w; // camera to world
@@ -69,7 +69,7 @@ struct CBufFrame
 // 'CBufModel' is a cbuffer updated per render nugget.
 // Shaders can select components from this structure as needed
 #if SHADER_BUILD
-cbuffer CBufModel :register(b1)
+cbuffer CBufModel_Forward :register(b1)
 {
 	// Object transform
 	EXPAND(matrix m_o2s :packoffset(c0) ;,PR_RDR_SHADER_TXFM  ) // object to screen
@@ -83,7 +83,7 @@ cbuffer CBufModel :register(b1)
 	EXPAND(matrix m_tex2surf0 :packoffset(c13) ;,PR_RDR_SHADER_TEX0) // texture to surface transform
 };
 #else
-struct CBufModel
+struct CBufModel_Forward
 {
 	// Object transform
 	pr::m4x4   m_o2s;

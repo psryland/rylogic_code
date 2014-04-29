@@ -21,7 +21,7 @@ namespace sol
 	// Main app logic
 	struct Main
 		:pr::app::Main<UserSettings, MainGUI>
-		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
 		pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;
@@ -37,9 +37,9 @@ namespace sol
 		wchar_t const* AppTitle() const { return L"Sol"; };
 
 		// Add to a viewport
-		void OnEvent(pr::rdr::Evt_SceneRender const& e)
+		void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 		{
-			e.m_rstep.as<pr::rdr::ForwardRender>().m_global_light.m_direction = e.m_scene.m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
+			e.m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light.m_direction = e.m_scene.m_view.m_c2w * pr::v4::normal3(-1.0f, -2.0f, -3.0f, 0.0f);
 		}
 
 		void ToggleWireframe()

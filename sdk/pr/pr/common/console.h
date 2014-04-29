@@ -1171,14 +1171,14 @@ namespace pr
 			std::vector<Item> m_items;
 
 			// Forward console events to attached handlers
-			void OnEvent(Evt_Key const& e)           { OnKey(*this, e);         }
-			void OnEvent(Evt_KeyDown const& e)       { OnKeyDown(*this, e);     }
-			void OnEvent(Evt_Line<char> const& e)    { OnLineA(*this, e);       }
-			void OnEvent(Evt_Line<wchar_t> const& e) { OnLineW(*this, e);       }
-			void OnEvent(Evt_Escape const& e)        { OnEscape(*this, e);      }
-			void OnEvent(Evt_Tab const& e)           { OnTab(*this, e);         }
-			void OnEvent(Evt_FunctionKey const& e)   { OnFunctionKey(*this, e); }
-			void OnEvent(Evt_FocusChanged const& e)  { Focus(&e.m_pad == this); }
+			void OnEvent(Evt_Key const& e)           override { OnKey(*this, e);         }
+			void OnEvent(Evt_KeyDown const& e)       override { OnKeyDown(*this, e);     }
+			void OnEvent(Evt_Line<char> const& e)    override { OnLineA(*this, e);       }
+			void OnEvent(Evt_Line<wchar_t> const& e) override { OnLineW(*this, e);       }
+			void OnEvent(Evt_Escape const& e)        override { OnEscape(*this, e);      }
+			void OnEvent(Evt_Tab const& e)           override { OnTab(*this, e);         }
+			void OnEvent(Evt_FunctionKey const& e)   override { OnFunctionKey(*this, e); }
+			void OnEvent(Evt_FocusChanged const& e)  override { Focus(&e.m_pad == this); }
 
 		public:
 			Pad(EColour fore = EColour::Default, EColour back = EColour::Default)

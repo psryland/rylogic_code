@@ -24,7 +24,7 @@ sol::AstronomicalBody::AstronomicalBody(pr::v4 const& position, float radius, fl
 	m_inst.m_i2w = pr::Translation(m_position);
 }
 
-void sol::AstronomicalBody::OnEvent(pr::rdr::Evt_SceneRender const& e)
+void sol::AstronomicalBody::OnEvent(pr::rdr::Evt_UpdateScene const& e)
 {
 	//float s = e.m_scene->m_view.m_centre_dist;
 	//m_inst.m_i2w = Scale4x4(s,s,s,v4Origin);

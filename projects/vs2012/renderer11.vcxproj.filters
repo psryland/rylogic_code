@@ -105,9 +105,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist_element.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h">
       <Filter>shaders</Filter>
     </ClInclude>
@@ -334,6 +331,18 @@
     <None Include="..\..\script\BuildShader.py">
       <Filter>shaders</Filter>
     </None>
+    <None Include="..\renderer11\shaders\common\gbuffer.hlsl">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsl">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\deferred_shading_cbuf.hlsl">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\deferred_shading.hlsl">
+      <Filter>shaders\common</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">
@@ -366,5 +375,19 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\renderer11\shaders\shaders\deferred_shading.ps.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="..\renderer11\shaders\shaders\deferred_shading.vs.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

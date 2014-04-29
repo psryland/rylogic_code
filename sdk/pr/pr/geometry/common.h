@@ -20,7 +20,7 @@ namespace pr
 	{
 		// EGeom
 		#define PR_ENUM(x) /*
-			*/x(Unknown ,= 0     ) /*
+			*/x(Invalid ,= 0     ) /*
 			*/x(Vert    ,= 1 << 0) /* Object space 3D position
 			*/x(Colr    ,= 1 << 1) /* Diffuse base colour
 			*/x(Norm    ,= 1 << 2) /* Object space 3D normal
@@ -35,9 +35,9 @@ namespace pr
 			bool m_has_alpha;       // True if the model contains any alpha
 
 			Props()
-			:m_bbox(pr::BBoxReset)
-			,m_geom(EGeom::Vert)
-			,m_has_alpha(false)
+				:m_bbox(pr::BBoxReset)
+				,m_geom(EGeom::Vert)
+				,m_has_alpha(false)
 			{}
 		};
 

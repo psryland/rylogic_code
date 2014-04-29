@@ -53,6 +53,7 @@ namespace ldr
 		,m_plugin_mgr(this)
 		,m_lua_src()
 		,m_files(m_settings, m_rdr, m_store, m_lua_src)
+		,m_scene_rdr_pass(0)
 		,m_step_objects()
 		,m_focus_point()
 		,m_origin_point()
@@ -61,9 +62,6 @@ namespace ldr
 		,m_test_point()
 		,m_test_point_enable(false)
 	{
-		// Configure the lighting
-		m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light = m_settings.m_Light;
-
 		// Create stock models such as the focus point, origin, selection box, etc
 		CreateStockModels();
 	}
@@ -109,20 +107,6 @@ namespace ldr
 		// Allow the navigation manager to adjust the camera, ready for this frame
 		//m_nav.PositionCamera();
 
-		auto& fr = m_scene.RdrStep<pr::rdr::ForwardRender>();
-
-		// Update the lighting. If lighting is camera relative, adjust the position and direction
-		fr.m_global_light = m_settings.m_Light;
-		if (m_settings.m_LightIsCameraRelative)
-		{
-			pr::rdr::Light& light = fr.m_global_light;
-			light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
-			light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
-		}
-
-		// Set the background colour
-		fr.m_background_colour = m_settings.m_BackgroundColour;
-
 		// Set the camera view
 		m_scene.SetView(m_cam);
 
@@ -130,28 +114,15 @@ namespace ldr
 		m_scene.ClearDrawlists();
 		m_scene.UpdateDrawlists();
 
-		// Update the fill mode for the scene
-		switch (m_settings.m_GlobalRenderMode) {
-		case EGlobalRenderMode::Solid:        fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EGlobalRenderMode::Wireframe:    fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EGlobalRenderMode::SolidAndWire: fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID); break;
-		}
-
 		// Render the scene
+		m_scene_rdr_pass = 0;
 		m_scene.Render();
 
 		// Render wire frame over solid
 		if (m_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
 		{
-			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-			fr.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
-			fr.m_clear_bb = false;
-
+			m_scene_rdr_pass = 1;
 			m_scene.Render();
-
-			fr.m_clear_bb = true;
-			fr.m_rsb.Clear(pr::rdr::ERS::FillMode);
-			fr.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
 		}
 
 		m_rdr.Present();
@@ -218,6 +189,7 @@ namespace ldr
 	// Create stock models such as the focus point, origin, etc
 	void Main::CreateStockModels()
 	{
+		using namespace pr::rdr;
 		{
 			// Create the focus point models
 			pr::v4 verts[] =
@@ -232,9 +204,13 @@ namespace ldr
 			pr::Colour32 coloursFF[] = { 0xFFFF0000, 0xFFFF0000, 0xFF00FF00, 0xFF00FF00, 0xFF0000FF, 0xFF0000FF };
 			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
 			pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
-			m_focus_point .m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
+
+			m_focus_point .m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
+			m_focus_point .m_model->m_name = "focus point";
 			m_focus_point .m_i2w   = pr::m4x4Identity;
-			m_origin_point.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
+
+			m_origin_point.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
+			m_origin_point.m_model->m_name = "origin point";
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
 		{
@@ -261,7 +237,8 @@ namespace ldr
 				24, 25, 24, 26, 24, 27,
 				28, 29, 28, 30, 28, 31,
 			};
-			m_selection_box.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
+			m_selection_box.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
+			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
 		}
 		{
@@ -283,12 +260,14 @@ namespace ldr
 				4, 5, 5, 6, 6, 7, 7, 4,
 				0, 4, 1, 5, 2, 6, 3, 7
 			};
-			m_bbox_model.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPC>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
+			m_bbox_model.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
+			m_bbox_model.m_model->m_name = "bbox";
 			m_bbox_model.m_i2w   = pr::m4x4Identity;
 		}
 		{
 			// Create a test point box model
-			m_test_point.m_model = pr::rdr::ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
+			m_test_point.m_model = ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
+			m_test_point.m_model->m_name = "test point";
 			m_test_point.m_i2w   = pr::m4x4Identity;
 		}
 	}
@@ -323,11 +302,9 @@ namespace ldr
 			pr::events::Send(ldr::Event_Refresh());
 	}
 
-	// Called when the viewport is being built
-	void Main::OnEvent(pr::rdr::Evt_SceneRender const& e)
+	// Called when the scene needs updating
+	void Main::OnEvent(pr::rdr::Evt_UpdateScene const& e)
 	{
-		PR_ASSERT(PR_DBG_LDR, e.m_rstep.Id() == pr::rdr::ERenderStep::ForwardRender, "Assuming only one render step");
-
 		// Render the focus point
 		if (m_settings.m_ShowFocusPoint)
 			e.m_scene.AddInstance(m_focus_point);
@@ -349,6 +326,45 @@ namespace ldr
 		{
 			for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
 				m_store[i]->AddBBoxToScene(e.m_scene, m_bbox_model.m_model);
+		}
+
+		// Setup the render steps (just one in this case)
+		auto fr = m_scene.FindRStep<pr::rdr::ForwardRender>();
+		if (fr != nullptr)
+		{
+			// Update the lighting. If lighting is camera relative, adjust the position and direction
+			pr::rdr::Light& light = fr->m_global_light;
+			light = m_settings.m_Light;
+			if (m_settings.m_LightIsCameraRelative)
+			{
+				light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
+				light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
+			}
+
+			// Set the background colour
+			fr->m_background_colour = m_settings.m_BackgroundColour;
+		}
+	}
+
+	// Called per render step
+	void Main::OnEvent(pr::rdr::Evt_RenderStepExecute const& e)
+	{
+		if (e.m_rstep.GetId() != pr::rdr::ERenderStep::ForwardRender)
+			return;
+
+		// Update the fill mode for the scene
+		auto& fr = e.m_rstep.as<pr::rdr::ForwardRender>();
+		if (m_scene_rdr_pass == 0 || e.m_complete)
+		{
+			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID);
+			fr.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+			fr.m_clear_bb = true;
+		}
+		else
+		{
+			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+			fr.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+			fr.m_clear_bb = false;
 		}
 	}
 }

@@ -15,7 +15,7 @@ namespace pr
 		// Position only vertex
 		struct VertP
 		{
-			enum { GeomMask = EGeom::Vert };
+			static EGeom::Enum_ const GeomMask = static_cast<EGeom::Enum_>(EGeom::Vert);
 
 			v3 m_pos;
 
@@ -37,7 +37,7 @@ namespace pr
 		// Position and colour
 		struct VertPC
 		{
-			enum { GeomMask = EGeom::Vert | EGeom::Colr };
+			static EGeom::Enum_ const GeomMask = static_cast<EGeom::Enum_>(EGeom::Vert | EGeom::Colr);
 
 			v3     m_pos;
 			Colour m_col;
@@ -61,7 +61,7 @@ namespace pr
 		// Position, Diffuse Texture
 		struct VertPT
 		{
-			enum { GeomMask = EGeom::Vert | EGeom::Tex0 };
+			static EGeom::Enum_ const GeomMask = static_cast<EGeom::Enum_>(EGeom::Vert | EGeom::Tex0);
 
 			v3     m_pos;
 			v2     m_uv;
@@ -85,7 +85,7 @@ namespace pr
 		// Position, Colour, Normal, Diffuse Texture
 		struct VertPCNT
 		{
-			enum { GeomMask = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0 };
+			static EGeom::Enum_ const GeomMask = static_cast<EGeom::Enum_>(EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0);
 
 			v3     m_pos;
 			Colour m_col;
@@ -113,4 +113,3 @@ namespace pr
 }
 
 #endif
-

@@ -70,6 +70,9 @@ try:
 
 	# Set defines
 	defines = ["/DSHADER_BUILD=1"]
+	if   shdr == "vs": defines = defines + ["/DPR_RDR_SHADER_VS=1"]
+	elif shdr == "ps": defines = defines + ["/DPR_RDR_SHADER_PS=1"]
+	elif shdr == "gs": defines = defines + ["/DPR_RDR_SHADER_GS=1"]
 
 	# Set other command line options
 	options = ["/nologo", "/Gis", "/Ges", "/WX"]

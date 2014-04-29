@@ -174,6 +174,7 @@ namespace pr
 			ptr->Release();
 		}
 	};
+	static_assert(sizeof(RefPtr<void>) == sizeof(void*), "Must be the same size as a raw pointer so arrays of RefPtrs can be cast to arrays of raw pointers");
 
 	template <typename T> inline bool operator == (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr == rhs.m_ptr; }
 	template <typename T> inline bool operator != (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr != rhs.m_ptr; }

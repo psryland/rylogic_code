@@ -14,7 +14,7 @@
 namespace ldr
 {
 	// A single dll plugin
-	struct Plugin :pr::events::IRecv<pr::rdr::Evt_SceneRender>
+	struct Plugin :pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
 		HMODULE                      m_dll;
 		ldr::Main*                   m_ldr;
@@ -36,7 +36,7 @@ namespace ldr
 		char const* Filepath() const { return m_filepath.c_str(); }
 
 		// Called when the draw list is being built
-		void OnEvent(pr::rdr::Evt_SceneRender const&);
+		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 
 		// Call 'm_pi_initialise' to start the plugin.
 		// This is not done in the constructor as we want the plugin to be added to be

@@ -12,6 +12,7 @@ namespace pr
 	{
 		// Constant buffer definitions
 		#include "renderer11/shaders/common/cbuffer.hlsl"
+		#include "renderer11/shaders/common/gbuffer_cbuf.hlsl"
 	}
 }
 

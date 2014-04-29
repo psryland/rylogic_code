@@ -3,8 +3,6 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_RENDERER_H
-#define PR_RDR_RENDER_RENDERER_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/config/config.h"
@@ -64,7 +62,7 @@ namespace pr
 				PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
 
 				// Disable multisampling when debugging as pix can't handle it
-				//PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
+				PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
 			}
 		};
 
@@ -160,5 +158,3 @@ namespace pr
 		void Present();
 	};
 }
-
-#endif

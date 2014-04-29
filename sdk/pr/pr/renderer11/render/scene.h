@@ -3,10 +3,9 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_SCENE_H
-#define PR_RDR_RENDER_SCENE_H
 
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/render/render_step.h"
 #include "pr/renderer11/util/event_types.h"
 //#include "pr/renderer11/render/drawlist.h"
@@ -27,7 +26,6 @@ namespace pr
 		struct Scene
 			:pr::events::IRecv<Evt_Resize>
 		{
-			typedef std::vector<RenderStepPtr> RenderStepCont;
 			pr::Renderer*  m_rdr;          // The controlling renderer
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
@@ -44,10 +42,21 @@ namespace pr
 			void Viewport(pr::rdr::Viewport const& viewport) { m_viewport = viewport; }
 
 			// Access the render step by Id
+			RenderStep* FindRStep(ERenderStep::Enum_ id) const;
 			RenderStep& operator[](ERenderStep::Enum_ id) const;
 
 			// Render step specific accessors
-			template <typename RStep> typename std::enable_if<std::is_same<RStep,ForwardRender>::value, ForwardRender>::type& RdrStep() const { return static_cast<ForwardRender&>((*this)[ERenderStep::ForwardRender]); }
+			template <typename TRStep> typename std::enable_if<std::is_base_of<RenderStep,TRStep>::value, TRStep>::type* FindRStep() const
+			{
+				return static_cast<TRStep*>(FindRStep(TRStep::Id));
+			}
+			template <typename TRStep> TRStep& RStep() const
+			{
+				auto rs = FindRStep<TRStep>();
+				if (rs != nullptr) return *rs;
+				PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ERenderStep::ToString(id)).c_str());
+				throw std::exception("Render step not part of this scene");
+			}
 
 			// Clear/Populate the drawlists for each render step.
 			// Drawlists can be used in two ways, one is to clear the drawsets with each frame
@@ -73,7 +82,7 @@ namespace pr
 		private:
 
 			// Resize the viewport on back buffer resize
-			void OnEvent(Evt_Resize const& evt);
+			void OnEvent(Evt_Resize const& evt) override;
 		};
 
 		//	// Note: scenes are copyable
@@ -105,7 +114,7 @@ namespace pr
 
 		//protected:
 		//	// Resize the viewport on back buffer resize
-		//	void OnEvent(pr::rdr::Evt_Resize const& evt);
+		//	void OnEvent(pr::rdr::Evt_Resize const& evt) override;
 
 		//	// Implementation of rendering for the derived scene type
 		//	virtual void DoRender(D3DPtr<ID3D11DeviceContext>& dc) const = 0;
@@ -133,5 +142,3 @@ namespace pr
 		//};
 	}
 }
-
-#endif

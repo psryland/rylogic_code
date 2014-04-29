@@ -3,8 +3,6 @@
 //  Copyright © Rylogic Ltd 2010
 //***********************************************
 
-#define PR_RDR_SHADER_VS 1
-
 #define PR_RDR_SHADER_VSIN_POS3 1
 #define PR_RDR_SHADER_VSIN_2DTEX0 1
 

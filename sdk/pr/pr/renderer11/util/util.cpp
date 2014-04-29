@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
-#include "pr/renderer11/render/draw_method.h"
+#include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/raster_state.h"
@@ -187,9 +187,9 @@ namespace pr
 				rsb.Clear(ERS::CullMode);
 			}
 		}
-		void SetAlphaBlending(DrawMethod& mat, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
+		void SetAlphaBlending(NuggetProps& ddata, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
 		{
-			SetAlphaBlending(mat.m_bsb, mat.m_dsb, mat.m_rsb, on, render_target, blend_op, src_blend, dst_blend);
+			SetAlphaBlending(ddata.m_bsb, ddata.m_dsb, ddata.m_rsb, on, render_target, blend_op, src_blend, dst_blend);
 		}
 
 		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features

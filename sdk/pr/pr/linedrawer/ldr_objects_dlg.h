@@ -59,13 +59,13 @@ namespace pr
 
 		private:
 			// An object has been added to the data manager
-			void OnEvent(Evt_LdrObjectAdd const&);
+			void OnEvent(Evt_LdrObjectAdd const&) override;
 
 			// Empty the tree and list controls, all objects have been deleted
-			void OnEvent(Evt_DeleteAll const&);
+			void OnEvent(Evt_DeleteAll const&) override;
 
 			// Remove an object from the tree and list controls
-			void OnEvent(Evt_LdrObjectDelete const&);
+			void OnEvent(Evt_LdrObjectDelete const&) override;
 		};
 	}
 }

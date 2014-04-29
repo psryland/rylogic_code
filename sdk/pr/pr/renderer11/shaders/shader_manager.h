@@ -24,30 +24,30 @@ namespace pr
 			pr::rdr::MemFuncs    m_mem; // Not using an allocator here, because the Shader type isn't known until 'CreateShader' is called
 			D3DPtr<ID3D11Device> m_device;
 			ShaderLookup         m_lookup_shader;  // A map from shader id to existing shader instances
-			
+
 			ShaderManager(ShaderManager const&); // no copying
 			ShaderManager& operator = (ShaderManager const&);
-			
+
 			friend struct BaseShader;
 			void Delete(pr::rdr::BaseShader const* shdr);
-			
+
 			// Create the built-in shaders
 			void CreateStockShaders();
-			
+
 			// Builds the basic parts of a shader.
-			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name);
-			
+			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name);
+
 		public:
 			ShaderManager(pr::rdr::MemFuncs& mem, D3DPtr<ID3D11Device>& device);
 			~ShaderManager();
-			
+
 			// Create a custom shader object.
 			// Pass nulls for 'vsdesc', 'psdesc' if they're not needed
-			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
+			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name)
 			{
 				// Create a lambda for allocating the shader
 				ShaderAlex create = [&](pr::rdr::ShaderManager* mgr){ return pr::rdr::Allocator<ShaderType>(m_mem).New(mgr); };
-				return InitShader(create, id, setup, vsdesc, psdesc, name);
+				return InitShader(create, id, setup, vsdesc, psdesc, cbdesc, name);
 			}
 
 			// Return the shader corresponding to 'id' or null if not found

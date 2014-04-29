@@ -23,7 +23,7 @@ namespace ldr
 		,pr::events::IRecv<ldr::Event_Error>
 		,pr::events::IRecv<ldr::Event_Status>
 		,pr::events::IRecv<ldr::Event_Refresh>
-		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		,pr::events::IRecv<pr::ldr::Evt_Refresh>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureCloseWindow>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
@@ -185,20 +185,20 @@ namespace ldr
 		void MenuList_ListChanged(pr::gui::MenuList* sender);
 
 		// Ldr event handlers
-		void OnEvent(ldr::Event_Info const& e);
-		void OnEvent(ldr::Event_Warn const& e);
-		void OnEvent(ldr::Event_Error const& e);
-		void OnEvent(ldr::Event_Status const& e);
-		void OnEvent(ldr::Event_Refresh const& e);
-		void OnEvent(pr::rdr::Evt_SceneRender const&);
-		void OnEvent(pr::ldr::Evt_Refresh const& e);
-		void OnEvent(pr::ldr::Evt_LdrMeasureCloseWindow const&);
-		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&);
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgCloseWindow const&);
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&);
-		void OnEvent(pr::ldr::Evt_AddBegin const&);
-		void OnEvent(pr::ldr::Evt_AddEnd const&);
-		void OnEvent(pr::settings::Evt<UserSettings> const&);
+		void OnEvent(ldr::Event_Info const& e) override;
+		void OnEvent(ldr::Event_Warn const& e) override;
+		void OnEvent(ldr::Event_Error const& e) override;
+		void OnEvent(ldr::Event_Status const& e) override;
+		void OnEvent(ldr::Event_Refresh const& e) override;
+		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
+		void OnEvent(pr::ldr::Evt_Refresh const& e) override;
+		void OnEvent(pr::ldr::Evt_LdrMeasureCloseWindow const&) override;
+		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override;
+		void OnEvent(pr::ldr::Evt_LdrAngleDlgCloseWindow const&) override;
+		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
+		void OnEvent(pr::ldr::Evt_AddBegin const&) override;
+		void OnEvent(pr::ldr::Evt_AddEnd const&) override;
+		void OnEvent(pr::settings::Evt<UserSettings> const&) override;
 
 		// Command line
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end);

@@ -857,7 +857,7 @@ void ldr::MainGUI::OnEvent(ldr::Event_Status const& e)
 }
 
 // Called when the viewport is being built
-void ldr::MainGUI::OnEvent(pr::rdr::Evt_SceneRender const& e)
+void ldr::MainGUI::OnEvent(pr::rdr::Evt_UpdateScene const& e)
 {
 	// Render the selection box
 	if (m_main->m_settings.m_ShowSelectionBox && m_store_ui.SelectedCount() != 0)
