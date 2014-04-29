@@ -18,4 +18,9 @@
 #define PR_RDR_SHADER_TINT0 1
 #define PR_RDR_SHADER_PVC 1
 
-#include "common/uber.hlsl"
+#include "common/uber.hlsli"
+
+#if PR_RDR_SHADER_VS
+#endif
+#if PR_RDR_SHADER_PS
+#endif

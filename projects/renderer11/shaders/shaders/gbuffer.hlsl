@@ -8,8 +8,8 @@
 //   Color1 = normal x,y (16bits each)
 //   Color2 = depth 32bit float (world space depth from camera)
 
-#include "gbuffer_cbuf.hlsl"
-#include "compression.inc.hlsl"
+#include "common/gbuffer_cbuf.hlsli"
+#include "common/compression.hlsli"
 
 // VS input format
 struct VS_INPUT
@@ -83,7 +83,7 @@ PS_OUTPUT main(PS_INPUT In)
 		Out.diff0 = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff0;
 
 	// Transform
-	half3 ws_norm = m_geom.y != 0 ? normalize(In.ws_norm).xyz : In.ws_norm.xyz;
+	half3 ws_norm = half3(m_geom.y != 0 ? normalize(In.ws_norm).xyz : In.ws_norm.xyz);
 	Out.ws_norm = EncodeNormal(ws_norm);
 
 	// Depth

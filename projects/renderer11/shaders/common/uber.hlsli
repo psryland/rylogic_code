@@ -25,9 +25,9 @@
 #ifndef PR_RDR_SHADER_UBER_HLSL
 #define PR_RDR_SHADER_UBER_HLSL
 
-#include "uber_defines.hlsl"
-#include "cbuffer.hlsl"
-#include "functions.hlsl"
+#include "uber_defines.hlsli"
+#include "cbuffer.hlsli"
+#include "functions.hlsli"
 
 // VS input format
 struct VS_INPUT

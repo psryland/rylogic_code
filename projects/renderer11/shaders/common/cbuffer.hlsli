@@ -6,7 +6,7 @@
 #define PR_RDR_SHADER_UBER_CBUFFER_HLSL
 
 #if SHADER_BUILD
-#include "uber_defines.hlsl"
+#include "uber_defines.hlsli"
 #endif
 
 #define PR_RDR_MAX_PROJECTED_TEXTURES 1

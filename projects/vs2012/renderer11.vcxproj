@@ -230,74 +230,40 @@
   <ItemGroup>
     <None Include="..\..\script\BuildShader.py" />
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl" />
-    <None Include="..\renderer11\shaders\common\cbuffer.hlsl" />
-    <None Include="..\renderer11\shaders\common\functions.hlsl" />
-    <None Include="..\renderer11\shaders\common\uber.hlsl" />
-    <None Include="..\renderer11\shaders\common\uber_defines.hlsl" />
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.vs.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.vs.hlsl">
+    <None Include="..\renderer11\shaders\common\cbuffer.hlsli" />
+    <None Include="..\renderer11\shaders\common\compression.hlsli" />
+    <None Include="..\renderer11\shaders\common\deferred_shading_cbuf.hlsli" />
+    <None Include="..\renderer11\shaders\common\functions.hlsli" />
+    <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsli" />
+    <None Include="..\renderer11\shaders\common\uber.hlsli" />
+    <None Include="..\renderer11\shaders\common\uber_defines.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\deferred_shading.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.vs.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\renderer11\shaders\common\gbuffer.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\renderer11\shaders\common\deferred_shading.hlsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\renderer11\shaders\common\deferred_shading_cbuf.hlsl">
-      <FileType>Document</FileType>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\deferred_shading.ps.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\deferred_shading.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
