@@ -9,6 +9,7 @@
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/drawlist_element.h"
+#include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/event_types.h"
 
@@ -140,10 +141,11 @@ namespace pr
 			// Uses g-buffer data to perform post process lighting
 			static const ERenderStep::Enum_ Id = ERenderStep::DeferredShading;
 
-			ModelPtr   m_unit_quad;         // The quad drawn to the screen for post processing
-			SceneView  m_unit_view;         // A scene view set up for post processing
-			pr::Colour m_background_colour; // The colour to clear the background to
-			bool       m_clear_bb;          // True if this render step clears the backbuffer before rendering
+			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
+			ModelPtr             m_unit_quad;         // The quad drawn to the screen for post processing
+			SceneView            m_unit_view;         // A scene view set up for post processing
+			pr::Colour           m_background_colour; // The colour to clear the background to
+			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
 
 			DeferredShading(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
 
@@ -169,9 +171,9 @@ namespace pr
 		{
 			static const ERenderStep::Enum_ Id = ERenderStep::ForwardRender;
 
+			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			pr::Colour           m_background_colour; // The colour to clear the background to
 			Light                m_global_light;      // The global light to use
-			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
 
 			//typedef std::vector<ProjectedTexture> ProjTextCont;

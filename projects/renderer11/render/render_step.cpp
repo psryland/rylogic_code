@@ -307,11 +307,17 @@ namespace pr
 
 		DeferredShading::DeferredShading(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
 			:RenderStep(scene)
+			,m_cbuf_frame()
 			,m_unit_quad(scene.m_rdr->m_mdl_mgr.m_unit_quad)
 			,m_unit_view(pr::m4x4Identity, pr::maths::tau_by_4, 1.0f, 1.0f, true)
 			,m_background_colour(bkgd_colour)
-			,m_clear_bb(true)
-		{}
+			,m_clear_bb(clear_bb)
+		{
+			// Create a constants buffer that changes per frame
+			CBufferDesc cbdesc(sizeof(CBufFrame_DeferredShading));
+			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame_DeferredShading"));
+		}
 
 		// Perform the render step
 		void DeferredShading::ExecuteInternal()
@@ -348,26 +354,26 @@ namespace pr
 			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 
-			// Draw the full screen quad
-			{
-				// Bind the shader to the device
-				m_shader.Bind(dc, dle, *this);
+			//// Draw the full screen quad
+			//{
+			//	// Bind the shader to the device
+			//	m_shader.Bind(dc, dle, *this);
 
-				// Add the nugget to the device context
-				dc->DrawIndexed(
-					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_begin),
-					0);
-			}
+			//	// Add the nugget to the device context
+			//	dc->DrawIndexed(
+			//		UINT(nugget.m_irange.size()),
+			//		UINT(nugget.m_irange.m_begin),
+			//		0);
+			//}
 		}
 
 		// ForwardRender ******************************************************
 
 		ForwardRender::ForwardRender(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
 			:RenderStep(scene)
+			,m_cbuf_frame()
 			,m_background_colour(bkgd_colour)
 			,m_global_light()
-			,m_cbuf_frame()
 			,m_clear_bb(clear_bb)
 		{
 			// Create a constants buffer that changes per frame

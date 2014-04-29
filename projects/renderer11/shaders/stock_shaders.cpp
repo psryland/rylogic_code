@@ -31,6 +31,8 @@ namespace pr
 		#include "renderer11/shaders/compiled/txfm_tint_tex.ps.h"
 		#include "renderer11/shaders/compiled/gbuffer.vs.h"
 		#include "renderer11/shaders/compiled/gbuffer.ps.h"
+		#include "renderer11/shaders/compiled/deferred_shading.vs.h"
+		#include "renderer11/shaders/compiled/deferred_shading.ps.h"
 
 		// Set the transform properties of a constants buffer
 		template <typename TCBuf> void Txfm(BaseInstance const& inst, SceneView const& view, TCBuf& cb)
