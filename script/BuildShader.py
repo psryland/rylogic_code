@@ -85,7 +85,7 @@ try:
 			options = ["/nologo", "/Gis", "/Ges", "/WX"]
 			
 			# Uncomment this for debugging
-			#options += ["/Od", "/Zi"]
+			options += ["/Od", "/Zi"]
 
 			# Build the shader using fxc
 			if trace: print("Running fxc.exe...")

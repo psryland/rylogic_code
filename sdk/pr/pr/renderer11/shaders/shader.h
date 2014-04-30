@@ -91,9 +91,6 @@ namespace pr
 			explicit BaseShader(ShaderManager* mgr);
 			virtual ~BaseShader() {}
 
-			// Bind the shader to the device context in preparation for rendering
-			void Bind(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) const;
-
 			// Ref counting cleanup function
 			static void RefCountZero(pr::RefCount<BaseShader>* doomed);
 
@@ -112,6 +109,9 @@ namespace pr
 			friend struct Allocator<BaseShader>;
 			BaseShader();
 		};
+
+		// Bind the shader to the device context in preparation for rendering
+		void BindShader(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const* dle, RenderStep const& rstep);
 
 		//// A collection of shaders (kinda like an effect)
 		//// It's intended that this object be subclassed for more complex shaders

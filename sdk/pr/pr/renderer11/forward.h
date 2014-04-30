@@ -157,6 +157,8 @@ namespace pr
 		struct SceneView;
 		struct Scene;
 		struct RenderStep;
+		struct GBufferCreate;
+		struct DSLightingPass;
 		struct ForwardRender;
 		struct Stereo;
 		struct DrawData;

@@ -54,8 +54,8 @@ namespace pr
 			Sort();
 		}
 
-		// Add an instance. The instance,model,and nuggets must be resident for the entire time
-		// that it is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
+		// Add an instance. The instance, model, and nuggets must be resident for the entire time
+		// that the instance is in the drawlist, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 		void RenderStep::AddInstance(BaseInstance const& inst)
 		{
 			// Get the model associated with the isntance
@@ -129,10 +129,10 @@ namespace pr
 			,m_cbuf_frame()
 			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::GBuffer))
 		{
-			// Create a constants buffer that changes per frame
+			// Create a constants buffer for constants that only change once per frame
 			CBufferDesc cbdesc(sizeof(CBufFrame_GBuffer));
 			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame_GBuffer"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "gbuffer CBufFrame"));
 
 			InitGBuffer(true);
 		}
@@ -171,7 +171,7 @@ namespace pr
 				// and get the render target view of each texture buffer
 				DXGI_FORMAT fmt[RTCount] =
 				{
-					DXGI_FORMAT_R8G8B8A8_SNORM, // diffuse layer
+					DXGI_FORMAT_R8G8B8A8_UNORM, // diffuse layer
 					DXGI_FORMAT_R16G16_SNORM,   // normal layer  (x,y) component
 					DXGI_FORMAT_R32_FLOAT,      // depth layer
 				};
@@ -180,18 +180,20 @@ namespace pr
 					// Create the resource
 					tdesc.Format = fmt[i];
 					pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
-					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s", ToString((RTEnum_)i))));
+					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s tex", ToString((RTEnum_)i))));
 
 					// Get the render target view
 					RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
 					rtvdesc.Texture2D.MipSlice = 0;
 					pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
+					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s rtv", ToString((RTEnum_)i))));
 
 					// Get the shader res view
 					ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 					srvdesc.Texture2D.MostDetailedMip = 0;
 					srvdesc.Texture2D.MipLevels = 1;
 					pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
+					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s srv", ToString((RTEnum_)i))));
 				}
 
 				// We need to create our own depth buffer to ensure it has the same dimensions
@@ -282,11 +284,10 @@ namespace pr
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
 			{
-				Nugget const&     nugget = *dle.m_nugget;
-				BaseShader const& shader = *dle.m_shader;
+				Nugget const& nugget = *dle.m_nugget;
 
 				// Bind the shader to the device
-				shader.Bind(dc, dle, *this);
+				m_shader->Bind(dc, dle, *this);
 
 				// Add the nugget to the device context
 				dc->DrawIndexed(
@@ -303,24 +304,28 @@ namespace pr
 			InitGBuffer(evt.m_done);
 		}
 
-		// DeferredShading ****************************************************
+		// DSLightingPass *****************************************************
 
-		DeferredShading::DeferredShading(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
+		DSLightingPass::DSLightingPass(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
 			:RenderStep(scene)
+			,m_gbuffer(scene.RStep<GBufferCreate>())
 			,m_cbuf_frame()
-			,m_unit_quad(scene.m_rdr->m_mdl_mgr.m_unit_quad)
+			,m_unit_quad()
 			,m_unit_view(pr::m4x4Identity, pr::maths::tau_by_4, 1.0f, 1.0f, true)
 			,m_background_colour(bkgd_colour)
 			,m_clear_bb(clear_bb)
+			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::DSLighting))
 		{
-			// Create a constants buffer that changes per frame
-			CBufferDesc cbdesc(sizeof(CBufFrame_DeferredShading));
+			m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.m_unit_quad;
+
+			// Create a constants buffer for constants that only change once per frame
+			CBufferDesc cbdesc(sizeof(CBufFrame_DSLighting));
 			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame_DeferredShading"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "dslighting CBufFrame"));
 		}
 
 		// Perform the render step
-		void DeferredShading::ExecuteInternal()
+		void DSLightingPass::ExecuteInternal()
 		{
 			auto dc = m_scene->m_rdr->ImmediateDC();
 
@@ -342,11 +347,12 @@ namespace pr
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants
-			CBufFrame_Forward cb = {};
-			SetViewConstants(m_unit_view, cb);
+			// We need the camera transform to calculate ws_pos from the depth
+			CBufFrame_DSLighting cb = {};
+			SetViewConstants(m_scene->m_view, cb);
 			{
 				// Lock and write the constants
-				LockT<CBufFrame_Forward> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
+				LockT<CBufFrame_DSLighting> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
 				*lock.ptr() = cb;
 			}
 
@@ -354,17 +360,24 @@ namespace pr
 			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
 
-			//// Draw the full screen quad
-			//{
-			//	// Bind the shader to the device
-			//	m_shader.Bind(dc, dle, *this);
+			// Draw the full screen quad
+			{
+				Nugget const& nugget = m_unit_quad.m_model->m_nuggets.front();
 
-			//	// Add the nugget to the device context
-			//	dc->DrawIndexed(
-			//		UINT(nugget.m_irange.size()),
-			//		UINT(nugget.m_irange.m_begin),
-			//		0);
-			//}
+				// Bind the shader to the device
+				DrawListElement dle;
+				dle.m_shader   = m_shader.m_ptr;
+				dle.m_nugget   = &nugget;
+				dle.m_instance = &m_unit_quad.m_base;
+				dle.m_sort_key = 0;
+				m_shader->Bind(dc, dle, *this);
+
+				// Add the nugget to the device context
+				dc->DrawIndexed(
+					UINT(nugget.m_irange.size()),
+					UINT(nugget.m_irange.m_begin),
+					0);
+			}
 		}
 
 		// ForwardRender ******************************************************

@@ -26,7 +26,7 @@
 #define PR_RDR_SHADER_UBER_HLSL
 
 #include "uber_defines.hlsli"
-#include "cbuffer.hlsli"
+#include "forward_cbuf.hlsli"
 #include "functions.hlsli"
 
 // VS input format

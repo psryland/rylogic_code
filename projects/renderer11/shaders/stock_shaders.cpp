@@ -31,8 +31,8 @@ namespace pr
 		#include "renderer11/shaders/compiled/txfm_tint_tex.ps.h"
 		#include "renderer11/shaders/compiled/gbuffer.vs.h"
 		#include "renderer11/shaders/compiled/gbuffer.ps.h"
-		#include "renderer11/shaders/compiled/deferred_shading.vs.h"
-		#include "renderer11/shaders/compiled/deferred_shading.ps.h"
+		#include "renderer11/shaders/compiled/dslighting.vs.h"
+		#include "renderer11/shaders/compiled/dslighting.ps.h"
 
 		// Set the transform properties of a constants buffer
 		template <typename TCBuf> void Txfm(BaseInstance const& inst, SceneView const& view, TCBuf& cb)
@@ -305,6 +305,51 @@ namespace pr
 			explicit GBuffer(ShaderManager* mgr) :BaseShader(mgr) {}
 		};
 
+		// DSLighting *********************************************************
+		struct DSLighting :BaseShader
+		{
+			// A point sampler used to sample the gbuffer
+			D3DPtr<ID3D11SamplerState> m_point_sampler;
+
+			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+			{
+				// Create the shader
+				VShaderDesc vsdesc(dslighting_vs, VertPCNT());
+				PShaderDesc psdesc(dslighting_ps);
+				//CBufferDesc cbdesc(sizeof(CBufModel_DSLighting)); // no per-model constants as yet
+				auto shdr = sm.CreateShader<DSLighting>(EStockShader::DSLighting, DSLighting::Setup, &vsdesc, &psdesc, nullptr, "dslighting");
+
+				// Create a texture sampler
+				auto sdesc = SamplerDesc::PointClamp();
+				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_point_sampler.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_point_sampler, "dslighting point sampler"));
+			}
+			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			{
+				auto& me = Me<DSLighting>(dle);
+				auto& gbuffer = rstep.as<DSLightingPass>().m_gbuffer;
+
+				// Set the constants for the shader
+				//CBufModel_DSLighting cb = {};
+				//Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
+				//Tint(*dle.m_instance, cb);
+				//Tex0(*dle.m_nugget, cb);
+				//{
+				//	LockT<CBufModel_GBuffer> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+				//	*lock.ptr() = cb;
+				//}
+
+				//// Set constants for the shader
+				//dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				//dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+
+				// Set constants for the pixel shader
+				dc->PSSetSamplers(0, 1, &me.m_point_sampler.m_ptr);
+				dc->PSSetShaderResources(0, GBufferCreate::RTCount, (ID3D11ShaderResourceView* const*)gbuffer.m_srv);
+			}
+			explicit DSLighting(ShaderManager* mgr) :BaseShader(mgr) {}
+		};
+
 		// Create the built-in shaders
 		void ShaderManager::CreateStockShaders()
 		{
@@ -314,7 +359,8 @@ namespace pr
 			TxTintPvcLit   ::Create(*this, m_device);
 			TxTintPvcLitTex::Create(*this, m_device);
 
-			GBuffer::Create(*this, m_device);
+			GBuffer   ::Create(*this, m_device);
+			DSLighting::Create(*this, m_device);
 		}
 
 		//// Setup this shader for rendering

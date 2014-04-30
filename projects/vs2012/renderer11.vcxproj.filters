@@ -319,13 +319,7 @@
     <None Include="..\..\script\BuildShader.py">
       <Filter>shaders</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\cbuffer.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
     <None Include="..\renderer11\shaders\common\compression.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\deferred_shading_cbuf.hlsli">
       <Filter>shaders\common</Filter>
     </None>
     <None Include="..\renderer11\shaders\common\functions.hlsli">
@@ -340,12 +334,15 @@
     <None Include="..\renderer11\shaders\common\uber_defines.hlsli">
       <Filter>shaders\common</Filter>
     </None>
+    <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\dslighting_cbuf.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.hlsl">
-      <Filter>shaders\shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\deferred_shading.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.hlsl">
@@ -361,6 +358,9 @@
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.hlsl">
+      <Filter>shaders\shaders</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\shaders\dslighting.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -10,6 +10,7 @@
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/render/scene_view.h"
+#include "pr/renderer11/instance.h"
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/event_types.h"
 
@@ -133,26 +134,34 @@ namespace pr
 			}
 		};
 
-		// DeferredShading ****************************************************
+		// DSLightingPass *****************************************************
 
-		struct DeferredShading
+		struct DSLightingPass
 			:RenderStep
 		{
+			// An instance type for the full screen quad
+			#define PR_RDR_INST(x)\
+				x(ModelPtr ,m_model  ,EInstComp::ModelPtr)
+			PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
+			#undef PR_RDR_INST
+
 			// Uses g-buffer data to perform post process lighting
 			static const ERenderStep::Enum_ Id = ERenderStep::DeferredShading;
 
+			GBufferCreate&       m_gbuffer;           // The gbuffer render step for access to the gbuffer textures
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
-			ModelPtr             m_unit_quad;         // The quad drawn to the screen for post processing
+			Instance             m_unit_quad;         // The quad drawn to the screen for post processing
 			SceneView            m_unit_view;         // A scene view set up for post processing
 			pr::Colour           m_background_colour; // The colour to clear the background to
 			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
+			ShaderPtr            m_shader;            // The shader used to generate the g-buffer
 
-			DeferredShading(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
+			DSLightingPass(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
 
 		private:
 
-			DeferredShading(DeferredShading const&);
-			DeferredShading& operator = (DeferredShading const&);
+			DSLightingPass(DSLightingPass const&);
+			DSLightingPass& operator = (DSLightingPass const&);
 
 			// The type of render step this is
 			ERenderStep::Enum_ GetId() const override { return Id; }

@@ -236,9 +236,9 @@
     <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\renderer11\shaders\common\cbuffer.hlsli" />
+    <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\compression.hlsli" />
-    <None Include="..\renderer11\shaders\common\deferred_shading_cbuf.hlsli" />
+    <None Include="..\renderer11\shaders\common\dslighting_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\functions.hlsli" />
     <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\uber.hlsli" />
@@ -255,7 +255,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\deferred_shading.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\dslighting.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.hlsl">

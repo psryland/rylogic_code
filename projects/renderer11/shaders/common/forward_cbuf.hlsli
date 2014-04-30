@@ -2,8 +2,6 @@
 // Renderer
 //  Copyright © Rylogic Ltd 2010
 //***********************************************
-#ifndef PR_RDR_SHADER_UBER_CBUFFER_HLSL
-#define PR_RDR_SHADER_UBER_CBUFFER_HLSL
 
 #if SHADER_BUILD
 #include "uber_defines.hlsli"
@@ -107,7 +105,5 @@ SamplerState      m_sampler0 :register(s0);
 // Projected textures
 Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES];
 SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES];
-
-#endif
 
 #endif

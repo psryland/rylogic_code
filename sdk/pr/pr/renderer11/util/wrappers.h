@@ -207,8 +207,10 @@ namespace pr
 		// Texture sampler description
 		struct SamplerDesc :D3D11_SAMPLER_DESC
 		{
-			static SamplerDesc ClampSampler() { return SamplerDesc(); }
-			static SamplerDesc WrapSampler()  { return SamplerDesc(D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP, D3D11_TEXTURE_ADDRESS_WRAP); }
+			static SamplerDesc PointClamp()  { return SamplerDesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP , D3D11_FILTER_MIN_MAG_MIP_POINT); }
+			static SamplerDesc PointWrap()   { return SamplerDesc(D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP  , D3D11_FILTER_MIN_MAG_MIP_POINT); }
+			static SamplerDesc LinearClamp() { return SamplerDesc(D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP , D3D11_FILTER_MIN_MAG_MIP_LINEAR); }
+			static SamplerDesc LinearWrap()  { return SamplerDesc(D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP , D3D11_TEXTURE_ADDRESS_WRAP  , D3D11_FILTER_MIN_MAG_MIP_LINEAR); }
 
 			SamplerDesc(
 				D3D11_TEXTURE_ADDRESS_MODE addrU = D3D11_TEXTURE_ADDRESS_CLAMP,

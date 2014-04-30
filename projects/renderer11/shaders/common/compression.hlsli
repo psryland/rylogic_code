@@ -1,5 +1,7 @@
-#ifndef PR_RDR_SHADER_COMPRESSION_INC_HLSL
-#define PR_RDR_SHADER_COMPRESSION_INC_HLSL
+//***********************************************
+// Renderer
+//  Copyright © Rylogic Ltd 2010
+//***********************************************
 
 // Encode/Decode a normal vector
 half2 EncodeNormal(half3 norm)
@@ -18,4 +20,3 @@ half3 DecodeNormal(half2 enc)
 	return norm;
 }
 
-#endif

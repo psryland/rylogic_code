@@ -4,13 +4,15 @@
 //***********************************************
 // Uses gbuffer output to light a scene
 
-#include "common/deferred_shading_cbuf.hlsli"
+#include "common/dslighting_cbuf.hlsli"
 #include "common/compression.hlsli"
 
 // VS input format
 struct VS_INPUT
 {
 	float3 pos  :Position;
+	float4 diff :Color0;
+	float3 norm :Normal;
 	float2 tex0 :TexCoord0;
 };
 
@@ -28,10 +30,10 @@ struct PS_OUTPUT
 };
 
 // Sampler and gbuffer textures
-SamplerState m_point_sampler :register(s0);
-Texture2D<float4> m_tex_diffuse :register(t0);
-Texture2D<half2> m_tex_normals :register(t1);
-Texture2D<float4> m_tex_depth :register(t2);
+SamplerState      m_point_sampler :register(s0);
+Texture2D<float4> m_tex_diffuse   :register(t0);
+Texture2D<half2>  m_tex_normals   :register(t1);
+Texture2D<float4> m_tex_depth     :register(t2);
 
 // Vertex shader
 #if PR_RDR_SHADER_VS

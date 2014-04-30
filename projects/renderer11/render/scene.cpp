@@ -19,6 +19,7 @@ namespace pr
 			,m_render_steps()
 		{
 			m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
+			m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
 			//m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
 		}
 

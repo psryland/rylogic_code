@@ -43,7 +43,7 @@ namespace pr
 
 			// Create a custom shader object.
 			// Pass nulls for 'vsdesc', 'psdesc' if they're not needed
-			template <class ShaderType> pr::rdr::ShaderPtr CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name)
+			template <class ShaderType> RefPtr<ShaderType> CreateShader(RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name)
 			{
 				// Create a lambda for allocating the shader
 				ShaderAlex create = [&](pr::rdr::ShaderManager* mgr){ return pr::rdr::Allocator<ShaderType>(m_mem).New(mgr); };
