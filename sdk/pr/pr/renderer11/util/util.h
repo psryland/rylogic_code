@@ -12,6 +12,13 @@ namespace pr
 {
 	namespace rdr
 	{
+		// To<D3DCOLORVALUE>
+		template <typename TFrom> struct Convert<D3DCOLORVALUE,TFrom>
+		{
+			static D3DCOLORVALUE To(pr::Colour const& c) { D3DCOLORVALUE cv = {c.r, c.g, c.b, c.a}; return cv; }
+			static D3DCOLORVALUE To(pr::Colour32 c)      { return To((pr::Colour)c); }
+		};
+
 		// Make a RdrId from a pointer
 		template <typename T> RdrId MakeId(T const* ptr)
 		{

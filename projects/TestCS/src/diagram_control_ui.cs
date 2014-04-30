@@ -23,10 +23,10 @@ namespace TestCS
 
 			ClientSize = new Size(640,480);
 			
-			//var node1 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(1,1,0)};
-			//var node2 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(-1,-1,0)};
-			//m_diag.Elements.Add(node1);
-			//m_diag.Elements.Add(node2);
+			var node1 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(1,1,0)};
+			var node2 = new DiagramControl.BoxNode{Text = "Hello", Position = m4x4.Translation(-1,-1,0)};
+			m_diag.Elements.Add(node1);
+			m_diag.Elements.Add(node2);
 
 			//var connector1 = new DiagramControl.Connector(node1, node2);
 			//m_diag.Elements.Add(connector1);

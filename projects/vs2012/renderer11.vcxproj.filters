@@ -204,6 +204,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\image.h">
       <Filter>textures</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\text.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\text_manager.h">
+      <Filter>textures</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -313,6 +319,12 @@
     </ClCompile>
     <ClCompile Include="..\renderer11\render\render_step.cpp">
       <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\text.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\textures\text_manager.cpp">
+      <Filter>textures</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

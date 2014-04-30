@@ -150,6 +150,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\image.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\text.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h" />
@@ -167,6 +168,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\scene_view.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\sortkey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_manager.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\text_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\demo_scene.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\event_types.h" />
@@ -212,6 +214,7 @@
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp" />
     <ClCompile Include="..\renderer11\textures\dds_texture_loader.cpp" />
+    <ClCompile Include="..\renderer11\textures\text.cpp" />
     <ClCompile Include="..\renderer11\textures\texture2d.cpp" />
     <ClCompile Include="..\renderer11\models\model.cpp" />
     <ClCompile Include="..\renderer11\models\model_buffer.cpp" />
@@ -219,6 +222,7 @@
     <ClCompile Include="..\renderer11\render\renderer.cpp" />
     <ClCompile Include="..\renderer11\render\scene.cpp" />
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp" />
+    <ClCompile Include="..\renderer11\textures\text_manager.cpp" />
     <ClCompile Include="..\renderer11\textures\wic_texture_loader.cpp" />
     <ClCompile Include="..\renderer11\util\lock.cpp" />
     <ClCompile Include="..\renderer11\util\stdafx.cpp">

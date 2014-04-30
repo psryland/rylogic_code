@@ -11,6 +11,7 @@
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/textures/texture_manager.h"
+#include "pr/renderer11/textures/text_manager.h"
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/raster_state.h"
@@ -51,7 +52,7 @@ namespace pr
 				,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 				,m_adapter(0)
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(0)
+				,m_device_layers(D3D11_CREATE_DEVICE_BGRA_SUPPORT)
 				,m_feature_levels()
 				,m_vsync(1)
 				,m_allow_alt_enter(false)
@@ -74,6 +75,7 @@ namespace pr
 			RdrSettings                    m_settings;
 			D3D_FEATURE_LEVEL              m_feature_level;
 			D3DPtr<ID3D11Device>           m_device;
+			D3DPtr<ID3D10Device1>          m_device10_1;
 			D3DPtr<IDXGISwapChain>         m_swap_chain;
 			D3DPtr<ID3D11DeviceContext>    m_immediate;
 			D3DPtr<ID3D11RenderTargetView> m_main_rtv;
@@ -95,6 +97,7 @@ namespace pr
 		rdr::ModelManager       m_mdl_mgr;
 		rdr::ShaderManager      m_shdr_mgr;
 		rdr::TextureManager     m_tex_mgr;
+		rdr::TextManager        m_text_mgr;
 		rdr::BlendStateManager  m_bs_mgr;
 		rdr::DepthStateManager  m_ds_mgr;
 		rdr::RasterStateManager m_rs_mgr;
@@ -104,6 +107,7 @@ namespace pr
 
 		// Return the d3d device
 		D3DPtr<ID3D11Device> Device() const { return m_device; }
+		D3DPtr<ID3D10Device1> Device10_1() const { return m_device10_1; }
 
 		// Return the immediate device context
 		D3DPtr<ID3D11DeviceContext> ImmediateDC() const { return m_immediate; }

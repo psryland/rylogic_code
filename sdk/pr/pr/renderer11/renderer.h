@@ -64,6 +64,8 @@
 // Textures
 #include "pr/renderer11/textures/texture_manager.h"
 #include "pr/renderer11/textures/texture2d.h"
+#include "pr/renderer11/textures/text_manager.h"
+#include "pr/renderer11/textures/text.h"
 //#include "pr/renderer11/textures/video.h"
 
 // Lighting

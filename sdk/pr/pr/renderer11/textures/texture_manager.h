@@ -10,8 +10,8 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
+#include "pr/renderer11/textures/text_manager.h"
 #include "pr/renderer11/textures/texture2d.h"
-
 
 namespace pr
 {

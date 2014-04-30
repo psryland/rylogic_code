@@ -23,6 +23,9 @@
 #include <windows.h>
 #include <d3d11.h>
 #include <d3d11sdklayers.h>
+#include <d3d10_1.h>
+#include <d2d1.h>
+#include <dwrite.h>
 
 #include "pr/macros/link.h"
 #include "pr/macros/count_of.h"
@@ -51,6 +54,7 @@
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/common/new.h"
+#include "pr/common/to.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -136,6 +140,12 @@ namespace pr
 //		struct AllocPres;
 //		typedef pr::RefPtr<Video> VideoPtr;
 //		typedef pr::RefPtr<AllocPres> AllocPresPtr;
+
+		// Text
+		class TextManager;
+		struct Text;
+		typedef pr::RefPtr<IDWriteTextFormat> FontPtr;
+		typedef pr::RefPtr<IDWriteTextLayout> TextLayoutPtr;
 
 		// Models
 		class  ModelManager;

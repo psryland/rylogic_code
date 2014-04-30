@@ -58,8 +58,8 @@ namespace ldr
 		,m_origin_point()
 		,m_selection_box()
 		,m_bbox_model()
-		,m_test_point()
-		,m_test_point_enable(false)
+		,m_test_model()
+		,m_test_model_enable(false)
 	{
 		// Configure the lighting
 		m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light = m_settings.m_Light;
@@ -191,8 +191,20 @@ namespace ldr
 	{
 		try
 		{
-			std::string scene = pr::ldr::CreateDemoScene();
-			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+			using namespace pr::rdr;
+
+			DrawMethod mat;
+			mat.m_shader = m_rdr.m_shdr_mgr.FindShaderFor<VertPCNT>();
+			//mat.m_tex_diffuse = m_rdr.m_tex_mgr.FindTexture(EStockTexture::Checker);
+			mat.m_tex_diffuse = m_rdr.m_text_mgr.CreateText(L"Hello", pr::rdr::EFont::Gabriola);
+			mat.m_rsb = RSBlock::SolidCullNone();
+			auto model = ModelGenerator<>::Quad(m_rdr, 1, 1, pr::iv2Zero, pr::Colour32White, &mat);
+			m_test_model.m_model = model;
+			m_test_model_enable = true;
+			m_scene.RdrStep<ForwardRender>().m_rsb = RSBlock::SolidCullNone();
+
+			//std::string scene = pr::ldr::CreateDemoScene();
+			//pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 
 			//{// hack
 			//	pr::rdr::ProjectedTexture pt;
@@ -203,16 +215,6 @@ namespace ldr
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
-	}
-
-	// Test point methods
-	void Main::TestPoint_Enable(bool yes)
-	{
-		m_test_point_enable = yes;
-	}
-	void Main::TestPoint_SetPosition(pr::v4 const& pos)
-	{
-		m_test_point.m_i2w.pos = pos;
 	}
 
 	// Create stock models such as the focus point, origin, etc
@@ -288,8 +290,8 @@ namespace ldr
 		}
 		{
 			// Create a test point box model
-			m_test_point.m_model = pr::rdr::ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
-			m_test_point.m_i2w   = pr::m4x4Identity;
+			m_test_model.m_model = pr::rdr::ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
+			m_test_model.m_i2w   = pr::m4x4Identity;
 		}
 	}
 
@@ -337,8 +339,8 @@ namespace ldr
 			e.m_scene.AddInstance(m_origin_point);
 
 		// Render the test point
-		if (m_test_point_enable)
-			e.m_scene.AddInstance(m_test_point);
+		if (m_test_model_enable)
+			e.m_scene.AddInstance(m_test_model);
 
 		// Add instances from the store
 		for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)
