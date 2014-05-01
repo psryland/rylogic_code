@@ -69,7 +69,7 @@ namespace pr
 			bool                     m_done;      // Task complete flag
 			bool                     m_cancel;    // Cancel signalled flag
 			int                      m_result;    // Dialog result to return
-			std::exception           m_exception; // An exception throw by the task
+			std::exception_ptr       m_exception; // An exception throw by the task
 			bool                     m_shown;     // True when the dlg is visible
 			WTL::CStatic             m_lbl_desc;  // The progress description
 			WTL::CProgressBarCtrl    m_bar;       // The progress bar
@@ -264,7 +264,7 @@ namespace pr
 						Lock lock(m_mutex);
 						m_done = true;
 						m_result = IDABORT;
-						m_exception = ex;
+						m_exception = std::current_exception();
 						m_cv.notify_all();
 					}
 					catch (...)
@@ -296,7 +296,7 @@ namespace pr
 
 				// Return the result
 				if (m_result == IDABORT)
-					throw m_exception;
+					std::rethrow_exception(m_exception);
 
 				return m_result;
 			}
