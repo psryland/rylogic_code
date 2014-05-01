@@ -69,9 +69,9 @@ namespace pr
 	struct m3x4;
 	struct m4x4;
 	struct Quat;
-	struct BoundingBox;
+	struct BBox;
 	struct OrientedBox;
-	struct BoundingSphere;
+	struct BSphere;
 	struct Line3;
 	struct FRect;
 	struct IRect;

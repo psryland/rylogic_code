@@ -15,7 +15,7 @@ namespace sol
 		:AstronomicalBody
 	{
 		Star(pr::v4 const& position, float radius, float mass, pr::Renderer& rdr, wchar_t const* texture);
-		//void OnEvent(pr::rdr::Evt_SceneRender const& e);
+		//void OnEvent(pr::rdr::Evt_UpdateScene const& e) override;
 	};
 }
 

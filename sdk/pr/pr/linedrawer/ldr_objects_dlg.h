@@ -28,7 +28,7 @@ namespace pr
 		{
 			std::shared_ptr<ObjectManagerDlgImpl> m_dlg; // pImpl pattern
 			std::set<ContextId> m_ignore_ctxids;         // Context ids not to display in the object manager
-			mutable pr::BoundingBox m_scene_bbox;        // A cached bounding box of all objects we know about (lazy updated)
+			mutable pr::BBox m_scene_bbox;        // A cached bounding box of all objects we know about (lazy updated)
 
 			ObjectManagerDlg(ObjectManagerDlg const&);
 			ObjectManagerDlg& operator=(ObjectManagerDlg const&);
@@ -51,7 +51,7 @@ namespace pr
 			void IgnoreContextId(ContextId id, bool ignore);
 
 			// Return a bounding box of the objects
-			pr::BoundingBox GetBBox(EObjectBounds bbox_type) const;
+			pr::BBox GetBBox(EObjectBounds bbox_type) const;
 
 			// Get/Set settings for the object manager window
 			std::string Settings() const;
@@ -59,13 +59,13 @@ namespace pr
 
 		private:
 			// An object has been added to the data manager
-			void OnEvent(Evt_LdrObjectAdd const&);
+			void OnEvent(Evt_LdrObjectAdd const&) override;
 
 			// Empty the tree and list controls, all objects have been deleted
-			void OnEvent(Evt_DeleteAll const&);
+			void OnEvent(Evt_DeleteAll const&) override;
 
 			// Remove an object from the tree and list controls
-			void OnEvent(Evt_LdrObjectDelete const&);
+			void OnEvent(Evt_LdrObjectDelete const&) override;
 		};
 	}
 }

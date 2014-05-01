@@ -17,7 +17,7 @@ namespace pr
 	namespace rdr
 	{
 		// User provided callback function for binding a shader to the device context
-		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)> ShaderSetupFunc;
+		typedef std::function<void(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)> ShaderSetupFunc;
 
 		// Initialisation data for a shader
 		struct ShaderDesc
@@ -70,39 +70,48 @@ namespace pr
 		// This is kind of like an old school effect
 		struct BaseShader :pr::RefCount<BaseShader>
 		{
-			D3DPtr<ID3D11InputLayout>       m_iplayout;        // The input layout compatible with this shader
-			D3DPtr<ID3D11Buffer>            m_cbuf;            // Constant buffers used by the shader
-			D3DPtr<ID3D11VertexShader>      m_vs;              // The vertex shader (null if not used)
-			D3DPtr<ID3D11PixelShader>       m_ps;              // The pixel shader (null if not used)
-			D3DPtr<ID3D11GeometryShader>    m_gs;              // The geometry shader (null if not used)
-			D3DPtr<ID3D11HullShader>        m_hs;              // The hull shader (null if not used)
-			D3DPtr<ID3D11DomainShader>      m_ds;              // The domain shader (null if not used)
-			RdrId                           m_id;              // Id for this shader instance
-			EGeom                           m_geom_mask;       // The geometry type supported by this shader
-			ShaderManager*                  m_mgr;             // The shader manager that created this shader
-			SortKeyId                       m_sort_id;         // A key used to order shaders next to each other in the drawlist
-			ShaderSetupFunc                 m_setup_func;      // User provided callback for binding this shader to a device context
-			BSBlock                         m_bsb;             // The blend state for the shader
-			RSBlock                         m_rsb;             // The rasterizer state for the shader
-			DSBlock                         m_dsb;             // The depth buffering state for the shader
-			time_t                          m_last_modified;   // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
-			string32                        m_name;            // Human readable id for the texture
+			D3DPtr<ID3D11InputLayout>    m_iplayout;      // The input layout compatible with this shader
+			D3DPtr<ID3D11VertexShader>   m_vs;            // The vertex shader (null if not used)
+			D3DPtr<ID3D11PixelShader>    m_ps;            // The pixel shader (null if not used)
+			D3DPtr<ID3D11GeometryShader> m_gs;            // The geometry shader (null if not used)
+			D3DPtr<ID3D11HullShader>     m_hs;            // The hull shader (null if not used)
+			D3DPtr<ID3D11DomainShader>   m_ds;            // The domain shader (null if not used)
+			D3DPtr<ID3D11Buffer>         m_cbuf;          // Constant buffer used by the shader
+			RdrId                        m_id;            // Id for this shader instance
+			EGeom                        m_geom_mask;     // The geometry type supported by this shader
+			ShaderManager*               m_mgr;           // The shader manager that created this shader
+			SortKeyId                    m_sort_id;       // A key used to order shaders next to each other in the drawlist
+			ShaderSetupFunc              m_setup_func;    // User provided callback for binding this shader to a device context
+			BSBlock                      m_bsb;           // The blend state for the shader
+			RSBlock                      m_rsb;           // The rasterizer state for the shader
+			DSBlock                      m_dsb;           // The depth buffering state for the shader
+			mutable time_t               m_last_modified; // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
+			string32                     m_name;          // Human readable id for the texture
 
 			explicit BaseShader(ShaderManager* mgr);
 			virtual ~BaseShader() {}
-
-			// Bind the shader to the device context in preparation for rendering
-			void Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep);
 
 			// Ref counting cleanup function
 			static void RefCountZero(pr::RefCount<BaseShader>* doomed);
 
 		protected:
+
+			// 'Me' accessor from nugget
+			template <typename TShader>
+			static typename std::enable_if<std::is_base_of<BaseShader,TShader>::value, TShader>::type const&
+			Me(DrawListElement const& dle)
+			{
+				return *static_cast<TShader const*>(dle.m_shader);
+			}
+
 			// Use the shader manager 'CreateShader'
 			// factory method to create new shaders
 			friend struct Allocator<BaseShader>;
 			BaseShader();
 		};
+
+		// Bind the shader to the device context in preparation for rendering
+		void BindShader(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const* dle, RenderStep const& rstep);
 
 		//// A collection of shaders (kinda like an effect)
 		//// It's intended that this object be subclassed for more complex shaders

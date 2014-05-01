@@ -26,7 +26,7 @@ ShapeTriangle& ShapeTriangle::set(v4 const& a, v4 const& b, v4 const& c, const m
 }
 
 // Return the bounding box for a triangle
-BoundingBox& pr::ph::CalcBBox(ShapeTriangle const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(ShapeTriangle const& shape, BBox& bbox)
 {
 	bbox.reset();
 	Encompass(bbox, shape.m_v.x);

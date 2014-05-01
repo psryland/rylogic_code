@@ -25,15 +25,18 @@
     <headerName>%barefilename%.res.h</headerName>
     <includes>
         <include path="P:\sdk\wtl\v9.0\Include\" />
+        <include path="C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\" />
+        <include path="C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\atlmfc\include\" />
         <include path="d:\Program Files (x86)\Windows Kits\8.1\Include\um\" />
-        <include path="D:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include\" />
+        <include path="D:\Program Files (x86)\Windows Kits\8.1\Include\shared\" />
+        <include path="D:\Program Files (x86)\Windows Kits\8.1\Include\winrt\" />
     </includes>
     <display>
         <autoSaveLayout value="true" />
-        <maximized value="true" />
+        <maximized value="false" />
     </display>
     <codeGeneration>
-        <unicode support="true" macro="" />
+        <unicode support="true" macro="_WIN32" />
         <encoding value="0" />
         <defaultLanguage value="0" />
         <insertBom value="false" />
@@ -45,7 +48,7 @@
         <asmDefine value="false" />
         <dialogEx value="false" />
         <menuEx value="false" />
-        <askIncludes value="true" />
+        <askIncludes value="false" />
         <resourceHeader>
             <![CDATA[#define WINVER 0x0600
 

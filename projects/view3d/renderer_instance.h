@@ -75,9 +75,9 @@ namespace view3d
 		void CreateStockObjects();
 
 		// Event handlers
-		void OnEvent(pr::ldr::Evt_Refresh const&);
-		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&);
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&);
+		void OnEvent(pr::ldr::Evt_Refresh const&) override;
+		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override;
+		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
 	};
 }
 

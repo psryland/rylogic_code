@@ -184,7 +184,7 @@ namespace pr
 				}
 			}
 
-			BoundingBox bbox = BBoxReset;
+			BBox bbox = BBoxReset;
 			pr::Encompass(bbox, origin);
 			pr::Encompass(bbox, origin + quad_x + quad_z);
 

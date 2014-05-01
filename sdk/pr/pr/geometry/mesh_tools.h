@@ -61,10 +61,10 @@ namespace pr
 				}
 
 				// Calculate the bounding box for a mesh
-				inline pr::BoundingBox GetBoundingBox(pr::Mesh const& mesh)
+				inline pr::BBox GetBoundingBox(pr::Mesh const& mesh)
 				{
 					// Enclose all of the vertices
-					pr::BoundingBox bbox = pr::BBoxReset;
+					pr::BBox bbox = pr::BBoxReset;
 					for (pr::TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
 						pr::Encompass(bbox, v->m_vertex);
 					return bbox;
@@ -139,7 +139,7 @@ namespace pr
 		inline void GenerateNormals(pr::Mesh& mesh)	{ return impl::mesh_tools::GenerateNormals<void>(mesh); }
 
 		// Calculate the bounding box for a mesh
-		inline pr::BoundingBox GetBoundingBox(pr::Mesh const& mesh) { return impl::mesh_tools::GetBoundingBox(mesh); }
+		inline pr::BBox GetBoundingBox(pr::Mesh const& mesh) { return impl::mesh_tools::GetBoundingBox(mesh); }
 
 		// Modify a mesh to be just verts and faces, i.e remove redundant verts when texture coords are not needed
 		inline void ReduceMesh(pr::Mesh& mesh) { return impl::mesh_tools::ReduceMesh<void>(mesh); }

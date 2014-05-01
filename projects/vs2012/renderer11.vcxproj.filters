@@ -105,9 +105,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\drawlist_element.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\draw_method.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h">
       <Filter>shaders</Filter>
     </ClInclude>
@@ -328,54 +325,54 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\renderer11\shaders\common\functions.hlsl">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\uber.hlsl">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\uber_defines.hlsl">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\cbuffer.hlsl">
-      <Filter>shaders\common</Filter>
-    </None>
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
       <Filter>directxtex</Filter>
     </None>
     <None Include="..\..\script\BuildShader.py">
       <Filter>shaders</Filter>
     </None>
+    <None Include="..\renderer11\shaders\common\compression.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\functions.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\uber.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\uber_defines.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\common\dslighting_cbuf.hlsli">
+      <Filter>shaders\common</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.vs.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.vs.hlsl">
-      <Filter>shaders\shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.ps.hlsl">
-      <Filter>shaders\shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.vs.hlsl">
-      <Filter>shaders\shaders</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.ps.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\shaders\dslighting.hlsl">
       <Filter>shaders\shaders</Filter>
     </CustomBuild>
   </ItemGroup>

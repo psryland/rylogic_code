@@ -23,7 +23,7 @@ ShapeBox& ShapeBox::set(const v4& dim, const m4x4& shape_to_model, MaterialId ma
 }
 
 // Return the bounding box for a box
-BoundingBox& pr::ph::CalcBBox(const ShapeBox& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(const ShapeBox& shape, BBox& bbox)
 {
 	bbox.m_centre = v4Origin;
 	bbox.m_radius = shape.m_radius;
@@ -43,7 +43,6 @@ MassProperties& pr::ph::CalcMassProperties(const ShapeBox& shape, float density,
 	mp.m_os_inertia_tensor.z.z = (1.0f / 3.0f) * (shape.m_radius.y * shape.m_radius.y + shape.m_radius.x * shape.m_radius.x);	// (1/12)m(Y^2 + Z^2)
 	return mp;
 }
-
 
 // Shift the centre of a box
 void pr::ph::ShiftCentre(ShapeBox&, v4& shift)
@@ -88,7 +87,7 @@ v4 pr::ph::SupportVertex(ShapeBox const& shape, v4 const& direction, std::size_t
 //PHv4 phSupportVertex(const PHsphere& prim, PHv4ref direction, PHuint, PHuint& support_vertex_id)
 //{
 //	PHv4 dir; dir.getNormal3(direction);
-//	
+//
 //	// Generate an id for the vertex in this direction
 //	support_vertex_id =	(static_cast<PHuint>((dir[0] + 1.0f) * 0.5f * (1 << 4)) << 20) |
 //						(static_cast<PHuint>((dir[1] + 1.0f) * 0.5f * (1 << 4)) << 10) |

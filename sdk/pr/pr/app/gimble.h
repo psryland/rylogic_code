@@ -13,7 +13,7 @@ namespace pr
 	namespace app
 	{
 		// A gimble model
-		struct Gimble :pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		struct Gimble :pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		{
 			// A renderer instance type for the body
 			#define PR_RDR_INST(x)\
@@ -36,7 +36,7 @@ namespace pr
 			}
 
 			// Add the gimble to a viewport
-			void OnEvent(pr::rdr::Evt_SceneRender const& e)
+			void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 			{
 				pr::rdr::SceneView const& view = e.m_scene.m_view;
 				m_inst.m_i2w = pr::Scale4x4(m_scale, view.FocusPoint() + view.m_c2w * m_ofs_pos);
@@ -48,7 +48,9 @@ namespace pr
 			// Create a model for a 'gimble'
 			void InitModel(pr::Renderer& rdr)
 			{
-				pr::rdr::VertPC const verts[] =
+				using namespace pr::rdr;
+
+				VertPC const verts[] =
 				{
 					{{-0.1f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
 					{{ 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
@@ -63,15 +65,14 @@ namespace pr
 				};
 
 				// Create the gimble model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "gimble"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxMake(verts), "gimble"));
 
-				pr::rdr::DrawMethod method;
-
-				// Get a suitable shader
-				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPC>();
+				NuggetProps mat; // Get a suitable shader
+				mat.m_topo = EPrim::LineList;
+				mat.m_geom = VertPC::GeomMask;
 
 				// Create a render nugget
-				m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::LineList);
+				m_inst.m_model->CreateNugget(mat);
 			}
 		};
 	}

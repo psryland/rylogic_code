@@ -21,7 +21,7 @@ ShapeArray& ShapeArray::set(std::size_t num_shapes, std::size_t size_in_bytes, c
 
 // Calculate the bounding box for the shape.
 // Assumes child shape bounding boxes have been set already
-BoundingBox& pr::ph::CalcBBox(ShapeArray const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(ShapeArray const& shape, BBox& bbox)
 {
 	bbox.reset();
 	for( Shape const* i = shape.begin(), *i_end = shape.end(); i != i_end; i = pr::ph::Inc(i) )

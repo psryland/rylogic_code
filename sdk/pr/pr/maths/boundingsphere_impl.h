@@ -12,47 +12,47 @@
 namespace pr
 {
 	// Type methods
-	inline BoundingSphere  BoundingSphere::make(v4 const& centre, float radius)     { BoundingSphere s = {{centre.x, centre.y, centre.z, radius}}; return s; }
-	inline BoundingSphere& BoundingSphere::set(v4 const& centre, float radius)      { m_ctr_rad = centre; m_ctr_rad.w = radius; return *this; }
-	inline BoundingSphere& BoundingSphere::zero()                                   { m_ctr_rad = v4Zero; return *this; }
-	inline BoundingSphere& BoundingSphere::unit()                                   { m_ctr_rad = v4Origin; return *this; }
-	inline BoundingSphere& BoundingSphere::reset()                                  { m_ctr_rad = -v4Origin; return *this; }
-	inline bool            BoundingSphere::IsValid() const                          { return Volume(*this) >= 0.0f; }
-	inline v4              BoundingSphere::Centre() const                           { return m_ctr_rad.w1(); }
-	inline float           BoundingSphere::Radius() const                           { return m_ctr_rad.w; }
-	inline float           BoundingSphere::RadiusSq() const                         { return Sqr(m_ctr_rad.w); }
-	inline float           BoundingSphere::Diametre() const                         { return 2.0f * m_ctr_rad.w; }
-	inline float           BoundingSphere::DiametreSq() const                       { return Sqr(Diametre()); }
+	inline BSphere  BSphere::make(v4 const& centre, float radius)     { BSphere s = {{centre.x, centre.y, centre.z, radius}}; return s; }
+	inline BSphere& BSphere::set(v4 const& centre, float radius)      { m_ctr_rad = centre; m_ctr_rad.w = radius; return *this; }
+	inline BSphere& BSphere::zero()                                   { m_ctr_rad = v4Zero; return *this; }
+	inline BSphere& BSphere::unit()                                   { m_ctr_rad = v4Origin; return *this; }
+	inline BSphere& BSphere::reset()                                  { m_ctr_rad = -v4Origin; return *this; }
+	inline bool     BSphere::IsValid() const                          { return Volume(*this) >= 0.0f; }
+	inline v4       BSphere::Centre() const                           { return m_ctr_rad.w1(); }
+	inline float    BSphere::Radius() const                           { return m_ctr_rad.w; }
+	inline float    BSphere::RadiusSq() const                         { return Sqr(m_ctr_rad.w); }
+	inline float    BSphere::Diametre() const                         { return 2.0f * m_ctr_rad.w; }
+	inline float    BSphere::DiametreSq() const                       { return Sqr(Diametre()); }
 
 	// Assignment operators
-	inline BoundingSphere& operator += (BoundingSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad += offset; return lhs; }
-	inline BoundingSphere& operator -= (BoundingSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad -= offset; return lhs; }
-	inline BoundingSphere& operator *= (BoundingSphere& lhs, float s)               { lhs.m_ctr_rad.w *= s; return lhs; }
-	inline BoundingSphere& operator /= (BoundingSphere& lhs, float s)               { lhs *= (1.0f / s); return lhs; }
+	inline BSphere& operator += (BSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad += offset; return lhs; }
+	inline BSphere& operator -= (BSphere& lhs, v4 const& offset)      { assert(offset.w == 0.0f); lhs.m_ctr_rad -= offset; return lhs; }
+	inline BSphere& operator *= (BSphere& lhs, float s)               { lhs.m_ctr_rad.w *= s; return lhs; }
+	inline BSphere& operator /= (BSphere& lhs, float s)               { lhs *= (1.0f / s); return lhs; }
 
 	// Binary operators
-	inline BoundingSphere operator + (BoundingSphere const& bsph, v4 const& offset) { BoundingSphere bs = bsph; return bs += offset; }
-	inline BoundingSphere operator - (BoundingSphere const& bsph, v4 const& offset) { BoundingSphere bs = bsph; return bs -= offset; }
-	inline BoundingSphere operator * (BoundingSphere const& bsph, float s)          { BoundingSphere bs = bsph; return bs *= s; }
-	inline BoundingSphere operator * (float s, BoundingSphere const& bsph)          { BoundingSphere bs = bsph; return bs *= s; }
-	inline BoundingSphere operator * (m4x4 const& m, BoundingSphere const& bsph)    { BoundingSphere bs; bs.m_ctr_rad = m * bsph.Centre(); bs.m_ctr_rad.w = bsph.m_ctr_rad.w; return bs; }
+	inline BSphere operator + (BSphere const& bsph, v4 const& offset) { BSphere bs = bsph; return bs += offset; }
+	inline BSphere operator - (BSphere const& bsph, v4 const& offset) { BSphere bs = bsph; return bs -= offset; }
+	inline BSphere operator * (BSphere const& bsph, float s)          { BSphere bs = bsph; return bs *= s; }
+	inline BSphere operator * (float s, BSphere const& bsph)          { BSphere bs = bsph; return bs *= s; }
+	inline BSphere operator * (m4x4 const& m, BSphere const& bsph)    { BSphere bs; bs.m_ctr_rad = m * bsph.Centre(); bs.m_ctr_rad.w = bsph.m_ctr_rad.w; return bs; }
 
 	// Equality operators
-	inline bool operator == (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (BoundingSphere const& lhs, BoundingSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	inline bool operator == (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+	inline bool operator != (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+	inline bool operator <  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+	inline bool operator >  (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+	inline bool operator <= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+	inline bool operator >= (BSphere const& lhs, BSphere const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
 	// Functions
-	inline float Volume(BoundingSphere const& bsph)
+	inline float Volume(BSphere const& bsph)
 	{
 		return 4.188790f * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w * bsph.m_ctr_rad.w; // (4/3)*pi*r^3
 	}
 
 	// Encompass 'point' within 'bsphere' and re-centre the centre point.
-	inline BoundingSphere& Encompass(BoundingSphere& bsphere, v4 const& point)
+	inline BSphere& Encompass(BSphere& bsphere, v4 const& point)
 	{
 		if (bsphere.Radius() < 0.0f) { bsphere.m_ctr_rad.set(point.x, point.y, point.z, 0.0f); return bsphere; }
 
@@ -65,14 +65,14 @@ namespace pr
 		bsphere.m_ctr_rad.w = new_radius;
 		return bsphere;
 	}
-	inline BoundingSphere Encompass(BoundingSphere const& bsphere, v4 const& point)
+	inline BSphere Encompass(BSphere const& bsphere, v4 const& point)
 	{
-		BoundingSphere bsph = bsphere;
+		BSphere bsph = bsphere;
 		return Encompass(bsph, point);
 	}
 
 	// Encompass 'rhs' in 'lhs' and re-centre the centre point
-	inline BoundingSphere& Encompass(BoundingSphere& lhs, BoundingSphere const& rhs)
+	inline BSphere& Encompass(BSphere& lhs, BSphere const& rhs)
 	{
 		if (lhs.Radius() < 0.0f) { lhs = rhs; return lhs; }
 
@@ -84,14 +84,14 @@ namespace pr
 		lhs.m_ctr_rad.w = new_radius;
 		return lhs;
 	}
-	inline BoundingSphere Encompass(BoundingSphere const& lhs, BoundingSphere const& rhs)
+	inline BSphere Encompass(BSphere const& lhs, BSphere const& rhs)
 	{
-		BoundingSphere bsph = lhs;
+		BSphere bsph = lhs;
 		return Encompass(bsph, rhs);
 	}
 
 	// Encompass 'point' within 'bsphere' without moving the centre point.
-	inline BoundingSphere& EncompassLoose(BoundingSphere& bsphere, v4 const& point)
+	inline BSphere& EncompassLoose(BSphere& bsphere, v4 const& point)
 	{
 		if (bsphere.m_ctr_rad.w < 0.0f) { bsphere.m_ctr_rad.set(point.x, point.y, point.z, 0.0f); return bsphere; }
 
@@ -100,14 +100,14 @@ namespace pr
 		bsphere.m_ctr_rad.w = pr::Sqrt(len_sq);
 		return bsphere;
 	}
-	inline BoundingSphere EncompassLoose(BoundingSphere const& bsphere, v4 const& point)
+	inline BSphere EncompassLoose(BSphere const& bsphere, v4 const& point)
 	{
-		BoundingSphere bsph = bsphere;
+		BSphere bsph = bsphere;
 		return EncompassLoose(bsph, point);
 	}
 
 	// Encompass 'rhs' in 'lhs' without moving the centre point
-	inline BoundingSphere& EncompassLoose(BoundingSphere& lhs, BoundingSphere const& rhs)
+	inline BSphere& EncompassLoose(BSphere& lhs, BSphere const& rhs)
 	{
 		if (lhs.Radius() < 0.0f) { lhs = rhs; return lhs; }
 
@@ -116,24 +116,24 @@ namespace pr
 		lhs.m_ctr_rad.w = new_radius;
 		return lhs;
 	}
-	inline BoundingSphere EncompassLoose(BoundingSphere const& lhs, BoundingSphere const& rhs)
+	inline BSphere EncompassLoose(BSphere const& lhs, BSphere const& rhs)
 	{
-		BoundingSphere bsph = lhs;
+		BSphere bsph = lhs;
 		return EncompassLoose(bsph, rhs);
 	}
 
 	// Return true if 'point' is within the bounding sphere
-	inline bool IsWithin(BoundingSphere const& bsphere, v4 const& point)
+	inline bool IsWithin(BSphere const& bsphere, v4 const& point)
 	{
 		return Length3Sq(point - bsphere.Centre()) < bsphere.RadiusSq();
 	}
-	inline bool IsWithin(BoundingSphere const& bsphere, BoundingSphere const& test)
+	inline bool IsWithin(BSphere const& bsphere, BSphere const& test)
 	{
 		return Length3(test.Centre() - bsphere.Centre()) + test.Radius() < bsphere.Radius();
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool IsIntersection(BoundingSphere const& lhs, BoundingSphere const& rhs)
+	inline bool IsIntersection(BSphere const& lhs, BSphere const& rhs)
 	{
 		return Length3(rhs.Centre() - lhs.Centre()) < lhs.Radius() + rhs.Radius();
 	}

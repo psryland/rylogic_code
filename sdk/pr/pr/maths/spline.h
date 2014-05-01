@@ -246,13 +246,13 @@ namespace pr
 	// Random infinite spline within a bounding box
 	struct RandSpline :pr::Spline
 	{
-		pr::Spline      m_next;
-		pr::BoundingBox m_bbox;
-		pr::Rnd         m_rng;
-		pr::uint        m_seed;
-		float           m_clock;  // The current 'time' along the spline [0,1)
+		pr::Spline m_next;
+		pr::BBox   m_bbox;
+		pr::Rnd    m_rng;
+		pr::uint   m_seed;
+		float      m_clock;  // The current 'time' along the spline [0,1)
 
-		RandSpline(pr::BoundingBox const& bbox = pr::BBoxUnit, pr::uint seed = 1)
+		RandSpline(pr::BBox const& bbox = pr::BBoxUnit, pr::uint seed = 1)
 		:m_next()
 		,m_bbox(bbox)
 		,m_rng()

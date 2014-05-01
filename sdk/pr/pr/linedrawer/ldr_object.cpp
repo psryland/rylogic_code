@@ -598,7 +598,7 @@ namespace pr
 		struct IObjectCreatorTexture :IObjectCreator
 		{
 			pr::rdr::Texture2DPtr m_texture;
-			pr::rdr::DrawMethod m_local_mat;
+			pr::rdr::NuggetProps m_local_mat;
 
 			IObjectCreatorTexture() :m_texture() ,m_local_mat() {}
 			bool ParseKeyword(ParseParams& p, HashValue kw) override
@@ -609,13 +609,13 @@ namespace pr
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
-			pr::rdr::DrawMethod* GetDrawMethod(ParseParams& p)
+			pr::rdr::NuggetProps* GetDrawData(ParseParams& p)
 			{
 				// If a texture was given create a material that uses it
 				if (!m_texture)
 					return nullptr;
 
-				m_local_mat = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>();
+				m_local_mat.m_shader = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>().m_ptr;
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);
@@ -780,6 +780,31 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::Grid
+		template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreatorLine
+		{
+			void Parse(ParseParams& p) override
+			{
+				int axis_id;
+				pr::v2 dim, div;
+				p.m_reader.ExtractInt(axis_id, 10);
+				p.m_reader.ExtractVector2(dim);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) div = dim; else p.m_reader.ExtractVector2(div);
+
+				pr::v2 step = dim / div;
+				for (float i = -dim.x/2; i <= dim.x/2; i += step.x)
+				{
+					m_point.push_back(pr::v4::make(i,-dim.y/2, 0, 1));
+					m_point.push_back(pr::v4::make(i, dim.y/2, 0, 1));
+				}
+				for (float i = -dim.y/2; i <= dim.y/2; i += step.y)
+				{
+					m_point.push_back(pr::v4::make(-dim.x/2, i, 0, 1));
+					m_point.push_back(pr::v4::make( dim.x/2, i, 0, 1));
+				}
+			}
+		};
+
 		// ELdrObject::Spline
 		template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreatorLine
 		{
@@ -863,7 +888,7 @@ namespace pr
 					return nullptr;
 				}
 
-				pr::BoundingBox bbox;
+				pr::BBox bbox;
 				GenerateShape(bbox);
 
 				// Permute the verts, normals, and bbox
@@ -875,7 +900,7 @@ namespace pr
 				// Create the model
 				ModelPtr model;
 				if (m_solid)
-					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawMethod(p));
+					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData(p));
 				else
 					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data());
 
@@ -883,7 +908,7 @@ namespace pr
 				model->m_name = name;
 				return model;
 			}
-			virtual void GenerateShape(pr::BoundingBox& bbox) = 0;
+			virtual void GenerateShape(pr::BBox& bbox) = 0;
 		};
 
 		// ELdrObject::Circle
@@ -895,7 +920,7 @@ namespace pr
 				p.m_reader.ExtractReal(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 			}
-			void GenerateShape(pr::BoundingBox& bbox) override
+			void GenerateShape(pr::BBox& bbox) override
 			{
 				m_facets = std::max(m_facets, 3);
 
@@ -977,7 +1002,7 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 				m_dim *= 0.5f;
 			}
-			void GenerateShape(pr::BoundingBox& bbox) override
+			void GenerateShape(pr::BBox& bbox) override
 			{
 				// Limit the rounding to half the smallest rectangle side length
 				auto rad = m_corner_radius;
@@ -1091,7 +1116,7 @@ namespace pr
 				}
 
 				// Create the model
-				ModelPtr model = ModelGenerator<>::Quad(p.m_rdr, m_point.size()/4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawMethod(p));
+				ModelPtr model = ModelGenerator<>::Quad(p.m_rdr, m_point.size()/4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1183,7 +1208,7 @@ namespace pr
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, pr::m4x4Identity, pr::Colour32White, GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, pr::m4x4Identity, pr::Colour32White, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1217,7 +1242,7 @@ namespace pr
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, m_b2w, pr::Colour32White, GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, m_b2w, pr::Colour32White, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1249,7 +1274,7 @@ namespace pr
 				}
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1264,7 +1289,7 @@ namespace pr
 			IObjectCreatorCuboid() :m_pt() ,m_b2w(pr::m4x4Identity) {}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1367,7 +1392,7 @@ namespace pr
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1409,7 +1434,7 @@ namespace pr
 				}
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawMethod(p));
+				auto model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1579,7 +1604,7 @@ namespace pr
 					m_normals.size(),
 					m_normals.data(),
 					m_texs.data(),
-					GetDrawMethod(p));
+					GetDrawData(p));
 				model->m_name = name;
 				return model;
 			}
@@ -1762,6 +1787,7 @@ namespace pr
 			case ELdrObject::LineD:        Parse<ELdrObject::LineD>     (p); break;
 			case ELdrObject::LineList:     Parse<ELdrObject::LineList>  (p); break;
 			case ELdrObject::LineBox:      Parse<ELdrObject::LineBox>   (p); break;
+			case ELdrObject::Grid:         Parse<ELdrObject::Grid>      (p); break;
 			case ELdrObject::Spline:       Parse<ELdrObject::Spline>    (p); break;
 			case ELdrObject::Circle:       Parse<ELdrObject::Circle>    (p); break;
 			case ELdrObject::Rect:         Parse<ELdrObject::Rect>      (p); break;
@@ -1905,7 +1931,7 @@ namespace pr
 		LdrObjectPtr Add(
 			pr::Renderer& rdr,
 			ObjectAttributes attr,
-			pr::rdr::EPrim prim_type,
+			pr::rdr::EPrim topo,
 			int icount,
 			int vcount,
 			pr::uint16 const* indices,
@@ -1924,11 +1950,9 @@ namespace pr
 			if (colours)    geom_type |= pr::rdr::EGeom::Colr;
 			if (tex_coords) geom_type |= pr::rdr::EGeom::Tex0;
 
-			// Create a tint material
-			pr::rdr::DrawMethod mat = rdr.m_shdr_mgr.FindShaderFor(geom_type);
-
 			// Create the model
-			obj->m_model = pr::rdr::ModelGenerator<>::Mesh(rdr, prim_type, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
+			pr::rdr::NuggetProps mat(topo, geom_type, rdr.m_shdr_mgr.FindShaderFor(geom_type).m_ptr);
+			obj->m_model = pr::rdr::ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
 			obj->m_model->m_name = obj->TypeAndName();
 			pr::events::Send(Evt_LdrObjectAdd(obj));
 			return obj;
@@ -2190,6 +2214,14 @@ R"(
 *LineBox linebox
 {
 	2 4 1 // Width, height, depth. Accepts 1, 2, or 3 dimensions. 1dim = cube, 2 = rod, 3 = arbitrary box
+}
+
+// A grid of lines
+*Grid grid FFA08080
+{
+	3      // axis_id
+	4 5    // width, height
+	8 10   // Optional, w,h divisions. If omitted defaults to width/height
 }
 
 // A curve described by a start and end point and two control points

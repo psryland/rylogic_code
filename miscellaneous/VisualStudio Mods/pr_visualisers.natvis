@@ -107,7 +107,10 @@
 	<Type Name="pr::rdr::BaseShader">
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
-	
+	<Type Name="pr::rdr::Model">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+
 	<!-- Console -->
 	<Type Name="pr::console::Coord">
 		<DisplayString>{X},{Y}</DisplayString>
@@ -119,5 +122,10 @@
 	<!-- Elements -->
 	<Type Name="ele::Element">
 		<DisplayString>{m_name->m_fullname}</DisplayString>
+	</Type>
+	
+	<!-- Misc -->
+	<Type Name="pr::quad_tree::Coord">
+		<DisplayString>Lvl:{m_level} {m_x}x{m_y}</DisplayString>
 	</Type>
 </AutoVisualizer>

@@ -29,65 +29,67 @@ namespace pr
 		EBBoxPlane_NumberOf = 6
 	};
 
-	struct BoundingBox
+	struct BBox
 	{
 		v4 m_centre;
 		v4 m_radius;
 
-		static BoundingBox make(v4 const& centre, v4 const& radius);
-		BoundingBox&       reset();
-		BoundingBox&       unit();
-		BoundingBox&       set(v4 const& centre, v4 const& radius);
-		bool               IsValid() const;
-		v4                 Lower() const;
-		v4                 Upper() const;
-		float              Lower(int axis) const;
-		float              Upper(int axis) const;
-		float              SizeX() const;
-		float              SizeY() const;
-		float              SizeZ() const;
-		v4 const&          Centre() const;
-		v4 const&          Radius() const;
-		float              DiametreSq() const;
-		float              Diametre() const;
+		static BBox make(v4 const& centre, v4 const& radius);
+		BBox&       reset();
+		BBox&       unit();
+		BBox&       set(v4 const& centre, v4 const& radius);
+		bool        IsValid() const;
+		v4          Lower() const;
+		v4          Upper() const;
+		float       Lower(int axis) const;
+		float       Upper(int axis) const;
+		float       SizeX() const;
+		float       SizeY() const;
+		float       SizeZ() const;
+		v4 const&   Centre() const;
+		v4 const&   Radius() const;
+		float       DiametreSq() const;
+		float       Diametre() const;
 	};
 
-	BoundingBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
-	BoundingBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
+	BBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
+	BBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
 
 	// Assignment operators
-	BoundingBox& operator += (BoundingBox& lhs, v4 const& offset);
-	BoundingBox& operator -= (BoundingBox& lhs, v4 const& offset);
-	BoundingBox& operator *= (BoundingBox& lhs, float s);
-	BoundingBox& operator /= (BoundingBox& lhs, float s);
+	BBox& operator += (BBox& lhs, v4 const& offset);
+	BBox& operator -= (BBox& lhs, v4 const& offset);
+	BBox& operator *= (BBox& lhs, float s);
+	BBox& operator /= (BBox& lhs, float s);
 
 	// Binary operators
-	BoundingBox operator + (BoundingBox const& bb, v4 const& offset);
-	BoundingBox operator - (BoundingBox const& bb, v4 const& offset);
-	BoundingBox operator * (const m4x4& m, BoundingBox const& bb);
+	BBox operator + (BBox const& bb, v4 const& offset);
+	BBox operator - (BBox const& bb, v4 const& offset);
+	BBox operator * (const m4x4& m, BBox const& bb);
 
 	// Equality operators
-	bool operator == (BoundingBox const& lhs, BoundingBox const& rhs);
-	bool operator != (BoundingBox const& lhs, BoundingBox const& rhs);
-	bool operator <  (BoundingBox const& lhs, BoundingBox const& rhs);
-	bool operator >  (BoundingBox const& lhs, BoundingBox const& rhs);
-	bool operator <= (BoundingBox const& lhs, BoundingBox const& rhs);
-	bool operator >= (BoundingBox const& lhs, BoundingBox const& rhs);
+	bool operator == (BBox const& lhs, BBox const& rhs);
+	bool operator != (BBox const& lhs, BBox const& rhs);
+	bool operator <  (BBox const& lhs, BBox const& rhs);
+	bool operator >  (BBox const& lhs, BBox const& rhs);
+	bool operator <= (BBox const& lhs, BBox const& rhs);
+	bool operator >= (BBox const& lhs, BBox const& rhs);
+
+	template <typename VertCont> BBox BBoxMake(VertCont const& verts);
 
 	// Functions
-	float			Volume(BoundingBox const& bbox);
-	Plane			GetPlane(BoundingBox const& bbox, EBBoxPlane side);
-	v4				GetCorner(BoundingBox const& bbox, uint corner);
-	BoundingSphere	GetBoundingSphere(BoundingBox const& bbox);
-	BoundingBox&	Encompass(BoundingBox& bbox, v4 const& point);
-	BoundingBox		Encompass(BoundingBox const& bbox, v4 const& point);
-	BoundingBox&	Encompass(BoundingBox& lhs, BoundingBox const& rhs);
-	BoundingBox		Encompass(BoundingBox const& lhs, BoundingBox const& rhs);
-	bool			IsWithin(BoundingBox const& bbox, v4 const& point, float tol);
-	bool			IsWithin(BoundingBox const& bbox, BoundingBox const& test);
-	bool			IsIntersection(BoundingBox const& bbox, Line3 const& line);
-	bool			IsIntersection(BoundingBox const& bbox, Plane const& plane);
-	bool			IsIntersection(BoundingBox const& lhs, BoundingBox const& rhs);
+	float			Volume(BBox const& bbox);
+	Plane			GetPlane(BBox const& bbox, EBBoxPlane side);
+	v4				GetCorner(BBox const& bbox, uint corner);
+	BSphere	GetBoundingSphere(BBox const& bbox);
+	BBox&	Encompass(BBox& bbox, v4 const& point);
+	BBox		Encompass(BBox const& bbox, v4 const& point);
+	BBox&	Encompass(BBox& lhs, BBox const& rhs);
+	BBox		Encompass(BBox const& lhs, BBox const& rhs);
+	bool			IsWithin(BBox const& bbox, v4 const& point, float tol);
+	bool			IsWithin(BBox const& bbox, BBox const& test);
+	bool			IsIntersection(BBox const& bbox, Line3 const& line);
+	bool			IsIntersection(BBox const& bbox, Plane const& plane);
+	bool			IsIntersection(BBox const& lhs, BBox const& rhs);
 }
 
 #endif

@@ -3,8 +3,6 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_FORWARD_H
-#define PR_RDR_FORWARD_H
 
 #include "pr/common/min_max_fix.h"
 
@@ -151,6 +149,7 @@ namespace pr
 		class  ModelManager;
 		struct ModelBuffer;
 		struct Model;
+		struct NuggetProps;
 		struct Nugget;
 		struct VertP;
 		struct VertPC;
@@ -168,9 +167,11 @@ namespace pr
 		struct SceneView;
 		struct Scene;
 		struct RenderStep;
+		struct GBufferCreate;
+		struct DSLightingPass;
 		struct ForwardRender;
 		struct Stereo;
-		struct DrawMethod;
+		struct DrawData;
 		struct DrawListElement;
 		typedef std::shared_ptr<RenderStep> RenderStepPtr;
 
@@ -206,7 +207,9 @@ namespace pr
 
 		// Ids for render steps
 		#define PR_ENUM(x)\
-			x(ForwardRender)
+			x(ForwardRender)\
+			x(GBufferCreate)\
+			x(DeferredShading)
 		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
@@ -215,16 +218,6 @@ namespace pr
 			x(FrameConstants)\
 			x(ModelConstants)
 		PR_DEFINE_ENUM1(EConstBuf, PR_ENUM);
-		#undef PR_ENUM
-
-		// EShader
-		#define PR_ENUM(x)\
-			x(TxTint         )\
-			x(TxTintPvc      )\
-			x(TxTintTex      )\
-			x(TxTintPvcLit   )\
-			x(TxTintPvcLitTex)
-		PR_DEFINE_ENUM1(EShader, PR_ENUM);
 		#undef PR_ENUM
 
 		// ETexAddrMode
@@ -317,6 +310,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

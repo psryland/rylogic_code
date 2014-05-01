@@ -13,7 +13,7 @@ namespace pr
 	namespace app
 	{
 		// A base class for a skybox
-		struct Skybox :pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		struct Skybox :pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		{
 			// Skybox styles - implies texture organisation as well
 			enum Style
@@ -68,9 +68,9 @@ namespace pr
 			}
 
 			// Add the skybox to a viewport
-			void OnEvent(pr::rdr::Evt_SceneRender const& e)
+			void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 			{
-				pr::rdr::SceneView const& view = e.m_scene.m_view;
+				auto& view = e.m_scene.m_view;
 				m_inst.m_i2w = m_i2w;
 				m_inst.m_i2w.pos = view.m_c2w.pos;
 				e.m_scene.AddInstance(m_inst);
@@ -81,21 +81,24 @@ namespace pr
 			// Create a model for a geosphere skybox
 			void InitGeosphere(pr::Renderer& rdr, wstring const& texpath)
 			{
-				// Create a material for the skybox
-				pr::rdr::DrawMethod method;
-				method.m_shader      = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
-				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::WrapSampler(), texpath.c_str());
-				method.m_rsb         = pr::rdr::RSBlock::SolidCullFront();
+				using namespace pr::rdr;
+
+				// Model nugget properties for the skybox
+				NuggetProps ddata;
+				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearWrap(), texpath.c_str());
+				ddata.m_rsb = RSBlock::SolidCullFront();
 
 				// Create the skybox model
-				m_inst.m_model = pr::rdr::ModelGenerator<pr::rdr::VertPT>::Geosphere(rdr, 1.0f, 3, Colour32White, &method);
+				m_inst.m_model = ModelGenerator<VertPT>::Geosphere(rdr, 1.0f, 3, Colour32White, &ddata);
 			}
 
 			// Create a model for a 5-sided cubic dome
 			void InitFiveSidedCube(pr::Renderer& rdr, wstring const& texpath)
 			{
+				using namespace pr::rdr;
+
 				float const s = 0.5f;
-				pr::rdr::VertPT const verts[] =
+				VertPT const verts[] =
 				{
 					{{-s,  s,  s}, { 0.25f, 0.25f}}, //0
 					{{-s,  s, -s}, { 0.25f, 0.75f}}, //1
@@ -120,26 +123,21 @@ namespace pr
 				};
 
 				// Create the skybox model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "skybox"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "skybox"));
 
-				// Create the render nuggets for the skybox
-				pr::rdr::DrawMethod method;
-
-				// Get a suitable shader
-				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
-
-				// Load the skybox texture
-				method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::ClampSampler(), texpath.c_str());
-
-				// Create the render nugget
-				m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::TriList);
+				// Create a model nugget for the skybox
+				NuggetProps ddata(EPrim::TriList, VertPT::GeomMask, rdr.m_shdr_mgr.FindShaderFor(VertPT::GeomMask).m_ptr);
+				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), texpath.c_str());
+				m_inst.m_model->CreateNugget(ddata);
 			}
 
 			// Create a model for a 6-sided cube
 			void InitSixSidedCube(pr::Renderer& rdr, wstring const& texpath)
 			{
+				using namespace pr::rdr;
+
 				float const s = 0.5f, t0 = 0.0f, t1 = 1.0f;
-				pr::rdr::VertPT const verts[] =
+				VertPT const verts[] =
 				{
 					{{+s, +s, -s}, {t0, t0}}, //  0 // +X
 					{{+s, -s, -s}, {t0, t1}}, //  1
@@ -177,13 +175,10 @@ namespace pr
 				};
 
 				// Create the skybox model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "skybox"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "skybox"));
 
-				// Create the render nuggets for the skybox
-				pr::rdr::DrawMethod method;
-
-				// Get a shader suitable for drawing skybox
-				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPT>();
+				// Create the model nuggets for the skybox
+				NuggetProps ddata(EPrim::TriList, VertPT::GeomMask);
 
 				// One texture per nugget
 				wstring tpath = texpath;
@@ -195,12 +190,12 @@ namespace pr
 					// Load the texture for this face of the skybox
 					tpath[ofs+0] = axes[i][0];
 					tpath[ofs+1] = axes[i][1];
-					method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::ClampSampler(), tpath.c_str());
+					ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), tpath.c_str());
 
 					// Create the render nugget for this face of the skybox
-					pr::rdr::Range vrange = pr::rdr::Range::make(i*4, (i+1)*4);
-					pr::rdr::Range irange = pr::rdr::Range::make(i*6, (i+1)*6);
-					m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::TriList, &vrange, &irange);
+					rdr::Range vrange = rdr::Range::make(i*4, (i+1)*4);
+					rdr::Range irange = rdr::Range::make(i*6, (i+1)*6);
+					m_inst.m_model->CreateNugget(ddata, &vrange, &irange);
 				}
 			}
 		};

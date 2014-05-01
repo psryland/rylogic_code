@@ -84,7 +84,10 @@ namespace pr
 			typename UserSettings,
 			typename MainGUI
 		>
-		struct Main :pr::AlignTo<16>
+		struct Main
+			:pr::AlignTo<16>
+			,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
+			,pr::events::IRecv<pr::rdr::Evt_RenderStepExecute>
 		{
 			// Define this type as base as a helper for derived type constructors
 			// so they can call: MyType(...) :base(..) {}
@@ -107,11 +110,6 @@ namespace pr
 				,m_gui(gui)
 				,m_rdr_pending(false)
 			{
-				// Setup a simple default scene
-				// Derived apps will override this
-				m_scene.RdrStep<pr::rdr::ForwardRender>().m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
-				m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light.m_on = true;
-
 				// Position the camera
 				m_cam.Aspect(1.0f);
 				m_cam.FovY(pr::maths::tau_by_8);
@@ -119,7 +117,6 @@ namespace pr
 					pr::v4::make(0, 0, 1.0f / (float)tan(m_cam.m_fovY/2.0f), 1.0f),
 					pr::v4Origin,
 					pr::v4YAxis, true);
-				//m_view0.CameraToWorld(m_cam.CameraToWorld());
 			}
 
 			virtual ~Main()
@@ -180,6 +177,24 @@ namespace pr
 
 				// Show the result
 				m_rdr.Present();
+			}
+
+		protected:
+
+			// Pre-scene render.  Setup a simple default scene. Derived apps will override this
+			void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
+			{
+				auto fr = e.m_scene.FindRStep<pr::rdr::ForwardRender>();
+				if (fr != nullptr)
+				{
+					fr->m_background_colour.set(0.5f,0.5f,0.5f,1.0f);
+					fr->m_global_light.m_on = true;
+				}
+				e.m_scene.SetView(m_cam);
+			}
+			void OnEvent(pr::rdr::Evt_RenderStepExecute const&) override
+			{
+				// Inherited as most apps will use this event
 			}
 
 		private:

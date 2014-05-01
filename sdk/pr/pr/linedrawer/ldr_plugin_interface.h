@@ -58,7 +58,7 @@ LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::Object
 //Import	pr::m4x4				ldrGetCameraToWorld			();
 //Import	pr::ldr::CameraData		ldrGetCameraData			();
 //Import	pr::v4					ldrScreenToWorld			(pr::v4 ss_position);
-//Import	void					ldrView						(const pr::BoundingBox& bbox);
+//Import	void					ldrView						(const pr::BBox& bbox);
 //Import	void					ldrViewAll					();
 // Functions implemented by linedrawer *************************************************
 
