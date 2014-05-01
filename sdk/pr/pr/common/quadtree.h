@@ -75,7 +75,7 @@ namespace pr
 		// e.g level 0 = [0,1), level 1 = [0,2), level 4 = [0, 8), etc
 		static size_t MaxIndex(size_t level)
 		{
-			return 1U << level;
+			return size_t(1) << level;
 		}
 
 		// Returns the level in the quad tree for an item bounded by 'radius'.
@@ -153,10 +153,10 @@ namespace pr
 			if (pt[0] < 0.0f || pt[0] >= m_sizex || pt[1] < 0.0f || pt[1] >= m_sizey)
 			{
 				float xdist = 0.0f, ydist = 0.0f;
-				if (pt[0] < 0.0f)     { xdist = -pt[0] + radius;           x = 0;                   }
-				if (pt[0] >= m_sizex) { xdist =  pt[0] - m_sizex + radius; x = MaxIndex(level) - 1; }
-				if (pt[1] < 0.0f)     { ydist = -pt[1] + radius;           y = 0;                   }
-				if (pt[1] >= m_sizey) { ydist =  pt[1] - m_sizey + radius; y = MaxIndex(level) - 1; }
+				if (pt[0] < 0.0f)     { xdist = -pt[0] + radius;           x = 0; }
+				if (pt[0] >= m_sizex) { xdist =  pt[0] - m_sizex + radius; x = static_cast<int>(MaxIndex(level) - 1); }
+				if (pt[1] < 0.0f)     { ydist = -pt[1] + radius;           y = 0; }
+				if (pt[1] >= m_sizey) { ydist =  pt[1] - m_sizey + radius; y = static_cast<int>(MaxIndex(level) - 1); }
 
 				while (level > 0 && 2.0f*xdist > CellSizeX(level))
 				{
