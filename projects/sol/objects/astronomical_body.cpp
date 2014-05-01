@@ -15,12 +15,11 @@ sol::AstronomicalBody::AstronomicalBody(pr::v4 const& position, float radius, fl
 	,m_mass(mass)
 {
 	// Load the texture for the body
-	pr::rdr::DrawMethod method;
-	method.m_shader      = rdr.m_shdr_mgr.FindShaderFor(pr::rdr::VertPCNT::GeomMask);
-	method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::WrapSampler(), AssMgr::DataPath(texture).c_str());
+	pr::rdr::NuggetProps mat;
+	mat.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::LinearWrap(), AssMgr::DataPath(texture).c_str());
 
 	// Create the model
-	m_inst.m_model = pr::rdr::ModelGenerator<>::Geosphere(rdr, m_radius, 4, pr::Colour32White, &method);
+	m_inst.m_model = pr::rdr::ModelGenerator<>::Geosphere(rdr, m_radius, 4, pr::Colour32White, &mat);
 	m_inst.m_i2w = pr::Translation(m_position);
 }
 
