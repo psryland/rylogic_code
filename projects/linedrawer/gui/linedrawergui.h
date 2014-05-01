@@ -51,6 +51,7 @@ namespace ldr
 		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool                      m_suspend_render;       // True to prevent rendering
 		StatusPri                 m_status_pri;           // Status priority buffer
+		WTL::CCursorHandle        m_hand_cursor;          // Hand cursor used for drag-drop
 
 		static char const* AppName() { return ldr::AppTitleA(); }
 
@@ -62,60 +63,60 @@ namespace ldr
 			MSG_WM_RBUTTONDBLCLK(OnMouseDblClk)
 			MSG_WM_MBUTTONDBLCLK(OnMouseDblClk)
 
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEW               ,OnFileNew)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEWSCRIPT         ,OnFileNewScript)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN              ,OnFileOpen)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN_ADDITIVE     ,OnFileOpenAdditive)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_WIREFRAME             ,OnToggleFillMode)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_EDITOR                ,OnEditSourceFiles)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_PLUGINMGR             ,OnFilePluginMgr)
-			COMMAND_ID_HANDLER(ID_ACCELERATOR_LIGHTING_DLG          ,OnShowLightingDlg)
-			COMMAND_ID_HANDLER(ID_FILE_NEW1                         ,OnFileNew)
-			COMMAND_ID_HANDLER(ID_FILE_NEWSCRIPT                    ,OnFileNewScript)
-			COMMAND_ID_HANDLER(ID_FILE_OPEN1                        ,OnFileOpen)
-			COMMAND_ID_HANDLER(ID_FILE_ADDITIVEOPEN                 ,OnFileOpenAdditive)
-			COMMAND_ID_HANDLER(ID_FILE_OPTIONS                      ,OnFileShowOptions)
-			COMMAND_ID_HANDLER(ID_FILE_PLUGINMGR                    ,OnFilePluginMgr)
-			COMMAND_ID_HANDLER(ID_FILE_EXIT                         ,OnAppClose)
-			COMMAND_ID_HANDLER(IDCLOSE                              ,OnAppClose)
-			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_ALL                 ,OnResetView)
-			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_SELECTED            ,OnResetView)
-			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_VISIBLE             ,OnResetView)
-			COMMAND_ID_HANDLER(ID_NAV_ALIGN_X                       ,OnNavAlign)
-			COMMAND_ID_HANDLER(ID_NAV_ALIGN_Y                       ,OnNavAlign)
-			COMMAND_ID_HANDLER(ID_NAV_ALIGN_Z                       ,OnNavAlign)
-			COMMAND_ID_HANDLER(ID_NAV_ALIGN_CURRENT                 ,OnNavAlign)
-			COMMAND_ID_HANDLER(ID_NAV_ALIGN_NONE                    ,OnNavAlign)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_POSX                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_NEGX                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_POSY                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_NEGY                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_POSZ                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_NEGZ                    ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_VIEW_AXIS_POSXYZ                  ,OnViewAxis)
-			COMMAND_ID_HANDLER(ID_NAVIGATION_CLEARSAVEDVIEWS        ,OnSaveView)
-			COMMAND_ID_HANDLER(ID_NAVIGATION_SAVEVIEW               ,OnSaveView)
-			COMMAND_ID_HANDLER(ID_NAVIGATION_SETFOCUSPOSITION       ,OnSetFocusPosition)
-			COMMAND_ID_HANDLER(ID_NAVIGATION_ORBIT                  ,OnOrbit)
-			COMMAND_ID_HANDLER(ID_DATA_OBJECTMANAGER                ,OnShowObjectManagerUI)
-			COMMAND_ID_HANDLER(ID_DATA_EDITSOURCEFILES              ,OnEditSourceFiles)
-			COMMAND_ID_HANDLER(ID_DATA_CLEARSCENE                   ,OnDataClearScene)
-			COMMAND_ID_HANDLER(ID_DATA_AUTOREFRESH                  ,OnDataAutoRefresh)
-			COMMAND_ID_HANDLER(ID_DATA_CREATE_DEMO_SCENE            ,OnCreateDemoScene)
-			COMMAND_ID_HANDLER(ID_RENDERING_SHOWFOCUS               ,OnShowFocus)
-			COMMAND_ID_HANDLER(ID_RENDERING_SHOWORIGIN              ,OnShowOrigin)
-			COMMAND_ID_HANDLER(ID_RENDERING_SHOWSELECTION           ,OnShowSelection)
-			COMMAND_ID_HANDLER(ID_RENDERING_SHOWOBJECTBBOXES        ,OnShowObjBBoxes)
-			COMMAND_ID_HANDLER(ID_RENDERING_WIREFRAME               ,OnToggleFillMode)
-			COMMAND_ID_HANDLER(ID_RENDERING_RENDER2D                ,OnRender2D)
-			COMMAND_ID_HANDLER(ID_RENDERING_LIGHTING                ,OnShowLightingDlg)
-			COMMAND_ID_HANDLER(ID_TOOLS_MEASURE                     ,OnShowToolDlg)
-			COMMAND_ID_HANDLER(ID_TOOLS_ANGLE                       ,OnShowToolDlg)
-			COMMAND_ID_HANDLER(ID_WINDOW_ALWAYSONTOP                ,OnWindowAlwaysOnTop)
-			COMMAND_ID_HANDLER(ID_WINDOW_BACKGROUNDCOLOUR           ,OnWindowBackgroundColour)
-			COMMAND_ID_HANDLER(ID_WINDOW_EXAMPLESCRIPT              ,OnWindowExampleScript)
-			COMMAND_ID_HANDLER(ID_WINDOW_CHECKFORUPDATES            ,OnCheckForUpdates)
-			COMMAND_ID_HANDLER(ID_WINDOW_ABOUTLINEDRAWER            ,OnWindowShowAboutBox)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEW           ,OnFileNew)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEWSCRIPT     ,OnFileNewScript)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN          ,OnFileOpen)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN_ADDITIVE ,OnFileOpenAdditive)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_WIREFRAME         ,OnToggleFillMode)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_EDITOR            ,OnEditSourceFiles)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_PLUGINMGR         ,OnShowPluginMgr)
+			COMMAND_ID_HANDLER(ID_ACCELERATOR_LIGHTING_DLG      ,OnShowLightingDlg)
+			COMMAND_ID_HANDLER(ID_FILE_NEW1                     ,OnFileNew)
+			COMMAND_ID_HANDLER(ID_FILE_NEWSCRIPT                ,OnFileNewScript)
+			COMMAND_ID_HANDLER(ID_FILE_OPEN1                    ,OnFileOpen)
+			COMMAND_ID_HANDLER(ID_FILE_ADDITIVEOPEN             ,OnFileOpenAdditive)
+			COMMAND_ID_HANDLER(ID_FILE_EXIT                     ,OnAppClose)
+			COMMAND_ID_HANDLER(IDCLOSE                          ,OnAppClose)
+			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_ALL             ,OnResetView)
+			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_SELECTED        ,OnResetView)
+			COMMAND_ID_HANDLER(ID_NAV_RESETVIEW_VISIBLE         ,OnResetView)
+			COMMAND_ID_HANDLER(ID_NAV_ALIGN_X                   ,OnNavAlign)
+			COMMAND_ID_HANDLER(ID_NAV_ALIGN_Y                   ,OnNavAlign)
+			COMMAND_ID_HANDLER(ID_NAV_ALIGN_Z                   ,OnNavAlign)
+			COMMAND_ID_HANDLER(ID_NAV_ALIGN_CURRENT             ,OnNavAlign)
+			COMMAND_ID_HANDLER(ID_NAV_ALIGN_NONE                ,OnNavAlign)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_POSX            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_NEGX            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_POSY            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_NEGY            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_POSZ            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_NEGZ            ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_VIEW_AXIS_POSXYZ          ,OnViewAxis)
+			COMMAND_ID_HANDLER(ID_NAV_CLEARSAVEDVIEWS           ,OnSaveView)
+			COMMAND_ID_HANDLER(ID_NAV_SAVEVIEW                  ,OnSaveView)
+			COMMAND_ID_HANDLER(ID_NAV_SETFOCUSPOSITION          ,OnSetFocusPosition)
+			COMMAND_ID_HANDLER(ID_NAV_ORBIT                     ,OnOrbit)
+			COMMAND_ID_HANDLER(ID_DATA_OBJECTMANAGER            ,OnShowObjectManagerUI)
+			COMMAND_ID_HANDLER(ID_DATA_EDITSOURCEFILES          ,OnEditSourceFiles)
+			COMMAND_ID_HANDLER(ID_DATA_CLEARSCENE               ,OnDataClearScene)
+			COMMAND_ID_HANDLER(ID_DATA_AUTOREFRESH              ,OnDataAutoRefresh)
+			COMMAND_ID_HANDLER(ID_DATA_CREATE_DEMO_SCENE        ,OnCreateDemoScene)
+			COMMAND_ID_HANDLER(ID_RENDERING_SHOWFOCUS           ,OnShowFocus)
+			COMMAND_ID_HANDLER(ID_RENDERING_SHOWORIGIN          ,OnShowOrigin)
+			COMMAND_ID_HANDLER(ID_RENDERING_SHOWSELECTION       ,OnShowSelection)
+			COMMAND_ID_HANDLER(ID_RENDERING_SHOWOBJECTBBOXES    ,OnShowObjBBoxes)
+			COMMAND_ID_HANDLER(ID_RENDERING_WIREFRAME           ,OnToggleFillMode)
+			COMMAND_ID_HANDLER(ID_RENDERING_RENDER2D            ,OnRender2D)
+			COMMAND_ID_HANDLER(ID_RENDERING_LIGHTING            ,OnShowLightingDlg)
+			COMMAND_ID_HANDLER(ID_TOOLS_MEASURE                 ,OnShowToolDlg)
+			COMMAND_ID_HANDLER(ID_TOOLS_ANGLE                   ,OnShowToolDlg)
+			COMMAND_ID_HANDLER(ID_TOOLS_OPTIONS                 ,OnShowOptions)
+			COMMAND_ID_HANDLER(ID_TOOLS_PLUGINMGR               ,OnShowPluginMgr)
+			COMMAND_ID_HANDLER(ID_WINDOW_ALWAYSONTOP            ,OnWindowAlwaysOnTop)
+			COMMAND_ID_HANDLER(ID_WINDOW_BACKGROUNDCOLOUR       ,OnWindowBackgroundColour)
+			COMMAND_ID_HANDLER(ID_WINDOW_EXAMPLESCRIPT          ,OnWindowExampleScript)
+			COMMAND_ID_HANDLER(ID_WINDOW_CHECKFORUPDATES        ,OnCheckForUpdates)
+			COMMAND_ID_HANDLER(ID_WINDOW_ABOUTLINEDRAWER        ,OnWindowShowAboutBox)
 
 			CHAIN_MSG_MAP_MEMBER(m_recent_files)
 			CHAIN_MSG_MAP_MEMBER(m_saved_views)
@@ -129,6 +130,7 @@ namespace ldr
 		void OnTimer(UINT_PTR nIDEvent);
 		void OnPaint(HDC hDC);
 		void OnGetMinMaxInfo(LPMINMAXINFO lpMMI);
+		HCURSOR OnQueryDragIcon();
 		void OnDropFiles(HDROP hDropInfo);
 
 		void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
@@ -144,8 +146,6 @@ namespace ldr
 		LRESULT OnFileNewScript         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnFileOpen              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnFileOpenAdditive      (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT OnFileShowOptions       (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
-		LRESULT OnFilePluginMgr         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnAppClose              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnResetView             (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnViewAxis              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
@@ -166,6 +166,8 @@ namespace ldr
 		LRESULT OnRender2D              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnShowLightingDlg       (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnShowToolDlg           (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT OnShowOptions           (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT OnShowPluginMgr         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnWindowAlwaysOnTop     (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnWindowBackgroundColour(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnWindowExampleScript   (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

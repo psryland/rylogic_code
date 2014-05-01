@@ -112,7 +112,7 @@ namespace pr
 			{
 				// Position the camera
 				m_cam.Aspect(1.0f);
-				m_cam.FovY(pr::maths::tau_by_4);
+				m_cam.FovY(pr::maths::tau_by_8);
 				m_cam.LookAt(
 					pr::v4::make(0, 0, 1.0f / (float)tan(m_cam.m_fovY/2.0f), 1.0f),
 					pr::v4Origin,

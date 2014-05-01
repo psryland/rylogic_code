@@ -280,6 +280,10 @@ namespace pr
 			}
 
 			// Drag-drop
+			virtual HCURSOR OnQueryDragIcon()
+			{
+				return nullptr; // Return non-null for drag-drop to work
+			}
 			virtual void OnDropFiles(HDROP hDropInfo)
 			{
 				(void)hDropInfo;
@@ -307,6 +311,7 @@ namespace pr
 				MSG_WM_MBUTTONUP(OnMouseUp)
 				MSG_WM_MOUSEMOVE(OnMouseMove)
 				MSG_WM_MOUSEWHEEL(OnMouseWheel)
+				MSG_WM_QUERYDRAGICON(OnQueryDragIcon)
 				MSG_WM_DROPFILES(OnDropFiles)
 				CHAIN_MSG_MAP(CFrameWindowImpl<DerivedGUI>)
 			END_MSG_MAP()
