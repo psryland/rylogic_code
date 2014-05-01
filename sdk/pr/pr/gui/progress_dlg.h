@@ -250,7 +250,7 @@ namespace pr
 					{
 						// Run the task
 						// Pass the dialog to the task function so that it can update progress.
-						// Pased as a pointer so that users have the option of passing nullptr
+						// Passed as a pointer so that users have the option of passing nullptr
 						std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
 
 						// Notify task complete
@@ -259,17 +259,13 @@ namespace pr
 						m_result = m_cancel ? IDCANCEL : IDOK;
 						m_cv.notify_all();
 					}
-					catch (std::exception const& ex)
+					catch (...)
 					{
 						Lock lock(m_mutex);
 						m_done = true;
 						m_result = IDABORT;
 						m_exception = std::current_exception();
 						m_cv.notify_all();
-					}
-					catch (...)
-					{
-						assert(false && "Unhandled exception in task");
 					}
 					Progress(1.0f);
 				});
