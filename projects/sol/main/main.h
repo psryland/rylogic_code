@@ -21,7 +21,6 @@ namespace sol
 	// Main app logic
 	struct Main
 		:pr::app::Main<UserSettings, MainGUI>
-		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
 		pr::app::Skybox m_skybox;
 		pr::app::Gimble m_gimble;

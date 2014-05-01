@@ -24,7 +24,7 @@ sol::Main::Main(MainGUI& gui)
 	,m_wireframe(false)
 {
 	m_cam.ClipPlanes(0.001f, 1e6f, false);
-	m_scene.RdrStep<pr::rdr::ForwardRender>().m_global_light.m_diffuse = pr::Colour32White;
+	m_scene.RStep<pr::rdr::ForwardRender>().m_global_light.m_diffuse = pr::Colour32White;
 	//m_test1.m_inst.m_i2w.pos.y = 0.01f;
 	//m_test2.m_inst.m_i2w.pos.y = 0.0f;
 }
