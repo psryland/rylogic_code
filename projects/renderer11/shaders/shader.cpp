@@ -8,6 +8,7 @@
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/instances/instance.h"
+#include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/render/render_step.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
@@ -18,12 +19,12 @@ namespace pr
 	{
 		BaseShader::BaseShader(ShaderManager* mgr)
 			:m_iplayout()
-			,m_cbuf()
 			,m_vs()
 			,m_ps()
 			,m_gs()
 			,m_hs()
 			,m_ds()
+			,m_cbuf()
 			,m_id()
 			,m_geom_mask()
 			,m_mgr(mgr)
@@ -35,10 +36,17 @@ namespace pr
 			,m_name()
 		{}
 
-		// Setup the input assembler for 'nugget'
-		void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget)
+		// Ref counting cleanup function
+		void BaseShader::RefCountZero(pr::RefCount<BaseShader>* doomed)
 		{
-			ModelBuffer const& mb = *nugget.m_model_buffer.m_ptr;
+			BaseShader* shdr = static_cast<BaseShader*>(doomed);
+			shdr->m_mgr->Delete(shdr);
+		}
+
+		// Setup the input assembler for 'nugget'
+		void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle)
+		{
+			ModelBuffer const& mb = *dle.m_nugget->m_model_buffer.m_ptr;
 
 			// Render nuggets v/i ranges are relative to the model buffer, not the model
 			// so when we set the v/i buffers we don't need any offsets, the offsets are
@@ -54,19 +62,19 @@ namespace pr
 			dc->IASetIndexBuffer(mb.m_ib.m_ptr, mb.m_ib.m_format, 0);
 
 			// Tell the IA what sort of primitives to expect
-			dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)nugget.m_prim_topo.value);
+			dc->IASetPrimitiveTopology((D3D11_PRIMITIVE_TOPOLOGY)dle.m_nugget->m_topo.value);
 		}
 
 		// Set the depth buffering states
-		void SetupDS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)
+		void SetupDS(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 		{
 			auto& ds_mgr = rstep.m_scene->m_rdr->m_ds_mgr;
-			auto& draw = nugget.m_draw;
-			auto inst_dsb = inst.find<DSBlock>(EInstComp::DSBlock);
+			auto inst_dsb = dle.m_instance->find<DSBlock>(EInstComp::DSBlock);
 
 			// Combine states in priority order
-			DSBlock dsb = draw.m_shader->m_dsb;
-			dsb |= draw.m_dsb;              // default states from the draw method
+			DSBlock dsb;
+			dsb  = dle.m_shader->m_dsb;     // default states from the shader
+			dsb |= dle.m_nugget->m_dsb;     // default states from the model nugget
 			dsb |= rstep.m_dsb;             // render step state overrides
 			if (inst_dsb) dsb |= *inst_dsb; // instance specific overrides
 
@@ -75,15 +83,15 @@ namespace pr
 		}
 
 		// Set the rasterizer states
-		void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)
+		void SetupRS(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 		{
 			auto& rs_mgr = rstep.m_scene->m_rdr->m_rs_mgr;
-			auto& draw = nugget.m_draw;
-			auto inst_rsb = inst.find<RSBlock>(EInstComp::RSBlock);
+			auto inst_rsb = dle.m_instance->find<RSBlock>(EInstComp::RSBlock);
 
 			// Combine states in priority order
-			RSBlock rsb = draw.m_shader->m_rsb;
-			rsb |= draw.m_rsb;              // default states from the draw method
+			RSBlock rsb;
+			rsb  = dle.m_shader->m_rsb;     // default states from the shader
+			rsb |= dle.m_nugget->m_rsb;     // default states from the model nugget
 			rsb |= rstep.m_rsb;             // render step state overrides
 			if (inst_rsb) rsb |= *inst_rsb; // instance specific overrides
 
@@ -92,15 +100,15 @@ namespace pr
 		}
 
 		// Set the blend states
-		void SetupBS(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)
+		void SetupBS(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 		{
 			auto& bs_mgr = rstep.m_scene->m_rdr->m_bs_mgr;
-			auto& draw = nugget.m_draw;
-			auto inst_bsb = inst.find<BSBlock>(EInstComp::BSBlock);
+			auto inst_bsb = dle.m_instance->find<BSBlock>(EInstComp::BSBlock);
 
 			// Combine states in priority order
-			BSBlock bsb = draw.m_shader->m_bsb;
-			bsb |= draw.m_bsb;              // default states from the draw method
+			BSBlock bsb;
+			bsb  = dle.m_shader->m_bsb;     // default states from the shader
+			bsb |= dle.m_nugget->m_bsb;     // default states from the draw method
 			bsb |= rstep.m_bsb;             // render step state overrides
 			if (inst_bsb) bsb |= *inst_bsb; // instance specific overrides
 
@@ -109,37 +117,35 @@ namespace pr
 		}
 
 		// Bind the shader to the device context in preparation for rendering
-		void BaseShader::Bind(D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)
+		void BindShader(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const* dle, RenderStep const& rstep)
 		{
+			if (!dle)
+				return; // todo
+
+			auto& shdr = *dle->m_shader;
+
 			// Call the custom binding function provided when the shader was created
-			m_setup_func(dc, nugget, inst, rstep);
+			shdr.m_setup_func(dc, *dle, rstep);
 
 			// Setup the input assembler
-			dc->IASetInputLayout(m_iplayout.m_ptr);
-			SetupIA(dc, nugget);
+			dc->IASetInputLayout(shdr.m_iplayout.m_ptr);
+			SetupIA(dc, *dle);
 
 			// Set the depth buffering states
-			SetupDS(dc, nugget, inst, rstep);
+			SetupDS(dc, *dle, rstep);
 
 			// Set the raster states
-			SetupRS(dc, nugget, inst, rstep);
+			SetupRS(dc, *dle, rstep);
 
 			// Set the blend states
-			SetupBS(dc, nugget, inst, rstep);
+			SetupBS(dc, *dle, rstep);
 
 			// Bind the shaders (passing null disables the shader)
-			dc->VSSetShader(m_vs.m_ptr, 0, 0);
-			dc->PSSetShader(m_ps.m_ptr, 0, 0);
-			dc->GSSetShader(m_gs.m_ptr, 0, 0);
-			dc->HSSetShader(m_hs.m_ptr, 0, 0);
-			dc->DSSetShader(m_ds.m_ptr, 0, 0);
-		}
-
-		// Ref counting cleanup function
-		void BaseShader::RefCountZero(pr::RefCount<BaseShader>* doomed)
-		{
-			BaseShader* shdr = static_cast<BaseShader*>(doomed);
-			shdr->m_mgr->Delete(shdr);
+			dc->VSSetShader(shdr.m_vs.m_ptr, 0, 0);
+			dc->PSSetShader(shdr.m_ps.m_ptr, 0, 0);
+			dc->GSSetShader(shdr.m_gs.m_ptr, 0, 0);
+			dc->HSSetShader(shdr.m_hs.m_ptr, 0, 0);
+			dc->DSSetShader(shdr.m_ds.m_ptr, 0, 0);
 		}
 	}
 }

@@ -1,5 +1,5 @@
 <NotepadPlus>
-    <UserLang name="HLSL" ext="fx hlsl vsh psh">
+    <UserLang name="HLSL" ext="fx hlsl vsh psh hlsli">
         <Settings>
             <Global caseIgnored="no" />
             <TreatAsSymbol comment="yes" commentLine="yes" />

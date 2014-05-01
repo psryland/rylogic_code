@@ -97,16 +97,16 @@ namespace pr
 
 			// Main engine step
 			void Step         (float elapsed_seconds);
-			
+
 			// Collision observers
 			bool NotifyPreCollision(ph::Rigidbody const& rbA, ph::Rigidbody const& rbB, ph::ContactManifold& manifold);
 			void NotifyPstCollision(ph::Rigidbody const& rbA, ph::Rigidbody const& rbB, ph::ContactManifold const& manifold);
-		
+
 			// Cast a ray into the physics world. Returns true if the ray hits something
 			bool RayCast(Ray const& ray, RayVsWorldResult& result);
 
 			// Events
-			void OnEvent(RBEvent const& e);
+			void OnEvent(RBEvent const& e) override;
 		};
 	}
 }

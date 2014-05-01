@@ -69,7 +69,7 @@ namespace pr
 			bool                     m_done;      // Task complete flag
 			bool                     m_cancel;    // Cancel signalled flag
 			int                      m_result;    // Dialog result to return
-			std::exception           m_exception; // An exception throw by the task
+			std::exception_ptr       m_exception; // An exception throw by the task
 			bool                     m_shown;     // True when the dlg is visible
 			WTL::CStatic             m_lbl_desc;  // The progress description
 			WTL::CProgressBarCtrl    m_bar;       // The progress bar
@@ -250,7 +250,7 @@ namespace pr
 					{
 						// Run the task
 						// Pass the dialog to the task function so that it can update progress.
-						// Pased as a pointer so that users have the option of passing nullptr
+						// Passed as a pointer so that users have the option of passing nullptr
 						std::bind(std::forward<Func>(func), this, std::forward<Args>(args)...)();
 
 						// Notify task complete
@@ -259,17 +259,13 @@ namespace pr
 						m_result = m_cancel ? IDCANCEL : IDOK;
 						m_cv.notify_all();
 					}
-					catch (std::exception const& ex)
+					catch (...)
 					{
 						Lock lock(m_mutex);
 						m_done = true;
 						m_result = IDABORT;
-						m_exception = ex;
+						m_exception = std::current_exception();
 						m_cv.notify_all();
-					}
-					catch (...)
-					{
-						assert(false && "Unhandled exception in task");
 					}
 					Progress(1.0f);
 				});
@@ -296,7 +292,7 @@ namespace pr
 
 				// Return the result
 				if (m_result == IDABORT)
-					throw m_exception;
+					std::rethrow_exception(m_exception);
 
 				return m_result;
 			}

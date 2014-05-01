@@ -25,6 +25,8 @@ namespace pr
 		{
 			ETok_Unknown,
 			ETok_Value,
+			ETok_If,
+			ETok_Else,
 			ETok_Comma,
 			ETok_LogOR,
 			ETok_LogAND,
@@ -164,6 +166,8 @@ namespace pr
 			case '^': return ETok_BitXOR;
 			case '(': return ETok_OpenParenthesis;
 			case ')': return ETok_CloseParenthesis;
+			case '?': return ETok_If;
+			case ':': return ETok_Else;
 			case '<':
 				if      (_strnicmp(expr, "<<"    ,2) == 0) return ETok_LeftShift;
 				else if (_strnicmp(expr, "<="    ,2) == 0) return ETok_LogLTEql;
@@ -502,6 +506,17 @@ namespace pr
 				case ETok_CloseParenthesis:
 					if (prev_op == ETok_Unknown) ++expr;
 					return true;
+				case ETok_If:
+					{
+						Val vals[2]; int valc = 0;
+						if (!Eval(++expr, vals, 2, valc, ETok_If)) return false;
+						if (valc != 2) throw std::exception("incomplete if-else");
+						result[ridx] = result[ridx].ll() != 0 ? vals[0] : vals[1];
+					}break;
+				case ETok_Else:
+					if (!Eval(++expr, result, rmax, ++ridx, ETok_Else)) return false;
+					++ridx;
+					return true;
 				}
 				if (result[ridx].m_fp) result[ridx] = sign * result[ridx].db();  // don't convert to ?: as the result will always be double
 				else                   result[ridx] = sign * result[ridx].ll(); // result[ridx].ll() will get promoted to double
@@ -661,6 +676,9 @@ namespace pr
 				PR_CHECK(pr::EvaluateI("123456789000000 / 2", v1), true);
 				PR_CHECK(v0 == v1, true);
 			}
+			PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
+			PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
+			PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
 		}
 	}
 }

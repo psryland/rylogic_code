@@ -206,10 +206,10 @@ namespace pr
 		pr::v4 NormSSPointFromWSPoint(pr::v4 const& world) const
 		{
 			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
-			
+
 			// Get the point in camera space and project into normalised screen space
 			pr::v4 cam = GetInverseFast(m_c2w) * world;
-			
+
 			pr::v4 point;
 			point.x = cam.x / (m_aspect * half_height);
 			point.y = cam.y / (half_height);
@@ -536,7 +536,7 @@ namespace pr
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
-		void View(pr::BoundingBox const& bbox, pr::v4 const& forward, pr::v4 const& up, bool update_base)
+		void View(pr::BBox const& bbox, pr::v4 const& forward, pr::v4 const& up, bool update_base)
 		{
 			if (!bbox.IsValid()) return;
 

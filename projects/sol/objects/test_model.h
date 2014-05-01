@@ -12,7 +12,7 @@
 namespace sol
 {
 	struct TestModel
-		:pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		:pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
 		// A renderer instance type for the body
 		#define PR_RDR_INST(x)\
@@ -29,15 +29,14 @@ namespace sol
 			for (int i = 0; i != 20; ++i)
 				points.push_back(pr::Random4(pr::v4Origin, 5.0f));
 
-			pr::rdr::DrawMethod method;
-			method.m_shader      = rdr.m_shdr_mgr.FindShaderFor(pr::rdr::VertPCNT::GeomMask);
-			method.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::ClampSampler(), AssMgr::DataPath(L"textures\\smiling gekko.dds").c_str());
-			m_inst.m_model       = pr::rdr::ModelGenerator<>::Quad(rdr, 1.0f, 1.0f, pr::iv2Zero, pr::Colour32White, &method);
-			m_inst.m_i2w         = pr::Translation(0,0,0);
+			pr::rdr::NuggetProps mat;
+			mat.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::LinearClamp(), AssMgr::DataPath(L"textures\\smiling gekko.dds").c_str());
+			m_inst.m_model    = pr::rdr::ModelGenerator<>::Quad(rdr, 1.0f, 1.0f, pr::iv2Zero, pr::Colour32White, &mat);
+			m_inst.m_i2w      = pr::Translation(0,0,0);
 		}
 
 		// Add to a viewport
-		void OnEvent(pr::rdr::Evt_SceneRender const& e)
+		void OnEvent(pr::rdr::Evt_UpdateScene const& e) override
 		{
 			float s = e.m_scene.m_view.m_centre_dist;
 			m_inst.m_i2w = pr::Scale4x4(s,s,s, m_inst.m_i2w.pos);

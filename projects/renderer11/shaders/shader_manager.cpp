@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
+#include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/render/sortkey.h"
 
@@ -15,7 +16,7 @@ namespace pr
 		#if PR_RDR_RUNTIME_SHADERS
 		// Look for a compiled shader object file by the name 'compiled_shader_filename'
 		// If the file exists, check the last modified time, and if newer, replace the shader 'ptr' and update 'last_modified'
-		void RefreshShaders(D3DPtr<ID3D11Device>& device, ShaderPtr const& shader)
+		void RefreshShaders(D3DPtr<ID3D11Device>& device, BaseShader const* shader)
 		{
 			// Only check every 5 seconds
 			static DWORD last_check = 0, check_frequency_ms = 5000;
@@ -83,14 +84,14 @@ namespace pr
 		}
 
 		// Builds the basic parts of a shader.
-		ShaderPtr ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
+		ShaderPtr ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name)
 		{
-			D3DPtr<ID3D11InputLayout>     iplayout;
-			D3DPtr<ID3D11VertexShader>    vs;
-			D3DPtr<ID3D11PixelShader>     ps;
+			D3DPtr<ID3D11InputLayout>  iplayout;
+			D3DPtr<ID3D11VertexShader> vs;
+			D3DPtr<ID3D11PixelShader>  ps;
+			D3DPtr<ID3D11Buffer>       cbuf;
 			EGeom geom_mask = 0;
 
-			// If 'id' doesn't exist (or is Auto), allocate a new shader
 			if (vsdesc != 0)
 			{
 				// Create the shader
@@ -107,14 +108,21 @@ namespace pr
 				// Create the pixel shader
 				pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &ps.m_ptr));
 			}
+			if (cbdesc != 0)
+			{
+				// Create a constants buffer
+				pr::Throw(m_device->CreateBuffer(cbdesc, 0, &cbuf.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, FmtS("%s CBuf", name)));
+			}
 
 			// If runtime shaders is enabled, wrap the setup function in a function
 			// that loads data from a compiled shader object file if it exists and is newer
 			#if PR_RDR_RUNTIME_SHADERS
-			setup = [=](D3DPtr<ID3D11DeviceContext>& dc, Nugget const& nugget, BaseInstance const& inst, RenderStep const& rstep)
+			setup = [=](D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 			{
-				RefreshShaders(m_device, nugget.m_draw.m_shader);
-				setup(dc, nugget, inst, rstep);
+				if (dle.m_shader != nullptr)
+					RefreshShaders(m_device, dle.m_shader);
+				setup(dc, dle, rstep);
 			};
 			#endif
 
@@ -123,15 +131,16 @@ namespace pr
 			shdr->m_iplayout   = iplayout;
 			shdr->m_vs         = vs;
 			shdr->m_ps         = ps;
+			shdr->m_cbuf       = cbuf;
 			shdr->m_id         = id == AutoId ? MakeId(shdr.m_ptr) : id;
 			shdr->m_setup_func = setup;
 			shdr->m_name       = name;
 			shdr->m_geom_mask  = geom_mask;
 			shdr->m_sort_id    = m_lookup_shader.size() % sortkey::MaxShaderId;
 			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
-			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_vs, pr::FmtS("vshdr <RdrId:%d>", shdr->m_id)));
-			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_ps, pr::FmtS("pshdr <RdrId:%d>", shdr->m_id)));
-			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_iplayout, pr::FmtS("iplayout <RdrId:%d>", shdr->m_id)));
+			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_vs, pr::FmtS("%s vs", name)));
+			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_ps, pr::FmtS("%s ps", name)));
+			PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_iplayout, pr::FmtS("%s iplayout", name)));
 			AddLookup(m_lookup_shader, shdr->m_id, shdr.m_ptr);
 
 			// The ShaderManager acts as a container of custom shaders. We need to

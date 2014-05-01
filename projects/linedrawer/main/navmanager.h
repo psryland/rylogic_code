@@ -46,7 +46,7 @@ namespace ldr
 		bool Render2D() const;
 
 		// Reset the camera to view a bbox from the prefer orientation
-		void ResetView(pr::BoundingBox const& view_bbox);
+		void ResetView(pr::BBox const& view_bbox);
 
 		//// Position the camera prior to rendering a frame
 		//void PositionCamera();

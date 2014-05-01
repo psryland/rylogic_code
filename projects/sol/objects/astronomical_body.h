@@ -11,7 +11,7 @@
 namespace sol
 {
 	struct AstronomicalBody
-		:pr::events::IRecv<pr::rdr::Evt_SceneRender>
+		:pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
 		// A renderer instance type for the body
 		#define PR_RDR_INST(x)\
@@ -26,7 +26,7 @@ namespace sol
 		Instance m_inst;     // The renderer instance
 
 		AstronomicalBody(pr::v4 const& position, float radius, float mass, pr::Renderer& rdr, wchar_t const* texture);
-		void OnEvent(pr::rdr::Evt_SceneRender const& e);
+		void OnEvent(pr::rdr::Evt_UpdateScene const& e) override;
 	};
 }
 

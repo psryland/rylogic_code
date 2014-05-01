@@ -205,7 +205,7 @@ namespace pr
 			}
 
 			Props props;
-			props.m_bbox = BoundingBox::make(pr::v4Origin, radius);
+			props.m_bbox = BBox::make(pr::v4Origin, radius);
 			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
 			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
@@ -281,7 +281,7 @@ namespace pr
 			}
 
 			Props props;
-			props.m_bbox = BoundingBox::make(pr::v4Origin, radius);
+			props.m_bbox = BBox::make(pr::v4Origin, radius);
 			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}

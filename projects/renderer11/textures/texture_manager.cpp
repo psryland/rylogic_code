@@ -197,12 +197,12 @@ namespace pr
 				pr::uint const data[] = {0};
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
-				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Black, src, tdesc, SamplerDesc::ClampSampler()));
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Black, src, tdesc, SamplerDesc::LinearClamp()));
 			}{
 				pr::uint const data[] = {0xFFFFFFFF};
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
-				m_stock_textures.push_back(CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::ClampSampler()));
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::LinearClamp()));
 			}{
 				pr::uint const data[] =
 				{
@@ -221,7 +221,7 @@ namespace pr
 				};
 				Image src = Image::make(8, 8, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 0, D3D11_USAGE_IMMUTABLE);
-				auto sam = SamplerDesc::WrapSampler();
+				auto sam = SamplerDesc::LinearWrap();
 				sam.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, sam));
 			}

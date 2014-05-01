@@ -23,7 +23,7 @@ ShapeCylinder& ShapeCylinder::set(float radius, float height, const m4x4& shape_
 }
 
 // Return the bounding box for the shape
-BoundingBox& pr::ph::CalcBBox(ShapeCylinder const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(ShapeCylinder const& shape, BBox& bbox)
 {
 	bbox.m_centre = v4Origin;
 	bbox.m_radius.x = shape.m_radius;
@@ -84,7 +84,6 @@ v4 pr::ph::SupportVertex(ShapeCylinder const& shape, v4 const& direction, std::s
 	sup_vert_id = (sup_vert.z < 0.0f)*32 | (sup_vert.y < 0.0f)*16 | (sup_vert.x < 0.0f)*8 | xmajor*4 | id;
 	return sup_vert;
 }
-
 
 // Find the nearest point and distance from a point to a shape
 // 'shape' and 'point' are in the same space

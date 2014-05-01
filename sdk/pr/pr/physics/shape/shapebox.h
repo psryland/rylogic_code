@@ -26,7 +26,7 @@ namespace pr
 		};
 
 		// Shape functions
-		BoundingBox&	CalcBBox			(ShapeBox const& shape, BoundingBox& bbox);
+		BBox&	CalcBBox			(ShapeBox const& shape, BBox& bbox);
 		MassProperties& CalcMassProperties	(ShapeBox const& shape, float density, MassProperties& mp);
 		void			ShiftCentre			(ShapeBox& shape, v4& shift);
 		v4				SupportVertex		(ShapeBox const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);

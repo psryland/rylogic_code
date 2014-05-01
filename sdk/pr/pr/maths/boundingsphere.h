@@ -14,61 +14,61 @@
 
 namespace pr
 {
-	struct BoundingSphere
+	struct BSphere
 	{
 		v4 m_ctr_rad; // x,y,z = position, 'w' = radius
 
-		static BoundingSphere make(v4 const& centre, float radius);
-		BoundingSphere&       set(v4 const& centre, float radius);
-		BoundingSphere&       zero();
-		BoundingSphere&       unit();
-		BoundingSphere&       reset();
-		bool                  IsValid() const;
-		v4                    Centre() const;
-		float                 Radius() const;
-		float                 RadiusSq() const;
-		float                 Diametre() const;
-		float                 DiametreSq() const;
+		static BSphere make(v4 const& centre, float radius);
+		BSphere&       set(v4 const& centre, float radius);
+		BSphere&       zero();
+		BSphere&       unit();
+		BSphere&       reset();
+		bool           IsValid() const;
+		v4             Centre() const;
+		float          Radius() const;
+		float          RadiusSq() const;
+		float          Diametre() const;
+		float          DiametreSq() const;
 	};
 
-	BoundingSphere const BSphereZero  = {v4Zero};
-	BoundingSphere const BSphereUnit  = {v4Origin};
-	BoundingSphere const BSphereReset = {-v4Origin};
+	BSphere const BSphereZero  = {v4Zero};
+	BSphere const BSphereUnit  = {v4Origin};
+	BSphere const BSphereReset = {-v4Origin};
 
 	// Assignment operators
-	BoundingSphere& operator += (BoundingSphere& lhs, v4 const& offset);
-	BoundingSphere& operator -= (BoundingSphere& lhs, v4 const& offset);
-	BoundingSphere& operator *= (BoundingSphere& lhs, float s);
-	BoundingSphere& operator /= (BoundingSphere& lhs, float s);
+	BSphere& operator += (BSphere& lhs, v4 const& offset);
+	BSphere& operator -= (BSphere& lhs, v4 const& offset);
+	BSphere& operator *= (BSphere& lhs, float s);
+	BSphere& operator /= (BSphere& lhs, float s);
 
 	// Binary operators
-	BoundingSphere operator + (BoundingSphere const& bsph, v4 const& offset);
-	BoundingSphere operator - (BoundingSphere const& bsph, v4 const& offset);
-	BoundingSphere operator * (BoundingSphere const& bsph, float s);
-	BoundingSphere operator * (float s, BoundingSphere const& bsph);
-	BoundingSphere operator * (m4x4 const& m, BoundingSphere const& bsph);
+	BSphere operator + (BSphere const& bsph, v4 const& offset);
+	BSphere operator - (BSphere const& bsph, v4 const& offset);
+	BSphere operator * (BSphere const& bsph, float s);
+	BSphere operator * (float s, BSphere const& bsph);
+	BSphere operator * (m4x4 const& m, BSphere const& bsph);
 
 	// Equality operators
-	bool operator == (BoundingSphere const& lhs, BoundingSphere const& rhs);
-    bool operator != (BoundingSphere const& lhs, BoundingSphere const& rhs);
-	bool operator <  (BoundingSphere const& lhs, BoundingSphere const& rhs);
-	bool operator >  (BoundingSphere const& lhs, BoundingSphere const& rhs);
-	bool operator <= (BoundingSphere const& lhs, BoundingSphere const& rhs);
-	bool operator >= (BoundingSphere const& lhs, BoundingSphere const& rhs);
+	bool operator == (BSphere const& lhs, BSphere const& rhs);
+    bool operator != (BSphere const& lhs, BSphere const& rhs);
+	bool operator <  (BSphere const& lhs, BSphere const& rhs);
+	bool operator >  (BSphere const& lhs, BSphere const& rhs);
+	bool operator <= (BSphere const& lhs, BSphere const& rhs);
+	bool operator >= (BSphere const& lhs, BSphere const& rhs);
 
 	// Functions
-	float           Volume(BoundingSphere const& bsph);
-	BoundingSphere& Encompass(BoundingSphere& bsphere, v4 const& point);
-	BoundingSphere  Encompass(BoundingSphere const& bsphere, v4 const& point);
-	BoundingSphere& Encompass(BoundingSphere& lhs, BoundingSphere const& rhs);
-	BoundingSphere  Encompass(BoundingSphere const& lhs, BoundingSphere const& rhs);
-	BoundingSphere& EncompassLoose(BoundingSphere& bsphere, v4 const& point);
-	BoundingSphere  EncompassLoose(BoundingSphere const& bsphere, v4 const& point);
-	BoundingSphere& EncompassLoose(BoundingSphere& lhs, BoundingSphere const& rhs);
-	BoundingSphere  EncompassLoose(BoundingSphere const& lhs, BoundingSphere const& rhs);
-	bool            IsWithin(BoundingSphere const& bsphere, v4 const& point);
-	bool            IsWithin(BoundingSphere const& bsphere, BoundingSphere const& test);
-	bool            IsIntersection(BoundingSphere const& lhs, BoundingSphere const& rhs);
+	float           Volume(BSphere const& bsph);
+	BSphere& Encompass(BSphere& bsphere, v4 const& point);
+	BSphere  Encompass(BSphere const& bsphere, v4 const& point);
+	BSphere& Encompass(BSphere& lhs, BSphere const& rhs);
+	BSphere  Encompass(BSphere const& lhs, BSphere const& rhs);
+	BSphere& EncompassLoose(BSphere& bsphere, v4 const& point);
+	BSphere  EncompassLoose(BSphere const& bsphere, v4 const& point);
+	BSphere& EncompassLoose(BSphere& lhs, BSphere const& rhs);
+	BSphere  EncompassLoose(BSphere const& lhs, BSphere const& rhs);
+	bool            IsWithin(BSphere const& bsphere, v4 const& point);
+	bool            IsWithin(BSphere const& bsphere, BSphere const& test);
+	bool            IsIntersection(BSphere const& lhs, BSphere const& rhs);
 }
 
 #endif

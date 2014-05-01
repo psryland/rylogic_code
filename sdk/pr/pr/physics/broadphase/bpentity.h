@@ -20,13 +20,13 @@ namespace pr
 		{
 			// Members to be filled in by the client
 			void*        m_owner;  // Pointer to the object that contains this broadphase::Entity
-			BoundingBox* m_bbox;   // Pointer to a bounding box representing the object within the broadphase
-			
+			BBox* m_bbox;   // Pointer to a bounding box representing the object within the broadphase
+
 			// Extra data used by the broadphase this entity belongs to
 			IBroadphase* m_broadphase;
-			
+
 			///<summary>Helper method for initialising this object</summary>
-			template <typename Owner> void         init(Owner& owner, BoundingBox& bbox) { m_owner = &owner; m_bbox = &bbox; m_broadphase = 0; }
+			template <typename Owner> void         init(Owner& owner, BBox& bbox) { m_owner = &owner; m_bbox = &bbox; m_broadphase = 0; }
 			template <typename Owner> Owner const& owner() const                         { return *reinterpret_cast<Owner const*>(m_owner); }
 			template <typename Owner> Owner&       owner()                               { return *reinterpret_cast<Owner*      >(m_owner); }
 			void Update()                                                                { if (m_broadphase) { m_broadphase->Update(*this); } }

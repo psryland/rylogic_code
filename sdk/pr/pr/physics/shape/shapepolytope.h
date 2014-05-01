@@ -25,12 +25,12 @@ namespace pr
 			uint16 m_first;		// Byte offset to the first neighbour
 			uint16 m_count;		// Number of neighbours
 
-			PolyIdx const*	begin() const				{ return reinterpret_cast<PolyIdx const*>(this) + m_first; }
-			PolyIdx*		begin()						{ return reinterpret_cast<PolyIdx*      >(this) + m_first; }
-			PolyIdx const*	end() const					{ return begin() + m_count; }
-			PolyIdx*		end()						{ return begin() + m_count; }
-			PolyIdx const&	nbr(std::size_t idx) const	{ return begin()[idx]; }
-			PolyIdx&		nbr(std::size_t idx)		{ return begin()[idx]; }
+			PolyIdx const* begin() const              { return reinterpret_cast<PolyIdx const*>(this) + m_first; }
+			PolyIdx*       begin()                    { return reinterpret_cast<PolyIdx*      >(this) + m_first; }
+			PolyIdx const* end() const                { return begin() + m_count; }
+			PolyIdx*       end()                      { return begin() + m_count; }
+			PolyIdx const& nbr(std::size_t idx) const { return begin()[idx]; }
+			PolyIdx&       nbr(std::size_t idx)       { return begin()[idx]; }
 		};
 
 		// Polytope shape
@@ -45,7 +45,7 @@ namespace pr
 			//PolyIdx		m_neighbour[...]
 
 			enum { EShapeType = EShape_Polytope };
-			
+
 			v4 const*				vert_begin() const					{ return reinterpret_cast<v4 const*>(this + 1); }
 			v4*						vert_begin()						{ return reinterpret_cast<v4*      >(this + 1); }
 			v4 const*				vert_end() const					{ return vert_begin() + m_vert_count; }
@@ -82,7 +82,7 @@ namespace pr
 		float			CalcVolume			(ShapePolytope const& shape);
 		v4				CalcCentreOfMass	(ShapePolytope const& shape);
 		void			ShiftCentre			(ShapePolytope& shape, v4& shift);
-		BoundingBox&	CalcBBox			(ShapePolytope const& shape, BoundingBox& bbox);
+		BBox&	CalcBBox			(ShapePolytope const& shape, BBox& bbox);
 		m3x4			CalcInertiaTensor	(ShapePolytope const& shape);
 		MassProperties& CalcMassProperties	(ShapePolytope const& shape, float density, MassProperties& mp);
 		v4				SupportVertex		(ShapePolytope const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);

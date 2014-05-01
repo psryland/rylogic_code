@@ -261,30 +261,30 @@ namespace pr
 			}
 
 			// Return a bounding box of the objects
-			pr::BoundingBox GetBBox(EObjectBounds bbox_type) const
+			pr::BBox GetBBox(EObjectBounds bbox_type) const
 			{
-				pr::BoundingBox bbox = pr::BBoxReset;
+				pr::BBox bbox = pr::BBoxReset;
 				switch (bbox_type)
 				{
 				default: PR_ASSERT(PR_DBG_LDROBJMGR, false, "Unknown bounding box type requested"); return pr::BBoxUnit;
 				case EObjectBounds::All:
 					for (HTREEITEM i = m_tree.GetRootItem(); i != 0; i = m_tree.GetNextItem(i, TVGN_NEXT))
 					{
-						pr::BoundingBox bb = GetLdrObject(i).BBoxWS(true);
+						pr::BBox bb = GetLdrObject(i).BBoxWS(true);
 						if (bb.IsValid()) pr::Encompass(bbox, bb);
 					}
 					break;
 				case EObjectBounds::Selected:
 					for (int i = m_list.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list.GetNextItem(i, LVNI_SELECTED))
 					{
-						pr::BoundingBox bb = GetLdrObject(i).BBoxWS(true);
+						pr::BBox bb = GetLdrObject(i).BBoxWS(true);
 						if (bb.IsValid()) pr::Encompass(bbox, bb);
 					}
 					break;
 				case EObjectBounds::Visible:
 					for (HTREEITEM i = m_tree.GetRootItem(); i != 0; i = m_tree.GetNextItem(i, TVGN_NEXT))
 					{
-						pr::BoundingBox bb = GetLdrObject(i).BBoxWS(true, [](LdrObject const& obj) { return obj.m_visible; });
+						pr::BBox bb = GetLdrObject(i).BBoxWS(true, [](LdrObject const& obj) { return obj.m_visible; });
 						if (bb.IsValid()) pr::Encompass(bbox, bb);
 					}
 					break;
@@ -939,7 +939,7 @@ namespace pr
 		}
 
 		// Return a bounding box of the objects
-		pr::BoundingBox ObjectManagerDlg::GetBBox(EObjectBounds bbox_type) const
+		pr::BBox ObjectManagerDlg::GetBBox(EObjectBounds bbox_type) const
 		{
 			if (bbox_type == EObjectBounds::All && m_scene_bbox != pr::BBoxReset)
 				return m_scene_bbox;

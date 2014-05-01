@@ -79,7 +79,7 @@ void pr::ph::ShiftCentre(ShapePolytope& shape, v4& shift)
 }
 
 // Return the bounding box for a polytope
-BoundingBox& pr::ph::CalcBBox(ShapePolytope const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(ShapePolytope const& shape, BBox& bbox)
 {
 	bbox.reset();
 	for( v4 const *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )

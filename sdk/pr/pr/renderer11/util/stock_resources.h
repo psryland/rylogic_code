@@ -3,8 +3,6 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_UTIL_STOCK_RESOURCES_H
-#define PR_RDR_UTIL_STOCK_RESOURCES_H
 
 #include "pr/renderer11/forward.h"
 
@@ -18,7 +16,16 @@ namespace pr
 			x(Checker ,= 0x42003)
 		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
 		#undef PR_ENUM
+
+		#define PR_ENUM(x)\
+			x(TxTint         )\
+			x(TxTintPvc      )\
+			x(TxTintTex      )\
+			x(TxTintPvcLit   )\
+			x(TxTintPvcLitTex)\
+			x(GBuffer)\
+			x(DSLighting)
+		PR_DEFINE_ENUM1(EStockShader, PR_ENUM);
+		#undef PR_ENUM
 	}
 }
-
-#endif

@@ -35,7 +35,7 @@ namespace pr
 			float m_min_volume; // The minimum volume a primitive may have (m^3)
 			ShapeBuilderSettings() :m_min_mass(1.0f) ,m_min_volume(0.001f * 0.001f * 0.001f) {}
 		};
-		
+
 		// An object for building collision shapes
 		class ShapeBuilder
 		{
@@ -43,7 +43,7 @@ namespace pr
 			{
 				ByteCont        m_data;  // Data containing the shape
 				MassProperties  m_mp;
-				BoundingBox     m_bbox;
+				BBox     m_bbox;
 				mutable Shape*  m_shape; // Used in the debugger only
 				ph::Shape const&    GetShape() const    { m_shape = (ph::Shape*)(&m_data[0]); return *reinterpret_cast<ph::Shape const*>(&m_data[0]); }
 				ph::Shape&          GetShape()          { m_shape = (ph::Shape*)(&m_data[0]); return *reinterpret_cast<ph::Shape*>(&m_data[0]); }
@@ -53,30 +53,30 @@ namespace pr
 			{
 				TPrimList       m_prim_list;
 				MassProperties  m_mp;
-				BoundingBox     m_bbox;
+				BBox     m_bbox;
 			};
-			
+
 			ShapeBuilderSettings    m_settings;
 			Model                   m_model;
-			
+
 			void    CalculateMassAndCentreOfMass();
 			void    MoveToCentreOfMassFrame(v4& model_to_CoMframe);
 			void    CalculateBoundingBox();
 			void    CalculateInertiaTensor();
-			
+
 		public:
 			ShapeBuilder(const ShapeBuilderSettings& settings = ShapeBuilderSettings());
-			
+
 			// Begin a new physics model
 			void Reset();
-			
+
 			// Add shapes to the current model.
 			template <typename ShapeType>
 			ph::EResult AddShape(ShapeType const& shape)
 			{
 				pr::RefPtr<Prim> prim = new Prim();
 				pr::AppendData(prim->m_data, byte_ptr_cast(&shape), byte_ptr_cast(&shape) + shape.m_base.m_size);
-				
+
 				// Convert the shape to canonical form (i.e. about it's centre of mass)
 				// Fill out the rest of the shape information
 				ShapeType& shape_ = shape_cast<ShapeType>(prim->GetShape());
@@ -85,18 +85,18 @@ namespace pr
 				ShiftCentre(shape_, prim->m_mp.m_centre_of_mass);
 				CalcBBox(shape_, prim->m_bbox);
 				shape_.m_base.m_bbox = prim->m_bbox;
-				
+
 				// Validate the primitive
 				if (prim->m_mp.m_mass / density < m_settings.m_min_volume)   { return EResult_VolumeTooSmall; }
 				if (prim->m_mp.m_mass < m_settings.m_min_mass)               { prim->m_mp.m_mass = m_settings.m_min_mass; }
 				m_model.m_prim_list.push_back(prim);
 				return EResult_Success;
 			}
-			
+
 			// Return access to a shape
 			ph::Shape const& GetShape(int i) const  { return m_model.m_prim_list[i]->GetShape(); }
 			ph::Shape const& GetShape() const       { return m_model.m_prim_list.back()->GetShape(); }
-			
+
 			// Serialise the shape into 'model_data'
 			// It should be possible to insert the shape returned from here into a larger shape.
 			// The highest level shape in a composite shape should have a shape_to_model transform of id.

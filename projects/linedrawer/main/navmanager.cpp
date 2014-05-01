@@ -58,7 +58,7 @@ bool ldr::NavManager::Render2D() const
 }
 
 // Reset the camera to view a bbox
-void ldr::NavManager::ResetView(pr::BoundingBox const& view_bbox)
+void ldr::NavManager::ResetView(pr::BBox const& view_bbox)
 {
 	m_camera.View(view_bbox, m_reset_forward, m_reset_up, true);
 }

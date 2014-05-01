@@ -39,7 +39,7 @@ ldr::Plugin::~Plugin()
 }
 
 // Called when the viewport is being built
-void ldr::Plugin::OnEvent(pr::rdr::Evt_SceneRender const& e)
+void ldr::Plugin::OnEvent(pr::rdr::Evt_UpdateScene const& e)
 {
 	// Add instances from the store
 	for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)

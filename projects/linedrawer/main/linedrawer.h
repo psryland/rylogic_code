@@ -19,15 +19,17 @@ namespace ldr
 	struct Main
 		:pr::app::Main<UserSettings, MainGUI>
 		,pr::events::IRecv<pr::ldr::Evt_SettingsChanged>
+		,pr::events::IRecv<pr::ldr::Evt_LdrObjectAdd>
+		,pr::events::IRecv<pr::ldr::Evt_LdrObjectDelete>
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
-		,pr::events::IRecv<pr::rdr::Evt_SceneRender>
 	{
 		// These types form part of the interface
-		NavManager                  m_nav;              // Controls user input and camera navigation
-		pr::ldr::ObjectCont         m_store;            // A container of all ldr objects created
-		PluginManager               m_plugin_mgr;       // The container of loaded plugins
-		LuaSource                   m_lua_src;          // An object for processing lua files
-		FileSources                 m_files;            // Manages files that are sources of ldr objects
+		NavManager          m_nav;            // Controls user input and camera navigation
+		pr::ldr::ObjectCont m_store;          // A container of all ldr objects created
+		PluginManager       m_plugin_mgr;     // The container of loaded plugins
+		LuaSource           m_lua_src;        // An object for processing lua files
+		FileSources         m_files;          // Manages files that are sources of ldr objects
+		int                 m_scene_rdr_pass; // Index of the current scene.Render() call
 
 		pr::ldr::LdrObjectStepData::Link m_step_objects;
 		pr::ldr::StockInstance           m_focus_point;
@@ -62,15 +64,17 @@ namespace ldr
 		virtual void Resize(pr::iv2 const& size);
 
 	private:
+
 		// Create stock models such as the focus point, origin, etc
 		void CreateStockModels();
 
 		// Event handlers
-		void OnEvent(pr::ldr::Evt_SettingsChanged const&);
-		void OnEvent(pr::ldr::Evt_LdrObjectAdd const&);
-		void OnEvent(pr::ldr::Evt_LdrObjectDelete const&);
-		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&);
-		void OnEvent(pr::rdr::Evt_SceneRender const&);
+		void OnEvent(pr::ldr::Evt_SettingsChanged const&) override;
+		void OnEvent(pr::ldr::Evt_LdrObjectAdd const&) override;
+		void OnEvent(pr::ldr::Evt_LdrObjectDelete const&) override;
+		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&) override;
+		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
+		void OnEvent(pr::rdr::Evt_RenderStepExecute const&) override;
 	};
 }
 

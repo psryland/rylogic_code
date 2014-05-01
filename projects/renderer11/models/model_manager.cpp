@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/models/model_settings.h"
+#include "pr/renderer11/models/input_layout.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/util.h"
@@ -20,6 +21,9 @@ namespace pr
 			,m_device     (device)
 		{
 			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null d3d device");
+
+			// Create stock models
+			CreateStockModels();
 		}
 		ModelManager::~ModelManager()
 		{}
@@ -84,6 +88,27 @@ namespace pr
 		{
 			if (!nugget) return;
 			m_alex_nugget.Delete(nugget);
+		}
+
+		// Create stock models
+		void ModelManager::CreateStockModels()
+		{
+			{// Unit quad in Z = 0 plane
+				VertPCNT verts[4] =
+				{
+					{pr::v3::make(-1,-1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0,1)},
+					{pr::v3::make( 1,-1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(1,1)},
+					{pr::v3::make( 1, 1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(1,0)},
+					{pr::v3::make(-1, 1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0,0)},
+				};
+				pr::uint16 idxs[]  = {0, 1, 2, 0, 2, 3};
+				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+				MdlSettings s(verts, idxs, bbox, "unit quad");
+				m_unit_quad = CreateModel(s);
+
+				NuggetProps ddata(EPrim::TriList, VertPCNT::GeomMask);
+				m_unit_quad->CreateNugget(ddata);
+			}
 		}
 	}
 }

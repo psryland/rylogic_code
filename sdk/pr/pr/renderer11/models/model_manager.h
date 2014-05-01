@@ -33,7 +33,11 @@ namespace pr
 			void Delete(Model* model);
 			void Delete(Nugget* nugget);
 
+			// Create stock models
+			void CreateStockModels();
+
 		public:
+
 			// Models and ModelBuffers must be created by the ModelManager
 			// because the model manager has the allocator
 			ModelManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
@@ -48,6 +52,9 @@ namespace pr
 			// Create a model within the provided model buffer.
 			// The buffer must contain sufficient space for the model
 			ModelPtr CreateModel(MdlSettings const& settings, ModelBufferPtr& model_buffer);
+
+			// Stock models
+			ModelPtr m_unit_quad;
 		};
 	}
 }
