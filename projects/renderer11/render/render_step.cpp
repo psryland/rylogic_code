@@ -284,12 +284,11 @@ namespace pr
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
 			{
-				Nugget const& nugget = *dle.m_nugget;
-
 				// Bind the shader to the device
-				m_shader->Bind(dc, dle, *this);
+				BindShader(dc, &dle, *this);
 
 				// Add the nugget to the device context
+				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_begin),
@@ -311,7 +310,6 @@ namespace pr
 			,m_gbuffer(scene.RStep<GBufferCreate>())
 			,m_cbuf_frame()
 			,m_unit_quad()
-			,m_unit_view(pr::m4x4Identity, pr::maths::tau_by_4, 1.0f, 1.0f, true)
 			,m_background_colour(bkgd_colour)
 			,m_clear_bb(clear_bb)
 			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::DSLighting))
@@ -370,7 +368,7 @@ namespace pr
 				dle.m_nugget   = &nugget;
 				dle.m_instance = &m_unit_quad.m_base;
 				dle.m_sort_key = 0;
-				m_shader->Bind(dc, dle, *this);
+				BindShader(dc, &dle, *this);
 
 				// Add the nugget to the device context
 				dc->DrawIndexed(
@@ -498,13 +496,11 @@ namespace pr
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
 			{
-				Nugget const&     nugget = *dle.m_nugget;
-				BaseShader const& shader = *dle.m_shader;
-
 				// Bind the shader to the device
-				shader.Bind(dc, dle, *this);
+				BindShader(dc, &dle, *this);
 
 				// Add the nugget to the device context
+				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_begin),

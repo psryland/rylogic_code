@@ -151,7 +151,6 @@ namespace pr
 			GBufferCreate&       m_gbuffer;           // The gbuffer render step for access to the gbuffer textures
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
 			Instance             m_unit_quad;         // The quad drawn to the screen for post processing
-			SceneView            m_unit_view;         // A scene view set up for post processing
 			pr::Colour           m_background_colour; // The colour to clear the background to
 			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
 			ShaderPtr            m_shader;            // The shader used to generate the g-buffer

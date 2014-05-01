@@ -18,9 +18,9 @@ namespace pr
 			,m_viewport(rdr.RenderTargetSize())
 			,m_render_steps()
 		{
-			m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
-			m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
-			//m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
+			//m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
+			//m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
+			m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
 		}
 
 		// Find a render step by id

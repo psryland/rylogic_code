@@ -36,6 +36,13 @@ namespace pr
 			,m_name()
 		{}
 
+		// Ref counting cleanup function
+		void BaseShader::RefCountZero(pr::RefCount<BaseShader>* doomed)
+		{
+			BaseShader* shdr = static_cast<BaseShader*>(doomed);
+			shdr->m_mgr->Delete(shdr);
+		}
+
 		// Setup the input assembler for 'nugget'
 		void SetupIA(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle)
 		{
@@ -110,37 +117,35 @@ namespace pr
 		}
 
 		// Bind the shader to the device context in preparation for rendering
-		void BaseShader::Bind(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) const
+		void BindShader(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const* dle, RenderStep const& rstep)
 		{
+			if (!dle)
+				return; // todo
+
+			auto& shdr = *dle->m_shader;
+
 			// Call the custom binding function provided when the shader was created
-			m_setup_func(dc, dle, rstep);
+			shdr.m_setup_func(dc, *dle, rstep);
 
 			// Setup the input assembler
-			dc->IASetInputLayout(m_iplayout.m_ptr);
-			SetupIA(dc, dle);
+			dc->IASetInputLayout(shdr.m_iplayout.m_ptr);
+			SetupIA(dc, *dle);
 
 			// Set the depth buffering states
-			SetupDS(dc, dle, rstep);
+			SetupDS(dc, *dle, rstep);
 
 			// Set the raster states
-			SetupRS(dc, dle, rstep);
+			SetupRS(dc, *dle, rstep);
 
 			// Set the blend states
-			SetupBS(dc, dle, rstep);
+			SetupBS(dc, *dle, rstep);
 
 			// Bind the shaders (passing null disables the shader)
-			dc->VSSetShader(m_vs.m_ptr, 0, 0);
-			dc->PSSetShader(m_ps.m_ptr, 0, 0);
-			dc->GSSetShader(m_gs.m_ptr, 0, 0);
-			dc->HSSetShader(m_hs.m_ptr, 0, 0);
-			dc->DSSetShader(m_ds.m_ptr, 0, 0);
-		}
-
-		// Ref counting cleanup function
-		void BaseShader::RefCountZero(pr::RefCount<BaseShader>* doomed)
-		{
-			BaseShader* shdr = static_cast<BaseShader*>(doomed);
-			shdr->m_mgr->Delete(shdr);
+			dc->VSSetShader(shdr.m_vs.m_ptr, 0, 0);
+			dc->PSSetShader(shdr.m_ps.m_ptr, 0, 0);
+			dc->GSSetShader(shdr.m_gs.m_ptr, 0, 0);
+			dc->HSSetShader(shdr.m_hs.m_ptr, 0, 0);
+			dc->DSSetShader(shdr.m_ds.m_ptr, 0, 0);
 		}
 	}
 }
