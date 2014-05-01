@@ -48,6 +48,7 @@ namespace pr
 			x(LineD            ,= 0x07512a2a)\
 			x(LineList         ,= 0x0e9c633b)\
 			x(LineBox          ,= 0x11d1a8c4)\
+			x(Grid             ,= 0x08D503AF)\
 			x(Spline           ,= 0x1f45c36e)\
 			x(Circle           ,= 0x015ed657)\
 			x(Rect             ,= 0x12E8C1AD)\

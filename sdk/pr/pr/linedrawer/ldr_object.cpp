@@ -780,6 +780,31 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::Grid
+		template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreatorLine
+		{
+			void Parse(ParseParams& p) override
+			{
+				int axis_id;
+				pr::v2 dim, div;
+				p.m_reader.ExtractInt(axis_id, 10);
+				p.m_reader.ExtractVector2(dim);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) div = dim; else p.m_reader.ExtractVector2(div);
+
+				pr::v2 step = dim / div;
+				for (float i = -dim.x/2; i <= dim.x/2; i += step.x)
+				{
+					m_point.push_back(pr::v4::make(i,-dim.y/2, 0, 1));
+					m_point.push_back(pr::v4::make(i, dim.y/2, 0, 1));
+				}
+				for (float i = -dim.y/2; i <= dim.y/2; i += step.y)
+				{
+					m_point.push_back(pr::v4::make(-dim.x/2, i, 0, 1));
+					m_point.push_back(pr::v4::make( dim.x/2, i, 0, 1));
+				}
+			}
+		};
+
 		// ELdrObject::Spline
 		template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreatorLine
 		{
@@ -1762,6 +1787,7 @@ namespace pr
 			case ELdrObject::LineD:        Parse<ELdrObject::LineD>     (p); break;
 			case ELdrObject::LineList:     Parse<ELdrObject::LineList>  (p); break;
 			case ELdrObject::LineBox:      Parse<ELdrObject::LineBox>   (p); break;
+			case ELdrObject::Grid:         Parse<ELdrObject::Grid>      (p); break;
 			case ELdrObject::Spline:       Parse<ELdrObject::Spline>    (p); break;
 			case ELdrObject::Circle:       Parse<ELdrObject::Circle>    (p); break;
 			case ELdrObject::Rect:         Parse<ELdrObject::Rect>      (p); break;
@@ -2188,6 +2214,14 @@ R"(
 *LineBox linebox
 {
 	2 4 1 // Width, height, depth. Accepts 1, 2, or 3 dimensions. 1dim = cube, 2 = rod, 3 = arbitrary box
+}
+
+// A grid of lines
+*Grid grid FFA08080
+{
+	3      // axis_id
+	4 5    // width, height
+	8 10   // Optional, w,h divisions. If omitted defaults to width/height
 }
 
 // A curve described by a start and end point and two control points
