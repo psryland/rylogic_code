@@ -422,7 +422,6 @@ namespace pr
 			m_nodes.push_back(Node(coord, parent));
 			return &m_nodes.back();
 		}
-
 	};
 }
 
@@ -510,8 +509,13 @@ namespace pr
 			}
 
 			// Sanity check
+			size_t count = 0;
 			for (auto& node : qtree.m_nodes)
+			{
 				PR_CHECK(qtree.SanityCheck(node), true);
+				count += node.m_items.size();
+			}
+			PR_CHECK(count, qtree.m_count);
 
 			for (int i = 0; i != 100; ++i)
 			{
@@ -529,19 +533,8 @@ namespace pr
 
 				// All flagged should collide, not flagged should not
 				for (auto& node : qtree.m_nodes)
-				{
 					for (auto& item : node.m_items)
-					{
-						bool col = Collide(W, item);
-						if (col != item.flag)
-						{
-							qtree.Traverse(W.pos, W.radius, [&](Watzit const&, void*){return true;});
-							col = !!col;
-						}
-
 						PR_CHECK(Collide(W, item), item.flag);
-					}
-				}
 			}
 
 			/*

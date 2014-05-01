@@ -123,4 +123,9 @@
 	<Type Name="ele::Element">
 		<DisplayString>{m_name->m_fullname}</DisplayString>
 	</Type>
+	
+	<!-- Misc -->
+	<Type Name="pr::quad_tree::Coord">
+		<DisplayString>Lvl:{m_level} {m_x}x{m_y}</DisplayString>
+	</Type>
 </AutoVisualizer>
