@@ -22,7 +22,7 @@ ShapeSphere& ShapeSphere::set(float radius, const m4x4& shape_to_model, Material
 }
 
 // Return the bounding box for a sphere
-BoundingBox& pr::ph::CalcBBox(ShapeSphere const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(ShapeSphere const& shape, BBox& bbox)
 {
 	bbox.m_centre = v4Origin;
 	bbox.m_radius.x = shape.m_radius;
@@ -60,9 +60,9 @@ v4 pr::ph::SupportVertex(ShapeSphere const& shape, v4 const& direction, std::siz
 
 	// We need to quantise the normal otherwise the iterative algorithms perform badly
 	v4 dir = Normalise3(direction);
-	
+
 	// Generate an id for the vertex in this direction
-	sup_vert_id = 
+	sup_vert_id =
 		static_cast<std::size_t>((dir.x + 1.0f) * 0.5f * (1 << 4)) << 20 |
 		static_cast<std::size_t>((dir.y + 1.0f) * 0.5f * (1 << 4)) << 10 |
 		static_cast<std::size_t>((dir.z + 1.0f) * 0.5f * (1 << 4)) << 0;

@@ -102,7 +102,7 @@ namespace pr
 					{pr::v3::make(-1, 1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0,0)},
 				};
 				pr::uint16 idxs[]  = {0, 1, 2, 0, 2, 3};
-				auto bbox = pr::BoundingBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
 				MdlSettings s(verts, idxs, bbox, "unit quad");
 				m_unit_quad = CreateModel(s);
 

@@ -30,7 +30,7 @@ namespace pr
 
 		struct Props
 		{
-			pr::BoundingBox m_bbox; // Bounding box in model space of the generated model
+			pr::BBox m_bbox; // Bounding box in model space of the generated model
 			EGeom m_geom;           // The components of the generated geometry
 			bool m_has_alpha;       // True if the model contains any alpha
 

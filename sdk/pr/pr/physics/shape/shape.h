@@ -35,7 +35,7 @@
 
 #ifndef PR_ASSERT
 #	define PR_ASSERT_STR_DEFINED
-#	define PR_ASSERT(grp, exp, str)	
+#	define PR_ASSERT(grp, exp, str)
 #endif
 
 namespace pr
@@ -67,7 +67,7 @@ namespace pr
 			uint m_flags;
 
 			// A bounding box for the shape (and its children if it's a composite shape)
-			BoundingBox m_bbox;
+			BBox m_bbox;
 
 			static Shape make(EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint flags) { Shape s; s.set(type, size, shape_to_model, material_id, flags); return s; }
 			Shape&		 set (EShape type, std::size_t size, const m4x4& shape_to_model, MaterialId material_id, uint flags);
@@ -86,7 +86,7 @@ namespace pr
 		// General shape functions
 		Shape*			GetDummyShape		();
 		const char*		GetShapeTypeStr		(EShape shape_type);
-		BoundingBox&	CalcBBox			(Shape const& shape, BoundingBox& bbox);
+		BBox&	CalcBBox			(Shape const& shape, BBox& bbox);
 		MassProperties& CalcMassProperties	(Shape const& shape, float density, MassProperties& mp);
 		void			ShiftCentre			(Shape& shape, v4& shift);
 		v4				SupportVertex		(Shape const& shape, v4 const& direction, std::size_t hint_vert_id, std::size_t& sup_vert_id);
@@ -103,7 +103,6 @@ namespace pr
 		template <typename ShapeType> inline ShapeType*       Inc(ShapeType*       p) { return reinterpret_cast<ShapeType*      >(byte_ptr(p) + p->m_base.m_size); }
 		template <>                   inline Shape const*     Inc(Shape const*     p) { return reinterpret_cast<Shape const*    >(byte_ptr(p) + p->m_size); }
 		template <>                   inline Shape*           Inc(Shape*           p) { return reinterpret_cast<Shape*          >(byte_ptr(p) + p->m_size); }
-
 	}
 }
 

@@ -299,14 +299,14 @@ namespace ldr
 	// Open a text panel for adding new ldr objects immediately
 	LRESULT MainGUI::OnFileNew(WORD, WORD, HWND, BOOL&)
 	{
-		CTextEntryDlg dlg(m_hWnd, "Create new ldr objects:", m_main->m_settings.m_NewObjectString.c_str(), true);
-		pr::IRect r  = pr::WindowBounds(m_hWnd);
-		dlg.m_width  = pr::Max(100, r.SizeX() - 50);
-		dlg.m_height = pr::Max(60,  r.SizeY() - 50);
-		if (dlg.DoModal() != IDOK) return S_OK;
-
 		try
 		{
+			CTextEntryDlg dlg(m_hWnd, "Create new ldr objects:", m_main->m_settings.m_NewObjectString.c_str(), true);
+			pr::IRect r  = pr::WindowBounds(m_hWnd);
+			dlg.m_width  = pr::Max(100, r.SizeX() - 50);
+			dlg.m_height = pr::Max(60,  r.SizeY() - 50);
+			if (dlg.DoModal() != IDOK) return S_OK;
+
 			m_main->m_settings.m_NewObjectString = dlg.m_body;
 			m_main->m_settings.Save();
 
@@ -317,19 +317,22 @@ namespace ldr
 		{
 			pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\nError details: %s", e.what())));
 		}
-		catch (...)
-		{
-			pr::events::Send(Event_Error("Unknown exception thrown while parsing source."));
-		}
 		return S_OK;
 	}
 
 	// Create a new text file for ldr script
 	LRESULT MainGUI::OnFileNewScript(WORD, WORD, HWND, BOOL&)
 	{
-		WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,m_hWnd);
-		if (fd.DoModal() != IDOK) return S_OK;
-		FileNew(fd.m_szFileName);
+		try
+		{
+			WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,m_hWnd);
+			if (fd.DoModal() != IDOK) return S_OK;
+			FileNew(fd.m_szFileName);
+		}
+		catch (std::exception const& e)
+		{
+			pr::events::Send(Event_Error(pr::FmtS("Creating a new script failed.\nError details: %s", e.what())));
+		}
 		return S_OK;
 	}
 
@@ -673,60 +676,77 @@ namespace ldr
 	// Create a new file
 	void MainGUI::FileNew(char const* filepath)
 	{
-		CloseHandle(pr::FileOpen(filepath, pr::EFileOpen::Writing));
+		try
+		{
+			CloseHandle(pr::FileOpen(filepath, pr::EFileOpen::Writing));
 
-		FileOpen(filepath, false);
-		StrList list; list.push_back(filepath);
-		OpenTextEditor(list);
+			FileOpen(filepath, false);
+			StrList list; list.push_back(filepath);
+			OpenTextEditor(list);
+		}
+		catch (std::exception const& e)
+		{
+			pr::events::Send(Event_Error(pr::FmtS("Error opening new script.\nError details: %s", e.what())));
+		}
 	}
 
 	// Add a file to the file sources
 	void MainGUI::FileOpen(char const* filepath, bool additive)
 	{
-		// Add the file to the recent files list
-		m_recent_files.Add(filepath, true);
+		try
+		{
+			// Add the file to the recent files list
+			m_recent_files.Add(filepath, true);
 
-		// Clear data from other files, unless this is an additive open
-		if (!additive) m_main->m_files.Clear();
-		m_main->m_files.Add(filepath);
+			// Clear data from other files, unless this is an additive open
+			if (!additive) m_main->m_files.Clear();
+			m_main->m_files.Add(filepath);
 
-		// Reset the camera if flagged
-		if (m_main->m_settings.m_ResetCameraOnLoad)
-			m_main->ResetView(pr::ldr::EObjectBounds::All);
+			// Reset the camera if flagged
+			if (m_main->m_settings.m_ResetCameraOnLoad)
+				m_main->ResetView(pr::ldr::EObjectBounds::All);
 
-		// Set the window title
-		pr::string<> title;
-		title += AppTitleA();
-		title += " - ";
-		title += filepath;
-		SetWindowTextA(title.c_str());
+			// Set the window title
+			pr::string<> title;
+			title += AppTitleA();
+			title += " - ";
+			title += filepath;
+			SetWindowTextA(title.c_str());
 
-		// Refresh
-		m_main->RenderNeeded();
+			// Refresh
+			m_main->RenderNeeded();
+		}
+		catch (std::exception const& ex)
+		{
+			pr::events::Send(Event_Error(pr::FmtS("Error when attempting to open file '%s'.\r\nDetails: %s", filepath, ex.what())));
+		}
 	}
 
 	// Open the text editor with the provided file list
 	void MainGUI::OpenTextEditor(StrList const& files)
 	{
-		// If no path to a text editor is provided, ignore the command
-		std::string cmd = m_main->m_settings.m_TextEditorCmd;
-		if (cmd.empty())
+		try
 		{
-			MessageBoxA("Text editor not provided. Check options", "Editor startup error", MB_OK);
-			return;
+			// If no path to a text editor is provided, ignore the command
+			std::string cmd = m_main->m_settings.m_TextEditorCmd;
+			if (cmd.empty())
+				throw std::exception("Text editor not provided. Check options");
+
+			// Build the command line string
+			for (auto& file : files)
+				cmd += " \"" + file + "\"";
+
+			// Launch the text editor in a new process
+			STARTUPINFO suinfo = {sizeof(STARTUPINFO)};
+			PROCESS_INFORMATION proc_info;
+			auto close_handles = pr::CreateScope([]{}, [&]{ CloseHandle(proc_info.hThread); CloseHandle(proc_info.hProcess); });
+			if (CreateProcessA(0, &cmd[0], 0, 0, FALSE, NORMAL_PRIORITY_CLASS, 0, 0, &suinfo, &proc_info) == FALSE)
+				throw std::exception(pr::FmtS("Failed to start text editor: '%s'", cmd.c_str()));
 		}
-
-		// Build the command line string
-		for (StrList::const_iterator i = files.begin(), iend = files.end(); i != iend; ++i)
-			cmd += " \"" + *i + "\"";
-
-		STARTUPINFO suinfo = {sizeof(STARTUPINFO)};
-		PROCESS_INFORMATION proc_info;
-		if (CreateProcessA(0, &cmd[0], 0, 0, FALSE, NORMAL_PRIORITY_CLASS, 0, 0, &suinfo, &proc_info) == FALSE)
-			MessageBoxA(pr::FmtS("Failed to start text editor: '%s'", cmd.c_str()), "Editor startup error", MB_OK);
-
-		CloseHandle(proc_info.hThread);
-		CloseHandle(proc_info.hProcess);
+		catch (std::exception const& e)
+		{
+			pr::events::Send(Event_Error(pr::FmtS("OpenTextEditor failed.\r\nError details: %s", e.what())));
+		}
 	}
 
 	// Set UI elements to reflect their current state

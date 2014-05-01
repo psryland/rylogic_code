@@ -191,7 +191,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, pr::m4x4 const& o2p);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, pr::uint colour, pr::uint mask, BOOL include_children);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex);
-	VIEW3D_API pr::BoundingBox         __stdcall View3D_ObjectBBoxMS             (View3DObject object);
+	VIEW3D_API pr::BBox         __stdcall View3D_ObjectBBoxMS             (View3DObject object);
 
 	// Materials
 	VIEW3D_API EView3DResult           __stdcall View3D_TextureCreate            (size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex);

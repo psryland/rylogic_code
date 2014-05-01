@@ -10,11 +10,25 @@
 
 namespace ldr
 {
-	// Ldr event base type
+	enum class EMsgLevel {Info, Error};
+
+	// Base class for error/warning/etc messages
 	struct Event
 	{
 		std::string m_msg;
-		Event(std::string const& msg) :m_msg(msg) {}
+		EMsgLevel   m_level;
+		std::exception const* m_except;
+
+		Event(std::string const& msg, EMsgLevel lvl = EMsgLevel::Error, std::exception const* ex = nullptr)
+			:m_msg(msg)
+			,m_level(lvl)
+			,m_except(ex)
+		{}
+		virtual ~Event() {}
+
+	private:
+		Event(Event const&);
+		Event& operator=(Event const&);
 	};
 
 	// Events containing general information as line drawer runs
@@ -45,10 +59,10 @@ namespace ldr
 		DWORD m_min_display_time_ms;
 
 		Event_Status(char const* msg, bool bold = false, int priority = 0, DWORD min_display_time_ms = 200)
-		:Event(msg)
-		,m_bold(bold)
-		,m_priority(priority)
-		,m_min_display_time_ms(min_display_time_ms)
+			:Event(msg)
+			,m_bold(bold)
+			,m_priority(priority)
+			,m_min_display_time_ms(min_display_time_ms)
 		{}
 	};
 

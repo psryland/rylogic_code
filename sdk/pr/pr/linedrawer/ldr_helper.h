@@ -381,7 +381,7 @@ namespace pr
 		//				,position.x ,position.y ,position.z
 		//				);
 		//}
-		//template <typename TStr> inline void BoundingBox(char const* name, unsigned int colour, const pr::BoundingBox& bbox, TStr& str)
+		//template <typename TStr> inline void BBox(char const* name, unsigned int colour, const pr::BBox& bbox, TStr& str)
 		//{
 		//	v4 lower = bbox.Lower();
 		//	v4 upper = bbox.Upper();

@@ -85,7 +85,7 @@ namespace pr
 
 				// Model nugget properties for the skybox
 				NuggetProps ddata;
-				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::WrapSampler(), texpath.c_str());
+				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearWrap(), texpath.c_str());
 				ddata.m_rsb = RSBlock::SolidCullFront();
 
 				// Create the skybox model
@@ -127,7 +127,7 @@ namespace pr
 
 				// Create a model nugget for the skybox
 				NuggetProps ddata(EPrim::TriList, VertPT::GeomMask, rdr.m_shdr_mgr.FindShaderFor(VertPT::GeomMask).m_ptr);
-				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::ClampSampler(), texpath.c_str());
+				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), texpath.c_str());
 				m_inst.m_model->CreateNugget(ddata);
 			}
 
@@ -190,7 +190,7 @@ namespace pr
 					// Load the texture for this face of the skybox
 					tpath[ofs+0] = axes[i][0];
 					tpath[ofs+1] = axes[i][1];
-					ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::ClampSampler(), tpath.c_str());
+					ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), tpath.c_str());
 
 					// Create the render nugget for this face of the skybox
 					rdr::Range vrange = rdr::Range::make(i*4, (i+1)*4);

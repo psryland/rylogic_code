@@ -28,11 +28,11 @@ namespace pr
 		static Frustum makeWH(float width, float height, float z, float zfar = 0);
 		static Frustum makeFA(float fovY, float aspect, float zfar = 0);
 		static Frustum makeHV(float horz_angle, float vert_angle, float zfar = 0);
-		
+
 		Frustum& setWH(float width, float height, float z, float zfar = 0);
 		Frustum& setFA(float fovY, float aspect, float zfar = 0);
 		Frustum& setHV(float horz_angle, float vert_angle, float zfar = 0);
-		
+
 		// Get/Set the z position of the sharp end.
 		// This is the distance to the far clip plane
 		void ZDist(float zero);
@@ -73,8 +73,8 @@ namespace pr
 
 	// Functions
 	bool IsWithin(Frustum const& frustum, v4 const& point);
-	bool IsWithin(Frustum const& frustum, BoundingBox const& bbox);
-	bool IsWithin(Frustum const& frustum, BoundingSphere const& sphere);
+	bool IsWithin(Frustum const& frustum, BBox const& bbox);
+	bool IsWithin(Frustum const& frustum, BSphere const& sphere);
 
 	// Intersect the line passing through 's' and 'e' to 'frustum' returning
 	// parametric values 't0' and 't1'. Note: this is an accumulative function,

@@ -305,12 +305,12 @@ namespace pr
 			// Return the bounding box for this object in model space
 			// To convert this to parent space multiply by 'm_o2p'
 			// e.g. BBoxMS() for "*Box { 1 2 3 *o2w{*rand} }" will return bb.m_centre = origin, bb.m_radius = (1,2,3)
-			template <typename Pred> pr::BoundingBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity) const
+			template <typename Pred> pr::BBox BBoxMS(bool include_children, Pred pred, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity) const
 			{
 				auto i2w = *p2w * m_anim.Step(time_s);
 
 				// Start with the bbox for this object
-				pr::BoundingBox bbox = pr::BBoxReset;
+				pr::BBox bbox = pr::BBoxReset;
 				if (m_model && pred(*this)) // Get the bbox from the graphics model
 				{
 					auto bb = i2w * m_model->m_bbox;
@@ -327,7 +327,7 @@ namespace pr
 				}
 				return bbox;
 			}
-			pr::BoundingBox BBoxMS(bool include_children) const
+			pr::BBox BBoxMS(bool include_children) const
 			{
 				return BBoxMS(include_children, [](LdrObject const&){ return true; });
 			}
@@ -335,7 +335,7 @@ namespace pr
 			// Return the bounding box for this object in world space.
 			// If this is a top level object, this will be equivalent to 'm_o2p * BBoxMS()'
 			// If not then, then the returned bbox will be transformed to the top level object space
-			template <typename Pred> pr::BoundingBox BBoxWS(bool include_children, Pred pred, float time_s = 0.0f) const
+			template <typename Pred> pr::BBox BBoxWS(bool include_children, Pred pred, float time_s = 0.0f) const
 			{
 				// Get the combined o2w transform;
 				pr::m4x4 o2w = m_o2p;
@@ -344,7 +344,7 @@ namespace pr
 
 				return BBoxMS(include_children, pred, time_s, &o2w);
 			}
-			pr::BoundingBox BBoxWS(bool include_children) const
+			pr::BBox BBoxWS(bool include_children) const
 			{
 				return BBoxWS(include_children, [](LdrObject const&){ return true; });
 			}

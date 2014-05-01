@@ -133,13 +133,13 @@ namespace pr
 	}
 
 	// Return true if any part of 'bbox' is within 'frustum'
-	inline bool IsWithin(Frustum const& frustum, BoundingBox const& bbox)
+	inline bool IsWithin(Frustum const& frustum, BBox const& bbox)
 	{
 		return IsWithin(frustum, GetBoundingSphere(bbox));
 	}
 
 	// Return true if any part of 'bsphere' is within 'frustum'
-	inline bool IsWithin(Frustum const& frustum, BoundingSphere const& sphere)
+	inline bool IsWithin(Frustum const& frustum, BSphere const& sphere)
 	{
 		v4 dots = frustum.m_Tnorms * sphere.Centre();
 		return dots.x >= -sphere.Radius() && dots.y >= -sphere.Radius() && dots.z >= -sphere.Radius() && dots.w >= -sphere.Radius();

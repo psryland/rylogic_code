@@ -294,7 +294,7 @@ namespace ldr
 	void Main::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
 	{
 		// Update the transform of the selection box
-		pr::BoundingBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
+		pr::BBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
 		pr::Scale4x4(m_selection_box.m_i2w, bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
 
 		// Request a refresh when the selection changes (if the selection box is visible)

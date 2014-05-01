@@ -41,11 +41,11 @@
 //bool DefaultBBoxTerrainCollisionCB(GetTerrainDataCB GetTerrainData, const Instance& object, const float time_step)
 //{
 //	const m4x4& bbox_to_world	= object.ObjectToWorld();
-//	const BoundingBox& bbox		= object.BBox();
+//	const BBox& bbox		= object.BBox();
 //
 //	Terrain terrain;
 //	terrain.m_lookup_type		= Terrain::eQuickOut | Terrain::eCheck;
-//	for( uint c = BoundingBox::FirstCorner; c < BoundingBox::NumberOfCorners; ++c )
+//	for( uint c = BBox::FirstCorner; c < BBox::NumberOfCorners; ++c )
 //	{
 //		terrain.m_position		= bbox_to_world * bbox.GetCorner(c, 1.0f);
 //		terrain.m_direction		= object.VelocityAt(terrain.m_position) * time_step;
@@ -124,13 +124,13 @@
 //{
 //	// Test a box around the cylinder to find a contact
 //	const m4x4	primA_to_world	= data.m_objA->ObjectToWorld() * primA.m_primitive_to_object;
-//	
+//
 //	v4 top, bottom, left, up;
 //	top		= primA_to_world[3] + primA.m_radius[2] * primA_to_world[2];
 //	bottom	= primA_to_world[3] - primA.m_radius[2] * primA_to_world[2];
 //	left	= primA.m_radius[0] * primA_to_world[0];
 //	up		= primA.m_radius[0] * primA_to_world[1];
-//	
+//
 //	v4 vertex[8];
 //	vertex[0] = top + left + up;
 //	vertex[1] = top - left + up;
@@ -196,7 +196,7 @@
 //	primA;
 //	data;
 ////PSR...	v4 centre = data.m_objA->ObjectToWorld() * primA.m_primitive_to_object[3];
-////PSR...	
+////PSR...
 ////PSR...	// Sample in the direction of travel using 6 points.
 ////PSR...	v4 vertex[6];
 ////PSR...	vertex[0] = centre;	vertex[0][0] += primA.m_radius[0];
@@ -275,7 +275,7 @@
 ////PSR...	D_dot_R[0] = direction.Dot3(radius[0]);
 ////PSR...	D_dot_R[1] = direction.Dot3(radius[1]);
 ////PSR...	D_dot_R[2] = direction.Dot3(radius[2]);
-////PSR...			
+////PSR...
 ////PSR...	const uint MAX_TEST_POINTS = 10;
 ////PSR...	v4 vertex_buffer[MAX_TEST_POINTS];
 ////PSR...	v4* vertex = vertex_buffer;

@@ -50,7 +50,7 @@ const char* pr::ph::GetShapeTypeStr(EShape shape_type)
 }
 
 // Calculate the bounding box for a shape
-BoundingBox& pr::ph::CalcBBox(Shape const& shape, BoundingBox& bbox)
+BBox& pr::ph::CalcBBox(Shape const& shape, BBox& bbox)
 {
 	switch( shape.m_type )
 	{
@@ -119,9 +119,9 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 const& point, float& distance, 
 //	{
 //		namespace cylinder
 //		{
-//			BoundingBox BBox(const Primitive& prim)
+//			BBox BBox(const Primitive& prim)
 //			{
-//				return BoundingBox::make(v4Origin, prim.m_radius);
+//				return BBox::make(v4Origin, prim.m_radius);
 //			}
 //			v4 CenterOfMass(const Primitive&)
 //			{
@@ -181,7 +181,7 @@ void pr::ph::ClosestPoint(Shape const& shape, v4 const& point, float& distance, 
 //					}
 //				}
 //			}
-//			
+//
 //			//*****
 //			// Pack and convert pointers to byte offsets for a range of models
 //			void Pack(ph::Model* first, ph::Model* last)

@@ -26,7 +26,7 @@ namespace pr
 		};
 
 		// Shape functions
-		BoundingBox&	CalcBBox			(ShapeTriangle const& shape, BoundingBox& bbox);
+		BBox&           CalcBBox			(ShapeTriangle const& shape, BBox& bbox);
 		MassProperties& CalcMassProperties	(ShapeTriangle const& shape, float density, MassProperties& mp);
 		m3x4			CalcInertiaTensor	(ShapeTriangle const& shape);
 		void			ShiftCentre			(ShapeTriangle& shape, v4& shift);

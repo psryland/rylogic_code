@@ -17,15 +17,14 @@ namespace pr
 		// forces and torques for 'elapsed_seconds' then resets these members
 		void Evolve(Rigidbody& rb, float elapsed_seconds);
 
-
 		//struct Instance : pr::chain::link<Instance, ManagedInstance>
 		//{
 		//	Instance();
 		//	Instance(Rigidbody* rigid_body, m4x4* object_to_world);
-		//	
+		//
 		//	// Accessors
-		//	const BoundingBox&	BBox() const						{ return m_rigid_body->m_bbox; }
-		//	const BoundingBox&	BBoxWS() const						{ return m_ws_bbox; }
+		//	const BBox&	BBox() const						{ return m_rigid_body->m_bbox; }
+		//	const BBox&	BBoxWS() const						{ return m_ws_bbox; }
 		//	float				Mass() const						{ return m_rigid_body->m_mass; }
 		//	const m4x4&			InvMassTensorWS() const				{ return m_ws_inv_inertia_tensor; }
 		//	uint				CollisionGroup() const				{ return m_collision_group; }
@@ -39,7 +38,7 @@ namespace pr
 		//	v4					VelocityAt(const v4& where) const	{ return m_velocity + Cross3(m_ang_velocity, where); }
 		//	float				GetEnergy(const v4& gravity) const;
 
-		//	// Set methods		
+		//	// Set methods
 		//	void SetCollisionGroup(uint group)						{ m_collision_group = group; }
 		//	void SetRigidBody(Rigidbody* rigid_body)				{ m_rigid_body = rigid_body; }
 		//	void SetObjectToWorld(m4x4* object_to_world)			{ m_object_to_world = object_to_world; }
@@ -68,7 +67,7 @@ namespace pr
 		//	// Derived variables
 		//	v4			m_ang_momentum;				// The angular momentum of the object in world space
 		//	m4x4		m_ws_inv_inertia_tensor;		// The world space inverse mass tensor
-		//	BoundingBox	m_ws_bbox;					// The world space bounding box for this object. Calculated per step
+		//	BBox	m_ws_bbox;					// The world space bounding box for this object. Calculated per step
 		//};
 
 		//// Implementation ***********************************************
@@ -115,4 +114,3 @@ namespace pr
 }
 
 #endif
-

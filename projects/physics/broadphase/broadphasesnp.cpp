@@ -61,16 +61,16 @@ void BPSweepAndPrune::Add(BPEntity& entity)
 void BPSweepAndPrune::Remove(BPEntity& entity)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, !m_enumerating, "Do not modify the broadphase while pair enumeration is happening");
-	
+
 	// Doing a binary search for 'entity', we need the array to be sorted for this
 	if (m_entity.size() > 1) Sort();
-	
-	// There may be several targets with the same lower bound. 
+
+	// There may be several targets with the same lower bound.
 	Pred_SnP pred(m_axis);
 	BPEntityCont::iterator target = std::lower_bound(m_entity.begin(), m_entity.end(), &entity, pred);
 	for (; target != m_entity.end() && *target != &entity && !pred(&entity, *target); ++target){}
 	PR_ASSERT(PR_DBG_PHYSICS, target != m_entity.end() && *target == &entity, "Object not in broadphase");
-	
+
 	m_entity.erase_fast(target);
 	entity.m_broadphase = 0;
 	m_sorted = false;
@@ -90,36 +90,36 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_BROADPHASE, phBPSnPEnumPairs);
 	PR_PROFILE_SCOPE(PR_PROFILE_BROADPHASE, phBPSnPEnumPairs);
-	
+
 	// Can't have pairs with one or zero elements
 	if (m_entity.size() <= 1)
 		return;
-	
+
 	// Sort the vector of BPEntities
 	Sort();
-	
+
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities
 	// during enumeration
 	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
-	
+
 	// Sweep the array looking for overlaps
 	v4 sum = v4Zero, sum_sq = v4Zero;
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{
 		BPEntity const& entityA = **i;
-		BoundingBox const& bboxA = *entityA.m_bbox;
-		
+		BBox const& bboxA = *entityA.m_bbox;
+
 		// Compute sums so we can measure the variance of the bbox centres
 		sum    += bboxA.Centre();
 		sum_sq += Sqr(bboxA.Centre());
-		
+
 		// Scan forward testing for overlap until we find a bbox whose min is greater than entity's max
 		for (BPEntityCont::const_iterator j = i + 1; j != i_end; ++j)
 		{
 			BPEntity const& entityB = **j;
-			BoundingBox const& bboxB = *entityB.m_bbox;
-			
+			BBox const& bboxB = *entityB.m_bbox;
+
 			// Stop testing if entityB's min is greater than entityA's max
 			if (bboxA.Upper(m_axis) < bboxB.Lower(m_axis))
 				break;
@@ -133,7 +133,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 			}
 		}
 	}
-	
+
 	// Compute the variance
 	v4 variance = sum_sq - Sqr(sum) / static_cast<float>(m_entity.size());
 	m_axis = LargestElement3(variance);
@@ -144,28 +144,28 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_BROADPHASE, phBPSnPSingleOverlap);
 	PR_PROFILE_SCOPE(PR_PROFILE_BROADPHASE, phBPSnPSingleOverlap);
-	
+
 	// Sort the vector of BPEntities
 	if (m_entity.size() > 1)
 		Sort();
-	
+
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
 	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
-	
+
 	BPEntity const& entityB = entity;
-	BoundingBox const& bboxB = *entityB.m_bbox;
-	
+	BBox const& bboxB = *entityB.m_bbox;
+
 	// Sweep the array looking for overlaps
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{
 		BPEntity const& entityA = **i;
-		BoundingBox const& bboxA = *entityA.m_bbox;
-		
+		BBox const& bboxA = *entityA.m_bbox;
+
 		// Stop testing if entityB's max is less than entityA's min
 		if (bboxB.Upper(m_axis) < bboxA.Lower(m_axis))
 			break;
-		
+
 		// If there is an overlap on all axes
 		if (bboxA.Upper(m_axis) > bboxB.Lower(m_axis) && IsIntersection(bboxA, bboxB))
 		{
@@ -182,27 +182,27 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, Ray const& ray, void* contex
 {
 	PR_DECLARE_PROFILE(PR_PROFILE_BROADPHASE, phBPSnPRay);
 	PR_PROFILE_SCOPE(PR_PROFILE_BROADPHASE, phBPSnPRay);
-		
+
 	// Sort the vector of BPEntities
 	if (m_entity.size() > 1)
 		Sort();
-	
+
 	// Set a debug flag to catch re-entrant use of the broadphase
 	// In most cases it will be fine however we cannot resort the entities during enumeration
 	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
-	
+
 	float ray_max = pr::Max(ray.m_point[m_axis], ray.m_point[m_axis] + ray.m_direction[m_axis]);
-	
+
 	// Sweep the array looking for overlaps with 'ray'
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{
 		BPEntity const& entityA = **i;
-		BoundingBox const& bboxA = *entityA.m_bbox;
-		
+		BBox const& bboxA = *entityA.m_bbox;
+
 		// Stop testing if 'ray_max' is less than entityA's min
 		if (ray_max < bboxA.Lower(m_axis))
 			break;
-		
+
 		// If there is an overlap on all axes
 		if (Intersect_LineSegmentToBoundingBox(ray.m_point, ray.m_point + ray.m_direction, bboxA))
 		{

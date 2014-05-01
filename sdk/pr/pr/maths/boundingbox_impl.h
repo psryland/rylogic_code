@@ -12,36 +12,36 @@
 namespace pr
 {
 	// Type methods
-	inline BoundingBox  BoundingBox::make(v4 const& centre, v4 const& radius) { BoundingBox bbox = {centre, radius}; return bbox; }
-	inline BoundingBox& BoundingBox::reset()                                  { m_centre = pr::v4Origin; m_radius.set(-1.0f, -1.0f, -1.0f, 0.0f); return *this; }
-	inline BoundingBox& BoundingBox::unit()                                   { m_centre = pr::v4Origin; m_radius.set(0.5f, 0.5f, 0.5f, 0.0f); return *this; }
-	inline BoundingBox& BoundingBox::set(v4 const& centre, v4 const& radius)  { m_centre = centre; m_radius = radius; return *this; }
-	inline bool         BoundingBox::IsValid() const                          { return Volume(*this) >= 0.0f; }
-	inline v4           BoundingBox::Lower() const                            { return m_centre - m_radius; }
-	inline v4           BoundingBox::Upper() const                            { return m_centre + m_radius; }
-	inline float        BoundingBox::Lower(int axis) const                    { return m_centre[axis] - m_radius[axis]; }
-	inline float        BoundingBox::Upper(int axis) const                    { return m_centre[axis] + m_radius[axis]; }
-	inline float        BoundingBox::SizeX() const                            { return 2.0f * m_radius.x; }
-	inline float        BoundingBox::SizeY() const                            { return 2.0f * m_radius.y; }
-	inline float        BoundingBox::SizeZ() const                            { return 2.0f * m_radius.z; }
-	inline v4 const&    BoundingBox::Centre() const                           { return m_centre; }
-	inline v4 const&    BoundingBox::Radius() const                           { return m_radius; }
-	inline float        BoundingBox::DiametreSq() const                       { return 4.0f * Length3Sq(m_radius); }
-	inline float        BoundingBox::Diametre() const                         { return Sqrt(DiametreSq()); }
+	inline BBox      BBox::make(v4 const& centre, v4 const& radius) { BBox bbox = {centre, radius}; return bbox; }
+	inline BBox&     BBox::reset()                                  { m_centre = pr::v4Origin; m_radius.set(-1.0f, -1.0f, -1.0f, 0.0f); return *this; }
+	inline BBox&     BBox::unit()                                   { m_centre = pr::v4Origin; m_radius.set(0.5f, 0.5f, 0.5f, 0.0f); return *this; }
+	inline BBox&     BBox::set(v4 const& centre, v4 const& radius)  { m_centre = centre; m_radius = radius; return *this; }
+	inline bool      BBox::IsValid() const                          { return Volume(*this) >= 0.0f; }
+	inline v4        BBox::Lower() const                            { return m_centre - m_radius; }
+	inline v4        BBox::Upper() const                            { return m_centre + m_radius; }
+	inline float     BBox::Lower(int axis) const                    { return m_centre[axis] - m_radius[axis]; }
+	inline float     BBox::Upper(int axis) const                    { return m_centre[axis] + m_radius[axis]; }
+	inline float     BBox::SizeX() const                            { return 2.0f * m_radius.x; }
+	inline float     BBox::SizeY() const                            { return 2.0f * m_radius.y; }
+	inline float     BBox::SizeZ() const                            { return 2.0f * m_radius.z; }
+	inline v4 const& BBox::Centre() const                           { return m_centre; }
+	inline v4 const& BBox::Radius() const                           { return m_radius; }
+	inline float     BBox::DiametreSq() const                       { return 4.0f * Length3Sq(m_radius); }
+	inline float     BBox::Diametre() const                         { return Sqrt(DiametreSq()); }
 
 	// Assignment operators
-	inline BoundingBox& operator += (BoundingBox& lhs, v4 const& offset)      { lhs.m_centre += offset; return lhs; }
-	inline BoundingBox& operator -= (BoundingBox& lhs, v4 const& offset)      { lhs.m_centre -= offset; return lhs; }
-	inline BoundingBox& operator *= (BoundingBox& lhs, float s)               { lhs.m_radius *= s; return lhs; }
-	inline BoundingBox& operator /= (BoundingBox& lhs, float s)               { lhs *= (1.0f / s); return lhs; }
+	inline BBox& operator += (BBox& lhs, v4 const& offset)      { lhs.m_centre += offset; return lhs; }
+	inline BBox& operator -= (BBox& lhs, v4 const& offset)      { lhs.m_centre -= offset; return lhs; }
+	inline BBox& operator *= (BBox& lhs, float s)               { lhs.m_radius *= s; return lhs; }
+	inline BBox& operator /= (BBox& lhs, float s)               { lhs *= (1.0f / s); return lhs; }
 
 	// Binary operators
-	inline BoundingBox operator + (BoundingBox const& lhs, v4 const& offset)  { BoundingBox bb = lhs; return bb += offset; }
-	inline BoundingBox operator - (BoundingBox const& lhs, v4 const& offset)  { BoundingBox bb = lhs; return bb -= offset; }
-	inline BoundingBox operator * (m4x4 const& m, BoundingBox const& rhs)
+	inline BBox operator + (BBox const& lhs, v4 const& offset)  { BBox bb = lhs; return bb += offset; }
+	inline BBox operator - (BBox const& lhs, v4 const& offset)  { BBox bb = lhs; return bb -= offset; }
+	inline BBox operator * (m4x4 const& m, BBox const& rhs)
 	{
 		assert(rhs.IsValid() && "Transforming an invalid bounding box");
-		BoundingBox bb = BoundingBox::make(m.pos, v4Zero);
+		BBox bb = BBox::make(m.pos, v4Zero);
 		m4x4 mat = GetTranspose3x3(m);
 		for (int i = 0; i != 3; ++i)
 		{
@@ -52,22 +52,31 @@ namespace pr
 	}
 
 	// Equality operators
-	inline bool	operator == (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool	operator != (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (BoundingBox const& lhs, BoundingBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	inline bool	operator == (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+	inline bool	operator != (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+	inline bool operator <  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+	inline bool operator >  (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+	inline bool operator <= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+	inline bool operator >= (BBox const& lhs, BBox const& rhs)  { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+
+	// Create a bounding box from a collection of verts
+	template <typename VertCont> BBox BBoxMake(VertCont const& verts)
+	{
+		BBox bbox = pr::BBoxReset;
+		for (auto& vert : verts)
+			Encompass(bbox, vert);
+		return bbox;
+	}
 
 	// Functions
-	inline float Volume(BoundingBox const& bbox)
+	inline float Volume(BBox const& bbox)
 	{
 		return bbox.SizeX() * bbox.SizeY() * bbox.SizeZ();
 	}
 
 	// Return a plane corresponding to a side of the bounding box
 	// Returns inward facing planes
-	inline Plane GetPlane(BoundingBox const& bbox, EBBoxPlane side)
+	inline Plane GetPlane(BBox const& bbox, EBBoxPlane side)
 	{
 		switch (side)
 		{
@@ -83,7 +92,7 @@ namespace pr
 	}
 
 	// Return a corner of the bounding box
-	inline v4 GetCorner(BoundingBox const& bbox, uint corner)
+	inline v4 GetCorner(BBox const& bbox, uint corner)
 	{
 		assert(corner < 8 && "Invalid corner index");
 		int x = ((corner >> 0) & 0x1) * 2 - 1;
@@ -93,13 +102,13 @@ namespace pr
 	}
 
 	// Return a bounding sphere that bounds the bounding box
-	inline BoundingSphere GetBoundingSphere(BoundingBox const& bbox)
+	inline BSphere GetBoundingSphere(BBox const& bbox)
 	{
-		return BoundingSphere::make(bbox.m_centre, Length3(bbox.m_radius));
+		return BSphere::make(bbox.m_centre, Length3(bbox.m_radius));
 	}
 
 	// Encompass 'point' within 'bbox'.
-	inline BoundingBox&	Encompass(BoundingBox& bbox, v4 const& point)
+	inline BBox&	Encompass(BBox& bbox, v4 const& point)
 	{
 		for (int i = 0; i != 3; ++i)
 		{
@@ -124,14 +133,14 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bbox'.
-	inline BoundingBox Encompass(BoundingBox const& bbox, v4 const& point)
+	inline BBox Encompass(BBox const& bbox, v4 const& point)
 	{
-		BoundingBox bb = bbox;
+		BBox bb = bbox;
 		return Encompass(bb, point);
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BoundingBox& Encompass(BoundingBox& lhs, BoundingBox const& rhs)
+	inline BBox& Encompass(BBox& lhs, BBox const& rhs)
 	{
 		// Don't treat rhs.IsValid() as an error, it's the only way to Encompass a empty bbox
 		if (!rhs.IsValid()) return lhs;
@@ -141,7 +150,7 @@ namespace pr
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BoundingBox&	Encompass(BoundingBox& lhs, BoundingSphere const& rhs)
+	inline BBox&	Encompass(BBox& lhs, BSphere const& rhs)
 	{
 		// Don't treat rhs.IsValid() as an error, it's the only way to Encompass a empty bsphere
 		if (!rhs.IsValid()) return lhs;
@@ -152,20 +161,20 @@ namespace pr
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BoundingBox Encompass(BoundingBox const& lhs, BoundingBox const& rhs)
+	inline BBox Encompass(BBox const& lhs, BBox const& rhs)
 	{
-		BoundingBox bb = lhs;
+		BBox bb = lhs;
 		return Encompass(bb, rhs);
 	}
 
 	// Returns true if 'point' is within the bounding volume
-	inline bool IsWithin(BoundingBox const& bbox, v4 const& point, float tol)
+	inline bool IsWithin(BBox const& bbox, v4 const& point, float tol)
 	{
 		return	Abs(point.x - bbox.m_centre.x) <= bbox.m_radius.x + tol &&
 				Abs(point.y - bbox.m_centre.y) <= bbox.m_radius.y + tol &&
 				Abs(point.z - bbox.m_centre.z) <= bbox.m_radius.z + tol;
 	}
-	inline bool IsWithin(BoundingBox const& bbox, BoundingBox const& test)
+	inline bool IsWithin(BBox const& bbox, BBox const& test)
 	{
 		return	Abs(test.m_centre.x - bbox.m_centre.x) <= (bbox.m_radius.x - test.m_radius.x) &&
 				Abs(test.m_centre.y - bbox.m_centre.y) <= (bbox.m_radius.y - test.m_radius.y) &&
@@ -173,7 +182,7 @@ namespace pr
 	}
 
 	// Returns true if 'line' intersects 'bbox'
-	inline bool IsIntersection(BoundingBox const& bbox, Line3 const& line)
+	inline bool IsIntersection(BBox const& bbox, Line3 const& line)
 	{
 		Line3 l = line;
 		Clip(bbox, l);
@@ -181,7 +190,7 @@ namespace pr
 	}
 
 	// Returns true if 'plane' intersects 'bbox'
-	inline bool IsIntersection(BoundingBox const& bbox, Plane const& plane)
+	inline bool IsIntersection(BBox const& bbox, Plane const& plane)
 	{
 		// If the eight corners of the box are on the same side of the plane then there's no intersect
 		bool first_side = Dot4(GetCorner(bbox, 0), plane) > 0.0f;
@@ -194,7 +203,7 @@ namespace pr
 	}
 
 	// Returns true if 'lhs' and 'rhs' intersect
-	inline bool IsIntersection(BoundingBox const& lhs, BoundingBox const& rhs)
+	inline bool IsIntersection(BBox const& lhs, BBox const& rhs)
 	{
 		return	Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
 				Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&

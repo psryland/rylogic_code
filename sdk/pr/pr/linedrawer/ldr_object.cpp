@@ -888,7 +888,7 @@ namespace pr
 					return nullptr;
 				}
 
-				pr::BoundingBox bbox;
+				pr::BBox bbox;
 				GenerateShape(bbox);
 
 				// Permute the verts, normals, and bbox
@@ -908,7 +908,7 @@ namespace pr
 				model->m_name = name;
 				return model;
 			}
-			virtual void GenerateShape(pr::BoundingBox& bbox) = 0;
+			virtual void GenerateShape(pr::BBox& bbox) = 0;
 		};
 
 		// ELdrObject::Circle
@@ -920,7 +920,7 @@ namespace pr
 				p.m_reader.ExtractReal(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 			}
-			void GenerateShape(pr::BoundingBox& bbox) override
+			void GenerateShape(pr::BBox& bbox) override
 			{
 				m_facets = std::max(m_facets, 3);
 
@@ -1002,7 +1002,7 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 				m_dim *= 0.5f;
 			}
-			void GenerateShape(pr::BoundingBox& bbox) override
+			void GenerateShape(pr::BBox& bbox) override
 			{
 				// Limit the rounding to half the smallest rectangle side length
 				auto rad = m_corner_radius;

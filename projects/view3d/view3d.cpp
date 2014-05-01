@@ -474,7 +474,7 @@ struct ObjectEditCBData
 	View3D_EditObjectCB edit_cb;
 	void* ctx;
 };
-void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rdr)
+void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer&)
 {
 	PR_ASSERT(PR_DBG, model != 0, "");
 	ObjectEditCBData& cbdata = *static_cast<ObjectEditCBData*>(ctx);
@@ -491,14 +491,13 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	View3DMaterial v3dmat = {0,0};
 
 	// If the model already has nuggets grab some defaults from it
-	if (!model->m_nmap[pr::rdr::ERenderStep::ForwardRender].empty())
+	if (!model->m_nuggets.empty())
 	{
-		auto nug = model->m_nmap[pr::rdr::ERenderStep::ForwardRender].front();
-		auto mat = nug.m_draw;
-		model_type = static_cast<EView3DPrim>(nug.m_prim_topo.value);
-		geom_type  = static_cast<EView3DGeom>(mat.m_shader->m_geom_mask.value);
-		v3dmat.m_diff_tex = mat.m_tex_diffuse.m_ptr;
-		v3dmat.m_env_map  = mat.m_tex_env_map.m_ptr;
+		auto nug = model->m_nuggets.front();
+		model_type = static_cast<EView3DPrim>(nug.m_topo.value);
+		geom_type  = static_cast<EView3DGeom>(nug.m_geom.value);
+		v3dmat.m_diff_tex = nug.m_tex_diffuse.m_ptr;
+		v3dmat.m_env_map  = nullptr;
 	}
 
 	// Get the user to generate the model
@@ -510,10 +509,10 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	PR_ASSERT(PR_DBG, geom_type != EView3DGeom::Unknown, "");
 
 	// Update the material
-	pr::rdr::DrawMethod mat;
-	mat.m_shader = rdr.m_shdr_mgr.FindShaderFor(static_cast<pr::rdr::EGeom::Enum_>(geom_type));
+	pr::rdr::NuggetProps mat;
+	mat.m_topo = static_cast<pr::rdr::EPrim::Enum_>(model_type);
+	mat.m_geom = static_cast<pr::rdr::EGeom::Enum_>(geom_type);
 	mat.m_tex_diffuse = v3dmat.m_diff_tex;
-	mat.m_tex_env_map = v3dmat.m_env_map;
 
 	{// Lock and update the model
 		pr::rdr::MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
@@ -538,8 +537,8 @@ void __stdcall ObjectEditCB(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rd
 	// Re-create the render nuggets
 	vrange.resize(new_vcount);
 	irange.resize(new_icount);
-	model->DeleteNuggets(pr::rdr::ERenderStep::ForwardRender);
-	model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, mat, static_cast<pr::rdr::EPrim::Enum_>(model_type), &vrange, &irange);
+	model->DeleteNuggets();
+	model->CreateNugget(mat, &vrange, &irange);
 }
 
 // Create an object via callback
@@ -608,13 +607,13 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, pr::uint c
 // Assign a texture to an object
 VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex)
 {
-	auto& nuggets = object->m_model->m_nmap[pr::rdr::ERenderStep::ForwardRender];
+	auto& nuggets = object->m_model->m_nuggets;
 	for (auto& nug : nuggets)
-		nug.m_draw.m_tex_diffuse = tex;
+		nug.m_tex_diffuse = tex;
 }
 
 // Return the model space bounding box for 'object'
-VIEW3D_API pr::BoundingBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
+VIEW3D_API pr::BBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 {
 	return object->BBoxMS(true);
 }
@@ -819,7 +818,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 	}
 
 	// Set the light source
-	auto& fr = scene.RdrStep<pr::rdr::ForwardRender>();
+	auto& fr = scene.RStep<pr::rdr::ForwardRender>();
 	fr.m_global_light = drawset->m_light;
 	if (drawset->m_light_is_camera_relative)
 	{

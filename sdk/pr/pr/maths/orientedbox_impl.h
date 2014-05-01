@@ -33,9 +33,9 @@ namespace pr
 		return ob.m_box_to_world;
 	}
 
-	inline BoundingSphere GetBoundingSphere(OrientedBox const& ob)
+	inline BSphere GetBoundingSphere(OrientedBox const& ob)
 	{
-		return BoundingSphere::make(ob.m_box_to_world.pos, Length3(ob.m_radius));
+		return BSphere::make(ob.m_box_to_world.pos, Length3(ob.m_radius));
 	}
 
 	// Returns a support vertex for the box in world space for a given direction

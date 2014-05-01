@@ -48,7 +48,9 @@ namespace pr
 			// Create a model for a 'gimble'
 			void InitModel(pr::Renderer& rdr)
 			{
-				pr::rdr::VertPC const verts[] =
+				using namespace pr::rdr;
+
+				VertPC const verts[] =
 				{
 					{{-0.1f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
 					{{ 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
@@ -63,15 +65,14 @@ namespace pr
 				};
 
 				// Create the gimble model
-				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(pr::rdr::MdlSettings(verts, indices, "gimble"));
+				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxMake(verts), "gimble"));
 
-				pr::rdr::DrawMethod method;
-
-				// Get a suitable shader
-				method.m_shader = rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPC>();
+				NuggetProps mat; // Get a suitable shader
+				mat.m_topo = EPrim::LineList;
+				mat.m_geom = VertPC::GeomMask;
 
 				// Create a render nugget
-				m_inst.m_model->CreateNugget(pr::rdr::ERenderStep::ForwardRender, method, pr::rdr::EPrim::LineList);
+				m_inst.m_model->CreateNugget(mat);
 			}
 		};
 	}

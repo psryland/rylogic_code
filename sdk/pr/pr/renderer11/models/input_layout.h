@@ -33,6 +33,7 @@ namespace pr
 		// Don't set values that aren't given
 		inline void SetPC  (VertP& vert, v4 const& pos, Colour32)                       { vert.m_pos = pos.xyz(); }
 		inline void SetPCNT(VertP& vert, v4 const& pos, Colour32, v4 const&, v2 const&) { vert.m_pos = pos.xyz(); }
+		inline void Encompass(BBox& bbox, VertP const& vert) { pr::Encompass(bbox, pr::v4::make(vert.m_pos, 1.0f)); }
 
 		// Position and colour
 		struct VertPC
@@ -57,6 +58,7 @@ namespace pr
 		// Don't set values that aren't given
 		inline void SetPC  (VertPC& vert, v4 const& pos, Colour32 col)                       { vert.m_pos = pos.xyz(); vert.m_col = col; }
 		inline void SetPCNT(VertPC& vert, v4 const& pos, Colour32 col, v4 const&, v2 const&) { vert.m_pos = pos.xyz(); vert.m_col = col; }
+		inline void Encompass(BBox& bbox, VertPC const& vert) { pr::Encompass(bbox, pr::v4::make(vert.m_pos, 1.0f)); }
 
 		// Position, Diffuse Texture
 		struct VertPT
@@ -81,6 +83,7 @@ namespace pr
 		// Don't set values that aren't given
 		inline void SetPC  (VertPT& vert, v4 const& pos, Colour32)                          { vert.m_pos = pos.xyz(); }
 		inline void SetPCNT(VertPT& vert, v4 const& pos, Colour32, v4 const&, v2 const& uv) { vert.m_pos = pos.xyz(); vert.m_uv = uv; }
+		inline void Encompass(BBox& bbox, VertPT const& vert) { pr::Encompass(bbox, pr::v4::make(vert.m_pos, 1.0f)); }
 
 		// Position, Colour, Normal, Diffuse Texture
 		struct VertPCNT
@@ -109,6 +112,7 @@ namespace pr
 		// Don't set values that aren't given
 		inline void SetPC  (VertPCNT& vert, v4 const& pos, Colour32 col)                               { vert.m_pos = pos.xyz(); vert.m_col = col; }
 		inline void SetPCNT(VertPCNT& vert, v4 const& pos, Colour32 col, v4 const& norm, v2 const& uv) { vert.m_pos = pos.xyz(); vert.m_col = col; vert.m_norm = norm.xyz(); vert.m_uv = uv; }
+		inline void Encompass(BBox& bbox, VertPCNT const& vert) { pr::Encompass(bbox, pr::v4::make(vert.m_pos, 1.0f)); }
 	}
 }
 

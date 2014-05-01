@@ -31,14 +31,14 @@ namespace pr
 			ERigidbody_Static,
 			ERigidbody_Terrain
 		};
-		
+
 		enum ERBFlags
 		{
 			ERBFlags_None   =      0,
 			ERBFlags_PreCol = 1 << 0,   // Notify for pre collision
 			ERBFlags_PstCol = 1 << 1,   // Notify for post collision
 		};
-		
+
 		// Data used to initialise a rigid body
 		struct RigidbodySettings
 		{
@@ -55,7 +55,7 @@ namespace pr
 			void*           m_user_data;                //
 			uint            m_flags;                    // Bitwise OR of ERBFlags
 			const char*     m_name;
-			
+
 			RigidbodySettings()
 			{
 				m_object_to_world                       .identity();
@@ -75,19 +75,19 @@ namespace pr
 				m_name                                  = "";
 			}
 		};
-		
+
 		// A rigid body
 		struct Rigidbody
 		{
 			typedef pr::chain::Link<Rigidbody> Link;
-			
+
 			Rigidbody(RigidbodySettings const& settings = RigidbodySettings());
 			Rigidbody(Rigidbody const& copy);
 			Rigidbody& operator = (Rigidbody const& copy);
 			RigidbodySettings GetSettings() const;
 			void Create(RigidbodySettings const& settings);
 			~Rigidbody();
-			
+
 			// Read Access Functions ******************************
 			ERigidbody      Type() const                            { return m_type; }
 			m4x4 const&     ObjectToWorld() const                   { return m_object_to_world; }
@@ -101,8 +101,8 @@ namespace pr
 			v4              Velocity() const                        { return m_inv_mass * Momentum(); }
 			v4              AngVelocity() const                     { return m_inv_mass * (m_ws_inv_inertia_tensor * AngMomentum()); }
 			v4              VelocityAt(const v4& ws_offset) const   { return Velocity() + Cross3(AngVelocity(), ws_offset); }
-			BoundingBox     BBoxWS() const                          { return m_ws_bbox; }
-			BoundingBox     BBoxOS() const                          { return GetShape()->m_bbox; }
+			BBox     BBoxWS() const                          { return m_ws_bbox; }
+			BBox     BBoxOS() const                          { return GetShape()->m_bbox; }
 			m3x4            InertiaOS() const                       { return m_os_inertia_tensor; }
 			void*           UserData() const                        { return m_user_data; }
 			MassProperties  GetMassProperties() const               { MassProperties mp = {m_os_inertia_tensor, v4Zero, Mass()}; return mp; }
@@ -115,7 +115,7 @@ namespace pr
 			bool            SleepState() const                      { return m_sleeping; }
 			bool            HasMicroVelocity() const                { return m_motion_type == EMotion_Static || (Length3Sq(Momentum()) < m_micro_mom_sq && Length3Sq(AngMomentum()) < m_micro_mom_sq); }
 			void            RestingContacts(v4* contacts, uint& count) const;
-			
+
 			// Write Access Functions ******************************
 			void            SetObjectToWorld(m4x4 const& o2w);
 			void            SetPosition(v4 const& position);
@@ -133,16 +133,16 @@ namespace pr
 			void            SetTorque(v4 const& torque);
 			void            SetSleepState(bool asleep);
 			void            SetName(char const* name);
-			
+
 			// Impulse functions ******************************
 			void            ApplyWSImpulse(v4 const& ws_impulse);
 			void            ApplyWSTwist(v4 const& ws_twist);
 			void            ApplyWSImpulse(v4 const& ws_impulse, v4 const& point);
-			
+
 #ifndef PR_PH_BUILD
 		private:
 #endif//PR_PH_BUILD
-		
+
 			// Impulse accumulator ******************************
 			v4              AccMomentum() const                     { return m_lin_momentum + m_acc_impulse; }
 			v4              AccAngMomentum() const                  { return m_ang_momentum + m_acc_twist; }
@@ -152,7 +152,7 @@ namespace pr
 			void            AccClearImpulse();
 			void            AccAddWSImpulse(v4 const& ws_impulse, v4 const& point);
 			void            AccApplyWSImpulse();
-			
+
 			// DO NOT USE THESE MEMBERS DIRECTLY, use the access functions/methods
 			m4x4            m_object_to_world;          // Object to world transform
 			Shape*          m_shape;                    // The shape of this model.
@@ -160,18 +160,18 @@ namespace pr
 			BPEntity        m_bp_entity;                // So that this object can be added to a broadphase
 			Link            m_engine_ref;               // Used to chain these together within the physics engine
 			Support         m_support;                  // Support data
-			
+
 			// Bounds
-			//BoundingBox   m_ms_bbox;  (get from shape now)// The model space bounding box for this object.
-			BoundingBox     m_ws_bbox;                  // World space bounding box. This is continuously updated for dynamic objects
-			
+			//BBox   m_ms_bbox;  (get from shape now)// The model space bounding box for this object.
+			BBox     m_ws_bbox;                  // World space bounding box. This is continuously updated for dynamic objects
+
 			// Mass properties
 			m3x4            m_os_inertia_tensor;        // The object space inertia tensor
 			m3x4            m_os_inv_inertia_tensor;    // The object space inverse inertia tensor
 			m3x4            m_ws_inv_inertia_tensor;    // The world space inverse inertia tensor. Calculated per step
 			float           m_mass;                     // The mass of the object
 			float           m_inv_mass;                 // The inverse mass
-			
+
 			// Dynamics
 			EMotion         m_motion_type;              // Static, Keyframed, or Dynamic
 			v4              m_lin_momentum;             // The linear momentum of the object in world space
@@ -182,15 +182,15 @@ namespace pr
 			v4              m_acc_twist;                // Accumulative twists calculated during collision resolution
 			bool            m_sleeping;                 // True when this object is asleep
 			float           m_micro_mom_sq;             // Micro momentum (sq) threshold
-			
+
 			// Miscellaneous
 			void*           m_user_data;                // User data
 			unsigned int    m_flags;                    // Flags
 			uint8           m_constraint_set;           // An id for the constraint set this object belongs to
-			
+
 			// Debugging
 			char            m_name[64];                 // A name for the physics object
-			
+
 			// todo: move this out of the interface
 			PR_EXPAND(PR_LOG_RB, char m_log_buf[512];)  // A buffer for the log data
 			PR_EXPAND(PR_LOG_RB, char* m_log;)          // A pointer into the log buffer (grows from the end)
@@ -204,4 +204,3 @@ namespace pr
 #endif
 
 #endif
-

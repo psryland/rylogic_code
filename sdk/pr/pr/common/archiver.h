@@ -46,7 +46,7 @@
 
 #ifndef PR_ASSERT
 #	define PR_ASSERT_STR_DEFINED
-#	define PR_ASSERT(grp, exp, str)	
+#	define PR_ASSERT(grp, exp, str)
 #endif
 #ifndef PR_EXPAND
 #	define PR_EXPAND_DEFINED
@@ -261,14 +261,14 @@ namespace pr
 				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateTypeInfo(tmp.m_type_info), "Template already defined for this type");
 				PR_ASSERT(PR_ARCHIVE_DBG, !IsTemplateName(tmp.m_type_name), "Template for type with this name already defined");
 				PR_EXPAND(PR_ARCHIVE_SHOW_TYPES, printf("Type: '%s' -> TypeInfo: 0x%08x  TypeName: 0x%08x\n", typeid(Type).name(), tmp.m_type_info, tmp.m_type_name));
-				
+
 				U_032 offset = 0, size = 0;
 				while (*template_desc != 0)
 				{
 					// A minus sign indicates the type should be skipped
 					bool add_field = *template_desc != '-';
 					template_desc += int(!add_field);
-					
+
 					// Add a field to the template
 					Field field;
 					field.m_type	= pr::hash::Hash(template_desc, ':');	++template_desc;
@@ -359,7 +359,7 @@ namespace pr
 				U_032 type_info = pr::hash::HashC(typeid(Type).name());
 				Read(GetTemplateByTypeInfo(type_info), reinterpret_cast<char*>(&type));
 			}
-		
+
 			#undef PR_ARCHIVE_4CC
 		};
 
@@ -400,7 +400,7 @@ namespace pr
 		//	int id = Hash(typeid(Type).name());
 		//	Templates::const_iterator iter = m_templates.find(id);
 		//	PR_ASSERT(1, iter != m_templates.end(), "Type not registered");
-		//	
+		//
 		//	Fields& fields = iter->second;
 
 		//}
@@ -410,7 +410,7 @@ namespace pr
 		//// Read from 'src' and write to 'dst' using runtime types 'src_type' and 'dst_type'
 		//inline void Read(int src_type, int dst_type, void const* src, void* dst)
 		//{
-		//	static ConvFunc conv[EType::NumberOf][EType::NumberOf] = 
+		//	static ConvFunc conv[EType::NumberOf][EType::NumberOf] =
 		//	{
 		//		{&Read<S_008,S_008> ,&Read<S_008,S_016> ,&Read<S_008,S_032> ,&Read<S_008,S_064> ,&Read<S_008,U_008> ,&Read<S_008,U_016> ,&Read<S_008,U_032> ,&Read<S_008,U_064> ,&Read<S_008,F_032> ,&Read<S_008,F_064> ,&Read<S_008,F_128> },
 		//		{&Read<S_016,S_008> ,&Read<S_016,S_016> ,&Read<S_016,S_032> ,&Read<S_016,S_064> ,&Read<S_016,U_008> ,&Read<S_016,U_016> ,&Read<S_016,U_032> ,&Read<S_016,U_064> ,&Read<S_016,F_032> ,&Read<S_016,F_064> ,&Read<S_016,F_128> },
@@ -484,14 +484,14 @@ namespace pr
 		inline void Serialise		(const float&		f,					ByteCont& data) { impl::SerialisePod<float>			(f, data); }
 		inline void Serialise		(const v4&			v,					ByteCont& data) { impl::SerialisePod<v4>				(v, data); }
 		inline void Serialise		(const m4x4&		m,					ByteCont& data) { impl::SerialisePod<m4x4>			(m, data); }
-		inline void Serialise		(const BoundingBox& bbox,				ByteCont& data) { impl::SerialisePod<BoundingBox>	(bbox, data); }
+		inline void Serialise		(const BBox& bbox,				ByteCont& data) { impl::SerialisePod<BBox>	(bbox, data); }
 		inline void SerialiseArray	(const char*		pc,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<char>			(pc,	count, data); }
 		inline void SerialiseArray	(const uint8*		pui8, std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint8>		(pui8,	count, data); }
 		inline void SerialiseArray	(const uint*		pui,  std::size_t count, ByteCont& data) { impl::SerialisePodArray<uint>			(pui,	count, data); }
 		inline void SerialiseArray	(const float*		pf,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<float>		(pf,	count, data); }
 		inline void SerialiseArray	(const v4*			pv,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<v4>			(pv,	count, data); }
 		inline void SerialiseArray	(const m4x4*		pm,	  std::size_t count, ByteCont& data) { impl::SerialisePodArray<m4x4>			(pm,	count, data); }
-		inline void SerialiseArray	(const BoundingBox* pbbox,std::size_t count, ByteCont& data) { impl::SerialisePodArray<BoundingBox>	(pbbox, count, data); }
+		inline void SerialiseArray	(const BBox* pbbox,std::size_t count, ByteCont& data) { impl::SerialisePodArray<BBox>	(pbbox, count, data); }
 		// Stl serialise functions. If you get a compile error in these
 		// functions you probably need to implement your own Serialise
 		// and SerialiseArray for the types in your container
@@ -556,7 +556,6 @@ namespace pr
 				CopyMemory(pod_array, data, count * sizeof(PodType));
 				data = (unsigned char*)data + count * sizeof(PodType);
 			}
-
 		} // impl
 
 		// Do not create a templated DeSerialise or DeSerialiseArray function. It's important that
@@ -569,14 +568,14 @@ namespace pr
 		inline void DeSerialise		(float&			f,							const void*& data)	{ impl::DeSerialisePod<float>			(f, data); }
 		inline void DeSerialise		(v4&			v,							const void*& data)	{ impl::DeSerialisePod<v4>				(v, data); }
 		inline void DeSerialise		(m4x4&			m,							const void*& data)	{ impl::DeSerialisePod<m4x4>			(m, data); }
-		inline void DeSerialise		(BoundingBox&	bbox,						const void*& data)	{ impl::DeSerialisePod<BoundingBox>		(bbox, data); }
+		inline void DeSerialise		(BBox&	bbox,						const void*& data)	{ impl::DeSerialisePod<BBox>		(bbox, data); }
 		inline void DeSerialiseArray(char*			pc,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<char>		(pc,	count, data); }
 		inline void DeSerialiseArray(uint8*			pui8,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint8>		(pui8,	count, data); }
 		inline void DeSerialiseArray(uint*			pui,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<uint>		(pui,	count, data); }
 		inline void DeSerialiseArray(float*			pf,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<float>		(pf,	count, data); }
 		inline void DeSerialiseArray(v4*			pv,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<v4>			(pv,	count, data); }
 		inline void DeSerialiseArray(m4x4*			pm,		std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<m4x4>		(pm,	count, data); }
-		inline void DeSerialiseArray(BoundingBox*	pbbox,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<BoundingBox>(pbbox, count, data); }
+		inline void DeSerialiseArray(BBox*	pbbox,	std::size_t count,	const void*& data)	{ impl::DeSerialisePodArray<BBox>(pbbox, count, data); }
 
 		// Stl deserialise functions. If you get a compile error in these
 		// functions you probably need to implement your own DeSerialise
@@ -608,7 +607,7 @@ namespace pr
 			for( std::size_t i = 0; i < length; ++i )
 			{
 				list.push_back(T);
-				DeSerialise	(list.back(),	data);			
+				DeSerialise	(list.back(),	data);
 			}
 		}
 		template <typename T> inline void DeSerialiseArray(const std::list<T>* list_array, std::size_t count, ByteCont& data)

@@ -68,7 +68,7 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'bbox'
-	inline float DistanceSq_PointToBoundingBox(v4 const& point, BoundingBox const& bbox)
+	inline float DistanceSq_PointToBoundingBox(v4 const& point, BBox const& bbox)
 	{
 		float dist_sq = 0.0f;
 		v4 lower = bbox.Lower();
@@ -147,7 +147,7 @@ namespace pr
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line)				{ float t; return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
 
 	// Returns the point on an AABB that is closest to 'point'
-	inline v4 ClosestPoint_PointToBoundingBox(v4 const& point, BoundingBox const& bbox)
+	inline v4 ClosestPoint_PointToBoundingBox(v4 const& point, BBox const& bbox)
 	{
 		v4 result;
 		v4 lower = bbox.Lower();
@@ -636,7 +636,7 @@ namespace pr
 	}
 
 	// Test if a line segment specified by points 'lineS' and 'lineE' intersects AABB b
-	inline bool Intersect_LineSegmentToBoundingBox(v4 const& lineS, v4 const& lineE, BoundingBox const& bbox)
+	inline bool Intersect_LineSegmentToBoundingBox(v4 const& lineS, v4 const& lineE, BBox const& bbox)
 	{
 		v4 lineM = (lineS + lineE) * 0.5f;	// Line segment midpoint
 		v4 lineH  = lineE - lineM;			// Line segment halflength vector
@@ -721,7 +721,7 @@ namespace pr
 	// Remember to initialise t0, t1.
 	// e.g. float t0 = -maths::float_max, t1 = maths::float_max;
 	// Returns true if some part of the line is within the bounding box
-	inline bool Clip_LineSegmentToBoundingBox(v4 const& point, v4 const& line, BoundingBox const& bbox, float& t0, float& t1)
+	inline bool Clip_LineSegmentToBoundingBox(v4 const& point, v4 const& line, BBox const& bbox, float& t0, float& t1)
 	{
 		v4 lower = bbox.Lower();
 		v4 upper = bbox.Upper();
@@ -782,7 +782,7 @@ namespace pr
 
 	// Clip 'line' to the bounding box 'bbox'. Returns true if the line is not wholy clipped away
 	// Note: 'line' and 'bbox' must be in the same space
-	inline bool Clip(BoundingBox const& bbox, Line3& line)
+	inline bool Clip(BBox const& bbox, Line3& line)
 	{
 		float t0 = 0.0f, t1 = 1.0f;
 		if( !Clip_LineSegmentToBoundingBox(line.m_point, line.m_line, bbox, t0, t1) )
