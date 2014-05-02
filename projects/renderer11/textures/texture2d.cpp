@@ -118,7 +118,11 @@ namespace pr
 		void Texture2D::RefCountZero(pr::RefCount<Texture2D>* doomed)
 		{
 			Texture2D* tex = static_cast<Texture2D*>(doomed);
-			tex->m_mgr->Delete(tex);
+			tex->Delete();
+		}
+		void Texture2D::Delete()
+		{
+			m_mgr->Delete(this);
 		}
 	}
 }

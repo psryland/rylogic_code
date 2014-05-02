@@ -18,13 +18,17 @@
 #include "pr/common/exception.h"
 #include "pr/str/tostring.h"
 
-
 // Support d3d errors if the header has been included before now. Dodgy I know :/
 #if defined(PR_SUPPORT_D3D_HRESULTS) || defined(_D3D9_H_)
 	#include <d3d9.h>
 	#include <dxerr.h> // Requires: dxerr9.lib
-	#define PR_SUPPORT_D3D_ERRORS
+	#pragma comment(lib, "dxerr9.lib")
+	#define PR_SUPPORT_D3D9_ERRORS
 #endif
+//#if defined(PR_SUPPORT_D3D_HRESULTS) || defined(__d3d11_h__)
+//	#include <d3d11.h>
+//	#define PR_SUPPORT_D3D11_ERRORS
+//#endif
 
 enum HResult
 {
@@ -49,8 +53,8 @@ namespace pr
 	// Convert an HRESULT into a string
 	template <> inline std::string ToString<HResult>(HResult result)
 	{
-		// If it's a d3d error code
-		#ifdef PR_SUPPORT_D3D_ERRORS
+		// If it's a d3d9 error code
+		#ifdef PR_SUPPORT_D3D9_ERRORS
 		if (HRESULT_FACILITY(result) == _FACD3D)
 		{
 			std::string dx_err;
@@ -61,7 +65,7 @@ namespace pr
 			return dx_err.c_str();
 		}
 		#endif
-		
+
 		// else ask windows
 		LPVOID lpMsgBuf;
 		if (!FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER|FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&lpMsgBuf, 0, NULL)) return "Unknown error code";
@@ -105,6 +109,7 @@ namespace pr
 	template <> inline bool Succeeded(long result)    { return Succeeded(static_cast<HResult>(result)); }
 }
 
-#undef PR_SUPPORT_D3D_ERRORS
+#undef PR_SUPPORT_D3D9_ERRORS
+#undef PR_SUPPORT_D3D11_ERRORS
 
 #endif

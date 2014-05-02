@@ -12,6 +12,7 @@
 //  #undef PR_ENUM
 //*/
 
+#pragma once
 #ifndef PR_MACROS_ENUM_H
 #define PR_MACROS_ENUM_H
 
@@ -32,6 +33,10 @@
 #define PR_ENUM_TOSTRING1(id)           case id: return #id;
 #define PR_ENUM_TOSTRING2(id, val)      case id: return #id;
 #define PR_ENUM_TOSTRING3(id, str, val) case id: return str;
+
+#define PR_ENUM_TOWSTRING1(id)           case id: return L#id;
+#define PR_ENUM_TOWSTRING2(id, val)      case id: return L#id;
+#define PR_ENUM_TOWSTRING3(id, str, val) case id: return L##str;
 
 #define PR_ENUM_STRCMP1(id)            if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
 #define PR_ENUM_STRCMP2(id, val)       if (::strcmp(name, #id) == 0) { enum_ = id; return true; }
@@ -94,6 +99,15 @@ struct enum_name\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
+		}\
+	}\
+	static wchar_t const* ToWString(Enum_ e)\
+	{\
+		switch (e) {\
+		default: notflags(assert(false && "Not a member of enum "#enum_name);) return L"";\
+		enum_vals1(PR_ENUM_TOWSTRING1)\
+		enum_vals2(PR_ENUM_TOWSTRING2)\
+		enum_vals3(PR_ENUM_TOWSTRING3)\
 		}\
 	}\
 \
@@ -203,6 +217,10 @@ struct enum_name\
 	char const* ToString() const\
 	{\
 		return enum_name::ToString(value);\
+	}\
+	wchar_t const* ToWString() const\
+	{\
+		return enum_name::ToWString(value);\
 	}\
 \
 	enum_name() :value() {}\
@@ -403,6 +421,12 @@ namespace pr
 			PR_CHECK(a3.ToString(), "a");
 			PR_CHECK(a4.ToString(), "A");
 			PR_CHECK(a5.ToString(), "a");
+
+			PR_CHECK(a1.ToWString(), L"A");
+			PR_CHECK(a2.ToWString(), L"A");
+			PR_CHECK(a3.ToWString(), L"a");
+			PR_CHECK(a4.ToWString(), L"A");
+			PR_CHECK(a5.ToWString(), L"a");
 
 			PR_CHECK(b1.ToString(), "B");
 			PR_CHECK(b2.ToString(), "B");

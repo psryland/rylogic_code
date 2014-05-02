@@ -75,6 +75,7 @@ namespace pr
 	bool operator >= (BBox const& lhs, BBox const& rhs);
 
 	template <typename VertCont> BBox BBoxMake(VertCont const& verts);
+	template <typename Vert> BBox BBoxMake(std::initializer_list<Vert>&& verts);
 
 	// Functions
 	float			Volume(BBox const& bbox);

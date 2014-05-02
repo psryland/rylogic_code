@@ -41,13 +41,15 @@ namespace pr
 
 			// Set a new texture description and re-create/reinitialise the texture and the srv.
 			void TexDesc(Image const& src, TextureDesc const& tdesc, ShaderResViewDesc const* srvdesc = nullptr);
-			
+
 			// Get/Set the description of the current sampler state pointed to by 'm_samp'
 			// Setting a new sampler description, re-creates the sampler state
 			SamplerDesc SamDesc() const;
 			void SamDesc(SamplerDesc const& desc);
 
+			// Ref counting cleanup
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);
+			protected: virtual void Delete();
 		};
 	}
 }

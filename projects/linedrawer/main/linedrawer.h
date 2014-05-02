@@ -36,8 +36,8 @@ namespace ldr
 		pr::ldr::StockInstance           m_origin_point;
 		pr::ldr::StockInstance           m_selection_box;
 		pr::ldr::StockInstance           m_bbox_model;
-		pr::ldr::StockInstance           m_test_point;
-		bool                             m_test_point_enable;
+		pr::ldr::StockInstance           m_test_model;
+		bool                             m_test_model_enable;
 
 		wchar_t const* AppTitle() const { return ldr::AppTitleW(); }
 
@@ -55,10 +55,6 @@ namespace ldr
 
 		// Generate a scene containing the supported line drawer objects
 		void CreateDemoScene();
-
-		// Test point methods
-		void TestPoint_Enable(bool yes);
-		void TestPoint_SetPosition(pr::v4 const& pos);
 
 		// The size of the window has changed
 		virtual void Resize(pr::iv2 const& size);
