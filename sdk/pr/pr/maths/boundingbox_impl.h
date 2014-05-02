@@ -67,6 +67,13 @@ namespace pr
 			Encompass(bbox, vert);
 		return bbox;
 	}
+	template <typename Vert> BBox BBoxMake(std::initializer_list<Vert>&& verts)
+	{
+		BBox bbox = pr::BBoxReset;
+		for (auto& vert : verts)
+			Encompass(bbox, vert);
+		return bbox;
+	}
 
 	// Functions
 	inline float Volume(BBox const& bbox)

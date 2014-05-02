@@ -110,7 +110,10 @@
 	<Type Name="pr::rdr::Model">
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
-
+	<Type Name="pr::rdr::Texture2D">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	
 	<!-- Console -->
 	<Type Name="pr::console::Coord">
 		<DisplayString>{X},{Y}</DisplayString>

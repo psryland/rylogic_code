@@ -162,27 +162,33 @@ namespace ldr
 	{
 		try
 		{
-			using namespace pr::rdr;
+			std::string scene = pr::ldr::CreateDemoScene();
+			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 
-			DrawMethod mat;
-			mat.m_shader = m_rdr.m_shdr_mgr.FindShaderFor<VertPCNT>();
-			//mat.m_tex_diffuse = m_rdr.m_tex_mgr.FindTexture(EStockTexture::Checker);
-			mat.m_tex_diffuse = m_rdr.m_text_mgr.CreateText(L"Hello", pr::rdr::EFont::Gabriola);
-			mat.m_rsb = RSBlock::SolidCullNone();
-			auto model = ModelGenerator<>::Quad(m_rdr, 1, 1, pr::iv2Zero, pr::Colour32White, &mat);
-			m_test_model.m_model = model;
-			m_test_model_enable = true;
-			m_scene.RdrStep<ForwardRender>().m_rsb = RSBlock::SolidCullNone();
+			/*{// For testing..
+				using namespace pr::rdr;
 
-			//std::string scene = pr::ldr::CreateDemoScene();
-			//pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+				auto gditex = m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, Image::make(100,100), "gdi test");
+				{
+					using namespace Gdiplus;
+					TextureGdi::Gfx gfx(gditex);
+					SolidBrush b(Color(255,0,0));
+					gfx.FillEllipse(&b, 0,0,100,100);
+				}
 
-			//{// hack
-			//	pr::rdr::ProjectedTexture pt;
-			//	pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
-			//	pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
-			//	m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
-			//}
+				NuggetProps mat;
+				//mat.m_tex_diffuse = m_rdr.m_tex_mgr.FindTexture(EStockTexture::Checker);
+				mat.m_tex_diffuse = gditex;
+				mat.m_rsb = RSBlock::SolidCullNone();
+				auto model = ModelGenerator<>::Quad(m_rdr, 1, 1, pr::iv2Zero, pr::Colour32White, &mat);
+				m_test_model.m_model = model;
+				m_test_model_enable = true;
+
+				//pr::rdr::ProjectedTexture pt;
+				//pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
+				//pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
+				//m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
+			}//*/
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }

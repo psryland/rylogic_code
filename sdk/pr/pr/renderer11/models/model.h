@@ -20,9 +20,7 @@ namespace pr
 			Range           m_vrange;        // The first and number of verties for this model within 'm_model_buffer'
 			Range           m_irange;        // The first and number of indices for this model within 'm_model_buffer'
 			TNuggetChain    m_nuggets;       // The nuggets for this model
-			pr::BBox m_bbox;          // A bounding box for the model. Set by the client
-			EGeom           m_geom;          // The valid components of the model geometry
-			bool            m_has_alpha;     // True if the model is semi-transparent
+			pr::BBox        m_bbox;          // A bounding box for the model. Set by the client
 			string32        m_name;          // A human readable name for the model
 			mutable int     m_dbg_flags;     // Flags used by PR_DBG_RDR to output info once only
 

@@ -30,7 +30,6 @@ namespace pr
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
 			,m_device()
-			,m_device10_1()
 			,m_swap_chain()
 			,m_immediate()
 			,m_main_rtv()
@@ -60,13 +59,6 @@ namespace pr
 			pr::Throw(m_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgi_device.m_ptr));
 			pr::Throw(dxgi_device->GetParent(__uuidof(IDXGIAdapter), (void**)&adapter.m_ptr));
 			pr::Throw(adapter->GetParent(__uuidof(IDXGIFactory), (void **)&factory.m_ptr));
-
-			// Create the dx10.1 device (on the same adapter)
-			D3D10_DRIVER_TYPE driver_type = D3D10_DRIVER_TYPE_HARDWARE;
-			UINT flags = D3D10_CREATE_DEVICE_BGRA_SUPPORT;
-			PR_EXPAND(PR_DBG_RDR, flags |= D3D10_CREATE_DEVICE_DEBUG);
-			pr::Throw(D3D10CreateDevice1(adapter.m_ptr, driver_type, 0, flags, D3D10_FEATURE_LEVEL_10_1, D3D10_1_SDK_VERSION, &m_device10_1.m_ptr));
-			m_device10_1->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_POINTLIST); // Keeps debug output quiet
 
 			// Check dlls,dx features,etc required to run the renderer are available
 			CheckDeviceFeatures(m_device, m_settings, m_feature_level);
@@ -146,7 +138,6 @@ namespace pr
 		,m_mdl_mgr(m_settings.m_mem, m_device)
 		,m_shdr_mgr(m_settings.m_mem, m_device)
 		,m_tex_mgr(m_settings.m_mem, m_device)
-		,m_text_mgr(m_settings.m_mem, m_device, m_device10_1, m_tex_mgr)
 		,m_bs_mgr(m_settings.m_mem, m_device)
 		,m_ds_mgr(m_settings.m_mem, m_device)
 		,m_rs_mgr(m_settings.m_mem, m_device)
