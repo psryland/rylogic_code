@@ -615,7 +615,6 @@ namespace pr
 				if (!m_texture)
 					return nullptr;
 
-				m_local_mat.m_shader = p.m_rdr.m_shdr_mgr.FindShaderFor<pr::rdr::VertPCNT>().m_ptr;
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);

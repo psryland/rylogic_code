@@ -53,20 +53,22 @@ namespace pr
 			auto uv = pr::CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, pr::v2Zero);
 
 			// Verts
-			Props props;
+			pr::BBox bbox = pr::BBoxReset;
 			for (std::size_t v = 0; v != num_verts; ++v)
 			{
 				v4 pt = *verts++;
 				v4 nm = *norm++;
 				SetPCNT(*v_out++, pt, *col++, nm, *uv++);
-				pr::Encompass(props.m_bbox, pt);
+				pr::Encompass(bbox, pt);
 			}
 
 			// Faces or edges or whatever
 			for (std::size_t i = 0; i != num_indices; ++i)
 				*i_out++ = *indices++;
 
+			Props props;
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | (normals != 0 ? EGeom::Norm : 0) | (tex_coords != 0 ? EGeom::Tex0 : 0);
+			props.m_bbox = bbox;
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
