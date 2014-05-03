@@ -103,13 +103,20 @@ namespace pr
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{
 			#if PR_DBG_RDR
+			char existing[256]; size_t size = sizeof(existing) - 1;
+			if (res->GetPrivateData(WKPDID_D3DDebugObjectName, &size, existing) != DXGI_ERROR_NOT_FOUND)
+			{
+				existing[size] = 0;
+				PR_ASSERT(PR_DBG_RDR, false, pr::FmtS("Resource is already named: %s", existing));
+			}
+
 			string32 res_name = name;
 			pr::Throw(res->SetPrivateData(WKPDID_D3DDebugObjectName, UINT(res_name.size()), res_name.c_str()));
 			#endif
 		}
 
 		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
-		void TestSystemCompatibility();
+		bool TestSystemCompatibility();
 	}
 }
 

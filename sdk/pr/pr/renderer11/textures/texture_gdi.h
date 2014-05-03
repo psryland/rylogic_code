@@ -29,10 +29,11 @@ namespace pr
 				~Gfx();
 			};
 
-		private:
-
+			// Get/Release the DC (prefer the Gfx class for RAII)
 			HDC GetDC();
 			void ReleaseDC();
+
+		private:
 
 			// Refcounting cleanup function
 			protected: void Delete() override;

@@ -18,11 +18,11 @@
 #define PR_IMPOSTER_H
 
 #include <new>
-#include "pr/meta/alignmentof.h"
-#include "pr/meta/alignedstorage.h"
-#include "pr/meta/alignedtype.h"
+#include "pr/meta/alignment_of.h"
+#include "pr/meta/aligned_storage.h"
+#include "pr/meta/aligned_type.h"
 #include "pr/meta/function_arity.h"
-#include "pr/meta/enableif.h"
+#include "pr/meta/enable_if.h"
 #include "pr/common/assert.h"
 
 namespace pr
@@ -153,7 +153,7 @@ namespace pr
 
 				MyTypeImpost impost3;
 				//CHECK_ASSERT(impost3 = impost);
-		
+
 				pr::imposter::construct(impost3, 2);
 				impost3 = impost;
 				PR_CHECK(impost3.get().m_value, 5);
@@ -166,6 +166,4 @@ namespace pr
 }
 #endif
 
-
 #endif
-

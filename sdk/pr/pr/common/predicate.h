@@ -4,11 +4,12 @@
 //******************************************
 // A collection of helpful predicates
 
+#pragma once
 #ifndef PR_COMMON_PREDICATES_H
 #define PR_COMMON_PREDICATES_H
 
 #include "pr/meta/if.h"
-#include "pr/meta/ispointer.h"
+#include "pr/meta/is_pointer.h"
 
 namespace pr
 {
@@ -19,13 +20,13 @@ namespace pr
 			template <typename T> struct PtrRelease { static void Release(T  t) { t->Release(); } };
 			template <typename T> struct RefRelease { static void Release(T& t) { t.Release(); } };
 		}
-		
+
 		// Delete a pointer
 		struct Delete
 		{
 			template <typename T> void operator () (T* p) const { delete p; }
 		};
-		
+
 		// Calls release on a pointer or a reference
 		struct Release
 		{
@@ -35,13 +36,13 @@ namespace pr
 				Type::Release(t);
 			}
 		};
-		
+
 		// A predicate that always returns true
 		struct AlwaysTrue
 		{
 			template <typename Type> bool operator ()(Type const&) const { return true; }
 		};
-		
+
 		// A predicate that always returns false
 		struct AlwaysFalse
 		{
@@ -49,5 +50,5 @@ namespace pr
 		};
 	}
 }
-	
+
 #endif

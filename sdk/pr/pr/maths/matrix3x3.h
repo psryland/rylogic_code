@@ -17,7 +17,7 @@
 
 namespace pr
 {
-	__declspec(align(16)) struct m3x4
+	struct alignas(16) m3x4
 	{
 		v4 x;
 		v4 y;

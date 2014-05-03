@@ -8,9 +8,9 @@
 
 #include <new>
 #include "pr/meta/if.h"
-#include "pr/meta/ispod.h"
-#include "pr/meta/alignmentof.h"
-#include "pr/meta/alignedstorage.h"
+#include "pr/meta/is_pod.h"
+#include "pr/meta/alignment_of.h"
+#include "pr/meta/aligned_storage.h"
 #include "pr/common/assert.h"
 #include "pr/common/cast.h"
 

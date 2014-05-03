@@ -22,6 +22,7 @@
 #include "pr/common/clipboard.h"
 #include "pr/common/hash.h"
 #include "pr/common/guid.h"
+#include "pr/common/prtypes.h"
 #include "pr/str/prstring.h"
 #include "pr/str/tostring.h"
 #include "pr/threads/process.h"
@@ -44,14 +45,14 @@ using namespace pr::cmdline;
 namespace cex
 {
 	char const VersionString[] = "v1.1";
-	
+
 	inline void SetEnvVar(std::string const& env_var, std::string const& value)
 	{
 		pr::Handle fp = pr::FileOpen("~cex.bat", pr::EFileOpen::Writing);
 		if (!fp) { std::cerr << "Failed to create '~cex.bat' file\n"; return; }
 		pr::FileWrite(fp, pr::FmtS("@echo off\nset %s=%s\n" ,env_var.c_str() ,value.c_str())); //"DEL /Q ~cex.bat\n"
 	}
-	
+
 	struct ICex
 	{
 		virtual void ShowHelp() const = 0;
@@ -120,7 +121,7 @@ namespace cex
 		{
 			char display_name[MAX_PATH];
 			BROWSEINFO browse_info;
-			browse_info.hwndOwner = GetConsoleWindow(); 
+			browse_info.hwndOwner = GetConsoleWindow();
 			browse_info.pidlRoot = 0;
 			browse_info.pszDisplayName = display_name;
 			browse_info.lpszTitle = m_message.c_str();
@@ -129,10 +130,10 @@ namespace cex
 			browse_info.lParam = 0;
 			browse_info.iImage = 0;
 			LPITEMIDLIST p = SHBrowseForFolder(&browse_info);
- 
+
 			std::string dir_path(MAX_PATH, 0);
 			SHGetPathFromIDList(p, &dir_path[0]);
-		
+
 			SetEnvVar(m_env_var, dir_path);
 			return 0;
 		}
@@ -260,7 +261,7 @@ namespace cex
 
 				result = selection->GotoLine(m_line, TRUE);
 				if (FAILED(result)) break;
-			
+
 				return 0;
 			}
 			std::cerr << "Failed to open file in VS.\nReason: " << pr::To<std::string>(result) << "\n";
@@ -617,12 +618,11 @@ namespace cex
 			return 0;
 		}
 
-
 		// Write out binary header file data
 		void WriteBinary(pr::Handle& in_file, pr::Handle& out_file)
 		{
 			// Write the data
-			uint const BytesPerLine = 16;
+			pr::uint const BytesPerLine = 16;
 			unsigned char buffer[BytesPerLine + 1];
 			DWORD i, bytes_read;
 			do
@@ -652,7 +652,7 @@ namespace cex
 		// Write out text header file data
 		void WriteText(pr::Handle& in_file, pr::Handle& out_file)
 		{
-			uint const BlockReadSize = 4096;
+			pr::uint const BlockReadSize = 4096;
 			char buffer[BlockReadSize];
 			DWORD bytes_read;
 			do
@@ -709,7 +709,7 @@ namespace cex
 		}
 	};
 }
-	
+
 // Main *********************************************************************************************
 class Main :public pr::cmdline::IOptionReceiver ,public cex::ICex
 {
@@ -726,7 +726,7 @@ public:
 	{
 		delete m_command;
 	}
-	
+
 	// Show the main help
 	void ShowHelp() const
 	{
@@ -761,7 +761,7 @@ public:
 			//"     del  ~cex.bat\n"
 			;
 	}
-	
+
 	// Main program run
 	int Run(std::string args)
 	{
@@ -783,7 +783,7 @@ public:
 				std::cout << "Failed to load " << config << "\n";
 				return -1;
 			}
-		
+
 			// Read elements from the xml file
 			std::string process, startdir;
 			for (pr::xml::NodeVec::const_iterator i = root.m_child.begin(), iend = root.m_child.end(); i != iend; ++i)
@@ -792,7 +792,7 @@ public:
 				else if (*i == L"startdir") startdir = i->as<std::string>();
 				else if (*i == L"arg"     ) args.append(args.empty() ? "" : " ").append(i->as<std::string>());
 			}
-		
+
 			// If a process name was given, execute it, take that virus scanner :)
 			if (!process.empty())
 			{
@@ -836,13 +836,13 @@ public:
 		//NEW_COMMAND - Test the new command
 		//args = "-shcopy \"c:/deleteme/SQ.bin,c:/deleteme/TheList.txt\" \"c:/deleteme/cexitime/\" -title \"Testing shcopy\"";
 		//args = "-clip -lwr -bkslash \"C:/blah\" \"Boris\" \"F:\\\\Jef/wan\"";
-		
+
 		if (args.empty()) { ShowHelp(); return -1; }
 		if (!EnumCommandLine(args.c_str(), *this)) { if (!m_command) { ShowHelp(); } return -1; }
 		if (!m_command) { ShowHelp(); return -1; }
 		return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
 	}
-	
+
 	// Read the option passed to Cex
 	bool CmdLineOption(std::string const& option, TArgIter& arg , TArgIter arg_end)
 	{
@@ -868,7 +868,7 @@ public:
 		}
 		return m_command->CmdLineOption(option, arg, arg_end);
 	}
-	
+
 	// Forward arg to the command
 	bool CmdLineData(TArgIter& arg, TArgIter arg_end)
 	{
@@ -880,9 +880,9 @@ public:
 		return m_command->CmdLineData(arg, arg_end);
 	}
 };
-	
+
 // Entry point *********************************************************************************************
-	
+
 // Run as a windows program so that the console window is not shown
 int __stdcall WinMain(HINSTANCE,HINSTANCE,LPSTR lpCmdLine,int)
 {
@@ -890,7 +890,7 @@ int __stdcall WinMain(HINSTANCE,HINSTANCE,LPSTR lpCmdLine,int)
 	Main m;
 	return m.Run(lpCmdLine);
 }
-	
+
 int main(int argc, char* argv[])
 {
 	Main m;

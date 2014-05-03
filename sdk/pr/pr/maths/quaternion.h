@@ -15,7 +15,7 @@
 
 namespace pr
 {
-	__declspec(align(16)) struct Quat
+	struct alignas(16) Quat
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct

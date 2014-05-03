@@ -52,6 +52,13 @@ enum class EView3DLight
 	Point,
 	Spot
 };
+enum class EView3DLogLevel
+{
+	Debug,
+	Info,
+	Warn,
+	Error,
+};
 
 namespace pr
 {
@@ -67,7 +74,6 @@ namespace view3d
 typedef view3d::Drawset* View3DDrawset;
 typedef view3d::Object*  View3DObject;
 typedef view3d::Texture* View3DTexture;
-
 struct View3DVertex
 {
 	pr::v4 pos;
@@ -119,6 +125,7 @@ struct View3DViewport
 
 typedef void (__stdcall *View3D_SettingsChanged)();
 typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
+typedef void (__stdcall *View3D_LogOutputCB)(EView3DLogLevel level, long long timestamp, char const* msg);
 typedef void (__stdcall *View3D_EditObjectCB)(
 	std::size_t vcount,      // The maximum size of 'verts'
 	std::size_t icount,      // The maximum size of 'indices'
@@ -134,7 +141,7 @@ typedef void (__stdcall *View3D_EditObjectCB)(
 extern "C"
 {
 	// Initialise/shutdown the dll
-	VIEW3D_API EView3DResult           __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+	VIEW3D_API EView3DResult           __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_changed_cb);
 	VIEW3D_API void                    __stdcall View3D_Shutdown();
 
 	// Draw sets
@@ -168,6 +175,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis        (View3DDrawset drawset, pr::v4& axis);
 	VIEW3D_API void                    __stdcall View3D_AlignCamera            (View3DDrawset drawset, pr::v4 const& axis);
 	VIEW3D_API void                    __stdcall View3D_ResetView              (View3DDrawset drawset, pr::v4 const& forward, pr::v4 const& up);
+	VIEW3D_API pr::v2                  __stdcall View3D_ViewArea               (View3DDrawset drawset, float dist);
 	VIEW3D_API void                    __stdcall View3D_GetFocusPoint          (View3DDrawset drawset, pr::v4& position);
 	VIEW3D_API void                    __stdcall View3D_SetFocusPoint          (View3DDrawset drawset, pr::v4 const& position);
 	VIEW3D_API pr::v4                  __stdcall View3D_WSPointFromNormSSPoint (View3DDrawset drawset, pr::v4 const& screen);
@@ -190,8 +198,8 @@ extern "C"
 	VIEW3D_API pr::m4x4                __stdcall View3D_ObjectGetO2P             (View3DObject object);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, pr::m4x4 const& o2p);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, pr::uint colour, pr::uint mask, BOOL include_children);
-	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex);
-	VIEW3D_API pr::BBox         __stdcall View3D_ObjectBBoxMS             (View3DObject object);
+	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, BOOL include_children);
+	VIEW3D_API pr::BBox                __stdcall View3D_ObjectBBoxMS             (View3DObject object);
 
 	// Materials
 	VIEW3D_API EView3DResult           __stdcall View3D_TextureCreate            (size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex);
@@ -200,6 +208,9 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_TextureDelete            (View3DTexture tex);
 	VIEW3D_API void                    __stdcall View3D_TextureGetInfo           (View3DTexture tex, View3DImageInfo& info);
 	VIEW3D_API EView3DResult           __stdcall View3D_TextureGetInfoFromFile   (char const* tex_filepath, View3DImageInfo& info);
+	VIEW3D_API EView3DResult           __stdcall View3D_TextureCreateGdiCompat   (size_t width, size_t height, View3DTexture& tex);
+	VIEW3D_API HDC                     __stdcall View3D_TextureGetDC             (View3DTexture tex);
+	VIEW3D_API void                    __stdcall View3D_TextureReleaseDC         (View3DTexture tex);
 
 	// Rendering
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();

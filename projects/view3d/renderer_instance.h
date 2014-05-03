@@ -3,20 +3,8 @@
 //  Copyright © Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-#ifndef PR_VIEW3D_RENDERER_INSTANCE_H
-#define PR_VIEW3D_RENDERER_INSTANCE_H
 
-#include <set>
-#include "pr/common/new.h"
-#include "pr/common/log.h"
-#include "pr/macros/count_of.h"
-#include "pr/maths/maths.h"
-#include "pr/camera/camera.h"
-#include "pr/script/embedded_lua.h"
-#include "pr/renderer11/renderer.h"
-#include "pr/linedrawer/ldr_object.h"
-#include "pr/linedrawer/ldr_objects_dlg.h"
-#include "pr/linedrawer/ldr_tools.h"
+#include "view3d/forward.h"
 #include "pr/view3d/view3d.h"
 
 namespace view3d
@@ -53,9 +41,7 @@ namespace view3d
 		:pr::events::IRecv<pr::ldr::Evt_Refresh>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
-		,pr::AlignTo<16>
 	{
-		pr::Logger                m_log;
 		pr::Renderer              m_renderer;
 		pr::rdr::Scene            m_scene;
 		pr::ldr::ObjectCont       m_obj_cont;
@@ -67,10 +53,8 @@ namespace view3d
 		Drawset*                  m_last_drawset;
 		view3d::Instance          m_focus_point;
 		view3d::Instance          m_origin_point;
-		View3D_ReportErrorCB      m_error_cb;
-		View3D_SettingsChanged    m_settings_changed_cb;
 
-		RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb);
+		explicit RendererInstance(HWND hwnd);
 		~RendererInstance();
 		void CreateStockObjects();
 
@@ -80,5 +64,3 @@ namespace view3d
 		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
 	};
 }
-
-#endif

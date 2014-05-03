@@ -25,11 +25,12 @@ namespace pr
 		// A scene contains an ordered collection of render steps.
 		struct Scene
 			:pr::events::IRecv<Evt_Resize>
+			,pr::AlignTo<16>
 		{
-			pr::Renderer*  m_rdr;          // The controlling renderer
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
 			RenderStepCont m_render_steps; // The stages of rendering the scene
+			pr::Renderer*  m_rdr;          // The controlling renderer
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 

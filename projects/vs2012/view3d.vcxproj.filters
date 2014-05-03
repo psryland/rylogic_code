@@ -21,9 +21,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\sdk\pr\pr\camera\trackball_3d.h">
-      <Filter>camera</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h">
       <Filter>lighting</Filter>
     </ClInclude>
@@ -93,6 +90,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h">
       <Filter>sdk\script</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
+      <Filter>camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\view3d\forward.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">

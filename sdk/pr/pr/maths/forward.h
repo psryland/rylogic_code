@@ -40,6 +40,11 @@
 #define thread_local __declspec(thread)
 #endif
 
+// C++11's alignas
+#ifndef alignas
+#define alignas(alignment) __declspec(align(alignment))
+#endif
+
 #if PR_MATHS_USE_DIRECTMATH
 #  include <directxmath.h>
 #endif

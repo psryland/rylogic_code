@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Windows.Forms;
 using pr.gfx;
 using pr.gui;
@@ -11,6 +12,7 @@ namespace TestCS
 		private readonly View3dControl m_view3d;
 		private readonly View3d.Object m_obj0;
 		private readonly View3d.Object m_obj1;
+		private readonly View3d.Texture m_tex0;
 
 		static FormView3d()
 		{
@@ -29,9 +31,11 @@ namespace TestCS
 			};
 			Controls.Add(m_view3d);
 
-			m_obj0 = new View3d.Object("*Box test FFFF0000 {1 2 3}");
+			// Simple create object
+			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}");
 			m_view3d.Drawset.AddObject(m_obj0);
 
+			// Create object via callback
 			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20,
 				(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx) =>
 				{
@@ -49,9 +53,19 @@ namespace TestCS
 				});
 			m_view3d.Drawset.AddObject(m_obj1);
 
-			m_view3d.View3d.CreateDemoScene();
-			m_view3d.Drawset.Camera.ResetView();
+			// Create a texture and assign it to an object
+			m_tex0 = new View3d.Texture(100,100,View3d.Texture.Option.Gdi);
+			using (var tex = new View3d.Texture.Lock(m_tex0))
+			{
+				tex.Gfx.Clear(Color.DarkBlue);
+				tex.Gfx.FillEllipse(Brushes.RoyalBlue, 10,10,80,80);
+				tex.Gfx.DrawString("Paul Rulz", SystemFonts.DefaultFont, Brushes.Black, new PointF(30,40));
+			}
+			m_obj0.SetTexture(m_tex0, true);
 
+			//m_view3d.View3d.CreateDemoScene();
+			
+			m_view3d.Drawset.Camera.ResetView();
 			m_view3d.Drawset.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 		}
 		protected override void Dispose(bool disposing)

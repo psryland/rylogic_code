@@ -4,8 +4,6 @@
 //*********************************************
 #pragma once
 
-#include "pr/common/min_max_fix.h"
-
 #include <vector>
 #include <string>
 #include <list>
@@ -15,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+
 #include <intrin.h>
 #include <malloc.h>
 #include <sdkddkver.h>
@@ -26,6 +25,8 @@
 #include "pr/macros/count_of.h"
 #include "pr/macros/repeat.h"
 #include "pr/macros/enum.h"
+#include "pr/meta/alignment_of.h"
+#include "pr/common/min_max_fix.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"

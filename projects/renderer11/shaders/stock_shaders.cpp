@@ -129,9 +129,10 @@ namespace pr
 				pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintTex>(EStockShader::TxTintTex, TxTintTex::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_tex");
 
 				// Create a texture sampler
+				// Note: don't name the sampler resource. Dx11 caches samplers with the same config
+				// so trying to name it will clash with any previous name it might have been given
 				SamplerDesc sdesc;
 				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_default_sampler_state.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_default_sampler_state, "tex0 sampler"));
 			}
 			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 			{
@@ -213,9 +214,10 @@ namespace pr
 				pr::RefPtr<TxTintPvcLitTex> shdr = sm.CreateShader<TxTintPvcLitTex>(EStockShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_pvc_lit_tex");
 
 				// Create a texture sampler
+				// Note: don't name the sampler resource. Dx11 caches samplers with the same config
+				// so trying to name it will clash with any previous name it might have been given
 				SamplerDesc sdesc;
 				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_default_sampler_state.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_default_sampler_state, "tex0 sampler"));
 			}
 			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
 			{

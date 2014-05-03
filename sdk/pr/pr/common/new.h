@@ -35,7 +35,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/meta/alignmentof.h"
+#include "pr/meta/alignment_of.h"
 
 namespace pr
 {

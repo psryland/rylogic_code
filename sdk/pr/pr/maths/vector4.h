@@ -17,7 +17,7 @@
 
 namespace pr
 {
-	__declspec(align(16)) struct v4
+	struct alignas(16) v4
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct

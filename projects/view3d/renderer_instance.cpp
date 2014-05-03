@@ -26,11 +26,10 @@ namespace view3d
 	}
 
 	// RendererInstance ***********************************
-	RendererInstance::RendererInstance(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_SettingsChanged settings_changed_cb)
+	RendererInstance::RendererInstance(HWND hwnd)
 		:pr::events::IRecv<pr::ldr::Evt_Refresh>(false)
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>(false)
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>(false)
-		,m_log("view3d", pr::log::ToStdout())
 		,m_renderer(GetRdrSettings(hwnd))
 		,m_scene(m_renderer)
 		,m_obj_cont()
@@ -42,8 +41,6 @@ namespace view3d
 		,m_last_drawset(0)
 		,m_focus_point()
 		,m_origin_point()
-		,m_error_cb(error_cb)
-		,m_settings_changed_cb(settings_changed_cb)
 	{
 		m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
 		m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
@@ -56,8 +53,8 @@ namespace view3d
 	RendererInstance::~RendererInstance()
 	{
 		// Clean up drawsets
-		for (DrawsetCont::iterator i = m_drawset.begin(), i_end = m_drawset.end(); i != i_end; ++i)
-			delete *i;
+		for (auto& ds : m_drawset)
+			delete ds;
 	}
 
 	void RendererInstance::CreateStockObjects()

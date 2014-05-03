@@ -24,7 +24,7 @@
 #include "pr/common/events.h"
 #include "pr/common/allocator.h"
 #include "pr/maths/maths.h"
-#include "pr/meta/primegtreq.h"
+#include "pr/meta/prime_gtreq.h"
 
 namespace pr
 {

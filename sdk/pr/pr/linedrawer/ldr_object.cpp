@@ -609,7 +609,7 @@ namespace pr
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
-			pr::rdr::NuggetProps* GetDrawData(ParseParams& p)
+			pr::rdr::NuggetProps* GetDrawData()
 			{
 				// If a texture was given create a material that uses it
 				if (!m_texture)
@@ -892,14 +892,15 @@ namespace pr
 
 				// Permute the verts, normals, and bbox
 				auto axis_id = pr::Abs(m_axis_id) - 1;
-				for (auto& v : m_point) v = pr::Permute3(v             , axis_id + 1);
-				auto norm                 = pr::Permute3(pr::v4ZAxis   , axis_id + 1);
-				bbox.m_radius             = pr::Permute3(bbox.m_radius , axis_id + 1);
+				for (auto& v : m_point)
+					v = pr::Permute3(v, axis_id + 1);
+				auto norm     = pr::Permute3(pr::v4ZAxis   , axis_id + 1);
+				bbox.m_radius = pr::Permute3(bbox.m_radius , axis_id + 1);
 
 				// Create the model
 				ModelPtr model;
 				if (m_solid)
-					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData(p));
+					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData());
 				else
 					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data());
 
@@ -1115,7 +1116,7 @@ namespace pr
 				}
 
 				// Create the model
-				ModelPtr model = ModelGenerator<>::Quad(p.m_rdr, m_point.size()/4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData(p));
+				ModelPtr model = ModelGenerator<>::Quad(p.m_rdr, m_point.size()/4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1207,7 +1208,7 @@ namespace pr
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, pr::m4x4Identity, pr::Colour32White, GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, pr::m4x4Identity, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1241,7 +1242,7 @@ namespace pr
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, m_b2w, pr::Colour32White, GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, m_b2w, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1273,7 +1274,7 @@ namespace pr
 				}
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1288,7 +1289,7 @@ namespace pr
 			IObjectCreatorCuboid() :m_pt() ,m_b2w(pr::m4x4Identity) {}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1391,7 +1392,7 @@ namespace pr
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1433,7 +1434,7 @@ namespace pr
 				}
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawData(p));
+				auto model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1603,7 +1604,7 @@ namespace pr
 					m_normals.size(),
 					m_normals.data(),
 					m_texs.data(),
-					GetDrawData(p));
+					GetDrawData());
 				model->m_name = name;
 				return model;
 			}
