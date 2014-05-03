@@ -17,6 +17,7 @@
 #define PR_RDR_SHADER_TXFMWS 1
 #define PR_RDR_SHADER_TINT0 1
 #define PR_RDR_SHADER_PVC 1
+#define PR_RDR_SHADER_LIGHTING 1
 
 #include "common/uber.hlsli"
 

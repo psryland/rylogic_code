@@ -3,9 +3,12 @@
 //  Copyright © Rylogic Ltd 2010
 //******************************************
 
-#ifndef PR_META_ALIGNED_TYPE_H
-#define PR_META_ALIGNED_TYPE_H
 #pragma once
+
+// C++11's alignas
+#ifndef alignas
+#define alignas(alignment) __declspec(align(alignment))
+#endif
 
 namespace pr
 {
@@ -19,9 +22,6 @@ namespace pr
 		template <> struct aligned_type<2>  { struct type { short  a; }; };
 		template <> struct aligned_type<4>  { struct type { int    a; }; };
 		template <> struct aligned_type<8>  { struct type { double a; }; };
-		template <> struct aligned_type<16> { __declspec(align(16)) struct type { char a[16]; }; };
+		template <> struct aligned_type<16> { struct alignas(16) type { char a[16]; }; };
 	}
 }
-
-#endif
-

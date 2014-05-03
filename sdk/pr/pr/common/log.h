@@ -48,7 +48,6 @@ namespace pr
 			Info,
 			Warn,
 			Error,
-			AssertionFailure,
 		};
 		template <typename Strm> inline Strm& operator << (Strm& s, ELevel level)
 		{
@@ -59,7 +58,6 @@ namespace pr
 			case ELevel::Info            : s << "Info"  ; return s;
 			case ELevel::Warn            : s << "Warn"  ; return s;
 			case ELevel::Error           : s << "Error" ; return s;
-			case ELevel::AssertionFailure: s << "Assert"; return s;
 			}
 		}
 
@@ -81,7 +79,7 @@ namespace pr
 			int           m_occurrences;
 
 			Event()
-				:m_level(ELevel::AssertionFailure)
+				:m_level(ELevel::Error)
 				,m_timestamp()
 				,m_context()
 				,m_msg()

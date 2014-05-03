@@ -42,16 +42,16 @@ namespace pr
 
 		#endif
 
-		// Return true if 'ptr' is correctly aligned for a pointer of type 'T const*'
-		template <typename T> inline bool is_aligned(void const* ptr)
-		{
-			return ((static_cast<char const*>(ptr) - static_cast<char const*>(0)) % alignment_of<T>::value) == 0;
-		}
-
 		// Return true if 'ptr' is aligned to 'alignment'
 		template <size_t Alignment> inline bool is_aligned_to(void const* ptr)
 		{
 			return ((static_cast<char const*>(ptr) - static_cast<char const*>(0)) % Alignment) == 0;
+		}
+
+		// Return true if 'ptr' is correctly aligned for a pointer of type 'T const*'
+		template <typename T> inline bool is_aligned(T const* ptr)
+		{
+			return is_aligned_to<alignment_of<T>::value>(ptr);
 		}
 	}
 }

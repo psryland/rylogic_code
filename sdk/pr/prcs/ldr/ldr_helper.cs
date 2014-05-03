@@ -3,6 +3,7 @@
 //  Copyright © Rylogic Ltd 2008
 //***********************************************
 
+using System.Drawing;
 using System.IO;
 using System.Text;
 using pr.maths;
@@ -52,6 +53,22 @@ namespace pr.ldr
 		{
 			if (o2w == m4x4.Identity) return "";
 			return "*o2w{*m4x4{" + Mat4x4(o2w) + "}}";
+		}
+		public static string Colour(uint col)
+		{
+			return col.ToString("X8");
+		}
+		public static string Colour(Color col)
+		{
+			return Colour(unchecked((uint)col.ToArgb()));
+		}
+		public static string Solid()
+		{
+			return "*Solid ";
+		}
+		public static string CornerRadius(float rad)
+		{
+			return "*CornerRadius {" + rad + "}";
 		}
 		public static string Line(string name, uint colour, v4 start, v4 end)
 		{
@@ -109,7 +126,13 @@ namespace pr.ldr
 		}
 		public LdrBuilder Append(params object[] parts)
 		{
-			foreach (var p in parts) m_sb.Append(p.ToString());
+			foreach (var p in parts)
+			{
+				if      (p is Color ) m_sb.Append(Ldr.Colour((Color)p));
+				else if (p is v4    ) m_sb.Append(Ldr.Vec3  ((v4)p))   ;
+				else if (p is m4x4  ) m_sb.Append(Ldr.Mat4x4((m4x4)p)) ;
+				else                  m_sb.Append(p.ToString());
+			}
 			return this;
 		}
 
@@ -129,14 +152,14 @@ namespace pr.ldr
 		public void Box(string name, uint colour, float size)      { Box(name, colour, size, v4.Origin); }
 		public void Box(string name, uint colour, float size, v4 position)
 		{
-			Append("*Box ",name," ",colour.ToString("X")," {",size," ",Ldr.Position(position),"}\n");
+			Append("*Box ",name," ",colour," {",size," ",Ldr.Position(position),"}\n");
 		}
 		public void Box(uint colour, float sx, float sy, float sz)              { Box(colour, sx, sy, sz, v4.Origin); }
 		public void Box(uint colour, float sx, float sy, float sz, v4 position) { Box(string.Empty, colour, sx, sy, sz, position); }
 		public void Box(string name, uint colour, float sx, float sy, float sz) { Box(name, colour, sx, sy, sz); }
 		public void Box(string name, uint colour, float sx, float sy, float sz, v4 position)
 		{
-			Append("*Box ",name," ",colour.ToString("X")," {",sx,",",sy,",",sz," ",Ldr.Position(position),"}\n");
+			Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Position(position),"}\n");
 		}
 
 		public void Sphere()                                       { Sphere(string.Empty, 0xFFFFFFFF); }
@@ -144,7 +167,7 @@ namespace pr.ldr
 		public void Sphere(string name, uint colour, float radius) { Sphere(name, colour, radius, v4.Origin); }
 		public void Sphere(string name, uint colour, float radius, v4 position)
 		{
-			Append("*Sphere ",name," ",colour.ToString("X")," {",radius," ",Ldr.Position(position),"}\n");
+			Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
 		}
 
 		public void Quad()                                                     { Quad(string.Empty, 0xFFFFFFFF); }
@@ -154,7 +177,7 @@ namespace pr.ldr
 		public void Quad(string name, uint colour, v4 tl, v4 tr, v4 br, v4 bl) { Quad(name, colour, tl, tr, br, bl, v4.Origin); }
 		public void Quad(string name, uint colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
 		{
-			Append("*Quad ",name," ",colour.ToString("X")," {",Ldr.Vec3(bl)," ",Ldr.Vec3(br)," ",Ldr.Vec3(tr)," ",Ldr.Vec3(tl)," ",Ldr.Position(position), "}\n");
+			Append("*Quad ",name," ",colour,"{",bl," ",br," ",tr," ",tl," ",Ldr.Position(position),"}\n");
 		}
 
 		public override string ToString()

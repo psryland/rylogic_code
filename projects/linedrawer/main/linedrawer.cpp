@@ -59,8 +59,8 @@ namespace ldr
 		,m_origin_point()
 		,m_selection_box()
 		,m_bbox_model()
-		,m_test_point()
-		,m_test_point_enable(false)
+		,m_test_model()
+		,m_test_model_enable(false)
 	{
 		// Create stock models such as the focus point, origin, selection box, etc
 		CreateStockModels();
@@ -165,25 +165,33 @@ namespace ldr
 			std::string scene = pr::ldr::CreateDemoScene();
 			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 
-			//{// hack
-			//	pr::rdr::ProjectedTexture pt;
-			//	pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
-			//	pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
-			//	m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
-			//}
+			/*{// For testing..
+				using namespace pr::rdr;
+
+				auto gditex = m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, Image::make(100,100), "gdi test");
+				{
+					using namespace Gdiplus;
+					TextureGdi::Gfx gfx(gditex);
+					SolidBrush b(Color(255,0,0));
+					gfx.FillEllipse(&b, 0,0,100,100);
+				}
+
+				NuggetProps mat;
+				//mat.m_tex_diffuse = m_rdr.m_tex_mgr.FindTexture(EStockTexture::Checker);
+				mat.m_tex_diffuse = gditex;
+				mat.m_rsb = RSBlock::SolidCullNone();
+				auto model = ModelGenerator<>::Quad(m_rdr, 1, 1, pr::iv2Zero, pr::Colour32White, &mat);
+				m_test_model.m_model = model;
+				m_test_model_enable = true;
+
+				//pr::rdr::ProjectedTexture pt;
+				//pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
+				//pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
+				//m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
+			}//*/
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
-	}
-
-	// Test point methods
-	void Main::TestPoint_Enable(bool yes)
-	{
-		m_test_point_enable = yes;
-	}
-	void Main::TestPoint_SetPosition(pr::v4 const& pos)
-	{
-		m_test_point.m_i2w.pos = pos;
 	}
 
 	// Create stock models such as the focus point, origin, etc
@@ -266,9 +274,9 @@ namespace ldr
 		}
 		{
 			// Create a test point box model
-			m_test_point.m_model = ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
-			m_test_point.m_model->m_name = "test point";
-			m_test_point.m_i2w   = pr::m4x4Identity;
+			m_test_model.m_model = ModelGenerator<>::Box(m_rdr, 0.1f, pr::m4x4Identity, pr::Colour32Green);
+			m_test_model.m_model->m_name = "test model";
+			m_test_model.m_i2w   = pr::m4x4Identity;
 		}
 	}
 
@@ -314,8 +322,8 @@ namespace ldr
 			e.m_scene.AddInstance(m_origin_point);
 
 		// Render the test point
-		if (m_test_point_enable)
-			e.m_scene.AddInstance(m_test_point);
+		if (m_test_model_enable)
+			e.m_scene.AddInstance(m_test_model);
 
 		// Add instances from the store
 		for (std::size_t i = 0, iend = m_store.size(); i != iend; ++i)

@@ -49,7 +49,7 @@ namespace pr
 				,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 				,m_adapter(0)
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(0)
+				,m_device_layers(D3D11_CREATE_DEVICE_BGRA_SUPPORT)
 				,m_feature_levels()
 				,m_vsync(1)
 				,m_allow_alt_enter(false)

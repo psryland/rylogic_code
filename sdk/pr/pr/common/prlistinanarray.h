@@ -8,9 +8,9 @@
 #define PR_LIST_IN_AN_ARRAY_H
 
 #include <new>
-#include "pr/meta/If.h"
-#include "pr/meta/IsPod.h"
-#include "pr/common/PRTypes.h"
+#include "pr/meta/if.h"
+#include "pr/meta/is_pod.h"
+#include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 
 namespace pr

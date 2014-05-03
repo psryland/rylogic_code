@@ -5,8 +5,6 @@
 // Camera to world matrix plus FoV and focus point
 // Supports 3D trackball-like mouse control and basic keyboard control
 
-#ifndef PR_CAMERA_CAMERA_H
-#define PR_CAMERA_CAMERA_H
 #pragma once
 
 #include <bitset>
@@ -88,14 +86,14 @@ namespace pr
 	// All points are in normalised screen space regardless of aspect ratio,
 	//  i.e. x=[-1, -1], y=[-1,1] with (-1,-1) = (left,bottom), i.e. normal cartesian axes.
 	// Use:
-	//  point = v2::make(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
+	//  point = pr::v2::make(2.0f * pt.x / float(Width) - 1.0f, 1.0f - 2.0f * pt.y / float(Height));
 	struct Camera
 	{
-		m4x4                   m_base_c2w;          // The starting position during a mouse movement
-		m4x4                   m_c2w;               // Camera to world transform
+		pr::m4x4               m_base_c2w;          // The starting position during a mouse movement
+		pr::m4x4               m_c2w;               // Camera to world transform
 		camera::NavKeyBindings m_key;               // Key bindings
 		float                  m_default_fovY;      // The default field of view
-		v4                     m_align;             // The directon to align 'up' to, or v4Zero
+		pr::v4                 m_align;             // The directon to align 'up' to, or v4Zero
 		camera::LockMask       m_lock_mask;         // Locks on the allowed motion
 		bool                   m_orthographic;      // True for orthographic camera to screen transforms, false for perspective
 		float                  m_base_fovY;         // The starting fov during a mouse movement
@@ -106,15 +104,15 @@ namespace pr
 		float                  m_near;              // The near plane as a multiple of the focus distance
 		float                  m_far;               // The near plane as a multiple of the focus distance
 		float                  m_accuracy_scale;    // Scale factor for high accuracy control
-		v2                     m_Lref;              // Movement start reference point for the left button
-		v2                     m_Rref;              // Movement start reference point for the right button
-		v2                     m_Mref;              // Movement start reference point for the middle button
+		pr::v2                 m_Lref;              // Movement start reference point for the left button
+		pr::v2                 m_Rref;              // Movement start reference point for the right button
+		pr::v2                 m_Mref;              // Movement start reference point for the middle button
 		bool                   m_moved;             // Dirty flag for when the camera moves
 		bool                   m_focus_rel_clip;    // True if the near/far clip planes should be relative to the focus point
 
 		Camera(float fovY = pr::maths::tau_by_8, float aspect = 1.0f)
-			:m_base_c2w(m4x4Identity)
-			,m_c2w(m4x4Identity)
+			:m_base_c2w(pr::m4x4Identity)
+			,m_c2w(pr::m4x4Identity)
 			,m_key()
 			,m_default_fovY(fovY)
 			,m_align(v4Zero)
@@ -136,29 +134,29 @@ namespace pr
 		{}
 
 		// Return the camera to world transform
-		void CameraToWorld(m4x4 const& c2w, bool update_base)
+		void CameraToWorld(pr::m4x4 const& c2w, bool update_base)
 		{
 			m_c2w = c2w;
 			if (update_base) MoveRef(v2Zero, 0);
 		}
-		m4x4 CameraToWorld() const
+		pr::m4x4 CameraToWorld() const
 		{
 			return m_c2w;
 		}
-		m4x4 WorldToCamera() const
+		pr::m4x4 WorldToCamera() const
 		{
 			return GetInverseFast(m_c2w);
 		}
 
 		// Return a perspective projection transform
-		m4x4 CameraToScreen(float near_clip, float far_clip) const
+		pr::m4x4 CameraToScreen(float near_clip, float far_clip) const
 		{
 			float height = 2.0f * m_focus_dist * pr::Tan(m_fovY * 0.5f);
 			return m_orthographic
 				? ProjectionOrthographic(height*m_aspect, height, near_clip, far_clip, true)
 				: ProjectionPerspectiveFOV(m_fovY, m_aspect, near_clip, far_clip, true);
 		}
-		m4x4 CameraToScreen() const
+		pr::m4x4 CameraToScreen() const
 		{
 			return m_focus_rel_clip
 				? CameraToScreen(m_focus_dist * m_near, m_focus_dist * m_far)
@@ -282,6 +280,15 @@ namespace pr
 			m_base_fovY = m_fovY = fovY;
 		}
 
+		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
+		pr::v2 ViewArea(float dist) const
+		{
+			auto h = pr::Tan(m_fovY * 0.5f);
+			return m_orthographic
+				? pr::v2::make(h * m_aspect, h)
+				: pr::v2::make(dist * h * m_aspect, dist * h);
+		}
+
 		// Return the view frustum for this camera
 		Frustum ViewFrustum() const
 		{
@@ -289,7 +296,7 @@ namespace pr
 		}
 
 		// Return the world space position of the focus point
-		v4 FocusPoint() const
+		pr::v4 FocusPoint() const
 		{
 			return m_c2w.pos - m_c2w.z * m_focus_dist;
 		}
@@ -413,7 +420,7 @@ namespace pr
 			}
 
 			// Translate
-			m_c2w.pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * v4::make(dx, dy, dz, 0.0f);
+			m_c2w.pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * pr::v4::make(dx, dy, dz, 0.0f);
 
 			// Apply non-camera relative locking
 			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])
@@ -452,7 +459,7 @@ namespace pr
 			}
 
 			// Save the world space position of the focus point
-			v4 old_focus = FocusPoint();
+			pr::v4 old_focus = FocusPoint();
 
 			// Rotate the camera matrix
 			m_c2w = m_base_c2w * Rotation4x4(pitch, yaw, roll, v4Origin);
@@ -540,8 +547,8 @@ namespace pr
 		{
 			if (!bbox.IsValid()) return;
 
-			v4 bbox_centre = bbox.Centre();
-			v4 bbox_radius = bbox.Radius();
+			pr::v4 bbox_centre = bbox.Centre();
+			pr::v4 bbox_radius = bbox.Radius();
 
 			// Get the radius of the bbox projected onto the plane 'forward'
 			float sizez = pr::maths::float_max;
@@ -603,5 +610,3 @@ namespace pr
 		}
 	};
 }
-
-#endif

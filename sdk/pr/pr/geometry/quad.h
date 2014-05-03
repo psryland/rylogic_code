@@ -77,12 +77,12 @@ namespace pr
 			ColourRepeater col(colours, num_colours, num_quads * 4, Colour32White);
 
 			// Texture coords
-			v2 t00 = (t2q * v4::make(0.0f, 0.0f, 0.0f, 1.0f)).xy();
-			v2 t01 = (t2q * v4::make(0.0f, 1.0f, 0.0f, 1.0f)).xy();
-			v2 t10 = (t2q * v4::make(1.0f, 0.0f, 0.0f, 1.0f)).xy();
-			v2 t11 = (t2q * v4::make(1.0f, 1.0f, 0.0f, 1.0f)).xy();
+			v2 t00 = (t2q * v4::make(0.000f, 0.000f, 0.0f, 1.0f)).xy();
+			v2 t01 = (t2q * v4::make(0.000f, 0.999f, 0.0f, 1.0f)).xy();
+			v2 t10 = (t2q * v4::make(0.999f, 0.000f, 0.0f, 1.0f)).xy();
+			v2 t11 = (t2q * v4::make(0.999f, 0.999f, 0.0f, 1.0f)).xy();
 
-			Props props;
+			pr::BBox bbox = pr::BBoxReset;
 			for (std::size_t i = 0; i != num_quads; ++i)
 			{
 				v4 v0 = *verts++;
@@ -100,10 +100,10 @@ namespace pr
 				SetPCNT(*v_out++, v2, c2, norm(v0,v2,v3), t00);
 				SetPCNT(*v_out++, v3, c3, norm(v2,v3,v1), t10);
 
-				pr::Encompass(props.m_bbox, v0);
-				pr::Encompass(props.m_bbox, v1);
-				pr::Encompass(props.m_bbox, v2);
-				pr::Encompass(props.m_bbox, v3);
+				pr::Encompass(bbox, v0);
+				pr::Encompass(bbox, v1);
+				pr::Encompass(bbox, v2);
+				pr::Encompass(bbox, v3);
 
 				// Set faces
 				std::size_t ibase = i * 6;
@@ -115,7 +115,10 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 3);
 			}
+
+			Props props;
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_bbox = bbox;
 			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
@@ -184,12 +187,9 @@ namespace pr
 				}
 			}
 
-			BBox bbox = BBoxReset;
-			pr::Encompass(bbox, origin);
-			pr::Encompass(bbox, origin + quad_x + quad_z);
-
 			Props props;
-			props.m_bbox = bbox;
+			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
+			props.m_bbox = pr::BBoxMake({origin, origin + quad_x + quad_z});
 			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}

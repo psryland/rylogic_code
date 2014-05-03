@@ -27,8 +27,8 @@ namespace pr.gui
 			/// <summary>The element to diagram transform</summary>
 			m4x4 Position { get; }
 
-			/// <summary>An ldr string for the graphics of the element (not including any text) in element space.</summary>
-			string Graphics();
+			/// <summary>Gets the graphics object for this element</summary>
+			View3d.Object Graphics { get; }
 		}
 		public interface INode :IElement
 		{
@@ -60,6 +60,32 @@ namespace pr.gui
 		/// <summary>Simple rectangular box node</summary>
 		public class BoxNode :DiagramControl.INode
 		{
+			private readonly View3d.Object m_obj;   // The graphics object for the node
+			private readonly View3d.Texture m_tex;  // The texture surface to draw on
+
+			public BoxNode(uint width, uint height, float corner_radius = 5f) :this(width,height,SystemColors.ControlLightLight, Color.Black, corner_radius) {}
+			public BoxNode(uint width, uint height, Color bkgd, Color border, float corner_radius = 5f)
+			{
+				var ldr = new LdrBuilder();
+				using (ldr.Group())
+				{
+					ldr.Append("*Rect r ",bkgd  ,"{3 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
+					ldr.Append("*Rect r ",border,"{3 ",width," ",height," ",Ldr.CornerRadius(corner_radius),"}\n");
+				}
+				m_obj = new View3d.Object(ldr.ToString());
+
+				m_tex = new View3d.Texture(width,height,View3d.Texture.Option.Gdi);
+				using (var tex = m_tex.LockSurface)
+				{
+					tex.Gfx.DrawString("This is a box node", SystemFonts.DefaultFont, Brushes.Black, PointF.Empty);
+				}
+				m_obj.SetTexture(m_tex, true);
+
+				Text  = string.Empty;
+				Style = new NodeStyle();
+				Position   = m4x4.Identity;
+			}
+
 			/// <summary>Text to display in this box</summary>
 			public string Text { get; set; }
 
@@ -69,43 +95,9 @@ namespace pr.gui
 			/// <summary>The element to diagram transform</summary>
 			public m4x4 Position { get; set; }
 
-			public BoxNode()
+			public View3d.Object Graphics
 			{
-				Text  = string.Empty;
-				Style = new NodeStyle();
-				Position   = m4x4.Identity;
-			}
-
-			/// <summary>Render the element (draw in diagram space, not screen space)</summary>
-			public string Graphics()
-			{
-				var ldr = new LdrBuilder();
-				using (ldr.Group())
-				{
-					ldr.Box("test", 0xFF00FF00);
-					//ldr.Quad(0xFF)
-					//gfx.SetClip(bounds.Inflated(5,5));
-
-					//using (var path = Gfx.RoundedRectanglePath(bounds, 5f))
-					//using (var brush = new PathGradientBrush(path))
-					//{
-					//	ColorBlend blend = new ColorBlend();
-					//	blend.Colors = new Color[] { Color.Transparent, Color.Black, Color.Black };
-					//	blend.Positions = new float[] { 0.0f, 0.1f, 1.0f };
-					//	brush.InterpolationColors = blend;
-					//	gfx.FillPath(brush, path);
-					//}
-
-					//using (var shd = new PathGradientBrush(, WrapMode.Clamp){CenterPoint})
-					//	gfx.FillRectangleRounded(shd, bounds.Inflated(5,5), 3f);     // drop shadow
-
-					//gfx.FillRectangleRounded(Style.Fill, bounds, 3f);
-					//gfx.DrawRectangleRounded(Style.Border, bounds.Inflated(-1,-1), 3f);
-
-					//v2 sz = gfx.MeasureString(Text, Style.Font);
-					//gfx.DrawString(Text, Style.Font, Style.Text, Bounds.Centre - sz/2);
-				}
-				return ldr.ToString();
+				get { return m_obj; }
 			}
 		}
 
@@ -116,9 +108,9 @@ namespace pr.gui
 			public m4x4 Position { get; set; }
 
 			/// <summary>Render the element (draw in diagram space, not screen space)</summary>
-			public string Graphics()
+			public View3d.Object Graphics
 			{
-				return string.Empty;
+				get { return null; }
 			}
 		}
 
@@ -160,8 +152,6 @@ namespace pr.gui
 		private View3d.CameraControls m_camera;         // The virtual window over the diagram
 		private PointF                m_grab_location;  // The location in diagram space of where the diagram was "grabbed"
 		private Rectangle             m_selection;      // Area selection, has width, height of zero when the user isn't selecting
-		private RangeF                m_zoom_range;     // The limits for zooming
-		private float                 m_zoom;           // The zoom value
 
 		public DiagramControl() :this(new RdrOptions()) {}
 		private DiagramControl(RdrOptions rdr_options)
@@ -170,8 +160,6 @@ namespace pr.gui
 			m_rdr_options    = rdr_options;
 			m_eb_update_diag = new EventBatcher(UpdateDiagram);
 			m_camera         = new View3d.CameraControls(m_view3d.Drawset);
-			m_zoom_range     = new RangeF(0.001, 1000.0);
-			m_zoom           = 1f;
 
 			InitializeComponent();
 
@@ -208,11 +196,8 @@ namespace pr.gui
 		{
 			m_view3d.Drawset.RemoveAllObjects();
 			foreach (var node in Elements)
-			{
-				var ldr = node.Graphics();
-				var obj = new View3d.Object(ldr){Tag = node};
-				m_view3d.Drawset.AddObject(obj);
-			}
+				m_view3d.Drawset.AddObject(node.Graphics);
+
 			m_view3d.SignalRefresh();
 		}
 
@@ -268,12 +253,11 @@ namespace pr.gui
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
-			//if (!DiagramRegion(ClientSize).Contains(e.Location)) return;
-			//var point = PointToDiagram(e.Location);
-			//var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
-			//Zoom *= (1.0f + delta * 0.001f);
-			//PositionDiagram(e.Location, point);
-			//Refresh();
+			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
+			m_view3d.NavigateZ(e.Delta / 120f);
+			var point = PointToDiagram(e.Location);
+			PositionDiagram(e.Location, point);
+			Refresh();
 		}
 
 		/// <summary>Handle mouse dragging the graph around</summary>
@@ -294,39 +278,11 @@ namespace pr.gui
 			{
 				m_camera.SetPosition(new v4(0,0,10,1), v4.Origin, v4.YAxis);
 			}
-			//if (reset_size && Math.Min(ClientSize.Width, ClientSize.Height) != 0)
-			//{
-			//	m_window.SizeX = (float)(ClientSize.Width  * m_zoom / PixelsPerUnit);
-			//	m_window.SizeY = (float)(ClientSize.Height * m_zoom / PixelsPerUnit);
-			//}
+			if (reset_size)
+			{
+				m_camera.FocusDist = 0.5f * Height / (float)Math.Tan(m_camera.FovY * 0.5f);
+			}
 		}
-
-		///// <summary>
-		///// Zoom in/out on the diagram. Remember to call refresh.
-		///// Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
-		//public double Zoom
-		//{
-		//	get { return m_zoom; }
-		//	set
-		//	{
-		//		TakeSnapshot();
-		//		m_zoom = (float)Maths.Clamp(value, m_zoom_range.Begin, m_zoom_range.End);
-		//		ResizeViewToClientArea();
-		//		RegenBitmap = true;
-		//	}
-		//}
-
-		///// <summary>Zoom limits</summary>
-		//public double ZoomMin
-		//{
-		//	get { return m_zoom_range.Begin; }
-		//	set { Debug.Assert(value > 0f); m_zoom_range.Begin = value; }
-		//}
-		//public double ZoomMax
-		//{
-		//	get { return m_zoom_range.End; }
-		//	set { Debug.Assert(value > 0f); m_zoom_range.End   = value; }
-		//}
 
 		/// <summary>
 		/// Returns a point in diagram space from a point in client space

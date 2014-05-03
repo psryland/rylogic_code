@@ -19,7 +19,7 @@
 #include "pr/meta/or.h"
 #include "pr/meta/and.h"
 #include "pr/meta/not.h"
-#include "pr/meta/isclass.h"
+#include "pr/meta/is_class.h"
 #include "pr/meta/constants.h"
 
 namespace pr

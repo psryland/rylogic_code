@@ -193,8 +193,9 @@ namespace pr
 		}
 
 		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
-		void TestSystemCompatibility()
+		bool TestSystemCompatibility()
 		{
+			return true;
 		}
 	}
 }

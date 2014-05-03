@@ -4,8 +4,6 @@
 //*********************************************
 #pragma once
 
-#include "pr/common/min_max_fix.h"
-
 #include <vector>
 #include <string>
 #include <list>
@@ -15,6 +13,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+
 #include <intrin.h>
 #include <malloc.h>
 #include <sdkddkver.h>
@@ -26,6 +25,8 @@
 #include "pr/macros/count_of.h"
 #include "pr/macros/repeat.h"
 #include "pr/macros/enum.h"
+#include "pr/meta/alignment_of.h"
+#include "pr/common/min_max_fix.h"
 #include "pr/common/prtypes.h"
 #include "pr/common/assert.h"
 #include "pr/common/hresult.h"
@@ -49,6 +50,7 @@
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/common/new.h"
+#include "pr/common/to.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -57,6 +59,7 @@
 #include "pr/camera/camera.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
+#include "pr/gui/gdiplus.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_helper.h"
 
@@ -121,11 +124,13 @@ namespace pr
 		class  TextureManager;
 		struct TextureDesc;
 		struct Texture2D;
+		struct TextureGdi;
 		struct Image;
 		struct AllocPres;
 		struct ProjectedTexture;
 		//struct Video;
 		typedef pr::RefPtr<Texture2D> Texture2DPtr;
+		typedef pr::RefPtr<TextureGdi> TextureGdiPtr;
 		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
 		//typedef pr::RefPtr<Video>     VideoPtr;
 

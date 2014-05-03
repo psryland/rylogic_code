@@ -1,9 +1,8 @@
 // Shamelessly lifted from Steve Robb's fuz library
 
-#ifndef PR_META_PRIME_GTREQ_H
-#define PR_META_PRIME_GTREQ_H
+#pragma once
 
-#include "pr/meta/IsPrime.h"
+#include "pr/meta/is_prime.h"
 
 namespace pr
 {
@@ -35,5 +34,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

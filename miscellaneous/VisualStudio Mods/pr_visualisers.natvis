@@ -2,6 +2,14 @@
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
+	<!-- Chain -->
+	<Type Name="pr::chain::head&lt;*,*&gt;">
+		<DisplayString>{m_next->m_obj}</DisplayString>
+	</Type>
+	<Type Name="pr::chain::link&lt;*,*&gt;">
+		<DisplayString>{m_obj}</DisplayString>
+	</Type>
+	
 	<!-- RefPtr -->
 	<Type Name="pr::RefPtr&lt;*&gt;">
 		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
@@ -110,7 +118,19 @@
 	<Type Name="pr::rdr::Model">
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
-
+	<Type Name="pr::rdr::Texture2D">
+		<DisplayString>{m_name}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::NuggetProps">
+		<DisplayString>{m_topo} {m_geom} {m_shader} {m_tex_diffuse}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::Nugget">
+		<DisplayString>{m_owner} {m_topo} {m_geom} count:{m_prim_count}</DisplayString>
+	</Type>
+	<Type Name="pr::rdr::DrawListElement">
+		<DisplayString>{m_nugget->m_owner} {m_shader}</DisplayString>
+	</Type>
+	
 	<!-- Console -->
 	<Type Name="pr::console::Coord">
 		<DisplayString>{X},{Y}</DisplayString>

@@ -1,9 +1,8 @@
 // Shamelessly lifted from Steve Robb's fuz library
 
-#ifndef PR_META_IS_PRIME_H
-#define PR_META_IS_PRIME_H
+#pragma once
 
-#include "pr/meta/SquareRoot.h"
+#include "pr/meta/square_root.h"
 
 namespace pr
 {
@@ -52,5 +51,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

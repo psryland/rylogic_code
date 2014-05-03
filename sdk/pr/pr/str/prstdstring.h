@@ -362,6 +362,12 @@ namespace pr
 			--m_count;
 		}
 
+		// The last character in the string (or the terminator for empty strings)
+		value_type last() const
+		{
+			return empty() ? value_type() : *(end() - 1);
+		}
+
 		// return pointer to nonmutable array
 		const_pointer data() const
 		{

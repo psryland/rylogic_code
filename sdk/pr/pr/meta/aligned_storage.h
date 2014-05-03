@@ -13,7 +13,7 @@
 #endif
 
 #include <type_traits>
-#include "pr/meta/alignedtype.h"
+#include "pr/meta/aligned_type.h"
 
 namespace pr
 {

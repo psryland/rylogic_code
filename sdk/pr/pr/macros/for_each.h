@@ -6,7 +6,7 @@
 #ifndef PR_MACRO_FOR_EACH_H
 #define PR_MACRO_FOR_EACH_H
 
-#include "pr/meta/typeof.h"
+#include "pr/meta/type_of.h"
 
 // non-const forward for each
 #define FOR_EACH(var, cont)\

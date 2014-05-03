@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -209,6 +210,13 @@ namespace pr.gfx
 			Middle = 1 << 2
 		}
 
+		public enum EView3DLogLevel
+		{
+			Debug,
+			Info,
+			Warn,
+			Error,
+		}
 		#endregion
 
 		#region Structs
@@ -326,21 +334,25 @@ namespace pr.gfx
 		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 
 		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
+		private readonly LogOutputCB m_log_cb;                    // A local reference to prevent the callback being garbage collected
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
 		private readonly List<DrawsetInterface> m_drawsets;       // Groups of objects to render
 		private readonly EventBatcher m_eb_refresh;               // Batch refresh calls
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3d(HWND handle, ReportErrorCB error_cb = null)
+		public View3d(HWND handle, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
 		{
 			m_error_cb = ErrorCB;
+			m_log_cb = LogCB;
 			m_settings_changed_cb = SettingsChgCB;
 			m_drawsets = new List<DrawsetInterface>();
 			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
+			
 			if (error_cb != null) OnError += error_cb;
+			if (log_cb != null) OnLog += log_cb;
 
 			// Initialise the renderer
-			var res = View3D_Initialise(handle, m_error_cb, m_settings_changed_cb);
+			var res = View3D_Initialise(handle, m_error_cb, m_log_cb, m_settings_changed_cb);
 			if (res != EResult.Success) throw new Exception(res);
 
 			// Create a default drawset
@@ -367,6 +379,10 @@ namespace pr.gfx
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
 		public delegate void ReportErrorCB(string msg);
+
+		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
+		public event LogOutputCB OnLog;
+		public delegate void LogOutputCB(EView3DLogLevel level, long timestamp, string msg);
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
 		public event SettingsChangedCB OnSettingsChanged;
@@ -518,7 +534,7 @@ namespace pr.gfx
 			var da = RenderTargetSize;
 			return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
 		}
-		
+
 		/// <summary>Convert a normalised point into a screen space point</summary>
 		private PointF ScreenSpacePointF(v2 pt)
 		{
@@ -530,12 +546,19 @@ namespace pr.gfx
 			var p = ScreenSpacePointF(pt);
 			return new Point((int)Math.Round(p.X), (int)Math.Round(p.Y));
 		}
-		
+
 		/// <summary>Callback function from the Dll when an error occurs</summary>
 		private void ErrorCB(string msg)
 		{
 			if (OnError != null) OnError(msg);
 			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+		}
+
+		/// <summary>Callback function from the Dll when a log event occurs</summary>
+		private void LogCB(EView3DLogLevel level, long timestamp, string msg)
+		{
+			if (OnLog != null) OnLog(level, timestamp, msg);
+			else Debug.Write(level.ToString() + "|" + timestamp.ToString() + "| " + msg);
 		}
 
 		/// <summary>Callback function from the Dll whenever the settings are changed</summary>
@@ -552,6 +575,16 @@ namespace pr.gfx
 			public CameraControls(DrawsetInterface ds)
 			{
 				m_ds = ds;
+			}
+
+			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
+			public v2 ViewArea(float dist)
+			{
+				return View3D_ViewArea(m_ds.Handle, dist);
+			}
+			public v2 ViewArea()
+			{
+				return ViewArea(FocusDist);
 			}
 
 			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
@@ -911,9 +944,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Assign a texture to this object</summary>
-			public void SetTexture(Texture tex)
+			public void SetTexture(Texture tex, bool include_children)
 			{
-				View3D_ObjectSetTexture(m_handle, tex.m_handle);
+				View3D_ObjectSetTexture(m_handle, tex.m_handle, include_children);
 			}
 
 			/// <summary>Delete this object</summary>
@@ -931,6 +964,22 @@ namespace pr.gfx
 			public HTexture m_handle;
 			public ImageInfo m_info;
 			public object Tag {get;set;}
+
+			public enum Option { Default, Gdi }
+
+			/// <summary>Construct an uninitialised texture</summary>
+			public Texture(uint width, uint height, Option option)
+			{
+				EResult res;
+				switch (option)
+				{
+				default: throw new ArgumentException("Unknown option");
+				case Option.Default: res = View3D_TextureCreate(IntPtr.Zero, 0, width, height, 0, EFormat.DXGI_FORMAT_B8G8R8A8_UNORM, out m_handle); break;
+				case Option.Gdi:     res = View3D_TextureCreateGdiCompat(width, height, out m_handle); break;
+				}
+				if (res != EResult.Success) throw new Exception(res);
+				View3D_TextureGetInfo(m_handle, out m_info);
+			}
 
 			/// <summary>Construct an uninitialised texture</summary>
 			public Texture(IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format)
@@ -997,6 +1046,33 @@ namespace pr.gfx
 				return info;
 			}
 
+			/// <summary>An RAII object used to lock the texture for drawing with GDI+ methods</summary>
+			public class Lock :IDisposable
+			{
+				private readonly HTexture m_tex;
+
+				/// <summary>GDI+ graphics interface</summary>
+				public Graphics Gfx { get; private set; }
+
+				public Lock(Texture tex)
+				{
+					m_tex = tex.m_handle;
+					var dc = View3D_TextureGetDC(m_tex);
+					if (dc == IntPtr.Zero) throw new Exception("Failed to get Texture DC. Check the texture is a GdiCompatible texture");
+					Gfx = Graphics.FromHdc(dc);
+				}
+				public void Dispose()
+				{
+					View3D_TextureReleaseDC(m_tex);
+				}
+			}
+
+			/// <summary>Lock the texture for drawing on</summary>
+			public Lock LockSurface
+			{
+				get { return new Lock(this); }
+			}
+
 			public override bool Equals(object obj) { return obj is Texture && m_handle.Equals(((Texture)obj).m_handle); }
 			public override int GetHashCode()       { return m_handle.GetHashCode(); }
 		}
@@ -1028,7 +1104,7 @@ namespace pr.gfx
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, SettingsChangedCB settings_changed_cb);
+		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, LogOutputCB log_cb, SettingsChangedCB settings_changed_cb);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown();
 
 		// Draw sets
@@ -1061,6 +1137,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HDrawset drawset, out v4 axis);
 		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, ref v4 axis);
 		[DllImport(Dll)] private static extern void              View3D_ResetView              (HDrawset drawset, ref v4 forward, ref v4 up);
+		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HDrawset drawset, float dist);
 		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HDrawset drawset, out v4 position);
 		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HDrawset drawset, ref v4 position);
 		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HDrawset drawset, ref v4 screen);
@@ -1082,7 +1159,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, bool include_children);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 
 		// Materials
@@ -1092,6 +1169,9 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateGdiCompat   (uint width, uint height, out HTexture tex);
+		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC             (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC         (HTexture tex);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Refresh                  ();
