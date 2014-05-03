@@ -69,8 +69,8 @@ namespace pr.gui
 				var ldr = new LdrBuilder();
 				using (ldr.Group())
 				{
-					ldr.Append("*Rect r ",bkgd  ,"{2 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
-					ldr.Append("*Rect r ",border,"{2 ",width," ",height," ",Ldr.CornerRadius(corner_radius),"}\n");
+					ldr.Append("*Rect r ",bkgd  ,"{3 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
+					ldr.Append("*Rect r ",border,"{3 ",width," ",height," ",Ldr.CornerRadius(corner_radius),"}\n");
 				}
 				m_obj = new View3d.Object(ldr.ToString());
 
