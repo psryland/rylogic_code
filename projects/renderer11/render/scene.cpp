@@ -13,7 +13,7 @@ namespace pr
 	namespace rdr
 	{
 		// Make a scene
-		Scene::Scene(pr::Renderer& rdr, SceneView const& view)
+		Scene::Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps, SceneView const& view)
 			:m_rdr(&rdr)
 			,m_view(view)
 			,m_viewport(rdr.RenderTargetSize())
@@ -21,9 +21,16 @@ namespace pr
 			,m_bkgd_colour()
 			,m_global_light()
 		{
-			//m_render_steps.push_back(std::make_shared<GBufferCreate>(*this, std::ref(m_bkgd_colour)));
-			//m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
-			m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
+			for (auto rs : rsteps)
+			{
+				switch (rs)
+				{
+				default: throw std::exception("Unknown render step");
+				case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
+				case ERenderStep::GBufferCreate: m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
+				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
+				}
+			}
 		}
 
 		// Find a render step by id

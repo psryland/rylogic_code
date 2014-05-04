@@ -16,7 +16,6 @@
 #include "pr/renderer11/util/util.h"
 #include "renderer11/util/internal_resources.h"
 #include "renderer11/render/state_stack.h"
-#include "renderer11/shaders/cbuffer.h"
 
 namespace pr
 {
@@ -138,7 +137,7 @@ namespace pr
 
 		// GBufferCreate ******************************************************
 
-		GBufferCreate::GBufferCreate(Scene& scene, pr::Colour const& bkgd_colour)
+		GBufferCreate::GBufferCreate(Scene& scene)
 			:RenderStep(scene)
 			,m_tex()
 			,m_rtv()
@@ -147,7 +146,6 @@ namespace pr
 			,m_main_rtv()
 			,m_main_dsv()
 			,m_cbuf_camera()
-			,m_bkgd_colour(bkgd_colour)
 			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::GBuffer))
 		{
 			PR_ASSERT(PR_DBG_RDR, m_shader != nullptr, "GBuffer shader missing");
@@ -290,7 +288,7 @@ namespace pr
 				[this]{ BindGBuffer(false); });
 
 			// Clear the g-buffer and depth buffer
-			pr::Colour reset_colour[RTCount] = { m_bkgd_colour, pr::ColourZero, pr::ColourWhite };
+			pr::Colour reset_colour[RTCount] = { m_scene->m_bkgd_colour, pr::ColourZero, pr::ColourWhite };
 			for (int i = 0; i != RTCount; ++i)
 				ss.m_dc->ClearRenderTargetView(m_rtv[i].m_ptr, reset_colour[i]);
 			ss.m_dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);

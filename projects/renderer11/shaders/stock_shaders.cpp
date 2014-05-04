@@ -15,7 +15,6 @@
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
 #include "renderer11/util/internal_resources.h"
-#include "renderer11/shaders/cbuffer.h"
 
 namespace pr
 {

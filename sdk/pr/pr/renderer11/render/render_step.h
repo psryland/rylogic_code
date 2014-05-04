@@ -102,10 +102,9 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
 			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // A constant buffer for the frame constant shader variables
-			pr::Colour const&                m_bkgd_colour; // The colour to clear the background to (ref of value in scene)
 			ShaderPtr                        m_shader;      // The shader used to generate the g-buffer
 
-			GBufferCreate(Scene& scene, pr::Colour const& bkgd_colour = pr::ColourBlack);
+			explicit GBufferCreate(Scene& scene);
 
 		private:
 
