@@ -22,9 +22,7 @@ namespace pr
 			x(TxTintPvc      )\
 			x(TxTintTex      )\
 			x(TxTintPvcLit   )\
-			x(TxTintPvcLitTex)\
-			x(GBuffer)\
-			x(DSLighting)
+			x(TxTintPvcLitTex)
 		PR_DEFINE_ENUM1(EStockShader, PR_ENUM);
 		#undef PR_ENUM
 	}

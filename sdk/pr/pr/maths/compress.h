@@ -17,21 +17,26 @@ namespace pr
 	// Returns a direction in 5 bits. (Actually a number < 27)
 	// Note: this can be converted into 4 bits if sign information isn't needed
 	// using: if( idx > 13 ) idx = 26 - idx; Doing so, does not effect the DecompressNormal() function
-	inline uint CompressNormal(const v4& norm)
+	struct Norm5bit
 	{
-		const float cos_67p5 = 0.382683f;
-		uint x = (norm.x > cos_67p5) - (norm.x < -cos_67p5) + 1;
-		uint y = (norm.y > cos_67p5) - (norm.y < -cos_67p5) + 1;
-		uint z = (norm.z > cos_67p5) - (norm.z < -cos_67p5) + 1;
-		return x + y*3 + z*9;
-	}
-	inline v4 DecompressNormal(uint idx)
-	{
-		int x = (idx % 3);
-		int y = (idx % 9) / 3;
-		int z = (idx / 9);
-		return v4::make(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
-	}
+		static uint Compress(v4 const& norm)
+		{
+			const float cos_67p5 = 0.382683f;
+			uint x = (norm.x > cos_67p5) - (norm.x < -cos_67p5) + 1;
+			uint y = (norm.y > cos_67p5) - (norm.y < -cos_67p5) + 1;
+			uint z = (norm.z > cos_67p5) - (norm.z < -cos_67p5) + 1;
+			return x + y*3 + z*9;
+		}
+		static v4 Decompress(uint idx, bool renorm = true)
+		{
+			int x = (idx % 3);
+			int y = (idx % 9) / 3;
+			int z = (idx / 9);
+			return renorm
+				? v4::normal3(x - 1.0f, y - 1.0f, z - 1.0f, 0.0f)
+				: v4::make   (x - 1.0f, y - 1.0f, z - 1.0f, 0.0f);
+		}
+	};
 
 	// Compress a v2 into a maximum number of bits
 	template <int MaxBits, typename ReturnType> inline ReturnType PackNormV2(const v2& vec)
@@ -432,4 +437,30 @@ namespace pr
 	//}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_compression)
+		{
+			float const step = 0.05f;
+			{ // Norm5bit
+				float max_error = 0.0f;
+				for (float z = -1.0f; z <= 1.0f; z += step)
+				for (float y = -1.0f; y <= 1.0f; y += step)
+				for (float x = -1.0f; x <= 1.0f; x += step)
+				{
+					v4   in_  = v4::normal3(x,y,z,0);
+					auto enc  = Norm5bit::Compress(in_);
+					v4   out_ = Norm5bit::Decompress(enc);
+					max_error = std::max(Length3(out_ - in_), max_error);
+				}
+				PR_CHECK(max_error < 0.6f, true);
+			}
+		}
+	}
+}
+#endif
 #endif

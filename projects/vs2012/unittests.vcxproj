@@ -171,7 +171,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingbox_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingsphere.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingsphere_impl.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\maths\compressionfunctions.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\compress.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\constants.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\conversion.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\convexhull.h" />

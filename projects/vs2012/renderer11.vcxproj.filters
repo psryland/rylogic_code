@@ -119,9 +119,6 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\renderer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\forward.h" />
-    <ClInclude Include="..\renderer11\shaders\cbuffer.h">
-      <Filter>shaders</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h">
       <Filter>geometry</Filter>
     </ClInclude>
@@ -203,6 +200,15 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_gdi.h">
       <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\util\internal_resources.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\render\state_stack.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\shaders\cbuffer.h">
+      <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -316,6 +322,9 @@
     </ClCompile>
     <ClCompile Include="..\renderer11\textures\texture_gdi.cpp">
       <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\render\state_stack.cpp">
+      <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

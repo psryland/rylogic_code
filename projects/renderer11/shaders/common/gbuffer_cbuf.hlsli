@@ -7,28 +7,61 @@
 #ifndef PR_RDR_SHADER_GBUFFER_CBUF_HLSL
 #define PR_RDR_SHADER_GBUFFER_CBUF_HLSL
 
-// Per frame constants
+// Camera to world transform
 #if SHADER_BUILD
-cbuffer CBufFrame_GBuffer :register(b0)
+cbuffer CBufCamera :register(b0)
 {
 	// Camera transform
-	matrix m_c2w :packoffset(c0); // camera to world
-	matrix m_w2c :packoffset(c4); // world to camera
-	matrix m_w2s :packoffset(c8); // world to screen
+	matrix m_c2w :packoffset(c0);  // camera to world
+	matrix m_w2c :packoffset(c4);  // world to camera
+	matrix m_w2s :packoffset(c8);  // world to screen
+	matrix m_s2c :packoffset(c12); // screen to camera
 };
 #else
-struct CBufFrame_GBuffer
+struct CBufCamera
 {
+	enum { Slot = 0 };
+	
 	// Camera transform
 	pr::m4x4 m_c2w; // camera to world
 	pr::m4x4 m_w2c; // world to camera
 	pr::m4x4 m_w2s; // world to screen
+	pr::m4x4 m_s2c; // screen to camera
+};
+#endif
+
+// Global lighting
+#if SHADER_BUILD
+cbuffer CBufLighting :register(b1)
+{
+	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
+	float4 m_global_lighting    :packoffset(c12); // Encoded info for global lighting
+	float4 m_ws_light_direction :packoffset(c13); // The direction of the global light source
+	float4 m_ws_light_position  :packoffset(c14); // The position of the global light source
+	float4 m_light_ambient      :packoffset(c15); // The colour of the ambient light
+	float4 m_light_colour       :packoffset(c16); // The colour of the directional light
+	float4 m_light_specular     :packoffset(c17); // The colour of the specular light. alpha channel is specular power
+	float4 m_spot               :packoffset(c18); // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+};
+#else
+struct CBufLighting
+{
+	enum { Slot = 1 };
+
+	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
+	pr::v4 m_global_lighting;    // Encoded info for global lighting
+	pr::v4 m_ws_light_direction; // The direction of the global light source
+	pr::v4 m_ws_light_position;  // The position of the global light source
+	pr::Colour m_light_ambient;  // The colour of the ambient light
+	pr::Colour m_light_colour;   // The colour of the directional light
+	pr::Colour m_light_specular; // The colour of the specular light. alpha channel is specular power
+	pr::v4 m_spot;               // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 #endif
 
 // Per-model constants
 #if SHADER_BUILD
-cbuffer CBufModel_GBuffer :register(b1)
+cbuffer CBufModel :register(b2)
 {
 	// Object transform
 	matrix m_o2s :packoffset(c0); // object to screen
@@ -44,20 +77,22 @@ cbuffer CBufModel_GBuffer :register(b1)
 	int4 m_geom :packoffset(c13); // x = has pvc, y = has normals, z = has tex0, w = not used
 };
 #else
-struct CBufModel_GBuffer
+struct CBufModel
 {
+	enum { Slot = 2 };
+	
 	// Object transform
-	pr::m4x4   m_o2s;
-	pr::m4x4   m_o2w;
+	pr::m4x4   m_o2s; // object to screen
+	pr::m4x4   m_o2w; // object to world
 
 	// Tinting
-	pr::Colour m_tint;
+	pr::Colour m_tint; // object tint colour
 
 	// Texture2D
-	pr::m4x4 m_tex2surf0;
+	pr::m4x4 m_tex2surf0; // texture to surface transform
 
 	// Geometry type
-	pr::iv4 m_geom;
+	pr::iv4 m_geom; // x = has pvc, y = has normals, z = has tex0, w = not used
 };
 #endif
 

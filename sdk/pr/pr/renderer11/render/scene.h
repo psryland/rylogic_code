@@ -27,10 +27,12 @@ namespace pr
 			:pr::events::IRecv<Evt_Resize>
 			,pr::AlignTo<16>
 		{
+			pr::Renderer*  m_rdr;          // The controlling renderer
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
 			RenderStepCont m_render_steps; // The stages of rendering the scene
-			pr::Renderer*  m_rdr;          // The controlling renderer
+			pr::Colour     m_bkgd_colour;  // The background colour for the scene
+			Light          m_global_light; // The global light settings
 
 			Scene(pr::Renderer& rdr, SceneView const& view = SceneView());
 

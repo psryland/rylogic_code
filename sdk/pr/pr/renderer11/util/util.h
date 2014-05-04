@@ -99,6 +99,22 @@ namespace pr
 			table[key] = value;
 		}
 
+		// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders
+		template <typename TCBuf> void WriteConstants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer>& cbuf, TCBuf const& cb, EShaderType shdr_type = EShaderType::VS|EShaderType::PS)
+		{
+			{// Copy the buffer to the dx buffer
+				LockT<TCBuf> lock(dc, cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
+				*lock.ptr() = cb;
+			}
+
+			// Bind the constants to the shaders
+			if (shdr_type & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+		}
+
 		// Set the name on a d3d resource (debug only)
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{

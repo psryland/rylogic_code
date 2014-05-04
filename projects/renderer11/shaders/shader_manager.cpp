@@ -13,56 +13,18 @@ namespace pr
 {
 	namespace rdr
 	{
-		#if PR_RDR_RUNTIME_SHADERS
-		// Look for a compiled shader object file by the name 'compiled_shader_filename'
-		// If the file exists, check the last modified time, and if newer, replace the shader 'ptr' and update 'last_modified'
-		void RefreshShaders(D3DPtr<ID3D11Device>& device, BaseShader const* shader)
-		{
-			// Only check every 5 seconds
-			static DWORD last_check = 0, check_frequency_ms = 5000;
-			if (GetTickCount() - last_check < check_frequency_ms) return;
-			last_check = GetTickCount();
-
-			wchar_t const* shader_directory = L"P:\\projects\\renderer11\\shaders\\compiled";
-			time_t last_mod, newest = shader->m_last_modified;
-			wstring256 filepath;
-
-			// Check the VS
-			filepath = pr::filesys::CombinePath<wstring256>(shader_directory, pr::To<wstring256>(shader->m_name+".vs.cso"));
-			if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::GetFileTimeStats(filepath).m_last_modified) > shader->m_last_modified)
-			{
-				std::vector<pr::uint8> buf;
-				if (pr::FileToBuffer(filepath.c_str(), buf) && !buf.empty())
-				{
-					pr::Throw(device->CreateVertexShader(&buf[0], buf.size(), 0, &shader->m_vs.m_ptr));
-					if (last_mod > newest) newest = last_mod;
-					PR_INFO(1, pr::FmtS("Vertex shader %s replaced", filepath.c_str()));
-				}
-			}
-
-			// Check the PS
-			filepath = pr::filesys::CombinePath<wstring256>(shader_directory, pr::To<wstring256>(shader->m_name+".ps.cso"));
-			if (pr::filesys::FileExists(filepath) && (last_mod = pr::filesys::FileTimeStats(filepath.c_str()).m_last_modified) > shader->m_last_modified)
-			{
-				std::vector<pr::uint8> buf;
-				if (pr::FileToBuffer(filepath.c_str(), buf) && !buf.empty())
-				{
-					pr::Throw(device->CreatePixelShader(&buf[0], buf.size(), 0, &shader->m_ps.m_ptr));
-					if (last_mod > newest) newest = last_mod;
-					PR_INFO(1, pr::FmtS("Pixel shader %s replaced", filepath.c_str()));
-				}
-			}
-
-			shader->m_last_modified = newest;
-		}
-		#endif
-
 		ShaderManager::ShaderManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device)
 			:m_mem(mem)
-			,m_device(device)
 			,m_lookup_shader(mem)
+			,m_default_sampler_state()
+			,m_device(device)
 		{
 			CreateStockShaders();
+
+			// Create the default sampler
+			SamplerDesc sdesc;
+			pr::Throw(device->CreateSamplerState(&sdesc, &m_default_sampler_state.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_default_sampler_state, "default sampler"));
 		}
 		ShaderManager::~ShaderManager()
 		{
@@ -84,12 +46,11 @@ namespace pr
 		}
 
 		// Builds the basic parts of a shader.
-		ShaderPtr ShaderManager::InitShader(ShaderAlex create, RdrId id, ShaderSetupFunc setup, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, CBufferDesc const* cbdesc, char const* name)
+		ShaderPtr ShaderManager::InitShader(ShaderAlex create, RdrId id, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
 		{
 			D3DPtr<ID3D11InputLayout>  iplayout;
 			D3DPtr<ID3D11VertexShader> vs;
 			D3DPtr<ID3D11PixelShader>  ps;
-			D3DPtr<ID3D11Buffer>       cbuf;
 			EGeom geom_mask = 0;
 
 			if (vsdesc != 0)
@@ -108,32 +69,13 @@ namespace pr
 				// Create the pixel shader
 				pr::Throw(m_device->CreatePixelShader(psdesc->m_data, psdesc->m_size, 0, &ps.m_ptr));
 			}
-			if (cbdesc != 0)
-			{
-				// Create a constants buffer
-				pr::Throw(m_device->CreateBuffer(cbdesc, 0, &cbuf.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, FmtS("%s CBuf", name)));
-			}
-
-			// If runtime shaders is enabled, wrap the setup function in a function
-			// that loads data from a compiled shader object file if it exists and is newer
-			#if PR_RDR_RUNTIME_SHADERS
-			setup = [=](D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
-			{
-				if (dle.m_shader != nullptr)
-					RefreshShaders(m_device, dle.m_shader);
-				setup(dc, dle, rstep);
-			};
-			#endif
 
 			// Allocate the new shader instance
 			ShaderPtr shdr = create(this);
 			shdr->m_iplayout   = iplayout;
 			shdr->m_vs         = vs;
 			shdr->m_ps         = ps;
-			shdr->m_cbuf       = cbuf;
 			shdr->m_id         = id == AutoId ? MakeId(shdr.m_ptr) : id;
-			shdr->m_setup_func = setup;
 			shdr->m_name       = name;
 			shdr->m_geom_mask  = geom_mask;
 			shdr->m_sort_id    = m_lookup_shader.size() % sortkey::MaxShaderId;

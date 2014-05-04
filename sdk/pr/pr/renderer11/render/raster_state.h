@@ -103,6 +103,9 @@ namespace pr
 				return *this;
 			}
 
+			bool operator == (RSBlock const& rhs) const { return (base&)*this == (base&)rhs; }
+			bool operator != (RSBlock const& rhs) const { return (base&)*this != (base&)rhs; }
+
 			// Some common raster states
 			static RSBlock SolidCullNone () { static RSBlock s_rs(D3D11_FILL_SOLID     ,D3D11_CULL_NONE ); return s_rs; }
 			static RSBlock SolidCullBack () { static RSBlock s_rs(D3D11_FILL_SOLID     ,D3D11_CULL_BACK ); return s_rs; }

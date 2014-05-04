@@ -6,6 +6,7 @@
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/instances/instance.h"
+#include "renderer11/render/state_stack.h"
 
 namespace pr
 {
@@ -17,8 +18,10 @@ namespace pr
 			,m_view(view)
 			,m_viewport(rdr.RenderTargetSize())
 			,m_render_steps()
+			,m_bkgd_colour()
+			,m_global_light()
 		{
-			//m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
+			//m_render_steps.push_back(std::make_shared<GBufferCreate>(*this, std::ref(m_bkgd_colour)));
 			//m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
 			m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
 		}
@@ -80,8 +83,9 @@ namespace pr
 		void Scene::Render()
 		{
 			// Invoke each render step in order
+			StateStack ss(m_rdr->ImmediateDC(), *this);
 			for (auto& rs : m_render_steps)
-				rs->Execute();
+				rs->Execute(ss);
 		}
 
 		// Resize the viewport on back buffer resize

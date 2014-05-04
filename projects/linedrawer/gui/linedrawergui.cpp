@@ -57,7 +57,8 @@ namespace ldr
 		pr::Throw(base::OnCreate(create));
 
 		// Create a step context for rendering
-		m_msg_loop.AddStepContext("rdr main loop", [this](double){ m_main->DoRender(false); }, 60.0f, false);
+		enum { force_render = true };
+		m_msg_loop.AddStepContext("rdr main loop", [this](double){ m_main->DoRender(force_render); }, 60.0f, false);
 
 		// Add a step context for stepping plugins
 		m_msg_loop.AddStepContext("plugin step", [this](double){ m_main->m_plugin_mgr.Poll(); }, 30.0f, true);

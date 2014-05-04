@@ -7,10 +7,15 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/instances/instance.h"
+#include "pr/renderer11/models/input_layout.h"
 #include "pr/renderer11/models/model.h"
+#include "pr/renderer11/models/model_settings.h"
+#include "pr/renderer11/models/model_manager.h"
 #include "pr/renderer11/util/lock.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
+#include "renderer11/util/internal_resources.h"
+#include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/cbuffer.h"
 
 namespace pr
@@ -23,6 +28,18 @@ namespace pr
 			cb.m_c2w = view.m_c2w;
 			cb.m_w2c = pr::GetInverse(view.m_c2w);
 			cb.m_w2s = view.m_c2s * pr::GetInverseFast(view.m_c2w);
+		}
+
+		// Helper for setting lighting constants
+		template <typename TCBuf> void SetLightingConstants(Light const& light, TCBuf& cb)
+		{
+			cb.m_global_lighting    = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
+			cb.m_ws_light_direction = light.m_direction;
+			cb.m_ws_light_position  = light.m_position;
+			cb.m_light_ambient      = light.m_ambient;
+			cb.m_light_colour       = light.m_diffuse;
+			cb.m_light_specular     = pr::Colour::make(light.m_specular, light.m_specular_power);
+			cb.m_spot               = pr::v4::make(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
 		}
 
 		// RenderStep *********************************************************
@@ -105,12 +122,15 @@ namespace pr
 		}
 
 		// Perform the render step
-		void RenderStep::Execute()
+		void RenderStep::Execute(StateStack& ss)
 		{
 			// Notify that this render step is about to execute
 			pr::events::Send(Evt_RenderStepExecute(*this, false));
 
-			ExecuteInternal();
+			{
+				StateStack::RSFrame frame(ss, *this);
+				ExecuteInternal(ss);
+			}
 
 			// Notify that the render step has finished
 			pr::events::Send(Evt_RenderStepExecute(*this, false));
@@ -118,7 +138,7 @@ namespace pr
 
 		// GBufferCreate ******************************************************
 
-		GBufferCreate::GBufferCreate(Scene& scene)
+		GBufferCreate::GBufferCreate(Scene& scene, pr::Colour const& bkgd_colour)
 			:RenderStep(scene)
 			,m_tex()
 			,m_rtv()
@@ -126,15 +146,20 @@ namespace pr
 			,m_dsv()
 			,m_main_rtv()
 			,m_main_dsv()
-			,m_cbuf_frame()
-			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::GBuffer))
+			,m_cbuf_camera()
+			,m_bkgd_colour(bkgd_colour)
+			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::GBuffer))
 		{
+			PR_ASSERT(PR_DBG_RDR, m_shader != nullptr, "GBuffer shader missing");
+
 			// Create a constants buffer for constants that only change once per frame
-			CBufferDesc cbdesc(sizeof(CBufFrame_GBuffer));
-			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "gbuffer CBufFrame"));
+			CBufferDesc cbdesc(sizeof(GBuffer::CBufCamera));
+			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_camera.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "GBuffer::CBufCamera"));
 
 			InitGBuffer(true);
+
+			m_rsb = RSBlock::SolidCullBack();
 		}
 
 		// Create render targets for the gbuffer based on the current render target size
@@ -171,9 +196,9 @@ namespace pr
 				// and get the render target view of each texture buffer
 				DXGI_FORMAT fmt[RTCount] =
 				{
-					DXGI_FORMAT_R8G8B8A8_UNORM, // diffuse layer
-					DXGI_FORMAT_R16G16_SNORM,   // normal layer  (x,y) component
-					DXGI_FORMAT_R32_FLOAT,      // depth layer
+					DXGI_FORMAT_R10G10B10A2_UNORM, // diffuse , normal Z sign  //DXGI_FORMAT_R8G8B8A8_UNORM,
+					DXGI_FORMAT_R16G16_SNORM,      // normal x,y //DXGI_FORMAT_R11G11B10_FLOAT,
+					DXGI_FORMAT_R32_FLOAT,         // depth layer
 				};
 				for (int i = 0; i != RTCount; ++i)
 				{
@@ -186,14 +211,12 @@ namespace pr
 					RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
 					rtvdesc.Texture2D.MipSlice = 0;
 					pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
-					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s rtv", ToString((RTEnum_)i))));
 
 					// Get the shader res view
 					ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
 					srvdesc.Texture2D.MostDetailedMip = 0;
 					srvdesc.Texture2D.MipLevels = 1;
 					pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
-					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s srv", ToString((RTEnum_)i))));
 				}
 
 				// We need to create our own depth buffer to ensure it has the same dimensions
@@ -226,6 +249,10 @@ namespace pr
 			{
 				// Restore the main RT and depth buffer
 				dc->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+
+				// Release our reference to the main rtv/dsv
+				m_main_rtv = nullptr;
+				m_main_dsv = nullptr;
 			}
 		}
 
@@ -252,44 +279,39 @@ namespace pr
 		}
 
 		// Perform the render step
-		void GBufferCreate::ExecuteInternal()
+		void GBufferCreate::ExecuteInternal(StateStack& ss)
 		{
-			auto dc = m_scene->m_rdr->ImmediateDC();
-
 			// Sort the draw list
 			SortIfNeeded();
 
 			// Bind the g-buffer to the OM
-			BindGBuffer(true);
+			auto bind_gbuffer = pr::CreateScope(
+				[this]{ BindGBuffer(true); },
+				[this]{ BindGBuffer(false); });
 
 			// Clear the g-buffer and depth buffer
-			pr::Colour reset_colour[RTCount] = { pr::ColourZero, pr::ColourZero, pr::ColourWhite };
+			pr::Colour reset_colour[RTCount] = { m_bkgd_colour, pr::ColourZero, pr::ColourWhite };
 			for (int i = 0; i != RTCount; ++i)
-				dc->ClearRenderTargetView(m_rtv[i].m_ptr, reset_colour[i]);
-			dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
+				ss.m_dc->ClearRenderTargetView(m_rtv[i].m_ptr, reset_colour[i]);
+			ss.m_dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 
 			// Set the viewport
-			dc->RSSetViewports(1, &m_scene->m_viewport);
+			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants and bind them to the shaders
-			CBufFrame_GBuffer cb = {};
+			GBuffer::CBufCamera cb = {};
 			SetViewConstants(m_scene->m_view, cb);
-			{
-				LockT<CBufFrame_GBuffer> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				*lock.ptr() = cb;
-			}
-			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
+			WriteConstants(ss.m_dc, m_cbuf_camera, cb);
 
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
 			{
-				// Bind the shader to the device
-				BindShader(dc, &dle, *this);
+				StateStack::DleFrame frame(ss, dle);
+				ss.Commit();
 
 				// Add the nugget to the device context
 				Nugget const& nugget = *dle.m_nugget;
-				dc->DrawIndexed(
+				ss.m_dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_begin),
 					0);
@@ -305,58 +327,84 @@ namespace pr
 
 		// DSLightingPass *****************************************************
 
-		DSLightingPass::DSLightingPass(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
+		DSLightingPass::DSLightingPass(Scene& scene)
 			:RenderStep(scene)
 			,m_gbuffer(scene.RStep<GBufferCreate>())
-			,m_cbuf_frame()
+			,m_cbuf_camera()
+			,m_cbuf_lighting()
 			,m_unit_quad()
-			,m_background_colour(bkgd_colour)
-			,m_clear_bb(clear_bb)
-			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::DSLighting))
+			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::DSLighting))
 		{
-			m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.m_unit_quad;
+			{// Unit quad in Z = 0 plane
+				float const px0 = -1.0f, px1 = 1.0f;
+				float const py0 = -1.0f, py1 = 1.0f;
+				float const t0 = 0.000f, t1 = 0.9999f;
+				VertPCNT verts[4] =
+				{
+					{pr::v3::make( px0, py0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
+					{pr::v3::make( px1, py0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
+					{pr::v3::make( px1, py1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
+					{pr::v3::make( px0, py1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
+				};
+				pr::uint16 idxs[] =
+				{
+					0, 1, 2, 0, 2, 3
+				};
+				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
 
-			// Create a constants buffer for constants that only change once per frame
-			CBufferDesc cbdesc(sizeof(CBufFrame_DSLighting));
-			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "dslighting CBufFrame"));
+				MdlSettings s(verts, idxs, bbox, "unit quad");
+				m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.CreateModel(s);
+
+				NuggetProps ddata(EPrim::TriList, VertPCNT::GeomMask);
+				m_unit_quad.m_model->CreateNugget(ddata);
+			}
+
+			{// Create a constants buffer for camera properties
+				CBufferDesc cbdesc(sizeof(GBuffer::CBufCamera));
+				pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_camera.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "dslighting CBufCamera"));
+			}
+			{// Create a constants buffer for lighting properties
+				CBufferDesc cbdesc(sizeof(GBuffer::CBufLighting));
+				pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_lighting.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_lighting, "dslighting CBufLighting"));
+			}
+
+			// Disable Z-buffer
+		//	m_dsb.Set(EDS::DepthEnable, false);
+		//	m_dsb.Set(EDS::DepthWriteMask, false);
 		}
 
 		// Perform the render step
-		void DSLightingPass::ExecuteInternal()
+		void DSLightingPass::ExecuteInternal(StateStack& ss)
 		{
-			auto dc = m_scene->m_rdr->ImmediateDC();
-
 			// Sort the draw list if needed
 			SortIfNeeded();
 
 			// Clear the back buffer and depth/stencil
-			if (m_clear_bb)
+			//if (m_clear_bb)
 			{
 				// Get the render target views
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
-				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-				dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
-				dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
+				ss.m_dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+			//	ss.m_dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
+				ss.m_dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 			}
 
 			// Set the viewport
-			dc->RSSetViewports(1, &m_scene->m_viewport);
+			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
 
-			// Set the frame constants
-			// We need the camera transform to calculate ws_pos from the depth
-			CBufFrame_DSLighting cb = {};
-			SetViewConstants(m_scene->m_view, cb);
-			{
-				// Lock and write the constants
-				LockT<CBufFrame_DSLighting> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				*lock.ptr() = cb;
+			{// Set camera constants
+				GBuffer::CBufCamera cb = {};
+				SetViewConstants(m_scene->m_view, cb); // We need the camera transform to calculate ws_pos from the depth
+				cb.m_s2c = pr::GetInverse(m_scene->m_view.m_c2s);
+				WriteConstants(ss.m_dc, m_cbuf_camera, cb);
 			}
-
-			// Bind the frame constants to the shaders
-			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
+			{// Set lighting constants
+				GBuffer::CBufLighting cb = {};
+				WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
+			}
 
 			// Draw the full screen quad
 			{
@@ -368,10 +416,12 @@ namespace pr
 				dle.m_nugget   = &nugget;
 				dle.m_instance = &m_unit_quad.m_base;
 				dle.m_sort_key = 0;
-				BindShader(dc, &dle, *this);
+
+				StateStack::DleFrame frame(ss, dle);
+				ss.Commit();
 
 				// Add the nugget to the device context
-				dc->DrawIndexed(
+				ss.m_dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_begin),
 					0);
@@ -380,17 +430,15 @@ namespace pr
 
 		// ForwardRender ******************************************************
 
-		ForwardRender::ForwardRender(Scene& scene, bool clear_bb, pr::Colour const& bkgd_colour)
+		ForwardRender::ForwardRender(Scene& scene, bool clear_bb)
 			:RenderStep(scene)
 			,m_cbuf_frame()
-			,m_background_colour(bkgd_colour)
-			,m_global_light()
 			,m_clear_bb(clear_bb)
 		{
 			// Create a constants buffer that changes per frame
-			CBufferDesc cbdesc(sizeof(CBufFrame_Forward));
+			CBufferDesc cbdesc(sizeof(ForwardRender::CBufFrame));
 			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "CBufFrame_Forward"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "ForwardRender::CBufFrame"));
 
 			m_rsb = RSBlock::SolidCullBack();
 
@@ -421,6 +469,49 @@ namespace pr
 			m_sort_needed = true;
 		}
 
+		// Perform the render step
+		void ForwardRender::ExecuteInternal(StateStack& ss)
+		{
+			// Sort the draw list if needed
+			SortIfNeeded();
+
+			// Clear the back buffer and depth/stencil
+			if (m_clear_bb)
+			{
+				// Get the render target views
+				D3DPtr<ID3D11RenderTargetView> rtv;
+				D3DPtr<ID3D11DepthStencilView> dsv;
+				ss.m_dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+				ss.m_dc->ClearRenderTargetView(rtv.m_ptr, m_scene->m_bkgd_colour);
+				ss.m_dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
+			}
+
+			// Set the viewport
+			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
+
+			// Set the frame constants
+			CBufFrame cb = {};
+			SetViewConstants(m_scene->m_view, cb);
+			SetLightingConstants(m_scene->m_global_light, cb);
+			//SetProjectedTextures(dc, cb, m_proj_tex);
+			WriteConstants(ss.m_dc, m_cbuf_frame, cb);
+
+			for (auto& dle : m_drawlist)
+			{
+				StateStack::DleFrame frame(ss, dle);
+				ss.Commit();
+
+				// Add the nugget to the device context
+				Nugget const& nugget = *dle.m_nugget;
+				ss.m_dc->DrawIndexed(
+					UINT(nugget.m_irange.size()),
+					UINT(nugget.m_irange.m_begin),
+					0);
+			}
+		}
+	}
+}
+
 		//// Projected textures
 		//void SetProjectedTextures(D3DPtr<ID3D11DeviceContext>& dc, CBufFrame_Forward& buf, ForwardRender::ProjTextCont const& proj_tex)
 		//{
@@ -446,66 +537,3 @@ namespace pr
 		//	dc->PSSetShaderResources(0, pt_count, texs);
 		//	dc->PSSetSamplers(0, pt_count, samp);
 		//}
-
-		// Perform the render step
-		void ForwardRender::ExecuteInternal()
-		{
-			auto dc = m_scene->m_rdr->ImmediateDC();
-
-			// Sort the draw list if needed
-			SortIfNeeded();
-
-			// Clear the back buffer and depth/stencil
-			if (m_clear_bb)
-			{
-				// Get the render target views
-				D3DPtr<ID3D11RenderTargetView> rtv;
-				D3DPtr<ID3D11DepthStencilView> dsv;
-				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-				dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
-				dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
-			}
-
-			// Set the viewport
-			dc->RSSetViewports(1, &m_scene->m_viewport);
-
-			// Set the frame constants
-			CBufFrame_Forward cb = {};
-			SetViewConstants(m_scene->m_view, cb);
-
-			// Lighting
-			cb.m_global_lighting    = pr::v4::make(static_cast<float>(m_global_light.m_type),0.0f,0.0f,0.0f);
-			cb.m_ws_light_direction = m_global_light.m_direction;
-			cb.m_ws_light_position  = m_global_light.m_position;
-			cb.m_light_ambient      = m_global_light.m_ambient;
-			cb.m_light_colour       = m_global_light.m_diffuse;
-			cb.m_light_specular     = pr::Colour::make(m_global_light.m_specular, m_global_light.m_specular_power);
-			cb.m_spot               = pr::v4::make(m_global_light.m_inner_cos_angle, m_global_light.m_outer_cos_angle, m_global_light.m_range, m_global_light.m_falloff);
-
-			//SetProjectedTextures(dc, cb, m_proj_tex);
-
-			{// Lock and write the constants
-				LockT<CBufFrame_Forward> lock(dc, m_cbuf_frame, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				*lock.ptr() = cb;
-			}
-
-			// Bind the frame constants to the shaders
-			dc->VSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-			dc->PSSetConstantBuffers(EConstBuf::FrameConstants, 1, &m_cbuf_frame.m_ptr);
-
-			// Loop over the elements in the draw list
-			for (auto& dle : m_drawlist)
-			{
-				// Bind the shader to the device
-				BindShader(dc, &dle, *this);
-
-				// Add the nugget to the device context
-				Nugget const& nugget = *dle.m_nugget;
-				dc->DrawIndexed(
-					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_begin),
-					0);
-			}
-		}
-	}
-}
