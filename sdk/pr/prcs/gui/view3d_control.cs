@@ -39,7 +39,7 @@ namespace pr.gui
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
 		public View3dControl(View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
 		{
-			if (Util.DesignTime) return;
+			if (this.IsInDesignMode()) return;
 			View3d = new View3d(Handle, error_cb, log_cb);
 			Camera = new View3d.CameraControls(View3d.Drawset);
 
@@ -450,7 +450,7 @@ namespace pr.gui
 		/// <summary>On Resize</summary>
 		protected override void OnResize(EventArgs e)
 		{
-			if (Util.DesignTime) { base.OnResize(e); return; }
+			if (this.IsInDesignMode()) { base.OnResize(e); return; }
 
 			base.OnResize(e);
 			View3d.RenderTargetSize = new Size(Width-2, Height-2);
@@ -460,7 +460,7 @@ namespace pr.gui
 		/// <summary>Absorb PaintBackground events</summary>
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
-			if (Util.DesignTime) { base.OnPaintBackground(e); return; }
+			if (this.IsInDesignMode()) { base.OnPaintBackground(e); return; }
 
 			if (Drawset == null)
 				base.OnPaintBackground(e);
@@ -469,7 +469,7 @@ namespace pr.gui
 		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (Util.DesignTime) { base.OnPaint(e); return; }
+			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
 
 			if (Drawset == null) base.OnPaint(e);
 			else Drawset.Render();

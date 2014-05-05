@@ -157,7 +157,7 @@ namespace pr.gui
 		public DiagramControl() :this(new RdrOptions()) {}
 		private DiagramControl(RdrOptions rdr_options)
 		{
-			if (Util.DesignTime) return;
+			if (this.IsInDesignMode()) return;
 
 			m_view3d         = new View3d(Handle);
 			m_rdr_options    = rdr_options;
@@ -318,7 +318,7 @@ namespace pr.gui
 		/// <summary>Resize the control</summary>
 		protected override void OnResize(EventArgs e)
 		{
-			if (Util.DesignTime) { base.OnResize(e); return; }
+			if (this.IsInDesignMode()) { base.OnResize(e); return; }
 
 			base.OnResize(e);
 			m_view3d.RenderTargetSize = new Size(Width,Height);
@@ -327,7 +327,7 @@ namespace pr.gui
 		// Absorb this event
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
-			if (Util.DesignTime) { base.OnPaintBackground(e); return; }
+			if (this.IsInDesignMode()) { base.OnPaintBackground(e); return; }
 
 			if (m_view3d.Drawset == null)
 				base.OnPaintBackground(e);
@@ -336,7 +336,7 @@ namespace pr.gui
 		// Paint the control
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (Util.DesignTime) { base.OnPaint(e); return; }
+			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
 
 			if (m_view3d.Drawset == null) base.OnPaint(e);
 			else m_view3d.Drawset.Render();

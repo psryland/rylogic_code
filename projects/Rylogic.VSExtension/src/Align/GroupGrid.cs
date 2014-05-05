@@ -22,7 +22,7 @@ namespace Rylogic.VSExtension
 		/// <summary>Can't do this in the constructor because the designer screws it up</summary>
 		public GroupGrid()
 		{
-			if (Util.DesignTime) return;
+			if (this.IsInDesignMode()) return;
 			VirtualMode = true;
 			AutoGenerateColumns = false;
 			Columns.Add(new DataGridViewTextBoxColumn{Tag = EGroupColumns.Name        , HeaderText = EGroupColumns.Name        .ToStringFast(), FillWeight = 100});

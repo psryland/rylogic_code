@@ -25,7 +25,7 @@ namespace Rylogic.VSExtension
 
 		public PatternGrid()
 		{
-			if (Util.DesignTime) return;
+			if (this.IsInDesignMode()) return;
 
 			// The patterns grid is virtual mode so that we can draw images and handle edits
 			AutoGenerateColumns = false;

@@ -19,6 +19,37 @@ namespace pr.extn
 {
 	public static class ControlExtensions
 	{
+		/// <summary>Tests if this component is being used by the VS designer</summary>
+		public static bool IsInDesignMode<TComponent>(this TComponent c) where TComponent:Component
+		{
+			if (Util.IsInDesignMode)
+				return true;
+
+			// Test the protected DesignMode component property
+			if ((bool)DesignModeProp.GetValue(c, null))
+				return true;
+
+			// 'DesignMode' doesn't work in constructors or grandchild controls... test recursively
+			var ctrl = c as Control;
+			if (ctrl != null && ctrl.Parent != null && ctrl.Parent.IsInDesignMode())
+				return true;
+
+			return false;
+		}
+		private static PropertyInfo DesignModeProp
+		{
+			get
+			{
+				if (m_impl_DesignModeProp == null)
+				{
+					m_impl_DesignModeProp = typeof(Component).GetProperty("DesignMode", BindingFlags.NonPublic|BindingFlags.Instance);
+					if (m_impl_DesignModeProp == null) throw new Exception("Component.DesignMode property missing");
+				}
+				return m_impl_DesignModeProp;
+			}
+		}
+		private static PropertyInfo m_impl_DesignModeProp;
+
 		/// <summary>Wrapper of begin invoke that takes a lambda</summary>
 		public static IAsyncResult BeginInvoke(this Form form, Action action)
 		{

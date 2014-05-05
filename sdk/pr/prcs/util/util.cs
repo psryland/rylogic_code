@@ -39,8 +39,10 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
-		/// <summary>True when running in the context of the designer</summary>
-		public static bool DesignTime
+		/// <summary>
+		/// State test for design mode.
+		/// Note: Use the Component extension method for a more reliable test</summary>
+		public static bool IsInDesignMode
 		{
 			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
 		}
