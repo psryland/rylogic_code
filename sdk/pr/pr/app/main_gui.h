@@ -36,6 +36,8 @@ namespace pr
 			DWORD                 m_my_thread_id; // The thread this gui object was created on
 			bool                  m_resizing;     // True during a resize of the main window
 			bool                  m_nav_enabled;  // True to allow default mouse navigation
+			LONG                  m_click_thres;  // Single click time threshold in ms
+			LONG                  m_down_at[4];   // Button down timestamp
 
 			MainGUI()
 				:m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
@@ -44,6 +46,8 @@ namespace pr
 				,m_my_thread_id(GetCurrentThreadId())
 				,m_resizing(false)
 				,m_nav_enabled(false)
+				,m_click_thres(200)
+				,m_down_at()
 			{
 				// Initialise common controls support
 				AtlInitCommonControls(IccClasses());
@@ -242,32 +246,71 @@ namespace pr
 			}
 
 			// Key down/up
+			virtual void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
+			{
+				(void)nChar,nRepCnt,nFlags;
+				SetMsgHandled(FALSE);
+			}
 			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
 			{
-				(void)nChar;
-				(void)nRepCnt;
-				(void)nFlags;
+				(void)nChar,nRepCnt,nFlags;
 				SetMsgHandled(FALSE);
 			}
 			virtual void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 			{
-				(void)nChar;
-				(void)nRepCnt;
-				(void)nFlags;
+				(void)nChar,nRepCnt,nFlags;
 				SetMsgHandled(FALSE);
 			}
 
-			// Default mouse navigation behaviour
-			virtual void OnMouseDown(UINT flags, CPoint point)
+			// Returns the index of the first mouse button that is down. 0 = None, Left = 1, Right = 2, Middle = 3
+			int BtnIndex(UINT mk_key) const
 			{
-				m_nav_enabled = true;
-				m_main->Nav(pr::NormalisePoint(m_hWnd, point), flags, true);
+				if (mk_key & MK_LBUTTON) return 1;
+				if (mk_key & MK_RBUTTON) return 2;
+				if (mk_key & MK_MBUTTON) return 3;
+				return 0;
 			}
-			virtual void OnMouseUp(UINT, CPoint point)
+
+			// Mouse click detection. Call from OnMouseDown/Up handlers
+			// Returns true on mouse up with within the click threshold
+			bool IsClick(UINT mk_key, bool up)
+			{
+				auto btn_index = BtnIndex(mk_key);
+				if (up)
+				{
+					bool click = btn_index != 0 && GetMessageTime() - m_down_at[btn_index] < m_click_thres;
+					m_down_at[btn_index] = 0;
+					return click;
+				}
+				else
+				{
+					m_down_at[btn_index] = GetMessageTime();
+					return false;
+				}
+			}
+
+			// Default mouse navigation behaviour
+			virtual void OnMouseDown(UINT btn, UINT flags, CPoint point)
+			{
+				(void)flags;
+				m_nav_enabled = true;
+				m_main->Nav(pr::NormalisePoint(m_hWnd, point), btn, true);
+				IsClick(btn, false);
+			}
+			virtual void OnMouseUp(UINT btn, UINT flags, CPoint point)
 			{
 				m_nav_enabled = false;
-				m_main->Nav(pr::NormalisePoint(m_hWnd, point), 0, true);
+				if (IsClick(btn, true))
+				{
+					OnMouseClick(btn, flags, point);
+					m_main->NavRevert();
+				}
+				else
+				{
+					m_main->Nav(pr::NormalisePoint(m_hWnd, point), 0, true);
+				}
 			}
+			virtual void OnMouseClick(UINT btn, UINT flags, CPoint point) { (void)btn,flags,point; }
 			virtual void OnMouseMove(UINT flags, CPoint point)
 			{
 				if (m_nav_enabled)
@@ -278,6 +321,15 @@ namespace pr
 				m_main->NavZ(delta / (float)WHEEL_DELTA);
 				return FALSE; // ie. we handled this wheel message
 			}
+
+			void OnLMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_LBUTTON, flags, point); }
+			void OnRMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_RBUTTON, flags, point); }
+			void OnMMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_MBUTTON, flags, point); }
+			void OnLMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_LBUTTON, flags, point); }
+			void OnRMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_RBUTTON, flags, point); }
+			void OnMMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_MBUTTON, flags, point); }
+			void OnXMouseDown(int fwButton, int flags, CPoint point) { OnMouseDown(fwButton, flags, point); }
+			void OnXMouseUp  (int fwButton, int flags, CPoint point) { OnMouseUp  (fwButton, flags, point); }
 
 			// Drag-drop
 			virtual HCURSOR OnQueryDragIcon()
@@ -294,6 +346,7 @@ namespace pr
 			BEGIN_MSG_MAP(x)
 				MSG_WM_CREATE(OnCreate)
 				MSG_WM_DESTROY(OnDestroy)
+				MSG_WM_SYSKEYDOWN(OnSysKeyDown)
 				MSG_WM_TIMER(OnTimer)
 				MSG_WM_ERASEBKGND(OnEraseBkGnd)
 				MSG_WM_PAINT(OnPaint)
@@ -303,12 +356,14 @@ namespace pr
 				MSG_WM_SIZE(OnSize)
 				MSG_WM_KEYDOWN(OnKeyDown)
 				MSG_WM_KEYUP(OnKeyUp)
-				MSG_WM_LBUTTONDOWN(OnMouseDown)
-				MSG_WM_RBUTTONDOWN(OnMouseDown)
-				MSG_WM_MBUTTONDOWN(OnMouseDown)
-				MSG_WM_LBUTTONUP(OnMouseUp)
-				MSG_WM_RBUTTONUP(OnMouseUp)
-				MSG_WM_MBUTTONUP(OnMouseUp)
+				MSG_WM_LBUTTONDOWN(OnLMouseDown)
+				MSG_WM_RBUTTONDOWN(OnRMouseDown)
+				MSG_WM_MBUTTONDOWN(OnMMouseDown)
+				MSG_WM_XBUTTONDOWN(OnXMouseDown)
+				MSG_WM_LBUTTONUP(OnLMouseUp)
+				MSG_WM_RBUTTONUP(OnRMouseUp)
+				MSG_WM_MBUTTONUP(OnMMouseUp)
+				MSG_WM_XBUTTONUP(OnXMouseUp)
 				MSG_WM_MOUSEMOVE(OnMouseMove)
 				MSG_WM_MOUSEWHEEL(OnMouseWheel)
 				MSG_WM_QUERYDRAGICON(OnQueryDragIcon)

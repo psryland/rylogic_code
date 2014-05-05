@@ -240,35 +240,49 @@ namespace ldr
 		return button_state;
 	}
 
-	void MainGUI::OnMouseDown(UINT flags, CPoint point)
+	void MainGUI::OnMouseDown(UINT btn, UINT, CPoint point)
 	{
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		int    btn_state = ButtonState(flags);
+		IsClick(btn, false);
 
 		SetCapture();
+		int btn_state = ButtonState(btn);
+		pr::v2 mouse_loc = pr::To<pr::v2>(point);
 		if (m_main->m_nav.MouseInput(mouse_loc, btn_state, true))
 			m_main->RenderNeeded();
 
 		MouseStatusUpdate(mouse_loc);
 	}
-	void MainGUI::OnMouseUp(UINT flags, CPoint point)
+	void MainGUI::OnMouseUp(UINT btn, UINT flags, CPoint point)
 	{
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		int    btn_state = ButtonState(flags);
-
 		ReleaseCapture();
-
-		if (m_main->m_nav.MouseInput(mouse_loc, btn_state, true))
+		pr::v2 mouse_loc = pr::To<pr::v2>(point);
+		if (IsClick(btn, true))
+		{
+			OnMouseClick(btn, flags, point);
 			m_main->RenderNeeded();
+		}
+		else
+		{
+			if (m_main->m_nav.MouseInput(mouse_loc, 0, true))
+				m_main->RenderNeeded();
+		}
 
 		MouseStatusUpdate(mouse_loc);
 	}
 	void MainGUI::OnMouseMove(UINT flags, CPoint point)
 	{
+		int btn_state = ButtonState(flags);
 		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		int    btn_state = ButtonState(flags);
-
 		if (m_main->m_nav.MouseInput(mouse_loc, btn_state, false))
+			m_main->RenderNeeded();
+
+		MouseStatusUpdate(mouse_loc);
+	}
+	void MainGUI::OnMouseClick(UINT btn, UINT, CPoint point)
+	{
+		int  btn_state = ButtonState(btn);
+		pr::v2 mouse_loc = pr::To<pr::v2>(point);
+		if (m_main->m_nav.MouseClick(mouse_loc, btn_state))
 			m_main->RenderNeeded();
 
 		MouseStatusUpdate(mouse_loc);
@@ -283,18 +297,6 @@ namespace ldr
 
 		MouseStatusUpdate(mouse_loc);
 		return FALSE; // ie. we handled this wheel message
-	}
-
-	// Mouse button double click
-	void MainGUI::OnMouseDblClk(UINT nFlags, CPoint point)
-	{
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		int    btn_state = ButtonState(nFlags);
-
-		if (m_main->m_nav.MouseDblClick(mouse_loc, btn_state))
-			m_main->RenderNeeded();
-
-		MouseStatusUpdate(mouse_loc);
 	}
 
 	// Open a text panel for adding new ldr objects immediately
@@ -802,9 +804,10 @@ namespace ldr
 			pr::v4 mouse_ss = pr::v4::make(mouse_location, m_main->m_nav.FocusDistance(), 0.0f);
 			pr::v4 mouse_ws = m_main->m_nav.WSPointFromSSPoint(mouse_ss);
 			pr::v4 focus_ws = m_main->m_nav.FocusPoint();
-			status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f}"
+			status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f} Focus Distance: %3.3f"
 				,mouse_ws.x ,mouse_ws.y ,mouse_ws.z
-				,focus_ws.x ,focus_ws.y ,focus_ws.z);
+				,focus_ws.x ,focus_ws.y ,focus_ws.z
+				,m_main->m_cam.FocusDist());
 		}
 		{
 			// Display zoom

@@ -133,6 +133,11 @@ namespace pr
 				m_cam.Translate(0, 0, delta);
 				RenderNeeded();
 			}
+			virtual void NavRevert()
+			{
+				m_cam.Revert();
+				RenderNeeded();
+			}
 
 			// The size of the window has changed
 			virtual void Resize(pr::iv2 const& size)

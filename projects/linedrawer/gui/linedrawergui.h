@@ -58,11 +58,6 @@ namespace ldr
 		MainGUI(LPTSTR cmdline);
 
 		BEGIN_MSG_MAP(x)
-			MSG_WM_SYSKEYDOWN(OnSysKeyDown)
-			MSG_WM_LBUTTONDBLCLK(OnMouseDblClk)
-			MSG_WM_RBUTTONDBLCLK(OnMouseDblClk)
-			MSG_WM_MBUTTONDBLCLK(OnMouseDblClk)
-
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEW           ,OnFileNew)
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILENEWSCRIPT     ,OnFileNewScript)
 			COMMAND_ID_HANDLER(ID_ACCELERATOR_FILEOPEN          ,OnFileOpen)
@@ -126,21 +121,21 @@ namespace ldr
 	private:
 		typedef std::list<std::string> StrList;
 
-		LRESULT OnCreate(LPCREATESTRUCT create);
-		void OnTimer(UINT_PTR nIDEvent);
-		void OnPaint(HDC hDC);
-		void OnGetMinMaxInfo(LPMINMAXINFO lpMMI);
-		HCURSOR OnQueryDragIcon();
-		void OnDropFiles(HDROP hDropInfo);
+		LRESULT OnCreate(LPCREATESTRUCT create) override;
+		void OnTimer(UINT_PTR nIDEvent) override;
+		void OnPaint(HDC hDC) override;
+		void OnGetMinMaxInfo(LPMINMAXINFO lpMMI) override;
+		HCURSOR OnQueryDragIcon() override;
+		void OnDropFiles(HDROP hDropInfo) override;
 
-		void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
-		void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
+		void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) override;
+		void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) override;
 
-		void OnMouseDown(UINT flags, CPoint point);
-		void OnMouseUp(UINT, CPoint point);
-		void OnMouseMove(UINT flags, CPoint point);
-		BOOL OnMouseWheel(UINT, short delta, CPoint);
-		void OnMouseDblClk(UINT nFlags, CPoint point);
+		void OnMouseDown(UINT btn, UINT flags, CPoint point) override;
+		void OnMouseUp(UINT btn, UINT flags, CPoint point) override;
+		void OnMouseClick(UINT btn, UINT nFlags, CPoint point) override;
+		void OnMouseMove(UINT flags, CPoint point) override;
+		BOOL OnMouseWheel(UINT, short delta, CPoint) override;
 
 		LRESULT OnFileNew               (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnFileNewScript         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

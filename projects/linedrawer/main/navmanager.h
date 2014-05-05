@@ -58,7 +58,7 @@ namespace ldr
 		// Returns true if the camera has moved or objects in the scene have moved
 		bool MouseInput(pr::v2 const& pos, int button_state, bool start_or_end);
 		bool MouseWheel(pr::v2 const& pos, float delta);
-		bool MouseDblClick(pr::v2 const& pos, int button_state);
+		bool MouseClick(pr::v2 const& pos, int button_state);
 
 		// Return the distance from the camera to the focus point
 		float FocusDistance() const { return m_camera.FocusDist(); }

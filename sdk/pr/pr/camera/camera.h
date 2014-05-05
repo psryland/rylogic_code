@@ -488,6 +488,15 @@ namespace pr
 			pr::Orthonormalise(m_base_c2w);
 		}
 
+		// Revert navigation back to the last commit
+		void Revert()
+		{
+			m_c2w = m_base_c2w;
+			m_fovY = m_base_fovY;
+			m_focus_dist = m_base_focus_dist;
+			m_moved = true;
+		}
+
 		// Return the current zoom scaling factor
 		float Zoom() const
 		{
