@@ -25,6 +25,7 @@
 #include "pr/macros/count_of.h"
 #include "pr/macros/repeat.h"
 #include "pr/macros/enum.h"
+#include "pr/macros/no_copy.h"
 #include "pr/meta/alignment_of.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/prtypes.h"
@@ -51,6 +52,7 @@
 #include "pr/common/colour.h"
 #include "pr/common/new.h"
 #include "pr/common/to.h"
+#include "pr/common/scope.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -94,15 +96,6 @@ namespace pr
 
 		typedef pr::geometry::EGeom EGeom;
 
-		// Configuration
-//		struct DeviceConfig;
-//		struct System;
-//		struct Adapter;
-//		struct DisplayModeIter;
-//		struct RdrSettings;
-//		struct VPSettings;
-//		struct IAllocator;
-
 		// Util
 		struct Lock;
 		struct MLock;
@@ -135,10 +128,10 @@ namespace pr
 		//typedef pr::RefPtr<Video>     VideoPtr;
 
 		// Video
-//		struct Video;
-//		struct AllocPres;
-//		typedef pr::RefPtr<Video> VideoPtr;
-//		typedef pr::RefPtr<AllocPres> AllocPresPtr;
+		//struct Video;
+		//struct AllocPres;
+		//typedef pr::RefPtr<Video> VideoPtr;
+		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
 
 		// Models
 		class  ModelManager;
@@ -161,25 +154,19 @@ namespace pr
 		// Scenes
 		struct SceneView;
 		struct Scene;
+		struct Stereo;
+
+		// Rendering
+		struct DrawListElement;
+		struct BSBlock;
+		struct DSBlock;
+		struct RSBlock;
+		struct StateStack;
 		struct RenderStep;
 		struct GBufferCreate;
 		struct DSLightingPass;
 		struct ForwardRender;
-		struct Stereo;
-		struct DrawData;
-		struct DrawListElement;
 		typedef std::shared_ptr<RenderStep> RenderStepPtr;
-
-		// Rendering
-		struct BSBlock;
-		struct DSBlock;
-		struct RSBlock;
-
-		// Enums
-		namespace EDbgRdrFlags
-		{
-			enum Type { WarnedNoRenderNuggets = 1 << 0 };
-		}
 
 		// EResult
 		#define PR_ENUM(x)/*
@@ -204,15 +191,20 @@ namespace pr
 		#define PR_ENUM(x)\
 			x(ForwardRender)\
 			x(GBufferCreate)\
-			x(DeferredShading)
+			x(DSLighting)
 		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
-		// EConstBuf
+		// EShaderType
 		#define PR_ENUM(x)\
-			x(FrameConstants)\
-			x(ModelConstants)
-		PR_DEFINE_ENUM1(EConstBuf, PR_ENUM);
+			x(Invalid ,= 0)\
+			x(VS      ,= 1 << 0)\
+			x(PS      ,= 1 << 1)\
+			x(GS      ,= 1 << 2)\
+			x(HS      ,= 1 << 3)\
+			x(DS      ,= 1 << 4)\
+			x(All     ,= ~0)
+		PR_DEFINE_ENUM2_FLAGS(EShaderType, PR_ENUM);
 		#undef PR_ENUM
 
 		// ETexAddrMode
@@ -254,43 +246,6 @@ namespace pr
 			x(Right)
 		PR_DEFINE_ENUM1(EEye, PR_ENUM);
 		#undef PR_ENUM
-
-		//		namespace EQuality
-//		{
-//			enum Type { Low,  Medium, High, NumberOf };
-//			inline char const* ToString(Type type)
-//			{
-//				switch (type) {
-//				default: return "";
-//				case Low: return "Low";
-//				case Medium: return "Medium";
-//				case High: return "High";
-//				}
-//			}
-//			inline Type Parse(char const* str)
-//			{
-//				int i; for (i = 0; i != NumberOf && !pr::str::EqualI(str, ToString(static_cast<Type>(i))); ++i) {}
-//				return static_cast<Type>(i);
-//			}
-//		}
-//		enum
-//		{
-//			MaxLights = 8,
-//			MaxShadowCasters = 4
-//		};
-//		namespace EDeviceResetPriority
-//		{
-//			enum Type
-//			{
-//				Normal = 0,
-//				LightingManager,
-//				ModelManager,
-//				MaterialManager,
-//				RenderStateManager,
-//				VertexFormatManager,
-//				Renderer,
-//			};
-//		}
 	}
 }
 

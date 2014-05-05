@@ -127,6 +127,19 @@ namespace pr
 					i->second->Release();
 			}
 		};
+
+		// Operators
+		template <typename TStateDesc, typename TFieldEnum, size_t N>
+		inline bool operator == (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		{
+			for (int i = 0; i != N; ++i) if (lhs.m_mask[i] != rhs.m_mask[i]) return false;
+			return true;
+		}
+		template <typename TStateDesc, typename TFieldEnum, size_t N>
+		inline bool operator != (StateBlock<TStateDesc, TFieldEnum, N> const& lhs, StateBlock<TStateDesc, TFieldEnum, N> const& rhs)
+		{
+			return !(lhs == rhs);
+		}
 	}
 }
 

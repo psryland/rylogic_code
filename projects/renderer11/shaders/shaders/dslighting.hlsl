@@ -2,10 +2,9 @@
 // Renderer
 //  Copyright © Rylogic Ltd 2014
 //***********************************************
-// Uses gbuffer output to light a scene
 
-#include "common/dslighting_cbuf.hlsli"
-#include "common/compression.hlsli"
+#include "common/gbuffer_cbuf.hlsli"
+#include "common/gbuffer.hlsli"
 
 // VS input format
 struct VS_INPUT
@@ -29,12 +28,6 @@ struct PS_OUTPUT
 	float4 diff0 :SV_Target0;
 };
 
-// Sampler and gbuffer textures
-SamplerState      m_point_sampler :register(s0);
-Texture2D<float4> m_tex_diffuse   :register(t0);
-Texture2D<half2>  m_tex_normals   :register(t1);
-Texture2D<float4> m_tex_depth     :register(t2);
-
 // Vertex shader
 #if PR_RDR_SHADER_VS
 PS_INPUT main(VS_INPUT In)
@@ -50,17 +43,18 @@ PS_INPUT main(VS_INPUT In)
 #if PR_RDR_SHADER_PS
 PS_OUTPUT main(PS_INPUT In)
 {
-	PS_OUTPUT Out;
-
 	// Sample the gbuffer
-	float4 diff0 = m_tex_diffuse.Sample(m_point_sampler, In.tex0);
-	half2 enc_norm = m_tex_normals.Sample(m_point_sampler, In.tex0);
-	float4 norm = float4(DecodeNormal(enc_norm), 0);
+	GPixel px = ReadGBuffer(In.tex0);
+	PS_OUTPUT Out;
 
 	// Do lighting...
 
 	// Output the lit pixel
-	Out.diff0 = diff0;
+	//Out.diff0 = px.diff;
+	//Out.diff0 = abs(px.ws_norm);
+	//Out.diff0 = saturate(0.5f * (1 - px.ws_pos.z)) * float4(1,1,1,1);
+	Out.diff0 = float4(1,1,1,1) * abs(frac(px.ws_pos.z));
+	//Out.diff0 = float4(1,0,1,1);
 	return Out;
 }
 #endif

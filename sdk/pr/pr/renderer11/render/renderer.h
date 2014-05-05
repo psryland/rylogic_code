@@ -62,7 +62,7 @@ namespace pr
 				PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
 
 				// Disable multisampling when debugging as pix can't handle it
-				//PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
+				PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
 			}
 		};
 

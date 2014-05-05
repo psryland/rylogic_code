@@ -68,7 +68,17 @@ namespace pr
 		template <typename T> static v4 make(T const* v)                            { v4 vec; return vec.set(v); }
 		template <typename T> static v4 make(T const* v, float w)                   { v4 vec; return vec.set(v, w); }
 		static v4                       normal3(float x, float y, float z, float w) { v4 vec; return Normalise3(vec.set(x, y, z, w)); }
+		template <typename T> static v4 normal3(T const& v, float z, float w)       { v4 vec; return Normalise3(vec.set(v, z, w)); }
+		template <typename T> static v4 normal3(T const& v, float w)                { v4 vec; return Normalise3(vec.set(v, w)); }
+		template <typename T> static v4 normal3(T const& v)                         { v4 vec; return Normalise3(vec.set(v)); }
+		template <typename T> static v4 normal3(T const* v)                         { v4 vec; return Normalise3(vec.set(v)); }
+		template <typename T> static v4 normal3(T const* v, float w)                { v4 vec; return Normalise3(vec.set(v, w)); }
 		static v4                       normal4(float x, float y, float z, float w) { v4 vec; return Normalise4(vec.set(x, y, z, w)); }
+		template <typename T> static v4 normal4(T const& v, float z, float w)       { v4 vec; return Normalise4(vec.set(v, z, w)); }
+		template <typename T> static v4 normal4(T const& v, float w)                { v4 vec; return Normalise4(vec.set(v, w)); }
+		template <typename T> static v4 normal4(T const& v)                         { v4 vec; return Normalise4(vec.set(v)); }
+		template <typename T> static v4 normal4(T const* v)                         { v4 vec; return Normalise4(vec.set(v)); }
+		template <typename T> static v4 normal4(T const* v, float w)                { v4 vec; return Normalise4(vec.set(v, w)); }
 	};
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
 	static_assert(std::is_pod<v4>::value, "Should be a pod type");

@@ -33,13 +33,13 @@ namespace pr
 			// 'AutoId' is a special value that tells the create texture functions to not look for an
 			// existing texture and create a new d3d resource for the texture.
 
-			Allocator<Texture2D>    m_alex_tex2d;
-			Allocator<TextureGdi>   m_alex_texgdi;
-			D3DPtr<ID3D11Device>    m_device;
-			TextureLookup           m_lookup_tex;     // A map from texture id to existing texture instances
-			TexFileLookup           m_lookup_fname;   // A map from hash of filepath to an existing d3d texture
-			pr::Array<Texture2DPtr> m_stock_textures; // A collection of references to the stock textures
-			pr::GdiPlus             m_gdiplus;
+			Allocator<Texture2D>       m_alex_tex2d;
+			Allocator<TextureGdi>      m_alex_texgdi;
+			D3DPtr<ID3D11Device>       m_device;
+			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
+			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing d3d texture
+			pr::Array<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
+			pr::GdiPlus                m_gdiplus;
 
 			TextureManager(TextureManager const&); // no copying
 			TextureManager& operator = (TextureManager const&);

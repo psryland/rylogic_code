@@ -58,7 +58,7 @@ namespace pr
 			void RemoveInstances(BaseInstance const** inst, std::size_t count);
 
 			// Perform the render step
-			void Execute();
+			void Execute(StateStack& ss);
 
 		protected:
 
@@ -66,7 +66,7 @@ namespace pr
 			virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) = 0;
 
 			// Dervied render steps perform their action
-			virtual void ExecuteInternal() = 0;
+			virtual void ExecuteInternal(StateStack& ss) = 0;
 
 		private:
 			RenderStep(RenderStep const&);
@@ -77,10 +77,17 @@ namespace pr
 		// but non-fixed means we need the pr::rdr::Allocator to construct it.
 		typedef pr::Array<RenderStepPtr, 16, true> RenderStepCont;
 
+		// Gbuffer base
+		struct GBuffer
+		{
+			#include "renderer11/shaders/common/gbuffer_cbuf.hlsli"
+		};
+
 		// GBufferCreate ******************************************************
 
 		struct GBufferCreate
 			:RenderStep
+			,GBuffer
 			,pr::events::IRecv<pr::rdr::Evt_Resize>
 		{
 			// Constructs the g-buffer for a scene
@@ -94,10 +101,10 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_dsv;
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
-			D3DPtr<ID3D11Buffer>             m_cbuf_frame; // A constant buffer for the frame constant shader variables
-			ShaderPtr                        m_shader;     // The shader used to generate the g-buffer
+			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // A constant buffer for the frame constant shader variables
+			ShaderPtr                        m_shader;      // The shader used to generate the g-buffer
 
-			GBufferCreate(Scene& scene);
+			explicit GBufferCreate(Scene& scene);
 
 		private:
 
@@ -117,7 +124,7 @@ namespace pr
 			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
 
 			// Perform the render step
-			void ExecuteInternal() override;
+			void ExecuteInternal(StateStack& ss) override;
 
 			// Handle main window resize events
 			void OnEvent(Evt_Resize const& evt) override;
@@ -138,6 +145,7 @@ namespace pr
 
 		struct DSLightingPass
 			:RenderStep
+			,GBuffer
 		{
 			// An instance type for the full screen quad
 			#define PR_RDR_INST(x)\
@@ -146,16 +154,16 @@ namespace pr
 			#undef PR_RDR_INST
 
 			// Uses g-buffer data to perform post process lighting
-			static const ERenderStep::Enum_ Id = ERenderStep::DeferredShading;
+			static const ERenderStep::Enum_ Id = ERenderStep::DSLighting;
 
-			GBufferCreate&       m_gbuffer;           // The gbuffer render step for access to the gbuffer textures
-			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
-			Instance             m_unit_quad;         // The quad drawn to the screen for post processing
-			pr::Colour           m_background_colour; // The colour to clear the background to
-			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
-			ShaderPtr            m_shader;            // The shader used to generate the g-buffer
+			GBufferCreate&       m_gbuffer;       // The gbuffer render step for access to the gbuffer textures
+			D3DPtr<ID3D11Buffer> m_cbuf_camera;   // A constant buffer for the frame constant shader variables
+			D3DPtr<ID3D11Buffer> m_cbuf_lighting; // A constant buffer for the frame constant shader variables
+			Instance             m_unit_quad;     // The quad drawn to the screen for post processing
+			bool                 m_clear_bb;      // True if this render step clears the backbuffer before rendering
+			ShaderPtr            m_shader;        // The shader used to generate the g-buffer
 
-			DSLightingPass(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
+			DSLightingPass(Scene& scene);
 
 		private:
 
@@ -169,7 +177,7 @@ namespace pr
 			void AddNuggets(BaseInstance const&, TNuggetChain const&) override {}
 
 			// Perform the render step
-			void ExecuteInternal() override;
+			void ExecuteInternal(StateStack& ss) override;
 		};
 
 		// Forward Render *****************************************************
@@ -178,16 +186,15 @@ namespace pr
 			:RenderStep
 		{
 			static const ERenderStep::Enum_ Id = ERenderStep::ForwardRender;
+			#include "renderer11/shaders/common/forward_cbuf.hlsli"
 
-			D3DPtr<ID3D11Buffer> m_cbuf_frame;        // A constant buffer for the frame constant shader variables
-			pr::Colour           m_background_colour; // The colour to clear the background to
-			Light                m_global_light;      // The global light to use
-			bool                 m_clear_bb;          // True if this render step clears the backbuffer before rendering
+			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // A constant buffer for the frame constant shader variables
+			bool                 m_clear_bb;     // True if this render step clears the backbuffer before rendering
 
 			//typedef std::vector<ProjectedTexture> ProjTextCont;
 			//ProjTextCont m_proj_tex;
 
-			ForwardRender(Scene& scene, bool clear_bb = true, pr::Colour const& bkgd_colour = pr::ColourBlack);
+			ForwardRender(Scene& scene, bool clear_bb = true);
 
 		private:
 
@@ -201,7 +208,7 @@ namespace pr
 			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
 
 			// Perform the render step
-			void ExecuteInternal() override;
+			void ExecuteInternal(StateStack& ss) override;
 		};
 	}
 }

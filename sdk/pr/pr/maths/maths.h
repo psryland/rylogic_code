@@ -39,7 +39,7 @@
 #include "pr/maths/polynomial.h"
 #include "pr/maths/bitfunctions.h"
 #include "pr/maths/geometryfunctions.h"
-#include "pr/maths/compressionfunctions.h"
+#include "pr/maths/compress.h"
 #include "pr/maths/conversion.h"
 
 #include "pr/maths/scalar_impl.h"

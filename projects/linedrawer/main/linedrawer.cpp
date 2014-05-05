@@ -336,22 +336,19 @@ namespace ldr
 				m_store[i]->AddBBoxToScene(e.m_scene, m_bbox_model.m_model);
 		}
 
-		// Setup the render steps (just one in this case)
-		auto fr = m_scene.FindRStep<pr::rdr::ForwardRender>();
-		if (fr != nullptr)
-		{
-			// Update the lighting. If lighting is camera relative, adjust the position and direction
-			pr::rdr::Light& light = fr->m_global_light;
-			light = m_settings.m_Light;
-			if (m_settings.m_LightIsCameraRelative)
-			{
-				light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
-				light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
-			}
+		// Setup the scene/render steps
 
-			// Set the background colour
-			fr->m_background_colour = m_settings.m_BackgroundColour;
+		// Update the lighting. If lighting is camera relative, adjust the position and direction
+		pr::rdr::Light& light = m_scene.m_global_light;
+		light = m_settings.m_Light;
+		if (m_settings.m_LightIsCameraRelative)
+		{
+			light.m_direction = m_cam.CameraToWorld() * m_settings.m_Light.m_direction;
+			light.m_position  = m_cam.CameraToWorld() * m_settings.m_Light.m_position;
 		}
+
+		// Set the background colour
+		m_scene.m_bkgd_colour = m_settings.m_BackgroundColour;
 	}
 
 	// Called per render step

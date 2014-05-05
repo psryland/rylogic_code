@@ -6,21 +6,31 @@
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/instances/instance.h"
+#include "renderer11/render/state_stack.h"
 
 namespace pr
 {
 	namespace rdr
 	{
 		// Make a scene
-		Scene::Scene(pr::Renderer& rdr, SceneView const& view)
+		Scene::Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps, SceneView const& view)
 			:m_rdr(&rdr)
 			,m_view(view)
 			,m_viewport(rdr.RenderTargetSize())
 			,m_render_steps()
+			,m_bkgd_colour()
+			,m_global_light()
 		{
-			//m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
-			//m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
-			m_render_steps.push_back(std::make_shared<ForwardRender>(*this));
+			for (auto rs : rsteps)
+			{
+				switch (rs)
+				{
+				default: throw std::exception("Unknown render step");
+				case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
+				case ERenderStep::GBufferCreate: m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
+				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
+				}
+			}
 		}
 
 		// Find a render step by id
@@ -80,8 +90,9 @@ namespace pr
 		void Scene::Render()
 		{
 			// Invoke each render step in order
+			StateStack ss(m_rdr->ImmediateDC(), *this);
 			for (auto& rs : m_render_steps)
-				rs->Execute();
+				rs->Execute(ss);
 		}
 
 		// Resize the viewport on back buffer resize

@@ -120,9 +120,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingsphere_impl.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\maths\compressionfunctions.h">
-      <Filter>pr\maths</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\constants.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -848,6 +845,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h">
       <Filter>pr\renderer11\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\maths\compress.h">
+      <Filter>pr\maths</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

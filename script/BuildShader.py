@@ -9,7 +9,11 @@
 # Expected input is an hlsl file.
 # The file is scanned for: PR_RDR_SHADER_VS, PR_RDR_SHADER_PS, etc
 # For each symbol found a compiled shader as header data is generated
-# in the output directory
+# in the output directory.
+#
+# Add 'pp' to the command line for preprocessed output
+# Add 'obj' to the command line for a 'compiled shader object' file
+#  that can be used with the runtime shader support in the renderer.
 #
 import sys, os, tempfile
 import Rylogic as Tools
@@ -17,7 +21,6 @@ import UserVars
 
 try:
 	Tools.CheckVersion(1)
-	trace = False
 
 	# Check valid command line
 	if len(sys.argv) < 2:
@@ -27,8 +30,9 @@ try:
 	fullpath = sys.argv[1]
 
 	# Check for optional parameters
-	pp  = True if "pp"  in sys.argv else False
-	obj = True if "obj" in sys.argv else False
+	pp    = True if "pp"    in sys.argv else False
+	obj   = True if "obj"   in sys.argv else False
+	trace = True if "trace" in sys.argv else False
 	if trace: print("pp:" + str(pp) + "  obj:" + str(obj))
 
 	# Find the source and output directories
@@ -65,12 +69,13 @@ try:
 
 			# Setup the command line for fxc
 			# Choose the output files to generate
-			output = "/Fh" + tmp_h_filepath
-			if obj: output += " /Fo" + tmp_cso_filepath
+			output = ["/Fh" + tmp_h_filepath]
+			if obj: output += ["/Fo" + tmp_cso_filepath]
+			if trace: print("Output: " + str(output))
 
 			# Set the variable name to the name of the file
-			varname = "/Vn" + fname + "_" + shdr
-			if trace: print("Variable Name: " + varname)
+			varname = ["/Vn" + fname + "_" + shdr]
+			if trace: print("Variable Name: " + str(varname))
 
 			# Set include paths
 			includes = ["/I" + srcdir + "\\.."]
@@ -89,10 +94,12 @@ try:
 
 			# Build the shader using fxc
 			if trace: print("Running fxc.exe...")
-			success,output = Tools.Run([UserVars.fxc, fullpath, profile, output, varname] + includes + defines + options, show_arguments=trace)
+			success,output = Tools.Run([UserVars.fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
 			if not success:
 				print(output)
+				print("failed")
 			elif trace:
+				print(output)
 				print("success")
 
 			# Compare the produced files with any existing ones,

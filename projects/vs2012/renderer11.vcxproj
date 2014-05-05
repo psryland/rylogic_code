@@ -179,10 +179,12 @@
     <ClInclude Include="..\renderer11\directxtex\DDS.h" />
     <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h" />
     <ClInclude Include="..\renderer11\directxtex\scoped.h" />
+    <ClInclude Include="..\renderer11\render\state_stack.h" />
     <ClInclude Include="..\renderer11\render\stereo.h" />
     <ClInclude Include="..\renderer11\shaders\cbuffer.h" />
     <ClInclude Include="..\renderer11\textures\dds_texture_loader.h" />
     <ClInclude Include="..\renderer11\textures\wic_texture_loader.h" />
+    <ClInclude Include="..\renderer11\util\internal_resources.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -207,6 +209,7 @@
     <ClCompile Include="..\renderer11\lights\light.cpp" />
     <ClCompile Include="..\renderer11\render\render_step.cpp" />
     <ClCompile Include="..\renderer11\render\scene_view.cpp" />
+    <ClCompile Include="..\renderer11\render\state_stack.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />

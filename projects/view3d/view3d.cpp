@@ -1431,19 +1431,19 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 		}
 
 		// Set the light source
-		auto& fr = scene.RStep<ForwardRender>();
-		fr.m_global_light = drawset->m_light;
+		Light& light = scene.m_global_light;
+		light = drawset->m_light;
 		if (drawset->m_light_is_camera_relative)
 		{
-			Light& light = fr.m_global_light;
 			light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
 			light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
 		}
 
 		// Set the background colour
-		fr.m_background_colour = drawset->m_background_colour;
+		scene.m_bkgd_colour = drawset->m_background_colour;
 
 		// Set the global fill mode
+		auto& fr = scene.RStep<ForwardRender>();
 		switch (drawset->m_fill_mode) {
 		case EView3DFillMode::Solid:     fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
 		case EView3DFillMode::Wireframe: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;

@@ -10,9 +10,11 @@
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/render/render_step.h"
 #include "pr/renderer11/util/lock.h"
 #include "pr/renderer11/util/stock_resources.h"
-#include "renderer11/shaders/cbuffer.h"
+#include "pr/renderer11/util/util.h"
+#include "renderer11/util/internal_resources.h"
 
 namespace pr
 {
@@ -59,276 +61,225 @@ namespace pr
 				: pr::m4x4Identity;
 		}
 
-		// TxTint *************************************************************
-		struct TxTint :BaseShader
+		// Convert a geom into an iv4 for flags passed to a shader
+		inline pr::iv4 GeomToIV4(EGeom geom)
 		{
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>&)
+			 return pr::iv4::make(
+				 pr::AllSet(geom, EGeom::Colr),
+				 pr::AllSet(geom, EGeom::Norm),
+				 pr::AllSet(geom, EGeom::Tex0),
+				 0);
+		}
+
+		// FwdShader **********************************************************
+		struct FwdShader :BaseShader
+		{
+			D3DPtr<ID3D11Buffer> m_cbuf_model; // Constant buffer used by the shader
+
+			FwdShader(ShaderManager* mgr)
+				:BaseShader(mgr)
+			{
+				// Create a per-model constants buffer
+				CBufferDesc cbdesc(sizeof(ForwardRender::CBufModel));
+				pr::Throw(mgr->m_device->CreateBuffer(&cbdesc, 0, &m_cbuf_model.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_model, "ForwardRender::CBufModel"));
+			}
+		};
+
+		// TxTint *************************************************************
+		struct TxTint :FwdShader
+		{
+			explicit TxTint(ShaderManager* mgr) :FwdShader(mgr) {}
+			static void Create(ShaderManager& sm)
 			{
 				VShaderDesc vsdesc(txfm_tint_vs, VertP());
 				PShaderDesc psdesc(txfm_tint_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_Forward));
-				sm.CreateShader<TxTint>(EStockShader::TxTint, TxTint::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint");
+				sm.CreateShader<TxTint>(EStockShader::TxTint, &vsdesc, &psdesc, "txfm_tint");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<TxTint>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer and bind it to the VS stage
-				CBufModel_Forward cb = {};
+				ForwardRender::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
-				{
-					LockT<CBufModel_Forward> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				WriteConstants(dc, m_cbuf_model, cb);
 			}
-			explicit TxTint(ShaderManager* mgr) :BaseShader(mgr) {}
 		};
 
 		// TxTintPvc **********************************************************
-		struct TxTintPvc :BaseShader
+		struct TxTintPvc :FwdShader
 		{
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>&)
+			explicit TxTintPvc(ShaderManager* mgr) :FwdShader(mgr) {}
+			static void Create(ShaderManager& sm)
 			{
 				VShaderDesc vsdesc(txfm_tint_pvc_vs, VertPC());
 				PShaderDesc psdesc(txfm_tint_pvc_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_Forward));
-				sm.CreateShader<TxTintPvc>(EStockShader::TxTintPvc, TxTintPvc::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_pvc");
+				sm.CreateShader<TxTintPvc>(EStockShader::TxTintPvc, &vsdesc, &psdesc, "txfm_tint_pvc");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<TxTintPvc>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer
-				CBufModel_Forward cb = {};
+				ForwardRender::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
-				{
-					LockT<CBufModel_Forward> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-			};
-			explicit TxTintPvc(ShaderManager* mgr) :BaseShader(mgr) {}
+				WriteConstants(dc, m_cbuf_model, cb);
+			}
 		};
 
 		// TxTintTex **********************************************************
-		struct TxTintTex :BaseShader
+		struct TxTintTex :FwdShader
 		{
-			D3DPtr<ID3D11SamplerState> m_default_sampler_state;
-
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+			explicit TxTintTex(ShaderManager* mgr) :FwdShader(mgr) {}
+			static void Create(ShaderManager& sm)
 			{
 				// Create the shader
 				VShaderDesc vsdesc(txfm_tint_tex_vs, VertPT());
 				PShaderDesc psdesc(txfm_tint_tex_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_Forward));
-				pr::RefPtr<TxTintTex> shdr = sm.CreateShader<TxTintTex>(EStockShader::TxTintTex, TxTintTex::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_tex");
-
-				// Create a texture sampler
-				// Note: don't name the sampler resource. Dx11 caches samplers with the same config
-				// so trying to name it will clash with any previous name it might have been given
-				SamplerDesc sdesc;
-				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_default_sampler_state.m_ptr));
+				sm.CreateShader<TxTintTex>(EStockShader::TxTintTex, &vsdesc, &psdesc, "txfm_tint_tex");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<TxTintTex>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer and bind it to the VS stage
-				CBufModel_Forward cb = {};
+				ForwardRender::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
 				Tex0(*dle.m_nugget, cb);
-				{
-					LockT<CBufModel_Forward> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-
-				// Set the constants
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				WriteConstants(dc, m_cbuf_model, cb);
 
 				// Set constants for the pixel shader
-				auto& tex_diffuse = dle.m_nugget->m_tex_diffuse;
-				if (tex_diffuse != nullptr)
-				{
-					// Set the shader resource view of the texture and the texture sampler
-					dc->PSSetShaderResources(0, 1, &tex_diffuse->m_srv.m_ptr);
-					dc->PSSetSamplers(0, 1, &tex_diffuse->m_samp.m_ptr);
-				}
-				else
-				{
-					dc->PSSetShaderResources(0, 0, 0);
-					dc->PSSetSamplers(0, 1, &me.m_default_sampler_state.m_ptr);
-				}
-			};
-			explicit TxTintTex(ShaderManager* mgr) :BaseShader(mgr) {}
+				BindTextureAndSampler(dc, dle.m_nugget->m_tex_diffuse);
+			}
+			void Cleanup(D3DPtr<ID3D11DeviceContext>& dc) override
+			{
+				BindTextureAndSampler(dc, nullptr);
+			}
 		};
 
 		// TxTintPvcLit *******************************************************
-		struct TxTintPvcLit :BaseShader
+		struct TxTintPvcLit :FwdShader
 		{
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>&)
+			explicit TxTintPvcLit(ShaderManager* mgr) :FwdShader(mgr) {}
+			static void Create(ShaderManager& sm)
 			{
 				// Create the shader
 				VShaderDesc vsdesc(txfm_tint_pvc_lit_vs, VertPCNT(), EGeom::Vert|EGeom::Colr|EGeom::Norm);
 				PShaderDesc psdesc(txfm_tint_pvc_lit_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_Forward));
-				sm.CreateShader<TxTintPvcLit>(EStockShader::TxTintPvcLit, TxTintPvcLit::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_pvc_lit");
+				sm.CreateShader<TxTintPvcLit>(EStockShader::TxTintPvcLit, &vsdesc, &psdesc, "txfm_tint_pvc_lit");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<TxTintPvcLit>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer and bind it to the VS stage
-				CBufModel_Forward cb = {};
+				ForwardRender::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
-				{
-					LockT<CBufModel_Forward> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-
-				// Set the constants
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				WriteConstants(dc, m_cbuf_model, cb);
 			}
-			explicit TxTintPvcLit(ShaderManager* mgr) :BaseShader(mgr) {}
 		};
 
 		// TxTintPvcLitTex ****************************************************
-		struct TxTintPvcLitTex :BaseShader
+		struct TxTintPvcLitTex :FwdShader
 		{
-			D3DPtr<ID3D11SamplerState> m_default_sampler_state;
-
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+			explicit TxTintPvcLitTex(ShaderManager* mgr) :FwdShader(mgr) {}
+			static void Create(ShaderManager& sm)
 			{
 				// Create the shader
 				VShaderDesc vsdesc(txfm_tint_pvc_lit_tex_vs, VertPCNT());
 				PShaderDesc psdesc(txfm_tint_pvc_lit_tex_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_Forward));
-				pr::RefPtr<TxTintPvcLitTex> shdr = sm.CreateShader<TxTintPvcLitTex>(EStockShader::TxTintPvcLitTex, TxTintPvcLitTex::Setup, &vsdesc, &psdesc, &cbdesc, "txfm_tint_pvc_lit_tex");
-
-				// Create a texture sampler
-				// Note: don't name the sampler resource. Dx11 caches samplers with the same config
-				// so trying to name it will clash with any previous name it might have been given
-				SamplerDesc sdesc;
-				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_default_sampler_state.m_ptr));
+				sm.CreateShader<TxTintPvcLitTex>(EStockShader::TxTintPvcLitTex, &vsdesc, &psdesc, "txfm_tint_pvc_lit_tex");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<TxTintPvcLitTex>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer and bind it to the VS stage
-				CBufModel_Forward cb = {};
+				ForwardRender::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
 				Tex0(*dle.m_nugget, cb);
-				{
-					LockT<CBufModel_Forward> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-
-				// Set constants for the vertex shader
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				WriteConstants(dc, m_cbuf_model, cb);
 
 				// Set constants for the pixel shader
-				auto& tex_diffuse = dle.m_nugget->m_tex_diffuse;
-				if (tex_diffuse != nullptr)
-				{
-					// Set the shader resource view of the texture and the texture sampler
-					dc->PSSetShaderResources(0, 1, &tex_diffuse->m_srv.m_ptr);
-					dc->PSSetSamplers(0, 1, &tex_diffuse->m_samp.m_ptr);
-				}
-				else
-				{
-					dc->PSSetShaderResources(0, 0, 0);
-					dc->PSSetSamplers(0, 1, &me.m_default_sampler_state.m_ptr);
-				}
+				BindTextureAndSampler(dc, dle.m_nugget->m_tex_diffuse);
 			}
-			explicit TxTintPvcLitTex(ShaderManager* mgr) :BaseShader(mgr) {}
+			void Cleanup(D3DPtr<ID3D11DeviceContext>& dc) override
+			{
+				BindTextureAndSampler(dc, nullptr);
+			}
 		};
 
 		// GBuffer ************************************************************
-		struct GBuffer :BaseShader
+		struct DSGBuffer :BaseShader
 		{
-			D3DPtr<ID3D11SamplerState> m_default_sampler_state;
+			D3DPtr<ID3D11Buffer> m_cbuf_model; // Constant buffer used by the shader
 
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+			explicit DSGBuffer(ShaderManager* mgr)
+				:BaseShader(mgr)
+			{
+				// Create a per-model constants buffer
+				CBufferDesc cbdesc(sizeof(GBuffer::CBufModel));
+				pr::Throw(mgr->m_device->CreateBuffer(&cbdesc, 0, &m_cbuf_model.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_model, "GBuffer::CBufModel"));
+			}
+			static void Create(ShaderManager& sm)
 			{
 				// Create the shader
 				VShaderDesc vsdesc(gbuffer_vs, VertPCNT());
 				PShaderDesc psdesc(gbuffer_ps);
-				CBufferDesc cbdesc(sizeof(CBufModel_GBuffer));
-				pr::RefPtr<GBuffer> shdr = sm.CreateShader<GBuffer>(EStockShader::GBuffer, GBuffer::Setup, &vsdesc, &psdesc, &cbdesc, "gbuffer");
-
-				// Create a texture sampler
-				SamplerDesc sdesc;
-				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_default_sampler_state.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_default_sampler_state, "gbuffer default sampler"));
+				sm.CreateShader<DSGBuffer>(ERdrShader::GBuffer, &vsdesc, &psdesc, "gbuffer");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<GBuffer>(dle);
+				BaseShader::Setup(dc, dle, rstep);
 
 				// Set the constants for the shader
-				CBufModel_GBuffer cb = {};
+				GBuffer::CBufModel cb = {};
+				cb.m_geom = GeomToIV4(dle.m_nugget->m_geom);
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
 				Tex0(*dle.m_nugget, cb);
-				{
-					LockT<CBufModel_GBuffer> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-					*lock.ptr() = cb;
-				}
-
-				// Set constants for the shader
-				dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
+				WriteConstants(dc, m_cbuf_model, cb);
 
 				// Set constants for the pixel shader
-				auto& tex_diffuse = dle.m_nugget->m_tex_diffuse;
-				if (tex_diffuse != nullptr)
-				{
-					// Set the shader resource view of the texture and the texture sampler
-					dc->PSSetShaderResources(0, 1, &tex_diffuse->m_srv.m_ptr);
-					dc->PSSetSamplers(0, 1, &tex_diffuse->m_samp.m_ptr);
-				}
-				else
-				{
-					dc->PSSetShaderResources(0, 0, 0);
-					dc->PSSetSamplers(0, 1, &me.m_default_sampler_state.m_ptr);
-				}
+				BindTextureAndSampler(dc, dle.m_nugget->m_tex_diffuse);
 			}
-			explicit GBuffer(ShaderManager* mgr) :BaseShader(mgr) {}
+			void Cleanup(D3DPtr<ID3D11DeviceContext>& dc) override
+			{
+				BindTextureAndSampler(dc, nullptr);
+			}
 		};
 
 		// DSLighting *********************************************************
 		struct DSLighting :BaseShader
 		{
-			// A point sampler used to sample the gbuffer
-			D3DPtr<ID3D11SamplerState> m_point_sampler;
+			D3DPtr<ID3D11SamplerState> m_point_sampler; // A point sampler used to sample the gbuffer
 
-			static void Create(ShaderManager& sm, D3DPtr<ID3D11Device>& device)
+			explicit DSLighting(ShaderManager* mgr)
+				:BaseShader(mgr)
+			{
+				// Create a gbuffer sampler
+				auto sdesc = SamplerDesc::PointClamp();
+				pr::Throw(mgr->m_device->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler, "dslighting point sampler"));
+			}
+			static void Create(ShaderManager& sm)
 			{
 				// Create the shader
 				VShaderDesc vsdesc(dslighting_vs, VertPCNT());
 				PShaderDesc psdesc(dslighting_ps);
-				//CBufferDesc cbdesc(sizeof(CBufModel_DSLighting)); // no per-model constants as yet
-				auto shdr = sm.CreateShader<DSLighting>(EStockShader::DSLighting, DSLighting::Setup, &vsdesc, &psdesc, nullptr, "dslighting");
-
-				// Create a texture sampler
-				auto sdesc = SamplerDesc::PointClamp();
-				pr::Throw(device->CreateSamplerState(&sdesc, &shdr->m_point_sampler.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(shdr->m_point_sampler, "dslighting point sampler"));
+				sm.CreateShader<DSLighting>(ERdrShader::DSLighting, &vsdesc, &psdesc, "dslighting");
 			}
-			static void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep)
+			void Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, RenderStep const& rstep) override
 			{
-				auto& me = Me<DSLighting>(dle);
+				BaseShader::Setup(dc, dle, rstep);
+
 				auto& gbuffer = rstep.as<DSLightingPass>().m_gbuffer;
 
 				// Set the constants for the shader
@@ -346,23 +297,32 @@ namespace pr
 				//dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
 
 				// Set constants for the pixel shader
-				dc->PSSetSamplers(0, 1, &me.m_point_sampler.m_ptr);
+				dc->PSSetSamplers(0, 1, &m_point_sampler.m_ptr);
 				dc->PSSetShaderResources(0, GBufferCreate::RTCount, (ID3D11ShaderResourceView* const*)gbuffer.m_srv);
 			}
-			explicit DSLighting(ShaderManager* mgr) :BaseShader(mgr) {}
+			void Cleanup(D3DPtr<ID3D11DeviceContext>& dc) override
+			{
+				ID3D11ShaderResourceView* null_srv[GBufferCreate::RTCount] = {};
+				dc->PSSetShaderResources(0, GBufferCreate::RTCount, null_srv);
+
+				ID3D11SamplerState* null_samp[1] = {};
+				dc->PSSetSamplers(0, 1, null_samp);
+			}
 		};
 
 		// Create the built-in shaders
 		void ShaderManager::CreateStockShaders()
 		{
-			TxTint         ::Create(*this, m_device);
-			TxTintPvc      ::Create(*this, m_device);
-			TxTintTex      ::Create(*this, m_device);
-			TxTintPvcLit   ::Create(*this, m_device);
-			TxTintPvcLitTex::Create(*this, m_device);
+			// Forward shaders
+			TxTint         ::Create(*this);
+			TxTintPvc      ::Create(*this);
+			TxTintTex      ::Create(*this);
+			TxTintPvcLit   ::Create(*this);
+			TxTintPvcLitTex::Create(*this);
 
-			GBuffer   ::Create(*this, m_device);
-			DSLighting::Create(*this, m_device);
+			// GBuffer shaders
+			DSGBuffer ::Create(*this);
+			DSLighting::Create(*this);
 		}
 
 		//// Setup this shader for rendering

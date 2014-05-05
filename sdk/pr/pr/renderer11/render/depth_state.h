@@ -130,6 +130,9 @@ namespace pr
 					});
 				return *this;
 			}
+
+			bool operator == (DSBlock const& rhs) const { return (base&)*this == (base&)rhs; }
+			bool operator != (DSBlock const& rhs) const { return (base&)*this != (base&)rhs; }
 		};
 
 		// Provides a pool of BlendState objects

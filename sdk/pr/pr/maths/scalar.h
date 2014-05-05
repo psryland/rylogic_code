@@ -216,6 +216,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/maths/maths.h"
 namespace pr
 {
 	namespace unittests
