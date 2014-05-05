@@ -283,7 +283,8 @@ namespace pr
 				auto& gbuffer = rstep.as<DSLightingPass>().m_gbuffer;
 
 				// Set the constants for the shader
-				//CBufModel_DSLighting cb = {};
+				//GBuffer::CBufModel cb = {};
+
 				//Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				//Tint(*dle.m_instance, cb);
 				//Tex0(*dle.m_nugget, cb);

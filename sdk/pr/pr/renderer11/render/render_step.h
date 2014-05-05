@@ -149,7 +149,7 @@ namespace pr
 		{
 			// An instance type for the full screen quad
 			#define PR_RDR_INST(x)\
-				x(ModelPtr ,m_model  ,EInstComp::ModelPtr)
+				x(ModelPtr ,m_model ,EInstComp::ModelPtr)
 			PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
 			#undef PR_RDR_INST
 

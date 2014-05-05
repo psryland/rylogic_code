@@ -16,7 +16,7 @@ Texture2D<float>  m_tex_depth     :register(t2);
 // Gbuffer Px out format
 struct PS_OUTPUT_GBUFFER
 {
-	float4 diff0    :SV_Target0;
+	float4 diff     :SV_Target0;
 	float2 ws_norm  :SV_Target1;
 	float  cs_depth :SV_Target2;
 };
@@ -25,22 +25,23 @@ struct PS_OUTPUT_GBUFFER
 struct GPixel
 {
 	float4 diff;
-	float4 ws_pos;
-	float4 ws_norm;
+	float3 ws_norm;
+	float3 cs_pos;
 };
 
 // Output a pixel for the gbuffer
-PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff0, float4 ws_pos, float4 ws_norm)
+PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 {
 	PS_OUTPUT_GBUFFER Out;
-	Out.diff0 = float4(diff0.xyz, step(0,ws_norm.z));
+	Out.diff = float4(diff.xyz, step(0,ws_norm.z));
 	Out.ws_norm = ws_norm.xy * 0.5f + 0.5f;
-	Out.cs_depth = mul(m_w2c,ws_pos).z;
+	Out.cs_depth = length(ws_pos - mul(m_c2w, float4(0,0,0,1)));
+	//Out.cs_depth = dot(m_c2w[2], ws_pos - m_c2w[3]);
 	return Out;
 }
 
 // Sample the gbuffer
-GPixel ReadGBuffer(float2 tex)
+GPixel ReadGBuffer(float2 tex, float3 cs_vdir)
 {
 	float4 diff = m_tex_diffuse.Sample(m_point_sampler, tex);
 	float2 norm = m_tex_normals.Sample(m_point_sampler, tex);
@@ -50,10 +51,10 @@ GPixel ReadGBuffer(float2 tex)
 	Out.diff = float4(diff.xyz, 0);
 
 	norm = norm * 2 - 1;
-	Out.ws_norm = normalize(float4(norm, (2*diff.w-1) * sqrt(saturate(1 - dot(norm,norm))), 0));
+	Out.ws_norm = normalize(float3(norm, (2*diff.w-1)*sqrt(saturate(1 - dot(norm,norm)))));
 
-	float2 cs_pos = mul(m_s2c, float4(2*tex.x-1, 1-2*tex.y, 0, 0)).xy;
-	Out.ws_pos = mul(m_c2w, float4(cs_pos, depth, 1));
+	Out.cs_pos = cs_vdir * depth;
+	//Out.cs_pos = cs_vdir * depth / cs_vdir.z;
 	return Out;
 }
 

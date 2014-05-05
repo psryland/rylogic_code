@@ -243,8 +243,8 @@
     </CustomBuild>
     <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\compression.hlsli" />
-    <None Include="..\renderer11\shaders\common\dslighting_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\functions.hlsli" />
+    <None Include="..\renderer11\shaders\common\gbuffer.hlsli" />
     <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\common\uber.hlsli" />
     <None Include="..\renderer11\shaders\common\uber_defines.hlsli" />

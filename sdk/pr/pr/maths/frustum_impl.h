@@ -183,6 +183,25 @@ namespace pr
 		// Return true if any portion of the line is within the frustum
 		return t0 < t1;
 	}
+
+	// Returns the corners of the frustum *in frustum space*
+	// Order: (-x,-y,z), (x,-y,z), (x,y,z), (-x,y,z)
+	// Note: this function puts the frustum pointy end at (0,0,0)
+	// with the wide end down the -z axis.
+	inline void GetCorners(Frustum const& frustum, v4 (&corners)[4], float z_)
+	{
+		auto z = frustum.ZDist();
+		auto x = frustum.Width()  * 0.5f * z_ / z;
+		auto y = frustum.Height() * 0.5f * z_ / z;
+		corners[0].set(-x, -y, -z_, 1.0f);
+		corners[1].set( x, -y, -z_, 1.0f);
+		corners[2].set( x,  y, -z_, 1.0f);
+		corners[3].set(-x,  y, -z_, 1.0f);
+	}
+	inline void GetCorners(Frustum const& frustum, v4 (&corners)[4])
+	{
+		GetCorners(frustum, corners, frustum.ZDist());
+	}
 }
 
 #endif

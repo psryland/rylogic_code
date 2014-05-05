@@ -11,22 +11,22 @@
 #if SHADER_BUILD
 cbuffer CBufCamera :register(b0)
 {
-	// Camera transform
-	matrix m_c2w :packoffset(c0);  // camera to world
-	matrix m_w2c :packoffset(c4);  // world to camera
-	matrix m_w2s :packoffset(c8);  // world to screen
-	matrix m_s2c :packoffset(c12); // screen to camera
+	matrix m_c2w        :packoffset(c0);  // camera to world
+	matrix m_c2s        :packoffset(c4);  // camera to screen
+	matrix m_w2c        :packoffset(c8);  // world to camera
+	matrix m_w2s        :packoffset(c12); // world to screen
+	float4 m_frustum[4] :packoffset(c16); // View frustum corners in camera space
 };
 #else
 struct CBufCamera
 {
 	enum { Slot = 0 };
-	
-	// Camera transform
+
 	pr::m4x4 m_c2w; // camera to world
+	pr::m4x4 m_c2s; // camera to screen
 	pr::m4x4 m_w2c; // world to camera
 	pr::m4x4 m_w2s; // world to screen
-	pr::m4x4 m_s2c; // screen to camera
+	pr::v4 m_frustum[4]; // View frustum corners in camera space
 };
 #endif
 
@@ -35,13 +35,13 @@ struct CBufCamera
 cbuffer CBufLighting :register(b1)
 {
 	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
-	float4 m_global_lighting    :packoffset(c12); // Encoded info for global lighting
-	float4 m_ws_light_direction :packoffset(c13); // The direction of the global light source
-	float4 m_ws_light_position  :packoffset(c14); // The position of the global light source
-	float4 m_light_ambient      :packoffset(c15); // The colour of the ambient light
-	float4 m_light_colour       :packoffset(c16); // The colour of the directional light
-	float4 m_light_specular     :packoffset(c17); // The colour of the specular light. alpha channel is specular power
-	float4 m_spot               :packoffset(c18); // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+	float4 m_global_lighting    :packoffset(c0); // Encoded info for global lighting
+	float4 m_ws_light_direction :packoffset(c1); // The direction of the global light source
+	float4 m_ws_light_position  :packoffset(c2); // The position of the global light source
+	float4 m_light_ambient      :packoffset(c3); // The colour of the ambient light
+	float4 m_light_colour       :packoffset(c4); // The colour of the directional light
+	float4 m_light_specular     :packoffset(c5); // The colour of the specular light. alpha channel is specular power
+	float4 m_spot               :packoffset(c6); // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 #else
 struct CBufLighting
@@ -80,7 +80,7 @@ cbuffer CBufModel :register(b2)
 struct CBufModel
 {
 	enum { Slot = 2 };
-	
+
 	// Object transform
 	pr::m4x4   m_o2s; // object to screen
 	pr::m4x4   m_o2w; // object to world

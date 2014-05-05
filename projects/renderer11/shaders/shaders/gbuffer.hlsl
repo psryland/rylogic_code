@@ -9,10 +9,10 @@
 // VS input format
 struct VS_INPUT
 {
-	float3 pos   :Position;
-	float4 diff0 :Color0;
-	float3 norm  :Normal;
-	float2 tex0  :TexCoord0;
+	float3 pos  :Position;
+	float4 diff :Color0;
+	float3 norm :Normal;
+	float2 tex  :TexCoord0;
 };
 
 // PS input format
@@ -21,8 +21,8 @@ struct PS_INPUT
 	float4 ss_pos  :SV_Position;
 	float4 ws_pos  :Position1;
 	float4 ws_norm :Normal;
-	float4 diff0   :Color0;
-	float2 tex0    :TexCoord0;
+	float4 diff    :Color0;
+	float2 tex     :TexCoord0;
 };
 
 // Diffuse texture0 /w sampler
@@ -43,14 +43,14 @@ PS_INPUT main(VS_INPUT In)
 	Out.ws_norm = m_geom.y != 0 ? mul(m_o2w,ms_norm) : float4(0,0,1,0);
 
 	// Tinting
-	Out.diff0 = m_tint;
+	Out.diff = m_tint;
 
 	// Per Vertex colour
 	if (m_geom.x != 0)
-		Out.diff0 = In.diff0 * Out.diff0;
+		Out.diff = In.diff * Out.diff;
 
 	// Texture2D (with transform)
-	Out.tex0 = m_geom.z != 0 ? mul(m_tex2surf0, float4(In.tex0,0,1)).xy : float2(0,0);
+	Out.tex = m_geom.z != 0 ? mul(m_tex2surf0, float4(In.tex,0,1)).xy : float2(0,0);
 
 	return Out;
 }
@@ -61,10 +61,10 @@ PS_INPUT main(VS_INPUT In)
 PS_OUTPUT_GBUFFER main(PS_INPUT In)
 {
 	// Tinting
-	float4 diff = In.diff0;
+	float4 diff = In.diff;
 
 	// Texture2D (with transform)
-	diff = m_geom.z != 0 ? m_texture0.Sample(m_sampler0, In.tex0) * diff : diff;
+	diff = m_geom.z != 0 ? m_texture0.Sample(m_sampler0, In.tex) * diff : diff;
 
 	// Transform
 	float4 ws_pos = In.ws_pos;

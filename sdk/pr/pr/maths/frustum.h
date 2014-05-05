@@ -16,11 +16,11 @@
 
 namespace pr
 {
-	struct Frustum
+	struct alignas(16) Frustum
 	{
 		// The inward pointing normals of the faces of the frustum
 		// Note: the frustum grows down the negative z axis, i.e. the
-		// z value of the pointy end is greater than the base end.
+		// z value of the pointy end is more positive than the base end.
 		// This is because cameras generally look down the negative z axis
 		// in righthanded space so that the x axis is to the right and the y axis is up.
 		m4x4 m_Tnorms;
@@ -33,8 +33,7 @@ namespace pr
 		Frustum& setFA(float fovY, float aspect, float zfar = 0);
 		Frustum& setHV(float horz_angle, float vert_angle, float zfar = 0);
 
-		// Get/Set the z position of the sharp end.
-		// This is the distance to the far clip plane
+		// Get/Set the z position of the sharp end or equivelantly, the distance to the far clip plane.
 		void ZDist(float zero);
 		float ZDist() const;
 
@@ -81,6 +80,12 @@ namespace pr
 	// 't0' and 't1' must be initialised. Returns true if t0 < t1 i.e. some of
 	// the line is within the frustum.
 	bool Intersect(Frustum const& frustum, v4 const& s, v4 const& e, float& t0, float& t1, bool include_far_plane);
+
+	// Returns the corners of the frustum *in frustum space*
+	// Order: (-x,-y,z), (x,-y,z), (x,y,z), (-x,y,z)
+	// Note: this function puts the frustum pointy end at (0,0,0)
+	void GetCorners(Frustum const& frustum, v4 (&corners)[4], float z);
+	void GetCorners(Frustum const& frustum, v4 (&corners)[4]);
 }
 
 #endif

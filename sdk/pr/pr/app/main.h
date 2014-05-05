@@ -105,7 +105,7 @@ namespace pr
 			Main(Setup setup, MainGUI& gui)
 				:m_settings(setup.UserSettings())
 				,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
-				,m_scene(m_rdr)
+				,m_scene(m_rdr,{pr::rdr::ERenderStep::GBufferCreate, pr::rdr::ERenderStep::DSLighting})
 				,m_cam()
 				,m_gui(gui)
 				,m_rdr_pending(false)

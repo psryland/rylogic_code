@@ -25,8 +25,9 @@ namespace pr
 		template <typename TCBuf> void SetViewConstants(SceneView const& view, TCBuf& cb)
 		{
 			cb.m_c2w = view.m_c2w;
-			cb.m_w2c = pr::GetInverse(view.m_c2w);
-			cb.m_w2s = view.m_c2s * pr::GetInverseFast(view.m_c2w);
+			cb.m_c2s = view.m_c2s;
+			cb.m_w2c = pr::GetInverseFast(cb.m_c2w);
+			cb.m_w2s = cb.m_c2s * cb.m_w2c;
 		}
 
 		// Helper for setting lighting constants
@@ -195,7 +196,7 @@ namespace pr
 				DXGI_FORMAT fmt[RTCount] =
 				{
 					DXGI_FORMAT_R10G10B10A2_UNORM, // diffuse , normal Z sign  //DXGI_FORMAT_R8G8B8A8_UNORM,
-					DXGI_FORMAT_R16G16_SNORM,      // normal x,y //DXGI_FORMAT_R11G11B10_FLOAT,
+					DXGI_FORMAT_R16G16_UNORM,      // normal x,y //DXGI_FORMAT_R11G11B10_FLOAT,
 					DXGI_FORMAT_R32_FLOAT,         // depth layer
 				};
 				for (int i = 0; i != RTCount; ++i)
@@ -339,10 +340,11 @@ namespace pr
 				float const t0 = 0.000f, t1 = 0.9999f;
 				VertPCNT verts[4] =
 				{
-					{pr::v3::make( px0, py0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
-					{pr::v3::make( px1, py0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
-					{pr::v3::make( px1, py1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
-					{pr::v3::make( px0, py1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
+					// Encode the view frustum corner index in 'pos.z', biased for the float to int cast
+					{pr::v3::make(px0, py0, 0.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
+					{pr::v3::make(px1, py0, 1.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
+					{pr::v3::make(px1, py1, 2.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
+					{pr::v3::make(px0, py1, 3.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
 				};
 				pr::uint16 idxs[] =
 				{
@@ -369,8 +371,16 @@ namespace pr
 			}
 
 			// Disable Z-buffer
-		//	m_dsb.Set(EDS::DepthEnable, false);
-		//	m_dsb.Set(EDS::DepthWriteMask, false);
+			m_dsb.Set(EDS::DepthEnable, false);
+			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
+		}
+
+		// Set the camera space position of the four corners of the view frustum in camera space
+		void SetFrustumCorners(SceneView const& view, GBuffer::CBufCamera& cb)
+		{
+			pr::GetCorners(view.Frustum(), cb.m_frustum, 1.0f);
+			//for (auto& pt : cb.m_frustum)
+			////	pt = cb.m_c2w * pt;
 		}
 
 		// Perform the render step
@@ -383,11 +393,11 @@ namespace pr
 			//if (m_clear_bb)
 			{
 				// Get the render target views
-				D3DPtr<ID3D11RenderTargetView> rtv;
-				D3DPtr<ID3D11DepthStencilView> dsv;
-				ss.m_dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-			//	ss.m_dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
-				ss.m_dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
+				//D3DPtr<ID3D11RenderTargetView> rtv;
+				//D3DPtr<ID3D11DepthStencilView> dsv;
+				//ss.m_dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+				//ss.m_dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
+				//ss.m_dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 			}
 
 			// Set the viewport
@@ -395,13 +405,13 @@ namespace pr
 
 			{// Set camera constants
 				GBuffer::CBufCamera cb = {};
-				SetViewConstants(m_scene->m_view, cb); // We need the camera transform to calculate ws_pos from the depth
-				cb.m_s2c = pr::GetInverse(m_scene->m_view.m_c2s);
+				SetViewConstants(m_scene->m_view, cb);
+				SetFrustumCorners(m_scene->m_view, cb);
 				WriteConstants(ss.m_dc, m_cbuf_camera, cb);
 			}
 			{// Set lighting constants
 				GBuffer::CBufLighting cb = {};
-				WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
+			//	WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
 			}
 
 			// Draw the full screen quad

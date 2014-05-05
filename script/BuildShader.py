@@ -4,7 +4,7 @@
 #
 # Build shaders using fxc.exe
 # Use:
-#  BuildShader.py $(Fullpath) [pp] [obj]
+#  BuildShader.py $(Fullpath) [pp] [obj] [debug]
 #
 # Expected input is an hlsl file.
 # The file is scanned for: PR_RDR_SHADER_VS, PR_RDR_SHADER_PS, etc
@@ -30,9 +30,10 @@ try:
 	fullpath = sys.argv[1]
 
 	# Check for optional parameters
-	pp    = True if "pp"    in sys.argv else False
-	obj   = True if "obj"   in sys.argv else False
-	trace = True if "trace" in sys.argv else False
+	pp    = True if "pp"    in [arg.lower() for arg in sys.argv] else False
+	obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
+	dbg   = True if "debug" in [arg.lower() for arg in sys.argv] else False
+	trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
 	if trace: print("pp:" + str(pp) + "  obj:" + str(obj))
 
 	# Find the source and output directories
@@ -87,10 +88,11 @@ try:
 			elif shdr == "gs": defines = defines + ["/DPR_RDR_SHADER_GS=1"]
 
 			# Set other command line options
-			options = ["/nologo", "/Gis", "/Ges", "/WX"]
+			options = ["/nologo", "/Gis", "/Ges", "/WX", "/Zpc"]
 			
-			# Uncomment this for debugging
-			options += ["/Od", "/Zi"]
+			# Debug build options
+			if dbg:
+				options += ["/Od", "/Zi"]
 
 			# Build the shader using fxc
 			if trace: print("Running fxc.exe...")

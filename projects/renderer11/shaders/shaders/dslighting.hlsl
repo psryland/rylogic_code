@@ -9,23 +9,24 @@
 // VS input format
 struct VS_INPUT
 {
-	float3 pos  :Position;
-	float4 diff :Color0;
-	float3 norm :Normal;
-	float2 tex0 :TexCoord0;
+	float3 pos  :Position;    // x,y = unused.  z = view frustum corner index
+	float4 diff :Color0;      // unused
+	float3 norm :Normal;      // unused
+	float2 tex  :TexCoord0;
 };
 
 // PS input format
 struct PS_INPUT
 {
-	float4 ss_pos :SV_Position;
-	float2 tex0   :TexCoord0;
+	float4 ss_pos  :SV_Position;
+	float2 tex     :TexCoord0;
+	float4 cs_vdir :TexCoord1;    // direction vector to the  projected point on the view frustum far plane
 };
 
 // PS output format
 struct PS_OUTPUT
 {
-	float4 diff0 :SV_Target0;
+	float4 diff :SV_Target0;
 };
 
 // Vertex shader
@@ -33,8 +34,9 @@ struct PS_OUTPUT
 PS_INPUT main(VS_INPUT In)
 {
 	PS_INPUT Out;
-	Out.ss_pos = float4(In.pos ,1);
-	Out.tex0 = In.tex0;
+	Out.cs_vdir = m_frustum[(int)In.pos.z];
+	Out.ss_pos = mul(m_c2s, Out.cs_vdir);
+	Out.tex = In.tex;
 	return Out;
 }
 #endif
@@ -44,17 +46,23 @@ PS_INPUT main(VS_INPUT In)
 PS_OUTPUT main(PS_INPUT In)
 {
 	// Sample the gbuffer
-	GPixel px = ReadGBuffer(In.tex0);
-	PS_OUTPUT Out;
-
+	GPixel px = ReadGBuffer(In.tex, normalize(In.cs_vdir.xyz));
+	float4 ws_pos = mul(m_c2w, float4(px.cs_pos,1));
+	
 	// Do lighting...
 
 	// Output the lit pixel
-	//Out.diff0 = px.diff;
-	//Out.diff0 = abs(px.ws_norm);
-	//Out.diff0 = saturate(0.5f * (1 - px.ws_pos.z)) * float4(1,1,1,1);
-	Out.diff0 = float4(1,1,1,1) * abs(frac(px.ws_pos.z));
-	//Out.diff0 = float4(1,0,1,1);
+	PS_OUTPUT Out;
+	//Out.diff = float4(1,0,1,1);
+	//Out.diff = px.diff;
+	//Out.diff = abs(float4(px.ws_norm,0));
+	//Out.diff = float4(1,1,1,1) * m_tex_depth.Sample(m_point_sampler, In.tex)*0.1f;
+	//Out.diff = saturate(0.5f * (1 - ws_pos.z)) * float4(1,1,1,1);
+	//Out.diff = float4(1,1,1,1) * frac(px.cs_pos.x);
+	//Out.diff = float4(1,1,1,1) * (ws_pos.x);
+	Out.diff = frac(float4(1,1,1,1) * ws_pos.x);
+	//Out.diff = normalize(float4(abs(In.cs_vdir),1));
+	//Out.diff = float4(In.tex,0,1);
 	return Out;
 }
 #endif

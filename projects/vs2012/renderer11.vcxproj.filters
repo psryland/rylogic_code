@@ -352,7 +352,7 @@
     <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli">
       <Filter>shaders\common</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\dslighting_cbuf.hlsli">
+    <None Include="..\renderer11\shaders\common\gbuffer.hlsli">
       <Filter>shaders\common</Filter>
     </None>
   </ItemGroup>
