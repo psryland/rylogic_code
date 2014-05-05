@@ -37,10 +37,11 @@ namespace pr.gui
 		public View3dControl() :this(null) {}
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3dControl(View3d.ReportErrorCB error_cb)
+		public View3dControl(View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
 		{
 			if (Util.DesignTime) return;
-			View3d = new View3d(Handle, error_cb);
+			View3d = new View3d(Handle, error_cb, log_cb);
+			Camera = new View3d.CameraControls(View3d.Drawset);
 
 			InitializeComponent();
 
@@ -55,8 +56,11 @@ namespace pr.gui
 		/// <summary>Clean up any resources being used.</summary>
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing) View3d.Dispose();
-			if (disposing && (components != null))
+			if (disposing && View3d != null)
+			{
+				View3d.Dispose();
+			}
+			if (disposing && components != null)
 			{
 				components.Dispose();
 			}
@@ -66,11 +70,27 @@ namespace pr.gui
 		/// <summary>The underlying interop wrapper</summary>
 		public View3d View3d { get; private set; }
 
+		/// <summary>The main camera</summary>
+		public View3d.CameraControls Camera { get; private set; }
+
+		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
+		public void SignalRefresh()
+		{
+			View3d.SignalRefresh();
+		}
+
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event View3d.ReportErrorCB OnError
 		{
 			add    { View3d.OnError += value; }
 			remove { View3d.OnError -= value; }
+		}
+
+		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
+		public event View3d.LogOutputCB OnLog
+		{
+			add    { View3d.OnLog += value; }
+			remove { View3d.OnLog -= value; }
 		}
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
@@ -160,7 +180,7 @@ namespace pr.gui
 			MouseMove -= OnMouseMove;
 			MouseMove += OnMouseMove;
 			Capture = true;
-			View3d.Navigate(e.Location, e.Button, true);
+			Camera.MouseNavigate(e.Location, e.Button, true);
 			m_mouse_down_at = Environment.TickCount;
 		}
 		public void OnMouseUp(object sender, MouseEventArgs e)
@@ -168,7 +188,7 @@ namespace pr.gui
 			Cursor = Cursors.Default;
 			MouseMove -= OnMouseMove;
 			Capture = false;
-			View3d.Navigate(e.Location, 0, true);
+			Camera.MouseNavigate(e.Location, 0, true);
 
 			// Short clicks bring up the context menu
 			if (e.Button == MouseButtons.Right && Environment.TickCount - m_mouse_down_at < ClickTimeMS)
@@ -177,13 +197,13 @@ namespace pr.gui
 		public void OnMouseMove(object sender, MouseEventArgs e)
 		{
 			if (Drawset == null) return;
-			View3d.Navigate(e.Location, e.Button, false);
+			Camera.MouseNavigate(e.Location, e.Button, false);
 			Drawset.Render();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Drawset == null) return;
-			View3d.NavigateZ(e.Delta / 120f);
+			Camera.Navigate(0f, 0f, e.Delta / 120f);
 			Drawset.Render();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)
@@ -191,7 +211,7 @@ namespace pr.gui
 			if (Drawset == null) return;
 			if (Bit.AllSet((int)e.Button, (int)MouseButtons.Middle) ||
 				Bit.AllSet((int)e.Button, (int)(MouseButtons.Left|MouseButtons.Right)))
-				Drawset.ResetZoom();
+				Camera.ResetZoom();
 			Drawset.Render();
 		}
 
@@ -430,6 +450,8 @@ namespace pr.gui
 		/// <summary>On Resize</summary>
 		protected override void OnResize(EventArgs e)
 		{
+			if (Util.DesignTime) { base.OnResize(e); return; }
+
 			base.OnResize(e);
 			View3d.RenderTargetSize = new Size(Width-2, Height-2);
 			//Refresh();
@@ -438,6 +460,8 @@ namespace pr.gui
 		/// <summary>Absorb PaintBackground events</summary>
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
+			if (Util.DesignTime) { base.OnPaintBackground(e); return; }
+
 			if (Drawset == null)
 				base.OnPaintBackground(e);
 		}
@@ -445,7 +469,8 @@ namespace pr.gui
 		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			// Render the control
+			if (Util.DesignTime) { base.OnPaint(e); return; }
+
 			if (Drawset == null) base.OnPaint(e);
 			else Drawset.Render();
 		}

@@ -521,15 +521,15 @@ VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY
 // void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, TRUE); }
 // void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), 0, TRUE); }
-VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end)
+// BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
+VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		if (nav_start_or_end)  drawset->m_camera.MoveRef(point, button_state);
-		else if (button_state) drawset->m_camera.Move   (point, button_state);
+		drawset->m_camera.MouseControl(point, button_state, nav_start_or_end != 0);
 	}
 	catch (std::exception const& ex)
 	{
@@ -537,20 +537,19 @@ VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, pr::v2 point, i
 	}
 }
 
-// Z axis mouse movement
-// BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_NavigateZ(m_drawset, zDelta / 120.0f); return TRUE; }
-VIEW3D_API void __stdcall View3D_NavigateZ(View3DDrawset drawset, float delta)
+// Direct movement of the camera
+VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, float dx, float dy, float dz)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.MoveZ(delta, true);
+		drawset->m_camera.Translate(dx, dy, dz);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_NavigateZ failed", ex);
+		Dll().ReportError("View3D_NavigateXY failed", ex);
 	}
 }
 

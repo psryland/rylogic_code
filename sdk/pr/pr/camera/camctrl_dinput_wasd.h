@@ -67,13 +67,13 @@ namespace pr
 					pr::v2 mv = pr::v2::make(
 						 5.0f * m_pan_speed * m_mouse.dx() / float(m_area.SizeX()),
 						-5.0f * m_pan_speed * m_mouse.dy() / float(m_area.SizeY()));
-					m_cam->MoveRef(pr::v2Zero, ENavBtn::Right);
-					m_cam->Move(mv, ENavBtn::Right);
-					m_cam->MoveRef(mv, 0);
+					m_cam->MouseControl(pr::v2Zero, ENavBtn::Right, true);
+					m_cam->MouseControl(mv, ENavBtn::Right, false);
+					m_cam->MouseControl(mv, 0, true);
 				}
 				
-				// Mouse wheel controls zoon
-				m_cam->MoveZ(0.01f * m_zoom_speed * m_mouse.dz(), true);
+				// Mouse wheel controls zoom
+				m_cam->Translate(0.0f, 0.0f, 0.01f * m_zoom_speed * m_mouse.dz(), true);
 				
 				// Camera focus point acceleration
 				pr::v4 lin_acc = pr::v4Zero; float rot = 0.0f;

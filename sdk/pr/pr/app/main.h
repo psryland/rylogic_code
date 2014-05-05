@@ -125,13 +125,12 @@ namespace pr
 			// Mouse navigation
 			virtual void Nav(pr::v2 const& pt, int btn_state, bool nav_start_stop)
 			{
-				if (nav_start_stop) m_cam.MoveRef(pt, btn_state);
-				else                m_cam.Move(pt, btn_state);
+				m_cam.MouseControl(pt, btn_state, nav_start_stop);
 				RenderNeeded();
 			}
 			virtual void NavZ(float delta)
 			{
-				m_cam.MoveZ(delta, true);
+				m_cam.Translate(0, 0, delta);
 				RenderNeeded();
 			}
 

@@ -134,10 +134,10 @@ namespace pr
 		{}
 
 		// Return the camera to world transform
-		void CameraToWorld(pr::m4x4 const& c2w, bool update_base)
+		void CameraToWorld(pr::m4x4 const& c2w, bool commit = true)
 		{
 			m_c2w = c2w;
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit) Commit();
 		}
 		pr::m4x4 CameraToWorld() const
 		{
@@ -323,37 +323,32 @@ namespace pr
 			m_base_focus_dist = m_focus_dist = dist;
 		}
 
-		// Set the reference point for the start and end of a move operation
-		// The start of a move operation is indicated by 'btn_state' being non-zero
-		// The end of the move operation is indicated by 'btn_state' being zero
-		// Note: 'point' should be normalised. i.e. x=[-1,-1], y=[-1,1]
-		void MoveRef(pr::v2 const& point, int btn_state)
+		// Modify the camera position based on mouse movement.
+		// 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		// The start of a mouse movement is indicated by 'btn_state' being non-zero
+		// The end of the mouse movement is indicated by 'btn_state' being zero
+		// 'ref_point' should be true on the mouse down/up event, false while dragging
+		void MouseControl(pr::v2 const& point, int btn_state, bool ref_point)
 		{
-			if (btn_state & camera::ENavBtn::Left)   m_Lref = point;
-			if (btn_state & camera::ENavBtn::Right)  m_Rref = point;
-			if (btn_state & camera::ENavBtn::Middle) m_Mref = point;
-			m_base_c2w  = m_c2w;
-			m_base_fovY = m_fovY;
-			m_base_focus_dist = m_focus_dist;
-			pr::Orthonormalise(m_base_c2w);
-		}
-
-		// Modify the camera position based on mouse movement
-		// Note: 'point' should be normalised. i.e. x=[-1, -1], y=[-1,1]
-		// with -1 = left and bottom. i.e. normal cartesian axes
-		void Move(pr::v2 const& point, int btn_state)
-		{
+			// Button states
 			bool lbtn = (btn_state & camera::ENavBtn::Left) != 0;
 			bool rbtn = (btn_state & camera::ENavBtn::Right) != 0;
 			bool mbtn = (btn_state & camera::ENavBtn::Middle) != 0;
 
+			if (ref_point)
+			{
+				if (btn_state & camera::ENavBtn::Left)   m_Lref = point;
+				if (btn_state & camera::ENavBtn::Right)  m_Rref = point;
+				if (btn_state & camera::ENavBtn::Middle) m_Mref = point;
+				Commit();
+			}
 			if (mbtn || (lbtn && rbtn))
 			{
 				if (KeyDown(m_key[camera::ENavKey::TranslateZ]))
 				{
 					// Move in a fraction of the focus distance
 					float delta = mbtn ? (point.y - m_Mref.y) : (point.y - m_Lref.y);
-					MoveZ(delta * 10.0f, false);
+					Translate(0, 0, delta * 10.0f, false);
 				}
 				else
 				{
@@ -376,29 +371,8 @@ namespace pr
 			}
 		}
 
-		// Translate in the Z axis direction
-		void MoveZ(float delta, bool update_base)
-		{
-			// Ignore if we're locked in the z translation direction
-			if (m_lock_mask & m_lock_mask[camera::LockMask::TransZ])
-			{
-				return;
-			}
-			if (KeyDown(m_key[camera::ENavKey::Accurate]))
-			{
-				delta *= m_accuracy_scale;
-				if (KeyDown(m_key[camera::ENavKey::SuperAccurate]))
-					delta *= m_accuracy_scale;
-			}
-
-			// Move in a fraction of the focus distance
-			float movez = -m_base_focus_dist * delta * 0.1f;
-			if (!KeyDown(m_key[camera::ENavKey::TranslateZ])) m_focus_dist = m_base_focus_dist + movez;
-			Translate(0.0f, 0.0f, movez, update_base);
-		}
-
 		// Translate by a camera relative amount
-		void Translate(float dx, float dy, float dz, bool update_base)
+		void Translate(float dx, float dy, float dz, bool commit = true)
 		{
 			if (m_lock_mask && m_lock_mask[camera::LockMask::CameraRelative])
 			{
@@ -419,6 +393,11 @@ namespace pr
 				}
 			}
 
+			// Move in a fraction of the focus distance
+			dz = -m_base_focus_dist * dz * 0.1f;
+			if (!KeyDown(m_key[camera::ENavKey::TranslateZ]))
+				m_focus_dist = m_base_focus_dist + dz;
+
 			// Translate
 			m_c2w.pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * pr::v4::make(dx, dy, dz, 0.0f);
 
@@ -431,13 +410,13 @@ namespace pr
 			}
 
 			// Set the base values
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit) Commit();
 
 			m_moved = true;
 		}
 
 		// Rotate the camera by Euler angles about the focus point
-		void Rotate(float pitch, float yaw, float roll, bool update_base)
+		void Rotate(float pitch, float yaw, float roll, bool commit = true)
 		{
 			if (m_lock_mask)
 			{
@@ -472,13 +451,13 @@ namespace pr
 				pr::LookAt(m_c2w, m_c2w.pos, old_focus, m_align);
 
 			// Set the base values
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit) Commit();
 
 			m_moved = true;
 		}
 
 		// Zoom the field of view. 'zoom' should be in the range (-1, 1) where negative numbers zoom in, positive out
-		void Zoom(float zoom, bool update_base)
+		void Zoom(float zoom, bool commit = true)
 		{
 			if (m_lock_mask)
 			{
@@ -495,9 +474,18 @@ namespace pr
 			m_fovY = pr::Clamp(m_fovY, pr::maths::tiny, pr::maths::tau_by_2 - pr::maths::tiny);
 
 			// Set the base values
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit) Commit();
 
 			m_moved = true;
+		}
+
+		// Set the current position, fov, and focus distance as the position reference
+		void Commit()
+		{
+			m_base_c2w  = m_c2w;
+			m_base_fovY = m_fovY;
+			m_base_focus_dist = m_focus_dist;
+			pr::Orthonormalise(m_base_c2w);
 		}
 
 		// Return the current zoom scaling factor
@@ -533,13 +521,13 @@ namespace pr
 		}
 
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
-		void LookAt(pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up, bool update_base)
+		void LookAt(pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up, bool commit = true)
 		{
 			pr::LookAt(m_c2w, position, lookat, up);
 			m_focus_dist = Length3(lookat - position);
 
 			// Set the base values
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit) Commit();
 		}
 
 		// Position the camera so that all of 'bbox' is visible to the camera when looking 'forward' and 'up'
@@ -568,7 +556,7 @@ namespace pr
 		}
 
 		// Orbit the camera about the focus point by 'angle_rad' radians
-		void Orbit(float angle_rad, bool update_base)
+		void Orbit(float angle_rad, bool commit = true)
 		{
 			// Record the focus point
 			pr::v4 old_focus = FocusPoint();
@@ -582,7 +570,8 @@ namespace pr
 			pr::Orthonormalise(m_c2w);
 
 			// Set the base values
-			if (update_base) MoveRef(v2Zero, 0);
+			if (commit)
+				Commit();
 
 			m_moved = true;
 		}
@@ -604,8 +593,8 @@ namespace pr
 			{
 				if (KeyDown(VK_LEFT )) Translate(-mov,0,0,true);
 				if (KeyDown(VK_RIGHT)) Translate( mov,0,0,true);
-				if (KeyDown(VK_UP   )) MoveZ(-mov,true);
-				if (KeyDown(VK_DOWN )) MoveZ( mov,true);
+				if (KeyDown(VK_UP   )) Translate(0,0,-mov,true);
+				if (KeyDown(VK_DOWN )) Translate(0,0, mov,true);
 			}
 		}
 	};

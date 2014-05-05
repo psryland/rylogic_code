@@ -15,6 +15,7 @@ using pr.extn;
 using pr.maths;
 using pr.gfx;
 using pr.ldr;
+using pr.util;
 
 namespace pr.gui
 {
@@ -156,6 +157,8 @@ namespace pr.gui
 		public DiagramControl() :this(new RdrOptions()) {}
 		private DiagramControl(RdrOptions rdr_options)
 		{
+			if (Util.DesignTime) return;
+
 			m_view3d         = new View3d(Handle);
 			m_rdr_options    = rdr_options;
 			m_eb_update_diag = new EventBatcher(UpdateDiagram);
@@ -175,12 +178,15 @@ namespace pr.gui
 						m_eb_update_diag.Signal();
 				};
 
-			Load += (s,a) => ResetView();
+			ResetView();
 			MouseNavigation = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_view3d.Dispose();
+			if (disposing && m_view3d != null)
+			{
+				m_view3d.Dispose();
+			}
 			if (disposing && (components != null))
 			{
 				components.Dispose();
@@ -254,9 +260,9 @@ namespace pr.gui
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
-			m_view3d.NavigateZ(e.Delta / 120f);
-			var point = PointToDiagram(e.Location);
-			PositionDiagram(e.Location, point);
+			m_camera.Navigate(0, 0, e.Delta / 120f);
+			//var point = PointToDiagram(e.Location);
+			//PositionDiagram(e.Location, point);
 			Refresh();
 		}
 
@@ -274,13 +280,13 @@ namespace pr.gui
 		/// <summary>Reset the view of the diagram back to the default</summary>
 		public void ResetView(bool reset_position = true, bool reset_size = true)
 		{
-			if (reset_position)
-			{
-				m_camera.SetPosition(new v4(0,0,10,1), v4.Origin, v4.YAxis);
-			}
 			if (reset_size)
 			{
 				m_camera.FocusDist = 0.5f * Height / (float)Math.Tan(m_camera.FovY * 0.5f);
+			}
+			if (reset_position)
+			{
+				m_camera.SetPosition(new v4(0,0,m_camera.FocusDist,1), v4.Origin, v4.YAxis);
 			}
 		}
 
@@ -291,11 +297,6 @@ namespace pr.gui
 		{
 			var ws = m_camera.WSPointFromSSPoint(point);
 			return new PointF(ws.x, ws.y);
-			//var wind = m_window.Lower();
-			//var rect = DiagramRegion(ClientSize);
-			//return new PointF(
-			//	wind.x + (point.X - rect.Left) * m_window.SizeX / rect.Width ,
-			//	wind.y + (point.Y - rect.Top ) * m_window.SizeY / rect.Height);
 		}
 
 		/// <summary>Returns a point in client space from a point in diagram space. Inverse of PointToDiagram</summary>
@@ -303,11 +304,6 @@ namespace pr.gui
 		{
 			var ws = new v4(point.X, point.Y, 0.0f, 1.0f);
 			return m_camera.SSPointFromWSPoint(ws);
-			//var wind = m_window.Lower();
-			//var rect = DiagramRegion(ClientSize);
-			//return new Point(
-			//	(int)(rect.Left + (point.X - wind.x) * rect.Width  / m_window.SizeX),
-			//	(int)(rect.Top  + (point.Y - wind.y) * rect.Height / m_window.SizeY));
 		}
 
 		/// <summary>Shifts the camera so that diagram space position 'ds' is at client space position 'cs'</summary>
@@ -315,16 +311,15 @@ namespace pr.gui
 		{
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
 			var dst = PointToDiagram(cs);
-			var o2w = m_camera.O2W;
-			o2w.p.x += ds.X - dst.X;
-			o2w.p.y += ds.Y - dst.Y;
-			m_camera.O2W = o2w;
+			m_camera.Navigate(ds.X - dst.X, ds.Y - dst.Y, 0);
 			Refresh();
 		}
 
 		/// <summary>Resize the control</summary>
 		protected override void OnResize(EventArgs e)
 		{
+			if (Util.DesignTime) { base.OnResize(e); return; }
+
 			base.OnResize(e);
 			m_view3d.RenderTargetSize = new Size(Width,Height);
 		}
@@ -332,6 +327,8 @@ namespace pr.gui
 		// Absorb this event
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
+			if (Util.DesignTime) { base.OnPaintBackground(e); return; }
+
 			if (m_view3d.Drawset == null)
 				base.OnPaintBackground(e);
 		}
@@ -339,14 +336,10 @@ namespace pr.gui
 		// Paint the control
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (m_view3d.Drawset == null)
-			{
-				base.OnPaint(e);
-			}
-			else
-			{
-				m_view3d.Drawset.Render();
-			}
+			if (Util.DesignTime) { base.OnPaint(e); return; }
+
+			if (m_view3d.Drawset == null) base.OnPaint(e);
+			else m_view3d.Drawset.Render();
 		}
 
 		/// <summary>Get the rectangular area of the diagram for a given client area.</summary>

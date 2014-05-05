@@ -397,62 +397,10 @@ namespace pr.gfx
 			return new DrawsetInterface(this);
 		}
 
-		/// <summary>Create multiple objects from a source file and associate them with 'context_id'</summary>
-		public void ObjectsCreateFromFile(string ldr_filepath, int context_id, bool async)
-		{
-			View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async);
-		}
-		public void ObjectsCreateFromFile(string ldr_filepath, bool async)
-		{
-			ObjectsCreateFromFile(ldr_filepath, DefaultContextId, async);
-		}
-
-		/// <summary>Delete all objects matching 'context_id'</summary>
-		public void ObjectsDelete(int context_id)
-		{
-			View3D_ObjectsDeleteById(context_id);
-		}
-
 		/// <summary>Show a window containing and example ldr script file</summary>
 		public void ShowExampleScript()
 		{
 			View3D_ShowDemoScript();
-		}
-
-		/// <summary>Example for creating objects</summary>
-		public void CreateDemoScene()
-		{
-			if (Drawset == null) return;
-			View3D_CreateDemoScene(Drawset.Handle);
-
-			//{// Create an object using ldr script
-			//    HObject obj = ObjectCreate("*Box ldr_box FFFF00FF {1 2 3}");
-			//    DrawsetAddObject(obj);
-			//}
-
-			//{// Create a box model, an instance for it, and add it to the drawset
-			//    HModel model = CreateModelBox(new v4(0.3f, 0.2f, 0.4f, 0f), m4x4.Identity, 0xFFFF0000);
-			//    HInstance instance = CreateInstance(model, m4x4.Identity);
-			//    AddInstance(drawset, instance);
-			//}
-
-			//{// Create a mesh
-			//    // Mesh data
-			//    Vertex[] vert = new Vertex[]
-			//    {
-			//        new Vertex(new v4( 0f, 0f, 0f, 1f), v4.ZAxis, 0xFFFF0000, v2.Zero),
-			//        new Vertex(new v4( 0f, 1f, 0f, 1f), v4.ZAxis, 0xFF00FF00, v2.Zero),
-			//        new Vertex(new v4( 1f, 0f, 0f, 1f), v4.ZAxis, 0xFF0000FF, v2.Zero),
-			//    };
-			//    ushort[] face = new ushort[]
-			//    {
-			//        0, 1, 2
-			//    };
-
-			//    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
-			//    HInstance instance = CreateInstance(model, m4x4.Identity);
-			//    AddInstance(drawset, instance);
-			//}
 		}
 
 		/// <summary>Show/Hide the object manager UI</summary>
@@ -473,20 +421,6 @@ namespace pr.gfx
 		{
 			get { return View3D_Viewport(); }
 			set { View3D_SetViewport(value); }
-		}
-
-		/// <summary>Direct X/Y navigation. 'point' is a point in client rect space.</summary>
-		public void Navigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
-		{
-			if (Drawset == null) return;
-			View3D_Navigate(Drawset.Handle, NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
-		}
-
-		/// <summary>Direct Z navigation</summary>
-		public void NavigateZ(float delta)
-		{
-			if (Drawset == null) return;
-			View3D_NavigateZ(Drawset.Handle, delta);
 		}
 
 		/// <summary>Standard keyboard shortcuts</summary>
@@ -566,146 +500,6 @@ namespace pr.gfx
 		{
 			// Forward changed settings notification to anyone that cares
 			if (OnSettingsChanged != null) OnSettingsChanged();
-		}
-
-		/// <summary>Namespace for the camera controls</summary>
-		public class CameraControls
-		{
-			private readonly DrawsetInterface m_ds;
-			public CameraControls(DrawsetInterface ds)
-			{
-				m_ds = ds;
-			}
-
-			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
-			public v2 ViewArea(float dist)
-			{
-				return View3D_ViewArea(m_ds.Handle, dist);
-			}
-			public v2 ViewArea()
-			{
-				return ViewArea(FocusDist);
-			}
-
-			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
-			public v4 AlignAxis
-			{
-				get { v4 up; View3D_CameraAlignAxis(m_ds.Handle, out up); return up; }
-				set { View3D_AlignCamera(m_ds.Handle, ref value); }
-			}
-
-			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
-			public float Aspect
-			{
-				get { return View3D_CameraAspect(m_ds.Handle); }
-				set { View3D_SetCameraAspect(m_ds.Handle, value); }
-			}
-
-			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
-			public float FovX
-			{
-				get { return View3D_CameraFovX(m_ds.Handle); }
-				set { View3D_SetCameraFovX(m_ds.Handle, value); }
-			}
-
-			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
-			public float FovY
-			{
-				get { return View3D_CameraFovY(m_ds.Handle); }
-				set { View3D_SetCameraFovY(m_ds.Handle, value); }
-			}
-
-			/// <summary>Get/Set the position of the camera focus point</summary>
-			public v4 FocusPoint
-			{
-				get { v4 pos; View3D_GetFocusPoint(m_ds.Handle, out pos); return pos; }
-				set { View3D_SetFocusPoint(m_ds.Handle, ref value); }
-			}
-
-			/// <summary>Get/Set the distance to the camera focus point</summary>
-			public float FocusDist
-			{
-				get { return View3D_FocusDistance(m_ds.Handle); }
-				set { View3D_SetFocusDistance(m_ds.Handle, value); }
-			}
-
-			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
-			public m4x4 O2W
-			{
-				get { m4x4 c2w; View3D_CameraToWorld(m_ds.Handle, out c2w); return c2w; }
-				set { View3D_SetCameraToWorld(m_ds.Handle, ref value); }
-			}
-
-			/// <summary>Set the camera to world transform and focus distance.</summary>
-			public void SetPosition(v4 position, v4 lookat, v4 up)
-			{
-				View3D_PositionCamera(m_ds.Handle, ref position, ref lookat, ref up);
-			}
-
-			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
-			public void ResetView(v4 forward, v4 up)
-			{
-				View3D_ResetView(m_ds.Handle, ref forward, ref up);
-			}
-
-			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
-			public void ResetView(v4 forward)
-			{
-				var up = AlignAxis;
-				if (up.Length3Sq == 0f) up = v4.YAxis;
-				if (v4.Parallel(up, forward)) up = v4.Perpendicular(forward);
-				ResetView(forward, up);
-			}
-
-			/// <summary>Move the camera to a position that can see the whole scene</summary>
-			public void ResetView()
-			{
-				var up = AlignAxis;
-				if (up.Length3Sq == 0f) up = v4.YAxis;
-				var forward = up.z > up.y ? v4.YAxis : v4.ZAxis;
-				ResetView(forward, up);
-			}
-
-			/// <summary>
-			/// Return a point in world space corresponding to a normalised screen space point.
-			/// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
-			/// The z component should be the world space distance from the camera.</summary>
-			public v4 WSPointFromNormSSPoint(v4 screen)
-			{
-				return View3D_WSPointFromNormSSPoint(m_ds.Handle, ref screen);
-			}
-			public v4 WSPointFromSSPoint(Point screen)
-			{
-				var nss = m_ds.View.NormalisePoint(screen);
-				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f));
-			}
-
-			/// <summary>
-			/// Return a point in normalised screen space corresponding to 'world'
-			/// The returned 'z' component will be the world space distance from the camera.</summary>
-			public v4 NormSSPointFromWSPoint(v4 world)
-			{
-				return View3D_NormSSPointFromWSPoint(m_ds.Handle, ref world);
-			}
-			public Point SSPointFromWSPoint(v4 world)
-			{
-				var nss = NormSSPointFromWSPoint(world);
-				return m_ds.View.ScreenSpacePoint(new v2(nss.x, nss.y));
-			}
-
-			/// <summary>
-			/// Convert a screen space point into a position and direction in world space.
-			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
-			/// The z component of 'screen' should be the world space distance from the camera</summary>
-			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
-			{
-				View3D_WSRayFromNormSSPoint(m_ds.Handle, ref screen, out ws_point, out ws_direction);
-			}
-			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
-			{
-				var nss = m_ds.View.NormalisePoint(screen);
-				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
-			}
 		}
 
 		/// <summary>Methods for adding/removing objects from a drawset</summary>
@@ -883,16 +677,207 @@ namespace pr.gfx
 				set { View3D_SetBackgroundColour(m_ds, value.ToArgb()); }
 			}
 
-			/// <summary>Reset the zoom factor to 1f</summary>
-			public void ResetZoom()
-			{
-				View3D_ResetZoom(m_ds);
-			}
-
 			/// <summary>Cause the drawset to be rendered</summary>
 			public void Render()
 			{
 				View3D_Render(m_ds);
+			}
+
+			/// <summary>Example for creating objects</summary>
+			public void CreateDemoScene()
+			{
+				View3D_CreateDemoScene(Handle);
+
+				//{// Create an object using ldr script
+				//    HObject obj = ObjectCreate("*Box ldr_box FFFF00FF {1 2 3}");
+				//    DrawsetAddObject(obj);
+				//}
+
+				//{// Create a box model, an instance for it, and add it to the drawset
+				//    HModel model = CreateModelBox(new v4(0.3f, 0.2f, 0.4f, 0f), m4x4.Identity, 0xFFFF0000);
+				//    HInstance instance = CreateInstance(model, m4x4.Identity);
+				//    AddInstance(drawset, instance);
+				//}
+
+				//{// Create a mesh
+				//    // Mesh data
+				//    Vertex[] vert = new Vertex[]
+				//    {
+				//        new Vertex(new v4( 0f, 0f, 0f, 1f), v4.ZAxis, 0xFFFF0000, v2.Zero),
+				//        new Vertex(new v4( 0f, 1f, 0f, 1f), v4.ZAxis, 0xFF00FF00, v2.Zero),
+				//        new Vertex(new v4( 1f, 0f, 0f, 1f), v4.ZAxis, 0xFF0000FF, v2.Zero),
+				//    };
+				//    ushort[] face = new ushort[]
+				//    {
+				//        0, 1, 2
+				//    };
+
+				//    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
+				//    HInstance instance = CreateInstance(model, m4x4.Identity);
+				//    AddInstance(drawset, instance);
+				//}
+			}
+		}
+
+		/// <summary>Namespace for the camera controls</summary>
+		public class CameraControls
+		{
+			private readonly DrawsetInterface m_ds;
+			public CameraControls(DrawsetInterface ds)
+			{
+				m_ds = ds;
+			}
+
+			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
+			public v2 ViewArea(float dist)
+			{
+				return View3D_ViewArea(m_ds.Handle, dist);
+			}
+			public v2 ViewArea()
+			{
+				return ViewArea(FocusDist);
+			}
+
+			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
+			public v4 AlignAxis
+			{
+				get { v4 up; View3D_CameraAlignAxis(m_ds.Handle, out up); return up; }
+				set { View3D_AlignCamera(m_ds.Handle, ref value); }
+			}
+
+			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
+			public float Aspect
+			{
+				get { return View3D_CameraAspect(m_ds.Handle); }
+				set { View3D_SetCameraAspect(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
+			public float FovX
+			{
+				get { return View3D_CameraFovX(m_ds.Handle); }
+				set { View3D_SetCameraFovX(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
+			public float FovY
+			{
+				get { return View3D_CameraFovY(m_ds.Handle); }
+				set { View3D_SetCameraFovY(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the position of the camera focus point</summary>
+			public v4 FocusPoint
+			{
+				get { v4 pos; View3D_GetFocusPoint(m_ds.Handle, out pos); return pos; }
+				set { View3D_SetFocusPoint(m_ds.Handle, ref value); }
+			}
+
+			/// <summary>Get/Set the distance to the camera focus point</summary>
+			public float FocusDist
+			{
+				get { return View3D_FocusDistance(m_ds.Handle); }
+				set { View3D_SetFocusDistance(m_ds.Handle, value); }
+			}
+
+			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
+			public m4x4 O2W
+			{
+				get { m4x4 c2w; View3D_CameraToWorld(m_ds.Handle, out c2w); return c2w; }
+				set { View3D_SetCameraToWorld(m_ds.Handle, ref value); }
+			}
+
+			/// <summary>Set the camera to world transform and focus distance.</summary>
+			public void SetPosition(v4 position, v4 lookat, v4 up)
+			{
+				View3D_PositionCamera(m_ds.Handle, ref position, ref lookat, ref up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
+			public void ResetView(v4 forward, v4 up)
+			{
+				View3D_ResetView(m_ds.Handle, ref forward, ref up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
+			public void ResetView(v4 forward)
+			{
+				var up = AlignAxis;
+				if (up.Length3Sq == 0f) up = v4.YAxis;
+				if (v4.Parallel(up, forward)) up = v4.Perpendicular(forward);
+				ResetView(forward, up);
+			}
+
+			/// <summary>Move the camera to a position that can see the whole scene</summary>
+			public void ResetView()
+			{
+				var up = AlignAxis;
+				if (up.Length3Sq == 0f) up = v4.YAxis;
+				var forward = up.z > up.y ? v4.YAxis : v4.ZAxis;
+				ResetView(forward, up);
+			}
+
+			/// <summary>Reset the zoom factor to 1f</summary>
+			public void ResetZoom()
+			{
+				View3D_ResetZoom(m_ds.Handle);
+			}
+
+			/// <summary>
+			/// Mouse navigation.
+			/// 'point' is a point in client rect space.
+			/// 'mouse_btns' is the state of the mouse buttons
+			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement</summary>
+			public void MouseNavigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
+			{
+				View3D_MouseNavigate(m_ds.Handle, m_ds.View.NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
+			}
+
+			/// <summary>Direct camera relative navigation</summary>
+			public void Navigate(float dx, float dy, float dz)
+			{
+				View3D_Navigate(m_ds.Handle, dx, dy, dz);
+			}
+
+			/// <summary>
+			/// Return a point in world space corresponding to a normalised screen space point.
+			/// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+			/// The z component should be the world space distance from the camera.</summary>
+			public v4 WSPointFromNormSSPoint(v4 screen)
+			{
+				return View3D_WSPointFromNormSSPoint(m_ds.Handle, ref screen);
+			}
+			public v4 WSPointFromSSPoint(Point screen)
+			{
+				var nss = m_ds.View.NormalisePoint(screen);
+				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f));
+			}
+
+			/// <summary>
+			/// Return a point in normalised screen space corresponding to 'world'
+			/// The returned 'z' component will be the world space distance from the camera.</summary>
+			public v4 NormSSPointFromWSPoint(v4 world)
+			{
+				return View3D_NormSSPointFromWSPoint(m_ds.Handle, ref world);
+			}
+			public Point SSPointFromWSPoint(v4 world)
+			{
+				var nss = NormSSPointFromWSPoint(world);
+				return m_ds.View.ScreenSpacePoint(new v2(nss.x, nss.y));
+			}
+
+			/// <summary>
+			/// Convert a screen space point into a position and direction in world space.
+			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
+			/// The z component of 'screen' should be the world space distance from the camera</summary>
+			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
+			{
+				View3D_WSRayFromNormSSPoint(m_ds.Handle, ref screen, out ws_point, out ws_direction);
+			}
+			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
+			{
+				var nss = m_ds.View.NormalisePoint(screen);
+				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
 			}
 		}
 
@@ -922,6 +907,25 @@ namespace pr.gfx
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb)
 			:this(name, colour, icount, vcount, edit_cb, DefaultContextId)
 			{
+			}
+
+			/// <summary>
+			/// Create multiple objects from a source file and associate them with 'context_id'.
+			/// Note, these objects cannot be accessed other than by context id.
+			/// This method is intended for creating static scenary</summary>
+			public static void CreateFromFile(string ldr_filepath, int context_id, bool async)
+			{
+				View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async);
+			}
+			public static void CreateFromFile(string ldr_filepath, bool async)
+			{
+				CreateFromFile(ldr_filepath, DefaultContextId, async);
+			}
+
+			/// <summary>Delete all objects matching 'context_id'</summary>
+			public static void DeleteAll(int context_id)
+			{
+				View3D_ObjectsDeleteById(context_id);
 			}
 
 			/// <summary>Modify the model of this object</summary>
@@ -1131,8 +1135,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_SetCameraFovX          (HDrawset drawset, float fovX);
 		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetCameraFovY          (HDrawset drawset, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern void              View3D_NavigateZ              (HDrawset drawset, float delta);
+		[DllImport(Dll)] private static extern void              View3D_MouseNavigate          (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HDrawset drawset, out v4 axis);
 		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, ref v4 axis);

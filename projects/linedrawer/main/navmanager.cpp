@@ -90,8 +90,7 @@ bool ldr::NavManager::MouseInput(pr::v2 const& pos, int button_state, bool start
 	{
 	default:break;
 	case ENavMode::Navigation:
-		if (start_or_end)      m_camera.MoveRef(NormalisedScreenSpace(pos, m_view_size), button_state);
-		else if (button_state) m_camera.Move   (NormalisedScreenSpace(pos, m_view_size), button_state);
+		m_camera.MouseControl(NormalisedScreenSpace(pos, m_view_size), button_state, start_or_end);
 		return true;
 	case ENavMode::Manipulation:
 		break;
@@ -105,7 +104,7 @@ bool ldr::NavManager::MouseWheel(pr::v2 const&, float delta)
 	{
 	default:break;
 	case ENavMode::Navigation:
-		m_camera.MoveZ(delta, true);
+		m_camera.Translate(0, 0, delta, true);
 		return true;
 	case ENavMode::Manipulation:
 		break;

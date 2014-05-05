@@ -169,8 +169,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_SetCameraFovX          (View3DDrawset drawset, float fovX);
 	VIEW3D_API float                   __stdcall View3D_CameraFovY             (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetCameraFovY          (View3DDrawset drawset, float fovY);
-	VIEW3D_API void                    __stdcall View3D_Navigate               (View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end);
-	VIEW3D_API void                    __stdcall View3D_NavigateZ              (View3DDrawset drawset, float delta);
+	VIEW3D_API void                    __stdcall View3D_MouseNavigate          (View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end);
+	VIEW3D_API void                    __stdcall View3D_Navigate               (View3DDrawset drawset, float dx, float dy, float dz);
 	VIEW3D_API void                    __stdcall View3D_ResetZoom              (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis        (View3DDrawset drawset, pr::v4& axis);
 	VIEW3D_API void                    __stdcall View3D_AlignCamera            (View3DDrawset drawset, pr::v4 const& axis);

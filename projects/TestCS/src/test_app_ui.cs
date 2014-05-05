@@ -1,4 +1,5 @@
-﻿using System.Windows.Forms;
+﻿using System.Drawing;
+using System.Windows.Forms;
 
 namespace TestCS
 {
@@ -65,6 +66,11 @@ namespace TestCS
 				{
 					new CheckedListBoxUI().Show(this);
 				};
+
+			Shown += (s,a) =>
+				{
+					Location = new Point(2100,50);
+				};
 		}
 
 		#region Windows Form Designer generated code
@@ -101,10 +107,10 @@ namespace TestCS
 			this.m_menu_test_colour_wheel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_hint_balloon = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_graph_control = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_diagram_control = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tool_form = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tree_grid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_diagram_control = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -172,6 +178,12 @@ namespace TestCS
 			this.m_menu_graph_control.Size = new System.Drawing.Size(159, 22);
 			this.m_menu_graph_control.Text = "&GraphControl";
 			// 
+			// m_menu_diagram_control
+			// 
+			this.m_menu_diagram_control.Name = "m_menu_diagram_control";
+			this.m_menu_diagram_control.Size = new System.Drawing.Size(159, 22);
+			this.m_menu_diagram_control.Text = "&DiagramControl";
+			// 
 			// m_menu_tool_form
 			// 
 			this.m_menu_tool_form.Name = "m_menu_tool_form";
@@ -190,12 +202,6 @@ namespace TestCS
 			this.m_menu_checked_listbox.Size = new System.Drawing.Size(159, 22);
 			this.m_menu_checked_listbox.Text = "CheckedListBox";
 			// 
-			// m_menu_diagram_control
-			// 
-			this.m_menu_diagram_control.Name = "m_menu_diagram_control";
-			this.m_menu_diagram_control.Size = new System.Drawing.Size(159, 22);
-			this.m_menu_diagram_control.Text = "&DiagramControl";
-			// 
 			// FormTestApp
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -204,6 +210,7 @@ namespace TestCS
 			this.Controls.Add(this.m_menu);
 			this.MainMenuStrip = this.m_menu;
 			this.Name = "FormTestApp";
+			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
 			this.Text = "TestApp";
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
