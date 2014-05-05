@@ -44,6 +44,11 @@ namespace pr
 			Evt_RenderStepExecute(Evt_RenderStepExecute const&);
 			Evt_RenderStepExecute& operator =(Evt_RenderStepExecute const&);
 		};
+
+		// Raised during a compatibility test. Compatibility failures should throw
+		struct Evt_CompatibilityTest
+		{
+		};
 	}
 }
 

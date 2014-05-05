@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
+#include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/models/nugget.h"
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/depth_state.h"
@@ -195,7 +196,15 @@ namespace pr
 		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
 		bool TestSystemCompatibility()
 		{
-			return true;
+			try
+			{
+				pr::events::Send(Evt_CompatibilityTest());
+				return true;
+			}
+			catch (std::exception const&)
+			{
+				return false;
+			}
 		}
 	}
 }
