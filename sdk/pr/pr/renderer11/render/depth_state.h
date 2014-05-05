@@ -107,26 +107,28 @@ namespace pr
 				case EDS::StencilPassOp      : face.StencilPassOp      = value; break;
 				case EDS::StencilFailOp      : face.StencilFailOp      = value; break;
 				}
-				base::Set(field);
+				base::Set(field, (int)back_face);
 			}
 
 			// Combine two states into one. 'rhs' has priority over 'this'
 			DSBlock& operator |= (DSBlock const& rhs)
 			{
-				Merge(rhs, [this](DepthStateDesc const& r, EDS mask, int i)
+				Merge(rhs, [this](EDS field, int i, DepthStateDesc const& r)
 					{
-						bool back_face = i == 1;
-						auto& face = back_face ? r.BackFace : r.FrontFace;
-						if (mask & EDS::DepthEnable       ) Set(EDS::DepthEnable        ,r.DepthEnable       );
-						if (mask & EDS::DepthWriteMask    ) Set(EDS::DepthWriteMask     ,r.DepthWriteMask    );
-						if (mask & EDS::DepthFunc         ) Set(EDS::DepthFunc          ,r.DepthFunc         );
-						if (mask & EDS::StencilEnable     ) Set(EDS::StencilEnable      ,r.StencilEnable     );
-						if (mask & EDS::StencilReadMask   ) Set(EDS::StencilReadMask    ,r.StencilReadMask   );
-						if (mask & EDS::StencilWriteMask  ) Set(EDS::StencilWriteMask   ,r.StencilWriteMask  );
-						if (mask & EDS::StencilFunc       ) Set(EDS::StencilFunc        ,face.StencilFunc       , back_face);
-						if (mask & EDS::StencilDepthFailOp) Set(EDS::StencilDepthFailOp ,face.StencilDepthFailOp, back_face);
-						if (mask & EDS::StencilPassOp     ) Set(EDS::StencilPassOp      ,face.StencilPassOp     , back_face);
-						if (mask & EDS::StencilFailOp     ) Set(EDS::StencilFailOp      ,face.StencilFailOp     , back_face);
+						switch (field)
+						{
+						default: PR_ASSERT(PR_DBG_RDR, false, "Unknown depth state field"); break;
+						case EDS::DepthEnable       : Set(EDS::DepthEnable        ,r.DepthEnable       ); break;
+						case EDS::DepthWriteMask    : Set(EDS::DepthWriteMask     ,r.DepthWriteMask    ); break;
+						case EDS::DepthFunc         : Set(EDS::DepthFunc          ,r.DepthFunc         ); break;
+						case EDS::StencilEnable     : Set(EDS::StencilEnable      ,r.StencilEnable     ); break;
+						case EDS::StencilReadMask   : Set(EDS::StencilReadMask    ,r.StencilReadMask   ); break;
+						case EDS::StencilWriteMask  : Set(EDS::StencilWriteMask   ,r.StencilWriteMask  ); break;
+						case EDS::StencilFunc       : Set(EDS::StencilFunc        ,(i == 0 ? r.FrontFace : r.BackFace).StencilFunc       , i != 0); break;
+						case EDS::StencilDepthFailOp: Set(EDS::StencilDepthFailOp ,(i == 0 ? r.FrontFace : r.BackFace).StencilDepthFailOp, i != 0); break;
+						case EDS::StencilPassOp     : Set(EDS::StencilPassOp      ,(i == 0 ? r.FrontFace : r.BackFace).StencilPassOp     , i != 0); break;
+						case EDS::StencilFailOp     : Set(EDS::StencilFailOp      ,(i == 0 ? r.FrontFace : r.BackFace).StencilFailOp     , i != 0); break;
+						}
 					});
 				return *this;
 			}

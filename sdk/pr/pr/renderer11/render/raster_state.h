@@ -87,18 +87,22 @@ namespace pr
 			// Combine two states into one. 'rhs' has priority over 'this'
 			RSBlock& operator |= (RSBlock const& rhs)
 			{
-				Merge(rhs ,[this](RasterStateDesc const& r, ERS mask, int)
+				Merge(rhs ,[this](ERS field, int, RasterStateDesc const& r)
 					{
-						if (mask & ERS::FillMode             ) Set(ERS::FillMode              ,r.FillMode             );
-						if (mask & ERS::CullMode             ) Set(ERS::CullMode              ,r.CullMode             );
-						if (mask & ERS::DepthClipEnable      ) Set(ERS::DepthClipEnable       ,r.FrontCounterClockwise);
-						if (mask & ERS::FrontCCW             ) Set(ERS::FrontCCW              ,r.DepthBias            );
-						if (mask & ERS::MultisampleEnable    ) Set(ERS::MultisampleEnable     ,r.MultisampleEnable    );
-						if (mask & ERS::AntialiasedLineEnable) Set(ERS::AntialiasedLineEnable ,r.SlopeScaledDepthBias );
-						if (mask & ERS::ScissorEnable        ) Set(ERS::ScissorEnable         ,r.DepthClipEnable      );
-						if (mask & ERS::DepthBias            ) Set(ERS::DepthBias             ,r.ScissorEnable        );
-						if (mask & ERS::DepthBias_clamp      ) Set(ERS::DepthBias_clamp       ,r.DepthBiasClamp       );
-						if (mask & ERS::SlopeScaledDepthBias ) Set(ERS::SlopeScaledDepthBias  ,r.AntialiasedLineEnable);
+						switch (field)
+						{
+						default: PR_ASSERT(PR_DBG_RDR, false, "Unknown raster state field"); break;
+						case ERS::FillMode             : Set(ERS::FillMode              ,r.FillMode             ); break;
+						case ERS::CullMode             : Set(ERS::CullMode              ,r.CullMode             ); break;
+						case ERS::DepthClipEnable      : Set(ERS::DepthClipEnable       ,r.FrontCounterClockwise); break;
+						case ERS::FrontCCW             : Set(ERS::FrontCCW              ,r.DepthBias            ); break;
+						case ERS::MultisampleEnable    : Set(ERS::MultisampleEnable     ,r.MultisampleEnable    ); break;
+						case ERS::AntialiasedLineEnable: Set(ERS::AntialiasedLineEnable ,r.SlopeScaledDepthBias ); break;
+						case ERS::ScissorEnable        : Set(ERS::ScissorEnable         ,r.DepthClipEnable      ); break;
+						case ERS::DepthBias            : Set(ERS::DepthBias             ,r.ScissorEnable        ); break;
+						case ERS::DepthBias_clamp      : Set(ERS::DepthBias_clamp       ,r.DepthBiasClamp       ); break;
+						case ERS::SlopeScaledDepthBias : Set(ERS::SlopeScaledDepthBias  ,r.AntialiasedLineEnable); break;
+						}
 					});
 				return *this;
 			}

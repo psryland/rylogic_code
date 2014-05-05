@@ -95,18 +95,22 @@ namespace pr
 			// Combine two states into one. 'rhs' has priority over 'this'
 			BSBlock& operator |= (BSBlock const& rhs)
 			{
-				Merge(rhs, [this](BlendStateDesc const& r, EBS mask, int i)
+				Merge(rhs, [this](EBS field, int i, BlendStateDesc const& r)
 					{
-						if (mask & EBS::AlphaToCoverageEnable ) Set(EBS::AlphaToCoverageEnable  ,r.AlphaToCoverageEnable                   );
-						if (mask & EBS::IndependentBlendEnable) Set(EBS::IndependentBlendEnable ,r.IndependentBlendEnable                  );
-						if (mask & EBS::BlendEnable           ) Set(EBS::BlendEnable            ,r.RenderTarget[i].BlendEnable          , i);
-						if (mask & EBS::SrcBlend              ) Set(EBS::SrcBlend               ,r.RenderTarget[i].SrcBlend             , i);
-						if (mask & EBS::DestBlend             ) Set(EBS::DestBlend              ,r.RenderTarget[i].DestBlend            , i);
-						if (mask & EBS::BlendOp               ) Set(EBS::BlendOp                ,r.RenderTarget[i].BlendOp              , i);
-						if (mask & EBS::SrcBlendAlpha         ) Set(EBS::SrcBlendAlpha          ,r.RenderTarget[i].SrcBlendAlpha        , i);
-						if (mask & EBS::DestBlendAlpha        ) Set(EBS::DestBlendAlpha         ,r.RenderTarget[i].DestBlendAlpha       , i);
-						if (mask & EBS::BlendOpAlpha          ) Set(EBS::BlendOpAlpha           ,r.RenderTarget[i].BlendOpAlpha         , i);
-						if (mask & EBS::RenderTargetWriteMask ) Set(EBS::RenderTargetWriteMask  ,r.RenderTarget[i].RenderTargetWriteMask, i);
+						switch (field)
+						{
+						default: PR_ASSERT(PR_DBG_RDR, false, "Unknown blend state field"); break;
+						case EBS::AlphaToCoverageEnable : Set(EBS::AlphaToCoverageEnable  ,r.AlphaToCoverageEnable                   ); break;
+						case EBS::IndependentBlendEnable: Set(EBS::IndependentBlendEnable ,r.IndependentBlendEnable                  ); break;
+						case EBS::BlendEnable           : Set(EBS::BlendEnable            ,r.RenderTarget[i].BlendEnable          , i); break;
+						case EBS::SrcBlend              : Set(EBS::SrcBlend               ,r.RenderTarget[i].SrcBlend             , i); break;
+						case EBS::DestBlend             : Set(EBS::DestBlend              ,r.RenderTarget[i].DestBlend            , i); break;
+						case EBS::BlendOp               : Set(EBS::BlendOp                ,r.RenderTarget[i].BlendOp              , i); break;
+						case EBS::SrcBlendAlpha         : Set(EBS::SrcBlendAlpha          ,r.RenderTarget[i].SrcBlendAlpha        , i); break;
+						case EBS::DestBlendAlpha        : Set(EBS::DestBlendAlpha         ,r.RenderTarget[i].DestBlendAlpha       , i); break;
+						case EBS::BlendOpAlpha          : Set(EBS::BlendOpAlpha           ,r.RenderTarget[i].BlendOpAlpha         , i); break;
+						case EBS::RenderTargetWriteMask : Set(EBS::RenderTargetWriteMask  ,r.RenderTarget[i].RenderTargetWriteMask, i); break;
+						}
 					});
 				return *this;
 			}
