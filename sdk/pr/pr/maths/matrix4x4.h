@@ -41,20 +41,20 @@ namespace pr
 		m4x4&        set(float const* mat);
 		m4x4&        zero();
 		m4x4&        identity();
-		v4           row(int i) const                       { return v4::make(x[i], y[i], z[i], w[i]); }
-		v4           col(int i) const                       { return (*this)[i]; }
-		void         row(int i, v4 const& row)              { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
-		void         col(int i, v4 const& col)              { (*this)[i] = col; }
-		Array const& ToArray() const                        { return reinterpret_cast<Array const&>(*this); }
-		Array&       ToArray()                              { return reinterpret_cast<Array&>      (*this); }
-		v4 const&    operator [] (int i) const              { assert(i < 4); return ToArray()[i]; }
-		v4&          operator [] (int i)                    { assert(i < 4); return ToArray()[i]; }
+		v4           row(int i) const;
+		v4           col(int i) const;
+		void         row(int i, v4 const& row);
+		void         col(int i, v4 const& col);
+		Array const& ToArray() const;
+		Array&       ToArray();
+		v4 const&    operator [] (int i) const;
+		v4&          operator [] (int i);
 	};
 	static_assert(std::alignment_of<m4x4>::value == 16, "Should be 16 byte aligned");
 	static_assert(std::is_pod<m4x4>::value, "Should be a pod type");
 
-	m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};
-	m4x4 const m4x4Identity = {v4XAxis, v4YAxis, v4ZAxis, v4Origin};
+	static m4x4 const m4x4Zero     = {v4Zero, v4Zero, v4Zero, v4Zero};
+	static m4x4 const m4x4Identity = {v4XAxis, v4YAxis, v4ZAxis, v4Origin};
 
 	// Element accessors
 	inline v4 const& GetX(m4x4 const& m) { return m.x; }

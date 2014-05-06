@@ -33,30 +33,36 @@ namespace pr
 		#pragma warning(pop)
 		typedef float Array[4];
 
-		v4&                       set(float x_);
-		v4&                       set(float x_, float y_, float z_, float w_);
-		template <typename T> v4& set(T const& v, float z_, float w_)         { x = GetXf(v); y = GetYf(v); z = z_; w = w_; return *this; }
-		template <typename T> v4& set(T const& v, float w_)                   { x = GetXf(v); y = GetYf(v); z = GetZf(v); w = w_; return *this; }
-		template <typename T> v4& set(T const& v)                             { x = GetXf(v); y = GetYf(v); z = GetZf(v); w = GetWf(v); return *this; }
-		template <typename T> v4& set(T const* v)                             { x = AsReal(v[0]); y = AsReal(v[1]); z = AsReal(v[2]); w = AsReal(v[3]); return *this; }
-		template <typename T> v4& set(T const* v, float w_)                   { x = AsReal(v[0]); y = AsReal(v[1]); z = AsReal(v[2]); w = w_; return *this; }
-		v2 const&                 xy() const                                  { return reinterpret_cast<v2 const&>(x); }
-		v2&                       xy()                                        { return reinterpret_cast<v2&>      (x); }
-		v2 const&                 yz() const                                  { return reinterpret_cast<v2 const&>(y); }
-		v2&                       yz()                                        { return reinterpret_cast<v2&>      (y); }
-		v2 const&                 zw() const                                  { return reinterpret_cast<v2 const&>(z); }
-		v2&                       zw()                                        { return reinterpret_cast<v2&>      (z); }
-		v3 const&                 xyz() const                                 { return reinterpret_cast<v3 const&>(x); }
-		v3&                       xyz()                                       { return reinterpret_cast<v3&>      (x); }
-		v3 const&                 yzw() const                                 { return reinterpret_cast<v3 const&>(y); }
-		v3&                       yzw()                                       { return reinterpret_cast<v3&>      (y); }
-		v4                        w0() const                                  { pr::v4 v = *this; v.w = 0.0f; return v; }
-		v4                        w1() const                                  { pr::v4 v = *this; v.w = 1.0f; return v; }
-		Array const&              ToArray() const                             { return reinterpret_cast<Array const&>(*this); }
-		Array&                    ToArray()                                   { return reinterpret_cast<Array&>      (*this); }
-		float const&              operator [] (int i) const                   { assert(i < 4); return ToArray()[i]; }
-		float&                    operator [] (int i)                         { assert(i < 4); return ToArray()[i]; }
-		v4& operator = (iv4 const& rhs);
+		v4& set(float x_);
+		v4& set(float x_, float y_, float z_, float w_);
+
+		template <typename T> v4& set(T const& v, float z_, float w_);
+		template <typename T> v4& set(T const& v, float w_);
+		template <typename T> v4& set(T const& v);
+		template <typename T> v4& set(T const* v);
+		template <typename T> v4& set(T const* v, float w_);
+
+		v2 const& xy() const;
+		v2&       xy();
+		v2 const& yz() const;
+		v2&       yz();
+		v2 const& zw() const;
+		v2&       zw();
+		v3 const& xyz() const;
+		v3&       xyz();
+		v3 const& yzw() const;
+		v3&       yzw();
+
+		v4 w0() const;
+		v4 w1() const;
+
+		Array const& ToArray() const;
+		Array&       ToArray();
+
+		float const& operator [] (int i) const;
+		float&       operator [] (int i);
+		v4&          operator = (iv4 const& rhs);
+
 		v2  vec2(int i0, int i1) const;
 		v3  vec3(int i0, int i1, int i2) const;
 
@@ -83,14 +89,15 @@ namespace pr
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
 	static_assert(std::is_pod<v4>::value, "Should be a pod type");
 
-	v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
-	v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
-	v4 const v4Min    = {maths::float_min, maths::float_min, maths::float_min, maths::float_min};
-	v4 const v4Max    = {maths::float_max, maths::float_max, maths::float_max, maths::float_max};
-	v4 const v4XAxis  = {1.0f, 0.0f, 0.0f, 0.0f};
-	v4 const v4YAxis  = {0.0f, 1.0f, 0.0f, 0.0f};
-	v4 const v4ZAxis  = {0.0f, 0.0f, 1.0f, 0.0f};
-	v4 const v4Origin = {0.0f, 0.0f, 0.0f, 1.0f};
+	static v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
+	static v4 const v4Half   = {0.5f, 0.5f, 0.5f, 0.5f};
+	static v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
+	static v4 const v4Min    = {maths::float_min, maths::float_min, maths::float_min, maths::float_min};
+	static v4 const v4Max    = {maths::float_max, maths::float_max, maths::float_max, maths::float_max};
+	static v4 const v4XAxis  = {1.0f, 0.0f, 0.0f, 0.0f};
+	static v4 const v4YAxis  = {0.0f, 1.0f, 0.0f, 0.0f};
+	static v4 const v4ZAxis  = {0.0f, 0.0f, 1.0f, 0.0f};
+	static v4 const v4Origin = {0.0f, 0.0f, 0.0f, 1.0f};
 
 	// Limits
 	namespace maths
@@ -141,8 +148,8 @@ namespace pr
 
 	// DirectXMath conversion functions
 	#if PR_MATHS_USE_DIRECTMATH
-	inline DirectX::XMVECTOR const& dxv4(v4 const& v) { return v.vec; }
-	inline DirectX::XMVECTOR&       dxv4(v4&       v) { return v.vec; }
+	inline DirectX::XMVECTOR const& dxv4(v4 const& v) { assert(maths::is_aligned(&v)); return v.vec; }
+	inline DirectX::XMVECTOR&       dxv4(v4&       v) { assert(maths::is_aligned(&v)); return v.vec; }
 	#endif
 
 	// Conversion functions between vector types

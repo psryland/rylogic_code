@@ -85,6 +85,19 @@ namespace pr
 	struct iv4;
 	struct Frustum;
 	typedef v4 Plane;
+
+	namespace maths
+	{
+		// Test alignment of 't'
+		template <typename T, int A> inline bool is_aligned(T const* t)
+		{
+			return (reinterpret_cast<char const*>(t) - static_cast<char const*>(nullptr)) % A == 0;
+		}
+		template <typename T> inline bool is_aligned(T const* t)
+		{
+			return is_aligned<T, std::alignment_of<T>::value>(t);
+		}
+	}
 }
 
 #endif

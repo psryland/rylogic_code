@@ -30,6 +30,65 @@ namespace pr
 		#endif
 		return *this;
 	}
+	template <typename T> inline v4& v4::set(T const& v, float z_, float w_)
+	{
+		x = GetXf(v);
+		y = GetYf(v);
+		z = z_;
+		w = w_;
+		return *this;
+	}
+	template <typename T> inline v4& v4::set(T const& v, float w_)
+	{
+		x = GetXf(v);
+		y = GetYf(v);
+		z = GetZf(v);
+		w = w_;
+		return *this;
+	}
+	template <typename T> inline v4& v4::set(T const& v)
+	{
+		x = GetXf(v);
+		y = GetYf(v);
+		z = GetZf(v);
+		w = GetWf(v);
+		return *this;
+	}
+	template <typename T> inline v4& v4::set(T const* v)
+	{
+		x = AsReal(v[0]);
+		y = AsReal(v[1]);
+		z = AsReal(v[2]);
+		w = AsReal(v[3]);
+		return *this;
+	}
+	template <typename T> inline v4& v4::set(T const* v, float w_)
+	{
+		x = AsReal(v[0]);
+		y = AsReal(v[1]);
+		z = AsReal(v[2]);
+		w = w_;
+		return *this;
+	}
+	inline v2 const& v4::xy() const  { return reinterpret_cast<v2 const&>(x); }
+	inline v2&       v4::xy()        { return reinterpret_cast<v2&>      (x); }
+	inline v2 const& v4::yz() const  { return reinterpret_cast<v2 const&>(y); }
+	inline v2&       v4::yz()        { return reinterpret_cast<v2&>      (y); }
+	inline v2 const& v4::zw() const  { return reinterpret_cast<v2 const&>(z); }
+	inline v2&       v4::zw()        { return reinterpret_cast<v2&>      (z); }
+	inline v3 const& v4::xyz() const { return reinterpret_cast<v3 const&>(x); }
+	inline v3&       v4::xyz()       { return reinterpret_cast<v3&>      (x); }
+	inline v3 const& v4::yzw() const { return reinterpret_cast<v3 const&>(y); }
+	inline v3&       v4::yzw()       { return reinterpret_cast<v3&>      (y); }
+
+	inline v4 v4::w0() const { pr::v4 v = *this; v.w = 0.0f; return v; }
+	inline v4 v4::w1() const { pr::v4 v = *this; v.w = 1.0f; return v; }
+
+	inline v4::Array const& v4::ToArray() const       { return reinterpret_cast<Array const&>(*this); }
+	inline v4::Array&       v4::ToArray()             { return reinterpret_cast<Array&>      (*this); }
+	inline float const& v4::operator [] (int i) const { assert(i < 4); return ToArray()[i]; }
+	inline float&       v4::operator [] (int i)       { assert(i < 4); return ToArray()[i]; }
+
 	inline v4& v4::operator = (iv4 const& rhs)
 	{
 		return set(float(rhs.x), float(rhs.y), float(rhs.z), float(rhs.w));

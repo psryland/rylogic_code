@@ -104,16 +104,24 @@ namespace pr
 		return *this;
 	}
 
-	inline m4x4&        m4x4::zero()                              { return *this = m4x4Zero; }
-	inline m4x4&        m4x4::identity()                          { return *this = m4x4Identity; }
+	inline                    m4x4& m4x4::zero()              { return *this = m4x4Zero; }
+	inline                    m4x4& m4x4::identity()          { return *this = m4x4Identity; }
+	inline v4                 m4x4::row(int i) const          { return v4::make(x[i], y[i], z[i], w[i]); }
+	inline v4                 m4x4::col(int i) const          { return (*this)[i]; }
+	inline void               m4x4::row(int i, v4 const& row) { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
+	inline void               m4x4::col(int i, v4 const& col) { (*this)[i] = col; }
+	inline m4x4::Array const& m4x4::ToArray() const           { return reinterpret_cast<Array const&>(*this); }
+	inline m4x4::Array&       m4x4::ToArray()                 { return reinterpret_cast<Array&>      (*this); }
+	inline v4 const&          m4x4::operator [] (int i) const { assert(i < 4); return ToArray()[i]; }
+	inline v4&                m4x4::operator [] (int i)       { assert(i < 4); return ToArray()[i]; }
 
 	// Assignment operators
-	inline m4x4& operator += (m4x4& lhs, float rhs)            { lhs.x += rhs; lhs.y += rhs; lhs.z += rhs; lhs.w += rhs; return lhs; }
-	inline m4x4& operator -= (m4x4& lhs, float rhs)            { lhs.x -= rhs; lhs.y -= rhs; lhs.z -= rhs; lhs.w -= rhs; return lhs; }
+	inline m4x4& operator += (m4x4& lhs, float rhs)            { lhs.x += rhs  ; lhs.y += rhs  ; lhs.z += rhs  ; lhs.w += rhs  ; return lhs; }
+	inline m4x4& operator -= (m4x4& lhs, float rhs)            { lhs.x -= rhs  ; lhs.y -= rhs  ; lhs.z -= rhs  ; lhs.w -= rhs  ; return lhs; }
 	inline m4x4& operator += (m4x4& lhs, m4x4 const& rhs)      { lhs.x += rhs.x; lhs.y += rhs.y; lhs.z += rhs.z; lhs.w += rhs.w; return lhs; }
 	inline m4x4& operator -= (m4x4& lhs, m4x4 const& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; lhs.w -= rhs.w; return lhs; }
-	inline m4x4& operator *= (m4x4& lhs, float s)              { lhs.x *= s; lhs.y *= s; lhs.z *= s; lhs.w *= s; return lhs; }
-	inline m4x4& operator /= (m4x4& lhs, float s)              { lhs.x /= s; lhs.y /= s; lhs.z /= s; lhs.w /= s; return lhs; }
+	inline m4x4& operator *= (m4x4& lhs, float s)              { lhs.x *= s    ; lhs.y *= s    ; lhs.z *= s    ; lhs.w *= s    ; return lhs; }
+	inline m4x4& operator /= (m4x4& lhs, float s)              { lhs.x /= s    ; lhs.y /= s    ; lhs.z /= s    ; lhs.w /= s    ; return lhs; }
 	inline m4x4& operator += (m4x4& lhs, m3x4 const& rhs)      { lhs.x += rhs.x; lhs.y += rhs.y; lhs.z += rhs.z; return lhs; }
 	inline m4x4& operator -= (m4x4& lhs, m3x4 const& rhs)      { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; return lhs; }
 
@@ -128,38 +136,51 @@ namespace pr
 	inline m4x4 operator * (float lhs, m4x4 const& rhs)        { m4x4 m = rhs; return m *= lhs; }
 	inline m4x4 operator / (m4x4 const& lhs, float rhs)        { m4x4 m = lhs; return m /= rhs; }
 
-#pragma warning (push)
-#pragma warning (disable : 4701) // 'ans' may not be fully initialised
 	inline m4x4 operator * (m4x4 const& lhs, m4x4 const& rhs)
 	{
-		m4x4 ans;
-#if PR_MATHS_USE_DIRECTMATH
-		auto l = dxm4(lhs);
-		auto r = dxm4(rhs);
-		dxm4(ans) = DirectX::XMMatrixMultiply(dxm4(rhs), dxm4(lhs));
-#else
-		m4x4 lhs_t = GetTranspose4x4(lhs);
-		for (int j = 0; j < 4; ++j)
-		{
-			for (int i = 0; i < 4; ++i)
-				ans[j][i] = Dot4(lhs_t[i], rhs[j]);
-		}
-#endif
-		return ans;
+		#if PR_MATHS_USE_DIRECTMATH
+			m4x4 ans;
+			dxm4(ans) = DirectX::XMMatrixMultiply(dxm4(rhs), dxm4(lhs));
+			return ans;
+		#else
+			m4x4 ans, tlhs = GetTranspose4x4(lhs);
+			ans.x.x = Dot4(tlhs.x, rhs.x);
+			ans.y.x = Dot4(tlhs.x, rhs.y);
+			ans.z.x = Dot4(tlhs.x, rhs.z);
+			ans.w.x = Dot4(tlhs.x, rhs.w);
+
+			ans.x.y = Dot4(tlhs.y, rhs.x);
+			ans.y.y = Dot4(tlhs.y, rhs.y);
+			ans.z.y = Dot4(tlhs.y, rhs.z);
+			ans.w.y = Dot4(tlhs.y, rhs.w);
+
+			ans.x.z = Dot4(tlhs.z, rhs.x);
+			ans.y.z = Dot4(tlhs.z, rhs.y);
+			ans.z.z = Dot4(tlhs.z, rhs.z);
+			ans.w.z = Dot4(tlhs.z, rhs.w);
+
+			ans.x.w = Dot4(tlhs.w, rhs.x);
+			ans.y.w = Dot4(tlhs.w, rhs.y);
+			ans.z.w = Dot4(tlhs.w, rhs.z);
+			ans.w.w = Dot4(tlhs.w, rhs.w);
+			return ans;
+		#endif
 	}
 	inline v4 operator * (m4x4 const& lhs, v4 const& rhs)
 	{
-		v4 ans;
-#if PR_MATHS_USE_DIRECTMATH
-		dxv4(ans) = DirectX::XMVector4Transform(dxv4(rhs), dxm4(lhs));
-#else
-		m4x4 lhs_t = GetTranspose4x4(lhs);
-		for (int i = 0; i < 4; ++i)
-			ans[i] = Dot4(lhs_t[i], rhs);
-#endif
-		return ans;
+		#if PR_MATHS_USE_DIRECTMATH
+			v4 ans;
+			dxv4(ans) = DirectX::XMVector4Transform(dxv4(rhs), dxm4(lhs));
+			return ans;
+		#else
+			v4 ans; m4x4 tlhs = GetTranspose4x4(lhs);
+			ans.x = Dot4(tlhs.x, rhs);
+			ans.y = Dot4(tlhs.y, rhs);
+			ans.z = Dot4(tlhs.z, rhs);
+			ans.w = Dot4(tlhs.w, rhs);
+			return ans;
+		#endif
 	}
-#pragma warning (pop)
 
 	// Unary operators
 	inline m4x4 operator + (m4x4 const& mat) { return mat; }
@@ -176,10 +197,10 @@ namespace pr
 	inline bool operator >= (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
 	// DirectXMath conversion functions
-#if PR_MATHS_USE_DIRECTMATH
-	inline DirectX::XMMATRIX const& dxm4(m4x4 const& m) { return reinterpret_cast<DirectX::XMMATRIX const&>(m); }
-	inline DirectX::XMMATRIX&       dxm4(m4x4&       m) { return reinterpret_cast<DirectX::XMMATRIX&>(m); }
-#endif
+	#if PR_MATHS_USE_DIRECTMATH
+	inline DirectX::XMMATRIX const& dxm4(m4x4 const& m) { assert(maths::is_aligned(&m)); return reinterpret_cast<DirectX::XMMATRIX const&>(m); }
+	inline DirectX::XMMATRIX&       dxm4(m4x4&       m) { assert(maths::is_aligned(&m)); return reinterpret_cast<DirectX::XMMATRIX&>(m); }
+	#endif
 
 	// Conversion functions between vector types
 	inline m3x4 const& cast_m3x4(m4x4 const& mat) { return reinterpret_cast<m3x4 const&>(mat); }
