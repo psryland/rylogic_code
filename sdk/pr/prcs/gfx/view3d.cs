@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using pr.common;
@@ -338,6 +339,28 @@ namespace pr.gfx
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
 		private readonly List<DrawsetInterface> m_drawsets;       // Groups of objects to render
 		private readonly EventBatcher m_eb_refresh;               // Batch refresh calls
+
+		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
+		public static void LoadDll(string dir = @".\lib\$(platform)")
+		{
+			// Search the local directory first
+			var dllpath = "view3d.dll";
+			if (PathEx.FileExists(dllpath))
+			{
+				try { SelectDll(dllpath); return; }
+				catch (Exception) {}
+			}
+
+			// Try the lib folder. Load the appropriate dll for the platform
+			dllpath = Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), "view3d.dll");
+			if (PathEx.FileExists(dllpath))
+			{
+				try { SelectDll(dllpath); return; }
+				catch (Exception) {}
+			}
+
+			throw new DllNotFoundException("Failed to load dependency 'view3d.dll'");
+		}
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
 		public View3d(HWND handle, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
@@ -1084,7 +1107,7 @@ namespace pr.gfx
 		#region DLL extern functions
 
 		private const string Dll = "view3d";
-		private static IntPtr m_module;
+		private static IntPtr m_module = IntPtr.Zero;
 
 		// A good idea is to add a static method in the class that is using this class
 		// e.g.
@@ -1098,6 +1121,9 @@ namespace pr.gfx
 		/// <summary>Call this method to load a specific version of the view3d.dll. Call this before any DllImport'd functions</summary>
 		public static void SelectDll(string dllpath)
 		{
+			if (m_module != IntPtr.Zero)
+				return; // Already loaded
+
 			m_module = LoadLibrary(dllpath);
 			if (m_module == IntPtr.Zero)
 				throw new System.Exception(string.Format("Failed to load dll {0}", dllpath));
