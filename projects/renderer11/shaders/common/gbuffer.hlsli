@@ -24,16 +24,17 @@ struct PS_OUTPUT_GBUFFER
 // Decoded gbuffer value
 struct GPixel
 {
-	float4 diff;
-	float4 ws_norm;
-	float4 cs_pos;
+	float4 diff;     // Unlit diffuse
+	float4 ws_norm;  // world space normal
+	float4 cs_pos;   // Camera space position
+	float cs_depth;  // Distance from camera
 };
 
 // Output a pixel for the gbuffer
 PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 {
 	PS_OUTPUT_GBUFFER Out;
-	Out.diff = float4(diff.xyz, step(0,ws_norm.z));
+	Out.diff = float4(diff.xyz, sign(ws_norm.z) * 0.5f + 0.5f);
 	Out.ws_norm = ws_norm.xy * 0.5f + 0.5f;
 	Out.cs_depth = length(ws_pos - m_c2w[3]);
 	return Out;
@@ -42,17 +43,21 @@ PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 // Sample the gbuffer
 GPixel ReadGBuffer(float2 tex, float3 cs_vdir)
 {
+	GPixel Out;
 	float4 diff = m_tex_diffuse.Sample(m_point_sampler, tex);
 	float2 norm = m_tex_normals.Sample(m_point_sampler, tex);
 	float depth = m_tex_depth.Sample(m_point_sampler, tex);
-	
-	GPixel Out;
+
 	Out.diff = float4(diff.xyz, 0);
 
-	norm = norm * 2 - 1;
-	Out.ws_norm = normalize(float4(norm, (2*diff.w-1)*sqrt(saturate(1 - dot(norm,norm))), 0));
+	float4 ws_norm = float4(norm * 2 - 1, diff.w * 2 - 1, 0);
+	if (dot(ws_norm,ws_norm) > 0.5f)
+		Out.ws_norm = normalize(float4(ws_norm.xy, ws_norm.z * sqrt(saturate(1 - dot(ws_norm.xy,ws_norm.xy))), 0));
+	else
+		Out.ws_norm = float4(0,0,0,0);
 
 	Out.cs_pos = float4(cs_vdir * depth, 1);
+	Out.cs_depth = depth;
 	return Out;
 }
 

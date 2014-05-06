@@ -40,7 +40,7 @@ PS_INPUT main(VS_INPUT In)
 	// Transform
 	Out.ss_pos  = mul(ms_pos, m_o2s);
 	Out.ws_pos  = mul(ms_pos, m_o2w);
-	Out.ws_norm = m_geom.y != 0 ? mul(ms_norm, m_n2w) : float4(0,0,1,0);
+	Out.ws_norm = m_geom.y != 0 ? mul(ms_norm, m_n2w) : float4(0,0,0,0);
 
 	// Tinting
 	Out.diff = m_tint;

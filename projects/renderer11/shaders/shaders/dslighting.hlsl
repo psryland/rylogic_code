@@ -51,14 +51,18 @@ PS_OUTPUT main(PS_INPUT In)
 	// Sample the gbuffer
 	GPixel px = ReadGBuffer(In.tex, normalize(In.cs_vdir.xyz));
 	float4 ws_pos = mul(px.cs_pos, m_c2w);
-	
+
+	// Basic diffuse
+	Out.diff = px.diff;
+
 	// Do lighting...
-	Out.diff = Illuminate(ws_pos, px.ws_norm, m_c2w[3], px.diff);
+	if (dot(px.ws_norm,px.ws_norm) > 0.5f)
+		Out.diff = Illuminate(ws_pos, px.ws_norm, m_c2w[3], Out.diff);
 
 	//Out.diff = float4(1,0,1,1);
 	//Out.diff = px.diff;
 	//Out.diff = abs(float4(px.ws_norm,0));
-	//Out.diff = float4(1,1,1,1) * m_tex_depth.Sample(m_point_sampler, In.tex)*0.1f;
+	//Out.diff = float4(1,1,1,1) * m_tex_depth.Sample(m_point_sampler, In.tex)*0.05f;
 	//Out.diff = saturate(0.5f * (1 - ws_pos.z)) * float4(1,1,1,1);
 	//Out.diff = float4(1,1,1,1) * frac(px.cs_pos.x);
 	//Out.diff = float4(1,1,1,1) * (ws_pos.x);
