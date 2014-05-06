@@ -25,8 +25,8 @@ struct PS_OUTPUT_GBUFFER
 struct GPixel
 {
 	float4 diff;
-	float3 ws_norm;
-	float3 cs_pos;
+	float4 ws_norm;
+	float4 cs_pos;
 };
 
 // Output a pixel for the gbuffer
@@ -35,8 +35,7 @@ PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 	PS_OUTPUT_GBUFFER Out;
 	Out.diff = float4(diff.xyz, step(0,ws_norm.z));
 	Out.ws_norm = ws_norm.xy * 0.5f + 0.5f;
-	Out.cs_depth = length(ws_pos - mul(m_c2w, float4(0,0,0,1)));
-	//Out.cs_depth = dot(m_c2w[2], ws_pos - m_c2w[3]);
+	Out.cs_depth = length(ws_pos - m_c2w[3]);
 	return Out;
 }
 
@@ -51,10 +50,9 @@ GPixel ReadGBuffer(float2 tex, float3 cs_vdir)
 	Out.diff = float4(diff.xyz, 0);
 
 	norm = norm * 2 - 1;
-	Out.ws_norm = normalize(float3(norm, (2*diff.w-1)*sqrt(saturate(1 - dot(norm,norm)))));
+	Out.ws_norm = normalize(float4(norm, (2*diff.w-1)*sqrt(saturate(1 - dot(norm,norm))), 0));
 
-	Out.cs_pos = cs_vdir * depth;
-	//Out.cs_pos = cs_vdir * depth / cs_vdir.z;
+	Out.cs_pos = float4(cs_vdir * depth, 1);
 	return Out;
 }
 

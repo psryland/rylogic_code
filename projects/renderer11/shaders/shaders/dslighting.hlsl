@@ -5,6 +5,7 @@
 
 #include "common/gbuffer_cbuf.hlsli"
 #include "common/gbuffer.hlsli"
+#include "common/phong_lighting.hlsli"
 
 // VS input format
 struct VS_INPUT
@@ -34,8 +35,8 @@ struct PS_OUTPUT
 PS_INPUT main(VS_INPUT In)
 {
 	PS_INPUT Out;
-	Out.cs_vdir = m_frustum[(int)In.pos.z];
-	Out.ss_pos = mul(m_c2s, Out.cs_vdir);
+	Out.cs_vdir = m_frustum[(int)In.pos.x];
+	Out.ss_pos = mul(Out.cs_vdir, m_c2s);
 	Out.tex = In.tex;
 	return Out;
 }
@@ -45,14 +46,15 @@ PS_INPUT main(VS_INPUT In)
 #if PR_RDR_SHADER_PS
 PS_OUTPUT main(PS_INPUT In)
 {
+	PS_OUTPUT Out;
+
 	// Sample the gbuffer
 	GPixel px = ReadGBuffer(In.tex, normalize(In.cs_vdir.xyz));
-	float4 ws_pos = mul(m_c2w, float4(px.cs_pos,1));
+	float4 ws_pos = mul(px.cs_pos, m_c2w);
 	
 	// Do lighting...
+	Out.diff = Illuminate(ws_pos, px.ws_norm, m_c2w[3], px.diff);
 
-	// Output the lit pixel
-	PS_OUTPUT Out;
 	//Out.diff = float4(1,0,1,1);
 	//Out.diff = px.diff;
 	//Out.diff = abs(float4(px.ws_norm,0));
@@ -60,7 +62,7 @@ PS_OUTPUT main(PS_INPUT In)
 	//Out.diff = saturate(0.5f * (1 - ws_pos.z)) * float4(1,1,1,1);
 	//Out.diff = float4(1,1,1,1) * frac(px.cs_pos.x);
 	//Out.diff = float4(1,1,1,1) * (ws_pos.x);
-	Out.diff = frac(float4(1,1,1,1) * ws_pos.x);
+	//Out.diff = frac(float4(1,1,1,1) * ws_pos.x);
 	//Out.diff = normalize(float4(abs(In.cs_vdir),1));
 	//Out.diff = float4(In.tex,0,1);
 	return Out;

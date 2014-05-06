@@ -63,9 +63,9 @@ PS_INPUT main(VS_INPUT In)
 	EXPAND(float4 ms_norm = float4(In.norm,0); , PR_RDR_SHADER_VSIN_NORM3)
 
 	// Transform
-	EXPAND(Out.ss_pos  = mul(m_o2s ,ms_pos ); , PR_RDR_SHADER_TXFM  )
-	EXPAND(Out.ws_pos  = mul(m_o2w ,ms_pos ); , PR_RDR_SHADER_TXFMWS)
-	EXPAND(Out.ws_norm = mul(m_o2w ,ms_norm); , PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ss_pos  = mul(ms_pos, m_o2s); , PR_RDR_SHADER_TXFM  )
+	EXPAND(Out.ws_pos  = mul(ms_pos, m_o2w); , PR_RDR_SHADER_TXFMWS)
+	EXPAND(Out.ws_norm = mul(ms_norm, m_n2w); , PR_RDR_SHADER_TXFMWS)
 
 	// Tinting
 	EXPAND(Out.diff0 = m_tint; , PR_RDR_SHADER_TINT0)
@@ -74,7 +74,7 @@ PS_INPUT main(VS_INPUT In)
 	EXPAND(Out.diff0 = In.diff0 * Out.diff0; , PR_RDR_SHADER_PVC)
 
 	// Texture2D (with transform)
-	EXPAND(Out.tex0 = mul(m_tex2surf0, float4(In.tex0,0,1)).xy; , PR_RDR_SHADER_TEX0)
+	EXPAND(Out.tex0 = mul(float4(In.tex0,0,1), m_tex2surf0).xy; , PR_RDR_SHADER_TEX0)
 
 	return Out;
 }

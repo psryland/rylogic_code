@@ -28,6 +28,11 @@ namespace pr
 			cb.m_c2s = view.m_c2s;
 			cb.m_w2c = pr::GetInverseFast(cb.m_c2w);
 			cb.m_w2s = cb.m_c2s * cb.m_w2c;
+
+			pr::Transpose4x4(cb.m_c2w);
+			pr::Transpose4x4(cb.m_c2s);
+			pr::Transpose4x4(cb.m_w2c);
+			pr::Transpose4x4(cb.m_w2s);
 		}
 
 		// Helper for setting lighting constants
@@ -335,16 +340,14 @@ namespace pr
 			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::DSLighting))
 		{
 			{// Unit quad in Z = 0 plane
-				float const px0 = -1.0f, px1 = 1.0f;
-				float const py0 = -1.0f, py1 = 1.0f;
 				float const t0 = 0.000f, t1 = 0.9999f;
 				VertPCNT verts[4] =
 				{
-					// Encode the view frustum corner index in 'pos.z', biased for the float to int cast
-					{pr::v3::make(px0, py0, 0.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
-					{pr::v3::make(px1, py0, 1.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
-					{pr::v3::make(px1, py1, 2.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
-					{pr::v3::make(px0, py1, 3.01f), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
+					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
+					{pr::v3::make(0.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
+					{pr::v3::make(1.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
+					{pr::v3::make(2.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
+					{pr::v3::make(3.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
 				};
 				pr::uint16 idxs[] =
 				{
@@ -375,12 +378,10 @@ namespace pr
 			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
 		}
 
-		// Set the camera space position of the four corners of the view frustum in camera space
+		// Set the position of the four corners of the view frustum in camera space
 		void SetFrustumCorners(SceneView const& view, GBuffer::CBufCamera& cb)
 		{
 			pr::GetCorners(view.Frustum(), cb.m_frustum, 1.0f);
-			//for (auto& pt : cb.m_frustum)
-			////	pt = cb.m_c2w * pt;
 		}
 
 		// Perform the render step
@@ -388,17 +389,6 @@ namespace pr
 		{
 			// Sort the draw list if needed
 			SortIfNeeded();
-
-			// Clear the back buffer and depth/stencil
-			//if (m_clear_bb)
-			{
-				// Get the render target views
-				//D3DPtr<ID3D11RenderTargetView> rtv;
-				//D3DPtr<ID3D11DepthStencilView> dsv;
-				//ss.m_dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
-				//ss.m_dc->ClearRenderTargetView(rtv.m_ptr, m_background_colour);
-				//ss.m_dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
-			}
 
 			// Set the viewport
 			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
@@ -411,7 +401,8 @@ namespace pr
 			}
 			{// Set lighting constants
 				GBuffer::CBufLighting cb = {};
-			//	WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
+				SetLightingConstants(m_scene->m_global_light, cb);
+				WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
 			}
 
 			// Draw the full screen quad

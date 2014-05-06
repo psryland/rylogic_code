@@ -38,9 +38,9 @@ PS_INPUT main(VS_INPUT In)
 	float4 ms_norm = float4(In.norm,0);
 
 	// Transform
-	Out.ss_pos  = mul(m_o2s ,ms_pos);
-	Out.ws_pos  = mul(m_o2w ,ms_pos);
-	Out.ws_norm = m_geom.y != 0 ? mul(m_o2w,ms_norm) : float4(0,0,1,0);
+	Out.ss_pos  = mul(ms_pos, m_o2s);
+	Out.ws_pos  = mul(ms_pos, m_o2w);
+	Out.ws_norm = m_geom.y != 0 ? mul(ms_norm, m_n2w) : float4(0,0,1,0);
 
 	// Tinting
 	Out.diff = m_tint;
@@ -50,7 +50,7 @@ PS_INPUT main(VS_INPUT In)
 		Out.diff = In.diff * Out.diff;
 
 	// Texture2D (with transform)
-	Out.tex = m_geom.z != 0 ? mul(m_tex2surf0, float4(In.tex,0,1)).xy : float2(0,0);
+	Out.tex = m_geom.z != 0 ? mul(float4(In.tex,0,1), m_tex2surf0).xy : float2(0,0);
 
 	return Out;
 }

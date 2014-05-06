@@ -5,17 +5,21 @@
 #ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
 #define PR_RDR_SHADER_FORWARD_CBUF_HLSL
 
+// Notes:
+// - use float4x4 not matrix... they're not the same (don't know why tho)
+// - hlsl float4x4 is column major (by default) but pr::m4x4 is row major.
+//   Rememeber to transpose matrices
+// - For efficiency, constant buffers need to be grouped by frequency of update
+//   The C/C++ versions of the buffer structs should contain elements assuming
+//   every struct member is selected. Make sure the packoffset is correct for
+//   each member.
+// - pack offsets are needed because of compile time selection of constants
+
 #if SHADER_BUILD
 #include "uber_defines.hlsli"
 #endif
 
 #define PR_RDR_MAX_PROJECTED_TEXTURES 1
-
-// Notes:
-// For efficiency, constant buffers need to be grouped by frequency of update
-// The C/C++ versions of the buffer structs should contain elements assuming
-// every struct member is selected. Make sure the packoffset is correct for
-// each member.
 
 // 'CBufFrame' is a cbuffer managed by a scene.
 // It contains values constant for the whole frame.
@@ -24,10 +28,10 @@
 cbuffer CBufFrame :register(b0)
 {
 	// Camera transform
-	matrix m_c2w        :packoffset(c0);  // camera to world
-	matrix m_c2s        :packoffset(c4);  // camera to screen
-	matrix m_w2c        :packoffset(c8);  // world to camera
-	matrix m_w2s        :packoffset(c12); // world to screen
+	float4x4 m_c2w        :packoffset(c0);  // camera to world
+	float4x4 m_c2s        :packoffset(c4);  // camera to screen
+	float4x4 m_w2c        :packoffset(c8);  // world to camera
+	float4x4 m_w2s        :packoffset(c12); // world to screen
 
 	// Global lighting
 	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
@@ -41,7 +45,7 @@ cbuffer CBufFrame :register(b0)
 
 	// Projected textures
 	float4 m_proj_tex_count :packoffset(c23);
-	matrix m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES] :packoffset(c24);
+	float4x4 m_proj_tex[PR_RDR_MAX_PROJECTED_TEXTURES] :packoffset(c24);
 };
 #else
 struct CBufFrame
@@ -76,21 +80,21 @@ struct CBufFrame
 cbuffer CBufModel :register(b1)
 {
 	// Object transform
-	EXPAND(matrix m_o2s :packoffset(c0) ;,PR_RDR_SHADER_TXFM  ) // object to screen
-	EXPAND(matrix m_o2w :packoffset(c4) ;,PR_RDR_SHADER_TXFMWS) // object to world
-	EXPAND(matrix m_n2w :packoffset(c8) ;,PR_RDR_SHADER_TXFMWS) // normal to world
+	EXPAND(float4x4 m_o2s :packoffset(c0) ;,PR_RDR_SHADER_TXFM  ) // object to screen
+	EXPAND(float4x4 m_o2w :packoffset(c4) ;,PR_RDR_SHADER_TXFMWS) // object to world
+	EXPAND(float4x4 m_n2w :packoffset(c8) ;,PR_RDR_SHADER_TXFMWS) // normal to world
 
 	// Tinting
 	EXPAND(float4 m_tint :packoffset(c12) ;,PR_RDR_SHADER_TINT0) // object tint colour
 
 	// Texture2D
-	EXPAND(matrix m_tex2surf0 :packoffset(c13) ;,PR_RDR_SHADER_TEX0) // texture to surface transform
+	EXPAND(float4x4 m_tex2surf0 :packoffset(c13) ;,PR_RDR_SHADER_TEX0) // texture to surface transform
 };
 #else
 struct CBufModel
 {
 	enum { Slot = 1 };
-	
+
 	// Object transform
 	pr::m4x4   m_o2s;
 	pr::m4x4   m_o2w;

@@ -44,6 +44,11 @@ namespace pr
 			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
 			cb.m_o2s = c2s * w2c * o2w;
 			cb.m_o2w = o2w;
+			cb.m_n2w = pr::Orthonormalise(cb.m_o2w);
+
+			pr::Transpose4x4(cb.m_o2s);
+			pr::Transpose4x4(cb.m_o2w);
+			pr::Transpose4x4(cb.m_n2w);
 		}
 
 		// Set the tint properties of a constants buffer
@@ -59,6 +64,8 @@ namespace pr
 			cb.m_tex2surf0 = ddata.m_tex_diffuse != nullptr
 				? ddata.m_tex_diffuse->m_t2s
 				: pr::m4x4Identity;
+
+			pr::Transpose4x4(cb.m_tex2surf0);
 		}
 
 		// Convert a geom into an iv4 for flags passed to a shader
@@ -281,21 +288,6 @@ namespace pr
 				BaseShader::Setup(dc, dle, rstep);
 
 				auto& gbuffer = rstep.as<DSLightingPass>().m_gbuffer;
-
-				// Set the constants for the shader
-				//GBuffer::CBufModel cb = {};
-
-				//Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
-				//Tint(*dle.m_instance, cb);
-				//Tex0(*dle.m_nugget, cb);
-				//{
-				//	LockT<CBufModel_GBuffer> lock(dc, me.m_cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				//	*lock.ptr() = cb;
-				//}
-
-				//// Set constants for the shader
-				//dc->VSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
-				//dc->PSSetConstantBuffers(EConstBuf::ModelConstants, 1, &me.m_cbuf.m_ptr);
 
 				// Set constants for the pixel shader
 				dc->PSSetSamplers(0, 1, &m_point_sampler.m_ptr);

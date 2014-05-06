@@ -226,12 +226,12 @@ namespace ldr
 			pr::v4 verts[] =
 			{
 				pr::v4::make(-0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f, -0.4f, 1.0f),
-				pr::v4::make(0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make(0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make(0.5f, -0.5f, -0.4f, 1.0f),
-				pr::v4::make(0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(0.5f,  0.5f, -0.4f, 1.0f),
+				pr::v4::make( 0.5f, -0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f, -0.4f, -0.5f, 1.0f), pr::v4::make( 0.4f, -0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f, -0.5f, -0.4f, 1.0f),
+				pr::v4::make( 0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make( 0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make( 0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make( 0.5f,  0.5f, -0.4f, 1.0f),
 				pr::v4::make(-0.5f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f, -0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f, -0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f, -0.4f, 1.0f),
 				pr::v4::make(-0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(-0.5f, -0.5f,  0.4f, 1.0f),
-				pr::v4::make(0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make(0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make(0.5f, -0.5f,  0.4f, 1.0f),
-				pr::v4::make(0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(0.5f,  0.5f,  0.4f, 1.0f),
+				pr::v4::make( 0.5f, -0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f, -0.4f,  0.5f, 1.0f), pr::v4::make( 0.4f, -0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f, -0.5f,  0.4f, 1.0f),
+				pr::v4::make( 0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make( 0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make( 0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make( 0.5f,  0.5f,  0.4f, 1.0f),
 				pr::v4::make(-0.5f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.4f,  0.5f, 1.0f), pr::v4::make(-0.4f,  0.5f,  0.5f, 1.0f), pr::v4::make(-0.5f,  0.5f,  0.4f, 1.0f),
 			};
 			pr::uint16 lines[] =
