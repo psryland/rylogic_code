@@ -102,6 +102,7 @@ namespace ldr
 			COMMAND_ID_HANDLER(ID_RENDERING_SHOWOBJECTBBOXES    ,OnShowObjBBoxes)
 			COMMAND_ID_HANDLER(ID_RENDERING_WIREFRAME           ,OnToggleFillMode)
 			COMMAND_ID_HANDLER(ID_RENDERING_RENDER2D            ,OnRender2D)
+			COMMAND_ID_HANDLER(ID_RENDERING_TECHNIQUE           ,OnRenderTechnique)
 			COMMAND_ID_HANDLER(ID_RENDERING_LIGHTING            ,OnShowLightingDlg)
 			COMMAND_ID_HANDLER(ID_TOOLS_MEASURE                 ,OnShowToolDlg)
 			COMMAND_ID_HANDLER(ID_TOOLS_ANGLE                   ,OnShowToolDlg)
@@ -159,6 +160,7 @@ namespace ldr
 		LRESULT OnShowObjBBoxes         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnToggleFillMode        (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnRender2D              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT OnRenderTechnique       (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnShowLightingDlg       (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnShowToolDlg           (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnShowOptions           (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

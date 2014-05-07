@@ -6,8 +6,9 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/scene_view.h"
-#include "pr/renderer11/render/render_step.h"
+#include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/event_types.h"
+#include "pr/renderer11/util/wrappers.h"
 
 namespace pr
 {
@@ -21,6 +22,10 @@ namespace pr
 			:pr::events::IRecv<Evt_Resize>
 			,pr::AlignTo<16>
 		{
+			// Fixed container of render steps. Doesn't really need to be fixed,
+			// but non-fixed means we need the pr::rdr::Allocator to construct it.
+			typedef pr::Array<RenderStepPtr, 16, true> RenderStepCont;
+
 			pr::Renderer*  m_rdr;          // The controlling renderer
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
@@ -29,6 +34,13 @@ namespace pr
 			Light          m_global_light; // The global light settings
 
 			Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
+
+			// Set the render steps to use for rendering the scene
+			void SetRenderSteps(std::vector<ERenderStep>&& rsteps);
+			
+			// Some render step presets
+			static std::vector<ERenderStep> ForwardRendering() { return {ERenderStep::ForwardRender}; }
+			static std::vector<ERenderStep> DeferredRendering() { return {ERenderStep::GBuffer, ERenderStep::DSLighting}; }
 
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }

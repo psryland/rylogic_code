@@ -16,12 +16,6 @@
     <Filter Include="shaders">
       <UniqueIdentifier>{046fe0e7-692c-4ede-8633-41b96de1420b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="shaders\shaders">
-      <UniqueIdentifier>{188ea3e3-14ac-4c9c-8c3a-e4b1827d0dc0}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="shaders\common">
-      <UniqueIdentifier>{f2eca657-5dc8-4b27-8ad4-e9ce2f165350}</UniqueIdentifier>
-    </Filter>
     <Filter Include="textures">
       <UniqueIdentifier>{faf42226-0091-4cef-b5ca-8c77abffc798}</UniqueIdentifier>
     </Filter>
@@ -36,6 +30,30 @@
     </Filter>
     <Filter Include="directxtex">
       <UniqueIdentifier>{705f984a-2f8f-42a1-b08f-130712f327da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="steps">
+      <UniqueIdentifier>{ed9c7a8f-f5fd-4478-99e0-000bbe24051b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="steps\forward">
+      <UniqueIdentifier>{a78ed2f2-207d-44cb-8685-367736de1877}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="steps\deferred">
+      <UniqueIdentifier>{4884a8b0-2dbe-4ef8-aaf1-5078c1fd77ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl">
+      <UniqueIdentifier>{ac2023af-8753-474e-8e51-b83cc0f5c4a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\forward">
+      <UniqueIdentifier>{e7cb889b-829b-4303-8e43-0be4ffeff3bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\deferred">
+      <UniqueIdentifier>{18cc3075-d6e7-45c4-b3ef-4e500afbd89e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="steps\shadow">
+      <UniqueIdentifier>{caca1f9d-cf0e-4778-863c-1d56746735ba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\shadow">
+      <UniqueIdentifier>{d679b4db-6cbe-41e9-88e9-5fd593c061d1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -186,9 +204,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h">
       <Filter>directxtex</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\render_step.h">
-      <Filter>render</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\event_types.h">
       <Filter>util</Filter>
     </ClInclude>
@@ -207,8 +222,29 @@
     <ClInclude Include="..\renderer11\render\state_stack.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer11\shaders\cbuffer.h">
-      <Filter>shaders</Filter>
+    <ClInclude Include="..\renderer11\steps\common.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\steps\deferred\ds_shader.h">
+      <Filter>steps\deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="..\renderer11\steps\forward\fwd_shader.h">
+      <Filter>steps\forward</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\render_step.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward\forward_render.h">
+      <Filter>steps\forward</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\dslighting.h">
+      <Filter>steps\deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\gbuffer.h">
+      <Filter>steps\deferred</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\shadow\shadow_map.h">
+      <Filter>steps\shadow</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -250,9 +286,6 @@
     </ClCompile>
     <ClCompile Include="..\renderer11\textures\texture_manager.cpp">
       <Filter>textures</Filter>
-    </ClCompile>
-    <ClCompile Include="..\renderer11\shaders\stock_shaders.cpp">
-      <Filter>shaders</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\lights\light.cpp">
       <Filter>lights</Filter>
@@ -317,66 +350,114 @@
     <ClCompile Include="..\renderer11\textures\wic_texture_loader.cpp">
       <Filter>textures</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\render\render_step.cpp">
-      <Filter>render</Filter>
-    </ClCompile>
     <ClCompile Include="..\renderer11\textures\texture_gdi.cpp">
       <Filter>textures</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\render\state_stack.cpp">
       <Filter>render</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\steps\render_step.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\forward_render.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\txfm_tint.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc_lit.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc_list_tex.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\txfm_tex.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\deferred\ds_shader.cpp">
+      <Filter>steps\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\deferred\dslighting_shader.cpp">
+      <Filter>steps\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\deferred\dslighting.cpp">
+      <Filter>steps\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\deferred\gbuffer_shader.cpp">
+      <Filter>steps\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\deferred\gbuffer.cpp">
+      <Filter>steps\deferred</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\forward\fwd_shader.cpp">
+      <Filter>steps\forward</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\steps\shadow\shadow_map.cpp">
+      <Filter>steps\shadow</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
       <Filter>directxtex</Filter>
     </None>
+    <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\forward\functions.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\forward\uber.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\forward\uber_defines.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
     <None Include="..\..\script\BuildShader.py">
-      <Filter>shaders</Filter>
+      <Filter>shaders\hlsl</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\compression.hlsli">
-      <Filter>shaders\common</Filter>
+    <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
+      <Filter>shaders\hlsl\shadow</Filter>
     </None>
-    <None Include="..\renderer11\shaders\common\functions.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\gbuffer_cbuf.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\uber.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\uber_defines.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\forward_cbuf.hlsli">
-      <Filter>shaders\common</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\common\gbuffer.hlsli">
-      <Filter>shaders\common</Filter>
+    <None Include="..\renderer11\shaders\hlsl\cbuf.hlsli">
+      <Filter>shaders\hlsl</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\shaders\gbuffer.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
+      <Filter>shaders\hlsl\shadow</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_pvc_lit_tex.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc_lit.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint_tex.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc_lit_tex.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\txfm_tint.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_tex.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\shaders\dslighting.hlsl">
-      <Filter>shaders\shaders</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\deferred\dslighting.hlsl">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsl">
+      <Filter>shaders\hlsl\deferred</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

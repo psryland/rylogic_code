@@ -54,14 +54,14 @@ namespace TestCS
 			m_view3d.Drawset.AddObject(m_obj1);
 
 			// Create a texture and assign it to an object
-			m_tex0 = new View3d.Texture(100,100,View3d.Texture.Option.Gdi);
+			m_tex0 = new View3d.Texture(100,100);
 			using (var tex = new View3d.Texture.Lock(m_tex0))
 			{
 				tex.Gfx.Clear(Color.DarkBlue);
 				tex.Gfx.FillEllipse(Brushes.RoyalBlue, 10,10,80,80);
 				tex.Gfx.DrawString("Paul Rulz", SystemFonts.DefaultFont, Brushes.Black, new PointF(30,40));
 			}
-			m_obj0.SetTexture(m_tex0, true);
+			m_obj0.SetTexture(m_tex0);
 
 			//m_view3d.View3d.CreateDemoScene();
 			

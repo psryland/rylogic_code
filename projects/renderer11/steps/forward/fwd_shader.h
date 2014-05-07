@@ -11,12 +11,15 @@ namespace pr
 {
 	namespace rdr
 	{
-		// A common base class for the forward rendering shaders
-		struct FwdShader :BaseShader
+		namespace fwd
 		{
 			// Constant buffer types for the forward shaders
 			#include "renderer11/shaders/hlsl/forward/forward_cbuf.hlsli"
+		}
 
+		// A common base class for the forward rendering shaders
+		struct FwdShader :BaseShader
+		{
 			// Per-model constant buffer
 			D3DPtr<ID3D11Buffer> m_cbuf_model;
 

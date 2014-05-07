@@ -167,6 +167,14 @@ namespace pr.util
 			return Math.Sqrt(dx*dx + dy*dy);
 		}
 
+		/// <summary>Set 'existing' to 'value' if not already Equal. Raises 'raise' if not equal</summary>
+		public static void SetAndRaise<T>(object this_, ref T existing, T value, EventHandler raise, EventArgs args = null)
+		{
+			if (Equals(existing, value)) return;
+			existing = value;
+			raise.Raise(this_, args ?? EventArgs.Empty);
+		}
+
 		/// <summary>Return an assembly attribute</summary>
 		public static T GetAssemblyAttribute<T>(Assembly ass)
 		{

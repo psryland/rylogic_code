@@ -46,9 +46,9 @@ namespace pr
 		static FRect make(IRect const& rect)                              { FRect frect; return frect = rect; }
 	};
 
-	FRect const FRectZero  = {v2Zero, v2Zero};
-	FRect const FRectReset = {v2Max, -v2Max};
-	FRect const FRectUnit  = {v2Zero, v2One};
+	static FRect const FRectZero  = {v2Zero, v2Zero};
+	static FRect const FRectReset = {v2Max, -v2Max};
+	static FRect const FRectUnit  = {v2Zero, v2One};
 
 	// Assignment operators
 	inline FRect& operator += (FRect& lhs, v2 const& offset) { lhs.m_min += offset; lhs.m_max += offset; return lhs; }

@@ -44,63 +44,197 @@ namespace pr.gui
 		/// <summary>Style attributes for nodes</summary>
 		public class NodeStyle
 		{
-			public Color Border { get; set; }
-			public Color Fill   { get; set; }
-			public Color Text   { get; set; }
-			public Font Font    { get; set; }
+			/// <summary>The colour of the node border</summary>
+			public Color Border
+			{
+				get { return m_impl_border; }
+				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
+			}
+			private Color m_impl_border = Color.Black;
 
+			/// <summary>The node background colour</summary>
+			public Color Fill
+			{
+				get { return m_impl_fill; }
+				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
+			}
+			private Color m_impl_fill = Color.WhiteSmoke;
+
+			/// <summary>The colour of the node when selected</summary>
+			public Color Selected
+			{
+				get { return m_impl_selected; }
+				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
+			}
+			private Color m_impl_selected = Color.LightBlue;
+
+			/// <summary>The node text colour</summary>
+			public Color Text
+			{
+				get { return m_impl_text; }
+				set { Util.SetAndRaise(this, ref m_impl_text, value, StyleChanged); }
+			}
+			private Color m_impl_text;
+
+			/// <summary>The font to use for the node text</summary>
+			public Font Font
+			{
+				get { return m_impl_font; }
+				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
+			}
+			private Font m_impl_font;
+			
+			/// <summary>The alignment of the text within the node</summary>
+			public ContentAlignment TextAlign
+			{
+				get { return m_impl_align; }
+				set { m_impl_align = value; }
+			}
+			private ContentAlignment m_impl_align;
+
+			/// <summary>Raised whenever a style property is changed</summary>
+			public event EventHandler StyleChanged;
+			
 			public NodeStyle()
 			{
-				Border = Color.Black;
-				Fill   = Color.WhiteSmoke;
-				Text   = Color.Black;
-				Font   = SystemFonts.DefaultFont;
+				using (StyleChanged.SuspendScope())
+				{
+					Border    = Color.Black;
+					Fill      = Color.WhiteSmoke;
+					Text      = Color.Black;
+					TextAlign = ContentAlignment.MiddleCenter;
+					Font      = new Font(FontFamily.GenericSansSerif, 16f, GraphicsUnit.Point);
+				}
+			}
+		}
+
+		/// <summary>A base class for nodes</summary>
+		public abstract class Node :DiagramControl.INode
+		{
+			protected bool m_dirty;
+
+			protected Node(string ldr_desc, uint width, uint height, string tex_obj_name, string text, m4x4 position, NodeStyle style)
+			{
+				// Set impl members to prevent m_dirty being set
+				m_impl_obj = new View3d.Object(ldr_desc);
+				m_impl_tex = new View3d.Texture(width,height);
+				m_impl_obj.SetTexture(Surf, tex_obj_name);
+				m_impl_text  = text;
+				m_impl_style = style;
+				m_dirty = false;
+
+				// Set the initial position
+				Position = position;
+				
+				Refresh(true);
+			}
+
+			/// <summary>The graphics object for this node</summary>
+			public View3d.Object Graphics
+			{
+				get { Refresh(); return m_impl_obj; }
+				private set { m_impl_obj = value; }
+			}
+			private View3d.Object m_impl_obj;
+
+			/// <summary>The surface to draw on for the node</summary>
+			protected View3d.Texture Surf
+			{
+				get { return m_impl_tex; }
+				private set { m_impl_tex = value; }
+			}
+			private View3d.Texture m_impl_tex;
+
+			/// <summary>Text to display in this node</summary>
+			public string Text
+			{
+				get { return m_impl_text; }
+				set { m_impl_text = value; m_dirty = true; }
+			}
+			private string m_impl_text;
+
+			/// <summary>Style attributes for the node</summary>
+			public NodeStyle Style
+			{
+				get { return m_impl_style; }
+				set { m_impl_style = value; m_dirty = true; }
+			}
+			private NodeStyle m_impl_style;
+
+			/// <summary>Get/Set whether the node is selected</summary>
+			public bool Selected { get; set; }
+
+			/// <summary>The element to diagram transform</summary>
+			public m4x4 Position
+			{
+				get { return Graphics.O2P; }
+				set { Graphics.O2P = value; }
+			}
+
+			/// <summary>Redraw this node if dirty</summary>
+			public void Refresh(bool force = false)
+			{
+				// Redraw the texture if dirty
+				if (!m_dirty && !force) return;
+				Render();
+				m_dirty = false;
+			}
+
+			/// <summary>Render the node into the surface</summary>
+			protected abstract void Render();
+
+			/// <summary>Returns the position to draw the text given the current alignment</summary>
+			protected v2 TextLocation(Graphics gfx)
+			{
+				var sz = new v2(Surf.Width, Surf.Height);
+				sz = sz - new v2(gfx.MeasureString(Text, Style.Font, sz));
+				switch (Style.TextAlign)
+				{
+				default: throw new ArgumentException("unknown text alignment");
+				case ContentAlignment.TopLeft     : return new v2(sz.x * 0.0f, sz.y * 0.0f);
+				case ContentAlignment.TopCenter   : return new v2(sz.x * 0.5f, sz.y * 0.0f);
+				case ContentAlignment.TopRight    : return new v2(sz.x * 1.0f, sz.y * 0.0f);
+				case ContentAlignment.MiddleLeft  : return new v2(sz.x * 0.0f, sz.y * 0.5f);
+				case ContentAlignment.MiddleCenter: return new v2(sz.x * 0.5f, sz.y * 0.5f);
+				case ContentAlignment.MiddleRight : return new v2(sz.x * 1.0f, sz.y * 0.5f);
+				case ContentAlignment.BottomLeft  : return new v2(sz.x * 0.0f, sz.y * 1.0f);
+				case ContentAlignment.BottomCenter: return new v2(sz.x * 0.5f, sz.y * 1.0f);
+				case ContentAlignment.BottomRight : return new v2(sz.x * 1.0f, sz.y * 1.0f);
+				}
 			}
 		}
 
 		/// <summary>Simple rectangular box node</summary>
-		public class BoxNode :DiagramControl.INode
+		public class BoxNode :Node
 		{
-			private readonly View3d.Object m_obj;   // The graphics object for the node
-			private readonly View3d.Texture m_tex;  // The texture surface to draw on
-
-			public BoxNode(uint width, uint height, float corner_radius = 5f) :this(width,height,SystemColors.ControlLightLight, Color.Black, corner_radius) {}
-			public BoxNode(uint width, uint height, Color bkgd, Color border, float corner_radius = 5f)
+			/// <summary>Create geometry for the node</summary>
+			private static string Make(uint width, uint height, Color bkgd, Color border, float corner_radius)
 			{
 				var ldr = new LdrBuilder();
-				using (ldr.Group())
+				using (ldr.Group("node"))
 				{
-					ldr.Append("*Rect r ",bkgd  ,"{3 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
-					ldr.Append("*Rect r ",border,"{3 ",width," ",height," ",Ldr.CornerRadius(corner_radius),"}\n");
+					ldr.Append("*Rect bkgd "  ,bkgd  ,"{3 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
+					ldr.Append("*Rect border ",border,"{3 ",width," ",height," ",Ldr.CornerRadius(corner_radius),"}\n");
 				}
-				m_obj = new View3d.Object(ldr.ToString());
-
-				m_tex = new View3d.Texture(width,height,View3d.Texture.Option.Gdi);
-				using (var tex = m_tex.LockSurface)
-				{
-					tex.Gfx.DrawString("This is a box node", SystemFonts.DefaultFont, Brushes.Black, PointF.Empty);
-				}
-				m_obj.SetTexture(m_tex, true);
-
-				Text  = string.Empty;
-				Style = new NodeStyle();
-				Position   = m4x4.Identity;
+				return ldr.ToString();
 			}
 
-			/// <summary>Text to display in this box</summary>
-			public string Text { get; set; }
-
-			/// <summary>Style attributes for the node</summary>
-			public NodeStyle Style { get; set; }
-
-			/// <summary>The element to diagram transform</summary>
-			public m4x4 Position { get; set; }
-
-			public View3d.Object Graphics
+			public BoxNode() :this("", 100, 50) {}
+			public BoxNode(string text, uint width, uint height) :this(text, width, height, Color.WhiteSmoke, Color.Black, 5f) {}
+			public BoxNode(string text, uint width, uint height, Color bkgd, Color border, float corner_radius) :this(text, width, height, bkgd, border, corner_radius, m4x4.Identity, new NodeStyle()) {}
+			public BoxNode(string text, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style) :base(Make(width, height, bkgd, border, corner_radius), width, height, "bkgd", text, position, style) {}
+			protected override void Render()
 			{
-				get { return m_obj; }
+				using (var tex = Surf.LockSurface)
+				{
+					tex.Gfx.Clear(Style.Fill);
+					using (var b = new SolidBrush(Style.Text))
+						tex.Gfx.DrawString(Text, Style.Font, b, TextLocation(tex.Gfx));
+				}
 			}
 		}
+
+		#endregion
 
 		/// <summary>Simple contector between nodes</summary>
 		public class Connector :DiagramControl.IConnector
@@ -114,8 +248,6 @@ namespace pr.gui
 				get { return null; }
 			}
 		}
-
-		#endregion
 
 		/// <summary>Wraps a diagram element</summary>
 		private class Element
@@ -171,10 +303,10 @@ namespace pr.gui
 			m_view3d.Drawset.Orthographic = true;
 			m_camera.SetPosition(new v4(0,0,10,1), v4.Origin, v4.YAxis);
 
-			Elements = new ListEvt<IElement>();
+			Elements = new BindingList<IElement>();
 			Elements.ListChanged += (s,a) =>
 				{
-					if ((a.ChgType & ListChg.ItemAddedOrRemoved) != 0)
+					if (a.ListChangedType == ListChangedType.ItemAdded || a.ListChangedType == ListChangedType.ItemDeleted)
 						m_eb_update_diag.Signal();
 				};
 
@@ -195,23 +327,22 @@ namespace pr.gui
 		}
 
 		/// <summary>Diagram objects</summary>
-		public ListEvt<IElement> Elements { get; private set; }
-
-		/// <summary>Update the graphics in the diagram</summary>
-		private void UpdateDiagram()
-		{
-			m_view3d.Drawset.RemoveAllObjects();
-			foreach (var node in Elements)
-				m_view3d.Drawset.AddObject(node.Graphics);
-
-			m_view3d.SignalRefresh();
-		}
+		public BindingList<IElement> Elements { get; private set; }
 
 		/// <summary>Controls for how the diagram is rendered</summary>
 		public RdrOptions RenderOptions
 		{
 			get { return m_rdr_options; }
 		}
+
+		/// <summary>Perform a hit test on the diagram</summary>
+		public HitTestResult HitTest(Point point)
+		{
+			var hit = new HitTestResult();
+			return hit;
+		}
+		public class HitTestResult
+		{}
 
 		/// <summary>Enable/Disable default mouse control</summary>
 		[Browsable(false)] public bool MouseNavigation
@@ -313,6 +444,16 @@ namespace pr.gui
 			var dst = PointToDiagram(cs);
 			m_camera.Navigate(ds.X - dst.X, ds.Y - dst.Y, 0);
 			Refresh();
+		}
+
+		/// <summary>Update the graphics in the diagram</summary>
+		private void UpdateDiagram()
+		{
+			m_view3d.Drawset.RemoveAllObjects();
+			foreach (var node in Elements)
+				m_view3d.Drawset.AddObject(node.Graphics);
+
+			m_view3d.SignalRefresh();
 		}
 
 		/// <summary>Resize the control</summary>

@@ -41,12 +41,13 @@ namespace pr
 	};
 	static_assert(std::is_pod<v2>::value, "Should be a pod type");
 
-	v2 const v2Zero  = {0.0f, 0.0f};
-	v2 const v2One   = {1.0f, 1.0f};
-	v2 const v2Min   = {maths::float_min, maths::float_min};
-	v2 const v2Max   = {maths::float_max, maths::float_max};
-	v2 const v2XAxis = {1.0f, 0.0f};
-	v2 const v2YAxis = {0.0f, 1.0f};
+	static v2 const v2Zero  = {0.0f, 0.0f};
+	static v2 const v2Half  = {0.5f, 0.5f};
+	static v2 const v2One   = {1.0f, 1.0f};
+	static v2 const v2Min   = {maths::float_min, maths::float_min};
+	static v2 const v2Max   = {maths::float_max, maths::float_max};
+	static v2 const v2XAxis = {1.0f, 0.0f};
+	static v2 const v2YAxis = {0.0f, 1.0f};
 
 	// Limits
 	namespace maths

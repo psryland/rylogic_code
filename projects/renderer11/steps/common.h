@@ -42,7 +42,8 @@ namespace pr
 		template <typename TCBuf> void Tint(BaseInstance const& inst, TCBuf& cb)
 		{
 			pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
-			cb.m_tint = col ? *col : pr::ColourWhite;
+			pr::Colour c = col ? *col : pr::ColourWhite;
+			cb.m_tint = c;
 		}
 
 		// Set the texture properties of a constants buffer
@@ -72,11 +73,11 @@ namespace pr
 		// Helper for setting lighting constants
 		template <typename TCBuf> void SetLightingConstants(Light const& light, TCBuf& cb)
 		{
-			cb.m_global_lighting    = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
+			cb.m_light_info         = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
 			cb.m_ws_light_direction = light.m_direction;
 			cb.m_ws_light_position  = light.m_position;
-			cb.m_light_ambient      = light.m_ambient;
-			cb.m_light_colour       = light.m_diffuse;
+			cb.m_light_ambient      = static_cast<pr::Colour>(light.m_ambient);
+			cb.m_light_colour       = static_cast<pr::Colour>(light.m_diffuse);
 			cb.m_light_specular     = pr::Colour::make(light.m_specular, light.m_specular_power);
 			cb.m_spot               = pr::v4::make(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
 		}

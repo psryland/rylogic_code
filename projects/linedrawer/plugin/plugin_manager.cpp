@@ -84,9 +84,9 @@ LDR_EXPORT bool ldrObjectVisible(ldrapi::ObjectHandle object)
 {
 	return object->m_visible;
 }
-LDR_EXPORT void ldrObjectSetVisible(ldrapi::ObjectHandle object, bool visible, bool include_children)
+LDR_EXPORT void ldrObjectSetVisible(ldrapi::ObjectHandle object, bool visible, char const* name)
 {
-	object->Visible(visible, include_children);
+	object->Visible(visible, name);
 }
 
 // Get/Set object wireframe mode
@@ -94,9 +94,9 @@ LDR_EXPORT bool ldrObjectWireframe(ldrapi::ObjectHandle object)
 {
 	return object->m_wireframe;
 }
-LDR_EXPORT void ldrObjectSetWireframe(ldrapi::ObjectHandle object, bool wireframe, bool include_children)
+LDR_EXPORT void ldrObjectSetWireframe(ldrapi::ObjectHandle object, bool wireframe, char const* name)
 {
-	object->Wireframe(wireframe, include_children);
+	object->Wireframe(wireframe, name);
 }
 
 // Plugin manager *****************************************************************

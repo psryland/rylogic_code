@@ -31,9 +31,9 @@ namespace pr
 		float          DiametreSq() const;
 	};
 
-	BSphere const BSphereZero  = {v4Zero};
-	BSphere const BSphereUnit  = {v4Origin};
-	BSphere const BSphereReset = {-v4Origin};
+	static BSphere const BSphereZero  = {v4Zero};
+	static BSphere const BSphereUnit  = {v4Origin};
+	static BSphere const BSphereReset = {-v4Origin};
 
 	// Assignment operators
 	BSphere& operator += (BSphere& lhs, v4 const& offset);

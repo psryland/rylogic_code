@@ -27,7 +27,7 @@ dlang/2.062
 dlang/head
 dlang/dm/
 dlang/dmd2/
-renderer11/shaders/compiled/*
+renderer11/shaders/hlsl/compiled/*
 RylogicEnv.cmd
 ResEdit.layout
 dump/

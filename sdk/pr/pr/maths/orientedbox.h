@@ -34,9 +34,9 @@ namespace pr
 		static OrientedBox  make(v4 const& centre, v4 const& radii, m3x4 const& ori) { OrientedBox bbox; return bbox.set(centre, radii, ori); }
 	};
 
-	OrientedBox const OBoxZero  = {m4x4Identity, v4Zero};
-	OrientedBox const OBoxUnit  = {m4x4Identity, {0.5f, 0.5f, 0.5f, 1.0f}};
-	OrientedBox const OBoxReset = {m4x4Identity, v4Zero};
+	static OrientedBox const OBoxZero  = {m4x4Identity, v4Zero};
+	static OrientedBox const OBoxUnit  = {m4x4Identity, {0.5f, 0.5f, 0.5f, 1.0f}};
+	static OrientedBox const OBoxReset = {m4x4Identity, v4Zero};
 
 	// Assignment operators
 	inline OrientedBox& operator += (OrientedBox& lhs, v4 const& offset) { lhs.m_box_to_world.pos += offset; return lhs; }

@@ -50,7 +50,11 @@ namespace pr.gui
 			DefaultKeyboardShortcuts = true;
 
 			// Update the size of the control whenever we're added to a new parent
-			ParentChanged += (s,a) => View3d.RenderTargetSize = new Size(Width-2, Height-2);
+			ParentChanged += (s,a) =>
+				{
+					if (View3d == null) return;
+					View3d.RenderTargetSize = new Size(Width-2, Height-2);
+				};
 		}
 
 		/// <summary>Clean up any resources being used.</summary>
@@ -59,6 +63,7 @@ namespace pr.gui
 			if (disposing && View3d != null)
 			{
 				View3d.Dispose();
+				View3d = null;
 			}
 			if (disposing && components != null)
 			{

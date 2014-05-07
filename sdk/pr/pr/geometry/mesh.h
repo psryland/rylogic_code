@@ -56,9 +56,11 @@ namespace pr
 			pr::BBox bbox = pr::BBoxReset;
 			for (std::size_t v = 0; v != num_verts; ++v)
 			{
-				v4 pt = *verts++;
-				v4 nm = *norm++;
-				SetPCNT(*v_out++, pt, *col++, nm, *uv++);
+				auto pt = *verts++;
+				auto cl = *col++;
+				auto nm = *norm++;
+				auto tx = *uv++;
+				SetPCNT(*v_out++, pt, cl, nm, tx);
 				pr::Encompass(bbox, pt);
 			}
 

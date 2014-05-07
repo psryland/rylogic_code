@@ -36,8 +36,8 @@ namespace pr
 	};
 	static_assert(std::is_pod<m2x2>::value, "Should be a pod type");
 
-	m2x2 const m2x2Zero     = {v2Zero, v2Zero};
-	m2x2 const m2x2Identity = {v2XAxis, v2YAxis};
+	static m2x2 const m2x2Zero     = {v2Zero, v2Zero};
+	static m2x2 const m2x2Identity = {v2XAxis, v2YAxis};
 
 	// Element accessors
 	inline v4 GetX(m2x2 const& m) { return v4::make(m.x, 0.0f, 0.0f); }

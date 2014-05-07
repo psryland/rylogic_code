@@ -165,30 +165,53 @@ namespace pr.gfx
 			DXGI_FORMAT_B4G4R4A4_UNORM              = 115,
 			DXGI_FORMAT_FORCE_UINT                  = 0xffffffff
 		}
-
-		/// <summary>Texture filtering flags</summary>
-		[Flags] public enum EFilter :uint
+		public enum EFilter :uint //D3D11_FILTER
 		{
-			D3DX_DEFAULT                 = 0xFFFFFFFF,
-			D3DX_FILTER_NONE             = (1 << 0),
-			D3DX_FILTER_POINT            = (2 << 0),
-			D3DX_FILTER_LINEAR           = (3 << 0),
-			D3DX_FILTER_TRIANGLE         = (4 << 0),
-			D3DX_FILTER_BOX              = (5 << 0),
-
-			D3DX_FILTER_MIRROR_U         = (1 << 16),
-			D3DX_FILTER_MIRROR_V         = (2 << 16),
-			D3DX_FILTER_MIRROR_W         = (4 << 16),
-			D3DX_FILTER_MIRROR           = (7 << 16),
-
-			D3DX_FILTER_DITHER           = (1 << 19),
-			D3DX_FILTER_DITHER_DIFFUSION = (2 << 19),
-
-			D3DX_FILTER_SRGB_IN          = (1 << 21),
-			D3DX_FILTER_SRGB_OUT         = (2 << 21),
-			D3DX_FILTER_SRGB             = (3 << 21),
+			D3D11_FILTER_MIN_MAG_MIP_POINT                          = 0,
+			D3D11_FILTER_MIN_MAG_POINT_MIP_LINEAR                   = 0x1,
+			D3D11_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT             = 0x4,
+			D3D11_FILTER_MIN_POINT_MAG_MIP_LINEAR                   = 0x5,
+			D3D11_FILTER_MIN_LINEAR_MAG_MIP_POINT                   = 0x10,
+			D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR            = 0x11,
+			D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT                   = 0x14,
+			D3D11_FILTER_MIN_MAG_MIP_LINEAR                         = 0x15,
+			D3D11_FILTER_ANISOTROPIC                                = 0x55,
+			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_POINT               = 0x80,
+			D3D11_FILTER_COMPARISON_MIN_MAG_POINT_MIP_LINEAR        = 0x81,
+			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_LINEAR_MIP_POINT  = 0x84,
+			D3D11_FILTER_COMPARISON_MIN_POINT_MAG_MIP_LINEAR        = 0x85,
+			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_MIP_POINT        = 0x90,
+			D3D11_FILTER_COMPARISON_MIN_LINEAR_MAG_POINT_MIP_LINEAR = 0x91,
+			D3D11_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT        = 0x94,
+			D3D11_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR              = 0x95,
+			D3D11_FILTER_COMPARISON_ANISOTROPIC                     = 0xd5,
+			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_POINT                  = 0x100,
+			D3D11_FILTER_MINIMUM_MIN_MAG_POINT_MIP_LINEAR           = 0x101,
+			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT     = 0x104,
+			D3D11_FILTER_MINIMUM_MIN_POINT_MAG_MIP_LINEAR           = 0x105,
+			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_MIP_POINT           = 0x110,
+			D3D11_FILTER_MINIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR    = 0x111,
+			D3D11_FILTER_MINIMUM_MIN_MAG_LINEAR_MIP_POINT           = 0x114,
+			D3D11_FILTER_MINIMUM_MIN_MAG_MIP_LINEAR                 = 0x115,
+			D3D11_FILTER_MINIMUM_ANISOTROPIC                        = 0x155,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_POINT                  = 0x180,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_POINT_MIP_LINEAR           = 0x181,
+			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_LINEAR_MIP_POINT     = 0x184,
+			D3D11_FILTER_MAXIMUM_MIN_POINT_MAG_MIP_LINEAR           = 0x185,
+			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_MIP_POINT           = 0x190,
+			D3D11_FILTER_MAXIMUM_MIN_LINEAR_MAG_POINT_MIP_LINEAR    = 0x191,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_LINEAR_MIP_POINT           = 0x194,
+			D3D11_FILTER_MAXIMUM_MIN_MAG_MIP_LINEAR                 = 0x195,
+			D3D11_FILTER_MAXIMUM_ANISOTROPIC                        = 0x1d5
 		}
-
+		public enum EAddrMode :uint //D3D11_TEXTURE_ADDRESS_MODE
+		{
+			D3D11_TEXTURE_ADDRESS_WRAP        = 1,
+			D3D11_TEXTURE_ADDRESS_MIRROR      = 2,
+			D3D11_TEXTURE_ADDRESS_CLAMP       = 3,
+			D3D11_TEXTURE_ADDRESS_BORDER      = 4,
+			D3D11_TEXTURE_ADDRESS_MIRROR_ONCE = 5,
+		}
 		public enum ELight
 		{
 			Ambient,
@@ -196,21 +219,18 @@ namespace pr.gfx
 			Point,
 			Spot
 		}
-
 		public enum EFillMode
 		{
 			Solid,
 			Wireframe,
 			SolidWire,
 		}
-
 		[Flags] public enum ENavBtn
 		{
 			Left   = 1 << 0,
 			Right  = 1 << 1,
 			Middle = 1 << 2
 		}
-
 		public enum EView3DLogLevel
 		{
 			Debug,
@@ -669,7 +689,7 @@ namespace pr.gfx
 			/// <summary>Set the single light source</summary>
 			public void SetLightSource(v4 position, v4 direction, bool camera_relative)
 			{
-				View3D_LightSource(m_ds, ref position, ref direction, camera_relative);
+				View3D_LightSource(m_ds, position, direction, camera_relative);
 			}
 
 			/// <summary>Show/Hide the measuring tool</summary>
@@ -765,7 +785,7 @@ namespace pr.gfx
 			public v4 AlignAxis
 			{
 				get { v4 up; View3D_CameraAlignAxis(m_ds.Handle, out up); return up; }
-				set { View3D_AlignCamera(m_ds.Handle, ref value); }
+				set { View3D_AlignCamera(m_ds.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
@@ -793,7 +813,7 @@ namespace pr.gfx
 			public v4 FocusPoint
 			{
 				get { v4 pos; View3D_GetFocusPoint(m_ds.Handle, out pos); return pos; }
-				set { View3D_SetFocusPoint(m_ds.Handle, ref value); }
+				set { View3D_SetFocusPoint(m_ds.Handle, value); }
 			}
 
 			/// <summary>Get/Set the distance to the camera focus point</summary>
@@ -813,13 +833,13 @@ namespace pr.gfx
 			/// <summary>Set the camera to world transform and focus distance.</summary>
 			public void SetPosition(v4 position, v4 lookat, v4 up)
 			{
-				View3D_PositionCamera(m_ds.Handle, ref position, ref lookat, ref up);
+				View3D_PositionCamera(m_ds.Handle, position, lookat, up);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
 			public void ResetView(v4 forward, v4 up)
 			{
-				View3D_ResetView(m_ds.Handle, ref forward, ref up);
+				View3D_ResetView(m_ds.Handle, forward, up);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
@@ -868,7 +888,7 @@ namespace pr.gfx
 			/// The z component should be the world space distance from the camera.</summary>
 			public v4 WSPointFromNormSSPoint(v4 screen)
 			{
-				return View3D_WSPointFromNormSSPoint(m_ds.Handle, ref screen);
+				return View3D_WSPointFromNormSSPoint(m_ds.Handle, screen);
 			}
 			public v4 WSPointFromSSPoint(Point screen)
 			{
@@ -881,7 +901,7 @@ namespace pr.gfx
 			/// The returned 'z' component will be the world space distance from the camera.</summary>
 			public v4 NormSSPointFromWSPoint(v4 world)
 			{
-				return View3D_NormSSPointFromWSPoint(m_ds.Handle, ref world);
+				return View3D_NormSSPointFromWSPoint(m_ds.Handle, world);
 			}
 			public Point SSPointFromWSPoint(v4 world)
 			{
@@ -895,7 +915,7 @@ namespace pr.gfx
 			/// The z component of 'screen' should be the world space distance from the camera</summary>
 			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
 			{
-				View3D_WSRayFromNormSSPoint(m_ds.Handle, ref screen, out ws_point, out ws_direction);
+				View3D_WSRayFromNormSSPoint(m_ds.Handle, screen, out ws_point, out ws_direction);
 			}
 			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
 			{
@@ -970,10 +990,26 @@ namespace pr.gfx
 				get { return View3D_ObjectBBoxMS(m_handle); }
 			}
 
-			/// <summary>Assign a texture to this object</summary>
-			public void SetTexture(Texture tex, bool include_children)
+			/// <summary>
+			/// Set the colour of this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then 'func' is applied to this object only
+			/// If 'name' is "", then 'func' is applied to this object and all children recursively
+			/// Otherwise, 'func' is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public void SetTexture(uint colour, uint mask, string name = null)
 			{
-				View3D_ObjectSetTexture(m_handle, tex.m_handle, include_children);
+				View3D_ObjectSetColour(m_handle, colour, mask, name);
+			}
+
+			/// <summary>
+			/// Set the texture on this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then 'func' is applied to this object only
+			/// If 'name' is "", then 'func' is applied to this object and all children recursively
+			/// Otherwise, 'func' is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public void SetTexture(Texture tex, string name = null)
+			{
+				View3D_ObjectSetTexture(m_handle, tex.m_handle, name);
 			}
 
 			/// <summary>Delete this object</summary>
@@ -992,50 +1028,74 @@ namespace pr.gfx
 			public ImageInfo m_info;
 			public object Tag {get;set;}
 
-			public enum Option { Default, Gdi }
-
-			/// <summary>Construct an uninitialised texture</summary>
-			public Texture(uint width, uint height, Option option)
+			public class Options
 			{
-				EResult res;
-				switch (option)
+				public bool GdiCompatible { get; set; }
+				public EFormat Format { get; set; }
+				public uint Mips { get; set; }
+				public EFilter Filter { get; set; }
+				public EAddrMode AddrU { get; set; }
+				public EAddrMode AddrV { get; set; }
+				public uint ColourKey { get; set; }
+
+				public Options()
 				{
-				default: throw new ArgumentException("Unknown option");
-				case Option.Default: res = View3D_TextureCreate(IntPtr.Zero, 0, width, height, 0, EFormat.DXGI_FORMAT_B8G8R8A8_UNORM, out m_handle); break;
-				case Option.Gdi:     res = View3D_TextureCreateGdiCompat(width, height, out m_handle); break;
+					GdiCompatible = true;
+					Format        = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
+					Mips          = 0;
+					Filter        = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+					AddrU         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
+					AddrV         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
+					ColourKey     = 0;
 				}
-				if (res != EResult.Success) throw new Exception(res);
-				View3D_TextureGetInfo(m_handle, out m_info);
 			}
 
 			/// <summary>Construct an uninitialised texture</summary>
-			public Texture(IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format)
+			public Texture(uint width, uint height, Options options = null) :this(width, height, IntPtr.Zero, 0, options)
+			{}
+
+			/// <summary>Construct an initialised texture</summary>
+			public Texture(uint width, uint height, IntPtr data, uint data_size, Options options = null)
 			{
-				EResult res = View3D_TextureCreate(data, data_size, width, height, mips, format, out m_handle);
+				options = options ?? new Options();
+				var res = options.GdiCompatible
+					? View3D_TextureCreateGdiCompat(width, height, out m_handle)
+					: View3D_TextureCreate(data, data_size, width, height, options.Mips, options.Format, out m_handle);
+
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
 			/// <summary>Construct a texture from a file</summary>
-			public Texture(string tex_filepath)
-			{
-				EResult res = View3D_TextureCreateFromFile(tex_filepath, 0, 0, 0, (uint)EFilter.D3DX_DEFAULT, (uint)EFilter.D3DX_DEFAULT, 0, out m_handle);
-				if (res != EResult.Success) throw new Exception(res);
-				View3D_TextureGetInfo(m_handle, out m_info);
-			}
+			public Texture(string tex_filepath, Options options = null) :this(tex_filepath, 0, 0, options)
+			{}
 
 			/// <summary>Construct a texture from a file</summary>
-			public Texture(string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key)
+			public Texture(string tex_filepath, uint width, uint height, Options options = null)
 			{
-				EResult res = View3D_TextureCreateFromFile(tex_filepath, width, height, mips, (uint)filter, (uint)mip_filter, colour_key, out m_handle);
+				var res = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey, out m_handle);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
+				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
+			}
+
+			/// <summary>Texture width</summary>
+			public uint Width { get { return m_info.m_width; } }
+			
+			/// <summary>Texture height</summary>
+			public uint Height { get { return m_info.m_height; } }
+			
+			/// <summary>Set the filtering and addressing modes to be used on the texture</summary>
+			public void SetFilterAndAddrMode(EFilter filter, EAddrMode addrU, EAddrMode addrV)
+			{
+				View3D_TextureSetFilterAndAddrMode(m_handle, filter, addrU, addrV);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level)
 			{
-				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, (uint)EFilter.D3DX_DEFAULT, 0);
+				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
@@ -1043,7 +1103,7 @@ namespace pr.gfx
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, EFilter filter, uint colour_key)
 			{
-				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, (uint)filter, colour_key);
+				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, filter, colour_key);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
@@ -1051,7 +1111,7 @@ namespace pr.gfx
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, Rectangle src_rect, Rectangle dst_rect, EFilter filter, uint colour_key)
 			{
-				var res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, (uint)filter, colour_key);
+				var res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
@@ -1148,11 +1208,12 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
 		[DllImport(Dll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
+		[DllImport(Dll)] private static extern bool              View3D_DrawsetHasObject         (HDrawset drawset, HObject obj);
 
 		// Camera
 		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HDrawset drawset, out m4x4 c2w);
 		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HDrawset drawset, ref m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HDrawset drawset, ref v4 position, ref v4 lookat, ref v4 up);
+		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HDrawset drawset, v4 position, v4 lookat, v4 up);
 		[DllImport(Dll)] private static extern float             View3D_FocusDistance          (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetFocusDistance       (HDrawset drawset, float dist);
 		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HDrawset drawset);
@@ -1165,19 +1226,19 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HDrawset drawset, out v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, ref v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_ResetView              (HDrawset drawset, ref v4 forward, ref v4 up);
+		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_ResetView              (HDrawset drawset, v4 forward, v4 up);
 		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HDrawset drawset, float dist);
 		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HDrawset drawset, out v4 position);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HDrawset drawset, ref v4 position);
-		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HDrawset drawset, ref v4 screen);
-		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HDrawset drawset, ref v4 world);
-		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HDrawset drawset, ref v4 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HDrawset drawset, v4 position);
+		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HDrawset drawset, v4 screen);
+		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HDrawset drawset, v4 world);
+		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HDrawset drawset, v4 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
 		[DllImport(Dll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
-		[DllImport(Dll)] private static extern void              View3D_LightSource              (HDrawset drawset, ref v4 position, ref v4 direction, bool camera_relative);
+		[DllImport(Dll)] private static extern void              View3D_LightSource              (HDrawset drawset, v4 position, v4 direction, bool camera_relative);
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
 
 		// Objects
@@ -1189,19 +1250,21 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, bool include_children);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 
 		// Materials
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate            (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateFromFile    (string tex_filepath, uint width, uint height, uint mips, uint filter, uint mip_filter, uint colour_key, out HTexture tex);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureLoadSurface       (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, uint filter, uint colour_key);
-		[DllImport(Dll)] private static extern void              View3D_TextureDelete            (HTexture tex);
-		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo           (HTexture tex, out ImageInfo info);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile   (string tex_filepath, out ImageInfo info);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateGdiCompat   (uint width, uint height, out HTexture tex);
-		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC             (HTexture tex);
-		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC         (HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate               (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateFromFile       (string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key, out HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
+		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
+		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateGdiCompat      (uint width, uint height, out HTexture tex);
+		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Refresh                  ();
@@ -1233,6 +1296,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
 		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
 		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (bool show);
+		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
 		#endregion
 	}
 }

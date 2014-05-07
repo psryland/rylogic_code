@@ -42,12 +42,12 @@ namespace pr
 		static iv4 make(int const* vec)                 { iv4 v; return v.set(vec); }
 	};
 
-	iv4 const iv4Zero   = {0, 0, 0, 0};
-	iv4 const iv4One    = {1, 1, 1, 1};
-	iv4 const iv4XAxis  = {1, 0, 0, 0};
-	iv4 const iv4YAxis  = {0, 1, 0, 0};
-	iv4 const iv4ZAxis  = {0, 0, 1, 0};
-	iv4 const iv4Origin = {0, 0, 0, 1};
+	static iv4 const iv4Zero   = {0, 0, 0, 0};
+	static iv4 const iv4One    = {1, 1, 1, 1};
+	static iv4 const iv4XAxis  = {1, 0, 0, 0};
+	static iv4 const iv4YAxis  = {0, 1, 0, 0};
+	static iv4 const iv4ZAxis  = {0, 0, 1, 0};
+	static iv4 const iv4Origin = {0, 0, 0, 1};
 
 	// Element accessors
 	inline int GetX(iv4 const& v) { return v.x; }

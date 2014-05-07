@@ -3,8 +3,6 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_RENDER_SCENE_VIEW_H
-#define PR_RDR_RENDER_SCENE_VIEW_H
 
 #include "pr/renderer11/forward.h"
 
@@ -42,5 +40,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

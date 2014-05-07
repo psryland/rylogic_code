@@ -5,11 +5,13 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using pr.maths;
 
 namespace pr.maths
 {
 	[Serializable]
+	[StructLayout(LayoutKind.Sequential)]
 	public struct v4
 	{
 		public float x, y, z, w;
@@ -46,6 +48,30 @@ namespace pr.maths
 		public string ToString4()                               { return ToString3() + " " + w; }
 		public string ToString4(string format)                  { return ToString3(format) + " " + w.ToString(format); }
 		public override string ToString()                       { return ToString4(); }
+
+		// Swizzles
+		public v2 xx { get { return new v2(x, x); } }
+		public v2 xy { get { return new v2(x, y); } }
+		public v2 xz { get { return new v2(x, z); } }
+		public v2 xw { get { return new v2(x, w); } }
+		
+		public v2 yx { get { return new v2(y, x); } }
+		public v2 yy { get { return new v2(y, y); } }
+		public v2 yz { get { return new v2(y, z); } }
+		public v2 yw { get { return new v2(y, w); } }
+		
+		public v2 zx { get { return new v2(z, x); } }
+		public v2 zy { get { return new v2(z, y); } }
+		public v2 zz { get { return new v2(z, z); } }
+		public v2 zw { get { return new v2(z, w); } }
+		
+		public v2 wx { get { return new v2(w, x); } }
+		public v2 wy { get { return new v2(w, y); } }
+		public v2 wz { get { return new v2(w, z); } }
+		public v2 ww { get { return new v2(w, w); } }
+
+		public v4 w0 { get { return new v4(x, y, z, 0); } }
+		public v4 w1 { get { return new v4(x, y, z, 1); } }
 
 		// Static v4 types
 		private readonly static v4 m_zero;

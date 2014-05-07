@@ -29,7 +29,7 @@ namespace pr
 				:DSShader(mgr)
 			{
 				// Create a per-model constants buffer
-				CBufferDesc cbdesc(sizeof(CBufModel));
+				CBufferDesc cbdesc(sizeof(ds::CBufModel));
 				pr::Throw(mgr->m_device->CreateBuffer(&cbdesc, 0, &m_cbuf_model.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_model, "GBufferCreateShader::CBufModel"));
 			}
@@ -38,7 +38,7 @@ namespace pr
 				BaseShader::Setup(dc, dle, rstep);
 
 				// Set the constants for the shader
-				CBufModel cb = {};
+				ds::CBufModel cb = {};
 				cb.m_geom = GeomToIV4(dle.m_nugget->m_geom);
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);

@@ -130,6 +130,9 @@
 	<Type Name="pr::rdr::DrawListElement">
 		<DisplayString>{m_nugget->m_owner} {m_shader}</DisplayString>
 	</Type>
+	<Type Name="pr::rdr::StateBlock&lt;*,*,*&gt;">
+		<DisplayString>{m_mask}</DisplayString>
+	</Type>
 	
 	<!-- Console -->
 	<Type Name="pr::console::Coord">

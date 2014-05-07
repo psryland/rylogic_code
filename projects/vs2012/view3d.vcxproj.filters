@@ -1,15 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="camera">
-      <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="lighting">
-      <UniqueIdentifier>{242341bf-7d1d-4ea8-b833-86a984170102}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="linedrawer">
-      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="sdk">
       <UniqueIdentifier>{2e13382c-2c9f-488d-8851-229d4321e08b}</UniqueIdentifier>
     </Filter>
@@ -19,16 +10,25 @@
     <Filter Include="sdk\script">
       <UniqueIdentifier>{f6a00def-486d-441f-a6c6-4d47ca0a53d5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="sdk\linedrawer">
+      <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\lighting">
+      <UniqueIdentifier>{242341bf-7d1d-4ea8-b833-86a984170102}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sdk\camera">
+      <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h">
-      <Filter>lighting</Filter>
+      <Filter>sdk\lighting</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
       <Filter>sdk\lua</Filter>
@@ -37,10 +37,10 @@
     <ClInclude Include="..\View3D\stdafx.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\view3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\script\char_stream.h">
       <Filter>sdk\script</Filter>
@@ -91,16 +91,16 @@
       <Filter>sdk\script</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
-      <Filter>camera</Filter>
+      <Filter>sdk\camera</Filter>
     </ClInclude>
     <ClInclude Include="..\view3d\forward.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.cpp">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sdk\pr\pr\lua\lua_core.c">
       <Filter>sdk\lua</Filter>
@@ -112,7 +112,7 @@
     <ClCompile Include="..\view3d\stdafx.cpp" />
     <ClCompile Include="..\View3D\view3d.cpp" />
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">
-      <Filter>linedrawer</Filter>
+      <Filter>sdk\linedrawer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

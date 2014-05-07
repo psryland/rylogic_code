@@ -3,10 +3,9 @@
 //  Copyright © Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_UTIL_UTIL_H
-#define PR_RDR_UTIL_UTIL_H
 
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/util/lock.h"
 
 namespace pr
 {
@@ -108,11 +107,11 @@ namespace pr
 			}
 
 			// Bind the constants to the shaders
-			if (shdr_type & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::Slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
+			if (shdr_type & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
 		}
 
 		// Set the name on a d3d resource (debug only)
@@ -135,5 +134,3 @@ namespace pr
 		bool TestSystemCompatibility();
 	}
 }
-
-#endif

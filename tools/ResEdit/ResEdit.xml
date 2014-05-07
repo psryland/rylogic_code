@@ -2,6 +2,7 @@
 <config>
     <recentFiles>
         <recentFile path="P:\projects\linedrawer\resources\linedrawer.rc" />
+        <recentFile path="D:\dump\test.rc.rc" />
         <recentFile path="R:\software\PC\RexProductKeyGenerator\res\resources.rc" />
         <recentFile path="C:\Windows\System32\uxtheme.dll" />
         <recentFile path="C:\Windows\System32\comdlg32.dll" />
@@ -20,7 +21,7 @@
     <language>English</language>
     <singleTabMode value="true" />
     <wizard value="false" />
-    <createProjectFolder value="true" />
+    <createProjectFolder value="false" />
     <defaultProjectPath value="C:\Users\Paul\ResEdit Projects\" />
     <headerName>%barefilename%.res.h</headerName>
     <includes>
@@ -36,7 +37,7 @@
         <maximized value="false" />
     </display>
     <codeGeneration>
-        <unicode support="true" macro="_WIN32" />
+        <unicode support="false" macro="" />
         <encoding value="0" />
         <defaultLanguage value="0" />
         <insertBom value="false" />
@@ -46,17 +47,28 @@
         <generateControl value="false" />
         <pascal value="false" />
         <asmDefine value="false" />
-        <dialogEx value="false" />
+        <dialogEx value="true" />
         <menuEx value="false" />
         <askIncludes value="false" />
         <resourceHeader>
             <![CDATA[#define WINVER 0x0600
-
+#include "%RESOURCE_HEADER%"
 #include <windows.h>
 #include <commctrl.h>
 #include <richedit.h>
-#include <atlres.h>
-#include "%RESOURCE_HEADER%"
+
+#ifndef WC_TABCONTROL
+#define WC_TABCONTROL "SysTabControl32"
+#endif
+
+#ifndef WC_LISTVIEW
+#define WC_LISTVIEW "SysListView32"
+#endif
+
+#ifndef TRACKBAR_CLASS
+#define TRACKBAR_CLASS "msctls_trackbar32"
+#endif
+
 %RESOURCES%]]>
 </resourceHeader>
     </codeGeneration>

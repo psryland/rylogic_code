@@ -577,6 +577,22 @@ namespace ldr
 		return S_OK;
 	}
 
+	// Toggle between forward and deferred rendering
+	LRESULT MainGUI::OnRenderTechnique(WORD, WORD, HWND, BOOL&)
+	{
+		auto fwd = {pr::rdr::ERenderStep::ForwardRender};
+		auto def = {pr::rdr::ERenderStep::GBuffer, pr::rdr::ERenderStep::DSLighting};
+		
+		if (m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() != nullptr)
+			m_main->m_scene.SetRenderSteps(pr::rdr::Scene::DeferredRendering());
+		else
+			m_main->m_scene.SetRenderSteps(pr::rdr::Scene::ForwardRendering());
+
+		UpdateUI();
+		m_main->RenderNeeded();
+		return S_OK;
+	}
+
 	// Display the lighting dialog
 	LRESULT MainGUI::OnShowLightingDlg(WORD, WORD, HWND, BOOL&)
 	{
@@ -785,6 +801,7 @@ namespace ldr
 
 		// Render 2d menu item
 		ModifyMenu(GetMenu(), ID_RENDERING_RENDER2D, MF_BYCOMMAND, ID_RENDERING_RENDER2D, m_main->m_nav.Render2D() ? "&Perspective" : "&Orthographic");
+		ModifyMenu(GetMenu(), ID_RENDERING_TECHNIQUE, MF_BYCOMMAND, ID_RENDERING_TECHNIQUE, m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() ? "&Deferred Rendering" : "&Forward Rendering");
 
 		// The tools windows
 		CheckMenuItem(GetMenu(), ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);

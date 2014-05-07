@@ -4,7 +4,7 @@
 #
 # Build shaders using fxc.exe
 # Use:
-#  BuildShader.py $(Fullpath) [pp] [obj] [debug]
+#  BuildShader.py $(Fullpath) [pp] [obj] [debug] [trace]
 #
 # Expected input is an hlsl file.
 # The file is scanned for: PR_RDR_SHADER_VS, PR_RDR_SHADER_PS, etc
@@ -79,7 +79,7 @@ try:
 			if trace: print("Variable Name: " + str(varname))
 
 			# Set include paths
-			includes = ["/I" + srcdir + "\\.."]
+			includes = []#"/I" + srcdir + "\\.."]
 
 			# Set defines
 			defines = ["/DSHADER_BUILD=1"]

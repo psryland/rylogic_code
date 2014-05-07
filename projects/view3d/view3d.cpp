@@ -99,6 +99,28 @@ static std::shared_ptr<DllData> g_dll = nullptr;
 inline DllData&          Dll() { return *g_dll; }
 inline RendererInstance& Rdr() { return g_dll->m_rdr; }
 
+// View3D to pr:: math type conversions
+template <typename T> T convert_to(View3DV2 const& v);
+template <typename T> T convert_to(View3DV4 const& v);
+template <typename T> T convert_to(View3DM4x4 const& m);
+template <typename T> T convert_to(View3DBBox const& bb);
+template <> pr::v2 convert_to(View3DV2 const& v)
+{
+	return pr::v2::make(v.x, v.y);
+}
+template <> pr::v4 convert_to(View3DV4 const& v)
+{
+	return pr::v4::make(v.x, v.y, v.z, v.w);
+}
+template <> pr::m4x4 convert_to(View3DM4x4 const& m)
+{
+	return pr::m4x4::make(convert_to<pr::v4>(m.x), m.y, m.z, m.w);
+}
+template <> pr::BBox convert_to(View3DBBox const& bb)
+{
+	return pr::BBox::make(bb.centre, bb.radius);
+}
+
 // Initialise the dll
 VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
 {
@@ -338,7 +360,7 @@ VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DO
 }
 
 // Return the camera to world transform
-VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, pr::m4x4& c2w)
+VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4& c2w)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -354,7 +376,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, pr::m4x4& 
 }
 
 // Set the camera to world transform
-VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, pr::m4x4 const& c2w)
+VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, View3DM4x4 const& c2w)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -370,7 +392,7 @@ VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, pr::m4x
 }
 
 // Position the camera for a drawset
-VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up)
+VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 position, View3DV4 lookat, View3DV4 up)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -522,7 +544,7 @@ VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY
 // void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
-VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, pr::v2 point, int button_state, BOOL nav_start_or_end)
+VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, View3DV2 point, int button_state, BOOL nav_start_or_end)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -570,7 +592,7 @@ VIEW3D_API void __stdcall View3D_ResetZoom(View3DDrawset drawset)
 }
 
 // Return the camera align axis
-VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, pr::v4& axis)
+VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, View3DV4& axis)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -586,7 +608,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, pr::v4& 
 }
 
 // Align the camera to an axis
-VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, pr::v4 const& axis)
+VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, View3DV4 axis)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -602,7 +624,7 @@ VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, pr::v4 const
 }
 
 // Move the camera to a position that can see the whole scene
-VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, pr::v4 const& forward, pr::v4 const& up)
+VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, View3DV4 forward, View3DV4 up)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -624,24 +646,24 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, pr::v4 const& 
 }
 
 // Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
-VIEW3D_API pr::v2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
+VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.ViewArea(dist);
+		return View3DV2::make(drawset->m_camera.ViewArea(dist));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ViewArea failed", ex);
-		return pr::v2Zero;
+		return View3DV2::make(pr::v2Zero);
 	}
 }
 
 // Get/Set the camera focus point position
-VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, pr::v4& position)
+VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, View3DV4& position)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -655,7 +677,7 @@ VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, pr::v4& po
 		Dll().ReportError("View3D_GetFocusPoint failed", ex);
 	}
 }
-VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, pr::v4 const& position)
+VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, View3DV4 position)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -673,51 +695,54 @@ VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, pr::v4 con
 // Return a point in world space corresponding to a normalised screen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
-VIEW3D_API pr::v4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawset, pr::v4 const& screen)
+VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawset, View3DV4 screen)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.WSPointFromNormSSPoint(screen);
+		return View3DV4::make(drawset->m_camera.WSPointFromNormSSPoint(screen));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_WSPointFromNormSSPoint failed", ex);
-		return pr::v4Zero;
+		return View3DV4::make(pr::v4Zero);
 	}
 }
 
 // Return a point in normalised screen space corresponding to a world space point.
 // The returned z component will be the world space distance from the camera.
-VIEW3D_API pr::v4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawset, pr::v4 const& world)
+VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawset, View3DV4 world)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.NormSSPointFromWSPoint(world);
+		return View3DV4::make(drawset->m_camera.NormSSPointFromWSPoint(world));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_NormSSPointFromWSPoint failed", ex);
-		return pr::v4Zero;
+		return View3DV4::make(pr::v4Zero);
 	}
 }
 
 // Return a point and direction in world space corresponding to a normalised sceen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
-VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, pr::v4 const& screen, pr::v4& ws_point, pr::v4& ws_direction)
+VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.WSRayFromNormSSPoint(screen, ws_point, ws_direction);
+		pr::v4 pt,dir;
+		drawset->m_camera.WSRayFromNormSSPoint(screen, pt, dir);
+		ws_point = pt;
+		ws_direction = dir;
 	}
 	catch (std::exception const& ex)
 	{
@@ -759,15 +784,15 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3
 }
 
 // Set up a single light source for a drawset
-VIEW3D_API void __stdcall View3D_LightSource(View3DDrawset drawset, pr::v4 const& position, pr::v4 const& direction, BOOL camera_relative)
+VIEW3D_API void __stdcall View3D_LightSource(View3DDrawset drawset, View3DV4 position, View3DV4 direction, BOOL camera_relative)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_light.m_position = position;
-		drawset->m_light.m_direction = direction;
+		drawset->m_light.m_position = static_cast<pr::v4>(position);
+		drawset->m_light.m_direction = static_cast<pr::v4>(direction);
 		drawset->m_light_is_camera_relative = camera_relative != 0;
 	}
 	catch (std::exception const& ex)
@@ -890,8 +915,8 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	}
 
 	// Get the user to generate the model
-	size_t new_vcount, new_icount;
-	cbdata.edit_cb(vrange.size(), irange.size(), &verts[0], &indices[0], new_vcount, new_icount, model_type, geom_type, v3dmat, cbdata.ctx);
+	UINT32 new_vcount, new_icount;
+	cbdata.edit_cb(UINT32(vrange.size()), UINT32(irange.size()), &verts[0], &indices[0], new_vcount, new_icount, model_type, geom_type, v3dmat, cbdata.ctx);
 	PR_ASSERT(PR_DBG, new_vcount <= vrange.size(), "");
 	PR_ASSERT(PR_DBG, new_icount <= irange.size(), "");
 	PR_ASSERT(PR_DBG, model_type != EView3DPrim::Invalid, "");
@@ -913,7 +938,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
 			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
-			pr::Encompass(model->m_bbox, vin->pos);
+			pr::Encompass(model->m_bbox, static_cast<pr::v4>(vin->pos));
 		}
 		auto iin = begin(indices);
 		auto iout = mlock.m_ilock.ptr<pr::uint16>();
@@ -931,7 +956,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 }
 
 // Create an object via callback
-VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, pr::uint colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1002,21 +1027,21 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 // Get/Set the object to parent transform for an object
 // This is the object to world transform for objects without parents
 // Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
-VIEW3D_API pr::m4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
+VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
 		if (!object) throw std::exception("object is null");
-		return object->m_o2p;
+		return View3DM4x4::make(object->m_o2p);
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ObjectGetO2P failed", ex);
-		return pr::m4x4Identity;
+		return View3DM4x4::make(pr::m4x4Identity);
 	}
 }
-VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, pr::m4x4 const& o2p)
+VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1033,21 +1058,8 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, pr::m4x4 cons
 }
 
 // Set the object colour
-VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, pr::uint colour, pr::uint mask, BOOL include_children)
-{
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
-	try
-	{
-		object->SetColour(pr::Colour32::make(colour), mask, include_children != 0);
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_ObjectSetColour failed", ex);
-	}
-}
-
-// Assign a texture to an object
-VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex, BOOL include_children)
+// See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1055,23 +1067,25 @@ VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTex
 		if (object == nullptr)
 			throw std::exception("Null object provided");
 
-		struct S
-		{
-			static void SetTexture(pr::ldr::LdrObject* obj, pr::rdr::Texture2DPtr tex, bool include_children)
-			{
-				if (obj->m_model != nullptr)
-				{
-					for (auto& nug : obj->m_model->m_nuggets)
-						nug.m_tex_diffuse = tex;
-				}
-				if (include_children)
-				{
-					for (auto& child : obj->m_child)
-						S::SetTexture(child.m_ptr, tex, true);
-				}
-			}
-		};
-		S::SetTexture(object, tex, include_children != 0);
+		object->SetColour(pr::Colour32::make(colour), mask, name);
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_ObjectSetColour failed", ex);
+	}
+}
+
+// Set the texture
+// See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex, char const* name)
+{
+	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	try
+	{
+		if (object == nullptr)
+			throw std::exception("Null object provided");
+
+		object->SetTexture(tex, name);
 	}
 	catch (std::exception const& ex)
 	{
@@ -1080,17 +1094,17 @@ VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTex
 }
 
 // Return the model space bounding box for 'object'
-VIEW3D_API pr::BBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
+VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
 	{
-		return object->BBoxMS(true);
+		return View3DBBox::make(object->BBoxMS(true));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ObjectBBoxMS failed", ex);
-		return pr::BBoxUnit;
+		return View3DBBox::make(pr::BBoxUnit);
 	}
 }
 
@@ -1100,7 +1114,7 @@ VIEW3D_API pr::BBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(size_t width, size_t height, DXGI_FORMAT format, void const* data, size_t data_size, size_t mips, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, DXGI_FORMAT format, void const* data, UINT32 data_size, UINT32 mips, View3DTexture& tex)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1122,7 +1136,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(size_t width, size_t hei
 }
 
 // Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, pr::uint width, pr::uint height, pr::uint mips, pr::uint filter, pr::uint mip_filter, pr::uint colour_key, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, UINT32 mips, UINT32 filter, UINT32 mip_filter, View3DColour colour_key, View3DTexture& tex)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1146,7 +1160,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_
 }
 
 // Create a gdi compatible texture.
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreateGdiCompat(size_t width, size_t height, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreateGdiCompat(UINT32 width, UINT32 height, View3DTexture& tex)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1205,7 +1219,7 @@ VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 }
 
 // Load a texture surface from file
-VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, pr::uint filter, pr::uint colour_key)
+VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1298,6 +1312,28 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 	{
 		Dll().ReportError("View3D_TextureGetInfoFromFile failed", ex);
 		return EView3DResult::Failed;
+	}
+}
+
+// Set the filtering and addressing modes to use on the texture
+VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV)
+{
+	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	try
+	{
+		SamplerDesc desc;
+		tex->m_samp->GetDesc(&desc);
+		desc.Filter = filter;
+		desc.AddressU = addrU;
+		desc.AddressV = addrV;
+
+		D3DPtr<ID3D11SamplerState> samp;
+		pr::Throw(Rdr().m_renderer.Device()->CreateSamplerState(&desc, &samp.m_ptr));
+		tex->m_samp = samp;
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_TextureGetInfoFromFile failed", ex);
 	}
 }
 
@@ -1776,7 +1812,7 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(BOOL show)
 	}}
 
 // Parse an ldr *o2w {} description returning the transform
-VIEW3D_API pr::m4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
+VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
 	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
 	try
@@ -1784,11 +1820,11 @@ VIEW3D_API pr::m4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 		pr::script::Reader reader;
 		pr::script::PtrSrc src(ldr_script);
 		reader.AddSource(src);
-		return pr::ldr::ParseLdrTransform(reader);
+		return View3DM4x4::make(pr::ldr::ParseLdrTransform(reader));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ParseLdrTransform failed", ex);
-		return pr::m4x4Identity;
+		return View3DM4x4::make(pr::m4x4Identity);
 	}
 }

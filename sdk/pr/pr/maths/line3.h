@@ -28,7 +28,7 @@ namespace pr
 		static Line3 make(v4 const& point, v4 const& line) { Line3 l; return l.set(point, line); }
 	};
 	
-	Line3 const Line3Zero  = {v4Origin, v4Zero};
+	static Line3 const Line3Zero  = {v4Origin, v4Zero};
 	
 	// Assignment operators
 	inline Line3& operator += (Line3& lhs, v4 const& vec) { lhs.m_line += vec; return lhs; }

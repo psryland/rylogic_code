@@ -51,12 +51,12 @@ float4 Illuminate(float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_dif
 	ltdiff += m_light_ambient;
 
 	float intensity = 0;
-	if      (m_global_lighting.x == 1.0) intensity = LightDirectional(m_ws_light_direction ,ws_norm         ,unlit_diff.a);
-	else if (m_global_lighting.x == 2.0) intensity = LightPoint      (m_ws_light_position  ,ws_norm ,ws_pos ,unlit_diff.a);
-	else if (m_global_lighting.x == 3.0) intensity = LightSpot       (m_ws_light_position  ,m_ws_light_direction ,m_spot.x ,m_spot.y ,m_spot.z ,ws_norm ,ws_pos ,unlit_diff.a);
+	if      (m_light_info.x == 1.0) intensity = LightDirectional(m_ws_light_direction ,ws_norm         ,unlit_diff.a);
+	else if (m_light_info.x == 2.0) intensity = LightPoint      (m_ws_light_position  ,ws_norm ,ws_pos ,unlit_diff.a);
+	else if (m_light_info.x == 3.0) intensity = LightSpot       (m_ws_light_position  ,m_ws_light_direction ,m_spot.x ,m_spot.y ,m_spot.z ,ws_norm ,ws_pos ,unlit_diff.a);
 	ltdiff += intensity * m_light_colour;
 
-	float4 ws_light_dir = (m_global_lighting.x == 1.0) ? m_ws_light_direction : normalize(ws_pos - m_ws_light_position);
+	float4 ws_light_dir = (m_light_info.x == 1.0) ? m_ws_light_direction : normalize(ws_pos - m_ws_light_position);
 	ltspec += intensity * float4(m_light_specular.rgb,1) * LightSpecular(ws_light_dir ,m_light_specular.a ,ws_norm ,ws_toeye_norm ,unlit_diff.a);
 
 	return saturate(2.0*(ltdiff-0.5)*unlit_diff + ltspec + unlit_diff);

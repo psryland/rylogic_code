@@ -298,7 +298,7 @@ namespace pr
 				for (int i = m_list.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list.GetNextItem(i, LVNI_SELECTED))
 				{
 					LdrObject& object = GetLdrObject(i);
-					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_visible, include_children);
+					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_visible, include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
 				pr::events::Send(Evt_Refresh());
@@ -310,7 +310,7 @@ namespace pr
 				for (int i = m_list.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list.GetNextItem(i, LVNI_SELECTED))
 				{
 					LdrObject& object = GetLdrObject(i);
-					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_wireframe, include_children);
+					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_wireframe, include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
 				pr::events::Send(Evt_Refresh());

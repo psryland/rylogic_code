@@ -27,7 +27,7 @@ namespace pr
 				BaseShader::Setup(dc, dle, rstep);
 
 				// Fill out the model constants buffer and bind it to the VS stage
-				CBufModel cb = {};
+				fwd::CBufModel cb = {};
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
 				Tex0(*dle.m_nugget, cb);

@@ -52,8 +52,8 @@ namespace pr
 		float       Diametre() const;
 	};
 
-	BBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
-	BBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
+	static BBox const BBoxUnit  = {{0.0f,  0.0f,  0.0f, 1.0f}, {0.5f, 0.5f, 0.5f, 0.0f}};
+	static BBox const BBoxReset = {{0.0f,  0.0f,  0.0f, 1.0f}, {-1.0f, -1.0f, -1.0f, 0.0f}};
 
 	// Assignment operators
 	BBox& operator += (BBox& lhs, v4 const& offset);

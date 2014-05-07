@@ -48,9 +48,9 @@ namespace pr
 		static IRect make(FRect const& rect)                      { IRect irect; return irect = rect; }
 	};
 
-	IRect const IRectZero  = {0, 0, 0, 0};
-	IRect const IRectReset = {maths::int_max, maths::int_max, -maths::int_max, -maths::int_max};
-	IRect const IRectUnit  = {0, 0, 1, 1};
+	static IRect const IRectZero  = {0, 0, 0, 0};
+	static IRect const IRectReset = {maths::int_max, maths::int_max, -maths::int_max, -maths::int_max};
+	static IRect const IRectUnit  = {0, 0, 1, 1};
 
 	// Assignment operators
 	inline IRect& operator += (IRect& lhs, iv2 const& offset) { lhs.m_min += offset; lhs.m_max += offset; return lhs; }

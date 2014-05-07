@@ -6,20 +6,25 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace pr.maths
 {
 	[Serializable]
+	[StructLayout(LayoutKind.Sequential)]
 	public struct v2
 	{
 		public float x, y;
 
 		// Integer cast accessors
-		public int ix	{ get { return (int)x; } }
-		public int iy	{ get { return (int)y; } }
+		public int ix { get { return (int)x; } }
+		public int iy { get { return (int)y; } }
 
 		// Constructors
 		public v2(float x_, float y_) { x = x_; y = y_; }
+		public v2(PointF pt) { x = pt.X; y = pt.Y; }
+		public v2(SizeF sz)  { x = sz.Width; y = sz.Height; }
+
 		public float this[int i]
 		{
 			get {switch (i) { case 0:return x;      case 1:return y;      default: throw new ArgumentException("index out of range", "i");} }
@@ -57,6 +62,8 @@ namespace pr.maths
 
 		public static v2 From(Point point)                     { return new v2(point.X, point.Y); }
 		public static v2 From(Size size)                       { return new v2(size.Width, size.Height); }
+		public static v2 From(PointF point)                    { return new v2(point.X, point.Y); }
+		public static v2 From(SizeF size)                      { return new v2(size.Width, size.Height); }
 
 		// Functions
 		public static v2   operator + (v2 lhs, v2 rhs)         { return new v2(lhs.x + rhs.x, lhs.y + rhs.y); }

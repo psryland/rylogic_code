@@ -111,6 +111,14 @@ namespace pr
 		class  ShaderManager;
 		struct ShaderDesc;
 		struct BaseShader;
+		struct TxTint;
+		struct TxTintPvc;
+		struct TxTintTex;
+		struct TxTintPvcLit;
+		struct TxTintPvcLitTex;
+		struct GBufferShader;
+		struct DSLightingShader;
+		struct ShadowMapShader;
 		typedef pr::RefPtr<BaseShader> ShaderPtr;
 
 		// Textures
@@ -163,9 +171,10 @@ namespace pr
 		struct RSBlock;
 		struct StateStack;
 		struct RenderStep;
-		struct GBufferCreate;
-		struct DSLightingPass;
 		struct ForwardRender;
+		struct GBuffer;
+		struct DSLighting;
+		struct ShadowMap;
 		typedef std::shared_ptr<RenderStep> RenderStepPtr;
 
 		// EResult
@@ -190,8 +199,9 @@ namespace pr
 		// Ids for render steps
 		#define PR_ENUM(x)\
 			x(ForwardRender)\
-			x(GBufferCreate)\
-			x(DSLighting)
+			x(GBuffer)\
+			x(DSLighting)\
+			x(ShadowMap)
 		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 

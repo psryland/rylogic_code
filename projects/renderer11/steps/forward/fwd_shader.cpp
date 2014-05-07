@@ -16,7 +16,7 @@ namespace pr
 			:BaseShader(mgr)
 		{
 			// Create a per-model constants buffer
-			CBufferDesc cbdesc(sizeof(CBufModel));
+			CBufferDesc cbdesc(sizeof(fwd::CBufModel));
 			pr::Throw(mgr->m_device->CreateBuffer(&cbdesc, 0, &m_cbuf_model.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_model, "FwdShader::CBufModel"));
 		}

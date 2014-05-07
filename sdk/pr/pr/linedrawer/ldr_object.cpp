@@ -92,9 +92,9 @@ namespace pr
 		}
 
 		// Return the declaration name of this object
-		std::string LdrObject::TypeAndName() const
+		string32 LdrObject::TypeAndName() const
 		{
-			return std::string(ELdrObject::ToString(m_type)) + " " + m_name;
+			return string32(ELdrObject::ToString(m_type)) + " " + m_name;
 		}
 
 		// Recursively add this object and its children to a viewport
@@ -137,39 +137,46 @@ namespace pr
 				child->AddBBoxToScene(scene, bbox_model, time_s, &m_i2w);
 		}
 
-		// Change visibility for this object
-		void LdrObject::Visible(bool visible, bool include_children)
+		// Set the visibility of this object or child objects matching 'name' (see Apply)
+		void LdrObject::Visible(bool visible, char const* name)
 		{
-			m_visible = visible;
-			if (!include_children) return;
-			for (auto& child : m_child)
-				child->Visible(visible, include_children);
+			Apply([=](LdrObject* o){ o->m_visible = visible; }, name);
 		}
 
-		// Change the render mode for this object
-		void LdrObject::Wireframe(bool wireframe, bool include_children)
+		// Set the render mode for this object or child objects matching 'name' (see Apply)
+		void LdrObject::Wireframe(bool wireframe, char const* name)
 		{
-			m_wireframe = wireframe;
-			if (m_wireframe) m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-			else             m_rsb.Clear(pr::rdr::ERS::FillMode);
-			if (!include_children) return;
-			for (auto& child : m_child)
-				child->Wireframe(wireframe, include_children);
+			Apply([=](LdrObject* o)
+			{
+				o->m_wireframe = wireframe;
+				if (o->m_wireframe) o->m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+				else                o->m_rsb.Clear(pr::rdr::ERS::FillMode);
+			}, name);
 		}
 
-		// Change the colour of this object
-		void LdrObject::SetColour(pr::Colour32 colour, pr::uint mask, bool include_children)
+		// Set the colour of this object or child objects matching 'name' (see Apply)
+		void LdrObject::SetColour(pr::Colour32 colour, pr::uint mask, char const* name)
 		{
-			pr::Colour32 blend = m_base_colour * colour;
-			m_colour.m_aarrggbb = SetBits(m_colour.m_aarrggbb, mask, blend.m_aarrggbb);
+			Apply([=](LdrObject* o)
+			{
+				pr::Colour32 blend = o->m_base_colour * colour;
+				o->m_colour.m_aarrggbb = SetBits(o->m_colour.m_aarrggbb, mask, blend.m_aarrggbb);
 
-			bool has_alpha = m_colour.a() != 0xFF;
-			m_sko.Alpha(has_alpha);
-			SetAlphaBlending(m_bsb, m_dsb, m_rsb, has_alpha);
+				bool has_alpha = o->m_colour.a() != 0xFF;
+				o->m_sko.Alpha(has_alpha);
+				SetAlphaBlending(o->m_bsb, o->m_dsb, o->m_rsb, has_alpha);
+			}, name);
+		}
 
-			if (!include_children) return;
-			for (auto& child : m_child)
-				child->SetColour(colour, mask, include_children);
+		// Set the texture on this object or child objects matching 'name' (see Apply)
+		void LdrObject::SetTexture(pr::rdr::Texture2DPtr tex, char const* name)
+		{
+			Apply([=](LdrObject* o)
+			{
+				if (o->m_model == nullptr) return;
+				for (auto& nug : o->m_model->m_nuggets)
+					nug.m_tex_diffuse = tex;
+			}, name);
 		}
 
 		// Called when there are no more references to this object
@@ -609,12 +616,10 @@ namespace pr
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
-			pr::rdr::NuggetProps* GetDrawData()
+			virtual pr::rdr::NuggetProps* GetDrawData()
 			{
-				// If a texture was given create a material that uses it
-				if (!m_texture)
-					return nullptr;
-
+				m_local_mat.m_topo = pr::rdr::EPrim::Invalid;
+				m_local_mat.m_geom = pr::rdr::EGeom::Invalid;
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);
@@ -1040,6 +1045,8 @@ namespace pr
 					m_tex.resize(vcount);
 					auto tx = rad / (2 * m_dim.x);
 					auto ty = rad / (2 * m_dim.y);
+					auto t0 = 0.0000f;
+					auto t1 = 0.9999f;
 
 					auto tb  = std::begin(m_tex);
 					auto tb0 = tb + verts_per_cnr * 0;
@@ -1051,10 +1058,10 @@ namespace pr
 						auto c = verts_per_cnr > 1 ? pr::Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
 						auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
 
-						*tb0++ = pr::v2::make(0+s*tx, 1-c*ty);
-						*tb1++ = pr::v2::make(1-c*tx, 1-s*ty);
-						*tb2++ = pr::v2::make(1-s*tx, 0+c*ty);
-						*tb3++ = pr::v2::make(0+c*tx, 0+s*ty);
+						*tb0++ = pr::v2::make(t0 + (1-c)*tx, t1 - (1-s)*ty);
+						*tb1++ = pr::v2::make(t1 - (1-s)*tx, t1 - (1-c)*ty);
+						*tb2++ = pr::v2::make(t1 - (1-c)*tx, t0 + (1-s)*ty);
+						*tb3++ = pr::v2::make(t0 + (1-s)*tx, t0 + (1-c)*ty);
 					}
 					assert(tb3 == std::end(m_tex));
 				}
@@ -1717,17 +1724,9 @@ namespace pr
 			p.m_reader.SectionEnd();
 
 			// Object modifiers applied to groups are applied recursively to children within the group
-			obj->m_colour_mask = 0xFFFFFFFF; // The group colour tints all children
-			if (obj->m_wireframe)
-			{
-				for (auto child : obj->m_child)
-					child->Wireframe(true, true);
-			}
-			if (!obj->m_visible)
-			{
-				for (auto child : obj->m_child)
-					child->Visible(false, true);
-			}
+			obj->m_colour_mask = 0xFFFFFFFF;      // The group colour tints all children
+			obj->Wireframe(obj->m_wireframe, ""); // Apply wireframe to all children
+			obj->Visible(obj->m_visible, "");     // Apply visibility to all children
 
 			// Add the model and instance to the containers
 			p.m_objects.push_back(obj);
@@ -1822,16 +1821,15 @@ namespace pr
 
 				// Apply the colour of 'obj' to all children using a mask
 				if (obj->m_colour_mask != 0)
-					for (auto& child : obj->m_child)
-						child->SetColour(obj->m_base_colour, obj->m_colour_mask, true);
+					obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
 
 				// If flagged as wireframe, set wireframe
 				if (obj->m_wireframe)
-					obj->Wireframe(true, false);
+					obj->Wireframe(true);
 
 				// If flagged as hidden, hide
 				if (!obj->m_visible)
-					obj->Visible(false, false);
+					obj->Visible(false);
 			}
 
 			// Give progress updates
@@ -1928,20 +1926,7 @@ namespace pr
 		}
 
 		// Add a custom object
-		LdrObjectPtr Add(
-			pr::Renderer& rdr,
-			ObjectAttributes attr,
-			pr::rdr::EPrim topo,
-			int icount,
-			int vcount,
-			pr::uint16 const* indices,
-			pr::v4 const* verts,
-			int ccount,
-			pr::Colour32 const* colours,
-			int ncount,
-			pr::v4 const* normals,
-			pr::v2 const* tex_coords,
-			ContextId context_id)
+		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, pr::rdr::EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, ContextId context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 

@@ -12,6 +12,7 @@
 #endif
 
 #include <string>
+#include <regex>
 #include "pr/macros/enum.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/array.h"
@@ -37,6 +38,7 @@ namespace pr
 		struct ObjectAttributes;
 		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
 		typedef pr::Array<LdrObjectPtr, 8> ObjectCont;
+		typedef pr::string<char, 32> string32;
 
 		static HTREEITEM const INVALID_TREE_ITEM =  0;
 		static int const       INVALID_LIST_ITEM = -1;
@@ -179,7 +181,7 @@ namespace pr
 		struct ObjectAttributes
 		{
 			ELdrObject   m_type;     // Object type
-			std::string  m_name;     // Name of the object
+			string32     m_name;     // Name of the object
 			pr::Colour32 m_colour;   // Base colour of the object
 			bool         m_instance; // True if an instance should be created
 
@@ -251,22 +253,22 @@ namespace pr
 			// Note: try not to use the RdrInstance members for things other than rendering
 			// they can temporarily have different models/transforms/etc during rendering of
 			// object bounding boxes etc.
-			pr::m4x4            m_o2p;           // Object to parent transform (or object to world if this is a top level object)
-			ELdrObject          m_type;          // Object type
-			LdrObject*          m_parent;        // The parent of this object, 0 for top level instances.
-			ObjectCont          m_child;         // A container of pointers to child instances
-			std::string         m_name;          // A name for the object
-			ContextId           m_context_id;    // The id of the context this instance was created in
-			pr::Colour32        m_base_colour;   // The original colour of this object
-			pr::uint            m_colour_mask;   // A bit mask for applying the base colour to child objects
-			Animation           m_anim;          // Animation data
-			LdrObjectUIData     m_uidata;        // Data required to find this object in the ui
-			LdrObjectStepData   m_step;          // Step data for the object
-			BBoxInstance        m_bbox_instance; // Used for rendering the bounding box for this instance
-			bool                m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
-			bool                m_visible;       // True if the instance should be rendered
-			bool                m_wireframe;     // True if this object is drawn in wireframe
-			void*               m_user_data;     // Custom data
+			pr::m4x4          m_o2p;           // Object to parent transform (or object to world if this is a top level object)
+			ELdrObject        m_type;          // Object type
+			LdrObject*        m_parent;        // The parent of this object, 0 for top level instances.
+			ObjectCont        m_child;         // A container of pointers to child instances
+			string32          m_name;          // A name for the object
+			ContextId         m_context_id;    // The id of the context this instance was created in
+			pr::Colour32      m_base_colour;   // The original colour of this object
+			pr::uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
+			Animation         m_anim;          // Animation data
+			LdrObjectUIData   m_uidata;        // Data required to find this object in the ui
+			LdrObjectStepData m_step;          // Step data for the object
+			BBoxInstance      m_bbox_instance; // Used for rendering the bounding box for this instance
+			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
+			bool              m_visible;       // True if the instance should be rendered
+			bool              m_wireframe;     // True if this object is drawn in wireframe
+			void*             m_user_data;     // Custom data
 
 			// Predicate for matching this object by context id
 			struct MatchId
@@ -281,7 +283,7 @@ namespace pr
 			~LdrObject();
 
 			// Return the type and name of this object
-			std::string TypeAndName() const;
+			string32 TypeAndName() const;
 
 			// Recursively add this object and its children to a scene
 			// Note, LdrObject does not inherit Evt_UpdateScene, because child LdrObjects need to be
@@ -293,14 +295,47 @@ namespace pr
 			// located and scaled to the transform and box of this object
 			void AddBBoxToScene(pr::rdr::Scene& scene, pr::rdr::ModelPtr bbox_model, float time_s = 0.0f, pr::m4x4 const* p2w = &pr::m4x4Identity);
 
-			// Change visibility for this object
-			void Visible(bool visible, bool include_children);
+			// Apply an operation on this object or any of its child objects that match 'name'
+			// If 'name' is null, then 'func' is applied to this object only
+			// If 'name' is "", then 'func' is applied to this object and all children recursively
+			// Otherwise, 'func' is applied to all child objects that match name.
+			// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
+			template <typename TFunc> void Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr)
+			{
+				if (obj == nullptr)
+				{
+					obj = this;
+				}
+				if (name == nullptr)
+				{
+					func(obj);
+				}
+				else if (name[0] == '\0')
+				{
+					func(obj);
+					for (auto& child : obj->m_child)
+						Apply(func, name, child.m_ptr);
+				}
+				else
+				{
+					if ((name[0] == '#' && std::regex_match(std::string(obj->m_name.c_str()), std::regex(&name[1]))) || obj->m_name == name)
+						func(obj);
+					for (auto& child : obj->m_child)
+						Apply(func, name, child.m_ptr);
+				}
+			}
 
-			// Change the render mode for this object
-			void Wireframe(bool wireframe, bool include_children);
+			// Set the visibility of this object or child objects matching 'name' (see Apply)
+			void Visible(bool visible, char const* name = nullptr);
 
-			// Change the colour of this object
-			void SetColour(pr::Colour32 colour, pr::uint mask, bool include_children);
+			// Set the render mode for this object or child objects matching 'name' (see Apply)
+			void Wireframe(bool wireframe, char const* name = nullptr);
+
+			// Set the colour of this object or child objects matching 'name' (see Apply)
+			void SetColour(pr::Colour32 colour, pr::uint mask, char const* name = nullptr);
+
+			// Set the texture on this object or child objects matching 'name' (see Apply)
+			void SetTexture(pr::rdr::Texture2DPtr tex, char const* name = nullptr);
 
 			// Return the bounding box for this object in model space
 			// To convert this to parent space multiply by 'm_o2p'

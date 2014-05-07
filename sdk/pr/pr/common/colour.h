@@ -7,9 +7,7 @@
 #define PR_COMMON_COLOUR_H
 
 #include <memory.h>
-#include "pr/common/prtypes.h"
-#include "pr/maths/rand.h"
-#include "pr/maths/scalar.h"
+#include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
 
 #if defined(_WINGDI_) && !defined(NOGDI)
@@ -257,7 +255,7 @@ namespace pr
 	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
 
 	// Equivalent to pr::v4, XMVECTOR, etc
-	struct Colour
+	struct alignas(16) Colour
 	{
 		#pragma warning(push)
 		#pragma warning(disable:4201) // nameless struct/union
@@ -290,6 +288,7 @@ namespace pr
 
 		Colour& operator = (Colour32 c32)                        { return set(c32); }
 		operator Colour32() const;
+		operator v4() const;
 
 		typedef float const (&array_ref)[4];
 		operator array_ref() const                               { return reinterpret_cast<array_ref>(*this); }
@@ -297,6 +296,8 @@ namespace pr
 		PR_SUPPORT_WINGDI(Colour& operator = (const COLORREF& c)    { set(GetRValue(c), GetGValue(c), GetBValue(c), 255); return *this; })
 		PR_SUPPORT_WINGDI(COLORREF GetColorRef() const              { return RGB(r*255.0f, g*255.0f, b*255.0f); })
 	};
+	static_assert(std::alignment_of<Colour>::value == 16, "Colour should have 16 byte alignment");
+	static_assert(std::is_pod<Colour>::value, "Should be a pod type");
 
 	Colour const ColourZero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	Colour const ColourOne    = {1.0f, 1.0f, 1.0f, 1.0f};
@@ -341,6 +342,7 @@ namespace pr
 	// Conversion operators
 	inline Colour32::operator Colour() const { return Colour::make(*this); }
 	inline Colour::operator Colour32() const { return Colour32::make(r,g,b,a); }
+	inline Colour::operator v4() const { return v4::make(r,g,b,a); }
 
 	// Miscellaneous *******************************************************************************************
 

@@ -82,7 +82,8 @@
 #define ID_RENDERING_SHOWOBJECTBBOXES           40304
 #define ID_RENDERING_WIREFRAME                  40305
 #define ID_RENDERING_RENDER2D                   40306
-#define ID_RENDERING_LIGHTING                   40307
+#define ID_RENDERING_TECHNIQUE                  40307
+#define ID_RENDERING_LIGHTING                   40308
 
 #define ID_TOOLS_MEASURE                        40401
 #define ID_TOOLS_ANGLE                          40402

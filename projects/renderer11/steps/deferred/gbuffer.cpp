@@ -29,9 +29,9 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, m_shader != nullptr, "GBuffer shader missing");
 
 			// Create a constants buffer for constants that only change once per frame
-			CBufferDesc cbdesc(sizeof(DSShader::CBufCamera));
+			CBufferDesc cbdesc(sizeof(ds::CBufCamera));
 			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_camera.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "GBuffer::CBufCamera"));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "ds::CBufCamera"));
 
 			InitGBuffer(true);
 
@@ -176,7 +176,7 @@ namespace pr
 			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants and bind them to the shaders
-			DSShader::CBufCamera cb = {};
+			ds::CBufCamera cb = {};
 			SetViewConstants(m_scene->m_view, cb);
 			WriteConstants(ss.m_dc, m_cbuf_camera, cb);
 

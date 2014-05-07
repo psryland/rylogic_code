@@ -52,8 +52,8 @@ namespace pr
 	static_assert(std::alignment_of<Quat>::value == 16, "Should have 16 byte alignment");
 	static_assert(std::is_pod<Quat>::value, "Should be a pod type");
 
-	Quat const QuatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
-	Quat const QuatIdentity = {0.0f, 0.0f, 0.0f, 1.0f};
+	static Quat const QuatZero     = {0.0f, 0.0f, 0.0f, 0.0f};
+	static Quat const QuatIdentity = {0.0f, 0.0f, 0.0f, 1.0f};
 
 	// Element accessors
 	inline float GetX(Quat const& q) { return q.x; }

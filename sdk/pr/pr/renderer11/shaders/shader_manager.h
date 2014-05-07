@@ -34,6 +34,9 @@ namespace pr
 			// Create the built-in shaders
 			void CreateStockShaders();
 
+			// Used for stock shaders to specialise
+			template <typename TShader> void CreateShader();
+
 			// Builds the basic parts of a shader.
 			pr::rdr::ShaderPtr InitShader(ShaderAlex create, RdrId id, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name);
 

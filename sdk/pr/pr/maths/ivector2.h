@@ -35,12 +35,12 @@ namespace pr
 		template <typename T> inline iv2 make(T const& pt)      { iv2 v; return v.set(GetXi(pt), GetYi(pt)); }
 	};
 
-	iv2 const iv2Zero   = {0, 0};
-	iv2 const iv2One    = {1, 1};
-	iv2 const iv2Min    = {maths::int_min, maths::int_min};
-	iv2 const iv2Max    = {maths::int_max, maths::int_max};
-	iv2 const iv2XAxis  = {1, 0};
-	iv2 const iv2YAxis  = {0, 1};
+	static iv2 const iv2Zero   = {0, 0};
+	static iv2 const iv2One    = {1, 1};
+	static iv2 const iv2Min    = {maths::int_min, maths::int_min};
+	static iv2 const iv2Max    = {maths::int_max, maths::int_max};
+	static iv2 const iv2XAxis  = {1, 0};
+	static iv2 const iv2YAxis  = {0, 1};
 
 	// Limits
 	namespace maths

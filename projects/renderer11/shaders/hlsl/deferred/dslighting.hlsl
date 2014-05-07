@@ -5,7 +5,7 @@
 
 #include "gbuffer_cbuf.hlsli"
 #include "gbuffer.hlsli"
-#include "phong_lighting.hlsli"
+#include "..\phong_lighting.hlsli"
 
 // VS input format
 struct VS_INPUT

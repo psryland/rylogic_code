@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Reflection;
 using pr.common;
 using pr.extn;
+using pr.util;
 
 namespace pr.extn
 {
@@ -71,6 +72,22 @@ namespace pr.extn
 		{
 			if (evt == null) return;
 			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(sender, args);
+		}
+
+		/// <summary>Returns an RAII object for suspending events</summary>
+		public static Scope SuspendScope<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
+		{
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(
+				() => Suspend(evt),
+				() => Resume(evt));
+		}
+		public static Scope SuspendScope(this EventHandler evt)
+		{
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(
+				() => Suspend(evt),
+				() => Resume(evt));
 		}
 
 		/// <summary>Block this event from firing when Raise() is called, until Resume() is called</summary>

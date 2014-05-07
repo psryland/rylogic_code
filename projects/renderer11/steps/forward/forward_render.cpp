@@ -22,7 +22,7 @@ namespace pr
 			,m_clear_bb(clear_bb)
 		{
 			// Create a constants buffer that changes per frame
-			CBufferDesc cbdesc(sizeof(FwdShader::CBufFrame));
+			CBufferDesc cbdesc(sizeof(fwd::CBufFrame));
 			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_frame.m_ptr));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_frame, "ForwardRender::CBufFrame"));
 
@@ -76,7 +76,7 @@ namespace pr
 			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants
-			FwdShader::CBufFrame cb = {};
+			fwd::CBufFrame cb = {};
 			SetViewConstants(m_scene->m_view, cb);
 			SetLightingConstants(m_scene->m_global_light, cb);
 			//SetProjectedTextures(dc, cb, m_proj_tex);

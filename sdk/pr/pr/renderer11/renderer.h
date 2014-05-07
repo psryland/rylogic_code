@@ -29,10 +29,8 @@
 
 // Configuration
 #include "pr/renderer11/config/config.h"
-//#include "pr/renderer/configuration/configure.h"
-//#include "pr/renderer/configuration/projectconfiguration.h"
 
-// Renderer
+// Render
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/blend_state.h"
@@ -40,10 +38,11 @@
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/sortkey.h"
 
-//// Drawlist
-//#include "pr/renderer/viewport/viewport.h"
-//#include "pr/renderer/viewport/drawlist.h"
-//#include "pr/renderer/viewport/drawlist_element.h"
+// Render Steps
+#include "pr/renderer11/steps/render_step.h"
+#include "pr/renderer11/steps/forward/forward_render.h"
+#include "pr/renderer11/steps/deferred/gbuffer.h"
+#include "pr/renderer11/steps/deferred/dslighting.h"
 
 // Models
 #include "pr/renderer11/models/model_manager.h"

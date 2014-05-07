@@ -43,9 +43,9 @@ LDR_API(LDR_EXPORT, void                  ,MouseStatusUpdates   ,(ldrapi::Plugin
 LDR_API(LDR_EXPORT, pr::m4x4              ,ObjectO2W            ,(ldrapi::ObjectHandle object))
 LDR_API(LDR_EXPORT, void                  ,ObjectSetO2W         ,(ldrapi::ObjectHandle object, pr::m4x4 const& o2w))
 LDR_API(LDR_EXPORT, bool                  ,ObjectVisible        ,(ldrapi::ObjectHandle object))
-LDR_API(LDR_EXPORT, void                  ,ObjectSetVisible     ,(ldrapi::ObjectHandle object, bool visible, bool include_children))
+LDR_API(LDR_EXPORT, void                  ,ObjectSetVisible     ,(ldrapi::ObjectHandle object, bool visible, char const* name))
 LDR_API(LDR_EXPORT, bool                  ,ObjectWireframe      ,(ldrapi::ObjectHandle object))
-LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::ObjectHandle object, bool wireframe, bool include_children))
+LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::ObjectHandle object, bool wireframe, char const* name))
 //Import	void					ldrSetObjectColour			(pr::ldr::ObjectHandle object, pr::Colour32 colour);
 //Import	void					ldrSetObjectSemiTransparent	(pr::ldr::ObjectHandle object, bool on);
 //Import	void					ldrSetObjectTransform   	(pr::ldr::ObjectHandle object, const pr::m4x4& object_to_world);
@@ -125,16 +125,16 @@ namespace ldrapi
 	{
 		ObjectHandle m_obj;
 
-		Object() :m_obj() {}
-		Object(ObjectHandle obj) :m_obj(obj) {}
-		void operator =(ObjectHandle obj)    { m_obj = obj; }
-		operator ObjectHandle() const        { return m_obj; }
-		pr::m4x4 O2W() const                 { return ObjectO2W(m_obj); }
-		void O2W(pr::m4x4 const& o2w)        { return ObjectSetO2W(m_obj, o2w); }
-		bool Visible() const                 { return ObjectVisible(m_obj); }
-		void Visible(bool vis, bool rec)     { return ObjectSetVisible(m_obj, vis, rec); }
-		bool Wireframe() const               { return ObjectWireframe(m_obj); }
-		void Wireframe(bool wire, bool rec)  { return ObjectSetWireframe(m_obj, wire, rec); }
+		Object() :m_obj()                           {}
+		Object(ObjectHandle obj) :m_obj(obj)        {}
+		void operator =(ObjectHandle obj)           { m_obj = obj; }
+		operator ObjectHandle() const               { return m_obj; }
+		pr::m4x4 O2W() const                        { return ObjectO2W(m_obj); }
+		void O2W(pr::m4x4 const& o2w)               { return ObjectSetO2W(m_obj, o2w); }
+		bool Visible() const                        { return ObjectVisible(m_obj); }
+		void Visible(bool vis, char const* name)    { return ObjectSetVisible(m_obj, vis, name); }
+		bool Wireframe() const                      { return ObjectWireframe(m_obj); }
+		void Wireframe(bool wire, char const* name) { return ObjectSetWireframe(m_obj, wire, name); }
 	};
 	#endif
 }

@@ -18,11 +18,11 @@
 #include <cassert>
 #include <type_traits>
 
-#define PR_MATHS_USE_D3DX ERROR_FIX_PLEASE
-#define PR_MATHS_USE_OPEN_MP ERROR_FIX_PLEASE
-#define PR_OMP_PARALLEL ERROR_FIX_PLEASE
-#define PR_OMP_PARALLEL_FOR ERROR_FIX_PLEASE
+// Libraries built to use directmath should be fine when linked in projects
+// that don't use directmath because all of the maths types have the same
+// size/alignment requirements reguardless.
 
+// Select directmath if already included
 #ifndef PR_MATHS_USE_DIRECTMATH
 #  if defined(DIRECTX_MATH_VERSION)
 #    define PR_MATHS_USE_DIRECTMATH 1
@@ -30,9 +30,16 @@
 #    define PR_MATHS_USE_DIRECTMATH 0
 #  endif
 #endif
+#if PR_MATHS_USE_DIRECTMATH
+#  include <directxmath.h>
+#endif
 
+// Use intrinsics by default
 #ifndef PR_MATHS_USE_INTRINSICS
 #define PR_MATHS_USE_INTRINSICS 1
+#endif
+#if PR_MATHS_USE_INTRINSICS
+#  pragma intrinsic(sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, pow, fmod, sqrt, exp, log10, log, abs, fabs, labs, memcmp, memcpy, memset)
 #endif
 
 // C++11's thread_local
@@ -43,14 +50,6 @@
 // C++11's alignas
 #ifndef alignas
 #define alignas(alignment) __declspec(align(alignment))
-#endif
-
-#if PR_MATHS_USE_DIRECTMATH
-#  include <directxmath.h>
-#endif
-
-#if PR_MATHS_USE_INTRINSICS
-#  pragma intrinsic(sin, cos, tan, asin, acos, atan, atan2, sinh, cosh, tanh, pow, fmod, sqrt, exp, log10, log, abs, fabs, labs, memcmp, memcpy, memset)
 #endif
 
 namespace pr

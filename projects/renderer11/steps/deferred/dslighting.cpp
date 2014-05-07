@@ -53,12 +53,12 @@ namespace pr
 			}
 
 			{// Create a constants buffer for camera properties
-				CBufferDesc cbdesc(sizeof(DSShader::CBufCamera));
+				CBufferDesc cbdesc(sizeof(ds::CBufCamera));
 				pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_camera.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "dslighting CBufCamera"));
 			}
 			{// Create a constants buffer for lighting properties
-				CBufferDesc cbdesc(sizeof(DSShader::CBufLighting));
+				CBufferDesc cbdesc(sizeof(ds::CBufLighting));
 				pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_lighting.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_lighting, "dslighting CBufLighting"));
 			}
@@ -69,7 +69,7 @@ namespace pr
 		}
 
 		// Set the position of the four corners of the view frustum in camera space
-		void SetFrustumCorners(SceneView const& view, DSShader::CBufCamera& cb)
+		void SetFrustumCorners(SceneView const& view, ds::CBufCamera& cb)
 		{
 			pr::GetCorners(view.Frustum(), cb.m_frustum, 1.0f);
 		}
@@ -84,13 +84,13 @@ namespace pr
 			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			{// Set camera constants
-				DSShader::CBufCamera cb = {};
+				ds::CBufCamera cb = {};
 				SetViewConstants(m_scene->m_view, cb);
 				SetFrustumCorners(m_scene->m_view, cb);
 				WriteConstants(ss.m_dc, m_cbuf_camera, cb);
 			}
 			{// Set lighting constants
-				DSShader::CBufLighting cb = {};
+				ds::CBufLighting cb = {};
 				SetLightingConstants(m_scene->m_global_light, cb);
 				WriteConstants(ss.m_dc, m_cbuf_lighting, cb);
 			}

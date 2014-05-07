@@ -56,8 +56,8 @@ namespace pr
 	static_assert(std::alignment_of<m3x4>::value == 16, "Should be 16 byte aligned");
 	static_assert(std::is_pod<m3x4>::value, "Should be a pod type");
 
-	m3x4 const m3x4Zero     = {v4Zero, v4Zero, v4Zero};
-	m3x4 const m3x4Identity = {v4XAxis, v4YAxis, v4ZAxis};
+	static m3x4 const m3x4Zero     = {v4Zero, v4Zero, v4Zero};
+	static m3x4 const m3x4Identity = {v4XAxis, v4YAxis, v4ZAxis};
 
 	// Element accessors
 	inline v4 const& GetX(m3x4 const& m) { return m.x; }

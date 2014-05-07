@@ -35,7 +35,7 @@ cbuffer CBufFrame :register(b0)
 
 	// Global lighting
 	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
-	float4 m_global_lighting    :packoffset(c16); // Encoded info for global lighting
+	float4 m_light_info         :packoffset(c16); // Encoded info for global lighting
 	float4 m_ws_light_direction :packoffset(c17); // The direction of the global light source
 	float4 m_ws_light_position  :packoffset(c18); // The position of the global light source
 	float4 m_light_ambient      :packoffset(c19); // The colour of the ambient light
@@ -50,7 +50,7 @@ cbuffer CBufFrame :register(b0)
 #else
 struct CBufFrame
 {
-	enum { Slot = 0 };
+	enum { slot = 0 };
 
 	// Camera transform
 	pr::m4x4 m_c2w; // camera to world
@@ -60,7 +60,7 @@ struct CBufFrame
 
 	// Global lighting
 	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
-	pr::v4 m_global_lighting;    // Encoded info for global lighting
+	pr::v4 m_light_info;         // Encoded info for global lighting
 	pr::v4 m_ws_light_direction; // The direction of the global light source
 	pr::v4 m_ws_light_position;  // The position of the global light source
 	pr::Colour m_light_ambient;  // The colour of the ambient light
@@ -93,7 +93,7 @@ cbuffer CBufModel :register(b1)
 #else
 struct CBufModel
 {
-	enum { Slot = 1 };
+	enum { slot = 1 };
 
 	// Object transform
 	pr::m4x4   m_o2s;

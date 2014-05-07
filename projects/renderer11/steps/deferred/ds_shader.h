@@ -11,12 +11,15 @@ namespace pr
 {
 	namespace rdr
 	{
-		// A common base class for the deferred rendering shaders
-		struct DSShader :BaseShader
+		namespace ds
 		{
 			// The constant buffer definitions
 			#include "renderer11/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
+		}
 
+		// A common base class for the deferred rendering shaders
+		struct DSShader :BaseShader
+		{
 			DSShader(ShaderManager* mgr);
 		};
 	}

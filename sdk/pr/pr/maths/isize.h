@@ -21,7 +21,7 @@ namespace pr
 		static ISize make(size_t x_, size_t y_)       { ISize sz; return sz.set(x_, y_); }
 	};
 
-	ISize const ISizeZero  = {0, 0};
+	static ISize const ISizeZero  = {0, 0};
 
 	//// Assignment operators
 	//inline IRect& operator += (IRect& lhs, iv2 const& offset) { lhs.m_min += offset; lhs.m_max += offset; return lhs; }
