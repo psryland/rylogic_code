@@ -6,6 +6,9 @@
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/instances/instance.h"
+#include "pr/renderer11/steps/forward/forward_render.h"
+#include "pr/renderer11/steps/deferred/gbuffer.h"
+#include "pr/renderer11/steps/deferred/dslighting.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr
@@ -21,14 +24,21 @@ namespace pr
 			,m_bkgd_colour()
 			,m_global_light()
 		{
+			SetRenderSteps(std::move(rsteps));
+		}
+
+		// Set the render steps to use for rendering the scene
+		void Scene::SetRenderSteps(std::vector<ERenderStep>&& rsteps)
+		{
+			m_render_steps.clear();
 			for (auto rs : rsteps)
 			{
 				switch (rs)
 				{
 				default: throw std::exception("Unknown render step");
 				case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
-				case ERenderStep::GBufferCreate: m_render_steps.push_back(std::make_shared<GBufferCreate>(*this));
-				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLightingPass>(*this));
+				case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer>(*this));
+				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting>(*this));
 				}
 			}
 		}

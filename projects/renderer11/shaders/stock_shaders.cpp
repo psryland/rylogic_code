@@ -36,38 +36,6 @@ namespace pr
 		#include "renderer11/shaders/compiled/dslighting.vs.h"
 		#include "renderer11/shaders/compiled/dslighting.ps.h"
 
-		// Set the transform properties of a constants buffer
-		template <typename TCBuf> void Txfm(BaseInstance const& inst, SceneView const& view, TCBuf& cb)
-		{
-			pr::m4x4 o2w = GetO2W(inst);
-			pr::m4x4 w2c = pr::GetInverseFast(view.m_c2w);
-			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
-			cb.m_o2s = c2s * w2c * o2w;
-			cb.m_o2w = o2w;
-			cb.m_n2w = pr::Orthonormalise(cb.m_o2w);
-
-			pr::Transpose4x4(cb.m_o2s);
-			pr::Transpose4x4(cb.m_o2w);
-			pr::Transpose4x4(cb.m_n2w);
-		}
-
-		// Set the tint properties of a constants buffer
-		template <typename TCBuf> void Tint(BaseInstance const& inst, TCBuf& cb)
-		{
-			pr::Colour32 const* col = inst.find<pr::Colour32>(EInstComp::TintColour32);
-			cb.m_tint = col ? *col : pr::ColourWhite;
-		}
-
-		// Set the texture properties of a constants buffer
-		template <typename TCBuf> void Tex0(NuggetProps const& ddata, TCBuf& cb)
-		{
-			cb.m_tex2surf0 = ddata.m_tex_diffuse != nullptr
-				? ddata.m_tex_diffuse->m_t2s
-				: pr::m4x4Identity;
-
-			pr::Transpose4x4(cb.m_tex2surf0);
-		}
-
 		// Convert a geom into an iv4 for flags passed to a shader
 		inline pr::iv4 GeomToIV4(EGeom geom)
 		{
@@ -303,44 +271,5 @@ namespace pr
 			}
 		};
 
-		// Create the built-in shaders
-		void ShaderManager::CreateStockShaders()
-		{
-			// Forward shaders
-			TxTint         ::Create(*this);
-			TxTintPvc      ::Create(*this);
-			TxTintTex      ::Create(*this);
-			TxTintPvcLit   ::Create(*this);
-			TxTintPvcLitTex::Create(*this);
-
-			// GBuffer shaders
-			DSGBuffer ::Create(*this);
-			DSLighting::Create(*this);
-		}
-
-		//// Setup this shader for rendering
-		//void Shader::Setup(D3DPtr<ID3D11DeviceContext>& dc, DrawListElement const& dle, SceneView const& view)
-		//{
-		//	(void)view;
-		//	(void)dle; //todo textures
-		//
-		//	// Configure the constants buffer for this shader
-		////todo	m_map(dc, m_constants, dle, view);
-		//
-		//	// Bind the constant buffer to the device
-		////todo	dc->VSSetConstantBuffers(0, 1, &m_constants.m_ptr);
-		//
-		//	// Apply the blend state if present
-		//	if (m_blend_state)
-		//		dc->OMSetBlendState(m_blend_state.m_ptr, 0, 0xffffffff);
-		//
-		//	// Apply the rasterizer state if present
-		//	if (m_rast_state)
-		//		dc->RSSetState(m_rast_state.m_ptr);
-		//
-		//	// Apply the depth buffer state if present
-		//	if (m_depth_state)
-		//		dc->OMSetDepthStencilState(m_depth_state.m_ptr, 0);
-		//}
 	}
 }

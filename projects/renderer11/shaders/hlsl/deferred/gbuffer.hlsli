@@ -5,7 +5,7 @@
 #ifndef PR_RDR_SHADER_GBUFFER_HLSLI
 #define PR_RDR_SHADER_GBUFFER_HLSLI
 
-#include "common/gbuffer_cbuf.hlsli"
+#include "gbuffer_cbuf.hlsli"
 
 // Sampler and gbuffer textures
 SamplerState      m_point_sampler :register(s0);

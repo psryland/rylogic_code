@@ -45,6 +45,21 @@ namespace pr
 			}
 		}
 
+		// Create the built-in shaders
+		void ShaderManager::CreateStockShaders()
+		{
+			// Forward shaders
+			CreateShader<TxTint         >();
+			CreateShader<TxTintPvc      >();
+			CreateShader<TxTintTex      >();
+			CreateShader<TxTintPvcLit   >();
+			CreateShader<TxTintPvcLitTex>();
+
+			// GBuffer shaders
+			CreateShader<GBufferShader>();
+			CreateShader<DSLightingShader>();
+		}
+
 		// Builds the basic parts of a shader.
 		ShaderPtr ShaderManager::InitShader(ShaderAlex create, RdrId id, VShaderDesc const* vsdesc, PShaderDesc const* psdesc, char const* name)
 		{

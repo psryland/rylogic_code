@@ -27,7 +27,7 @@
 
 #include "uber_defines.hlsli"
 #include "forward_cbuf.hlsli"
-#include "functions.hlsli"
+#include "phong_lighting.hlsli"
 
 // VS input format
 struct VS_INPUT

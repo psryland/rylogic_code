@@ -3,8 +3,8 @@
 //  Copyright © Rylogic Ltd 2014
 //***********************************************
 
-#include "common/gbuffer_cbuf.hlsli"
-#include "common/gbuffer.hlsli"
+#include "gbuffer_cbuf.hlsli"
+#include "gbuffer.hlsli"
 
 // VS input format
 struct VS_INPUT

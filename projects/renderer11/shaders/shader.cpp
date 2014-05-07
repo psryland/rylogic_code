@@ -9,9 +9,9 @@
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/render/drawlist_element.h"
-#include "pr/renderer11/render/render_step.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
+#include "pr/renderer11/steps/render_step.h"
 
 namespace pr
 {
@@ -89,6 +89,8 @@ namespace pr
 
 				check.m_last_modified = newest;
 			}
+			#else
+			(void)dc;
 			#endif
 		}
 

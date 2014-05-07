@@ -10,6 +10,7 @@
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/renderer.h"
+#include "pr/renderer11/steps/render_step.h"
 
 namespace pr
 {
