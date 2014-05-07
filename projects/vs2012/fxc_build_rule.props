@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
+    <CustomBuildAfterTargets>PreBuildEvent</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <CustomBuild>
@@ -11,7 +11,8 @@
       <Message>
       </Message>
       <Outputs>%(RelativeDir)%(Filename).h;%(Outputs)</Outputs>
-      <AdditionalInputs>\tools\_build_shader.py</AdditionalInputs>
+      <AdditionalInputs>\script\BuildShader.py</AdditionalInputs>
+      <LinkObjects>false</LinkObjects>
     </CustomBuild>
     <BatchFileBuild>
       <BatchFileToRun>Q:\bin\_build_shader.cmd</BatchFileToRun>

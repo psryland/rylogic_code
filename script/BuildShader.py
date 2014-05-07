@@ -41,7 +41,7 @@ try:
 	fname,extn  = os.path.splitext(file)
 	if trace: print("File: " + fname + extn)
 
-	outdir = srcdir + r"\..\compiled"
+	outdir = srcdir + r"\..\compiled" + (r"\debug" if dbg else r"\release")
 	if not os.path.exists(outdir): os.makedirs(outdir)
 	if trace: print("Output directory: " + outdir)
 

@@ -18,8 +18,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include "renderer11/shaders/hlsl/compiled/dslighting.vs.h"
-		#include "renderer11/shaders/hlsl/compiled/dslighting.ps.h"
+		#include PR_RDR_COMPILED_SHADER_DIR(dslighting.vs.h)
+		#include PR_RDR_COMPILED_SHADER_DIR(dslighting.ps.h)
 
 		struct DSLightingShader :DSShader
 		{

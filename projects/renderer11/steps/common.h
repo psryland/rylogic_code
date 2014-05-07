@@ -9,6 +9,12 @@
 #include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/instances/instance.h"
 
+#ifdef NDEBUG
+#define PR_RDR_COMPILED_SHADER_DIR(file) PR_STRINGISE(renderer11/shaders/hlsl/compiled/release/##file)
+#else
+#define PR_RDR_COMPILED_SHADER_DIR(file) PR_STRINGISE(renderer11/shaders/hlsl/compiled/debug/##file)
+#endif
+
 namespace pr
 {
 	namespace rdr

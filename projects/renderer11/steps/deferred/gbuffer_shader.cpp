@@ -16,8 +16,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include "renderer11/shaders/hlsl/compiled/gbuffer.vs.h"
-		#include "renderer11/shaders/hlsl/compiled/gbuffer.ps.h"
+		#include PR_RDR_COMPILED_SHADER_DIR(gbuffer.vs.h)
+		#include PR_RDR_COMPILED_SHADER_DIR(gbuffer.ps.h)
 
 		// A shader that creates the gbuffer
 		struct GBufferShader :DSShader

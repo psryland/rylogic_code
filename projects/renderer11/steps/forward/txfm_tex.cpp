@@ -16,8 +16,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include "renderer11/shaders/hlsl/compiled/txfm_tint_tex.vs.h"
-		#include "renderer11/shaders/hlsl/compiled/txfm_tint_tex.ps.h"
+		#include PR_RDR_COMPILED_SHADER_DIR(txfm_tint_tex.vs.h)
+		#include PR_RDR_COMPILED_SHADER_DIR(txfm_tint_tex.ps.h)
 
 		struct TxTintTex :FwdShader
 		{
