@@ -54,7 +54,7 @@ namespace pr.maths
 		public override int GetHashCode()                     { unchecked { return m_centre.GetHashCode() ^ m_radius.GetHashCode(); } }
 
 		// Conversion
-		public static implicit operator BRect(RectangleF r) { return new BRect(new v2(r.X+r.Width/2, r.Y+r.Height/2), new v2(r.Width/2, r.Height/2)); }
+		public static implicit operator BRect(RectangleF r) { return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, v2.Abs(v2.From(r.Size)) / 2f); }
 		public static implicit operator RectangleF(BRect r) { return new RectangleF(r.m_centre.x - r.m_radius.x, r.m_centre.y - r.m_radius.y, 2*r.m_radius.x, 2*r.m_radius.y); }
 		public Rectangle ToRectangle()
 		{
@@ -68,31 +68,49 @@ namespace pr.maths
 		/// <summary>Returns true if the bounding box represents a point or volume</summary>
 		public bool IsValid
 		{
-			get { return Volume >= 0.0f; }
+			get { return m_radius.x >= 0f && m_radius.y >= 0f; }
 		}
 
-		/// <summary>Returns the lower corner of the bounding box</summary>
-		public v2 Lower()
+		/// <summary>Get/Set the lower corner of the bounding box</summary>
+		public v2 Lower
 		{
-			return m_centre - m_radius;
+			get { return m_centre - m_radius; }
+			set
+			{
+				if (!IsValid)
+				{
+					m_centre = value;
+					m_radius = v2.Zero;
+				}
+				else
+				{
+					var upper = Upper;
+					var lower = value;
+					m_centre = (lower + upper) / 2f;
+					m_radius = upper - m_centre;
+				}
+			}
 		}
 
-		/// <summary>Returns the upper corner of the bounding box</summary>
-		public v2 Upper()
+		/// <summary>Get/Set the upper corner of the bounding box</summary>
+		public v2 Upper
 		{
-			return m_centre + m_radius;
-		}
-
-		/// <summary>Returns the lower dimension for an axis of the bounding box</summary>
-		public float Lower(int axis)
-		{
-			return m_centre[axis] - m_radius[axis];
-		}
-
-		/// <summary>Returns the upper dimension of an axis of the bounding box</summary>
-		public float Upper(int axis)
-		{
-			return m_centre[axis] + m_radius[axis];
+			get { return m_centre + m_radius; }
+			set
+			{
+				if (!IsValid)
+				{
+					m_centre = value;
+					m_radius = v2.Zero;
+				}
+				else
+				{
+					var upper = value;
+					var lower = Lower;
+					m_centre = (lower + upper) / 2f;
+					m_radius = upper - m_centre;
+				}
+			}
 		}
 
 		/// <summary>Get/Set the x dimension of the bounding box</summary>
@@ -135,8 +153,8 @@ namespace pr.maths
 			get { return Maths.Sqrt(DiametreSq); }
 		}
 
-		/// <summary>Gets the volume of the bounding box</summary>
-		public float Volume
+		/// <summary>Gets the area of the bounding rect</summary>
+		public float Area
 		{
 			get { return SizeX * SizeY; }
 		}
@@ -183,7 +201,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>
-		public bool IsWithin(v2 point, float tol)
+		public bool IsWithin(v2 point, float tol = 0f)
 		{
 			return
 				Math.Abs(point.x - m_centre.x) <= m_radius.x + tol &&
@@ -191,7 +209,7 @@ namespace pr.maths
 		}
 
 		/// <summary>Returns true if 'brect' is within this bounding box (within 'tol'erance)</summary>
-		public bool IsWithin(BRect bbox, float tol)
+		public bool IsWithin(BRect bbox, float tol = 0f)
 		{
 			return
 				Math.Abs(bbox.m_centre.x - m_centre.x) <= (m_radius.x - bbox.m_radius.x + tol) &&
@@ -214,6 +232,16 @@ namespace pr.maths
 		public BRect Shifted(float dx, float dy)
 		{
 			return Shifted(new v2(dx, dy));
+		}
+
+		/// <summary>Increase the size of the bounding rect by 'delta'. i.e. grows by half 'delta' in each direction</summary>
+		public BRect Inflate(v2 delta)
+		{
+			return new BRect(m_centre, m_radius + delta/2f);
+		}
+		public BRect Inflate(float dx, float dy)
+		{
+			return Inflate(new v2(dx, dy));
 		}
 	}
 }

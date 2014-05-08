@@ -248,6 +248,7 @@ extern "C"
 	VIEW3D_API EView3DResult           __stdcall View3D_TextureCreateGdiCompat      (UINT32 width, UINT32 height, View3DTexture& tex);
 	VIEW3D_API HDC                     __stdcall View3D_TextureGetDC                (View3DTexture tex);
 	VIEW3D_API void                    __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
+	VIEW3D_API void                    __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
 
 	// Rendering
 	VIEW3D_API void                    __stdcall View3D_Refresh                  ();

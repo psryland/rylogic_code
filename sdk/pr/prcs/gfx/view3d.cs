@@ -225,11 +225,23 @@ namespace pr.gfx
 			Wireframe,
 			SolidWire,
 		}
-		[Flags] public enum ENavBtn
+		[Flags] public enum EBtn
 		{
-			Left   = 1 << 0,
-			Right  = 1 << 1,
-			Middle = 1 << 2
+			None     = 0,
+			Left     = 1 << 0,
+			Right    = 1 << 1,
+			Middle   = 1 << 2,
+			XButton1 = 1 << 3,
+			XButton2 = 1 << 4,
+		}
+		public enum EBtnIdx
+		{
+			None     = -1,
+			Left     = 0,
+			Right    = 1,
+			Middle   = 2,
+			XButton1 = 3,
+			XButton2 = 4,
 		}
 		public enum EView3DLogLevel
 		{
@@ -496,13 +508,26 @@ namespace pr.gfx
 		}
 
 		/// <summary>Convert a button enum to a button state int</summary>
-		private static int ButtonState(MouseButtons button)
+		public static EBtn ButtonState(MouseButtons button)
 		{
-			int btn_state = 0;
-			if (Bit.AllSet((uint)button, (uint)MouseButtons.Left  )) btn_state |= (int)ENavBtn.Left;
-			if (Bit.AllSet((uint)button, (uint)MouseButtons.Right )) btn_state |= (int)ENavBtn.Right;
-			if (Bit.AllSet((uint)button, (uint)MouseButtons.Middle)) btn_state |= (int)ENavBtn.Middle;
-			return btn_state;
+			EBtn state = EBtn.None;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Left    )) state |= EBtn.Left;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Right   )) state |= EBtn.Right;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Middle  )) state |= EBtn.Middle;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton1)) state |= EBtn.XButton1;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton2)) state |= EBtn.XButton2;
+			return state;
+		}
+
+		/// <summary>Convert the forms MouseButtons enum into an index of first button that is down</summary>
+		public static EBtnIdx ButtonIndex(MouseButtons button)
+		{
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Left    )) return EBtnIdx.Left;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Right   )) return EBtnIdx.Right;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.Middle  )) return EBtnIdx.Middle;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton1)) return EBtnIdx.XButton1;
+			if (Bit.AllSet((uint)button, (uint)MouseButtons.XButton2)) return EBtnIdx.XButton2;
+			return EBtnIdx.None;
 		}
 
 		/// <summary>Convert a screen space point to a normalised point</summary>
@@ -873,7 +898,7 @@ namespace pr.gfx
 			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement</summary>
 			public void MouseNavigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
 			{
-				View3D_MouseNavigate(m_ds.Handle, m_ds.View.NormalisePoint(point), ButtonState(mouse_btns), nav_start_or_end);
+				View3D_MouseNavigate(m_ds.Handle, m_ds.View.NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
 			}
 
 			/// <summary>Direct camera relative navigation</summary>
@@ -1080,11 +1105,22 @@ namespace pr.gfx
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
-			/// <summary>Texture width</summary>
-			public uint Width { get { return m_info.m_width; } }
+			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
+			public Size Size
+			{
+				get { return new Size((int)m_info.m_width, (int)m_info.m_height); }
+				set
+				{
+					if (Size == value) return;
+					Resize((uint)value.Width, (uint)value.Height, false, false);
+				}
+			}
 			
-			/// <summary>Texture height</summary>
-			public uint Height { get { return m_info.m_height; } }
+			/// <summary>Resize the texture optionally preserving content</summary>
+			public void Resize(uint width, uint height, bool all_instances, bool preserve)
+			{
+				View3D_TextureResize(m_handle, width, height, all_instances, preserve);
+			}
 			
 			/// <summary>Set the filtering and addressing modes to be used on the texture</summary>
 			public void SetFilterAndAddrMode(EFilter filter, EAddrMode addrU, EAddrMode addrV)
@@ -1265,6 +1301,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateGdiCompat      (uint width, uint height, out HTexture tex);
 		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
+		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
 
 		// Rendering
 		[DllImport(Dll)] private static extern void              View3D_Refresh                  ();

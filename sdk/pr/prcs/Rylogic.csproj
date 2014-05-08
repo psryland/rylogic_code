@@ -296,12 +296,15 @@
     <Compile Include="maths\bbox.cs" />
     <Compile Include="maths\bit.cs" />
     <Compile Include="maths\brect.cs" />
+    <Compile Include="maths\clip.cs" />
+    <Compile Include="maths\closest_point.cs" />
     <Compile Include="maths\matrix2x2.cs" />
     <Compile Include="maths\matrix3x4.cs" />
     <Compile Include="maths\matrix4x4.cs" />
     <Compile Include="maths\quaternion.cs" />
     <Compile Include="maths\rand.cs" />
     <Compile Include="maths\scalar.cs" />
+    <Compile Include="maths\spline.cs" />
     <Compile Include="maths\stat.cs" />
     <Compile Include="maths\vector2.cs" />
     <Compile Include="maths\vector4.cs" />

@@ -55,7 +55,7 @@ namespace pr.maths
 		/// <summary>Returns true if the bounding box represents a point or volume</summary>
 		public bool IsValid
 		{
-			get { return Volume >= 0.0f; }
+			get { return m_radius.x >= 0f && m_radius.y >= 0f && m_radius.z >= 0f; }
 		}
 
 		/// <summary>Returns the lower corner of the bounding box</summary>

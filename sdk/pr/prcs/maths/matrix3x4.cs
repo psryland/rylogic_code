@@ -183,7 +183,7 @@ namespace pr.maths
 
 		// Make an orientation matrix from a direction. Note the rotation around the direction
 		// vector is not defined. 'axis' is the axis that 'direction' will become
-		public static m3x4 OrientationFromDirection(v4 direction, int axis, v4 preferred_up)
+		public static m3x4 OriFromDir(v4 direction, int axis, v4 preferred_up)
 		{
 			if (v4.Parallel(preferred_up, direction)) preferred_up = v4.Perpendicular(direction);
 			m3x4 ans = Identity;
@@ -192,9 +192,9 @@ namespace pr.maths
 			ans.y = v4.Cross3(ans.z, ans.x);
 			return PermuteRotation(ans, axis);
 		}
-		public static m3x4 OrientationFromDirection(v4 direction, int axis)
+		public static m3x4 OriFromDir(v4 direction, int axis)
 		{
-			return OrientationFromDirection(direction, axis, v4.Perpendicular(direction));
+			return OriFromDir(direction, axis, v4.Perpendicular(direction));
 		}
 
 		// Create a rotation from an axis and angle

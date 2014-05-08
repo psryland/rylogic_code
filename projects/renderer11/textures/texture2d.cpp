@@ -37,7 +37,7 @@ namespace pr
 			,m_mgr(mgr)
 			,m_name()
 		{
-			TexDesc(src, tdesc, srvdesc);
+			TexDesc(src, tdesc, false, false, srvdesc);
 			SamDesc(sdesc);
 		}
 		Texture2D::Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id)
@@ -62,7 +62,13 @@ namespace pr
 		}
 
 		// Set a new texture description and re-create/reinitialise the texture and the srv.
-		void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, ShaderResViewDesc const* srvdesc)
+		// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
+		//  dx texture get updated as well. If false, then this texture becomes a unique instance
+		//  and 'm_id' is changed.
+		// 'perserve' - if true, the content of the current texture is stretch blted to the new texture
+		//  if possible. If not possible, an exception is thrown
+		// 'srvdesc' - if not null, causes the new shader resourve view to be created using this description
+		void Texture2D::TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc)
 		{
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;
@@ -86,8 +92,12 @@ namespace pr
 
 				D3DPtr<ID3D11Resource> res;
 				pr::Throw(DirectX::CreateTexture(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));
-				pr::Throw(DirectX::CreateShaderResourceView(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
 				pr::Throw(res->QueryInterface(__uuidof(ID3D11Texture2D), (void**)&tex.m_ptr));
+				
+				if (srvdesc)
+					pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
+				else
+					pr::Throw(DirectX::CreateShaderResourceView(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &srv.m_ptr));
 			}
 			else
 			{
@@ -95,9 +105,40 @@ namespace pr
 				pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, srvdesc, &srv.m_ptr));
 			}
 
-			// Exception-safely save the pointers
-			m_tex = tex;
-			m_srv = srv;
+			// Copy the surface data from the existing texture
+			if (preserve && m_tex != nullptr)
+			{
+				// Note: it might be tempting to do this but the effect would look the same
+				// as just using the old texture, i.e. stretched. There is no stretch copy in
+				// dx10+. If you do decide to support this, this is the process that's needed:
+				//  - Make a render target texture of the same format as the new texture,
+				//  - Use a shader set up for rendering one texture into another,
+				//  - Push render states,
+				//  - call dc->Draw()
+				//  - Restore render states
+				TextureDesc existing_desc; m_tex->GetDesc(&existing_desc);
+				if (existing_desc.Width != tdesc.Width || existing_desc.Height != tdesc.Height)
+					throw std::exception("Cannot preserve content of resized textures");
+
+				// Copy unscaled content from 
+				D3DPtr<ID3D11DeviceContext> dc;
+				m_mgr->m_device->GetImmediateContext(&dc.m_ptr);
+				if (existing_desc.SampleDesc == tdesc.SampleDesc)
+				{
+					dc->CopyResource(tex.m_ptr, m_tex.m_ptr);
+				}
+				else
+				{
+					throw std::exception("not implemented");
+					//for (UINT slice = 0; slice != existing_desc.MipLevels; ++slice)
+					//	for (UINT arr = 0; arr != existing_desc.ArraySize; ++arr)
+					//		dc->ResolveSubresource(tex.m_ptr, D3D11CalcSubresource(slice, arr, existing_desc.MipLevels);
+					
+				}
+			}
+
+			// Update the texture and optionally all instances of the same dx texture
+			m_mgr->ReplaceTexture(*this, tex, srv, all_instances);
 		}
 
 		// Returns a description of the current sampler state pointed to by 'm_samp'
@@ -112,6 +153,17 @@ namespace pr
 			D3DPtr<ID3D11SamplerState> samp_state;
 			pr::Throw(m_mgr->m_device->CreateSamplerState(&desc, &samp_state.m_ptr));
 			m_samp = samp_state;
+		}
+
+		// Resize this texture to 'size' optionally applying the resize to all instances of this
+		// texture and optionally preserving the current content of the texture
+		void Texture2D::Resize(size_t width, size_t height, bool all_instances, bool preserve)
+		{
+			TextureDesc tdesc;
+			m_tex->GetDesc(&tdesc);
+			tdesc.Width = checked_cast<UINT>(width);
+			tdesc.Height = checked_cast<UINT>(height);
+			TexDesc(Image(), tdesc, all_instances, preserve);
 		}
 
 		// Refcounting cleanup function

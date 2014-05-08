@@ -6,18 +6,17 @@
 //  d3d11.lib
 //  dxgi.lib
 //
-// ToDo:
-// Ambient occlusion -  use the G-Buffer to sample normals in a spherical volume, scale
-//   intensity based on average "up-ness"
-//
-// Render method:
-//  render opaques with one directional light
-//  render skybox
-//   =>G-buffer
-//     pixels contain: depth, normal, colour (with directional light), lighting option (including none)
-//  render light volumes
-//  render alpha back faces
-//  render alpha front faces
+// Feature Wishlist:
+// Ambient occlusion
+//  - use the G-Buffer to sample normals in a spherical volume, scale
+//    intensity based on average "up-ness"
+// Thick Lines
+//  - Use a geometry shader to support thick lines by turning a line list
+//    into a tristrip
+// Shadow Mapping
+//  - Use Rylo-Shadows
+// Order Independent Alpha
+//  - Try that thing you read about weighted alpha by screen depth
 
 #pragma once
 #ifndef PR_RDR_RENDERER_H

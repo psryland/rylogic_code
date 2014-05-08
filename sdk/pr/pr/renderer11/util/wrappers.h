@@ -158,6 +158,7 @@ namespace pr
 				if (quality != 0 && Quality >= quality) Quality = quality - 1;
 			}
 		};
+		inline bool operator == (DXGI_SAMPLE_DESC const& lhs, DXGI_SAMPLE_DESC const& rhs) { return lhs.Count == rhs.Count && lhs.Quality == rhs.Quality; }
 
 		// Texture buffer description
 		struct TextureDesc :D3D11_TEXTURE2D_DESC

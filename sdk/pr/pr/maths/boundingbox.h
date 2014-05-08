@@ -78,19 +78,19 @@ namespace pr
 	template <typename Vert> BBox BBoxMake(std::initializer_list<Vert>&& verts);
 
 	// Functions
-	float			Volume(BBox const& bbox);
-	Plane			GetPlane(BBox const& bbox, EBBoxPlane side);
-	v4				GetCorner(BBox const& bbox, uint corner);
-	BSphere	GetBoundingSphere(BBox const& bbox);
-	BBox&	Encompass(BBox& bbox, v4 const& point);
-	BBox		Encompass(BBox const& bbox, v4 const& point);
-	BBox&	Encompass(BBox& lhs, BBox const& rhs);
-	BBox		Encompass(BBox const& lhs, BBox const& rhs);
-	bool			IsWithin(BBox const& bbox, v4 const& point, float tol);
-	bool			IsWithin(BBox const& bbox, BBox const& test);
-	bool			IsIntersection(BBox const& bbox, Line3 const& line);
-	bool			IsIntersection(BBox const& bbox, Plane const& plane);
-	bool			IsIntersection(BBox const& lhs, BBox const& rhs);
+	float   Volume(BBox const& bbox);
+	Plane   GetPlane(BBox const& bbox, EBBoxPlane side);
+	v4      GetCorner(BBox const& bbox, uint corner);
+	BSphere GetBoundingSphere(BBox const& bbox);
+	BBox&   Encompass(BBox& bbox, v4 const& point);
+	BBox    Encompass(BBox const& bbox, v4 const& point);
+	BBox&   Encompass(BBox& lhs, BBox const& rhs);
+	BBox    Encompass(BBox const& lhs, BBox const& rhs);
+	bool    IsWithin(BBox const& bbox, v4 const& point, float tol);
+	bool    IsWithin(BBox const& bbox, BBox const& test);
+	bool    IsIntersection(BBox const& bbox, Line3 const& line);
+	bool    IsIntersection(BBox const& bbox, Plane const& plane);
+	bool    IsIntersection(BBox const& lhs, BBox const& rhs);
 }
 
 #endif

@@ -245,10 +245,22 @@ namespace pr.extn
 			return idx >= 0 ? list[idx] : default(T);
 		}
 
-		/// <summary>Sub range sort using a delegate</summary>
-		public static void Sort<T>(this List<T> list, int start, int count, Comparison<T> cmp)
+		///// <summary>Sub range sort using a delegate</summary>
+		//public static void Sort<T>(this List<T> list, int start, int count, Comparison<T> cmp)
+		//{
+		//	list.Sort(start, count, Cmp<T>.From(cmp));
+		//}
+
+		/// <summary>Sort the list using a lamba</summary>
+		public static void Sort<T>(this IList<T> list, Func<T,T,int> cmp)
 		{
-			list.Sort(start, count, Cmp<T>.From(cmp));
+			list.Sort(0, list.Count, cmp);
+		}
+
+		/// <summary>Sub range sort using a delegate</summary>
+		public static void Sort<T>(this IList<T> list, int start, int count, Func<T,T,int> cmp)
+		{
+			list.QuickSort(new Comparison<T>(cmp), start, count);
 		}
 
 		/// <summary>Remove adjascent duplicate elements within the range [begin, end).
@@ -394,11 +406,22 @@ namespace pr
 	{
 		internal static partial class TestExtensions
 		{
-			[Test] public static void ListExtensions()
+			[Test] public static void ListQuickSort()
 			{
 				var rng = new Random();
 				var list = new List<int>(100);
+				for (var i = 0; i != 100; ++i)
+					list.Add(rng.Next(10));
 
+				list.Sort((l,r) => l.CompareTo(r));
+				
+				for (var i = 0; i != list.Count - 1; ++i)
+					Assert.True(list[i] <= list[i+1]);
+			}
+			[Test] public static void ListUnique()
+			{
+				var rng = new Random();
+				var list = new List<int>(100);
 				for (var i = 0; i != 100; ++i)
 					list.Add(rng.Next(10));
 
@@ -416,6 +439,7 @@ namespace pr
 
 				Assert.AreEqual(5, list.Add2(5));
 			}
+
 		}
 	}
 }

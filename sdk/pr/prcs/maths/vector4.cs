@@ -24,6 +24,8 @@ namespace pr.maths
 
 		// Constructors
 		public v4(float x_, float y_, float z_, float w_)       { x = x_; y = y_; z = z_; w = w_; }
+		public v4(v2 xy, float z_, float w_)                    { x = xy.x; y = xy.y; z = z_; w = w_; }
+
 		public float this[int i]
 		{
 			get { switch(i){case 0:return x;case 1:return y;case 2:return z;case 3:return w;default: throw new ArgumentException("index out of range", "i");} }
@@ -41,6 +43,7 @@ namespace pr.maths
 		public float Length4                                    { get { return (float)Math.Sqrt(Length4Sq); } }
 		public v4 AsPos                                         { get { v4 v = this; v.w = 1.0f; return v; } }
 		public v4 AsDir                                         { get { v4 v = this; v.w = 0.0f; return v; } }
+		public float[] ToArray()                                { return new[]{x, y, z, w}; }
 		public string ToString2()                               { return x + " " + y; }
 		public string ToString2(string format)                  { return x.ToString(format) + " " + y.ToString(format); }
 		public string ToString3()                               { return ToString2() + " " + z; }
@@ -113,6 +116,7 @@ namespace pr.maths
 		public static v4 operator / (v4 lhs, float rhs)        { return new v4(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs); }
 		public static bool operator ==(v4 lhs, v4 rhs)         { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
 		public static bool operator !=(v4 lhs, v4 rhs)         { return !(lhs == rhs); }
+		public static v4 operator + (v4 vec)                   { return vec; }
 		public static v4 operator - (v4 vec)                   { return new v4(-vec.x, -vec.y, -vec.z, -vec.w); }
 		public override bool Equals(object o)                  { return o is v4 && (v4)o == this; }
 		public override int GetHashCode()                      { unchecked { return x.GetHashCode() ^ y.GetHashCode() ^ z.GetHashCode() ^ w.GetHashCode(); } }

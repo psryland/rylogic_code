@@ -836,7 +836,7 @@ namespace pr
 				var root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
 
 				var ints = new List<int>{0,1,2,3,4};
-				var elems = Util.NewArray(5, i => new Elem1(i));
+				var elems = Util.NewArray(5, i => new Elem1((uint)i));
 				string s;
 
 				var xint = root.Add2("elem", 42);

@@ -14,10 +14,10 @@ namespace pr
 {
 	namespace rdr
 	{
+		// Todo, make a Texture base class
 		// A 2D texture
 		// Each time MatMgr.CreateTexture is called, a new Texture2D instance is allocated.
 		// However, the resources associated with this texture may be shared with other Textures.
-		// A copy of the TextureDesc is kept locally in the texture instance for per-instance modification
 		struct Texture2D :pr::RefCount<Texture2D>
 		{
 			pr::m4x4                         m_t2s;       // Texture to surface transform
@@ -40,12 +40,22 @@ namespace pr
 			TextureDesc TexDesc() const;
 
 			// Set a new texture description and re-create/reinitialise the texture and the srv.
-			void TexDesc(Image const& src, TextureDesc const& tdesc, ShaderResViewDesc const* srvdesc = nullptr);
+			// 'all_instances' - if true, all Texture2D objects that refer to the same underlying
+			//  dx texture get updated as well. If false, then this texture becomes a unique instance
+			//  and 'm_id' is changed.
+			// 'perserve' - if true, the content of the current texture is stretch blted to the new texture
+			//  if possible. If not possible, an exception is thrown
+			// 'srvdesc' - if not null, causes the new shader resourve view to be created using this description
+			void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc = nullptr);
 
 			// Get/Set the description of the current sampler state pointed to by 'm_samp'
 			// Setting a new sampler description, re-creates the sampler state
 			SamplerDesc SamDesc() const;
 			void SamDesc(SamplerDesc const& desc);
+
+			// Resize this texture to 'size' optionally applying the resize to all instances of this
+			// texture and optionally preserving the current content of the texture
+			void Resize(size_t width, size_t height, bool all_instances, bool preserve);
 
 			// Ref counting cleanup
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);

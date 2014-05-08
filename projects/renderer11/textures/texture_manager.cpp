@@ -269,5 +269,29 @@ namespace pr
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Checker, src, tdesc, sam, "#checker"));
 			}
 		}
+
+		// Updates the texture and srv pointers in 'existing' to those provided.
+		// If 'all_instances' is true, 'm_lookup_tex' is searched for Texture instances that point to the same
+		// dx resource as 'existing'. All are updated to point to the given 'tex' and 'srv' and the RdrId remains unchanged.
+		// If 'all_instances' is false, only 'existing' has its dx pointers changed.
+		void TextureManager::ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances)
+		{
+			if (all_instances && existing.m_tex != nullptr)
+			{
+				// Replace the dx texture in all other texture instances that share it with 'existing'
+				for (auto& rhs : m_lookup_tex)
+				{
+					auto& other = *rhs.second;
+					if (other.m_tex.m_ptr != existing.m_tex.m_ptr) continue;
+					other.m_tex = tex;
+					other.m_srv = srv;
+				}
+			}
+			else
+			{
+				existing.m_tex = tex;
+				existing.m_srv = srv;
+			}
+		}
 	}
 }

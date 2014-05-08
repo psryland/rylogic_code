@@ -1337,6 +1337,20 @@ VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, 
 	}
 }
 
+// Resize a texture to 'size' optionally preserving it's content
+VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve)
+{
+	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	try
+	{
+		tex->Resize(width, height, all_instances != 0, preserve != 0);
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_TextureResize failed", ex);
+	}
+}
+
 // Rendering ***************************************************************
 
 // Redraw the last rendered drawset

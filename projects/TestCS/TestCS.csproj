@@ -80,6 +80,9 @@
     <EmbeddedResource Include="src\colour_wheel_ui.resx">
       <DependentUpon>colour_wheel_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\diagram_control_ui.resx">
+      <DependentUpon>diagram_control_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\test_app_ui.resx">
       <DependentUpon>test_app_ui.cs</DependentUpon>
     </EmbeddedResource>
