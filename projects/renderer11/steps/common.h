@@ -19,14 +19,15 @@ namespace pr
 {
 	namespace rdr
 	{
-		// Convert a geom into an iv4 for flags passed to a shader
-		inline pr::iv4 GeomToIV4(EGeom geom)
+		// Set the geometry type
+		template <typename TCBuf> void Geom(NuggetProps const& ddata, TCBuf& cb)
 		{
-			 return pr::iv4::make(
-				 pr::AllSet(geom, EGeom::Colr),
-				 pr::AllSet(geom, EGeom::Norm),
-				 pr::AllSet(geom, EGeom::Tex0),
-				 0);
+			// Convert a geom into an iv4 for flags passed to a shader
+			cb.m_geom = pr::iv4::make(
+				pr::AllSet(ddata.m_geom, EGeom::Norm),
+				pr::AllSet(ddata.m_geom, EGeom::Tex0),
+				0,
+				0);
 		}
 
 		// Set the transform properties of a constants buffer

@@ -679,9 +679,9 @@ namespace pr
 				// Create the model
 				ModelPtr model;
 				if (m_linemesh)
-					model = ModelGenerator<VertPC>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), m_colour.size(), m_colour.data());
+					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), m_colour.size(), m_colour.data());
 				else
-					model = ModelGenerator<VertPC>::Lines(p.m_rdr, m_point.size()/2, m_point.data(), m_colour.size(), m_colour.data());
+					model = ModelGenerator<>::Lines(p.m_rdr, m_point.size()/2, m_point.data(), m_colour.size(), m_colour.data());
 
 				model->m_name = name;
 				return model;
@@ -1951,7 +1951,7 @@ namespace pr
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
 			// Create buffers for a dynamic model
-			pr::rdr::VBufferDesc vbs(vcount, sizeof(pr::rdr::VertPCNT), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+			pr::rdr::VBufferDesc vbs(vcount, sizeof(pr::rdr::Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 			pr::rdr::IBufferDesc ibs(icount, sizeof(pr::uint16), pr::rdr::DxFormat<pr::uint16>::value, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
 			pr::rdr::MdlSettings settings(vbs, ibs);
 

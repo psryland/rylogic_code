@@ -17,8 +17,9 @@ namespace pr
 		}
 
 		#define PR_ENUM(x)\
-			x(GBuffer   , = EStockShader::NumberOf)\
-			x(DSLighting,)
+			x(FwdShader  ,= EStockShader::NumberOf)\
+			x(GBuffer    ,)\
+			x(DSLighting ,)
 		PR_DEFINE_ENUM2(ERdrShader, PR_ENUM);
 		#undef PR_ENUM
 	}

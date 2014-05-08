@@ -49,13 +49,13 @@
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/models/nugget.h"
-#include "pr/renderer11/models/input_layout.h"
 #include "pr/renderer11/models/model_generator.h"
 
 // Instances
 #include "pr/renderer11/instances/instance.h"
 
 // Shaders
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
 

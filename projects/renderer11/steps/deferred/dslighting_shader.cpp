@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/shaders/shader_manager.h"
-#include "pr/renderer11/models/input_layout.h"
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/steps/render_step.h"
 #include "pr/renderer11/steps/deferred/dslighting.h"
 #include "pr/renderer11/steps/deferred/gbuffer.h"
@@ -57,7 +57,7 @@ namespace pr
 		template <> void ShaderManager::CreateShader<DSLightingShader>()
 		{
 			// Create the shader
-			VShaderDesc vsdesc(dslighting_vs, VertPCNT());
+			VShaderDesc vsdesc(dslighting_vs, Vert());
 			PShaderDesc psdesc(dslighting_ps);
 			CreateShader<DSLightingShader>(ERdrShader::DSLighting, &vsdesc, &psdesc, "dslighting");
 		}

@@ -5,7 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/shaders/shader_manager.h"
-#include "pr/renderer11/models/input_layout.h"
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/steps/render_step.h"
 #include "renderer11/steps/common.h"
 #include "renderer11/steps/deferred/ds_shader.h"
@@ -39,7 +39,7 @@ namespace pr
 
 				// Set the constants for the shader
 				ds::CBufModel cb = {};
-				cb.m_geom = GeomToIV4(dle.m_nugget->m_geom);
+				Geom(*dle.m_nugget, cb);
 				Txfm(*dle.m_instance, rstep.m_scene->m_view, cb);
 				Tint(*dle.m_instance, cb);
 				Tex0(*dle.m_nugget, cb);
@@ -58,7 +58,7 @@ namespace pr
 		template <> void ShaderManager::CreateShader<GBufferShader>()
 		{
 			// Create the shader
-			VShaderDesc vsdesc(gbuffer_vs, VertPCNT());
+			VShaderDesc vsdesc(gbuffer_vs, Vert());
 			PShaderDesc psdesc(gbuffer_ps);
 			CreateShader<GBufferShader>(ERdrShader::GBuffer, &vsdesc, &psdesc, "gbuffer");
 		}

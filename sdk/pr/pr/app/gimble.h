@@ -50,14 +50,14 @@ namespace pr
 			{
 				using namespace pr::rdr;
 
-				VertPC const verts[] =
+				Vert const verts[] =
 				{
-					{{-0.1f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-					{{ 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-					{{ 0.0f, -0.1f,  0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-					{{ 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-					{{ 0.0f,  0.0f, -0.1f}, {0.0f, 0.0f, 1.0f, 1.0f}},
-					{{ 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}},
+					{{-0.1f,  0.0f,  0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, v4Zero, v2Zero},
+					{{ 1.0f,  0.0f,  0.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, v4Zero, v2Zero},
+					{{ 0.0f, -0.1f,  0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, v4Zero, v2Zero},
+					{{ 0.0f,  1.0f,  0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, v4Zero, v2Zero},
+					{{ 0.0f,  0.0f, -0.1f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, v4Zero, v2Zero},
+					{{ 0.0f,  0.0f,  1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, v4Zero, v2Zero},
 				};
 				pr::uint16 const indices[] =
 				{
@@ -69,7 +69,7 @@ namespace pr
 
 				NuggetProps mat; // Get a suitable shader
 				mat.m_topo = EPrim::LineList;
-				mat.m_geom = VertPC::GeomMask;
+				mat.m_geom = EGeom::Vert | EGeom::Colr;
 
 				// Create a render nugget
 				m_inst.m_model->CreateNugget(mat);

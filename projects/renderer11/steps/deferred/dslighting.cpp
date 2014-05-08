@@ -6,7 +6,7 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/instances/instance.h"
-#include "pr/renderer11/models/input_layout.h"
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/models/model_settings.h"
 #include "pr/renderer11/models/model_manager.h"
@@ -31,13 +31,13 @@ namespace pr
 		{
 			{// Unit quad in Z = 0 plane
 				float const t0 = 0.000f, t1 = 0.9999f;
-				VertPCNT verts[4] =
+				Vert verts[4] =
 				{
 					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
-					{pr::v3::make(0.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t1)},
-					{pr::v3::make(1.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t1)},
-					{pr::v3::make(2.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t1,t0)},
-					{pr::v3::make(3.01f, 0, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(t0,t0)},
+					{pr::v4::make(0.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t1)},
+					{pr::v4::make(1.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t1)},
+					{pr::v4::make(2.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t1,t0)},
+					{pr::v4::make(3.01f, 0, 0, 0), pr::ColourWhite, pr::v4Zero, pr::v2::make(t0,t0)},
 				};
 				pr::uint16 idxs[] =
 				{
@@ -48,7 +48,7 @@ namespace pr
 				MdlSettings s(verts, idxs, bbox, "unit quad");
 				m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.CreateModel(s);
 
-				NuggetProps ddata(EPrim::TriList, VertPCNT::GeomMask);
+				NuggetProps ddata(EPrim::TriList, EGeom::Vert);
 				m_unit_quad.m_model->CreateNugget(ddata);
 			}
 

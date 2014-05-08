@@ -145,6 +145,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\dslighting.h" />
@@ -156,7 +157,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_gdi.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_buffer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\models\model_generator.h" />
@@ -225,11 +225,6 @@
     <ClCompile Include="..\renderer11\steps\deferred\gbuffer.cpp" />
     <ClCompile Include="..\renderer11\steps\forward\forward_render.cpp" />
     <ClCompile Include="..\renderer11\steps\forward\fwd_shader.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\txfm_tex.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\txfm_tint.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc_list_tex.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\txfm_tint_pvc_lit.cpp" />
     <ClCompile Include="..\renderer11\steps\render_step.cpp" />
     <ClCompile Include="..\renderer11\steps\shadow\shadow_map.cpp" />
     <ClCompile Include="..\renderer11\textures\dds_texture_loader.cpp" />
@@ -257,9 +252,7 @@
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\forward\functions.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\forward\uber.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\forward\uber_defines.hlsli" />
+    <None Include="..\renderer11\shaders\hlsl\inout.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
   </ItemGroup>
@@ -270,24 +263,19 @@
     <CustomBuild Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc_lit.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_pvc_lit_tex.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\txfm_tint_tex.hlsl">
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\hlsl\thick_line.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\forward.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

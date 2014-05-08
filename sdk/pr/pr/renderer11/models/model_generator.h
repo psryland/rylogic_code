@@ -11,7 +11,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		template <typename VType = VertPCNT, typename IType = pr::uint16>
+		template <typename VType = Vert, typename IType = pr::uint16>
 		struct ModelGenerator
 		{
 			// A container for the model data

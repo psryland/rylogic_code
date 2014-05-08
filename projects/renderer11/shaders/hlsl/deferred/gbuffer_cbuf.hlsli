@@ -47,7 +47,14 @@ cbuffer CBufModel :cbuf_bank(b2)
 	float4x4 m_tex2surf0; // texture to surface transform
 
 	// Geometry type
-	int4 m_geom; // x = has pvc, y = has normals, z = has tex0, w = not used
+	int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z,w = not used
 };
+
+#if SHADER_BUILD
+
+#define HAS_NORMALS m_geom.x == 1
+#define HAS_TEX0 m_geom.y == 1
+
+#endif
 
 #endif

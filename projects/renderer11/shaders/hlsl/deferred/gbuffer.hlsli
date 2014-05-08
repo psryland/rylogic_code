@@ -14,7 +14,7 @@ Texture2D<float2> m_tex_normals   :register(t1);
 Texture2D<float>  m_tex_depth     :register(t2);
 
 // Gbuffer Px out format
-struct PS_OUTPUT_GBUFFER
+struct PSOut_GBuffer
 {
 	float4 diff     :SV_Target0;
 	float2 ws_norm  :SV_Target1;
@@ -26,14 +26,14 @@ struct GPixel
 {
 	float4 diff;     // Unlit diffuse
 	float4 ws_norm;  // world space normal
-	float4 cs_pos;   // Camera space position
-	float cs_depth;  // Distance from camera
+	float4 cs_vert;  // Camera space position
+	float  cs_depth; // Distance from camera
 };
 
 // Output a pixel for the gbuffer
-PS_OUTPUT_GBUFFER WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
+PSOut_GBuffer WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 {
-	PS_OUTPUT_GBUFFER Out;
+	PSOut_GBuffer Out;
 	Out.diff = float4(diff.xyz, sign(ws_norm.z) * 0.5f + 0.5f);
 	Out.ws_norm = ws_norm.xy * 0.5f + 0.5f;
 	Out.cs_depth = length(ws_pos - m_c2w[3]);
@@ -56,7 +56,7 @@ GPixel ReadGBuffer(float2 tex, float3 cs_vdir)
 	else
 		Out.ws_norm = float4(0,0,0,0);
 
-	Out.cs_pos = float4(cs_vdir * depth, 1);
+	Out.cs_vert = float4(cs_vdir * depth, 1);
 	Out.cs_depth = depth;
 	return Out;
 }

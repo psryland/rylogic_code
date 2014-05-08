@@ -49,11 +49,7 @@ namespace pr
 		void ShaderManager::CreateStockShaders()
 		{
 			// Forward shaders
-			CreateShader<TxTint         >();
-			CreateShader<TxTintPvc      >();
-			CreateShader<TxTintTex      >();
-			CreateShader<TxTintPvcLit   >();
-			CreateShader<TxTintPvcLitTex>();
+			CreateShader<FwdShader>();
 
 			// GBuffer shaders
 			CreateShader<GBufferShader>();

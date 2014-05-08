@@ -86,10 +86,11 @@ namespace pr
 				// Model nugget properties for the skybox
 				NuggetProps ddata;
 				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearWrap(), texpath.c_str());
+				ddata.m_geom = EGeom::Vert | EGeom::Tex0;
 				ddata.m_rsb = RSBlock::SolidCullFront();
 
 				// Create the skybox model
-				m_inst.m_model = ModelGenerator<VertPT>::Geosphere(rdr, 1.0f, 3, Colour32White, &ddata);
+				m_inst.m_model = ModelGenerator<>::Geosphere(rdr, 1.0f, 3, Colour32White, &ddata);
 			}
 
 			// Create a model for a 5-sided cubic dome
@@ -98,20 +99,20 @@ namespace pr
 				using namespace pr::rdr;
 
 				float const s = 0.5f;
-				VertPT const verts[] =
+				Vert const verts[] =
 				{
-					{{-s,  s,  s}, { 0.25f, 0.25f}}, //0
-					{{-s,  s, -s}, { 0.25f, 0.75f}}, //1
-					{{ s,  s, -s}, { 0.75f, 0.75f}}, //2
-					{{ s,  s,  s}, { 0.75f, 0.25f}}, //3
-					{{-s, -s,  s}, {-0.25f, 0.25f}}, //4
-					{{-s, -s, -s}, {-0.25f, 0.75f}}, //5
-					{{-s, -s, -s}, { 0.25f, 1.25f}}, //6
-					{{ s, -s, -s}, { 0.75f, 1.25f}}, //7
-					{{ s, -s, -s}, { 1.25f, 0.75f}}, //8
-					{{ s, -s,  s}, { 1.25f, 0.25f}}, //9
-					{{ s, -s,  s}, { 0.75f,-0.25f}}, //10
-					{{-s, -s,  s}, { 0.25f,-0.25f}}, //11
+					{{-s,  s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 0.25f}}, //0
+					{{-s,  s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 0.75f}}, //1
+					{{ s,  s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 0.75f}}, //2
+					{{ s,  s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 0.25f}}, //3
+					{{-s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, {-0.25f, 0.25f}}, //4
+					{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {-0.25f, 0.75f}}, //5
+					{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f, 1.25f}}, //6
+					{{ s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f, 1.25f}}, //7
+					{{ s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 1.25f, 0.75f}}, //8
+					{{ s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 1.25f, 0.25f}}, //9
+					{{ s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.75f,-0.25f}}, //10
+					{{-s, -s,  s, 1.0f}, pr::ColourWhite, pr::v4Zero, { 0.25f,-0.25f}}, //11
 				};
 				pr::uint16 const indices[] =
 				{
@@ -126,7 +127,9 @@ namespace pr
 				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "skybox"));
 
 				// Create a model nugget for the skybox
-				NuggetProps ddata(EPrim::TriList, VertPT::GeomMask, rdr.m_shdr_mgr.FindShaderFor(VertPT::GeomMask).m_ptr);
+				NuggetProps ddata;
+				ddata.m_topo = EPrim::TriList;
+				ddata.m_geom = EGeom::Vert|EGeom::Tex0;
 				ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), texpath.c_str());
 				m_inst.m_model->CreateNugget(ddata);
 			}
@@ -137,32 +140,32 @@ namespace pr
 				using namespace pr::rdr;
 
 				float const s = 0.5f, t0 = 0.0f, t1 = 1.0f;
-				VertPT const verts[] =
+				Vert const verts[] =
 				{
-					{{+s, +s, -s}, {t0, t0}}, //  0 // +X
-					{{+s, -s, -s}, {t0, t1}}, //  1
-					{{+s, -s, +s}, {t1, t1}}, //  2
-					{{+s, +s, +s}, {t1, t0}}, //  3
-					{{-s, +s, +s}, {t0, t0}}, //  4 // -X
-					{{-s, -s, +s}, {t0, t1}}, //  5
-					{{-s, -s, -s}, {t1, t1}}, //  6
-					{{-s, +s, -s}, {t1, t0}}, //  7
-					{{+s, +s, +s}, {t0, t0}}, //  8 // +Y
-					{{-s, +s, +s}, {t0, t1}}, //  9
-					{{-s, +s, -s}, {t1, t1}}, // 10
-					{{+s, +s, -s}, {t1, t0}}, // 11
-					{{+s, -s, -s}, {t0, t0}}, // 12 // -Y
-					{{-s, -s, -s}, {t0, t1}}, // 13
-					{{-s, -s, +s}, {t1, t1}}, // 14
-					{{+s, -s, +s}, {t1, t0}}, // 15
-					{{+s, +s, +s}, {t0, t0}}, // 16 // +Z
-					{{+s, -s, +s}, {t0, t1}}, // 17
-					{{-s, -s, +s}, {t1, t1}}, // 18
-					{{-s, +s, +s}, {t1, t0}}, // 19
-					{{-s, +s, -s}, {t0, t0}}, // 20 // -Z
-					{{-s, -s, -s}, {t0, t1}}, // 21
-					{{+s, -s, -s}, {t1, t1}}, // 22
-					{{+s, +s, -s}, {t1, t0}}, // 23
+					{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  0 // +X
+					{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  1
+					{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, //  2
+					{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, //  3
+					{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  4 // -X
+					{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  5
+					{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, //  6
+					{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, //  7
+					{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, //  8 // +Y
+					{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, //  9
+					{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 10
+					{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 11
+					{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 12 // -Y
+					{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 13
+					{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 14
+					{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 15
+					{{+s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 16 // +Z
+					{{+s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 17
+					{{-s, -s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 18
+					{{-s, +s, +s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 19
+					{{-s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t0}}, // 20 // -Z
+					{{-s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t0, t1}}, // 21
+					{{+s, -s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t1}}, // 22
+					{{+s, +s, -s, 1.0f}, pr::ColourWhite, pr::v4Zero, {t1, t0}}, // 23
 				};
 				pr::uint16 const indices[] =
 				{
@@ -178,7 +181,7 @@ namespace pr
 				m_inst.m_model = rdr.m_mdl_mgr.CreateModel(MdlSettings(verts, indices, pr::BBoxReset, "skybox"));
 
 				// Create the model nuggets for the skybox
-				NuggetProps ddata(EPrim::TriList, VertPT::GeomMask);
+				NuggetProps ddata(EPrim::TriList, EGeom::Vert|EGeom::Tex0);
 
 				// One texture per nugget
 				wstring tpath = texpath;

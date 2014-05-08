@@ -934,7 +934,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 
 		// Copy the model data into the model
 		auto vin = begin(verts);
-		auto vout = mlock.m_vlock.ptr<VertPCNT>();
+		auto vout = mlock.m_vlock.ptr<Vert>();
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
 			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);

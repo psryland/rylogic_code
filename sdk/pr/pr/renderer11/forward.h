@@ -111,11 +111,8 @@ namespace pr
 		class  ShaderManager;
 		struct ShaderDesc;
 		struct BaseShader;
-		struct TxTint;
-		struct TxTintPvc;
-		struct TxTintTex;
-		struct TxTintPvcLit;
-		struct TxTintPvcLitTex;
+		struct Vert;
+		struct FwdShader;
 		struct GBufferShader;
 		struct DSLightingShader;
 		struct ShadowMapShader;
@@ -147,10 +144,6 @@ namespace pr
 		struct Model;
 		struct NuggetProps;
 		struct Nugget;
-		struct VertP;
-		struct VertPC;
-		struct VertPCT;
-		struct VertPCNT;
 		struct MdlSettings;
 		typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
 		typedef pr::RefPtr<Model> ModelPtr;

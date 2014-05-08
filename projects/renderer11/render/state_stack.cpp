@@ -4,9 +4,9 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "renderer11/render/state_stack.h"
-#include "pr/renderer11/models/input_layout.h"
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/models/nugget.h"
+#include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/renderer.h"

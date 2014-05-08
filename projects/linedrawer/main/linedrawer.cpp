@@ -213,11 +213,11 @@ namespace ldr
 			pr::Colour32 colours80[] = { 0xFF800000, 0xFF800000, 0xFF008000, 0xFF008000, 0xFF000080, 0xFF000080 };
 			pr::uint16 lines[]       = { 0, 1, 2, 3, 4, 5 };
 
-			m_focus_point .m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
+			m_focus_point .m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(coloursFF), coloursFF);
 			m_focus_point .m_model->m_name = "focus point";
 			m_focus_point .m_i2w   = pr::m4x4Identity;
 
-			m_origin_point.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
+			m_origin_point.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80);
 			m_origin_point.m_model->m_name = "origin point";
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
@@ -245,7 +245,7 @@ namespace ldr
 				24, 25, 24, 26, 24, 27,
 				28, 29, 28, 30, 28, 31,
 			};
-			m_selection_box.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
+			m_selection_box.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines);
 			m_selection_box.m_model->m_name = "selection box";
 			m_selection_box.m_i2w   = pr::m4x4Identity;
 		}
@@ -268,7 +268,7 @@ namespace ldr
 				4, 5, 5, 6, 6, 7, 7, 4,
 				0, 4, 1, 5, 2, 6, 3, 7
 			};
-			m_bbox_model.m_model = ModelGenerator<VertPC>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
+			m_bbox_model.m_model = ModelGenerator<>::Mesh(m_rdr, EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, 1, &pr::Colour32Blue);
 			m_bbox_model.m_model->m_name = "bbox";
 			m_bbox_model.m_i2w   = pr::m4x4Identity;
 		}
