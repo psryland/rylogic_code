@@ -11,8 +11,8 @@
 // Inheritors use the IncRef/DecRef methods, so that stack tracing works
 
 #pragma once
-#ifndef PR_COMMON_REFPTR_H
-#define PR_COMMON_REFPTR_H
+
+#include <type_traits>
 
 #define PR_REFPTR_TRACE 0
 #if PR_REFPTR_TRACE == 1
@@ -20,14 +20,9 @@
 #include "pr/common/stackdump.h"
 #endif
 
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
-
 namespace pr
 {
+	#if PR_REFPTR_TRACE == 1
 	// A function prototype for clients to implement/specialise to aid stack traces, etc
 	// Example code:
 	// #define PR_REFPTR_TRACE 1
@@ -41,50 +36,67 @@ namespace pr
 	//        OutputDebugStringA(pr::FmtS("%s(%d):\n", file.c_str(), line));
 	//    });
 	// }
-	#if PR_REFPTR_TRACE == 1
 	template <typename T> void RefPtrTrace(bool,T*) {}
 	template <typename T> long PtrRefCount(T*);
 	#endif
 
 	// A ptr wrapper to a reference counting object.
 	// 'T' should have methods 'AddRef' and 'Release'
+	// Not the same as std::shared_ptr<> because it assumes
+	// the pointed to object has AddRef()/Release() methods
 	template <typename T> struct RefPtr
 	{
 		mutable T* m_ptr;
 
-		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
-
 		RefPtr()
-		:m_ptr(0)
+			:m_ptr(nullptr)
 		{}
 
-		RefPtr(T* t)
-		:m_ptr(t)
+		RefPtr(nullptr_t)
+			:m_ptr(nullptr)
+		{}
+
+		// Construct from any pointer convertable to 'T'
+		template <typename U> RefPtr(U* t)
+			:m_ptr(t)
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
 
-		RefPtr(int nul)
-		:m_ptr(0)
-		{
-			PR_ASSERT(PR_DBG, nul == 0, ""); (void)nul;
-		}
-
+		// Copy construct
 		RefPtr(RefPtr const& rhs)
-		:m_ptr(rhs.m_ptr)
+			:m_ptr(rhs.m_ptr)
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
 
-		template <typename U> RefPtr(RefPtr<U> const& rhs)
-		:m_ptr(static_cast<T*>(rhs.m_ptr))
+		// Copy construct from convertable pointer
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr(RefPtr<U> const& rhs)
+			:m_ptr(static_cast<T*>(rhs.m_ptr))
 		{
 			if (m_ptr)
 				IncRef(m_ptr);
 		}
 
+		// Move construct
+		RefPtr(RefPtr&& rhs)
+			:m_ptr(rhs.m_ptr)
+		{
+			rhs.m_ptr = nullptr;
+		}
+
+		// Move construct from convertable pointer
+		template<class U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr(RefPtr<U>&& rhs)
+			:m_ptr(static_cast<T*>(rhs.m_ptr))
+		{
+			rhs.m_ptr = nullptr;
+		}
+
+		// Destructor
 		~RefPtr()
 		{
 			if (m_ptr)
@@ -92,11 +104,10 @@ namespace pr
 		}
 
 		// Assignment
-		RefPtr& operator = (int nul)
+		RefPtr& operator = (nullptr_t)
 		{
 			if (m_ptr) DecRef(m_ptr);
-			m_ptr = 0;
-			PR_ASSERT(PR_DBG, nul == 0, ""); (void)nul;
+			m_ptr = nullptr;
 			return *this;
 		}
 		RefPtr& operator = (RefPtr const& rhs)
@@ -110,7 +121,13 @@ namespace pr
 			}
 			return *this;
 		}
-		template <typename U> RefPtr& operator = (RefPtr<U> const& rhs)
+		RefPtr& operator = (RefPtr&& rhs)
+		{
+			std::swap(m_ptr, rhs.m_ptr);
+			return *this;
+		}
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr& operator = (RefPtr<U> const& rhs)
 		{
 			if (m_ptr != static_cast<T*>(rhs.m_ptr))
 			{
@@ -121,21 +138,28 @@ namespace pr
 			}
 			return *this;
 		}
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		RefPtr& operator = (RefPtr<U>&& rhs)
+		{
+			std::swap(m_ptr, static_cast<T*>(rhs.m_ptr));
+			return *this;
+		}
 
 		// Implicit conversion to bool
+		struct bool_tester { int x; }; typedef int bool_tester::* bool_type;
 		operator bool_type() const
 		{
-			return m_ptr != 0 ? &bool_tester::x : static_cast<bool_type>(0);
+			return m_ptr != nullptr ? &bool_tester::x : static_cast<bool_type>(nullptr);
 		}
 
 		// Implicit conversion to base class
-		template <typename U> operator RefPtr<U>() const
+		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
+		operator RefPtr<U>() const
 		{
 			return RefPtr<U>(static_cast<U*>(m_ptr));
 		}
 
-		// Pointer de-ref
-		T* operator -> ()       { return m_ptr; }
+		// Pointer deref
 		T* operator -> () const { return m_ptr; }
 
 		// The current reference count
@@ -170,7 +194,7 @@ namespace pr
 			//   D3DPtr p1(raw) (ref count = 1 still because the following DecRef)
 			//   p1->~D3DPtr()  (ref count = 0)
 			//   p0->~D3DPtr()  "app.exe has triggered a break point" (i.e. crashed)
-			PR_ASSERT(PR_DBG, pr::PtrRefCount(ptr) > 0, "Pointer reference count is 0");
+			assert(pr::PtrRefCount(ptr) > 0 && "Pointer reference count is 0");
 			ptr->Release();
 		}
 	};
@@ -199,10 +223,10 @@ namespace pr
 	#endif
 	#endif
 }
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#endif
-
-#endif
+namespace std
+{
+	template <typename T> void swap(pr::RefCount<T>& lhs, pr::RefCount<T>& rhs)
+	{
+		swap(lhs.m_ref_count, rhs.m_ref_count);
+	}
+}

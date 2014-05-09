@@ -147,9 +147,9 @@ namespace pr
 		PR_EXPAND(PR_DBG_RDR, int rcnt);
 		PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
 		m_immediate->OMSetRenderTargets(0, 0, 0);
-		m_immediate = 0;
-		m_main_rtv = 0;
-		m_main_dsv = 0;
+		m_immediate = nullptr;
+		m_main_rtv = nullptr;
+		m_main_dsv = nullptr;
 
 		// Destroying a Swap Chain:
 		// You may not release a swap chain in full-screen mode because doing so may create thread contention
@@ -157,11 +157,11 @@ namespace pr
 		// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
 		PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
 		m_swap_chain->SetFullscreenState(FALSE, 0);
-		m_swap_chain = 0;
+		m_swap_chain = nullptr;
 
 		// Can't assert this as the managers still contain references to the device (and possibly the client)
 		//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the d3d device");
-		m_device = 0;
+		m_device = nullptr;
 	}
 
 	// Get/Set full screen mode
@@ -296,8 +296,8 @@ namespace pr
 		m_immediate->OMSetRenderTargets(0, 0, 0);
 		m_immediate->ClearState();
 
-		m_main_rtv = 0;
-		m_main_dsv = 0;
+		m_main_rtv = nullptr;
+		m_main_dsv = nullptr;
 
 		// Get the swap chain to resize itself
 		// Pass 0 for width and height, DirectX gets them from the associated window

@@ -133,7 +133,12 @@
 	<Type Name="pr::rdr::StateBlock&lt;*,*,*&gt;">
 		<DisplayString>{m_mask}</DisplayString>
 	</Type>
-	
+
+	<!-- Line Drawer -->
+	<Type Name="pr::ldr::LdrObject">
+		<DisplayString>{m_type} {m_name} {m_colour}</DisplayString>
+	</Type>
+
 	<!-- Console -->
 	<Type Name="pr::console::Coord">
 		<DisplayString>{X},{Y}</DisplayString>

@@ -56,12 +56,12 @@ namespace pr
 			// This will override the 'dc' passed to Map by the renderer manager classes (which will pass in the immediate dc)
 			// Note: that to map a deferred context, you can only use write discard or write no overwrite.
 			Lock()
-			:D3D11_MAPPED_SUBRESOURCE()
-			,m_dc()
-			,m_res(0)
-			,m_sub(0)
-			,m_stride()
-			,m_range()
+				:D3D11_MAPPED_SUBRESOURCE()
+				,m_dc()
+				,m_res()
+				,m_sub()
+				,m_stride()
+				,m_range()
 			{}
 			Lock(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Resource> const& res, UINT sub, D3D11_MAP map_type, UINT flags, std::size_t stride, Range range = RangeZero)
 			{
@@ -118,8 +118,8 @@ namespace pr
 				if (!m_res) return;
 				m_dc->Unmap(m_res.m_ptr, m_sub);
 				static_cast<D3D11_MAPPED_SUBRESOURCE&>(*this) = D3D11_MAPPED_SUBRESOURCE();
-				m_res = 0;
-				m_dc = 0;
+				m_res = nullptr;
+				m_dc = nullptr;
 			}
 		};
 		template <typename TType> struct LockT :Lock

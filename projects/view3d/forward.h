@@ -15,9 +15,10 @@
 
 #define _WTL_NO_CSTRING
 
-#include <set>
-#include <thread>
 #include <exception>
+#include <set>
+#include <mutex>
+#include <thread>
 
 #include <atlbase.h>
 #include <atlapp.h>

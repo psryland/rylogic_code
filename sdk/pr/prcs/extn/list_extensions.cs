@@ -307,36 +307,41 @@ namespace pr.extn
 			return list.Unique(0, list.Count, (lhs,rhs) => lhs.Equals(rhs));
 		}
 
+		/// <summary>
+		/// Partition 'list' within the range [left,right) such that the element at list[left]
+		/// is moved to it's correct position within the list if it was sorted.
+		/// Returns the index location of where list[left] is moved to.</summary>
 		public static int Partition<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
 		{
-			int i = left;
-			int j = right - 1;
+			if (left == right)
+				return left;
+			if (left > right)
+				throw new Exception("invalid range");
 
-			// pick the pivot point and save it
+			// Copy the pivot
 			T pivot = list[left];
 
-			// until the indices cross
-			while (i < j)
+			// while the indices haven't meet at the pivot index
+			int i = left, j = right;
+			for (;;)
 			{
-				// move the right pointer left until value < pivot
-				while (comparison(list[j], pivot) > 0 && i < j) j--;
+				// Move the right index left until value < pivot
+				for (--j; i != j && comparison(list[j], pivot) > 0; --j) {}
+				if (i == j) break;
 
-				// move the right value to the left position
-				// increment left pointer
-				if (i != j) list[i++] = list[j];
+				// Copy the right value to the left position
+				list[i] = list[j];
 
-				// move the left pointer to the right until value > pivot
-				while (comparison(list[i], pivot) < 0 && i < j) i++;
+				// Move the left index right until value > pivot
+				for (++i; i != j && comparison(list[i], pivot) < 0; ++i) {}
+				if (i == j) break;
 
-				// move the left value to the right position
-				// decrement right pointer
-				if (i != j) list[j--] = list[i];
+				// Copy the left value to the right position
+				list[j] = list[i];
 			}
 
-			// put the pivot holder in the left spot
+			// Copy the pivot back into the pivot location
 			list[i] = pivot;
-
-			// return pivot location
 			return i;
 		}
 		public static int Partition<T>(this IList<T> list, Comparison<T> comparison)
@@ -359,10 +364,10 @@ namespace pr.extn
 			int pivot = list.Partition(comparison, left, right);
 
 			// if the left index is less than the pivot, sort left side
-			if (left < pivot) list.QuickSort(comparison, left, pivot - 1);
+			if (pivot - left > 1) list.QuickSort(comparison, left, pivot);
 
-			// if right index is greated than pivot, sort right side
-			if (right > pivot) list.QuickSort(comparison, pivot + 1, right);
+			// if right index is greater than pivot, sort right side
+			if (right - pivot > 1) list.QuickSort(comparison, pivot + 1, right);
 		}
 
 		/// <summary>Return the nth element in the list as if the list was sorted</summary>
@@ -409,8 +414,8 @@ namespace pr
 			[Test] public static void ListQuickSort()
 			{
 				var rng = new Random();
-				var list = new List<int>(100);
-				for (var i = 0; i != 100; ++i)
+				var list = new List<int>(99);
+				for (var i = 0; i != 99; ++i)
 					list.Add(rng.Next(10));
 
 				list.Sort((l,r) => l.CompareTo(r));

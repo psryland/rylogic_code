@@ -335,6 +335,9 @@ namespace pr
 			void SetColour(pr::Colour32 colour, pr::uint mask, char const* name = nullptr);
 
 			// Set the texture on this object or child objects matching 'name' (see Apply)
+			// Note for difference mode drawlist management, if the object is currently in
+			// one or more drawlists (i.e. added to a scene) it will need to be removed and
+			// re-added so that the sort order is correct.
 			void SetTexture(pr::rdr::Texture2DPtr tex, char const* name = nullptr);
 
 			// Return the bounding box for this object in model space
@@ -383,6 +386,15 @@ namespace pr
 			{
 				return BBoxWS(include_children, [](LdrObject const&){ return true; });
 			}
+
+			// Add/Remove 'child' as a child of this object
+			void AddChild(LdrObjectPtr child);
+			LdrObjectPtr RemoveChild(LdrObjectPtr& child);
+			LdrObjectPtr RemoveChild(size_t i);
+			void RemoveAllChildren();
+
+			// Transfer the parts of 'rhs' that are model related to this object
+			void UpdateModel(LdrObject&& rhs);
 
 			// Called when there are no more references to this object
 			static void RefCountZero(RefCount<LdrObject>* doomed);

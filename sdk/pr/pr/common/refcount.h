@@ -14,16 +14,9 @@
 //       RefPtr<Thing> ptr(new Thing()); // thing deleted when last reference goes out of scope
 //   }
 //
-#ifndef PR_COMMON_REFCOUNT_H
-#define PR_COMMON_REFCOUNT_H
+#pragma once
 
 #include <windows.h>
-
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
 
 namespace pr
 {
@@ -38,34 +31,55 @@ namespace pr
 		mutable volatile long m_ref_count;
 
 		RefCount()
-		:m_ref_count(0)
-		{
-		}
+			:m_ref_count(0)
+		{}
+
 		virtual ~RefCount()
+		{}
+
+		RefCount(RefCount&& rhs)
+			:m_ref_count(rhs.m_ref_count)
 		{
+			rhs.m_ref_count = 0;
 		}
-		RefCount(RefCount const& rhs) :m_ref_count(0)
+
+		RefCount& operator = (RefCount&& rhs)
 		{
-		}
-		RefCount& operator = (RefCount const& rhs)
-		{
-			if (&rhs != this) m_ref_count = 0;
+			std::swap(m_ref_count, rhs.m_ref_count);
 			return *this;
 		}
+
 		long AddRef() const
 		{
 			return Shared ? ::InterlockedIncrement(&m_ref_count) : ++m_ref_count;
 		}
+		
 		long Release() const
 		{
-			PR_ASSERT(PR_DBG, m_ref_count > 0, "");
+			assert(m_ref_count > 0);
 			long ref_count = Shared ? ::InterlockedDecrement(&m_ref_count) : --m_ref_count;
 			if (!ref_count) { Deleter::RefCountZero(const_cast<RefCount<Deleter,Shared>*>(this)); }
 			return ref_count;
 		}
+		
 		static void RefCountZero(RefCount<Deleter,Shared>* doomed)
 		{
 			delete doomed;
+		}
+
+	private:
+		RefCount(RefCount const&) // Ref counted objects should be copyable
+			:m_ref_count(0)
+		{
+			// This object has just been constructed, therefore AddRef() has
+			// never been called meaning there are no references to it,
+			// even tho the object we're copying may have references.
+		}
+		RefCount& operator = (RefCount const& rhs)
+		{
+			// See notes in copy constructor
+			if (&rhs != this) m_ref_count = 0;
+			return *this;
 		}
 	};
 
@@ -91,10 +105,3 @@ namespace pr
 		return count;
 	}
 }
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#endif
-
-#endif

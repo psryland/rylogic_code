@@ -47,7 +47,7 @@ namespace pr
 				,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
 				,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
 				,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
-				,m_adapter(0)
+				,m_adapter()
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
 				,m_device_layers(D3D11_CREATE_DEVICE_BGRA_SUPPORT)
 				,m_feature_levels()
@@ -107,7 +107,7 @@ namespace pr
 		D3DPtr<ID3D11DeviceContext> ImmediateDC() const { return m_immediate; }
 
 		// Create a new deferred device context
-		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return 0; };
+		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return nullptr; };
 
 		// Returns an allocator object suitable for allocating instances of 'T'
 		template <class Type> rdr::Allocator<Type> Allocator() const { return rdr::Allocator<Type>(m_settings.m_mem); }

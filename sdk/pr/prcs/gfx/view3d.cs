@@ -212,6 +212,40 @@ namespace pr.gfx
 			D3D11_TEXTURE_ADDRESS_BORDER      = 4,
 			D3D11_TEXTURE_ADDRESS_MIRROR_ONCE = 5,
 		}
+		[Flags] public enum EBindFlags :uint //D3D11_BIND_FLAG
+		{
+			NONE                        = 0,
+			D3D11_BIND_VERTEX_BUFFER    = 0x1,
+			D3D11_BIND_INDEX_BUFFER     = 0x2,
+			D3D11_BIND_CONSTANT_BUFFER  = 0x4,
+			D3D11_BIND_SHADER_RESOURCE  = 0x8,
+			D3D11_BIND_STREAM_OUTPUT    = 0x10,
+			D3D11_BIND_RENDER_TARGET    = 0x20,
+			D3D11_BIND_DEPTH_STENCIL    = 0x40,
+			D3D11_BIND_UNORDERED_ACCESS = 0x80,
+			D3D11_BIND_DECODER          = 0x200,
+			D3D11_BIND_VIDEO_ENCODER    = 0x400
+		}
+		[Flags] public enum EResMiscFlags :uint//D3D11_RESOURCE_MISC_FLAG
+		{
+			NONE                                                = 0,
+			D3D11_RESOURCE_MISC_GENERATE_MIPS                   = 0x1,
+			D3D11_RESOURCE_MISC_SHARED                          = 0x2,
+			D3D11_RESOURCE_MISC_TEXTURECUBE                     = 0x4,
+			D3D11_RESOURCE_MISC_DRAWINDIRECT_ARGS               = 0x10,
+			D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS          = 0x20,
+			D3D11_RESOURCE_MISC_BUFFER_STRUCTURED               = 0x40,
+			D3D11_RESOURCE_MISC_RESOURCE_CLAMP                  = 0x80,
+			D3D11_RESOURCE_MISC_SHARED_KEYEDMUTEX               = 0x100,
+			D3D11_RESOURCE_MISC_GDI_COMPATIBLE                  = 0x200,
+			D3D11_RESOURCE_MISC_SHARED_NTHANDLE                 = 0x800,
+			D3D11_RESOURCE_MISC_RESTRICTED_CONTENT              = 0x1000,
+			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE        = 0x2000,
+			D3D11_RESOURCE_MISC_RESTRICT_SHARED_RESOURCE_DRIVER = 0x4000,
+			D3D11_RESOURCE_MISC_GUARDED                         = 0x8000,
+			D3D11_RESOURCE_MISC_TILE_POOL                       = 0x20000,
+			D3D11_RESOURCE_MISC_TILED                           = 0x40000
+		}
 		public enum ELight
 		{
 			Ambient,
@@ -278,6 +312,35 @@ namespace pr.gfx
 			public EFormat m_format; //DXGI_FORMAT
 			public uint    m_image_file_format;//D3DXIMAGE_FILEFORMAT
 			public float   m_aspect { get {return (float)m_width / m_height;} }
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct TextureOptions
+		{
+			public EFormat Format;
+			public uint Mips;
+			public EFilter Filter;
+			public EAddrMode AddrU;
+			public EAddrMode AddrV;
+			public EBindFlags BindFlags;
+			public EResMiscFlags MiscFlags;
+			public uint ColourKey;
+			public bool HasAlpha;
+			public bool GdiCompatible;
+
+			public TextureOptions(bool gdi_compatible)
+			{
+				Format        = gdi_compatible ? EFormat.DXGI_FORMAT_B8G8R8A8_UNORM : EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
+				Mips          = gdi_compatible ? 1U : 0U;
+				Filter        = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+				AddrU         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
+				AddrV         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
+				BindFlags     = gdi_compatible ? EBindFlags.D3D11_BIND_SHADER_RESOURCE|EBindFlags.D3D11_BIND_RENDER_TARGET : EBindFlags.NONE;
+				MiscFlags     = gdi_compatible ? EResMiscFlags.D3D11_RESOURCE_MISC_GDI_COMPATIBLE : EResMiscFlags.NONE;
+				ColourKey     = 0;
+				HasAlpha      = false;
+				GdiCompatible = gdi_compatible;
+			}
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -538,15 +601,15 @@ namespace pr.gfx
 		}
 
 		/// <summary>Convert a normalised point into a screen space point</summary>
-		private PointF ScreenSpacePointF(v2 pt)
+		private v2 ScreenSpacePointF(v2 pt)
 		{
 			var da = RenderTargetSize;
-			return new PointF((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
+			return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
 		}
 		private Point ScreenSpacePoint(v2 pt)
 		{
 			var p = ScreenSpacePointF(pt);
-			return new Point((int)Math.Round(p.X), (int)Math.Round(p.Y));
+			return new Point((int)Math.Round(p.x), (int)Math.Round(p.y));
 		}
 
 		/// <summary>Callback function from the Dll when an error occurs</summary>
@@ -996,6 +1059,12 @@ namespace pr.gfx
 				View3D_ObjectsDeleteById(context_id);
 			}
 
+			/// <summary>Change the model for this object</summary>
+			public void UpdateModel(string ldr_script)
+			{
+				View3D_ObjectUpdateModel(m_handle, ldr_script, false);
+			}
+
 			/// <summary>Modify the model of this object</summary>
 			public void Edit(EditObjectCB edit_cb)
 			{
@@ -1021,9 +1090,21 @@ namespace pr.gfx
 			/// If 'name' is "", then 'func' is applied to this object and all children recursively
 			/// Otherwise, 'func' is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
-			public void SetTexture(uint colour, uint mask, string name = null)
+			public void SetColour(uint colour, uint mask, string name = null)
 			{
 				View3D_ObjectSetColour(m_handle, colour, mask, name);
+			}
+			public void SetColour(uint colour, string name = null)
+			{
+				SetColour(colour, 0xFFFFFFFF, name);
+			}
+			public void SetColour(Color colour, uint mask, string name = null)
+			{
+				SetColour(unchecked((uint)colour.ToArgb()), mask, name);
+			}
+			public void SetColour(Color colour, string name = null)
+			{
+				SetColour(colour, 0xFFFFFFFF, name);
 			}
 
 			/// <summary>
@@ -1053,51 +1134,33 @@ namespace pr.gfx
 			public ImageInfo m_info;
 			public object Tag {get;set;}
 
-			public class Options
-			{
-				public bool GdiCompatible { get; set; }
-				public EFormat Format { get; set; }
-				public uint Mips { get; set; }
-				public EFilter Filter { get; set; }
-				public EAddrMode AddrU { get; set; }
-				public EAddrMode AddrV { get; set; }
-				public uint ColourKey { get; set; }
-
-				public Options()
-				{
-					GdiCompatible = true;
-					Format        = EFormat.DXGI_FORMAT_R8G8B8A8_UNORM;
-					Mips          = 0;
-					Filter        = EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-					AddrU         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
-					AddrV         = EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP;
-					ColourKey     = 0;
-				}
-			}
-
 			/// <summary>Construct an uninitialised texture</summary>
-			public Texture(uint width, uint height, Options options = null) :this(width, height, IntPtr.Zero, 0, options)
+			public Texture(uint width, uint height)
+				:this(width, height, IntPtr.Zero, 0, new TextureOptions(true))
 			{}
-
-			/// <summary>Construct an initialised texture</summary>
-			public Texture(uint width, uint height, IntPtr data, uint data_size, Options options = null)
+			public Texture(uint width, uint height, TextureOptions options)
+				:this(width, height, IntPtr.Zero, 0, options)
+			{}
+			public Texture(uint width, uint height, IntPtr data, uint data_size, TextureOptions options)
 			{
-				options = options ?? new Options();
-				var res = options.GdiCompatible
-					? View3D_TextureCreateGdiCompat(width, height, out m_handle)
-					: View3D_TextureCreate(data, data_size, width, height, options.Mips, options.Format, out m_handle);
-
+				var res = View3D_TextureCreate(width, height, data, data_size, ref options, out m_handle);
 				if (res != EResult.Success) throw new Exception(res);
+				
 				View3D_TextureGetInfo(m_handle, out m_info);
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
 			}
 
 			/// <summary>Construct a texture from a file</summary>
-			public Texture(string tex_filepath, Options options = null) :this(tex_filepath, 0, 0, options)
+			public Texture(string tex_filepath)
+				:this(tex_filepath, 0, 0, new TextureOptions(true))
 			{}
-
-			/// <summary>Construct a texture from a file</summary>
-			public Texture(string tex_filepath, uint width, uint height, Options options = null)
+			public Texture(string tex_filepath, TextureOptions options)
+				:this(tex_filepath, 0, 0, options)
+			{}
+			public Texture(string tex_filepath, uint width, uint height)
+				:this(tex_filepath, width, height, new TextureOptions(true))
+			{}
+			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
 				var res = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey, out m_handle);
 				if (res != EResult.Success) throw new Exception(res);
@@ -1281,9 +1344,10 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdateModel        (HObject obj, string ldr_script, bool async);
+		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);
@@ -1291,14 +1355,13 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 
 		// Materials
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate               (IntPtr data, uint data_size, uint width, uint height, uint mips, EFormat format, out HTexture tex);
+		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options, out HTexture tex);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateFromFile       (string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key, out HTexture tex);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
 		[DllImport(Dll)] private static extern void              View3D_TextureSetFilterAndAddrMode (HTexture tex, EFilter filter, EAddrMode addrU, EAddrMode addrV);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateGdiCompat      (uint width, uint height, out HTexture tex);
 		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);

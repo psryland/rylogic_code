@@ -5,7 +5,8 @@ using System.Runtime.InteropServices;
 
 namespace pr.common
 {
-	/// <summary>A helper class for pinning a managed structure so that it is suitable
+	/// <summary>
+	/// A helper class for pinning a managed structure so that it is suitable
 	/// for unmanaged calls. A pinned object will not be collected and will not be moved
 	/// by the GC until explicitly freed.</summary>
 	public class PinnedObject<T> :IDisposable
@@ -39,7 +40,7 @@ namespace pr.common
 
 		public void Dispose()
 		{
-			if( !m_disposed )
+			if (!m_disposed)
 			{
 				m_handle.Free();
 				m_ptr = IntPtr.Zero;

@@ -27,11 +27,13 @@ try:
 		r"P:\projects",
 		]
 
-	excl = [
+	excludes = [
 		r"\obj",
 		r"\Debug",
 		r"\Release",
 		r"\_ReSharper",
+		r"\.metadata",
+		r"\directshow.net",
 		]
 		
 	extns = [
@@ -47,15 +49,19 @@ try:
 	line_count = 0;
 	for dir in dirs:
 		for fpath in Tools.EnumFiles(dir):
-			if any(excl in fpath):
-				continue
+			if any([True for excl in excludes if fpath.find(excl) != -1]):
+				continue;
 			fname,extn = os.path.splitext(fpath)
 			if extn in extns:
-				print(fpath)
-				++line_count;
-			#	with open(fpath) as f:
-			#		for i, l in enumerate(f): pass
-			#	line_count += i + 1
+				try:
+					with open(fpath) as f:
+						for i,l in enumerate(f): pass
+					print(str(i+1) + " - " + fpath)
+					line_count += i + 1
+				except Exception as ex:
+					print(str(ex))
+					print(fpath)
+					print(i)
 
 	print("Total Line Count: " + str(line_count))
 	Tools.OnSuccess()

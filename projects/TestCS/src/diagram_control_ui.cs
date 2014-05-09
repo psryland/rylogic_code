@@ -12,6 +12,11 @@ namespace TestCS
 	public class DiagramControlUI :Form
 	{
 		private DiagramControl m_diag;
+		private MenuStrip menuStrip1;
+		private ToolStripMenuItem toolsToolStripMenuItem;
+		private ToolStripMenuItem m_menu_tools_save;
+		private ToolStripMenuItem m_menu_tools_load;
+		private ToolStripMenuItem m_menu_tools_clear;
 		private IMessageFilter m_filter;
 
 		static DiagramControlUI()
@@ -23,15 +28,16 @@ namespace TestCS
 
 		private StatusStrip statusStrip1;
 		private ToolStripStatusLabel m_status_mouse_pos;
-	
+		private string m_diag_xml;
+
 		public DiagramControlUI()
 		{
 			InitializeComponent();
 
 			ClientSize = new Size(640,480);
 
-			var node0 = new DiagramControl.BoxNode("Node0",100,30){Position = m4x4.Translation(50,10,0)};
-			var node1 = new DiagramControl.BoxNode{Text = "Node1", Position = m4x4.Translation(-100,-30,0)};
+			var node0 = new DiagramControl.BoxNode("Node0",100,30){Position = m4x4.Translation(0,0,0)};
+			var node1 = new DiagramControl.BoxNode{Text = "Node1", Position = m4x4.Translation(100,100,0)};
 			m_diag.Elements.Add(node0);
 			m_diag.Elements.Add(node1);
 
@@ -40,6 +46,10 @@ namespace TestCS
 
 			m_diag.ResetView();
 
+			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
+			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml);
+			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
+			
 			m_filter = new Filter(this);
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
 			FormClosed += (s,a) => Application.RemoveMessageFilter(m_filter);
@@ -94,12 +104,19 @@ namespace TestCS
 			this.m_diag = new pr.gui.DiagramControl();
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.m_status_mouse_pos = new System.Windows.Forms.ToolStripStatusLabel();
+			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_save = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_load = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.m_diag)).BeginInit();
 			this.statusStrip1.SuspendLayout();
+			this.menuStrip1.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_diag
 			// 
+			this.m_diag.AllowEditing = false;
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);
 			this.m_diag.Name = "m_diag";
@@ -122,18 +139,60 @@ namespace TestCS
 			this.m_status_mouse_pos.Size = new System.Drawing.Size(118, 17);
 			this.m_status_mouse_pos.Text = "toolStripStatusLabel1";
 			// 
+			// menuStrip1
+			// 
+			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.toolsToolStripMenuItem});
+			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+			this.menuStrip1.Name = "menuStrip1";
+			this.menuStrip1.Size = new System.Drawing.Size(552, 24);
+			this.menuStrip1.TabIndex = 2;
+			this.menuStrip1.Text = "menuStrip1";
+			// 
+			// toolsToolStripMenuItem
+			// 
+			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_tools_save,
+            this.m_menu_tools_load,
+            this.m_menu_tools_clear});
+			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
+			this.toolsToolStripMenuItem.Text = "&Tools";
+			// 
+			// m_menu_tools_save
+			// 
+			this.m_menu_tools_save.Name = "m_menu_tools_save";
+			this.m_menu_tools_save.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_save.Text = "Save";
+			// 
+			// m_menu_tools_load
+			// 
+			this.m_menu_tools_load.Name = "m_menu_tools_load";
+			this.m_menu_tools_load.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_load.Text = "Load";
+			// 
+			// m_menu_tools_clear
+			// 
+			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
+			this.m_menu_tools_clear.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_clear.Text = "Clear";
+			// 
 			// DiagramControlUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(552, 566);
 			this.Controls.Add(this.statusStrip1);
+			this.Controls.Add(this.menuStrip1);
 			this.Controls.Add(this.m_diag);
+			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "DiagramControlUI";
 			this.Text = "DiagramControl";
 			((System.ComponentModel.ISupportInitialize)(this.m_diag)).EndInit();
 			this.statusStrip1.ResumeLayout(false);
 			this.statusStrip1.PerformLayout();
+			this.menuStrip1.ResumeLayout(false);
+			this.menuStrip1.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

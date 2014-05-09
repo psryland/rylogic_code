@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Runtime.Serialization;
 using System.Xml.Linq;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace pr.extn
@@ -28,9 +29,13 @@ namespace pr.extn
 		/// <summary>Signature of the methods used to convert a type to an XElement</summary>
 		public delegate XElement ToFunc(object obj, XElement node);
 
-		/// <summary>A map from type to 'ToXml' method</summary>
-		private static readonly ToBinding ToMap = new ToBinding();
-		private class ToBinding :Dictionary<Type, ToFunc>
+		/// <summary>
+		/// A map from type to 'ToXml' method
+		/// User ToXml functions can be added to this map.
+		/// Note, they are only needed if ToBinding.Convert() method fails</summary>
+		public static ToBinding ToMap { get { return m_impl_ToMap; } }
+		private static readonly ToBinding m_impl_ToMap = new ToBinding();
+		public class ToBinding :Dictionary<Type, ToFunc>
 		{
 			public ToBinding()
 			{
@@ -118,6 +123,28 @@ namespace pr.extn
 							font.Unit           .ToXml(Reflect<Font>.MemberName(x => x.Unit           ), false),
 							font.GdiCharSet     .ToXml(Reflect<Font>.MemberName(x => x.GdiCharSet     ), false),
 							font.GdiVerticalFont.ToXml(Reflect<Font>.MemberName(x => x.GdiVerticalFont), false));
+						return node;
+					};
+				this[typeof(v2)] = (obj, node) =>
+					{
+						var vec = (v2)obj;
+						node.SetValue(vec.ToString());
+						return node;
+					};
+				this[typeof(v4)] = (obj, node) =>
+					{
+						var vec = (v4)obj;
+						node.SetValue(vec.ToString4());
+						return node;
+					};
+				this[typeof(m4x4)] = (obj, node) =>
+					{
+						var mat = (m4x4)obj;
+						node.Add(
+							mat.x.ToXml(Reflect<m4x4>.MemberName(x => x.x), false),
+							mat.y.ToXml(Reflect<m4x4>.MemberName(x => x.y), false),
+							mat.z.ToXml(Reflect<m4x4>.MemberName(x => x.z), false),
+							mat.w.ToXml(Reflect<m4x4>.MemberName(x => x.w), false));
 						return node;
 					};
 			}
@@ -254,8 +281,12 @@ namespace pr.extn
 		/// <summary>Signature of the methods used to convert an XElement to a type instance</summary>
 		public delegate object AsFunc(XElement elem, Type type, Func<Type, object> factory);
 
-		/// <summary>A map from type to 'As' method</summary>
-		private static readonly AsBinding AsMap = new AsBinding();
+		/// <summary>
+		/// A map from type to 'As' method
+		/// User conversion functions can be added to this map
+		/// Note, they are only needed if AsBinding.Convert() method fails</summary>
+		public static AsBinding AsMap { get { return m_impl_AsMap; } }
+		private static readonly AsBinding m_impl_AsMap = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
 			public AsBinding()
@@ -327,6 +358,22 @@ namespace pr.extn
 						var gdi_vertical_font = elem.Element(Reflect<Font>.MemberName(x => x.GdiVerticalFont)).As<bool>();
 						return new Font(font_family, size, style, unit, gdi_charset, gdi_vertical_font);
 					};
+				this[typeof(v2)] = (elem, type, instance) =>
+					{
+						return v2.Parse(elem.Value);
+					};
+				this[typeof(v4)] = (elem, type, instance) =>
+					{
+						return v4.Parse4(elem.Value);
+					};
+				this[typeof(m4x4)] = (elem, type, instance) =>
+					{
+						var x = elem.Element(Reflect<m4x4>.MemberName(m => m.x)).As<v4>();
+						var y = elem.Element(Reflect<m4x4>.MemberName(m => m.y)).As<v4>();
+						var z = elem.Element(Reflect<m4x4>.MemberName(m => m.z)).As<v4>();
+						var w = elem.Element(Reflect<m4x4>.MemberName(m => m.w)).As<v4>();
+						return new m4x4(x,y,z,w);
+					};
 			}
 
 			/// <summary>
@@ -334,9 +381,9 @@ namespace pr.extn
 			/// If 'type' is 'object' then the type is inferred from the node.
 			/// 'factory' is used to construct instances of type, unless type is
 			/// an array, in which case factory is used to construct the array elements</summary>
-			public object Convert(XElement elem, Type type, Func<Type,object> factory)
+			public object Convert(XElement elem, Type type, Func<Type,object> factory_)
 			{
-				factory = factory ?? Activator.CreateInstance;
+				var factory = factory_ ?? Activator.CreateInstance;
 
 				// If 'type' is nullable then returning the underlying type will
 				// automatically convert to the nullable type
@@ -410,6 +457,9 @@ namespace pr.extn
 					// Try DataContract binding
 					var dca = type.GetCustomAttributes(typeof(DataContractAttribute), true).FirstOrDefault();
 					if (dca != null) { func = this[type] = AsDataContract; break; }
+
+					// If a factory method has been supplied, rely on that
+					if (factory_ != null) { func = this[type] = AsFromFactory; break; }
 
 					// Note, the constructor can be private, but not inherited
 					Debug.Assert(false, "{0} does not have a constructor taking an XElement parameter or is not a data contract class".Fmt(type.Name));
@@ -491,11 +541,22 @@ namespace pr.extn
 				};
 			return AsMap[type](elem, type, factory);
 		}
+		
+		/// <summary>An 'As' method that relies of the factory function to read 'elem'</summary>
+		public static object AsFromFactory(XElement elem, Type type, Func<Type,object> factory)
+		{
+			return factory(type);
+		}
 
 		/// <summary>Returns this xml node as an instance of the type implied by it's node attributes</summary>
-		public static object ToObject(this XElement elem)
+		public static object ToObject(this XElement elem, Func<Type,object> factory = null)
 		{
-			return AsMap.Convert(elem, typeof(object), null);
+			// Passing a factory function to handle any of the types 'elem' might be
+			// can work, but the factory function won't be available further down the
+			// hierarchy and so is of limited use. A better way is to add custom handlers
+			// to the 'AsMap'.
+			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
+			return AsMap.Convert(elem, typeof(object), factory);
 		}
 
 		/// <summary>
@@ -504,12 +565,15 @@ namespace pr.extn
 		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor</summary>
 		public static T As<T>(this XElement elem, Func<Type,object> factory = null)
 		{
+			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
 			return (T)AsMap.Convert(elem, typeof(T), factory);
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
 		public static void As<T>(this XElement parent, IList<T> list, string elem_name, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)
 		{
+			if (parent == null) throw new ArgumentNullException("xml element is null. Key not found?");
+
 			var count = 0;
 			foreach (var e in parent.Elements(elem_name))
 			{
@@ -528,14 +592,18 @@ namespace pr.extn
 
 		#endregion
 
-		/// <summary>Add 'child' to this element and return child. Useful for the syntax: "var thing = root.Add2(new Thing());"</summary>
+		/// <summary>
+		/// Add 'child' to this element and return child. Useful for the syntax: "var thing = root.Add2(new Thing());"
+		/// WARNING: returns the *child* object added, *not* parent.</summary>
 		public static T Add2<T>(this XContainer parent, T child)
 		{
 			parent.Add(child);
 			return child;
 		}
 
-		/// <summary>Add 'child' to this element and return child. Useful for the syntax: "var element = root.Add2("name", child);"</summary>
+		/// <summary>
+		/// Add 'child' to this element and return child. Useful for the syntax: "var element = root.Add2("name", child);"
+		/// WARNING: returns the *child* object added, *not* parent.</summary>
 		public static XElement Add2(this XContainer parent, string name, object child, bool type_attr = true)
 		{
 			var elem = child.ToXml(name, type_attr);

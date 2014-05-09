@@ -72,6 +72,7 @@
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/wrappers.h"
 #include "pr/renderer11/util/lock.h"
+#include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/event_types.h"
 

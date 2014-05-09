@@ -169,35 +169,41 @@ namespace pr.maths
 		}
 
 		/// <summary>Expands the bounding box to include 'point'</summary>
-		public void Encompass(v2 point)
+		public void Encompass(params v2[] points)
 		{
-			for (int i = 0; i != 2; ++i)
+			foreach (var point in points)
 			{
-				if (m_radius[i] < 0.0f)
+				for (int i = 0; i != 2; ++i)
 				{
-					m_centre[i] = point[i];
-					m_radius[i] = 0.0f;
-				}
-				else
-				{
-					float signed_dist = point[i] - m_centre[i];
-					float length      = Math.Abs(signed_dist);
-					if (length > m_radius[i])
+					if (m_radius[i] < 0.0f)
 					{
-						float new_radius = (length + m_radius[i]) / 2.0f;
-						m_centre[i] += signed_dist * (new_radius - m_radius[i]) / length;
-						m_radius[i] = new_radius;
+						m_centre[i] = point[i];
+						m_radius[i] = 0.0f;
+					}
+					else
+					{
+						float signed_dist = point[i] - m_centre[i];
+						float length      = Math.Abs(signed_dist);
+						if (length > m_radius[i])
+						{
+							float new_radius = (length + m_radius[i]) / 2.0f;
+							m_centre[i] += signed_dist * (new_radius - m_radius[i]) / length;
+							m_radius[i] = new_radius;
+						}
 					}
 				}
 			}
 		}
 
 		/// <summary>Expands the bounding box to include 'rhs'</summary>
-		public void Encompass(BRect rhs)
+		public void Encompass(params BRect[] areas)
 		{
-			Debug.Assert(rhs.IsValid, "Encompasing an invalid bounding box");
-			Encompass(rhs.m_centre + rhs.m_radius);
-			Encompass(rhs.m_centre - rhs.m_radius);
+			foreach (var area in areas)
+			{
+				Debug.Assert(area.IsValid, "Encompasing an invalid bounding box");
+				Encompass(area.m_centre + area.m_radius);
+				Encompass(area.m_centre - area.m_radius);
+			}
 		}
 
 		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>

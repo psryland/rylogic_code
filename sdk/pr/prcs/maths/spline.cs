@@ -29,9 +29,11 @@ namespace pr.maths
 
 		/// <summary>Interpretation of the control points</summary>
 		public v4 Point0   { get { return m.x; }       set { m.x = value; } }
+		public v4 Ctrl0    { get { return m.y; }       set { m.y = value; } }
+		public v4 Ctrl1    { get { return m.z; }       set { m.z = value; } }
+		public v4 Point1   { get { return m.w; }       set { m.w = value; } }
 		public v4 Forward0 { get { return m.y - m.x; } set { m.y = m.x + value; } }
 		public v4 Forward1 { get { return m.w - m.z; } set { m.z = m.w - value; } }
-		public v4 Point1   { get { return m.w; }       set { m.w = value; } }
 
 		/// <summary>Return the position along the spline at 'time'</summary>
 		public v4 Position(float time)

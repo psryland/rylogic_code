@@ -170,4 +170,3 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 def TouchFile(fname, times=None):
 	with open(fname, mode='a') as f:
 		os.utime(fname, times=times)
-		

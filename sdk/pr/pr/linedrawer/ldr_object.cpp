@@ -14,7 +14,6 @@
 #include "pr/maths/convexhull.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
-#include "pr/renderer11/render/scene.h"
 
 namespace pr
 {
@@ -155,12 +154,12 @@ namespace pr
 		}
 
 		// Set the colour of this object or child objects matching 'name' (see Apply)
+		// Object base colour is not changed, only the tint colour = tint
 		void LdrObject::SetColour(pr::Colour32 colour, pr::uint mask, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
-				pr::Colour32 blend = o->m_base_colour * colour;
-				o->m_colour.m_aarrggbb = SetBits(o->m_colour.m_aarrggbb, mask, blend.m_aarrggbb);
+				o->m_colour.m_aarrggbb = SetBits(o->m_base_colour.m_aarrggbb, mask, colour.m_aarrggbb);
 
 				bool has_alpha = o->m_colour.a() != 0xFF;
 				o->m_sko.Alpha(has_alpha);
@@ -169,20 +168,117 @@ namespace pr
 		}
 
 		// Set the texture on this object or child objects matching 'name' (see Apply)
+		// Note for difference mode drawlist management, if the object is currently in
+		// one or more drawlists (i.e. added to a scene) it will need to be removed and
+		// re-added so that the sort order is correct.
 		void LdrObject::SetTexture(pr::rdr::Texture2DPtr tex, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
 				if (o->m_model == nullptr) return;
 				for (auto& nug : o->m_model->m_nuggets)
+				{
 					nug.m_tex_diffuse = tex;
+
+					o->m_sko.Alpha(tex->m_has_alpha);
+					pr::rdr::SetAlphaBlending(nug, tex->m_has_alpha);
+					// The drawlists will need to be resorted...
+				}
 			}, name);
+		}
+
+		// Add/Remove 'child' as a child of this object
+		void LdrObject::AddChild(LdrObjectPtr child)
+		{
+			PR_ASSERT(PR_DBG, child->m_parent != this, "child is already a child of this object");
+			PR_ASSERT(PR_DBG, child->m_parent == nullptr, "child already has a parent");
+			child->m_parent = this;
+			m_child.push_back(child);
+		}
+		LdrObjectPtr LdrObject::RemoveChild(LdrObjectPtr& child)
+		{
+			PR_ASSERT(PR_DBG, child->m_parent == this, "child is not a child of this object");
+			auto idx = std::find(begin(m_child), end(m_child), child) - begin(m_child);
+			return RemoveChild(idx);
+		}
+		LdrObjectPtr LdrObject::RemoveChild(size_t i)
+		{
+			PR_ASSERT(PR_DBG, i >= 0 && i < m_child.size(), "child index out of range");
+			auto child = m_child[i];
+			m_child.erase(begin(m_child) + i);
+			child->m_parent = nullptr;
+			return child;
+		}
+		void LdrObject::RemoveAllChildren()
+		{
+			while (!m_child.empty())
+				RemoveChild(0);
+		}
+
+		// Transfer the parts of 'rhs' that are model related to this object
+		void LdrObject::UpdateModel(LdrObject&& rhs)
+		{
+			// Note, it shouldn't matter if this object has a parent,
+			// because we're only changing it's contents
+			PR_ASSERT(PR_DBG, rhs.m_parent == nullptr, "rhs belongs to another object");
+
+			RemoveAllChildren();
+
+			// Fake this object's death and reincarnation. Who do voodoo? :-S
+			// Copy the model related data from 'rhs' to this object.
+			// Sending out 'delete' and 'add' events should fool observers into
+			// thinking 'object' was deleted and a new ldr object was added that
+			// just happens to have the same pointer.
+			pr::events::Send(Evt_LdrObjectDelete(this));
+		
+			// Swap the bits we want from 'rhs'
+			// Note: we can't swap everything then copy back the bits we want to keep
+			// because LdrObject is reference counted and isn't copyable. This is risky
+			// though, if need members are added I'm bound to forget to consider them here :-/
+			
+			// Commented out parts are those delibrately kept
+			
+			// RdrInstance
+			//std::swap(m_i2w  ,rhs.m_i2w   );
+			std::swap(m_model  ,rhs.m_model );
+			std::swap(m_colour ,rhs.m_colour);
+			std::swap(m_sko    ,rhs.m_sko   );
+			std::swap(m_bsb    ,rhs.m_bsb   );
+			std::swap(m_dsb    ,rhs.m_dsb   );
+			std::swap(m_rsb    ,rhs.m_rsb   );
+			
+			// RefCount<LdrObject>
+			//std::swap(m_ref_count , rhs.m_ref_count);
+			
+			// LdrObject
+			//std::swap(m_o2p         ,rhs.m_o2p          );
+			std::swap(m_type          ,rhs.m_type         );
+			//std::swap(m_parent      ,rhs.m_parent       );
+			//std::swap(m_child       ,rhs.m_child        );
+			//std::swap(m_name        ,rhs.m_name         );
+			std::swap(m_context_id    ,rhs.m_context_id   );
+			std::swap(m_base_colour   ,rhs.m_base_colour  );
+			std::swap(m_colour_mask   ,rhs.m_colour_mask  );
+			std::swap(m_anim          ,rhs.m_anim         );
+			//std::swap(m_uidata      ,rhs.m_uidata       );
+			std::swap(m_step          ,rhs.m_step         );
+			std::swap(m_bbox_instance ,rhs.m_bbox_instance);
+			std::swap(m_instanced     ,rhs.m_instanced    );
+			std::swap(m_visible       ,rhs.m_visible      );
+			std::swap(m_wireframe     ,rhs.m_wireframe    );
+			//std::swap(m_user_data   ,rhs.m_user_data    );
+
+			// Transfer the child objects
+			while (!rhs.m_child.empty())
+				AddChild(rhs.RemoveChild(0));
+
+			pr::events::Send(Evt_LdrObjectAdd(this));
 		}
 
 		// Called when there are no more references to this object
 		void LdrObject::RefCountZero(RefCount<LdrObject>* doomed)
 		{
-			events::Send(Evt_LdrObjectDelete(static_cast<LdrObject*>(doomed)));
+			pr::events::Send(Evt_LdrObjectDelete(static_cast<LdrObject*>(doomed)));
 			delete doomed;
 		}
 		long LdrObject::AddRef() const
@@ -1724,9 +1820,17 @@ namespace pr
 			p.m_reader.SectionEnd();
 
 			// Object modifiers applied to groups are applied recursively to children within the group
-			obj->m_colour_mask = 0xFFFFFFFF;      // The group colour tints all children
-			obj->Wireframe(obj->m_wireframe, ""); // Apply wireframe to all children
-			obj->Visible(obj->m_visible, "");     // Apply visibility to all children
+			// Apply colour to all children
+			if (obj->m_colour_mask != 0)
+				obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
+			
+			// Apply wireframe to all children
+			if (obj->m_wireframe)
+				obj->Wireframe(obj->m_wireframe, "");
+			
+			// Apply visibility to all children
+			if (!obj->m_visible)
+				obj->Visible(obj->m_visible, "");
 
 			// Add the model and instance to the containers
 			p.m_objects.push_back(obj);
@@ -1817,7 +1921,7 @@ namespace pr
 				// Set colour on 'obj' (so that render states are set correctly)
 				// Note that the colour is 'blended' with 'm_base_colour' so
 				// m_base_colour * White = m_base_colour.
-				obj->SetColour(pr::Colour32White, 0xFFFFFFFF, false);
+				obj->SetColour(obj->m_base_colour, 0xFFFFFFFF);
 
 				// Apply the colour of 'obj' to all children using a mask
 				if (obj->m_colour_mask != 0)
@@ -1868,8 +1972,7 @@ namespace pr
 			// 'total' is the total number of objects added
 			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg)
 				{
-					// CoInitialise
-					pr::InitCom init_com;
+					// Note: you application needs to have called CoInitialise() before here
 
 					ModelCont models;
 					std::size_t total = 0;

@@ -43,6 +43,7 @@ struct DllData :pr::AlignTo<16>
 	std::string            m_settings;
 	bool                   m_compatible;
 	RendererInstance       m_rdr;
+	std::recursive_mutex   m_mutex;
 	std::thread::id        m_this_thread;
 
 	DllData(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
@@ -53,6 +54,7 @@ struct DllData :pr::AlignTo<16>
 		,m_settings()
 		,m_compatible(TestSystemCompatibility())
 		,m_rdr(hwnd)
+		,m_mutex()
 		,m_this_thread(std::this_thread::get_id())
 	{
 		AtlInitCommonControls(ICC_BAR_CLASSES); // add flags to support other controls
@@ -94,6 +96,8 @@ private:
 	DllData& operator=(DllData const&);
 };
 
+typedef std::lock_guard<std::recursive_mutex> LockGuard;
+
 // Singleton accessors
 static std::shared_ptr<DllData> g_dll = nullptr;
 inline DllData&          Dll() { return *g_dll; }
@@ -104,22 +108,12 @@ template <typename T> T convert_to(View3DV2 const& v);
 template <typename T> T convert_to(View3DV4 const& v);
 template <typename T> T convert_to(View3DM4x4 const& m);
 template <typename T> T convert_to(View3DBBox const& bb);
-template <> pr::v2 convert_to(View3DV2 const& v)
-{
-	return pr::v2::make(v.x, v.y);
-}
-template <> pr::v4 convert_to(View3DV4 const& v)
-{
-	return pr::v4::make(v.x, v.y, v.z, v.w);
-}
-template <> pr::m4x4 convert_to(View3DM4x4 const& m)
-{
-	return pr::m4x4::make(convert_to<pr::v4>(m.x), m.y, m.z, m.w);
-}
-template <> pr::BBox convert_to(View3DBBox const& bb)
-{
-	return pr::BBox::make(bb.centre, bb.radius);
-}
+template <> pr::v2   convert_to(View3DV2 const& v)    { return pr::v2::make(v.x, v.y); }
+template <> pr::v4   convert_to(View3DV4 const& v)    { return pr::v4::make(v.x, v.y, v.z, v.w); }
+template <> pr::m4x4 convert_to(View3DM4x4 const& m)  { return pr::m4x4::make(convert_to<pr::v4>(m.x), m.y, m.z, m.w); }
+template <> pr::BBox convert_to(View3DBBox const& bb) { return pr::BBox::make(bb.centre, bb.radius); }
+
+#define LOCK_GUARD LockGuard lock(Dll().m_mutex)
 
 // Initialise the dll
 VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
@@ -156,7 +150,7 @@ VIEW3D_API void __stdcall View3D_Shutdown()
 // Generate a settings string for the view
 VIEW3D_API char const* __stdcall View3D_GetSettings(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		std::stringstream out;
@@ -175,7 +169,7 @@ VIEW3D_API char const* __stdcall View3D_GetSettings(View3DDrawset drawset)
 // Parse a settings string and apply to the view
 VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* settings)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		// Parse the settings
@@ -212,7 +206,7 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* 
 // Create/Delete a draw set
 VIEW3D_API EView3DResult __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		drawset = new Drawset();
@@ -233,7 +227,7 @@ VIEW3D_API EView3DResult __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
 }
 VIEW3D_API void __stdcall View3D_DrawsetDelete(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		View3D_DrawsetRemoveAllObjects(drawset);
@@ -249,7 +243,7 @@ VIEW3D_API void __stdcall View3D_DrawsetDelete(View3DDrawset drawset)
 // Add/Remove objects by context id
 VIEW3D_API void __stdcall View3D_DrawsetAddObjectsById(View3DDrawset drawset, int context_id)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		for (std::size_t i = 0, iend = Rdr().m_obj_cont.size(); i != iend; ++i)
@@ -263,7 +257,7 @@ VIEW3D_API void __stdcall View3D_DrawsetAddObjectsById(View3DDrawset drawset, in
 }
 VIEW3D_API void __stdcall View3D_DrawsetRemoveObjectsById(View3DDrawset drawset, int context_id)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		pr::ldr::LdrObject::MatchId in_this_context(context_id);
@@ -279,7 +273,7 @@ VIEW3D_API void __stdcall View3D_DrawsetRemoveObjectsById(View3DDrawset drawset,
 // Add/Remove an object to/from a drawset
 VIEW3D_API void __stdcall View3D_DrawsetAddObject(View3DDrawset drawset, View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0 && object != 0, "");
@@ -295,7 +289,7 @@ VIEW3D_API void __stdcall View3D_DrawsetAddObject(View3DDrawset drawset, View3DO
 }
 VIEW3D_API void __stdcall View3D_DrawsetRemoveObject(View3DDrawset drawset, View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -312,7 +306,7 @@ VIEW3D_API void __stdcall View3D_DrawsetRemoveObject(View3DDrawset drawset, View
 // Remove all objects from the drawset
 VIEW3D_API void __stdcall View3D_DrawsetRemoveAllObjects(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -328,7 +322,7 @@ VIEW3D_API void __stdcall View3D_DrawsetRemoveAllObjects(View3DDrawset drawset)
 // Return the number of objects assigned to this drawset
 VIEW3D_API int __stdcall View3D_DrawsetObjectCount(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -345,7 +339,7 @@ VIEW3D_API int __stdcall View3D_DrawsetObjectCount(View3DDrawset drawset)
 // Return true if 'object' is included in 'drawset'
 VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -362,7 +356,7 @@ VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DO
 // Return the camera to world transform
 VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4& c2w)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -378,7 +372,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4
 // Set the camera to world transform
 VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, View3DM4x4 const& c2w)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -394,7 +388,7 @@ VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, View3DM
 // Position the camera for a drawset
 VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 position, View3DV4 lookat, View3DV4 up)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -410,7 +404,7 @@ VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 
 // Return the distance to the camera focus point
 VIEW3D_API float __stdcall View3D_FocusDistance(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -427,7 +421,7 @@ VIEW3D_API float __stdcall View3D_FocusDistance(View3DDrawset drawset)
 // Set the camera focus distance
 VIEW3D_API void __stdcall View3D_SetFocusDistance(View3DDrawset drawset, float dist)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -443,7 +437,7 @@ VIEW3D_API void __stdcall View3D_SetFocusDistance(View3DDrawset drawset, float d
 // Return the aspect ratio for the camera field of view
 VIEW3D_API float __stdcall View3D_CameraAspect(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -460,7 +454,7 @@ VIEW3D_API float __stdcall View3D_CameraAspect(View3DDrawset drawset)
 // Set the aspect ratio for the camera field of view
 VIEW3D_API void __stdcall View3D_SetCameraAspect(View3DDrawset drawset, float aspect)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -476,7 +470,7 @@ VIEW3D_API void __stdcall View3D_SetCameraAspect(View3DDrawset drawset, float as
 // Return the horizontal field of view (in radians).
 VIEW3D_API float __stdcall View3D_CameraFovX(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -493,7 +487,7 @@ VIEW3D_API float __stdcall View3D_CameraFovX(View3DDrawset drawset)
 // Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
 VIEW3D_API void __stdcall View3D_SetCameraFovX(View3DDrawset drawset, float fovX)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -509,7 +503,7 @@ VIEW3D_API void __stdcall View3D_SetCameraFovX(View3DDrawset drawset, float fovX
 // Return the vertical field of view (in radians).
 VIEW3D_API float __stdcall View3D_CameraFovY(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -526,7 +520,7 @@ VIEW3D_API float __stdcall View3D_CameraFovY(View3DDrawset drawset)
 // Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
 VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -546,7 +540,7 @@ VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
 VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, View3DV2 point, int button_state, BOOL nav_start_or_end)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -562,7 +556,7 @@ VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, View3DV2 p
 // Direct movement of the camera
 VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, float dx, float dy, float dz)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -578,7 +572,7 @@ VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, float dx, float
 // Reset to the default zoom
 VIEW3D_API void __stdcall View3D_ResetZoom(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -594,7 +588,7 @@ VIEW3D_API void __stdcall View3D_ResetZoom(View3DDrawset drawset)
 // Return the camera align axis
 VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, View3DV4& axis)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -610,7 +604,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, View3DV4
 // Align the camera to an axis
 VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, View3DV4 axis)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -626,7 +620,7 @@ VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, View3DV4 axi
 // Move the camera to a position that can see the whole scene
 VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, View3DV4 forward, View3DV4 up)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -648,7 +642,7 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, View3DV4 forwa
 // Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
 VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -665,7 +659,7 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
 // Get/Set the camera focus point position
 VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, View3DV4& position)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -679,7 +673,7 @@ VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, View3DV4& 
 }
 VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, View3DV4 position)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -697,7 +691,7 @@ VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, View3DV4 p
 // The z component should be the world space distance from the camera
 VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawset, View3DV4 screen)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -715,7 +709,7 @@ VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawse
 // The returned z component will be the world space distance from the camera.
 VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawset, View3DV4 world)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -734,7 +728,7 @@ VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawse
 // The z component should be the world space distance from the camera
 VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -755,7 +749,7 @@ VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, Vie
 // Return the configuration of the single light source
 VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (!drawset) throw std::exception("drawset is null");
@@ -771,7 +765,7 @@ VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DDrawset drawset)
 // Configure the single light source
 VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3DLight const& light)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (!drawset) throw std::exception("drawset is null");
@@ -786,7 +780,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3
 // Set up a single light source for a drawset
 VIEW3D_API void __stdcall View3D_LightSource(View3DDrawset drawset, View3DV4 position, View3DV4 direction, BOOL camera_relative)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -821,7 +815,7 @@ struct PreviewLighting
 };
 VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DDrawset drawset, HWND parent)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -847,7 +841,7 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DDrawset drawset, HWND par
 // These objects will not have handles but can be deleted by their context id
 VIEW3D_API EView3DResult __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		pr::ldr::AddFile(Rdr().m_renderer, ldr_filepath, Rdr().m_obj_cont, context_id, async != 0, 0, &Rdr().m_lua);
@@ -863,7 +857,7 @@ VIEW3D_API EView3DResult __stdcall View3D_ObjectsCreateFromFile(char const* ldr_
 // If multiple objects are created, the handle returned is to the last object only
 VIEW3D_API EView3DResult __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, View3DObject& object, BOOL async)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		object = 0;
@@ -958,7 +952,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 // Create an object via callback
 VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		object = 0;
@@ -976,10 +970,37 @@ VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DC
 	}
 }
 
+// Replace the model and all child objects of 'obj' with the results of 'ldr_script'
+VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdateModel(View3DObject object, char const* ldr_script, BOOL async)
+{
+	LOCK_GUARD;
+	try
+	{
+		if (!object) throw std::exception("object is null");
+		
+		// Create a new object
+		View3DObject tmp;
+		View3D_ObjectCreateLdr(ldr_script, object->m_context_id, tmp, async);
+
+		// Replace the model of 'object' with the model from 'tmp'
+		object->UpdateModel(std::move(*tmp));
+
+		// Remove the temporary object
+		View3D_ObjectDelete(tmp);
+
+		return EView3DResult::Success;
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_ObjectCreateLdr failed", ex);
+		return EView3DResult::Failed;
+	}
+}
+
 // Edit an existing model
 VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObjectCB edit_cb, void* ctx)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		ObjectEditCBData cbdata = {edit_cb, ctx};
@@ -994,7 +1015,7 @@ VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObje
 // Delete all objects matching a context id
 VIEW3D_API void __stdcall View3D_ObjectsDeleteById(int context_id)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		for (DrawsetCont::iterator i = Rdr().m_drawset.begin(), iend = Rdr().m_drawset.end(); i != iend; ++i)
@@ -1010,12 +1031,16 @@ VIEW3D_API void __stdcall View3D_ObjectsDeleteById(int context_id)
 // Delete an object
 VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (!object) return;
-		for (DrawsetCont::iterator i = Rdr().m_drawset.begin(), iend = Rdr().m_drawset.end(); i != iend; ++i)
-			View3D_DrawsetRemoveObject(*i, object);
+		
+		// Remove the object from any drawsets it's in
+		for (auto ds : Rdr().m_drawset)
+			View3D_DrawsetRemoveObject(ds, object);
+		
+		// Delete the object from the object container
 		pr::ldr::Remove(Rdr().m_obj_cont, object);
 	}
 	catch (std::exception const& ex)
@@ -1029,7 +1054,7 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 // Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
 VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (!object) throw std::exception("object is null");
@@ -1043,7 +1068,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
 }
 VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, pr::FEql(o2p.w.w,1.0f), "View3D_ObjectSetO2P: invalid object transform");
@@ -1061,7 +1086,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (object == nullptr)
@@ -1079,7 +1104,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColo
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex, char const* name)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (object == nullptr)
@@ -1096,7 +1121,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTex
 // Return the model space bounding box for 'object'
 VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		return View3DBBox::make(object->BBoxMS(true));
@@ -1114,17 +1139,31 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, DXGI_FORMAT format, void const* data, UINT32 data_size, UINT32 mips, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options, View3DTexture& tex)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
-		Image src = Image::make(width, height, data, format);
-		if (src.m_pitch.x * src.m_pitch.y != data_size)
+		Image src = Image::make(width, height, data, options.m_format);
+		if (src.m_pixels != nullptr && src.m_pitch.x * src.m_pitch.y != data_size)
 			throw std::exception("Incorrect data size provided");
 
-		TextureDesc tdesc(src, mips);
-		Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, SamplerDesc::LinearClamp());
+		TextureDesc tdesc(src);
+		tdesc.Format = options.m_format;
+		tdesc.MipLevels = options.m_mips;
+		tdesc.BindFlags = options.m_bind_flags | (options.m_gdi_compatible ? D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_RENDER_TARGET : 0);
+		tdesc.MiscFlags = options.m_misc_flags | (options.m_gdi_compatible ? D3D11_RESOURCE_MISC_GDI_COMPATIBLE : 0);
+
+		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter = options.m_filter;
+
+		Texture2DPtr t = options.m_gdi_compatible
+			? Rdr().m_renderer.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc)
+			: Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc);
+
+		t->m_has_alpha = options.m_has_alpha != 0;
 		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
 		return EView3DResult::Success;
 	}
@@ -1136,18 +1175,19 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 }
 
 // Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, UINT32 mips, UINT32 filter, UINT32 mip_filter, View3DColour colour_key, View3DTexture& tex)
+VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options, View3DTexture& tex)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		(void)width;
 		(void)height;
-		(void)mips;
-		(void)colour_key;
-		(void)filter;
-		(void)mip_filter;
+
 		SamplerDesc sdesc;
+		sdesc.AddressU = options.m_addrU;
+		sdesc.AddressV = options.m_addrV;
+		sdesc.Filter   = options.m_filter;
+
 		Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath);
 		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
 		return EView3DResult::Success;
@@ -1159,28 +1199,10 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_
 	}
 }
 
-// Create a gdi compatible texture.
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreateGdiCompat(UINT32 width, UINT32 height, View3DTexture& tex)
-{
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
-	try
-	{
-		Image src = Image::make(width, height);
-		Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTextureGdi(AutoId, src);
-		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
-		return EView3DResult::Success;
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_TextureCreateGdiCompat failed", ex);
-		return EView3DResult::Failed;
-	}
-}
-
 // Get/Release a DC for the texture. Must be a TextureGdi texture
 VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (tex == nullptr)
@@ -1200,7 +1222,7 @@ VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex)
 }
 VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (tex == nullptr)
@@ -1221,7 +1243,7 @@ VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 // Load a texture surface from file
 VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		(void)tex;
@@ -1254,7 +1276,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, 
 // Release a texture to free memory
 VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		tex->Release();
@@ -1268,7 +1290,7 @@ VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
 // Read the properties of an existing texture
 VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageInfo& info)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, tex != 0, "");
@@ -1290,7 +1312,7 @@ VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageIn
 // Read the properties of an image file
 VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, View3DImageInfo& info)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		(void)tex_filepath;
@@ -1318,7 +1340,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 // Set the filtering and addressing modes to use on the texture
 VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		SamplerDesc desc;
@@ -1340,7 +1362,7 @@ VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, 
 // Resize a texture to 'size' optionally preserving it's content
 VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		tex->Resize(width, height, all_instances != 0, preserve != 0);
@@ -1356,7 +1378,7 @@ VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, 
 // Redraw the last rendered drawset
 VIEW3D_API void __stdcall View3D_Refresh()
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (Rdr().m_last_drawset)
@@ -1372,7 +1394,7 @@ VIEW3D_API void __stdcall View3D_Refresh()
 // In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
 VIEW3D_API void __stdcall View3D_RenderTargetSize(int& width, int& height)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		auto area = Rdr().m_renderer.RenderTargetSize();
@@ -1386,7 +1408,7 @@ VIEW3D_API void __stdcall View3D_RenderTargetSize(int& width, int& height)
 }
 VIEW3D_API void __stdcall View3D_SetRenderTargetSize(int width, int height)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		if (width  < 0) width  = 0;
@@ -1408,7 +1430,7 @@ VIEW3D_API void __stdcall View3D_SetRenderTargetSize(int width, int height)
 // Get/Set the viewport within the render target
 VIEW3D_API View3DViewport __stdcall View3D_Viewport()
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		return reinterpret_cast<View3DViewport const&>(Rdr().m_scene.m_viewport);
@@ -1421,7 +1443,7 @@ VIEW3D_API View3DViewport __stdcall View3D_Viewport()
 }
 VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		Rdr().m_scene.m_viewport = reinterpret_cast<Viewport const&>(vp);
@@ -1435,7 +1457,7 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
 // Render a drawset
 VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1527,7 +1549,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
 // Get/Set the fill mode for a drawset
 VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1542,7 +1564,7 @@ VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DDrawset drawset)
 }
 VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillMode mode)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1558,7 +1580,7 @@ VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillM
 // Selected between perspective and orthographic projection
 VIEW3D_API BOOL __stdcall View3D_Orthographic(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1573,7 +1595,7 @@ VIEW3D_API BOOL __stdcall View3D_Orthographic(View3DDrawset drawset)
 }
 VIEW3D_API void __stdcall View3D_SetOrthographic(View3DDrawset drawset, BOOL render2d)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1589,7 +1611,7 @@ VIEW3D_API void __stdcall View3D_SetOrthographic(View3DDrawset drawset, BOOL ren
 // Get/Set the background colour for a drawset
 VIEW3D_API int __stdcall View3D_BackgroundColour(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1604,7 +1626,7 @@ VIEW3D_API int __stdcall View3D_BackgroundColour(View3DDrawset drawset)
 }
 VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DDrawset drawset, int aarrggbb)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1620,7 +1642,7 @@ VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DDrawset drawset, int 
 // Show the measurement tool
 VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible()
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		return Rdr().m_measure_tool_ui.IsWindowVisible();
@@ -1633,7 +1655,7 @@ VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible()
 }
 VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DDrawset drawset, BOOL show)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1650,7 +1672,7 @@ VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DDrawset drawset, BOOL sho
 // Show the angle tool
 VIEW3D_API BOOL __stdcall View3D_AngleToolVisible()
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		return Rdr().m_angle_tool_ui.IsWindowVisible();
@@ -1663,7 +1685,7 @@ VIEW3D_API BOOL __stdcall View3D_AngleToolVisible()
 }
 VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DDrawset drawset, BOOL show)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1680,7 +1702,7 @@ VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DDrawset drawset, BOOL show)
 // Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
 VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1703,7 +1725,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DDrawset drawset)
 // Show a window containing the demo scene script
 VIEW3D_API void __stdcall View3D_ShowDemoScript()
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		Rdr().m_obj_cont_ui.ShowScript(pr::ldr::CreateDemoScene(), 0);
@@ -1717,7 +1739,7 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript()
 // Return true if the focus point is visible
 VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1734,7 +1756,7 @@ VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DDrawset drawset)
 // Add the focus point to a drawset
 VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DDrawset drawset, BOOL show)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1750,7 +1772,7 @@ VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DDrawset drawset, BOOL show
 // Set the size of the focus point
 VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DDrawset drawset, float size)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1766,7 +1788,7 @@ VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DDrawset drawset, float 
 // Return true if the origin is visible
 VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DDrawset drawset)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1783,7 +1805,7 @@ VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DDrawset drawset)
 // Add the focus point to a drawset
 VIEW3D_API void __stdcall View3D_ShowOrigin(View3DDrawset drawset, BOOL show)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1799,7 +1821,7 @@ VIEW3D_API void __stdcall View3D_ShowOrigin(View3DDrawset drawset, BOOL show)
 // Set the size of the focus point
 VIEW3D_API void __stdcall View3D_SetOriginSize(View3DDrawset drawset, float size)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
@@ -1815,7 +1837,7 @@ VIEW3D_API void __stdcall View3D_SetOriginSize(View3DDrawset drawset, float size
 // Display the object manager ui
 VIEW3D_API void __stdcall View3D_ShowObjectManager(BOOL show)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		Rdr().m_obj_cont_ui.Show(show != 0);
@@ -1828,7 +1850,7 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(BOOL show)
 // Parse an ldr *o2w {} description returning the transform
 VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
+	LOCK_GUARD;
 	try
 	{
 		pr::script::Reader reader;
