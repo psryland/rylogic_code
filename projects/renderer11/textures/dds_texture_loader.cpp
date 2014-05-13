@@ -1314,7 +1314,7 @@ HRESULT DirectX::CreateDDSTextureFromMemory(
 	return hr;
 }
 
-// Create a d3d texture from a dds file
+// Create a dx texture from a dds file
 HRESULT DirectX::CreateDDSTextureFromFile(_In_ ID3D11Device* d3dDevice, _In_z_ wchar_t const* fileName, _Out_opt_ ID3D11Resource** texture, _Out_opt_ ID3D11ShaderResourceView** textureView, _In_ size_t maxsize)
 {
 	PR_ASSERT(PR_DBG, d3dDevice && fileName && (texture || textureView), "Invalid parameters");

@@ -148,11 +148,13 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\dslighting.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\gbuffer.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward\forward_render.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_set.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\thick_line.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\dslighting.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward_render.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\gbuffer.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\render_step.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\shadow\shadow_map.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\shadow_map.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\image.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture_gdi.h" />
@@ -185,9 +187,7 @@
     <ClInclude Include="..\renderer11\directxtex\scoped.h" />
     <ClInclude Include="..\renderer11\render\state_stack.h" />
     <ClInclude Include="..\renderer11\render\stereo.h" />
-    <ClInclude Include="..\renderer11\steps\common.h" />
-    <ClInclude Include="..\renderer11\steps\deferred\ds_shader.h" />
-    <ClInclude Include="..\renderer11\steps\forward\fwd_shader.h" />
+    <ClInclude Include="..\renderer11\shaders\common.h" />
     <ClInclude Include="..\renderer11\textures\dds_texture_loader.h" />
     <ClInclude Include="..\renderer11\textures\wic_texture_loader.h" />
     <ClInclude Include="..\renderer11\util\internal_resources.h" />
@@ -216,17 +216,18 @@
     <ClCompile Include="..\renderer11\render\scene_view.cpp" />
     <ClCompile Include="..\renderer11\render\state_stack.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
+    <ClCompile Include="..\renderer11\shaders\dslighting_shader.cpp" />
+    <ClCompile Include="..\renderer11\shaders\fwd_shader.cpp" />
+    <ClCompile Include="..\renderer11\shaders\gbuffer_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
-    <ClCompile Include="..\renderer11\steps\deferred\ds_shader.cpp" />
-    <ClCompile Include="..\renderer11\steps\deferred\gbuffer_shader.cpp" />
-    <ClCompile Include="..\renderer11\steps\deferred\dslighting_shader.cpp" />
-    <ClCompile Include="..\renderer11\steps\deferred\dslighting.cpp" />
-    <ClCompile Include="..\renderer11\steps\deferred\gbuffer.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\forward_render.cpp" />
-    <ClCompile Include="..\renderer11\steps\forward\fwd_shader.cpp" />
+    <ClCompile Include="..\renderer11\shaders\shader_set.cpp" />
+    <ClCompile Include="..\renderer11\shaders\thick_line.cpp" />
+    <ClCompile Include="..\renderer11\steps\dslighting.cpp" />
+    <ClCompile Include="..\renderer11\steps\forward_render.cpp" />
+    <ClCompile Include="..\renderer11\steps\gbuffer.cpp" />
     <ClCompile Include="..\renderer11\steps\render_step.cpp" />
-    <ClCompile Include="..\renderer11\steps\shadow\shadow_map.cpp" />
+    <ClCompile Include="..\renderer11\steps\shadow_map.cpp" />
     <ClCompile Include="..\renderer11\textures\dds_texture_loader.cpp" />
     <ClCompile Include="..\renderer11\textures\texture_gdi.cpp" />
     <ClCompile Include="..\renderer11\textures\texture2d.cpp" />
@@ -251,7 +252,6 @@
     <None Include="..\renderer11\shaders\hlsl\cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\inout.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
@@ -270,14 +270,22 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\thick_line.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\forward.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\forward\forward.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linelist.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linestrip.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

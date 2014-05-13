@@ -12,7 +12,11 @@
 //   Rememeber to transpose matrices
 // - For efficiency, constant buffers need to be grouped by frequency of update
 
-#if !SHADER_BUILD
+#ifdef SHADER_BUILD
+
+#define cbuf_bank(b) register(b)
+
+#else
 
 enum class EBank { b0, b1, b2, b3, b4, b5 };
 template <EBank bn> struct Bank
@@ -26,10 +30,6 @@ typedef pr::iv4  int4;
 
 #define cbuffer struct
 #define cbuf_bank(b) Bank<EBank::b>
-
-#else
-
-#define cbuf_bank(b) register(b)
 
 #endif
 

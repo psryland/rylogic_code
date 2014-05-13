@@ -27,8 +27,8 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_dsv;
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
-			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // A constant buffer for the frame constant shader variables
-			ShaderPtr                        m_shader;      // The shader used to generate the g-buffer
+			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // Per-frame camera constants
+			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
 
 			explicit GBuffer(Scene& scene);
 
@@ -47,7 +47,7 @@ namespace pr
 			void BindGBuffer(bool bind);
 
 			// Add model nuggets to the draw list for this render step
-			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
+			void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) override;
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

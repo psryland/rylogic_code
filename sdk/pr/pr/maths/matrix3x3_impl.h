@@ -261,18 +261,7 @@ namespace pr
 		return !FEql(Determinant3(mat), 0.0f);
 	}
 
-	inline m3x4& Inverse(m3x4& mat)
-	{
-		assert(IsInvertable(mat) && "Matrix has no inverse");
-		float inv_det = 1.0f / Determinant3(mat);
-		m3x4  tmp     = GetTranspose(mat);
-		mat.x = Cross3(tmp.y, tmp.z) * inv_det;
-		mat.y = Cross3(tmp.z, tmp.x) * inv_det;
-		mat.z = Cross3(tmp.x, tmp.y) * inv_det;
-		return mat;
-	}
-
-	inline m3x4 GetInverse(m3x4 const& mat)
+	inline m3x4 Invert(m3x4 const& mat)
 	{
 		assert(IsInvertable(mat) && "Matrix has no inverse");
 		float inv_det = 1.0f / Determinant3(mat);
@@ -283,25 +272,21 @@ namespace pr
 		return Transpose(tmp);
 	}
 
-	inline m3x4& InverseFast(m3x4& mat)
+	inline m3x4 InvertFast(m3x4 const& mat_)
 	{
-		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
+		assert(IsOrthonormal(mat_) && "Matrix is not orthonormal");
+		m3x4 mat = mat_;
 		return Transpose(mat);
 	}
 
-	inline m3x4 GetInverseFast(m3x4 const& mat)
+	// Orthonormalises the rotation component of 'mat'
+	inline m3x4 Orthonorm(m3x4 const& mat)
 	{
 		m3x4 m = mat;
-		return InverseFast(m);
-	}
-
-	// Orthonormalises the rotation component of 'mat'
-	inline m3x4& Orthonormalise(m3x4& mat)
-	{
-		mat.x = Normalise3(mat.x);
-		mat.y = Normalise3(Cross3(mat.z, mat.x));
-		mat.z = Cross3(mat.x, mat.y);
-		return mat;
+		m.x = Normalise3(m.x);
+		m.y = Normalise3(Cross3(m.z, m.x));
+		m.z = Cross3(m.x, m.y);
+		return m;
 	}
 
 	// Return true if 'mat' is orthonormal

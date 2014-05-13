@@ -121,7 +121,7 @@ namespace pr
 		bool IsIntersection(OrientedBox const& lhs, OrientedBox const& rhs, Penetration& pen)
 		{
 			// Compute a transform for 'rhs' in 'lhs's frame
-			m4x4 R = GetInverseFast(lhs.m_box_to_world) * rhs.m_box_to_world;
+			m4x4 R = InvertFast(lhs.m_box_to_world) * rhs.m_box_to_world;
 
 			// Compute common subexpressions. Add in an epsilon term to counteract arithmetic
 			// errors when two edges are parallel and their cross product is (near) null

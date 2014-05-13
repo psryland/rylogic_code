@@ -44,23 +44,71 @@ namespace pr.gui
 		{
 			protected Element(string ldr_desc, m4x4 position)
 			{
-				Id = Guid.NewGuid();
+				Diagram  = null;
+				Id       = Guid.NewGuid();
 				Graphics = new View3d.Object(ldr_desc);
 				Position = position;
 			}
 			protected Element(string ldr_desc, XElement node)
 			{
+				Diagram  = null;
 				Graphics = new View3d.Object(ldr_desc);
 				Id       = node.Element("id").As<Guid>();
 				Position = node.Element("pos").As<m4x4>();
 			}
 			public virtual void Dispose()
 			{
+				if (Diagram != null)
+					Diagram.Elements.Remove(this);
+					
 				Graphics = null;
+				Invalidated = null;
+				PositionChanged = null;
+				DataChanged = null;
+				SelectedChanged = null;
 			}
 
 			/// <summary>Get the entity type for this element</summary>
 			public abstract Entity Entity { get; }
+
+			/// <summary>Non-null when the element has been added to a diagram</summary>
+			internal DiagramControl Diagram
+			{
+				get { return m_impl_diag; }
+				set
+				{
+					if (m_impl_diag == value) return;
+
+					Selected = false;
+
+					// Detach from the old diagram
+					if (m_impl_diag != null)
+					{
+						Invalidated     -= m_impl_diag.HandleElementInvalidated;
+						SelectedChanged -= m_impl_diag.HandleElementSelectionChanged;
+						PositionChanged -= m_impl_diag.HandleElementPositionChanged;
+						DataChanged     -= m_impl_diag.HandleElementDataChanged;
+					}
+					
+					// Assign the new diagram
+					m_impl_diag = value;
+
+					// Attach handlers
+					if (m_impl_diag != null)
+					{
+						Invalidated     += m_impl_diag.HandleElementInvalidated;
+						SelectedChanged += m_impl_diag.HandleElementSelectionChanged;
+						PositionChanged += m_impl_diag.HandleElementPositionChanged;
+						DataChanged     += m_impl_diag.HandleElementDataChanged;
+						
+						// Set a new Z position
+						var pos = Position;
+						pos.p.z = m_impl_diag.ElementZ;
+						Position = pos;
+					}
+				}
+			}
+			private DiagramControl m_impl_diag;
 
 			/// <summary>Unique id for this element</summary>
 			public Guid Id { get; private set; }
@@ -87,8 +135,13 @@ namespace pr.gui
 			private bool Dirty { get { return m_impl_dirty; } set { m_impl_dirty = value && m_allow_invalidate; } }
 			private bool m_impl_dirty;
 
+			/// <summary>Raised whenever the element needs to be redrawn</summary>
 			public event EventHandler Invalidated;
 
+			/// <summary>Raised whenever data associated with the element changes</summary>
+			public event EventHandler DataChanged;
+			protected void RaiseDataChanged() { DataChanged.Raise(this, EventArgs.Empty); }
+			
 			/// <summary>Get/Set the selected state</summary>
 			public virtual bool Selected
 			{
@@ -123,10 +176,19 @@ namespace pr.gui
 			/// <summary>The element to diagram transform</summary>
 			public m4x4 Position
 			{
-				get { return Graphics.O2P; }
-				set { Graphics.O2P = value; PositionChanged.Raise(this, EventArgs.Empty); }
+				get
+				{
+					return Graphics != null ? Graphics.O2P : m4x4.Identity;
+				}
+				set
+				{
+					if (Graphics == null || Equals(Graphics.O2P, value)) return;
+					Graphics.O2P = value;
+					PositionChanged.Raise(this, EventArgs.Empty);
+				}
 			}
 			internal m4x4 PositionAtSelectionChange { get; set; }
+			internal m4x4 DragStartPosition { get; set; }
 
 			/// <summary>Raised whenever the node is moved</summary>
 			public event EventHandler PositionChanged;
@@ -148,6 +210,9 @@ namespace pr.gui
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public abstract HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam);
+
+			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
+			public abstract void Drag(v2 delta, bool commit);
 
 			/// <summary>Render the node into the surface</summary>
 			public abstract void Render();
@@ -173,11 +238,10 @@ namespace pr.gui
 			protected Node(string ldr_desc, string tex_obj_name, XElement node)
 				:base(ldr_desc, node)
 			{
-				var width  = node.Element("tex_sx").As<uint>();
-				var height = node.Element("tex_sy").As<uint>();
-				Text       = node.Element("text").As<string>();
-				Style      = node.Element("style").As<NodeStyle>();
-				Surf = new View3d.Texture(width, height);
+				Size  = node.Element("size").As<Size>();
+				Text  = node.Element("text").As<string>();
+				Style = node.Element("style").As<NodeStyle>();
+				Surf  = new View3d.Texture((uint)Size.Width, (uint)Size.Height);
 				Graphics.SetTexture(Surf, tex_obj_name);
 			}
 			public override void Dispose()
@@ -193,16 +257,56 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
-				node.Add2("tex_sx" ,Surf.Size.Width  ,false);
-				node.Add2("tex_sy" ,Surf.Size.Height ,false);
-				node.Add2("text"   ,Text             ,false);
-				node.Add2("style"  ,Style            ,false);
+				node.Add2("size"  ,Size  ,false);
+				node.Add2("text"  ,Text  ,false);
+				node.Add2("style" ,Style ,false);
 				return base.ToXml(node);
 			}
+
+			/// <summary>Get/Set whether node's auto size to their contents</summary>
+			public virtual bool AutoSize
+			{
+				get { return m_impl_autosize; }
+				set
+				{
+					if (m_impl_autosize == value) return;
+					m_impl_autosize = value;
+					Size = PreferredSize;
+					Invalidate();
+				}
+			}
+			private bool m_impl_autosize;
 
 			/// <summary>The centre point of the node</summary>
 			public virtual v4 Centre { get { return new v4(Bounds.Centre, 0, 1); } }
 
+			/// <summary>The diagram space width/height of the node</summary>
+			public virtual Size Size
+			{
+				get { return Surf.Size; }
+				set
+				{
+					if (Surf.Size == value) return;
+					Surf.Size = value;
+					Invalidate();
+				}
+			}
+
+			/// <summary>Return the node size appropriate for the current text in the node</summary>
+			public virtual Size PreferredSize
+			{
+				get
+				{
+					using (var gfx = Diagram.CreateGraphics())
+					{
+						v2 sz = gfx.MeasureString(Text, Style.Font);
+						sz.x += Style.Padding.Left + Style.Padding.Right;
+						sz.y += Style.Padding.Top + Style.Padding.Bottom;
+						return new Size((int)Math.Round(sz.x),(int)Math.Round(sz.y));
+					}
+				}
+			}
+	
 			/// <summary>The surface to draw on for the node</summary>
 			protected View3d.Texture Surf
 			{
@@ -219,7 +323,7 @@ namespace pr.gui
 			public virtual string Text
 			{
 				get { return m_impl_text; }
-				set { m_impl_text = value; Invalidate(); }
+				set { m_impl_text = value; Invalidate(); RaiseDataChanged(); }
 			}
 			private string m_impl_text;
 
@@ -246,8 +350,10 @@ namespace pr.gui
 			/// <summary>Returns the position to draw the text given the current alignment</summary>
 			protected v2 TextLocation(Graphics gfx)
 			{
-				var sz = v2.From(Surf.Size);
-				sz = sz - new v2(gfx.MeasureString(Text, Style.Font, sz));
+				var sz = v2.From(Size);
+				sz.x -= Style.Padding.Left + Style.Padding.Right;
+				sz.y -= Style.Padding.Top + Style.Padding.Bottom;
+				sz -= new v2(gfx.MeasureString(Text, Style.Font, sz));
 				switch (Style.TextAlign)
 				{
 				default: throw new ArgumentException("unknown text alignment");
@@ -280,6 +386,17 @@ namespace pr.gui
 				}
 				return nearest;
 			}
+		
+			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
+			public override void Drag(v2 delta, bool commit)
+			{
+				var pos = DragStartPosition;
+				pos.p.x += delta.x;
+				pos.p.y += delta.y;
+				Position = pos;
+				if (commit)
+					DragStartPosition = Position;
+			}
 		}
 
 		/// <summary>Simple rectangular box node</summary>
@@ -307,7 +424,6 @@ namespace pr.gui
 			public BoxNode(XElement node)
 				:base(Make(node), LdrName, node)
 			{
-				Size         = node.Element("size").As<Size>();
 				CornerRadius = node.Element("cnr").As<float>();
 
 				AllowInvalidate();
@@ -316,8 +432,7 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
-				node.Add2("size" ,Size         ,false);
-				node.Add2("cnr"  ,CornerRadius ,false);
+				node.Add2("cnr" ,CornerRadius ,false);
 				return base.ToXml(node);
 			}
 
@@ -334,18 +449,6 @@ namespace pr.gui
 				var cnr    = node.Element("cnr"  ).As<float>();
 				var style  = node.Element("style").As<NodeStyle>();
 				return Make((uint)size.Width, (uint)size.Height, style.Fill, cnr);
-			}
-
-			/// <summary>The diagram space width/height of the node</summary>
-			public Size Size
-			{
-				get { return Surf.Size; }
-				set
-				{
-					if (Surf.Size == value) return;
-					Surf.Size = value;
-					Invalidate();
-				}
 			}
 
 			/// <summary>The radius of the box node corners</summary>
@@ -446,9 +549,17 @@ namespace pr.gui
 			public ContentAlignment TextAlign
 			{
 				get { return m_impl_align; }
-				set { m_impl_align = value; }
+				set { Util.SetAndRaise(this, ref m_impl_align, value, StyleChanged); }
 			}
 			private ContentAlignment m_impl_align;
+
+			/// <summary>The padding surrounding the text in the node</summary>
+			public Padding Padding
+			{
+				get { return m_impl_padding; }
+				set { Util.SetAndRaise(this, ref m_impl_padding, value, StyleChanged); }
+			}
+			private Padding m_impl_padding;
 
 			/// <summary>Raised whenever a style property is changed</summary>
 			public event EventHandler StyleChanged;
@@ -462,6 +573,7 @@ namespace pr.gui
 					Text      = Color.Black;
 					TextAlign = ContentAlignment.MiddleCenter;
 					Font      = new Font(FontFamily.GenericSansSerif, 16f, GraphicsUnit.Point);
+					Padding   = new Padding(10,10,10,10);
 				}
 			}
 			public NodeStyle(XElement node)
@@ -472,6 +584,7 @@ namespace pr.gui
 				Text      = node.Element("text"    ).As<Color>();
 				Font      = node.Element("font"    ).As<Font>();
 				TextAlign = node.Element("align"   ).As<ContentAlignment>();
+				Padding   = node.Element("padding" ).As<Padding>();
 			}
 
 			/// <summary>Export to xml</summary>
@@ -483,6 +596,7 @@ namespace pr.gui
 				node.Add2("text"     ,Text      ,false);
 				node.Add2("font"     ,Font      ,false);
 				node.Add2("align"    ,TextAlign ,false);
+				node.Add2("padding"  ,Padding   ,false);
 				return node;
 			}
 		}
@@ -515,8 +629,8 @@ namespace pr.gui
 
 				AllowInvalidate();
 			}
-			public Connector(DiagramControl diag, XElement node)
-				:base(Make(diag, node), node)
+			public Connector(XElement node)
+				:base(Make(node), node)
 			{
 				Anc0  = node.Element("anc0" ).As<NodeAnchor>();
 				Anc1  = node.Element("anc1" ).As<NodeAnchor>();
@@ -586,7 +700,7 @@ namespace pr.gui
 				var ldr = new LdrBuilder();
 				using (ldr.Group("connector"))
 				{
-					ldr.Append("*Spline line ",selected ? style.Selected : style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1,"}\n");
+					ldr.Append("*Spline line ",selected ? style.Selected : style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",style.Width,"} }\n");
 				}
 				return ldr.ToString();
 			}
@@ -596,7 +710,7 @@ namespace pr.gui
 				AttachPoints(node0, node1, out anc0, out anc1);
 				return Make(anc0, anc1, selected, style);
 			}
-			private static string Make(DiagramControl diag, XElement node)
+			private static string Make(XElement node)
 			{
 				var anc0  = node.Element("anc0" ).As<NodeAnchor>();
 				var anc1  = node.Element("anc1" ).As<NodeAnchor>();
@@ -645,6 +759,12 @@ namespace pr.gui
 					return null;
 
 				return new HitTestResult.Hit(this, pt.xy);
+			}
+
+			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
+			public override void Drag(v2 delta, bool commit)
+			{
+				Invalidate();
 			}
 
 			/// <summary>Get/Set the selected state</summary>
@@ -720,7 +840,7 @@ namespace pr.gui
 					Type = EType.Line;
 					Line = Color.Black;
 					Selected = Color.Blue;
-					Width = 0f;
+					Width = 5f;
 				}
 			}
 			public ConnectorStyle(XElement node)
@@ -815,11 +935,12 @@ namespace pr.gui
 		#endregion
 
 		// Members
-		private readonly View3d       m_view3d;           // Renderer
-		private readonly RdrOptions   m_rdr_options;      // Rendering options
-		private readonly EventBatcher m_eb_update_diag;   // Event batcher for updating the diagram graphics
-		private View3d.CameraControls m_camera;           // The virtual window over the diagram
-		private MouseSelection[]      m_mbutton;          // Per button mouse selection data
+		private readonly View3d       m_view3d;         // Renderer
+		private readonly RdrOptions   m_rdr_options;    // Rendering options
+		private readonly EventBatcher m_eb_update_diag; // Event batcher for updating the diagram graphics
+		private View3d.CameraControls m_camera;         // The virtual window over the diagram
+		private MouseSelection[]      m_mbutton;        // Per button mouse selection data
+		private bool                  m_edited;         // True when the diagram has been edited and requires saving
 
 		public DiagramControl() :this(new RdrOptions()) {}
 		private DiagramControl(RdrOptions rdr_options)
@@ -831,6 +952,7 @@ namespace pr.gui
 			m_eb_update_diag = new EventBatcher(UpdateDiagram);
 			m_camera         = new View3d.CameraControls(m_view3d.Drawset);
 			m_mbutton        = Util.NewArray<MouseSelection>(Enum<EBtnIdx>.Count);
+			m_edited         = false;
 
 			InitializeComponent();
 
@@ -838,9 +960,9 @@ namespace pr.gui
 			m_view3d.Drawset.OriginVisible = false;
 			m_view3d.Drawset.Orthographic = true;
 
-			Elements = new BindingList<Element>();
-			Selected = new BindingList<Element>();
-			Elements.ListChanged += HandleElementListChanged;
+			Elements = new BindingListEx<Element>();
+			Selected = new BindingListEx<Element>();
+			Elements.ListChanging += HandleElementListChanging;
 
 			ResetView();
 			DefaultKeyboardShortcuts = true;
@@ -861,19 +983,20 @@ namespace pr.gui
 			base.Dispose(disposing);
 		}
 
+		/// <summary>Raised whenever elements in the diagram have been edited or moved</summary>
+		public event EventHandler DiagramChanged;
+
 		/// <summary>Remove all data from the diagram</summary>
 		public void ResetDiagram()
 		{
-			foreach (var elem in Elements)
-				elem.Dispose();
-			Elements.Clear();
+//			Elements.L.Clear();
 		}
 
 		/// <summary>Diagram objects</summary>
-		public BindingList<Element> Elements { get; private set; }
+		public BindingListEx<Element> Elements { get; private set; }
 
 		/// <summary>The set of selected diagram elements</summary>
-		public BindingList<Element> Selected { get; private set; }
+		public BindingListEx<Element> Selected { get; private set; }
 
 		/// <summary>Controls for how the diagram is rendered</summary>
 		public RdrOptions RenderOptions
@@ -894,7 +1017,6 @@ namespace pr.gui
 				if (hit != null)
 					result.Hits.Add(hit);
 			}
-			result.Hits.Sort((l,r) => r.Element.Position.p.z.CompareTo(l.Element.Position.p.z)); // Top to bottom z order
 			return result;
 		}
 		public class HitTestResult
@@ -998,6 +1120,9 @@ namespace pr.gui
 			sel.m_selection.Size     = v2.Zero;
 			sel.m_hit_result         = HitTest(sel.m_selection.Location);
 
+			foreach (var elem in Selected)
+				elem.DragStartPosition = elem.Position;
+
 			MouseMove -= OnMouseDrag;
 			MouseMove += OnMouseDrag;
 			Capture = true;
@@ -1027,8 +1152,7 @@ namespace pr.gui
 			case MouseButtons.Left:
 				{
 					// If this is a click or an area select, select/deselect elements
-					var first = sel.m_hit_result.Hits.FirstOrDefault();
-					var area_select = first == null || !first.Element.Selected;
+					var area_select = sel.m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
 					if (is_click || area_select)
 						SelectElements(sel.m_selection, ModifierKeys);
 					else
@@ -1061,8 +1185,7 @@ namespace pr.gui
 				{
 					// If the drag operation started on a selected element then drag the
 					// selected elements within the diagram, otherwise change the selection area
-					var first = sel.m_hit_result.Hits.FirstOrDefault();
-					var area_select = first == null || !first.Element.Selected;
+					var area_select = sel.m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
 					if (area_select)
 						sel.m_selection.Size = PointToDiagram(e.Location) - v2.From(sel.m_selection.Location);
 					else
@@ -1144,58 +1267,67 @@ namespace pr.gui
 		/// <summary>Move the selected elements by </summary>
 		private void DragSelected(v2 delta, bool commit)
 		{
+			if (!AllowEditing) return;
 			foreach (var elem in Selected)
-			{
-				var pos = elem.PositionAtSelectionChange;
-				pos.p.x += delta.x;
-				pos.p.y += delta.y;
-				elem.Position = pos;
-				if (commit)
-					elem.PositionAtSelectionChange = elem.Position;
-			}
+				elem.Drag(delta, commit);
 			Refresh();
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
-		private void HandleElementListChanged(object sender, ListChangedEventArgs args)
+		private void HandleElementListChanging(object sender, BindingListEx<Element>.ListChangingEventArgs args)
 		{
-			switch (args.ListChangedType)
+			switch (args.ChangeType)
 			{
-			case ListChangedType.Reset:
+			case ListChg.PreReset:
 				{
-					// Update the diagram
-					m_eb_update_diag.Signal();
+					// This Elements list is about to be cleared, detach handlers from all elements
+					foreach (var elem in Elements)
+						elem.Diagram = null;
+
 					break;
 				}
-			case ListChangedType.ItemAdded:
+			case ListChg.ItemPreAdd:
 				{
-					var elem = (Element)Elements[args.NewIndex];
-
-					// Set z-order for new items
-					var pos = elem.Position;
-					pos.p.z = ElementZ;
-					elem.Position = pos;
-
-					// Watch for selected/deselected
-					elem.SelectedChanged -= HandleElementSelectionChanged;
-					elem.SelectedChanged += HandleElementSelectionChanged;
-
-					// Update the diagram
-					m_eb_update_diag.Signal();
+					// An element is about to be added, attach handlers
+					var elem = args.Item;
+					if (elem.Diagram == this) throw new ArgumentException("element already belongs to this diagram");
+					if (elem.Diagram != null) throw new ArgumentException("element already belongs to another diagram");
+					elem.Diagram = this;
 					break;
 				}
-			case ListChangedType.ItemDeleted:
+			case ListChg.ItemPreRemove:
 				{
-					var elem = (Element)Elements[args.NewIndex];
-
-					// Watch for selected/deselected
-					elem.SelectedChanged -= HandleElementSelectionChanged;
-
+					// An element is about to be removed, detach handlers
+					args.Item.Diagram = null;
+					break;
+				}
+			case ListChg.ItemAdded:
+			case ListChg.ItemRemoved:
+			case ListChg.Reset:
+				{
 					// Update the diagram
 					m_eb_update_diag.Signal();
 					break;
 				}
 			}
+		}
+
+		/// <summary>Handle an element being invalidated</summary>
+		private void HandleElementInvalidated(object sender, EventArgs e)
+		{
+			
+		}
+
+		/// <summary>Called when an element in the diagram has been moved</summary>
+		private void HandleElementPositionChanged(object sender, EventArgs e)
+		{
+			m_edited = true;
+		}
+
+		/// <summary>Called when the data associated with an element has changed</summary>
+		private void HandleElementDataChanged(object sender, EventArgs e)
+		{
+			m_edited = true;
 		}
 
 		/// <summary>Add remove elements from our collection of selected objects when their selection changes</summary>
@@ -1238,15 +1370,18 @@ namespace pr.gui
 					if (first != null)
 						first.Element.Selected = true;
 				}
-				// Otherwise clear all selections and select the first element in the hit list
+				// Otherwise clear all selections and select the top element in the hit list
 				else
 				{
 					foreach (var elem in Selected.ToArray())
 						elem.Selected = false;
 
-					var first = hits.Hits.FirstOrDefault();
-					if (first != null)
-						first.Element.Selected = true;
+					if (hits.Hits.Count != 0)
+					{
+						var sel = hits.Hits.MaxBy(x => x.Element.Position.p.z);
+						if (sel != null)
+							sel.Element.Selected = true;
+					}
 				}
 			}
 			// Otherwise it's area selection
@@ -1349,6 +1484,13 @@ namespace pr.gui
 			foreach (var elem in Elements)
 				elem.Refresh();
 
+			// Notify observers that the diagram has changed
+			if (m_edited)
+			{
+				DiagramChanged.Raise(this, EventArgs.Empty);
+				m_edited = false;
+			}
+			
 			m_view3d.SignalRefresh();
 		}
 
@@ -1396,25 +1538,27 @@ namespace pr.gui
 		}
 
 		/// <summary>Import the diagram from xml</summary>
-		public void ImportXml(XDocument xml)
+		public void ImportXml(XDocument xml, bool reset = true)
 		{
 			if (xml.Root == null) throw new InvalidDataException("xml file does not contain any config data");
 
-			XmlExtensions.AsMap[typeof(Connector )] = (elem, type, ctor) => new Connector(this, elem);
 			XmlExtensions.AsMap[typeof(NodeAnchor)] = (elem, type, ctor) => new NodeAnchor(this, elem);
+			
+			if (reset)
+				ResetDiagram();
 
 			foreach (var node in xml.Root.Elements())
 				Elements.Add((Element)node.ToObject());
 
 			UpdateDiagram();
 		}
-		public void ImportXml(string xml)
+		public void ImportXml(string xml, bool reset = true)
 		{
-			ImportXml(XDocument.Parse(xml));
+			ImportXml(XDocument.Parse(xml), reset);
 		}
-		public void LoadXml(string filepath)
+		public void LoadXml(string filepath, bool reset = true)
 		{
-			ImportXml(XDocument.Load(filepath));
+			ImportXml(XDocument.Load(filepath), reset);
 		}
 
 		#region Component Designer generated code

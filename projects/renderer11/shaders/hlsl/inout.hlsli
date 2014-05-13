@@ -4,6 +4,7 @@
 //***********************************************
 #ifndef PR_RDR_SHADER_INOUT_HLSL
 #define PR_RDR_SHADER_INOUT_HLSL
+#if SHADER_BUILD
 
 // Vertex shader input format
 struct VSIn
@@ -25,4 +26,4 @@ struct PSIn
 };
 
 #endif
-
+#endif

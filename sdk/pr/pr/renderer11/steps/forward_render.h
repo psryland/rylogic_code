@@ -15,11 +15,9 @@ namespace pr
 		{
 			static const ERenderStep::Enum_ Id = ERenderStep::ForwardRender;
 
-			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // A constant buffer for the frame constant shader variables
+			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // Per-frame constant buffer
+			D3DPtr<ID3D11Buffer> m_cbuf_nugget;  // Per-nugget constant buffer
 			bool                 m_clear_bb;     // True if this render step clears the backbuffer before rendering
-
-			//typedef std::vector<ProjectedTexture> ProjTextCont;
-			//ProjTextCont m_proj_tex;
 
 			ForwardRender(Scene& scene, bool clear_bb = true);
 
@@ -32,7 +30,7 @@ namespace pr
 			ERenderStep::Enum_ GetId() const override { return Id; }
 
 			// Add model nuggets to the draw list for this render step
-			void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) override;
+			void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) override;
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

@@ -470,7 +470,7 @@ namespace pr
 					}
 				case EKeyword::Inverse:
 					{
-						pr::Inverse(p2w);
+						p2w = pr::Invert(p2w);
 						break;
 					}
 				case EKeyword::Normalise:
@@ -482,7 +482,7 @@ namespace pr
 					}
 				case EKeyword::Orthonormalise:
 					{
-						pr::Orthonormalise(p2w);
+						p2w = pr::Orthonorm(p2w);
 						break;
 					}
 				}
@@ -732,10 +732,11 @@ namespace pr
 			VCont& m_point;
 			ICont& m_index;
 			CCont& m_colour;
+			float  m_line_width;
 			bool   m_per_line_colour;
 			bool   m_linemesh;
 
-			IObjectCreatorLine() :m_point(Point()) ,m_index(Index()) ,m_colour(Color()) ,m_per_line_colour() ,m_linemesh() {}
+			IObjectCreatorLine() :m_point(Point()) ,m_index(Index()) ,m_colour(Color()) ,m_line_width() ,m_per_line_colour() ,m_linemesh() {}
 			bool ParseKeyword(ParseParams& p, HashValue kw) override
 			{
 				switch (kw)
@@ -759,6 +760,11 @@ namespace pr
 						p1 = p + t[1] * dir;
 						return true;
 					}
+				case EKeyword::Width:
+					{
+						p.m_reader.ExtractRealS(m_line_width);
+						return true;
+					}
 				}
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
@@ -778,6 +784,15 @@ namespace pr
 					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), m_colour.size(), m_colour.data());
 				else
 					model = ModelGenerator<>::Lines(p.m_rdr, m_point.size()/2, m_point.data(), m_colour.size(), m_colour.data());
+				
+				// Use thick lines
+				if (m_line_width != 0.0f)
+				{
+					auto shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", m_line_width));
+					shdr->m_default_linewidth = m_line_width;
+					for (auto& nug : model->m_nuggets)
+						nug.m_sset.push_back(shdr);
+				}
 
 				model->m_name = name;
 				return model;
@@ -945,7 +960,7 @@ namespace pr
 				pr::m4x4 basis;
 				p.m_reader.ExtractMatrix3x3(cast_m3x4(basis));
 
-				pr::v4       pts[] = {{0,0,0,1}, basis.x, {0,0,0,1}, basis.y, {0,0,0,1}, basis.z};
+				pr::v4       pts[] = {pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1()};
 				pr::Colour32 col[] = {pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue};
 				pr::uint16   idx[] = {0,1,2,3,4,5};
 
@@ -2039,7 +2054,7 @@ namespace pr
 			if (tex_coords) geom_type |= pr::rdr::EGeom::Tex0;
 
 			// Create the model
-			pr::rdr::NuggetProps mat(topo, geom_type, rdr.m_shdr_mgr.FindShaderFor(geom_type).m_ptr);
+			pr::rdr::NuggetProps mat(topo, geom_type);
 			obj->m_model = pr::rdr::ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
 			obj->m_model->m_name = obj->TypeAndName();
 			pr::events::Send(Evt_LdrObjectAdd(obj));
@@ -2266,6 +2281,11 @@ R"(
 // Below is an example of every supported object type with notes on their syntax
 // ************************************************************************************
 
+// Line modifiers:
+//   *Coloured - The lines have an aarrggbb colour after each one. Must occur before line data if used.
+//   *Width - Render the lines with the thickness specified (in pixels).
+//   *Param - Clip the previous line to the parametric values given.
+
 // A model containing an arbitrary list of line segments
 *Line lines
 {
@@ -2318,6 +2338,7 @@ R"(
 	*Coloured                           // Optional. If specified each spline has an aarrggbb colour after it. Must occur before any spline data if used
 	0 0 0  0 0 1  1 0 1  1 0 0 FF00FF00 // p0 p1 p2 p3 - all points are positions
 	0 0 0  1 0 0  1 1 0  1 1 1 FFFF0000 // tangents given by p1-p0, p3-p2
+	*Width { 4 }                        // Optional line width
 }
 
 // A circle or ellipse

@@ -15,12 +15,5 @@ namespace pr
 		{
 			enum Type { WarnedNoRenderNuggets = 1 << 0 };
 		}
-
-		#define PR_ENUM(x)\
-			x(FwdShader  ,= EStockShader::NumberOf)\
-			x(GBuffer    ,)\
-			x(DSLighting ,)
-		PR_DEFINE_ENUM2(ERdrShader, PR_ENUM);
-		#undef PR_ENUM
 	}
 }

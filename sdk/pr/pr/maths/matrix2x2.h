@@ -79,10 +79,8 @@ namespace pr
 	m2x2&   Transpose(m2x2& m);
 	m2x2    GetTranspose(m2x2 const& m);
 	bool    IsInvertable(m2x2 const& m);
-	m2x2&   Inverse(m2x2& m);
-	m2x2&   InverseFast(m2x2& m);
-	m2x2    GetInverse(m2x2 const& m);
-	m2x2    GetInverseFast(m2x2 const& m);
+	m2x2    Invert(m2x2 const& m);
+	m2x2    InvertFast(m2x2 const& m);
 }
 
 #endif

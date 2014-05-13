@@ -94,6 +94,7 @@
       <Filter>sdk\camera</Filter>
     </ClInclude>
     <ClInclude Include="..\view3d\forward.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\view3d\prmaths.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">

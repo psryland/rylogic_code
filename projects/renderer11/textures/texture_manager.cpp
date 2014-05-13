@@ -79,7 +79,7 @@ namespace pr
 			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			// Allocate a new texture instance and d3d texture resource
+			// Allocate a new texture instance and dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
@@ -118,7 +118,7 @@ namespace pr
 			D3DPtr<ID3D11Texture2D> tex;
 			D3DPtr<ID3D11ShaderResourceView> srv;
 
-			// Look for an existing d3d texture corresponding to 'filepath'
+			// Look for an existing dx texture corresponding to 'filepath'
 			RdrId texfile_id = MakeId(pr::filesys::StandardiseC<wstring256>(filepath).c_str());
 			auto iter = m_lookup_fname.find(texfile_id);
 			if (iter != m_lookup_fname.end())
@@ -165,7 +165,7 @@ namespace pr
 			if (!tdesc.MipLevels == 1)
 				throw pr::Exception<HRESULT>(E_FAIL, "Gdi textures require the MipLevels == 1");
 
-			// Allocate a new texture instance and d3d texture resource
+			// Allocate a new texture instance and dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
 			TextureGdiPtr inst = m_alex_texgdi.New(this, src, tdesc, sdesc, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
@@ -183,7 +183,7 @@ namespace pr
 			return CreateTextureGdi(id, src, tdesc, SamplerDesc::LinearClamp(), name);
 		}
 
-		// Create a new texture instance that uses the same d3d texture as an existing texture.
+		// Create a new texture instance that uses the same dx texture as an existing texture.
 		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 		// 'existing' is an existing texture instance to clone
 		// 'sam_desc' is an optional sampler state description to set on the clone.
@@ -193,7 +193,7 @@ namespace pr
 			if (id != AutoId && m_lookup_tex.find(id) == end(m_lookup_tex))
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
-			// Allocate a new texture instance that reuses the d3d texture resource
+			// Allocate a new texture instance that reuses the dx texture resource
 			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, *existing.m_ptr, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
@@ -218,7 +218,7 @@ namespace pr
 			TextureLookup::iterator iter = m_lookup_tex.find(tex->m_id);
 			PR_ASSERT(PR_DBG_RDR, iter != m_lookup_tex.end(), "Texture not found");
 
-			// If the d3d texture will be released when we clean up this texture
+			// If the dx texture will be released when we clean up this texture
 			// then check whether it's in the fname lookup table and remove it if it is.
 			if (tex->m_src_id != 0 && tex->m_tex.RefCount() == 1)
 			{

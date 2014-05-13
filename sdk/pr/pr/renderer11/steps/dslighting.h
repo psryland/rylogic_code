@@ -28,7 +28,8 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_lighting; // A constant buffer for the frame constant shader variables
 			Instance             m_unit_quad;     // The quad drawn to the screen for post processing
 			bool                 m_clear_bb;      // True if this render step clears the backbuffer before rendering
-			ShaderPtr            m_shader;        // The shader used to generate the g-buffer
+			ShaderPtr            m_shdr_vs;       //
+			ShaderPtr            m_shdr_ps;       //
 
 			DSLighting(Scene& scene);
 
@@ -41,7 +42,7 @@ namespace pr
 			ERenderStep::Enum_ GetId() const override { return Id; }
 
 			// Add model nuggets to the draw list for this render step
-			void AddNuggets(BaseInstance const&, TNuggetChain const&) override {}
+			void AddNuggets(BaseInstance const&, TNuggetChain&) override {}
 
 			// Perform the render step
 			void ExecuteInternal(StateStack& ss) override;

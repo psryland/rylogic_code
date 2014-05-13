@@ -113,7 +113,9 @@
     <Compile Include="common\ref_count.cs" />
     <Compile Include="common\rtf.cs" />
     <Compile Include="common\cache.cs" />
+    <Compile Include="container\binding_list.cs" />
     <Compile Include="container\kdtree.cs" />
+    <Compile Include="container\list_chg.cs" />
     <Compile Include="container\tri_table.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\pin.cs" />

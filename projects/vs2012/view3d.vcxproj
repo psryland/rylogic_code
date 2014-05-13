@@ -181,6 +181,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\stream_stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\token.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\view3d\prmaths.h" />
     <ClInclude Include="..\view3d\forward.h" />
     <ClInclude Include="..\View3D\renderer_instance.h" />
     <ClInclude Include="..\View3D\stdafx.h" />

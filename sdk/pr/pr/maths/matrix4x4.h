@@ -127,11 +127,9 @@ namespace pr
 	m4x4  GetTranspose3x3(m4x4 const& mat);
 	m4x4  GetRotation(m4x4 const& mat);
 	bool  IsInvertable(m4x4 const& mat);
-	m4x4& Inverse(m4x4& mat);
-	m4x4  GetInverse(m4x4 const& mat);
-	m4x4& InverseFast(m4x4& mat);
-	m4x4  GetInverseFast(m4x4 const& mat);
-	m4x4& Orthonormalise(m4x4& mat);
+	m4x4  Invert(m4x4 const& mat);
+	m4x4  InvertFast(m4x4 const& mat);
+	m4x4  Orthonorm(m4x4 const& mat);
 	bool  IsOrthonormal(m4x4 const& mat);
 	void  GetAxisAngle(m4x4 const& mat, v4& axis, float& angle);
 	m4x4  Abs(m4x4 const& mat);

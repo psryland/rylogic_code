@@ -5,10 +5,10 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
-#include "pr/renderer11/steps/deferred/gbuffer.h"
-#include "renderer11/steps/common.h"
-#include "renderer11/steps/deferred/ds_shader.h"
-#include "renderer11/util/internal_resources.h"
+#include "pr/renderer11/steps/gbuffer.h"
+#include "pr/renderer11/util/stock_resources.h"
+#include "pr/renderer11/shaders/shader.h"
+#include "renderer11/shaders/common.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr
@@ -23,16 +23,9 @@ namespace pr
 			,m_dsv()
 			,m_main_rtv()
 			,m_main_dsv()
-			,m_cbuf_camera()
-			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::GBuffer))
+			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
+			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<ds::CBufModel>("ds::CBufModel"))
 		{
-			PR_ASSERT(PR_DBG_RDR, m_shader != nullptr, "GBuffer shader missing");
-
-			// Create a constants buffer for constants that only change once per frame
-			CBufferDesc cbdesc(sizeof(ds::CBufCamera));
-			pr::Throw(scene.m_rdr->Device()->CreateBuffer(&cbdesc, nullptr, &m_cbuf_camera.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_cbuf_camera, "ds::CBufCamera"));
-
 			InitGBuffer(true);
 
 			m_rsb = RSBlock::SolidCullBack();
@@ -133,7 +126,7 @@ namespace pr
 		}
 
 		// Add model nuggets to the draw list for this render step
-		void GBuffer::AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets)
+		void GBuffer::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
 		{
 			// See if the instance has a sort key override
 			SKOverride const* sko = inst.find<SKOverride>(EInstComp::SortkeyOverride);
@@ -143,8 +136,12 @@ namespace pr
 			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
 			{
+				// Ensure the nugget contains gbuffer shaders vs/ps
+				// Note, the nugget may contain other shaders that are used by this render step as well
+				nug.m_sset.get(EStockShader::GBufferVS, m_shdr_mgr)->UsedBy(Id);
+				nug.m_sset.get(EStockShader::GBufferPS, m_shdr_mgr)->UsedBy(Id);
+
 				DrawListElement dle;
-				dle.m_shader   = m_shader.m_ptr;
 				dle.m_instance = &inst;
 				dle.m_nugget   = &nug;
 				dle.m_sort_key = sko ? sko->Combine(nug.m_sort_key) : nug.m_sort_key;
@@ -157,6 +154,8 @@ namespace pr
 		// Perform the render step
 		void GBuffer::ExecuteInternal(StateStack& ss)
 		{
+			auto& dc = ss.m_dc;
+
 			// Sort the draw list
 			SortIfNeeded();
 
@@ -167,18 +166,18 @@ namespace pr
 
 			// Clear the g-buffer and depth buffer
 			float diff_reset[4] = {m_scene->m_bkgd_colour.r, m_scene->m_bkgd_colour.g, m_scene->m_bkgd_colour.b, 0.5f};
-			ss.m_dc->ClearRenderTargetView(m_rtv[0].m_ptr, diff_reset);
-			ss.m_dc->ClearRenderTargetView(m_rtv[1].m_ptr, pr::v4Half.ToArray());
-			ss.m_dc->ClearRenderTargetView(m_rtv[2].m_ptr, pr::v4Max.ToArray());
-			ss.m_dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
+			dc->ClearRenderTargetView(m_rtv[0].m_ptr, diff_reset);
+			dc->ClearRenderTargetView(m_rtv[1].m_ptr, pr::v4Half.ToArray());
+			dc->ClearRenderTargetView(m_rtv[2].m_ptr, pr::v4Max.ToArray());
+			dc->ClearDepthStencilView(m_dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 
 			// Set the viewport
-			ss.m_dc->RSSetViewports(1, &m_scene->m_viewport);
+			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants and bind them to the shaders
 			ds::CBufCamera cb = {};
 			SetViewConstants(m_scene->m_view, cb);
-			WriteConstants(ss.m_dc, m_cbuf_camera, cb);
+			WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
 
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
@@ -186,9 +185,20 @@ namespace pr
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();
 
+				// Set the per-nugget constants
+				ds::CBufModel cb = {};
+				SetGeomType(*dle.m_nugget, cb);
+				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
+				SetTint(*dle.m_instance, cb);
+				SetTexDiffuse(*dle.m_nugget, cb);
+				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
+
+				// Bind a texture
+				BindTextureAndSampler(dc, 0, dle.m_nugget->m_tex_diffuse);
+
 				// Add the nugget to the device context
 				Nugget const& nugget = *dle.m_nugget;
-				ss.m_dc->DrawIndexed(
+				dc->DrawIndexed(
 					UINT(nugget.m_irange.size()),
 					UINT(nugget.m_irange.m_begin),
 					0);

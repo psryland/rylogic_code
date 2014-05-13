@@ -26,7 +26,7 @@ namespace pr
 			settings.m_multisamp.Validate(device, settings.m_depth_format);
 		}
 
-		// Initialise the renderer state variables and creates the d3d device and swap chain.
+		// Initialise the renderer state variables and creates the dx device and swap chain.
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
 			,m_device()
@@ -77,7 +77,7 @@ namespace pr
 			sd.Flags        = m_settings.m_swap_chain_flags;
 			pr::Throw(factory->CreateSwapChain(m_device.m_ptr, &sd, &m_swap_chain.m_ptr));
 
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_device     , pr::FmtS("d3d device")));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_device     , pr::FmtS("dx device")));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_swap_chain , pr::FmtS("swap chain")));
 			PR_EXPAND(PR_DBG_RDR, NameResource(m_immediate  , pr::FmtS("immed dc"  )));
 
@@ -160,7 +160,7 @@ namespace pr
 		m_swap_chain = nullptr;
 
 		// Can't assert this as the managers still contain references to the device (and possibly the client)
-		//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the d3d device");
+		//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the dx device");
 		m_device = nullptr;
 	}
 

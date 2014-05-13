@@ -18,6 +18,13 @@ namespace pr
 			static D3DCOLORVALUE To(pr::Colour32 c)      { return To((pr::Colour)c); }
 		};
 
+		// Returns an incrementing id with each call
+		inline RdrId MonotonicId()
+		{
+			static RdrId s_id = 0;
+			return ++s_id;
+		}
+
 		// Make a RdrId from a pointer
 		template <typename T> RdrId MakeId(T const* ptr)
 		{
@@ -48,6 +55,14 @@ namespace pr
 			return dc;
 		}
 
+		// Return the device from a device context
+		inline D3DPtr<ID3D11Device> Device(D3DPtr<ID3D11DeviceContext>& dc)
+		{
+			D3DPtr<ID3D11Device> device;
+			dc->GetDevice(&device.m_ptr);
+			return device;
+		}
+
 		// Compile time type to dxgi_format conversion
 		template <typename Idx> struct DxFormat { static const DXGI_FORMAT value = DXGI_FORMAT_UNKNOWN; };
 		template <> struct DxFormat<pr::uint16> { static const DXGI_FORMAT value = DXGI_FORMAT_R16_UINT; };
@@ -57,6 +72,22 @@ namespace pr
 		template <> struct DxFormat<pr::v4>     { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 		template <> struct DxFormat<pr::Colour> { static const DXGI_FORMAT value = DXGI_FORMAT_R32G32B32A32_FLOAT; };
 
+		// Shader type to enum map
+		template <typename D3DShaderType> struct ShaderTypeId { static const EShaderType::Enum_ value = EShaderType::Invalid; };
+		template <> struct ShaderTypeId<ID3D11VertexShader  > { static const EShaderType::Enum_ value = EShaderType::VS; };
+		template <> struct ShaderTypeId<ID3D11PixelShader   > { static const EShaderType::Enum_ value = EShaderType::PS; };
+		template <> struct ShaderTypeId<ID3D11GeometryShader> { static const EShaderType::Enum_ value = EShaderType::GS; };
+		template <> struct ShaderTypeId<ID3D11HullShader    > { static const EShaderType::Enum_ value = EShaderType::HS; };
+		template <> struct ShaderTypeId<ID3D11DomainShader  > { static const EShaderType::Enum_ value = EShaderType::DS; };
+
+		// Shader enum to dx type map
+		template <EShaderType::Enum_ ST> struct DxShaderType {};
+		template <> struct DxShaderType<EShaderType::VS> { typedef ID3D11VertexShader   type; };
+		template <> struct DxShaderType<EShaderType::PS> { typedef ID3D11PixelShader    type; };
+		template <> struct DxShaderType<EShaderType::GS> { typedef ID3D11GeometryShader type; };
+		template <> struct DxShaderType<EShaderType::HS> { typedef ID3D11HullShader     type; };
+		template <> struct DxShaderType<EShaderType::DS> { typedef ID3D11DomainShader   type; };
+		
 		// The number of supported quality levels for the given format and sample count
 		UINT MultisampleQualityLevels(D3DPtr<ID3D11Device>& device, DXGI_FORMAT format, UINT sample_count);
 
@@ -66,7 +97,7 @@ namespace pr
 		// Returns the number of indices implied by a primitive count and geometry topology
 		size_t IndexCount(size_t pcount, EPrim topo);
 
-		// Returns the number of bits per pixel for a given d3d format
+		// Returns the number of bits per pixel for a given dx format
 		size_t BitsPerPixel(DXGI_FORMAT fmt);
 		inline size_t BytesPerPixel(DXGI_FORMAT fmt) { return BitsPerPixel(fmt) >> 3; }
 
@@ -98,23 +129,7 @@ namespace pr
 			table[key] = value;
 		}
 
-		// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders
-		template <typename TCBuf> void WriteConstants(D3DPtr<ID3D11DeviceContext>& dc, D3DPtr<ID3D11Buffer>& cbuf, TCBuf const& cb, EShaderType shdr_type = EShaderType::VS|EShaderType::PS)
-		{
-			{// Copy the buffer to the dx buffer
-				LockT<TCBuf> lock(dc, cbuf, 0, D3D11_MAP_WRITE_DISCARD, 0);
-				*lock.ptr() = cb;
-			}
-
-			// Bind the constants to the shaders
-			if (shdr_type & EShaderType::VS) dc->VSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::PS) dc->PSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-			if (shdr_type & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-		}
-
-		// Set the name on a d3d resource (debug only)
+		// Set the name on a dx resource (debug only)
 		template <typename T> inline void NameResource(D3DPtr<T>& res, char const* name)
 		{
 			#if PR_DBG_RDR

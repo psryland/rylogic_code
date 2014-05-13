@@ -31,13 +31,13 @@ namespace pr
 			// the manager to find an existing dx texture for that file. Think of the fname lookup
 			// as mapping from fname to RdrId, and then using the tex lookup to map RdrId to dx texture.
 			// 'AutoId' is a special value that tells the create texture functions to not look for an
-			// existing texture and create a new d3d resource for the texture.
+			// existing texture and create a new dx resource for the texture.
 
 			Allocator<Texture2D>       m_alex_tex2d;
 			Allocator<TextureGdi>      m_alex_texgdi;
 			D3DPtr<ID3D11Device>       m_device;
 			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
-			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing d3d texture
+			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
 			pr::Array<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
 			pr::GdiPlus                m_gdiplus;
 
@@ -69,7 +69,7 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			Texture2DPtr CreateTexture2D(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
 
-			// Create a new texture instance that uses the same d3d texture as an existing texture.
+			// Create a new texture instance that uses the same dx texture as an existing texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
 			// 'existing' is an existing texture instance to clone
 			// 'sam_desc' is an optional sampler state description to set on the clone.

@@ -100,7 +100,7 @@ namespace pr
 		Renderer(rdr::RdrSettings const& settings);
 		~Renderer();
 
-		// Return the d3d device
+		// Return the dx device
 		D3DPtr<ID3D11Device> Device() const { return m_device; }
 
 		// Return the immediate device context

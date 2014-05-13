@@ -106,7 +106,7 @@ void pr::ph::ImpulseResponse(Contact& contact, v4& ws_impulse)
 	m3x4 inv_mass1	= objA.m_inv_mass * (m3x4Identity - (cpmA * objA.m_ws_inv_inertia_tensor * cpmA));
 	m3x4 inv_mass2	= objB.m_inv_mass * (m3x4Identity - (cpmB * objB.m_ws_inv_inertia_tensor * cpmB));
 	m3x4 inv_mass	= inv_mass1 + inv_mass2;
-	m3x4 mass		= inv_mass.GetInverse();
+	m3x4 mass		= inv_mass.Invert();
 
 	// Pi is the impulse required to reduce the normal component of rel_velocity to zero.
 	// Pii is the impulse to reduce rel_velocity to zero

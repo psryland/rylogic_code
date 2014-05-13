@@ -163,7 +163,7 @@ void ConstraintAccumulator::SetCollisionMatrix(Constraint& cons, Rigidbody const
 		m3x4 cpmB = CrossProductMatrix3x3(pointB);	// pointB is object relative
 		inv_mass += rbB.m_inv_mass * (m3x4Identity - (cpmB * rbB.m_ws_inv_inertia_tensor * cpmB));
 	}
-	cons.m_mass = GetInverse(inv_mass);
+	cons.m_mass = Invert(inv_mass);
 }
 
 // Add a collision or resting contact constraint for a pair of objects that are overlapping

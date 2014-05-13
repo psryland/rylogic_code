@@ -144,7 +144,7 @@ void Rigidbody::SetMassProperties(MassProperties const& mp)
 	PR_EXPAND(PR_LOG_RB, Log(*this, "SetMassProperties");)
 	SetMass(mp.m_mass);
 	m_os_inertia_tensor     = mp.m_os_inertia_tensor;
-	m_os_inv_inertia_tensor = GetInverse(mp.m_os_inertia_tensor);
+	m_os_inv_inertia_tensor = Invert(mp.m_os_inertia_tensor);
 	m_ws_inv_inertia_tensor = InvInertiaTensorWS(Orientation(), m_os_inv_inertia_tensor);
 }
 

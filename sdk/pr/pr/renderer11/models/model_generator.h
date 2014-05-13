@@ -54,14 +54,10 @@ namespace pr
 
 				// Set primitive type, this is non-negotiable
 				ddata.m_topo = topo;
-				
+
 				// Default the geometry type from the generate function
 				if (ddata.m_geom == EGeom::Invalid)
 					ddata.m_geom = props.m_geom;
-
-				// If no shader has been provided, choose one based on the model geometry
-				if (ddata.m_shader == nullptr)
-					ddata.m_shader = rdr.m_shdr_mgr.FindShaderFor(ddata.m_geom).m_ptr;
 
 				// If the model geom has valid texture data but no texture, use white
 				if (AllSet(ddata.m_geom, EGeom::Tex0) && ddata.m_tex_diffuse == nullptr)

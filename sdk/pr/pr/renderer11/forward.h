@@ -53,6 +53,7 @@
 #include "pr/common/new.h"
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
+#include "pr/common/map_adapter.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -85,7 +86,7 @@ namespace pr
 		typedef uintptr_t  RdrId;
 		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
-		RdrId const AutoId = ~0U; // A special value for automatically generating an Id
+		static RdrId const AutoId = ~0U; // A special value for automatically generating an Id
 
 		typedef pr::string<char, 32>     string32;
 		typedef pr::string<char, 512>    string512;
@@ -101,22 +102,24 @@ namespace pr
 		struct MLock;
 		template <class T> struct Allocator;
 
-		// Input layouts
-		class InputLayoutManager;
-
 		// Lighting
 		struct Light;
 
 		// Shaders
+		struct Vert;
 		class  ShaderManager;
 		struct ShaderDesc;
-		struct BaseShader;
-		struct Vert;
-		struct FwdShader;
-		struct GBufferShader;
-		struct DSLightingShader;
+		struct ShaderBase;
+		struct ShaderSet;
+		struct FwdShaderVS;
+		struct FwdShaderPS;
+		struct GBufferShaderVS;
+		struct GBufferShaderPS;
+		struct DSLightingShaderVS;
+		struct DSLightingShaderPS;
+		struct ThickLineListShaderGS;
 		struct ShadowMapShader;
-		typedef pr::RefPtr<BaseShader> ShaderPtr;
+		typedef pr::RefPtr<ShaderBase> ShaderPtr;
 
 		// Textures
 		class  TextureManager;
@@ -126,11 +129,8 @@ namespace pr
 		struct Image;
 		struct AllocPres;
 		struct ProjectedTexture;
-		//struct Video;
 		typedef pr::RefPtr<Texture2D> Texture2DPtr;
 		typedef pr::RefPtr<TextureGdi> TextureGdiPtr;
-		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
-		//typedef pr::RefPtr<Video>     VideoPtr;
 
 		// Video
 		//struct Video;
@@ -163,6 +163,7 @@ namespace pr
 		struct DSBlock;
 		struct RSBlock;
 		struct StateStack;
+		struct DeviceState;
 		struct RenderStep;
 		struct ForwardRender;
 		struct GBuffer;
@@ -198,14 +199,14 @@ namespace pr
 		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
-		// EShaderType
+		// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx
 		#define PR_ENUM(x)\
 			x(Invalid ,= 0)\
 			x(VS      ,= 1 << 0)\
-			x(PS      ,= 1 << 1)\
-			x(GS      ,= 1 << 2)\
-			x(HS      ,= 1 << 3)\
-			x(DS      ,= 1 << 4)\
+			x(HS      ,= 1 << 1)\
+			x(DS      ,= 1 << 2)\
+			x(GS      ,= 1 << 3)\
+			x(PS      ,= 1 << 4)\
 			x(All     ,= ~0)
 		PR_DEFINE_ENUM2_FLAGS(EShaderType, PR_ENUM);
 		#undef PR_ENUM

@@ -16,6 +16,7 @@ namespace pr
 	{
 		RenderStep::RenderStep(Scene& scene)
 			:m_scene(&scene)
+			,m_shdr_mgr(&scene.m_rdr->m_shdr_mgr)
 			,m_drawlist(scene.m_rdr->Allocator<DrawListElement>())
 			,m_sort_needed(true)
 			,m_bsb()

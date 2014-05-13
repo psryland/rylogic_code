@@ -6,9 +6,9 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/lights/light.h"
-#include "pr/renderer11/steps/shadow/shadow_map.h"
-#include "renderer11/steps/common.h"
-#include "renderer11/util/internal_resources.h"
+#include "pr/renderer11/steps/shadow_map.h"
+#include "pr/renderer11/util/stock_resources.h"
+#include "renderer11/shaders/common.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr
@@ -37,7 +37,7 @@ namespace pr
 
 		ShadowMap::ShadowMap(Scene& scene)
 			:RenderStep(scene)
-			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(ERdrShader::GBuffer))
+			,m_shader(scene.m_rdr->m_shdr_mgr.FindShader(EStockShader::GBufferVS))
 		{
 			PR_ASSERT(PR_DBG_RDR, m_shader != nullptr, "GBuffer shader missing");
 		}
@@ -99,7 +99,7 @@ namespace pr
 					// Position the light camera at the centre of the plane we're projecting onto looking in the light direction
 					pr::v4 pos = (TL + TR + BL + BR) * 0.25f;
 					pr::m4x4 lt2w = pr::LookAt(pos, pos + light.m_direction, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
-					w2s = pr::GetInverseFast(lt2w);
+					w2s = pr::InvertFast(lt2w);
 
 					// Create an orthographic projection
 					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, -100.0f, 100.0f, true);
@@ -158,7 +158,7 @@ namespace pr
 					// Create a light to world transform
 					// Position the light camera at the light position looking in the -frustum plane normal direction
 					pr::m4x4 lt2w = pr::LookAt(light.m_position, light.m_position - ws_norm, pr::Parallel(ws_norm,c2w.y) ? c2w.z : c2w.y);
-					w2s = pr::GetInverse(lt2w);
+					w2s = pr::Invert(lt2w);
 					tl = w2s * TL;
 					tr = w2s * TR;
 					bl = w2s * BL;

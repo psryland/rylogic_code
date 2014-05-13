@@ -8,33 +8,33 @@
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/shaders/shader_set.h"
 
 namespace pr
 {
 	namespace rdr
 	{
+		struct DeviceState
+		{
+			RenderStep const* m_rstep;
+			DrawListElement const* m_dle;
+			ModelBufferPtr m_mb;
+			EPrim m_topo;
+			DSBlock m_dsb;
+			RSBlock m_rsb;
+			BSBlock m_bsb;
+			ShaderSet m_shdrs;
+
+			DeviceState();
+		};
+
 		// Maintains a history of the device state restoring it on destruction
 		struct StateStack
 		{
-			struct State
-			{
-				RenderStep const* m_rstep;
-				DrawListElement const* m_dle;
-				D3DPtr<ID3D11InputLayout> m_iplayout;
-				ModelBufferPtr m_mb;
-				EPrim m_topo;
-				DSBlock m_dsb;
-				RSBlock m_rsb;
-				BSBlock m_bsb;
-				BaseShader* m_shdr;
-
-				State();
-			};
-
 			struct Frame
 			{
 				StateStack& m_ss;
-				State m_restore;
+				DeviceState m_restore;
 				Frame(StateStack& ss) :m_ss(ss) ,m_restore(m_ss.m_pending) {}
 				~Frame() { m_ss.m_pending = m_restore; }
 				PR_NO_COPY(Frame);
@@ -52,9 +52,9 @@ namespace pr
 
 			D3DPtr<ID3D11DeviceContext> m_dc;
 			Scene& m_scene;
-			State m_init_state;
-			State m_pending;
-			State m_current;
+			DeviceState m_init_state;
+			DeviceState m_pending;
+			DeviceState m_current;
 
 			StateStack(D3DPtr<ID3D11DeviceContext> dc, Scene& scene);
 			~StateStack();

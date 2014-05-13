@@ -12,6 +12,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.extn;
 using pr.maths;
@@ -64,53 +65,43 @@ namespace pr.extn
 				this[typeof(Size)] = (obj, node) =>
 					{
 						var sz = (Size)obj;
-						node.Add(
-							sz.Width .ToXml(Reflect<Size>.MemberName(x => x.Width ), false),
-							sz.Height.ToXml(Reflect<Size>.MemberName(x => x.Height), false));
+						node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
 						return node;
 					};
 				this[typeof(SizeF)] = (obj, node) =>
 					{
 						var sz = (SizeF)obj;
-						node.Add(
-							sz.Width .ToXml(Reflect<SizeF>.MemberName(x => x.Width ), false),
-							sz.Height.ToXml(Reflect<SizeF>.MemberName(x => x.Height), false));
+						node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
 						return node;
 					};
 				this[typeof(Point)] = (obj, node) =>
 					{
 						var pt = (Point)obj;
-						node.Add(
-							pt.X .ToXml(Reflect<Point>.MemberName(x => x.X), false),
-							pt.Y .ToXml(Reflect<Point>.MemberName(x => x.Y), false));
+						node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
 						return node;
 					};
 				this[typeof(PointF)] = (obj, node) =>
 					{
 						var pt = (PointF)obj;
-						node.Add(
-							pt.X .ToXml(Reflect<PointF>.MemberName(x => x.X), false),
-							pt.Y .ToXml(Reflect<PointF>.MemberName(x => x.Y), false));
+						node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
 						return node;
 					};
 				this[typeof(Rectangle)] = (obj, node) =>
 					{
 						var rc = (Rectangle)obj;
-						node.Add(
-							rc.X     .ToXml(Reflect<Rectangle>.MemberName(x => x.X     ), false),
-							rc.Y     .ToXml(Reflect<Rectangle>.MemberName(x => x.Y     ), false),
-							rc.Width .ToXml(Reflect<Rectangle>.MemberName(x => x.Width ), false),
-							rc.Height.ToXml(Reflect<Rectangle>.MemberName(x => x.Height), false));
+						node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
 						return node;
 					};
 				this[typeof(RectangleF)] = (obj, node) =>
 					{
 						var rc = (RectangleF)obj;
-						node.Add(
-							rc.X     .ToXml(Reflect<RectangleF>.MemberName(x => x.X     ), false),
-							rc.Y     .ToXml(Reflect<RectangleF>.MemberName(x => x.Y     ), false),
-							rc.Width .ToXml(Reflect<RectangleF>.MemberName(x => x.Width ), false),
-							rc.Height.ToXml(Reflect<RectangleF>.MemberName(x => x.Height), false));
+						node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
+						return node;
+					};
+				this[typeof(Padding)] = (obj, node) =>
+					{
+						var p = (Padding)obj;
+						node.SetValue("{0} {1} {2} {3}".Fmt(p.Left, p.Top, p.Right, p.Bottom));
 						return node;
 					};
 				this[typeof(Font)] = (obj, node) =>
@@ -289,6 +280,7 @@ namespace pr.extn
 		private static readonly AsBinding m_impl_AsMap = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
+			private readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
 			public AsBinding()
 			{
 				this[typeof(string         )] = (elem, type, ctor) => elem.Value;
@@ -310,43 +302,38 @@ namespace pr.extn
 				this[typeof(Color          )] = (elem, type, ctor) => Color          .FromArgb(int.Parse(elem.Value, NumberStyles.HexNumber));
 				this[typeof(Size)] = (elem, type, ctor) =>
 					{
-						var W = elem.Element(Reflect<Size>.MemberName(x => x.Width)).As<int>();
-						var H = elem.Element(Reflect<Size>.MemberName(x => x.Height)).As<int>();
-						return new Size(W,H);
+						var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new Size(int.Parse(wh[0]), int.Parse(wh[1]));
 					};
 				this[typeof(SizeF)] = (elem, type, ctor) =>
 					{
-						var W = elem.Element(Reflect<SizeF>.MemberName(x => x.Width)).As<int>();
-						var H = elem.Element(Reflect<SizeF>.MemberName(x => x.Height)).As<int>();
-						return new SizeF(W,H);
+						var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new SizeF(float.Parse(wh[0]), float.Parse(wh[1]));
 					};
 				this[typeof(Point)] = (elem, type, ctor) =>
 					{
-						var X = elem.Element(Reflect<Point>.MemberName(x => x.X)).As<int>();
-						var Y = elem.Element(Reflect<Point>.MemberName(x => x.Y)).As<int>();
-						return new Point(X,Y);
+						var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new Point(int.Parse(xy[0]), int.Parse(xy[1]));
 					};
 				this[typeof(PointF)] = (elem, type, ctor) =>
 					{
-						var X = elem.Element(Reflect<PointF>.MemberName(x => x.X)).As<int>();
-						var Y = elem.Element(Reflect<PointF>.MemberName(x => x.Y)).As<int>();
-						return new PointF(X,Y);
+						var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new PointF(float.Parse(xy[0]), float.Parse(xy[1]));
 					};
 				this[typeof(Rectangle)] = (elem, type, ctor) =>
 					{
-						var X = elem.Element(Reflect<Rectangle>.MemberName(x => x.X     )).As<int>();
-						var Y = elem.Element(Reflect<Rectangle>.MemberName(x => x.Y     )).As<int>();
-						var W = elem.Element(Reflect<Rectangle>.MemberName(x => x.Width )).As<int>();
-						var H = elem.Element(Reflect<Rectangle>.MemberName(x => x.Height)).As<int>();
-						return new Rectangle(X,Y,W,H);
+						var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new Rectangle(int.Parse(xywh[0]), int.Parse(xywh[1]), int.Parse(xywh[2]), int.Parse(xywh[3]));
 					};
 				this[typeof(RectangleF)] = (elem, type, ctor) =>
 					{
-						var X = elem.Element(Reflect<RectangleF>.MemberName(x => x.X     )).As<int>();
-						var Y = elem.Element(Reflect<RectangleF>.MemberName(x => x.Y     )).As<int>();
-						var W = elem.Element(Reflect<RectangleF>.MemberName(x => x.Width )).As<int>();
-						var H = elem.Element(Reflect<RectangleF>.MemberName(x => x.Height)).As<int>();
-						return new RectangleF(X,Y,W,H);
+						var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new RectangleF(float.Parse(xywh[0]), float.Parse(xywh[1]), float.Parse(xywh[2]), float.Parse(xywh[3]));
+					};
+				this[typeof(Padding)] = (elem, type, ctor) =>
+					{
+						var ltrb = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+						return new Padding(int.Parse(ltrb[0]), int.Parse(ltrb[1]), int.Parse(ltrb[2]), int.Parse(ltrb[3]));
 					};
 				this[typeof(Font)] = (elem, type, instance) =>
 					{

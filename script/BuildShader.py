@@ -34,7 +34,14 @@ try:
 	obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
 	dbg   = True if "debug" in [arg.lower() for arg in sys.argv] else False
 	trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
-	if trace: print("pp:" + str(pp) + "  obj:" + str(obj))
+
+	# Enable compiled shader objects in debug, for debugging and runtime shaders
+	if dbg:
+		obj = True;
+
+	# Show the command line options
+	if trace:
+		print("pp:" + str(pp) + "  obj:" + str(obj) + "  debug:" + str(dbg))
 
 	# Find the source and output directories
 	srcdir,file = os.path.split(fullpath)
@@ -82,7 +89,7 @@ try:
 			includes = []#"/I" + srcdir + "\\.."]
 
 			# Set defines
-			defines = ["/DSHADER_BUILD=1"]
+			defines = ["/DSHADER_BUILD"]
 			if   shdr == "vs": defines = defines + ["/DPR_RDR_SHADER_VS=1"]
 			elif shdr == "ps": defines = defines + ["/DPR_RDR_SHADER_PS=1"]
 			elif shdr == "gs": defines = defines + ["/DPR_RDR_SHADER_GS=1"]
@@ -98,6 +105,7 @@ try:
 			if trace: print("Running fxc.exe...")
 			success,output = Tools.Run([UserVars.fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
 			if not success:
+				print("Compiling: " + fullpath)
 				print(output)
 				print("failed")
 			elif trace:

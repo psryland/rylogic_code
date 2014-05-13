@@ -170,10 +170,7 @@ namespace pr
 	template <typename TFrom, int LocalCount, bool Fixed, typename Allocator>
 	struct Convert<pr::string<wchar_t,LocalCount,Fixed,Allocator>, TFrom>
 	{
-	private:
 		typedef pr::string<wchar_t,LocalCount,Fixed,Allocator> pr_string;
-
-	public:
 		static pr_string To(bool from)                           { return from ? L"true" : L"false"; }
 		static pr_string To(wchar_t from)                        { return pr_string(1, from); }
 		static pr_string To(long long from, int radix)           { wchar_t buf[128]; return impl::itostr(from, buf, radix); }
@@ -215,10 +212,10 @@ namespace pr
 	// To<size_t>
 	template <typename TFrom> struct Convert<size_t,TFrom>
 	{
-		static int To(char const* from, int radix)               { return static_cast<size_t>(::strtoul(from, 0, radix)); }
-		static int To(wchar_t const* from, int radix)            { return static_cast<size_t>(::wcstoul(from, 0, radix)); }
-		static int To(std::string const& from, int radix)        { return static_cast<size_t>(::strtoul(from.c_str(), 0, radix)); }
-		static int To(std::wstring const& from, int radix)       { return static_cast<size_t>(::wcstoul(from.c_str(), 0, radix)); }
+		static size_t To(char const* from, int radix)               { return static_cast<size_t>(::strtoul(from, 0, radix)); }
+		static size_t To(wchar_t const* from, int radix)            { return static_cast<size_t>(::wcstoul(from, 0, radix)); }
+		static size_t To(std::string const& from, int radix)        { return static_cast<size_t>(::strtoul(from.c_str(), 0, radix)); }
+		static size_t To(std::wstring const& from, int radix)       { return static_cast<size_t>(::wcstoul(from.c_str(), 0, radix)); }
 	};
 }
 

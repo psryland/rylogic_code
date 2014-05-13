@@ -145,7 +145,7 @@ namespace pr
 		}
 		pr::m4x4 WorldToCamera() const
 		{
-			return GetInverseFast(m_c2w);
+			return InvertFast(m_c2w);
 		}
 
 		// Return a perspective projection transform
@@ -206,7 +206,7 @@ namespace pr
 			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
 
 			// Get the point in camera space and project into normalised screen space
-			pr::v4 cam = GetInverseFast(m_c2w) * world;
+			pr::v4 cam = InvertFast(m_c2w) * world;
 
 			pr::v4 point;
 			point.x = cam.x / (m_aspect * half_height);
@@ -283,7 +283,7 @@ namespace pr
 		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
 		pr::v2 ViewArea(float dist) const
 		{
-			auto h = pr::Tan(m_fovY * 0.5f);
+			auto h = 2.0f * pr::Tan(m_fovY * 0.5f);
 			return m_orthographic
 				? pr::v2::make(h * m_aspect, h)
 				: pr::v2::make(dist * h * m_aspect, dist * h);
@@ -399,7 +399,9 @@ namespace pr
 				m_focus_dist = m_base_focus_dist + dz;
 
 			// Translate
-			m_c2w.pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * pr::v4::make(dx, dy, dz, 0.0f);
+			auto pos = m_base_c2w.pos + cast_m3x4(m_base_c2w) * pr::v4::make(dx, dy, dz, 0.0f);
+			if (IsFinite(pos))
+				m_c2w.pos = pos;
 
 			// Apply non-camera relative locking
 			if (m_lock_mask && !m_lock_mask[camera::LockMask::CameraRelative])
@@ -485,7 +487,7 @@ namespace pr
 			m_base_c2w  = m_c2w;
 			m_base_fovY = m_fovY;
 			m_base_focus_dist = m_focus_dist;
-			pr::Orthonormalise(m_base_c2w);
+			m_base_c2w = pr::Orthonorm(m_base_c2w);
 		}
 
 		// Revert navigation back to the last commit
@@ -571,12 +573,12 @@ namespace pr
 			pr::v4 old_focus = FocusPoint();
 
 			// Find the axis of rotation
-			pr::v4 axis = IsAligned() ? pr::GetInverseFast(m_c2w) * m_align : m_c2w.y;
+			pr::v4 axis = IsAligned() ? pr::InvertFast(m_c2w) * m_align : m_c2w.y;
 
 			// Rotate the camera transform and reposition to look at the focus point
 			m_c2w     = m_c2w * Rotation4x4(axis, angle_rad, v4Origin);
 			m_c2w.pos = old_focus + m_focus_dist * m_c2w.z;
-			pr::Orthonormalise(m_c2w);
+			m_c2w     = pr::Orthonorm(m_c2w);
 
 			// Set the base values
 			if (commit)

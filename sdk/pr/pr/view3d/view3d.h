@@ -68,6 +68,17 @@ namespace view3d
 	typedef pr::ldr::LdrObject Object;
 	typedef pr::rdr::Texture2D Texture;
 	struct Drawset;
+
+	// View3D to custom type conversion.
+	// Specialise this to convert to/from View3D types to a custom type
+	template <typename TTo, typename TFrom> struct Convert
+	{
+		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
+	};
+	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
+	{
+		return Convert<TTo,TFrom>::To(from);
+	}
 }
 typedef view3d::Drawset* View3DDrawset;
 typedef view3d::Object*  View3DObject;
@@ -78,27 +89,27 @@ struct View3DV2
 	float x, y;
 
 	// Make convertable to/from any vector2 type with x,y members
-	template <typename T> static View3DV2 make(T const& t) { View3DV2 v = {t.x, t.y}; return v; }
-	template <typename T> View3DV2& operator = (T const& t) { x = t.x; y = t.y; return *this; }
-	template <typename T> operator T() const { return convert_to<T>(*this); }
+	template <typename T> static View3DV2 make(T const& t)    { return view3d::To<View3DV2>(t); }
+	template <typename T> View3DV2& operator = (T const& t)   { return *this = make(t); }
+	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
 };
 struct View3DV4
 {
 	float x, y, z, w;
 
 	// Make convertable to/from any vector4 type with x,y,z,w members
-	template <typename T> static View3DV4 make(T const& t) { View3DV4 v = {t.x, t.y, t.z, t.w}; return v; }
-	template <typename T> View3DV4& operator = (T const& t) { x = t.x; y = t.y; z = t.z; w = t.w; return *this; }
-	template <typename T> operator T() const { return convert_to<T>(*this); }
+	template <typename T> static View3DV4 make(T const& t)    { return view3d::To<View3DV4>(t); }
+	template <typename T> View3DV4& operator = (T const& t)   { return *this = make(t); }
+	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
 };
 struct View3DM4x4
 {
 	View3DV4 x, y, z, w;
 
 	// Make convertable to/from any matrix4x4 type with x,y,z,w vector members
-	template <typename T> static View3DM4x4 make(T const& t) { View3DM4x4 m = {View3DV4::make(t.x), View3DV4::make(t.y), View3DV4::make(t.z), View3DV4::make(t.w)}; return m; }
-	template <typename T> View3DM4x4& operator = (T const& t) { x = t.x; y = t.y; z = t.z; w = t.w; return *this; }
-	template <typename T> operator T() const { return convert_to<T>(*this); }
+	template <typename T> static View3DM4x4 make(T const& t)  { return view3d::To<View3DM4x4>(t); }
+	template <typename T> View3DM4x4& operator = (T const& t) { return *this = make(t); }
+	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
 };
 struct View3DBBox
 {
@@ -106,9 +117,9 @@ struct View3DBBox
 	View3DV4 radius;
 
 	// Make convertable to/from any bounding box type with m_centre/m_radius vector members
-	template <typename T> static View3DBBox make(T const& t) { View3DBBox bb = {View3DV4::make(t.m_centre), View3DV4::make(t.m_radius)}; return bb; }
-	template <typename T> View3DBBox& operator = (T const& t) { centre = t.m_centre; radius = t.m_radius; return *this; }
-	template <typename T> operator T() const { return convert_to<T>(*this); }
+	template <typename T> static View3DBBox make(T const& t)  { return view3d::To<View3DBBox>(t); }
+	template <typename T> View3DBBox& operator = (T const& t) { return *this = make(t); }
+	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
 };
 struct View3DVertex
 {
@@ -134,9 +145,9 @@ struct View3DLight
 	BOOL         m_on;
 	View3DV4     m_position;
 	View3DV4     m_direction;
-	pr::Colour32 m_ambient;
-	pr::Colour32 m_diffuse;
-	pr::Colour32 m_specular;
+	View3DColour m_ambient;
+	View3DColour m_diffuse;
+	View3DColour m_specular;
 	float        m_specular_power;
 	float        m_inner_cos_angle;
 	float        m_outer_cos_angle;

@@ -95,30 +95,29 @@ namespace pr
 	{
 		return !FEql(Determinant(m), 0.0f);
 	}
-	inline m2x2& Inverse(m2x2& m)
+	inline m2x2 Invert(m2x2 const& mat_)
 	{
-		float det = Determinant(m); assert(det != 0.0f && "Matrix is singular");
+		float det = Determinant(mat_);
+		assert(det != 0.0f && "Matrix is singular");
 		float inv_det = 1.0f / det;
-		float xx = m.x.x; m.x.x =  inv_det * m.y.y; m.y.y =  inv_det * xx;
-		float xy = m.x.y; m.x.y = -inv_det * m.y.x; m.y.x = -inv_det * xy;
-		return m;
+		
+		m2x2 mat;
+		mat.x.x =  inv_det * mat_.y.y;
+		mat.x.y = -inv_det * mat_.y.x;
+		mat.y.y =  inv_det * mat_.x.x;
+		mat.y.x = -inv_det * mat_.x.y;
+		return mat;
 	}
-	inline m2x2& InverseFast(m2x2& m)
+	inline m2x2 InvertFast(m2x2 const& mat_)
 	{
-		assert(FEql(Determinant(m) ,1.0f) && "Matrix is not pure rotation");
-		float xx = m.x.x; m.x.x =  m.y.y; m.y.y =  xx;
-		float xy = m.x.y; m.x.y = -m.y.x; m.y.x = -xy;
-		return m;
-	}
-	inline m2x2 GetInverse(m2x2 const& m)
-	{
-		m2x2 m_ = m;
-		return Inverse(m_);
-	}
-	inline m2x2 GetInverseFast(m2x2 const& m)
-	{
-		m2x2 m_ = m;
-		return InverseFast(m_);
+		assert(FEql(Determinant(mat_) ,1.0f) && "Matrix is not pure rotation");
+		
+		m2x2 mat;
+		mat.x.x =  mat_.y.y;
+		mat.x.y = -mat_.y.x;
+		mat.y.y =  mat_.x.x;
+		mat.y.x = -mat_.x.y;
+		return mat;
 	}
 }
 

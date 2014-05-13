@@ -25,7 +25,7 @@ namespace pr
 			D3DPtr<ID3D11ShaderResourceView> m_srv;       // A shader resource view of the texture
 			D3DPtr<ID3D11SamplerState>       m_samp;      // The sampler state to use with this texture
 			RdrId                            m_id;        // Id for this texture in the texture managers lookup map
-			RdrId                            m_src_id;    // An id identifying the source this texture was created from (needed when deleting the last ref to a d3d tex)
+			RdrId                            m_src_id;    // An id identifying the source this texture was created from (needed when deleting the last ref to a dx tex)
 			SortKeyId                        m_sort_id;   // A sort key component for this texture
 			bool                             m_has_alpha; // True if the texture contains alpha pixels
 			TextureManager*                  m_mgr;       // The texture manager that created this texture

@@ -25,7 +25,7 @@ void pr::ph::SphereVsCylinder(Shape const& sphere, m4x4 const& a2w, Shape const&
 	PR_EXPAND(PR_DBG_SPH_CYL_COLLISION, StringToFile(str, "C:/Deleteme/collision_spherecylinder.pr_script"); str.clear());
 	
 	// Get a transform for the sphere in cylinder space
-	m4x4 a2b = GetInverseFast(b2w) * a2w;
+	m4x4 a2b = InvertFast(b2w) * a2w;
 	v4 const& sphere_pos = a2b.pos; // sphere position in cylinder space
 	float height = Abs(sphere_pos.y);
 

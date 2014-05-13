@@ -7,7 +7,7 @@
 #ifndef PR_RDR_SHADER_GBUFFER_CBUF_HLSL
 #define PR_RDR_SHADER_GBUFFER_CBUF_HLSL
 
-#include "..\cbuf.hlsli"
+#include "../cbuf.hlsli"
 
 // Camera to world transform
 cbuffer CBufCamera :cbuf_bank(b0)

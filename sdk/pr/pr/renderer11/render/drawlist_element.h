@@ -12,7 +12,6 @@ namespace pr
 	{
 		struct DrawListElement
 		{
-			BaseShader*         m_shader;   // The shader used to render this dle
 			SortKey             m_sort_key; // The key for this element (not necessarily the same as nugget->m_sortkey)
 			Nugget const*       m_nugget;   // The geometry nugget to draw
 			BaseInstance const* m_instance; // The instance of the model that 'm_nugget' belongs to

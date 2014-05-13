@@ -32,6 +32,15 @@ namespace pr
 			// The world space position of the camera focus point
 			pr::v4 FocusPoint() const { return m_c2w.pos - m_c2w.z * m_centre_dist; }
 
+			// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
+			pr::v2 ViewArea(float dist) const
+			{
+				auto h = 2.0f * pr::Tan(m_fovY * 0.5f);
+				return m_orthographic
+					? pr::v2::make(h * m_aspect, h)
+					: pr::v2::make(dist * h * m_aspect, dist * h);
+			}
+
 			// Update the camera to screen projection transform
 			void UpdateCameraToScreen();
 

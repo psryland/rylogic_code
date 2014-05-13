@@ -17,15 +17,17 @@ namespace pr
 	namespace rdr
 	{
 		// Setup the input assembler
-		void SetupIA(StateStack::State& current, StateStack::State& pending, D3DPtr<ID3D11DeviceContext>& dc, bool force)
+		void SetupIA(DeviceState& current, DeviceState& pending, D3DPtr<ID3D11DeviceContext>& dc, bool force)
 		{
 			// Render nugget v/i ranges are relative to the model buffer, not the model
 			// so when we set the v/i buffers we don't need any offsets, the offsets are
 			// provided to the DrawIndexed() call
 
 			// Set the input vertex format
-			if (current.m_iplayout != pending.m_iplayout || force)
-				dc->IASetInputLayout(pending.m_iplayout.m_ptr);
+			auto current_vs = current.m_shdrs.find(EShaderType::VS);
+			auto pending_vs = pending.m_shdrs.find(EShaderType::VS);
+			if (current_vs != pending_vs || force)
+				dc->IASetInputLayout(pending_vs ? pending_vs->m_iplayout.m_ptr : nullptr);
 
 			// Bind the v/i buffer to the IA
 			if (current.m_mb != pending.m_mb || force)
@@ -53,7 +55,7 @@ namespace pr
 		}
 
 		// Setup render states
-		void SetupRS(StateStack::State& current, StateStack::State& pending, D3DPtr<ID3D11DeviceContext>& dc, pr::Renderer& rdr, bool force)
+		void SetupRS(DeviceState& current, DeviceState& pending, D3DPtr<ID3D11DeviceContext>& dc, pr::Renderer& rdr, bool force)
 		{
 			// Set the depth buffering states
 			if (current.m_dsb != pending.m_dsb || force)
@@ -78,43 +80,32 @@ namespace pr
 		}
 
 		// Setup a shader
-		void SetupShdr(StateStack::State& current, StateStack::State& pending, D3DPtr<ID3D11DeviceContext>& dc, bool force)
+		void SetupShdrs(DeviceState& current, DeviceState& pending, D3DPtr<ID3D11DeviceContext>& dc, bool force)
 		{
-			if (current.m_shdr != pending.m_shdr || force)
+			if (current.m_shdrs != pending.m_shdrs || force)
 			{
-				if (current.m_shdr != nullptr)
-					current.m_shdr->Cleanup(dc);
+				for (auto& s : current.m_shdrs)
+					s->Cleanup(dc);
 
-				if (pending.m_shdr != nullptr)
-				{
-					dc->VSSetShader(pending.m_shdr->m_vs.m_ptr, nullptr, 0);
-					dc->PSSetShader(pending.m_shdr->m_ps.m_ptr, nullptr, 0);
-					dc->GSSetShader(pending.m_shdr->m_gs.m_ptr, nullptr, 0);
-					dc->HSSetShader(pending.m_shdr->m_hs.m_ptr, nullptr, 0);
-					dc->DSSetShader(pending.m_shdr->m_ds.m_ptr, nullptr, 0);
-				}
-				else
-				{
-					dc->VSSetShader(nullptr, nullptr, 0);
-					dc->PSSetShader(nullptr, nullptr, 0);
-					dc->GSSetShader(nullptr, nullptr, 0);
-					dc->HSSetShader(nullptr, nullptr, 0);
-					dc->DSSetShader(nullptr, nullptr, 0);
-				}
+				dc->VSSetShader(pending.m_shdrs.find_dx<EShaderType::VS>().m_ptr, nullptr, 0);
+				dc->HSSetShader(pending.m_shdrs.find_dx<EShaderType::HS>().m_ptr, nullptr, 0);
+				dc->DSSetShader(pending.m_shdrs.find_dx<EShaderType::DS>().m_ptr, nullptr, 0);
+				dc->GSSetShader(pending.m_shdrs.find_dx<EShaderType::GS>().m_ptr, nullptr, 0);
+				dc->PSSetShader(pending.m_shdrs.find_dx<EShaderType::PS>().m_ptr, nullptr, 0);
 			}
 
-			// Always call setup on the pending shader even if it hasn't changed
-			// It still needs to change per-model constants
-			if (pending.m_shdr != nullptr)
-				pending.m_shdr->Setup(dc, *pending.m_dle, *pending.m_rstep);
+			// Always call setup on the pending shaders even if they haven't changed
+			// They may have per-nugget setup to do
+			for (auto& s : pending.m_shdrs)
+				s->Setup(dc, pending);
 		}
 
 		// Apply the current state to the device
-		void ApplyState(StateStack::State& current, StateStack::State& pending, D3DPtr<ID3D11DeviceContext>& dc, pr::Renderer& rdr, bool force = false)
+		void ApplyState(DeviceState& current, DeviceState& pending, D3DPtr<ID3D11DeviceContext>& dc, pr::Renderer& rdr, bool force = false)
 		{
 			SetupIA(current, pending, dc, force);
 			SetupRS(current, pending, dc, rdr, force);
-			SetupShdr(current, pending, dc, force);
+			SetupShdrs(current, pending, dc, force);
 
 			current = pending;
 		}
@@ -141,16 +132,15 @@ namespace pr
 		}
 
 		// Default state
-		StateStack::State::State()
+		DeviceState::DeviceState()
 			:m_rstep()
 			,m_dle()
-			,m_iplayout()
 			,m_mb()
 			,m_topo(EPrim::PointList)
 			,m_dsb()
 			,m_rsb()
 			,m_bsb()
-			,m_shdr()
+			,m_shdrs()
 		{}
 
 		// State stack frame for a render step
@@ -164,10 +154,23 @@ namespace pr
 		StateStack::DleFrame::DleFrame(StateStack& ss, DrawListElement const& dle)
 			:Frame(ss)
 		{
+			// Save the dle
 			m_ss.m_pending.m_dle = &dle;
 
+			// Get the shaders involved
+			m_ss.m_pending.m_shdrs.clear();
+			for (auto& shdr : dle.m_nugget->m_sset)
+			{
+				if (!shdr->IsUsedBy(m_ss.m_pending.m_rstep->GetId())) continue;
+				m_ss.m_pending.m_shdrs.push_back(shdr);
+			}
+			
+			// Sort them into execution order so the render states get merged in a fixed order
+			std::sort(std::begin(m_ss.m_pending.m_shdrs), std::end(m_ss.m_pending.m_shdrs), [](ShaderPtr lhs,ShaderPtr rhs){ return lhs->m_shdr_type < rhs->m_shdr_type; });
+			PR_ASSERT(PR_DBG_RDR, m_ss.m_pending.m_shdrs.find(EShaderType::VS) != nullptr, "Nugget has no vertex shader");
+			PR_ASSERT(PR_DBG_RDR, m_ss.m_pending.m_shdrs.find(EShaderType::PS) != nullptr, "Nugget has no pixel shader");
+
 			// IA states
-			m_ss.m_pending.m_iplayout = dle.m_shader->m_iplayout;
 			m_ss.m_pending.m_mb       = dle.m_nugget->m_model_buffer;
 			m_ss.m_pending.m_topo     = dle.m_nugget->m_topo;
 
@@ -177,7 +180,8 @@ namespace pr
 
 			// DS states
 			DSBlock dsb;                          // Combine states in priority order
-			dsb  = dle.m_shader->m_dsb;           // default states from the shader
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				dsb |= s->m_dsb;                  // default states from the shaders
 			dsb |= dle.m_nugget->m_dsb;           // default states from the model nugget
 			if (m_ss.m_pending.m_rstep)           // render step state overrides
 				dsb |= m_ss.m_pending.m_rstep->m_dsb;
@@ -187,7 +191,8 @@ namespace pr
 
 			// RS states
 			RSBlock rsb;                          // Combine states in priority order
-			rsb  = dle.m_shader->m_rsb;           // default states from the shader
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				rsb |= s->m_rsb;                  // default states from the shader
 			rsb |= dle.m_nugget->m_rsb;           // default states from the model nugget
 			if (m_ss.m_pending.m_rstep)           // render step state overrides
 				rsb |= m_ss.m_pending.m_rstep->m_rsb;
@@ -197,16 +202,14 @@ namespace pr
 
 			// BS states
 			BSBlock bsb;                          // Combine states in priority order
-			bsb  = dle.m_shader->m_bsb;           // default states from the shader
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				bsb |= s->m_bsb;                  // default states from the shader
 			bsb |= dle.m_nugget->m_bsb;           // default states from the draw method
 			if (m_ss.m_pending.m_rstep)           // render step state overrides
 				bsb |= m_ss.m_pending.m_rstep->m_bsb;
 			if (inst_bsb)                         // instance specific overrides
 				bsb |= *inst_bsb;
 			m_ss.m_pending.m_bsb = bsb;
-
-			// Shader
-			m_ss.m_pending.m_shdr = dle.m_shader;
 		}
 	}
 }

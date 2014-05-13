@@ -4,6 +4,7 @@
 //***********************************************
 #ifndef PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
 #define PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
+#if SHADER_BUILD
 
 float LightDirectional(in float4 ws_light_direction, in float4 ws_norm, in float alpha)
 {
@@ -62,4 +63,5 @@ float4 Illuminate(float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_dif
 	return saturate(2.0*(ltdiff-0.5)*unlit_diff + ltspec + unlit_diff);
 }
 
+#endif
 #endif

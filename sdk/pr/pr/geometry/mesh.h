@@ -47,7 +47,7 @@ namespace pr
 			ColourRepeater col(colours, num_colours, num_verts, pr::Colour32White);
 
 			// Normal iterator wrapper
-			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4YAxis);
+			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4Zero);
 
 			// UV iterator wrapper
 			auto uv = pr::CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, pr::v2Zero);

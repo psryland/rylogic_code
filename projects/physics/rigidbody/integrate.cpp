@@ -96,7 +96,7 @@ void pr::ph::Evolve(Rigidbody& rb, float elapsed_seconds)
 		break;
 	}
 	// May not need to do this every step...
-	Orthonormalise(rb.m_object_to_world);
+	rb.m_object_to_world = Orthonorm(rb.m_object_to_world);
 	
 #if PR_PH_TEST_ANGULAR == 1
 	PR_EXPAND(PR_PH_TEST_ANGULAR, float new_ak = rb.AngularKineticEnergy();)

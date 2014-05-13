@@ -5,6 +5,7 @@
 
 #include "stdafx.h"
 #include "pr/view3d/view3d.h"
+#include "pr/view3d/prmaths.h"
 #include "view3d/renderer_instance.h"
 
 using namespace view3d;
@@ -102,16 +103,6 @@ typedef std::lock_guard<std::recursive_mutex> LockGuard;
 static std::shared_ptr<DllData> g_dll = nullptr;
 inline DllData&          Dll() { return *g_dll; }
 inline RendererInstance& Rdr() { return g_dll->m_rdr; }
-
-// View3D to pr:: math type conversions
-template <typename T> T convert_to(View3DV2 const& v);
-template <typename T> T convert_to(View3DV4 const& v);
-template <typename T> T convert_to(View3DM4x4 const& m);
-template <typename T> T convert_to(View3DBBox const& bb);
-template <> pr::v2   convert_to(View3DV2 const& v)    { return pr::v2::make(v.x, v.y); }
-template <> pr::v4   convert_to(View3DV4 const& v)    { return pr::v4::make(v.x, v.y, v.z, v.w); }
-template <> pr::m4x4 convert_to(View3DM4x4 const& m)  { return pr::m4x4::make(convert_to<pr::v4>(m.x), m.y, m.z, m.w); }
-template <> pr::BBox convert_to(View3DBBox const& bb) { return pr::BBox::make(bb.centre, bb.radius); }
 
 #define LOCK_GUARD LockGuard lock(Dll().m_mutex)
 

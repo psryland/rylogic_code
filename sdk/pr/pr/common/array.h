@@ -882,6 +882,24 @@ namespace pr
 			return ArrayType(begin(), end());
 		}
 	};
+
+	// Operators
+	template <typename T1,int L1,bool F1,typename A1, typename T2,int L2,bool F2,typename A2> 
+	inline bool operator == (Array<T1,L1,F1,A1> const& lhs, Array<T2,L2,F2,A2> const& rhs)
+	{
+		if (lhs.size() != rhs.size()) return false;
+		auto lptr = std::begin(lhs);
+		auto rptr = std::begin(rhs);
+		for (auto n = lhs.size(); n-- != 0;)
+			if (!(*lptr == *rptr)) return false;
+		
+		return true;
+	}
+	template <typename T1,int L1,bool F1,typename A1, typename T2,int L2,bool F2,typename A2> 
+	inline bool operator != (Array<T1,L1,F1,A1> const& lhs, Array<T2,L2,F2,A2> const& rhs)
+	{
+		return !(lhs == rhs);
+	}
 }
 
 #if PR_UNITTESTS

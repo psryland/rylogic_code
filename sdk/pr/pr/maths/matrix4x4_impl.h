@@ -279,11 +279,13 @@ namespace pr
 #endif
 	}
 
+	// Returns the sum of the first 3 diagonal elements of 'mat'
 	inline float Trace3(m4x4 const& mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z;
 	}
 
+	// Returns the sum of the diagonal elements of 'mat'
 	inline float Trace4(m4x4 const& mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z + mat.w.w;
@@ -333,6 +335,7 @@ namespace pr
 		return Transpose3x3(m);
 	}
 
+	// Returns 'mat' with no translation component
 	inline m4x4 GetRotation(m4x4 const& mat)
 	{
 		m4x4 m = mat;
@@ -340,14 +343,16 @@ namespace pr
 		return m;
 	}
 
+	// True if 'mat' has an inverse
 	inline bool IsInvertable(m4x4 const& mat)
 	{
 		return !FEql(Determinant4(mat), 0.0f);
 	}
 
 	// Invert this matrix
-	inline m4x4& Inverse(m4x4& mat)
+	inline m4x4 Invert(m4x4 const& mat_)
 	{
+		m4x4 mat = mat_;
 #if PR_MATHS_USE_DIRECTMATH
 		v4 det;
 		dxv4(det) = DirectX::XMMatrixDeterminant(dxm4(mat));
@@ -402,39 +407,27 @@ namespace pr
 #endif
 		return mat;
 	}
-	inline m4x4 GetInverse(m4x4 const& mat)
-	{
-		m4x4 m = mat;
-		return Inverse(m);
-	}
 
 	// Find the inverse of this matrix. It must be orthonormal
-	inline m4x4& InverseFast(m4x4& mat)
+	inline m4x4 InvertFast(m4x4 const& mat_)
 	{
-		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");
-		v4 translation = mat.pos;
-		Transpose3x3(mat);
-		mat.pos.x = -(translation.x * mat.x.x + translation.y * mat.y.x + translation.z * mat.z.x);
-		mat.pos.y = -(translation.x * mat.x.y + translation.y * mat.y.y + translation.z * mat.z.y);
-		mat.pos.z = -(translation.x * mat.x.z + translation.y * mat.y.z + translation.z * mat.z.z);
+		assert(IsOrthonormal(mat_) && "Matrix is not orthonormal");
+		m4x4 mat = GetTranspose3x3(mat_);
+		mat.pos.x = -Dot3(mat_.x, mat_.pos);
+		mat.pos.y = -Dot3(mat_.y, mat_.pos);
+		mat.pos.z = -Dot3(mat_.z, mat_.pos);
 		return mat;
-	}
-
-	// Return the inverse of this matrix. It must be orthonormal
-	inline m4x4 GetInverseFast(m4x4 const& mat)
-	{
-		m4x4 m = mat;
-		return InverseFast(m);
 	}
 
 	// Orthonormalises the rotation component of the matrix
-	inline m4x4& Orthonormalise(m4x4& mat)
+	inline m4x4 Orthonorm(m4x4 const& mat)
 	{
-		mat.x = Normalise3(mat.x);
-		mat.y = Normalise3(Cross3(mat.z, mat.x));
-		mat.z = Cross3(mat.x, mat.y);
-		assert(IsOrthonormal(mat));
-		return mat;
+		m4x4 m = mat;
+		m.x = Normalise3(m.x);
+		m.y = Normalise3(Cross3(m.z, m.x));
+		m.z = Cross3(m.x, m.y);
+		assert(IsOrthonormal(m));
+		return m;
 	}
 
 	// Return true if this matrix is orthonormal
@@ -729,8 +722,8 @@ namespace pr
 		m4x4 Z = m4x4Identity;  // Converges to mat^-0.5
 		for (int i = 0; i != 10; ++i)
 		{
-			m4x4 Y_next = 0.5 * (Y + GetInverse(Z));
-			m4x4 Z_next = 0.5 * (Z + GetInverse(Y));
+			m4x4 Y_next = 0.5 * (Y + Invert(Z));
+			m4x4 Z_next = 0.5 * (Z + Invert(Y));
 			Y = Y_next;
 			Z = Z_next;
 		}
@@ -793,25 +786,15 @@ namespace pr
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{//m4x4CreateFrom3
-				m4x4 a2b; a2b.set(Random3N(0.0f), rand::fltc(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
-				a2b = m4x4::make(
-					v4::make(0.58738488f,  0.60045743f,  0.54261398f, 0.0f),
-					v4::make(-0.47383153f,  0.79869330f, -0.37090793f, 0.0f),
-					v4::make(-0.65609658f, -0.03924191f,  0.75365603f, 0.0f),
-					v4::make(0.09264841f,  6.84435890f,  3.09618950f, 1.0f));
-
-				m4x4 b2a;           b2a = GetInverse(a2b);
-				m4x4 b2a_2 = a2b;   Inverse(b2a_2);
-				PR_CHECK(FEql(b2a, b2a_2), true);
-
-				m4x4 a2a = b2a * a2b; a2a;
+				m4x4 a2b;
+				a2b.set(Random3N(0.0f), rand::fltc(0.0f,1.0f), Random3(0.0f, 10.0f, 1.0f));
+				
+				m4x4 b2a = Invert(a2b);
+				m4x4 a2a = b2a * a2b;
 				PR_CHECK(FEql(m4x4Identity, a2a), true);
 
-				m4x4 b2a_fast = GetInverseFast(a2b); b2a_fast;
-				m4x4 b2a_fast_2 = a2b; InverseFast(b2a_fast_2);
-
+				m4x4 b2a_fast = InvertFast(a2b);
 				PR_CHECK(FEql(b2a_fast, b2a), true);
-				PR_CHECK(FEql(b2a_fast, b2a_fast_2), true);
 			}
 			{//m4x4Orthonormalise
 				m4x4 a2b;
@@ -819,7 +802,7 @@ namespace pr
 				a2b.y.set(4.0f,-1.0f, 2.0f, 0.0f);
 				a2b.z.set(1.0f,-2.0f, 4.0f, 0.0f);
 				a2b.w.set(1.0f, 2.0f, 3.0f, 1.0f);
-				PR_CHECK(IsOrthonormal(Orthonormalise(a2b)), true);
+				PR_CHECK(IsOrthonormal(Orthonorm(a2b)), true);
 			}
 		}
 	}

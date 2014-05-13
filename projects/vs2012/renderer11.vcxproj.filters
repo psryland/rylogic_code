@@ -34,12 +34,6 @@
     <Filter Include="steps">
       <UniqueIdentifier>{ed9c7a8f-f5fd-4478-99e0-000bbe24051b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="steps\forward">
-      <UniqueIdentifier>{a78ed2f2-207d-44cb-8685-367736de1877}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="steps\deferred">
-      <UniqueIdentifier>{4884a8b0-2dbe-4ef8-aaf1-5078c1fd77ca}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\hlsl">
       <UniqueIdentifier>{ac2023af-8753-474e-8e51-b83cc0f5c4a7}</UniqueIdentifier>
     </Filter>
@@ -49,13 +43,10 @@
     <Filter Include="shaders\hlsl\deferred">
       <UniqueIdentifier>{18cc3075-d6e7-45c4-b3ef-4e500afbd89e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="steps\shadow">
-      <UniqueIdentifier>{caca1f9d-cf0e-4778-863c-1d56746735ba}</UniqueIdentifier>
-    </Filter>
     <Filter Include="shaders\hlsl\shadow">
       <UniqueIdentifier>{d679b4db-6cbe-41e9-88e9-5fd593c061d1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="shaders\hlsl\gui">
+    <Filter Include="shaders\hlsl\screenspace">
       <UniqueIdentifier>{5e0e9d84-d090-4b5f-a8a3-d92dfc76e305}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -124,9 +115,6 @@
       <Filter>render</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h">
-      <Filter>shaders</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h">
       <Filter>shaders</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\texture2d.h">
@@ -222,32 +210,35 @@
     <ClInclude Include="..\renderer11\render\state_stack.h">
       <Filter>render</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer11\steps\common.h">
-      <Filter>steps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\renderer11\steps\deferred\ds_shader.h">
-      <Filter>steps\deferred</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\render_step.h">
       <Filter>steps</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward\forward_render.h">
-      <Filter>steps\forward</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\dslighting.h">
-      <Filter>steps\deferred</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\deferred\gbuffer.h">
-      <Filter>steps\deferred</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\shadow\shadow_map.h">
-      <Filter>steps\shadow</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\input_layout.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\renderer11\steps\forward\fwd_shader.h">
-      <Filter>steps\forward</Filter>
+    <ClInclude Include="..\renderer11\shaders\common.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\dslighting.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward_render.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\gbuffer.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\shadow_map.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_set.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\thick_line.h">
+      <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -279,9 +270,6 @@
       <Filter>util</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp">
-      <Filter>shaders</Filter>
-    </ClCompile>
-    <ClCompile Include="..\renderer11\shaders\shader.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
     <ClCompile Include="..\renderer11\textures\texture2d.cpp">
@@ -362,37 +350,40 @@
     <ClCompile Include="..\renderer11\steps\render_step.cpp">
       <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\forward\forward_render.cpp">
-      <Filter>steps\forward</Filter>
+    <ClCompile Include="..\renderer11\steps\dslighting.cpp">
+      <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\deferred\ds_shader.cpp">
-      <Filter>steps\deferred</Filter>
+    <ClCompile Include="..\renderer11\steps\forward_render.cpp">
+      <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\deferred\dslighting_shader.cpp">
-      <Filter>steps\deferred</Filter>
+    <ClCompile Include="..\renderer11\steps\gbuffer.cpp">
+      <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\deferred\dslighting.cpp">
-      <Filter>steps\deferred</Filter>
+    <ClCompile Include="..\renderer11\steps\shadow_map.cpp">
+      <Filter>steps</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\deferred\gbuffer_shader.cpp">
-      <Filter>steps\deferred</Filter>
+    <ClCompile Include="..\renderer11\shaders\dslighting_shader.cpp">
+      <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\deferred\gbuffer.cpp">
-      <Filter>steps\deferred</Filter>
+    <ClCompile Include="..\renderer11\shaders\fwd_shader.cpp">
+      <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\shadow\shadow_map.cpp">
-      <Filter>steps\shadow</Filter>
+    <ClCompile Include="..\renderer11\shaders\gbuffer_shader.cpp">
+      <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\steps\forward\fwd_shader.cpp">
-      <Filter>steps\forward</Filter>
+    <ClCompile Include="..\renderer11\shaders\shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\shaders\thick_line.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\shaders\shader_set.cpp">
+      <Filter>shaders</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">
       <Filter>directxtex</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli">
-      <Filter>shaders\hlsl\forward</Filter>
     </None>
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
       <Filter>shaders\hlsl\deferred</Filter>
@@ -415,6 +406,9 @@
     <None Include="..\renderer11\shaders\hlsl\inout.hlsli">
       <Filter>shaders\hlsl</Filter>
     </None>
+    <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
@@ -429,8 +423,11 @@
     <CustomBuild Include="..\renderer11\shaders\hlsl\forward\forward.hlsl">
       <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\thick_line.hlsl">
-      <Filter>shaders\hlsl\gui</Filter>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linelist.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linestrip.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

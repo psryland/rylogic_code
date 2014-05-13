@@ -10,20 +10,8 @@ using pr.extn;
 
 namespace pr.container
 {
-	[Flags] public enum ListChg
-	{
-		Reset       = 1 << 0,
-		Reordered   = 1 << 1,
-		ItemAdded   = 1 << 2,
-		ItemRemoved = 1 << 3,
-		ItemChanged = 1 << 4,
-
-		ItemAddedOrRemoved = ItemAdded|ItemRemoved,
-		OrderChanged = ItemAdded|ItemRemoved|Reordered|Reset,
-	}
-
 	// List wrapper with events
-	public class ListEvt<T> :List<T> ,IList<T> ,IList
+	[Obsolete("using binding list instead")] public class ListEvt<T> :List<T> ,IList<T> ,IList
 	{
 		public ListEvt() {}
 		public ListEvt(int capacity) :base(capacity) {}

@@ -121,20 +121,29 @@ namespace pr
 		// Construct a standard sort key for a render nugget
 		inline pr::rdr::SortKey MakeSortKey(NuggetProps const& ddata)
 		{
+			(void)ddata;
 			bool alpha = false;
 
+			// Make a sort key that is the same for all nuggets with the  same shaders and same state
 			SortKey key = 0;
-			if (ddata.m_shader)
-			{
-				key |= ddata.m_shader->m_sort_id << sortkey::ShaderIdOfs;
-				PR_ASSERT(PR_DBG_RDR, ddata.m_shader->m_sort_id < sortkey::MaxShaderId, "shader sort id overflow");
-			}
-			if (ddata.m_tex_diffuse)
-			{
-				key   |= ddata.m_tex_diffuse->m_sort_id << sortkey::TextureIdOfs;
-				alpha |= ddata.m_tex_diffuse->m_has_alpha;
-				PR_ASSERT(PR_DBG_RDR, ddata.m_tex_diffuse->m_sort_id < sortkey::MaxTextureId, "texture sort id overflow");
-			}
+			//if (ddata.m_sset.m_vs != nullptr)
+			//{
+			//	key ^= ddata.m_sset.m_vs->m_sort_id;
+			//}
+
+
+//todo
+			//if (ddata.m_shader)
+			//{
+			//	key |= ddata.m_shader->m_sort_id << sortkey::ShaderIdOfs;
+			//	PR_ASSERT(PR_DBG_RDR, ddata.m_shader->m_sort_id < sortkey::MaxShaderId, "shader sort id overflow");
+			//}
+			//if (ddata.m_tex_diffuse)
+			//{
+			//	key   |= ddata.m_tex_diffuse->m_sort_id << sortkey::TextureIdOfs;
+			//	alpha |= ddata.m_tex_diffuse->m_has_alpha;
+			//	PR_ASSERT(PR_DBG_RDR, ddata.m_tex_diffuse->m_sort_id < sortkey::MaxTextureId, "texture sort id overflow");
+			//}
 
 			//rs::State const* rsb = mat.m_rsb.Find(D3DRS_ALPHABLENDENABLE);
 			//if (rsb && rsb->m_state == TRUE)

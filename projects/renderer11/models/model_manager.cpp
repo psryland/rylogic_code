@@ -20,7 +20,7 @@ namespace pr
 			,m_alex_nugget(Allocator<Nugget>(mem))
 			,m_device     (device)
 		{
-			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null d3d device");
+			PR_ASSERT(PR_DBG_RDR, m_device != 0, "Null directx device");
 
 			// Create stock models
 			CreateStockModels();

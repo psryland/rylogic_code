@@ -19,7 +19,7 @@ namespace pr
 			static pr::m4x4 MakeTransform(pr::v4 const& eye, pr::v4 const& at, pr::v4 const& up, float aspect, float fovY, float Znear, float Zfar, bool orthographic)
 			{
 				// world to projection origin
-				auto w2pt = pr::GetInverseFast(pr::LookAt(eye, at, up));
+				auto w2pt = pr::InvertFast(pr::LookAt(eye, at, up));
 
 				// Projection transform
 				float height = 2.0f * pr::Tan(fovY * 0.5f); // Ortho transform => height is calculated at '1' from the 'eye'

@@ -19,12 +19,13 @@ namespace pr
 		{
 			typedef pr::Array<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>> TDrawList;
 
-			Scene*    m_scene;       // The scene this render step is owned by
-			TDrawList m_drawlist;    // The drawlist for this render step
-			bool      m_sort_needed; // True when the list needs sorting
-			BSBlock   m_bsb;         // Blend states
-			RSBlock   m_rsb;         // Raster states
-			DSBlock   m_dsb;         // Depth buffer states
+			Scene*         m_scene;       // The scene this render step is owned by
+			ShaderManager* m_shdr_mgr;    // Convenience pointer to the shader manager
+			TDrawList      m_drawlist;    // The drawlist for this render step
+			bool           m_sort_needed; // True when the list needs sorting
+			BSBlock        m_bsb;         // Blend states
+			RSBlock        m_rsb;         // Raster states
+			DSBlock        m_dsb;         // Depth buffer states
 
 			RenderStep(Scene& scene);
 			virtual ~RenderStep() {}
@@ -59,7 +60,11 @@ namespace pr
 		protected:
 
 			// Add model nuggets to the draw list for this render step
-			virtual void AddNuggets(BaseInstance const& inst, TNuggetChain const& nuggets) = 0;
+			// The nuggets contain model specific data (such as diffuse texture) as well as
+			// a collection of shader instances (each containing shader specific data such
+			// as projection texture, line width, etc). This method needs to ensure the
+			// nugget's shader collection contains the appropriate shaders.
+			virtual void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) = 0;
 
 			// Dervied render steps perform their action
 			virtual void ExecuteInternal(StateStack& ss) = 0;

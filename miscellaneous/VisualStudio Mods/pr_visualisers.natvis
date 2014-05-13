@@ -112,7 +112,7 @@
 	</Type>
 
 	<!-- Renderer11 -->
-	<Type Name="pr::rdr::BaseShader">
+	<Type Name="pr::rdr::ShaderBase">
 		<DisplayString>{m_name}</DisplayString>
 	</Type>
 	<Type Name="pr::rdr::Model">

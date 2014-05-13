@@ -38,8 +38,8 @@ namespace pr
 
 				ShapePolytope const& polyA = shape_cast<ShapePolytope>(shapeA);
 				ShapePolytope const& polyB = shape_cast<ShapePolytope>(shapeB);
-				m3x4 w2a = GetInverseFast(cast_m3x4(a2w));
-				m3x4 w2b = GetInverseFast(cast_m3x4(b2w));
+				m3x4 w2a = InvertFast(cast_m3x4(a2w));
+				m3x4 w2b = InvertFast(cast_m3x4(b2w));
 
 			//	if( a2w.pos == b2w.pos ) return false;
 

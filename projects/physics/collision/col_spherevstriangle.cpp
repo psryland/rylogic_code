@@ -21,7 +21,7 @@ void pr::ph::SphereVsTriangle(Shape const& sphere, m4x4 const& a2w, Shape const&
 	ShapeTriangle const& triangle_shape = shape_cast<ShapeTriangle>(triangle);
 
 	// Get the sphere in triangle space
-	v4 pos = GetInverseFast(b2w) * a2w.pos;
+	v4 pos = InvertFast(b2w) * a2w.pos;
 
 	// Find the closest point on the triangle to the sphere
 	v4 a = triangle_shape.m_v.x; a.w = 1.0f;

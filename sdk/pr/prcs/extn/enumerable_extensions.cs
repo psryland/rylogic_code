@@ -64,6 +64,68 @@ namespace pr.extn
 			return source.Skip(1).All(x => comparer.Equals(first, selector(x)));
 		}
 
+		/// <summary>Returns the maximum element based on 'selector'</summary>
+		public static TSource MaxBy<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
+		{
+			return source.MaxBy(selector, Comparer<TKey>.Default);
+		}
+		
+		/// <summary>Returns the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
+		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer)
+		{
+			if (source   == null) throw new ArgumentNullException("source");
+			if (selector == null) throw new ArgumentNullException("selector");
+			if (comparer == null) throw new ArgumentNullException("comparer");
+			using (var src_iter = source.GetEnumerator())
+			{
+				if (!src_iter.MoveNext())
+					throw new InvalidOperationException("Sequence contains no elements");
+				
+				var max = src_iter.Current;
+				var max_key = selector(max);
+				while (src_iter.MoveNext())
+				{
+					var item = src_iter.Current;
+					var key = selector(item);
+					if (comparer.Compare(key, max_key) <= 0) continue;
+					max_key = key;
+					max = item;
+				}
+				return max;
+			}
+		}
+
+		/// <summary>Returns the minimum element based on 'selector'</summary>
+		public static TSource MinBy<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
+		{
+			return source.MinBy(selector, Comparer<TKey>.Default);
+		}
+		
+		/// <summary>Returns the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
+		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer)
+		{
+			if (source   == null) throw new ArgumentNullException("source");
+			if (selector == null) throw new ArgumentNullException("selector");
+			if (comparer == null) throw new ArgumentNullException("comparer");
+			using (var src_iter = source.GetEnumerator())
+			{
+				if (!src_iter.MoveNext())
+					throw new InvalidOperationException("Sequence contains no elements");
+				
+				var max = src_iter.Current;
+				var max_key = selector(max);
+				while (src_iter.MoveNext())
+				{
+					var item = src_iter.Current;
+					var key = selector(item);
+					if (comparer.Compare(key, max_key) >= 0) continue;
+					max_key = key;
+					max = item;
+				}
+				return max;
+			}
+		}
+
 		/// <summary>Returns this collection as pairs</summary>
 		public static IEnumerable<Tuple<TSource,TSource>> InPairs<TSource>(this IEnumerable<TSource> source)
 		{

@@ -39,9 +39,9 @@
 
 // Render Steps
 #include "pr/renderer11/steps/render_step.h"
-#include "pr/renderer11/steps/forward/forward_render.h"
-#include "pr/renderer11/steps/deferred/gbuffer.h"
-#include "pr/renderer11/steps/deferred/dslighting.h"
+#include "pr/renderer11/steps/forward_render.h"
+#include "pr/renderer11/steps/gbuffer.h"
+#include "pr/renderer11/steps/dslighting.h"
 
 // Models
 #include "pr/renderer11/models/model_manager.h"
@@ -58,6 +58,7 @@
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
+#include "pr/renderer11/shaders/thick_line.h"
 
 // Textures
 #include "pr/renderer11/textures/texture_manager.h"

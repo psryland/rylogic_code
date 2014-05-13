@@ -525,7 +525,7 @@ void Engine::OnEvent(RBEvent const& e)
 //	}
 //
 //	m4x4 inv_mass = inv_mass1 + inv_mass2; inv_mass[3][3] = 1.0f;
-//	m4x4 mass = inv_mass.GetInverse();
+//	m4x4 mass = inv_mass.Invert();
 //
 //	const ph::Material& materialA = PhysicsMaterial(contact.m_material_indexA);
 //	const ph::Material& materialB = PhysicsMaterial(contact.m_material_indexB);

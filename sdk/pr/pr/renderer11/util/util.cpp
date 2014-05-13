@@ -53,7 +53,7 @@ namespace pr
 			}
 		}
 
-		// Return the number of bits per pixel for a given d3d format
+		// Return the number of bits per pixel for a given dx format
 		size_t BitsPerPixel(DXGI_FORMAT fmt)
 		{
 			size_t bbp = DirectX::BitsPerPixel(fmt);

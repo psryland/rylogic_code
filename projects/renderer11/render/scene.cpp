@@ -6,9 +6,9 @@
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/instances/instance.h"
-#include "pr/renderer11/steps/forward/forward_render.h"
-#include "pr/renderer11/steps/deferred/gbuffer.h"
-#include "pr/renderer11/steps/deferred/dslighting.h"
+#include "pr/renderer11/steps/forward_render.h"
+#include "pr/renderer11/steps/gbuffer.h"
+#include "pr/renderer11/steps/dslighting.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr

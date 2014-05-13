@@ -24,7 +24,7 @@ void pr::ph::SphereVsBox(Shape const& sphere, m4x4 const& a2w, Shape const& box,
 	PR_EXPAND(PR_DBG_SPH_BOX_COLLISION, ldr::g_output->Print(ldr::Txfm(b2w));)
 
 	// Convert into box space
-	v4 b2s = GetInverseFast(b2w) * a2w.pos - v4Origin; // Box to sphere vector in box space
+	v4 b2s = InvertFast(b2w) * a2w.pos - v4Origin; // Box to sphere vector in box space
 	PR_EXPAND(PR_DBG_SPH_BOX_COLLISION, ldr::Line("b2s", "FF00FF00", v4Origin, b2s);)
 	
 	// Get a vector from the sphere to the nearest point on the box

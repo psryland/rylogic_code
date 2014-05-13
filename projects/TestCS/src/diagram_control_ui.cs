@@ -116,7 +116,6 @@ namespace TestCS
 			// 
 			// m_diag
 			// 
-			this.m_diag.AllowEditing = false;
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);
 			this.m_diag.Name = "m_diag";

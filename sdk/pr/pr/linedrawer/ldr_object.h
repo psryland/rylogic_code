@@ -111,6 +111,7 @@ namespace pr
 			x(Camera          ,= 0x19028d2f)\
 			x(Lock            ,= 0x0a040f55)\
 			x(Coloured        ,= 0x078194a5)\
+			x(Width           ,= 0x190A34C3)\
 			x(Param           ,= 0x090da184)\
 			x(Texture         ,= 0x126f7a1b)\
 			x(Video           ,= 0x1121909f)\

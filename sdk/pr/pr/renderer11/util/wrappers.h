@@ -133,7 +133,10 @@ namespace pr
 			{}
 			CBufferDesc(size_t size, D3D11_USAGE usage = D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_FLAG cpu_access = D3D11_CPU_ACCESS_WRITE, D3D11_RESOURCE_MISC_FLAG res_flag = D3D11_RESOURCE_MISC_FLAG(0))
 				:BufferDesc(size, (byte*)0, usage, D3D11_BIND_CONSTANT_BUFFER, cpu_access, res_flag)
-			{}
+			{
+				if ((size % 16) != 0)
+					throw std::exception("Constant buffers must be a multiple of 16 bytes");
+			}
 		};
 
 		// Multi sampling description
