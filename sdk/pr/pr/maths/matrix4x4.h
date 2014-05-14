@@ -17,11 +17,13 @@ namespace pr
 {
 	struct alignas(16) m4x4
 	{
-		v4 x;
-		v4 y;
-		v4 z;
-		union { v4 w; v4 pos; };
+		#pragma warning (disable:4201)
+		union {
+		struct { v4 x, y, z, w; };
+		struct { m3x4 rot; v4 pos; };
+		};
 		typedef v4 Array[4];
+		#pragma warning (default:4201)
 
 		static m4x4  make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
 		static m4x4  make(m3x4 const& ori, v4 const& translation);
@@ -134,43 +136,25 @@ namespace pr
 	void  GetAxisAngle(m4x4 const& mat, v4& axis, float& angle);
 	m4x4  Abs(m4x4 const& mat);
 	m4x4  Sqr(m4x4 const& mat);
-	m4x4& Translation(m4x4& mat, v3 const& xyz);
-	m4x4& Translation(m4x4& mat, v4 const& xyz);
-	m4x4& Translation(m4x4& mat, float x, float y, float z);
-	m4x4  Translation(v3 const& xyz);
-	m4x4  Translation(v4 const& xyz);
-	m4x4  Translation(float x, float y, float z);
-	m4x4& Rotation4x4(m4x4& mat, float pitch, float yaw, float roll, v4 const& translation);
-	m4x4& Rotation4x4(m4x4& mat, v4 const& axis, float angle, v4 const& translation);
-	m4x4& Rotation4x4(m4x4& mat, v4 const& angular_displacement, v4 const& translation);
-	m4x4& Rotation4x4(m4x4& mat, v4 const& from, v4 const& to, v4 const& translation);
-	m4x4& Rotation4x4(m4x4& mat, Quat const& quat, v4 const& translation);
+	m4x4  Translation4x4(v3 const& xyz);
+	m4x4  Translation4x4(v4 const& xyz);
+	m4x4  Translation4x4(float x, float y, float z);
 	m4x4  Rotation4x4(float pitch, float yaw, float roll, v4 const& translation);
 	m4x4  Rotation4x4(v3 const& axis, float angle, v4 const& translation);
 	m4x4  Rotation4x4(v4 const& axis, float angle, v4 const& translation);
 	m4x4  Rotation4x4(v4 const& angular_displacement, v4 const& translation);
 	m4x4  Rotation4x4(v4 const& from, v4 const& to, v4 const& translation);
 	m4x4  Rotation4x4(Quat const& quat, v4 const& translation);
-	m4x4& Scale4x4(m4x4& mat, float scale, v4 const& translation);
-	m4x4& Scale4x4(m4x4& mat, float sx, float sy, float sz, v4 const& translation);
 	m4x4  Scale4x4(float scale, v4 const& translation);
 	m4x4  Scale4x4(float sx, float sy, float sz, v4 const& translation);
-	m4x4& Shear4x4(m4x4& mat, float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& translation);
 	m4x4  Shear4x4(float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& translation);
-	m4x4& LookAt(m4x4& mat, v4 const& eye, v4 const& at, v4 const& up);
 	m4x4  LookAt(v4 const& eye, v4 const& at, v4 const& up);
-	m4x4& ProjectionOrthographic(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded);
 	m4x4  ProjectionOrthographic(float w, float h, float Znear, float Zfar, bool righthanded);
-	m4x4& ProjectionPerspective(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded);
 	m4x4  ProjectionPerspective(float w, float h, float Znear, float Zfar, bool righthanded);
-	m4x4& ProjectionPerspective(m4x4& mat, float l, float r, float t, float b, float Znear, float Zfar, bool righthanded);
 	m4x4  ProjectionPerspective(float l, float r, float t, float b, float Znear, float Zfar, bool righthanded);
-	m4x4& ProjectionPerspectiveFOV(m4x4& mat, float fovY, float aspect, float Znear, float Zfar, bool righthanded);
 	m4x4  ProjectionPerspectiveFOV(float FOV, float aspect, float Znear, float Zfar, bool righthanded);
 	m4x4  CrossProductMatrix4x4(v4 const& vec);
-	m4x4& OriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position);
 	m4x4  OriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position);
-	m4x4& ScaledOriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position);
 	m4x4  ScaledOriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position);
 	m4x4  Sqrt(m4x4 const& mat);
 }

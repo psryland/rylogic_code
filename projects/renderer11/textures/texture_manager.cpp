@@ -12,7 +12,6 @@
 #include "pr/renderer11/util/util.h"
 #include "renderer11/textures/dds_texture_loader.h"
 #include "renderer11/textures/wic_texture_loader.h"
-
 namespace pr
 {
 	namespace rdr
@@ -52,20 +51,6 @@ namespace pr
 			,m_gdiplus()
 		{
 			CreateStockTextures();
-		}
-		TextureManager::~TextureManager()
-		{
-			// Drop references to the stock textures
-			m_stock_textures.resize(0);
-
-			// Release the ref added in CreateTexture()
-			// When the textures delete themselves, they'll be removed from the lookup
-			while (!m_lookup_tex.empty())
-			{
-				auto iter = begin(m_lookup_tex);
-				PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to texture %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
-				iter->second->Release();
-			}
 		}
 
 		// Create a new texture instance.
@@ -207,6 +192,27 @@ namespace pr
 			return inst;
 		}
 
+		// Create a new texture instance that wraps an existing dx texture.
+		// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
+		// 'existing' is an existing dx texture to wrap
+		// 'sam_desc' is an optional sampler state description to set on the clone.
+		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, D3DPtr<ID3D11Texture2D> existing_tex, D3DPtr<ID3D11ShaderResourceView> existing_srv, SamplerDesc const& sam_desc, char const* name)
+		{
+			// Check whether 'id' already exists, if so, throw.
+			if (id != AutoId && m_lookup_tex.find(id) != end(m_lookup_tex))
+				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
+
+			// Allocate a new texture instance that reuses the dx texture resource
+			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			Texture2DPtr inst = m_alex_tex2d.New(this, existing_tex, existing_srv, sam_desc, sort_id);
+			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
+			inst->m_name = name ? name : "";
+
+			// Add the texture instance to the lookup table
+			AddLookup(m_lookup_tex, inst->m_id, inst.m_ptr);
+			return inst;
+		}
+
 		// Delete a texture instance.
 		void TextureManager::Delete(Texture2D* tex)
 		{
@@ -231,12 +237,38 @@ namespace pr
 			m_lookup_tex.erase(iter);
 		}
 
+		// Get pointers to the main render target texture and shader resource view
+		void GetMainRTResources(D3DPtr<ID3D11Device> device, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
+		{
+			D3DPtr<ID3D11RenderTargetView> rtv;
+
+			// Get the render target view and underlying resource
+			auto dc = ImmediateDC(device);
+			dc->OMGetRenderTargets(1, &rtv.m_ptr, nullptr);
+			D3DPtr<ID3D11Resource> res; rtv->GetResource(&res.m_ptr);
+
+			// Query for the texture2d interface
+			pr::Throw(res->QueryInterface( __uuidof(ID3D11Texture2D), (void**) &tex.m_ptr));
+			TextureDesc tdesc; tex->GetDesc(&tdesc);
+
+			// If the texture was created with srv binding, create a srv
+			if (tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
+			{
+				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
+				pr::Throw(device->CreateShaderResourceView(res.m_ptr, &srvdesc, &srv.m_ptr));
+			}
+		}
+
 		// Generates the stock textures
 		void TextureManager::CreateStockTextures()
 		{
-			// Calling AddRef so that the textures are not destroyed immediately.
-			// This means the only reference to these textures is in the texture lookup map
 			{
+				D3DPtr<ID3D11Texture2D> tex;
+				D3DPtr<ID3D11ShaderResourceView> srv;
+				GetMainRTResources(m_device, tex, srv);
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::MainRT, tex, srv, SamplerDesc::LinearClamp(), "#main_rt"));
+			}{
 				pr::uint const data[] = {0};
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
@@ -291,6 +323,36 @@ namespace pr
 			{
 				existing.m_tex = tex;
 				existing.m_srv = srv;
+			}
+		}
+
+		// Handle resize events
+		void TextureManager::OnEvent(Evt_Resize const& e)
+		{
+			// On resizing the main RT we need to release the RT Texture
+			auto tex = FindTexture(EStockTexture::MainRT);
+			if (e.m_done)
+			{
+				GetMainRTResources(m_device, tex->m_tex, tex->m_srv);
+			}
+			else
+			{
+				tex->m_tex = nullptr;
+				tex->m_srv = nullptr;
+			}
+		}
+		void TextureManager::OnEvent(Evt_RendererDestroy const&)
+		{
+			// Drop references to the stock textures
+			m_stock_textures.resize(0);
+
+			// Release the ref added in CreateTexture()
+			// When the textures delete themselves, they'll be removed from the lookup
+			while (!m_lookup_tex.empty())
+			{
+				auto iter = begin(m_lookup_tex);
+				PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to texture %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
+				iter->second->Release();
 			}
 		}
 	}

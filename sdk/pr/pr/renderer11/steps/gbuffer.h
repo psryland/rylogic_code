@@ -41,10 +41,10 @@ namespace pr
 			ERenderStep::Enum_ GetId() const override { return Id; }
 
 			// Create render targets for the gbuffer based on the current render target size
-			void InitGBuffer(bool create_buffers);
+			void InitRT(bool create_buffers);
 
 			// Set the g-buffer as the render target
-			void BindGBuffer(bool bind);
+			void BindRT(bool bind);
 
 			// Add model nuggets to the draw list for this render step
 			void AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets) override;

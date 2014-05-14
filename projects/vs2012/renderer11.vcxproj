@@ -222,6 +222,7 @@
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_set.cpp" />
+    <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\thick_line.cpp" />
     <ClCompile Include="..\renderer11\steps\dslighting.cpp" />
     <ClCompile Include="..\renderer11\steps\forward_render.cpp" />

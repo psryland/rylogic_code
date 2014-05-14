@@ -70,7 +70,7 @@ namespace pr
 			sd.BufferCount  = m_settings.m_buffer_count;
 			sd.BufferDesc   = m_settings.m_mode;
 			sd.SampleDesc   = m_settings.m_multisamp;
-			sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+			sd.BufferUsage  = DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT;
 			sd.OutputWindow = m_settings.m_hwnd;
 			sd.Windowed     = m_settings.m_windowed;
 			sd.SwapEffect   = m_settings.m_swap_effect;
@@ -98,7 +98,7 @@ namespace pr
 
 			// Create a render-target view of the back buffer
 			pr::Throw(m_device->CreateRenderTargetView(back_buffer.m_ptr, 0, &m_main_rtv.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_main_rtv, pr::FmtS("main RT <%dx%d>", m_bbdesc.Width, m_bbdesc.Height)));
+			PR_EXPAND(PR_DBG_RDR, NameResource(m_main_rtv, "main RT"));
 
 			// Create a texture buffer that we will use as the depth buffer
 			TextureDesc desc;
@@ -144,6 +144,9 @@ namespace pr
 	{}
 	Renderer::~Renderer()
 	{
+		// Notify of the renderer shutdown
+		pr::events::Send(pr::rdr::Evt_RendererDestroy(*this));
+
 		PR_EXPAND(PR_DBG_RDR, int rcnt);
 		PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
 		m_immediate->OMSetRenderTargets(0, 0, 0);
@@ -310,6 +313,12 @@ namespace pr
 		// Notify that the resize is done
 		area = RenderTargetSize();
 		pr::events::Send(rdr::Evt_Resize(true, area)); // notify after changing the RT (with the new size)
+	}
+
+	// Binds the main render target and depth buffer to the OM
+	void Renderer::RestoreMainRT()
+	{
+		m_immediate->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
 	}
 
 	// Flip the scene to the display

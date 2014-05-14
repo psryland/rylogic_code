@@ -135,7 +135,7 @@ void EvolveAngularOrder2(Rigidbody& rb, float elapsed_seconds)
 	// Calculate mid-point values
 	float half_dt = elapsed_seconds * 0.5f;
 	m3x4 mid_orientation            = rb.Orientation() + CrossProductMatrix3x3(rb.AngVelocity() * half_dt) * rb.Orientation();
-	m3x4 mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * GetTranspose(mid_orientation);
+	m3x4 mid_ws_inv_inertia_tensor  = mid_orientation * rb.m_os_inv_inertia_tensor * Transpose3x3(mid_orientation);
 	v4   mid_ang_momentum           = rb.m_ang_momentum + rb.m_torque * half_dt;
 	v4   mid_ang_velocity           = mid_ws_inv_inertia_tensor * rb.m_inv_mass * mid_ang_momentum;
 	
@@ -186,7 +186,7 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step0                       = elapsed_seconds * b00;
 	step_orientation            = orientation_0 + dorientation_0*step0;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*step0;
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * GetTranspose(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
 	m3x4 dorientation_1         = CrossProductMatrix3x3(step_ang_velocity) * step_orientation;
 	
@@ -195,7 +195,7 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step1                       = elapsed_seconds * b11;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * GetTranspose(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
 	m3x4 dorientation_2         = CrossProductMatrix3x3(step_ang_velocity) * step_orientation;
 	
@@ -205,7 +205,7 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step2                       = elapsed_seconds * b22;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * GetTranspose(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
 	m3x4 dorientation_3         = CrossProductMatrix3x3(step_ang_velocity) * step_orientation;
 	
@@ -216,7 +216,7 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step3                       = elapsed_seconds * b33;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2 + dorientation_3*step3;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2 + step3);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * GetTranspose(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
 	m3x4 dorientation_4         = CrossProductMatrix3x3(step_ang_velocity) * step_orientation;
 	
@@ -228,7 +228,7 @@ void EvolveAngularOrder5(Rigidbody& rb, float elapsed_seconds)
 	step4                       = elapsed_seconds * b44;
 	step_orientation            = orientation_0 + dorientation_0*step0 + dorientation_1*step1 + dorientation_2*step2 + dorientation_3*step3 + dorientation_4*step4;
 	step_ang_momentum           = rb.m_ang_momentum + rb.m_torque*(step0 + step1 + step2 + step3 + step4);
-	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * GetTranspose(rb.Orientation());
+	step_ws_inv_inertia_tensor  = rb.Orientation() * rb.m_os_inv_inertia_tensor * Transpose3x3(rb.Orientation());
 	step_ang_velocity           = step_ws_inv_inertia_tensor * rb.m_inv_mass * step_ang_momentum;
 	m3x4 dorientation_5         = CrossProductMatrix3x3(step_ang_velocity) * step_orientation;
 	

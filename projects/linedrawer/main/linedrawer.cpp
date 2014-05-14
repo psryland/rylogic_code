@@ -42,7 +42,7 @@ namespace ldr
 		// Return settings to configure the render
 		pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area)
 		{
-			return pr::rdr::RdrSettings(hwnd, TRUE, client_area);
+			return pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area);
 		}
 	};
 
@@ -94,14 +94,14 @@ namespace ldr
 		if (m_settings.m_ShowFocusPoint)
 		{
 			float scale = m_settings.m_FocusPointScale * m_nav.FocusDistance();
-			pr::Scale4x4(m_focus_point.m_i2w, scale, m_nav.FocusPoint());
+			m_focus_point.m_i2w = pr::Scale4x4(scale, m_nav.FocusPoint());
 		}
 
 		// Update the scale of the origin
 		if (m_settings.m_ShowOrigin)
 		{
 			float scale = m_settings.m_FocusPointScale * pr::Length3(m_cam.CameraToWorld().pos);
-			pr::Scale4x4(m_origin_point.m_i2w, scale, pr::v4Origin);
+			m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
 		}
 
 		// Allow the navigation manager to adjust the camera, ready for this frame
@@ -162,30 +162,30 @@ namespace ldr
 	{
 		try
 		{
-			std::string scene = pr::ldr::CreateDemoScene();
-			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
-
-			/*
+			//*
 			{// For testing..
 				using namespace pr::rdr;
 
-				auto thick_line = m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS);
+				if (m_scene.FindRStep<ShadowMap>() == nullptr)
+					m_scene.m_render_steps.insert(begin(m_scene.m_render_steps), std::make_shared<ShadowMap>(m_scene, m_scene.m_global_light, pr::iv2::make(1024,1024)));
 
-				NuggetProps mat;
-				mat.m_sset.push_back(thick_line);
+				//auto thick_line = m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS);
+
+				//NuggetProps mat;
+				//mat.m_sset.push_back(thick_line);
 			
-				//std::vector<pr::v4> lines;
-				//pr::Spline s = pr::Spline::make(pr::v4Origin, pr::v4XAxis.w1, pr::v4YAxis.w1, pr::v4Origin);
-				//pr::Raster(s, lines, 100);
+				////std::vector<pr::v4> lines;
+				////pr::Spline s = pr::Spline::make(pr::v4Origin, pr::v4XAxis.w1, pr::v4YAxis.w1, pr::v4Origin);
+				////pr::Raster(s, lines, 100);
 
-				pr::v4 lines[] =
-				{
-					pr::v4::make(0,-1,0,1), pr::v4::make(0,1,0,1),
-					pr::v4::make(-1,0,0,1), pr::v4::make(1,0,0,1),
-				};
-				auto model = ModelGenerator<>::Lines(m_rdr, 2, lines, 0, nullptr, &mat);
-				m_test_model.m_model = model;
-				m_test_model_enable = true;
+				//pr::v4 lines[] =
+				//{
+				//	pr::v4::make(0,-1,0,1), pr::v4::make(0,1,0,1),
+				//	pr::v4::make(-1,0,0,1), pr::v4::make(1,0,0,1),
+				//};
+				//auto model = ModelGenerator<>::Lines(m_rdr, 2, lines, 0, nullptr, &mat);
+				//m_test_model.m_model = model;
+				//m_test_model_enable = true;
 
 				//pr::rdr::ProjectedTexture pt;
 				//pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
@@ -193,6 +193,9 @@ namespace ldr
 				//m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
 			}
 			//*/
+
+			std::string scene = pr::ldr::CreateDemoScene();
+			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
@@ -307,7 +310,7 @@ namespace ldr
 	{
 		// Update the transform of the selection box
 		pr::BBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
-		pr::Scale4x4(m_selection_box.m_i2w, bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
+		m_selection_box.m_i2w = pr::Scale4x4(bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
 
 		// Request a refresh when the selection changes (if the selection box is visible)
 		if (m_settings.m_ShowSelectionBox)

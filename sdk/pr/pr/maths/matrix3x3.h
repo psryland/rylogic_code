@@ -13,15 +13,12 @@
 #include "pr/maths/vector3.h"
 #include "pr/maths/vector4.h"
 #include "pr/maths/quaternion.h"
-#include "pr/maths/matrix4x4.h"
 
 namespace pr
 {
 	struct alignas(16) m3x4
 	{
-		v4 x;
-		v4 y;
-		v4 z;
+		v4 x, y, z;
 		typedef v4 Array[3];
 
 		static m3x4  make(float xx, float xy, float xz, float yx, float yy, float yz, float zx, float zy, float zz);
@@ -108,35 +105,23 @@ namespace pr
 	float Determinant3(m3x4 const& mat);
 	float Trace3(m3x4 const& mat);
 	v4    Kernel(m3x4 const& mat);
-	m3x4& Transpose(m3x4& mat);
-	m3x4  GetTranspose(m3x4 const& mat);
+	m3x4  Transpose3x3(m3x4 const& mat);
 	bool  IsInvertable(m3x4 const& mat);
 	m3x4  Invert(m3x4 const& mat);
 	m3x4  InvertFast(m3x4 const& mat);
 	m3x4  Orthonorm(m3x4 const& mat);
 	bool  IsOrthonormal(m3x4 const& mat);
 	void  GetAxisAngle(m3x4 const& mat, v4& axis, float& angle);
-	m3x4& Rotation3x3 (m3x4& mat, float pitch, float yaw, float roll);
-	m3x4& Rotation3x3 (m3x4& mat, v3 const& axis_norm, float angle);
-	m3x4& Rotation3x3 (m3x4& mat, v4 const& axis_norm, float angle);
-	m3x4& Rotation3x3 (m3x4& mat, Quat const& quat);
 	m3x4  Rotation3x3 (float pitch, float yaw, float roll);
 	m3x4  Rotation3x3 (const v3& axis, float angle);
 	m3x4  Rotation3x3 (v4 const& axis_norm, float angle);
 	m3x4  Rotation3x3 (const Quat& quat);
-	m3x4& Scale3x3    (m3x4& mat, float scale);
-	m3x4& Scale3x3    (m3x4& mat, float sx, float sy, float sz);
 	m3x4  Scale3x3    (float scale);
 	m3x4  Scale3x3    (float sx, float sy, float sz);
-	m3x4& Shear3x3    (m3x4& mat, float sxy, float sxz, float syx, float syz, float szx, float szy);
 	m3x4  Shear3x3    (float sxy, float sxz, float syx, float syz, float szx, float szy);
-	m3x4& Diagonalise3x3(m3x4& mat, m3x4& eigen_vectors, v4& eigen_values);
-	m3x4  GetDiagonal3x3(m3x4 const& mat, m3x4& eigen_vectors, v4& eigen_values);
-	m3x4& RotationToZAxis(m3x4& mat, v4 const& from);
+	m3x4  Diagonalise3x3(m3x4 const& mat, m3x4& eigen_vectors, v4& eigen_values);
 	m3x4  RotationToZAxis(v4 const& from);
-	m3x4& OriFromDir(m3x4& ori, v4 const& dir, int axis, v4 const& up);
 	m3x4  OriFromDir(v4 const& dir, int axis, v4 const& up);
-	m3x4& ScaledOriFromDir(m3x4& ori, v4 const& dir, int axis, v4 const& up);
 	m3x4  ScaledOriFromDir(v4 const& dir, int axis, v4 const& up);
 	m3x4  CrossProductMatrix3x3(v4 const& vec);
 }

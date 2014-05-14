@@ -10,12 +10,13 @@ using pr.extn;
 
 namespace pr.common
 {
-	public class EventBatcher
+	public class EventBatcher :IDisposable
 	{
 		private readonly Dispatcher m_dispatcher;
 		private readonly TimeSpan m_delay;
 		private int m_issue;
 		private int m_actioned_issue;
+		private bool m_disposed;
 
 		/// <summary>The callback called when this event has been signalled</summary>
 		public event Action Action;
@@ -35,11 +36,16 @@ namespace pr.common
 			if (dispatcher == null)
 				throw new ArgumentNullException("dispatcher","dispatcher can't be null");
 
-			m_dispatcher = dispatcher;
-			m_delay = delay;
-			m_issue = 0;
-			m_actioned_issue = 0;
+			m_dispatcher           = dispatcher;
+			m_delay                = delay;
+			m_issue                = 0;
+			m_actioned_issue       = 0;
+			m_disposed             = false;
 			MaxSignalsBeforeAction = int.MaxValue;
+		}
+		public void Dispose()
+		{
+			m_disposed = true;
 		}
 
 		/// <summary>
@@ -52,7 +58,7 @@ namespace pr.common
 			var issue = Interlocked.Increment(ref m_issue);
 			m_dispatcher.BeginInvokeDelayed(() =>
 				{
-					if (Action == null) return;
+					if (Action == null || m_disposed) return;
 					if (unchecked(issue - m_actioned_issue) < MaxSignalsBeforeAction &&
 						Interlocked.CompareExchange(ref m_issue, issue, issue) != issue)
 						return;

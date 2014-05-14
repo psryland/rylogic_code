@@ -36,8 +36,8 @@ namespace TestCS
 
 			ClientSize = new Size(640,480);
 
-			var node0 = new DiagramControl.BoxNode("Node0",100,30){Position = m4x4.Translation(0,0,0)};
-			var node1 = new DiagramControl.BoxNode{Text = "Node1", Position = m4x4.Translation(100,100,0)};
+			var node0 = new DiagramControl.BoxNode("Node0"){Position = m4x4.Translation(0,0,0)};
+			var node1 = new DiagramControl.BoxNode{Text = "Node1 is really long\nand contains new lines", Position = m4x4.Translation(100,100,0)};
 			m_diag.Elements.Add(node0);
 			m_diag.Elements.Add(node1);
 

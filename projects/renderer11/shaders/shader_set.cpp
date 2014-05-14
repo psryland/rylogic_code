@@ -11,19 +11,22 @@ namespace pr
 	namespace rdr
 	{
 		// Get or add a shader with id 'shdr_id'
+		ShaderPtr ShaderSet::get(RdrId shdr_id, ShaderManager* mgr)
+		{
+			auto s = get(shdr_id);
+			if (s != nullptr) return s;
+			s = mgr->FindShader(shdr_id);
+			if (s == nullptr) throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Shader with id %d not found", shdr_id));
+			push_back(s);
+			return s;
+		}
+
 		ShaderPtr ShaderSet::get(RdrId shdr_id) const
 		{
 			for (auto& s : *this)
 				if (s->m_id == shdr_id)
 					return s;
 			return nullptr;
-		}
-		ShaderPtr ShaderSet::get(RdrId shdr_id, ShaderManager* mgr)
-		{
-			auto s = get(shdr_id);
-			if (s != nullptr) return s;
-			push_back(s = mgr->FindShader(shdr_id));
-			return s;
 		}
 
 		// Return a shader by shader type

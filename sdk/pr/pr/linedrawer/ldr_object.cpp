@@ -239,7 +239,7 @@ namespace pr
 			// Commented out parts are those delibrately kept
 			
 			// RdrInstance
-			//std::swap(m_i2w  ,rhs.m_i2w   );
+			std::swap(m_i2w    ,rhs.m_i2w   );
 			std::swap(m_model  ,rhs.m_model );
 			std::swap(m_colour ,rhs.m_colour);
 			std::swap(m_sko    ,rhs.m_sko   );
@@ -251,11 +251,11 @@ namespace pr
 			//std::swap(m_ref_count , rhs.m_ref_count);
 			
 			// LdrObject
-			//std::swap(m_o2p         ,rhs.m_o2p          );
+			std::swap(m_o2p           ,rhs.m_o2p          );
 			std::swap(m_type          ,rhs.m_type         );
 			//std::swap(m_parent      ,rhs.m_parent       );
 			//std::swap(m_child       ,rhs.m_child        );
-			//std::swap(m_name        ,rhs.m_name         );
+			std::swap(m_name          ,rhs.m_name         );
 			std::swap(m_context_id    ,rhs.m_context_id   );
 			std::swap(m_base_colour   ,rhs.m_base_colour  );
 			std::swap(m_colour_mask   ,rhs.m_colour_mask  );
@@ -412,7 +412,7 @@ namespace pr
 
 						if (axis_id < 0) direction = -direction;
 						axis_id = pr::Abs(axis_id) - 1;
-						pr::OriFromDir(cast_m3x4(p2w), direction, axis_id, pr::v4YAxis);
+						p2w.rot = pr::OriFromDir(direction, axis_id, pr::v4YAxis);
 						break;
 					}
 				case EKeyword::Quat:

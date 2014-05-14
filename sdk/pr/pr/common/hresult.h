@@ -122,9 +122,9 @@ namespace pr
 	template <> struct is_int64<__int64> { static const bool value = true; };
 
 	// Success / Failure / Verify
-	template <typename Result> inline bool Failed   (Result result) { return !Succeeded(result); }
-	template <typename Result> inline void Verify   (Result result) { assert(Succeeded(result) && Reason().c_str()); (void)result; }
-	template <typename Result> inline void Throw    (Result result) { if (!Succeeded(result)) throw pr::Exception<Result>(result, Reason().c_str()); }
+	template <typename Result> inline bool Failed   (Result result)                       { return !Succeeded(result); }
+	template <typename Result> inline void Verify   (Result result)                       { assert(Succeeded(result) && Reason().c_str()); (void)result; }
+	template <typename Result> inline void Throw    (Result result, std::string msg = "") { if (!Succeeded(result)) throw pr::Exception<Result>(result, msg + " " + Reason()); }
 	template <typename Result> inline bool Succeeded(Result result)
 	{
 		static_assert(std::is_enum<Result>::value, "Only enum result codes should be used as ToString() for other types has a different meaning");

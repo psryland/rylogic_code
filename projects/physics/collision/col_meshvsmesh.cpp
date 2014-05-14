@@ -588,7 +588,7 @@ namespace pr
 					// Construct a rotation matrix that transforms 'new_r' onto the z axis
 					// This means all other 'r' can be projected into the XY place by rotating
 					// them, then dropping their z value
-					m3x4 M; RotationToZAxis(M, new_r);	
+					m3x4 M = RotationToZAxis(new_r);
 					//m3x4 M;
 					//{
 					//	float const& x = new_r.x;
@@ -662,7 +662,7 @@ namespace pr
 						if( !FEql2(rn, v2Zero) )	{ rn = Normalise2(rn); }
 						else						{ rn = v2XAxis; }
 					}
-					half_space_normal = GetTranspose(M) * v4::make(rn, 0.0f, 0.0f);
+					half_space_normal = Transpose3x3(M) * v4::make(rn, 0.0f, 0.0f);
 					
 					PR_ASSERT(PR_DBG_MESH_COLLISION, VerifyHalfSpace(r, first_new_r + 1, half_space_normal), "");
 					PR_ASSERT(PR_DBG_MESH_COLLISION, FindHalfPlaneBruteForce(r, first_new_r + 1, true), "");

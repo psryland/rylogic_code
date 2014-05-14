@@ -158,9 +158,7 @@ namespace pr
 		}
 		pr::m4x4 CameraToScreen() const
 		{
-			return m_focus_rel_clip
-				? CameraToScreen(m_focus_dist * m_near, m_focus_dist * m_far)
-				: CameraToScreen(m_near, m_far);
+			return CameraToScreen(Near(), Far());
 		}
 
 		// Return a point in normalised screen space, i.e. (-1,-1)->(1,1)
@@ -238,6 +236,18 @@ namespace pr
 			m_near = near_;
 			m_far = far_;
 			m_focus_rel_clip = focus_relative_clip;
+		}
+
+		// The near clip plane
+		float Near() const
+		{
+			return (m_focus_rel_clip ? m_focus_dist : 1) * m_near;
+		}
+
+		// The far clip plane
+		float Far() const
+		{
+			return (m_focus_rel_clip ? m_focus_dist : 1) * m_far;
 		}
 
 		// Return the aspect ratio
@@ -450,7 +460,7 @@ namespace pr
 
 			// If an align axis is given, align up to it
 			if (Length3Sq(m_align) > maths::tiny)
-				pr::LookAt(m_c2w, m_c2w.pos, old_focus, m_align);
+				m_c2w = pr::LookAt(m_c2w.pos, old_focus, m_align);
 
 			// Set the base values
 			if (commit) Commit();
@@ -519,7 +529,7 @@ namespace pr
 			if (Length3Sq(m_align) > maths::tiny)
 			{
 				if (pr::Parallel(m_c2w.z, m_align)) m_c2w.set(m_c2w.y, m_c2w.z, m_c2w.x, m_c2w.w);
-				pr::LookAt(m_c2w, m_c2w.pos, FocusPoint(), m_align);
+				m_c2w = pr::LookAt(m_c2w.pos, FocusPoint(), m_align);
 				m_moved = true;
 				m_base_c2w = m_c2w; // Update the base point
 			}
@@ -534,7 +544,7 @@ namespace pr
 		// Position the camera at 'position' looking at 'lookat' with up pointing 'up'
 		void LookAt(pr::v4 const& position, pr::v4 const& lookat, pr::v4 const& up, bool commit = true)
 		{
-			pr::LookAt(m_c2w, position, lookat, up);
+			m_c2w = pr::LookAt(position, lookat, up);
 			m_focus_dist = Length3(lookat - position);
 
 			// Set the base values

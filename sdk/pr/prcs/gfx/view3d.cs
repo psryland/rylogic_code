@@ -428,7 +428,11 @@ namespace pr.gfx
 			IntPtr ctx);
 
 		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
+		
+		/// <summary>Method for actually rendering the scene</summary>
+		public delegate void RenderCB();
 
+		private readonly RenderCB m_render_cb;                    // User call back to render the scene
 		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
 		private readonly LogOutputCB m_log_cb;                    // A local reference to prevent the callback being garbage collected
 		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
@@ -458,29 +462,32 @@ namespace pr.gfx
 		}
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3d(HWND handle, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
+		public View3d(HWND handle, RenderCB render_cb, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
 		{
 			m_error_cb = ErrorCB;
 			m_log_cb = LogCB;
 			m_settings_changed_cb = SettingsChgCB;
 			m_drawsets = new List<DrawsetInterface>();
 			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
-			
+			m_render_cb = render_cb;
+
 			if (error_cb != null) OnError += error_cb;
 			if (log_cb != null) OnLog += log_cb;
 
 			// Initialise the renderer
-			var res = View3D_Initialise(handle, m_error_cb, m_log_cb, m_settings_changed_cb);
+			var res = View3D_Initialise(handle, m_render_cb, m_error_cb, m_log_cb, m_settings_changed_cb);
 			if (res != EResult.Success) throw new Exception(res);
 
 			// Create a default drawset
 			Drawset = DrawsetCreate();
+			RenderTarget = new Texture(View3D_TextureRenderTarget());
 		}
 		public void Dispose()
 		{
 			while (m_drawsets.Count != 0)
 				m_drawsets[0].Dispose();
 
+			RenderTarget.Dispose();
 			View3D_Shutdown();
 		}
 
@@ -489,11 +496,19 @@ namespace pr.gfx
 		{
 			m_eb_refresh.Signal();
 		}
+
+		/// <summary>Triggers the callback to render and present the scene</summary>
 		public void Refresh()
 		{
-			View3D_Refresh();
+			m_render_cb();
 		}
 
+		/// <summary>Called to flip the back buffer to the screen after all drawset have been rendered</summary>
+		public void Present()
+		{
+			View3D_Present();
+		}
+	
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
 		public delegate void ReportErrorCB(string msg);
@@ -533,6 +548,9 @@ namespace pr.gfx
 			get { int w,h; View3D_RenderTargetSize(out w, out h); return new Size(w,h); }
 			set { View3D_SetRenderTargetSize(value.Width, value.Height); }
 		}
+
+		/// <summary>Get the render target texture</summary>
+		public Texture RenderTarget { get; private set; }
 
 		/// <summary>Get/Set the size/position of the viewport within the render target</summary>
 		public View3DViewport Viewport
@@ -808,10 +826,10 @@ namespace pr.gfx
 				set { View3D_SetBackgroundColour(m_ds, value.ToArgb()); }
 			}
 
-			/// <summary>Cause the drawset to be rendered</summary>
+			/// <summary>Cause the drawset to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
-				View3D_Render(m_ds);
+				View3D_DrawsetRender(m_ds);
 			}
 
 			/// <summary>Example for creating objects</summary>
@@ -1130,9 +1148,18 @@ namespace pr.gfx
 		/// <summary>Texture resource wrapper</summary>
 		public class Texture :IDisposable
 		{
+			private bool m_owned;
 			public HTexture m_handle;
 			public ImageInfo m_info;
 			public object Tag {get;set;}
+
+			/// <summary>Create a texture from an existing texture resource</summary>
+			internal Texture(HTexture handle)
+			{
+				m_owned = false;
+				m_handle = handle;
+				View3D_TextureGetInfo(m_handle, out m_info);
+			}
 
 			/// <summary>Construct an uninitialised texture</summary>
 			public Texture(uint width, uint height)
@@ -1143,6 +1170,7 @@ namespace pr.gfx
 			{}
 			public Texture(uint width, uint height, IntPtr data, uint data_size, TextureOptions options)
 			{
+				m_owned = true;
 				var res = View3D_TextureCreate(width, height, data, data_size, ref options, out m_handle);
 				if (res != EResult.Success) throw new Exception(res);
 				
@@ -1162,10 +1190,18 @@ namespace pr.gfx
 			{}
 			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
+				m_owned = true;
 				var res = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey, out m_handle);
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
+			}
+			
+			public void Dispose()
+			{
+				if (m_handle == IntPtr.Zero) return;
+				if (m_owned) View3D_TextureDelete(m_handle);
+				m_handle = IntPtr.Zero;
 			}
 
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
@@ -1183,6 +1219,7 @@ namespace pr.gfx
 			public void Resize(uint width, uint height, bool all_instances, bool preserve)
 			{
 				View3D_TextureResize(m_handle, width, height, all_instances, preserve);
+				View3D_TextureGetInfo(m_handle, out m_info);
 			}
 			
 			/// <summary>Set the filtering and addressing modes to be used on the texture</summary>
@@ -1214,15 +1251,7 @@ namespace pr.gfx
 				if (res != EResult.Success) throw new Exception(res);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
-
-			/// <summary>Release resources held by this texture</summary>
-			public void Dispose()
-			{
-				if (m_handle == IntPtr.Zero) return;
-				View3D_TextureDelete(m_handle);
-				m_handle = IntPtr.Zero;
-			}
-
+			
 			/// <summary>Return properties of the texture</summary>
 			public static ImageInfo GetInfo(string tex_filepath)
 			{
@@ -1250,13 +1279,17 @@ namespace pr.gfx
 				public void Dispose()
 				{
 					View3D_TextureReleaseDC(m_tex);
+					if (m_tex == View3D_TextureRenderTarget())
+						View3D_RestoreMainRT();
 				}
 			}
 
 			/// <summary>Lock the texture for drawing on</summary>
-			public Lock LockSurface
+			[DebuggerHidden]
+			public Lock LockSurface()
 			{
-				get { return new Lock(this); }
+				// This is a method to prevent the debugger evaluating it cause multiple GetDC calls
+				return new Lock(this);
 			}
 
 			public override bool Equals(object obj) { return obj is Texture && m_handle.Equals(((Texture)obj).m_handle); }
@@ -1293,12 +1326,13 @@ namespace pr.gfx
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, ReportErrorCB error_cb, LogOutputCB log_cb, SettingsChangedCB settings_changed_cb);
+		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, RenderCB render_cb, ReportErrorCB error_cb, LogOutputCB log_cb, SettingsChangedCB settings_changed_cb);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown();
 
 		// Draw sets
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
+		[DllImport(Dll)] private static extern void              View3D_DrawsetRender            (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
 		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
 		[DllImport(Dll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
@@ -1365,14 +1399,15 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         ();
 
 		// Rendering
-		[DllImport(Dll)] private static extern void              View3D_Refresh                  ();
+		[DllImport(Dll)] private static extern void              View3D_Present                  ();
+		[DllImport(Dll)] private static extern void              View3D_SignalRefresh            ();
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (out int width, out int height);
 		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (int width, int height);
 		[DllImport(Dll)] private static extern View3DViewport    View3D_Viewport                 ();
 		[DllImport(Dll)] private static extern void              View3D_SetViewport              (View3DViewport vp);
-		[DllImport(Dll)] private static extern void              View3D_Render                   (HDrawset drawset);
 		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
 		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
@@ -1387,6 +1422,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
 
 		// Miscellaneous
+		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            ();
 		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           ();
 		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);

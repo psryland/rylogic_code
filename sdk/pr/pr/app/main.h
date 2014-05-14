@@ -74,7 +74,7 @@ namespace pr
 			int UserSettings() { return 0; }
 
 			// Return settings to configure the render
-			pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, client_area); }
+			pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area); }
 		};
 
 		// This type contains the main app logic. It's lifetime is controlled by the GUI.

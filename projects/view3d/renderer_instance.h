@@ -38,9 +38,6 @@ namespace view3d
 	// This object owns the drawsets and instances.
 	// References to instances are added/removed to/from drawsets
 	struct RendererInstance
-		:pr::events::IRecv<pr::ldr::Evt_Refresh>
-		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
-		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
 		pr::Renderer              m_renderer;
 		pr::rdr::Scene            m_scene;
@@ -57,10 +54,5 @@ namespace view3d
 		explicit RendererInstance(HWND hwnd);
 		~RendererInstance();
 		void CreateStockObjects();
-
-		// Event handlers
-		void OnEvent(pr::ldr::Evt_Refresh const&) override;
-		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override;
-		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
 	};
 }

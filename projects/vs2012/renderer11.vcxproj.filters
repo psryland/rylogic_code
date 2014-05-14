@@ -380,6 +380,9 @@
     <ClCompile Include="..\renderer11\shaders\shader_set.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
+    <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl">

@@ -11,7 +11,7 @@ namespace pr
 {
 	namespace rdr
 	{
-		Texture2D::Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv, SamplerDesc const& sam_desc, SortKeyId sort_id)
+		Texture2D::Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, SamplerDesc const& sam_desc, SortKeyId sort_id)
 			:m_t2s(pr::m4x4Identity)
 			,m_tex(tex)
 			,m_srv(srv)
@@ -23,6 +23,14 @@ namespace pr
 			,m_mgr(mgr)
 			,m_name()
 		{
+			if (m_srv == nullptr)
+			{
+				TextureDesc tdesc;
+				tex->GetDesc(&tdesc);
+				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
+				pr::Throw(m_mgr->m_device->CreateShaderResourceView(tex.m_ptr, &srvdesc, &srv.m_ptr));
+			}
 			SamDesc(sam_desc);
 		}
 		Texture2D::Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc)
@@ -164,6 +172,25 @@ namespace pr
 			tdesc.Width = checked_cast<UINT>(width);
 			tdesc.Height = checked_cast<UINT>(height);
 			TexDesc(Image(), tdesc, all_instances, preserve);
+		}
+
+		// Get the GDI dc from the surface
+		HDC Texture2D::GetDC()
+		{
+			HDC dc;
+			D3DPtr<IDXGISurface1> surf;
+			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface1), (void **)&surf.m_ptr));
+			pr::Throw(surf->GetDC(TRUE, &dc), "GetDC can only be called for textures that were created with the D3D11_RESOURCE_MISC_GDI_COMPATIBLE flag");
+			return dc;
+		}
+
+		// Release the GDI dc from the surface
+		void Texture2D::ReleaseDC()
+		{
+			D3DPtr<IDXGISurface1> surf;
+			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface1), (void **)&surf.m_ptr));
+			pr::Throw(surf->ReleaseDC(nullptr));
+			// Note: the main RT must be restored once all ReleaseDC's have been called
 		}
 
 		// Refcounting cleanup function

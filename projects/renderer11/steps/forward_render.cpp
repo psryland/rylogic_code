@@ -67,6 +67,7 @@ namespace pr
 			if (m_clear_bb)
 			{
 				// Get the render target views
+				// Note: if you've called GetDC() you need to call ReleaseDC() and RestoreMainRT() or rtv will be null
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
 				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);

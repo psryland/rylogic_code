@@ -26,14 +26,26 @@ namespace pr
 			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<ds::CBufModel>("ds::CBufModel"))
 		{
-			InitGBuffer(true);
+			InitRT(true);
 
 			m_rsb = RSBlock::SolidCullBack();
 		}
 
 		// Create render targets for the gbuffer based on the current render target size
-		void GBuffer::InitGBuffer(bool create_buffers)
+		void GBuffer::InitRT(bool create_buffers)
 		{
+			// Release any existing RTs
+			m_dsv = nullptr;
+			for (int i = 0; i != GBuffer::RTCount; ++i)
+			{
+				m_tex[i] = nullptr;
+				m_rtv[i] = nullptr;
+				m_srv[i] = nullptr;
+			}
+
+			if (!create_buffers)
+				return;
+
 			auto dc = m_scene->m_rdr->ImmediateDC();
 			auto size = m_scene->m_rdr->RenderTargetSize();
 			auto device = m_scene->m_rdr->Device();
@@ -50,60 +62,48 @@ namespace pr
 			tdesc.CPUAccessFlags     = 0;
 			tdesc.MiscFlags          = 0;
 
-			// Release any existing RTs
-			m_dsv = nullptr;
+			// Create a texture for each layer in the gbuffer
+			// and get the render target view of each texture buffer
+			DXGI_FORMAT fmt[GBuffer::RTCount] =
+			{
+				DXGI_FORMAT_R10G10B10A2_UNORM, // diffuse , normal Z sign  //DXGI_FORMAT_R8G8B8A8_UNORM,
+				DXGI_FORMAT_R16G16_UNORM,      // normal x,y //DXGI_FORMAT_R11G11B10_FLOAT,
+				DXGI_FORMAT_R32_FLOAT,         // depth layer
+			};
 			for (int i = 0; i != GBuffer::RTCount; ++i)
 			{
-				m_tex[i] = nullptr;
-				m_rtv[i] = nullptr;
-				m_srv[i] = nullptr;
+				// Create the resource
+				tdesc.Format = fmt[i];
+				pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
+				PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s tex", ToString((GBuffer::RTEnum_)i))));
+
+				// Get the render target view
+				RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
+				rtvdesc.Texture2D.MipSlice = 0;
+				pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
+
+				// Get the shader res view
+				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
+				srvdesc.Texture2D.MostDetailedMip = 0;
+				srvdesc.Texture2D.MipLevels = 1;
+				pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
 			}
 
-			if (create_buffers)
-			{
-				// Create a texture for each layer in the gbuffer
-				// and get the render target view of each texture buffer
-				DXGI_FORMAT fmt[GBuffer::RTCount] =
-				{
-					DXGI_FORMAT_R10G10B10A2_UNORM, // diffuse , normal Z sign  //DXGI_FORMAT_R8G8B8A8_UNORM,
-					DXGI_FORMAT_R16G16_UNORM,      // normal x,y //DXGI_FORMAT_R11G11B10_FLOAT,
-					DXGI_FORMAT_R32_FLOAT,         // depth layer
-				};
-				for (int i = 0; i != GBuffer::RTCount; ++i)
-				{
-					// Create the resource
-					tdesc.Format = fmt[i];
-					pr::Throw(device->CreateTexture2D(&tdesc, 0, &m_tex[i].m_ptr));
-					PR_EXPAND(PR_DBG_RDR, NameResource(m_tex[i], FmtS("gbuffer %s tex", ToString((GBuffer::RTEnum_)i))));
+			// We need to create our own depth buffer to ensure it has the same dimensions
+			// and multisampling properties as the g-buffer RTs.
+			D3DPtr<ID3D11Texture2D> dtex;
+			tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+			pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "gbuffer dsv"));
 
-					// Get the render target view
-					RenderTargetViewDesc rtvdesc(tdesc.Format, D3D11_RTV_DIMENSION_TEXTURE2D);
-					rtvdesc.Texture2D.MipSlice = 0;
-					pr::Throw(device->CreateRenderTargetView(m_tex[i].m_ptr, &rtvdesc, &m_rtv[i].m_ptr));
-
-					// Get the shader res view
-					ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-					srvdesc.Texture2D.MostDetailedMip = 0;
-					srvdesc.Texture2D.MipLevels = 1;
-					pr::Throw(device->CreateShaderResourceView(m_tex[i].m_ptr, &srvdesc, &m_srv[i].m_ptr));
-				}
-
-				// We need to create our own depth buffer to ensure it has the same dimensions
-				// and multisampling properties as the g-buffer RTs.
-				D3DPtr<ID3D11Texture2D> dtex;
-				tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-				tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-				pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
-				PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "gbuffer dsv"));
-
-				DepthStencilViewDesc dsvdesc(tdesc.Format);
-				dsvdesc.Texture2D.MipSlice = 0;
-				pr::Throw(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
-			}
+			DepthStencilViewDesc dsvdesc(tdesc.Format);
+			dsvdesc.Texture2D.MipSlice = 0;
+			pr::Throw(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
 		}
 
 		// Bind the gbuffer RTs to the output merger
-		void GBuffer::BindGBuffer(bool bind)
+		void GBuffer::BindRT(bool bind)
 		{
 			auto dc = m_scene->m_rdr->ImmediateDC();
 			if (bind)
@@ -161,8 +161,8 @@ namespace pr
 
 			// Bind the g-buffer to the OM
 			auto bind_gbuffer = pr::CreateScope(
-				[this]{ BindGBuffer(true); },
-				[this]{ BindGBuffer(false); });
+				[this]{ BindRT(true); },
+				[this]{ BindRT(false); });
 
 			// Clear the g-buffer and depth buffer
 			float diff_reset[4] = {m_scene->m_bkgd_colour.r, m_scene->m_bkgd_colour.g, m_scene->m_bkgd_colour.b, 0.5f};
@@ -209,7 +209,7 @@ namespace pr
 		void GBuffer::OnEvent(Evt_Resize const& evt)
 		{
 			// Recreate the g-buffer on resize
-			InitGBuffer(evt.m_done);
+			InitRT(evt.m_done);
 		}
 	}
 }

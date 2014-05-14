@@ -99,7 +99,7 @@ try:
 			
 			# Debug build options
 			if dbg:
-				options += ["/Od", "/Zi"]
+				options += ["/Od", "/Zi", "/Gfp"]
 
 			# Build the shader using fxc
 			if trace: print("Running fxc.exe...")

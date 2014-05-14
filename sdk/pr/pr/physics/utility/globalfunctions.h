@@ -22,11 +22,11 @@ namespace pr
 		// Create inertia tensors
 		inline m3x4 InertiaTensorWS(m3x4 const& orientation, m3x4 const& os_inertia_tensor)
 		{
-			return orientation * os_inertia_tensor * GetTranspose(orientation);
+			return orientation * os_inertia_tensor * Transpose3x3(orientation);
 		}
 		inline m3x4 InvInertiaTensorWS(m3x4 const& orientation, m3x4 const& os_inv_inertia_tensor)
 		{
-			return orientation * os_inv_inertia_tensor * GetTranspose(orientation);
+			return orientation * os_inv_inertia_tensor * Transpose3x3(orientation);
 		}
 	}
 }

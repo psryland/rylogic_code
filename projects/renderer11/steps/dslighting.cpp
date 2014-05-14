@@ -49,6 +49,8 @@ namespace pr
 				m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.CreateModel(s);
 
 				NuggetProps ddata(EPrim::TriList, EGeom::Vert);
+				ddata.m_sset.get(EStockShader::DSLightingVS, m_shdr_mgr)->UsedBy(Id);
+				ddata.m_sset.get(EStockShader::DSLightingPS, m_shdr_mgr)->UsedBy(Id);
 				m_unit_quad.m_model->CreateNugget(ddata);
 			}
 
@@ -88,11 +90,9 @@ namespace pr
 
 			// Draw the full screen quad
 			{
-				Nugget const& nugget = m_unit_quad.m_model->m_nuggets.front();
-
 				// Bind the shader to the device
 				DrawListElement dle;
-				dle.m_nugget   = &nugget;
+				dle.m_nugget   = &m_unit_quad.m_model->m_nuggets.front();
 				dle.m_instance = &m_unit_quad.m_base;
 				dle.m_sort_key = 0;
 
@@ -101,8 +101,8 @@ namespace pr
 
 				// Add the nugget to the device context
 				dc->DrawIndexed(
-					UINT(nugget.m_irange.size()),
-					UINT(nugget.m_irange.m_begin),
+					UINT(dle.m_nugget->m_irange.size()),
+					UINT(dle.m_nugget->m_irange.m_begin),
 					0);
 			}
 		}

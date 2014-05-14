@@ -32,8 +32,13 @@ namespace pr
 
 			shader_cso[id] = pr::To<wstring256>(pr::FmtS("%s\\%s",compile_shader_dir,cso_filepath));
 		}
+		#endif
+	
 		void ShaderBase::Setup(D3DPtr<ID3D11DeviceContext>& dc, DeviceState&)
 		{
+			#if !PR_RDR_RUNTIME_SHADERS
+			(void)dc;
+			#else
 			struct ModCheck
 			{
 				DWORD  m_last_check;    // Tick value when the last check for a changed shader was made
@@ -74,8 +79,8 @@ namespace pr
 			}
 
 			check.m_last_modified = newest;
+			#endif
 		}
-		#endif
 
 		// Get/Set whether this shader is used by the given render step
 		// Shaders are created with 'm_used_by' set to zero. Users can then set the render steps that

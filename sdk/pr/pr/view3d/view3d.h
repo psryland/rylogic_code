@@ -190,6 +190,7 @@ struct View3DViewport
 };
 
 typedef void (__stdcall *View3D_SettingsChanged)();
+typedef void (__stdcall *View3D_RenderCB)();
 typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
 typedef void (__stdcall *View3D_LogOutputCB)(EView3DLogLevel level, long long timestamp, char const* msg);
 typedef void (__stdcall *View3D_EditObjectCB)(
@@ -207,12 +208,13 @@ typedef void (__stdcall *View3D_EditObjectCB)(
 extern "C"
 {
 	// Initialise/shutdown the dll
-	VIEW3D_API EView3DResult           __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_changed_cb);
+	VIEW3D_API EView3DResult           __stdcall View3D_Initialise(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_changed_cb);
 	VIEW3D_API void                    __stdcall View3D_Shutdown();
 
 	// Draw sets
 	VIEW3D_API char const*             __stdcall View3D_GetSettings              (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetSettings              (View3DDrawset drawset, char const* settings);
+	VIEW3D_API void                    __stdcall View3D_DrawsetRender            (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_DrawsetAddObjectsById    (View3DDrawset drawset, int context_id);
 	VIEW3D_API void                    __stdcall View3D_DrawsetRemoveObjectsById (View3DDrawset drawset, int context_id);
 	VIEW3D_API EView3DResult           __stdcall View3D_DrawsetCreate            (View3DDrawset& drawset);
@@ -279,14 +281,14 @@ extern "C"
 	VIEW3D_API HDC                     __stdcall View3D_TextureGetDC                (View3DTexture tex);
 	VIEW3D_API void                    __stdcall View3D_TextureReleaseDC            (View3DTexture tex);
 	VIEW3D_API void                    __stdcall View3D_TextureResize               (View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve);
+	VIEW3D_API View3DTexture           __stdcall View3D_TextureRenderTarget         ();
 
 	// Rendering
-	VIEW3D_API void                    __stdcall View3D_Refresh                  ();
+	VIEW3D_API void                    __stdcall View3D_Present                  ();
 	VIEW3D_API void                    __stdcall View3D_RenderTargetSize         (int& width, int& height);
 	VIEW3D_API void                    __stdcall View3D_SetRenderTargetSize      (int width, int height);
 	VIEW3D_API View3DViewport          __stdcall View3D_Viewport                 ();
 	VIEW3D_API void                    __stdcall View3D_SetViewport              (View3DViewport vp);
-	VIEW3D_API void                    __stdcall View3D_Render                   (View3DDrawset drawset);
 	VIEW3D_API EView3DFillMode         __stdcall View3D_FillMode                 (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_SetFillMode              (View3DDrawset drawset, EView3DFillMode mode);
 	VIEW3D_API BOOL                    __stdcall View3D_Orthographic             (View3DDrawset drawset);
@@ -301,6 +303,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowAngleTool            (View3DDrawset drawset, BOOL show);
 
 	// Miscellaneous
+	VIEW3D_API void                    __stdcall View3D_RestoreMainRT            ();
 	VIEW3D_API void                    __stdcall View3D_CreateDemoScene          (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_ShowDemoScript           ();
 	VIEW3D_API BOOL                    __stdcall View3D_FocusPointVisible        (View3DDrawset drawset);

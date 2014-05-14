@@ -218,9 +218,7 @@
     <Compile Include="gui\dgv_custom_columns.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\diagram_control.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
+    <Compile Include="gui\diagram_control.cs" />
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
     </Compile>

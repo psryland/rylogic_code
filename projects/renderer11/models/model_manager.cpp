@@ -93,26 +93,26 @@ namespace pr
 		// Create stock models
 		void ModelManager::CreateStockModels()
 		{
-			//{// Unit quad in Z = 0 plane
-			//	VertPCNT verts[4] =
-			//	{
-			//		{pr::v3::make(-1,-1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0.0000f,0.9999f)},
-			//		{pr::v3::make( 1,-1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0.9999f,0.9999f)},
-			//		{pr::v3::make( 1, 1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0.9999f,0.0000f)},
-			//		{pr::v3::make(-1, 1, 0), pr::ColourWhite, pr::v3ZAxis, pr::v2::make(0.0000f,0.0000f)},
-			//	};
-			//	pr::uint16 idxs[] =
-			//	{
-			//		0, 1, 2, 0, 2, 3
-			//	};
-			//	auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
+			{// Unit quad in Z = 0 plane
+				Vert verts[4] =
+				{
+					{pr::v4::make(-0.5f,-0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.0000f,0.9999f)},
+					{pr::v4::make( 0.5f,-0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.9999f,0.9999f)},
+					{pr::v4::make( 0.5f, 0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.9999f,0.0000f)},
+					{pr::v4::make(-0.5f, 0.5f, 0, 1), pr::ColourWhite, pr::v4ZAxis, pr::v2::make(0.0000f,0.0000f)},
+				};
+				pr::uint16 idxs[] =
+				{
+					0, 1, 2, 0, 2, 3
+				};
+				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
 
-			//	MdlSettings s(verts, idxs, bbox, "unit quad");
-			//	m_unit_quad = CreateModel(s);
+				MdlSettings s(verts, idxs, bbox, "unit quad");
+				m_unit_quad = CreateModel(s);
 
-			//	NuggetProps ddata(EPrim::TriList, VertPCNT::GeomMask);
-			//	m_unit_quad->CreateNugget(ddata);
-			//}
+				NuggetProps ddata(EPrim::TriList, Vert::GeomMask);
+				m_unit_quad->CreateNugget(ddata);
+			}
 		}
 	}
 }

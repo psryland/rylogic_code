@@ -117,6 +117,8 @@ namespace pr
 		struct GBufferShaderPS;
 		struct DSLightingShaderVS;
 		struct DSLightingShaderPS;
+		struct ShadowMapVS;
+		struct ShadowMapPS;
 		struct ThickLineListShaderGS;
 		struct ShadowMapShader;
 		typedef pr::RefPtr<ShaderBase> ShaderPtr;

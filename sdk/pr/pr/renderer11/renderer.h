@@ -42,6 +42,7 @@
 #include "pr/renderer11/steps/forward_render.h"
 #include "pr/renderer11/steps/gbuffer.h"
 #include "pr/renderer11/steps/dslighting.h"
+#include "pr/renderer11/steps/shadow_map.h"
 
 // Models
 #include "pr/renderer11/models/model_manager.h"

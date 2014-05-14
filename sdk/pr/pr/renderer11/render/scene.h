@@ -34,6 +34,7 @@ namespace pr
 			Light          m_global_light; // The global light settings
 
 			Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
+			~Scene();
 
 			// Set the render steps to use for rendering the scene
 			void SetRenderSteps(std::vector<ERenderStep>&& rsteps);

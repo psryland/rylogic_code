@@ -65,6 +65,10 @@ namespace pr
 			CreateShader<DSLightingShaderVS>();
 			CreateShader<DSLightingShaderPS>();
 
+			// Shadow map shaders
+			CreateShader<ShadowMapVS>();
+			CreateShader<ShadowMapPS>();
+
 			// Other shaders
 			CreateShader<ThickLineListShaderGS>();
 		}

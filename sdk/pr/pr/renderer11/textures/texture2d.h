@@ -32,7 +32,7 @@ namespace pr
 			string32                         m_name;      // Human readable id for the texture
 			//VideoPtr                         m_video;     // Non-null if this texture is the output of a video
 
-			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
+			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
 			Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc = nullptr);
 			Texture2D(TextureManager* mgr, Texture2D const& existing, SortKeyId sort_id);
 
@@ -56,6 +56,22 @@ namespace pr
 			// Resize this texture to 'size' optionally applying the resize to all instances of this
 			// texture and optionally preserving the current content of the texture
 			void Resize(size_t width, size_t height, bool all_instances, bool preserve);
+
+			// Get/Release the DC (prefer the Gfx class for RAII)
+			// Note: Only works for textures created with GDI compatibility
+			HDC GetDC();
+			void ReleaseDC();
+
+			// A scoped device context to allow GDI+ edits of the texture
+			class Gfx :public Gdiplus::Graphics
+			{
+				Texture2DPtr m_tex;
+				Gfx(Gfx const&);
+				Gfx& operator=(Gfx const&);
+			public:
+				Gfx(Texture2DPtr& tex) :Gdiplus::Graphics(tex->GetDC()) ,m_tex(tex) {}
+				~Gfx() { m_tex->ReleaseDC(); }
+			};
 
 			// Ref counting cleanup
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);

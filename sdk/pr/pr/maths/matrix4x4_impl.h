@@ -291,6 +291,7 @@ namespace pr
 		return mat.x.x + mat.y.y + mat.z.z + mat.w.w;
 	}
 
+	// The kernel of the matrix
 	inline v4 Kernel(m4x4 const& mat)
 	{
 		return v4::make(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
@@ -323,12 +324,14 @@ namespace pr
 		return mat;
 	}
 
+	// Return the 4x4 transpose of 'mat'
 	inline m4x4 GetTranspose4x4(m4x4 const& mat)
 	{
 		m4x4 m = mat;
 		return Transpose4x4(m);
 	}
 
+	// Return the 3x3 transpose of 'mat'
 	inline m4x4 GetTranspose3x3(m4x4 const& mat)
 	{
 		m4x4 m = mat;
@@ -465,66 +468,32 @@ namespace pr
 	{
 		return mat * mat;
 	}
-	inline m4x4& Translation(m4x4& mat, v3 const& xyz)
+	inline m4x4 Translation4x4(v3 const& xyz)
 	{
-		mat.identity();
+		m4x4 mat = m4x4Identity;
 		mat.pos.set(xyz, 1.0f);
 		return mat;
 	}
-	inline m4x4& Translation(m4x4& mat, v4 const& xyz)
+	inline m4x4 Translation4x4(v4 const& xyz)
 	{
-		mat.identity();
+		assert(xyz.w == 1.0f && "translation should be a position vector");
+		m4x4 mat = m4x4Identity;
 		mat.pos = xyz;
 		return mat;
 	}
-	inline m4x4& Translation(m4x4& mat, float x, float y, float z)
+	inline m4x4 Translation4x4(float x, float y, float z)
 	{
-		mat.identity();
-		mat.pos.set(x, y, z, 1.0f);
+		m4x4 mat = m4x4Identity;
+		mat.pos.set(x,y,z,1.0f);
 		return mat;
-	}
-	inline m4x4 Translation(v3 const& xyz)
-	{
-		m4x4 m;
-		return Translation(m, xyz);
-	}
-	inline m4x4 Translation(v4 const& xyz)
-	{
-		m4x4 m;
-		return Translation(m, xyz);
-	}
-	inline m4x4 Translation(float x, float y, float z)
-	{
-		m4x4 m;
-		return Translation(m, x, y, z);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, float pitch, float yaw, float roll, v4 const& translation)
-	{
-		return mat.set(pitch, yaw, roll, translation);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, v3 const& axis, float angle, v4 const& translation)
-	{
-		return mat.set(v4::make(axis, 0.0f), angle, translation);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, v4 const& axis, float angle, v4 const& translation)
-	{
-		return mat.set(axis, angle, translation);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, v4 const& angular_displacement, v4 const& translation)
-	{
-		return mat.set(angular_displacement, translation);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, v4 const& from, v4 const& to, v4 const& translation)
-	{
-		return mat.set(from, to, translation);
-	}
-	inline m4x4& Rotation4x4(m4x4& mat, Quat const& quat, v4 const& translation)
-	{
-		return mat.set(quat, translation);
 	}
 	inline m4x4 Rotation4x4(float pitch, float yaw, float roll, v4 const& translation)
 	{
 		return m4x4::make(pitch, yaw, roll, translation);
+	}
+	inline m4x4 Rotation4x4(v3 const& axis, float angle, v4 const& translation)
+	{
+		return m4x4::make(v4::make(axis, 0.0f), angle, translation);
 	}
 	inline m4x4 Rotation4x4(v4 const& axis, float angle, v4 const& translation)
 	{
@@ -542,66 +511,45 @@ namespace pr
 	{
 		return m4x4::make(quat, translation);
 	}
-	inline m4x4& Scale4x4(m4x4& mat, float scale, v4 const& translation)
+	inline m4x4 Scale4x4(float scale, v4 const& translation)
 	{
-		Zero(mat);
+		m4x4 mat = {};
 		mat.x.x = mat.y.y = mat.z.z = scale;
 		mat.pos = translation;
 		return mat;
 	}
-	inline m4x4& Scale4x4(m4x4& mat, float sx, float sy, float sz, v4 const& translation)
+	inline m4x4 Scale4x4(float sx, float sy, float sz, v4 const& translation)
 	{
-		Zero(mat);
+		m4x4 mat = {};
 		mat.x.x = sx;
 		mat.y.y = sy;
 		mat.z.z = sz;
 		mat.pos = translation;
 		return mat;
 	}
-	inline m4x4 Scale4x4(float scale, v4 const& translation)
-	{
-		m4x4 m;
-		return Scale4x4(m, scale, translation);
-	}
-	inline m4x4 Scale4x4(float sx, float sy, float sz, v4 const& translation)
-	{
-		m4x4 m;
-		return Scale4x4(m, sx, sy, sz, translation);
-	}
-
-	inline m4x4& Shear4x4(m4x4& mat, float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& translation)
-	{
-		Shear3x3(cast_m3x4(mat), sxy, sxz, syx, syz, szx, szy);
-		mat.pos = translation;
-		return mat;
-	}
 	inline m4x4 Shear4x4(float sxy, float sxz, float syx, float syz, float szx, float szy, v4 const& translation)
 	{
-		m4x4 m;
-		return Shear4x4(m, sxy, sxz, syx, syz, szx, szy, translation);
+		return m4x4::make(Shear3x3(sxy, sxz, syx, syz, szx, szy), translation);
 	}
 
-	inline m4x4& LookAt(m4x4& mat, v4 const& eye, v4 const& at, v4 const& up)
+	// Orientation matrix to "look" at a point
+	inline m4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
 	{
 		assert(eye.w == 1.0f && at.w == 1.0f && up.w == 0.0f && "Invalid position/direction vectors passed to Lookat");
 		assert(!pr::Parallel(at - eye, up) && "Lookat point and up axis are aligned");
+		m4x4 mat;
 		mat.z = Normalise3(eye - at);
 		mat.x = Normalise3(Cross3(up, mat.z));
 		mat.y = Cross3(mat.z, mat.x);
 		mat.pos = eye;
 		return mat;
 	}
-	inline m4x4 LookAt(v4 const& eye, v4 const& at, v4 const& up)
-	{
-		m4x4 m;
-		return LookAt(m, eye, at, up);
-	}
 
 	// Construct an orthographic projection matrix
-	inline m4x4& ProjectionOrthographic(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionOrthographic(float w, float h, float Znear, float Zfar, bool righthanded)
 	{
 		float diff = Zfar - Znear;
-		Zero(mat);
+		m4x4 mat = {};
 		mat.x.x = 2.0f / w;
 		mat.y.y = 2.0f / h;
 		mat.z.z = Sign<float>(!righthanded) / diff;
@@ -609,18 +557,13 @@ namespace pr
 		mat.w.z = -Znear / diff;
 		return mat;
 	}
-	inline m4x4 ProjectionOrthographic(float w, float h, float Znear, float Zfar, bool righthanded)
-	{
-		m4x4 m;
-		return ProjectionOrthographic(m, w, h, Znear, Zfar, righthanded);
-	}
 
 	// Construct a perspective projection matrix
-	inline m4x4& ProjectionPerspective(m4x4& mat, float w, float h, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspective(float w, float h, float Znear, float Zfar, bool righthanded)
 	{
 		float zn   = 2.0f * Znear;
 		float diff = Zfar - Znear;
-		Zero(mat);
+		m4x4 mat = {};
 		mat.x.x = zn / w;
 		mat.y.y = zn / h;
 		mat.z.w = Sign<float>(!righthanded);
@@ -628,18 +571,13 @@ namespace pr
 		mat.w.z = -Znear * Zfar / diff;
 		return mat;
 	}
-	inline m4x4 ProjectionPerspective(float w, float h, float Znear, float Zfar, bool righthanded)
-	{
-		m4x4 m;
-		return ProjectionPerspective(m, w, h, Znear, Zfar, righthanded);
-	}
 
 	// Construct a perspective projection matrix offset from the centre
-	inline m4x4& ProjectionPerspective(m4x4& mat, float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspective(float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
 	{
 		float zn   = 2.0f * Znear;
 		float diff = Zfar - Znear;
-		Zero(mat);
+		m4x4 mat = {};
 		mat.x.x = zn / (r - l);
 		mat.y.y = zn / (t - b);
 		mat.z.x = (l+r)/(l-r);
@@ -649,28 +587,18 @@ namespace pr
 		mat.w.z = -Znear * Zfar / diff;
 		return mat;
 	}
-	inline m4x4 ProjectionPerspective(float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
-	{
-		m4x4 m;
-		return ProjectionPerspective(m, l, r, t, b, Znear, Zfar, righthanded);
-	}
 
 	// Construct a perspective projection matrix using field of view
-	inline m4x4& ProjectionPerspectiveFOV(m4x4& mat, float fovY, float aspect, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float Znear, float Zfar, bool righthanded)
 	{
 		float diff = Zfar - Znear;
-		Zero(mat);
+		m4x4 mat = {};
 		mat.y.y = 1.0f / pr::Tan(fovY/2);
 		mat.x.x = mat.y.y / aspect;
 		mat.z.w = Sign<float>(!righthanded);
 		mat.z.z = mat.z.w * Zfar / diff;
 		mat.w.z = -Znear * Zfar / diff;
 		return mat;
-	}
-	inline m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float Znear, float Zfar, bool righthanded)
-	{
-		m4x4 m;
-		return ProjectionPerspectiveFOV(m, fovY, aspect, Znear, Zfar, righthanded);
 	}
 
 	// Return the cross product matrix for 'vec'. This matrix can be used to take the
@@ -688,30 +616,16 @@ namespace pr
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be choosen.
-	inline m4x4& OriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position)
+	inline m4x4 OriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position)
 	{
-		OriFromDir(cast_m3x4(ori), dir, axis, up);
-		ori.pos = position;
-		return ori;
-	}
-	inline m4x4  OriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position)
-	{
-		m4x4 m;
-		return OriFromDir(m, dir, axis, up, position);
+		return m4x4::make(OriFromDir(dir, axis, up), position);
 	}
 
 	// Make a scaled object to world transform from a direction vector and position
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	inline m4x4& ScaledOriFromDir(m4x4& ori, v4 const& dir, int axis, v4 const& up, v4 const& position)
+	inline m4x4 ScaledOriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position)
 	{
-		ScaledOriFromDir(cast_m3x4(ori), dir, axis, up);
-		ori.pos = position;
-		return ori;
-	}
-	inline m4x4  ScaledOriFromDir(v4 const& dir, int axis, v4 const& up, v4 const& position)
-	{
-		m4x4 m;
-		return ScaledOriFromDir(m, dir, axis, up, position);
+		return m4x4::make(ScaledOriFromDir(dir, axis, up), position);
 	}
 
 	// Return the square root of a matrix. The square root is the matrix B where B.B = mat.
@@ -753,9 +667,9 @@ namespace pr
 			{//m4x4Translation
 				m4x4 m2;
 				m4x4 m1 = m4x4::make(v4XAxis, v4YAxis, v4ZAxis, v4::make(1.0f, 2.0f, 3.0f, 1.0f));
-				Translation(m2, v3::make(1.0f, 2.0f, 3.0f));
+				m2 = Translation4x4(v3::make(1.0f, 2.0f, 3.0f));
 				PR_CHECK(FEql(m1, m2), true);
-				Translation(m2, v4::make(1.0f, 2.0f, 3.0f, 1.0f));
+				m2 = Translation4x4(v4::make(1.0f, 2.0f, 3.0f, 1.0f));
 				PR_CHECK(FEql(m1, m2), true);
 			}
 			{//m4x4CreateFrom
@@ -771,16 +685,16 @@ namespace pr
 				PR_CHECK(FEql4(V3, V4), true);
 			}
 			{//m4x4CreateFrom2
-				m4x4 m1; Rotation4x4(m1, 1.0f, 0.5f, 0.7f, v4Origin);
-				m4x4 m2; m2.set(Quat::make(1.0f, 0.5f, 0.7f), v4Origin);
+				m4x4 m1 = Rotation4x4(1.0f, 0.5f, 0.7f, v4Origin);
+				m4x4 m2 = m4x4::make(Quat::make(1.0f, 0.5f, 0.7f), v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);
 
 				float ang = rand::fltc(0.0f,1.0f);
 				v4 axis = Random3N(0.0f);
-				m1; Rotation4x4(m1, axis, ang, v4Origin);
-				m2; m2.set(Quat::make(axis, ang), v4Origin);
+				m1 = Rotation4x4(axis, ang, v4Origin);
+				m2 = m4x4::make(Quat::make(axis, ang), v4Origin);
 				PR_CHECK(IsOrthonormal(m1), true);
 				PR_CHECK(IsOrthonormal(m2), true);
 				PR_CHECK(FEql(m1, m2), true);

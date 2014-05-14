@@ -48,13 +48,11 @@ GPixel ReadGBuffer(float2 tex, float3 cs_vdir)
 	float2 norm = m_tex_normals.Sample(m_point_sampler, tex);
 	float depth = m_tex_depth.Sample(m_point_sampler, tex);
 
-	Out.diff = float4(diff.xyz, 0);
+	Out.diff = float4(diff.xyz, 1);
 
 	float4 ws_norm = float4(norm * 2 - 1, diff.w * 2 - 1, 0);
-	if (dot(ws_norm,ws_norm) > 0.5f)
-		Out.ws_norm = normalize(float4(ws_norm.xy, ws_norm.z * sqrt(saturate(1 - dot(ws_norm.xy,ws_norm.xy))), 0));
-	else
-		Out.ws_norm = float4(0,0,0,0);
+	float has_norm = dot(ws_norm,ws_norm);
+	Out.ws_norm = step(0.5f, has_norm) * float4(ws_norm.xy, ws_norm.z * sqrt(saturate(1 - dot(ws_norm.xy,ws_norm.xy))), 0);
 
 	Out.cs_vert = float4(cs_vdir * depth, 1);
 	Out.cs_depth = depth;

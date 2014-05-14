@@ -32,7 +32,7 @@ namespace sol
 			pr::rdr::NuggetProps mat;
 			mat.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, pr::rdr::SamplerDesc::LinearClamp(), AssMgr::DataPath(L"textures\\smiling gekko.dds").c_str());
 			m_inst.m_model    = pr::rdr::ModelGenerator<>::Quad(rdr, 1.0f, 1.0f, pr::iv2Zero, pr::Colour32White, &mat);
-			m_inst.m_i2w      = pr::Translation(0,0,0);
+			m_inst.m_i2w      = pr::Translation4x4(0,0,0);
 		}
 
 		// Add to a viewport

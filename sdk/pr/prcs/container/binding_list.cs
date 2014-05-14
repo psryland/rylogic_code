@@ -11,10 +11,15 @@ namespace pr.container
 	{
 		public BindingListEx() :base() {}
 		public BindingListEx(IList<T> list) :base(list) {}
+		public BindingListEx(int initial_count, T value)
+		{
+			for (;initial_count-- != 0;)
+				Add(value);
+		}
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
-		public event EventHandler<ListChangingEventArgs> ListChanging;
-		public class ListChangingEventArgs :EventArgs
+		public event EventHandler<ListChgEventArgs> ListChanging;
+		public class ListChgEventArgs :EventArgs
 		{
 			/// <summary>The change this event represents</summary>
 			public ListChg ChangeType { get; private set; }
@@ -25,7 +30,7 @@ namespace pr.container
 			/// <summary>The item added/remove</summary>
 			public T Item { get; private set; }
 
-			public ListChangingEventArgs(ListChg chg, int index, T item)
+			public ListChgEventArgs(ListChg chg, int index, T item)
 			{
 				ChangeType = chg;
 				Index      = index;
@@ -33,27 +38,49 @@ namespace pr.container
 			}
 		}
 
+		/// <summary>Raised whenever an element in the list is changed</summary>
+		public event EventHandler<ItemChgEventArgs> ItemChanged;
+		public class ItemChgEventArgs :EventArgs
+		{
+			/// <summary>Index position of the item that was changed</summary>
+			public int Index { get; private set; }
+
+			/// <summary>The item before it was changed</summary>
+			public T OldItem { get; private set; }
+
+			/// <summary>The new item now in position 'Index' in the list</summary>
+			public T NewItem { get; private set; }
+
+			public ItemChgEventArgs(int index, T old_item, T new_item)
+			{
+				Index = index;
+				OldItem = old_item;
+				NewItem = new_item;
+			}
+		}
+
+		// Removes all items from the list
 		protected override void ClearItems()
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.PreReset, -1, default(T)));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.PreReset, -1, default(T)));
 
 			base.ClearItems();
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.Reset, -1, default(T)));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.Reset, -1, default(T)));
 		}
 
 		// Inserts the specified item in the list at the specified index.
 		protected override void InsertItem(int index, T item)
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemPreAdd, -1, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreAdd, -1, item));
 
 			base.InsertItem(index, item);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemAdded, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, item));
 		}
 
 		// Removes the item at the specified index.
@@ -61,12 +88,12 @@ namespace pr.container
 		{
 			var item = this[index];
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemPreRemove, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreRemove, index, item));
 			
 			base.RemoveItem(index);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemRemoved, -1, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, -1, item));
 		}
 		
 		// Replaces the item at the specified index with the specified item.
@@ -74,16 +101,19 @@ namespace pr.container
 		{
 			var old = this[index];
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemPreAdd, -1, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreAdd, -1, item));
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemPreRemove, index, old));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreRemove, index, old));
 		
 			base.SetItem(index, item);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemRemoved, -1, old));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, -1, old));
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChangingEventArgs(ListChg.ItemAdded, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, item));
+
+			if (RaiseListChangedEvents)
+				ItemChanged.Raise(this, new ItemChgEventArgs(index, old, item));
 		}
 	}
 }

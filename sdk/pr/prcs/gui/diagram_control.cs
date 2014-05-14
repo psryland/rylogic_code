@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.Data;
 using System.IO;
 using System.Linq;
@@ -42,17 +43,17 @@ namespace pr.gui
 		/// <summary>Base class for anything on a diagram</summary>
 		public abstract class Element :IDisposable
 		{
-			protected Element(string ldr_desc, m4x4 position)
+			protected Element(m4x4 position)
 			{
 				Diagram  = null;
 				Id       = Guid.NewGuid();
-				Graphics = new View3d.Object(ldr_desc);
+				Graphics = new View3d.Object("*Group {}");
 				Position = position;
 			}
-			protected Element(string ldr_desc, XElement node)
+			protected Element(XElement node)
 			{
 				Diagram  = null;
-				Graphics = new View3d.Object(ldr_desc);
+				Graphics = new View3d.Object("*Group {}");
 				Id       = node.Element("id").As<Guid>();
 				Position = node.Element("pos").As<m4x4>();
 			}
@@ -60,7 +61,7 @@ namespace pr.gui
 			{
 				if (Diagram != null)
 					Diagram.Elements.Remove(this);
-					
+
 				Graphics = null;
 				Invalidated = null;
 				PositionChanged = null;
@@ -89,7 +90,7 @@ namespace pr.gui
 						PositionChanged -= m_impl_diag.HandleElementPositionChanged;
 						DataChanged     -= m_impl_diag.HandleElementDataChanged;
 					}
-					
+
 					// Assign the new diagram
 					m_impl_diag = value;
 
@@ -100,7 +101,7 @@ namespace pr.gui
 						SelectedChanged += m_impl_diag.HandleElementSelectionChanged;
 						PositionChanged += m_impl_diag.HandleElementPositionChanged;
 						DataChanged     += m_impl_diag.HandleElementDataChanged;
-						
+
 						// Set a new Z position
 						var pos = Position;
 						pos.p.z = m_impl_diag.ElementZ;
@@ -141,7 +142,7 @@ namespace pr.gui
 			/// <summary>Raised whenever data associated with the element changes</summary>
 			public event EventHandler DataChanged;
 			protected void RaiseDataChanged() { DataChanged.Raise(this, EventArgs.Empty); }
-			
+
 			/// <summary>Get/Set the selected state</summary>
 			public virtual bool Selected
 			{
@@ -225,24 +226,58 @@ namespace pr.gui
 		/// <summary>A base class for nodes</summary>
 		public abstract class Node :Element
 		{
-			protected Node(string ldr_desc, uint width, uint height, string tex_obj_name, string text, m4x4 position, NodeStyle style)
-				:base(ldr_desc, position)
-			{
-				Surf     = new View3d.Texture(width,height);
-				Text     = text;
-				Style    = style;
-				Graphics.SetTexture(Surf, tex_obj_name);
+			/// <summary>Function prototype for creating an ldr string describing a graphics model</summary>
+			private delegate string MakeGfx(uint width, uint height, NodeStyle style);
 
-				Style.StyleChanged += Invalidate;
-			}
-			protected Node(string ldr_desc, string tex_obj_name, XElement node)
-				:base(ldr_desc, node)
+			/// <summary>Base node constructor</summary>
+			/// <param name="make_gfx">Function for creating the graphics model</param>
+			/// <param name="autosize">If true, the width and height a maximum size limits (0 meaning unlimited)</param>
+			/// <param name="width">The width of the node, or if 'autosize' is true, the maximum width of the node</param>
+			/// <param name="height">The height of the node, or if 'autosize' is true, the maximum height of the node</param>
+			/// <param name="tex_obj_name">The graphics object name that receives the surface texture</param>
+			/// <param name="text">The text of the node</param>
+			/// <param name="position">The position of the node on the diagram</param>
+			/// <param name="style">Style properties for the node</param>
+			protected Node(bool autosize, uint width, uint height, string text, m4x4 position, NodeStyle style)
+				:base(position)
 			{
-				Size  = node.Element("size").As<Size>();
-				Text  = node.Element("text").As<string>();
-				Style = node.Element("style").As<NodeStyle>();
-				Surf  = new View3d.Texture((uint)Size.Width, (uint)Size.Height);
-				Graphics.SetTexture(Surf, tex_obj_name);
+				// Set the node text and style
+				m_impl_text = text;
+				m_impl_style = style;
+
+				// Set the node size
+				m_impl_autosize = autosize;
+				m_impl_sizemax = m_impl_autosize ? new Size((int)width, (int)height) : Size.Empty;
+				var sz = PreferredSize(m_impl_sizemax.Width, m_impl_sizemax.Height);
+				if (width  == 0) width  = (uint)sz.Width;
+				if (height == 0) height = (uint)sz.Height;
+
+				Init(width, height);
+			}
+			protected Node(XElement node)
+				:base(node)
+			{
+				// Set the node text and style
+				m_impl_text  = node.Element("text").As<string>();
+				m_impl_style = node.Element("style").As<NodeStyle>();
+				
+				// Set the node size
+				m_impl_autosize = node.Element("autosize").As<bool>();
+				m_impl_sizemax = node.Element("sizemax").As<Size>();
+				var size = node.Element("size").As<Size>();
+				var sz = PreferredSize(m_impl_sizemax.Width, m_impl_sizemax.Height);
+				if (size.Width  == 0) size.Width  = sz.Width;
+				if (size.Height == 0) size.Height = sz.Height;
+				
+				Init((uint)size.Width, (uint)size.Height);
+			}
+			private void Init(uint width, uint height)
+			{
+				// Create the surface texture and assign it to the graphics object
+				Surf = new View3d.Texture(width, height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
+
+				// Watch for style changes
+				Style.StyleChanged += Invalidate;
 			}
 			public override void Dispose()
 			{
@@ -257,11 +292,31 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
-				node.Add2("size"  ,Size  ,false);
-				node.Add2("text"  ,Text  ,false);
-				node.Add2("style" ,Style ,false);
+				node.Add2("autosize" ,AutoSize ,false);
+				node.Add2("sizemax"  ,SizeMax  ,false);
+				node.Add2("size"     ,Size     ,false);
+				node.Add2("text"     ,Text     ,false);
+				node.Add2("style"    ,Style    ,false);
 				return base.ToXml(node);
 			}
+
+			/// <summary>Text to display in this node</summary>
+			public virtual string Text
+			{
+				get { return m_impl_text; }
+				set
+				{
+					if (m_impl_text == value) return;
+					m_impl_text = value;
+					
+					if (AutoSize)
+						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+
+					Invalidate();
+					RaiseDataChanged();
+				}
+			}
+			private string m_impl_text;
 
 			/// <summary>Get/Set whether node's auto size to their contents</summary>
 			public virtual bool AutoSize
@@ -271,42 +326,77 @@ namespace pr.gui
 				{
 					if (m_impl_autosize == value) return;
 					m_impl_autosize = value;
-					Size = PreferredSize;
+					
+					if (AutoSize)
+						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+
 					Invalidate();
 				}
 			}
 			private bool m_impl_autosize;
 
-			/// <summary>The centre point of the node</summary>
-			public virtual v4 Centre { get { return new v4(Bounds.Centre, 0, 1); } }
-
 			/// <summary>The diagram space width/height of the node</summary>
 			public virtual Size Size
 			{
-				get { return Surf.Size; }
+				get { return Surf != null ? Surf.Size : Size.Empty; }
 				set
 				{
-					if (Surf.Size == value) return;
-					Surf.Size = value;
-					Invalidate();
+					if (AutoSize) return;
+					SetSize(value);
+				}
+			}
+			protected virtual void SetSize(Size sz)
+			{
+				if (Surf == null || Surf.Size == sz) return;
+				Surf.Size = sz;
+				Invalidate();
+			}
+
+			/// <summary>Get/Set limits for auto size</summary>
+			public virtual Size SizeMax
+			{
+				get { return m_impl_sizemax; }
+				set
+				{
+					if (m_impl_sizemax == value) return;
+					m_impl_sizemax = value;
+					
+					if (AutoSize)
+						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+				}
+			}
+			private Size m_impl_sizemax;
+
+			/// <summary>Return the preferred node size given the current text and upper size bounds</summary>
+			public Size PreferredSize(float max_width = 0f, float max_height = 0f)
+			{
+				v2 layout = new v2(
+					max_width  != 0f ? max_width  : float.MaxValue,
+					max_height != 0f ? max_height : float.MaxValue);
+
+				using (var img = new Bitmap(1,1,PixelFormat.Format32bppArgb))
+				using (var gfx = System.Drawing.Graphics.FromImage(img))
+				{
+					v2 sz = gfx.MeasureString(Text, Style.Font, layout);
+					sz.x += Style.Padding.Left + Style.Padding.Right;
+					sz.y += Style.Padding.Top + Style.Padding.Bottom;
+					return new Size((int)Math.Round(sz.x),(int)Math.Round(sz.y));
 				}
 			}
 
-			/// <summary>Return the node size appropriate for the current text in the node</summary>
-			public virtual Size PreferredSize
+			/// <summary>Get/Set the centre point of the node</summary>
+			public virtual v4 Centre
 			{
-				get
+				get { return new v4(Bounds.Centre, 0, 1); }
+				set
 				{
-					using (var gfx = Diagram.CreateGraphics())
-					{
-						v2 sz = gfx.MeasureString(Text, Style.Font);
-						sz.x += Style.Padding.Left + Style.Padding.Right;
-						sz.y += Style.Padding.Top + Style.Padding.Bottom;
-						return new Size((int)Math.Round(sz.x),(int)Math.Round(sz.y));
-					}
+					var pos = Position;
+					var ofs = pos.p - Centre;
+					pos.p = value + ofs;
+					Position = pos;
 				}
 			}
-	
+
 			/// <summary>The surface to draw on for the node</summary>
 			protected View3d.Texture Surf
 			{
@@ -318,14 +408,6 @@ namespace pr.gui
 				}
 			}
 			private View3d.Texture m_impl_surf;
-
-			/// <summary>Text to display in this node</summary>
-			public virtual string Text
-			{
-				get { return m_impl_text; }
-				set { m_impl_text = value; Invalidate(); RaiseDataChanged(); }
-			}
-			private string m_impl_text;
 
 			/// <summary>Style attributes for the node</summary>
 			public virtual NodeStyle Style
@@ -386,7 +468,7 @@ namespace pr.gui
 				}
 				return nearest;
 			}
-		
+
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
 			public override void Drag(v2 delta, bool commit)
 			{
@@ -405,26 +487,34 @@ namespace pr.gui
 			private const string LdrName = "node";
 
 			public BoxNode()
-				:this("", 100, 50)
+				:this("", true, 0, 0)
 			{}
-			public BoxNode(string text, uint width, uint height)
-				:this(text, width, height, Color.WhiteSmoke, Color.Black, 5f)
+			public BoxNode(string text)
+				:this(text, true, 0, 0)
 			{}
-			public BoxNode(string text, uint width, uint height, Color bkgd, Color border, float corner_radius)
-				:this(text, width, height, bkgd, border, corner_radius, m4x4.Identity, new NodeStyle())
+			public BoxNode(string text, bool autosize, uint width, uint height)
+				:this(text, autosize, width, height, Color.WhiteSmoke, Color.Black, 5f)
 			{}
-			public BoxNode(string text, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style)
-				:base(Make(width, height, bkgd, corner_radius), width, height, LdrName, text, position, style)
+			public BoxNode(string text, bool autosize, uint width, uint height, Color bkgd, Color border, float corner_radius)
+				:this(text, autosize, width, height, bkgd, border, corner_radius, m4x4.Identity, NodeStyle.Default)
+			{}
+			public BoxNode(string text, bool autosize, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style)
+				:base(autosize, width, height, text, position, style)
 			{
-				Size = new Size((int)width, (int)height);
 				CornerRadius = corner_radius;
-
-				AllowInvalidate();
+				Init();
 			}
 			public BoxNode(XElement node)
-				:base(Make(node), LdrName, node)
+				:base(node)
 			{
 				CornerRadius = node.Element("cnr").As<float>();
+				Init();
+			}
+			private void Init()
+			{
+				// Create the graphics object
+				m_size_changed = true;
+				Render();
 
 				AllowInvalidate();
 			}
@@ -434,21 +524,6 @@ namespace pr.gui
 			{
 				node.Add2("cnr" ,CornerRadius ,false);
 				return base.ToXml(node);
-			}
-
-			/// <summary>Create geometry for the node</summary>
-			private static string Make(uint width, uint height, Color bkgd, float corner_radius)
-			{
-				var ldr = new LdrBuilder();
-				ldr.Append("*Rect ",LdrName," ",bkgd," {3 ",width," ",height," ",Ldr.Solid()," ",Ldr.CornerRadius(corner_radius),"}\n");
-				return ldr.ToString();
-			}
-			private static string Make(XElement node)
-			{
-				var size   = node.Element("size" ).As<Size>();
-				var cnr    = node.Element("cnr"  ).As<float>();
-				var style  = node.Element("style").As<NodeStyle>();
-				return Make((uint)size.Width, (uint)size.Height, style.Fill, cnr);
 			}
 
 			/// <summary>The radius of the box node corners</summary>
@@ -462,14 +537,37 @@ namespace pr.gui
 			/// <summary>AABB for the element in diagram space</summary>
 			public override BRect Bounds { get { return new BRect(Position.p.xy, v2.From(Size) / 2); } }
 
+			/// <summary>Detect resize and update the graphics as needed</summary>
+			protected override void SetSize(Size sz)
+			{
+				base.SetSize(sz);
+				m_size_changed = true;
+			}
+			private bool m_size_changed;
+
 			/// <summary>Render the node into the surface</summary>
 			public override void Render()
 			{
-				using (var tex = Surf.LockSurface)
+				// Update the graphics model when the size changes
+				if (m_size_changed)
 				{
+					var ldr = new LdrBuilder();
+					ldr.Append("*Rect node {3 ",Size.Width," ",Size.Height," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+					Graphics.UpdateModel(ldr.ToString());
+					Graphics.SetTexture(Surf);
+					m_size_changed = false;
+				}
+
+				using (var tex = Surf.LockSurface())
+				{
+					var rect = Bounds.ToRectangle();
+					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
+
 					tex.Gfx.Clear(Selected ? Style.Selected : Style.Fill);
-					using (var b = new SolidBrush(Style.Text))
-						tex.Gfx.DrawString(Text, Style.Font, b, TextLocation(tex.Gfx));
+					using (var bsh = new SolidBrush(Style.Text))
+						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
+					//using (var pen = new Pen(Style.Border, 2f))
+					//	tex.Gfx.DrawRectangleRounded(pen, rect, CornerRadius);
 				}
 			}
 
@@ -505,6 +603,8 @@ namespace pr.gui
 		/// <summary>Style attributes for nodes</summary>
 		public class NodeStyle
 		{
+			public static readonly NodeStyle Default = new NodeStyle();
+
 			/// <summary>The colour of the node border</summary>
 			public Color Border
 			{
@@ -517,7 +617,7 @@ namespace pr.gui
 			public Color Fill
 			{
 				get { return m_impl_fill; }
-				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
+				set { Util.SetAndRaise(this, ref m_impl_fill, value, StyleChanged); }
 			}
 			private Color m_impl_fill = Color.WhiteSmoke;
 
@@ -612,29 +712,30 @@ namespace pr.gui
 			private const float MinSelectionDistanceSq = 25f;
 
 			public Connector(Node node0, Node node1)
-				:this(node0, node1, new ConnectorStyle())
+				:this(node0, node1, ConnectorStyle.Default)
 			{}
 			public Connector(Node node0, Node node1, ConnectorStyle style)
-				:base(Make(node0, node1, false, style), m4x4.Translation(AttachCentre(node0, node1)))
+				:base(m4x4.Translation(AttachCentre(node0, node1)))
 			{
 				NodeAnchor anc0, anc1;
 				AttachPoints(node0, node1, out anc0, out anc1);
 				Anc0 = anc0;
 				Anc1 = anc1;
 				Style = style;
-
-				Anc0.Elem.PositionChanged += Invalidate;
-				Anc1.Elem.PositionChanged += Invalidate;
-				Style.StyleChanged += Invalidate;
-
-				AllowInvalidate();
+				Init();
 			}
 			public Connector(XElement node)
-				:base(Make(node), node)
+				:base(node)
 			{
 				Anc0  = node.Element("anc0" ).As<NodeAnchor>();
 				Anc1  = node.Element("anc1" ).As<NodeAnchor>();
 				Style = node.Element("style").As<ConnectorStyle>();
+				Init();
+			}
+			private void Init()
+			{
+				// Update the graphics object
+				Render();
 
 				Anc0.Elem.PositionChanged += Invalidate;
 				Anc1.Elem.PositionChanged += Invalidate;
@@ -691,31 +792,6 @@ namespace pr.gui
 				var pt1 = anc1.LocationWS - centre;                         pt1.z = 0;
 				var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = 0;
 				return new Spline(pt0,ct0,ct1,pt1);
-			}
-
-			/// <summary>Create geometry for the connector</summary>
-			private static string Make(NodeAnchor anc0, NodeAnchor anc1, bool selected, ConnectorStyle style)
-			{
-				var spline = MakeSpline(anc0, anc1, false);
-				var ldr = new LdrBuilder();
-				using (ldr.Group("connector"))
-				{
-					ldr.Append("*Spline line ",selected ? style.Selected : style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",style.Width,"} }\n");
-				}
-				return ldr.ToString();
-			}
-			private static string Make(Node node0, Node node1, bool selected, ConnectorStyle style)
-			{
-				NodeAnchor anc0, anc1;
-				AttachPoints(node0, node1, out anc0, out anc1);
-				return Make(anc0, anc1, selected, style);
-			}
-			private static string Make(XElement node)
-			{
-				var anc0  = node.Element("anc0" ).As<NodeAnchor>();
-				var anc1  = node.Element("anc1" ).As<NodeAnchor>();
-				var style = node.Element("style").As<ConnectorStyle>();
-				return Make(anc0, anc1, false, style);
 			}
 
 			/// <summary>The 'from' node</summary>
@@ -782,7 +858,10 @@ namespace pr.gui
 			/// <summary>Update the graphics for the connector</summary>
 			public override void Render()
 			{
-				Graphics.UpdateModel(Make(Anc0, Anc1, Selected, Style));
+				var spline = MakeSpline(Anc0, Anc1, false);
+				var ldr = new LdrBuilder();
+				ldr.Append("*Spline line ",Selected ? Style.Selected : Style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
+				Graphics.UpdateModel(ldr.ToString());
 				Position = m4x4.Translation(AttachCentre(Anc0, Anc1));
 			}
 		}
@@ -790,6 +869,8 @@ namespace pr.gui
 		/// <summary>Style properties for connectors</summary>
 		public class ConnectorStyle
 		{
+			public static readonly ConnectorStyle Default = new ConnectorStyle();
+
 			/// <summary>Connector styles</summary>
 			public enum EType
 			{
@@ -909,6 +990,25 @@ namespace pr.gui
 			public HitTestResult m_hit_result; // The hit test result on mouse down
 		}
 
+		/// <summary>Graphics objects used by the diagram</summary>
+		private class Tools :IDisposable
+		{
+			/// <summary>A rectangular selection box</summary>
+			public View3d.Object m_selection_box;
+
+			public Tools()
+			{
+				var ldr = new LdrBuilder();
+				using (ldr.Group("selection_box"))
+				{
+
+				}
+
+			}
+			public void Dispose()
+			{
+			}
+		}
 		#endregion
 
 		#region Render Options
@@ -947,7 +1047,7 @@ namespace pr.gui
 		{
 			if (this.IsInDesignMode()) return;
 
-			m_view3d         = new View3d(Handle);
+			m_view3d         = new View3d(Handle, Render);
 			m_rdr_options    = rdr_options;
 			m_eb_update_diag = new EventBatcher(UpdateDiagram);
 			m_camera         = new View3d.CameraControls(m_view3d.Drawset);
@@ -968,17 +1068,18 @@ namespace pr.gui
 			DefaultKeyboardShortcuts = true;
 			DefaultMouseNavigation = true;
 			AllowEditing = true;
+			AllowMove = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
-			ResetDiagram();
-			if (disposing && m_view3d != null)
+			if (disposing)
 			{
-				m_view3d.Dispose();
-			}
-			if (disposing && (components != null))
-			{
-				components.Dispose();
+				ResetDiagram();
+				m_eb_update_diag.Dispose();
+				if (m_view3d != null)
+					m_view3d.Dispose();
+				if (components != null)
+					components.Dispose();
 			}
 			base.Dispose(disposing);
 		}
@@ -989,7 +1090,7 @@ namespace pr.gui
 		/// <summary>Remove all data from the diagram</summary>
 		public void ResetDiagram()
 		{
-//			Elements.L.Clear();
+			Elements.Clear();
 		}
 
 		/// <summary>Diagram objects</summary>
@@ -1006,6 +1107,10 @@ namespace pr.gui
 
 		/// <summary>Minimum bounding area for view reset</summary>
 		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
+
+		/// <summary>Used to control z order</summary>
+		private float ElementZ { get { return m_impl_element_z += 0.0001f; } }
+		private float m_impl_element_z;
 
 		/// <summary>Perform a hit test on the diagram</summary>
 		public HitTestResult HitTest(v2 ds_point)
@@ -1106,8 +1211,11 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Enable/Disable editing</summary>
+		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
 		public bool AllowEditing { get; set; }
+
+		/// <summary>True if users are allowed to move elements on the diagram</summary>
+		public bool AllowMove { get; set; }
 
 		/// <summary>Default Mouse navigation. Public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseEventArgs e)
@@ -1131,6 +1239,7 @@ namespace pr.gui
 		{
 			// Get the mouse selection data for the mouse button
 			var sel = m_mbutton[(int)View3d.ButtonIndex(e.Button)];
+			if (!sel.m_btn_down) return; // Button down wasn't received first
 			sel.m_btn_down = false;
 
 			// Only release the mouse when all buttons are up
@@ -1170,7 +1279,9 @@ namespace pr.gui
 		}
 		private void OnMouseDrag(object sender, MouseEventArgs e)
 		{
-			var sel = m_mbutton[(int)View3d.ButtonIndex(e.Button)];
+			var idx = (int)View3d.ButtonIndex(e.Button);
+			if (idx == -1) return; // Drag event with no mouse button down?
+			var sel = m_mbutton[idx];
 
 			// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
 			var grab = v2.From(sel.m_grab_cs);
@@ -1210,7 +1321,9 @@ namespace pr.gui
 		}
 		private void OnDiagramClicked(MouseEventArgs e)
 		{
-			//var hit = HitTest(e.Location
+			// Show the context menu on right click
+			if (e.Button == MouseButtons.Right)
+				ShowContextMenu(e.Location);
 		}
 
 		/// <summary>Reset the view of the diagram back to the default</summary>
@@ -1267,14 +1380,14 @@ namespace pr.gui
 		/// <summary>Move the selected elements by </summary>
 		private void DragSelected(v2 delta, bool commit)
 		{
-			if (!AllowEditing) return;
+			if (!AllowMove) return;
 			foreach (var elem in Selected)
 				elem.Drag(delta, commit);
 			Refresh();
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
-		private void HandleElementListChanging(object sender, BindingListEx<Element>.ListChangingEventArgs args)
+		private void HandleElementListChanging(object sender, BindingListEx<Element>.ListChgEventArgs args)
 		{
 			switch (args.ChangeType)
 			{
@@ -1315,7 +1428,6 @@ namespace pr.gui
 		/// <summary>Handle an element being invalidated</summary>
 		private void HandleElementInvalidated(object sender, EventArgs e)
 		{
-			
 		}
 
 		/// <summary>Called when an element in the diagram has been moved</summary>
@@ -1411,12 +1523,36 @@ namespace pr.gui
 			Refresh();
 		}
 
-		/// <summary>Used to control z order</summary>
-		private float ElementZ
+		/// <summary>Spread the nodes on the diagram so none are overlapping</summary>
+		public void ScatterNodes()
 		{
-			get { return m_impl_element_z += 0.0001f; }
+			int node_count = Elements.Count(x => x.Entity == Entity.Node);
+			int col_count = 1 + (int)Math.Sqrt(node_count);
+
+			int col = 0;
+			float row_height = 0f;
+			v2 xy = v2.Zero, margin = new v2(30,30);
+			foreach (var node in Elements.Where(x => x.Entity == Entity.Node))
+			{
+				var pos = node.Position;
+				pos.p = new v4(xy, 0, 1);
+				node.Position = pos;
+
+				col++;
+				xy.x += node.Bounds.SizeX + margin.x;
+				row_height = Math.Max(row_height, node.Bounds.SizeY);
+
+				if (col == col_count)
+				{
+					col = 0;
+					xy.x = 0;
+					xy.y += row_height + margin.y;
+					row_height = 0;
+				}
+			}
+			ResetView();
+			Refresh();
 		}
-		private float m_impl_element_z;
 
 		/// <summary>
 		/// Removes and re-adds all elements to the diagram.
@@ -1490,7 +1626,7 @@ namespace pr.gui
 				DiagramChanged.Raise(this, EventArgs.Empty);
 				m_edited = false;
 			}
-			
+
 			m_view3d.SignalRefresh();
 		}
 
@@ -1517,8 +1653,21 @@ namespace pr.gui
 		{
 			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
 
-			if (m_view3d.Drawset == null) base.OnPaint(e);
-			else m_view3d.Drawset.Render();
+			if (m_view3d.Drawset == null)
+				base.OnPaint(e);
+			else
+				m_view3d.Refresh();
+		}
+
+		/// <summary>Render and Present the scene</summary>
+		private void Render()
+		{
+			m_view3d.Drawset.Render();
+
+			using (var tex = m_view3d.RenderTarget.LockSurface())
+				tex.Gfx.DrawEllipse(Pens.Blue, new Rectangle(100,100,200,150));
+
+			m_view3d.Present();
 		}
 
 		/// <summary>Export the current diagram as xml</summary>
@@ -1543,7 +1692,7 @@ namespace pr.gui
 			if (xml.Root == null) throw new InvalidDataException("xml file does not contain any config data");
 
 			XmlExtensions.AsMap[typeof(NodeAnchor)] = (elem, type, ctor) => new NodeAnchor(this, elem);
-			
+
 			if (reset)
 				ResetDiagram();
 
@@ -1559,6 +1708,730 @@ namespace pr.gui
 		public void LoadXml(string filepath, bool reset = true)
 		{
 			ImportXml(XDocument.Load(filepath), reset);
+		}
+
+		/// <summary>Event allowing callers to add options to the context menu</summary>
+		public event Action<DiagramControl, ContextMenuStrip> AddUserMenuOptions;
+
+		/// <summary>Create and display a context menu</summary>
+		public void ShowContextMenu(Point location)
+		{
+			// Note: using lists and AddRange here for performance reasons
+			// Using 'DropDownItems.Add' causes lots of PerformLayout calls
+			var context_menu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
+			var lvl0 = new List<ToolStripItem>();
+
+			using (this.ChangeCursor(Cursors.WaitCursor))
+			using (context_menu.SuspendLayout(false))
+			{
+				// Allow users to add menu options
+				AddUserMenuOptions.Raise(this, context_menu);
+
+				if (AllowEditing)
+				{
+				}
+
+				if (AllowMove)
+				{
+					#region Scatter
+					var scatter = lvl0.Add2(new ToolStripMenuItem("Scatter"));
+					scatter.Click += (s,a) => ScatterNodes();
+					#endregion
+				}
+
+				/*
+				#region Show Value
+				{
+					var show_value = lvl0.Add2(new ToolStripMenuItem("Show Value"));
+					show_value.Checked = (bool)m_tooltip.Tag;
+					show_value.Click += (s,a) =>
+						{
+							m_tooltip.Hide(this);
+							if ((bool)m_tooltip.Tag) MouseMove -= OnMouseMoveTooltip;
+							m_tooltip.Tag = !(bool)m_tooltip.Tag;
+							if ((bool)m_tooltip.Tag) MouseMove += OnMouseMoveTooltip;
+						};
+				}
+				#endregion
+
+				#region Zoom Menu
+				{
+					var zoom_menu = lvl0.Add2(new ToolStripMenuItem("Zoom"));
+					var lvl1 = new List<ToolStripItem>();
+
+					var default_zoom = lvl1.Add2(new ToolStripMenuItem("Default"));
+					default_zoom.Click += (s,a) =>
+						{
+							FindDefaultRange();
+							ResetToDefaultRange();
+							Refresh();
+						};
+
+					var zoom_in = lvl1.Add2(new ToolStripMenuItem("In"));
+					zoom_in.Click += (s,a) =>
+						{
+							var point = PointToGraph(m_selection.Location);
+							Zoom *= 0.5;
+							PositionGraph(m_selection.Location,point);
+							Refresh();
+						};
+
+					var zoom_out = lvl1.Add2(new ToolStripMenuItem("Out"));
+					zoom_out.Click += (s,a) =>
+						{
+							var point = PointToGraph(m_selection.Location);
+							Zoom *= 2.0;
+							PositionGraph(m_selection.Location,point);
+							Refresh();
+						};
+
+					zoom_menu.DropDownItems.AddRange(lvl1.ToArray());
+				}
+				#endregion
+
+				#region Series menus
+				if (m_data.Count != 0)
+				{
+					#region All Series
+					{
+						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: All"));
+						var lvl1 = new List<ToolStripItem>();
+
+						#region Visible
+						{
+							var state = m_data.Aggregate(0, (x,s) => x | (s.RenderOptions.m_visible ? 2 : 1));
+							var option = lvl1.Add2(new ToolStripMenuItem("Visible"));
+							option.CheckState = state == 2 ? CheckState.Checked : state == 1 ? CheckState.Unchecked : CheckState.Indeterminate;
+							option.Click += (s,a) =>
+								{
+									option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
+									foreach (var x in m_data) x.RenderOptions.m_visible = option.CheckState == CheckState.Checked;
+									RegenBitmap = true;
+								};
+						}
+						#endregion
+
+						series_menu.DropDownItems.AddRange(lvl1.ToArray());
+					}
+					#endregion
+					#region Individual Series
+					for (var index = 0; index != m_data.Count; ++index)
+					{
+						var series = m_data[index];
+
+						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: " + series.Name));
+						var lvl1 = new List<ToolStripItem>();
+
+						if      (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point) series_menu.ForeColor = series.RenderOptions.m_point_colour;
+						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line ) series_menu.ForeColor = series.RenderOptions.m_line_colour;
+						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar  ) series_menu.ForeColor = series.RenderOptions.m_bar_colour;
+						series_menu.Checked = series.RenderOptions.m_visible;
+						series_menu.Tag = index;
+						series_menu.Click += (s,a) =>
+							{
+								series.RenderOptions.m_visible = !series.RenderOptions.m_visible;
+								series_menu.Checked = series.RenderOptions.m_visible;
+								RegenBitmap = true;
+							};
+
+						#region Elements
+						{
+							var elements_menu = lvl1.Add2(new ToolStripMenuItem("Elements"));
+							var lvl2 = new List<ToolStripItem>();
+
+							#region Draw main data
+							{
+								var option = lvl2.Add2(new ToolStripMenuItem("Series data"));
+								option.Checked = series.RenderOptions.m_draw_data;
+								option.Click += (s,a) =>
+									{
+										series.RenderOptions.m_draw_data = !series.RenderOptions.m_draw_data;
+										RegenBitmap = true;
+									};
+							}
+							#endregion
+							#region Draw error bars
+							{
+								var option = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
+								option.Checked = series.RenderOptions.m_draw_error_bars;
+								option.Click += (s,a) =>
+									{
+										series.RenderOptions.m_draw_error_bars = !series.RenderOptions.m_draw_error_bars;
+										RegenBitmap = true;
+									};
+							}
+							#endregion
+							#region Draw zeros
+							{
+								var draw_zeros = lvl2.Add2(new ToolStripComboBox());
+								draw_zeros.Items.AddRange(Enum<Series.RdrOpts.PlotZeros>.Names.Select(x => x + " Zeros").Cast<object>().ToArray());
+								draw_zeros.SelectedIndex = (int)series.RenderOptions.m_draw_zeros;
+								draw_zeros.SelectedIndexChanged += (s,a) =>
+									{
+										series.RenderOptions.m_draw_zeros = (Series.RdrOpts.PlotZeros)draw_zeros.SelectedIndex;
+										RegenBitmap = true;
+									};
+								draw_zeros.KeyDown += (s,a) =>
+									{
+										if (a.KeyCode == Keys.Return)
+											context_menu.Close();
+									};
+							}
+							#endregion
+
+							elements_menu.DropDownItems.AddRange(lvl2.ToArray());
+						}
+						#endregion
+
+						#region Plot Type Menu
+						{
+							var plot_type_menu = lvl1.Add2(new ToolStripMenuItem("Plot Type"));
+							{
+								var option = new ToolStripComboBox();
+								plot_type_menu.DropDownItems.Add(option);
+								option.Items.AddRange(Enum<Series.RdrOpts.PlotType>.Names.Cast<object>().ToArray());
+								option.SelectedIndex = (int)series.RenderOptions.m_plot_type;
+								option.SelectedIndexChanged += (s,a) =>
+									{
+										series.RenderOptions.m_plot_type = (Series.RdrOpts.PlotType)option.SelectedIndex;
+										RegenBitmap = true;
+									};
+								option.KeyDown += (s,a) =>
+									{
+										if (a.KeyCode == Keys.Return)
+											context_menu.Close();
+									};
+							}
+						}
+						#endregion
+
+						#region Appearance Menu
+						{
+							var appearance_menu = lvl1.Add2(new ToolStripMenuItem("Appearance"));
+							var lvl2 = new List<ToolStripItem>();
+
+							#region Points
+							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point || series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
+							{
+								var point_menu = lvl2.Add2(new ToolStripMenuItem("Points"));
+								var lvl3 = new List<ToolStripItem>();
+
+								#region Size
+								{
+									var size_menu = lvl3.Add2(new ToolStripMenuItem("Size"));
+									{
+										var option = new ToolStripTextBox{AcceptsReturn = false};
+										size_menu.DropDownItems.Add(option);
+										option.Text = series.RenderOptions.m_point_size.ToString("0.00");
+										option.TextChanged += (s,a) =>
+											{
+												float size;
+												if (!float.TryParse(option.Text,out size)) return;
+												series.RenderOptions.m_point_size = size;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+								#region Colour
+								{
+									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									{
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_point_colour};
+										colour_menu.DropDownItems.Add(option);
+										option.Click += (s,a) =>
+											{
+												var cd = new ColourUI{InitialColour = option.BackColor};
+												if (cd.ShowDialog() != DialogResult.OK) return;
+												series.RenderOptions.m_point_colour = cd.Colour;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+
+								point_menu.DropDownItems.AddRange(lvl3.ToArray());
+							}
+							#endregion
+							#region Lines
+							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
+							{
+								var line_menu = lvl2.Add2(new ToolStripMenuItem("Lines"));
+								var lvl3 = new List<ToolStripItem>();
+
+								#region Width
+								{
+									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
+									{
+										var option = new ToolStripTextBox();
+										width_menu.DropDownItems.Add(option);
+										option.Text = series.RenderOptions.m_line_width.ToString("0.00");
+										option.TextChanged += (s,a) =>
+											{
+												float width;
+												if (!float.TryParse(option.Text,out width)) return;
+												series.RenderOptions.m_line_width = width;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+								#region Colour
+								{
+									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									{
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_line_colour};
+										colour_menu.DropDownItems.Add(option);
+										option.Click += (s,a) =>
+											{
+												var cd = new ColourUI{InitialColour = option.BackColor};
+												if (cd.ShowDialog() != DialogResult.OK) return;
+												series.RenderOptions.m_line_colour = cd.Colour;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+
+								line_menu.DropDownItems.AddRange(lvl3.ToArray());
+							}
+							#endregion
+							#region Bars
+							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar)
+							{
+								var bar_menu = lvl2.Add2(new ToolStripMenuItem("Bars"));
+								var lvl3 = new List<ToolStripItem>();
+
+								#region Width
+								{
+									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
+									{
+										var option = new ToolStripTextBox();
+										width_menu.DropDownItems.Add(option);
+										option.Text = series.RenderOptions.m_bar_width.ToString("0.00");
+										option.TextChanged += (s,a) =>
+											{
+												float width;
+												if (!float.TryParse(option.Text,out width)) return;
+												series.RenderOptions.m_bar_width = width;
+												RegenBitmap = true;
+											};
+										option.KeyDown += (s,a) =>
+											{
+												if (a.KeyCode == Keys.Return)
+													context_menu.Close();
+											};
+									}
+								}
+								#endregion
+								#region Bar Colour
+								{
+									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									{
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_bar_colour};
+										colour_menu.DropDownItems.Add(option);
+										option.Click += (s,a) =>
+											{
+												var cd = new ColourUI{InitialColour = option.BackColor};
+												if (cd.ShowDialog() != DialogResult.OK) return;
+												series.RenderOptions.m_bar_colour = cd.Colour;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+
+								bar_menu.DropDownItems.AddRange(lvl3.ToArray());
+							}
+							#endregion
+							#region Error Bars
+							if (series.RenderOptions.m_draw_error_bars)
+							{
+								var errorbar_menu = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
+								var lvl3 = new List<ToolStripItem>();
+
+								#region Colour
+								{
+									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									{
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_error_bar_colour};
+										colour_menu.DropDownItems.Add(option);
+										option.Click += (s,a) =>
+											{
+												var cd = new ColourUI{InitialColour = option.BackColor};
+												if (cd.ShowDialog() != DialogResult.OK) return;
+												series.RenderOptions.m_error_bar_colour = cd.Colour;
+												RegenBitmap = true;
+											};
+									}
+								}
+								#endregion
+
+								errorbar_menu.DropDownItems.AddRange(lvl3.ToArray());
+							}
+							#endregion
+
+							appearance_menu.DropDownItems.AddRange(lvl2.ToArray());
+						}
+						#endregion
+
+						#region Moving Average
+						{
+							var mv_avr_menu = lvl1.Add2(new ToolStripMenuItem("Moving Average"));
+							#region Draw Moving Average
+							{
+								var option = new ToolStripMenuItem("Draw Moving Average");
+								mv_avr_menu.DropDownItems.Add(option);
+								option.Checked = series.RenderOptions.m_draw_moving_avr;
+								option.Click += (s,a) =>
+									{
+										series.RenderOptions.m_draw_moving_avr = !series.RenderOptions.m_draw_moving_avr;
+										RegenBitmap = true;
+									};
+							}
+							#endregion
+							#region Window Size
+							{
+								var win_size_menu = new ToolStripMenuItem("Window Size");
+								mv_avr_menu.DropDownItems.Add(win_size_menu);
+								{
+									var option = new ToolStripTextBox();
+									win_size_menu.DropDownItems.Add(option);
+									option.Text = series.RenderOptions.m_ma_window_size.ToString(CultureInfo.InvariantCulture);
+									option.TextChanged += (s,a) =>
+										{
+											int size;
+											if (!int.TryParse(option.Text,out size)) return;
+											series.RenderOptions.m_ma_window_size = size;
+											RegenBitmap = true;
+										};
+								}
+							}
+							#endregion
+							#region Line Width
+							{
+								var line_width_menu = new ToolStripMenuItem("Line Width");
+								mv_avr_menu.DropDownItems.Add(line_width_menu);
+								{
+									var option = new ToolStripTextBox();
+									line_width_menu.DropDownItems.Add(option);
+									option.Text = series.RenderOptions.m_ma_line_width.ToString(CultureInfo.InvariantCulture);
+									option.TextChanged += (s,a) =>
+										{
+											int size;
+											if (!int.TryParse(option.Text,out size)) return;
+											series.RenderOptions.m_ma_line_width = size;
+											RegenBitmap = true;
+										};
+								}
+							}
+							#endregion
+							#region Line Colour
+							{
+								var line_colour_menu = new ToolStripMenuItem("Line Colour");
+								mv_avr_menu.DropDownItems.Add(line_colour_menu);
+								{
+									var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_ma_line_colour};
+									line_colour_menu.DropDownItems.Add(option);
+									option.Click += (s,a) =>
+										{
+											var cd = new ColourUI{InitialColour = option.BackColor};
+											if (cd.ShowDialog() != DialogResult.OK) return;
+											series.RenderOptions.m_ma_line_colour = cd.Colour;
+											RegenBitmap = true;
+										};
+								}
+							}
+							#endregion
+						}
+						#endregion
+
+						#region Delete Series
+						if (series.AllowDelete)
+						{
+							var delete_menu = lvl1.Add2(new ToolStripMenuItem("Delete"));
+							delete_menu.Click += (s,a) =>
+								{
+									if (MessageBox.Show(this,"Confirm delete?","Delete Series",MessageBoxButtons.YesNo,MessageBoxIcon.Warning) != DialogResult.Yes) return;
+									m_data.RemoveAt((int)series_menu.Tag);
+									FindDefaultRange();
+									RegenBitmap = true;
+								};
+						}
+						#endregion
+
+						series_menu.DropDownItems.AddRange(lvl1.ToArray());
+					}
+					#endregion
+				}
+				#endregion
+
+				#region Rendering Options
+				{
+					var appearance_menu = lvl0.Add2(new ToolStripMenuItem("Appearance"));
+					var lvl1 = new List<ToolStripItem>();
+
+					#region Background Colour
+					{
+						var bk_colour_menu = lvl1.Add2(new ToolStripMenuItem("Background Colour"));
+						{
+							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = m_rdr_options.m_bg_colour};
+							bk_colour_menu.DropDownItems.Add(option);
+							option.Click += (s,a) =>
+								{
+									var cd = new ColourUI{InitialColour = option.BackColor};
+									if (cd.ShowDialog() != DialogResult.OK) return;
+									m_rdr_options.m_bg_colour = cd.Colour;
+									RegenBitmap = true;
+								};
+						}
+					}
+					#endregion
+					#region Opacity
+					if (ParentForm != null)
+					{
+						var opacity_menu = lvl1.Add2(new ToolStripMenuItem("Opacity"));
+						{
+							var option = new ToolStripTextBox();
+							opacity_menu.DropDownItems.Add(option);
+							option.Text = ParentForm.Opacity.ToString("0.00");
+							option.TextChanged += (s,a) =>
+								{
+									double opc;
+									if (ParentForm != null && double.TryParse(option.Text,out opc))
+										ParentForm.Opacity = Math.Max(0.1,Math.Min(1.0,opc));
+								};
+						}
+					}
+					#endregion
+
+					appearance_menu.DropDownItems.AddRange(lvl1.ToArray());
+				}
+				#endregion
+
+				#region Axis Options
+				{
+					var axes_menu = lvl0.Add2(new ToolStripMenuItem("Axes"));
+					var lvl1 = new List<ToolStripItem>();
+
+					#region X Axis
+					{
+						var x_axis_menu = lvl1.Add2(new ToolStripMenuItem("X Axis"));
+						var lvl2 = new List<ToolStripItem>();
+
+						#region Min
+						{
+							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
+							{
+								var option = new ToolStripTextBox();
+								min_menu.DropDownItems.Add(option);
+								option.Text = XAxis.Min.ToString("G5");
+								option.TextChanged += (s,a) =>
+									{
+										float v;
+										if (!float.TryParse(option.Text,out v)) return;
+										XAxis.Min = v;
+										RegenBitmap = true;
+									};
+							}
+						}
+						#endregion
+						#region Max
+						{
+							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
+							{
+								var option = new ToolStripTextBox();
+								max_menu.DropDownItems.Add(option);
+								option.Text = XAxis.Max.ToString("G5");
+								option.TextChanged += (s,a) =>
+									{
+										float v;
+										if (!float.TryParse(option.Text,out v)) return;
+										XAxis.Max = v;
+										RegenBitmap = true;
+									};
+							}
+						}
+						#endregion
+						#region Allow Scroll
+						{
+							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = m_xaxis.AllowScroll });
+							allow_scroll.Click += (s,a) => m_xaxis.AllowScroll = !m_xaxis.AllowScroll;
+						}
+						#endregion
+						#region Allow Zoom
+						{
+							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = m_xaxis.AllowZoom });
+							allow_zoom.Click += (s,e) => m_xaxis.AllowZoom = !m_xaxis.AllowZoom;
+						}
+						#endregion
+
+						x_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
+					}
+					#endregion
+					#region Y Axis
+					{
+						var y_axis_menu = lvl1.Add2(new ToolStripMenuItem("Y Axis"));
+						var lvl2 = new List<ToolStripItem>();
+
+						#region Min
+						{
+							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
+							{
+								var option = new ToolStripTextBox();
+								min_menu.DropDownItems.Add(option);
+								option.Text = YAxis.Min.ToString("G5");
+								option.TextChanged += (s,a) =>
+									{
+										float v;
+										if (!float.TryParse(option.Text,out v)) return;
+										YAxis.Min = v;
+										RegenBitmap = true;
+									};
+							}
+						}
+						#endregion
+						#region Max
+						{
+							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
+							{
+								var option = new ToolStripTextBox();
+								max_menu.DropDownItems.Add(option);
+								option.Text = YAxis.Max.ToString("G5");
+								option.TextChanged += (s,a) =>
+									{
+										float v;
+										if (!float.TryParse(option.Text,out v)) return;
+										YAxis.Max = v;
+										RegenBitmap = true;
+									};
+							}
+						}
+						#endregion
+						#region Allow Scroll
+						{
+							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = m_yaxis.AllowScroll });
+							allow_scroll.Click += (s,e) => m_yaxis.AllowScroll = !m_yaxis.AllowScroll;
+						}
+						#endregion
+						#region Allow Zoom
+						{
+							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = m_yaxis.AllowZoom });
+							allow_zoom.Click += (s,e) => m_yaxis.AllowZoom = !m_yaxis.AllowZoom;
+						}
+						#endregion
+
+						y_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
+					}
+					#endregion
+
+					axes_menu.DropDownItems.AddRange(lvl1.ToArray());
+				}
+				#endregion
+
+				#region Notes
+				{
+					var note_menu = lvl0.Add2(new ToolStripMenuItem("Notes"));
+					var lvl1 = new List<ToolStripItem>();
+
+					#region Add
+					{
+						var option = lvl1.Add2(new ToolStripMenuItem("Add"));
+						option.Click += (s,e) =>
+							{
+								var form = new Form
+									{
+										Text = "Add Note",
+										FormBorderStyle = FormBorderStyle.SizableToolWindow,
+										StartPosition = FormStartPosition.Manual,
+										Location = PointToScreen(location),
+										Size = new Size(160,100),
+										KeyPreview = true
+									};
+								form.KeyDown += (o,a) =>
+									{
+										if (a.KeyCode == Keys.Enter && (a.Modifiers & Keys.Control) == 0)
+											form.DialogResult = DialogResult.OK;
+									};
+								var tb = new TextBox
+									{
+										Dock = DockStyle.Fill,
+										Multiline = true,
+										AcceptsReturn = false
+									};
+								form.Controls.Add(tb);
+								if (form.ShowDialog(this) != DialogResult.OK || tb.Text.Length == 0) return;
+								m_notes.Add(new Note(tb.Text,PointToGraph(location)));
+								RegenBitmap = true;
+							};
+					}
+					#endregion
+					#region Delete
+					{
+						var dist = 100f;
+						Note nearest = null;
+						foreach (var note in m_notes)
+						{
+							var sep = GraphToPoint(note.m_loc) - (Size)location;
+							var d = (float)Math.Sqrt(sep.X*sep.X + sep.Y*sep.Y);
+							if (d >= dist) continue;
+							dist = d;
+							nearest = note;
+						}
+						if (nearest != null)
+						{
+							var option = lvl1.Add2(new ToolStripMenuItem("Delete '{0}'".Fmt(nearest.m_msg.Summary(12))));
+							option.Click += (s,e) =>
+								{
+									m_notes.Remove(nearest);
+									RegenBitmap = true;
+								};
+						}
+					}
+					#endregion
+
+					note_menu.DropDownItems.AddRange(lvl1.ToArray());
+				}
+				#endregion
+
+				#region Export
+				{
+					var export_menu = lvl0.Add2(new ToolStripMenuItem("Export"));
+					export_menu.Click += (s,a) => ExportCSV();
+				}
+				#endregion
+
+				#region Import
+				{
+					var import_menu = lvl0.Add2(new ToolStripMenuItem("Import"));
+					import_menu.Click += (s,a) => ImportCSV(null);
+				}
+				#endregion
+*/
+				context_menu.Items.AddRange(lvl0.ToArray());
+			}
+
+			context_menu.Closed += (s,a) => Refresh();
+			context_menu.Show(this, location);
+		}
+
+		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
+		private class ContextMenuRenderer :ToolStripProfessionalRenderer
+		{
+			protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+			{
+				var item = e.Item as NoHighlightToolStripMenuItem;
+				if (item == null) { base.OnRenderMenuItemBackground(e); return; }
+
+				e.Graphics.FillRectangle(new SolidBrush(item.BackColor), e.Item.ContentRectangle);
+				e.Graphics.DrawRectangle(Pens.Black, e.Item.ContentRectangle);
+			}
+		}
+
+		/// <summary>Special menu item that doesn't draw highlighted</summary>
+		private class NoHighlightToolStripMenuItem :ToolStripMenuItem
+		{
+			public NoHighlightToolStripMenuItem(string text) :base(text) {}
 		}
 
 		#region Component Designer generated code

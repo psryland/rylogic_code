@@ -256,7 +256,7 @@ namespace pr
 	{
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 		m3x4 cpm_x_i2wR = to - from;
-		m3x4 w2iR = GetTranspose(from);
+		m3x4 w2iR = Transpose3x3(from);
 		m3x4 cpm = cpm_x_i2wR * w2iR;
 		return v4::make(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}

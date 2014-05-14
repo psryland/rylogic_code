@@ -48,8 +48,7 @@ PSOut main(PSIn_DSLighting In)
 	Out.diff = px.diff;
 
 	// Do lighting...
-	if (dot(px.ws_norm,px.ws_norm) > 0.5f)
-		Out.diff = Illuminate(ws_vert, px.ws_norm, m_c2w[3], Out.diff);
+	Out.diff = Illuminate(ws_vert, px.ws_norm, m_c2w[3], Out.diff);
 
 	//Out.diff = float4(1,0,1,1);
 	//Out.diff = px.diff;
@@ -61,6 +60,8 @@ PSOut main(PSIn_DSLighting In)
 	//Out.diff = frac(float4(1,1,1,1) * ws_pos.x);
 	//Out.diff = normalize(float4(abs(In.cs_vdir),1));
 	//Out.diff = float4(In.tex,0,1);
+	//Out.diff = float4(m_tex_normals.Sample(m_point_sampler, In.tex0), 0, 1);
+	
 	return Out;
 }
 #endif

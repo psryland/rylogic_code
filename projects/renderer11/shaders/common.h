@@ -39,6 +39,10 @@ namespace pr
 		{
 			#include "renderer11/shaders/hlsl/screenspace/thick_line_cbuf.hlsli"
 		}
+		namespace smap
+		{
+			#include "renderer11/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
+		}
 
 		// Set the geometry type
 		template <typename TCBuf> void SetGeomType(NuggetProps const& ddata, TCBuf& cb)

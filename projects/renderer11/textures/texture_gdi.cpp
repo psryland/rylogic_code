@@ -42,32 +42,7 @@ namespace pr
 
 		TextureGdi::TextureGdi(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc)
 			:Texture2D(mgr, src, tdesc, sdesc, sort_id, srvdesc)
-		{
-			pr::Throw(m_tex->QueryInterface(__uuidof(IDXGISurface1), (void **)&m_surf.m_ptr));
-		}
-
-		TextureGdi::Gfx::Gfx(TextureGdiPtr& tex)
-			:Gdiplus::Graphics(tex->GetDC())
-			,m_tex(tex)
 		{}
-		TextureGdi::Gfx::~Gfx()
-		{
-			m_tex->ReleaseDC();
-		}
-
-		// Get the GDI dc from the surface
-		HDC TextureGdi::GetDC()
-		{
-			HDC dc;
-			pr::Throw(m_surf->GetDC(TRUE, &dc));
-			return dc;
-		}
-
-		// Release the GDI dc from the surface
-		void TextureGdi::ReleaseDC()
-		{
-			pr::Throw(m_surf->ReleaseDC(nullptr));
-		}
 
 		// Refcounting cleanup function
 		void TextureGdi::Delete()

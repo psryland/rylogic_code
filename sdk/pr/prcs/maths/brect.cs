@@ -36,7 +36,7 @@ namespace pr.maths
 		public static BRect operator / (BRect lhs, float s)   { lhs.m_radius /= s; return lhs; }
 		//public static BRect operator * (m3x4 m, BRect rhs)
 		//{
-		//	Debug.Assert(rhs.IsValid, "Transforming an invalid bounding box");
+		//	Debug.Assert(rhs.IsValid, "Transforming an invalid bounding rectangle");
 		//	BRect bb = new BRect(m.p, v2.Zero);
 		//	m2x2 mat = m2x2.Transpose2x2(m);
 		//	for (int i = 0; i != 2; ++i)
@@ -65,13 +65,13 @@ namespace pr.maths
 				(int)Math.Round(2*m_radius.y));
 		}
 
-		/// <summary>Returns true if the bounding box represents a point or volume</summary>
+		/// <summary>Returns true if the bounding rectangle represents a point or volume</summary>
 		public bool IsValid
 		{
 			get { return m_radius.x >= 0f && m_radius.y >= 0f; }
 		}
 
-		/// <summary>Get/Set the lower corner of the bounding box</summary>
+		/// <summary>Get/Set the lower corner of the bounding rectangle</summary>
 		public v2 Lower
 		{
 			get { return m_centre - m_radius; }
@@ -92,7 +92,7 @@ namespace pr.maths
 			}
 		}
 
-		/// <summary>Get/Set the upper corner of the bounding box</summary>
+		/// <summary>Get/Set the upper corner of the bounding rectangle</summary>
 		public v2 Upper
 		{
 			get { return m_centre + m_radius; }
@@ -113,41 +113,48 @@ namespace pr.maths
 			}
 		}
 
-		/// <summary>Get/Set the x dimension of the bounding box</summary>
+		/// <summary>Get/Set the x dimension of the bounding rectangle</summary>
 		public float SizeX
 		{
 			get { return 2.0f * m_radius.x; }
 			set { m_radius.x = value * 0.5f; }
 		}
 
-		/// <summary>Gets the y dimension of the bounding box</summary>
+		/// <summary>Gets the y dimension of the bounding rectangle</summary>
 		public float SizeY
 		{
 			get { return 2.0f * m_radius.y; }
 			set { m_radius.y = value * 0.5f; }
 		}
 
-		/// <summary>Get/Sets the centre point of the bounding box</summary>
+		/// <summary>Get/Set the size of the rect</summary>
+		public v2 Size
+		{
+			get { return new v2(SizeX, SizeY); }
+			set { SizeX = value.x; SizeY = value.y; }
+		}
+
+		/// <summary>Get/Sets the centre point of the bounding rectangle</summary>
 		public v2 Centre
 		{
 			get { return m_centre; }
 			set { m_centre = value; }
 		}
 
-		/// <summary>Get/Sets the dimensions of the bounding box</summary>
+		/// <summary>Get/Sets the dimensions of the bounding rectangle</summary>
 		public v2 Radius
 		{
 			get { return m_radius; }
 			set { m_radius = value; }
 		}
 
-		/// <summary>Gets the squared length of the diagonal of the bounding box</summary>
+		/// <summary>Gets the squared length of the diagonal of the bounding rectangle</summary>
 		public float DiametreSq
 		{
 			get { return 4.0f * m_radius.Length2Sq; }
 		}
 
-		/// <summary>Gets the length of the diagonal of the bounding box</summary>
+		/// <summary>Gets the length of the diagonal of the bounding rectangle</summary>
 		public float Diametre
 		{
 			get { return Maths.Sqrt(DiametreSq); }
@@ -159,7 +166,7 @@ namespace pr.maths
 			get { return SizeX * SizeY; }
 		}
 
-		/// <summary>Returns a corner of the bounding box. 'corner'</summary>
+		/// <summary>Returns a corner of the bounding rectangle. 'corner'</summary>
 		public v2 GetCorner(uint corner)
 		{
 			Debug.Assert(corner < 4, "Invalid corner index");
@@ -168,7 +175,7 @@ namespace pr.maths
 			return new v2(m_centre.x + x*m_radius.x, m_centre.y + y*m_radius.y);
 		}
 
-		/// <summary>Expands the bounding box to include 'point'</summary>
+		/// <summary>Expands the bounding rectangle to include 'point'</summary>
 		public void Encompass(params v2[] points)
 		{
 			foreach (var point in points)
@@ -195,18 +202,18 @@ namespace pr.maths
 			}
 		}
 
-		/// <summary>Expands the bounding box to include 'rhs'</summary>
+		/// <summary>Expands the bounding rectangle to include 'rhs'</summary>
 		public void Encompass(params BRect[] areas)
 		{
 			foreach (var area in areas)
 			{
-				Debug.Assert(area.IsValid, "Encompasing an invalid bounding box");
+				Debug.Assert(area.IsValid, "Encompasing an invalid bounding rectangle");
 				Encompass(area.m_centre + area.m_radius);
 				Encompass(area.m_centre - area.m_radius);
 			}
 		}
 
-		/// <summary>Returns true if 'point' is within this bounding box (within 'tol'erance)</summary>
+		/// <summary>Returns true if 'point' is within this bounding rectangle (within 'tol'erance)</summary>
 		public bool IsWithin(v2 point, float tol = 0f)
 		{
 			return
@@ -214,7 +221,7 @@ namespace pr.maths
 				Math.Abs(point.y - m_centre.y) <= m_radius.y + tol;
 		}
 
-		/// <summary>Returns true if 'brect' is within this bounding box (within 'tol'erance)</summary>
+		/// <summary>Returns true if 'brect' is within this bounding rectangle (within 'tol'erance)</summary>
 		public bool IsWithin(BRect bbox, float tol = 0f)
 		{
 			return
@@ -222,7 +229,7 @@ namespace pr.maths
 				Math.Abs(bbox.m_centre.y - m_centre.y) <= (m_radius.y - bbox.m_radius.y + tol);
 		}
 
-		/// <summary>Returns true if 'rhs' intersects with this bounding box</summary>
+		/// <summary>Returns true if 'rhs' intersects with this bounding rectangle</summary>
 		public static bool IsIntersection(BRect lhs, BRect rhs)
 		{
 			return

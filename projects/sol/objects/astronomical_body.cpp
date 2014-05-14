@@ -20,7 +20,7 @@ sol::AstronomicalBody::AstronomicalBody(pr::v4 const& position, float radius, fl
 
 	// Create the model
 	m_inst.m_model = pr::rdr::ModelGenerator<>::Geosphere(rdr, m_radius, 4, pr::Colour32White, &mat);
-	m_inst.m_i2w = pr::Translation(m_position);
+	m_inst.m_i2w = pr::Translation4x4(m_position);
 }
 
 void sol::AstronomicalBody::OnEvent(pr::rdr::Evt_UpdateScene const& e)

@@ -27,7 +27,8 @@ namespace pr
 			SceneView(pr::Camera const& cam);
 
 			// Return the view frustum in camera space
-			pr::Frustum Frustum() const { return Frustum::makeFA(m_fovY, m_aspect, m_far); }
+			pr::Frustum Frustum(float zfar) const { return Frustum::makeFA(m_fovY, m_aspect, zfar); }
+			pr::Frustum Frustum() const           { return Frustum(m_far); }
 
 			// The world space position of the camera focus point
 			pr::v4 FocusPoint() const { return m_c2w.pos - m_c2w.z * m_centre_dist; }

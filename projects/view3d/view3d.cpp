@@ -35,8 +35,13 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
 #pragma endregion
 
 // Global data for this dll
-struct DllData :pr::AlignTo<16>
+struct DllData
+	:pr::AlignTo<16>
+	,pr::events::IRecv<pr::ldr::Evt_Refresh>
+	,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
+	,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 {
+	View3D_RenderCB        m_render_cb;
 	View3D_ReportErrorCB   m_error_cb;
 	View3D_LogOutputCB     m_log_cb;
 	View3D_SettingsChanged m_settings_cb;
@@ -47,8 +52,9 @@ struct DllData :pr::AlignTo<16>
 	std::recursive_mutex   m_mutex;
 	std::thread::id        m_this_thread;
 
-	DllData(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
-		:m_error_cb(error_cb)
+	DllData(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
+		:m_render_cb(render_cb)
+		,m_error_cb(error_cb)
 		,m_log_cb(log_cb)
 		,m_settings_cb(settings_cb)
 		,m_log("view3d", [this](pr::log::Event const& ev){ LogOutput(ev); })
@@ -95,6 +101,11 @@ struct DllData :pr::AlignTo<16>
 private:
 	DllData(DllData const&);
 	DllData& operator=(DllData const&);
+
+	// Event handlers
+	void OnEvent(pr::ldr::Evt_Refresh const&) override { m_render_cb(); }
+	void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override { m_render_cb(); }
+	void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override { m_render_cb(); }
 };
 
 typedef std::lock_guard<std::recursive_mutex> LockGuard;
@@ -107,7 +118,7 @@ inline RendererInstance& Rdr() { return g_dll->m_rdr; }
 #define LOCK_GUARD LockGuard lock(Dll().m_mutex)
 
 // Initialise the dll
-VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
+VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
 {
 	try
 	{
@@ -116,7 +127,7 @@ VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_ReportErr
 			return EView3DResult::Success;
 
 		// Allocate the dll data
-		g_dll.reset(new DllData(hwnd, error_cb, log_cb, settings_cb)); // Don't use std::make_shared, because it doesn't call operator new()
+		g_dll.reset(new DllData(hwnd, render_cb, error_cb, log_cb, settings_cb)); // Don't use std::make_shared, because it doesn't call operator new()
 		PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(g_dll.get()), "dll data not aligned");
 
 		return EView3DResult::Success;
@@ -191,6 +202,97 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* 
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_SetSettings failed", ex);
+	}
+}
+
+// Render a drawset
+// Remember to call View3D_Present() after all View3D_Render calls
+VIEW3D_API void __stdcall View3D_DrawsetRender(View3DDrawset drawset)
+{
+	LOCK_GUARD;
+	try
+	{
+		PR_ASSERT(PR_DBG, drawset != 0, "");
+		if (!drawset) throw std::exception("drawset is null");
+		Rdr().m_last_drawset = drawset;
+
+		auto& scene = Rdr().m_scene;
+
+		// Reset the drawlist
+		scene.ClearDrawlists();
+
+		// Add objects from the drawset to the viewport
+		for (auto& obj : drawset->m_objects)
+			obj->AddToScene(scene);
+
+		// Add the measure tool objects if the window is visible
+		if (Rdr().m_measure_tool_ui.IsWindowVisible() && Rdr().m_measure_tool_ui.Gfx())
+			Rdr().m_measure_tool_ui.Gfx()->AddToScene(scene);;
+
+		// Add the angle tool objects if the window is visible
+		if (Rdr().m_angle_tool_ui.IsWindowVisible() && Rdr().m_angle_tool_ui.Gfx())
+			Rdr().m_angle_tool_ui.Gfx()->AddToScene(scene);;
+
+		// Position the focus point
+		if (drawset->m_focus_point_visible)
+		{
+			float scale = drawset->m_focus_point_size * drawset->m_camera.FocusDist();
+			Rdr().m_focus_point.m_i2w = pr::Scale4x4(scale, drawset->m_camera.FocusPoint());
+			scene.AddInstance(Rdr().m_focus_point);
+		}
+		// Scale the origin point
+		if (drawset->m_origin_point_visible)
+		{
+			float scale = drawset->m_origin_point_size * pr::Length3(drawset->m_camera.CameraToWorld().pos);
+			Rdr().m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
+			scene.AddInstance(Rdr().m_origin_point);
+		}
+
+		{// Set the view and projection matrices
+			pr::Camera& cam = drawset->m_camera;
+			scene.SetView(cam);
+		}
+
+		// Set the light source
+		Light& light = scene.m_global_light;
+		light = drawset->m_light;
+		if (drawset->m_light_is_camera_relative)
+		{
+			light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
+			light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
+		}
+
+		// Set the background colour
+		scene.m_bkgd_colour = drawset->m_background_colour;
+
+		// Set the global fill mode
+		auto& fr = scene.RStep<ForwardRender>();
+		switch (drawset->m_fill_mode) {
+		case EView3DFillMode::Solid:     fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EView3DFillMode::Wireframe: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+		case EView3DFillMode::SolidWire: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		}
+
+		// Render the scene
+		scene.Render();
+
+		// Render wire frame over solid for 'SolidWire' mode
+		if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
+		{
+			fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+			fr.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+			fr.m_clear_bb = false;
+
+			scene.Render();
+
+			fr.m_clear_bb = true;
+			fr.m_rsb.Clear(ERS::FillMode);
+			fr.m_bsb.Clear(EBS::BlendEnable, 0);
+		}
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_Render failed", ex);
 	}
 }
 
@@ -798,7 +900,8 @@ struct PreviewLighting
 		m_drawset->m_light                    = light;
 		m_drawset->m_light_is_camera_relative = camera_relative;
 
-		View3D_Render(m_drawset);
+		View3D_DrawsetRender(m_drawset);
+		View3D_Present();
 
 		m_drawset->m_light                    = prev_light;
 		m_drawset->m_light_is_camera_relative = prev_camera_relative;
@@ -818,7 +921,10 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DDrawset drawset, HWND par
 		if (dlg.DoModal(parent) != IDOK) return;
 		drawset->m_light                    = dlg.m_light;
 		drawset->m_light_is_camera_relative = dlg.m_camera_relative;
-		View3D_Render(drawset);
+		
+		View3D_DrawsetRender(drawset);
+		View3D_Present();
+
 		Dll().NotifySettingsChanged();
 	}
 	catch (std::exception const& ex)
@@ -1155,7 +1261,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 			: Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc);
 
 		t->m_has_alpha = options.m_has_alpha != 0;
-		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
+		tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
 		return EView3DResult::Success;
 	}
 	catch (std::exception const& ex)
@@ -1180,7 +1286,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_
 		sdesc.Filter   = options.m_filter;
 
 		Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath);
-		tex = t.m_ptr; t.m_ptr = 0; // rely on the caller for correct reference counting
+		tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
 		return EView3DResult::Success;
 	}
 	catch (std::exception const& ex)
@@ -1199,11 +1305,7 @@ VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex)
 		if (tex == nullptr)
 			throw std::exception("Null texture provided");
 
-		auto gditex = dynamic_cast<TextureGdi*>(tex);
-		if (gditex == nullptr)
-			throw std::exception("Texture is not a gdi texture. GetDC should only be used on textures created with the View3D_TextureCreateGdiCompat() function");
-
-		return gditex->GetDC();
+		return tex->GetDC();
 	}
 	catch (std::exception const& ex)
 	{
@@ -1219,11 +1321,7 @@ VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 		if (tex == nullptr)
 			throw std::exception("Null texture provided");
 
-		auto gditex = dynamic_cast<TextureGdi*>(tex);
-		if (gditex == nullptr)
-			throw std::exception("Texture is not a gdi texture. ReleaseDC should only be used on textures created with the View3D_TextureCreateGdiCompat() function");
-
-		gditex->ReleaseDC();
+		tex->ReleaseDC();
 	}
 	catch (std::exception const& ex)
 	{
@@ -1364,20 +1462,35 @@ VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, 
 	}
 }
 
-// Rendering ***************************************************************
-
-// Redraw the last rendered drawset
-VIEW3D_API void __stdcall View3D_Refresh()
+// Return the render target as a texture
+VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget()
 {
 	LOCK_GUARD;
 	try
 	{
-		if (Rdr().m_last_drawset)
-			View3D_Render(Rdr().m_last_drawset);
+		auto tex = Rdr().m_renderer.m_tex_mgr.FindTexture(EStockTexture::MainRT);
+		return tex.m_ptr;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_Refresh failed", ex);
+		Dll().ReportError("View3D_TextureResize failed", ex);
+		return nullptr;
+	}
+}
+
+// Rendering ***************************************************************
+
+// Finish rendering with a back buffer flip
+VIEW3D_API void __stdcall View3D_Present()
+{
+	LOCK_GUARD;
+	try
+	{
+		Rdr().m_renderer.Present();
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_Present failed", ex);
 	}
 }
 
@@ -1442,98 +1555,6 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_SetViewport failed", ex);
-	}
-}
-
-// Render a drawset
-VIEW3D_API void __stdcall View3D_Render(View3DDrawset drawset)
-{
-	LOCK_GUARD;
-	try
-	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		Rdr().m_last_drawset = drawset;
-
-		auto& scene = Rdr().m_scene;
-
-		// Reset the drawlist
-		scene.ClearDrawlists();
-
-		// Add objects from the drawset to the viewport
-		for (auto& obj : drawset->m_objects)
-			obj->AddToScene(scene);
-
-		// Add the measure tool objects if the window is visible
-		if (Rdr().m_measure_tool_ui.IsWindowVisible() && Rdr().m_measure_tool_ui.Gfx())
-			Rdr().m_measure_tool_ui.Gfx()->AddToScene(scene);;
-
-		// Add the angle tool objects if the window is visible
-		if (Rdr().m_angle_tool_ui.IsWindowVisible() && Rdr().m_angle_tool_ui.Gfx())
-			Rdr().m_angle_tool_ui.Gfx()->AddToScene(scene);;
-
-		// Position the focus point
-		if (drawset->m_focus_point_visible)
-		{
-			float scale = drawset->m_focus_point_size * drawset->m_camera.FocusDist();
-			pr::Scale4x4(Rdr().m_focus_point.m_i2w, scale, drawset->m_camera.FocusPoint());
-			scene.AddInstance(Rdr().m_focus_point);
-		}
-		// Scale the origin point
-		if (drawset->m_origin_point_visible)
-		{
-			float scale = drawset->m_origin_point_size * pr::Length3(drawset->m_camera.CameraToWorld().pos);
-			pr::Scale4x4(Rdr().m_origin_point.m_i2w, scale, pr::v4Origin);
-			scene.AddInstance(Rdr().m_origin_point);
-		}
-
-		{// Set the view and projection matrices
-			pr::Camera& cam = drawset->m_camera;
-			scene.SetView(cam);
-		}
-
-		// Set the light source
-		Light& light = scene.m_global_light;
-		light = drawset->m_light;
-		if (drawset->m_light_is_camera_relative)
-		{
-			light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
-			light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
-		}
-
-		// Set the background colour
-		scene.m_bkgd_colour = drawset->m_background_colour;
-
-		// Set the global fill mode
-		auto& fr = scene.RStep<ForwardRender>();
-		switch (drawset->m_fill_mode) {
-		case EView3DFillMode::Solid:     fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EView3DFillMode::Wireframe: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EView3DFillMode::SolidWire: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		}
-
-		// Render the scene
-		scene.Render();
-
-		// Render wire frame over solid for 'SolidWire' mode
-		if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
-		{
-			fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-			fr.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
-			fr.m_clear_bb = false;
-
-			scene.Render();
-
-			fr.m_clear_bb = true;
-			fr.m_rsb.Clear(ERS::FillMode);
-			fr.m_bsb.Clear(EBS::BlendEnable, 0);
-		}
-
-		Rdr().m_renderer.Present();
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_Render failed", ex);
 	}
 }
 
@@ -1687,6 +1708,20 @@ VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DDrawset drawset, BOOL show)
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ShowAngleTool failed", ex);
+	}
+}
+
+// Restore the main render target and depth buffer
+VIEW3D_API void __stdcall View3D_RestoreMainRT()
+{
+	LOCK_GUARD;
+	try
+	{
+		Rdr().m_renderer.RestoreMainRT();
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_RestoreMainRT failed", ex);
 	}
 }
 

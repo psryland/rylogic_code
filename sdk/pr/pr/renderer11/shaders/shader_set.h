@@ -25,8 +25,8 @@ namespace pr
 			using Cont::end;
 
 			// Get or add a shader with id 'shdr_id'
-			ShaderPtr get(RdrId shdr_id) const;
 			ShaderPtr get(RdrId shdr_id, ShaderManager* mgr);
+			ShaderPtr get(RdrId shdr_id) const;
 
 			// Return a shader by shader type
 			ShaderPtr get(EShaderType type) const;

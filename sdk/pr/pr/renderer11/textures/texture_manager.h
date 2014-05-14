@@ -10,6 +10,7 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
+#include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/textures/texture_gdi.h"
 
@@ -18,6 +19,8 @@ namespace pr
 	namespace rdr
 	{
 		class TextureManager
+			:pr::events::IRecv<Evt_Resize>
+			,pr::events::IRecv<Evt_RendererDestroy>
 		{
 			typedef Lookup<RdrId, Texture2D*>       TextureLookup;
 			typedef Lookup<RdrId, ID3D11Texture2D*> TexFileLookup;
@@ -58,9 +61,12 @@ namespace pr
 			// (as if created with AutoId) and only 'existing' has its dx pointers changed. 'existing' also gets a new sort_id.
 			void ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances);
 
+			// Handle events
+			void OnEvent(Evt_Resize const& e) override;
+			void OnEvent(Evt_RendererDestroy const& e) override;
+
 		public:
 			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
-			~TextureManager();
 
 			// Create a new texture instance.
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
@@ -95,6 +101,12 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
+
+			// Create a new texture instance that wraps an existing dx texture.
+			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id
+			// 'existing' is an existing dx texture to wrap
+			// 'sam_desc' is the sampler state description to use on the texture
+			Texture2DPtr CreateTexture2D(RdrId id, D3DPtr<ID3D11Texture2D> existing_tex, D3DPtr<ID3D11ShaderResourceView> existing_srv, SamplerDesc const& sam_desc, char const* name = nullptr);
 		};
 	}
 }

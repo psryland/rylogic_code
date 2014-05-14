@@ -40,7 +40,7 @@ namespace pr.gui
 		public View3dControl(View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
 		{
 			if (this.IsInDesignMode()) return;
-			View3d = new View3d(Handle, error_cb, log_cb);
+			View3d = new View3d(Handle, Render, error_cb, log_cb);
 			Camera = new View3d.CameraControls(View3d.Drawset);
 
 			InitializeComponent();
@@ -203,13 +203,13 @@ namespace pr.gui
 		{
 			if (Drawset == null) return;
 			Camera.MouseNavigate(e.Location, e.Button, false);
-			Drawset.Render();
+			SignalRefresh();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Drawset == null) return;
 			Camera.Navigate(0f, 0f, e.Delta / 120f);
-			Drawset.Render();
+			SignalRefresh();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)
 		{
@@ -217,7 +217,7 @@ namespace pr.gui
 			if (Bit.AllSet((int)e.Button, (int)MouseButtons.Middle) ||
 				Bit.AllSet((int)e.Button, (int)(MouseButtons.Left|MouseButtons.Right)))
 				Camera.ResetZoom();
-			Drawset.Render();
+			SignalRefresh();
 		}
 
 		///// <summary>Create a drawset. Sets the current drawset to the one created</summary>
@@ -476,8 +476,17 @@ namespace pr.gui
 		{
 			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
 
-			if (Drawset == null) base.OnPaint(e);
-			else Drawset.Render();
+			if (Drawset == null)
+				base.OnPaint(e);
+			else
+				Render();
+		}
+
+		/// <summary>Render and present the scene</summary>
+		private void Render()
+		{
+			Drawset.Render();
+			View3d.Present();
 		}
 
 		/// <summary>Required method for Designer support - do not modify the contents of this method with the code editor.</summary>

@@ -41,7 +41,7 @@ PSOut_GBuffer main(PSIn In)
 {
 	// Transform
 	float4 ws_vert = In.ws_vert;
-	float4 ws_norm = normalize(In.ws_norm);
+	float4 ws_norm = HAS_NORMALS ? normalize(In.ws_norm) : float4(0,0,0,0);
 
 	// Tinting
 	float4 diff = In.diff;

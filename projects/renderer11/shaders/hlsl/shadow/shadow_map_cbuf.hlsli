@@ -9,15 +9,17 @@
 
 #include "..\cbuf.hlsli"
 
-// Camera to world transform
-cbuffer CBufCamera :cbuf_bank(b0)
+// Camera to world transform and view frustum
+cbuffer CBufFrame :cbuf_bank(b0)
 {
-	float4x4 m_c2w; // camera to world
-	float4x4 m_c2s; // camera to screen
-	float4x4 m_w2c; // world to camera
-	float4x4 m_w2s; // world to screen
-
-	float4   m_frustum[4]; // View frustum corners in camera space
+	float4x4 m_proj[5];   // The five projection transforms onto the frustum faces
+	float4   m_frust_dim; // The dimensions of the shadow frustum
+	//	float4x4 m_c2w; // camera to world
+//	float4x4 m_c2s; // camera to screen
+//	float4x4 m_w2c; // world to camera
+//	float4x4 m_w2s; // world to screen
+//
+//	float4   m_frustum[4]; // View frustum corners in camera space
 };
 
 // Light source
@@ -33,5 +35,23 @@ cbuffer CBufLighting :cbuf_bank(b1)
 	float4 m_spot;               // x = inner cos angle, y = outer cos angle, z = range, w = falloff
 };
 
+
+// Per nugget constants
+cbuffer CBufNugget :cbuf_bank(b2)
+{
+	// Object transform
+	float4x4 m_o2s; // object to screen
+	float4x4 m_o2w; // object to world
+	float4x4 m_n2w; // normal to world
+
+	// Tinting
+	//float4 m_tint; // object tint colour
+
+	// Texture2D
+	//float4x4 m_tex2surf0; // texture to surface transform
+
+	// Geometry type
+	//int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z,w = not used
+};
 #endif
 

@@ -13,7 +13,7 @@ namespace view3d
 	{
 		if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 		RECT rect; ::GetClientRect(hwnd, &rect);
-		pr::rdr::RdrSettings s(hwnd, TRUE, pr::To<pr::iv2>(rect));
+		pr::rdr::RdrSettings s(hwnd, TRUE, TRUE, pr::To<pr::iv2>(rect));
 		return s;
 	}
 
@@ -27,10 +27,7 @@ namespace view3d
 
 	// RendererInstance ***********************************
 	RendererInstance::RendererInstance(HWND hwnd)
-		:pr::events::IRecv<pr::ldr::Evt_Refresh>(false)
-		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>(false)
-		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>(false)
-		,m_renderer(GetRdrSettings(hwnd))
+		:m_renderer(GetRdrSettings(hwnd))
 		,m_scene(m_renderer)
 		,m_obj_cont()
 		,m_obj_cont_ui(hwnd)
@@ -44,10 +41,6 @@ namespace view3d
 	{
 		m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
 		m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
-
-		// Sign up for events now
-		pr::events::IRecv<pr::ldr::Evt_Refresh         >::subscribe(true);
-		pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>::subscribe(true);
 	}
 
 	RendererInstance::~RendererInstance()
@@ -76,20 +69,6 @@ namespace view3d
 		m_focus_point .m_i2w   = pr::m4x4Identity;
 		m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_renderer, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80, 0, 0);
 		m_origin_point.m_i2w   = pr::m4x4Identity;
-	}
-
-	// Event handlers
-	void RendererInstance::OnEvent(pr::ldr::Evt_Refresh const&)
-	{
-		View3D_Refresh();
-	}
-	void RendererInstance::OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&)
-	{
-		View3D_Refresh();
-	}
-	void RendererInstance::OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&)
-	{
-		View3D_Refresh();
 	}
 
 	// Drawset ***********************************

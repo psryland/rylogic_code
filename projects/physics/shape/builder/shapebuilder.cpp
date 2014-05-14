@@ -123,8 +123,8 @@ void ShapeBuilder::CalculateInertiaTensor()
 		m3x4 primitive_inertia  = prim.m_mp.m_mass * prim.m_mp.m_os_inertia_tensor;
 
 		// Rotate the inertia tensor into object space
-		m3x4 prim_to_model		= cast_m3x4(prim.GetShape().m_shape_to_model);
-		primitive_inertia		= prim_to_model * primitive_inertia * GetTranspose(prim_to_model);
+		m3x4 prim_to_model = cast_m3x4(prim.GetShape().m_shape_to_model);
+		primitive_inertia  = prim_to_model * primitive_inertia * Transpose3x3(prim_to_model);
 
 		// Translate the inertia tensor using the parallel axis theorem
 		ParallelAxisTranslateInertia(primitive_inertia, prim.GetShape().m_shape_to_model.pos, prim.m_mp.m_mass, ParallelAxisTranslate::AwayFromCoM);

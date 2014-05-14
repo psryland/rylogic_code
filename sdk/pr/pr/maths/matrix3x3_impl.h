@@ -163,7 +163,7 @@ namespace pr
 	#pragma warning (disable : 4701) // 'ans' may not be fully initialised
 	inline m3x4 operator * (m3x4 const& lhs, m3x4 const& rhs)
 	{
-		m3x4 ans, lhs_t = GetTranspose(lhs);
+		m3x4 ans, lhs_t = Transpose3x3(lhs);
 		for (int j = 0; j < 3; ++j)
 		{
 			ans[j].w = 0.0f;
@@ -175,7 +175,7 @@ namespace pr
 	inline v4 operator * (m3x4 const& lhs, v4 const& rhs)
 	{
 		v4 ans;
-		m3x4 lhs_t = GetTranspose(lhs);
+		m3x4 lhs_t = Transpose3x3(lhs);
 		for (int i = 0; i < 3; ++i)
 			ans[i] = Dot3(lhs_t[i], rhs);
 		ans.w = rhs.w;
@@ -184,7 +184,7 @@ namespace pr
 	inline v3 operator * (m3x4 const& lhs, v3 const& rhs)
 	{
 		v3 ans;
-		m3x4 lhs_t = GetTranspose(lhs);
+		m3x4 lhs_t = Transpose3x3(lhs);
 		for (int i = 0; i < 3; ++i)
 			ans[i] = Dot3(cast_v3(lhs_t[i]), rhs);
 		return ans;
@@ -216,11 +216,13 @@ namespace pr
 		return IsFinite(m.x, max_value) && IsFinite(m.y, max_value) && IsFinite(m.z, max_value);
 	}
 
+	// Reset 'mat' to all zeros
 	inline m3x4& Zero(m3x4& mat)
 	{
 		return mat.zero();
 	}
 
+	// Return 'mat' with all elements positive
 	inline m3x4 Abs(m3x4 const& mat)
 	{
 		return m3x4::make(Abs(mat.x), Abs(mat.y), Abs(mat.z));
@@ -232,35 +234,35 @@ namespace pr
 		return Triple3(mat.x, mat.y, mat.z);
 	}
 
+	// Return the trace of 'mat'
 	inline float Trace3(m3x4 const& mat)
 	{
 		return mat.x.x + mat.y.y + mat.z.z;
 	}
 
+	// Return the kernel of 'mat'
 	inline v4 Kernel(m3x4 const& mat)
 	{
 		return v4::make(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
 	}
 
-	inline m3x4& Transpose(m3x4& mat)
-	{
-		Swap(mat.x.y, mat.y.x);
-		Swap(mat.x.z, mat.z.x);
-		Swap(mat.y.z, mat.z.y);
-		return mat;
-	}
-
-	inline m3x4 GetTranspose(m3x4 const& mat)
+	// Return the transpose of 'mat'
+	inline m3x4 Transpose3x3(m3x4 const& mat)
 	{
 		m3x4 m = mat;
-		return Transpose(m);
+		Swap(m.x.y, m.y.x);
+		Swap(m.x.z, m.z.x);
+		Swap(m.y.z, m.z.y);
+		return m;
 	}
 
+	// True if 'mat' can be inverted
 	inline bool IsInvertable(m3x4 const& mat)
 	{
 		return !FEql(Determinant3(mat), 0.0f);
 	}
 
+	// Invert the matrix 'mat'
 	inline m3x4 Invert(m3x4 const& mat)
 	{
 		assert(IsInvertable(mat) && "Matrix has no inverse");
@@ -269,14 +271,15 @@ namespace pr
 		tmp.x = Cross3(mat.y, mat.z) * inv_det;
 		tmp.y = Cross3(mat.z, mat.x) * inv_det;
 		tmp.z = Cross3(mat.x, mat.y) * inv_det;
-		return Transpose(tmp);
+		return Transpose3x3(tmp);
 	}
 
+	// Invert the orthonormal matrix 'mat'
 	inline m3x4 InvertFast(m3x4 const& mat_)
 	{
 		assert(IsOrthonormal(mat_) && "Matrix is not orthonormal");
 		m3x4 mat = mat_;
-		return Transpose(mat);
+		return Transpose3x3(mat);
 	}
 
 	// Orthonormalises the rotation component of 'mat'
@@ -318,49 +321,76 @@ namespace pr
 	}
 
 	// Cosntruct a rotation matrix
-	inline m3x4& Rotation3x3 (m3x4& mat, float pitch, float yaw, float roll)   { return mat.set(pitch, yaw, roll); }
-	inline m3x4& Rotation3x3 (m3x4& mat, v3 const& axis_norm, float angle)     { return mat.set(v4::make(axis_norm, 0.0f), angle); }
-	inline m3x4& Rotation3x3 (m3x4& mat, v4 const& axis_norm, float angle)     { return mat.set(axis_norm, angle); }
-	inline m3x4& Rotation3x3 (m3x4& mat, v4 const& angular_displacement)       { return mat.set(angular_displacement); }
-	inline m3x4& Rotation3x3 (m3x4& mat, Quat const& quat)                     { return mat.set(quat); }
-	inline m3x4  Rotation3x3 (float pitch, float yaw, float roll)              { m3x4 m; return Rotation3x3(m, pitch, yaw, roll); }
-	inline m3x4  Rotation3x3 (v4 const& angular_displacement)                  { m3x4 m; return Rotation3x3(m, angular_displacement); }
-	inline m3x4  Rotation3x3 (v3 const& axis, float angle)                     { m3x4 m; return Rotation3x3(m, axis, angle); }
-	inline m3x4  Rotation3x3 (v4 const& axis_norm, float angle)                { m3x4 m; return Rotation3x3(m, axis_norm, angle); }
-	inline m3x4  Rotation3x3 (const Quat& quat)                                { m3x4 m; return Rotation3x3(m, quat); }
+	inline m3x4 Rotation3x3(float pitch, float yaw, float roll)
+	{
+		return m3x4::make(pitch, yaw, roll);
+	}
+	inline m3x4 Rotation3x3(v3 const& axis_norm, float angle)
+	{
+		return m3x4::make(v4::make(axis_norm, 0.0f), angle);
+	}
+	inline m3x4 Rotation3x3(v4 const& axis_norm, float angle)
+	{
+		return m3x4::make(axis_norm, angle);
+	}
+	inline m3x4 Rotation3x3(v4 const& angular_displacement)
+	{
+		return m3x4::make(angular_displacement);
+	}
+	inline m3x4 Rotation3x3(Quat const& quat)
+	{
+		return m3x4::make(quat);
+	}
 
 	// Construct a scale matrix
-	inline m3x4& Scale3x3    (m3x4& mat, float scale)                          { Zero(mat); mat.x.x = mat.y.y = mat.z.z = scale; return mat; }
-	inline m3x4& Scale3x3    (m3x4& mat, float sx, float sy, float sz)         { Zero(mat); mat.x.x = sx; mat.y.y = sy; mat.z.z = sz; return mat; }
-	inline m3x4  Scale3x3    (float scale)                                     { m3x4 m; return Scale3x3(m, scale); }
-	inline m3x4  Scale3x3    (float sx, float sy, float sz)                    { m3x4 m; return Scale3x3(m, sx, sy, sz); }
+	inline m3x4 Scale3x3(float scale)
+	{
+		m3x4 mat = {};
+		mat.x.x = mat.y.y = mat.z.z = scale;
+		return mat;
+	}
+	inline m3x4 Scale3x3(float sx, float sy, float sz)
+	{
+		m3x4 mat = {};
+		mat.x.x = sx;
+		mat.y.y = sy;
+		mat.z.z = sz;
+		return mat;
+	}
 
 	// Construct a shear matrix
-	inline m3x4& Shear3x3    (m3x4& mat, float sxy, float sxz, float syx, float syz, float szx, float szy) { mat.x.set(1.0f, sxy, sxz, 0.0f); mat.y.set(syx, 1.0f, syz, 0.0f); mat.z.set(szx, szy, 1.0f, 0.0f); return mat; }
-	inline m3x4  Shear3x3    (float sxy, float sxz, float syx, float syz, float szx, float szy)            { m3x4 m; return Shear3x3(m, sxy, sxz, syx, syz, szx, szy); }
-
-	// Diagonalise a 3x3 matrix. From numerical recipes
-	namespace impl
+	inline m3x4 Shear3x3(float sxy, float sxz, float syx, float syz, float szx, float szy)
 	{
-		inline void Rotate(m3x4& mat, int i, int j, int k, int l, float s, float tau)
-		{
-			float temp = mat[j][i];
-			float h    = mat[l][k];
-			mat[j][i] = temp - s * (h + temp * tau);
-			mat[l][k] = h    + s * (temp - h * tau);
-		}
+		m3x4 mat;
+		mat.x.set(1.0f, sxy, sxz, 0.0f);
+		mat.y.set(syx, 1.0f, syz, 0.0f);
+		mat.z.set(szx, szy, 1.0f, 0.0f);
+		return mat;
 	}
-	inline m3x4& Diagonalise3x3(m3x4& mat, m3x4& eigen_vectors, v4& eigen_values)
+	
+	// Diagonalise a 3x3 matrix. From numerical recipes
+	inline m3x4 Diagonalise3x3(m3x4 const& mat_, m3x4& eigen_vectors, v4& eigen_values)
 	{
+		struct L
+		{
+			static void Rotate(m3x4& mat, int i, int j, int k, int l, float s, float tau)
+			{
+				float temp = mat[j][i];
+				float h    = mat[l][k];
+				mat[j][i] = temp - s * (h + temp * tau);
+				mat[l][k] = h    + s * (temp - h * tau);
+			}
+		};
+
 		// Initialise the eigen values and b to be the diagonal elements of 'mat'
 		v4 b;
-		eigen_values.x = b.x = mat.x.x;
-		eigen_values.y = b.y = mat.y.y;
-		eigen_values.z = b.z = mat.z.z;
+		eigen_values.x = b.x = mat_.x.x;
+		eigen_values.y = b.y = mat_.y.y;
+		eigen_values.z = b.z = mat_.z.z;
 		eigen_values.w = b.w = 0.0f;
-
 		eigen_vectors.identity();
 
+		m3x4 mat = mat_;
 		float sum;
 		float const diagonal_eps = 1.0e-4f;
 		do
@@ -368,19 +398,19 @@ namespace pr
 			v4 z = v4Zero;
 
 			// sweep through all elements above the diagonal
-			for( int i = 0; i != 3; ++i ) //ip
+			for (int i = 0; i != 3; ++i) //ip
 			{
-				for( int j = i + 1; j != 3; ++j ) //iq
+				for (int j = i + 1; j != 3; ++j) //iq
 				{
-					if( Abs(mat[j][i]) > diagonal_eps/3.0f )
+					if (Abs(mat[j][i]) > diagonal_eps/3.0f)
 					{
-						float h		= eigen_values[j] - eigen_values[i];
+						float h     = eigen_values[j] - eigen_values[i];
 						float theta = 0.5f * h / mat[j][i];
-						float t		= Sign(theta) / (Abs(theta) + Sqrt(1.0f + Sqr(theta)));
-						float c		= 1.0f / Sqrt(1.0f + Sqr(t));
-						float s		= t * c;
-						float tau	= s / (1.0f + c);
-						h			= t * mat[j][i];
+						float t     = Sign(theta) / (Abs(theta) + Sqrt(1.0f + Sqr(theta)));
+						float c     = 1.0f / Sqrt(1.0f + Sqr(t));
+						float s     = t * c;
+						float tau   = s / (1.0f + c);
+						h           = t * mat[j][i];
 
 						z[i] -= h;
 						z[j] += h;
@@ -388,17 +418,17 @@ namespace pr
 						eigen_values[j] += h;
 						mat[j][i] = 0.0f;
 
-						for( int k = 0; k != i; ++k )
-							impl::Rotate(mat, k, i, k, j, s, tau); //changes mat( 0:i-1 ,i) and mat( 0:i-1 ,j)
+						for (int k = 0; k != i; ++k)
+							L::Rotate(mat, k, i, k, j, s, tau); //changes mat( 0:i-1 ,i) and mat( 0:i-1 ,j)
 
-						for( int k = i + 1; k != j; ++k )
-							impl::Rotate(mat, i, k, k, j, s, tau); //changes mat(i, i+1:j-1 ) and mat( i+1:j-1 ,j)
+						for (int k = i + 1; k != j; ++k)
+							L::Rotate(mat, i, k, k, j, s, tau); //changes mat(i, i+1:j-1 ) and mat( i+1:j-1 ,j)
 
-						for( int k = j + 1; k != 3; ++k )
-							impl::Rotate(mat, i, k, j, k, s, tau); //changes mat(i, j+1:2 ) and mat(j, j+1:2 )
+						for (int k = j + 1; k != 3; ++k)
+							L::Rotate(mat, i, k, j, k, s, tau); //changes mat(i, j+1:2 ) and mat(j, j+1:2 )
 
-						for( int k = 0; k != 3; ++k )
-							impl::Rotate(eigen_vectors, k, i, k, j, s, tau); //changes EigenVec( 0:2 ,i) and evec( 0:2 ,j)
+						for (int k = 0; k != 3; ++k)
+							L::Rotate(eigen_vectors, k, i, k, j, s, tau); //changes EigenVec( 0:2 ,i) and evec( 0:2 ,j)
 					}
 				}
 			}
@@ -414,19 +444,15 @@ namespace pr
 		while (sum > diagonal_eps);
 		return mat;
 	}
-	inline m3x4 GetDiagonal3x3(m3x4 const& mat, m3x4& eigen_vectors, v4& eigen_values)
-	{
-		m3x4 m = mat;
-		return Diagonalise3x3(m, eigen_vectors, eigen_values);
-	}
 
 	// Construct a rotation matrix that transforms 'from' onto the z axis
 	// Other points can then be projected onto the XY plane by rotating by this
 	// matrix and then setting the z value to zero
-	inline m3x4& RotationToZAxis(m3x4& mat, v4 const& from)
+	inline m3x4 RotationToZAxis(v4 const& from)
 	{
 		float r = Sqr(from.x) + Sqr(from.y);
 		float d = Sqrt(r);
+		m3x4 mat;
 		if (FEql(d, 0.0f))
 		{
 			mat = m3x4Identity;	// Create an identity transform or a 180 degree rotation
@@ -441,48 +467,32 @@ namespace pr
 		}
 		return mat;
 	}
-	inline m3x4  RotationToZAxis(v4 const& from)
-	{
-		m3x4 m;
-		return RotationToZAxis(m, from);
-	}
 
 	// Make an orientation matrix from a direction vector
 	// 'dir' is the direction to align the 'axis'th axis to
 	// 'up' is the preferred up direction, however if up is parallel to 'dir'
 	// then a vector perpendicular to 'dir' will be choosen.
-	inline m3x4& OriFromDir(m3x4& ori, v4 const& dir, int axis_id, v4 const& up)
+	inline m3x4 OriFromDir(v4 const& dir, int axis_id, v4 const& up)
 	{
 		assert(axis_id >= 0 && axis_id <= 2 && "axis_id out of range");
 		v4 up_ = pr::Parallel(up, dir) ? Perpendicular(dir) : up;
 		auto _0 = (axis_id + 0) % 3;
 		auto _1 = (axis_id + 1) % 3;
 		auto _2 = (axis_id + 2) % 3;
+		m3x4 ori;
 		ori[_0] = Normalise3(dir);
 		ori[_1] = Normalise3(Cross3(up_, ori[_0]));
 		ori[_2] = Cross3(ori[_0], ori[_1]);
 		return ori;
 	}
-	inline m3x4  OriFromDir(v4 const& dir, int axis, v4 const& up)
-	{
-		m3x4 m;
-		return OriFromDir(m, dir, axis, up);
-	}
 
 	// Make a scaled orientation matrix from a direction vector
 	// Returns a transform for scaling and rotating the 'axis'th axis to 'dir'
-	inline m3x4& ScaledOriFromDir(m3x4& ori, v4 const& dir, int axis, v4 const& up)
+	inline m3x4 ScaledOriFromDir(v4 const& dir, int axis, v4 const& up)
 	{
 		float len = pr::Length3(dir);
-		if (len < pr::maths::tiny) return Scale3x3(ori, 0.0f);
-		OriFromDir(ori, dir, axis, up);
-		ori = ori * Scale3x3(len);
-		return ori;
-	}
-	inline m3x4  ScaledOriFromDir(v4 const& dir, int axis, v4 const& up)
-	{
-		m3x4 ori;
-		return ScaledOriFromDir(ori, dir, axis, up);
+		if (len < pr::maths::tiny) return Scale3x3(0.0f);
+		return OriFromDir(dir, axis, up) * Scale3x3(len);
 	}
 
 	// Return the cross product matrix for 'vec'. This matrix can be used to take the

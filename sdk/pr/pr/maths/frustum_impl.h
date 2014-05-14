@@ -100,11 +100,13 @@ namespace pr
 	}
 
 	// Return a matrix containing the inward pointing normals as the x,y,z,w vectors
-	// where: x=left, y=right, z=top, w=bottom
+	// where: x=left, y=right, z=top, w=bottom. Note, the far plane normal isn't included
 	inline pr::m4x4 Frustum::Normals() const
 	{
 		return GetTranspose4x4(m_Tnorms);
 	}
+
+	// Return the (inward pointing) plane vector for a face of the frustum [0,5)
 	inline pr::v4 Frustum::Normal(int plane_index) const
 	{
 		return Plane(plane_index).w0();

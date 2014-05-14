@@ -70,6 +70,7 @@ namespace TestCS
 		}
 		protected override void Dispose(bool disposing)
 		{
+			if (m_tex0 != null) m_tex0.Dispose();
 			if (m_obj0 != null) m_obj0.Dispose();
 			if (m_obj1 != null) m_obj1.Dispose();
 			if (m_view3d != null) m_view3d.Dispose();

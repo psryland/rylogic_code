@@ -45,21 +45,24 @@ namespace pr
 				,m_multisamp(4, ~0U)
 				,m_buffer_count(2)
 				,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
-				,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
+				,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 				,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 				,m_adapter()
 				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(D3D11_CREATE_DEVICE_BGRA_SUPPORT)
+				,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
 				,m_feature_levels()
 				,m_vsync(1)
 				,m_allow_alt_enter(false)
 			{
+				if (gdi_compat)
+					m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+
 				// Notes:
 				// - vsync has different meaning for the swap effect modes.
 				//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the vsync rate)
 				//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 				// Add the debug layer in debug mode
-				PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
 
 				// Disable multisampling when debugging as pix can't handle it
 				PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
@@ -131,6 +134,9 @@ namespace pr
 		// Passing iv2.Zero will cause the RT to get its size from the associated window
 		// Call when the window size changes (e.g. from a WM_SIZE message)
 		void RenderTargetSize(pr::iv2 const& size);
+
+		// Binds the main render target and depth buffer to the OM
+		void RestoreMainRT();
 
 		// Rendering:
 		//  For each scene to be rendered:

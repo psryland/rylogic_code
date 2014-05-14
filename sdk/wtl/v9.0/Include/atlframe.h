@@ -2086,6 +2086,7 @@ public:
 	struct _AtlUpdateUIData
 	{
 		WORD m_wState;
+		#pragma warning (disable:4201)
 		union
 		{
 			void* m_lpData;
@@ -2096,6 +2097,7 @@ public:
 				WORD m_nIDLast;
 			};
 		};
+		#pragma warning (default:4201)
 
 		bool operator ==(const _AtlUpdateUIData& e) const
 		{ return (m_wState == e.m_wState && m_lpData == e.m_lpData); }

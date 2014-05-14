@@ -44,8 +44,8 @@ namespace pr
 			,m_fovY        (cam.m_fovY)
 			,m_aspect      (cam.m_aspect)
 			,m_centre_dist (cam.m_focus_dist)
-			,m_near        (0.01f)
-			,m_far         (1.0e8f)
+			,m_near        (cam.Near())
+			,m_far         (cam.Far())
 			,m_orthographic(cam.m_orthographic)
 		{
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");
@@ -56,8 +56,9 @@ namespace pr
 		{
 			// Note: the aspect ratio is independent of 'm_viewport' in the scene allowing the view to be stretched
 			float height = 2.0f * m_centre_dist * pr::Tan(m_fovY * 0.5f);
-			if (m_orthographic) ProjectionOrthographic  (m_c2s ,height*m_aspect ,height   ,m_near ,m_far ,true);
-			else                ProjectionPerspectiveFOV(m_c2s ,m_fovY          ,m_aspect ,m_near ,m_far ,true);
+			m_c2s = m_orthographic
+				? ProjectionOrthographic  (height*m_aspect ,height   ,m_near ,m_far ,true)
+				: ProjectionPerspectiveFOV(m_fovY          ,m_aspect ,m_near ,m_far ,true);
 		}
 
 		// Return the scene views for the left and right eye in stereoscopic view

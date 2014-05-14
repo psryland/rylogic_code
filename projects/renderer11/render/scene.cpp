@@ -26,6 +26,10 @@ namespace pr
 		{
 			SetRenderSteps(std::move(rsteps));
 		}
+		Scene::~Scene()
+		{
+			pr::events::Send(Evt_SceneDestroy(*this));
+		}
 
 		// Set the render steps to use for rendering the scene
 		void Scene::SetRenderSteps(std::vector<ERenderStep>&& rsteps)

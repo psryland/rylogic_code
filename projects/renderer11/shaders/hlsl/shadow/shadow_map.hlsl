@@ -6,31 +6,45 @@
 #define PR_RDR_SHADER_SHADOW_MAP_HLSLI
 
 #include "shadow_map_cbuf.hlsli"
-
-// VS input format
-struct VS_INPUT
-{
-	float3 pos  :Position;
-	float4 diff :Color0;
-	float3 norm :Normal;
-	float2 tex  :TexCoord0;
-};
+#include "../inout.hlsli"
 
 // PS input format
-struct PS_INPUT
+struct PSIn_ShadowMap
 {
-	float4 ss_pos  :SV_Position;
-	//float4 ws_pos  :Position1;
+	// The positions of the vert projected onto each face of the frustum
+	float4 ss_vert   :SV_Position;
+	float4 ss_vert0  :TexCoord0;
+	float4 ss_vert1  :TexCoord1;
+	float4 ss_vert2  :TexCoord2;
+	float4 ss_vert3  :TexCoord3;
+	float4 ss_vert4  :TexCoord4;
 	//float4 ws_norm :Normal;
 	//float4 diff    :Color0;
 	//float2 tex     :TexCoord0;
 };
 
+struct PSOut
+{
+	// Expects a 2-channel texture, r = depth on wedge end of frustum, g = depth on far plane
+	float2 depth :SV_Target;
+};
+
 // Vertex shader
 #if PR_RDR_SHADER_VS
-PS_INPUT main(VS_INPUT In)
+PSIn_ShadowMap main(VSIn In)
 {
-	PS_INPUT Out;
+	PSIn_ShadowMap Out;
+	
+	float4 ws_vert = mul(In.vert, m_o2w);
+	Out.ss_vert  = mul(In.vert, m_o2s);
+	
+	// Project the vertex onto each plane of the frustum
+	Out.ss_vert0 = mul(ws_vert, m_proj[0]);
+	Out.ss_vert1 = mul(ws_vert, m_proj[1]);
+	Out.ss_vert2 = mul(ws_vert, m_proj[2]);
+	Out.ss_vert3 = mul(ws_vert, m_proj[3]);
+	Out.ss_vert4 = mul(ws_vert, m_proj[4]);
+	
 	//Out.pos      = 0;
 	//Out.ws_pos   = 0;
 	//Out.ss_pos   = 0;
@@ -42,7 +56,22 @@ PS_INPUT main(VS_INPUT In)
 	//Out.pos    = mul(Out.ws_pos, g_world_to_smap);
 	//Out.ss_pos = Out.pos.xy;
 
-	Out.ss_pos = float4(0,0,0,0);
+	return Out;
+}
+#endif
+
+#if PR_RDR_SHADER_PS
+PSOut main(PSIn_ShadowMap In)
+{
+	PSOut Out;
+	float4 d0 = In.ss_vert0 / In.ss_vert0.w;
+	float4 d1 = In.ss_vert1 / In.ss_vert1.w;
+	float4 d2 = In.ss_vert2 / In.ss_vert2.w;
+	float4 d3 = In.ss_vert3 / In.ss_vert3.w;
+	float4 d4 = In.ss_vert4 / In.ss_vert4.w;
+	
+	Out.depth = float2(0,100*d4.z);
+	//Out.depth = d4.xy;
 	return Out;
 }
 #endif
