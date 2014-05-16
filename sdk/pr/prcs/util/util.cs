@@ -47,6 +47,14 @@ namespace pr.util
 			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
 		}
 
+		/// <summary>Swap two values</summary>
+		public static void Swap<T>(ref T lhs, ref T rhs)
+		{
+			T tmp = lhs;
+			lhs = rhs;
+			rhs = lhs;
+		}
+
 		/// <summary>Compare two ranges within a byte array</summary>
 		public static int Compare(byte[] lhs, int lstart, int llength, byte[] rhs, int rstart, int rlength)
 		{

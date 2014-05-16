@@ -28,6 +28,8 @@ namespace pr.gui
 	/// <summary>A control for drawing box and line diagrams</summary>
 	public class DiagramControl :UserControl ,ISupportInitialize
 	{
+		private const int TextureScale = 4;
+
 		/// <summary>
 		/// The types of elements that can be on a diagram.
 		/// Also defines the order that elements are written to xml</summary>
@@ -36,6 +38,12 @@ namespace pr.gui
 			Node,
 			Connector,
 			Label,
+		}
+
+		/// <summary>Says "I have a guid"</summary>
+		private interface IHasId
+		{
+			Guid Id { get; }
 		}
 
 		#region Elements
@@ -103,9 +111,9 @@ namespace pr.gui
 						DataChanged     += m_impl_diag.HandleElementDataChanged;
 
 						// Set a new Z position
-						var pos = Position;
-						pos.p.z = m_impl_diag.ElementZ;
-						Position = pos;
+						var p = Position;
+						p.pos.z = m_impl_diag.ElementZ;
+						Position = p;
 					}
 				}
 			}
@@ -188,11 +196,20 @@ namespace pr.gui
 					PositionChanged.Raise(this, EventArgs.Empty);
 				}
 			}
+			public v2 PositionXY
+			{
+				get { return Position.pos.xy; }
+				set { var p = Position; Position = new m4x4(p.rot, new v4(value, p.pos.z, p.pos.w)); }
+			}
 			internal m4x4 PositionAtSelectionChange { get; set; }
 			internal m4x4 DragStartPosition { get; set; }
 
-			/// <summary>Raised whenever the node is moved</summary>
+			/// <summary>Raised whenever the element is moved</summary>
 			public event EventHandler PositionChanged;
+
+			/// <summary>Raised whenever the element changes size</summary>
+			public event EventHandler SizeChanged;
+			protected void RaiseSizeChanged() { SizeChanged.Raise(this, EventArgs.Empty); }
 
 			/// <summary>The graphics object for this node</summary>
 			public View3d.Object Graphics
@@ -242,15 +259,15 @@ namespace pr.gui
 				:base(position)
 			{
 				// Set the node text and style
-				m_impl_text = text;
-				m_impl_style = style;
+				Text = text;
+				Style = style;
 
 				// Set the node size
-				m_impl_autosize = autosize;
-				m_impl_sizemax = m_impl_autosize ? new Size((int)width, (int)height) : Size.Empty;
-				var sz = PreferredSize(m_impl_sizemax.Width, m_impl_sizemax.Height);
-				if (width  == 0) width  = (uint)sz.Width;
-				if (height == 0) height = (uint)sz.Height;
+				AutoSize = autosize;
+				SizeMax = AutoSize ? new v2(width, height) : v2.Zero;
+				var sz = PreferredSize(SizeMax);
+				if (width  == 0) width  = (uint)sz.x;
+				if (height == 0) height = (uint)sz.y;
 
 				Init(width, height);
 			}
@@ -258,23 +275,26 @@ namespace pr.gui
 				:base(node)
 			{
 				// Set the node text and style
-				m_impl_text  = node.Element("text").As<string>();
-				m_impl_style = node.Element("style").As<NodeStyle>();
-				
+				Text     = node.Element("text").As<string>();
+				Style    = new NodeStyle();
+				Style.Id = node.Element("style").As<Guid>();
+
 				// Set the node size
-				m_impl_autosize = node.Element("autosize").As<bool>();
-				m_impl_sizemax = node.Element("sizemax").As<Size>();
-				var size = node.Element("size").As<Size>();
-				var sz = PreferredSize(m_impl_sizemax.Width, m_impl_sizemax.Height);
-				if (size.Width  == 0) size.Width  = sz.Width;
-				if (size.Height == 0) size.Height = sz.Height;
-				
-				Init((uint)size.Width, (uint)size.Height);
+				AutoSize = node.Element("autosize").As<bool>();
+				SizeMax  = node.Element("sizemax").As<v2>();
+				var size = node.Element("size").As<v2>();
+				var sz = PreferredSize(SizeMax);
+				if (size.x == 0) size.x = sz.x;
+				if (size.y == 0) size.y = sz.y;
+
+				Init((uint)size.x, (uint)size.y);
 			}
 			private void Init(uint width, uint height)
 			{
+				Connectors = new BindingListEx<Connector>();
+
 				// Create the surface texture and assign it to the graphics object
-				Surf = new View3d.Texture(width, height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
+				Surf = new View3d.Texture(TextureScale * width, TextureScale * height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR});//D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
 
 				// Watch for style changes
 				Style.StyleChanged += Invalidate;
@@ -292,12 +312,13 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
+				base.ToXml(node);
 				node.Add2("autosize" ,AutoSize ,false);
 				node.Add2("sizemax"  ,SizeMax  ,false);
 				node.Add2("size"     ,Size     ,false);
 				node.Add2("text"     ,Text     ,false);
-				node.Add2("style"    ,Style    ,false);
-				return base.ToXml(node);
+				node.Add2("style"    ,Style.Id ,false);
+				return node;
 			}
 
 			/// <summary>Text to display in this node</summary>
@@ -308,9 +329,9 @@ namespace pr.gui
 				{
 					if (m_impl_text == value) return;
 					m_impl_text = value;
-					
+
 					if (AutoSize)
-						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+						SetSize(PreferredSize(SizeMax));
 
 					Invalidate();
 					RaiseDataChanged();
@@ -326,9 +347,9 @@ namespace pr.gui
 				{
 					if (m_impl_autosize == value) return;
 					m_impl_autosize = value;
-					
+
 					if (AutoSize)
-						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+						SetSize(PreferredSize(SizeMax));
 
 					Invalidate();
 				}
@@ -336,43 +357,44 @@ namespace pr.gui
 			private bool m_impl_autosize;
 
 			/// <summary>The diagram space width/height of the node</summary>
-			public virtual Size Size
+			public virtual v2 Size
 			{
-				get { return Surf != null ? Surf.Size : Size.Empty; }
+				get { return Surf != null ? v2.From(Surf.Size) / TextureScale : v2.Zero; }
 				set
 				{
 					if (AutoSize) return;
 					SetSize(value);
 				}
 			}
-			protected virtual void SetSize(Size sz)
+			protected virtual void SetSize(v2 sz)
 			{
-				if (Surf == null || Surf.Size == sz) return;
-				Surf.Size = sz;
+				var tex_size = (sz * TextureScale).ToSize();
+				if (Surf == null || Surf.Size == tex_size) return;
+				Surf.Size = tex_size;
+				RaiseSizeChanged();
 				Invalidate();
 			}
 
 			/// <summary>Get/Set limits for auto size</summary>
-			public virtual Size SizeMax
+			public virtual v2 SizeMax
 			{
 				get { return m_impl_sizemax; }
 				set
 				{
 					if (m_impl_sizemax == value) return;
 					m_impl_sizemax = value;
-					
+
 					if (AutoSize)
-						SetSize(PreferredSize(SizeMax.Width, SizeMax.Height));
+						SetSize(PreferredSize(SizeMax));
 				}
 			}
-			private Size m_impl_sizemax;
+			private v2 m_impl_sizemax;
 
 			/// <summary>Return the preferred node size given the current text and upper size bounds</summary>
-			public Size PreferredSize(float max_width = 0f, float max_height = 0f)
+			public v2 PreferredSize(v2 layout)
 			{
-				v2 layout = new v2(
-					max_width  != 0f ? max_width  : float.MaxValue,
-					max_height != 0f ? max_height : float.MaxValue);
+				if (layout.x == 0f) layout.x = float.MaxValue;
+				if (layout.y == 0f) layout.y = float.MaxValue;
 
 				using (var img = new Bitmap(1,1,PixelFormat.Format32bppArgb))
 				using (var gfx = System.Drawing.Graphics.FromImage(img))
@@ -380,21 +402,19 @@ namespace pr.gui
 					v2 sz = gfx.MeasureString(Text, Style.Font, layout);
 					sz.x += Style.Padding.Left + Style.Padding.Right;
 					sz.y += Style.Padding.Top + Style.Padding.Bottom;
-					return new Size((int)Math.Round(sz.x),(int)Math.Round(sz.y));
+					return sz;
 				}
+			}
+			public v2 PreferredSize(float max_width = 0f, float max_height = 0f)
+			{
+				return PreferredSize(new v2(max_width, max_height));
 			}
 
 			/// <summary>Get/Set the centre point of the node</summary>
-			public virtual v4 Centre
+			public virtual v2 Centre
 			{
-				get { return new v4(Bounds.Centre, 0, 1); }
-				set
-				{
-					var pos = Position;
-					var ofs = pos.p - Centre;
-					pos.p = value + ofs;
-					Position = pos;
-				}
+				get { return Bounds.Centre; }
+				set { PositionXY = value + (PositionXY - Centre); }
 			}
 
 			/// <summary>The surface to draw on for the node</summary>
@@ -429,25 +449,28 @@ namespace pr.gui
 				}
 			}
 
+			/// <summary>The connectors linked to this node</summary>
+			public BindingListEx<Connector> Connectors { get; private set; }
+
 			/// <summary>Returns the position to draw the text given the current alignment</summary>
 			protected v2 TextLocation(Graphics gfx)
 			{
-				var sz = v2.From(Size);
+				var sz = Size;
 				sz.x -= Style.Padding.Left + Style.Padding.Right;
 				sz.y -= Style.Padding.Top + Style.Padding.Bottom;
-				sz -= new v2(gfx.MeasureString(Text, Style.Font, sz));
+				var tx = new v2(gfx.MeasureString(Text, Style.Font, sz));
 				switch (Style.TextAlign)
 				{
 				default: throw new ArgumentException("unknown text alignment");
-				case ContentAlignment.TopLeft     : return new v2(sz.x * 0.0f, sz.y * 0.0f);
-				case ContentAlignment.TopCenter   : return new v2(sz.x * 0.5f, sz.y * 0.0f);
-				case ContentAlignment.TopRight    : return new v2(sz.x * 1.0f, sz.y * 0.0f);
-				case ContentAlignment.MiddleLeft  : return new v2(sz.x * 0.0f, sz.y * 0.5f);
-				case ContentAlignment.MiddleCenter: return new v2(sz.x * 0.5f, sz.y * 0.5f);
-				case ContentAlignment.MiddleRight : return new v2(sz.x * 1.0f, sz.y * 0.5f);
-				case ContentAlignment.BottomLeft  : return new v2(sz.x * 0.0f, sz.y * 1.0f);
-				case ContentAlignment.BottomCenter: return new v2(sz.x * 0.5f, sz.y * 1.0f);
-				case ContentAlignment.BottomRight : return new v2(sz.x * 1.0f, sz.y * 1.0f);
+				case ContentAlignment.TopLeft     : return new v2(Style.Padding.Left                    , Style.Padding.Top);
+				case ContentAlignment.TopCenter   : return new v2((Size.x - tx.x) * 0.5f                , Style.Padding.Top);
+				case ContentAlignment.TopRight    : return new v2((Size.x - tx.x) - Style.Padding.Right , Style.Padding.Top);
+				case ContentAlignment.MiddleLeft  : return new v2(Style.Padding.Left                    , (Size.y - tx.y) * 0.5f);
+				case ContentAlignment.MiddleCenter: return new v2((Size.x - tx.x) * 0.5f                , (Size.y - tx.y) * 0.5f);
+				case ContentAlignment.MiddleRight : return new v2((Size.x - tx.x) - Style.Padding.Right , (Size.y - tx.y) * 0.5f);
+				case ContentAlignment.BottomLeft  : return new v2(Style.Padding.Left                    , (Size.y - tx.y) - Style.Padding.Bottom);
+				case ContentAlignment.BottomCenter: return new v2((Size.x - tx.x) * 0.5f                , (Size.y - tx.y) - Style.Padding.Bottom);
+				case ContentAlignment.BottomRight : return new v2((Size.x - tx.x) - Style.Padding.Right , (Size.y - tx.y) - Style.Padding.Bottom);
 				}
 			}
 
@@ -472,13 +495,25 @@ namespace pr.gui
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
 			public override void Drag(v2 delta, bool commit)
 			{
-				var pos = DragStartPosition;
-				pos.p.x += delta.x;
-				pos.p.y += delta.y;
-				Position = pos;
+				var p = DragStartPosition;
+				p.pos.x += delta.x;
+				p.pos.y += delta.y;
+				Position = p;
 				if (commit)
 					DragStartPosition = Position;
 			}
+
+			/// <summary>Edit the node contents</summary>
+			public virtual void Edit(DiagramControl diag)
+			{
+				var bounds = diag.DiagramToClient(Bounds);
+				var edit = new EditField{Location = diag.PointToScreen(bounds.Location), Text = Text, Font = Style.Font};
+				if (edit.ShowDialog(diag.ParentForm) == DialogResult.OK)
+					Text = edit.Text.Trim();
+			}
+
+			// ToString
+			public override string ToString() { return "Node (" + Text.Summary(10) + ")"; }
 		}
 
 		/// <summary>Simple rectangular box node</summary>
@@ -522,8 +557,9 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
-				node.Add2("cnr" ,CornerRadius ,false);
-				return base.ToXml(node);
+				base.ToXml(node);
+				node.Add2("cnr" ,CornerRadius, false);
+				return node;
 			}
 
 			/// <summary>The radius of the box node corners</summary>
@@ -535,10 +571,10 @@ namespace pr.gui
 			private float m_impl_corner_radius;
 
 			/// <summary>AABB for the element in diagram space</summary>
-			public override BRect Bounds { get { return new BRect(Position.p.xy, v2.From(Size) / 2); } }
+			public override BRect Bounds { get { return new BRect(Position.pos.xy, Size / 2); } }
 
 			/// <summary>Detect resize and update the graphics as needed</summary>
-			protected override void SetSize(Size sz)
+			protected override void SetSize(v2 sz)
 			{
 				base.SetSize(sz);
 				m_size_changed = true;
@@ -552,14 +588,16 @@ namespace pr.gui
 				if (m_size_changed)
 				{
 					var ldr = new LdrBuilder();
-					ldr.Append("*Rect node {3 ",Size.Width," ",Size.Height," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-					Graphics.UpdateModel(ldr.ToString());
+					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+					Graphics.UpdateModel(ldr.ToString(), new View3d.Object.Keep{Transform = true});
 					Graphics.SetTexture(Surf);
 					m_size_changed = false;
 				}
 
 				using (var tex = Surf.LockSurface())
 				{
+					tex.Gfx.ScaleTransform(TextureScale, TextureScale);
+
 					var rect = Bounds.ToRectangle();
 					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
 
@@ -587,23 +625,28 @@ namespace pr.gui
 			{
 				get
 				{
-					var x = new []{-Size.Width /2f + CornerRadius, 0f, Size.Width /2f - CornerRadius};
-					var y = new []{-Size.Height/2f + CornerRadius, 0f, Size.Height/2f - CornerRadius};
-					for (int i = 0; i != 3; ++i)
+					var x = new []{0f};
+					var y = new []{0f};
+					//var x = new []{-Size.x/2f + CornerRadius, 0f, Size.x/2f - CornerRadius};
+					//var y = new []{-Size.y/2f + CornerRadius, 0f, Size.y/2f - CornerRadius};
+					for (int i = 0; i != x.Length; ++i)
 					{
-						yield return new NodeAnchor(this, new v4(+Size.Width/2f,  y[i], 0, 1), +v4.XAxis);
-						yield return new NodeAnchor(this, new v4(-Size.Width/2f,  y[i], 0, 1), -v4.XAxis);
-						yield return new NodeAnchor(this, new v4(x[i], +Size.Height/2f, 0, 1), +v4.YAxis);
-						yield return new NodeAnchor(this, new v4(x[i], -Size.Height/2f, 0, 1), -v4.YAxis);
+						yield return new NodeAnchor(this, new v4(+Size.x/2f, y[i], 0, 1), +v4.XAxis);
+						yield return new NodeAnchor(this, new v4(-Size.x/2f, y[i], 0, 1), -v4.XAxis);
+						yield return new NodeAnchor(this, new v4(x[i], +Size.y/2f, 0, 1), +v4.YAxis);
+						yield return new NodeAnchor(this, new v4(x[i], -Size.y/2f, 0, 1), -v4.YAxis);
 					}
 				}
 			}
 		}
 
 		/// <summary>Style attributes for nodes</summary>
-		public class NodeStyle
+		public class NodeStyle :IHasId
 		{
 			public static readonly NodeStyle Default = new NodeStyle();
+
+			/// <summary>Unique id for the style</summary>
+			public Guid Id { get; internal set; }
 
 			/// <summary>The colour of the node border</summary>
 			public Color Border
@@ -668,16 +711,18 @@ namespace pr.gui
 			{
 				using (StyleChanged.SuspendScope())
 				{
+					Id        = Guid.NewGuid();
 					Border    = Color.Black;
 					Fill      = Color.WhiteSmoke;
 					Text      = Color.Black;
 					TextAlign = ContentAlignment.MiddleCenter;
-					Font      = new Font(FontFamily.GenericSansSerif, 16f, GraphicsUnit.Point);
+					Font      = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
 					Padding   = new Padding(10,10,10,10);
 				}
 			}
 			public NodeStyle(XElement node)
 			{
+				Id        = node.Element("id"      ).As<Guid>();
 				Border    = node.Element("border"  ).As<Color>();
 				Fill      = node.Element("fill"    ).As<Color>();
 				Selected  = node.Element("selected").As<Color>();
@@ -690,6 +735,7 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public XElement ToXml(XElement node)
 			{
+				node.Add2("id"       ,Id        ,false);
 				node.Add2("border"   ,Border    ,false);
 				node.Add2("fill"     ,Fill      ,false);
 				node.Add2("selected" ,Selected  ,false);
@@ -712,24 +758,30 @@ namespace pr.gui
 			private const float MinSelectionDistanceSq = 25f;
 
 			public Connector(Node node0, Node node1)
-				:this(node0, node1, ConnectorStyle.Default)
+				:this(node0, node1, string.Empty)
 			{}
-			public Connector(Node node0, Node node1, ConnectorStyle style)
+			public Connector(Node node0, Node node1, string label)
+				:this(node0, node1, label, ConnectorStyle.Default)
+			{}
+			public Connector(Node node0, Node node1, string label, ConnectorStyle style)
 				:base(m4x4.Translation(AttachCentre(node0, node1)))
 			{
 				NodeAnchor anc0, anc1;
 				AttachPoints(node0, node1, out anc0, out anc1);
-				Anc0 = anc0;
-				Anc1 = anc1;
+				Anc0  = anc0;
+				Anc1  = anc1;
+				Label = label;
 				Style = style;
 				Init();
 			}
 			public Connector(XElement node)
 				:base(node)
 			{
-				Anc0  = node.Element("anc0" ).As<NodeAnchor>();
-				Anc1  = node.Element("anc1" ).As<NodeAnchor>();
-				Style = node.Element("style").As<ConnectorStyle>();
+				Anc0     = node.Element("anc0" ).As<NodeAnchor>();
+				Anc1     = node.Element("anc1" ).As<NodeAnchor>();
+				Label    = node.Element("label").As<string>();
+				Style    = new ConnectorStyle();
+				Style.Id = node.Element("style").As<Guid>();
 				Init();
 			}
 			private void Init()
@@ -737,6 +789,8 @@ namespace pr.gui
 				// Update the graphics object
 				Render();
 
+				Anc0.Elem.SizeChanged += Relink;
+				Anc1.Elem.SizeChanged += Relink;
 				Anc0.Elem.PositionChanged += Invalidate;
 				Anc1.Elem.PositionChanged += Invalidate;
 				Style.StyleChanged += Invalidate;
@@ -745,6 +799,8 @@ namespace pr.gui
 			}
 			public override void Dispose()
 			{
+				Anc0.Elem.SizeChanged -= Relink;
+				Anc1.Elem.SizeChanged -= Relink;
 				Anc0.Elem.PositionChanged -= Invalidate;
 				Anc1.Elem.PositionChanged -= Invalidate;
 				Style.StyleChanged -= Invalidate;
@@ -757,17 +813,19 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
 			{
-				node.Add2("anc0"  ,Anc0  ,false);
-				node.Add2("anc1"  ,Anc1  ,false);
-				node.Add2("style" ,Style ,false);
-				return base.ToXml(node);
+				base.ToXml(node);
+				node.Add2("anc0"  ,Anc0    , false);
+				node.Add2("anc1"  ,Anc1    , false);
+				node.Add2("label" ,Label   , false);
+				node.Add2("style" ,Style.Id, false);
+				return node;
 			}
 
 			/// <summary>Returns the nearest anchor points on two nodes</summary>
 			private static void AttachPoints(Node node0, Node node1, out NodeAnchor anc0, out NodeAnchor anc1)
 			{
-				anc0 = node0.NearestAnchor(m4x4.InverseFast(node0.Position) * node1.Centre);
-				anc1 = node1.NearestAnchor(m4x4.InverseFast(node1.Position) * node0.Centre);
+				anc0 = node0.NearestAnchor(m4x4.InverseFast(node0.Position) * new v4(node1.Centre, 0f, 1f));
+				anc1 = node1.NearestAnchor(m4x4.InverseFast(node1.Position) * new v4(node0.Centre, 0f, 1f));
 			}
 
 			/// <summary>Returns the diagram space position of the centre between nearest anchor points on two nodes</summary>
@@ -795,10 +853,61 @@ namespace pr.gui
 			}
 
 			/// <summary>The 'from' node</summary>
-			public NodeAnchor Anc0 { get; private set; }
+			public NodeAnchor Anc0
+			{
+				get { return m_impl_anc0; }
+				private set
+				{
+					Debug.Assert(value.GetNode() == null || value.GetNode() != Anc1.GetNode(), "Don't allow connections between anchors of the same node");
+					var n0 = Anc0.GetNode();
+					var n1 = value.GetNode();
+					if (n0 != null && n0 != n1) n0.Connectors.Remove(this);
+					if (n1 != null && n0 != n1) n1.Connectors.Add(this);
+					m_impl_anc0 = value;
+				}
+			}
+			private NodeAnchor m_impl_anc0;
 
 			/// <summary>The 'to' node</summary>
-			public NodeAnchor Anc1 { get; private set; }
+			public NodeAnchor Anc1
+			{
+				get { return m_impl_anc1; }
+				private set
+				{
+					Debug.Assert(value.GetNode() == null || value.GetNode() != Anc0.GetNode(), "Don't allow connections between anchors of the same node");
+					var n0 = Anc1.GetNode();
+					var n1 = value.GetNode();
+					if (n0 != null && n0 != n1) n0.Connectors.Remove(this);
+					if (n1 != null && n0 != n1) n1.Connectors.Add(this);
+					m_impl_anc1 = value;
+				}
+			}
+			private NodeAnchor m_impl_anc1;
+
+			/// <summary>The 'from' node</summary>
+			public Node Node0
+			{
+				get { return Anc0.GetNode(); }
+			}
+
+			/// <summary>The 'to' node</summary>
+			public Node Node1
+			{
+				get { return Anc1.GetNode(); }
+			}
+
+			/// <summary>A string label for the connector</summary>
+			public virtual string Label
+			{
+				get { return m_impl_label; }
+				set
+				{
+					if (m_impl_label == value) return;
+					m_impl_label = value;
+					Invalidate();
+				}
+			}
+			private string m_impl_label;
 
 			/// <summary>Style attributes for the connector</summary>
 			public virtual ConnectorStyle Style
@@ -864,19 +973,57 @@ namespace pr.gui
 				Graphics.UpdateModel(ldr.ToString());
 				Position = m4x4.Translation(AttachCentre(Anc0, Anc1));
 			}
+
+			/// <summary>Returns the other connected node</summary>
+			internal Node OtherNode(Node node)
+			{
+				if (Anc0.GetNode() == node)
+					return Anc1.GetNode();
+				if (Anc1.GetNode() == node)
+					return Anc0.GetNode();
+				throw new Exception("{0} is not connected to {1}".Fmt(ToString(), node.ToString()));
+			}
+
+			/// <summary>Update the node anchors</summary>
+			public void Relink(bool find_previous_anchors)
+			{
+				if (find_previous_anchors)
+				{
+					Anc0 = Anc0.Elem.As<Node>().NearestAnchor(Anc0.Location);
+					Anc1 = Anc1.Elem.As<Node>().NearestAnchor(Anc1.Location);
+				}
+				else
+				{
+					NodeAnchor anc0,anc1;
+					AttachPoints(Anc0.Elem.As<Node>(), Anc1.Elem.As<Node>(), out anc0, out anc1);
+					Anc0 = anc0;
+					Anc1 = anc1;
+				}
+				Invalidate();
+			}
+			public void Relink(object sender = null, EventArgs args = null)
+			{
+				Relink(true);
+			}
+
+			// ToString
+			public override string ToString() { return "Connector (" + Anc0.ToString() + "-" + Anc1.ToString() + ")"; }
 		}
 
 		/// <summary>Style properties for connectors</summary>
-		public class ConnectorStyle
+		public class ConnectorStyle :IHasId
 		{
 			public static readonly ConnectorStyle Default = new ConnectorStyle();
 
+			/// <summary>Unique id for the style</summary>
+			public Guid Id { get; internal set; }
+
 			/// <summary>Connector styles</summary>
-			public enum EType
+			[Flags] public enum EType
 			{
-				Line,
-				ForwardArrow,
-				BackArrow,
+				Line         = 1 << 0,
+				ForwardArrow = 1 << 1,
+				BackArrow    = 1 << 2,
 			}
 
 			/// <summary>The connector style</summary>
@@ -918,14 +1065,16 @@ namespace pr.gui
 			{
 				using (StyleChanged.SuspendScope())
 				{
-					Type = EType.Line;
-					Line = Color.Black;
+					Id       = Guid.NewGuid();
+					Type     = EType.Line;
+					Line     = Color.Black;
 					Selected = Color.Blue;
-					Width = 5f;
+					Width    = 5f;
 				}
 			}
 			public ConnectorStyle(XElement node)
 			{
+				Id       = node.Element("id"      ).As<Guid>();
 				Type     = node.Element("type"    ).As<EType>();
 				Line     = node.Element("line"    ).As<Color>();
 				Selected = node.Element("selected").As<Color>();
@@ -935,6 +1084,7 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public XElement ToXml(XElement node)
 			{
+				node.Add2("id"       ,Id       ,false);
 				node.Add2("type"     ,Type     ,false);
 				node.Add2("line"     ,Line     ,false);
 				node.Add2("selected" ,Selected ,false);
@@ -979,6 +1129,8 @@ namespace pr.gui
 				node.Add2("loc"     ,Location ,false);
 				return node;
 			}
+
+			public override string ToString() { return "Anchor (" + Elem.ToString() + ")"; }
 		}
 
 		/// <summary>Selection data for a mouse button</summary>
@@ -990,31 +1142,134 @@ namespace pr.gui
 			public HitTestResult m_hit_result; // The hit test result on mouse down
 		}
 
-		/// <summary>Graphics objects used by the diagram</summary>
-		private class Tools :IDisposable
+		/// <summary>Helper form for editing the value in a node</summary>
+		private class EditField :Form
 		{
-			/// <summary>A rectangular selection box</summary>
-			public View3d.Object m_selection_box;
-
-			public Tools()
+			private readonly TextBox m_field;
+			public override string Text
 			{
-				var ldr = new LdrBuilder();
-				using (ldr.Group("selection_box"))
-				{
-
-				}
-
+				get { return m_field != null ? m_field.Text : string.Empty; }
+				set { if (m_field != null) m_field.Text = value; }
 			}
-			public void Dispose()
+
+			public EditField()
 			{
+				ShowInTaskbar   = false;
+				FormBorderStyle = FormBorderStyle.None;
+				KeyPreview      = true;
+				Margin          = Padding.Empty;
+				StartPosition   = FormStartPosition.Manual;
+
+				m_field           = new TextBox
+				{
+					Multiline = true,
+					MinimumSize = new Size(80,30),
+					MaximumSize = new Size(640,480),
+					BorderStyle = BorderStyle.None,
+					Margin = Padding.Empty,
+				};
+
+				Controls.Add(m_field);
+			}
+			private void DoAutoSize()
+			{
+				var sz              = m_field.PreferredSize;
+				sz.Width           += 1;
+				sz.Height          += m_field.Font.Height + 2;
+				Size                = sz;
+				m_field.Size        = sz;
+				Size                = m_field.Size;
+				m_field.ScrollBars  = m_field.Size != sz ? ScrollBars.Both : ScrollBars.None;
+			}
+			protected override void OnShown(EventArgs e)
+			{
+				DoAutoSize();
+ 				base.OnShown(e);
+			}
+			protected override void OnKeyDown(KeyEventArgs e)
+			{
+				if (e.KeyCode == Keys.Escape)
+				{
+					DialogResult = DialogResult.Cancel;
+					Close();
+					return;
+				}
+				if (e.KeyCode == Keys.Return && e.Control)
+				{
+					DialogResult = DialogResult.OK;
+					Close();
+					return;
+				}
+				DoAutoSize();
+				base.OnKeyDown(e);
 			}
 		}
+
+		/// <summary>A cache of node or connector style objects</summary>
+		private class StyleCache<T> where T:IHasId
+		{
+			private readonly Dictionary<Guid, T> m_map = new Dictionary<Guid, T>();
+			private readonly NodeStyle m_default = new NodeStyle();
+
+			public StyleCache() {}
+			public StyleCache(XElement node)
+			{
+				foreach (var n in node.Elements())
+				{
+					var style = n.As<T>();
+					m_map.Add(style.Id, style);
+				}
+			}
+			public XElement ToXml(XElement node)
+			{
+				foreach (var ns in m_map)
+					node.Add2("style", ns.Value, false);
+				return node;
+			}
+
+			/// <summary>Returns the style associated with 'style.Id'summary>
+			internal T this[T style]
+			{
+				get
+				{
+					// 'style' may be a default constructed node style with just the id changed
+					// This lookup tries to find the correct style for the id. If not found, then
+					// 'style' is added to the cache.
+					T out_style;
+					if (m_map.TryGetValue(style.Id, out out_style))
+						return out_style;
+
+					m_map.Add(style.Id, style);
+					return style;
+				}
+			}
+		}
+
+		///// <summary>Graphics objects used by the diagram</summary>
+		//private class Tools :IDisposable
+		//{
+		//	/// <summary>A rectangular selection box</summary>
+		//	public View3d.Object m_selection_box;
+
+		//	public Tools()
+		//	{
+		//		var ldr = new LdrBuilder();
+		//		using (ldr.Group("selection_box"))
+		//		{
+		//		}
+
+		//	}
+		//	public void Dispose()
+		//	{
+		//	}
+		//}
+
 		#endregion
 
-		#region Render Options
+		#region Options
 
 		/// <summary>Rendering options</summary>
-		public class RdrOptions
+		public class DiagramOptions
 		{
 			// Colours for graph elements
 			public Color m_bg_colour      = SystemColors.ControlDark;      // The fill colour of the background
@@ -1022,37 +1277,99 @@ namespace pr.gui
 			public Color m_grid_colour    = Color.FromArgb(230, 230, 230); // The colour of the grid lines
 
 			// Graph margins and constants
-			public float m_left_margin    = 0.0f; // Fractional distance from the left edge
-			public float m_right_margin   = 0.0f;
-			public float m_top_margin     = 0.0f;
-			public float m_bottom_margin  = 0.0f;
-			public float m_title_top      = 0.01f; // Fractional distance  down from the top of the client area to the top of the title text
-			public Font  m_title_font     = new Font("tahoma", 12, FontStyle.Bold);    // Font to use for the title text
-			public Font  m_note_font      = new Font("tahoma",  8, FontStyle.Regular); // Font to use for graph notes
-			public RdrOptions Clone() { return (RdrOptions)MemberwiseClone(); }
+			public class NodeOptions
+			{
+				public float Margin = 30f;
+				
+				public NodeOptions() {}
+				public NodeOptions(XElement node)
+				{
+					Margin = node.Element("margin").As<float>();
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2("margin", Margin, false);
+					return node;
+				}
+			}
+			public NodeOptions Node = new NodeOptions();
+
+			//public float m_left_margin    = 0.0f; // Fractional distance from the left edge
+			//public float m_right_margin   = 0.0f;
+			//public float m_top_margin     = 0.0f;
+			//public float m_bottom_margin  = 0.0f;
+			//public float m_title_top      = 0.01f; // Fractional distance  down from the top of the client area to the top of the title text
+			//public Font  m_title_font     = new Font("tahoma", 12, FontStyle.Bold);    // Font to use for the title text
+			//public Font  m_note_font      = new Font("tahoma",  8, FontStyle.Regular); // Font to use for graph notes
+			
+			// Scatter parameters
+			public class ScatterOptions
+			{
+				public int   MaxIterations = 1;
+				public float SpringConstant = 0.1f;
+				public float CoulombConstant = 1000f;
+				public float ConnectorScale = 10f;
+				public float Equilibrium = 0.001f;
+
+				public ScatterOptions() {}
+				public ScatterOptions(XElement node)
+				{
+					MaxIterations   = node.Element("iterations"      ).As<int>();
+					SpringConstant  = node.Element("spring_constant" ).As<float>();
+					CoulombConstant = node.Element("coulomb_constant").As<float>();
+					ConnectorScale  = node.Element("connector_scale" ).As<float>();
+					Equilibrium     = node.Element("equilibrium"     ).As<float>();
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2("iterations"       ,MaxIterations   ,false);
+					node.Add2("spring_constant"  ,SpringConstant  ,false);
+					node.Add2("coulomb_constant" ,CoulombConstant ,false);
+					node.Add2("connector_scale"  ,ConnectorScale  ,false);
+					node.Add2("equilibrium"      ,Equilibrium     ,false);
+					return node;
+				}
+			}
+			public ScatterOptions Scatter = new ScatterOptions();
+
+			public DiagramOptions() {}
+			public DiagramOptions(XElement node)
+			{
+				Node    = node.Element("node"   ).As<NodeOptions>();
+				Scatter = node.Element("scatter").As<ScatterOptions>();
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2("node"    ,Node    ,false);
+				node.Add2("scatter" ,Scatter ,false);
+				return node;
+			}
+			public DiagramOptions Clone() { return (DiagramOptions)MemberwiseClone(); }
 		}
 
 		#endregion
 
 		// Members
-		private readonly View3d       m_view3d;         // Renderer
-		private readonly RdrOptions   m_rdr_options;    // Rendering options
-		private readonly EventBatcher m_eb_update_diag; // Event batcher for updating the diagram graphics
-		private View3d.CameraControls m_camera;         // The virtual window over the diagram
-		private MouseSelection[]      m_mbutton;        // Per button mouse selection data
-		private bool                  m_edited;         // True when the diagram has been edited and requires saving
+		private readonly View3d            m_view3d;           // Renderer
+		private readonly EventBatcher      m_eb_update_diag;   // Event batcher for updating the diagram graphics
+		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
+		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
+		private StyleCache<ConnectorStyle> m_connector_styles; // The collection of node styles
+		private MouseSelection[]           m_mbutton;          // Per button mouse selection data
+		private bool                       m_edited;           // True when the diagram has been edited and requires saving
 
-		public DiagramControl() :this(new RdrOptions()) {}
-		private DiagramControl(RdrOptions rdr_options)
+		public DiagramControl() :this(new DiagramOptions()) {}
+		private DiagramControl(DiagramOptions options)
 		{
 			if (this.IsInDesignMode()) return;
 
-			m_view3d         = new View3d(Handle, Render);
-			m_rdr_options    = rdr_options;
-			m_eb_update_diag = new EventBatcher(UpdateDiagram);
-			m_camera         = new View3d.CameraControls(m_view3d.Drawset);
-			m_mbutton        = Util.NewArray<MouseSelection>(Enum<EBtnIdx>.Count);
-			m_edited         = false;
+			m_view3d           = new View3d(Handle, Render);
+			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
+			m_camera           = new View3d.CameraControls(m_view3d.Drawset);
+			m_node_styles      = new StyleCache<NodeStyle>();
+			m_connector_styles = new StyleCache<ConnectorStyle>();
+			m_mbutton          = Util.NewArray<MouseSelection>(Enum<EBtnIdx>.Count);
+			m_edited           = false;
 
 			InitializeComponent();
 
@@ -1060,6 +1377,7 @@ namespace pr.gui
 			m_view3d.Drawset.OriginVisible = false;
 			m_view3d.Drawset.Orthographic = true;
 
+			Options = options ?? new DiagramOptions();
 			Elements = new BindingListEx<Element>();
 			Selected = new BindingListEx<Element>();
 			Elements.ListChanging += HandleElementListChanging;
@@ -1069,6 +1387,7 @@ namespace pr.gui
 			DefaultMouseNavigation = true;
 			AllowEditing = true;
 			AllowMove = true;
+			AllowSelection = true;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -1100,10 +1419,7 @@ namespace pr.gui
 		public BindingListEx<Element> Selected { get; private set; }
 
 		/// <summary>Controls for how the diagram is rendered</summary>
-		public RdrOptions RenderOptions
-		{
-			get { return m_rdr_options; }
-		}
+		public DiagramOptions Options { get; set; }
 
 		/// <summary>Minimum bounding area for view reset</summary>
 		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
@@ -1122,6 +1438,13 @@ namespace pr.gui
 				if (hit != null)
 					result.Hits.Add(hit);
 			}
+
+			// Sort the results by type then z order
+			result.Hits.Sort((l,r) =>
+				{
+					if (l.Entity != r.Entity) return l.Entity.CompareTo(r.Entity);
+					return l.Element.Position.pos.z.CompareTo(r.Element.Position.pos.z);
+				});
 			return result;
 		}
 		public class HitTestResult
@@ -1217,6 +1540,9 @@ namespace pr.gui
 		/// <summary>True if users are allowed to move elements on the diagram</summary>
 		public bool AllowMove { get; set; }
 
+		/// <summary>True if users are allowed to select elements on the diagram</summary>
+		public bool AllowSelection { get; set; }
+
 		/// <summary>Default Mouse navigation. Public to allow users to forward mouse calls to us.</summary>
 		public void OnMouseDown(object sender, MouseEventArgs e)
 		{
@@ -1224,7 +1550,7 @@ namespace pr.gui
 			var sel                  = m_mbutton[(int)View3d.ButtonIndex(e.Button)];
 			sel.m_btn_down           = true;
 			sel.m_grab_cs            = e.Location;
-			sel.m_selection.Location = PointToDiagram(sel.m_grab_cs);
+			sel.m_selection.Location = ClientToDiagram(sel.m_grab_cs);
 			sel.m_selection.Size     = v2.Zero;
 			sel.m_hit_result         = HitTest(sel.m_selection.Location);
 
@@ -1265,7 +1591,7 @@ namespace pr.gui
 					if (is_click || area_select)
 						SelectElements(sel.m_selection, ModifierKeys);
 					else
-						DragSelected(PointToDiagram(e.Location) - sel.m_selection.Location, true);
+						DragSelected(ClientToDiagram(e.Location) - sel.m_selection.Location, true);
 					break;
 				}
 			case MouseButtons.Right:
@@ -1298,9 +1624,9 @@ namespace pr.gui
 					// selected elements within the diagram, otherwise change the selection area
 					var area_select = sel.m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
 					if (area_select)
-						sel.m_selection.Size = PointToDiagram(e.Location) - v2.From(sel.m_selection.Location);
+						sel.m_selection.Size = ClientToDiagram(e.Location) - v2.From(sel.m_selection.Location);
 					else
-						DragSelected(PointToDiagram(e.Location) - sel.m_selection.Location, false);
+						DragSelected(ClientToDiagram(e.Location) - sel.m_selection.Location, false);
 					break;
 				}
 			case MouseButtons.Right:
@@ -1324,6 +1650,28 @@ namespace pr.gui
 			// Show the context menu on right click
 			if (e.Button == MouseButtons.Right)
 				ShowContextMenu(e.Location);
+		}
+
+		/// <summary>Handle double clicks</summary>
+		protected override void OnMouseDoubleClick(MouseEventArgs e)
+		{
+			base.OnMouseDoubleClick(e);
+			if (!AllowEditing)
+				return;
+
+			// Find what was hit
+			var hit = HitTest(ClientToDiagram(e.Location));
+			var elem = hit.Hits.FirstOrDefault();
+			if (elem == null)
+				return;
+
+			switch (elem.Entity)
+			{
+			default: throw new Exception("Unknown diagram element");
+			case Entity.Node: elem.Element.As<Node>().Edit(this); break;
+			case Entity.Connector: break;
+			case Entity.Label: break;
+			}
 		}
 
 		/// <summary>Reset the view of the diagram back to the default</summary>
@@ -1352,27 +1700,42 @@ namespace pr.gui
 			Refresh();
 		}
 
-		/// <summary>
-		/// Returns a point in diagram space from a point in client space
-		/// Use to convert mouse (client-space) locations to diagram coordinates</summary>
-		public v2 PointToDiagram(Point point)
+		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
+		public v2 ClientToDiagram(Point point)
 		{
 			var ws = m_camera.WSPointFromSSPoint(point);
 			return new v2(ws.x, ws.y);
 		}
 
-		/// <summary>Returns a point in client space from a point in diagram space. Inverse of PointToDiagram</summary>
-		public Point DiagramToPoint(v2 point)
+		/// <summary>Returns a rectangle diagram space from a rectangle in client space.</summary>
+		public BRect DiagramToClient(Rectangle rect)
+		{
+			var r = BRect.From(rect);
+			r.Centre = ClientToDiagram(r.Centre.ToPoint());
+			r.Radius = ClientToDiagram(r.Radius.ToPoint()) - r.Centre;
+			return r;
+		}
+
+		/// <summary>Returns a point in client space from a point in diagram space. Inverse of ClientToDiagram</summary>
+		public Point DiagramToClient(v2 point)
 		{
 			var ws = new v4(point, 0.0f, 1.0f);
 			return m_camera.SSPointFromWSPoint(ws);
+		}
+
+		/// <summary>Returns a rectangle in client space from a rectangle in diagram space. Inverse of ClientToDiagram</summary>
+		public Rectangle DiagramToClient(BRect rect)
+		{
+			rect.Centre = v2.From(DiagramToClient(rect.Centre));
+			rect.Radius = v2.Abs(v2.From(DiagramToClient(rect.Radius)) - v2.From(DiagramToClient(v2.Zero)));
+			return rect.ToRectangle();
 		}
 
 		/// <summary>Shifts the camera so that diagram space position 'ds' is at client space position 'cs'</summary>
 		public void PositionDiagram(Point cs, v2 ds)
 		{
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
-			var dst = PointToDiagram(cs);
+			var dst = ClientToDiagram(cs);
 			m_camera.Navigate(ds.x - dst.x, ds.y - dst.y, 0);
 			Refresh();
 		}
@@ -1401,9 +1764,10 @@ namespace pr.gui
 				}
 			case ListChg.ItemPreAdd:
 				{
-					// An element is about to be added, attach handlers
+					// An element is about to be added, attach handlers.
+					// If the new element is already in this list, remove it first (the list is being reordered)
 					var elem = args.Item;
-					if (elem.Diagram == this) throw new ArgumentException("element already belongs to this diagram");
+					if (elem.Diagram == this) elem.Diagram = null;
 					if (elem.Diagram != null) throw new ArgumentException("element already belongs to another diagram");
 					elem.Diagram = this;
 					break;
@@ -1415,6 +1779,24 @@ namespace pr.gui
 					break;
 				}
 			case ListChg.ItemAdded:
+				{
+					// When an element is saved to xml, it only saves the style id.
+					// When loaded from xml, a default style is created with the id changed
+					// to that from the xml data. When added to a diagram, we use the style id
+					// to get the correct style for that id. (also with the side effect of adding
+					// new styles to the diagram)
+					var node = args.Item as Node;
+					if (node != null)
+						node.Style = m_node_styles[node.Style];
+
+					var conn = args.Item as Connector;
+					if (conn != null)
+						conn.Style = m_connector_styles[conn.Style];
+
+					// Update the diagram
+					m_eb_update_diag.Signal();
+					break;
+				}
 			case ListChg.ItemRemoved:
 			case ListChg.Reset:
 				{
@@ -1459,6 +1841,9 @@ namespace pr.gui
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
 		public void SelectElements(RectangleF rect, Keys modifiers)
 		{
+			if (!AllowSelection)
+				return;
+
 			// Normalise the selection
 			BRect r = rect;
 
@@ -1488,12 +1873,9 @@ namespace pr.gui
 					foreach (var elem in Selected.ToArray())
 						elem.Selected = false;
 
-					if (hits.Hits.Count != 0)
-					{
-						var sel = hits.Hits.MaxBy(x => x.Element.Position.p.z);
-						if (sel != null)
-							sel.Element.Selected = true;
-					}
+					var sel = hits.Hits.FirstOrDefault();
+					if (sel != null)
+						sel.Element.Selected = true;
 				}
 			}
 			// Otherwise it's area selection
@@ -1523,34 +1905,154 @@ namespace pr.gui
 			Refresh();
 		}
 
+		/// <summary>Selects nodes that are connected to already selected nodes</summary>
+		public void SelectConnectedNodes()
+		{
+			if (!AllowSelection)
+				return;
+
+			var nodes = Selected.Where(x => x.Entity == Entity.Node).Cast<Node>().ToList();
+			foreach (var node in nodes)
+			foreach (var conn in node.Connectors)
+				conn.OtherNode(node).Selected = true;
+
+			Refresh();
+		}
+
 		/// <summary>Spread the nodes on the diagram so none are overlapping</summary>
 		public void ScatterNodes()
 		{
-			int node_count = Elements.Count(x => x.Entity == Entity.Node);
-			int col_count = 1 + (int)Math.Sqrt(node_count);
+			// Find all nodes and connectors involved in the scatter
+			bool selected = Selected.Count != 0;
+			var nodes = (selected ? Selected : Elements).Where(x => x.Entity == Entity.Node).Cast<Node>().ToList();
+			var conns = nodes.SelectMany(x => x.Connectors).Where(x => x.Node0.Selected == selected && x.Node1.Selected == selected).Distinct().ToList();
 
-			int col = 0;
-			float row_height = 0f;
-			v2 xy = v2.Zero, margin = new v2(30,30);
-			foreach (var node in Elements.Where(x => x.Entity == Entity.Node))
-			{
-				var pos = node.Position;
-				pos.p = new v4(xy, 0, 1);
-				node.Position = pos;
+			var force0 = new v2[conns.Count];
+			var force1 = new v2[conns.Count];
+			var force = force0;
+			var last = force1;
 
-				col++;
-				xy.x += node.Bounds.SizeX + margin.x;
-				row_height = Math.Max(row_height, node.Bounds.SizeY);
+			var rand = new Rand();
+			var djitter = Options.Scatter.Equilibrium * 0.4f;
+			Func<v2> jitter = () => v2.Random2(-djitter, djitter, rand);
 
-				if (col == col_count)
+			// Finds the minimum separation distance between to nodes for a given direction
+			Func<v2,Node,Node,float> min_separation = (v,n0,n1) =>
 				{
-					col = 0;
-					xy.x = 0;
-					xy.y += row_height + margin.y;
-					row_height = 0;
+					var sz = n1.Bounds.Size + n0.Bounds.Size;
+					return (Math.Abs(v.x / sz.x) > Math.Abs(v.y / sz.y) ? sz.x : sz.y) + Options.Node.Margin;
+				};
+
+			// Spring-mass simulation
+			for (int i = 0; i != Options.Scatter.MaxIterations; ++i)
+			{
+				// Determine forces
+				for (int j = 0; j != conns.Count; ++j)
+				{
+					var conn = conns[j];
+					var node0 = conn.Node0;
+					var node1 = conn.Node1;
+					var vec = node1.PositionXY - node0.PositionXY;
+					
+					// Find the minimum separation distance
+					var min_sep = min_separation(vec, node0, node1);
+
+					// Find the current separation
+					var sep = Math.Max(min_sep, vec.Length2);
+					
+					// Spring force F = -Kx
+					var spring = -Options.Scatter.SpringConstant * (float)Math.Max(0, sep - min_sep);
+
+					// Coulomb force F = kQq/x²
+					// Nodes are more repulsive if that have more connections
+					var q0 = 1f + node0.Connectors.Count * Options.Scatter.ConnectorScale;
+					var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
+					var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
+
+					var net = spring + coulumb;
+					var frc = vec * (net / sep) + jitter();
+					force[j] += frc;
 				}
+
+				// Apply forces... sort of, don't simulation acceleration/velocity
+				bool equilibrium = true;
+				for (int j = 0; j != conns.Count; ++j)
+				{
+					equilibrium &= (force[j] - last[j]).Length2Sq < Options.Scatter.Equilibrium;
+
+					var conn = conns[j];
+					var node0 = conn.Node0;
+					var node1 = conn.Node1;
+					var vec = node1.PositionXY - node0.PositionXY;
+					var min_sep = min_separation(vec, node0, node1);
+
+					// Limit the magnitude of the position change in the direction of 'vec' to half the minimum separation distance
+					if (Maths.Sqr(v2.Dot2(vec, force[j])) > Maths.Sqr(min_sep) * vec.Length2Sq)
+						force[j] *= 0.5f * min_sep / force[j].Length2;
+
+					node0.PositionXY -= force[j];
+					node1.PositionXY += force[j];
+				}
+				if (equilibrium)
+					break;
+				
+				// Reset forces
+				Util.Swap(ref force, ref last);
+				force.Clear();
 			}
-			ResetView();
+
+			RelinkNodes();
+			Refresh();
+
+			//// Determine the number per row, and what the
+			//// average width of a row should be
+			//int node_count = 0;
+			//float total_width = 0;
+			//foreach (var node in nodes)
+			//{
+			//	++node_count;
+			//	total_width += node.Bounds.SizeX + margin.x;
+			//}
+			//float avr_width = total_width / node_count;
+			//float max_row_width = (float)Math.Sqrt(avr_width);
+
+			//// Do layout
+			//v2 xy = v2.Zero; float row_height = 0;
+			//foreach (var node in Elements.Where(x => x.Entity == Entity.Node))
+			//{
+			//	var bounds = node.Bounds;
+
+			//	// Set the node position
+			//	var pos = node.Position;
+			//	pos.p = new v4(xy.x + bounds.Radius.x, xy.y + bounds.Radius.y, 0, 1);
+			//	node.Position = pos;
+
+			//	// Move the position pointer
+			//	xy.x += bounds.SizeX + margin.x;
+			//	row_height = Math.Max(row_height, node.Bounds.SizeY + margin.y);
+
+			//	// Time to wrap around?
+			//	if (xy.x > max_row_width)
+			//	{
+			//		xy.x = 0;
+			//		xy.y += row_height;
+			//		row_height = 0;
+			//	}
+			//}
+			//ResetView();
+			//Refresh();
+		}
+
+		/// <summary>Update the links between nodes to pick the nearest anchor points</summary>
+		public void RelinkNodes()
+		{
+			// Relink the connectors from selected nodes or all connectors if nothing is selected
+			var connectors = Selected.Count != 0
+				? Selected.Where(x => x.Entity == Entity.Node).Cast<Node>().SelectMany(x => x.Connectors)
+				: Elements.Where(x => x.Entity == Entity.Connector).Cast<Connector>();
+
+			foreach (var connector in connectors)
+				connector.Relink(false);
 			Refresh();
 		}
 
@@ -1592,10 +2094,10 @@ namespace pr.gui
 		/// <summary>Get the rectangular area of the diagram for a given client area.</summary>
 		public Rectangle DiagramRegion(Size target_size)
 		{
-			var marginL = (int)(target_size.Width  * RenderOptions.m_left_margin  );
-			var marginT = (int)(target_size.Height * RenderOptions.m_top_margin   );
-			var marginR = (int)(target_size.Width  * RenderOptions.m_right_margin );
-			var marginB = (int)(target_size.Height * RenderOptions.m_bottom_margin);
+			var marginL = 0;//(int)(target_size.Width  * Options.m_left_margin  );
+			var marginT = 0;//(int)(target_size.Height * Options.m_top_margin   );
+			var marginR = 0;//(int)(target_size.Width  * Options.m_right_margin );
+			var marginB = 0;//(int)(target_size.Height * Options.m_bottom_margin);
 
 			//if (m_title.Length != 0)       { marginT += TextRenderer.MeasureText(m_title      ,       RenderOptions.m_title_font).Height; }
 			//if (m_yaxis.Label.Length != 0) { marginL += TextRenderer.MeasureText(m_yaxis.Label, YAxis.RenderOptions.m_label_font).Height; }
@@ -1663,19 +2165,19 @@ namespace pr.gui
 		private void Render()
 		{
 			m_view3d.Drawset.Render();
-
-			using (var tex = m_view3d.RenderTarget.LockSurface())
-				tex.Gfx.DrawEllipse(Pens.Blue, new Rectangle(100,100,200,150));
-
 			m_view3d.Present();
 		}
 
 		/// <summary>Export the current diagram as xml</summary>
 		public XElement ExportXml(XElement node)
 		{
-			Elements.Sort((l,r) => l.Entity.CompareTo(r.Entity));
+			using (Elements.SuspendEvents())
+				Elements.Sort((l,r) => l.Entity.CompareTo(r.Entity));
+
+			node.Add2("node_styles", m_node_styles ,false);
+			node.Add2("connector_styles", m_connector_styles, false);
 			foreach (var elem in Elements)
-				node.Add2("elem", elem);
+				node.Add2("elem", elem, true);
 			return node;
 		}
 		public XDocument ExportXml()
@@ -1697,7 +2199,14 @@ namespace pr.gui
 				ResetDiagram();
 
 			foreach (var node in xml.Root.Elements())
-				Elements.Add((Element)node.ToObject());
+			{
+				switch (node.Name.LocalName)
+				{
+				case "node_styles":      m_node_styles = node.As<StyleCache<NodeStyle>>(); break;
+				case "connector_styles": m_connector_styles = node.As<StyleCache<ConnectorStyle>>(); break;
+				case "elem":             Elements.Add((Element)node.ToObject()); break;
+				}
+			}
 
 			UpdateDiagram();
 		}
@@ -1733,9 +2242,29 @@ namespace pr.gui
 
 				if (AllowMove)
 				{
+					lvl0.Add(new ToolStripSeparator());
+
 					#region Scatter
 					var scatter = lvl0.Add2(new ToolStripMenuItem("Scatter"));
 					scatter.Click += (s,a) => ScatterNodes();
+					#endregion
+
+					#region Relink
+					var relink = lvl0.Add2(new ToolStripMenuItem("Relink"));
+					relink.Click += (s,a) => RelinkNodes();
+					#endregion
+				}
+
+				if (AllowSelection)
+				{
+					lvl0.Add(new ToolStripSeparator());
+
+					#region Selection
+					var select_connected = lvl0.Add2(new ToolStripMenuItem("Select Connected Nodes"));
+					select_connected.Click += (s,a) =>
+						{
+							SelectConnectedNodes();
+						};
 					#endregion
 				}
 
@@ -2462,5 +2991,11 @@ namespace pr.gui
 		public void EndInit(){}
 
 		#endregion
+	}
+
+	internal static class DiagramControlExtn
+	{
+		/// <summary>Helper for getting the node from a NodeAnchor</summary>
+		internal static DiagramControl.Node GetNode(this DiagramControl.NodeAnchor anc) { return anc != null ? anc.Elem.As<DiagramControl.Node>() : null; }
 	}
 }

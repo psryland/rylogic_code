@@ -110,15 +110,17 @@ namespace pr.maths
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
-		public static v4 Random(Rand r, float min_angle, float max_angle)
+		public static v4 Random(float min_angle, float max_angle, Rand r)
 		{
-			return Make(v4.Normalise3(v4.Random3(0.0f)), r.Float(min_angle, max_angle));
+			r = r ?? new Rand();
+			return Make(v4.Random3N(0.0f, r), r.Float(min_angle, max_angle));
 		}
 		
 		/// <summary>Construct a random quaternion rotation</summary>
 		public static v4 Random(Rand r)
 		{
-			return Make(v4.Normalise3(v4.Random3(0.0f)), r.Float(0.0f, Maths.Tau));
+			r = r ?? new Rand();
+			return Make(v4.Random3N(0.0f, r), r.Float(0.0f, Maths.Tau));
 		}
 
 		/// <summary>Spherically interpolate between quaternions</summary>

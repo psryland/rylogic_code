@@ -36,7 +36,7 @@ namespace pr.maths
 		public static BBox operator * (m4x4 m, BBox rhs)
 		{
 			Debug.Assert(rhs.IsValid, "Transforming an invalid bounding box");
-			BBox bb = new BBox(m.p, v4.Zero);
+			BBox bb = new BBox(m.pos, v4.Zero);
 			m4x4 mat = m4x4.Transpose3x3(m);
 			for (int i = 0; i != 3; ++i)
 			{

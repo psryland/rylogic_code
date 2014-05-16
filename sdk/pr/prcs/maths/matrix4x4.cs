@@ -17,11 +17,12 @@ namespace pr.maths
 		[FieldOffset(32)] public v4   z;
 		[FieldOffset(48)] public v4   w;
 
-		[FieldOffset( 0)] public m3x4 r;
-		[FieldOffset(48)] public v4   p;
+		[FieldOffset( 0)] public m3x4 rot;
+		[FieldOffset(48)] public v4   pos;
 
 		public override string ToString() { return x + " \n" + y + " \n" + z + " \n" + w + " \n"; }
 
+		public m4x4(m3x4 rot_, v4 pos_) :this()                                                { rot = rot_; pos = pos_; }
 		public m4x4(v4 x_, v4 y_, v4 z_, v4 w_) :this()                                        { set(x_, y_, z_, w_); }
 		public m4x4(v4 axis_norm, v4 axis_sine_angle, float cos_angle, v4 translation) :this() { set(axis_norm, axis_sine_angle, cos_angle, translation); }
 		public m4x4(v4 axis_norm, float angle, v4 translation) :this()                         { set(axis_norm, angle, translation); }
@@ -43,8 +44,8 @@ namespace pr.maths
 		public void set(v4 axis_norm, v4 axis_sine_angle, float cos_angle, v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			r.set(axis_norm, axis_sine_angle, cos_angle);
-			p = translation;
+			rot.set(axis_norm, axis_sine_angle, cos_angle);
+			pos = translation;
 		}
 		public void set(v4 axis_norm, float angle, v4 translation)
 		{
@@ -54,8 +55,8 @@ namespace pr.maths
 		public void set(v4 from, v4 to, v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			r.set(from, to);
-			p = translation;
+			rot.set(from, to);
+			pos = translation;
 		}
 
 		// Static m4x4 types
@@ -82,7 +83,7 @@ namespace pr.maths
 
 		public static void Transpose3x3(ref m4x4 m)
 		{
-			m3x4.Transpose3x3(ref m.r);
+			m3x4.Transpose3x3(ref m.rot);
 		}
 		public static m4x4 Transpose3x3(m4x4 m)
 		{
@@ -122,7 +123,7 @@ namespace pr.maths
 
 		public static void Orthonormalise(ref m4x4 m)
 		{
-			m3x4.Orthonormalise(ref m.r);
+			m3x4.Orthonormalise(ref m.rot);
 		}
 		public static m4x4 Orthonormalise(m4x4 m)
 		{
@@ -132,7 +133,7 @@ namespace pr.maths
 
 		public static bool IsOrthonormal(m4x4 m)
 		{
-			return	m3x4.IsOrthonormal(m.r);
+			return	m3x4.IsOrthonormal(m.rot);
 		}
 
 		public static v4 operator * (m4x4 lhs, v4 rhs)
@@ -188,7 +189,7 @@ namespace pr.maths
 		public static m4x4 OriFromDir(v4 direction, int axis, v4 preferred_up, v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4{r=m3x4.OriFromDir(direction, axis, preferred_up), p=translation};
+			return new m4x4(m3x4.OriFromDir(direction, axis, preferred_up), translation);
 		}
 		public static m4x4 OriFromDir(v4 direction, int axis, v4 translation)
 		{
@@ -203,7 +204,7 @@ namespace pr.maths
 		public static m4x4 Translation(v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
-			return new m4x4{r=m3x4.Identity, p=translation};
+			return new m4x4(m3x4.Identity, translation);
 		}
 
 		// Create a rotation matrix

@@ -9,14 +9,29 @@ namespace pr.maths
 {
 	public class Rand :Random
 	{
-		public double Min;
-		public double Max;
+		/// <summary>The range on which to return random numbers [Min,Max)</summary>
+		public double Min, Max;
 
-		public double Double()                       { return NextDouble() * (Max - Min) + Min; }
+		/// <summary>Return a random number on [Min,Max)</summary>
+		public double Double() { return Double(Min,Max); }
+
+		/// <summary>Return a random number on [min,max)</summary>
 		public double Double(double min, double max) { return NextDouble() * (max - min) + min; }
-		public float  Float()                        { return (float)Double(); } 
-		public float  Float(float min, float max)    { return (float)Double(min, max); } 
-		public int    Int()                          { return (int)Double(); }
+		
+		/// <summary>Returns a random number on [Min,Max)</summary>
+		public float Float() { return Float((float)Min,(float)Max); } 
+		
+		/// <summary>Returns a random number on [min,max)</summary>
+		public float Float(float min, float max) { return (float)Double(min, max); } 
+		
+		/// <summary>Returns a random number on [avr-d,avr+d)</summary>
+		public float FloatC(float avr, float d) { return Float(avr - d, avr + d); }
+
+		/// <summary>Returns a random integer on [(int)Min, (int)Max)</summary>
+		public int Int() { return Int((int)Min, (int)Max); }
+
+		/// <summary>Returns a random integer on [(int)min, (int)max)</summary>
+		public int Int(int min, int max) { return (int)Double(min, max); }
 		
 		public Rand()
 		{

@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re
-sys.path.append("../../script")
+sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
 import Rylogic as Tools
 import UserVars
 
 try:
-
 	print(
 		"*************************************************************************\n"
 		"LineDrawer Deploy\n"
@@ -15,35 +14,54 @@ try:
 
 	Tools.CheckVersion(1)
 
-	platform = input("Platform\n1 - x64\n2 - x86\n(default x64): ")
-	if   platform == "1": platform = "x64"
-	elif platform == "2": platform = "x86"
-	elif platform == "" : platform = "x64"
-	else: Tools.OnError("Unknown platform")
+	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
+	# e.g: "\"folder\proj_name:Rebuild\""
+	projects = [
+		"linedrawer",
+		]
+	configs = [
+		"debug",
+		"release"
+		]
+	platforms = [
+		"x86",
+		"x64"
+		]
 
-	config = input("Configuration (debug, release(default))? ")
-	if config == "": config = "release"
-
-	proj   = UserVars.root + "\\projects\\vs2012\\linedrawer.sln"
-	srcdir = UserVars.root + "\\obj2012\\linedrawer\\" + platform + "\\" + config
-	dstdir = UserVars.root + "\\bin\\linedrawer\\" + platform
-
-	input(
-		" Deploy Settings:\n"
-		"         Source: " + srcdir + "\n"
-		"    Destination: " + dstdir + "\n"
-		"  Configuration: " + config + "\n"
-		"Press enter to continue")
+	procs = []
+	parallel = False
+	same_window = True
 
 	#Invoke MSBuild
-	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:linedrawer:Rebuild", "/p:Configuration="+config+";Platform="+platform])
+	projs = ";".join(projects)
+	for platform in platforms:
+		for config in configs:
+			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
+			if parallel:
+				procs.extend([Tools.Spawn(args, same_window=same_window)])
+			else:
+				print("\n *** " + platform + " - " + config + " ***\n")
+				Tools.Exec(args)
 
-	# Copy files to the destination
+	errors = False
+	for proc in procs:
+		proc.wait()
+		if proc.returncode != 0:
+			errors = True
+	
+	if errors:
+		Tools.OnError("Errors occurred")
+
+	#Deploy
+	platform = "x64"
+	config = "release"
+	srcdir = UserVars.root + "\\obj\\v120\\linedrawer\\" + platform + "\\" + config
+	dstdir = UserVars.root + "\\bin\\linedrawer\\" + platform
+
 	print("Deploying...")
 	Tools.Copy(srcdir + "\\linedrawer.exe", dstdir + "\\linedrawer.exe")
 
 	Tools.OnSuccess()
 
 except Exception as ex:
-	Tools.OnError("ERROR: " + str(ex))
+	Tools.OnException(ex)

@@ -2,11 +2,22 @@
 // Byte Array Functions
 //  Copyright © Rylogic Ltd 2010
 //***************************************************
+using System;
 
 namespace pr.extn
 {
 	public static class ArrayExtensions
 	{
+		/// <summary>Reset the array to default</summary>
+		public static void Clear<T>(this T[] arr)
+		{
+			Array.Clear(arr, 0, arr.Length);
+		}
+		public static void Clear<T>(this T[] arr, int index, int length)
+		{
+			Array.Clear(arr, index, length);
+		}
+
 		/// <summary>Create a shallow copy of this array</summary>
 		public static T[] Dup<T>(this T[] arr)
 		{

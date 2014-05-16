@@ -65,6 +65,8 @@ namespace pr.maths
 				(int)Math.Round(2*m_radius.y));
 		}
 
+		public static BRect From(Rectangle r) { return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, v2.Abs(v2.From(r.Size)) / 2f); }
+
 		/// <summary>Returns true if the bounding rectangle represents a point or volume</summary>
 		public bool IsValid
 		{

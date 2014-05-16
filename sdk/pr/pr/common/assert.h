@@ -92,6 +92,10 @@
 #  define PR_JOIN(x,y)    PR_DO_JOIN(x,y)
 #endif
 
+#ifndef PR_LINK
+#  define PR_LINK __FILE__ "(" PR_STRINGISE(__LINE__) ") : "
+#endif
+
 // Allow for the assert function already being defined
 #ifndef PR_ASSERT_FUNC
 

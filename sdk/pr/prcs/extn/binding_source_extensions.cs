@@ -62,7 +62,7 @@ namespace pr
 	{
 		internal static partial class TestExtensions
 		{
-			[Test] public static void BindingSources()
+			[Test] public static void BindingSourceExtns()
 			{}
 		}
 	}

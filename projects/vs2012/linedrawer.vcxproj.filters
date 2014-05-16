@@ -36,13 +36,7 @@
     <Filter Include="tools">
       <UniqueIdentifier>{a97bcce8-34b3-47d2-9c2a-1113b27b9756}</UniqueIdentifier>
     </Filter>
-    <Filter Include="sdk">
-      <UniqueIdentifier>{d5e2a138-9399-408f-995d-c7d59ab318df}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="sdk\pr">
-      <UniqueIdentifier>{31775a2c-98ba-451e-99fd-6fbbc20fd92c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="sdk\pr\app">
+    <Filter Include="app">
       <UniqueIdentifier>{824051ef-3b2a-46ed-b82c-893721fd0f70}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -90,7 +84,7 @@
       <Filter>gui</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sdk\pr\pr\app\entry_point.cpp">
-      <Filter>sdk\pr\app</Filter>
+      <Filter>app</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -182,13 +176,13 @@
       <Filter>gui</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\app\forward.h">
-      <Filter>sdk\pr\app</Filter>
+      <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\app\main.h">
-      <Filter>sdk\pr\app</Filter>
+      <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h">
-      <Filter>sdk\pr\app</Filter>
+      <Filter>app</Filter>
     </ClInclude>
     <ClInclude Include="..\linedrawer\main\forward.h">
       <Filter>main</Filter>

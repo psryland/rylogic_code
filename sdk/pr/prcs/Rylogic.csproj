@@ -98,7 +98,7 @@
     <Compile Include="attrib\string_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
-    <Compile Include="common\binding_source.cs">
+    <Compile Include="container\binding_source.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="common\cmdline.cs" />
@@ -116,6 +116,7 @@
     <Compile Include="container\binding_list.cs" />
     <Compile Include="container\kdtree.cs" />
     <Compile Include="container\list_chg.cs" />
+    <Compile Include="container\quadtree.cs" />
     <Compile Include="container\tri_table.cs" />
     <Compile Include="crypt\activation_code.cs" />
     <Compile Include="common\pin.cs" />
@@ -125,7 +126,6 @@
     <Compile Include="common\sqlite.cs" />
     <Compile Include="common\tuple.cs" />
     <Compile Include="common\weak_delegate.cs" />
-    <Compile Include="container\listevt.cs" />
     <Compile Include="container\list_map.cs" />
     <Compile Include="container\ring_buffer.cs" />
     <Compile Include="container\sortable_binding_list.cs" />
@@ -218,7 +218,9 @@
     <Compile Include="gui\dgv_custom_columns.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\diagram_control.cs" />
+    <Compile Include="gui\diagram_control.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="gui\dock_container.cs">
       <SubType>Form</SubType>
     </Compile>

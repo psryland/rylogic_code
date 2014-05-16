@@ -1,20 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using pr.extn;
+using pr.util;
 
 namespace pr.container
 {
 	/// <summary>Extension to BindingList that notifies *before* and item is removed</summary>
 	public class BindingListEx<T> :System.ComponentModel.BindingList<T>
 	{
-		public BindingListEx() :base() {}
-		public BindingListEx(IList<T> list) :base(list) {}
+		public BindingListEx() :base()
+		{
+			Init();
+		}
+		public BindingListEx(IList<T> list) :base(list)
+		{
+			Init();
+		}
 		public BindingListEx(int initial_count, T value)
 		{
+			Init();
 			for (;initial_count-- != 0;)
 				Add(value);
+		}
+		private void Init()
+		{
+			// ResetBindings and ResetItem aren't overridable.
+			// Attach handlers to ensure we always receive the Reset event.
+			// Calling the 'new' method will cause the Pre events to be raised as well
+			ListChanged += (s,a) =>
+				{
+					if (a.ListChangedType == ListChangedType.Reset)
+						ListChanging.Raise(this, new ListChgEventArgs(ListChg.Reset, -1, default(T)));
+					if (a.ListChangedType == ListChangedType.ItemChanged)
+						ListChanging.Raise(this, new ListChgEventArgs(ListChg.Reset, a.NewIndex, this[a.NewIndex]));
+				};
 		}
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
@@ -65,10 +87,8 @@ namespace pr.container
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs(ListChg.PreReset, -1, default(T)));
 
+			// Reset event is raised from attached handler
 			base.ClearItems();
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs(ListChg.Reset, -1, default(T)));
 		}
 
 		// Inserts the specified item in the list at the specified index.
@@ -100,20 +120,59 @@ namespace pr.container
 		protected override void SetItem(int index, T item)
 		{
 			var old = this[index];
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreAdd, -1, item));
+
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreRemove, index, old));
-		
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemPreAdd, index, item));
+
 			base.SetItem(index, item);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, -1, old));
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, item));
+				ItemChanged.Raise(this, new ItemChgEventArgs(index, old, item));
 
 			if (RaiseListChangedEvents)
-				ItemChanged.Raise(this, new ItemChgEventArgs(index, old, item));
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemRemoved, index, old));
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.ItemAdded, index, item));
+		}
+
+		// Reorders the list
+		protected override void ApplySortCore(System.ComponentModel.PropertyDescriptor prop, System.ComponentModel.ListSortDirection direction)
+		{
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.PreReordered, -1, default(T)));
+			
+			base.ApplySortCore(prop, direction);
+
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.Reordered, -1, default(T)));
+		}
+
+		// Notify observers of the entire list changing
+		public new void ResetBindings()
+		{
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.PreReset, -1, default(T)));
+
+			// Reset event is raised from attached handler
+			base.ResetBindings();
+		}
+		
+		// Notify observers of a specific item changing
+		public new void ResetItem(int position)
+		{
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs(ListChg.PreReset, position, this[position]));
+
+			// Reset event is raised from attached handler
+			base.ResetItem(position);
+		}
+	
+		/// <summary>RAII object for suspending list events</summary>
+		public Scope SuspendEvents()
+		{
+			return Scope.Create(() => RaiseListChangedEvents = false, () => RaiseListChangedEvents = true);
 		}
 	}
 }

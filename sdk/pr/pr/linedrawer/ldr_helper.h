@@ -22,7 +22,7 @@ namespace pr
 			if (str.size() == 0) return;
 			pr::Handle h = ::CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 			DWORD bytes_written; ::WriteFile(h, &str[0], (DWORD)str.size(), &bytes_written, 0);
-			PR_ASSERT(PR_DBG, bytes_written == str.size(), "Failed to write ldr string");
+			PR_INFO_EXP(PR_DBG, bytes_written == str.size(), PR_LINK "Failed to write ldr string");
 		}
 		template <typename TStr> inline TStr& Vec3(v4 const& vec, TStr& str)
 		{
@@ -208,7 +208,7 @@ namespace pr
 
 		template <typename TStr> inline TStr& Frustum(char const* name, unsigned int colour, pr::Frustum const& f, m4x4 const& o2w, TStr& str)
 		{
-			pr::m4x4 f2w = o2w * pr::Translation(0.0f, 0.0f, f.ZDist());
+			pr::m4x4 f2w = o2w * pr::Translation4x4(0.0f, 0.0f, f.ZDist());
 			str += FmtS("*FrustumFA %s %08X { %d %f %f %f %f " ,name ,colour ,-3 ,pr::RadiansToDegrees(f.FovY()) ,f.Aspect() ,0.0f ,f.ZDist());
 			Transform(f2w, str);
 			str += "}\n";

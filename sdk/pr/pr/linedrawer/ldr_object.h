@@ -394,8 +394,39 @@ namespace pr
 			LdrObjectPtr RemoveChild(size_t i);
 			void RemoveAllChildren();
 
+			// Flags for partial update of a model
+			struct UpdateModelKeep
+			{
+				bool m_name;
+				bool m_transform;
+				bool m_context_id;
+				bool m_children;
+				bool m_colour;
+				bool m_colour_mask;
+				bool m_wireframe;
+				bool m_visibility;
+				bool m_animation;
+				bool m_step_data;
+				bool m_user_data;
+				
+				enum class EKeep { None, All };
+				UpdateModelKeep(EKeep keep = EKeep::None)
+					:m_name       (keep == EKeep::All)
+					,m_transform  (keep == EKeep::All)
+					,m_context_id (keep == EKeep::All)
+					,m_children   (keep == EKeep::All)
+					,m_colour     (keep == EKeep::All)
+					,m_colour_mask(keep == EKeep::All)
+					,m_wireframe  (keep == EKeep::All)
+					,m_visibility (keep == EKeep::All)
+					,m_animation  (keep == EKeep::All)
+					,m_step_data  (keep == EKeep::All)
+					,m_user_data  (keep == EKeep::All)
+				{}
+			};
+
 			// Transfer the parts of 'rhs' that are model related to this object
-			void UpdateModel(LdrObject&& rhs);
+			void UpdateModel(LdrObject&& rhs, UpdateModelKeep const& keep);
 
 			// Called when there are no more references to this object
 			static void RefCountZero(RefCount<LdrObject>* doomed);

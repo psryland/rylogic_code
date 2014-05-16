@@ -60,11 +60,6 @@ namespace pr.maths
 		public static v2 Min { get { return m_min; } }
 		public static v2 Max { get { return m_max; } }
 
-		public static v2 From(Point point)                     { return new v2(point.X, point.Y); }
-		public static v2 From(Size size)                       { return new v2(size.Width, size.Height); }
-		public static v2 From(PointF point)                    { return new v2(point.X, point.Y); }
-		public static v2 From(SizeF size)                      { return new v2(size.Width, size.Height); }
-
 		// Functions
 		public static v2   operator + (v2 lhs, v2 rhs)         { return new v2(lhs.x + rhs.x, lhs.y + rhs.y); }
 		public static v2   operator - (v2 lhs, v2 rhs)         { return new v2(lhs.x - rhs.x, lhs.y - rhs.y); }
@@ -80,16 +75,25 @@ namespace pr.maths
 		// Conversion
 		public static implicit operator v2(PointF p)           { return new v2(p.X, p.Y); }
 		public static implicit operator PointF(v2 p)           { return new PointF(p.x, p.y); }
-		public static implicit operator v2(SizeF s)           { return new v2(s.Width, s.Height); }
-		public static implicit operator SizeF(v2 s)           { return new SizeF(s.x, s.y); }
+		public static implicit operator v2(SizeF s)            { return new v2(s.Width, s.Height); }
+		public static implicit operator SizeF(v2 s)            { return new SizeF(s.x, s.y); }
+		public static v2 From(Point point)                     { return new v2(point.X, point.Y); }
+		public static v2 From(Size size)                       { return new v2(size.Width, size.Height); }
+		public static v2 From(PointF point)                    { return new v2(point.X, point.Y); }
+		public static v2 From(SizeF size)                      { return new v2(size.Width, size.Height); }
+		public Point ToPoint()                                 { return new Point((int)x, (int)y); }
+		public Size ToSize()                                   { return new Size((int)x, (int)y); }
 
-		public static bool  FEqlZero2(v2 vec, float tol)        { return vec.Length2Sq < tol * tol; }
-		public static bool  FEqlZero2(v2 vec)                   { return FEqlZero2(vec, Maths.TinyF); }
-		public static bool  FEql2(v2 lhs, v2 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
-		public static bool  FEql2(v2 lhs, v2 rhs)               { return FEql2(lhs, rhs, Maths.TinyF); }
-		public static v2    Random2(Rand r, float z, float w)   { return new v2(r.Float(), r.Float()); }
-		public static v2    Random2(float z, float w)           { return Random2(new Rand(), z, w); }
-
+		public static bool FEqlZero2(v2 vec, float tol)       { return vec.Length2Sq < tol * tol; }
+		public static bool FEqlZero2(v2 vec)                  { return FEqlZero2(vec, Maths.TinyF); }
+		public static bool FEql2(v2 lhs, v2 rhs, float tol)   { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol); }
+		public static bool FEql2(v2 lhs, v2 rhs)              { return FEql2(lhs, rhs, Maths.TinyF); }
+		
+		public static v2 Random2(float min, float max, Rand r) { r = r ?? new Rand(); return new v2(r.Float(min,max)     ,r.Float(min,max)    ); }
+		public static v2 Random2(v2 min, v2 max, Rand r)       { r = r ?? new Rand(); return new v2(r.Float(min.x,max.x) ,r.Float(min.y,max.y)); }
+		public static v2 Random2(float rad, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v2 v; for (; (v = Random2(-rad, rad, r)).Length2Sq > rad_sq; ){} return v; }
+		public static v2 Random2N(Rand r)                      { r = r ?? new Rand(); return v2.Random2(1.0f, r); }
+		
 		public static v2    Abs(v2 vec)                        { return new v2(Math.Abs(vec.x), Math.Abs(vec.y)); }
 		public static v2    Blend(v2 lhs, v2 rhs, float frac)  { return lhs * (1f - frac) + rhs * (frac); }
 		public static v2    Clamp2(v2 vec, v2 min, v2 max)     { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }

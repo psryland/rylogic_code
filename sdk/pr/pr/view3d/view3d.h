@@ -3,210 +3,202 @@
 //  Copyright © Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-#ifndef PR_VIEW3D_VIEW3D_H
-#define PR_VIEW3D_VIEW3D_H
 
 #ifdef VIEW3D_EXPORTS
-#	define VIEW3D_API __declspec(dllexport)
+#define VIEW3D_API __declspec(dllexport)
 #else
-#	define VIEW3D_API __declspec(dllimport)
+#define VIEW3D_API __declspec(dllimport)
 #endif
 
 #include <windows.h>
 #include <d3d11.h>
 
-enum class EView3DResult
-{
-	Success,
-	Failed,
-};
-enum class EView3DFillMode
-{
-	Solid,
-	Wireframe,
-	SolidWire,
-};
-enum class EView3DGeom // pr::rdr::EGeom
-{
-	Unknown = 0,
-	Vert    = 1 << 0, // Object space 3D position
-	Colr    = 1 << 1, // Diffuse base colour
-	Norm    = 1 << 2, // Object space 3D normal
-	Tex0    = 1 << 3, // Diffuse texture
-};
-enum class EView3DPrim
-{
-	Invalid   = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
-	PointList = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
-	LineList  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
-	LineStrip = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
-	TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
-	TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
-};
-enum class EView3DLight
-{
-	Ambient,
-	Directional,
-	Point,
-	Spot
-};
-enum class EView3DLogLevel
-{
-	Debug,
-	Info,
-	Warn,
-	Error,
-};
-
-namespace pr
-{
-	namespace ldr { struct LdrObject; }
-	namespace rdr { struct Texture2D; }
-}
-namespace view3d
-{
-	typedef pr::ldr::LdrObject Object;
-	typedef pr::rdr::Texture2D Texture;
-	struct Drawset;
-
-	// View3D to custom type conversion.
-	// Specialise this to convert to/from View3D types to a custom type
-	template <typename TTo, typename TFrom> struct Convert
+#ifdef VIEW3D_EXPORTS
+	namespace pr
 	{
-		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
-	};
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
-	{
-		return Convert<TTo,TFrom>::To(from);
+		namespace ldr { struct LdrObject; }
+		namespace rdr { struct Texture2D; }
 	}
-}
-typedef view3d::Drawset* View3DDrawset;
-typedef view3d::Object*  View3DObject;
-typedef view3d::Texture* View3DTexture;
-typedef unsigned int View3DColour;
-struct View3DV2
-{
-	float x, y;
-
-	// Make convertable to/from any vector2 type with x,y members
-	template <typename T> static View3DV2 make(T const& t)    { return view3d::To<View3DV2>(t); }
-	template <typename T> View3DV2& operator = (T const& t)   { return *this = make(t); }
-	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
-};
-struct View3DV4
-{
-	float x, y, z, w;
-
-	// Make convertable to/from any vector4 type with x,y,z,w members
-	template <typename T> static View3DV4 make(T const& t)    { return view3d::To<View3DV4>(t); }
-	template <typename T> View3DV4& operator = (T const& t)   { return *this = make(t); }
-	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
-};
-struct View3DM4x4
-{
-	View3DV4 x, y, z, w;
-
-	// Make convertable to/from any matrix4x4 type with x,y,z,w vector members
-	template <typename T> static View3DM4x4 make(T const& t)  { return view3d::To<View3DM4x4>(t); }
-	template <typename T> View3DM4x4& operator = (T const& t) { return *this = make(t); }
-	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
-};
-struct View3DBBox
-{
-	View3DV4 centre;
-	View3DV4 radius;
-
-	// Make convertable to/from any bounding box type with m_centre/m_radius vector members
-	template <typename T> static View3DBBox make(T const& t)  { return view3d::To<View3DBBox>(t); }
-	template <typename T> View3DBBox& operator = (T const& t) { return *this = make(t); }
-	template <typename T> operator T() const                  { return view3d::To<T>(*this); }
-};
-struct View3DVertex
-{
-	View3DV4 pos;
-	View3DV4 norm;
-	View3DV2 tex;
-	View3DColour col;
-	UINT32 pad;
-	void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) { pos = p; col = c; norm = n; tex = t; }
-};
-struct View3DImageInfo
-{
-	UINT32 m_width;
-	UINT32 m_height;
-	UINT32 m_depth;
-	UINT32 m_mips;
-	DXGI_FORMAT m_format;
-	UINT32 m_image_file_format;//D3DXIMAGE_FILEFORMAT
-};
-struct View3DLight
-{
-	EView3DLight m_type;
-	BOOL         m_on;
-	View3DV4     m_position;
-	View3DV4     m_direction;
-	View3DColour m_ambient;
-	View3DColour m_diffuse;
-	View3DColour m_specular;
-	float        m_specular_power;
-	float        m_inner_cos_angle;
-	float        m_outer_cos_angle;
-	float        m_range;
-	float        m_falloff;
-	BOOL         m_cast_shadows;
-};
-struct View3DTextureOptions
-{
-	DXGI_FORMAT                m_format;
-	UINT                       m_mips;
-	D3D11_FILTER               m_filter;
-	D3D11_TEXTURE_ADDRESS_MODE m_addrU;
-	D3D11_TEXTURE_ADDRESS_MODE m_addrV;
-	D3D11_BIND_FLAG            m_bind_flags;
-	D3D11_RESOURCE_MISC_FLAG   m_misc_flags;
-	UINT                       m_colour_key;
-	BOOL                       m_has_alpha;
-	BOOL                       m_gdi_compatible;
-
-	static View3DTextureOptions Default()
+	namespace view3d
 	{
-		View3DTextureOptions opts = {DXGI_FORMAT_R8G8B8A8_UNORM, 0, D3D11_FILTER_MIN_MAG_MIP_LINEAR, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_TEXTURE_ADDRESS_CLAMP, D3D11_BIND_FLAG(0), D3D11_RESOURCE_MISC_FLAG(0), 0, false, false};
-		return opts;
+		typedef pr::ldr::LdrObject Object;
+		typedef pr::rdr::Texture2D Texture;
+		struct Drawset;
 	}
-};
-struct View3DMaterial
-{
-	View3DTexture m_diff_tex;
-	View3DTexture m_env_map;
-};
-struct View3DViewport
-{
-	float m_x;
-	float m_y;
-	float m_width;
-	float m_height;
-	float m_min_depth;
-	float m_max_depth;
-};
-
-typedef void (__stdcall *View3D_SettingsChanged)();
-typedef void (__stdcall *View3D_RenderCB)();
-typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
-typedef void (__stdcall *View3D_LogOutputCB)(EView3DLogLevel level, long long timestamp, char const* msg);
-typedef void (__stdcall *View3D_EditObjectCB)(
-	UINT32 vcount,      // The maximum size of 'verts'
-	UINT32 icount,      // The maximum size of 'indices'
-	View3DVertex* verts,     // The vert buffer to be filled
-	UINT16* indices,     // The index buffer to be filled
-	UINT32& new_vcount, // The number of verts in the updated model
-	UINT32& new_icount, // The number indices in the updated model
-	EView3DPrim& model_type, // The primitive type of the updated model
-	EView3DGeom& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
-	View3DMaterial& mat,     // The material to use for the updated model
-	void* ctx);              // User context data
+	typedef view3d::Drawset* View3DDrawset;
+	typedef view3d::Object*  View3DObject;
+	typedef view3d::Texture* View3DTexture;
+#else
+	typedef void* View3DDrawset;
+	typedef void* View3DObject;
+	typedef void* View3DTexture;
+#endif
 
 extern "C"
 {
+	typedef unsigned int View3DColour;
+
+	enum class EView3DResult
+	{
+		Success,
+		Failed,
+	};
+	enum class EView3DFillMode
+	{
+		Solid,
+		Wireframe,
+		SolidWire,
+	};
+	enum class EView3DGeom // pr::rdr::EGeom
+	{
+		Unknown = 0,
+		Vert    = 1 << 0, // Object space 3D position
+		Colr    = 1 << 1, // Diffuse base colour
+		Norm    = 1 << 2, // Object space 3D normal
+		Tex0    = 1 << 3, // Diffuse texture
+	};
+	enum class EView3DPrim
+	{
+		Invalid   = D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED,
+		PointList = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST,
+		LineList  = D3D11_PRIMITIVE_TOPOLOGY_LINELIST,
+		LineStrip = D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP,
+		TriList   = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+		TriStrip  = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+	};
+	enum class EView3DLight
+	{
+		Ambient,
+		Directional,
+		Point,
+		Spot
+	};
+	enum class EView3DLogLevel
+	{
+		Debug,
+		Info,
+		Warn,
+		Error,
+	};
+
+	typedef struct
+	{
+		float x, y;
+	} View3DV2;
+	
+	typedef struct
+	{
+		float x, y, z, w;
+	} View3DV4;
+	
+	typedef struct
+	{
+		View3DV4 x, y, z, w;
+	} View3DM4x4;
+	
+	typedef struct
+	{
+		View3DV4 centre;
+		View3DV4 radius;
+	} View3DBBox;
+	
+	typedef struct
+	{
+		View3DV4 pos;
+		View3DV4 norm;
+		View3DV2 tex;
+		View3DColour col;
+		UINT32 pad;
+	} View3DVertex;
+	
+	typedef struct
+	{
+		UINT32 m_width;
+		UINT32 m_height;
+		UINT32 m_depth;
+		UINT32 m_mips;
+		DXGI_FORMAT m_format;
+		UINT32 m_image_file_format;//D3DXIMAGE_FILEFORMAT
+	} View3DImageInfo;
+
+	typedef struct
+	{
+		EView3DLight m_type;
+		BOOL         m_on;
+		View3DV4     m_position;
+		View3DV4     m_direction;
+		View3DColour m_ambient;
+		View3DColour m_diffuse;
+		View3DColour m_specular;
+		float        m_specular_power;
+		float        m_inner_cos_angle;
+		float        m_outer_cos_angle;
+		float        m_range;
+		float        m_falloff;
+		BOOL         m_cast_shadows;
+	} View3DLight;
+	
+	typedef struct
+	{
+		DXGI_FORMAT                m_format;
+		UINT                       m_mips;
+		D3D11_FILTER               m_filter;
+		D3D11_TEXTURE_ADDRESS_MODE m_addrU;
+		D3D11_TEXTURE_ADDRESS_MODE m_addrV;
+		D3D11_BIND_FLAG            m_bind_flags;
+		D3D11_RESOURCE_MISC_FLAG   m_misc_flags;
+		UINT                       m_colour_key;
+		BOOL                       m_has_alpha;
+		BOOL                       m_gdi_compatible;
+	} View3DTextureOptions;
+
+	typedef struct
+	{
+		BOOL m_name;
+		BOOL m_transform;
+		BOOL m_context_id;
+		BOOL m_children;
+		BOOL m_colour;
+		BOOL m_colour_mask;
+		BOOL m_wireframe;
+		BOOL m_visibility;
+		BOOL m_animation;
+		BOOL m_step_data;
+		BOOL m_user_data;
+	} View3DUpdateModelKeep;
+	
+	typedef struct
+	{
+		View3DTexture m_diff_tex;
+		View3DTexture m_env_map;
+	} View3DMaterial;
+	
+	typedef struct
+	{
+		float m_x;
+		float m_y;
+		float m_width;
+		float m_height;
+		float m_min_depth;
+		float m_max_depth;
+	} View3DViewport;
+
+	typedef void (__stdcall *View3D_SettingsChanged)();
+	typedef void (__stdcall *View3D_RenderCB)();
+	typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
+	typedef void (__stdcall *View3D_LogOutputCB)(EView3DLogLevel level, long long timestamp, char const* msg);
+	typedef void (__stdcall *View3D_EditObjectCB)(
+		UINT32 vcount,      // The maximum size of 'verts'
+		UINT32 icount,      // The maximum size of 'indices'
+		View3DVertex* verts,     // The vert buffer to be filled
+		UINT16* indices,     // The index buffer to be filled
+		UINT32& new_vcount, // The number of verts in the updated model
+		UINT32& new_icount, // The number indices in the updated model
+		EView3DPrim& model_type, // The primitive type of the updated model
+		EView3DGeom& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
+		View3DMaterial& mat,     // The material to use for the updated model
+		void* ctx);              // User context data
+
 	// Initialise/shutdown the dll
 	VIEW3D_API EView3DResult           __stdcall View3D_Initialise(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_changed_cb);
 	VIEW3D_API void                    __stdcall View3D_Shutdown();
@@ -260,7 +252,7 @@ extern "C"
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async);
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, int context_id, View3DObject& object, BOOL async);
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object);
-	VIEW3D_API EView3DResult           __stdcall View3D_ObjectUpdateModel        (View3DObject object, char const* ldr_script, BOOL async);
+	VIEW3D_API EView3DResult           __stdcall View3D_ObjectUpdateModel        (View3DObject object, char const* ldr_script, View3DUpdateModelKeep const& keep, BOOL async);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);
@@ -316,4 +308,60 @@ extern "C"
 	VIEW3D_API View3DM4x4              __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
 }
 
+// Conversion to/from maths types
+#ifdef __cplusplus
+namespace view3d
+{
+	// View3D to custom type conversion.
+	// Specialise this to convert to/from View3D types to a custom type
+	// Include "pr/view3d/prmaths.h" if using pr maths types
+	template <typename TTo, typename TFrom> struct Convert
+	{
+		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
+	};
+	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)
+	{
+		return Convert<TTo,TFrom>::To(from);
+	}
+
+	struct Vertex :View3DVertex
+	{
+		void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) { pos = p; col = c; norm = n; tex = t; }
+	};
+	struct TextureOptions :View3DTextureOptions
+	{
+		TextureOptions() :View3DTextureOptions()
+		{
+			m_format         = DXGI_FORMAT_R8G8B8A8_UNORM;
+			m_mips           = 0;
+			m_filter         = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			m_addrU          = D3D11_TEXTURE_ADDRESS_CLAMP;
+			m_addrV          = D3D11_TEXTURE_ADDRESS_CLAMP;
+			m_bind_flags     = D3D11_BIND_FLAG(0);
+			m_misc_flags     = D3D11_RESOURCE_MISC_FLAG(0);
+			m_colour_key     = 0;
+			m_has_alpha      = false;
+			m_gdi_compatible = false;
+		}
+	};
+	struct UpdateModelKeep :View3DUpdateModelKeep
+	{
+		enum class EKeep { None, All };
+		UpdateModelKeep(EKeep keep = EKeep::None)
+		{
+			m_name        = keep == EKeep::All;
+			m_transform   = keep == EKeep::All;
+			m_context_id  = keep == EKeep::All;
+			m_children    = keep == EKeep::All;
+			m_colour      = keep == EKeep::All;
+			m_colour_mask = keep == EKeep::All;
+			m_wireframe   = keep == EKeep::All;
+			m_visibility  = keep == EKeep::All;
+			m_animation   = keep == EKeep::All;
+			m_step_data   = keep == EKeep::All;
+			m_user_data   = keep == EKeep::All;
+		}
+	};
+}
 #endif
+

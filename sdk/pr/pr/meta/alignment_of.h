@@ -49,7 +49,7 @@ namespace pr
 		}
 
 		// Return true if 'ptr' is correctly aligned for a pointer of type 'T const*'
-		template <typename T> inline bool is_aligned(T const* ptr)
+		template <typename T> inline bool is_aligned(void const* ptr)
 		{
 			return is_aligned_to<alignment_of<T>::value>(ptr);
 		}

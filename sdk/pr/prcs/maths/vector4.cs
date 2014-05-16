@@ -134,19 +134,21 @@ namespace pr.maths
 		public static bool FEql3(v4 lhs, v4 rhs)               { return FEql3(lhs, rhs, Maths.TinyF); }
 		public static bool FEql4(v4 lhs, v4 rhs, float tol)    { return Maths.FEql(lhs.x, rhs.x, tol) && Maths.FEql(lhs.y, rhs.y, tol) && Maths.FEql(lhs.z, rhs.z, tol) && Maths.FEql(lhs.w, rhs.w, tol); }
 		public static bool FEql4(v4 lhs, v4 rhs)               { return FEql4(lhs, rhs, Maths.TinyF); }
-		
-		public static v4 Random2(Rand r, float z, float w)     { return new v4(r.Float(), r.Float(), z, w); }
-		public static v4 Random2(float z, float w)             { return Random2(new Rand(), z, w); }
-		public static v4 Random3(Rand r, float w)              { return new v4(r.Float(), r.Float(), r.Float(), w); }
-		public static v4 Random3(float w)                      { return Random3(new Rand(), w); }
-		public static v4 Random4(Rand r)                       { return new v4(r.Float(), r.Float(), r.Float(), r.Float()); }
-		public static v4 Random4()                             { return Random4(new Rand()); }
-		public static v4 Random2N(Rand r, float z, float w)    { return Normalise2(Random2(r, z, w)); }
-		public static v4 Random2N(float z, float w)            { return Normalise2(Random2(z, w)); }
-		public static v4 Random3N(Rand r, float w)             { return Normalise3(Random3(r,w)); }
-		public static v4 Random3N(float w)                     { return Normalise3(Random3(w)); }
-		public static v4 Random4N(Rand r)                      { return Normalise4(Random4(r)); }
-		public static v4 Random4N()                            { return Normalise4(Random4(new Rand())); }
+
+		public static v4 Random4(float min, float max, Rand r) { r = r ?? new Rand(); return new v4(r.Float(min,max)     ,r.Float(min,max)     ,r.Float(min,max)     ,r.Float(min,max)    ); }
+		public static v4 Random4(v4 min, v4 max, Rand r)       { r = r ?? new Rand(); return new v4(r.Float(min.x,max.x) ,r.Float(min.y,max.y) ,r.Float(min.z,max.z) ,r.Float(min.w,max.w)); }
+		public static v4 Random4(float rad, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v4 v; for (; (v = Random4(-rad, rad, r)).Length4Sq > rad_sq; ){} return v; }
+		public static v4 Random4N(Rand r)                      { r = r ?? new Rand(); return v4.Random4(1.0f, r); }
+
+		public static v4 Random3(float min, float max, float w, Rand r) { r = r ?? new Rand(); return new v4(r.Float(min,max)     ,r.Float(min,max)     ,r.Float(min,max)     ,w); }
+		public static v4 Random3(v4 min, v4 max, float w, Rand r)       { r = r ?? new Rand(); return new v4(r.Float(min.x,max.x) ,r.Float(min.y,max.y) ,r.Float(min.z,max.z) ,w); }
+		public static v4 Random3(float rad, float w, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v4 v; for (; (v = Random3(-rad, rad, w, r)).Length3Sq > rad_sq; ){} return v; }
+		public static v4 Random3N(float w, Rand r)                      { r = r ?? new Rand(); return v4.Random3(1.0f, w, r); }
+
+		public static v4 Random2(float min, float max, float z, float w, Rand r) { r = r ?? new Rand(); return new v4(r.Float(min,max)     ,r.Float(min,max)     ,z ,w); }
+		public static v4 Random2(v4 min, v4 max, float z, float w, Rand r)       { r = r ?? new Rand(); return new v4(r.Float(min.x,max.x) ,r.Float(min.y,max.y) ,z ,w); }
+		public static v4 Random2(float rad, float z, float w, Rand r)            { r = r ?? new Rand(); var rad_sq = rad*rad; v4 v; for (; (v = Random2(-rad, rad, z, w, r)).Length2Sq > rad_sq; ){} return v; }
+		public static v4 Random2N(float z, float w, Rand r)                      { r = r ?? new Rand(); return v4.Random2(1.0f, z, w, r); }
 		
 		public static v4 Clamp3(v4 vec, v4 min, v4 max)        { return new v4(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y), Maths.Clamp(vec.z, min.z, max.z), vec.w); }
 		public static v4 Clamp4(v4 vec, v4 min, v4 max)        { return new v4(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y), Maths.Clamp(vec.z, min.z, max.z), Maths.Clamp(vec.w, min.w, max.w)); }

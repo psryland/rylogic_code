@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Xml.Linq;
 using pr.extn;
 using pr.gui;
 using pr.gfx;
@@ -17,6 +18,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tools_save;
 		private ToolStripMenuItem m_menu_tools_load;
 		private ToolStripMenuItem m_menu_tools_clear;
+		private ToolStripMenuItem m_menu_tools_loadmmapdiag;
 		private IMessageFilter m_filter;
 
 		static DiagramControlUI()
@@ -38,21 +40,46 @@ namespace TestCS
 
 			var node0 = new DiagramControl.BoxNode("Node0"){Position = m4x4.Translation(0,0,0)};
 			var node1 = new DiagramControl.BoxNode{Text = "Node1 is really long\nand contains new lines", Position = m4x4.Translation(100,100,0)};
+			var node2 = new DiagramControl.BoxNode("Node2 - Paul Rulz"){Position = m4x4.Translation(-100,-50,0)};
+			node1.Style = new DiagramControl.NodeStyle{Text = Color.Red};
+
 			m_diag.Elements.Add(node0);
 			m_diag.Elements.Add(node1);
+			m_diag.Elements.Add(node2);
 
-			var connector1 = new DiagramControl.Connector(node0, node1);
-			m_diag.Elements.Add(connector1);
+			m_diag.Elements.Add(new DiagramControl.Connector(node0, node1));
+			m_diag.Elements.Add(new DiagramControl.Connector(node1, node2));
+			m_diag.Elements.Add(new DiagramControl.Connector(node2, node0));
 
 			m_diag.ResetView();
 
 			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
 			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml);
 			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
+			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.LoadXml("P:\\dump\\mmap_diag.xml");
 			
 			m_filter = new Filter(this);
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
 			FormClosed += (s,a) => Application.RemoveMessageFilter(m_filter);
+
+			const string options_filepath = "P:\\dump\\diag_options.xml";
+			var xml = new XDocument();
+			xml.Add2(new XElement("root")).Add2("options", m_diag.Options, false);
+			xml.Save(options_filepath);
+
+			var tim = new System.Windows.Forms.Timer{Interval = 10};
+			tim.Tick += (s,a) =>
+				{
+					try
+					{
+						m_diag.Options = XDocument.Load(options_filepath).Root.Element("options").As<DiagramControl.DiagramOptions>();
+						m_diag.ScatterNodes();
+					}
+					catch (Exception)
+					{}
+				};
+			tim.Start();
+
 		}
 
 		private class Filter :IMessageFilter
@@ -66,7 +93,7 @@ namespace TestCS
 				case Win32.WM_MOUSEMOVE:
 					if (m_form.m_diag != null)
 					{
-						var pt = m_form.m_diag.PointToDiagram(m_form.m_diag.PointToClient(MousePosition));
+						var pt = m_form.m_diag.ClientToDiagram(m_form.m_diag.PointToClient(MousePosition));
 						m_form.m_status_mouse_pos.Text = "Pos: {0} {1}".Fmt(pt.x.ToString("F3"), pt.y.ToString("F3"));
 					}
 					break;
@@ -109,6 +136,7 @@ namespace TestCS
 			this.m_menu_tools_save = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_load = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_loadmmapdiag = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.m_diag)).BeginInit();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
@@ -116,6 +144,9 @@ namespace TestCS
 			// 
 			// m_diag
 			// 
+			this.m_diag.AllowEditing = true;
+			this.m_diag.AllowMove = true;
+			this.m_diag.AllowSelection = true;
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);
 			this.m_diag.Name = "m_diag";
@@ -153,7 +184,8 @@ namespace TestCS
 			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_menu_tools_save,
             this.m_menu_tools_load,
-            this.m_menu_tools_clear});
+            this.m_menu_tools_clear,
+            this.m_menu_tools_loadmmapdiag});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
@@ -161,20 +193,26 @@ namespace TestCS
 			// m_menu_tools_save
 			// 
 			this.m_menu_tools_save.Name = "m_menu_tools_save";
-			this.m_menu_tools_save.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_save.Size = new System.Drawing.Size(166, 22);
 			this.m_menu_tools_save.Text = "Save";
 			// 
 			// m_menu_tools_load
 			// 
 			this.m_menu_tools_load.Name = "m_menu_tools_load";
-			this.m_menu_tools_load.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_load.Size = new System.Drawing.Size(166, 22);
 			this.m_menu_tools_load.Text = "Load";
 			// 
 			// m_menu_tools_clear
 			// 
 			this.m_menu_tools_clear.Name = "m_menu_tools_clear";
-			this.m_menu_tools_clear.Size = new System.Drawing.Size(152, 22);
+			this.m_menu_tools_clear.Size = new System.Drawing.Size(166, 22);
 			this.m_menu_tools_clear.Text = "Clear";
+			// 
+			// m_menu_tools_loadmmapdiag
+			// 
+			this.m_menu_tools_loadmmapdiag.Name = "m_menu_tools_loadmmapdiag";
+			this.m_menu_tools_loadmmapdiag.Size = new System.Drawing.Size(166, 22);
+			this.m_menu_tools_loadmmapdiag.Text = "Load mmap_diag";
 			// 
 			// DiagramControlUI
 			// 

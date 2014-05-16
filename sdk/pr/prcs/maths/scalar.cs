@@ -8,9 +8,7 @@ using System.Diagnostics;
 
 namespace pr.maths
 {
-	/// <summary>
-	/// scalar functions
-	/// </summary>
+	/// <summary>scalar functions</summary>
 	public static class Maths
 	{
 		public const float Tiny      = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
@@ -82,6 +80,10 @@ namespace pr.maths
 		public static int       Compare(long lhs, long rhs)                     { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 		public static int       Compare(float lhs, float rhs)                   { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
 		public static int       Compare(double lhs, double rhs)                 { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }
+		public static float     Len2Sq(float x, float y)                        { return Sqr(x) + Sqr(y); }
+		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
+		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
+		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
 
 		/// <summary>
 		/// Return the greatest common factor between 'a' and 'b'

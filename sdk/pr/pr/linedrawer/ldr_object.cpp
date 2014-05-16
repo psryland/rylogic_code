@@ -1,6 +1,6 @@
 //***************************************************************************************************
 // Ldr Object Manager
-//  Copyright © Rylogic Ltd 2009
+//  Copyright Â© Rylogic Ltd 2009
 //***************************************************************************************************
 
 #include <string>
@@ -216,13 +216,11 @@ namespace pr
 		}
 
 		// Transfer the parts of 'rhs' that are model related to this object
-		void LdrObject::UpdateModel(LdrObject&& rhs)
+		void LdrObject::UpdateModel(LdrObject&& rhs, UpdateModelKeep const& keep)
 		{
 			// Note, it shouldn't matter if this object has a parent,
 			// because we're only changing it's contents
 			PR_ASSERT(PR_DBG, rhs.m_parent == nullptr, "rhs belongs to another object");
-
-			RemoveAllChildren();
 
 			// Fake this object's death and reincarnation. Who do voodoo? :-S
 			// Copy the model related data from 'rhs' to this object.
@@ -235,42 +233,57 @@ namespace pr
 			// Note: we can't swap everything then copy back the bits we want to keep
 			// because LdrObject is reference counted and isn't copyable. This is risky
 			// though, if need members are added I'm bound to forget to consider them here :-/
-			
 			// Commented out parts are those delibrately kept
 			
 			// RdrInstance
-			std::swap(m_i2w    ,rhs.m_i2w   );
-			std::swap(m_model  ,rhs.m_model );
-			std::swap(m_colour ,rhs.m_colour);
-			std::swap(m_sko    ,rhs.m_sko   );
-			std::swap(m_bsb    ,rhs.m_bsb   );
-			std::swap(m_dsb    ,rhs.m_dsb   );
-			std::swap(m_rsb    ,rhs.m_rsb   );
-			
+			std::swap(m_model, rhs.m_model);
+			std::swap(m_sko, rhs.m_sko);
+			std::swap(m_bsb, rhs.m_bsb);
+			std::swap(m_dsb, rhs.m_dsb);
+			std::swap(m_rsb, rhs.m_rsb);
+			if (!keep.m_transform)
+				std::swap(m_i2w, rhs.m_i2w);
+			if (!keep.m_colour)
+				std::swap(m_colour, rhs.m_colour);
+
 			// RefCount<LdrObject>
 			//std::swap(m_ref_count , rhs.m_ref_count);
-			
+
 			// LdrObject
-			std::swap(m_o2p           ,rhs.m_o2p          );
-			std::swap(m_type          ,rhs.m_type         );
 			//std::swap(m_parent      ,rhs.m_parent       );
 			//std::swap(m_child       ,rhs.m_child        );
-			std::swap(m_name          ,rhs.m_name         );
-			std::swap(m_context_id    ,rhs.m_context_id   );
-			std::swap(m_base_colour   ,rhs.m_base_colour  );
-			std::swap(m_colour_mask   ,rhs.m_colour_mask  );
-			std::swap(m_anim          ,rhs.m_anim         );
 			//std::swap(m_uidata      ,rhs.m_uidata       );
-			std::swap(m_step          ,rhs.m_step         );
-			std::swap(m_bbox_instance ,rhs.m_bbox_instance);
-			std::swap(m_instanced     ,rhs.m_instanced    );
-			std::swap(m_visible       ,rhs.m_visible      );
-			std::swap(m_wireframe     ,rhs.m_wireframe    );
-			//std::swap(m_user_data   ,rhs.m_user_data    );
+			std::swap(m_type, rhs.m_type);
+			std::swap(m_bbox_instance, rhs.m_bbox_instance);
+			std::swap(m_instanced, rhs.m_instanced);
+			if (!keep.m_name)
+				std::swap(m_name, rhs.m_name);
+			if (!keep.m_transform)
+				std::swap(m_o2p, rhs.m_o2p);
+			if (!keep.m_context_id)
+				std::swap(m_context_id, rhs.m_context_id);
+			if (!keep.m_wireframe)
+				std::swap(m_wireframe, rhs.m_wireframe);
+			if (!keep.m_visibility)
+				std::swap(m_visible, rhs.m_visible);
+			if (!keep.m_animation)
+				std::swap(m_anim, rhs.m_anim);
+			if (!keep.m_step_data)
+				std::swap(m_step, rhs.m_step);
+			if (!keep.m_colour_mask)
+				std::swap(m_colour_mask, rhs.m_colour_mask);
+			if (!keep.m_colour)
+				std::swap(m_base_colour, rhs.m_base_colour);
+			if (!keep.m_user_data)
+				std::swap(m_user_data, rhs.m_user_data);
 
 			// Transfer the child objects
-			while (!rhs.m_child.empty())
-				AddChild(rhs.RemoveChild(0));
+			if (!keep.m_children)
+			{
+				RemoveAllChildren();
+				while (!rhs.m_child.empty())
+					AddChild(rhs.RemoveChild(0));
+			}
 
 			pr::events::Send(Evt_LdrObjectAdd(this));
 		}
@@ -406,7 +419,7 @@ namespace pr
 
 						if (axis_id < 1 || axis_id > 3)
 						{
-							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
+							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
 							break;
 						}
 
@@ -999,7 +1012,7 @@ namespace pr
 				// Validate
 				if (m_axis_id < 1 || m_axis_id > 3)
 				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
 					return nullptr;
 				}
 
@@ -1439,7 +1452,7 @@ namespace pr
 				m_pt[7].set(-f*w,  f*h, f, 1.0f);
 
 				switch (axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1477,7 +1490,7 @@ namespace pr
 				m_pt[7].set( f*w,  f*h, f, 1.0f);
 
 				switch (axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1541,7 +1554,7 @@ namespace pr
 				switch (m_axis_id)
 				{
 				default:
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
 					return nullptr;
 				case  1: o2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: o2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
@@ -2133,12 +2146,12 @@ namespace pr
 R"(
 //********************************************
 // LineDrawer demo scene
-//  Copyright © Rylogic Ltd 2009
+//  Copyright Â© Rylogic Ltd 2009
 //********************************************
 //
 // Notes:
-//  axis_id is an integer describing an axis number. It must one of ±1, ±2, ±3
-//  corresponding to ±X, ±Y, ±Z respectively
+//  axis_id is an integer describing an axis number. It must one of Â±1, Â±2, Â±3
+//  corresponding to Â±X, Â±Y, Â±Z respectively
 
 // Clear existing data
 *Clear /*{ctx_id ...}*/ // Context ids can be listed within a section
@@ -2344,14 +2357,14 @@ R"(
 // A circle or ellipse
 *Circle circle
 {
-	2 1.6                               // axis_id, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 1.6                               // axis_id, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
 }
 *Circle ellipse
 {
-	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                      // Optional, controls the smoothness of the edge
@@ -2360,7 +2373,7 @@ R"(
 // A rectangle
 *Rect rect FF0000FF                    // Object colour is the outline colour
 {
-	2                                  // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2                                  // axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	1.2                                // width
 	1.3                                // Optional height. If omitted, height = width
 	*Solid                             // Optional, if omitted then the shape is an outline only
@@ -2447,14 +2460,14 @@ R"(
 // Points along the z axis. Width, Height given at '1' along the z axis
 *FrustumWH frustumwh
 {
-	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
 // A frustum given by field of view (in Y), aspect ratio, and near and far plane distances
 *FrustumFA frustumfa
 {
-	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
@@ -2481,7 +2494,7 @@ R"(
 // A cylinder given by axis number, height, and radius
 *CylinderHR cylinder
 {
-	2 0.6 0.2                         // axis_id, height, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 0.6 0.2                         // axis_id, height, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cylinder major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cylinder
 	*Scale 1.2 0.8                    // Optional. X,Y scale factors
@@ -2490,7 +2503,7 @@ R"(
 }
 *CylinderHR cone FFFF00FF
 {
-	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1.5 0.4                    // Optional. X,Y scale factors
@@ -2501,7 +2514,7 @@ R"(
 // A cone given by axis number, two heights, and solid angle
 *ConeHA coneha FF00FFFF
 {
-	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1 1                        // Optional. X,Y scale factors

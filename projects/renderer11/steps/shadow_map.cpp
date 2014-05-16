@@ -166,9 +166,12 @@ namespace pr
 			// in front of the frustum faces => reset depths to zero.
 			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero);
 
-			// Viewport.. ??
+			// Viewport = the whole smap
 			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
 			dc->RSSetViewports(1, &vp);
+
+			//hack
+			m_shadow_distance = 3.0f;
 
 			{// Set the frame constants
 				auto& c2w = m_scene->m_view.m_c2w;
@@ -212,22 +215,23 @@ namespace pr
 		// onto a surface parallel to the frustum plane for the given face (based on light type).
 		bool ShadowMap::CreateProjection(int face, pr::Frustum const& frust, pr::m4x4 const& c2w, Light const& light, pr::m4x4& w2s)
 		{
-			#define DBG_PROJ 0
+			#define DBG_PROJ 1
 			#if DBG_PROJ
-			struct Dump {
-				Dump(v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_) {
-					v4 tl = tl_ / tl_.w;
-					v4 tr = tr_ / tr_.w;
-					v4 bl = bl_ / bl_.w;
-					v4 br = br_ / br_.w;
-					std::string str;
-					pr::ldr::Box("smap", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
-					pr::ldr::Box("tl", 0xFFFF0000, tl, 0.2f, str);
-					pr::ldr::Box("tr", 0xFF00FF00, tr, 0.2f, str);
-					pr::ldr::Box("bl", 0xFF0000FF, bl, 0.2f, str);
-					pr::ldr::Box("br", 0xFFFFFF00, br, 0.2f, str);
-					pr::ldr::Write(str, "d:/deleteme/smap_proj_screen.ldr");
-				}
+			auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_)
+			{
+				v4 tl = tl_ / tl_.w;
+				v4 tr = tr_ / tr_.w;
+				v4 bl = bl_ / bl_.w;
+				v4 br = br_ / br_.w;
+				std::string str;
+				// This is the screen space view volume for a light-camera looking at 'face' of the frustum
+				pr::ldr::Box("view_volume", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
+				pr::ldr::Frustum("shadow_volume", 0x8000FF00, frust, pr::m4x4Identity, str);
+				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.2f, str);
+				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.2f, str);
+				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.2f, str);
+				pr::ldr::Box("br", 0xFFFFFF00, br, 0.2f, str);
+				pr::ldr::Write(str, "d:/dump/smap_proj_screen.ldr");
 			};
 			#endif
 
@@ -278,6 +282,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 
 					// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
 					pr::v2 ledge = Normalise2((tl - bl).xy());
@@ -291,6 +296,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 
 					// Scale the face of the frustum into the viewport
 					pr::m4x4 S = pr::Scale4x4(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, pr::v4Origin);
@@ -301,6 +307,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 
 					// Shear to make the projected plane square
 					pr::m4x4 H = pr::Shear4x4(-(tr.y - tl.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, pr::v4Origin);
@@ -312,7 +319,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					Dump(tl,tr,bl,br);
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 					#endif
 					return true;
 				}
@@ -332,6 +339,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 
 					// Create a perspective projection
 					float zr = 0.001f, zf = dist_to_light, zn = zf*zr;
@@ -344,7 +352,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					Dump(tl,tr,bl,br);
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
 					#endif
 					return true;
 				}

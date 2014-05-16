@@ -378,7 +378,7 @@ namespace pr.extn
 			{
 				var children = node.Add2(new XElement(Tag.Children));
 				foreach (var ch in m_children.Values)
-					children.Add(ch.ToXml(Tag.Ctrl));
+					children.Add(ch.ToXml(Tag.Ctrl, true));
 			}
 
 			return node;

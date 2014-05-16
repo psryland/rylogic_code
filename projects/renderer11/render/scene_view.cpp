@@ -20,7 +20,7 @@ namespace pr
 			,m_far          (1.0e8f)
 			,m_orthographic (false)
 		{
-			PR_ASSERT(PR_DBG_RDR, pr::meta::is_aligned(this), "My alignment is broke");
+			PR_ASSERT(PR_DBG_RDR, pr::meta::is_aligned<SceneView>(this), "My alignment is broke");
 
 			UpdateCameraToScreen();
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");

@@ -40,9 +40,7 @@ namespace pr.common
 		}
 		public XElement ToXml(XElement node)
 		{
-			node.Add(
-				Key.ToXml("key", false),
-				Value.ToXml("value"));
+			node.Add(Key.ToXml("key", false), Value.ToXml("value", true));
 			return node;
 		}
 		public override string ToString() { return Key + "  " + Value; }

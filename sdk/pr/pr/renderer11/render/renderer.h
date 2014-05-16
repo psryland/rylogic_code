@@ -37,7 +37,7 @@ namespace pr
 			UINT                         m_vsync;            // Present SyncInterval value
 			bool                         m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 
-			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
+			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, BOOL gdi_compat = FALSE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
 				:m_mem()
 				,m_hwnd(hwnd)
 				,m_windowed(windowed)

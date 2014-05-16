@@ -344,6 +344,22 @@ namespace pr.gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct UpdateModelKeep
+		{
+			public bool m_name       ;
+			public bool m_transform  ;
+			public bool m_context_id ;
+			public bool m_children   ;
+			public bool m_colour     ;
+			public bool m_colour_mask;
+			public bool m_wireframe  ;
+			public bool m_visibility ;
+			public bool m_animation  ;
+			public bool m_step_data  ;
+			public bool m_user_data  ;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
 			public IntPtr m_diff_tex;
@@ -352,7 +368,7 @@ namespace pr.gfx
 
 		/// <summary>Light source properties</summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DLight
+		public struct Light
 		{
 			public ELight   m_type;
 			public bool     m_on;
@@ -369,9 +385,9 @@ namespace pr.gfx
 			public bool     m_cast_shadows;
 
 			/// <summary>Return properties for a directional light source</summary>
-			public static View3DLight Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
+			public static Light Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
 			{
-				return new View3DLight
+				return new Light
 				{
 					m_type           = ELight.Directional,
 					m_on             = true,
@@ -388,7 +404,7 @@ namespace pr.gfx
 
 		/// <summary>The viewport volume in rendertarget space (ie. screen coords, not normalised)</summary>
 		[StructLayout(LayoutKind.Sequential)]
-		public struct View3DViewport
+		public struct Viewport
 		{
 			public float m_x;
 			public float m_y;
@@ -484,6 +500,7 @@ namespace pr.gfx
 		}
 		public void Dispose()
 		{
+			m_eb_refresh.Dispose();
 			while (m_drawsets.Count != 0)
 				m_drawsets[0].Dispose();
 
@@ -553,7 +570,7 @@ namespace pr.gfx
 		public Texture RenderTarget { get; private set; }
 
 		/// <summary>Get/Set the size/position of the viewport within the render target</summary>
-		public View3DViewport Viewport
+		public Viewport View
 		{
 			get { return View3D_Viewport(); }
 			set { View3D_SetViewport(value); }
@@ -780,7 +797,7 @@ namespace pr.gfx
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
-			public View3DLight LightProperties
+			public Light LightProperties
 			{
 				get { return View3D_LightProperties(m_ds); }
 				set { View3D_SetLightProperties(m_ds, ref value); }
@@ -1078,9 +1095,41 @@ namespace pr.gfx
 			}
 
 			/// <summary>Change the model for this object</summary>
-			public void UpdateModel(string ldr_script)
+			public void UpdateModel(string ldr_script, Keep keep = null)
 			{
-				View3D_ObjectUpdateModel(m_handle, ldr_script, false);
+				keep = keep ?? new Keep();
+				View3D_ObjectUpdateModel(m_handle, ldr_script, ref keep.m_data, false);
+			}
+			public enum EKeep { None, All };
+			public class Keep
+			{
+				internal UpdateModelKeep m_data;
+				public bool Name       { get { return m_data.m_name       ; } set { m_data.m_name        = value; } }
+				public bool Transform  { get { return m_data.m_transform  ; } set { m_data.m_transform   = value; } }
+				public bool ContextId  { get { return m_data.m_context_id ; } set { m_data.m_context_id  = value; } }
+				public bool Children   { get { return m_data.m_children   ; } set { m_data.m_children    = value; } }
+				public bool Colour     { get { return m_data.m_colour     ; } set { m_data.m_colour      = value; } }
+				public bool ColourMask { get { return m_data.m_colour_mask; } set { m_data.m_colour_mask = value; } }
+				public bool Wireframe  { get { return m_data.m_wireframe  ; } set { m_data.m_wireframe   = value; } }
+				public bool Visibility { get { return m_data.m_visibility ; } set { m_data.m_visibility  = value; } }
+				public bool Animation  { get { return m_data.m_animation  ; } set { m_data.m_animation   = value; } }
+				public bool StepData   { get { return m_data.m_step_data  ; } set { m_data.m_step_data   = value; } }
+				public bool UserData   { get { return m_data.m_user_data  ; } set { m_data.m_user_data   = value; } }
+				public Keep(EKeep keep = EKeep.None)
+				{
+					m_data = new UpdateModelKeep();
+					m_data.m_name        = keep == EKeep.All;
+					m_data.m_transform   = keep == EKeep.All;
+					m_data.m_context_id  = keep == EKeep.All;
+					m_data.m_children    = keep == EKeep.All;
+					m_data.m_colour      = keep == EKeep.All;
+					m_data.m_colour_mask = keep == EKeep.All;
+					m_data.m_wireframe   = keep == EKeep.All;
+					m_data.m_visibility  = keep == EKeep.All;
+					m_data.m_animation   = keep == EKeep.All;
+					m_data.m_step_data   = keep == EKeep.All;
+					m_data.m_user_data   = keep == EKeep.All;
+				}
 			}
 
 			/// <summary>Modify the model of this object</summary>
@@ -1369,8 +1418,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HDrawset drawset, v4 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
-		[DllImport(Dll)] private static extern View3DLight       View3D_LightProperties          (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref View3DLight light);
+		[DllImport(Dll)] private static extern Light             View3D_LightProperties          (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref Light light);
 		[DllImport(Dll)] private static extern void              View3D_LightSource              (HDrawset drawset, v4 position, v4 direction, bool camera_relative);
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
 
@@ -1378,7 +1427,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdateModel        (HObject obj, string ldr_script, bool async);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdateModel        (HObject obj, string ldr_script, ref UpdateModelKeep keep, bool async);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
@@ -1406,8 +1455,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_SignalRefresh            ();
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (out int width, out int height);
 		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (int width, int height);
-		[DllImport(Dll)] private static extern View3DViewport    View3D_Viewport                 ();
-		[DllImport(Dll)] private static extern void              View3D_SetViewport              (View3DViewport vp);
+		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 ();
+		[DllImport(Dll)] private static extern void              View3D_SetViewport              (Viewport vp);
 		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
 		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);

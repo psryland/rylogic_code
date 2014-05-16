@@ -8,8 +8,8 @@ import UserVars
 try:
 	print(
 		"*************************************************************************\n"
-		"Batch Build\n"
-		"Copyright Rylogic Limited 2013\n"
+		"View3d Deploy\n"
+		"Copyright Rylogic Limited 2014\n"
 		"*************************************************************************")
 
 	Tools.CheckVersion(1)
@@ -17,23 +17,7 @@ try:
 	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
 	# e.g: "\"folder\proj_name:Rebuild\""
 	projects = [
-		"renderer11",
-	#	"renderer11:Rebuild",
-		"linedrawer",
-	#	"physics",
-	#	"unittests",
 		"view3d",
-	#	"view3d:Rebuild",
-	#	"sol",
-	#	"cex",
-	#	"fwd",
-	#	"TextFormatter",
-	#	"prautoexp",
-	#	"Rylogic",
-	#	"Rylogic.VSExtension",
-	#	"Csex_vs2012",
-	#	"RylogViewer",
-	#	"TestCS"
 		]
 	configs = [
 		"debug",
@@ -45,8 +29,8 @@ try:
 		]
 
 	procs = []
-	parallel = True
-	same_window = False
+	parallel = False
+	same_window = True
 
 	#Invoke MSBuild
 	projs = ";".join(projects)

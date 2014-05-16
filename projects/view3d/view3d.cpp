@@ -454,7 +454,7 @@ VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		c2w = drawset->m_camera.m_c2w;
+		c2w = view3d::To<View3DM4x4>(drawset->m_camera.m_c2w);
 	}
 	catch (std::exception const& ex)
 	{
@@ -470,7 +470,7 @@ VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, View3DM
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.m_c2w = c2w;
+		drawset->m_camera.m_c2w = view3d::To<pr::m4x4>(c2w);
 	}
 	catch (std::exception const& ex)
 	{
@@ -486,7 +486,7 @@ VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.LookAt(position, lookat, up, true);
+		drawset->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
 	}
 	catch (std::exception const& ex)
 	{
@@ -638,7 +638,7 @@ VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, View3DV2 p
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.MouseControl(point, button_state, nav_start_or_end != 0);
+		drawset->m_camera.MouseControl(view3d::To<pr::v2>(point), button_state, nav_start_or_end != 0);
 	}
 	catch (std::exception const& ex)
 	{
@@ -686,7 +686,7 @@ VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, View3DV4
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		axis = drawset->m_camera.m_align;
+		axis = view3d::To<View3DV4>(drawset->m_camera.m_align);
 	}
 	catch (std::exception const& ex)
 	{
@@ -702,7 +702,7 @@ VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, View3DV4 axi
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.SetAlign(axis);
+		drawset->m_camera.SetAlign(view3d::To<pr::v4>(axis));
 	}
 	catch (std::exception const& ex)
 	{
@@ -724,7 +724,7 @@ VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, View3DV4 forwa
 		for (auto obj : drawset->m_objects)
 			pr::Encompass(bbox, obj->BBoxWS(true));
 		if (bbox == pr::BBoxReset) bbox = pr::BBoxUnit;
-		drawset->m_camera.View(bbox, forward, up, true);
+		drawset->m_camera.View(bbox, view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), true);
 	}
 	catch (std::exception const& ex)
 	{
@@ -740,12 +740,12 @@ VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return View3DV2::make(drawset->m_camera.ViewArea(dist));
+		return view3d::To<View3DV2>(drawset->m_camera.ViewArea(dist));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ViewArea failed", ex);
-		return View3DV2::make(pr::v2Zero);
+		return view3d::To<View3DV2>(pr::v2Zero);
 	}
 }
 
@@ -757,7 +757,7 @@ VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, View3DV4& 
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		position = drawset->m_camera.FocusPoint();
+		position = view3d::To<View3DV4>(drawset->m_camera.FocusPoint());
 	}
 	catch (std::exception const& ex)
 	{
@@ -771,7 +771,7 @@ VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, View3DV4 p
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.FocusPoint(position);
+		drawset->m_camera.FocusPoint(view3d::To<pr::v4>(position));
 	}
 	catch (std::exception const& ex)
 	{
@@ -789,12 +789,12 @@ VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawse
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return View3DV4::make(drawset->m_camera.WSPointFromNormSSPoint(screen));
+		return view3d::To<View3DV4>(drawset->m_camera.WSPointFromNormSSPoint(view3d::To<pr::v4>(screen)));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_WSPointFromNormSSPoint failed", ex);
-		return View3DV4::make(pr::v4Zero);
+		return view3d::To<View3DV4>(pr::v4Zero);
 	}
 }
 
@@ -807,12 +807,12 @@ VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawse
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return View3DV4::make(drawset->m_camera.NormSSPointFromWSPoint(world));
+		return view3d::To<View3DV4>(drawset->m_camera.NormSSPointFromWSPoint(view3d::To<pr::v4>(world)));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_NormSSPointFromWSPoint failed", ex);
-		return View3DV4::make(pr::v4Zero);
+		return view3d::To<View3DV4>(pr::v4Zero);
 	}
 }
 
@@ -827,9 +827,9 @@ VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, Vie
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
 		pr::v4 pt,dir;
-		drawset->m_camera.WSRayFromNormSSPoint(screen, pt, dir);
-		ws_point = pt;
-		ws_direction = dir;
+		drawset->m_camera.WSRayFromNormSSPoint(view3d::To<pr::v4>(screen), pt, dir);
+		ws_point = view3d::To<View3DV4>(pt);
+		ws_direction = view3d::To<View3DV4>(dir);
 	}
 	catch (std::exception const& ex)
 	{
@@ -878,8 +878,8 @@ VIEW3D_API void __stdcall View3D_LightSource(View3DDrawset drawset, View3DV4 pos
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_light.m_position = static_cast<pr::v4>(position);
-		drawset->m_light.m_direction = static_cast<pr::v4>(direction);
+		drawset->m_light.m_position = view3d::To<pr::v4>(position);
+		drawset->m_light.m_direction = view3d::To<pr::v4>(direction);
 		drawset->m_light_is_camera_relative = camera_relative != 0;
 	}
 	catch (std::exception const& ex)
@@ -1028,8 +1028,8 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 		auto vout = mlock.m_vlock.ptr<Vert>();
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
-			SetPCNT(*vout++, vin->pos, pr::Colour32::make(vin->col), vin->norm, vin->tex);
-			pr::Encompass(model->m_bbox, static_cast<pr::v4>(vin->pos));
+			SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32::make(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
+			pr::Encompass(model->m_bbox, view3d::To<pr::v4>(vin->pos));
 		}
 		auto iin = begin(indices);
 		auto iout = mlock.m_ilock.ptr<pr::uint16>();
@@ -1068,7 +1068,7 @@ VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DC
 }
 
 // Replace the model and all child objects of 'obj' with the results of 'ldr_script'
-VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdateModel(View3DObject object, char const* ldr_script, BOOL async)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdateModel(View3DObject object, char const* ldr_script, View3DUpdateModelKeep const& keep, BOOL async)
 {
 	LOCK_GUARD;
 	try
@@ -1080,7 +1080,19 @@ VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdateModel(View3DObject object,
 		View3D_ObjectCreateLdr(ldr_script, object->m_context_id, tmp, async);
 
 		// Replace the model of 'object' with the model from 'tmp'
-		object->UpdateModel(std::move(*tmp));
+		pr::ldr::LdrObject::UpdateModelKeep k;
+		k.m_name        = keep.m_name        != 0;
+		k.m_transform   = keep.m_transform   != 0;
+		k.m_context_id  = keep.m_context_id  != 0;
+		k.m_children    = keep.m_children    != 0;
+		k.m_colour      = keep.m_colour      != 0;
+		k.m_colour_mask = keep.m_colour_mask != 0;
+		k.m_wireframe   = keep.m_wireframe   != 0;
+		k.m_visibility  = keep.m_visibility  != 0;
+		k.m_animation   = keep.m_animation   != 0;
+		k.m_step_data   = keep.m_step_data   != 0;
+		k.m_user_data   = keep.m_user_data   != 0;
+		object->UpdateModel(std::move(*tmp), k);
 
 		// Remove the temporary object
 		View3D_ObjectDelete(tmp);
@@ -1155,12 +1167,12 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
 	try
 	{
 		if (!object) throw std::exception("object is null");
-		return View3DM4x4::make(object->m_o2p);
+		return view3d::To<View3DM4x4>(object->m_o2p);
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ObjectGetO2P failed", ex);
-		return View3DM4x4::make(pr::m4x4Identity);
+		return view3d::To<View3DM4x4>(pr::m4x4Identity);
 	}
 }
 VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p)
@@ -1171,7 +1183,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 		PR_ASSERT(PR_DBG, pr::FEql(o2p.w.w,1.0f), "View3D_ObjectSetO2P: invalid object transform");
 		if (!object) throw std::exception("object is null");
 		if (!pr::FEql(o2p.w.w,1.0f)) throw std::exception("invalid object to parent transform");
-		object->m_o2p = o2p;
+		object->m_o2p = view3d::To<pr::m4x4>(o2p);
 	}
 	catch (std::exception const& ex)
 	{
@@ -1221,12 +1233,12 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 	LOCK_GUARD;
 	try
 	{
-		return View3DBBox::make(object->BBoxMS(true));
+		return view3d::To<View3DBBox>(object->BBoxMS(true));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ObjectBBoxMS failed", ex);
-		return View3DBBox::make(pr::BBoxUnit);
+		return view3d::To<View3DBBox>(pr::BBoxUnit);
 	}
 }
 
@@ -1882,11 +1894,11 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 		pr::script::Reader reader;
 		pr::script::PtrSrc src(ldr_script);
 		reader.AddSource(src);
-		return View3DM4x4::make(pr::ldr::ParseLdrTransform(reader));
+		return view3d::To<View3DM4x4>(pr::ldr::ParseLdrTransform(reader));
 	}
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_ParseLdrTransform failed", ex);
-		return View3DM4x4::make(pr::m4x4Identity);
+		return view3d::To<View3DM4x4>(pr::m4x4Identity);
 	}
 }
