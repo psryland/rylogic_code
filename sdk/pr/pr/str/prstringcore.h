@@ -1,6 +1,6 @@
 //***********************************************************************
 // Core String functions
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
 // String types:
 //	std::string, std::wstring, etc

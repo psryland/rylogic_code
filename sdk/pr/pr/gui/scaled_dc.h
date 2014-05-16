@@ -1,6 +1,6 @@
 //***********************************************
 // Scaled DC
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***********************************************
 #ifndef PR_GUI_SCALED_DC_H
 #define PR_GUI_SCALED_DC_H

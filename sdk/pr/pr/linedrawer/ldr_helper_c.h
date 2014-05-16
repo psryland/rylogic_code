@@ -1,6 +1,6 @@
 //************************************
 // LineDrawerHelper (C)
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //************************************
 #ifndef PR_LINE_DRAWER_HELPER_C_H
 #define PR_LINE_DRAWER_HELPER_C_H

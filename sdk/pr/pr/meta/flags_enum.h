@@ -1,6 +1,6 @@
 //******************************************************************************
 // Flags Enum
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
 // Bitwise operators for enums with the flags_enum type_trait
 #pragma once

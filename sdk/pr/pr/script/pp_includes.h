@@ -1,6 +1,6 @@
 //**********************************
 // Preprocessor includes handler
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************
 #ifndef PR_SCRIPT_PP_INCLUDES_H
 #define PR_SCRIPT_PP_INCLUDES_H

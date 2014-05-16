@@ -1,6 +1,6 @@
 //**********************************
 // Script charactor source
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 #ifndef PR_SCRIPT_SCRIPT_CORE_H
 #define PR_SCRIPT_SCRIPT_CORE_H

@@ -1,6 +1,6 @@
 //******************************************************************
 // Quad
-//  Copyright © Rylogic Ltd 2013
+//  Copyright (c) Rylogic Ltd 2013
 //******************************************************************
 // Create a rectangular patch with texture coordinates
 //  geometry - the geometry object to return

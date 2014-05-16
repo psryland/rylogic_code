@@ -1,6 +1,6 @@
 //***********************************************
 // ATL/WTL headers
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***********************************************
 
 #ifndef PR_COMMON_ATL_H

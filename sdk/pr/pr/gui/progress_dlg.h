@@ -1,6 +1,6 @@
 //***************************************************************************************************
 // Progress Dialog
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
 // Self contained progress dialog and background thread
 // No resource files, etc, needed. See unittests for usage.

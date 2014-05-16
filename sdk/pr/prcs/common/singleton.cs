@@ -1,6 +1,6 @@
 //***********************************************
 // Singleton
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //***********************************************
 
 namespace pr.common

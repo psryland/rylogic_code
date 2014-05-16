@@ -1,6 +1,6 @@
 //*****************************************
 // Sqlite C++ wrapper
-//  Copyright © Paul Ryland 2012
+//  Copyright (c) Paul Ryland 2012
 //*****************************************
 
 #pragma once

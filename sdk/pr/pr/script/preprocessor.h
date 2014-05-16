@@ -1,6 +1,6 @@
 //**********************************
 // Script preprocessor
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************
 #ifndef PR_SCRIPT_PREPROCESSOR_H
 #define PR_SCRIPT_PREPROCESSOR_H

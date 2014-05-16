@@ -11,7 +11,7 @@ using System.Security.Permissions;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Rylogic Limited")]
 [assembly: AssemblyProduct("pr")]
-[assembly: AssemblyCopyright("Copyright © Rylogic Ltd 2009")]
+[assembly: AssemblyCopyright("Copyright (c) Rylogic Ltd 2009")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

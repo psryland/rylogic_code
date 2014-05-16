@@ -1,6 +1,6 @@
 //***********************************************
 // DateTime
-//  Copyright © Rylogic Ltd 2013
+//  Copyright (c) Rylogic Ltd 2013
 //***********************************************
 #pragma once
 #ifndef PR_COMMON_TIME_H

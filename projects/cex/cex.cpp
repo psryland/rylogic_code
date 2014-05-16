@@ -1,6 +1,6 @@
 //**********************************************
 // Command line extensions
-//  Copyright © Rylogic Ltd 2004
+//  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 // To add new commands add code at the NEW_COMMAND comments
 
@@ -733,7 +733,7 @@ public:
 		std::cout <<
 			"\n"
 			"***********************************************************\n"
-			" --- Commandline Extensions - Copyright © Rylogic 2006 --- \n"
+			" --- Commandline Extensions - Copyright (c) Rylogic 2006 --- \n"
 			"***********************************************************\n"
 			" Version: " << cex::VersionString << "\n"
 			"  Syntax: Cex -command [parameters]\n"

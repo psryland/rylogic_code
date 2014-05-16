@@ -1,6 +1,6 @@
 //**********************************
 // Script tokeniser
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************
 #ifndef PR_SCRIPT_TOKENISER_H
 #define PR_SCRIPT_TOKENISER_H

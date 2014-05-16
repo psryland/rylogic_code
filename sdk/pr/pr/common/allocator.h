@@ -1,6 +1,6 @@
 //***********************************************************************
 // Default Allocator
-//  Copyright © 2007 Paul Ryland
+//  Copyright (c) 2007 Paul Ryland
 //***********************************************************************
 #pragma once
 #ifndef PR_COMMON_ALLOCATOR_H

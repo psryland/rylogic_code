@@ -1,6 +1,6 @@
 //***************************************************************************************************
 // Plugin Manager
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #include "linedrawer/main/stdafx.h"
 #include "linedrawer/utility/misc.h"

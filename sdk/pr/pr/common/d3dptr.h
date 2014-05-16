@@ -1,6 +1,6 @@
 //*****************************************
 // DirectX Ref Ptr
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //*****************************************
 #pragma once
 

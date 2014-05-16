@@ -1,6 +1,6 @@
 //**********************************
 // Script charactor source stack
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 
 #pragma once

@@ -1,6 +1,6 @@
 //*****************************************
 // Quad Tree
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //*****************************************
 // Sparce loose quad tree.
 // Items in the nodes of the tree can over hang up to half

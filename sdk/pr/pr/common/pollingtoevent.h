@@ -1,6 +1,6 @@
 //*********************************************
 // PollingToEvent
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 // This is a self contained thread for polling something
 // and calling an event function whenever the polling

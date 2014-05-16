@@ -1,6 +1,6 @@
 //***********************************************************************
 // Utility String functions
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
 
 #ifndef PR_STR_STRING_UTILITY_H

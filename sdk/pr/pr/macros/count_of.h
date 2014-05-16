@@ -1,6 +1,6 @@
 //*************************************
 // Count Of macro
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //*************************************
 // Use:
 //	char arr[256];

@@ -1,6 +1,6 @@
 //*****************************************
 // Settings
-// Copyright © Rylogic Ltd 2013
+// Copyright (c) Rylogic Ltd 2013
 //*****************************************
 // Usage:
 // #include "pr/storage/settings.h"

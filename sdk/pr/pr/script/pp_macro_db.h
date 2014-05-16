@@ -1,6 +1,6 @@
 //**********************************
 // Preprocessor macro container
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************
 #ifndef PR_SCRIPT_PP_MACRO_DB_H
 #define PR_SCRIPT_PP_MACRO_DB_H

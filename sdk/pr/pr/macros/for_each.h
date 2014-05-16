@@ -1,6 +1,6 @@
 //******************************************
 // for_each macro
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //******************************************
 
 #ifndef PR_MACRO_FOR_EACH_H

@@ -1,6 +1,6 @@
 //******************************************
 // Container Functions
-//  Copyright © March 2008 Paul Ryland
+//  Copyright (c) March 2008 Paul Ryland
 //******************************************
 #ifndef PR_COMMON_CONTAINER_FUNCTIONS_H
 #define PR_COMMON_CONTAINER_FUNCTIONS_H

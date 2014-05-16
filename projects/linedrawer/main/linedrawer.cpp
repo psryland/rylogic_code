@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // LineDrawer
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #include "linedrawer/main/stdafx.h"
 #include "linedrawer/main/linedrawer.h"
@@ -16,7 +16,7 @@ namespace ldr
 	wchar_t const AppNameW[] = L"LineDrawer";
 	char const AppNameA[]    = "LineDrawer";
 	char const Version[]     = "4.00.00";
-	char const Copyright[]   = "Copyright © Rylogic Limited 2002";
+	char const Copyright[]   = "Copyright (c) Rylogic Limited 2002";
 
 	pr::ldr::ContextId LdrContext = 0xFFFFFFFF;
 

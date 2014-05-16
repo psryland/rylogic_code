@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // Application Framework
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
 // How To Use:
 // #my_app.h - can define the whole app in one header if needed

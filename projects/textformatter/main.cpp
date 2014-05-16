@@ -1,6 +1,6 @@
 //**********************************************************
 // TextFormatter
-//  Copyright © Paul Ryland 2012
+//  Copyright (c) Paul Ryland 2012
 //**********************************************************
 //#include <memory>
 #include <string>
@@ -31,7 +31,7 @@ struct Main :pr::cmdline::IOptionReceiver
 		//printf(
 		//	"\n"
 		//	"***************************************************\n"
-		//	" --- Text Formatter - Copyright © Rylogic 2011 --- \n"
+		//	" --- Text Formatter - Copyright (c) Rylogic 2011 --- \n"
 		//	"***************************************************\n"
 		//	"\n"
 		//	"  Syntax: TextFormatter -f 'FileToFormat' [-h] [-o 'OutputFilename'] [-command0 -command1 ...]\n"

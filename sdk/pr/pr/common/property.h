@@ -1,6 +1,6 @@
 //************************************************************************
 // Property (like C# properties)
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //************************************************************************
 #pragma once
 #ifndef PR_PROPERTY_H

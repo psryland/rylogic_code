@@ -1,6 +1,6 @@
 //*********************************************************************
 // Chain
-//  Copyright © Rylogic Ltd 2004
+//  Copyright (c) Rylogic Ltd 2004
 //*********************************************************************
 // A chain is a way of grouping objects where the containment of the objects
 // is the responsibility of the client. Chained objects are always part of a

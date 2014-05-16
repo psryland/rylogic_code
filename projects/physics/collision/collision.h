@@ -1,6 +1,6 @@
 //*********************************************
 // Physics engine
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 
 // This file is for general purpose collision functions and types

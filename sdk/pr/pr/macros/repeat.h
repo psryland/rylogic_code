@@ -1,6 +1,6 @@
 //*************************************
 // Repeat
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*************************************
 // Example:
 //  // Overloads taking various numbers of parameters

@@ -1,6 +1,6 @@
 //******************************************
 // Camera
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //******************************************
 // Camera to world matrix plus FoV and focus point
 // Supports 3D trackball-like mouse control and basic keyboard control

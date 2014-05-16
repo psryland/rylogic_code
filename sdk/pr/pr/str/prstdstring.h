@@ -1,6 +1,6 @@
 //******************************************
 // pr::string<>
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //******************************************
 // A version of std::string with configurable local caching
 // Note: this file is made to match pr::Array as much as possible

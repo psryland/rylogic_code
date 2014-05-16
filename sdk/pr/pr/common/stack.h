@@ -1,6 +1,6 @@
 //******************************************
 // A very simple stack class
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //******************************************
 	
 #ifndef PR_STACK_H

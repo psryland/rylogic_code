@@ -1,6 +1,6 @@
 //**************************************
 // Triangular Table
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**************************************
 //
 // Helper functions for triangular tables

@@ -1,6 +1,6 @@
 //******************************************
 // Function Arity
-//  Copyright © Oct 2009 Paul Ryland
+//  Copyright (c) Oct 2009 Paul Ryland
 //******************************************
 #ifndef PR_META_FUNCTION_ARITY_H
 #define PR_META_FUNCTION_ARITY_H

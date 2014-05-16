@@ -1,6 +1,6 @@
 //*****************************************
 // KD Tree
-//  Copyright © March 2005 Paul Ryland
+//  Copyright (c) March 2005 Paul Ryland
 //*****************************************
 //
 // Example use:

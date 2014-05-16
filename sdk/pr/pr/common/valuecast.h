@@ -1,6 +1,6 @@
 //******************************************
 // Value Cast
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //******************************************
 // Use to range check between casts to values of different bit lengths
 

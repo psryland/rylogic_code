@@ -1,6 +1,6 @@
 //***********************************************************
 // Profile Managers
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //***********************************************************
 
 #ifndef PR_PROFILE_MANAGER_H

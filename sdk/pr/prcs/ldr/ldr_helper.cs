@@ -1,6 +1,6 @@
 //***********************************************
 // LineDrawer helper
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //***********************************************
 
 using System.Drawing;

@@ -1,6 +1,6 @@
 //*********************************************
 // Bit Array
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #ifndef PR_BIT_ARRAY_H
 #define PR_BIT_ARRAY_H

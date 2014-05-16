@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // Simulation message pump
-//  Copyright © Rylogic Limited 2009
+//  Copyright (c) Rylogic Limited 2009
 //*****************************************************************************************
 // Usage:
 // The app's main gui class should inherit 'pr::threads::SimMessagePump'

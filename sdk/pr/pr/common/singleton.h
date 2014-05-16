@@ -1,6 +1,6 @@
 //***********************************************************************
 // Singleton
-//  Copyright © Rylogic Ltd 2003
+//  Copyright (c) Rylogic Ltd 2003
 //***********************************************************************
 // Usage:
 //	class Thing1 : public Singleton<Thing1>

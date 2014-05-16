@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // Application Framework
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
 // Files in the "pr/app/" form a starting point for building line-drawer style graphics
 // apps based on WTL and pr::Renderer.

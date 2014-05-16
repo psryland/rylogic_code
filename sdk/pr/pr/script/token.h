@@ -1,6 +1,6 @@
 //**********************************
 // Script tokens
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************
 #pragma once
 #ifndef PR_SCRIPT_TOKEN_H

@@ -1,6 +1,6 @@
 //**********************************************
 // Triangulate a polygon
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************************
 // Triangulates a polygon that may have holes and be in separate pieces
 // Usage:

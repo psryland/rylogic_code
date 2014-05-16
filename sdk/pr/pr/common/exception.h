@@ -1,6 +1,6 @@
 //**********************************
 // Exception std::exception
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 #pragma once
 #ifndef PR_EXCEPTION_H

@@ -1,6 +1,6 @@
 //***********************************************************************
 //  Handle
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***********************************************************************
 // A scoped windows HANDLE plus some helper file functions
 //

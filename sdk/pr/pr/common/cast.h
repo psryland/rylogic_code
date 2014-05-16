@@ -1,6 +1,6 @@
 //******************************************
 // Byte Ptr Cast
-//  Copyright © March 2008 Paul Ryland
+//  Copyright (c) March 2008 Paul Ryland
 //******************************************
 // Use to cast any pointer to a byte pointer
 #pragma once

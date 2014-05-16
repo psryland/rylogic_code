@@ -1,6 +1,6 @@
 //******************************************
 // min<> max<>
-//  Copyright © Rylogic Ltd 2013
+//  Copyright (c) Rylogic Ltd 2013
 //******************************************
 
 #ifndef PR_META_MIN_MAX_H

@@ -1,6 +1,6 @@
 //*******************************************************
 // Clipboard
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*******************************************************
 #ifndef PR_COMMON_CLIPBOARD_H
 #define PR_COMMON_CLIPBOARD_H

@@ -1,6 +1,6 @@
 //**********************************************
 // File path/File system operations
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //**********************************************
 // Pathname  = full path e.g. Drive:/path/path/file.ext
 // Drive     = the drive e.g. "P". No ':'

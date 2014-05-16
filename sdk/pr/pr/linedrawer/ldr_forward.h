@@ -1,6 +1,6 @@
 //************************************
 // Ldr Forward
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //************************************
 // Public forward declarations
 #pragma once

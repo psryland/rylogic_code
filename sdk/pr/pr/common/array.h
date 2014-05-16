@@ -1,6 +1,6 @@
 //******************************************
 // pr::Array<>
-//  Copyright © Rylogic Ltd 2003
+//  Copyright (c) Rylogic Ltd 2003
 //******************************************
 // A version of std::vector with configurable local caching
 // Note: this file is made to match pr::string<> as much as possible

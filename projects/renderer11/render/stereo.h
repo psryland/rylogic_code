@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
 #ifndef PR_RDR_RENDER_STEREO_H

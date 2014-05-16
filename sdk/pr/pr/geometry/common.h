@@ -1,6 +1,6 @@
 //********************************
 // Geometry properties
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //********************************
 #pragma once
 #ifndef PR_GEOMETRY_COMMON_H

@@ -1,6 +1,6 @@
 //******************************************
 // Scoped
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //******************************************
 // A helper struct for changing the state of a variable when it leaves scope
 // Usage:

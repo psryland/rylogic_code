@@ -1,6 +1,6 @@
 //**********************************
 // Script character source
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 #pragma once
 #ifndef PR_SCRIPT_COMMENT_STRIP_H

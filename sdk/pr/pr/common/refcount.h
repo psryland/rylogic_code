@@ -1,6 +1,6 @@
 //************************************************************************
 // Ref counting base class
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //************************************************************************
 // Usage:
 //   struct Thing :pr::RefCount<Thing> {};

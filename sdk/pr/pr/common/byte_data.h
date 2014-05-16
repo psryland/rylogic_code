@@ -1,6 +1,6 @@
 //******************************************
 // ByteData
-//  Copyright © Oct 2003 Paul Ryland
+//  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
 
 #ifndef PR_BYTE_DATA_H

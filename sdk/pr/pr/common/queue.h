@@ -1,6 +1,6 @@
 //******************************************
 // A very simple queue class
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //******************************************
 
 #ifndef PR_QUEUE_H

@@ -1,6 +1,6 @@
 //***************************************************************************************************
 // Lighting Dialog
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #include "linedrawer/main/stdafx.h"
 #include "linedrawer/plugin/plugin.h"

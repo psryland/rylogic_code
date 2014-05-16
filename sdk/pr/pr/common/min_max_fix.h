@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // min_max_fix.h
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 // Templated inline functions to replace Windows defined
 // min/max macros which interfere with the maths library.

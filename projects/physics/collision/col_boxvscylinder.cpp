@@ -1,6 +1,6 @@
 //*********************************************
 // Physics engine
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 // This file contains and implementation of box vs cylinder (not capsule)
 // collision detection. As fair as I know this is an original algorithm.

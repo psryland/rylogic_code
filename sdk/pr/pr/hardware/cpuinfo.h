@@ -1,6 +1,6 @@
 //******************************************
 // CPU info
-//  Copyright © Sept 2010 Paul Ryland
+//  Copyright (c) Sept 2010 Paul Ryland
 //******************************************
 
 #ifndef PR_CPUINFO_H

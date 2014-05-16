@@ -1,6 +1,6 @@
 //**********************************************
 // Dependency Checker
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************************
 
 // Code file dependency checker

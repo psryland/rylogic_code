@@ -1,6 +1,6 @@
 //******************************************
 // Predicate
-//  Copyright © March 2008 Paul Ryland
+//  Copyright (c) March 2008 Paul Ryland
 //******************************************
 // A collection of helpful predicates
 

@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright Â© Rylogic Ltd 2012
+//  Copyright Â(c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
 

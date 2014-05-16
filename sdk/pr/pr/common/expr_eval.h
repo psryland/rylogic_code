@@ -1,6 +1,6 @@
 //*************************************************************
 // Expression Evaluator
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //*************************************************************
 
 #ifndef PR_EXPR_EVAL_H

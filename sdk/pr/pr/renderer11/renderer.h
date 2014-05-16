@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 // Required libs:
 //  d3d11.lib

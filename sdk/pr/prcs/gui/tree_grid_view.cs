@@ -1,5 +1,5 @@
 ﻿//*****************************************************************************************
-// Copyright © Rylogic Ltd 2011
+// Copyright (c) Rylogic Ltd 2011
 // Inspired by Mark Rideout's TreeGridView control but massively refactored
 //*****************************************************************************************
 using System;

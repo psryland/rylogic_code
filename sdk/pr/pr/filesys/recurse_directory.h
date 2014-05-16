@@ -1,6 +1,6 @@
 //**************************************************************
 // Recurse Directory
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //**************************************************************
 #pragma once
 #ifndef PR_FILESYS_RECURSE_DIRECTORY_H

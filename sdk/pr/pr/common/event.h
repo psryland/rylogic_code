@@ -1,6 +1,6 @@
 //******************************************
 // Multicast Event
-//  Copyright © Oct 2009 Paul Ryland
+//  Copyright (c) Oct 2009 Paul Ryland
 //******************************************
 // C#-style multicast delegate event
 // Use:

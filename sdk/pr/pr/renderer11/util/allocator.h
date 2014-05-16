@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 // This file contains a set of helper wrappers for initialising some d3d11 structures
 #pragma once

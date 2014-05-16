@@ -1,6 +1,6 @@
 //**********************************
 // Pipe
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 // Usage:
 //	pr::Pipe<> pipe;

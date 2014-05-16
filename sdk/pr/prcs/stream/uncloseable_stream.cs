@@ -1,6 +1,6 @@
 ﻿//***************************************************
 // Uncloseable Stream
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***************************************************
 
 using System;

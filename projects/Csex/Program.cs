@@ -63,7 +63,7 @@ namespace Csex
 				Console.WriteLine(
 				"\n"+
 				"***********************************************************\n"+
-				" --- Commandline Extensions - Copyright © Rylogic 2012 --- \n"+
+				" --- Commandline Extensions - Copyright (c) Rylogic 2012 --- \n"+
 				"***********************************************************\n"+
 				"                                         Version: "+VersionString+"\n"+
 				"  Syntax: Csex -command [parameters]\n"+

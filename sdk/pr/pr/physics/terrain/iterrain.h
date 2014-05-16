@@ -1,6 +1,6 @@
 //*********************************************
 // Physics engine
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 
 // Terrain is a system that can return points of contact and normals for

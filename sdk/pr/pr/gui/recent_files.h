@@ -1,6 +1,6 @@
 //*************************************************************************
 // Recent Files
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //*************************************************************************
 // Usage:
 //	Create an instance of RecentFiles in a GUI class

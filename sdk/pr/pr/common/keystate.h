@@ -1,6 +1,6 @@
 //********************************************************************
 // Key State
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //********************************************************************
 // Helper functions for reading the state of a key
 // Usage:

@@ -1,6 +1,6 @@
 //**********************************
 // Directory Tree
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************
 #ifndef PR_DIRECTORY_TREE_H
 #define PR_DIRECTORY_TREE_H

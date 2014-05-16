@@ -1,6 +1,6 @@
 //*********************************************
 // Physics engine
-//  Copyright © Rylogic Ltd 2006
+//  Copyright (c) Rylogic Ltd 2006
 //*********************************************
 
 // A Shape is the basic type used for narrow phase collision.

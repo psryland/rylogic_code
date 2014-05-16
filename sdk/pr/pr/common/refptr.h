@@ -1,6 +1,6 @@
 //**********************************************************************************
 // Pointer to a reference counted object
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //**********************************************************************************
 // Use this pointer to point to objects with 'AddRef' and 'Release' functions
 // Note: types that inherit pr::RefCount<> can be used

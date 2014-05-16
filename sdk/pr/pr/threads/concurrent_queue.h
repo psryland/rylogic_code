@@ -1,6 +1,6 @@
 //*********************************************************************
 // Concurrent Queue
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //*********************************************************************
 // Thread safe producer/consumer queue
 // See unit tests for usage

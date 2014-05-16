@@ -1,6 +1,6 @@
 //***************************************************
 // EnumEx
-//  Copyright © Rylogic Ltd 2013
+//  Copyright (c) Rylogic Ltd 2013
 //***************************************************
 using System;
 using System.Collections.Generic;

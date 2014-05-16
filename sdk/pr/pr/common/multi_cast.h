@@ -1,6 +1,6 @@
 //******************************************
 // Multicast
-//  Copyright © Oct 2011 Rylogic Ltd
+//  Copyright (c) Oct 2011 Rylogic Ltd
 //******************************************
 
 #pragma once

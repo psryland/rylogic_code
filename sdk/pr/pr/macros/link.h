@@ -1,6 +1,6 @@
 //*************************************
 // PRStringise
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*************************************
 #pragma once
 #ifndef PR_MACRO_LINK_H

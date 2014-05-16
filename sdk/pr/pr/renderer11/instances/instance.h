@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 // Definition of the instance base class and built in instances for the renderer
 //

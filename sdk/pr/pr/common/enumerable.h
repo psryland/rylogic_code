@@ -1,6 +1,6 @@
 //******************************************
 // Enumerable
-//  Copyright © Oct 2003 Paul Ryland
+//  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
 // A base class for creating C#-style Enumerables
 // use:

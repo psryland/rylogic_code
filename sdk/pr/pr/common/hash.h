@@ -1,6 +1,6 @@
 //*************************************
 // Hash
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //*************************************
 #pragma once
 #ifndef PR_HASH_H
@@ -165,7 +165,7 @@ namespace pr
 		inline HashValue HashLwr(char const* src, char term) { return HashLwr(src, term, -1); }
 		inline HashValue HashLwr(char const* src)            { return HashLwr(src, 0, -1); }
 
-		// http://www.azillionmonkeys.com/qed/hash.html, © Copyright 2004-2008 by Paul Hsieh
+		// http://www.azillionmonkeys.com/qed/hash.html, (c) Copyright 2004-2008 by Paul Hsieh
 		inline HashValue FastHash(void const* data, size_t len, HashValue hash)
 		{
 			// Local function for reading 16bit chunks of 'data'

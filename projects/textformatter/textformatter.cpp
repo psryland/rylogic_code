@@ -35,7 +35,7 @@ struct Main :pr::cmdline::IOptionReceiver
 		printf(
 			"\n"
 			"***************************************************\n"
-			" --- Text Formatter - Copyright © Rylogic 2011 --- \n"
+			" --- Text Formatter - Copyright (c) Rylogic 2011 --- \n"
 			"***************************************************\n"
 			"\n"
 			"  Syntax: TextFormatter -f 'FileToFormat' [-h] [-o 'OutputFilename'] [-command0 -command1 ...]\n"

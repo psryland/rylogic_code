@@ -1,6 +1,6 @@
 //*******************************************************
 // GDI+ helpers
-//  Copyright © Rylogic Limited 2009
+//  Copyright (c) Rylogic Limited 2009
 //*******************************************************
 
 #pragma once

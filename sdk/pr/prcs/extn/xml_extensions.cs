@@ -1,6 +1,6 @@
 ﻿//***************************************************
 // Xml Helper Functions
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //***************************************************
 
 using System;

@@ -1,6 +1,6 @@
 //*****************************************************************
 // Assert
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************
 // Usage:
 //  Each module should use a define like "PR_DBG_???" to enable asserts

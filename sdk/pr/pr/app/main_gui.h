@@ -1,6 +1,6 @@
 //*****************************************************************************************
 // Application Framework
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
 // See pr/app/main.h for usage instructions
 #pragma once

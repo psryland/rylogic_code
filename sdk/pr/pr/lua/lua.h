@@ -1,6 +1,6 @@
 //*********************************************
 // Lua Wrapper
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 // This file contains a helper object for creating a lua state and
 // a collection of useful lua functions that operate on a lua state.

@@ -1,6 +1,6 @@
 //****************************************************
 // Fmt - An inline function for inserting formated text
-//  Copyright © Rylogic Ltd 2008
+//  Copyright (c) Rylogic Ltd 2008
 //****************************************************
 // Note about __declspec(thread):
 //  Doesn't work in dll's on windows <= XP

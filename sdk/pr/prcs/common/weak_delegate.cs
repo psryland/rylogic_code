@@ -1,6 +1,6 @@
 //***********************************************
 // Weak Delegate
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
 // http://diditwith.net/PermaLink,guid,aacdb8ae-7baa-4423-a953-c18c1c7940ab.aspx

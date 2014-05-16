@@ -1,6 +1,6 @@
 //******************************************
 // Event sending/receiving
-//  Copyright © Oct 2003 Paul Ryland
+//  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
 
 #pragma once

@@ -1,6 +1,6 @@
 //***********************************************
 // Graph Control
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //***********************************************
 
 #ifndef PR_GUI_GRAPH_CTRL_H

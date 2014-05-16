@@ -1,6 +1,6 @@
 //*****************************************************************************
 // Maths library
-//  Copyright © Rylogic Ltd 2002
+//  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 #pragma once
 #ifndef PR_MATHS_CONSTANTS_H

@@ -1,6 +1,6 @@
 //**********************************
 // Script character source
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //**********************************
 #pragma once
 #ifndef PR_SCRIPT_NEWLINE_STRIP_H

@@ -1,6 +1,6 @@
 //***********************************************************************
 // Memory Pool
-//  Copyright © Rylogic Ltd 2001
+//  Copyright (c) Rylogic Ltd 2001
 //***********************************************************************
 //
 // MemPool allows objects of any type to be "re-cycled" and avoid excessive

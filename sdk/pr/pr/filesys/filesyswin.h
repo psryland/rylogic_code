@@ -1,6 +1,6 @@
 //**********************************************
 // File system functions requiring windows
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //**********************************************
 //	Pathname	= full path e.g. Drive:/path/path/file.ext
 //	Drive		= the drive e.g. "P:"

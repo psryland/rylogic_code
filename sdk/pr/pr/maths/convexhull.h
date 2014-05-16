@@ -1,6 +1,6 @@
 //**********************************************
 // ConvexHull
-//  Copyright ©  Paul Ryland 2008
+//  Copyright (c)  Paul Ryland 2008
 //**********************************************
 
 #pragma once

@@ -1,6 +1,6 @@
 ﻿//***************************************************
 // Rtf string builder
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //***************************************************
 
 using System;
@@ -1299,7 +1299,7 @@ namespace pr.common
 				//    `-'" `"\_  ,_.-;_.-\_ ',    Project : RTFLib
 				//        _.-'_./   {_.'   ; /    Author  : Anton
 				//       {_.-``-'         {_/     Assembly: 1.0.0.0
-				//                                Copyright © 2005-2008, Rogue Trader/MWM
+				//                                Copyright (c) 2005-2008, Rogue Trader/MWM
 				// ----------------------------------------------------------------------------------------
 				// The Graphics Context's resolution is simply the current resolution at which
 				// windows is being displayed.  Normally it's 96 dpi, but instead of assuming
@@ -1684,7 +1684,7 @@ namespace pr
 //    `-'" `"\_  ,_.-;_.-\_ ',    Project : RTFLib
 //        _.-'_./   {_.'   ; /    Author  : Anton
 //       {_.-``-'         {_/     Assembly: 1.0.0.0
-//                                Copyright © 2005-2008, Rogue Trader/MWM
+//                                Copyright (c) 2005-2008, Rogue Trader/MWM
 // ----------------------------------------------------------------------------------------
 
 	public enum EFont

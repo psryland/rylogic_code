@@ -1,6 +1,6 @@
 //***********************************************************
 // Profiler
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //***********************************************************
 // Usage:
 //	Put the PR_PROFILE_FRAME_BEGIN, PR_PROFILE_FRAME_END, and PR_PROFILE_OUTPUT

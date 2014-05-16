@@ -1,6 +1,6 @@
 //*************************************
 // Auto File
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*************************************
 #pragma once
 #ifndef PR_COMMON_AUTOFILE_H

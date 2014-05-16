@@ -1,6 +1,6 @@
 //*************************************
 // Remove parenthesis from macro parameters
-// Copyright © Rylogic Ltd 2014
+// Copyright (c) Rylogic Ltd 2014
 //*************************************
 #ifndef PR_MACROS_REMOVE_PARENS_H
 #define PR_MACROS_REMOVE_PARENS_H
