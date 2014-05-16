@@ -94,9 +94,13 @@ namespace pr
 
 				DirectX::ScratchImage scratch;
 				if (tdesc.MipLevels != 1)
+				{
 					pr::Throw(DirectX::GenerateMipMaps(img, DirectX::TEX_FILTER_FANT, tdesc.MipLevels, scratch));
+				}
 				else
-					scratch.Initialize2D(img.format, img.width, img.height, tdesc.ArraySize, 1);
+				{
+					scratch.InitializeFromImage(img, false);
+				}
 
 				D3DPtr<ID3D11Resource> res;
 				pr::Throw(DirectX::CreateTexture(m_mgr->m_device.m_ptr, scratch.GetImages(), scratch.GetImageCount(), scratch.GetMetadata(), &res.m_ptr));

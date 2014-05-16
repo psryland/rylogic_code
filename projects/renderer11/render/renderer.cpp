@@ -94,11 +94,11 @@ namespace pr
 			// Get the back buffer so we can copy its properties
 			D3DPtr<ID3D11Texture2D> back_buffer;
 			pr::Throw(m_swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&back_buffer.m_ptr));
+			PR_EXPAND(PR_DBG_RDR, NameResource(back_buffer, "main RT"));
 			back_buffer->GetDesc(&m_bbdesc);
 
 			// Create a render-target view of the back buffer
-			pr::Throw(m_device->CreateRenderTargetView(back_buffer.m_ptr, 0, &m_main_rtv.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_main_rtv, "main RT"));
+			pr::Throw(m_device->CreateRenderTargetView(back_buffer.m_ptr, nullptr, &m_main_rtv.m_ptr));
 
 			// Create a texture buffer that we will use as the depth buffer
 			TextureDesc desc;

@@ -1,6 +1,6 @@
 //*********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2012
+//  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/textures/texture_manager.h"
@@ -253,11 +253,7 @@ namespace pr
 
 			// If the texture was created with srv binding, create a srv
 			if (tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
-			{
-				ShaderResViewDesc srvdesc(tdesc.Format, D3D11_SRV_DIMENSION_TEXTURE2D);
-				srvdesc.Texture2D.MipLevels = tdesc.MipLevels;
-				pr::Throw(device->CreateShaderResourceView(res.m_ptr, &srvdesc, &srv.m_ptr));
-			}
+				pr::Throw(device->CreateShaderResourceView(res.m_ptr, nullptr, &srv.m_ptr));
 		}
 
 		// Generates the stock textures
@@ -267,7 +263,7 @@ namespace pr
 				D3DPtr<ID3D11Texture2D> tex;
 				D3DPtr<ID3D11ShaderResourceView> srv;
 				GetMainRTResources(m_device, tex, srv);
-				m_stock_textures.push_back(CreateTexture2D(EStockTexture::MainRT, tex, srv, SamplerDesc::LinearClamp(), "#main_rt"));
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::MainRT, tex, srv, SamplerDesc::LinearClamp(), "#mainrt"));
 			}{
 				pr::uint const data[] = {0};
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
