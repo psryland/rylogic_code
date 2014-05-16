@@ -140,34 +140,21 @@ namespace pr.maths
 
 		public static v4 operator * (m3x4 lhs, v4 rhs)
 		{
-			v4 ans;
 			Transpose3x3(ref lhs);
-			ans.x = v4.Dot4(lhs.x, rhs);
-			ans.y = v4.Dot4(lhs.y, rhs);
-			ans.z = v4.Dot4(lhs.z, rhs);
-			ans.w = rhs.w;
-			return ans;
+			return new v4(
+				v4.Dot4(lhs.x, rhs),
+				v4.Dot4(lhs.y, rhs),
+				v4.Dot4(lhs.z, rhs),
+				rhs.w);
 		}
 
 		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
 		{
-			m3x4 ans;
 			Transpose3x3(ref lhs);
-			ans.x.x = v4.Dot4(lhs.x, rhs.x);
-			ans.x.y = v4.Dot4(lhs.y, rhs.x);
-			ans.x.z = v4.Dot4(lhs.z, rhs.x);
-			ans.x.w = 0f;
-
-			ans.y.x = v4.Dot4(lhs.x, rhs.y);
-			ans.y.y = v4.Dot4(lhs.y, rhs.y);
-			ans.y.z = v4.Dot4(lhs.z, rhs.y);
-			ans.y.w = 0f;
-
-			ans.z.x = v4.Dot4(lhs.x, rhs.z);
-			ans.z.y = v4.Dot4(lhs.y, rhs.z);
-			ans.z.z = v4.Dot4(lhs.z, rhs.z);
-			ans.z.w = 0f;
-			return ans;
+			return new m3x4(
+				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), 0f),
+				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), 0f),
+				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), 0f));
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'

@@ -1280,15 +1280,18 @@ namespace pr.gui
 			public class NodeOptions
 			{
 				public float Margin = 30f;
+				public bool AutoRelink = true;
 				
 				public NodeOptions() {}
 				public NodeOptions(XElement node)
 				{
 					Margin = node.Element("margin").As<float>();
+					AutoRelink = node.Element("auto_relink").As<bool>();
 				}
 				public XElement ToXml(XElement node)
 				{
 					node.Add2("margin", Margin, false);
+					node.Add2("auto_relink", AutoRelink, false);
 					return node;
 				}
 			}
@@ -1305,11 +1308,11 @@ namespace pr.gui
 			// Scatter parameters
 			public class ScatterOptions
 			{
-				public int   MaxIterations = 1;
-				public float SpringConstant = 0.1f;
+				public int   MaxIterations = 20;
+				public float SpringConstant = 0.01f;
 				public float CoulombConstant = 1000f;
-				public float ConnectorScale = 10f;
-				public float Equilibrium = 0.001f;
+				public float ConnectorScale = 1f;
+				public float Equilibrium = 0.01f;
 
 				public ScatterOptions() {}
 				public ScatterOptions(XElement node)
@@ -1352,6 +1355,7 @@ namespace pr.gui
 		// Members
 		private readonly View3d            m_view3d;           // Renderer
 		private readonly EventBatcher      m_eb_update_diag;   // Event batcher for updating the diagram graphics
+		private readonly EventBatcher      m_eb_refresh;       // Event batcher for refresh elements
 		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
 		private StyleCache<ConnectorStyle> m_connector_styles; // The collection of node styles
@@ -1363,8 +1367,10 @@ namespace pr.gui
 		{
 			if (this.IsInDesignMode()) return;
 
+			m_impl_options     = options ?? new DiagramOptions();
 			m_view3d           = new View3d(Handle, Render);
 			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
+			m_eb_refresh       = new EventBatcher(Refresh);
 			m_camera           = new View3d.CameraControls(m_view3d.Drawset);
 			m_node_styles      = new StyleCache<NodeStyle>();
 			m_connector_styles = new StyleCache<ConnectorStyle>();
@@ -1377,7 +1383,6 @@ namespace pr.gui
 			m_view3d.Drawset.OriginVisible = false;
 			m_view3d.Drawset.Orthographic = true;
 
-			Options = options ?? new DiagramOptions();
 			Elements = new BindingListEx<Element>();
 			Selected = new BindingListEx<Element>();
 			Elements.ListChanging += HandleElementListChanging;
@@ -1419,14 +1424,23 @@ namespace pr.gui
 		public BindingListEx<Element> Selected { get; private set; }
 
 		/// <summary>Controls for how the diagram is rendered</summary>
-		public DiagramOptions Options { get; set; }
+		public DiagramOptions Options
+		{
+			get { return m_impl_options; }
+			set
+			{
+				m_impl_options = value ?? new DiagramOptions();
+				UpdateDiagram(true);
+			}
+		}
+		private DiagramOptions m_impl_options;
 
 		/// <summary>Minimum bounding area for view reset</summary>
 		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
 
 		/// <summary>Used to control z order</summary>
 		private float ElementZ { get { return m_impl_element_z += 0.0001f; } }
-		private float m_impl_element_z;
+		private float m_impl_element_z = 0.1f;
 
 		/// <summary>Perform a hit test on the diagram</summary>
 		public HitTestResult HitTest(v2 ds_point)
@@ -1601,7 +1615,7 @@ namespace pr.gui
 					break;
 				}
 			}
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 		private void OnMouseDrag(object sender, MouseEventArgs e)
 		{
@@ -1634,7 +1648,7 @@ namespace pr.gui
 					// Change the cursor once dragging
 					Cursor = Cursors.SizeAll;
 					PositionDiagram(e.Location, sel.m_selection.Location);
-					Refresh();
+					m_eb_refresh.Signal();
 					break;
 				}
 			}
@@ -1643,7 +1657,7 @@ namespace pr.gui
 		{
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
 			m_camera.Navigate(0, 0, e.Delta / 120f);
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 		private void OnDiagramClicked(MouseEventArgs e)
 		{
@@ -1697,7 +1711,7 @@ namespace pr.gui
 				var tar = new v4(bounds.Centre, 0, 1);
 				m_camera.SetPosition(eye, tar, v4.YAxis);
 			}
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
@@ -1737,7 +1751,7 @@ namespace pr.gui
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
 			var dst = ClientToDiagram(cs);
 			m_camera.Navigate(ds.x - dst.x, ds.y - dst.y, 0);
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Move the selected elements by </summary>
@@ -1746,7 +1760,7 @@ namespace pr.gui
 			if (!AllowMove) return;
 			foreach (var elem in Selected)
 				elem.Drag(delta, commit);
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
@@ -1815,7 +1829,13 @@ namespace pr.gui
 		/// <summary>Called when an element in the diagram has been moved</summary>
 		private void HandleElementPositionChanged(object sender, EventArgs e)
 		{
+			var node = sender as Node;
+			if (node != null && Options.Node.AutoRelink)
+				foreach (var conn in node.Connectors)
+					conn.Relink(false);
+
 			m_edited = true;
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Called when the data associated with an element has changed</summary>
@@ -1902,7 +1922,7 @@ namespace pr.gui
 				}
 			}
 
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Selects nodes that are connected to already selected nodes</summary>
@@ -1916,7 +1936,7 @@ namespace pr.gui
 			foreach (var conn in node.Connectors)
 				conn.OtherNode(node).Selected = true;
 
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Spread the nodes on the diagram so none are overlapping</summary>
@@ -1927,11 +1947,7 @@ namespace pr.gui
 			var nodes = (selected ? Selected : Elements).Where(x => x.Entity == Entity.Node).Cast<Node>().ToList();
 			var conns = nodes.SelectMany(x => x.Connectors).Where(x => x.Node0.Selected == selected && x.Node1.Selected == selected).Distinct().ToList();
 
-			var force0 = new v2[conns.Count];
-			var force1 = new v2[conns.Count];
-			var force = force0;
-			var last = force1;
-
+			// Prevent issues with nodes exactly on top of each other
 			var rand = new Rand();
 			var djitter = Options.Scatter.Equilibrium * 0.4f;
 			Func<v2> jitter = () => v2.Random2(-djitter, djitter, rand);
@@ -1943,104 +1959,98 @@ namespace pr.gui
 					return (Math.Abs(v.x / sz.x) > Math.Abs(v.y / sz.y) ? sz.x : sz.y) + Options.Node.Margin;
 				};
 
-			// Spring-mass simulation
+			var qtree = new QuadTree<Node>(ContentBounds);
+			var force = new Dictionary<Node,v2>();
+			var last  = new Dictionary<Node,v2>();
+
+			// Initialise the forces
+			foreach (var node in nodes)
+				force[node] = last[node] = jitter();
+
+			// Spring-mass + Coulomb field simulation
 			for (int i = 0; i != Options.Scatter.MaxIterations; ++i)
 			{
-				// Determine forces
+				// Build a quad tree of the nodes
+				foreach (var node in nodes)
+					qtree.Insert(node, node.Bounds.Centre, node.Bounds.Diametre/2);
+
+				// Determine spring forces
 				for (int j = 0; j != conns.Count; ++j)
 				{
 					var conn = conns[j];
 					var node0 = conn.Node0;
 					var node1 = conn.Node1;
-					var vec = node1.PositionXY - node0.PositionXY;
-					
-					// Find the minimum separation distance
+				
+					// Find the minimum separation and the current separation
+					var vec     = node1.PositionXY - node0.PositionXY;
 					var min_sep = min_separation(vec, node0, node1);
-
-					// Find the current separation
-					var sep = Math.Max(min_sep, vec.Length2);
+					var sep     = Math.Max(min_sep, vec.Length2);
 					
 					// Spring force F = -Kx
 					var spring = -Options.Scatter.SpringConstant * (float)Math.Max(0, sep - min_sep);
-
-					// Coulomb force F = kQq/x²
-					// Nodes are more repulsive if that have more connections
-					var q0 = 1f + node0.Connectors.Count * Options.Scatter.ConnectorScale;
-					var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
-					var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
-
-					var net = spring + coulumb;
-					var frc = vec * (net / sep) + jitter();
-					force[j] += frc;
+					
+					var f = vec * (spring / sep);
+					force[node0] -= f;
+					force[node1] += f;
 				}
 
-				// Apply forces... sort of, don't simulation acceleration/velocity
-				bool equilibrium = true;
-				for (int j = 0; j != conns.Count; ++j)
+				// Determine coulomb forces
+				for (int j = 0; j != nodes.Count; ++j)
 				{
-					equilibrium &= (force[j] - last[j]).Length2Sq < Options.Scatter.Equilibrium;
+					var node0 = nodes[j];
 
-					var conn = conns[j];
-					var node0 = conn.Node0;
-					var node1 = conn.Node1;
-					var vec = node1.PositionXY - node0.PositionXY;
-					var min_sep = min_separation(vec, node0, node1);
+					// Nodes are more repulsive if they have more connections
+					var q0 = 1f + node0.Connectors.Count * Options.Scatter.ConnectorScale;
 
-					// Limit the magnitude of the position change in the direction of 'vec' to half the minimum separation distance
-					if (Maths.Sqr(v2.Dot2(vec, force[j])) > Maths.Sqr(min_sep) * vec.Length2Sq)
-						force[j] *= 0.5f * min_sep / force[j].Length2;
+					// Find nearby nodes and apply forces
+					qtree.Traverse(node0.PositionXY, node0.Bounds.Diametre, node1 =>
+						{
+							// Find the minimum separation and the current separation
+							var vec     = node1.PositionXY - node0.PositionXY;
+							var min_sep = min_separation(vec, node0, node1);
+							var sep     = Math.Max(min_sep, vec.Length2);
+					
+							// Coulomb force F = kQq/x²
+							var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
+							var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
 
-					node0.PositionXY -= force[j];
-					node1.PositionXY += force[j];
+							var f = vec * (coulumb / sep);
+							force[node0] -= f;
+							force[node1] += f;
+							return true;
+						});
+				}
+
+				// Apply forces... sort of, don't simulate acceleration/velocity
+				bool equilibrium = true;
+				for (int j = 0; j != nodes.Count; ++j)
+				{
+					var node = nodes[j];
+					var frc = force[node];
+					var lst = last[node];
+
+					equilibrium &= (frc - lst).Length2Sq < Options.Scatter.Equilibrium;
+
+					// Limit the magnitude of the position change
+					var force_lensq = frc.Length2Sq;
+					var bound_lensq = node.Bounds.DiametreSq;
+					var frc_limited = force_lensq > bound_lensq
+						? frc * (float)Math.Sqrt(bound_lensq / force_lensq)
+						: frc;
+
+					node.PositionXY += frc_limited;
+
+					// Reset the forces
+					last[node] = frc;
+					force[node] = jitter();
 				}
 				if (equilibrium)
 					break;
-				
-				// Reset forces
-				Util.Swap(ref force, ref last);
-				force.Clear();
 			}
 
-			RelinkNodes();
-			Refresh();
-
-			//// Determine the number per row, and what the
-			//// average width of a row should be
-			//int node_count = 0;
-			//float total_width = 0;
-			//foreach (var node in nodes)
-			//{
-			//	++node_count;
-			//	total_width += node.Bounds.SizeX + margin.x;
-			//}
-			//float avr_width = total_width / node_count;
-			//float max_row_width = (float)Math.Sqrt(avr_width);
-
-			//// Do layout
-			//v2 xy = v2.Zero; float row_height = 0;
-			//foreach (var node in Elements.Where(x => x.Entity == Entity.Node))
-			//{
-			//	var bounds = node.Bounds;
-
-			//	// Set the node position
-			//	var pos = node.Position;
-			//	pos.p = new v4(xy.x + bounds.Radius.x, xy.y + bounds.Radius.y, 0, 1);
-			//	node.Position = pos;
-
-			//	// Move the position pointer
-			//	xy.x += bounds.SizeX + margin.x;
-			//	row_height = Math.Max(row_height, node.Bounds.SizeY + margin.y);
-
-			//	// Time to wrap around?
-			//	if (xy.x > max_row_width)
-			//	{
-			//		xy.x = 0;
-			//		xy.y += row_height;
-			//		row_height = 0;
-			//	}
-			//}
-			//ResetView();
-			//Refresh();
+			if (Options.Node.AutoRelink)
+				RelinkNodes();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Update the links between nodes to pick the nearest anchor points</summary>
@@ -2053,7 +2063,7 @@ namespace pr.gui
 
 			foreach (var connector in connectors)
 				connector.Relink(false);
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>
@@ -2068,7 +2078,7 @@ namespace pr.gui
 				m_view3d.Drawset.AddObject(elem.Graphics);
 			}
 
-			Refresh();
+			m_eb_refresh.Signal();
 		}
 
 		/// <summary>
@@ -2267,680 +2277,10 @@ namespace pr.gui
 						};
 					#endregion
 				}
-
-				/*
-				#region Show Value
-				{
-					var show_value = lvl0.Add2(new ToolStripMenuItem("Show Value"));
-					show_value.Checked = (bool)m_tooltip.Tag;
-					show_value.Click += (s,a) =>
-						{
-							m_tooltip.Hide(this);
-							if ((bool)m_tooltip.Tag) MouseMove -= OnMouseMoveTooltip;
-							m_tooltip.Tag = !(bool)m_tooltip.Tag;
-							if ((bool)m_tooltip.Tag) MouseMove += OnMouseMoveTooltip;
-						};
-				}
-				#endregion
-
-				#region Zoom Menu
-				{
-					var zoom_menu = lvl0.Add2(new ToolStripMenuItem("Zoom"));
-					var lvl1 = new List<ToolStripItem>();
-
-					var default_zoom = lvl1.Add2(new ToolStripMenuItem("Default"));
-					default_zoom.Click += (s,a) =>
-						{
-							FindDefaultRange();
-							ResetToDefaultRange();
-							Refresh();
-						};
-
-					var zoom_in = lvl1.Add2(new ToolStripMenuItem("In"));
-					zoom_in.Click += (s,a) =>
-						{
-							var point = PointToGraph(m_selection.Location);
-							Zoom *= 0.5;
-							PositionGraph(m_selection.Location,point);
-							Refresh();
-						};
-
-					var zoom_out = lvl1.Add2(new ToolStripMenuItem("Out"));
-					zoom_out.Click += (s,a) =>
-						{
-							var point = PointToGraph(m_selection.Location);
-							Zoom *= 2.0;
-							PositionGraph(m_selection.Location,point);
-							Refresh();
-						};
-
-					zoom_menu.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
-				#region Series menus
-				if (m_data.Count != 0)
-				{
-					#region All Series
-					{
-						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: All"));
-						var lvl1 = new List<ToolStripItem>();
-
-						#region Visible
-						{
-							var state = m_data.Aggregate(0, (x,s) => x | (s.RenderOptions.m_visible ? 2 : 1));
-							var option = lvl1.Add2(new ToolStripMenuItem("Visible"));
-							option.CheckState = state == 2 ? CheckState.Checked : state == 1 ? CheckState.Unchecked : CheckState.Indeterminate;
-							option.Click += (s,a) =>
-								{
-									option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
-									foreach (var x in m_data) x.RenderOptions.m_visible = option.CheckState == CheckState.Checked;
-									RegenBitmap = true;
-								};
-						}
-						#endregion
-
-						series_menu.DropDownItems.AddRange(lvl1.ToArray());
-					}
-					#endregion
-					#region Individual Series
-					for (var index = 0; index != m_data.Count; ++index)
-					{
-						var series = m_data[index];
-
-						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: " + series.Name));
-						var lvl1 = new List<ToolStripItem>();
-
-						if      (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point) series_menu.ForeColor = series.RenderOptions.m_point_colour;
-						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line ) series_menu.ForeColor = series.RenderOptions.m_line_colour;
-						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar  ) series_menu.ForeColor = series.RenderOptions.m_bar_colour;
-						series_menu.Checked = series.RenderOptions.m_visible;
-						series_menu.Tag = index;
-						series_menu.Click += (s,a) =>
-							{
-								series.RenderOptions.m_visible = !series.RenderOptions.m_visible;
-								series_menu.Checked = series.RenderOptions.m_visible;
-								RegenBitmap = true;
-							};
-
-						#region Elements
-						{
-							var elements_menu = lvl1.Add2(new ToolStripMenuItem("Elements"));
-							var lvl2 = new List<ToolStripItem>();
-
-							#region Draw main data
-							{
-								var option = lvl2.Add2(new ToolStripMenuItem("Series data"));
-								option.Checked = series.RenderOptions.m_draw_data;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.m_draw_data = !series.RenderOptions.m_draw_data;
-										RegenBitmap = true;
-									};
-							}
-							#endregion
-							#region Draw error bars
-							{
-								var option = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
-								option.Checked = series.RenderOptions.m_draw_error_bars;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.m_draw_error_bars = !series.RenderOptions.m_draw_error_bars;
-										RegenBitmap = true;
-									};
-							}
-							#endregion
-							#region Draw zeros
-							{
-								var draw_zeros = lvl2.Add2(new ToolStripComboBox());
-								draw_zeros.Items.AddRange(Enum<Series.RdrOpts.PlotZeros>.Names.Select(x => x + " Zeros").Cast<object>().ToArray());
-								draw_zeros.SelectedIndex = (int)series.RenderOptions.m_draw_zeros;
-								draw_zeros.SelectedIndexChanged += (s,a) =>
-									{
-										series.RenderOptions.m_draw_zeros = (Series.RdrOpts.PlotZeros)draw_zeros.SelectedIndex;
-										RegenBitmap = true;
-									};
-								draw_zeros.KeyDown += (s,a) =>
-									{
-										if (a.KeyCode == Keys.Return)
-											context_menu.Close();
-									};
-							}
-							#endregion
-
-							elements_menu.DropDownItems.AddRange(lvl2.ToArray());
-						}
-						#endregion
-
-						#region Plot Type Menu
-						{
-							var plot_type_menu = lvl1.Add2(new ToolStripMenuItem("Plot Type"));
-							{
-								var option = new ToolStripComboBox();
-								plot_type_menu.DropDownItems.Add(option);
-								option.Items.AddRange(Enum<Series.RdrOpts.PlotType>.Names.Cast<object>().ToArray());
-								option.SelectedIndex = (int)series.RenderOptions.m_plot_type;
-								option.SelectedIndexChanged += (s,a) =>
-									{
-										series.RenderOptions.m_plot_type = (Series.RdrOpts.PlotType)option.SelectedIndex;
-										RegenBitmap = true;
-									};
-								option.KeyDown += (s,a) =>
-									{
-										if (a.KeyCode == Keys.Return)
-											context_menu.Close();
-									};
-							}
-						}
-						#endregion
-
-						#region Appearance Menu
-						{
-							var appearance_menu = lvl1.Add2(new ToolStripMenuItem("Appearance"));
-							var lvl2 = new List<ToolStripItem>();
-
-							#region Points
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point || series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
-							{
-								var point_menu = lvl2.Add2(new ToolStripMenuItem("Points"));
-								var lvl3 = new List<ToolStripItem>();
-
-								#region Size
-								{
-									var size_menu = lvl3.Add2(new ToolStripMenuItem("Size"));
-									{
-										var option = new ToolStripTextBox{AcceptsReturn = false};
-										size_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_point_size.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float size;
-												if (!float.TryParse(option.Text,out size)) return;
-												series.RenderOptions.m_point_size = size;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-								#region Colour
-								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
-									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_point_colour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_point_colour = cd.Colour;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-
-								point_menu.DropDownItems.AddRange(lvl3.ToArray());
-							}
-							#endregion
-							#region Lines
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
-							{
-								var line_menu = lvl2.Add2(new ToolStripMenuItem("Lines"));
-								var lvl3 = new List<ToolStripItem>();
-
-								#region Width
-								{
-									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
-									{
-										var option = new ToolStripTextBox();
-										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_line_width.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float width;
-												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.m_line_width = width;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-								#region Colour
-								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
-									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_line_colour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_line_colour = cd.Colour;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-
-								line_menu.DropDownItems.AddRange(lvl3.ToArray());
-							}
-							#endregion
-							#region Bars
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar)
-							{
-								var bar_menu = lvl2.Add2(new ToolStripMenuItem("Bars"));
-								var lvl3 = new List<ToolStripItem>();
-
-								#region Width
-								{
-									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
-									{
-										var option = new ToolStripTextBox();
-										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_bar_width.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float width;
-												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.m_bar_width = width;
-												RegenBitmap = true;
-											};
-										option.KeyDown += (s,a) =>
-											{
-												if (a.KeyCode == Keys.Return)
-													context_menu.Close();
-											};
-									}
-								}
-								#endregion
-								#region Bar Colour
-								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
-									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_bar_colour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_bar_colour = cd.Colour;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-
-								bar_menu.DropDownItems.AddRange(lvl3.ToArray());
-							}
-							#endregion
-							#region Error Bars
-							if (series.RenderOptions.m_draw_error_bars)
-							{
-								var errorbar_menu = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
-								var lvl3 = new List<ToolStripItem>();
-
-								#region Colour
-								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
-									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_error_bar_colour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_error_bar_colour = cd.Colour;
-												RegenBitmap = true;
-											};
-									}
-								}
-								#endregion
-
-								errorbar_menu.DropDownItems.AddRange(lvl3.ToArray());
-							}
-							#endregion
-
-							appearance_menu.DropDownItems.AddRange(lvl2.ToArray());
-						}
-						#endregion
-
-						#region Moving Average
-						{
-							var mv_avr_menu = lvl1.Add2(new ToolStripMenuItem("Moving Average"));
-							#region Draw Moving Average
-							{
-								var option = new ToolStripMenuItem("Draw Moving Average");
-								mv_avr_menu.DropDownItems.Add(option);
-								option.Checked = series.RenderOptions.m_draw_moving_avr;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.m_draw_moving_avr = !series.RenderOptions.m_draw_moving_avr;
-										RegenBitmap = true;
-									};
-							}
-							#endregion
-							#region Window Size
-							{
-								var win_size_menu = new ToolStripMenuItem("Window Size");
-								mv_avr_menu.DropDownItems.Add(win_size_menu);
-								{
-									var option = new ToolStripTextBox();
-									win_size_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.m_ma_window_size.ToString(CultureInfo.InvariantCulture);
-									option.TextChanged += (s,a) =>
-										{
-											int size;
-											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.m_ma_window_size = size;
-											RegenBitmap = true;
-										};
-								}
-							}
-							#endregion
-							#region Line Width
-							{
-								var line_width_menu = new ToolStripMenuItem("Line Width");
-								mv_avr_menu.DropDownItems.Add(line_width_menu);
-								{
-									var option = new ToolStripTextBox();
-									line_width_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.m_ma_line_width.ToString(CultureInfo.InvariantCulture);
-									option.TextChanged += (s,a) =>
-										{
-											int size;
-											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.m_ma_line_width = size;
-											RegenBitmap = true;
-										};
-								}
-							}
-							#endregion
-							#region Line Colour
-							{
-								var line_colour_menu = new ToolStripMenuItem("Line Colour");
-								mv_avr_menu.DropDownItems.Add(line_colour_menu);
-								{
-									var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_ma_line_colour};
-									line_colour_menu.DropDownItems.Add(option);
-									option.Click += (s,a) =>
-										{
-											var cd = new ColourUI{InitialColour = option.BackColor};
-											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.m_ma_line_colour = cd.Colour;
-											RegenBitmap = true;
-										};
-								}
-							}
-							#endregion
-						}
-						#endregion
-
-						#region Delete Series
-						if (series.AllowDelete)
-						{
-							var delete_menu = lvl1.Add2(new ToolStripMenuItem("Delete"));
-							delete_menu.Click += (s,a) =>
-								{
-									if (MessageBox.Show(this,"Confirm delete?","Delete Series",MessageBoxButtons.YesNo,MessageBoxIcon.Warning) != DialogResult.Yes) return;
-									m_data.RemoveAt((int)series_menu.Tag);
-									FindDefaultRange();
-									RegenBitmap = true;
-								};
-						}
-						#endregion
-
-						series_menu.DropDownItems.AddRange(lvl1.ToArray());
-					}
-					#endregion
-				}
-				#endregion
-
-				#region Rendering Options
-				{
-					var appearance_menu = lvl0.Add2(new ToolStripMenuItem("Appearance"));
-					var lvl1 = new List<ToolStripItem>();
-
-					#region Background Colour
-					{
-						var bk_colour_menu = lvl1.Add2(new ToolStripMenuItem("Background Colour"));
-						{
-							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = m_rdr_options.m_bg_colour};
-							bk_colour_menu.DropDownItems.Add(option);
-							option.Click += (s,a) =>
-								{
-									var cd = new ColourUI{InitialColour = option.BackColor};
-									if (cd.ShowDialog() != DialogResult.OK) return;
-									m_rdr_options.m_bg_colour = cd.Colour;
-									RegenBitmap = true;
-								};
-						}
-					}
-					#endregion
-					#region Opacity
-					if (ParentForm != null)
-					{
-						var opacity_menu = lvl1.Add2(new ToolStripMenuItem("Opacity"));
-						{
-							var option = new ToolStripTextBox();
-							opacity_menu.DropDownItems.Add(option);
-							option.Text = ParentForm.Opacity.ToString("0.00");
-							option.TextChanged += (s,a) =>
-								{
-									double opc;
-									if (ParentForm != null && double.TryParse(option.Text,out opc))
-										ParentForm.Opacity = Math.Max(0.1,Math.Min(1.0,opc));
-								};
-						}
-					}
-					#endregion
-
-					appearance_menu.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
-				#region Axis Options
-				{
-					var axes_menu = lvl0.Add2(new ToolStripMenuItem("Axes"));
-					var lvl1 = new List<ToolStripItem>();
-
-					#region X Axis
-					{
-						var x_axis_menu = lvl1.Add2(new ToolStripMenuItem("X Axis"));
-						var lvl2 = new List<ToolStripItem>();
-
-						#region Min
-						{
-							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
-							{
-								var option = new ToolStripTextBox();
-								min_menu.DropDownItems.Add(option);
-								option.Text = XAxis.Min.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										XAxis.Min = v;
-										RegenBitmap = true;
-									};
-							}
-						}
-						#endregion
-						#region Max
-						{
-							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
-							{
-								var option = new ToolStripTextBox();
-								max_menu.DropDownItems.Add(option);
-								option.Text = XAxis.Max.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										XAxis.Max = v;
-										RegenBitmap = true;
-									};
-							}
-						}
-						#endregion
-						#region Allow Scroll
-						{
-							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = m_xaxis.AllowScroll });
-							allow_scroll.Click += (s,a) => m_xaxis.AllowScroll = !m_xaxis.AllowScroll;
-						}
-						#endregion
-						#region Allow Zoom
-						{
-							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = m_xaxis.AllowZoom });
-							allow_zoom.Click += (s,e) => m_xaxis.AllowZoom = !m_xaxis.AllowZoom;
-						}
-						#endregion
-
-						x_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
-					}
-					#endregion
-					#region Y Axis
-					{
-						var y_axis_menu = lvl1.Add2(new ToolStripMenuItem("Y Axis"));
-						var lvl2 = new List<ToolStripItem>();
-
-						#region Min
-						{
-							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
-							{
-								var option = new ToolStripTextBox();
-								min_menu.DropDownItems.Add(option);
-								option.Text = YAxis.Min.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										YAxis.Min = v;
-										RegenBitmap = true;
-									};
-							}
-						}
-						#endregion
-						#region Max
-						{
-							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
-							{
-								var option = new ToolStripTextBox();
-								max_menu.DropDownItems.Add(option);
-								option.Text = YAxis.Max.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										YAxis.Max = v;
-										RegenBitmap = true;
-									};
-							}
-						}
-						#endregion
-						#region Allow Scroll
-						{
-							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = m_yaxis.AllowScroll });
-							allow_scroll.Click += (s,e) => m_yaxis.AllowScroll = !m_yaxis.AllowScroll;
-						}
-						#endregion
-						#region Allow Zoom
-						{
-							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = m_yaxis.AllowZoom });
-							allow_zoom.Click += (s,e) => m_yaxis.AllowZoom = !m_yaxis.AllowZoom;
-						}
-						#endregion
-
-						y_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
-					}
-					#endregion
-
-					axes_menu.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
-				#region Notes
-				{
-					var note_menu = lvl0.Add2(new ToolStripMenuItem("Notes"));
-					var lvl1 = new List<ToolStripItem>();
-
-					#region Add
-					{
-						var option = lvl1.Add2(new ToolStripMenuItem("Add"));
-						option.Click += (s,e) =>
-							{
-								var form = new Form
-									{
-										Text = "Add Note",
-										FormBorderStyle = FormBorderStyle.SizableToolWindow,
-										StartPosition = FormStartPosition.Manual,
-										Location = PointToScreen(location),
-										Size = new Size(160,100),
-										KeyPreview = true
-									};
-								form.KeyDown += (o,a) =>
-									{
-										if (a.KeyCode == Keys.Enter && (a.Modifiers & Keys.Control) == 0)
-											form.DialogResult = DialogResult.OK;
-									};
-								var tb = new TextBox
-									{
-										Dock = DockStyle.Fill,
-										Multiline = true,
-										AcceptsReturn = false
-									};
-								form.Controls.Add(tb);
-								if (form.ShowDialog(this) != DialogResult.OK || tb.Text.Length == 0) return;
-								m_notes.Add(new Note(tb.Text,PointToGraph(location)));
-								RegenBitmap = true;
-							};
-					}
-					#endregion
-					#region Delete
-					{
-						var dist = 100f;
-						Note nearest = null;
-						foreach (var note in m_notes)
-						{
-							var sep = GraphToPoint(note.m_loc) - (Size)location;
-							var d = (float)Math.Sqrt(sep.X*sep.X + sep.Y*sep.Y);
-							if (d >= dist) continue;
-							dist = d;
-							nearest = note;
-						}
-						if (nearest != null)
-						{
-							var option = lvl1.Add2(new ToolStripMenuItem("Delete '{0}'".Fmt(nearest.m_msg.Summary(12))));
-							option.Click += (s,e) =>
-								{
-									m_notes.Remove(nearest);
-									RegenBitmap = true;
-								};
-						}
-					}
-					#endregion
-
-					note_menu.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
-				#region Export
-				{
-					var export_menu = lvl0.Add2(new ToolStripMenuItem("Export"));
-					export_menu.Click += (s,a) => ExportCSV();
-				}
-				#endregion
-
-				#region Import
-				{
-					var import_menu = lvl0.Add2(new ToolStripMenuItem("Import"));
-					import_menu.Click += (s,a) => ImportCSV(null);
-				}
-				#endregion
-*/
 				context_menu.Items.AddRange(lvl0.ToArray());
 			}
 
-			context_menu.Closed += (s,a) => Refresh();
+			context_menu.Closed += (s,a) => m_eb_refresh.Signal();
 			context_menu.Show(this, location);
 		}
 

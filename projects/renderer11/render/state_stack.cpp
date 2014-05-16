@@ -164,7 +164,7 @@ namespace pr
 				if (!shdr->IsUsedBy(m_ss.m_pending.m_rstep->GetId())) continue;
 				m_ss.m_pending.m_shdrs.push_back(shdr);
 			}
-			
+
 			// Sort them into execution order so the render states get merged in a fixed order
 			std::sort(std::begin(m_ss.m_pending.m_shdrs), std::end(m_ss.m_pending.m_shdrs), [](ShaderPtr lhs,ShaderPtr rhs){ return lhs->m_shdr_type < rhs->m_shdr_type; });
 			PR_ASSERT(PR_DBG_RDR, m_ss.m_pending.m_shdrs.find(EShaderType::VS) != nullptr, "Nugget has no vertex shader");
@@ -178,37 +178,42 @@ namespace pr
 			auto inst_rsb = dle.m_instance->find<RSBlock>(EInstComp::RSBlock);
 			auto inst_bsb = dle.m_instance->find<BSBlock>(EInstComp::BSBlock);
 
+			// Combine states in priority order
+
 			// DS states
-			DSBlock dsb;                          // Combine states in priority order
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				dsb |= s->m_dsb;                  // default states from the shaders
-			dsb |= dle.m_nugget->m_dsb;           // default states from the model nugget
-			if (m_ss.m_pending.m_rstep)           // render step state overrides
+			DSBlock dsb;
+			dsb |= m_ss.m_scene.m_dsb;
+			dsb |= dle.m_nugget->m_dsb;
+			if (m_ss.m_pending.m_rstep)
 				dsb |= m_ss.m_pending.m_rstep->m_dsb;
-			if (inst_dsb)                         // instance specific overrides
+			if (inst_dsb)
 				dsb |= *inst_dsb;
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				dsb |= s->m_dsb;
 			m_ss.m_pending.m_dsb = dsb;
 
 			// RS states
-			RSBlock rsb;                          // Combine states in priority order
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				rsb |= s->m_rsb;                  // default states from the shader
-			rsb |= dle.m_nugget->m_rsb;           // default states from the model nugget
-			if (m_ss.m_pending.m_rstep)           // render step state overrides
+			RSBlock rsb;
+			rsb |= m_ss.m_scene.m_rsb;
+			rsb |= dle.m_nugget->m_rsb;
+			if (m_ss.m_pending.m_rstep)
 				rsb |= m_ss.m_pending.m_rstep->m_rsb;
-			if (inst_rsb)                         // instance specific overrides
+			if (inst_rsb)
 				rsb |= *inst_rsb;
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				rsb |= s->m_rsb;
 			m_ss.m_pending.m_rsb = rsb;
 
 			// BS states
-			BSBlock bsb;                          // Combine states in priority order
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				bsb |= s->m_bsb;                  // default states from the shader
-			bsb |= dle.m_nugget->m_bsb;           // default states from the draw method
-			if (m_ss.m_pending.m_rstep)           // render step state overrides
+			BSBlock bsb;
+			bsb |= m_ss.m_scene.m_bsb;
+			bsb |= dle.m_nugget->m_bsb;
+			if (m_ss.m_pending.m_rstep)
 				bsb |= m_ss.m_pending.m_rstep->m_bsb;
-			if (inst_bsb)                         // instance specific overrides
+			if (inst_bsb)
 				bsb |= *inst_bsb;
+			for (auto& s : m_ss.m_pending.m_shdrs)
+				bsb |= s->m_bsb;
 			m_ss.m_pending.m_bsb = bsb;
 		}
 	}

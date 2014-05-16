@@ -1737,6 +1737,35 @@ VIEW3D_API void __stdcall View3D_RestoreMainRT()
 	}
 }
 
+// Returns true if the depth buffer is enabled
+VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabled()
+{
+	LOCK_GUARD;
+	try
+	{
+		return Rdr().m_scene.m_dsb.Desc().DepthEnable;
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_DepthBufferEnabled failed", ex);
+		return TRUE;
+	}
+}
+
+// Enables or disables the depth buffer
+VIEW3D_API void __stdcall View3D_SetDepthBufferEnabled(BOOL enabled)
+{
+	LOCK_GUARD;
+	try
+	{
+		Rdr().m_scene.m_dsb.Set(EDS::DepthEnable, enabled);
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_SetDepthBufferEnabled failed", ex);
+	}
+}
+
 // Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
 VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DDrawset drawset)
 {

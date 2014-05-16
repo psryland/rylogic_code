@@ -38,11 +38,11 @@ namespace pr.maths
 		/// <summary>Return the position along the spline at 'time'</summary>
 		public v4 Position(float time)
 		{
-			v4 blend;
-			blend.x = (1.0f - time) * (1.0f - time) * (1.0f - time);
-			blend.y = 3.0f * time * (1.0f - time) * (1.0f - time);
-			blend.z = 3.0f * time * time * (1.0f - time);
-			blend.w = time * time * time;
+			var blend = new v4(
+				(1.0f - time) * (1.0f - time) * (1.0f - time),
+				3.0f * time * (1.0f - time) * (1.0f - time),
+				3.0f * time * time * (1.0f - time),
+				time * time * time);
 			return (m * blend).w1;
 		}
 
@@ -53,22 +53,22 @@ namespace pr.maths
 		/// have a constant velocity of (1,0,0) over the full length of the spline.</summary>
 		public v4 Velocity(float time)
 		{
-			v4 dblend; // the derivative of blend
-			dblend.x = 3.0f * (time - 1.0f) * (1.0f - time);
-			dblend.y = 3.0f * (1.0f - time) * (1.0f - 3.0f * time);
-			dblend.z = 3.0f * time * (2.0f - 3.0f * time);
-			dblend.w = 3.0f * time * time;
+			var dblend = new v4( // the derivative of blend
+				3.0f * (time - 1.0f) * (1.0f - time),
+				3.0f * (1.0f - time) * (1.0f - 3.0f * time),
+				3.0f * time * (2.0f - 3.0f * time),
+				3.0f * time * time);
 			return (m * dblend).w0;
 		}
 
 		/// <summary>Return the acceleration along the spline at 'time'</summary>
 		public v4 Acceleration(float time)
 		{
-			v4 ddblend; // the 2nd derivative of blend
-			ddblend.x = 6.0f * (1.0f - time);
-			ddblend.y = 6.0f * (3.0f * time - 2.0f);
-			ddblend.z = 6.0f * (1.0f - 3.0f * time);
-			ddblend.w = 6.0f * time;
+			var ddblend = new v4( // the 2nd derivative of blend
+				6.0f * (1.0f - time),
+				6.0f * (3.0f * time - 2.0f),
+				6.0f * (1.0f - 3.0f * time),
+				6.0f * time);
 			return (m * ddblend).w0;
 		}
 

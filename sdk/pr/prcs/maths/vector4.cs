@@ -11,10 +11,17 @@ using pr.maths;
 namespace pr.maths
 {
 	[Serializable]
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Explicit)]
 	public struct v4
 	{
-		public float x, y, z, w;
+		[FieldOffset( 0)] public float x;
+		[FieldOffset( 4)] public float y;
+		[FieldOffset( 8)] public float z;
+		[FieldOffset(12)] public float w;
+
+		[FieldOffset( 0)] public v2 xy;
+		[FieldOffset( 4)] public v2 yz;
+		[FieldOffset( 8)] public v2 zw;
 
 		// Integer cast accessors
 		public int ix { get { return (int)x; } }
@@ -23,8 +30,9 @@ namespace pr.maths
 		public int iw { get { return (int)w; } }
 
 		// Constructors
-		public v4(float x_, float y_, float z_, float w_)       { x = x_; y = y_; z = z_; w = w_; }
-		public v4(v2 xy, float z_, float w_)                    { x = xy.x; y = xy.y; z = z_; w = w_; }
+		public v4(float x_, float y_, float z_, float w_) :this() { x = x_; y = y_; z = z_; w = w_; }
+		public v4(v2 xy_, float z_, float w_) :this()             { xy = xy_; z = z_; w = w_; }
+		public v4(v2 xy_, v2 zw_) :this()                         { xy = xy_; zw = zw_; }
 
 		public float this[int i]
 		{
@@ -43,7 +51,6 @@ namespace pr.maths
 		public float Length4                                    { get { return (float)Math.Sqrt(Length4Sq); } }
 		public v4 AsPos                                         { get { v4 v = this; v.w = 1.0f; return v; } }
 		public v4 AsDir                                         { get { v4 v = this; v.w = 0.0f; return v; } }
-		public float[] ToArray()                                { return new[]{x, y, z, w}; }
 		public string ToString2()                               { return x + " " + y; }
 		public string ToString2(string format)                  { return x.ToString(format) + " " + y.ToString(format); }
 		public string ToString3()                               { return ToString2() + " " + z; }
@@ -52,26 +59,9 @@ namespace pr.maths
 		public string ToString4(string format)                  { return ToString3(format) + " " + w.ToString(format); }
 		public override string ToString()                       { return ToString4(); }
 
-		// Swizzles
-		public v2 xx { get { return new v2(x, x); } }
-		public v2 xy { get { return new v2(x, y); } }
-		public v2 xz { get { return new v2(x, z); } }
-		public v2 xw { get { return new v2(x, w); } }
-		
-		public v2 yx { get { return new v2(y, x); } }
-		public v2 yy { get { return new v2(y, y); } }
-		public v2 yz { get { return new v2(y, z); } }
-		public v2 yw { get { return new v2(y, w); } }
-		
-		public v2 zx { get { return new v2(z, x); } }
-		public v2 zy { get { return new v2(z, y); } }
-		public v2 zz { get { return new v2(z, z); } }
-		public v2 zw { get { return new v2(z, w); } }
-		
-		public v2 wx { get { return new v2(w, x); } }
-		public v2 wy { get { return new v2(w, y); } }
-		public v2 wz { get { return new v2(w, z); } }
-		public v2 ww { get { return new v2(w, w); } }
+		public float[] ToArray()                                { return new[]{x, y, z, w}; }
+		public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
+		public static implicit operator float[](v4 p)           { return p.ToArray(); }
 
 		public v4 w0 { get { return new v4(x, y, z, 0); } }
 		public v4 w1 { get { return new v4(x, y, z, 1); } }

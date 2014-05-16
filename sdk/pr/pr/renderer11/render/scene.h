@@ -7,6 +7,9 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/lights/light.h"
+#include "pr/renderer11/render/blend_state.h"
+#include "pr/renderer11/render/raster_state.h"
+#include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/util/wrappers.h"
 
@@ -32,6 +35,9 @@ namespace pr
 			RenderStepCont m_render_steps; // The stages of rendering the scene
 			pr::Colour     m_bkgd_colour;  // The background colour for the scene
 			Light          m_global_light; // The global light settings
+			DSBlock        m_dsb;          // Scene-wide states
+			RSBlock        m_rsb;          // Scene-wide states
+			BSBlock        m_bsb;          // Scene-wide states
 
 			Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
 			~Scene();

@@ -88,6 +88,14 @@ namespace pr.util
 			return arr;
 		}
 
+		/// <summary>Helper for allocating a dictionary preloaded with data</summary>
+		public static Dictionary<TKey,TValue> NewDict<TKey,TValue>(int count, Func<int,TKey> key, Func<int,TValue> value)
+		{
+			var dick = new Dictionary<TKey,TValue>();
+			for (int i = 0; i != count; ++i) dick.Add(key(i), value(i));
+			return dick;
+		}
+
 		/// <summary>Returns the number to add to pad 'size' up to 'alignment'</summary>
 		public static int Pad(int size, int alignment)
 		{

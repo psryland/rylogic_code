@@ -296,6 +296,8 @@ extern "C"
 
 	// Miscellaneous
 	VIEW3D_API void                    __stdcall View3D_RestoreMainRT            ();
+	VIEW3D_API BOOL                    __stdcall View3D_DepthBufferEnabled       ();
+	VIEW3D_API void                    __stdcall View3D_SetDepthBufferEnabled    (BOOL enabled);
 	VIEW3D_API void                    __stdcall View3D_CreateDemoScene          (View3DDrawset drawset);
 	VIEW3D_API void                    __stdcall View3D_ShowDemoScript           ();
 	VIEW3D_API BOOL                    __stdcall View3D_FocusPointVisible        (View3DDrawset drawset);

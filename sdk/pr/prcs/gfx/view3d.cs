@@ -576,6 +576,13 @@ namespace pr.gfx
 			set { View3D_SetViewport(value); }
 		}
 
+		/// <summary>Get/Set whether the depth buffer is enabled</summary>
+		public bool DepthBufferEnabled
+		{
+			get { return View3D_DepthBufferEnabled(); }
+			set { View3D_SetDepthBufferEnabled(value); }
+		}
+
 		/// <summary>Standard keyboard shortcuts</summary>
 		public void TranslateKey(object sender, KeyEventArgs e)
 		{
@@ -1472,6 +1479,8 @@ namespace pr.gfx
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            ();
+		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabled       ();
+		[DllImport(Dll)] private static extern void              View3D_SetDepthBufferEnabled    (bool enabled);
 		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           ();
 		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);

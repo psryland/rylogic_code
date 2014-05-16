@@ -73,6 +73,9 @@ namespace pr.container
 		private readonly uint       m_max_levels;    // The maximum depth the tree will grow to
 		private int                 m_count;         // The number of items added to the tree
 
+		
+		public QuadTree(RectangleF rect, uint max_levels = 16) :this(rect.X, rect.Y, rect.Width, rect.Height, max_levels) {}
+		public QuadTree(PointF min, SizeF size, uint max_levels = 16) :this(min.X, min.Y, size.Width, size.Height, max_levels) {}
 		public QuadTree(float minx, float miny, float sizex, float sizey, uint max_levels = 16)
 		{
 			m_nodes      = new List<Node>();
@@ -89,7 +92,7 @@ namespace pr.container
 		public List<Node> Nodes { get { return m_nodes; } }
 
 		/// <summary>The min x,y corner of the region covered by the quad tree</summary>
-		public PointF MinCorner { get { return new PointF(m_minx, m_miny); } }
+		public PointF Location { get { return new PointF(m_minx, m_miny); } }
 
 		/// <summary>The x,y size of the region covered by the quad tree</summary>
 		public SizeF Size { get { return new SizeF(m_sizex, m_sizey); } }
@@ -373,7 +376,11 @@ namespace pr.container
 
 			return true;
 		}
-
+		public bool Traverse(float[] point, float radius, Func<TItem,bool> pred, Node root = null)
+		{
+			return Traverse(point, radius, (i,n) => pred(i), root);
+		}
+		
 		/// <summary>Returns true if 'node' can contain an item could overlay 'point'+'radius' (in region space).</summary>
 		public bool Overlaps(Node node, float[] point, float radius)
 		{

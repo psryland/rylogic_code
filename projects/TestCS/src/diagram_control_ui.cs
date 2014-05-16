@@ -19,6 +19,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tools_load;
 		private ToolStripMenuItem m_menu_tools_clear;
 		private ToolStripMenuItem m_menu_tools_loadmmapdiag;
+		private ToolStripMenuItem m_menu_tools_load_options;
 		private IMessageFilter m_filter;
 
 		static DiagramControlUI()
@@ -57,28 +58,29 @@ namespace TestCS
 			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml);
 			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
 			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.LoadXml("P:\\dump\\mmap_diag.xml");
-			
+			m_menu_tools_load_options.Click += (s,a) => m_diag.Options = XDocument.Load("P:\\dump\\diag_options.xml").Root.Element("options").As<DiagramControl.DiagramOptions>();
+
 			m_filter = new Filter(this);
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
 			FormClosed += (s,a) => Application.RemoveMessageFilter(m_filter);
 
-			const string options_filepath = "P:\\dump\\diag_options.xml";
-			var xml = new XDocument();
-			xml.Add2(new XElement("root")).Add2("options", m_diag.Options, false);
-			xml.Save(options_filepath);
+			//const string options_filepath = ;
+			//var xml = new XDocument();
+			//xml.Add2(new XElement("root")).Add2("options", m_diag.Options, false);
+			//xml.Save(options_filepath);
 
-			var tim = new System.Windows.Forms.Timer{Interval = 10};
-			tim.Tick += (s,a) =>
-				{
-					try
-					{
-						m_diag.Options = XDocument.Load(options_filepath).Root.Element("options").As<DiagramControl.DiagramOptions>();
-						m_diag.ScatterNodes();
-					}
-					catch (Exception)
-					{}
-				};
-			tim.Start();
+			//var tim = new System.Windows.Forms.Timer{Interval = 10};
+			//tim.Tick += (s,a) =>
+			//	{
+			//		try
+			//		{
+			//			m_diag.Options = XDocument.Load(options_filepath).Root.Element("options").As<DiagramControl.DiagramOptions>();
+			//			m_diag.ScatterNodes();
+			//		}
+			//		catch (Exception)
+			//		{}
+			//	};
+			//tim.Start();
 
 		}
 
@@ -137,6 +139,7 @@ namespace TestCS
 			this.m_menu_tools_load = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_loadmmapdiag = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tools_load_options = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.m_diag)).BeginInit();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
@@ -150,6 +153,7 @@ namespace TestCS
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);
 			this.m_diag.Name = "m_diag";
+			this.m_diag.Options = null;
 			this.m_diag.Size = new System.Drawing.Size(552, 566);
 			this.m_diag.TabIndex = 0;
 			// 
@@ -185,7 +189,8 @@ namespace TestCS
             this.m_menu_tools_save,
             this.m_menu_tools_load,
             this.m_menu_tools_clear,
-            this.m_menu_tools_loadmmapdiag});
+            this.m_menu_tools_loadmmapdiag,
+            this.m_menu_tools_load_options});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
@@ -213,6 +218,12 @@ namespace TestCS
 			this.m_menu_tools_loadmmapdiag.Name = "m_menu_tools_loadmmapdiag";
 			this.m_menu_tools_loadmmapdiag.Size = new System.Drawing.Size(166, 22);
 			this.m_menu_tools_loadmmapdiag.Text = "Load mmap_diag";
+			// 
+			// m_menu_tools_load_options
+			// 
+			this.m_menu_tools_load_options.Name = "m_menu_tools_load_options";
+			this.m_menu_tools_load_options.Size = new System.Drawing.Size(166, 22);
+			this.m_menu_tools_load_options.Text = "Load Options";
 			// 
 			// DiagramControlUI
 			// 

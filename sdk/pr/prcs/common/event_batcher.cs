@@ -26,7 +26,7 @@ namespace pr.common
 		/// Used to prevent an endless stream of Signals resulting in Action never being called</summary>
 		public int MaxSignalsBeforeAction { get; set; }
 
-		public EventBatcher() :this(TimeSpan.FromMilliseconds(100)) {}
+		public EventBatcher() :this(TimeSpan.FromMilliseconds(10)) {}
 		public EventBatcher(Action action) :this() { Action += action; }
 		public EventBatcher(Action action, TimeSpan delay) :this(delay) { Action += action; }
 		public EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher) { Action += action; }

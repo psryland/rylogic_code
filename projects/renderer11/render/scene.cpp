@@ -23,6 +23,9 @@ namespace pr
 			,m_render_steps()
 			,m_bkgd_colour()
 			,m_global_light()
+			,m_dsb()
+			,m_rsb()
+			,m_bsb()
 		{
 			SetRenderSteps(std::move(rsteps));
 		}
