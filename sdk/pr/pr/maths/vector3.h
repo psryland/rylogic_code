@@ -38,6 +38,8 @@ namespace pr
 		float const&              operator [](int i) const                 { assert(i < 3); return ToArray()[i]; }
 		float&                    operator [](int i)                       { assert(i < 3); return ToArray()[i]; }
 		v2 vec2(int i0, int i1) const;
+		v4 w0() const;
+		v4 w1() const;
 
 		static v3                       make(float x)                      { v3 vec; return vec.set(x); }
 		static v3                       make(float x, float y, float z)    { v3 vec; return vec.set(x, y, z); }

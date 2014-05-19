@@ -145,9 +145,6 @@
     <ClInclude Include="..\linedrawer\plugin\plugin_manager.h">
       <Filter>plugin</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h">
-      <Filter>lights</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
       <Filter>lua</Filter>
     </ClInclude>
@@ -195,6 +192,12 @@
     </ClInclude>
     <ClInclude Include="..\linedrawer\resources\linedrawer.res.h">
       <Filter>resources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light_dlg.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera_dlg.h">
+      <Filter>camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

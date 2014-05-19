@@ -63,7 +63,11 @@ namespace pr
 			}
 			virtual ~MainGUI()
 			{
-				PR_ASSERT(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
+				// This should only happen during an unhandled exception
+				PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
+				if (IsWindow())
+					DestroyWindow();
+				
 				pr::app::Module().RemoveMessageLoop();
 			}
 

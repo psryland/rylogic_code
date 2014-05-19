@@ -52,90 +52,93 @@ try:
 	if not os.path.exists(outdir): os.makedirs(outdir)
 	if trace: print("Output directory: " + outdir)
 
-	# Scan the file looking for symbols to indicate which shaders to build
 	keys = [
-		["vs", r"^#if PR_RDR_SHADER_VS$", "/Tvs_4_0"],
-		["ps", r"^#if PR_RDR_SHADER_PS$", "/Tps_4_0"],
-		["gs", r"^#if PR_RDR_SHADER_GS$", "/Tgs_4_0"],
+		["vs", "/Tvs_4_0", r"^#ifdef PR_RDR_VSHADER_(?P<name>.*)$"],
+		["ps", "/Tps_4_0", r"^#ifdef PR_RDR_PSHADER_(?P<name>.*)$"],
+		["gs", "/Tgs_4_0", r"^#ifdef PR_RDR_GSHADER_(?P<name>.*)$"],
 		]
-	for shdr,key,profile in keys:
-		if Tools.Extract(fullpath,key):
-			if trace: print("Building shader: " + shdr)
+
+	# Scan the file looking for VS, then GS, then PS shaders
+	for shdr,profile,patn in keys:
+		
+		# For each matching instance, build the shader
+		shaders = Tools.ExtractMany(fullpath,patn)
+		for m in shaders:
+
+			shdr_name = m.group("name") + "_" + shdr
+			if trace: print("Building: " + shdr_name)
 
 			# Create temporary filepaths so that we only overwrite
 			# existing files if they've actually changed
-			tmp_h_filepath   = tempfile.gettempdir() + "\\" + fname + "." + shdr + ".h.tmp"
-			tmp_cso_filepath = tempfile.gettempdir() + "\\" + fname + "." + shdr + ".cso.tmp"
-			h_filepath       = outdir + "\\" + fname + "." + shdr + ".h"
-			cso_filepath     = outdir + "\\" + fname + "." + shdr + ".cso"
-			pp_filepath      = outdir + "\\" + fname + "." + shdr + ".pp"
+			filepath_h   = tempfile.gettempdir() + "\\" + shdr_name + ".h"
+			filepath_cso = tempfile.gettempdir() + "\\" + shdr_name + ".cso"
 
 			# Delete any potentially left over temporary output
-			if os.path.exists(tmp_h_filepath):   os.remove(tmp_h_filepath)
-			if os.path.exists(tmp_cso_filepath): os.remove(tmp_cso_filepath)
-			if os.path.exists(pp_filepath):      os.remove(pp_filepath)
+			if os.path.exists(filepath_h):   os.remove(filepath_h)
+			if os.path.exists(filepath_cso): os.remove(filepath_cso)
 
 			# Setup the command line for fxc
 			# Choose the output files to generate
-			output = ["/Fh" + tmp_h_filepath]
-			if obj: output += ["/Fo" + tmp_cso_filepath]
+			output = ["/Fh" + filepath_h]
+			if obj: output += ["/Fo" + filepath_cso]
 			if trace: print("Output: " + str(output))
 
-			# Set the variable name to the name of the file
-			varname = ["/Vn" + fname + "_" + shdr]
+			# Set the variable name to the name of the shader
+			varname = ["/Vn" + shdr_name]
 			if trace: print("Variable Name: " + str(varname))
 
 			# Set include paths
 			includes = []#"/I" + srcdir + "\\.."]
 
 			# Set defines
-			defines = ["/DSHADER_BUILD"]
-			if   shdr == "vs": defines = defines + ["/DPR_RDR_SHADER_VS=1"]
-			elif shdr == "ps": defines = defines + ["/DPR_RDR_SHADER_PS=1"]
-			elif shdr == "gs": defines = defines + ["/DPR_RDR_SHADER_GS=1"]
+			selected = "PR_RDR_"+shdr.upper()+"HADER_"+shdr_name[:-3]
+			defines = ["/DSHADER_BUILD", "/D"+selected]
 
 			# Set other command line options
 			options = ["/nologo", "/Gis", "/Ges", "/WX", "/Zpc"]
 			
 			# Debug build options
-			#if dbg:
-			options += ["/O3"] #["/Od", "/Zi", "/Gfp"]
+			if dbg:
+				options += ["/Od", "/Zi", "/Gfp"]
 
-			# Build the shader using fxc
-			if trace: print("Running fxc.exe...")
-			success,output = Tools.Run([UserVars.fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
-			if not success:
-				print("Compiling: " + fullpath)
-				print(output)
-				print("failed")
-			elif trace:
-				print(output)
-				print("success")
+			if not pp:
+				# Build the shader using fxc
+				if trace: print("Running fxc.exe...")
+				success,output = Tools.Run([UserVars.fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
+				if not success:
+					print("Compiling: " + fullpath)
+					print(output)
+					print("failed")
+				elif trace:
+					print(output)
+					print("success")
 
-			# Compare the produced files with any existing ones,
-			# don't replace the files if they are identical
-			# This prevents VS rebuilding all the time.
-			if pp:
-				print("Preprocessed only")
-			elif Tools.DiffContent(tmp_h_filepath, h_filepath):
-				Tools.Copy(tmp_h_filepath, h_filepath)
-				if os.path.exists(tmp_cso_filepath):
-					Tools.Copy(tmp_cso_filepath, cso_filepath)
-			elif trace:
-				print("Content unchanged")
+				out_filepath_h   = outdir + "\\" + shdr_name + ".h"
+				out_filepath_cso = outdir + "\\" + shdr_name + ".cso"
 
-			# Delete temporary output if still there
-			if os.path.exists(tmp_h_filepath):   os.remove(tmp_h_filepath)
-			if os.path.exists(tmp_cso_filepath): os.remove(tmp_cso_filepath)
+				# Compare the produced files with any existing ones, don't replace the files if they are identical.
+				# This prevents VS rebuilding all the time.
+				if Tools.DiffContent(filepath_h, out_filepath_h):
+					Tools.Copy(filepath_h, out_filepath_h)
+					if os.path.exists(filepath_cso):
+						Tools.Copy(filepath_cso, out_filepath_cso)
+				elif trace:
+					print("Content unchanged")
 
-			# Generate preprocessed output
-			if pp:
+				# Delete temporary output
+				if os.path.exists(filepath_h):   os.remove(filepath_h)
+				if os.path.exists(filepath_cso): os.remove(filepath_cso)
+
+			else: # Generate preprocessed output
+
+				# Delete existing pp output
+				filepath_pp = outdir + "\\" + shdr_name + ".pp"
+				if os.path.exists(filepath_pp):  os.remove(filepath_pp)
+
+				# Preprocess and clean
 				Tools.Exec([UserVars.fxc, fullpath, "/P"+pp_filepath] + includes + defines + options)
 				Tools.Exec([UserVars.root + r"\bin\textformatter.exe", "-f", pp_filepath, "-newlines", "0", "1"])
 				Tools.Exec([UserVars.textedit, pp_filepath])
-
-#	if trace:
-#		Tools.OnSuccess()
 
 except Exception as ex:
 	Tools.OnException(ex)

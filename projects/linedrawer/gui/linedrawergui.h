@@ -90,6 +90,7 @@ namespace ldr
 			COMMAND_ID_HANDLER(ID_NAV_CLEARSAVEDVIEWS           ,OnSaveView)
 			COMMAND_ID_HANDLER(ID_NAV_SAVEVIEW                  ,OnSaveView)
 			COMMAND_ID_HANDLER(ID_NAV_SETFOCUSPOSITION          ,OnSetFocusPosition)
+			COMMAND_ID_HANDLER(ID_NAV_SETCAMERAPOSITION         ,OnSetCameraPosition)
 			COMMAND_ID_HANDLER(ID_NAV_ORBIT                     ,OnOrbit)
 			COMMAND_ID_HANDLER(ID_DATA_OBJECTMANAGER            ,OnShowObjectManagerUI)
 			COMMAND_ID_HANDLER(ID_DATA_EDITSOURCEFILES          ,OnEditSourceFiles)
@@ -146,6 +147,7 @@ namespace ldr
 		LRESULT OnResetView             (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnViewAxis              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnSetFocusPosition      (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
+		LRESULT OnSetCameraPosition     (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnNavAlign              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnSaveView              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnOrbit                 (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);

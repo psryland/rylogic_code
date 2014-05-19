@@ -110,17 +110,28 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 		raise
 
 # Extract data from a text file using a regex
-# Capture groups are defined like: (?P<name>.*)
-# and accessed like: m.group("name")
-# Returns the regex match object or null
+# Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
+# Returns the regex match object for the first match or null
 def Extract(filepath, regex):
 	pat = re.compile(regex)
 	with open(filepath) as f:
 		for line in f:
 			m = pat.search(line)
 			if m: return m
-		return None
+	return None
 
+# Extract data from a text file using a regex
+# Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
+# Returns a collection of matches from within the file
+def ExtractMany(filepath, regex):
+	pat = re.compile(regex)
+	matches = []
+	with open(filepath) as f:
+		for line in f:
+			m = pat.search(line)
+			if m: matches = matches + [m]
+	return matches
+		
 # Modify a file using regex
 # Capture groups are defined like: (?P<name>.*)
 # and accessed like: m.group("name")

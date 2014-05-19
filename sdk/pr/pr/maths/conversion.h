@@ -23,20 +23,59 @@ namespace pr
 	template <typename TFrom> struct Convert<double,TFrom>
 	{
 		static double To(char const* s) { char* end; return strtod(s, &end); }
+		static double To(std::string s) { return To(s.c_str()); }
 	};
 
 	// To<float>
 	template <typename TFrom> struct Convert<float,TFrom>
 	{
 		static float To(char const* s) { return static_cast<float>(pr::To<double>(s)); }
+		static float To(std::string s) { return To(s.c_str()); }
 	};
 
 	// To<v2>
 	template <typename TFrom> struct Convert<v2,TFrom>
 	{
+		static v2 To(char const* s)
+		{
+			char* end;
+			float x = strtod(s, &end);
+			float y = strtod(end, &end);
+			return pr::v2::make(x,y);
+		}
+		static v2 To(std::string s) { return To(s.c_str()); }
 		#ifdef _WINDEF_
 		static v2 To(POINT const& x) { return pr::v2::make(float(x.x), float(x.y)); }
 		#endif
+	};
+
+	// To<v3>
+	template <typename TFrom> struct Convert<v3,TFrom>
+	{
+		static v3 To(char const* s)
+		{
+			char* end;
+			float x = (float)strtod(s, &end);
+			float y = (float)strtod(end, &end);
+			float z = (float)strtod(end, &end);
+			return pr::v3::make(x,y,z);
+		}
+		static v3 To(std::string s) { return To(s.c_str()); }
+	};
+
+	// To<v4>
+	template <typename TFrom> struct Convert<v4,TFrom>
+	{
+		static v4 To(char const* s)
+		{
+			char* end;
+			float x = strtod(s, &end);
+			float y = strtod(end, &end);
+			float z = strtod(end, &end);
+			float w = strtod(end, &end);
+			return pr::v4::make(x,y,z,w);
+		}
+		static v4 To(std::string s) { return To(s.c_str()); }
 	};
 
 	// From<v3>
@@ -121,6 +160,36 @@ namespace pr
 
 	#endif
 
+	// Convert an integer to a string of binary
+	template <typename T> inline std::string ToBinary(T n)
+	{
+		int const bits = sizeof(T) * 8;
+		std::string str; str.reserve(bits);
+		for (int i = bits; i-- != 0;)
+			str.push_back((n & Bit64(i)) ? '1' : '0');
+		return str;
+	}
+
+	// Write a vector to a stream
+	template <typename Stream> inline Stream& operator << (Stream& out, pr::v2 const& vec)
+	{
+		return out << vec.x << " " << vec.y;
+	}
+	template <typename Stream> inline Stream& operator << (Stream& out, pr::v3 const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z;
+	}
+	template <typename Stream> inline Stream& operator << (Stream& out, pr::v4 const& vec)
+	{
+		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
+	}
+}
+
+#endif
+
+
+
+
 	//template <typename ToType> inline ToType To(v3 const& v)   { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(v4 const& v)   { static_assert(false, "No conversion from to this type available"); }
 	//template <typename ToType> inline ToType To(m3x4 const& m) { static_assert(false, "No conversion from to this type available"); }
@@ -201,29 +270,3 @@ namespace pr
 //	template <>                inline RECT      To<RECT> (Gdiplus::Rect const& rect) { RECT r = {rect.X, rect.Y, rect.X + rect.Width, rect.Y + rect.Height}; return r; }
 //}
 
-	// Convert an integer to a string of binary
-	template <typename T> inline std::string ToBinary(T n)
-	{
-		int const bits = sizeof(T) * 8;
-		std::string str; str.reserve(bits);
-		for (int i = bits; i-- != 0;)
-			str.push_back((n & Bit64(i)) ? '1' : '0');
-		return str;
-	}
-
-	// Write a vector to a stream
-	template <typename Stream> inline Stream& operator << (Stream& out, pr::v2 const& vec)
-	{
-		return out << vec.x << " " << vec.y;
-	}
-	template <typename Stream> inline Stream& operator << (Stream& out, pr::v3 const& vec)
-	{
-		return out << vec.x << " " << vec.y << " " << vec.z;
-	}
-	template <typename Stream> inline Stream& operator << (Stream& out, pr::v4 const& vec)
-	{
-		return out << vec.x << " " << vec.y << " " << vec.z << " " << vec.w;
-	}
-}
-
-#endif

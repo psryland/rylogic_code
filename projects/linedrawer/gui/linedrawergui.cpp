@@ -437,6 +437,17 @@ namespace ldr
 		return S_OK;
 	}
 
+	// Set the position of the camera
+	LRESULT MainGUI::OnSetCameraPosition(WORD, WORD, HWND, BOOL&)
+	{
+		pr::camera::PositionDlg dlg;
+		dlg.m_cam = m_main->m_cam;
+		if (dlg.DoModal(m_hWnd) != IDOK) return S_OK;
+		m_main->m_cam = dlg.m_cam;
+		m_main->RenderNeeded();
+		return S_OK;
+	}
+
 	// Align the camera to the selected axis
 	LRESULT MainGUI::OnNavAlign(WORD, WORD wID, HWND, BOOL&)
 	{

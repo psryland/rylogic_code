@@ -59,16 +59,17 @@
 #define ID_NAV_VIEW_AXIS_NEGZ                   40109
 #define ID_NAV_VIEW_AXIS_POSXYZ                 40110
 #define ID_NAV_SETFOCUSPOSITION                 40111
-#define ID_NAV_ALIGN_X                          40112
-#define ID_NAV_ALIGN_Y                          40113
-#define ID_NAV_ALIGN_Z                          40114
-#define ID_NAV_ALIGN_CURRENT                    40115
-#define ID_NAV_ALIGN_NONE                       40116
-#define ID_NAV_CLEARSAVEDVIEWS                  40117
-#define ID_NAV_SAVEVIEW                         40118
-#define ID_NAV_SAVEDVIEWS                       40119
-#define ID_NAV_SAVEDVIEWS_LAST                  40129
-#define ID_NAV_ORBIT                            40130
+#define ID_NAV_SETCAMERAPOSITION                40112
+#define ID_NAV_ALIGN_X                          40113
+#define ID_NAV_ALIGN_Y                          40114
+#define ID_NAV_ALIGN_Z                          40115
+#define ID_NAV_ALIGN_CURRENT                    40116
+#define ID_NAV_ALIGN_NONE                       40117
+#define ID_NAV_CLEARSAVEDVIEWS                  40118
+#define ID_NAV_SAVEVIEW                         40119
+#define ID_NAV_SAVEDVIEWS                       40120
+#define ID_NAV_SAVEDVIEWS_LAST                  40130
+#define ID_NAV_ORBIT                            40131
 
 #define ID_DATA_OBJECTMANAGER                   40201
 #define ID_DATA_EDITSOURCEFILES                 40202

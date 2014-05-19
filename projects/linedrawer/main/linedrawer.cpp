@@ -169,7 +169,9 @@ namespace ldr
 				if (m_scene.FindRStep<ShadowMap>() == nullptr)
 					m_scene.m_render_steps.insert(begin(m_scene.m_render_steps), std::make_shared<ShadowMap>(m_scene, m_scene.m_global_light, pr::iv2::make(1024,1024)));
 
-				pr::ldr::AddString(m_rdr, "*Sphere s FF00FF00 { 1 }", m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+				pr::ldr::AddString(m_rdr, "*Rect r FF00FF00 {3 1 *Solid}", m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+				m_nav.m_camera.LookAt(pr::v4Origin, pr::v4::make(0,0,2,1), pr::v4YAxis);
+
 				//auto thick_line = m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS);
 
 				//NuggetProps mat;

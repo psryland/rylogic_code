@@ -65,6 +65,7 @@ IDR_MENU_MAIN MENU
             MENUITEM "&Axis -X,-Y,-Z", ID_NAV_VIEW_AXIS_POSXYZ
         }
         MENUITEM "Set &Focus Position...", ID_NAV_SETFOCUSPOSITION
+        MENUITEM "Set Camera &Position...", ID_NAV_SETCAMERAPOSITION
         MENUITEM SEPARATOR
         POPUP "&Align"
         {

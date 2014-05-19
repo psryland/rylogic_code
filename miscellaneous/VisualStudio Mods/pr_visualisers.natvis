@@ -2,28 +2,6 @@
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-	<!-- Chain -->
-	<Type Name="pr::chain::head&lt;*,*&gt;">
-		<DisplayString>{m_next->m_obj}</DisplayString>
-	</Type>
-	<Type Name="pr::chain::link&lt;*,*&gt;">
-		<DisplayString>{m_obj}</DisplayString>
-	</Type>
-	
-	<!-- RefPtr -->
-	<Type Name="pr::RefPtr&lt;*&gt;">
-		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
-		<Expand>
-			<ExpandedItem>m_ptr</ExpandedItem> 
-		</Expand>
-	</Type>
-	<Type Name="D3DPtr&lt;*&gt;">
-		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
-		<Expand>
-			<ExpandedItem>m_ptr</ExpandedItem> 
-		</Expand>
-	</Type>
-
 	<!-- pr::Array -->
 	<Type Name="pr::Array&lt;*,*,*,*&gt;">
 		<AlternativeType Name="pr::Array&lt;*,*,*&gt;" />
@@ -40,14 +18,12 @@
 		</Expand>
 	</Type>
 
-	<!-- pr::string -->
-	<Type Name="pr::string&lt;char,*,*,*&gt;">
-		<DisplayString>[{m_count-1}] {m_ptr,s}</DisplayString>
-		<StringView>m_ptr,su</StringView>
+	<!-- Chain -->
+	<Type Name="pr::chain::head&lt;*,*&gt;">
+		<DisplayString>{m_next->m_obj}</DisplayString>
 	</Type>
-	<Type Name="pr::string&lt;wchar_t,*,*,*&gt;">
-		<DisplayString>[{m_count-1}] {m_ptr,su}</DisplayString>
-		<StringView>m_ptr,su</StringView>
+	<Type Name="pr::chain::link&lt;*,*&gt;">
+		<DisplayString>{m_obj}</DisplayString>
 	</Type>
 
 	<!-- Maths -->
@@ -106,6 +82,30 @@
 		<DisplayString>{m_value}</DisplayString>
 	</Type>
 
+	<!-- RefPtr -->
+	<Type Name="pr::RefPtr&lt;*&gt;">
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+	<Type Name="D3DPtr&lt;*&gt;">
+		<DisplayString>[{m_ptr}] {*m_ptr}</DisplayString>
+		<Expand>
+			<ExpandedItem>m_ptr</ExpandedItem> 
+		</Expand>
+	</Type>
+
+	<!-- pr::string -->
+	<Type Name="pr::string&lt;char,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,s}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+	<Type Name="pr::string&lt;wchar_t,*,*,*&gt;">
+		<DisplayString>[{m_count-1}] {m_ptr,su}</DisplayString>
+		<StringView>m_ptr,su</StringView>
+	</Type>
+
 	<!-- Geometry -->
 	<Type Name="pr::Colour32">
 		<DisplayString>{m_aarrggbb,x}</DisplayString>
@@ -156,4 +156,5 @@
 	<Type Name="pr::quad_tree::Coord">
 		<DisplayString>Lvl:{m_level} {m_x}x{m_y}</DisplayString>
 	</Type>
+
 </AutoVisualizer>

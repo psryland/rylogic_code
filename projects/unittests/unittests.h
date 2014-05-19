@@ -11,6 +11,7 @@
 #include "pr/app/skybox.h"
 #include "pr/camera/camctrl_dinput_wasd.h"
 #include "pr/camera/camera.h"
+#include "pr/camera/camera_dlg.h"
 #include "pr/common/alloca.h"
 #include "pr/common/allocator.h"
 #include "pr/common/archiver.h"

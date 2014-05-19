@@ -15,6 +15,9 @@ namespace pr
 	{
 		return pr::v2::make(ToArray()[i0], ToArray()[i1]);
 	}
+	inline v4 v3::w0() const { return v4::make(*this, 0); }
+	inline v4 v3::w1() const { return v4::make(*this, 1); }
+
 	inline v3& Zero(v3& v)
 	{
 		return v = pr::v3Zero;

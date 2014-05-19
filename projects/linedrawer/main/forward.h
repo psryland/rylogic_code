@@ -31,6 +31,7 @@
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
+#include "pr/camera/camera_dlg.h"
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/gui/menu_helper.h"
 #include "pr/gui/recent_files.h"

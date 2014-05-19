@@ -219,9 +219,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\app\main.h" />
     <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h" />
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\camera\camera_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light_dlg.h" />
     <ClInclude Include="..\linedrawer\gui\linedrawergui.h" />
     <ClInclude Include="..\linedrawer\main\file_sources.h" />
     <ClInclude Include="..\linedrawer\main\forward.h" />
@@ -248,7 +250,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_plugin_interface.h" />
     <ClInclude Include="..\linedrawer\plugin\plugin.h" />
     <ClInclude Include="..\linedrawer\plugin\plugin_manager.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer\lighting\lighting_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h" />
   </ItemGroup>

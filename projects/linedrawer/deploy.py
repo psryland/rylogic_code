@@ -20,12 +20,12 @@ try:
 		"linedrawer",
 		]
 	configs = [
+		"release",
 		"debug",
-		"release"
 		]
 	platforms = [
+		"x64",
 		"x86",
-		"x64"
 		]
 
 	procs = []
