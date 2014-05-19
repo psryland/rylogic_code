@@ -6,9 +6,9 @@
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/render/drawlist_element.h"
-#include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/util/event_types.h"
+#include "renderer11/util/forward_private.h"
 
 namespace pr
 {
@@ -67,6 +67,8 @@ namespace pr
 
 			// Shadow map shaders
 			CreateShader<ShadowMapVS>();
+			CreateShader<ShadowMapFaceGS>();
+			CreateShader<ShadowMapLineGS>();
 			CreateShader<ShadowMapPS>();
 
 			// Other shaders
@@ -125,6 +127,10 @@ namespace pr
 				if (desc == nullptr)
 					throw pr::Exception<HRESULT>(E_FAIL, "Vertex shader description not provided");
 
+				// Ensure the associated input layout exists
+				GetIP(id, desc);
+				
+				// Attach the input layout as private data to the vertex shader
 				D3DPtr<ID3D11VertexShader> vs;
 				pr::Throw(m_device->CreateVertexShader(desc->m_data, desc->m_size, 0, &vs.m_ptr));
 				return vs;

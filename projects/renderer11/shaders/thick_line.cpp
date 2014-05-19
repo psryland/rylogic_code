@@ -20,15 +20,15 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include PR_RDR_SHADER_COMPILED_DIR(thick_linelist.gs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(thick_linestrip.gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(thick_linelist_gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(thick_linestrip_gs.h)
 
 		ThickLineListShaderGS::ThickLineListShaderGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
 			:base(mgr, id, name, shdr)
 			,m_cbuf_model(m_mgr->GetCBuf<screenspace::CbufThickLine>("CbufThickLine"))
 			,m_default_linewidth(2.0f)
 		{
-			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "thick_linelist.gs.cso"));
+			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "thick_linelist_gs.cso"));
 		}
 
 		// Setup the shader ready to be used on 'dle'
@@ -51,13 +51,9 @@ namespace pr
 		template <> void ShaderManager::CreateShader<ThickLineListShaderGS>()
 		{
 			// Create the dx shaders
-			GShaderDesc gsdesc(thick_linelist_gs);
-			auto dx_gs = GetGS(EStockShader::ThickLineListGS, &gsdesc);
-
-			// Create the shader instance
-			auto shdr = CreateShader<ThickLineListShaderGS>(EStockShader::ThickLineListGS, dx_gs, "thick_linelist_gs");
-			shdr->UsedBy(ERenderStep::ForwardRender);
-			shdr->UsedBy(ERenderStep::GBuffer);
+			GShaderDesc desc(thick_linelist_gs);
+			auto dx = GetGS(EStockShader::ThickLineListGS, &desc);
+			CreateShader<ThickLineListShaderGS>(EStockShader::ThickLineListGS, dx, "thick_linelist_gs");
 		}
 	}
 }

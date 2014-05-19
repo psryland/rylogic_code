@@ -8,9 +8,10 @@
 
 #include <hash_map>
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
-#include "pr/renderer11/shaders/shader.h"
+#include "pr/renderer11/util/stock_resources.h"
 
 namespace pr
 {

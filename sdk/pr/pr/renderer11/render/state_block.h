@@ -18,8 +18,6 @@ namespace pr
 		template <typename TStateDesc, typename TFieldEnum, size_t N>
 		struct StateBlock :TStateDesc
 		{
-			typedef StateBlock<TStateDesc, TFieldEnum, N> base;
-
 			// 'TStateDesc' is a dx structure containing sets of render states such as 'D3D11_DEPTH_STENCIL_DESC'
 			// 'm_mask' is a bit field indicating which members in 'TStateDesc' have had a value set. The reason
 			// it is an array is to handle internal arrays in 'TStateDesc'.

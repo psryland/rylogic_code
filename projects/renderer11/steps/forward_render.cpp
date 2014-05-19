@@ -21,6 +21,8 @@ namespace pr
 			,m_cbuf_frame(m_shdr_mgr->GetCBuf<fwd::CBufFrame>("Fwd::CBufFrame"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<fwd::CBufModel>("Fwd::CBufModel"))
 			,m_clear_bb(clear_bb)
+			,m_vs(m_shdr_mgr->FindShader(EStockShader::FwdShaderVS))
+			,m_ps(m_shdr_mgr->FindShader(EStockShader::FwdShaderPS))
 		{
 			m_rsb = RSBlock::SolidCullBack();
 
@@ -41,8 +43,8 @@ namespace pr
 			{
 				// Ensure the nugget contains forward shaders vs/ps
 				// Note, the nugget may contain other shaders that are used by this render step as well
-				nug.m_sset.get(EStockShader::FwdShaderVS, m_shdr_mgr)->UsedBy(Id);
-				nug.m_sset.get(EStockShader::FwdShaderPS, m_shdr_mgr)->UsedBy(Id);
+				nug.m_smap[Id].m_vs = m_vs;
+				nug.m_smap[Id].m_ps = m_ps;
 
 				// Add a dle for this nugget
 				DrawListElement dle;

@@ -18,8 +18,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include PR_RDR_SHADER_COMPILED_DIR(dslighting.vs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(dslighting.ps.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(dslighting_vs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(dslighting_ps.h)
 
 		// Deferred lighting vertex shader
 		struct DSLightingShaderVS :Shader<ID3D11VertexShader, DSLightingShaderVS>
@@ -28,7 +28,7 @@ namespace pr
 			DSLightingShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting.vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting_vs.cso"));
 			}
 		};
 
@@ -47,7 +47,7 @@ namespace pr
 				pr::Throw(mgr->m_device->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler, "dslighting point sampler"));
 
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting.ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting_ps.cso"));
 			}
 
 			// Setup the shader ready to be used on 'dle'
@@ -79,25 +79,15 @@ namespace pr
 		// Create this shader
 		template <> void ShaderManager::CreateShader<DSLightingShaderVS>()
 		{
-			// Create the dx shaders
-			VShaderDesc vsdesc(dslighting_vs, Vert());
-			auto dx_ip = GetIP(EStockShader::DSLightingVS, &vsdesc);
-			auto dx_vs = GetVS(EStockShader::DSLightingVS, &vsdesc);
-			
-			// Create the shader instances
-			auto shdr = CreateShader<DSLightingShaderVS>(EStockShader::DSLightingVS, dx_vs, "dslighting_vs");
-			shdr->m_iplayout = dx_ip;
-			shdr->UsedBy(ERenderStep::DSLighting);
+			VShaderDesc desc(dslighting_vs, Vert());
+			auto dx = GetVS(EStockShader::DSLightingVS, &desc);
+			CreateShader<DSLightingShaderVS>(EStockShader::DSLightingVS, dx, "dslighting_vs");
 		}
 		template <> void ShaderManager::CreateShader<DSLightingShaderPS>()
 		{
-			// Create the dx shaders
-			PShaderDesc psdesc(dslighting_ps);
-			auto dx_ps = GetPS(EStockShader::DSLightingPS, &psdesc);
-
-			// Create the shader instances
-			auto shdr = CreateShader<DSLightingShaderPS>(EStockShader::DSLightingPS, dx_ps, "dslighting_ps");
-			shdr->UsedBy(ERenderStep::DSLighting);
+			PShaderDesc desc(dslighting_ps);
+			auto dx = GetPS(EStockShader::DSLightingPS, &desc);
+			CreateShader<DSLightingShaderPS>(EStockShader::DSLightingPS, dx, "dslighting_ps");
 		}
 	}
 }

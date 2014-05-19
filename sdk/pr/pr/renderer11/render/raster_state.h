@@ -30,8 +30,10 @@ namespace pr
 
 		struct RSBlock :private StateBlock<RasterStateDesc, ERS, 1>
 		{
-			RSBlock() {}
-			RSBlock(D3D11_FILL_MODE fill, D3D11_CULL_MODE cull)
+			typedef StateBlock<RasterStateDesc, ERS, 1> base;
+			
+			RSBlock() :base() {}
+			RSBlock(D3D11_FILL_MODE fill, D3D11_CULL_MODE cull) :base()
 			{
 				Set(ERS::FillMode, fill);
 				Set(ERS::CullMode, cull);

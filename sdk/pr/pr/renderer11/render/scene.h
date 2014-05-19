@@ -10,6 +10,7 @@
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/util/wrappers.h"
 

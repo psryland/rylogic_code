@@ -6,40 +6,54 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/shaders/shader.h"
+#include "pr/renderer11/util/stock_resources.h"
 
 namespace pr
 {
 	namespace rdr
 	{
 		// A collection of shader instances
-		struct ShaderSet :private pr::Array<ShaderPtr, 8, true>
+		struct ShaderSet
 		{
-			typedef pr::Array<ShaderPtr, 8, true> Cont;
+			ShaderPtr m_vs;
+			ShaderPtr m_gs;
+			ShaderPtr m_ps;
 
-			// Allow shaders to be added manually
-			using Cont::push_back;
-			using Cont::clear;
-
-			// Iterator access
-			using Cont::begin;
-			using Cont::end;
-
-			// Get or add a shader with id 'shdr_id'
-			ShaderPtr get(RdrId shdr_id, ShaderManager* mgr);
-			ShaderPtr get(RdrId shdr_id) const;
-
-			// Return a shader by shader type
-			ShaderPtr get(EShaderType type) const;
-			ShaderPtr find(EShaderType type) const;
-			
-			// Return a dx shader pointer for the given type
-			template <EShaderType::Enum_ ST> D3DPtr<typename DxShaderType<ST>::type> find_dx() const
-			{
-				auto shdr = find(ST).m_ptr;
-				return shdr != nullptr ? shdr->m_shdr : nullptr;
-			}
-
-			bool operator != (ShaderSet const& rhs) const { return !(static_cast<Cont const&>(*this) == static_cast<Cont const&>(rhs)); }
+			ShaderSet() :m_vs() ,m_gs() ,m_ps() {}
+			std::initializer_list<ShaderPtr> Enumerate() const { return std::initializer_list<ShaderPtr>(&m_vs, &m_ps + 1); }
+			D3DPtr<ID3D11VertexShader>   VS() const { return m_vs ? m_vs->m_shdr : nullptr; }
+			D3DPtr<ID3D11GeometryShader> GS() const { return m_gs ? m_gs->m_shdr : nullptr; }
+			D3DPtr<ID3D11PixelShader>    PS() const { return m_ps ? m_ps->m_shdr : nullptr; }
 		};
+
+		// A mapping from render step to shader set
+		struct ShaderMap
+		{
+			// A shader set per render step
+			ShaderSet m_rstep[ERenderStep::NumberOf];
+
+			ShaderMap() :m_rstep() {}
+
+			// Access to the shaders for a given render step
+			ShaderSet const& operator [](ERenderStep rstep) const { assert(rstep >= 0 && rstep < ERenderStep::NumberOf); return m_rstep[rstep]; }
+			ShaderSet&       operator [](ERenderStep rstep)       { assert(rstep >= 0 && rstep < ERenderStep::NumberOf); return m_rstep[rstep]; }
+		};
+
+		inline bool operator == (ShaderSet const& lhs, ShaderSet const& rhs)
+		{
+			return
+				lhs.m_vs == rhs.m_vs &&
+				lhs.m_ps == rhs.m_ps &&
+				lhs.m_gs == rhs.m_gs;
+		}
+		inline bool operator != (ShaderSet const& lhs, ShaderSet const& rhs) { return !(lhs == rhs); }
+		inline bool operator == (ShaderMap const& lhs, ShaderMap const& rhs)
+		{
+			for (auto rs : ERenderStep::Members())
+				if (lhs[rs] != rhs[rs])
+					return false;
+			return true;
+		}
+		inline bool operator != (ShaderMap const& lhs, ShaderMap const& rhs) { return !(lhs == rhs); }
 	}
 }

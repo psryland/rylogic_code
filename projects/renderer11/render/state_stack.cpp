@@ -24,10 +24,10 @@ namespace pr
 			// provided to the DrawIndexed() call
 
 			// Set the input vertex format
-			auto current_vs = current.m_shdrs.find(EShaderType::VS);
-			auto pending_vs = pending.m_shdrs.find(EShaderType::VS);
+			auto current_vs = current.m_shdrs.m_vs;
+			auto pending_vs = pending.m_shdrs.m_vs;
 			if (current_vs != pending_vs || force)
-				dc->IASetInputLayout(pending_vs ? pending_vs->m_iplayout.m_ptr : nullptr);
+				dc->IASetInputLayout(pending_vs ? pending_vs->IpLayout().m_ptr : nullptr);
 
 			// Bind the v/i buffer to the IA
 			if (current.m_mb != pending.m_mb || force)
@@ -84,20 +84,18 @@ namespace pr
 		{
 			if (current.m_shdrs != pending.m_shdrs || force)
 			{
-				for (auto& s : current.m_shdrs)
-					s->Cleanup(dc);
+				for (auto& s : current.m_shdrs.Enumerate())
+					if (s) s->Cleanup(dc);
 
-				dc->VSSetShader(pending.m_shdrs.find_dx<EShaderType::VS>().m_ptr, nullptr, 0);
-				dc->HSSetShader(pending.m_shdrs.find_dx<EShaderType::HS>().m_ptr, nullptr, 0);
-				dc->DSSetShader(pending.m_shdrs.find_dx<EShaderType::DS>().m_ptr, nullptr, 0);
-				dc->GSSetShader(pending.m_shdrs.find_dx<EShaderType::GS>().m_ptr, nullptr, 0);
-				dc->PSSetShader(pending.m_shdrs.find_dx<EShaderType::PS>().m_ptr, nullptr, 0);
+				dc->VSSetShader(pending.m_shdrs.VS().m_ptr, nullptr, 0);
+				dc->GSSetShader(pending.m_shdrs.GS().m_ptr, nullptr, 0);
+				dc->PSSetShader(pending.m_shdrs.PS().m_ptr, nullptr, 0);
 			}
 
-			// Always call setup on the pending shaders even if they haven't changed
-			// They may have per-nugget setup to do
-			for (auto& s : pending.m_shdrs)
-				s->Setup(dc, pending);
+			// Always call setup on the pending shaders even if they
+			// haven't changed. They may have per-nugget setup to do
+			for (auto& s : pending.m_shdrs.Enumerate())
+				if (s) s->Setup(dc, pending);
 		}
 
 		// Apply the current state to the device
@@ -158,17 +156,7 @@ namespace pr
 			m_ss.m_pending.m_dle = &dle;
 
 			// Get the shaders involved
-			m_ss.m_pending.m_shdrs.clear();
-			for (auto& shdr : dle.m_nugget->m_sset)
-			{
-				if (!shdr->IsUsedBy(m_ss.m_pending.m_rstep->GetId())) continue;
-				m_ss.m_pending.m_shdrs.push_back(shdr);
-			}
-
-			// Sort them into execution order so the render states get merged in a fixed order
-			std::sort(std::begin(m_ss.m_pending.m_shdrs), std::end(m_ss.m_pending.m_shdrs), [](ShaderPtr lhs,ShaderPtr rhs){ return lhs->m_shdr_type < rhs->m_shdr_type; });
-			PR_ASSERT(PR_DBG_RDR, m_ss.m_pending.m_shdrs.find(EShaderType::VS) != nullptr, "Nugget has no vertex shader");
-			PR_ASSERT(PR_DBG_RDR, m_ss.m_pending.m_shdrs.find(EShaderType::PS) != nullptr, "Nugget has no pixel shader");
+			m_ss.m_pending.m_shdrs = dle.m_nugget->m_smap[m_ss.m_pending.m_rstep->GetId()];
 
 			// IA states
 			m_ss.m_pending.m_mb       = dle.m_nugget->m_model_buffer;
@@ -188,8 +176,8 @@ namespace pr
 				dsb |= m_ss.m_pending.m_rstep->m_dsb;
 			if (inst_dsb)
 				dsb |= *inst_dsb;
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				dsb |= s->m_dsb;
+			for (auto& s : m_ss.m_pending.m_shdrs.Enumerate())
+				if (s) dsb |= s->m_dsb;
 			m_ss.m_pending.m_dsb = dsb;
 
 			// RS states
@@ -200,8 +188,8 @@ namespace pr
 				rsb |= m_ss.m_pending.m_rstep->m_rsb;
 			if (inst_rsb)
 				rsb |= *inst_rsb;
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				rsb |= s->m_rsb;
+			for (auto& s : m_ss.m_pending.m_shdrs.Enumerate())
+				if (s) rsb |= s->m_rsb;
 			m_ss.m_pending.m_rsb = rsb;
 
 			// BS states
@@ -212,8 +200,8 @@ namespace pr
 				bsb |= m_ss.m_pending.m_rstep->m_bsb;
 			if (inst_bsb)
 				bsb |= *inst_bsb;
-			for (auto& s : m_ss.m_pending.m_shdrs)
-				bsb |= s->m_bsb;
+			for (auto& s : m_ss.m_pending.m_shdrs.Enumerate())
+				if (s) bsb |= s->m_bsb;
 			m_ss.m_pending.m_bsb = bsb;
 		}
 	}

@@ -7,7 +7,7 @@
 #include "pr/renderer11/render/renderer.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/instances/instance.h"
-#include "renderer11/util/internal_resources.h"
+#include "renderer11/util/forward_private.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr

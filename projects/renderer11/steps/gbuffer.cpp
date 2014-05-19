@@ -25,6 +25,8 @@ namespace pr
 			,m_main_dsv()
 			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<ds::CBufModel>("ds::CBufModel"))
+			,m_vs(m_shdr_mgr->FindShader(EStockShader::GBufferVS))
+			,m_ps(m_shdr_mgr->FindShader(EStockShader::GBufferPS))
 		{
 			InitRT(true);
 
@@ -138,8 +140,8 @@ namespace pr
 			{
 				// Ensure the nugget contains gbuffer shaders vs/ps
 				// Note, the nugget may contain other shaders that are used by this render step as well
-				nug.m_sset.get(EStockShader::GBufferVS, m_shdr_mgr)->UsedBy(Id);
-				nug.m_sset.get(EStockShader::GBufferPS, m_shdr_mgr)->UsedBy(Id);
+				nug.m_smap[Id].m_vs = m_vs;
+				nug.m_smap[Id].m_ps = m_ps;
 
 				DrawListElement dle;
 				dle.m_instance = &inst;

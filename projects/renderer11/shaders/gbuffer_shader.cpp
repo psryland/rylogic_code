@@ -15,8 +15,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer.vs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer.ps.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer_vs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(gbuffer_ps.h)
 
 		// gbuffer creation vertex shader
 		struct GBufferShaderVS :Shader<ID3D11VertexShader, GBufferShaderVS>
@@ -25,7 +25,7 @@ namespace pr
 			GBufferShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer.vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer_vs.cso"));
 			}
 		};
 
@@ -36,32 +36,22 @@ namespace pr
 			GBufferShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer.ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer_ps.cso"));
 			}
 		};
 
 		// Create the gbuffer shaders
 		template <> void ShaderManager::CreateShader<GBufferShaderVS>()
 		{
-			// Create the dxshaders
-			VShaderDesc vsdesc(gbuffer_vs, Vert());
-			auto dx_ip = GetIP(EStockShader::GBufferVS, &vsdesc);
-			auto dx_vs = GetVS(EStockShader::GBufferVS, &vsdesc);
-
-			// Create the shader instances
-			auto shdr = CreateShader<GBufferShaderVS>(EStockShader::GBufferVS, dx_vs, "gbuffer_vs");
-			shdr->m_iplayout = dx_ip;
-			shdr->UsedBy(ERenderStep::GBuffer);
+			VShaderDesc desc(gbuffer_vs, Vert());
+			auto dx = GetVS(EStockShader::GBufferVS, &desc);
+			CreateShader<GBufferShaderVS>(EStockShader::GBufferVS, dx, "gbuffer_vs");
 		}
 		template <> void ShaderManager::CreateShader<GBufferShaderPS>()
 		{
-			// Create the dxshaders
-			PShaderDesc psdesc(gbuffer_ps);
-			auto dx_ps = GetPS(EStockShader::GBufferPS, &psdesc);
-
-			// Create the shader instances
-			auto shdr = CreateShader<GBufferShaderPS>(EStockShader::GBufferPS, dx_ps, "gbuffer_ps");
-			shdr->UsedBy(ERenderStep::GBuffer);
+			PShaderDesc desc(gbuffer_ps);
+			auto dx = GetPS(EStockShader::GBufferPS, &desc);
+			CreateShader<GBufferShaderPS>(EStockShader::GBufferPS, dx, "gbuffer_ps");
 		}
 	}
 }

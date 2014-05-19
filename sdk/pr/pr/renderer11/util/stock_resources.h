@@ -10,25 +10,38 @@ namespace pr
 {
 	namespace rdr
 	{
+		#define PR_ENUM(x)\
+			x(Invalid       , = InvalidId)\
+			x(ForwardRender ,)\
+			x(GBuffer       ,)\
+			x(DSLighting    ,)\
+			x(ShadowMap     ,)
+		PR_DEFINE_ENUM2(ERenderStep, PR_ENUM);
+		#undef PR_ENUM
+
 		#define PR_ENUM(x) \
-			x(MainRT  ,= 0x42000)\
-			x(Black   ,= 0x42001)\
-			x(White   ,= 0x42002)\
-			x(Checker ,= 0x42003)
+			x(Invalid ,= InvalidId)\
+			x(MainRT  ,)\
+			x(Black   ,)\
+			x(White   ,)\
+			x(Checker ,)
 		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
 		#undef PR_ENUM
 
 		#define PR_ENUM(x) \
-			x(FwdShaderVS     )\
-			x(FwdShaderPS     )\
-			x(GBufferVS       )\
-			x(GBufferPS       )\
-			x(DSLightingVS    )\
-			x(DSLightingPS    )\
-			x(ShadowMapVS     )\
-			x(ShadowMapPS     )\
-			x(ThickLineListGS )
-		PR_DEFINE_ENUM1(EStockShader, PR_ENUM);
+			x(Invalid         , = InvalidId)\
+			x(FwdShaderVS     ,)\
+			x(FwdShaderPS     ,)\
+			x(GBufferVS       ,)\
+			x(GBufferPS       ,)\
+			x(DSLightingVS    ,)\
+			x(DSLightingPS    ,)\
+			x(ShadowMapVS     ,)\
+			x(ShadowMapFaceGS ,)\
+			x(ShadowMapLineGS ,)\
+			x(ShadowMapPS     ,)\
+			x(ThickLineListGS ,)
+		PR_DEFINE_ENUM2(EStockShader, PR_ENUM);
 		#undef PR_ENUM
 	}
 }

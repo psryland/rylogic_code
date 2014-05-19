@@ -53,7 +53,7 @@
 #include "pr/common/new.h"
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
-#include "pr/common/map_adapter.h"
+#include "pr/common/container_functions.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -87,6 +87,7 @@ namespace pr
 		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
 		static RdrId const AutoId = ~0U; // A special value for automatically generating an Id
+		static RdrId const InvalidId = 0U;
 
 		typedef pr::string<char, 32>     string32;
 		typedef pr::string<char, 512>    string512;
@@ -111,16 +112,7 @@ namespace pr
 		struct ShaderDesc;
 		struct ShaderBase;
 		struct ShaderSet;
-		struct FwdShaderVS;
-		struct FwdShaderPS;
-		struct GBufferShaderVS;
-		struct GBufferShaderPS;
-		struct DSLightingShaderVS;
-		struct DSLightingShaderPS;
-		struct ShadowMapVS;
-		struct ShadowMapPS;
-		struct ThickLineListShaderGS;
-		struct ShadowMapShader;
+		struct ShaderMap;
 		typedef pr::RefPtr<ShaderBase> ShaderPtr;
 
 		// Textures
@@ -190,15 +182,6 @@ namespace pr
 			x(TriList   ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)\
 			x(TriStrip  ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
 		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
-		#undef PR_ENUM
-
-		// Ids for render steps
-		#define PR_ENUM(x)\
-			x(ForwardRender)\
-			x(GBuffer)\
-			x(DSLighting)\
-			x(ShadowMap)
-		PR_DEFINE_ENUM1(ERenderStep, PR_ENUM);
 		#undef PR_ENUM
 
 		// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx

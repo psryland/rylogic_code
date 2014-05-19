@@ -2,9 +2,6 @@
 // Renderer
 //  Copyright © Rylogic Ltd 2010
 //***********************************************
-#ifndef PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
-#define PR_RDR_SHADER_PHONG_LIGHTING_HLSLI
-#if SHADER_BUILD
 
 #define DIRECTIONAL_LIGHT (m_light_info.x == 1.0)
 #define POINT_LIGHT       (m_light_info.x == 2.0)
@@ -70,6 +67,3 @@ float4 Illuminate(float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_dif
 
 	return saturate(ltdiff + ltspec + unlit_diff);
 }
-
-#endif
-#endif

@@ -28,8 +28,8 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_lighting; // A constant buffer for the frame constant shader variables
 			Instance             m_unit_quad;     // The quad drawn to the screen for post processing
 			bool                 m_clear_bb;      // True if this render step clears the backbuffer before rendering
-			ShaderPtr            m_shdr_vs;       //
-			ShaderPtr            m_shdr_ps;       //
+			ShaderPtr            m_vs;            //
+			ShaderPtr            m_ps;            //
 
 			DSLighting(Scene& scene);
 

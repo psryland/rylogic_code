@@ -23,7 +23,7 @@ struct PSOut
 };
 
 // Vertex shader
-#if PR_RDR_SHADER_VS
+#ifdef PR_RDR_VSHADER_dslighting
 PSIn_DSLighting main(VSIn In)
 {
 	PSIn_DSLighting Out;
@@ -35,7 +35,7 @@ PSIn_DSLighting main(VSIn In)
 #endif
 
 // Pixel shader
-#if PR_RDR_SHADER_PS
+#ifdef PR_RDR_PSHADER_dslighting
 PSOut main(PSIn_DSLighting In)
 {
 	PSOut Out;

@@ -26,8 +26,8 @@ namespace pr
 			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
 			,m_cbuf_lighting(m_shdr_mgr->GetCBuf<ds::CBufLighting>("ds::CBufLighting"))
 			,m_unit_quad()
-			,m_shdr_vs(m_shdr_mgr->FindShader(EStockShader::DSLightingVS))
-			,m_shdr_ps(m_shdr_mgr->FindShader(EStockShader::DSLightingPS))
+			,m_vs(m_shdr_mgr->FindShader(EStockShader::DSLightingVS))
+			,m_ps(m_shdr_mgr->FindShader(EStockShader::DSLightingPS))
 		{
 			{// Unit quad in Z = 0 plane
 				float const t0 = 0.000f, t1 = 0.9999f;
@@ -49,8 +49,8 @@ namespace pr
 				m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.CreateModel(s);
 
 				NuggetProps ddata(EPrim::TriList, EGeom::Vert);
-				ddata.m_sset.get(EStockShader::DSLightingVS, m_shdr_mgr)->UsedBy(Id);
-				ddata.m_sset.get(EStockShader::DSLightingPS, m_shdr_mgr)->UsedBy(Id);
+				ddata.m_smap[Id].m_vs = m_vs;
+				ddata.m_smap[Id].m_ps = m_ps;
 				m_unit_quad.m_model->CreateNugget(ddata);
 			}
 

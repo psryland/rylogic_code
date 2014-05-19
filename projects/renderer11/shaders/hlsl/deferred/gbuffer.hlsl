@@ -12,7 +12,7 @@ SamplerState      m_sampler0 :register(s0);
 Texture2D<float4> m_texture0 :register(t0);
 
 // Vertex shader
-#if PR_RDR_SHADER_VS
+#ifdef PR_RDR_VSHADER_gbuffer
 PSIn main(VSIn In)
 {
 	PSIn Out;
@@ -36,7 +36,7 @@ PSIn main(VSIn In)
 #endif
 
 // Pixel shader
-#if PR_RDR_SHADER_PS
+#ifdef PR_RDR_PSHADER_gbuffer
 PSOut_GBuffer main(PSIn In)
 {
 	// Transform

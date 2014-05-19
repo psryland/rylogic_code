@@ -419,7 +419,7 @@ namespace pr
 
 						if (axis_id < 1 || axis_id > 3)
 						{
-							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 							break;
 						}
 
@@ -804,7 +804,7 @@ namespace pr
 					auto shdr = p.m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS)->Clone<ThickLineListShaderGS>(AutoId, pr::FmtS("thick_line_%f", m_line_width));
 					shdr->m_default_linewidth = m_line_width;
 					for (auto& nug : model->m_nuggets)
-						nug.m_sset.push_back(shdr);
+						nug.m_smap[ERenderStep::ForwardRender].m_gs = shdr;
 				}
 
 				model->m_name = name;
@@ -1012,7 +1012,7 @@ namespace pr
 				// Validate
 				if (m_axis_id < 1 || m_axis_id > 3)
 				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 					return nullptr;
 				}
 
@@ -1339,7 +1339,7 @@ namespace pr
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, pr::m4x4Identity, pr::Colour32White, GetDrawData());
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1373,7 +1373,7 @@ namespace pr
 			}
 			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim * 0.5f, m_b2w, pr::Colour32White, GetDrawData());
+				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1452,7 +1452,7 @@ namespace pr
 				m_pt[7].set(-f*w,  f*h, f, 1.0f);
 
 				switch (axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1490,7 +1490,7 @@ namespace pr
 				m_pt[7].set( f*w,  f*h, f, 1.0f);
 
 				switch (axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1554,7 +1554,7 @@ namespace pr
 				switch (m_axis_id)
 				{
 				default:
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 					return nullptr;
 				case  1: o2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: o2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
@@ -2150,8 +2150,8 @@ R"(
 //********************************************
 //
 // Notes:
-//  axis_id is an integer describing an axis number. It must one of Â±1, Â±2, Â±3
-//  corresponding to Â±X, Â±Y, Â±Z respectively
+//  axis_id is an integer describing an axis number. It must one of ±1, ±2, ±3
+//  corresponding to ±X, ±Y, ±Z respectively
 
 // Clear existing data
 *Clear /*{ctx_id ...}*/ // Context ids can be listed within a section
@@ -2357,14 +2357,14 @@ R"(
 // A circle or ellipse
 *Circle circle
 {
-	2 1.6                               // axis_id, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1.6                               // axis_id, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
 }
 *Circle ellipse
 {
-	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                      // Optional, controls the smoothness of the edge
@@ -2373,7 +2373,7 @@ R"(
 // A rectangle
 *Rect rect FF0000FF                    // Object colour is the outline colour
 {
-	2                                  // axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2                                  // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	1.2                                // width
 	1.3                                // Optional height. If omitted, height = width
 	*Solid                             // Optional, if omitted then the shape is an outline only
@@ -2460,14 +2460,14 @@ R"(
 // Points along the z axis. Width, Height given at '1' along the z axis
 *FrustumWH frustumwh
 {
-	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
 // A frustum given by field of view (in Y), aspect ratio, and near and far plane distances
 *FrustumFA frustumfa
 {
-	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
@@ -2494,7 +2494,7 @@ R"(
 // A cylinder given by axis number, height, and radius
 *CylinderHR cylinder
 {
-	2 0.6 0.2                         // axis_id, height, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.6 0.2                         // axis_id, height, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cylinder major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cylinder
 	*Scale 1.2 0.8                    // Optional. X,Y scale factors
@@ -2503,7 +2503,7 @@ R"(
 }
 *CylinderHR cone FFFF00FF
 {
-	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1.5 0.4                    // Optional. X,Y scale factors
@@ -2514,7 +2514,7 @@ R"(
 // A cone given by axis number, two heights, and solid angle
 *ConeHA coneha FF00FFFF
 {
-	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1 1                        // Optional. X,Y scale factors

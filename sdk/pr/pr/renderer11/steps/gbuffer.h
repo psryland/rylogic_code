@@ -29,6 +29,8 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
 			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // Per-frame camera constants
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
+			ShaderPtr                        m_vs;
+			ShaderPtr                        m_ps;
 
 			explicit GBuffer(Scene& scene);
 

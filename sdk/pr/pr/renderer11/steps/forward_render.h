@@ -18,6 +18,8 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // Per-frame constant buffer
 			D3DPtr<ID3D11Buffer> m_cbuf_nugget;  // Per-nugget constant buffer
 			bool                 m_clear_bb;     // True if this render step clears the backbuffer before rendering
+			ShaderPtr            m_vs;
+			ShaderPtr            m_ps;
 
 			ForwardRender(Scene& scene, bool clear_bb = true);
 

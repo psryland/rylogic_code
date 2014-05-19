@@ -2,8 +2,6 @@
 // Renderer
 //  Copyright © Rylogic Ltd 2014
 //***********************************************
-#ifndef PR_RDR_SHADER_SHADOW_MAP_HLSLI
-#define PR_RDR_SHADER_SHADOW_MAP_HLSLI
 
 #include "shadow_map_cbuf.hlsli"
 #include "../inout.hlsli"
@@ -12,15 +10,8 @@
 struct PSIn_ShadowMap
 {
 	// The positions of the vert projected onto each face of the frustum
-	float4 ss_vert   :SV_Position;
-	float4 ss_vert0  :TexCoord0;
-	float4 ss_vert1  :TexCoord1;
-	float4 ss_vert2  :TexCoord2;
-	float4 ss_vert3  :TexCoord3;
-	float4 ss_vert4  :TexCoord4;
-	//float4 ws_norm :Normal;
-	//float4 diff    :Color0;
-	//float2 tex     :TexCoord0;
+	float4 ss_vert  :SV_Position;
+	float4 ws_vert  :TexCoord0;  // Projection index passed in w
 };
 
 struct PSOut
@@ -30,50 +21,62 @@ struct PSOut
 };
 
 // Vertex shader
-#if PR_RDR_SHADER_VS
+#ifdef PR_RDR_VSHADER_shadow_map
 PSIn_ShadowMap main(VSIn In)
 {
+	// Pass the ws_vert to the GS
 	PSIn_ShadowMap Out;
-	
-	float4 ws_vert = mul(In.vert, m_o2w);
-	Out.ss_vert  = mul(In.vert, m_o2s);
-	
-	// Project the vertex onto each plane of the frustum
-	Out.ss_vert0 = mul(ws_vert, m_proj[0]);
-	Out.ss_vert1 = mul(ws_vert, m_proj[1]);
-	Out.ss_vert2 = mul(ws_vert, m_proj[2]);
-	Out.ss_vert3 = mul(ws_vert, m_proj[3]);
-	Out.ss_vert4 = mul(ws_vert, m_proj[4]);
-	
-	//Out.pos      = 0;
-	//Out.ws_pos   = 0;
-	//Out.ss_pos   = 0;
-	//float4 ms_pos  = float4(In.pos  ,1);
-	//float4 ms_norm = float4(In.norm ,0);
-
-	//// SMap
-	//Out.ws_pos = mul(ms_pos, g_object_to_world);
-	//Out.pos    = mul(Out.ws_pos, g_world_to_smap);
-	//Out.ss_pos = Out.pos.xy;
-
+	Out.ss_vert = float4(0,0,0,0);
+	Out.ws_vert = mul(In.vert, m_o2w);
 	return Out;
 }
 #endif
 
-#if PR_RDR_SHADER_PS
+// Geometry shader
+#ifdef PR_RDR_GSHADER_shadow_map_face
+[maxvertexcount(15)]
+void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> TriStream)
+{
+	// Replicate the face for each projection and
+	// project it onto the plane of the frustum
+	PSIn_ShadowMap Out;
+	for (int i = 0; i != 5; ++i)
+	for (int j = 0; j != 3; ++j)
+	{
+		Out = In[j];
+		Out.ws_vert.w = float(i);
+		Out.ss_vert = mul(In[j].ws_vert, m_proj[i]);
+		TriStream.Append(Out);
+	}
+}
+#endif
+#ifdef PR_RDR_GSHADER_shadow_map_line
+[maxvertexcount(10)]
+void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStream)
+{
+	// Replicate the line for each projection and
+	// project it onto the plane of the frustum
+	PSIn_ShadowMap Out;
+	for (int i = 0; i != 5; ++i)
+	for (int j = 0; j != 2; ++j)
+	{
+		Out = In[j];
+		Out.ws_vert.w = float(i);
+		Out.ss_vert = mul(In[j].ws_vert, m_proj[i]);
+		TriStream.Append(Out);
+	}
+}
+#endif
+
+// Pixel shader
+#ifdef PR_RDR_PSHADER_shadow_map
 PSOut main(PSIn_ShadowMap In)
 {
+	// Output the depth in the appropriate position in the RT
 	PSOut Out;
-	float4 d0 = In.ss_vert0 / In.ss_vert0.w;
-	float4 d1 = In.ss_vert1 / In.ss_vert1.w;
-	float4 d2 = In.ss_vert2 / In.ss_vert2.w;
-	float4 d3 = In.ss_vert3 / In.ss_vert3.w;
-	float4 d4 = In.ss_vert4 / In.ss_vert4.w;
-	
-	Out.depth = float2(0,100*d4.z);
-	//Out.depth = d4.xy;
+	float4 d = In.ss_vert / In.ss_vert.w;
+	clip(In.ws_vert.w == 4 ? 1 : -1);
+	Out.depth = float2(0,abs(d.z));
 	return Out;
 }
-#endif
-
 #endif

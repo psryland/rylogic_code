@@ -294,7 +294,7 @@ namespace pr.gui
 				Connectors = new BindingListEx<Connector>();
 
 				// Create the surface texture and assign it to the graphics object
-				Surf = new View3d.Texture(TextureScale * width, TextureScale * height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR});//D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
+				Surf = new View3d.Texture(TextureScale * width, TextureScale * height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});// D3D11_FILTER_MIN_MAG_MIP_LINEAR});//D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
 
 				// Watch for style changes
 				Style.StyleChanged += Invalidate;

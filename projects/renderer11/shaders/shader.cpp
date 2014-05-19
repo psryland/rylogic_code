@@ -82,18 +82,12 @@ namespace pr
 			#endif
 		}
 
-		// Get/Set whether this shader is used by the given render step
-		// Shaders are created with 'm_used_by' set to zero. Users can then set the render steps that
-		// will see the shader. The stock shaders have default set are creation time. If theres are not
-		// appropriate a copy of the shader should be made with different 'used_by' render steps set.
-		bool ShaderBase::IsUsedBy(ERenderStep rstep) const
+		// Return the input layout associated with this shader.
+		// Note, returns null for all shaders except vertex shaders
+		D3DPtr<ID3D11InputLayout> ShaderBase::IpLayout() const
 		{
-			// Can't rename getter 'UsedBy' because ShaderPtr always returns a non-const pointer causing the 'set' method to always be called.
-			return pr::AllSet(m_used_by, 1 << rstep);
-		}
-		void ShaderBase::UsedBy(ERenderStep rstep)
-		{
-			m_used_by = pr::SetBits(m_used_by, 1 << rstep, true);
+			if (m_shdr_type != EShaderType::VS) return nullptr;
+			return m_mgr->GetIP(m_id);
 		}
 
 		// Ref counting cleanup function

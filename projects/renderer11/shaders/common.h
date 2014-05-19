@@ -29,7 +29,7 @@ namespace pr
 		// The constant buffer definitions
 		namespace fwd
 		{
-			#include "renderer11/shaders/hlsl/forward/forward.hlsl"
+			#include "renderer11/shaders/hlsl/forward/forward_cbuf.hlsli"
 		}
 		namespace ds
 		{
@@ -144,19 +144,22 @@ namespace pr
 				ID3D11ShaderResourceView* null_srv[1] = {};
 				dc->PSSetShaderResources(slot, 1, null_srv);
 
-				// If there is not sampler assigned, create a default one and assign it,
-				// otherwise leave what's there... it shouldn't matter cause it's not being used anyway.
 				ID3D11SamplerState* null_samp[1] = {};
-				dc->PSGetSamplers(slot, 1, null_samp);
-				if (null_samp[0] == nullptr)
-				{
-					auto desc = SamplerDesc::LinearClamp();
-					D3DPtr<ID3D11SamplerState> samp_state;
-					pr::Throw(Device(dc)->CreateSamplerState(&desc, &samp_state.m_ptr));
-				
-					null_samp[0] = samp_state.m_ptr;
-					dc->PSSetSamplers(slot, 1, null_samp);
-				}
+				dc->PSSetSamplers(slot, 1, null_samp);
+
+				//// If there is not sampler assigned, create a default one and assign it,
+				//// otherwise leave what's there... it shouldn't matter cause it's not being used anyway.
+				//ID3D11SamplerState* null_samp[1] = {};
+				//dc->PSGetSamplers(slot, 1, null_samp);
+				//if (null_samp[0] == nullptr)
+				//{
+				//	auto desc = SamplerDesc::LinearClamp();
+				//	D3DPtr<ID3D11SamplerState> samp_state;
+				//	pr::Throw(Device(dc)->CreateSamplerState(&desc, &samp_state.m_ptr));
+				//
+				//	null_samp[0] = samp_state.m_ptr;
+				//	dc->PSSetSamplers(slot, 1, null_samp);
+				//}
 			}
 		}
 	}

@@ -16,8 +16,10 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map.vs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map.ps.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map_vs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map_face_gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map_line_gs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(shadow_map_ps.h)
 
 		// Shadow map vertex shader
 		struct ShadowMapVS :Shader<ID3D11VertexShader, ShadowMapVS>
@@ -26,7 +28,29 @@ namespace pr
 			ShadowMapVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map.vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_vs.cso"));
+			}
+		};
+
+		// Shadow map face geometry shader
+		struct ShadowMapFaceGS :Shader<ID3D11GeometryShader, ShadowMapFaceGS>
+		{
+			typedef Shader<ID3D11GeometryShader, ShadowMapFaceGS> base;
+			ShadowMapFaceGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
+				:base(mgr, id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_face_gs.cso"));
+			}
+		};
+
+		// Shadow map line geometry shader
+		struct ShadowMapLineGS :Shader<ID3D11GeometryShader, ShadowMapLineGS>
+		{
+			typedef Shader<ID3D11GeometryShader, ShadowMapLineGS> base;
+			ShadowMapLineGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
+				:base(mgr, id, name, shdr)
+			{
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_line_gs.cso"));
 			}
 		};
 
@@ -37,32 +61,34 @@ namespace pr
 			ShadowMapPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map.ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_ps.cso"));
 			}
 		};
 
 		// Create the shadow map shaders
 		template <> void ShaderManager::CreateShader<ShadowMapVS>()
 		{
-			// Create the dx shaders
-			VShaderDesc vsdesc(shadow_map_vs, Vert());
-			auto dx_ip = GetIP(EStockShader::ShadowMapVS, &vsdesc);
-			auto dx_vs = GetVS(EStockShader::ShadowMapVS, &vsdesc);
-			
-			// Create the shader instances
-			auto shdr = CreateShader<ShadowMapVS>(EStockShader::ShadowMapVS, dx_vs, "smap_vs");
-			shdr->m_iplayout = dx_ip;
-			shdr->UsedBy(ERenderStep::ShadowMap);
+			VShaderDesc desc(shadow_map_vs, Vert());
+			auto dx = GetVS(EStockShader::ShadowMapVS, &desc);
+			CreateShader<ShadowMapVS>(EStockShader::ShadowMapVS, dx, "smap_vs");
+		}
+		template <> void ShaderManager::CreateShader<ShadowMapFaceGS>()
+		{
+			GShaderDesc desc(shadow_map_face_gs);
+			auto dx = GetGS(EStockShader::ShadowMapFaceGS, &desc);
+			CreateShader<ShadowMapFaceGS>(EStockShader::ShadowMapFaceGS, dx, "smap_face_gs");
+		}
+		template <> void ShaderManager::CreateShader<ShadowMapLineGS>()
+		{
+			GShaderDesc desc(shadow_map_line_gs);
+			auto dx = GetGS(EStockShader::ShadowMapLineGS, &desc);
+			CreateShader<ShadowMapLineGS>(EStockShader::ShadowMapLineGS, dx, "smap_line_gs");
 		}
 		template <> void ShaderManager::CreateShader<ShadowMapPS>()
 		{
-			// Create the dx shaders
-			PShaderDesc psdesc(shadow_map_ps);
-			auto dx_ps = GetPS(EStockShader::ShadowMapPS, &psdesc);
-
-			// Create the shader instances
-			auto shdr = CreateShader<ShadowMapPS>(EStockShader::ShadowMapPS, dx_ps, "smap_ps");
-			shdr->UsedBy(ERenderStep::ShadowMap);
+			PShaderDesc desc(shadow_map_ps);
+			auto dx = GetPS(EStockShader::ShadowMapPS, &desc);
+			CreateShader<ShadowMapPS>(EStockShader::ShadowMapPS, dx, "smap_ps");
 		}
 	}
 }

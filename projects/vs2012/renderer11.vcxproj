@@ -143,7 +143,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\directxtex.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
@@ -183,6 +182,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\util\wrappers.h" />
     <ClInclude Include="..\renderer11\directxtex\BC.h" />
     <ClInclude Include="..\renderer11\directxtex\DDS.h" />
+    <ClInclude Include="..\renderer11\directxtex\DirectXTex.h" />
     <ClInclude Include="..\renderer11\directxtex\DirectXTexP.h" />
     <ClInclude Include="..\renderer11\directxtex\scoped.h" />
     <ClInclude Include="..\renderer11\render\state_stack.h" />
@@ -190,7 +190,7 @@
     <ClInclude Include="..\renderer11\shaders\common.h" />
     <ClInclude Include="..\renderer11\textures\dds_texture_loader.h" />
     <ClInclude Include="..\renderer11\textures\wic_texture_loader.h" />
-    <ClInclude Include="..\renderer11\util\internal_resources.h" />
+    <ClInclude Include="..\renderer11\util\forward_private.h" />
     <ClInclude Include="..\renderer11\util\stdafx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -221,7 +221,6 @@
     <ClCompile Include="..\renderer11\shaders\gbuffer_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
-    <ClCompile Include="..\renderer11\shaders\shader_set.cpp" />
     <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\thick_line.cpp" />
     <ClCompile Include="..\renderer11\steps\dslighting.cpp" />
@@ -249,10 +248,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\script\BuildShader.py" />
-    <None Include="..\..\sdk\pr\pr\renderer11\render\directxtex.inl" />
+    <None Include="..\renderer11\directxtex\DirectXTex.inl" />
     <None Include="..\renderer11\shaders\hlsl\cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
+    <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\inout.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
@@ -276,14 +276,11 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linelist.hlsl">
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_linestrip.hlsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
       <FileType>Document</FileType>
     </None>

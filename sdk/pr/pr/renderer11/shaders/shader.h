@@ -79,18 +79,12 @@ namespace pr
 			RdrId                     m_id;        // Id for this shader
 			EGeom                     m_geom;      // Required geometry format for this shader
 			SortKeyId                 m_sort_id;   // A key used to order shaders next to each other in the drawlist
-			size_t                    m_used_by;   // Bit mask of render steps that are using this shader instance
 			BSBlock                   m_bsb;       // The blend state for the shader
 			RSBlock                   m_rsb;       // The rasterizer state for the shader
 			DSBlock                   m_dsb;       // The depth buffering state for the shader
 			string32                  m_name;      // Human readable id for the shader
-			D3DPtr<ID3D11InputLayout> m_iplayout;  // Null except for vertex shaders
-			
-			virtual ~ShaderBase() {}
 
-			// Get/Set whether this shader is used by the given render step
-			bool IsUsedBy(ERenderStep rstep) const;
-			void UsedBy(ERenderStep rstep);
+			virtual ~ShaderBase() {}
 
 			// Setup the shader ready to be used on 'dle'
 			// This needs to take the state stack and set things via that, to prevent unnecessary state changes
@@ -103,11 +97,15 @@ namespace pr
 			ShaderPtr Clone(RdrId new_id, char const* new_name)
 			{
 				return MakeClone(new_id, new_name);
-			}			
+			}
 			template <typename ShaderType> pr::RefPtr<ShaderType> Clone(RdrId new_id, char const* new_name)
 			{
 				return MakeClone(new_id, new_name);
 			}
+
+			// Return the input layout associated with this shader.
+			// Note, returns null for all shaders except vertex shaders
+			D3DPtr<ID3D11InputLayout> IpLayout() const;
 
 			// Ref counting cleanup
 			static void RefCountZero(pr::RefCount<ShaderBase>* doomed);
@@ -124,18 +122,16 @@ namespace pr
 				,m_mgr(mgr)
 				,m_id(id == AutoId ? MakeId(this) : id)
 				,m_geom()
-				,m_used_by()
 				,m_sort_id()
 				,m_bsb()
 				,m_rsb()
 				,m_dsb()
 				,m_name(name)
-				,m_iplayout()
 			{}
 
 			// Create a new shader that is a copy of this shader
 			virtual ShaderPtr MakeClone(RdrId new_id, char const* new_name) = 0;
-			
+
 			// Forwarding methods are needed because only ShaderBase is a friend of the ShaderManager
 			template <typename ShaderType> void Delete(ShaderType* shdr)
 			{
@@ -159,13 +155,11 @@ namespace pr
 			ShaderPtr MakeClone(RdrId new_id, char const* new_name) override
 			{
 				auto shdr = m_mgr->CreateShader<Derived>(new_id, m_shdr, new_name);
-				
+
 				shdr->m_geom     = m_geom;
-				shdr->m_used_by  = m_used_by;
 				shdr->m_bsb      = m_bsb;
 				shdr->m_rsb      = m_rsb;
 				shdr->m_dsb      = m_dsb;
-				shdr->m_iplayout = m_iplayout;
 				return shdr;
 			}
 

@@ -38,16 +38,16 @@ namespace pr
 		{
 			EPrim          m_topo;        // The primitive topology for this nugget
 			EGeom          m_geom;        // The valid geometry components within this range
-			ShaderSet      m_sset;        // The shaders to use (optional, some render steps use their own shaders)
+			ShaderMap      m_smap;        // The shaders to use (optional, some render steps use their own shaders)
 			Texture2DPtr   m_tex_diffuse; // Diffuse texture
 			BSBlock        m_bsb;         // Rendering states
 			DSBlock        m_dsb;         // Rendering states
 			RSBlock        m_rsb;         // Rendering states
 
-			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderSet* sset = nullptr)
+			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr)
 				:m_topo(topo)
 				,m_geom(geom)
-				,m_sset(sset ? *sset : ShaderSet())
+				,m_smap(smap ? *smap : ShaderMap())
 				,m_tex_diffuse()
 				,m_bsb()
 				,m_dsb()

@@ -16,8 +16,8 @@ namespace pr
 	namespace rdr
 	{
 		// include generated header files
-		#include PR_RDR_SHADER_COMPILED_DIR(forward.vs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(forward.ps.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(forward_vs.h)
+		#include PR_RDR_SHADER_COMPILED_DIR(forward_ps.h)
 
 		// Forward rendering vertex shader
 		struct FwdShaderVS :Shader<ID3D11VertexShader, FwdShaderVS>
@@ -26,7 +26,7 @@ namespace pr
 			FwdShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward.vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward_vs.cso"));
 			}
 		};
 
@@ -37,32 +37,22 @@ namespace pr
 			FwdShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward.ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward_ps.cso"));
 			}
 		};
 
 		// Create the forward shaders
 		template <> void ShaderManager::CreateShader<FwdShaderVS>()
 		{
-			// Create the dx shaders
-			VShaderDesc vsdesc(forward_vs, Vert());
-			auto dx_ip = GetIP(EStockShader::FwdShaderVS, &vsdesc);
-			auto dx_vs = GetVS(EStockShader::FwdShaderVS, &vsdesc);
-			
-			// Create the shader instances
-			auto shdr = CreateShader<FwdShaderVS>(EStockShader::FwdShaderVS, dx_vs, "fwd_shader_vs");
-			shdr->m_iplayout = dx_ip;
-			shdr->UsedBy(ERenderStep::ForwardRender);
+			VShaderDesc desc(forward_vs, Vert());
+			auto dx = GetVS(EStockShader::FwdShaderVS, &desc);
+			CreateShader<FwdShaderVS>(EStockShader::FwdShaderVS, dx, "fwd_shader_vs");
 		}
 		template <> void ShaderManager::CreateShader<FwdShaderPS>()
 		{
-			// Create the dx shaders
-			PShaderDesc psdesc(forward_ps);
-			auto dx_ps = GetPS(EStockShader::FwdShaderPS, &psdesc);
-
-			// Create the shader instances
-			auto shdr = CreateShader<FwdShaderPS>(EStockShader::FwdShaderPS, dx_ps, "fwd_shader_ps");
-			shdr->UsedBy(ERenderStep::ForwardRender);
+			PShaderDesc desc(forward_ps);
+			auto dx = GetPS(EStockShader::FwdShaderPS, &desc);
+			CreateShader<FwdShaderPS>(EStockShader::FwdShaderPS, dx, "fwd_shader_ps");
 		}
 	}
 }

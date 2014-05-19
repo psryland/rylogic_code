@@ -31,6 +31,10 @@ namespace pr
 
 		struct BSBlock :private StateBlock<BlendStateDesc, EBS, 8>
 		{
+			typedef StateBlock<BlendStateDesc, EBS, 8> base;
+
+			BSBlock() :base() {}
+
 			using base::Hash;
 			using base::Desc;
 

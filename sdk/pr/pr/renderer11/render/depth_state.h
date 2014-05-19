@@ -31,6 +31,10 @@ namespace pr
 
 		struct DSBlock :private StateBlock<DepthStateDesc, EDS, 2>
 		{
+			typedef StateBlock<DepthStateDesc, EDS, 2> base;
+
+			DSBlock() :base() {}
+
 			using base::Hash;
 			using base::Desc;
 

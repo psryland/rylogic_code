@@ -16,17 +16,15 @@ namespace pr
 	namespace rdr
 	{
 		// Algorithm:
-		// - Create projection transforms from the light onto planes that are parallel the sides
-		//   of the view frustum.
+		// - Create 5 projection transforms from the light onto each of the planes of the shadow frustum (= view frustum with nearer far plane).
+		// - Vertex shader: transform verts to world space
+		// - Geometry Shader: replicates the geometry 5 times, transforming each primitive by the corresponding projection transform
+		// - Pixel Shader: use the id to write the depth into the appropriate place on the render target
+		// - Use no depth buffer with blend mode min to avoid depth buffer issues
 		// - Render the scene writing distance-to-frustum data. (this solves the problem of directional
 		//   lights being at infinity)
 		// - In the lighting pass, project ray from ws_pos to frustum, measure distance and compare to
 		//   texture to detect shadow
-		//
-		// Notes:
-		//  Although there's 5 projection matrices per light, one shadow ray can only hit one
-		//  surface of the view frustum, so it should be possible to render all 5 frustum sides
-		//  in a single pass
 
 		ShadowMap::ShadowMap(Scene& scene, Light& light, pr::iv2 size)
 			:RenderStep(scene)
@@ -41,6 +39,11 @@ namespace pr
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<smap::CBufNugget>("smap::CBufNugget"))
 			,m_shadow_distance(100.0f)
 			,m_smap_size(size)
+			,m_vs(m_shdr_mgr->FindShader(EStockShader::ShadowMapVS))
+			,m_ps(m_shdr_mgr->FindShader(EStockShader::ShadowMapPS))
+			,m_gs_face(m_shdr_mgr->FindShader(EStockShader::ShadowMapFaceGS))
+			,m_gs_line(m_shdr_mgr->FindShader(EStockShader::ShadowMapLineGS))
+
 		{
 			InitRT(size);
 			
@@ -132,10 +135,10 @@ namespace pr
 			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
 			{
-				// Ensure the nugget contains the required shaders vs/ps
-				// Note, the nugget may contain other shaders that are used by this render step as well
-				nug.m_sset.get(EStockShader::ShadowMapVS, m_shdr_mgr)->UsedBy(Id);
-				nug.m_sset.get(EStockShader::ShadowMapPS, m_shdr_mgr)->UsedBy(Id);
+				// Ensure the nugget contains the required vs/gs/ps shaders
+				nug.m_smap[Id].m_vs = m_vs;
+				nug.m_smap[Id].m_gs = (nug.m_topo == EPrim::LineList || nug.m_topo == EPrim::LineStrip) ? m_gs_line : m_gs_face;
+				nug.m_smap[Id].m_ps = m_ps;
 
 				// Add a dle for this nugget
 				DrawListElement dle;
@@ -173,17 +176,20 @@ namespace pr
 			//hack
 			m_shadow_distance = 3.0f;
 
+			auto m_max_caster_distance = 6.0f;
+
 			{// Set the frame constants
 				auto& c2w = m_scene->m_view.m_c2w;
-				auto frustum = m_scene->m_view.Frustum(m_shadow_distance);
+				auto shadow_frustum = m_scene->m_view.Frustum(m_shadow_distance);
 				smap::CBufFrame cb = {};
-				CreateProjection(0, frustum, c2w, m_light, cb.m_proj[0]);
-				CreateProjection(1, frustum, c2w, m_light, cb.m_proj[1]);
-				CreateProjection(2, frustum, c2w, m_light, cb.m_proj[2]);
-				CreateProjection(3, frustum, c2w, m_light, cb.m_proj[3]);
-				CreateProjection(4, frustum, c2w, m_light, cb.m_proj[4]);
-				cb.m_frust_dim = frustum.Dim();
-				WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::PS);
+				CreateProjection(shadow_frustum, 0, m_light, c2w, m_max_caster_distance, cb.m_proj[0]);
+				CreateProjection(shadow_frustum, 1, m_light, c2w, m_max_caster_distance, cb.m_proj[1]);
+				CreateProjection(shadow_frustum, 2, m_light, c2w, m_max_caster_distance, cb.m_proj[2]);
+				CreateProjection(shadow_frustum, 3, m_light, c2w, m_max_caster_distance, cb.m_proj[3]);
+				CreateProjection(shadow_frustum, 4, m_light, c2w, m_max_caster_distance, cb.m_proj[4]);
+				cb.m_frust_dim = shadow_frustum.Dim();
+				cb.m_frust_dim.w = m_max_caster_distance;
+				WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 			}
 			
 			{// Set the light constants
@@ -213,7 +219,16 @@ namespace pr
 
 		// Create a projection transform that will take points in world space and project them
 		// onto a surface parallel to the frustum plane for the given face (based on light type).
-		bool ShadowMap::CreateProjection(int face, pr::Frustum const& frust, pr::m4x4 const& c2w, Light const& light, pr::m4x4& w2s)
+		// 'shadow_frustum' - the volume in which objects receive shadows. It should be aligned with
+		//  the camera frustum but with a nearer far plane.
+		// 'face' - the face index of the shadow frustum (see pr::Frustum::EPlane)
+		// 'light' - the light source that we're creating the projection transform for
+		// 'c2w' - the camera to world (and => shadow_frustum to world) transform
+		// 'max_range' - is the maximum distance of any shadow casting object from the shadow frustum
+		// plane. Effectively the projection near plane for directional lights or for point lights further
+		// than this distance. Objects further than this distance don't result in pixels in the smap.
+		// This should be the distance that depth information is normalised into the range [0,1) by.
+		bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
 		{
 			#define DBG_PROJ 1
 			#if DBG_PROJ
@@ -226,7 +241,6 @@ namespace pr
 				std::string str;
 				// This is the screen space view volume for a light-camera looking at 'face' of the frustum
 				pr::ldr::Box("view_volume", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
-				pr::ldr::Frustum("shadow_volume", 0x8000FF00, frust, pr::m4x4Identity, str);
 				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.2f, str);
 				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.2f, str);
 				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.2f, str);
@@ -235,13 +249,10 @@ namespace pr
 			};
 			#endif
 
-			// Get the frustum normal for 'face'
-			pr::v4 ws_norm = c2w * frust.Normal(face);
-
 			// TL,TR,BL,BR below refer to the corners of a quad that, for the first four faces,
 			// has the camera position in the centre with two points in front of the camera
 			// and two behind. We only care about the wedge on the quad that goes from the camera
-			// position to the two corners in front of the camera.
+			// to the two corners positioned in front of the camera.
 			float sign_z[5] =
 			{
 				pr::Sign<float>(face==1||face==3),
@@ -251,12 +262,18 @@ namespace pr
 				1.0f,
 			};
 
-			// Get the corners of the plane we want to project onto in world space.
-			pr::v4 fdim = frust.Dim();
+			// Get the corners of the plane that will be the far clip plane (in world space).
+			pr::v4 fdim = shadow_frustum.Dim();
 			pr::v4 tl, TL = c2w * pr::v4::make(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
 			pr::v4 tr, TR = c2w * pr::v4::make( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
 			pr::v4 bl, BL = c2w * pr::v4::make(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
 			pr::v4 br, BR = c2w * pr::v4::make( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
+
+			// Initialise to invalid
+			w2s = m4x4Zero;
+
+			// Get the frustum normal for 'face'
+			pr::v4 ws_norm = c2w * shadow_frustum.Normal(face);
 
 			// Construct the projection transform based on the light type
 			switch (light.m_type)
@@ -267,14 +284,17 @@ namespace pr
 					if (pr::Dot3(light.m_direction, ws_norm) >= 0)
 						return false;
 
-					// Create a light to world transform
-					// Position the light camera at the centre of the plane we're projecting onto, looking in the light direction
-					pr::v4 pos = (TL + TR + BL + BR) * 0.25f;
-					pr::m4x4 lt2w = pr::LookAt(pos, pos + light.m_direction, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
+					// We can't set a sensible near clip plane for directional lights,
+					// since they are positioned at infinity. Position the light-camera at
+					// 'max_range' in front of the plane.
+
+					// Create a light to world transform.
+					pr::v4 centre = (TL + TR + BL + BR) * 0.25f;
+					pr::m4x4 lt2w = pr::LookAt(centre - light.m_direction * max_range, centre, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
 					w2s = pr::InvertFast(lt2w);
 
 					// Create an orthographic projection
-					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, -100.0f, 100.0f, true);
+					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, 0.0f, max_range, true);
 					w2s = lt2s * w2s;
 
 					// Project the four corners of the plane
@@ -327,7 +347,7 @@ namespace pr
 			case ELight::Point:
 				{
 					// The surface must face the light source
-					float dist_to_light = pr::Dot3(light.m_position - c2w.pos, ws_norm) + (face == 4)*frust.ZDist();
+					float dist_to_light = pr::Dot3(light.m_position - c2w.pos, ws_norm) + (face == 4)*shadow_frustum.ZDist();
 					if (dist_to_light <= 0)
 						return false;
 
