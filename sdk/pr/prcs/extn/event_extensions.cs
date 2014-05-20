@@ -17,324 +17,255 @@ namespace pr.extn
 	[DebuggerStepThrough]
 	public static class EventExtensions
 	{
+		// Notes:
+		//  - Suspend/Resume has no effect on a null event.
+		//  - Do not modify events while suspended, doing so will cause leaks
 		private class SuspendData
 		{
 			public bool m_raised = false; // true if the event has been raised while suspended
-			public int  m_nest   = 1;     // nested suspend count
+			public int  m_nest   = 0;     // nested suspend count
 		}
 
 		/// <summary>A collection of suspended events and whether notify has been called on this suspended event</summary>
 		private static readonly Dictionary<object,SuspendData> m_suspended = new Dictionary<object,SuspendData>();
 
-		// Notes:
-		//  - Suspend/Resume has no effect on a null event.
-		//  - Do not modify events while suspended, doing so will cause leaks
-
-		/// <summary>Add 'evt' to the collection of suspended events</summary>
-		private static void SuspendImpl<T>(T evt)
+		#region Impl
+		private static class Impl<T>
 		{
-			SuspendData sd = IsSuspendedImpl(evt) ? m_suspended[evt] : null;
-			if (sd == null) m_suspended.Add(evt, new SuspendData());
-			else            sd.m_nest++;
-		}
+			/// <summary>Add 'evt' to the collection of suspended events. Returns true if the evt has been raised since suspended</summary>
+			public static bool Suspend(T evt, bool suspend)
+			{
+				// Find the suspend data associated with this event
+				SuspendData sd = IsSuspended(evt) ? m_suspended[evt] : null;
+				if (sd == null)
+				{
+					// If no data, add it, or throw if this is a resume
+					if (suspend)
+						m_suspended.Add(evt, sd = new SuspendData());
+					else
+						throw new ArgumentException("Event not suspended. Make sure the event is not modified while suspended");
+				}
 
-		/// <summary>Remove 'evt' from the collection of suspended events</summary>
-		private static bool ResumeImpl<T>(T evt)
-		{
-			SuspendData sd = IsSuspendedImpl(evt) ? m_suspended[evt] : null;
-			if (sd == null) throw new ArgumentException("Event not suspended. Make sure the event is not modified while suspended");
-			if (--sd.m_nest == 0) m_suspended.Remove(evt);
-			return sd.m_raised;
-		}
+				// Suspend/Resume ref count
+				if (suspend)
+					++sd.m_nest;
+				else
+					--sd.m_nest;
 
-		/// <summary>Returns true if 'evt' is suspended</summary>
-		private static bool IsSuspendedImpl<T>(T evt)
-		{
-			return m_suspended.ContainsKey(evt);
-		}
+				// If this was the last resume, remove 'evt' from the suspending events collection
+				if (sd.m_nest == 0)
+				{
+					m_suspended.Remove(evt);
+				}
 
-		/// <summary>Flag 'evt' as signalled</summary>
-		private static void SignalImpl<T>(T evt)
-		{
-			if (!IsSuspendedImpl(evt)) throw new ArgumentException("Event not suspended. Make sure the event is not modified while suspended");
-			m_suspended[evt].m_raised = true;
-		}
+				// Return the 'Raised' of the event
+				return sd.m_raised;
+			}
 
-		// EventHandlers *****************************************
+			/// <summary>Returns true if 'evt' is suspended</summary>
+			public static bool IsSuspended(T evt)
+			{
+				return m_suspended.ContainsKey(evt);
+			}
+
+			/// <summary>Flag 'evt' as signalled</summary>
+			public static void Signal(T evt)
+			{
+				if (!IsSuspended(evt)) throw new ArgumentException("Event not suspended. Make sure the event is not modified while suspended");
+				m_suspended[evt].m_raised = true;
+			}
+		}
+		#endregion
+
+		#region EventHandler / EventHandler<>
 
 		/// <summary>Fire the event if not suspended</summary>
 		public static void Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
 		{
 			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(sender, args);
+			if (Impl<EventHandler<TEventArgs>>.IsSuspended(evt))
+				Impl<EventHandler<TEventArgs>>.Signal(evt);
+			else
+				evt(sender, args);
 		}
+
+		/// <summary>Fire the event if not suspended</summary>
 		public static void Raise(this EventHandler evt, object sender, EventArgs args)
 		{
 			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(sender, args);
+			if (Impl<EventHandler>.IsSuspended(evt))
+				Impl<EventHandler>.Signal(evt);
+			else
+				evt(sender, args);
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
 		public static Scope SuspendScope<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(
-				() => Suspend(evt),
-				() => Resume(evt));
+			return Scope.Create(() => Suspend(evt, true), () => Suspend(evt, false));
 		}
+
+		/// <summary>Returns an RAII object for suspending events</summary>
 		public static Scope SuspendScope(this EventHandler evt)
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(
-				() => Suspend(evt),
-				() => Resume(evt));
+			return Scope.Create(() => Suspend(evt, true), () => Suspend(evt, false));
 		}
 
-		/// <summary>Block this event from firing when Raise() is called, until Resume() is called</summary>
-		public static void Suspend<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
-		{
-			if (evt == null) return;
-			SuspendImpl(evt);
-		}
-		public static void Suspend(this EventHandler evt)
-		{
-			if (evt == null) return;
-			SuspendImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
+		/// <summary>
+		/// Block/Unblock this event from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend<TEventArgs>(this EventHandler<TEventArgs> evt, bool suspend) where TEventArgs :EventArgs
 		{
 			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-		public static bool Resume(this EventHandler evt)
-		{
-			if (evt == null) return false;
-			return ResumeImpl(evt);
+			return Impl<EventHandler<TEventArgs>>.Suspend(evt, suspend);
 		}
 
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended, will call Raise()</summary>
-		public static void Resume<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
+		/// <summary>
+		/// Block/Unblock this event from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend(this EventHandler evt, bool suspend)
 		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(sender, args);
-		}
-		public static void Resume(this EventHandler evt, object sender, EventArgs args)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(sender, args);
+			if (evt == null) return false;
+			return Impl<EventHandler>.Suspend(evt, suspend);
 		}
 
 		/// <summary>Returns true if this event is currently suspended</summary>
 		public static bool IsSuspended<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
 		{
-			return evt != null && IsSuspendedImpl(evt);
+			return evt != null && Impl<EventHandler<TEventArgs>>.IsSuspended(evt);
 		}
 		public static bool IsSuspended(this EventHandler evt)
 		{
-			return evt != null && IsSuspendedImpl(evt);
+			return evt != null && Impl<EventHandler>.IsSuspended(evt);
 		}
 
-		// 0 Args *************************************************
+		#endregion
+
+		#region Action
 
 		/// <summary>Fire the event if not suspended</summary>
 		public static void Raise(this Action evt)
 		{
 			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt();
+			if (Impl<Action>.IsSuspended(evt))
+				Impl<Action>.Signal(evt);
+			else
+				evt();
 		}
 
-		/// <summary>Block this event from firing when Raise() is called, until Resume() is called</summary>
-		public static void Suspend(this Action evt)
+		/// <summary>Returns an RAII object for suspending events</summary>
+		public static Scope SuspendScope(this Action evt)
 		{
-			if (evt == null) return;
-			SuspendImpl(evt);
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
 		}
 
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume(this Action evt)
+		/// <summary>
+		/// Block/Unblock this action from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend(this Action evt, bool suspend)
 		{
 			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended and 'raise_if_signalled' is true, will call Raise()</summary>
-		public static void Resume(this Action evt, bool raise_if_signalled)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt) && raise_if_signalled) evt();
+			return Impl<Action>.Suspend(evt, suspend);
 		}
 
 		/// <summary>Returns true if this event is currently suppended</summary>
 		public static bool IsSuspended(this Action evt)
 		{
-			return evt != null && IsSuspendedImpl(evt);
+			return evt != null && Impl<Action>.IsSuspended(evt);
 		}
 
-		// 1 Arg *************************************************
+		///// <summary>Resume firing this event when Raise() is called.
+		///// if the event was signalled while suspended and 'raise_if_signalled' is true, will call Raise()</summary>
+		//public static void Resume(this Action evt, bool raise_if_signalled)
+		//{
+		//	if (evt == null) return;
+		//	if (ResumeImpl(evt) && raise_if_signalled) evt();
+		//}
+
+		#endregion
+
+		#region Action<T1>
 
 		/// <summary>Fire the event if not suspended</summary>
 		public static void Raise<T1>(this Action<T1> evt, T1 arg1)
 		{
 			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(arg1);
+			if (Impl<Action<T1>>.IsSuspended(evt))
+				Impl<Action<T1>>.Signal(evt);
+			else
+				evt(arg1);
 		}
 
-		/// <summary>Block this event from firing when Raise() is called until Resume() is called</summary>
-		public static void Suspend<T1>(this Action<T1> evt)
+		/// <summary>Returns an RAII object for suspending events</summary>
+		public static Scope SuspendScope<T1>(this Action<T1> evt)
 		{
-			if (evt == null) return;
-			SuspendImpl(evt);
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
 		}
 
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume<T1>(this Action<T1> evt)
+		/// <summary>
+		/// Block/Unblock this action from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend<T1>(this Action<T1> evt, bool suspend)
 		{
 			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended, will call Raise()</summary>
-		public static void Resume<T1>(this Action<T1> evt, T1 arg1)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(arg1);
+			return Impl<Action<T1>>.Suspend(evt, suspend);
 		}
 
 		/// <summary>Returns true if this event is currently suppended</summary>
 		public static bool IsSuspended<T1>(this Action<T1> evt)
 		{
-			return evt != null && IsSuspendedImpl(evt);
+			return evt != null && Impl<Action<T1>>.IsSuspended(evt);
 		}
 
-		// 2 Args *************************************************
+		#endregion
+
+		#region Action<T1,T2>
 
 		/// <summary>Fire the event if not suspended</summary>
 		public static void Raise<T1,T2>(this Action<T1,T2> evt, T1 arg1, T2 arg2)
 		{
 			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(arg1, arg2);
+			if (Impl<Action<T1,T2>>.IsSuspended(evt))
+				Impl<Action<T1,T2>>.Signal(evt);
+			else
+				evt(arg1, arg2);
 		}
 
-		/// <summary>Block this event from firing when Raise() is called until Resume() is called</summary>
-		public static void Suspend<T1,T2>(this Action<T1,T2> evt)
+		/// <summary>Returns an RAII object for suspending events</summary>
+		public static Scope SuspendScope<T1,T2>(this Action<T1,T2> evt)
 		{
-			if (evt == null) return;
-			SuspendImpl(evt);
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
 		}
 
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume<T1,T2>(this Action<T1,T2> evt)
+		/// <summary>
+		/// Block/Unblock this action from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the action has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend<T1,T2>(this Action<T1,T2> evt, bool suspend)
 		{
 			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended, will call Raise()</summary>
-		public static void Resume<T1,T2>(this Action<T1,T2> evt, T1 arg1, T2 arg2)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(arg1, arg2);
+			return Impl<Action<T1,T2>>.Suspend(evt, suspend);
 		}
 
 		/// <summary>Returns true if this event is currently suppended</summary>
 		public static bool IsSuspended<T1,T2>(this Action<T1,T2> evt)
 		{
-			return evt != null && IsSuspendedImpl(evt);
+			return evt != null && Impl<Action<T1,T2>>.IsSuspended(evt);
 		}
 
-		// 3 Args *************************************************
+		#endregion
 
-		/// <summary>Fire the event if not suspended</summary>
-		public static void Raise<T1,T2,T3>(this Action<T1,T2,T3> evt, T1 arg1, T2 arg2, T3 arg3)
-		{
-			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(arg1, arg2, arg3);
-		}
+		#region MakeWeak
 
-		/// <summary>Block this event from firing when Raise() is called until Resume() is called</summary>
-		public static void Suspend<T1,T2,T3>(this Action<T1,T2,T3> evt)
-		{
-			if (evt == null) return;
-			SuspendImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume<T1,T2,T3>(this Action<T1,T2,T3> evt)
-		{
-			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended, will call Raise()</summary>
-		public static void Resume<T1,T2,T3>(this Action<T1,T2,T3> evt, T1 arg1, T2 arg2, T3 arg3)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(arg1, arg2, arg3);
-		}
-
-		/// <summary>Returns true if this event is currently suppended</summary>
-		public static bool IsSuspended<T1,T2,T3>(this Action<T1,T2,T3> evt)
-		{
-			return evt != null && IsSuspendedImpl(evt);
-		}
-
-		// 4 Args *************************************************
-
-		/// <summary>Fire the event if not suspended</summary>
-		public static void Raise<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> evt, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-		{
-			if (evt == null) return;
-			if (IsSuspendedImpl(evt)) SignalImpl(evt); else evt(arg1, arg2, arg3, arg4);
-		}
-
-		/// <summary>Block this event from firing when Raise() is called until Resume() is called</summary>
-		public static void Suspend<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> evt)
-		{
-			if (evt == null) return;
-			SuspendImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// Does not fire the event if Raise() was called while suspended.
-		/// Returns true however if the event was signalled while suspended</summary>
-		public static bool Resume<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> evt)
-		{
-			if (evt == null) return false;
-			return ResumeImpl(evt);
-		}
-
-		/// <summary>Resume firing this event when Raise() is called.
-		/// if the event was signalled while suspended, will call Raise()</summary>
-		public static void Resume<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> evt, T1 arg1, T2 arg2, T3 arg3, T4 arg4)
-		{
-			if (evt == null) return;
-			if (ResumeImpl(evt)) evt(arg1, arg2, arg3, arg4);
-		}
-
-		/// <summary>Returns true if this event is currently suppended</summary>
-		public static bool IsSuspended<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> evt)
-		{
-			return evt != null && IsSuspendedImpl(evt);
-		}
-
-		// Extension methods *********************************************
 		/// <summary>
 		/// Usage:
 		///   Attach a weak action/event handler to an event
@@ -354,6 +285,7 @@ namespace pr.extn
 		///          remove {}
 		///      }
 		///    }
+		///
 		/// Behaviour:
 		///   Gun gun = new Gun();
 		///   Target bob = new Target("Bob");
@@ -441,6 +373,8 @@ namespace pr.extn
 			IWeakAction<T1,T2,T3,T4> weak_action = (IWeakAction<T1,T2,T3,T4>)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
+
+		#endregion
 	}
 }
 
@@ -490,12 +424,12 @@ namespace pr
 				// Test event suspend/resume
 				int boo_raised = 0;
 				BooEvent += (i)=> { ++boo_raised; };
-				BooEvent.Suspend();
+				BooEvent.Suspend(true);
 				BooEvent.Raise(0);
 				BooEvent.Raise(1);
 				BooEvent.Raise(2);
 				BooEvent.Raise(3);
-				Assert.IsTrue(BooEvent.Resume());
+				Assert.IsTrue(BooEvent.Suspend(false));
 				Assert.AreEqual(0, boo_raised);
 			}
 			[Test] public static void WeakActions()

@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using pr.stream;
 
-namespace pr.util
+namespace pr.container
 {
 	public class CSVData
 	{
@@ -237,7 +237,7 @@ namespace pr.util
 namespace pr
 {
 	using NUnit.Framework;
-	using util;
+	using container;
 
 	[TestFixture] internal static partial class UnitTests
 	{

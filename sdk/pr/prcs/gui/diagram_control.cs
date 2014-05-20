@@ -113,7 +113,7 @@ namespace pr.gui
 						// Set a new Z position
 						var p = Position;
 						p.pos.z = m_impl_diag.ElementZ;
-						Position = p;
+						Graphics.O2P = p; // Set directly so we don't raise the event
 					}
 				}
 			}
@@ -971,7 +971,7 @@ namespace pr.gui
 				var ldr = new LdrBuilder();
 				ldr.Append("*Spline line ",Selected ? Style.Selected : Style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
 				Graphics.UpdateModel(ldr.ToString());
-				Position = m4x4.Translation(AttachCentre(Anc0, Anc1));
+				Graphics.O2P = m4x4.Translation(AttachCentre(Anc0, Anc1));
 			}
 
 			/// <summary>Returns the other connected node</summary>
@@ -1355,7 +1355,6 @@ namespace pr.gui
 		// Members
 		private readonly View3d            m_view3d;           // Renderer
 		private readonly EventBatcher      m_eb_update_diag;   // Event batcher for updating the diagram graphics
-		private readonly EventBatcher      m_eb_refresh;       // Event batcher for refresh elements
 		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
 		private StyleCache<ConnectorStyle> m_connector_styles; // The collection of node styles
@@ -1370,7 +1369,6 @@ namespace pr.gui
 			m_impl_options     = options ?? new DiagramOptions();
 			m_view3d           = new View3d(Handle, Render);
 			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
-			m_eb_refresh       = new EventBatcher(Refresh);
 			m_camera           = new View3d.CameraControls(m_view3d.Drawset);
 			m_node_styles      = new StyleCache<NodeStyle>();
 			m_connector_styles = new StyleCache<ConnectorStyle>();
@@ -1410,6 +1408,19 @@ namespace pr.gui
 
 		/// <summary>Raised whenever elements in the diagram have been edited or moved</summary>
 		public event EventHandler DiagramChanged;
+		
+		/// <summary>Get/Set whether DiagramChanged events are raised</summary>
+		public bool RaiseEvents
+		{
+			get { return !DiagramChanged.IsSuspended(); }
+			set { DiagramChanged.Suspend(!value); }
+		}
+		public Scope SuspendEvents()
+		{
+			return Scope.Create(
+				() => RaiseEvents = false,
+				() => RaiseEvents = true);
+		}
 
 		/// <summary>Remove all data from the diagram</summary>
 		public void ResetDiagram()
@@ -1491,6 +1502,7 @@ namespace pr.gui
 					Point    = pt;
 					Location = conn.Position;
 				}
+				public override string ToString() { return Element.ToString(); }
 			}
 
 			/// <summary>All</summary>
@@ -1571,6 +1583,7 @@ namespace pr.gui
 			foreach (var elem in Selected)
 				elem.DragStartPosition = elem.Position;
 
+			RaiseEvents = false;
 			MouseMove -= OnMouseDrag;
 			MouseMove += OnMouseDrag;
 			Capture = true;
@@ -1588,6 +1601,7 @@ namespace pr.gui
 				Capture = false;
 				Cursor = Cursors.Default;
 				MouseMove -= OnMouseDrag;
+				RaiseEvents = true;
 			}
 
 			// If we haven't dragged, treat it as a click instead
@@ -1615,7 +1629,7 @@ namespace pr.gui
 					break;
 				}
 			}
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 		private void OnMouseDrag(object sender, MouseEventArgs e)
 		{
@@ -1648,7 +1662,7 @@ namespace pr.gui
 					// Change the cursor once dragging
 					Cursor = Cursors.SizeAll;
 					PositionDiagram(e.Location, sel.m_selection.Location);
-					m_eb_refresh.Signal();
+					Refresh();
 					break;
 				}
 			}
@@ -1657,7 +1671,7 @@ namespace pr.gui
 		{
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
 			m_camera.Navigate(0, 0, e.Delta / 120f);
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 		private void OnDiagramClicked(MouseEventArgs e)
 		{
@@ -1711,7 +1725,7 @@ namespace pr.gui
 				var tar = new v4(bounds.Centre, 0, 1);
 				m_camera.SetPosition(eye, tar, v4.YAxis);
 			}
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
@@ -1751,16 +1765,15 @@ namespace pr.gui
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
 			var dst = ClientToDiagram(cs);
 			m_camera.Navigate(ds.x - dst.x, ds.y - dst.y, 0);
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
-		/// <summary>Move the selected elements by </summary>
+		/// <summary>Move the selected elements by 'delta'</summary>
 		private void DragSelected(v2 delta, bool commit)
 		{
 			if (!AllowMove) return;
 			foreach (var elem in Selected)
 				elem.Drag(delta, commit);
-			m_eb_refresh.Signal();
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
@@ -1835,7 +1848,7 @@ namespace pr.gui
 					conn.Relink(false);
 
 			m_edited = true;
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>Called when the data associated with an element has changed</summary>
@@ -1922,7 +1935,7 @@ namespace pr.gui
 				}
 			}
 
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>Selects nodes that are connected to already selected nodes</summary>
@@ -1936,7 +1949,7 @@ namespace pr.gui
 			foreach (var conn in node.Connectors)
 				conn.OtherNode(node).Selected = true;
 
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>Spread the nodes on the diagram so none are overlapping</summary>
@@ -1949,7 +1962,7 @@ namespace pr.gui
 
 			// Prevent issues with nodes exactly on top of each other
 			var rand = new Rand();
-			var djitter = Options.Scatter.Equilibrium * 0.4f;
+			var djitter = 10f;
 			Func<v2> jitter = () => v2.Random2(-djitter, djitter, rand);
 
 			// Finds the minimum separation distance between to nodes for a given direction
@@ -1965,7 +1978,10 @@ namespace pr.gui
 
 			// Initialise the forces
 			foreach (var node in nodes)
-				force[node] = last[node] = jitter();
+			{
+				force[node] = last[node] = v2.Zero;
+				node.PositionXY += jitter();
+			}
 
 			// Spring-mass + Coulomb field simulation
 			for (int i = 0; i != Options.Scatter.MaxIterations; ++i)
@@ -2010,7 +2026,7 @@ namespace pr.gui
 							var min_sep = min_separation(vec, node0, node1);
 							var sep     = Math.Max(min_sep, vec.Length2);
 					
-							// Coulomb force F = kQq/x�
+							// Coulomb force F = kQq/xÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²
 							var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
 							var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
 
@@ -2042,7 +2058,7 @@ namespace pr.gui
 
 					// Reset the forces
 					last[node] = frc;
-					force[node] = jitter();
+					force[node] = v2.Zero;
 				}
 				if (equilibrium)
 					break;
@@ -2050,7 +2066,7 @@ namespace pr.gui
 
 			if (Options.Node.AutoRelink)
 				RelinkNodes();
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>Update the links between nodes to pick the nearest anchor points</summary>
@@ -2063,7 +2079,7 @@ namespace pr.gui
 
 			foreach (var connector in connectors)
 				connector.Relink(false);
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>
@@ -2071,14 +2087,16 @@ namespace pr.gui
 		/// Should only be used when the elements collection is modifed, otherwise use Refresh()</summary>
 		private void UpdateDiagram(bool invalidate_all)
 		{
+			var elements = new BindingListEx<Element>(Elements);
+			
 			m_view3d.Drawset.RemoveAllObjects();
-			foreach (var elem in Elements)
+			foreach (var elem in elements)
 			{
 				if (invalidate_all) elem.Invalidate();
 				m_view3d.Drawset.AddObject(elem.Graphics);
 			}
 
-			m_eb_refresh.Signal();
+			Refresh();
 		}
 
 		/// <summary>
@@ -2128,19 +2146,24 @@ namespace pr.gui
 		/// <summary>Update all invalidated objects in the diagram</summary>
 		public override void Refresh()
 		{
-			base.Refresh();
-			foreach (var elem in Elements)
-				elem.Refresh();
-
-			// Notify observers that the diagram has changed
-			if (m_edited)
+			if (m_in_refresh) return; // Prevent reentrancy
+			using (Scope.Create(() => m_in_refresh = true, () => m_in_refresh = false))
 			{
-				DiagramChanged.Raise(this, EventArgs.Empty);
-				m_edited = false;
-			}
+				base.Refresh();
+				foreach (var elem in Elements)
+					elem.Refresh();
 
-			m_view3d.SignalRefresh();
+				// Notify observers that the diagram has changed
+				if (m_edited)
+				{
+					DiagramChanged.Raise(this, EventArgs.Empty);
+					m_edited = false;
+				}
+
+				m_view3d.SignalRefresh();
+			}
 		}
+		private bool m_in_refresh;
 
 		/// <summary>Resize the control</summary>
 		protected override void OnResize(EventArgs e)
@@ -2230,7 +2253,12 @@ namespace pr.gui
 		}
 
 		/// <summary>Event allowing callers to add options to the context menu</summary>
-		public event Action<DiagramControl, ContextMenuStrip> AddUserMenuOptions;
+		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
+		public class AddUserMenuOptionsEventArgs :EventArgs
+		{
+			public ContextMenuStrip Menu { get; private set; }
+			public AddUserMenuOptionsEventArgs(ContextMenuStrip menu) { Menu = menu; }
+		}
 
 		/// <summary>Create and display a context menu</summary>
 		public void ShowContextMenu(Point location)
@@ -2244,7 +2272,7 @@ namespace pr.gui
 			using (context_menu.SuspendLayout(false))
 			{
 				// Allow users to add menu options
-				AddUserMenuOptions.Raise(this, context_menu);
+				AddUserMenuOptions.Raise(this, new AddUserMenuOptionsEventArgs(context_menu));
 
 				if (AllowEditing)
 				{
@@ -2280,7 +2308,7 @@ namespace pr.gui
 				context_menu.Items.AddRange(lvl0.ToArray());
 			}
 
-			context_menu.Closed += (s,a) => m_eb_refresh.Signal();
+			context_menu.Closed += (s,a) => Refresh();
 			context_menu.Show(this, location);
 		}
 

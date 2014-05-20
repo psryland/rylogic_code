@@ -631,6 +631,35 @@ namespace pr.util
 			return ELibCopyResult.Success;
 		}
 		public enum ELibCopyResult { Success, DestExists, SrcNotFound }
+	
+		/// <summary>
+		/// Helper for making a file dialog file type filter string.
+		/// Strings starting with *. are assumed to be extensions
+		/// Use: FileDialogFilter("Text Files","*.txt","Bitmaps","*.bmp","*.png"); </summary>
+		public static string FileDialogFilter(params string[] desc)
+		{
+			if (desc.Length == 0) return string.Empty;
+			if (desc[0].StartsWith("*.")) throw new Exception("First string should be a file type description");
+			
+			var sb = new StringBuilder();
+			var extn = new List<string>();
+			for (int i = 0; i != desc.Length;)
+			{
+				if (sb.Length != 0) sb.Append("|");
+				sb.Append(desc[i]);
+				
+				extn.Clear();
+				for (++i; i != desc.Length && desc[i].StartsWith("*."); ++i)
+					extn.Add(desc[i]);
+				
+				if (extn.Count == 0) throw new Exception("Expected file extension patterns to follow description");
+				
+				sb.Append("(").Append(string.Join(",", extn)).Append(")");
+				sb.Append("|").Append(string.Join(";", extn));
+			}
+
+			return sb.ToString();
+		}
 	}
 
 	/// <summary>Type specific utility methods</summary>
