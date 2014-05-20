@@ -238,16 +238,22 @@ namespace pr
 			m_focus_rel_clip = focus_relative_clip;
 		}
 
+		// Returns a distance scaled by the focus distance (if m_focus_rel_clip is enabled)
+		float FocusRelativeDistance(float dist) const
+		{
+			return (m_focus_rel_clip ? m_focus_dist : 1) * dist;
+		}
+
 		// The near clip plane
 		float Near() const
 		{
-			return (m_focus_rel_clip ? m_focus_dist : 1) * m_near;
+			return FocusRelativeDistance(m_near);
 		}
 
 		// The far clip plane
 		float Far() const
 		{
-			return (m_focus_rel_clip ? m_focus_dist : 1) * m_far;
+			return FocusRelativeDistance(m_far);
 		}
 
 		// Return the aspect ratio

@@ -4,9 +4,7 @@
 //***********************************************
 
 #include "shadow_map_cbuf.hlsli"
-#include "../inout.hlsli"
-
-#define TINY 0.0001f
+#include "../types.hlsli"
 
 // PS input format
 struct PSIn_ShadowMap
@@ -91,9 +89,11 @@ PSOut main(PSIn_ShadowMap In)
 	clip(face_sign0[face] * (px.y - px.x) + TINY);
 	clip(face_sign1[face] * (px.y + px.x) + TINY);
 
-	// Output the depth in the appropriate position in the RT
+	// Output the depth to the RT
 	PSOut Out;
-	Out.depth = float2((face != 4) * px.z, (face == 4) * px.z);
+	Out.depth = float2(
+		(face == 4) + (face != 4)*px.z,
+		(face != 4) + (face == 4)*px.z);
 	return Out;
 }
 #endif

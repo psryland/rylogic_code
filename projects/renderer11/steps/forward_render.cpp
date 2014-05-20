@@ -18,8 +18,8 @@ namespace pr
 	{
 		ForwardRender::ForwardRender(Scene& scene, bool clear_bb)
 			:RenderStep(scene)
-			,m_cbuf_frame(m_shdr_mgr->GetCBuf<fwd::CBufFrame>("Fwd::CBufFrame"))
-			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<fwd::CBufModel>("Fwd::CBufModel"))
+			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::fwd::CBufFrame>("Fwd::CBufFrame"))
+			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::fwd::CBufModel>("Fwd::CBufModel"))
 			,m_clear_bb(clear_bb)
 			,m_vs(m_shdr_mgr->FindShader(EStockShader::FwdShaderVS))
 			,m_ps(m_shdr_mgr->FindShader(EStockShader::FwdShaderPS))
@@ -81,9 +81,10 @@ namespace pr
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants
-			fwd::CBufFrame cb = {};
+			hlsl::fwd::CBufFrame cb = {};
 			SetViewConstants(m_scene->m_view, cb);
-			SetLightingConstants(m_scene->m_global_light, cb);
+			SetLightingConstants(m_scene->m_global_light, cb.m_global_light);
+			SetShadowMapConstants(m_scene->m_view, 0, cb.m_shadow);
 			WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::PS);
 
 			for (auto& dle : m_drawlist)
@@ -92,7 +93,7 @@ namespace pr
 				ss.Commit();
 
 				// Set the per-nugget constants
-				fwd::CBufModel cb = {};
+				hlsl::fwd::CBufModel cb = {};
 				SetGeomType(*dle.m_nugget, cb);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
 				SetTint(*dle.m_instance, cb);

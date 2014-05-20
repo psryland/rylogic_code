@@ -14,23 +14,23 @@
 
 #ifdef SHADER_BUILD
 
-#define cbuf_bank(b) register(b)
+	#define cbuf_bank(b) register(b)
 
 #else
 
-enum class EBank { b0, b1, b2, b3, b4, b5 };
-template <EBank bn> struct Bank
-{
-	enum { slot = bn };
-};
+	enum class EBank { b0, b1, b2, b3, b4, b5 };
+	template <EBank bn> struct Bank
+	{
+		enum { slot = bn };
+	};
 
-typedef pr::m4x4 float4x4;
-typedef pr::v4   float4;
-typedef pr::iv4  int4;
+	typedef pr::m4x4 float4x4;
+	typedef pr::v4   float4;
+	typedef pr::iv4  int4;
 
-#define cbuffer struct
-#define cbuf_bank(b) Bank<EBank::b>
-#define row_major
+	#define cbuffer struct
+	#define cbuf_bank(b) Bank<EBank::b>
+	#define row_major
 
 #endif
 

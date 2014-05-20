@@ -5,8 +5,7 @@
 
 #include "gbuffer_cbuf.hlsli"
 #include "gbuffer.hlsli"
-#include "..\inout.hlsli"
-#include "..\phong_lighting.hlsli"
+#include "..\lighting\phong_lighting.hlsli"
 
 // PS input format
 struct PSIn_DSLighting
@@ -48,7 +47,7 @@ PSOut main(PSIn_DSLighting In)
 	Out.diff = px.diff;
 
 	// Do lighting...
-	Out.diff = Illuminate(ws_vert, px.ws_norm, m_c2w[3], Out.diff);
+	Out.diff = Illuminate(m_light, ws_vert, px.ws_norm, m_c2w[3], Out.diff);
 
 	//Out.diff = float4(1,0,1,1);
 	//Out.diff = px.diff;

@@ -5,7 +5,6 @@
 
 #include "gbuffer_cbuf.hlsli"
 #include "gbuffer.hlsli"
-#include "..\inout.hlsli"
 
 // Diffuse texture0 /w sampler
 SamplerState      m_sampler0 :register(s0);

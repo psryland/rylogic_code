@@ -23,8 +23,8 @@ namespace pr
 		DSLighting::DSLighting(Scene& scene)
 			:RenderStep(scene)
 			,m_gbuffer(scene.RStep<GBuffer>())
-			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
-			,m_cbuf_lighting(m_shdr_mgr->GetCBuf<ds::CBufLighting>("ds::CBufLighting"))
+			,m_cbuf_camera  (m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera  >("ds::CBufCamera"))
+			,m_cbuf_lighting(m_shdr_mgr->GetCBuf<hlsl::ds::CBufLighting>("ds::CBufLighting"))
 			,m_unit_quad()
 			,m_vs(m_shdr_mgr->FindShader(EStockShader::DSLightingVS))
 			,m_ps(m_shdr_mgr->FindShader(EStockShader::DSLightingPS))
@@ -60,7 +60,7 @@ namespace pr
 		}
 
 		// Set the position of the four corners of the view frustum in camera space
-		void SetFrustumCorners(SceneView const& view, ds::CBufCamera& cb)
+		void SetFrustumCorners(SceneView const& view, hlsl::ds::CBufCamera& cb)
 		{
 			pr::GetCorners(view.Frustum(), cb.m_frustum, 1.0f);
 		}
@@ -77,14 +77,14 @@ namespace pr
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			{// Set camera constants
-				ds::CBufCamera cb = {};
+				hlsl::ds::CBufCamera cb = {};
 				SetViewConstants(m_scene->m_view, cb);
 				SetFrustumCorners(m_scene->m_view, cb);
 				WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
 			}
 			{// Set lighting constants
-				ds::CBufLighting cb = {};
-				SetLightingConstants(m_scene->m_global_light, cb);
+				hlsl::ds::CBufLighting cb = {};
+				SetLightingConstants(m_scene->m_global_light, cb.m_light);
 				WriteConstants(dc, m_cbuf_lighting, cb, EShaderType::PS);
 			}
 

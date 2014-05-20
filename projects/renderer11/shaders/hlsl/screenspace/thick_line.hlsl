@@ -3,8 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
-#include "../inout.hlsli"
 #include "thick_line_cbuf.hlsli"
+#include "../types.hlsli"
 
 // Converts line geometry into tristrip
 #ifdef PR_RDR_GSHADER_thick_linelist

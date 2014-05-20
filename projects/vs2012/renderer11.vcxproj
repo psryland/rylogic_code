@@ -253,9 +253,10 @@
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\inout.hlsli" />
-    <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli" />
+    <None Include="..\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli" />
+    <None Include="..\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli" />
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli" />
+    <None Include="..\renderer11\shaders\hlsl\types.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\renderer11\shaders\hlsl\deferred\dslighting.hlsl">

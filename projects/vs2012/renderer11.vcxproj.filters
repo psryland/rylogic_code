@@ -49,6 +49,9 @@
     <Filter Include="shaders\hlsl\screenspace">
       <UniqueIdentifier>{5e0e9d84-d090-4b5f-a8a3-d92dfc76e305}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders\hlsl\lighting">
+      <UniqueIdentifier>{f4a19bcc-f66c-4c39-b094-b66f24601c81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\renderer11\util\stdafx.h">
@@ -388,9 +391,6 @@
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
       <Filter>shaders\hlsl\deferred</Filter>
     </None>
-    <None Include="..\renderer11\shaders\hlsl\phong_lighting.hlsli">
-      <Filter>shaders\hlsl</Filter>
-    </None>
     <None Include="..\..\script\BuildShader.py">
       <Filter>shaders\hlsl</Filter>
     </None>
@@ -398,9 +398,6 @@
       <Filter>shaders\hlsl\shadow</Filter>
     </None>
     <None Include="..\renderer11\shaders\hlsl\cbuf.hlsli">
-      <Filter>shaders\hlsl</Filter>
-    </None>
-    <None Include="..\renderer11\shaders\hlsl\inout.hlsli">
       <Filter>shaders\hlsl</Filter>
     </None>
     <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
@@ -411,6 +408,15 @@
     </None>
     <None Include="..\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli">
       <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli">
+      <Filter>shaders\hlsl\lighting</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\types.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli">
+      <Filter>shaders\hlsl\shadow</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -24,24 +24,28 @@ namespace pr
 		void RegisterRuntimeShader(RdrId id, char const* cso_filepath);
 		#endif
 
-		#include "renderer11/shaders/hlsl/cbuf.hlsli"
+		namespace hlsl
+		{
+			#include "renderer11/shaders/hlsl/cbuf.hlsli"
+			#include "renderer11/shaders/hlsl/types.hlsli"
 
-		// The constant buffer definitions
-		namespace fwd
-		{
-			#include "renderer11/shaders/hlsl/forward/forward_cbuf.hlsli"
-		}
-		namespace ds
-		{
-			#include "renderer11/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
-		}
-		namespace screenspace
-		{
-			#include "renderer11/shaders/hlsl/screenspace/thick_line_cbuf.hlsli"
-		}
-		namespace smap
-		{
-			#include "renderer11/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
+			// The constant buffer definitions
+			namespace fwd
+			{
+				#include "renderer11/shaders/hlsl/forward/forward_cbuf.hlsli"
+			}
+			namespace ds
+			{
+				#include "renderer11/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
+			}
+			namespace screenspace
+			{
+				#include "renderer11/shaders/hlsl/screenspace/thick_line_cbuf.hlsli"
+			}
+			namespace smap
+			{
+				#include "renderer11/shaders/hlsl/shadow/shadow_map_cbuf.hlsli"
+			}
 		}
 
 		// Set the geometry type
@@ -61,6 +65,7 @@ namespace pr
 			pr::m4x4 o2w = GetO2W(inst);
 			pr::m4x4 w2c = pr::InvertFast(view.m_c2w);
 			pr::m4x4 c2s; if (!FindC2S(inst, c2s)) c2s = view.m_c2s;
+
 			cb.m_o2s = c2s * w2c * o2w;
 			cb.m_o2w = o2w;
 			cb.m_n2w = pr::Orthonorm(cb.m_o2w);
@@ -92,15 +97,27 @@ namespace pr
 		}
 
 		// Helper for setting lighting constants
-		template <typename TCBuf> void SetLightingConstants(Light const& light, TCBuf& cb)
+		inline void SetLightingConstants(Light const& light, hlsl::Light& cb)
 		{
-			cb.m_light_info         = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
-			cb.m_ws_light_direction = light.m_direction;
-			cb.m_ws_light_position  = light.m_position;
-			cb.m_light_ambient      = static_cast<pr::Colour>(light.m_ambient);
-			cb.m_light_colour       = static_cast<pr::Colour>(light.m_diffuse);
-			cb.m_light_specular     = pr::Colour::make(light.m_specular, light.m_specular_power);
-			cb.m_spot               = pr::v4::make(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
+			cb.m_info         = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
+			cb.m_ws_direction = light.m_direction;
+			cb.m_ws_position  = light.m_position;
+			cb.m_ambient      = static_cast<pr::Colour>(light.m_ambient);
+			cb.m_colour       = static_cast<pr::Colour>(light.m_diffuse);
+			cb.m_specular     = pr::Colour::make(light.m_specular, light.m_specular_power);
+			cb.m_spot         = pr::v4::make(light.m_inner_cos_angle, light.m_outer_cos_angle, light.m_range, light.m_falloff);
+		}
+
+		// Helper for setting shadow map constants
+		inline void SetShadowMapConstants(SceneView const& view, int smap_count, hlsl::Shadow& cb)
+		{
+			auto shadow_frustum = view.ShadowFrustum();
+			auto max_range = view.m_shadow_max_caster_dist;
+
+			cb.m_info        = pr::iv4::make(smap_count, 0, 0, 0);
+			cb.m_frust_dim   = shadow_frustum.Dim();
+			cb.m_frust_dim.w = max_range;
+			cb.m_frust       = shadow_frustum.m_Tnorms;
 		}
 
 		// Lock and write 'cb' into 'cbuf'. The set 'cbuf' as the constants for the shaders

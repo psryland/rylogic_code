@@ -5,19 +5,22 @@
 // Shader for forward rendering face data
 
 #include "forward_cbuf.hlsli"
-#include "../inout.hlsli"
-#include "../phong_lighting.hlsli"
+#include "../types.hlsli"
 
 // Texture2D /w sampler
 Texture2D<float4> m_texture0 :register(t0);
 SamplerState      m_sampler0 :register(s0);
 
+// Shadow map
+Texture2D<float2> m_smap_texture[1];
+SamplerState      m_smap_sampler[1];
+
 // Projected textures
 Texture2D<float4> m_proj_texture[PR_RDR_MAX_PROJECTED_TEXTURES];
 SamplerState      m_proj_sampler[PR_RDR_MAX_PROJECTED_TEXTURES];
 
-#define HAS_NORMALS m_geom.x == 1
-#define HAS_TEX0 m_geom.y == 1
+#include "../lighting/phong_lighting.hlsli"
+#include "../shadow/shadow_cast.hlsli"
 
 // PS output format
 struct PSOut
@@ -62,14 +65,19 @@ PSOut main(PSIn In)
 	Out.diff = In.diff;
 
 	// Texture2D (with transform)
-	if (HAS_TEX0)
+	if (HasTex0)
 		Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
 	//if (HAS_PROJTEX) // Projected textures
 	//	Out.diff0 = ProjTex(In.ws_pos, Out.diff);
 
+	// Shadows
+	float light_visible = true;
+	if (m_shadow.m_info.x == 1)
+		light_visible = LightVisibility(m_shadow, 0, m_global_light, m_w2c, In.ws_vert);
+
 	// Lighting
-	if (HAS_NORMALS)
-		Out.diff = Illuminate(In.ws_vert, In.ws_norm, m_c2w[3], Out.diff);
+	if (HasNormals)
+		Out.diff = Illuminate(m_global_light, In.ws_vert, light_visible * In.ws_norm, m_c2w[3], Out.diff);
 
 	return Out;
 }

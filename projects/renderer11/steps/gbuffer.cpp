@@ -23,8 +23,8 @@ namespace pr
 			,m_dsv()
 			,m_main_rtv()
 			,m_main_dsv()
-			,m_cbuf_camera(m_shdr_mgr->GetCBuf<ds::CBufCamera>("ds::CBufCamera"))
-			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<ds::CBufModel>("ds::CBufModel"))
+			,m_cbuf_camera(m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera>("ds::CBufCamera"))
+			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufModel >("ds::CBufModel"))
 			,m_vs(m_shdr_mgr->FindShader(EStockShader::GBufferVS))
 			,m_ps(m_shdr_mgr->FindShader(EStockShader::GBufferPS))
 		{
@@ -177,7 +177,7 @@ namespace pr
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants and bind them to the shaders
-			ds::CBufCamera cb = {};
+			hlsl::ds::CBufCamera cb = {};
 			SetViewConstants(m_scene->m_view, cb);
 			WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
 
@@ -188,7 +188,7 @@ namespace pr
 				ss.Commit();
 
 				// Set the per-nugget constants
-				ds::CBufModel cb = {};
+				hlsl::ds::CBufModel cb = {};
 				SetGeomType(*dle.m_nugget, cb);
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
 				SetTint(*dle.m_instance, cb);

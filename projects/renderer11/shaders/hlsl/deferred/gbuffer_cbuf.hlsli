@@ -8,6 +8,7 @@
 #define PR_RDR_SHADER_GBUFFER_CBUF_HLSL
 
 #include "../cbuf.hlsli"
+#include "../types.hlsli"
 
 // Camera to world transform
 cbuffer CBufCamera :cbuf_bank(b0)
@@ -22,14 +23,7 @@ cbuffer CBufCamera :cbuf_bank(b0)
 // Global lighting
 cbuffer CBufLighting :cbuf_bank(b1)
 {
-	// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
-	float4 m_light_info;         // Encoded info for global lighting
-	float4 m_ws_light_direction; // The direction of the global light source
-	float4 m_ws_light_position;  // The position of the global light source
-	float4 m_light_ambient;      // The colour of the ambient light
-	float4 m_light_colour;       // The colour of the directional light
-	float4 m_light_specular;     // The colour of the specular light. alpha channel is specular power
-	float4 m_spot;               // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+	Light m_light;
 };
 
 // Per-model constants

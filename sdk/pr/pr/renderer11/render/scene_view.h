@@ -13,14 +13,16 @@ namespace pr
 		// The properties of a camera that looks into the scene
 		struct SceneView
 		{
-			m4x4  m_c2w;          // Camera to world, or InvView transform
-			m4x4  m_c2s;          // Camera to Screen, or Projection transform
-			float m_fovY;         // FOV
-			float m_aspect;       // Aspect ratio = width / height
-			float m_centre_dist;  // Distance to the centre of the frustum
-			float m_near;         // The distance to the near plane
-			float m_far;          // The distance to the far plane
-			bool  m_orthographic; // True for orthographic projection
+			m4x4  m_c2w;                    // Camera to world, or InvView transform
+			m4x4  m_c2s;                    // Camera to Screen, or Projection transform
+			float m_fovY;                   // FOV
+			float m_aspect;                 // Aspect ratio = width / height
+			float m_centre_dist;            // Distance to the centre of the frustum
+			float m_near;                   // The distance to the near plane
+			float m_far;                    // The distance to the far plane
+			float m_shadow_zfar;            // The far plane for shadows
+			float m_shadow_max_caster_dist; // The maximum distance for objects that cast shadows (used to normalise depth values in the smap)
+			bool  m_orthographic;           // True for orthographic projection
 
 			SceneView();
 			SceneView(pr::m4x4 const& c2w, float fovY, float aspect, float centre_dist, bool orthographic);
@@ -29,6 +31,9 @@ namespace pr
 			// Return the view frustum in camera space
 			pr::Frustum Frustum(float zfar) const { return Frustum::makeFA(m_fovY, m_aspect, zfar); }
 			pr::Frustum Frustum() const           { return Frustum(m_far); }
+
+			// Return the view volume in which shadows are cast
+			pr::Frustum ShadowFrustum() const { return Frustum(m_shadow_zfar); }
 
 			// The world space position of the camera focus point
 			pr::v4 FocusPoint() const { return m_c2w.pos - m_c2w.z * m_centre_dist; }

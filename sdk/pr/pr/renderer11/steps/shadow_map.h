@@ -23,10 +23,8 @@ namespace pr
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;        // The main RT for restoring after the rstep
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;        // The main DB for restoring after the rstep
 			D3DPtr<ID3D11Buffer>             m_cbuf_frame;      // Per-frame constant buffer
-			D3DPtr<ID3D11Buffer>             m_cbuf_light;      // Per-light constant buffer
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;     // Per-nugget constant buffer
 			pr::iv2                          m_smap_size;       // Dimensions of the smap texture
-			float                            m_shadow_distance; // The distance in front of the camera to consider shadows
 			ShaderPtr                        m_vs;
 			ShaderPtr                        m_ps;
 			ShaderPtr                        m_gs_face;

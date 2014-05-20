@@ -44,16 +44,13 @@ namespace pr
 			,m_srv()
 			,m_main_rtv()
 			,m_main_dsv()
-			,m_cbuf_frame(m_shdr_mgr->GetCBuf<smap::CBufFrame>("smap::CBufFrame"))
-			,m_cbuf_light(m_shdr_mgr->GetCBuf<smap::CBufLighting>("smap::CBufLighting"))
-			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<smap::CBufNugget>("smap::CBufNugget"))
-			,m_shadow_distance(100.0f)
+			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::smap::CBufFrame >("smap::CBufFrame"))
+			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::smap::CBufNugget>("smap::CBufNugget"))
 			,m_smap_size(size)
 			,m_vs(m_shdr_mgr->FindShader(EStockShader::ShadowMapVS))
 			,m_ps(m_shdr_mgr->FindShader(EStockShader::ShadowMapPS))
 			,m_gs_face(m_shdr_mgr->FindShader(EStockShader::ShadowMapFaceGS))
 			,m_gs_line(m_shdr_mgr->FindShader(EStockShader::ShadowMapLineGS))
-
 		{
 			InitRT(size);
 			
@@ -100,18 +97,6 @@ namespace pr
 			srvdesc.Texture2D.MostDetailedMip = 0;
 			srvdesc.Texture2D.MipLevels = 1;
 			pr::Throw(device->CreateShaderResourceView(m_tex.m_ptr, &srvdesc, &m_srv.m_ptr));
-
-			//// We need to create our own depth buffer to ensure it has the same dimensions
-			//// and multisampling properties as the g-buffer RTs.
-			//D3DPtr<ID3D11Texture2D> dtex;
-			//tdesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-			//tdesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-			//pr::Throw(device->CreateTexture2D(&tdesc, 0, &dtex.m_ptr));
-			//PR_EXPAND(PR_DBG_RDR, NameResource(dtex, "gbuffer dsv"));
-
-			//DepthStencilViewDesc dsvdesc(tdesc.Format);
-			//dsvdesc.Texture2D.MipSlice = 0;
-			//pr::Throw(device->CreateDepthStencilView(dtex.m_ptr, &dsvdesc, &m_dsv.m_ptr));
 		}
 
 		// Bind the smap RT to the output merger
@@ -182,32 +167,22 @@ namespace pr
 			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
 			dc->RSSetViewports(1, &vp);
 
-			//hack
-			m_shadow_distance = 3.0f;
-
-			auto m_max_caster_distance = 6.0f;
-
 			{// Set the frame constants
 				auto& c2w = m_scene->m_view.m_c2w;
-				auto shadow_frustum = m_scene->m_view.Frustum(m_shadow_distance);
-				smap::CBufFrame cb = {};
-				CreateProjection(shadow_frustum, 0, m_light, c2w, m_max_caster_distance, cb.m_proj[0]);
-				CreateProjection(shadow_frustum, 1, m_light, c2w, m_max_caster_distance, cb.m_proj[1]);
-				CreateProjection(shadow_frustum, 2, m_light, c2w, m_max_caster_distance, cb.m_proj[2]);
-				CreateProjection(shadow_frustum, 3, m_light, c2w, m_max_caster_distance, cb.m_proj[3]);
-				CreateProjection(shadow_frustum, 4, m_light, c2w, m_max_caster_distance, cb.m_proj[4]);
+				auto shadow_frustum = m_scene->m_view.ShadowFrustum();
+				
+				hlsl::smap::CBufFrame cb = {};
+				CreateProjection(shadow_frustum, 0, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[0]);
+				CreateProjection(shadow_frustum, 1, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[1]);
+				CreateProjection(shadow_frustum, 2, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[2]);
+				CreateProjection(shadow_frustum, 3, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[3]);
+				CreateProjection(shadow_frustum, 4, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, cb.m_proj[4]);
 
 				cb.m_frust_dim = shadow_frustum.Dim();
-				cb.m_frust_dim.w = m_max_caster_distance;
+				cb.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
 				WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
 			}
 			
-			{// Set the light constants
-				smap::CBufLighting cb = {};
-				SetLightingConstants(m_light, cb);
-				WriteConstants(dc, m_cbuf_light, cb, EShaderType::PS);
-			}
-
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
 			{
@@ -215,7 +190,7 @@ namespace pr
 				ss.Commit();
 
 				// Set the per-nugget constants
-				smap::CBufNugget cb = {};
+				hlsl::smap::CBufNugget cb = {};
 				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
 				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS);
 
@@ -228,6 +203,17 @@ namespace pr
 
 #if SMAP_TEST
 			{
+				auto clip = [](float x) { return x < 0.0f; };
+				auto step = [](float b, float a) { return a >= b ? 1.0f : 0.0f; };
+				auto step4 = [](v4 const& b, v4 const& a)
+				{
+					return v4::make(
+						b.x >= a.x ? 1.0f : 0.0f,
+						b.y >= a.y ? 1.0f : 0.0f,
+						b.z >= a.z ? 1.0f : 0.0f,
+						b.w >= a.w ? 1.0f : 0.0f);
+				};
+
 				Vert verts[4] =
 				{
 					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
@@ -243,10 +229,10 @@ namespace pr
 				} vout[4];
 
 				auto& c2w = m_scene->m_view.m_c2w;
-				auto shadow_frustum = m_scene->m_view.Frustum(m_shadow_distance);
+				auto shadow_frustum = m_scene->m_view.ShadowFrustum();
 				m4x4 proj;
 				static int face = 0;
-				CreateProjection(shadow_frustum, face, m_light, c2w, m_max_caster_distance, proj);
+				CreateProjection(shadow_frustum, face, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, proj);
 				
 				for (int i = 0; i != 4; ++i)
 				{
@@ -256,7 +242,6 @@ namespace pr
 					vout[i].ws_vert.w = float(face);
 				}
 
-				auto clip = [](float x) { return x < 0.0f; };
 				struct
 				{
 					v4 ss_vert;
@@ -278,6 +263,25 @@ namespace pr
 
 					rt[i].depth = v2::make((face != 4) * px.z, (face == 4) * px.z);
 				}
+
+				//auto IntersectFrustum = [&](Frustum const& frust, v4 const& s, v4 const& e)
+				//{
+				//	v4 const T = v4::make(1e38f);
+				//	v4 d0 = frust.m_Tnorms * s;
+				//	v4 d1 = frust.m_Tnorms * e;
+				//	v4 t0 = step4(d1,d0)      * Min(T, -d0/(d1 - d0));        // Clip to the frustum sides
+				//	float  t1 = step(e.z,s.z) * Min(T.x, -s.z / (e.z - s.z)); // Clip to the far plane
+
+				//	float t = T.x;
+				//	if (t0.x != 0) t = Min(t,t0.x);
+				//	if (t0.y != 0) t = Min(t,t0.y);
+				//	if (t0.z != 0) t = Min(t,t0.z);
+				//	if (t0.w != 0) t = Min(t,t0.w);
+				//	if (t1   != 0) t = Min(t,t1);
+				//	return t;
+				//};
+
+				//auto t = IntersectFrustum(shadow_frustum, c2w.pos - c2w.z, c2w.pos - 2*c2w.z);
 			}
 #endif
 		}

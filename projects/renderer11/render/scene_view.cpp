@@ -11,14 +11,16 @@ namespace pr
 	{
 		// Construct scene views
 		SceneView::SceneView()
-			:m_c2w          (m4x4Identity)
-			,m_c2s          ()
-			,m_fovY         (pr::maths::tau_by_8)
-			,m_aspect       (1.0f)
-			,m_centre_dist  (1.0f)
-			,m_near         (0.01f)
-			,m_far          (1.0e8f)
-			,m_orthographic (false)
+			:m_c2w(m4x4Identity)
+			,m_c2s()
+			,m_fovY(pr::maths::tau_by_8)
+			,m_aspect(1.0f)
+			,m_centre_dist(1.0f)
+			,m_near(0.01f)
+			,m_far(1.0e8f)
+			,m_shadow_zfar(100.0f)
+			,m_shadow_max_caster_dist(200.0f)
+			,m_orthographic(false)
 		{
 			PR_ASSERT(PR_DBG_RDR, pr::meta::is_aligned<SceneView>(this), "My alignment is broke");
 
@@ -26,26 +28,30 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");
 		}
 		SceneView::SceneView(pr::m4x4 const& c2w, float fovY, float aspect, float centre_dist, bool orthographic)
-			:m_c2w         (c2w)
-			,m_c2s         ()
-			,m_fovY        (fovY)
-			,m_aspect      (aspect)
-			,m_centre_dist (centre_dist)
-			,m_near        (0.01f)
-			,m_far         (1.0e8f)
+			:m_c2w(c2w)
+			,m_c2s()
+			,m_fovY(fovY)
+			,m_aspect(aspect)
+			,m_centre_dist(centre_dist)
+			,m_near(0.01f)
+			,m_far(1.0e8f)
+			,m_shadow_zfar(100.0f)
+			,m_shadow_max_caster_dist(200.0f)
 			,m_orthographic(orthographic)
 		{
 			UpdateCameraToScreen();
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");
 		}
 		SceneView::SceneView(pr::Camera const& cam)
-			:m_c2w         (cam.CameraToWorld())
-			,m_c2s         (cam.CameraToScreen())
-			,m_fovY        (cam.m_fovY)
-			,m_aspect      (cam.m_aspect)
-			,m_centre_dist (cam.m_focus_dist)
-			,m_near        (cam.Near())
-			,m_far         (cam.Far())
+			:m_c2w(cam.CameraToWorld())
+			,m_c2s(cam.CameraToScreen())
+			,m_fovY(cam.m_fovY)
+			,m_aspect(cam.m_aspect)
+			,m_centre_dist(cam.m_focus_dist)
+			,m_near(cam.Near())
+			,m_far(cam.Far())
+			,m_shadow_zfar(cam.FocusRelativeDistance(100.0f))
+			,m_shadow_max_caster_dist(cam.FocusRelativeDistance(200.0f))
 			,m_orthographic(cam.m_orthographic)
 		{
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");

@@ -25,7 +25,7 @@ namespace pr
 
 		ThickLineListShaderGS::ThickLineListShaderGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
 			:base(mgr, id, name, shdr)
-			,m_cbuf_model(m_mgr->GetCBuf<screenspace::CbufThickLine>("CbufThickLine"))
+			,m_cbuf_model(m_mgr->GetCBuf<hlsl::screenspace::CbufThickLine>("CbufThickLine"))
 			,m_default_linewidth(2.0f)
 		{
 			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "thick_linelist_gs.cso"));
@@ -40,7 +40,7 @@ namespace pr
 			auto screen_size = state.m_rstep->m_scene->m_rdr->RenderTargetSize();
 			//auto screen_size = state.m_rstep->m_scene->m_view.ViewArea(1.0f);
 
-			screenspace::CbufThickLine cb = {};
+			hlsl::screenspace::CbufThickLine cb = {};
 			cb.m_dim_and_width.x = float(screen_size.x);
 			cb.m_dim_and_width.y = float(screen_size.y);
 			cb.m_dim_and_width.w = lw ? *lw : m_default_linewidth;
