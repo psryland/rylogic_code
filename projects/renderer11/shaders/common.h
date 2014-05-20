@@ -64,10 +64,6 @@ namespace pr
 			cb.m_o2s = c2s * w2c * o2w;
 			cb.m_o2w = o2w;
 			cb.m_n2w = pr::Orthonorm(cb.m_o2w);
-
-			pr::Transpose4x4(cb.m_o2s);
-			pr::Transpose4x4(cb.m_o2w);
-			pr::Transpose4x4(cb.m_n2w);
 		}
 
 		// Set the tint properties of a constants buffer
@@ -84,8 +80,6 @@ namespace pr
 			cb.m_tex2surf0 = ddata.m_tex_diffuse != nullptr
 				? ddata.m_tex_diffuse->m_t2s
 				: pr::m4x4Identity;
-
-			pr::Transpose4x4(cb.m_tex2surf0);
 		}
 
 		// Helper for setting scene view constants
@@ -95,11 +89,6 @@ namespace pr
 			cb.m_c2s = view.m_c2s;
 			cb.m_w2c = pr::InvertFast(cb.m_c2w);
 			cb.m_w2s = cb.m_c2s * cb.m_w2c;
-
-			pr::Transpose4x4(cb.m_c2w);
-			pr::Transpose4x4(cb.m_c2s);
-			pr::Transpose4x4(cb.m_w2c);
-			pr::Transpose4x4(cb.m_w2s);
 		}
 
 		// Helper for setting lighting constants
@@ -131,7 +120,7 @@ namespace pr
 		}
 
 		// Helper for binding 'tex' to a texture slot, along with its sampler
-		inline void BindTextureAndSampler(D3DPtr<ID3D11DeviceContext>& dc, UINT slot, Texture2DPtr tex)
+		inline void BindTextureAndSampler(D3DPtr<ID3D11DeviceContext>& dc, UINT slot, Texture2DPtr tex, D3DPtr<ID3D11SamplerState> default_samp_state)
 		{
 			if (tex != nullptr)
 			{
@@ -144,22 +133,8 @@ namespace pr
 				ID3D11ShaderResourceView* null_srv[1] = {};
 				dc->PSSetShaderResources(slot, 1, null_srv);
 
-				ID3D11SamplerState* null_samp[1] = {};
+				ID3D11SamplerState* null_samp[1] = {default_samp_state.m_ptr};
 				dc->PSSetSamplers(slot, 1, null_samp);
-
-				//// If there is not sampler assigned, create a default one and assign it,
-				//// otherwise leave what's there... it shouldn't matter cause it's not being used anyway.
-				//ID3D11SamplerState* null_samp[1] = {};
-				//dc->PSGetSamplers(slot, 1, null_samp);
-				//if (null_samp[0] == nullptr)
-				//{
-				//	auto desc = SamplerDesc::LinearClamp();
-				//	D3DPtr<ID3D11SamplerState> samp_state;
-				//	pr::Throw(Device(dc)->CreateSamplerState(&desc, &samp_state.m_ptr));
-				//
-				//	null_samp[0] = samp_state.m_ptr;
-				//	dc->PSSetSamplers(slot, 1, null_samp);
-				//}
 			}
 		}
 	}

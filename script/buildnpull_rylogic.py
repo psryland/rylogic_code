@@ -9,9 +9,15 @@ import UserVars
 try:
 	# build rylogic.dll
 	Tools.Exec([sys.executable, r"P:\sdk\pr\prcs\deploy.py", "nowait"])
-	
+
 	# pull
-	Tools.Exec([sys.executable, r"R:\software\SDK\pr\lib\_pull_pr_libs.py"])
-	
+	Tools.Exec([sys.executable, r"R:\software\SDK\pr\lib\_pull_pr_libs.py", "nowait"])
+
+	config = "debug"
+	Tools.Copy("R:\\software\\SDK\\pr\\lib\\anycpu\\" + config + "\\rylogic.dll", "R:\\software\\SDK\\pr\\lib\\anycpu\\");
+	Tools.Copy("R:\\software\\SDK\\pr\\lib\\anycpu\\" + config + "\\rylogic.pdb", "R:\\software\\SDK\\pr\\lib\\anycpu\\");
+
+	Tools.OnSuccess();
+
 except Exception as ex:
 	Tools.OnError("ERROR: " + str(ex))

@@ -79,10 +79,10 @@ namespace pr
 	}
 
 	// Return a vector containing the dimensions of the frustum
-	// half_width, half_height, zfar, longest_edge_length
+	// half_width, half_height, zfar
 	inline pr::v4 Frustum::Dim() const
 	{
-		return pr::v4::make(0.5f*Width(), 0.5f*Height(), ZDist(), Len3(0.5f*Width(), 0.5f*Height(), ZDist()));
+		return pr::v4::make(0.5f*Width(), 0.5f*Height(), ZDist(), 0);
 	}
 
 	// Return a plane of the frustum

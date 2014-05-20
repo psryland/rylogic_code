@@ -894,14 +894,14 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.ExtractReal(dim.z);
 				dim *= 0.5f;
 
-				m_point.push_back(pr::v4::make(-dim.x, -dim.y, -dim.z, 0));
-				m_point.push_back(pr::v4::make( dim.x, -dim.y, -dim.z, 0));
-				m_point.push_back(pr::v4::make( dim.x,  dim.y, -dim.z, 0));
-				m_point.push_back(pr::v4::make(-dim.x,  dim.y, -dim.z, 0));
-				m_point.push_back(pr::v4::make(-dim.x, -dim.y,  dim.z, 0));
-				m_point.push_back(pr::v4::make( dim.x, -dim.y,  dim.z, 0));
-				m_point.push_back(pr::v4::make( dim.x,  dim.y,  dim.z, 0));
-				m_point.push_back(pr::v4::make(-dim.x,  dim.y,  dim.z, 0));
+				m_point.push_back(pr::v4::make(-dim.x, -dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make( dim.x, -dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make( dim.x,  dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x,  dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x, -dim.y,  dim.z, 1.0f));
+				m_point.push_back(pr::v4::make( dim.x, -dim.y,  dim.z, 1.0f));
+				m_point.push_back(pr::v4::make( dim.x,  dim.y,  dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x,  dim.y,  dim.z, 1.0f));
 
 				pr::uint16 idx[] = {0,1,1,2,2,3,3,0, 4,5,5,6,6,7,7,4, 0,4,1,5,2,6,3,7};
 				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));

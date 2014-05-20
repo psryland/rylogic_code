@@ -12,11 +12,11 @@
 // Camera to world transform
 cbuffer CBufCamera :cbuf_bank(b0)
 {
-	float4x4 m_c2w; // camera to world
-	float4x4 m_c2s; // camera to screen
-	float4x4 m_w2c; // world to camera
-	float4x4 m_w2s; // world to screen
-	float4   m_frustum[4]; // View frustum corners in camera space
+	row_major float4x4 m_c2w; // camera to world
+	row_major float4x4 m_c2s; // camera to screen
+	row_major float4x4 m_w2c; // world to camera
+	row_major float4x4 m_w2s; // world to screen
+	float4 m_frustum[4]; // View frustum corners in camera space
 };
 
 // Global lighting
@@ -36,15 +36,15 @@ cbuffer CBufLighting :cbuf_bank(b1)
 cbuffer CBufModel :cbuf_bank(b2)
 {
 	// Object transform
-	float4x4 m_o2s; // object to screen
-	float4x4 m_o2w; // object to world
-	float4x4 m_n2w; // normal to world (o2w unscaled)
+	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_o2w; // object to world
+	row_major float4x4 m_n2w; // normal to world (o2w unscaled)
 	
 	// Tinting
 	float4 m_tint; // object tint colour
 
 	// Texture2D
-	float4x4 m_tex2surf0; // texture to surface transform
+	row_major float4x4 m_tex2surf0; // texture to surface transform
 
 	// Geometry type
 	int4 m_geom;  // x = 1 => has normals, y = 1 => has tex0, z,w = not used

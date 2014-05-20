@@ -37,7 +37,8 @@ namespace pr
 			ShaderLookup m_lookup_shader; // Map from id to ShaderBase instances
 			CBufLookup   m_lookup_cbuf;   // Shared cbuffer objects
 
-			D3DPtr<ID3D11SamplerState> m_default_sampler_state; // A default sampler state to use in shaders that expect a texture/sampler but have no texture/sampler bound
+			// A default sampler state to use in shaders that expect a texture/sampler but have no texture/sampler bound
+			D3DPtr<ID3D11SamplerState> m_default_sampler_state;
 
 			friend struct ShaderBase;
 			ShaderManager(ShaderManager const&); // no copying
@@ -90,13 +91,6 @@ namespace pr
 			// Create a copy of an existing shader.
 			ShaderPtr CloneShader(RdrId id, RdrId new_id, char const* new_name);
 
-			//// Return a pointer to a shader that is best suited for rendering geometry with the vertex structure described by 'geom_mask'
-			//ShaderSet BuildShaderFor(EGeom geom) const;
-			//template <class Vert> ShaderSet BuildShaderFor() const
-			//{
-			//	return BuildShaderFor(Vert::GeomMask);
-			//}
-
 			// Get or create a cbuffer object for given type 'TCBuf'
 			template <typename TCBuf> D3DPtr<ID3D11Buffer> GetCBuf(char const* name = nullptr)
 			{
@@ -115,6 +109,12 @@ namespace pr
 				PR_EXPAND(PR_DBG_RDR, NameResource(cbuf, name)); (void)name;
 				m_lookup_cbuf[id] = cbuf;
 				return cbuf;
+			}
+
+			// A default sampler state to use in shaders that expect a texture/sampler but have no texture/sampler bound
+			D3DPtr<ID3D11SamplerState> DefaultSamplerState() const
+			{
+				return m_default_sampler_state;
 			}
 		};
 	}

@@ -11,6 +11,16 @@
 #include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/common.h"
 
+#define SMAP_TEST 1
+#if SMAP_TEST
+#include "pr/renderer11/instance.h"
+#include "pr/renderer11/models/model_generator.h"
+#include "pr/renderer11/models/model_settings.h"
+#include "pr/renderer11/models/model.h"
+#include "pr/renderer11/steps/forward_render.h"
+#include "pr/renderer11/shaders/input_layout.h"
+#endif
+
 namespace pr
 {
 	namespace rdr
@@ -49,8 +59,7 @@ namespace pr
 			
 			m_dsb.Set(EDS::DepthEnable, FALSE);
 			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
-
-			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MAX, 1);
+			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MIN, 1);
 		}
 
 		// Create the render target for the smap
@@ -167,7 +176,7 @@ namespace pr
 			// Clear the smap depth buffer.
 			// The depth data is the ws_pos-to-frustum surface, we only care about points
 			// in front of the frustum faces => reset depths to zero.
-			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero);
+			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourOne);
 
 			// Viewport = the whole smap
 			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
@@ -187,6 +196,7 @@ namespace pr
 				CreateProjection(shadow_frustum, 2, m_light, c2w, m_max_caster_distance, cb.m_proj[2]);
 				CreateProjection(shadow_frustum, 3, m_light, c2w, m_max_caster_distance, cb.m_proj[3]);
 				CreateProjection(shadow_frustum, 4, m_light, c2w, m_max_caster_distance, cb.m_proj[4]);
+
 				cb.m_frust_dim = shadow_frustum.Dim();
 				cb.m_frust_dim.w = m_max_caster_distance;
 				WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::GS|EShaderType::PS);
@@ -215,6 +225,61 @@ namespace pr
 					UINT(nugget.m_irange.m_begin),
 					0);
 			}
+
+#if SMAP_TEST
+			{
+				Vert verts[4] =
+				{
+					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
+					{pr::v4::make(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.999f)},
+					{pr::v4::make( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.999f)},
+					{pr::v4::make( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.0f)},
+					{pr::v4::make(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.0f)},
+				};
+				struct
+				{
+					v4 ss_vert;
+					v4 ws_vert;
+				} vout[4];
+
+				auto& c2w = m_scene->m_view.m_c2w;
+				auto shadow_frustum = m_scene->m_view.Frustum(m_shadow_distance);
+				m4x4 proj;
+				static int face = 0;
+				CreateProjection(shadow_frustum, face, m_light, c2w, m_max_caster_distance, proj);
+				
+				for (int i = 0; i != 4; ++i)
+				{
+					vout[i].ss_vert = proj * verts[i].m_vert;
+					vout[i].ss_vert.w += (vout[i].ss_vert.w == 0.0f) * pr::maths::tiny;
+					vout[i].ws_vert = vout[i].ss_vert / vout[i].ss_vert.w;
+					vout[i].ws_vert.w = float(face);
+				}
+
+				auto clip = [](float x) { return x < 0.0f; };
+				struct
+				{
+					v4 ss_vert;
+					v2 depth;
+					bool clipped;
+				} rt[4] = {};
+
+				for (int i = 0; i != 4; ++i)
+				{
+					v4 px = vout[i].ss_vert / vout[i].ss_vert.w;
+					rt[i].ss_vert = px;
+
+					// Clip to the wedge of the fwd texture we're rendering to (or no clip for the back texture)
+					const float face_sign0[] = {-1.0f,  1.0f, -1.0f,  1.0f, 0.0f};
+					const float face_sign1[] = { 1.0f, -1.0f, -1.0f,  1.0f, 0.0f};
+					rt[i].clipped = false;
+					rt[i].clipped |= clip(face_sign0[face] * (px.y - px.x));
+					rt[i].clipped |= clip(face_sign1[face] * (px.y + px.x));
+
+					rt[i].depth = v2::make((face != 4) * px.z, (face == 4) * px.z);
+				}
+			}
+#endif
 		}
 
 		// Create a projection transform that will take points in world space and project them
@@ -232,7 +297,7 @@ namespace pr
 		{
 			#define DBG_PROJ 1
 			#if DBG_PROJ
-			auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_)
+			auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
 			{
 				v4 tl = tl_ / tl_.w;
 				v4 tr = tr_ / tr_.w;
@@ -240,36 +305,54 @@ namespace pr
 				v4 br = br_ / br_.w;
 				std::string str;
 				// This is the screen space view volume for a light-camera looking at 'face' of the frustum
-				pr::ldr::Box("view_volume", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
-				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.2f, str);
-				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.2f, str);
-				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.2f, str);
-				pr::ldr::Box("br", 0xFFFFFF00, br, 0.2f, str);
+				pr::ldr::LineBox("view_volume", 0xFFFFFFFF, pr::v4::make(0,0,0.5f,1), pr::v4::make(2,2,1,0), str);
+				pr::ldr::Box("tl", 0xFFFF0000, tl, 0.04f, str);
+				pr::ldr::Box("tr", 0xFF00FF00, tr, 0.04f, str);
+				pr::ldr::Box("bl", 0xFF0000FF, bl, 0.04f, str);
+				pr::ldr::Box("br", 0xFFFFFF00, br, 0.04f, str);
+				pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
 				pr::ldr::Write(str, "d:/dump/smap_proj_screen.ldr");
+			};
+			auto Frust = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
+			{
+				std::string str;
+				pr::ldr::Frustum("shadow_frustum", 0xffffffff, shadow_frustum, c2w * Translation4x4(0,0,-shadow_frustum.ZDist()), str);
+				pr::ldr::Rect("obj", 0xFFFF00FF, 3, 2, 2, true, pr::m4x4Identity, str);
+				pr::ldr::Box("tl", 0xFFFF0000, tl_, 0.04f, str);
+				pr::ldr::Box("tr", 0xFF00FF00, tr_, 0.04f, str);
+				pr::ldr::Box("bl", 0xFF0000FF, bl_, 0.04f, str);
+				pr::ldr::Box("br", 0xFFFFFF00, br_, 0.04f, str);
+				pr::ldr::Line("l", 0xFFA0A0E0, bl_, tr_, str);
+				pr::ldr::Line("l", 0xFFA0A0E0, br_, tl_, str);
+				pr::ldr::LineD("light", 0xFFFFFF00, pr::v4Origin, light_ * max_range, str);
+				pr::ldr::Write(str, "d:/dump/smap_proj_frust.ldr");
 			};
 			#endif
 
 			// TL,TR,BL,BR below refer to the corners of a quad that, for the first four faces,
-			// has the camera position in the centre with two points in front of the camera
-			// and two behind. We only care about the wedge on the quad that goes from the camera
-			// to the two corners positioned in front of the camera.
-			float sign_z[5] =
+			// has the camera position in the centre with two points in front of the camera and
+			// two behind. (Note: in front of the camera means down the -z axis). We only care
+			// about the wedge on the quad that goes from the camera to the two corners positioned
+			// in front of the camera.
+			float sign_z[4] =
 			{
 				pr::Sign<float>(face==1||face==3),
 				pr::Sign<float>(face==0||face==3),
 				pr::Sign<float>(face==1||face==2),
 				pr::Sign<float>(face==0||face==2),
-				1.0f,
 			};
 
 			// Get the corners of the plane that will be the far clip plane (in world space).
 			pr::v4 fdim = shadow_frustum.Dim();
-			pr::v4 tl, TL = c2w * pr::v4::make(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
-			pr::v4 tr, TR = c2w * pr::v4::make( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
-			pr::v4 bl, BL = c2w * pr::v4::make(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
-			pr::v4 br, BR = c2w * pr::v4::make( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
+			pr::v4 tl, TL, tr, TR, bl, BL, br, BR;
+			TL = c2w * pr::v4::make(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
+			TR = c2w * pr::v4::make( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
+			BL = c2w * pr::v4::make(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
+			BR = c2w * pr::v4::make( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
+			if (face==0 || face == 1) { std::swap(TL,TR); std::swap(BL,BR); }
+			if (face==2 || face == 3) { std::swap(TL,BL); std::swap(TR,BR); }
+			PR_EXPAND(DBG_PROJ, Frust(TL,TR,BL,BR,light.m_direction));
 
-			// Initialise to invalid
 			w2s = m4x4Zero;
 
 			// Get the frustum normal for 'face'
@@ -284,17 +367,17 @@ namespace pr
 					if (pr::Dot3(light.m_direction, ws_norm) >= 0)
 						return false;
 
-					// We can't set a sensible near clip plane for directional lights,
-					// since they are positioned at infinity. Position the light-camera at
-					// 'max_range' in front of the plane.
+					// This is a parallel projection, so it doesn't matter where we "position"
+					// the light-camera. On the projection plane with the far plane at 0.0f and
+					// the near plane at -max_range is as good as anywhere.
 
 					// Create a light to world transform.
 					pr::v4 centre = (TL + TR + BL + BR) * 0.25f;
-					pr::m4x4 lt2w = pr::LookAt(centre - light.m_direction * max_range, centre, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
+					pr::m4x4 lt2w = pr::LookAt(centre, centre + light.m_direction, pr::Parallel(light.m_direction,c2w.y) ? c2w.z : c2w.y);
 					w2s = pr::InvertFast(lt2w);
 
 					// Create an orthographic projection
-					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, 0.0f, max_range, true);
+					pr::m4x4 lt2s = pr::ProjectionOrthographic(1.0f, 1.0f, -max_range, 0.0f, true);
 					w2s = lt2s * w2s;
 
 					// Project the four corners of the plane
@@ -302,7 +385,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Rotate so that TL is above BL and TR is above BR (i.e. the left and right edges are vertical)
 					pr::v2 ledge = Normalise2((tl - bl).xy());
@@ -316,7 +399,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Scale the face of the frustum into the viewport
 					pr::m4x4 S = pr::Scale4x4(2.0f/(tr.x - tl.x), 2.0f/(tr.y - br.y), 1.0f, pr::v4Origin);
@@ -327,11 +410,15 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Shear to make the projected plane square
-					pr::m4x4 H = pr::Shear4x4(-(tr.y - tl.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, pr::v4Origin);
-					w2s = H * w2s;
+					pr::m4x4 H1 = pr::Shear4x4((tl.y - tr.y)/(tr.x - tl.x), 0, 0, 0, 0, 0, pr::v4Origin);
+					w2s = H1 * w2s;
+
+					// Shear to make the projection plane perpendicular to the light direction
+					pr::m4x4 H2 = pr::Shear4x4(0, 0.5f*(tl.z + bl.z) - 1.0f, 0, 0.5f*(bl.z + br.z) - 1.0f, 0, 0, pr::v4Origin);
+					w2s = H2 * w2s;
 
 					#if DBG_PROJ
 					// Project the four corners of the plane
@@ -339,7 +426,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 					#endif
 					return true;
 				}
@@ -359,7 +446,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 
 					// Create a perspective projection
 					float zr = 0.001f, zf = dist_to_light, zn = zf*zr;
@@ -372,7 +459,7 @@ namespace pr
 					tr = w2s * TR;
 					bl = w2s * BL;
 					br = w2s * BR;
-					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br));
+					PR_EXPAND(DBG_PROJ, Dump(tl,tr,bl,br,w2s*light.m_direction));
 					#endif
 					return true;
 				}
@@ -383,7 +470,6 @@ namespace pr
 	}
 }
 
-#define SMAP_TEST 1
 #if SMAP_TEST
 #include "pr/renderer11/instance.h"
 #include "pr/renderer11/models/model_generator.h"

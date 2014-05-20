@@ -30,6 +30,7 @@ typedef pr::iv4  int4;
 
 #define cbuffer struct
 #define cbuf_bank(b) Bank<EBank::b>
+#define row_major
 
 #endif
 

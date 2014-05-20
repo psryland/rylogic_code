@@ -6,12 +6,14 @@
 #include "shadow_map_cbuf.hlsli"
 #include "../inout.hlsli"
 
+#define TINY 0.0001f
+
 // PS input format
 struct PSIn_ShadowMap
 {
 	// The positions of the vert projected onto each face of the frustum
-	float4 ss_vert  :SV_Position;
-	float4 ws_vert  :TexCoord0;  // Projection index passed in w
+	float4 ss_vert :SV_Position; // xy = unnormalised texture xy, zw = depth
+	float4 xyz_face :TexCoord0; // GS: ws_vert PS: Normalised screen xyz and face index
 };
 
 struct PSOut
@@ -27,7 +29,7 @@ PSIn_ShadowMap main(VSIn In)
 	// Pass the ws_vert to the GS
 	PSIn_ShadowMap Out;
 	Out.ss_vert = float4(0,0,0,0);
-	Out.ws_vert = mul(In.vert, m_o2w);
+	Out.xyz_face = mul(In.vert, m_o2w); // Pass ws_vert to GS
 	return Out;
 }
 #endif
@@ -41,12 +43,16 @@ void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> Tr
 	// project it onto the plane of the frustum
 	PSIn_ShadowMap Out;
 	for (int i = 0; i != 5; ++i)
-	for (int j = 0; j != 3; ++j)
 	{
-		Out = In[j];
-		Out.ws_vert.w = float(i);
-		Out.ss_vert = mul(In[j].ws_vert, m_proj[i]);
-		TriStream.Append(Out);
+		if (!any(m_proj[i])) continue;
+		for (int j = 0; j != 3; ++j)
+		{
+			Out = In[j];
+			Out.ss_vert = mul(In[j].xyz_face, m_proj[i]);
+			Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+			TriStream.Append(Out);
+		}
+		TriStream.RestartStrip();
 	}
 }
 #endif
@@ -58,12 +64,16 @@ void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStr
 	// project it onto the plane of the frustum
 	PSIn_ShadowMap Out;
 	for (int i = 0; i != 5; ++i)
-	for (int j = 0; j != 2; ++j)
 	{
-		Out = In[j];
-		Out.ws_vert.w = float(i);
-		Out.ss_vert = mul(In[j].ws_vert, m_proj[i]);
-		TriStream.Append(Out);
+		if (!any(m_proj[i])) continue;
+		for (int j = 0; j != 2; ++j)
+		{
+			Out = In[j];
+			Out.ss_vert = mul(In[j].xyz_face, m_proj[i]);
+			Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+			TriStream.Append(Out);
+		}
+		TriStream.RestartStrip();
 	}
 }
 #endif
@@ -72,11 +82,27 @@ void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStr
 #ifdef PR_RDR_PSHADER_shadow_map
 PSOut main(PSIn_ShadowMap In)
 {
+	float3 px = In.xyz_face.xyz / In.ss_vert.w;
+	int face = int(In.xyz_face.w);
+
+	// Clip to the wedge of the fwd texture we're rendering to (or no clip for the back texture)
+	const float face_sign0[] = {-1.0f,  1.0f, -1.0f,  1.0f, 0.0f};
+	const float face_sign1[] = { 1.0f, -1.0f, -1.0f,  1.0f, 0.0f};
+	clip(face_sign0[face] * (px.y - px.x) + TINY);
+	clip(face_sign1[face] * (px.y + px.x) + TINY);
+
 	// Output the depth in the appropriate position in the RT
 	PSOut Out;
-	float4 d = In.ss_vert / In.ss_vert.w;
-	clip(In.ws_vert.w == 4 ? 1 : -1);
-	Out.depth = float2(0,abs(d.z));
+	Out.depth = float2((face != 4) * px.z, (face == 4) * px.z);
 	return Out;
 }
 #endif
+
+
+
+
+
+
+
+
+

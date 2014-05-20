@@ -99,7 +99,14 @@ namespace pr
 		{
 			return str += FmtS("*LineD %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,start[0] ,start[1] ,start[2] ,direction[0] ,direction[1] ,direction[2]);
 		}
-		template <typename TStr> inline TStr& Rectangle(char const* name, unsigned int colour, v4 const& TL, v4 const& BL, v4 const& BR, v4 const& TR, TStr& str)
+		template <typename TStr> inline TStr& Rect(char const* name, unsigned int colour, int axis, float w, float h, bool solid, m4x4 const& o2w, TStr& str)
+		{
+			str += FmtS("*Rect %s %08X {%d %f %f %s ", name, colour, axis, w, h, solid ? "*solid" : "");
+			if (o2w != pr::m4x4Identity) Transform(o2w, str);
+			str += "}\n";
+			return str;
+		}
+		template <typename TStr> inline TStr& Rect(char const* name, unsigned int colour, v4 const& TL, v4 const& BL, v4 const& BR, v4 const& TR, TStr& str)
 		{
 			return str += FmtS(
 						"*Rectangle %s %08X "
@@ -182,6 +189,13 @@ namespace pr
 		{
 			str += FmtS("*Boxlist %s %08X { %f %f %f " ,name ,colour ,dim.x ,dim.y ,dim.z);
 			for (int i = 0; i != count; ++i) Vec3(positions[i], str);
+			str += "}\n";
+			return str;
+		}
+		template <typename TStr> inline TStr& LineBox(char const* name, unsigned int colour, pr::v4 const& position, v4 const& dim, TStr& str)
+		{
+			str += FmtS("*LineBox %s %08X {%f %f %f ", name, colour, dim.x, dim.y, dim.z);
+			if (position != pr::v4Origin) Position(position, str);
 			str += "}\n";
 			return str;
 		}

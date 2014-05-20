@@ -12,8 +12,9 @@
 // Camera to world transform and view frustum
 cbuffer CBufFrame :cbuf_bank(b0)
 {
-	float4x4 m_proj[5];   // The five projection transforms onto the frustum faces
-	float4   m_frust_dim; // The dimensions of the shadow frustum
+	row_major float4x4 m_proj[5];  // The five projection transforms onto the frustum faces
+	float4 m_frust_dim;            // The dimensions of the shadow frustum
+
 	//	float4x4 m_c2w; // camera to world
 //	float4x4 m_c2s; // camera to screen
 //	float4x4 m_w2c; // world to camera
@@ -40,9 +41,9 @@ cbuffer CBufLighting :cbuf_bank(b1)
 cbuffer CBufNugget :cbuf_bank(b2)
 {
 	// Object transform
-	float4x4 m_o2s; // object to screen
-	float4x4 m_o2w; // object to world
-	float4x4 m_n2w; // normal to world
+	row_major float4x4 m_o2s; // object to screen
+	row_major float4x4 m_o2w; // object to world
+	row_major float4x4 m_n2w; // normal to world
 
 	// Tinting
 	//float4 m_tint; // object tint colour

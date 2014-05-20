@@ -100,7 +100,7 @@ namespace pr
 				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
 
 				// Bind a texture
-				BindTextureAndSampler(dc, 0, dle.m_nugget->m_tex_diffuse);
+				BindTextureAndSampler(dc, 0, dle.m_nugget->m_tex_diffuse, m_shdr_mgr->DefaultSamplerState());
 
 				// Draw the nugget
 				Nugget const& nugget = *dle.m_nugget;
@@ -109,6 +109,9 @@ namespace pr
 					UINT(nugget.m_irange.m_begin),
 					0);
 			}
+
+			// Unbind textures, they might be render targets...
+			BindTextureAndSampler(dc, 0, nullptr, m_shdr_mgr->DefaultSamplerState());
 		}
 	}
 }
