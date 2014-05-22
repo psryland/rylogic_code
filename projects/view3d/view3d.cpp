@@ -846,7 +846,21 @@ VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DDrawset drawset)
 	try
 	{
 		if (!drawset) throw std::exception("drawset is null");
-		return reinterpret_cast<View3DLight const&>(drawset->m_light);
+		View3DLight light = {};
+		light.m_position        =  view3d::To<View3DV4>(drawset->m_light.m_position);
+		light.m_direction       =  view3d::To<View3DV4>(drawset->m_light.m_direction);
+		light.m_type            =  static_cast<EView3DLight>(drawset->m_light.m_type.value);
+		light.m_ambient         =  drawset->m_light.m_ambient;
+		light.m_diffuse         =  drawset->m_light.m_diffuse;
+		light.m_specular        =  drawset->m_light.m_specular;
+		light.m_specular_power  =  drawset->m_light.m_specular_power;
+		light.m_inner_cos_angle =  drawset->m_light.m_inner_cos_angle;
+		light.m_outer_cos_angle =  drawset->m_light.m_outer_cos_angle;
+		light.m_range           =  drawset->m_light.m_range;
+		light.m_falloff         =  drawset->m_light.m_falloff;
+		light.m_cast_shadows    =  drawset->m_light.m_cast_shadows;
+		light.m_on              =  drawset->m_light.m_on;
+		return light;
 	}
 	catch (std::exception const& ex)
 	{
@@ -862,7 +876,19 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3
 	try
 	{
 		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_light = reinterpret_cast<Light const&>(light);
+		drawset->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
+		drawset->m_light.m_direction       = view3d::To<pr::v4>(light.m_direction);
+		drawset->m_light.m_type            = pr::rdr::ELight::From(light.m_type);
+		drawset->m_light.m_ambient         = light.m_ambient;
+		drawset->m_light.m_diffuse         = light.m_diffuse;
+		drawset->m_light.m_specular        = light.m_specular;
+		drawset->m_light.m_specular_power  = light.m_specular_power;
+		drawset->m_light.m_inner_cos_angle = light.m_inner_cos_angle;
+		drawset->m_light.m_outer_cos_angle = light.m_outer_cos_angle;
+		drawset->m_light.m_range           = light.m_range;
+		drawset->m_light.m_falloff         = light.m_falloff;
+		drawset->m_light.m_cast_shadows    = light.m_cast_shadows != 0;
+		drawset->m_light.m_on              = light.m_on != 0;
 	}
 	catch (std::exception const& ex)
 	{
@@ -1549,7 +1575,15 @@ VIEW3D_API View3DViewport __stdcall View3D_Viewport()
 	LOCK_GUARD;
 	try
 	{
-		return reinterpret_cast<View3DViewport const&>(Rdr().m_scene.m_viewport);
+		auto& scene_vp = Rdr().m_scene.m_viewport;
+		View3DViewport vp = {};
+		vp.m_x         = scene_vp.TopLeftX;
+		vp.m_y         = scene_vp.TopLeftY;
+		vp.m_width     = scene_vp.Width;
+		vp.m_height    = scene_vp.Height;
+		vp.m_min_depth = scene_vp.MinDepth;
+		vp.m_max_depth = scene_vp.MaxDepth;
+		return vp;
 	}
 	catch (std::exception const& ex)
 	{
@@ -1562,7 +1596,13 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
 	LOCK_GUARD;
 	try
 	{
-		Rdr().m_scene.m_viewport = reinterpret_cast<Viewport const&>(vp);
+		auto& scene_vp = Rdr().m_scene.m_viewport;
+		scene_vp.TopLeftX = vp.m_x        ;
+		scene_vp.TopLeftY = vp.m_y        ;
+		scene_vp.Width    = vp.m_width    ;
+		scene_vp.Height   = vp.m_height   ;
+		scene_vp.MinDepth = vp.m_min_depth;
+		scene_vp.MaxDepth = vp.m_max_depth;
 	}
 	catch (std::exception const& ex)
 	{

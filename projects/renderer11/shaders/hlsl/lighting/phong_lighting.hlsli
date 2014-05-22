@@ -43,7 +43,7 @@ float LightSpecular(in uniform float4 ws_light_direction, in uniform float specu
 }
 
 // Return the colour due to lighting. Returns unlit_diff if ws_norm is zero
-float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 ws_cam, float4 unlit_diff)
+float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 ws_cam, float light_visible, float4 unlit_diff)
 {
 	// Lighting should not change the alpha value. If the thing was semi transparent coming in, casting
 	// light on it shouldn't change it.
@@ -58,12 +58,12 @@ float4 Illuminate(in uniform Light light, float4 ws_pos, float4 ws_norm, float4 
 
 	float4 ltdiff = float4(0,0,0,0);
 	ltdiff.rgb += light.m_ambient.rgb;
-	ltdiff.rgb += intensity * light.m_colour.rgb;
+	ltdiff.rgb += intensity * light_visible * light.m_colour.rgb;
 	ltdiff.rgb  = 2.0 * (ltdiff.rgb - 0.5) * unlit_diff.rgb;
 	ltdiff.rgb *= has_norm;
 
 	float4 ltspec = float4(0,0,0,0);
-	ltspec.rgb += intensity * light.m_specular.rgb * LightSpecular(ws_light_dir ,light.m_specular.a ,ws_norm ,ws_toeye_norm ,unlit_diff.a);
+	ltspec.rgb += intensity * light_visible * light.m_specular.rgb * LightSpecular(ws_light_dir ,light.m_specular.a ,ws_norm ,ws_toeye_norm ,unlit_diff.a);
 	ltspec.rgb *= has_norm;
 
 	return saturate(ltdiff + ltspec + unlit_diff);

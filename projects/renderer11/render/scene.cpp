@@ -9,6 +9,7 @@
 #include "pr/renderer11/steps/forward_render.h"
 #include "pr/renderer11/steps/gbuffer.h"
 #include "pr/renderer11/steps/dslighting.h"
+#include "pr/renderer11/steps/shadow_map.h"
 #include "renderer11/render/state_stack.h"
 
 namespace pr
@@ -28,6 +29,13 @@ namespace pr
 			,m_bsb()
 		{
 			SetRenderSteps(std::move(rsteps));
+
+			// Set default scene render states
+			m_rsb = RSBlock::SolidCullBack();
+
+			// Use line antialiasing if multisampling is enabled
+			if (m_rdr->Settings().m_multisamp.Count != 1)
+				m_rsb.Set(ERS::MultisampleEnable, TRUE);
 		}
 		Scene::~Scene()
 		{
@@ -44,8 +52,9 @@ namespace pr
 				{
 				default: throw std::exception("Unknown render step");
 				case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
-				case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer>(*this));
-				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting>(*this));
+				case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer      >(*this)); break;
+				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting   >(*this)); break;
+				case ERenderStep::ShadowMap:     m_render_steps.push_back(std::make_shared<ShadowMap    >(*this, m_global_light, pr::iv2::make(4096,4096))); break;
 				}
 			}
 		}

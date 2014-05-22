@@ -40,6 +40,8 @@ struct Shadow
 	row_major float4x4 m_frust; // Inward pointing frustum plane normals, transposed.
 };
 
+#define ShadowMapCount(shdw) (shdw.m_info.x)
+
 #ifdef SHADER_BUILD
 
 	// Vertex shader input format

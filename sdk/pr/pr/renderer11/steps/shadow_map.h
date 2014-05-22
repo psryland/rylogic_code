@@ -20,6 +20,7 @@ namespace pr
 			D3DPtr<ID3D11Texture2D>          m_tex;
 			D3DPtr<ID3D11RenderTargetView>   m_rtv;
 			D3DPtr<ID3D11ShaderResourceView> m_srv;
+			D3DPtr<ID3D11SamplerState>       m_samp;
 			D3DPtr<ID3D11RenderTargetView>   m_main_rtv;        // The main RT for restoring after the rstep
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;        // The main DB for restoring after the rstep
 			D3DPtr<ID3D11Buffer>             m_cbuf_frame;      // Per-frame constant buffer
@@ -64,6 +65,9 @@ namespace pr
 			// than this distance. Objects further than this distance don't result in pixels in the smap.
 			// This should be the distance that depth information is normalised into the range [0,1) by.
 			bool CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s);
+		
+			// Method used to debug smaps
+			void Debugging(StateStack& ss);
 		};
 	}
 }

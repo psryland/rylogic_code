@@ -11,15 +11,7 @@
 #include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/common.h"
 
-#define SMAP_TEST 1
-#if SMAP_TEST
-#include "pr/renderer11/instance.h"
-#include "pr/renderer11/models/model_generator.h"
-#include "pr/renderer11/models/model_settings.h"
-#include "pr/renderer11/models/model.h"
-#include "pr/renderer11/steps/forward_render.h"
-#include "pr/renderer11/shaders/input_layout.h"
-#endif
+#define SMAP_TEST 0//PR_DBG_RDR
 
 namespace pr
 {
@@ -42,6 +34,7 @@ namespace pr
 			,m_tex()
 			,m_rtv()
 			,m_srv()
+			,m_samp()
 			,m_main_rtv()
 			,m_main_dsv()
 			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::smap::CBufFrame >("smap::CBufFrame"))
@@ -56,7 +49,10 @@ namespace pr
 			
 			m_dsb.Set(EDS::DepthEnable, FALSE);
 			m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
-			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MIN, 1);
+			m_bsb.Set(EBS::BlendEnable, TRUE, 0);
+			m_bsb.Set(EBS::BlendOp, D3D11_BLEND_OP_MAX, 0);
+			m_bsb.Set(EBS::DestBlend, D3D11_BLEND_DEST_COLOR, 0);
+			m_bsb.Set(EBS::SrcBlend, D3D11_BLEND_SRC_COLOR, 0);
 		}
 
 		// Create the render target for the smap
@@ -74,7 +70,7 @@ namespace pr
 			TextureDesc tdesc;
 			tdesc.Width          = size.x;
 			tdesc.Height         = size.y;
-			tdesc.Format         = DXGI_FORMAT_R16G16_UNORM;//DXGI_FORMAT_R8G8B8A8_UNORM; // R = z depth, G = -z depth
+			tdesc.Format         = DXGI_FORMAT_R16G16_FLOAT; // R = z depth, G = -z depth
 			tdesc.MipLevels      = 1;
 			tdesc.ArraySize      = 1;
 			tdesc.SampleDesc     = MultiSamp(1,0);
@@ -97,6 +93,10 @@ namespace pr
 			srvdesc.Texture2D.MostDetailedMip = 0;
 			srvdesc.Texture2D.MipLevels = 1;
 			pr::Throw(device->CreateShaderResourceView(m_tex.m_ptr, &srvdesc, &m_srv.m_ptr));
+
+			// Create a sampler for sampling the shadow map
+			auto sdesc = SamplerDesc::LinearClamp();
+			pr::Throw(device->CreateSamplerState(&sdesc, &m_samp.m_ptr));
 		}
 
 		// Bind the smap RT to the output merger
@@ -159,9 +159,9 @@ namespace pr
 				[this]{ BindRT(false); });
 
 			// Clear the smap depth buffer.
-			// The depth data is the ws_pos-to-frustum surface, we only care about points
-			// in front of the frustum faces => reset depths to zero.
-			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourOne);
+			// The depth data is the fractional distance between the frustum plane (0) and the light (1).
+			// We only care about points in front of the frustum faces => reset depths to zero.
+			dc->ClearRenderTargetView(m_rtv.m_ptr, pr::ColourZero);
 
 			// Viewport = the whole smap
 			Viewport vp(UINT(m_smap_size.x), UINT(m_smap_size.y));
@@ -201,89 +201,7 @@ namespace pr
 					0);
 			}
 
-#if SMAP_TEST
-			{
-				auto clip = [](float x) { return x < 0.0f; };
-				auto step = [](float b, float a) { return a >= b ? 1.0f : 0.0f; };
-				auto step4 = [](v4 const& b, v4 const& a)
-				{
-					return v4::make(
-						b.x >= a.x ? 1.0f : 0.0f,
-						b.y >= a.y ? 1.0f : 0.0f,
-						b.z >= a.z ? 1.0f : 0.0f,
-						b.w >= a.w ? 1.0f : 0.0f);
-				};
-
-				Vert verts[4] =
-				{
-					// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
-					{pr::v4::make(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.999f)},
-					{pr::v4::make( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.999f)},
-					{pr::v4::make( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.0f)},
-					{pr::v4::make(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.0f)},
-				};
-				struct
-				{
-					v4 ss_vert;
-					v4 ws_vert;
-				} vout[4];
-
-				auto& c2w = m_scene->m_view.m_c2w;
-				auto shadow_frustum = m_scene->m_view.ShadowFrustum();
-				m4x4 proj;
-				static int face = 0;
-				CreateProjection(shadow_frustum, face, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, proj);
-				
-				for (int i = 0; i != 4; ++i)
-				{
-					vout[i].ss_vert = proj * verts[i].m_vert;
-					vout[i].ss_vert.w += (vout[i].ss_vert.w == 0.0f) * pr::maths::tiny;
-					vout[i].ws_vert = vout[i].ss_vert / vout[i].ss_vert.w;
-					vout[i].ws_vert.w = float(face);
-				}
-
-				struct
-				{
-					v4 ss_vert;
-					v2 depth;
-					bool clipped;
-				} rt[4] = {};
-
-				for (int i = 0; i != 4; ++i)
-				{
-					v4 px = vout[i].ss_vert / vout[i].ss_vert.w;
-					rt[i].ss_vert = px;
-
-					// Clip to the wedge of the fwd texture we're rendering to (or no clip for the back texture)
-					const float face_sign0[] = {-1.0f,  1.0f, -1.0f,  1.0f, 0.0f};
-					const float face_sign1[] = { 1.0f, -1.0f, -1.0f,  1.0f, 0.0f};
-					rt[i].clipped = false;
-					rt[i].clipped |= clip(face_sign0[face] * (px.y - px.x));
-					rt[i].clipped |= clip(face_sign1[face] * (px.y + px.x));
-
-					rt[i].depth = v2::make((face != 4) * px.z, (face == 4) * px.z);
-				}
-
-				//auto IntersectFrustum = [&](Frustum const& frust, v4 const& s, v4 const& e)
-				//{
-				//	v4 const T = v4::make(1e38f);
-				//	v4 d0 = frust.m_Tnorms * s;
-				//	v4 d1 = frust.m_Tnorms * e;
-				//	v4 t0 = step4(d1,d0)      * Min(T, -d0/(d1 - d0));        // Clip to the frustum sides
-				//	float  t1 = step(e.z,s.z) * Min(T.x, -s.z / (e.z - s.z)); // Clip to the far plane
-
-				//	float t = T.x;
-				//	if (t0.x != 0) t = Min(t,t0.x);
-				//	if (t0.y != 0) t = Min(t,t0.y);
-				//	if (t0.z != 0) t = Min(t,t0.z);
-				//	if (t0.w != 0) t = Min(t,t0.w);
-				//	if (t1   != 0) t = Min(t,t1);
-				//	return t;
-				//};
-
-				//auto t = IntersectFrustum(shadow_frustum, c2w.pos - c2w.z, c2w.pos - 2*c2w.z);
-			}
-#endif
+			PR_EXPAND(SMAP_TEST, Debugging(ss));
 		}
 
 		// Create a projection transform that will take points in world space and project them
@@ -299,7 +217,7 @@ namespace pr
 		// This should be the distance that depth information is normalised into the range [0,1) by.
 		bool ShadowMap::CreateProjection(pr::Frustum const& shadow_frustum, int face, Light const& light, pr::m4x4 const& c2w, float max_range, pr::m4x4& w2s)
 		{
-			#define DBG_PROJ 1
+			#define DBG_PROJ 0 //PR_DBG_RDR
 			#if DBG_PROJ
 			auto Dump = [&](v4 const& tl_, v4 const& tr_, v4 const& bl_, v4 const& br_, v4 const& light_)
 			{
@@ -347,14 +265,17 @@ namespace pr
 			};
 
 			// Get the corners of the plane that will be the far clip plane (in world space).
+			// Note, the non-far plane faces of the frustum will actually result in a left
+			// handed projection because I'm just reflecting the verts through the z-plane.
+			// To compensate for this, the geometry shader reverses the winding order of the
+			// faces. The reason for doing this is to simplify texture lookup, pixels on the
+			// left of the screen will be on the left of the texture, rather than on the right.
 			pr::v4 fdim = shadow_frustum.Dim();
 			pr::v4 tl, TL, tr, TR, bl, BL, br, BR;
 			TL = c2w * pr::v4::make(-fdim.x,  fdim.y, sign_z[0]*fdim.z, 1.0f);
 			TR = c2w * pr::v4::make( fdim.x,  fdim.y, sign_z[1]*fdim.z, 1.0f);
 			BL = c2w * pr::v4::make(-fdim.x, -fdim.y, sign_z[2]*fdim.z, 1.0f);
 			BR = c2w * pr::v4::make( fdim.x, -fdim.y, sign_z[3]*fdim.z, 1.0f);
-			if (face==0 || face == 1) { std::swap(TL,TR); std::swap(BL,BR); }
-			if (face==2 || face == 3) { std::swap(TL,BL); std::swap(TR,BR); }
 			PR_EXPAND(DBG_PROJ, Frust(TL,TR,BL,BR,light.m_direction));
 
 			w2s = m4x4Zero;
@@ -486,17 +407,19 @@ namespace pr
 {
 	namespace rdr
 	{
+		// A model instance that draws a quad on the lower left of the view
+		// containing the shadow map texture
 		#define PR_RDR_INST(x)\
 			x(pr::m4x4 ,m_i2w   ,EInstComp::I2WTransform)\
 			x(ModelPtr ,m_model ,EInstComp::ModelPtr)
 		PR_RDR_DEFINE_INSTANCE(SmapTestInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
-
 		struct SmapTest
 			:SmapTestInstance
 			,pr::events::IRecv<Evt_UpdateScene>
 			,pr::events::IRecv<Evt_SceneDestroy>
 		{
+			void OnEvent(pr::rdr::Evt_SceneDestroy const&) { m_model = nullptr; }
 			void OnEvent(pr::rdr::Evt_UpdateScene const& e)
 			{
 				auto rstep = e.m_scene.FindRStep<ShadowMap>();
@@ -540,11 +463,208 @@ namespace pr
 				m_i2w = view.m_c2w * Translation4x4(dx,dy,dz) * Scale4x4(area.x/4.0f, area.y/4.0f, 1.0f, pr::v4Origin);
 				e.m_scene.RStep<ForwardRender>().AddInstance(*this);
 			}
-			void OnEvent(pr::rdr::Evt_SceneDestroy const&)
-			{
-				m_model = nullptr;
-			}
 		} g_smap_test;
+
+		typedef pr::iv4 int4;
+		typedef pr::v4 float4;
+		typedef pr::v2 float2;
+		typedef pr::m4x4 float4x4;
+		#define uniform
+		#define TINY 0.0001f
+
+		struct SLight
+		{
+			// x = light type = 0 - ambient, 1 - directional, 2 - point, 3 - spot
+			int4   m_info;         // Encoded info for global lighting
+			float4 m_ws_direction; // The direction of the global light source
+			float4 m_ws_position;  // The position of the global light source
+			float4 m_ambient;      // The colour of the ambient light
+			float4 m_colour;       // The colour of the directional light
+			float4 m_specular;     // The colour of the specular light. alpha channel is specular power
+			float4 m_spot;         // x = inner cos angle, y = outer cos angle, z = range, w = falloff
+		};
+
+		struct SShadow
+		{
+			int4 m_info;                // x = count of smaps
+			float4 m_frust_dim;         // x = width at far plane, y = height at far plane, z = distance to far plane, w = smap max range (for normalising distances)
+			row_major float4x4 m_frust; // Inward pointing frustum plane normals, transposed.
+		};
+		struct SSampler
+		{
+		} m_smap_sampler[1];
+		struct STexture
+		{
+			float2 Sample(SSampler const& s, float2 const& uv)
+			{
+				return float2::make(0.6f,0.4f);
+			}
+		} m_smap_texture[1];
+
+		// Shader intrinic functions
+		bool clip(float x)
+		{
+			return x < 0.0f;
+		};
+		float step(float lo, float hi)
+		{
+			return hi >= lo ? 1.0f : 0.0f;
+		};
+		v4 step(v4 const& lo, v4 const& hi)
+		{
+			return v4::make(
+				hi.x >= lo.x ? 1.0f : 0.0f,
+				hi.y >= lo.y ? 1.0f : 0.0f,
+				hi.z >= lo.z ? 1.0f : 0.0f,
+				hi.w >= lo.w ? 1.0f : 0.0f);
+		}
+		v4 lerp(v4 const& a, v4 const& b, float t)
+		{
+			return (1-t)*a + t*b;
+		}
+		float saturate(float x)
+		{
+			return Clamp(x,0.0f,1.0f);
+		}
+		float length(v4 const& v)
+		{
+			return Length4(v);
+		}
+		v4 mul(v4 const& v, m4x4 const& m)
+		{
+			return m * v;
+		}
+
+		// Returns a direction vector of the shadow cast from point 'ws_vert' 
+		float4 ShadowRayWS(uniform SLight const& light, float4 const& ws_pos)
+		{
+			return DirectionalLight(light) ? light.m_ws_direction : (ws_pos - light.m_ws_position);
+		}
+
+		// Returns the parametric value 't' of the intersection between the line
+		// passing through 's' and 'e' with 'frust'.
+		// Assumes 's' is within the frustum to start with
+		float IntersectFrustum(uniform SShadow const& shadow, float4 const& s, float4 const& e)
+		{
+			const float4 T = float4::make(1e10f);
+	
+			// Find the distance from each frustum face for 's' and 'e'
+			float4 d0 = mul(s, shadow.m_frust);
+			float4 d1 = mul(e, shadow.m_frust);
+
+			// Clip the edge 's-e' to each of the frustum sides (Actually, find the parametric
+			// value of the intercept)(min(T,..) protects against divide by zero)
+			float4 t0 = step(d1,d0)   * Min(T, -d0/(d1 - d0));        // Clip to the frustum sides
+			float  t1 = step(e.z,s.z) * Min(T.x, -s.z / (e.z - s.z)); // Clip to the far plane
+
+			// Set all components that are <= 0.0 to BIG
+			t0 += step(t0, v4Zero) * T;
+			t1 += step(t1, 0.0f) * T.x;
+
+			// Find the smallest positive parametric value
+			// => the closest intercept with a frustum plane
+			float t = T.x;
+			t = Min(t, t0.x);
+			t = Min(t, t0.y);
+			t = Min(t, t0.z);
+			t = Min(t, t0.w);
+			t = Min(t, t1);
+			return t;
+		}
+
+		// Returns a value between [0,1] where 0 means fully in shadow, 1 means not in shadow
+		float LightVisibility(uniform SShadow const& shadow, uniform int smap_index, uniform SLight const& light, uniform row_major float4x4 const& w2c, float4 const& ws_pos)
+		{
+			// Find the shadow ray in frustum space and its intersection with the frustum
+			float4 ws_ray = ShadowRayWS(light, ws_pos);
+			float4 fs_pos0 = mul(ws_pos         , w2c); fs_pos0.z += shadow.m_frust_dim.z;
+			float4 fs_pos1 = mul(ws_pos + ws_ray, w2c); fs_pos1.z += shadow.m_frust_dim.z;
+			float t = IntersectFrustum(shadow, fs_pos0, fs_pos1);
+			float4 intercept = lerp(fs_pos0, fs_pos1, t);
+
+			// Convert the intersection to texture space
+			float2 uv = float2::make(0.5f + 0.5f*intercept.x/shadow.m_frust_dim.x, 0.5f - 0.5f*intercept.y/shadow.m_frust_dim.y);
+
+			// Find the distance from the frustum to 'ws_pos'
+			float dist = saturate(t * length(ws_ray) / shadow.m_frust_dim.w) + TINY;
+
+			// Sample the smap
+			float2 depth = m_smap_texture[smap_index].Sample(m_smap_sampler[smap_index], uv);
+
+			// R channel is near frustum faces, G channel is the far frustum plane.
+			// If intercept.z is 0 then the intercept is on the far plane.
+			return step(TINY, intercept.z) * depth.x + step(intercept.z, TINY) * depth.y;
+		}
+
+		void ShadowMap::Debugging(StateStack& ss)
+		{
+			auto shadow_frustum = m_scene->m_view.ShadowFrustum();
+			SShadow shadow = {};
+			shadow.m_info = pr::iv4::make(1,0,0,0);
+			shadow.m_frust = shadow_frustum.m_Tnorms;
+			shadow.m_frust_dim = shadow_frustum.Dim();
+			shadow.m_frust_dim.w = m_scene->m_view.m_shadow_max_caster_dist;
+
+			SLight light = {};
+			light.m_info = pr::iv4::make(1,0,0,0);
+			light.m_ws_direction = m_scene->m_global_light.m_direction;
+			light.m_ws_position  = m_scene->m_global_light.m_position;
+
+			LightVisibility(shadow, 0, light, InvertFast(m_scene->m_view.m_c2w), pr::v4::make(0,0,0,1));
+
+			/*
+			Vert verts[4] =
+			{
+				// Encode the view frustum corner index in 'pos.x', biased for the float to int cast
+				{pr::v4::make(-1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.999f)},
+				{pr::v4::make( 1.0f, -1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.999f)},
+				{pr::v4::make( 1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.999f,0.0f)},
+				{pr::v4::make(-1.0f,  1.0f, 0, 1), pr::ColourWhite, pr::v4Zero, pr::v2::make(0.0f,0.0f)},
+			};
+			struct
+			{
+				v4 ss_vert;
+				v4 ws_vert;
+			} vout[4];
+
+			auto& c2w = m_scene->m_view.m_c2w;
+			auto shadow_frustum = m_scene->m_view.ShadowFrustum();
+			m4x4 proj;
+			static int face = 0;
+			CreateProjection(shadow_frustum, face, m_light, c2w, m_scene->m_view.m_shadow_max_caster_dist, proj);
+				
+			for (int i = 0; i != 4; ++i)
+			{
+				vout[i].ss_vert = proj * verts[i].m_vert;
+				vout[i].ss_vert.w += (vout[i].ss_vert.w == 0.0f) * pr::maths::tiny;
+				vout[i].ws_vert = vout[i].ss_vert / vout[i].ss_vert.w;
+				vout[i].ws_vert.w = float(face);
+			}
+
+			struct
+			{
+				v4 ss_vert;
+				v2 depth;
+				bool clipped;
+			} rt[4] = {};
+
+			for (int i = 0; i != 4; ++i)
+			{
+				v4 px = vout[i].ss_vert / vout[i].ss_vert.w;
+				rt[i].ss_vert = px;
+
+				// Clip to the wedge of the fwd texture we're rendering to (or no clip for the back texture)
+				const float face_sign0[] = {-1.0f,  1.0f, -1.0f,  1.0f, 0.0f};
+				const float face_sign1[] = { 1.0f, -1.0f, -1.0f,  1.0f, 0.0f};
+				rt[i].clipped = false;
+				rt[i].clipped |= clip(face_sign0[face] * (px.y - px.x));
+				rt[i].clipped |= clip(face_sign1[face] * (px.y + px.x));
+
+				rt[i].depth = v2::make((face != 4) * px.z, (face == 4) * px.z);
+			}
+			*/
+		}
 	}
 }
+
 #endif

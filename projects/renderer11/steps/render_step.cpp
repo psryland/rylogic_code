@@ -99,7 +99,15 @@ namespace pr
 			pr::events::Send(Evt_RenderStepExecute(*this, false));
 
 			{
+				PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
+					[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToWString(GetId())); },
+					[&]{ ss.m_dbg->EndEvent(); }));
+
+				// Commit before the start of a render step to ensure changes
+				// are flushed before the render steps tries to clear back buffers, etc
 				StateStack::RSFrame frame(ss, *this);
+				ss.Commit();
+
 				ExecuteInternal(ss);
 			}
 

@@ -38,18 +38,48 @@ PSIn_ShadowMap main(VSIn In)
 void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> TriStream)
 {
 	// Replicate the face for each projection and
-	// project it onto the plane of the frustum
+	// project it onto the plane of the frustum.
+	// Reverse the winding order for planes 1-4 to allow
+	// for left handed projection.
 	PSIn_ShadowMap Out;
-	for (int i = 0; i != 5; ++i)
+	for (int i = 0; i != 4; ++i)
 	{
 		if (!any(m_proj[i])) continue;
-		for (int j = 0; j != 3; ++j)
-		{
-			Out = In[j];
-			Out.ss_vert = mul(In[j].xyz_face, m_proj[i]);
-			Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-			TriStream.Append(Out);
-		}
+
+		Out = In[0];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		Out = In[2];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		Out = In[1];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		TriStream.RestartStrip();
+	}
+	if (any(m_proj[4]))
+	{
+		Out = In[0];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		Out = In[1];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		Out = In[2];
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
 		TriStream.RestartStrip();
 	}
 }
@@ -64,13 +94,17 @@ void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStr
 	for (int i = 0; i != 5; ++i)
 	{
 		if (!any(m_proj[i])) continue;
-		for (int j = 0; j != 2; ++j)
-		{
-			Out = In[j];
-			Out.ss_vert = mul(In[j].xyz_face, m_proj[i]);
-			Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-			TriStream.Append(Out);
-		}
+
+		Out = In[0];
+		Out.ss_vert = mul(In[0].xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
+		Out = In[1];
+		Out.ss_vert = mul(In[1].xyz_face, m_proj[i]);
+		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
+		TriStream.Append(Out);
+
 		TriStream.RestartStrip();
 	}
 }
@@ -84,16 +118,19 @@ PSOut main(PSIn_ShadowMap In)
 	int face = int(In.xyz_face.w);
 
 	// Clip to the wedge of the fwd texture we're rendering to (or no clip for the back texture)
-	const float face_sign0[] = {-1.0f,  1.0f, -1.0f,  1.0f, 0.0f};
-	const float face_sign1[] = { 1.0f, -1.0f, -1.0f,  1.0f, 0.0f};
+	const float face_sign0[] = { 1.0f, -1.0f,  1.0f, -1.0f, 0.0f};
+	const float face_sign1[] = {-1.0f,  1.0f,  1.0f, -1.0f, 0.0f};
 	clip(face_sign0[face] * (px.y - px.x) + TINY);
 	clip(face_sign1[face] * (px.y + px.x) + TINY);
 
 	// Output the depth to the RT
+	// px.z is the normalised fractional distance between the light and the frustum plane
+	// Invert it so that the light is 1.0 and the frustum plane is 0.0.
 	PSOut Out;
 	Out.depth = float2(
-		(face == 4) + (face != 4)*px.z,
-		(face != 4) + (face == 4)*px.z);
+		(face != 4) * (1.0f - px.z),
+		(face == 4) * (1.0f - px.z)
+		);
 	return Out;
 }
 #endif

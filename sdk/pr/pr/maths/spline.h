@@ -148,7 +148,7 @@ namespace pr
 	// Note: the analytic solution to this problem involves solving a 5th order polynomial
 	// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
 	// Should have quadratic convergence
-	inline float ClosestPoint_PointToSpline(pr::Spline const& spline, v4 const& pt, float initial_estimate, int iterations = 5)
+	inline float ClosestPoint_PointToSpline(pr::Spline const& spline, v4 const& pt, float initial_estimate, bool bound01 = true, int iterations = 5)
 	{
 		// The distance (sqr'd) from 'pt' to the spline is: Dist(t) = |pt - S(t)|^2.    (S(t) = spline at t)
 		// At the closest point, Dist'(t) = 0.
@@ -165,17 +165,19 @@ namespace pr
 			pr::v4 ddS = spline.Acceleration(time);
 			pr::v4 R   = pt - S;
 			time += pr::Dot3(R, dS) / (pr::Dot3(dS,dS) - pr::Dot3(R,ddS));
+			if (bound01 && (time <= 0.0f || time >= 1.0f))
+				return Clamp(time, 0.0f, 1.0f);
 		}
 		return time;
 	}
 
 	// This overload attempts to find the nearest point robustly
 	// by testing 3 starting points and returning minimum.
-	inline float ClosestPoint_PointToSpline(pr::Spline const& spline, pr::v4 const& pt)
+	inline float ClosestPoint_PointToSpline(pr::Spline const& spline, pr::v4 const& pt, bool bound01 = true)
 	{
-		float t0 = pr::ClosestPoint_PointToSpline(spline, pt, -0.5f, 5);
-		float t1 = pr::ClosestPoint_PointToSpline(spline, pt,  0.5f, 5);
-		float t2 = pr::ClosestPoint_PointToSpline(spline, pt,  1.5f, 5);
+		float t0 = pr::ClosestPoint_PointToSpline(spline, pt, -0.5f, bound01, 5);
+		float t1 = pr::ClosestPoint_PointToSpline(spline, pt,  0.5f, bound01, 5);
+		float t2 = pr::ClosestPoint_PointToSpline(spline, pt,  1.5f, bound01, 5);
 		float d0 = pr::Length3Sq(pt - spline.Position(t0));
 		float d1 = pr::Length3Sq(pt - spline.Position(t1));
 		float d2 = pr::Length3Sq(pt - spline.Position(t2));

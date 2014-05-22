@@ -99,7 +99,7 @@ namespace pr
 		// Helper for setting lighting constants
 		inline void SetLightingConstants(Light const& light, hlsl::Light& cb)
 		{
-			cb.m_info         = pr::v4::make(static_cast<float>(light.m_type),0.0f,0.0f,0.0f);
+			cb.m_info         = pr::iv4::make(int(light.m_type),0,0,0);
 			cb.m_ws_direction = light.m_direction;
 			cb.m_ws_position  = light.m_position;
 			cb.m_ambient      = static_cast<pr::Colour>(light.m_ambient);
@@ -134,25 +134,6 @@ namespace pr
 			if (shdr_types & EShaderType::GS) dc->GSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
 			if (shdr_types & EShaderType::HS) dc->HSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
 			if (shdr_types & EShaderType::DS) dc->DSSetConstantBuffers(TCBuf::slot, 1, &cbuf.m_ptr);
-		}
-
-		// Helper for binding 'tex' to a texture slot, along with its sampler
-		inline void BindTextureAndSampler(D3DPtr<ID3D11DeviceContext>& dc, UINT slot, Texture2DPtr tex, D3DPtr<ID3D11SamplerState> default_samp_state)
-		{
-			if (tex != nullptr)
-			{
-				// Set the shader resource view of the texture and the texture sampler
-				dc->PSSetShaderResources(slot, 1, &tex->m_srv.m_ptr);
-				dc->PSSetSamplers(slot, 1, &tex->m_samp.m_ptr);
-			}
-			else
-			{
-				ID3D11ShaderResourceView* null_srv[1] = {};
-				dc->PSSetShaderResources(slot, 1, null_srv);
-
-				ID3D11SamplerState* null_samp[1] = {default_samp_state.m_ptr};
-				dc->PSSetSamplers(slot, 1, null_samp);
-			}
 		}
 	}
 }

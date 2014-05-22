@@ -18,8 +18,8 @@ namespace pr
 			,m_centre_dist(1.0f)
 			,m_near(0.01f)
 			,m_far(1.0e8f)
-			,m_shadow_zfar(100.0f)
-			,m_shadow_max_caster_dist(200.0f)
+			,m_shadow_zfar(10.0f)
+			,m_shadow_max_caster_dist(20.0f)
 			,m_orthographic(false)
 		{
 			PR_ASSERT(PR_DBG_RDR, pr::meta::is_aligned<SceneView>(this), "My alignment is broke");
@@ -35,8 +35,8 @@ namespace pr
 			,m_centre_dist(centre_dist)
 			,m_near(0.01f)
 			,m_far(1.0e8f)
-			,m_shadow_zfar(100.0f)
-			,m_shadow_max_caster_dist(200.0f)
+			,m_shadow_zfar(10.0f)
+			,m_shadow_max_caster_dist(20.0f)
 			,m_orthographic(orthographic)
 		{
 			UpdateCameraToScreen();
@@ -50,8 +50,8 @@ namespace pr
 			,m_centre_dist(cam.m_focus_dist)
 			,m_near(cam.Near())
 			,m_far(cam.Far())
-			,m_shadow_zfar(cam.FocusRelativeDistance(100.0f))
-			,m_shadow_max_caster_dist(cam.FocusRelativeDistance(200.0f))
+			,m_shadow_zfar(cam.FocusRelativeDistance(2.0f))
+			,m_shadow_max_caster_dist(cam.FocusRelativeDistance(4.0f))
 			,m_orthographic(cam.m_orthographic)
 		{
 			PR_ASSERT(PR_DBG_RDR, pr::IsFinite(m_c2w) && pr::IsFinite(m_c2s) && pr::IsFinite(m_fovY) && pr::IsFinite(m_aspect) && pr::IsFinite(m_centre_dist), "invalid scene view parameters");

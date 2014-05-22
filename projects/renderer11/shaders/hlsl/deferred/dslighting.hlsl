@@ -47,7 +47,7 @@ PSOut main(PSIn_DSLighting In)
 	Out.diff = px.diff;
 
 	// Do lighting...
-	Out.diff = Illuminate(m_light, ws_vert, px.ws_norm, m_c2w[3], Out.diff);
+	Out.diff = Illuminate(m_light, ws_vert, px.ws_norm, m_c2w[3], 1.0f, Out.diff);
 
 	//Out.diff = float4(1,0,1,1);
 	//Out.diff = px.diff;

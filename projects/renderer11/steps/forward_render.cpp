@@ -8,6 +8,7 @@
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/steps/forward_render.h"
+#include "pr/renderer11/steps/shadow_map.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "renderer11/shaders/common.h"
 #include "renderer11/render/state_stack.h"
@@ -23,13 +24,7 @@ namespace pr
 			,m_clear_bb(clear_bb)
 			,m_vs(m_shdr_mgr->FindShader(EStockShader::FwdShaderVS))
 			,m_ps(m_shdr_mgr->FindShader(EStockShader::FwdShaderPS))
-		{
-			m_rsb = RSBlock::SolidCullBack();
-
-			// Use line antialiasing if multisampling is enabled
-			if (m_scene->m_rdr->Settings().m_multisamp.Count != 1)
-				m_rsb.Set(ERS::MultisampleEnable, TRUE);
-		}
+		{}
 
 		// Add model nuggets to the draw list for this render step
 		void ForwardRender::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
@@ -80,11 +75,15 @@ namespace pr
 			// Set the viewport
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
+			// Check if shadows are enabled
+			auto smap_rstep = m_scene->FindRStep<ShadowMap>();
+			StateStack::SmapFrame smap_frame(ss, smap_rstep);
+
 			// Set the frame constants
 			hlsl::fwd::CBufFrame cb = {};
 			SetViewConstants(m_scene->m_view, cb);
 			SetLightingConstants(m_scene->m_global_light, cb.m_global_light);
-			SetShadowMapConstants(m_scene->m_view, 0, cb.m_shadow);
+			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb.m_shadow);
 			WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::PS);
 
 			for (auto& dle : m_drawlist)
@@ -100,9 +99,6 @@ namespace pr
 				SetTexDiffuse(*dle.m_nugget, cb);
 				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
 
-				// Bind a texture
-				BindTextureAndSampler(dc, 0, dle.m_nugget->m_tex_diffuse, m_shdr_mgr->DefaultSamplerState());
-
 				// Draw the nugget
 				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
@@ -110,9 +106,6 @@ namespace pr
 					UINT(nugget.m_irange.m_begin),
 					0);
 			}
-
-			// Unbind textures, they might be render targets...
-			BindTextureAndSampler(dc, 0, nullptr, m_shdr_mgr->DefaultSamplerState());
 		}
 	}
 }

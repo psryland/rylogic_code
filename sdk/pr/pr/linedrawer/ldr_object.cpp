@@ -1391,7 +1391,7 @@ namespace pr
 				pr::v4 v;
 				p.m_reader.ExtractVector3(v, 1.0f);
 				if (m_dim == pr::v4Zero)
-					m_dim = v.w0() * 0.5f;
+					m_dim = v.w0();
 				else
 					m_location.push_back(v);
 			}
@@ -1403,6 +1403,8 @@ namespace pr
 					p.m_reader.ReportError("Box list object description incomplete");
 					return nullptr;
 				}
+
+				m_dim *= 0.5f;
 
 				// Create the model
 				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData());
@@ -1429,19 +1431,31 @@ namespace pr
 		// ELdrObject::FrustumWH
 		template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreatorCuboid
 		{
+			float m_width,m_height,m_near,m_far,m_view_plane;
+			int m_axis_id;
+
+			ObjectCreator() :m_width(1.0f), m_height(1.0f), m_near(0.0f), m_far(1.0f), m_view_plane(1.0f), m_axis_id(3) {}
+			bool ParseKeyword(ParseParams& p, HashValue kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorCuboid::ParseKeyword(p, kw);
+				case EKeyword::ViewPlaneZ: p.m_reader.ExtractRealS(m_view_plane); return true;
+				}
+			}
 			void Parse(ParseParams& p) override
 			{
-				int axis_id;
-				p.m_reader.ExtractInt(axis_id, 10);
-
-				float w,h,n,f;
-				p.m_reader.ExtractReal(w);
-				p.m_reader.ExtractReal(h);
-				p.m_reader.ExtractReal(n);
-				p.m_reader.ExtractReal(f);
-				w *= 0.5f;
-				h *= 0.5f;
-
+				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractReal(m_width);
+				p.m_reader.ExtractReal(m_height);
+				p.m_reader.ExtractReal(m_near);
+				p.m_reader.ExtractReal(m_far);
+			}
+			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			{
+				float w = m_width  * 0.5f / m_view_plane;
+				float h = m_height * 0.5f / m_view_plane;
+				float n = m_near, f = m_far;
+				
 				m_pt[0].set(-n*w, -n*h, n, 1.0f);
 				m_pt[1].set(-n*w,  n*h, n, 1.0f);
 				m_pt[2].set( n*w, -n*h, n, 1.0f);
@@ -1451,8 +1465,8 @@ namespace pr
 				m_pt[6].set(-f*w, -f*h, f, 1.0f);
 				m_pt[7].set(-f*w,  f*h, f, 1.0f);
 
-				switch (axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				switch (m_axis_id){
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return nullptr;
 				case  1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1460,26 +1474,32 @@ namespace pr
 				case  3: m_b2w = pr::m4x4Identity; break;
 				case -3: m_b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
 				}
+
+				return IObjectCreatorCuboid::CreateModel(p, name);
 			}
-		};
+	};
 
 		// ELdrObject::FrustumFA
 		template <> struct ObjectCreator<ELdrObject::FrustumFA> :IObjectCreatorCuboid
 		{
+			float m_fovY, m_aspect, m_near, m_far;
+			int m_axis_id;
+
+			ObjectCreator() :m_fovY(pr::maths::tau_by_8), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
 			void Parse(ParseParams& p) override
 			{
-				int axis_id;
-				p.m_reader.ExtractInt(axis_id,10);
-
-				float fovY,aspect,n,f;
-				p.m_reader.ExtractReal(fovY);
-				p.m_reader.ExtractReal(aspect);
-				p.m_reader.ExtractReal(n);
-				p.m_reader.ExtractReal(f);
-
+				p.m_reader.ExtractInt(m_axis_id,10);
+				p.m_reader.ExtractReal(m_fovY);
+				p.m_reader.ExtractReal(m_aspect);
+				p.m_reader.ExtractReal(m_near);
+				p.m_reader.ExtractReal(m_far);
+			}
+			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			{
 				// Construct pointed down +z, then rotate the points based on axis id
-				float h = pr::Tan(pr::DegreesToRadians(fovY * 0.5f));
-				float w = aspect * h;
+				float h = pr::Tan(pr::DegreesToRadians(m_fovY * 0.5f));
+				float w = m_aspect * h;
+				float n = m_near, f = m_far;
 				m_pt[0].set(-n*w, -n*h, n, 1.0f);
 				m_pt[1].set( n*w, -n*h, n, 1.0f);
 				m_pt[2].set(-n*w,  n*h, n, 1.0f);
@@ -1489,8 +1509,8 @@ namespace pr
 				m_pt[6].set(-f*w,  f*h, f, 1.0f);
 				m_pt[7].set( f*w,  f*h, f, 1.0f);
 
-				switch (axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
+				switch (m_axis_id) {
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return nullptr;
 				case  1: m_b2w = pr::Rotation4x4(0.0f , pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f ,-pr::maths::tau_by_4 ,0.0f ,pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4 ,0.0f ,0.0f ,pr::v4Origin); break;
@@ -1498,6 +1518,8 @@ namespace pr
 				case  3: m_b2w = pr::m4x4Identity; break;
 				case -3: m_b2w = pr::Rotation4x4(0.0f ,pr::maths::tau_by_2 ,0.0f ,pr::v4Origin); break;
 				}
+
+				return IObjectCreatorCuboid::CreateModel(p, name);
 			}
 		};
 
@@ -2457,10 +2479,11 @@ R"(
 }
 
 // A frustum given by width, height, near plane and far plane
-// Points along the z axis. Width, Height given at '1' along the z axis
+// Width, Height given at '1' along the z axis by default, unless *ViewPlaneZ is given
 *FrustumWH frustumwh
 {
 	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	*ViewPlaneZ { 2 }                   // Optional. The distance at which the frustum has dimensions width,height
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 

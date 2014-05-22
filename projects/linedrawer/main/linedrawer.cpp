@@ -162,15 +162,15 @@ namespace ldr
 	{
 		try
 		{
-			//*
+			/*
 			{// For testing..
 				using namespace pr::rdr;
 
-				if (m_scene.FindRStep<ShadowMap>() == nullptr)
-					m_scene.m_render_steps.insert(begin(m_scene.m_render_steps), std::make_shared<ShadowMap>(m_scene, m_scene.m_global_light, pr::iv2::make(1024,1024)));
+				//if (m_scene.FindRStep<ShadowMap>() == nullptr)
+				//	m_scene.m_render_steps.insert(begin(m_scene.m_render_steps), std::make_shared<ShadowMap>(m_scene, m_scene.m_global_light, pr::iv2::make(1024,1024)));
 
-				pr::ldr::AddString(m_rdr, "*Rect r FF00FF00 {3 1 *Solid}", m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
-				m_nav.m_camera.LookAt(pr::v4Origin, pr::v4::make(0,0,2,1), pr::v4YAxis);
+				//pr::ldr::AddString(m_rdr, "*Rect r FF00FF00 {3 1 *Solid}", m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+				//m_nav.m_camera.LookAt(pr::v4Origin, pr::v4::make(0,0,2,1), pr::v4YAxis);
 
 				//auto thick_line = m_rdr.m_shdr_mgr.FindShader(EStockShader::ThickLineListGS);
 
@@ -197,8 +197,8 @@ namespace ldr
 			}
 			//*/
 
-			//std::string scene = pr::ldr::CreateDemoScene();
-			//pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+			std::string scene = pr::ldr::CreateDemoScene();
+			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
@@ -371,14 +371,14 @@ namespace ldr
 		auto& fr = e.m_rstep.as<pr::rdr::ForwardRender>();
 		if (m_scene_rdr_pass == 0 || e.m_complete)
 		{
-			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID);
-			fr.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+			m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID);
+			m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
 			fr.m_clear_bb = true;
 		}
 		else
 		{
-			fr.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-			fr.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+			m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+			m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
 			fr.m_clear_bb = false;
 		}
 	}

@@ -195,9 +195,6 @@ namespace pr
 				SetTexDiffuse(*dle.m_nugget, cb);
 				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
 
-				// Bind a texture
-				BindTextureAndSampler(dc, 0, dle.m_nugget->m_tex_diffuse, m_shdr_mgr->DefaultSamplerState());
-
 				// Add the nugget to the device context
 				Nugget const& nugget = *dle.m_nugget;
 				dc->DrawIndexed(
@@ -205,9 +202,6 @@ namespace pr
 					UINT(nugget.m_irange.m_begin),
 					0);
 			}
-
-			// Unbind textures, they might be render targets...
-			BindTextureAndSampler(dc, 0, nullptr, m_shdr_mgr->DefaultSamplerState());
 		}
 
 		// Handle main window resize events

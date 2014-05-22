@@ -71,6 +71,7 @@ namespace pr
 			virtual void ExecuteInternal(StateStack& ss) = 0;
 
 		private:
+
 			RenderStep(RenderStep const&);
 			RenderStep& operator = (RenderStep const&);
 		};

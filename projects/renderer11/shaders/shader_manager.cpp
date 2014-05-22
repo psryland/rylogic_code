@@ -22,15 +22,9 @@ namespace pr
 			,m_lookup_gs(mem)
 			,m_lookup_shader(mem)
 			,m_lookup_cbuf(mem)
-			,m_default_sampler_state()
 			,m_device(device)
 		{
 			CreateStockShaders();
-
-			// Create the default sampler
-			SamplerDesc sdesc;
-			pr::Throw(device->CreateSamplerState(&sdesc, &m_default_sampler_state.m_ptr));
-			PR_EXPAND(PR_DBG_RDR, NameResource(m_default_sampler_state, "default sampler"));
 		}
 		ShaderManager::~ShaderManager()
 		{

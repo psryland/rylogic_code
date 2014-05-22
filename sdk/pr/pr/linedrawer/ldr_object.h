@@ -118,6 +118,7 @@ namespace pr
 			x(Divisions       ,= 0x1a7f5e28)\
 			x(Layers          ,= 0x0ea88b62)\
 			x(Wedges          ,= 0x0e4a1c99)\
+			x(ViewPlaneZ      ,= 0x053FC43C)\
 			x(Verts           ,= 0x1b15f488)\
 			x(Normals         ,= 0x061bcc50)\
 			x(Colours         ,= 0x1e9214e3)\

@@ -52,6 +52,8 @@ PSIn main(VSIn In)
 }
 #endif
 
+
+
 // Main pixel shader
 #ifdef PR_RDR_PSHADER_forward
 PSOut main(PSIn In)
@@ -67,17 +69,15 @@ PSOut main(PSIn In)
 	// Texture2D (with transform)
 	if (HasTex0)
 		Out.diff = m_texture0.Sample(m_sampler0, In.tex0) * Out.diff;
-	//if (HAS_PROJTEX) // Projected textures
-	//	Out.diff0 = ProjTex(In.ws_pos, Out.diff);
 
 	// Shadows
-	float light_visible = true;
-	if (m_shadow.m_info.x == 1)
+	float light_visible = 1.0f;
+	if (ShadowMapCount(m_shadow) == 1)
 		light_visible = LightVisibility(m_shadow, 0, m_global_light, m_w2c, In.ws_vert);
 
 	// Lighting
 	if (HasNormals)
-		Out.diff = Illuminate(m_global_light, In.ws_vert, light_visible * In.ws_norm, m_c2w[3], Out.diff);
+		Out.diff = Illuminate(m_global_light, In.ws_vert, In.ws_norm, m_c2w[3], light_visible, Out.diff);
 
 	return Out;
 }
