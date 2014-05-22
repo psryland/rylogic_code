@@ -1,0 +1,61 @@
+// Demo Scene
+/*
+*Camera
+{
+	*LookAt {0 0 1}
+	*Up {0 1 0}
+	*o2w{*pos{0 0 4}}
+	*Align {0 1 0}
+	*Cull {CW}
+}
+*/
+
+//
+*Group world
+{
+	*Rect floor FF006000 {1 10 10 *Solid *o2w{*pos{ 0 -4  0}                }}
+	*Rect wall  FFE0E0A0 {2 8 10 *Solid *o2w{*pos{-5  0  0}                }}
+	*Rect wall  FFE0E0A0 {2 8 10 *Solid *o2w{*pos{ 5  0  0} *Euler{0 180 0}}}
+	*Rect wall  FFE0E0A0 {2 8 10 *Solid *o2w{*pos{ 0  0  5} *Euler{0  90 0}}}
+	*Rect wall  FFE0E0A0 {2 8 10 *Solid *o2w{*pos{ 0  0 -5} *Euler{0 270 0}}}
+}
+
+*Group clutter
+{
+	*Box box FF00FF00
+	{
+		0.8 4 0.6
+		*o2w{*pos{3 -2 -4}}
+	}
+	*ConeHA cone FF00FFFF
+	{
+		2 0 2 0.5                      // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+		*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
+		*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
+		*Scale 1 1                        // Optional. X,Y scale factors
+		*Texture {"#checker"}             // Optional texture
+		*o2w{*pos{-2 -2 -2}}
+	}
+	
+	*Sphere sphere FFFF0000
+	{
+		1
+		*wireframe
+		*o2w{*pos{2 0 3}}
+	}
+	
+	*Grid grid FF00FFFF
+	{
+		3      // axis_id
+		2 3    // width, height
+		4 6   // Optional, w,h divisions. If omitted defaults to width/height
+		*o2w{*pos{-4 1.5 2}}
+		*Animation               // Add simple animation to this object
+		{
+			*Style PlayContinuous      // Animation style, one of: NoAnimation, PlayOnce, PlayReverse, PingPong, PlayContinuous
+			*Period 1.2          // The period of the animation in seconds
+			*Velocity 0 0 0      // Linear velocity vector in m/s
+			*AngVelocity 0 1 0   // Angular velocity vector in rad/s
+		}
+	}
+}
