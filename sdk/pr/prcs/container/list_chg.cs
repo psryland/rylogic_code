@@ -35,4 +35,58 @@ namespace pr.container
 		/// <summary>Raised just after the list is reordered</summary>
 		Reordered,
 	}
+
+	public class ListChgEventArgs<T> :EventArgs
+	{
+		/// <summary>The change this event represents</summary>
+		public ListChg ChangeType { get; private set; }
+
+		/// <summary>The index of the item while in the list, or -1 if not in the list</summary>
+		public int Index { get; private set; }
+
+		/// <summary>The item added/remove</summary>
+		public T Item { get; private set; }
+
+		public ListChgEventArgs(ListChg chg, int index, T item)
+		{
+			ChangeType = chg;
+			Index      = index;
+			Item       = item;
+		}
+	}
+
+	public class ItemChgEventArgs<T> :EventArgs
+	{
+		/// <summary>Index position of the item that was changed</summary>
+		public int Index { get; private set; }
+
+		/// <summary>The item before it was changed</summary>
+		public T OldItem { get; private set; }
+
+		/// <summary>The new item now in position 'Index' in the list</summary>
+		public T NewItem { get; private set; }
+
+		public ItemChgEventArgs(int index, T old_item, T new_item)
+		{
+			Index = index;
+			OldItem = old_item;
+			NewItem = new_item;
+		}
+	}
+
+	/// <summary>List index position change event</summary>
+	public class PositionChgEventArgs :EventArgs
+	{
+		/// <summary>The previous index</summary>
+		public int OldIndex { get; private set; }
+		
+		/// <summary>The new current index</summary>
+		public int NewIndex { get; private set; }
+
+		public PositionChgEventArgs(int old_index, int new_index)
+		{
+			OldIndex = old_index;
+			NewIndex = new_index;
+		}
+	}
 }

@@ -338,7 +338,7 @@
     <Compile Include="util\crc32.cs" />
     <Compile Include="util\crt.cs" />
     <Compile Include="util\dragdrop.cs" />
-    <Compile Include="util\eql.cs" />
+    <Compile Include="common\comparer.cs" />
     <Compile Include="common\event_batcher.cs" />
     <Compile Include="gui\flag_checked_listbox.cs">
       <SubType>Component</SubType>

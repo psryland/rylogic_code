@@ -52,12 +52,27 @@ namespace TestCS
 			m_diag.Elements.Add(new DiagramControl.Connector(node1, node2));
 			m_diag.Elements.Add(new DiagramControl.Connector(node2, node0));
 
+			var node4 = new DiagramControl.BoxNode("Node4"){PositionXY = new v2(-80, 60)};
+			var node5 = new DiagramControl.BoxNode("Node5"){PositionXY = new v2( 80,-60)};
+			node4.Diagram = m_diag;
+			node5.Diagram = m_diag;
+			
+			var conn4 = new DiagramControl.Connector(node4, node2);
+			var conn5 = new DiagramControl.Connector(node5, node4);
+			var conn6 = new DiagramControl.Connector(node1, node4);
+			conn4.Diagram = m_diag;
+			conn5.Diagram = m_diag;
+			conn6.Diagram = m_diag;
+			
+			node5.Dispose();
+			node5 = null;
+
 			m_diag.ResetView();
 
 			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
 			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml);
 			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
-			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.LoadXml("P:\\dump\\mmap_diag.xml");
+			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.ImportXml(XDocument.Load("P:\\dump\\mmap_diag.xml").Root, true);
 			m_menu_tools_load_options.Click += (s,a) => m_diag.Options = XDocument.Load("P:\\dump\\diag_options.xml").Root.Element("options").As<DiagramControl.DiagramOptions>();
 
 			m_filter = new Filter(this);

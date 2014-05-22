@@ -2,15 +2,22 @@
 using System.ComponentModel;
 using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
 	public class BindingSource<TItem> :BindingSource
 	{
-		public BindingSource() :base() {}
-		public BindingSource(IContainer container) :base(container) {}
-		public BindingSource(object dataSource, string dataMember) :base(dataSource, dataMember) {}
+		private int m_impl_previous_position;
+
+		public BindingSource() :base() { Init(); }
+		public BindingSource(IContainer container) :base(container) { Init(); }
+		public BindingSource(object dataSource, string dataMember) :base(dataSource, dataMember) { Init(); }
+		private void Init()
+		{
+			m_impl_previous_position = -1;
+		}
 
 		/// <summary>The current item</summary>
 		public new TItem Current
@@ -49,13 +56,24 @@ namespace pr.container
 		}
 
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
-		public event EventHandler<BindingListEx<TItem>.ListChgEventArgs> ListChanging;
-		private void RaiseListChanging(object sender = null, BindingListEx<TItem>.ListChgEventArgs args = null)
+		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
+		private void RaiseListChanging(object sender = null, ListChgEventArgs<TItem> args = null)
 		{
 			// I don't know why, but signing this up directly, as in:
 			// bl.ListChanging += ListChanging.Raise;
 			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
+		}
+
+		/// <summary>Raised just before the current list position changes</summary>
+		public event EventHandler<PositionChgEventArgs> PositionChanging;
+
+		/// <summary>Position changed handler</summary>
+		protected override void OnPositionChanged(EventArgs e)
+		{
+			PositionChanging.Raise(this, new PositionChgEventArgs(m_impl_previous_position, Position));
+			m_impl_previous_position = Position;
+			base.OnPositionChanged(e);
 		}
 
 		// Note:
@@ -72,12 +90,12 @@ namespace pr.container
 		public new void ResetBindings(bool metadata_changed)
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.PreReset, -1, default(TItem)));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
 
 			base.ResetBindings(metadata_changed);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.Reset, -1, default(TItem)));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
 		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the currently selected item and refresh its displayed value.</summary>
@@ -87,12 +105,12 @@ namespace pr.container
 			var index = Position;
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.PreReset, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, index, item));
 
 			base.ResetCurrentItem();
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.Reset, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, index, item));
 		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
@@ -101,12 +119,12 @@ namespace pr.container
 			var item = this[itemIndex];
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.PreReset, itemIndex, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, itemIndex, item));
 
 			base.ResetItem(itemIndex);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new BindingListEx<TItem>.ListChgEventArgs(ListChg.Reset, itemIndex, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, itemIndex, item));
 		}
 	}
 }
@@ -133,7 +151,6 @@ namespace pr
 		}
 		internal static class TestBindingSource
 		{
-
 			[Test] public static void BindingSource()
 			{
 				var bl_evts = new List<ListChg>();
@@ -280,6 +297,29 @@ namespace pr
 						));
 					clear();
 				}
+			}
+			[Test] public static void BindingSourceCurrency()
+			{
+				var bl = new BindingListEx<int>();
+				bl.AddRange(new[]{1,2,3,4,5});
+
+				var positions = new List<int>();
+				var bs = new BindingSource<int>{DataSource = bl};
+				bs.PositionChanging += (s,a) =>
+					{
+						positions.Add(a.OldIndex);
+						positions.Add(a.NewIndex);
+					};
+
+				bs.Position = 3;
+				bs.Position = 1;
+				Assert.True(positions.SequenceEqual(new[]{0,3,3,1}));
+
+				bs.CurrencyManager.Position = 4;
+				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4}));
+
+				bs.DataSource = null;
+				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
 			}
 		}
 	}

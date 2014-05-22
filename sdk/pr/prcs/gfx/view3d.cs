@@ -384,6 +384,23 @@ namespace pr.gfx
 			public float    m_falloff;
 			public bool     m_cast_shadows;
 
+			/// <summary>Return properties for an ambient light source</summary>
+			public static Light Ambient(Colour32 ambient)
+			{
+				return new Light
+				{
+					m_type           = ELight.Ambient,
+					m_on             = true,
+					m_position       = v4.Origin,
+					m_direction      = v4.Zero,
+					m_ambient        = ambient,
+					m_diffuse        = Colour32.Zero,
+					m_specular       = Colour32.Zero,
+					m_specular_power = 0f,
+					m_cast_shadows   = false,
+				};
+			}
+
 			/// <summary>Return properties for a directional light source</summary>
 			public static Light Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
 			{
@@ -393,6 +410,23 @@ namespace pr.gfx
 					m_on             = true,
 					m_position       = v4.Origin,
 					m_direction      = direction,
+					m_ambient        = ambient,
+					m_diffuse        = diffuse,
+					m_specular       = specular,
+					m_specular_power = spec_power,
+					m_cast_shadows   = cast_shadows,
+				};
+			}
+
+			/// <summary>Return properties for a point light source</summary>
+			public static Light Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
+			{
+				return new Light
+				{
+					m_type           = ELight.Point,
+					m_on             = true,
+					m_position       = position,
+					m_direction      = v4.Zero,
 					m_ambient        = ambient,
 					m_diffuse        = diffuse,
 					m_specular       = specular,

@@ -43,7 +43,7 @@ namespace pr.extn
 		/// <summary>Get or add a new item in the dictionary</summary>
 		public static TValue GetOrAdd<TKey,TValue>(this IDictionary<TKey,TValue> dic, TKey key) where TValue :new()
 		{
-			return dic.GetOrAdd(key, k => new TValue());
+			return GetOrAdd(dic, key, k => new TValue());
 		}
 	}
 }

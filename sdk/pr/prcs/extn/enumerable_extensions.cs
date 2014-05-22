@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using pr.common;
 
 namespace pr.extn
 {
@@ -32,9 +33,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns the indices of 'element' within this collection</summary>
-		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, IEqualityComparer<TSource> comparer = null)
+		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, Eql<TSource> comparer = null)
 		{
-			comparer = comparer ?? EqualityComparer<TSource>.Default;
+			comparer = comparer ?? Eql<TSource>.Default;
 			var i = 0;
 			foreach (var s in source)
 			{
@@ -55,32 +56,27 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns true if all elements this collection result in the same result from 'selector'</summary>
-		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, IEqualityComparer<TRet> comparer = null)
+		public static bool AllSame<TSource, TRet>(this IEnumerable<TSource> source, Func<TSource,TRet> selector, Eql<TRet> comparer = null)
 		{
-			comparer = comparer ?? EqualityComparer<TRet>.Default;
+			comparer = comparer ?? Eql<TRet>.Default;
 
 			if (!source.Any()) return true;
 			var first = selector(source.First());
 			return source.Skip(1).All(x => comparer.Equals(first, selector(x)));
 		}
 
-		/// <summary>Returns the maximum element based on 'selector'</summary>
-		public static TSource MaxBy<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
-		{
-			return source.MaxBy(selector, Comparer<TKey>.Default);
-		}
-		
 		/// <summary>Returns the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer)
+		public static TSource MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
-			if (comparer == null) throw new ArgumentNullException("comparer");
+
+			comparer = comparer ?? Cmp<TKey>.Default;
 			using (var src_iter = source.GetEnumerator())
 			{
 				if (!src_iter.MoveNext())
 					throw new InvalidOperationException("Sequence contains no elements");
-				
+
 				var max = src_iter.Current;
 				var max_key = selector(max);
 				while (src_iter.MoveNext())
@@ -95,23 +91,18 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Returns the minimum element based on 'selector'</summary>
-		public static TSource MinBy<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector)
-		{
-			return source.MinBy(selector, Comparer<TKey>.Default);
-		}
-		
 		/// <summary>Returns the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
-		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer)
+		public static TSource MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
 		{
 			if (source   == null) throw new ArgumentNullException("source");
 			if (selector == null) throw new ArgumentNullException("selector");
-			if (comparer == null) throw new ArgumentNullException("comparer");
+
+			comparer = comparer ?? Cmp<TKey>.Default;
 			using (var src_iter = source.GetEnumerator())
 			{
 				if (!src_iter.MoveNext())
 					throw new InvalidOperationException("Sequence contains no elements");
-				
+
 				var max = src_iter.Current;
 				var max_key = selector(max);
 				while (src_iter.MoveNext())
@@ -138,17 +129,35 @@ namespace pr.extn
 			}
 		}
 
-		///// <summary>Returns:
-		/////  (0,1),(2,3),(4,5),...<para/>
-		/////  (0,2),(4,6),(8,10),...<para/>
-		/////  (
-		///// </summary>
-		///// <typeparam name="TSource"></typeparam>
-		///// <param name="source"></param>
-		///// <returns></returns>
-		//public static IEnumerable<Tuple<TSource,TSource>> Reduce<TSource>(this IEnumerable<TSource> source)
-		//{
-		//}
+		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
+		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Cmp<TSource> comparer = null)
+		{
+			comparer = comparer ?? Cmp<TSource>.Default;
+
+			var lhs = source.GetIterator();
+			var rhs = other.GetIterator();
+			for (;!lhs.AtEnd && !rhs.AtEnd;)
+			{
+				if (comparer.Compare(lhs.Current,rhs.Current) < 0)
+				{
+					yield return lhs.Current;
+					lhs.MoveNext();
+				}
+				else
+				{
+					yield return rhs.Current;
+					rhs.MoveNext();
+				}
+			}
+			for (; !lhs.AtEnd; lhs.MoveNext())
+			{
+				yield return lhs.Current;
+			}
+			for (; !rhs.AtEnd; rhs.MoveNext())
+			{
+				yield return rhs.Current;
+			}
+		}
 	}
 }
 
@@ -176,6 +185,15 @@ namespace pr
 				Assert.AreEqual(11 ,sums[2]);
 				Assert.AreEqual(15 ,sums[3]);
 				Assert.AreEqual(9  ,sums[4]);
+			}
+			[Test] public static void Merge()
+			{
+				var a0 = new[]{1,2,4,6,10};
+				var a1 = new[]{1,3,4,7,8};
+				var r0 = new[]{1,1,2,3,4,4,6,7,8,10};
+				var r1 = a0.Zip(a1, Cmp<int>.From((l,r) => l < r));
+
+				Assert.True(r0.SequenceEqual(r1));
 			}
 		}
 	}

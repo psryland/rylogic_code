@@ -510,6 +510,10 @@ namespace pr.extn
 				{
 					new_inst = new_inst ?? Activator.CreateInstance;
 
+					// This will always deserialise as a default object ignoring the elements
+					if (members.Count == 0 && el.HasElements)
+						throw new Exception("{0} has the DataContract attribute, but no DataMembers.".Fmt(ty.Name));
+
 					// Read nodes from the xml, and populate any members with matching names
 					object obj = new_inst(ty);
 					foreach (var e in el.Elements())

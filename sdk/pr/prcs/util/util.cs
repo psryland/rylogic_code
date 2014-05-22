@@ -527,15 +527,6 @@ namespace pr.util
 		};
 		#endregion
 
-		/// <summary>Return the value for 'key', if it doesn't exist, insert and return the result of calling 'def'</summary>
-		public static V GetOrAdd<K,V>(this Dictionary<K, V> dic, K key, Func<K,V> def)
-		{
-			V value;
-			if (dic.TryGetValue(key, out value)) return value;
-			dic.Add(key, value = def(key)); // 'def' is only evaluated if 'key' is not found
-			return value;
-		}
-
 		/// <summary>A stack trace that selected a band of stack frames</summary>
 		public static string StackTrace(int skip, int count)
 		{

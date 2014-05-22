@@ -15,7 +15,7 @@ namespace pr.maths
 		/// Note: the analytic solution to this problem involves solving a 5th order polynomial
 		/// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
 		/// Should have quadratic convergence</summary>
-		public static float ClosestPoint(Spline spline, v4 pt, float initial_estimate, int iterations = 5)
+		public static float ClosestPoint(Spline spline, v4 pt, float initial_estimate, bool bound01 = true, int iterations = 5)
 		{
 			// The distance (sqr'd) from 'pt' to the spline is: Dist(t) = |pt - S(t)|^2.    (S(t) = spline at t)
 			// At the closest point, Dist'(t) = 0.
@@ -32,6 +32,8 @@ namespace pr.maths
 				v4 ddS = spline.Acceleration(time);
 				v4 R   = pt - S;
 				time += v4.Dot3(R, dS) / (v4.Dot3(dS,dS) - v4.Dot3(R,ddS));
+				if (bound01 && time <= 0.0f || time >= 1.0f)
+					return Maths.Clamp(time, 0.0f, 1.0f);
 			}
 			return time;
 		}
@@ -39,11 +41,11 @@ namespace pr.maths
 		/// <summary>
 		/// This overload attempts to find the nearest point robustly
 		/// by testing 3 starting points and returning minimum.</summary>
-		public static float ClosestPoint(Spline spline, v4 pt)
+		public static float ClosestPoint(Spline spline, v4 pt, bool bound01 = true)
 		{
-			float t0 = ClosestPoint(spline, pt, -0.5f, 5);
-			float t1 = ClosestPoint(spline, pt,  0.5f, 5);
-			float t2 = ClosestPoint(spline, pt,  1.5f, 5);
+			float t0 = ClosestPoint(spline, pt, 0.0f, bound01, 5);
+			float t1 = ClosestPoint(spline, pt, 0.5f, bound01, 5);
+			float t2 = ClosestPoint(spline, pt, 1.0f, bound01, 5);
 			float d0 = (pt - spline.Position(t0)).Length3Sq;
 			float d1 = (pt - spline.Position(t1)).Length3Sq;
 			float d2 = (pt - spline.Position(t2)).Length3Sq;
