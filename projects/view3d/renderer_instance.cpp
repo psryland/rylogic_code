@@ -13,7 +13,7 @@ namespace view3d
 	{
 		if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 		RECT rect; ::GetClientRect(hwnd, &rect);
-		pr::rdr::RdrSettings s(hwnd, TRUE, TRUE, pr::To<pr::iv2>(rect));
+		pr::rdr::RdrSettings s(hwnd, TRUE, FALSE, pr::To<pr::iv2>(rect));
 		return s;
 	}
 

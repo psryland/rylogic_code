@@ -36,17 +36,17 @@ namespace pr
 	inline v3 Random2(          float min_length, float max_length, float z_)           { return v3::make(Random2(min_length, max_length), z_); }
 	inline v4 Random2(          float min_length, float max_length, float z_, float w_) { return v4::make(Random2(min_length, max_length), z_, w_); }
 	inline v2 Random2(Rnd& rnd, v2 const& vmin, v2 const& vmax)                         { return v2::make(rnd.fltr(vmin.x, vmax.x), rnd.fltr(vmin.y, vmax.y)); }
-	inline v3 Random2(Rnd& rnd, v3 const& vmin, v3 const& vmax, float z_)               { return v3::make(Random2(rnd, vmin.xy(), vmax.xy()), z_); }
-	inline v4 Random2(Rnd& rnd, v4 const& vmin, v4 const& vmax, float z_, float w_)     { return v4::make(Random2(rnd, vmin.xy(), vmax.xy()), z_, w_); }
+	inline v3 Random2(Rnd& rnd, v3 const& vmin, v3 const& vmax, float z_)               { return v3::make(Random2(rnd, vmin.xy, vmax.xy), z_); }
+	inline v4 Random2(Rnd& rnd, v4 const& vmin, v4 const& vmax, float z_, float w_)     { return v4::make(Random2(rnd, vmin.xy, vmax.xy), z_, w_); }
 	inline v2 Random2(          v2 const& vmin, v2 const& vmax)                         { return Random2(rand::Rand(), vmin, vmax); }
-	inline v3 Random2(          v3 const& vmin, v3 const& vmax, float z_)               { return v3::make(Random2(vmin.xy(), vmax.xy()), z_); }
-	inline v4 Random2(          v4 const& vmin, v4 const& vmax, float z_, float w_)     { return v4::make(Random2(vmin.xy(), vmax.xy()), z_, w_); }
+	inline v3 Random2(          v3 const& vmin, v3 const& vmax, float z_)               { return v3::make(Random2(vmin.xy, vmax.xy), z_); }
+	inline v4 Random2(          v4 const& vmin, v4 const& vmax, float z_, float w_)     { return v4::make(Random2(vmin.xy, vmax.xy), z_, w_); }
 	inline v2 Random2(Rnd& rnd, v2 const& centre, float radius)                         { return Random2(rnd, 0.0f, radius) + centre; }
-	inline v3 Random2(Rnd& rnd, v3 const& centre, float radius, float z_)               { return v3::make(Random2(rnd, centre.xy(), radius), z_); }
-	inline v4 Random2(Rnd& rnd, v4 const& centre, float radius, float z_, float w_)     { return v4::make(Random2(rnd, centre.xy(), radius), z_, w_); }
+	inline v3 Random2(Rnd& rnd, v3 const& centre, float radius, float z_)               { return v3::make(Random2(rnd, centre.xy, radius), z_); }
+	inline v4 Random2(Rnd& rnd, v4 const& centre, float radius, float z_, float w_)     { return v4::make(Random2(rnd, centre.xy, radius), z_, w_); }
 	inline v2 Random2(          v2 const& centre, float radius)                         { return Random2(rand::Rand(), centre, radius); }
-	inline v3 Random2(          v3 const& centre, float radius, float z_)               { return v3::make(Random2(centre.xy(), radius), z_); }
-	inline v4 Random2(          v4 const& centre, float radius, float z_, float w_)     { return v4::make(Random2(centre.xy(), radius), z_, w_); }
+	inline v3 Random2(          v3 const& centre, float radius, float z_)               { return v3::make(Random2(centre.xy, radius), z_); }
+	inline v4 Random2(          v4 const& centre, float radius, float z_, float w_)     { return v4::make(Random2(centre.xy, radius), z_, w_); }
 	
 	inline v3 Random3N(Rnd& rnd)
 	{
@@ -67,13 +67,13 @@ namespace pr
 	inline v3 Random3(          float min_length, float max_length)                     { return Random3(rand::Rand(), min_length, max_length); }
 	inline v4 Random3(          float min_length, float max_length, float w_)           { return v4::make(Random3(min_length, max_length), w_); }
 	inline v3 Random3(Rnd& rnd, v3 const& vmin, v3 const& vmax)                         { return v3::make(rnd.fltr(vmin.x,vmax.x), rnd.fltr(vmin.y,vmax.y), rnd.fltr(vmin.z,vmax.z)); }
-	inline v4 Random3(Rnd& rnd, v4 const& vmin, v4 const& vmax, float w_)               { return v4::make(Random3(rnd, vmin.xyz(), vmax.xyz()), w_); }
+	inline v4 Random3(Rnd& rnd, v4 const& vmin, v4 const& vmax, float w_)               { return v4::make(Random3(rnd, vmin.xyz, vmax.xyz), w_); }
 	inline v3 Random3(          v3 const& vmin, v3 const& vmax)                         { return Random3(rand::Rand(), vmin, vmax); }
-	inline v4 Random3(          v4 const& vmin, v4 const& vmax, float w_)               { return v4::make(Random3(vmin.xyz(), vmax.xyz()), w_); }
+	inline v4 Random3(          v4 const& vmin, v4 const& vmax, float w_)               { return v4::make(Random3(vmin.xyz, vmax.xyz), w_); }
 	inline v3 Random3(Rnd& rnd, v3 const& centre, float radius)                         { return Random3(rnd, 0.0f, radius) + centre; }
-	inline v4 Random3(Rnd& rnd, v4 const& centre, float radius, float w_)               { return v4::make(Random3(rnd, centre.xyz(), radius), w_); }
+	inline v4 Random3(Rnd& rnd, v4 const& centre, float radius, float w_)               { return v4::make(Random3(rnd, centre.xyz, radius), w_); }
 	inline v3 Random3(          v3 const& centre, float radius)                         { return Random3(rand::Rand(), centre, radius); }
-	inline v4 Random3(          v4 const& centre, float radius, float w_)               { return v4::make(Random3(centre.xyz(), radius), w_); }
+	inline v4 Random3(          v4 const& centre, float radius, float w_)               { return v4::make(Random3(centre.xyz, radius), w_); }
 	
 	inline v4 Random4N(Rnd& rnd)
 	{

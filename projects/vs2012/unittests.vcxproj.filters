@@ -495,9 +495,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\vectormap.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -854,6 +851,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
       <Filter>pr\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

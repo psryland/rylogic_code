@@ -21,14 +21,13 @@ namespace pr
 	{
 		// include generated header files
 		#include PR_RDR_SHADER_COMPILED_DIR(thick_linelist_gs.h)
-		#include PR_RDR_SHADER_COMPILED_DIR(thick_linestrip_gs.h)
 
 		ThickLineListShaderGS::ThickLineListShaderGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
 			:base(mgr, id, name, shdr)
 			,m_cbuf_model(m_mgr->GetCBuf<hlsl::screenspace::CbufThickLine>("CbufThickLine"))
 			,m_default_linewidth(2.0f)
 		{
-			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "thick_linelist_gs.cso"));
+			PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "thick_line_gs.cso"));
 		}
 
 		// Setup the shader ready to be used on 'dle'

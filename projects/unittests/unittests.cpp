@@ -18,19 +18,20 @@ namespace pr
 }
 #endif
 */
-#include <tchar.h>
+
 #include <algorithm>
 #include "pr/common/unittests.h"
 #include "unittests/unittests.h"
-//#include "pr/maths/maths.h"
+//#include "pr/maths/matrix4x4.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
 
-int _tmain(int argc, _TCHAR* argv[])
+int main(int argc, char const* argv[])
+//int _tmain(int argc, _TCHAR* argv[])
 {
-	bool runtests = argc >= 2 && std::any_of(argv + 1, argv + argc, [](_TCHAR* x){ return _tcscmp(x, _T("runtests")) == 0;} );
-	bool wordy    = argc >= 2 && std::any_of(argv + 1, argv + argc, [](_TCHAR* x){ return _tcscmp(x, _T("verbose")) == 0;} );
+	bool runtests = argc >= 2 && std::any_of(argv + 1, argv + argc, [](char const* x){ return strcmp(x, "runtests") == 0;} );
+	bool wordy    = argc >= 2 && std::any_of(argv + 1, argv + argc, [](char const* x){ return strcmp(x, "verbose") == 0;} );
 	if (runtests)
 		return pr::unittests::RunAllTests(wordy);
 

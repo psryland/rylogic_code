@@ -11,7 +11,6 @@
 #include "pr/maths/constants.h"
 #include "pr/maths/scalar.h"
 #include "pr/maths/vector4.h"
-#include "pr/maths/matrix3x3.h"
 
 namespace pr
 {
@@ -22,6 +21,7 @@ namespace pr
 		union
 		{
 			struct { float x,y,z,w; };
+			struct { v4 xyzw; };
 			#if PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec;
 			#elif PR_MATHS_USE_INTRINSICS

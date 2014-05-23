@@ -9,6 +9,7 @@
 #include <memory.h>
 #include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
+#include "pr/common/to.h"
 
 #if defined(_WINGDI_) && !defined(NOGDI)
 #  define PR_SUPPORT_WINGDI(exp) exp
@@ -344,7 +345,7 @@ namespace pr
 	inline Colour::operator Colour32() const { return Colour32::make(r,g,b,a); }
 	inline Colour::operator v4() const { return v4::make(r,g,b,a); }
 
-	// Miscellaneous *******************************************************************************************
+	// Miscellaneous ******************************************************************************
 
 	// Find the 4D distance squared between two colours
 	inline int DistanceSq(Colour32 lhs, Colour32 rhs)
@@ -363,6 +364,32 @@ namespace pr
 			col[i] = uint8(lhs[i] * (1.0f - frac) + rhs[i] * frac);
 		return col;
 	}
+
+	// Conversion *********************************************************************************
+
+	// To<Colour32>
+	template <typename TFrom> struct Convert<Colour32,TFrom>
+	{
+		static Colour32 To(char const* s) { return Colour32::make(strtoul(s, nullptr, 16)); }
+		static Colour32 To(std::string s) { return To(s.c_str()); }
+		static Colour32 To(Colour const& c) { return static_cast<Colour32>(c); }
+	};
+
+	// To<Colour>
+	template <typename TFrom> struct Convert<Colour,TFrom>
+	{
+		static Colour To(char const* s)
+		{
+			char* end;
+			float r = float(strtod(s,   &end));
+			float g = float(strtod(end, &end));
+			float b = float(strtod(end, &end));
+			float a = float(strtod(end, &end));
+			return Colour::make(r,g,b,a);
+		}
+		static Colour To(std::string s) { return To(s.c_str()); }
+		static Colour To(Colour32 c) { return static_cast<Colour>(c); }
+	};
 }
 
 #undef PR_SUPPORT_WINGDI

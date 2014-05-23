@@ -70,7 +70,7 @@ namespace TestCS
 			m_diag.ResetView();
 
 			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
-			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml);
+			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml, m_diag.Elements.Count != 0);
 			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
 			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.ImportXml(XDocument.Load("P:\\dump\\mmap_diag.xml").Root, true);
 			m_menu_tools_load_options.Click += (s,a) => m_diag.Options = XDocument.Load("P:\\dump\\diag_options.xml").Root.Element("options").As<DiagramControl.DiagramOptions>();

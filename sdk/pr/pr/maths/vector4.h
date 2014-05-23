@@ -9,9 +9,6 @@
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
-#include "pr/maths/scalar.h"
-#include "pr/maths/ivector2.h"
-#include "pr/maths/ivector4.h"
 #include "pr/maths/vector2.h"
 #include "pr/maths/vector3.h"
 
@@ -24,6 +21,8 @@ namespace pr
 		union
 		{
 			struct { float x,y,z,w; };
+			struct { v2 xy, zw; };
+			struct { v3 xyz; };
 			#if PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec;
 			#elif PR_MATHS_USE_INTRINSICS
@@ -41,17 +40,6 @@ namespace pr
 		template <typename T> v4& set(T const& v);
 		template <typename T> v4& set(T const* v);
 		template <typename T> v4& set(T const* v, float w_);
-
-		v2 const& xy() const;
-		v2&       xy();
-		v2 const& yz() const;
-		v2&       yz();
-		v2 const& zw() const;
-		v2&       zw();
-		v3 const& xyz() const;
-		v3&       xyz();
-		v3 const& yzw() const;
-		v3&       yzw();
 
 		v4 w0() const;
 		v4 w1() const;

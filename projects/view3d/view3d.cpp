@@ -266,11 +266,10 @@ VIEW3D_API void __stdcall View3D_DrawsetRender(View3DDrawset drawset)
 		scene.m_bkgd_colour = drawset->m_background_colour;
 
 		// Set the global fill mode
-		auto& fr = scene.RStep<ForwardRender>();
 		switch (drawset->m_fill_mode) {
-		case EView3DFillMode::Solid:     fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EView3DFillMode::Wireframe: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EView3DFillMode::SolidWire: fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EView3DFillMode::Solid:     scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EView3DFillMode::Wireframe: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+		case EView3DFillMode::SolidWire: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
 		}
 
 		// Render the scene
@@ -279,15 +278,16 @@ VIEW3D_API void __stdcall View3D_DrawsetRender(View3DDrawset drawset)
 		// Render wire frame over solid for 'SolidWire' mode
 		if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
 		{
-			fr.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-			fr.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+			auto& fr = scene.RStep<ForwardRender>();
+			scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+			scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
 			fr.m_clear_bb = false;
 
 			scene.Render();
 
 			fr.m_clear_bb = true;
-			fr.m_rsb.Clear(ERS::FillMode);
-			fr.m_bsb.Clear(EBS::BlendEnable, 0);
+			scene.m_rsb.Clear(ERS::FillMode);
+			scene.m_bsb.Clear(EBS::BlendEnable, 0);
 		}
 	}
 	catch (std::exception const& ex)

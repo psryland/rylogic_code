@@ -69,7 +69,7 @@ try:
 			if trace: print("Building: " + shdr_name)
 
 			# Create temporary filepaths so that we only overwrite
-			# existing files if they've actually changed
+			# existing files if they've actually changed.
 			filepath_h   = tempfile.gettempdir() + "\\" + shdr_name + ".h"
 			filepath_cso = tempfile.gettempdir() + "\\" + shdr_name + ".cso"
 

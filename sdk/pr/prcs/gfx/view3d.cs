@@ -482,12 +482,12 @@ namespace pr.gfx
 		/// <summary>Method for actually rendering the scene</summary>
 		public delegate void RenderCB();
 
-		private readonly RenderCB m_render_cb;                    // User call back to render the scene
-		private readonly ReportErrorCB m_error_cb;                // A local reference to prevent the callback being garbage collected
-		private readonly LogOutputCB m_log_cb;                    // A local reference to prevent the callback being garbage collected
-		private readonly SettingsChangedCB m_settings_changed_cb; // A local reference to prevent the callback being garbage collected
-		private readonly List<DrawsetInterface> m_drawsets;       // Groups of objects to render
-		private readonly EventBatcher m_eb_refresh;               // Batch refresh calls
+		private readonly RenderCB m_render_cb;              // User call back to render the scene
+		private readonly ReportErrorCB m_error_cb;          // A local reference to prevent the callback being garbage collected
+		private readonly LogOutputCB m_log_cb;              // A local reference to prevent the callback being garbage collected
+		private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
+		private readonly List<DrawsetInterface> m_drawsets; // Groups of objects to render
+		private readonly EventBatcher m_eb_refresh;         // Batch refresh calls
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static void LoadDll(string dir = @".\lib\$(platform)")
@@ -514,18 +514,18 @@ namespace pr.gfx
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
 		public View3d(HWND handle, RenderCB render_cb, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
 		{
-			m_error_cb = ErrorCB;
-			m_log_cb = LogCB;
-			m_settings_changed_cb = SettingsChgCB;
-			m_drawsets = new List<DrawsetInterface>();
-			m_eb_refresh = new EventBatcher(Refresh, TimeSpan.Zero);
-			m_render_cb = render_cb;
+			m_error_cb    = ErrorCB;
+			m_log_cb      = LogCB;
+			m_settings_cb = SettingsChgCB;
+			m_drawsets    = new List<DrawsetInterface>();
+			m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
+			m_render_cb   = render_cb;
 
 			if (error_cb != null) OnError += error_cb;
 			if (log_cb != null) OnLog += log_cb;
 
 			// Initialise the renderer
-			var res = View3D_Initialise(handle, m_render_cb, m_error_cb, m_log_cb, m_settings_changed_cb);
+			var res = View3D_Initialise(handle, m_render_cb, m_error_cb, m_log_cb, m_settings_cb);
 			if (res != EResult.Success) throw new Exception(res);
 
 			// Create a default drawset

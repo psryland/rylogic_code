@@ -11,6 +11,7 @@ namespace pr.extn
 {
 	public static class BindingSourceExtensions
 	{
+		/// <summary>Returns the 'current' item in the binding source or null (rather than throwing an exception)</summary>
 		public static object CurrentOrDefault(this BindingSource bs)
 		{
 			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : null;

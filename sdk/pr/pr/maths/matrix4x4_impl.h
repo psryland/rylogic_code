@@ -11,15 +11,6 @@
 
 namespace pr
 {
-	inline m4x4 m4x4::make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)      { m4x4 m; return m.set(x_, y_, z_, w_); }
-	inline m4x4 m4x4::make(m3x4 const& ori, v4 const& translation)                      { m4x4 m; return m.set(ori, translation); }
-	inline m4x4 m4x4::make(Quat const& quat, v4 const& translation)                     { m4x4 m; return m.set(quat, translation); }
-	inline m4x4 m4x4::make(v4 const& axis, float angle, v4 const& translation)          { m4x4 m; return m.set(axis, angle, translation); }
-	inline m4x4 m4x4::make(v4 const& angular_displacement, v4 const& translation)       { m4x4 m; return m.set(angular_displacement, translation); }
-	inline m4x4 m4x4::make(v4 const& from, v4 const& to, v4 const& translation)         { m4x4 m; return m.set(from, to, translation); }
-	inline m4x4 m4x4::make(float pitch,  float yaw, float roll, v4 const& translation)  { m4x4 m; return m.set(pitch,  yaw, roll, translation); }
-	inline m4x4 m4x4::make(float const* mat)                                            { m4x4 m; return m.set(mat); }
-
 	inline m4x4& m4x4::set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)
 	{
 		x = x_;
@@ -103,17 +94,6 @@ namespace pr
 		w.set(mat + 12);
 		return *this;
 	}
-
-	inline                    m4x4& m4x4::zero()              { return *this = m4x4Zero; }
-	inline                    m4x4& m4x4::identity()          { return *this = m4x4Identity; }
-	inline v4                 m4x4::row(int i) const          { return v4::make(x[i], y[i], z[i], w[i]); }
-	inline v4                 m4x4::col(int i) const          { return (*this)[i]; }
-	inline void               m4x4::row(int i, v4 const& row) { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
-	inline void               m4x4::col(int i, v4 const& col) { (*this)[i] = col; }
-	inline m4x4::Array const& m4x4::ToArray() const           { return reinterpret_cast<Array const&>(*this); }
-	inline m4x4::Array&       m4x4::ToArray()                 { return reinterpret_cast<Array&>      (*this); }
-	inline v4 const&          m4x4::operator [] (int i) const { assert(i < 4); return ToArray()[i]; }
-	inline v4&                m4x4::operator [] (int i)       { assert(i < 4); return ToArray()[i]; }
 
 	// Assignment operators
 	inline m4x4& operator += (m4x4& lhs, float rhs)            { lhs.x += rhs  ; lhs.y += rhs  ; lhs.z += rhs  ; lhs.w += rhs  ; return lhs; }
@@ -209,7 +189,7 @@ namespace pr
 	// Zero the matrix
 	inline m4x4& Zero(m4x4& mat)
 	{
-		return mat.zero();
+		return mat = m4x4Zero;
 	}
 
 	// Return a m4x4 from this m3x4
@@ -363,7 +343,7 @@ namespace pr
 		assert(det.x != 0.f && "Matrix has no inverse");
 #else
 		m4x4  A = GetTranspose4x4(mat); // Take the transpose so that row operations are faster
-		m4x4& B = mat; B.identity();
+		m4x4& B = mat; B = m4x4Identity;
 
 		// Loop through columns
 		for (int j = 0; j < 4; ++j)

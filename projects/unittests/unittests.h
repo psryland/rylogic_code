@@ -242,6 +242,7 @@
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/render/state_block.h"
+#include "pr/renderer11/shaders/hlsl_proxy.h"
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader.h"
 #include "pr/renderer11/shaders/shader_manager.h"

@@ -77,7 +77,7 @@ namespace pr
 					pr::v2 const& vo = vout[i];
 
 					auto v0 = proj * vi;
-					auto v1 = v0.xy() / v0.w;
+					auto v1 = v0.xy / v0.w;
 
 					PR_CHECK(FEql2(v1, vo), true);
 				}
@@ -114,7 +114,7 @@ namespace pr
 					pr::v2 const& vo = vout[i];
 
 					auto v0 = proj * vi;
-					auto v1 = v0.xy() / v0.w;
+					auto v1 = v0.xy / v0.w;
 
 					PR_CHECK(FEql2(v1, vo), true);
 				}

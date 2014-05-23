@@ -551,9 +551,25 @@ namespace pr.extn
 		}
 
 		/// <summary>
+		/// Return this element as an instance of 'T'.<para/>
+		/// Use 'ToObject' if the type should be inferred from the node attributes<para/>
+		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.<para/>
+		/// E.g:<para/>
+		///  val = node.Element("val").As&lt;int&gt;(); <para/>
+		///  val = node.Element("val").As&lt;int&gt;(default_val); <para/></summary>
+		public static T As<T>(this XElement elem, T optional_default, Func<Type,object> factory = null)
+		{
+			if (elem == null) return optional_default;
+			return (T)AsMap.Convert(elem, typeof(T), factory);
+		}
+
+		/// <summary>
 		/// Return this element as an instance of 'T'.
 		/// Use 'ToObject' if the type should be inferred from the node attributes
-		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor</summary>
+		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.
+		/// E.g:<para\>
+		///  val = node.Element("val").As&lt;int&gt;() <para\>
+		///  val = node.Element("val").As&lt;int&gt;(default_val) <para\></summary>
 		public static T As<T>(this XElement elem, Func<Type,object> factory = null)
 		{
 			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
@@ -561,14 +577,24 @@ namespace pr.extn
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
+		public static void As<T>(this XElement parent, IList<T> list, string elem_name, T optional_default, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)
+		{
+			AsList<T>(parent, list, elem_name, e => e.As<T>(optional_default, factory), is_duplicate);
+		}
+
+		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
 		public static void As<T>(this XElement parent, IList<T> list, string elem_name, Func<T,T,bool> is_duplicate = null, Func<Type,object> factory = null)
+		{
+			AsList<T>(parent, list, elem_name, e => e.As<T>(factory), is_duplicate);
+		}
+		private static void AsList<T>(XElement parent, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool> is_duplicate)
 		{
 			if (parent == null) throw new ArgumentNullException("xml element is null. Key not found?");
 
 			var count = 0;
 			foreach (var e in parent.Elements(elem_name))
 			{
-				var item = e.As<T>(factory);
+				var item = conv(e);
 				var index = count;
 				if (is_duplicate != null)
 				{
@@ -749,7 +775,7 @@ namespace pr
 				// DC class
 				var dc = new Elem2(2,"3");
 				var node = dc.ToXml("dc", false);
-				var DC = node.As<Elem2>(t => new Elem2(0,null));
+				var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
 				Assert.AreEqual(dc.m_int, DC.m_int);
 				Assert.AreEqual(dc.m_string, DC.m_string);
 			}
@@ -779,14 +805,14 @@ namespace pr
 			{
 				var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
 				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(t => new Elem2(0,null));
+				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			[Test] public static void TestToXml12()
 			{
 				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
 				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(t => new Elem2(0,""));
+				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
 				Assert.True(arr.SequenceEqual(ARR));
 			}
 			[Test] public static void TestToXml13()
@@ -808,7 +834,7 @@ namespace pr
 			{
 				var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
 				var node = arr.ToXml("arr", true);
-				var ARR = node.As<object[]>(ty =>
+				var ARR = node.As<object[]>(factory:ty =>
 					{
 						if (ty == typeof(Elem1)) return new Elem1();
 						if (ty == typeof(Elem2)) return new Elem2(0,string.Empty);

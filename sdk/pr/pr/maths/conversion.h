@@ -69,10 +69,18 @@ namespace pr
 		static v4 To(char const* s)
 		{
 			char* end;
-			float x = strtod(s, &end);
-			float y = strtod(end, &end);
-			float z = strtod(end, &end);
-			float w = strtod(end, &end);
+			float x = float(strtod(s,   &end));
+			float y = float(strtod(end, &end));
+			float z = float(strtod(end, &end));
+			float w = float(strtod(end, &end));
+			return pr::v4::make(x,y,z,w);
+		}
+		static v4 To(char const* s, float w)
+		{
+			char* end;
+			float x = float(strtod(s,   &end));
+			float y = float(strtod(end, &end));
+			float z = float(strtod(end, &end));
 			return pr::v4::make(x,y,z,w);
 		}
 		static v4 To(std::string s) { return To(s.c_str()); }

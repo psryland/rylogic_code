@@ -21,17 +21,23 @@ namespace pr
 	//  };
 	template <typename TTo, typename TFrom> struct Convert
 	{
-		static TTo To(TFrom const&)                 { static_assert(false, "No conversion from this type available"); }
-		static TTo To(TFrom const&, int)            { static_assert(false, "No conversion from this type available"); }
-		static TTo To(TFrom const&, char const*)    { static_assert(false, "No conversion from this type available"); }
-		static TTo To(TFrom const&, wchar_t const*) { static_assert(false, "No conversion from this type available"); }
+		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
+		
+		template <typename... Args>
+		static TTo To(TFrom const&, Args...) { static_assert(false, "No conversion from this type available"); }
 	};
 
 	// Convert 'from' to 'to'
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from)                     { return Convert<TTo,TFrom>::To(from); }
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from, int radix)          { return Convert<TTo,TFrom>::To(from, radix); }
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from, char const* fmt)    { return Convert<TTo,TFrom>::To(from, fmt); }
-	template <typename TTo, typename TFrom> inline TTo To(TFrom const& from, wchar_t const* fmt) { return Convert<TTo,TFrom>::To(from, fmt); }
+	template <typename TTo, typename TFrom>
+	inline TTo To(TFrom const& from)
+	{
+		return Convert<TTo,TFrom>::To(from);
+	}
+	template <typename TTo, typename TFrom, typename... Args>
+	inline TTo To(TFrom const& from, Args... args)
+	{
+		return Convert<TTo,TFrom>::To(from, std::forward<Args>(args)...);
+	}
 }
 
 #endif

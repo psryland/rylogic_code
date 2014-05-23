@@ -21,7 +21,7 @@ namespace pr
 			,m_outer_cos_angle (0.92f)
 			,m_range           (1000.0f)
 			,m_falloff         (0.0f)
-			,m_cast_shadows    (false)
+			,m_cast_shadow     (0.0f)
 			,m_on              (true)
 		{}
 
@@ -83,8 +83,8 @@ namespace pr
 		std::string Light::Settings() const
 		{
 			std::stringstream out;
-			out << "  *" << ELightKW::Pos  << "{" << m_position.xyz() << "}\n"
-				<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz() << "}\n"
+			out << "  *" << ELightKW::Pos  << "{" << m_position.xyz << "}\n"
+				<< "  *" << ELightKW::Dir  << "{" << m_direction.xyz << "}\n"
 				<< "  *" << ELightKW::Type << "{" << m_type << "}\n"
 				<< std::hex
 				<< "  *" << ELightKW::Amb  << "{" << m_ambient.m_aarrggbb << "}\n"
@@ -96,7 +96,7 @@ namespace pr
 				<< "  *" << ELightKW::OtCA << "{" << m_outer_cos_angle << "}\n"
 				<< "  *" << ELightKW::Rng  << "{" << m_range << "}\n"
 				<< "  *" << ELightKW::FOff << "{" << m_falloff << "}\n"
-				<< "  *" << ELightKW::Shdw << "{" << m_cast_shadows << "}\n"
+				<< "  *" << ELightKW::Shdw << "{" << m_cast_shadow << "}\n"
 				<< "  *" << ELightKW::On   << "{" << m_on << "}\n"
 				;
 			return out.str();
@@ -132,7 +132,7 @@ namespace pr
 					case ELightKW::OtCA: reader.ExtractRealS(light.m_outer_cos_angle); break;
 					case ELightKW::Rng:  reader.ExtractRealS(light.m_range); break;
 					case ELightKW::FOff: reader.ExtractRealS(light.m_falloff); break;
-					case ELightKW::Shdw: reader.ExtractBoolS(light.m_cast_shadows); break;
+					case ELightKW::Shdw: reader.ExtractRealS(light.m_cast_shadow); break;
 					case ELightKW::On:   reader.ExtractBoolS(light.m_on); break;
 					}
 				}

@@ -15,24 +15,28 @@ namespace pr
 {
 	struct m2x2
 	{
-		v2 x;
-		v2 y;
-		typedef v2 Array[2];
+		#pragma warning (disable:4201)
+		union {
+		struct { v2 x, y; };
+		struct { v2 arr[2]; };
+		};
+		#pragma warning (default:4201)
 
-		static m2x2  make(v2 const& x, v2 const& y);
-		static m2x2  make(float xx, float xy, float yx, float yy);
-		static m2x2  make(float const* mat);
-		static m2x2  make(float angle);
-		m2x2&        set(v2 const& x_, v2 const& y_);
-		m2x2&        set(float xx, float xy, float yx, float yy);
-		m2x2&        set(float const* mat);
-		m2x2&        set(float angle);
-		m2x2&        zero();
-		m2x2&        identity();
-		Array const& ToArray() const               { return reinterpret_cast<Array const&>(*this); }
-		Array&       ToArray()                     { return reinterpret_cast<Array&>      (*this); }
-		v2 const&    operator [](uint i) const     { assert(i < 2); return ToArray()[i]; }
-		v2&          operator [](uint i)           { assert(i < 2); return ToArray()[i]; }
+		m2x2& set(v2 const& x_, v2 const& y_);
+		m2x2& set(float xx, float xy, float yx, float yy);
+		m2x2& set(float const* mat);
+		m2x2& set(float angle);
+
+		typedef v2 Array[2];
+		Array const& ToArray() const               { return arr; }
+		Array&       ToArray()                     { return arr; }
+		v2 const&    operator [](uint i) const     { assert(i < 2); return arr[i]; }
+		v2&          operator [](uint i)           { assert(i < 2); return arr[i]; }
+
+		static m2x2 make(v2 const& x, v2 const& y)                { m2x2 m; return m.set(x, y);           }
+		static m2x2 make(float xx, float xy, float yx, float yy)  { m2x2 m; return m.set(xx, xy, yx, yy); }
+		static m2x2 make(float const* mat)                        { m2x2 m; return m.set(mat);            }
+		static m2x2 make(float angle)                             { m2x2 m; return m.set(angle);          }
 	};
 	static_assert(std::is_pod<m2x2>::value, "Should be a pod type");
 

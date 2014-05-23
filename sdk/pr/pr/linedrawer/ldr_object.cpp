@@ -15,6 +15,8 @@
 #include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
 
+using namespace pr::rdr;
+
 namespace pr
 {
 	namespace ldr
@@ -37,6 +39,20 @@ namespace pr
 		inline ICont& Index() { g_index.resize(0); return g_index; }
 		inline CCont& Color() { g_color.resize(0); return g_color; }
 		inline TCont& Texts() { g_texts.resize(0); return g_texts; }
+
+		// Convert an axis id to an axis
+		inline v4 AxisId(int id)
+		{
+			switch (id) {
+			default: return v4Zero;
+			case +1: return  v4XAxis;
+			case -1: return -v4XAxis;
+			case +2: return  v4YAxis;
+			case -2: return -v4YAxis;
+			case +3: return  v4ZAxis;
+			case -3: return -v4ZAxis;
+			}
+		}
 
 		// Check the hash values are correct
 		PR_EXPAND(PR_DBG, static bool s_eldrobject_kws_checked = pr::CheckHashEnum<ELdrObject>([&](char const* s) { return pr::script::Reader::HashKeyword(s,false); }));
@@ -97,7 +113,7 @@ namespace pr
 		}
 
 		// Recursively add this object and its children to a viewport
-		void LdrObject::AddToScene(pr::rdr::Scene& scene, float time_s, pr::m4x4 const* p2w)
+		void LdrObject::AddToScene(Scene& scene, float time_s, pr::m4x4 const* p2w)
 		{
 			// Set the instance to world
 			m_i2w = *p2w * m_o2p * m_anim.Step(time_s);
@@ -113,7 +129,7 @@ namespace pr
 
 		// Recursively add this object using 'bbox_model' instead of its
 		// actual model, located and scaled to the transform and box of this object
-		void LdrObject::AddBBoxToScene(pr::rdr::Scene& scene, pr::rdr::ModelPtr bbox_model, float time_s, pr::m4x4 const* p2w)
+		void LdrObject::AddBBoxToScene(Scene& scene, ModelPtr bbox_model, float time_s, pr::m4x4 const* p2w)
 		{
 			// Set the instance to world
 			pr::m4x4 i2w = *p2w * m_o2p * m_anim.Step(time_s);
@@ -148,8 +164,8 @@ namespace pr
 			Apply([=](LdrObject* o)
 			{
 				o->m_wireframe = wireframe;
-				if (o->m_wireframe) o->m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
-				else                o->m_rsb.Clear(pr::rdr::ERS::FillMode);
+				if (o->m_wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+				else                o->m_rsb.Clear(ERS::FillMode);
 			}, name);
 		}
 
@@ -171,7 +187,7 @@ namespace pr
 		// Note for difference mode drawlist management, if the object is currently in
 		// one or more drawlists (i.e. added to a scene) it will need to be removed and
 		// re-added so that the sort order is correct.
-		void LdrObject::SetTexture(pr::rdr::Texture2DPtr tex, char const* name)
+		void LdrObject::SetTexture(Texture2DPtr tex, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
@@ -181,7 +197,7 @@ namespace pr
 					nug.m_tex_diffuse = tex;
 
 					o->m_sko.Alpha(tex->m_has_alpha);
-					pr::rdr::SetAlphaBlending(nug, tex->m_has_alpha);
+					SetAlphaBlending(nug, tex->m_has_alpha);
 					// The drawlists will need to be resorted...
 				}
 			}, name);
@@ -228,13 +244,13 @@ namespace pr
 			// thinking 'object' was deleted and a new ldr object was added that
 			// just happens to have the same pointer.
 			pr::events::Send(Evt_LdrObjectDelete(this));
-		
+
 			// Swap the bits we want from 'rhs'
 			// Note: we can't swap everything then copy back the bits we want to keep
 			// because LdrObject is reference counted and isn't copyable. This is risky
 			// though, if need members are added I'm bound to forget to consider them here :-/
 			// Commented out parts are those delibrately kept
-			
+
 			// RdrInstance
 			std::swap(m_model, rhs.m_model);
 			std::swap(m_sko, rhs.m_sko);
@@ -304,7 +320,7 @@ namespace pr
 		}
 
 		// LdrObject Creation functions *********************************************
-		typedef std::unordered_map<hash::HashValue, pr::rdr::ModelPtr> ModelCont;
+		typedef std::unordered_map<hash::HashValue, ModelPtr> ModelCont;
 
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
@@ -396,89 +412,97 @@ namespace pr
 					}
 				case EKeyword::M4x4:
 					{
-						reader.ExtractMatrix4x4S(p2w);
+						m4x4 o2w;
+						reader.ExtractMatrix4x4S(o2w);
+						p2w = o2w * p2w;
 						break;
 					}
 				case EKeyword::M3x3:
 					{
-						reader.ExtractMatrix3x3S(pr::cast_m3x4(p2w));
+						m3x4 rot;
+						reader.ExtractMatrix3x3S(rot);
+						p2w.rot = rot * p2w.rot;
 						break;
 					}
 				case EKeyword::Pos:
 					{
-						reader.ExtractVector3S(p2w.pos, 1.0f);
+						pr::v4 pos;
+						reader.ExtractVector3S(pos, 1.0f);
+						p2w.pos += pos;
 						break;
 					}
-				case EKeyword::Direction:
+				case EKeyword::Align:
 					{
-						pr::v4 direction; int axis_id;
+						int axis_id;
+						pr::v4 direction;
 						reader.SectionStart();
-						reader.ExtractVector3(direction, 0.0f);
 						reader.ExtractInt(axis_id, 10);
+						reader.ExtractVector3(direction, 0.0f);
 						reader.SectionEnd();
 
-						if (axis_id < 1 || axis_id > 3)
+						v4 axis = AxisId(axis_id);
+						if (IsZero3(axis))
 						{
 							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 							break;
 						}
 
-						if (axis_id < 0) direction = -direction;
-						axis_id = pr::Abs(axis_id) - 1;
-						p2w.rot = pr::OriFromDir(direction, axis_id, pr::v4YAxis);
+						m3x4 rot = pr::Rotation3x3(axis, direction);
+						p2w.rot = rot * p2w.rot;
 						break;
 					}
 				case EKeyword::Quat:
 					{
 						pr::Quat quat;
-						reader.ExtractVector4S(pr::cast_v4(quat));
-						cast_m3x4(p2w).set(quat);
+						reader.ExtractVector4S(quat.xyzw);
+						p2w.rot = m3x4::make(quat) * p2w.rot;
 						break;
 					}
 				case EKeyword::Rand4x4:
 					{
-						pr::v4 centre; float radius;
+						float radius;
+						pr::v4 centre;
 						reader.SectionStart();
 						reader.ExtractVector3(centre, 1.0f);
 						reader.ExtractReal(radius);
 						reader.SectionEnd();
-						p2w = pr::Random4x4(centre, radius);
+						p2w = pr::Random4x4(centre, radius) * p2w;
 						break;
 					}
 				case EKeyword::RandPos:
 					{
-						pr::v4 centre; float radius;
+						float radius;
+						pr::v4 centre;
 						reader.SectionStart();
 						reader.ExtractVector3(centre, 1.0f);
 						reader.ExtractReal(radius);
 						reader.SectionEnd();
-						p2w.pos = Random3(centre, radius, 1.0f);
+						p2w.pos += Random3(centre, radius, 0.0f);
 						break;
 					}
 				case EKeyword::RandOri:
 					{
-						pr::cast_m3x4(p2w) = pr::Random3x4();
+						p2w.rot = pr::Random3x4() * p2w.rot;
 						break;
 					}
 				case EKeyword::Euler:
 					{
 						pr::v4 angles;
 						reader.ExtractVector3S(angles, 0.0f);
-						pr::cast_m3x4(p2w) = pr::m3x4::make(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z));
+						pr::m3x4 rot = pr::m3x4::make(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z));
+						p2w.rot = rot * p2w.rot;
 						break;
 					}
 				case EKeyword::Scale:
 					{
 						pr::v4 scale;
 						reader.ExtractVector3S(scale, 0.0f);
-						p2w.x *= scale.x;
-						p2w.y *= scale.y;
-						p2w.z *= scale.z;
+						p2w.rot = Scale3x3(scale.x, scale.y, scale.z) * p2w.rot;
 						break;
 					}
 				case EKeyword::Transpose:
 					{
-						pr::Transpose4x4(p2w);
+						p2w = pr::Transpose4x4(p2w);
 						break;
 					}
 				case EKeyword::Inverse:
@@ -502,8 +526,48 @@ namespace pr
 			}
 			reader.SectionEnd();
 
-			// Premultiply the transform
+			// Premultiply the object to world transform
 			o2w = p2w * o2w;
+		}
+
+		// Parse a camera description
+		void ParseCamera(pr::script::Reader& reader, pr::Camera& cam)
+		{
+			reader.SectionStart();
+			for (EKeyword kw; reader.NextKeywordH(kw);)
+			{
+				switch (kw)
+				{
+				default:
+					{
+						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
+					}
+				case EKeyword::O2W:
+					{
+						pr::m4x4 c2w;
+						ParseTransform(reader, c2w);
+						cam.CameraToWorld(c2w);
+						break;
+					}
+				case EKeyword::LookAt:
+					{
+						pr::v4 lookat;
+						reader.ExtractVector3S(lookat, 1.0f);
+						pr::m4x4 c2w = cam.CameraToWorld();
+						cam.LookAt(c2w.pos, lookat, c2w.y);
+						break;
+					}
+				case EKeyword::Align:
+					{
+						pr::v4 align;
+						reader.ExtractVector3S(align, 0.0f);
+						cam.SetAlign(align);
+						break;
+					}
+				}
+			}
+			reader.SectionEnd();
 		}
 
 		// Parse a simple animation description
@@ -608,12 +672,12 @@ namespace pr
 		}
 
 		// Parse a texture description
-		// Returns a pointer to the pr::rdr::Texture created in the renderer
-		bool ParseTexture(ParseParams& p, pr::rdr::Texture2DPtr& tex)
+		// Returns a pointer to the Texture created in the renderer
+		bool ParseTexture(ParseParams& p, Texture2DPtr& tex)
 		{
 			std::string tex_filepath;
 			pr::m4x4 t2s = pr::m4x4Identity;
-			pr::rdr::SamplerDesc sam;
+			SamplerDesc sam;
 
 			p.m_reader.SectionStart();
 			while (!p.m_reader.IsSectionEnd())
@@ -637,8 +701,8 @@ namespace pr
 						{
 							char word[20];
 							p.m_reader.SectionStart();
-							p.m_reader.ExtractIdentifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)pr::rdr::ETexAddrMode::Parse(word, false);
-							p.m_reader.ExtractIdentifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)pr::rdr::ETexAddrMode::Parse(word, false);
+							p.m_reader.ExtractIdentifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+							p.m_reader.ExtractIdentifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
 							p.m_reader.SectionEnd();
 							break;
 						}
@@ -646,7 +710,7 @@ namespace pr
 						{
 							char word[20];
 							p.m_reader.SectionStart();
-							p.m_reader.ExtractIdentifier(word); sam.Filter = (D3D11_FILTER)pr::rdr::EFilter::Parse(word, false);
+							p.m_reader.ExtractIdentifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
 							p.m_reader.SectionEnd();
 							break;
 						}
@@ -665,7 +729,7 @@ namespace pr
 				// Create the texture
 				try
 				{
-					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(pr::rdr::AutoId, sam, tex_filepath.c_str());
+					tex = p.m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sam, tex_filepath.c_str());
 					tex->m_t2s = t2s;
 				}
 				catch (std::exception const& e)
@@ -677,7 +741,7 @@ namespace pr
 		}
 
 		// Parse a video texture
-		bool ParseVideo(ParseParams& p, pr::rdr::Texture2DPtr& vid)
+		bool ParseVideo(ParseParams& p, Texture2DPtr& vid)
 		{
 			std::string filepath;
 			p.m_reader.SectionStart();
@@ -689,7 +753,7 @@ namespace pr
 				//// Load the video texture
 				//try
 				//{
-				//	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(pr::rdr::AutoId, filepath.c_str());
+				//	vid = p.m_rdr.m_tex_mgr.CreateVideoTexture(AutoId, filepath.c_str());
 				//}
 				//catch (std::exception const& e)
 				//{
@@ -700,21 +764,26 @@ namespace pr
 			return true;
 		}
 
+		#pragma region Object Creators
+
+		// Template prototype for ObjectCreators
+		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
+
 		// Base class for all object creators
 		struct IObjectCreator
 		{
 			virtual ~IObjectCreator() {}
 			virtual bool ParseKeyword(ParseParams&, HashValue) { return false; }
 			virtual void Parse(ParseParams& p) = 0;
-			virtual pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) = 0;
+			virtual ModelPtr CreateModel(ParseParams& p, std::string name) { (void)p,name; return nullptr; }
 			virtual void PostObjectCreation(LdrObjectPtr&) {}
 		};
 
 		// Base class for objects with a texture
 		struct IObjectCreatorTexture :IObjectCreator
 		{
-			pr::rdr::Texture2DPtr m_texture;
-			pr::rdr::NuggetProps m_local_mat;
+			Texture2DPtr m_texture;
+			NuggetProps m_local_mat;
 
 			IObjectCreatorTexture() :m_texture() ,m_local_mat() {}
 			bool ParseKeyword(ParseParams& p, HashValue kw) override
@@ -725,10 +794,10 @@ namespace pr
 				case EKeyword::Video:    ParseVideo(p, m_texture); return true;
 				}
 			}
-			virtual pr::rdr::NuggetProps* GetDrawData()
+			virtual NuggetProps* GetDrawData()
 			{
-				m_local_mat.m_topo = pr::rdr::EPrim::Invalid;
-				m_local_mat.m_geom = pr::rdr::EGeom::Invalid;
+				m_local_mat.m_topo = EPrim::Invalid;
+				m_local_mat.m_geom = EGeom::Invalid;
 				m_local_mat.m_tex_diffuse = m_texture;
 				//if (m_texture->m_video)
 				//	m_texture->m_video->Play(true);
@@ -736,8 +805,42 @@ namespace pr
 			}
 		};
 
-		// Template prototype for ObjectCreators
-		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
+		// Base class of light source objects
+		struct IObjectCreatorLight :IObjectCreator
+		{
+			Light m_light;
+
+			IObjectCreatorLight() :m_light() { m_light.m_on = true; }
+			bool ParseKeyword(ParseParams& p, HashValue kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreator::ParseKeyword(p, kw);
+				case EKeyword::Range:
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.ExtractReal(m_light.m_range);
+						p.m_reader.ExtractReal(m_light.m_falloff);
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::Specular:
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.ExtractInt(m_light.m_specular.m_aarrggbb, 16);
+						p.m_reader.ExtractReal(m_light.m_specular_power);
+						p.m_reader.SectionEnd();
+						return true;
+					}
+				case EKeyword::CastShadow:
+					{
+						p.m_reader.ExtractRealS(m_light.m_cast_shadow);
+						return true;
+					}
+				}
+			}
+		};
+
+		#pragma region Line Objects
 
 		// Base class for object creators that are based on lines
 		struct IObjectCreatorLine :IObjectCreator
@@ -780,7 +883,7 @@ namespace pr
 					}
 				}
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				using namespace pr::rdr;
 
@@ -797,7 +900,7 @@ namespace pr
 					model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), m_colour.size(), m_colour.data());
 				else
 					model = ModelGenerator<>::Lines(p.m_rdr, m_point.size()/2, m_point.data(), m_colour.size(), m_colour.data());
-				
+
 				// Use thick lines
 				if (m_line_width != 0.0f)
 				{
@@ -983,6 +1086,10 @@ namespace pr
 			}
 		};
 
+		#pragma endregion
+
+		#pragma region 2D Shapes
+
 		// Base class for object creators that are based on 2d shapes
 		struct IObjectCreatorShape2d :IObjectCreatorTexture
 		{
@@ -1005,7 +1112,7 @@ namespace pr
 				case EKeyword::Facets: p.m_reader.ExtractIntS(m_facets, 10); return true;
 				}
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				using namespace pr::rdr;
 
@@ -1235,7 +1342,7 @@ namespace pr
 				case EKeyword::Coloured: m_per_vert_colour = true; return true;
 				}
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				using namespace pr::rdr;
 
@@ -1323,6 +1430,10 @@ namespace pr
 			}
 		};
 
+		#pragma endregion
+
+		#pragma region 3D Shapes
+
 		// ELdrObject::Box
 		template <> struct ObjectCreator<ELdrObject::Box> :IObjectCreatorTexture
 		{
@@ -1336,10 +1447,10 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.ExtractReal(m_dim.z);
 				m_dim *= 0.5f;
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, GetDrawData());
+				auto model = ModelGenerator<>::Box(p.m_rdr, m_dim, pr::m4x4Identity, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1371,9 +1482,9 @@ namespace pr
 				m_dim *= 0.5f;
 				m_b2w = pr::OriFromDir(s1 - s0, 2, m_up, (s1 + s0) * 0.5f);
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, GetDrawData());
+				auto model = ModelGenerator<>::Box(p.m_rdr, m_dim, m_b2w, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1395,7 +1506,7 @@ namespace pr
 				else
 					m_location.push_back(v);
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Validate
 				if (m_dim == pr::v4Zero || m_location.size() == 0)
@@ -1407,7 +1518,7 @@ namespace pr
 				m_dim *= 0.5f;
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData());
+				auto model = ModelGenerator<>::BoxList(p.m_rdr, m_location.size(), m_location.data(), m_dim, 0, 0, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1420,9 +1531,9 @@ namespace pr
 			pr::m4x4 m_b2w;
 
 			IObjectCreatorCuboid() :m_pt() ,m_b2w(pr::m4x4Identity) {}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
+				auto model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1450,12 +1561,12 @@ namespace pr
 				p.m_reader.ExtractReal(m_near);
 				p.m_reader.ExtractReal(m_far);
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				float w = m_width  * 0.5f / m_view_plane;
 				float h = m_height * 0.5f / m_view_plane;
 				float n = m_near, f = m_far;
-				
+
 				m_pt[0].set(-n*w, -n*h, n, 1.0f);
 				m_pt[1].set(-n*w,  n*h, n, 1.0f);
 				m_pt[2].set( n*w, -n*h, n, 1.0f);
@@ -1494,7 +1605,7 @@ namespace pr
 				p.m_reader.ExtractReal(m_near);
 				p.m_reader.ExtractReal(m_far);
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Construct pointed down +z, then rotate the points based on axis id
 				float h = pr::Tan(pr::DegreesToRadians(m_fovY * 0.5f));
@@ -1543,9 +1654,9 @@ namespace pr
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.ExtractReal(m_dim.z);
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				auto model = pr::rdr::ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData());
+				auto model = ModelGenerator<>::Geosphere(p.m_rdr, m_dim, m_divisions, pr::Colour32White, GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1569,7 +1680,7 @@ namespace pr
 				case EKeyword::Scale:   p.m_reader.ExtractVector2(m_scale); return true;
 				}
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				// Get the transform so that model is aligned to 'axis_id'
 				pr::m4x4 o2w = pr::m4x4Identity;
@@ -1587,7 +1698,7 @@ namespace pr
 				}
 
 				// Create the model
-				auto model = pr::rdr::ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawData());
+				auto model = ModelGenerator<>::Cylinder(p.m_rdr ,m_dim.x ,m_dim.y ,m_dim.z ,o2w ,m_scale.x ,m_scale.y ,m_wedges ,m_layers ,1 ,&pr::Colour32White ,GetDrawData());
 				model->m_name = name;
 				return model;
 			}
@@ -1630,7 +1741,7 @@ namespace pr
 			CCont& m_colours;
 			TCont& m_texs;
 			ICont& m_indices;
-			pr::rdr::EPrim::Enum_ m_prim_type;
+			EPrim::Enum_ m_prim_type;
 			bool m_generate_normals;
 
 			IObjectCreatorMesh() :m_verts(Point()) ,m_normals(Norms()) ,m_colours(Color()) ,m_texs(Texts()) ,m_indices(Index()) ,m_prim_type() ,m_generate_normals(false) {}
@@ -1676,7 +1787,7 @@ namespace pr
 							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = pr::rdr::EPrim::LineList;
+						m_prim_type = EPrim::LineList;
 						return true;
 					}
 				case EKeyword::Faces:
@@ -1690,7 +1801,7 @@ namespace pr
 							m_indices.push_back(idx[2]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = pr::rdr::EPrim::TriList;
+						m_prim_type = EPrim::TriList;
 						return true;
 					}
 				case EKeyword::Tetra:
@@ -1713,7 +1824,7 @@ namespace pr
 							m_indices.push_back(idx[1]);
 						}
 						p.m_reader.SectionEnd();
-						m_prim_type = pr::rdr::EPrim::TriList;
+						m_prim_type = EPrim::TriList;
 						return true;
 					}
 				case EKeyword::GenerateNormals:
@@ -1723,7 +1834,7 @@ namespace pr
 					}
 				}
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				using namespace pr::rdr;
 
@@ -1771,9 +1882,9 @@ namespace pr
 				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Mesh object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
-				if (m_prim_type == pr::rdr::EPrim::LineList)
+				if (m_prim_type == EPrim::LineList)
 				{
 					m_generate_normals = false;
 					m_normals.clear();
@@ -1790,7 +1901,7 @@ namespace pr
 				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Convext hull object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
-			pr::rdr::ModelPtr CreateModel(ParseParams& p, std::string name) override
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
 			{
 				m_indices.resize(6 * (m_verts.size() - 2));
 
@@ -1800,11 +1911,89 @@ namespace pr
 				m_verts  .resize(num_verts);
 				m_indices.resize(3*num_faces);
 
-				m_prim_type = pr::rdr::EPrim::TriList;
+				m_prim_type = EPrim::TriList;
 				m_generate_normals = true;
 				return IObjectCreatorMesh::CreateModel(p, name);
 			}
 		};
+
+		#pragma endregion
+
+		#pragma region Special Objects
+
+		// ELdrObject::DirectionalLight
+		template <> struct ObjectCreator<ELdrObject::DirectionalLight> :IObjectCreatorLight
+		{
+			ObjectCreator() :IObjectCreatorLight() {}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.ExtractVector3S(m_light.m_direction, 0.0f);
+			}
+		};
+
+		// ELdrObject::PointLight
+		template <> struct ObjectCreator<ELdrObject::PointLight> :IObjectCreatorLight
+		{
+			ObjectCreator() :IObjectCreatorLight() {}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.ExtractVector3S(m_light.m_position, 1.0f);
+			}
+		};
+
+		// ELdrObject::SpotLight
+		template <> struct ObjectCreator<ELdrObject::SpotLight> :IObjectCreatorLight
+		{
+			ObjectCreator() :IObjectCreatorLight() {}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.ExtractVector3S(m_light.m_position, 1.0f);
+				p.m_reader.ExtractVector3S(m_light.m_direction, 0.0f);
+				p.m_reader.ExtractReal(m_light.m_inner_cos_angle); // actually in degress atm
+				p.m_reader.ExtractReal(m_light.m_outer_cos_angle); // actually in degress atm
+			}
+		};
+
+		//ELdrObject::Group
+		template <> struct ObjectCreator<ELdrObject::Group> :IObjectCreator
+		{
+			void PostObjectCreation(LdrObjectPtr& obj) override
+			{
+				// Object modifiers applied to groups are applied recursively to children within the group
+				// Apply colour to all children
+				if (obj->m_colour_mask != 0)
+					obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
+
+				// Apply wireframe to all children
+				if (obj->m_wireframe)
+					obj->Wireframe(obj->m_wireframe, "");
+
+				// Apply visibility to all children
+				if (!obj->m_visible)
+					obj->Visible(obj->m_visible, "");
+			}
+		};
+
+		// ELdrObject::Instance
+		template <> struct ObjectCreator<ELdrObject::Instance> :IObjectCreator
+		{
+			ModelPtr CreateModel(ParseParams& p, std::string name) override
+			{
+				// Locate the model that this is an instance of
+				auto model_key = pr::hash::HashC(name.c_str());
+				auto mdl = p.m_models.find(model_key);
+				if (mdl == p.m_models.end())
+				{
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Instance not found");
+					return;
+				}
+				return mdl->second;
+			}
+		};
+
+		#pragma endregion
+
+		#pragma endregion
 
 		// Parse an ldr object
 		template <ELdrObject::Enum_ ShapeType> void Parse(ParseParams& p)
@@ -1836,95 +2025,14 @@ namespace pr
 			}
 			p.m_reader.SectionEnd();
 
-			// Create the model and add the model and instance to the containers
+			// Create the model 
 			obj->m_model = creator.CreateModel(p, obj->TypeAndName());
-			p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
-			p.m_objects.push_back(obj);
-		}
 
-		// Read a group description
-		void ParseGroup(ParseParams& p)
-		{
-			// Read the object attributes: name, colour, instance
-			ObjectAttributes attr = ParseAttributes(p.m_reader, ELdrObject::Group);
-			LdrObjectPtr obj(new LdrObject(attr, p.m_parent, p.m_context_id));
-
-			// Read the description of the model
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
-			{
-				if (p.m_reader.IsKeyword())
-				{
-					HashValue kw = p.m_reader.NextKeywordH();
-					ParseParams pp(p, obj->m_child, kw, obj.m_ptr);
-					if (ParseLdrObject(pp)) continue;
-					if (ParseProperties(pp, kw, obj)) continue;
-					p.m_reader.ReportError(pr::script::EResult::UnknownToken);
-				}
-				else
-				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue);
-					p.m_reader.FindSectionEnd();
-				}
-			}
-			p.m_reader.SectionEnd();
-
-			// Object modifiers applied to groups are applied recursively to children within the group
-			// Apply colour to all children
-			if (obj->m_colour_mask != 0)
-				obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
-			
-			// Apply wireframe to all children
-			if (obj->m_wireframe)
-				obj->Wireframe(obj->m_wireframe, "");
-			
-			// Apply visibility to all children
-			if (!obj->m_visible)
-				obj->Visible(obj->m_visible, "");
+			// Post object create
+			creator.PostObjectCreation(obj);
 
 			// Add the model and instance to the containers
-			p.m_objects.push_back(obj);
-		}
-
-		// Read an instance description
-		void ParseInstance(ParseParams& p)
-		{
-			// Read the object attributes: name, colour, instance. (note, instance will be ignored)
-			ObjectAttributes attr = ParseAttributes(p.m_reader, ELdrObject::Instance);
-
-			// Locate the model that this is an instance of
-			auto model_key = pr::hash::HashC(attr.m_name.c_str());
-			auto mdl = p.m_models.find(model_key);
-			if (mdl == p.m_models.end())
-			{
-				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Instance not found");
-				return;
-			}
-
-			LdrObjectPtr obj(new LdrObject(attr, p.m_parent, p.m_context_id));
-			obj->m_model = mdl->second;
-
-			// Parse any properties of the instance
-			p.m_reader.SectionStart();
-			while (!p.m_reader.IsSectionEnd())
-			{
-				if (p.m_reader.IsKeyword())
-				{
-					HashValue kw = p.m_reader.NextKeywordH();
-					ParseParams pp(p, obj->m_child, kw, obj.m_ptr);
-					if (ParseLdrObject(pp)) continue;
-					if (ParseProperties(pp, kw, obj)) continue;
-					p.m_reader.ReportError(pr::script::EResult::UnknownToken);
-				}
-				else
-				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue);
-					p.m_reader.FindSectionEnd();
-				}
-			}
-			p.m_reader.SectionEnd();
-
-			// Add the instance to the container
+			p.m_models[pr::hash::HashC(obj->m_name.c_str())] = obj->m_model;
 			p.m_objects.push_back(obj);
 		}
 
@@ -1936,30 +2044,33 @@ namespace pr
 			switch ((ELdrObject::Enum_)p.m_keyword)
 			{
 			default: return false;
-			case ELdrObject::Line:         Parse<ELdrObject::Line>      (p); break;
-			case ELdrObject::LineD:        Parse<ELdrObject::LineD>     (p); break;
-			case ELdrObject::LineList:     Parse<ELdrObject::LineList>  (p); break;
-			case ELdrObject::LineBox:      Parse<ELdrObject::LineBox>   (p); break;
-			case ELdrObject::Grid:         Parse<ELdrObject::Grid>      (p); break;
-			case ELdrObject::Spline:       Parse<ELdrObject::Spline>    (p); break;
-			case ELdrObject::Circle:       Parse<ELdrObject::Circle>    (p); break;
-			case ELdrObject::Rect:         Parse<ELdrObject::Rect>      (p); break;
-			case ELdrObject::Matrix3x3:    Parse<ELdrObject::Matrix3x3> (p); break;
-			case ELdrObject::Triangle:     Parse<ELdrObject::Triangle>  (p); break;
-			case ELdrObject::Quad:         Parse<ELdrObject::Quad>      (p); break;
-			case ELdrObject::Plane:        Parse<ELdrObject::Plane>     (p); break;
-			case ELdrObject::Box:          Parse<ELdrObject::Box>       (p); break;
-			case ELdrObject::BoxLine:      Parse<ELdrObject::BoxLine>   (p); break;
-			case ELdrObject::BoxList:      Parse<ELdrObject::BoxList>   (p); break;
-			case ELdrObject::FrustumWH:    Parse<ELdrObject::FrustumWH> (p); break;
-			case ELdrObject::FrustumFA:    Parse<ELdrObject::FrustumFA> (p); break;
-			case ELdrObject::Sphere:       Parse<ELdrObject::Sphere>    (p); break;
-			case ELdrObject::CylinderHR:   Parse<ELdrObject::CylinderHR>(p); break;
-			case ELdrObject::ConeHA:       Parse<ELdrObject::ConeHA>    (p); break;
-			case ELdrObject::Mesh:         Parse<ELdrObject::Mesh>      (p); break;
-			case ELdrObject::ConvexHull:   Parse<ELdrObject::ConvexHull>(p); break;
-			case ELdrObject::Group:        ParseGroup                   (p); break;
-			case ELdrObject::Instance:     ParseInstance                (p); break;
+			case ELdrObject::Line            : Parse<ELdrObject::Line            >(p); break;
+			case ELdrObject::LineD           : Parse<ELdrObject::LineD           >(p); break;
+			case ELdrObject::LineList        : Parse<ELdrObject::LineList        >(p); break;
+			case ELdrObject::LineBox         : Parse<ELdrObject::LineBox         >(p); break;
+			case ELdrObject::Grid            : Parse<ELdrObject::Grid            >(p); break;
+			case ELdrObject::Spline          : Parse<ELdrObject::Spline          >(p); break;
+			case ELdrObject::Circle          : Parse<ELdrObject::Circle          >(p); break;
+			case ELdrObject::Rect            : Parse<ELdrObject::Rect            >(p); break;
+			case ELdrObject::Matrix3x3       : Parse<ELdrObject::Matrix3x3       >(p); break;
+			case ELdrObject::Triangle        : Parse<ELdrObject::Triangle        >(p); break;
+			case ELdrObject::Quad            : Parse<ELdrObject::Quad            >(p); break;
+			case ELdrObject::Plane           : Parse<ELdrObject::Plane           >(p); break;
+			case ELdrObject::Box             : Parse<ELdrObject::Box             >(p); break;
+			case ELdrObject::BoxLine         : Parse<ELdrObject::BoxLine         >(p); break;
+			case ELdrObject::BoxList         : Parse<ELdrObject::BoxList         >(p); break;
+			case ELdrObject::FrustumWH       : Parse<ELdrObject::FrustumWH       >(p); break;
+			case ELdrObject::FrustumFA       : Parse<ELdrObject::FrustumFA       >(p); break;
+			case ELdrObject::Sphere          : Parse<ELdrObject::Sphere          >(p); break;
+			case ELdrObject::CylinderHR      : Parse<ELdrObject::CylinderHR      >(p); break;
+			case ELdrObject::ConeHA          : Parse<ELdrObject::ConeHA          >(p); break;
+			case ELdrObject::Mesh            : Parse<ELdrObject::Mesh            >(p); break;
+			case ELdrObject::ConvexHull      : Parse<ELdrObject::ConvexHull      >(p); break;
+			case ELdrObject::DirectionalLight: Parse<ELdrObject::DirectionalLight>(p); break;
+			case ELdrObject::PointLight      : Parse<ELdrObject::PointLight      >(p); break;
+			case ELdrObject::SpotLight       : Parse<ELdrObject::SpotLight       >(p); break;
+			case ELdrObject::Group           : Parse<ELdrObject::Group           >(p); break;
+			case ELdrObject::Instance        : Parse<ELdrObject::Instance        >(p); break;
 			}
 
 			// Apply properties to each object added
@@ -2042,10 +2153,18 @@ namespace pr
 								break;
 							}
 
+						// Camera position description
+						case EKeyword::Camera:
+							{
+								pr::Camera cam;
+								ParseCamera(reader, cam);
+								pr::events::Send(Evt_LdrSetCamera(cam));
+								break;
+							}
+
 						// Application commands
 						case EKeyword::Clear: break; // use event
 						case EKeyword::Wireframe: break;
-						case EKeyword::Camera: break;
 						case EKeyword::Lock: break;
 						case EKeyword::Delimiters: break;
 						}
@@ -2079,18 +2198,18 @@ namespace pr
 		}
 
 		// Add a custom object
-		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, pr::rdr::EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, ContextId context_id)
+		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, ContextId context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
-			pr::rdr::EGeom  geom_type  = pr::rdr::EGeom::Vert;
-			if (normals)    geom_type |= pr::rdr::EGeom::Norm;
-			if (colours)    geom_type |= pr::rdr::EGeom::Colr;
-			if (tex_coords) geom_type |= pr::rdr::EGeom::Tex0;
+			EGeom  geom_type  = EGeom::Vert;
+			if (normals)    geom_type |= EGeom::Norm;
+			if (colours)    geom_type |= EGeom::Colr;
+			if (tex_coords) geom_type |= EGeom::Tex0;
 
 			// Create the model
-			pr::rdr::NuggetProps mat(topo, geom_type);
-			obj->m_model = pr::rdr::ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
+			NuggetProps mat(topo, geom_type);
+			obj->m_model = ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
 			obj->m_model->m_name = obj->TypeAndName();
 			pr::events::Send(Evt_LdrObjectAdd(obj));
 			return obj;
@@ -2104,9 +2223,9 @@ namespace pr
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
 
 			// Create buffers for a dynamic model
-			pr::rdr::VBufferDesc vbs(vcount, sizeof(pr::rdr::Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-			pr::rdr::IBufferDesc ibs(icount, sizeof(pr::uint16), pr::rdr::DxFormat<pr::uint16>::value, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
-			pr::rdr::MdlSettings settings(vbs, ibs);
+			VBufferDesc vbs(vcount, sizeof(Vert), D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+			IBufferDesc ibs(icount, sizeof(pr::uint16), DxFormat<pr::uint16>::value, D3D11_USAGE_DYNAMIC, D3D11_CPU_ACCESS_WRITE);
+			MdlSettings settings(vbs, ibs);
 
 			// Create the model
 			obj->m_model = rdr.m_mdl_mgr.CreateModel(settings);
@@ -2199,18 +2318,18 @@ R"(
 	*o2w
 	{
 		// An empty 'o2w' is equivalent to an identity transform
-		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}  // *M4x4 {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major
-		*M3x3 {1 0 0  0 1 0  0 0 1}                 // *M3x3 {xx xy xz  yx yy yz  zx zy zz} - i.e. row major
-		*Pos {0 1 0}                                // *Pos {x y z}
-		*Direction {0 1 0 3}                        // *Direction {dx dy dz axis_id} - direction vector, and axis id to align to that direction
-		*Quat {0 1 0 0.3}                           // *Quat {x y z s} - quaternion
-		*Rand4x4 {0 1 0 2}                          // *Rand4x4 {cx cy cz r} - centre position, radius. Random orientation
-		*RandPos {0 1 0 2}                          // *RandPos {cx cy cz r} - centre position, radius
+		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}  // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major
+		*M3x3 {1 0 0  0 1 0  0 0 1}                 // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major
+		*Pos {0 1 0}                                // {x y z}
+		*Align {3 0 1 0}                            // {axis_id dx dy dz } - direction vector, and axis id to align to that direction
+		*Quat {0 1 0 0.3}                           // {x y z s} - quaternion
+		*Rand4x4 {0 1 0 2}                          // {cx cy cz r} - centre position, radius. Random orientation
+		*RandPos {0 1 0 2}                          // {cx cy cz r} - centre position, radius
 		*RandOri                                    // Randomises the orientation of the current transform
-		*Scale {1 1.2 1}                            // *Scale { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform
+		*Scale {1 1.2 1}                            // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform
 		*Transpose                                  // Transposes the current transform
 		*Inverse                                    // Inverts the current transform
-		*Euler {45 30 60}                           // *Euler { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw
+		*Euler {45 30 60}                           // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw
 		*Normalise                                  // Normalises the lengths of the vectors of the current transform
 		*Orthonormalise                             // Normalises the lengths and makes orthogonal the vectors of the current transform
 	}
@@ -2308,6 +2427,58 @@ R"(
 			}
 		}
 	}
+}
+)";
+out <<
+R"(
+// ************************************************************************************
+// Camera
+// ************************************************************************************
+
+// A camera section must be at the top level in the script
+// Camera descriptions raise an event immediately after being parsed.
+// The application handles this event to set the camera position.
+*Camera
+{
+	// Note: order is important
+	*o2w{*pos{0 0 4}}         // Camera position/orientation within the scene
+	*LookAt {0 0 1}           // Optional. Point the camera at {x,y,z} from where it currently is
+	*Align {0 1 0}            // Optional. Lock the camera's up axis to  {x,y,z}
+}
+
+// ************************************************************************************
+// Lights
+// ************************************************************************************
+// Light sources can be top level objects, children of other objects, or contain
+// child objects. In some ways they are like a *Group object, they have no geometry
+// of their own but can contain objects with geometry.
+
+*DirectionalLight sun FFFF00  // Colour attribute is the colour of the light source
+{
+	0 -1 -0.3                 // Direction dx,dy,dz (doesn't need to be normalised)
+	*Specular {FFFFFF 1000}   // Optional. Specular colour and power
+	*CastShadow {10}         // Optional. {range} Shadows are cast from this light source out to range
+	*o2w{*pos{5 5 5}}         // Position/orientation of the object
+}
+
+*PointLight glow FF00FF
+{
+	5 5 5                     // Position x,y,z
+	*Range {100}              // Optional. Range of the light. Default is infinite
+	*Specular {FFFFFF 1000}   // Optional. Specular colour and power
+	//*CastShadow {10}        // Optional. {range} Shadows are cast from this light source out to range
+	*o2w{*pos{5 5 5}}
+}
+
+*SpotLight spot 00FFFF
+{
+	3 5 4                     // Position x,y,z
+	-1 -1 -1                  // Direction dx,dy,dz (doesn't need to be normalised)
+	30 60                     // Inner angle (deg), Outer angle (deg)
+	*Range {100 0}            // Optional. {range, falloff}. Default is infinite
+	*Specular {FFFFFF 1000}   // Optional. Specular colour and power
+	//*CastShadow {10}       // Optional. {range} Shadows are cast from this light source out to range
+	*o2w{*pos{5 5 5}}         // Position and orientation (directional lights shine down -z)
 }
 )";
 out <<

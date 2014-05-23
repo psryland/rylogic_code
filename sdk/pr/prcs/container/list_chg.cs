@@ -47,11 +47,15 @@ namespace pr.container
 		/// <summary>The item added/remove</summary>
 		public T Item { get; private set; }
 
+		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
+		public bool Cancel { get; set; }
+
 		public ListChgEventArgs(ListChg chg, int index, T item)
 		{
 			ChangeType = chg;
 			Index      = index;
 			Item       = item;
+			Cancel     = false;
 		}
 	}
 

@@ -12,16 +12,10 @@
 namespace pr
 {
 	// Type methods
-	inline m2x2      m2x2::make(v2 const& x, v2 const& y)                { m2x2 m; return m.set(x, y); }
-	inline m2x2      m2x2::make(float xx, float xy, float yx, float yy)  { m2x2 m; return m.set(xx, xy, yx, yy); }
-	inline m2x2      m2x2::make(float const* mat)                        { m2x2 m; return m.set(mat); }
-	inline m2x2      m2x2::make(float angle)                             { m2x2 m; return m.set(angle); }
-	inline m2x2&     m2x2::set(v2 const& x_, v2 const& y_)               { x = x_; y = y_; return *this; }
-	inline m2x2&     m2x2::set(float xx, float xy, float yx, float yy)   { x.set(xx, xy); y.set(yx, yy); return *this; }
-	inline m2x2&     m2x2::set(float const* mat)                         { x.set(mat); y.set(mat+2); return *this; }
-	inline m2x2&     m2x2::set(float angle)                              { y.y = (x.x = Cos(angle)); y.x = -(x.y = Sin(angle)); return *this; }
-	inline m2x2&     m2x2::zero()                                        { return *this = m2x2Zero; }
-	inline m2x2&     m2x2::identity()                                    { return *this = m2x2Identity; }
+	inline m2x2& m2x2::set(v2 const& x_, v2 const& y_)               { x = x_; y = y_; return *this; }
+	inline m2x2& m2x2::set(float xx, float xy, float yx, float yy)   { x.set(xx, xy); y.set(yx, yy); return *this; }
+	inline m2x2& m2x2::set(float const* mat)                         { x.set(mat); y.set(mat+2); return *this; }
+	inline m2x2& m2x2::set(float angle)                              { y.y = (x.x = Cos(angle)); y.x = -(x.y = Sin(angle)); return *this; }
 
 	// Assignment operators
 	inline m2x2& operator += (m2x2& lhs, m2x2 const& rhs)        { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
@@ -88,8 +82,7 @@ namespace pr
 	}
 	inline m2x2 GetTranspose(m2x2 const& m)
 	{
-		m2x2 m_ = {{m.x.x, m.y.x}, {m.x.y, m.y.y}};
-		return m_;
+		return m2x2::make(m.x.x, m.y.x, m.x.y, m.y.y);
 	}
 	inline bool IsInvertable(m2x2 const& m)
 	{

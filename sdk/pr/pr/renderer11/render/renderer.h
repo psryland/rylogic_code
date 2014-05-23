@@ -55,17 +55,23 @@ namespace pr
 				,m_allow_alt_enter(false)
 			{
 				if (gdi_compat)
+				{
+					// Must use B8G8R8A8_UNORM for gdi compatibility
 					m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+
+					// Also, multisampling isn't supported
+					m_multisamp = pr::rdr::MultiSamp();
+				}
 
 				// Notes:
 				// - vsync has different meaning for the swap effect modes.
 				//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the vsync rate)
 				//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 				// Add the debug layer in debug mode
-				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+				PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
 
 				// Disable multisampling when debugging as pix can't handle it
-				PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
+				//PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
 			}
 		};
 

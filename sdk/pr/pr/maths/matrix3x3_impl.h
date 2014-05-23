@@ -11,14 +11,6 @@
 
 namespace pr
 {
-	inline m3x4 m3x4::make(v4 const& x_, v4 const& y_, v4 const& z_)   { m3x4 m; return m.set(x_, y_, z_); }
-	inline m3x4 m3x4::make(Quat const& quat)                           { m3x4 m; return m.set(quat); }
-	inline m3x4 m3x4::make(v4 const& from, v4 const& to)               { m3x4 m; return m.set(from, to); }
-	inline m3x4 m3x4::make(v4 const& axis_norm, float angle)           { m3x4 m; return m.set(axis_norm, angle); }
-	inline m3x4 m3x4::make(v4 const& angular_displacement)             { m3x4 m; return m.set(angular_displacement); }
-	inline m3x4 m3x4::make(float pitch, float yaw, float roll)         { m3x4 m; return m.set(pitch, yaw, roll); }
-	inline m3x4 m3x4::make(float const* mat)                           { m3x4 m; return m.set(mat); }
-
 	// Create from vectors
 	inline m3x4& m3x4::set(v4 const& x_, v4 const& y_, v4 const& z_)
 	{
@@ -100,7 +92,7 @@ namespace pr
 	{
 		assert(FEql(angular_displacement.w, 0.0f) && "'angular_displacement' should be a scaled direction vector");
 		float len = Length3(angular_displacement);
-		return len > maths::tiny ? set(angular_displacement/len, len) : identity();
+		return len > maths::tiny ? set(angular_displacement/len, len) : *this = m3x4Identity;
 	}
 
 	// Create from an pitch, yaw, and roll.
@@ -137,8 +129,6 @@ namespace pr
 		z.set(mat+8);
 		return *this;
 	}
-	inline m3x4&     m3x4::zero()                                  { return *this = m3x4Zero; }
-	inline m3x4&     m3x4::identity()                              { return *this = m3x4Identity; }
 
 	// Assignment operators
 	inline m3x4& operator += (m3x4& lhs, float rhs)                { cast_v3(lhs.x) += rhs;   cast_v3(lhs.y) += rhs;   cast_v3(lhs.z) += rhs;   return lhs; }
@@ -219,7 +209,7 @@ namespace pr
 	// Reset 'mat' to all zeros
 	inline m3x4& Zero(m3x4& mat)
 	{
-		return mat.zero();
+		return mat = m3x4Zero;
 	}
 
 	// Return 'mat' with all elements positive
@@ -341,6 +331,10 @@ namespace pr
 	{
 		return m3x4::make(quat);
 	}
+	inline m3x4 Rotation3x3(v4 const& from, v4 const& to)
+	{
+		return m3x4::make(from, to);
+	}
 
 	// Construct a scale matrix
 	inline m3x4 Scale3x3(float scale)
@@ -388,7 +382,7 @@ namespace pr
 		eigen_values.y = b.y = mat_.y.y;
 		eigen_values.z = b.z = mat_.z.z;
 		eigen_values.w = b.w = 0.0f;
-		eigen_vectors.identity();
+		eigen_vectors = m3x4Identity;
 
 		m3x4 mat = mat_;
 		float sum;

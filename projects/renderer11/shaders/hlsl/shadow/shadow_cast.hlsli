@@ -65,13 +65,14 @@ float LightVisibility(uniform Shadow shadow, uniform int smap_index, uniform Lig
 
 	// R channel is near frustum faces, G channel is the far frustum plane.
 	// If intercept.z is 0 then the intercept is on the far plane.
-	float smap_dist = step(TINY, intercept.z) * depth.x + step(intercept.z, TINY) * depth.y;
+	const float Eps = TINY * 10;
+	float smap_dist = step(Eps, intercept.z) * depth.x + step(intercept.z, Eps) * depth.y;
 
 	// "depths" are actually fractional distances between the frustum plane
 	// and the light. e.g. a depth of 0.25 means the shadow caster is closer
 	// to the frustum face than the light. So for 'ws_pos' to have a smaller
 	// depth value means it's in shadow.
-	return smoothstep(smap_dist-TINY, smap_dist, dist);
+	return smoothstep(smap_dist-Eps, smap_dist, dist);
 }
 
 #endif

@@ -35,7 +35,7 @@ PSIn_ShadowMap main(VSIn In)
 // Geometry shader
 #ifdef PR_RDR_GSHADER_shadow_map_face
 [maxvertexcount(15)]
-void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> TriStream)
+void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> OutStream)
 {
 	// Replicate the face for each projection and
 	// project it onto the plane of the frustum.
@@ -49,44 +49,44 @@ void main(triangle PSIn_ShadowMap In[3], inout TriangleStream<PSIn_ShadowMap> Tr
 		Out = In[0];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
 		Out = In[2];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
 		Out = In[1];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
-		TriStream.RestartStrip();
+		OutStream.RestartStrip();
 	}
 	if (any(m_proj[4]))
 	{
 		Out = In[0];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
 		Out = In[1];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
 		Out = In[2];
 		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
-		TriStream.RestartStrip();
+		OutStream.RestartStrip();
 	}
 }
 #endif
 #ifdef PR_RDR_GSHADER_shadow_map_line
 [maxvertexcount(10)]
-void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStream)
+void main(line PSIn_ShadowMap In[2], inout LineStream<PSIn_ShadowMap> OutStream)
 {
 	// Replicate the line for each projection and
 	// project it onto the plane of the frustum
@@ -96,16 +96,16 @@ void main(line PSIn_ShadowMap In[2], inout TriangleStream<PSIn_ShadowMap> TriStr
 		if (!any(m_proj[i])) continue;
 
 		Out = In[0];
-		Out.ss_vert = mul(In[0].xyz_face, m_proj[i]);
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
 		Out = In[1];
-		Out.ss_vert = mul(In[1].xyz_face, m_proj[i]);
+		Out.ss_vert = mul(Out.xyz_face, m_proj[i]);
 		Out.xyz_face = float4(Out.ss_vert.xyz, i + TINY);
-		TriStream.Append(Out);
+		OutStream.Append(Out);
 
-		TriStream.RestartStrip();
+		OutStream.RestartStrip();
 	}
 }
 #endif

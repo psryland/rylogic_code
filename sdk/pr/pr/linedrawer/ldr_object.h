@@ -70,6 +70,9 @@ namespace pr
 			x(ConvexHull       ,= 0x0a93b3d5)\
 			x(Group            ,= 0x1c1c3d90)\
 			x(Instance         ,= 0x061978f8)\
+			x(DirectionalLight ,= 0x00000002)\
+			x(PointLight       ,= 0x00000003)\
+			x(SpotLight        ,= 0x00000004)\
 			x(Custom           ,= 0x1a1023c5)
 		PR_DEFINE_ENUM2(ELdrObject, PR_ENUM);
 		#undef PR_ENUM
@@ -109,6 +112,8 @@ namespace pr
 			x(Delimiters      ,= 0x084f5b30)\
 			x(Clear           ,= 0x045518bd)\
 			x(Camera          ,= 0x19028d2f)\
+			x(LookAt          ,= 0x00000001)\
+			x(Align           ,= 0x00000002)\
 			x(Lock            ,= 0x0a040f55)\
 			x(Coloured        ,= 0x078194a5)\
 			x(Width           ,= 0x190A34C3)\
@@ -129,7 +134,10 @@ namespace pr
 			x(GenerateNormals ,= 0x1c991230)\
 			x(Step            ,= 0x0ad1d27d)\
 			x(Addr            ,= 0x0a215e87)\
-			x(Filter          ,= 0x183f6f0c)
+			x(Filter          ,= 0x183f6f0c)\
+			x(Range           ,= 0x01000003)\
+			x(Specular        ,= 0x01000000)\
+			x(CastShadow      ,= 0x01000001)
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 
@@ -409,7 +417,7 @@ namespace pr
 				bool m_animation;
 				bool m_step_data;
 				bool m_user_data;
-				
+
 				enum class EKeep { None, All };
 				UpdateModelKeep(EKeep keep = EKeep::None)
 					:m_name       (keep == EKeep::All)
@@ -435,41 +443,67 @@ namespace pr
 			long Release() const;
 		};
 
-		// Events Types *************************************
+		#pragma region Events
 
-		struct Evt_AddBegin {};     // A number of objects are about to be added
-		struct Evt_AddEnd           // The last object in a group has been added
+		// A number of objects are about to be added
+		struct Evt_AddBegin
+		{};
+
+		// The last object in a group has been added
+		struct Evt_AddEnd
 		{
 			int m_first, m_last;    // Index of the first and last object added
 			Evt_AddEnd(int first, int last) :m_first(first) ,m_last(last) {}
 		};
-		struct Evt_LdrObjectAdd     // An ldr object has been added
+
+		// All objects removed from the object manager
+		struct Evt_DeleteAll
+		{};
+
+		// An ldr object has been added
+		struct Evt_LdrObjectAdd
 		{
 			LdrObjectPtr m_obj;     // The object that was added.
 			Evt_LdrObjectAdd(LdrObjectPtr obj) :m_obj(obj) {}
 		};
-		struct Evt_LdrObjectChg     // An ldr object has been modified
+
+		// An ldr object has been modified
+		struct Evt_LdrObjectChg
 		{
 			LdrObjectPtr m_obj;     // The object that was changed.
 			Evt_LdrObjectChg(LdrObjectPtr obj) :m_obj(obj) {}
 		};
-		struct Evt_DeleteAll {};    // All objects removed from the object manager
+
+		// An ldr object is about to be deleted
 		struct Evt_LdrObjectDelete
 		{
 			LdrObject* m_obj;       // The object to be deleted. Note, not a ref ptr because this event is only sent when the ref count = 0
 			Evt_LdrObjectDelete(LdrObject* obj) :m_obj(obj) {}
 		};
+
+		// An object with step code has been created
 		struct Evt_LdrObjectStepCode
 		{
 			LdrObjectPtr m_obj;     // The object containing step code
 			Evt_LdrObjectStepCode(LdrObjectPtr obj) :m_obj(obj) {}
 		};
-		struct Evt_Refresh          // Called when one or more objects have changed state
+
+		// A camera description has been read
+		struct Evt_LdrSetCamera
+		{
+			pr::Camera m_cam;
+			Evt_LdrSetCamera(pr::Camera const& cam) :m_cam(cam) {}
+		};
+
+		// Called when one or more objects have changed state
+		struct Evt_Refresh
 		{
 			LdrObjectPtr m_obj;     // The object that has changed. If null, then more than one object has changed
 			Evt_Refresh() :m_obj(0) {}
 			Evt_Refresh(LdrObjectPtr obj) :m_obj(obj) {}
 		};
+
+		// Callback progress event used during parsing
 		struct Evt_LdrProgress
 		{
 			int m_count;            // -1 for unknown
@@ -479,8 +513,16 @@ namespace pr
 			LdrObjectPtr m_obj;     // An object near the current progress point
 			Evt_LdrProgress(int count, int total, char const* desc, bool allow_cancel, LdrObjectPtr obj) :m_count(count) ,m_total(total) ,m_desc(desc) ,m_allow_cancel(allow_cancel) ,m_obj(obj) {}
 		};
-		struct Evt_LdrObjectSelectionChanged {}; // Event fired from the UI when the selected object changes
-		struct Evt_SettingsChanged {}; // Sent by the object manager ui whenever its settings have changed
+
+		// Event fired from the UI when the selected object changes
+		struct Evt_LdrObjectSelectionChanged
+		{};
+
+		// Sent by the object manager ui whenever its settings have changed
+		struct Evt_SettingsChanged
+		{};
+
+		#pragma endregion
 
 		// LdrObject Creation functions *********************************************
 

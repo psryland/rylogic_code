@@ -54,7 +54,7 @@ namespace pr
 				case ERenderStep::ForwardRender: m_render_steps.push_back(std::make_shared<ForwardRender>(*this)); break;
 				case ERenderStep::GBuffer:       m_render_steps.push_back(std::make_shared<GBuffer      >(*this)); break;
 				case ERenderStep::DSLighting:    m_render_steps.push_back(std::make_shared<DSLighting   >(*this)); break;
-				case ERenderStep::ShadowMap:     m_render_steps.push_back(std::make_shared<ShadowMap    >(*this, m_global_light, pr::iv2::make(1000,1000))); break;
+				case ERenderStep::ShadowMap:     m_render_steps.push_back(std::make_shared<ShadowMap    >(*this, m_global_light, pr::iv2::make(4096,4096))); break;
 				}
 			}
 		}

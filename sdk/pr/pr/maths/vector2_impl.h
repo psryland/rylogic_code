@@ -11,6 +11,47 @@
 
 namespace pr
 {
+	inline v2& v2::set(float x_)
+	{
+		x = y = x_;
+		return *this;
+	}
+	inline v2& v2::set(float x_, float y_)
+	{
+		x = x_;
+		y = y_;
+		return *this;
+	}
+	template <typename T> inline v2& v2::set(T const& v)
+	{
+		x = GetXf(v);
+		y = GetYf(v);
+		return *this;
+	}
+	template <typename T> inline v2& v2::set(T const* v)
+	{ 
+		x = GetXf(v[0]);
+		y = GetYf(v[1]);
+		return *this;
+	}
+	inline v2::Array const (&v2::ToArray() const)
+	{
+		return reinterpret_cast<Array const&>(*this);
+	}
+	inline v2::Array (&v2::ToArray())
+	{
+		return reinterpret_cast<Array&>(*this);
+	}
+	inline float const& v2::operator [](int i) const
+	{
+		assert(i < 2);
+		return ToArray()[i];
+	}
+	inline float& v2::operator [](int i)
+	{
+		assert(i < 2);
+		return ToArray()[i];
+	}
 	inline v2& v2::operator = (iv2 const& rhs)
 	{
 		return set(float(rhs.x), float(rhs.y));

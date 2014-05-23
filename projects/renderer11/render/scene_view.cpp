@@ -50,7 +50,7 @@ namespace pr
 			,m_centre_dist(cam.m_focus_dist)
 			,m_near(cam.Near())
 			,m_far(cam.Far())
-			,m_shadow_zfar(cam.FocusRelativeDistance(2.0f))
+			,m_shadow_zfar(cam.FocusRelativeDistance(3.0f))
 			,m_shadow_max_caster_dist(cam.FocusRelativeDistance(4.0f))
 			,m_orthographic(cam.m_orthographic)
 		{

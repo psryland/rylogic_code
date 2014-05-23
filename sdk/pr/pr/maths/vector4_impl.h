@@ -70,16 +70,6 @@ namespace pr
 		w = w_;
 		return *this;
 	}
-	inline v2 const& v4::xy() const  { return reinterpret_cast<v2 const&>(x); }
-	inline v2&       v4::xy()        { return reinterpret_cast<v2&>      (x); }
-	inline v2 const& v4::yz() const  { return reinterpret_cast<v2 const&>(y); }
-	inline v2&       v4::yz()        { return reinterpret_cast<v2&>      (y); }
-	inline v2 const& v4::zw() const  { return reinterpret_cast<v2 const&>(z); }
-	inline v2&       v4::zw()        { return reinterpret_cast<v2&>      (z); }
-	inline v3 const& v4::xyz() const { return reinterpret_cast<v3 const&>(x); }
-	inline v3&       v4::xyz()       { return reinterpret_cast<v3&>      (x); }
-	inline v3 const& v4::yzw() const { return reinterpret_cast<v3 const&>(y); }
-	inline v3&       v4::yzw()       { return reinterpret_cast<v3&>      (y); }
 
 	inline v4 v4::w0() const { pr::v4 v = *this; v.w = 0.0f; return v; }
 	inline v4 v4::w1() const { pr::v4 v = *this; v.w = 1.0f; return v; }

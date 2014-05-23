@@ -10,27 +10,22 @@
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
 #include "pr/maths/scalar.h"
-#include "pr/maths/ivector2.h"
-#include "pr/maths/ivector4.h"
-#include "pr/maths/vector3.h"
-#include "pr/maths/vector4.h"
 
 namespace pr
 {
 	struct v2
 	{
-		float x;
-		float y;
+		float x, y;
 		typedef float Array[2];
 
-		v2&                       set(float x_)                            { x = y = x_; return *this; }
-		v2&                       set(float x_, float y_)                  { x = x_; y = y_; return *this; }
-		template <typename T> v2& set(T const& v)                          { x = GetXf(v); y = GetYf(v); return *this; }
-		template <typename T> v2& set(T const* v)                          { x = AsReal(v[0]); y = GetYf(v[1]); return *this; }
-		Array const&              ToArray() const                          { return reinterpret_cast<Array const&>(*this); }
-		Array&                    ToArray()                                { return reinterpret_cast<Array&>      (*this); }
-		float const&              operator [] (int i)    const             { assert(i < 2); return ToArray()[i]; }
-		float&                    operator [] (int i)                      { assert(i < 2); return ToArray()[i]; }
+		v2&                       set(float x_);
+		v2&                       set(float x_, float y_);
+		template <typename T> v2& set(T const& v);
+		template <typename T> v2& set(T const* v);
+		Array const&              ToArray() const;
+		Array&                    ToArray();
+		float const&              operator [] (int i) const;
+		float&                    operator [] (int i);
 		v2& operator = (iv2 const& rhs);
 
 		static v2                       make(float x)             { v2 vec; return vec.set(x); }
@@ -82,7 +77,7 @@ namespace pr
 	inline v2 operator - (float lhs, v2 const& rhs)                   { v2 v = rhs; return v -= lhs; }
 	inline v2 operator * (float lhs, v2 const& rhs)                   { v2 v = rhs; return v *= lhs; }
 	inline v2 operator / (float lhs, v2 const& rhs)                   { assert(All2(rhs,maths::NonZero<float>)); return v2::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs) ); }
-	inline v2 operator % (float lhs, v2 const& rhs)                   { assert( All2(rhs,maths::NonZero<float>)); return v2::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs))); }
+	inline v2 operator % (float lhs, v2 const& rhs)                   { assert(All2(rhs,maths::NonZero<float>)); return v2::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs))); }
 
 	// Unary operators
 	inline v2 operator + (v2 const& vec) { return vec; }

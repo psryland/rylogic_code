@@ -58,12 +58,12 @@ namespace pr
 
 			RigidbodySettings()
 			{
-				m_object_to_world                       .identity();
+				m_object_to_world                       = m4x4Identity;
 				m_shape                                 = GetDummyShape();
 				m_type                                  = ERigidbody_Dynamic;
 				m_mass_properties.m_mass                = 10.0f;
 				m_mass_properties.m_centre_of_mass      = pr::v4Origin;
-				m_mass_properties.m_os_inertia_tensor   .identity();
+				m_mass_properties.m_os_inertia_tensor   = m3x4Identity;
 				m_motion_type                           = EMotion_Dynamic;
 				m_initially_sleeping                    = false;
 				m_lin_velocity                          = pr::v4Zero;

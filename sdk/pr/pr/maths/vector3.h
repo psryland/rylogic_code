@@ -9,19 +9,20 @@
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
-#include "pr/maths/scalar.h"
-#include "pr/maths/ivector2.h"
-#include "pr/maths/ivector4.h"
 #include "pr/maths/vector2.h"
-#include "pr/maths/vector4.h"
 
 namespace pr
 {
 	struct v3
 	{
-		float x;
-		float y;
-		float z;
+		#pragma warning(push)
+		#pragma warning(disable:4201) // nameless struct
+		union
+		{
+			struct { float x, y, z; };
+			struct { v2 xy; };
+		};
+		#pragma warning(pop)
 		typedef float Array[3];
 
 		v3&                       set(float x_)                            { x = y = z = x_; return *this; }
@@ -29,10 +30,6 @@ namespace pr
 		template <typename T> v3& set(T const& v, float z_)                { x = GetXf(v); y = GetYf(v); z = z_; return *this; }
 		template <typename T> v3& set(T const& v)                          { x = GetXf(v); y = GetYf(v); z = GetZf(v); return *this; }
 		template <typename T> v3& set(T const* v)                          { x = AsReal(v[0]); y = AsReal(v[1]); z = AsReal(v[2]); return *this; }
-		v2 const&                 xy() const                               { return reinterpret_cast<v2 const&>(x); }
-		v2&                       xy()                                     { return reinterpret_cast<v2&>      (x); }
-		v2 const&                 yz() const                               { return reinterpret_cast<v2 const&>(y); }
-		v2&                       yz()                                     { return reinterpret_cast<v2&>      (y); }
 		Array const&              ToArray() const                          { return reinterpret_cast<Array const&>(*this); }
 		Array&                    ToArray()                                { return reinterpret_cast<Array&>      (*this); }
 		float const&              operator [](int i) const                 { assert(i < 3); return ToArray()[i]; }

@@ -21,36 +21,38 @@ namespace pr
 		union {
 		struct { v4 x, y, z, w; };
 		struct { m3x4 rot; v4 pos; };
+		struct { v4 arr[4]; };
 		};
-		typedef v4 Array[4];
 		#pragma warning (default:4201)
 
-		static m4x4  make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		static m4x4  make(m3x4 const& ori, v4 const& translation);
-		static m4x4  make(Quat const& quat, v4 const& translation);
-		static m4x4  make(v4 const& axis, float angle, v4 const& translation);
-		static m4x4  make(v4 const& angular_displacement, v4 const& translation);
-		static m4x4  make(v4 const& from, v4 const& to, v4 const& translation);
-		static m4x4  make(float pitch,  float yaw, float roll, v4 const& translation);
-		static m4x4  make(float const* mat);
-		m4x4&        set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
-		m4x4&        set(m3x4 const& ori, v4 const& translation);
-		m4x4&        set(Quat const& quat, v4 const& translation);
-		m4x4&        set(v4 const& axis, float angle, v4 const& translation);
-		m4x4&        set(v4 const& angular_displacement, v4 const& translation);
-		m4x4&        set(v4 const& from, v4 const& to, v4 const& translation);
-		m4x4&        set(float pitch,  float yaw, float roll, v4 const& translation);
-		m4x4&        set(float const* mat);
-		m4x4&        zero();
-		m4x4&        identity();
-		v4           row(int i) const;
-		v4           col(int i) const;
-		void         row(int i, v4 const& row);
-		void         col(int i, v4 const& col);
-		Array const& ToArray() const;
-		Array&       ToArray();
-		v4 const&    operator [] (int i) const;
-		v4&          operator [] (int i);
+		m4x4& set(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_);
+		m4x4& set(m3x4 const& ori, v4 const& translation);
+		m4x4& set(Quat const& quat, v4 const& translation);
+		m4x4& set(v4 const& axis, float angle, v4 const& translation);
+		m4x4& set(v4 const& angular_displacement, v4 const& translation);
+		m4x4& set(v4 const& from, v4 const& to, v4 const& translation);
+		m4x4& set(float pitch,  float yaw, float roll, v4 const& translation);
+		m4x4& set(float const* mat);
+
+		v4    row(int i) const          { return v4::make(x[i], y[i], z[i], w[i]); }
+		v4    col(int i) const          { return (*this)[i]; }
+		void  row(int i, v4 const& row) { x[i] = row.x; y[i] = row.y; z[i] = row.z; w[i] = row.w; }
+		void  col(int i, v4 const& col) { (*this)[i] = col; }
+
+		typedef v4 Array[4];
+		Array const& ToArray() const           { return arr; }
+		Array&       ToArray()                 { return arr; }
+		v4 const&    operator [] (int i) const { assert(i < 4); return arr[i]; }
+		v4&          operator [] (int i)       { assert(i < 4); return arr[i]; }
+
+		static m4x4 make(v4 const& x_, v4 const& y_, v4 const& z_, v4 const& w_)      { m4x4 m; return m.set(x_, y_, z_, w_);                    }
+		static m4x4 make(m3x4 const& ori, v4 const& translation)                      { m4x4 m; return m.set(ori, translation);                  }
+		static m4x4 make(Quat const& quat, v4 const& translation)                     { m4x4 m; return m.set(quat, translation);                 }
+		static m4x4 make(v4 const& axis, float angle, v4 const& translation)          { m4x4 m; return m.set(axis, angle, translation);          }
+		static m4x4 make(v4 const& angular_displacement, v4 const& translation)       { m4x4 m; return m.set(angular_displacement, translation); }
+		static m4x4 make(v4 const& from, v4 const& to, v4 const& translation)         { m4x4 m; return m.set(from, to, translation);             }
+		static m4x4 make(float pitch,  float yaw, float roll, v4 const& translation)  { m4x4 m; return m.set(pitch,  yaw, roll, translation);    }
+		static m4x4 make(float const* mat)                                            { m4x4 m; return m.set(mat);                               }
 	};
 	static_assert(std::alignment_of<m4x4>::value == 16, "Should be 16 byte aligned");
 	static_assert(std::is_pod<m4x4>::value, "Should be a pod type");

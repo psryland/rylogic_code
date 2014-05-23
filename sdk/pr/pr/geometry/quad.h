@@ -77,10 +77,10 @@ namespace pr
 			ColourRepeater col(colours, num_colours, num_quads * 4, Colour32White);
 
 			// Texture coords
-			v2 t00 = (t2q * v4::make(0.000f, 0.000f, 0.0f, 1.0f)).xy();
-			v2 t01 = (t2q * v4::make(0.000f, 0.999f, 0.0f, 1.0f)).xy();
-			v2 t10 = (t2q * v4::make(0.999f, 0.000f, 0.0f, 1.0f)).xy();
-			v2 t11 = (t2q * v4::make(0.999f, 0.999f, 0.0f, 1.0f)).xy();
+			v2 t00 = (t2q * v4::make(0.000f, 0.000f, 0.0f, 1.0f)).xy;
+			v2 t01 = (t2q * v4::make(0.000f, 0.999f, 0.0f, 1.0f)).xy;
+			v2 t10 = (t2q * v4::make(0.999f, 0.000f, 0.0f, 1.0f)).xy;
+			v2 t11 = (t2q * v4::make(0.999f, 0.999f, 0.0f, 1.0f)).xy;
 
 			pr::BBox bbox = pr::BBoxReset;
 			for (std::size_t i = 0; i != num_quads; ++i)
@@ -157,9 +157,9 @@ namespace pr
 			v4 norm = Normalise3IfNonZero(Cross3(quad_z,quad_x));
 			v4 step_x = quad_x / (divisions.x + 1);
 			v4 step_y = quad_z / (divisions.y + 1);
-			v2 uvbase = (t2q * v4Origin).xy();
-			v2 du     = (t2q * v4XAxis).xy();
-			v2 dv     = (t2q * v4YAxis).xy();
+			v2 uvbase = (t2q * v4Origin).xy;
+			v2 du     = (t2q * v4XAxis).xy;
+			v2 dv     = (t2q * v4YAxis).xy;
 			for (int h = 0, hend = divisions.y + 2; h != hend; ++h, uvbase += dv)
 			{
 				v4 vert = origin + float(h) * step_y;

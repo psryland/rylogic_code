@@ -80,6 +80,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\kdtree.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\keystate.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\log.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\mempool.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\min_max_fix.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\msgbox.h" />
@@ -119,7 +120,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\vectormap.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />
     <ClInclude Include="..\..\sdk\pr\pr\crypt\crypt.h" />

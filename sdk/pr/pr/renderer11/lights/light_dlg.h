@@ -7,14 +7,15 @@
 #ifndef PR_RDR_LIGHTS_LIGHT_DLG_H
 #define PR_RDR_LIGHTS_LIGHT_DLG_H
 
-#include "pr/common/min_max_fix.h"
 #include <atlbase.h>
 #include <atlapp.h>
 #include <atlwin.h>
 #include <atlctrls.h>
 #include <atldlgs.h>
 #include <atlcrack.h>
+#include "pr/common/min_max_fix.h"
 #include "pr/macros/count_of.h"
+#include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/str/prstring.h"
 #include "pr/renderer11/lights/light.h"
@@ -107,7 +108,8 @@ namespace pr
 			{}
 			~LightingDlg()
 			{
-				if (IsWindow()) EndDialog(0);
+				if (IsWindow())
+					EndDialog(0);
 			}
 
 			// Handler methods
@@ -132,56 +134,119 @@ namespace pr
 				m_edit_spot_inner    .Attach(GetDlgItem(IDC_EDIT_SPOT_INNER_ANGLE));
 				m_edit_spot_outer    .Attach(GetDlgItem(IDC_EDIT_SPOT_OUTER_ANGLE));
 
-				int ids[ELight::NumberOf];
-				ids[ELight::Ambient]     = IDC_RADIO_AMBIENT;
-				ids[ELight::Directional] = IDC_RADIO_DIRECTIONAL;
-				ids[ELight::Point]       = IDC_RADIO_POINT;
-				ids[ELight::Spot]        = IDC_RADIO_SPOT;
-				CheckRadioButton(IDC_RADIO_AMBIENT, IDC_RADIO_SPOT, ids[m_light.m_type]);
-				m_edit_position      .SetWindowText(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_position.x ,m_light.m_position.y ,m_light.m_position.z));
-				m_edit_direction     .SetWindowText(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_direction.x ,m_light.m_direction.y ,m_light.m_direction.z));
-				m_check_cam_rel      .SetCheck(m_camera_relative);
-				m_check_cast_shadows .SetCheck(m_light.m_cast_shadows);
-				m_edit_ambient       .SetWindowTextA(pr::FmtS("%8.8X" ,m_light.m_ambient.m_aarrggbb));
-				m_edit_diffuse       .SetWindowTextA(pr::FmtS("%8.8X" ,m_light.m_diffuse.m_aarrggbb));
-				m_edit_specular      .SetWindowTextA(pr::FmtS("%8.8X" ,m_light.m_specular.m_aarrggbb));
-				m_edit_spec_power    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + m_light.m_specular_power)));
-				m_edit_spot_range    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + m_light.m_range)));
-				m_edit_spot_inner    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_inner_cos_angle)))));
-				m_edit_spot_outer    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_outer_cos_angle)))));
-
+				PopulateControls();
 				UpdateUI();
 				return TRUE;
 			}
 			void OnCommand(UINT, int nID, CWindow)
 			{
-				if (nID == IDOK || nID == IDCANCEL) { UpdateUI(); EndDialog(nID); return; }
-				if (nID == IDRETRY)                 { UpdateUI(); m_preview(m_light, m_camera_relative); return; }
-				if (nID == IDC_RADIO_AMBIENT || nID == IDC_RADIO_DIRECTIONAL || nID == IDC_RADIO_POINT || nID == IDC_RADIO_SPOT) { UpdateUI(); return; }
-				SetMsgHandled(FALSE);
+				ReadValues();
+				PopulateControls();
+				UpdateUI();
+
+				switch (nID)
+				{
+				default:
+					SetMsgHandled(FALSE);
+					break;
+				case IDOK:
+				case IDCANCEL:
+					EndDialog(nID);
+					return;
+				case IDRETRY:
+					m_preview(m_light, m_camera_relative);
+					break;
+				case IDC_RADIO_AMBIENT:
+				case IDC_RADIO_DIRECTIONAL:
+				case IDC_RADIO_POINT:
+				case IDC_RADIO_SPOT:
+					break;
+				}
 			}
 
+			// Update the values in the controls
+			void PopulateControls()
+			{
+				int ids[ELight::NumberOf];
+				ids[ELight::Ambient]     = IDC_RADIO_AMBIENT;
+				ids[ELight::Directional] = IDC_RADIO_DIRECTIONAL;
+				ids[ELight::Point]       = IDC_RADIO_POINT;
+				ids[ELight::Spot]        = IDC_RADIO_SPOT;
+
+				CheckRadioButton(IDC_RADIO_AMBIENT, IDC_RADIO_SPOT, ids[m_light.m_type]);
+				m_edit_position      .SetWindowTextA(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_position.x ,m_light.m_position.y ,m_light.m_position.z));
+				m_edit_direction     .SetWindowTextA(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_direction.x ,m_light.m_direction.y ,m_light.m_direction.z));
+				m_check_cam_rel      .SetCheck(m_camera_relative);
+				m_check_cast_shadows .SetCheck(m_light.m_cast_shadows);
+				m_edit_ambient       .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_ambient.m_aarrggbb ));
+				m_edit_diffuse       .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_diffuse.m_aarrggbb ));
+				m_edit_specular      .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_specular.m_aarrggbb));
+				m_edit_spec_power    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + m_light.m_specular_power)));
+				m_edit_spot_range    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + m_light.m_range)));
+				m_edit_spot_inner    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_inner_cos_angle)))));
+				m_edit_spot_outer    .SetWindowTextA(pr::FmtS("%d" ,(int)(0.5f + pr::RadiansToDegrees(pr::ACos(m_light.m_outer_cos_angle)))));
+			}
+
+			// Read an validate values from the controls
+			void ReadValues()
+			{
+				char str[256];
+
+				// Light type
+				if (m_btn_ambient    .GetCheck()) m_light.m_type = pr::rdr::ELight::Ambient;
+				if (m_btn_directional.GetCheck()) m_light.m_type = pr::rdr::ELight::Directional;
+				if (m_btn_point      .GetCheck()) m_light.m_type = pr::rdr::ELight::Point;
+				if (m_btn_spot       .GetCheck()) m_light.m_type = pr::rdr::ELight::Spot;
+
+				// Position
+				m_edit_position.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_position = pr::To<pr::v4>(str, 1.0f);
+
+				// Direction
+				m_edit_direction.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_direction = pr::Normalise3(pr::To<pr::v4>(str, 0.0f));
+
+				// Camera relative
+				m_camera_relative = m_check_cam_rel.GetCheck() != 0;
+				
+				// Cast shadows
+				m_light.m_cast_shadows = m_check_cast_shadows.GetCheck() != 0;
+
+				// Ambient
+				m_edit_ambient.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_ambient = pr::To<Colour32>(str);
+				m_light.m_ambient.a() = 0;
+
+				// Diffuse
+				m_edit_diffuse.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_diffuse = pr::To<Colour32>(str);
+				m_light.m_diffuse.a()  = 0xFF;
+
+				// Specular
+				m_edit_specular.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_specular = pr::To<Colour32>(str);
+				m_light.m_specular.a() = 0;
+
+				// Specular power
+				m_edit_spec_power.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_specular_power = pr::To<float>(str);
+
+				// Spot range
+				m_edit_spot_range.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_range = pr::To<float>(str);
+
+				// Spot cone
+				m_edit_spot_inner.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_inner_cos_angle = pr::To<float>(str);
+				m_light.m_inner_cos_angle = pr::Cos(pr::DegreesToRadians(m_light.m_inner_cos_angle));
+				m_edit_spot_outer.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_outer_cos_angle = pr::To<float>(str);
+				m_light.m_outer_cos_angle = pr::Cos(pr::DegreesToRadians(m_light.m_outer_cos_angle));
+			}
+
+			// Enable/Disable controls
 			void UpdateUI()
 			{
-				// Update the values
-				char str[256];
-				if (m_btn_ambient      .GetCheck()) m_light.m_type = pr::rdr::ELight::Ambient;
-				if (m_btn_directional  .GetCheck()) m_light.m_type = pr::rdr::ELight::Directional;
-				if (m_btn_point        .GetCheck()) m_light.m_type = pr::rdr::ELight::Point;
-				if (m_btn_spot         .GetCheck()) m_light.m_type = pr::rdr::ELight::Spot;
-				m_edit_position        .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealArrayC(m_light.m_position .ToArray(), 3, str);
-				m_edit_direction       .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealArrayC(m_light.m_direction.ToArray(), 3, str); pr::Normalise3(m_light.m_direction);
-				m_camera_relative      = m_check_cam_rel.GetCheck() != 0;
-				m_light.m_cast_shadows = m_check_cast_shadows.GetCheck() != 0;
-				m_edit_ambient         .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractIntC(m_light.m_ambient.m_aarrggbb, 16, str);  m_light.m_ambient.a() = 0;
-				m_edit_diffuse         .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractIntC(m_light.m_diffuse.m_aarrggbb, 16, str);  m_light.m_diffuse.a() = 0xFF;
-				m_edit_specular        .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractIntC(m_light.m_specular.m_aarrggbb, 16, str); m_light.m_specular.a() = 0;
-				m_edit_spec_power      .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealC(m_light.m_specular_power, str);
-				m_edit_spot_range      .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealC(m_light.m_range, str);
-				m_edit_spot_inner      .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealC(m_light.m_inner_cos_angle, str); m_light.m_inner_cos_angle = pr::Cos(pr::DegreesToRadians(m_light.m_inner_cos_angle));
-				m_edit_spot_outer      .GetWindowText(str, PR_COUNTOF(str)); pr::str::ExtractRealC(m_light.m_outer_cos_angle, str); m_light.m_outer_cos_angle = pr::Cos(pr::DegreesToRadians(m_light.m_outer_cos_angle));
-
-				// Enable/Disable controls
 				m_edit_position      .EnableWindow(m_light.m_type == ELight::Point       || m_light.m_type == ELight::Spot);
 				m_edit_direction     .EnableWindow(m_light.m_type == ELight::Directional || m_light.m_type == ELight::Spot);
 				m_check_cam_rel      .EnableWindow(m_light.m_type != ELight::Ambient);

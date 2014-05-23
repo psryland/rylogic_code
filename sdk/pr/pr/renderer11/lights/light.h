@@ -15,19 +15,19 @@ namespace pr
 	{
 		struct Light
 		{
-			v4           m_position;
-			v4           m_direction;
-			ELight       m_type;
-			Colour32     m_ambient;
-			Colour32     m_diffuse;
-			Colour32     m_specular;
-			float        m_specular_power;
-			float        m_inner_cos_angle;
-			float        m_outer_cos_angle;
-			float        m_range;
-			float        m_falloff;
-			bool         m_cast_shadows;
-			bool         m_on;
+			v4       m_position;        // Position, only valid for point,spot lights
+			v4       m_direction;       // Direction, only valid for directional,spot lights
+			ELight   m_type;            // One of ambient, directional, point, spot
+			Colour32 m_ambient;         // Ambient light colour
+			Colour32 m_diffuse;         // Main light colour
+			Colour32 m_specular;        // Specular light colour
+			float    m_specular_power;  // Specular power (controls specular spot size)
+			float    m_inner_cos_angle; // Spot light inner angle 100% light
+			float    m_outer_cos_angle; // Spot light outer angle 0% light
+			float    m_range;           // Light range, only valid for point,spot lights
+			float    m_falloff;         // Intensity falloff per unit distance
+			float    m_cast_shadow;     // Shadow cast range, 0 for off
+			bool     m_on;              // True if this light is on
 
 			Light();
 			bool IsValid() const;

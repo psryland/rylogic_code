@@ -51,7 +51,12 @@ namespace pr.container
 		protected override void ClearItems()
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T)));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 
 			// Reset event is raised from attached handler
 			base.ClearItems();
@@ -61,7 +66,12 @@ namespace pr.container
 		protected override void InsertItem(int index, T item)
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemPreAdd, -1, item));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, -1, item);
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 
 			base.InsertItem(index, item);
 
@@ -74,7 +84,12 @@ namespace pr.container
 		{
 			var item = this[index];
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, item));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, item);
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 			
 			base.RemoveItem(index);
 
@@ -88,9 +103,19 @@ namespace pr.container
 			var old = this[index];
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, old));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreRemove, index, old);
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemPreAdd, index, item));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, index, item);
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 
 			base.SetItem(index, item);
 
@@ -107,7 +132,12 @@ namespace pr.container
 		protected override void ApplySortCore(System.ComponentModel.PropertyDescriptor prop, System.ComponentModel.ListSortDirection direction)
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.PreReordered, -1, default(T)));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.PreReordered, -1, default(T));
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 			
 			base.ApplySortCore(prop, direction);
 
@@ -119,7 +149,12 @@ namespace pr.container
 		public new void ResetBindings()
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T)));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 
 			// Reset event is raised from attached handler
 			base.ResetBindings();
@@ -129,7 +164,12 @@ namespace pr.container
 		public new void ResetItem(int position)
 		{
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.PreReset, position, this[position]));
+			{
+				var args = new ListChgEventArgs<T>(ListChg.PreReset, position, this[position]);
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
 
 			// Reset event is raised from attached handler
 			base.ResetItem(position);

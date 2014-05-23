@@ -80,21 +80,22 @@ void Engine::ConstructCommon()
 
 	// Setup the terrain object
 	RigidbodySettings terrain_settings;
-	terrain_settings.m_object_to_world			.identity();
-	terrain_settings.m_shape					= &m_terrain_shape.set(m_settings.m_terrain, m4x4Identity, 0, EShapeFlags_None).m_base;
-	terrain_settings.m_type						= ERigidbody_Terrain;
-	terrain_settings.m_motion_type				= EMotion_Static;
-	terrain_settings.m_mass_properties.m_mass	= maths::float_max;
+	terrain_settings.m_object_to_world        = m4x4Identity;
+	terrain_settings.m_shape                  = &m_terrain_shape.set(m_settings.m_terrain, m4x4Identity, 0, EShapeFlags_None).m_base;
+	terrain_settings.m_type                   = ERigidbody_Terrain;
+	terrain_settings.m_motion_type            = EMotion_Static;
+	terrain_settings.m_mass_properties.m_mass = maths::float_max;
 	m_terrain_object.Create(terrain_settings);
-	m_terrain_object.m_ws_bbox.m_radius			= v4Max;
-	m_terrain_object.m_os_inv_inertia_tensor	= m3x4Zero;
-	m_terrain_object.m_os_inertia_tensor		= m3x4Identity * maths::float_max;
-	m_terrain_object.m_ws_inv_inertia_tensor	= m3x4Zero;
+	m_terrain_object.m_ws_bbox.m_radius      = v4Max;
+	m_terrain_object.m_os_inv_inertia_tensor = m3x4Zero;
+	m_terrain_object.m_os_inertia_tensor     = m3x4Identity * maths::float_max;
+	m_terrain_object.m_ws_inv_inertia_tensor = m3x4Zero;
 
-	m_stepping		= false;
-	m_frame_number	= 0;
+	m_stepping     = false;
+	m_frame_number = 0;
+
 	PR_EXPAND(PR_DBG_PHYSICS, m_time = 0.0f;)
-}			
+}
 
 // Add a rigid body to the engine
 void Engine::Register(ph::Rigidbody& rigid_body)
@@ -177,7 +178,6 @@ void Engine::Step(float elapsed_seconds)
 	m_constraints.Solve();
 
 	m_stepping = false;
-
 }PR_PROFILE_FRAME;PR_PROFILE_OUTPUT(120);}
 
 // Perform collision detection between two objects (ordered by their shape type)
@@ -547,7 +547,7 @@ void Engine::OnEvent(RBEvent const& e)
 //	{
 //		elasticity_t = -1.0f + (elasticity_t + 1.0f) * rel_velocity_t / m_settings.m_max_resting_speed;
 //	}
-//	
+//
 //	// Pi is the impulse required to reduce the normal component of rel_velocity to zero.
 //	// Pii is the impulse to reduce rel_velocity to zero
 //	// See article: A New Algebraic Rigid Body Collision Law Based On Impulse Space Considerations
@@ -564,7 +564,7 @@ void Engine::OnEvent(RBEvent const& e)
 //	{
 //		float kappa = dynamic_friction * (1.0f + elasticity_n) * Dot3(contact.m_normal, Pi) /
 //			(Abs(Dot3(contact.m_tangent, Pii)) - dynamic_friction * Dot3(contact.m_normal, Pdiff));
-//		
+//
 //		impulse = (1.0f + elasticity_n) * Pi + kappa * Pdiff;
 //	}
 //
