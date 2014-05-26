@@ -148,7 +148,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_set.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\thick_line.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\screen_space_shaders.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\dslighting.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\forward_render.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\steps\gbuffer.h" />
@@ -222,7 +222,7 @@
     <ClCompile Include="..\renderer11\shaders\shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\shader_manager.cpp" />
     <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp" />
-    <ClCompile Include="..\renderer11\shaders\thick_line.cpp" />
+    <ClCompile Include="..\renderer11\shaders\screen_space_shaders.cpp" />
     <ClCompile Include="..\renderer11\steps\dslighting.cpp" />
     <ClCompile Include="..\renderer11\steps\forward_render.cpp" />
     <ClCompile Include="..\renderer11\steps\gbuffer.cpp" />
@@ -282,9 +282,14 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
+    <None Include="..\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

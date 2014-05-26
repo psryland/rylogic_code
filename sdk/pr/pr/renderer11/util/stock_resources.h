@@ -40,7 +40,8 @@ namespace pr
 			x(ShadowMapFaceGS ,)\
 			x(ShadowMapLineGS ,)\
 			x(ShadowMapPS     ,)\
-			x(ThickLineListGS ,)
+			x(ThickLineListGS ,)\
+			x(ArrowHeadGS     ,)
 		PR_DEFINE_ENUM2(EStockShader, PR_ENUM);
 		#undef PR_ENUM
 	}

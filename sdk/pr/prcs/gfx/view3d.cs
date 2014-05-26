@@ -277,12 +277,27 @@ namespace pr.gfx
 			XButton1 = 3,
 			XButton2 = 4,
 		}
-		public enum EView3DLogLevel
+		public enum ELogLevel
 		{
 			Debug,
 			Info,
 			Warn,
 			Error,
+		}
+		[Flags] public enum EUpdateObject :int // Flags for partial update of a model
+		{
+			None        = 0     ,
+			All         = ~0    ,
+			Name        = 1 << 0,
+			Model       = 1 << 1,
+			Transform   = 1 << 2,
+			Children    = 1 << 3,
+			Colour      = 1 << 4,
+			ColourMask  = 1 << 5,
+			Wireframe   = 1 << 6,
+			Visibility  = 1 << 7,
+			Animation   = 1 << 8,
+			StepData    = 1 << 9,
 		}
 		#endregion
 
@@ -344,22 +359,6 @@ namespace pr.gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		public struct UpdateModelKeep
-		{
-			public bool m_name       ;
-			public bool m_transform  ;
-			public bool m_context_id ;
-			public bool m_children   ;
-			public bool m_colour     ;
-			public bool m_colour_mask;
-			public bool m_wireframe  ;
-			public bool m_visibility ;
-			public bool m_animation  ;
-			public bool m_step_data  ;
-			public bool m_user_data  ;
-		}
-
-		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
 			public IntPtr m_diff_tex;
@@ -382,7 +381,7 @@ namespace pr.gfx
 			public float    m_outer_cos_angle;
 			public float    m_range;
 			public float    m_falloff;
-			public bool     m_cast_shadows;
+			public float    m_cast_shadow;
 
 			/// <summary>Return properties for an ambient light source</summary>
 			public static Light Ambient(Colour32 ambient)
@@ -397,12 +396,12 @@ namespace pr.gfx
 					m_diffuse        = Colour32.Zero,
 					m_specular       = Colour32.Zero,
 					m_specular_power = 0f,
-					m_cast_shadows   = false,
+					m_cast_shadow    = 0f,
 				};
 			}
 
 			/// <summary>Return properties for a directional light source</summary>
-			public static Light Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
+			public static Light Directional(v4 direction, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
 			{
 				return new Light
 				{
@@ -414,12 +413,12 @@ namespace pr.gfx
 					m_diffuse        = diffuse,
 					m_specular       = specular,
 					m_specular_power = spec_power,
-					m_cast_shadows   = cast_shadows,
+					m_cast_shadow    = cast_shadow,
 				};
 			}
 
 			/// <summary>Return properties for a point light source</summary>
-			public static Light Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, bool cast_shadows)
+			public static Light Point(v4 position, Colour32 ambient, Colour32 diffuse, Colour32 specular, float spec_power, float cast_shadow)
 			{
 				return new Light
 				{
@@ -431,7 +430,7 @@ namespace pr.gfx
 					m_diffuse        = diffuse,
 					m_specular       = specular,
 					m_specular_power = spec_power,
-					m_cast_shadows   = cast_shadows,
+					m_cast_shadow    = cast_shadow,
 				};
 			}
 		}
@@ -566,7 +565,7 @@ namespace pr.gfx
 
 		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
 		public event LogOutputCB OnLog;
-		public delegate void LogOutputCB(EView3DLogLevel level, long timestamp, string msg);
+		public delegate void LogOutputCB(ELogLevel level, long timestamp, string msg);
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
 		public event SettingsChangedCB OnSettingsChanged;
@@ -696,7 +695,7 @@ namespace pr.gfx
 		}
 
 		/// <summary>Callback function from the Dll when a log event occurs</summary>
-		private void LogCB(EView3DLogLevel level, long timestamp, string msg)
+		private void LogCB(ELogLevel level, long timestamp, string msg)
 		{
 			if (OnLog != null) OnLog(level, timestamp, msg);
 			else Debug.Write(level.ToString() + "|" + timestamp.ToString() + "| " + msg);
@@ -1136,41 +1135,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Change the model for this object</summary>
-			public void UpdateModel(string ldr_script, Keep keep = null)
+			public void UpdateModel(string ldr_script, EUpdateObject flags = EUpdateObject.All)
 			{
-				keep = keep ?? new Keep();
-				View3D_ObjectUpdateModel(m_handle, ldr_script, ref keep.m_data, false);
-			}
-			public enum EKeep { None, All };
-			public class Keep
-			{
-				internal UpdateModelKeep m_data;
-				public bool Name       { get { return m_data.m_name       ; } set { m_data.m_name        = value; } }
-				public bool Transform  { get { return m_data.m_transform  ; } set { m_data.m_transform   = value; } }
-				public bool ContextId  { get { return m_data.m_context_id ; } set { m_data.m_context_id  = value; } }
-				public bool Children   { get { return m_data.m_children   ; } set { m_data.m_children    = value; } }
-				public bool Colour     { get { return m_data.m_colour     ; } set { m_data.m_colour      = value; } }
-				public bool ColourMask { get { return m_data.m_colour_mask; } set { m_data.m_colour_mask = value; } }
-				public bool Wireframe  { get { return m_data.m_wireframe  ; } set { m_data.m_wireframe   = value; } }
-				public bool Visibility { get { return m_data.m_visibility ; } set { m_data.m_visibility  = value; } }
-				public bool Animation  { get { return m_data.m_animation  ; } set { m_data.m_animation   = value; } }
-				public bool StepData   { get { return m_data.m_step_data  ; } set { m_data.m_step_data   = value; } }
-				public bool UserData   { get { return m_data.m_user_data  ; } set { m_data.m_user_data   = value; } }
-				public Keep(EKeep keep = EKeep.None)
-				{
-					m_data = new UpdateModelKeep();
-					m_data.m_name        = keep == EKeep.All;
-					m_data.m_transform   = keep == EKeep.All;
-					m_data.m_context_id  = keep == EKeep.All;
-					m_data.m_children    = keep == EKeep.All;
-					m_data.m_colour      = keep == EKeep.All;
-					m_data.m_colour_mask = keep == EKeep.All;
-					m_data.m_wireframe   = keep == EKeep.All;
-					m_data.m_visibility  = keep == EKeep.All;
-					m_data.m_animation   = keep == EKeep.All;
-					m_data.m_step_data   = keep == EKeep.All;
-					m_data.m_user_data   = keep == EKeep.All;
-				}
+				View3D_ObjectUpdate(m_handle, ldr_script, flags);
 			}
 
 			/// <summary>Modify the model of this object</summary>
@@ -1468,7 +1435,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
 		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdateModel        (HObject obj, string ldr_script, ref UpdateModelKeep keep, bool async);
+		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);

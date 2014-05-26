@@ -7,7 +7,7 @@
 #ifndef PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
 #define PR_RDR_SHADER_SHADOW_MAP_CBUF_HLSL
 
-#include "..\cbuf.hlsli"
+#include "../types.hlsli"
 
 // Camera to world transform and view frustum
 cbuffer CBufFrame :cbuf_bank(b0)

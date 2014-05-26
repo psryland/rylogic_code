@@ -83,7 +83,8 @@ namespace pr
 			RSBlock                   m_rsb;       // The rasterizer state for the shader
 			DSBlock                   m_dsb;       // The depth buffering state for the shader
 			string32                  m_name;      // Human readable id for the shader
-
+			RdrId                     m_orig_id;   // Id of the shader this is a clone of (used for debugging)
+			
 			virtual ~ShaderBase() {}
 
 			// Setup the shader ready to be used on 'dle'
@@ -94,11 +95,11 @@ namespace pr
 			virtual void Cleanup(D3DPtr<ID3D11DeviceContext>&) {}
 
 			// Create a clone of this shader
-			ShaderPtr Clone(RdrId new_id, char const* new_name)
+			ShaderPtr Clone(RdrId new_id, char const* new_name = nullptr)
 			{
 				return MakeClone(new_id, new_name);
 			}
-			template <typename ShaderType> pr::RefPtr<ShaderType> Clone(RdrId new_id, char const* new_name)
+			template <typename ShaderType> pr::RefPtr<ShaderType> Clone(RdrId new_id, char const* new_name = nullptr)
 			{
 				return MakeClone(new_id, new_name);
 			}
@@ -126,7 +127,8 @@ namespace pr
 				,m_bsb()
 				,m_rsb()
 				,m_dsb()
-				,m_name(name)
+				,m_name(name ? name : "")
+				,m_orig_id(m_id)
 			{}
 
 			// Create a new shader that is a copy of this shader
@@ -160,6 +162,7 @@ namespace pr
 				shdr->m_bsb      = m_bsb;
 				shdr->m_rsb      = m_rsb;
 				shdr->m_dsb      = m_dsb;
+				shdr->m_orig_id  = m_orig_id;
 				return shdr;
 			}
 

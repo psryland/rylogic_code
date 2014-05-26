@@ -105,7 +105,7 @@ namespace ldr
 		}
 
 		// Allow the navigation manager to adjust the camera, ready for this frame
-		//m_nav.PositionCamera();
+		m_nav.PositionCamera();
 
 		// Set the camera view
 		m_scene.SetView(m_cam);
@@ -299,13 +299,26 @@ namespace ldr
 	// An object has been added to the object manager
 	void Main::OnEvent(pr::ldr::Evt_LdrObjectAdd const& e)
 	{
+		// Link it's step object with the others
 		pr::chain::Insert(m_step_objects, e.m_obj->m_step.m_link);
+
+		// If we're using deferred rendering and the object is a light source,
+		// add it to the lighting pass. If the light is a shadow caster, add a render step for it
+		auto lighting_pass = m_scene.FindRStep(pr::rdr::ERenderStep::DSLighting);
+		if (lighting_pass != nullptr)
+		{
+			// todo
+		}
 	}
 
 	// An object has been deleted from the object manager
 	void Main::OnEvent(pr::ldr::Evt_LdrObjectDelete const& e)
 	{
+		// Remove the step object
 		pr::chain::Remove(e.m_obj->m_step.m_link);
+
+		// If we're using deferred rendering and the object is a light source,
+		// remove it from the lighting pass. If the light is a shadow caster, remove it's render step
 	}
 
 	// The selected objects have changed
@@ -318,6 +331,20 @@ namespace ldr
 		// Request a refresh when the selection changes (if the selection box is visible)
 		if (m_settings.m_ShowSelectionBox)
 			pr::events::Send(ldr::Event_Refresh());
+	}
+
+	// A camera description has been read from a script
+	void Main::OnEvent(pr::ldr::Evt_LdrSetCamera const& e)
+	{
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::C2W     ) m_cam.CameraToWorld   (e.m_cam.CameraToWorld());
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Focus   ) m_cam.FocusDist       (e.m_cam.FocusDist());
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Align   ) m_cam.SetAlign        (e.m_cam.m_align);
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Aspect  ) m_cam.Aspect          (e.m_cam.m_aspect);
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::FovY    ) m_cam.FovY            (e.m_cam.FovY());
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Near    ) m_cam.m_near           = e.m_cam.m_near;
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Far     ) m_cam.m_far            = e.m_cam.m_far;
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::AbsClip ) m_cam.m_focus_rel_clip = e.m_cam.m_focus_rel_clip;
+		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Ortho   ) m_cam.m_orthographic   = e.m_cam.m_orthographic;
 	}
 
 	// Called when the scene needs updating

@@ -26,7 +26,7 @@ namespace pr
 			FwdShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward_vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_vs.cso"));
 			}
 		};
 
@@ -37,7 +37,7 @@ namespace pr
 			FwdShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "forward_ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "forward_ps.cso"));
 			}
 		};
 

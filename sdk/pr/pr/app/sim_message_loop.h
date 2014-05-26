@@ -71,15 +71,48 @@ namespace pr
 			// A sorting predicate
 			static bool Order(Context const* lhs, Context const* rhs) { return lhs->next_step_time() < rhs->next_step_time(); }
 		};
-
 		pr::Array<Context*> m_contexts;
+
+		struct Stats
+		{
+			size_t m_long_frames;
+			size_t m_dropped_frames;
+			size_t m_sequential_steps_limit_reached;
+
+			Stats()
+				:m_long_frames()
+				,m_dropped_frames()
+				,m_sequential_steps_limit_reached()
+			{}
+			operator bool() const
+			{
+				return m_long_frames || m_dropped_frames || m_sequential_steps_limit_reached;
+			}
+			std::string ToString() const
+			{
+				return pr::Fmt(
+					"Frame stats:\r\n"
+					"  Long Frames: %d\r\n"
+					"  Dropped Frames: %d\r\n"
+					"  Seq Limit: %d\r\n"
+					,m_long_frames
+					,m_dropped_frames
+					,m_sequential_steps_limit_reached);
+			}
+		};
+		Stats m_stats;
 
 	public:
 		SimMsgLoop()
 			:m_contexts()
+			,m_stats()
 		{}
 		~SimMsgLoop()
 		{
+			if (m_stats)
+				OutputDebugStringA(m_stats.ToString().c_str());
+
+			//PR_LOG(m_log, Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
 			for (auto i = begin(m_contexts), iend = end(m_contexts); i != iend; ++i)
 				delete *i;
 		}
@@ -95,13 +128,17 @@ namespace pr
 		// Runs the message loop until WM_QUIT
 		virtual int Run()
 		{
-			// Initialise 'm_msg'
-			::PeekMessage(&m_msg, 0, 0, 0, PM_NOREMOVE);
-			while (m_msg.message != WM_QUIT)
+			for (;;)
 			{
 				// Pumping needed?
 				if (::PeekMessage(&m_msg, 0, 0, 0, PM_REMOVE))
 				{
+					if (m_msg.message == WM_QUIT)
+					{
+						// WM_QUIT == exit loop
+						break;
+					}
+
 					if (!PreTranslateMessage(&m_msg))
 					{
 						::TranslateMessage(&m_msg);
@@ -129,6 +166,7 @@ namespace pr
 						const unsigned int max_sequential_step_count = 10;
 						if (elapsed < ctx.m_ticks_per_frame || ++ctx.m_sequential_step_count == max_sequential_step_count)
 						{
+							m_stats.m_sequential_steps_limit_reached += (ctx.m_sequential_step_count == max_sequential_step_count);
 							ctx.m_sequential_step_count = 0;
 							break;
 						}
@@ -140,6 +178,7 @@ namespace pr
 							auto time_skip = (frames_behind - 1) * ctx.m_ticks_per_frame;
 							ctx.m_last_time += time_skip;
 							elapsed -= time_skip;
+							m_stats.m_dropped_frames += static_cast<size_t>(frames_behind);
 							//PR_LOG(m_log, Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
 						}
 
@@ -149,8 +188,11 @@ namespace pr
 							sw.start(true);
 							ctx.m_step(pr::rtc::ToSec(step_interval));
 							sw.stop();
-							//if (sw.period() > ctx.m_ticks_per_frame)
+							if (sw.period() > ctx.m_ticks_per_frame)
+							{
+								++m_stats.m_long_frames;
 								//PR_LOG(m_log, Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
+							}
 						}
 						ctx.m_last_time += step_interval;
 

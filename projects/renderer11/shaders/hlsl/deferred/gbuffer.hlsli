@@ -36,7 +36,7 @@ PSOut_GBuffer WriteGBuffer(float4 diff, float4 ws_pos, float4 ws_norm)
 	PSOut_GBuffer Out;
 	Out.diff = float4(diff.xyz, sign(ws_norm.z) * 0.5f + 0.5f);
 	Out.ws_norm = ws_norm.xy * 0.5f + 0.5f;
-	Out.cs_depth = length(ws_pos - m_c2w[3]);
+	Out.cs_depth = length(ws_pos - m_cam.m_c2w[3]);
 	return Out;
 }
 

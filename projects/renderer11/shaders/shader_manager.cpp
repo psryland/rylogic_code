@@ -67,6 +67,7 @@ namespace pr
 
 			// Other shaders
 			CreateShader<ThickLineListShaderGS>();
+			CreateShader<ArrowHeadShaderGS>();
 		}
 
 		// Get (or create) a shader of type 'TShdr'.

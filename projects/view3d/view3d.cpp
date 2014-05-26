@@ -858,7 +858,7 @@ VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DDrawset drawset)
 		light.m_outer_cos_angle =  drawset->m_light.m_outer_cos_angle;
 		light.m_range           =  drawset->m_light.m_range;
 		light.m_falloff         =  drawset->m_light.m_falloff;
-		light.m_cast_shadows    =  drawset->m_light.m_cast_shadows;
+		light.m_cast_shadow     =  drawset->m_light.m_cast_shadow;
 		light.m_on              =  drawset->m_light.m_on;
 		return light;
 	}
@@ -887,7 +887,7 @@ VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3
 		drawset->m_light.m_outer_cos_angle = light.m_outer_cos_angle;
 		drawset->m_light.m_range           = light.m_range;
 		drawset->m_light.m_falloff         = light.m_falloff;
-		drawset->m_light.m_cast_shadows    = light.m_cast_shadows != 0;
+		drawset->m_light.m_cast_shadow     = light.m_cast_shadow;
 		drawset->m_light.m_on              = light.m_on != 0;
 	}
 	catch (std::exception const& ex)
@@ -1094,35 +1094,14 @@ VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DC
 }
 
 // Replace the model and all child objects of 'obj' with the results of 'ldr_script'
-VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdateModel(View3DObject object, char const* ldr_script, View3DUpdateModelKeep const& keep, BOOL async)
+VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdate(View3DObject object, char const* ldr_script, EView3DUpdateObject flags)
 {
 	LOCK_GUARD;
 	try
 	{
 		if (!object) throw std::exception("object is null");
 		
-		// Create a new object
-		View3DObject tmp;
-		View3D_ObjectCreateLdr(ldr_script, object->m_context_id, tmp, async);
-
-		// Replace the model of 'object' with the model from 'tmp'
-		pr::ldr::LdrObject::UpdateModelKeep k;
-		k.m_name        = keep.m_name        != 0;
-		k.m_transform   = keep.m_transform   != 0;
-		k.m_context_id  = keep.m_context_id  != 0;
-		k.m_children    = keep.m_children    != 0;
-		k.m_colour      = keep.m_colour      != 0;
-		k.m_colour_mask = keep.m_colour_mask != 0;
-		k.m_wireframe   = keep.m_wireframe   != 0;
-		k.m_visibility  = keep.m_visibility  != 0;
-		k.m_animation   = keep.m_animation   != 0;
-		k.m_step_data   = keep.m_step_data   != 0;
-		k.m_user_data   = keep.m_user_data   != 0;
-		object->UpdateModel(std::move(*tmp), k);
-
-		// Remove the temporary object
-		View3D_ObjectDelete(tmp);
-
+		pr::ldr::Update(Rdr().m_renderer, object, ldr_script, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
 		return EView3DResult::Success;
 	}
 	catch (std::exception const& ex)

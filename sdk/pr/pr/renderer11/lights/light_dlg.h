@@ -32,10 +32,10 @@ namespace pr
 			CButton m_btn_directional;
 			CButton m_btn_point;
 			CButton m_btn_spot;
+			CButton m_check_cam_rel;
 			CEdit   m_edit_position;
 			CEdit   m_edit_direction;
-			CButton m_check_cam_rel;
-			CButton m_check_cast_shadows;
+			CEdit   m_edit_shadow_range;
 			CEdit   m_edit_ambient;
 			CEdit   m_edit_diffuse;
 			CEdit   m_edit_specular;
@@ -51,7 +51,7 @@ namespace pr
 			enum
 			{
 				IDC_RADIO_AMBIENT=1000, IDC_RADIO_DIRECTIONAL, IDC_RADIO_POINT, IDC_RADIO_SPOT,
-				IDC_EDIT_POSITION, IDC_EDIT_DIRECTION, IDC_CHECK_CAM_RELATIVE, IDC_CHECK_CAST_SHADOWS,
+				IDC_EDIT_POSITION, IDC_EDIT_DIRECTION, IDC_CHECK_CAM_RELATIVE, IDC_EDIT_SHADOW_RANGE,
 				IDC_EDIT_AMBIENT, IDC_EDIT_DIFFUSE, IDC_EDIT_SPECULAR, IDC_EDIT_SPECULAR_POWER,
 				IDC_EDIT_SPOT_INNER_ANGLE, IDC_EDIT_SPOT_OUTER_ANGLE, IDC_EDIT_SPOT_RANGE
 			};
@@ -68,8 +68,9 @@ namespace pr
 				CONTROL_AUTORADIOBUTTON(TEXT("Directional"), IDC_RADIO_DIRECTIONAL, 9, 39, 49, 10, WS_TABSTOP, 0)
 				CONTROL_EDITTEXT(IDC_EDIT_POSITION, 87, 7, 94, 14, WS_GROUP|ES_AUTOHSCROLL, 0)
 				CONTROL_EDITTEXT(IDC_EDIT_DIRECTION, 87, 23, 94, 14, ES_AUTOHSCROLL, 0)
-				CONTROL_AUTOCHECKBOX(TEXT("Camera Relative:"), IDC_CHECK_CAM_RELATIVE, 87, 40, 92, 8, BS_LEFT, WS_EX_RIGHT)
-				CONTROL_AUTOCHECKBOX(TEXT("Cast Shadows:"), IDC_CHECK_CAST_SHADOWS, 95, 52, 84, 8, BS_LEFT, WS_EX_RIGHT)
+				CONTROL_AUTOCHECKBOX(TEXT("Camera Relative:"), IDC_CHECK_CAM_RELATIVE, 87, 38, 92, 8, BS_RIGHT, WS_EX_RIGHT)
+				CONTROL_LTEXT(TEXT("Cast Shadows:"), IDC_STATIC, 10, 51, 74, 8, BS_RIGHT, WS_EX_RIGHT)
+				CONTROL_EDITTEXT(IDC_EDIT_SHADOW_RANGE, 87, 48, 94, 14, ES_AUTOHSCROLL, 0)
 				CONTROL_EDITTEXT(IDC_EDIT_AMBIENT, 87, 64, 94, 14, ES_AUTOHSCROLL, 0)
 				CONTROL_EDITTEXT(IDC_EDIT_DIFFUSE, 87, 80, 94, 14, ES_AUTOHSCROLL, 0)
 				CONTROL_EDITTEXT(IDC_EDIT_SPECULAR, 87, 96, 94, 14, ES_AUTOHSCROLL, 0)
@@ -92,13 +93,13 @@ namespace pr
 			END_CONTROLS_MAP()
 			BEGIN_MSG_MAP(LightingDlg)
 				MSG_WM_INITDIALOG(OnInitDialog)
-				COMMAND_ID_HANDLER_EX(IDOK                  ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDRETRY               ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDCANCEL              ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDC_RADIO_AMBIENT     ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDC_RADIO_DIRECTIONAL ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDC_RADIO_POINT       ,OnCommand)
-				COMMAND_ID_HANDLER_EX(IDC_RADIO_SPOT        ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDOK                   ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDRETRY                ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDCANCEL               ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDC_RADIO_AMBIENT      ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDC_RADIO_DIRECTIONAL  ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDC_RADIO_POINT        ,OnCommand)
+				COMMAND_ID_HANDLER_EX(IDC_RADIO_SPOT         ,OnCommand)
 			END_MSG_MAP()
 
 			explicit LightingDlg(Preview const& preview)
@@ -122,10 +123,10 @@ namespace pr
 				m_btn_directional    .Attach(GetDlgItem(IDC_RADIO_DIRECTIONAL));
 				m_btn_point          .Attach(GetDlgItem(IDC_RADIO_POINT));
 				m_btn_spot           .Attach(GetDlgItem(IDC_RADIO_SPOT));
+				m_check_cam_rel      .Attach(GetDlgItem(IDC_CHECK_CAM_RELATIVE));
 				m_edit_position      .Attach(GetDlgItem(IDC_EDIT_POSITION));
 				m_edit_direction     .Attach(GetDlgItem(IDC_EDIT_DIRECTION));
-				m_check_cam_rel      .Attach(GetDlgItem(IDC_CHECK_CAM_RELATIVE));
-				m_check_cast_shadows .Attach(GetDlgItem(IDC_CHECK_CAST_SHADOWS));
+				m_edit_shadow_range  .Attach(GetDlgItem(IDC_EDIT_SHADOW_RANGE));
 				m_edit_ambient       .Attach(GetDlgItem(IDC_EDIT_AMBIENT));
 				m_edit_diffuse       .Attach(GetDlgItem(IDC_EDIT_DIFFUSE));
 				m_edit_specular      .Attach(GetDlgItem(IDC_EDIT_SPECULAR));
@@ -174,10 +175,10 @@ namespace pr
 				ids[ELight::Spot]        = IDC_RADIO_SPOT;
 
 				CheckRadioButton(IDC_RADIO_AMBIENT, IDC_RADIO_SPOT, ids[m_light.m_type]);
+				m_check_cam_rel      .SetCheck(m_camera_relative);
 				m_edit_position      .SetWindowTextA(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_position.x ,m_light.m_position.y ,m_light.m_position.z));
 				m_edit_direction     .SetWindowTextA(pr::FmtS("%3.3f %3.3f %3.3f" ,m_light.m_direction.x ,m_light.m_direction.y ,m_light.m_direction.z));
-				m_check_cam_rel      .SetCheck(m_camera_relative);
-				m_check_cast_shadows .SetCheck(m_light.m_cast_shadows);
+				m_edit_shadow_range  .SetWindowTextA(pr::FmtS("%3.3f" ,m_light.m_cast_shadow));
 				m_edit_ambient       .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_ambient.m_aarrggbb ));
 				m_edit_diffuse       .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_diffuse.m_aarrggbb ));
 				m_edit_specular      .SetWindowTextA(pr::FmtS("%6.6X" ,0xFFFFFF & m_light.m_specular.m_aarrggbb));
@@ -210,7 +211,8 @@ namespace pr
 				m_camera_relative = m_check_cam_rel.GetCheck() != 0;
 				
 				// Cast shadows
-				m_light.m_cast_shadows = m_check_cast_shadows.GetCheck() != 0;
+				m_edit_shadow_range.GetWindowTextA(str, PR_COUNTOF(str));
+				m_light.m_cast_shadow = pr::To<float>(str);
 
 				// Ambient
 				m_edit_ambient.GetWindowTextA(str, PR_COUNTOF(str));
@@ -250,7 +252,7 @@ namespace pr
 				m_edit_position      .EnableWindow(m_light.m_type == ELight::Point       || m_light.m_type == ELight::Spot);
 				m_edit_direction     .EnableWindow(m_light.m_type == ELight::Directional || m_light.m_type == ELight::Spot);
 				m_check_cam_rel      .EnableWindow(m_light.m_type != ELight::Ambient);
-				m_check_cast_shadows .EnableWindow(m_light.m_type != ELight::Ambient);
+				m_edit_shadow_range  .EnableWindow(m_light.m_type != ELight::Ambient);
 				m_edit_ambient       .EnableWindow(true);
 				m_edit_diffuse       .EnableWindow(m_light.m_type != ELight::Ambient);
 				m_edit_specular      .EnableWindow(m_light.m_type != ELight::Ambient);

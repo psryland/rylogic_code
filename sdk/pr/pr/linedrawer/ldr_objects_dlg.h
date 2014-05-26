@@ -28,7 +28,7 @@ namespace pr
 		{
 			std::shared_ptr<ObjectManagerDlgImpl> m_dlg; // pImpl pattern
 			std::set<ContextId> m_ignore_ctxids;         // Context ids not to display in the object manager
-			mutable pr::BBox m_scene_bbox;        // A cached bounding box of all objects we know about (lazy updated)
+			mutable pr::BBox m_scene_bbox;               // A cached bounding box of all objects we know about (lazy updated)
 
 			ObjectManagerDlg(ObjectManagerDlg const&);
 			ObjectManagerDlg& operator=(ObjectManagerDlg const&);

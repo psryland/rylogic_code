@@ -234,14 +234,14 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_set.h">
       <Filter>shaders</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\thick_line.h">
-      <Filter>shaders</Filter>
-    </ClInclude>
     <ClInclude Include="..\renderer11\directxtex\DirectXTex.h">
       <Filter>directxtex</Filter>
     </ClInclude>
     <ClInclude Include="..\renderer11\util\forward_private.h">
       <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\screen_space_shaders.h">
+      <Filter>shaders</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -377,10 +377,10 @@
     <ClCompile Include="..\renderer11\shaders\shader.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\shaders\thick_line.cpp">
+    <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
-    <ClCompile Include="..\renderer11\shaders\shadow_map_shader.cpp">
+    <ClCompile Include="..\renderer11\shaders\screen_space_shaders.cpp">
       <Filter>shaders</Filter>
     </ClCompile>
   </ItemGroup>
@@ -400,9 +400,6 @@
     <None Include="..\renderer11\shaders\hlsl\cbuf.hlsli">
       <Filter>shaders\hlsl</Filter>
     </None>
-    <None Include="..\renderer11\shaders\hlsl\screenspace\thick_line_cbuf.hlsli">
-      <Filter>shaders\hlsl\screenspace</Filter>
-    </None>
     <None Include="..\renderer11\directxtex\DirectXTex.inl">
       <Filter>directxtex</Filter>
     </None>
@@ -417,6 +414,9 @@
     </None>
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli">
       <Filter>shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
+      <Filter>shaders\hlsl\screenspace</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -433,6 +433,9 @@
       <Filter>shaders\hlsl\forward</Filter>
     </CustomBuild>
     <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
       <Filter>shaders\hlsl\screenspace</Filter>
     </CustomBuild>
   </ItemGroup>

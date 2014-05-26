@@ -25,7 +25,7 @@ namespace pr
 			GBufferShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer_vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "gbuffer_vs.cso"));
 			}
 		};
 
@@ -36,7 +36,7 @@ namespace pr
 			GBufferShaderPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "gbuffer_ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "gbuffer_ps.cso"));
 			}
 		};
 

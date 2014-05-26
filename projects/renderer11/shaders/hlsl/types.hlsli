@@ -14,6 +14,15 @@ static const float TINY = 0.0001f;
 #define HasNormals (m_geom.x == 1)
 #define HasTex0    (m_geom.y == 1)
 
+// Camera
+struct Camera
+{
+	row_major float4x4 m_c2w; // camera to world
+	row_major float4x4 m_c2s; // camera to screen
+	row_major float4x4 m_w2c; // world to camera
+	row_major float4x4 m_w2s; // world to screen
+};
+
 // Lights
 struct Light
 {

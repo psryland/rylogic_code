@@ -38,6 +38,7 @@ namespace pr
 			bool                  m_nav_enabled;  // True to allow default mouse navigation
 			LONG                  m_click_thres;  // Single click time threshold in ms
 			LONG                  m_down_at[4];   // Button down timestamp
+			int                   m_exit_code;    // Exit code
 
 			MainGUI()
 				:m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
@@ -48,6 +49,7 @@ namespace pr
 				,m_nav_enabled(false)
 				,m_click_thres(200)
 				,m_down_at()
+				,m_exit_code()
 			{
 				// Initialise common controls support
 				AtlInitCommonControls(IccClasses());
@@ -63,10 +65,15 @@ namespace pr
 			}
 			virtual ~MainGUI()
 			{
+				// It's too late to call DestroyWindow here, because that posts a WM_DESTROY
+				// message to the thread queue which should be handled resulting in a WM_QUIT
+				// being posted which causes the msg loop to return.
+				PR_ASSERT(PR_DBG, m_main == nullptr && m_hWnd == 0, "Destructing MainGUI before DestroyWindow has been called");
+				
 				// This should only happen during an unhandled exception
-				PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
-				if (IsWindow())
-					DestroyWindow();
+				//PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
+				//if (IsWindow())
+				//	DestroyWindow();
 				
 				pr::app::Module().RemoveMessageLoop();
 			}
@@ -143,13 +150,17 @@ namespace pr
 				CMessageLoop* loop = pr::app::Module().GetMessageLoop();
 				loop->RemoveMessageFilter(this);
 				loop->RemoveIdleHandler(this);
-				SetMsgHandled(FALSE);
+				
+				// Post WM_QUIT which will cause the msg_loop to exit
+				::PostQuitMessage(m_exit_code);
 			}
 			virtual void CloseApp(int exit_code)
 			{
+				PR_ASSERT(PR_DBG, GetCurrentThreadId() == m_my_thread_id, "Close must be called from the thread with the associated message loop");
+
+				// Post the WM_DESTROY message to this thread's queue
+				m_exit_code = exit_code;
 				DestroyWindow();
-				::PostQuitMessage(exit_code);
-				m_hWnd = 0;
 			}
 
 			// Idle handler

@@ -81,7 +81,7 @@ namespace pr
 
 			// Set the frame constants
 			hlsl::fwd::CBufFrame cb = {};
-			SetViewConstants(m_scene->m_view, cb);
+			SetViewConstants(m_scene->m_view, cb.m_cam);
 			SetLightingConstants(m_scene->m_global_light, cb.m_global_light);
 			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb.m_shadow);
 			WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::PS);

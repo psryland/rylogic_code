@@ -4,6 +4,7 @@
 //***************************************************************************************************
 
 #pragma once
+
 #ifndef PR_LDR_OBJECT_H
 #define PR_LDR_OBJECT_H
 
@@ -43,15 +44,16 @@ namespace pr
 		static HTREEITEM const INVALID_TREE_ITEM =  0;
 		static int const       INVALID_LIST_ITEM = -1;
 
-		// Ldr object types
+		#pragma region Ldr object types
 		#define PR_ENUM(x)\
 			x(Unknown          ,= 0x062170b2)\
 			x(Line             ,= 0x10d28008)\
 			x(LineD            ,= 0x07512a2a)\
-			x(LineList         ,= 0x0e9c633b)\
+			x(LineStrip        ,= 0x0702D776)\
 			x(LineBox          ,= 0x11d1a8c4)\
 			x(Grid             ,= 0x08D503AF)\
 			x(Spline           ,= 0x1f45c36e)\
+			x(Arrow            ,= 0x0A85DC58)\
 			x(Circle           ,= 0x015ed657)\
 			x(Rect             ,= 0x12E8C1AD)\
 			x(Matrix3x3        ,= 0x1bd46252)\
@@ -70,76 +72,89 @@ namespace pr
 			x(ConvexHull       ,= 0x0a93b3d5)\
 			x(Group            ,= 0x1c1c3d90)\
 			x(Instance         ,= 0x061978f8)\
-			x(DirectionalLight ,= 0x00000002)\
-			x(PointLight       ,= 0x00000003)\
-			x(SpotLight        ,= 0x00000004)\
+			x(DirectionalLight ,= 0x1744E3AC)\
+			x(PointLight       ,= 0x01058AFF)\
+			x(SpotLight        ,= 0x0C406795)\
 			x(Custom           ,= 0x1a1023c5)
 		PR_DEFINE_ENUM2(ELdrObject, PR_ENUM);
 		#undef PR_ENUM
+		#pragma endregion
 
-		// Ldr script keywords
+		#pragma region Ldr script keywords
 		#define PR_ENUM(x)\
-			x(O2W             ,= 0x1d20a7ba)\
-			x(M4x4            ,= 0x1788ecfa)\
-			x(M3x3            ,= 0x0aef28f5)\
-			x(Pos             ,= 0x13930daf)\
-			x(Up              ,= 0x1e72eb5a)\
-			x(Direction       ,= 0x0fca4076)\
-			x(Quat            ,= 0x1de5b1fd)\
-			x(Rand4x4         ,= 0x02becb08)\
-			x(RandPos         ,= 0x0456bf23)\
-			x(RandOri         ,= 0x185629c3)\
-			x(Euler           ,= 0x150894fc)\
-			x(Scale           ,= 0x1837069d)\
-			x(Transpose       ,= 0x12fafef6)\
-			x(Inverse         ,= 0x01ca4f54)\
-			x(Normalise       ,= 0x01693558)\
-			x(Orthonormalise  ,= 0x1c2a9e41)\
-			x(Colour          ,= 0x08b2c176)\
-			x(Solid           ,= 0x0B6477F6)\
-			x(Facets          ,= 0x1C8FE1ED)\
-			x(CornerRadius    ,= 0x1C7A230A)\
-			x(RandColour      ,= 0x0cdef959)\
-			x(ColourMask      ,= 0x05dc4ca1)\
-			x(Animation       ,= 0x004c5336)\
-			x(Style           ,= 0x0c0c447d)\
-			x(Period          ,= 0x166be380)\
-			x(Velocity        ,= 0x13c33323)\
-			x(AngVelocity     ,= 0x1572a9b4)\
-			x(Axis            ,= 0x05a50e20)\
-			x(Hidden          ,= 0x16ade487)\
-			x(Wireframe       ,= 0x067b0d73)\
-			x(Delimiters      ,= 0x084f5b30)\
-			x(Clear           ,= 0x045518bd)\
-			x(Camera          ,= 0x19028d2f)\
-			x(LookAt          ,= 0x00000001)\
-			x(Align           ,= 0x00000002)\
-			x(Lock            ,= 0x0a040f55)\
-			x(Coloured        ,= 0x078194a5)\
-			x(Width           ,= 0x190A34C3)\
-			x(Param           ,= 0x090da184)\
-			x(Texture         ,= 0x126f7a1b)\
-			x(Video           ,= 0x1121909f)\
-			x(Divisions       ,= 0x1a7f5e28)\
-			x(Layers          ,= 0x0ea88b62)\
-			x(Wedges          ,= 0x0e4a1c99)\
-			x(ViewPlaneZ      ,= 0x053FC43C)\
-			x(Verts           ,= 0x1b15f488)\
-			x(Normals         ,= 0x061bcc50)\
-			x(Colours         ,= 0x1e9214e3)\
-			x(TexCoords       ,= 0x096ec538)\
-			x(Lines           ,= 0x18abd83b)\
-			x(Faces           ,= 0x14903115)\
-			x(Tetra           ,= 0x092750d0)\
-			x(GenerateNormals ,= 0x1c991230)\
-			x(Step            ,= 0x0ad1d27d)\
-			x(Addr            ,= 0x0a215e87)\
-			x(Filter          ,= 0x183f6f0c)\
-			x(Range           ,= 0x01000003)\
-			x(Specular        ,= 0x01000000)\
-			x(CastShadow      ,= 0x01000001)
+			x(O2W                ,= 0x1d20a7ba)\
+			x(M4x4               ,= 0x1788ecfa)\
+			x(M3x3               ,= 0x0aef28f5)\
+			x(Pos                ,= 0x13930daf)\
+			x(Up                 ,= 0x1e72eb5a)\
+			x(Direction          ,= 0x0fca4076)\
+			x(Quat               ,= 0x1de5b1fd)\
+			x(Rand4x4            ,= 0x02becb08)\
+			x(RandPos            ,= 0x0456bf23)\
+			x(RandOri            ,= 0x185629c3)\
+			x(Euler              ,= 0x150894fc)\
+			x(Scale              ,= 0x1837069d)\
+			x(Transpose          ,= 0x12fafef6)\
+			x(Inverse            ,= 0x01ca4f54)\
+			x(Normalise          ,= 0x01693558)\
+			x(Orthonormalise     ,= 0x1c2a9e41)\
+			x(Colour             ,= 0x08b2c176)\
+			x(Solid              ,= 0x0B6477F6)\
+			x(Facets             ,= 0x1C8FE1ED)\
+			x(CornerRadius       ,= 0x1C7A230A)\
+			x(RandColour         ,= 0x0cdef959)\
+			x(ColourMask         ,= 0x05dc4ca1)\
+			x(Animation          ,= 0x004c5336)\
+			x(Style              ,= 0x0c0c447d)\
+			x(Period             ,= 0x166be380)\
+			x(Velocity           ,= 0x13c33323)\
+			x(AngVelocity        ,= 0x1572a9b4)\
+			x(Axis               ,= 0x05a50e20)\
+			x(Hidden             ,= 0x16ade487)\
+			x(Wireframe          ,= 0x067b0d73)\
+			x(Delimiters         ,= 0x084f5b30)\
+			x(Clear              ,= 0x045518bd)\
+			x(Camera             ,= 0x19028d2f)\
+			x(LookAt             ,= 0x1B6B2D38)\
+			x(Align              ,= 0x0E12A77C)\
+			x(Aspect             ,= 0x1003E8FA)\
+			x(FovX               ,= 0x19374FBB)\
+			x(FovY               ,= 0x136802CE)\
+			x(Fov                ,= 0x1AF2491D)\
+			x(Near               ,= 0x1E14CA9C)\
+			x(Far                ,= 0x05214BAB)\
+			x(AbsoluteClipPlanes ,= 0x026E4C7B)\
+			x(Orthographic       ,= 0x1EA1DC13)\
+			x(Lock               ,= 0x0a040f55)\
+			x(Coloured           ,= 0x078194a5)\
+			x(Width              ,= 0x190A34C3)\
+			x(Smooth             ,= 0x0EF3B8A6)\
+			x(Param              ,= 0x090da184)\
+			x(Texture            ,= 0x126f7a1b)\
+			x(Video              ,= 0x1121909f)\
+			x(Divisions          ,= 0x1a7f5e28)\
+			x(Layers             ,= 0x0ea88b62)\
+			x(Wedges             ,= 0x0e4a1c99)\
+			x(ViewPlaneZ         ,= 0x053FC43C)\
+			x(Verts              ,= 0x1b15f488)\
+			x(Normals            ,= 0x061bcc50)\
+			x(Colours            ,= 0x1e9214e3)\
+			x(TexCoords          ,= 0x096ec538)\
+			x(Lines              ,= 0x18abd83b)\
+			x(Faces              ,= 0x14903115)\
+			x(Tetra              ,= 0x092750d0)\
+			x(GenerateNormals    ,= 0x1c991230)\
+			x(Step               ,= 0x0ad1d27d)\
+			x(Addr               ,= 0x0a215e87)\
+			x(Filter             ,= 0x183f6f0c)\
+			x(Range              ,= 0x0529B2DD)\
+			x(Specular           ,= 0x15DF6A5F)\
+			x(CastShadow         ,= 0x10C1337D)
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
+		#pragma endregion
+
+		#pragma region Enums
 
 		// Modes for bounding groups of objects
 		#define PR_ENUM(x)\
@@ -159,10 +174,31 @@ namespace pr
 		PR_DEFINE_ENUM1(EAnimStyle, PR_ENUM);
 		#undef PR_ENUM
 
+		// Flags for partial update of a model
+		#define PR_ENUM(x)\
+			x(None       ,= 0)\
+			x(All        ,= ~0U)\
+			x(Name       ,= 1 << 0)\
+			x(Model      ,= 1 << 1)\
+			x(Transform  ,= 1 << 2)\
+			x(Children   ,= 1 << 3)\
+			x(Colour     ,= 1 << 4)\
+			x(ColourMask ,= 1 << 5)\
+			x(Wireframe  ,= 1 << 6)\
+			x(Visibility ,= 1 << 7)\
+			x(Animation  ,= 1 << 8)\
+			x(StepData   ,= 1 << 9)
+		PR_DEFINE_ENUM2_FLAGS(EUpdateObject, PR_ENUM);
+		#undef PR_ENUM
+		
+		#pragma endregion
+
+		#pragma region Types
+
 		// An instance type for line drawer stock objects
 		#define PR_RDR_INST(x)\
-			x(pr::m4x4            ,m_i2w    ,pr::rdr::EInstComp::I2WTransform   )\
-			x(pr::rdr::ModelPtr   ,m_model  ,pr::rdr::EInstComp::ModelPtr       )
+			x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+			x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr    )
 		PR_RDR_DEFINE_INSTANCE(StockInstance, PR_RDR_INST);
 		#undef PR_RDR_INST
 
@@ -200,14 +236,6 @@ namespace pr
 			ObjectAttributes(ELdrObject type, char const* name) :m_type(type), m_name(name) ,m_colour(pr::Colour32White) ,m_instance(true) {}
 			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(true) {}
 			ObjectAttributes(ELdrObject type, char const* name, pr::Colour32 colour, bool instance) :m_type(type), m_name(name) ,m_colour(colour) ,m_instance(instance) {}
-		};
-
-		// UI data for an ldr object
-		struct LdrObjectUIData
-		{
-			HTREEITEM m_tree_item;
-			int       m_list_item;
-			LdrObjectUIData();
 		};
 
 		// Info on how to animate a ldr object
@@ -255,6 +283,14 @@ namespace pr
 			bool empty() const  { return m_code.empty(); }
 		};
 
+		// Interface for user data
+		struct ILdrUserData { virtual ~ILdrUserData() {} };
+
+		// A map from custom id to user data
+		typedef std::unordered_map<size_t, std::unique_ptr<ILdrUserData>> UserData;
+
+		#pragma endregion
+
 		// A line drawer object
 		struct LdrObject
 			:RdrInstance
@@ -272,13 +308,12 @@ namespace pr
 			pr::Colour32      m_base_colour;   // The original colour of this object
 			pr::uint          m_colour_mask;   // A bit mask for applying the base colour to child objects
 			Animation         m_anim;          // Animation data
-			LdrObjectUIData   m_uidata;        // Data required to find this object in the ui
 			LdrObjectStepData m_step;          // Step data for the object
 			BBoxInstance      m_bbox_instance; // Used for rendering the bounding box for this instance
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered
 			bool              m_wireframe;     // True if this object is drawn in wireframe
-			void*             m_user_data;     // Custom data
+			UserData          m_user_data;     // User assigned data
 
 			// Predicate for matching this object by context id
 			struct MatchId
@@ -403,39 +438,12 @@ namespace pr
 			LdrObjectPtr RemoveChild(size_t i);
 			void RemoveAllChildren();
 
-			// Flags for partial update of a model
-			struct UpdateModelKeep
-			{
-				bool m_name;
-				bool m_transform;
-				bool m_context_id;
-				bool m_children;
-				bool m_colour;
-				bool m_colour_mask;
-				bool m_wireframe;
-				bool m_visibility;
-				bool m_animation;
-				bool m_step_data;
-				bool m_user_data;
+			// True if this object contains user data matching 'id'
+			bool HasUserData(size_t id) const { return m_user_data.count(id) != 0; }
 
-				enum class EKeep { None, All };
-				UpdateModelKeep(EKeep keep = EKeep::None)
-					:m_name       (keep == EKeep::All)
-					,m_transform  (keep == EKeep::All)
-					,m_context_id (keep == EKeep::All)
-					,m_children   (keep == EKeep::All)
-					,m_colour     (keep == EKeep::All)
-					,m_colour_mask(keep == EKeep::All)
-					,m_wireframe  (keep == EKeep::All)
-					,m_visibility (keep == EKeep::All)
-					,m_animation  (keep == EKeep::All)
-					,m_step_data  (keep == EKeep::All)
-					,m_user_data  (keep == EKeep::All)
-				{}
-			};
-
-			// Transfer the parts of 'rhs' that are model related to this object
-			void UpdateModel(LdrObject&& rhs, UpdateModelKeep const& keep);
+			// Convenience accessor to user data
+			template <typename T> T const& UserData(size_t id) const { return *m_user_data[id].get(); }
+			template <typename T> T&       UserData(size_t id)       { return *m_user_data[id].get(); }
 
 			// Called when there are no more references to this object
 			static void RefCountZero(RefCount<LdrObject>* doomed);
@@ -491,8 +499,22 @@ namespace pr
 		// A camera description has been read
 		struct Evt_LdrSetCamera
 		{
+			// Bit mask of set fields
+			enum EField
+			{
+				C2W     = 1 << 0,
+				Focus   = 1 << 1,
+				Align   = 1 << 2,
+				Aspect  = 1 << 3,
+				FovY    = 1 << 4,
+				Near    = 1 << 5,
+				Far     = 1 << 6,
+				AbsClip = 1 << 7,
+				Ortho   = 1 << 8,
+			};
 			pr::Camera m_cam;
-			Evt_LdrSetCamera(pr::Camera const& cam) :m_cam(cam) {}
+			size_t m_set_fields;
+			Evt_LdrSetCamera() :m_cam() ,m_set_fields() {}
 		};
 
 		// Called when one or more objects have changed state
@@ -503,16 +525,16 @@ namespace pr
 			Evt_Refresh(LdrObjectPtr obj) :m_obj(obj) {}
 		};
 
-		// Callback progress event used during parsing
-		struct Evt_LdrProgress
-		{
-			int m_count;            // -1 for unknown
-			int m_total;            // -1 for unknown
-			char const* m_desc;     // A brief description of the operation that progress is for
-			bool m_allow_cancel;    // True if it's ok to cancel this operation
-			LdrObjectPtr m_obj;     // An object near the current progress point
-			Evt_LdrProgress(int count, int total, char const* desc, bool allow_cancel, LdrObjectPtr obj) :m_count(count) ,m_total(total) ,m_desc(desc) ,m_allow_cancel(allow_cancel) ,m_obj(obj) {}
-		};
+		//// Callback progress event used during parsing
+		//struct Evt_LdrProgress
+		//{
+		//	int m_count;            // -1 for unknown
+		//	int m_total;            // -1 for unknown
+		//	char const* m_desc;     // A brief description of the operation that progress is for
+		//	bool m_allow_cancel;    // True if it's ok to cancel this operation
+		//	LdrObjectPtr m_obj;     // An object near the current progress point
+		//	Evt_LdrProgress(int count, int total, char const* desc, bool allow_cancel, LdrObjectPtr obj) :m_count(count) ,m_total(total) ,m_desc(desc) ,m_allow_cancel(allow_cancel) ,m_obj(obj) {}
+		//};
 
 		// Event fired from the UI when the selected object changes
 		struct Evt_LdrObjectSelectionChanged
@@ -531,8 +553,9 @@ namespace pr
 		// Remember to update the bounding box, vertex and index ranges, and regenerate nuggets.
 		typedef void (__stdcall *EditObjectCB)(pr::rdr::ModelPtr model, void* ctx, pr::Renderer& rdr);
 
-		// Add the ldr objects described in 'reader' to 'objects'
-		// Note: this is done as a background thread while a progrss dialog is displayed
+		// Add the ldr objects described in 'reader' to 'objects'.
+		// If 'async' is true, a progress dialog is displayed and adding is done in a background thread.
+		// Raises 'Evt_LdrObjectAdd' events for each root level object added.
 		void Add(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true);
 
 		// Add models/instances from a text file containing linedrawer script
@@ -579,6 +602,9 @@ namespace pr
 		// Objects created by this method will have dynamic usage and are suitable for updating every frame
 		// They are intended to be used with the 'Edit' function.
 		pr::ldr::LdrObjectPtr Add(pr::Renderer& rdr, pr::ldr::ObjectAttributes attr, int icount, int vcount, EditObjectCB edit_cb, void* ctx, pr::ldr::ContextId context_id = DefaultContext);
+
+		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
+		void Update(pr::Renderer& rdr, LdrObjectPtr object, char const* desc, EUpdateObject flags = EUpdateObject::All);
 
 		// Modify the geometry of an LdrObject
 		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);

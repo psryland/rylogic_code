@@ -79,7 +79,7 @@ namespace pr
 			// 'num_colours' should be either, 0, 1, or num_lines * 2
 			// 'colours' is an input array of colour values or a pointer to a single colour.
 			// 'mat' is an optional material to use for the lines
-			static ModelPtr Lines(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,NuggetProps const* mat = 0)
+			static ModelPtr Lines(Renderer& rdr, std::size_t num_lines, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Lines(num_lines, points, num_colours, colours, vb, ib); };
 
@@ -87,7 +87,7 @@ namespace pr
 				pr::geometry::LineSize(num_lines, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
 			}
-			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,std::size_t num_colours = 0 ,Colour32 const* colours = 0 ,NuggetProps const* mat = 0)
+			static ModelPtr LinesD(Renderer& rdr, std::size_t num_lines, v4 const* points, v4 const* directions, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, vb, ib); };
 
@@ -95,17 +95,17 @@ namespace pr
 				pr::geometry::LineSize(num_lines, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
 			}
-			static ModelPtr LinesD(Renderer& rdr ,std::size_t num_lines ,v4 const* points ,v4 const* directions ,Colour32 colour ,NuggetProps const* mat = 0)
+			static ModelPtr LineStrip(Renderer& rdr, std::size_t num_lines, v4 const* points, std::size_t num_colours = 0, Colour32 const* colour = nullptr, NuggetProps const* mat = nullptr)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::LinesD(num_lines, points, directions, colour, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::LinesStrip(num_lines, points, num_colours, colour, vb, ib); };
 
 				std::size_t vcount, icount;
-				pr::geometry::LineSize(num_lines, vcount, icount);
-				return Create(rdr, vcount, icount, EPrim::LineList, mat, gen);
+				pr::geometry::LineStripSize(num_lines, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::LineStrip, mat, gen);
 			}
 
 			// Quad *******************************************************************************
-			static ModelPtr Quad(Renderer& rdr, size_t num_quads, v4 const* verts, size_t num_colours = 0, Colour32 const* colours = 0, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = 0)
+			static ModelPtr Quad(Renderer& rdr, size_t num_quads, v4 const* verts, size_t num_colours = 0, Colour32 const* colours = nullptr, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, vb, ib); };
 
@@ -113,7 +113,7 @@ namespace pr
 				pr::geometry::QuadSize(num_quads, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = 0)
+			static ModelPtr Quad(Renderer& rdr, v4 const& origin, v4 const& patch_x, v4 const& patch_y, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, m4x4 const& t2q = m4x4Identity, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, vb, ib); };
 
@@ -121,7 +121,7 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Quad(Renderer& rdr, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(width, height, divisions, colour, vb, ib); };
 
@@ -129,7 +129,7 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, NuggetProps const* mat = 0)
+			static ModelPtr Quad(Renderer& rdr, v4 const& centre, v4 const& forward, v4 const& top, float width, float height, iv2 const& divisions = iv2Zero, Colour32 colour = Colour32White, v2 const& tex_origin = v2Zero, v2 const& tex_dim = v2One, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, vb, ib); };
 
@@ -139,7 +139,7 @@ namespace pr
 			}
 
 			// Boxes ******************************************************************************
-			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = 0, NuggetProps const* mat = 0)
+			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Boxes(num_boxes, points, num_colours, colours, vb, ib); };
 
@@ -147,7 +147,7 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = 0, NuggetProps const* mat = 0)
+			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, m4x4 const& o2w, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, vb, ib); };
 
@@ -155,7 +155,7 @@ namespace pr
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Box(Renderer& rdr, v4 const& rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Box(rad, o2w, colour, vb, ib); };
 
@@ -163,11 +163,11 @@ namespace pr
 				pr::geometry::BoxSize(1, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Box(Renderer& rdr, float rad, m4x4 const& o2w = m4x4Identity, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				return Box(rdr, v4::make(rad), o2w, colour, mat);
 			}
-			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = 0, NuggetProps const* mat = 0)
+			static ModelPtr BoxList(Renderer& rdr, std::size_t num_boxes, v4 const* positions, v4 const& rad, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, vb, ib); };
 
@@ -177,7 +177,7 @@ namespace pr
 			}
 
 			// Sphere *****************************************************************************
-			static ModelPtr Geosphere(Renderer& rdr, v4 const& radius, std::size_t divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Geosphere(Renderer& rdr, v4 const& radius, std::size_t divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Geosphere(radius, divisions, colour, vb, ib); };
 
@@ -185,11 +185,11 @@ namespace pr
 				pr::geometry::GeosphereSize(divisions, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Geosphere(Renderer& rdr, float radius, std::size_t divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Geosphere(Renderer& rdr, float radius, std::size_t divisions = 3, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				return Geosphere(rdr, v4::make(radius, 0.0f), divisions, colour, mat);
 			}
-			static ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Sphere(Renderer& rdr, v4 const& radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Sphere(radius, wedges, layers, colour, vb, ib); };
 
@@ -197,13 +197,13 @@ namespace pr
 				pr::geometry::SphereSize(wedges, layers, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr Sphere(Renderer& rdr, float radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = 0)
+			static ModelPtr Sphere(Renderer& rdr, float radius, std::size_t wedges = 20, std::size_t layers = 5, Colour32 colour = Colour32White, NuggetProps const* mat = nullptr)
 			{
 				return Sphere(rdr, v4::make(radius, 0.0f), wedges, layers, colour, mat);
 			}
 
 			// Cylinder ***************************************************************************
-			static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, m4x4 const& o2w = m4x4Identity, float xscale = 1.0f, float yscale = 1.0f, std::size_t wedges = 20, std::size_t layers = 1, std::size_t num_colours = 0, Colour32 const* colours = 0, NuggetProps const* mat = 0)
+			static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, m4x4 const& o2w = m4x4Identity, float xscale = 1.0f, float yscale = 1.0f, std::size_t wedges = 20, std::size_t layers = 1, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Cylinder(radius0, radius1, height, o2w, xscale, yscale, wedges, layers, num_colours, colours, vb, ib); };
 
@@ -219,7 +219,7 @@ namespace pr
 			//ModelPtr    CapsuleHRxy(Renderer& rdr                          ,float height ,float xradius ,float yradius ,m4x4 const& o2w = pr::m4x4Identity ,std::size_t divisions = 3 ,Colour32 colour = Colour32White ,rdr::Material const* mat = 0 ,Range* vrange = 0 ,Range* irange = 0);
 
 			// Mesh *******************************************************************************
-			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = 0, std::size_t num_normals = 0, v4 const* normals = 0, v2 const* tex_coords = 0, NuggetProps const* mat = 0)
+			static ModelPtr Mesh(Renderer& rdr, EPrim prim_type, std::size_t num_verts, std::size_t num_indices, v4 const* verts, pr::uint16 const* indices, std::size_t num_colours = 0, Colour32 const* colours = nullptr, std::size_t num_normals = 0, v4 const* normals = 0, v2 const* tex_coords = 0, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, num_normals, normals, tex_coords, vb, ib); };
 

@@ -48,8 +48,8 @@ namespace ldr
 		// Reset the camera to view a bbox from the prefer orientation
 		void ResetView(pr::BBox const& view_bbox);
 
-		//// Position the camera prior to rendering a frame
-		//void PositionCamera();
+		// Position the camera prior to rendering a frame
+		void PositionCamera();
 
 		// Mouse input. This should be raw input from the UI
 		// 'pos' is the screen space position of the mouse

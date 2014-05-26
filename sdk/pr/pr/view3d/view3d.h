@@ -80,6 +80,21 @@ extern "C"
 		Warn,
 		Error,
 	};
+	enum class EView3DUpdateObject :int// Flags for partial update of a model
+	{
+		None        = 0     ,
+		All         = ~0    ,
+		Name        = 1 << 0,
+		Model       = 1 << 1,
+		Transform   = 1 << 2,
+		Children    = 1 << 3,
+		Colour      = 1 << 4,
+		ColourMask  = 1 << 5,
+		Wireframe   = 1 << 6,
+		Visibility  = 1 << 7,
+		Animation   = 1 << 8,
+		StepData    = 1 << 9,
+	};
 
 	typedef struct
 	{
@@ -135,7 +150,7 @@ extern "C"
 		float        m_outer_cos_angle;
 		float        m_range;
 		float        m_falloff;
-		BOOL         m_cast_shadows;
+		float        m_cast_shadow;
 	} View3DLight;
 	
 	typedef struct
@@ -252,7 +267,7 @@ extern "C"
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async);
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, int context_id, View3DObject& object, BOOL async);
 	VIEW3D_API EView3DResult           __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object);
-	VIEW3D_API EView3DResult           __stdcall View3D_ObjectUpdateModel        (View3DObject object, char const* ldr_script, View3DUpdateModelKeep const& keep, BOOL async);
+	VIEW3D_API EView3DResult           __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);

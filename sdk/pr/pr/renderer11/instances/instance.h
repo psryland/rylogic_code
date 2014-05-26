@@ -42,7 +42,7 @@ namespace pr
 			*/x(DSBlock            )/* pr::rdr::DSBlock
 			*/x(RSBlock            )/* pr::rdr::RSBlock
 			*/x(TintColour32       )/* pr::Colour32
-			*/x(LineWidth          )/* pr::uint
+			*/x(SSWidth            )/* pr::uint (screen space width)
 			*/x(FirstUserCpt       ) // Clients may add other component types
 		PR_DEFINE_ENUM1(EInstComp, PR_ENUM);
 		#undef PR_ENUM

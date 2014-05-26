@@ -78,7 +78,7 @@ namespace pr
 
 			{// Set camera constants
 				hlsl::ds::CBufCamera cb = {};
-				SetViewConstants(m_scene->m_view, cb);
+				SetViewConstants(m_scene->m_view, cb.m_cam);
 				SetFrustumCorners(m_scene->m_view, cb);
 				WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
 			}

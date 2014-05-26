@@ -81,10 +81,10 @@ namespace pr.container
 	/// <summary>List index position change event</summary>
 	public class PositionChgEventArgs :EventArgs
 	{
-		/// <summary>The previous index</summary>
+		/// <summary>The previous index (-1 means no previous index)</summary>
 		public int OldIndex { get; private set; }
 		
-		/// <summary>The new current index</summary>
+		/// <summary>The new current index (-1 means no current index)</summary>
 		public int NewIndex { get; private set; }
 
 		public PositionChgEventArgs(int old_index, int new_index)

@@ -45,7 +45,7 @@ namespace pr
 				time_t m_last_modified; // Support for dynamically loading shaders at runtime (unused when PR_RDR_RUNTIME_SHADERS is not defined)
 			};
 			static std::unordered_map<RdrId, ModCheck> s_check;
-			auto& check = s_check[m_id];
+			auto& check = s_check[m_orig_id];
 
 			// Only check every now and again
 			enum { check_frequency_ms = 1000 };
@@ -53,11 +53,12 @@ namespace pr
 			check.m_last_check = GetTickCount();
 
 			auto device = Device(dc);
-			auto iter = shader_cso.find(m_id);
-			if (iter == std::end(shader_cso)) return;
-			wstring256 cso_filepath = iter->second;
+			auto iter = shader_cso.find(m_orig_id);
+			if (iter == std::end(shader_cso))
+				return;
 			
 			// Check for a new shader
+			wstring256 cso_filepath = iter->second;
 			time_t last_mod, newest = check.m_last_modified;
 			if (pr::filesys::FileExists(cso_filepath) && (last_mod = pr::filesys::GetFileTimeStats(cso_filepath).m_last_modified) > check.m_last_modified)
 			{

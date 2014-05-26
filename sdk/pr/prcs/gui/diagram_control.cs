@@ -282,6 +282,30 @@ namespace pr.gui
 			}
 			private View3d.Object m_gfx;
 
+			/// <summary>Bring this element to top of the stack</summary>
+			public void BringToFront()
+			{
+				// Set a new Z position (directly so we don't raise the event)
+				if (m_diag != null && m_gfx != null)
+				{
+					var p = m_gfx.O2P;
+					p.pos.z = m_diag.ElementZ;
+					m_gfx.O2P = p; 
+				}
+			}
+
+			/// <summary>Send this element to the bottom of the stack</summary>
+			public void SendToBack()
+			{
+				// Set a new Z position (directly so we don't raise the event)
+				if (m_diag != null && m_gfx != null)
+				{
+					var p = m_gfx.O2P;
+					p.pos.z = -m_diag.ElementZ;
+					m_gfx.O2P = p; 
+				}
+			}
+
 			/// <summary>AABB for the element in diagram space</summary>
 			public abstract BRect Bounds { get; }
 
@@ -720,7 +744,7 @@ namespace pr.gui
 				{
 					var ldr = new LdrBuilder();
 					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-					Graphics.UpdateModel(ldr.ToString(), new View3d.Object.Keep{Transform = true});
+					Graphics.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 					Graphics.SetTexture(Surf);
 					m_size_changed = false;
 				}
@@ -1091,7 +1115,20 @@ namespace pr.gui
 			{
 				var spline = MakeSpline(Anc0, Anc1, false);
 				var ldr = new LdrBuilder();
-				ldr.Append("*Spline line ",Selected ? Style.Selected : Style.Line ,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
+				using (ldr.Group("connector"))
+				{
+					var col = Selected ? Style.Selected : Style.Line;
+					if ((Style.Type & ConnectorStyle.EType.Line) != 0)
+						ldr.Append("*Spline line ",col,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
+					//if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
+					//	ldr.Append("*Triangle fwdarrow ",col,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
+//	-1.5 -1.5 0 FFFF0000               // Three corner points of the triangle
+//	 1.5 -1.5 0 FF00FF00
+//	 0.0  1.5 0 FF0000FF
+//	*o2w{*randpos{0 0 0 2}}
+//	*Texture {"#checker"}              // Optional texture
+//}
+				}
 				Graphics.UpdateModel(ldr.ToString());
 				Graphics.O2P = m4x4.Translation(AttachCentre(Anc0, Anc1));
 			}
@@ -1760,8 +1797,8 @@ namespace pr.gui
 		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
 
 		/// <summary>Used to control z order</summary>
-		private float ElementZ { get { return m_impl_element_z += 0.0001f; } }
-		private float m_impl_element_z = 0.1f;
+		private float ElementZ { get { return m_impl_element_z += 0.001f; } }
+		private float m_impl_element_z = 0.0f;
 
 		/// <summary>Perform a hit test on the diagram</summary>
 		public HitTestResult HitTest(v2 ds_point)

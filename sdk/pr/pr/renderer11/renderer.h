@@ -59,7 +59,7 @@
 #include "pr/renderer11/shaders/input_layout.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/shaders/shader.h"
-#include "pr/renderer11/shaders/thick_line.h"
+#include "pr/renderer11/shaders/screen_space_shaders.h"
 
 // Textures
 #include "pr/renderer11/textures/texture_manager.h"

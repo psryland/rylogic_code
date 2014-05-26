@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
-#include "thick_line_cbuf.hlsli"
+#include "screenspace_cbuf.hlsli"
 #include "../types.hlsli"
 
 // Converts line geometry into tristrip

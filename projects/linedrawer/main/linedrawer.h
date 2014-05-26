@@ -22,6 +22,7 @@ namespace ldr
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectAdd>
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectDelete>
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
+		,pr::events::IRecv<pr::ldr::Evt_LdrSetCamera>
 	{
 		// These types form part of the interface
 		NavManager          m_nav;            // Controls user input and camera navigation
@@ -69,6 +70,7 @@ namespace ldr
 		void OnEvent(pr::ldr::Evt_LdrObjectAdd const&) override;
 		void OnEvent(pr::ldr::Evt_LdrObjectDelete const&) override;
 		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&) override;
+		void OnEvent(pr::ldr::Evt_LdrSetCamera const&) override;
 		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 		void OnEvent(pr::rdr::Evt_RenderStepExecute const&) override;
 	};

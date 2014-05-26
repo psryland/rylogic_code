@@ -131,7 +131,18 @@ namespace pr
 			{
 				// Ensure the nugget contains the required vs/gs/ps shaders
 				nug.m_smap[Id].m_vs = m_vs;
-				nug.m_smap[Id].m_gs = (nug.m_topo == EPrim::LineList || nug.m_topo == EPrim::LineStrip) ? m_gs_line : m_gs_face;
+				switch (nug.m_topo) {
+				case EPrim::LineList:
+				case EPrim::LineStrip:
+					nug.m_smap[Id].m_gs = m_gs_line;
+					break;
+				case EPrim::TriList:
+				case EPrim::TriStrip:
+					nug.m_smap[Id].m_gs = m_gs_face;
+					break;
+				default:
+					continue; // Ignore point lists.. can a point cast a shadow anyway?
+				}
 				nug.m_smap[Id].m_ps = m_ps;
 
 				// Add a dle for this nugget

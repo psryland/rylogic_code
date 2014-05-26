@@ -16,6 +16,10 @@ namespace pr.extn
 		{
 			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : null;
 		}
+		public static T CurrentOrDefault<T>(this BindingSource bs)
+		{
+			return (T)bs.CurrentOrDefault();
+		}
 
 		/// <summary>Temporarily detaches the DataSource from this binding source</summary>
 		public static Scope PauseBinding(this BindingSource bs)

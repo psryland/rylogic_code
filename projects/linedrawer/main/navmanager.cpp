@@ -65,10 +65,10 @@ namespace ldr
 		m_camera.View(view_bbox, m_reset_forward, m_reset_up, true);
 	}
 
-	//// Position the camera prior to rendering a frame
-	//void NavManager::PositionCamera()
-	//{
-	//}
+	// Position the camera prior to rendering a frame
+	void NavManager::PositionCamera()
+	{
+	}
 
 	// Normalise a screen-space point
 	inline pr::v2 NormalisedScreenSpace(pr::v2 pos, pr::iv2 view_size)

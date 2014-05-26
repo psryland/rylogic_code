@@ -106,7 +106,7 @@ IDR_MENU_MAIN MENU
         MENUITEM "Render &2D", ID_RENDERING_RENDER2D
         MENUITEM "&Forward Render", ID_RENDERING_TECHNIQUE
         MENUITEM SEPARATOR
-        MENUITEM "&Lighting...", ID_RENDERING_LIGHTING
+        MENUITEM "&Lighting...\tCtrl+L", ID_RENDERING_LIGHTING
     }
     POPUP "&Tools"
     {

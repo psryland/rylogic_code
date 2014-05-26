@@ -38,9 +38,9 @@ namespace pr
 			{
 				#include "renderer11/shaders/hlsl/deferred/gbuffer_cbuf.hlsli"
 			}
-			namespace screenspace
+			namespace ss
 			{
-				#include "renderer11/shaders/hlsl/screenspace/thick_line_cbuf.hlsli"
+				#include "renderer11/shaders/hlsl/screenspace/screenspace_cbuf.hlsli"
 			}
 			namespace smap
 			{
@@ -88,7 +88,7 @@ namespace pr
 		}
 
 		// Helper for setting scene view constants
-		template <typename TCBuf> void SetViewConstants(SceneView const& view, TCBuf& cb)
+		inline void SetViewConstants(SceneView const& view, hlsl::Camera& cb)
 		{
 			cb.m_c2w = view.m_c2w;
 			cb.m_c2s = view.m_c2s;

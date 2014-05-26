@@ -96,6 +96,23 @@ namespace pr
 			:public CIndirectDialogImpl<ObjectManagerDlgImpl>
 			,public CDialogResize<ObjectManagerDlgImpl>
 		{
+			// UI data for an ldr object
+			struct UIData :ILdrUserData
+			{
+				HTREEITEM m_tree_item;
+				int       m_list_item;
+
+				static size_t Id()
+				{
+					static size_t s_id = pr::hash::HashC("LdrObjectUIData");
+					return s_id;
+				}
+				UIData()
+					:m_tree_item(INVALID_TREE_ITEM)
+					,m_list_item(INVALID_LIST_ITEM)
+				{}
+			};
+				
 			HWND                    m_parent;               // Parent window
 			WTL::CStatusBarCtrl     m_status;               // The status bar
 			WTL::CSplitterWindow    m_split;                // Splitter window
@@ -153,6 +170,10 @@ namespace pr
 				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_LIST_ITEM && m_list.GetItemData(item) != 0, "List item does not refer to an LdrObject");
 				return *reinterpret_cast<LdrObject*>(m_list.GetItemData(item));
 			}
+
+			// Return the uidata for an object
+			static UIData* GetUIData(LdrObject& obj) { return static_cast<UIData*>(obj.m_user_data[UIData::Id()].get()); }
+			static UIData* GetUIData(LdrObject* obj) { return obj ? GetUIData(*obj) : nullptr; }
 
 			// Get/Set settings for the object manager window
 			std::string Settings() const
@@ -237,15 +258,17 @@ namespace pr
 			// Select an ldr object
 			void SelectLdrObject(LdrObject& object, bool make_visible)
 			{
+				auto obj_uidata = GetUIData(object);
+
 				// Select in the tree
-				m_tree.SetItemState(object.m_uidata.m_tree_item, TVIS_SELECTED, TVIS_SELECTED);
-				if (make_visible) m_tree.EnsureVisible(object.m_uidata.m_tree_item);
+				m_tree.SetItemState(obj_uidata->m_tree_item, TVIS_SELECTED, TVIS_SELECTED);
+				if (make_visible) m_tree.EnsureVisible(obj_uidata->m_tree_item);
 
 				// Select in the list and make visible
-				if (object.m_uidata.m_list_item != INVALID_LIST_ITEM)
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
 				{
-					m_list.SetItemState(object.m_uidata.m_list_item, LVIS_SELECTED, LVIS_SELECTED);
-					if (make_visible) m_list.EnsureVisible(object.m_uidata.m_list_item, FALSE);
+					m_list.SetItemState(obj_uidata->m_list_item, LVIS_SELECTED, LVIS_SELECTED);
+					if (make_visible) m_list.EnsureVisible(obj_uidata->m_list_item, FALSE);
 				}
 
 				// Flag the selection data as invalid
@@ -328,7 +351,7 @@ namespace pr
 						// Delete all non-selected items
 						if ((m_list.GetItemState(i, LVIS_SELECTED) & LVIS_SELECTED) == 0)
 						{
-							GetLdrObject(i).m_uidata.m_list_item = INVALID_LIST_ITEM;
+							GetUIData(GetLdrObject(i))->m_list_item = INVALID_LIST_ITEM;
 							m_list.DeleteItem(i);
 						}
 					}
@@ -339,7 +362,7 @@ namespace pr
 				{
 					// Remove all items from the list
 					for (int i = m_list.GetNextItem(-1, LVNI_ALL); i != -1; i = m_list.GetNextItem(i, LVNI_ALL))
-						GetLdrObject(i).m_uidata.m_list_item = INVALID_LIST_ITEM;
+						GetUIData(GetLdrObject(i))->m_list_item = INVALID_LIST_ITEM;
 					m_list.DeleteAllItems();
 
 					// Re-add items based on what's displayed in the tree
@@ -349,7 +372,7 @@ namespace pr
 						LdrObject& object = GetLdrObject(i);
 
 						// Add a list item for this tree item
-						object.m_uidata.m_list_item = list_position;
+						GetUIData(object)->m_list_item = list_position;
 						m_list.InsertItem(list_position, object.m_name.c_str());
 						m_list.SetItemData(list_position, reinterpret_cast<DWORD_PTR>(&object));
 						UpdateListItem(object, false);
@@ -382,20 +405,21 @@ namespace pr
 				// 'start_index'==-1 means all list items
 				if (start_index < 0) start_index = 0;
 				for (int i = start_index, iend = m_list.GetItemCount(); i < iend; ++i)
-					GetLdrObject(i).m_uidata.m_list_item = i;
+					GetUIData(GetLdrObject(i))->m_list_item = i;
 			}
 
 			// Update the displayed properties in the list
 			void UpdateListItem(LdrObject& object, bool recursive)
 			{
-				if (object.m_uidata.m_list_item == INVALID_LIST_ITEM) return;
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::Name      ,object.m_name.c_str());
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::LdrType   ,ELdrObject::ToString(object.m_type));
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::Colour    ,pr::FmtS("%X", object.m_colour.m_aarrggbb));
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::Visible   ,object.m_visible ? "Visible"   : "Hidden");
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::Wireframe ,object.m_wireframe ? "Wireframe" : "Solid");
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::Volume    ,pr::FmtS("%3.3f", Volume(object.BBoxMS(false))));
-				m_list.SetItemText(object.m_uidata.m_list_item ,EColumn::CtxtId    ,pr::FmtS("%d", object.m_context_id));
+				auto obj_uidata = GetUIData(object);
+				if (obj_uidata->m_list_item == INVALID_LIST_ITEM) return;
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Name      ,object.m_name.c_str());
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::LdrType   ,ELdrObject::ToString(object.m_type));
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Colour    ,pr::FmtS("%X", object.m_colour.m_aarrggbb));
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Visible   ,object.m_visible ? "Visible"   : "Hidden");
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Wireframe ,object.m_wireframe ? "Wireframe" : "Solid");
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Volume    ,pr::FmtS("%3.3f", Volume(object.BBoxMS(false))));
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::CtxtId    ,pr::FmtS("%d", object.m_context_id));
 				if (!recursive) return;
 				for (ObjectCont::iterator c = object.m_child.begin(), cend = object.m_child.end(); c != cend; ++c)
 					UpdateListItem(*(*c).m_ptr, recursive);
@@ -405,16 +429,24 @@ namespace pr
 			void Add(LdrObject* obj, LdrObject* prev, bool last_call = true)
 			{
 				PR_ASSERT(PR_DBG_LDROBJMGR, obj, "Attempting to add a null object to the UI");
-				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_parent || obj->m_parent->m_uidata.m_tree_item != INVALID_TREE_ITEM, "Parent is not in the tree");
+				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_parent || GetUIData(*obj->m_parent)->m_tree_item != INVALID_TREE_ITEM, "Parent is not in the tree");
+
+				// Add UI data to the object
+				PR_ASSERT(PR_DBG_LDROBJMGR, obj->m_user_data.count(UIData::Id()) == 0, "This item is already in the UI");
+				obj->m_user_data[UIData::Id()] = std::make_unique<UIData>();
+				
+				auto obj_uidata    = GetUIData(obj);
+				auto prev_uidata   = GetUIData(prev);
+				auto parent_uidata = GetUIData(obj->m_parent);
 
 				// Add the item to the tree
-				obj->m_uidata.m_tree_item = m_tree.InsertItem(obj->m_name.c_str(),
-					obj->m_parent ? obj->m_parent->m_uidata.m_tree_item : TVI_ROOT,
-					prev          ? prev->m_uidata.m_tree_item          : TVI_LAST);
+				obj_uidata->m_tree_item = m_tree.InsertItem(obj->m_name.c_str(),
+					obj->m_parent ? parent_uidata->m_tree_item : TVI_ROOT,
+					prev          ? prev_uidata->m_tree_item   : TVI_LAST);
 
 				// Save a pointer to this object in the tree
-				if (obj->m_uidata.m_tree_item != INVALID_TREE_ITEM)
-					m_tree.SetItemData(obj->m_uidata.m_tree_item, reinterpret_cast<DWORD_PTR>(obj));
+				if (obj_uidata->m_tree_item != INVALID_TREE_ITEM)
+					m_tree.SetItemData(obj_uidata->m_tree_item, reinterpret_cast<DWORD_PTR>(obj));
 				else {}
 				// todo: Report errors, without spamming the user...
 
@@ -422,26 +454,26 @@ namespace pr
 				// If 'obj' is a top level object, then add it to the list
 				if (obj->m_parent == 0)
 				{
-					obj->m_uidata.m_list_item = m_list.InsertItem(m_list.GetItemCount(), obj->m_name.c_str());
-					if (obj->m_uidata.m_list_item == INVALID_LIST_ITEM) {}
+					obj_uidata->m_list_item = m_list.InsertItem(m_list.GetItemCount(), obj->m_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
 					// todo: Report errors, without spamming the user...
 				}
 				// Otherwise, if 'prev' is visible in the list then display 'obj' in the list as well
-				else if (prev && prev->m_uidata.m_list_item != INVALID_LIST_ITEM)
+				else if (prev && prev_uidata->m_list_item != INVALID_LIST_ITEM)
 				{
-					obj->m_uidata.m_list_item = m_list.InsertItem(prev->m_uidata.m_list_item + 1, obj->m_name.c_str());
-					if (obj->m_uidata.m_list_item == INVALID_LIST_ITEM) {}
+					obj_uidata->m_list_item = m_list.InsertItem(prev_uidata->m_list_item + 1, obj->m_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
 					// todo: Report errors, without spamming the user...
 				}
 				else
 				{
-					obj->m_uidata.m_list_item = INVALID_LIST_ITEM;
+					obj_uidata->m_list_item = INVALID_LIST_ITEM;
 				}
 
 				// Save a pointer to this object in the list
-				if (obj->m_uidata.m_list_item != INVALID_LIST_ITEM)
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
 				{
-					m_list.SetItemData(obj->m_uidata.m_list_item, reinterpret_cast<DWORD_PTR>(obj));
+					m_list.SetItemData(obj_uidata->m_list_item, reinterpret_cast<DWORD_PTR>(obj));
 					UpdateListItem(*obj, false);
 				}
 
@@ -452,14 +484,16 @@ namespace pr
 
 				// On leaving the last recusive call, fix up the references
 				if (last_call)
-					FixListCtrlReferences(obj->m_uidata.m_list_item);
+					FixListCtrlReferences(obj_uidata->m_list_item);
 			}
 
 			// Recursively remove 'obj' and its children from the tree and list controls.
 			// Note that objects are not deleted from the ObjectManager
 			void Remove(LdrObject* obj, bool last_call = true)
 			{
-				int list_position = obj->m_uidata.m_list_item;
+				auto obj_uidata = GetUIData(obj);
+				if (obj_uidata == nullptr) return; // Object wasn't added so has no ui data
+				int list_position = obj_uidata->m_list_item;
 
 				// Recursively delete children in reverse order to prevent corrupting list control indices
 				for (std::size_t c = obj->m_child.size(); c != 0; --c)
@@ -467,15 +501,18 @@ namespace pr
 
 				// If the object is in the list, remove it. We'll fix up the list
 				// references after all children of 'obj' have been removed.
-				if (obj->m_uidata.m_list_item != INVALID_LIST_ITEM)
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
 				{
-					m_list.DeleteItem(obj->m_uidata.m_list_item);
-					obj->m_uidata.m_list_item = INVALID_LIST_ITEM;
+					m_list.DeleteItem(obj_uidata->m_list_item);
+					obj_uidata->m_list_item = INVALID_LIST_ITEM;
 				}
 
 				// Remove it from the tree.
-				m_tree.DeleteItem(obj->m_uidata.m_tree_item);
-				obj->m_uidata.m_tree_item = INVALID_TREE_ITEM;
+				m_tree.DeleteItem(obj_uidata->m_tree_item);
+				obj_uidata->m_tree_item = INVALID_TREE_ITEM;
+
+				// Remove the uidata from the object
+				obj->m_user_data.erase(UIData::Id());
 
 				if (last_call)
 					FixListCtrlReferences(list_position);
@@ -495,7 +532,7 @@ namespace pr
 				CollapseRecursive(object);
 
 				// Fix the indices of the remaining list members
-				FixListCtrlReferences(object->m_uidata.m_list_item);
+				FixListCtrlReferences(GetUIData(object)->m_list_item);
 			}
 
 			// Recursively collapse objects in the tree.
@@ -509,15 +546,16 @@ namespace pr
 					CollapseRecursive(child);
 
 					// Remove this child from the list control
-					if (child->m_uidata.m_list_item != INVALID_LIST_ITEM)
+					auto child_uidata = GetUIData(child);
+					if (child_uidata->m_list_item != INVALID_LIST_ITEM)
 					{
-						m_list.DeleteItem(child->m_uidata.m_list_item);
-						child->m_uidata.m_list_item = INVALID_LIST_ITEM;
+						m_list.DeleteItem(child_uidata->m_list_item);
+						child_uidata->m_list_item = INVALID_LIST_ITEM;
 					}
 				}
 
 				// Collapse this tree item
-				m_tree.Expand(object->m_uidata.m_tree_item, TVE_COLLAPSE);
+				m_tree.Expand(GetUIData(object)->m_tree_item, TVE_COLLAPSE);
 			}
 
 			// Expand 'object' in the tree and add its children to 'list'
@@ -529,13 +567,13 @@ namespace pr
 				if (!expanding)
 				{
 					expanding = true;
-					int list_position = object->m_uidata.m_list_item + 1;
+					int list_position = GetUIData(object)->m_list_item + 1;
 					ExpandRecursive(object, recursive, list_position);
 					expanding = false;
 				}
 
 				// Fix the indices of the remaining list members
-				FixListCtrlReferences(object->m_uidata.m_list_item + 1);
+				FixListCtrlReferences(GetUIData(object)->m_list_item + 1);
 			}
 
 			// Expand this object. If 'all_children' is true, expand all of its children.
@@ -548,10 +586,10 @@ namespace pr
 					LdrObject* child = object->m_child[c].m_ptr;
 
 					// Add this child to the list control
-					if (object->m_uidata.m_list_item != INVALID_LIST_ITEM &&
-						child->m_uidata.m_list_item == INVALID_LIST_ITEM)
+					if (GetUIData(object)->m_list_item != INVALID_LIST_ITEM &&
+						GetUIData(child )->m_list_item == INVALID_LIST_ITEM)
 					{
-						child->m_uidata.m_list_item = list_position;
+						GetUIData(child)->m_list_item = list_position;
 						m_list.InsertItem(list_position, child->m_name.c_str());
 						m_list.SetItemData(list_position, reinterpret_cast<DWORD_PTR>(child));
 						UpdateListItem(*child, false);
@@ -562,7 +600,7 @@ namespace pr
 				}
 
 				// Expand this tree item
-				m_tree.Expand(object->m_uidata.m_tree_item, TVE_EXPAND);
+				m_tree.Expand(GetUIData(object)->m_tree_item, TVE_EXPAND);
 			}
 
 			// Handler methods
@@ -716,7 +754,7 @@ namespace pr
 				// Mirror items selected in the tree with those selected in the list
 				LPNMTREEVIEW tv = reinterpret_cast<LPNMTREEVIEW>(hdr);
 				LdrObject& object = GetLdrObject(tv->itemNew.hItem);
-				if (object.m_uidata.m_list_item == INVALID_LIST_ITEM) return S_OK;
+				if (GetUIData(object)->m_list_item == INVALID_LIST_ITEM) return S_OK;
 
 				SelectNone();
 				SelectLdrObject(object, true);
@@ -957,12 +995,9 @@ namespace pr
 			m_dlg->Settings(settings);
 		}
 
-		// An object has been added to the data manager
+		// An object has been created
 		void ObjectManagerDlg::OnEvent(Evt_LdrObjectAdd const& e)
 		{
-			PR_ASSERT(PR_DBG_LDROBJMGR, e.m_obj->m_uidata.m_tree_item == INVALID_TREE_ITEM, "This item is already in the UI");
-			PR_ASSERT(PR_DBG_LDROBJMGR, e.m_obj->m_uidata.m_list_item == INVALID_LIST_ITEM, "This item is already in the UI");
-
 			// Ignore context ids we're not showing in the obj mgr.
 			if (m_ignore_ctxids.find(e.m_obj->m_context_id) != m_ignore_ctxids.end())
 				return;
@@ -975,11 +1010,11 @@ namespace pr
 			LdrObject* prev = 0;
 			if (e.m_obj->m_parent)
 			{
-				ObjectCont& children = e.m_obj->m_parent->m_child;
-				for (ObjectCont::iterator i = children.begin(), iend = children.end(); i != iend; ++i)
+				auto& children = e.m_obj->m_parent->m_child;
+				for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
 				{
 					if (*i != e.m_obj) continue;
-					if (i == children.begin()) break;
+					if (i == std::begin(children)) break;
 					prev = (*(--i)).m_ptr;
 					break;
 				}

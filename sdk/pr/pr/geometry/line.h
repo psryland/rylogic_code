@@ -20,6 +20,12 @@ namespace pr
 			vcount = value_cast<Tvr>(2 * num_lines);
 			icount = value_cast<Tir>(2 * num_lines);
 		}
+		template <typename Tvr, typename Tir>
+		void LineStripSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
+		{
+			vcount = value_cast<Tvr>(1 + num_lines);
+			icount = value_cast<Tir>(1 + num_lines);
+		}
 
 		// Generate lines from an array of start point, end point pairs.
 		// 'num_lines' is the number of start/end point pairs in the following arrays
@@ -62,23 +68,45 @@ namespace pr
 
 		// Create lines using collections of points and directions
 		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
-		inline Props LinesD(std::size_t num_lines ,TVertCIter points ,TVertCIter directions ,std::size_t num_colours ,TColCIter colours ,TVertIter out_verts, TIdxIter out_indices)
+		inline Props LinesD(std::size_t num_lines, TVertCIter points, TVertCIter directions, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			std::vector<v4> buf(num_lines * 2);
 			auto dst = begin(buf);
 			for (std::size_t i = 0; i != num_lines; ++i, ++points, ++directions)
 			{
 				*dst++ = *points;
-				*dst++ = *points+ *directions;
+				*dst++ = *points + *directions;
 			}
 			return Lines(num_lines, &buf[0], num_colours, colours, out_verts, out_indices);
 		}
 
-		// Create lines using collections of points and directions and a single colour
-		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		inline Props LinesD(std::size_t num_lines ,TVertCIter points ,TVertCIter directions ,Colour32 colour ,TVertIter out_verts, TIdxIter out_indices)
+		// Create a line strip
+		template <typename TVertCIter, typename TColCIter, typename TVertIter, typename TIdxIter>
+		inline Props LinesStrip(std::size_t num_lines, TVertCIter points, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			return LinesD(num_lines ,points ,directions ,1 ,&colour ,out_verts ,out_indices);
+			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+
+			Props props;
+			auto v_in  = points;
+			auto v_out = out_verts;
+			auto i_out = out_indices;
+			ColourRepeater col(colours, num_colours, 1+num_lines, Colour32White);
+			VIdx index = 0;
+			
+			pr::Encompass(props.m_bbox, *v_in);
+			SetPC(*v_out++, *v_in++, *col++);
+			*i_out++ = index++;
+
+			for (std::size_t i = 0; i != num_lines; ++i)
+			{
+				pr::Encompass(props.m_bbox, *v_in);
+				SetPC(*v_out++, *v_in++, *col++);
+				*i_out++ = index++;
+			}
+
+			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
+			props.m_has_alpha = col.m_alpha;
+			return props;
 		}
 	}
 }

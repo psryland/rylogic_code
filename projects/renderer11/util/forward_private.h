@@ -28,5 +28,6 @@ namespace pr
 		struct ShadowMapLineGS;
 		struct ShadowMapPS;
 		struct ThickLineListShaderGS;
+		struct ArrowHeadShaderGS;
 	}
 }

@@ -207,6 +207,17 @@ namespace pr
 	template <typename T> inline bool operator <= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr <= rhs.m_ptr; }
 	template <typename T> inline bool operator >= (RefPtr<T> const& lhs, RefPtr<T> const& rhs) { return lhs.m_ptr >= rhs.m_ptr; }
 
+	// The interface required by RefPtr.
+	// Note, the 'T' in RefPtr<T> doesn't actually need to inherit this interface
+	// due to template duck-typing, but it can be useful for RefPtr<IRefCounted>
+	// pointers to different typed objects.
+	struct IRefCounted
+	{
+		virtual ~IRefCounted() {}
+		virtual long AddRef() const = 0;
+		virtual long Release() const = 0;
+	};
+
 	// Some helper trace methods
 	#if PR_REFPTR_TRACE == 1
 	#if defined(__d3d11_h__)

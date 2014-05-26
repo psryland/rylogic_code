@@ -7,7 +7,6 @@
 #ifndef PR_RDR_SHADER_FORWARD_CBUF_HLSL
 #define PR_RDR_SHADER_FORWARD_CBUF_HLSL
 
-#include "../cbuf.hlsli"
 #include "../types.hlsli"
 
 #define PR_RDR_MAX_PROJECTED_TEXTURES 1
@@ -18,10 +17,7 @@
 cbuffer CBufFrame :cbuf_bank(b0)
 {
 	// Camera transform
-	row_major float4x4 m_c2w; // camera to world
-	row_major float4x4 m_c2s; // camera to screen
-	row_major float4x4 m_w2c; // world to camera
-	row_major float4x4 m_w2s; // world to screen
+	Camera m_cam;
 	
 	// Global lighting
 	Light m_global_light;

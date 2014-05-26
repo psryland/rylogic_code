@@ -73,11 +73,11 @@ PSOut main(PSIn In)
 	// Shadows
 	float light_visible = 1.0f;
 	if (ShadowMapCount(m_shadow) == 1)
-		light_visible = LightVisibility(m_shadow, 0, m_global_light, m_w2c, In.ws_vert);
+		light_visible = LightVisibility(m_shadow, 0, m_global_light, m_cam.m_w2c, In.ws_vert);
 
 	// Lighting
 	if (HasNormals)
-		Out.diff = Illuminate(m_global_light, In.ws_vert, In.ws_norm, m_c2w[3], light_visible, Out.diff);
+		Out.diff = Illuminate(m_global_light, In.ws_vert, In.ws_norm, m_cam.m_c2w[3], light_visible, Out.diff);
 
 	return Out;
 }

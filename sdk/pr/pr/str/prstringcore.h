@@ -206,11 +206,11 @@ namespace pr
 		{
 			return EqualN(str1, str2, length, Pred_EqualNoCase());
 		}
-		template <typename tstr1, typename tchar, size_t Len> inline bool EqualN(tstr1 const& str1, tchar (&str2)[Len])
+		template <typename tstr1, typename tchar, size_t Len> inline bool EqualN(tstr1 const& str1, tchar const (&str2)[Len])
 		{
 			return EqualN(str1, str2, Len, Pred_Equal());
 		}
-		template <typename tstr1, typename tchar, size_t Len> inline bool EqualNI(tstr1 const& str1, tchar (&str2)[Len])
+		template <typename tstr1, typename tchar, size_t Len> inline bool EqualNI(tstr1 const& str1, tchar const (&str2)[Len])
 		{
 			return EqualN(str1, str2, Len, Pred_EqualNoCase());
 		}

@@ -28,7 +28,7 @@ namespace pr
 			DSLightingShaderVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting_vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_vs.cso"));
 			}
 		};
 
@@ -47,7 +47,7 @@ namespace pr
 				pr::Throw(mgr->m_device->CreateSamplerState(&sdesc, &m_point_sampler.m_ptr));
 				PR_EXPAND(PR_DBG_RDR, NameResource(m_point_sampler, "dslighting point sampler"));
 
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "dslighting_ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "dslighting_ps.cso"));
 			}
 
 			// Setup the shader ready to be used on 'dle'

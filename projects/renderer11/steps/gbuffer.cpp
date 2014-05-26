@@ -178,7 +178,7 @@ namespace pr
 
 			// Set the frame constants and bind them to the shaders
 			hlsl::ds::CBufCamera cb = {};
-			SetViewConstants(m_scene->m_view, cb);
+			SetViewConstants(m_scene->m_view, cb.m_cam);
 			WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
 
 			// Loop over the elements in the draw list

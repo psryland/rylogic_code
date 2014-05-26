@@ -28,7 +28,7 @@ namespace pr
 			ShadowMapVS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11VertexShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_vs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_vs.cso"));
 			}
 		};
 
@@ -39,7 +39,7 @@ namespace pr
 			ShadowMapFaceGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_face_gs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_face_gs.cso"));
 			}
 		};
 
@@ -50,7 +50,7 @@ namespace pr
 			ShadowMapLineGS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11GeometryShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_line_gs.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_line_gs.cso"));
 			}
 		};
 
@@ -61,7 +61,7 @@ namespace pr
 			ShadowMapPS(ShaderManager* mgr, RdrId id, char const* name, D3DPtr<ID3D11PixelShader> shdr)
 				:base(mgr, id, name, shdr)
 			{
-				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(id, "shadow_map_ps.cso"));
+				PR_EXPAND(PR_RDR_RUNTIME_SHADERS, RegisterRuntimeShader(m_orig_id, "shadow_map_ps.cso"));
 			}
 		};
 

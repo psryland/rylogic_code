@@ -228,6 +228,7 @@ namespace pr
 				virtual ~IEvents() {}
 			} *OnEvent;
 
+			// 'func' should have 'ProgressDlg*' as the first parameter
 			template <typename Func, typename... Args>
 			ProgressDlg(char const* title, char const* desc, Func&& func, Args&&... args)
 				:m_state(title, desc, 0.0f)

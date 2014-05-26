@@ -288,12 +288,20 @@ namespace pr
 			return m_fovY;
 		}
 
-		// Set the Yaxis field of view. Fov relationship: tan(m_fovY/2) * aspect_w_by_h = tan(fovX/2);
+		// Set the Yaxis field of view. Fov relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		void FovY(float fovY)
 		{
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && pr::IsFinite(fovY), "");
 			m_moved = fovY != m_fovY;
 			m_base_fovY = m_fovY = fovY;
+		}
+
+		// Set both X and Y axis field of view. Implies aspect ratio
+		void Fov(float fovX, float fovY)
+		{
+			auto aspect = pr::Tan(fovX/2) / pr::Tan(fovY/2);
+			Aspect(aspect);
+			FovY(fovY);
 		}
 
 		// Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
