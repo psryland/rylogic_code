@@ -66,8 +66,8 @@ namespace pr
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		Type PopStdDev() const { return pr::Sqrt(PopStdVar()); }
 		Type SamStdDev() const { return pr::Sqrt(SamStdVar()); }
-		Type PopStdVar() const { return m_var * (1.0 / (m_count + (m_count == 0))); }
-		Type SamStdVar() const { return m_var * (1.0 / (m_count - (m_count != 1))); }
+		Type PopStdVar() const { return static_cast<Type>(m_var * (1.0 / (m_count + (m_count == 0)))); }
+		Type SamStdVar() const { return static_cast<Type>(m_var * (1.0 / (m_count - (m_count != 1)))); }
 
 		Stat() { Reset(); }
 
@@ -77,8 +77,8 @@ namespace pr
 			m_count = 0;
 			m_mean  = Type();
 			m_var   = Type();
-			m_min   =  pr::maths::limits<Type>::max();
-			m_max   = -pr::maths::limits<Type>::max();
+			m_min   = pr::maths::limits<Type>::max();
+			m_max   = pr::maths::limits<Type>::lowest();
 		}
 
 		// Accumulate statistics for 'value' in a single pass.
@@ -88,8 +88,8 @@ namespace pr
 			++m_count;
 			Type diff  = value - m_mean;
 			double inv_count = 1.0 / m_count;
-			m_mean += diff * inv_count;
-			m_var  += diff * diff * ((m_count - 1) * inv_count);
+			m_mean += static_cast<Type>(diff * inv_count);
+			m_var  += static_cast<Type>(diff * diff * ((m_count - 1) * inv_count));
 			m_min = min_of(value, m_min);
 			m_max = max_of(value, m_max);
 		}

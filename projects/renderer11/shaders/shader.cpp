@@ -65,15 +65,16 @@ namespace pr
 				std::vector<pr::uint8> buf;
 				if (pr::FileToBuffer(cso_filepath.c_str(), buf) && !buf.empty())
 				{
-					switch (m_shdr_type)
-					{
+					D3DPtr<ID3D11DeviceChild> dxshdr;
+					switch (m_shdr_type) {
 					default: PR_ASSERT(PR_DBG_RDR, false, "Unknown shader type"); break;
-					case EShaderType::VS: pr::Throw(device->CreateVertexShader   (&buf[0], buf.size(), 0, (ID3D11VertexShader  **)&m_shdr.m_ptr)); break;
-					case EShaderType::PS: pr::Throw(device->CreatePixelShader    (&buf[0], buf.size(), 0, (ID3D11PixelShader   **)&m_shdr.m_ptr)); break;
-					case EShaderType::GS: pr::Throw(device->CreateGeometryShader (&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&m_shdr.m_ptr)); break;
-					case EShaderType::HS: pr::Throw(device->CreateHullShader     (&buf[0], buf.size(), 0, (ID3D11HullShader    **)&m_shdr.m_ptr)); break;
-					case EShaderType::DS: pr::Throw(device->CreateDomainShader   (&buf[0], buf.size(), 0, (ID3D11DomainShader  **)&m_shdr.m_ptr)); break;
+					case EShaderType::VS: pr::Throw(device->CreateVertexShader   (&buf[0], buf.size(), 0, (ID3D11VertexShader  **)&dxshdr.m_ptr)); break;
+					case EShaderType::PS: pr::Throw(device->CreatePixelShader    (&buf[0], buf.size(), 0, (ID3D11PixelShader   **)&dxshdr.m_ptr)); break;
+					case EShaderType::GS: pr::Throw(device->CreateGeometryShader (&buf[0], buf.size(), 0, (ID3D11GeometryShader**)&dxshdr.m_ptr)); break;
+					case EShaderType::HS: pr::Throw(device->CreateHullShader     (&buf[0], buf.size(), 0, (ID3D11HullShader    **)&dxshdr.m_ptr)); break;
+					case EShaderType::DS: pr::Throw(device->CreateDomainShader   (&buf[0], buf.size(), 0, (ID3D11DomainShader  **)&dxshdr.m_ptr)); break;
 					}
+					m_shdr = dxshdr;
 					if (last_mod > newest) newest = last_mod;
 					PR_INFO(1, pr::FmtS("Shader %s replaced", pr::To<std::string>(cso_filepath).c_str()));
 				}

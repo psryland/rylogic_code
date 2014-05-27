@@ -27,7 +27,7 @@ namespace ldr
 		~PluginManager();
 
 		// Poll stepable plugins
-		void Poll();
+		void Poll(double elapsed_s);
 
 		// Load a plugin and add it to the collection
 		// Returns a pointer to the plugin instance if started up correctly

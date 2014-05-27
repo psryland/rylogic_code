@@ -99,59 +99,57 @@ LDR_EXPORT void ldrObjectSetWireframe(ldrapi::ObjectHandle object, bool wirefram
 	object->Wireframe(wireframe, name);
 }
 
-// Plugin manager *****************************************************************
-
-ldr::PluginManager::PluginManager(LineDrawer* ldr)
-:m_plugins()
-,m_ldr(ldr)
-,m_last_poll(0)
-{}
-ldr::PluginManager::~PluginManager()
+namespace ldr
 {
-	for (PluginCont::iterator i = m_plugins.begin(), iend = m_plugins.end(); i != iend; ++i)
-		delete *i;
-}
+	// Plugin manager *****************************************************************
 
-// Poll stepable plugins
-void ldr::PluginManager::Poll()
-{
-	pr::uint64 this_poll = pr::rtc::Read();
-	pr::uint64 elapsed_ticks = this_poll - m_last_poll; // handles roll over
-	m_last_poll = this_poll;
-
-	double elapsed_s = elapsed_ticks / static_cast<double>(pr::rtc::ReadCPUFreq());
-	if (elapsed_s > 0.0 && elapsed_s < 1.0)
+	PluginManager::PluginManager(LineDrawer* ldr)
+		:m_plugins()
+		,m_ldr(ldr)
+		,m_last_poll(0)
+	{}
+	PluginManager::~PluginManager()
 	{
-		for (PluginCont::iterator i = m_plugins.begin(), iend = m_plugins.end(); i != iend; ++i)
-			(*i)->Poll(elapsed_s);
+		for (auto pi : m_plugins)
+			delete pi;
 	}
-}
 
-// Load a plugin and add it to the collection
-// Returns a pointer to the plugin instance if started up correctly
-ldr::Plugin* ldr::PluginManager::Add(char const* filepath, char const* args)
-{
-	Plugin* plugin = new Plugin(m_ldr, filepath, args);
-	m_plugins.push_back(plugin);
-	plugin->Start();
-	return plugin;
-}
+	// Poll stepable plugins
+	void PluginManager::Poll(double elapsed_s)
+	{
+		if (elapsed_s > 0.0 && elapsed_s < 1.0)
+		{
+			for (auto pi : m_plugins)
+				pi->Poll(elapsed_s);
+		}
+	}
 
-// Shutdown and unload a plugin
-void ldr::PluginManager::Remove(Plugin* plugin)
-{
-	PluginCont::iterator iter = std::find(m_plugins.begin(), m_plugins.end(), plugin);
-	if (iter != m_plugins.end()) m_plugins.erase(iter);
-	delete plugin;
-}
+	// Load a plugin and add it to the collection
+	// Returns a pointer to the plugin instance if started up correctly
+	Plugin* PluginManager::Add(char const* filepath, char const* args)
+	{
+		Plugin* plugin = new Plugin(m_ldr, filepath, args);
+		m_plugins.push_back(plugin);
+		plugin->Start();
+		return plugin;
+	}
 
-// Access to the plugins
-ldr::Plugin const* ldr::PluginManager::First(Iter& iter) const
-{
-	iter = m_plugins.begin();
-	return Next(iter);
-}
-ldr::Plugin const* ldr::PluginManager::Next(Iter& iter) const
-{
-	return iter != m_plugins.end() ? *iter++ : 0;
+	// Shutdown and unload a plugin
+	void PluginManager::Remove(Plugin* plugin)
+	{
+		PluginCont::iterator iter = std::find(m_plugins.begin(), m_plugins.end(), plugin);
+		if (iter != m_plugins.end()) m_plugins.erase(iter);
+		delete plugin;
+	}
+
+	// Access to the plugins
+	Plugin const* PluginManager::First(Iter& iter) const
+	{
+		iter = m_plugins.begin();
+		return Next(iter);
+	}
+	Plugin const* PluginManager::Next(Iter& iter) const
+	{
+		return iter != m_plugins.end() ? *iter++ : 0;
+	}
 }

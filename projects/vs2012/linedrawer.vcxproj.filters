@@ -199,6 +199,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera_dlg.h">
       <Filter>camera</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h">
+      <Filter>app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\linedrawer\resources\linedrawer.rc">

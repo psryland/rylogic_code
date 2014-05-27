@@ -37,42 +37,7 @@ namespace pr
 			UINT                         m_vsync;            // Present SyncInterval value
 			bool                         m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 
-			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, BOOL gdi_compat = FALSE, pr::iv2 const& client_area = pr::iv2::make(1024,768))
-				:m_mem()
-				,m_hwnd(hwnd)
-				,m_windowed(windowed)
-				,m_mode(client_area)
-				,m_multisamp(4, ~0U)
-				,m_buffer_count(2)
-				,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
-				,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
-				,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
-				,m_adapter()
-				,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
-				,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
-				,m_feature_levels()
-				,m_vsync(1)
-				,m_allow_alt_enter(false)
-			{
-				if (gdi_compat)
-				{
-					// Must use B8G8R8A8_UNORM for gdi compatibility
-					m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-
-					// Also, multisampling isn't supported
-					m_multisamp = pr::rdr::MultiSamp();
-				}
-
-				// Notes:
-				// - vsync has different meaning for the swap effect modes.
-				//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the vsync rate)
-				//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
-				// Add the debug layer in debug mode
-				//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-
-				// Disable multisampling when debugging as pix can't handle it
-				PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
-			}
+			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, BOOL gdi_compat = FALSE, pr::iv2 const& client_area = pr::iv2::make(1024,768));
 		};
 
 		// Renderer state variables
@@ -89,7 +54,7 @@ namespace pr
 			bool                           m_idle;    // True while the window is occluded
 
 			RdrState(RdrSettings const& settings);
-			virtual ~RdrState() {}
+			virtual ~RdrState();
 			void InitMainRT();
 		};
 	}

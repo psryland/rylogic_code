@@ -26,6 +26,44 @@ namespace pr
 			settings.m_multisamp.Validate(device, settings.m_depth_format);
 		}
 
+		// Default RdrSettings
+		RdrSettings::RdrSettings(HWND hwnd, BOOL windowed, BOOL gdi_compat, pr::iv2 const& client_area)
+			:m_mem()
+			,m_hwnd(hwnd)
+			,m_windowed(windowed)
+			,m_mode(client_area)
+			,m_multisamp(4, ~0U)
+			,m_buffer_count(2)
+			,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
+			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
+			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
+			,m_adapter()
+			,m_driver_type(D3D_DRIVER_TYPE_HARDWARE)
+			,m_device_layers(gdi_compat ? D3D11_CREATE_DEVICE_BGRA_SUPPORT : 0)
+			,m_feature_levels()
+			,m_vsync(1)
+			,m_allow_alt_enter(false)
+		{
+			if (gdi_compat)
+			{
+				// Must use B8G8R8A8_UNORM for gdi compatibility
+				m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+
+				// Also, multisampling isn't supported
+				m_multisamp = pr::rdr::MultiSamp();
+			}
+
+			// Notes:
+			// - vsync has different meaning for the swap effect modes.
+			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the vsync rate)
+			//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
+			// Add the debug layer in debug mode
+			PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+
+			// Disable multisampling when debugging as pix can't handle it
+			PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
+		}
+
 		// Initialise the renderer state variables and creates the dx device and swap chain.
 		RdrState::RdrState(RdrSettings const& settings)
 			:m_settings(settings)
@@ -88,6 +126,28 @@ namespace pr
 			InitMainRT();
 		}
 
+		// Renderer state destruction. All 
+		RdrState::~RdrState()
+		{
+			PR_EXPAND(PR_DBG_RDR, int rcnt);
+			PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
+			m_immediate->OMSetRenderTargets(0, 0, 0);
+			m_immediate = nullptr;
+			m_main_rtv = nullptr;
+			m_main_dsv = nullptr;
+
+			// Destroying a Swap Chain:
+			// You may not release a swap chain in full-screen mode because doing so may create thread contention
+			// (which will cause DXGI to raise a non-continuable exception). Before releasing a swap chain, first
+			// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
+			PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
+			m_swap_chain->SetFullscreenState(FALSE, 0);
+			m_swap_chain = nullptr;
+
+			PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the dx device");
+			m_device = nullptr;
+		}
+
 		// Change the renderer to use a specific render method
 		void RdrState::InitMainRT()
 		{
@@ -146,25 +206,6 @@ namespace pr
 	{
 		// Notify of the renderer shutdown
 		pr::events::Send(pr::rdr::Evt_RendererDestroy(*this));
-
-		PR_EXPAND(PR_DBG_RDR, int rcnt);
-		PR_ASSERT(PR_DBG_RDR, (rcnt = m_immediate.RefCount()) == 1, "Outstanding references to the immediate device context");
-		m_immediate->OMSetRenderTargets(0, 0, 0);
-		m_immediate = nullptr;
-		m_main_rtv = nullptr;
-		m_main_dsv = nullptr;
-
-		// Destroying a Swap Chain:
-		// You may not release a swap chain in full-screen mode because doing so may create thread contention
-		// (which will cause DXGI to raise a non-continuable exception). Before releasing a swap chain, first
-		// switch to windowed mode (using IDXGISwapChain::SetFullscreenState( FALSE, NULL )) and then call IUnknown::Release.
-		PR_ASSERT(PR_DBG_RDR, (rcnt = m_swap_chain.RefCount()) == 1, "Outstanding references to the swap chain");
-		m_swap_chain->SetFullscreenState(FALSE, 0);
-		m_swap_chain = nullptr;
-
-		// Can't assert this as the managers still contain references to the device (and possibly the client)
-		//PR_ASSERT(PR_DBG_RDR, (rcnt = m_device.RefCount()) == 1, "Outstanding references to the dx device");
-		m_device = nullptr;
 	}
 
 	// Get/Set full screen mode

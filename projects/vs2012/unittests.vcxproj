@@ -113,7 +113,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\timers.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />

@@ -82,7 +82,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=0;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -98,7 +97,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,7 +114,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=0;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -133,7 +130,6 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>linedrawer\main\stdafx.h</PrecompiledHeaderFile>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -218,6 +214,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\app\forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\app\main.h" />
     <ClInclude Include="..\..\sdk\pr\pr\app\main_gui.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h" />
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />

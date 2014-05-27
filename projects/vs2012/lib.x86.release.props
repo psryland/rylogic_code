@@ -35,6 +35,7 @@
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <SDLCheck>true</SDLCheck>
+      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <PostBuildEvent>
       <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>

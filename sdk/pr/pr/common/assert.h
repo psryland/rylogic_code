@@ -167,8 +167,8 @@
 #define PR_EXPAND1(exp)         exp
 #define PR_EXPAND(grp, exp)     PR_JOIN(PR_EXPAND, grp)(exp)
 
-#define PR_INFO0(exp, str)      do {} while (pr::impl::ConstantExpressionSink(false))
-#define PR_INFO1(exp, str)      do { if (pr::impl::ConstantExpressionSink(!(exp))) { PR_OUTPUT_MSG(str); size_t len=strlen(str); if(len&&(str)[len-1]!='\n') {PR_OUTPUT_MSG("\n");} } } while (pr::impl::ConstantExpressionSink(false))
+#define PR_INFO0(show, str)     do {} while (pr::impl::ConstantExpressionSink(false))
+#define PR_INFO1(show, str)     do { if (pr::impl::ConstantExpressionSink(show)) { PR_OUTPUT_MSG(str); size_t len=strlen(str); if(len&&(str)[len-1]!='\n') {PR_OUTPUT_MSG("\n");} } } while (pr::impl::ConstantExpressionSink(false))
 
 #define PR_ASSERT0(exp, str)    do {} while (pr::impl::ConstantExpressionSink(false))
 #define PR_ASSERT1(exp, str)    do { PR_ASSERT_FUNC(exp, str); } while (pr::impl::ConstantExpressionSink(false))
@@ -176,11 +176,11 @@
 // Assert that 'exp' is true, if not display an assertion failure message containing 'str'. Switched on 'grp'
 #define PR_ASSERT(grp, exp, str)   PR_JOIN(PR_ASSERT, grp)(exp, str)
 
-// Display an info message 'str' if 'exp' is *not* true. Switched on 'grp'
-#define PR_INFO_EXP(grp, exp, str) PR_JOIN(PR_INFO, grp)(exp, str)
+// Display an info message 'str' if 'exp' is true. Switched on 'grp'
+#define PR_INFO_IF(grp, exp, str)  PR_JOIN(PR_INFO, grp)(exp, str)
 
 // Display an info message 'str'. Switched on 'grp'
-#define PR_INFO(grp, str)          PR_JOIN(PR_INFO, grp)(false, str)
+#define PR_INFO(grp, str)          PR_JOIN(PR_INFO, grp)(true, str)
 
 // Display an info message warning when a stub function is called
 #define PR_STUB_FUNC()             PR_OUTPUT_MSG("Warning: Stub function called\n")

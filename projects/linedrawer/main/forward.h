@@ -21,7 +21,6 @@
 #include "pr/common/command_line.h"
 #include "pr/common/events.h"
 #include "pr/common/new.h"
-#include "pr/common/timers.h"
 #include "pr/common/windows_com.h"
 #include "pr/common/keystate.h"
 #include "pr/common/colour.h"

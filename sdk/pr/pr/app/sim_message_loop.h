@@ -11,11 +11,19 @@
 
 #include <string>
 #include <functional>
+#include <thread>
 #include <atlbase.h>
 #include <atlapp.h>
-#include "pr/common/timers.h"
+#include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/array.h"
+#include "pr/common/stop_watch.h"
+
+#define PR_LOOP_TIMING 1//PR_DBG
+#if PR_LOOP_TIMING
+#include "pr/maths/stat.h"
+#include "pr/gui/messagemap_dbg.h"
+#endif
 
 namespace pr
 {
@@ -29,6 +37,41 @@ namespace pr
 		typedef std::function<void(double)> StepFunc;
 
 	private:
+		typedef pr::rtc::duration_t duration_t;
+		typedef pr::rtc::time_point_t time_point_t;
+
+		#if PR_LOOP_TIMING
+		struct Stats
+		{
+			size_t m_frame_index;
+			size_t m_long_frames;
+			pr::Stat<> m_step_time;
+
+			Stats()
+				:m_frame_index()
+				,m_long_frames()
+				,m_step_time()
+			{}
+			std::string ToString() const
+			{
+				return pr::Fmt(
+					"Frame stats:\n"
+					"  Long Frames: %d\n"
+					"  Avr Frame: %fms\n"
+					"  Min Frame: %fms\n"
+					"  Max Frame: %fms\n"
+					,m_long_frames
+					,m_step_time.Mean()
+					,m_step_time.Minimum()
+					,m_step_time.Maximum()
+					);
+			}
+		};
+		
+		// Message loop timing
+		pr::Stat<> m_msg_time;
+		#endif
+
 		struct Context
 		{
 			// A debugging name for the context
@@ -39,166 +82,139 @@ namespace pr
 
 			// The number of rtc ticks per frame. For fixed step rate contexts, this is the interval
 			// used for each step. For non-fixed step rate contexts, this is the minimum time between steps
-			pr::rtc::Ticks m_ticks_per_frame;
+			duration_t m_ticks_per_frame;
 
 			// The rtc time last time the context was stepped
-			pr::rtc::Ticks m_last_time;
+			duration_t m_last_time;
 
 			// True if this context should always be stepped with the same elapsed time
 			// Useful for deterministic simulation
 			bool m_fixed_step_rate;
 
-			// Drops frames if the simulation gets more than 'm_allowed_frames_behind' steps behind.
-			// Use 'INFINITE' to never drop frames, should always be >= 1
-			unsigned int m_allowed_frames_behind;
+			// Run stats for this context
+			PR_EXPAND(PR_LOOP_TIMING, Stats m_stats;)
 
-			// The number of times this frame as been stepped sequentially (without messages being pumped)
-			unsigned int m_sequential_step_count;
-
-			Context(char const* name, StepFunc step, float frames_per_second, bool fixed_step_rate, int max_frames_behind)
+			Context(char const* name, StepFunc step, float frames_per_second, bool fixed_step_rate)
 				:m_name(name)
 				,m_step(step)
-				,m_ticks_per_frame(static_cast<pr::rtc::Ticks>(pr::rtc::ReadCPUFreq() / frames_per_second))
-				,m_last_time(pr::rtc::Read())
+				,m_ticks_per_frame(pr::rtc::FromSec(1.0f / frames_per_second))
+				,m_last_time()
 				,m_fixed_step_rate(fixed_step_rate)
-				,m_allowed_frames_behind(max_frames_behind + (max_frames_behind == 0))
-				,m_sequential_step_count(0)
 			{}
+			~Context()
+			{
+				PR_INFO(PR_LOOP_TIMING, m_name.c_str());
+				PR_INFO(PR_LOOP_TIMING, m_stats.ToString().c_str());
+			}
 
 			// Returns the rtc value of when this context would ideally be stepped next
-			pr::rtc::Ticks next_step_time() const { return m_last_time + m_ticks_per_frame; }
+			duration_t next_step_time() const { return m_last_time + m_ticks_per_frame; }
 
 			// A sorting predicate
 			static bool Order(Context const* lhs, Context const* rhs) { return lhs->next_step_time() < rhs->next_step_time(); }
 		};
 		pr::Array<Context*> m_contexts;
 
-		struct Stats
-		{
-			size_t m_long_frames;
-			size_t m_dropped_frames;
-			size_t m_sequential_steps_limit_reached;
-
-			Stats()
-				:m_long_frames()
-				,m_dropped_frames()
-				,m_sequential_steps_limit_reached()
-			{}
-			operator bool() const
-			{
-				return m_long_frames || m_dropped_frames || m_sequential_steps_limit_reached;
-			}
-			std::string ToString() const
-			{
-				return pr::Fmt(
-					"Frame stats:\r\n"
-					"  Long Frames: %d\r\n"
-					"  Dropped Frames: %d\r\n"
-					"  Seq Limit: %d\r\n"
-					,m_long_frames
-					,m_dropped_frames
-					,m_sequential_steps_limit_reached);
-			}
-		};
-		Stats m_stats;
-
 	public:
-		SimMsgLoop()
-			:m_contexts()
-			,m_stats()
-		{}
+		SimMsgLoop() :m_contexts() {}
 		~SimMsgLoop()
 		{
-			if (m_stats)
-				OutputDebugStringA(m_stats.ToString().c_str());
-
-			//PR_LOG(m_log, Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
-			for (auto i = begin(m_contexts), iend = end(m_contexts); i != iend; ++i)
-				delete *i;
+			for (auto ctx : m_contexts)
+				delete ctx;
+			
+			PR_INFO(PR_LOOP_TIMING, pr::FmtS(
+				"Msg Queue:\n"
+				"  Avr Time: %fms\n"
+				"  Min Time: %fms\n"
+				"  Max Time: %fms\n"
+				,m_msg_time.Mean()
+				,m_msg_time.Minimum()
+				,m_msg_time.Maximum()
+				));
 		}
 
 		// For everything that needs stepping at a particular rate, add a step context
 		// e.g. Simulation step and draw are two typical step contexts
-		void AddStepContext(char const* name, StepFunc step, float frames_per_second, bool fixed_step_rate, unsigned int max_frames_behind = 1)
+		void AddStepContext(char const* name, StepFunc step, float frames_per_second, bool fixed_step_rate)
 		{
-			m_contexts.push_back(new Context(name, step, frames_per_second, fixed_step_rate, max_frames_behind));
+			m_contexts.push_back(new Context(name, step, frames_per_second, fixed_step_rate));
 			std::sort(begin(m_contexts), end(m_contexts), Context::Order);
 		}
 
 		// Runs the message loop until WM_QUIT
 		virtual int Run()
 		{
-			for (;;)
-			{
-				// Pumping needed?
-				if (::PeekMessage(&m_msg, 0, 0, 0, PM_REMOVE))
-				{
-					if (m_msg.message == WM_QUIT)
-					{
-						// WM_QUIT == exit loop
-						break;
-					}
+			duration_t const MinTimeBetweenFrames = pr::rtc::FromMSec(1.0);
 
+			PR_EXPAND(PR_LOOP_TIMING, pr::rtc::StopWatch sw);
+			for (pr::rtc::StopWatch clock(true); ; std::this_thread::yield())
+			{
+				auto msg_start = clock.now();
+
+				// Pumping needed?
+				PR_EXPAND(PR_LOOP_TIMING, sw.start(true));
+				if (::PeekMessage(&m_msg, 0, 0, 0, PM_REMOVE) && m_msg.message != WM_QUIT)
+				{
 					if (!PreTranslateMessage(&m_msg))
 					{
 						::TranslateMessage(&m_msg);
 						::DispatchMessage(&m_msg);
 					}
-
-					if (IsIdleMessage(&m_msg))
-					{
-						int idle_count = 0;
-						while (OnIdle(idle_count++) && !::PeekMessage(&m_msg, 0, 0, 0, PM_NOREMOVE))
-						{}
-					}
 				}
-				else if (!m_contexts.empty())
+				PR_EXPAND(PR_LOOP_TIMING, sw.stop());
+				PR_EXPAND(PR_LOOP_TIMING, m_msg_time.Add(sw.period_ms()));
+				PR_INFO_IF(PR_LOOP_TIMING, sw.period_ms() > 20.0, pr::FmtS("%-16s took %fms\n", pr::debug_wm::WMtoString(m_msg.message), sw.period_ms()));
+
+				// Only allow the message handling to consume a fixed amount of sim time
+				auto msg_end = clock.now();
+				clock.m_start += std::max(duration_t::zero(), (msg_end - msg_start) - MinTimeBetweenFrames);
+
+				// Exit the message pump when WM_QUIT is received
+				if (m_msg.message == WM_QUIT)
+					break;
+
+				// No contexts...
+				if (m_contexts.empty())
+					continue;
+
+				// Process all contexts until the front one is no longer due for stepping
+				for(;;)
 				{
-					// Process all contexts until the front one is no longer due for stepping
-					pr::rtc::StopWatch sw;
-					for(;;)
+					auto& ctx    = *m_contexts.front();
+					auto now     = clock.now();
+					auto elapsed = now - ctx.m_last_time;
+
+					// If the next context is not due for stepping, leave the loop
+					if (elapsed < ctx.m_ticks_per_frame)
+						break;
+
+					// Find the period of time to step by
+					auto step_interval = ctx.m_fixed_step_rate ? ctx.m_ticks_per_frame : elapsed;
+
+					// Perform the step
+					PR_EXPAND(PR_LOOP_TIMING, sw.start(true));
+					ctx.m_step(pr::rtc::ToSec(step_interval));
+					PR_EXPAND(PR_LOOP_TIMING, sw.stop());
+
+					// Advance the context's last time.
+					ctx.m_last_time = std::max(now + step_interval, clock.now() - MinTimeBetweenFrames);
+
+					// Frame stats
+					#if PR_LOOP_TIMING
+					ctx.m_stats.m_frame_index++;
+					ctx.m_stats.m_step_time.Add(sw.period_ms());
+					if (step_interval < sw.period())
 					{
-						auto& ctx = *m_contexts.front();
-
-						// See if it's time to step the next context
-						auto now = pr::rtc::Read();
-						auto elapsed = now - ctx.m_last_time;
-						const unsigned int max_sequential_step_count = 10;
-						if (elapsed < ctx.m_ticks_per_frame || ++ctx.m_sequential_step_count == max_sequential_step_count)
-						{
-							m_stats.m_sequential_steps_limit_reached += (ctx.m_sequential_step_count == max_sequential_step_count);
-							ctx.m_sequential_step_count = 0;
-							break;
-						}
-
-						// See if we need to drop frames for this context
-						auto frames_behind = ctx.m_fixed_step_rate ? elapsed / ctx.m_ticks_per_frame : 1;
-						if (frames_behind > ctx.m_allowed_frames_behind)
-						{
-							auto time_skip = (frames_behind - 1) * ctx.m_ticks_per_frame;
-							ctx.m_last_time += time_skip;
-							elapsed -= time_skip;
-							m_stats.m_dropped_frames += static_cast<size_t>(frames_behind);
-							//PR_LOG(m_log, Warn, pr::FmtS("Dropping %d frames for %s", frames_behind - 1, ctx.m_name.c_str()));
-						}
-
-						// 'ctx' requires stepping
-						auto step_interval = ctx.m_fixed_step_rate ? ctx.m_ticks_per_frame : elapsed;
-						{
-							sw.start(true);
-							ctx.m_step(pr::rtc::ToSec(step_interval));
-							sw.stop();
-							if (sw.period() > ctx.m_ticks_per_frame)
-							{
-								++m_stats.m_long_frames;
-								//PR_LOG(m_log, Warn, pr::FmtS("'%s' step() took %3.3fms, frame time: %3.3fms", ctx.m_name.c_str(), sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
-							}
-						}
-						ctx.m_last_time += step_interval;
-
-						// Sort the contexts so that the front of the list is the next to be stepped
-						std::sort(begin(m_contexts), end(m_contexts), Context::Order);
+						++ctx.m_stats.m_long_frames;
+						PR_INFO(1, pr::FmtS("Long Frame: %-15s (frame: %d) Took: %fms (frame period: %fms)\n", ctx.m_name.c_str(), ctx.m_stats.m_frame_index, sw.period_ms(), pr::rtc::ToMSec(ctx.m_ticks_per_frame)));
 					}
+					#endif
+
+					// Buble sort the contexts so that the front of the list is the next to be stepped
+					// The list should be in order except for the first so bubble sort is best
+					for (size_t i = 0, iend = m_contexts.size() - 1; i < iend; ++i)
+						if (!Context::Order(m_contexts[i], m_contexts[i+1]))
+							std::swap(m_contexts[i], m_contexts[i+1]);
 				}
 			}
 			return (int)m_msg.wParam;

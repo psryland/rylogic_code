@@ -37,7 +37,7 @@ float pr::ph::CalcVolume(ShapePolytope const& shape)
 	}
 	if( volume < maths::tiny )
 	{
-		PR_INFO_EXP(PR_DBG_PHYSICS, volume > 0.0f, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
+		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
 		volume = maths::tiny;
 	}
 	return volume / 6.0f;
@@ -59,7 +59,7 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 	}
 	if( volume < maths::tiny )
 	{
-		PR_INFO_EXP(PR_DBG_PHYSICS, volume > 0.0f, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
+		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
 		volume = Abs(volume + maths::tiny);
 	}
 	centre_of_mass /= volume * 4.0f;
@@ -130,7 +130,7 @@ m3x4 pr::ph::CalcInertiaTensor(ShapePolytope const& shape)
 	}
 	if( volume < maths::tiny )
 	{
-		PR_INFO_EXP(PR_DBG_PHYSICS, volume > 0.0f, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
+		PR_INFO(PR_DBG_PHYSICS, FmtS("PRPhysics: Shape %s with volume = %f\n", GetShapeTypeStr(shape.m_base.m_type), volume));
 		volume = maths::tiny;
 	}
 

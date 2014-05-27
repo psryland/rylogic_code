@@ -41,7 +41,7 @@ namespace pr
 			while (!m_lookup_shader.empty())
 			{
 				auto iter = begin(m_lookup_shader);
-				PR_INFO_EXP(PR_DBG_RDR, pr::PtrRefCount(iter->second) == 1, pr::FmtS("External references to shader %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
+				PR_INFO_IF(PR_DBG_RDR, pr::PtrRefCount(iter->second) != 1, pr::FmtS("External references to shader %d - %s still exist", iter->second->m_id, iter->second->m_name.c_str()));
 				iter->second->Release();
 			}
 		}

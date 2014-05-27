@@ -486,9 +486,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\timers.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -853,6 +850,9 @@
       <Filter>pr\camera</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h">
       <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>

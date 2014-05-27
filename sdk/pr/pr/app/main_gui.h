@@ -146,14 +146,27 @@ namespace pr
 			}
 			virtual void OnDestroy()
 			{
+				OutputDebugStringA("Main window OnDestroy called\n");
 				m_main = nullptr;
 				CMessageLoop* loop = pr::app::Module().GetMessageLoop();
 				loop->RemoveMessageFilter(this);
 				loop->RemoveIdleHandler(this);
 				
-				// Post WM_QUIT which will cause the msg_loop to exit
-				::PostQuitMessage(m_exit_code);
+				// Let WM_DESTROY carry on to base classes which will eventually
+				// call PostQuitMessage to exit the message loop.
+				SetMsgHandled(FALSE);
 			}
+			virtual void OnSysCommand(UINT nID, CPoint)
+			{
+				if (nID == IDCLOSE)
+				{
+					CloseApp(0);
+					return;
+				}
+				SetMsgHandled(FALSE);
+			}
+
+			// Initiate app shutdown
 			virtual void CloseApp(int exit_code)
 			{
 				PR_ASSERT(PR_DBG, GetCurrentThreadId() == m_my_thread_id, "Close must be called from the thread with the associated message loop");
@@ -361,6 +374,7 @@ namespace pr
 			BEGIN_MSG_MAP(x)
 				MSG_WM_CREATE(OnCreate)
 				MSG_WM_DESTROY(OnDestroy)
+				MSG_WM_SYSCOMMAND(OnSysCommand)
 				MSG_WM_SYSKEYDOWN(OnSysKeyDown)
 				MSG_WM_TIMER(OnTimer)
 				MSG_WM_ERASEBKGND(OnEraseBkGnd)

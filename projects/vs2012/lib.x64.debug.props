@@ -29,6 +29,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <SDLCheck>true</SDLCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <AdditionalOptions>/Zm200</AdditionalOptions>
     </ClCompile>
     <PostBuildEvent>
       <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
