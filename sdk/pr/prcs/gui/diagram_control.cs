@@ -53,22 +53,21 @@ namespace pr.gui
 			{
 				Diagram  = null;
 				Id       = id;
-				Graphics = new View3d.Object("*Group {}");
 				Position = position;
 				Visible  = true;
+				m_allow_invalidate = false;
 			}
 			protected Element(XElement node)
 			{
 				Diagram  = null;
-				Graphics = new View3d.Object("*Group {}");
 				Id       = node.Element(XmlField.Id).As<Guid>();
 				Position = node.Element(XmlField.Position).As<m4x4>();
 				Visible  = true;
+				m_allow_invalidate = false;
 			}
 			public virtual void Dispose()
 			{
 				Diagram = null;
-				Graphics = null;
 				Invalidated = null;
 				PositionChanged = null;
 				DataChanged = null;
@@ -106,14 +105,6 @@ namespace pr.gui
 				// Attach to the new diagram
 				if (m_diag != null && mod_elements_collection)
 					m_diag.Elements.Add(this);
-
-				// Set a new Z position (directly so we don't raise the event)
-				if (m_diag != null && m_gfx != null)
-				{
-					var p = m_gfx.O2P;
-					p.pos.z = m_diag.ElementZ;
-					m_gfx.O2P = p; 
-				}
 			}
 			private DiagramControl m_diag;
 
@@ -136,7 +127,7 @@ namespace pr.gui
 				Invalidated.Raise(this, EventArgs.Empty);
 			}
 			protected void AllowInvalidate() { m_allow_invalidate = true; Invalidate(); }
-			private bool m_allow_invalidate = false;
+			private bool m_allow_invalidate;
 
 			/// <summary>Dirty flag = need to render</summary>
 			private bool Dirty { get { return m_impl_dirty; } set { m_impl_dirty = value && m_allow_invalidate; } }
@@ -228,6 +219,34 @@ namespace pr.gui
 			}
 			private bool m_impl_visible;
 
+			/// <summary>Send this element to the bottom of the stack</summary>
+			public void SendToBack()
+			{
+				// Z order is determined by position in the Elements collection
+				if (m_diag == null) return;
+				
+				// Save the diagram pointer because removing
+				// this element will remove it from the Diagram
+				var diag = m_diag;
+				diag.Elements.Remove(this);
+				diag.Elements.Insert(0, this);
+				diag.m_eb_update_diag.Signal();
+			}
+
+			/// <summary>Bring this element to top of the stack</summary>
+			public void BringToFront()
+			{
+				// Z order is determined by position in the Elements collection
+				if (m_diag == null) return;
+
+				// Save the diagram pointer because removing
+				// this element will remove it from the Diagram
+				var diag = m_diag;
+				diag.Elements.Remove(this);
+				diag.Elements.Add(this);
+				diag.m_eb_update_diag.Signal();
+			}
+
 			/// <summary>Redraw this node if dirty</summary>
 			public void Refresh(bool force = false)
 			{
@@ -246,65 +265,42 @@ namespace pr.gui
 			/// <summary>The element to diagram transform</summary>
 			public m4x4 Position
 			{
-				get
-				{
-					return m_gfx != null ? m_gfx.O2P : m4x4.Identity;
-				}
+				get { return m_impl_position; }
 				set
 				{
-					if (m_gfx == null || Equals(m_gfx.O2P, value)) return;
+					if (Equals(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
+
+			/// <summary>Get/Set the XY position of the element</summary>
 			public v2 PositionXY
 			{
 				get { return Position.pos.xy; }
-				set { var p = Position; Position = new m4x4(p.rot, new v4(value, p.pos.z, p.pos.w)); }
+				set { var o2p = Position; Position = new m4x4(o2p.rot, new v4(value, o2p.pos.z, o2p.pos.w)); }
 			}
+
+			/// <summary>Get/Set the z position of the element</summary>
+			internal float PositionZ
+			{
+				get { return Position.pos.z; }
+				set { var o2p = Position; o2p.pos.z = value; Position = o2p; }
+			}
+			
+			/// <summary>Position recorded at the time of selection/deselection</summary>
 			internal m4x4 PositionAtSelectionChange { get; set; }
+			
+			/// <summary>Position recorded at the time dragging starts</summary>
 			internal m4x4 DragStartPosition { get; set; }
+
+			/// <summary>Internal set position and raise event</summary>
 			protected virtual void SetPosition(m4x4 pos)
 			{
-				m_gfx.O2P = pos;
+				m_impl_position = pos;
 				if (Diagram != null) Diagram.Edited = true;
 				PositionChanged.Raise(this, EventArgs.Empty);
 			}
-
-			/// <summary>The graphics object for this node</summary>
-			public View3d.Object Graphics
-			{
-				get { Refresh(); return m_gfx; }
-				protected set
-				{
-					if (m_gfx != null) m_gfx.Dispose();
-					m_gfx = value;
-				}
-			}
-			private View3d.Object m_gfx;
-
-			/// <summary>Bring this element to top of the stack</summary>
-			public void BringToFront()
-			{
-				// Set a new Z position (directly so we don't raise the event)
-				if (m_diag != null && m_gfx != null)
-				{
-					var p = m_gfx.O2P;
-					p.pos.z = m_diag.ElementZ;
-					m_gfx.O2P = p; 
-				}
-			}
-
-			/// <summary>Send this element to the bottom of the stack</summary>
-			public void SendToBack()
-			{
-				// Set a new Z position (directly so we don't raise the event)
-				if (m_diag != null && m_gfx != null)
-				{
-					var p = m_gfx.O2P;
-					p.pos.z = -m_diag.ElementZ;
-					m_gfx.O2P = p; 
-				}
-			}
+			private m4x4 m_impl_position;
 
 			/// <summary>AABB for the element in diagram space</summary>
 			public abstract BRect Bounds { get; }
@@ -315,17 +311,12 @@ namespace pr.gui
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
 			public abstract void Drag(v2 delta, bool commit);
 
-			/// <summary>Render the node into the surface</summary>
-			public abstract void Render();
-
 			/// <summary>Return the attachment location and normal nearest to 'pt'.</summary>
 			public AnchorPoint NearestAnchor(v4 pt, bool pt_in_element_space)
 			{
 				if (!pt_in_element_space)
-				{
-					if (m_gfx == null) throw new Exception("Can only find nearest in diagram space when the element is part of a diagram");
-					pt = m4x4.InverseFast(m_gfx.O2P) * pt;
-				}
+					pt = m4x4.InverseFast(Position) * pt;
+				
 				return AnchorPoints.MinBy(x => (x.Location - pt).Length3Sq);
 			}
 
@@ -347,7 +338,13 @@ namespace pr.gui
 				Invalidate();
 			}
 			protected abstract void UpdateInternal(XElement node);
-		
+
+			/// <summary>Update the graphics associated with this element</summary>
+			public abstract void Render();
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			internal abstract void AddToDrawset(View3d.DrawsetInterface drawset);
+
 			/// <summary>Check the self consistency of this element</summary>
 			public virtual bool CheckConsistency()
 			{
@@ -628,7 +625,7 @@ namespace pr.gui
 			internal override void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
 			{
 				base.SetDiagramInternal(diag, mod_elements_collection);
-			
+
 				// When an element is saved to xml, it only saves the style id.
 				// When loaded from xml, a default style is created with the id changed
 				// to that from the xml data. When added to a diagram, we use the style id
@@ -670,6 +667,9 @@ namespace pr.gui
 		{
 			private const string LdrName = "node";
 
+			/// <summary>Only one graphics object for a box node</summary>
+			private View3d.Object m_gfx;
+
 			public BoxNode()
 				:this(Guid.NewGuid())
 			{}
@@ -703,10 +703,17 @@ namespace pr.gui
 			private void Init()
 			{
 				// Create the graphics object
+				m_gfx = new View3d.Object("*Group{}");
 				m_size_changed = true;
 				Render();
 
 				AllowInvalidate();
+			}
+			public override void Dispose()
+			{
+				base.Dispose();
+				if (m_gfx != null) m_gfx.Dispose();
+				m_gfx = null;
 			}
 
 			/// <summary>Export to xml</summary>
@@ -725,9 +732,13 @@ namespace pr.gui
 			}
 			private float m_impl_corner_radius;
 
-			/// <summary>AABB for the element in diagram space</summary>
-			public override BRect Bounds { get { return new BRect(Position.pos.xy, Size / 2); } }
-
+			/// <summary>Set the position of the element</summary>
+			protected override void SetPosition(m4x4 pos)
+			{
+				m_gfx.O2P = pos;
+				base.SetPosition(pos);
+			}
+			
 			/// <summary>Detect resize and update the graphics as needed</summary>
 			protected override void SetSize(v2 sz)
 			{
@@ -736,33 +747,8 @@ namespace pr.gui
 			}
 			private bool m_size_changed;
 
-			/// <summary>Render the node into the surface</summary>
-			public override void Render()
-			{
-				// Update the graphics model when the size changes
-				if (m_size_changed)
-				{
-					var ldr = new LdrBuilder();
-					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-					Graphics.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
-					Graphics.SetTexture(Surf);
-					m_size_changed = false;
-				}
-
-				using (var tex = Surf.LockSurface())
-				{
-					tex.Gfx.ScaleTransform(TextureScale, TextureScale);
-
-					var rect = Bounds.ToRectangle();
-					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
-
-					tex.Gfx.Clear(Selected ? Style.Selected : Style.Fill);
-					using (var bsh = new SolidBrush(Style.Text))
-						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
-					//using (var pen = new Pen(Style.Border, 2f))
-					//	tex.Gfx.DrawRectangleRounded(pen, rect, CornerRadius);
-				}
-			}
+			/// <summary>AABB for the element in diagram space</summary>
+			public override BRect Bounds { get { return new BRect(Position.pos.xy, Size / 2); } }
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
@@ -799,6 +785,46 @@ namespace pr.gui
 			{
 				base.UpdateInternal(node);
 				CornerRadius = node.Element(XmlField.CornerRadius).As<float>(CornerRadius);
+			}
+
+			/// <summary>Render the node into the surface</summary>
+			public override void Render()
+			{
+				// Update the graphics model when the size changes
+				if (m_size_changed)
+				{
+					// Save z because UpdateModel will override it
+					var z = PositionZ;
+					
+					var ldr = new LdrBuilder();
+					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+					m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+					m_gfx.SetTexture(Surf);
+					
+					// Restore the z position
+					PositionZ = z;
+					m_size_changed = false;
+				}
+
+				using (var tex = Surf.LockSurface())
+				{
+					tex.Gfx.ScaleTransform(TextureScale, TextureScale);
+
+					var rect = Bounds.ToRectangle();
+					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
+
+					tex.Gfx.Clear(Selected ? Style.Selected : Style.Fill);
+					using (var bsh = new SolidBrush(Style.Text))
+						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
+				}
+			}
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			internal override void AddToDrawset(View3d.DrawsetInterface drawset, float z)
+			{
+				PositionZ = z;
+				m_gfx.O2P = Position;
+				drawset.AddObject(m_gfx);
 			}
 		}
 
@@ -918,7 +944,16 @@ namespace pr.gui
 		{
 			private const float DefaultSplineControlLength = 50f;
 			private const float MinSelectionDistanceSq = 25f;
-			
+
+			/// <summary>Graphics for the connector line</summary>
+			private View3d.Object m_gfx_line;
+
+			/// <summary>Graphics for the forward arrow</summary>
+			private View3d.Object m_gfx_fwd;
+
+			/// <summary>Graphics for the backward arrow</summary>
+			private View3d.Object m_gfx_bak;
+
 			public Connector()
 				:this(Guid.NewGuid(), null, null, string.Empty)
 			{}
@@ -932,7 +967,7 @@ namespace pr.gui
 				:this(id, node0, node1, label, ConnectorStyle.Default)
 			{}
 			public Connector(Guid id, Node node0, Node node1, string label, ConnectorStyle style)
-				:base(id, m4x4.Translation(AttachCentre(node0, node1)))
+				:base(id, m4x4.Translation(AttachCentre(node0, node1), 0f))
 			{
 				m_anc0 = new AnchorPoint();
 				m_anc1 = new AnchorPoint();
@@ -940,22 +975,30 @@ namespace pr.gui
 				Label = label;
 				Node0 = node0;
 				Node1 = node1;
-				Relink(false);
-
-				AllowInvalidate();
+				Init();
 			}
 			public Connector(XElement node)
 				:base(node)
 			{
 				m_anc0 = new AnchorPoint();
 				m_anc1 = new AnchorPoint();
-
 				Node0 = node.Element(XmlField.Anchor0).As<AnchorPoint>().Elem.As<Node>();
 				Node1 = node.Element(XmlField.Anchor1).As<AnchorPoint>().Elem.As<Node>();
 				Style = new ConnectorStyle{Id = node.Element(XmlField.Style).As<Guid>()};
 				Label = node.Element(XmlField.Label).As<string>();
+				Init();
+			}
+			private void Init()
+			{
+				// Update the positions of the anchors
 				Relink(false);
-				
+
+				// Create graphics for the connector
+				m_gfx_line = new View3d.Object("*Group{}");
+				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
+				m_gfx_bak = new View3d.Object("*Triangle conn_fwd FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
+				Render();
+
 				AllowInvalidate();
 			}
 			public override void Dispose()
@@ -963,6 +1006,12 @@ namespace pr.gui
 				Node0 = null;
 				Node1 = null;
 				Style = null;
+				if (m_gfx_line != null) m_gfx_line.Dispose();
+				if (m_gfx_fwd  != null) m_gfx_fwd.Dispose();
+				if (m_gfx_bak  != null) m_gfx_bak.Dispose();
+				m_gfx_line = null;
+				m_gfx_fwd  = null;
+				m_gfx_bak  = null;
 				base.Dispose();
 			}
 
@@ -1063,12 +1112,29 @@ namespace pr.gui
 			}
 			private ConnectorStyle m_impl_style;
 
+			/// <summary>Get/Set the selected state</summary>
+			public override bool Selected
+			{
+				get { return base.Selected; }
+				set
+				{
+					if (Selected == value) return;
+					base.Selected = value;
+					Graphics.SetColour(Selected ? Style.Selected : Style.Line, "line");
+				}
+			}
+
+			protected override void SetPosition(m4x4 pos)
+			{
+				base.SetPosition(pos);
+			}
+
 			/// <summary>AABB for the element in diagram space</summary>
 			public override BRect Bounds
 			{
 				get
 				{
-					var spline = MakeSpline(Anc0, Anc1, true);
+					var spline = MakeSpline(Anc0, Anc1, PositionZ, true);
 					var bounds = BRect.Reset;
 					bounds.Encompass(spline.Point0.xy, spline.Ctrl0.xy, spline.Ctrl1.xy, spline.Point1.xy);
 					return bounds;
@@ -1079,7 +1145,7 @@ namespace pr.gui
 			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
 				// Find the closest point to the spline
-				var spline = MakeSpline(Anc0, Anc1, true);
+				var spline = MakeSpline(Anc0, Anc1, PositionZ, true);
 				var t = Geometry.ClosestPoint(spline, new v4(point, 0, 1));
 				var pt = spline.Position(t);
 				var diff_cs = // Convert separating distance screen space
@@ -1098,39 +1164,33 @@ namespace pr.gui
 				Invalidate();
 			}
 
-			/// <summary>Get/Set the selected state</summary>
-			public override bool Selected
+			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
+			public override IEnumerable<AnchorPoint> AnchorPoints
 			{
-				get { return base.Selected; }
-				set
+				get
 				{
-					if (Selected == value) return;
-					base.Selected = value;
-					Graphics.SetColour(Selected ? Style.Selected : Style.Line, "line");
+					yield return new AnchorPoint(this, Position.pos, v4.Zero);
 				}
 			}
 
 			/// <summary>Update the graphics for the connector</summary>
 			public override void Render()
 			{
-				var spline = MakeSpline(Anc0, Anc1, false);
+				// Save z because UpdateModel will override it
+				var z = PositionZ;
+
+				var spline = MakeSpline(Anc0, Anc1, z, false);
+				var col = Selected ? Style.Selected : Style.Line;
+				var ty = Style.Type == ConnectorStyle.EType.Line ? "Line" :
+					((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0 ? "Fwd" : string.Empty) +
+					((Style.Type & ConnectorStyle.EType.BackArrow   ) != 0 ? "Back" : string.Empty);
+
 				var ldr = new LdrBuilder();
-				using (ldr.Group("connector"))
-				{
-					var col = Selected ? Style.Selected : Style.Line;
-					if ((Style.Type & ConnectorStyle.EType.Line) != 0)
-						ldr.Append("*Spline line ",col,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
-					//if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
-					//	ldr.Append("*Triangle fwdarrow ",col,"{",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Width {",Style.Width,"} }\n");
-//	-1.5 -1.5 0 FFFF0000               // Three corner points of the triangle
-//	 1.5 -1.5 0 FF00FF00
-//	 0.0  1.5 0 FF0000FF
-//	*o2w{*randpos{0 0 0 2}}
-//	*Texture {"#checker"}              // Optional texture
-//}
-				}
-				Graphics.UpdateModel(ldr.ToString());
-				Graphics.O2P = m4x4.Translation(AttachCentre(Anc0, Anc1));
+				ldr.Append("*Arrow connector ",col,"{",ty," ",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Smooth *Width {",Style.Width,"} }\n");
+
+				// Update the line of the connector
+				m_gfx_line.UpdateModel(ldr.ToString());
+				m_gfx_line.O2P = m4x4.Translation(AttachCentre(Anc0, Anc1), z);
 			}
 
 			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
@@ -1199,7 +1259,7 @@ namespace pr.gui
 			internal override void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
 			{
 				base.SetDiagramInternal(diag, mod_elements_collection);
-			
+
 				// When an element is saved to xml, it only saves the style id.
 				// When loaded from xml, a default style is created with the id changed
 				// to that from the xml data. When added to a diagram, we use the style id
@@ -1210,13 +1270,12 @@ namespace pr.gui
 			}
 
 			/// <summary>Returns the diagram space position of the centre between nearest anchor points on two nodes</summary>
-			private static v4 AttachCentre(AnchorPoint anc0, AnchorPoint anc1)
+			private static v2 AttachCentre(AnchorPoint anc0, AnchorPoint anc1)
 			{
-				v4 centre = (anc0.LocationWS + anc1.LocationWS) / 2f;
-				centre.z = 0;
+				v2 centre = 0.5f * (anc0.LocationWS + anc1.LocationWS).xy;
 				return centre;
 			}
-			private static v4 AttachCentre(Node node0, Node node1)
+			private static v2 AttachCentre(Node node0, Node node1)
 			{
 				AnchorPoint anc0, anc1;
 				AttachPoints(node0, node1, out anc0, out anc1);
@@ -1231,13 +1290,13 @@ namespace pr.gui
 			}
 
 			/// <summary>Returns the spline that connects two anchor points</summary>
-			private static Spline MakeSpline(AnchorPoint anc0, AnchorPoint anc1, bool diag_space)
+			private static Spline MakeSpline(AnchorPoint anc0, AnchorPoint anc1, float z, bool diag_space)
 			{
-				var centre = diag_space ? v4.Zero : AttachCentre(anc0, anc1).w0;
-				var pt0 = anc0.LocationWS - centre;                         pt0.z = 0;
-				var ct0 = pt0 + anc0.NormalWS * DefaultSplineControlLength; ct0.z = 0;
-				var pt1 = anc1.LocationWS - centre;                         pt1.z = 0;
-				var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = 0;
+				var centre = diag_space ? v4.Zero : new v4(AttachCentre(anc0, anc1), z, 0f);
+				var pt0 = anc0.LocationWS - centre;                         pt0.z = z;  
+				var ct0 = pt0 + anc0.NormalWS * DefaultSplineControlLength; ct0.z = z;
+				var pt1 = anc1.LocationWS - centre;                         pt1.z = z;
+				var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = z;
 				return new Spline(pt0,ct0,ct1,pt1);
 			}
 
@@ -1256,7 +1315,7 @@ namespace pr.gui
 
 				return base.CheckConsistency();
 			}
-			
+
 			// ToString
 			public override string ToString() { return "Connector (" + Anc0.ToString() + "-" + Anc1.ToString() + ")"; }
 		}
@@ -1320,7 +1379,7 @@ namespace pr.gui
 					Type     = EType.Line;
 					Line     = Color.Black;
 					Selected = Color.Blue;
-					Width    = 5f;
+					Width    = 8f;
 				}
 			}
 			public ConnectorStyle(XElement node)
@@ -1580,25 +1639,6 @@ namespace pr.gui
 			public const string ScatterSettings = "scatter_settings";
 		}
 
-		///// <summary>Graphics objects used by the diagram</summary>
-		//private class Tools :IDisposable
-		//{
-		//	/// <summary>A rectangular selection box</summary>
-		//	public View3d.Object m_selection_box;
-
-		//	public Tools()
-		//	{
-		//		var ldr = new LdrBuilder();
-		//		using (ldr.Group("selection_box"))
-		//		{
-		//		}
-
-		//	}
-		//	public void Dispose()
-		//	{
-		//	}
-		//}
-
 		#endregion
 
 		#region Options
@@ -1710,7 +1750,8 @@ namespace pr.gui
 			if (this.IsInDesignMode()) return;
 			m_view3d = new View3d(Handle, Render);
 			m_camera = new View3d.CameraControls(m_view3d.Drawset);
-			
+			m_camera.SetClipPlanes(0.01f, 1.1f, true);
+
 			InitializeComponent();
 
 			m_view3d.Drawset.LightProperties = View3d.Light.Ambient(Colour32.Gray);
@@ -1796,10 +1837,6 @@ namespace pr.gui
 		/// <summary>Minimum bounding area for view reset</summary>
 		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
 
-		/// <summary>Used to control z order</summary>
-		private float ElementZ { get { return m_impl_element_z += 0.001f; } }
-		private float m_impl_element_z = 0.0f;
-
 		/// <summary>Perform a hit test on the diagram</summary>
 		public HitTestResult HitTest(v2 ds_point)
 		{
@@ -1815,7 +1852,7 @@ namespace pr.gui
 			result.Hits.Sort((l,r) =>
 				{
 					if (l.Entity != r.Entity) return l.Entity.CompareTo(r.Entity);
-					return l.Element.Position.pos.z.CompareTo(r.Element.Position.pos.z);
+					return l.Element.PositionZ.CompareTo(r.Element.PositionZ);
 				});
 			return result;
 		}
@@ -2155,6 +2192,7 @@ namespace pr.gui
 					// diagram. Note, don't dispose, we don't own the elements
 					foreach (var elem in Elements)
 						elem.SetDiagramInternal(null, false);
+					
 					// no sanity check here, because the Elements.Clear() is still in progress
 					break;
 				}
@@ -2366,7 +2404,7 @@ namespace pr.gui
 								var min_sep = min_separation(vec, node0, node1);
 								var sep     = Math.Max(min_sep, vec.Length2);
 
-								// Coulomb force F = kQq/xÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²
+								// Coulomb force F = kQq/xÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²
 								var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
 								var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
 
@@ -2433,10 +2471,29 @@ namespace pr.gui
 		private void UpdateDiagram(bool invalidate_all)
 		{
 			m_view3d.Drawset.RemoveAllObjects();
-			foreach (var elem in Elements)
+
+			// Invalidate all first (if needed)
+			if (invalidate_all)
+				Elements.ForEach(x => x.Invalidate());
+
+			var zorder = 0f;
+
+			// Draw all the nodes first
+			foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
 			{
 				if (!elem.Visible) continue;
-				if (invalidate_all) elem.Invalidate();
+				elem.PositionZ = zorder += 0.001f;
+				elem.AddToDrawset(m_view3d.Drawset);
+
+				m_view3d.Drawset.AddObject(elem.Graphics);
+			}
+
+			// Draw all the connectors above the nodes
+			zorder += 1.0f;
+			foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
+			{
+				if (!elem.Visible) continue;
+				elem.PositionZ = zorder += 0.001f;
 				m_view3d.Drawset.AddObject(elem.Graphics);
 			}
 
@@ -2555,7 +2612,7 @@ namespace pr.gui
 			node.Add2(XmlField.ConnStyles, m_connector_styles, false);
 			foreach (var elem in Elements)
 				node.Add2(XmlField.Element, elem, true);
-			
+
 			return node;
 		}
 		public XDocument ExportXml()
@@ -2608,7 +2665,7 @@ namespace pr.gui
 		public void ImportXml(XElement node, bool merge)
 		{
 			if (!merge) { ImportXml(node); return; }
-			
+
 			// Build a map of Guids to elements
 			var map = Elements.ToDictionary(x => x.Id);
 
@@ -2787,11 +2844,11 @@ namespace pr.gui
 			selected1.Sort(ByGuid);
 			if (!selected0.SequenceEqual(selected1, ByGuid))
 				throw new Exception("Selected elements collection is inconsistent with the selected state of the elements");
-			
+
 			// Check the consistency of all elements
 			foreach (var elem in Elements)
 				elem.CheckConsistency();
-			
+
 			return true;
 		}
 

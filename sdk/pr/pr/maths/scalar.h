@@ -136,6 +136,9 @@ namespace pr
 	template <typename T> inline T      Normalise2(T const& v)                       { return v / Length2(v); }
 	template <typename T> inline T      Normalise3(T const& v)                       { return v / Length3(v); }
 	template <typename T> inline T      Normalise4(T const& v)                       { return v / Length4(v); }
+	template <typename T> inline T      Normalise2(T const& v, T const& def)         { return IsZero2(v) ? def : Normalise2(v); }
+	template <typename T> inline T      Normalise3(T const& v, T const& def)         { return IsZero3(v) ? def : Normalise3(v); }
+	template <typename T> inline T      Normalise4(T const& v, T const& def)         { return IsZero4(v) ? def : Normalise4(v); }
 	template <typename T> inline T      Normalise2IfNonZero(T const& v)              { return IsZero2(v) ? v : Normalise2(v); }
 	template <typename T> inline T      Normalise3IfNonZero(T const& v)              { return IsZero3(v) ? v : Normalise3(v); }
 	template <typename T> inline T      Normalise4IfNonZero(T const& v)              { return IsZero4(v) ? v : Normalise4(v); }

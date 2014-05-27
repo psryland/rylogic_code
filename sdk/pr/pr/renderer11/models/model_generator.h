@@ -137,6 +137,14 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
+			static ModelPtr QuadStrip(Renderer& rdr, size_t num_quads, v4 const* verts, float width, v4 const& normal, size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
+			{
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::QuadStrip(num_quads, verts, width, normal, num_colours, colours, vb, ib); };
+
+				std::size_t vcount, icount;
+				pr::geometry::QuadStripSize(num_quads, vcount, icount);
+				return Create(rdr, vcount, icount, EPrim::TriStrip, mat, gen);
+			}
 
 			// Boxes ******************************************************************************
 			static ModelPtr Boxes(Renderer& rdr, std::size_t num_boxes, v4 const* points, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)

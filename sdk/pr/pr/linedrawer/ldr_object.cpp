@@ -183,7 +183,7 @@ namespace pr
 					v4 axis = AxisId(axis_id);
 					if (IsZero3(axis))
 					{
-						reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3");
+						reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
 						break;
 					}
 
@@ -565,10 +565,10 @@ namespace pr
 			return true;
 		}
 
-		#pragma region Object Creators
-
 		// Template prototype for ObjectCreators
 		template <ELdrObject::Enum_ ObjType> struct ObjectCreator;
+
+		#pragma region ObjectCreator Base Classes
 
 		// Base class for all object creators
 		struct IObjectCreator
@@ -650,8 +650,6 @@ namespace pr
 			}
 		};
 
-		#pragma region Line Objects
-
 		// Base class for object creators that are based on lines
 		struct IObjectCreatorLine :IObjectCreator
 		{
@@ -660,16 +658,28 @@ namespace pr
 			CCont& m_colour;
 			float  m_line_width;
 			bool   m_per_line_colour;
-			bool   m_linemesh;
+			bool   m_smooth;
 			bool   m_linestrip;
+			bool   m_linemesh;
 
-			IObjectCreatorLine() :m_point(Point()), m_index(Index()), m_colour(Color()), m_line_width(), m_per_line_colour(), m_linemesh(), m_linestrip() {}
+			IObjectCreatorLine(bool linestrip, bool linemesh)
+				:m_point(Point())
+				,m_index(Index())
+				,m_colour(Color())
+				,m_line_width()
+				,m_per_line_colour()
+				,m_smooth()
+				,m_linestrip(linestrip)
+				,m_linemesh(linemesh)
+			{}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw)
 				{
 				default: return IObjectCreator::ParseKeyword(p, kw);
-				case EKeyword::Coloured:  m_per_line_colour = true; return true;
+				case EKeyword::Coloured: m_per_line_colour = true; return true;
+				case EKeyword::Smooth: m_smooth = true; return true;
+				case EKeyword::Width: p.m_reader.ExtractRealS(m_line_width); return true;
 				case EKeyword::Param:
 					{
 						float t[2];
@@ -687,11 +697,6 @@ namespace pr
 						p1 = p + t[1] * dir;
 						return true;
 					}
-				case EKeyword::Width:
-					{
-						p.m_reader.ExtractRealS(m_line_width);
-						return true;
-					}
 				}
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -703,6 +708,14 @@ namespace pr
 				{
 					p.m_reader.ReportError(FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
+				}
+
+				// Smooth the points
+				if (m_smooth && m_linestrip)
+				{
+					auto points = m_point;
+					m_point.resize(0);
+					pr::Smooth(points, m_point);
 				}
 
 				// Create the model
@@ -722,9 +735,296 @@ namespace pr
 			}
 		};
 
+		// Base class for object creators that are based on 2d shapes
+		struct IObjectCreatorShape2d :IObjectCreatorTexture
+		{
+			// Create space for the model
+			VCont& m_point;
+			ICont& m_index;
+			TCont& m_tex;
+			int    m_axis_id;
+			pr::v4 m_dim;
+			int    m_facets;
+			bool   m_solid;
+
+			IObjectCreatorShape2d() :m_point(Point()), m_index(Index()), m_tex(Texts()), m_axis_id(), m_dim(), m_facets(40), m_solid(false) {}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				case EKeyword::Solid:  m_solid = true; return true;
+				case EKeyword::Facets: p.m_reader.ExtractIntS(m_facets, 10); return true;
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_axis_id < 1 || m_axis_id > 3)
+				{
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					return;
+				}
+
+				pr::BBox bbox;
+				GenerateShape(bbox);
+
+				// Permute the verts, normals, and bbox
+				auto axis_id = pr::Abs(m_axis_id) - 1;
+				for (auto& v : m_point)
+					v = pr::Permute3(v, axis_id + 1);
+				auto norm = pr::Permute3(pr::v4ZAxis, axis_id + 1);
+				bbox.m_radius = pr::Permute3(bbox.m_radius, axis_id + 1);
+
+				// Create the model
+				if (m_solid)
+					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData());
+				else
+					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data());
+
+				obj->m_model->m_bbox = bbox;
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+			virtual void GenerateShape(pr::BBox& bbox) = 0;
+		};
+
+		// Base class for planar objects
+		struct IObjectCreatorPlane :IObjectCreatorTexture
+		{
+			VCont& m_point;
+			CCont& m_colour;
+			bool   m_per_vert_colour;
+
+			IObjectCreatorPlane() :m_point(Point()), m_colour(Color()), m_per_vert_colour() {}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				case EKeyword::Coloured: m_per_vert_colour = true; return true;
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_point.empty() || (m_point.size() % 4) != 0)
+				{
+					p.m_reader.ReportError("Object description incomplete");
+					return;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, m_point.size() / 4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
+		// Base class for arbitrary cubiod shapes
+		struct IObjectCreatorCuboid :IObjectCreatorTexture
+		{
+			pr::v4 m_pt[8];
+			pr::m4x4 m_b2w;
+
+			IObjectCreatorCuboid() :m_pt(), m_b2w(pr::m4x4Identity) {}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
+		// Base class for cone shapes
+		struct IObjectCreatorCone :IObjectCreatorTexture
+		{
+			int m_axis_id;
+			pr::v4 m_dim; // x,y = radius, z = height
+			pr::v2 m_scale;
+			int m_layers, m_wedges;
+
+			IObjectCreatorCone() :m_axis_id(1), m_dim(), m_scale(), m_layers(1), m_wedges(20) {}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				case EKeyword::Layers:  p.m_reader.ExtractInt(m_layers, 10); return true;
+				case EKeyword::Wedges:  p.m_reader.ExtractInt(m_wedges, 10); return true;
+				case EKeyword::Scale:   p.m_reader.ExtractVector2(m_scale); return true;
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				// Get the transform so that model is aligned to 'axis_id'
+				pr::m4x4 o2w = pr::m4x4Identity;
+				switch (m_axis_id)
+				{
+				default:
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					return;
+				case  1: o2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
+				case -1: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
+				case  2: o2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
+				case -2: o2w = pr::Rotation4x4(pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
+				case  3: o2w = pr::m4x4Identity; break;
+				case -3: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_2, 0.0f, pr::v4Origin); break;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, o2w, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
+		// Base class for mesh based objects
+		struct IObjectCreatorMesh :IObjectCreatorTexture
+		{
+			VCont& m_verts;
+			NCont& m_normals;
+			CCont& m_colours;
+			TCont& m_texs;
+			ICont& m_indices;
+			EPrim::Enum_ m_prim_type;
+			bool m_generate_normals;
+
+			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_generate_normals(false) {}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
+				case EKeyword::Verts:
+				{
+					p.m_reader.SectionStart();
+					for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(v, 1.0f); m_verts.push_back(v); }
+					p.m_reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::Normals:
+				{
+					p.m_reader.SectionStart();
+					for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(n, 0.0f); m_normals.push_back(n); }
+					p.m_reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::Colours:
+				{
+					p.m_reader.SectionStart();
+					for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractInt(c.m_aarrggbb, 16); m_colours.push_back(c); }
+					p.m_reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::TexCoords:
+				{
+					p.m_reader.SectionStart();
+					for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector2(t); m_texs.push_back(t); }
+					p.m_reader.SectionEnd();
+					return true;
+				}
+				case EKeyword::Lines:
+				{
+					p.m_reader.SectionStart();
+					for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
+					{
+						p.m_reader.ExtractIntArray(idx, 2, 10);
+						m_indices.push_back(idx[0]);
+						m_indices.push_back(idx[1]);
+					}
+					p.m_reader.SectionEnd();
+					m_prim_type = EPrim::LineList;
+					return true;
+				}
+				case EKeyword::Faces:
+				{
+					p.m_reader.SectionStart();
+					for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
+					{
+						p.m_reader.ExtractIntArray(idx, 3, 10);
+						m_indices.push_back(idx[0]);
+						m_indices.push_back(idx[1]);
+						m_indices.push_back(idx[2]);
+					}
+					p.m_reader.SectionEnd();
+					m_prim_type = EPrim::TriList;
+					return true;
+				}
+				case EKeyword::Tetra:
+				{
+					p.m_reader.SectionStart();
+					for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
+					{
+						p.m_reader.ExtractIntArray(idx, 4, 10);
+						m_indices.push_back(idx[0]);
+						m_indices.push_back(idx[1]);
+						m_indices.push_back(idx[2]);
+						m_indices.push_back(idx[0]);
+						m_indices.push_back(idx[2]);
+						m_indices.push_back(idx[3]);
+						m_indices.push_back(idx[0]);
+						m_indices.push_back(idx[3]);
+						m_indices.push_back(idx[1]);
+						m_indices.push_back(idx[3]);
+						m_indices.push_back(idx[2]);
+						m_indices.push_back(idx[1]);
+					}
+					p.m_reader.SectionEnd();
+					m_prim_type = EPrim::TriList;
+					return true;
+				}
+				case EKeyword::GenerateNormals:
+				{
+					m_generate_normals = true;
+					return true;
+				}
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_indices.empty() || m_verts.empty())
+				{
+					p.m_reader.ReportError("Mesh object description incomplete");
+					return;
+				}
+
+				// Generate normals if needed
+				if (m_generate_normals)
+				{
+					m_normals.resize(m_verts.size());
+					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(),
+						[&](std::size_t i){ return m_verts[i]; },
+						[&](std::size_t i){ return m_normals[i]; },
+						[&](std::size_t i, pr::v4 const& nm){ m_normals[i] = nm; });
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Mesh(
+					p.m_rdr,
+					m_prim_type,
+					m_verts.size(),
+					m_indices.size(),
+					m_verts.data(),
+					m_indices.data(),
+					m_colours.size(),
+					m_colours.data(),
+					m_normals.size(),
+					m_normals.data(),
+					m_texs.data(),
+					GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
+		#pragma endregion
+
+		#pragma region Line Objects
+
 		// ELdrObject::Line
 		template <> struct ObjectCreator<ELdrObject::Line> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(false, false) {}
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 p0, p1;
@@ -745,6 +1045,7 @@ namespace pr
 		// ELdrObject::LineD
 		template <> struct ObjectCreator<ELdrObject::LineD> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(false, false) {}
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 p0, p1;
@@ -765,6 +1066,7 @@ namespace pr
 		// ELdrObject::LineStrip
 		template <> struct ObjectCreator<ELdrObject::LineStrip> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(true, false) {}
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt;
@@ -783,10 +1085,9 @@ namespace pr
 		// ELdrObject::LineBox
 		template <> struct ObjectCreator<ELdrObject::LineBox> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(false, true) {}
 			void Parse(ParseParams& p) override
 			{
-				m_linemesh = true;
-
 				pr::v4 dim;
 				p.m_reader.ExtractReal(dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.ExtractReal(dim.y);
@@ -794,13 +1095,13 @@ namespace pr
 				dim *= 0.5f;
 
 				m_point.push_back(pr::v4::make(-dim.x, -dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(dim.x, -dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(dim.x, dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, dim.y, -dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, -dim.y, dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(dim.x, -dim.y, dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(dim.x, dim.y, dim.z, 1.0f));
-				m_point.push_back(pr::v4::make(-dim.x, dim.y, dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(+dim.x, -dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(+dim.x, +dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x, +dim.y, -dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x, -dim.y, +dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(+dim.x, -dim.y, +dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(+dim.x, +dim.y, +dim.z, 1.0f));
+				m_point.push_back(pr::v4::make(-dim.x, +dim.y, +dim.z, 1.0f));
 
 				pr::uint16 idx[] = { 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 };
 				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
@@ -810,6 +1111,7 @@ namespace pr
 		// ELdrObject::Grid
 		template <> struct ObjectCreator<ELdrObject::Grid> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(false, false) {}
 			void Parse(ParseParams& p) override
 			{
 				int axis_id;
@@ -835,6 +1137,7 @@ namespace pr
 		// ELdrObject::Spline
 		template <> struct ObjectCreator<ELdrObject::Spline> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(true, false) {}
 			void Parse(ParseParams& p) override
 			{
 				pr::Spline spline;
@@ -846,17 +1149,13 @@ namespace pr
 				// Generate points for the spline
 				pr::Array<pr::v4, 30, true> raster;
 				pr::Raster(spline, raster, 30);
-				for (size_t i = 0, iend = raster.size() - 1; i != iend; ++i)
-				{
-					m_point.push_back(raster[i + 0]);
-					m_point.push_back(raster[i + 1]);
-				}
+				m_point.insert(std::end(m_point), std::begin(raster), std::end(raster));
 
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
 					p.m_reader.ExtractInt(col.m_aarrggbb, 16);
-					for (size_t i = 0, iend = (raster.size() - 1) * 2; i != iend; ++i)
+					for (size_t i = 0, iend = raster.size(); i != iend; ++i)
 						m_colour.push_back(col);
 				}
 			}
@@ -869,15 +1168,7 @@ namespace pr
 			EArrowType m_type;
 			bool m_smooth;
 
-			ObjectCreator() :m_type(EArrowType::Invalid) ,m_smooth(false) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw)
-				{
-				default: return IObjectCreatorLine::ParseKeyword(p, kw);
-				case EKeyword::Smooth: m_smooth = true; return true;
-				}
-			}
+			ObjectCreator() :IObjectCreatorLine(false, false) ,m_type(EArrowType::Invalid) ,m_smooth(false) {}
 			void Parse(ParseParams& p) override
 			{
 				// If no points read yet, expect the arrow type first
@@ -917,26 +1208,11 @@ namespace pr
 				}
 
 				// Convert the points into a spline if smooth is specified
-				if (m_smooth && m_point.size() > 2)
+				if (m_smooth && m_linestrip)
 				{
-					// Subdivide each line seqment to generate points and control points
 					auto point = m_point;
 					m_point.resize(0);
-
-					// Raster a spline between the points given
-					for (size_t i = 1, iend = point.size() - 1; i != iend; ++i)
-					{
-						auto sp = i == 1      ? point[i-1] : (point[i-1] + point[i]) * 0.5f;
-						auto sc = i == 1      ? (point[i-1] + point[i]) * 0.5f : point[i];
-						auto ec = i == iend-1 ? (point[i+1] + point[i]) * 0.5f : point[i];
-						auto ep = i == iend-1 ? point[i+1] : (point[i+1] + point[i]) * 0.5f;
-
-						// Generate points for the spline
-						auto spline = pr::Spline::make(sp, sc, ec, ep);
-						pr::Array<pr::v4, 30, true> raster;
-						pr::Raster(spline, raster, 30);
-						m_point.insert(std::end(m_point), std::begin(raster), std::end(raster));
-					}
+					pr::Smooth(point, m_point);
 				}
 
 				// Generate the model
@@ -1025,10 +1301,9 @@ namespace pr
 		// ELdrObject::Matrix3x3
 		template <> struct ObjectCreator<ELdrObject::Matrix3x3> :IObjectCreatorLine
 		{
+			ObjectCreator() :IObjectCreatorLine(false, true) {}
 			void Parse(ParseParams& p) override
 			{
-				m_linemesh = true;
-
 				pr::m4x4 basis;
 				p.m_reader.ExtractMatrix3x3(cast_m3x4(basis));
 
@@ -1036,70 +1311,15 @@ namespace pr
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
 				pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
 
-				m_point.insert(m_point.end(), pts, pts + PR_COUNTOF(pts));
+				m_point .insert(m_point .end(), pts, pts + PR_COUNTOF(pts));
 				m_colour.insert(m_colour.end(), col, col + PR_COUNTOF(col));
-				m_index.insert(m_index.end(), idx, idx + PR_COUNTOF(idx));
+				m_index .insert(m_index .end(), idx, idx + PR_COUNTOF(idx));
 			}
 		};
 
 		#pragma endregion
 
 		#pragma region Shapes2d
-
-		// Base class for object creators that are based on 2d shapes
-		struct IObjectCreatorShape2d :IObjectCreatorTexture
-		{
-			// Create space for the model
-			VCont& m_point;
-			ICont& m_index;
-			TCont& m_tex;
-			int    m_axis_id;
-			pr::v4 m_dim;
-			int    m_facets;
-			bool   m_solid;
-
-			IObjectCreatorShape2d() :m_point(Point()), m_index(Index()), m_tex(Texts()), m_axis_id(), m_dim(), m_facets(40), m_solid(false) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw)
-				{
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Solid:  m_solid = true; return true;
-				case EKeyword::Facets: p.m_reader.ExtractIntS(m_facets, 10); return true;
-				}
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				using namespace pr::rdr;
-
-				// Validate
-				if (m_axis_id < 1 || m_axis_id > 3)
-				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3");
-					return;
-				}
-
-				pr::BBox bbox;
-				GenerateShape(bbox);
-
-				// Permute the verts, normals, and bbox
-				auto axis_id = pr::Abs(m_axis_id) - 1;
-				for (auto& v : m_point)
-					v = pr::Permute3(v, axis_id + 1);
-				auto norm = pr::Permute3(pr::v4ZAxis, axis_id + 1);
-				bbox.m_radius = pr::Permute3(bbox.m_radius, axis_id + 1);
-
-				// Create the model
-				if (m_solid)
-					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData());
-				else
-					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data());
-
-				obj->m_model->m_bbox = bbox;
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-			virtual void GenerateShape(pr::BBox& bbox) = 0;
-		};
 
 		// ELdrObject::Circle
 		template <> struct ObjectCreator<ELdrObject::Circle> :IObjectCreatorShape2d
@@ -1281,38 +1501,6 @@ namespace pr
 			}
 		};
 
-		// Base class for planar objects
-		struct IObjectCreatorPlane :IObjectCreatorTexture
-		{
-			VCont& m_point;
-			CCont& m_colour;
-			bool   m_per_vert_colour;
-
-			IObjectCreatorPlane() :m_point(Point()), m_colour(Color()), m_per_vert_colour() {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Coloured: m_per_vert_colour = true; return true;
-				}
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				using namespace pr::rdr;
-
-				// Validate
-				if (m_point.empty() || (m_point.size() % 4) != 0)
-				{
-					p.m_reader.ReportError("Object description incomplete");
-					return;
-				}
-
-				// Create the model
-				obj->m_model = ModelGenerator<>::Quad(p.m_rdr, m_point.size() / 4, m_point.data(), m_colour.size(), m_colour.data(), pr::m4x4Identity, GetDrawData());
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-		};
-
 		// ELdrObject::Triangle
 		template <> struct ObjectCreator<ELdrObject::Triangle> :IObjectCreatorPlane
 		{
@@ -1380,6 +1568,71 @@ namespace pr
 				m_point.push_back(pnt - up + left);
 				m_point.push_back(pnt + up - left);
 				m_point.push_back(pnt + up + left);
+			}
+		};
+
+		// ELdrObject::Ribbon
+		template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreatorPlane
+		{
+			int m_axis_id;
+			float m_width;
+			bool m_smooth;
+			int m_parm_index;
+
+			ObjectCreator() :m_axis_id(3) ,m_width(10.0f) ,m_smooth(false) ,m_parm_index(0) {}
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw){
+				default: return IObjectCreatorPlane::ParseKeyword(p, kw);
+				case EKeyword::Smooth: m_smooth = true; return true;
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				switch (m_parm_index){
+				case 0: // Axis id
+					p.m_reader.ExtractInt(m_axis_id, 10);
+					++m_parm_index;
+					break;
+				case 1: // Width
+					p.m_reader.ExtractReal(m_width);
+					++m_parm_index;
+					break;
+				case 2: // Points
+					pr::v4 pt;
+					p.m_reader.ExtractVector3(pt, 1.0f);
+					m_point.push_back(pt);
+
+					if (m_per_vert_colour)
+					{
+						pr::Colour32 col;
+						p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+						m_colour.push_back(col);
+					}
+					break;
+				}
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				// Validate
+				if (m_point.empty() || (m_point.size() % 4) != 0)
+				{
+					p.m_reader.ReportError("Object description incomplete");
+					return;
+				}
+
+				// Smooth the points
+				if (m_smooth)
+				{
+					auto points = m_point;
+					m_point.resize(0);
+					pr::Smooth(points, m_point);
+				}
+
+				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, AxisId(m_axis_id), m_colour.size(), m_colour.data(), GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
 
@@ -1474,20 +1727,6 @@ namespace pr
 			}
 		};
 
-		// Base class for arbitrary cubiod shapes
-		struct IObjectCreatorCuboid :IObjectCreatorTexture
-		{
-			pr::v4 m_pt[8];
-			pr::m4x4 m_b2w;
-
-			IObjectCreatorCuboid() :m_pt(), m_b2w(pr::m4x4Identity) {}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				obj->m_model = ModelGenerator<>::Boxes(p.m_rdr, 1, m_pt, m_b2w, 0, 0, GetDrawData());
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-		};
-
 		// ELdrObject::FrustumWH
 		template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreatorCuboid
 		{
@@ -1526,7 +1765,7 @@ namespace pr
 				m_pt[7].set(-f*w, f*h, f, 1.0f);
 
 				switch (m_axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
@@ -1570,7 +1809,7 @@ namespace pr
 				m_pt[7].set(f*w, f*h, f, 1.0f);
 
 				switch (m_axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
@@ -1610,47 +1849,6 @@ namespace pr
 			}
 		};
 
-		// Base class for cone shapes
-		struct IObjectCreatorCone :IObjectCreatorTexture
-		{
-			int m_axis_id;
-			pr::v4 m_dim; // x,y = radius, z = height
-			pr::v2 m_scale;
-			int m_layers, m_wedges;
-
-			IObjectCreatorCone() :m_axis_id(1), m_dim(), m_scale(), m_layers(1), m_wedges(20) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Layers:  p.m_reader.ExtractInt(m_layers, 10); return true;
-				case EKeyword::Wedges:  p.m_reader.ExtractInt(m_wedges, 10); return true;
-				case EKeyword::Scale:   p.m_reader.ExtractVector2(m_scale); return true;
-				}
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				// Get the transform so that model is aligned to 'axis_id'
-				pr::m4x4 o2w = pr::m4x4Identity;
-				switch (m_axis_id)
-				{
-				default:
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3");
-					return;
-				case  1: o2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case -1: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case  2: o2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case -2: o2w = pr::Rotation4x4(pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case  3: o2w = pr::m4x4Identity; break;
-				case -3: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_2, 0.0f, pr::v4Origin); break;
-				}
-
-				// Create the model
-				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, o2w, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, GetDrawData());
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-		};
-
 		// ELdrObject::CylinderHR
 		template <> struct ObjectCreator<ELdrObject::CylinderHR> :IObjectCreatorCone
 		{
@@ -1679,147 +1877,6 @@ namespace pr
 				m_dim.y = h1 * pr::Tan(a);
 			}
 		};
-
-		// Base class for mesh based objects
-		struct IObjectCreatorMesh :IObjectCreatorTexture
-		{
-			VCont& m_verts;
-			NCont& m_normals;
-			CCont& m_colours;
-			TCont& m_texs;
-			ICont& m_indices;
-			EPrim::Enum_ m_prim_type;
-			bool m_generate_normals;
-
-			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_generate_normals(false) {}
-			bool ParseKeyword(ParseParams& p, EKeyword kw) override
-			{
-				switch (kw) {
-				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Verts:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(v, 1.0f); m_verts.push_back(v); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
-				case EKeyword::Normals:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(n, 0.0f); m_normals.push_back(n); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
-				case EKeyword::Colours:
-				{
-					p.m_reader.SectionStart();
-					for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractInt(c.m_aarrggbb, 16); m_colours.push_back(c); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
-				case EKeyword::TexCoords:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector2(t); m_texs.push_back(t); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
-				case EKeyword::Lines:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
-					{
-						p.m_reader.ExtractIntArray(idx, 2, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::LineList;
-					return true;
-				}
-				case EKeyword::Faces:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
-					{
-						p.m_reader.ExtractIntArray(idx, 3, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[2]);
-					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::TriList;
-					return true;
-				}
-				case EKeyword::Tetra:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
-					{
-						p.m_reader.ExtractIntArray(idx, 4, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[1]);
-					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::TriList;
-					return true;
-				}
-				case EKeyword::GenerateNormals:
-				{
-					m_generate_normals = true;
-					return true;
-				}
-				}
-			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				using namespace pr::rdr;
-
-				// Validate
-				if (m_indices.empty() || m_verts.empty())
-				{
-					p.m_reader.ReportError("Mesh object description incomplete");
-					return;
-				}
-
-				// Generate normals if needed
-				if (m_generate_normals)
-				{
-					m_normals.resize(m_verts.size());
-					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(),
-						[&](std::size_t i){ return m_verts[i]; },
-						[&](std::size_t i){ return m_normals[i]; },
-						[&](std::size_t i, pr::v4 const& nm){ m_normals[i] = nm; });
-				}
-
-				// Create the model
-				obj->m_model = ModelGenerator<>::Mesh(
-					p.m_rdr,
-					m_prim_type,
-					m_verts.size(),
-					m_indices.size(),
-					m_verts.data(),
-					m_indices.data(),
-					m_colours.size(),
-					m_colours.data(),
-					m_normals.size(),
-					m_normals.data(),
-					m_texs.data(),
-					GetDrawData());
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-		};
-
 		// ELdrObject::Mesh
 		template <> struct ObjectCreator<ELdrObject::Mesh> :IObjectCreatorMesh
 		{
@@ -1936,8 +1993,6 @@ namespace pr
 
 		#pragma endregion
 
-		#pragma endregion
-
 		// Parse an ldr object of type 'ShapeType'
 		// Note: not using an output iterator style callback because model instancing
 		// relies on the map from object to model.
@@ -2020,6 +2075,7 @@ namespace pr
 			case ELdrObject::Triangle:         Parse<ELdrObject::Triangle        >(p); break;
 			case ELdrObject::Quad:             Parse<ELdrObject::Quad            >(p); break;
 			case ELdrObject::Plane:            Parse<ELdrObject::Plane           >(p); break;
+			case ELdrObject::Ribbon:           Parse<ELdrObject::Ribbon          >(p); break;
 			case ELdrObject::Box:              Parse<ELdrObject::Box             >(p); break;
 			case ELdrObject::BoxLine:          Parse<ELdrObject::BoxLine         >(p); break;
 			case ELdrObject::BoxList:          Parse<ELdrObject::BoxList         >(p); break;
@@ -2102,7 +2158,7 @@ namespace pr
 			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg, ParseResult& result)
 			{
 				// Note: your application needs to have called CoInitialise() before here
-				auto bcount = result.m_objects.size();
+				auto bcount = static_cast<int>(result.m_objects.size());
 				pr::events::Send(Evt_AddBegin());
 
 				std::size_t start_time = GetTickCount();
@@ -2125,7 +2181,7 @@ namespace pr
 					return dlg->Progress(-1.0f, pr::FmtS("Parsing scene...\r\nObject count: %d\r\n%s %s", result.m_objects.size(), type, name.c_str()));
 				});
 
-				auto ecount = result.m_objects.size();
+				auto ecount = static_cast<int>(result.m_objects.size());
 				pr::events::Send(Evt_AddEnd(bcount, ecount));
 			};
 
@@ -2308,8 +2364,8 @@ namespace pr
 //********************************************
 //
 // Notes:
-//  axis_id is an integer describing an axis number. It must one of Ã‚Â±1, Ã‚Â±2, Ã‚Â±3
-//  corresponding to Ã‚Â±X, Ã‚Â±Y, Ã‚Â±Z respectively
+//  axis_id is an integer describing an axis number. It must one of Â±1, Â±2, Â±3
+//  corresponding to Â±X, Â±Y, Â±Z respectively
 
 // Clear existing data
 *Clear /*{ctx_id ...}*/ // Context ids can be listed within a section
@@ -2588,14 +2644,14 @@ out <<
 // A circle or ellipse
 *Circle circle
 {
-	2 1.6                               // axis_id, radius. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 1.6                               // axis_id, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
 }
 *Circle ellipse
 {
-	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                      // Optional, controls the smoothness of the edge
@@ -2604,7 +2660,7 @@ out <<
 // A rectangle
 *Rect rect FF0000FF                    // Object colour is the outline colour
 {
-	2                                  // axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2                                  // axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	1.2                                // width
 	1.3                                // Optional height. If omitted, height = width
 	*Solid                             // Optional, if omitted then the shape is an outline only
@@ -2658,6 +2714,23 @@ out <<
 	*Texture {"#checker"} // Optional texture
 }
 
+// A triangle strip of quads following a line
+*Ribbon ribbon FF00FFFF
+{
+	3                     // Axis id. The forward facing axis for the ribbon
+	20                    // Width (in world space)
+	*Coloured             // Optional. If specific means each pair of verts in along the ribbon has a colour
+	-1 -2  0 FFFF0000
+	-1  3  0 FF00FF00
+	 2  0  0 FF0000FF
+	*Smooth               // Optional. Generates a spline throught the points
+	*o2w{*randpos{0 0 0 2} *randori}
+	*Texture              // Optional texture repeated along each quad of the ribbon
+	{
+		"#checker"
+	}
+}
+
 // A box given by width, height, and depth
 *Box box
 {
@@ -2691,7 +2764,7 @@ out <<
 // Width, Height given at '1' along the z axis by default, unless *ViewPlaneZ is given
 *FrustumWH frustumwh
 {
-	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*ViewPlaneZ { 2 }                   // Optional. The distance at which the frustum has dimensions width,height
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
@@ -2699,7 +2772,7 @@ out <<
 // A frustum given by field of view (in Y), aspect ratio, and near and far plane distances
 *FrustumFA frustumfa
 {
-	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
@@ -2726,7 +2799,7 @@ out <<
 // A cylinder given by axis number, height, and radius
 *CylinderHR cylinder
 {
-	2 0.6 0.2                         // axis_id, height, radius. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 0.6 0.2                         // axis_id, height, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cylinder major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cylinder
 	*Scale 1.2 0.8                    // Optional. X,Y scale factors
@@ -2735,7 +2808,7 @@ out <<
 }
 *CylinderHR cone FFFF00FF
 {
-	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1.5 0.4                    // Optional. X,Y scale factors
@@ -2746,7 +2819,7 @@ out <<
 // A cone given by axis number, two heights, and solid angle
 *ConeHA coneha FF00FFFF
 {
-	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: Ã‚Â±1 = Ã‚Â±x, Ã‚Â±2 = Ã‚Â±y, Ã‚Â±3 = Ã‚Â±z
+	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1 1                        // Optional. X,Y scale factors

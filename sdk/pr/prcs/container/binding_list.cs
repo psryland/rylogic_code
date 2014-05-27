@@ -9,9 +9,8 @@ using pr.util;
 
 namespace pr.container
 {
-	/// <summary>Extension to BindingList that notifies *before* and item is removed</summary>
-	[DataContract]
-	public class BindingListEx<T> :System.ComponentModel.BindingList<T>
+	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
+	[DataContract] public class BindingListEx<T> :System.ComponentModel.BindingList<T>
 	{
 		public BindingListEx() :base()
 		{

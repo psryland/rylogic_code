@@ -184,6 +184,10 @@ namespace pr.maths
 		{
 			return Translation(new v4(dx, dy, dz, 1f));
 		}
+		public static m4x4 Translation(v2 dxy, float dz)
+		{
+			return Translation(new v4(dxy, dz, 1f));
+		}
 		public static m4x4 Translation(v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");

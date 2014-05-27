@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -48,6 +48,8 @@ namespace TestCS
 			m_diag.Elements.Add(node1);
 			m_diag.Elements.Add(node2);
 
+			DiagramControl.ConnectorStyle.Default.Type = DiagramControl.ConnectorStyle.EType.ForwardArrow;
+
 			m_diag.Elements.Add(new DiagramControl.Connector(node0, node1));
 			m_diag.Elements.Add(new DiagramControl.Connector(node1, node2));
 			m_diag.Elements.Add(new DiagramControl.Connector(node2, node0));
@@ -68,6 +70,8 @@ namespace TestCS
 			node5 = null;
 
 			m_diag.ResetView();
+
+			node0.BringToFront();
 
 			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
 			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml, m_diag.Elements.Count != 0);

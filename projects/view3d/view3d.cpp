@@ -446,6 +446,8 @@ VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DO
 	}
 }
 
+// Camera ********************************************************
+
 // Return the camera to world transform
 VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4& c2w)
 {
@@ -495,7 +497,7 @@ VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 
 }
 
 // Return the distance to the camera focus point
-VIEW3D_API float __stdcall View3D_FocusDistance(View3DDrawset drawset)
+VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DDrawset drawset)
 {
 	LOCK_GUARD;
 	try
@@ -512,7 +514,7 @@ VIEW3D_API float __stdcall View3D_FocusDistance(View3DDrawset drawset)
 }
 
 // Set the camera focus distance
-VIEW3D_API void __stdcall View3D_SetFocusDistance(View3DDrawset drawset, float dist)
+VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DDrawset drawset, float dist)
 {
 	LOCK_GUARD;
 	try
@@ -545,7 +547,7 @@ VIEW3D_API float __stdcall View3D_CameraAspect(View3DDrawset drawset)
 }
 
 // Set the aspect ratio for the camera field of view
-VIEW3D_API void __stdcall View3D_SetCameraAspect(View3DDrawset drawset, float aspect)
+VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DDrawset drawset, float aspect)
 {
 	LOCK_GUARD;
 	try
@@ -578,7 +580,7 @@ VIEW3D_API float __stdcall View3D_CameraFovX(View3DDrawset drawset)
 }
 
 // Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
-VIEW3D_API void __stdcall View3D_SetCameraFovX(View3DDrawset drawset, float fovX)
+VIEW3D_API void __stdcall View3D_CameraSetFovX(View3DDrawset drawset, float fovX)
 {
 	LOCK_GUARD;
 	try
@@ -611,7 +613,7 @@ VIEW3D_API float __stdcall View3D_CameraFovY(View3DDrawset drawset)
 }
 
 // Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
-VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY)
+VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DDrawset drawset, float fovY)
 {
 	LOCK_GUARD;
 	try
@@ -623,6 +625,22 @@ VIEW3D_API void __stdcall View3D_SetCameraFovY(View3DDrawset drawset, float fovY
 	catch (std::exception const& ex)
 	{
 		Dll().ReportError("View3D_SetCameraFovY failed", ex);
+	}
+}
+
+// Set the near and far clip planes for the camera
+VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DDrawset drawset, float near_, float far_, BOOL focus_relative)
+{
+	LOCK_GUARD;
+	try
+	{
+		PR_ASSERT(PR_DBG, drawset != 0, "");
+		if (!drawset) throw std::exception("drawset is null");
+		drawset->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
+	}
+	catch (std::exception const& ex)
+	{
+		Dll().ReportError("View3D_CameraSetClipPlanes failed", ex);
 	}
 }
 

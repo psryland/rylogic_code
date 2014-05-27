@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -955,21 +955,27 @@ namespace pr.gfx
 			public float Aspect
 			{
 				get { return View3D_CameraAspect(m_ds.Handle); }
-				set { View3D_SetCameraAspect(m_ds.Handle, value); }
+				set { View3D_CameraSetAspect(m_ds.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
 			public float FovX
 			{
 				get { return View3D_CameraFovX(m_ds.Handle); }
-				set { View3D_SetCameraFovX(m_ds.Handle, value); }
+				set { View3D_CameraSetFovX(m_ds.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public float FovY
 			{
 				get { return View3D_CameraFovY(m_ds.Handle); }
-				set { View3D_SetCameraFovY(m_ds.Handle, value); }
+				set { View3D_CameraSetFovY(m_ds.Handle, value); }
+			}
+
+			/// <summary>Set the camera near plane distance. Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
+			public void SetClipPlanes(float near, float far, bool focus_relative)
+			{
+				View3D_CameraSetClipPlanes(m_ds.Handle, near, far, focus_relative);
 			}
 
 			/// <summary>Get/Set the position of the camera focus point</summary>
@@ -982,8 +988,8 @@ namespace pr.gfx
 			/// <summary>Get/Set the distance to the camera focus point</summary>
 			public float FocusDist
 			{
-				get { return View3D_FocusDistance(m_ds.Handle); }
-				set { View3D_SetFocusDistance(m_ds.Handle, value); }
+				get { return View3D_CameraFocusDistance(m_ds.Handle); }
+				set { View3D_CameraSetFocusDistance(m_ds.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
@@ -1056,7 +1062,7 @@ namespace pr.gfx
 			public v4 WSPointFromSSPoint(Point screen)
 			{
 				var nss = m_ds.View.NormalisePoint(screen);
-				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f));
+				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_ds.Handle), 1.0f));
 			}
 
 			/// <summary>
@@ -1083,7 +1089,7 @@ namespace pr.gfx
 			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
 			{
 				var nss = m_ds.View.NormalisePoint(screen);
-				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_FocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
+				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
 			}
 		}
 
@@ -1404,14 +1410,15 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HDrawset drawset, out m4x4 c2w);
 		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HDrawset drawset, ref m4x4 c2w);
 		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HDrawset drawset, v4 position, v4 lookat, v4 up);
-		[DllImport(Dll)] private static extern float             View3D_FocusDistance          (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusDistance       (HDrawset drawset, float dist);
+		[DllImport(Dll)] private static extern float             View3D_CameraFocusDistance    (HDrawset drawset);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFocusDistance (HDrawset drawset, float dist);
 		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraAspect        (HDrawset drawset, float aspect);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HDrawset drawset, float aspect);
 		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraFovX          (HDrawset drawset, float fovX);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFovX          (HDrawset drawset, float fovX);
 		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraFovY          (HDrawset drawset, float fovY);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HDrawset drawset, float fovY);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HDrawset drawset, float near, float far, bool focus_relative);
 		[DllImport(Dll)] private static extern void              View3D_MouseNavigate          (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
 		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HDrawset drawset);

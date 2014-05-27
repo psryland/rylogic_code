@@ -54,6 +54,14 @@ namespace pr
 			vcount = value_cast<Tvr>(4 * num_quads);
 			icount = value_cast<Tir>(6 * num_quads);
 		}
+		
+		// Returns the number of verts and indices needed to hold geometry for a quad strip
+		template <typename Tvr, typename Tir>
+		void QuadStripSize(size_t num_quads, Tvr& vcount, Tir& icount)
+		{
+			vcount = value_cast<Tvr>(2 * (1 + num_quads));
+			icount = value_cast<Tir>(2 * (1 + num_quads));
+		}
 
 		// Generate quads from sets of four points
 		// Point Order: (bottom to top 'S')
@@ -227,6 +235,82 @@ namespace pr
 			v4 quad_z = height * Normalise3(Cross3(quad_x, fwd));
 			v4 origin = centre - 0.5f * quad_x - 0.5f * quad_z;
 			return Quad(origin, quad_x, quad_z, divisions, colour, t2q, v_out, i_out);
+		}
+
+		// Generate a strip of quads centred on a line of verts.
+		// 'num_quads' is the number quads in the strip (num_quads == num_verts - 1)
+		// 'verts' is the input array of line verts
+		// 'width' is the tranverse width of the quad strip (not half width)
+		// 'normal' is the normal of the first vertex. After that, normals on same side are used
+		// 'num_colours' should be either 0, 1, num_quads+1 representing; no colour, 1 colour for all, 1 colour per vertex pair
+		// 'v_out' is an output iterator to receive the [vert,colour,norm,tex] data
+		// 'i_out' is an output iterator to receive the index data
+		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
+		Props QuadStrip(size_t num_quads, TVertCIter verts, float width, v4 const& normal, size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+		{
+			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+
+			if (num_quads < 1) return Props();
+			auto num_verts = num_quads + 1;
+
+			// Colour iterator wrapper
+			ColourRepeater col(colours, num_colours, num_verts, Colour32White);
+
+			// Texture coords (note: 1D texture)
+			v2 const t00 = v2::make(0.000f, 0.000f);
+			v2 const t10 = v2::make(0.999f, 0.000f);
+			
+			v4       v0, v1 = *verts++, v2 = *verts++;
+			v4       n0, n1 = normal  , n2 = normal;
+			Colour32 c0, c1 = *col++  , c2 = *col++;
+			VIdx index = 0;
+			width *= 0.5f;
+			
+			pr::BBox bbox = pr::BBoxReset;
+			auto bb = [&](v4 const& v) { pr::Encompass(bbox, v); return v; };
+
+			// Output the start verts
+			auto norm = normal;
+			auto bi = pr::Normalise3(pr::Cross3(n1, v2 - v1), pr::Perpendicular(n1));
+			SetPCNT(*v_out++, bb(v1 + bi*width), c1, norm, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v1 - bi*width), c1, norm, t10); *i_out++ = index++;
+
+			// Output verts down the strip
+			for (std::size_t i = 1; i != num_verts - 1; ++i)
+			{
+				auto v = *verts++;
+				auto c = *col++;
+				if (FEql(v,v2)) continue; // skip degenerates
+
+				v0 = v1; v1 = v2; v2 = v;
+				n0 = n1; n1 = n2; n2 = n;
+				c0 = c1; c1 = c2; c2 = c;
+
+				// Find the bisector
+				auto r0 = v1 - v0;
+				auto r1 = v2 - v1;
+				auto d0 = pr::Normalise3(r0);
+				auto d1 = pr::Normalise3(r1);
+				auto n = pr::Normalise3(d1 - d0, v4Zero);
+				if (pr::FEqlZero3(n)) continue; // skip straight sections
+				norm = pr::Dot3(n,norm ) < 0 ? -n : n; // Choose the normal on the same side as the previous one
+				bi = pr::Normalise3(pr::Cross3(norm, d1), bi);
+				
+				// Output verts
+				SetPCNT(*v_out++, bb(v1 + bi*width), c1, norm, t00); *i_out++ = index++;
+				SetPCNT(*v_out++, bb(v1 - bi*width), c1, norm, t10); *i_out++ = index++;
+			}
+
+			// Output the last verts
+			auto bi = pr::Normalise3(pr::Cross3(n2, v2 - v1), bi);
+			SetPCNT(*v_out++, bb(v2 + bi*width), c2, norm, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v2 - bi*width), c2, norm, t10); *i_out++ = index++;
+
+			Props props;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+			props.m_bbox = bbox;
+			props.m_has_alpha = col.m_alpha;
+			return props;
 		}
 	}
 }

@@ -186,18 +186,34 @@ namespace pr
 		return t2;
 	}
 
-	namespace impl
+	// Fill a container of points with a rastered version of 'spline'
+	// 'points' is the vert along the spline
+	// 'times' is the times along 'spline' at the point locations
+	template <typename PCont, typename TCont>
+	void Raster(pr::Spline const& spline, PCont& points, TCont& times, int max_points, float tol = pr::maths::tiny)
 	{
-		namespace spline
+		struct L
 		{
 			struct Elem // Linked list element type used to form a priority queue
 			{
-				Elem* m_next; Spline const* m_spline; int m_ins; float m_err;
-				Elem(Spline const& s, int ins) :m_next(0) ,m_spline(&s) ,m_ins(ins) ,m_err(pr::Length3(s.y - s.x) + pr::Length3(s.z - s.y) + pr::Length3(s.w - s.z) - pr::Length3(s.w - s.x)) {}
+				Elem*         m_next;      // The next subsection of spline with less error
+				Spline const* m_spline;    // Pointer to the subsection of the spline
+				float         m_t0, m_t1;  // Times along the original spline
+				int           m_ins;       // The position to insert a vert in the out container
+				float         m_err;       // How much a straight line diverges from 'm_spline'
+				
+				Elem(Spline const& s, float t0, float t1, int ins)
+					:m_next(0)
+					,m_spline(&s)
+					,m_t0(t0)
+					,m_t1(t1)
+					,m_ins(ins)
+					,m_err(pr::Length3(s.y - s.x) + pr::Length3(s.z - s.y) + pr::Length3(s.w - s.z) - pr::Length3(s.w - s.x))
+				{}
 			};
 
 			// Insert 'elem' into the priority queue of which 'queue' is the head
-			inline Elem* QInsert(Elem* queue, Elem& elem)
+			static Elem* QInsert(Elem* queue, Elem& elem)
 			{
 				if (queue == 0 || queue->m_err < elem.m_err) { elem.m_next = queue; return &elem; }
 				Elem* i; for (i = queue; i->m_next && i->m_next->m_err > elem.m_err; i = i->m_next) {}
@@ -207,7 +223,7 @@ namespace pr
 			}
 
 			// Breadth-first recursive raster of this spline
-			template <typename Cont> void Raster(Cont& points, Elem* queue, int& pts_remaining, float tol)
+			static void Raster(PCont& points, TCont& times, Elem* queue, int& pts_remaining, float tol)
 			{
 				// Pop the top spline segment from the queue or we've run out of points
 				Elem const& elem = *queue;
@@ -220,31 +236,83 @@ namespace pr
 				// Subdivide the spline segment and insert the mid-point into 'points'
 				Spline Lhalf, Rhalf;                       // Spline seqments for each half
 				Split(*elem.m_spline, 0.5f, Lhalf, Rhalf); // splits the spline at t=0.5
+				float t = (elem.m_t0 + elem.m_t1) * 0.5f;  // Find the time on the original spline
 				points.insert(points.begin() + elem.m_ins, Lhalf.Point1());
+				times .insert(times .begin() + elem.m_ins, t);
 
 				// Increment the insert position for all elements after 'elem.m_ins'
 				for (Elem* i = queue; i != 0; i = i->m_next)
 					i->m_ins += (i->m_ins > elem.m_ins);
 
 				// Insert both halves into the queue
-				Elem lhs(Lhalf, elem.m_ins), rhs(Rhalf, elem.m_ins+1);  // Create queue elements for each half
-				queue = QInsert(queue, lhs);
-				queue = QInsert(queue, rhs);
+				queue = QInsert(queue, Elem(Lhalf, elem.m_t0, t, elem.m_ins  ));
+				queue = QInsert(queue, Elem(Rhalf, t, elem.m_t1, elem.m_ins+1));
 				Raster(points, queue, --pts_remaining, tol); // continue recursively
 			}
+		};
+
+		points.insert(std::end(points), spline.Point0());
+		points.insert(std::end(points), spline.Point1());
+		times.insert(std::end(times), 0.0f);
+		times.insert(std::end(times), 1.0f);
+
+		int pts_remaining = max_points - 2;
+		L::Elem elem(spline, 0.0f, 1.0f, 1);
+		L::Raster(points, times, &elem, pts_remaining, tol);
+	}
+	template <typename PCont>
+	void Raster(pr::Spline const& spline, PCont& points, int max_points, float tol = pr::maths::tiny)
+	{
+		// Dummy container for the time values
+		struct TCont
+		{
+			int begin() { return 0; }
+			int end()   { return 0; }
+			void insert(int, float) {}
+		} times;
+		Raster(spline, points, times, max_points, tol);
+	}
+
+	// Fill a container of points with a smoothed spline based on 'points
+	template <typename Cont, typename VOut, int MaxPointsPerSpline = 30>
+	void Smooth(Cont const& points, VOut out, float tol = pr::maths::tiny)
+	{
+		if (points.size() < 3)
+		{
+			float times[] = {0.0f, 1.0f};
+			out(points.data(), times, points.size());
+			return;
+		}
+
+		// Generate a spline from each set of three points in 'points'
+		pr::Array<pr::v4, MaxPointsPerSpline, true> raster;
+		pr::Array<float , MaxPointsPerSpline, true> times;
+		for (size_t i = 1, iend = point.size() - 1; i != iend; ++i)
+		{
+			// Generate points for the spline
+			auto sp = i == 1      ?  point[i-1]                    : (point[i-1] + point[i]) * 0.5f;
+			auto sc = i == 1      ? (point[i-1] + point[i]) * 0.5f :  point[i];
+			auto ec = i == iend-1 ? (point[i+1] + point[i]) * 0.5f :  point[i];
+			auto ep = i == iend-1 ?  point[i+1]                    : (point[i+1] + point[i]) * 0.5f;
+			auto spline = pr::Spline::make(sp, sc, ec, ep);
+
+			// Raster the spline into a temp buffer
+			raster.resize(0); times.resize(0);
+			pr::Raster(spline, raster, times, MaxPointsPerSpline);
+
+			// Stream out the verts
+			out(raster.data(), times.data(), raster.size());
 		}
 	}
-
-	// Fill a container of points with a rastered version of this spline
-	template <typename Cont> void Raster(pr::Spline const& spline, Cont& points, int max_points, float tol = pr::maths::tiny)
+	template <typename Cont, int MaxPointsPerSpline = 30>
+	void Smooth(Cont const& points, Cont& out, float tol = pr::maths::tiny)
 	{
-		impl::spline::Elem elem(spline, 1);
-		points.push_back(spline.Point0());
-		points.push_back(spline.Point1());
-		int pts_remaining = max_points - 2;
-		impl::spline::Raster(points, &elem, pts_remaining, tol);
+		Smooth(points, [&](pr::v4 const* vert, float const* times, size_t count)
+		{
+			out.insert(std::end(out), vert, vert + count);
+		}, tol);
 	}
-
+	
 	// Random infinite spline within a bounding box
 	struct RandSpline :pr::Spline
 	{
