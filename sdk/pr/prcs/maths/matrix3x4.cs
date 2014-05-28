@@ -170,16 +170,21 @@ namespace pr.maths
 
 		// Make an orientation matrix from a direction. Note the rotation around the direction
 		// vector is not defined. 'axis' is the axis that 'direction' will become
-		public static m3x4 OriFromDir(v4 direction, int axis, v4 preferred_up)
+		public static m3x4 OriFromDir(v4 direction, AxisId axis, v4 preferred_up)
 		{
-			if (v4.Parallel(preferred_up, direction)) preferred_up = v4.Perpendicular(direction);
+			// Get the preferred up direction (handling parallel cases)
+			preferred_up = v4.Parallel(preferred_up, direction) ? v4.Perpendicular(direction) : preferred_up;
+
+			// Create an orientation matrix where +Z points along 'direction'
 			m3x4 ans = Identity;
 			ans.z = v4.Normalise3(direction);
 			ans.x = v4.Normalise3(v4.Cross3(preferred_up, ans.z));
 			ans.y = v4.Cross3(ans.z, ans.x);
-			return PermuteRotation(ans, axis);
+
+			// Permute the column vectors so +Z becomes 'axis'
+			return Maths.SignF(axis) * PermuteRotation(ans, Math.Abs(axis) - 1);
 		}
-		public static m3x4 OriFromDir(v4 direction, int axis)
+		public static m3x4 OriFromDir(v4 direction, AxisId axis)
 		{
 			return OriFromDir(direction, axis, v4.Perpendicular(direction));
 		}

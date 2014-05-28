@@ -299,11 +299,13 @@
     <Compile Include="inet\markdown.cs" />
     <Compile Include="inet\proxy.cs" />
     <Compile Include="ldr\ldr_helper.cs" />
+    <Compile Include="maths\axis_id.cs" />
     <Compile Include="maths\bbox.cs" />
     <Compile Include="maths\bit.cs" />
     <Compile Include="maths\brect.cs" />
     <Compile Include="maths\clip.cs" />
     <Compile Include="maths\closest_point.cs" />
+    <Compile Include="maths\intersect.cs" />
     <Compile Include="maths\matrix2x2.cs" />
     <Compile Include="maths\matrix3x4.cs" />
     <Compile Include="maths\matrix4x4.cs" />

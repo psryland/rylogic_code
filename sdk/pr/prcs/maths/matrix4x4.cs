@@ -169,12 +169,12 @@ namespace pr.maths
 
 		// Make an orientation matrix from a direction. Note the rotation around the direction
 		// vector is not defined. 'axis' is the axis that 'direction' will become
-		public static m4x4 OriFromDir(v4 direction, int axis, v4 preferred_up, v4 translation)
+		public static m4x4 OriFromDir(v4 direction, AxisId axis, v4 preferred_up, v4 translation)
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
 			return new m4x4(m3x4.OriFromDir(direction, axis, preferred_up), translation);
 		}
-		public static m4x4 OriFromDir(v4 direction, int axis, v4 translation)
+		public static m4x4 OriFromDir(v4 direction, AxisId axis, v4 translation)
 		{
 			return OriFromDir(direction, axis, v4.Perpendicular(direction), translation);
 		}

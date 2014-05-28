@@ -245,9 +245,11 @@ namespace pr
 					i->m_ins += (i->m_ins > elem.m_ins);
 
 				// Insert both halves into the queue
-				queue = QInsert(queue, Elem(Lhalf, elem.m_t0, t, elem.m_ins  ));
-				queue = QInsert(queue, Elem(Rhalf, t, elem.m_t1, elem.m_ins+1));
-				Raster(points, queue, --pts_remaining, tol); // continue recursively
+				Elem lhs(Lhalf, elem.m_t0, t, elem.m_ins  );
+				Elem rhs(Rhalf, t, elem.m_t1, elem.m_ins+1);
+				queue = QInsert(queue, lhs);
+				queue = QInsert(queue, rhs);
+				Raster(points, times, queue, --pts_remaining, tol); // continue recursively
 			}
 		};
 
@@ -287,27 +289,27 @@ namespace pr
 		// Generate a spline from each set of three points in 'points'
 		pr::Array<pr::v4, MaxPointsPerSpline, true> raster;
 		pr::Array<float , MaxPointsPerSpline, true> times;
-		for (size_t i = 1, iend = point.size() - 1; i != iend; ++i)
+		for (size_t i = 1, iend = points.size() - 1; i != iend; ++i)
 		{
 			// Generate points for the spline
-			auto sp = i == 1      ?  point[i-1]                    : (point[i-1] + point[i]) * 0.5f;
-			auto sc = i == 1      ? (point[i-1] + point[i]) * 0.5f :  point[i];
-			auto ec = i == iend-1 ? (point[i+1] + point[i]) * 0.5f :  point[i];
-			auto ep = i == iend-1 ?  point[i+1]                    : (point[i+1] + point[i]) * 0.5f;
+			auto sp = i == 1      ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
+			auto sc = (points[i-1] + points[i]) * 0.5f;
+			auto ec = (points[i+1] + points[i]) * 0.5f;
+			auto ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
 			auto spline = pr::Spline::make(sp, sc, ec, ep);
 
 			// Raster the spline into a temp buffer
 			raster.resize(0); times.resize(0);
-			pr::Raster(spline, raster, times, MaxPointsPerSpline);
+			pr::Raster(spline, raster, times, MaxPointsPerSpline, tol);
 
 			// Stream out the verts
-			out(raster.data(), times.data(), raster.size());
+			out(raster.data(), times.data(), raster.size() - (i+1 != iend));
 		}
 	}
 	template <typename Cont, int MaxPointsPerSpline = 30>
 	void Smooth(Cont const& points, Cont& out, float tol = pr::maths::tiny)
 	{
-		Smooth(points, [&](pr::v4 const* vert, float const* times, size_t count)
+		Smooth(points, [&](pr::v4 const* vert, float const*, size_t count)
 		{
 			out.insert(std::end(out), vert, vert + count);
 		}, tol);

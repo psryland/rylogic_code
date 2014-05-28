@@ -60,7 +60,7 @@ namespace pr
 			x(Triangle         ,= 0x118ad8f6)\
 			x(Quad             ,= 0x083b7f24)\
 			x(Plane            ,= 0x0ed56051)\
-			x(Ribbon           ,= 0x00000100)\
+			x(Ribbon           ,= 0x098B72FB)\
 			x(Box              ,= 0x11b87d89)\
 			x(BoxLine          ,= 0x11d4daa7)\
 			x(BoxList          ,= 0x1481a6af)\

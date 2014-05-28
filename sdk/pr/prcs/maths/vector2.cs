@@ -98,8 +98,8 @@ namespace pr.maths
 		public static v2 Random2N(Rand r)                      { r = r ?? new Rand(); return v2.Random2(1.0f, r); }
 		
 		public static v2    Abs(v2 vec)                        { return new v2(Math.Abs(vec.x), Math.Abs(vec.y)); }
-		public static v2    Blend(v2 lhs, v2 rhs, float frac)  { return lhs * (1f - frac) + rhs * (frac); }
 		public static v2    Clamp2(v2 vec, v2 min, v2 max)     { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }
+		public static v2    Lerp(v2 lhs, v2 rhs, float t)      { return lhs * (1f - t) + rhs * t; }
 		public static v2    Normalise2(v2 vec)                 { return vec / vec.Length2; }
 		public static v2    Normalise2(ref v2 vec)             { return vec /= vec.Length2; }
 		public static float Dot2(v2 lhs, v2 rhs)               { return lhs.x * rhs.x + lhs.y * rhs.y; }

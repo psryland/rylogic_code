@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
 #pragma once
-#ifndef PR_COMMON_REPEATER_H
-#define PR_COMMON_REPEATER_H
 
 namespace pr
 {
@@ -26,20 +24,22 @@ namespace pr
 		// 'output_count' is the number of times the iterator will be incremented
 		// 'def' is the value to return when 'iter' is exhausted
 		Repeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
-		:m_iter(iter)
-		,m_count(count)
-		,m_repeat(output_count / (count + (count == 0)))
-		,m_r(0)
-		,m_n(0)
-		,m_default(def)
-		,m_item(Next())
+			:m_iter(iter)
+			,m_count(count)
+			,m_repeat(output_count / (count + (count == 0)))
+			,m_r(0)
+			,m_n(0)
+			,m_default(def)
+			,m_item(Next())
+		{}
+		virtual ~Repeater()
 		{}
 
 		TItem operator*() const
 		{
 			return m_item;
 		}
-		Repeater& operator ++()
+		virtual Repeater& operator ++()
 		{
 			if (++m_r == m_repeat)
 			{
@@ -57,7 +57,7 @@ namespace pr
 		}
 
 		// Reads from 'm_iter' and increments.
-		TItem Next()
+		virtual TItem Next()
 		{
 			TItem item;
 			if (m_n != m_count) { item = *m_iter; ++m_iter; }
@@ -75,6 +75,31 @@ namespace pr
 	{
 		return Repeater<TCIter, TItem>(iter, count, output_count, def);
 	}
+
+	//// An iterator wrapper that returns N items from an iterator
+	//// that points to M items, where N/M is an integer > 0
+	//// Returned values are linearly interpolated
+	//template <typename TCIter, typename TItem, typename Lerp>
+	//struct LerpRepeater :Repeater<TCIter, TItem>
+	//{
+	//	TItem m_next;
+
+	//	LerpRepeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def)
+	//		:Repeater(iter, count, output_count, def)
+	//		,m_next(Repeater::Next())
+	//	{}
+	//	Repeater& operator ++()
+	//	{
+	//		Repeater::operator++();
+
+	//	}
+	//	TItem Next() override
+	//	{
+	//		auto item = m_next;
+	//		m_next = Repeater::Next();
+	//		return item;
+	//	}
+	//};
 }
 
 #if PR_UNITTESTS
@@ -102,6 +127,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

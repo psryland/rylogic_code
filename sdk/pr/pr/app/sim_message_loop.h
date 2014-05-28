@@ -19,7 +19,7 @@
 #include "pr/common/array.h"
 #include "pr/common/stop_watch.h"
 
-#define PR_LOOP_TIMING 1//PR_DBG
+#define PR_LOOP_TIMING 0//PR_DBG
 #if PR_LOOP_TIMING
 #include "pr/maths/stat.h"
 #include "pr/gui/messagemap_dbg.h"

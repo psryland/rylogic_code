@@ -183,7 +183,7 @@ namespace pr
 					v4 axis = AxisId(axis_id);
 					if (IsZero3(axis))
 					{
-						reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+						reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 						break;
 					}
 
@@ -764,7 +764,7 @@ namespace pr
 				// Validate
 				if (m_axis_id < 1 || m_axis_id > 3)
 				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 					return;
 				}
 
@@ -861,7 +861,7 @@ namespace pr
 				switch (m_axis_id)
 				{
 				default:
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3");
+					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
 					return;
 				case  1: o2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case -1: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
@@ -1438,9 +1438,9 @@ namespace pr
 					auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
 
 					*vb0++ = pr::v4::make(-m_dim.x + rad * (1 - c), -m_dim.y + rad * (1 - s), 0, 1);
-					*vb1++ = pr::v4::make(m_dim.x - rad * (1 - s), -m_dim.y + rad * (1 - c), 0, 1);
-					*vb2++ = pr::v4::make(m_dim.x - rad * (1 - c), m_dim.y - rad * (1 - s), 0, 1);
-					*vb3++ = pr::v4::make(-m_dim.x + rad * (1 - s), m_dim.y - rad * (1 - c), 0, 1);
+					*vb1++ = pr::v4::make(+m_dim.x - rad * (1 - s), -m_dim.y + rad * (1 - c), 0, 1);
+					*vb2++ = pr::v4::make(+m_dim.x - rad * (1 - c), +m_dim.y - rad * (1 - s), 0, 1);
+					*vb3++ = pr::v4::make(-m_dim.x + rad * (1 - s), +m_dim.y - rad * (1 - c), 0, 1);
 				}
 				assert(vb3 == std::end(m_point));
 
@@ -1617,7 +1617,7 @@ namespace pr
 				using namespace pr::rdr;
 
 				// Validate
-				if (m_point.empty() || (m_point.size() % 4) != 0)
+				if (m_point.size() < 2)
 				{
 					p.m_reader.ReportError("Object description incomplete");
 					return;
@@ -1631,7 +1631,8 @@ namespace pr
 					pr::Smooth(points, m_point);
 				}
 
-				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, AxisId(m_axis_id), m_colour.size(), m_colour.data(), GetDrawData());
+				auto normal = AxisId(m_axis_id);
+				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, 1, &normal, m_colour.size(), m_colour.data(), GetDrawData());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
@@ -1765,7 +1766,7 @@ namespace pr
 				m_pt[7].set(-f*w, f*h, f, 1.0f);
 
 				switch (m_axis_id){
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
@@ -1809,7 +1810,7 @@ namespace pr
 				m_pt[7].set(f*w, f*h, f, 1.0f);
 
 				switch (m_axis_id) {
-				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of Â±1, Â±2, Â±3"); return;
+				default: p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3"); return;
 				case  1: m_b2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case -1: m_b2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
 				case  2: m_b2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
@@ -2364,8 +2365,8 @@ namespace pr
 //********************************************
 //
 // Notes:
-//  axis_id is an integer describing an axis number. It must one of Â±1, Â±2, Â±3
-//  corresponding to Â±X, Â±Y, Â±Z respectively
+//  axis_id is an integer describing an axis number. It must one of ±1, ±2, ±3
+//  corresponding to ±X, ±Y, ±Z respectively
 
 // Clear existing data
 *Clear /*{ctx_id ...}*/ // Context ids can be listed within a section
@@ -2644,14 +2645,14 @@ out <<
 // A circle or ellipse
 *Circle circle
 {
-	2 1.6                               // axis_id, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1.6                               // axis_id, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
 }
 *Circle ellipse
 {
-	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                      // Optional, controls the smoothness of the edge
@@ -2660,7 +2661,7 @@ out <<
 // A rectangle
 *Rect rect FF0000FF                    // Object colour is the outline colour
 {
-	2                                  // axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2                                  // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	1.2                                // width
 	1.3                                // Optional height. If omitted, height = width
 	*Solid                             // Optional, if omitted then the shape is an outline only
@@ -2718,7 +2719,7 @@ out <<
 *Ribbon ribbon FF00FFFF
 {
 	3                     // Axis id. The forward facing axis for the ribbon
-	20                    // Width (in world space)
+	0.1                   // Width (in world space)
 	*Coloured             // Optional. If specific means each pair of verts in along the ribbon has a colour
 	-1 -2  0 FFFF0000
 	-1  3  0 FF00FF00
@@ -2764,7 +2765,7 @@ out <<
 // Width, Height given at '1' along the z axis by default, unless *ViewPlaneZ is given
 *FrustumWH frustumwh
 {
-	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 1 1 0 1.5                         // axis_id, width, height, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*ViewPlaneZ { 2 }                   // Optional. The distance at which the frustum has dimensions width,height
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
@@ -2772,7 +2773,7 @@ out <<
 // A frustum given by field of view (in Y), aspect ratio, and near and far plane distances
 *FrustumFA frustumfa
 {
-	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	-1 90 1 0.4 1.5                    // axis_id, fovY, aspect, near plane, far plane. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*RandColour *o2w{*RandPos{0 0 0 2}}
 }
 
@@ -2799,7 +2800,7 @@ out <<
 // A cylinder given by axis number, height, and radius
 *CylinderHR cylinder
 {
-	2 0.6 0.2                         // axis_id, height, radius. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.6 0.2                         // axis_id, height, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cylinder major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cylinder
 	*Scale 1.2 0.8                    // Optional. X,Y scale factors
@@ -2808,7 +2809,7 @@ out <<
 }
 *CylinderHR cone FFFF00FF
 {
-	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.8 0.5 0                       // axis_id, height, base radius, [tip radius]. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1.5 0.4                    // Optional. X,Y scale factors
@@ -2819,7 +2820,7 @@ out <<
 // A cone given by axis number, two heights, and solid angle
 *ConeHA coneha FF00FFFF
 {
-	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: Â±1 = Â±x, Â±2 = Â±y, Â±3 = Â±z
+	2 0.1 1.2 0.5                     // axis_id, tip-to-top distance, tip-to-base distance, solid angle(rad). axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
 	*Layers 3                         // Optional. Controls the number of divisions along the cone major axis
 	*Wedges 50                        // Optional. Controls the faceting of the curved parts of the cone
 	*Scale 1 1                        // Optional. X,Y scale factors

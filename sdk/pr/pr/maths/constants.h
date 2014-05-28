@@ -29,6 +29,8 @@ namespace pr
 		float const tau_by_8   = 7.853982e-1F;
 		float const tau_by_360 = 1.745329e-2F;
 		float const E60_by_tau = 5.729578e+1F;
+		float const root2      = 1.414214e+0F;
+		float const inv_root2  = 7.071069e-1F;
 		double const dbl_tiny = 1.000000e-12;
 
 		template <typename Type> struct limits :std::numeric_limits<Type> {};

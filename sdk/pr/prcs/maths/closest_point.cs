@@ -10,6 +10,23 @@ namespace pr.maths
 {
 	public static partial class Geometry
 	{
+		/// <summary>Finds the closest point to the 2d line segment a->b returning the parametric value</summary>
+		public static float ClosestPoint(v2 a, v2 b, v2 pt)
+		{
+			v2 ab = b - a;
+
+			// Project 'pt' onto 'ab', but defer divide by 'ab.Length2Sq'
+			float t = v2.Dot2(pt - a, ab);
+			if (t <= 0.0f)
+				return 0.0f; // 'point' projects outside 'line', clamp to 0.0f
+			
+			float denom = ab.Length2Sq;
+			if (t >= denom)
+				return 1.0f; // 'point' projects outside 'line', clamp to 1.0f
+			
+			return t / denom; // 'point' projects inside 'line', do deferred divide now
+		}
+
 		/// <summary>
 		/// Find the closest point on 'spline' to 'pt'
 		/// Note: the analytic solution to this problem involves solving a 5th order polynomial

@@ -59,8 +59,9 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void QuadStripSize(size_t num_quads, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(2 * (1 + num_quads));
-			icount = value_cast<Tir>(2 * (1 + num_quads));
+			// A quad plus corner per quad
+			vcount = value_cast<Tvr>(4 * num_quads);
+			icount = value_cast<Tir>(4 * num_quads);
 		}
 
 		// Generate quads from sets of four points
@@ -245,8 +246,8 @@ namespace pr
 		// 'num_colours' should be either 0, 1, num_quads+1 representing; no colour, 1 colour for all, 1 colour per vertex pair
 		// 'v_out' is an output iterator to receive the [vert,colour,norm,tex] data
 		// 'i_out' is an output iterator to receive the index data
-		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
-		Props QuadStrip(size_t num_quads, TVertCIter verts, float width, v4 const& normal, size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+		template <typename TVertCIter, typename TNormCIter, typename TVertIter, typename TIdxIter>
+		Props QuadStrip(size_t num_quads, TVertCIter verts, float width, size_t num_normals, TNormCIter normals, size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
 			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 
@@ -256,55 +257,95 @@ namespace pr
 			// Colour iterator wrapper
 			ColourRepeater col(colours, num_colours, num_verts, Colour32White);
 
+			// Normal iterator wrapper
+			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
+
 			// Texture coords (note: 1D texture)
 			v2 const t00 = v2::make(0.000f, 0.000f);
 			v2 const t10 = v2::make(0.999f, 0.000f);
 			
-			v4       v0, v1 = *verts++, v2 = *verts++;
-			v4       n0, n1 = normal  , n2 = normal;
-			Colour32 c0, c1 = *col++  , c2 = *col++;
-			VIdx index = 0;
-			width *= 0.5f;
-			
 			pr::BBox bbox = pr::BBoxReset;
 			auto bb = [&](v4 const& v) { pr::Encompass(bbox, v); return v; };
 
-			// Output the start verts
-			auto norm = normal;
-			auto bi = pr::Normalise3(pr::Cross3(n1, v2 - v1), pr::Perpendicular(n1));
-			SetPCNT(*v_out++, bb(v1 + bi*width), c1, norm, t00); *i_out++ = index++;
-			SetPCNT(*v_out++, bb(v1 - bi*width), c1, norm, t10); *i_out++ = index++;
+			VIdx index = 0;
+			auto hwidth = width * 0.5f;
+			v4       v0, v1 = *verts++, v2 = *verts++;
+			v4       n0, n1 = *norm++ , n2 = *norm++ ;
+			Colour32 c0, c1 = *col++  , c2 = *col++  ;
 
-			// Output verts down the strip
-			for (std::size_t i = 1; i != num_verts - 1; ++i)
+			// Create the first pair of verts
+			v4 bi = pr::Normalise3(pr::Cross3(n1, v2 - v1), pr::Perpendicular(n1));
+			SetPCNT(*v_out++, bb(v1 + bi*hwidth), c1, n1, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v1 - bi*hwidth), c1, n1, t10); *i_out++ = index++;
+
+			for (size_t i = 0; i != num_quads - 1; ++i)
 			{
-				auto v = *verts++;
-				auto c = *col++;
-				if (FEql(v,v2)) continue; // skip degenerates
+				v0 = v1; v1 = v2; v2 = *verts++;
+				n0 = n1; n1 = n2; n2 = *norm++;
+				c0 = c1; c1 = c2; c2 = *col++;
 
-				v0 = v1; v1 = v2; v2 = v;
-				n0 = n1; n1 = n2; n2 = n;
-				c0 = c1; c1 = c2; c2 = c;
+				auto d0 = v1 - v0;
+				auto d1 = v2 - v1;
+				auto b0 = pr::Normalise3(pr::Cross3(n1, d0), pr::Perpendicular(n1));
+				auto b1 = pr::Normalise3(pr::Cross3(n1, d1), pr::Perpendicular(n1));
+				bi = pr::Normalise3(b0 + b1, bi); // The bisector at v1
+				// Note: bi always points to the left of d0 and d1
+			
+				// Find the distance, t, along d0 to the inside corner vert
+				// let t = 1 - u, where u is the distance back along d0 from v1
+				// x = dot(d0,bi)/|d0| = the length of bi along d0
+				// y = dot(b0,bi)      = the perpendicular distance of bi from d0
+				// let w = x/|d0| = dot(d0,bi)/|d0|² => x = w*|d0|
+				// x/y = |d0|/Y = similar triangles
+				//   => Y = |d0|*y/x = y/w = |d0|²*dot(b0,bi)/dot(d0,bi)
+				// for u >= 1; Y <= hwidth
+				//   => y/w <= hwidth
+				//   => y <= hwidth*w
+				// u = 1 - t = X/|d0| = parametric value back from v1 where the perpendicular distance is hwidth
+				//   X/hwidth = x/y => X = hwidth*w*|d0|/y
+				//   => X/|d0| = hwidth*w/y
+				//   => t = 1 - hwidth*w/y
+				auto d0_sq = Length3Sq(d0);
+				auto d1_sq = Length3Sq(d1);
+				auto w0 = Abs(Dot3(d0,bi)) / d0_sq;
+				auto w1 = Abs(Dot3(d1,bi)) / d1_sq;
+				auto y = Dot3(b0,bi); // == Dot3(b1,bi);
+				auto u0 = y <= hwidth*w0 ? 1.0f : hwidth*w0/y; // Cannot be a div/0 because w0,w1 are positive-semi-definite.
+				auto u1 = y <= hwidth*w1 ? 1.0f : hwidth*w1/y;
+				if (Dot3(d0,bi) >= 0.0f) // line turns to the right
+				{
+					auto inner = u0*pr::Sqrt(d0_sq) > u1*pr::Sqrt(d1_sq) // Pick the maximum distance from v1
+						? v1 - u0*d0 - b0*hwidth
+						: v1 + u1*d1 - b1*hwidth;
 
-				// Find the bisector
-				auto r0 = v1 - v0;
-				auto r1 = v2 - v1;
-				auto d0 = pr::Normalise3(r0);
-				auto d1 = pr::Normalise3(r1);
-				auto n = pr::Normalise3(d1 - d0, v4Zero);
-				if (pr::FEqlZero3(n)) continue; // skip straight sections
-				norm = pr::Dot3(n,norm ) < 0 ? -n : n; // Choose the normal on the same side as the previous one
-				bi = pr::Normalise3(pr::Cross3(norm, d1), bi);
-				
-				// Output verts
-				SetPCNT(*v_out++, bb(v1 + bi*width), c1, norm, t00); *i_out++ = index++;
-				SetPCNT(*v_out++, bb(v1 - bi*width), c1, norm, t10); *i_out++ = index++;
+					// Finish the previous quad
+					SetPCNT(*v_out++, bb(v1 + b0*hwidth), c1, n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+
+					// Start the next quad
+					SetPCNT(*v_out++, bb(v1 + b1*hwidth), c1, n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+				}
+				else // line turns to the left
+				{
+					auto inner = u0*pr::Sqrt(d0_sq) > u1*pr::Sqrt(d1_sq) // Pick the maximum distance from v1
+						? v1 - u0*d0 + b0*hwidth
+						: v1 + u1*d1 + b1*hwidth;
+
+					// Finish the previous quad
+					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 - b0*hwidth), c1, n1, t00); *i_out++ = index++;
+					
+					// Start the next quad
+					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 - b1*hwidth), c1, n1, t00); *i_out++ = index++;
+				}
 			}
 
-			// Output the last verts
-			auto bi = pr::Normalise3(pr::Cross3(n2, v2 - v1), bi);
-			SetPCNT(*v_out++, bb(v2 + bi*width), c2, norm, t00); *i_out++ = index++;
-			SetPCNT(*v_out++, bb(v2 - bi*width), c2, norm, t10); *i_out++ = index++;
+			// Finish the previous quad
+			bi = pr::Normalise3(pr::Cross3(n2, v2 - v1), pr::Perpendicular(n2));
+			SetPCNT(*v_out++, bb(v2 + bi*hwidth), c2, n2, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v2 - bi*hwidth), c2, n2, t10); *i_out++ = index++;
 
 			Props props;
 			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;

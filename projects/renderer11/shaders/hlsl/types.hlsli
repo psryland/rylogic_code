@@ -37,6 +37,7 @@ struct Light
 };
 
 // Helpers for identifying light type
+#define AmbientLight(light)     (light.m_info.x == 0)
 #define DirectionalLight(light) (light.m_info.x == 1)
 #define PointLight(light)       (light.m_info.x == 2)
 #define SpotLight(light)        (light.m_info.x == 3)

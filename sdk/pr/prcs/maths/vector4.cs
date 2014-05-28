@@ -148,6 +148,9 @@ namespace pr.maths
 		public static v4    Normalise2(v4 vec)                 { return vec / vec.Length2; }
 		public static v4    Normalise3(v4 vec)                 { return vec / vec.Length3; }
 		public static v4    Normalise4(v4 vec)                 { return vec / vec.Length4; }
+		public static v4    Normalise2(v4 vec, v4 def)         { return Maths.FEql(vec.Length2Sq, 0f) ? def : vec / vec.Length2; }
+		public static v4    Normalise3(v4 vec, v4 def)         { return Maths.FEql(vec.Length3Sq, 0f) ? def : vec / vec.Length3; }
+		public static v4    Normalise4(v4 vec, v4 def)         { return Maths.FEql(vec.Length4Sq, 0f) ? def : vec / vec.Length4; }
 		public static v4    Normalise2(ref v4 vec)             { return vec /= vec.Length2; }
 		public static v4    Normalise3(ref v4 vec)             { return vec /= vec.Length3; }
 		public static v4    Normalise4(ref v4 vec)             { return vec /= vec.Length4; }

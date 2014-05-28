@@ -91,7 +91,7 @@ namespace pr
 	template <typename T> inline bool   IsZero3(T const& v)                                     { return IsZero2(v) && GetZ(v) == 0; }
 	template <typename T> inline bool   IsZero4(T const& v)                                     { return IsZero3(v) && GetW(v) == 0; }
 
-	template <typename T> inline bool   FEql     (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(static_cast<float>(a), static_cast<float>(b)); }
+	template <typename T> inline bool   FEql     (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(static_cast<float>(lhs), static_cast<float>(rhs), tol); }
 	template <typename T> inline bool   FEql2    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(GetX(lhs), GetX(rhs), tol) && FEql(GetY(lhs), GetY(rhs), tol); }
 	template <typename T> inline bool   FEql3    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql2(lhs, rhs, tol) && FEql(GetZ(lhs), GetZ(rhs), tol); }
 	template <typename T> inline bool   FEql4    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql3(lhs, rhs, tol) && FEql(GetW(lhs), GetW(rhs), tol); }

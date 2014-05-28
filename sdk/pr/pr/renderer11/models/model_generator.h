@@ -137,9 +137,9 @@ namespace pr
 				pr::geometry::QuadSize(divisions, vcount, icount);
 				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen);
 			}
-			static ModelPtr QuadStrip(Renderer& rdr, size_t num_quads, v4 const* verts, float width, v4 const& normal, size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
+			static ModelPtr QuadStrip(Renderer& rdr, size_t num_quads, v4 const* verts, float width, size_t num_normals = 0, v4 const* normals = nullptr, size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::QuadStrip(num_quads, verts, width, normal, num_colours, colours, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::QuadStripSize(num_quads, vcount, icount);

@@ -51,10 +51,11 @@ namespace pr.gui
 		{
 			protected Element(Guid id, m4x4 position)
 			{
-				Diagram  = null;
-				Id       = id;
-				Position = position;
-				Visible  = true;
+				m_diag             = null;
+				Id                 = id;
+				m_impl_position    = position;
+				m_impl_selected    = false;
+				m_impl_visible     = true;
 				m_allow_invalidate = false;
 			}
 			protected Element(XElement node)
@@ -247,21 +248,6 @@ namespace pr.gui
 				diag.m_eb_update_diag.Signal();
 			}
 
-			/// <summary>Redraw this node if dirty</summary>
-			public void Refresh(bool force = false)
-			{
-				// Redraw the texture if dirty
-				if (!Dirty && !force) return;
-
-				if (m_impl_refreshing) return; // Protect against reentrancy
-				using (Scope.Create(() => m_impl_refreshing = true, () => m_impl_refreshing = false))
-				{
-					Render();
-					Dirty = false;
-				}
-			}
-			private bool m_impl_refreshing;
-
 			/// <summary>The element to diagram transform</summary>
 			public m4x4 Position
 			{
@@ -281,10 +267,10 @@ namespace pr.gui
 			}
 
 			/// <summary>Get/Set the z position of the element</summary>
-			internal float PositionZ
+			public float PositionZ
 			{
 				get { return Position.pos.z; }
-				set { var o2p = Position; o2p.pos.z = value; Position = o2p; }
+				internal set { var o2p = Position; o2p.pos.z = value; Position = o2p; }
 			}
 			
 			/// <summary>Position recorded at the time of selection/deselection</summary>
@@ -323,8 +309,25 @@ namespace pr.gui
 			/// <summary>Return all the locations that connectors can attach to this node (in node space)</summary>
 			public abstract IEnumerable<AnchorPoint> AnchorPoints { get; }
 
+			/// <summary>Update the graphics and object transforms associated with this element</summary>
+			public void Refresh(bool force = false)
+			{
+				if (!Dirty && !force) return;  // Only if dirty
+				if (m_impl_refreshing) return; // Protect against reentrancy
+				using (Scope.Create(() => m_impl_refreshing = true, () => m_impl_refreshing = false))
+				{
+					RefreshInternal();
+					Dirty = false;
+				}
+			}
+			protected abstract void RefreshInternal();
+			private bool m_impl_refreshing;
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			internal abstract void AddToDrawset(View3d.DrawsetInterface drawset);
+
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
-			public void Update(XElement node)
+			internal void Update(XElement node)
 			{
 				if (node.Attribute(XmlField.TypeAttribute).Value != GetType().FullName)
 					throw new Exception("Must update a diagram element with xml data for the same type");
@@ -338,12 +341,6 @@ namespace pr.gui
 				Invalidate();
 			}
 			protected abstract void UpdateInternal(XElement node);
-
-			/// <summary>Update the graphics associated with this element</summary>
-			public abstract void Render();
-
-			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal abstract void AddToDrawset(View3d.DrawsetInterface drawset);
 
 			/// <summary>Check the self consistency of this element</summary>
 			public virtual bool CheckConsistency()
@@ -705,7 +702,7 @@ namespace pr.gui
 				// Create the graphics object
 				m_gfx = new View3d.Object("*Group{}");
 				m_size_changed = true;
-				Render();
+				Refresh(true);
 
 				AllowInvalidate();
 			}
@@ -735,8 +732,8 @@ namespace pr.gui
 			/// <summary>Set the position of the element</summary>
 			protected override void SetPosition(m4x4 pos)
 			{
-				m_gfx.O2P = pos;
 				base.SetPosition(pos);
+				if (m_gfx != null) m_gfx.O2P = pos;
 			}
 			
 			/// <summary>Detect resize and update the graphics as needed</summary>
@@ -787,25 +784,23 @@ namespace pr.gui
 				CornerRadius = node.Element(XmlField.CornerRadius).As<float>(CornerRadius);
 			}
 
-			/// <summary>Render the node into the surface</summary>
-			public override void Render()
+			/// <summary>Update the graphics and object transforms associated with this element</summary>
+			protected override void RefreshInternal()
 			{
 				// Update the graphics model when the size changes
 				if (m_size_changed)
 				{
-					// Save z because UpdateModel will override it
-					var z = PositionZ;
-					
 					var ldr = new LdrBuilder();
 					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-					m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+					m_gfx.UpdateModel(ldr.ToString());
 					m_gfx.SetTexture(Surf);
-					
-					// Restore the z position
-					PositionZ = z;
 					m_size_changed = false;
 				}
 
+				// Update the position
+				m_gfx.O2P = Position;
+
+				// Update the texture surface
 				using (var tex = Surf.LockSurface())
 				{
 					tex.Gfx.ScaleTransform(TextureScale, TextureScale);
@@ -820,118 +815,9 @@ namespace pr.gui
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal override void AddToDrawset(View3d.DrawsetInterface drawset, float z)
+			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
 			{
-				PositionZ = z;
-				m_gfx.O2P = Position;
 				drawset.AddObject(m_gfx);
-			}
-		}
-
-		/// <summary>Style attributes for nodes</summary>
-		public class NodeStyle :IHasId
-		{
-			public static readonly NodeStyle Default = new NodeStyle();
-
-			/// <summary>Unique id for the style</summary>
-			public Guid Id { get; internal set; }
-
-			/// <summary>The colour of the node border</summary>
-			public Color Border
-			{
-				get { return m_impl_border; }
-				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
-			}
-			private Color m_impl_border = Color.Black;
-
-			/// <summary>The node background colour</summary>
-			public Color Fill
-			{
-				get { return m_impl_fill; }
-				set { Util.SetAndRaise(this, ref m_impl_fill, value, StyleChanged); }
-			}
-			private Color m_impl_fill = Color.WhiteSmoke;
-
-			/// <summary>The colour of the node when selected</summary>
-			public Color Selected
-			{
-				get { return m_impl_selected; }
-				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
-			}
-			private Color m_impl_selected = Color.LightBlue;
-
-			/// <summary>The node text colour</summary>
-			public Color Text
-			{
-				get { return m_impl_text; }
-				set { Util.SetAndRaise(this, ref m_impl_text, value, StyleChanged); }
-			}
-			private Color m_impl_text;
-
-			/// <summary>The font to use for the node text</summary>
-			public Font Font
-			{
-				get { return m_impl_font; }
-				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
-			}
-			private Font m_impl_font;
-
-			/// <summary>The alignment of the text within the node</summary>
-			public ContentAlignment TextAlign
-			{
-				get { return m_impl_align; }
-				set { Util.SetAndRaise(this, ref m_impl_align, value, StyleChanged); }
-			}
-			private ContentAlignment m_impl_align;
-
-			/// <summary>The padding surrounding the text in the node</summary>
-			public Padding Padding
-			{
-				get { return m_impl_padding; }
-				set { Util.SetAndRaise(this, ref m_impl_padding, value, StyleChanged); }
-			}
-			private Padding m_impl_padding;
-
-			/// <summary>Raised whenever a style property is changed</summary>
-			public event EventHandler StyleChanged;
-
-			public NodeStyle()
-			{
-				using (StyleChanged.SuspendScope())
-				{
-					Id        = Guid.NewGuid();
-					Border    = Color.Black;
-					Fill      = Color.WhiteSmoke;
-					Text      = Color.Black;
-					TextAlign = ContentAlignment.MiddleCenter;
-					Font      = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
-					Padding   = new Padding(10,10,10,10);
-				}
-			}
-			public NodeStyle(XElement node)
-			{
-				Id        = node.Element(XmlField.Id      ).As<Guid>();
-				Border    = node.Element(XmlField.Border  ).As<Color>();
-				Fill      = node.Element(XmlField.Fill    ).As<Color>();
-				Selected  = node.Element(XmlField.Selected).As<Color>();
-				Text      = node.Element(XmlField.Text    ).As<Color>();
-				Font      = node.Element(XmlField.Font    ).As<Font>();
-				TextAlign = node.Element(XmlField.Align   ).As<ContentAlignment>();
-				Padding   = node.Element(XmlField.Padding ).As<Padding>();
-			}
-
-			/// <summary>Export to xml</summary>
-			public XElement ToXml(XElement node)
-			{
-				node.Add2(XmlField.Id       ,Id        ,false);
-				node.Add2(XmlField.Border   ,Border    ,false);
-				node.Add2(XmlField.Fill     ,Fill      ,false);
-				node.Add2(XmlField.Selected ,Selected  ,false);
-				node.Add2(XmlField.Text     ,Text      ,false);
-				node.Add2(XmlField.Font     ,Font      ,false);
-				node.Add2(XmlField.Align    ,TextAlign ,false);
-				node.Add2(XmlField.Padding  ,Padding   ,false);
-				return node;
 			}
 		}
 
@@ -944,6 +830,7 @@ namespace pr.gui
 		{
 			private const float DefaultSplineControlLength = 50f;
 			private const float MinSelectionDistanceSq = 25f;
+			private static readonly v4 Bias = new v4(0,0,0.001f,0);
 
 			/// <summary>Graphics for the connector line</summary>
 			private View3d.Object m_gfx_line;
@@ -953,6 +840,11 @@ namespace pr.gui
 
 			/// <summary>Graphics for the backward arrow</summary>
 			private View3d.Object m_gfx_bak;
+
+			/// <summary>
+			/// Controls how the connector is positioned relative to the 
+			/// mid point between Anc0.LocationWS and Anc1.LocationWS</summary>
+			private v4 m_centre_offset;
 
 			public Connector()
 				:this(Guid.NewGuid(), null, null, string.Empty)
@@ -971,6 +863,7 @@ namespace pr.gui
 			{
 				m_anc0 = new AnchorPoint();
 				m_anc1 = new AnchorPoint();
+				m_centre_offset = v4.Zero;
 				Style = style;
 				Label = label;
 				Node0 = node0;
@@ -980,12 +873,13 @@ namespace pr.gui
 			public Connector(XElement node)
 				:base(node)
 			{
-				m_anc0 = new AnchorPoint();
-				m_anc1 = new AnchorPoint();
-				Node0 = node.Element(XmlField.Anchor0).As<AnchorPoint>().Elem.As<Node>();
-				Node1 = node.Element(XmlField.Anchor1).As<AnchorPoint>().Elem.As<Node>();
-				Style = new ConnectorStyle{Id = node.Element(XmlField.Style).As<Guid>()};
-				Label = node.Element(XmlField.Label).As<string>();
+				m_anc0          = new AnchorPoint();
+				m_anc1          = new AnchorPoint();
+				m_centre_offset = node.Element(XmlField.CentreOffset).As<v4>(v4.Zero);
+				Node0           = node.Element(XmlField.Anchor0).As<AnchorPoint>().Elem.As<Node>();
+				Node1           = node.Element(XmlField.Anchor1).As<AnchorPoint>().Elem.As<Node>();
+				Style           = new ConnectorStyle{Id = node.Element(XmlField.Style).As<Guid>()};
+				Label           = node.Element(XmlField.Label).As<string>();
 				Init();
 			}
 			private void Init()
@@ -996,8 +890,8 @@ namespace pr.gui
 				// Create graphics for the connector
 				m_gfx_line = new View3d.Object("*Group{}");
 				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
-				m_gfx_bak = new View3d.Object("*Triangle conn_fwd FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
-				Render();
+				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
+				Refresh(true);
 
 				AllowInvalidate();
 			}
@@ -1120,13 +1014,25 @@ namespace pr.gui
 				{
 					if (Selected == value) return;
 					base.Selected = value;
-					Graphics.SetColour(Selected ? Style.Selected : Style.Line, "line");
+					m_gfx_line.SetColour(Selected ? Style.Selected : Style.Line);
+					m_gfx_fwd .SetColour(Selected ? Style.Selected : Style.Line);
+					m_gfx_bak .SetColour(Selected ? Style.Selected : Style.Line);
 				}
 			}
 
+			/// <summary>Set the position of the element</summary>
 			protected override void SetPosition(m4x4 pos)
 			{
 				base.SetPosition(pos);
+				m_gfx_line.O2P = Position;
+
+				// If the connector has a back arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.BackArrow) != 0)
+					m_gfx_bak.O2P = m4x4.OriFromDir(Anc0.NormalWS, AxisId.PosY, v4.ZAxis, Anc0.LocationWS + Bias);
+				
+				// If the connector has a forward arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
+					m_gfx_fwd.O2P = m4x4.OriFromDir(Anc1.NormalWS, AxisId.PosY, v4.ZAxis, Anc1.LocationWS + Bias);
 			}
 
 			/// <summary>AABB for the element in diagram space</summary>
@@ -1134,9 +1040,8 @@ namespace pr.gui
 			{
 				get
 				{
-					var spline = MakeSpline(Anc0, Anc1, PositionZ, true);
 					var bounds = BRect.Reset;
-					bounds.Encompass(spline.Point0.xy, spline.Ctrl0.xy, spline.Ctrl1.xy, spline.Point1.xy);
+					bounds.Encompass(Points(true));
 					return bounds;
 				}
 			}
@@ -1144,18 +1049,57 @@ namespace pr.gui
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
-				// Find the closest point to the spline
-				var spline = MakeSpline(Anc0, Anc1, PositionZ, true);
-				var t = Geometry.ClosestPoint(spline, new v4(point, 0, 1));
-				var pt = spline.Position(t);
-				var diff_cs = // Convert separating distance screen space
+				var points = Points(true);
+				var dist_sq = float.MaxValue;
+				var closest_pt = v2.Zero;
+				if (Style.Smooth && points.Length > 2)
+				{
+					// The ribbon object smooths points using the following algorithm
+					// How to not duplicate this code?
+	
+					// Generate a spline from each set of three points in 'points'
+					for (int i = 1, iend = points.Length - 1; i != iend; ++i)
+					{
+						// Generate points for the spline
+						var sp = i == 1      ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
+						var sc = (points[i-1] + points[i]) * 0.5f;
+						var ec = (points[i+1] + points[i]) * 0.5f;
+						var ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
+						var spline = new Spline(new v4(sp,0,1), new v4(sc,0,1), new v4(ec,0,1), new v4(ep,0,1));
+
+						// Find the closest point to the spline
+						var t = Geometry.ClosestPoint(spline, new v4(point,0,1));
+						var pt = spline.Position(t);
+						var dsq = (point - pt.xy).Length2Sq;
+						if (dsq < dist_sq)
+						{
+							dist_sq = dsq;
+							closest_pt = pt.xy;
+						}
+					}
+				}
+				else
+				{
+					for (int i = 0; i < points.Length - 1; ++i)
+					{
+						var t = Geometry.ClosestPoint(points[i], points[i+1], point);
+						var pt = v2.Lerp(points[i], points[i+1], t);
+						var dsq = (point - pt).Length2Sq;
+						if (dsq < dist_sq)
+						{
+							dist_sq = dsq;
+							closest_pt = pt;
+						}
+					}
+				}
+
+				// Convert separating distance screen space
+				var dist_cs = 
 					v2.From(cam.SSPointFromWSPoint(new v4(point,0,1))) -
-					v2.From(cam.SSPointFromWSPoint(pt));
+					v2.From(cam.SSPointFromWSPoint(new v4(closest_pt,0,1)));
 
-				if (diff_cs.Length2Sq > MinSelectionDistanceSq)
-					return null;
-
-				return new HitTestResult.Hit(this, pt.xy);
+				if (dist_cs.Length2Sq > MinSelectionDistanceSq) return null;
+				return new HitTestResult.Hit(this, closest_pt);
 			}
 
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
@@ -1172,35 +1116,64 @@ namespace pr.gui
 					yield return new AnchorPoint(this, Position.pos, v4.Zero);
 				}
 			}
+			///// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
+			//public override IEnumerable<AnchorPoint> AnchorPoints
+			//{
+			//	get
+			//	{
+			//		yield return m_anc0;
+			//		yield return m_anc1;
+			//	}
+			//}
 
-			/// <summary>Update the graphics for the connector</summary>
-			public override void Render()
+			/// <summary>Update the graphics and transforms for the connector</summary>
+			protected override void RefreshInternal()
 			{
-				// Save z because UpdateModel will override it
-				var z = PositionZ;
+				// Update the transform
+				PositionXY = AttachCentre(Anc0, Anc1);
 
-				var spline = MakeSpline(Anc0, Anc1, z, false);
-				var col = Selected ? Style.Selected : Style.Line;
-				var ty = Style.Type == ConnectorStyle.EType.Line ? "Line" :
-					((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0 ? "Fwd" : string.Empty) +
-					((Style.Type & ConnectorStyle.EType.BackArrow   ) != 0 ? "Back" : string.Empty);
+				var ldr   = new LdrBuilder();
+				var col   = Selected ? Style.Selected : Style.Line;
+				var width = Style.Width;
+				var pts   = Points(false);
 
-				var ldr = new LdrBuilder();
-				ldr.Append("*Arrow connector ",col,"{",ty," ",spline.Point0,"  ",spline.Ctrl0,"  ",spline.Ctrl1,"  ",spline.Point1," *Smooth *Width {",Style.Width,"} }\n");
+				// Update the connector line graphics
+				ldr.Append("*Ribbon connector ",col,"{3 ",width);
+				pts.ForEach(pt => ldr.Append(" ",new v4(pt,0,1)));
+				if (Style.Smooth) ldr.Append(" *Smooth");
+				ldr.Append("}");
 
-				// Update the line of the connector
 				m_gfx_line.UpdateModel(ldr.ToString());
-				m_gfx_line.O2P = m4x4.Translation(AttachCentre(Anc0, Anc1), z);
+				m_gfx_line.O2P = Position;
+
+				// If the connector has a back arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.BackArrow) != 0)
+				{
+					m_gfx_bak.SetColour(col);
+					m_gfx_bak.O2P = m4x4.OriFromDir(Anc0.NormalWS, AxisId.PosY, v4.ZAxis, Anc0.LocationWS + Bias);
+				}
+
+				// If the connector has a forward arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
+				{
+					m_gfx_fwd.SetColour(col);
+					m_gfx_fwd.O2P = m4x4.OriFromDir(Anc1.NormalWS, AxisId.PosY, v4.ZAxis, Anc1.LocationWS + Bias);
+				}
 			}
 
-			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			public override IEnumerable<AnchorPoint> AnchorPoints
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
 			{
-				get
-				{
-					yield return m_anc0;
-					yield return m_anc1;
-				}
+				// Add the main connector line
+				drawset.AddObject(m_gfx_line);
+
+				// If the connector has a back arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.BackArrow) != 0)
+					drawset.AddObject(m_gfx_bak);
+
+				// If the connector has a forward arrow, add the arrow head graphics
+				if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
+					drawset.AddObject(m_gfx_fwd);
 			}
 
 			/// <summary>Detach from 'node'</summary>
@@ -1289,16 +1262,49 @@ namespace pr.gui
 				anc1 = node1.NearestAnchor(new v4(node0.Centre, 0f, 1f), false);
 			}
 
-			/// <summary>Returns the spline that connects two anchor points</summary>
-			private static Spline MakeSpline(AnchorPoint anc0, AnchorPoint anc1, float z, bool diag_space)
+			/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
+			private v2[] Points(bool diagram_space)
 			{
-				var centre = diag_space ? v4.Zero : new v4(AttachCentre(anc0, anc1), z, 0f);
-				var pt0 = anc0.LocationWS - centre;                         pt0.z = z;  
-				var ct0 = pt0 + anc0.NormalWS * DefaultSplineControlLength; ct0.z = z;
-				var pt1 = anc1.LocationWS - centre;                         pt1.z = z;
-				var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = z;
-				return new Spline(pt0,ct0,ct1,pt1);
+				// A connector is constructed from: Anc0.LocationWS, CentreOffset, Anc1.LocationWS.
+				// A line from Anc0.LocationWS is extended in the direction of Anc0.NormalWS till it
+				// is perpendicular to m_centre_offset. The same is done from Anc1.LocationWS
+				// A connecting line between these points is then formed.
+
+				var origin = diagram_space ? v4.Zero : Position.pos.w0;
+				var centre = (Position.pos - origin + m_centre_offset).xy;
+				var start  = (Anc0.LocationWS - origin).xy;
+				var end    = (Anc1.LocationWS - origin).xy;
+
+				v2 intersect;
+				if (Geometry.Intersect(
+					start, start + Anc0.NormalWS.xy,
+					end  , end   + Anc1.NormalWS.xy,
+					out intersect))
+				{
+					return new[]{start, intersect, end};
+				}
+				else
+				{
+					return new[]
+					{
+						start,
+						start + v2.Dot2(centre - start, Anc0.NormalWS.xy) * Anc0.NormalWS.xy,
+						end   + v2.Dot2(centre - end  , Anc1.NormalWS.xy) * Anc1.NormalWS.xy,
+						end
+					};
+				}
 			}
+
+			///// <summary>Returns the spline that connects two anchor points</summary>
+			//private static Spline MakeSpline(AnchorPoint anc0, AnchorPoint anc1, float z, bool diag_space)
+			//{
+			//	var centre = diag_space ? v4.Zero : new v4(AttachCentre(anc0, anc1), z, 0f);
+			//	var pt0 = anc0.LocationWS - centre;                         pt0.z = z;  
+			//	var ct0 = pt0 + anc0.NormalWS * DefaultSplineControlLength; ct0.z = z;
+			//	var pt1 = anc1.LocationWS - centre;                         pt1.z = z;
+			//	var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = z;
+			//	return new Spline(pt0,ct0,ct1,pt1);
+			//}
 
 			/// <summary>Check the self consistency of this element</summary>
 			public override bool CheckConsistency()
@@ -1318,6 +1324,117 @@ namespace pr.gui
 
 			// ToString
 			public override string ToString() { return "Connector (" + Anc0.ToString() + "-" + Anc1.ToString() + ")"; }
+		}
+
+		#endregion
+
+		#region Styles
+
+		/// <summary>Style attributes for nodes</summary>
+		public class NodeStyle :IHasId
+		{
+			public static readonly NodeStyle Default = new NodeStyle();
+
+			/// <summary>Unique id for the style</summary>
+			public Guid Id { get; internal set; }
+
+			/// <summary>The colour of the node border</summary>
+			public Color Border
+			{
+				get { return m_impl_border; }
+				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
+			}
+			private Color m_impl_border = Color.Black;
+
+			/// <summary>The node background colour</summary>
+			public Color Fill
+			{
+				get { return m_impl_fill; }
+				set { Util.SetAndRaise(this, ref m_impl_fill, value, StyleChanged); }
+			}
+			private Color m_impl_fill = Color.WhiteSmoke;
+
+			/// <summary>The colour of the node when selected</summary>
+			public Color Selected
+			{
+				get { return m_impl_selected; }
+				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
+			}
+			private Color m_impl_selected = Color.LightBlue;
+
+			/// <summary>The node text colour</summary>
+			public Color Text
+			{
+				get { return m_impl_text; }
+				set { Util.SetAndRaise(this, ref m_impl_text, value, StyleChanged); }
+			}
+			private Color m_impl_text;
+
+			/// <summary>The font to use for the node text</summary>
+			public Font Font
+			{
+				get { return m_impl_font; }
+				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
+			}
+			private Font m_impl_font;
+
+			/// <summary>The alignment of the text within the node</summary>
+			public ContentAlignment TextAlign
+			{
+				get { return m_impl_align; }
+				set { Util.SetAndRaise(this, ref m_impl_align, value, StyleChanged); }
+			}
+			private ContentAlignment m_impl_align;
+
+			/// <summary>The padding surrounding the text in the node</summary>
+			public Padding Padding
+			{
+				get { return m_impl_padding; }
+				set { Util.SetAndRaise(this, ref m_impl_padding, value, StyleChanged); }
+			}
+			private Padding m_impl_padding;
+
+			/// <summary>Raised whenever a style property is changed</summary>
+			public event EventHandler StyleChanged;
+
+			public NodeStyle()
+			{
+				using (StyleChanged.SuspendScope())
+				{
+					Id        = Guid.NewGuid();
+					Border    = Color.Black;
+					Fill      = Color.WhiteSmoke;
+					Text      = Color.Black;
+					TextAlign = ContentAlignment.MiddleCenter;
+					Font      = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
+					Padding   = new Padding(10,10,10,10);
+				}
+			}
+			public NodeStyle(XElement node) :this()
+			{
+				Id        = node.Element(XmlField.Id      ).As<Guid>            (Id       );
+				Border    = node.Element(XmlField.Border  ).As<Color>           (Border   );
+				Fill      = node.Element(XmlField.Fill    ).As<Color>           (Fill     );
+				Selected  = node.Element(XmlField.Selected).As<Color>           (Selected );
+				Text      = node.Element(XmlField.Text    ).As<Color>           (Text     );
+				Font      = node.Element(XmlField.Font    ).As<Font>            (Font     );
+				TextAlign = node.Element(XmlField.Align   ).As<ContentAlignment>(TextAlign);
+				Padding   = node.Element(XmlField.Padding ).As<Padding>         (Padding  );
+			}
+
+			/// <summary>Export to xml</summary>
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(XmlField.Id       ,Id        ,false);
+				node.Add2(XmlField.Border   ,Border    ,false);
+				node.Add2(XmlField.Fill     ,Fill      ,false);
+				node.Add2(XmlField.Selected ,Selected  ,false);
+				node.Add2(XmlField.Text     ,Text      ,false);
+				node.Add2(XmlField.Font     ,Font      ,false);
+				node.Add2(XmlField.Align    ,TextAlign ,false);
+				node.Add2(XmlField.Padding  ,Padding   ,false);
+				return node;
+			}
 		}
 
 		/// <summary>Style properties for connectors</summary>
@@ -1367,6 +1484,14 @@ namespace pr.gui
 				set { Util.SetAndRaise(this, ref m_impl_width, value, StyleChanged); }
 			}
 			private float m_impl_width;
+			
+			/// <summary>True for a smooth connector, false for a straight edged connector</summary>
+			public bool Smooth
+			{
+				get { return m_impl_smooth; }
+				set { Util.SetAndRaise(this, ref m_impl_smooth, value, StyleChanged); }
+			}
+			private bool m_impl_smooth;
 
 			/// <summary>Raised whenever a style property is changed</summary>
 			public event EventHandler StyleChanged;
@@ -1380,25 +1505,28 @@ namespace pr.gui
 					Line     = Color.Black;
 					Selected = Color.Blue;
 					Width    = 8f;
+					Smooth   = false;
 				}
 			}
-			public ConnectorStyle(XElement node)
+			public ConnectorStyle(XElement node) :this()
 			{
-				Id       = node.Element("id"      ).As<Guid>();
-				Type     = node.Element("type"    ).As<EType>();
-				Line     = node.Element("line"    ).As<Color>();
-				Selected = node.Element("selected").As<Color>();
-				Width    = node.Element("width"   ).As<float>();
+				Id       = node.Element(XmlField.Id      ).As<Guid> (Id      );
+				Type     = node.Element(XmlField.Type    ).As<EType>(Type    );
+				Line     = node.Element(XmlField.Line    ).As<Color>(Line    );
+				Selected = node.Element(XmlField.Selected).As<Color>(Selected);
+				Width    = node.Element(XmlField.Width   ).As<float>(Width   );
+				Smooth   = node.Element(XmlField.Smooth  ).As<bool> (Smooth  );
 			}
 
 			/// <summary>Export to xml</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2("id"       ,Id       ,false);
-				node.Add2("type"     ,Type     ,false);
-				node.Add2("line"     ,Line     ,false);
-				node.Add2("selected" ,Selected ,false);
-				node.Add2("width"    ,Width    ,false);
+				node.Add2(XmlField.Id       ,Id       ,false);
+				node.Add2(XmlField.Type     ,Type     ,false);
+				node.Add2(XmlField.Line     ,Line     ,false);
+				node.Add2(XmlField.Selected ,Selected ,false);
+				node.Add2(XmlField.Width    ,Width    ,false);
+				node.Add2(XmlField.Smooth   ,Smooth   ,false);
 				return node;
 			}
 		}
@@ -1615,6 +1743,7 @@ namespace pr.gui
 			public const string CornerRadius    = "cnr"             ;
 			public const string Anchor0         = "anc0"            ;
 			public const string Anchor1         = "anc1"            ;
+			public const string CentreOffset    = "centre_offset"   ;
 			public const string Label           = "label"           ;
 			public const string Styles          = "style"           ;
 			public const string NodeStyles      = "node_styles"     ;
@@ -1624,7 +1753,11 @@ namespace pr.gui
 			public const string Fill            = "fill"            ;
 			public const string Selected        = "selected"        ;
 			public const string Font            = "font"            ;
+			public const string Type            = "type"            ;
 			public const string Align           = "align"           ;
+			public const string Line            = "line"            ;
+			public const string Width           = "width"           ;
+			public const string Smooth          = "smooth"          ;
 			public const string Padding         = "padding"         ;
 			public const string ElementId       = "elem_id"         ;
 			public const string Location        = "loc"             ;
@@ -2404,7 +2537,7 @@ namespace pr.gui
 								var min_sep = min_separation(vec, node0, node1);
 								var sep     = Math.Max(min_sep, vec.Length2);
 
-								// Coulomb force F = kQq/xÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²
+								// Coulomb force F = kQq/xÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬ÃƒÂ¢Ã¢â‚¬Å¾¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’¢ÃƒÂ¢Ã¢â‚¬Å¡¬Ãƒâ€¦¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â²
 								var q1 = 1f + node1.Connectors.Count * Options.Scatter.ConnectorScale;
 								var coulumb = Options.Scatter.CoulombConstant * q0 * q1 / (sep * sep);
 
@@ -2476,25 +2609,13 @@ namespace pr.gui
 			if (invalidate_all)
 				Elements.ForEach(x => x.Invalidate());
 
+			// Add the elements to the drawset
 			var zorder = 0f;
-
-			// Draw all the nodes first
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
+			foreach (var elem in Elements)
 			{
 				if (!elem.Visible) continue;
 				elem.PositionZ = zorder += 0.001f;
 				elem.AddToDrawset(m_view3d.Drawset);
-
-				m_view3d.Drawset.AddObject(elem.Graphics);
-			}
-
-			// Draw all the connectors above the nodes
-			zorder += 1.0f;
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
-			{
-				if (!elem.Visible) continue;
-				elem.PositionZ = zorder += 0.001f;
-				m_view3d.Drawset.AddObject(elem.Graphics);
 			}
 
 			Refresh();
