@@ -10,6 +10,7 @@
 #include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
 #include "pr/common/to.h"
+#include "pr/common/interpolate.h"
 
 #if defined(_WINGDI_) && !defined(NOGDI)
 #  define PR_SUPPORT_WINGDI(exp) exp
@@ -389,6 +390,26 @@ namespace pr
 		}
 		static Colour To(std::string s) { return To(s.c_str()); }
 		static Colour To(Colour32 c) { return static_cast<Colour>(c); }
+	};
+
+	// Interpolate<Colour32>
+	template <> struct Interpolate<Colour32>
+	{
+		struct Point
+		{
+			template <typename F> Colour32 operator()(Colour32 lhs, Colour32, F, F) const
+			{
+				return lhs;
+			}
+		};
+		struct Linear
+		{
+			template <typename F> Colour32 operator()(Colour32 lhs, Colour32 rhs, F n, F N) const
+			{
+				if (N-- <= 1) return lhs;
+				return Lerp(lhs, rhs, float(n)/N);
+			}
+		};
 	};
 }
 

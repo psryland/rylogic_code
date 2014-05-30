@@ -37,32 +37,28 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Lines(std::size_t num_lines, v4 const* points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
-			ColourRepeater col(colours, num_colours, 2*num_lines, Colour32White);
-
-			Props props;
-			v4 const* v_in = points;
-			TVertIter v_out = out_verts;
-			TIdxIter i_out = out_indices;
 			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+			Props props;
+			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
+
+			// Colour iterator
+			auto col = pr::CreateRepeater(colours, num_colours, 2*num_lines, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+
+			v4 const* v_in  = points;
+			TVertIter v_out = out_verts;
+			TIdxIter  i_out = out_indices;
+			VIdx index = 0;
+
 			for (std::size_t i = 0; i != num_lines; ++i)
 			{
-				auto& v0 = *v_in++;
-				auto& v1 = *v_in++;
-				Colour32 c0 = *col++;
-				Colour32 c1 = *col++;
-
-				SetPC(*v_out++, v0, c0);
-				SetPC(*v_out++, v1, c1);
-
-				*i_out++ = value_cast<VIdx>(2*i + 0);
-				*i_out++ = value_cast<VIdx>(2*i + 1);
-
-				// Grow the bounding box
-				pr::Encompass(props.m_bbox, v0);
-				pr::Encompass(props.m_bbox, v1);
+				SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
+				SetPC(*v_out++, bb(*v_in++), cc(*col++)); *i_out++ = index++;
 			}
-			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
-			props.m_has_alpha = col.m_alpha;
+
 			return props;
 		}
 
@@ -85,27 +81,27 @@ namespace pr
 		inline Props LinesStrip(std::size_t num_lines, TVertCIter points, std::size_t num_colours, TColCIter colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
-
 			Props props;
+			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
+
+			// Colour iterator
+			auto col = pr::CreateLerpRepeater(colours, num_colours, 1+num_lines, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+
 			auto v_in  = points;
 			auto v_out = out_verts;
 			auto i_out = out_indices;
-			ColourRepeater col(colours, num_colours, 1+num_lines, Colour32White);
 			VIdx index = 0;
-			
-			pr::Encompass(props.m_bbox, *v_in);
-			SetPC(*v_out++, *v_in++, *col++);
-			*i_out++ = index++;
 
-			for (std::size_t i = 0; i != num_lines; ++i)
+			for (std::size_t i = 0; i != num_lines + 1; ++i)
 			{
-				pr::Encompass(props.m_bbox, *v_in);
-				SetPC(*v_out++, *v_in++, *col++);
+				SetPC(*v_out++, bb(*v_in++), cc(*col++));
 				*i_out++ = index++;
 			}
 
-			props.m_geom = EGeom::Vert | (num_colours != 0 ? EGeom::Colr : 0);
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 	}

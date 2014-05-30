@@ -855,6 +855,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\interpolate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.py">

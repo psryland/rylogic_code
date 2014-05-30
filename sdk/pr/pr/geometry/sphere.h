@@ -174,6 +174,11 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Geosphere(v4 const& radius, std::size_t divisions, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
+			Props props;
+			props.m_bbox = BBox::make(pr::v4Origin, radius);
+			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
+			props.m_has_alpha = colour.a() != 0xFF;
+
 			// Preallocate buffers to compile the geosphere into
 			std::size_t vcount, icount;
 			GeosphereSize(divisions, vcount, icount);
@@ -204,10 +209,6 @@ namespace pr
 				*out_indices++ = value_cast<VIdx>(i->m_vidx[2]);
 			}
 
-			Props props;
-			props.m_bbox = BBox::make(pr::v4Origin, radius);
-			props.m_geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | EGeom::Tex0;
-			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}
 
@@ -232,6 +233,10 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Sphere(v4 const& radius, std::size_t wedges, std::size_t layers, Colour32 colour, TVertIter out_verts, TIdxIter out_indices)
 		{
+			Props props;
+			props.m_bbox = BBox::make(pr::v4Origin, radius);
+			props.m_has_alpha = colour.a() != 0xFF;
+
 			if (wedges < 3) wedges = 3;
 			if (layers < 2) layers = 2;
 
@@ -280,9 +285,6 @@ namespace pr
 				*out_indices++ = value_cast<VIdx>(ilayer + 1 );
 			}
 
-			Props props;
-			props.m_bbox = BBox::make(pr::v4Origin, radius);
-			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}
 	}

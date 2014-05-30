@@ -34,8 +34,6 @@ namespace pr.gui
 		// - Prefer direct calls on the diagram from an element rather than
 		//  having the diagram watch for events... Events can be suspended.
 
-		private const int TextureScale = 4;
-
 		/// <summary>
 		/// The types of elements that can be on a diagram.
 		/// Also defines the order that elements are written to xml</summary>
@@ -193,11 +191,6 @@ namespace pr.gui
 						if (value) m_diag.Selected.Add(this);
 						else m_diag.Selected.Remove(this);
 					}
-					else
-					{
-						// Selected when not part of a diagram?
-						value = !!value;
-					}
 
 					// Record the diagram location at the time we were selected/deselected
 					PositionAtSelectionChange = Position;
@@ -294,6 +287,12 @@ namespace pr.gui
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public abstract HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam);
 
+			/// <summary>Handle a click event on this element</summary>
+			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
+			{
+				return false;
+			}
+
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
 			public abstract void Drag(v2 delta, bool commit);
 
@@ -353,18 +352,14 @@ namespace pr.gui
 
 		#region Nodes
 
-		/// <summary>A base class for nodes</summary>
+		/// <summary>Base class for all node types</summary>
 		public abstract class Node :Element
 		{
-			/// <summary>Function prototype for creating an ldr string describing a graphics model</summary>
-			private delegate string MakeGfx(uint width, uint height, NodeStyle style);
-
 			/// <summary>Base node constructor</summary>
-			/// <param name="make_gfx">Function for creating the graphics model</param>
-			/// <param name="autosize">If true, the width and height a maximum size limits (0 meaning unlimited)</param>
+			/// <param name="id">Globally unique id for the element</param>
+			/// <param name="autosize">If true, the width and height are maximum size limits (0 meaning unlimited)</param>
 			/// <param name="width">The width of the node, or if 'autosize' is true, the maximum width of the node</param>
 			/// <param name="height">The height of the node, or if 'autosize' is true, the maximum height of the node</param>
-			/// <param name="tex_obj_name">The graphics object name that receives the surface texture</param>
 			/// <param name="text">The text of the node</param>
 			/// <param name="position">The position of the node on the diagram</param>
 			/// <param name="style">Style properties for the node</param>
@@ -404,10 +399,8 @@ namespace pr.gui
 			}
 			private void Init(uint width, uint height)
 			{
+				m_impl_size = new v2(width, height);
 				Connectors = new BindingListEx<Connector>();
-
-				// Create the surface texture and assign it to the graphics object
-				Surf = new View3d.Texture(TextureScale * width, TextureScale * height, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});// D3D11_FILTER_MIN_MAG_MIP_LINEAR});//D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
 
 				// Watch for style changes
 				Style.StyleChanged += Invalidate;
@@ -419,7 +412,6 @@ namespace pr.gui
 					Connectors.First().Remove(this);
 
 				Style = null;
-				Surf = null;
 				base.Dispose();
 			}
 
@@ -479,7 +471,7 @@ namespace pr.gui
 			/// <summary>The diagram space width/height of the node</summary>
 			public virtual v2 Size
 			{
-				get { return Surf != null ? v2.From(Surf.Size) / TextureScale : v2.Zero; }
+				get { return m_impl_size; }
 				set
 				{
 					if (AutoSize) return;
@@ -488,12 +480,11 @@ namespace pr.gui
 			}
 			protected virtual void SetSize(v2 sz)
 			{
-				var tex_size = (sz * TextureScale).ToSize();
-				if (Surf == null || Surf.Size == tex_size) return;
-				Surf.Size = tex_size;
+				m_impl_size = sz;
 				RaiseSizeChanged();
 				Invalidate();
 			}
+			private v2 m_impl_size;
 
 			/// <summary>Get/Set limits for auto size</summary>
 			public virtual v2 SizeMax
@@ -530,24 +521,18 @@ namespace pr.gui
 				return PreferredSize(new v2(max_width, max_height));
 			}
 
-			/// <summary>Get/Set the centre point of the node</summary>
+			/// <summary>Get/Set the centre point of the node (in diagram space)</summary>
 			public virtual v2 Centre
 			{
 				get { return Bounds.Centre; }
 				set { PositionXY = value + (PositionXY - Centre); }
 			}
 
-			/// <summary>The surface to draw on for the node</summary>
-			protected View3d.Texture Surf
+			/// <summary>AABB for the element in diagram space</summary>
+			public override BRect Bounds
 			{
-				get { return m_impl_surf; }
-				private set
-				{
-					if (m_impl_surf != null) m_impl_surf.Dispose();
-					m_impl_surf = value;
-				}
+				get { return new BRect(Position.pos.xy, Size / 2); }
 			}
-			private View3d.Texture m_impl_surf;
 
 			/// <summary>Style attributes for the node</summary>
 			public virtual NodeStyle Style
@@ -659,8 +644,98 @@ namespace pr.gui
 			public override string ToString() { return "Node (" + Text.Summary(10) + ")"; }
 		}
 
+		/// <summary>A base class for nodes containing a texture</summary>
+		public abstract class TexturedNode :Node
+		{
+			/// <summary>TexturedNode constructor</summary>
+			/// <param name="id">Globally unique id for the element</param>
+			/// <param name="autosize">If true, the width and height are maximum size limits (0 meaning unlimited)</param>
+			/// <param name="width">The width of the node, or if 'autosize' is true, the maximum width of the node</param>
+			/// <param name="height">The height of the node, or if 'autosize' is true, the maximum height of the node</param>
+			/// <param name="text">The text of the node</param>
+			/// <param name="position">The position of the node on the diagram</param>
+			/// <param name="style">Style properties for the node</param>
+			protected TexturedNode(Guid id, bool autosize, uint width, uint height, string text, m4x4 position, NodeStyle style)
+				:base(id, autosize, width, height, text, position, style)
+			{
+				Init();
+			}
+			protected TexturedNode(XElement node)
+				:base(node)
+			{
+				Init();
+			}
+			private void Init()
+			{
+				// Create the surface texture and assign it to the graphics object
+				Surf = new View3d.Texture(TextureScale * (uint)Size.x, TextureScale * (uint)Size.y, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});// D3D11_FILTER_MIN_MAG_MIP_LINEAR});//D3D11_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR});
+			}
+			public override void Dispose()
+			{
+				Surf = null;
+				base.Dispose();
+			}
+
+			/// <summary>Texture scaling factor</summary>
+			protected virtual uint TextureScale { get { return 4; } }
+
+			/// <summary>Change the size of the node</summary>
+			protected override void SetSize(v2 sz)
+			{
+				var tex_size = (sz * TextureScale).ToSize();
+				if (Surf == null || Surf.Size == tex_size) return;
+				Surf.Size = tex_size;
+				base.SetSize(sz);
+			}
+
+			/// <summary>The surface to draw on for the node</summary>
+			protected View3d.Texture Surf
+			{
+				get { return m_impl_surf; }
+				private set
+				{
+					if (m_impl_surf != null) m_impl_surf.Dispose();
+					m_impl_surf = value;
+				}
+			}
+			private View3d.Texture m_impl_surf;
+		}
+
+		/// <summary>An invisible 'node-like' object used for detaching/attaching connectors</summary>
+		public class NodeProxy :Node
+		{
+			public NodeProxy()
+				:base(Guid.NewGuid(), false, 20, 20, string.Empty, m4x4.Identity, NodeStyle.Default)
+			{}
+
+			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
+			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			{
+				var pt = point - Centre;
+				if (pt.Length2Sq > Maths.Sqr(Bounds.Diametre/2f))
+					return null;
+				
+				var hit = new HitTestResult.Hit(this, pt);
+				return hit;
+			}
+
+			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
+			public override IEnumerable<AnchorPoint> AnchorPoints
+			{
+				get { yield return new AnchorPoint(this, v4.Origin, v4.Zero); }
+			}
+
+			/// <summary>Update the graphics and object transforms associated with this element</summary>
+			protected override void RefreshInternal()
+			{}
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
+			{}
+		}
+
 		/// <summary>Simple rectangular box node</summary>
-		public class BoxNode :Node
+		public class BoxNode :TexturedNode
 		{
 			private const string LdrName = "node";
 
@@ -744,9 +819,6 @@ namespace pr.gui
 			}
 			private bool m_size_changed;
 
-			/// <summary>AABB for the element in diagram space</summary>
-			public override BRect Bounds { get { return new BRect(Position.pos.xy, Size / 2); } }
-
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
@@ -828,8 +900,6 @@ namespace pr.gui
 		/// <summary>A base class for connectors between elements</summary>
 		public class Connector :Element
 		{
-			private const float DefaultSplineControlLength = 50f;
-			private const float MinSelectionDistanceSq = 25f;
 			private static readonly v4 Bias = new v4(0,0,0.001f,0);
 
 			/// <summary>Graphics for the connector line</summary>
@@ -889,8 +959,8 @@ namespace pr.gui
 
 				// Create graphics for the connector
 				m_gfx_line = new View3d.Object("*Group{}");
-				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
-				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {0 1 0  -1 -0.6 0  1 -0.6 0}");
+				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
+				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
 				Refresh(true);
 
 				AllowInvalidate();
@@ -975,8 +1045,24 @@ namespace pr.gui
 				}
 			}
 
+			/// <summary>Get/Set the node</summary>
+			internal Node Node(bool to)
+			{
+				return to ? Node1 : Node0;
+			}
+			internal void Node(bool to, Node node)
+			{
+				if (to)
+					Node1 = node;
+				else
+					Node0 = node;
+			}
+
 			/// <summary>True if the connector is not attached at both ends</summary>
 			public bool Dangling { get { return Node0 == null || Node1 ==  null; } }
+
+			/// <summary>True at least one end of the connector is attached to a node</summary>
+			public bool Attached { get { return Node0 != null || Node1 !=  null; } }
 
 			/// <summary>A string label for the connector</summary>
 			public virtual string Label
@@ -1017,6 +1103,7 @@ namespace pr.gui
 					m_gfx_line.SetColour(Selected ? Style.Selected : Style.Line);
 					m_gfx_fwd .SetColour(Selected ? Style.Selected : Style.Line);
 					m_gfx_bak .SetColour(Selected ? Style.Selected : Style.Line);
+					UpdatePositions();
 				}
 			}
 
@@ -1024,15 +1111,33 @@ namespace pr.gui
 			protected override void SetPosition(m4x4 pos)
 			{
 				base.SetPosition(pos);
-				m_gfx_line.O2P = Position;
+				UpdatePositions();
+			}
+			private void UpdatePositions()
+			{
+				// Raise selected objects above others
+				var bias = (Selected ? new v4(0,0,1,0) : v4.Zero) + Bias;
+
+				// Set the line transform
+				m_gfx_line.O2P = new m4x4(Position.rot, Position.pos + bias);
 
 				// If the connector has a back arrow, add the arrow head graphics
 				if ((Style.Type & ConnectorStyle.EType.BackArrow) != 0)
-					m_gfx_bak.O2P = m4x4.OriFromDir(Anc0.NormalWS, AxisId.PosY, v4.ZAxis, Anc0.LocationWS + Bias);
+				{
+					var dir = -Anc0.NormalWS;
+					if (dir == v4.Zero) dir = Anc1.NormalWS;
+					if (dir == v4.Zero) dir = v4.Normalise3(Anc0.LocationWS - Anc1.LocationWS, v4.YAxis);
+					m_gfx_bak.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), Anc0.LocationWS + bias) * m4x4.Scale(Style.Width, v4.Origin);
+				}
 				
 				// If the connector has a forward arrow, add the arrow head graphics
 				if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
-					m_gfx_fwd.O2P = m4x4.OriFromDir(Anc1.NormalWS, AxisId.PosY, v4.ZAxis, Anc1.LocationWS + Bias);
+				{
+					var dir = -Anc1.NormalWS;
+					if (dir == v4.Zero) dir = Anc0.NormalWS;
+					if (dir == v4.Zero) dir = v4.Normalise3(Anc1.LocationWS - Anc0.LocationWS, v4.YAxis);
+					m_gfx_fwd.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), Anc1.LocationWS + bias) * m4x4.Scale(Style.Width, v4.Origin);
+				}
 			}
 
 			/// <summary>AABB for the element in diagram space</summary>
@@ -1098,8 +1203,35 @@ namespace pr.gui
 					v2.From(cam.SSPointFromWSPoint(new v4(point,0,1))) -
 					v2.From(cam.SSPointFromWSPoint(new v4(closest_pt,0,1)));
 
-				if (dist_cs.Length2Sq > MinSelectionDistanceSq) return null;
-				return new HitTestResult.Hit(this, closest_pt);
+				if (dist_cs.Length2Sq > MinCSSelectionDistanceSq) return null;
+				return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
+			}
+
+			/// <summary>Handle a click event on this element</summary>
+			internal override bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
+			{
+				// Only respond if selected and editing is allowed
+				if (Selected && Diagram.AllowEditing)
+				{
+					// Hit point in screen space
+					var hit_point_cs = v2.From(cam.SSPointFromWSPoint(new v4(hit.Point,0,0) + Position.pos));
+					var anc0_cs = v2.From(cam.SSPointFromWSPoint(Anc0.LocationWS));
+					var anc1_cs = v2.From(cam.SSPointFromWSPoint(Anc1.LocationWS));
+
+					// If the click was at the ends of the connector and diagram editing
+					// is allowed, detach the connector and start a move link mouse op
+					if ((hit_point_cs - anc0_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
+					{
+						Diagram.m_mouse_op[(int)EBtnIdx.None] = new MouseOpMoveLink(Diagram, this, false);
+						return true;
+					}
+					if ((hit_point_cs - anc1_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
+					{
+						Diagram.m_mouse_op[(int)EBtnIdx.None] = new MouseOpMoveLink(Diagram, this, true);
+						return true;
+					}
+				}
+				return false;
 			}
 
 			/// <summary>Drag the element 'delta' from the DragStartPosition</summary>
@@ -1116,15 +1248,6 @@ namespace pr.gui
 					yield return new AnchorPoint(this, Position.pos, v4.Zero);
 				}
 			}
-			///// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			//public override IEnumerable<AnchorPoint> AnchorPoints
-			//{
-			//	get
-			//	{
-			//		yield return m_anc0;
-			//		yield return m_anc1;
-			//	}
-			//}
 
 			/// <summary>Update the graphics and transforms for the connector</summary>
 			protected override void RefreshInternal()
@@ -1144,21 +1267,16 @@ namespace pr.gui
 				ldr.Append("}");
 
 				m_gfx_line.UpdateModel(ldr.ToString());
-				m_gfx_line.O2P = Position;
 
 				// If the connector has a back arrow, add the arrow head graphics
 				if ((Style.Type & ConnectorStyle.EType.BackArrow) != 0)
-				{
 					m_gfx_bak.SetColour(col);
-					m_gfx_bak.O2P = m4x4.OriFromDir(Anc0.NormalWS, AxisId.PosY, v4.ZAxis, Anc0.LocationWS + Bias);
-				}
 
 				// If the connector has a forward arrow, add the arrow head graphics
 				if ((Style.Type & ConnectorStyle.EType.ForwardArrow) != 0)
-				{
 					m_gfx_fwd.SetColour(col);
-					m_gfx_fwd.O2P = m4x4.OriFromDir(Anc1.NormalWS, AxisId.PosY, v4.ZAxis, Anc1.LocationWS + Bias);
-				}
+
+				UpdatePositions();
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
@@ -1285,26 +1403,21 @@ namespace pr.gui
 				}
 				else
 				{
+					var dir0 = Anc0.NormalWS.xy;
+					var dir1 = Anc1.NormalWS.xy;
+					if (dir0 == v2.Zero) dir0 = -dir1;
+					if (dir1 == v2.Zero) dir1 = -dir0;
+					if (dir0 == v2.Zero) dir0 = v2.Normalise2(end - start, v2.Zero);
+					if (dir1 == v2.Zero) dir1 = v2.Normalise2(start - end, v2.Zero);
 					return new[]
 					{
 						start,
-						start + v2.Dot2(centre - start, Anc0.NormalWS.xy) * Anc0.NormalWS.xy,
-						end   + v2.Dot2(centre - end  , Anc1.NormalWS.xy) * Anc1.NormalWS.xy,
+						start + Math.Max(v2.Dot2(centre - start, dir0), MinConnectorLen) * dir0,
+						end   + Math.Max(v2.Dot2(centre - end  , dir1), MinConnectorLen) * dir1,
 						end
 					};
 				}
 			}
-
-			///// <summary>Returns the spline that connects two anchor points</summary>
-			//private static Spline MakeSpline(AnchorPoint anc0, AnchorPoint anc1, float z, bool diag_space)
-			//{
-			//	var centre = diag_space ? v4.Zero : new v4(AttachCentre(anc0, anc1), z, 0f);
-			//	var pt0 = anc0.LocationWS - centre;                         pt0.z = z;  
-			//	var ct0 = pt0 + anc0.NormalWS * DefaultSplineControlLength; ct0.z = z;
-			//	var pt1 = anc1.LocationWS - centre;                         pt1.z = z;
-			//	var ct1 = pt1 + anc1.NormalWS * DefaultSplineControlLength; ct1.z = z;
-			//	return new Spline(pt0,ct0,ct1,pt1);
-			//}
 
 			/// <summary>Check the self consistency of this element</summary>
 			public override bool CheckConsistency()
@@ -1331,11 +1444,12 @@ namespace pr.gui
 		#region Styles
 
 		/// <summary>Style attributes for nodes</summary>
-		public class NodeStyle :IHasId
+		public class NodeStyle :IHasId ,ICloneable
 		{
 			public static readonly NodeStyle Default = new NodeStyle();
 
 			/// <summary>Unique id for the style</summary>
+			[Browsable(false)]
 			public Guid Id { get; internal set; }
 
 			/// <summary>The colour of the node border</summary>
@@ -1344,7 +1458,7 @@ namespace pr.gui
 				get { return m_impl_border; }
 				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
 			}
-			private Color m_impl_border = Color.Black;
+			private Color m_impl_border;
 
 			/// <summary>The node background colour</summary>
 			public Color Fill
@@ -1352,7 +1466,7 @@ namespace pr.gui
 				get { return m_impl_fill; }
 				set { Util.SetAndRaise(this, ref m_impl_fill, value, StyleChanged); }
 			}
-			private Color m_impl_fill = Color.WhiteSmoke;
+			private Color m_impl_fill;
 
 			/// <summary>The colour of the node when selected</summary>
 			public Color Selected
@@ -1360,7 +1474,7 @@ namespace pr.gui
 				get { return m_impl_selected; }
 				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
 			}
-			private Color m_impl_selected = Color.LightBlue;
+			private Color m_impl_selected;
 
 			/// <summary>The node text colour</summary>
 			public Color Text
@@ -1370,14 +1484,6 @@ namespace pr.gui
 			}
 			private Color m_impl_text;
 
-			/// <summary>The font to use for the node text</summary>
-			public Font Font
-			{
-				get { return m_impl_font; }
-				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
-			}
-			private Font m_impl_font;
-
 			/// <summary>The alignment of the text within the node</summary>
 			public ContentAlignment TextAlign
 			{
@@ -1385,6 +1491,14 @@ namespace pr.gui
 				set { Util.SetAndRaise(this, ref m_impl_align, value, StyleChanged); }
 			}
 			private ContentAlignment m_impl_align;
+
+			/// <summary>The font to use for the node text</summary>
+			public Font Font
+			{
+				get { return m_impl_font; }
+				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
+			}
+			private Font m_impl_font;
 
 			/// <summary>The padding surrounding the text in the node</summary>
 			public Padding Padding
@@ -1404,6 +1518,7 @@ namespace pr.gui
 					Id        = Guid.NewGuid();
 					Border    = Color.Black;
 					Fill      = Color.WhiteSmoke;
+					Selected  = Color.LightBlue;
 					Text      = Color.Black;
 					TextAlign = ContentAlignment.MiddleCenter;
 					Font      = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
@@ -1417,8 +1532,8 @@ namespace pr.gui
 				Fill      = node.Element(XmlField.Fill    ).As<Color>           (Fill     );
 				Selected  = node.Element(XmlField.Selected).As<Color>           (Selected );
 				Text      = node.Element(XmlField.Text    ).As<Color>           (Text     );
-				Font      = node.Element(XmlField.Font    ).As<Font>            (Font     );
 				TextAlign = node.Element(XmlField.Align   ).As<ContentAlignment>(TextAlign);
+				Font      = node.Element(XmlField.Font    ).As<Font>            (Font     );
 				Padding   = node.Element(XmlField.Padding ).As<Padding>         (Padding  );
 			}
 
@@ -1435,14 +1550,32 @@ namespace pr.gui
 				node.Add2(XmlField.Padding  ,Padding   ,false);
 				return node;
 			}
+		
+			/// <summary>Clone this style object</summary>
+			public object Clone()
+			{
+				var s = new NodeStyle
+				{
+					Id        = Id,
+					Border    = Border,
+					Fill      = Fill,
+					Text      = Text,
+					TextAlign = TextAlign,
+					Font      = (Font)Font.Clone(),
+					Padding   = Padding
+				};
+				s.StyleChanged = StyleChanged;
+				return s;
+			}
 		}
 
 		/// <summary>Style properties for connectors</summary>
-		public class ConnectorStyle :IHasId
+		public class ConnectorStyle :IHasId ,ICloneable
 		{
 			public static readonly ConnectorStyle Default = new ConnectorStyle();
 
 			/// <summary>Unique id for the style</summary>
+			[Browsable(false)]
 			public Guid Id { get; internal set; }
 
 			/// <summary>Connector styles</summary>
@@ -1504,7 +1637,7 @@ namespace pr.gui
 					Type     = EType.Line;
 					Line     = Color.Black;
 					Selected = Color.Blue;
-					Width    = 8f;
+					Width    = 5f;
 					Smooth   = false;
 				}
 			}
@@ -1528,6 +1661,75 @@ namespace pr.gui
 				node.Add2(XmlField.Width    ,Width    ,false);
 				node.Add2(XmlField.Smooth   ,Smooth   ,false);
 				return node;
+			}
+	
+			/// <summary>Clone this style object</summary>
+			public object Clone()
+			{
+				var s = new ConnectorStyle
+				{
+					Id       = Id      ,
+					Type     = Type    ,
+					Line     = Line    ,
+					Selected = Selected,
+					Width    = Width   ,
+					Smooth   = Smooth  ,
+				};
+				s.StyleChanged = StyleChanged;
+				return s;
+			}
+		}
+
+		/// <summary>A cache of node or connector style objects</summary>
+		private class StyleCache<T> where T:IHasId
+		{
+			private readonly Dictionary<Guid, T> m_map = new Dictionary<Guid, T>();
+			private readonly NodeStyle m_default = new NodeStyle();
+
+			public StyleCache() {}
+			public StyleCache(XElement node)
+			{
+				foreach (var n in node.Elements())
+				{
+					var style = n.As<T>();
+					m_map[style.Id] = style;
+				}
+			}
+			public XElement ToXml(XElement node)
+			{
+				foreach (var ns in m_map)
+					node.Add2("style", ns.Value, false);
+				return node;
+			}
+
+			/// <summary>Add the styles in 'rhs' to this cache</summary>
+			public void Merge(StyleCache<T> rhs)
+			{
+				foreach (var s in rhs.m_map)
+					m_map[s.Key] = s.Value;
+			}
+
+			/// <summary>Reset the style cache</summary>
+			public void Clear()
+			{
+				m_map.Clear();
+			}
+
+			/// <summary>Returns the style associated with 'style.Id'summary>
+			internal T this[T style]
+			{
+				get
+				{
+					// 'style' may be a default constructed node style with just the id changed
+					// This lookup tries to find the correct style for the id. If not found, then
+					// 'style' is added to the cache.
+					T out_style;
+					if (m_map.TryGetValue(style.Id, out out_style))
+						return out_style;
+
+					m_map.Add(style.Id, style);
+					return style;
+				}
 			}
 		}
 
@@ -1598,19 +1800,348 @@ namespace pr.gui
 
 		#endregion
 
-		#region Misc
+		#region Mouse Op
 
-		/// <summary>Minimum distance in pixels before the diagram starts dragging</summary>
-		private const int MinDragPixelDistanceSq = 25;
-
-		/// <summary>Selection data for a mouse button</summary>
-		private class MouseSelection
+		/// <summary>Base class for a mouse operation performed with the mouse down->drag->up sequence</summary>
+		public abstract class MouseOp
 		{
+			protected DiagramControl m_diag; // The diagram
+
+			//Selection data for a mouse button
 			public bool          m_btn_down;   // True while the corresponding mouse button is down
 			public Point         m_grab_cs;    // The client space location of where the diagram was "grabbed"
 			public RectangleF    m_selection;  // Area selection, has width, height of zero when the user isn't selecting
 			public HitTestResult m_hit_result; // The hit test result on mouse down
+
+			public MouseOp(DiagramControl diag)
+			{
+				m_diag = diag;
+			}
+
+			/// <summary>True if the mouse down event should be treated as a click (so far)</summary>
+			protected bool IsClick(Point location)
+			{
+				var grab = v2.From(m_grab_cs);
+				var diff = v2.From(location) - grab;
+				return diff.Length2Sq < MinDragPixelDistanceSq;
+			}
+
+			/// <summary>Called on mouse down</summary>
+			public abstract void MouseDown(MouseEventArgs e);
+
+			/// <summary>Called on mouse move</summary>
+			public abstract void MouseMove(MouseEventArgs e);
+
+			/// <summary>Called on mouse up</summary>
+			public abstract void MouseUp(MouseEventArgs e);
 		}
+
+		/// <summary>A mouse operation for dragging selected elements around</summary>
+		public class MouseOpDragOrClickElements :MouseOp
+		{
+			public MouseOpDragOrClickElements(DiagramControl diag) :base(diag) {}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				// Record the drag start positions for selected objects
+				foreach (var elem in m_diag.Selected)
+					elem.DragStartPosition = elem.Position;
+
+				// Prevent events while dragging the elements around
+				m_diag.RaiseEvents = false;
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				// If the drag operation started on a selected element then drag the
+				// selected elements within the diagram, otherwise change the selection area
+				var area_select = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
+				if (area_select)
+					m_selection.Size = m_diag.ClientToDiagram(e.Location) - v2.From(m_selection.Location);
+				else
+					m_diag.DragSelected(m_diag.ClientToDiagram(e.Location) - m_selection.Location, false);
+				
+				m_diag.Refresh();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				m_diag.RaiseEvents = true;
+				var area_select = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
+
+				// If this is a single click...
+				if (IsClick(e.Location))
+				{
+					// Forward the click to the top element
+					var ht = m_diag.HitTestCS(e.Location);
+					var hit = ht.Hits.FirstOrDefault();
+					var target = hit != null ? hit.Element : null;
+
+					// Check to see if the click is on an existing selected object
+					// If so, allow that object handle the click
+					// Otherwise, standard single click selection
+					if (target == null || !target.HandleClicked(hit, ht.Camera))
+						m_diag.SelectElements(m_selection, ModifierKeys);
+				}
+				else if (area_select)
+					m_diag.SelectElements(m_selection, ModifierKeys);
+				else
+					m_diag.DragSelected(m_diag.ClientToDiagram(e.Location) - m_selection.Location, true);
+			
+				m_diag.Refresh();
+			}
+		}
+
+		/// <summary>A mouse operation for dragging the diagram around</summary>
+		public class MouseOpDragOrClickDiagram :MouseOp
+		{
+			public MouseOpDragOrClickDiagram(DiagramControl diag) :base(diag) {}
+			public override void MouseDown(MouseEventArgs e)
+			{}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
+				if (IsClick(e.Location))
+					return;
+
+				// Change the cursor once dragging
+				m_diag.Cursor = Cursors.SizeAll;
+				m_diag.PositionDiagram(e.Location, m_selection.Location);
+				m_diag.Refresh();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				m_diag.Cursor = Cursors.Default;
+				
+				// If we haven't dragged, treat it as a click instead
+				if (IsClick(e.Location))
+					m_diag.OnDiagramClicked(e);
+				else
+					m_diag.PositionDiagram(e.Location, m_selection.Location);
+
+				m_diag.Refresh();
+			}
+		}
+		
+		/// <summary>
+		/// A mouse operation for creating a new link between nodes.
+		/// If a link gets made between nodes where there is already an existing
+		/// link, the new link just disappears</summary>
+		public class MouseOpCreateLink :MouseOp
+		{
+			private readonly Node m_fixed;     // The unmoving node
+			private readonly Node m_proxy;     // Proxy node that one end of the link will be attached to
+			private readonly Connector m_conn; // The temporary connector
+			private readonly bool m_forward;   // True if 'm_fixed' is the 'from' end of the link
+
+			public MouseOpCreateLink(DiagramControl diag, Node fixed_, bool forward) :base(diag)
+			{
+				m_fixed   = fixed_;
+				m_forward = forward;
+				m_proxy   = new NodeProxy(){Diagram = diag}; // Create a proxy for the floating end to attach to
+				m_conn    = m_forward
+					? new Connector(m_fixed, m_proxy){Diagram = diag}
+					: new Connector(m_proxy, m_fixed){Diagram = diag};
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				m_proxy.PositionXY = m_diag.ClientToDiagram(e.Location);
+				m_conn.Relink(false);
+				m_diag.Refresh();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				// Find the node to make the link with
+				var ht = m_diag.HitTestCS(e.Location);
+				var hit = ht.Hits.FirstOrDefault(x => x.Entity == Entity.Node && x.Element != m_proxy);
+				var target = hit != null ? hit.Element.As<Node>() : null;
+
+				// No link, just delete the link
+				if (target == null || target == m_fixed)
+				{
+					m_conn.Dispose();
+					m_proxy.Dispose();
+				}
+				else
+				{
+					// Look for an existing connector between 'm_fixed' and 'target'
+					// Only add a new link if there isn't an existing one
+					var existing = m_fixed.Connectors.FirstOrDefault(x => m_forward ? x.Node1 == target : x.Node0 == target);
+					if (existing != null) m_conn.Dispose();
+					else
+					{
+						// Attach 'm_conn' to 'target'
+						if (m_forward)
+							m_conn.Node1 = target;
+						else
+ 							m_conn.Node0 = target;
+
+						// Notify the caller about the link creation
+						var res = m_diag.RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.AddingLink, conn:m_conn));
+						if (res.Cancel)
+							m_conn.Dispose();
+						else
+							m_conn.Relink(false);
+					}
+					m_proxy.Dispose();
+				}
+
+				m_diag.Refresh();
+			}
+		}
+
+		/// <summary>
+		/// A mouse operation for relinking an existing link to another node.
+		/// If a link already existings for the new fixed,target pair, revert
+		/// the link back to it's original position</summary>
+		public class MouseOpMoveLink :MouseOp
+		{
+			private readonly Node m_fixed;     // The unmoving node
+			private readonly Node m_prev;      // The node that the moving end was originally attached to
+			private readonly Node m_proxy;     // Proxy node that one end of the link will be attached to
+			private readonly Connector m_conn; // The temporary connector
+			private readonly bool m_forward;   // True if 'm_fixed' is the 'from' end of the link
+
+			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward) :base(diag)
+			{
+				m_fixed   = forward ? conn.Node0 : conn.Node1;
+				m_prev    = forward ? conn.Node1 : conn.Node0;
+				m_forward = forward;
+				m_proxy   = new NodeProxy(){Diagram = diag}; // Create a proxy for the floating end to attach to
+				m_conn    = conn;
+				
+				// Replace the moving end with the proxy
+				if (m_forward) m_conn.Node1 = m_proxy;
+				else           m_conn.Node0 = m_proxy;
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				m_proxy.PositionXY = m_diag.ClientToDiagram(e.Location);
+				m_conn.Relink(false);
+				m_diag.Refresh();
+			}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				// Find the node to make the link with
+				var ht = m_diag.HitTestCS(e.Location);
+				var hit = ht.Hits.FirstOrDefault(x => x.Entity == Entity.Node && x.Element != m_proxy);
+				var target = hit != null ? hit.Element.As<Node>() : null;
+				Action Revert = () =>
+					{
+						if (m_forward) m_conn.Node1 = m_prev;
+						else           m_conn.Node0 = m_prev;
+					};
+
+				// No link, just revert the link
+				if (target == null || target == m_fixed)
+				{
+					Revert();
+					m_proxy.Dispose();
+				}
+				else
+				{
+					// Look for an existing connector between 'm_fixed' and 'target'
+					// Only add a new link if there isn't an existing one
+					var existing = m_fixed.Connectors.FirstOrDefault(x => m_forward ? x.Node1 == target : x.Node0 == target);
+					if (existing == null)
+					{
+						// Attach 'm_conn' to 'target'
+						if (m_forward) m_conn.Node1 = target;
+						else           m_conn.Node0 = target;
+
+						// Notify the caller about the link creation
+						var res = m_diag.RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.MovingLink, node:target, conn:m_conn));
+						if (res.Cancel)
+							Revert();
+						else
+							m_conn.Relink(false);
+					}
+					else
+					{
+						Revert();
+					}
+					m_proxy.Dispose();
+				}
+
+				m_diag.Refresh();
+			}
+			
+		}
+		#endregion
+
+		#region Event Args
+
+		/// <summary>Event args for the diagram changed event</summary>
+		public class DiagramChangedEventArgs :EventArgs
+		{
+			// Note: many events are available by attaching to the Elements binding list
+			
+			public enum EType
+			{
+				/// <summary>
+				/// Raised after the diagram has had data changed. This event will be raised
+				/// in addition to the more detailed modification notification events below</summary>
+				Edited,
+
+				/// <summary>
+				/// A new link is being created.
+				/// Setting 'Cancel' for this event will abort the add.
+				/// 'Connector' holds the new connector being added.</summary>
+				AddingLink,
+
+				/// <summary>
+				/// An end of a connector is being moved to another node
+				/// Setting 'Cancel' for this event will abort the move.
+				/// 'Connector' holds the connector being moved.
+				/// 'Node' holds the new node being attached to.</summary>
+				MovingLink,
+			}
+
+			/// <summary>The type of change that occurred</summary>
+			public EType ChgType { get; private set; }
+
+			/// <summary>A cancel property for "about to change" events</summary>
+			public bool Cancel { get; set; }
+
+			/// <summary>The node involved in the change (or null if not relevant)</summary>
+			public Node Node { get; private set; }
+	
+			/// <summary>The connector involved in the change (or null if not relevant)</summary>
+			public Connector Connector { get; private set; }
+
+			public DiagramChangedEventArgs(EType ty, Node node = null, Connector conn = null)
+			{
+				ChgType   = ty;
+				Node      = node;
+				Connector = conn;
+				Cancel    = false;
+			}
+		}
+
+		/// <summary>Event args for user context menu options</summary>
+		public class AddUserMenuOptionsEventArgs :EventArgs
+		{
+			public ContextMenuStrip Menu { get; private set; }
+			public AddUserMenuOptionsEventArgs(ContextMenuStrip menu) { Menu = menu; }
+		}
+
+		#endregion
+
+		#region Misc
+
+		/// <summary>How close a click as to be for selection to occur (in screen space)</summary>
+		private const float MinCSSelectionDistanceSq = 25f;
+
+		/// <summary>Minimum distance in pixels before the diagram starts dragging</summary>
+		private const int MinDragPixelDistanceSq = 25;
+
+		/// <summary>The minimum distance a connector sticks out from a node</summary>
+		private const int MinConnectorLen = 30;
 
 		/// <summary>Helper form for editing the value in a node</summary>
 		private class EditField :Form
@@ -1675,59 +2206,6 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>A cache of node or connector style objects</summary>
-		private class StyleCache<T> where T:IHasId
-		{
-			private readonly Dictionary<Guid, T> m_map = new Dictionary<Guid, T>();
-			private readonly NodeStyle m_default = new NodeStyle();
-
-			public StyleCache() {}
-			public StyleCache(XElement node)
-			{
-				foreach (var n in node.Elements())
-				{
-					var style = n.As<T>();
-					m_map[style.Id] = style;
-				}
-			}
-			public XElement ToXml(XElement node)
-			{
-				foreach (var ns in m_map)
-					node.Add2("style", ns.Value, false);
-				return node;
-			}
-
-			/// <summary>Add the styles in 'rhs' to this cache</summary>
-			public void Merge(StyleCache<T> rhs)
-			{
-				foreach (var s in rhs.m_map)
-					m_map[s.Key] = s.Value;
-			}
-
-			/// <summary>Reset the style cache</summary>
-			public void Clear()
-			{
-				m_map.Clear();
-			}
-
-			/// <summary>Returns the style associated with 'style.Id'summary>
-			internal T this[T style]
-			{
-				get
-				{
-					// 'style' may be a default constructed node style with just the id changed
-					// This lookup tries to find the correct style for the id. If not found, then
-					// 'style' is added to the cache.
-					T out_style;
-					if (m_map.TryGetValue(style.Id, out out_style))
-						return out_style;
-
-					m_map.Add(style.Id, style);
-					return style;
-				}
-			}
-		}
-
 		/// <summary>String constants used in xml export/import</summary>
 		private static class XmlField
 		{
@@ -1770,6 +2248,72 @@ namespace pr.gui
 			public const string Equilibrium     = "equilibrium"     ;
 			public const string NodeSettings    = "node_settings"   ;
 			public const string ScatterSettings = "scatter_settings";
+		}
+
+		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
+		private class ContextMenuRenderer :ToolStripProfessionalRenderer
+		{
+			protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+			{
+				var item = e.Item as NoHighlightToolStripMenuItem;
+				if (item == null) { base.OnRenderMenuItemBackground(e); return; }
+
+				e.Graphics.FillRectangle(new SolidBrush(item.BackColor), e.Item.ContentRectangle);
+				e.Graphics.DrawRectangle(Pens.Black, e.Item.ContentRectangle);
+			}
+		}
+
+		/// <summary>Special menu item that doesn't draw highlighted</summary>
+		private class NoHighlightToolStripMenuItem :ToolStripMenuItem
+		{
+			public NoHighlightToolStripMenuItem(string text) :base(text) {}
+		}
+
+		/// <summary>Results collection for a hit test</summary>
+		public class HitTestResult
+		{
+			public class Hit
+			{
+				/// <summary>The type of element hit</summary>
+				public Entity Entity { get; private set; }
+
+				/// <summary>The element that was hit</summary>
+				public Element Element { get; private set; }
+
+				/// <summary>Where on the element it was hit (in element space)</summary>
+				public PointF Point { get; private set; }
+
+				/// <summary>The element's diagram location at the time it was hit</summary>
+				public m4x4 Location { get; private set; }
+
+				public Hit(Node node, PointF pt)
+				{
+					Entity   = Entity.Node;
+					Element  = node;
+					Point    = pt;
+					Location = node.Position;
+				}
+				public Hit(Connector conn, PointF pt)
+				{
+					Entity   = Entity.Connector;
+					Element  = conn;
+					Point    = pt;
+					Location = conn.Position;
+				}
+				public override string ToString() { return Element.ToString(); }
+			}
+
+			/// <summary>The collection of hit objects</summary>
+			public List<Hit> Hits { get; private set; }
+
+			/// <summary>The camera position when the hit test was performed (needed for diagram to screen space conversion)</summary>
+			public View3d.CameraControls Camera { get; private set; }
+
+			public HitTestResult(View3d.CameraControls cam)
+			{
+				Hits = new List<Hit>();
+				Camera = cam;
+			}
 		}
 
 		#endregion
@@ -1865,7 +2409,7 @@ namespace pr.gui
 		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
 		private StyleCache<ConnectorStyle> m_connector_styles; // The collection of node styles
-		private MouseSelection[]           m_mbutton;          // Per button mouse selection data
+		private MouseOp[]                  m_mouse_op;         // Per button current mouse operation
 
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
@@ -1877,7 +2421,7 @@ namespace pr.gui
 			m_hoverscroll      = new HoverScroll(Handle);
 			m_node_styles      = new StyleCache<NodeStyle>();
 			m_connector_styles = new StyleCache<ConnectorStyle>();
-			m_mbutton          = Util.NewArray<MouseSelection>(Enum<EBtnIdx>.Count);
+			m_mouse_op         = new MouseOp[Enum<EBtnIdx>.Count];
 			Edited             = false;
 
 			if (this.IsInDesignMode()) return;
@@ -1896,7 +2440,7 @@ namespace pr.gui
 
 			ResetView();
 			DefaultKeyboardShortcuts = true;
-			DefaultMouseNavigation = true;
+			DefaultMouseControl = true;
 			AllowEditing = true;
 			AllowMove = true;
 			AllowSelection = true;
@@ -1920,7 +2464,15 @@ namespace pr.gui
 		}
 
 		/// <summary>Raised whenever elements in the diagram have been edited or moved</summary>
-		public event EventHandler DiagramChanged;
+		public event EventHandler<DiagramChangedEventArgs> DiagramChanged;
+		private DiagramChangedEventArgs RaiseDiagramChanged(DiagramChangedEventArgs args)
+		{
+			DiagramChanged.Raise(this, args);
+			return args;
+		}
+
+		/// <summary>Event allowing callers to add options to the context menu</summary>
+		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
 
 		/// <summary>Get/Set whether DiagramChanged events are raised</summary>
 		[Browsable(false)]
@@ -1968,12 +2520,15 @@ namespace pr.gui
 		private DiagramOptions m_impl_options;
 
 		/// <summary>Minimum bounding area for view reset</summary>
-		public BRect ResetMinBounds { get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); } }
+		public BRect ResetMinBounds
+		{
+			get { return new BRect(v2.Zero, new v2(Width/1.5f, Height/1.5f)); }
+		}
 
 		/// <summary>Perform a hit test on the diagram</summary>
 		public HitTestResult HitTest(v2 ds_point)
 		{
-			var result = new HitTestResult();
+			var result = new HitTestResult(m_camera);
 			foreach (var elem in Elements)
 			{
 				var hit = elem.HitTest(ds_point, m_camera);
@@ -1989,42 +2544,9 @@ namespace pr.gui
 				});
 			return result;
 		}
-		public class HitTestResult
+		public HitTestResult HitTestCS(Point cs_point)
 		{
-			public class Hit
-			{
-				/// <summary>The type of element hit</summary>
-				public Entity Entity { get; private set; }
-
-				/// <summary>The element that was hit</summary>
-				public Element Element { get; private set; }
-
-				/// <summary>Where on the element it was hit</summary>
-				public PointF Point { get; private set; }
-
-				/// <summary>The element's diagram location at the time it was hit</summary>
-				public m4x4 Location { get; private set; }
-
-				public Hit(Node node, PointF pt)
-				{
-					Entity   = Entity.Node;
-					Element  = node;
-					Point    = pt;
-					Location = node.Position;
-				}
-				public Hit(Connector conn, PointF pt)
-				{
-					Entity   = Entity.Connector;
-					Element  = conn;
-					Point    = pt;
-					Location = conn.Position;
-				}
-				public override string ToString() { return Element.ToString(); }
-			}
-
-			/// <summary>All</summary>
-			public List<Hit> Hits { get; private set; }
-			public HitTestResult() { Hits = new List<Hit>(); }
+			return HitTest(ClientToDiagram(cs_point));
 		}
 
 		/// <summary>Standard keyboard shortcuts</summary>
@@ -2036,9 +2558,7 @@ namespace pr.gui
 				{
 					if (AllowSelection)
 					{
-						foreach (var e in Selected.ToArray())
-							e.Selected = false;
-
+						Selected.ToArray().ForEach(x => x.Selected = false);
 						Refresh();
 					}
 					break;
@@ -2047,8 +2567,7 @@ namespace pr.gui
 				{
 					if (AllowEditing)
 					{
-						foreach (var e in Selected.ToArray())
-							Elements.Remove(e);
+						Selected.ToArray().ForEach(x => Elements.Remove(x));
 					}
 					break;
 				}
@@ -2062,6 +2581,12 @@ namespace pr.gui
 					ResetView();
 					break;
 				}
+			case Keys.A:
+				if ((args.Modifiers & Keys.Control) != 0)
+				{
+					Elements.ForEach(x => x.Selected = true);
+				}
+				break;
 			}
 		}
 
@@ -2081,21 +2606,7 @@ namespace pr.gui
 		/// <summary>Enable/Disable default mouse control</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool DefaultMouseNavigation
-		{
-			set
-			{
-				MouseDown  -= OnMouseDown;
-				MouseUp    -= OnMouseUp;
-				MouseWheel -= OnMouseWheel;
-				if (value)
-				{
-					MouseDown  += OnMouseDown;
-					MouseUp    += OnMouseUp;
-					MouseWheel += OnMouseWheel;
-				}
-			}
-		}
+		public bool DefaultMouseControl { get; set; }
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
 		public bool AllowEditing { get; set; }
@@ -2106,111 +2617,93 @@ namespace pr.gui
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
 
-		/// <summary>Default Mouse navigation. Public to allow users to forward mouse calls to us.</summary>
-		public void OnMouseDown(object sender, MouseEventArgs e)
+		protected override void OnMouseDown(MouseEventArgs e)
 		{
-			// Get the mouse selection data for the mouse button
-			var sel                  = m_mbutton[(int)View3d.ButtonIndex(e.Button)];
-			sel.m_btn_down           = true;
-			sel.m_grab_cs            = e.Location;
-			sel.m_selection.Location = ClientToDiagram(sel.m_grab_cs);
-			sel.m_selection.Size     = v2.Zero;
-			sel.m_hit_result         = HitTest(sel.m_selection.Location);
+			base.OnMouseDown(e);
 
-			foreach (var elem in Selected)
-				elem.DragStartPosition = elem.Position;
+			// Look for the mouse op to perform
+			var btn = View3d.ButtonIndex(e.Button);
+			if (m_mouse_op[(int)btn] == null)
+			{
+				// If this is a left mouse button down event and there is a current
+				// operation in the 'EBtnIdx.None' slot, swap it to the left btn slot
+				if (btn == EBtnIdx.Left && m_mouse_op[(int)EBtnIdx.None] != null)
+				{
+					m_mouse_op.Swap((int)EBtnIdx.Left, (int)EBtnIdx.None);
+				}
+				// Otherwise, if default navigation is on, create the default mouse op
+				else if (DefaultMouseControl)
+				{
+					m_mouse_op[(int)btn] = CreateDefaultMouseOp(btn);
+				}
+			
+				// If there's still no mouse op, ignore the event
+				if (m_mouse_op[(int)btn] == null)
+					return;
+			}
 
-			RaiseEvents = false;
-			MouseMove -= OnMouseDrag;
-			MouseMove += OnMouseDrag;
+			// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
+			var op = m_mouse_op[(int)btn];
+			op.m_btn_down           = true;
+			op.m_grab_cs            = e.Location;
+			op.m_selection.Location = ClientToDiagram(op.m_grab_cs);
+			op.m_selection.Size     = v2.Zero;
+			op.m_hit_result         = HitTest(op.m_selection.Location);
+			op.MouseDown(e);
+
 			Capture = true;
 		}
-		public void OnMouseUp(object sender, MouseEventArgs e)
+		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			// Get the mouse selection data for the mouse button
-			var sel = m_mbutton[(int)View3d.ButtonIndex(e.Button)];
-			if (!sel.m_btn_down) return; // Button down wasn't received first
-			sel.m_btn_down = false;
+			base.OnMouseMove(e);
 
-			// Only release the mouse when all buttons are up
-			if (!m_mbutton.Any(mb => mb.m_btn_down))
-			{
-				Capture = false;
-				Cursor = Cursors.Default;
-				MouseMove -= OnMouseDrag;
-				RaiseEvents = true;
-			}
-
-			// If we haven't dragged, treat it as a click instead
-			var grab = v2.From(sel.m_grab_cs);
-			var diff = v2.From(e.Location) - grab;
-			var is_click = diff.Length2Sq < MinDragPixelDistanceSq;
-
-			// Respond to the button
-			switch (e.Button)
-			{
-			case MouseButtons.Left:
-				{
-					// If this is a click or an area select, select/deselect elements
-					var area_select = sel.m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
-					if (is_click || area_select)
-						SelectElements(sel.m_selection, ModifierKeys);
-					else
-						DragSelected(ClientToDiagram(e.Location) - sel.m_selection.Location, true);
-					break;
-				}
-			case MouseButtons.Right:
-				{
-					if (is_click)
-						OnDiagramClicked(e);
-					break;
-				}
-			}
-			Refresh();
-		}
-		private void OnMouseDrag(object sender, MouseEventArgs e)
-		{
-			var idx = (int)View3d.ButtonIndex(e.Button);
-			if (idx == -1) return; // Drag event with no mouse button down?
-			var sel = m_mbutton[idx];
-
-			// If we haven't dragged, treat it as a click instead (i.e. ignore till it's a drag operation)
-			var grab = v2.From(sel.m_grab_cs);
-			var diff = v2.From(e.Location) - grab;
-			var is_click = diff.Length2Sq < MinDragPixelDistanceSq;
-			if (is_click)
+			// Look for the mouse op to perform
+			var btn = View3d.ButtonIndex(e.Button);
+			if (m_mouse_op[(int)btn] == null)
 				return;
 
-			switch (e.Button)
-			{
-			case MouseButtons.Left:
-				{
-					// If the drag operation started on a selected element then drag the
-					// selected elements within the diagram, otherwise change the selection area
-					var area_select = sel.m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
-					if (area_select)
-						sel.m_selection.Size = ClientToDiagram(e.Location) - v2.From(sel.m_selection.Location);
-					else
-						DragSelected(ClientToDiagram(e.Location) - sel.m_selection.Location, false);
-					Refresh();
-					break;
-				}
-			case MouseButtons.Right:
-				{
-					// Change the cursor once dragging
-					Cursor = Cursors.SizeAll;
-					PositionDiagram(e.Location, sel.m_selection.Location);
-					Refresh();
-					break;
-				}
-			}
+			var op = m_mouse_op[(int)btn];
+			op.MouseMove(e);
 		}
-		public void OnMouseWheel(object sender, MouseEventArgs e)
+		protected override void OnMouseUp(MouseEventArgs e)
 		{
+			base.OnMouseUp(e);
+
+			// Only release the mouse when all buttons are up
+			if (MouseButtons == MouseButtons.None)
+				Capture = false;
+
+			// Look for the mouse op to perform
+			var btn = View3d.ButtonIndex(e.Button);
+			if (m_mouse_op[(int)btn] == null)
+				return;
+
+			var op = m_mouse_op[(int)btn];
+			op.MouseUp(e);
+			 
+			m_mouse_op[(int)btn] = null;
+		}
+		protected override void OnMouseWheel(MouseEventArgs e)
+		{
+			base.OnMouseWheel(e);
+
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
 			m_camera.Navigate(0, 0, e.Delta / 120f);
 			Refresh();
 		}
+
+		/// <summary>Create the default navigation mouse operation based on mouse button</summary>
+		private MouseOp CreateDefaultMouseOp(EBtnIdx btn_idx)
+		{
+			switch (btn_idx)
+			{
+			default: return null;
+			case EBtnIdx.Left: return new MouseOpDragOrClickElements(this);
+			case EBtnIdx.Right: return new MouseOpDragOrClickDiagram(this);
+			}
+		}
+
+		/// <summary>Handle mouse clicks on the diagram</summary>
 		private void OnDiagramClicked(MouseEventArgs e)
 		{
 			// Show the context menu on right click
@@ -2226,7 +2719,7 @@ namespace pr.gui
 				return;
 
 			// Find what was hit
-			var hit = HitTest(ClientToDiagram(e.Location));
+			var hit = HitTestCS(e.Location);
 			var elem = hit.Hits.FirstOrDefault();
 			if (elem == null)
 				return;
@@ -2314,6 +2807,12 @@ namespace pr.gui
 				elem.Drag(delta, commit);
 		}
 
+		/// <summary>Returns a selected element if it is the only selected element</summary>
+		private Element SingleSelection
+		{
+			get { return Selected.Count == 1 ? Selected[0] : null; }
+		}
+
 		/// <summary>Handle elements added/removed from the elements list</summary>
 		private void HandleElementListChanging(object sender, ListChgEventArgs<Element> args)
 		{
@@ -2360,7 +2859,7 @@ namespace pr.gui
 		}
 
 		/// <summary>
-		/// Select elements that are wholy within 'rect'.
+		/// Select elements that are wholy within 'rect'. (rect is in diagram space)
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
@@ -2678,7 +3177,7 @@ namespace pr.gui
 				// Notify observers that the diagram has changed
 				if (Edited)
 				{
-					DiagramChanged.Raise(this, EventArgs.Empty);
+					RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.Edited));
 					Edited = false;
 				}
 
@@ -2858,14 +3357,6 @@ namespace pr.gui
 			ImportXml(xml.Root, merge);
 		}
 
-		/// <summary>Event allowing callers to add options to the context menu</summary>
-		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
-		public class AddUserMenuOptionsEventArgs :EventArgs
-		{
-			public ContextMenuStrip Menu { get; private set; }
-			public AddUserMenuOptionsEventArgs(ContextMenuStrip menu) { Menu = menu; }
-		}
-
 		/// <summary>Create and display a context menu</summary>
 		public void ShowContextMenu(Point location)
 		{
@@ -2882,11 +3373,26 @@ namespace pr.gui
 
 				if (AllowEditing)
 				{
+					if (lvl0.Count != 0)
+						lvl0.Add(new ToolStripSeparator());
+
+					#region Create Link
+					if (SingleSelection != null && SingleSelection.Entity == Entity.Node)
+					{
+						var create_link = lvl0.Add2(new ToolStripMenuItem("Create Link"));
+						create_link.Click += (s,a) =>
+							{
+								// Start the link create mouse op
+								m_mouse_op[(int)EBtnIdx.None] = new MouseOpCreateLink(this, SingleSelection.As<Node>(), true);
+							};
+					}
+					#endregion
 				}
 
 				if (AllowMove)
 				{
-					lvl0.Add(new ToolStripSeparator());
+					if (lvl0.Count != 0)
+						lvl0.Add(new ToolStripSeparator());
 
 					#region Scatter
 					var scatter = lvl0.Add2(new ToolStripMenuItem("Scatter"));
@@ -2901,7 +3407,8 @@ namespace pr.gui
 
 				if (AllowSelection)
 				{
-					lvl0.Add(new ToolStripSeparator());
+					if (lvl0.Count != 0)
+						lvl0.Add(new ToolStripSeparator());
 
 					#region Selection
 					var select_connected = lvl0.Add2(new ToolStripMenuItem("Select Connected Nodes"));
@@ -2911,6 +3418,24 @@ namespace pr.gui
 						};
 					#endregion
 				}
+
+				#region Properties
+				if (AllowEditing)
+				{
+					if (lvl0.Count != 0)
+						lvl0.Add(new ToolStripSeparator());
+
+					if (Selected.Count != 0)
+					{
+						var props = lvl0.Add2(new ToolStripMenuItem("Properties"));
+						props.Click += (s,a) =>
+							{
+								EditProperties();
+							};
+					}
+				}
+				#endregion
+
 				context_menu.Items.AddRange(lvl0.ToArray());
 			}
 
@@ -2918,23 +3443,37 @@ namespace pr.gui
 			context_menu.Show(this, location);
 		}
 
-		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
-		private class ContextMenuRenderer :ToolStripProfessionalRenderer
+		/// <summary>Display a dialog for editing properties of selected elements</summary>
+		private void EditProperties()
 		{
-			protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+			// Ensure all selected elements have a unique style object
+			foreach (var elem in Selected)
 			{
-				var item = e.Item as NoHighlightToolStripMenuItem;
-				if (item == null) { base.OnRenderMenuItemBackground(e); return; }
-
-				e.Graphics.FillRectangle(new SolidBrush(item.BackColor), e.Item.ContentRectangle);
-				e.Graphics.DrawRectangle(Pens.Black, e.Item.ContentRectangle);
+				var node = elem as Node;
+				if (node != null && node.Style == NodeStyle.Default)
+					node.Style = (NodeStyle)NodeStyle.Default.Clone();
+				
+				var conn = elem as Connector;
+				if (conn != null && conn.Style == ConnectorStyle.Default)
+					conn.Style = (ConnectorStyle)ConnectorStyle.Default.Clone();
 			}
-		}
 
-		/// <summary>Special menu item that doesn't draw highlighted</summary>
-		private class NoHighlightToolStripMenuItem :ToolStripMenuItem
-		{
-			public NoHighlightToolStripMenuItem(string text) :base(text) {}
+			var props = new PropertyGrid{Dock = DockStyle.Fill};
+			props.SelectedObjects = Selected
+				.Where(x => x.Entity == Entity.Node || x.Entity == Entity.Connector)
+				.Cast<object>()
+				.Select(x => x is Node ? (object)((Node)x).Style : (object)((Connector)x).Style)
+				.ToArray();
+
+			var form = new Form
+			{
+				StartPosition = FormStartPosition.CenterParent,
+				ShowInTaskbar = false,
+				Text = "Properties",
+			};
+			form.Controls.Add(props);
+			form.ShowDialog(this);
+			Refresh();
 		}
 
 		/// <summary>Check the self consistency of elements</summary>

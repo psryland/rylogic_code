@@ -43,8 +43,12 @@ namespace pr
 			v2 const* tex_coords,
 			TVertIter v_out, TIdxIter i_out)
 		{
+			Props props;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | (normals != 0 ? EGeom::Norm : 0) | (tex_coords != 0 ? EGeom::Tex0 : 0);
+
 			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, num_verts, pr::Colour32White);
+			auto col = pr::CreateRepeater(colours, num_colours, num_verts, pr::Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
 
 			// Normal iterator wrapper
 			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4Zero);
@@ -52,26 +56,17 @@ namespace pr
 			// UV iterator wrapper
 			auto uv = pr::CreateRepeater(tex_coords, tex_coords != 0 ? num_verts : 0, num_verts, pr::v2Zero);
 
-			// Verts
-			pr::BBox bbox = pr::BBoxReset;
-			for (std::size_t v = 0; v != num_verts; ++v)
-			{
-				auto pt = *verts++;
-				auto cl = *col++;
-				auto nm = *norm++;
-				auto tx = *uv++;
-				SetPCNT(*v_out++, pt, cl, nm, tx);
-				pr::Encompass(bbox, pt);
-			}
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
+			// Verts
+			for (std::size_t v = 0; v != num_verts; ++v)
+				SetPCNT(*v_out++, bb(*verts++), cc(*col++), *norm++, *uv++);
+			
 			// Faces or edges or whatever
 			for (std::size_t i = 0; i != num_indices; ++i)
 				*i_out++ = *indices++;
 
-			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | (normals != 0 ? EGeom::Norm : 0) | (tex_coords != 0 ? EGeom::Tex0 : 0);
-			props.m_bbox = bbox;
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 	}

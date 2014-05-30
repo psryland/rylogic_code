@@ -101,6 +101,7 @@ namespace pr.maths
 		public static v2    Clamp2(v2 vec, v2 min, v2 max)     { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }
 		public static v2    Lerp(v2 lhs, v2 rhs, float t)      { return lhs * (1f - t) + rhs * t; }
 		public static v2    Normalise2(v2 vec)                 { return vec / vec.Length2; }
+		public static v2    Normalise2(v2 vec, v2 def)         { return Maths.FEql(vec.Length2Sq,0) ? def : vec / vec.Length2; }
 		public static v2    Normalise2(ref v2 vec)             { return vec /= vec.Length2; }
 		public static float Dot2(v2 lhs, v2 rhs)               { return lhs.x * rhs.x + lhs.y * rhs.y; }
 		public static v2    ComponentDivide(v2 lhs, v2 rhs)    { return new v2(lhs.x / rhs.x, lhs.y / rhs.y); }

@@ -270,12 +270,12 @@ namespace pr.gfx
 		}
 		public enum EBtnIdx
 		{
-			None     = -1,
 			Left     = 0,
 			Right    = 1,
 			Middle   = 2,
 			XButton1 = 3,
 			XButton2 = 4,
+			None     = 5,
 		}
 		public enum ELogLevel
 		{

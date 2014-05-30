@@ -42,7 +42,12 @@ namespace ldr
 		// Return settings to configure the render
 		pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area)
 		{
-			return pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area);
+			auto settings = pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area);
+
+			// Disable multisampling when debugging as pix can't handle it
+			//settings.m_multisamp = pr::rdr::MultiSamp();
+
+			return settings;
 		}
 	};
 

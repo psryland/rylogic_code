@@ -79,6 +79,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\istream.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\kdtree.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\keystate.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\interpolate.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\log.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\mempool.h" />

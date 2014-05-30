@@ -41,33 +41,34 @@ namespace TestCS
 
 			var node0 = new DiagramControl.BoxNode("Node0"){Position = m4x4.Translation(0,0,0)};
 			var node1 = new DiagramControl.BoxNode{Text = "Node1 is really long\nand contains new lines", Position = m4x4.Translation(100,100,0)};
-			//var node2 = new DiagramControl.BoxNode("Node2 - Paul Rulz"){Position = m4x4.Translation(-100,-50,0)};
-			//node1.Style = new DiagramControl.NodeStyle{Text = Color.Red};
+			var node2 = new DiagramControl.BoxNode("Node2 - Paul Rulz"){Position = m4x4.Translation(-100,-50,0)};
+			node1.Style = new DiagramControl.NodeStyle{Text = Color.Red};
 
 			m_diag.Elements.Add(node0);
 			m_diag.Elements.Add(node1);
-			//m_diag.Elements.Add(node2);
+			m_diag.Elements.Add(node2);
 
-			DiagramControl.ConnectorStyle.Default.Type = DiagramControl.ConnectorStyle.EType.ForwardArrow;
+			DiagramControl.ConnectorStyle.Default.Type = DiagramControl.ConnectorStyle.EType.ForwardArrow|DiagramControl.ConnectorStyle.EType.BackArrow;
+			DiagramControl.ConnectorStyle.Default.Smooth = true;
 
 			m_diag.Elements.Add(new DiagramControl.Connector(node0, node1));
-			//m_diag.Elements.Add(new DiagramControl.Connector(node1, node2));
-			//m_diag.Elements.Add(new DiagramControl.Connector(node2, node0));
+			m_diag.Elements.Add(new DiagramControl.Connector(node1, node2));
+			m_diag.Elements.Add(new DiagramControl.Connector(node2, node0));
 
-			//var node4 = new DiagramControl.BoxNode("Node4"){PositionXY = new v2(-80, 60)};
-			//var node5 = new DiagramControl.BoxNode("Node5"){PositionXY = new v2( 80,-60)};
-			//node4.Diagram = m_diag;
-			//node5.Diagram = m_diag;
+			var node4 = new DiagramControl.BoxNode("Node4"){PositionXY = new v2(-80, 60)};
+			var node5 = new DiagramControl.BoxNode("Node5"){PositionXY = new v2( 80,-60)};
+			node4.Diagram = m_diag;
+			node5.Diagram = m_diag;
 			
-			//var conn4 = new DiagramControl.Connector(node4, node2);
-			//var conn5 = new DiagramControl.Connector(node5, node4);
-			//var conn6 = new DiagramControl.Connector(node1, node4);
-			//conn4.Diagram = m_diag;
-			//conn5.Diagram = m_diag;
-			//conn6.Diagram = m_diag;
+			var conn4 = new DiagramControl.Connector(node4, node2);
+			var conn5 = new DiagramControl.Connector(node5, node4);
+			var conn6 = new DiagramControl.Connector(node1, node4);
+			conn4.Diagram = m_diag;
+			conn5.Diagram = m_diag;
+			conn6.Diagram = m_diag;
 			
-			//node5.Dispose();
-			//node5 = null;
+			node5.Dispose();
+			node5 = null;
 
 			m_diag.ResetView();
 

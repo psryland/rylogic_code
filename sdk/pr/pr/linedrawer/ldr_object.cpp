@@ -236,7 +236,15 @@ namespace pr
 				case EKeyword::Scale:
 				{
 					pr::v4 scale;
-					reader.ExtractVector3S(scale, 0.0f);
+					reader.SectionStart();
+					reader.ExtractReal(scale.x);
+					if (reader.IsSectionEnd())
+						scale.z = scale.y = scale.x;
+					else
+					{
+						reader.ExtractReal(scale.y);
+						reader.ExtractReal(scale.z);
+					}
 					p2w.rot = Scale3x3(scale.x, scale.y, scale.z) * p2w.rot;
 					break;
 				}
@@ -1166,9 +1174,8 @@ namespace pr
 		{
 			enum EArrowType { Invalid = -1, Line = 0, Fwd = 1 << 0, Back = 1 << 1, FwdBack = Fwd | Back };
 			EArrowType m_type;
-			bool m_smooth;
 
-			ObjectCreator() :IObjectCreatorLine(false, false) ,m_type(EArrowType::Invalid) ,m_smooth(false) {}
+			ObjectCreator() :IObjectCreatorLine(true, false) ,m_type(EArrowType::Invalid) {}
 			void Parse(ParseParams& p) override
 			{
 				// If no points read yet, expect the arrow type first
@@ -1215,14 +1222,22 @@ namespace pr
 					pr::Smooth(point, m_point);
 				}
 
+				pr::geometry::Props props;
+
+				// Colour interpolator iterator
+				auto col = pr::CreateLerpRepeater(m_colour.data(), m_colour.size(), m_point.size(), pr::Colour32White);
+				auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+
+				// Model bounding box
+				auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+
 				// Generate the model
 				// 'm_point' should contain line strip data
 				ModelGenerator<>::Cont cont(m_point.size() + 2, m_point.size() + 2);
 				auto v_in  = std::begin(m_point);
 				auto v_out = std::begin(cont.m_vcont);
 				auto i_out = std::begin(cont.m_icont);
-				pr::geometry::ColourRepeater col(m_colour.data(), m_colour.size(), m_point.size(), Colour32White);
-				pr::BBox bbox = pr::BBoxReset;
+				pr::Colour32 c = pr::Colour32White;
 				pr::uint16 index = 0;
 
 				// Add the back arrow head geometry (a point)
@@ -1235,25 +1250,22 @@ namespace pr
 				// Add the line strip
 				for (std::size_t i = 0, iend = m_point.size(); i != iend; ++i)
 				{
-					auto& v = *v_in++;
-					auto  c = *col++;
-					SetPC(*v_out++, v, c);
+					SetPC(*v_out++, bb(*v_in++), c = cc(*col++));
 					*i_out++ = index++;
-					pr::Encompass(bbox, v);
 				}
 			
 				// Add the forward arrow head geometry (a point)
 				if (m_type & EArrowType::Fwd)
 				{
 					--v_in;
-					SetPCN(*v_out++, *v_in, *col, pr::Normalise3(*v_in - *(v_in-1)));
+					SetPCN(*v_out++, *v_in, c, pr::Normalise3(*v_in - *(v_in-1)));
 					*i_out++ = index++;
 				}
 
 				// Create the model
 				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
 				IBufferDesc ib(cont.m_icont.size(), &cont.m_icont[0]);
-				obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, bbox));
+				obj->m_model = p.m_rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, props.m_bbox));
 				obj->m_model->m_name = obj->TypeAndName();
 
 				// Get instances of the arrow head geometry shader and the thick line shader
@@ -1282,7 +1294,7 @@ namespace pr
 					nug.m_topo = EPrim::LineStrip;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
-					SetAlphaBlending(nug, col.m_alpha);
+					SetAlphaBlending(nug, props.m_has_alpha);
 					obj->m_model->CreateNugget(nug, &vrange, &irange);
 				}
 				if (m_type & EArrowType::Fwd)
@@ -2400,7 +2412,7 @@ namespace pr
 		*Rand4x4 {0 1 0 2}                          // {cx cy cz r} - centre position, radius. Random orientation
 		*RandPos {0 1 0 2}                          // {cx cy cz r} - centre position, radius
 		*RandOri                                    // Randomises the orientation of the current transform
-		*Scale {1 1.2 1}                            // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform
+		*Scale {1 1.2 1}                            // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values
 		*Transpose                                  // Transposes the current transform
 		*Inverse                                    // Inverts the current transform
 		*Euler {45 30 60}                           // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw

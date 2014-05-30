@@ -203,5 +203,15 @@ namespace pr.maths
 		{
 			return new m4x4(from, to, translation);
 		}
+
+		// Create a scale matrix
+		public static m4x4 Scale(float s, v4 translation)
+		{
+			return new m4x4(s*v4.XAxis, s*v4.YAxis, s*v4.ZAxis, translation);
+		}
+		public static m4x4 Scale(float sx, float sy, float sz, v4 translation)
+		{
+			return new m4x4(sx*v4.XAxis, sy*v4.YAxis, sz*v4.ZAxis, translation);
+		}
 	}
 }

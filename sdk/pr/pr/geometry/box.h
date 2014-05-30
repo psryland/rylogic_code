@@ -44,6 +44,8 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Boxes(std::size_t num_boxes, TVertCIter points, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
+			typedef decltype(impl::remove_ref(*out_indices)) VIdx;
+
 			int const vidx[] =
 			{
 				7,5,1,3, // +X
@@ -65,31 +67,36 @@ namespace pr
 			};
 			std::size_t const icount = sizeof(indices)/sizeof(indices[0]);
 
+			// Texture coords
+			v2 const t00 = v2::make(0.0f, 0.0f);
+			v2 const t01 = v2::make(0.0f, 1.0f);
+			v2 const t10 = v2::make(1.0f, 0.0f);
+			v2 const t11 = v2::make(1.0f, 1.0f);
+
+			Props props;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+
 			// Helper function for generating normals
 			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(c - b, a - b)); };
 
 			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, 8*num_boxes, Colour32White);
+			auto col = pr::CreateRepeater(colours, num_colours, 8*num_boxes, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
 
-			// Texture coords
-			v2 t00 = v2::make(0.0f, 0.0f);
-			v2 t01 = v2::make(0.0f, 1.0f);
-			v2 t10 = v2::make(1.0f, 0.0f);
-			v2 t11 = v2::make(1.0f, 1.0f);
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
-			Props props;
-			TVertCIter v_in = points;
-			TVertIter v_out = out_verts;
-			TIdxIter  i_out = out_indices;
+			TVertCIter v_in  = points;
+			TVertIter  v_out = out_verts;
+			TIdxIter   i_out = out_indices;
 			for (std::size_t i = 0; i != num_boxes; ++i)
 			{
 				// Read 8 points from the vertex and colour streams
 				struct { v4 pt; Colour32 cl; } vert[8];
 				for (std::size_t j = 0; j != 8; ++j)
 				{
-					vert[j].pt = *v_in; ++v_in;
-					vert[j].cl = *col;  ++col;
-					pr::Encompass(props.m_bbox, vert[j].pt);
+					vert[j].pt = bb(*v_in++);
+					vert[j].cl = cc(*col++);
 				}
 
 				// Set the verts
@@ -109,7 +116,6 @@ namespace pr
 				// Set the faces
 				std::size_t const* ii = indices;
 				std::size_t ibase = i * 24;
-				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
 				for (std::size_t j = 0; j != icount/6; ++j)
 				{
 					*i_out++ = value_cast<VIdx>(ibase + *ii++);
@@ -120,8 +126,6 @@ namespace pr
 					*i_out++ = value_cast<VIdx>(ibase + *ii++);
 				}
 			}
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 

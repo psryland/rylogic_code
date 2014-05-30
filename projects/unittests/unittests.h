@@ -46,6 +46,7 @@
 #include "pr/common/ienumoutput.h"
 #include "pr/common/imposter.h"
 #include "pr/common/inplacealloc.h"
+#include "pr/common/interpolate.h"
 #include "pr/common/ireport.h"
 #include "pr/common/istream.h"
 #include "pr/common/kdtree.h"

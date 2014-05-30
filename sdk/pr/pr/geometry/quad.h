@@ -79,11 +79,20 @@ namespace pr
 		template <typename TVertCIter, typename TVertIter, typename TIdxIter>
 		Props Quad(size_t num_quads, TVertCIter verts, size_t num_colours, Colour32 const* colours, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
+			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+
+			Props props;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+
 			// Helper function for generating normals
 			auto norm = [](v4 const& a, v4 const& b, v4 const& c) { return Normalise3IfNonZero(Cross3(a - b, c - b)); };
 
 			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, num_quads * 4, Colour32White);
+			auto col = pr::CreateRepeater(colours, num_colours, num_quads * 4, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
+
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Texture coords
 			v2 t00 = (t2q * v4::make(0.000f, 0.000f, 0.0f, 1.0f)).xy;
@@ -91,7 +100,6 @@ namespace pr
 			v2 t10 = (t2q * v4::make(0.999f, 0.000f, 0.0f, 1.0f)).xy;
 			v2 t11 = (t2q * v4::make(0.999f, 0.999f, 0.0f, 1.0f)).xy;
 
-			pr::BBox bbox = pr::BBoxReset;
 			for (std::size_t i = 0; i != num_quads; ++i)
 			{
 				v4 v0 = *verts++;
@@ -104,19 +112,13 @@ namespace pr
 				Colour32 c3 = *col++;
 
 				// Set verts
-				SetPCNT(*v_out++, v0, c0, norm(v1,v0,v2), t01);
-				SetPCNT(*v_out++, v1, c1, norm(v3,v1,v0), t11);
-				SetPCNT(*v_out++, v2, c2, norm(v0,v2,v3), t00);
-				SetPCNT(*v_out++, v3, c3, norm(v2,v3,v1), t10);
-
-				pr::Encompass(bbox, v0);
-				pr::Encompass(bbox, v1);
-				pr::Encompass(bbox, v2);
-				pr::Encompass(bbox, v3);
+				SetPCNT(*v_out++, bb(v0), cc(c0), norm(v1,v0,v2), t01);
+				SetPCNT(*v_out++, bb(v1), cc(c1), norm(v3,v1,v0), t11);
+				SetPCNT(*v_out++, bb(v2), cc(c2), norm(v0,v2,v3), t00);
+				SetPCNT(*v_out++, bb(v3), cc(c3), norm(v2,v3,v1), t10);
 
 				// Set faces
 				std::size_t ibase = i * 6;
-				typedef decltype(impl::remove_ref(*i_out)) VIdx;
 				*i_out++ = value_cast<VIdx>(ibase);
 				*i_out++ = value_cast<VIdx>(ibase + 1);
 				*i_out++ = value_cast<VIdx>(ibase + 2);
@@ -125,10 +127,6 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(ibase + 3);
 			}
 
-			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
-			props.m_bbox = bbox;
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 
@@ -162,6 +160,13 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Quad(v4 const& origin, v4 const& quad_x, v4 const& quad_z, iv2 const& divisions, Colour32 colour, m4x4 const& t2q, TVertIter v_out, TIdxIter i_out)
 		{
+			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+
+			Props props;
+			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
+			props.m_bbox = pr::BBoxMake({origin, origin + quad_x + quad_z});
+			props.m_has_alpha = colour.a() != 0xFF;
+
 			// Create the vertices
 			v4 norm = Normalise3IfNonZero(Cross3(quad_z,quad_x));
 			v4 step_x = quad_x / (divisions.x + 1);
@@ -179,7 +184,6 @@ namespace pr
 
 			// Create the faces
 			int verts_per_row = divisions.x + 2;
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 			for (int h = 0, hend = divisions.y+1; h != hend; ++h)
 			{
 				int row = h * verts_per_row;
@@ -196,10 +200,6 @@ namespace pr
 				}
 			}
 
-			Props props;
-			props.m_geom = EGeom::Vert|EGeom::Colr|EGeom::Norm|EGeom::Tex0;
-			props.m_bbox = pr::BBoxMake({origin, origin + quad_x + quad_z});
-			props.m_has_alpha = colour.a() != 0xFF;
 			return props;
 		}
 
@@ -242,7 +242,8 @@ namespace pr
 		// 'num_quads' is the number quads in the strip (num_quads == num_verts - 1)
 		// 'verts' is the input array of line verts
 		// 'width' is the tranverse width of the quad strip (not half width)
-		// 'normal' is the normal of the first vertex. After that, normals on same side are used
+		// 'num_normals' should be either 0, 1, num_quads+1 representing; no norm, 1 norm for all, 1 norm per vertex pair
+		// 'normals' is the normal of the first vertex. After that, normals on same side are used
 		// 'num_colours' should be either 0, 1, num_quads+1 representing; no colour, 1 colour for all, 1 colour per vertex pair
 		// 'v_out' is an output iterator to receive the [vert,colour,norm,tex] data
 		// 'i_out' is an output iterator to receive the index data
@@ -251,21 +252,25 @@ namespace pr
 		{
 			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 
+			Props props;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+
 			if (num_quads < 1) return Props();
 			auto num_verts = num_quads + 1;
 
 			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, num_verts, Colour32White);
+			auto col = pr::CreateLerpRepeater(colours, num_colours, num_verts, Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
 
 			// Normal iterator wrapper
-			auto norm = pr::CreateRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
+			auto norm = pr::CreateLerpRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
+
+			// Bounding box
+			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Texture coords (note: 1D texture)
 			v2 const t00 = v2::make(0.000f, 0.000f);
 			v2 const t10 = v2::make(0.999f, 0.000f);
-			
-			pr::BBox bbox = pr::BBoxReset;
-			auto bb = [&](v4 const& v) { pr::Encompass(bbox, v); return v; };
 
 			VIdx index = 0;
 			auto hwidth = width * 0.5f;
@@ -275,8 +280,8 @@ namespace pr
 
 			// Create the first pair of verts
 			v4 bi = pr::Normalise3(pr::Cross3(n1, v2 - v1), pr::Perpendicular(n1));
-			SetPCNT(*v_out++, bb(v1 + bi*hwidth), c1, n1, t00); *i_out++ = index++;
-			SetPCNT(*v_out++, bb(v1 - bi*hwidth), c1, n1, t10); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v1 + bi*hwidth), cc(c1), n1, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v1 - bi*hwidth), cc(c1), n1, t10); *i_out++ = index++;
 
 			for (size_t i = 0; i != num_quads - 1; ++i)
 			{
@@ -319,12 +324,12 @@ namespace pr
 						: v1 + u1*d1 - b1*hwidth;
 
 					// Finish the previous quad
-					SetPCNT(*v_out++, bb(v1 + b0*hwidth), c1, n1, t00); *i_out++ = index++;
-					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 + b0*hwidth), cc(c1), n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , cc(c1), n1, t10); *i_out++ = index++;
 
 					// Start the next quad
-					SetPCNT(*v_out++, bb(v1 + b1*hwidth), c1, n1, t00); *i_out++ = index++;
-					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 + b1*hwidth), cc(c1), n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , cc(c1), n1, t10); *i_out++ = index++;
 				}
 				else // line turns to the left
 				{
@@ -333,24 +338,20 @@ namespace pr
 						: v1 + u1*d1 + b1*hwidth;
 
 					// Finish the previous quad
-					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
-					SetPCNT(*v_out++, bb(v1 - b0*hwidth), c1, n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , cc(c1), n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 - b0*hwidth), cc(c1), n1, t00); *i_out++ = index++;
 					
 					// Start the next quad
-					SetPCNT(*v_out++, bb(inner)         , c1, n1, t10); *i_out++ = index++;
-					SetPCNT(*v_out++, bb(v1 - b1*hwidth), c1, n1, t00); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(inner)         , cc(c1), n1, t10); *i_out++ = index++;
+					SetPCNT(*v_out++, bb(v1 - b1*hwidth), cc(c1), n1, t00); *i_out++ = index++;
 				}
 			}
 
 			// Finish the previous quad
 			bi = pr::Normalise3(pr::Cross3(n2, v2 - v1), pr::Perpendicular(n2));
-			SetPCNT(*v_out++, bb(v2 + bi*hwidth), c2, n2, t00); *i_out++ = index++;
-			SetPCNT(*v_out++, bb(v2 - bi*hwidth), c2, n2, t10); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v2 + bi*hwidth), cc(c2), n2, t00); *i_out++ = index++;
+			SetPCNT(*v_out++, bb(v2 - bi*hwidth), cc(c2), n2, t10); *i_out++ = index++;
 
-			Props props;
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
-			props.m_bbox = bbox;
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 	}

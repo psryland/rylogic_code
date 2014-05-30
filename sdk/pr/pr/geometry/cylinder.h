@@ -37,17 +37,24 @@ namespace pr
 		template <typename TVertIter, typename TIdxIter>
 		Props Cylinder(float radius0, float radius1, float height, m4x4 const& o2w, float xscale ,float yscale ,std::size_t wedges, std::size_t layers, std::size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
+			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			
+			std::size_t vcount,icount;
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
-
-			std::size_t vcount,icount;
 			CylinderSize(wedges, layers, vcount, icount);
 
-			// Colour iterator wrapper
-			ColourRepeater col(colours, num_colours, vcount, pr::Colour32White);
-
 			Props props;
-			typedef decltype(impl::remove_ref(*i_out)) VIdx;
+			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
+
+			// Bounding box
+			float max_radius = std::max(radius0, radius1);
+			pr::Encompass(props.m_bbox, o2w * v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
+			pr::Encompass(props.m_bbox, o2w * v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
+
+			// Colour iterator wrapper
+			auto col = pr::CreateRepeater(colours, num_colours, vcount, pr::Colour32White);
+			auto cc = [&](pr::Colour32 c) { props.m_has_alpha |= c.a() != 0xff; return c; };
 
 			float z  = -height * 0.5f;
 			float dz = height / layers;
@@ -60,13 +67,13 @@ namespace pr
 			v2 uv = v2::make(0.5f, 0.5f);
 
 			// Verts
-			SetPCNT(*v_out++, pt, *col++, nm, uv);
+			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			for (std::size_t w = 0; w <= wedges; ++w) // Bottom face
 			{
 				float a = da*w;
 				pt = o2w * v4::make(cos(a) * radius0 * xscale, sin(a) * radius0 * yscale, z, 1.0f);
 				uv = v2::make(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
-				SetPCNT(*v_out++, pt, *col++, nm, uv);
+				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			}
 			for (std::size_t l = 0; l <= layers; ++l) // The walls
 			{
@@ -78,7 +85,7 @@ namespace pr
 					pt = o2w * v4::make(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
 					nm = o2w * v4::normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
 					uv = v2::make(a / maths::tau, 1.0f - (z + height*0.5f) / height);
-					SetPCNT(*v_out++, pt, *col++, nm, uv);
+					SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 				}
 				if (l != layers) z += dz;
 			}
@@ -88,11 +95,11 @@ namespace pr
 				float a = da*w + (layers%2)*da*0.5f;
 				pt = o2w * v4::make(cos(a) * radius1 * xscale, sin(a) * radius1 * yscale, z, 1.0f);
 				uv = v2::make(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
-				SetPCNT(*v_out++, pt, *col++, nm, uv);
+				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			}
 			pt = o2w * v4::make(0 ,0 ,z ,1.0f);
 			uv = v2::make(0.5, 0.5f);
-			SetPCNT(*v_out++, pt, *col++, nm, uv);
+			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 
 			// Faces
 			ibase = 1;
@@ -124,12 +131,6 @@ namespace pr
 				*i_out++ = value_cast<VIdx>(last);
 			}
 
-			float max_radius = std::max(radius0, radius1);
-			pr::Encompass(props.m_bbox, o2w * v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
-			pr::Encompass(props.m_bbox, o2w * v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
-
-			props.m_geom = EGeom::Vert | (colours != 0 ? EGeom::Colr : 0) | EGeom::Norm | EGeom::Tex0;
-			props.m_has_alpha = col.m_alpha;
 			return props;
 		}
 	}
