@@ -66,6 +66,15 @@ namespace pr.maths
 		}
 
 		public static BRect From(Rectangle r) { return new BRect(v2.From(r.Location) + v2.From(r.Size)/2f, v2.Abs(v2.From(r.Size)) / 2f); }
+		
+		/// <summary>Return a bounding rect about the given points</summary>
+		public static BRect FromBounds(params v2[] points)
+		{
+			var br = BRect.Reset;
+			foreach (var pt in points)
+				br.Encompass(pt);
+			return br;
+		}
 
 		/// <summary>Returns true if the bounding rectangle represents a point or volume</summary>
 		public bool IsValid

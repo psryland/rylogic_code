@@ -292,9 +292,9 @@ namespace pr
 		for (size_t i = 1, iend = points.size() - 1; i != iend; ++i)
 		{
 			// Generate points for the spline
-			auto sp = i == 1      ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
-			auto sc = (points[i-1] + points[i]) * 0.5f;
-			auto ec = (points[i+1] + points[i]) * 0.5f;
+			auto sp = i == 1 ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
+			auto sc = points[i];
+			auto ec = points[i];
 			auto ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
 			auto spline = pr::Spline::make(sp, sc, ec, ep);
 

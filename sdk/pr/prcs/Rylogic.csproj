@@ -115,6 +115,7 @@
     <Compile Include="common\rtf.cs" />
     <Compile Include="common\cache.cs" />
     <Compile Include="container\binding_list.cs" />
+    <Compile Include="container\bi_dictionary.cs" />
     <Compile Include="container\csv_data.cs">
       <SubType>Code</SubType>
     </Compile>

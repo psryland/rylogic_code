@@ -26,7 +26,7 @@ namespace pr
 		
 		// 'iter' is the src iterator
 		// 'count' is the number of available items pointed to by 'iter'
-		// 'output_count' is the number of times the iterator will be incremented
+		// 'output_count' is the number items to be output from the iterator
 		// 'def' is the value to return when 'iter' is exhausted
 		Repeater(TCIter iter, std::size_t count, std::size_t output_count, TItem const& def, Interp interp = Interp())
 			:m_interp(interp)
@@ -38,7 +38,7 @@ namespace pr
 			,m_default(def)
 			,m_curr(Next())
 			,m_next(Next())
-			,m_item(m_interp(m_curr, m_next, m_r, m_output))
+			,m_item(m_interp(m_curr, m_next, 0, 1))
 		{}
 		virtual ~Repeater()
 		{}
@@ -48,14 +48,19 @@ namespace pr
 		}
 		Repeater& operator ++()
 		{
-			// Not yet time to move to the next?
-			if ((m_r += m_count) >= m_output)
+			// step size is (m_count-1)/(m_output-1)
+			// e.g.  count = 3 |                 |                 |
+			//      output = 7 |     |     |     |     |     |     |
+			//      output = 6 |      |      |      |      |       |
+			// step = 2/6 = 1/3
+			m_r += m_count - 1;
+			if (m_r >= m_output - 1)
 			{
-				m_r -= m_output;
+				m_r -= m_output - 1;
 				m_curr = m_next;
 				m_next = Next();
 			}
-			m_item = m_interp(m_curr, m_next, m_r, m_output);
+			m_item = m_interp(m_curr, m_next, m_r, m_output - 1);
 			return *this;
 		}
 		Repeater operator ++(int)
@@ -116,30 +121,32 @@ namespace pr
 				vec.push_back(2);
 
 				auto rep = pr::CreateRepeater(begin(vec), vec.size(), 6, -1);
-				PR_CHECK(*rep  ,  0); ++rep;
-				PR_CHECK(*rep  ,  0); rep++;
-				PR_CHECK(*rep++,  1);
-				PR_CHECK(*rep++,  1);
-				PR_CHECK(*rep++,  2);
-				PR_CHECK(*rep++,  2);
-				PR_CHECK(*rep++, -1);
-				PR_CHECK(*rep++, -1);
+				PR_CHECK(*(rep  ),  0);
+				PR_CHECK(*(++rep),  0);
+				PR_CHECK(*(++rep),  0);
+				PR_CHECK(*(++rep),  1);
+				PR_CHECK(*(++rep),  1);
+				PR_CHECK(*(++rep),  2);
+				PR_CHECK(*(++rep),  2);
+				PR_CHECK(*(++rep),  2);
+				PR_CHECK(*(++rep), -1);
+				PR_CHECK(*(++rep), -1);
 			}
 			{
 				std::vector<float> vec;
 				vec.push_back(0.0f);
+				vec.push_back(0.5f);
 				vec.push_back(1.0f);
-				vec.push_back(2.0f);
 
-				auto rep = pr::CreateLerpRepeater(begin(vec), vec.size(), 6, 3.0f);
-				PR_CHECK(*rep  , 0.0f); ++rep;
-				PR_CHECK(*rep  , 0.5f); rep++;
+				auto rep = pr::CreateLerpRepeater(begin(vec), vec.size(), 6, 1.0f);
+				PR_CHECK(*rep++, 0.0f);
+				PR_CHECK(*rep++, 0.2f);
+				PR_CHECK(*rep++, 0.4f);
+				PR_CHECK(*rep++, 0.6f);
+				PR_CHECK(*rep++, 0.8f);
 				PR_CHECK(*rep++, 1.0f);
-				PR_CHECK(*rep++, 1.5f);
-				PR_CHECK(*rep++, 2.0f);
-				PR_CHECK(*rep++, 2.5f);
-				PR_CHECK(*rep++, 3.0f);
-				PR_CHECK(*rep++, 3.0f);
+				PR_CHECK(*rep++, 1.0f);
+				PR_CHECK(*rep++, 1.0f);
 			}
 			{
 				std::vector<float> vec;

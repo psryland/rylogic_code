@@ -803,6 +803,12 @@ namespace pr.gfx
 				get { return View3D_DrawsetObjectCount(m_ds); }
 			}
 
+			/// <summary>True if 'obj' is a member of this drawset</summary>
+			public bool HasObject(Object obj)
+			{
+				return View3D_DrawsetHasObject(m_ds, obj.m_handle);
+			}
+
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{

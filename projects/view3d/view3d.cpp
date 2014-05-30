@@ -437,7 +437,7 @@ VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DO
 	{
 		PR_ASSERT(PR_DBG, drawset != 0, "");
 		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_objects.find(object) != drawset->m_objects.end();
+		return drawset->m_objects.find(object) != std::end(drawset->m_objects);
 	}
 	catch (std::exception const& ex)
 	{
