@@ -2,16 +2,18 @@
 // LineDrawer Helper
 //  Copyright (c) Rylogic Ltd 2006
 //************************************
-#ifndef PR_LINE_DRAWER_HELPER_H
-#define PR_LINE_DRAWER_HELPER_H
+#pragma once
 
 #include <string>
 #include <algorithm>
 #include <windows.h>
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
+#include "pr/common/colour.h"
+#include "pr/str/tostring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/conversion.h"
 
 namespace pr
 {
@@ -22,7 +24,7 @@ namespace pr
 			if (str.size() == 0) return;
 			pr::Handle h = ::CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 			DWORD bytes_written; ::WriteFile(h, &str[0], (DWORD)str.size(), &bytes_written, 0);
-			PR_INFO_EXP(PR_DBG, bytes_written == str.size(), PR_LINK "Failed to write ldr string");
+			PR_INFO_IF(PR_DBG, bytes_written != str.size(), PR_LINK "Failed to write ldr string");
 		}
 		template <typename TStr> inline TStr& Vec3(v4 const& vec, TStr& str)
 		{
@@ -36,10 +38,6 @@ namespace pr
 		{
 			str += "*pos{"; Vec3(vec, str); str += "}"; return str;
 		}
-		//template <typename TStr> inline void Dir(v4 vec, TStr& str)
-		//{
-		//	str += "*direction {"; Vec3(vec, str); str += "} ";
-		//}
 		template <typename TStr> inline TStr& M4x4(m4x4 const& mat, TStr& str)
 		{
 			str+="*m4x4{"; Vec4(mat.x, str); Vec4(mat.y, str); Vec4(mat.z, str); Vec4(mat.w, str); str+="}"; return str;
@@ -137,19 +135,6 @@ namespace pr
 			str += "}\n";
 			return str;
 		}
-		//template <typename TStr> inline void Grid(char const* name, unsigned int colour, float dimx, float dimy, int divx, int divy, v4 position, TStr& str)
-		//{
-		//	str += Fmt(	"*GridWH %s %08X "
-		//				"{ "
-		//					"%f %f %d %d "
-		//					"*Position {%f %f %f} "
-		//				"}\n"
-		//				,name
-		//				,colour
-		//				,dimx ,dimy ,divx ,divy
-		//				,position.x ,position.y ,position.z
-		//				);
-		//}
 		template <typename TStr> inline TStr& Ellipse(char const* name, unsigned int colour, v4 const& centre, int axis_id, float major, float minor, TStr& str)
 		{
 			str += FmtS("*Ellipse %s %08X {%d %f %f " ,name ,colour ,axis_id ,major ,minor);
@@ -199,27 +184,6 @@ namespace pr
 			str += "}\n";
 			return str;
 		}
-		//template <typename TStr> inline void BoxLU(char const* name, unsigned int colour, v4 lower, v4 upper, TStr& str)
-		//{
-		//	str += Fmt(	"*BoxLU %s %08X {%f %f %f %f %f %f}\n" ,name ,colour ,lower.x ,lower.y ,lower.z ,upper.x ,upper.y ,upper.z);
-		//}
-
-		//template <typename TStr> inline void BoxLine(char const* name, unsigned int colour, v4 s, v4 e, float size, TStr& str)
-		//{
-		//	size *= 0.5f;
-		//	v4 d = e - s;
-		//	str += Fmt(	"*Box %s %08X {%f %f %f *Line ray %08X {0 0 0 %f %f %f} " ,name ,colour ,size ,size ,size ,colour ,d.x ,d.y ,d.z);
-		//	if (s != pr::v4Origin) Position(s, str);
-		//	str += "}\n";
-		//}
-		//template <typename TStr> inline void Box2(char const* name, unsigned int colour, v4 position, float size, TStr& str)
-		//{
-		//	size *= 0.5f;
-		//	str += Fmt(	"*Box %s %08X {%f %f %f " ,name ,colour ,size ,size ,size);
-		//	if (position != pr::v4Origin) str += Fmt("*Position {%f %f %f}" ,position.x ,position.y ,position.z);
-		//	str += "}\n";
-		//}
-
 		template <typename TStr> inline TStr& Frustum(char const* name, unsigned int colour, pr::Frustum const& f, m4x4 const& o2w, TStr& str)
 		{
 			pr::m4x4 f2w = o2w * pr::Translation4x4(0.0f, 0.0f, f.ZDist());
@@ -286,18 +250,6 @@ namespace pr
 			str += "}\n";
 			return str;
 		}
-		//template <typename TStr> inline void QuadLU(char const* name, unsigned int colour, v4 lower, v4 upper, TStr& str)
-		//{
-		//	str += Fmt("*QuadLU %s %08X "
-		//				"{ "
-		//					" %f %f %f "
-		//					" %f %f %f "
-		//				"}\n"
-		//				,name ,colour
-		//				,lower.x ,lower.y ,lower.z
-		//				,upper.x ,upper.y ,upper.z
-		//				);
-		//}
 		template <typename TStr> inline TStr& Plane(char const* name, unsigned int colour, pr::Plane const& plane, v4 const& centre, float size, TStr& str)
 		{
 			str += FmtS("*Plane %s %08X {" ,name ,colour);
@@ -347,26 +299,6 @@ namespace pr
 			str += "}\n";
 			return str;
 		}
-		//template <typename TStr> inline void Matrix4x4(char const* name, unsigned int colour, m4x4 tx, float scale, TStr& str)
-		//{
-		//	v4 x = tx.x * scale;
-		//	v4 y = tx.y * scale;
-		//	v4 z = tx.z * scale;
-		//	v4 w = tx.pos;
-		//	str += FmtS("*Matrix4x4 %s %08X "
-		//				"{ "
-		//					"%f %f %f %f "
-		//					"%f %f %f %f "
-		//					"%f %f %f %f "
-		//					"%f %f %f %f "
-		//				"}\n"
-		//				,name ,colour
-		//				,x.x ,x.y ,x.z ,x.w
-		//				,y.x ,y.y ,y.z ,y.w
-		//				,z.x ,z.y ,z.z ,z.w
-		//				,w.x ,w.y ,w.z ,w.w
-		//				);
-		//}
 		template <typename TStr> inline TStr& Axis(char const* name, uint colour, m4x4 const& basis, TStr& str)
 		{
 			str += FmtS(	"*Group %s %08X\n"
@@ -383,40 +315,6 @@ namespace pr
 		{
 			return Axis(name, colour, pr::m4x4::make(basis, pr::v4Origin), str);
 		}
-		//template <typename TStr> inline void CrossHair(char const* name, unsigned int colour, v4 position, float size, TStr& str)
-		//{
-		//	str += FmtS("*Line %s %08X "
-		//				"{ "
-		//					"%f 0 0 %f 0 0  0 %f 0 0 %f 0  0 0 %f 0 0 %f "
-		//					"*Position { %f %f %f } "
-		//				"}\n"
-		//				,name ,colour
-		//				,-size/2 ,size/2 ,-size/2 ,size/2 ,-size/2 ,size/2
-		//				,position.x ,position.y ,position.z
-		//				);
-		//}
-		//template <typename TStr> inline void BBox(char const* name, unsigned int colour, const pr::BBox& bbox, TStr& str)
-		//{
-		//	v4 lower = bbox.Lower();
-		//	v4 upper = bbox.Upper();
-		//	str += FmtS("*BoxLU %s %08X "
-		//				"{ "
-		//					"%f %f %f "
-		//					"%f %f %f "
-		//				"}\n"
-		//				,name, colour
-		//				,lower.x, lower.y, lower.z
-		//				,upper.x, upper.y, upper.z
-		//				);
-		//}
-		//template <typename TStr> inline void OrientedBox(char const* name, unsigned int colour, const pr::OrientedBox& obox, TStr& str)
-		//{
-		//	str += FmtS("*Box %s %08X {" ,name ,colour);
-		//	Vec3(2.0f * obox.m_radius, str);
-		//	Txfm(obox.Getm4x4(), str)
-		//	str += "}\n";
-		//}
-
 		template <typename TStr, typename VCont, typename ICont> inline TStr& Mesh(char const* name, unsigned int colour, VCont const& verts, ICont const& indices, int indices_per_prim, pr::m4x4 const& o2w, TStr& str)
 		{
 			auto v = std::begin(verts);
@@ -450,31 +348,69 @@ namespace pr
 			return str;
 		}
 
-		//template <typename TStr> inline void Mesh(char const* name, unsigned int colour, pr::Mesh const& mesh, TStr& str)
-		//{
-		//	if (mesh.m_vertex.empty() || mesh.m_face.empty()) return;
-		//	bool gen_norms = IsZero3(mesh.m_vertex[0].m_normal);
+		// A new way....
+		struct O2W
+		{
+			pr::m4x4 m_mat;
+			O2W(pr::v4 const& pos) :m_mat(pr::Translation4x4(pos)) {}
+			O2W(pr::m4x4 const& mat) :m_mat(mat) {}
+		};
 
-		//	str += FmtS("*Mesh %s %08X\n{\n" ,name ,colour);
-		//	str +=         "\t*Verts {\n";
-		//	for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
-		//	{	str += FmtS("\t%f %f %f\n" ,v->m_vertex.x ,v->m_vertex.y ,v->m_vertex.z); }
-		//	str +=         "\t}\n";
-		//	str +=         "\t*Faces {\n";
-		//	for (TFaceCont::const_iterator f = mesh.m_face.begin(), f_end = mesh.m_face.end(); f != f_end; ++f)
-		//	{	str += FmtS("\t%d %d %d\n" ,f->m_vert_index[0] ,f->m_vert_index[1] ,f->m_vert_index[2]); }
-		//	str +=         "\t}\n";
-		//	if (gen_norms)
-		//	{	str +=     "\t*GenerateNormals\n"; }
-		//	else {
-		//	str +=         "\t*Normals {\n";
-		//	for (TVertCont::const_iterator v = mesh.m_vertex.begin(), v_end = mesh.m_vertex.end(); v != v_end; ++v)
-		//	{	str += FmtS("\t%f %f %f\n" ,v->m_normal.x ,v->m_normal.y ,v->m_normal.z); }
-		//	str +=         "\t}\n";
-		//	str +=     "}\n";
-		//	}
-		//}
+		template <typename TStr> inline TStr& Append(TStr& str, char const* s)
+		{
+			return str.append(s);
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, long i)
+		{
+			return str.append(pr::To<std::string>(i));
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, float f)
+		{
+			return str.append(pr::To<std::string>(f));
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, pr::Colour32 c)
+		{
+			return str.append(pr::To<std::string>(c));
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, pr::v3 const& v)
+		{
+			return str.append(pr::To<std::string>(v));
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, pr::v4 const& v)
+		{
+			return str.append(pr::To<std::string>(v));
+		}
+		template <typename TStr> inline TStr& Append(TStr& str, O2W const& o2w)
+		{
+			if (o2w.m_mat == m4x4Identity)
+				return str;
+			if (o2w.m_mat.rot == m3x4Identity)
+				return str.append("*o2w{*pos{").append(pr::To<std::string>(o2w.m_mat.pos.xyz)).append("}}");
+			return str.append("*o2w{*m4x4{").append(pr::To<std::string>(o2w.m_mat)).append("}}");
+		}
+		template <typename TStr, typename Arg0, typename... Args> inline TStr& Append(TStr& str, Arg0 const& arg0, Args&&... args)
+		{
+			Append(str, arg0);
+			return Append(str, std::forward<Args>(args)...);
+		}
 	}
 }
 
+#if PR_UNITTESTS
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_ldr_ldrhelper)
+		{
+			std::string str;
+			pr::ldr::Append(str,"*Box b ",pr::Colour32Green," {",pr::v3::make(1.0f,2.0f,3.0f)," ",pr::ldr::O2W(pr::m4x4Identity),"}");
+			PR_CHECK(str, "*Box b ff00ff00 {1.000000 2.000000 3.000000 }");
+
+			str.resize(0);
+			pr::ldr::Append(str,"*Box b ",pr::Colour32Red," {",1.5f," ",pr::ldr::O2W(pr::v4ZAxis.w1()),"}");
+			PR_CHECK(str, "*Box b ffff0000 {1.500000 *o2w{*pos{0.000000 0.000000 1.000000}}}");
+		}
+	}
+}
 #endif

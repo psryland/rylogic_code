@@ -22,10 +22,10 @@ namespace pr
 			Colour32 m_diffuse;         // Main light colour
 			Colour32 m_specular;        // Specular light colour
 			float    m_specular_power;  // Specular power (controls specular spot size)
+			float    m_range;           // Light range
+			float    m_falloff;         // Intensity falloff per unit distance
 			float    m_inner_cos_angle; // Spot light inner angle 100% light
 			float    m_outer_cos_angle; // Spot light outer angle 0% light
-			float    m_range;           // Light range, only valid for point,spot lights
-			float    m_falloff;         // Intensity falloff per unit distance
 			float    m_cast_shadow;     // Shadow cast range, 0 for off
 			bool     m_on;              // True if this light is on
 

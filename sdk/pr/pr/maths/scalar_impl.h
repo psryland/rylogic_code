@@ -75,6 +75,7 @@ namespace pr
 		return (flip_sign ? -guess : guess);
 	}
 
+	// Fast hash
 	inline uint Hash(float value, uint max_value)
 	{
 		// Arbitrary prime
@@ -95,6 +96,7 @@ namespace pr
 		if (n < 0) n += max_value;
 		return static_cast<uint>(n);
 	}
+
 	// 'scale' should be a power of 2, i.e. 256, 1024, 2048, etc
 	inline float Quantise(float x, int scale)
 	{
@@ -119,6 +121,40 @@ namespace pr
 	{
 		float len_sq = adj0*adj0 + adj1*adj1 - 2.0f * adj0 * adj1 * Cos(angle);
 		return len_sq > 0.0f ? Sqrt(len_sq) : 0.0f;
+	}
+
+	// Returns 1.0f if 'hi' is >= 'lo' otherwise 0.0f
+	inline float Step(float lo, float hi)
+	{
+		return hi >= lo ? 1.0f : 0.0f;
+	}
+
+	// Returns the Hermite interpolation (3t² - 2t³) between 'lo' and 'hi' for t=[0,1]
+	inline float SmoothStep(float lo, float hi, float t)
+	{
+		if (lo == hi) return lo;
+		t = Clamp((t - lo)/(hi - lo), 0.0f, 1.0f);
+		return t*t*(3 - 2*t);
+	}
+
+	// Returns a fifth-order Perlin interpolation (6t^5 - 15t^4 + 10t^3) between 'lo' and 'hi' for t=[0,1]
+	inline float SmoothStep2(float lo, float hi, float t)
+	{
+		if (lo == hi) return lo;
+		t = Clamp((t - lo)/(hi - lo), 0.0f, 1.0f);
+		return t*t*t*(t*(t*6 - 15) + 10);
+	}
+
+	// Return the greatest common factor between 'a' and 'b'
+	// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
+	inline int GreatestCommonFactor(int a, int b)
+	{
+		while (b) { int t = b; b = a % b; a = t; }
+		return a;
+	}
+	inline int LeastCommonMultiple(int a, int b)
+	{
+		return (a*b) / GreatestCommonFactor(a,b);
 	}
 }
 

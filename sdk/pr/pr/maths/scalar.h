@@ -175,6 +175,11 @@ namespace pr
 	float   CosAngle(float adj0, float adj1, float opp);
 	float   Angle(float adj0, float adj1, float opp);
 	float   Length(float adj0, float adj1, float angle);
+	float   Step(float lo, float hi);
+	float   SmoothStep(float lo, float hi, float t);
+	float   SmoothStep2(float lo, float hi, float t);
+	int     GreatestCommonFactor(int a, int b);
+	int     LeastCommonMultiple(int a, int b);
 
 	// Function objects for generating sequences
 	template <typename Type> struct ArithmeticSequence
@@ -189,18 +194,6 @@ namespace pr
 		GeometricSequence(Type initial_value = 0, Type ratio = Type(1)) :m_value(initial_value) ,m_ratio(ratio) {}
 		Type operator()() { Type v = m_value; m_value = static_cast<Type>(m_value * m_ratio); return v; }
 	};
-
-	// Return the greatest common factor between 'a' and 'b'
-	// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
-	inline int GreatestCommonFactor(int a, int b)
-	{
-		while (b) { int t = b; b = a % b; a = t; }
-		return a;
-	}
-	inline int LeastCommonMultiple(int a, int b)
-	{
-		return (a*b) / GreatestCommonFactor(a,b);
-	}
 
 	// Predicates
 	namespace maths

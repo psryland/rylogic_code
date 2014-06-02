@@ -102,8 +102,9 @@
 #define ID_ACCELERATOR_FILEOPEN                 40603
 #define ID_ACCELERATOR_FILEOPEN_ADDITIVE        40604
 #define ID_ACCELERATOR_EDITOR                   40605
-#define ID_ACCELERATOR_PLUGINMGR                40606
-#define ID_ACCELERATOR_WIREFRAME                40607
-#define ID_ACCELERATOR_LIGHTING_DLG             40608
-#define ID_ACCELERATOR_UNDO                     40609
-#define ID_ACCELERATOR_REDO                     40610
+#define ID_ACCELERATOR_CAMERAPOS                40606
+#define ID_ACCELERATOR_PLUGINMGR                40607
+#define ID_ACCELERATOR_WIREFRAME                40608
+#define ID_ACCELERATOR_LIGHTING_DLG             40609
+#define ID_ACCELERATOR_UNDO                     40610
+#define ID_ACCELERATOR_REDO                     40611

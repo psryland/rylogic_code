@@ -76,45 +76,55 @@ namespace pr
 				m_edit_up      .Attach(GetDlgItem(IDC_EDIT_UP      ));
 				m_edit_horz_fov.Attach(GetDlgItem(IDC_EDIT_HORZ_FOV));
 				m_btn_preview  .Attach(GetDlgItem(IDC_BTN_PREVIEW  ));
-
-				m_edit_position.SetWindowTextA(Str(m_cam.CameraToWorld().pos));
-				m_edit_lookat  .SetWindowTextA(Str(m_cam.FocusPoint()));
-				m_edit_up      .SetWindowTextA(Str(m_cam.CameraToWorld().y));
-				m_edit_horz_fov.SetWindowTextA(Str(pr::RadiansToDegrees(m_cam.FovX())));
-			
 				m_btn_preview.ShowWindow(m_allow_preview ? SW_SHOW : SW_HIDE);
 
-				UpdateUI();
+				PopulateControls();
 				return TRUE;
 			}
 			void OnCommand(UINT, int nID, CWindow)
 			{
-				if (nID == IDOK || nID == IDCANCEL)
+				ReadValues();
+				PopulateControls();
+				switch (nID)
 				{
-					UpdateUI();
+				default:
+					SetMsgHandled(FALSE);
+					break;
+				case IDOK:
+				case IDCANCEL:
 					EndDialog(nID);
 					return;
-				}
-				if (nID == IDC_BTN_PREVIEW)
-				{
+				case IDC_BTN_PREVIEW:
 					Preview();
+					break;
 				}
-				SetMsgHandled(FALSE);
 			}
-			void UpdateUI()
+			void ReadValues()
 			{
 				// Update the values
-				auto position = pr::To<pr::v3>(GetCtrlText(m_edit_position));
-				auto lookat   = pr::To<pr::v3>(GetCtrlText(m_edit_lookat));
-				auto up       = pr::To<pr::v3>(GetCtrlText(m_edit_up));
+				auto position = pr::To<pr::v3>(GetCtrlText(m_edit_position)).w1();
+				auto lookat   = pr::To<pr::v3>(GetCtrlText(m_edit_lookat)).w1();
+				auto up       = pr::To<pr::v3>(GetCtrlText(m_edit_up)).w0();
 				auto hfov     = pr::DegreesToRadians(pr::To<float>(GetCtrlText(m_edit_horz_fov)));
 
-				m_cam.LookAt(position.w1(), lookat.w1(), up.w0());
+				if (pr::FEqlZero3(lookat - position))
+					lookat = position + pr::v4ZAxis;
+				if (pr::Parallel(lookat - position, up))
+					up = pr::Perpendicular(up);
+		
+				m_cam.LookAt(position, lookat, up);
 				m_cam.FovX(hfov);
+			}
+			void PopulateControls()
+			{
+				m_edit_position.SetWindowTextA(Str(m_cam.CameraToWorld().pos));
+				m_edit_lookat  .SetWindowTextA(Str(m_cam.FocusPoint()));
+				m_edit_up      .SetWindowTextA(Str(m_cam.CameraToWorld().y));
+				m_edit_horz_fov.SetWindowTextA(Str(pr::RadiansToDegrees(m_cam.FovX())));
 			}
 			virtual void Preview()
 			{
-				// Do nothing, subclass for preview ability
+				// Subclass for preview ability
 			}
 
 			enum

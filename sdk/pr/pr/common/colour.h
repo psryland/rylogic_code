@@ -6,6 +6,7 @@
 #ifndef PR_COMMON_COLOUR_H
 #define PR_COMMON_COLOUR_H
 
+#include <string>
 #include <memory.h>
 #include "pr/maths/maths.h"
 #include "pr/macros/enum.h"
@@ -263,6 +264,9 @@ namespace pr
 		#pragma warning(disable:4201) // nameless struct/union
 		union {
 			struct { float r,g,b,a; };
+			struct { v4 rgba; };
+			struct { v2 rg, ba; };
+			struct { v3 rgb; };
 			#if PR_MATHS_USE_DIRECTMATH
 			DirectX::XMVECTOR vec;
 			#elif PR_MATHS_USE_INTRINSICS
@@ -367,6 +371,11 @@ namespace pr
 	}
 
 	// Conversion *********************************************************************************
+	// To<std::string>
+	template <> struct Convert<std::string, Colour32>
+	{
+		static std::string To(Colour32 c) { return pr::To<std::string>(c.m_aarrggbb, 16); }
+	};
 
 	// To<Colour32>
 	template <typename TFrom> struct Convert<Colour32,TFrom>

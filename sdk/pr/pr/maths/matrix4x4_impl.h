@@ -526,58 +526,56 @@ namespace pr
 	}
 
 	// Construct an orthographic projection matrix
-	inline m4x4 ProjectionOrthographic(float w, float h, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionOrthographic(float w, float h, float zn, float zf, bool righthanded)
 	{
-		float diff = Zfar - Znear;
+		auto rh = Sign<float>(righthanded);
 		m4x4 mat = {};
 		mat.x.x = 2.0f / w;
 		mat.y.y = 2.0f / h;
-		mat.z.z = Sign<float>(!righthanded) / diff;
+		mat.z.z = rh / (zn - zf);
 		mat.w.w = 1.0f;
-		mat.w.z = -Znear / diff;
+		mat.w.z = rh * zn / (zn - zf);
 		return mat;
 	}
 
 	// Construct a perspective projection matrix
-	inline m4x4 ProjectionPerspective(float w, float h, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspective(float w, float h, float zn, float zf, bool righthanded)
 	{
-		float zn   = 2.0f * Znear;
-		float diff = Zfar - Znear;
+		auto rh = Sign<float>(righthanded);
 		m4x4 mat = {};
-		mat.x.x = zn / w;
-		mat.y.y = zn / h;
-		mat.z.w = Sign<float>(!righthanded);
-		mat.z.z = mat.z.w * Zfar / diff;
-		mat.w.z = -Znear * Zfar / diff;
+		mat.x.x = 2.0f * zn / w;
+		mat.y.y = 2.0f * zn / h;
+		mat.z.w = -rh;
+		mat.z.z = rh * zf / (zn - zf);
+		mat.w.z = zn * zf / (zn - zf);
 		return mat;
 	}
 
 	// Construct a perspective projection matrix offset from the centre
-	inline m4x4 ProjectionPerspective(float l, float r, float t, float b, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspective(float l, float r, float t, float b, float zn, float zf, bool righthanded)
 	{
-		float zn   = 2.0f * Znear;
-		float diff = Zfar - Znear;
+		auto rh = Sign<float>(righthanded);
 		m4x4 mat = {};
-		mat.x.x = zn / (r - l);
-		mat.y.y = zn / (t - b);
-		mat.z.x = (l+r)/(l-r);
-		mat.z.y = (t+b)/(b-t);
-		mat.z.w = Sign<float>(!righthanded);
-		mat.z.z = mat.z.w * Zfar / diff;
-		mat.w.z = -Znear * Zfar / diff;
+		mat.x.x = 2.0f * zn / (r - l);
+		mat.y.y = 2.0f * zn / (t - b);
+		mat.z.x = rh * (r + l) / (r - l);
+		mat.z.y = rh * (t + b) / (t - b);
+		mat.z.w = -rh;
+		mat.z.z = rh * zf / (zn - zf);
+		mat.w.z = zn * zf / (zn - zf);
 		return mat;
 	}
 
 	// Construct a perspective projection matrix using field of view
-	inline m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float Znear, float Zfar, bool righthanded)
+	inline m4x4 ProjectionPerspectiveFOV(float fovY, float aspect, float zn, float zf, bool righthanded)
 	{
-		float diff = Zfar - Znear;
+		auto rh = Sign<float>(righthanded);
 		m4x4 mat = {};
 		mat.y.y = 1.0f / pr::Tan(fovY/2);
 		mat.x.x = mat.y.y / aspect;
-		mat.z.w = Sign<float>(!righthanded);
-		mat.z.z = mat.z.w * Zfar / diff;
-		mat.w.z = -Znear * Zfar / diff;
+		mat.z.w = -rh;
+		mat.z.z = rh * zf / (zn - zf);
+		mat.w.z = zn * zf / (zn - zf);
 		return mat;
 	}
 

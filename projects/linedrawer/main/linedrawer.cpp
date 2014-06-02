@@ -45,7 +45,8 @@ namespace ldr
 			auto settings = pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area);
 
 			// Disable multisampling when debugging as pix can't handle it
-			//settings.m_multisamp = pr::rdr::MultiSamp();
+			settings.m_multisamp = pr::rdr::MultiSamp();
+			#pragma message(PR_LINK "multisamp disabled")
 
 			return settings;
 		}

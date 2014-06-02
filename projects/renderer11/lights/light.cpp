@@ -17,10 +17,10 @@ namespace pr
 			,m_diffuse         (Colour32::make(0.5f, 0.5f, 0.5f, 1.0f))
 			,m_specular        (Colour32::make(0.1f, 0.1f, 0.1f, 0.0f))
 			,m_specular_power  (1000.0f)
+			,m_range           (100.0f)
+			,m_falloff         (0.0f)
 			,m_inner_cos_angle (0.97f)
 			,m_outer_cos_angle (0.92f)
-			,m_range           (1000.0f)
-			,m_falloff         (0.0f)
 			,m_cast_shadow     (0.0f)
 			,m_on              (true)
 		{}

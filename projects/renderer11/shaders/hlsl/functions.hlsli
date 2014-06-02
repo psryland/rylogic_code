@@ -19,3 +19,13 @@ float4 ProjTex(float4 ws_pos, float4 in_diff)
 	}
 	return out_diff;
 }
+
+// Returns the near and far plane distances in camera space from a
+// projection matrix (either perspective or orthonormal)
+float2 ClipPlanes(float4x4 c2s)
+{
+	float2 dist;
+	dist.x = c2s._43 / c2s._33; // near
+	dist.y = c2s._43 / (1 + c2s._33) + c2s._44*(c2s._43 - c2s._33 - 1)/(c2s._33 * (1 + c2s._33)); // far
+	return dist;
+}

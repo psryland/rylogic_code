@@ -15,9 +15,11 @@
 namespace pr
 {
 	// To<std::string>
-	template <> struct Convert<std::string,v2> { static std::string To(v2 const& x) { return pr::Fmt("%f %f",x.x,x.y); } };
-	template <> struct Convert<std::string,v3> { static std::string To(v3 const& x) { return pr::Fmt("%f %f %f",x.x,x.y,x.z); } };
-	template <> struct Convert<std::string,v4> { static std::string To(v4 const& x) { return pr::Fmt("%f %f %f %f",x.x,x.y,x.z,x.w); } };
+	template <> struct Convert<std::string,v2>   { static std::string To(v2 const& x)   { return pr::Fmt("%f %f",x.x,x.y); } };
+	template <> struct Convert<std::string,v3>   { static std::string To(v3 const& x)   { return pr::Fmt("%f %f %f",x.x,x.y,x.z); } };
+	template <> struct Convert<std::string,v4>   { static std::string To(v4 const& x)   { return pr::Fmt("%f %f %f %f",x.x,x.y,x.z,x.w); } };
+	template <> struct Convert<std::string,m3x4> { static std::string To(m3x4 const& m) { return pr::To<std::string>(m.x.xyz)+" "+pr::To<std::string>(m.y.xyz)+" "+pr::To<std::string>(m.z.xyz); } };
+	template <> struct Convert<std::string,m4x4> { static std::string To(m4x4 const& m) { return pr::To<std::string>(m.x)+" "+pr::To<std::string>(m.y)+" "+pr::To<std::string>(m.z)+" "+pr::To<std::string>(m.w); } };
 
 	// To<double>
 	template <typename TFrom> struct Convert<double,TFrom>
@@ -84,30 +86,6 @@ namespace pr
 			return pr::v4::make(x,y,z,w);
 		}
 		static v4 To(std::string s) { return To(s.c_str()); }
-	};
-
-	// From<v3>
-	template <typename TTo> struct Convert<TTo,v3>
-	{
-		static TTo To(v3&& from) { return pr::To<TTo>(v.x) + " " + pr::To<TTo>(v.y) + " " + pr::To<TTo>(v.z); }
-	};
-
-	// From<v4>
-	template <typename TTo> struct Convert<TTo,v4>
-	{
-		static TTo To(v4&& from) { return pr::To<TTo>(v.x) + " " + pr::To<TTo>(v.y) + " " + pr::To<TTo>(v.z) + " " + pr::To<TTo>(v.w); }
-	};
-
-	// From<m3x4>
-	template <typename TTo> struct Convert<TTo,m3x4>
-	{
-		static TTo To(m3x4&& from) { return pr::To<TTo>(v.x.xyz()) + " " + pr::To<TTo>(v.y.xyz()) + " " + pr::To<TTo>(v.z.xyz()); }
-	};
-
-	// From<m4x4>
-	template <typename TTo> struct Convert<TTo,m4x4>
-	{
-		static TTo To(m4x4&& from) { return pr::To<TTo>(v.x) + " " + pr::To<TTo>(v.y) + " " + pr::<TTo>(v.z) + " " + pr::To<TTo>(v.w); }
 	};
 
 	// To<iv2>

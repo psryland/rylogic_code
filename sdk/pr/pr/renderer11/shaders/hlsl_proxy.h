@@ -7,21 +7,16 @@
 #pragma once
 
 #include "pr/maths/maths.h"
+#include "pr/renderer11/renderer.h"
 
 namespace pr
 {
 	namespace hlsl
 	{
-		#define uniform const
+		#define uniform
 		#define row_major
 		#define line
 		#define inout
-
-		#define SV_Position //:SV_Position
-		#define Position1   //:Position1
-		#define Normal      //:Normal
-		#define Color0      //:Color0
-		#define TexCoord0   //:TexCoord0
 		
 		struct float2 :pr::v2
 		{
@@ -29,21 +24,39 @@ namespace pr
 			float2(pr::v2 const& x) :pr::v2(x) {}
 			float2(float x, float y) :pr::v2(pr::v2::make(x,y)) {}
 		};
+		inline float GetX(float2 const& v) { return v.x; }
+		inline float GetY(float2 const& v) { return v.y; }
+
 		struct float4 :pr::v4
 		{
 			float4() {}
 			float4(pr::v4 const& x) :pr::v4(x) {}
+			float4(float2 const& xy, float z, float w) :pr::v4(pr::v4::make(xy,z,w)) {}
 			float4(float x, float y, float z, float w) :pr::v4(pr::v4::make(x,y,z,w)) {}
 		};
+		inline float GetX(float4 const& v) { return v.x; }
+		inline float GetY(float4 const& v) { return v.y; }
+		inline float GetZ(float4 const& v) { return v.z; }
+		inline float GetW(float4 const& v) { return v.w; }
+
 		struct int4 :pr::iv4
 		{
 			int4() {}
-			int4(pr::iv4 x) :pr::iv4(x) {}
+			int4(pr::iv4 const& x) :pr::iv4(x) {}
 			int4(int x, int y, int z, int w) :pr::iv4(pr::iv4::make(x,y,z,w)) {}
 		};
 		struct float4x4 :pr::m4x4
 		{
+			float4x4() {}
+			float4x4(pr::m4x4 const& x) :pr::m4x4(x) {}
+			float4x4(float4 const& x, float4 const& y, float4 const& z, float4 const& w)
+				:pr::m4x4(pr::m4x4::make(x,y,z,w))
+			{}
 		};
+		inline float4 GetX(float4x4 const& v) { return v.x; }
+		inline float4 GetY(float4x4 const& v) { return v.y; }
+		inline float4 GetZ(float4x4 const& v) { return v.z; }
+		inline float4 GetW(float4x4 const& v) { return v.w; }
 
 		struct SamplerState
 		{
@@ -51,7 +64,11 @@ namespace pr
 
 		template <typename Format> struct Texture2D
 		{
-			virtual Format Sample(SamplerState const&, Format const& uv) = 0;
+			virtual Format Sample(SamplerState const&, float2 const& uv)
+			{
+				(void)uv;
+				return Format();
+			}
 		};
 
 		template <typename T> struct TriangleStream
@@ -64,11 +81,19 @@ namespace pr
 		bool clip(float x)
 		{
 			return x < 0.0f;
-		};
+		}
 		float step(float lo, float hi)
 		{
-			return hi >= lo ? 1.0f : 0.0f;
-		};
+			return Step(lo,hi);
+		}
+		float sign(float x)
+		{
+			return x < 0.0f ? -1.0f : x > 0.0f ? 1.0f : 0.0f;
+		}
+		float smoothstep(float lo, float hi, float t)
+		{
+			return pr::SmoothStep(lo,hi,t);
+		}
 		float saturate(float x)
 		{
 			return Clamp(x,0.0f,1.0f);
@@ -87,9 +112,17 @@ namespace pr
 		{
 			return (1-t)*a + t*b;
 		}
+		float4 min(float4 const& a, float4 const& b)
+		{
+			return Min(a,b);
+		}
 		float4 normalize(float4 const& v)
 		{
 			return Normalise4(static_cast<pr::v4 const&>(v));
+		}
+		float dot(float4 const& a, float4 const& b)
+		{
+			return Dot4(a,b);
 		}
 		float4 mul(float4 const& v, m4x4 const& m)
 		{
@@ -103,5 +136,26 @@ namespace pr
 				hi.z >= lo.z ? 1.0f : 0.0f,
 				hi.w >= lo.w ? 1.0f : 0.0f);
 		}
+
+		struct SLight
+		{
+			int4   m_info;         // x = light type (0:ambient, 1:directional, 2:point, 3:spot), yzw = unused
+			float4 m_ws_direction; // The direction of the global light source
+			float4 m_ws_position;  // The position of the global light source
+			float4 m_ambient;      // The colour of the ambient light
+			float4 m_colour;       // The colour of the directional light
+			float4 m_specular;     // The colour of the specular light. alpha channel is specular power
+			float4 m_range;        // x = range, y = falloff, z = inner cos angle, w = outer cos angle
+
+			SLight(pr::rdr::Light const& light)
+				:m_info((int)light.m_type,0,0,0)
+				,m_ws_direction(light.m_direction)
+				,m_ws_position(light.m_position)
+				,m_ambient(To<Colour>(light.m_ambient))
+				,m_colour(To<Colour>(light.m_diffuse))
+				,m_specular(pr::v4::make(To<Colour>(light.m_specular).rgb, light.m_specular_power))
+				,m_range(light.m_range, light.m_falloff, light.m_inner_cos_angle, light.m_outer_cos_angle)
+			{}
+		};
 	}
 }
