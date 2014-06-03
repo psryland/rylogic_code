@@ -16,8 +16,7 @@ namespace pr
 {
 	struct iv2
 	{
-		int x;
-		int y;
+		int x, y;
 
 		iv2&                       set(int x_, int y_)          { x = x_; y = y_; return *this; }
 		iv2&                       set(int const* vec)          { x = vec[0]; y = vec[1]; return *this; }

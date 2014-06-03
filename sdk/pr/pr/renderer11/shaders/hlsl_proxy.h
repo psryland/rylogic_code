@@ -20,16 +20,27 @@ namespace pr
 		
 		struct float2 :pr::v2
 		{
-			float2() {}
+			float2() :pr::v2() {}
 			float2(pr::v2 const& x) :pr::v2(x) {}
 			float2(float x, float y) :pr::v2(pr::v2::make(x,y)) {}
 		};
 		inline float GetX(float2 const& v) { return v.x; }
 		inline float GetY(float2 const& v) { return v.y; }
 
+		struct float3 :pr::v3
+		{
+			float3() :pr::v3() {}
+			float3(pr::v3 const& x) :pr::v3(x) {}
+			float3(float2 const& xy, float z) :pr::v3(pr::v3::make(xy,z)) {}
+			float3(float x, float y, float z) :pr::v3(pr::v3::make(x,y,z)) {}
+		};
+		inline float GetX(float3 const& v) { return v.x; }
+		inline float GetY(float3 const& v) { return v.y; }
+		inline float GetZ(float3 const& v) { return v.z; }
+
 		struct float4 :pr::v4
 		{
-			float4() {}
+			float4() :pr::v4() {}
 			float4(pr::v4 const& x) :pr::v4(x) {}
 			float4(float2 const& xy, float z, float w) :pr::v4(pr::v4::make(xy,z,w)) {}
 			float4(float x, float y, float z, float w) :pr::v4(pr::v4::make(x,y,z,w)) {}
@@ -41,13 +52,13 @@ namespace pr
 
 		struct int4 :pr::iv4
 		{
-			int4() {}
+			int4() :pr::iv4() {}
 			int4(pr::iv4 const& x) :pr::iv4(x) {}
 			int4(int x, int y, int z, int w) :pr::iv4(pr::iv4::make(x,y,z,w)) {}
 		};
 		struct float4x4 :pr::m4x4
 		{
-			float4x4() {}
+			float4x4() :pr::m4x4() {}
 			float4x4(pr::m4x4 const& x) :pr::m4x4(x) {}
 			float4x4(float4 const& x, float4 const& y, float4 const& z, float4 const& w)
 				:pr::m4x4(pr::m4x4::make(x,y,z,w))
@@ -64,10 +75,18 @@ namespace pr
 
 		template <typename Format> struct Texture2D
 		{
+			pr::rdr::Image m_img;
 			virtual Format Sample(SamplerState const&, float2 const& uv)
 			{
-				(void)uv;
-				return Format();
+				int u = int(uv.x * m_img.m_dim.x);
+				int v = int(uv.y * m_img.m_dim.y);
+				return ReadPixel(u, v);
+			}
+			virtual Format ReadPixel(int u, int v)
+			{
+				auto* px = static_cast<Format const*>(m_img.m_pixels);
+				if (px == nullptr) return Format();
+				return px[v * m_img.m_pitch.x + u];
 			}
 		};
 

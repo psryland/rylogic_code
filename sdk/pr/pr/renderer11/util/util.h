@@ -103,6 +103,7 @@ namespace pr
 
 		// Returns the expected row and slice pitch for a given image width*height and format
 		pr::ISize Pitch(pr::ISize size, DXGI_FORMAT fmt);
+		pr::ISize Pitch(TextureDesc const& tdesc);
 
 		// Returns the number of expected mip levels for a given width x height texture
 		size_t MipCount(pr::ISize size);

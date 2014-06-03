@@ -68,6 +68,10 @@ namespace pr
 			DirectX::ComputePitch(fmt, size.x, size.y, pitch.x, pitch.y, DirectX::CP_FLAGS_NONE);
 			return pitch;
 		}
+		pr::ISize Pitch(TextureDesc const& tdesc)
+		{
+			return Pitch(ISize::make(tdesc.Width, tdesc.Height), tdesc.Format);
+		}
 
 		// Returns the number of expected mip levels for a given width x height texture
 		size_t MipCount(pr::ISize size)

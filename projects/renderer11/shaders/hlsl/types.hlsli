@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 
 #ifndef PR_RDR_SHADER_TYPES_HLSLI

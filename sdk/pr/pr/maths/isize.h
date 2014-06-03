@@ -14,11 +14,10 @@ namespace pr
 {
 	struct ISize
 	{
-		size_t x;
-		size_t y;
+		size_t x, y;
 
-		ISize& set(size_t x_, size_t y_)             { x = x_; y = y_; return *this; }
-		static ISize make(size_t x_, size_t y_)       { ISize sz; return sz.set(x_, y_); }
+		ISize& set(size_t x_, size_t y_)        { x = x_; y = y_; return *this; }
+		static ISize make(size_t x_, size_t y_) { ISize sz; return sz.set(x_, y_); }
 	};
 
 	static ISize const ISizeZero  = {0, 0};
@@ -31,13 +30,13 @@ namespace pr
 	//inline IRect operator + (IRect const& lhs, iv2 const& offset)   { IRect r = lhs; return r += offset; }
 	//inline IRect operator - (IRect const& lhs, iv2 const& offset)   { IRect r = lhs; return r -= offset; }
 
-	//// Equality operators
-	//inline bool operator == (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	//inline bool operator != (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	//inline bool operator <  (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	//inline bool operator >  (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	//inline bool operator <= (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	//inline bool operator >= (IRect const& lhs, IRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	// Equality operators
+	inline bool operator == (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+	inline bool operator != (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+	inline bool operator <  (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+	inline bool operator >  (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+	inline bool operator <= (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+	inline bool operator >= (ISize const& lhs, ISize const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
 	//// Functions
 	//IRect   Zero(IRect& rect);

@@ -26,6 +26,7 @@
 
 	typedef pr::m4x4 float4x4;
 	typedef pr::v4   float4;
+	typedef pr::v3   float3;
 	typedef pr::v2   float2;
 	typedef pr::iv4  int4;
 
