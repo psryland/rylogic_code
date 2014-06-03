@@ -96,6 +96,11 @@
 		</Expand>
 	</Type>
 
+	<!-- Repeater -->
+	<Type Name="pr::Repeater&lt;*,*,*&gt;">
+		<DisplayString>{m_item} (curr:{m_curr} next:{m_next}) ({(float)m_r/(m_output-1)})</DisplayString>
+	</Type>
+
 	<!-- pr::string -->
 	<Type Name="pr::string&lt;char,*,*,*&gt;">
 		<DisplayString>[{m_count-1}] {m_ptr,s}</DisplayString>

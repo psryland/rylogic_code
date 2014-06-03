@@ -53,14 +53,20 @@ namespace pr
 			//      output = 7 |     |     |     |     |     |     |
 			//      output = 6 |      |      |      |      |       |
 			// step = 2/6 = 1/3
-			m_r += m_count - 1;
-			if (m_r >= m_output - 1)
+			if (m_output > 1)
 			{
-				m_r -= m_output - 1;
-				m_curr = m_next;
-				m_next = Next();
+				if (m_count != 0)
+				{
+					m_r += m_count - 1;
+					if (m_r >= m_output - 1)
+					{
+						m_r -= m_output - 1;
+						m_curr = m_next;
+						m_next = Next();
+					}
+				}
+				m_item = m_interp(m_curr, m_next, m_r, m_output - 1);
 			}
-			m_item = m_interp(m_curr, m_next, m_r, m_output - 1);
 			return *this;
 		}
 		Repeater operator ++(int)
@@ -75,9 +81,12 @@ namespace pr
 		virtual TItem Next()
 		{
 			// Exhausted the iterator? return the default
-			if (m_i == m_count) return m_default;
-			++m_i;
-			return *m_iter++;
+			if (m_i != m_count)
+			{
+				++m_i;
+				return *m_iter++;
+			}
+			return m_default;
 		}
 	};
 
@@ -160,6 +169,28 @@ namespace pr
 				PR_CHECK(*rep++, 0.6f);
 				PR_CHECK(*rep++, 0.8f);
 				PR_CHECK(*rep++, 1.0f);
+			}
+			{
+				auto rep = pr::CreateRepeater(nullptr, 0, 1, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+			}
+			{
+				auto rep = pr::CreateRepeater(nullptr, 0, 4, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+				PR_CHECK(*rep++, 2.0f);
+			}
+			{
+				float f = 1.0f;
+				auto rep = pr::CreateLerpRepeater(&f, 1, 4, 2.0f);
+				PR_CHECK(*rep++, 1.0f);
+				PR_CHECK(*rep++, 1.0f);
+				PR_CHECK(*rep++, 1.0f);
+				PR_CHECK(*rep++, 1.0f);
+				PR_CHECK(*rep++, 1.0f); // only returns default if no data is provided
 			}
 		}
 	}

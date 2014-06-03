@@ -20,10 +20,22 @@ namespace pr.util
 	/// </remarks>
 	public class GenericTypeConverter<T> :TypeConverter where T: new()
 	{
-		public override string ToString() { return StrTxfm.Apply(typeof(T).Name, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, " ", ""); }
-		public override bool GetPropertiesSupported    (ITypeDescriptorContext context) { return true; }
-		public override bool GetCreateInstanceSupported(ITypeDescriptorContext context) { return true; }
-		public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes) { return TypeDescriptor.GetProperties(value ,attributes); }
+		public override string ToString()
+		{
+			return StrTxfm.Apply(typeof(T).Name, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, " ", "");
+		}
+		public override bool GetPropertiesSupported(ITypeDescriptorContext context)
+		{
+			return true;
+		}
+		public override bool GetCreateInstanceSupported(ITypeDescriptorContext context)
+		{
+			return AllowCreateInstance;
+		}
+		public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes)
+		{
+			return TypeDescriptor.GetProperties(value ,attributes);
+		}
 		public override object CreateInstance(ITypeDescriptorContext context, IDictionary values)
 		{
 			T t = new T();
@@ -34,5 +46,14 @@ namespace pr.util
 			}
 			return t;
 		}
+		public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+		{
+			return base.ConvertTo(context, culture, value, destinationType);
+		}
+
+		/// <summary>
+		/// Gets whether the property grid will try to clone 'T' rather than changing the original.
+		/// Note: if this returns true, the object must be ICloneable or a new instance still won't be created</summary>
+		protected virtual bool AllowCreateInstance { get { return false; } }
 	}
 }

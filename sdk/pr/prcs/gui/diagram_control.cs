@@ -612,6 +612,13 @@ namespace pr.gui
 					Text = edit.Text.Trim();
 			}
 
+			/// <summary>Update the connectors attached to this node</summary>
+			public void Relink(bool find_previous_anchors)
+			{
+				foreach (var c in Connectors)
+					c.Relink(find_previous_anchors);
+			}
+
 			/// <summary>Assign this element to a diagram</summary>
 			internal override void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
 			{
@@ -713,14 +720,26 @@ namespace pr.gui
 		/// <summary>An invisible 'node-like' object used for detaching/attaching connectors</summary>
 		public class NodeProxy :Node
 		{
+			private readonly AnchorPoint m_anchor_point;
+
 			public NodeProxy()
-				:base(Guid.NewGuid(), false, 20, 20, string.Empty, m4x4.Identity, NodeStyle.Default)
+				:base(Guid.NewGuid(), false, 20, 20, "ProxyNode", m4x4.Identity, NodeStyle.Default)
 			{
-				AnchorNormalWS = v4.Zero;
+				m_anchor_point = new AnchorPoint(this, v4.Origin, v4.Zero);
 			}
 
-			/// <summary>The diagram space normal the returned anchor point should have. v4.Zero is valid</summary>
-			public v4 AnchorNormalWS { get; set; }
+			/// <summary>The normal of the sole anchor point on this node. v4.Zero is valid</summary>
+			public v4 AnchorNormal
+			{
+				get { return m_anchor_point.Normal; }
+				set
+				{
+					if (m_anchor_point.Normal == value) return;
+					m_anchor_point.Normal = value;
+					if (Connectors.Count != 0)
+						Connectors[0].Anc(this).Normal = value;
+				}
+			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
 			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
@@ -736,7 +755,7 @@ namespace pr.gui
 			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
 			public override IEnumerable<AnchorPoint> AnchorPoints
 			{
-				get { yield return new AnchorPoint(this, v4.Origin, AnchorNormalWS); }
+				get { yield return m_anchor_point; }
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -937,7 +956,7 @@ namespace pr.gui
 
 			/// <summary>
 			/// Controls how the connector is positioned relative to the
-			/// mid point between Anc0.LocationWS and Anc1.LocationWS</summary>
+			/// mid point between Anc0.LocationDS and Anc1.LocationDS</summary>
 			private v4 m_centre_offset;
 
 			public Connector()
@@ -1044,6 +1063,15 @@ namespace pr.gui
 				}
 			}
 			private readonly AnchorPoint m_anc1;
+
+			/// <summary>Get the anchor point associated with 'node'</summary>
+			public AnchorPoint Anc(Node node)
+			{
+				return
+					Node0 == node ? Anc0 :
+					Node1 == node ? Anc1 :
+					null;
+			}
 
 			/// <summary>The 'from' node</summary>
 			public Node Node0
@@ -1174,26 +1202,28 @@ namespace pr.gui
 			{
 				// Raise selected objects above others
 				var bias = (Selected ? new v4(0,0,1,0) : v4.Zero) + Bias;
-
+				
 				// Set the line transform
 				m_gfx_line.O2P = new m4x4(Position.rot, Position.pos + bias);
 
 				// If the connector has a back arrow, add the arrow head graphics
 				if ((Type & EType.Back) != 0)
 				{
-					var dir = -Anc0.NormalWS;
-					if (dir == v4.Zero) dir = Anc1.NormalWS;
-					if (dir == v4.Zero) dir = v4.Normalise3(Anc0.LocationWS - Anc1.LocationWS, v4.YAxis);
-					m_gfx_bak.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), Anc0.LocationWS + bias) * m4x4.Scale(Style.Width, v4.Origin);
+					var dir = -Anc0.NormalDS;
+					if (dir == v4.Zero) dir = Anc1.NormalDS;
+					if (dir == v4.Zero) dir = v4.Normalise3(Anc0.LocationDS - Anc1.LocationDS, v4.YAxis);
+					var pos = new v4(Anc0.LocationDS.xy, Math.Max(Anc0.LocationDS.z, PositionZ), 1f);
+					m_gfx_bak.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
 
 				// If the connector has a forward arrow, add the arrow head graphics
 				if ((Type & EType.Forward) != 0)
 				{
-					var dir = -Anc1.NormalWS;
-					if (dir == v4.Zero) dir = Anc0.NormalWS;
-					if (dir == v4.Zero) dir = v4.Normalise3(Anc1.LocationWS - Anc0.LocationWS, v4.YAxis);
-					m_gfx_fwd.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), Anc1.LocationWS + bias) * m4x4.Scale(Style.Width, v4.Origin);
+					var dir = -Anc1.NormalDS;
+					if (dir == v4.Zero) dir = Anc0.NormalDS;
+					if (dir == v4.Zero) dir = v4.Normalise3(Anc1.LocationDS - Anc0.LocationDS, v4.YAxis);
+					var pos = new v4(Anc1.LocationDS.xy, Math.Max(Anc1.LocationDS.z, PositionZ), 1f);
+					m_gfx_fwd.O2P = m4x4.Rotation(v4.ZAxis, (float)Math.Atan2(dir.y, dir.x), pos + bias) * m4x4.Scale(Style.Width, v4.Origin);
 				}
 			}
 
@@ -1273,8 +1303,8 @@ namespace pr.gui
 					// Hit point in screen space
 					var hit_point_ds = Position.pos + new v4(hit.Point,0,0);
 					var hit_point_cs = v2.From(cam.SSPointFromWSPoint(hit_point_ds));
-					var anc0_cs = v2.From(cam.SSPointFromWSPoint(Anc0.LocationWS));
-					var anc1_cs = v2.From(cam.SSPointFromWSPoint(Anc1.LocationWS));
+					var anc0_cs = v2.From(cam.SSPointFromWSPoint(Anc0.LocationDS));
+					var anc1_cs = v2.From(cam.SSPointFromWSPoint(Anc1.LocationDS));
 
 					// If the click was at the ends of the connector and diagram editing
 					// is allowed, detach the connector and start a move link mouse op
@@ -1421,7 +1451,7 @@ namespace pr.gui
 			/// <summary>Returns the diagram space position of the centre between nearest anchor points on two nodes</summary>
 			private static v2 AttachCentre(AnchorPoint anc0, AnchorPoint anc1)
 			{
-				v2 centre = 0.5f * (anc0.LocationWS + anc1.LocationWS).xy;
+				v2 centre = 0.5f * (anc0.LocationDS + anc1.LocationDS).xy;
 				return centre;
 			}
 			private static v2 AttachCentre(Node node0, Node node1)
@@ -1441,39 +1471,39 @@ namespace pr.gui
 			/// <summary>Returns the corner points of the connector from Anc0 to Anc1</summary>
 			private v2[] Points(bool diagram_space)
 			{
-				// A connector is constructed from: Anc0.LocationWS, CentreOffset, Anc1.LocationWS.
-				// A line from Anc0.LocationWS is extended in the direction of Anc0.NormalWS till it
-				// is perpendicular to m_centre_offset. The same is done from Anc1.LocationWS
+				// A connector is constructed from: Anc0.LocationDS, CentreOffset, Anc1.LocationDS.
+				// A line from Anc0.LocationDS is extended in the direction of Anc0.NormalDS till it
+				// is perpendicular to m_centre_offset. The same is done from Anc1.LocationDS
 				// A connecting line between these points is then formed.
 
 				var origin = diagram_space ? v4.Zero : Position.pos.w0;
 				var centre = (Position.pos - origin + m_centre_offset).xy;
-				var start  = (Anc0.LocationWS - origin).xy;
-				var end    = (Anc1.LocationWS - origin).xy;
+				var start  = (Anc0.LocationDS - origin).xy;
+				var end    = (Anc1.LocationDS - origin).xy;
 
 				v2 intersect;
 				if (Geometry.Intersect(
-					start, start + Anc0.NormalWS.xy,
-					end  , end   + Anc1.NormalWS.xy, out intersect))
+					start, start + Anc0.NormalDS.xy,
+					end  , end   + Anc1.NormalDS.xy, out intersect))
 				{
-					if (v2.Dot2(intersect - start, Anc0.NormalWS.xy) > 0 &&
-						v2.Dot2(intersect - end  , Anc1.NormalWS.xy) > 0)
+					if (v2.Dot2(intersect - start, Anc0.NormalDS.xy) > 0 &&
+						v2.Dot2(intersect - end  , Anc1.NormalDS.xy) > 0)
 						return new[]{start, intersect, end};
 				}
 
-				var dir0 = Anc0.NormalWS.xy;
-				var dir1 = Anc1.NormalWS.xy;
+				var dir0 = Anc0.NormalDS.xy;
+				var dir1 = Anc1.NormalDS.xy;
 				if (dir0 == v2.Zero) dir0 = -dir1;
 				if (dir1 == v2.Zero) dir1 = -dir0;
 				if (dir0 == v2.Zero) dir0 = v2.Normalise2(end - start, v2.Zero);
 				if (dir1 == v2.Zero) dir1 = v2.Normalise2(start - end, v2.Zero);
-				return new[]
-				{
-					start,
-					start + Math.Max(v2.Dot2(centre - start, dir0), MinConnectorLen) * dir0,
-					end   + Math.Max(v2.Dot2(centre - end  , dir1), MinConnectorLen) * dir1,
-					end
-				};
+				
+				var slen = v2.Dot2(centre - start, dir0);
+				var elen = v2.Dot2(centre -   end, dir1);
+				slen = Math.Min(Math.Max(slen, MinConnectorLen), Style.Smooth ? MinConnectorLen : slen);
+				elen = Math.Min(Math.Max(elen, MinConnectorLen), Style.Smooth ? MinConnectorLen : elen);
+
+				return new[]{start, start + slen * dir0, end + elen*dir1, end};
 			}
 
 			/// <summary>Check the self consistency of this element</summary>
@@ -1815,13 +1845,21 @@ namespace pr.gui
 		/// <summary>A point that a connector can connect to</summary>
 		public class AnchorPoint
 		{
-			public AnchorPoint() :this(null,v4.Origin,v4.YAxis) {}
-			public AnchorPoint(Element elem, v4 loc, v4 norm) { Elem = elem; Location = loc; Normal = norm; }
-			public AnchorPoint(IDictionary<Guid,Element> elements, XElement node) :this()
+			public AnchorPoint()
+				:this(null,v4.Origin,v4.YAxis)
+			{}
+			public AnchorPoint(Element elem, v4 loc, v4 norm)
+			{
+				m_impl_elem     = elem;
+				m_impl_location = loc;
+				m_impl_normal   = norm;
+			}
+			public AnchorPoint(IDictionary<Guid,Element> elements, XElement node)
+				:this()
 			{
 				var id = node.Element(XmlField.ElementId).As<Guid>();
 				m_impl_elem = elements.TryGetValue(id, out m_impl_elem) ? m_impl_elem : null;
-				Location = node.Element(XmlField.Location).As<v4>(v4.Origin);
+				m_impl_location = node.Element(XmlField.Location).As<v4>(v4.Origin);
 				Update(null, true);
 			}
 
@@ -1845,18 +1883,43 @@ namespace pr.gui
 						// When set to null, record the last diagram space position
 						// so that anything connected to this anchor point doesn't
 						// snap to the origin.
-						Location = LocationWS;
-						Normal   = NormalWS;
+						Location = LocationDS;
+						Normal   = NormalDS;
 					}
 					m_impl_elem = value;
 				}
 			}
 			private Element m_impl_elem;
 
-			public v4 Location   { get; set; }
-			public v4 Normal     { get; set; }
-			public v4 LocationWS { get { return Elem != null ? Elem.Position * Location : Location; } }
-			public v4 NormalWS   { get { return Elem != null ? Elem.Position * Normal   : Normal  ; } }
+			/// <summary>Get/Set the node-relative position of the anchor</summary>
+			public v4 Location
+			{
+				get { return m_impl_location; }
+				set
+				{
+					if (m_impl_location == value) return;
+					m_impl_location = value;
+				}
+			}
+			private v4 m_impl_location;
+
+			/// <summary>Get/Set the node-relative anchor normal</summary>
+			public v4 Normal
+			{
+				get { return m_impl_normal; }
+				set
+				{
+					if (m_impl_normal == value) return;
+					m_impl_normal = value;
+				}
+			}
+			private v4 m_impl_normal;
+
+			/// <summary>Get the diagram space position of the anchor</summary>
+			public v4 LocationDS { get { return Elem != null ? Elem.Position * Location : Location; } }
+			
+			/// <summary>Get the diagram space anchor normal</summary>
+			public v4 NormalDS   { get { return Elem != null ? Elem.Position * Normal   : Normal  ; } }
 
 			/// <summary>Update this anchor point location after it has moved/resized</summary>
 			public void Update(Element connected, bool nearest_previous)
@@ -1964,15 +2027,11 @@ namespace pr.gui
 				// If this is a single click...
 				if (IsClick(e.Location))
 				{
-					// Forward the click to the top element
-					var ht = m_diag.HitTestCS(e.Location);
-					var hit = ht.Hits.FirstOrDefault();
-					var target = hit != null ? hit.Element : null;
-
 					// Check to see if the click is on an existing selected object
-					// If so, allow that object handle the click
-					// Otherwise, standard single click selection
-					if (target == null || !target.HandleClicked(hit, ht.Camera))
+					// If so, allow that object handle the click, otherwise select elements.
+					var ht = m_diag.HitTestCS(e.Location);
+					var sel = ht.Hits.FirstOrDefault(x => x.Element.Selected);
+					if (sel == null || !sel.Element.HandleClicked(sel, ht.Camera))
 					{
 						var selection_area = new BRect(m_grab_ds, v2.Zero);
 						m_diag.SelectElements(selection_area, ModifierKeys);
@@ -2055,13 +2114,13 @@ namespace pr.gui
 				if (target != null)
 				{
 					var anchor = target.NearestAnchor(hit.Point, true);
-					m_proxy.PositionXY = anchor.LocationWS.xy;
-					m_proxy.AnchorNormalWS = anchor.NormalWS;
+					m_proxy.PositionXY = anchor.LocationDS.xy;
+					m_proxy.AnchorNormal = anchor.Normal;
 				}
 				else
 				{
 					m_proxy.PositionXY = m_diag.ClientToDiagram(e.Location);
-					m_proxy.AnchorNormalWS = v4.Zero;
+					m_proxy.AnchorNormal = v4.Zero;
 				}
 				m_conn.Invalidate();
 				m_diag.Refresh();
@@ -2081,8 +2140,14 @@ namespace pr.gui
 				else
 				{
 					// Look for an existing connector between 'm_fixed' and 'target'
-					var existing = m_fixed.Connectors.FirstOrDefault(x => m_forward ? x.Node1 == target : x.Node0 == target);
-					if (existing != null) Revert();
+					var existing = m_fixed != null
+						? m_fixed.Connectors.FirstOrDefault(x => m_forward ? x.Node1 == target : x.Node0 == target)
+						: null;
+
+					if (existing != null)
+					{
+						Revert();
+					}
 					else
 					{
 						var anchor = target.NearestAnchor(hit.Point, true);
@@ -3206,7 +3271,8 @@ namespace pr.gui
 				}
 			}
 
-			foreach (var c in conns)
+			// Relink all connectors connected to nodes that have moved
+			foreach (var c in nodes.SelectMany(x => x.Connectors).Distinct())
 				c.Relink(!Options.Node.AutoRelink);
 			UpdateDiagram();
 		}
