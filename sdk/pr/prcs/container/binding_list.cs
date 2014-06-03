@@ -36,7 +36,7 @@ namespace pr.container
 					if (a.ListChangedType == ListChangedType.Reset)
 						ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
 					if (a.ListChangedType == ListChangedType.ItemChanged)
-						ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, a.NewIndex, this[a.NewIndex]));
+						ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
 				};
 		}
 
@@ -164,7 +164,7 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.PreReset, position, this[position]);
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreReset, position, this[position]);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;

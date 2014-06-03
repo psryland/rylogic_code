@@ -70,6 +70,9 @@ namespace TestCS
 			node5.Dispose();
 			node5 = null;
 
+			var lbl1 = new Joypad();
+			lbl1.Elem = conn5;
+
 			m_diag.ResetView();
 
 			node0.BringToFront();
@@ -101,6 +104,22 @@ namespace TestCS
 			//		{}
 			//	};
 			//tim.Start();
+
+		}
+
+		private class Joypad :DiagramControl.Label
+		{
+			public Joypad()
+				:base(300, 300)
+			{
+			}
+
+			protected override void RefreshInternal()
+			{
+				var ldr = new pr.ldr.LdrBuilder();
+				ldr.Append("*Box b FF00FF00 {20 *o2w{*randori}}");
+				Gfx.UpdateModel(ldr.ToString());
+			}
 
 		}
 

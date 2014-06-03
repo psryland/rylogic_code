@@ -7,17 +7,19 @@ namespace pr.container
 {
 	public enum ListChg
 	{
-		/// <summary>
-		/// Raised before a single item or the entire list is reset.
-		/// If Index == -1, the entire list is reseting.</summary>
+		/// <summary>Raised before the entire list is reset</summary>
 		PreReset,
 		
-		/// <summary>
-		/// Raised after a single item or the entire list is reset.
-		/// If Index == -1, the entire list was reset.</summary>
+		/// <summary>Raised after the entire list is reset</summary>
 		Reset,
 
-		/// <summary>Raised just before an item is added to the list.</summary>
+		/// <summary>Raised before a single item is reset</summary>
+		ItemPreReset,
+
+		/// <summary>Raised after a single item is reset</summary>
+		ItemReset,
+
+		/// <summary>Raised just before an item is added to the list</summary>
 		ItemPreAdd,
 
 		/// <summary>Raised just after an item is added to the list</summary>

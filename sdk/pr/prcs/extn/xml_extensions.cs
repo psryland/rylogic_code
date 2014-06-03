@@ -550,17 +550,11 @@ namespace pr.extn
 			return AsMap.Convert(elem, typeof(object), factory);
 		}
 
-		/// <summary>
-		/// Return this element as an instance of 'T'.<para/>
-		/// Use 'ToObject' if the type should be inferred from the node attributes<para/>
-		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.<para/>
-		/// E.g:<para/>
-		///  val = node.Element("val").As&lt;int&gt;(); <para/>
-		///  val = node.Element("val").As&lt;int&gt;(default_val); <para/></summary>
-		public static T As<T>(this XElement elem, T optional_default, Func<Type,object> factory = null)
+		/// <summary>Returns this xml node as an instance of the type implied by it's node attributes</summary>
+		public static object ToObject(this XElement elem, object optional_default, Func<Type,object> factory = null)
 		{
 			if (elem == null) return optional_default;
-			return (T)AsMap.Convert(elem, typeof(T), factory);
+			return ToObject(elem, factory);
 		}
 
 		/// <summary>
@@ -574,6 +568,19 @@ namespace pr.extn
 		{
 			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
 			return (T)AsMap.Convert(elem, typeof(T), factory);
+		}
+
+		/// <summary>
+		/// Return this element as an instance of 'T'.<para/>
+		/// Use 'ToObject' if the type should be inferred from the node attributes<para/>
+		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.<para/>
+		/// E.g:<para/>
+		///  val = node.Element("val").As&lt;int&gt;(); <para/>
+		///  val = node.Element("val").As&lt;int&gt;(default_val); <para/></summary>
+		public static T As<T>(this XElement elem, T optional_default, Func<Type,object> factory = null)
+		{
+			if (elem == null) return optional_default;
+			return As<T>(elem, factory);
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>

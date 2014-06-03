@@ -105,12 +105,12 @@ namespace pr.container
 			var index = Position;
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, index, item));
 
 			base.ResetCurrentItem();
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, index, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, index, item));
 		}
 
 		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
@@ -119,12 +119,12 @@ namespace pr.container
 			var item = this[itemIndex];
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, itemIndex, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, itemIndex, item));
 
 			base.ResetItem(itemIndex);
 
 			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, itemIndex, item));
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
 		}
 	}
 }
@@ -220,17 +220,17 @@ namespace pr
 					bl.ResetBindings();
 					bl.ResetItem(1);
 					Assert.True(bl_evts.Contains
-						(ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.PreReset   ,ListChg.Reset
-						,ListChg.PreReset   ,ListChg.Reset));
+						(ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.PreReset     ,ListChg.Reset
+						,ListChg.ItemPreReset ,ListChg.ItemReset));
 					Assert.True(bs_evts.Contains
-						(ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd ,ListChg.ItemAdded
-						,ListChg.PreReset   ,ListChg.Reset
-						,ListChg.PreReset   ,ListChg.Reset));
+						(ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+						,ListChg.PreReset     ,ListChg.Reset
+						,ListChg.ItemPreReset ,ListChg.ItemReset));
 					clear();
 				}
 
@@ -291,9 +291,9 @@ namespace pr
 					bs.ResetBindings(false);
 					Assert.True(bl_evts.Contains());
 					Assert.True(bs_evts.Contains
-						(ListChg.PreReset   ,ListChg.Reset
-						,ListChg.PreReset   ,ListChg.Reset
-						,ListChg.PreReset   ,ListChg.Reset
+						(ListChg.ItemPreReset ,ListChg.ItemReset
+						,ListChg.ItemPreReset ,ListChg.ItemReset
+						,ListChg.PreReset     ,ListChg.Reset
 						));
 					clear();
 				}
