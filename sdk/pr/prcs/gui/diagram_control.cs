@@ -52,7 +52,6 @@ namespace pr.gui
 				m_impl_position    = position;
 				m_impl_selected    = false;
 				m_impl_visible     = true;
-				m_allow_invalidate = false;
 			}
 			protected Element(XElement node)
 			{
@@ -60,7 +59,6 @@ namespace pr.gui
 				Id       = node.Element(XmlField.Id).As<Guid>();
 				Position = node.Element(XmlField.Position).As<m4x4>();
 				Visible  = true;
-				m_allow_invalidate = false;
 			}
 			public virtual void Dispose()
 			{
@@ -139,11 +137,9 @@ namespace pr.gui
 				Dirty = true;
 				Invalidated.Raise(this, EventArgs.Empty);
 			}
-			protected void AllowInvalidate() { m_allow_invalidate = true; Invalidate(); }
-			private bool m_allow_invalidate;
 
 			/// <summary>Dirty flag = need to render</summary>
-			private bool Dirty { get { return m_impl_dirty; } set { m_impl_dirty = value && m_allow_invalidate; } }
+			private bool Dirty { get { return m_impl_dirty; } set { m_impl_dirty = value; } }
 			private bool m_impl_dirty;
 
 			/// <summary>Get/Set whether events from this element are suspended or not</summary>
@@ -297,11 +293,18 @@ namespace pr.gui
 			}
 			private m4x4 m_impl_position;
 
+			/// <summary>Get/Set the centre point of the element (in diagram space)</summary>
+			public v2 Centre
+			{
+				get { return Bounds.Centre; }
+				set { PositionXY = value + (PositionXY - Centre); }
+			}
+
 			/// <summary>AABB for the element in diagram space</summary>
-			public abstract BRect Bounds { get; }
+			public virtual BRect Bounds { get { return new BRect(PositionXY, v2.Zero); } }
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public abstract HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam);
+			public virtual HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam) { return null; }
 
 			/// <summary>Handle a click event on this element</summary>
 			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
@@ -327,13 +330,13 @@ namespace pr.gui
 				if (!pt_in_element_space)
 					point = m4x4.InverseFast(Position) * point;
 
-				return AnchorPoints.MinBy(x => (x.Location - point).Length3Sq);
+				return AnchorPoints().MinBy(x => (x.Location - point).Length3Sq);
 			}
 
 			/// <summary>Return all the locations that connectors can attach to this node (in node space)</summary>
-			public virtual IEnumerable<AnchorPoint> AnchorPoints
+			public virtual IEnumerable<AnchorPoint> AnchorPoints()
 			{
-				get { yield return new AnchorPoint(this, v4.Origin, v4.Zero); }
+				yield return new AnchorPoint(this, v4.Origin, v4.Zero);
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -347,11 +350,37 @@ namespace pr.gui
 					Dirty = false;
 				}
 			}
-			protected abstract void RefreshInternal();
+			protected virtual void RefreshInternal() {}
 			private bool m_impl_refreshing;
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal abstract void AddToDrawset(View3d.DrawsetInterface drawset);
+			internal void AddToDrawset(View3d.DrawsetInterface drawset) { AddToDrawsetInternal(drawset); }
+			protected virtual void AddToDrawsetInternal(View3d.DrawsetInterface drawset) {}
+
+			/// <summary>Edit the element contents</summary>
+			public virtual void Edit()
+			{
+				// Get the user control used to edit the node
+				var editing_control = EditingControl();
+				if (editing_control == null)
+					return; // not editable
+
+				// Create a form to host the control
+				var edit = new EditField(editing_control)
+				{
+					Bounds = Diagram.RectangleToScreen(Diagram.DiagramToClient(Bounds)),
+				};
+
+				// Display modally
+				if (edit.ShowDialog(Diagram.ParentForm) == DialogResult.OK)
+					editing_control.Commit();
+			}
+
+			/// <summary>Gets a control to use for editing the element. Return null if not editable</summary>
+			protected virtual EditingControl EditingControl()
+			{
+				return null;
+			}
 
 			/// <summary>Check the self consistency of this element</summary>
 			public virtual bool CheckConsistency()
@@ -361,7 +390,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Base class for a rectangular resizable element</summary>
-		public abstract class RectElement :Element
+		public abstract class ResizeableElement :Element
 		{
 			/// <summary>Base node constructor</summary>
 			/// <param name="id">Globally unique id for the element</param>
@@ -369,21 +398,23 @@ namespace pr.gui
 			/// <param name="width">The width of the node, or if 'autosize' is true, the maximum width of the node</param>
 			/// <param name="height">The height of the node, or if 'autosize' is true, the maximum height of the node</param>
 			/// <param name="position">The position of the node on the diagram</param>
-			protected RectElement(Guid id, bool autosize, uint width, uint height, m4x4 position)
+			protected ResizeableElement(Guid id, bool autosize, uint width, uint height, m4x4 position)
 				:base(id, position)
 			{
 				// Set the node size
 				m_impl_autosize = autosize;
 				m_impl_sizemax = AutoSize ? new v2(width, height) : v2.Zero;
 				m_impl_size = new v2(width, height);
+				m_size_changed = true;
 			}
-			protected RectElement(XElement node)
+			protected ResizeableElement(XElement node)
 				:base(node)
 			{
 				// Set the node size
 				m_impl_autosize = node.Element(XmlField.AutoSize).As<bool>();
 				m_impl_sizemax = node.Element(XmlField.SizeMax).As<v2>();
 				m_impl_size = node.Element(XmlField.Size).As<v2>();
+				m_size_changed = true;
 			}
 
 			/// <summary>Export to xml</summary>
@@ -433,10 +464,14 @@ namespace pr.gui
 			protected virtual void SetSize(v2 sz)
 			{
 				m_impl_size = sz;
+				m_size_changed = true;
 				RaiseSizeChanged();
 				Invalidate();
 			}
 			private v2 m_impl_size;
+			
+			/// <summary>Size-changed dirty flag for derived elements</summary>
+			protected bool m_size_changed;
 
 			/// <summary>Get/Set limits for auto size</summary>
 			public virtual v2 SizeMax
@@ -459,46 +494,8 @@ namespace pr.gui
 				return Size;
 			}
 
-			/// <summary>Get/Set the centre point of the node (in diagram space)</summary>
-			public virtual v2 Centre
-			{
-				get { return Bounds.Centre; }
-				set { PositionXY = value + (PositionXY - Centre); }
-			}
-
 			/// <summary>AABB for the element in diagram space</summary>
-			public override BRect Bounds
-			{
-				get { return new BRect(Position.pos.xy, Size / 2); }
-			}
-
-			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
-			{
-				var bounds = Bounds;
-				if (!bounds.IsWithin(point)) return null;
-				point -= bounds.Centre;
-
-				var hit = new HitTestResult.Hit(this, point);
-				return hit;
-			}
-
-			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			public override IEnumerable<AnchorPoint> AnchorPoints
-			{
-				get
-				{
-					var x = new []{0f};
-					var y = new []{0f};
-					for (int i = 0; i != x.Length; ++i)
-					{
-						yield return new AnchorPoint(this, new v4(+Size.x/2f, y[i], 0, 1), +v4.XAxis);
-						yield return new AnchorPoint(this, new v4(-Size.x/2f, y[i], 0, 1), -v4.XAxis);
-						yield return new AnchorPoint(this, new v4(x[i], +Size.y/2f, 0, 1), +v4.YAxis);
-						yield return new AnchorPoint(this, new v4(x[i], -Size.y/2f, 0, 1), -v4.YAxis);
-					}
-				}
-			}
+			public override BRect Bounds { get { return new BRect(PositionXY, Size / 2); } }
 		}
 
 		#endregion
@@ -506,7 +503,7 @@ namespace pr.gui
 		#region Nodes
 
 		/// <summary>Base class for all node types</summary>
-		public abstract class Node :RectElement
+		public abstract class Node :ResizeableElement
 		{
 			/// <summary>Base node constructor</summary>
 			/// <param name="id">Globally unique id for the element</param>
@@ -535,8 +532,6 @@ namespace pr.gui
 			private void Init()
 			{
 				Connectors = new BindingListEx<Connector>();
-
-				// Watch for style changes
 				Style.StyleChanged += Invalidate;
 			}
 			public override void Dispose()
@@ -656,13 +651,33 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>Edit the node contents</summary>
-			public virtual void Edit(DiagramControl diag)
+			/// <summary>Gets a control to use for editing the element. Return null if not editable</summary>
+			protected override EditingControl EditingControl()
 			{
-				var bounds = diag.DiagramToClient(Bounds);
-				var edit = new EditField{Location = diag.PointToScreen(bounds.Location), Text = Text, Font = Style.Font};
-				if (edit.ShowDialog(diag.ParentForm) == DialogResult.OK)
-					Text = edit.Text.Trim();
+				var tb = new TextBox
+					{
+						Multiline = true,
+						MinimumSize = new Size(80,30),
+						MaximumSize = new Size(640,480),
+						BorderStyle = BorderStyle.None,
+						Margin = Padding.Empty,
+						Text = Text,
+					};
+				Action<Form> autosize = form =>
+					{
+						var sz         = tb.PreferredSize;
+						sz.Width      += 1;
+						sz.Height     += tb.Font.Height + 2;
+						form.Size      = sz;
+						tb.Size        = sz;
+						form.Size      = tb.Size;
+						tb.ScrollBars  = tb.Size != sz ? ScrollBars.Both : ScrollBars.None;
+					};
+				Action commit = () =>
+					{
+						Text = tb.Text.Trim();
+					};
+				return new EditingControl(tb, autosize, commit);
 			}
 
 			/// <summary>Update the connectors attached to this node</summary>
@@ -704,55 +719,6 @@ namespace pr.gui
 			public override string ToString() { return "Node (" + Text.Summary(10) + ")"; }
 		}
 
-		/// <summary>A base class for nodes containing a texture</summary>
-		public abstract class TexturedNode :Node
-		{
-			private readonly Surface m_surf;
-
-			/// <summary>TexturedNode constructor</summary>
-			/// <param name="id">Globally unique id for the element</param>
-			/// <param name="autosize">If true, the width and height are maximum size limits (0 meaning unlimited)</param>
-			/// <param name="width">The width of the node, or if 'autosize' is true, the maximum width of the node</param>
-			/// <param name="height">The height of the node, or if 'autosize' is true, the maximum height of the node</param>
-			/// <param name="text">The text of the node</param>
-			/// <param name="position">The position of the node on the diagram</param>
-			/// <param name="style">Style properties for the node</param>
-			protected TexturedNode(Guid id, bool autosize, uint width, uint height, string text, m4x4 position, NodeStyle style)
-				:base(id, autosize, width, height, text, position, style)
-			{
-				m_surf = new Surface(1,1);
-			}
-			protected TexturedNode(XElement node)
-				:base(node)
-			{
-				m_surf = new Surface(1,1);
-			}
-			public override void Dispose()
-			{
-				if (m_surf != null) m_surf.Dispose();
-				base.Dispose();
-			}
-
-			/// <summary>Scaling from node size to texture size</summary>
-			protected uint TextureScale
-			{
-				get { return m_surf.TextureScale; }
-			}
-
-			/// <summary>Change the size of the node</summary>
-			protected override void SetSize(v2 sz)
-			{
-				m_surf.SetSize(sz);
-				base.SetSize(sz);
-			}
-
-			/// <summary>The surface to draw on for the node</summary>
-			protected View3d.Texture Surf
-			{
-				get { return m_surf.Surf; }
-			}
-		}
-
 		/// <summary>An invisible 'node-like' object used for detaching/attaching connectors</summary>
 		public class NodeProxy :Node
 		{
@@ -788,10 +754,10 @@ namespace pr.gui
 				return hit;
 			}
 
-			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			public override IEnumerable<AnchorPoint> AnchorPoints
+			/// <summary>Return all the locations that connectors can attach to on this element</summary>
+			public override IEnumerable<AnchorPoint> AnchorPoints()
 			{
-				get { yield return m_anchor_point; }
+				yield return m_anchor_point;
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
@@ -799,17 +765,17 @@ namespace pr.gui
 			{}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
+			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
 			{}
 		}
 
 		/// <summary>Simple rectangular box node</summary>
-		public class BoxNode :TexturedNode
+		public class BoxNode :Node
 		{
 			private const string LdrName = "node";
 
 			/// <summary>Only one graphics object for a box node</summary>
-			private View3d.Object m_gfx;
+			private readonly TexturedQuad m_gfx;
 
 			public BoxNode()
 				:this(Guid.NewGuid())
@@ -832,32 +798,25 @@ namespace pr.gui
 			public BoxNode(Guid id, string text, bool autosize, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style)
 				:base(id, autosize, width, height, text, position, style)
 			{
-				CornerRadius = corner_radius;
+				m_gfx = new TexturedQuad(Size, corner_radius);
 				Init();
 			}
 			public BoxNode(XElement node)
 				:base(node)
 			{
-				CornerRadius = node.Element(XmlField.CornerRadius).As<float>();
+				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
+				m_gfx = new TexturedQuad(Size, corner_radius);
 				Init();
 			}
 			private void Init()
 			{
-				// Create the graphics object
-				m_gfx = new View3d.Object("*Group{}");
-				m_size_changed = true;
-				Refresh(true);
-
 				if (AutoSize)
 					SetSize(PreferredSize(SizeMax));
-
-				AllowInvalidate();
 			}
 			public override void Dispose()
 			{
-				base.Dispose();
 				if (m_gfx != null) m_gfx.Dispose();
-				m_gfx = null;
+				base.Dispose();
 			}
 
 			/// <summary>Export to xml</summary>
@@ -876,10 +835,9 @@ namespace pr.gui
 			/// <summary>The radius of the box node corners</summary>
 			public float CornerRadius
 			{
-				get { return m_impl_corner_radius; }
-				set { m_impl_corner_radius = value; Invalidate(); }
+				get { return m_gfx.CornerRadius; }
+				set { m_gfx.CornerRadius = value; Invalidate(); }
 			}
-			private float m_impl_corner_radius;
 
 			/// <summary>Set the position of the element</summary>
 			protected override void SetPosition(m4x4 pos)
@@ -888,30 +846,52 @@ namespace pr.gui
 				if (m_gfx != null) m_gfx.O2P = pos;
 			}
 
-			/// <summary>Detect resize and update the graphics as needed</summary>
+			/// <summary>Change the size of the node</summary>
 			protected override void SetSize(v2 sz)
 			{
 				base.SetSize(sz);
-				m_size_changed = true;
+				m_gfx.Size = sz;
 			}
-			private bool m_size_changed;
 
-			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			public override IEnumerable<AnchorPoint> AnchorPoints
+			/// <summary>Perform a hit test on this element. Returns null for no hit. 'point' is in diagram space</summary>
+			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
-				get
+				var bounds = Bounds;
+				if (!bounds.IsWithin(point)) return null;
+				point -= bounds.Centre;
+
+				var hit = new HitTestResult.Hit(this, point);
+				return hit;
+			}
+
+			/// <summary>Return all the locations that connectors can attach to on this element</summary>
+			public override IEnumerable<AnchorPoint> AnchorPoints()
+			{
+				const float pixels_per_anchor = 5f;
+				
+				// Get the dimensions and half dimensions
+				var hsx = Size.x/2f - CornerRadius;
+				var hsy = Size.y/2f - CornerRadius;
+
+				// Find how many anchors will fit along x
+				var divx = 1; for (; hsx / (1+divx) > pixels_per_anchor; ++divx) {}
+				var divy = 1; for (; hsy / (1+divy) > pixels_per_anchor; ++divy) {}
+				divx = Math.Max(1, divx - 1);
+				divy = Math.Max(1, divy - 1);
+
+				for (int i = -divx; i <= divx; ++i)
 				{
-					var sx = Size.x - 2*CornerRadius;
-					var sy = Size.y - 2*CornerRadius;
-					var x = new []{-sx/4f, 0f, sx/4f};
-					var y = new []{-sy/4f, 0f, sy/4f};
-					for (int i = 0; i != x.Length; ++i)
-					{
-						yield return new AnchorPoint(this, new v4(+Size.x/2f, y[i], 0, 1), +v4.XAxis);
-						yield return new AnchorPoint(this, new v4(-Size.x/2f, y[i], 0, 1), -v4.XAxis);
-						yield return new AnchorPoint(this, new v4(x[i], +Size.y/2f, 0, 1), +v4.YAxis);
-						yield return new AnchorPoint(this, new v4(x[i], -Size.y/2f, 0, 1), -v4.YAxis);
-					}
+					var x = hsx * i / divx;
+					var y = hsy + CornerRadius;
+					yield return new AnchorPoint(this, new v4(x, +y, 0, 1), +v4.YAxis);
+					yield return new AnchorPoint(this, new v4(x, -y, 0, 1), -v4.YAxis);
+				}
+				for (int i = -divy; i <= divy; ++i)
+				{
+					var x = hsx + CornerRadius;
+					var y = hsy * i / divy;
+					yield return new AnchorPoint(this, new v4(+x, y, 0, 1), +v4.XAxis);
+					yield return new AnchorPoint(this, new v4(-x, y, 0, 1), -v4.XAxis);
 				}
 			}
 
@@ -919,23 +899,14 @@ namespace pr.gui
 			protected override void RefreshInternal()
 			{
 				// Update the graphics model when the size changes
-				if (m_size_changed)
-				{
-					var ldr = new LdrBuilder();
-					ldr.Append("*Rect node {3 ",Size.x," ",Size.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-					m_gfx.UpdateModel(ldr.ToString());
-					m_gfx.SetTexture(Surf);
-					m_size_changed = false;
-				}
+				m_gfx.Refresh();
 
 				// Update the position
 				m_gfx.O2P = Position;
 
 				// Update the texture surface
-				using (var tex = Surf.LockSurface())
+				using (var tex = m_gfx.LockSurface())
 				{
-					tex.Gfx.ScaleTransform(TextureScale, TextureScale);
-
 					var rect = Bounds.ToRectangle();
 					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
 
@@ -946,7 +917,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
+			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
 			{
 				drawset.AddObject(m_gfx);
 			}
@@ -957,38 +928,25 @@ namespace pr.gui
 		#region Labels
 		
 		/// <summary>Base class for all labels</summary>
-		public abstract class Label :RectElement
+		public abstract class Label :Element
 		{
 			// Labels are attached to elements and move as child objects
 			public Label()
-				:this(0U, 0U)
+				:this(Guid.NewGuid())
 			{}
-			public Label(uint sx, uint sy)
-				:this(Guid.NewGuid(), sx, sy, m4x4.Identity)
+			public Label(Guid id)
+				:this(id, m4x4.Identity)
 			{}
-			public Label(Guid id, uint sx, uint sy, m4x4 position)
-				:base(id, false, sx, sy, position)
+			public Label(Guid id, m4x4 position)
+				:base(id, position)
 			{
 				m_anc = new AnchorPoint();
-				Init();
 			}
 			public Label(XElement node)
 				:base(node)
 			{
 				m_anc = new AnchorPoint();
 				Anc = node.Element(XmlField.Anchor).As<AnchorPoint>();
-				Init();
-			}
-			private void Init()
-			{
-				Gfx = new View3d.Object("*Group{}");
-				AllowInvalidate();
-			}
-			public override void Dispose()
-			{
-				if (Gfx != null) Gfx.Dispose();
-				Gfx = null;
-				base.Dispose();
 			}
 
 			/// <summary>Get the entity type for this element</summary>
@@ -1001,16 +959,18 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
+				node.Add2(XmlField.Anchor, Anc, false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
 				base.FromXml(node);
+				Anc = node.Element(XmlField.Anchor).As<AnchorPoint>(Anc);
 			}
 
-			/// <summary>The label graphics object</summary>
-			protected View3d.Object Gfx { get; private set; }
-
+			/// <summary>Disable selection for labels</summary>
+			public override bool Selected { get { return false; } set { } }
+	
 			/// <summary>The anchor point that the label is attached to</summary>
 			public AnchorPoint Anc
 			{
@@ -1045,71 +1005,91 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>Set the position of the element</summary>
-			protected override void SetPosition(m4x4 pos)
+			/// <summary>Update the anchor position whenever the parent element moves</summary>
+			private void HandleElementMoved(object sender = null, EventArgs args = null)
 			{
-				base.SetPosition(pos);
-				UpdatePosition();
-			}
-			private void UpdatePosition()
-			{
-				m_anc.Update(m_anc.Elem, true);
-				
-			}
-
-			/// <summary>Handle the element the label is attached to moving</summary>
-			private void HandleElementMoved(object sender, EventArgs args)
-			{
-				UpdatePosition();
+				// Need to call update on the anchor because the anchor can move on the parent element
+				Anc.Update(Elem, true);
+				Position = m4x4.Translation(Anc.LocationDS.xy, PositionZ);
 				Invalidate();
 			}
 
-			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
+			/// <summary>Edit the label contents</summary>
+			protected override EditingControl EditingControl()
 			{
-				drawset.AddObject(Gfx);
+				return null;
 			}
 		}
 
 		/// <summary>Base class for labels containing a texture</summary>
-		public abstract class TexturedLabel :Label
+		public class TexturedLabel :Label
 		{
-			private readonly Surface m_surf;
-			
+			private readonly TexturedQuad m_gfx;
+
 			public TexturedLabel()
 				:this(0U, 0U)
 			{}
 			public TexturedLabel(uint sx, uint sy)
-				:this(Guid.NewGuid(), sx, sy, m4x4.Identity)
+				:this(Guid.NewGuid(), sx, sy)
+			{}
+			public TexturedLabel(Guid id, uint sx, uint sy)
+				:this(id, sx, sy, m4x4.Identity)
 			{}
 			public TexturedLabel(Guid id, uint sx, uint sy, m4x4 position)
-				:base(id, sx, sy, position)
+				:base(id, position)
 			{
-				m_surf = new Surface(sx, sy);
+				m_gfx = new TexturedQuad(new v2(sx, sy), 0);
 			}
 			public override void Dispose()
 			{
-				if (m_surf != null) m_surf.Dispose();
+				if (m_gfx != null) m_gfx.Dispose();
 				base.Dispose();
 			}
 
-			/// <summary>Texture scaling factor</summary>
-			protected uint TextureScale
+			/// <summary>Get/Set the size of the element</summary>
+			public v2 Size
 			{
-				get { return m_surf.TextureScale; }
+				get { return m_gfx.Size; }
+				set { m_gfx.Size = value; Invalidate(); }
 			}
 
-			/// <summary>Change the size of the node</summary>
-			protected override void SetSize(v2 sz)
+			/// <summary>AABB for the element in diagram space</summary>
+			public override BRect Bounds
 			{
-				m_surf.SetSize(sz);
-				base.SetSize(sz);
+				get { return new BRect(Position.pos.xy, Size / 2); }
 			}
+
+			/// <summary>Access the graphics object</summary>
+			protected View3d.Object Gfx { get { return m_gfx; } }
 
 			/// <summary>The surface to draw on for the node</summary>
-			protected View3d.Texture Surf
+			protected View3d.Texture.Lock LockSurface()
 			{
-				get { return m_surf.Surf; }
+				return m_gfx.LockSurface();
+			}
+
+			/// <summary>Update the graphics and object transforms associated with this element</summary>
+			protected override void RefreshInternal()
+			{
+				m_gfx.Refresh();
+				m_gfx.O2P = Position;
+			}
+
+			/// <summary>Perform a hit test on this element. Returns null for no hit. 'point' is in diagram space</summary>
+			public override HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			{
+				var bounds = Bounds;
+				if (!bounds.IsWithin(point)) return null;
+				point -= bounds.Centre;
+
+				var hit = new HitTestResult.Hit(this, point);
+				return hit;
+			}
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
+			{
+				drawset.AddObject(m_gfx);
 			}
 		}
 
@@ -1189,7 +1169,6 @@ namespace pr.gui
 				
 				Relink(find_previous_anchors);
 				Refresh(true);
-				AllowInvalidate();
 			}
 			public override void Dispose()
 			{
@@ -1375,9 +1354,9 @@ namespace pr.gui
 				{
 					if (Selected == value) return;
 					base.Selected = value;
-					m_gfx_line.SetColour(Selected ? Style.Selected : Style.Line);
-					m_gfx_fwd .SetColour(Selected ? Style.Selected : Style.Line);
-					m_gfx_bak .SetColour(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_line != null) m_gfx_line.SetColour(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_fwd  != null) m_gfx_fwd .SetColour(Selected ? Style.Selected : Style.Line);
+					if (m_gfx_bak  != null) m_gfx_bak .SetColour(Selected ? Style.Selected : Style.Line);
 					UpdatePositions();
 				}
 			}
@@ -1437,19 +1416,9 @@ namespace pr.gui
 				var closest_pt = v2.Zero;
 				if (Style.Smooth && points.Length > 2)
 				{
-					// The ribbon object smooths points using the following algorithm
-					// How to not duplicate this code?
-
-					// Generate a spline from each set of three points in 'points'
-					for (int i = 1, iend = points.Length - 1; i != iend; ++i)
+					// Smooth connectors convert the points to splines
+					foreach (var spline in Spline.CreateSplines(points.Select(x => new v4(x,0,1))))
 					{
-						// Generate points for the spline
-						var sp = i == 1 ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
-						var sc = points[i];
-						var ec = points[i];
-						var ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
-						var spline = new Spline(new v4(sp,0,1), new v4(sc,0,1), new v4(ec,0,1), new v4(ep,0,1));
-
 						// Find the closest point to the spline
 						var t = Geometry.ClosestPoint(spline, new v4(point,0,1));
 						var pt = spline.Position(t);
@@ -1477,10 +1446,7 @@ namespace pr.gui
 				}
 
 				// Convert separating distance screen space
-				var dist_cs =
-					v2.From(cam.SSPointFromWSPoint(new v4(point,0,1))) -
-					v2.From(cam.SSPointFromWSPoint(new v4(closest_pt,0,1)));
-
+				var dist_cs = cam.SSVecFromWSVec(closest_pt, point);
 				if (dist_cs.Length2Sq > MinCSSelectionDistanceSq) return null;
 				return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
 			}
@@ -1519,13 +1485,16 @@ namespace pr.gui
 				Invalidate();
 			}
 
-			/// <summary>Return all the locations that connectors can attach to on this node (in node space)</summary>
-			public override IEnumerable<AnchorPoint> AnchorPoints
+			/// <summary>Return all the locations that connectors can attach to on this element</summary>
+			public override IEnumerable<AnchorPoint> AnchorPoints()
 			{
-				get
-				{
-					yield return new AnchorPoint(this, Position.pos, v4.Zero);
-				}
+				var pts = Points(false);
+				v4 ctr;
+				if      (pts.Length == 4)                  ctr = new v4((pts[1] + pts[2]) / 2f, PositionZ, 1);
+				else if (pts.Length == 3 && !Style.Smooth) ctr = new v4(pts[1], PositionZ, 1);
+				else if (pts.Length == 3)                  ctr = Spline.CreateSplines(pts.Select(x => new v4(x,PositionZ,1))).First().Position(0.5f);
+				else throw new Exception("unexpected number of connector points");
+				yield return new AnchorPoint(this, ctr, v4.Zero);
 			}
 
 			/// <summary>Update the graphics and transforms for the connector</summary>
@@ -1559,7 +1528,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			internal override void AddToDrawset(View3d.DrawsetInterface drawset)
+			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
 			{
 				// Add the main connector line
 				drawset.AddObject(m_gfx_line);
@@ -1672,7 +1641,7 @@ namespace pr.gui
 				slen = Math.Min(Math.Max(slen, MinConnectorLen), Style.Smooth ? MinConnectorLen : slen);
 				elen = Math.Min(Math.Max(elen, MinConnectorLen), Style.Smooth ? MinConnectorLen : elen);
 
-				return new[]{start, start + slen * dir0, end + elen*dir1, end};
+				return new[]{start, start + slen*dir0, end + elen*dir1, end};
 			}
 
 			/// <summary>Check the self consistency of this element</summary>
@@ -2328,40 +2297,29 @@ namespace pr.gui
 				}
 				else
 				{
-					// Look for an existing connector between 'm_fixed' and 'target'
-					var existing = m_fixed != null
-						? m_fixed.Connectors.FirstOrDefault(x => m_forward ? x.Node1 == target : x.Node0 == target)
-						: null;
+					var anchor = target.NearestAnchor(hit.Point, true);
 
-					if (existing != null)
+					// Attach 'm_conn' to 'target'
+					if (m_forward)
 					{
-						Revert();
+						m_conn.Node1 = target;
+						m_conn.Anc1.Location = anchor.Location;
+						m_conn.Anc1.Normal   = anchor.Normal;
 					}
 					else
 					{
-						var anchor = target.NearestAnchor(hit.Point, true);
-
-						// Attach 'm_conn' to 'target'
-						if (m_forward)
-						{
-							m_conn.Node1 = target;
-							m_conn.Anc1.Location = anchor.Location;
-							m_conn.Anc1.Normal   = anchor.Normal;
-						}
-						else
-						{
-							m_conn.Node0 = target;
-							m_conn.Anc0.Location = anchor.Location;
-							m_conn.Anc0.Normal   = anchor.Normal;
-						}
-
-						// Notify the caller
-						var res = m_diag.RaiseDiagramChanged(GetNotifyArgs(target));
-						if (res.Cancel)
-							Revert();
-						else
-							m_conn.Invalidate();
+						m_conn.Node0 = target;
+						m_conn.Anc0.Location = anchor.Location;
+						m_conn.Anc0.Normal   = anchor.Normal;
 					}
+
+					// Notify the caller
+					var res = m_diag.RaiseDiagramChanged(GetNotifyArgs(target));
+					if (res.Cancel)
+						Revert();
+					else
+						m_conn.Invalidate();
+
 					m_proxy.Dispose();
 				}
 				m_diag.Refresh();
@@ -2494,6 +2452,74 @@ namespace pr.gui
 		/// <summary>The minimum distance a connector sticks out from a node</summary>
 		private const int MinConnectorLen = 30;
 
+		/// <summary>A 'mixin' class for a textured round-cornered quad</summary>
+		internal class TexturedQuad :View3d.Object
+		{
+			/// <summary>True when the model needs updating</summary>
+			private bool m_model_dirty;
+
+			public TexturedQuad(v2 sz, float corner_radius, uint texture_scale = 4)
+			{
+				m_surf = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
+				m_impl_corner_radius = corner_radius;
+				m_model_dirty = true;
+			}
+			public override void Dispose()
+			{
+ 				m_surf.Dispose();
+				base.Dispose();
+			}
+
+			/// <summary>The radius of the quad corners</summary>
+			public float CornerRadius
+			{
+				get { return m_impl_corner_radius; }
+				set { m_impl_corner_radius = value; m_model_dirty = true; }
+			}
+			private float m_impl_corner_radius;
+
+			/// <summary>The texture surface of the quad</summary>
+			public Surface Surface { get { return m_surf; } }
+			private readonly Surface m_surf;
+
+			/// <summary>Texture scaling factor</summary>
+			public uint TextureScale
+			{
+				get { return Surface.TextureScale; }
+			}
+
+			/// <summary>Lock the texture for drawing on</summary>
+			public View3d.Texture.Lock LockSurface()
+			{
+				return Surface.LockSurface();
+			}
+
+			/// <summary>Get/Set the size of the quad and texture</summary>
+			public v2 Size
+			{
+				get { return m_surf.Size; }
+				set
+				{
+					if (Size == value) return;
+					m_surf.Size = value;
+					m_model_dirty = true;
+				}
+			}
+
+			/// <summary>Update the model</summary>
+			public void Refresh()
+			{
+				if (!m_model_dirty) return;
+
+				var sz = Size;
+				var ldr = new LdrBuilder();
+				ldr.Append("*Rect node {3 ",sz.x," ",sz.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+				UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+				SetTexture(Surface.Surf);
+				m_model_dirty = false;
+			}
+		}
+
 		/// <summary>A 'mixin' class for elements containing a texture</summary>
 		internal class Surface :IDisposable
 		{
@@ -2501,7 +2527,9 @@ namespace pr.gui
 			{
 				Debug.Assert(texture_scale != 0);
 				TextureScale = texture_scale;
-				Surf = new View3d.Texture(TextureScale * sx, TextureScale * sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});
+				sx = Math.Max(1, sx * TextureScale);
+				sy = Math.Max(1, sy * TextureScale);
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
 			{
@@ -2511,12 +2539,16 @@ namespace pr.gui
 			/// <summary>Texture scaling factor</summary>
 			public uint TextureScale { get; private set; }
 
-			/// <summary>Change the size of the texture</summary>
-			public void SetSize(v2 sz)
+			/// <summary>Get/Set the logical (i.e not-scaled) size of the texture</summary>
+			public v2 Size
 			{
-				var tex_size = (sz * TextureScale).ToSize();
-				if (Surf == null || Surf.Size == tex_size) return;
-				Surf.Size = tex_size;
+				get { return v2.From(Surf.Size) / TextureScale; }
+				set
+				{
+					var tex_size = (value * TextureScale).ToSize();
+					if (Surf == null || Surf.Size == tex_size) return;
+					Surf.Size = tex_size;
+				}
 			}
 
 			/// <summary>The texture surface</summary>
@@ -2530,50 +2562,62 @@ namespace pr.gui
 				}
 			}
 			private View3d.Texture m_impl_surf;
+
+			/// <summary>
+			/// Lock the texture for drawing on.
+			/// Draw in logical surface area units, ignore texture scale</summary>
+			public View3d.Texture.Lock LockSurface()
+			{
+				var lck = Surf.LockSurface();
+				lck.Gfx.ScaleTransform(TextureScale, TextureScale);
+				return lck;
+			}
 		}
 
-		/// <summary>Helper form for editing the value in a node</summary>
+		/// <summary>Wraps a hosted control used to edit an element value</summary>
+		public class EditingControl
+		{
+			/// <summary>The control to be display when editing the element</summary>
+			public Control Ctrl;
+
+			/// <summary>Called to resize the form during editing</summary>
+			public Action<Form> DoAutoSize;
+			
+			/// <summary>Called if the editing is accepted</summary>
+			public Action Commit;
+
+			public EditingControl(Control ctrl, Action commit)
+				:this(ctrl, null, commit)
+			{}
+			public EditingControl(Control ctrl, Action<Form> autosize, Action commit)
+			{
+				Ctrl       = ctrl;
+				DoAutoSize = autosize;
+				Commit     = commit;
+			}
+		}
+
+		/// <summary>Helper form for editing the value of an element using a hosted control</summary>
 		private class EditField :Form
 		{
-			private readonly TextBox m_field;
-			public override string Text
+			private readonly EditingControl m_ctrl;
+			public EditField(EditingControl ctrl)
 			{
-				get { return m_field != null ? m_field.Text : string.Empty; }
-				set { if (m_field != null) m_field.Text = value; }
-			}
+				m_ctrl = ctrl;
+				m_ctrl.Ctrl.Dock = DockStyle.Fill;
 
-			public EditField()
-			{
 				ShowInTaskbar   = false;
 				FormBorderStyle = FormBorderStyle.None;
 				KeyPreview      = true;
 				Margin          = Padding.Empty;
 				StartPosition   = FormStartPosition.Manual;
-
-				m_field           = new TextBox
-				{
-					Multiline = true,
-					MinimumSize = new Size(80,30),
-					MaximumSize = new Size(640,480),
-					BorderStyle = BorderStyle.None,
-					Margin = Padding.Empty,
-				};
-
-				Controls.Add(m_field);
-			}
-			private void DoAutoSize()
-			{
-				var sz              = m_field.PreferredSize;
-				sz.Width           += 1;
-				sz.Height          += m_field.Font.Height + 2;
-				Size                = sz;
-				m_field.Size        = sz;
-				Size                = m_field.Size;
-				m_field.ScrollBars  = m_field.Size != sz ? ScrollBars.Both : ScrollBars.None;
+				Controls.Add(m_ctrl.Ctrl);
 			}
 			protected override void OnShown(EventArgs e)
 			{
-				DoAutoSize();
+				if (m_ctrl.DoAutoSize != null)
+					m_ctrl.DoAutoSize(this);
+
  				base.OnShown(e);
 			}
 			protected override void OnKeyDown(KeyEventArgs e)
@@ -2590,7 +2634,10 @@ namespace pr.gui
 					Close();
 					return;
 				}
-				DoAutoSize();
+				
+				if (m_ctrl.DoAutoSize != null)
+					m_ctrl.DoAutoSize(this);
+
 				base.OnKeyDown(e);
 			}
 		}
@@ -3122,18 +3169,13 @@ namespace pr.gui
 				return;
 
 			// Find what was hit
-			var hit = HitTestCS(e.Location);
-			var elem = hit.Hits.FirstOrDefault();
-			if (elem == null)
+			var ht = HitTestCS(e.Location);
+			var hit = ht.Hits.FirstOrDefault();
+			if (hit == null)
 				return;
 
-			switch (elem.Entity)
-			{
-			default: throw new Exception("Unknown diagram element");
-			case Entity.Node: elem.Element.As<Node>().Edit(this); break;
-			case Entity.Connector: break;
-			case Entity.Label: break;
-			}
+			// Edit the element
+			hit.Element.Edit();
 		}
 
 		/// <summary>Reset the view of the diagram back to the default</summary>
@@ -3572,7 +3614,10 @@ namespace pr.gui
 			{
 				var bounds = BRect.Reset;
 				foreach (var elem in Elements)
-					bounds.Encompass(elem.Bounds);
+				{
+					var b = elem.Bounds;
+					if (b.IsValid) bounds.Encompass(b);
+				}
 				return bounds;
 			}
 		}

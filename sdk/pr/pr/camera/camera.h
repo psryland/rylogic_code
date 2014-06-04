@@ -211,7 +211,7 @@ namespace pr
 			point.y = cam.y / (half_height);
 			if (!m_orthographic)
 			{
-				float sz = m_focus_dist / cam.z;
+				float sz = -m_focus_dist / cam.z;
 				point.x *= sz;
 				point.y *= sz;
 			}

@@ -4,8 +4,11 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using pr.common;
+using pr.extn;
 
 namespace pr.maths
 {
@@ -149,6 +152,40 @@ namespace pr.maths
 			if (t0 != 0f) clipped = clipped.Split(t0).Item2;
 			if (t1 != 1f) clipped = clipped.Split(t1).Item1;
 			return Len(clipped, tol);
+		}
+
+		/// <summary>
+		/// Convert a collection of points into a collection of splines.
+		/// Generates a spline from each set of three points in 'points'</summary>
+		public static IEnumerable<Spline> CreateSplines(IEnumerable<v4> points)
+		{
+			var iter = points.GetIterator();
+			if (iter.AtEnd) yield break;
+			
+			v4 p0,p1,p2;
+
+			p1 = iter.Current;
+			iter.MoveNext();
+			if (iter.AtEnd) yield break;
+
+			p2 = iter.Current;
+			iter.MoveNext();
+			if (iter.AtEnd) yield return new Spline(p1, p2, p1, p2);
+
+			// Generate a spline from each set of three points in 'points'
+			for (bool first = true, last = false; !last; first = false)
+			{
+				p0 = p1; p1 = p2; p2 = iter.Current;
+				iter.MoveNext();
+				last = iter.AtEnd;
+
+				// Generate points for the spline
+				var sp = first ? p0 : (p0 + p1) * 0.5f;
+				var sc = p1;
+				var ec = p1;
+				var ep = last ? p2 : (p2 + p1) * 0.5f;
+				yield return new Spline(sp, sc, ec, ep);
+			}
 		}
 
 		///// <summary>Fill a container of points with a rastered version of this spline</summary>

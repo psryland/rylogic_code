@@ -4,8 +4,6 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_SPLINE_H
-#define PR_MATHS_SPLINE_H
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -275,6 +273,35 @@ namespace pr
 		Raster(spline, points, times, max_points, tol);
 	}
 
+	// Convert a container of points into a list of splines
+	// Generates a spline from each set of three points in 'points'
+	// VOut(Spline const& spline, bool last);
+	template <typename Cont, typename VOut>
+	void CreateSplines(Cont const& points, VOut out)
+	{
+		if (points.size() < 2)
+		{
+			return;
+		}
+		if (points.size() < 3)
+		{
+			out(Spline::make(points[0], points[1], points[0], points[1]), true);
+			return;
+		}
+
+		// Generate a spline from each set of three points in 'points'
+		for (size_t i = 1, iend = points.size() - 1; i != iend; ++i)
+		{
+			// Generate points for the spline
+			auto sp = i == 1 ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
+			auto sc = points[i];
+			auto ec = points[i];
+			auto ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
+			auto spline = Spline::make(sp, sc, ec, ep);
+			out(spline, i == iend-1);
+		}
+	}
+
 	// Fill a container of points with a smoothed spline based on 'points
 	template <typename Cont, typename VOut, int MaxPointsPerSpline = 30>
 	void Smooth(Cont const& points, VOut out, float tol = pr::maths::tiny)
@@ -286,25 +313,19 @@ namespace pr
 			return;
 		}
 
-		// Generate a spline from each set of three points in 'points'
 		pr::Array<pr::v4, MaxPointsPerSpline, true> raster;
 		pr::Array<float , MaxPointsPerSpline, true> times;
-		for (size_t i = 1, iend = points.size() - 1; i != iend; ++i)
+		CreateSplines(points, [&](Spline const& spline, bool last)
 		{
-			// Generate points for the spline
-			auto sp = i == 1 ? points[i-1] : (points[i-1] + points[i]) * 0.5f;
-			auto sc = points[i];
-			auto ec = points[i];
-			auto ep = i == iend-1 ? points[i+1] : (points[i+1] + points[i]) * 0.5f;
-			auto spline = pr::Spline::make(sp, sc, ec, ep);
+			raster.resize(0);
+			times.resize(0);
 
 			// Raster the spline into a temp buffer
-			raster.resize(0); times.resize(0);
 			pr::Raster(spline, raster, times, MaxPointsPerSpline, tol);
 
 			// Stream out the verts
-			out(raster.data(), times.data(), raster.size() - (i+1 != iend));
-		}
+			out(raster.data(), times.data(), raster.size() - !last);
+		});
 	}
 	template <typename Cont, int MaxPointsPerSpline = 30>
 	void Smooth(Cont const& points, Cont& out, float tol = pr::maths::tiny)
@@ -369,5 +390,3 @@ namespace pr
 		pr::v4 Acceleration() const { return pr::Spline::Acceleration(m_clock); }
 	};
 }
-
-#endif

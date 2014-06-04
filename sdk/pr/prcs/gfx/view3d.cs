@@ -1083,7 +1083,21 @@ namespace pr.gfx
 				var nss = NormSSPointFromWSPoint(world);
 				return m_ds.View.ScreenSpacePoint(new v2(nss.x, nss.y));
 			}
+			public Point SSPointFromWSPoint(v2 world)
+			{
+				return SSPointFromWSPoint(new v4(world, 0, 1));
+			}
 
+			// Return a screen space vector that is the world space line a->b projected onto the screen.
+			public v2 SSVecFromWSVec(v4 s, v4 e)
+			{
+				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
+			}
+			public v2 SSVecFromWSVec(v2 s, v2 e)
+			{
+				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
+			}
+			
 			/// <summary>
 			/// Convert a screen space point into a position and direction in world space.
 			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
@@ -1106,14 +1120,16 @@ namespace pr.gfx
 			public object Tag {get;set;}
 
 			/// <summary>Create an object from a ldr script description</summary>
+			public Object()
+				:this("*group{}")
+			{}
+			public Object(string ldr_script)
+				:this(ldr_script, DefaultContextId, false)
+			{}
 			public Object(string ldr_script, int context_id, bool async)
 			{
 				EResult res = View3D_ObjectCreateLdr(ldr_script, context_id, out m_handle, async);
 				if (res != EResult.Success) throw new Exception(res);
-			}
-			public Object(string ldr_script)
-			:this(ldr_script, DefaultContextId, false)
-			{
 			}
 
 			/// <summary>Create an object via callback</summary>
@@ -1206,7 +1222,7 @@ namespace pr.gfx
 			}
 
 			/// <summary>Delete this object</summary>
-			public void Dispose()
+			public virtual void Dispose()
 			{
 				if (m_handle == IntPtr.Zero) return;
 				View3D_ObjectDelete(m_handle);

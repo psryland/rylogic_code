@@ -109,18 +109,39 @@ namespace TestCS
 
 		private class Joypad :DiagramControl.Label
 		{
+			private View3d.Object m_gfx;
 			public Joypad()
-				:base(300, 300)
 			{
+				m_gfx = new View3d.Object();
 			}
 
 			protected override void RefreshInternal()
 			{
 				var ldr = new pr.ldr.LdrBuilder();
-				ldr.Append("*Box b FF00FF00 {20 *o2w{*randori}}");
-				Gfx.UpdateModel(ldr.ToString());
+				ldr.Append("*Box b FF00FF00 {20}");
+				m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+				m_gfx.O2P = Position;
 			}
 
+			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			{
+				if ((PositionXY - point).Length2 > 20)
+					return null;
+
+				point -= PositionXY;
+				return new DiagramControl.HitTestResult.Hit(this, point);
+			}
+
+			protected override DiagramControl.EditingControl EditingControl()
+			{
+				return new DiagramControl.EditingControl(new TextBox(), () => {});
+			}
+
+			/// <summary>Add the graphics associated with this element to the drawset</summary>
+			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
+			{
+				drawset.AddObject(m_gfx);
+			}
 		}
 
 		private class Filter :IMessageFilter
