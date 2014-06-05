@@ -73,19 +73,23 @@ namespace pr.maths
 		public override int  GetHashCode()                     { unchecked { return x.GetHashCode() ^ y.GetHashCode(); } }
 
 		// Conversion
-		public static implicit operator v2(float[] a)         { return new v2(a[0], a[1]); }
-		public static implicit operator float[](v2 p)         { return p.ToArray(); }
-		public static implicit operator v2(PointF p)          { return new v2(p.X, p.Y); }
-		public static implicit operator PointF(v2 p)          { return new PointF(p.x, p.y); }
-		public static implicit operator v2(SizeF s)           { return new v2(s.Width, s.Height); }
-		public static implicit operator SizeF(v2 s)           { return new SizeF(s.x, s.y); }
-		public static v2 From(Point point)                    { return new v2(point.X, point.Y); }
-		public static v2 From(Size size)                      { return new v2(size.Width, size.Height); }
-		public static v2 From(PointF point)                   { return new v2(point.X, point.Y); }
-		public static v2 From(SizeF size)                     { return new v2(size.Width, size.Height); }
-		public float[] ToArray()                              { return new[]{x, y}; }
-		public Point   ToPoint()                              { return new Point((int)x, (int)y); }
-		public Size    ToSize()                               { return new Size((int)x, (int)y); }
+		public static implicit operator v2(float[] a) { return new v2(a[0], a[1]); }
+		public static implicit operator float[](v2 p) { return p.ToArray(); }
+		public static implicit operator v2(PointF p)  { return new v2(p.X, p.Y); }
+		public static implicit operator PointF(v2 p)  { return new PointF(p.x, p.y); }
+		public static implicit operator v2(SizeF s)   { return new v2(s.Width, s.Height); }
+		public static implicit operator SizeF(v2 s)   { return new SizeF(s.x, s.y); }
+		public static v2 From(Point point)            { return new v2(point.X, point.Y); }
+		public static v2 From(Size size)              { return new v2(size.Width, size.Height); }
+		public static v2 From(PointF point)           { return new v2(point.X, point.Y); }
+		public static v2 From(SizeF size)             { return new v2(size.Width, size.Height); }
+		public float[]   ToArray()                    { return new[]{x, y}; }
+		public Point     ToPoint()                    { return new Point((int)x, (int)y); }
+		public PointF    ToPointF()                   { return new PointF(x, y); }
+		public Size      ToSize()                     { return new Size((int)x, (int)y); }
+		public SizeF     ToSizeF()                    { return new SizeF(x, y); }
+		public Rectangle ToRectangle()                { return new Rectangle(Point.Empty, ToSize()); }
+		public RectangleF ToRectangleF()              { return new RectangleF(PointF.Empty, ToSizeF()); }
 
 		public static bool FEqlZero2(v2 vec, float tol)       { return vec.Length2Sq < tol * tol; }
 		public static bool FEqlZero2(v2 vec)                  { return FEqlZero2(vec, Maths.TinyF); }

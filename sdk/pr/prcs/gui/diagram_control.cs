@@ -40,6 +40,19 @@ namespace pr.gui
 		/// <summary>Says "I have a guid"</summary>
 		private interface IHasId { Guid Id { get; } }
 
+		/// <summary>Marker interface for element styles</summary>
+		public interface IStyle
+		{
+			/// <summary>Raised whenever a style property is changed</summary>
+			event EventHandler StyleChanged;
+		}
+
+		/// <summary>For elements that have an associated IStyle object</summary>
+		public interface IHasStyle
+		{
+			IStyle Style { get; }
+		}
+
 		#region Elements
 
 		/// <summary>Base class for anything on a diagram</summary>
@@ -503,7 +516,7 @@ namespace pr.gui
 		#region Nodes
 
 		/// <summary>Base class for all node types</summary>
-		public abstract class Node :ResizeableElement
+		public abstract class Node :ResizeableElement ,IHasStyle
 		{
 			/// <summary>Base node constructor</summary>
 			/// <param name="id">Globally unique id for the element</param>
@@ -616,6 +629,7 @@ namespace pr.gui
 				}
 			}
 			private NodeStyle m_impl_style;
+			IStyle IHasStyle.Style { get { return Style; } }
 
 			/// <summary>Get/Set the selected state</summary>
 			public override bool Selected
@@ -775,7 +789,7 @@ namespace pr.gui
 			private const string LdrName = "node";
 
 			/// <summary>Only one graphics object for a box node</summary>
-			private readonly TexturedQuad m_gfx;
+			private readonly TexturedShape<QuadShape> m_gfx;
 
 			public BoxNode()
 				:this(Guid.NewGuid())
@@ -798,14 +812,14 @@ namespace pr.gui
 			public BoxNode(Guid id, string text, bool autosize, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style)
 				:base(id, autosize, width, height, text, position, style)
 			{
-				m_gfx = new TexturedQuad(Size, corner_radius);
+				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 				Init();
 			}
 			public BoxNode(XElement node)
 				:base(node)
 			{
 				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
-				m_gfx = new TexturedQuad(Size, corner_radius);
+				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 				Init();
 			}
 			private void Init()
@@ -835,8 +849,8 @@ namespace pr.gui
 			/// <summary>The radius of the box node corners</summary>
 			public float CornerRadius
 			{
-				get { return m_gfx.CornerRadius; }
-				set { m_gfx.CornerRadius = value; Invalidate(); }
+				get { return m_gfx.Shape.CornerRadius; }
+				set { m_gfx.Shape.CornerRadius = value; Invalidate(); }
 			}
 
 			/// <summary>Set the position of the element</summary>
@@ -867,28 +881,27 @@ namespace pr.gui
 			/// <summary>Return all the locations that connectors can attach to on this element</summary>
 			public override IEnumerable<AnchorPoint> AnchorPoints()
 			{
-				const float pixels_per_anchor = 5f;
+				const float units_per_anchor = 10f;
 				
 				// Get the dimensions and half dimensions
-				var hsx = Size.x/2f - CornerRadius;
-				var hsy = Size.y/2f - CornerRadius;
+				var sz = Size;
+				var hsx = sz.x/2f - CornerRadius - units_per_anchor;
+				var hsy = sz.y/2f - CornerRadius - units_per_anchor;
 
 				// Find how many anchors will fit along x
-				var divx = 1; for (; hsx / (1+divx) > pixels_per_anchor; ++divx) {}
-				var divy = 1; for (; hsy / (1+divy) > pixels_per_anchor; ++divy) {}
-				divx = Math.Max(1, divx - 1);
-				divy = Math.Max(1, divy - 1);
+				var divx = Math.Max((int)(hsx / units_per_anchor), 1);
+				var divy = Math.Max((int)(hsy / units_per_anchor), 1);
 
 				for (int i = -divx; i <= divx; ++i)
 				{
 					var x = hsx * i / divx;
-					var y = hsy + CornerRadius;
+					var y = sz.y / 2f;
 					yield return new AnchorPoint(this, new v4(x, +y, 0, 1), +v4.YAxis);
 					yield return new AnchorPoint(this, new v4(x, -y, 0, 1), -v4.YAxis);
 				}
 				for (int i = -divy; i <= divy; ++i)
 				{
-					var x = hsx + CornerRadius;
+					var x = sz.x / 2f;
 					var y = hsy * i / divy;
 					yield return new AnchorPoint(this, new v4(+x, y, 0, 1), +v4.XAxis);
 					yield return new AnchorPoint(this, new v4(-x, y, 0, 1), -v4.XAxis);
@@ -994,12 +1007,14 @@ namespace pr.gui
 					if (Elem != null)
 					{
 						Elem.PositionChanged -= HandleElementMoved;
+						if (Elem is IHasStyle) ((IHasStyle)Elem).Style.StyleChanged -= HandleElementMoved;
 						Diagram = null;
 					}
 					Anc.Elem = value;
 					if (Elem != null)
 					{
 						Diagram = Elem.Diagram;
+						if (Elem is IHasStyle) ((IHasStyle)Elem).Style.StyleChanged += HandleElementMoved;
 						Elem.PositionChanged += HandleElementMoved;
 					}
 				}
@@ -1022,23 +1037,23 @@ namespace pr.gui
 		}
 
 		/// <summary>Base class for labels containing a texture</summary>
-		public class TexturedLabel :Label
+		public class TexturedLabel<TShape> :Label where TShape :IShape, new()
 		{
-			private readonly TexturedQuad m_gfx;
+			private readonly TexturedShape<TShape> m_gfx;
 
 			public TexturedLabel()
-				:this(0U, 0U)
+				:this(new TShape(), 0U, 0U)
 			{}
-			public TexturedLabel(uint sx, uint sy)
-				:this(Guid.NewGuid(), sx, sy)
+			public TexturedLabel(TShape shape, uint sx, uint sy)
+				:this(Guid.NewGuid(), shape, sx, sy)
 			{}
-			public TexturedLabel(Guid id, uint sx, uint sy)
-				:this(id, sx, sy, m4x4.Identity)
+			public TexturedLabel(Guid id, TShape shape, uint sx, uint sy)
+				:this(id, shape, sx, sy, m4x4.Identity)
 			{}
-			public TexturedLabel(Guid id, uint sx, uint sy, m4x4 position)
+			public TexturedLabel(Guid id, TShape shape, uint sx, uint sy, m4x4 position)
 				:base(id, position)
 			{
-				m_gfx = new TexturedQuad(new v2(sx, sy), 0);
+				m_gfx = new TexturedShape<TShape>(shape, new v2(sx, sy));
 			}
 			public override void Dispose()
 			{
@@ -1098,7 +1113,7 @@ namespace pr.gui
 		#region Connectors
 
 		/// <summary>A base class for connectors between elements</summary>
-		public class Connector :Element
+		public class Connector :Element ,IHasStyle
 		{
 			/// <summary>Connector type</summary>
 			[Flags] public enum EType
@@ -1201,7 +1216,8 @@ namespace pr.gui
 			protected override void FromXml(XElement node)
 			{
 				base.FromXml(node);
-				Style.Id = node.Element(XmlField.Style).As<Guid>(Style.Id);
+				var id   = node.Element(XmlField.Style).As<Guid>(Style.Id);
+				Style    = id != Style.Id ? new ConnectorStyle{Id = id} : Style;
 				Label    = node.Element(XmlField.Label).ToObject(Label).As<Label>();
 				Anc0     = node.Element(XmlField.Anchor0).As<AnchorPoint>(Anc0);
 				Anc1     = node.Element(XmlField.Anchor1).As<AnchorPoint>(Anc1);
@@ -1345,6 +1361,7 @@ namespace pr.gui
 				}
 			}
 			private ConnectorStyle m_impl_style;
+			IStyle IHasStyle.Style { get { return Style; } }
 
 			/// <summary>Get/Set the selected state</summary>
 			public override bool Selected
@@ -1504,7 +1521,7 @@ namespace pr.gui
 				PositionXY = AttachCentre(Anc0, Anc1);
 
 				var ldr   = new LdrBuilder();
-				var col   = Selected ? Style.Selected : Style.Line;
+				var col   = Selected ? Style.Selected : Dangling ? Style.Dangling : Style.Line;
 				var width = Style.Width;
 				var pts   = Points(false);
 
@@ -1670,7 +1687,7 @@ namespace pr.gui
 
 		/// <summary>Style attributes for nodes</summary>
 		[TypeConverter(typeof(NodeStyle))]
-		public class NodeStyle :GenericTypeConverter<NodeStyle> ,IHasId ,ICloneable
+		public class NodeStyle :GenericTypeConverter<NodeStyle> ,IHasId ,ICloneable ,IStyle
 		{
 			public static readonly NodeStyle Default = new NodeStyle{Id = Guid.Empty};
 
@@ -1809,7 +1826,7 @@ namespace pr.gui
 
 		/// <summary>Style properties for connectors</summary>
 		[TypeConverter(typeof(ConnectorStyle))]
-		public class ConnectorStyle :GenericTypeConverter<ConnectorStyle> ,IHasId ,ICloneable
+		public class ConnectorStyle :GenericTypeConverter<ConnectorStyle> ,IHasId ,ICloneable ,IStyle
 		{
 			public static readonly ConnectorStyle Default = new ConnectorStyle{Id = Guid.Empty};
 
@@ -1818,6 +1835,7 @@ namespace pr.gui
 				Id       = Guid.NewGuid();
 				Line     = Color.Black;
 				Selected = Color.Blue;
+				Dangling = Color.DarkRed;
 				Width    = 5f;
 				Smooth   = false;
 			}
@@ -1826,6 +1844,7 @@ namespace pr.gui
 				Id       = node.Element(XmlField.Id      ).As<Guid> (Id      );
 				Line     = node.Element(XmlField.Line    ).As<Color>(Line    );
 				Selected = node.Element(XmlField.Selected).As<Color>(Selected);
+				Dangling = node.Element(XmlField.Dangling).As<Color>(Dangling);
 				Width    = node.Element(XmlField.Width   ).As<float>(Width   );
 				Smooth   = node.Element(XmlField.Smooth  ).As<bool> (Smooth  );
 			}
@@ -1834,6 +1853,7 @@ namespace pr.gui
 				Id           = rhs.Id          ;
 				Line         = rhs.Line        ;
 				Selected     = rhs.Selected    ;
+				Dangling     = rhs.Dangling    ;
 				Width        = rhs.Width       ;
 				Smooth       = rhs.Smooth      ;
 				StyleChanged = rhs.StyleChanged;
@@ -1858,6 +1878,14 @@ namespace pr.gui
 				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
 			}
 			private Color m_impl_selected;
+
+			/// <summary>The colour of dangling connectors</summary>
+			public Color Dangling
+			{
+				get { return m_impl_dangling; }
+				set { Util.SetAndRaise(this, ref m_impl_dangling, value, StyleChanged); }
+			}
+			private Color m_impl_dangling;
 
 			/// <summary>The width of the connector line</summary>
 			public float Width
@@ -1901,6 +1929,7 @@ namespace pr.gui
 					Id       = rhs.Id      ;
 					Line     = rhs.Line    ;
 					Selected = rhs.Selected;
+					Dangling = rhs.Dangling;
 					Width    = rhs.Width   ;
 					Smooth   = rhs.Smooth  ;
 				}
@@ -2452,16 +2481,54 @@ namespace pr.gui
 		/// <summary>The minimum distance a connector sticks out from a node</summary>
 		private const int MinConnectorLen = 30;
 
+		/// <summary>Interface for shape creation types</summary>
+		public interface IShape
+		{
+			/// <summary>Generate the ldr string for the shape</summary>
+			string Make(v2 sz);
+		}
+		
+		/// <summary>A quad shape</summary>
+		public class QuadShape :IShape
+		{
+			public QuadShape(float corner_radius)
+			{
+				CornerRadius = corner_radius;
+			}
+
+			/// <summary>The radius of the quad corners</summary>
+			public float CornerRadius { get; set; }
+
+			/// <summary>Generate the ldr string for the shape</summary>
+			public string Make(v2 sz)
+			{
+				var ldr = new LdrBuilder();
+				ldr.Append("*Rect {3 ",sz.x," ",sz.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+				return ldr.ToString();
+			}
+		}
+
+		/// <summary>A ellipse shape</summary>
+		public class EllipseShape :IShape
+		{
+			public string Make(v2 sz)
+			{
+				var ldr = new LdrBuilder();
+				ldr.Append("*Circle {3 ",sz.x/2f," ",sz.y/2f," ",Ldr.Solid(),"}\n");
+				return ldr.ToString();
+			}
+		}
+
 		/// <summary>A 'mixin' class for a textured round-cornered quad</summary>
-		internal class TexturedQuad :View3d.Object
+		internal class TexturedShape<TShape> :View3d.Object where TShape :IShape
 		{
 			/// <summary>True when the model needs updating</summary>
 			private bool m_model_dirty;
 
-			public TexturedQuad(v2 sz, float corner_radius, uint texture_scale = 4)
+			public TexturedShape(TShape shape, v2 sz, uint texture_scale = 4)
 			{
+				Shape = shape;
 				m_surf = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
-				m_impl_corner_radius = corner_radius;
 				m_model_dirty = true;
 			}
 			public override void Dispose()
@@ -2470,13 +2537,8 @@ namespace pr.gui
 				base.Dispose();
 			}
 
-			/// <summary>The radius of the quad corners</summary>
-			public float CornerRadius
-			{
-				get { return m_impl_corner_radius; }
-				set { m_impl_corner_radius = value; m_model_dirty = true; }
-			}
-			private float m_impl_corner_radius;
+			/// <summary>The underlying shape</summary>
+			public TShape Shape { get; private set; }
 
 			/// <summary>The texture surface of the quad</summary>
 			public Surface Surface { get { return m_surf; } }
@@ -2511,10 +2573,8 @@ namespace pr.gui
 			{
 				if (!m_model_dirty) return;
 
-				var sz = Size;
-				var ldr = new LdrBuilder();
-				ldr.Append("*Rect node {3 ",sz.x," ",sz.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-				UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+				var ldr = Shape.Make(Size);
+				UpdateModel(ldr, View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 				SetTexture(Surface.Surf);
 				m_model_dirty = false;
 			}
@@ -2667,6 +2727,7 @@ namespace pr.gui
 			public const string Border          = "border"          ;
 			public const string Fill            = "fill"            ;
 			public const string Selected        = "selected"        ;
+			public const string Dangling        = "dangling"        ;
 			public const string Font            = "font"            ;
 			public const string Type            = "type"            ;
 			public const string Align           = "align"           ;
