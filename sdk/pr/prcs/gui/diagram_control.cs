@@ -134,8 +134,8 @@ namespace pr.gui
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
 			internal void Update(XElement node)
 			{
-				if (node.Attribute(XmlField.TypeAttribute).Value != GetType().FullName)
-					throw new Exception("Must update a diagram element with xml data for the same type");
+			//	if (node.Attribute(XmlField.TypeAttribute).Value != GetType().FullName)
+			//		throw new Exception("Must update a diagram element with xml data for the same type");
 
 				using (SuspendEvents())
 					FromXml(node);
@@ -1850,7 +1850,7 @@ namespace pr.gui
 			}
 			public ConnectorStyle(ConnectorStyle rhs)
 			{
-				Id           = rhs.Id          ;
+				Id           = Guid.NewGuid()  ;
 				Line         = rhs.Line        ;
 				Selected     = rhs.Selected    ;
 				Dangling     = rhs.Dangling    ;

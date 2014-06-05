@@ -39,6 +39,7 @@ namespace pr
 			Allocator<Texture2D>       m_alex_tex2d;
 			Allocator<TextureGdi>      m_alex_texgdi;
 			D3DPtr<ID3D11Device>       m_device;
+			D3DPtr<ID2D1Factory>       m_d2dfactory;
 			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
 			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
 			pr::Array<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
@@ -66,7 +67,7 @@ namespace pr
 			void OnEvent(Evt_RendererDestroy const& e) override;
 
 		public:
-			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device);
+			TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory);
 
 			// Create a new texture instance.
 			// 'id' is the id to assign to the created texture instance. Use 'AutoId' to auto generate an id
@@ -101,6 +102,7 @@ namespace pr
 			// 'sdesc' is a description of the sampler to use
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, char const* name = nullptr);
 			TextureGdiPtr CreateTextureGdi(RdrId id, Image const& src, char const* name = nullptr);
+			TextureGdiPtr CreateTextureGdi(RdrId id, size_t w, size_t h, char const* name);
 
 			// Create a new texture instance that wraps an existing dx texture.
 			// 'id' is the id to assign to this new texture instance. Use 'AutoId' to auto generate an id

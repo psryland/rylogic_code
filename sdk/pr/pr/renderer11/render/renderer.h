@@ -50,6 +50,7 @@ namespace pr
 			D3DPtr<ID3D11DeviceContext>    m_immediate;
 			D3DPtr<ID3D11RenderTargetView> m_main_rtv;
 			D3DPtr<ID3D11DepthStencilView> m_main_dsv;
+			D3DPtr<ID2D1Factory>           m_d2dfactory;
 			TextureDesc                    m_bbdesc;  // The texture description of the back buffer
 			bool                           m_idle;    // True while the window is occluded
 
@@ -82,6 +83,9 @@ namespace pr
 
 		// Create a new deferred device context
 		D3DPtr<ID3D11DeviceContext> DeferredDC() const { return nullptr; };
+
+		// Return the direct2d factory
+		D3DPtr<ID2D1Factory> D2DFactory() const { return m_d2dfactory; }
 
 		// Returns an allocator object suitable for allocating instances of 'T'
 		template <class Type> rdr::Allocator<Type> Allocator() const { return rdr::Allocator<Type>(m_settings.m_mem); }

@@ -44,6 +44,27 @@ namespace pr
 			:Texture2D(mgr, src, tdesc, sdesc, sort_id, srvdesc)
 		{}
 
+		// Get the dxgi surface within this texture
+		D3DPtr<IDXGISurface> TextureGdi::GetSurface()
+		{
+			D3DPtr<IDXGISurface> surf;
+			pr::Throw(m_tex->QueryInterface(&surf.m_ptr));
+			return surf;
+		}
+
+		// Get a d2d rendertarget for the dxgi surface within this texture
+		D3DPtr<ID2D1RenderTarget> TextureGdi::GetD2DRenderTarget()
+		{
+			auto surf = GetSurface();
+			
+			// Create a D2D render target which can draw into our offscreen D3D surface.
+			// Given that we use a constant size for the texture, we fix the DPI at 96.
+			D3DPtr<ID2D1RenderTarget> rt;
+			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+			pr::Throw(m_mgr->m_d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
+			return rt;
+		}
+
 		// Refcounting cleanup function
 		void TextureGdi::Delete()
 		{

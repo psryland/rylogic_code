@@ -9,43 +9,57 @@
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
 	int nRet;
-	std::string err_msg;
-	try
 	{
-		// CoInitialise COM
-		pr::InitCom init_com;
+		std::string err_msg;
+		std::shared_ptr<ATL::CWindow> gui;
+		try
+		{
+			// CoInitialise COM
+			pr::InitCom init_com;
 
-		// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
-		::DefWindowProc(NULL, 0, 0, 0L);
+			// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
+			::DefWindowProc(NULL, 0, 0, 0L);
 
-		// Initialise the WTL module singleton
-		pr::Throw(pr::app::Module().Init(NULL, hInstance));
+			// Initialise the WTL module singleton
+			pr::Throw(pr::app::Module().Init(NULL, hInstance));
 
-		// Create an instance of the main window and start it running
-		std::shared_ptr<ATL::CWindow> gui = pr::app::CreateGUI(lpstrCmdLine);
-		gui->ShowWindow(nCmdShow);
-		gui->UpdateWindow();
-		nRet = pr::app::Module().GetMessageLoop()->Run();
+			// Create an instance of the main window and start it running
+			gui = pr::app::CreateGUI(lpstrCmdLine);
+			gui->ShowWindow(nCmdShow);
+			gui->UpdateWindow();
+			nRet = pr::app::Module().GetMessageLoop()->Run();
+		}
+		catch (std::exception const& ex)
+		{
+			DWORD last_error = GetLastError();
+			HRESULT res = HRESULT_FROM_WIN32(last_error);
+			std::string ex_msg(ex.what()); ex_msg.substr(0, ex_msg.find_last_not_of(" \t\r\n")).swap(ex_msg);
+			err_msg = pr::Fmt("Application shutdown due to unhandled error:\r\nError Message: '%s'", ex_msg.c_str());
+			if (res != S_OK) err_msg += pr::Fmt("\r\nLast Error Code: %X - %s", res, pr::HrMsg(res).c_str());
+			nRet = -1;
+		}
+		catch (...)
+		{
+			err_msg = "Shutting down due to an unknown exception";
+			nRet = -1;
+		}
+
+		// Attempt to shut the window down gracefully
+		if (gui->IsWindow())
+		{
+			try
+			{
+				gui->DestroyWindow();
+				pr::app::Module().GetMessageLoop()->Run();
+			}
+			catch (...) {}
+		}
+
+		if (nRet == -1)
+		{
+			std::thread([&] { ::MessageBoxA(0, err_msg.c_str(), "Application Error", MB_OK|MB_ICONERROR); }).join();
+		}
 	}
-	catch (std::exception const& ex)
-	{
-		DWORD last_error = GetLastError();
-		HRESULT res = HRESULT_FROM_WIN32(last_error);
-		err_msg = ex.what();
-		if (res != S_OK) err_msg += pr::Fmt("\nLast Error Code: %X - %s", res, pr::HrMsg(res).c_str());
-		nRet = -1;
-	}
-	catch (...)
-	{
-		err_msg = "Shutting down due to an unknown exception";
-		nRet = -1;
-	}
-
-	if (nRet == -1)
-	{
-		std::thread([&] { ::MessageBoxA(0, err_msg.c_str(), "Application Error", MB_OK|MB_ICONERROR); }).join();
-	}
-
 	pr::app::Module().Term();
 	return nRet;
 }

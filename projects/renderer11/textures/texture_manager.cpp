@@ -41,10 +41,11 @@ namespace pr
 			}
 		}
 
-		TextureManager::TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device)
+		TextureManager::TextureManager(MemFuncs& mem, D3DPtr<ID3D11Device>& device, D3DPtr<ID2D1Factory>& d2dfactory)
 			:m_alex_tex2d(Allocator<Texture2D>(mem))
 			,m_alex_texgdi(Allocator<TextureGdi>(mem))
 			,m_device(device)
+			,m_d2dfactory(d2dfactory)
 			,m_lookup_tex(mem)
 			,m_lookup_fname(mem)
 			,m_stock_textures()
@@ -166,6 +167,10 @@ namespace pr
 			tdesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
 			tdesc.MiscFlags = D3D11_RESOURCE_MISC_GDI_COMPATIBLE;
 			return CreateTextureGdi(id, src, tdesc, SamplerDesc::LinearClamp(), name);
+		}
+		TextureGdiPtr TextureManager::CreateTextureGdi(RdrId id, size_t w, size_t h, char const* name)
+		{
+			return CreateTextureGdi(id, Image::make(w,h), name);
 		}
 
 		// Create a new texture instance that uses the same dx texture as an existing texture.

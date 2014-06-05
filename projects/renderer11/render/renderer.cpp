@@ -74,6 +74,7 @@ namespace pr
 			,m_immediate()
 			,m_main_rtv()
 			,m_main_dsv()
+			,m_d2dfactory()
 			,m_feature_level()
 			,m_bbdesc()
 			,m_idle(false)
@@ -124,6 +125,10 @@ namespace pr
 			// Make DXGI monitor for Alt-Enter and switch between windowed and full screen
 			pr::Throw(factory->MakeWindowAssociation(m_settings.m_hwnd, m_settings.m_allow_alt_enter ? 0 : DXGI_MWA_NO_ALT_ENTER));
 
+			// Create the direct2d factory
+			if (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT)
+				pr::Throw(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_d2dfactory.m_ptr));
+
 			// Setup the main render target
 			InitMainRT();
 		}
@@ -137,6 +142,7 @@ namespace pr
 			m_immediate = nullptr;
 			m_main_rtv = nullptr;
 			m_main_dsv = nullptr;
+			m_d2dfactory = nullptr;
 
 			// Destroying a Swap Chain:
 			// You may not release a swap chain in full-screen mode because doing so may create thread contention
@@ -199,7 +205,7 @@ namespace pr
 		:RdrState(settings)
 		,m_mdl_mgr(m_settings.m_mem, m_device)
 		,m_shdr_mgr(m_settings.m_mem, m_device)
-		,m_tex_mgr(m_settings.m_mem, m_device)
+		,m_tex_mgr(m_settings.m_mem, m_device, m_d2dfactory)
 		,m_bs_mgr(m_settings.m_mem, m_device)
 		,m_ds_mgr(m_settings.m_mem, m_device)
 		,m_rs_mgr(m_settings.m_mem, m_device)

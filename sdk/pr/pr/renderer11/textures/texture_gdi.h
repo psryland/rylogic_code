@@ -16,6 +16,12 @@ namespace pr
 		{
 			TextureGdi(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc = nullptr);
 
+			// Get the dxgi surface within this texture
+			D3DPtr<IDXGISurface> GetSurface();
+
+			// Get a d2d rendertarget for the dxgi surface within this texture
+			D3DPtr<ID2D1RenderTarget> GetD2DRenderTarget();
+
 		private:
 
 			// Refcounting cleanup function
