@@ -46,6 +46,7 @@ namespace pr.container
 					bl.ListChanging -= RaiseListChanging;
 				
 				// Set new data source
+				base.DataSource = null;
 				base.DataSource = value;
 				
 				// Hookup

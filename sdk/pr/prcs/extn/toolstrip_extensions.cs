@@ -49,6 +49,23 @@ namespace pr.extn
 				yield return item;
 		}
 
+		/// <summary>Recursively search the collection removing any items with a Name property equal to 'key'</summary>
+		public static void RemoveByKey(this ToolStripItemCollection cont, string[] keys, bool recursive)
+		{
+			for (int i = cont.Count; i-- != 0;)
+			{
+				var item = cont[i];
+				if (keys.Contains(item.Name))
+					cont.RemoveAt(i);
+				else if (item is ToolStripMenuItem && recursive)
+					item.As<ToolStripMenuItem>().DropDownItems.RemoveByKey(keys, recursive);
+			}
+		}
+		public static void RemoveByKey(this ToolStripItemCollection cont, string key, bool recursive)
+		{
+			cont.RemoveByKey(new[]{key}, recursive);
+		}
+
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
 		public static void SetText(this ToolStripComboBox cb, string text)
 		{

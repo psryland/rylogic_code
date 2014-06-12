@@ -9,7 +9,7 @@ using System.Diagnostics;
 namespace pr.maths
 {
 	/// <summary>scalar functions</summary>
-	public static class Maths
+	public static partial class Maths
 	{
 		public const float Tiny      = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
 		public const float Tau       = 6.283185307179586476925286766559e+0F; // circle constant

@@ -102,7 +102,6 @@ namespace pr.maths
 		public static v2 Random2N(Rand r)                      { r = r ?? new Rand(); return v2.Random2(1.0f, r); }
 		
 		public static v2    Abs(v2 vec)                        { return new v2(Math.Abs(vec.x), Math.Abs(vec.y)); }
-		public static v2    Clamp2(v2 vec, v2 min, v2 max)     { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }
 		public static v2    Lerp(v2 lhs, v2 rhs, float t)      { return lhs * (1f - t) + rhs * t; }
 		public static v2    Normalise2(v2 vec)                 { return vec / vec.Length2; }
 		public static v2    Normalise2(v2 vec, v2 def)         { return Maths.FEql(vec.Length2Sq,0) ? def : vec / vec.Length2; }
@@ -131,5 +130,12 @@ namespace pr.maths
 			string[] values = s.Split(new char[]{' ',',','\t'},2);
 			return values.Length == 2 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y);
 		}
+	}
+
+	public static partial class Maths
+	{
+		public static v2 Min(v2 lhs, v2 rhs)           { return new v2(Maths.Min(lhs.x,rhs.x), Maths.Min(lhs.y,rhs.y)); }
+		public static v2 Max(v2 lhs, v2 rhs)           { return new v2(Maths.Max(lhs.x,rhs.x), Maths.Max(lhs.y,rhs.y)); }
+		public static v2 Clamp(v2 vec, v2 min, v2 max) { return new v2(Maths.Clamp(vec.x, min.x, max.x), Maths.Clamp(vec.y, min.y, max.y)); }
 	}
 }

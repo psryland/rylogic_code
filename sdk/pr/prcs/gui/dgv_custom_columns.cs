@@ -114,7 +114,6 @@ namespace pr.gui
 			var obj = DataGridView.Rows[row_index].DataBoundItem;
 			return GetMinValue(col, obj);
 		}
-
 		private int GetMaxValueInternal(int row_index)
 		{
 			// If no binding property has been given, return the column min value
@@ -137,7 +136,7 @@ namespace pr.gui
 			paint_parts &= ~DataGridViewPaintParts.ContentForeground;
 			base.Paint(gfx, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
 			
-			var v = (int)value;
+			var v  = Convert.ToDouble(value);
 			var mn = GetMinValueInternal(row_index);
 			var mx = GetMaxValueInternal(row_index);
 			DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, v, mn, mx);
@@ -182,8 +181,9 @@ namespace pr.gui
 		protected override void OnPaint(PaintEventArgs e)
 		{
 			var cell = (DataGridViewTrackBarCell)Value;
+			var value = Convert.ToDouble(cell.Value);
 			e.Graphics.FillRectangle(Brushes.LightBlue, e.ClipRectangle);
-			PaintTrackBar(e.Graphics, e.ClipRectangle, (int)cell.Value, cell.MinValue, cell.MaxValue);
+			PaintTrackBar(e.Graphics, e.ClipRectangle, value, cell.MinValue, cell.MaxValue);
 		}
 		private void ReadValue(int x)
 		{
@@ -203,10 +203,11 @@ namespace pr.gui
 			ReadValue(e.X);
 			Refresh();
 		}
+
 		/// <summary>Paint the track bar</summary>
-		public static void PaintTrackBar(Graphics gfx, Rectangle cell_bounds, int pos, int min_pos, int max_pos)
+		public static void PaintTrackBar(Graphics gfx, Rectangle cell_bounds, double pos, double min_pos, double max_pos)
 		{
-			var frac = Maths.Clamp(Maths.Frac(min_pos, pos, max_pos), 0f, 1f);
+			var frac = (float)Maths.Clamp(Maths.Frac(min_pos, pos, max_pos), 0f, 1f);
 
 			// Draw the track
 			RectangleF track_rect = cell_bounds;
