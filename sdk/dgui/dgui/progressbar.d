@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.progressbar;
 
 import dgui.core.controls.subclassedcontrol;
@@ -40,7 +31,7 @@ class ProgressBar: SubclassedControl
 			this.sendMessage(PBM_SETRANGE32, this._minRange, this._maxRange);
 		}
 	}
-	
+
 	@property public uint maxRange()
 	{
 		return this._maxRange;
@@ -77,7 +68,7 @@ class ProgressBar: SubclassedControl
 		{
 			return this.sendMessage(PBM_GETPOS, 0, 0);
 		}
-		
+
 		return this._value;
 	}
 
@@ -105,25 +96,25 @@ class ProgressBar: SubclassedControl
 
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
-		ccp.SuperclassName = WC_PROGRESSBAR;
-		ccp.ClassName = WC_DPROGRESSBAR;
+		ccp.superclassName = WC_PROGRESSBAR;
+		ccp.className = WC_DPROGRESSBAR;
 
-		assert(this._dock !is DockStyle.FILL, "ProgressBar: Invalid Dock Style");
+		assert(this._dock !is DockStyle.fill, "ProgressBar: Invalid Dock Style");
 
-		if(this._dock is DockStyle.LEFT || this._dock is DockStyle.RIGHT)
+		if(this._dock is DockStyle.left || this._dock is DockStyle.right)
 		{
 			this.setStyle(PBS_VERTICAL, true);
 		}
-		
+
 		super.createControlParams(ccp);
 	}
-	
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		this.sendMessage(PBM_SETRANGE32, this._minRange, this._maxRange);
 		this.sendMessage(PBM_SETSTEP, this._step, 0);
 		this.sendMessage(PBM_SETPOS, this._value, 0);
-		
+
 		super.onHandleCreated(e);
 	}
 }

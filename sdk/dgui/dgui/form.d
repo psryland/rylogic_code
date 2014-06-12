@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.form;
 
 public import dgui.core.dialogs.dialogresult;
@@ -27,48 +18,48 @@ alias CancelEventArgs!(Form) CancelFormEventArgs;
 
 enum FormBits: ulong
 {
-	NONE 		 	= 0,
-	MODAL_COMPLETED = 1,
+	none 		 	= 0,
+	modalCompleted = 1,
 }
 
 enum FormBorderStyle: ubyte
 {
-	NONE 				= 0, 
-	MANUAL 				= 1, // Internal Use
-	FIXED_SINGLE 		= 2,
-	FIXED_3D 			= 4,
-	FIXED_DIALOG		= 8,
-	SIZEABLE 			= 16, 
-	FIXED_TOOLWINDOW 	= 32,
-	SIZEABLE_TOOLWINDOW = 64,
+	none 				= 0,
+	manual 				= 1, // Internal Use
+	fixedSingle 		= 2,
+	fixed3d 			= 4,
+	fixedDialog		= 8,
+	sizeable 			= 16,
+	fixedToolWindow 	= 32,
+	sizeableToolWindow = 64,
 }
 
 enum FormStartPosition: ubyte
 {
-	MANUAL 			 = 0,
-	CENTER_PARENT	 = 1,
-	CENTER_SCREEN	 = 2,
-	DEFAULT_LOCATION = 4,
+	manual 			 = 0,
+	centerParent	 = 1,
+	centerScreen	 = 2,
+	defaultLocation = 4,
 }
 
 class Form: LayoutControl
 {
-	private FormBits _fBits = FormBits.NONE;
-	private FormStartPosition _startPosition = FormStartPosition.MANUAL;
-	private FormBorderStyle _formBorder = FormBorderStyle.SIZEABLE;
-	private DialogResult _dlgResult = DialogResult.CANCEL;
+	private FormBits _fBits = FormBits.none;
+	private FormStartPosition _startPosition = FormStartPosition.manual;
+	private FormBorderStyle _formBorder = FormBorderStyle.sizeable;
+	private DialogResult _dlgResult = DialogResult.cancel;
 	private HWND _hActiveWnd;
 	private Icon _formIcon;
 	private MenuBar _menu;
 
 	public Event!(Control, EventArgs) close;
 	public Event!(Control, CancelFormEventArgs) closing;
-	
+
 	public this()
 	{
 		this.setStyle(WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX, true);
 	}
-	
+
 	@property public final void formBorderStyle(FormBorderStyle fbs)
 	{
 		if(this.created)
@@ -86,10 +77,10 @@ class Form: LayoutControl
 			this.setStyle(style, true);
 			this.setExStyle(exStyle, true);
 		}
-		
+
 		this._formBorder = fbs;
 	}
-	
+
 	@property public final void controlBox(bool b)
 	{
 		this.setStyle(WS_SYSMENU, b);
@@ -144,14 +135,14 @@ class Form: LayoutControl
 			{
 				this._formIcon.dispose();
 			}
-			
+
 			this.sendMessage(WM_SETICON, ICON_BIG, cast(LPARAM)ico.handle);
 			this.sendMessage(WM_SETICON, ICON_SMALL, cast(LPARAM)ico.handle);
 		}
 
 		this._formIcon = ico;
 	}
-	
+
 	@property public final void topMost(bool b)
 	{
 		this.setExStyle(WS_EX_TOPMOST, b);
@@ -161,14 +152,14 @@ class Form: LayoutControl
 	{
 		this._startPosition = fsp;
 	}
-	
+
 	private void doEvents()
 	{
 		MSG m = void;
 
 		while(GetMessageW(&m, null, 0, 0))
 		{
-			if(Form.hasBit(this._cBits, ControlBits.MODAL_CONTROL) && Form.hasBit(this._fBits, FormBits.MODAL_COMPLETED))
+			if(Form.hasBit(this._cBits, ControlBits.modalControl) && Form.hasBit(this._fBits, FormBits.modalCompleted))
 			{
 				break;
 			}
@@ -179,44 +170,44 @@ class Form: LayoutControl
 			}
 		}
 	}
-	
+
 	public override void show()
 	{
 		super.show();
-		
+
 		this.doEvents();
 	}
-	
+
 	public final DialogResult showDialog()
 	{
-		Form.setBit(this._cBits, ControlBits.MODAL_CONTROL, true);
+		Form.setBit(this._cBits, ControlBits.modalControl, true);
 		this._hActiveWnd = GetActiveWindow();
 		EnableWindow(this._hActiveWnd, false);
-		
+
 		this.show();
 		return this._dlgResult;
 	}
 
 	private final void doFormStartPosition()
 	{
-		if((this._startPosition is FormStartPosition.CENTER_PARENT && !this.parent) || 
-			this._startPosition is FormStartPosition.CENTER_SCREEN)
+		if((this._startPosition is FormStartPosition.centerParent && !this.parent) ||
+			this._startPosition is FormStartPosition.centerScreen)
 		{
 			Rect wa = Screen.workArea;
 			Rect b = this._bounds;
-			
-			this._bounds.position = Point((wa.width - b.width) / 2, 
+
+			this._bounds.position = Point((wa.width - b.width) / 2,
 										  (wa.height - b.height) / 2);
 		}
-		else if(this._startPosition is FormStartPosition.CENTER_PARENT)
+		else if(this._startPosition is FormStartPosition.centerParent)
 		{
 			Rect pr = this.parent.bounds;
 			Rect b = this._bounds;
 
-			this._bounds.position = Point(pr.left + (pr.width - b.width) / 2, 
+			this._bounds.position = Point(pr.left + (pr.width - b.width) / 2,
 										  pr.top + (pr.height - b.height) / 2);
 		}
-		else if(this._startPosition is FormStartPosition.DEFAULT_LOCATION)
+		else if(this._startPosition is FormStartPosition.defaultLocation)
 		{
 			this._bounds.position = Point(CW_USEDEFAULT, CW_USEDEFAULT);
 		}
@@ -226,55 +217,55 @@ class Form: LayoutControl
 	{
 		switch(fbs)
 		{
-			case FormBorderStyle.FIXED_3D:
+			case FormBorderStyle.fixed3d:
 				style &= ~(WS_BORDER | WS_THICKFRAME | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_STATICEDGE);
-				
+
 				style |= WS_CAPTION;
 				exStyle |= WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE | WS_EX_DLGMODALFRAME;
 				break;
-			
-			case FormBorderStyle.FIXED_DIALOG:
+
+			case FormBorderStyle.fixedDialog:
 				style &= ~(WS_BORDER | WS_THICKFRAME);
 				exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-			
+
 				style |= WS_CAPTION | WS_DLGFRAME;
 				exStyle |= WS_EX_DLGMODALFRAME | WS_EX_WINDOWEDGE;
 				break;
-			
-			case FormBorderStyle.FIXED_SINGLE:
+
+			case FormBorderStyle.fixedSingle:
 				style &= ~(WS_THICKFRAME | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE | WS_EX_STATICEDGE);
-			
+
 				style |= WS_CAPTION | WS_BORDER;
 				exStyle |= WS_EX_WINDOWEDGE | WS_EX_DLGMODALFRAME;
 				break;
-			
-			case FormBorderStyle.FIXED_TOOLWINDOW:
+
+			case FormBorderStyle.fixedToolWindow:
 				style &= ~(WS_BORDER | WS_THICKFRAME | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-			
+
 				style |= WS_CAPTION;
 				exStyle |= WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE | WS_EX_DLGMODALFRAME;
 				break;
-			
-			case FormBorderStyle.SIZEABLE:
+
+			case FormBorderStyle.sizeable:
 				style &= ~(WS_BORDER | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_CLIENTEDGE | WS_EX_DLGMODALFRAME | WS_EX_STATICEDGE);
-			
+
 				style |= WS_CAPTION | WS_THICKFRAME;
 				exStyle |= WS_EX_WINDOWEDGE;
 				break;
-			
-			case FormBorderStyle.SIZEABLE_TOOLWINDOW:
+
+			case FormBorderStyle.sizeableToolWindow:
 				style &= ~(WS_BORDER | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_CLIENTEDGE | WS_EX_DLGMODALFRAME | WS_EX_STATICEDGE);
 
 				style |= WS_THICKFRAME | WS_CAPTION;
 				exStyle |= WS_EX_TOOLWINDOW | WS_EX_WINDOWEDGE;
 				break;
-			
-			case FormBorderStyle.NONE:
+
+			case FormBorderStyle.none:
 				style &= ~(WS_BORDER | WS_THICKFRAME | WS_CAPTION | WS_DLGFRAME);
 				exStyle &= ~(WS_EX_TOOLWINDOW | WS_EX_CLIENTEDGE | WS_EX_DLGMODALFRAME | WS_EX_STATICEDGE | WS_EX_WINDOWEDGE);
 				break;
@@ -282,41 +273,41 @@ class Form: LayoutControl
 			default:
 				assert(0, "Unknown Form Border Style");
 				//break;
-		}		
+		}
 	}
-	
+
 	protected override void onDGuiMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case DGUI_SETDIALOGRESULT:
 			{
 				this._dlgResult = cast(DialogResult)m.wParam;
-				
-				Form.setBit(this._fBits, FormBits.MODAL_COMPLETED, true);
+
+				Form.setBit(this._fBits, FormBits.modalCompleted, true);
 				ShowWindow(this._handle, SW_HIDE); // Hide this window (it waits to be destroyed)
 				EnableWindow(this._hActiveWnd, true);
 				SetActiveWindow(this._hActiveWnd); // Restore the previous active window
 			}
 			break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.onDGuiMessage(m);
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		uint style = 0, exStyle = 0;
 		makeFormBorderStyle(this._formBorder, style, exStyle);
-		
+
 		this.setStyle(style, true);
 		this.setExStyle(exStyle, true);
-		ccp.ClassName = WC_FORM;
-		ccp.DefaultCursor = SystemCursors.arrow;
-		
+		ccp.className = WC_FORM;
+		ccp.defaultCursor = SystemCursors.arrow;
+
 		this.doFormStartPosition();
 		super.createControlParams(ccp);
 	}
@@ -329,13 +320,13 @@ class Form: LayoutControl
 			SetMenu(this._handle, this._menu.handle);
 			DrawMenuBar(this._handle);
 		}
-		
+
 		if(this._formIcon)
-		{	
+		{
 			Message m = Message(this._handle, WM_SETICON, ICON_BIG, cast(LPARAM)this._formIcon.handle);
 			this.originalWndProc(m);
-			
-			m.Msg = ICON_SMALL;
+
+			m.msg = ICON_SMALL;
 			this.originalWndProc(m);
 		}
 
@@ -344,7 +335,7 @@ class Form: LayoutControl
 
 	protected override void wndProc(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_CLOSE:
 			{
@@ -355,16 +346,16 @@ class Form: LayoutControl
 				{
 					this.onClose(EventArgs.empty);
 
-					if(Form.hasBit(this._cBits, ControlBits.MODAL_CONTROL))
+					if(Form.hasBit(this._cBits, ControlBits.modalControl))
 					{
 						EnableWindow(this._hActiveWnd, true);
 						SetActiveWindow(this._hActiveWnd);
 					}
-					
+
 					super.wndProc(m);
 				}
 
-				m.Result = 0;
+				m.result = 0;
 			}
 			break;
 

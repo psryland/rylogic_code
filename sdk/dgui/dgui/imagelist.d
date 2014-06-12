@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.imagelist;
 
 import dgui.core.interfaces.idisposable;
@@ -26,11 +17,11 @@ import dgui.canvas;
 
 enum ColorDepth: uint
 {
-	DEPTH_4BIT = ILC_COLOR4,
-	DEPTH_8BIT = ILC_COLOR8,
-	DEPTH_16BIT = ILC_COLOR16,
-	DEPTH_24BIT = ILC_COLOR24,
-	DEPTH_32BIT = ILC_COLOR32,	
+	depth4bit = ILC_COLOR4,
+	depth8bit = ILC_COLOR8,
+	depth16bit = ILC_COLOR16,
+	depth24bit = ILC_COLOR24,
+	depth32bit = ILC_COLOR32,
 }
 
 /*
@@ -52,8 +43,8 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 	private static ImageList_DestroyProc imageList_Destroy;
 	private static ImageList_DrawProc imageList_Draw;
 	private static ImageList_SetBkColorProc imageList_SetBkColor;
-	
-	private ColorDepth _depth = ColorDepth.DEPTH_32BIT;
+
+	private ColorDepth _depth = ColorDepth.depth32bit;
 	private Size _size;
 	private Collection!(Icon) _images;
 
@@ -64,9 +55,9 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 			HMODULE hModule = getModuleHandle("comctl32.dll");
 
 			/*
-			  * Static Library Issue: Use Dynamic Binding so Visual Styles are enabled (if supported) 
+			  * Static Library Issue: Use Dynamic Binding so Visual Styles are enabled (if supported)
 			  */
-			 
+
 			imageList_Create = cast(ImageList_CreateProc)GetProcAddress(hModule, "ImageList_Create");
 			imageList_Remove = cast(ImageList_RemoveProc)GetProcAddress(hModule, "ImageList_Remove");
 			imageList_AddIcon = cast(ImageList_AddIconProc)GetProcAddress(hModule, "ImageList_AddIcon");
@@ -84,35 +75,31 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 		}
 	}
 
-	public void dispose() 
+	public void dispose()
 	{
 		foreach(Icon i; this._images)
 		{
 			i.dispose(); //Dispose Icons before delete the ImageList.
 		}
-		
+
 		imageList_Destroy(this._handle);
 	}
-	
-	@trusted @property public override HIMAGELIST handle()
-	{
-		try
-		{
-			if(!this.created)
-			{
-				if(this._size == NullSize)
-				{
-					this._size.width = 16;
-					this._size.height = 16;
-				}
 
-				this._handle = imageList_Create(this._size.width, this._size.height, this._depth | ILC_MASK, 0, 0);
-				imageList_SetBkColor(this._handle, CLR_NONE);
-			}		
-		
-			return super.handle;
+	@property public override HIMAGELIST handle()
+	{
+		if(!this.created)
+		{
+			if(this._size == nullSize)
+			{
+				this._size.width = 16;
+				this._size.height = 16;
+			}
+
+			this._handle = imageList_Create(this._size.width, this._size.height, this._depth | ILC_MASK, 0, 0);
+			imageList_SetBkColor(this._handle, CLR_NONE);
 		}
-		catch (Exception) { return null; }
+
+		return super.handle;
 	}
 
 	public final void drawIcon(int i, Canvas dest, Point pos)
@@ -131,7 +118,7 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 
 		if(!this.created)
 		{
-			if(this._size == NullSize)
+			if(this._size == nullSize)
 			{
 				this._size.width = 16;
 				this._size.height = 16;
@@ -150,7 +137,7 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 		{
 			this._images.removeAt(index);
 		}
-		
+
 		if(this.created)
 		{
 			imageList_Remove(this._handle, index);
@@ -168,7 +155,7 @@ class ImageList: Handle!(HIMAGELIST), IDisposable
 		{
 			return this._images.get();
 		}
-		
+
 		return null;
 	}
 

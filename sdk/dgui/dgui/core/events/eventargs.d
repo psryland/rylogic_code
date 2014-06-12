@@ -1,52 +1,43 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.events.eventargs;
 
 class EventArgs
 {
 	private static EventArgs _empty;
-	
+
 	protected this()
 	{
-		
+
 	}
 
 	@property public static EventArgs empty()
 	{
-		if(!this._empty)	
+		if(!this._empty)
 		{
 			_empty = new EventArgs();
 		}
 
 		return _empty;
-	}	
+	}
 }
 
 class CancelEventArgs(T): EventArgs
 {
 	private bool _cancel = false;
 	private T _t;
-	
+
 	public this(T t)
 	{
 		this._t = t;
 	}
-	
+
 	@property public final bool cancel()
 	{
 		return this._cancel;
@@ -56,7 +47,7 @@ class CancelEventArgs(T): EventArgs
 	{
 		this._cancel = b;
 	}
-	
+
 	@property public final T item()
 	{
 		return this._t;

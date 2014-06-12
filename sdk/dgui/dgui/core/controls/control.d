@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.controls.control;
 
 public import dgui.core.interfaces.idisposable;
@@ -39,50 +30,50 @@ public import dgui.canvas;
 
 enum DockStyle: ubyte
 {
-	NONE 	= 0,
-	LEFT 	= 1,
-	TOP 	= 2,
-	RIGHT 	= 4,
-	BOTTOM 	= 8,
-	FILL 	= 16,
+	none 	= 0,
+	left 	= 1,
+	top 	= 2,
+	right 	= 4,
+	bottom 	= 8,
+	fill 	= 16,
 }
 
 enum PositionSpecified
 {
-	POSITION = 0,
-	SIZE     = 1,
-	ALL      = 2,
+	position = 0,
+	size     = 1,
+	all      = 2,
 }
 
 enum ControlBits: ulong
 {
-	NONE          		= 0,
-	ERASED        		= 1,
-	MOUSE_ENTER   		= 2,
-	CAN_NOTIFY   		= 4,
-	MODAL_CONTROL 		= 8,   // For Modal Dialogs
-	DOUBLE_BUFFERED		= 16,  // Use DGui's double buffered routine to draw components (be careful with this one!)
-	OWN_CLICK_MSG 	    = 32,  // Does the component Handles click itself?
-	CANNOT_ADD_CHILD	= 64,  // The child window will not be added to the parent's child controls' list
-	USE_CACHED_TEXT		= 128, // Does not send WM_SETTEXT / WM_GETTEXT messages, but it uses it's internal variable only.
+	none          		= 0,
+	erased        		= 1,
+	mouseEnter   		= 2,
+	canNotify   		= 4,
+	modalControl 		= 8,   // For Modal Dialogs
+	doubleBuffered		= 16,  // Use DGui's double buffered routine to draw components (be careful with this one!)
+	ownClickMsg 	    = 32,  // Does the component Handles click itself?
+	cannotAddChild	= 64,  // The child window will not be added to the parent's child controls' list
+	useCachedText		= 128, // Does not send WM_SETTEXT / WM_GETTEXT messages, but it uses it's internal variable only.
 }
 
 enum BorderStyle: ubyte
 {
-	NONE 		 = 0,
-	MANUAL 		 = 1, // Internal Use
-	FIXED_SINGLE = 2,
-	FIXED_3D	 = 4,
+	none 		 = 0,
+	manual 		 = 1, // Internal Use
+	fixedSingle = 2,
+	fixed3d	 = 4,
 }
 
 struct CreateControlParams
 {
-	string ClassName;
-	string SuperclassName; //Used in Superlassing
-	Color DefaultBackColor;
-	Color DefaultForeColor;
-	Cursor DefaultCursor;
-	ClassStyles ClassStyle;
+	string className;
+	string superclassName; //Used in Superlassing
+	Color defaultBackColor;
+	Color defaultForeColor;
+	Cursor defaultCursor;
+	ClassStyles classStyle;
 }
 
 abstract class Control: Handle!(HWND), IDisposable
@@ -100,8 +91,8 @@ abstract class Control: Handle!(HWND), IDisposable
 	protected Rect _bounds;
 	protected Color _foreColor;
 	protected Color _backColor;
-	protected DockStyle _dock = DockStyle.NONE;
-	protected ControlBits _cBits = ControlBits.CAN_NOTIFY;
+	protected DockStyle _dock = DockStyle.none;
+	protected ControlBits _cBits = ControlBits.canNotify;
 
 	public Event!(Control, PaintEventArgs) paint;
 	public Event!(Control, EventArgs) focusChanged;
@@ -120,11 +111,11 @@ abstract class Control: Handle!(HWND), IDisposable
 	public Event!(Control, EventArgs) resize;
 	public Event!(Control, EventArgs) click;
 
-    mixin TagProperty; // Insert tag() property in Control
+    mixin tagProperty; // Insert tag() property in Control
 
 	public this()
 	{
-		
+
 	}
 
 	public ~this()
@@ -146,39 +137,39 @@ abstract class Control: Handle!(HWND), IDisposable
 
 		if(this._handle)
 		{
-			/* From MSDN: Destroys the specified window. 
-			   The function sends WM_DESTROY and WM_NCDESTROY messages to the window 
-			   to deactivate it and remove the keyboard focus from it. 
-			   The function also destroys the window's menu, flushes the thread message queue, 
-			   destroys timers, removes clipboard ownership, and breaks the clipboard viewer chain 
-			   (if the window is at the top of the viewer chain). If the specified window is a parent 
-			   or owner window, DestroyWindow automatically destroys the associated child or owned 
-			   windows when it destroys the parent or owner window. The function first destroys child 
+			/* From MSDN: Destroys the specified window.
+			   The function sends WM_DESTROY and WM_NCDESTROY messages to the window
+			   to deactivate it and remove the keyboard focus from it.
+			   The function also destroys the window's menu, flushes the thread message queue,
+			   destroys timers, removes clipboard ownership, and breaks the clipboard viewer chain
+			   (if the window is at the top of the viewer chain). If the specified window is a parent
+			   or owner window, DestroyWindow automatically destroys the associated child or owned
+			   windows when it destroys the parent or owner window. The function first destroys child
 			   or owned windows, and then it destroys the parent or owner window
 			*/
-			
+
 			DestroyWindow(this._handle);
 		}
-		
+
 		this._handle = null;
 	}
-	
+
 
 	public static void convertRect(ref Rect rect, Control from, Control to)
 	{
 		MapWindowPoints(from ? from.handle : null, to ? to.handle : null, cast(POINT*)&rect.rect, 2);
 	}
-	
+
 	public static void convertPoint(ref Point pt, Control from, Control to)
 	{
 		MapWindowPoints(from ? from.handle : null, to ? to.handle : null, &pt.point, 1);
 	}
-	
+
 	public static void convertSize(ref Size sz, Control from, Control to)
 	{
 		MapWindowPoints(from ? from.handle : null, to ? to.handle : null, cast(POINT*)&sz.size, 1);
-	}		
-	
+	}
+
 	@property public final Rect bounds()
 	{
 		return this._bounds;
@@ -187,7 +178,7 @@ abstract class Control: Handle!(HWND), IDisposable
 	@property public void bounds(Rect rect)
 	{
 		this._bounds = rect;
-		
+
 		if(this.created)
 		{
 			this.setWindowPos(rect.left, rect.top, rect.width, rect.height);
@@ -198,31 +189,31 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		if(this.getExStyle() & WS_EX_CLIENTEDGE)
 		{
-			return BorderStyle.FIXED_3D;
+			return BorderStyle.fixed3d;
 		}
 		else if(this.getStyle() & WS_BORDER)
 		{
-			return BorderStyle.FIXED_SINGLE;
+			return BorderStyle.fixedSingle;
 		}
 
-		return BorderStyle.NONE;
+		return BorderStyle.none;
 	}
 
 	@property public final void borderStyle(BorderStyle bs)
-	{		
+	{
 		switch(bs)
 		{
-			case BorderStyle.FIXED_3D:
+			case BorderStyle.fixed3d:
 				this.setStyle(WS_BORDER, false);
 				this.setExStyle(WS_EX_CLIENTEDGE, true);
 				break;
 
-			case BorderStyle.FIXED_SINGLE:
+			case BorderStyle.fixedSingle:
 				this.setStyle(WS_BORDER, true);
 				this.setExStyle(WS_EX_CLIENTEDGE, false);
 				break;
-			
-			case BorderStyle.NONE:
+
+			case BorderStyle.none:
 				this.setStyle(WS_BORDER, false);
 				this.setExStyle(WS_EX_CLIENTEDGE, false);
 				break;
@@ -241,8 +232,8 @@ abstract class Control: Handle!(HWND), IDisposable
 	@property public void parent(Control c)
 	{
 		this._parent = c;
-		
-		if(!Control.hasBit(this._cBits, ControlBits.CANNOT_ADD_CHILD))
+
+		if(!Control.hasBit(this._cBits, ControlBits.cannotAddChild))
 		{
 			c.sendMessage(DGUI_ADDCHILDCONTROL, winCast!(WPARAM)(this), 0);
 		}
@@ -272,14 +263,14 @@ abstract class Control: Handle!(HWND), IDisposable
 			SetFocus(this._handle);
 		}
 	}
-	
+
 	@property public bool focused()
 	{
 		if(this.created)
 		{
 			return GetFocus() == this._handle;
 		}
-		
+
 		return false;
 	}
 
@@ -294,10 +285,10 @@ abstract class Control: Handle!(HWND), IDisposable
 		{
 			DeleteObject(this._backBrush);
 		}
-		
+
 		this._backColor = c;
 		this._backBrush = CreateSolidBrush(c.colorref);
-		
+
 		if(this.created)
 		{
 			this.invalidate();
@@ -315,10 +306,10 @@ abstract class Control: Handle!(HWND), IDisposable
 		{
 			DeleteObject(this._foreBrush);
 		}
-		
+
 		this._foreColor = c;
 		this._foreBrush = CreateSolidBrush(c.colorref);
-		
+
 		if(this.created)
 		{
 			this.invalidate();
@@ -337,11 +328,11 @@ abstract class Control: Handle!(HWND), IDisposable
 
 	@property public string text()
 	{
-		if(this.created && !Control.hasBit(this._cBits, ControlBits.USE_CACHED_TEXT))
+		if(this.created && !Control.hasBit(this._cBits, ControlBits.useCachedText))
 		{
 			return getWindowText(this._handle);
 		}
-		
+
 		return this._text;
 	}
 
@@ -349,34 +340,34 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		this._text = s;
 
-		if(this.created && !Control.hasBit(this._cBits, ControlBits.USE_CACHED_TEXT))
+		if(this.created && !Control.hasBit(this._cBits, ControlBits.useCachedText))
 		{
-			Control.setBit(this._cBits, ControlBits.CAN_NOTIFY, false); //Do not trigger TextChanged Event
+			Control.setBit(this._cBits, ControlBits.canNotify, false); //Do not trigger TextChanged Event
 			setWindowText(this._handle, s);
-			Control.setBit(this._cBits, ControlBits.CAN_NOTIFY, true);
+			Control.setBit(this._cBits, ControlBits.canNotify, true);
 		}
 	}
 
 	@property public final Font font()
-	{	
+	{
 		if(!this._defaultFont)
 		{
 			/* Font is not set, use Windows Font */
 			this._defaultFont = SystemFonts.windowsFont;
 		}
-		
+
 		return this._defaultFont;
 	}
 
 	@property public final void font(Font f)
-	{		
+	{
 		if(this.created)
 		{
 			if(this._defaultFont)
 			{
 				this._defaultFont.dispose();
 			}
-			
+
 			this.sendMessage(WM_SETFONT, cast(WPARAM)f.handle, true);
 		}
 
@@ -412,17 +403,17 @@ abstract class Control: Handle!(HWND), IDisposable
 			this.setSize(sz.width, sz.height);
 		}
 	}
-	
+
 	@property public final Size clientSize()
 	{
 		if(this.created)
 		{
 			Rect r = void;
-			
+
 			GetClientRect(this._handle, &r.rect);
 			return r.size;
 		}
-		
+
 		return this.size;
 	}
 
@@ -439,10 +430,10 @@ abstract class Control: Handle!(HWND), IDisposable
 			{
 				this._ctxMenu.dispose();
 			}
-			
+
 			this._ctxMenu = cm;
 		}
-	}	
+	}
 
 	@property public final int width()
 	{
@@ -500,9 +491,9 @@ abstract class Control: Handle!(HWND), IDisposable
 		{
 			this._defaultCursor.dispose();
 		}
-		
+
 		this._defaultCursor = c;
-		
+
 		if(this.created)
 		{
 			this.sendMessage(WM_SETCURSOR, cast(WPARAM)this._handle, 0);
@@ -537,11 +528,11 @@ abstract class Control: Handle!(HWND), IDisposable
 	}
 
 	public void show()
-	{ 
+	{
 		if(this.created)
 		{
 			SetWindowPos(this._handle, null, 0, 0, 0, 0, SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-			
+
 			if(this._parent)
 			{
 				this._parent.sendMessage(DGUI_DOLAYOUT, 0, 0);
@@ -575,82 +566,75 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		RedrawWindow(this._handle, null, null, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
 	}
-	
+
 	public final void sendMessage(ref Message m)
 	{
 		/*
 		 * SendMessage() emulation: it allows to send messages even if the control is not created,
 		 * it is useful in order to send custom messages to components.
 		 */
-		
-		if(m.Msg >= DGUI_BASE) /* DGui's Custom Message Handling */
+
+		if(m.msg >= DGUI_BASE) /* DGui's Custom Message Handling */
 		{
 			this.onDGuiMessage(m);
 		}
 		else /* Window Procedure Message Handling */
 		{
-			//Control.setBit(this._cBits, ControlBits.CAN_NOTIFY, false);
+			//Control.setBit(this._cBits, ControlBits.canNotify, false);
 			this.wndProc(m);
-			//Control.setBit(this._cBits, ControlBits.CAN_NOTIFY, true);
+			//Control.setBit(this._cBits, ControlBits.canNotify, true);
 		}
 	}
-	
+
 	public final uint sendMessage(uint msg, WPARAM wParam, LPARAM lParam)
 	{
 		Message m = Message(this._handle, msg, wParam, lParam);
 		this.sendMessage(m);
-		
-		return cast(uint)m.Result;
+
+		return m.result;
 	}
-	
-	extern(Windows) protected static LRESULT msgRouter(HWND hWnd, uint msg, WPARAM wParam, LPARAM lParam) nothrow
-	{		
-		try
+
+	extern(Windows) package static LRESULT msgRouter(HWND hWnd, uint msg, WPARAM wParam, LPARAM lParam)
+	{
+		if(msg == WM_NCCREATE)
 		{
-			if(msg == WM_NCCREATE)
-			{
-				/*
-				 * TRICK: Id == hWnd
-				 * ---
-				 * Inizializzazione Componente
-				 */
-		
-				CREATESTRUCTW* pCreateStruct = cast(CREATESTRUCTW*)lParam;
-				LPARAM param = cast(LPARAM)pCreateStruct.lpCreateParams;
-				SetWindowLongW(hWnd, GWL_USERDATA, cast(int)param);
-				SetWindowLongW(hWnd, GWL_ID, cast(uint)hWnd);
+			/*
+			 * TRICK: Id == hWnd
+			 * ---
+			 * Inizializzazione Componente
+			 */
 
-				Control theThis = winCast!(Control)(param);
-				theThis._handle = hWnd;	//Assign handle.
-			}
+			CREATESTRUCTW* pCreateStruct = cast(CREATESTRUCTW*)lParam;
+			LPARAM param = cast(LPARAM)pCreateStruct.lpCreateParams;
+			SetWindowLongW(hWnd, GWL_USERDATA, param);
+			SetWindowLongW(hWnd, GWL_ID, cast(uint)hWnd);
 
-			Control theThis = winCast!(Control)(GetWindowLongW(hWnd, GWL_USERDATA));
-			Message m = Message(hWnd, msg, wParam, lParam);
-
-			if(theThis)
-			{
-				theThis.wndProc(m);
-			}
-			else
-			{
-				Control.defWindowProc(m);
-			}
-			return m.Result;
+			Control theThis = winCast!(Control)(param);
+			theThis._handle = hWnd;	//Assign handle.
 		}
-		catch (Exception)
+
+		Control theThis = winCast!(Control)(GetWindowLongW(hWnd, GWL_USERDATA));
+		Message m = Message(hWnd, msg, wParam, lParam);
+
+		if(theThis)
 		{
-			assert(false, "msgRouter failed");
-			//return E_FAIL;
+			theThis.wndProc(m);
 		}
+		else
+		{
+			Control.defWindowProc(m);
+		}
+
+		return m.result;
 	}
 
 	private void onMenuCommand(WPARAM wParam, LPARAM lParam)
 	{
 		MENUITEMINFOW minfo;
-		
+
 		minfo.cbSize = MENUITEMINFOW.sizeof;
 		minfo.fMask = MIIM_DATA;
-		
+
 		if(GetMenuItemInfoW(cast(HMENU)lParam, cast(UINT)wParam, TRUE, &minfo))
 		{
 			MenuItem sender = winCast!(MenuItem)(minfo.dwItemData);
@@ -661,37 +645,37 @@ abstract class Control: Handle!(HWND), IDisposable
 	private void create()
 	{
 		CreateControlParams ccp;
-		ccp.DefaultBackColor = SystemColors.colorBtnFace;
-		ccp.DefaultForeColor = SystemColors.colorBtnText;
+		ccp.defaultBackColor = SystemColors.colorButtonFace;
+		ccp.defaultForeColor = SystemColors.colorButtonText;
 
 		this.createControlParams(ccp);
 
-		this._backBrush = CreateSolidBrush(ccp.DefaultBackColor.colorref);
-		this._foreBrush = CreateSolidBrush(ccp.DefaultForeColor.colorref);
+		this._backBrush = CreateSolidBrush(ccp.defaultBackColor.colorref);
+		this._foreBrush = CreateSolidBrush(ccp.defaultForeColor.colorref);
 
-		if(ccp.DefaultCursor)
+		if(ccp.defaultCursor)
 		{
-			this._defaultCursor = ccp.DefaultCursor;
+			this._defaultCursor = ccp.defaultCursor;
 		}
 
 		if(!this._defaultFont)
 		{
 			this._defaultFont = SystemFonts.windowsFont;
 		}
-		
+
 		if(!this._backColor.valid) // Invalid Color
 		{
-			this.backColor = ccp.DefaultBackColor;
+			this.backColor = ccp.defaultBackColor;
 		}
-		
+
 		if(!this._foreColor.valid) // Invalid Color
 		{
-			this.foreColor = ccp.DefaultForeColor;
+			this.foreColor = ccp.defaultForeColor;
 		}
 
 		HWND hParent = null;
 
-		if(Control.hasBit(this._cBits, ControlBits.MODAL_CONTROL)) //Is Modal ?
+		if(Control.hasBit(this._cBits, ControlBits.modalControl)) //Is Modal ?
 		{
 			hParent = GetActiveWindow();
 			this.setStyle(WS_CHILD, false);
@@ -700,21 +684,21 @@ abstract class Control: Handle!(HWND), IDisposable
 		else if(this._parent)
 		{
 			hParent = this._parent.handle;
-			
+
 			/* As MSDN says:
 			    WS_POPUP: The windows is a pop-up window. *** This style cannot be used with the WS_CHILD style. *** */
-			
+
 			if(!(this.getStyle() & WS_POPUP)) //The windows doesn't have WS_POPUP style, set WS_CHILD style.
 			{
 				this.setStyle(WS_CHILD, true);
 			}
-			
+
 			this.setStyle(WS_CLIPSIBLINGS, true);
 		}
 
 		createWindowEx(this.getExStyle(),
-					   ccp.ClassName,
-					   this._text, 
+					   ccp.className,
+					   this._text,
 					   this.getStyle(),
 					   this._bounds.x,
 					   this._bounds.y,
@@ -722,42 +706,42 @@ abstract class Control: Handle!(HWND), IDisposable
 					   this._bounds.height,
 					   hParent,
 					   winCast!(void*)(this));
-		
+
 		if(!this._handle)
 		{
-			throwException!(Win32Exception)("Control Creation failed: (ClassName: '%s', Text: '%s')", 
-											ccp.ClassName, this._text);
+			throwException!(Win32Exception)("Control Creation failed: (ClassName: '%s', Text: '%s')",
+											ccp.className, this._text);
 		}
-		
+
 		UpdateWindow(this._handle);
-		
+
 		if(this._parent)
 		{
 			this._parent.sendMessage(DGUI_CHILDCONTROLCREATED, winCast!(WPARAM)(this), 0); //Notify the parent window
 		}
 	}
-	
+
 	private void setPosition(int x, int y)
 	{
-		this.setWindowPos(x, y, 0, 0, PositionSpecified.POSITION);
+		this.setWindowPos(x, y, 0, 0, PositionSpecified.position);
 	}
-	
+
 	private void setSize(int w, int h)
 	{
-		this.setWindowPos(0, 0, w, h, PositionSpecified.SIZE);
+		this.setWindowPos(0, 0, w, h, PositionSpecified.size);
 	}
-	
-	private void setWindowPos(int x, int y, int w, int h, PositionSpecified ps = PositionSpecified.ALL)
+
+	private void setWindowPos(int x, int y, int w, int h, PositionSpecified ps = PositionSpecified.all)
 	{
 		uint wpf = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOMOVE | SWP_NOSIZE;
-		
-		if(ps !is PositionSpecified.ALL)
+
+		if(ps !is PositionSpecified.all)
 		{
-			if(ps is PositionSpecified.POSITION)
+			if(ps is PositionSpecified.position)
 			{
 				wpf &= ~SWP_NOMOVE;
 			}
-			else //if(ps is PositionSpecified.SIZE)
+			else //if(ps is PositionSpecified.size)
 			{
 				wpf &= ~SWP_NOSIZE;
 			}
@@ -766,22 +750,22 @@ abstract class Control: Handle!(HWND), IDisposable
 		{
 			wpf &= ~(SWP_NOMOVE | SWP_NOSIZE);
 		}
-		
+
 		SetWindowPos(this._handle, null, x, y, w, h, wpf); //Bounds updated in WM_WINDOWPOSCHANGED
 	}
-	
+
 	private void drawMenuItemImage(DRAWITEMSTRUCT* pDrawItem)
 	{
 		MenuItem mi = winCast!(MenuItem)(pDrawItem.itemData);
-		
+
 		if(mi)
 		{
 			scope Canvas c = Canvas.fromHDC(pDrawItem.hDC, false); //HDC *Not* Owned by Canvas Object
 			int icoSize = GetSystemMetrics(SM_CYMENU);
 			c.drawImage(mi.rootMenu.imageList.images[mi.imageIndex], Rect(0, 0, icoSize, icoSize));
 		}
-	}	
-	
+	}
+
 	protected final uint getStyle()
 	{
 		if(this.created)
@@ -813,7 +797,7 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		set ? (rBits |= rBit) : (rBits &= ~rBit);
 	}
-	
+
 	protected static final bool hasBit(ref ulong rBits, ulong rBit)
 	{
 		return cast(bool)(rBits & rBit);
@@ -835,7 +819,7 @@ abstract class Control: Handle!(HWND), IDisposable
 		{
 			uint exStyle = this.getExStyle();
 			set ? (exStyle |= cstyle) : (exStyle &= ~cstyle);
-		
+
 			SetWindowLongW(this._handle, GWL_EXSTYLE, exStyle);
 			this.redraw();
 			this._extendedStyle = exStyle;
@@ -845,14 +829,14 @@ abstract class Control: Handle!(HWND), IDisposable
 			set ? (this._extendedStyle |= cstyle) : (this._extendedStyle &= ~cstyle);
 		}
 	}
-	
+
 	protected void createControlParams(ref CreateControlParams ccp)
 	{
-		ClassStyles cstyle = ccp.ClassStyle | ClassStyles.DBLCLKS;
-		
-		WindowClass.register(ccp.ClassName, cstyle, ccp.DefaultCursor, &Control.msgRouter);
+		ClassStyles cstyle = ccp.classStyle | ClassStyles.doubleClicks;
+
+		WindowClass.register(ccp.className, cstyle, ccp.defaultCursor, cast(WNDPROC) /*FIXME may throw*/ &Control.msgRouter);
 	}
-	
+
 	protected uint originalWndProc(ref Message m)
 	{
 		return Control.defWindowProc(m);
@@ -862,27 +846,27 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		if(IsWindowUnicode(m.hWnd))
 		{
-			m.Result = DefWindowProcW(m.hWnd, m.Msg, m.wParam, m.lParam);
+			m.result = DefWindowProcW(m.hWnd, m.msg, m.wParam, m.lParam);
 		}
 		else
 		{
-			m.Result = DefWindowProcA(m.hWnd, m.Msg, m.wParam, m.lParam);
+			m.result = DefWindowProcA(m.hWnd, m.msg, m.wParam, m.lParam);
 		}
-		
-		return cast(uint)(m.Result);
+
+		return m.result;
 	}
 
 	protected void onDGuiMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case DGUI_REFLECTMESSAGE:
 				Message rm = *(cast(Message*)m.wParam);
 				this.onReflectedMessage(rm);
 				*(cast(Message*)m.wParam) = rm; //Copy the result, so the parent can return result.
-				//m.Result = rm.Result; // No result here! 
+				//m.result = rm.result; // No result here!
 				break;
-			
+
 			case DGUI_CREATEONLY:
 			{
 				if(!this.created)
@@ -891,60 +875,60 @@ abstract class Control: Handle!(HWND), IDisposable
 				}
 			}
 			break;
-			
+
 			default:
-				m.Result = 0;
+				m.result = 0;
 				break;
 		}
 	}
-	
+
 	protected void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_CTLCOLOREDIT, WM_CTLCOLORBTN:
 				SetBkColor(cast(HDC)m.wParam, this.backColor.colorref);
 				SetTextColor(cast(HDC)m.wParam, this.foreColor.colorref);
-				m.Result = cast(LRESULT)this._backBrush;
+				m.result = cast(LRESULT)this._backBrush;
 				break;
-			
+
 			case WM_MEASUREITEM:
 			{
 				MEASUREITEMSTRUCT* pMeasureItem = cast(MEASUREITEMSTRUCT*)m.lParam;
-				
+
 				if(pMeasureItem.CtlType == ODT_MENU)
 				{
 					MenuItem mi = winCast!(MenuItem)(pMeasureItem.itemData);
-				
+
 					if(mi)
 					{
 						if(mi.parent.handle == GetMenu(this._handle))// Check if parent of 'mi' is the menu bar
 						{
 							FontMetrics fm = this.font.metrics;
-							
+
 							int icoSize = GetSystemMetrics(SM_CYMENU);
-							pMeasureItem.itemWidth = icoSize + fm.MaxCharWidth;
+							pMeasureItem.itemWidth = icoSize + fm.maxCharWidth;
 						}
 						else
 						{
 							pMeasureItem.itemWidth = 10;
 						}
 					}
-				}				
+				}
 			}
 			break;
-			
+
 			case WM_DRAWITEM:
 			{
 				DRAWITEMSTRUCT* pDrawItem = cast(DRAWITEMSTRUCT*)m.lParam;
-			
+
 				if(pDrawItem.CtlType == ODT_MENU)
 				{
 					this.drawMenuItemImage(pDrawItem);
 				}
 			}
 			break;
-			
+
 			default:
 				//Control.defWindowProc(m);
 				break;
@@ -985,7 +969,7 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		this.resize(this, e);
 	}
-	
+
 	protected void onVisibleChanged(EventArgs e)
 	{
 		this.visibleChanged(this, e);
@@ -1020,25 +1004,25 @@ abstract class Control: Handle!(HWND), IDisposable
 	{
 		this.mouseLeave(this, e);
 	}
-	
+
 	protected void onFocusChanged(EventArgs e)
 	{
 		this.focusChanged(this, e);
 	}
-	
+
 	protected void onControlCode(ControlCodeEventArgs e)
 	{
 		this.controlCode(this, e);
 	}
-	
+
 	protected void wndProc(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_ERASEBKGND:
-				m.Result = 0; // Do nothing here, handle it in WM_PAINT
+				m.result = 0; // Do nothing here, handle it in WM_PAINT
 				break;
-			
+
 			case WM_PAINT:
 			{
 				HDC hdc;
@@ -1055,24 +1039,24 @@ abstract class Control: Handle!(HWND), IDisposable
 					hdc = cast(HDC)m.wParam;
 					GetUpdateRect(this._handle, &clipRect.rect, false);
 				}
-				
+
 				FillRect(hdc, &clipRect.rect, this._backBrush); //Fill with background color;
-				
+
 				scope Canvas c = Canvas.fromHDC(hdc, false);
 				scope PaintEventArgs e = new PaintEventArgs(c, clipRect);
 				this.onPaint(e);
-				
+
 				if(!m.wParam)
 				{
 					EndPaint(this._handle, &ps);
 				}
-				
-				m.Result = 0;
+
+				m.result = 0;
 			}
 			break;
-			
+
 			case WM_CREATE: // Aggiornamento Font, rimuove FIXED SYS
-			{				
+			{
 				this.sendMessage(WM_SETFONT, cast(WPARAM)this._defaultFont.handle, true);
 
 				if(this._ctxMenu)
@@ -1083,15 +1067,15 @@ abstract class Control: Handle!(HWND), IDisposable
 					{
 						DestroyMenu(hDefaultMenu); //Destroy default menu (if exists)
 					}
-					
+
 					this._ctxMenu.create();
 				}
-				
+
 				this.onHandleCreated(EventArgs.empty);
-				m.Result = 0; //Continue..
+				m.result = 0; //Continue..
 			}
 			break;
-			
+
 			case WM_WINDOWPOSCHANGED:
 			{
 				WINDOWPOS* pWndPos = cast(WINDOWPOS*)m.lParam;
@@ -1099,19 +1083,19 @@ abstract class Control: Handle!(HWND), IDisposable
 				if(!(pWndPos.flags & SWP_NOMOVE) || !(pWndPos.flags & SWP_NOSIZE))
 				{
 					/* Note: 'pWndPos' has NonClient coordinates */
-					
+
 					if(!(pWndPos.flags & SWP_NOMOVE))
 					{
 						this._bounds.x = pWndPos.x;
 						this._bounds.y = pWndPos.y;
 					}
-					
+
 					if(!(pWndPos.flags & SWP_NOSIZE))
 					{
 						this._bounds.width = pWndPos.cx;
 						this._bounds.height = pWndPos.cy;
 					}
-					
+
 					if(!(pWndPos.flags & SWP_NOSIZE))
 					{
 						this.onResize(EventArgs.empty);
@@ -1126,15 +1110,15 @@ abstract class Control: Handle!(HWND), IDisposable
 
 					this.onVisibleChanged(EventArgs.empty);
 				}
-				
+
 				this.originalWndProc(m); //Send WM_SIZE too
 			}
 			break;
 
 			case WM_KEYDOWN:
-			{				
+			{
 				scope KeyEventArgs e = new KeyEventArgs(cast(Keys)m.wParam);
-				this.onKeyDown(e);				
+				this.onKeyDown(e);
 
 				if(e.handled)
 				{
@@ -1142,7 +1126,7 @@ abstract class Control: Handle!(HWND), IDisposable
 				}
 				else
 				{
-					m.Result = 0;
+					m.result = 0;
 				}
 			}
 			break;
@@ -1158,13 +1142,13 @@ abstract class Control: Handle!(HWND), IDisposable
 				}
 				else
 				{
-					m.Result = 0;
+					m.result = 0;
 				}
 			}
 			break;
 
 			case WM_CHAR:
-			{				
+			{
 				scope KeyCharEventArgs e = new KeyCharEventArgs(cast(Keys)m.wParam, cast(char)m.wParam);
 				this.onKeyChar(e);
 
@@ -1174,31 +1158,31 @@ abstract class Control: Handle!(HWND), IDisposable
 				}
 				else
 				{
-					m.Result = 0;
+					m.result = 0;
 				}
 			}
 			break;
-			
+
 			case WM_MOUSELEAVE:
 			{
-				Control.setBit(this._cBits, ControlBits.MOUSE_ENTER, false);
-				
+				Control.setBit(this._cBits, ControlBits.mouseEnter, false);
+
 				scope MouseEventArgs e = new MouseEventArgs(Point(LOWORD(m.lParam), HIWORD(m.lParam)), cast(MouseKeys)m.wParam);
 				this.onMouseLeave(e);
 
 				this.originalWndProc(m);
 			}
 			break;
-			
+
 			case WM_MOUSEMOVE:
 			{
 				scope MouseEventArgs e = new MouseEventArgs(Point(LOWORD(m.lParam), HIWORD(m.lParam)), cast(MouseKeys)m.wParam);
 				this.onMouseMove(e);
 
-				if(!Control.hasBit(this._cBits, ControlBits.MOUSE_ENTER))
+				if(!Control.hasBit(this._cBits, ControlBits.mouseEnter))
 				{
-					Control.setBit(this._cBits, ControlBits.MOUSE_ENTER, true);
-					
+					Control.setBit(this._cBits, ControlBits.mouseEnter, true);
+
 					TRACKMOUSEEVENT tme;
 
 					tme.cbSize = TRACKMOUSEEVENT.sizeof;
@@ -1213,7 +1197,7 @@ abstract class Control: Handle!(HWND), IDisposable
 				this.originalWndProc(m);
 			}
 			break;
-			
+
 			case WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_RBUTTONDOWN:
 			{
 				scope MouseEventArgs e = new MouseEventArgs(Point(LOWORD(m.lParam), HIWORD(m.lParam)), cast(MouseKeys)m.wParam);
@@ -1225,47 +1209,47 @@ abstract class Control: Handle!(HWND), IDisposable
 
 			case WM_LBUTTONUP, WM_MBUTTONUP, WM_RBUTTONUP:
 			{
-				MouseKeys mk = MouseKeys.NONE;
+				MouseKeys mk = MouseKeys.none;
 
 				if(GetAsyncKeyState(MK_LBUTTON))
 				{
-					mk |= MouseKeys.LEFT;
+					mk |= MouseKeys.left;
 				}
 
 				if(GetAsyncKeyState(MK_MBUTTON))
 				{
-					mk |= MouseKeys.MIDDLE;
+					mk |= MouseKeys.middle;
 				}
 
 				if(GetAsyncKeyState(MK_RBUTTON))
 				{
-					mk |= MouseKeys.RIGHT;
+					mk |= MouseKeys.right;
 				}
-				
-				Point p = Point(LOWORD(m.lParam), HIWORD(m.lParam));				
+
+				Point p = Point(LOWORD(m.lParam), HIWORD(m.lParam));
 				scope MouseEventArgs e = new MouseEventArgs(p, mk);
 				this.onMouseKeyUp(e);
-				
+
 				Control.convertPoint(p, this, null);
 
-				if(m.Msg == WM_LBUTTONUP && !Control.hasBit(this._cBits, ControlBits.OWN_CLICK_MSG) && WindowFromPoint(p.point) == this._handle)
+				if(m.msg == WM_LBUTTONUP && !Control.hasBit(this._cBits, ControlBits.ownClickMsg) && WindowFromPoint(p.point) == this._handle)
 				{
 					this.onClick(EventArgs.empty);
 				}
-				
+
 				this.originalWndProc(m);
 			}
 			break;
 
 			case WM_LBUTTONDBLCLK, WM_MBUTTONDBLCLK, WM_RBUTTONDBLCLK:
-			{				
+			{
 				scope MouseEventArgs e = new MouseEventArgs(Point(LOWORD(m.lParam), HIWORD(m.lParam)), cast(MouseKeys)m.wParam);
 				this.onDoubleClick(e);
 
 				this.originalWndProc(m);
 			}
 			break;
-			
+
 			case WM_SETCURSOR:
 			{
 				if(cast(HWND)m.wParam == this._handle && this._defaultCursor && cast(LONG)this._defaultCursor.handle != GetClassLongW(this._handle, GCL_HCURSOR))
@@ -1276,7 +1260,7 @@ abstract class Control: Handle!(HWND), IDisposable
 				this.originalWndProc(m); //Continue cursor selection
 			}
 			break;
-		
+
 			case WM_MENUCOMMAND:
 				this.onMenuCommand(m.wParam, m.lParam);
 				break;
@@ -1288,7 +1272,7 @@ abstract class Control: Handle!(HWND), IDisposable
 					this._ctxMenu.popupMenu(this._handle, Cursor.position);
 				}
 
-				this.originalWndProc(m);				
+				this.originalWndProc(m);
 			}
 			break;
 
@@ -1298,31 +1282,31 @@ abstract class Control: Handle!(HWND), IDisposable
 				this.originalWndProc(m);
 			}
 			break;
-			
+
 			case WM_GETDLGCODE:
 			{
 				scope ControlCodeEventArgs e = new ControlCodeEventArgs();
 				this.onControlCode(e);
-				
-				if(e.controlCode is ControlCode.IGNORE)
+
+				if(e.controlCode is ControlCode.ignore)
 				{
 					this.originalWndProc(m);
 				}
 				else
 				{
-					m.Result = e.controlCode;
+					m.result = e.controlCode;
 				}
 			}
 			break;
-			
+
 			case WM_INITMENU:
 			{
 				if(this._ctxMenu)
 				{
 					this._ctxMenu.onPopup(EventArgs.empty);
 				}
-				
-				m.Result = 0;
+
+				m.result = 0;
 			}
 			break;
 

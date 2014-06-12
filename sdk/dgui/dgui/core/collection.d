@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.collection;
 
 class Collection(T)
@@ -24,14 +15,14 @@ class Collection(T)
 	public final int add(T t)
 	{
 		this._t ~= t;
-		return cast(int)(this._t.length - 1);
+		return this._t.length - 1;
 	}
 
 	public final void clear()
 	{
 		this._t.length = 0;
 	}
-	
+
 	public final T[] get()
 	{
 		return this._t;
@@ -39,11 +30,11 @@ class Collection(T)
 
 	@property public final int length()
 	{
-		return cast(int)(this._t.length);
+		return this._t.length;
 	}
 
 	public final void remove(T t)
-	{		
+	{
 		this.removeAt(this.find(t));
 	}
 
@@ -51,7 +42,7 @@ class Collection(T)
 	{
 		int x = 0;
 		T[] newT = new T[this._t.length - 1];
-		
+
 		foreach(int i, T t; this._t)
 		{
 			if(i != idx)
@@ -125,5 +116,5 @@ class Collection(T)
 		}
 
 		return res;
-	}	
+	}
 }

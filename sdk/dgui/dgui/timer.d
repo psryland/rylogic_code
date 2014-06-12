@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.timer;
 
 import dgui.core.interfaces.idisposable;
@@ -25,11 +16,11 @@ import dgui.core.exception;
 
 final class Timer: IDisposable
 {
-	private alias Timer[uint] TimerMap;
-	
+	private alias Timer[uint] timerMap;
+
 	public Event!(Timer, EventArgs) tick;
 
-	private static TimerMap _timers;
+	private static timerMap _timers;
 	private uint _timerId = 0;
 	private uint _time = 0;
 
@@ -38,32 +29,27 @@ final class Timer: IDisposable
 		this.dispose();
 	}
 
-	extern(Windows) private static void timerProc(HWND hwnd, uint msg, ulong idEvent, uint t) nothrow
+	extern(Windows) private static void timerProc(HWND hwnd, uint msg, uint idEvent, uint t)
 	{
-		try
+		if(idEvent in _timers)
 		{
-			uint idEvt = cast(uint)idEvent;
-			if( idEvt in _timers)
-			{
-				_timers[idEvt].onTick(EventArgs.empty);
-			}
-			else
-			{
-				throwException!(Win32Exception)("Unknown Timer: '%08X'", idEvt);
-			}
+			_timers[idEvent].onTick(EventArgs.empty);
 		}
-		catch (Exception){}
+		else
+		{
+			throwException!(Win32Exception)("Unknown Timer: '%08X'", idEvent);
+		}
 	}
 
-	public void dispose() 
+	public void dispose()
 	{
 		if(this._timerId)
 		{
 			if(!KillTimer(null, this._timerId))
 			{
 				throwException!(Win32Exception)("Cannot Dispose Timer");
-			}			
-			
+			}
+
 			_timers.remove(this._timerId);
 			this._timerId = 0;
 		}
@@ -83,7 +69,7 @@ final class Timer: IDisposable
 	{
 		if(!this._timerId)
 		{
-			this._timerId = SetTimer(null, 0, this._time, &Timer.timerProc);
+			this._timerId = SetTimer(null, 0, this._time, cast(TIMERPROC) /*FIXME may throw*/ &Timer.timerProc);
 
 			if(!this._timerId)
 			{

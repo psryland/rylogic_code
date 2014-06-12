@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.registry;
 
 pragma(lib, "advapi32.lib");
@@ -29,10 +20,10 @@ import dgui.core.handle;
 
 enum RegistryValueType: uint
 {
-	BINARY = REG_BINARY,
-	DWORD = REG_DWORD,
-	QWORD = REG_QWORD,
-	STRING = REG_SZ,
+	binary = REG_BINARY,
+	dword = REG_DWORD,
+	qword = REG_QWORD,
+	string_ = REG_SZ,
 }
 
 interface IRegistryValue
@@ -49,7 +40,7 @@ abstract class RegistryValue(T): IRegistryValue
 	{
 		this._value = val;
 	}
-	
+
 	@property public abstract RegistryValueType valueType();
 }
 
@@ -59,10 +50,10 @@ final class RegistryValueBinary: RegistryValue!(ubyte[])
 	{
 		super(b);
 	}
-	
+
 	@property public override RegistryValueType valueType()
 	{
-		return RegistryValueType.BINARY;
+		return RegistryValueType.binary;
 	}
 
 	public override string toString()
@@ -79,7 +70,7 @@ final class RegistryValueBinary: RegistryValue!(ubyte[])
 
 	public void write(RegistryKey owner, string name)
 	{
-		ulong res = RegSetValueExW(owner.handle, toUTFz!(wchar*)(name), 0, REG_BINARY, cast(const ubyte*)this._value.ptr, cast(uint)this._value.length);
+		ulong res = RegSetValueExW(owner.handle, toUTFz!(wchar*)(name), 0, REG_BINARY, cast(ubyte*)this._value.ptr, this._value.length);
 
 		if(res != ERROR_SUCCESS)
 		{
@@ -94,10 +85,10 @@ final class RegistryValueString: RegistryValue!(string)
 	{
 		super(s);
 	}
-	
+
 	@property public override RegistryValueType valueType()
 	{
-		return RegistryValueType.STRING;
+		return RegistryValueType.string_;
 	}
 
 	public override string toString()
@@ -107,7 +98,7 @@ final class RegistryValueString: RegistryValue!(string)
 
 	public void write(RegistryKey owner, string name)
 	{
-		ulong res = RegSetValueExW(owner.handle, toUTFz!(wchar*)(name), 0, REG_SZ, cast(ubyte*)this._value.ptr, cast(uint)this._value.length);
+		ulong res = RegSetValueExW(owner.handle, toUTFz!(wchar*)(name), 0, REG_SZ, cast(ubyte*)this._value.ptr, this._value.length);
 
 		if(res != ERROR_SUCCESS)
 		{
@@ -122,10 +113,10 @@ final class RegistryValueDword: RegistryValue!(uint)
 	{
 		super(i);
 	}
-	
+
 	@property public override RegistryValueType valueType()
 	{
-		return RegistryValueType.DWORD;
+		return RegistryValueType.dword;
 	}
 
 	public override string toString()
@@ -150,10 +141,10 @@ final class RegistryValueQword: RegistryValue!(ulong)
 	{
 		super(l);
 	}
-	
+
 	@property public override RegistryValueType valueType()
 	{
-		return RegistryValueType.QWORD;
+		return RegistryValueType.qword;
 	}
 
 	public override string toString()
@@ -175,7 +166,7 @@ final class RegistryValueQword: RegistryValue!(ulong)
 final class RegistryKey: Handle!(HKEY), IDisposable
 {
 	private bool _owned;
-	
+
 	package this(HKEY hKey, bool owned = true)
 	{
 		this._handle = hKey;
@@ -187,7 +178,7 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 		this.dispose();
 	}
 
-	public void dispose() 
+	public void dispose()
 	{
 		if(this._owned)
 		{
@@ -200,17 +191,17 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 	{
 		const uint MAX_KEY_LENGTH = 0xFF;
 		const uint MAX_VALUE_NAME = 0x3FFF;
-			
+
 		HKEY hDelKey;
 		uint valuesCount, subKeysCount;
 		wchar[] keyName = new wchar[MAX_KEY_LENGTH];
 		wchar[] valName = new wchar[MAX_VALUE_NAME];
-		
+
 		if(RegOpenKeyExW(hKey, toUTFz!(wchar*)(name), 0, KEY_ALL_ACCESS, &hDelKey) != ERROR_SUCCESS)
 		{
 			throwException!(RegistryException)("Cannot open Key '%s'", to!(string)(name.ptr));
 		}
-		
+
 		if(RegQueryInfoKeyW(hDelKey, null, null, null, &subKeysCount, null, null, &valuesCount, null, null, null, null) != ERROR_SUCCESS)
 		{
 			throwException!(RegistryException)("Cannot query Key '%s'", to!(string)(name.ptr));
@@ -219,7 +210,7 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 		for(int i = 0; i < subKeysCount; i++)
 		{
 			uint size = MAX_KEY_LENGTH;
-				
+
 			RegEnumKeyExW(hDelKey, 0, keyName.ptr, &size, null, null, null, null);
 		}
 			this.doDeleteSubKey(hDelKey, toUTF8(keyName));
@@ -227,7 +218,7 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 		for(int i = 0; i < valuesCount; i++)
 		{
 			uint size = MAX_VALUE_NAME;
-				
+
 			if(RegEnumValueW(hDelKey, 0, valName.ptr, &size, null, null, null, null) != ERROR_SUCCESS)
 			{
 				throwException!(RegistryException)("Cannot enumerate values from key '%s'", name);
@@ -253,7 +244,7 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 		uint disp;
 
 		int res = RegCreateKeyExW(this._handle, toUTFz!(wchar*)(name), 0, null, 0, KEY_ALL_ACCESS, null, &hKey, &disp);
-		
+
 		switch(res)
 		{
 			case ERROR_SUCCESS:
@@ -262,7 +253,7 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 			default:
 				throwException!(RegistryException)("Cannot create Key '%s'", name);
 		}
-		
+
 		return null;
 	}
 
@@ -281,11 +272,11 @@ final class RegistryKey: Handle!(HKEY), IDisposable
 		{
 			case ERROR_SUCCESS:
 				return new RegistryKey(hKey);
-			
+
 			default:
 				throwException!(RegistryException)("Cannot retrieve Key '%s'", name);
 		}
-		
+
 		return null;
 	}
 
@@ -353,77 +344,77 @@ final class Registry
 
 	private this()
 	{
-		
+
 	}
 
-	@property public static RegistryKey classesRoot() 
+	@property public static RegistryKey classesRoot()
 	{
 		if(!_classesRoot)
 		{
 			_classesRoot = new RegistryKey(HKEY_CLASSES_ROOT, false);
 		}
-		
+
 		return _classesRoot;
 	}
-	
-	@property public static RegistryKey currentConfig() 
+
+	@property public static RegistryKey currentConfig()
 	{
 		if(!_currentConfig)
 		{
 			_currentConfig = new RegistryKey(HKEY_CURRENT_CONFIG, false);
 		}
-		
+
 		return _currentConfig;
 	}
-	
-	@property public static RegistryKey currentUser() 
+
+	@property public static RegistryKey currentUser()
 	{
 		if(!_currentUser)
 		{
 			_currentUser = new RegistryKey(HKEY_CURRENT_USER, false);
 		}
-		
+
 		return _currentUser;
 	}
-	
-	@property public static RegistryKey dynData() 
+
+	@property public static RegistryKey dynData()
 	{
 		if(!_dynData)
 		{
 			_dynData = new RegistryKey(HKEY_DYN_DATA, false);
 		}
-		
+
 		return _dynData;
 	}
-	
-	@property public static RegistryKey localMachine() 
+
+	@property public static RegistryKey localMachine()
 	{
 		if(!_localMachine)
 		{
 			_localMachine = new RegistryKey(HKEY_LOCAL_MACHINE, false);
 		}
-		
+
 		return _localMachine;
 	}
-	
-	@property public static RegistryKey performanceData() 
+
+	@property public static RegistryKey performanceData()
 	{
 		if(!_performanceData)
 		{
 			_performanceData = new RegistryKey(HKEY_PERFORMANCE_DATA, false);
 		}
-		
+
 		return _performanceData;
 	}
-	
-	
-	@property public static RegistryKey users() 
+
+
+	@property public static RegistryKey users()
 	{
 		if(!_users)
 		{
 			_users = new RegistryKey(HKEY_USERS, false);
 		}
-		
+
 		return _users;
 	}
 }

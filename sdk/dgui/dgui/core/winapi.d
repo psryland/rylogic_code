@@ -1,18 +1,10 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
 
 /*
@@ -33,7 +25,7 @@ extern(Windows)
 		I_CHILDRENCALLBACK  = -1,
 		LPSTR_TEXTCALLBACKW = -1,
 	}
-	
+
 	enum
 	{
 		SW_INVALIDATE = 2,
@@ -54,7 +46,7 @@ extern(Windows)
 		DLGC_STATIC 		 = 256,
 		DLGC_BUTTON 		 = 0x2000,
 	}
-	
+
 	/* Frame Control Constants */
 	enum: uint
 	{
@@ -64,7 +56,7 @@ extern(Windows)
 		DFC_BUTTON		= 4,
 		DFC_POPUPMENU	= 5,
 	}
-	
+
 	enum: uint
 	{
 		DFCS_CAPTIONCLOSE   = 0,
@@ -73,7 +65,7 @@ extern(Windows)
 		DFCS_CAPTIONRESTORE = 3,
 		DFCS_CAPTIONHELP    = 4,
 	}
-	
+
 	enum: uint
 	{
 		DFCS_SCROLLUP            = 0,
@@ -84,7 +76,7 @@ extern(Windows)
 		DFCS_SCROLLSIZEGRIP      = 8,
 		DFCS_SCROLLSIZEGRIPRIGHT = 16,
 	}
-	
+
 	enum: uint
 	{
 		DFCS_MENUARROW      = 0,
@@ -92,7 +84,7 @@ extern(Windows)
 		DFCS_MENUBULLET     = 2,
 		DFCS_MENUARROWRIGHT = 4,
 	}
-	
+
 	enum: uint
 	{
 		DFCS_BUTTONCHECK         = 0,
@@ -105,7 +97,7 @@ extern(Windows)
 		DFCS_PUSHED              = 512,
 		DFCS_CHECKED             = 1024,
 	}
-	
+
 	enum: uint
 	{
 		DFCS_TRANSPARENT         = 0x800,
@@ -114,7 +106,7 @@ extern(Windows)
 		DFCS_FLAT                = 0x4000,
 		DFCS_MONO                = 0x8000,
 	}
-	
+
 	/* Windows Generic Messages */
 	enum: uint
 	{
@@ -146,8 +138,8 @@ extern(Windows)
 		//WM_MDICASCADE 		= 0x0227,
 		//WM_MDIICONARRANGE	 	= 0x0228,
 		//WM_MDIGETACTIVE 	 	= 0x0229,
-	}	
-	
+	}
+
 	/* Windows Position and Size Flags */
 	enum: uint
 	{
@@ -174,7 +166,7 @@ extern(Windows)
 		DIB_RGB_COLORS = 0,
 		DIB_PAL_COLORS = 1,
 	}
-	
+
 	/* GDI Object Types */
 	enum: uint
 	{
@@ -192,7 +184,7 @@ extern(Windows)
 		OBJ_ENHMETADC   = 12,
 		OBJ_ENHMETAFILE = 13,
 	}
-	
+
 	/* Track Bar Messages */
 	enum: uint
 	{
@@ -249,7 +241,7 @@ extern(Windows)
 		TBS_NOTHUMB        = 0x0080,
 		TBS_TOOLTIPS       = 0x0100,
 	}
-	
+
 	/* DrawIconEx() API flags */
 	enum: uint
 	{
@@ -258,8 +250,8 @@ extern(Windows)
 		DI_COMPAT 	   = 0x0004,
 		DI_DEFAULTSIZE = 0x0008,
 		DI_NORMAL 	   = DI_IMAGE | DI_MASK,
-	}	
-	
+	}
+
 	/* GetClassLong() API Flags */
 	enum: int
 	{
@@ -290,7 +282,7 @@ extern(Windows)
 		CCS_NOMOVEX 	  = 130,
 		CCS_RIGHT 		  = 131,
 	}
-	
+
 	/* GetWindowLong Flags() */
 	enum: int
 	{
@@ -301,8 +293,8 @@ extern(Windows)
 		GWL_EXSTYLE    = -20,
 		GWL_USERDATA   = -21,
 		GWL_ID		   = -12,
-	}	
-	
+	}
+
 	/* Notification Messages Base */
 	enum: uint
 	{
@@ -311,7 +303,7 @@ extern(Windows)
 		NM_RCLICK	  = NM_FIRST - 5,
 		NM_CUSTOMDRAW = NM_FIRST - 12,
 	}
-	
+
 	/* DrawEdge() API Flags */
 	enum: uint
 	{
@@ -349,18 +341,18 @@ extern(Windows)
 		BF_FLAT                    = 0x4000,
 		BF_MONO                    = 0x8000,
 	}
-	
+
 	/* Rich Edit Messages */
 	enum: uint
 	{
 		ES_DISABLENOSCROLL   = 0x00002000,
-			
+
 		ENM_NONE			 = 0x00000000,
 		ENM_CHANGE			 = 0x00000001,
 		ENM_UPDATE			 = 0x00000002,
 		ENM_LINK 			 = 0x04000000,
-		ENM_PROTECTED 		 = 0x00200000,			
-		
+		ENM_PROTECTED 		 = 0x00200000,
+
 		EM_CANPASTE			 = WM_USER + 50,
 		EM_EXGETSEL			 = WM_USER + 52,
 		EM_EXLIMITTEXT		 = WM_USER + 53,
@@ -375,7 +367,7 @@ extern(Windows)
 		EM_STREAMIN 		 = WM_USER + 73,
 		EM_STREAMOUT 		 = WM_USER + 74,
 		EM_GETTEXTRANGE 	 = WM_USER + 75,
-		
+
 		/* Rich Edit 2.0 */
 		EM_SETUNDOLIMIT 	 = WM_USER + 82,
 		EM_REDO 			 = WM_USER + 84,
@@ -394,9 +386,9 @@ extern(Windows)
 		EM_SETTEXTEX 		 = WM_USER + 97,
 		EN_LINK 			 = 0x070B,
 	}
-	
+
 	const HBMMENU_CALLBACK = cast(HBITMAP)-1;
-	
+
 	/+
 	/* Rich Edit Text Styles */
 	enum: uint
@@ -405,14 +397,14 @@ extern(Windows)
 		SF_RTF				= 0x0002,
 		SF_RTFNOOBJS 		= 0x0003,
 		SF_TEXTIZED 		= 0x0004,
-		
+
 		SFF_SELECTION 		= 0x8000,
 		SFF_PLAINRTF 		= 0x4000,
-		
+
 		SCF_SELECTION 		= 0x0001,
 		SCF_WORD 			= 0x0002,
 		SCF_ALL 			= 0x0004,
-		
+
 		CFM_BOLD 			= 0x00000001,
 		CFM_ITALIC 			= 0x00000002,
 		CFM_UNDERLINE 		= 0x00000004,
@@ -442,7 +434,7 @@ extern(Windows)
 		CFM_STYLE 			= 0x00080000,
 		CFM_ANIMATION 		= 0x00040000,
 		CFM_REVAUTHOR 		= 0x00008000,
-		
+
 		CFE_BOLD 			= 0x0001,
 		CFE_ITALIC 			= 0x0002,
 		CFE_UNDERLINE 		= 0x0004,
@@ -453,14 +445,14 @@ extern(Windows)
 		CFE_AUTOBACKCOLOR	= CFM_BACKCOLOR,
 		CFE_SUBSCRIPT 		= 0x00010000,
 		CFE_SUPERSCRIPT		= 0x00020000,
-		
+
 		CFM_SUBSCRIPT 		= CFE_SUBSCRIPT | CFE_SUPERSCRIPT,
 		CFM_SUPERSCRIPT 	= CFM_SUBSCRIPT,
-		
+
 		CFU_UNDERLINE 		= 1,
 	}
 	+/
-	
+
 	enum: DWORD
 	{
 		OFN_OVERWRITEPROMPT 		= 0x00000002,
@@ -490,7 +482,7 @@ extern(Windows)
 		//OFN_DONTADDTORECENT 		= 0x02000000,
 		//OFN_FORCESHOWHIDDEN 		= 0x10000000,
 	}
-	
+
 	enum: DWORD
 	{
 		CF_SCREENFONTS				 = 0x00000001,
@@ -522,7 +514,7 @@ extern(Windows)
 		//CF_NOSCRIPTSEL 			 = 0x00800000,
 		//CF_NOVERTFONTS 			 = 0x01000000,
 	}
-	
+
 	enum: uint
 	{
 		ODT_MENU 	 = 1,
@@ -531,7 +523,7 @@ extern(Windows)
 		ODT_BUTTON   = 4,
 		ODT_STATIC   = 5,
 	}
-	
+
 	/*
 	enum: uint
 	{
@@ -541,7 +533,7 @@ extern(Windows)
 		MDITILE_ZORDER = 0x0004,
 	}
 	*/
-	
+
 	enum
 	{
 		DS_ABSALIGN      = 0x0001,
@@ -588,9 +580,9 @@ extern(Windows)
 		WS_EX_TOOLWINDOW		 = 128,
 		WS_EX_TOPMOST 			 = 8,
 		WS_EX_WINDOWEDGE 		 = 256,
-		//WS_EX_TRANSPARENT		 = 32,		
+		//WS_EX_TRANSPARENT		 = 32,
 	}
-	
+
 	/* ToolTip Messages */
 	enum: uint
 	{
@@ -598,15 +590,15 @@ extern(Windows)
 		TTM_SETDELAYTIME   = WM_USER + 3,
 		TTM_POP            = WM_USER + 28,
 		TTM_SETTITLEW 	   = WM_USER + 33,
-		TTM_POPUP          = WM_USER + 34,		
+		TTM_POPUP          = WM_USER + 34,
 		TTM_ADDTOOLW 	   = WM_USER + 50,
 		TTM_DELTOOLW  	   = WM_USER + 51,
 		TTM_GETTEXTW 	   = WM_USER + 56,
 		TTM_UPDATETIPTEXTW = WM_USER + 57,
-		
+
 		TTN_FIRST 		 = -520u,
 		TTN_GETDISPINFOW = TTN_FIRST - 10,
-		 
+
 		//TTN_SHOW         = TTN_FIRST - 1,
 		//TTN_POP          = TTN_FIRST - 2,
 		//TTM_ADDTOOLA              = WM_USER + 4,
@@ -615,10 +607,10 @@ extern(Windows)
 		//TTM_GETTEXTA 		 = WM_USER + 11,
 		//TTM_UPDATETIPTEXTA    = WM_USER + 12,
 		//TTM_ENUMTOOLSA 	 = WM_USER + 14,
-		//TTM_GETCURRENTTOOLA = WM_USER + 15,		
-	}	
-	
-	/* ToolTip Icons */	
+		//TTM_GETCURRENTTOOLA = WM_USER + 15,
+	}
+
+	/* ToolTip Icons */
 	enum: uint
 	{
 		TTI_NONE    = 0,
@@ -626,7 +618,7 @@ extern(Windows)
 		TTI_WARNING = 2,
 		TTI_ERROR   = 3,
 	}
-	
+
 	/* ToolTip Styles */
 	enum: uint
 	{
@@ -637,7 +629,7 @@ extern(Windows)
 		TTS_BALLOON   = 0x40, // IE5+
 		TTS_CLOSE     = 0x80,
 	}
-	
+
 	/* ToolTip Flags */
 	enum: uint
 	{
@@ -651,9 +643,9 @@ extern(Windows)
 		TTF_PARSELINKS  = 0x1000,
 		TTF_DI_SETITEM  = 0x8000, // IE3+
 	}
-		
+
 	enum: uint
-	{		
+	{
 		AW_HOR_POSITIVE = 0x00000001,
 		AW_HOR_NEGATIVE = 0x00000002,
 		AW_VER_POSITIVE = 0x00000004,
@@ -664,7 +656,7 @@ extern(Windows)
 		AW_SLIDE	    = 0x00040000,
 		AW_BLEND 		= 0x00080000,
 	}
-	
+
 	enum: uint
 	{
 		MF_STRING 		 = 0x00000000,
@@ -679,13 +671,13 @@ extern(Windows)
 		MF_SEPARATOR 	 = 0x00000800,
 		MF_DEFAULT 		 = 0x00001000,
 		MF_SYSMENU 		 = 0x00002000,
-				 
+
 		MFT_STRING 		 = MF_STRING,
 		MFT_MENUBARBREAK = MF_MENUBARBREAK,
 		MFT_MENUBREAK 	 = MF_MENUBREAK,
 		MFT_RADIOCHECK	 = 0x00000200,
 		MFT_SEPARATOR	 = MF_SEPARATOR,
-		
+
 		MFS_UNCHECKED 	 = MF_UNCHECKED,
 		MFS_CHECKED		 = MF_CHECKED,
 		MFS_DEFAULT		 = MF_DEFAULT,
@@ -701,7 +693,7 @@ extern(Windows)
 		MIIM_TYPE		 = 0x00000010,
 		MIIM_BITMAP      = 0x00000080,
 	}
-	
+
 	/*
 	enum: int
 	{
@@ -712,7 +704,7 @@ extern(Windows)
 		RGN_COPY = 5,
 	}
 	*/
-		
+
 	enum: int
 	{
 		HWND_TOP       = 0,
@@ -720,7 +712,7 @@ extern(Windows)
 	    HWND_TOPMOST   = -1,
 	    HWND_NOTOPMOST = -2,
 	}
-	
+
 	enum: uint
 	{
 		CBS_SIMPLE 			  = 0x0001,
@@ -741,17 +733,17 @@ extern(Windows)
 		CBEIF_LPARAM        = 0x00000020,
 		CBEIF_DI_SETITEM    = 0x10000000,
 	}
-	
+
 	enum: uint
 	{
 		TME_HOVER     = 1,
 		TME_LEAVE 	  = 2,
 		TME_QUERY 	  = 0x40000000,
 		TME_CANCEL 	  = 0x80000000,
-		
+
 		HOVER_DEFAULT = 0xFFFFFFFF,
 	}
-	
+
 	enum: uint
 	{
 		TPM_LEFTBUTTON   = 0x0000,
@@ -768,13 +760,13 @@ extern(Windows)
 		TPM_RETURNCMD    = 0x0100,
 		TPM_RECURSE      = 0x0001,
 	}
-	
+
 	enum
 	{
 		ICON_SMALL = 0,
 		ICON_BIG   = 1,
 	}
-	
+
 	enum: uint
 	{
 		SPI_GETNONCLIENTMETRICS = 41,
@@ -794,7 +786,7 @@ extern(Windows)
 		ODS_DEFAULT		 = 32,
 		ODS_COMBOBOXEDIT = 4096,
 	}
-	
+
 	const LPWSTR IDC_ARROW		 = cast(LPWSTR)32512;
 	const LPWSTR IDC_UPARROW	 = cast(LPWSTR)32516;
 	const LPWSTR IDC_ICON 		 = cast(LPWSTR)32641;
@@ -809,7 +801,7 @@ extern(Windows)
 	const LPWSTR IDC_SIZENWSE	 = cast(LPWSTR)32642;
 	const LPWSTR IDC_SIZEWE		 = cast(LPWSTR)32644;
 	const LPWSTR IDC_WAIT		 = cast(LPWSTR)32514;
-	
+
 	enum: ushort
 	{
 		MK_LBUTTON = 0x0001,
@@ -818,20 +810,20 @@ extern(Windows)
 		MK_CONTROL = 0x0008,
 		MK_MBUTTON = 0x0010,
 	}
-	
+
 	enum
 	{
 		LOGPIXELSX = 88,
 		LOGPIXELSY = 90,
 	}
-	
+
 	enum
 	{
 		LB_OKAY     = 0,
 		LB_ERR      = -1,
 		LB_ERRSPACE = -2,
 	}
-	
+
 	enum: uint
 	{
 		LB_GETCOUNT				 = 0x018B,
@@ -861,7 +853,7 @@ extern(Windows)
 		LB_ADDFILE				 = 0x0196,
 		LB_DIR					 = 0x018D,
 	}
-	
+
 	enum: uint
 	{
 		LBS_NOINTEGRALHEIGHT  = 0x0100,
@@ -878,7 +870,7 @@ extern(Windows)
 		LBS_HASSTRINGS		  = 0x0040,
 		LBS_WANTKEYBOARDINPUT = 0x0400,
 	}
-	
+
 	enum
 	{
 		LBN_ERRSPACE  = -2,
@@ -888,14 +880,14 @@ extern(Windows)
 		LBN_SETFOCUS  = 4,
 		LBN_KILLFOCUS = 5,
 	}
-	
+
 	enum
 	{
 		CB_OKAY = 0,
 		CB_ERR = -1,
 		CB_ERRSPACE = -2,
 	}
-	
+
 	enum: uint
 	{
 		CB_SETCURSEL 			= 0x014E,
@@ -935,14 +927,14 @@ extern(Windows)
 		CBEM_SETITEMW			= WM_USER + 12,
 		CBEM_GETITEMW			= WM_USER + 13,
 	}
-	
+
 	enum: DWORD
 	{
 		CBS_SORT 			 = 0x0100,
 		CBS_HASSTRINGS		 = 0x0200,
 		CBS_NOINTEGRALHEIGHT = 0x0400,
 	}
-	
+
 	enum
 	{
 		CBN_SELCHANGE  = 1,
@@ -950,20 +942,20 @@ extern(Windows)
 		CBN_KILLFOCUS  = 4,
 		CBN_EDITCHANGE = 5,
 	}
-	
+
 	enum: uint
 	{
 		TVE_COLLAPSE = 0x0001,
 		TVE_EXPAND   = 0x0002,
 		TVE_TOGGLE   = 0x0003,
 	}
-	
+
 	enum: uint
 	{
 		TVIS_SELECTED = 0x0002,
 		TVIS_EXPANDED = 0x0020,
 	}
-	
+
 	enum: uint
 	{
 		TVIF_TEXT 		   = 0x0001,
@@ -975,18 +967,18 @@ extern(Windows)
 		TVIF_CHILDREN = 0x0040,
 		TVIF_INTEGRAL = 0x0080, // IE4+
 	}
-	
+
 	enum: uint
 	{
 		TVGN_FIRSTVISIBLE = 0x0005,
 		TVGN_CARET 		  = 0x0009,
 	}
-	
+
 	enum: uint
 	{
 		TV_FIRST 			= 0x1100,
 		TVN_FIRST 			= cast(UINT)-400,
-		
+
 		TVM_INSERTITEMA 	= TV_FIRST + 0,
 		TVM_DELETEITEM  	= TV_FIRST + 1,
 		TVM_EXPAND      	= TV_FIRST + 2,
@@ -1007,14 +999,14 @@ extern(Windows)
 		TVM_INSERTITEMW 	= TV_FIRST + 50,
 		TVM_SETITEMW 		= TV_FIRST + 63,
 		TVM_GETITEMW 		= TV_FIRST + 62,
-		
+
 		TVN_SELCHANGINGA 	= TVN_FIRST - 1,
 		TVN_SELCHANGEDA 	= TVN_FIRST - 2,
 		TVN_GETDISPINFOA	= TVN_FIRST - 3,
 		TVN_ITEMEXPANDINGA 	= TVN_FIRST - 5,
 		TVN_ITEMEXPANDEDA 	= TVN_FIRST - 6,
 		TVN_BEGINLABELEDITA = TVN_FIRST - 10,
-		TVN_ENDLABELEDITA 	= TVN_FIRST - 11,	
+		TVN_ENDLABELEDITA 	= TVN_FIRST - 11,
 		TVN_SELCHANGINGW	= TVN_FIRST - 50,
 		TVN_SELCHANGEDW 	= TVN_FIRST - 51,
 		TVN_GETDISPINFOW 	= TVN_FIRST - 52,
@@ -1023,8 +1015,8 @@ extern(Windows)
 		TVN_BEGINLABELEDITW = TVN_FIRST - 59,
 		TVN_ENDLABELEDITW 	= TVN_FIRST - 60,
 	}
-	
-	
+
+
 	enum: uint
 	{
 		TVS_HASBUTTONS	  = 0x0001,
@@ -1038,7 +1030,7 @@ extern(Windows)
 		TVS_NOSCROLL	  = 0x2000, // Internet Explorer 4+
 		TVS_SINGLEEXPAND  = 0x0400, // Internet Explorer 4+
 	}
-	
+
 	enum: HTREEITEM
 	{
 		TVI_ROOT  = cast(HTREEITEM)-0x10000,
@@ -1046,30 +1038,30 @@ extern(Windows)
 		TVI_LAST  = cast(HTREEITEM)-0x0FFFE,
 		TVI_SORT  = cast(HTREEITEM)-0x0FFFD,
 	}
-	
+
 	enum: uint
 	{
 		TVC_UNKNOWN    = 0x0000,
 		TVC_BYMOUSE    = 0x0001,
 		TVC_BYKEYBOARD = 0x0002,
 	}
-	
+
 	enum: WPARAM
 	{
 		TVSIL_NORMAL = 0,
 		TVSIL_STATE  = 2,
 	}
-	
+
 	enum: uint
 	{
 		SB_SETTEXTA	   = WM_USER + 1,
 		SB_SETPARTS	   = WM_USER + 4,
 		SB_SIMPLE  	   = WM_USER + 9,
 		SB_SETTEXTW	   = WM_USER + 11,
-		
+
 		SBARS_SIZEGRIP = 0x0100,
 	}
-	
+
 	enum: WPARAM
 	{
 		SBT_NOBORDERS  = 0x0100,
@@ -1077,11 +1069,11 @@ extern(Windows)
 		SBT_RTLREADING = 0x0400,
 		SBT_OWNERDRAW  = 0x1000,
 	}
-	
+
 	enum: uint
 	{
 		LVM_FIRST = 0x1000,
-		
+
 		LVM_SETBKCOLOR    				= LVM_FIRST + 1,
 		LVM_SETIMAGELIST  				= LVM_FIRST + 3,
 		LVM_SETITEMW 	  				= LVM_FIRST + 76,
@@ -1115,19 +1107,19 @@ extern(Windows)
 		//LVM_SETCOLUMNA 				= LVM_FIRST + 26,
 		//LVM_INSERTCOLUMNA				= LVM_FIRST + 27,
 	}
-	
+
 	enum: uint
 	{
 		LVIS_OVERLAYMASK    = 0x0F00,
 		LVIS_STATEIMAGEMASK = 0xF000,
 	}
-	
+
 	enum: uint
 	{
 		LVN_FIRST 			= cast(uint)-100,
-		
+
 		LVN_ITEMCHANGING 		= LVN_FIRST - 0,
-		LVN_ITEMCHANGED 		= LVN_FIRST - 1,		
+		LVN_ITEMCHANGED 		= LVN_FIRST - 1,
 		LVN_BEGINLABELEDITW 	= LVN_FIRST - 75,
 		LVN_ENDLABELEDITW 		= LVN_FIRST - 76,
 		LVN_COLUMNCLICK 		= LVN_FIRST - 8,
@@ -1136,7 +1128,7 @@ extern(Windows)
 		//LVN_GETDISPINFOA 		= LVN_FIRST - 50,
 		//LVN_ENDLABELEDITA 	= LVN_FIRST - 6,
 	}
-	
+
 	enum: uint
 	{
 		LVCF_FMT = 0x0001,
@@ -1144,7 +1136,7 @@ extern(Windows)
 		LVCF_TEXT = 0x0004,
 		LVCF_SUBITEM = 0x0008,
 	}
-	
+
 	enum: int
 	{
 		LVCFMT_LEFT  	   = 0x0000,
@@ -1152,7 +1144,7 @@ extern(Windows)
 		LVCFMT_CENTER	   = 0x0002,
 		LVCFMT_JUSTIFYMASK = 0x0003,
 	}
-	
+
 	enum: uint
 	{
 		LVIF_TEXT  = 0x0001,
@@ -1160,7 +1152,7 @@ extern(Windows)
 		LVIF_PARAM = 0x0004,
 		LVIF_STATE = 0x0008,
 	}
-	
+
 	enum: uint
 	{
 		LVIS_FOCUSED	 = 0x0001,
@@ -1168,7 +1160,7 @@ extern(Windows)
 		LVIS_CUT 		 = 0x0004,
 		LVIS_DROPHILITED = 0x0008,
 	}
-	
+
 	enum: uint
 	{
 		LVS_ALIGNTOP 		= 0x0000,
@@ -1189,7 +1181,7 @@ extern(Windows)
 		LVS_OWNERDATA		= 0x1000,
 		LVS_NOSCROLL 		= 0x2000,
 	}
-	
+
 	enum: uint
 	{
 		LVS_EX_GRIDLINES 	  	= 0x00000001,
@@ -1200,7 +1192,7 @@ extern(Windows)
 		LVS_EX_FULLROWSELECT 	= 0x00000020,
 		LVS_EX_ONECLICKACTIVATE = 0x00000040,
 		LVS_EX_TWOCLICKACTIVATE = 0x00000080,
-		
+
 		// Internet Explorer 4+
 		LVS_EX_FLATSB   		= 0x00000100,
 		LVS_EX_REGIONAL 		= 0x00000200,
@@ -1209,18 +1201,18 @@ extern(Windows)
 		LVS_EX_UNDERLINECOLD 	= 0x00001000,
 		LVS_EX_MULTIWORKAREAS 	= 0x00002000,
 	}
-	
+
 	enum
 	{
 		LVSIL_NORMAL = 0,
 		LVSIL_SMALL  = 1,
 		LVSIL_STATE  = 2,
 	}
-	
+
 	enum: uint
 	{
 		TCM_FIRST = 0x1300,
-		
+
 		TCM_DELETEITEM		 = TCM_FIRST + 8,
 		TCM_DELETEALLITEMS 	 = TCM_FIRST + 9,
 		TCM_GETITEMRECT 	 = TCM_FIRST + 10,
@@ -1238,8 +1230,8 @@ extern(Windows)
 		//TCM_INSERTITEMA  	 = TCM_FIRST + 7,
 		//TCM_SETITEMEXTRA 	 = TCM_FIRST + 14,
 	}
-	
-	
+
+
 	enum: uint
 	{
 		TCIF_TEXT 	  	= 0x0001,
@@ -1247,7 +1239,7 @@ extern(Windows)
 		TCIF_RTLREADING = 0x0004,
 		TCIF_PARAM 		= 0x0008,
 	}
-	
+
 	enum: uint
 	{
 		TCS_FORCEICONLEFT  	  = 0x0010,
@@ -1263,7 +1255,7 @@ extern(Windows)
 		TCS_OWNERDRAWFIXED    = 0x2000,
 		TCS_TOOLTIPS 		  = 0x4000,
 		TCS_FOCUSNEVER 		  = 0x8000,
-		
+
 		// Internet Explorer 3+
 		TCS_SCROLLOPPOSITE 	  = 0x0001,
 		TCS_BOTTOM 			  = 0x0002,
@@ -1271,33 +1263,33 @@ extern(Windows)
 		TCS_MULTISELECT 	  = 0x0004,
 		TCS_HOTTRACK 		  = 0x0040,
 		TCS_VERTICAL 		  = 0x0080,
-		
+
 		// Internet Explorer 4+
 		TCS_FLATBUTTONS 	  = 0x0008,
 	}
-	
+
 	enum: uint
 	{
 		TCN_FIRST 	    = cast(uint)-550,
-		
+
 		TCN_SELCHANGE	= TCN_FIRST - 1,
 		TCN_SELCHANGING = TCN_FIRST - 2,
 	}
-	
+
 	enum: uint
 	{
 		NIF_MESSAGE = 0x00000001,
 		NIF_ICON 	= 0x00000002,
 		NIF_TIP 	= 0x00000004,
 	}
-	
+
 	enum: uint
 	{
 		NIM_ADD    = 0x00000000,
 		NIM_MODIFY = 0x00000001,
 		NIM_DELETE = 0x00000002,
 	}
-	
+
 	enum: uint
 	{
 		SIF_RANGE		    = 0x0001,
@@ -1306,7 +1298,7 @@ extern(Windows)
 		SIF_DISABLENOSCROLL = 0x0008,
 		SIF_ALL			    = 23,
 	}
-	
+
 	enum: int
 	{
 		SM_SWAPBUTTON  = 23,
@@ -1320,8 +1312,8 @@ extern(Windows)
 		SM_CYMENU      = 15,
 		SM_CXVSCROLL   = 2,
 		SM_CYHSCROLL   = 3,
-	}	
-	
+	}
+
 	enum: uint
 	{
 		LR_DEFAULTCOLOR     = 0,
@@ -1338,13 +1330,13 @@ extern(Windows)
 		LR_DEFAULTSIZE 		= 0x0040,
 		LR_SHARED 			= 0x8000,
 	}
-	
+
 	enum: COLORREF
 	{
 		CLR_INVALID = 0xFFFFFFFF,
 		CLR_NONE    = CLR_INVALID,
 	}
-	
+
 	enum: uint
 	{
 		DT_TOP     		   = 0x00000000,
@@ -1369,19 +1361,19 @@ extern(Windows)
 		DT_RTLREADING      = 0x00020000,
 		DT_WORD_ELLIPSIS   = 0x00040000,
 	}
-		
+
 	enum
 	{
 		TRANSPARENT = 1,
 		OPAQUE      = 2,
 	}
-	
+
 	enum: uint
 	{
 		ETO_OPAQUE  = 0x0002,
 		ETO_CLIPPED = 0x0004,
 	}
-	
+
 	enum: uint
 	{
 		PS_SOLID       = 0,
@@ -1392,20 +1384,20 @@ extern(Windows)
 		PS_NULL 	   = 5,
 		PS_INSIDEFRAME = 6,
 	}
-	
+
 	enum: uint
 	{
 		IMAGE_BITMAP = 0,
 		IMAGE_ICON   = 1,
 		IMAGE_CURSOR = 2,
 	}
-	
+
 	const LPWSTR IDI_ERROR		 = MAKEINTRESOURCEW(32513);
 	const LPWSTR IDI_QUESTION	 = MAKEINTRESOURCEW(32514);
 	const LPWSTR IDI_WARNING	 = MAKEINTRESOURCEW(32515);
 	const LPWSTR IDI_ASTERISK 	 = MAKEINTRESOURCEW(32516);
 	const LPWSTR IDI_INFORMATION = IDI_ASTERISK;
-	
+
 	const LPCWSTR RT_BITMAP		  = MAKEINTRESOURCEW(2);
 	const LPCWSTR RT_ICON		  = MAKEINTRESOURCEW(3);
 	const LPCWSTR RT_MENU		  = MAKEINTRESOURCEW(4);
@@ -1423,7 +1415,7 @@ extern(Windows)
 	const LPCWSTR RT_ANIICON	  = MAKEINTRESOURCEW(22);
 	const LPCWSTR RT_HTML		  = MAKEINTRESOURCEW(23);
 	const LPCWSTR RT_MANIFEST	  = MAKEINTRESOURCEW(24);
-	
+
 	enum: LONG
 	{
 		HS_HORIZONTAL = 0,
@@ -1433,7 +1425,7 @@ extern(Windows)
 		HS_CROSS      = 4,
 		HS_DIAGCROSS  = 5,
 	}
-		
+
 	enum: uint
 	{
 		// Internet Explorer 3+
@@ -1449,9 +1441,9 @@ extern(Windows)
 		ICC_DATE_CLASSES	   = 0x00000100,
 		ICC_USEREX_CLASSES     = 0x00000200,
 		ICC_COOL_CLASSES	   = 0x00000400,
-		
+
 		ICC_STANDARD_CLASSES   = 0x00004000,
-		
+
 		// IE4+
 		ICC_INTERNET_CLASSES   = 0x00000800,
 		ICC_PAGESCROLLER_CLASS = 0x00001000,
@@ -1463,9 +1455,9 @@ extern(Windows)
 		PBS_SMOOTH        = 0x01,
 		PBS_VERTICAL      = 0x04,
 		PBS_MARQUEE       = 0x08,
-		PBS_SMOOTHREVERSE = 0x10,		
+		PBS_SMOOTHREVERSE = 0x10,
 	}
-	
+
 	enum: uint
 	{
 		PBM_SETRANGE    = WM_USER + 1,
@@ -1478,21 +1470,21 @@ extern(Windows)
 		PBM_GETRANGE    = 1031,
 		PBM_GETPOS      = 1032,
 		PBM_SETBARCOLOR = 1033,
-	}	
-	
+	}
+
 	enum: uint
 	{
 		BIF_RETURNONLYFSDIRS  = 0x0001,
 		BIF_NEWDIALOGSTYLE    = 0x0040,
 		BIF_NONEWFOLDERBUTTON = 0x0200, // Shell32.dll 6.0+
 	}
-	
+
 	enum
 	{
 		ILD_NORMAL  = 0,
 		LF_FACESIZE = 32,
 	}
-	
+
 	enum: uint
 	{
 		ILC_COLOR4  = 0x0004,
@@ -1516,7 +1508,7 @@ extern(Windows)
 		TBSTYLE_LIST 	 		= 0x1000,
 
 		TBSTYLE_EX_DRAWDDARROWS = 0x00000001,
-		
+
 		BTNS_BUTTON		  		= TBSTYLE_BUTTON,
 		BTNS_SEP		  		= TBSTYLE_SEP,
 		BTNS_CHECK		  		= TBSTYLE_CHECK,
@@ -1526,8 +1518,8 @@ extern(Windows)
 		BTNS_WHOLEDROPDOWN		= 0x0080,
 		BTNS_SHOWTEXT 	  		= 0x0040,
 	}
-	
-	
+
+
 	enum: BYTE
 	{
 		TBSTATE_CHECKED 	  = 0x01,
@@ -1539,7 +1531,7 @@ extern(Windows)
 		TBSTATE_ELLIPSES      = 0x40,
 		TBSTATE_MARKED        = 0x80,
 	}
-	
+
 	enum: LRESULT
 	{
 		TBDDRET_DEFAULT      = 0,
@@ -1555,10 +1547,10 @@ extern(Windows)
 		TBIF_STYLE   = 8,
 		TBIF_LPARAM  = 16,
 		TBIF_COMMAND = 32,
-		TBIF_SIZE    = 64,		
+		TBIF_SIZE    = 64,
 		TBIF_BYINDEX = 0x80000000,
 	}
-	
+
 	enum: uint
 	{
 		TB_SETSTATE 		= WM_USER + 17,
@@ -1580,7 +1572,7 @@ extern(Windows)
 		//TB_ADDBUTTONSA 	= WM_USER + 20,
 		//TB_INSERTBUTTONA 	= WM_USER + 21,
 		//TB_GETBUTTONINFOA = WM_USER + 65,
-		//TB_SETBUTTONINFOA = WM_USER + 66,		
+		//TB_SETBUTTONINFOA = WM_USER + 66,
 	}
 
 	enum: uint
@@ -1594,14 +1586,14 @@ extern(Windows)
 		CC_ENABLETEMPLATEHANDLE = 0x00000040,
 		CC_SOLIDCOLOR			= 0x00000080,
 		CC_ANYCOLOR  			= 0x00000100,
-	}	
-	
+	}
+
 	enum: uint
 	{
 		TBN_FIRST    = cast(uint)-700,
 		TBN_DROPDOWN = TBN_FIRST - 10,
 	}
-	
+
 	struct WNDCLASSEXW
 	{
 		UINT cbSize;
@@ -1617,7 +1609,7 @@ extern(Windows)
 		LPCWSTR lpszClassName;
 		HICON hIconSm;
 	}
-	
+
 	align(1) struct TEXTMETRICW
 	{
 		LONG tmHeight;
@@ -1641,13 +1633,13 @@ extern(Windows)
 		BYTE tmPitchAndFamily;
 		BYTE tmCharSet;
 	}
-	
+
 	struct SIZE
 	{
 		LONG cx;
 		LONG cy;
 	}
-	
+
 	struct NMMOUSE
 	{
 		NMHDR hdr;
@@ -1676,20 +1668,20 @@ extern(Windows)
 		ushort Blue;
 		ushort Alpha;
 	}
-	
+
 	struct GRADIENT_TRIANGLE
 	{
 		ULONG Vertex1;
 		ULONG Vertex2;
 		ULONG Vertex3;
 	}
-	
+
 	struct GRADIENT_RECT
 	{
 		ULONG UpperLeft;
 		ULONG LowerRight;
 	}
-	
+
 	struct ACTCTXW
 	{
 		ULONG cbSize;
@@ -1702,7 +1694,7 @@ extern(Windows)
 		LPCWSTR lpApplicationName;
 		HMODULE hModule;
 	}
-	
+
 	struct OSVERSIONINFOW
 	{
 		DWORD dwOSVersionInfoSize;
@@ -1712,7 +1704,7 @@ extern(Windows)
 		DWORD dwPlatformId;
 		wchar[128] szCSDVersion;
 	}
-	
+
 	struct WINDOWPOS
 	{
 		HWND hwnd;
@@ -1721,10 +1713,10 @@ extern(Windows)
 		int  y;
 		int  cx;
 		int  cy;
-		UINT flags;                
+		UINT flags;
 	}
 
-	struct WINDOWINFO 
+	struct WINDOWINFO
 	{
 		DWORD cbSize;
 		RECT rcWindow;
@@ -1749,8 +1741,8 @@ extern(Windows)
 		int iOverlay;
 		int iIndent;
 		LPARAM lParam;
-	}	
-	
+	}
+
 	struct BLENDFUNCTION
 	{
 		BYTE BlendOp;
@@ -1758,30 +1750,30 @@ extern(Windows)
 		BYTE SourceConstantAlpha;
 		BYTE AlphaFormat;
 	}
-	
+
 	struct NOTIFYICONDATA
 	{
-		 DWORD cbSize; 
-		 HWND hWnd; 
-		 UINT uID; 
-		 UINT uFlags; 
-		 UINT uCallbackMessage; 
-		 HICON hIcon; 
-		 char[64] szTip; 
+		 DWORD cbSize;
+		 HWND hWnd;
+		 UINT uID;
+		 UINT uFlags;
+		 UINT uCallbackMessage;
+		 HICON hIcon;
+		 char[64] szTip;
 	}
-	
+
 	struct SHITEMID
 	{
 		align(1):
 		USHORT cb; // Size including cb.
 		BYTE[1] abID;
 	}
-		
+
 	struct ITEMIDLIST
 	{
 		SHITEMID mkid;
 	}
-		
+
 	struct BROWSEINFOW
 	{
 		HWND hwndOwner;
@@ -1793,30 +1785,30 @@ extern(Windows)
 		LPARAM lParam;
 		int iImage;
 	}
-	
+
 	struct LOGBRUSH
 	{
 		UINT lbStyle;
 		COLORREF lbColor;
 		LONG lbHatch;
 	}
-		
+
 	struct DRAWTEXTPARAMS
-	{ 
-		UINT cbSize; 
-		int iTabLength; 
-		int iLeftMargin; 
-		int iRightMargin; 
-		UINT uiLengthDrawn; 
+	{
+		UINT cbSize;
+		int iTabLength;
+		int iLeftMargin;
+		int iRightMargin;
+		UINT uiLengthDrawn;
 	}
-		
+
 	struct NMHDR
-	{ 
+	{
 		HWND hwndFrom;
 		UINT idFrom;
 		UINT code;
 	}
-		
+
 	struct NMCUSTOMDRAW
 	{
 		NMHDR hdr;
@@ -1827,7 +1819,7 @@ extern(Windows)
 		UINT uItemState;
 		LPARAM lItemlParam;
 	}
-		
+
 	struct NMTVCUSTOMDRAW
 	{
 		NMCUSTOMDRAW nmcd;
@@ -1835,7 +1827,7 @@ extern(Windows)
 		COLORREF clrTextBk;
 		int iLevel; // IE4+
 	}
-	
+
 	struct NMLISTVIEW
 	{
 		NMHDR hdr;
@@ -1847,7 +1839,7 @@ extern(Windows)
 		POINT ptAction;
 		LPARAM lParam;
 	}
-	
+
 	struct LVITEMW
 	{
 		UINT mask;
@@ -1860,7 +1852,7 @@ extern(Windows)
 		int iImage;
 		LPARAM lParam;
 	}
-		
+
 	align(1) struct NMTTDISPINFOW
 	{
 		NMHDR hdr;
@@ -1870,13 +1862,13 @@ extern(Windows)
 		UINT uFlags;
 		LPARAM lParam;
 	}
-	
+
 	struct LVDISPINFOW
 	{
 		NMHDR hdr;
 		LVITEMW item;
 	}
-		
+
 	struct LVCOLUMNW
 	{
 		UINT mask;
@@ -1886,7 +1878,7 @@ extern(Windows)
 		int cchTextMax;
 		int iSubItem;
 	}
-	
+
 	struct TBBUTTON
 	{
 		int iBitmap;
@@ -1897,7 +1889,7 @@ extern(Windows)
 		DWORD dwData;
 		int iString;
 	}
-	
+
 	struct NMTOOLBARW
 	{
 		NMHDR hdr;
@@ -1907,7 +1899,7 @@ extern(Windows)
 		LPWSTR pszText;
 		RECT rcButton;
 	}
-	
+
 	struct TVITEMW
 	{
 		UINT mask;
@@ -1920,22 +1912,22 @@ extern(Windows)
 		int iSelectedImage;
 		int cChildren;
 		LPARAM lParam;
-	}	
-	
+	}
+
 	struct TVHITTESTINFO
 	{
 		POINT pt;
 		UINT flags;
 		HTREEITEM hItem;
 	}
-		
+
 	struct TVINSERTSTRUCTW
 	{
 		HTREEITEM hParent;
 		HTREEITEM hInsertAfter;
 		TVITEMW item;
 	}
-		
+
 	struct NMTREEVIEWW
 	{
 		NMHDR hdr;
@@ -1944,13 +1936,13 @@ extern(Windows)
 		TVITEMW itemNew;
 		POINT ptDrag;
 	}
-		
+
 	struct NMTVDISPINFOW
 	{
 		NMHDR hdr;
 		TVITEMW item;
 	}
-	
+
 	struct TCITEMW
 	{
 		UINT mask;
@@ -1961,14 +1953,14 @@ extern(Windows)
 		int iImage;
 		LPARAM lParam;
 	}
-	
+
 	// Rich edit.
 	struct CHARRANGE
 	{
-		LONG cpMin; 
-		LONG cpMax; 
+		LONG cpMin;
+		LONG cpMax;
 	}
-	
+
 	// Rich edit.
 	struct EDITSTREAM
 	{
@@ -1976,13 +1968,13 @@ extern(Windows)
 		DWORD dwError;
 		EDITSTREAMCALLBACK pfnCallback;
 	}
-	
+
 	struct TEXTRANGEA
 	{
 		CHARRANGE chrg;
 		LPSTR lpstrText;
 	}
-	
+
 	struct MENUITEMINFOW
 	{
 		UINT cbSize;
@@ -1998,7 +1990,7 @@ extern(Windows)
 		UINT cch;
 		HBITMAP hbmpItem;
 	}
-	
+
 	struct SCROLLINFO
 	{
 		UINT cbSize;
@@ -2008,8 +2000,8 @@ extern(Windows)
 		UINT nPage;
 		int nPos;
 		int nTrackPos;
-	}	
-	
+	}
+
 	struct TBBUTTONINFOW
 	{
 		UINT cbSize;
@@ -2023,20 +2015,20 @@ extern(Windows)
 		LPWSTR pszText;
 		int cchText;
 	}
-	
+
 	align(1) struct CHOOSECOLORW
 	{
-		DWORD lStructSize; 
-		HWND hwndOwner; 
-		HWND hInstance; 
-		COLORREF rgbResult; 
-		COLORREF* lpCustColors; 
-		DWORD Flags; 
-		LPARAM lCustData; 
-		LPCCHOOKPROC lpfnHook; 
-		LPCWSTR lpTemplateName; 
+		DWORD lStructSize;
+		HWND hwndOwner;
+		HWND hInstance;
+		COLORREF rgbResult;
+		COLORREF* lpCustColors;
+		DWORD Flags;
+		LPARAM lCustData;
+		LPCCHOOKPROC lpfnHook;
+		LPCWSTR lpTemplateName;
 	}
-	
+
 	struct LOGFONTW
 	{
 		LONG lfHeight;
@@ -2054,7 +2046,7 @@ extern(Windows)
 		BYTE lfPitchAndFamily;
 		WCHAR[LF_FACESIZE] lfFaceName;
 	}
-	
+
 	struct NONCLIENTMETRICSW
 	{
 		UINT cbSize;
@@ -2073,7 +2065,7 @@ extern(Windows)
 		LOGFONTW lfStatusFont;
 		LOGFONTW lfMessageFont;
 	}
-	
+
 	align(1) struct CHOOSEFONTW
 	{
 		DWORD lStructSize;
@@ -2093,7 +2085,7 @@ extern(Windows)
 		INT nSizeMin;
 		INT nSizeMax;
 	}
-	
+
 	struct ICONINFO
 	{
 		BOOL fIcon;
@@ -2102,7 +2094,7 @@ extern(Windows)
 		HBITMAP hbmMask;
 		HBITMAP hbmColor;
 	}
-	
+
 	struct CREATESTRUCTW
 	{
 		LPVOID lpCreateParams;
@@ -2118,7 +2110,7 @@ extern(Windows)
 		LPCWSTR lpszClass;
 		DWORD dwExStyle;
 	}
-	
+
 	struct TOOLINFOW
 	{
 		UINT cbSize;
@@ -2131,7 +2123,7 @@ extern(Windows)
 		LPARAM lParam;
 		//void* lpReserved; <-- From XP/Vista/7
 	}
-	
+
 	struct TRACKMOUSEEVENT
 	{
 		DWORD cbSize;
@@ -2139,7 +2131,7 @@ extern(Windows)
 		HWND hwndTrack;
 		DWORD dwHoverTime;
 	}
-			
+
 	struct DRAWITEMSTRUCT
 	{
 		UINT CtlType;
@@ -2152,7 +2144,7 @@ extern(Windows)
 		RECT rcItem;
 		DWORD itemData;
 	}
-	
+
 	struct MEASUREITEMSTRUCT
 	{
 		UINT CtlType;
@@ -2162,13 +2154,13 @@ extern(Windows)
 		UINT itemHeight;
 		DWORD itemData;
 	}
-	
+
 	struct INITCOMMONCONTROLSEX
 	{
 		DWORD dwSize;
 		DWORD dwICC;
 	}
-	
+
 	struct MENUINFO
 	{
 		DWORD cbSize;
@@ -2179,7 +2171,7 @@ extern(Windows)
 		DWORD dwContextHelpID;
 		ULONG_PTR dwMenuData;
 	}
-	
+
 	/* *** Win32 Macros *** */
 	COLORREF RGB(int r, int g, int b)
 	{
@@ -2190,23 +2182,23 @@ extern(Windows)
 	{
 		return cast(DWORD)cast(WORD)wLow | (cast(DWORD)cast(WORD)wHigh << 16);
 	}
-	
+
 	LPWSTR MAKEINTRESOURCEW(ushort id)
 	{
 		return (cast(LPWSTR)(cast(ULONG_PTR)((cast(WORD)(id)))));
 	}
 
-	BYTE GetRValue(COLORREF c) 
+	BYTE GetRValue(COLORREF c)
 	{
 		return cast(BYTE)c;
 	}
-	
-	BYTE GetGValue(COLORREF c) 
+
+	BYTE GetGValue(COLORREF c)
 	{
 		return cast(BYTE)(c >> 8);
 	}
 
-	BYTE GetBValue(COLORREF c) 
+	BYTE GetBValue(COLORREF c)
 	{
 		return cast(BYTE)(c >> 16);
 	}
@@ -2214,7 +2206,7 @@ extern(Windows)
 	short GetWheelDelta(WPARAM wParam)
 	{
 		return cast(short)HIWORD(wParam);
-	} 
+	}
 
 	alias GUID CLSID;
 	alias DWORD function(/+ DWORD_PTR +/ DWORD dwCookie, LPBYTE pbBuff, LONG cb, LONG* pcb) EDITSTREAMCALLBACK; // Rich edit.
@@ -2260,13 +2252,13 @@ extern(Windows)
 	VOID ExitProcess(UINT uExitCode);
 	int MulDiv(int nNumber, int nNumerator, int nDenominator);
 
-	/* *** User32.dll *** */	
+	/* *** User32.dll *** */
 	int MessageBoxW(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType);
 	BOOL GetMessageW(MSG* lpMsg, HWND hWnd, UINT wMsgFilterMin, UINT wMsgFilterMax);
 	LRESULT DispatchMessageW(MSG* lpmsg);
 	HWND CreateWindowExW(DWORD dwExStyle, LPCWSTR lpClassName, LPCWSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam);
 	HDWP DeferWindowPos(HDWP hWinPosInfo, HWND hWnd, HWND hWndInsertAfter, int x, int y, int cx, int cy, UINT uFlags);
-	//LRESULT SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);	
+	//LRESULT SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 	HANDLE LoadImageW(HINSTANCE hinst, LPCWSTR lpszName, UINT uType, int cxDesired, int cyDesired, UINT fuLoad);
 	LRESULT CallWindowProcA(WNDPROC lpPrevWndFunc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 	LRESULT CallWindowProcW(WNDPROC lpPrevWndFunc, HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -2274,7 +2266,7 @@ extern(Windows)
 	BOOL GetTextExtentPoint32W(HDC hdc, LPCWSTR lpString, int c, SIZE* lpSize);
 	BOOL DrawFrameControl(HDC hdc, RECT* lprc, uint uType, uint uState);
 	BOOL SetMenuItemInfoW(HMENU hMenu, UINT uItem, BOOL fByPosition, MENUITEMINFOW* lpmii);
-	BOOL InsertMenuItemW(HMENU hMenu, UINT uItem, BOOL fByPosition, MENUITEMINFOW* lpmii);		
+	BOOL InsertMenuItemW(HMENU hMenu, UINT uItem, BOOL fByPosition, MENUITEMINFOW* lpmii);
 	BOOL SystemParametersInfoW(UINT uiAction, UINT uiParam, PVOID pvParam, UINT fWinIni);
 	UINT SetTimer(HWND hWnd, UINT nIDEvent, UINT uElapse, TIMERPROC lpTimerFunc);
 	BOOL GetClassInfoExW(HINSTANCE hinst, LPCWSTR lpszClass, WNDCLASSEXW* lpwcx);
@@ -2297,9 +2289,9 @@ extern(Windows)
 	DWORD GetClassLongW(HWND hWnd, int nIndex);
 	ATOM RegisterClassExW(WNDCLASSEXW* lpwcx);
 	HDWP BeginDeferWindowPos(int nNumWindows);
-	BOOL EndDeferWindowPos(HDWP hWinPosInfo);	
+	BOOL EndDeferWindowPos(HDWP hWinPosInfo);
 	BOOL KillTimer(HWND hWnd, UINT uIDEvent);
-	BOOL DrawFocusRect(HDC hDC, RECT* lprc);	
+	BOOL DrawFocusRect(HDC hDC, RECT* lprc);
 	BOOL OpenClipboard(HWND hWndNewOwner);
 	BOOL SetMenu(HWND hWnd, HMENU hMenu);
 	int GetWindowTextLengthW(HWND hWnd);
@@ -2341,7 +2333,7 @@ extern(Windows)
 	int ImageList_AddIcon(HIMAGELIST himl, HICON hicon);
 	int ImageList_ReplaceIcon(HIMAGELIST, int, HICON);
 	BOOL ImageList_Remove(HIMAGELIST himl, int i);
-	BOOL ImageList_Destroy(HIMAGELIST himl);	
+	BOOL ImageList_Destroy(HIMAGELIST himl);
 
 	/* *** Gdi32.dll *** */
 	//BOOL GdiTransparentBlt(HDC hdcDest, int xoriginDest, int yoriginDest,int wDest, int hDest, HDC hdcSrc, int xoriginSrc, int yoriginSrc, int wSrc, int hSrc, UINT crTransparent);
@@ -2355,7 +2347,7 @@ extern(Windows)
 	//BOOL GdiGradientFill(HDC hdc, TRIVERTEX* pVertex, ULONG dwNumVertex, void* pMesh, ULONG dwNumMesh, ULONG dwMode);
 	HBITMAP CreateBitmap(int nWidth, int nHeight, UINT cPlanes, UINT cBitsPerPel, const(void*) lpvBits);
 	BOOL Rectangle(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
-	BOOL Ellipse(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect); 
+	BOOL Ellipse(HDC hdc, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect);
 	BOOL PatBlt(HDC hdc, int nXLeft, int nYLeft, int nWidth, int nHeight, DWORD dwRop);
 	HBITMAP CreateCompatibleBitmap(HDC hdc, int nWidth, int nHeight);
 	BOOL SetBrushOrgEx(HDC hdc, int nXOrg, int nYOrg, LPPOINT lppt);
@@ -2364,7 +2356,7 @@ extern(Windows)
 	HBRUSH CreateHatchBrush(int ht, COLORREF crColor);
 	BOOL GetTextMetricsW(HDC hdc, TEXTMETRICW* lptm);
 	HBRUSH CreateSolidBrush(COLORREF crColor);
-	HFONT CreateFontIndirectW(LOGFONTW* lplf); 
+	HFONT CreateFontIndirectW(LOGFONTW* lplf);
 	BOOL DrawEdge(HDC, LPRECT, UINT, UINT);
 	BOOL DestroyCursor(HCURSOR hCursor);
 	BOOL DestroyIcon(HICON hIcon);
@@ -2377,10 +2369,10 @@ extern(Windows)
 	LONG RegSetValueExW(HKEY hKey, LPCWSTR lpValueName, DWORD Reserved,DWORD dwType, const BYTE *lpData, DWORD cbData);
 	LONG RegQueryInfoKeyW(HKEY hKey, LPWSTR lpClass, LPDWORD lpcClass, LPDWORD lpReserved, LPDWORD lpcSubKeys, LPDWORD lpcMaxSubKeyLen, LPDWORD lpcMaxClassLen, LPDWORD lpcValues, LPDWORD lpcMaxValueNameLen, LPDWORD lpcMaxValueLen, LPDWORD lpcbSecurityDescriptor, PFILETIME lpftLastWriteTime);
 	LONG RegEnumKeyExW(HKEY hKey, DWORD dwIndex, LPWSTR lpName, LPDWORD lpcName, LPDWORD lpReserved, LPWSTR lpClass, LPDWORD lpcClass, PFILETIME lpftLastWriteTime);
-	LONG RegEnumValueW(HKEY hKey, DWORD dwIndex, LPWSTR lpValueName, LPDWORD lpcchValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);	
+	LONG RegEnumValueW(HKEY hKey, DWORD dwIndex, LPWSTR lpValueName, LPDWORD lpcchValueName, LPDWORD lpReserved, LPDWORD lpType, LPBYTE lpData, LPDWORD lpcbData);
 	LONG RegDeleteValueW(HKEY hKey, LPCWSTR lpValueName);
 	LONG RegDeleteKeyW(HKEY hKey, LPCWSTR lpSubKey);
-	
+
 	/* *** Ole32.dll *** */
 	HRESULT CLSIDFromString(wchar* lpsz, CLSID* pclsid);
-}	
+}

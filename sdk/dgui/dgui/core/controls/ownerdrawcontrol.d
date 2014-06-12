@@ -1,20 +1,11 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.controls.ownerdrawcontrol;
 
 public import dgui.core.controls.subclassedcontrol;
@@ -22,19 +13,19 @@ public import dgui.core.events.eventargs;
 
 enum OwnerDrawMode: ubyte
 {
-	NORMAL = 0,
-	FIXED = 1,
-	VARIABLE = 2,
+	normal = 0,
+	fixed = 1,
+	variable = 2,
 }
 
 enum DrawItemState: uint
 {
-	DEFAULT  = ODS_DEFAULT,
-	CHECKED  = ODS_CHECKED,
-	DISABLED = ODS_DISABLED,
-	FOCUSED  = ODS_FOCUS,
-	GRAYED   = ODS_GRAYED,
-	SELECTED = ODS_SELECTED,
+	default_  = ODS_DEFAULT,
+	checked  = ODS_CHECKED,
+	disabled = ODS_DISABLED,
+	focused  = ODS_FOCUS,
+	grayed   = ODS_GRAYED,
+	selected = ODS_SELECTED,
 }
 
 class MeasureItemEventArgs: EventArgs
@@ -43,7 +34,7 @@ class MeasureItemEventArgs: EventArgs
 	private int _height;
 	private int _index;
 	private Canvas _canvas;
-	
+
 	public this(Canvas c, int width, int height, int index)
 	{
 		this._canvas = c;
@@ -135,7 +126,7 @@ class DrawItemEventArgs: EventArgs
 
 	public void drawFocusRect()
 	{
-		if(this._state & DrawItemState.FOCUSED)
+		if(this._state & DrawItemState.focused)
 		{
 			DrawFocusRect(this._canvas.handle, &this._itemRect.rect);
 		}
@@ -152,7 +143,7 @@ abstract class OwnerDrawControl: SubclassedControl
 	public Event!(Control, MeasureItemEventArgs) measureItem;
 	public Event!(Control, DrawItemEventArgs) drawItem;
 
-	protected OwnerDrawMode _drawMode = OwnerDrawMode.NORMAL;
+	protected OwnerDrawMode _drawMode = OwnerDrawMode.normal;
 
 	@property public OwnerDrawMode drawMode()
 	{
@@ -176,7 +167,7 @@ abstract class OwnerDrawControl: SubclassedControl
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_MEASUREITEM:
 			{
@@ -184,11 +175,11 @@ abstract class OwnerDrawControl: SubclassedControl
 				HDC hdc = GetDC(this._handle);
 				SetBkColor(hdc, this.backColor.colorref);
 				SetTextColor(hdc, this.foreColor.colorref);
-					
+
 				scope Canvas c = Canvas.fromHDC(hdc);
-				scope MeasureItemEventArgs e = new MeasureItemEventArgs(c, pMeasureItem.itemWidth, pMeasureItem.itemHeight, 
+				scope MeasureItemEventArgs e = new MeasureItemEventArgs(c, pMeasureItem.itemWidth, pMeasureItem.itemHeight,
 																		   pMeasureItem.itemID);
-																		   
+
 				this.onMeasureItem(e);
 
 				if(e.width)
@@ -214,8 +205,8 @@ abstract class OwnerDrawControl: SubclassedControl
 
 				if(pDrawItem.itemState & ODS_SELECTED)
 				{
-					fc = SystemColors.colorHighLightText;
-					bc = SystemColors.colorHighLight;
+					fc = SystemColors.colorHighlightText;
+					bc = SystemColors.colorHighlight;
 				}
 				else
 				{
@@ -224,13 +215,13 @@ abstract class OwnerDrawControl: SubclassedControl
 				}
 
 				scope Canvas c = Canvas.fromHDC(pDrawItem.hDC);
-				scope DrawItemEventArgs e = new DrawItemEventArgs(c, cast(DrawItemState)pDrawItem.itemState, 
+				scope DrawItemEventArgs e = new DrawItemEventArgs(c, cast(DrawItemState)pDrawItem.itemState,
 																  r, fc, bc, pDrawItem.itemID);
 
 				this.onDrawItem(e);
 			}
 			break;
-			
+
 			default:
 				break;
 		}

@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.listview;
 
 import std.utf: toUTF8;
@@ -24,37 +15,37 @@ import dgui.imagelist;
 
 enum ColumnTextAlign: int
 {
-	LEFT = LVCFMT_LEFT,
-	CENTER = LVCFMT_CENTER,
-	RIGHT = LVCFMT_RIGHT,
+	left = LVCFMT_LEFT,
+	center = LVCFMT_CENTER,
+	right = LVCFMT_RIGHT,
 }
 
 enum ViewStyle: uint
-{	
-	LIST = LVS_LIST,
-	REPORT = LVS_REPORT,
-	LARGE_ICON = LVS_ICON,
-	SMALL_ICON = LVS_SMALLICON,
+{
+	list = LVS_LIST,
+	report = LVS_REPORT,
+	largeIcon = LVS_ICON,
+	smallIcon = LVS_SMALLICON,
 }
 
 enum ListViewBits: ubyte
 {
-	NONE 			   = 0,
-	GRID_LINES  	   = 1,
-	FULL_ROW_SELECT    = 2,
-	CHECK_BOXES 	   = 4,
+	none 			   = 0,
+	gridLines  	   = 1,
+	fullRowSelect    = 2,
+	checkBoxes 	   = 4,
 }
 
 class ListViewItem
 {
-	private Collection!(ListViewItem) _subItems;	
+	private Collection!(ListViewItem) _subItems;
 	private bool _checked = false;
 	private ListViewItem _parentItem;
 	private ListView _owner;
 	private string _text;
 	private int _imgIdx;
-	
-	mixin TagProperty;
+
+	mixin tagProperty;
 
 	package this(ListView owner, string txt, int imgIdx, bool check)
 	{
@@ -97,7 +88,7 @@ class ListViewItem
 		{
 			return;
 		}
-		
+
 		this._imgIdx = imgIdx;
 
 		if(this._owner && this._owner.created)
@@ -114,7 +105,7 @@ class ListViewItem
 	}
 
 	@property public final string text()
-	{		
+	{
 		return this._text;
 	}
 
@@ -135,7 +126,7 @@ class ListViewItem
 		}
 	}
 
-	@property package bool internalChecked() 
+	@property package bool internalChecked()
 	{
 		return this._checked;
 	}
@@ -146,7 +137,7 @@ class ListViewItem
 		{
 			return cast(bool)((this._owner.sendMessage(LVM_GETITEMSTATE, this.index, LVIS_STATEIMAGEMASK) >> 12) - 1);
 		}
-		
+
 		return this._checked;
 	}
 
@@ -156,28 +147,28 @@ class ListViewItem
 		{
 			return;
 		}
-		
+
 		this._checked = b;
-		
+
 		if(this._owner && this._owner.created)
 		{
 			LVITEMW lvi;
 
 			lvi.mask = LVIF_STATE;
 			lvi.stateMask = LVIS_STATEIMAGEMASK;
-			lvi.state = cast(LPARAM)((b ? 2 : 1) << 12); //Checked State
-			
+			lvi.state = cast(LPARAM)(b ? 2 : 1) << 12; //Checked State
+
 			this._owner.sendMessage(LVM_SETITEMSTATE, this.index, cast(LPARAM)&lvi);
 		}
 	}
-	
+
 	public final void addSubItem(string txt)
 	{
 		if(this._parentItem) //E' un subitem, non fare niente.
 		{
 			return;
 		}
-		
+
 		if(!this._subItems)
 		{
 			this._subItems = new Collection!(ListViewItem)();
@@ -193,12 +184,12 @@ class ListViewItem
 	}
 
 	@property public final ListViewItem[] subItems()
-	{	
+	{
 		if(this._subItems)
 		{
 			return this._subItems.get();
 		}
-		
+
 		return null;
 	}
 
@@ -230,7 +221,7 @@ class ListViewItem
 		else if(this._owner && this._parentItem)
 		{
 			int i = 0;
-			
+
 			foreach(ListViewItem lvi; this._parentItem.subItems)
 			{
 				if(lvi is this)
@@ -252,7 +243,7 @@ class ListViewColumn
 	private ListView _owner;
 	private string _text;
 	private int _width;
-	
+
 	package this(ListView owner, string txt, int w, ColumnTextAlign cta)
 	{
 		this._owner = owner;
@@ -266,7 +257,7 @@ class ListViewColumn
 		if(this._owner)
 		{
 			int i = 0;
-			
+
 			foreach(ListViewColumn lvc; this._owner.columns)
 			{
 				if(lvc is this)
@@ -308,10 +299,10 @@ class ListView: OwnerDrawControl
 {
 	public Event!(Control, EventArgs) itemChanged;
 	public Event!(Control, ListViewItemCheckedEventArgs) itemChecked;
-	
+
 	private Collection!(ListViewColumn) _columns;
 	private Collection!(ListViewItem) _items;
-	private ListViewBits _lBits = ListViewBits.NONE;
+	private ListViewBits _lBits = ListViewBits.none;
 	private ListViewItem _selectedItem;
 	private ImageList _imgList;
 
@@ -333,21 +324,21 @@ class ListView: OwnerDrawControl
 
 	@property public final ViewStyle viewStyle()
 	{
-		if(this.getStyle() & ViewStyle.LARGE_ICON)
+		if(this.getStyle() & ViewStyle.largeIcon)
 		{
-			return ViewStyle.LARGE_ICON;
+			return ViewStyle.largeIcon;
 		}
-		else if(this.getStyle() & ViewStyle.SMALL_ICON)
+		else if(this.getStyle() & ViewStyle.smallIcon)
 		{
-			return ViewStyle.SMALL_ICON;
+			return ViewStyle.smallIcon;
 		}
-		else if(this.getStyle() & ViewStyle.LIST)
+		else if(this.getStyle() & ViewStyle.list)
 		{
-			return ViewStyle.LIST;
+			return ViewStyle.list;
 		}
-		else if(this.getStyle() & ViewStyle.REPORT)
+		else if(this.getStyle() & ViewStyle.report)
 		{
-			return ViewStyle.REPORT;
+			return ViewStyle.report;
 		}
 
 		assert(false, "Unknwown ListView Style");
@@ -356,19 +347,19 @@ class ListView: OwnerDrawControl
 	@property public final void viewStyle(ViewStyle vs)
 	{
 		/* Remove flickering in Report Mode */
-		ListView.setBit(this._cBits, ControlBits.DOUBLE_BUFFERED, vs is ViewStyle.REPORT);
-		
+		ListView.setBit(this._cBits, ControlBits.doubleBuffered, vs is ViewStyle.report);
+
 		this.setStyle(vs, true);
 	}
 
 	@property public final bool fullRowSelect()
 	{
-		return cast(bool)(this._lBits & ListViewBits.FULL_ROW_SELECT);
+		return cast(bool)(this._lBits & ListViewBits.fullRowSelect);
 	}
 
 	@property public final void fullRowSelect(bool b)
 	{
-		this._lBits |= ListViewBits.FULL_ROW_SELECT;
+		this._lBits |= ListViewBits.fullRowSelect;
 
 		if(this.created)
 		{
@@ -378,32 +369,32 @@ class ListView: OwnerDrawControl
 
 	@property public final bool gridLines()
 	{
-		return cast(bool)(this._lBits & ListViewBits.GRID_LINES);
+		return cast(bool)(this._lBits & ListViewBits.gridLines);
 	}
 
 	@property public final void gridLines(bool b)
 	{
-		this._lBits |= ListViewBits.GRID_LINES;
+		this._lBits |= ListViewBits.gridLines;
 
 		if(this.created)
 		{
 			this.sendMessage(LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_GRIDLINES, b ? LVS_EX_GRIDLINES : 0);
-		}		
+		}
 	}
 
 	@property public final bool checkBoxes()
 	{
-		return cast(bool)(this._lBits & ListViewBits.CHECK_BOXES);
+		return cast(bool)(this._lBits & ListViewBits.checkBoxes);
 	}
 
 	@property public final void checkBoxes(bool b)
 	{
-		this._lBits |= ListViewBits.CHECK_BOXES;
+		this._lBits |= ListViewBits.checkBoxes;
 
 		if(this.created)
 		{
 			this.sendMessage(LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_CHECKBOXES, b ? LVS_EX_CHECKBOXES : 0);
-		}		
+		}
 	}
 
 	@property public final ListViewItem selectedItem()
@@ -411,7 +402,7 @@ class ListView: OwnerDrawControl
 		return this._selectedItem;
 	}
 
-	public final ListViewColumn addColumn(string txt, int w, ColumnTextAlign cta = ColumnTextAlign.LEFT)
+	public final ListViewColumn addColumn(string txt, int w, ColumnTextAlign cta = ColumnTextAlign.left)
 	{
 		if(!this._columns)
 		{
@@ -425,7 +416,7 @@ class ListView: OwnerDrawControl
 		{
 			ListView.insertColumn(lvc);
 		}
-		
+
 		return lvc;
 	}
 
@@ -451,7 +442,7 @@ class ListView: OwnerDrawControl
 				//TODO: Gestire caso "Rimozione colonna 0".
 			}
 		}
-		
+
 		if(this.created)
 		{
 			this.sendMessage(LVM_DELETECOLUMN, idx, 0);
@@ -472,7 +463,7 @@ class ListView: OwnerDrawControl
 		{
 			ListView.insertItem(lvi);
 		}
-		
+
 		return lvi;
 	}
 
@@ -482,7 +473,7 @@ class ListView: OwnerDrawControl
 		{
 			this._items.removeAt(idx);
 		}
-		
+
 		if(this.created)
 		{
 			this.sendMessage(LVM_DELETEITEM, idx, 0);
@@ -521,7 +512,7 @@ class ListView: OwnerDrawControl
 
 		int idx = item.index;
 		LVITEMW lvi;
-	
+
 		lvi.mask = LVIF_TEXT | (!subitem ? (LVIF_IMAGE | LVIF_STATE | LVIF_PARAM) : 0);
 		lvi.iImage = !subitem ? item.imageIndex : -1;
 		lvi.iItem = !subitem ? idx : item.parentItem.index;
@@ -536,10 +527,10 @@ class ListView: OwnerDrawControl
 			if(item.listView.checkBoxes) //LVM_INSERTITEM doesn't handle CheckBoxes, use LVM_SETITEMSTATE
 			{
 				//Recycle the variable 'lvi'
-				
+
 				lvi.mask = LVIF_STATE;
 				lvi.stateMask = LVIS_STATEIMAGEMASK;
-				lvi.state = cast(LPARAM)((item.internalChecked ? 2 : 1) << 12); //Checked State
+				lvi.state = cast(LPARAM)(item.internalChecked ? 2 : 1) << 12; //Checked State
 				item.listView.sendMessage(LVM_SETITEMSTATE, idx, cast(LPARAM)&lvi);
 			}
 
@@ -562,7 +553,7 @@ class ListView: OwnerDrawControl
 		lvc.mask =  LVCF_TEXT | LVCF_WIDTH | LVCF_FMT;
 		lvc.cx = col.width;
 		lvc.fmt = col.textAlign;
-		lvc.pszText = toUTFz!(wchar*)(col.text);				
+		lvc.pszText = toUTFz!(wchar*)(col.text);
 
 		col.listView.sendMessage(LVM_INSERTCOLUMNW, col.listView._columns.length, cast(LPARAM)&lvc);
 	}
@@ -570,37 +561,37 @@ class ListView: OwnerDrawControl
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		this.setStyle(LVS_ALIGNLEFT | LVS_ALIGNTOP | LVS_AUTOARRANGE | LVS_SHAREIMAGELISTS, true);
-		
+
 		/* WS_CLIPSIBLINGS | WS_CLIPCHILDREN: There is a SysHeader Component inside a list view in Report Mode */
-		if(this.getStyle() & ViewStyle.REPORT)
+		if(this.getStyle() & ViewStyle.report)
 		{
 			this.setStyle(WS_CLIPSIBLINGS | WS_CLIPCHILDREN, true);
-		}		
-		
-		ccp.SuperclassName = WC_LISTVIEW;
-		ccp.ClassName = WC_DLISTVIEW;
-		ccp.DefaultBackColor = SystemColors.colorWindow;
-		
+		}
+
+		ccp.superclassName = WC_LISTVIEW;
+		ccp.className = WC_DLISTVIEW;
+		ccp.defaultBackColor = SystemColors.colorWindow;
+
 		switch(this._drawMode)
 		{
-			case OwnerDrawMode.FIXED:
+			case OwnerDrawMode.fixed:
 				this.setStyle(LVS_OWNERDRAWFIXED, true);
 				break;
-			
-			case OwnerDrawMode.VARIABLE:
+
+			case OwnerDrawMode.variable:
 				assert(false, "ListView: Owner Draw Variable Style not allowed");
-			
+
 			default:
 				break;
 		}
-		
+
 		//ListView.setBit(this._cBits, ControlBits.ORIGINAL_PAINT, true);
 		super.createControlParams(ccp);
 	}
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_NOTIFY:
 			{
@@ -615,13 +606,13 @@ class ListView: OwnerDrawControl
 							if(pNotify.uChanged & LVIF_STATE)
 							{
 								uint changedState = pNotify.uNewState ^ pNotify.uOldState;
-	
+
 								if(pNotify.uNewState & LVIS_SELECTED)
 								{
 									this._selectedItem = this._items[pNotify.iItem];
 									this.onSelectedItemChanged(EventArgs.empty);
 								}
-								
+
 								if((changedState & 0x2000) || (changedState & 0x1000)) /* IF Checked || Unchecked THEN */
 								{
 									scope ListViewItemCheckedEventArgs e = new ListViewItemCheckedEventArgs(this._items[pNotify.iItem]);
@@ -630,7 +621,7 @@ class ListView: OwnerDrawControl
 							}
 						}
 						break;
-					
+
 						default:
 							break;
 					}
@@ -641,23 +632,23 @@ class ListView: OwnerDrawControl
 			default:
 				break;
 		}
-		
+
 		super.onReflectedMessage(m);
 	}
 
 	protected override void onHandleCreated(EventArgs e)
 	{
-		if(this._lBits & ListViewBits.GRID_LINES)
+		if(this._lBits & ListViewBits.gridLines)
 		{
 			this.sendMessage(LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_GRIDLINES, LVS_EX_GRIDLINES);
 		}
 
-		if(this._lBits & ListViewBits.FULL_ROW_SELECT)
+		if(this._lBits & ListViewBits.fullRowSelect)
 		{
 			this.sendMessage(LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_FULLROWSELECT, LVS_EX_FULLROWSELECT);
 		}
 
-		if(this._lBits & ListViewBits.CHECK_BOXES)
+		if(this._lBits & ListViewBits.checkBoxes)
 		{
 			this.sendMessage(LVM_SETEXTENDEDLISTVIEWSTYLE, LVS_EX_CHECKBOXES, LVS_EX_CHECKBOXES);
 		}
@@ -668,7 +659,7 @@ class ListView: OwnerDrawControl
 			this.sendMessage(LVM_SETIMAGELIST, LVSIL_SMALL, cast(LPARAM)this._imgList.handle);
 		}
 
-		if(this.getStyle() & ViewStyle.REPORT)
+		if(this.getStyle() & ViewStyle.report)
 		{
 			if(this._columns)
 			{
@@ -677,11 +668,11 @@ class ListView: OwnerDrawControl
 					ListView.insertColumn(lvc);
 				}
 			}
-			
+
 			/* Remove flickering in Report Mode */
-			ListView.setBit(this._cBits, ControlBits.DOUBLE_BUFFERED, true);
+			ListView.setBit(this._cBits, ControlBits.doubleBuffered, true);
 		}
-		
+
 		if(this._items)
 		{
 			foreach(ListViewItem lvi; this._items)

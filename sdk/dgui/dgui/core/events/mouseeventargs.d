@@ -1,20 +1,11 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.events.mouseeventargs;
 
 public import dgui.core.events.eventargs;
@@ -23,19 +14,19 @@ import dgui.core.winapi;
 
 enum MouseWheel: ubyte
 {
-	UP,
-	DOWN,
+	up,
+	down,
 }
 
 enum MouseKeys: uint
 {
-	NONE   = 0, // No mouse buttons specified.
+	none   = 0, // No mouse buttons specified.
 
 	// Standard mouse keys
-	LEFT   = MK_LBUTTON, 
-	RIGHT  = MK_RBUTTON,
-	MIDDLE = MK_MBUTTON,
-	
+	left   = MK_LBUTTON,
+	right  = MK_RBUTTON,
+	middle = MK_MBUTTON,
+
 	// Windows 2000+
 	//XBUTTON1 = 0x0800000,
 	//XBUTTON2 = 0x1000000,
@@ -66,11 +57,11 @@ class MouseEventArgs: EventArgs
 class MouseWheelEventArgs: MouseEventArgs
 {
 	private MouseWheel _mw;
-	
+
 	public this(Point cursorPos, MouseKeys mk, MouseWheel mw)
 	{
 		this._mw = mw;
-		
+
 		super(cursorPos, mk);
 	}
 

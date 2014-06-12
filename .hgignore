@@ -21,12 +21,7 @@ syntax: glob
 *.DotSettings
 *.pyc
 *ReSharper*
-dlang/dmd.*.zip
-dlang/2.05x
-dlang/2.062
-dlang/head
-dlang/dm/
-dlang/dmd2/
+dlang/*
 renderer11/shaders/hlsl/compiled/*
 RylogicEnv.cmd
 ResEdit.layout

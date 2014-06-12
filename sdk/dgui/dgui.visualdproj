@@ -89,9 +89,10 @@
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>1</useStdLibPath>
+  <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
@@ -183,9 +184,10 @@
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>1</useStdLibPath>
+  <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand />
+  <postBuildCommand>\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -277,9 +279,10 @@
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>1</useStdLibPath>
+  <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>Q:\tools\_publish_lib.cmd $(TargetPath) $(PlatformName) $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
@@ -371,9 +374,10 @@
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>1</useStdLibPath>
+  <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand />
+  <postBuildCommand>\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="dgui">
@@ -397,7 +401,6 @@
      <File path="dgui\core\events\controlcodeeventargs.d" />
      <File path="dgui\core\events\event.d" />
      <File path="dgui\core\events\eventargs.d" />
-     <File path="dgui\core\events\focuseventargs.d" />
      <File path="dgui\core\events\keyeventargs.d" />
      <File path="dgui\core\events\mouseeventargs.d" />
      <File path="dgui\core\events\painteventargs.d" />

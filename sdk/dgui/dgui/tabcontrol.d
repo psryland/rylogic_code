@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.tabcontrol;
 
 import std.utf: toUTFz;
@@ -23,25 +14,25 @@ import dgui.core.interfaces.ilayoutcontrol;
 import dgui.layout.panel;
 import dgui.imagelist;
 
-private struct TcItem
+private struct TCItem
 {
-	TCITEMHEADERW Header;
-	TabPage Page;
+	TCITEMHEADERW header;
+	TabPage page;
 }
 
 enum TabAlignment
 {
-	TOP    = 0,
-	LEFT   = TCS_VERTICAL,
-	RIGHT  = TCS_VERTICAL | TCS_RIGHT,
-	BOTTOM = TCS_BOTTOM,
+	top    = 0,
+	left   = TCS_VERTICAL,
+	right  = TCS_VERTICAL | TCS_RIGHT,
+	bottom = TCS_BOTTOM,
 }
 
 class TabPage: Panel
 {
 	private int _imgIndex;
 	private TabControl _owner;
-	
+
 	protected void initTabPage()
 	{
 		//Does Nothing
@@ -52,7 +43,7 @@ class TabPage: Panel
 		if(this._owner && this._owner.created && this._owner.tabPages)
 		{
 			int i = 0;
-			
+
 			foreach(TabPage tp; this._owner.tabPages)
 			{
 				if(tp is this)
@@ -85,10 +76,10 @@ class TabPage: Panel
 
 		if(this._owner && this._owner.created)
 		{
-			TcItem tci = void;
+			TCItem tci = void;
 
-			tci.Header.mask = TCIF_TEXT;
-			tci.Header.pszText = toUTFz!(wchar*)(txt);
+			tci.header.mask = TCIF_TEXT;
+			tci.header.pszText = toUTFz!(wchar*)(txt);
 
 			this._owner.sendMessage(TCM_SETITEMW, this.index, cast(LPARAM)&tci);
 			this.redraw();
@@ -106,26 +97,26 @@ class TabPage: Panel
 
 		if(this._owner && this._owner.created)
 		{
-			TcItem tci = void;
+			TCItem tci = void;
 
-			tci.Header.mask = TCIF_IMAGE;
-			tci.Header.iImage = idx;
+			tci.header.mask = TCIF_IMAGE;
+			tci.header.iImage = idx;
 
 			this._owner.sendMessage(TCM_SETITEMW, this.index, cast(LPARAM)&tci);
 		}
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		this.setExStyle(WS_EX_STATICEDGE, true);
-		
+
 		super.createControlParams(ccp);
 	}
-	
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		this.initTabPage();
-		
+
 		super.onHandleCreated(e);
 	}
 }
@@ -136,9 +127,9 @@ class TabControl: SubclassedControl, ILayoutControl
 {
 	public Event!(Control, CancelTabPageEventArgs) tabPageChanging;
 	public Event!(Control, EventArgs) tagPageChanged;
-	
+
 	private Collection!(TabPage) _tabPages;
-	private TabAlignment _ta = TabAlignment.TOP;
+	private TabAlignment _ta = TabAlignment.top;
 	private ImageList _imgList;
 	private int _selIndex = 0; //By Default: select the first TagPage (if exists)
 
@@ -148,7 +139,7 @@ class TabControl: SubclassedControl, ILayoutControl
 		{
 			this._tabPages = new Collection!(TabPage);
 		}
-		
+
 		T tp = new T();
 		tp.text = t;
 		tp.imageIndex = imgIndex;
@@ -157,13 +148,13 @@ class TabControl: SubclassedControl, ILayoutControl
 		tp.parent = this;
 
 		this._tabPages.add(tp);
-		
+
 		if(this.created)
 		{
 			this.createTabPage(tp);
 		}
 
-		return tp;		
+		return tp;
 	}
 
 	public final void removePage(int idx)
@@ -172,7 +163,7 @@ class TabControl: SubclassedControl, ILayoutControl
 		{
 			this.removeTabPage(idx);
 		}
-		
+
 		this._tabPages.removeAt(idx);
 	}
 
@@ -182,10 +173,10 @@ class TabControl: SubclassedControl, ILayoutControl
 		{
 			return this._tabPages.get();
 		}
-		
+
 		return null;
 	}
-	
+
 	@property public final TabPage selectedPage()
 	{
 		if(this._tabPages)
@@ -197,7 +188,7 @@ class TabControl: SubclassedControl, ILayoutControl
 	}
 
 	@property public final void selectedPage(TabPage stp)
-	{		
+	{
 		this.selectedIndex = stp.index;
 	}
 
@@ -211,7 +202,7 @@ class TabControl: SubclassedControl, ILayoutControl
 		if(this._tabPages)
 		{
 			TabPage sp = this.selectedPage;   //Old TabPage
-			TabPage tp = this._tabPages[idx]; //New TabPage	
+			TabPage tp = this._tabPages[idx]; //New TabPage
 
 			if(sp && sp !is tp)
 			{
@@ -224,14 +215,14 @@ class TabControl: SubclassedControl, ILayoutControl
 				/*
 				 * By default, TabPages are created not visible
 				 */
-				
+
 				tp.visible = true;
 			}
 
 			if(this.created)
 			{
 				this.updateLayout();
-			}			
+			}
 		}
 	}
 
@@ -259,7 +250,7 @@ class TabControl: SubclassedControl, ILayoutControl
 	{
 		this.setStyle(this._ta, false);
 		this.setStyle(ta, true);
-		
+
 		this._ta = ta;
 	}
 
@@ -270,48 +261,48 @@ class TabControl: SubclassedControl, ILayoutControl
 			foreach(int i, TabPage tp; this._tabPages)
 			{
 				this.createTabPage(tp, false);
-				
+
 				if(i == this._selIndex)
 				{
 					tp.visible = true;
 					this.updateLayout();
 				}
 			}
-			
+
 			this.selectedIndex = this._selIndex;
 		}
-	}	
-	
+	}
+
 	public void updateLayout()
 	{
 		TabPage selPage = this.selectedPage;
-		
+
 		if(selPage)
 		{
-			TabControl tc = selPage.tabControl;				
-			Rect adjRect, r = Rect(NullPoint, tc.clientSize);
-		
+			TabControl tc = selPage.tabControl;
+			Rect adjRect, r = Rect(nullPoint, tc.clientSize);
+
 			tc.sendMessage(TCM_ADJUSTRECT, false, cast(LPARAM)&adjRect.rect);
 
 			r.left += adjRect.left;
 			r.top += adjRect.top;
 			r.right += r.left + adjRect.width;
 			r.bottom += r.top + adjRect.height;
-		
+
 			selPage.bounds = r; //selPage docks its child componentsS
 		}
 	}
 
 	private void createTabPage(TabPage tp, bool adding = true)
 	{
-		TcItem tci;
-		tci.Header.mask = TCIF_IMAGE | TCIF_TEXT | TCIF_PARAM;		
-		tci.Header.iImage = tp.imageIndex;
-		tci.Header.pszText = toUTFz!(wchar*)(tp.text);
-		tci.Page = tp;
-		
+		TCItem tci;
+		tci.header.mask = TCIF_IMAGE | TCIF_TEXT | TCIF_PARAM;
+		tci.header.iImage = tp.imageIndex;
+		tci.header.pszText = toUTFz!(wchar*)(tp.text);
+		tci.page = tp;
+
 		tp.sendMessage(DGUI_CREATEONLY, 0, 0); //Calls Control.create()
-		
+
 		int idx = tp.index;
 		this.sendMessage(TCM_INSERTITEMW, idx, cast(LPARAM)&tci);
 
@@ -323,7 +314,7 @@ class TabControl: SubclassedControl, ILayoutControl
 	}
 
 	private void removeTabPage(int idx)
-	{		
+	{
 		if(this._tabPages)
 		{
 			if(idx == this._selIndex)
@@ -341,15 +332,15 @@ class TabControl: SubclassedControl, ILayoutControl
 			tp.dispose();
 		}
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		this.setStyle(WS_CLIPCHILDREN | WS_CLIPSIBLINGS, true);
 		this.setExStyle(WS_EX_CONTROLPARENT, true);
-		
-		ccp.SuperclassName = WC_TABCONTROL;
-		ccp.ClassName = WC_DTABCONTROL;
-		
+
+		ccp.superclassName = WC_TABCONTROL;
+		ccp.className = WC_DTABCONTROL;
+
 		super.createControlParams(ccp);
 	}
 
@@ -366,8 +357,8 @@ class TabControl: SubclassedControl, ILayoutControl
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		if(m.Msg == WM_NOTIFY)
-		{	
+		if(m.msg == WM_NOTIFY)
+		{
 			NMHDR* pNotify = cast(NMHDR*)m.lParam;
 
 			switch(pNotify.code)
@@ -375,28 +366,28 @@ class TabControl: SubclassedControl, ILayoutControl
 				case TCN_SELCHANGING:
 					scope CancelTabPageEventArgs e = new CancelTabPageEventArgs(this.selectedPage);
 					this.onTabPageChanging(e);
-					m.Result = e.cancel;
+					m.result = e.cancel;
 					break;
 
 				case TCN_SELCHANGE:
 					this.selectedIndex = this.sendMessage(TCM_GETCURSEL, 0, 0);
 					this.onTabPageChanged(EventArgs.empty);
 					break;
-				
+
 				default:
 					break;
 			}
 		}
-		
+
 		super.onReflectedMessage(m);
 	}
-	
+
 	protected override void show()
 	{
 		super.show();
 		this.updateLayout();
 	}
-	
+
 	protected override void onResize(EventArgs e)
 	{
 		this.updateLayout();

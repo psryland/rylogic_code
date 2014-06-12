@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.statusbar;
 
 import std.utf: toUTFz;
@@ -25,10 +16,10 @@ final class StatusPart
 	private StatusBar _owner;
 	private string _text;
 	private int _width;
-	
+
 	package this(StatusBar sb, string txt, int w)
 	{
-		this._owner = sb;	
+		this._owner = sb;
 		this._text = txt;
 		this._width = w;
 	}
@@ -103,7 +94,7 @@ class StatusBar: SubclassedControl
 	/*
 	public void removePanel(int idx)
 	{
-		
+
 	}
 	*/
 
@@ -128,7 +119,7 @@ class StatusBar: SubclassedControl
 		{
 			return this._parts.get();
 		}
-		
+
 		return null;
 	}
 
@@ -157,14 +148,14 @@ class StatusBar: SubclassedControl
 			owner.sendMessage(SB_SETTEXTW, MAKEWPARAM(i, 0), cast(LPARAM)toUTFz!(wchar*)(sp.text));
 		}
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
-		this._dock = DockStyle.BOTTOM; //Force dock
-		
-		ccp.SuperclassName = WC_STATUSBAR;
-		ccp.ClassName = WC_DSTATUSBAR;
-		
+		this._dock = DockStyle.bottom; //Force dock
+
+		ccp.superclassName = WC_STATUSBAR;
+		ccp.className = WC_DSTATUSBAR;
+
 		if(this._partsVisible)
 		{
 			this.setStyle(SBARS_SIZEGRIP, true);
@@ -182,7 +173,7 @@ class StatusBar: SubclassedControl
 				StatusBar.insertPart(sp);
 			}
 		}
-		
+
 		super.onHandleCreated(e);
 	}
 }

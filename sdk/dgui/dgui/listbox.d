@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.listbox;
 
 import std.utf: toUTFz;
@@ -39,7 +30,7 @@ class ListBox: OwnerDrawControl
 	}
 
 	public Event!(Control, EventArgs) itemChanged;
-	
+
 	private Collection!(Object) _items;
 	private Object _selectedItem;
 	private int _selectedIndex;
@@ -120,7 +111,7 @@ class ListBox: OwnerDrawControl
 		{
 			return this._items.get();
 		}
-		
+
 		return null;
 	}
 
@@ -128,50 +119,50 @@ class ListBox: OwnerDrawControl
 	{
 		return this.sendMessage(LB_ADDSTRING, 0, cast(LPARAM)toUTFz!(wchar*)(obj.toString()));
 	}
-	
+
 	protected void onItemChanged(EventArgs e)
 	{
 		this.itemChanged(this, e);
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		/* LBN_SELCHANGE: This notification code is sent only by a list box that has the LBS_NOTIFY style (by MSDN) */
 		this.setStyle(LBS_NOINTEGRALHEIGHT | LBS_NOTIFY, true);
 		this.setExStyle(WS_EX_CLIENTEDGE, true);
-		
-		ccp.SuperclassName = WC_LISTBOX;
-		ccp.ClassName = WC_DLISTBOX;
-		ccp.DefaultBackColor = SystemColors.colorWindow;
+
+		ccp.superclassName = WC_LISTBOX;
+		ccp.className = WC_DLISTBOX;
+		ccp.defaultBackColor = SystemColors.colorWindow;
 
 		switch(this._drawMode)
 		{
-			case OwnerDrawMode.FIXED:
+			case OwnerDrawMode.fixed:
 				this.setStyle(LBS_OWNERDRAWFIXED, true);
 				break;
-			
-			case OwnerDrawMode.VARIABLE:
+
+			case OwnerDrawMode.variable:
 				this.setStyle(LBS_OWNERDRAWVARIABLE, true);
 				break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.createControlParams(ccp);
 	}
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		if(m.Msg == WM_COMMAND && HIWORD(m.wParam) == LBN_SELCHANGE)
+		if(m.msg == WM_COMMAND && HIWORD(m.wParam) == LBN_SELCHANGE)
 		{
 			this._selectedIndex = this.sendMessage(LB_GETCURSEL, 0, 0);
 			this.onItemChanged(EventArgs.empty);
 		}
-		
+
 		super.onReflectedMessage(m);
-	}	
-	
+	}
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		if(this._items)
@@ -181,7 +172,7 @@ class ListBox: OwnerDrawControl
 				this.createItem(obj);
 			}
 		}
-		
+
 		super.onHandleCreated(e);
 	}
 }

@@ -1,20 +1,11 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.events.scrolleventargs;
 
 public import dgui.core.events.eventargs;
@@ -22,35 +13,35 @@ import dgui.core.winapi;
 
 enum ScrollMode: uint
 {
-	BOTTOM 		  = SB_BOTTOM,
-	ENDSCROLL 	  = SB_ENDSCROLL,
-	LINEDOWN  	  = SB_LINEDOWN,
-	LINEUP 		  = SB_LINEUP,
-	PAGEDOWN	  = SB_PAGEDOWN,
-	PAGEUP 		  = SB_PAGEUP,
-	THUMBPOSITION = SB_THUMBPOSITION,
-	THUMBTRACK 	  = SB_THUMBTRACK,
-	TOP 		  = SB_TOP,
-	LEFT  		  = SB_LEFT,
-	RIGHT 		  = SB_RIGHT,
-	LINELEFT      = SB_LINELEFT,
-	LINERIGHT 	  = SB_LINERIGHT,
-	PAGELEFT 	  = SB_PAGELEFT,
-	PAGERIGHT 	  = SB_PAGERIGHT,
+	bottom 		  = SB_BOTTOM,
+	endScroll 	  = SB_ENDSCROLL,
+	lineDown  	  = SB_LINEDOWN,
+	lineUp 		  = SB_LINEUP,
+	pageDown	  = SB_PAGEDOWN,
+	pageUp 		  = SB_PAGEUP,
+	thumbPosition = SB_THUMBPOSITION,
+	thumbTrack 	  = SB_THUMBTRACK,
+	top 		  = SB_TOP,
+	left  		  = SB_LEFT,
+	right 		  = SB_RIGHT,
+	lineLeft      = SB_LINELEFT,
+	lineRight 	  = SB_LINERIGHT,
+	pageLeft 	  = SB_PAGELEFT,
+	pageRight 	  = SB_PAGERIGHT,
 }
 
 enum ScrollWindowDirection: ubyte
 {
-	LEFT  = 0,
-	UP    = 1,
-	RIGHT = 2,
-	DOWN  = 4,
+	left  = 0,
+	up    = 1,
+	right = 2,
+	down  = 4,
 }
 
 enum ScrollDirection: ubyte
 {
-	VERTICAL,
-	HORIZONTAL,
+	vertical,
+	horizontal,
 }
 
 class ScrollEventArgs: EventArgs

@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.combobox;
 
 import std.utf: toUTFz;
@@ -24,10 +15,10 @@ public import dgui.imagelist;
 
 enum DropDownStyles: uint
 {
-	NONE 		  = 0, // Internal Use
-	SIMPLE 		  = CBS_SIMPLE,
-	DROPDOWN 	  = CBS_DROPDOWN,
-	DROPDOWN_LIST = CBS_DROPDOWNLIST,
+	none 		  = 0, // Internal Use
+	simple 		  = CBS_SIMPLE,
+	dropdown 	  = CBS_DROPDOWN,
+	dropdownList = CBS_DROPDOWNLIST,
 }
 
 class ComboBoxItem
@@ -35,9 +26,9 @@ class ComboBoxItem
 	private ComboBox _owner;
 	private string _text;
 	private int _imgIndex = -1;
-	
-	mixin TagProperty;
-	
+
+	mixin tagProperty;
+
 	package this(string txt, int idx = -1)
 	{
 		this._text = txt;
@@ -56,7 +47,7 @@ class ComboBoxItem
 				}
 			}
 		}
-		
+
 		return -1;
 	}
 
@@ -89,7 +80,7 @@ class ComboBoxItem
 
 			this._owner.sendMessage(CBEM_SETITEMW, 0, cast(LPARAM)&cbei);
 		}
-	} 
+	}
 
 	@property public final string text()
 	{
@@ -116,17 +107,17 @@ class ComboBoxItem
 class ComboBox: SubclassedControl
 {
 	public Event!(Control, EventArgs) itemChanged;
-	
+
 	private Collection!(ComboBoxItem) _items;
-	private DropDownStyles _oldDdStyle = DropDownStyles.NONE;
+	private DropDownStyles _oldDDStyle = DropDownStyles.none;
 	private int _selectedIndex;
 	private ImageList _imgList;
-	
+
 	public this()
 	{
-		this.setStyle(DropDownStyles.DROPDOWN, true);
+		this.setStyle(DropDownStyles.dropdown, true);
 	}
-	
+
 	public final ComboBoxItem addItem(string s, int imgIndex = -1)
 	{
 		if(!this._items)
@@ -186,7 +177,7 @@ class ComboBox: SubclassedControl
 
 			this._items.clear();
 		}
-		
+
 		this.selectedIndex = -1;
 	}
 
@@ -195,7 +186,7 @@ class ComboBox: SubclassedControl
 		if(this.created)
 		{
 			return this._items[this._selectedIndex];
-		}		
+		}
 		else
 		{
 			int idx = this.selectedIndex;
@@ -208,14 +199,14 @@ class ComboBox: SubclassedControl
 
 		return null;
 	}
-	
+
 	@property public override bool focused()
 	{
 		if(this.created)
 		{
 			return GetFocus() == cast(HWND)this.sendMessage(CBEM_GETCOMBOCONTROL, 0, 0);
 		}
-		
+
 		return false;
 	}
 
@@ -236,12 +227,12 @@ class ComboBox: SubclassedControl
 
 	@property public final void dropDownStyle(DropDownStyles dds)
 	{
-		if(dds !is this._oldDdStyle)
+		if(dds !is this._oldDDStyle)
 		{
-			this.setStyle(this._oldDdStyle, false); //Rimuovo il vecchio
+			this.setStyle(this._oldDDStyle, false); //Rimuovo il vecchio
 			this.setStyle(dds, true); //Aggiungo il nuovo
-			
-			this._oldDdStyle = dds;
+
+			this._oldDDStyle = dds;
 		}
 	}
 
@@ -251,7 +242,7 @@ class ComboBox: SubclassedControl
 		{
 			return this._items.get();
 		}
-		
+
 		return null;
 	}
 
@@ -265,7 +256,7 @@ class ComboBox: SubclassedControl
 		cbei.iSelectedImage = cbi.imageIndex;
 		cbei.pszText = toUTFz!(wchar*)(cbi.text);
 		cbei.lParam = winCast!(LPARAM)(cbi);
-	
+
 		this.sendMessage(CBEM_INSERTITEMW, 0, cast(LPARAM)&cbei);
 		cbi.comboBox = this;
 		return cbi;
@@ -279,23 +270,23 @@ class ComboBox: SubclassedControl
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		// Use Original Paint Routine, the double buffered one causes some issues
-		
-		ccp.SuperclassName = WC_COMBOBOXEX;
-		ccp.ClassName = WC_DCOMBOBOX;
-		
+
+		ccp.superclassName = WC_COMBOBOXEX;
+		ccp.className = WC_DCOMBOBOX;
+
 		this.setStyle(WS_CLIPCHILDREN | WS_CLIPSIBLINGS, true); //Clip child ComboBox
 		//this.setStyle(CBS_NOINTEGRALHEIGHT, true);
-				
+
 		super.createControlParams(ccp);
 	}
 
 	protected override void onHandleCreated(EventArgs e)
-	{		
+	{
 		if(this._imgList)
 		{
 			this.sendMessage(CBEM_SETIMAGELIST, 0, cast(LPARAM)this._imgList.handle);
 		}
-		
+
 		if(this._items)
 		{
 			foreach(ComboBoxItem cbi; this._items)
@@ -308,13 +299,13 @@ class ComboBox: SubclassedControl
 		{
 			this.sendMessage(CB_SETCURSEL, this._selectedIndex, 0);
 		}
-		
+
 		super.onHandleCreated(e);
 	}
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		if(m.Msg == WM_COMMAND && HIWORD(m.wParam) == CBN_SELCHANGE)
+		if(m.msg == WM_COMMAND && HIWORD(m.wParam) == CBN_SELCHANGE)
 		{
 			this._selectedIndex = this.sendMessage(CB_GETCURSEL, 0, 0);
 			this.onItemChanged(EventArgs.empty);
@@ -322,10 +313,10 @@ class ComboBox: SubclassedControl
 
 		super.onReflectedMessage(m);
 	}
-	
+
 	protected override void wndProc(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_COMMAND:
 			{
@@ -334,15 +325,15 @@ class ComboBox: SubclassedControl
 				{
 					this.onFocusChanged(EventArgs.empty);
 				}
-				
+
 				super.wndProc(m);
 			}
 			break;
-			
+
 			case WM_SETFOCUS, WM_KILLFOCUS:
 				this.originalWndProc(m); //Don't send focusChanged event here!
 				break;
-			
+
 			default:
 				super.wndProc(m);
 				break;

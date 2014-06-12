@@ -1,18 +1,10 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
 
 /* ANSI <-> UNICODE bridge module */
@@ -20,29 +12,29 @@
 module dgui.core.charset;
 
 import std.conv: to;
-import std.utf: toUTFz;
+public import std.utf: toUTFz;
 import dgui.core.winapi;
 import dgui.core.utils;
 
 /**
   * $(B) Unicode Wrapper of CreateWindowEx API $(B)
   */
-public HWND createWindowEx(DWORD exStyle, string className, string windowName, DWORD style, 
+public HWND createWindowEx(DWORD exStyle, string className, string windowName, DWORD style,
 					       int x, int y, int nWidth, int nHeight, HWND hWndParent, LPVOID lpParam)
-{	
-	return CreateWindowExW(exStyle, toUTFz!(wchar*)(className), toUTFz!(wchar*)(windowName), style, x, y, 
+{
+	return CreateWindowExW(exStyle, toUTFz!(wchar*)(className), toUTFz!(wchar*)(windowName), style, x, y,
 						   nWidth, nHeight, hWndParent, null, getHInstance(), lpParam);
 }
 
 public BOOL getClassInfoEx(string className, WNDCLASSEXW* pWndClassEx)
-{	
+{
 	return GetClassInfoExW(getHInstance(), toUTFz!(wchar*)(className), pWndClassEx);
 }
 
 public string getModuleFileName(HMODULE hModule)
 {
 	wchar[MAX_PATH + 1] path = void;
-	
+
 	int len = GetModuleFileNameW(hModule, path.ptr, path.length);
 	return to!(string)(path[0..len]);
 }
@@ -91,16 +83,16 @@ public int getWindowTextLength(HWND hWnd)
 }
 
 public string getWindowText(HWND hWnd)
-{	
+{
 	int len = getWindowTextLength(hWnd);
-	
+
 	if(!len)
 	{
 		return null;
 	}
 
 	len++;
-	
+
 	wchar[] t = new wchar[len];
 	len = GetWindowTextW(hWnd, t.ptr, len);
 	return to!(string)(t[0..len]);
@@ -122,16 +114,16 @@ public HFONT createFontIndirect(string s, LOGFONTW* lf)
 	{
 		s = s[0..LF_FACESIZE - 1];
 	}
-	
+
 	wstring ws = to!(wstring)(s);
 
 	foreach(int i, wchar wch; ws)
 	{
 		lf.lfFaceName[i] = wch;
 	}
-	
+
 	lf.lfFaceName[ws.length] = '\0';
-	
+
 	return CreateFontIndirectW(lf);
 }
 
@@ -149,11 +141,11 @@ public LONG getWindowLong(HWND hWnd, int nIndex)
 {
 	return GetWindowLongW(hWnd, nIndex);
 }
-	
+
 public ATOM registerClassEx(string className, HCURSOR hCursor, HBRUSH hBackground, WNDPROC wndProc, uint style)
 {
 	WNDCLASSEXW wc;
-	
+
 	wc.cbSize = WNDCLASSEXW.sizeof;
 	wc.lpszClassName = toUTFz!(wchar*)(className);
 	wc.hCursor = hCursor;
@@ -161,7 +153,7 @@ public ATOM registerClassEx(string className, HCURSOR hCursor, HBRUSH hBackgroun
 	wc.hbrBackground = hBackground;
 	wc.lpfnWndProc = wndProc;
 	wc.style = style;
-	
+
 	return RegisterClassExW(&wc);
 }
 

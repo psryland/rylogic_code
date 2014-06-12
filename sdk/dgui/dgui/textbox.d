@@ -1,46 +1,37 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.textbox;
 
 import dgui.core.controls.textcontrol;
 
 enum CharacterCasing
 {
-	NORMAL = 0,
-	UPPERCASE = ES_UPPERCASE,
-	LOWERCASE = ES_LOWERCASE,
+	normal = 0,
+	uppercase = ES_UPPERCASE,
+	lowercase = ES_LOWERCASE,
 }
 
 class TextBox: TextControl
 {
-	private CharacterCasing _chChasing  = CharacterCasing.NORMAL;
+	private CharacterCasing _chChasing  = CharacterCasing.normal;
 	private uint _maxLength = 0;
-	
+
 	@property public final bool multiline()
 	{
 		return cast(bool)(this.getStyle() & ES_MULTILINE);
 	}
-	
+
 	@property public final void multiline(bool b)
 	{
 		this.setStyle(ES_MULTILINE, b);
 	}
-	
+
 	@property public final uint maxLength()
 	{
 		if(!this._maxLength)
@@ -57,11 +48,11 @@ class TextBox: TextControl
 
 		return this._maxLength;
 	}
-	
+
 	@property public final void maxLength(uint len)
 	{
 		this._maxLength = len;
-		
+
 		if(!len)
 		{
 			if(this.getStyle() & ES_MULTILINE)
@@ -73,13 +64,13 @@ class TextBox: TextControl
 				len = 0xFFFFFFFE;
 			}
 		}
-		
+
 		if(this.created)
 		{
 			this.sendMessage(EM_SETLIMITTEXT, len, 0);
 		}
 	}
-	
+
 	@property public final CharacterCasing characterCasing()
 	{
 		return this._chChasing;
@@ -88,7 +79,7 @@ class TextBox: TextControl
 	@property public final void characterCasing(CharacterCasing ch)
 	{
 		this._chChasing = ch;
-		
+
 		if(this.created)
 		{
 			this.setStyle(this._chChasing, false); //Remove Old Style
@@ -105,25 +96,25 @@ class TextBox: TextControl
 	{
 		this.setStyle(ES_PASSWORD, b);
 	}
-	
+
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
 		this.setExStyle(WS_EX_CLIENTEDGE, true);
 		this.setStyle(this._chChasing, true);
-		ccp.SuperclassName = WC_EDIT;
-		ccp.ClassName = WC_DEDIT;
+		ccp.superclassName = WC_EDIT;
+		ccp.className = WC_DEDIT;
 
 		this.height = 20; //E questo cos'è?
 		super.createControlParams(ccp);
 	}
-	
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		if(this._maxLength)
 		{
 			this.sendMessage(EM_SETLIMITTEXT, this._maxLength, 0);
 		}
-		
+
 		super.onHandleCreated(e);
 	}
 }

@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.resources;
 
 import dgui.core.charset;
@@ -27,26 +18,26 @@ import dgui.canvas;
 final class Resources
 {
 	private static Resources _rsrc;
-	
+
 	private this()
 	{
-		
-	}	
+
+	}
 
 	public Icon getIcon(ushort id)
 	{
-		return getIcon(id, NullSize);
+		return getIcon(id, nullSize);
 	}
-	
+
 	public Icon getIcon(ushort id, Size sz)
 	{
-		HICON hIcon = loadImage(getHInstance(), cast(wchar*)id, IMAGE_ICON, sz.width, sz.height, LR_LOADTRANSPARENT | (sz == NullSize ? LR_DEFAULTSIZE : 0));
+		HICON hIcon = loadImage(getHInstance(), cast(wchar*)id, IMAGE_ICON, sz.width, sz.height, LR_LOADTRANSPARENT | (sz == nullSize ? LR_DEFAULTSIZE : 0));
 
 		if(!hIcon)
 		{
-			throwException!(GdiException)("Cannot load Icon: '%d'", id);
+			throwException!(GDIException)("Cannot load Icon: '%d'", id);
 		}
-		
+
 		return Icon.fromHICON(hIcon);
 	}
 
@@ -56,7 +47,7 @@ final class Resources
 
 		if(!hBitmap)
 		{
-			throwException!(GdiException)("Cannot load Bitmap: '%d'", id);
+			throwException!(GDIException)("Cannot load Bitmap: '%d'", id);
 		}
 
 		return Bitmap.fromHBITMAP(hBitmap);
@@ -68,7 +59,7 @@ final class Resources
 
 		if(!hRsrc)
 		{
-			throwException!(GdiException)("Cannot load Custom Resource: '%d'", id);
+			throwException!(GDIException)("Cannot load Custom Resource: '%d'", id);
 		}
 
 		return cast(T*)LockResource(LoadResource(null, hRsrc));

@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.label;
 
 import std.string;
@@ -22,24 +13,24 @@ import dgui.core.controls.control;
 
 enum LabelDrawMode: ubyte
 {
-	NORMAL = 0,
-	OWNER_DRAW = 1,
+	normal = 0,
+	ownerDraw = 1,
 }
 
 class Label: Control
 {
-	private LabelDrawMode _drawMode = LabelDrawMode.NORMAL;
-	private TextAlignment _textAlign = TextAlignment.MIDDLE | TextAlignment.LEFT;
+	private LabelDrawMode _drawMode = LabelDrawMode.normal;
+	private TextAlignment _textAlign = TextAlignment.middle | TextAlignment.left;
 
 	alias @property Control.text text;
 	private bool _multiLine = false;
-	
+
 	@property public override void text(string s)
 	{
 		super.text = s;
-		
+
 		this._multiLine = false;
-		
+
 		foreach(char ch; s)
 		{
 			if(ch == '\n' || ch == '\r')
@@ -48,13 +39,13 @@ class Label: Control
 				break;
 			}
 		}
-		
+
 		if(this.created)
 		{
 			this.invalidate();
 		}
 	}
-	
+
 	@property public final LabelDrawMode drawMode()
 	{
 		return this._drawMode;
@@ -73,7 +64,7 @@ class Label: Control
 	@property public final void alignment(TextAlignment ta)
 	{
 		this._textAlign = ta;
-		
+
 		if(this.created)
 		{
 			this.invalidate();
@@ -82,8 +73,8 @@ class Label: Control
 
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
-		ccp.ClassName = WC_DLABEL;
-		ccp.ClassStyle = ClassStyles.HREDRAW | ClassStyles.VREDRAW;
+		ccp.className = WC_DLABEL;
+		ccp.classStyle = ClassStyles.hRedraw | ClassStyles.vRedraw;
 
 		super.createControlParams(ccp);
 	}
@@ -92,12 +83,12 @@ class Label: Control
 	{
 		super.onPaint(e);
 
-		if(this._drawMode is LabelDrawMode.NORMAL)
+		if(this._drawMode is LabelDrawMode.normal)
 		{
 			Canvas c = e.canvas;
-			Rect r = Rect(NullPoint, this.clientSize);
-			
-			scope TextFormat tf = new TextFormat(this._multiLine ? TextFormatFlags.WORD_BREAK : TextFormatFlags.SINGLE_LINE);
+			Rect r = Rect(nullPoint, this.clientSize);
+
+			scope TextFormat tf = new TextFormat(this._multiLine ? TextFormatFlags.wordBreak : TextFormatFlags.singleLine);
 			tf.alignment = this._textAlign;
 
 			scope SolidBrush sb = new SolidBrush(this.backColor);

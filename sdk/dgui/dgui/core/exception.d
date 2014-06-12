@@ -1,27 +1,18 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.exception;
 
 import std.string: format;
 import std.windows.syserror;
 import dgui.core.winapi: GetLastError;
 
-mixin template ExceptionBody()
+mixin template exceptionBody()
 {
 	public this(string msg)
 	{
@@ -31,27 +22,27 @@ mixin template ExceptionBody()
 
 final class DGuiException: Exception
 {
-	mixin ExceptionBody;
+	mixin exceptionBody;
 }
 
 final class Win32Exception: Exception
 {
-	mixin ExceptionBody;
+	mixin exceptionBody;
 }
 
 final class RegistryException: Exception
 {
-	mixin ExceptionBody;
+	mixin exceptionBody;
 }
 
-final class GdiException: Exception
+final class GDIException: Exception
 {
-	mixin ExceptionBody;
+	mixin exceptionBody;
 }
 
 final class WindowsNotSupportedException: Exception
 {
-	mixin ExceptionBody;
+	mixin exceptionBody;
 }
 
 void throwException(T1, T2...)(string fmt, T2 args)

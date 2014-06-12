@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.toolbar;
 
 import dgui.core.controls.subclassedcontrol;
@@ -23,21 +14,21 @@ public import dgui.imagelist;
 
 enum ToolButtonStyle: ubyte
 {
-	BUTTON = TBSTYLE_BUTTON,
-	SEPARATOR = TBSTYLE_SEP,
-	DROPDOWN = TBSTYLE_DROPDOWN,
+	button = TBSTYLE_BUTTON,
+	separator = TBSTYLE_SEP,
+	dropdown = TBSTYLE_DROPDOWN,
 }
 
 class ToolButton
 {
 	public Event!(ToolButton, EventArgs) click;
-	
+
 	private ToolBar _owner;
 	private ContextMenu _ctxMenu;
 	private ToolButtonStyle _tbs;
 	private int _imgIndex;
 	private bool _enabled;
-	
+
 	package this(ToolBar tb, ToolButtonStyle tbs, int imgIndex, bool enabled)
 	{
 		this._owner = tb;
@@ -58,11 +49,11 @@ class ToolButton
 				{
 					return i;
 				}
-				
+
 				i++;
 			}
 		}
-		
+
 		return -1;
 	}
 
@@ -177,8 +168,8 @@ class ToolBar: SubclassedControl
 		{
 			this._buttons = new Collection!(ToolButton)();
 		}
-		
-		ToolButton tb = new ToolButton(this, ToolButtonStyle.DROPDOWN, imgIndex, en);
+
+		ToolButton tb = new ToolButton(this, ToolButtonStyle.dropdown, imgIndex, en);
 		tb.contextMenu = ctxMenu;
 		this._buttons.add(tb);
 
@@ -187,7 +178,7 @@ class ToolBar: SubclassedControl
 			ToolBar.addItem(tb);
 		}
 
-		return tb;		
+		return tb;
 	}
 
 	public final ToolButton addButton(int imgIndex, bool en = true)
@@ -196,8 +187,8 @@ class ToolBar: SubclassedControl
 		{
 			this._buttons = new Collection!(ToolButton)();
 		}
-		
-		ToolButton tb = new ToolButton(this, ToolButtonStyle.BUTTON, imgIndex, en);
+
+		ToolButton tb = new ToolButton(this, ToolButtonStyle.button, imgIndex, en);
 		this._buttons.add(tb);
 
 		if(this.created)
@@ -214,8 +205,8 @@ class ToolBar: SubclassedControl
 		{
 			this._buttons = new Collection!(ToolButton)();
 		}
-		
-		ToolButton tb = new ToolButton(this, ToolButtonStyle.SEPARATOR, -1, true);
+
+		ToolButton tb = new ToolButton(this, ToolButtonStyle.separator, -1, true);
 		this._buttons.add(tb);
 
 		if(this.created)
@@ -227,7 +218,7 @@ class ToolBar: SubclassedControl
 	public final void removeButton(int idx)
 	{
 		this._buttons.removeAt(idx);
-		
+
 		if(this.created)
 		{
 			this.sendMessage(TB_DELETEBUTTON, idx, 0);
@@ -240,7 +231,7 @@ class ToolBar: SubclassedControl
 		{
 			return this._buttons.get();
 		}
-		
+
 		return null;
 	}
 
@@ -257,14 +248,14 @@ class ToolBar: SubclassedControl
 
 		switch(tb.style)
 		{
-			case ToolButtonStyle.BUTTON, ToolButtonStyle.DROPDOWN:
+			case ToolButtonStyle.button, ToolButtonStyle.dropdown:
 				tbtn.iBitmap = tb.imageIndex;
 				tbtn.fsStyle = cast(ubyte)tb.style;
 				tbtn.fsState = cast(ubyte)(tb.enabled ? TBSTATE_ENABLED : 0);
 				tbtn.dwData = winCast!(uint)(tb);
 				break;
 
-			case ToolButtonStyle.SEPARATOR:
+			case ToolButtonStyle.separator:
 				tbtn.fsStyle = cast(ubyte)tb.style;
 				break;
 
@@ -272,30 +263,30 @@ class ToolBar: SubclassedControl
 				assert(false, "Unknown ToolButton Style");
 		}
 
-		if(tb.toolBar._dock is DockStyle.LEFT || tb.toolBar._dock is DockStyle.RIGHT)
+		if(tb.toolBar._dock is DockStyle.left || tb.toolBar._dock is DockStyle.right)
 		{
 			tbtn.fsState |= TBSTATE_WRAP;
 		}
 
-		tb.toolBar.sendMessage(TB_INSERTBUTTONW, tb.index, cast(LPARAM)&tbtn);		
+		tb.toolBar.sendMessage(TB_INSERTBUTTONW, tb.index, cast(LPARAM)&tbtn);
 	}
 
 	protected override void createControlParams(ref CreateControlParams ccp)
-	{		
-		ccp.SuperclassName = WC_TOOLBAR;
-		ccp.ClassName = WC_DTOOLBAR;
+	{
+		ccp.superclassName = WC_TOOLBAR;
+		ccp.className = WC_DTOOLBAR;
 		this.setStyle(TBSTYLE_FLAT | CCS_NODIVIDER | CCS_NOPARENTALIGN, true);
 
-		if(this._dock is DockStyle.NONE)
+		if(this._dock is DockStyle.none)
 		{
-			this._dock = DockStyle.TOP;
+			this._dock = DockStyle.top;
 		}
 
-		if(this._dock is DockStyle.LEFT || this._dock is DockStyle.RIGHT)
+		if(this._dock is DockStyle.left || this._dock is DockStyle.right)
 		{
 			this.setStyle(CCS_VERT, true);
 		}
-		
+
 		super.createControlParams(ccp);
 	}
 
@@ -318,13 +309,13 @@ class ToolBar: SubclassedControl
 				ToolBar.addItem(tb);
 			}
 		}
-		
+
 		super.onHandleCreated(e);
 	}
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_NOTIFY:
 			{
@@ -363,38 +354,38 @@ class ToolBar: SubclassedControl
 						}
 					}
 					break;
-					
+
 					default:
 						break;
 				}
 			}
 			break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.onReflectedMessage(m);
 	}
 
 	protected override void wndProc(ref Message m)
 	{
-		if(m.Msg == WM_WINDOWPOSCHANGING)
+		if(m.msg == WM_WINDOWPOSCHANGING)
 		{
 			/*
 			 * HACK: Forza il ridimensionamento della barra strumenti.
 			 */
-			
+
 			WINDOWPOS* pWindowPos = cast(WINDOWPOS*)m.lParam;
 			uint sz = this.sendMessage(TB_GETBUTTONSIZE, 0, 0);
 
 			switch(this._dock)
 			{
-				case DockStyle.TOP, DockStyle.BOTTOM:
+				case DockStyle.top, DockStyle.bottom:
 					pWindowPos.cy = HIWORD(sz);
 					break;
-				
-				case DockStyle.LEFT, DockStyle.RIGHT:
+
+				case DockStyle.left, DockStyle.right:
 					pWindowPos.cx = LOWORD(sz);
 					break;
 

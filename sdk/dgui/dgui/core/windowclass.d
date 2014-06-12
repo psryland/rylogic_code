@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.windowclass;
 
 import std.utf: toUTFz;
@@ -32,7 +23,7 @@ enum
 	WC_LISTBOX 		= "ListBox",
 	WC_LISTVIEW 	= "SysListView32",
 	WC_PROGRESSBAR  = "msctls_progress32",
-	WC_RICHEDIT 	= "RichEdit20A",
+	WC_RICHEDIT 	= "RichEdit20W",
 	WC_STATUSBAR 	= "msctls_statusbar32",
 	WC_TABCONTROL   = "SysTabControl32",
 	WC_EDIT			= "EDIT",
@@ -41,7 +32,7 @@ enum
 	WC_TOOLTIP      = "tooltips_class32",
 	WC_TREEVIEW 	= "SysTreeView32",
 	//WC_STATIC 		= "STATIC",
-	
+
 	// DGui Classes
 	WC_DPANEL		= "DPanel",
 	WC_FORM 		= "DForm",
@@ -66,22 +57,22 @@ enum
 	WC_DSPLITPANEL  = "DSplitPanel",
 }
 
-enum ClassStyles: uint 
+enum ClassStyles: uint
 {
-	NONE 			= 0x00000000,
-	VREDRAW			= 0x00000001,
-	HREDRAW			= 0x00000002,
-	KEYCVTWINDOW	= 0x00000004,
-	DBLCLKS			= 0x00000008,
-	OWNDC			= 0x00000020,
-	CLASSDC			= 0x00000040,
-	PARENTDC		= 0x00000080,
-	NOKEYCVT		= 0x00000100,
-	NOCLOSE			= 0x00000200,
-	SAVEBITS		= 0x00000800,
-	BYTEALIGNCLIENT	= 0x00001000,
-	BYTEALIGNWINDOW	= 0x00002000,
-	GLOBALCLASS		= 0x00004000,
+	none 			= 0x00000000,
+	vRedraw			= 0x00000001,
+	hRedraw			= 0x00000002,
+	keyCVTWindow	= 0x00000004,
+	doubleClicks			= 0x00000008,
+	ownDC			= 0x00000020,
+	classDC			= 0x00000040,
+	parentDC		= 0x00000080,
+	noKeyCVT		= 0x00000100,
+	noClose			= 0x00000200,
+	saveBits		= 0x00000800,
+	byteAlignClient	= 0x00001000,
+	byteAlignWindow	= 0x00002000,
+	globalClass		= 0x00004000,
 	IME				= 0x00010000,
 }
 
@@ -93,29 +84,29 @@ final class WindowClass
 		wc.cbSize = WNDCLASSEXW.sizeof;
 
 		if(!getClassInfoEx(className, &wc))
-		{			
+		{
 			if(!registerClassEx(className, cursor ? cursor.handle : SystemCursors.arrow.handle, null, wndProc, classStyle))
 			{
 				throwException!(Win32Exception)("Windows Class '%s' not created", className);
 			}
 		}
-	}	
-	
+	}
+
 	public static WNDPROC superclass(string oldClassName, string newClassName, WNDPROC newWndProc)
 	{
 		WNDCLASSEXW oldWc = void, newWc = void;
 
 		oldWc.cbSize = WNDCLASSEXW.sizeof;
 		newWc.cbSize = WNDCLASSEXW.sizeof;
-		
+
 		const(wchar)* pNewClassName = toUTFz!(const(wchar)*)(newClassName);
 		getClassInfoEx(oldClassName, &oldWc);
 
 		if(!getClassInfoEx(newClassName, &newWc)) // IF Class Non Found THEN
 		{
 			newWc = oldWc;
-			newWc.style &= ~ClassStyles.GLOBALCLASS; // Remove Global Class
-			
+			newWc.style &= ~ClassStyles.globalClass; // Remove Global Class
+
 			newWc.lpfnWndProc = newWndProc;
 			newWc.lpszClassName = pNewClassName;
 			newWc.hInstance = getHInstance();

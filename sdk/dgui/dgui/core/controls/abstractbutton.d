@@ -1,20 +1,11 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.controls.abstractbutton;
 
 public import dgui.core.dialogs.dialogresult;
@@ -25,29 +16,29 @@ public import dgui.core.controls.ownerdrawcontrol;
   */
 enum CheckState: uint
 {
-	CHECKED = BST_CHECKED, 				///Checked State
-	UNCHECKED = BST_UNCHECKED,			///Unchecked State
-	INDETERMINATE = BST_INDETERMINATE,	///Indeterminate State
+	checked = BST_CHECKED, 				///Checked State
+	unchecked = BST_UNCHECKED,			///Unchecked State
+	indeterminate = BST_INDETERMINATE,	///Indeterminate State
 }
 
 /// Abstract class of a _Button/_CheckBox/_RadioButton
 abstract class AbstractButton: OwnerDrawControl
 {
-	protected DialogResult _dr = DialogResult.NONE;
+	protected DialogResult _dr = DialogResult.none;
 
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
-		AbstractButton.setBit(this._cBits, ControlBits.OWN_CLICK_MSG, true); // Let Button to handle Click Event itself
-		
-		ccp.SuperclassName = WC_BUTTON;
+		AbstractButton.setBit(this._cBits, ControlBits.ownClickMsg, true); // Let Button to handle Click Event itself
+
+		ccp.superclassName = WC_BUTTON;
 		this.setStyle(WS_TABSTOP, true);
 
 		super.createControlParams(ccp);
 	}
-	
+
 	protected override void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_COMMAND:
 			{
@@ -55,31 +46,31 @@ abstract class AbstractButton: OwnerDrawControl
 				{
 					 case BN_CLICKED:
 					 {
-						MouseKeys mk = MouseKeys.NONE;
+						MouseKeys mk = MouseKeys.none;
 
 						if(GetAsyncKeyState(MK_LBUTTON))
 						{
-							mk |= MouseKeys.LEFT;
+							mk |= MouseKeys.left;
 						}
 
 						if(GetAsyncKeyState(MK_MBUTTON))
 						{
-							mk |= MouseKeys.MIDDLE;
+							mk |= MouseKeys.middle;
 						}
 
 						if(GetAsyncKeyState(MK_RBUTTON))
 						{
-							mk |= MouseKeys.RIGHT;
+							mk |= MouseKeys.right;
 						}
-						 
-						Point p = Point(LOWORD(m.lParam), HIWORD(m.lParam));				
+
+						Point p = Point(LOWORD(m.lParam), HIWORD(m.lParam));
 						scope MouseEventArgs e = new MouseEventArgs(p, mk);
 						this.onClick(EventArgs.empty);
-						 
-						if(this._dr !is DialogResult.NONE)
+
+						if(this._dr !is DialogResult.none)
 						{
 							Control c = this.topLevelControl;
-							
+
 							if(c)
 							{
 								c.sendMessage(DGUI_SETDIALOGRESULT, this._dr, 0);
@@ -87,17 +78,17 @@ abstract class AbstractButton: OwnerDrawControl
 						}
 					 }
 					 break;
-					
+
 					default:
 						break;
 				}
 			}
 			break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.onReflectedMessage(m);
 	}
 }
@@ -106,32 +97,32 @@ abstract class AbstractButton: OwnerDrawControl
 abstract class CheckedButton: AbstractButton
 {
 	public Event!(Control, EventArgs) checkChanged; ///Checked Changed Event of a Checkable _Button
-	
-	private CheckState _checkState = CheckState.UNCHECKED;
-	
+
+	private CheckState _checkState = CheckState.unchecked;
+
 	/**
 	 Returns:
 		True if the _Button is _checked otherwise False.
-	
+
 	 See_Also:
 		checkState() property below.
 	 */
 	@property public bool checked()
 	{
-		return this.checkState is CheckState.CHECKED;		
+		return this.checkState is CheckState.checked;
 	}
-	
+
 	/**
 	  Sets the checked state of a checkable _button
-	  
+
 	  Params:
 		True checks the _button, False unchecks it.
 	  */
 	@property public void checked(bool b)
 	{
-		this.checkState = b ? CheckState.CHECKED : CheckState.UNCHECKED;
+		this.checkState = b ? CheckState.checked : CheckState.unchecked;
 	}
-	
+
 	/**
 	  Returns:
 		A CheckState enum that returns the state of the checkable button (it includes the indeterminate state too)
@@ -145,7 +136,7 @@ abstract class CheckedButton: AbstractButton
 
 		return this._checkState;
 	}
-	
+
 	/**
 	  Sets the check state of a checkable button
 	  */
@@ -158,16 +149,16 @@ abstract class CheckedButton: AbstractButton
 			this.sendMessage(BM_SETCHECK, cs, 0);
 		}
 	}
-	
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		this.sendMessage(BM_SETCHECK, this._checkState, 0);
 		super.onHandleCreated(e);
 	}
-	
+
 	protected override void onReflectedMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case WM_COMMAND:
 			{
@@ -182,20 +173,20 @@ abstract class CheckedButton: AbstractButton
 						}
 					 }
 					 break;
-					
+
 					default:
 						break;
 				}
 			}
 			break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.onReflectedMessage(m);
 	}
-	
+
 	protected void onCheckChanged(EventArgs e)
 	{
 		this.checkChanged(this, e);

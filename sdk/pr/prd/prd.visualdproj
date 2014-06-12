@@ -47,9 +47,9 @@
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
+  <imppath>P:\sdk\pr;P:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>Q:\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>\obj\v120\$(ProjectName)\$(PlatformName)\$(Configuration)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -89,10 +89,10 @@
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>0</useStdLibPath>
+  <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>echo Running PBE
-call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call \script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
@@ -142,9 +142,9 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
+  <imppath>P:\sdk\pr;P:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>Q:\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>\obj\v120\$(ProjectName)\$(PlatformName)\$(Configuration)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -184,10 +184,10 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>0</useStdLibPath>
+  <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>echo Running PBE
-call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuildCommand>
+  <postBuildCommand>call \script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -237,9 +237,9 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
+  <imppath>P:\sdk\pr;P:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>\obj\v120\$(ProjectName)\$(PlatformName)\$(Configuration)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -279,9 +279,10 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>0</useStdLibPath>
+  <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand />
+  <postBuildCommand>call \script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
@@ -331,9 +332,9 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <compiler>0</compiler>
   <otherDMD>0</otherDMD>
   <program>$(DMDInstallDir)windows\bin\dmd.exe</program>
-  <imppath>Q:\sdk\pr;Q:\sdk\dgui</imppath>
+  <imppath>P:\sdk\pr;P:\sdk\dgui</imppath>
   <fileImppath />
-  <outdir>..\..\..\obj2012\$(ProjectName)\$(PlatformName)\$(ConfigurationName)</outdir>
+  <outdir>\obj\v120\$(ProjectName)\$(PlatformName)\$(Configuration)</outdir>
   <objdir>$(OutDir)</objdir>
   <objname />
   <libname />
@@ -373,18 +374,19 @@ call Q:\tools\_publish_lib.cmd $(TargetPath) x64 $(ConfigurationName)</postBuild
   <resfile />
   <exefile>$(OutDir)\$(ProjectName).lib</exefile>
   <useStdLibPath>0</useStdLibPath>
+  <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand />
+  <postBuildCommand>call \script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="prd">
   <Folder name="app" />
-  <Folder name="db">
-   <File path="db\sqlite.d" />
-  </Folder>
   <Folder name="common">
    <File path="common\cmdline.d" />
+  </Folder>
+  <Folder name="db">
+   <File path="db\sqlite.d" />
   </Folder>
   <Folder name="gui" />
   <Folder name="maths">

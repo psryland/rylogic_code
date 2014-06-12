@@ -1,20 +1,11 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.treeview;
 
 import std.utf: toUTFz;
@@ -24,8 +15,8 @@ import dgui.imagelist;
 
 enum NodeInsertMode
 {
-	HEAD = TVI_FIRST,
-	TAIL = TVI_LAST,
+	head = TVI_FIRST,
+	tail = TVI_LAST,
 }
 
 class TreeNode: Handle!(HTREEITEM)//, IDisposable
@@ -39,9 +30,9 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	private string _text;
 	private int _imgIndex;
 	private int _selImgIndex;
-	
-	mixin TagProperty;
-	
+
+	mixin tagProperty;
+
 	package this(TreeView owner, string txt, int imgIndex, int selImgIndex, NodeInsertMode nim)
 	{
 		this._childNodesCreated = false;
@@ -77,7 +68,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	}
 	*/
 
-	public final TreeNode addNode(string txt, int imgIndex = -1, int selImgIndex = -1, NodeInsertMode nim = NodeInsertMode.TAIL)
+	public final TreeNode addNode(string txt, int imgIndex = -1, int selImgIndex = -1, NodeInsertMode nim = NodeInsertMode.tail)
 	{
 		if(!this._nodes)
 		{
@@ -94,7 +85,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 
 		return tn;
 	}
-	
+
 	public final TreeNode addNode(string txt, int imgIndex, NodeInsertMode nim)
 	{
 		return this.addNode(txt, imgIndex, imgIndex, nim);
@@ -103,8 +94,8 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	public final TreeNode addNode(string txt, NodeInsertMode nim)
 	{
 		return this.addNode(txt, -1, -1, nim);
-	}	
-	
+	}
+
 	public final void removeNode(TreeNode node)
 	{
 		if(this.created)
@@ -121,12 +112,12 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	public final void removeNode(int idx)
 	{
 		TreeNode node = null;
-		
+
 		if(this._nodes)
 		{
 			node = this._nodes[idx];
 		}
-		
+
 		if(node)
 		{
 			TreeView.removeTreeNode(node);
@@ -142,7 +133,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	{
 		return this._nim;
 	}
-	
+
 	@property public final TreeView treeView()
 	{
 		return this._owner;
@@ -174,7 +165,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 	{
 		return this._lazyNode;
 	}
-	
+
 	@property public final void lazyNode(bool b)
 	{
 		this._lazyNode = b;
@@ -255,7 +246,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 		{
 			return this._nodes.get();
 		}
-		
+
 		return null;
 	}
 
@@ -292,7 +283,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 				{
 					return i;
 				}
-				
+
 				i++;
 			}
 		}
@@ -321,7 +312,7 @@ class TreeNode: Handle!(HTREEITEM)//, IDisposable
 					TreeView.createTreeNode(tn);
 				}
 			}
-			
+
 			this._childNodesCreated = true;
 		}
 	}
@@ -338,7 +329,7 @@ class TreeView: SubclassedControl
 	public Event!(Control, CancelTreeNodeEventArgs) treeNodeExpanding;
 	public Event!(Control, TreeNodeEventArgs) treeNodeExpanded;
 	public Event!(Control, TreeNodeEventArgs) treeNodeCollapsed;
-	
+
 	private Collection!(TreeNode) _nodes;
 	private ImageList _imgList;
 	private TreeNode _selectedNode;
@@ -346,14 +337,14 @@ class TreeView: SubclassedControl
 	public final void clear()
 	{
 		this.sendMessage(TVM_DELETEITEM, 0, cast(LPARAM)TVI_ROOT);
-		
+
 		if(this._nodes)
 		{
 			this._nodes.clear();
 		}
-	}	
+	}
 
-	public final TreeNode addNode(string txt, int imgIndex = -1, int selImgIndex = -1, NodeInsertMode nim = NodeInsertMode.TAIL)
+	public final TreeNode addNode(string txt, int imgIndex = -1, int selImgIndex = -1, NodeInsertMode nim = NodeInsertMode.tail)
 	{
 		if(!this._nodes)
 		{
@@ -370,7 +361,7 @@ class TreeView: SubclassedControl
 
 		return tn;
 	}
-	
+
 	public final TreeNode addNode(string txt, int imgIndex, NodeInsertMode nim)
 	{
 		return this.addNode(txt, imgIndex, imgIndex, nim);
@@ -379,7 +370,7 @@ class TreeView: SubclassedControl
 	public final TreeNode addNode(string txt, NodeInsertMode nim)
 	{
 		return this.addNode(txt, -1, -1, nim);
-	}		
+	}
 
 	public final void removeNode(TreeNode node)
 	{
@@ -397,12 +388,12 @@ class TreeView: SubclassedControl
 	public final void removeNode(int idx)
 	{
 		TreeNode node = null;
-		
+
 		if(this._nodes)
 		{
 			node = this._nodes[idx];
 		}
-		
+
 		if(node)
 		{
 			this.removeTreeNode(node);
@@ -475,7 +466,7 @@ class TreeView: SubclassedControl
 
 		TreeView tvw = node.treeView;
 		node.handle = cast(HTREEITEM)tvw.sendMessage(TVM_INSERTITEMW, 0, cast(LPARAM)&tvis);
-		
+
 		/*
 		  *  Performance Killer: simulate a virtual tree view instead
 		  *
@@ -496,13 +487,13 @@ class TreeView: SubclassedControl
 
 	protected override void createControlParams(ref CreateControlParams ccp)
 	{
-		ccp.SuperclassName = WC_TREEVIEW;
-		ccp.ClassName = WC_DTREEVIEW;
+		ccp.superclassName = WC_TREEVIEW;
+		ccp.className = WC_DTREEVIEW;
 		this.setStyle(TVS_LINESATROOT | TVS_HASLINES | TVS_HASBUTTONS, true);
-		ccp.DefaultBackColor = SystemColors.colorWindow;
-		
+		ccp.defaultBackColor = SystemColors.colorWindow;
+
 		// Tree view is Double buffered in DGui
-		TreeView.setBit(this._cBits, ControlBits.DOUBLE_BUFFERED, true);
+		TreeView.setBit(this._cBits, ControlBits.doubleBuffered, true);
 		super.createControlParams(ccp);
 	}
 
@@ -514,7 +505,7 @@ class TreeView: SubclassedControl
 		}
 
 		if(this._nodes)
-		{			
+		{
 			foreach(TreeNode tn; this._nodes)
 			{
 				TreeView.createTreeNode(tn);
@@ -526,20 +517,20 @@ class TreeView: SubclassedControl
 
 	protected override void onReflectedMessage(ref Message m)
 	{
-		if(m.Msg == WM_NOTIFY)
+		if(m.msg == WM_NOTIFY)
 		{
 			NMTREEVIEWW* pNotifyTreeView = cast(NMTREEVIEWW*)m.lParam;
-			
+
 			switch(pNotifyTreeView.hdr.code)
 			{
 				case TVN_GETDISPINFOW:
 				{
 					NMTVDISPINFOW* pTvDispInfo = cast(NMTVDISPINFOW*)m.lParam;
 					TreeNode node = winCast!(TreeNode)(pTvDispInfo.item.lParam);
-					
+
 					if(node.lazyNode || node.nodes) //Is a Lazy Node, or has childNodes sooner or later a child node will be added
 					{
-						pTvDispInfo.item.cChildren = cast(int)(node.nodes ? node.nodes.length : 1); 
+						pTvDispInfo.item.cChildren = node.nodes ? node.nodes.length : 1;
 					}
 					else
 					{
@@ -547,28 +538,28 @@ class TreeView: SubclassedControl
 					}
 				}
 				break;
-				
+
 				case TVN_ITEMEXPANDINGW:
 				{
 					TreeNode node = winCast!(TreeNode)(pNotifyTreeView.itemNew.lParam);
 					scope CancelTreeNodeEventArgs e = new CancelTreeNodeEventArgs(node);
-					
+
 					this.onTreeNodeExpanding(e); //Allow the user to add nodes if e.cancel is 'false'
-					
+
 					if(!e.cancel && pNotifyTreeView.action & TVE_EXPAND)
 					{
 						node.doChildNodes();
 					}
-					
-					m.Result = e.cancel;
+
+					m.result = e.cancel;
 				}
 				break;
-				
+
 				case TVN_ITEMEXPANDEDW:
 				{
 					TreeNode node = winCast!(TreeNode)(pNotifyTreeView.itemNew.lParam);
 					scope TreeNodeEventArgs e = new TreeNodeEventArgs(node);
-					
+
 					if(pNotifyTreeView.action & TVE_EXPAND)
 					{
 						this.onTreeNodeExpanded(e);
@@ -579,13 +570,13 @@ class TreeView: SubclassedControl
 					}
 				}
 				break;
-				
+
 				case TVN_SELCHANGINGW:
 				{
 					TreeNode node = winCast!(TreeNode)(pNotifyTreeView.itemNew.lParam);
 					scope CancelTreeNodeEventArgs e = new CancelTreeNodeEventArgs(node);
 					this.onSelectedNodeChanging(e);
-					m.Result = e.cancel;
+					m.result = e.cancel;
 				}
 				break;
 
@@ -603,7 +594,7 @@ class TreeView: SubclassedControl
 				case NM_RCLICK: //Trigger a WM_CONTEXMENU Message (Fixes the double click/context menu bug, probably it's a windows bug).
 					Message sm = Message(this._handle, WM_CONTEXTMENU, 0, 0);
 					this.wndProc(sm);
-					m.Result = sm.Result;
+					m.result = sm.result;
 					break;
 
 				default:
@@ -612,12 +603,12 @@ class TreeView: SubclassedControl
 			}
 		}
 	}
-	
+
 	protected void onTreeNodeExpanding(CancelTreeNodeEventArgs e)
 	{
 		this.treeNodeExpanding(this, e);
-	}	
-	
+	}
+
 	protected void onTreeNodeExpanded(TreeNodeEventArgs e)
 	{
 		this.treeNodeExpanded(this, e);
@@ -627,7 +618,7 @@ class TreeView: SubclassedControl
 	{
 		this.treeNodeCollapsed(this, e);
 	}
-	
+
 	protected void onSelectedNodeChanging(CancelTreeNodeEventArgs e)
 	{
 		this.selectedNodeChanging(this, e);

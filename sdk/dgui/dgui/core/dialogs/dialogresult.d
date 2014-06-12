@@ -1,33 +1,24 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.dialogs.dialogresult;
 
 private import dgui.core.winapi;
 
 enum DialogResult: int
 {
-	NONE,
-	OK = IDOK,
-	YES = IDYES,
-	NO = IDNO,
-	CANCEL = IDCANCEL,
-	RETRY = IDRETRY,
-	ABORT = IDABORT,
-	IGNORE = IDIGNORE,
-	CLOSE = CANCEL, //Same as 'CANCEL'
+	none,
+	ok = IDOK,
+	yes = IDYES,
+	no = IDNO,
+	cancel = IDCANCEL,
+	retry = IDRETRY,
+	abort = IDABORT,
+	ignore = IDIGNORE,
+	close = cancel, //Same as 'cancel'
 }

@@ -1,18 +1,10 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
 
 /* Windows 2000/XP/Vista/7 Compatibility Module */
@@ -57,21 +49,21 @@ private void initBitmapInfo(ref BITMAPINFO bi, SIZE sz)
 	bi.bmiHeader.biCompression = 0; //BI_RGB;
 	bi.bmiHeader.biWidth = sz.cx;
 	bi.bmiHeader.biHeight = sz.cy;
-	bi.bmiHeader.biBitCount = 32;	
+	bi.bmiHeader.biBitCount = 32;
 }
 
 private HBITMAP create32BitHBITMAP(HDC hdc, SIZE sz)
 {
 	BITMAPINFO bi;
 	initBitmapInfo(bi, sz);
-	
+
 	return CreateDIBSection(hdc, &bi, DIB_RGB_COLORS, null, null, 0);
 }
 
 bool hasAlpha(ARGB* pArgb, SIZE szIco, int cxRow)
 {
     ulong cxDelta = cxRow - szIco.cx;
-	
+
     for(ulong y = szIco.cy; y; --y)
     {
         for(ulong x = szIco.cx; x; --x)
@@ -89,13 +81,13 @@ bool hasAlpha(ARGB* pArgb, SIZE szIco, int cxRow)
 }
 
 private void convertToPARGB32(HDC hdc, ARGB* pArgb, HBITMAP hBmpMask, SIZE sz, int cxRow)
-{	
+{
 	BITMAPINFO bi;
 	initBitmapInfo(bi, sz);
-	
+
 	ubyte[] pBits = new ubyte[bi.bmiHeader.biWidth * 4 * bi.bmiHeader.biHeight];
 	GetDIBits(hdc, hBmpMask, 0, bi.bmiHeader.biHeight, pBits.ptr, &bi, DIB_RGB_COLORS);
-	
+
 	ulong cxDelta = cxRow - bi.bmiHeader.biWidth;
 	ARGB *pArgbMask = cast(ARGB*)pBits.ptr;
 
@@ -123,20 +115,20 @@ private void convertBufferToPARGB32(HPAINTBUFFER hPaintBuffer, HDC hdc, HICON hI
 {
 	int cxRow;
 	RGBQUAD* pRgbQuad;
-	
+
 	getBufferedPaintBits(hPaintBuffer, &pRgbQuad, &cxRow);
 	ARGB* pArgb = cast(ARGB*)pRgbQuad;
-	
+
 	if(!hasAlpha(pArgb, szIco, cxRow))
 	{
 		ICONINFO ii;
 		GetIconInfo(hIcon, &ii);
-		
+
 		if(ii.hbmMask)
 		{
 			convertToPARGB32(hdc, pArgb, ii.hbmMask, szIco, cxRow);
 		}
-		
+
 		DeleteObject(ii.hbmColor);
 		DeleteObject(ii.hbmMask);
 	}
@@ -146,7 +138,7 @@ public HBITMAP iconToBitmapPARGB32(HICON hIcon)
 {
 	static HMODULE hUxTheme;
 	WindowsVersion ver = getWindowsVersion();
-	
+
 	SIZE szIco;
 	szIco.cx = GetSystemMetrics(SM_CXSMICON);
 	szIco.cy = GetSystemMetrics(SM_CYSMICON);
@@ -156,44 +148,44 @@ public HBITMAP iconToBitmapPARGB32(HICON hIcon)
 	rIco.top = 0;
 	rIco.right = szIco.cx;
 	rIco.bottom = szIco.cy;
-	
-	if(ver > WindowsVersion.WINDOWS_XP) //Is Vista or 7
+
+	if(ver > WindowsVersion.windowsXP) //Is Vista or 7
 	{
 		if(!hUxTheme)
 		{
 			hUxTheme = getModuleHandle("UxTheme.dll");
-			
+
 			beginBufferedPaint = cast(BeginBufferedPaintProc)GetProcAddress(hUxTheme, "BeginBufferedPaint");
 			getBufferedPaintBits = cast(GetBufferedPaintBitsProc)GetProcAddress(hUxTheme, "GetBufferedPaintBits");
 			endBufferedPaint = cast(EndBufferedPaintProc)GetProcAddress(hUxTheme, "EndBufferedPaint");
-		}		
-		
+		}
+
 		HDC hdc = CreateCompatibleDC(null);
 		HBITMAP hBitmap = create32BitHBITMAP(hdc, szIco);
 		HBITMAP hOldBitmap = SelectObject(hdc, hBitmap);
-		
+
 		BLENDFUNCTION bf;
 		bf.BlendOp = 0; // AC_SRC_OVER
 		bf.SourceConstantAlpha = 255;
 		bf.AlphaFormat = 1; // AC_SRC_ALPHA
-		
+
 		BP_PAINTPARAMS pp;
 		pp.cbSize = BP_PAINTPARAMS.sizeof;
 		pp.dwFlags = BPPF_ERASE;
 		pp.pBlendFunction = &bf;
-		
+
 		HDC hdcBuffer;
 		HPAINTBUFFER hPaintBuffer = beginBufferedPaint(hdc, &rIco, 1 /*BPBF_DIB*/, &pp, &hdcBuffer);
 		DrawIconEx(hdcBuffer, 0, 0, hIcon, szIco.cx, szIco.cy, 0, null, DI_NORMAL);
 		convertBufferToPARGB32(hPaintBuffer, hdc, hIcon, szIco);
 		endBufferedPaint(hPaintBuffer, true);
-		
+
 		SelectObject(hdc, hOldBitmap);
 		DeleteDC(hdc);
-		
+
 		return hBitmap;
 	}
-	
+
 	throwException!(WindowsNotSupportedException)("Not supported in 2000/XP");
 	return null;
 }

@@ -1,26 +1,17 @@
-﻿/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.core.geometry;
 
 import dgui.core.winapi;
 
 struct Rect
-{	
+{
 	public union
 	{
 		align(1)  struct
@@ -83,12 +74,12 @@ struct Rect
 	}
 
 	@property public int width()
-	{		
+	{
 		if(this.right != CW_USEDEFAULT)
 		{
 			return this.right - this.left;
 		}
-		
+
 		return CW_USEDEFAULT;
 	}
 
@@ -103,7 +94,7 @@ struct Rect
 		{
 			return this.bottom - this.top;
 		}
-		
+
 		return CW_USEDEFAULT;
 	}
 
@@ -120,7 +111,7 @@ struct Rect
 	@property public void position(Point pt)
 	{
 		Size sz = this.size; //Copia dimensioni
-		
+
 		this.left = pt.x;
 		this.top = pt.y;
 		this.right = this.left + sz.width;
@@ -153,7 +144,7 @@ struct Rect
 }
 
 struct Point
-{	
+{
 	public union
 	{
 		align(1) struct
@@ -164,16 +155,16 @@ struct Point
 
 		POINT point;
 	}
-	
+
 	public bool inRect(Rect r)
 	{
 		if(point.x < r.left || point.y < r.top || point.x > r.right || point.y > r.bottom)
 		{
 			return false;
 		}
-		
+
 		return true;
-	}	
+	}
 
 	public bool opEquals(ref const Point pt) const
 	{
@@ -183,7 +174,7 @@ struct Point
 	public static Point opCall(int x, int y)
 	{
 		Point pt = void; //Viene inizializzata sotto.
-		
+
 		pt.x = x;
 		pt.y = y;
 		return pt;
@@ -191,7 +182,7 @@ struct Point
 }
 
 struct Size
-{	
+{
 	public union
 	{
 		align(1) struct
@@ -211,13 +202,13 @@ struct Size
 	public static Size opCall(int w, int h)
 	{
 		Size sz = void;
-		
+
 		sz.width = w;
 		sz.height = h;
 		return sz;
 	}
 }
 
-public const Rect NullRect; // = Rect.init;
-public const Point NullPoint; // = Point.init;
-public const Size NullSize; // = Size.init;
+public const Rect nullRect; // = Rect.init;
+public const Point nullPoint; // = Point.init;
+public const Size nullSize; // = Size.init;

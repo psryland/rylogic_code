@@ -1,20 +1,11 @@
-/*
-	Copyright (c) 2011 - 2012 Trogu Antonio Davide
+﻿/** DGui project file.
 
-	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+Copyright: Trogu Antonio Davide 2011-2013
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
+License: $(HTTP boost.org/LICENSE_1_0.txt, Boost License 1.0).
 
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+Authors: Trogu Antonio Davide
 */
-
 module dgui.layout.layoutcontrol;
 
 import dgui.core.interfaces.ilayoutcontrol;
@@ -29,12 +20,12 @@ class ResizeManager: Handle!(HDWP), IDisposable
 			this._handle = BeginDeferWindowPos(c);
 		}
 	}
-	
+
 	public ~this()
 	{
 		this.dispose();
 	}
-	
+
 	public void dispose()
 	{
 		if(this._handle)
@@ -42,43 +33,43 @@ class ResizeManager: Handle!(HDWP), IDisposable
 			EndDeferWindowPos(this._handle);
 		}
 	}
-	
+
 	public void setPosition(Control ctrl, Point pt)
 	{
 		this.setPosition(ctrl, pt.x, pt.y);
 	}
-	
+
 	public void setPosition(Control ctrl, int x, int y)
 	{
-		this.resizeControl(ctrl, x, y, 0, 0, PositionSpecified.POSITION);
+		this.resizeControl(ctrl, x, y, 0, 0, PositionSpecified.position);
 	}
-	
+
 	public void setSize(Control ctrl, Size sz)
 	{
 		this.setSize(ctrl, sz.width, sz.height);
-	}	
-	
+	}
+
 	public void setSize(Control ctrl, int w, int h)
 	{
-		this.resizeControl(ctrl, 0, 0, w, h, PositionSpecified.SIZE);
+		this.resizeControl(ctrl, 0, 0, w, h, PositionSpecified.size);
 	}
-	
-	public void resizeControl(Control ctrl, Rect r, PositionSpecified ps = PositionSpecified.ALL)
+
+	public void resizeControl(Control ctrl, Rect r, PositionSpecified ps = PositionSpecified.all)
 	{
 		this.resizeControl(ctrl, r.x, r.y, r.width, r.height, ps);
 	}
 
-	public void resizeControl(Control ctrl, int x, int y, int w, int h, PositionSpecified ps = PositionSpecified.ALL)
+	public void resizeControl(Control ctrl, int x, int y, int w, int h, PositionSpecified ps = PositionSpecified.all)
 	{
 		uint wpf = SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOMOVE | SWP_NOSIZE;
-		
-		if(ps !is PositionSpecified.ALL)
+
+		if(ps !is PositionSpecified.all)
 		{
-			if(ps is PositionSpecified.POSITION)
+			if(ps is PositionSpecified.position)
 			{
 				wpf &= ~SWP_NOMOVE;
 			}
-			else //if(ps is PositionSpecified.SIZE)
+			else //if(ps is PositionSpecified.size)
 			{
 				wpf &= ~SWP_NOSIZE;
 			}
@@ -87,7 +78,7 @@ class ResizeManager: Handle!(HDWP), IDisposable
 		{
 			wpf &= ~(SWP_NOMOVE | SWP_NOSIZE);
 		}
-		
+
 		if(this._handle)
 		{
 			this._handle = DeferWindowPos(this._handle, ctrl.handle, null, x, y, w, h, wpf);
@@ -96,7 +87,7 @@ class ResizeManager: Handle!(HDWP), IDisposable
 		{
 			SetWindowPos(ctrl.handle, null, x, y, w, h, wpf); //Bounds updated in WM_WINDOWPOSCHANGED
 		}
-	}	
+	}
 }
 
 abstract class LayoutControl: ContainerControl, ILayoutControl
@@ -106,56 +97,56 @@ abstract class LayoutControl: ContainerControl, ILayoutControl
 		super.show();
 		this.updateLayout();
 	}
-	
+
 	public void updateLayout()
 	{
 		if(this._childControls && this.created && this.visible)
 		{
 			scope ResizeManager rm = new ResizeManager(this._childControls.length);
-			Rect da = Rect(NullPoint, this.clientSize);
-			
+			Rect da = Rect(nullPoint, this.clientSize);
+
 			foreach(Control c; this._childControls)
-			{				
+			{
 				if(da.empty)
 				{
 					rm.dispose();
 					break;
 				}
-				
-				if(c.dock !is DockStyle.NONE && c.visible && c.created)
+
+				if(c.dock !is DockStyle.none && c.visible && c.created)
 				{
 					switch(c.dock)
 					{
-						case DockStyle.LEFT:
+						case DockStyle.left:
 							//c.bounds = Rect(da.left, da.top, c.width, da.height);
 							rm.resizeControl(c, da.left, da.top, c.width, da.height);
 							da.left += c.width;
 							break;
-						
-						case DockStyle.TOP:
+
+						case DockStyle.top:
 							//c.bounds = Rect(da.left, da.top, da.width, c.height);
 							rm.resizeControl(c, da.left, da.top, da.width, c.height);
 							da.top += c.height;
 							break;
 
-						case DockStyle.RIGHT:
+						case DockStyle.right:
 							//c.bounds = Rect(da.right - c.width, da.top, c.width, da.height);
 							rm.resizeControl(c, da.right - c.width, da.top, c.width, da.height);
 							da.right -= c.width;
 							break;
 
-						case DockStyle.BOTTOM:
+						case DockStyle.bottom:
 							//c.bounds = Rect(c, da.left, da.bottom - c.height, da.width, c.height);
 							rm.resizeControl(c, da.left, da.bottom - c.height, da.width, c.height);
 							da.bottom -= c.height;
 							break;
-						
-						case DockStyle.FILL:
+
+						case DockStyle.fill:
 							//c.bounds = da;
 							rm.resizeControl(c, da);
-							da.size = NullSize;
+							da.size = nullSize;
 							break;
-						
+
 						default:
 							rm.dispose();
 							assert(false, "Unknown DockStyle");
@@ -164,45 +155,45 @@ abstract class LayoutControl: ContainerControl, ILayoutControl
 				}
 			}
 		}
-	}	
-	
+	}
+
 	protected override void onDGuiMessage(ref Message m)
 	{
-		switch(m.Msg)
+		switch(m.msg)
 		{
 			case DGUI_DOLAYOUT:
 				this.updateLayout();
 				break;
-			
+
 			case DGUI_CHILDCONTROLCREATED:
 			{
 				Control c = winCast!(Control)(m.wParam);
-				
-				if(c.dock !is DockStyle.NONE && c.visible)
+
+				if(c.dock !is DockStyle.none && c.visible)
 				{
 					this.updateLayout();
 				}
 			}
 			break;
-			
+
 			default:
 				break;
 		}
-		
+
 		super.onDGuiMessage(m);
 	}
-	
+
 	protected override void onHandleCreated(EventArgs e)
 	{
 		super.onHandleCreated(e);
-		
+
 		this.updateLayout();
 	}
-	
+
 	protected override void onResize(EventArgs e)
 	{
 		this.updateLayout();
-		
+
 		InvalidateRect(this._handle, null, true);
 		UpdateWindow(this._handle);
 		super.onResize(e);
