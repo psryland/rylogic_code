@@ -22,13 +22,8 @@ namespace pr
 		// Note: this object does not add references to LdrObjects
 		struct ObjectManagerDlgImpl;
 		class ObjectManagerDlg
-			:pr::events::IRecv<Evt_LdrObjectAdd>
-			,pr::events::IRecv<Evt_DeleteAll>
-			,pr::events::IRecv<Evt_LdrObjectDelete>
 		{
-			std::shared_ptr<ObjectManagerDlgImpl> m_dlg; // pImpl pattern
-			std::set<ContextId> m_ignore_ctxids;         // Context ids not to display in the object manager
-			mutable pr::BBox m_scene_bbox;               // A cached bounding box of all objects we know about (lazy updated)
+			std::shared_ptr<ObjectManagerDlgImpl> m_dlg; // pImpl pattern, to hide the atl includes. shared_ptr because it's an incomplete type
 
 			ObjectManagerDlg(ObjectManagerDlg const&);
 			ObjectManagerDlg& operator=(ObjectManagerDlg const&);
@@ -36,6 +31,19 @@ namespace pr
 		public:
 			ObjectManagerDlg(HWND parent = 0);
 			bool IsChild(HWND hwnd) const;
+
+			// Remove all objects
+			void Clear();
+
+			// Add 'obj' to the dialog
+			void Add(LdrObjectPtr obj);
+
+			// Add 'objects' recursively to the dialog
+			template <typename TCont> void Populate(TCont const& objects)
+			{
+				for (auto& obj : objects)
+					Add(obj);
+			}
 
 			// Display the object manager window
 			void Show(bool show);
@@ -46,10 +54,6 @@ namespace pr
 			// Display a window containing the example script
 			void ShowScript(std::string script, HWND parent);
 
-			// Set the ignore state for a particular context id
-			// Should be called before objects are added to the obj mgr
-			void IgnoreContextId(ContextId id, bool ignore);
-
 			// Return a bounding box of the objects
 			pr::BBox GetBBox(EObjectBounds bbox_type) const;
 
@@ -57,15 +61,15 @@ namespace pr
 			std::string Settings() const;
 			void Settings(char const* settings);
 
-		private:
-			// An object has been added to the data manager
-			void OnEvent(Evt_LdrObjectAdd const&) override;
+		//private:
+		//	// An object has been added to the data manager
+		//	void OnEvent(Evt_LdrObjectAdd const&) override;
 
-			// Empty the tree and list controls, all objects have been deleted
-			void OnEvent(Evt_DeleteAll const&) override;
+		//	// Empty the tree and list controls, all objects have been deleted
+		//	void OnEvent(Evt_DeleteAll const&) override;
 
-			// Remove an object from the tree and list controls
-			void OnEvent(Evt_LdrObjectDelete const&) override;
+		//	// Remove an object from the tree and list controls
+		//	void OnEvent(Evt_LdrObjectDelete const&) override;
 		};
 	}
 }

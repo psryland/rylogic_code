@@ -95,36 +95,33 @@ namespace pr
 		struct ObjectManagerDlgImpl
 			:public CIndirectDialogImpl<ObjectManagerDlgImpl>
 			,public CDialogResize<ObjectManagerDlgImpl>
+			,pr::AlignTo<16>
 		{
 			// UI data for an ldr object
-			struct UIData :ILdrUserData
+			struct UIData
 			{
 				HTREEITEM m_tree_item;
 				int       m_list_item;
-
-				static size_t Id()
-				{
-					static size_t s_id = pr::hash::HashC("LdrObjectUIData");
-					return s_id;
-				}
 				UIData()
 					:m_tree_item(INVALID_TREE_ITEM)
 					,m_list_item(INVALID_LIST_ITEM)
 				{}
 			};
 				
-			HWND                    m_parent;               // Parent window
-			WTL::CStatusBarCtrl     m_status;               // The status bar
-			WTL::CSplitterWindow    m_split;                // Splitter window
-			WTL::CTreeViewCtrl      m_tree;                 // Tree control
-			WTL::CListViewCtrl      m_list;                 // List control
-			WTL::CButton            m_btn_expand_all;       // Expand all button
-			WTL::CButton            m_btn_collapse_all;     // Collapse all button
-			WTL::CEdit              m_filter;               // Object filter
-			WTL::CButton            m_btn_apply_filter;     // Apply filter button
-			bool                    m_expanding;            // True during a recursive expansion of a node in the tree view
-			bool                    m_selection_changed;    // Dirty flag for the selection bbox/object
-			bool                    m_suspend_layout;       // True while a block of changes are occurring.
+			HWND                 m_parent;            // Parent window
+			WTL::CStatusBarCtrl  m_status;            // The status bar
+			WTL::CSplitterWindow m_split;             // Splitter window
+			WTL::CTreeViewCtrl   m_tree;              // Tree control
+			WTL::CListViewCtrl   m_list;              // List control
+			WTL::CButton         m_btn_expand_all;    // Expand all button
+			WTL::CButton         m_btn_collapse_all;  // Collapse all button
+			WTL::CEdit           m_filter;            // Object filter
+			WTL::CButton         m_btn_apply_filter;  // Apply filter button
+			bool                 m_expanding;         // True during a recursive expansion of a node in the tree view
+			bool                 m_selection_changed; // Dirty flag for the selection bbox/object
+			bool                 m_suspend_layout;    // True while a block of changes are occurring.
+			ObjectCont           m_store;             // Objects added to this dlg
+			mutable pr::BBox     m_scene_bbox;        // A cached bounding box of all objects we know about (lazy updated)
 
 			ObjectManagerDlgImpl(HWND parent = 0)
 				:m_parent(parent)
@@ -139,6 +136,8 @@ namespace pr
 				,m_expanding(false)
 				,m_selection_changed(true)
 				,m_suspend_layout(false)
+				,m_store()
+				,m_scene_bbox(pr::BBoxReset)
 			{
 				if (Create(0) == 0)
 					throw std::exception("Failed to create object manager ui");
@@ -172,7 +171,7 @@ namespace pr
 			}
 
 			// Return the uidata for an object
-			static UIData* GetUIData(LdrObject& obj) { return static_cast<UIData*>(obj.m_user_data[UIData::Id()].get()); }
+			static UIData* GetUIData(LdrObject& obj) { return &obj.m_user_data.get<UIData>(); }
 			static UIData* GetUIData(LdrObject* obj) { return obj ? GetUIData(*obj) : nullptr; }
 
 			// Get/Set settings for the object manager window
@@ -286,6 +285,9 @@ namespace pr
 			// Return a bounding box of the objects
 			pr::BBox GetBBox(EObjectBounds bbox_type) const
 			{
+				if (bbox_type == EObjectBounds::All && m_scene_bbox != pr::BBoxReset)
+					return m_scene_bbox;
+
 				pr::BBox bbox = pr::BBoxReset;
 				switch (bbox_type)
 				{
@@ -425,6 +427,102 @@ namespace pr
 					UpdateListItem(*(*c).m_ptr, recursive);
 			}
 
+			// Empty the store of objects displayed in this dialog
+			void Clear()
+			{
+				for (auto& obj : m_store)
+					Remove(obj.m_ptr);
+
+				m_store.resize(0);
+			}
+
+			// Add 'obj' to the dialog
+			void Add(LdrObject* obj)
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, obj, "Attempting to add a null object to the UI");
+				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_parent || GetUIData(*obj->m_parent)->m_tree_item != INVALID_TREE_ITEM, "Parent is not in the tree");
+
+				// Ignore context ids we're not showing in the obj mgr.
+				//if (m_ignore_ctxids.find(e.m_obj->m_context_id) != m_ignore_ctxids.end())
+				//	return;
+
+				// Ignore models that aren't instanced
+				if (!obj->m_instanced)
+					return;
+
+				// Find the previous sibbling
+				LdrObject* prev = 0;
+				if (obj->m_parent)
+				{
+					auto& children = obj->m_parent->m_child;
+					for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
+					{
+						if (i->m_ptr != obj) continue;
+						if (i == std::begin(children)) break;
+						prev = (*(--i)).m_ptr;
+						break;
+					}
+				}
+
+				//Add(obj, prev);
+
+				// Add UI data to the object
+				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_user_data.has<UIData>(this), "This item is already in the UI");
+				obj->m_user_data.get<UIData>(this) = UIData();
+				
+				auto obj_uidata    = GetUIData(obj);
+				auto prev_uidata   = GetUIData(prev);
+				auto parent_uidata = GetUIData(obj->m_parent);
+
+				// Add the item to the tree
+				obj_uidata->m_tree_item = m_tree.InsertItem(obj->m_name.c_str(),
+					obj->m_parent ? parent_uidata->m_tree_item : TVI_ROOT,
+					prev          ? prev_uidata->m_tree_item   : TVI_LAST);
+
+				// Save a pointer to this object in the tree
+				if (obj_uidata->m_tree_item != INVALID_TREE_ITEM)
+					m_tree.SetItemData(obj_uidata->m_tree_item, reinterpret_cast<DWORD_PTR>(obj));
+				else
+				{} // todo: Report errors, without spamming the user...
+
+				// Add the item to the list
+				// If 'obj' is a top level object, then add it to the list
+				if (obj->m_parent == 0)
+				{
+					obj_uidata->m_list_item = m_list.InsertItem(m_list.GetItemCount(), obj->m_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
+					// todo: Report errors, without spamming the user...
+				}
+				// Otherwise, if 'prev' is visible in the list then display 'obj' in the list as well
+				else if (prev && prev_uidata->m_list_item != INVALID_LIST_ITEM)
+				{
+					obj_uidata->m_list_item = m_list.InsertItem(prev_uidata->m_list_item + 1, obj->m_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
+					// todo: Report errors, without spamming the user...
+				}
+				else
+				{
+					obj_uidata->m_list_item = INVALID_LIST_ITEM;
+				}
+
+				// Save a pointer to this object in the list
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
+				{
+					m_list.SetItemData(obj_uidata->m_list_item, reinterpret_cast<DWORD_PTR>(obj));
+					UpdateListItem(*obj, false);
+				}
+
+				// Add the children
+				LdrObject* p = 0;
+				for (ObjectCont::iterator c = obj->m_child.begin(), cend = obj->m_child.end(); c != cend; p = (*c).m_ptr, ++c)
+					Add((*c).m_ptr, p, false);
+
+				// On leaving the last recusive call, fix up the references
+				FixListCtrlReferences(obj_uidata->m_list_item);
+
+				m_scene_bbox = pr::BBoxReset;
+			}
+
 			// Recursively add 'obj' and its children to the tree and list control
 			void Add(LdrObject* obj, LdrObject* prev, bool last_call = true)
 			{
@@ -432,8 +530,8 @@ namespace pr
 				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_parent || GetUIData(*obj->m_parent)->m_tree_item != INVALID_TREE_ITEM, "Parent is not in the tree");
 
 				// Add UI data to the object
-				PR_ASSERT(PR_DBG_LDROBJMGR, obj->m_user_data.count(UIData::Id()) == 0, "This item is already in the UI");
-				obj->m_user_data[UIData::Id()] = std::make_unique<UIData>();
+				PR_ASSERT(PR_DBG_LDROBJMGR, !obj->m_user_data.has<UIData>(this), "This item is already in the UI");
+				obj->m_user_data.get<UIData>(this) = UIData();
 				
 				auto obj_uidata    = GetUIData(obj);
 				auto prev_uidata   = GetUIData(prev);
@@ -512,7 +610,7 @@ namespace pr
 				obj_uidata->m_tree_item = INVALID_TREE_ITEM;
 
 				// Remove the uidata from the object
-				obj->m_user_data.erase(UIData::Id());
+				obj->m_user_data.erase<UIData>();
 
 				if (last_call)
 					FixListCtrlReferences(list_position);
@@ -936,15 +1034,25 @@ namespace pr
 		};
 
 		// ObjectManagerDlg ***********************************************************************
+
 		ObjectManagerDlg::ObjectManagerDlg(HWND parent)
 			:m_dlg(new ObjectManagerDlgImpl(parent))
-			,m_ignore_ctxids()
-			,m_scene_bbox(pr::BBoxReset)
 		{}
-
 		bool ObjectManagerDlg::IsChild(HWND hwnd) const
 		{
 			return m_dlg->IsChild(hwnd) != 0;
+		}
+
+		// Remove all objects
+		void ObjectManagerDlg::Clear()
+		{
+			m_dlg->Clear();
+		}
+
+		// Add 'obj' to the dialog
+		void ObjectManagerDlg::Add(LdrObjectPtr obj)
+		{
+			m_dlg->Add(obj.m_ptr);
 		}
 
 		// Display the object manager window
@@ -968,20 +1076,17 @@ namespace pr
 			example.DoModal(parent);
 		}
 
-		// Set the ignore state for a particular context id
-		// Should be called before objects are added to the obj mgr
-		void ObjectManagerDlg::IgnoreContextId(ContextId id, bool ignore)
-		{
-			if (ignore) m_ignore_ctxids.insert(id);
-			else        m_ignore_ctxids.erase(id);
-		}
+		//// Set the ignore state for a particular context id
+		//// Should be called before objects are added to the obj mgr
+		//void ObjectManagerDlg::IgnoreContextId(ContextId id, bool ignore)
+		//{
+		//	if (ignore) m_ignore_ctxids.insert(id);
+		//	else        m_ignore_ctxids.erase(id);
+		//}
 
 		// Return a bounding box of the objects
 		pr::BBox ObjectManagerDlg::GetBBox(EObjectBounds bbox_type) const
 		{
-			if (bbox_type == EObjectBounds::All && m_scene_bbox != pr::BBoxReset)
-				return m_scene_bbox;
-
 			return m_dlg->GetBBox(bbox_type);
 		}
 
@@ -995,48 +1100,48 @@ namespace pr
 			m_dlg->Settings(settings);
 		}
 
-		// An object has been created
-		void ObjectManagerDlg::OnEvent(Evt_LdrObjectAdd const& e)
-		{
-			// Ignore context ids we're not showing in the obj mgr.
-			if (m_ignore_ctxids.find(e.m_obj->m_context_id) != m_ignore_ctxids.end())
-				return;
+		//// An object has been created
+		//void ObjectManagerDlg::OnEvent(Evt_LdrObjectAdd const& e)
+		//{
+		//	// Ignore context ids we're not showing in the obj mgr.
+		//	if (m_ignore_ctxids.find(e.m_obj->m_context_id) != m_ignore_ctxids.end())
+		//		return;
 
-			// Ignore models that aren't instanced
-			if (!e.m_obj->m_instanced)
-				return;
+		//	// Ignore models that aren't instanced
+		//	if (!e.m_obj->m_instanced)
+		//		return;
 
-			// Find the previous sibbling
-			LdrObject* prev = 0;
-			if (e.m_obj->m_parent)
-			{
-				auto& children = e.m_obj->m_parent->m_child;
-				for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
-				{
-					if (*i != e.m_obj) continue;
-					if (i == std::begin(children)) break;
-					prev = (*(--i)).m_ptr;
-					break;
-				}
-			}
+		//	// Find the previous sibbling
+		//	LdrObject* prev = 0;
+		//	if (e.m_obj->m_parent)
+		//	{
+		//		auto& children = e.m_obj->m_parent->m_child;
+		//		for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
+		//		{
+		//			if (*i != e.m_obj) continue;
+		//			if (i == std::begin(children)) break;
+		//			prev = (*(--i)).m_ptr;
+		//			break;
+		//		}
+		//	}
 
-			m_dlg->Add(e.m_obj.m_ptr, prev);
-			m_scene_bbox = pr::BBoxReset;
-		}
+		//	m_dlg->Add(e.m_obj.m_ptr, prev);
+		//	m_scene_bbox = pr::BBoxReset;
+		//}
 
-		// Empty the tree and list controls, all objects have been deleted
-		void ObjectManagerDlg::OnEvent(Evt_DeleteAll const&)
-		{
-			m_dlg->DeleteAll();
-			m_scene_bbox = pr::BBoxReset;
-		}
+		//// Empty the tree and list controls, all objects have been deleted
+		//void ObjectManagerDlg::OnEvent(Evt_DeleteAll const&)
+		//{
+		//	m_dlg->DeleteAll();
+		//	m_scene_bbox = pr::BBoxReset;
+		//}
 
-		// Remove an object from the tree and list controls
-		void ObjectManagerDlg::OnEvent(Evt_LdrObjectDelete const& e)
-		{
-			m_dlg->Remove(e.m_obj);
-			m_scene_bbox = pr::BBoxReset;
-		}
+		//// Remove an object from the tree and list controls
+		//void ObjectManagerDlg::OnEvent(Evt_LdrObjectDelete const& e)
+		//{
+		//	m_dlg->Remove(e.m_obj);
+		//	m_scene_bbox = pr::BBoxReset;
+		//}
 	}
 }
 

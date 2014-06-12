@@ -120,6 +120,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\user_data.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />

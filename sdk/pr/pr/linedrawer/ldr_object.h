@@ -21,6 +21,7 @@
 #include "pr/common/new.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
+#include "pr/common/user_data.h"
 #include "pr/maths/maths.h"
 #include "pr/str/prstdstring.h"
 #include "pr/script/reader.h"
@@ -284,12 +285,6 @@ namespace pr
 			bool empty() const  { return m_code.empty(); }
 		};
 
-		// Interface for user data
-		struct ILdrUserData { virtual ~ILdrUserData() {} };
-
-		// A map from custom id to user data
-		typedef std::unordered_map<size_t, std::unique_ptr<ILdrUserData>> UserData;
-
 		#pragma endregion
 
 		// A line drawer object
@@ -314,7 +309,7 @@ namespace pr
 			bool              m_instanced;     // False if this instance should never be drawn (it's used for instancing only)
 			bool              m_visible;       // True if the instance should be rendered
 			bool              m_wireframe;     // True if this object is drawn in wireframe
-			UserData          m_user_data;     // User assigned data
+			pr::UserData      m_user_data;     // User data
 
 			// Predicate for matching this object by context id
 			struct MatchId
@@ -438,13 +433,6 @@ namespace pr
 			LdrObjectPtr RemoveChild(LdrObjectPtr& child);
 			LdrObjectPtr RemoveChild(size_t i);
 			void RemoveAllChildren();
-
-			// True if this object contains user data matching 'id'
-			bool HasUserData(size_t id) const { return m_user_data.count(id) != 0; }
-
-			// Convenience accessor to user data
-			template <typename T> T const& UserData(size_t id) const { return *m_user_data[id].get(); }
-			template <typename T> T&       UserData(size_t id)       { return *m_user_data[id].get(); }
 
 			// Called when there are no more references to this object
 			static void RefCountZero(RefCount<LdrObject>* doomed);

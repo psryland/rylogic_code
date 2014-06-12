@@ -648,13 +648,8 @@ namespace pr
 			}
 			void CreateModel(ParseParams&, LdrObjectPtr obj) override
 			{
-				struct UserLight :Light, ILdrUserData, pr::AlignTo < 16 >
-				{
-					UserLight(Light const& light) :Light(light) {}
-				};
-
 				// Assign the light data as user data
-				obj->m_user_data[obj->m_type.value] = std::unique_ptr<UserLight>(new UserLight(m_light));
+				obj->m_user_data.get<Light>() = m_light;
 			}
 		};
 
