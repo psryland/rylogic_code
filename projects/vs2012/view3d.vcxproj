@@ -182,10 +182,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\token.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\tokeniser.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\prmaths.h" />
+    <ClInclude Include="..\view3d\context.h" />
     <ClInclude Include="..\view3d\forward.h" />
-    <ClInclude Include="..\View3D\renderer_instance.h" />
     <ClInclude Include="..\View3D\stdafx.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\view3d.h" />
+    <ClInclude Include="..\view3d\window.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
@@ -234,7 +235,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
       </PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\View3D\renderer_instance.cpp" />
     <ClCompile Include="..\view3d\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

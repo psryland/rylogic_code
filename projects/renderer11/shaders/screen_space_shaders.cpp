@@ -6,7 +6,7 @@
 #include "pr/renderer11/shaders/screen_space_shaders.h"
 #include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/render/drawlist_element.h"
-#include "pr/renderer11/render/renderer.h"
+#include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/render/scene_view.h"
 #include "pr/renderer11/steps/render_step.h"
@@ -23,7 +23,7 @@ namespace pr
 		template <typename TCBuf> inline void SetScreenSpaceConstants(DeviceState const& state, float default_width, TCBuf& cb)
 		{
 			auto lw = state.m_dle->m_instance->find<float>(EInstComp::SSWidth);
-			auto screen_size = state.m_rstep->m_scene->m_rdr->RenderTargetSize();
+			auto screen_size = state.m_rstep->m_scene->m_wnd->RenderTargetSize();
 			cb.m_dim_and_width = pr::v4::make(float(screen_size.x), float(screen_size.y), 0, lw ? *lw : default_width);
 		}
 

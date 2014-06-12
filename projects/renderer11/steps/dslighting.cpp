@@ -3,10 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #include "renderer11/util/stdafx.h"
-#include "pr/renderer11/render/renderer.h"
+#include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/shaders/input_layout.h"
+#include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/models/model.h"
 #include "pr/renderer11/models/model_settings.h"
 #include "pr/renderer11/models/model_manager.h"
@@ -46,7 +47,7 @@ namespace pr
 				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(1,1,0,0));
 
 				MdlSettings s(verts, idxs, bbox, "unit quad");
-				m_unit_quad.m_model = scene.m_rdr->m_mdl_mgr.CreateModel(s);
+				m_unit_quad.m_model = scene.m_wnd->mdl_mgr().CreateModel(s);
 
 				NuggetProps ddata(EPrim::TriList, EGeom::Vert);
 				ddata.m_smap[Id].m_vs = m_vs;

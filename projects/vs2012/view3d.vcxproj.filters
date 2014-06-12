@@ -33,7 +33,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
       <Filter>sdk\lua</Filter>
     </ClInclude>
-    <ClInclude Include="..\View3D\renderer_instance.h" />
     <ClInclude Include="..\View3D\stdafx.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\view3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
@@ -95,6 +94,8 @@
     </ClInclude>
     <ClInclude Include="..\view3d\forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\view3d\prmaths.h" />
+    <ClInclude Include="..\view3d\window.h" />
+    <ClInclude Include="..\view3d\context.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
@@ -109,7 +110,6 @@
     <ClCompile Include="..\..\sdk\pr\pr\lua\lua_lib.c">
       <Filter>sdk\lua</Filter>
     </ClCompile>
-    <ClCompile Include="..\View3D\renderer_instance.cpp" />
     <ClCompile Include="..\view3d\stdafx.cpp" />
     <ClCompile Include="..\View3D\view3d.cpp" />
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">

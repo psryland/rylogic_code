@@ -22,22 +22,12 @@ namespace pr
 		struct RdrSettings
 		{
 			MemFuncs                     m_mem;              // The manager of allocations/deallocations
-			HWND                         m_hwnd;             // The associated window
-			BOOL                         m_windowed;         // Windowed mode or full screen
-			DisplayMode                  m_mode;             // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
-			MultiSamp                    m_multisamp;        // Number of samples per pixel (AA/Multisampling)
-			UINT                         m_buffer_count;     // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
-			DXGI_SWAP_EFFECT             m_swap_effect;      // How to swap the back buffer to the front buffer
-			UINT                         m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
-			DXGI_FORMAT                  m_depth_format;     // Depth buffer format
-			D3DPtr<IDXGIAdapter>         m_adapter;          // The adapter to use. 0 means use the default
+			D3DPtr<IDXGIAdapter>         m_adapter;          // The adapter to use. nullptr means use the default
 			D3D_DRIVER_TYPE              m_driver_type;      // HAL, REF, etc
 			UINT                         m_device_layers;    // Add layers over the basic device (see D3D11_CREATE_DEVICE_FLAG)
 			pr::Array<D3D_FEATURE_LEVEL> m_feature_levels;   // Features to support. Empty implies 9.1 -> 11.0
-			UINT                         m_vsync;            // Present SyncInterval value
-			bool                         m_allow_alt_enter;  // Allow switching to full screen with alt-enter
 
-			RdrSettings(HWND hwnd = 0, BOOL windowed = TRUE, BOOL gdi_compat = FALSE, pr::iv2 const& client_area = pr::iv2::make(1024,768));
+			RdrSettings(BOOL gdi_compat);
 		};
 
 		// Renderer state variables
@@ -46,17 +36,11 @@ namespace pr
 			RdrSettings                    m_settings;
 			D3D_FEATURE_LEVEL              m_feature_level;
 			D3DPtr<ID3D11Device>           m_device;
-			D3DPtr<IDXGISwapChain>         m_swap_chain;
 			D3DPtr<ID3D11DeviceContext>    m_immediate;
-			D3DPtr<ID3D11RenderTargetView> m_main_rtv;
-			D3DPtr<ID3D11DepthStencilView> m_main_dsv;
 			D3DPtr<ID2D1Factory>           m_d2dfactory;
-			TextureDesc                    m_bbdesc;  // The texture description of the back buffer
-			bool                           m_idle;    // True while the window is occluded
 
 			RdrState(RdrSettings const& settings);
-			virtual ~RdrState();
-			void InitMainRT();
+			~RdrState();
 		};
 	}
 
@@ -92,50 +76,5 @@ namespace pr
 
 		// Read access to the initialisation settings
 		rdr::RdrSettings const& Settings() const { return m_settings; }
-
-		// Get/Set full screen mode
-		// Don't use the automatic alt-enter system, it's too uncontrollable
-		// Handle WM_SYSKEYDOWN for VK_RETURN, then call FullScreenMode
-		bool FullScreenMode() const;
-		void FullScreenMode(bool on, rdr::DisplayMode mode);
-
-		// The display mode of the main render target
-		DXGI_FORMAT DisplayFormat() const;
-
-		// Returns the size of the render target
-		pr::iv2 RenderTargetSize() const;
-
-		// Set the render target size.
-		// Passing iv2.Zero will cause the RT to get its size from the associated window
-		// Call when the window size changes (e.g. from a WM_SIZE message)
-		void RenderTargetSize(pr::iv2 const& size);
-
-		// Binds the main render target and depth buffer to the OM
-		void RestoreMainRT();
-
-		// Rendering:
-		//  For each scene to be rendered:
-		//     Build/Update the draw list for that scene
-		//     Set the scene viewport
-		//     Render the drawlist
-		//
-		// Rendering a Drawlist:
-		//   Deferred using: http://www.catalinzima.com/tutorials/deferred-rendering-in-xna/creating-the-g-buffer/
-		//
-		// Drawlist Order:
-		//   opaques
-		//   skybox
-		//   alphas
-		//
-		// Observations:
-		//   Only immediate context needed for normal rendering,
-		//   Deferred context might be useful for generating shadow data (dunno yet)
-		//
-		// Call Present() to present the scene to the display.
-		//   From DirectX docs: To enable maximal parallelism between the CPU and the graphics
-		//   accelerator, it is advantageous to call RenderEnd() as far ahead of calling Present()
-		//   as possible. 'BltBackBuffer()' can be used to redraw the display from the last back
-		//   buffer but this only works for D3DSWAPEFFECT_COPY.
-		void Present();
 	};
 }

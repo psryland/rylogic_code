@@ -5,6 +5,7 @@
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/steps/render_step.h"
 #include "pr/renderer11/render/renderer.h"
+#include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
 #include "pr/renderer11/instances/instance.h"
 #include "renderer11/util/forward_private.h"
@@ -16,8 +17,8 @@ namespace pr
 	{
 		RenderStep::RenderStep(Scene& scene)
 			:m_scene(&scene)
-			,m_shdr_mgr(&scene.m_rdr->m_shdr_mgr)
-			,m_drawlist(scene.m_rdr->Allocator<DrawListElement>())
+			,m_shdr_mgr(&scene.m_wnd->shdr_mgr())
+			,m_drawlist(scene.m_wnd->m_rdr->Allocator<DrawListElement>())
 			,m_sort_needed(true)
 			,m_bsb()
 			,m_rsb()

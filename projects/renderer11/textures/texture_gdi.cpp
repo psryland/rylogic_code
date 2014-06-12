@@ -57,10 +57,13 @@ namespace pr
 		{
 			auto surf = GetSurface();
 			
+			float dpiX, dpiY;
+			m_mgr->m_d2dfactory->GetDesktopDpi(&dpiX, &dpiY);
+
 			// Create a D2D render target which can draw into our offscreen D3D surface.
 			// Given that we use a constant size for the texture, we fix the DPI at 96.
 			D3DPtr<ID2D1RenderTarget> rt;
-			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+			auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED), dpiX, dpiY);
 			pr::Throw(m_mgr->m_d2dfactory->CreateDxgiSurfaceRenderTarget(surf.m_ptr, props, &rt.m_ptr));
 			return rt;
 		}

@@ -16,9 +16,11 @@ namespace pr
 		// Called twice, once before resizing, and once afterward
 		struct Evt_Resize
 		{
-			bool    m_done;  // True when the swap chain has resized it's buffers
-			pr::iv2 m_area;  // The render target size before (m_done == false) or after (m_done == true) the swap chain buffer resize
-			Evt_Resize(bool done, pr::iv2 const& area) :m_done(done) ,m_area(area) {}
+			Window* m_window; // The renderer window that is resizing
+			bool    m_done;   // True when the swap chain has resized it's buffers
+			pr::iv2 m_area;   // The render target size before (m_done == false) or after (m_done == true) the swap chain buffer resize
+			
+			Evt_Resize(Window* window, bool done, pr::iv2 const& area) :m_window(window) ,m_done(done) ,m_area(area) {}
 		};
 
 		// Raised once just before a scene is rendered.

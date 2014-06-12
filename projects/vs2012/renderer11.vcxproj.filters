@@ -243,6 +243,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\screen_space_shaders.h">
       <Filter>shaders</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\window.h">
+      <Filter>render</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
@@ -382,6 +385,9 @@
     </ClCompile>
     <ClCompile Include="..\renderer11\shaders\screen_space_shaders.cpp">
       <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\renderer11\render\window.cpp">
+      <Filter>render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

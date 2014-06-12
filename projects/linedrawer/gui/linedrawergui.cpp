@@ -179,10 +179,10 @@ namespace ldr
 		if (nChar == VK_RETURN)
 		{
 			// If currently in full screen mode, switch to windowed
-			if (m_main->m_rdr.FullScreenMode())
+			if (m_main->m_window.FullScreenMode())
 			{
 				pr::rdr::DisplayMode mode;
-				m_main->m_rdr.FullScreenMode(false, mode);
+				m_main->m_window.FullScreenMode(false, mode);
 
 				// Show the status and menu controls again
 				SetMenu(m_menu);
@@ -201,7 +201,7 @@ namespace ldr
 
 				// Get the full screen display mode from the settings
 				pr::rdr::DisplayMode mode(1920, 1080);
-				m_main->m_rdr.FullScreenMode(true, mode);
+				m_main->m_window.FullScreenMode(true, mode);
 			}
 			m_main->RenderNeeded();
 			m_main->DoRender();

@@ -143,6 +143,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\blend_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\depth_state.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\state_block.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\window.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\input_layout.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\shaders\shader_manager.h" />
@@ -215,6 +216,7 @@
     <ClCompile Include="..\renderer11\render\scene_view.cpp" />
     <ClCompile Include="..\renderer11\render\state_stack.cpp" />
     <ClCompile Include="..\renderer11\render\stereo.cpp" />
+    <ClCompile Include="..\renderer11\render\window.cpp" />
     <ClCompile Include="..\renderer11\shaders\dslighting_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\fwd_shader.cpp" />
     <ClCompile Include="..\renderer11\shaders\gbuffer_shader.cpp" />

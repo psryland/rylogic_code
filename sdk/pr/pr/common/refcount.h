@@ -21,7 +21,7 @@
 namespace pr
 {
 	// Reference counting mix-in base class
-	// 'Deleter' is a type containing a static function with signiture: 'void RefCountZero(RefCount* obj)'
+	// 'Deleter' is a type containing a static function with signature: 'void RefCountZero(RefCount* obj)'
 	// Its purpose is to release resources owned by the ref counted object because there are no more references to it.
 	// 'RefCount' itself contains a 'RefCountZero' function so that clients can use 'RefCount<Derived>'
 	// which will pick up the default behaviour of deleting the ref counted object when the count hits zero

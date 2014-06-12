@@ -242,34 +242,10 @@ namespace pr
 			m_lookup_tex.erase(iter);
 		}
 
-		// Get pointers to the main render target texture and shader resource view
-		void GetMainRTResources(D3DPtr<ID3D11Device> device, D3DPtr<ID3D11Texture2D>& tex, D3DPtr<ID3D11ShaderResourceView>& srv)
-		{
-			D3DPtr<ID3D11RenderTargetView> rtv;
-
-			// Get the render target view and underlying resource
-			auto dc = ImmediateDC(device);
-			dc->OMGetRenderTargets(1, &rtv.m_ptr, nullptr);
-			D3DPtr<ID3D11Resource> res; rtv->GetResource(&res.m_ptr);
-
-			// Query for the texture2d interface
-			pr::Throw(res->QueryInterface( __uuidof(ID3D11Texture2D), (void**) &tex.m_ptr));
-			TextureDesc tdesc; tex->GetDesc(&tdesc);
-
-			// If the texture was created with srv binding, create a srv
-			if (tdesc.BindFlags & D3D11_BIND_SHADER_RESOURCE)
-				pr::Throw(device->CreateShaderResourceView(res.m_ptr, nullptr, &srv.m_ptr));
-		}
-
 		// Generates the stock textures
 		void TextureManager::CreateStockTextures()
 		{
 			{
-				D3DPtr<ID3D11Texture2D> tex;
-				D3DPtr<ID3D11ShaderResourceView> srv;
-				GetMainRTResources(m_device, tex, srv);
-				m_stock_textures.push_back(CreateTexture2D(EStockTexture::MainRT, tex, srv, SamplerDesc::LinearClamp(), "#mainrt"));
-			}{
 				pr::uint const data[] = {0};
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
@@ -327,21 +303,6 @@ namespace pr
 			}
 		}
 
-		// Handle resize events
-		void TextureManager::OnEvent(Evt_Resize const& e)
-		{
-			// On resizing the main RT we need to release the RT Texture
-			auto tex = FindTexture(EStockTexture::MainRT);
-			if (e.m_done)
-			{
-				GetMainRTResources(m_device, tex->m_tex, tex->m_srv);
-			}
-			else
-			{
-				tex->m_tex = nullptr;
-				tex->m_srv = nullptr;
-			}
-		}
 		void TextureManager::OnEvent(Evt_RendererDestroy const&)
 		{
 			// Drop references to the stock textures

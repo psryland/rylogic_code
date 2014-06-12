@@ -4,7 +4,7 @@
 //*********************************************
 #include "renderer11/util/stdafx.h"
 #include "pr/renderer11/render/scene.h"
-#include "pr/renderer11/render/renderer.h"
+#include "pr/renderer11/render/window.h"
 #include "pr/renderer11/instances/instance.h"
 #include "pr/renderer11/steps/forward_render.h"
 #include "pr/renderer11/steps/gbuffer.h"
@@ -17,10 +17,10 @@ namespace pr
 	namespace rdr
 	{
 		// Make a scene
-		Scene::Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps, SceneView const& view)
-			:m_rdr(&rdr)
+		Scene::Scene(Window& wnd, std::vector<ERenderStep>&& rsteps, SceneView const& view)
+			:m_wnd(&wnd)
 			,m_view(view)
-			,m_viewport(rdr.RenderTargetSize())
+			,m_viewport(wnd.RenderTargetSize())
 			,m_render_steps()
 			,m_bkgd_colour()
 			,m_global_light()
@@ -34,7 +34,7 @@ namespace pr
 			m_rsb = RSBlock::SolidCullBack();
 
 			// Use line antialiasing if multisampling is enabled
-			if (m_rdr->Settings().m_multisamp.Count != 1)
+			if (wnd.m_multisamp.Count != 1)
 				m_rsb.Set(ERS::MultisampleEnable, TRUE);
 		}
 		Scene::~Scene()
@@ -115,8 +115,11 @@ namespace pr
 		// Render the scene
 		void Scene::Render()
 		{
+			// Bind the window render target to the OM
+			m_wnd->RestoreRT();
+
 			// Invoke each render step in order
-			StateStack ss(m_rdr->ImmediateDC(), *this);
+			StateStack ss(m_wnd->ImmediateDC(), *this);
 			for (auto& rs : m_render_steps)
 				rs->Execute(ss);
 		}
@@ -126,7 +129,7 @@ namespace pr
 		{
 			// Todo, this is assuming the viewport covers the entire back buffer
 			// it won't work for viewports that are sub regions of the screen
-			if (evt.m_done)
+			if (evt.m_done && evt.m_window == m_wnd)
 				m_viewport = evt.m_area;
 		}
 	}

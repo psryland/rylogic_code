@@ -30,7 +30,7 @@ namespace pr
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
 			typedef pr::Array<RenderStepPtr, 16, true> RenderStepCont;
 
-			pr::Renderer*  m_rdr;          // The controlling renderer
+			Window*        m_wnd;          // The controlling window
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen
 			Viewport       m_viewport;     // Represents the rectangular area on the back buffer that this scene covers
 			RenderStepCont m_render_steps; // The stages of rendering the scene
@@ -40,7 +40,7 @@ namespace pr
 			RSBlock        m_rsb;          // Scene-wide states
 			BSBlock        m_bsb;          // Scene-wide states
 
-			Scene(pr::Renderer& rdr, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
+			Scene(Window& wnd, std::vector<ERenderStep>&& rsteps = {ERenderStep::ForwardRender}, SceneView const& view = SceneView());
 			~Scene();
 
 			// Set the render steps to use for rendering the scene
@@ -53,10 +53,6 @@ namespace pr
 			// Get/Set the view (i.e. the camera to screen projection or 'View' matrix in dx speak)
 			void SetView(SceneView const& view) { m_view = view; }
 			void SetView(pr::Camera const& cam) { SetView(SceneView(cam)); }
-
-			// Get/Set the on-screen visible area of this scene when rendered
-			Viewport const& Viewport() const                 { return m_viewport; }
-			void Viewport(pr::rdr::Viewport const& viewport) { m_viewport = viewport; }
 
 			// Access the render step by Id
 			RenderStep* FindRStep(ERenderStep::Enum_ id) const;

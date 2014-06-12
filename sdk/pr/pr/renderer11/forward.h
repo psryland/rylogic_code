@@ -56,6 +56,7 @@
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
 #include "pr/common/container_functions.h"
+#include "pr/common/user_data.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -100,13 +101,38 @@ namespace pr
 
 		typedef pr::geometry::EGeom EGeom;
 
-		// Util
-		struct Lock;
-		struct MLock;
-		template <class T> struct Allocator;
+		// Render
+		struct Window;
+		struct Scene;
+		struct SceneView;
 
-		// Lighting
-		struct Light;
+		// Rendering
+		struct DrawListElement;
+		struct BSBlock;
+		struct DSBlock;
+		struct RSBlock;
+		struct StateStack;
+		struct DeviceState;
+		struct RenderStep;
+		struct ForwardRender;
+		struct GBuffer;
+		struct DSLighting;
+		struct ShadowMap;
+		typedef std::shared_ptr<RenderStep> RenderStepPtr;
+
+		// Models
+		class  ModelManager;
+		struct ModelBuffer;
+		struct Model;
+		struct NuggetProps;
+		struct Nugget;
+		struct MdlSettings;
+		typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
+		typedef pr::RefPtr<Model> ModelPtr;
+		typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
+
+		// Instances
+		struct BaseInstance;
 
 		// Shaders
 		struct Vert;
@@ -134,38 +160,16 @@ namespace pr
 		//typedef pr::RefPtr<Video> VideoPtr;
 		//typedef pr::RefPtr<AllocPres> AllocPresPtr;
 
-		// Models
-		class  ModelManager;
-		struct ModelBuffer;
-		struct Model;
-		struct NuggetProps;
-		struct Nugget;
-		struct MdlSettings;
-		typedef pr::RefPtr<ModelBuffer> ModelBufferPtr;
-		typedef pr::RefPtr<Model> ModelPtr;
-		typedef pr::chain::head<Nugget, struct ChainGroupNugget> TNuggetChain;
+		// Lighting
+		struct Light;
 
-		// Instances
-		struct BaseInstance;
-
-		// Scenes
-		struct SceneView;
-		struct Scene;
-		struct Stereo;
-
-		// Rendering
-		struct DrawListElement;
-		struct BSBlock;
-		struct DSBlock;
-		struct RSBlock;
-		struct StateStack;
-		struct DeviceState;
-		struct RenderStep;
-		struct ForwardRender;
-		struct GBuffer;
-		struct DSLighting;
-		struct ShadowMap;
-		typedef std::shared_ptr<RenderStep> RenderStepPtr;
+		// Util
+		class BlendStateManager;
+		class DepthStateManager;
+		class RasterStateManager;
+		struct Lock;
+		struct MLock;
+		template <class T> struct Allocator;
 
 		// EResult
 		#define PR_ENUM(x)/*

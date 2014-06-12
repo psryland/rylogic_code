@@ -19,8 +19,7 @@ namespace pr
 	namespace rdr
 	{
 		class TextureManager
-			:pr::events::IRecv<Evt_Resize>
-			,pr::events::IRecv<Evt_RendererDestroy>
+			:pr::events::IRecv<Evt_RendererDestroy>
 		{
 			typedef Lookup<RdrId, Texture2D*>       TextureLookup;
 			typedef Lookup<RdrId, ID3D11Texture2D*> TexFileLookup;
@@ -63,7 +62,6 @@ namespace pr
 			void ReplaceTexture(Texture2D& existing, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, bool all_instances);
 
 			// Handle events
-			void OnEvent(Evt_Resize const& e) override;
 			void OnEvent(Evt_RendererDestroy const& e) override;
 
 		public:

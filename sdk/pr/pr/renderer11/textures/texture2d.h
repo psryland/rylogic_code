@@ -18,7 +18,8 @@ namespace pr
 		// A 2D texture
 		// Each time MatMgr.CreateTexture is called, a new Texture2D instance is allocated.
 		// However, the resources associated with this texture may be shared with other Textures.
-		struct Texture2D :pr::RefCount<Texture2D>
+		struct Texture2D
+			:pr::RefCount<Texture2D>
 		{
 			pr::m4x4                         m_t2s;       // Texture to surface transform
 			D3DPtr<ID3D11Texture2D>          m_tex;       // The texture resource
@@ -30,7 +31,6 @@ namespace pr
 			bool                             m_has_alpha; // True if the texture contains alpha pixels
 			TextureManager*                  m_mgr;       // The texture manager that created this texture
 			string32                         m_name;      // Human readable id for the texture
-			//VideoPtr                         m_video;     // Non-null if this texture is the output of a video
 
 			Texture2D(TextureManager* mgr, D3DPtr<ID3D11Texture2D> tex, D3DPtr<ID3D11ShaderResourceView> srv, SamplerDesc const& sam_desc, SortKeyId sort_id);
 			Texture2D(TextureManager* mgr, Image const& src, TextureDesc const& tdesc, SamplerDesc const& sdesc, SortKeyId sort_id, ShaderResViewDesc const* srvdesc = nullptr);

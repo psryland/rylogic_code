@@ -72,6 +72,7 @@ namespace TestCS
 
 			var lbl1 = new Joypad();
 			lbl1.Elem = conn5;
+			lbl1.Diagram = m_diag;
 
 			m_diag.ResetView();
 
@@ -114,7 +115,6 @@ namespace TestCS
 			{
 				m_gfx = new View3d.Object();
 			}
-
 			protected override void RefreshInternal()
 			{
 				var ldr = new pr.ldr.LdrBuilder();
@@ -122,7 +122,6 @@ namespace TestCS
 				m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 				m_gfx.O2P = Position;
 			}
-
 			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
 				if ((PositionXY - point).Length2 > 20)
@@ -131,16 +130,15 @@ namespace TestCS
 				point -= PositionXY;
 				return new DiagramControl.HitTestResult.Hit(this, point);
 			}
-
 			protected override DiagramControl.EditingControl EditingControl()
 			{
 				return new DiagramControl.EditingControl(new TextBox(), () => {});
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			protected override void AddToDrawsetInternal(View3d.DrawsetInterface drawset)
+			protected override void AddToSceneInternal(View3d.Window window)
 			{
-				drawset.AddObject(m_gfx);
+				window.AddObject(m_gfx);
 			}
 		}
 
@@ -208,7 +206,6 @@ namespace TestCS
 			// m_diag
 			// 
 			this.m_diag.AllowEditing = true;
-			this.m_diag.AllowMove = true;
 			this.m_diag.AllowSelection = true;
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);

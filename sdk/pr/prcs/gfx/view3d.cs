@@ -10,7 +10,8 @@ using pr.extn;
 using pr.maths;
 
 using HWND     = System.IntPtr;
-using HDrawset = System.IntPtr;
+using HContext = System.IntPtr;
+using HWindow  = System.IntPtr;
 using HObject  = System.IntPtr;
 using HTexture = System.IntPtr;
 
@@ -465,8 +466,7 @@ namespace pr.gfx
 
 		/// <summary>Edit object callback function</summary>
 		public delegate void EditObjectCB(
-			int vcount,
-			int icount,
+			int vcount, int icount,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=0)][Out] Vertex[] verts,
 			[MarshalAs(UnmanagedType.LPArray, SizeParamIndex=1)][Out] ushort[] indices,
 			out int new_vcount,
@@ -478,15 +478,15 @@ namespace pr.gfx
 
 		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 		
-		/// <summary>Method for actually rendering the scene</summary>
+		public delegate void ReportErrorCB(string msg);
+		public delegate void LogOutputCB(ELogLevel level, long timestamp, string msg);
+		public delegate void SettingsChangedCB();
 		public delegate void RenderCB();
 
-		private readonly RenderCB m_render_cb;              // User call back to render the scene
-		private readonly ReportErrorCB m_error_cb;          // A local reference to prevent the callback being garbage collected
-		private readonly LogOutputCB m_log_cb;              // A local reference to prevent the callback being garbage collected
-		private readonly SettingsChangedCB m_settings_cb;   // A local reference to prevent the callback being garbage collected
-		private readonly List<DrawsetInterface> m_drawsets; // Groups of objects to render
-		private readonly EventBatcher m_eb_refresh;         // Batch refresh calls
+		private readonly ReportErrorCB m_error_cb; // A local reference to prevent the callback being garbage collected
+		private readonly LogOutputCB   m_log_cb;   // A local reference to prevent the callback being garbage collected
+		private readonly List<Window>  m_windows;  // Groups of objects to render
+		private readonly HContext      m_context;  // Unique id per Initialise call
 
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static void LoadDll(string dir = @".\lib\$(platform)")
@@ -511,138 +511,46 @@ namespace pr.gfx
 		}
 
 		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3d(HWND handle, RenderCB render_cb, ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
+		public View3d(ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
 		{
 			m_error_cb    = ErrorCB;
 			m_log_cb      = LogCB;
-			m_settings_cb = SettingsChgCB;
-			m_drawsets    = new List<DrawsetInterface>();
-			m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
-			m_render_cb   = render_cb;
+			m_windows     = new List<Window>();
 
 			if (error_cb != null) OnError += error_cb;
 			if (log_cb != null) OnLog += log_cb;
 
-			// Initialise the renderer
-			var res = View3D_Initialise(handle, m_render_cb, m_error_cb, m_log_cb, m_settings_cb);
-			if (res != EResult.Success) throw new Exception(res);
-
-			// Create a default drawset
-			Drawset = DrawsetCreate();
-			RenderTarget = new Texture(View3D_TextureRenderTarget());
+			// Initialise view3d
+			m_context = View3D_Initialise(m_error_cb, m_log_cb);
+			if (m_context == HContext.Zero)
+				throw new Exception("Failed to initialised View3d");
 		}
 		public void Dispose()
 		{
-			m_eb_refresh.Dispose();
-			while (m_drawsets.Count != 0)
-				m_drawsets[0].Dispose();
+			while (m_windows.Count != 0)
+				m_windows[0].Dispose();
 
-			RenderTarget.Dispose();
-			View3D_Shutdown();
+			View3D_Shutdown(m_context);
 		}
 
-		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-		public void SignalRefresh()
-		{
-			m_eb_refresh.Signal();
-		}
-
-		/// <summary>Triggers the callback to render and present the scene</summary>
-		public void Refresh()
-		{
-			m_render_cb();
-		}
-
-		/// <summary>Called to flip the back buffer to the screen after all drawset have been rendered</summary>
-		public void Present()
-		{
-			View3D_Present();
-		}
-	
 		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
 		public event ReportErrorCB OnError;
-		public delegate void ReportErrorCB(string msg);
 
 		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
 		public event LogOutputCB OnLog;
-		public delegate void LogOutputCB(ELogLevel level, long timestamp, string msg);
 
-		/// <summary>Event notifying whenever rendering settings have changed</summary>
-		public event SettingsChangedCB OnSettingsChanged;
-		public delegate void SettingsChangedCB();
-
-		/// <summary>Get/Set the currently active drawset</summary>
-		public DrawsetInterface Drawset { get; set; }
-
-		/// <summary>Create a drawset. Sets the current drawset to the one created</summary>
-		public DrawsetInterface DrawsetCreate()
+		/// <summary>Callback function from the Dll when an error occurs</summary>
+		private void ErrorCB(string msg)
 		{
-			return new DrawsetInterface(this);
+			if (OnError != null) OnError(msg);
+			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 		}
 
-		/// <summary>Show a window containing and example ldr script file</summary>
-		public void ShowExampleScript()
+		/// <summary>Callback function from the Dll when a log event occurs</summary>
+		private void LogCB(ELogLevel level, long timestamp, string msg)
 		{
-			View3D_ShowDemoScript();
-		}
-
-		/// <summary>Show/Hide the object manager UI</summary>
-		public void ShowObjectManager(bool show)
-		{
-			View3D_ShowObjectManager(show);
-		}
-
-		/// <summary>Resize the render target</summary>
-		public Size RenderTargetSize
-		{
-			get { int w,h; View3D_RenderTargetSize(out w, out h); return new Size(w,h); }
-			set { View3D_SetRenderTargetSize(value.Width, value.Height); }
-		}
-
-		/// <summary>Get the render target texture</summary>
-		public Texture RenderTarget { get; private set; }
-
-		/// <summary>Get/Set the size/position of the viewport within the render target</summary>
-		public Viewport View
-		{
-			get { return View3D_Viewport(); }
-			set { View3D_SetViewport(value); }
-		}
-
-		/// <summary>Get/Set whether the depth buffer is enabled</summary>
-		public bool DepthBufferEnabled
-		{
-			get { return View3D_DepthBufferEnabled(); }
-			set { View3D_SetDepthBufferEnabled(value); }
-		}
-
-		/// <summary>Standard keyboard shortcuts</summary>
-		public void TranslateKey(object sender, KeyEventArgs e)
-		{
-			if (Drawset == null) return;
-			switch (e.KeyCode)
-			{
-			case Keys.F7:
-				{
-					Drawset.Camera.ResetView();
-					Drawset.Render();
-					break;
-				}
-			case Keys.Space:
-				{
-					ShowObjectManager(true);
-					break;
-				}
-			case Keys.W:
-				{
-					if ((e.Modifiers & Keys.Control) != 0)
-					{
-						Drawset.FillMode = Enum<EFillMode>.Cycle(Drawset.FillMode);
-						Drawset.Render();
-					}
-					break;
-				}
-			}
+			if (OnLog != null) OnLog(level, timestamp, msg);
+			else Debug.Write(level.ToString() + "|" + timestamp.ToString() + "| " + msg);
 		}
 
 		/// <summary>Convert a button enum to a button state int</summary>
@@ -668,59 +576,27 @@ namespace pr.gfx
 			return EBtnIdx.None;
 		}
 
-		/// <summary>Convert a screen space point to a normalised point</summary>
-		private v2 NormalisePoint(Point pt)
-		{
-			var da = RenderTargetSize;
-			return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
-		}
-
-		/// <summary>Convert a normalised point into a screen space point</summary>
-		private v2 ScreenSpacePointF(v2 pt)
-		{
-			var da = RenderTargetSize;
-			return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
-		}
-		private Point ScreenSpacePoint(v2 pt)
-		{
-			var p = ScreenSpacePointF(pt);
-			return new Point((int)Math.Round(p.x), (int)Math.Round(p.y));
-		}
-
-		/// <summary>Callback function from the Dll when an error occurs</summary>
-		private void ErrorCB(string msg)
-		{
-			if (OnError != null) OnError(msg);
-			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-		}
-
-		/// <summary>Callback function from the Dll when a log event occurs</summary>
-		private void LogCB(ELogLevel level, long timestamp, string msg)
-		{
-			if (OnLog != null) OnLog(level, timestamp, msg);
-			else Debug.Write(level.ToString() + "|" + timestamp.ToString() + "| " + msg);
-		}
-
-		/// <summary>Callback function from the Dll whenever the settings are changed</summary>
-		private void SettingsChgCB()
-		{
-			// Forward changed settings notification to anyone that cares
-			if (OnSettingsChanged != null) OnSettingsChanged();
-		}
-
-		/// <summary>Methods for adding/removing objects from a drawset</summary>
-		public class DrawsetInterface :IDisposable
+		/// <summary>Binds a 3D scene to a window</summary>
+		public class Window :IDisposable
 		{
 			private readonly View3d m_view;
-			private readonly HDrawset m_ds;
-			public DrawsetInterface(View3d view)
+			private readonly RenderCB m_render_cb;   // User call back to render the scene
+			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
+			private readonly EventBatcher m_eb_refresh;  // Batch refresh calls
+			private HWindow m_wnd;
+
+			public Window(View3d view, HWND hwnd, RenderCB render_cb = null, SettingsChangedCB settings_cb = null)
 			{
 				m_view = view;
-				var res = View3D_DrawsetCreate(out m_ds);
-				if (res != EResult.Success) throw new Exception(res);
-				m_view.m_drawsets.Add(this);
+				m_render_cb = render_cb;
+				m_settings_cb = SettingsChgCB;
+				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
 
-				// Create a light source
+				m_wnd = View3D_CreateWindow(hwnd, m_settings_cb, m_render_cb);
+				if (m_wnd == null)
+					throw new Exception("Failed to create View3D window");
+
+				// Setup the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
 
 				// Display the focus point
@@ -732,167 +608,281 @@ namespace pr.gfx
 			}
 			public void Dispose()
 			{
-				m_view.m_drawsets.Remove(this);
-				if (m_view.Drawset == this) m_view.Drawset = null;
-				View3D_DrawsetDelete(m_ds);
+				if (m_eb_refresh != null)
+					m_eb_refresh.Dispose();
+
+				if (m_wnd != HWindow.Zero)
+				{
+					View3D_DestroyWindow(m_wnd);
+					m_wnd = HWindow.Zero;
+				}
+			}
+
+			/// <summary>Event notifying whenever rendering settings have changed</summary>
+			public event SettingsChangedCB OnSettingsChanged;
+
+			/// <summary>Callback function from the Dll whenever the settings are changed</summary>
+			private void SettingsChgCB()
+			{
+				// Forward changed settings notification to anyone that cares
+				if (OnSettingsChanged != null)
+					OnSettingsChanged();
+			}
+
+			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
+			public void SignalRefresh()
+			{
+				m_eb_refresh.Signal();
+			}
+
+			/// <summary>Triggers the callback to render and present the scene</summary>
+			public void Refresh()
+			{
+				m_render_cb();
 			}
 
 			/// <summary>The associated view3d object</summary>
 			public View3d View { get { return m_view; } }
 
-			/// <summary>Get the native view3d handle for the drawset</summary>
-			public IntPtr Handle { get { return m_ds; } }
-
-			/// <summary>Import/Export a settings string for view3d</summary>
-			public string Settings
-			{
-				get { return Marshal.PtrToStringAnsi(View3D_GetSettings(m_ds)); }
-				set { View3D_SetSettings(m_ds, value); }
-			}
+			/// <summary>Get the native view3d handle for the window</summary>
+			public IntPtr Handle { get { return m_wnd; } }
 
 			/// <summary>Camera controls</summary>
-			public readonly CameraControls Camera;
+			public CameraControls Camera { get; private set; }
 
-			/// <summary>Add an object to the drawset</summary>
+			/// <summary>Get the render target texture</summary>
+			public Texture RenderTarget
+			{
+				get { return new Texture(View3D_TextureRenderTarget(m_wnd)); }
+			}
+
+			/// <summary>Import/Export a settings string</summary>
+			public string Settings
+			{
+				get { return Marshal.PtrToStringAnsi(View3D_GetSettings(m_wnd)); }
+				set { View3D_SetSettings(m_wnd, value); }
+			}
+
+			/// <summary>Add an object to the window</summary>
 			public void AddObject(Object obj)
 			{
-				View3D_DrawsetAddObject(m_ds, obj.m_handle);
+				View3D_AddObject(m_wnd, obj.m_handle);
 			}
 
 			/// <summary>Add multiple objects by context id</summary>
 			public void AddObjects(int context_id)
 			{
-				View3D_DrawsetAddObjectsById(m_ds, context_id);
+				View3D_AddObjectsById(m_wnd, context_id);
 			}
 
-			/// <summary>Add a collection of objects to the drawset</summary>
+			/// <summary>Add a collection of objects to the window</summary>
 			public void AddObjects(IEnumerable<Object> objects)
 			{
 				foreach (var obj in objects)
-					View3D_DrawsetAddObject(m_ds, obj.m_handle);
+					View3D_AddObject(m_wnd, obj.m_handle);
 			}
 
-			/// <summary>Remove an object from the drawset</summary>
+			/// <summary>Remove an object from the window</summary>
 			public void RemoveObject(Object obj)
 			{
-				View3D_DrawsetRemoveObject(m_ds, obj.m_handle);
+				View3D_RemoveObject(m_wnd, obj.m_handle);
 			}
 
 			/// <summary>Remove multiple objects by context id</summary>
 			public void RemoveObjects(int context_id)
 			{
-				View3D_DrawsetRemoveObjectsById(m_ds, context_id);
+				View3D_RemoveObjectsById(m_wnd, context_id);
 			}
 
-			/// <summary>Remove a collection of objects from the drawset</summary>
+			/// <summary>Remove a collection of objects from the window</summary>
 			public void RemoveObjects(IEnumerable<Object> objects)
 			{
 				foreach (var obj in objects)
-					View3D_DrawsetRemoveObject(m_ds, obj.m_handle);
+					View3D_RemoveObject(m_wnd, obj.m_handle);
 			}
 
-			/// <summary>Remove all instances from the drawset</summary>
+			/// <summary>Remove all instances from the window</summary>
 			public void RemoveAllObjects()
 			{
-				View3D_DrawsetRemoveAllObjects(m_ds);
+				View3D_RemoveAllObjects(m_wnd);
 			}
 
-			/// <summary>Return the number of objects in a drawset</summary>
+			/// <summary>Return the number of objects in a window</summary>
 			public int ObjectCount
 			{
-				get { return View3D_DrawsetObjectCount(m_ds); }
+				get { return View3D_ObjectCount(m_wnd); }
 			}
 
-			/// <summary>True if 'obj' is a member of this drawset</summary>
+			/// <summary>True if 'obj' is a member of this window</summary>
 			public bool HasObject(Object obj)
 			{
-				return View3D_DrawsetHasObject(m_ds, obj.m_handle);
+				return View3D_HasObject(m_wnd, obj.m_handle);
 			}
 
 			/// <summary>Show/Hide the focus point</summary>
 			public bool FocusPointVisible
 			{
-				get { return View3D_FocusPointVisible(m_ds); }
-				set { View3D_ShowFocusPoint(m_ds, value); }
+				get { return View3D_FocusPointVisible(m_wnd); }
+				set { View3D_ShowFocusPoint(m_wnd, value); }
 			}
 
 			/// <summary>Set the size of the focus point graphic</summary>
 			public float FocusPointSize
 			{
-				set { View3D_SetFocusPointSize(m_ds, value); }
+				set { View3D_SetFocusPointSize(m_wnd, value); }
 			}
 
 			/// <summary>Show/Hide the origin point</summary>
 			public bool OriginVisible
 			{
-				get { return View3D_OriginVisible(m_ds); }
-				set { View3D_ShowOrigin(m_ds, value); }
+				get { return View3D_OriginVisible(m_wnd); }
+				set { View3D_ShowOrigin(m_wnd, value); }
 			}
 
 			/// <summary>Set the size of the origin graphic</summary>
 			public float OriginSize
 			{
-				set { View3D_SetOriginSize(m_ds, value); }
+				set { View3D_SetOriginSize(m_wnd, value); }
 			}
 
 			/// <summary>Get/Set the render mode</summary>
 			public EFillMode FillMode
 			{
-				get { return View3D_FillMode(m_ds); }
-				set { View3D_SetFillMode(m_ds, value); }
+				get { return View3D_FillMode(m_wnd); }
+				set { View3D_SetFillMode(m_wnd, value); }
 			}
 
 			/// <summary>Get/Set the light properties. Note returned value is a value type</summary>
 			public Light LightProperties
 			{
-				get { return View3D_LightProperties(m_ds); }
-				set { View3D_SetLightProperties(m_ds, ref value); }
+				get { return View3D_LightProperties(m_wnd); }
+				set { View3D_SetLightProperties(m_wnd, ref value); }
 			}
 
 			/// <summary>Show the lighting dialog</summary>
-			public void ShowLightingDlg(Form parent)
+			public void ShowLightingDlg()
 			{
-				View3D_ShowLightingDlg(m_ds, parent != null ? parent.Handle : IntPtr.Zero);
+				View3D_ShowLightingDlg(m_wnd);
 			}
 
 			/// <summary>Set the single light source</summary>
 			public void SetLightSource(v4 position, v4 direction, bool camera_relative)
 			{
-				View3D_LightSource(m_ds, position, direction, camera_relative);
+				View3D_LightSource(m_wnd, position, direction, camera_relative);
 			}
 
 			/// <summary>Show/Hide the measuring tool</summary>
 			public bool ShowMeasureTool
 			{
-				get { return View3D_MeasureToolVisible(); }
-				set { View3D_ShowMeasureTool(m_ds, value); }
+				get { return View3D_MeasureToolVisible(m_wnd); }
+				set { View3D_ShowMeasureTool(m_wnd, value); }
 			}
 
 			/// <summary>Show/Hide the angle tool</summary>
 			public bool ShowAngleTool
 			{
-				get { return View3D_AngleToolVisible(); }
-				set { View3D_ShowAngleTool(m_ds, value); }
+				get { return View3D_AngleToolVisible(m_wnd); }
+				set { View3D_ShowAngleTool(m_wnd, value); }
 			}
 
 			/// <summary>Get/Set orthographic rendering mode</summary>
 			public bool Orthographic
 			{
-				get { return View3D_Orthographic(m_ds); }
-				set { View3D_SetOrthographic(m_ds, value); }
+				get { return View3D_Orthographic(m_wnd); }
+				set { View3D_SetOrthographic(m_wnd, value); }
 			}
 
-			/// <summary>The background colour for the drawset</summary>
+			/// <summary>The background colour for the window</summary>
 			public Color BackgroundColour
 			{
-				get { return Color.FromArgb(View3D_BackgroundColour(m_ds)); }
-				set { View3D_SetBackgroundColour(m_ds, value.ToArgb()); }
+				get { return Color.FromArgb(View3D_BackgroundColour(m_wnd)); }
+				set { View3D_SetBackgroundColour(m_wnd, value.ToArgb()); }
 			}
 
-			/// <summary>Cause the drawset to be rendered. Remember to call Present when done</summary>
+			/// <summary>Cause the window to be rendered. Remember to call Present when done</summary>
 			public void Render()
 			{
-				View3D_DrawsetRender(m_ds);
+				View3D_Render(m_wnd);
+			}
+
+			/// <summary>Called to flip the back buffer to the screen after all window have been rendered</summary>
+			public void Present()
+			{
+				View3D_Present(m_wnd);
+			}
+
+			/// <summary>Resize the render target</summary>
+			public Size RenderTargetSize
+			{
+				get { int w,h; View3D_RenderTargetSize(m_wnd, out w, out h); return new Size(w,h); }
+				set { View3D_SetRenderTargetSize(m_wnd, value.Width, value.Height); }
+			}
+
+			/// <summary>Restore the render target as the main output</summary>
+			public void RestoreRT()
+			{
+				View3D_RestoreMainRT(m_wnd);
+			}
+
+			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
+			public Viewport Viewport
+			{
+				get { return View3D_Viewport(m_wnd); }
+				set { View3D_SetViewport(m_wnd, value); }
+			}
+
+			/// <summary>Get/Set whether the depth buffer is enabled</summary>
+			public bool DepthBufferEnabled
+			{
+				get { return View3D_DepthBufferEnabled(m_wnd); }
+				set { View3D_SetDepthBufferEnabled(m_wnd, value); }
+			}
+
+			/// <summary>Convert a screen space point to a normalised point</summary>
+			public v2 NormalisePoint(Point pt)
+			{
+				var da = RenderTargetSize;
+				return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
+			}
+
+			/// <summary>Convert a normalised point into a screen space point</summary>
+			public v2 ScreenSpacePointF(v2 pt)
+			{
+				var da = RenderTargetSize;
+				return new v2((pt.x + 1f) * da.Width / 2f, (1f - pt.y) * da.Height / 2f);
+			}
+			public Point ScreenSpacePoint(v2 pt)
+			{
+				var p = ScreenSpacePointF(pt);
+				return new Point((int)Math.Round(p.x), (int)Math.Round(p.y));
+			}
+
+			/// <summary>Standard keyboard shortcuts</summary>
+			public void TranslateKey(object sender, KeyEventArgs e)
+			{
+				switch (e.KeyCode)
+				{
+				case Keys.F7:
+					{
+						Camera.ResetView();
+						Render();
+						break;
+					}
+				case Keys.Space:
+					{
+						ShowObjectManager(true);
+						break;
+					}
+				case Keys.W:
+					{
+						if ((e.Modifiers & Keys.Control) != 0)
+						{
+							FillMode = Enum<EFillMode>.Cycle(FillMode);
+							Render();
+						}
+						break;
+					}
+				}
 			}
 
 			/// <summary>Example for creating objects</summary>
@@ -905,10 +895,10 @@ namespace pr.gfx
 				//    DrawsetAddObject(obj);
 				//}
 
-				//{// Create a box model, an instance for it, and add it to the drawset
+				//{// Create a box model, an instance for it, and add it to the window
 				//    HModel model = CreateModelBox(new v4(0.3f, 0.2f, 0.4f, 0f), m4x4.Identity, 0xFFFF0000);
 				//    HInstance instance = CreateInstance(model, m4x4.Identity);
-				//    AddInstance(drawset, instance);
+				//    AddInstance(window, instance);
 				//}
 
 				//{// Create a mesh
@@ -926,24 +916,36 @@ namespace pr.gfx
 
 				//    HModel model = CreateModel(vert.Length, face.Length, vert, face, EPrimType.D3DPT_TRIANGLELIST);
 				//    HInstance instance = CreateInstance(model, m4x4.Identity);
-				//    AddInstance(drawset, instance);
+				//    AddInstance(window, instance);
 				//}
+			}
+
+			/// <summary>Show a window containing and example ldr script file</summary>
+			public void ShowExampleScript()
+			{
+				View3D_ShowDemoScript(m_wnd);
+			}
+
+			/// <summary>Show/Hide the object manager UI</summary>
+			public void ShowObjectManager(bool show)
+			{
+				View3D_ShowObjectManager(m_wnd, show);
 			}
 		}
 
 		/// <summary>Namespace for the camera controls</summary>
 		public class CameraControls
 		{
-			private readonly DrawsetInterface m_ds;
-			public CameraControls(DrawsetInterface ds)
+			private readonly Window m_window;
+			public CameraControls(Window window)
 			{
-				m_ds = ds;
+				m_window = window;
 			}
 
 			/// <summary>Return the world space size of the camera view area at 'dist' in front of the camera</summary>
 			public v2 ViewArea(float dist)
 			{
-				return View3D_ViewArea(m_ds.Handle, dist);
+				return View3D_ViewArea(m_window.Handle, dist);
 			}
 			public v2 ViewArea()
 			{
@@ -953,68 +955,68 @@ namespace pr.gfx
 			/// <summary>Get/Set the camera align axis (camera up axis). Zero vector means no align axis is set</summary>
 			public v4 AlignAxis
 			{
-				get { v4 up; View3D_CameraAlignAxis(m_ds.Handle, out up); return up; }
-				set { View3D_AlignCamera(m_ds.Handle, value); }
+				get { v4 up; View3D_CameraAlignAxis(m_window.Handle, out up); return up; }
+				set { View3D_AlignCamera(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera view aspect ratio = Width/Height</summary>
 			public float Aspect
 			{
-				get { return View3D_CameraAspect(m_ds.Handle); }
-				set { View3D_CameraSetAspect(m_ds.Handle, value); }
+				get { return View3D_CameraAspect(m_window.Handle); }
+				set { View3D_CameraSetAspect(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa</summary>
 			public float FovX
 			{
-				get { return View3D_CameraFovX(m_ds.Handle); }
-				set { View3D_CameraSetFovX(m_ds.Handle, value); }
+				get { return View3D_CameraFovX(m_window.Handle); }
+				set { View3D_CameraSetFovX(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public float FovY
 			{
-				get { return View3D_CameraFovY(m_ds.Handle); }
-				set { View3D_CameraSetFovY(m_ds.Handle, value); }
+				get { return View3D_CameraFovY(m_window.Handle); }
+				set { View3D_CameraSetFovY(m_window.Handle, value); }
 			}
 
 			/// <summary>Set the camera near plane distance. Note aspect ratio is preserved, setting FovY changes FovX and visa versa</summary>
 			public void SetClipPlanes(float near, float far, bool focus_relative)
 			{
-				View3D_CameraSetClipPlanes(m_ds.Handle, near, far, focus_relative);
+				View3D_CameraSetClipPlanes(m_window.Handle, near, far, focus_relative);
 			}
 
 			/// <summary>Get/Set the position of the camera focus point</summary>
 			public v4 FocusPoint
 			{
-				get { v4 pos; View3D_GetFocusPoint(m_ds.Handle, out pos); return pos; }
-				set { View3D_SetFocusPoint(m_ds.Handle, value); }
+				get { v4 pos; View3D_GetFocusPoint(m_window.Handle, out pos); return pos; }
+				set { View3D_SetFocusPoint(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the distance to the camera focus point</summary>
 			public float FocusDist
 			{
-				get { return View3D_CameraFocusDistance(m_ds.Handle); }
-				set { View3D_CameraSetFocusDistance(m_ds.Handle, value); }
+				get { return View3D_CameraFocusDistance(m_window.Handle); }
+				set { View3D_CameraSetFocusDistance(m_window.Handle, value); }
 			}
 
 			/// <summary>Get/Set the camera to world transform. Note: use SetPosition to set the focus distance at the same time</summary>
 			public m4x4 O2W
 			{
-				get { m4x4 c2w; View3D_CameraToWorld(m_ds.Handle, out c2w); return c2w; }
-				set { View3D_SetCameraToWorld(m_ds.Handle, ref value); }
+				get { m4x4 c2w; View3D_CameraToWorld(m_window.Handle, out c2w); return c2w; }
+				set { View3D_SetCameraToWorld(m_window.Handle, ref value); }
 			}
 
 			/// <summary>Set the camera to world transform and focus distance.</summary>
 			public void SetPosition(v4 position, v4 lookat, v4 up)
 			{
-				View3D_PositionCamera(m_ds.Handle, position, lookat, up);
+				View3D_PositionCamera(m_window.Handle, position, lookat, up);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
 			public void ResetView(v4 forward, v4 up)
 			{
-				View3D_ResetView(m_ds.Handle, forward, up);
+				View3D_ResetView(m_window.Handle, forward, up);
 			}
 
 			/// <summary>Move the camera to a position that can see the whole scene given camera direction 'forward'</summary>
@@ -1038,7 +1040,7 @@ namespace pr.gfx
 			/// <summary>Reset the zoom factor to 1f</summary>
 			public void ResetZoom()
 			{
-				View3D_ResetZoom(m_ds.Handle);
+				View3D_ResetZoom(m_window.Handle);
 			}
 
 			/// <summary>
@@ -1048,13 +1050,13 @@ namespace pr.gfx
 			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement</summary>
 			public void MouseNavigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
 			{
-				View3D_MouseNavigate(m_ds.Handle, m_ds.View.NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
+				View3D_MouseNavigate(m_window.Handle, m_window.NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
 			}
 
 			/// <summary>Direct camera relative navigation</summary>
 			public void Navigate(float dx, float dy, float dz)
 			{
-				View3D_Navigate(m_ds.Handle, dx, dy, dz);
+				View3D_Navigate(m_window.Handle, dx, dy, dz);
 			}
 
 			/// <summary>
@@ -1063,12 +1065,12 @@ namespace pr.gfx
 			/// The z component should be the world space distance from the camera.</summary>
 			public v4 WSPointFromNormSSPoint(v4 screen)
 			{
-				return View3D_WSPointFromNormSSPoint(m_ds.Handle, screen);
+				return View3D_WSPointFromNormSSPoint(m_window.Handle, screen);
 			}
 			public v4 WSPointFromSSPoint(Point screen)
 			{
-				var nss = m_ds.View.NormalisePoint(screen);
-				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_ds.Handle), 1.0f));
+				var nss = m_window.NormalisePoint(screen);
+				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f));
 			}
 
 			/// <summary>
@@ -1076,19 +1078,21 @@ namespace pr.gfx
 			/// The returned 'z' component will be the world space distance from the camera.</summary>
 			public v4 NormSSPointFromWSPoint(v4 world)
 			{
-				return View3D_NormSSPointFromWSPoint(m_ds.Handle, world);
+				return View3D_NormSSPointFromWSPoint(m_window.Handle, world);
 			}
 			public Point SSPointFromWSPoint(v4 world)
 			{
 				var nss = NormSSPointFromWSPoint(world);
-				return m_ds.View.ScreenSpacePoint(new v2(nss.x, nss.y));
+				return m_window.ScreenSpacePoint(new v2(nss.x, nss.y));
 			}
 			public Point SSPointFromWSPoint(v2 world)
 			{
 				return SSPointFromWSPoint(new v4(world, 0, 1));
 			}
 
-			// Return a screen space vector that is the world space line a->b projected onto the screen.
+			/// <summary>
+			/// Return a screen space vector that is the world space line a->b
+			/// projected onto the screen.</summary>
 			public v2 SSVecFromWSVec(v4 s, v4 e)
 			{
 				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
@@ -1097,19 +1101,32 @@ namespace pr.gfx
 			{
 				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
 			}
-			
+
+			/// <summary>
+			/// Return a world space vector that is the screen space line a->b
+			/// at the focus depth from the camera.</summary>
+			public v4 WSVecFromSSVec(Point s, Point e)
+			{
+				var nss_s = m_window.NormalisePoint(s);
+				var nss_e = m_window.NormalisePoint(e);
+				var z = View3D_CameraFocusDistance(m_window.Handle);
+				return
+					WSPointFromNormSSPoint(new v4(nss_e.x, nss_e.y, z, 1.0f)) -
+					WSPointFromNormSSPoint(new v4(nss_s.x, nss_s.y, z, 1.0f));
+			}
+
 			/// <summary>
 			/// Convert a screen space point into a position and direction in world space.
 			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
 			/// The z component of 'screen' should be the world space distance from the camera</summary>
 			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
 			{
-				View3D_WSRayFromNormSSPoint(m_ds.Handle, screen, out ws_point, out ws_direction);
+				View3D_WSRayFromNormSSPoint(m_window.Handle, screen, out ws_point, out ws_direction);
 			}
 			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
 			{
-				var nss = m_ds.View.NormalisePoint(screen);
-				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_ds.Handle), 1.0f), out ws_point, out ws_direction);
+				var nss = m_window.NormalisePoint(screen);
+				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f), out ws_point, out ws_direction);
 			}
 		}
 
@@ -1128,19 +1145,26 @@ namespace pr.gfx
 			{}
 			public Object(string ldr_script, int context_id, bool async)
 			{
-				EResult res = View3D_ObjectCreateLdr(ldr_script, context_id, out m_handle, async);
-				if (res != EResult.Success) throw new Exception(res);
+				m_handle = View3D_ObjectCreateLdr(ldr_script, context_id, async);
+				if (m_handle == HObject.Zero) throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
 
 			/// <summary>Create an object via callback</summary>
+			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb)
+				:this(name, colour, icount, vcount, edit_cb, DefaultContextId)
+			{}
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, int context_id)
 			{
-				EResult res = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, context_id, out m_handle);
-				if (res != EResult.Success) throw new Exception(res);
+				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, context_id);
+				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
 			}
-			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb)
-			:this(name, colour, icount, vcount, edit_cb, DefaultContextId)
+			public virtual void Dispose()
 			{
+				if (m_handle != HObject.Zero)
+				{
+					View3D_ObjectDelete(m_handle);
+					m_handle = HObject.Zero;
+				}
 			}
 
 			/// <summary>
@@ -1220,14 +1244,6 @@ namespace pr.gfx
 			{
 				View3D_ObjectSetTexture(m_handle, tex.m_handle, name);
 			}
-
-			/// <summary>Delete this object</summary>
-			public virtual void Dispose()
-			{
-				if (m_handle == IntPtr.Zero) return;
-				View3D_ObjectDelete(m_handle);
-				m_handle = IntPtr.Zero;
-			}
 		}
 
 		/// <summary>Texture resource wrapper</summary>
@@ -1256,8 +1272,8 @@ namespace pr.gfx
 			public Texture(uint width, uint height, IntPtr data, uint data_size, TextureOptions options)
 			{
 				m_owned = true;
-				var res = View3D_TextureCreate(width, height, data, data_size, ref options, out m_handle);
-				if (res != EResult.Success) throw new Exception(res);
+				m_handle = View3D_TextureCreate(width, height, data, data_size, ref options);
+				if (m_handle == HTexture.Zero) throw new Exception("Failed to create {0}x{1} texture".Fmt(width,height));
 				
 				View3D_TextureGetInfo(m_handle, out m_info);
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
@@ -1276,17 +1292,19 @@ namespace pr.gfx
 			public Texture(string tex_filepath, uint width, uint height, TextureOptions options)
 			{
 				m_owned = true;
-				var res = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey, out m_handle);
-				if (res != EResult.Success) throw new Exception(res);
+				m_handle = View3D_TextureCreateFromFile(tex_filepath, width, height, options.Mips, options.Filter, options.Filter, options.ColourKey);
+				if (m_handle == HTexture.Zero) throw new Exception("Failed to create texture from {0}".Fmt(tex_filepath));
 				View3D_TextureGetInfo(m_handle, out m_info);
 				View3D_TextureSetFilterAndAddrMode(m_handle, options.Filter, options.AddrU, options.AddrV);
 			}
 			
 			public void Dispose()
 			{
-				if (m_handle == IntPtr.Zero) return;
-				if (m_owned) View3D_TextureDelete(m_handle);
-				m_handle = IntPtr.Zero;
+				if (m_handle != HTexture.Zero)
+				{
+					if (m_owned) View3D_TextureDelete(m_handle);
+					m_handle = HTexture.Zero;
+				}
 			}
 
 			/// <summary>Get/Set the texture size. Set does not preserve the texture content</summary>
@@ -1316,24 +1334,21 @@ namespace pr.gfx
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level)
 			{
-				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
-				if (res != EResult.Success) throw new Exception(res);
+				View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR, 0);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, EFilter filter, uint colour_key)
 			{
-				EResult res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, filter, colour_key);
-				if (res != EResult.Success) throw new Exception(res);
+				View3D_TextureLoadSurface(m_handle, level, tex_filepath, null, null, filter, colour_key);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
 
 			/// <summary>Fill a surface of this texture from a file</summary>
 			public void LoadSurface(string tex_filepath, int level, Rectangle src_rect, Rectangle dst_rect, EFilter filter, uint colour_key)
 			{
-				var res = View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
-				if (res != EResult.Success) throw new Exception(res);
+				View3D_TextureLoadSurface(m_handle, level, tex_filepath, new []{dst_rect}, new []{src_rect}, filter, colour_key);
 				View3D_TextureGetInfo(m_handle, out m_info);
 			}
 			
@@ -1354,6 +1369,9 @@ namespace pr.gfx
 				/// <summary>GDI+ graphics interface</summary>
 				public Graphics Gfx { get; private set; }
 
+				/// <summary>
+				/// Lock 'tex' making 'Gfx' available.
+				/// Note: it 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
 				public Lock(Texture tex)
 				{
 					m_tex = tex.m_handle;
@@ -1364,8 +1382,6 @@ namespace pr.gfx
 				public void Dispose()
 				{
 					View3D_TextureReleaseDC(m_tex);
-					if (m_tex == View3D_TextureRenderTarget())
-						View3D_RestoreMainRT();
 				}
 			}
 
@@ -1382,9 +1398,6 @@ namespace pr.gfx
 		}
 
 		#region DLL extern functions
-
-		private const string Dll = "view3d";
-		private static IntPtr m_module = IntPtr.Zero;
 
 		// A good idea is to add a static method in the class that is using this class
 		// e.g.
@@ -1409,62 +1422,64 @@ namespace pr.gfx
 
 		/// <summary>True if the view3d dll has been loaded</summary>
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
+		private static IntPtr m_module = IntPtr.Zero;
+
+		private const string Dll = "view3d";
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern EResult           View3D_Initialise(HWND hwnd, RenderCB render_cb, ReportErrorCB error_cb, LogOutputCB log_cb, SettingsChangedCB settings_changed_cb);
-		[DllImport(Dll)] private static extern void              View3D_Shutdown();
+		[DllImport(Dll)] private static extern HContext          View3D_Initialise(ReportErrorCB error_cb, LogOutputCB log_cb);
+		[DllImport(Dll)] private static extern void              View3D_Shutdown(HContext context);
 
-		// Draw sets
-		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings              (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetSettings              (HDrawset drawset, string settings);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetRender            (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetAddObjectsById    (HDrawset drawset, int context_id);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObjectsById (HDrawset drawset, int context_id);
-		[DllImport(Dll)] private static extern EResult           View3D_DrawsetCreate            (out HDrawset handle);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetDelete            (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetAddObject         (HDrawset drawset, HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveObject      (HDrawset drawset, HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_DrawsetRemoveAllObjects  (HDrawset drawset);
-		[DllImport(Dll)] private static extern int               View3D_DrawsetObjectCount       (HDrawset drawset);
-		[DllImport(Dll)] private static extern bool              View3D_DrawsetHasObject         (HDrawset drawset, HObject obj);
+		// Windows
+		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, SettingsChangedCB settings_cb, RenderCB render_cb);
+		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
+		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
+		[DllImport(Dll)] private static extern void              View3D_AddObject              (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_RemoveObject           (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_RemoveAllObjects       (HWindow window);
+		[DllImport(Dll)] private static extern bool              View3D_HasObject              (HWindow window, HObject obj);
+		[DllImport(Dll)] private static extern int               View3D_ObjectCount            (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_AddObjectsById         (HWindow window, int context_id);
+		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, int context_id);
 
 		// Camera
-		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HDrawset drawset, out m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HDrawset drawset, ref m4x4 c2w);
-		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HDrawset drawset, v4 position, v4 lookat, v4 up);
-		[DllImport(Dll)] private static extern float             View3D_CameraFocusDistance    (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFocusDistance (HDrawset drawset, float dist);
-		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HDrawset drawset, float aspect);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFovX          (HDrawset drawset, float fovX);
-		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HDrawset drawset, float fovY);
-		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HDrawset drawset, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern void              View3D_MouseNavigate          (HDrawset drawset, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern void              View3D_Navigate               (HDrawset drawset, float dx, float dy, float dz);
-		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HDrawset drawset, out v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HDrawset drawset, v4 axis);
-		[DllImport(Dll)] private static extern void              View3D_ResetView              (HDrawset drawset, v4 forward, v4 up);
-		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HDrawset drawset, float dist);
-		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HDrawset drawset, out v4 position);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HDrawset drawset, v4 position);
-		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HDrawset drawset, v4 screen);
-		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HDrawset drawset, v4 world);
-		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HDrawset drawset, v4 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HWindow window, out m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_SetCameraToWorld       (HWindow window, ref m4x4 c2w);
+		[DllImport(Dll)] private static extern void              View3D_PositionCamera         (HWindow window, v4 position, v4 lookat, v4 up);
+		[DllImport(Dll)] private static extern float             View3D_CameraFocusDistance    (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFocusDistance (HWindow window, float dist);
+		[DllImport(Dll)] private static extern float             View3D_CameraAspect           (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetAspect        (HWindow window, float aspect);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovX             (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFovX          (HWindow window, float fovX);
+		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HWindow window, float fovY);
+		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HWindow window, float near, float far, bool focus_relative);
+		[DllImport(Dll)] private static extern void              View3D_MouseNavigate          (HWindow window, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern void              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
+		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HWindow window, out v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HWindow window, v4 axis);
+		[DllImport(Dll)] private static extern void              View3D_ResetView              (HWindow window, v4 forward, v4 up);
+		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HWindow window, float dist);
+		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HWindow window, out v4 position);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HWindow window, v4 position);
+		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HWindow window, v4 screen);
+		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HWindow window, v4 world);
+		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
-		[DllImport(Dll)] private static extern Light             View3D_LightProperties          (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HDrawset drawset, ref Light light);
-		[DllImport(Dll)] private static extern void              View3D_LightSource              (HDrawset drawset, v4 position, v4 direction, bool camera_relative);
-		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HDrawset drawset, HWND parent);
+		[DllImport(Dll)] private static extern Light             View3D_LightProperties          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetLightProperties       (HWindow window, ref Light light);
+		[DllImport(Dll)] private static extern void              View3D_LightSource              (HWindow window, v4 position, v4 direction, bool camera_relative);
+		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreateLdr          (string ldr_script, int context_id, out HObject obj, bool async);
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id, out HObject obj);
-		[DllImport(Dll)] private static extern EResult           View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
+		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, int context_id, bool async);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id);
+		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
@@ -1475,9 +1490,9 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 
 		// Materials
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options, out HTexture tex);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureCreateFromFile       (string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key, out HTexture tex);
-		[DllImport(Dll)] private static extern EResult           View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreate               (uint width, uint height, IntPtr data, uint data_size, ref TextureOptions options);
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureCreateFromFile       (string tex_filepath, uint width, uint height, uint mips, EFilter filter, EFilter mip_filter, uint colour_key);
+		[DllImport(Dll)] private static extern void              View3D_TextureLoadSurface          (HTexture tex, int level, string tex_filepath, Rectangle[] dst_rect, Rectangle[] src_rect, EFilter filter, uint colour_key);
 		[DllImport(Dll)] private static extern void              View3D_TextureDelete               (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureGetInfo              (HTexture tex, out ImageInfo info);
 		[DllImport(Dll)] private static extern EResult           View3D_TextureGetInfoFromFile      (string tex_filepath, out ImageInfo info);
@@ -1485,41 +1500,41 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern IntPtr            View3D_TextureGetDC                (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureReleaseDC            (HTexture tex);
 		[DllImport(Dll)] private static extern void              View3D_TextureResize               (HTexture tex, uint width, uint height, bool all_instances, bool preserve);
-		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         ();
+		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
 
 		// Rendering
-		[DllImport(Dll)] private static extern void              View3D_Present                  ();
-		[DllImport(Dll)] private static extern void              View3D_SignalRefresh            ();
-		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (out int width, out int height);
-		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (int width, int height);
-		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 ();
-		[DllImport(Dll)] private static extern void              View3D_SetViewport              (Viewport vp);
-		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HDrawset drawset, EFillMode mode);
-		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HDrawset drawset, bool render2d);
-		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HDrawset drawset, int aarrggbb);
+		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (HWindow window, out int width, out int height);
+		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (HWindow window, int width, int height);
+		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetViewport              (HWindow window, Viewport vp);
+		[DllImport(Dll)] private static extern EFillMode         View3D_FillMode                 (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetFillMode              (HWindow window, EFillMode mode);
+		[DllImport(Dll)] private static extern bool              View3D_Orthographic             (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetOrthographic          (HWindow window, bool render2d);
+		[DllImport(Dll)] private static extern int               View3D_BackgroundColour         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetBackgroundColour      (HWindow window, int aarrggbb);
 
 		// Tools
-		[DllImport(Dll)] private static extern bool              View3D_MeasureToolVisible       ();
-		[DllImport(Dll)] private static extern void              View3D_ShowMeasureTool          (HDrawset drawset, bool show);
-		[DllImport(Dll)] private static extern bool              View3D_AngleToolVisible         ();
-		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HDrawset drawset, bool show);
+		[DllImport(Dll)] private static extern bool              View3D_MeasureToolVisible       (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowMeasureTool          (HWindow window, bool show);
+		[DllImport(Dll)] private static extern bool              View3D_AngleToolVisible         (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HWindow window, bool show);
 
 		// Miscellaneous
-		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            ();
-		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabled       ();
-		[DllImport(Dll)] private static extern void              View3D_SetDepthBufferEnabled    (bool enabled);
-		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           ();
-		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_ShowFocusPoint           (HDrawset drawset, bool show);
-		[DllImport(Dll)] private static extern void              View3D_SetFocusPointSize        (HDrawset drawset, float size);
-		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HDrawset drawset);
-		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HDrawset drawset, bool show);
-		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HDrawset drawset, float size);
-		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (bool show);
+		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);
+		[DllImport(Dll)] private static extern bool              View3D_DepthBufferEnabled       (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_SetDepthBufferEnabled    (HWindow window, bool enabled);
+		[DllImport(Dll)] private static extern bool              View3D_FocusPointVisible        (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowFocusPoint           (HWindow window, bool show);
+		[DllImport(Dll)] private static extern void              View3D_SetFocusPointSize        (HWindow window, float size);
+		[DllImport(Dll)] private static extern bool              View3D_OriginVisible            (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowOrigin               (HWindow window, bool show);
+		[DllImport(Dll)] private static extern void              View3D_SetOriginSize            (HWindow window, float size);
+		[DllImport(Dll)] private static extern void              View3D_CreateDemoScene          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
 		#endregion
 	}

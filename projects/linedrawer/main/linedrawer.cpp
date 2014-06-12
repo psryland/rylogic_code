@@ -39,22 +39,25 @@ namespace ldr
 			return ldr::UserSettings(path, true);
 		}
 
+		static BOOL const gdi_support = TRUE;
+		#pragma message(PR_LINK "gdi support enabled")
+
 		// Return settings to configure the render
-		pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area)
+		pr::rdr::RdrSettings RdrSettings()
 		{
-			auto settings = pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area);
+			return pr::rdr::RdrSettings(gdi_support);
+		}
 
-			// Disable multisampling when debugging as pix can't handle it
-			settings.m_multisamp = pr::rdr::MultiSamp();
-			#pragma message(PR_LINK "multisamp disabled")
-
-			return settings;
+		// Return settings for the render window
+		pr::rdr::WndSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
+		{
+			return pr::rdr::WndSettings(hwnd, TRUE, gdi_support, client_area);
 		}
 	};
 
 	Main::Main(MainGUI& gui)
 		:base(Setup(), gui)
-		,m_nav(m_cam, m_rdr.RenderTargetSize(), m_settings.m_CameraAlignAxis)
+		,m_nav(m_cam, m_window.RenderTargetSize(), m_settings.m_CameraAlignAxis)
 		,m_store()
 		,m_plugin_mgr(this)
 		,m_lua_src()
@@ -131,7 +134,7 @@ namespace ldr
 			m_scene.Render();
 		}
 
-		m_rdr.Present();
+		m_window.Present();
 	}
 
 	// Reload all data
@@ -168,10 +171,32 @@ namespace ldr
 	{
 		try
 		{
-			/*
 			{// For testing..
+				using namespace pr;
 				using namespace pr::rdr;
 
+								//pr::v4 lines[] =
+				//{
+				//	pr::v4::make(0,-1,0,1), pr::v4::make(0,1,0,1),
+				//	pr::v4::make(-1,0,0,1), pr::v4::make(1,0,0,1),
+				//};
+				auto gditex = m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, 512,512, "test");
+				auto rt = gditex->GetD2DRenderTarget();
+				
+				rt->BeginDraw();
+				D3DPtr<ID2D1SolidColorBrush> bsh;
+				rt->Clear(D2D1::ColorF(D2D1::ColorF::Enum::DarkGreen));
+				pr::Throw(rt->CreateSolidColorBrush(D2D1::ColorF(1.0f,1.0f,0.0f), &bsh.m_ptr));
+				rt->FillEllipse(D2D1::Ellipse(D2D1::Point2F(256,256),200,100), bsh.m_ptr);
+				rt->EndDraw();
+
+				NuggetProps mat;
+				mat.m_tex_diffuse = gditex;//m_rdr.m_tex_mgr.FindTexture(EStockTexture::Checker);//
+				auto model = ModelGenerator<>::Quad(m_rdr, 2, 2, iv2Zero, Colour32White, &mat);
+				m_test_model.m_model = model;
+				m_test_model_enable = true;
+
+			/*
 				//if (m_scene.FindRStep<ShadowMap>() == nullptr)
 				//	m_scene.m_render_steps.insert(begin(m_scene.m_render_steps), std::make_shared<ShadowMap>(m_scene, m_scene.m_global_light, pr::iv2::make(1024,1024)));
 
@@ -200,11 +225,11 @@ namespace ldr
 				//pt.m_tex = m_rdr.m_tex_mgr.FindTexture(pr::rdr::EStockTexture::Checker);
 				//pt.m_o2w = pr::rdr::ProjectedTexture::MakeTransform(pr::v4::make(15,0,0,1), pr::v4Origin, pr::v4YAxis, 1.0f, pr::maths::tau_by_4, 0.01f, 100.0f, false);
 				//m_scene.m_render_steps[0]->as<pr::rdr::ForwardRender>().m_proj_tex.push_back(pt);
-			}
 			//*/
+			}
 
-			std::string scene = pr::ldr::CreateDemoScene();
-			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+			//std::string scene = pr::ldr::CreateDemoScene();
+			//pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }

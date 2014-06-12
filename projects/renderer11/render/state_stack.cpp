@@ -23,7 +23,7 @@ namespace pr
 			,m_init_state()
 			,m_pending()
 			,m_current()
-			,m_tex_default(scene.m_rdr->m_tex_mgr.FindTexture(EStockTexture::White))
+			,m_tex_default(scene.m_wnd->tex_mgr().FindTexture(EStockTexture::White))
 			,m_dbg()
 		{
 			// Create the debugging interface
@@ -133,21 +133,21 @@ namespace pr
 			// Set the depth buffering states
 			if (current.m_dsb != pending.m_dsb || force)
 			{
-				auto ptr = m_scene.m_rdr->m_ds_mgr.State(pending.m_dsb);
+				auto ptr = m_scene.m_wnd->ds_mgr().State(pending.m_dsb);
 				m_dc->OMSetDepthStencilState(ptr.m_ptr, 0);
 			}
 
 			// Set the rasterizer states
 			if (current.m_rsb != pending.m_rsb || force)
 			{
-				auto ptr = m_scene.m_rdr->m_rs_mgr.State(pending.m_rsb);
+				auto ptr = m_scene.m_wnd->rs_mgr().State(pending.m_rsb);
 				m_dc->RSSetState(ptr.m_ptr);
 			}
 
 			// Set the blend states
 			if (current.m_bsb != pending.m_bsb || force)
 			{
-				auto ptr = m_scene.m_rdr->m_bs_mgr.State(pending.m_bsb);
+				auto ptr = m_scene.m_wnd->bs_mgr().State(pending.m_bsb);
 				m_dc->OMSetBlendState(ptr.m_ptr, 0, 0xFFFFFFFF); // todo, the BlendFactor and SampleMask should really be part of the BSBlock
 			}
 		}

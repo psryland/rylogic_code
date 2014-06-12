@@ -3,10 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #include "renderer11/util/stdafx.h"
-#include "pr/renderer11/render/renderer.h"
+#include "pr/renderer11/render/window.h"
 #include "pr/renderer11/render/scene.h"
-#include "pr/renderer11/lights/light.h"
+#include "pr/renderer11/shaders/shader_manager.h"
 #include "pr/renderer11/steps/shadow_map.h"
+#include "pr/renderer11/lights/light.h"
 #include "pr/renderer11/util/stock_resources.h"
 #include "renderer11/render/state_stack.h"
 #include "renderer11/shaders/common.h"
@@ -63,8 +64,8 @@ namespace pr
 			m_rtv = nullptr;
 			m_srv = nullptr;
 
-			auto device = m_scene->m_rdr->Device();
-			auto dc = m_scene->m_rdr->ImmediateDC();
+			auto device = m_scene->m_wnd->Device();
+			auto dc = m_scene->m_wnd->ImmediateDC();
 
 			// Create the smap texture
 			TextureDesc tdesc;
@@ -102,7 +103,7 @@ namespace pr
 		// Bind the smap RT to the output merger
 		void ShadowMap::BindRT(bool bind)
 		{
-			auto dc = m_scene->m_rdr->ImmediateDC();
+			auto dc = m_scene->m_wnd->ImmediateDC();
 			if (bind)
 			{
 				// Save a reference to the main render target/depth buffer

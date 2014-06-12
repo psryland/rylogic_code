@@ -73,8 +73,19 @@ namespace pr
 			//   Unfortunately it can't return void to pass to a parameterless constructor so use int:-/
 			int UserSettings() { return 0; }
 
+			static BOOL const GdiCompat = FALSE;
+
 			// Return settings to configure the render
-			pr::rdr::RdrSettings RdrSettings(HWND hwnd, pr::iv2 const& client_area) { return pr::rdr::RdrSettings(hwnd, TRUE, FALSE, client_area); }
+			pr::rdr::RdrSettings RdrSettings()
+			{
+				return pr::rdr::RdrSettings(GdiCompat);
+			}
+
+			// Return settings for the render window
+			pr::rdr::WndSettings RdrWindowSettings(HWND hwnd, pr::iv2 const& client_area)
+			{
+				return pr::rdr::WndSettings(hwnd, TRUE, GdiCompat, client_area);
+			}
 		};
 
 		// This type contains the main app logic. It's lifetime is controlled by the GUI.
@@ -93,25 +104,30 @@ namespace pr
 			// so they can call: MyType(...) :base(..) {}
 			typedef Main<UserSettings,MainGUI> base;
 
-			UserSettings   m_settings;    // Application wide user settings
-			pr::Renderer   m_rdr;         // The renderer
-			pr::rdr::Scene m_scene;       // The main view
-			pr::Camera     m_cam;         // A camera
-			MainGUI&       m_gui;         // The GUI that owns this app logic class
-			bool           m_rdr_pending; // Render call batching, true if render has been called at least once
+			UserSettings    m_settings;    // Application wide user settings
+			pr::Renderer    m_rdr;         // The renderer
+			pr::rdr::Window m_window;      // The window that will be rendered into
+			pr::rdr::Scene  m_scene;       // The main view
+			pr::Camera      m_cam;         // A camera
+			MainGUI&        m_gui;         // The GUI that owns this app logic class
+			bool            m_rdr_pending; // Render call batching, true if render has been called at least once
 
 			// Construct using a template setup object.
 			template <typename Setup>
 			Main(Setup setup, MainGUI& gui)
 				:m_settings(setup.UserSettings())
-				,m_rdr(setup.RdrSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
+				,m_rdr(setup.RdrSettings())
+				,m_window(m_rdr, setup.RdrWindowSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
 				//,m_scene(m_rdr,{pr::rdr::ERenderStep::ForwardRender})
-				,m_scene(m_rdr,{pr::rdr::ERenderStep::ShadowMap, pr::rdr::ERenderStep::ForwardRender})
+				,m_scene(m_window,{pr::rdr::ERenderStep::ShadowMap, pr::rdr::ERenderStep::ForwardRender})
 				//,m_scene(m_rdr,{pr::rdr::ERenderStep::GBufferCreate, pr::rdr::ERenderStep::DSLighting})
 				,m_cam()
 				,m_gui(gui)
 				,m_rdr_pending(false)
 			{
+				// Bind the window to the OM
+				m_window.RestoreRT();
+
 				// Position the camera
 				m_cam.Aspect(1.0f);
 				m_cam.FovY(pr::maths::tau_by_8);
@@ -144,7 +160,7 @@ namespace pr
 			// The size of the window has changed
 			virtual void Resize(pr::iv2 const& size)
 			{
-				m_rdr.RenderTargetSize(size);
+				m_window.RenderTargetSize(size);
 				m_cam.Aspect(size.x / float(size.y));
 			}
 
@@ -182,7 +198,7 @@ namespace pr
 				m_scene.Render();
 
 				// Show the result
-				m_rdr.Present();
+				m_window.Present();
 			}
 
 		protected:

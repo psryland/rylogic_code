@@ -47,3 +47,19 @@
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
+
+#include "pr/view3d/view3d.h"
+#include "pr/view3d/prmaths.h"
+
+namespace view3d
+{
+	typedef std::set<View3DObject>  ObjectCont;
+	typedef std::set<View3DWindow>  WindowCont;
+	typedef std::lock_guard<std::recursive_mutex> LockGuard;
+
+	#define PR_RDR_INST(x)\
+		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\
+		x(pr::rdr::ModelPtr ,m_model ,pr::rdr::EInstComp::ModelPtr)
+	PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST)
+	#undef PR_RDR_INST
+}

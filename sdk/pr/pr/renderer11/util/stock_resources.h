@@ -21,7 +21,6 @@ namespace pr
 
 		#define PR_ENUM(x) \
 			x(Invalid ,= InvalidId)\
-			x(MainRT  ,)\
 			x(Black   ,)\
 			x(White   ,)\
 			x(Checker ,)

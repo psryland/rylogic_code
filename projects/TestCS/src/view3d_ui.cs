@@ -33,7 +33,7 @@ namespace TestCS
 
 			// Simple create object
 			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}");
-			m_view3d.Drawset.AddObject(m_obj0);
+			m_view3d.Window.AddObject(m_obj0);
 
 			// Create object via callback
 			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20,
@@ -51,7 +51,7 @@ namespace TestCS
 					prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
 					geom_type = View3d.EGeom.Vert;
 				});
-			m_view3d.Drawset.AddObject(m_obj1);
+			m_view3d.Window.AddObject(m_obj1);
 
 			// Create a texture and assign it to an object
 			m_tex0 = new View3d.Texture(100,100);
@@ -65,8 +65,8 @@ namespace TestCS
 
 			//m_view3d.View3d.CreateDemoScene();
 			
-			m_view3d.Drawset.Camera.ResetView();
-			m_view3d.Drawset.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
+			m_view3d.Camera.ResetView();
+			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 		}
 		protected override void Dispose(bool disposing)
 		{

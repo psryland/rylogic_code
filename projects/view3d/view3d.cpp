@@ -6,15 +6,16 @@
 #include "stdafx.h"
 #include "pr/view3d/view3d.h"
 #include "pr/view3d/prmaths.h"
-#include "view3d/renderer_instance.h"
+#include "view3d/context.h"
+#include "view3d/window.h"
 
-using namespace view3d;
 using namespace pr::rdr;
 using namespace pr::log;
+using namespace view3d;
 
 CAppModule g_module;
 
-#pragma region("Dll entry point")
+#pragma region Dll entry point
 #ifdef _MANAGED
 #pragma managed(push, off)
 #endif
@@ -34,146 +35,109 @@ BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
 #endif
 #pragma endregion
 
-// Global data for this dll
-struct DllData
-	:pr::AlignTo<16>
-	,pr::events::IRecv<pr::ldr::Evt_Refresh>
-	,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
-	,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
-{
-	View3D_RenderCB        m_render_cb;
-	View3D_ReportErrorCB   m_error_cb;
-	View3D_LogOutputCB     m_log_cb;
-	View3D_SettingsChanged m_settings_cb;
-	pr::Logger             m_log;
-	std::string            m_settings;
-	bool                   m_compatible;
-	RendererInstance       m_rdr;
-	std::recursive_mutex   m_mutex;
-	std::thread::id        m_this_thread;
+// The view3d dll is loaded once per application, although an application may have
+// multiple windows and may call Initialise/Shutdown a number of times.
+// We want to be able to create View3d objects in isolation which means one
+// global context within the dll. This also means one renderer, one list of objects
+static Context* g_ctx = nullptr;
+static Context& Dll() { if (g_ctx) return *g_ctx; throw std::exception("View3d not initialised"); }
 
-	DllData(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
-		:m_render_cb(render_cb)
-		,m_error_cb(error_cb)
-		,m_log_cb(log_cb)
-		,m_settings_cb(settings_cb)
-		,m_log("view3d", [this](pr::log::Event const& ev){ LogOutput(ev); })
-		,m_settings()
-		,m_compatible(TestSystemCompatibility())
-		,m_rdr(hwnd)
-		,m_mutex()
-		,m_this_thread(std::this_thread::get_id())
-	{
-		AtlInitCommonControls(ICC_BAR_CLASSES); // add flags to support other controls
-		m_rdr.CreateStockObjects();
-	}
-
-	// Forward log data to the callback
-	void LogOutput(pr::log::Event const& ev)
-	{
-		if (!m_log_cb) return;
-		m_log_cb(static_cast<EView3DLogLevel>(ev.m_level), ev.m_timestamp.count(), ev.m_msg.c_str());
-	}
-
-	// Report an error via the callback
-	void ReportError(pr::string<> msg)
-	{
-		m_log.Write(ELevel::Error, msg);
-		if (!m_error_cb) return;
-		if (msg.last() != '\n') msg.push_back('\n');
-		m_error_cb(msg.c_str());
-	}
-	void ReportError(pr::string<> msg, std::exception const& ex)
-	{
-		m_log.Write(ELevel::Error, ex, msg);
-		if (!m_error_cb) return;
-		if (msg.last() != '\n') msg.push_back('\n');
-		m_error_cb(pr::FmtS("%sReason: %s\n", msg.c_str(), ex.what()));
-	}
-
-	// Invoke the settings changed callback
-	void NotifySettingsChanged()
-	{
-		if (m_settings_cb) return;
-		m_settings_cb();
-	}
-
-private:
-	DllData(DllData const&);
-	DllData& operator=(DllData const&);
-
-	// Event handlers
-	void OnEvent(pr::ldr::Evt_Refresh const&) override { m_render_cb(); }
-	void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override { m_render_cb(); }
-	void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override { m_render_cb(); }
-};
-
-typedef std::lock_guard<std::recursive_mutex> LockGuard;
-
-// Singleton accessors
-static std::shared_ptr<DllData> g_dll = nullptr;
-inline DllData&          Dll() { return *g_dll; }
-inline RendererInstance& Rdr() { return g_dll->m_rdr; }
-
-#define LOCK_GUARD LockGuard lock(Dll().m_mutex)
+#define DllLockGuard LockGuard lock(Dll().m_mutex)
+#define DllReportError Dll().ReportError
 
 // Initialise the dll
-VIEW3D_API EView3DResult __stdcall View3D_Initialise(HWND hwnd, View3D_RenderCB render_cb, View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb, View3D_SettingsChanged settings_cb)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb)
 {
 	try
 	{
-		// Already initialised?
-		if (g_dll != nullptr)
-			return EView3DResult::Success;
+		if (g_ctx == nullptr)
+			g_ctx = new Context(error_cb, log_cb);
 
-		// Allocate the dll data
-		g_dll.reset(new DllData(hwnd, render_cb, error_cb, log_cb, settings_cb)); // Don't use std::make_shared, because it doesn't call operator new()
-		PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(g_dll.get()), "dll data not aligned");
-
-		return EView3DResult::Success;
+		static View3DContext context = nullptr;
+		g_ctx->m_inits.insert(++context);
+		return context;
 	}
 	catch (std::exception const& e)
 	{
 		error_cb(pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()));
-		return EView3DResult::Failed;
+		return nullptr;
 	}
 	catch (...)
 	{
 		error_cb("Failed to initialise View3D.\nReason: An unknown exception occurred\n");
-		return EView3DResult::Failed;
+		return nullptr;
 	}
 }
-VIEW3D_API void __stdcall View3D_Shutdown()
+VIEW3D_API void __stdcall View3D_Shutdown(View3DContext context)
 {
-	PR_ASSERT(PR_DBG, std::this_thread::get_id() == Dll().m_this_thread, "cross thread called to view3d");
-	g_dll = nullptr;
+	if (!g_ctx) return;
+
+	g_ctx->m_inits.erase(context);
+	if (!g_ctx->m_inits.empty()) return;
+
+	delete g_ctx;
+	g_ctx = nullptr;
 }
 
-// Generate a settings string for the view
-VIEW3D_API char const* __stdcall View3D_GetSettings(View3DDrawset drawset)
+// Create/Destroy a window
+VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
 {
-	LOCK_GUARD;
 	try
 	{
-		std::stringstream out;
-		out << "*SceneSettings {" << Rdr().m_obj_cont_ui.Settings() << "}\n";
-		out << "*Light {\n" << drawset->m_light.Settings() << "}\n";
-		Dll().m_settings = out.str();
-		return Dll().m_settings.c_str();
+		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, settings_cb, render_cb));
+
+		DllLockGuard;
+		Dll().m_wnd_cont.insert(win.get());
+		return win.release();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_GetSettings failed", ex);
-		return "";
+		DllReportError("View3D_CreateWindow failed", ex);
+		return nullptr;
+	}
+}
+VIEW3D_API void __stdcall View3D_DestroyWindow(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		
+		DllLockGuard;
+		Dll().m_wnd_cont.erase(window);
+		delete window;
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_DestroyWindow failed", ex);
 	}
 }
 
-// Parse a settings string and apply to the view
-VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* settings)
+// Generate/Parse a settings string for the view
+VIEW3D_API char const* __stdcall View3D_GetSettings(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!window) throw std::exception("window is null");
+		
+		std::stringstream out;
+		//out << "*SceneSettings {" << window->m_obj_cont_ui.Settings() << "}\n";
+		out << "*Light {\n" << window->m_light.Settings() << "}\n";
+		
+		window->m_settings = out.str();
+		return window->m_settings.c_str();
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_GetSettings failed", ex);
+		return "";
+	}
+}
+VIEW3D_API void __stdcall View3D_SetSettings(View3DWindow window, char const* settings)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
 		// Parse the settings
 		pr::script::Reader reader;
 		pr::script::PtrSrc src(settings);
@@ -185,462 +149,339 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DDrawset drawset, char const* 
 			{
 				pr::string<> desc;
 				reader.ExtractSection(desc, false);
-				Rdr().m_obj_cont_ui.Settings(desc.c_str());
+				//window->m_obj_cont_ui.Settings(desc.c_str());
 				continue;
 			}
 			if (pr::str::EqualI(kw, "Light"))
 			{
 				pr::string<> desc;
 				reader.ExtractSection(desc, false);
-				drawset->m_light.Settings(desc.c_str());
+				window->m_light.Settings(desc.c_str());
 				continue;
 			}
 		}
-		View3D_GetSettings(drawset);
-		Dll().NotifySettingsChanged();
+
+		// Notify of settings changed
+		window->NotifySettingsChanged();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetSettings failed", ex);
+		DllReportError("View3D_SetSettings failed", ex);
 	}
 }
 
-// Render a drawset
-// Remember to call View3D_Present() after all View3D_Render calls
-VIEW3D_API void __stdcall View3D_DrawsetRender(View3DDrawset drawset)
+// Add/Remove objects to/from a window
+VIEW3D_API void __stdcall View3D_AddObject(View3DWindow window, View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		Rdr().m_last_drawset = drawset;
-
-		auto& scene = Rdr().m_scene;
-
-		// Reset the drawlist
-		scene.ClearDrawlists();
-
-		// Add objects from the drawset to the viewport
-		for (auto& obj : drawset->m_objects)
-			obj->AddToScene(scene);
-
-		// Add the measure tool objects if the window is visible
-		if (Rdr().m_measure_tool_ui.IsWindowVisible() && Rdr().m_measure_tool_ui.Gfx())
-			Rdr().m_measure_tool_ui.Gfx()->AddToScene(scene);;
-
-		// Add the angle tool objects if the window is visible
-		if (Rdr().m_angle_tool_ui.IsWindowVisible() && Rdr().m_angle_tool_ui.Gfx())
-			Rdr().m_angle_tool_ui.Gfx()->AddToScene(scene);;
-
-		// Position the focus point
-		if (drawset->m_focus_point_visible)
-		{
-			float scale = drawset->m_focus_point_size * drawset->m_camera.FocusDist();
-			Rdr().m_focus_point.m_i2w = pr::Scale4x4(scale, drawset->m_camera.FocusPoint());
-			scene.AddInstance(Rdr().m_focus_point);
-		}
-		// Scale the origin point
-		if (drawset->m_origin_point_visible)
-		{
-			float scale = drawset->m_origin_point_size * pr::Length3(drawset->m_camera.CameraToWorld().pos);
-			Rdr().m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
-			scene.AddInstance(Rdr().m_origin_point);
-		}
-
-		{// Set the view and projection matrices
-			pr::Camera& cam = drawset->m_camera;
-			scene.SetView(cam);
-		}
-
-		// Set the light source
-		Light& light = scene.m_global_light;
-		light = drawset->m_light;
-		if (drawset->m_light_is_camera_relative)
-		{
-			light.m_direction = drawset->m_camera.CameraToWorld() * drawset->m_light.m_direction;
-			light.m_position  = drawset->m_camera.CameraToWorld() * drawset->m_light.m_position;
-		}
-
-		// Set the background colour
-		scene.m_bkgd_colour = drawset->m_background_colour;
-
-		// Set the global fill mode
-		switch (drawset->m_fill_mode) {
-		case EView3DFillMode::Solid:     scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EView3DFillMode::Wireframe: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EView3DFillMode::SolidWire: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		}
-
-		// Render the scene
-		scene.Render();
-
-		// Render wire frame over solid for 'SolidWire' mode
-		if (drawset->m_fill_mode == EView3DFillMode::SolidWire)
-		{
-			auto& fr = scene.RStep<ForwardRender>();
-			scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-			scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
-			fr.m_clear_bb = false;
-
-			scene.Render();
-
-			fr.m_clear_bb = true;
-			scene.m_rsb.Clear(ERS::FillMode);
-			scene.m_bsb.Clear(EBS::BlendEnable, 0);
-		}
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_Render failed", ex);
-	}
-}
-
-// Create/Delete a draw set
-VIEW3D_API EView3DResult __stdcall View3D_DrawsetCreate(View3DDrawset& drawset)
-{
-	LOCK_GUARD;
-	try
-	{
-		drawset = new Drawset();
-		Rdr().m_drawset.insert(drawset);
-
-		// Set the initial aspect ratio
-		pr::iv2 client_area = Rdr().m_renderer.RenderTargetSize();
-		float aspect = client_area.x / float(client_area.y);
-		drawset->m_camera.Aspect(aspect);
-
-		return EView3DResult::Success;
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_DrawsetCreate failed", ex);
-		return EView3DResult::Failed;
-	}
-}
-VIEW3D_API void __stdcall View3D_DrawsetDelete(View3DDrawset drawset)
-{
-	LOCK_GUARD;
-	try
-	{
-		View3D_DrawsetRemoveAllObjects(drawset);
-		Rdr().m_drawset.erase(drawset);
-		delete drawset;
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_DrawsetDelete failed", ex);
-	}
-}
-
-// Add/Remove objects by context id
-VIEW3D_API void __stdcall View3D_DrawsetAddObjectsById(View3DDrawset drawset, int context_id)
-{
-	LOCK_GUARD;
-	try
-	{
-		for (std::size_t i = 0, iend = Rdr().m_obj_cont.size(); i != iend; ++i)
-			if (Rdr().m_obj_cont[i]->m_context_id == context_id)
-				View3D_DrawsetAddObject(drawset, Rdr().m_obj_cont[i].m_ptr);
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_DrawsetAddObejctsById failed", ex);
-	}
-}
-VIEW3D_API void __stdcall View3D_DrawsetRemoveObjectsById(View3DDrawset drawset, int context_id)
-{
-	LOCK_GUARD;
-	try
-	{
-		pr::ldr::LdrObject::MatchId in_this_context(context_id);
-		for (ObjectCont::iterator i = drawset->m_objects.begin(), iend = drawset->m_objects.end(); i != iend; ++i)
-			if ((*i)->m_context_id == context_id) drawset->m_objects.erase(i);
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_DrawsetRemoveObjectsById failed", ex);
-	}
-}
-
-// Add/Remove an object to/from a drawset
-VIEW3D_API void __stdcall View3D_DrawsetAddObject(View3DDrawset drawset, View3DObject object)
-{
-	LOCK_GUARD;
-	try
-	{
-		PR_ASSERT(PR_DBG, drawset != 0 && object != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
+		if (!window) throw std::exception("window is null");
 		if (!object) throw std::exception("object is null");
-		ObjectCont::const_iterator iter = drawset->m_objects.find(object);
-		if (iter == drawset->m_objects.end()) drawset->m_objects.insert(iter, object);
+		
+		DllLockGuard;
+		auto iter = window->m_objects.find(object);
+		if (iter == window->m_objects.end())
+			window->m_objects.insert(iter, object);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DrawsetAddObject failed", ex);
+		DllReportError("View3D_AddObject failed", ex);
 	}
 }
-VIEW3D_API void __stdcall View3D_DrawsetRemoveObject(View3DDrawset drawset, View3DObject object)
+VIEW3D_API void __stdcall View3D_RemoveObject(View3DWindow window, View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
+		if (!window) throw std::exception("window is null");
 		if (!object) return;
-		drawset->m_objects.erase(object);
+
+		DllLockGuard;
+		window->m_objects.erase(object);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DrawsetRemoveObject failed", ex);
+		DllReportError("View3D_RemoveObject failed", ex);
+	}
+}
+VIEW3D_API void __stdcall View3D_RemoveAllObjects(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_objects.clear();
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_RemoveAllObjects failed", ex);
 	}
 }
 
-// Remove all objects from the drawset
-VIEW3D_API void __stdcall View3D_DrawsetRemoveAllObjects(View3DDrawset drawset)
+// Return true if 'object' is amoung 'window's objects
+VIEW3D_API BOOL __stdcall View3D_HasObject(View3DWindow window, View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_objects.clear();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_objects.find(object) != std::end(window->m_objects);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DrawsetRemoveAllObjects failed", ex);
+		DllReportError("View3D_HasObject failed", ex);
+		return false;
 	}
 }
 
-// Return the number of objects assigned to this drawset
-VIEW3D_API int __stdcall View3D_DrawsetObjectCount(View3DDrawset drawset)
+// Return the number of objects assigned to 'window'
+VIEW3D_API int __stdcall View3D_ObjectCount(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return int(drawset->m_objects.size());
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return int(window->m_objects.size());
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DrawsetObjectCount failed", ex);
+		DllReportError("View3D_ObjectCount failed", ex);
 		return 0;
 	}
 }
 
-// Return true if 'object' is included in 'drawset'
-VIEW3D_API BOOL __stdcall View3D_DrawsetHasObject(View3DDrawset drawset, View3DObject object)
+// Add/Remove objects by context id
+VIEW3D_API void __stdcall View3D_AddObjectsById(View3DWindow window, int context_id)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_objects.find(object) != std::end(drawset->m_objects);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		for (auto obj : Dll().m_obj_cont)
+			if (obj->m_context_id == context_id)
+				View3D_AddObject(window, obj.m_ptr);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DrawsetHasObject failed", ex);
-		return false;
+		DllReportError("View3D_AddObjectsById failed", ex);
+	}
+}
+VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, int context_id)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		pr::ldr::LdrObject::MatchId in_this_context(context_id);
+		for (auto obj : window->m_objects)
+			if (obj->m_context_id == context_id)
+				window->m_objects.erase(obj);
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_RemoveObjectsById failed", ex);
 	}
 }
 
 // Camera ********************************************************
 
 // Return the camera to world transform
-VIEW3D_API void __stdcall View3D_CameraToWorld(View3DDrawset drawset, View3DM4x4& c2w)
+VIEW3D_API void __stdcall View3D_CameraToWorld(View3DWindow window, View3DM4x4& c2w)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		c2w = view3d::To<View3DM4x4>(drawset->m_camera.m_c2w);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		c2w = view3d::To<View3DM4x4>(window->m_camera.m_c2w);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraToWorld failed", ex);
+		DllReportError("View3D_CameraToWorld failed", ex);
 	}
 }
 
 // Set the camera to world transform
-VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DDrawset drawset, View3DM4x4 const& c2w)
+VIEW3D_API void __stdcall View3D_SetCameraToWorld(View3DWindow window, View3DM4x4 const& c2w)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.m_c2w = view3d::To<pr::m4x4>(c2w);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.m_c2w = view3d::To<pr::m4x4>(c2w);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetCameraToWorld failed", ex);
+		DllReportError("View3D_SetCameraToWorld failed", ex);
 	}
 }
 
-// Position the camera for a drawset
-VIEW3D_API void __stdcall View3D_PositionCamera(View3DDrawset drawset, View3DV4 position, View3DV4 lookat, View3DV4 up)
+// Position the camera for a window
+VIEW3D_API void __stdcall View3D_PositionCamera(View3DWindow window, View3DV4 position, View3DV4 lookat, View3DV4 up)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.LookAt(view3d::To<pr::v4>(position), view3d::To<pr::v4>(lookat), view3d::To<pr::v4>(up), true);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_PositionCamera failed", ex);
+		DllReportError("View3D_PositionCamera failed", ex);
 	}
 }
 
 // Return the distance to the camera focus point
-VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DDrawset drawset)
+VIEW3D_API float __stdcall View3D_CameraFocusDistance(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.FocusDist();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.FocusDist();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_FocusDistance failed", ex);
+		DllReportError("View3D_CameraFocusDistance failed", ex);
 		return 0.0f;
 	}
 }
 
 // Set the camera focus distance
-VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DDrawset drawset, float dist)
+VIEW3D_API void __stdcall View3D_CameraSetFocusDistance(View3DWindow window, float dist)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.FocusDist(dist);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.FocusDist(dist);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetFocusDistance failed", ex);
+		DllReportError("View3D_CameraSetFocusDistance failed", ex);
 	}
 }
 
 // Return the aspect ratio for the camera field of view
-VIEW3D_API float __stdcall View3D_CameraAspect(View3DDrawset drawset)
+VIEW3D_API float __stdcall View3D_CameraAspect(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.Aspect();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.Aspect();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraAspect failed", ex);
+		DllReportError("View3D_CameraAspect failed", ex);
 		return 1.0f;
 	}
 }
 
 // Set the aspect ratio for the camera field of view
-VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DDrawset drawset, float aspect)
+VIEW3D_API void __stdcall View3D_CameraSetAspect(View3DWindow window, float aspect)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.Aspect(aspect);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.Aspect(aspect);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetCameraAspect failed", ex);
+		DllReportError("View3D_CameraSetAspect failed", ex);
 	}
 }
 
 // Return the horizontal field of view (in radians).
-VIEW3D_API float __stdcall View3D_CameraFovX(View3DDrawset drawset)
+VIEW3D_API float __stdcall View3D_CameraFovX(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.FovX();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.FovX();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraFovX failed", ex);
+		DllReportError("View3D_CameraFovX failed", ex);
 		return 0.0f;
 	}
 }
 
 // Set the horizontal field of view (in radians). Note aspect ratio is preserved, setting FovX changes FovY and visa versa
-VIEW3D_API void __stdcall View3D_CameraSetFovX(View3DDrawset drawset, float fovX)
+VIEW3D_API void __stdcall View3D_CameraSetFovX(View3DWindow window, float fovX)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.FovX(fovX);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.FovX(fovX);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetCameraFovX failed", ex);
+		DllReportError("View3D_CameraSetFovX failed", ex);
 	}
 }
 
 // Return the vertical field of view (in radians).
-VIEW3D_API float __stdcall View3D_CameraFovY(View3DDrawset drawset)
+VIEW3D_API float __stdcall View3D_CameraFovY(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.FovY();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.FovY();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraFovY failed", ex);
+		DllReportError("View3D_CameraFovY failed", ex);
 		return 0.0f;
 	}
 }
 
 // Set the vertical field of view (in radians). Note aspect ratio is preserved, setting FovY changes FovX and visa versa
-VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DDrawset drawset, float fovY)
+VIEW3D_API void __stdcall View3D_CameraSetFovY(View3DWindow window, float fovY)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.FovY(fovY);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.FovY(fovY);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetCameraFovY failed", ex);
+		DllReportError("View3D_CameraSetFovY failed", ex);
 	}
 }
 
 // Set the near and far clip planes for the camera
-VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DDrawset drawset, float near_, float far_, BOOL focus_relative)
+VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float near_, float far_, BOOL focus_relative)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.ClipPlanes(near_, far_, focus_relative != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraSetClipPlanes failed", ex);
+		DllReportError("View3D_CameraSetClipPlanes failed", ex);
 	}
 }
 
@@ -649,187 +490,186 @@ VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DDrawset drawset, floa
 // void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
-VIEW3D_API void __stdcall View3D_MouseNavigate(View3DDrawset drawset, View3DV2 point, int button_state, BOOL nav_start_or_end)
+VIEW3D_API void __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 point, int button_state, BOOL nav_start_or_end)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.MouseControl(view3d::To<pr::v2>(point), button_state, nav_start_or_end != 0);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.MouseControl(view3d::To<pr::v2>(point), button_state, nav_start_or_end != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_Navigate failed", ex);
+		DllReportError("View3D_MouseNavigate failed", ex);
 	}
 }
 
 // Direct movement of the camera
-VIEW3D_API void __stdcall View3D_Navigate(View3DDrawset drawset, float dx, float dy, float dz)
+VIEW3D_API void __stdcall View3D_Navigate(View3DWindow window, float dx, float dy, float dz)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.Translate(dx, dy, dz);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.Translate(dx, dy, dz);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_NavigateXY failed", ex);
+		DllReportError("View3D_Navigate failed", ex);
 	}
 }
 
 // Reset to the default zoom
-VIEW3D_API void __stdcall View3D_ResetZoom(View3DDrawset drawset)
+VIEW3D_API void __stdcall View3D_ResetZoom(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.ResetZoom();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.ResetZoom();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ResetZoom failed", ex);
+		DllReportError("View3D_ResetZoom failed", ex);
 	}
 }
 
 // Return the camera align axis
-VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DDrawset drawset, View3DV4& axis)
+VIEW3D_API void __stdcall View3D_CameraAlignAxis(View3DWindow window, View3DV4& axis)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		axis = view3d::To<View3DV4>(drawset->m_camera.m_align);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		axis = view3d::To<View3DV4>(window->m_camera.m_align);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_CameraAlignAxis failed", ex);
+		DllReportError("View3D_CameraAlignAxis failed", ex);
 	}
 }
 
 // Align the camera to an axis
-VIEW3D_API void __stdcall View3D_AlignCamera(View3DDrawset drawset, View3DV4 axis)
+VIEW3D_API void __stdcall View3D_AlignCamera(View3DWindow window, View3DV4 axis)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.SetAlign(view3d::To<pr::v4>(axis));
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.SetAlign(view3d::To<pr::v4>(axis));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_AlignCamera failed", ex);
+		DllReportError("View3D_AlignCamera failed", ex);
 	}
 }
 
 // Move the camera to a position that can see the whole scene
-VIEW3D_API void __stdcall View3D_ResetView(View3DDrawset drawset, View3DV4 forward, View3DV4 up)
+VIEW3D_API void __stdcall View3D_ResetView(View3DWindow window, View3DV4 forward, View3DV4 up)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
+		if (!window) throw std::exception("window is null");
+		DllLockGuard;
 
 		// The bounding box for the scene
 		auto bbox = pr::BBoxReset;
-		for (auto obj : drawset->m_objects)
+		for (auto obj : window->m_objects)
 			pr::Encompass(bbox, obj->BBoxWS(true));
 		if (bbox == pr::BBoxReset) bbox = pr::BBoxUnit;
-		drawset->m_camera.View(bbox, view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), true);
+		window->m_camera.View(bbox, view3d::To<pr::v4>(forward), view3d::To<pr::v4>(up), true);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ResetView failed", ex);
+		DllReportError("View3D_ResetView failed", ex);
 	}
 }
 
 // Return the size of the perpendicular area visible to the camera at 'dist' (in world space)
-VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DDrawset drawset, float dist)
+VIEW3D_API View3DV2 __stdcall View3D_ViewArea(View3DWindow window, float dist)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return view3d::To<View3DV2>(drawset->m_camera.ViewArea(dist));
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV2>(window->m_camera.ViewArea(dist));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ViewArea failed", ex);
+		DllReportError("View3D_ViewArea failed", ex);
 		return view3d::To<View3DV2>(pr::v2Zero);
 	}
 }
 
 // Get/Set the camera focus point position
-VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DDrawset drawset, View3DV4& position)
+VIEW3D_API void __stdcall View3D_GetFocusPoint(View3DWindow window, View3DV4& position)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		position = view3d::To<View3DV4>(drawset->m_camera.FocusPoint());
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		position = view3d::To<View3DV4>(window->m_camera.FocusPoint());
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_GetFocusPoint failed", ex);
+		DllReportError("View3D_GetFocusPoint failed", ex);
 	}
 }
-VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DDrawset drawset, View3DV4 position)
+VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DWindow window, View3DV4 position)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.FocusPoint(view3d::To<pr::v4>(position));
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.FocusPoint(view3d::To<pr::v4>(position));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetFocusPoint failed", ex);
+		DllReportError("View3D_SetFocusPoint failed", ex);
 	}
 }
 
 // Return a point in world space corresponding to a normalised screen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
-VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DDrawset drawset, View3DV4 screen)
+VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DWindow window, View3DV4 screen)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return view3d::To<View3DV4>(drawset->m_camera.WSPointFromNormSSPoint(view3d::To<pr::v4>(screen)));
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV4>(window->m_camera.WSPointFromNormSSPoint(view3d::To<pr::v4>(screen)));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_WSPointFromNormSSPoint failed", ex);
+		DllReportError("View3D_WSPointFromNormSSPoint failed", ex);
 		return view3d::To<View3DV4>(pr::v4Zero);
 	}
 }
 
 // Return a point in normalised screen space corresponding to a world space point.
 // The returned z component will be the world space distance from the camera.
-VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawset, View3DV4 world)
+VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DWindow window, View3DV4 world)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return view3d::To<View3DV4>(drawset->m_camera.NormSSPointFromWSPoint(view3d::To<pr::v4>(world)));
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV4>(window->m_camera.NormSSPointFromWSPoint(view3d::To<pr::v4>(world)));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_NormSSPointFromWSPoint failed", ex);
+		DllReportError("View3D_NormSSPointFromWSPoint failed", ex);
 		return view3d::To<View3DV4>(pr::v4Zero);
 	}
 }
@@ -837,182 +677,186 @@ VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DDrawset drawse
 // Return a point and direction in world space corresponding to a normalised sceen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
-VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DDrawset drawset, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
+VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
 		pr::v4 pt,dir;
-		drawset->m_camera.WSRayFromNormSSPoint(view3d::To<pr::v4>(screen), pt, dir);
+		window->m_camera.WSRayFromNormSSPoint(view3d::To<pr::v4>(screen), pt, dir);
 		ws_point = view3d::To<View3DV4>(pt);
 		ws_direction = view3d::To<View3DV4>(dir);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_WSRayFromNormSSPoint failed", ex);
+		DllReportError("View3D_WSRayFromNormSSPoint failed", ex);
 	}
 }
 
 // Lighting ********************************************************
 
 // Return the configuration of the single light source
-VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DDrawset drawset)
+VIEW3D_API View3DLight __stdcall View3D_LightProperties(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (!drawset) throw std::exception("drawset is null");
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
 		View3DLight light = {};
-		light.m_position        =  view3d::To<View3DV4>(drawset->m_light.m_position);
-		light.m_direction       =  view3d::To<View3DV4>(drawset->m_light.m_direction);
-		light.m_type            =  static_cast<EView3DLight>(drawset->m_light.m_type.value);
-		light.m_ambient         =  drawset->m_light.m_ambient;
-		light.m_diffuse         =  drawset->m_light.m_diffuse;
-		light.m_specular        =  drawset->m_light.m_specular;
-		light.m_specular_power  =  drawset->m_light.m_specular_power;
-		light.m_inner_cos_angle =  drawset->m_light.m_inner_cos_angle;
-		light.m_outer_cos_angle =  drawset->m_light.m_outer_cos_angle;
-		light.m_range           =  drawset->m_light.m_range;
-		light.m_falloff         =  drawset->m_light.m_falloff;
-		light.m_cast_shadow     =  drawset->m_light.m_cast_shadow;
-		light.m_on              =  drawset->m_light.m_on;
+		light.m_position        =  view3d::To<View3DV4>(window->m_light.m_position);
+		light.m_direction       =  view3d::To<View3DV4>(window->m_light.m_direction);
+		light.m_type            =  static_cast<EView3DLight>(window->m_light.m_type.value);
+		light.m_ambient         =  window->m_light.m_ambient;
+		light.m_diffuse         =  window->m_light.m_diffuse;
+		light.m_specular        =  window->m_light.m_specular;
+		light.m_specular_power  =  window->m_light.m_specular_power;
+		light.m_inner_cos_angle =  window->m_light.m_inner_cos_angle;
+		light.m_outer_cos_angle =  window->m_light.m_outer_cos_angle;
+		light.m_range           =  window->m_light.m_range;
+		light.m_falloff         =  window->m_light.m_falloff;
+		light.m_cast_shadow     =  window->m_light.m_cast_shadow;
+		light.m_on              =  window->m_light.m_on;
 		return light;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_LightProperties failed", ex);
+		DllReportError("View3D_LightProperties failed", ex);
 		return View3DLight();
 	}
 }
 
 // Configure the single light source
-VIEW3D_API void __stdcall View3D_SetLightProperties(View3DDrawset drawset, View3DLight const& light)
+VIEW3D_API void __stdcall View3D_SetLightProperties(View3DWindow window, View3DLight const& light)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
-		drawset->m_light.m_direction       = view3d::To<pr::v4>(light.m_direction);
-		drawset->m_light.m_type            = pr::rdr::ELight::From(light.m_type);
-		drawset->m_light.m_ambient         = light.m_ambient;
-		drawset->m_light.m_diffuse         = light.m_diffuse;
-		drawset->m_light.m_specular        = light.m_specular;
-		drawset->m_light.m_specular_power  = light.m_specular_power;
-		drawset->m_light.m_inner_cos_angle = light.m_inner_cos_angle;
-		drawset->m_light.m_outer_cos_angle = light.m_outer_cos_angle;
-		drawset->m_light.m_range           = light.m_range;
-		drawset->m_light.m_falloff         = light.m_falloff;
-		drawset->m_light.m_cast_shadow     = light.m_cast_shadow;
-		drawset->m_light.m_on              = light.m_on != 0;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_light.m_position        = view3d::To<pr::v4>(light.m_position);
+		window->m_light.m_direction       = view3d::To<pr::v4>(light.m_direction);
+		window->m_light.m_type            = pr::rdr::ELight::From(light.m_type);
+		window->m_light.m_ambient         = light.m_ambient;
+		window->m_light.m_diffuse         = light.m_diffuse;
+		window->m_light.m_specular        = light.m_specular;
+		window->m_light.m_specular_power  = light.m_specular_power;
+		window->m_light.m_inner_cos_angle = light.m_inner_cos_angle;
+		window->m_light.m_outer_cos_angle = light.m_outer_cos_angle;
+		window->m_light.m_range           = light.m_range;
+		window->m_light.m_falloff         = light.m_falloff;
+		window->m_light.m_cast_shadow     = light.m_cast_shadow;
+		window->m_light.m_on              = light.m_on != 0;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetLightProperties failed", ex);
+		DllReportError("View3D_SetLightProperties failed", ex);
 	}
 }
 
-// Set up a single light source for a drawset
-VIEW3D_API void __stdcall View3D_LightSource(View3DDrawset drawset, View3DV4 position, View3DV4 direction, BOOL camera_relative)
+// Set up a single light source for a window
+VIEW3D_API void __stdcall View3D_LightSource(View3DWindow window, View3DV4 position, View3DV4 direction, BOOL camera_relative)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_light.m_position = view3d::To<pr::v4>(position);
-		drawset->m_light.m_direction = view3d::To<pr::v4>(direction);
-		drawset->m_light_is_camera_relative = camera_relative != 0;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_light.m_position = view3d::To<pr::v4>(position);
+		window->m_light.m_direction = view3d::To<pr::v4>(direction);
+		window->m_light_is_camera_relative = camera_relative != 0;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_LightSource failed", ex);
+		DllReportError("View3D_LightSource failed", ex);
 	}
 }
 
 // Show the lighting UI
 struct PreviewLighting
 {
-	View3DDrawset m_drawset;
-	PreviewLighting(View3DDrawset drawset) :m_drawset(drawset) {}
+	View3DWindow m_window;
+	PreviewLighting(View3DWindow window) :m_window(window) {}
 	void operator()(Light const& light, bool camera_relative)
 	{
-		Light prev_light                      = m_drawset->m_light;
-		bool prev_camera_relative             = m_drawset->m_light_is_camera_relative;
-		m_drawset->m_light                    = light;
-		m_drawset->m_light_is_camera_relative = camera_relative;
+		Light prev_light          = m_window->m_light;
+		bool prev_camera_relative = m_window->m_light_is_camera_relative;
 
-		View3D_DrawsetRender(m_drawset);
-		View3D_Present();
+		m_window->m_light                    = light;
+		m_window->m_light_is_camera_relative = camera_relative;
 
-		m_drawset->m_light                    = prev_light;
-		m_drawset->m_light_is_camera_relative = prev_camera_relative;
+		View3D_Render(m_window);
+		View3D_Present(m_window);
+
+		m_window->m_light                    = prev_light;
+		m_window->m_light_is_camera_relative = prev_camera_relative;
 	}
 };
-VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DDrawset drawset, HWND parent)
+VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		PreviewLighting pv(drawset);
-		LightingDlg<PreviewLighting> dlg(pv);
-		dlg.m_light           = drawset->m_light;
-		dlg.m_camera_relative = drawset->m_light_is_camera_relative;
-		if (dlg.DoModal(parent) != IDOK) return;
-		drawset->m_light                    = dlg.m_light;
-		drawset->m_light_is_camera_relative = dlg.m_camera_relative;
-		
-		View3D_DrawsetRender(drawset);
-		View3D_Present();
+		if (!window) throw std::exception("window is null");
 
-		Dll().NotifySettingsChanged();
+		DllLockGuard;
+		PreviewLighting pv(window);
+		LightingDlg<PreviewLighting> dlg(pv);
+		dlg.m_light           = window->m_light;
+		dlg.m_camera_relative = window->m_light_is_camera_relative;
+		if (dlg.DoModal(window->m_wnd.m_hwnd) != IDOK) return;
+		window->m_light                    = dlg.m_light;
+		window->m_light_is_camera_relative = dlg.m_camera_relative;
+		
+		View3D_Render(window);
+		View3D_Present(window);
+
+		window->NotifySettingsChanged();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowLightingDlg failed", ex);
+		DllReportError("View3D_ShowLightingDlg failed", ex);
 	}
 }
 
-// Create/Delete objects ********************************************************
+// Objects **********************************************************
+
 // Create objects given in a file.
-// These objects will not have handles but can be deleted by their context id
-VIEW3D_API EView3DResult __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
+// These objects will not have handles but can be added/removed by their context id.
+// Returns the number of objects added.
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
 {
-	LOCK_GUARD;
 	try
 	{
-		pr::ldr::AddFile(Rdr().m_renderer, ldr_filepath, Rdr().m_obj_cont, context_id, async != 0, 0, &Rdr().m_lua);
-		return EView3DResult::Success;
+		DllLockGuard;
+		pr::ldr::ObjectCont cont;
+		pr::ldr::AddFile(Dll().m_rdr, ldr_filepath, cont, context_id, async != 0, 0, &Dll().m_lua);
+		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
+		return int(cont.size());
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectsCreateFromFile failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_ObjectsCreateFromFile failed", ex);
+		return 0;
 	}
 }
 
 // If multiple objects are created, the handle returned is to the last object only
-VIEW3D_API EView3DResult __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, View3DObject& object, BOOL async)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, BOOL async)
 {
-	LOCK_GUARD;
 	try
 	{
-		object = 0;
-		size_t initial = Rdr().m_obj_cont.size();
-		pr::ldr::AddString(Rdr().m_renderer, ldr_script, Rdr().m_obj_cont, context_id, async != 0, 0, &Rdr().m_lua);
-		size_t final = Rdr().m_obj_cont.size();
-		if (initial == final) return EView3DResult::Failed;
-		object = Rdr().m_obj_cont.back().m_ptr;
-		return EView3DResult::Success;
+		DllLockGuard;
+		pr::ldr::ObjectCont cont;
+		pr::ldr::AddString(Dll().m_rdr, ldr_script, cont, context_id, async != 0, 0, &Dll().m_lua);
+		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
+		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectCreateLdr failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_ObjectCreateLdr failed", ex);
+		return nullptr;
 	}
 }
 
@@ -1091,93 +935,95 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 }
 
 // Create an object via callback
-VIEW3D_API EView3DResult __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id, View3DObject& object)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreate(char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id)
 {
-	LOCK_GUARD;
 	try
 	{
-		object = 0;
+		DllLockGuard;
 		ObjectEditCBData cbdata = {edit_cb, ctx};
-		pr::ldr::LdrObjectPtr obj = pr::ldr::Add(Rdr().m_renderer, pr::ldr::ObjectAttributes(pr::ldr::ELdrObject::Custom, name, pr::Colour32::make(colour)), icount, vcount, ObjectEditCB, &cbdata, context_id);
-		if (!obj) return EView3DResult::Failed;
-		Rdr().m_obj_cont.push_back(obj);
-		object = obj.m_ptr;
-		return EView3DResult::Success;
+		pr::ldr::ObjectAttributes attr(pr::ldr::ELdrObject::Custom, name, pr::Colour32::make(colour));
+		auto obj = pr::ldr::Add(Dll().m_rdr, attr, icount, vcount, ObjectEditCB, &cbdata, context_id);
+		if (obj) Dll().m_obj_cont.push_back(obj);
+		return obj.m_ptr;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectCreate failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_ObjectCreate failed", ex);
+		return nullptr;
 	}
 }
 
 // Replace the model and all child objects of 'obj' with the results of 'ldr_script'
-VIEW3D_API EView3DResult __stdcall View3D_ObjectUpdate(View3DObject object, char const* ldr_script, EView3DUpdateObject flags)
+VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* ldr_script, EView3DUpdateObject flags)
 {
-	LOCK_GUARD;
 	try
 	{
 		if (!object) throw std::exception("object is null");
-		
-		pr::ldr::Update(Rdr().m_renderer, object, ldr_script, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
-		return EView3DResult::Success;
+
+		DllLockGuard;
+		pr::ldr::Update(Dll().m_rdr, object, ldr_script, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectCreateLdr failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_ObjectUpdate failed", ex);
 	}
 }
 
 // Edit an existing model
 VIEW3D_API void __stdcall View3D_ObjectEdit(View3DObject object, View3D_EditObjectCB edit_cb, void* ctx)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
 		ObjectEditCBData cbdata = {edit_cb, ctx};
-		pr::ldr::Edit(Rdr().m_renderer, object, ObjectEditCB, &cbdata);
+		pr::ldr::Edit(Dll().m_rdr, object, ObjectEditCB, &cbdata);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectEdit failed", ex);
+		DllReportError("View3D_ObjectEdit failed", ex);
 	}
 }
 
 // Delete all objects matching a context id
 VIEW3D_API void __stdcall View3D_ObjectsDeleteById(int context_id)
 {
-	LOCK_GUARD;
 	try
 	{
-		for (DrawsetCont::iterator i = Rdr().m_drawset.begin(), iend = Rdr().m_drawset.end(); i != iend; ++i)
-			View3D_DrawsetRemoveObjectsById(*i, context_id);
-		pr::ldr::Remove(Rdr().m_obj_cont, &context_id, 1, 0, 0);
+		DllLockGuard;
+
+		// Remove objects from any windows they might be assigned to
+		for (auto wnd : Dll().m_wnd_cont)
+			View3D_RemoveObjectsById(wnd, context_id);
+
+		pr::ldr::Remove(Dll().m_obj_cont, &context_id, 1, 0, 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectsDeleteById failed", ex);
+		DllReportError("View3D_ObjectsDeleteById failed", ex);
 	}
 }
 
 // Delete an object
 VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
 		if (!object) return;
 		
-		// Remove the object from any drawsets it's in
-		for (auto ds : Rdr().m_drawset)
-			View3D_DrawsetRemoveObject(ds, object);
+		DllLockGuard;
+
+		// Remove the object from any windows it's in
+		for (auto wnd : Dll().m_wnd_cont)
+			View3D_RemoveObject(wnd, object);
 		
 		// Delete the object from the object container
-		pr::ldr::Remove(Rdr().m_obj_cont, object);
+		pr::ldr::Remove(Dll().m_obj_cont, object);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectDelete failed", ex);
+		DllReportError("View3D_ObjectDelete failed", ex);
 	}
 }
 
@@ -1186,31 +1032,32 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 // Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
 VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
 		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
 		return view3d::To<View3DM4x4>(object->m_o2p);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectGetO2P failed", ex);
+		DllReportError("View3D_ObjectGetO2P failed", ex);
 		return view3d::To<View3DM4x4>(pr::m4x4Identity);
 	}
 }
 VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, pr::FEql(o2p.w.w,1.0f), "View3D_ObjectSetO2P: invalid object transform");
-		if (!object) throw std::exception("object is null");
+		if (!object) throw std::exception("Object is null");
 		if (!pr::FEql(o2p.w.w,1.0f)) throw std::exception("invalid object to parent transform");
+
+		DllLockGuard;
 		object->m_o2p = view3d::To<pr::m4x4>(o2p);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectSetO2P failed", ex);
+		DllReportError("View3D_ObjectSetO2P failed", ex);
 	}
 }
 
@@ -1218,17 +1065,16 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (object == nullptr)
-			throw std::exception("Null object provided");
+		if (!object) throw std::exception("Object is null");
 
+		DllLockGuard;
 		object->SetColour(pr::Colour32::make(colour), mask, name);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectSetColour failed", ex);
+		DllReportError("View3D_ObjectSetColour failed", ex);
 	}
 }
 
@@ -1236,31 +1082,32 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColo
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetTexture(View3DObject object, View3DTexture tex, char const* name)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (object == nullptr)
-			throw std::exception("Null object provided");
+		if (!object) throw std::exception("Object is null");
 
+		DllLockGuard;
 		object->SetTexture(tex, name);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectSetTexture failed", ex);
+		DllReportError("View3D_ObjectSetTexture failed", ex);
 	}
 }
 
 // Return the model space bounding box for 'object'
 VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
 		return view3d::To<View3DBBox>(object->BBoxMS(true));
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ObjectBBoxMS failed", ex);
+		DllReportError("View3D_ObjectBBoxMS failed", ex);
 		return view3d::To<View3DBBox>(pr::BBoxUnit);
 	}
 }
@@ -1271,9 +1118,8 @@ VIEW3D_API View3DBBox __stdcall View3D_ObjectBBoxMS(View3DObject object)
 // Set 'data' to 0 to leave the texture uninitialised, if not 0 then data must point to width x height pixel data
 // of the size appropriate for the given format. e.g. pr::uint px_data[width * height] for D3DFMT_A8R8G8B8
 // Note: careful with stride, 'data' is expected to have the appropriate stride for pr::rdr::BytesPerPixel(format) * width
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options, View3DTexture& tex)
+VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 height, void const* data, UINT32 data_size, View3DTextureOptions const& options)
 {
-	LOCK_GUARD;
 	try
 	{
 		Image src = Image::make(width, height, data, options.m_format);
@@ -1291,93 +1137,79 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 		sdesc.AddressV = options.m_addrV;
 		sdesc.Filter = options.m_filter;
 
+		DllLockGuard;
 		Texture2DPtr t = options.m_gdi_compatible
-			? Rdr().m_renderer.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc)
-			: Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc);
+			? Dll().m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc)
+			: Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc);
 
 		t->m_has_alpha = options.m_has_alpha != 0;
-		tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
-		return EView3DResult::Success;
+		auto tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
+		return tex;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureCreate failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_TextureCreate failed", ex);
+		return nullptr;
 	}
 }
 
 // Load a texture from file. Specify width == 0, height == 0 to use the dimensions of the file
-VIEW3D_API EView3DResult __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options, View3DTexture& tex)
+VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(char const* tex_filepath, UINT32 width, UINT32 height, View3DTextureOptions const& options)
 {
-	LOCK_GUARD;
 	try
 	{
-		(void)width;
-		(void)height;
+		(void)width,height; //todo
 
 		SamplerDesc sdesc;
 		sdesc.AddressU = options.m_addrU;
 		sdesc.AddressV = options.m_addrV;
 		sdesc.Filter   = options.m_filter;
 
-		Texture2DPtr t = Rdr().m_renderer.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath);
-		tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
-		return EView3DResult::Success;
+		DllLockGuard;
+		Texture2DPtr t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath);
+		auto tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
+		return tex;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureCreateFromFile failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_TextureCreateFromFile failed", ex);
+		return nullptr;
 	}
 }
 
 // Get/Release a DC for the texture. Must be a TextureGdi texture
 VIEW3D_API HDC __stdcall View3D_TextureGetDC(View3DTexture tex)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (tex == nullptr)
-			throw std::exception("Null texture provided");
-
+		if (!tex) throw std::exception("Texture is null");
 		return tex->GetDC();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureGetDC failed", ex);
+		DllReportError("View3D_TextureGetDC failed", ex);
 		return nullptr;
 	}
 }
 VIEW3D_API void __stdcall View3D_TextureReleaseDC(View3DTexture tex)
 {
-	LOCK_GUARD;
 	try
 	{
-		if (tex == nullptr)
-			throw std::exception("Null texture provided");
-
+		if (!tex) throw std::exception("Texture is null");
 		tex->ReleaseDC();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureReleaseDC failed", ex);
+		DllReportError("View3D_TextureReleaseDC failed", ex);
 	}
 }
 
 // Load a texture surface from file
-VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
+VIEW3D_API void __stdcall View3D_TextureLoadSurface(View3DTexture tex, int level, char const* tex_filepath, RECT const* dst_rect, RECT const* src_rect, UINT32 filter, View3DColour colour_key)
 {
-	LOCK_GUARD;
 	try
 	{
-		(void)tex;
-		(void)level;
-		(void)tex_filepath;
-		(void)dst_rect;
-		(void)src_rect;
-		(void)filter;
-		(void)colour_key;
-		//return EView3DResult::Failed;
+		(void)tex,level,tex_filepath,dst_rect,src_rect,filter,colour_key;
 		throw std::exception("not implemented");
 		//try
 		//{
@@ -1392,32 +1224,29 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureLoadSurface(View3DTexture tex, 
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureLoadSurface failed", ex);
-		return EView3DResult::Failed;
+		DllReportError("View3D_TextureLoadSurface failed", ex);
 	}
 }
 
 // Release a texture to free memory
 VIEW3D_API void __stdcall View3D_TextureDelete(View3DTexture tex)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!tex) throw std::exception("Texture is null");
 		tex->Release();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureDelete failed", ex);
+		DllReportError("View3D_TextureDelete failed", ex);
 	}
 }
 
 // Read the properties of an existing texture
 VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageInfo& info)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, tex != 0, "");
 		if (!tex) throw std::exception("texture is null");
 		auto tex_info = tex->TexDesc();
 		info.m_width             = tex_info.Width;
@@ -1429,20 +1258,18 @@ VIEW3D_API void __stdcall View3D_TextureGetInfo(View3DTexture tex, View3DImageIn
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureGetInfo failed", ex);
+		DllReportError("View3D_TextureGetInfo failed", ex);
 	}
 }
 
 // Read the properties of an image file
 VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex_filepath, View3DImageInfo& info)
 {
-	LOCK_GUARD;
 	try
 	{
-		(void)tex_filepath;
-		(void)info;
+		(void)tex_filepath,info;
 		//D3DXIMAGE_INFO tex_info;
-		//if (pr::Failed(Rdr().m_renderer.m_mat_mgr.TextureInfo(tex_filepath, tex_info)))
+		//if (pr::Failed(Dll().m_rdr.m_mat_mgr.TextureInfo(tex_filepath, tex_info)))
 		//	return EView3DResult::Failed;
 
 		//info.m_width             = tex_info.Width;
@@ -1456,7 +1283,7 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureGetInfoFromFile failed", ex);
+		DllReportError("View3D_TextureGetInfoFromFile failed", ex);
 		return EView3DResult::Failed;
 	}
 }
@@ -1464,9 +1291,12 @@ VIEW3D_API EView3DResult __stdcall View3D_TextureGetInfoFromFile(char const* tex
 // Set the filtering and addressing modes to use on the texture
 VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, D3D11_FILTER filter, D3D11_TEXTURE_ADDRESS_MODE addrU, D3D11_TEXTURE_ADDRESS_MODE addrV)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!tex) throw std::exception("Texture is null");
+		
+		DllLockGuard;
+
 		SamplerDesc desc;
 		tex->m_samp->GetDesc(&desc);
 		desc.Filter = filter;
@@ -1474,105 +1304,202 @@ VIEW3D_API void __stdcall View3D_TextureSetFilterAndAddrMode(View3DTexture tex, 
 		desc.AddressV = addrV;
 
 		D3DPtr<ID3D11SamplerState> samp;
-		pr::Throw(Rdr().m_renderer.Device()->CreateSamplerState(&desc, &samp.m_ptr));
+		pr::Throw(Dll().m_rdr.Device()->CreateSamplerState(&desc, &samp.m_ptr));
 		tex->m_samp = samp;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureGetInfoFromFile failed", ex);
+		DllReportError("View3D_TextureGetInfoFromFile failed", ex);
 	}
 }
 
 // Resize a texture to 'size' optionally preserving it's content
 VIEW3D_API void __stdcall View3D_TextureResize(View3DTexture tex, UINT32 width, UINT32 height, BOOL all_instances, BOOL preserve)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!tex) throw std::exception("Texture is null");
+
+		DllLockGuard;
 		tex->Resize(width, height, all_instances != 0, preserve != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureResize failed", ex);
+		DllReportError("View3D_TextureResize failed", ex);
 	}
 }
 
 // Return the render target as a texture
-VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget()
+VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		auto tex = Rdr().m_renderer.m_tex_mgr.FindTexture(EStockTexture::MainRT);
-		return tex.m_ptr;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_wnd.m_main_tex.m_ptr;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_TextureResize failed", ex);
+		DllReportError("View3D_TextureResize failed", ex);
 		return nullptr;
 	}
 }
 
 // Rendering ***************************************************************
 
-// Finish rendering with a back buffer flip
-VIEW3D_API void __stdcall View3D_Present()
+// Render a window. Remember to call View3D_Present() after all render calls
+VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		Rdr().m_renderer.Present();
+		if (!window) throw std::exception("window is null");
+		auto& wnd = *window;
+		auto& scene = wnd.m_scene;
+		DllLockGuard;
+
+		// Reset the drawlist
+		scene.ClearDrawlists();
+
+		// Add objects from the window to the viewport
+		for (auto& obj : wnd.m_objects)
+			obj->AddToScene(scene);
+
+		// Add the measure tool objects if the window is visible
+		if (wnd.m_measure_tool_ui.IsWindowVisible() && wnd.m_measure_tool_ui.Gfx())
+			wnd.m_measure_tool_ui.Gfx()->AddToScene(scene);
+
+		// Add the angle tool objects if the window is visible
+		if (wnd.m_angle_tool_ui.IsWindowVisible() && wnd.m_angle_tool_ui.Gfx())
+			wnd.m_angle_tool_ui.Gfx()->AddToScene(scene);
+
+		// Position the focus point
+		if (wnd.m_focus_point_visible)
+		{
+			float scale = wnd.m_focus_point_size * wnd.m_camera.FocusDist();
+			wnd.m_focus_point.m_i2w = pr::Scale4x4(scale, wnd.m_camera.FocusPoint());
+			scene.AddInstance(wnd.m_focus_point);
+		}
+		// Scale the origin point
+		if (wnd.m_origin_point_visible)
+		{
+			float scale = wnd.m_origin_point_size * pr::Length3(wnd.m_camera.CameraToWorld().pos);
+			wnd.m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
+			scene.AddInstance(wnd.m_origin_point);
+		}
+
+		// Set the view and projection matrices
+		pr::Camera& cam = wnd.m_camera;
+		scene.SetView(cam);
+
+		// Set the light source
+		Light& light = scene.m_global_light;
+		light = wnd.m_light;
+		if (wnd.m_light_is_camera_relative)
+		{
+			light.m_direction = wnd.m_camera.CameraToWorld() * wnd.m_light.m_direction;
+			light.m_position  = wnd.m_camera.CameraToWorld() * wnd.m_light.m_position;
+		}
+
+		// Set the background colour
+		scene.m_bkgd_colour = wnd.m_background_colour;
+
+		// Set the global fill mode
+		switch (wnd.m_fill_mode) {
+		case EView3DFillMode::Solid:     scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		case EView3DFillMode::Wireframe: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+		case EView3DFillMode::SolidWire: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+		}
+
+		// Render the scene
+		scene.Render();
+
+		// Render wire frame over solid for 'SolidWire' mode
+		if (wnd.m_fill_mode == EView3DFillMode::SolidWire)
+		{
+			auto& fr = scene.RStep<ForwardRender>();
+			scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+			scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+			fr.m_clear_bb = false;
+
+			scene.Render();
+
+			fr.m_clear_bb = true;
+			scene.m_rsb.Clear(ERS::FillMode);
+			scene.m_bsb.Clear(EBS::BlendEnable, 0);
+		}
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_Present failed", ex);
+		DllReportError("View3D_Render failed", ex);
+	}
+}
+
+// Finish rendering with a back buffer flip
+VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_wnd.Present();
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_Present failed", ex);
 	}
 }
 
 // Get/Set the dimensions of the render target
 // In set, if 'width' and 'height' are zero, the RT is resized to the associated window automatically.
-VIEW3D_API void __stdcall View3D_RenderTargetSize(int& width, int& height)
+VIEW3D_API void __stdcall View3D_RenderTargetSize(View3DWindow window, int& width, int& height)
 {
-	LOCK_GUARD;
 	try
 	{
-		auto area = Rdr().m_renderer.RenderTargetSize();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		auto area = window->m_wnd.RenderTargetSize();
 		width     = area.x;
 		height    = area.y;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_RenderTargetSize failed", ex);
+		DllReportError("View3D_RenderTargetSize failed", ex);
 	}
 }
-VIEW3D_API void __stdcall View3D_SetRenderTargetSize(int width, int height)
+VIEW3D_API void __stdcall View3D_SetRenderTargetSize(View3DWindow window, int width, int height)
 {
-	LOCK_GUARD;
 	try
 	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
 		if (width  < 0) width  = 0;
 		if (height < 0) height = 0;
-		Rdr().m_renderer.RenderTargetSize(pr::iv2::make(width, height));
-		auto size = Rdr().m_renderer.RenderTargetSize();
+		window->m_wnd.RenderTargetSize(pr::iv2::make(width, height));
+		auto size = window->m_wnd.RenderTargetSize();
 
-		// Update the aspect ratio for all drawsets
+		// Update the window aspect ratio
 		float aspect = (size.x == 0 || size.y == 0) ? 1.0f : size.x / float(size.y);
-		for (auto ds : Rdr().m_drawset)
-			ds->m_camera.Aspect(aspect);
+		window->m_camera.Aspect(aspect);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetRenderTargetSize failed", ex);
+		DllReportError("View3D_SetRenderTargetSize failed", ex);
 	}
 }
 
 // Get/Set the viewport within the render target
-VIEW3D_API View3DViewport __stdcall View3D_Viewport()
+VIEW3D_API View3DViewport __stdcall View3D_Viewport(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		auto& scene_vp = Rdr().m_scene.m_viewport;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		auto& scene_vp = window->m_scene.m_viewport;
 		View3DViewport vp = {};
 		vp.m_x         = scene_vp.TopLeftX;
 		vp.m_y         = scene_vp.TopLeftY;
@@ -1584,16 +1511,18 @@ VIEW3D_API View3DViewport __stdcall View3D_Viewport()
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_Viewport failed", ex);
+		DllReportError("View3D_Viewport failed", ex);
 		return View3DViewport();
 	}
 }
-VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
+VIEW3D_API void __stdcall View3D_SetViewport(View3DWindow window, View3DViewport vp)
 {
-	LOCK_GUARD;
 	try
 	{
-		auto& scene_vp = Rdr().m_scene.m_viewport;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		auto& scene_vp = window->m_scene.m_viewport;
 		scene_vp.TopLeftX = vp.m_x        ;
 		scene_vp.TopLeftY = vp.m_y        ;
 		scene_vp.Width    = vp.m_width    ;
@@ -1603,358 +1532,369 @@ VIEW3D_API void __stdcall View3D_SetViewport(View3DViewport vp)
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetViewport failed", ex);
+		DllReportError("View3D_SetViewport failed", ex);
 	}
 }
 
-// Get/Set the fill mode for a drawset
-VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DDrawset drawset)
+// Get/Set the fill mode for a window
+VIEW3D_API EView3DFillMode __stdcall View3D_FillMode(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_fill_mode;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_fill_mode;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_FillMode failed", ex);
+		DllReportError("View3D_FillMode failed", ex);
 		return EView3DFillMode();
 	}
 }
-VIEW3D_API void __stdcall View3D_SetFillMode(View3DDrawset drawset, EView3DFillMode mode)
+VIEW3D_API void __stdcall View3D_SetFillMode(View3DWindow window, EView3DFillMode mode)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_fill_mode = mode;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_fill_mode = mode;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetFillMode failed", ex);
+		DllReportError("View3D_SetFillMode failed", ex);
 	}
 }
 
 // Selected between perspective and orthographic projection
-VIEW3D_API BOOL __stdcall View3D_Orthographic(View3DDrawset drawset)
+VIEW3D_API BOOL __stdcall View3D_Orthographic(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_camera.m_orthographic;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_camera.m_orthographic;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_Orthographic failed", ex);
+		DllReportError("View3D_Orthographic failed", ex);
 		return false;
 	}
 }
-VIEW3D_API void __stdcall View3D_SetOrthographic(View3DDrawset drawset, BOOL render2d)
+VIEW3D_API void __stdcall View3D_SetOrthographic(View3DWindow window, BOOL render2d)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_camera.m_orthographic = render2d != 0;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_camera.m_orthographic = render2d != 0;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetOrthographic failed", ex);
+		DllReportError("View3D_SetOrthographic failed", ex);
 	}
 }
 
-// Get/Set the background colour for a drawset
-VIEW3D_API int __stdcall View3D_BackgroundColour(View3DDrawset drawset)
+// Get/Set the background colour for a window
+VIEW3D_API int __stdcall View3D_BackgroundColour(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_background_colour;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_background_colour;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_BackgroundColour failed", ex);
+		DllReportError("View3D_BackgroundColour failed", ex);
 		return 0;
 	}
 }
-VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DDrawset drawset, int aarrggbb)
+VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aarrggbb)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_background_colour = pr::Colour32::make(aarrggbb);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_background_colour = pr::Colour32::make(aarrggbb);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetBackgroundColour failed", ex);
+		DllReportError("View3D_SetBackgroundColour failed", ex);
 	}
 }
 
 // Show the measurement tool
-VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible()
+VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		return Rdr().m_measure_tool_ui.IsWindowVisible();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_measure_tool_ui.IsWindowVisible();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_MeasureToolVisible failed", ex);
+		DllReportError("View3D_MeasureToolVisible failed", ex);
 		return false;
 	}
 }
-VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DDrawset drawset, BOOL show)
+VIEW3D_API void __stdcall View3D_ShowMeasureTool(View3DWindow window, BOOL show)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		Rdr().m_measure_tool_ui.SetReadPointCtx(drawset);
-		Rdr().m_measure_tool_ui.Show(show != 0);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_measure_tool_ui.SetReadPointCtx(window);
+		window->m_measure_tool_ui.Show(show != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowMeasureTool failed", ex);
+		DllReportError("View3D_ShowMeasureTool failed", ex);
 	}
 }
 
 // Show the angle tool
-VIEW3D_API BOOL __stdcall View3D_AngleToolVisible()
+VIEW3D_API BOOL __stdcall View3D_AngleToolVisible(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		return Rdr().m_angle_tool_ui.IsWindowVisible();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_angle_tool_ui.IsWindowVisible();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_AngleToolVisible failed", ex);
+		DllReportError("View3D_AngleToolVisible failed", ex);
 		return false;
 	}
 }
-VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DDrawset drawset, BOOL show)
+VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DWindow window, BOOL show)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		Rdr().m_angle_tool_ui.SetReadPointCtx(drawset);
-		Rdr().m_angle_tool_ui.Show(show != 0);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_angle_tool_ui.SetReadPointCtx(window);
+		window->m_angle_tool_ui.Show(show != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowAngleTool failed", ex);
+		DllReportError("View3D_ShowAngleTool failed", ex);
 	}
 }
 
 // Restore the main render target and depth buffer
-VIEW3D_API void __stdcall View3D_RestoreMainRT()
+VIEW3D_API void __stdcall View3D_RestoreMainRT(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		Rdr().m_renderer.RestoreMainRT();
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_wnd.RestoreRT();
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_RestoreMainRT failed", ex);
+		DllReportError("View3D_RestoreMainRT failed", ex);
 	}
 }
 
 // Returns true if the depth buffer is enabled
-VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabled()
+VIEW3D_API BOOL __stdcall View3D_DepthBufferEnabled(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		return Rdr().m_scene.m_dsb.Desc().DepthEnable;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_scene.m_dsb.Desc().DepthEnable;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_DepthBufferEnabled failed", ex);
+		DllReportError("View3D_DepthBufferEnabled failed", ex);
 		return TRUE;
 	}
 }
 
 // Enables or disables the depth buffer
-VIEW3D_API void __stdcall View3D_SetDepthBufferEnabled(BOOL enabled)
+VIEW3D_API void __stdcall View3D_SetDepthBufferEnabled(View3DWindow window, BOOL enabled)
 {
-	LOCK_GUARD;
 	try
 	{
-		Rdr().m_scene.m_dsb.Set(EDS::DepthEnable, enabled);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_scene.m_dsb.Set(EDS::DepthEnable, enabled);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetDepthBufferEnabled failed", ex);
-	}
-}
-
-// Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
-VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DDrawset drawset)
-{
-	LOCK_GUARD;
-	try
-	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-
-		size_t initial = Rdr().m_obj_cont.size();
-		pr::ldr::AddString(Rdr().m_renderer, pr::ldr::CreateDemoScene().c_str(), Rdr().m_obj_cont, pr::ldr::DefaultContext, true, 0, &Rdr().m_lua);
-		size_t final = Rdr().m_obj_cont.size();
-		for (size_t i = initial; i != final; ++i)
-		{
-			View3D_DrawsetAddObject(drawset, Rdr().m_obj_cont[i].m_ptr);
-		}
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_CreateDemoScene failed", ex);
-	}
-}
-
-// Show a window containing the demo scene script
-VIEW3D_API void __stdcall View3D_ShowDemoScript()
-{
-	LOCK_GUARD;
-	try
-	{
-		Rdr().m_obj_cont_ui.ShowScript(pr::ldr::CreateDemoScene(), 0);
-	}
-	catch (std::exception const& ex)
-	{
-		Dll().ReportError("View3D_ShowDemoScript failed", ex);
+		DllReportError("View3D_SetDepthBufferEnabled failed", ex);
 	}
 }
 
 // Return true if the focus point is visible
-VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DDrawset drawset)
+VIEW3D_API BOOL __stdcall View3D_FocusPointVisible(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_focus_point_visible;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_focus_point_visible;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_FocusPointVisible failed", ex);
+		DllReportError("View3D_FocusPointVisible failed", ex);
 		return false;
 	}
 }
 
-// Add the focus point to a drawset
-VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DDrawset drawset, BOOL show)
+// Add the focus point to a window
+VIEW3D_API void __stdcall View3D_ShowFocusPoint(View3DWindow window, BOOL show)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_focus_point_visible = show != 0;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_focus_point_visible = show != 0;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowFocusPoint failed", ex);
+		DllReportError("View3D_ShowFocusPoint failed", ex);
 	}
 }
 
 // Set the size of the focus point
-VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DDrawset drawset, float size)
+VIEW3D_API void __stdcall View3D_SetFocusPointSize(View3DWindow window, float size)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_focus_point_size = size;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_focus_point_size = size;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetFocusPointSize failed", ex);
+		DllReportError("View3D_SetFocusPointSize failed", ex);
 	}
 }
 
 // Return true if the origin is visible
-VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DDrawset drawset)
+VIEW3D_API BOOL __stdcall View3D_OriginVisible(View3DWindow window)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		return drawset->m_origin_point_visible;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return window->m_origin_point_visible;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_OriginVisible failed", ex);
+		DllReportError("View3D_OriginVisible failed", ex);
 		return false;
 	}
 }
 
-// Add the focus point to a drawset
-VIEW3D_API void __stdcall View3D_ShowOrigin(View3DDrawset drawset, BOOL show)
+// Add the focus point to a window
+VIEW3D_API void __stdcall View3D_ShowOrigin(View3DWindow window, BOOL show)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_origin_point_visible = show != 0;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_origin_point_visible = show != 0;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowOrigin failed", ex);
+		DllReportError("View3D_ShowOrigin failed", ex);
 	}
 }
 
 // Set the size of the focus point
-VIEW3D_API void __stdcall View3D_SetOriginSize(View3DDrawset drawset, float size)
+VIEW3D_API void __stdcall View3D_SetOriginSize(View3DWindow window, float size)
 {
-	LOCK_GUARD;
 	try
 	{
-		PR_ASSERT(PR_DBG, drawset != 0, "");
-		if (!drawset) throw std::exception("drawset is null");
-		drawset->m_origin_point_size = size;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_origin_point_size = size;
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_SetOriginSize failed", ex);
+		DllReportError("View3D_SetOriginSize failed", ex);
+	}
+}
+
+// Create a scene showing the capabilities of view3d (actually of ldr_object_manager)
+VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		pr::ldr::ObjectCont cont;
+		pr::ldr::AddString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), cont, pr::ldr::DefaultContext, true, 0, &Dll().m_lua);
+		for (auto& obj : cont)
+			View3D_AddObject(window, obj.m_ptr);
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_CreateDemoScene failed", ex);
+	}
+}
+
+// Show a window containing the demo scene script
+VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+//		window->m_obj_cont_ui.ShowScript(pr::ldr::CreateDemoScene(), 0);
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_ShowDemoScript failed", ex);
 	}
 }
 
 // Display the object manager ui
-VIEW3D_API void __stdcall View3D_ShowObjectManager(BOOL show)
+VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL show)
 {
-	LOCK_GUARD;
 	try
 	{
-		Rdr().m_obj_cont_ui.Show(show != 0);
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		(void)show;
+//		window->m_obj_cont_ui.Show(show != 0);
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ShowObjectManager failed", ex);
-	}}
+		DllReportError("View3D_ShowObjectManager failed", ex);
+	}
+}
 
 // Parse an ldr *o2w {} description returning the transform
 VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
-	LOCK_GUARD;
 	try
 	{
 		pr::script::Reader reader;
@@ -1964,7 +1904,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 	}
 	catch (std::exception const& ex)
 	{
-		Dll().ReportError("View3D_ParseLdrTransform failed", ex);
+		DllReportError("View3D_ParseLdrTransform failed", ex);
 		return view3d::To<View3DM4x4>(pr::m4x4Identity);
 	}
 }
