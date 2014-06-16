@@ -77,10 +77,11 @@ namespace pr.extn
 		}
 
 		/// <summary>Add a range of elements to the list</summary>
-		public static void AddRange<T>(this IList<T> list, IEnumerable<T> items)
+		public static IList<T> AddRange<T>(this IList<T> list, IEnumerable<T> items)
 		{
 			foreach (var i in items)
 				list.Add(i);
+			return list;
 		}
 
 		/// <summary>Swap elements in the list</summary>
@@ -93,14 +94,18 @@ namespace pr.extn
 		}
 
 		/// <summary>Reverse the order of all elements in this list</summary>
-		public static void Reverse(this IList list)
+		public static IList Reverse(this IList list)
 		{
 			list.Reverse(0, list.Count);
+			return list;
 		}
-		public static void Reverse<T>(this BindingList<T> list) { ((IList)list).Reverse(); }
+		public static BindingList<T> Reverse<T>(this BindingList<T> list)
+		{
+			return list.As<IList>().Reverse().As<BindingList<T>>();
+		}
 
 		/// <summary>Reverses the order of the elements in the specified range.</summary>
-		public static void Reverse(this IList list, int index, int count)
+		public static IList Reverse(this IList list, int index, int count)
 		{
 			if (index < 0) throw new ArgumentOutOfRangeException("index", "index must be >= 0");
 			if (count < 0) throw new ArgumentOutOfRangeException("count", "count must be >= 0");
@@ -114,8 +119,12 @@ namespace pr.extn
 				list[index1] = list[index2];
 				list[index2] = tmp;
 			}
+			return list;
 		}
-		public static void Reverse<T>(this BindingList<T> list, int index, int count) { ((IList)list).Reverse(index, count); }
+		public static BindingList<T> Reverse<T>(this BindingList<T> list, int index, int count)
+		{
+			return list.As<IList>().Reverse(index, count).As<BindingList<T>>();
+		}
 
 		/// <summary>Replaces 'replacee' with 'replacer' in this list. Throws if 'replacee' can't be found.</summary>
 		public static void Replace<T>(this IList list, T replacee, T replacer)
@@ -213,11 +222,11 @@ namespace pr.extn
 		}
 
 		/// <summary>Remove the range of elements from [startIndex, list.Count)</summary>
-		public static void RemoveToEnd<T>(this List<T> list, int startIndex)
+		public static List<T> RemoveToEnd<T>(this List<T> list, int startIndex)
 		{
 			var diff = list.Count - startIndex;
-			if (diff > 0)
-				list.RemoveRange(startIndex, diff);
+			if (diff > 0) list.RemoveRange(startIndex, diff);
+			return list;
 		}
 
 		/// <summary>
@@ -252,15 +261,17 @@ namespace pr.extn
 		//}
 
 		/// <summary>Sort the list using a lamba</summary>
-		public static void Sort<T>(this IList<T> list, Func<T,T,int> cmp)
+		public static IList<T> Sort<T>(this IList<T> list, Func<T,T,int> cmp)
 		{
 			list.Sort(0, list.Count, cmp);
+			return list;
 		}
 
 		/// <summary>Sub range sort using a delegate</summary>
-		public static void Sort<T>(this IList<T> list, int start, int count, Func<T,T,int> cmp)
+		public static IList<T> Sort<T>(this IList<T> list, int start, int count, Func<T,T,int> cmp)
 		{
 			list.QuickSort(new Comparison<T>(cmp), start, count);
+			return list;
 		}
 
 		/// <summary>Remove adjascent duplicate elements within the range [begin, end).
@@ -358,7 +369,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Sort the list using the quick sort algorithm</summary>
-		public static void QuickSort<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
+		public static IList<T> QuickSort<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
 		{
 			// pivot and get pivot location
 			int pivot = list.Partition(comparison, left, right);
@@ -368,6 +379,8 @@ namespace pr.extn
 
 			// if right index is greater than pivot, sort right side
 			if (right - pivot > 1) list.QuickSort(comparison, pivot + 1, right);
+		
+			return list;
 		}
 
 		/// <summary>Return the nth element in the list as if the list was sorted</summary>

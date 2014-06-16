@@ -63,11 +63,12 @@ namespace pr.gui
 		{
 			protected Element(Guid id, m4x4 position)
 			{
-				m_diag             = null;
-				Id                 = id;
-				m_impl_position    = position;
-				m_impl_selected    = false;
-				m_impl_visible     = true;
+				m_diag          = null;
+				Id              = id;
+				m_impl_position = position;
+				m_impl_selected = false;
+				m_impl_visible  = true;
+				UserData        = new Dictionary<Guid, object>();
 			}
 			protected Element(XElement node)
 			{
@@ -75,6 +76,8 @@ namespace pr.gui
 				Id       = node.Element(XmlField.Id).As<Guid>();
 				Position = node.Element(XmlField.Position).As<m4x4>();
 				Visible  = true;
+				UserData = new Dictionary<Guid, object>();
+				Dirty    = true;
 			}
 			public virtual void Dispose()
 			{
@@ -137,9 +140,7 @@ namespace pr.gui
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
 			internal void Update(XElement node)
 			{
-			//	if (node.Attribute(XmlField.TypeAttribute).Value != GetType().FullName)
-			//		throw new Exception("Must update a diagram element with xml data for the same type");
-
+				// Don't validate the TypeAttribute as users may have subclassed the element
 				using (SuspendEvents())
 					FromXml(node);
 
@@ -238,6 +239,9 @@ namespace pr.gui
 				}
 			}
 			private bool m_impl_visible;
+
+			/// <summary>Allow users to bind arbitrary data to the diagram element</summary>
+			public IDictionary<Guid, object> UserData { get; private set; }
 
 			/// <summary>Send this element to the bottom of the stack</summary>
 			public void SendToBack()
@@ -443,9 +447,9 @@ namespace pr.gui
 			}
 			protected override void FromXml(XElement node)
 			{
-				base.FromXml(node);
 				SizeMax = node.Element(XmlField.SizeMax).As<v2>(SizeMax);
 				Size    = node.Element(XmlField.Size).As<v2>(Size);
+				base.FromXml(node);
 			}
 
 			/// <summary>The diagram space width/height of the node</summary>
@@ -524,7 +528,7 @@ namespace pr.gui
 				:base(node)
 			{
 				m_impl_text = node.Element(XmlField.Text).As<string>();
-				m_impl_style = new NodeStyle{Id = node.Element(XmlField.Style).As<Guid>()};
+				m_impl_style = new NodeStyle(node.Element(XmlField.Style).As<Guid>());
 
 				// Be careful using Style in here, it's only a placeholder
 				// instance until the element has been added to a diagram.
@@ -552,14 +556,15 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.Text     ,Text     ,false);
-				node.Add2(XmlField.Style    ,Style.Id ,false);
+				node.Add2(XmlField.Text  ,Text     ,false);
+				node.Add2(XmlField.Style ,Style.Id ,false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				base.FromXml(node);
+				Style = new NodeStyle(node.Element(XmlField.Style).As<Guid>(Style.Id));
 				Text = node.Element(XmlField.Text).As<string>(Text);
+				base.FromXml(node);
 			}
 
 			/// <summary>The connectors linked to this node</summary>
@@ -608,20 +613,20 @@ namespace pr.gui
 			public override bool Resizeable { get { return !Style.AutoSize; } }
 
 			/// <summary>Style attributes for the node</summary>
-			public virtual NodeStyle Style
+			public NodeStyle Style
 			{
-				get { return m_impl_style ?? NodeStyle.Default; }
+				get { return Diagram != null ? (m_impl_style = Diagram.m_node_styles[m_impl_style]) : m_impl_style; }
 				set
 				{
 					if (m_impl_style == value) return;
 					if (m_impl_style != null) m_impl_style.StyleChanged -= Invalidate;
-					m_impl_style = value;
+					m_impl_style = Diagram != null ? Diagram.m_node_styles[value] : value;
 					if (m_impl_style != null) m_impl_style.StyleChanged += Invalidate;
 					Invalidate();
 				}
 			}
-			private NodeStyle m_impl_style;
 			IStyle IHasStyle.Style { get { return Style; } }
+			private NodeStyle m_impl_style;
 
 			/// <summary>Get/Set the selected state</summary>
 			public override bool Selected
@@ -686,25 +691,11 @@ namespace pr.gui
 				return new EditingControl(tb, autosize, commit);
 			}
 
-			/// <summary>Update the connectors attached to this node</summary>
-			public void Relink(bool find_previous_anchors)
+			/// <summary>Try to untangle the connectors to this node</summary>
+			public void Untangle()
 			{
-				foreach (var c in Connectors)
-					c.Relink(find_previous_anchors);
-			}
-
-			/// <summary>Assign this element to a diagram</summary>
-			internal override void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
-			{
-				base.SetDiagramInternal(diag, mod_elements_collection);
-
-				// When an element is saved to xml, it only saves the style id.
-				// When loaded from xml, a default style is created with the id changed
-				// to that from the xml data. When added to a diagram, we use the style id
-				// to get the correct style for that id. (also with the side effect of adding
-				// new styles to the diagram)
-				if (diag != null)
-					Style = diag.m_node_styles[Style];
+				// Test each connector against the others
+				// Todo
 			}
 
 			/// <summary>Check the self consistency of this element</summary>
@@ -718,20 +709,29 @@ namespace pr.gui
 					if (conn.Node0 == this && conn.Node1 == this)
 						throw new Exception("Node {0} contains connector {1} that is attached to it at both ends".Fmt(ToString(), conn.ToString()));
 				}
+
+				// The style should be known to the diagram
+				if (Diagram != null)
+				{
+					if (!Diagram.m_node_styles.ContainsKey(Style.Id))
+						throw new Exception("Node {0} style is not in the diagram's style cache".Fmt(ToString()));
+				}
 				return base.CheckConsistency();
 			}
 
 			// ToString
-			public override string ToString() { return "Node (" + Text.Summary(10) + ")"; }
+			public override string ToString() { return "Node["+Text.Summary(20)+"]"; }
 		}
 
-		/// <summary>An invisible 'node-like' object used for detaching/attaching connectors</summary>
+		/// <summary>
+		/// An invisible 'node-like' object used for detaching/attaching connectors.
+		/// Public so that subclassed controls can detect and exclude it</summary>
 		public class NodeProxy :Node
 		{
 			private readonly AnchorPoint m_anchor_point;
 
 			public NodeProxy()
-				:base(Guid.NewGuid(), 20, 20, "ProxyNode", m4x4.Identity, NodeStyle.Default)
+				:base(Guid.NewGuid(), 20, 20, "ProxyNode", m4x4.Identity, new NodeStyle(Guid.Empty))
 			{
 				m_anchor_point = new AnchorPoint(this, v4.Origin, v4.Zero);
 			}
@@ -811,12 +811,12 @@ namespace pr.gui
 				:this(id, text, width, height, Color.WhiteSmoke, Color.Black, 5f)
 			{}
 			public BoxNode(Guid id, string text, uint width, uint height, Color bkgd, Color border, float corner_radius)
-				:this(id, text, width, height, bkgd, border, corner_radius, m4x4.Identity, NodeStyle.Default)
+				:this(id, text, width, height, bkgd, border, corner_radius, m4x4.Identity, new NodeStyle(Guid.Empty))
 			{}
 			public BoxNode(Guid id, string text, uint width, uint height, Color bkgd, Color border, float corner_radius, m4x4 position, NodeStyle style)
 				:base(id, width, height, text, position, style)
 			{
-				var sz = style.AutoSize ? PreferredSize(SizeMax) : Size;
+				var sz = Style.AutoSize ? PreferredSize(SizeMax) : Size;
 				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), sz);
 				Size = sz;
 			}
@@ -841,8 +841,8 @@ namespace pr.gui
 			}
 			protected override void FromXml(XElement node)
 			{
-				base.FromXml(node);
 				CornerRadius = node.Element(XmlField.CornerRadius).As<float>(CornerRadius);
+				base.FromXml(node);
 			}
 
 			/// <summary>The radius of the box node corners</summary>
@@ -944,11 +944,10 @@ namespace pr.gui
 				if (!pt_in_element_space)
 					point = m4x4.InverseFast(Position) * point;
 
-				float units_per_anchor = Diagram != null ? Diagram.Options.Node.AnchorSpacing : 10f;
-				float bias_distance_sq = Maths.Sqr(2*units_per_anchor);
+				float bias_distance_sq = Maths.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 25f);
 
 				// Select the nearest anchor, but bias the anchor points that are already used
-				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location);
+				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location).ToArray();
 				return AnchorPoints().MinBy(x => (x.Location - point).Length2Sq + (used.Any(v => v4.FEql2(v,x.Location)) ? bias_distance_sq : 0));
 			}
 
@@ -1201,7 +1200,7 @@ namespace pr.gui
 				:this(Guid.NewGuid(), node0, node1)
 			{}
 			public Connector(Guid id, Node node0, Node node1)
-				:this(id, node0, node1, ConnectorStyle.Default)
+				:this(id, node0, node1, new ConnectorStyle(Guid.Empty))
 			{}
 			public Connector(Guid id, Node node0, Node node1, ConnectorStyle style)
 				:base(id, m4x4.Translation(AttachCentre(node0, node1), 0f))
@@ -1210,7 +1209,6 @@ namespace pr.gui
 				m_anc1 = new AnchorPoint();
 				m_centre_offset = v4.Zero;
 				Style = style;
-				Label = null;
 				Node0 = node0;
 				Node1 = node1;
 
@@ -1224,9 +1222,8 @@ namespace pr.gui
 				m_centre_offset = node.Element(XmlField.CentreOffset).As<v4>(v4.Zero);
 				Anc0            = node.Element(XmlField.Anchor0).As<AnchorPoint>();
 				Anc1            = node.Element(XmlField.Anchor1).As<AnchorPoint>();
-				Type            = node.Element(XmlField.Type).As<EType>(EType.Line);
-				Style           = new ConnectorStyle{Id = node.Element(XmlField.Style).As<Guid>(ConnectorStyle.Default.Id)};
-				Label           = node.Element(XmlField.Label).ToObject().As<Label>();
+				Type            = node.Element(XmlField.Type).As<EType>();
+				Style           = new ConnectorStyle(node.Element(XmlField.Style).As<Guid>());
 
 				Init(true);
 			}
@@ -1237,8 +1234,8 @@ namespace pr.gui
 				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
 				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
 
+				Style.StyleChanged += Invalidate;
 				Relink(find_previous_anchors);
-				Refresh(true);
 			}
 			public override void Dispose()
 			{
@@ -1265,17 +1262,14 @@ namespace pr.gui
 				node.Add2(XmlField.Anchor1 ,Anc1    , false);
 				node.Add2(XmlField.Type    ,Type    , false);
 				node.Add2(XmlField.Style   ,Style.Id, false);
-				node.Add2(XmlField.Label   ,Label   , true );
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				base.FromXml(node);
-				var id   = node.Element(XmlField.Style).As<Guid>(Style.Id);
-				Style    = id != Style.Id ? new ConnectorStyle{Id = id} : Style;
-				Label    = node.Element(XmlField.Label).ToObject(Label).As<Label>();
+				Style    = new ConnectorStyle(node.Element(XmlField.Style).As<Guid>(Style.Id));
 				Anc0     = node.Element(XmlField.Anchor0).As<AnchorPoint>(Anc0);
 				Anc1     = node.Element(XmlField.Anchor1).As<AnchorPoint>(Anc1);
+				base.FromXml(node);
 			}
 
 			/// <summary>The 'from' anchor</summary>
@@ -1393,34 +1387,34 @@ namespace pr.gui
 			}
 			private EType m_impl_type;
 
-			/// <summary>A label graphic for the connector</summary>
-			public virtual Label Label
-			{
-				get { return m_impl_label; }
-				set
-				{
-					if (m_impl_label == value) return;
-					m_impl_label = value;
-					Invalidate();
-				}
-			}
-			private Label m_impl_label;
+			///// <summary>A label graphic for the connector</summary>
+			//public virtual Label Label
+			//{
+			//	get { return m_impl_label; }
+			//	set
+			//	{
+			//		if (m_impl_label == value) return;
+			//		m_impl_label = value;
+			//		Invalidate();
+			//	}
+			//}
+			//private Label m_impl_label;
 
 			/// <summary>Style attributes for the connector</summary>
-			public virtual ConnectorStyle Style
+			public ConnectorStyle Style
 			{
-				get { return m_impl_style ?? ConnectorStyle.Default; }
+				get { return Diagram != null ? (m_impl_style = Diagram.m_connector_styles[m_impl_style]) : m_impl_style; }
 				set
 				{
 					if (m_impl_style == value) return;
 					if (m_impl_style != null) m_impl_style.StyleChanged -= Invalidate;
-					m_impl_style = value;
+					m_impl_style = Diagram != null ? Diagram.m_connector_styles[value] : value;
 					if (m_impl_style != null) m_impl_style.StyleChanged += Invalidate;
 					Invalidate();
 				}
 			}
-			private ConnectorStyle m_impl_style;
 			IStyle IHasStyle.Style { get { return Style; } }
+			private ConnectorStyle m_impl_style;
 
 			/// <summary>Get/Set the selected state</summary>
 			public override bool Selected
@@ -1657,20 +1651,6 @@ namespace pr.gui
 				Relink(find_previous_anchors);
 			}
 
-			/// <summary>Assign this element to a diagram</summary>
-			internal override void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
-			{
-				base.SetDiagramInternal(diag, mod_elements_collection);
-
-				// When an element is saved to xml, it only saves the style id.
-				// When loaded from xml, a default style is created with the id changed
-				// to that from the xml data. When added to a diagram, we use the style id
-				// to get the correct style for that id. (also with the side effect of adding
-				// new styles to the diagram)
-				if (diag != null)
-					Style = diag.m_connector_styles[Style];
-			}
-
 			/// <summary>Returns the diagram space position of the centre between nearest anchor points on two nodes</summary>
 			private static v2 AttachCentre(AnchorPoint anc0, AnchorPoint anc1)
 			{
@@ -1742,11 +1722,18 @@ namespace pr.gui
 				if (Node1 != null && Node1.Connectors.FirstOrDefault(x => x.Id == Id) == null)
 					throw new Exception("Connector {0} is connected to node {0}, but that node does not contain a reference to this connector".Fmt(ToString(), Node1.ToString()));
 
+				// The style should be known to the diagram
+				if (Diagram != null)
+				{
+					if (!Diagram.m_connector_styles.ContainsKey(Style.Id))
+						throw new Exception("Connector {0} style is not in the diagram's style cache".Fmt(ToString()));
+				}
+
 				return base.CheckConsistency();
 			}
 
 			// ToString
-			public override string ToString() { return "Connector (" + Anc0.ToString() + "-" + Anc1.ToString() + ")"; }
+			public override string ToString() { return "Connector["+Anc0.ToString()+" -> "+Anc1.ToString()+"]"; }
 		}
 
 		#endregion
@@ -1757,11 +1744,12 @@ namespace pr.gui
 		[TypeConverter(typeof(NodeStyle))]
 		public class NodeStyle :GenericTypeConverter<NodeStyle> ,IHasId ,IStyle
 		{
-			public static readonly NodeStyle Default = new NodeStyle{Id = Guid.Empty};
-
 			public NodeStyle()
+				:this(Guid.NewGuid())
+			{}
+			public NodeStyle(Guid id)
 			{
-				Id        = Guid.NewGuid();
+				Id        = id;
 				AutoSize  = true;
 				Border    = Color.Black;
 				Fill      = Color.WhiteSmoke;
@@ -1785,16 +1773,16 @@ namespace pr.gui
 			}
 			public NodeStyle(NodeStyle rhs)
 			{
-				Id           = Guid.NewGuid()        ;
-				AutoSize     = rhs.AutoSize          ;
-				Border       = rhs.Border            ;
-				Fill         = rhs.Fill              ;
-				Selected     = rhs.Selected          ;
-				Text         = rhs.Text              ;
-				TextAlign    = rhs.TextAlign         ;
-				Font         = (Font)rhs.Font.Clone();
-				Padding      = rhs.Padding           ;
-				StyleChanged = rhs.StyleChanged      ;
+				Id                   = Guid.NewGuid()        ;
+				AutoSize             = rhs.AutoSize          ;
+				Border               = rhs.Border            ;
+				Fill                 = rhs.Fill              ;
+				Selected             = rhs.Selected          ;
+				Text                 = rhs.Text              ;
+				TextAlign            = rhs.TextAlign         ;
+				Font                 = (Font)rhs.Font.Clone();
+				Padding              = rhs.Padding           ;
+				StyleChangedInternal = rhs.StyleChangedInternal;
 			}
 
 			/// <summary>Export to xml</summary>
@@ -1814,13 +1802,13 @@ namespace pr.gui
 
 			/// <summary>Unique id for the style</summary>
 			[Browsable(false)]
-			public Guid Id { get; internal set; }
+			public Guid Id { get; private set; }
 
 			/// <summary>True if the node's size is determined automatically from its content</summary>
 			public bool AutoSize
 			{
 				get { return m_impl_autosize; }
-				set { Util.SetAndRaise(this, ref m_impl_autosize, value, StyleChanged); }
+				set { Set(ref m_impl_autosize, value); }
 			}
 			private bool m_impl_autosize;
 
@@ -1828,7 +1816,7 @@ namespace pr.gui
 			public Color Border
 			{
 				get { return m_impl_border; }
-				set { Util.SetAndRaise(this, ref m_impl_border, value, StyleChanged); }
+				set { Set(ref m_impl_border, value); }
 			}
 			private Color m_impl_border;
 
@@ -1836,7 +1824,7 @@ namespace pr.gui
 			public Color Fill
 			{
 				get { return m_impl_fill; }
-				set { Util.SetAndRaise(this, ref m_impl_fill, value, StyleChanged); }
+				set { Set(ref m_impl_fill, value); }
 			}
 			private Color m_impl_fill;
 
@@ -1844,7 +1832,7 @@ namespace pr.gui
 			public Color Selected
 			{
 				get { return m_impl_selected; }
-				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
+				set { Set(ref m_impl_selected, value); }
 			}
 			private Color m_impl_selected;
 
@@ -1852,7 +1840,7 @@ namespace pr.gui
 			public Color Text
 			{
 				get { return m_impl_text; }
-				set { Util.SetAndRaise(this, ref m_impl_text, value, StyleChanged); }
+				set { Set(ref m_impl_text, value); }
 			}
 			private Color m_impl_text;
 
@@ -1860,7 +1848,7 @@ namespace pr.gui
 			public ContentAlignment TextAlign
 			{
 				get { return m_impl_align; }
-				set { Util.SetAndRaise(this, ref m_impl_align, value, StyleChanged); }
+				set { Set(ref m_impl_align, value); }
 			}
 			private ContentAlignment m_impl_align;
 
@@ -1868,7 +1856,7 @@ namespace pr.gui
 			public Font Font
 			{
 				get { return m_impl_font; }
-				set { Util.SetAndRaise(this, ref m_impl_font, value, StyleChanged); }
+				set { Set(ref m_impl_font, value); }
 			}
 			private Font m_impl_font;
 
@@ -1876,23 +1864,39 @@ namespace pr.gui
 			public Padding Padding
 			{
 				get { return m_impl_padding; }
-				set { Util.SetAndRaise(this, ref m_impl_padding, value, StyleChanged); }
+				set { Set(ref m_impl_padding, value); }
 			}
 			private Padding m_impl_padding;
 
-			/// <summary>Raised whenever a style property is changed</summary>
-			public event EventHandler StyleChanged;
+			/// <summary>Raised whenever a style property is changed. Note: Weak event</summary>
+			public event EventHandler StyleChanged
+			{
+				add { StyleChangedInternal += value.MakeWeak(eh => StyleChangedInternal -= eh); }
+				remove {}
+			}
+			private event EventHandler StyleChangedInternal;
+
+			/// <summary>Helper for setting properties and raising events</summary>
+			private void Set<T>(ref T existing, T value)
+			{
+				if (Equals(existing, value)) return;
+				existing = value;
+				StyleChangedInternal.Raise(this, EventArgs.Empty);
+			}
+		
+			public override string ToString() { return "NS:"+Id; }
 		}
 
 		/// <summary>Style properties for connectors</summary>
 		[TypeConverter(typeof(ConnectorStyle))]
 		public class ConnectorStyle :GenericTypeConverter<ConnectorStyle> ,IHasId ,IStyle
 		{
-			public static readonly ConnectorStyle Default = new ConnectorStyle{Id = Guid.Empty};
-
 			public ConnectorStyle()
+				:this(Guid.NewGuid())
+			{}
+			public ConnectorStyle(Guid id)
 			{
-				Id       = Guid.NewGuid();
+				Id       = id;
 				Line     = Color.Black;
 				Selected = Color.Blue;
 				Dangling = Color.DarkRed;
@@ -1910,13 +1914,13 @@ namespace pr.gui
 			}
 			public ConnectorStyle(ConnectorStyle rhs)
 			{
-				Id           = Guid.NewGuid()  ;
-				Line         = rhs.Line        ;
-				Selected     = rhs.Selected    ;
-				Dangling     = rhs.Dangling    ;
-				Width        = rhs.Width       ;
-				Smooth       = rhs.Smooth      ;
-				StyleChanged = rhs.StyleChanged;
+				Id                   = Guid.NewGuid();
+				Line                 = rhs.Line;
+				Selected             = rhs.Selected;
+				Dangling             = rhs.Dangling;
+				Width                = rhs.Width;
+				Smooth               = rhs.Smooth;
+				StyleChangedInternal = rhs.StyleChangedInternal;
 			}
 
 			/// <summary>Export to xml</summary>
@@ -1932,13 +1936,13 @@ namespace pr.gui
 
 			/// <summary>Unique id for the style</summary>
 			[Browsable(false)]
-			public Guid Id { get; internal set; }
+			public Guid Id { get; private set; }
 
 			/// <summary>The colour of the line portion of the connector</summary>
 			public Color Line
 			{
 				get { return m_impl_line; }
-				set { Util.SetAndRaise(this, ref m_impl_line, value, StyleChanged); }
+				set { Set(ref m_impl_line, value); }
 			}
 			private Color m_impl_line;
 
@@ -1946,7 +1950,7 @@ namespace pr.gui
 			public Color Selected
 			{
 				get { return m_impl_selected; }
-				set { Util.SetAndRaise(this, ref m_impl_selected, value, StyleChanged); }
+				set { Set(ref m_impl_selected, value); }
 			}
 			private Color m_impl_selected;
 
@@ -1954,7 +1958,7 @@ namespace pr.gui
 			public Color Dangling
 			{
 				get { return m_impl_dangling; }
-				set { Util.SetAndRaise(this, ref m_impl_dangling, value, StyleChanged); }
+				set { Set(ref m_impl_dangling, value); }
 			}
 			private Color m_impl_dangling;
 
@@ -1962,7 +1966,7 @@ namespace pr.gui
 			public float Width
 			{
 				get { return m_impl_width; }
-				set { Util.SetAndRaise(this, ref m_impl_width, value, StyleChanged); }
+				set { Set(ref m_impl_width, value); }
 			}
 			private float m_impl_width;
 
@@ -1970,12 +1974,27 @@ namespace pr.gui
 			public bool Smooth
 			{
 				get { return m_impl_smooth; }
-				set { Util.SetAndRaise(this, ref m_impl_smooth, value, StyleChanged); }
+				set { Set(ref m_impl_smooth, value); }
 			}
 			private bool m_impl_smooth;
 
-			/// <summary>Raised whenever a style property is changed</summary>
-			public event EventHandler StyleChanged;
+			/// <summary>Raised whenever a style property is changed. Note: Weak event</summary>
+			public event EventHandler StyleChanged
+			{
+				add { StyleChangedInternal += value.MakeWeak(eh => StyleChangedInternal -= eh); }
+				remove {}
+			}
+			private event EventHandler StyleChangedInternal;
+
+			/// <summary>Helper for setting properties and raising events</summary>
+			private void Set<T>(ref T existing, T value)
+			{
+				if (Equals(existing, value)) return;
+				existing = value;
+				StyleChangedInternal.Raise(this, EventArgs.Empty);
+			}
+		
+			public override string ToString() { return "CS:"+Id; }
 		}
 
 		/// <summary>A cache of node or connector style objects</summary>
@@ -1985,7 +2004,8 @@ namespace pr.gui
 
 			public StyleCache()
 			{
-				 m_map = new Dictionary<Guid, T>();
+				m_map = new Dictionary<Guid,T>();
+				m_map.Add(Guid.Empty, (T)Activator.CreateInstance(typeof(T), Guid.Empty));
 			}
 			public StyleCache(XElement node) :this()
 			{
@@ -2002,6 +2022,12 @@ namespace pr.gui
 				return node;
 			}
 
+			/// <summary>True if 'id' is in the cache</summary>
+			public bool ContainsKey(Guid id)
+			{
+				return m_map.ContainsKey(id);
+			}
+
 			/// <summary>Add the styles in 'rhs' to this cache</summary>
 			public void Merge(StyleCache<T> rhs)
 			{
@@ -2009,27 +2035,25 @@ namespace pr.gui
 					m_map[s.Key] = s.Value;
 			}
 
-			/// <summary>Reset the style cache</summary>
-			public void Clear()
-			{
-				m_map.Clear();
-			}
-
-			/// <summary>Returns the style associated with 'style.Id'summary>
-			internal T this[T style]
+			/// <summary>Get/Cache 'style'</summary>
+			public T this[T style]
 			{
 				get
 				{
-					// 'style' may be a default constructed node style with just the id changed
-					// This lookup tries to find the correct style for the id. If not found, then
-					// 'style' is added to the cache.
+					if (style == null)
+						return m_map[Guid.Empty];
+
 					T out_style;
 					if (m_map.TryGetValue(style.Id, out out_style))
 						return out_style;
-
+					
 					m_map.Add(style.Id, style);
 					return style;
 				}
+			}
+			public T this[Guid id]
+			{
+				get { return m_map[id]; }
 			}
 
 			/// <summary>Remove styles that are not referenced by any elements</summary>
@@ -2049,6 +2073,12 @@ namespace pr.gui
 				// Remove any remaining styles
 				foreach (var id in unused)
 					m_map.Remove(id);
+			}
+		
+			/// <summary>Access to the styles</summary>
+			public IEnumerable<T> Styles
+			{
+				get { return m_map.Values; }
 			}
 		}
 
@@ -2155,7 +2185,7 @@ namespace pr.gui
 			}
 
 			// ToString
-			public override string ToString() { return "Anchor (" + (Elem!=null?Elem.ToString():"dangling") + ")"; }
+			public override string ToString() { return "Anc["+(Elem!=null?Elem.ToString():"dangling")+"]"; }
 		}
 
 		#endregion
@@ -2163,7 +2193,7 @@ namespace pr.gui
 		#region Mouse Op
 
 		/// <summary>Base class for a mouse operation performed with the mouse down->drag->up sequence</summary>
-		public abstract class MouseOp
+		private abstract class MouseOp
 		{
 			protected DiagramControl m_diag; // The diagram
 
@@ -2197,7 +2227,7 @@ namespace pr.gui
 		}
 
 		/// <summary>A mouse operation for dragging selected elements around</summary>
-		public class MouseOpDragOrClickElements :MouseOp
+		private class MouseOpDragOrClickElements :MouseOp
 		{
 			private bool m_selection_graphic_added;
 			public MouseOpDragOrClickElements(DiagramControl diag) :base(diag)
@@ -2279,7 +2309,7 @@ namespace pr.gui
 		}
 
 		/// <summary>A mouse operation for dragging the diagram around</summary>
-		public class MouseOpDragOrClickDiagram :MouseOp
+		private class MouseOpDragOrClickDiagram :MouseOp
 		{
 			public MouseOpDragOrClickDiagram(DiagramControl diag) :base(diag) {}
 			public override void MouseDown(MouseEventArgs e)
@@ -2310,7 +2340,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Base class for mouse operations that involve moving a link</summary>
-		public abstract class MouseOpMoveLinkBase :MouseOp
+		private abstract class MouseOpMoveLinkBase :MouseOp
 		{
 			protected readonly Node m_fixed;      // The unmoving node
 			protected readonly NodeProxy m_proxy; // Proxy node that one end of the link will be attached to
@@ -2399,7 +2429,7 @@ namespace pr.gui
 		/// A mouse operation for creating a new link between nodes.
 		/// If a link gets made between nodes where there is already an existing
 		/// link, the new link just disappears</summary>
-		public class MouseOpCreateLink :MouseOpMoveLinkBase
+		private class MouseOpCreateLink :MouseOpMoveLinkBase
 		{
 			public MouseOpCreateLink(DiagramControl diag, Node fixed_, bool forward, Connector.EType type)
 				:base(diag, fixed_, forward)
@@ -2427,7 +2457,7 @@ namespace pr.gui
 		/// A mouse operation for relinking an existing link to another node.
 		/// If a link already existings for the new fixed,target pair, revert
 		/// the link back to it's original position</summary>
-		public class MouseOpMoveLink :MouseOpMoveLinkBase
+		private class MouseOpMoveLink :MouseOpMoveLinkBase
 		{
 			private readonly AnchorPoint m_prev; // The anchor point that the moving end was originally attached to
 
@@ -2455,7 +2485,7 @@ namespace pr.gui
 
 		/// <summary>
 		/// A mouse operation for resizing selected elements</summary>
-		public class MouseOpResize :MouseOp
+		private class MouseOpResize :MouseOp
 		{
 			private class Resizee
 			{
@@ -2865,53 +2895,54 @@ namespace pr.gui
 		/// <summary>String constants used in xml export/import</summary>
 		private static class XmlField
 		{
-			public const string Root               = "root"            ;
-			public const string TypeAttribute      = "ty"              ;
-			public const string Element            = "elem"            ;
-			public const string Id                 = "id"              ;
-			public const string Position           = "pos"             ;
-			public const string Text               = "text"            ;
-			public const string AutoSize           = "autosize"        ;
-			public const string SizeMax            = "sizemax"         ;
-			public const string Size               = "size"            ;
-			public const string CornerRadius       = "cnr"             ;
-			public const string Anchor             = "anc"             ;
-			public const string Anchor0            = "anc0"            ;
-			public const string Anchor1            = "anc1"            ;
-			public const string CentreOffset       = "centre_offset"   ;
-			public const string Label              = "label"           ;
-			public const string TexturedShape      = "textured_shape"  ;
-			public const string Shape              = "shape"           ;
-			public const string Surface            = "surface"         ;
-			public const string TextureScale       = "texture_scale"   ;
-			public const string Styles             = "style"           ;
-			public const string NodeStyles         = "node_styles"     ;
-			public const string ConnStyles         = "conn_styles"     ;
-			public const string Style              = "style"           ;
-			public const string Border             = "border"          ;
-			public const string Fill               = "fill"            ;
-			public const string Selected           = "selected"        ;
-			public const string Dangling           = "dangling"        ;
-			public const string Font               = "font"            ;
-			public const string Type               = "type"            ;
-			public const string Align              = "align"           ;
-			public const string Line               = "line"            ;
-			public const string Width              = "width"           ;
-			public const string Smooth             = "smooth"          ;
-			public const string Padding            = "padding"         ;
-			public const string ElementId          = "elem_id"         ;
-			public const string Location           = "loc"             ;
-			public const string Margin             = "margin"          ;
-			public const string AutoRelink         = "auto_relink"     ;
-			public const string Iterations         = "iterations"      ;
-			public const string SpringConstant     = "spring_constant" ;
-			public const string CoulombConstant    = "coulomb_constant";
-			public const string ConnectorScale     = "connector_scale" ;
-			public const string Equilibrium        = "equilibrium"     ;
-			public const string NodeSettings       = "node_settings"   ;
-			public const string ScatterSettings    = "scatter_settings";
-			public const string BkColour           = "bk_colour"       ;
-			public const string AnchorSpacing = "anchor_spacing"  ;
+			public const string Root              = "root"               ;
+			public const string TypeAttribute     = "ty"                 ;
+			public const string Element           = "elem"               ;
+			public const string Id                = "id"                 ;
+			public const string Position          = "pos"                ;
+			public const string Text              = "text"               ;
+			public const string AutoSize          = "autosize"           ;
+			public const string SizeMax           = "sizemax"            ;
+			public const string Size              = "size"               ;
+			public const string CornerRadius      = "cnr"                ;
+			public const string Anchor            = "anc"                ;
+			public const string Anchor0           = "anc0"               ;
+			public const string Anchor1           = "anc1"               ;
+			public const string CentreOffset      = "centre_offset"      ;
+			public const string Label             = "label"              ;
+			public const string TexturedShape     = "textured_shape"     ;
+			public const string Shape             = "shape"              ;
+			public const string Surface           = "surface"            ;
+			public const string TextureScale      = "texture_scale"      ;
+			public const string Styles            = "style"              ;
+			public const string NodeStyles        = "node_styles"        ;
+			public const string ConnStyles        = "conn_styles"        ;
+			public const string Style             = "style"              ;
+			public const string Border            = "border"             ;
+			public const string Fill              = "fill"               ;
+			public const string Selected          = "selected"           ;
+			public const string Dangling          = "dangling"           ;
+			public const string Font              = "font"               ;
+			public const string Type              = "type"               ;
+			public const string Align             = "align"              ;
+			public const string Line              = "line"               ;
+			public const string Width             = "width"              ;
+			public const string Smooth            = "smooth"             ;
+			public const string Padding           = "padding"            ;
+			public const string ElementId         = "elem_id"            ;
+			public const string Location          = "loc"                ;
+			public const string Margin            = "margin"             ;
+			public const string AutoRelink        = "auto_relink"        ;
+			public const string Iterations        = "iterations"         ;
+			public const string SpringConstant    = "spring_constant"    ;
+			public const string CoulombConstant   = "coulomb_constant"   ;
+			public const string ConnectorScale    = "connector_scale"    ;
+			public const string Equilibrium       = "equilibrium"        ;
+			public const string NodeSettings      = "node_settings"      ;
+			public const string ScatterSettings   = "scatter_settings"   ;
+			public const string BkColour          = "bk_colour"          ;
+			public const string AnchorSpacing     = "anchor_spacing"     ;
+			public const string AnchorSharingBias = "anchor_sharing_bias";
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
@@ -3069,6 +3100,10 @@ namespace pr.gui
 				[Description("This distance between snap-to points on a node")]
 				public float AnchorSpacing { get; set; }
 
+				/// <summary>Anchor point sharing bias</summary>
+				[Description("Controls how anchor points are chosen in automatic relinking. Larger values reduce anchor point sharing")]
+				public float AnchorSharingBias { get; set; }
+
 				/// <summary>The margin between nodes</summary>
 				[Description("")]
 				public float Margin { get; set; }
@@ -3079,21 +3114,24 @@ namespace pr.gui
 
 				public NodeOptions()
 				{
-					AnchorSpacing = 25f;
-					Margin        = 30f;
-					AutoRelink    = false;
+					AnchorSpacing     = 25f;
+					AnchorSharingBias = 70f;
+					Margin            = 30f;
+					AutoRelink        = false;
 				}
 				public NodeOptions(XElement node) :this()
 				{
-					AnchorSpacing = node.Element(XmlField.AnchorSpacing).As <float>(AnchorSpacing);
-					Margin        = node.Element(XmlField.Margin       ).As <float>(Margin       );
-					AutoRelink    = node.Element(XmlField.AutoRelink   ).As <bool >(AutoRelink   );
+					AnchorSpacing     = node.Element(XmlField.AnchorSpacing    ).As <float >(AnchorSpacing    );
+					AnchorSharingBias = node.Element(XmlField.AnchorSharingBias).As <float >(AnchorSharingBias);
+					Margin            = node.Element(XmlField.Margin           ).As <float >(Margin           );
+					AutoRelink        = node.Element(XmlField.AutoRelink       ).As <bool  >(AutoRelink       );
 				}
 				public XElement ToXml(XElement node)
 				{
-					node.Add2(XmlField.AnchorSpacing, AnchorSpacing, false);
-					node.Add2(XmlField.Margin       , Margin       , false);
-					node.Add2(XmlField.AutoRelink   , AutoRelink   , false);
+					node.Add2(XmlField.AnchorSpacing     , AnchorSpacing     , false);
+					node.Add2(XmlField.AnchorSharingBias , AnchorSharingBias , false);
+					node.Add2(XmlField.Margin            , Margin            , false);
+					node.Add2(XmlField.AutoRelink        , AutoRelink        , false);
 					return node;
 				}
 			}
@@ -3208,18 +3246,18 @@ namespace pr.gui
 			Edited             = false;
 
 			if (this.IsInDesignMode()) return;
+
 			m_view3d = new View3d();
 			m_window = new View3d.Window(m_view3d, Handle, Render);
 			m_tools  = new Tools();
 			m_camera = m_window.Camera;
 			m_camera.SetClipPlanes(0.5f, 1.1f, true);
-
-			InitializeComponent();
-
 			m_window.LightProperties = View3d.Light.Directional(-v4.ZAxis, Colour32.Zero, Colour32.Gray, Colour32.Zero, 0f, 0f);
 			m_window.FocusPointVisible = false;
 			m_window.OriginVisible = false;
 			m_window.Orthographic = false;
+
+			InitializeComponent();
 
 			Elements.ListChanging += HandleElementListChanging;
 			Selected.ListChanging += HandleSelectListChanging;
@@ -3396,6 +3434,12 @@ namespace pr.gui
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool DefaultMouseControl { get; set; }
+
+		/// <summary>Get the default node style</summary>
+		public NodeStyle DefaultNodeStyle { get { return m_node_styles[Guid.Empty]; } }
+
+		/// <summary>Get the default connector style</summary>
+		public ConnectorStyle DefaultConnectorStyle { get { return m_connector_styles[Guid.Empty]; } }
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
 		public bool AllowEditing { get; set; }
@@ -3631,6 +3675,12 @@ namespace pr.gui
 					elem.SetDiagramInternal(null, false);
 
 					// no sanity check here, because the Elements.Remove() is still in progress
+					break;
+				}
+			case ListChg.ItemPreAdd:
+				{
+					if (Elements.IndexOf(x => x.Id == args.Item.Id) != -1)
+						throw new ArgumentException("Item is already in this diagram");
 					break;
 				}
 			case ListChg.ItemAdded:
@@ -3926,9 +3976,15 @@ namespace pr.gui
 			var connectors = Selected.Count != 0
 				? Selected.Where(x => x.Entity == Entity.Node).Cast<Node>().SelectMany(x => x.Connectors)
 				: Elements.Where(x => x.Entity == Entity.Connector).Cast<Connector>();
-
 			foreach (var connector in connectors)
 				connector.Relink(false);
+
+			var nodes = Selected.Count != 0
+				? Selected.Where(x => x.Entity == Entity.Node).Cast<Node>()
+				: Elements.Where(x => x.Entity == Entity.Node).Cast<Node>();
+			foreach (var node in nodes)
+				node.Untangle();
+
 			Refresh();
 		}
 
@@ -4138,22 +4194,29 @@ namespace pr.gui
 		{
 			// Node styles
 			m_node_styles.RemoveUnused(Elements);
-			node.Add2(XmlField.NodeStyles, m_node_styles ,false);
+			var ns = m_node_styles.Styles.OrderBy(x => x.Id);
+			node.Add2(XmlField.NodeStyles, ns, false);
 
 			// Connector styles
 			m_connector_styles.RemoveUnused(Elements);
-			node.Add2(XmlField.ConnStyles, m_connector_styles, false);
+			var cs = m_connector_styles.Styles.OrderBy(x => x.Id);
+			node.Add2(XmlField.ConnStyles, cs, false);
 
+			// Sort the elements so that the produced xml has a stable order
+			var nodes = Elements.Where(x => x.Entity == Entity.Node && !(x is NodeProxy)).OrderBy(x => x.Id).ToArray();
+			var conns = Elements.Where(x => x.Entity == Entity.Connector).OrderBy(x => x.Id).ToArray();
+			var labls = Elements.Where(x => x.Entity == Entity.Label    ).OrderBy(x => x.Id).ToArray();
+			
 			// Nodes
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
+			foreach (var elem in nodes)
 				node.Add2(XmlField.Element, elem, true);
 
 			// Connectors
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
+			foreach (var elem in conns)
 				node.Add2(XmlField.Element, elem, true);
 
 			// Labels
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Label))
+			foreach (var elem in labls)
 				node.Add2(XmlField.Element, elem, true);
 
 			return node;
@@ -4188,20 +4251,16 @@ namespace pr.gui
 					{
 					case XmlField.NodeStyles:
 						{
-							var node_styles = n.As<StyleCache<NodeStyle>>();
-							if (!merge)
-								m_node_styles = node_styles ?? new StyleCache<NodeStyle>();
-							else if (node_styles != null)
-								m_node_styles.Merge(node_styles);
+							var node_styles = n.As<StyleCache<NodeStyle>>() ?? new StyleCache<NodeStyle>();
+							if (!merge) m_node_styles = node_styles;
+							else        m_node_styles.Merge(node_styles);
 							break;
 						}
 					case XmlField.ConnStyles:
 						{
-							var conn_styles = n.As<StyleCache<ConnectorStyle>>();
-							if (!merge)
-								m_connector_styles = conn_styles ?? new StyleCache<ConnectorStyle>();
-							else if (conn_styles != null)
-								m_connector_styles.Merge(conn_styles);
+							var conn_styles = n.As<StyleCache<ConnectorStyle>>() ?? new StyleCache<ConnectorStyle>();
+							if (!merge) m_connector_styles = conn_styles;
+							else        m_connector_styles.Merge(conn_styles);
 							break;
 						}
 					case XmlField.Element:
@@ -4391,9 +4450,9 @@ namespace pr.gui
 							foreach (var elem in Selected.ToArray())
 							{
 								if (elem.Entity == Entity.Node)
-									elem.As<Node>().Style = NodeStyle.Default;
+									elem.As<Node>().Style = m_node_styles[Guid.Empty];
 								if (elem.Entity == Entity.Connector)
-									elem.As<Connector>().Style = ConnectorStyle.Default;
+									elem.As<Connector>().Style = m_connector_styles[Guid.Empty];
 							}
 							Refresh();
 						};
@@ -4416,12 +4475,12 @@ namespace pr.gui
 			foreach (var elem in Selected)
 			{
 				var node = elem as Node;
-				if (node != null && node.Style == NodeStyle.Default)
-					node.Style = m_node_styles[new NodeStyle(NodeStyle.Default)];
+				if (node != null && node.Style.Id == Guid.Empty)
+					node.Style = new NodeStyle(node.Style);
 
 				var conn = elem as Connector;
-				if (conn != null && conn.Style == ConnectorStyle.Default)
-					conn.Style = m_connector_styles[new ConnectorStyle(ConnectorStyle.Default)];
+				if (conn != null && conn.Style.Id == Guid.Empty)
+					conn.Style = new ConnectorStyle(conn.Style);
 			}
 
 			var form = new Form
@@ -4452,8 +4511,8 @@ namespace pr.gui
 				var fields = new
 					{
 						MainOptions = Options,
-						NodeStyle = NodeStyle.Default,
-						ConnectorStyle = ConnectorStyle.Default,
+						NodeStyle = m_node_styles[Guid.Empty],
+						ConnectorStyle = m_connector_styles[Guid.Empty],
 					};
 
 				props.SelectedObject = fields;
@@ -4466,6 +4525,23 @@ namespace pr.gui
 
 		/// <summary>Check the self consistency of elements</summary>
 		public bool CheckConsistency()
+		{
+			try
+			{
+				// Allow inconsistency while events are suspended
+				if (RaiseEvents)
+					CheckConsistencyInternal();
+				
+				return true;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
+		/// <summary>Check consistency of the diagram elements</summary>
+		protected virtual void CheckConsistencyInternal()
 		{
 			// Take a copy to prevent events being raised
 			var elements = Elements.ToArray();
@@ -4496,12 +4572,10 @@ namespace pr.gui
 			// Check the consistency of all elements
 			foreach (var elem in Elements)
 				elem.CheckConsistency();
-
-			return true;
 		}
 
 		/// <summary>Element sorting predicates</summary>
-		private Cmp<Element> ByGuid   = Cmp<Element>.From((l,r) => l.Id.CompareTo(r.Id));
+		protected Cmp<Element> ByGuid   = Cmp<Element>.From((l,r) => l.Id.CompareTo(r.Id));
 
 		#region Component Designer generated code
 

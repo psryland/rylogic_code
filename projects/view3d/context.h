@@ -37,6 +37,11 @@ namespace view3d
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 			AtlInitCommonControls(ICC_BAR_CLASSES); // add flags to support other controls
 		}
+		~Context()
+		{
+			while (!m_wnd_cont.empty())
+				View3D_DestroyWindow(*m_wnd_cont.begin());
+		}
 
 		// Forward log data to the callback
 		void LogOutput(pr::log::Event const& ev)

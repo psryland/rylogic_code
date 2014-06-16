@@ -125,7 +125,7 @@ namespace pr.extn
 			{
 				var item1 = en.Current;
 				var item2 = en.MoveNext() ? en.Current : default(TSource);
-				yield return new Tuple<TSource,TSource>(item1,item2);
+				yield return Tuple.Create(item1,item2);
 			}
 		}
 
@@ -157,6 +157,24 @@ namespace pr.extn
 			{
 				yield return rhs.Current;
 			}
+		}
+	
+		/// <summary>Compare elements with 'other' returning pairs where the elements are not equal</summary>
+		public static IEnumerable<Tuple<TSource,TSource>> Differences<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Eql<TSource> comparer = null)
+		{
+			comparer = comparer ?? Eql<TSource>.Default;
+
+			var i0 = source.GetIterator();
+			var i1 = other.GetIterator();
+			for (; !i0.AtEnd && !i1.AtEnd; i0.MoveNext(), i1.MoveNext())
+			{
+				if (comparer.Equals(i0.Current, i1.Current)) continue;
+				yield return Tuple.Create(i0.Current, i1.Current);
+			}
+			for (; !i0.AtEnd; i0.MoveNext())
+				yield return Tuple.Create(i0.Current, default(TSource));
+			for (; !i1.AtEnd; i1.MoveNext())
+				yield return Tuple.Create(default(TSource), i1.Current);
 		}
 	}
 }
@@ -195,6 +213,16 @@ namespace pr
 
 				Assert.True(r0.SequenceEqual(r1));
 			}
+			[Test] public static void Differences()
+			{
+				var a0 = new[]{1,2,3,4,5};
+				var a1 = new[]{1,3,3,4,6,7};
+				var r0 = new[]{2,3,5,6,0,7};
+				var r1 = a0.Differences(a1).SelectMany(x => new[]{x.Item1, x.Item2}).ToArray();
+
+				Assert.True(r0.SequenceEqual(r1));
+			}
+
 		}
 	}
 }

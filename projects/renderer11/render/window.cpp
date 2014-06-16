@@ -90,6 +90,8 @@ namespace pr
 		{
 			m_main_rtv = nullptr;
 			m_main_dsv = nullptr;
+			m_main_srv = nullptr;
+			m_main_tex = nullptr;
 
 			// Destroying a Swap Chain:
 			// You may not release a swap chain in full-screen mode because doing so may create thread contention

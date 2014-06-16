@@ -48,7 +48,7 @@ namespace TestCS
 			m_diag.Elements.Add(node1);
 			m_diag.Elements.Add(node2);
 
-			DiagramControl.ConnectorStyle.Default.Smooth = true;
+			m_diag.DefaultConnectorStyle.Smooth = true;
 			var conn_type = DiagramControl.Connector.EType.BiDir;
 			
 			m_diag.Elements.Add(new DiagramControl.Connector(node0, node1){Type = conn_type});

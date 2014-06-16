@@ -43,9 +43,9 @@ namespace ldr
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
-		// Ignore internal context ids
-		m_store_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
-		m_store_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
+		//// Ignore internal context ids
+		//m_store_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
+		//m_store_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
 
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
