@@ -34,6 +34,7 @@ try:
 	obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
 	dbg   = True if "debug" in [arg.lower() for arg in sys.argv] else False
 	trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
+	#trace = True
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
 	if dbg:
@@ -98,8 +99,9 @@ try:
 			options = ["/nologo", "/Gis", "/Ges", "/WX", "/Zpc"]
 			
 			# Debug build options
+			# For some reason, the /Zi option causes the output to be different each time it's built using fxc in the windows 8.1 kit...
 			if dbg:
-				options += ["/Od", "/Zi", "/Gfp"]
+				options += ["/Gfp", "/Od"]#, "/Zi"]
 
 			if not pp:
 				# Build the shader using fxc
@@ -118,7 +120,7 @@ try:
 
 				# Compare the produced files with any existing ones, don't replace the files if they are identical.
 				# This prevents VS rebuilding all the time.
-				if Tools.DiffContent(filepath_h, out_filepath_h):
+				if Tools.DiffContent(filepath_h, out_filepath_h,trace=trace):
 					Tools.Copy(filepath_h, out_filepath_h)
 					if os.path.exists(filepath_cso):
 						Tools.Copy(filepath_cso, out_filepath_cso)

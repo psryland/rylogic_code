@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2014
+//  Copyright (c) Rylogic Ltd 2014
 //***********************************************
 // Constant buffer definitions for gbuffer shader
 // This file is included from C++ source as well

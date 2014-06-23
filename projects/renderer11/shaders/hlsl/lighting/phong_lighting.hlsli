@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 
 #include "../types.hlsli"

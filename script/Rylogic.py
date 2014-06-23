@@ -31,14 +31,34 @@ def Diff(src,dst):
 	return not sfound or not dfound or os.stat(src).st_mtime != os.stat(dst).st_mtime
 
 # Compare the content of two files and return true if they are different, ignoring file timestamps
-def DiffContent(src,dst):
+def DiffContent(src,dst,trace=False):
 	sfound = os.path.exists(src)
 	dfound = os.path.exists(dst)
-	if not sfound or not dfound or os.path.getsize(src) != os.path.getsize(dst):
+	if not sfound:
+		if trace: print("Content different, '"+src+"' not found")
 		return True
-	with open(src) as s:
-		with open(dst) as d:
-			return s.read() != d.read()
+	if not dfound:
+		if trace: print("Content different, '"+dst+"' not found")
+		return True
+	if os.path.getsize(src) != os.path.getsize(dst):
+		if trace: print("Content different, '"+src+"' and '"+dst+"' have different sizes")
+		return True
+	with open(src,'rb') as s:
+		with open(dst,'rb') as d:
+			sd = s.read()
+			dd = d.read()
+			if sd != dd:
+				if trace:
+					print("Content different, '"+src+"' and '"+dst+"' have different content")
+					print(len(sd))
+					for i in range(0,len(sd)):
+						if sd[i] != dd[i]:
+							print("diff at byte " + str(i) + ": " + str(sd[i]) + " != " + str(dd[i]))
+							break
+				return True
+
+	if trace: print("'"+src+"' and '"+dst+"' are identical")
+	return False
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False):
