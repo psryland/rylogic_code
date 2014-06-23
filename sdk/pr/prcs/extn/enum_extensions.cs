@@ -96,8 +96,10 @@ namespace pr.extn
 			public DictionaryEnumConverter(string[] names, T[] values)
 			{
 				m_dic = new Dictionary<long, string>(names.Length);
+				
+				// If the same value occurs multiple times in the enum, overwrite
 				for (var j = 0; j < names.Length; j++)
-					m_dic.Add(Convert.ToInt64(values[j], null), names[j]);
+					m_dic[Convert.ToInt64(values[j], null)] = names[j];
 			}
 			public override string ToStringInternal(long value)
 			{

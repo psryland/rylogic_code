@@ -20,6 +20,8 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tools_clear;
 		private ToolStripMenuItem m_menu_tools_loadmmapdiag;
 		private ToolStripMenuItem m_menu_tools_load_options;
+		private ToolStripMenuItem m_menu_tools_allowediting;
+		private ToolStripContainer m_toolstripcont;
 		private IMessageFilter m_filter;
 
 		static DiagramControlUI()
@@ -60,6 +62,11 @@ namespace TestCS
 			node4.Diagram = m_diag;
 			node5.Diagram = m_diag;
 			
+			var combo = new ComboBox{DataSource = new[]{"Paul","Was","Here"}};
+			node4.EditControl = new DiagramControl.EditingControl(combo
+				,(elem,form) => combo.SelectedItem = elem.As<DiagramControl.Node>().Text
+				,elem => elem.As<DiagramControl.Node>().Text = combo.SelectedItem.As<string>());
+			
 			var conn4 = new DiagramControl.Connector(node4, node2){Type = conn_type};
 			var conn5 = new DiagramControl.Connector(node5, node4){Type = conn_type};
 			var conn6 = new DiagramControl.Connector(node1, node4){Type = conn_type};
@@ -83,6 +90,10 @@ namespace TestCS
 			m_menu_tools_save.Click += (s,a) => m_diag_xml = m_diag.ExportXml().ToString();
 			m_menu_tools_loadmmapdiag.Click += (s,a) => m_diag.ImportXml(XDocument.Load("P:\\dump\\mmap_diag.xml").Root, true);
 			m_menu_tools_load_options.Click += (s,a) => m_diag.Options = XDocument.Load("P:\\dump\\diag_options.xml").Root.Element("options").As<DiagramControl.DiagramOptions>();
+			m_menu_tools_allowediting.Click += (s,a) => m_menu_tools_allowediting.Checked = m_diag.AllowEditing = !m_diag.AllowEditing;
+
+			m_toolstripcont.TopToolStripPanel.Controls.Add(m_diag.EditToolstrip);
+			m_diag.EditToolstrip.Visible = true;
 
 			m_filter = new Filter(this);
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
@@ -114,6 +125,7 @@ namespace TestCS
 			public Joypad()
 			{
 				m_gfx = new View3d.Object();
+				EditControl = null;
 			}
 			protected override void RefreshInternal()
 			{
@@ -129,10 +141,6 @@ namespace TestCS
 
 				point -= PositionXY;
 				return new DiagramControl.HitTestResult.Hit(this, point);
-			}
-			protected override DiagramControl.EditingControl EditingControl()
-			{
-				return new DiagramControl.EditingControl(new TextBox(), () => {});
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
@@ -188,7 +196,9 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.m_diag = new pr.gui.DiagramControl();
+			pr.gui.DiagramControl.DiagramOptions diagramOptions1 = new pr.gui.DiagramControl.DiagramOptions();
+			pr.gui.DiagramControl.DiagramOptions.NodeOptions nodeOptions1 = new pr.gui.DiagramControl.DiagramOptions.NodeOptions();
+			pr.gui.DiagramControl.DiagramOptions.ScatterOptions scatterOptions1 = new pr.gui.DiagramControl.DiagramOptions.ScatterOptions();
 			this.statusStrip1 = new System.Windows.Forms.StatusStrip();
 			this.m_status_mouse_pos = new System.Windows.Forms.ToolStripStatusLabel();
 			this.menuStrip1 = new System.Windows.Forms.MenuStrip();
@@ -198,27 +208,24 @@ namespace TestCS
 			this.m_menu_tools_clear = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_loadmmapdiag = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_load_options = new System.Windows.Forms.ToolStripMenuItem();
-			((System.ComponentModel.ISupportInitialize)(this.m_diag)).BeginInit();
+			this.m_menu_tools_allowediting = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_toolstripcont = new System.Windows.Forms.ToolStripContainer();
+			this.m_diag = new pr.gui.DiagramControl();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();
+			this.m_toolstripcont.BottomToolStripPanel.SuspendLayout();
+			this.m_toolstripcont.ContentPanel.SuspendLayout();
+			this.m_toolstripcont.TopToolStripPanel.SuspendLayout();
+			this.m_toolstripcont.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_diag)).BeginInit();
 			this.SuspendLayout();
-			// 
-			// m_diag
-			// 
-			this.m_diag.AllowEditing = true;
-			this.m_diag.AllowSelection = true;
-			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_diag.Location = new System.Drawing.Point(0, 0);
-			this.m_diag.Name = "m_diag";
-			this.m_diag.Options = null;
-			this.m_diag.Size = new System.Drawing.Size(552, 566);
-			this.m_diag.TabIndex = 0;
 			// 
 			// statusStrip1
 			// 
+			this.statusStrip1.Dock = System.Windows.Forms.DockStyle.None;
 			this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_status_mouse_pos});
-			this.statusStrip1.Location = new System.Drawing.Point(0, 544);
+			this.statusStrip1.Location = new System.Drawing.Point(0, 0);
 			this.statusStrip1.Name = "statusStrip1";
 			this.statusStrip1.Size = new System.Drawing.Size(552, 22);
 			this.statusStrip1.TabIndex = 1;
@@ -232,6 +239,7 @@ namespace TestCS
 			// 
 			// menuStrip1
 			// 
+			this.menuStrip1.Dock = System.Windows.Forms.DockStyle.None;
 			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolsToolStripMenuItem});
 			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
@@ -247,7 +255,8 @@ namespace TestCS
             this.m_menu_tools_load,
             this.m_menu_tools_clear,
             this.m_menu_tools_loadmmapdiag,
-            this.m_menu_tools_load_options});
+            this.m_menu_tools_load_options,
+            this.m_menu_tools_allowediting});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
@@ -282,24 +291,80 @@ namespace TestCS
 			this.m_menu_tools_load_options.Size = new System.Drawing.Size(166, 22);
 			this.m_menu_tools_load_options.Text = "Load Options";
 			// 
+			// m_menu_tools_allowediting
+			// 
+			this.m_menu_tools_allowediting.Name = "m_menu_tools_allowediting";
+			this.m_menu_tools_allowediting.Size = new System.Drawing.Size(166, 22);
+			this.m_menu_tools_allowediting.Text = "AllowEditing";
+			// 
+			// m_toolstripcont
+			// 
+			// 
+			// m_toolstripcont.BottomToolStripPanel
+			// 
+			this.m_toolstripcont.BottomToolStripPanel.Controls.Add(this.statusStrip1);
+			// 
+			// m_toolstripcont.ContentPanel
+			// 
+			this.m_toolstripcont.ContentPanel.Controls.Add(this.m_diag);
+			this.m_toolstripcont.ContentPanel.Size = new System.Drawing.Size(552, 520);
+			this.m_toolstripcont.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_toolstripcont.Location = new System.Drawing.Point(0, 0);
+			this.m_toolstripcont.Margin = new System.Windows.Forms.Padding(0);
+			this.m_toolstripcont.Name = "m_toolstripcont";
+			this.m_toolstripcont.Size = new System.Drawing.Size(552, 566);
+			this.m_toolstripcont.TabIndex = 4;
+			this.m_toolstripcont.Text = "toolStripContainer1";
+			// 
+			// m_toolstripcont.TopToolStripPanel
+			// 
+			this.m_toolstripcont.TopToolStripPanel.Controls.Add(this.menuStrip1);
+			// 
+			// m_diag
+			// 
+			this.m_diag.AllowEditing = true;
+			this.m_diag.AllowSelection = true;
+			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_diag.Location = new System.Drawing.Point(0, 0);
+			this.m_diag.Name = "m_diag";
+			diagramOptions1.BkColour = System.Drawing.SystemColors.ControlDark;
+			nodeOptions1.AnchorSharingBias = 70F;
+			nodeOptions1.AnchorSpacing = 25F;
+			nodeOptions1.AutoRelink = false;
+			nodeOptions1.Margin = 30F;
+			diagramOptions1.Node = nodeOptions1;
+			scatterOptions1.ConnectorScale = 1F;
+			scatterOptions1.CoulombConstant = 1000F;
+			scatterOptions1.Equilibrium = 0.01F;
+			scatterOptions1.MaxIterations = 20;
+			scatterOptions1.SpringConstant = 0.01F;
+			diagramOptions1.Scatter = scatterOptions1;
+			this.m_diag.Options = diagramOptions1;
+			this.m_diag.Size = new System.Drawing.Size(552, 520);
+			this.m_diag.TabIndex = 0;
+			// 
 			// DiagramControlUI
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(552, 566);
-			this.Controls.Add(this.statusStrip1);
-			this.Controls.Add(this.menuStrip1);
-			this.Controls.Add(this.m_diag);
+			this.Controls.Add(this.m_toolstripcont);
 			this.MainMenuStrip = this.menuStrip1;
 			this.Name = "DiagramControlUI";
 			this.Text = "DiagramControl";
-			((System.ComponentModel.ISupportInitialize)(this.m_diag)).EndInit();
 			this.statusStrip1.ResumeLayout(false);
 			this.statusStrip1.PerformLayout();
 			this.menuStrip1.ResumeLayout(false);
 			this.menuStrip1.PerformLayout();
+			this.m_toolstripcont.BottomToolStripPanel.ResumeLayout(false);
+			this.m_toolstripcont.BottomToolStripPanel.PerformLayout();
+			this.m_toolstripcont.ContentPanel.ResumeLayout(false);
+			this.m_toolstripcont.TopToolStripPanel.ResumeLayout(false);
+			this.m_toolstripcont.TopToolStripPanel.PerformLayout();
+			this.m_toolstripcont.ResumeLayout(false);
+			this.m_toolstripcont.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.m_diag)).EndInit();
 			this.ResumeLayout(false);
-			this.PerformLayout();
 
 		}
 

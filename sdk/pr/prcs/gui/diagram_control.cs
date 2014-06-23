@@ -68,25 +68,29 @@ namespace pr.gui
 				m_impl_position = position;
 				m_impl_selected = false;
 				m_impl_visible  = true;
+				EditControl     = null;
 				UserData        = new Dictionary<Guid, object>();
 			}
 			protected Element(XElement node)
 			{
-				Diagram  = null;
-				Id       = node.Element(XmlField.Id).As<Guid>();
-				Position = node.Element(XmlField.Position).As<m4x4>();
-				Visible  = true;
-				UserData = new Dictionary<Guid, object>();
-				Dirty    = true;
+				Diagram     = null;
+				Id          = node.Element(XmlField.Id).As<Guid>();
+				Position    = node.Element(XmlField.Position).As<m4x4>();
+				Visible     = true;
+				EditControl = null;
+				UserData    = new Dictionary<Guid, object>();
+				Dirty       = true;
 			}
 			public virtual void Dispose()
 			{
+				Disposing.Raise(this, EventArgs.Empty);
 				Diagram = null;
 				Invalidated = null;
 				PositionChanged = null;
 				DataChanged = null;
 				SelectedChanged = null;
 			}
+			public event EventHandler Disposing;
 
 			/// <summary>Get the entity type for this element</summary>
 			public abstract Entity Entity { get; }
@@ -123,7 +127,7 @@ namespace pr.gui
 			private DiagramControl m_diag;
 
 			/// <summary>Unique id for this element</summary>
-			public Guid Id { get; private set; }
+			public Guid Id { get; set; }
 
 			/// <summary>Export to xml</summary>
 			public virtual XElement ToXml(XElement node)
@@ -389,29 +393,23 @@ namespace pr.gui
 			protected virtual void AddToSceneInternal(View3d.Window window) {}
 
 			/// <summary>Edit the element contents</summary>
-			public virtual void Edit()
+			public void Edit()
 			{
 				// Get the user control used to edit the node
-				var editing_control = EditingControl();
-				if (editing_control == null)
+				if (EditControl == null)
 					return; // not editable
 
 				// Create a form to host the control
-				var edit = new EditField(editing_control)
-				{
-					Bounds = Diagram.RectangleToScreen(Diagram.DiagramToClient(Bounds)),
-				};
+				var edit = new EditField(this, EditControl);
 
 				// Display modally
+				EditControl.Init(this, edit);
 				if (edit.ShowDialog(Diagram.ParentForm) == DialogResult.OK)
-					editing_control.Commit();
+					EditControl.Commit(this);
 			}
 
-			/// <summary>Gets a control to use for editing the element. Return null if not editable</summary>
-			protected virtual EditingControl EditingControl()
-			{
-				return null;
-			}
+			/// <summary>A control wrapper use for editing the element. Set to null if not editable</summary>
+			public EditingControl EditControl { get; set; }
 
 			/// <summary>Check the self consistency of this element</summary>
 			public virtual bool CheckConsistency()
@@ -537,6 +535,7 @@ namespace pr.gui
 			private void Init()
 			{
 				Connectors = new BindingListEx<Connector>();
+				EditControl = DefaultEditControl;
 				Style.StyleChanged += Invalidate;
 			}
 			public override void Dispose()
@@ -596,6 +595,9 @@ namespace pr.gui
 			/// <summary>Return the preferred node size given the current text and upper size bounds</summary>
 			public override v2 PreferredSize(v2 layout)
 			{
+				if (!Text.HasValue())
+					return Size;
+
 				if (layout.x == 0f) layout.x = float.MaxValue;
 				if (layout.y == 0f) layout.y = float.MaxValue;
 
@@ -663,32 +665,29 @@ namespace pr.gui
 			}
 
 			/// <summary>Gets a control to use for editing the element. Return null if not editable</summary>
-			protected override EditingControl EditingControl()
+			public static EditingControl DefaultEditControl
 			{
-				var tb = new TextBox
-					{
-						Multiline = true,
-						MinimumSize = new Size(80,30),
-						MaximumSize = new Size(640,480),
-						BorderStyle = BorderStyle.None,
-						Margin = Padding.Empty,
-						Text = Text,
-					};
-				Action<Form> autosize = form =>
-					{
-						var sz         = tb.PreferredSize;
-						sz.Width      += 1;
-						sz.Height     += tb.Font.Height + 2;
-						form.Size      = sz;
-						tb.Size        = sz;
-						form.Size      = tb.Size;
-						tb.ScrollBars  = tb.Size != sz ? ScrollBars.Both : ScrollBars.None;
-					};
-				Action commit = () =>
-					{
-						Text = tb.Text.Trim();
-					};
-				return new EditingControl(tb, autosize, commit);
+				get
+				{
+					var tb = new TextBox
+						{
+							Multiline = true,
+							BorderStyle = BorderStyle.None,
+							Margin = Padding.Empty,
+							ScrollBars = ScrollBars.Both,
+						};
+					Action<Element,Form> init = (elem,form) =>
+						{
+							tb.Text = elem.As<Node>().Text;
+							form.ClientSize = tb.PreferredSize;
+							form.Height += 16;
+						};
+					Action<Element> commit = elem =>
+						{
+							elem.As<Node>().Text = tb.Text.Trim();
+						};
+					return new EditingControl(tb, init, commit);
+				}
 			}
 
 			/// <summary>Try to untangle the connectors to this node</summary>
@@ -799,13 +798,13 @@ namespace pr.gui
 				:this(Guid.NewGuid())
 			{}
 			public BoxNode(Guid id)
-				:this(id, "", 0, 0)
+				:this(id, "")
 			{}
 			public BoxNode(string text)
 				:this(Guid.NewGuid(), text)
 			{}
 			public BoxNode(Guid id, string text)
-				:this(id, text, 0, 0)
+				:this(id, text, 80, 30)
 			{}
 			public BoxNode(Guid id, string text, uint width, uint height)
 				:this(id, text, width, height, Color.WhiteSmoke, Color.Black, 5f)
@@ -967,6 +966,10 @@ namespace pr.gui
 					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
 
 					tex.Gfx.Clear(Selected ? Style.Selected : Style.Fill);
+					tex.Gfx.CompositingMode = CompositingMode.SourceOver;
+					tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
+					tex.Gfx.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+					tex.Gfx.SmoothingMode = SmoothingMode.AntiAlias;
 					using (var bsh = new SolidBrush(Style.Text))
 						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
 				}
@@ -1068,12 +1071,6 @@ namespace pr.gui
 				Anc.Update(this);
 				Position = m4x4.Translation(Anc.LocationDS.xy, PositionZ);
 				Invalidate();
-			}
-
-			/// <summary>Edit the label contents</summary>
-			protected override EditingControl EditingControl()
-			{
-				return null;
 			}
 		}
 
@@ -1537,12 +1534,12 @@ namespace pr.gui
 					// is allowed, detach the connector and start a move link mouse op
 					if ((hit_point_cs - anc0_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
 					{
-						Diagram.m_mouse_op[(int)EBtnIdx.None] = new MouseOpMoveLink(Diagram, this, false);
+						Diagram.m_mouse_op.SetPending(EBtnIdx.Left, new MouseOpMoveLink(Diagram, this, false){StartOnMouseDown = false});
 						return true;
 					}
 					if ((hit_point_cs - anc1_cs).Length2Sq < DiagramControl.MinCSSelectionDistanceSq)
 					{
-						Diagram.m_mouse_op[(int)EBtnIdx.None] = new MouseOpMoveLink(Diagram, this, true);
+						Diagram.m_mouse_op.SetPending(EBtnIdx.Left, new MouseOpMoveLink(Diagram, this, true){StartOnMouseDown = false});
 						return true;
 					}
 				}
@@ -1734,6 +1731,137 @@ namespace pr.gui
 
 			// ToString
 			public override string ToString() { return "Connector["+Anc0.ToString()+" -> "+Anc1.ToString()+"]"; }
+		}
+
+		#endregion
+
+		#region Shapes
+
+		/// <summary>Interface for shape creation types</summary>
+		public interface IShape
+		{
+			/// <summary>Generate the ldr string for the shape</summary>
+			string Make(v2 sz);
+		}
+
+		/// <summary>A quad shape</summary>
+		public class QuadShape :IShape
+		{
+			public QuadShape(float corner_radius)
+			{
+				CornerRadius = corner_radius;
+			}
+			public QuadShape(XElement node)
+			{
+				CornerRadius = node.Element(XmlField.CornerRadius).As<float>();
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(XmlField.CornerRadius, CornerRadius, false);
+				return node;
+			}
+
+			/// <summary>The radius of the quad corners</summary>
+			public float CornerRadius { get; set; }
+
+			/// <summary>Generate the ldr string for the shape</summary>
+			public string Make(v2 sz)
+			{
+				var ldr = new LdrBuilder();
+				ldr.Append("*Rect {3 ",sz.x," ",sz.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
+				return ldr.ToString();
+			}
+		}
+
+		/// <summary>A ellipse shape</summary>
+		public class EllipseShape :IShape
+		{
+			public EllipseShape() {}
+			public EllipseShape(XElement node) {}
+			public XElement ToXml(XElement node) { return node; }
+
+			/// <summary>Generate the ldr string for the shape</summary>
+			public string Make(v2 sz)
+			{
+				var ldr = new LdrBuilder();
+				ldr.Append("*Circle {3 ",sz.x/2f," ",sz.y/2f," ",Ldr.Solid(),"}\n");
+				return ldr.ToString();
+			}
+		}
+
+		/// <summary>A 'mixin' class for a textured round-cornered quad</summary>
+		internal class TexturedShape<TShape> :View3d.Object where TShape :IShape
+		{
+			/// <summary>True when the model needs updating</summary>
+			private bool m_model_dirty;
+
+			public TexturedShape(TShape shape, v2 sz, uint texture_scale = 4)
+			{
+				Shape = shape;
+				m_surf = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
+				m_model_dirty = true;
+			}
+			public TexturedShape(XElement node)
+			{
+				Shape = node.Element(XmlField.Shape).As<TShape>();
+				m_surf = node.Element(XmlField.Surface).As<Surface>();
+				m_model_dirty = true;
+			}
+			public override void Dispose()
+			{
+ 				m_surf.Dispose();
+				base.Dispose();
+			}
+
+			/// <summary>Export to xml</summary>
+			public XElement ToXml(XElement node)
+			{
+				node.Add2(XmlField.Shape, Shape, false);
+				node.Add2(XmlField.Surface, Surface, false);
+				return node;
+			}
+
+			/// <summary>The underlying shape</summary>
+			public TShape Shape { get; private set; }
+
+			/// <summary>The texture surface of the quad</summary>
+			public Surface Surface { get { return m_surf; } }
+			private readonly Surface m_surf;
+
+			/// <summary>Texture scaling factor</summary>
+			public uint TextureScale
+			{
+				get { return Surface.TextureScale; }
+			}
+
+			/// <summary>Lock the texture for drawing on</summary>
+			public View3d.Texture.Lock LockSurface()
+			{
+				return Surface.LockSurface();
+			}
+
+			/// <summary>Get/Set the size of the quad and texture</summary>
+			public v2 Size
+			{
+				get { return m_surf.Size; }
+				set
+				{
+					if (Size == value) return;
+					m_surf.Size = value;
+					m_model_dirty = true;
+				}
+			}
+
+			/// <summary>Update the model</summary>
+			public void Refresh()
+			{
+				if (!m_model_dirty) return;
+
+				var ldr = Shape.Make(Size);
+				UpdateModel(ldr, View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+				SetTexture(Surface.Surf);
+				m_model_dirty = false;
+			}
 		}
 
 		#endregion
@@ -2192,8 +2320,82 @@ namespace pr.gui
 
 		#region Mouse Op
 
+		/// <summary>Manages per-button mouse operations</summary>
+		private class MouseOps
+		{
+			private readonly Dictionary<EBtnIdx, MouseOp> m_ops;
+			private readonly Dictionary<EBtnIdx, MouseOp> m_pending;
+
+			public MouseOps()
+			{
+				m_ops     = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+				m_pending = Enum<EBtnIdx>.Values.ToDictionary(k => k, k => (MouseOp)null);
+			}
+
+			/// <summary>The currently active mouse op</summary>
+			public MouseOp Active { get; private set; }
+
+			/// <summary>Return the op pending for button 'idx'</summary>
+			public MouseOp Pending(EBtnIdx idx)
+			{
+				return m_pending[idx];
+			}
+
+			/// <summary>Add a mouse op to be started on the next mouse down event for button 'idx'</summary>
+			public void SetPending(EBtnIdx idx, MouseOp op)
+			{
+				if (m_pending[idx] != null) m_pending[idx].Dispose();
+				m_pending[idx] = op;
+			}
+
+			/// <summary>Start/End the next mouse op for button 'idx'</summary>
+			public void BeginOp(EBtnIdx idx)
+			{
+				Active = m_pending[idx];
+				m_pending[idx] = null;
+			}
+			public void EndOp(EBtnIdx idx)
+			{
+				if (Active != null) Active.Dispose();
+				Active = null;
+
+				if (m_pending[idx] != null && !m_pending[idx].StartOnMouseDown)
+					BeginOp(idx);
+			}
+
+			///// <summary>Get/Set the mouse op for the given mouse button</summary>
+			//public MouseOp this[EBtnIdx idx]
+			//{
+			//	get { return Active = m_ops[idx]; }
+			//	set
+			//	{
+			//		// If setting the op to null, dispose the existing op and copy any pending op
+			//		if (value == null)
+			//		{
+			//			if (m_ops[idx] != null) m_ops[idx].Dispose();
+			//			m_ops[idx] = m_pending[idx];
+			//			m_pending[idx] = null;
+			//		}
+
+			//		// If setting the op to a value, set directly if the op is currently null, otherwise set pending
+			//		else
+			//		{
+			//			if (m_ops[idx] != null)
+			//			{
+			//				if (m_pending[idx] != null) m_pending[idx].Dispose();
+			//				m_pending[idx] = value;
+			//			}
+			//			else
+			//			{
+			//				m_ops[idx] = value;
+			//			}
+			//		}
+			//	}
+			//}
+		}
+
 		/// <summary>Base class for a mouse operation performed with the mouse down->drag->up sequence</summary>
-		private abstract class MouseOp
+		private abstract class MouseOp :IDisposable
 		{
 			protected DiagramControl m_diag; // The diagram
 
@@ -2206,7 +2408,17 @@ namespace pr.gui
 			public MouseOp(DiagramControl diag)
 			{
 				m_diag = diag;
+				StartOnMouseDown = true;
+				Cancelled = false;
 			}
+			public virtual void Dispose()
+			{}
+
+			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
+			public bool StartOnMouseDown { get; set; }
+
+			/// <summary>True if the op was aborted</summary>
+			public bool Cancelled { get; protected set; }
 
 			/// <summary>True if the mouse down event should be treated as a click (so far)</summary>
 			protected bool IsClick(Point location)
@@ -2229,13 +2441,18 @@ namespace pr.gui
 		/// <summary>A mouse operation for dragging selected elements around</summary>
 		private class MouseOpDragOrClickElements :MouseOp
 		{
+			private HitTestResult.Hit m_hit_selected;
 			private bool m_selection_graphic_added;
+
 			public MouseOpDragOrClickElements(DiagramControl diag) :base(diag)
 			{
 				m_selection_graphic_added = false;
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
+				// Look for a selected object that the mouse operation starts on
+				m_hit_selected = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected);
+
 				// Record the drag start positions for selected objects
 				foreach (var elem in m_diag.Selected)
 					elem.DragStartPosition = elem.Position;
@@ -2249,8 +2466,8 @@ namespace pr.gui
 				if (IsClick(e.Location))
 					return;
 
-				var area_select = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
-				if (!area_select)
+				var drag_selected = m_diag.AllowEditing && m_hit_selected != null;
+				if (drag_selected)
 				{
 					// If the drag operation started on a selected element then drag the
 					// selected elements within the diagram.
@@ -2277,28 +2494,27 @@ namespace pr.gui
 			public override void MouseUp(MouseEventArgs e)
 			{
 				m_diag.RaiseEvents = true;
-				var is_area_select = m_hit_result.Hits.FirstOrDefault(x => x.Element.Selected) == null;
 
 				// If this is a single click...
 				if (IsClick(e.Location))
 				{
 					// Check to see if the click is on an existing selected object
-					// If so, allow that object handle the click, otherwise select elements.
-					var ht = m_diag.HitTestCS(e.Location);
-					var sel = ht.Hits.FirstOrDefault(x => x.Element.Selected);
-					if (sel == null || !sel.Element.HandleClicked(sel, ht.Camera))
+					// If so, allow that object to handle the click, otherwise select elements.
+					if (m_hit_selected == null || !m_hit_selected.Element.HandleClicked(m_hit_selected, m_hit_result.Camera))
 					{
 						var selection_area = new BRect(m_grab_ds, v2.Zero);
 						m_diag.SelectElements(selection_area, ModifierKeys);
 					}
 				}
-				else if (is_area_select)
+				else if (m_hit_selected != null && m_diag.AllowEditing)
+				{
+					m_diag.DragSelected(m_diag.ClientToDiagram(e.Location) - m_grab_ds, true);
+				}
+				else
 				{
 					var selection_area = BRect.FromBounds(m_grab_ds, m_diag.ClientToDiagram(e.Location));
 					m_diag.SelectElements(selection_area, ModifierKeys);
 				}
-				else
-					m_diag.DragSelected(m_diag.ClientToDiagram(e.Location) - m_grab_ds, true);
 
 				// Remove the area selection graphic
 				if (m_selection_graphic_added)
@@ -2339,27 +2555,62 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>
+		/// A mouse operation for creating a new node.</summary>
+		private class MouseOpCreateNode :MouseOp
+		{
+			private Node m_node;
+			public MouseOpCreateNode(DiagramControl diag) :base(diag)
+			{}
+			public override void Dispose()
+			{
+				if (m_node != null) m_node.Dispose();
+				base.Dispose();
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				m_node = new BoxNode{PositionXY = m_grab_ds};
+				m_node.Diagram = m_diag;
+				m_node.PositionXY = m_grab_ds;
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{}
+			public override void MouseUp(MouseEventArgs e)
+			{
+				var args = m_diag.RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.AddingNode, m_node));
+				if (args.Cancel)
+				{
+					Cancelled = true;
+					return;
+				}
+
+				m_node = null; // Prevent the node being disposed
+			}
+		}
+
 		/// <summary>Base class for mouse operations that involve moving a link</summary>
 		private abstract class MouseOpMoveLinkBase :MouseOp
 		{
-			protected readonly Node m_fixed;      // The unmoving node
 			protected readonly NodeProxy m_proxy; // Proxy node that one end of the link will be attached to
-			protected readonly bool m_forward;    // True if 'm_fixed' is the 'from' end of the link
+			protected readonly bool m_forward;    // Indicates whether the start or the end of the connector is floating
 			protected Connector m_conn;           // The connector being moved
-
-			public MouseOpMoveLinkBase(DiagramControl diag, Node fixed_, bool forward) :base(diag)
+			protected Node m_fixed;               // The unmoving node
+			
+			public MouseOpMoveLinkBase(DiagramControl diag, bool forward) :base(diag)
 			{
-				m_fixed   = fixed_;
-				m_conn    = null;
+				m_proxy = new NodeProxy{Diagram = diag}; // Create a proxy for the floating end to attach to
 				m_forward = forward;
-				m_proxy   = new NodeProxy(){Diagram = diag}; // Create a proxy for the floating end to attach to
+			}
+			public override void Dispose()
+			{
+				if (m_proxy != null) m_proxy.Dispose();
+				base.Dispose();
 			}
 			private HitTestResult.Hit HitTestNode(Point location_cs)
 			{
 				return m_diag.HitTestCS(location_cs).Hits.FirstOrDefault(x => x.Entity == Entity.Node && x.Element != m_proxy && x.Element != m_fixed);
 			}
-			public override void MouseDown(MouseEventArgs e)
-			{}
+			public override void MouseDown(MouseEventArgs e) {}
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// If we're hovering over a node, find the nearest anchor on that node and snap to it
@@ -2386,11 +2637,10 @@ namespace pr.gui
 				var hit = HitTestNode(e.Location);
 				var target = hit != null ? hit.Element.As<Node>() : null;
 
-				// No link, just revert the link
+				// No node to link to? Just revert the link
 				if (target == null)
 				{
 					Revert();
-					m_proxy.Dispose();
 				}
 				else
 				{
@@ -2415,12 +2665,11 @@ namespace pr.gui
 					if (res.Cancel)
 						Revert();
 					else
-						m_conn.Invalidate();
-
-					m_proxy.Dispose();
+						Commit();
 				}
 				m_diag.Refresh();
 			}
+			protected abstract void Commit();
 			protected abstract void Revert();
 			protected abstract DiagramChangedEventArgs GetNotifyArgs(Node target);
 		}
@@ -2431,12 +2680,42 @@ namespace pr.gui
 		/// link, the new link just disappears</summary>
 		private class MouseOpCreateLink :MouseOpMoveLinkBase
 		{
-			public MouseOpCreateLink(DiagramControl diag, Node fixed_, bool forward, Connector.EType type)
-				:base(diag, fixed_, forward)
+			private readonly Connector.EType m_type;
+
+			public MouseOpCreateLink(DiagramControl diag, Connector.EType type) :base(diag, true)
 			{
-				m_conn = m_forward
-					? new Connector(m_fixed, m_proxy){Type = type, Diagram = diag}
-					: new Connector(m_proxy, m_fixed){Type = type, Diagram = diag};
+				m_type = type;
+			}
+			public override void Dispose()
+			{
+				if (m_conn != null) m_conn.Dispose();
+				base.Dispose();
+			}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				// Find the node to start the link from. If the mouse
+				// down did not start on a node cancel the create link op.
+				var hit = m_hit_result.Hits.FirstOrDefault(x => x.Entity == Entity.Node);
+				m_fixed = hit != null ? hit.Element.As<Node>() : null;
+				if (m_fixed == null)
+				{
+					Revert();
+					Cancelled = true;
+					return;
+				}
+
+				// Create a link from the hit node to the proxy node
+				m_conn = new Connector(m_fixed, m_proxy){Type = m_type, Diagram = m_diag};
+
+			}
+			public override void MouseMove(MouseEventArgs e)
+			{
+				base.MouseMove(e);
+				m_conn.Anc(m_fixed).Update(m_proxy.PositionXY, false, m_conn);
+			}
+			protected override void Commit()
+			{
+				m_conn = null;
 			}
 			protected override void Revert()
 			{
@@ -2445,11 +2724,6 @@ namespace pr.gui
 			protected override DiagramChangedEventArgs GetNotifyArgs(Node target)
 			{
 				return new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.AddingLink, m_conn);
-			}
-			public override void MouseMove(MouseEventArgs e)
-			{
-				base.MouseMove(e);
-				m_conn.Anc(m_fixed).Update(m_proxy.PositionXY, false, m_conn);
 			}
 		}
 
@@ -2461,16 +2735,17 @@ namespace pr.gui
 		{
 			private readonly AnchorPoint m_prev; // The anchor point that the moving end was originally attached to
 
-			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward)
-				:base(diag, forward ? conn.Node0 : conn.Node1, forward)
+			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward) :base(diag, forward)
 			{
 				m_conn = conn;
 				m_prev = forward ? m_conn.Anc1 : m_conn.Anc0;
+				m_fixed = forward ? conn.Node0 : conn.Node1;
 
 				// Replace the moving end with the proxy
 				if (m_forward) m_conn.Anc1 = m_proxy.Anchor;
 				else           m_conn.Anc0 = m_proxy.Anchor;
 			}
+			protected override void Commit() {}
 			protected override void Revert()
 			{
 				if (m_forward) m_conn.Anc1 = m_prev;
@@ -2497,8 +2772,7 @@ namespace pr.gui
 			private readonly Tools.ResizeGrabber m_grabber; // The grabber to use for resizing
 			private readonly Resizee[] m_resizees;
 
-			public MouseOpResize(DiagramControl diag, Tools.ResizeGrabber grabber)
-				:base(diag)
+			public MouseOpResize(DiagramControl diag, Tools.ResizeGrabber grabber) :base(diag)
 			{
 				m_grabber = grabber;
 				
@@ -2555,6 +2829,12 @@ namespace pr.gui
 				Edited,
 
 				/// <summary>
+				/// A new node is being created.
+				/// Setting 'Cancel' for this event will about the add.
+				/// 'Elements' contains the new node being added.</summary>
+				AddingNode,
+
+				/// <summary>
 				/// A new link is being created.
 				/// Setting 'Cancel' for this event will abort the add.
 				/// 'Elements' contains the new connector being added.</summary>
@@ -2599,6 +2879,133 @@ namespace pr.gui
 
 		#endregion
 
+		#region Editting
+
+		/// <summary>Wraps a hosted control used to edit an element value</summary>
+		public class EditingControl
+		{
+			/// <summary>The control to be display when editing the element</summary>
+			public Control Ctrl;
+
+			/// <summary>Initialise the control with the existing element</summary>
+			public Action<Element,Form> Init;
+
+			/// <summary>Called if the editing is accepted</summary>
+			public Action<Element> Commit;
+
+			public EditingControl(Control ctrl, Action<Element,Form> init, Action<Element> commit)
+			{
+				Ctrl       = ctrl;
+				Init       = init;
+				Commit     = commit;
+			}
+		}
+
+		/// <summary>Helper form for editing the value of an element using a hosted control</summary>
+		private class EditField :Form
+		{
+			private class SizeBar :StatusBar
+			{
+				private Point m_fixed;
+				private bool m_resizing;
+
+				public SizeBar()
+				{
+					Dock = DockStyle.Bottom;
+					SizingGrip = true;
+					Height = 12;
+				}
+				protected override void OnMouseDown(MouseEventArgs e)
+				{
+					base.OnMouseDown(e);
+					if (Width - e.Location.X < 12)
+					{
+						m_fixed = Parent.Location;
+						Capture = true;
+						m_resizing = true;
+					}
+				}
+				protected override void OnMouseMove(MouseEventArgs e)
+				{
+					base.OnMouseMove(e);
+					Cursor = Width - e.Location.X < 12 ? Cursors.SizeNWSE : Cursors.Default;
+					if (m_resizing)
+					{
+						var loc = PointToScreen(e.Location);
+						Parent.Size = new Size(loc.X - m_fixed.X, loc.Y - m_fixed.Y);
+					}
+				}
+				protected override void OnMouseUp(MouseEventArgs e)
+				{
+					base.OnMouseUp(e);
+					Cursor = Cursors.Default;
+					m_resizing = false;
+				}
+			}
+			private readonly EditingControl m_ctrl;
+
+			public EditField(Element elem, EditingControl ctrl)
+			{
+				m_ctrl = ctrl;
+				m_ctrl.Ctrl.Dock = DockStyle.Fill;
+
+				ShowInTaskbar   = false;
+				FormBorderStyle = FormBorderStyle.None;
+				MinimumSize     = new Size(80,30);
+				MaximumSize     = new Size(640,480);
+				KeyPreview      = true;
+				Margin          = Padding.Empty;
+				StartPosition   = FormStartPosition.Manual;
+
+				var bnds    = elem.Diagram.RectangleToScreen(elem.Diagram.DiagramToClient(elem.Bounds));
+				bnds.Width  = Math.Min(Bounds.Width, 80);
+				bnds.Height = Math.Min(Bounds.Height, 30);
+				Bounds      = bnds;
+
+				Controls.Add(m_ctrl.Ctrl);
+				Controls.Add(new SizeBar());
+			}
+			protected override void OnShown(EventArgs e)
+			{
+				m_ctrl.Ctrl.Capture = true;
+				m_ctrl.Ctrl.MouseDown += ClickToClose;
+				base.OnShown(e);
+			}
+			protected override void OnClosed(EventArgs e)
+			{
+				m_ctrl.Ctrl.MouseDown -= ClickToClose;
+				m_ctrl.Ctrl.Capture = false;
+				base.OnClosed(e);
+			}
+			protected override void OnKeyDown(KeyEventArgs e)
+			{
+				if (e.KeyCode == Keys.Escape)
+				{
+					DialogResult = DialogResult.Cancel;
+					Close();
+					return;
+				}
+				if (e.KeyCode == Keys.Return && e.Control)
+				{
+					DialogResult = DialogResult.OK;
+					Close();
+					return;
+				}
+				base.OnKeyDown(e);
+			}
+			private void ClickToClose(object sender, MouseEventArgs e)
+			{
+				var pt = e.Location;
+				if (pt.X < 0 || pt.Y < 0 || pt.X > Size.Width || pt.Y > Size.Height)
+				{
+					DialogResult = DialogResult.Cancel;
+					Close();
+				}
+			}
+		}
+
+		#endregion
+
 		#region Misc
 
 		/// <summary>How close a click as to be for selection to occur (in screen space)</summary>
@@ -2610,131 +3017,57 @@ namespace pr.gui
 		/// <summary>The minimum distance a connector sticks out from a node</summary>
 		private const int MinConnectorLen = 30;
 
-		/// <summary>Interface for shape creation types</summary>
-		public interface IShape
+		/// <summary>String constants used in xml export/import</summary>
+		private static class XmlField
 		{
-			/// <summary>Generate the ldr string for the shape</summary>
-			string Make(v2 sz);
-		}
-
-		/// <summary>A quad shape</summary>
-		public class QuadShape :IShape
-		{
-			public QuadShape(float corner_radius)
-			{
-				CornerRadius = corner_radius;
-			}
-			public QuadShape(XElement node)
-			{
-				CornerRadius = node.Element(XmlField.CornerRadius).As<float>();
-			}
-			public XElement ToXml(XElement node)
-			{
-				node.Add2(XmlField.CornerRadius, CornerRadius, false);
-				return node;
-			}
-
-			/// <summary>The radius of the quad corners</summary>
-			public float CornerRadius { get; set; }
-
-			/// <summary>Generate the ldr string for the shape</summary>
-			public string Make(v2 sz)
-			{
-				var ldr = new LdrBuilder();
-				ldr.Append("*Rect {3 ",sz.x," ",sz.y," ",Ldr.Solid()," ",Ldr.CornerRadius(CornerRadius),"}\n");
-				return ldr.ToString();
-			}
-		}
-
-		/// <summary>A ellipse shape</summary>
-		public class EllipseShape :IShape
-		{
-			public EllipseShape() {}
-			public EllipseShape(XElement node) {}
-			public XElement ToXml(XElement node) { return node; }
-
-			/// <summary>Generate the ldr string for the shape</summary>
-			public string Make(v2 sz)
-			{
-				var ldr = new LdrBuilder();
-				ldr.Append("*Circle {3 ",sz.x/2f," ",sz.y/2f," ",Ldr.Solid(),"}\n");
-				return ldr.ToString();
-			}
-		}
-
-		/// <summary>A 'mixin' class for a textured round-cornered quad</summary>
-		internal class TexturedShape<TShape> :View3d.Object where TShape :IShape
-		{
-			/// <summary>True when the model needs updating</summary>
-			private bool m_model_dirty;
-
-			public TexturedShape(TShape shape, v2 sz, uint texture_scale = 4)
-			{
-				Shape = shape;
-				m_surf = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
-				m_model_dirty = true;
-			}
-			public TexturedShape(XElement node)
-			{
-				Shape = node.Element(XmlField.Shape).As<TShape>();
-				m_surf = node.Element(XmlField.Surface).As<Surface>();
-				m_model_dirty = true;
-			}
-			public override void Dispose()
-			{
- 				m_surf.Dispose();
-				base.Dispose();
-			}
-
-			/// <summary>Export to xml</summary>
-			public XElement ToXml(XElement node)
-			{
-				node.Add2(XmlField.Shape, Shape, false);
-				node.Add2(XmlField.Surface, Surface, false);
-				return node;
-			}
-
-			/// <summary>The underlying shape</summary>
-			public TShape Shape { get; private set; }
-
-			/// <summary>The texture surface of the quad</summary>
-			public Surface Surface { get { return m_surf; } }
-			private readonly Surface m_surf;
-
-			/// <summary>Texture scaling factor</summary>
-			public uint TextureScale
-			{
-				get { return Surface.TextureScale; }
-			}
-
-			/// <summary>Lock the texture for drawing on</summary>
-			public View3d.Texture.Lock LockSurface()
-			{
-				return Surface.LockSurface();
-			}
-
-			/// <summary>Get/Set the size of the quad and texture</summary>
-			public v2 Size
-			{
-				get { return m_surf.Size; }
-				set
-				{
-					if (Size == value) return;
-					m_surf.Size = value;
-					m_model_dirty = true;
-				}
-			}
-
-			/// <summary>Update the model</summary>
-			public void Refresh()
-			{
-				if (!m_model_dirty) return;
-
-				var ldr = Shape.Make(Size);
-				UpdateModel(ldr, View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
-				SetTexture(Surface.Surf);
-				m_model_dirty = false;
-			}
+			public const string Root              = "root"               ;
+			public const string TypeAttribute     = "ty"                 ;
+			public const string Element           = "elem"               ;
+			public const string Id                = "id"                 ;
+			public const string Position          = "pos"                ;
+			public const string Text              = "text"               ;
+			public const string AutoSize          = "autosize"           ;
+			public const string SizeMax           = "sizemax"            ;
+			public const string Size              = "size"               ;
+			public const string CornerRadius      = "cnr"                ;
+			public const string Anchor            = "anc"                ;
+			public const string Anchor0           = "anc0"               ;
+			public const string Anchor1           = "anc1"               ;
+			public const string CentreOffset      = "centre_offset"      ;
+			public const string Label             = "label"              ;
+			public const string TexturedShape     = "textured_shape"     ;
+			public const string Shape             = "shape"              ;
+			public const string Surface           = "surface"            ;
+			public const string TextureScale      = "texture_scale"      ;
+			public const string Styles            = "style"              ;
+			public const string NodeStyles        = "node_styles"        ;
+			public const string ConnStyles        = "conn_styles"        ;
+			public const string Style             = "style"              ;
+			public const string Border            = "border"             ;
+			public const string Fill              = "fill"               ;
+			public const string Selected          = "selected"           ;
+			public const string Dangling          = "dangling"           ;
+			public const string Font              = "font"               ;
+			public const string Type              = "type"               ;
+			public const string Align             = "align"              ;
+			public const string Line              = "line"               ;
+			public const string Width             = "width"              ;
+			public const string Smooth            = "smooth"             ;
+			public const string Padding           = "padding"            ;
+			public const string ElementId         = "elem_id"            ;
+			public const string Location          = "loc"                ;
+			public const string Margin            = "margin"             ;
+			public const string AutoRelink        = "auto_relink"        ;
+			public const string Iterations        = "iterations"         ;
+			public const string SpringConstant    = "spring_constant"    ;
+			public const string CoulombConstant   = "coulomb_constant"   ;
+			public const string ConnectorScale    = "connector_scale"    ;
+			public const string Equilibrium       = "equilibrium"        ;
+			public const string NodeSettings      = "node_settings"      ;
+			public const string ScatterSettings   = "scatter_settings"   ;
+			public const string BkColour          = "bk_colour"          ;
+			public const string AnchorSpacing     = "anchor_spacing"     ;
+			public const string AnchorSharingBias = "anchor_sharing_bias";
 		}
 
 		/// <summary>A 'mixin' class for elements containing a texture</summary>
@@ -2807,142 +3140,26 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Wraps a hosted control used to edit an element value</summary>
-		public class EditingControl
+		/// <summary>Subclassed split button for the edit toolbar</summary>
+		private class ToolButton :ToolStripSplitButtonCheckable
 		{
-			/// <summary>The control to be display when editing the element</summary>
-			public Control Ctrl;
-
-			/// <summary>Called to resize the form during editing</summary>
-			public Action<Form> DoAutoSize;
-
-			/// <summary>Called if the editing is accepted</summary>
-			public Action Commit;
-
-			public EditingControl(Control ctrl, Action commit)
-				:this(ctrl, null, commit)
-			{}
-			public EditingControl(Control ctrl, Action<Form> autosize, Action commit)
+			public ToolButton()
 			{
-				Ctrl       = ctrl;
-				DoAutoSize = autosize;
-				Commit     = commit;
+				DropDown            = new ToolStripDropDownSingleSelect();
+				Checked             = false;
+				CheckOnClicked      = true;
+				CheckOnItemSelected = true;
+				DisplayStyle        = ToolStripItemDisplayStyle.Image;
 			}
-		}
-
-		/// <summary>Helper form for editing the value of an element using a hosted control</summary>
-		private class EditField :Form
-		{
-			private readonly EditingControl m_ctrl;
-			public EditField(EditingControl ctrl)
+			protected override void OnDropDownItemClicked(ToolStripItemClickedEventArgs e)
 			{
-				m_ctrl = ctrl;
-				m_ctrl.Ctrl.Dock = DockStyle.Fill;
-
-				ShowInTaskbar   = false;
-				FormBorderStyle = FormBorderStyle.None;
-				KeyPreview      = true;
-				Margin          = Padding.Empty;
-				StartPosition   = FormStartPosition.Manual;
-				Controls.Add(m_ctrl.Ctrl);
+				// Update the image to that of the selected item
+				if (DisplayStyle == ToolStripItemDisplayStyle.Image || DisplayStyle == ToolStripItemDisplayStyle.ImageAndText)
+					Image = e.ClickedItem.Image;
+				
+				DefaultItem = e.ClickedItem;
+				base.OnDropDownItemClicked(e);
 			}
-			protected override void OnShown(EventArgs e)
-			{
-				if (m_ctrl.DoAutoSize != null)
-					m_ctrl.DoAutoSize(this);
-
-				m_ctrl.Ctrl.Capture = true;
-				m_ctrl.Ctrl.MouseDown += ClickToClose;
- 				base.OnShown(e);
-			}
-			protected override void OnClosed(EventArgs e)
-			{
-				m_ctrl.Ctrl.MouseDown -= ClickToClose;
-				m_ctrl.Ctrl.Capture = false;
-				base.OnClosed(e);
-			}
-			protected override void OnKeyDown(KeyEventArgs e)
-			{
-				if (e.KeyCode == Keys.Escape)
-				{
-					DialogResult = DialogResult.Cancel;
-					Close();
-					return;
-				}
-				if (e.KeyCode == Keys.Return && e.Control)
-				{
-					DialogResult = DialogResult.OK;
-					Close();
-					return;
-				}
-
-				if (m_ctrl.DoAutoSize != null)
-					m_ctrl.DoAutoSize(this);
-
-				base.OnKeyDown(e);
-			}
-			private void ClickToClose(object sender, MouseEventArgs e)
-			{
-				var pt = e.Location;
-				if (pt.X < 0 || pt.Y < 0 || pt.X > Size.Width || pt.Y > Size.Height)
-				{
-					DialogResult = DialogResult.Cancel;
-					Close();
-				}
-			}
-		}
-
-		/// <summary>String constants used in xml export/import</summary>
-		private static class XmlField
-		{
-			public const string Root              = "root"               ;
-			public const string TypeAttribute     = "ty"                 ;
-			public const string Element           = "elem"               ;
-			public const string Id                = "id"                 ;
-			public const string Position          = "pos"                ;
-			public const string Text              = "text"               ;
-			public const string AutoSize          = "autosize"           ;
-			public const string SizeMax           = "sizemax"            ;
-			public const string Size              = "size"               ;
-			public const string CornerRadius      = "cnr"                ;
-			public const string Anchor            = "anc"                ;
-			public const string Anchor0           = "anc0"               ;
-			public const string Anchor1           = "anc1"               ;
-			public const string CentreOffset      = "centre_offset"      ;
-			public const string Label             = "label"              ;
-			public const string TexturedShape     = "textured_shape"     ;
-			public const string Shape             = "shape"              ;
-			public const string Surface           = "surface"            ;
-			public const string TextureScale      = "texture_scale"      ;
-			public const string Styles            = "style"              ;
-			public const string NodeStyles        = "node_styles"        ;
-			public const string ConnStyles        = "conn_styles"        ;
-			public const string Style             = "style"              ;
-			public const string Border            = "border"             ;
-			public const string Fill              = "fill"               ;
-			public const string Selected          = "selected"           ;
-			public const string Dangling          = "dangling"           ;
-			public const string Font              = "font"               ;
-			public const string Type              = "type"               ;
-			public const string Align             = "align"              ;
-			public const string Line              = "line"               ;
-			public const string Width             = "width"              ;
-			public const string Smooth            = "smooth"             ;
-			public const string Padding           = "padding"            ;
-			public const string ElementId         = "elem_id"            ;
-			public const string Location          = "loc"                ;
-			public const string Margin            = "margin"             ;
-			public const string AutoRelink        = "auto_relink"        ;
-			public const string Iterations        = "iterations"         ;
-			public const string SpringConstant    = "spring_constant"    ;
-			public const string CoulombConstant   = "coulomb_constant"   ;
-			public const string ConnectorScale    = "connector_scale"    ;
-			public const string Equilibrium       = "equilibrium"        ;
-			public const string NodeSettings      = "node_settings"      ;
-			public const string ScatterSettings   = "scatter_settings"   ;
-			public const string BkColour          = "bk_colour"          ;
-			public const string AnchorSpacing     = "anchor_spacing"     ;
-			public const string AnchorSharingBias = "anchor_sharing_bias";
 		}
 
 		/// <summary>Custom button renderer because the office 'checked' state buttons look crap</summary>
@@ -3229,21 +3446,22 @@ namespace pr.gui
 		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
 		private readonly Tools             m_tools;            // Tools
 		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
-		private StyleCache<ConnectorStyle> m_connector_styles; // The collection of node styles
-		private MouseOp[]                  m_mouse_op;         // Per button current mouse operation
+		private StyleCache<ConnectorStyle> m_connector_styles; //
+		private MouseOps                   m_mouse_op;         // Per button current mouse operation
+		private ToolStrip                  m_toolstrip_edit;   //
 
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
 		{
-			Elements           = new BindingListEx<Element>();
-			Selected           = new BindingListEx<Element>();
-			m_impl_options     = options ?? new DiagramOptions();
-			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
-			m_hoverscroll      = new HoverScroll(Handle);
-			m_node_styles      = new StyleCache<NodeStyle>();
-			m_connector_styles = new StyleCache<ConnectorStyle>();
-			m_mouse_op         = new MouseOp[Enum<EBtnIdx>.Count];
-			Edited             = false;
+			Elements             = new BindingListEx<Element>();
+			Selected             = new BindingListEx<Element>();
+			m_impl_options       = options ?? new DiagramOptions();
+			m_eb_update_diag     = new EventBatcher(UpdateDiagram);
+			m_hoverscroll        = new HoverScroll(Handle);
+			m_node_styles        = new StyleCache<NodeStyle>();
+			m_connector_styles   = new StyleCache<ConnectorStyle>();
+			m_mouse_op           = new MouseOps();
+			Edited               = false;
 
 			if (this.IsInDesignMode()) return;
 
@@ -3258,6 +3476,7 @@ namespace pr.gui
 			m_window.Orthographic = false;
 
 			InitializeComponent();
+			SetupEditToolstrip();
 
 			Elements.ListChanging += HandleElementListChanging;
 			Selected.ListChanging += HandleSelectListChanging;
@@ -3442,7 +3661,12 @@ namespace pr.gui
 		public ConnectorStyle DefaultConnectorStyle { get { return m_connector_styles[Guid.Empty]; } }
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
-		public bool AllowEditing { get; set; }
+		public bool AllowEditing
+		{
+			get { return m_impl_allow_editing; }
+			set { m_impl_allow_editing = value; UpdateEditToolbar(); }
+		}
+		private bool m_impl_allow_editing;
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
 		public bool AllowSelection { get; set; }
@@ -3450,49 +3674,39 @@ namespace pr.gui
 		protected override void OnMouseDown(MouseEventArgs e)
 		{
 			base.OnMouseDown(e);
+			
+			// If a mouse op is already active, ignore mouse down
+			if (m_mouse_op.Active != null)
+				return;
 
 			// Look for the mouse op to perform
 			var btn = View3d.ButtonIndex(e.Button);
-			if (m_mouse_op[(int)btn] == null)
-			{
-				// If this is a left mouse button down event and there is a current
-				// operation in the 'EBtnIdx.None' slot, swap it to the left btn slot
-				if (btn == EBtnIdx.Left && m_mouse_op[(int)EBtnIdx.None] != null)
-				{
-					m_mouse_op.Swap((int)EBtnIdx.Left, (int)EBtnIdx.None);
-				}
-				// Otherwise, if default navigation is on, create the default mouse op
-				else if (DefaultMouseControl)
-				{
-					m_mouse_op[(int)btn] = CreateDefaultMouseOp(btn, e.Location);
-				}
+			if (m_mouse_op.Pending(btn) == null && DefaultMouseControl)
+				m_mouse_op.SetPending(btn, CreateDefaultMouseOp(btn, e.Location));
 
-				// If there's still no mouse op, ignore the event
-				if (m_mouse_op[(int)btn] == null)
-					return;
-			}
+			// Start the next mouse op
+			m_mouse_op.BeginOp(btn);
 
 			// Get the mouse op, save mouse location and hit test data, then call op.MouseDown()
-			var op = m_mouse_op[(int)btn];
-			op.m_btn_down   = true;
-			op.m_grab_cs    = e.Location;
-			op.m_grab_ds    = ClientToDiagram(op.m_grab_cs);
-			op.m_hit_result = HitTest(op.m_grab_ds);
-			op.MouseDown(e);
-
-			Capture = true;
+			var op = m_mouse_op.Active;
+			if (op != null && !op.Cancelled)
+			{
+				op.m_btn_down   = true;
+				op.m_grab_cs    = e.Location;
+				op.m_grab_ds    = ClientToDiagram(op.m_grab_cs);
+				op.m_hit_result = HitTest(op.m_grab_ds);
+				op.MouseDown(e);
+				Capture = true;
+			}
 		}
 		protected override void OnMouseMove(MouseEventArgs e)
 		{
 			base.OnMouseMove(e);
 
 			// Look for the mouse op to perform
-			var btn = View3d.ButtonIndex(e.Button);
-			if (m_mouse_op[(int)btn] == null)
-				return;
-
-			var op = m_mouse_op[(int)btn];
-			op.MouseMove(e);
+			var op = m_mouse_op.Active;
+			if (op != null && !op.Cancelled)
+				op.MouseMove(e);
 		}
 		protected override void OnMouseUp(MouseEventArgs e)
 		{
@@ -3504,13 +3718,12 @@ namespace pr.gui
 
 			// Look for the mouse op to perform
 			var btn = View3d.ButtonIndex(e.Button);
-			if (m_mouse_op[(int)btn] == null)
-				return;
-
-			var op = m_mouse_op[(int)btn];
-			op.MouseUp(e);
-
-			m_mouse_op[(int)btn] = null;
+			var op = m_mouse_op.Active;
+			if (op != null && !op.Cancelled)
+				op.MouseUp(e);
+			
+			m_mouse_op.EndOp(btn);
+			UpdateEditToolbar();
 		}
 		protected override void OnMouseWheel(MouseEventArgs e)
 		{
@@ -3522,15 +3735,15 @@ namespace pr.gui
 		}
 
 		/// <summary>Create the default navigation mouse operation based on mouse button</summary>
-		private MouseOp CreateDefaultMouseOp(EBtnIdx btn_idx, Point pt_cs)
+		private MouseOp CreateDefaultMouseOp(EBtnIdx btn, Point pt_cs)
 		{
-			switch (btn_idx)
+			switch (btn)
 			{
 			default: return null;
 			case EBtnIdx.Left:
 				{
 					// If elements are selected, see if the mouse has selected one of the resize-grabbers
-					if (SelectionGraphicsVisible)
+					if (AllowEditing && SelectionGraphicsVisible)
 					{
 						var pt_ds = ClientToDiagram(pt_cs);
 						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).Length2Sq);
@@ -3654,7 +3867,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
-		private void HandleElementListChanging(object sender, ListChgEventArgs<Element> args)
+		protected virtual void HandleElementListChanging(object sender, ListChgEventArgs<Element> args)
 		{
 			switch (args.ChangeType)
 			{
@@ -3706,7 +3919,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle elements added/removed from the selection list</summary>
-		private void HandleSelectListChanging(object sender, ListChgEventArgs<Element> args)
+		protected virtual void HandleSelectListChanging(object sender, ListChgEventArgs<Element> args)
 		{
 			// If we're just about to add the first item to the selection list
 			// or remove the last item, add/remove the selection graphics
@@ -3717,6 +3930,7 @@ namespace pr.gui
 			case ListChg.ItemRemoved:
 				{
 					SelectionGraphicsVisible = Selected.Any(x => x.Resizeable);
+					UpdateEditToolbar();
 					break;
 				}
 			default:
@@ -4049,10 +4263,13 @@ namespace pr.gui
 			set
 			{
 				if (m_impl_selection_graphics_visible == value) return;
-				m_impl_selection_graphics_visible = value;
+				m_impl_selection_graphics_visible = value && AllowEditing;
 				
-				if (value) m_window.AddObjects(m_tools.Resizer);
-				else       m_window.RemoveObjects(m_tools.Resizer);
+				if (m_impl_selection_graphics_visible)
+					m_window.AddObjects(m_tools.Resizer);
+				else
+					m_window.RemoveObjects(m_tools.Resizer);
+				
 				UpdateSelectionGraphics();
 			}
 		}
@@ -4244,6 +4461,7 @@ namespace pr.gui
 			using (Scope.Create(
 				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = (elem, type, ctor) => new AnchorPoint(map, elem),
 				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = null))
+			using (SuspendEvents())
 			{
 				foreach (var n in node.Elements())
 				{
@@ -4350,38 +4568,6 @@ namespace pr.gui
 			{
 				var lvl0 = new List<ToolStripItem>();
 
-				#region Create Link
-				if (AllowEditing && SingleSelection != null && SingleSelection.Entity == Entity.Node)
-				{
-					var create_links = (ToolStripMenuItem)add(lvl0, 1, new ToolStripMenuItem("Create Link"));
-					var lvl1 = new List<ToolStripItem>();
-
-					// Start the link create mouse op
-					var line = add(lvl1, 0, new ToolStripMenuItem("Line"){Name="LineConnector"});
-					line.Click += (s,a) =>
-						{
-							m_mouse_op[(int)EBtnIdx.None] = new MouseOpCreateLink(this, SingleSelection.As<Node>(), true, Connector.EType.Line);
-						};
-					var fwd = add(lvl1, 0, new ToolStripMenuItem("Forward Arrow"){Name="FwdConnector"});
-					fwd.Click += (s,a) =>
-						{
-							m_mouse_op[(int)EBtnIdx.None] = new MouseOpCreateLink(this, SingleSelection.As<Node>(), true, Connector.EType.Forward);
-						};
-					var bk = add(lvl1, 0, new ToolStripMenuItem("Back Arrow"){Name="BackConnector"});
-					bk.Click += (s,a) =>
-						{
-							m_mouse_op[(int)EBtnIdx.None] = new MouseOpCreateLink(this, SingleSelection.As<Node>(), true, Connector.EType.Back);
-						};
-					var bidir = add(lvl1, 0, new ToolStripMenuItem("Bidirectional Arrow"){Name="BiDirConnector"});
-					bidir.Click += (s,a) =>
-						{
-							m_mouse_op[(int)EBtnIdx.None] = new MouseOpCreateLink(this, SingleSelection.As<Node>(), true, Connector.EType.BiDir);
-						};
-
-					create_links.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
 				#region Scatter
 				if (AllowEditing)
 				{
@@ -4466,6 +4652,146 @@ namespace pr.gui
 			AddUserMenuOptions.Raise(this, new AddUserMenuOptionsEventArgs(context_menu));
 
 			context_menu.Show(this, location);
+		}
+
+		/// <summary>Gets the toolstrip containing edit controls for the diagram</summary>
+		public ToolStrip EditToolstrip
+		{
+			get { return m_toolstrip_edit; }
+		}
+
+		/// <summary>Key names for the edit tools</summary>
+		public static class EditTools
+		{
+			public static class Node
+			{
+				public const string Key     = "edittools_node";
+				public const string BoxNode = "edittools_node_boxnode";
+			}
+			public static class Conn
+			{
+				public const string Key           = "edittools_conn";
+				public const string Line          = "edittools_conn_line";
+				public const string Forward       = "edittools_conn_fwd";
+				public const string Back          = "edittools_conn_back";
+				public const string Bidirectional = "edittools_conn_bidi";
+			}
+		}
+
+		/// <summary>Setup a toolstrip with tools for editing the diagram</summary>
+		private void SetupEditToolstrip()
+		{
+			#region Create Edit Toolbar
+			m_toolstrip_edit = new ToolStrip(){Visible = false};
+			m_toolstrip_edit.SuspendLayout();
+
+			var btn_node = new DiagramControl.ToolButton
+			{
+				Image = pr.Resources.boxes,
+				Name = EditTools.Node.Key,
+				Size = new Size(32, 22),
+				Text = "Node",
+				ToolTipText = "Add Node",
+			};
+			var btn_node_boxnode = new ToolStripMenuItem
+			{
+				CheckOnClick = true,
+				Image = global::pr.Resources.boxes,
+				Name = EditTools.Node.BoxNode,
+				Size = new Size(78, 22),
+				Text = "Box Node",
+			};
+			var btn_conn = new DiagramControl.ToolButton
+			{
+				Image = pr.Resources.connector1,
+				Name = EditTools.Conn.Key,
+				Size = new Size(32, 22),
+				Text = "Connector",
+				ToolTipText = "Add Connector",
+			};
+			var btn_conn_line = new ToolStripMenuItem
+			{
+				CheckOnClick = true,
+				Image = global::pr.Resources.connector1,
+				Name = EditTools.Conn.Line,
+				Size = new Size(108, 22),
+				Text = "Line Connector",
+			};
+			var btn_conn_fwd = new ToolStripMenuItem
+			{
+				CheckOnClick = true,
+				Image = global::pr.Resources.connector2,
+				Name = EditTools.Conn.Forward,
+				Size = new Size(129, 22),
+				Text = "Forward Connector",
+			};
+			var btn_conn_back = new ToolStripMenuItem
+			{
+				CheckOnClick = true,
+				Image = global::pr.Resources.connector3,
+				Name = EditTools.Conn.Back,
+				Size = new Size(137, 22),
+				Text = "Backward Connector",
+			};
+			var btn_conn_bidi = new ToolStripMenuItem
+			{
+				CheckOnClick = true,
+				Image = global::pr.Resources.connector4,
+				Name = EditTools.Conn.Bidirectional,
+				Size = new Size(152, 22),
+				Text = "Bidirectional Connector",
+			};
+
+			btn_node.DropDownItems.AddRange(new ToolStripItem[]{btn_node_boxnode});
+			btn_conn.DropDownItems.AddRange(new ToolStripItem[]{btn_conn_line, btn_conn_fwd, btn_conn_back, btn_conn_bidi});
+
+			btn_node.DefaultItem = btn_node_boxnode;
+			btn_conn.DefaultItem = btn_conn_line;
+
+			m_toolstrip_edit.Items.AddRange(new ToolStripItem[]{btn_node, btn_conn});
+			m_toolstrip_edit.ResumeLayout(false);
+			m_toolstrip_edit.PerformLayout();
+			#endregion
+
+			btn_node.ButtonClick += (s,a) =>
+				{
+					var btn = s.As<DiagramControl.ToolButton>();
+					switch (btn.DefaultItem.Name)
+					{
+					case EditTools.Node.BoxNode:
+						m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateNode(this) : null);
+						break;
+					}
+				};
+
+			btn_conn.ButtonClick += (s,a) =>
+				{
+					var btn = s.As<DiagramControl.ToolButton>();
+					switch (btn.DefaultItem.Name)
+					{
+					case EditTools.Conn.Line:          m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
+					case EditTools.Conn.Forward:       m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
+					case EditTools.Conn.Back:          m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
+					case EditTools.Conn.Bidirectional: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
+					}
+				};
+
+			UpdateEditToolbar();
+		}
+
+		/// <summary>Update the state of the edit toolbar as selections change</summary>
+		private void UpdateEditToolbar()
+		{
+			// Note, visibility of items in the edit toolbar should not be changed
+			// as callers may set the visibility to suit their needs
+
+			var btn_node = m_toolstrip_edit.Items["edittools_node"].As<ToolButton>();
+			btn_node.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateNode;
+			btn_node.Enabled = AllowEditing;
+
+			var btn_conn = m_toolstrip_edit.Items["edittools_conn"].As<ToolButton>();
+			btn_conn.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateLink;
+			btn_conn.Enabled = AllowEditing;
 		}
 
 		/// <summary>Display a dialog for editing properties of selected elements</summary>
@@ -4591,14 +4917,15 @@ namespace pr.gui
 		private void InitializeComponent()
 		{
 			this.SuspendLayout();
-			//
+			// 
 			// DiagramControl
-			//
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.Name = "DiagramControl";
 			this.Size = new System.Drawing.Size(373, 368);
 			this.ResumeLayout(false);
+			this.PerformLayout();
 		}
 
 		public void BeginInit(){}

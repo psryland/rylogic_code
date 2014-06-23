@@ -264,6 +264,12 @@
     <Compile Include="gui\hint_balloon.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="gui\toolstrip_dropdown_singleselect.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\toolstrip_splitbuttoncheckable.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\toolstrip_datetimepicker.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -435,6 +441,7 @@
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <CustomToolNamespace>pr</CustomToolNamespace>
     </EmbeddedResource>
     <EmbeddedResource Include="SmilingGekko140x110.ico" />
   </ItemGroup>
@@ -478,6 +485,21 @@
     <None Include="..\lib\x64\Release\view3d.dll">
       <Link>lib\x64\release\view3d.dll</Link>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\connector1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\connector2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\connector3.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\connector4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\boxes.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

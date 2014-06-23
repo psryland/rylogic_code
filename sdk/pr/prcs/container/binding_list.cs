@@ -40,6 +40,13 @@ namespace pr.container
 				};
 		}
 
+		/// <summary>Get/Set readonly for this list</summary>
+		public bool ReadOnly
+		{
+			get { return !AllowNew && !AllowEdit && !AllowRemove; }
+			set { AllowNew = AllowEdit = AllowRemove = value; }
+		}
+
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
 
