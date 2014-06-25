@@ -26,7 +26,6 @@ namespace pr
 		// 'radius0' is the radius of the bottom face (i.e. -z axis face) of the cylinder
 		// 'radius1' is the radius of the top face (i.e. +z axis face) of the cylinder
 		// 'height' is the length of the cylinder along the z axis
-		// 'o2w' an object to world transform to apply to the verts of the cylinder
 		// 'xscale'/'yscale' are scaling factors that can be used to make the cylinder ellipsoidal
 		// 'wedges' is the number of divisions around the z axis
 		// 'layers' is the number of sections along the zaxis, must be >= 1
@@ -35,7 +34,7 @@ namespace pr
 		// The texture coords assigned to the cylinder map a quad around the 'barrel' of the cylinder and a circle
 		// on the ends of the cylinder since this is the most likely way it would be textured
 		template <typename TVertIter, typename TIdxIter>
-		Props Cylinder(float radius0, float radius1, float height, m4x4 const& o2w, float xscale ,float yscale ,std::size_t wedges, std::size_t layers, std::size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
+		Props Cylinder(float radius0, float radius1, float height, float xscale ,float yscale ,std::size_t wedges, std::size_t layers, std::size_t num_colours, Colour32 const* colours, TVertIter v_out, TIdxIter i_out)
 		{
 			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 			
@@ -49,8 +48,8 @@ namespace pr
 
 			// Bounding box
 			float max_radius = std::max(radius0, radius1);
-			pr::Encompass(props.m_bbox, o2w * v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
-			pr::Encompass(props.m_bbox, o2w * v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
+			pr::Encompass(props.m_bbox, v4::make(-max_radius * xscale, -max_radius * yscale, -height * 0.5f, 1.0f));
+			pr::Encompass(props.m_bbox, v4::make(+max_radius * xscale, +max_radius * yscale, +height * 0.5f, 1.0f));
 
 			// Colour iterator wrapper
 			auto col = pr::CreateRepeater(colours, num_colours, vcount, pr::Colour32White);
@@ -62,8 +61,8 @@ namespace pr
 			std::size_t verts_per_layer = wedges + 1;
 			std::size_t ibase = 0, last = vcount - 1;
 
-			v4 pt = o2w * v4::make(0, 0, z, 1.0f);
-			v4 nm = o2w * -v4ZAxis;
+			v4 pt = v4::make(0, 0, z, 1.0f);
+			v4 nm = -v4ZAxis;
 			v2 uv = v2::make(0.5f, 0.5f);
 
 			// Verts
@@ -71,7 +70,7 @@ namespace pr
 			for (std::size_t w = 0; w <= wedges; ++w) // Bottom face
 			{
 				float a = da*w;
-				pt = o2w * v4::make(cos(a) * radius0 * xscale, sin(a) * radius0 * yscale, z, 1.0f);
+				pt = v4::make(cos(a) * radius0 * xscale, sin(a) * radius0 * yscale, z, 1.0f);
 				uv = v2::make(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
 				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			}
@@ -82,22 +81,22 @@ namespace pr
 				for (std::size_t w = 0; w <= wedges; ++w)
 				{
 					float a = da*w + (l%2)*da*0.5f;
-					pt = o2w * v4::make(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
-					nm = o2w * v4::normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
+					pt = v4::make(cos(a) * r * xscale, sin(a) * r * yscale, z, 1.0f);
+					nm = v4::normal3(height * cos(a + da*0.5f) / xscale, height * sin(a + da*0.5f) / yscale ,nz ,0.0f);
 					uv = v2::make(a / maths::tau, 1.0f - (z + height*0.5f) / height);
 					SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 				}
 				if (l != layers) z += dz;
 			}
-			nm = o2w * v4ZAxis;
+			nm = v4ZAxis;
 			for (std::size_t w = 0; w <= wedges; ++w) // Top face
 			{
 				float a = da*w + (layers%2)*da*0.5f;
-				pt = o2w * v4::make(cos(a) * radius1 * xscale, sin(a) * radius1 * yscale, z, 1.0f);
+				pt = v4::make(cos(a) * radius1 * xscale, sin(a) * radius1 * yscale, z, 1.0f);
 				uv = v2::make(cos(a) * 0.5f + 0.5f, sin(a) * 0.5f + 0.5f);
 				SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 			}
-			pt = o2w * v4::make(0 ,0 ,z ,1.0f);
+			pt = v4::make(0 ,0 ,z ,1.0f);
 			uv = v2::make(0.5, 0.5f);
 			SetPCNT(*v_out++, pt, cc(*col++), nm, uv);
 

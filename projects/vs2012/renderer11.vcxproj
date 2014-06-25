@@ -133,6 +133,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh_tools.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\shape2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\config\config.h" />

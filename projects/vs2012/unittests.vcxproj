@@ -169,6 +169,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\macros\remove_parenthesis.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\repeat.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\stringise.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\maths\axis_id.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\bitfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingbox.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\boundingbox_impl.h" />

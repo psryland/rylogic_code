@@ -246,6 +246,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\render\window.h">
       <Filter>render</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\shape2d.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">

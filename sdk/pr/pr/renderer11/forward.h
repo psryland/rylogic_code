@@ -65,17 +65,18 @@
 #include "pr/camera/camera.h"
 #include "pr/storage/nugget_file/nuggetfile.h"
 #include "pr/maths/maths.h"
-#include "pr/gui/gdiplus.h"
-#include "pr/script/reader.h"
-#include "pr/linedrawer/ldr_helper.h"
-
+#include "pr/geometry/common.h"
 #include "pr/geometry/line.h"
 #include "pr/geometry/quad.h"
+#include "pr/geometry/shape2d.h"
 #include "pr/geometry/box.h"
 #include "pr/geometry/sphere.h"
 #include "pr/geometry/cylinder.h"
 #include "pr/geometry/mesh.h"
 #include "pr/geometry/utility.h"
+#include "pr/gui/gdiplus.h"
+#include "pr/script/reader.h"
+#include "pr/linedrawer/ldr_helper.h"
 
 #define PR_DBG_RDR PR_DBG
 

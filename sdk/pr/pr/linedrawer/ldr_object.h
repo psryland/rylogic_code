@@ -56,6 +56,7 @@ namespace pr
 			x(Spline           ,= 0x1f45c36e)\
 			x(Arrow            ,= 0x0A85DC58)\
 			x(Circle           ,= 0x015ed657)\
+			x(Pie              ,= 0x1198851C)\
 			x(Rect             ,= 0x12E8C1AD)\
 			x(Matrix3x3        ,= 0x1bd46252)\
 			x(Triangle         ,= 0x118ad8f6)\

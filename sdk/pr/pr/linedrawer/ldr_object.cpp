@@ -11,6 +11,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
 #include "pr/common/windows_com.h"
+#include "pr/maths/maths.h"
 #include "pr/maths/convexhull.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
@@ -245,6 +246,7 @@ namespace pr
 						reader.ExtractReal(scale.y);
 						reader.ExtractReal(scale.z);
 					}
+					reader.SectionEnd();
 					p2w.rot = Scale3x3(scale.x, scale.y, scale.z) * p2w.rot;
 					break;
 				}
@@ -741,16 +743,12 @@ namespace pr
 		// Base class for object creators that are based on 2d shapes
 		struct IObjectCreatorShape2d :IObjectCreatorTexture
 		{
-			// Create space for the model
-			VCont& m_point;
-			ICont& m_index;
-			TCont& m_tex;
-			int    m_axis_id;
+			pr::AxisId m_axis_id;
 			pr::v4 m_dim;
 			int    m_facets;
 			bool   m_solid;
 
-			IObjectCreatorShape2d() :m_point(Point()), m_index(Index()), m_tex(Texts()), m_axis_id(), m_dim(), m_facets(40), m_solid(false) {}
+			IObjectCreatorShape2d() :m_axis_id(), m_dim(), m_facets(40), m_solid(false) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw)
@@ -760,37 +758,6 @@ namespace pr
 				case EKeyword::Facets: p.m_reader.ExtractIntS(m_facets, 10); return true;
 				}
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				using namespace pr::rdr;
-
-				// Validate
-				if (m_axis_id < 1 || m_axis_id > 3)
-				{
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
-					return;
-				}
-
-				pr::BBox bbox;
-				GenerateShape(bbox);
-
-				// Permute the verts, normals, and bbox
-				auto axis_id = pr::Abs(m_axis_id) - 1;
-				for (auto& v : m_point)
-					v = pr::Permute3(v, axis_id + 1);
-				auto norm = pr::Permute3(pr::v4ZAxis, axis_id + 1);
-				bbox.m_radius = pr::Permute3(bbox.m_radius, axis_id + 1);
-
-				// Create the model
-				if (m_solid)
-					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::TriList, m_point.size(), m_index.size(), m_point.data(), m_index.data(), 0, 0, 1, &norm, m_tex.data(), GetDrawData());
-				else
-					obj->m_model = ModelGenerator<>::Mesh(p.m_rdr, EPrim::LineList, m_point.size(), m_index.size(), m_point.data(), m_index.data());
-
-				obj->m_model->m_bbox = bbox;
-				obj->m_model->m_name = obj->TypeAndName();
-			}
-			virtual void GenerateShape(pr::BBox& bbox) = 0;
 		};
 
 		// Base class for planar objects
@@ -842,7 +809,7 @@ namespace pr
 		// Base class for cone shapes
 		struct IObjectCreatorCone :IObjectCreatorTexture
 		{
-			int m_axis_id;
+			pr::AxisId m_axis_id;
 			pr::v4 m_dim; // x,y = radius, z = height
 			pr::v2 m_scale;
 			int m_layers, m_wedges;
@@ -1333,67 +1300,65 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 			}
-			void GenerateShape(pr::BBox& bbox) override
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				m_facets = std::max(m_facets, 3);
+				using namespace pr::rdr;
 
-				// Create space for the model
-				auto vcount = m_facets;
-				auto icount = m_solid ? 3 * (m_facets - 2) : 2 * m_facets;
-				m_point.resize(vcount);
-				m_index.resize(icount);
-
-				// Fill the vertex buffer
-				auto vb = std::begin(m_point);
-				for (int i = 0; i != m_facets; ++i)
+				pr::m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != 3)
 				{
-					auto c = pr::Cos(pr::maths::tau * i / m_facets);
-					auto s = pr::Sin(pr::maths::tau * i / m_facets);
-					*vb++ = pr::v4::make(m_dim.x * c, m_dim.y * s, 0, 1);
-				}
-				assert(vb == std::end(m_point));
-
-				// Generate texture coords for solid shapes
-				if (m_solid)
-				{
-					m_tex.resize(vcount);
-					auto tb = std::begin(m_tex);
-					for (int i = 0; i != m_facets; ++i)
-					{
-						auto c = pr::Cos(pr::maths::tau * i / m_facets);
-						auto s = pr::Sin(pr::maths::tau * i / m_facets);
-						*tb++ = pr::v2::make(0.5f*(c + 1), 0.5f*(1 - s));
-					}
-					assert(tb == std::end(m_tex));
+					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					po2w = &o2w;
 				}
 
-				// Fill the index buffer
-				auto ib = std::begin(m_index);
-				if (m_solid)
-				{
-					for (int i = 1; i != vcount - 1; ++i)
-					{
-						*ib++ = 0;
-						*ib++ = checked_cast<pr::uint16>(i);
-						*ib++ = checked_cast<pr::uint16>(i + 1);
-					}
-				}
-				else // border only
-				{
-					for (int i = 0; i != vcount; ++i)
-					{
-						*ib++ = checked_cast<pr::uint16>(i);
-						*ib++ = checked_cast<pr::uint16>((i + 1) % vcount);
-					}
-				}
-				assert(ib == std::end(m_index));
+				// Create the model
+				obj->m_model = ModelGenerator<>::Ellipse(p.m_rdr, m_dim.x, m_dim.y, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
 
-				// Set the bounding box
-				bbox.set(pr::v4Origin, pr::v4::make(m_dim.x, m_dim.y, 0, 0));
+		// LdrObject::Pie
+		template <> struct ObjectCreator<ELdrObject::Pie> :IObjectCreatorShape2d
+		{
+			pr::v2 m_ang, m_rad;
+
+			ObjectCreator() :m_ang() ,m_rad() { m_dim = v4One; }
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw)
+				{
+				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
+				case EKeyword::Scale: p.m_reader.ExtractVector2(m_dim.xy); return true;
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
+				p.m_reader.ExtractVector2(m_ang);
+				p.m_reader.ExtractVector2(m_rad);
+
+				if (m_ang.x == m_ang.y) m_ang.y += 360.0f;
+				m_ang.x = pr::DegreesToRadians(m_ang.x);
+				m_ang.y = pr::DegreesToRadians(m_ang.y);
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+
+				pr::m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != 3)
+				{
+					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					po2w = &o2w;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::Pie(p.m_rdr, m_dim.x, m_dim.y, m_ang.x, m_ang.y, m_rad.x, m_rad.y, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
 
@@ -1414,97 +1379,25 @@ namespace pr
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
 				m_dim *= 0.5f;
 			}
-			void GenerateShape(pr::BBox& bbox) override
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				// Limit the rounding to half the smallest rectangle side length
-				auto rad = m_corner_radius;
-				if (rad > m_dim.x) rad = m_dim.x;
-				if (rad > m_dim.y) rad = m_dim.y;
-				auto verts_per_cnr = rad != 0.0f ? std::max(m_facets / 4, 0) + 1 : 1;
+				using namespace pr::rdr;
 
-				// Create space for the model
-				auto vcount = 4 * verts_per_cnr;
-				auto icount = m_solid ? 12 * verts_per_cnr - 6 : 8 * verts_per_cnr;
-				m_point.resize(vcount);
-				m_index.resize(icount);
-
-				// Fill the vertex buffer
-				auto vb = std::begin(m_point);
-				auto vb0 = vb + verts_per_cnr * 0;
-				auto vb1 = vb + verts_per_cnr * 1;
-				auto vb2 = vb + verts_per_cnr * 2;
-				auto vb3 = vb + verts_per_cnr * 3;
-				for (int i = 0; i != verts_per_cnr; ++i)
+				pr::m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != 3)
 				{
-					auto c = verts_per_cnr > 1 ? pr::Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-					auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-
-					*vb0++ = pr::v4::make(-m_dim.x + rad * (1 - c), -m_dim.y + rad * (1 - s), 0, 1);
-					*vb1++ = pr::v4::make(+m_dim.x - rad * (1 - s), -m_dim.y + rad * (1 - c), 0, 1);
-					*vb2++ = pr::v4::make(+m_dim.x - rad * (1 - c), +m_dim.y - rad * (1 - s), 0, 1);
-					*vb3++ = pr::v4::make(-m_dim.x + rad * (1 - s), +m_dim.y - rad * (1 - c), 0, 1);
-				}
-				assert(vb3 == std::end(m_point));
-
-				// Generate texture coords for solid shapes
-				if (m_solid)
-				{
-					m_tex.resize(vcount);
-					auto tx = rad / (2 * m_dim.x);
-					auto ty = rad / (2 * m_dim.y);
-					auto t0 = 0.0000f;
-					auto t1 = 0.9999f;
-
-					auto tb = std::begin(m_tex);
-					auto tb0 = tb + verts_per_cnr * 0;
-					auto tb1 = tb + verts_per_cnr * 1;
-					auto tb2 = tb + verts_per_cnr * 2;
-					auto tb3 = tb + verts_per_cnr * 3;
-					for (int i = 0; i != verts_per_cnr; ++i)
-					{
-						auto c = verts_per_cnr > 1 ? pr::Cos(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-						auto s = verts_per_cnr > 1 ? pr::Sin(pr::maths::tau_by_4 * i / (verts_per_cnr - 1)) : 0;
-
-						*tb0++ = pr::v2::make(t0 + (1 - c)*tx, t1 - (1 - s)*ty);
-						*tb1++ = pr::v2::make(t1 - (1 - s)*tx, t1 - (1 - c)*ty);
-						*tb2++ = pr::v2::make(t1 - (1 - c)*tx, t0 + (1 - s)*ty);
-						*tb3++ = pr::v2::make(t0 + (1 - s)*tx, t0 + (1 - c)*ty);
-					}
-					assert(tb3 == std::end(m_tex));
+					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					po2w = &o2w;
 				}
 
-				// Fill the index buffer
-				auto ib = std::begin(m_index);
-				if (m_solid)
-				{
-					for (int i = 0, iend = (vcount / 2) - 1; i != iend; ++i)
-					{
-						*ib++ = checked_cast<pr::uint16>(vcount - i - 1);
-						*ib++ = checked_cast<pr::uint16>(i);
-						*ib++ = checked_cast<pr::uint16>(vcount - i - 2);
-
-						*ib++ = checked_cast<pr::uint16>(vcount - i - 2);
-						*ib++ = checked_cast<pr::uint16>(i);
-						*ib++ = checked_cast<pr::uint16>(i + 1);
-					}
-				}
-				else // border only
-				{
-					for (int i = 0; i != vcount; ++i)
-					{
-						*ib++ = checked_cast<pr::uint16>(i);
-						*ib++ = checked_cast<pr::uint16>((i + 1) % vcount);
-					}
-				}
-				assert(ib == std::end(m_index));
-
-				// Set the bounding box
-				bbox.set(pr::v4Origin, pr::v4::make(m_dim.x, m_dim.y, 0, 0));
+				// Create the model
+				obj->m_model = ModelGenerator<>::RoundedRectangle(p.m_rdr, m_dim.x, m_dim.y, m_corner_radius, m_solid, m_facets, Colour32White, po2w, GetDrawData());
+				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
 
@@ -1581,7 +1474,7 @@ namespace pr
 		// ELdrObject::Ribbon
 		template <> struct ObjectCreator<ELdrObject::Ribbon> :IObjectCreatorPlane
 		{
-			int m_axis_id;
+			pr::AxisId m_axis_id;
 			float m_width;
 			bool m_smooth;
 			int m_parm_index;
@@ -1598,7 +1491,7 @@ namespace pr
 			{
 				switch (m_parm_index){
 				case 0: // Axis id
-					p.m_reader.ExtractInt(m_axis_id, 10);
+					p.m_reader.ExtractInt(m_axis_id.value, 10);
 					++m_parm_index;
 					break;
 				case 1: // Width
@@ -1739,7 +1632,7 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::FrustumWH> :IObjectCreatorCuboid
 		{
 			float m_width, m_height, m_near, m_far, m_view_plane;
-			int m_axis_id;
+			pr::AxisId m_axis_id;
 
 			ObjectCreator() :m_width(1.0f), m_height(1.0f), m_near(0.0f), m_far(1.0f), m_view_plane(1.0f), m_axis_id(3) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
@@ -1751,7 +1644,7 @@ namespace pr
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(m_width);
 				p.m_reader.ExtractReal(m_height);
 				p.m_reader.ExtractReal(m_near);
@@ -1790,12 +1683,12 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::FrustumFA> :IObjectCreatorCuboid
 		{
 			float m_fovY, m_aspect, m_near, m_far;
-			int m_axis_id;
+			pr::AxisId m_axis_id;
 
 			ObjectCreator() :m_fovY(pr::maths::tau_by_8), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(m_fovY);
 				p.m_reader.ExtractReal(m_aspect);
 				p.m_reader.ExtractReal(m_near);
@@ -1862,7 +1755,7 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(m_dim.z);
 				p.m_reader.ExtractReal(m_dim.x);
 				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
@@ -1875,7 +1768,7 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				float h0, h1, a;
-				p.m_reader.ExtractInt(m_axis_id, 10);
+				p.m_reader.ExtractInt(m_axis_id.value, 10);
 				p.m_reader.ExtractReal(h0);
 				p.m_reader.ExtractReal(h1);
 				p.m_reader.ExtractReal(a);
@@ -2079,6 +1972,7 @@ namespace pr
 			case ELdrObject::Arrow:            Parse<ELdrObject::Arrow           >(p); break;
 			case ELdrObject::Circle:           Parse<ELdrObject::Circle          >(p); break;
 			case ELdrObject::Rect:             Parse<ELdrObject::Rect            >(p); break;
+			case ELdrObject::Pie:              Parse<ELdrObject::Pie             >(p); break;
 			case ELdrObject::Matrix3x3:        Parse<ELdrObject::Matrix3x3       >(p); break;
 			case ELdrObject::Triangle:         Parse<ELdrObject::Triangle        >(p); break;
 			case ELdrObject::Quad:             Parse<ELdrObject::Quad            >(p); break;
@@ -2652,17 +2546,30 @@ out <<
 // A circle or ellipse
 *Circle circle
 {
-	2 1.6                               // axis_id, radius. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2                                   // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z 
+	1.6                                 // radius
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
 	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
 }
 *Circle ellipse
 {
-	2 1.6 0.8                           // axis_id, radiusx, radiusy. axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	2                                   // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	1.6 0.8                             // radiusx, radiusy
 	*Solid                              // Optional, if omitted then the circle is an outline only
 	*RandColour *o2w{*RandPos{0 0 0 2}} // Object colour is the outline colour
-	//*Facets { 40 }                      // Optional, controls the smoothness of the edge
+	//*Facets { 40 }                    // Optional, controls the smoothness of the edge
+}
+
+// A pie/wedge
+*Pie pie FF00FFFF
+{
+	2                                  // axis_id: ±1 = ±x, ±2 = ±y, ±3 = ±z
+	10 45                              // Start angle, End angle in degress (from the 'x' axis). Equal values creates a ring
+	0.1 0.7                            // inner radius, outer radius
+	*Scale 1.0 0.8                     // Optional. X,Y scale factors
+	*Solid                             // Optional, if omitted then the shape is an outline only
+	//*Facets { 40 }                   // Optional, controls the smoothness of the inner and outer edges
 }
 
 // A rectangle

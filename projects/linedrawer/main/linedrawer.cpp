@@ -174,8 +174,8 @@ namespace ldr
 			{// For testing..
 				using namespace pr;
 				using namespace pr::rdr;
-
-								//pr::v4 lines[] =
+			/*
+				//pr::v4 lines[] =
 				//{
 				//	pr::v4::make(0,-1,0,1), pr::v4::make(0,1,0,1),
 				//	pr::v4::make(-1,0,0,1), pr::v4::make(1,0,0,1),
@@ -228,8 +228,8 @@ namespace ldr
 			//*/
 			}
 
-			//std::string scene = pr::ldr::CreateDemoScene();
-			//pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+			std::string scene = pr::ldr::CreateDemoScene();
+			pr::ldr::AddString(m_rdr, scene.c_str(), m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
