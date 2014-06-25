@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 using pr.extn;
@@ -7,7 +9,7 @@ using pr.util;
 namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
-	public class BindingSource<TItem> :BindingSource
+	public class BindingSource<TItem> :BindingSource ,IEnumerable<TItem>
 	{
 		private int m_impl_previous_position;
 
@@ -23,6 +25,12 @@ namespace pr.container
 		public new TItem Current
 		{
 			get { return (TItem)base.Current; }
+			set
+			{
+				var idx = List.IndexOf(value);
+				if (idx < 0 || idx >= List.Count) throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
+				CurrencyManager.Position = idx;
+			}
 		}
 
 		/// <summary>Access an item by index</summary>
@@ -39,20 +47,24 @@ namespace pr.container
 			set
 			{
 				if (value == base.DataSource) return;
-				
+
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
+
 				// Unhook
 				var bl = base.DataSource as BindingListEx<TItem>;
 				if (bl != null)
 					bl.ListChanging -= RaiseListChanging;
-				
+
 				// Set new data source
 				base.DataSource = null;
 				base.DataSource = value;
-				
+
 				// Hookup
 				bl = base.DataSource as BindingListEx<TItem>;
 				if (bl != null)
 					bl.ListChanging += RaiseListChanging;
+
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
 			}
 		}
 
@@ -126,6 +138,12 @@ namespace pr.container
 
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
+		}
+
+		/// <summary>Enumerate over data source elements</summary>
+		IEnumerator<TItem> IEnumerable<TItem>.GetEnumerator()
+		{
+			return this.Cast<TItem>().GetEnumerator();
 		}
 	}
 }
@@ -211,8 +229,8 @@ namespace pr
 					clear();
 				
 					bl.Clear();
-					Assert.True(bl_evts.Contains(ListChg.PreReset, ListChg.Reset));
-					Assert.True(bs_evts.Contains(ListChg.PreReset, ListChg.Reset));
+					Assert.True(bl_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+					Assert.True(bs_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
 					clear();
 
 					bl.Add(1);
@@ -265,8 +283,8 @@ namespace pr
 					clear();
 
 					bs.Clear();
-					Assert.True(bl_evts.Contains(ListChg.PreReset, ListChg.Reset));
-					Assert.True(bs_evts.Contains(ListChg.PreReset, ListChg.Reset));
+					Assert.True(bl_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+					Assert.True(bs_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
 					clear();
 					
 					bs.Add(1);
@@ -322,6 +340,13 @@ namespace pr
 				bs.DataSource = null;
 				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
 			}
+			//[Test] public static void BindingSourceEnumeration()
+			//{
+			//	var arr = new[]{1,2,3,4,5};
+			//	var bs = new BindingSource<int>{DataSource = arr};
+			//	var res = bs.ToArray();
+			//	Assert.True(arr.SequenceEqual(res));
+			//}
 		}
 	}
 }
