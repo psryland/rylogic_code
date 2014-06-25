@@ -6,6 +6,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 
 namespace pr.container
@@ -153,7 +154,7 @@ namespace pr.container
 		private int MedianSplit(int first, int last, int split_axis)
 		{
 			var split_point = first + (last - first) / 2;
-			this.NthElement(split_point, (lhs,rhs) => KdTreeSorter.GetAxisValue(lhs, split_axis) < KdTreeSorter.GetAxisValue(rhs, split_axis) ? -1 : 1, first, last);
+			this.NthElement(split_point, first, last, Cmp<T>.From((lhs,rhs) => KdTreeSorter.GetAxisValue(lhs, split_axis) < KdTreeSorter.GetAxisValue(rhs, split_axis) ? -1 : 1));
 			return split_point;
 		}
 
@@ -276,7 +277,7 @@ namespace pr
 				Assert.AreEqual(result[1], new v2(5f,4f));
 				Assert.AreEqual(result[2], new v2(5f,5f));
 				Assert.AreEqual(result[3], new v2(5f,6f));
-				Assert.AreEqual(result[3], new v2(6f,5f));
+				Assert.AreEqual(result[4], new v2(6f,5f));
 			}
 		}
 	}

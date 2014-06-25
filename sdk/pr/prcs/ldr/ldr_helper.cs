@@ -145,37 +145,37 @@ namespace pr.ldr
 				);
 		}
 
-		public void Box()                                          { Box(string.Empty, 0xFFFFFFFF); }
-		public void Box(uint colour, float size)                   { Box(colour, size, v4.Origin); }
-		public void Box(uint colour, float size, v4 position)      { Box(string.Empty, colour, size, position); }
-		public void Box(string name, uint colour)                  { Box(name, colour, 1f); }
-		public void Box(string name, uint colour, float size)      { Box(name, colour, size, v4.Origin); }
-		public void Box(string name, uint colour, float size, v4 position)
+		public void Box()                                          { Box(string.Empty, Color.White); }
+		public void Box(Color colour, float size)                  { Box(colour, size, v4.Origin); }
+		public void Box(Color colour, float size, v4 position)     { Box(string.Empty, colour, size, position); }
+		public void Box(string name, Color colour)                 { Box(name, colour, 1f); }
+		public void Box(string name, Color colour, float size)     { Box(name, colour, size, v4.Origin); }
+		public void Box(string name, Color colour, float size, v4 position)
 		{
 			Append("*Box ",name," ",colour," {",size," ",Ldr.Position(position),"}\n");
 		}
-		public void Box(uint colour, float sx, float sy, float sz)              { Box(colour, sx, sy, sz, v4.Origin); }
-		public void Box(uint colour, float sx, float sy, float sz, v4 position) { Box(string.Empty, colour, sx, sy, sz, position); }
-		public void Box(string name, uint colour, float sx, float sy, float sz) { Box(name, colour, sx, sy, sz); }
-		public void Box(string name, uint colour, float sx, float sy, float sz, v4 position)
+		public void Box(Color colour, float sx, float sy, float sz)              { Box(colour, sx, sy, sz, v4.Origin); }
+		public void Box(Color colour, float sx, float sy, float sz, v4 position) { Box(string.Empty, colour, sx, sy, sz, position); }
+		public void Box(string name, Color colour, float sx, float sy, float sz) { Box(name, colour, sx, sy, sz); }
+		public void Box(string name, Color colour, float sx, float sy, float sz, v4 position)
 		{
 			Append("*Box ",name," ",colour," {",sx," ",sy," ",sz," ",Ldr.Position(position),"}\n");
 		}
 
-		public void Sphere()                                       { Sphere(string.Empty, 0xFFFFFFFF); }
-		public void Sphere(string name, uint colour)               { Sphere(name, colour, 1f); }
-		public void Sphere(string name, uint colour, float radius) { Sphere(name, colour, radius, v4.Origin); }
-		public void Sphere(string name, uint colour, float radius, v4 position)
+		public void Sphere()                                        { Sphere(string.Empty, Color.White); }
+		public void Sphere(string name, Color colour)               { Sphere(name, colour, 1f); }
+		public void Sphere(string name, Color colour, float radius) { Sphere(name, colour, radius, v4.Origin); }
+		public void Sphere(string name, Color colour, float radius, v4 position)
 		{
 			Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
 		}
 
-		public void Quad()                                                     { Quad(string.Empty, 0xFFFFFFFF); }
-		public void Quad(uint colour)                                          { Quad(string.Empty, colour); }
-		public void Quad(uint colour, v4 tl, v4 tr, v4 br, v4 bl)              { Quad(string.Empty, colour, tl, tr, br, bl); }
-		public void Quad(string name, uint colour)                             { Quad(name, colour, new v4(0,1,0,1), new v4(1,1,0,1), new v4(1,0,0,1), new v4(0,0,0,1)); }
-		public void Quad(string name, uint colour, v4 tl, v4 tr, v4 br, v4 bl) { Quad(name, colour, tl, tr, br, bl, v4.Origin); }
-		public void Quad(string name, uint colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
+		public void Quad()                                                      { Quad(string.Empty, Color.White); }
+		public void Quad(Color colour)                                          { Quad(string.Empty, colour); }
+		public void Quad(Color colour, v4 tl, v4 tr, v4 br, v4 bl)              { Quad(string.Empty, colour, tl, tr, br, bl); }
+		public void Quad(string name, Color colour)                             { Quad(name, colour, new v4(0,1,0,1), new v4(1,1,0,1), new v4(1,0,0,1), new v4(0,0,0,1)); }
+		public void Quad(string name, Color colour, v4 tl, v4 tr, v4 br, v4 bl) { Quad(name, colour, tl, tr, br, bl, v4.Origin); }
+		public void Quad(string name, Color colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
 		{
 			Append("*Quad ",name," ",colour,"{",bl," ",br," ",tr," ",tl," ",Ldr.Position(position),"}\n");
 		}
@@ -202,13 +202,13 @@ namespace pr
 				var ldr = new LdrBuilder();
 				using (ldr.Group("g"))
 				{
-					ldr.Box("b", 0xFF00FF00);
-					ldr.Sphere("s", 0xFFFF0000);
+					ldr.Box("b", Color.FromArgb(0,0xFF,0));
+					ldr.Sphere("s", Color.Red);
 				}
 				var expected =
 					"*Group g {\n"+
-					"*Box b FF00FF00 {1 1 1 *o2w{*pos{0 0 0}}}\n"+
-					"*Sphere s FFFF0000 {1 *o2w{*pos{0 0 0}}}\n"+
+					"*Box b FF00FF00 {1 }\n"+
+					"*Sphere s FFFF0000 {1 }\n"+
 					"}\n";
 				Assert.AreEqual(expected, ldr.ToString());
 			}

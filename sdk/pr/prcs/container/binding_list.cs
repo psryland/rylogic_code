@@ -58,6 +58,13 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
+				var args = new ListChgEventArgs<T>(ListChg.PreClear, -1, default(T));
+				ListChanging.Raise(this, args);
+				if (args.Cancel)
+					return;
+			}
+			if (RaiseListChangedEvents)
+			{
 				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
@@ -66,6 +73,9 @@ namespace pr.container
 
 			// Reset event is raised from attached handler
 			base.ClearItems();
+
+			if (RaiseListChangedEvents)
+				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Clear, -1, default(T)));
 		}
 
 		// Inserts the specified item in the list at the specified index.
@@ -182,9 +192,19 @@ namespace pr.container
 		}
 	
 		/// <summary>RAII object for suspending list events</summary>
-		public Scope SuspendEvents()
+		public Scope SuspendEvents(bool reset_bindings_on_resume = false)
 		{
-			return Scope.Create(() => RaiseListChangedEvents = false, () => RaiseListChangedEvents = true);
+			return Scope.Create(
+				() =>
+				{
+					RaiseListChangedEvents = false;
+				},
+				() =>
+				{
+					RaiseListChangedEvents = true;
+					if (reset_bindings_on_resume)
+						ResetBindings();
+				});
 		}
 	}
 }

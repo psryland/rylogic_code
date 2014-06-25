@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using pr.common;
 using pr.util;
 using pr.extn;
 
@@ -254,41 +255,104 @@ namespace pr.extn
 			return idx >= 0 ? list[idx] : default(T);
 		}
 
-		///// <summary>Sub range sort using a delegate</summary>
-		//public static void Sort<T>(this List<T> list, int start, int count, Comparison<T> cmp)
-		//{
-		//	list.Sort(start, count, Cmp<T>.From(cmp));
-		//}
+		/// <summary>
+		/// Partition 'list' within the range [left,right) such that the element at list[left]
+		/// is moved to it's correct position within the list if it was sorted.
+		/// Returns the index location of where list[left] is moved to.</summary>
+		public static int Partition<T>(this IList<T> list, int left, int right, Cmp<T> comparer)
+		{
+			if (left == right)
+				return left;
+			if (left > right)
+				throw new Exception("invalid range");
+
+			// Copy the pivot
+			T pivot = list[left];
+
+			// while the indices haven't meet at the pivot index
+			int i = left, j = right;
+			for (;;)
+			{
+				// Move the right index left until value < pivot
+				for (--j; i != j && comparer.Compare(list[j], pivot) > 0; --j) {}
+				if (i == j) break;
+
+				// Copy the right value to the left position
+				list[i] = list[j];
+
+				// Move the left index right until value > pivot
+				for (++i; i != j && comparer.Compare(list[i], pivot) < 0; ++i) {}
+				if (i == j) break;
+
+				// Copy the left value to the right position
+				list[j] = list[i];
+			}
+
+			// Copy the pivot back into the pivot location
+			list[i] = pivot;
+			return i;
+		}
+		public static int Partition<T>(this IList<T> list, Cmp<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
+			return list.Partition(0, list.Count, comparer);
+		}
 
 		/// <summary>Sort the list using a lamba</summary>
-		public static IList<T> Sort<T>(this IList<T> list, Func<T,T,int> cmp)
+		public static IList<T> Sort<T>(this IList<T> list, Cmp<T> comparer = null)
 		{
-			list.Sort(0, list.Count, cmp);
-			return list;
+			return list.Sort(0, list.Count, comparer);
 		}
 
 		/// <summary>Sub range sort using a delegate</summary>
-		public static IList<T> Sort<T>(this IList<T> list, int start, int count, Func<T,T,int> cmp)
+		public static IList<T> Sort<T>(this IList<T> list, int start, int count, Cmp<T> comparer = null)
 		{
-			list.QuickSort(new Comparison<T>(cmp), start, count);
+			comparer = comparer ?? Cmp<T>.Default;
+			list.QuickSort(start, count, comparer);
+			return list;
+		}
+
+		/// <summary>Sort the list using the quick sort algorithm</summary>
+		public static IList<T> QuickSort<T>(this IList<T> list, Cmp<T> comparer = null)
+		{
+			comparer = comparer ?? Cmp<T>.Default;
+			return list.QuickSort(0, list.Count, comparer);
+		}
+		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right)
+		{
+			return list.QuickSort(0, list.Count, Cmp<T>.Default);
+		}
+		public static IList<T> QuickSort<T>(this IList<T> list, int left, int right, Cmp<T> comparer)
+		{
+			// pivot and get pivot location
+			int pivot = list.Partition(left, right, comparer);
+
+			// if the left index is less than the pivot, sort left side
+			if (pivot - left > 1) list.QuickSort(left, pivot, comparer);
+
+			// if right index is greater than pivot, sort right side
+			if (right - pivot > 1) list.QuickSort(pivot + 1, right, comparer);
+		
 			return list;
 		}
 
 		/// <summary>Remove adjascent duplicate elements within the range [begin, end).
 		/// Returns the end of the unique range (i.e. a value in the range [begin,end]</summary>
-		public static int Unique<T>(this IList<T> list, int begin, int end, Func<T,T,bool> equal)
+		public static int Unique<T>(this IList<T> list, int begin, int end, Eql<T> comparer = null)
 		{
 			Debug.Assert(begin <= end && end <= list.Count);
 			if (list.Count <= 1) return list.Count;
 			int w,r,range_end;
 
+			comparer = comparer ?? Eql<T>.Default;
+			
 			// Find the first equal adjascent elements
-			for (r = begin + 1; r < end && !equal(list[r-1], list[r]); ++r) {}
+			for (r = begin + 1; r < end && !comparer.Equals(list[r-1], list[r]); ++r) {}
 
 			// back copy elements overwriting duplicates
 			for (w = r - 1; r < end;)
 			{
-				for (++r; r != end && equal(list[w], list[r]); ++r) {}
+				for (++r; r != end && comparer.Equals(list[w], list[r]); ++r) {}
 				if (r == end) break;
 				list[++w] = list[r];
 			}
@@ -305,110 +369,30 @@ namespace pr.extn
 
 			return range_end;
 		}
-		public static int Unique<T>(this IList<T> list, Func<T,T,bool> equal)
+		public static int Unique<T>(this IList<T> list, Eql<T> comparer = null)
 		{
-			return list.Unique(0, list.Count, equal);
-		}
-		public static int Unique<T>(this IList<T> list, int begin, int end)
-		{
-			return list.Unique(begin, end, (lhs,rhs) => lhs.Equals(rhs));
-		}
-		public static int Unique<T>(this IList<T> list)
-		{
-			return list.Unique(0, list.Count, (lhs,rhs) => lhs.Equals(rhs));
-		}
-
-		/// <summary>
-		/// Partition 'list' within the range [left,right) such that the element at list[left]
-		/// is moved to it's correct position within the list if it was sorted.
-		/// Returns the index location of where list[left] is moved to.</summary>
-		public static int Partition<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
-		{
-			if (left == right)
-				return left;
-			if (left > right)
-				throw new Exception("invalid range");
-
-			// Copy the pivot
-			T pivot = list[left];
-
-			// while the indices haven't meet at the pivot index
-			int i = left, j = right;
-			for (;;)
-			{
-				// Move the right index left until value < pivot
-				for (--j; i != j && comparison(list[j], pivot) > 0; --j) {}
-				if (i == j) break;
-
-				// Copy the right value to the left position
-				list[i] = list[j];
-
-				// Move the left index right until value > pivot
-				for (++i; i != j && comparison(list[i], pivot) < 0; ++i) {}
-				if (i == j) break;
-
-				// Copy the left value to the right position
-				list[j] = list[i];
-			}
-
-			// Copy the pivot back into the pivot location
-			list[i] = pivot;
-			return i;
-		}
-		public static int Partition<T>(this IList<T> list, Comparison<T> comparison)
-		{
-			return list.Partition(comparison, 0, list.Count - 1);
-		}
-		public static int Partition<T>(this IList<T> list, IComparer<T> comparer)
-		{
-			return list.Partition(comparer.Compare);
-		}
-		public static int Partition<T>(this IList<T> list) where T : IComparable<T>
-		{
-			return list.Partition((x, y) => x.CompareTo(y));
-		}
-
-		/// <summary>Sort the list using the quick sort algorithm</summary>
-		public static IList<T> QuickSort<T>(this IList<T> list, Comparison<T> comparison, int left, int right)
-		{
-			// pivot and get pivot location
-			int pivot = list.Partition(comparison, left, right);
-
-			// if the left index is less than the pivot, sort left side
-			if (pivot - left > 1) list.QuickSort(comparison, left, pivot);
-
-			// if right index is greater than pivot, sort right side
-			if (right - pivot > 1) list.QuickSort(comparison, pivot + 1, right);
-		
-			return list;
+			return list.Unique(0, list.Count, comparer);
 		}
 
 		/// <summary>Return the nth element in the list as if the list was sorted</summary>
-		public static T NthElement<T>(this IList<T> list, int n, Comparison<T> comparison, int left, int right)
+		public static T NthElement<T>(this IList<T> list, int n, int left, int right, Cmp<T> comparer)
 		{
 			// get pivot position
-			int pivot = list.Partition(comparison, left, right);
+			int pivot = list.Partition(left, right, comparer);
 
 			// if pivot is less that k, select from the right part
-			if (pivot < n) return list.NthElement(n, comparison, pivot + 1, right);
+			if (pivot < n) return list.NthElement(n, pivot + 1, right, comparer);
 
 			// if pivot is greater than n, select from the left side
-			if (pivot > n) return list.NthElement(n, comparison, left, pivot - 1);
+			if (pivot > n) return list.NthElement(n, left, pivot - 1, comparer);
 
 			// if equal, return the value
 			return list[pivot];
 		}
-		public static T NthElement<T>(this IList<T> list, int n, Comparison<T> comparison)
+		public static T NthElement<T>(this IList<T> list, int n, Cmp<T> comparer = null)
 		{
-			return list.NthElement(n, comparison, 0, list.Count - 1);
-		}
-		public static T NthElement<T>(this IList<T> list, int n, IComparer<T> comparer)
-		{
-			return list.NthElement(n, comparer.Compare);
-		}
-		public static T NthElement<T>(this IList<T> list, int n) where T : IComparable<T>
-		{
-			return list.NthElement(n, (x, y) => x.CompareTo(y));
+			comparer = comparer ?? Cmp<T>.Default;
+			return list.NthElement(n, 0, list.Count, comparer);
 		}
 	}
 }
@@ -431,7 +415,7 @@ namespace pr
 				for (var i = 0; i != 99; ++i)
 					list.Add(rng.Next(10));
 
-				list.Sort((l,r) => l.CompareTo(r));
+				list.Sort();
 				
 				for (var i = 0; i != list.Count - 1; ++i)
 					Assert.True(list[i] <= list[i+1]);
@@ -443,7 +427,7 @@ namespace pr
 				for (var i = 0; i != 100; ++i)
 					list.Add(rng.Next(10));
 
-				list.Sort(0, list.Count, Maths.Compare);
+				list.Sort();
 
 				int last = list.Unique(0, 50);
 				for (var i = 0; i < last; ++i)

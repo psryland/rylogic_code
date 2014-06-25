@@ -36,6 +36,12 @@ namespace pr.container
 
 		/// <summary>Raised just after the list is reordered</summary>
 		Reordered,
+
+		/// <summary>Raised just before the list is cleared</summary>
+		PreClear,
+
+		/// <summary>Raised just after the list is cleared</summary>
+		Clear,
 	}
 
 	public class ListChgEventArgs<T> :EventArgs

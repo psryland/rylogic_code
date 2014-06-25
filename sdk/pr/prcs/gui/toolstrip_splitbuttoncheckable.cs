@@ -15,8 +15,9 @@ namespace pr.gui
 
 		public ToolStripSplitButtonCheckable()
 		{
+			DropDown       = new ToolStripDropDownSingleSelect();
+			Checked        = false;
 			CheckOnClicked = false;
-			CheckOnItemSelected = false;
 		}
 
 		/// <summary>Get/Set the checked state of the button</summary>
@@ -35,15 +36,28 @@ namespace pr.gui
 		/// <summary>Automatically check/uncheck the button on click</summary>
 		public bool CheckOnClicked { get; set; }
 
-		/// <summary>Automatically check the button when a item in the drop down is selected</summary>
-		public bool CheckOnItemSelected { get; set; }
-
 		/// <summary>Raised when the 'Checked' property changes</summary>
 		public event EventHandler CheckedChanged;
 
+		protected override void OnDefaultItemChanged(EventArgs e)
+		{
+			base.OnDefaultItemChanged(e);
+			
+			// There is a retarded bug in .NET where the OnDefaultItemChanged method is called
+			// before the default item is changed, so there's no way to see what the new default item is.
+			this.BeginInvokeDelayed(0, () =>
+				{
+					if (DefaultItem != null)
+					{
+						Text  = DefaultItem.Text;
+						Image = DefaultItem.Image;
+					}
+				});
+		}
 		protected override void OnDropDownItemClicked(ToolStripItemClickedEventArgs e)
 		{
-			if (CheckOnItemSelected) Checked = true;
+			DefaultItem = e.ClickedItem;
+			DropDown.As<ToolStripDropDownSingleSelect>().Selected = e.ClickedItem;
 			base.OnDropDownItemClicked(e);
 		}
 		protected override void OnButtonClick(System.EventArgs e)

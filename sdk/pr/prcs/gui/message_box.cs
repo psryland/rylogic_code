@@ -40,7 +40,6 @@ namespace pr.gui
 		{
 			InitializeComponent();
 			StartPosition = FormStartPosition.CenterParent;
-			FormBorderStyle = FormBorderStyle.FixedSingle; // Default to fixed, can be Sizeable if needed tho
 			Title = title;
 			Message = message;
 			Reflow = true;
@@ -176,7 +175,7 @@ namespace pr.gui
 			const int text_margin = 27;
 			const int button_margin_h = 10;
 			const int button_margin_v = 12;
-			const float reflow_aspect = 3.5f;
+			const float reflow_aspect = 5.0f;
 			var btn_size = m_btn_positive.Size;
 			var btns = new[]{m_btn_negative, m_btn_neutral, m_btn_positive};
 			var num_btns = btns.Count(b => b.Text != string.Empty);

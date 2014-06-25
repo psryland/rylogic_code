@@ -79,11 +79,11 @@ namespace pr.gui
 				Visible     = true;
 				EditControl = null;
 				UserData    = new Dictionary<Guid, object>();
-				Dirty       = true;
 			}
 			public virtual void Dispose()
 			{
 				Disposing.Raise(this, EventArgs.Empty);
+				if (Diagram != null) Diagram.m_dirty.Remove(this);
 				Diagram = null;
 				Invalidated = null;
 				PositionChanged = null;
@@ -96,7 +96,7 @@ namespace pr.gui
 			public abstract Entity Entity { get; }
 
 			/// <summary>Non-null when the element has been added to a diagram</summary>
-			public DiagramControl Diagram
+			public virtual DiagramControl Diagram
 			{
 				get { return m_diag; }
 				set { SetDiagramInternal(value, true); }
@@ -123,6 +123,8 @@ namespace pr.gui
 				// Attach to the new diagram
 				if (m_diag != null && mod_elements_collection)
 					m_diag.Elements.Add(this);
+
+				Invalidate();
 			}
 			private DiagramControl m_diag;
 
@@ -154,14 +156,10 @@ namespace pr.gui
 			/// <summary>Indicate a render is needed. Note: doesn't call Render</summary>
 			public void Invalidate(object sender = null, EventArgs args = null)
 			{
-				if (Dirty) return;
-				Dirty = true;
+				if (Diagram == null || Diagram.m_dirty.Contains(this)) return;
+				Diagram.m_dirty.Add(this);
 				Invalidated.Raise(this, EventArgs.Empty);
 			}
-
-			/// <summary>Dirty flag = need to render</summary>
-			private bool Dirty { get { return m_impl_dirty; } set { m_impl_dirty = value; } }
-			private bool m_impl_dirty;
 
 			/// <summary>Get/Set whether events from this element are suspended or not</summary>
 			public virtual bool RaiseEvents
@@ -222,9 +220,6 @@ namespace pr.gui
 						if (value) m_diag.Selected.Add(this);
 						else m_diag.Selected.Remove(this);
 					}
-
-					// Record the diagram location at the time we were selected/deselected
-					PositionAtSelectionChange = Position;
 
 					// Notify observers about the selection change
 					SelectedChanged.Raise(this, EventArgs.Empty);
@@ -308,9 +303,6 @@ namespace pr.gui
 				internal set { var o2p = Position; o2p.pos.z = value; Position = o2p; }
 			}
 
-			/// <summary>Position recorded at the time of selection/deselection</summary>
-			internal m4x4 PositionAtSelectionChange { get; set; }
-
 			/// <summary>Position recorded at the time dragging starts</summary>
 			internal m4x4 DragStartPosition { get; set; }
 
@@ -375,15 +367,11 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			public void Refresh(bool force = false)
+			public void Refresh()
 			{
-				if (!Dirty && !force) return;  // Only if dirty
 				if (m_impl_refreshing) return; // Protect against reentrancy
 				using (Scope.Create(() => m_impl_refreshing = true, () => m_impl_refreshing = false))
-				{
 					RefreshInternal();
-					Dirty = false;
-				}
 			}
 			protected virtual void RefreshInternal() {}
 			private bool m_impl_refreshing;
@@ -540,12 +528,13 @@ namespace pr.gui
 			}
 			public override void Dispose()
 			{
+				base.Dispose();
+
 				// Remove this node from the connectors
 				while (!Connectors.Empty())
 					Connectors.First().Remove(this);
 
 				Style = null;
-				base.Dispose();
 			}
 
 			/// <summary>Get the entity type for this element</summary>
@@ -827,8 +816,8 @@ namespace pr.gui
 			}
 			public override void Dispose()
 			{
-				if (m_gfx != null) m_gfx.Dispose();
 				base.Dispose();
+				if (m_gfx != null) m_gfx.Dispose();
 			}
 
 			/// <summary>Export to xml</summary>
@@ -869,7 +858,9 @@ namespace pr.gui
 					if (m_gfx.Size != Size)
 					{
 						m_gfx.Size = Size;
-						RefreshInternal();
+						m_gfx.Refresh();
+						Invalidate();
+						//RefreshInternal();
 					}
 				}
 			}
@@ -1072,6 +1063,14 @@ namespace pr.gui
 				Position = m4x4.Translation(Anc.LocationDS.xy, PositionZ);
 				Invalidate();
 			}
+
+			/// <summary>Update the graphics and object transforms associated with this element</summary>
+			protected override void RefreshInternal()
+			{
+				// Ensure the attached element is refreshed first, since our position depends on it
+				if (Elem != null) Elem.Refresh();
+				base.RefreshInternal();
+			}
 		}
 
 		/// <summary>Base class for labels containing a texture</summary>
@@ -1137,6 +1136,7 @@ namespace pr.gui
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
 			protected override void RefreshInternal()
 			{
+				base.RefreshInternal();
 				m_gfx.Refresh();
 				m_gfx.O2P = Position;
 			}
@@ -1747,19 +1747,9 @@ namespace pr.gui
 		/// <summary>A quad shape</summary>
 		public class QuadShape :IShape
 		{
-			public QuadShape(float corner_radius)
-			{
-				CornerRadius = corner_radius;
-			}
-			public QuadShape(XElement node)
-			{
-				CornerRadius = node.Element(XmlField.CornerRadius).As<float>();
-			}
-			public XElement ToXml(XElement node)
-			{
-				node.Add2(XmlField.CornerRadius, CornerRadius, false);
-				return node;
-			}
+			public QuadShape(float corner_radius) { CornerRadius = corner_radius; }
+			public QuadShape(XElement node)       { CornerRadius = node.Element(XmlField.CornerRadius).As<float>(); }
+			public XElement ToXml(XElement node)  { node.Add2(XmlField.CornerRadius, CornerRadius, false); return node; }
 
 			/// <summary>The radius of the quad corners</summary>
 			public float CornerRadius { get; set; }
@@ -1789,7 +1779,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>A 'mixin' class for a textured round-cornered quad</summary>
+		/// <summary>A 'mixin' class for a textured shape</summary>
 		internal class TexturedShape<TShape> :View3d.Object where TShape :IShape
 		{
 			/// <summary>True when the model needs updating</summary>
@@ -2719,7 +2709,8 @@ namespace pr.gui
 			}
 			protected override void Revert()
 			{
-				m_conn.Dispose();
+				if (m_conn != null) m_conn.Dispose();
+				m_conn = null;
 			}
 			protected override DiagramChangedEventArgs GetNotifyArgs(Node target)
 			{
@@ -2849,7 +2840,8 @@ namespace pr.gui
 				/// <summary>
 				/// Elements are about to be deleted from the diagram by the user.
 				/// Setting 'Cancel' for this event will abort the deletion.
-				/// 'Elements' contains the elements that will be deleted.</summary>
+				/// 'Elements' contains the elements that will be deleted.
+				/// 'Elements' can be replaced with a different set of elements to remove</summary>
 				RemovingElements,
 			}
 
@@ -2860,7 +2852,7 @@ namespace pr.gui
 			public bool Cancel { get; set; }
 
 			/// <summary>The elements involved in the change.</summary>
-			public Element[] Elements { get; private set; }
+			public Element[] Elements { get; set; }
 
 			public DiagramChangedEventArgs(EType ty, params Element[] elements)
 			{
@@ -3137,28 +3129,6 @@ namespace pr.gui
 				var lck = Surf.LockSurface();
 				lck.Gfx.ScaleTransform(TextureScale, TextureScale);
 				return lck;
-			}
-		}
-
-		/// <summary>Subclassed split button for the edit toolbar</summary>
-		private class ToolButton :ToolStripSplitButtonCheckable
-		{
-			public ToolButton()
-			{
-				DropDown            = new ToolStripDropDownSingleSelect();
-				Checked             = false;
-				CheckOnClicked      = true;
-				CheckOnItemSelected = true;
-				DisplayStyle        = ToolStripItemDisplayStyle.Image;
-			}
-			protected override void OnDropDownItemClicked(ToolStripItemClickedEventArgs e)
-			{
-				// Update the image to that of the selected item
-				if (DisplayStyle == ToolStripItemDisplayStyle.Image || DisplayStyle == ToolStripItemDisplayStyle.ImageAndText)
-					Image = e.ClickedItem.Image;
-				
-				DefaultItem = e.ClickedItem;
-				base.OnDropDownItemClicked(e);
 			}
 		}
 
@@ -3449,19 +3419,21 @@ namespace pr.gui
 		private StyleCache<ConnectorStyle> m_connector_styles; //
 		private MouseOps                   m_mouse_op;         // Per button current mouse operation
 		private ToolStrip                  m_toolstrip_edit;   //
+		private readonly HashSet<Element>  m_dirty;            // Elements that need refreshing
 
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
 		{
-			Elements             = new BindingListEx<Element>();
-			Selected             = new BindingListEx<Element>();
-			m_impl_options       = options ?? new DiagramOptions();
-			m_eb_update_diag     = new EventBatcher(UpdateDiagram);
-			m_hoverscroll        = new HoverScroll(Handle);
-			m_node_styles        = new StyleCache<NodeStyle>();
-			m_connector_styles   = new StyleCache<ConnectorStyle>();
-			m_mouse_op           = new MouseOps();
-			Edited               = false;
+			Elements           = new BindingListEx<Element>();
+			Selected           = new BindingListEx<Element>();
+			m_impl_options     = options ?? new DiagramOptions();
+			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
+			m_hoverscroll      = new HoverScroll(Handle);
+			m_node_styles      = new StyleCache<NodeStyle>();
+			m_connector_styles = new StyleCache<ConnectorStyle>();
+			m_mouse_op         = new MouseOps();
+			m_dirty            = new HashSet<Element>();
+			Edited             = false;
 
 			if (this.IsInDesignMode()) return;
 
@@ -3478,8 +3450,8 @@ namespace pr.gui
 			InitializeComponent();
 			SetupEditToolstrip();
 
-			Elements.ListChanging += HandleElementListChanging;
-			Selected.ListChanging += HandleSelectListChanging;
+			Elements.ListChanging += (s,a) => OnElementListChanging(a);
+			Selected.ListChanging += (s,a) => OnSelectListChanging(a);
 
 			ResetView();
 			DefaultKeyboardShortcuts = true;
@@ -3509,7 +3481,7 @@ namespace pr.gui
 		public event EventHandler<DiagramChangedEventArgs> DiagramChanged;
 		private DiagramChangedEventArgs RaiseDiagramChanged(DiagramChangedEventArgs args)
 		{
-			DiagramChanged.Raise(this, args);
+			OnDiagramChanged(args);
 			return args;
 		}
 
@@ -3592,7 +3564,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Standard keyboard shortcuts</summary>
-		public void TranslateKey(object sender, KeyEventArgs args)
+		public virtual void TranslateKey(object sender, KeyEventArgs args)
 		{
 			switch (args.KeyCode)
 			{
@@ -3600,7 +3572,7 @@ namespace pr.gui
 				{
 					if (AllowSelection)
 					{
-						Selected.ToArray().ForEach(x => x.Selected = false);
+						Selected.Clear();
 						Refresh();
 					}
 					break;
@@ -3609,10 +3581,10 @@ namespace pr.gui
 				{
 					if (AllowEditing)
 					{
-						// Allow the caller to cancel the deletion
-						var selected = Selected.ToArray();
-						if (!RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.RemovingElements, selected)).Cancel)
-							selected.ForEach(x => Elements.Remove(x));
+						// Allow the caller to cancel the deletion or change the selection
+						var res = new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.RemovingElements, Selected.ToArray());
+						if (!RaiseDiagramChanged(res).Cancel)
+							res.Elements.ForEach(x => Elements.Remove(x));
 					}
 					break;
 				}
@@ -3629,7 +3601,7 @@ namespace pr.gui
 			case Keys.A:
 				if ((args.Modifiers & Keys.Control) != 0)
 				{
-					Elements.ToArray().ForEach(x => x.Selected = true);
+					Elements.ForEach(x => x.Selected = true);
 					Refresh();
 				}
 				break;
@@ -3867,7 +3839,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle elements added/removed from the elements list</summary>
-		protected virtual void HandleElementListChanging(object sender, ListChgEventArgs<Element> args)
+		protected virtual void OnElementListChanging(ListChgEventArgs<Element> args)
 		{
 			switch (args.ChangeType)
 			{
@@ -3919,23 +3891,55 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle elements added/removed from the selection list</summary>
-		protected virtual void HandleSelectListChanging(object sender, ListChgEventArgs<Element> args)
+		protected virtual void OnSelectListChanging(ListChgEventArgs<Element> args)
 		{
 			// If we're just about to add the first item to the selection list
 			// or remove the last item, add/remove the selection graphics
 			switch (args.ChangeType)
 			{
-			case ListChg.Reset:
 			case ListChg.ItemAdded:
-			case ListChg.ItemRemoved:
 				{
-					SelectionGraphicsVisible = Selected.Any(x => x.Resizeable);
-					UpdateEditToolbar();
+					args.Item.Selected = true;
 					break;
 				}
-			default:
-				break;
+			case ListChg.ItemRemoved:
+				{
+					args.Item.Selected = false;
+					break;
+				}
+			case ListChg.PreClear:
+				{
+					using (Selected.SuspendEvents(false))
+					{
+						foreach (var elem in Selected.ToArray())
+							elem.Selected = false;
+					}
+					break;
+				}
+			case ListChg.Reset:
+				{
+					using (Selected.SuspendEvents(false))
+					{
+						Selected.Clear();
+						Selected.AddRange(Elements.Where(x => x.Selected));
+					}
+					break;
+				}
 			}
+			SelectionGraphicsVisible = Selected.Any(x => x.Resizeable);
+			UpdateEditToolbar();
+		}
+
+		/// <summary>Raises the Diagram changed event. Allows subclasses to set properties in 'args'</summary>
+		protected virtual void OnDiagramChanged(DiagramChangedEventArgs args)
+		{
+			DiagramChanged.Raise(this, args);
+		}
+
+		/// <summary>Deselect all elements</summary>
+		public void ClearSelection()
+		{
+			Selected.Clear();
 		}
 
 		/// <summary>
@@ -3984,23 +3988,16 @@ namespace pr.gui
 						break;
 					}
 
-					// Deselect all elements
-					using (Selected.SuspendEvents())
-					{
-						foreach (var elem in Selected.ToArray())
-							elem.Selected = false;
-
-						// Select the next element
-						if (to_select != null)
-							to_select.Element.Selected = true;
-					}
-					Selected.ResetBindings();
+					// Deselect all elements and select the next element
+					Selected.Clear();
+					if (to_select != null)
+						to_select.Element.Selected = true;
 				}
 			}
 			// Otherwise it's area selection
 			else
 			{
-				using (Selected.SuspendEvents())
+				using (Selected.SuspendEvents(true))
 				{
 					// If control is down, those in the selection area become deselected
 					if (Bit.AllSet((int)modifiers, (int)Keys.Control))
@@ -4018,11 +4015,10 @@ namespace pr.gui
 					// Otherwise, the existing selection is cleared, and those within the selection area become selected
 					else
 					{
-						foreach (var elem in Elements.ToArray())
+						foreach (var elem in Elements)
 							elem.Selected = r.IsWithin(elem.Bounds);
 					}
 				}
-				Selected.ResetBindings();
 			}
 
 			Refresh();
@@ -4352,8 +4348,12 @@ namespace pr.gui
 			using (Scope.Create(() => m_in_refresh = true, () => m_in_refresh = false))
 			{
 				base.Refresh();
-				foreach (var elem in Elements)
+				while (m_dirty.Count != 0)
+				{
+					var elem = m_dirty.First();
+					m_dirty.Remove(elem);
 					elem.Refresh();
+				}
 
 				// Notify observers that the diagram has changed
 				if (Edited)
@@ -4670,11 +4670,11 @@ namespace pr.gui
 			}
 			public static class Conn
 			{
-				public const string Key           = "edittools_conn";
-				public const string Line          = "edittools_conn_line";
-				public const string Forward       = "edittools_conn_fwd";
-				public const string Back          = "edittools_conn_back";
-				public const string Bidirectional = "edittools_conn_bidi";
+				public const string Key     = "edittools_conn";
+				public const string Line    = "edittools_conn_line";
+				public const string Forward = "edittools_conn_fwd";
+				public const string Back    = "edittools_conn_back";
+				public const string Bidir   = "edittools_conn_bidi";
 			}
 		}
 
@@ -4685,61 +4685,65 @@ namespace pr.gui
 			m_toolstrip_edit = new ToolStrip(){Visible = false};
 			m_toolstrip_edit.SuspendLayout();
 
-			var btn_node = new DiagramControl.ToolButton
+			var btn_node = new ToolStripSplitButtonCheckable
 			{
-				Image = pr.Resources.boxes,
-				Name = EditTools.Node.Key,
-				Size = new Size(32, 22),
-				Text = "Node",
-				ToolTipText = "Add Node",
+				CheckOnClicked      = true,
+				DisplayStyle        = ToolStripItemDisplayStyle.Image,
+				Image               = pr.Resources.boxes,
+				Name                = EditTools.Node.Key,
+				Size                = new Size(32, 22),
+				Text                = "Node",
+				ToolTipText         = "Add Node",
+			};
+			var btn_conn = new ToolStripSplitButtonCheckable
+			{
+				CheckOnClicked      = true,
+				DisplayStyle        = ToolStripItemDisplayStyle.Image,
+				Image               = pr.Resources.connector1,
+				Name                = EditTools.Conn.Key,
+				Size                = new Size(32, 22),
+				Text                = "Connector",
+				ToolTipText         = "Add Connector",
 			};
 			var btn_node_boxnode = new ToolStripMenuItem
 			{
 				CheckOnClick = true,
-				Image = global::pr.Resources.boxes,
-				Name = EditTools.Node.BoxNode,
-				Size = new Size(78, 22),
-				Text = "Box Node",
-			};
-			var btn_conn = new DiagramControl.ToolButton
-			{
-				Image = pr.Resources.connector1,
-				Name = EditTools.Conn.Key,
-				Size = new Size(32, 22),
-				Text = "Connector",
-				ToolTipText = "Add Connector",
+				Image        = global::pr.Resources.boxes,
+				Name         = EditTools.Node.BoxNode,
+				Size         = new Size(78, 22),
+				Text         = "Box Node",
 			};
 			var btn_conn_line = new ToolStripMenuItem
 			{
 				CheckOnClick = true,
-				Image = global::pr.Resources.connector1,
-				Name = EditTools.Conn.Line,
-				Size = new Size(108, 22),
-				Text = "Line Connector",
+				Image        = global::pr.Resources.connector1,
+				Name         = EditTools.Conn.Line,
+				Size         = new Size(108, 22),
+				Text         = "Line Connector",
 			};
 			var btn_conn_fwd = new ToolStripMenuItem
 			{
 				CheckOnClick = true,
-				Image = global::pr.Resources.connector2,
-				Name = EditTools.Conn.Forward,
-				Size = new Size(129, 22),
-				Text = "Forward Connector",
+				Image        = global::pr.Resources.connector2,
+				Name         = EditTools.Conn.Forward,
+				Size         = new Size(129, 22),
+				Text         = "Forward Connector",
 			};
 			var btn_conn_back = new ToolStripMenuItem
 			{
 				CheckOnClick = true,
-				Image = global::pr.Resources.connector3,
-				Name = EditTools.Conn.Back,
-				Size = new Size(137, 22),
-				Text = "Backward Connector",
+				Image        = global::pr.Resources.connector3,
+				Name         = EditTools.Conn.Back,
+				Size         = new Size(137, 22),
+				Text         = "Backward Connector",
 			};
 			var btn_conn_bidi = new ToolStripMenuItem
 			{
 				CheckOnClick = true,
-				Image = global::pr.Resources.connector4,
-				Name = EditTools.Conn.Bidirectional,
-				Size = new Size(152, 22),
-				Text = "Bidirectional Connector",
+				Image        = global::pr.Resources.connector4,
+				Name         = EditTools.Conn.Bidir,
+				Size         = new Size(152, 22),
+				Text         = "Bidir Connector",
 			};
 
 			btn_node.DropDownItems.AddRange(new ToolStripItem[]{btn_node_boxnode});
@@ -4755,7 +4759,7 @@ namespace pr.gui
 
 			btn_node.ButtonClick += (s,a) =>
 				{
-					var btn = s.As<DiagramControl.ToolButton>();
+					var btn = s.As<ToolStripSplitButtonCheckable>();
 					switch (btn.DefaultItem.Name)
 					{
 					case EditTools.Node.BoxNode:
@@ -4766,13 +4770,13 @@ namespace pr.gui
 
 			btn_conn.ButtonClick += (s,a) =>
 				{
-					var btn = s.As<DiagramControl.ToolButton>();
+					var btn = s.As<ToolStripSplitButtonCheckable>();
 					switch (btn.DefaultItem.Name)
 					{
-					case EditTools.Conn.Line:          m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
-					case EditTools.Conn.Forward:       m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
-					case EditTools.Conn.Back:          m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
-					case EditTools.Conn.Bidirectional: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
+					case EditTools.Conn.Line:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Line   ) : null); break;
+					case EditTools.Conn.Forward: m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Forward) : null); break;
+					case EditTools.Conn.Back:    m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.Back   ) : null); break;
+					case EditTools.Conn.Bidir:   m_mouse_op.SetPending(EBtnIdx.Left, btn.Checked ? new MouseOpCreateLink(this, Connector.EType.BiDir  ) : null); break;
 					}
 				};
 
@@ -4785,11 +4789,11 @@ namespace pr.gui
 			// Note, visibility of items in the edit toolbar should not be changed
 			// as callers may set the visibility to suit their needs
 
-			var btn_node = m_toolstrip_edit.Items["edittools_node"].As<ToolButton>();
+			var btn_node = m_toolstrip_edit.Items[EditTools.Node.Key].As<ToolStripSplitButtonCheckable>();
 			btn_node.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateNode;
 			btn_node.Enabled = AllowEditing;
 
-			var btn_conn = m_toolstrip_edit.Items["edittools_conn"].As<ToolButton>();
+			var btn_conn = m_toolstrip_edit.Items[EditTools.Conn.Key].As<ToolStripSplitButtonCheckable>();
 			btn_conn.Checked = m_mouse_op.Pending(EBtnIdx.Left) is MouseOpCreateLink;
 			btn_conn.Enabled = AllowEditing;
 		}

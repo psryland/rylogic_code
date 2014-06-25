@@ -21,14 +21,15 @@ namespace pr.gui
 			set
 			{
 				foreach (var item in MenuItems)
-					item.Checked = ReferenceEquals(item,value);
+					if (!ReferenceEquals(item,value))
+						item.Checked = false;
 			}
 		}
 
 		protected override void OnItemClicked(ToolStripItemClickedEventArgs e)
 		{
-			base.OnItemClicked(e);
 			Selected = e.ClickedItem;
+			base.OnItemClicked(e);
 		}
 	}
 }
