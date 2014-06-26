@@ -63,6 +63,7 @@ namespace pr.gui
 		{
 			protected Element(Guid id, m4x4 position)
 			{
+				m_disposing     = false;
 				m_diag          = null;
 				Id              = id;
 				m_impl_position = position;
@@ -73,6 +74,7 @@ namespace pr.gui
 			}
 			protected Element(XElement node)
 			{
+				m_disposing = false;
 				Diagram     = null;
 				Id          = node.Element(XmlField.Id).As<Guid>();
 				Position    = node.Element(XmlField.Position).As<m4x4>();
@@ -80,17 +82,20 @@ namespace pr.gui
 				EditControl = null;
 				UserData    = new Dictionary<Guid, object>();
 			}
-			public virtual void Dispose()
+			public void Dispose()
 			{
-				Disposing.Raise(this, EventArgs.Empty);
-				if (Diagram != null) Diagram.m_dirty.Remove(this);
+				m_disposing = true;
+				Disposing();
+			}
+			protected virtual void Disposing()
+			{
 				Diagram = null;
 				Invalidated = null;
 				PositionChanged = null;
 				DataChanged = null;
 				SelectedChanged = null;
 			}
-			public event EventHandler Disposing;
+			private bool m_disposing;
 
 			/// <summary>Get the entity type for this element</summary>
 			public abstract Entity Entity { get; }
@@ -114,15 +119,22 @@ namespace pr.gui
 				Selected = false;
 
 				// Detach from the old diagram
-				if (m_diag != null && mod_elements_collection)
-					m_diag.Elements.Remove(this);
+				if (m_diag != null)
+				{
+					m_diag.m_dirty.Remove(this);
+					if (mod_elements_collection)
+						m_diag.Elements.Remove(this);
+				}
 
 				// Assign the new diagram
 				m_diag = diag;
 
 				// Attach to the new diagram
-				if (m_diag != null && mod_elements_collection)
-					m_diag.Elements.Add(this);
+				if (m_diag != null)
+				{
+					if (mod_elements_collection)
+						m_diag.Elements.Add(this);
+				}
 
 				Invalidate();
 			}
@@ -156,7 +168,7 @@ namespace pr.gui
 			/// <summary>Indicate a render is needed. Note: doesn't call Render</summary>
 			public void Invalidate(object sender = null, EventArgs args = null)
 			{
-				if (Diagram == null || Diagram.m_dirty.Contains(this)) return;
+				if (m_disposing || Diagram == null || Diagram.m_dirty.Contains(this)) return;
 				Diagram.m_dirty.Add(this);
 				Invalidated.Raise(this, EventArgs.Empty);
 			}
@@ -526,15 +538,11 @@ namespace pr.gui
 				EditControl = DefaultEditControl;
 				Style.StyleChanged += Invalidate;
 			}
-			public override void Dispose()
+			protected override void Disposing()
 			{
-				base.Dispose();
-
-				// Remove this node from the connectors
-				while (!Connectors.Empty())
-					Connectors.First().Remove(this);
-
+				DetachConnectors();
 				Style = null;
+				base.Disposing();
 			}
 
 			/// <summary>Get the entity type for this element</summary>
@@ -679,6 +687,13 @@ namespace pr.gui
 				}
 			}
 
+			/// <summary>Remove this node from the connectors that reference it</summary>
+			public void DetachConnectors()
+			{
+				while (!Connectors.Empty())
+					Connectors.First().Remove(this);
+			}
+
 			/// <summary>Try to untangle the connectors to this node</summary>
 			public void Untangle()
 			{
@@ -781,7 +796,7 @@ namespace pr.gui
 			private const string LdrName = "node";
 
 			/// <summary>Only one graphics object for a box node</summary>
-			private readonly TexturedShape<QuadShape> m_gfx;
+			private TexturedShape<QuadShape> m_gfx;
 
 			public BoxNode()
 				:this(Guid.NewGuid())
@@ -814,10 +829,11 @@ namespace pr.gui
 				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
 				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 			}
-			public override void Dispose()
+			protected override void Disposing()
 			{
-				base.Dispose();
 				if (m_gfx != null) m_gfx.Dispose();
+				m_gfx = null;
+				base.Disposing();
 			}
 
 			/// <summary>Export to xml</summary>
@@ -858,9 +874,7 @@ namespace pr.gui
 					if (m_gfx.Size != Size)
 					{
 						m_gfx.Size = Size;
-						m_gfx.Refresh();
-						Invalidate();
-						//RefreshInternal();
+						UpdateTextImage();
 					}
 				}
 			}
@@ -944,13 +958,26 @@ namespace pr.gui
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
 			protected override void RefreshInternal()
 			{
-				// Update the graphics model when the size changes
-				m_gfx.Refresh();
-
-				// Update the position
 				m_gfx.O2P = Position;
+				UpdateTextImage();
+			}
 
-				// Update the texture surface
+			/// <summary>Add the graphics associated with this element to the window</summary>
+			protected override void AddToSceneInternal(View3d.Window window)
+			{
+				window.AddObject(m_gfx);
+			}
+
+			/// <summary>Raised whenever data associated with the element changes</summary>
+			protected override void RaiseDataChanged()
+			{
+				base.RaiseDataChanged();
+				UpdateTextImage();
+			}
+
+			/// <summary>Update the texture surface</summary>
+			private void UpdateTextImage()
+			{
 				using (var tex = m_gfx.LockSurface())
 				{
 					var rect = Bounds.ToRectangle();
@@ -964,12 +991,6 @@ namespace pr.gui
 					using (var bsh = new SolidBrush(Style.Text))
 						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
 				}
-			}
-
-			/// <summary>Add the graphics associated with this element to the window</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
-			{
-				window.AddObject(m_gfx);
 			}
 		}
 
@@ -1076,7 +1097,7 @@ namespace pr.gui
 		/// <summary>Base class for labels containing a texture</summary>
 		public class TexturedLabel<TShape> :Label where TShape :IShape, new()
 		{
-			private readonly TexturedShape<TShape> m_gfx;
+			private TexturedShape<TShape> m_gfx;
 
 			public TexturedLabel()
 				:this(new TShape(), 0U, 0U)
@@ -1097,10 +1118,11 @@ namespace pr.gui
 			{
 				m_gfx = node.Element(XmlField.TexturedShape).As<TexturedShape<TShape>>();
 			}
-			public override void Dispose()
+			protected override void Disposing()
 			{
 				if (m_gfx != null) m_gfx.Dispose();
-				base.Dispose();
+				m_gfx = null;
+				base.Disposing();
 			}
 
 			/// <summary>Export to xml</summary>
@@ -1137,7 +1159,6 @@ namespace pr.gui
 			protected override void RefreshInternal()
 			{
 				base.RefreshInternal();
-				m_gfx.Refresh();
 				m_gfx.O2P = Position;
 			}
 
@@ -1234,10 +1255,9 @@ namespace pr.gui
 				Style.StyleChanged += Invalidate;
 				Relink(find_previous_anchors);
 			}
-			public override void Dispose()
+			protected override void Disposing()
 			{
-				Node0 = null;
-				Node1 = null;
+				DetachNodes();
 				Style = null;
 				if (m_gfx_line != null) m_gfx_line.Dispose();
 				if (m_gfx_fwd  != null) m_gfx_fwd.Dispose();
@@ -1245,7 +1265,7 @@ namespace pr.gui
 				m_gfx_line = null;
 				m_gfx_fwd  = null;
 				m_gfx_bak  = null;
-				base.Dispose();
+				base.Disposing();
 			}
 
 			/// <summary>Get the entity type for this element</summary>
@@ -1370,6 +1390,13 @@ namespace pr.gui
 
 			/// <summary>True at least one end of the connector is attached to a node</summary>
 			public bool Attached { get { return Node0 != null || Node1 !=  null; } }
+
+			/// <summary>Detach from the nodes at each end of the connector</summary>
+			public void DetachNodes()
+			{
+				Node0 = null;
+				Node1 = null;
+			}
 
 			/// <summary>The connector type</summary>
 			public EType Type
@@ -1613,8 +1640,8 @@ namespace pr.gui
 			public void Remove(Node node)
 			{
 				if (node == null) throw new ArgumentNullException("node");
-				if (Node0 == node) { Node0 = null; return; }
-				if (Node1 == node) { Node1 = null; return; }
+				if (Node0 == node) { Node0 = null; Invalidate(); return; }
+				if (Node1 == node) { Node1 = null; Invalidate(); return; }
 				throw new Exception("Connector '{0}' is not connected to node {0}".Fmt(ToString(), node.ToString()));
 			}
 
@@ -1780,22 +1807,19 @@ namespace pr.gui
 		}
 
 		/// <summary>A 'mixin' class for a textured shape</summary>
-		internal class TexturedShape<TShape> :View3d.Object where TShape :IShape
+		public class TexturedShape<TShape> :View3d.Object where TShape :IShape
 		{
-			/// <summary>True when the model needs updating</summary>
-			private bool m_model_dirty;
-
 			public TexturedShape(TShape shape, v2 sz, uint texture_scale = 4)
 			{
 				Shape = shape;
 				m_surf = new Surface((uint)(sz.x + 0.5f), (uint)(sz.y + 0.5f), texture_scale);
-				m_model_dirty = true;
+				UpdateModel();
 			}
 			public TexturedShape(XElement node)
 			{
 				Shape = node.Element(XmlField.Shape).As<TShape>();
 				m_surf = node.Element(XmlField.Surface).As<Surface>();
-				m_model_dirty = true;
+				UpdateModel();
 			}
 			public override void Dispose()
 			{
@@ -1838,19 +1862,16 @@ namespace pr.gui
 				{
 					if (Size == value) return;
 					m_surf.Size = value;
-					m_model_dirty = true;
+					UpdateModel();
 				}
 			}
 
-			/// <summary>Update the model</summary>
-			public void Refresh()
+			/// <summary>Update the model shape and set the texture</summary>
+			private void UpdateModel()
 			{
-				if (!m_model_dirty) return;
-
 				var ldr = Shape.Make(Size);
 				UpdateModel(ldr, View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
 				SetTexture(Surface.Surf);
-				m_model_dirty = false;
 			}
 		}
 
@@ -2529,7 +2550,6 @@ namespace pr.gui
 				// Change the cursor once dragging
 				m_diag.Cursor = Cursors.SizeAll;
 				m_diag.PositionDiagram(e.Location, m_grab_ds);
-				m_diag.Refresh();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -3063,9 +3083,9 @@ namespace pr.gui
 		}
 
 		/// <summary>A 'mixin' class for elements containing a texture</summary>
-		internal class Surface :IDisposable
+		public class Surface :IDisposable
 		{
-			public Surface(uint sx, uint sy, uint texture_scale = 4)
+			public Surface(uint sx, uint sy, uint texture_scale = 2)
 			{
 				Debug.Assert(texture_scale != 0);
 				TextureScale = texture_scale;
@@ -3584,7 +3604,20 @@ namespace pr.gui
 						// Allow the caller to cancel the deletion or change the selection
 						var res = new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.RemovingElements, Selected.ToArray());
 						if (!RaiseDiagramChanged(res).Cancel)
-							res.Elements.ForEach(x => Elements.Remove(x));
+						{
+							foreach (var elem in res.Elements)
+							{
+								var node = elem as Node;
+								if (node != null)
+									node.DetachConnectors();
+								
+								var conn = elem as Connector;
+								if (conn != null)
+									conn.DetachNodes();
+
+								Elements.Remove(elem);
+							}
+						}
 					}
 					break;
 				}

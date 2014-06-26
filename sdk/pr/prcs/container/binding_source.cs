@@ -143,7 +143,8 @@ namespace pr.container
 		/// <summary>Enumerate over data source elements</summary>
 		IEnumerator<TItem> IEnumerable<TItem>.GetEnumerator()
 		{
-			return this.Cast<TItem>().GetEnumerator();
+			foreach (var item in List)
+				yield return (TItem)item;
 		}
 	}
 }
@@ -340,13 +341,13 @@ namespace pr
 				bs.DataSource = null;
 				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
 			}
-			//[Test] public static void BindingSourceEnumeration()
-			//{
-			//	var arr = new[]{1,2,3,4,5};
-			//	var bs = new BindingSource<int>{DataSource = arr};
-			//	var res = bs.ToArray();
-			//	Assert.True(arr.SequenceEqual(res));
-			//}
+			[Test] public static void BindingSourceEnumeration()
+			{
+				var arr = new[]{1,2,3,4,5};
+				var bs = new BindingSource<int>{DataSource = arr};
+				var res = bs.ToArray();
+				Assert.True(arr.SequenceEqual(res));
+			}
 		}
 	}
 }

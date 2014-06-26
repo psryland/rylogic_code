@@ -110,6 +110,49 @@ namespace pr
 			return impl::ExtractLine<fixed_buffer<Char>, Char, Iter>(buf, src, inc_cr, newline);
 		}
 		
+		// Extract a contiguous block of non-delimiter characters from 'src'
+		namespace impl
+		{
+			template <typename Str, typename Char, typename Iter> bool ExtractToken(Str& token, Iter& src, char const* delim)
+			{
+				delim = Delim(delim);
+				FindFirstNotOfAdv(src, delim);
+				if (*src == 0) return false;
+				for (token.push_back(Char(*src)), ++src; *src && *FindChar(delim,*src) == 0; token.push_back(Char(*src)), ++src) {}
+				return true;
+			}
+		}
+		template <typename Str, typename Iter> inline bool ExtractToken(Str& token, Iter& src, char const* delim = 0)
+		{
+			token.clear();
+			return impl::ExtractToken<Str, Str::value_type, Iter>(token, src, delim);
+		}
+		template <typename Char, typename Iter> inline bool ExtractToken(Char* token, size_t len, Iter& src, char const* delim = 0)
+		{
+			fixed_buffer<Char> buf(token, len);
+			return impl::ExtractToken<fixed_buffer<Char>, Char, Iter>(buf, src, delim);
+		}
+		template <typename Char, size_t Len, typename Iter> inline bool ExtractToken(Char (&token)[Len], Iter& src, char const* delim = 0)
+		{
+			fixed_buffer<Char> buf(token, Len);
+			return impl::ExtractToken<fixed_buffer<Char>, Char, Iter>(buf, src, delim);
+		}
+		template <typename Str, typename Iter> inline bool ExtractTokenC(Str& token, Iter src, char const* delim = 0)
+		{
+			token.clear();
+			return impl::ExtractToken<Str, Str::value_type, Iter>(token, src, delim);
+		}
+		template <typename Char, typename Iter> inline bool ExtractTokenC(Char* token, size_t len, Iter src, char const* delim = 0)
+		{
+			fixed_buffer<Char> buf(token, len);
+			return impl::ExtractToken<fixed_buffer<Char>, Char, Iter>(buf, src, delim);
+		}
+		template <typename Char, size_t Len, typename Iter> inline bool ExtractTokenC(Char (&token)[Len], Iter src, char const* delim = 0)
+		{
+			fixed_buffer<Char> buf(token, Len);
+			return impl::ExtractToken<fixed_buffer<Char>, Char, Iter>(buf, src, delim);
+		}
+
 		// Extract a contiguous block of identifier characers from 'src' incrementing 'src'
 		namespace impl
 		{
@@ -562,6 +605,13 @@ namespace pr
 				char line[10];
 				PR_CHECK(ExtractLineC(line, src, false), true); PR_CHECK(Equal(line, "abcefg")   ,true);
 				PR_CHECK(ExtractLineC(line, src, true) , true); PR_CHECK(Equal(line, "abcefg\n") ,true);
+			}
+			{//ExtractToken
+				char const* src = "!token_ 781 #@!$";
+				char tok[10];
+				PR_CHECK(ExtractToken(tok, src), true); PR_CHECK(Equal(tok, "!token_") ,true);
+				PR_CHECK(ExtractToken(tok, src), true); PR_CHECK(Equal(tok, "781")     ,true);
+				PR_CHECK(ExtractToken(tok, src), true); PR_CHECK(Equal(tok, "#@!$")    ,true);
 			}
 			{//ExtractIdentifier
 				wchar_t const* src = L"\t\n\r Ident { 10.9 }";

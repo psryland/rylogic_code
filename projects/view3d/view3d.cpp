@@ -1061,6 +1061,23 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 	}
 }
 
+// Set the object visibility
+// See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API void __stdcall View3D_SetVisibility(View3DObject object, BOOL visible, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		object->Visible(visible != 0, name);
+	}
+	catch (std::exception const& ex)
+	{
+		DllReportError("View3D_SetVisibility failed", ex);
+	}
+}
+
 // Set the object colour
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)

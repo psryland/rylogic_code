@@ -84,14 +84,14 @@ namespace pr
 		// 'solid' - true = tristrip model, false = linestrip model
 		// 'facets' - the number of facets for a complete ring, scaled to the actual ang0->ang1 range
 		template <typename TVertIter, typename TIdxIter>
-		Props Pie(float dimx, float dimy, float ang0, float ang1, float rad0, float rad1, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
+		Props Pie(float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets, Colour32 colour, TVertIter v_out, TIdxIter i_out)
 		{
 			typedef decltype(impl::remove_ref(*i_out)) VIdx;
 
 			auto scale = abs(ang1 - ang0) / pr::maths::tau;
 			facets = std::max(int(scale * facets + 0.5f), 3);
-			rad0 = std::max(0.0f, rad0);
-			rad1 = std::max(rad0, rad1);
+			radius0 = std::max(0.0f, radius0);
+			radius1 = std::max(radius0, radius1);
 			
 			Props props;
 			props.m_geom = EGeom::Vert | EGeom::Colr | (solid ? EGeom::Norm : 0) | (solid ? EGeom::Tex0 : 0);
@@ -100,7 +100,7 @@ namespace pr
 			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
 
 			// Tex coords
-			auto tr0 = FEqlZero(rad1) ? 0.0f : rad0 / rad1;
+			auto tr0 = FEqlZero(radius1) ? 0.0f : radius0 / radius1;
 			auto tr1 = 1.0f;
 
 			// Set Verts
@@ -109,8 +109,8 @@ namespace pr
 				auto a = pr::Lerp(ang0, ang1, float(i) / facets);
 				auto c = pr::Cos(a);
 				auto s = pr::Sin(a);
-				SetPCNT(*v_out++, bb(pr::v4::make(rad0 * dimx * c, rad0 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr0*c, 0.5f - 0.5f*tr0*s));
-				SetPCNT(*v_out++, bb(pr::v4::make(rad1 * dimx * c, rad1 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr1*c, 0.5f - 0.5f*tr1*s));
+				SetPCNT(*v_out++, bb(pr::v4::make(radius0 * dimx * c, radius0 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr0*c, 0.5f - 0.5f*tr0*s));
+				SetPCNT(*v_out++, bb(pr::v4::make(radius1 * dimx * c, radius1 * dimy * s, 0, 1)), colour, pr::v4ZAxis, pr::v2::make(0.5f + 0.5f*tr1*c, 0.5f - 0.5f*tr1*s));
 			}
 
 			if (solid)

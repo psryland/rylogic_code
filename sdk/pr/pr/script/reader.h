@@ -248,6 +248,28 @@ namespace pr
 				return named_kw_hashed == kw_hashed;
 			}
 
+			// Extract a token from the source.
+			// A token is a contiguous block of non-separater characters
+			template <typename StrType> bool ExtractToken(StrType& token)
+			{
+				if (pr::str::ExtractToken(token, m_src, m_delim)) return true;
+				return ReportError(EResult::TokenNotFound, "token expected");
+			}
+			template <typename StrType> bool ExtractTokenS(StrType& token)
+			{
+				return SectionStart() && ExtractToken(token) && SectionEnd();
+			}
+			template <typename StrType> bool ExtractToken(StrType& token, char const* delim)
+			{
+				std::string sep = m_delim; sep += delim;
+				if (pr::str::ExtractToken(token, m_src, sep.c_str())) return true;
+				return ReportError(EResult::TokenNotFound, "token expected");
+			}
+			template <typename StrType> bool ExtractTokenS(StrType& token, char const* delim)
+			{
+				return SectionStart() && ExtractToken(token, delim) && SectionEnd();
+			}
+
 			// Extract an identifier from the source.
 			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
 			template <typename StrType> bool ExtractIdentifier(StrType& word)
@@ -261,27 +283,43 @@ namespace pr
 			}
 
 			// Extract identifiers from the source separated by 'sep'
-			template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, char sep = '.')
+			template <typename StrType> bool ExtractIdentifiers(char, StrType& word)
 			{
-				if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word1)) return true;
+				if (pr::str::ExtractIdentifier(word, m_src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
-			template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, char sep = '.')
+			template <typename StrType, typename... StrTypes> bool ExtractIdentifiers(char sep, StrType& word, StrTypes&&... words)
 			{
-				if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word2)) return true;
-				return ReportError(EResult::TokenNotFound, "identifier expected");
+				if (!pr::str::ExtractIdentifier(word, m_src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
+				if (*m_src == sep) ++m_src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
+				return ExtractIdentifiers(sep, std::forward<StrTypes>(words)...);
 			}
-			template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, StrType& word3, char sep = '.')
+			template <typename StrType, typename... StrTypes> bool ExtractIdentifiersS(char sep, StrType& word, StrTypes&&... words)
 			{
-				if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word2) && *m_src == sep && *(++m_src) &&
-					ExtractIdentifier(word3)) return true;
-				return ReportError(EResult::TokenNotFound, "identifier expected");
+				return SectionStart() && ExtractIdentifiers(sep,word,std::forward<StrTypes>(words)...) && SectionEnd();
 			}
+			
+			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, char sep = '.')
+			//{
+			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word1)) return true;
+			//	return ReportError(EResult::TokenNotFound, "identifier expected");
+			//}
+			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, char sep = '.')
+			//{
+			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word2)) return true;
+			//	return ReportError(EResult::TokenNotFound, "identifier expected");
+			//}
+			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, StrType& word3, char sep = '.')
+			//{
+			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word2) && *m_src == sep && *(++m_src) &&
+			//		ExtractIdentifier(word3)) return true;
+			//	return ReportError(EResult::TokenNotFound, "identifier expected");
+			//}
 
 			// Extract a string from the source.
 			// A string is a sequence of characters between quotes.
@@ -547,6 +585,7 @@ namespace pr
 				"*Junk\n"
 				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
 				"*Section {*SubSection { *Data \n NUM \"With a }\\\"string\\\"{ in it\" }}    \n"
+				"*Token 123token\n"
 				"*LastThing";
 
 			char kw[50];
@@ -616,6 +655,8 @@ namespace pr
 				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
 				PR_CHECK(reader.ExtractSection(str, false), true); PR_CHECK(str, "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
 				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
+				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Token");
+				PR_CHECK(reader.ExtractToken(str)         , true); PR_CHECK(str, "123token");
 				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "LastThing");
 				PR_CHECK(!reader.IsKeyword()              , true);
 				PR_CHECK(!reader.IsSectionStart()         , true);
@@ -636,9 +677,9 @@ namespace pr
 				reader.AddSource(ptr);
 
 				std::string s0,s1,s2,s3;
-				reader.ExtractIdentifier(s0,s1,'.');        PR_CHECK(s0 == "A" && s1 == "B", true);
-				reader.ExtractIdentifier(s0,s1,s2,'.');     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
-				reader.ExtractIdentifier(s0,s1,s2,s3,'.');  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
+				reader.ExtractIdentifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
+				reader.ExtractIdentifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
+				reader.ExtractIdentifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
 			}
 		}
 	}

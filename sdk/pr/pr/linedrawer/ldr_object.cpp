@@ -129,9 +129,33 @@ namespace pr
 			ObjectAttributes attr;
 			attr.m_type = model_type;
 			attr.m_name = ELdrObject::ToString(model_type);
-			if (!reader.IsSectionStart()) reader.ExtractIdentifier(attr.m_name);
-			if (!reader.IsSectionStart()) reader.ExtractInt(attr.m_colour.m_aarrggbb, 16);
-			if (!reader.IsSectionStart()) reader.ExtractBool(attr.m_instance);
+			
+			// Read the next tokens
+			string32 tok0, tok1; auto count = 0;
+			if (!reader.IsSectionStart()) { reader.ExtractToken(tok0, "{}"); ++count; }
+			if (!reader.IsSectionStart()) { reader.ExtractToken(tok1, "{}"); ++count; }
+			if (!reader.IsSectionStart()) { reader.ExtractBool(attr.m_instance); }
+
+			// If not all tokens are given, allow the name to be optional
+			uint32 aarrggbb;
+
+			// If the second token is a valid colour, assume the first is the name
+			if (count == 2 && pr::str::ExtractIntC(aarrggbb, 16, std::begin(tok1)))
+			{
+				if (!pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+				attr.m_colour = aarrggbb;
+			}
+			// If the first token is a valid colour and no second token was given, assume the first token is the colour and no name was given
+			else if (count == 1 && pr::str::ExtractIntC(aarrggbb, 16, std::begin(tok0)))
+			{
+				attr.m_colour = aarrggbb;
+			}
+			// Otherwise, make no assumptions
+			else
+			{
+				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))           reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+				if (count >= 2 && !pr::str::ExtractIntC(attr.m_colour.m_aarrggbb, 16, std::begin(tok1))) reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+			}
 			return attr;
 		}
 

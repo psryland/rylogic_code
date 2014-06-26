@@ -1212,10 +1212,21 @@ namespace pr.gfx
 			}
 
 			/// <summary>
+			/// Set the visibility of this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public void SetVisible(bool vis, string name = null)
+			{
+				View3D_SetVisibility(m_handle, vis, name);
+			}
+
+			/// <summary>
 			/// Set the colour of this object or any of its child objects that match 'name'.
-			/// If 'name' is null, then 'func' is applied to this object only
-			/// If 'name' is "", then 'func' is applied to this object and all children recursively
-			/// Otherwise, 'func' is applied to all child objects that match name.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void SetColour(uint colour, uint mask, string name = null)
 			{
@@ -1236,9 +1247,9 @@ namespace pr.gfx
 
 			/// <summary>
 			/// Set the texture on this object or any of its child objects that match 'name'.
-			/// If 'name' is null, then 'func' is applied to this object only
-			/// If 'name' is "", then 'func' is applied to this object and all children recursively
-			/// Otherwise, 'func' is applied to all child objects that match name.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void SetTexture(Texture tex, string name = null)
 			{
@@ -1485,6 +1496,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
+		[DllImport(Dll)] private static extern void              View3D_SetVisibility            (HObject obj, bool visible, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);

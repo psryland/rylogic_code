@@ -63,6 +63,7 @@ namespace pr.extn
 			}
 
 			/// <summary>Returns true if 'evt' is suspended</summary>
+			[DebuggerStepThrough]
 			public static bool IsSuspended(T evt)
 			{
 				return m_suspended.ContainsKey(evt);
@@ -80,6 +81,7 @@ namespace pr.extn
 		#region EventHandler / EventHandler<>
 
 		/// <summary>Fire the event if not suspended</summary>
+		[DebuggerStepThrough]
 		public static void Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
 		{
 			if (evt == null) return;
@@ -90,6 +92,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Fire the event if not suspended</summary>
+		[DebuggerStepThrough]
 		public static void Raise(this EventHandler evt, object sender, EventArgs args)
 		{
 			if (evt == null) return;

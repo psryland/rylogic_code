@@ -44,7 +44,7 @@ namespace pr.container
 		public bool ReadOnly
 		{
 			get { return !AllowNew && !AllowEdit && !AllowRemove; }
-			set { AllowNew = AllowEdit = AllowRemove = value; }
+			set { AllowNew = AllowEdit = AllowRemove = !value; }
 		}
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>

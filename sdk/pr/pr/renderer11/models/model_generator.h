@@ -184,9 +184,9 @@ namespace pr
 					? Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, ModifyTxfm(*o2w))
 					: Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen);
 			}
-			static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float rad0, float rad1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
+			static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
-				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Pie(dimx, dimy, ang0, ang1, rad0, rad1, solid, facets, colour, vb, ib); };
+				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);

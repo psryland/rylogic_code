@@ -116,6 +116,10 @@ namespace pr.maths
 			Debug.Assert(lhs.Length2Sq != 0 && rhs.Length2Sq != 0, "CosAngle undefined for zero vectors");
 			return Maths.Clamp(Dot2(lhs,rhs) / (float)Math.Sqrt(lhs.Length2Sq * rhs.Length2Sq), -1f, 1f);
 		}
+		public static v2    UnitCircle(float ang)
+		{
+			return new v2((float)Math.Cos(ang), (float)Math.Sin(ang));
+		}
 		public static v2 Parse(string s)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v2.Parse() string argument was null");

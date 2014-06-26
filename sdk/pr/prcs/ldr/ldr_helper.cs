@@ -6,6 +6,7 @@
 using System.Drawing;
 using System.IO;
 using System.Text;
+using pr.extn;
 using pr.maths;
 using pr.util;
 
@@ -32,17 +33,21 @@ namespace pr.ldr
 		{
 			return "}\n";
 		}
+		public static string Vec3(v2 vec)
+		{
+			return "{0} {1} 0".Fmt(vec.x,vec.y);
+		}
 		public static string Vec3(v4 vec)
 		{
-			return "" + vec.x + " " + vec.y + " " + vec.z;
+			return "{0} {1} {2}".Fmt(vec.x,vec.y,vec.z);
 		}
 		public static string Vec4(v4 vec)
 		{
-			return "" + vec.x + " " + vec.y + " " + vec.z + " " + vec.w;
+			return "{0} {1} {2} {3}".Fmt(vec.x,vec.y,vec.z,vec.w);
 		}
 		public static string Mat4x4(m4x4 mat)
 		{
-			return "" + Vec4(mat.x) + " " + Vec4(mat.y) + " " + Vec4(mat.z) + " " + Vec4(mat.w);
+			return "{0} {1} {2} {3}".Fmt(Vec4(mat.x),Vec4(mat.y),Vec4(mat.z),Vec4(mat.w));
 		}
 		public static string Position(v4 position)
 		{
@@ -62,9 +67,13 @@ namespace pr.ldr
 		{
 			return Colour(unchecked((uint)col.ToArgb()));
 		}
-		public static string Solid()
+		public static string Solid(bool solid = true)
 		{
-			return "*Solid ";
+			return solid ? "*Solid" : string.Empty;
+		}
+		public static string Facets(int facets)
+		{
+			return "*Facets {{{0}}}".Fmt(facets);
 		}
 		public static string CornerRadius(float rad)
 		{
@@ -129,19 +138,21 @@ namespace pr.ldr
 			foreach (var p in parts)
 			{
 				if      (p is Color ) m_sb.Append(Ldr.Colour((Color)p));
-				else if (p is v4    ) m_sb.Append(Ldr.Vec3  ((v4)p))   ;
-				else if (p is m4x4  ) m_sb.Append(Ldr.Mat4x4((m4x4)p)) ;
+				else if (p is v4    ) m_sb.Append(Ldr.Vec3  ((v4)p));
+				else if (p is m4x4  ) m_sb.Append(Ldr.Mat4x4((m4x4)p));
+				else if (p is AxisId) m_sb.Append(((AxisId)p).m_id);
 				else                  m_sb.Append(p.ToString());
 			}
 			return this;
 		}
 
-		public Scope Group() { return Group(string.Empty); }
-		public Scope Group(string name)
+		public Scope Group()            { return Group(string.Empty); }
+		public Scope Group(string name) { return Group(name, v4.Origin); }
+		public Scope Group(string name, v4 position)
 		{
 			return new Scope(
 				() => Append("*Group ",name," {\n"),
-				() => Append("}\n")
+				() => Append(Ldr.Position(position),"}\n")
 				);
 		}
 
@@ -168,6 +179,31 @@ namespace pr.ldr
 		public void Sphere(string name, Color colour, float radius, v4 position)
 		{
 			Append("*Sphere ",name," ",colour," {",radius," ",Ldr.Position(position),"}\n");
+		}
+
+		public void Circle()                                                                    { Circle(string.Empty, Color.White, 3, true); }
+		public void Circle(string name, Color colour, AxisId axis_id, bool solid)               { Circle(name, colour, axis_id, solid, v4.Origin); }
+		public void Circle(string name, Color colour, AxisId axis_id, bool solid, float radius) { Circle(name, colour, axis_id, solid, radius, v4.Origin); }
+		public void Circle(string name, Color colour, AxisId axis_id, bool solid, v4 position)  { Circle(name, colour, axis_id, solid, 1f, position); }
+		public void Circle(string name, Color colour, AxisId axis_id, bool solid, float radius, v4 position)
+		{
+			Append("*Circle ",name," ",colour," {",axis_id," ",radius," ",Ldr.Solid(solid)," ",Ldr.Position(position),"}\n");
+		}
+
+		public void Ellipse()                                                                                    { Ellipse(string.Empty, Color.White, 3, true, 1f, 0.5f); }
+		public void Ellipse(string name, Color colour, AxisId axis_id, bool solid, float radiusx, float radiusy) { Ellipse(name, colour, axis_id, solid, radiusx, radiusy, v4.Origin); }
+		public void Ellipse(string name, Color colour, AxisId axis_id, bool solid, float radiusx, float radiusy, v4 position)
+		{
+			Append("*Circle ",name," ",colour," {",axis_id," ",radiusx," ",radiusy," ",Ldr.Solid(solid)," ",Ldr.Position(position),"}\n");
+		}
+
+		public void Pie()                                                                                                                   { Pie(string.Empty, Color.White, 3, true, 0f, 45f); }
+		public void Pie(string name, Color colour, AxisId axis_id, bool solid, float ang0, float ang1)                                      { Pie(name, colour, axis_id, solid, ang0, ang1, v4.Origin); }
+		public void Pie(string name, Color colour, AxisId axis_id, bool solid, float ang0, float ang1, v4 position)                         { Pie(name, colour, axis_id, solid, ang0, ang1, 0f, 1f, position); }
+		public void Pie(string name, Color colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, v4 position) { Pie(name, colour, axis_id, solid, ang0, ang1, rad0, rad1, 1f, 1f, 40, position); }
+		public void Pie(string name, Color colour, AxisId axis_id, bool solid, float ang0, float ang1, float rad0, float rad1, float sx, float sy, int facets, v4 position)
+		{
+			Append("*Pie ",name," ",colour," {",axis_id," ",ang0," ",ang1," ",rad0," ",rad1," ",Ldr.Solid(solid)," ",Ldr.Facets(facets)," *Scale ",sx," ",sy," ",Ldr.Position(position),"}\n");
 		}
 
 		public void Quad()                                                      { Quad(string.Empty, Color.White); }

@@ -275,6 +275,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);
 	VIEW3D_API View3DM4x4              __stdcall View3D_ObjectGetO2P             (View3DObject object);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, View3DM4x4 const& o2p);
+	VIEW3D_API void                    __stdcall View3D_SetVisibility            (View3DObject obj, BOOL visible, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
 	VIEW3D_API View3DBBox              __stdcall View3D_ObjectBBoxMS             (View3DObject object);

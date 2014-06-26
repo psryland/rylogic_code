@@ -8,7 +8,7 @@ namespace pr.maths
 {
 	public struct AxisId
 	{
-		private int m_id;
+		public int m_id;
 		
 		public AxisId(int id)
 		{
