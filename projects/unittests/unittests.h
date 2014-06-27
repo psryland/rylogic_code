@@ -107,6 +107,7 @@
 #include "pr/filesys/filewatch.h"
 #include "pr/filesys/findfiles.h"
 #include "pr/filesys/recurse_directory.h"
+#include "pr/geometry/3ds.h"
 #include "pr/geometry/box.h"
 #include "pr/geometry/common.h"
 #include "pr/geometry/cylinder.h"

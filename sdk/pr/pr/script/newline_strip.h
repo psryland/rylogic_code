@@ -26,19 +26,20 @@ namespace pr
 			size_t m_lines_min;
 
 			NewLineStrip(Src& src, size_t lines_max = 1, size_t lines_min = 0)
-				:Src(SrcType::Unknown)
+				:Src()
 				,m_buf(src)
 				,m_lines_max(lines_max)
 				,m_lines_min(lines_min < lines_max ? lines_min : lines_max)
 			{}
-			SrcType::Type type() const { return m_buf.type(); }
-			Loc           loc()  const { return m_buf.loc(); }
-			void          loc(Loc& l)  { m_buf.loc(l); }
+
+			ESrcType type() const override { return m_buf.type(); }
+			Loc  loc() const override      { return m_buf.loc(); }
+			void loc(Loc& l) override      { m_buf.loc(l); }
 
 		protected:
-			char peek() const { return *m_buf; }
-			void next()       { ++m_buf; }
-			void seek()
+			char peek() const override { return *m_buf; }
+			void next() override       { ++m_buf; }
+			void seek() override 
 			{
 				for (;;)
 				{

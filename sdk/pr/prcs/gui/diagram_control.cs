@@ -84,10 +84,9 @@ namespace pr.gui
 			}
 			public void Dispose()
 			{
-				m_disposing = true;
-				Disposing();
+				Dispose(m_disposing = true);
 			}
-			protected virtual void Disposing()
+			protected virtual void Dispose(bool disposing)
 			{
 				Diagram = null;
 				Invalidated = null;
@@ -538,11 +537,11 @@ namespace pr.gui
 				EditControl = DefaultEditControl;
 				Style.StyleChanged += Invalidate;
 			}
-			protected override void Disposing()
+			protected override void Dispose(bool disposing)
 			{
 				DetachConnectors();
 				Style = null;
-				base.Disposing();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>Get the entity type for this element</summary>
@@ -829,11 +828,11 @@ namespace pr.gui
 				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
 				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 			}
-			protected override void Disposing()
+			protected override void Dispose(bool disposing)
 			{
 				if (m_gfx != null) m_gfx.Dispose();
 				m_gfx = null;
-				base.Disposing();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>Export to xml</summary>
@@ -1118,11 +1117,11 @@ namespace pr.gui
 			{
 				m_gfx = node.Element(XmlField.TexturedShape).As<TexturedShape<TShape>>();
 			}
-			protected override void Disposing()
+			protected override void Dispose(bool disposing)
 			{
 				if (m_gfx != null) m_gfx.Dispose();
 				m_gfx = null;
-				base.Disposing();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>Export to xml</summary>
@@ -1255,7 +1254,7 @@ namespace pr.gui
 				Style.StyleChanged += Invalidate;
 				Relink(find_previous_anchors);
 			}
-			protected override void Disposing()
+			protected override void Dispose(bool disposing)
 			{
 				DetachNodes();
 				Style = null;
@@ -1265,7 +1264,7 @@ namespace pr.gui
 				m_gfx_line = null;
 				m_gfx_fwd  = null;
 				m_gfx_bak  = null;
-				base.Disposing();
+				base.Dispose(disposing);
 			}
 
 			/// <summary>Get the entity type for this element</summary>

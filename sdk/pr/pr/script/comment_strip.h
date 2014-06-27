@@ -17,15 +17,19 @@ namespace pr
 		{
 			Buffer<> m_buf;
 			
-			CommentStrip(Src& src) :Src(SrcType::Unknown) ,m_buf(src) {}
-			SrcType::Type type() const { return m_buf.type(); }
-			Loc           loc()  const { return m_buf.loc(); }
-			void          loc(Loc& l)  { m_buf.loc(l); }
-			
+			CommentStrip(Src& src)
+				:Src()
+				,m_buf(src)
+			{}
+
+			ESrcType type() const override { return m_buf.type(); }
+			Loc  loc() const override      { return m_buf.loc(); }
+			void loc(Loc& l) override      { m_buf.loc(l); }
+
 		protected:
-			char peek() const { return *m_buf; }
-			void next()       { ++m_buf; }
-			void seek()
+			char peek() const override { return *m_buf; }
+			void next() override       { ++m_buf; }
+			void seek() override 
 			{
 				for (;;)
 				{

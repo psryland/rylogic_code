@@ -21,26 +21,24 @@ namespace pr
 	namespace script
 	{
 		// Error handling interface - includes default implementation
-		// Clients can either implement the 'ScriptReader_TokenNotFound' and 'IErrorHandler_Error' methods
-		// or just the 'ScriptReader_ShowMessage' method to output the standard formatted error message
-		// e.g. struct ErrorHandler :pr::script::IErrorHandler {void ShowMessage(char const* str) {::MessageBoxA(::GetFocus(),str,"Script Error",MB_OK);}} error_handler;
+		// Clients can either implement the 'IErrorHandler_Error' method or just the
+		// 'ScriptReader_ShowMessage' method to output the standard formatted error message.
+		// e.g.
+		//   struct ErrorHandler :pr::script::IErrorHandler
+		//   {
+		//       void ShowMessage(char const* str) { ::MessageBoxA(::GetFocus(), str, "Script Error", MB_OK); }
+		//   };
 		struct IErrorHandler
 		{
 			virtual ~IErrorHandler() {}
-			virtual void IErrorHandler_ImplementationVersion0() = 0;
 			virtual void IErrorHandler_ShowMessage(char const*) {}
 			virtual void IErrorHandler_Error(pr::script::EResult result, char const* error_msg, pr::script::Loc const& loc)
 			{
 				// Report a basic error message.
-				// To implement script history, users should use a history char stream
-				// and include that in reported messages.
+				// To implement script history, users should use a history char stream and include that in reported messages.
 				IErrorHandler_ShowMessage(pr::script::ErrMsg(result, error_msg, loc).c_str());
 				throw pr::script::Exception(result, loc, error_msg);
 			}
-		};
-		struct DftErrorHandler :IErrorHandler
-		{
-			void IErrorHandler_ImplementationVersion0() {}
 		};
 
 		// pr script reader
@@ -49,7 +47,7 @@ namespace pr
 		private:
 			PPMacroDB       m_dft_macros;
 			FileIncludes    m_dft_includes;
-			DftErrorHandler m_dft_errors;
+			IErrorHandler   m_dft_errors;
 			Preprocessor    m_pp;
 			CommentStrip    m_strip;
 			Src&            m_src;
@@ -66,7 +64,7 @@ namespace pr
 			void EatWhiteSpace() { for (; *pr::str::FindChar(m_delim, *m_src) != 0; ++m_src) {} }
 
 		public:
-			Reader()
+			Reader(bool case_sensitive_keywords = false)
 				:m_dft_macros()
 				,m_dft_includes()
 				,m_dft_errors()
@@ -75,17 +73,26 @@ namespace pr
 				,m_src(m_strip)
 				,m_error_handler(&m_dft_errors)
 				,m_delim(" \t\r\n\v,;")
-				,m_case_sensitive_keywords(false)
+				,m_case_sensitive_keywords(case_sensitive_keywords)
 			{}
+			Reader(Src& src, bool case_sensitive_keywords = false) :Reader(case_sensitive_keywords)
+			{
+				AddSource(src);
+			}
+			Reader(Src* src, bool delete_on_pop, bool case_sensitive_keywords = false) :Reader(case_sensitive_keywords)
+			{
+				AddSource(src, delete_on_pop);
+			}
 
 			// Interface pointers
+			// Set these for non-default handling of macros, includes, embedded code, or error reporting
 			IPPMacroDB*&    MacroHandler()   { return m_pp.m_macros; }
 			IIncludes*&     IncludeHandler() { return m_pp.m_includes; }
 			IEmbeddedCode*& CodeHandler()    { return m_pp.m_embedded; }
 			IErrorHandler*& ErrorHandler()   { return m_error_handler; }
 
 			// User delimiter characters
-			char const*&    Delimiters()     { return m_delim; }
+			char const*& Delimiters() { return m_delim; }
 
 			// Push a source onto the input stack
 			// Note: specific overloads that add strings or files are not included
@@ -298,28 +305,6 @@ namespace pr
 			{
 				return SectionStart() && ExtractIdentifiers(sep,word,std::forward<StrTypes>(words)...) && SectionEnd();
 			}
-			
-			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, char sep = '.')
-			//{
-			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word1)) return true;
-			//	return ReportError(EResult::TokenNotFound, "identifier expected");
-			//}
-			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, char sep = '.')
-			//{
-			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word2)) return true;
-			//	return ReportError(EResult::TokenNotFound, "identifier expected");
-			//}
-			//template <typename StrType> bool ExtractIdentifier(StrType& word0, StrType& word1, StrType& word2, StrType& word3, char sep = '.')
-			//{
-			//	if (ExtractIdentifier(word0) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word1) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word2) && *m_src == sep && *(++m_src) &&
-			//		ExtractIdentifier(word3)) return true;
-			//	return ReportError(EResult::TokenNotFound, "identifier expected");
-			//}
 
 			// Extract a string from the source.
 			// A string is a sequence of characters between quotes.
@@ -603,9 +588,7 @@ namespace pr
 			{// basic extract methods
 				pr::script::Loc    loc;
 				pr::script::PtrSrc ptr(src, &loc);
-				pr::script::Reader reader;
-				reader.CaseSensitiveKeywords(true);
-				reader.AddSource(ptr);
+				pr::script::Reader reader(ptr, true);
 
 				PR_CHECK(reader.CaseSensitiveKeywords()     ,true);
 				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
@@ -672,9 +655,7 @@ namespace pr
 
 				pr::script::Loc    loc;
 				pr::script::PtrSrc ptr(src, &loc);
-				pr::script::Reader reader;
-				reader.CaseSensitiveKeywords(true);
-				reader.AddSource(ptr);
+				pr::script::Reader reader(ptr, true);
 
 				std::string s0,s1,s2,s3;
 				reader.ExtractIdentifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);

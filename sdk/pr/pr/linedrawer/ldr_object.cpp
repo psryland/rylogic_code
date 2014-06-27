@@ -838,7 +838,7 @@ namespace pr
 			pr::v2 m_scale;
 			int m_layers, m_wedges;
 
-			IObjectCreatorCone() :m_axis_id(1), m_dim(), m_scale(), m_layers(1), m_wedges(20) {}
+			IObjectCreatorCone() :m_axis_id(), m_dim(), m_scale(pr::v2One), m_layers(1), m_wedges(20) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
@@ -850,23 +850,15 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
-				// Get the transform so that model is aligned to 'axis_id'
-				pr::m4x4 o2w = pr::m4x4Identity;
-				switch (m_axis_id)
+				pr::m4x4 o2w, *po2w = nullptr;
+				if (m_axis_id != 3)
 				{
-				default:
-					p.m_reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
-					return;
-				case  1: o2w = pr::Rotation4x4(0.0f, -pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case -1: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_4, 0.0f, pr::v4Origin); break;
-				case  2: o2w = pr::Rotation4x4(-pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case -2: o2w = pr::Rotation4x4(pr::maths::tau_by_4, 0.0f, 0.0f, pr::v4Origin); break;
-				case  3: o2w = pr::m4x4Identity; break;
-				case -3: o2w = pr::Rotation4x4(0.0f, pr::maths::tau_by_2, 0.0f, pr::v4Origin); break;
+					o2w = pr::Rotation4x4(pr::AxisId(3), m_axis_id, pr::v4Origin);
+					po2w = &o2w;
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, o2w, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, GetDrawData());
+				obj->m_model = ModelGenerator<>::Cylinder(p.m_rdr, m_dim.x, m_dim.y, m_dim.z, m_scale.x, m_scale.y, m_wedges, m_layers, 1, &pr::Colour32White, po2w, GetDrawData());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};

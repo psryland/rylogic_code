@@ -33,23 +33,22 @@ namespace pr
 			IEmbeddedCode* m_embedded;  // Handler for embedded code
 
 			Preprocessor(IPPMacroDB* macros, IIncludes* includes, IEmbeddedCode* embedded)
-			:Src(SrcType::Unknown)
-			,m_src_stack()
-			,m_buf(m_src_stack)
-			,m_macros(macros)
-			,m_includes(includes)
-			,m_embedded(embedded)
-			,m_if_stack()
+				:Src()
+				,m_src_stack()
+				,m_buf(m_src_stack)
+				,m_macros(macros)
+				,m_includes(includes)
+				,m_embedded(embedded)
+				,m_if_stack()
 			{}
-
 			Preprocessor(Src& src, IPPMacroDB* macros, IIncludes* includes, IEmbeddedCode* embedded)
-			:Src(SrcType::Unknown)
-			,m_src_stack(src)
-			,m_buf(m_src_stack)
-			,m_macros(macros)
-			,m_includes(includes)
-			,m_embedded(embedded)
-			,m_if_stack()
+				:Src()
+				,m_src_stack(src)
+				,m_buf(m_src_stack)
+				,m_macros(macros)
+				,m_includes(includes)
+				,m_embedded(embedded)
+				,m_if_stack()
 			{}
 
 			// Add a char stream as an input source
@@ -65,15 +64,27 @@ namespace pr
 				return !m_buf.empty();
 			}
 
-			// debugging methods
-			SrcType::Type type() const { return m_src_stack.type(); }
-			Loc           loc()  const { return m_src_stack.loc();  }
-			void          loc(Loc& l)  { m_src_stack.loc(l); }
+			ESrcType type() const override { return m_src_stack.type(); }
+			Loc  loc() const override      { return m_src_stack.loc();  }
+			void loc(Loc& l) override      { m_src_stack.loc(l); }
 
 		private:
-			char peek() const { return *m_buf; }
-			void next()       { ++m_buf; }
-			void seek()
+			// A source for expanded macros that contains a null terminated
+			// string char source that contains it's own buffer
+			struct MacroSrc :Src
+			{
+				string m_str;  // The buffer
+				size_t m_idx;  // The index position in the buffer
+
+				MacroSrc() :Src(ESrcType::Macro) ,m_str() ,m_idx(0) {}
+				char peek() const override { return *(m_str.c_str() + m_idx); }
+				void next() override       { ++m_idx; }
+				void seek() override       { while (m_idx <= m_str.size()-2 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\n') {next(); next();} }
+			};
+
+			char peek() const override { return *m_buf; }
+			void next() override       { ++m_buf; }
+			void seek() override
 			{
 				for (;;)
 				{
@@ -111,7 +122,7 @@ namespace pr
 					}
 
 					// Look for possible macro identifiers in the source (not within expanded macros)
-					if (m_macros && m_buf.type() != SrcType::Macro && pr::str::IsIdentifier(*m_buf, true))
+					if (m_macros && m_buf.type() != ESrcType::Macro && pr::str::IsIdentifier(*m_buf, true))
 					{
 						// Buffer the identifier
 						m_buf.BufferIdentifier();
@@ -127,7 +138,7 @@ namespace pr
 							{
 								// Create a buffered string source for the expanded macro
 								// and get the macro to generate it's expanded version.
-								std::auto_ptr<BufferedSrc> exp(new BufferedSrc(0, SrcType::Macro));
+								auto exp = std::make_unique<MacroSrc>();
 								macro->GetSubstString(exp->m_str, params);
 								ExpandMacros(*exp.get(), PPMacroAncestor(macro, 0), m_buf.loc());
 								m_src_stack.push(exp.release(), true);
@@ -253,7 +264,7 @@ namespace pr
 				case EPPKeyword::Eval:
 					{
 						Eat::LineSpace(m_buf);
-						std::auto_ptr<BufferedSrc> expr(new BufferedSrc(0, SrcType::Macro));
+						auto expr = std::make_unique<MacroSrc>();
 
 						// Extract text between '{' and '}'
 						Loc loc = m_buf.loc();
@@ -305,7 +316,7 @@ namespace pr
 						if (m_embedded)
 						{
 							// Eventually, 'code' will contain the result which we want to treat like an expanded macro
-							std::auto_ptr<BufferedSrc> code(new BufferedSrc(0, SrcType::Macro));
+							auto code = std::make_unique<MacroSrc>();
 							for (; *m_buf && src != end; src.shift(*m_buf), ++m_buf) { code->m_str.push_back(src.front()); }
 
 							// Expand any macros in the buffered text
@@ -332,7 +343,7 @@ namespace pr
 			}
 
 			// Recursively expand the expression in 'src' with macro substitutions
-			void ExpandMacros(BufferedSrc& src, PPMacroAncestor const& parent, Loc const& loc)
+			void ExpandMacros(MacroSrc& src, PPMacroAncestor const& parent, Loc const& loc)
 			{
 				string id;
 				PPMacro::Params params;
@@ -347,7 +358,7 @@ namespace pr
 					pr::str::ExtractIdentifier(id, buf);
 					PPMacro const* macro = m_macros ? m_macros->Find(Hash::String(id)) : 0;
 					if (!macro) continue;
-					
+
 					// Check the correct parameters have been given
 					params.clear();
 					if (!macro->ReadParams<false>(buf, params, loc)) continue;
@@ -358,7 +369,7 @@ namespace pr
 					if (p) continue; // a recursive substitution.. ignore
 
 					// Recursively expand the macro into a temporary buffer
-					BufferedSrc ex(0, SrcType::Macro);
+					MacroSrc ex;
 					macro->GetSubstString(ex.m_str, params);
 					ExpandMacros(ex, PPMacroAncestor(macro, &parent), loc);
 
@@ -415,7 +426,7 @@ namespace pr
 
 								// Create a buffered string source for the expanded macro
 								// and get the macro to generate it's expanded version.
-								BufferedSrc exp(0, SrcType::Macro);
+								MacroSrc exp;
 								macro->GetSubstString(exp.m_str, params);
 								ExpandMacros(exp, PPMacroAncestor(macro, 0), m_buf.loc());
 								expr.append(exp.m_str);

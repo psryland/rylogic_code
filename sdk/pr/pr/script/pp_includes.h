@@ -45,29 +45,43 @@ namespace pr
 			bool  m_ignore_missing; // True if missing includes are just ignored
 			
 			FileIncludes()
-			:m_paths()
-			,m_ignore_missing(false)
+				:m_paths()
+				,m_ignore_missing(false)
 			{}
 			
 			// Open an include file
 			FileSrc* Open(pr::script::string const& include, pr::script::Loc const& loc, bool search_paths_only)
 			{
+				string searched_paths;
+
 				// Search the directory of the current source (if it's a file)
 				if (!search_paths_only && !loc.m_file.empty())
 				{
-					string path = pr::filesys::CombinePath(pr::filesys::GetDirectory(loc.m_file), include);
-					if (pr::filesys::FileExists(path)) return new FileSrc(path.c_str());
+					string dir = pr::filesys::GetDirectory(loc.m_file);
+					string path = pr::filesys::CombinePath(dir, include);
+					if (pr::filesys::FileExists(path))
+						return new FileSrc(path.c_str());
+					else
+						searched_paths.append(dir).append("\n");
 				}
 				
 				// Search the include paths
 				string path;
-				for (Paths::const_iterator i = m_paths.begin(), iend = m_paths.end(); i != iend; ++i)
+				for (auto& dir : m_paths)
 				{
-					path = pr::filesys::CombinePath(*i, include);
-					if (pr::filesys::FileExists(path)) return new FileSrc(path.c_str());
+					path = pr::filesys::CombinePath(dir, include);
+					if (pr::filesys::FileExists(path))
+						return new FileSrc(path.c_str());
+					else
+						searched_paths.append(dir).append("\n");
 				}
 				
-				if (!m_ignore_missing) throw Exception(EResult::MissingInclude, loc, fmt("Failed to open %s", include.c_str()));
+				if (!m_ignore_missing)
+				{
+					// Check that the script source is a file source, String sources don't have a relative directory
+					auto msg = fmt("Failed to open %s\n\nFile not found in search paths:\n%s", include.c_str(), searched_paths.c_str());
+					throw Exception(EResult::MissingInclude, loc, msg);
+				}
 				return 0;
 			}
 			

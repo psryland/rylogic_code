@@ -115,6 +115,9 @@
 	<Type Name="pr::Colour32">
 		<DisplayString>{m_aarrggbb,x}</DisplayString>
 	</Type>
+	<Type Name="pr::geometry::Max3DS::Chunk">
+		<DisplayString>[Id={m_id.value}] len={m_length}</DisplayString>
+	</Type>
 
 	<!-- Renderer11 -->
 	<Type Name="pr::rdr::ShaderBase">

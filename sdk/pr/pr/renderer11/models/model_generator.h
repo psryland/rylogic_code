@@ -32,21 +32,24 @@ namespace pr
 				{}
 			};
 
-			struct ModifyNoOp
-			{
-				void operator()(Cont&, pr::geometry::Props&) const {}
-			};
-
 			// Helper function for creating a model
-			template <typename GenFunc, typename ModFunc = ModifyNoOp>
-			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, NuggetProps const* ddata_, GenFunc& GenerateFunc, ModFunc const& ModifyFunc = ModFunc())
+			template <typename GenFunc>
+			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, NuggetProps const* ddata_, GenFunc& GenerateFunc, m4x4 const* o2w = nullptr)
 			{
 				// Generate the model in local buffers
 				Cont cont(vcount, icount);
 				pr::geometry::Props props = GenerateFunc(begin(cont.m_vcont), begin(cont.m_icont));
 
-				// Allow the model to be modified
-				ModifyFunc(cont, props);
+				// Bake a transform into the model
+				if (o2w)
+				{
+					props.m_bbox = *o2w * props.m_bbox;
+					for (auto& v : cont.m_vcont)
+					{
+						v.m_vert = *o2w * v.m_vert;
+						v.m_norm = *o2w * v.m_norm;
+					}
+				}
 
 				// Create the model
 				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
@@ -79,25 +82,6 @@ namespace pr
 				model->CreateNugget(ddata);
 				return model;
 			}
-
-			// Model modifiers ********************************************************************
-			struct ModifyTxfm
-			{
-				pr::m4x4 m_o2w;
-
-				// Bake a transform into the model
-				ModifyTxfm(pr::m4x4 const& o2w) :m_o2w(o2w) {}
-				ModifyTxfm(AxisId from_axis, AxisId to_axis) :m_o2w(Rotation4x4(from_axis, to_axis, pr::v4Origin)) {}
-				void operator()(Cont& cont, pr::geometry::Props& props) const
-				{
-					props.m_bbox = m_o2w * props.m_bbox;
-					for (auto& v : cont.m_vcont)
-					{
-						v.m_vert = m_o2w * v.m_vert;
-						v.m_norm = m_o2w * v.m_norm;
-					}
-				}
-			};
 
 			// Lines ******************************************************************************
 			// Generate lines from an array of start point, end point pairs.
@@ -180,9 +164,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::EllipseSize(solid, facets, vcount, icount);
-				return o2w
-					? Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, ModifyTxfm(*o2w))
-					: Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen);
+				return Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, o2w);
 			}
 			static ModelPtr Pie(Renderer& rdr, float dimx, float dimy, float ang0, float ang1, float radius0, float radius1, bool solid, int facets = 40, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -190,9 +172,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);
-				return o2w
-					? Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, ModifyTxfm(*o2w))
-					: Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen);
+				return Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, o2w);
 			}
 			static ModelPtr RoundedRectangle(Renderer& rdr, float dimx, float dimy, float corner_radius, bool solid, int facets = 10, Colour32 colour = Colour32White, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
@@ -200,9 +180,7 @@ namespace pr
 
 				std::size_t vcount, icount;
 				pr::geometry::RoundedRectangleSize(solid, corner_radius, facets, vcount, icount);
-				return o2w
-					? Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, ModifyTxfm(*o2w))
-					: Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen);
+				return Create(rdr, vcount, icount, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, gen, o2w);
 			}
 
 			// Boxes ******************************************************************************
@@ -270,13 +248,13 @@ namespace pr
 			}
 
 			// Cylinder ***************************************************************************
-			static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, m4x4 const& o2w = m4x4Identity, float xscale = 1.0f, float yscale = 1.0f, std::size_t wedges = 20, std::size_t layers = 1, std::size_t num_colours = 0, Colour32 const* colours = nullptr, NuggetProps const* mat = nullptr)
+			static ModelPtr Cylinder(Renderer& rdr, float radius0, float radius1, float height, float xscale = 1.0f, float yscale = 1.0f, std::size_t wedges = 20, std::size_t layers = 1, std::size_t num_colours = 0, Colour32 const* colours = nullptr, m4x4 const* o2w = nullptr, NuggetProps const* mat = nullptr)
 			{
 				auto gen = [=](Cont::VIter vb, Cont::IIter ib){ return pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, vb, ib); };
 
 				std::size_t vcount, icount;
 				pr::geometry::CylinderSize(wedges, layers, vcount, icount);
-				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen, ModifyTxfm(o2w));
+				return Create(rdr, vcount, icount, EPrim::TriList, mat, gen, o2w);
 			}
 
 			// Capsule ****************************************************************************

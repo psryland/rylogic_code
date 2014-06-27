@@ -25,33 +25,38 @@ namespace pr
 				Item(Src* src, bool cleanup) :m_src(src) ,m_cleanup(cleanup) {}
 				void cleanup() { if (m_cleanup) delete m_src; }
 			};
-			
+
 			typedef pr::Array<Item, 16> Stack; // The stack of char sources
 			Stack m_stack;
-			
+
 		public:
 			SrcStack()
-			:Src(SrcType::Unknown)
-			,m_stack()
+				:Src()
+				,m_stack()
 			{}
-			
+
 			// Construct the stack with a char source
 			explicit SrcStack(Src& src)
-			:Src(SrcType::Unknown)
-			,m_stack()
-			{ push(src); }
-			
+				:Src()
+				,m_stack()
+			{
+				push(src);
+			}
+
 			// Construct the stack with a char source that needs deleting when popped from the stack
 			explicit SrcStack(Src* src, bool delete_on_pop)
-			:Src(SrcType::Unknown)
-			,m_stack()
-			{ push(src, delete_on_pop); }
-			
-			virtual ~SrcStack()        { while (!m_stack.empty()) pop(); }
-			SrcType::Type type() const { return m_stack.empty() ? SrcType::Unknown : m_stack.back().m_src->type(); }
-			Loc           loc() const  { return m_stack.empty() ? Loc() : m_stack.back().m_src->loc(); }
-			void          loc(Loc& l)  { if (!m_stack.empty()) m_stack.back().m_src->loc(l); }
-			
+				:Src()
+				,m_stack()
+			{
+				push(src, delete_on_pop);
+			}
+
+			virtual ~SrcStack()
+			{
+				while (!m_stack.empty())
+					pop();
+			}
+
 			// Push a stream onto the stack
 			void push(Src& src)
 			{
@@ -61,7 +66,7 @@ namespace pr
 			{
 				m_stack.push_back(Item(src, delete_on_pop));
 			}
-			
+
 			// Pop the top stream off the stack
 			void pop()
 			{
@@ -69,17 +74,21 @@ namespace pr
 				m_stack.back().cleanup();
 				m_stack.pop_back();
 			}
-			
+
 			// Return the number of sources on the stack
 			size_t size() const
 			{
 				return m_stack.size();
 			}
-			
+
+			ESrcType type() const override { return m_stack.empty() ? ESrcType::Unknown : m_stack.back().m_src->type(); }
+			Loc  loc() const override      { return m_stack.empty() ? Loc() : m_stack.back().m_src->loc(); }
+			void loc(Loc& l) override      { if (!m_stack.empty()) m_stack.back().m_src->loc(l); }
+
 		protected:
-			char peek() const { return m_stack.empty() ? 0 : **m_stack.back().m_src; }
-			void next()       { ++(*m_stack.back().m_src); }
-			void seek()       { for (; !m_stack.empty() && **m_stack.back().m_src == 0; pop()) {} }
+			char peek() const override { return m_stack.empty() ? 0 : **m_stack.back().m_src; }
+			void next() override       { ++(*m_stack.back().m_src); }
+			void seek() override       { for (; !m_stack.empty() && **m_stack.back().m_src == 0; pop()) {} }
 		};
 	}
 }

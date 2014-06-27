@@ -126,6 +126,7 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\3ds.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\box.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\cylinder.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h" />
