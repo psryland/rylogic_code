@@ -1,6 +1,7 @@
 <!--ResEdit configuration file-->
 <config>
     <recentFiles>
+        <recentFile path="D:\Dump\LdrObjectUI\LdrObjectUI.rc" />
         <recentFile path="D:\dump\test.rc.rc" />
         <recentFile path="P:\projects\linedrawer\resources\linedrawer.rc" />
         <recentFile path="R:\software\PC\RexProductKeyGenerator\res\resources.rc" />
@@ -21,16 +22,16 @@
     <language>English</language>
     <singleTabMode value="true" />
     <wizard value="false" />
-    <createProjectFolder value="false" />
-    <defaultProjectPath value="C:\Users\Paul\ResEdit Projects\" />
+    <createProjectFolder value="true" />
+    <defaultProjectPath value="D:\Dump\" />
     <headerName>%barefilename%.res.h</headerName>
     <includes>
         <include path="P:\sdk\wtl\v9.0\Include\" />
+        <include path="C:\Program Files (x86)\Windows Kits\8.1\Include\um\" />
+        <include path="C:\Program Files (x86)\Windows Kits\8.1\Include\shared\" />
+        <include path="C:\Program Files (x86)\Windows Kits\8.1\Include\winrt\" />
         <include path="C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\" />
         <include path="C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\atlmfc\include\" />
-        <include path="d:\Program Files (x86)\Windows Kits\8.1\Include\um\" />
-        <include path="D:\Program Files (x86)\Windows Kits\8.1\Include\shared\" />
-        <include path="D:\Program Files (x86)\Windows Kits\8.1\Include\winrt\" />
     </includes>
     <display>
         <autoSaveLayout value="true" />
@@ -49,7 +50,7 @@
         <asmDefine value="false" />
         <dialogEx value="true" />
         <menuEx value="false" />
-        <askIncludes value="false" />
+        <askIncludes value="true" />
         <resourceHeader>
             <![CDATA[#define WINVER 0x0600
 #include "%RESOURCE_HEADER%"
