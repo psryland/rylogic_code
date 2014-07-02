@@ -18,6 +18,11 @@
 		</Expand>
 	</Type>
 
+	<!-- Expression Evaluator -->
+	<Type Name="pr::impl::Val">
+		<DisplayString>{m_fp ? m_db : m_ll}</DisplayString>
+	</Type>
+
 	<!-- Chain -->
 	<Type Name="pr::chain::head&lt;*,*&gt;">
 		<DisplayString>{m_next->m_obj}</DisplayString>
@@ -115,8 +120,8 @@
 	<Type Name="pr::Colour32">
 		<DisplayString>{m_aarrggbb,x}</DisplayString>
 	</Type>
-	<Type Name="pr::geometry::Max3DS::Chunk">
-		<DisplayString>[Id={m_id.value}] len={m_length}</DisplayString>
+	<Type Name="pr::geometry::max_3ds::ChunkHeader">
+		<DisplayString>[{(pr::geometry::max_3ds::EChunkId::Enum_)id}] Len={len}</DisplayString>
 	</Type>
 
 	<!-- Renderer11 -->

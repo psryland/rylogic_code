@@ -1,0 +1,133 @@
+void SubChunks(uint end);
+
+struct Vec3 { float x,y,z; };
+struct Face { ushort i[3], flags; };
+
+struct UnknownChunk
+{
+	ushort id <format=hex>;
+	uint len;
+	union {
+	byte bytes[len - 6];
+	} data;
+};
+struct M3DVersion
+{
+	ushort id <format=hex>;
+	uint len;
+	union {
+	ushort version;
+	byte data[len - 6];
+	} data;
+};
+struct MasterScale
+{
+	ushort id <format=hex>;
+	uint len;
+	union {
+	float scale;
+	byte data[len - 6];
+	} data;
+};
+struct MeshVersion
+{
+	ushort id <format=hex>;
+	uint len;
+	union {
+	ushort version;
+	byte data[len - 6];
+	} data;
+};
+struct Camera
+{
+	ushort id <format=hex>;
+	uint len;
+	Vec3 pos;
+	Vec3 tangent;
+	float bank_angle;
+	float focus;
+};
+struct ObjectBlock
+{
+	ushort id <format=hex>;
+	uint len;
+	string name;
+	SubChunks(FTell() + len - 6);
+};
+struct TriMesh
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+struct VertexList
+{
+	ushort id <format=hex>;
+	uint len;
+	ushort count;
+	Vec3 point[count];
+	
+};
+struct MaterialBlock
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+struct MaterialName
+{
+	ushort id <format=hex>;
+	uint len;
+	string name;
+};
+struct MaterialColour
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+struct M3DEditor
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+struct KeyFramer
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+struct MainChunk
+{
+	ushort id <format=hex>;
+	uint len;
+	SubChunks(FTell() + len - 6);
+};
+
+void SubChunks(uint end)
+{
+	while (FTell() < end)
+	{
+		switch (ReadUShort(FTell()))
+		{
+		case 0x0002: M3DVersion version; break;
+		case 0x3D3D: M3DEditor editor; break;
+		case 0x3D3E: MeshVersion mesh_version; break;
+		case 0x0100: MasterScale scale; break;
+		case 0x4000: ObjectBlock object; break;
+		case 0x4100: TriMesh trimesh; break;
+		case 0x4110: VertexList verts; break;
+		case 0x4700: Camera camera; break;
+		case 0xAFFF: MaterialBlock material; break;
+		case 0xA000: MaterialName material_name; break;
+		case 0xA010: MaterialColour ambient; break;
+		case 0xA020: MaterialColour diffuse; break;
+		case 0xA030: MaterialColour specular; break;
+		case 0xB000: KeyFramer keyframer; break;
+		default: UnknownChunk chunk; break;
+		}
+	}
+}
+
+MainChunk main;
