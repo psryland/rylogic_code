@@ -136,6 +136,8 @@
     <ClInclude Include="..\..\sdk\pr\pr\filesys\filewatch.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\findfiles.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\recurse_directory.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\3ds.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\atlgdix.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\context_menu.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\font_helper.h" />
@@ -354,6 +356,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -375,6 +378,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

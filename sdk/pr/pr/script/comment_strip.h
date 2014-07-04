@@ -85,7 +85,10 @@ namespace pr
 				"/not a comment\n"
 				"/*\n"
 				"  more lines\n"
-				"*/\n";
+				"*/\n"
+				"// multi\\\n"
+				" line\\\n"
+				" comment\n";
 			char const* str_out = 
 				"123\n"
 				"456789     \n"
@@ -95,6 +98,7 @@ namespace pr
 				"      \n"
 				"\"string \\\" /*a*/ //b\"  \n"
 				"/not a comment\n"
+				"\n"
 				"\n";
 			PtrSrc src(str_in);
 			CommentStrip strip(src);

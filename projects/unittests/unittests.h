@@ -114,6 +114,7 @@
 #include "pr/geometry/deformablemesh.h"
 #include "pr/geometry/line.h"
 #include "pr/geometry/mesh.h"
+#include "pr/geometry/model_file.h"
 #include "pr/geometry/quad.h"
 #include "pr/geometry/shape2d.h"
 #include "pr/geometry/sphere.h"

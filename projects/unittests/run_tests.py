@@ -12,11 +12,14 @@ import UserVars
 try:
 	Tools.CheckVersion(1)
 
+	# Set this to false to disable running tests on compiling
+	RunTests = True
+
 	tests_exe = sys.argv[1]
-	if os.path.exists(tests_exe):
+	if os.path.exists(tests_exe) and RunTests:
 		Tools.Exec([tests_exe, "runtests"])
 	else:
-		print("Unit tests not run")
+		print("   **** Unit tests not run ****   ")
 
 except Exception as ex:
 	Tools.OnException(ex,False)

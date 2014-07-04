@@ -68,6 +68,9 @@
     <Filter Include="pr\camera">
       <UniqueIdentifier>{e9ebf09f-ad1a-4108-ba5b-e8162aa01153}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{7f4f044d-7196-421b-b40d-15cba420920e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -863,6 +866,12 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\axis_id.h">
       <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h">
+      <Filter>pr\geometry</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

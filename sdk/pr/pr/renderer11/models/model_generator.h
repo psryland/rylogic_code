@@ -273,6 +273,93 @@ namespace pr
 				return Create(rdr, vcount, icount, prim_type, mat, gen);
 			}
 
+			// ModelFile **************************************************************************
+			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* parts = nullptr)
+			{
+				using namespace pr::geometry;
+
+				std::unordered_map<std::string, max_3ds::Material> mats;
+				auto matlookup = [&](std::string const& name)
+				{
+					return mats.at(name);
+				};
+
+				// Parse the materials in the 3ds stream
+				Read3DSMaterials(src, [&](max_3ds::Material&& mat)
+				{
+					// Called for each material found in the src
+					// If 'mat' contains textures, add them to the renderer
+					{
+						// hmm, how to handle this?
+					}
+					mats[mat.m_name] = mat;
+				});
+
+				// Nugget properties and model sub-ranges
+				std::vector<NuggetProps> nuggets;
+
+				// A container for the verts and indices
+				Cont cont(0,0);
+				pr::BBox bbox = BBoxReset;
+
+				// Parse the model objects in the 3ds stream
+				Read3DSModels(src, [&](max_3ds::Object&& obj)
+				{
+					// todo, filter on 'parts'
+					(void)parts;
+
+					// Convert the max model into a renderer model
+					auto bb = Max3DSModel(obj, matlookup
+						,[&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
+						{
+							NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
+						
+							// Retrieve the texture pointer from 'rdr'
+							//if (!mat.m_textures.empty())
+							//	ddata.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(...);
+						
+							// If the material has alpha, set the alpha blending states in the nugget
+							if (!FEql(mat.m_diffuse.a, 1.0f))
+								SetAlphaBlending(ddata, true);
+						
+							// Save the nugget for creating later
+							nuggets.emplace_back(ddata);
+						}
+						,[&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
+						{
+							VType vert;
+							SetPCNT(vert, p, c, n, t);
+							cont.m_vcont.push_back(vert);
+						}
+						,[&](pr::uint16 i)
+						{
+							cont.m_icont.push_back(i);
+						});
+
+					Encompass(bbox, bb);
+				});
+
+				// Create the model
+				VBufferDesc vb(cont.m_vcont.size(), &cont.m_vcont[0]);
+				IBufferDesc ib(cont.m_icont.size(), &cont.m_icont[0]);
+				ModelPtr model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, bbox));
+
+				// Create the nuggets as defined in the model
+				for (auto& nug : nuggets)
+					model->CreateNugget(nug);
+
+				return model;
+			}
+			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, char const* parts = nullptr)
+			{
+				using namespace pr::geometry;
+				switch (format)
+				{
+				default: throw std::exception("Unsupported model file format");
+				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, parts);
+				}
+			}
+
 			//// Utility ****************************************************************************
 			//// Generate normals for this model
 			//// Assumes the locked region of the model contains a triangle list

@@ -80,11 +80,11 @@ VIEW3D_API void __stdcall View3D_Shutdown(View3DContext context)
 }
 
 // Create/Destroy a window
-VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
+VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
 {
 	try
 	{
-		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, settings_cb, render_cb));
+		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat, settings_cb, render_cb));
 
 		DllLockGuard;
 		Dll().m_wnd_cont.insert(win.get());
@@ -906,6 +906,10 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	mat.m_topo = static_cast<EPrim::Enum_>(model_type);
 	mat.m_geom = static_cast<EGeom::Enum_>(geom_type);
 	mat.m_tex_diffuse = v3dmat.m_diff_tex;
+	mat.m_vrange = vrange;
+	mat.m_irange = irange;
+	mat.m_vrange.resize(new_vcount);
+	mat.m_irange.resize(new_icount);
 
 	{// Lock and update the model
 		MLock mlock(model, D3D11_MAP_WRITE_DISCARD);
@@ -928,10 +932,8 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	}
 
 	// Re-create the render nuggets
-	vrange.resize(new_vcount);
-	irange.resize(new_icount);
 	model->DeleteNuggets();
-	model->CreateNugget(mat, &vrange, &irange);
+	model->CreateNugget(mat);
 }
 
 // Create an object via callback
@@ -1914,9 +1916,8 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
 	try
 	{
-		pr::script::Reader reader;
 		pr::script::PtrSrc src(ldr_script);
-		reader.AddSource(src);
+		pr::script::Reader reader(src);
 		return view3d::To<View3DM4x4>(pr::ldr::ParseLdrTransform(reader));
 	}
 	catch (std::exception const& ex)

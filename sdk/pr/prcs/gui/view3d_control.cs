@@ -26,14 +26,14 @@ namespace pr.gui
 
 	public class View3dControl :UserControl
 	{
-		public View3dControl() :this(null) {}
-		public View3dControl(View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
+		public View3dControl() :this(false, null) {}
+		public View3dControl(bool gdi_compat, View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
 		{
 			if (this.IsInDesignMode()) return;
 
 			// A reference is held within View3d to the callbacks, so callers don't need to hold one
 			View3d = new View3d(error_cb, log_cb);
-			Window = new View3d.Window(View3d, Handle, Render);
+			Window = new View3d.Window(View3d, Handle, gdi_compat, Render);
 
 			InitializeComponent();
 

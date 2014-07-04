@@ -70,6 +70,7 @@ namespace pr
 	bool  Clip(BBox const& bbox, Line3& line);
 	bool  ClipToSlab(v4 const& norm, float dist1, float dist2, v4& s, v4& e);
 	float CircumRadius(v4 const& a, v4 const& b, v4 const& c, v4& centre);
+	v4    TriangleAngles(v4 const& a, v4 const& b, v4 const& c);
 }
 
 #endif

@@ -73,6 +73,7 @@ namespace pr
 			x(ConeHA           ,= 0x1f093110)\
 			x(Mesh             ,= 0x07fb0d2b)\
 			x(ConvexHull       ,= 0x0a93b3d5)\
+			x(Model            ,= 0x0BD70B84)\
 			x(Group            ,= 0x1c1c3d90)\
 			x(Instance         ,= 0x061978f8)\
 			x(DirectionalLight ,= 0x1744E3AC)\

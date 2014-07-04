@@ -128,6 +128,13 @@ namespace pr
 			if (rhs.m_end  >= m_end  ) { m_end   = rhs.m_end; }
 			return *this;
 		}
+
+		// Implicit conversion to a Range<U> if T is convertable to U
+		template <typename U, typename = typename std::enable_if<std::is_convertible<T,U>::value>::type>
+		operator Range<U>()
+		{
+			return Range<U>::make(m_begin, m_end);
+		}
 	};
 
 	// Operators
@@ -365,6 +372,12 @@ namespace pr
 				PR_CHECK(4.0f, r4.m_end);
 				PR_CHECK(0.0f, r4.size());
 				PR_CHECK(IsWithin(r4, 4.0f), true);
+			}
+			{ // Implicit conversion
+				Range<uint16> r0 = Range<uint16>::make(0, 65535);
+				Range<uint> r1;
+				r1 = r0;
+				PR_CHECK(r1 == Range<uint>::make(0, 65535), true);
 			}
 		}
 	}

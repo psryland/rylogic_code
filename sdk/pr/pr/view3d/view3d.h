@@ -221,7 +221,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_Shutdown(View3DContext context);
 
 	// Windows
-	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb);
+	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb);
 	VIEW3D_API void                    __stdcall View3D_DestroyWindow     (View3DWindow window);
 	VIEW3D_API char const*             __stdcall View3D_GetSettings       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_SetSettings       (View3DWindow window, char const* settings);

@@ -36,7 +36,7 @@ namespace pr
 			// Create a nugget from a range within this model
 			// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 			// Remember you might need to delete render nuggets first
-			void CreateNugget(NuggetProps const& props, Range const* vrange_ = 0, Range const* irange_ = 0);
+			void CreateNugget(NuggetProps props);
 
 			// Call to release the nuggets that this model has been
 			// divided into. Nuggets are the contiguous sub groups

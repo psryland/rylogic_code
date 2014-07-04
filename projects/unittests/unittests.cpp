@@ -21,8 +21,9 @@ namespace pr
 
 #include <algorithm>
 #include "pr/common/unittests.h"
-#include "unittests/unittests.h"
-//#include "pr/geometry/3ds.h"
+//#include "unittests/unittests.h"
+#include "pr/geometry/3ds.h"
+//#include "pr/common/expr_eval.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
@@ -34,6 +35,7 @@ int main(int argc, char const* argv[])
 	bool wordy    = argc >= 2 && std::any_of(argv + 1, argv + argc, [](char const* x){ return strcmp(x, "verbose") == 0;} );
 	if (runtests)
 		return pr::unittests::RunAllTests(wordy);
-
+	
+	printf("*** Unit Tests Not Run ***\n");
 	return 0;
 }

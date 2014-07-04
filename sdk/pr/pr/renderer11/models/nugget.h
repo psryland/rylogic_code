@@ -44,7 +44,13 @@ namespace pr
 			DSBlock        m_dsb;         // Rendering states
 			RSBlock        m_rsb;         // Rendering states
 
-			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr)
+			// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
+			// When copied to the nugget collection for the model they are converted to model buffer relative ranges.
+			// If the ranges are zero length, they are assume to mean the entire model
+			Range m_vrange;
+			Range m_irange;
+
+			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range())
 				:m_topo(topo)
 				,m_geom(geom)
 				,m_smap(smap ? *smap : ShaderMap())
@@ -52,6 +58,8 @@ namespace pr
 				,m_bsb()
 				,m_dsb()
 				,m_rsb()
+				,m_vrange(vrange)
+				,m_irange(irange)
 			{}
 		};
 
@@ -62,8 +70,6 @@ namespace pr
 		struct Nugget :pr::chain::link<Nugget, ChainGroupNugget> ,NuggetProps
 		{
 			ModelBufferPtr m_model_buffer; // The vertex and index buffers.
-			Range          m_vrange;       // The index offset into the vertex buffer and the number of vertices for this nugget (relative to model buffer, not model)
-			Range          m_irange;       // The index offset into the index buffer and the number of indices for this nugget (relative to model buffer, not model)
 			size_t         m_prim_count;   // The number of primitives in this nugget
 			SortKey        m_sort_key;     // A cached sort key derived from this nugget
 			Model*         m_owner;        // The model that this nugget belongs to (for debugging mainly)
@@ -71,8 +77,6 @@ namespace pr
 			Nugget(NuggetProps const& props)
 				:NuggetProps(props)
 				,m_model_buffer()
-				,m_vrange()
-				,m_irange()
 				,m_prim_count()
 				,m_sort_key()
 				,m_owner()

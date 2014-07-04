@@ -79,7 +79,14 @@ namespace pr
 				MacroSrc() :Src(ESrcType::Macro) ,m_str() ,m_idx(0) {}
 				char peek() const override { return *(m_str.c_str() + m_idx); }
 				void next() override       { ++m_idx; }
-				void seek() override       { while (m_idx <= m_str.size()-2 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\n') {next(); next();} }
+				void seek() override
+				{
+					while (m_idx <= m_str.size()-2 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\n')
+					{
+						next();
+						next();
+					}
+				}
 			};
 
 			char peek() const override { return *m_buf; }
@@ -505,6 +512,22 @@ namespace pr
 					"1\n"
 					"(!1)\n"
 					;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
+			{// Multi-line proprocessor
+				char const* str_in =
+					"#define ml\\\n"
+					"  MULTI\\\n"
+					"LINE\n"
+					"ml";
+				char const* str_out =
+					"MULTILINE";
+
 				PtrSrc src(str_in);
 				PPMacroDB macros;
 				Preprocessor pp(src, &macros, 0, 0);

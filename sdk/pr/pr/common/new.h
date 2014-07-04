@@ -13,6 +13,8 @@
 
 namespace pr
 {
+	// This is basically the same as std::make_unique except that it calls
+	// operator new() on 'T'. std::make_unique uses placement new instead
 	template <typename T, typename... Args>
 	inline std::unique_ptr<T> New(Args&&... args)
 	{

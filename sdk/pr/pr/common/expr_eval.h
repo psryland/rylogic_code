@@ -20,67 +20,143 @@ namespace pr
 {
 	namespace impl
 	{
-		// These must be in precedence order (last value is highest precedence)
-		enum ETok
+		// Expression tokens
+		enum class ETok
 		{
-			ETok_Unknown,
-			ETok_Value,
-			ETok_If,
-			ETok_Else,
-			ETok_Comma,
-			ETok_LogOR,
-			ETok_LogAND,
-			ETok_BitOR,
-			ETok_BitXOR,
-			ETok_BitAND,
-			ETok_LogEql,
-			ETok_LogNEql,
-			ETok_LogLT,
-			ETok_LogLTEql,
-			ETok_LogGT,
-			ETok_LogGTEql,
-			ETok_LeftShift,
-			ETok_RightShift,
-			ETok_Add,
-			ETok_Sub,
-			ETok_Mul,
-			ETok_Div,
-			ETok_Fmod,
-			ETok_Mod,
-			ETok_Comp,
-			ETok_Not,
-			ETok_Abs,
-			ETok_Ceil,
-			ETok_Floor,
-			ETok_Round,
-			ETok_Min,
-			ETok_Max,
-			ETok_Clamp,
-			ETok_Sin,
-			ETok_Cos,
-			ETok_Tan,
-			ETok_ASin,
-			ETok_ACos,
-			ETok_ATan,
-			ETok_ATan2,
-			ETok_SinH,
-			ETok_CosH,
-			ETok_TanH,
-			ETok_Exp,
-			ETok_Log,
-			ETok_Log10,
-			ETok_Pow,
-			ETok_Sqr,
-			ETok_Sqrt,
-			ETok_Len2,
-			ETok_Len3,
-			ETok_Len4,
-			ETok_Deg,
-			ETok_Rad,
-			ETok_OpenParenthesis,
-			ETok_CloseParenthesis,
-			ETok_NumberOf
+			None,
+			If,
+			Else,
+			Comma,
+			LogOR,
+			LogAND,
+			BitOR,
+			BitXOR,
+			BitAND,
+			LogEql,
+			LogNEql,
+			LogLT,
+			LogLTEql,
+			LogGT,
+			LogGTEql,
+			LeftShift,
+			RightShift,
+			Add,
+			Sub,
+			Mul,
+			Div,
+			Mod,
+			UnaryAdd,
+			UnaryMinus,
+			Comp,
+			Not,
+			Fmod,
+			Abs,
+			Ceil,
+			Floor,
+			Round,
+			Min,
+			Max,
+			Clamp,
+			Sin,
+			Cos,
+			Tan,
+			ASin,
+			ACos,
+			ATan,
+			ATan2,
+			SinH,
+			CosH,
+			TanH,
+			Exp,
+			Log,
+			Log10,
+			Pow,
+			Sqr,
+			Sqrt,
+			Len2,
+			Len3,
+			Len4,
+			Deg,
+			Rad,
+			OpenParenthesis,
+			CloseParenthesis,
+			Value
 		};
+
+		// Returns the precedence of a token
+		// How to work out precedence:
+		//   NewOp = the op whose precedence you want to know
+		//   RhsOp = an op in this list
+		// Ask, "If I encounter RhsOp next after NewOp, should NewOp go on hold while
+		//  RhsOp is evaluated, or should I stop and evaluate up to NewOp before carrying on".
+		//  Also the visa versa case.
+		// If NewOp should go on hold, then it has lower precedence (i.e. NewOp < RhsOp)
+		// If NewOp needs evaluating, then RhsOp has lower precedence (i.e. RhsOp > NewOp)
+		inline int Precedence(ETok tok)
+		{
+			switch (tok)
+			{
+			default: throw std::exception("Unknown token");
+			case ETok::None            : return   0;
+			case ETok::Comma           : return  20;
+			case ETok::If              : return  30;
+			case ETok::Else            : return  30;
+			case ETok::LogOR           : return  40;
+			case ETok::LogAND          : return  50;
+			case ETok::BitOR           : return  60;
+			case ETok::BitXOR          : return  70;
+			case ETok::BitAND          : return  80;
+			case ETok::LogEql          : return  90;
+			case ETok::LogNEql         : return  90;
+			case ETok::LogLT           : return 100;
+			case ETok::LogLTEql        : return 100;
+			case ETok::LogGT           : return 100;
+			case ETok::LogGTEql        : return 100;
+			case ETok::LeftShift       : return 110;
+			case ETok::RightShift      : return 110;
+			case ETok::Add             : return 120;
+			case ETok::Sub             : return 120;
+			case ETok::Mul             : return 130;
+			case ETok::Div             : return 130;
+			case ETok::Mod             : return 130;
+			case ETok::UnaryAdd        : return 140;
+			case ETok::UnaryMinus      : return 140;
+			case ETok::Comp            : return 140;
+			case ETok::Not             : return 140;
+			case ETok::Fmod            : return 200;
+			case ETok::Abs             : return 200;
+			case ETok::Ceil            : return 200;
+			case ETok::Floor           : return 200;
+			case ETok::Round           : return 200;
+			case ETok::Min             : return 200;
+			case ETok::Max             : return 200;
+			case ETok::Clamp           : return 200;
+			case ETok::Sin             : return 200;
+			case ETok::Cos             : return 200;
+			case ETok::Tan             : return 200;
+			case ETok::ASin            : return 200;
+			case ETok::ACos            : return 200;
+			case ETok::ATan            : return 200;
+			case ETok::ATan2           : return 200;
+			case ETok::SinH            : return 200;
+			case ETok::CosH            : return 200;
+			case ETok::TanH            : return 200;
+			case ETok::Exp             : return 200;
+			case ETok::Log             : return 200;
+			case ETok::Log10           : return 200;
+			case ETok::Pow             : return 200;
+			case ETok::Sqr             : return 200;
+			case ETok::Sqrt            : return 200;
+			case ETok::Len2            : return 200;
+			case ETok::Len3            : return 200;
+			case ETok::Len4            : return 200;
+			case ETok::Deg             : return 200;
+			case ETok::Rad             : return 200;
+			case ETok::OpenParenthesis : return 300;
+			case ETok::CloseParenthesis: return 300;
+			case ETok::Value           : return 1000;
+			}
+		}
 
 		// An integral or floating point value
 		struct Val
@@ -147,7 +223,8 @@ namespace pr
 		// Extract a token from 'expr'
 		// If the token is a value then 'expr' is advanced past the value
 		// if it's an operator it isn't. This is so that operator precedense works
-		inline ETok Token(char const*& expr, Val& val)
+		// 'follows_value' should be true if the preceeding expression evaluates to a value
+		inline ETok Token(char const*& expr, Val& val, bool follows_value)
 		{
 			// Skip any leading whitespace
 			while (*expr && isspace(*expr)) { ++expr; }
@@ -156,371 +233,394 @@ namespace pr
 			switch (tolower(*expr))
 			{
 			default: break;
-			case '+': return ETok_Add;
-			case '-': return ETok_Sub;
-			case '*': return ETok_Mul;
-			case '/': return ETok_Div;
-			case '%': return ETok_Mod;
-			case '~': return ETok_Comp;
-			case ',': return ETok_Comma;
-			case '^': return ETok_BitXOR;
-			case '(': return ETok_OpenParenthesis;
-			case ')': return ETok_CloseParenthesis;
-			case '?': return ETok_If;
-			case ':': return ETok_Else;
+			// Convert Add/Sub to unary plus/minus by looking at the previous expression
+			// If the previous expression evaluates to a value then Add/Sub are binary expressions
+			case '+': return follows_value ? ETok::Add : ETok::UnaryAdd;
+			case '-': return follows_value ? ETok::Sub : ETok::UnaryMinus;
+			case '*': return ETok::Mul;
+			case '/': return ETok::Div;
+			case '%': return ETok::Mod;
+			case '~': return ETok::Comp;
+			case ',': return ETok::Comma;
+			case '^': return ETok::BitXOR;
+			case '(': return ETok::OpenParenthesis;
+			case ')': return ETok::CloseParenthesis;
+			case '?': return ETok::If;
+			case ':': return ETok::Else;
 			case '<':
-				if      (_strnicmp(expr, "<<"    ,2) == 0) return ETok_LeftShift;
-				else if (_strnicmp(expr, "<="    ,2) == 0) return ETok_LogLTEql;
-				else return ETok_LogLT;
+				if      (_strnicmp(expr, "<<"    ,2) == 0) return ETok::LeftShift;
+				else if (_strnicmp(expr, "<="    ,2) == 0) return ETok::LogLTEql;
+				else return ETok::LogLT;
 			case '>':
-				if      (_strnicmp(expr, ">>"    ,2) == 0) return ETok_RightShift;
-				else if (_strnicmp(expr, ">="    ,2) == 0) return ETok_LogGTEql;
-				else return ETok_LogGT;
+				if      (_strnicmp(expr, ">>"    ,2) == 0) return ETok::RightShift;
+				else if (_strnicmp(expr, ">="    ,2) == 0) return ETok::LogGTEql;
+				else return ETok::LogGT;
 			case '|':
-				if      (_strnicmp(expr, "||"    ,2) == 0) return ETok_LogOR;
-				else return ETok_BitOR;
+				if      (_strnicmp(expr, "||"    ,2) == 0) return ETok::LogOR;
+				else return ETok::BitOR;
 			case '&':
-				if      (_strnicmp(expr, "&&"    ,2) == 0) return ETok_LogAND;
-				else return ETok_BitAND;
+				if      (_strnicmp(expr, "&&"    ,2) == 0) return ETok::LogAND;
+				else return ETok::BitAND;
 			case '=':
-				if      (_strnicmp(expr, "=="    ,2) == 0) return ETok_LogEql;
+				if      (_strnicmp(expr, "=="    ,2) == 0) return ETok::LogEql;
 				else break;
 			case '!':
-				if      (_strnicmp(expr, "!="    ,2) == 0) return ETok_LogNEql;
-				else return ETok_Not;
+				if      (_strnicmp(expr, "!="    ,2) == 0) return ETok::LogNEql;
+				else return ETok::Not;
 			case 'a':
-				if      (_strnicmp(expr, "abs"   ,3) == 0) return ETok_Abs;
-				else if (_strnicmp(expr, "asin"  ,4) == 0) return ETok_ASin;
-				else if (_strnicmp(expr, "acos"  ,4) == 0) return ETok_ACos;
-				else if (_strnicmp(expr, "atan2" ,5) == 0) return ETok_ATan2;
-				else if (_strnicmp(expr, "atan"  ,4) == 0) return ETok_ATan;
+				if      (_strnicmp(expr, "abs"   ,3) == 0) return ETok::Abs;
+				else if (_strnicmp(expr, "asin"  ,4) == 0) return ETok::ASin;
+				else if (_strnicmp(expr, "acos"  ,4) == 0) return ETok::ACos;
+				else if (_strnicmp(expr, "atan2" ,5) == 0) return ETok::ATan2;
+				else if (_strnicmp(expr, "atan"  ,4) == 0) return ETok::ATan;
 				else break;
 			case 'c':
-				if      (_strnicmp(expr, "clamp" ,5) == 0) return ETok_Clamp;
-				else if (_strnicmp(expr, "ceil"  ,4) == 0) return ETok_Ceil;
-				else if (_strnicmp(expr, "cosh"  ,4) == 0) return ETok_CosH;
-				else if (_strnicmp(expr, "cos"   ,3) == 0) return ETok_Cos;
+				if      (_strnicmp(expr, "clamp" ,5) == 0) return ETok::Clamp;
+				else if (_strnicmp(expr, "ceil"  ,4) == 0) return ETok::Ceil;
+				else if (_strnicmp(expr, "cosh"  ,4) == 0) return ETok::CosH;
+				else if (_strnicmp(expr, "cos"   ,3) == 0) return ETok::Cos;
 				else break;
 			case 'd':
-				if      (_strnicmp(expr, "deg"   ,3) == 0) return ETok_Deg;
+				if      (_strnicmp(expr, "deg"   ,3) == 0) return ETok::Deg;
 				else break;
 			case 'e':
-				if      (_strnicmp(expr, "exp"   ,3) == 0) return ETok_Exp;
+				if      (_strnicmp(expr, "exp"   ,3) == 0) return ETok::Exp;
 				else break;
 			case 'f':
-				if      (_strnicmp(expr, "floor" ,5) == 0) return ETok_Floor;
-				else if (_strnicmp(expr, "fmod"  ,3) == 0) return ETok_Fmod;
+				if      (_strnicmp(expr, "floor" ,5) == 0) return ETok::Floor;
+				else if (_strnicmp(expr, "fmod"  ,3) == 0) return ETok::Fmod;
+				else if (_strnicmp(expr, "false" ,5) == 0) { expr += 5; val = 0.0; return ETok::Value; }
 				else break;
 			case 'l':
-				if      (_strnicmp(expr, "log10" ,5) == 0) return ETok_Log10;
-				else if (_strnicmp(expr, "log"   ,3) == 0) return ETok_Log;
-				else if (_strnicmp(expr, "len2"  ,4) == 0) return ETok_Len2;
-				else if (_strnicmp(expr, "len3"  ,4) == 0) return ETok_Len3;
-				else if (_strnicmp(expr, "len4"  ,4) == 0) return ETok_Len4;
+				if      (_strnicmp(expr, "log10" ,5) == 0) return ETok::Log10;
+				else if (_strnicmp(expr, "log"   ,3) == 0) return ETok::Log;
+				else if (_strnicmp(expr, "len2"  ,4) == 0) return ETok::Len2;
+				else if (_strnicmp(expr, "len3"  ,4) == 0) return ETok::Len3;
+				else if (_strnicmp(expr, "len4"  ,4) == 0) return ETok::Len4;
 				else break;
 			case 'm':
-				if      (_strnicmp(expr, "min"   ,3) == 0) return ETok_Min;
-				else if (_strnicmp(expr, "max"   ,3) == 0) return ETok_Max;
+				if      (_strnicmp(expr, "min"   ,3) == 0) return ETok::Min;
+				else if (_strnicmp(expr, "max"   ,3) == 0) return ETok::Max;
 				else break;
 			case 'p':
-				if      (_strnicmp(expr, "pow"   ,3) == 0) return ETok_Pow;
-				else if (_strnicmp(expr, "phi"   ,3) == 0) { expr += 3; val = 1.618034e+0F; return ETok_Value; }
-				else if (_strnicmp(expr, "pi"    ,2) == 0) { expr += 2; val = 3.141592e+0F; return ETok_Value; }
+				if      (_strnicmp(expr, "pow"   ,3) == 0) return ETok::Pow;
+				else if (_strnicmp(expr, "phi"   ,3) == 0) { expr += 3; val = 1.618033988749894848204586834; return ETok::Value; }
+				else if (_strnicmp(expr, "pi"    ,2) == 0) { expr += 2; val = 3.1415926535897932384626433832795; return ETok::Value; }
 				else break;
 			case 'r':
-				if      (_strnicmp(expr, "round" ,5) == 0) return ETok_Round;
-				else if (_strnicmp(expr, "rad"   ,3) == 0) return ETok_Rad;
+				if      (_strnicmp(expr, "round" ,5) == 0) return ETok::Round;
+				else if (_strnicmp(expr, "rad"   ,3) == 0) return ETok::Rad;
 				else break;
 			case 's':
-				if      (_strnicmp(expr, "sinh"  ,4) == 0) return ETok_SinH;
-				else if (_strnicmp(expr, "sin"   ,3) == 0) return ETok_Sin;
-				else if (_strnicmp(expr, "sqrt"  ,4) == 0) return ETok_Sqrt;
-				else if (_strnicmp(expr, "sqr"   ,3) == 0) return ETok_Sqr;
+				if      (_strnicmp(expr, "sinh"  ,4) == 0) return ETok::SinH;
+				else if (_strnicmp(expr, "sin"   ,3) == 0) return ETok::Sin;
+				else if (_strnicmp(expr, "sqrt"  ,4) == 0) return ETok::Sqrt;
+				else if (_strnicmp(expr, "sqr"   ,3) == 0) return ETok::Sqr;
 				else break;
 			case 't':
-				if      (_strnicmp(expr, "tanh"  ,4) == 0) return ETok_TanH;
-				else if (_strnicmp(expr, "tan"   ,3) == 0) return ETok_Tan;
-				else if (_strnicmp(expr, "tau"   ,3) == 0) { expr += 3; val = 6.283185e+0F; return ETok_Value; }
+				if      (_strnicmp(expr, "tanh"  ,4) == 0) return ETok::TanH;
+				else if (_strnicmp(expr, "tan"   ,3) == 0) return ETok::Tan;
+				else if (_strnicmp(expr, "tau"   ,3) == 0) { expr += 3; val = 6.283185307179586476925286766559; return ETok::Value; }
+				else if (_strnicmp(expr, "true"  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
 				else break;
 			}
 
 			// If it's not an operator, try extracting an operand
-			return  val.read(expr) ? ETok_Value : ETok_Unknown;
+			return  val.read(expr) ? ETok::Value : ETok::None;
 		}
 
 		// Evaluate an expression.
-		inline bool Eval(char const*& expr, Val* result, int rmax, int& ridx, ETok prev_op)
+		// Called recursively for each operation within an expression.
+		// 'parent_op' is used to determine precedence order.
+		inline bool Eval(char const*& expr, Val* result, int rmax, int& ridx, ETok parent_op, bool l2r = true)
 		{
-			if (ridx >= rmax) throw std::exception("too many results");
-			ETok prev_tok = prev_op;
+			if (ridx >= rmax)
+				throw std::exception("too many results");
+
+			// Each time round the while loop should result in a value.
+			// Operation tokens result in recursive calls.
+			bool follows_value = false;
 			while (*expr)
 			{
-				int idx = 0, sign = 1; Val lhs, rhs;  //ArgType lhs, rhs = 0, sign = ArgType(1);
-				ETok tok = Token(expr, lhs);
-				if      (tok == ETok_Add && prev_tok != ETok_Value) { sign =  1; tok = Token(++expr, lhs); }
-				else if (tok == ETok_Sub && prev_tok != ETok_Value) { sign = -1; tok = Token(++expr, lhs); }
-				else if (tok > ETok_Value && tok < prev_op) return true;
-				prev_tok = tok;
+				Val lhs, rhs;
+				ETok tok = Token(expr, lhs, follows_value);
+				follows_value = true;
 
+				// If the next token has lower precedence than the parent operation
+				// then return to allow the parent op to evaluate
+				auto prec0 = Precedence(tok);
+				auto prec1 = Precedence(parent_op);
+				if (prec0 < prec1)
+					return true;
+				if (prec0 == prec1 && l2r)
+					return true;
+				
+				int idx = 0;
 				switch (tok)
 				{
 				default:
 					throw std::exception("unknown expression token");
-				case ETok_Unknown:
+				case ETok::None:
 					return *expr == 0;
-				case ETok_Value:
+				case ETok::Value:
 					result[ridx] = lhs;
 					break;
-				case ETok_Add:
+				case ETok::Add:
 					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx] + rhs;
 					break;
-				case ETok_Sub:
+				case ETok::Sub:
 					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx] - rhs;
 					break;
-				case ETok_Mul:
+				case ETok::Mul:
 					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx] * rhs;
 					break;
-				case ETok_Div:
+				case ETok::Div:
 					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx] / rhs;
 					break;
-				case ETok_Mod:
+				case ETok::Mod:
 					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() % rhs.ll();
 					break;
-				case ETok_Comp:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
+				case ETok::UnaryAdd:
+					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
+					result[ridx] = rhs;
+					break;
+				case ETok::UnaryMinus:
+					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
+					if (rhs.m_fp) result[ridx] = -rhs.db(); // don't convert to ?: as the result will always be double
+					else          result[ridx] = -rhs.ll(); // result[ridx].ll() will get promoted to double
+					break;
+				case ETok::Comp:
+					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
 					if (rhs.ll() < 0) result[ridx] = ~rhs.ll();
 					else              result[ridx] = ~rhs.ul();
 					break;
-				case ETok_Not:
-					if (!Eval(++expr, &rhs, 1, idx, tok)) return false;
+				case ETok::Not:
+					if (!Eval(++expr, &rhs, 1, idx, tok, false)) return false;
 					result[ridx] = !rhs.ll();
 					break;
-				case ETok_LogOR:
+				case ETok::LogOR:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() || rhs.ll();
 					break;
-				case ETok_LogAND:
+				case ETok::LogAND:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() && rhs.ll();
 					break;
-				case ETok_BitOR:
+				case ETok::BitOR:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ul() | rhs.ul();
 					break;
-				case ETok_BitXOR:
+				case ETok::BitXOR:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ul() ^ rhs.ul();
 					break;
-				case ETok_BitAND:
+				case ETok::BitAND:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ul() & rhs.ul();
 					break;
-				case ETok_LogEql:
+				case ETok::LogEql:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx] == rhs;
 					break;
-				case ETok_LogNEql:
+				case ETok::LogNEql:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = !(result[ridx] == rhs);
 					break;
-				case ETok_LogLT:
+				case ETok::LogLT:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() < rhs.ll();
 					break;
-				case ETok_LogLTEql:
+				case ETok::LogLTEql:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() <= rhs.ll();
 					break;
-				case ETok_LogGT:
+				case ETok::LogGT:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() > rhs.ll();
 					break;
-				case ETok_LogGTEql:
+				case ETok::LogGTEql:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ll() >= rhs.ll();
 					break;
-				case ETok_LeftShift:
+				case ETok::LeftShift:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ul() << rhs.ll();
 					break;
-				case ETok_RightShift:
+				case ETok::RightShift:
 					if (!Eval(expr += 2, &rhs, 1, idx, tok)) return false;
 					result[ridx] = result[ridx].ul() >> rhs.ll();
 					break;
-				case ETok_Fmod:
+				case ETok::Fmod:
 					{
 						Val args[2];
 						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'mod'");
 						result[ridx] = ::fmod(args[0].db(), args[1].db());
 					}break;
-				case ETok_Ceil:
+				case ETok::Ceil:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::ceil(rhs.db());
 					break;
-				case ETok_Floor:
+				case ETok::Floor:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::floor(rhs.db());
 					break;
-				case ETok_Round:
+				case ETok::Round:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::floor(rhs.db() + 0.5);
 					break;
-				case ETok_Min:
+				case ETok::Min:
 					{
 						Val args[2];
 						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'min'");
 						result[ridx] = args[0] < args[1] ? args[0] : args[1];
 					}break;
-				case ETok_Max:
+				case ETok::Max:
 					{
 						Val args[2];
 						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'max'");
 						result[ridx] = args[0] < args[1] ? args[1] : args[0];
 					}break;
-				case ETok_Clamp:
+				case ETok::Clamp:
 					{
 						Val args[3];
 						if (!Eval(expr += 5, args, 3, idx, tok)) return false;
 						if (idx+1 != 3) throw std::exception("insufficient parameters for 'clamp'");
 						result[ridx] = args[0] < args[1] ? args[1] : args[2] < args[0] ? args[2] : args[0];
 					}break;
-				case ETok_Abs:
+				case ETok::Abs:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::abs(rhs.m_fp ? rhs.db() : rhs.ll());
 					break;
-				case ETok_Sin:
+				case ETok::Sin:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::sin(rhs.db());
 					break;
-				case ETok_Cos:
+				case ETok::Cos:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::cos(rhs.db());
 					break;
-				case ETok_Tan:
+				case ETok::Tan:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::tan(rhs.db());
 					break;
-				case ETok_ASin:
+				case ETok::ASin:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::asin(rhs.db());
 					break;
-				case ETok_ACos:
+				case ETok::ACos:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::acos(rhs.db());
 					break;
-				case ETok_ATan:
+				case ETok::ATan:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::atan(rhs.db());
 					break;
-				case ETok_ATan2:
+				case ETok::ATan2:
 					{
 						Val args[2];
 						if (!Eval(expr += 5, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'atan2'");
 						result[ridx] = ::atan2(args[0].db(), args[1].db());
 					}break;
-				case ETok_SinH:
+				case ETok::SinH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::sinh(rhs.db());
 					break;
-				case ETok_CosH:
+				case ETok::CosH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::cosh(rhs.db());
 					break;
-				case ETok_TanH:
+				case ETok::TanH:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::tanh(rhs.db());
 					break;
-				case ETok_Exp:
+				case ETok::Exp:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::exp(rhs.db());
 					break;
-				case ETok_Log:
+				case ETok::Log:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::log(rhs.db());
 					break;
-				case ETok_Log10:
+				case ETok::Log10:
 					if (!Eval(expr += 5, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::log10(rhs.db());
 					break;
-				case ETok_Pow:
+				case ETok::Pow:
 					{
 						Val args[2];
 						if (!Eval(expr += 3, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'pow'");
 						result[ridx] = ::pow(args[0].db(), args[1].db());
 					}break;
-				case ETok_Sqr:
+				case ETok::Sqr:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = rhs * rhs;
 					break;
-				case ETok_Sqrt:
+				case ETok::Sqrt:
 					if (!Eval(expr += 4, &rhs, 1, idx, tok)) return false;
 					result[ridx] = ::sqrt(rhs.db());
 					break;
-				case ETok_Len2:
+				case ETok::Len2:
 					{
 						Val args[2];
 						if (!Eval(expr += 4, args, 2, idx, tok)) return false;
 						if (idx+1 != 2) throw std::exception("insufficient parameters for 'len2'");
 						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db());
 					}break;
-				case ETok_Len3:
+				case ETok::Len3:
 					{
 						Val args[3];
 						if (!Eval(expr += 4, args, 3, idx, tok)) return false;
 						if (idx+1 != 3) throw std::exception("insufficient parameters for 'len3'");
 						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db());
 					}break;
-				case ETok_Len4:
+				case ETok::Len4:
 					{
 						Val args[4];
 						if (!Eval(expr += 4, args, 4, idx, tok)) return false;
 						if (idx+1 != 4) throw std::exception("insufficient parameters for 'len4'");
 						result[ridx] = ::sqrt(0.0 + args[0].db()*args[0].db() + args[1].db()*args[1].db() + args[2].db()*args[2].db() + args[3].db()*args[3].db());
 					}break;
-				case ETok_Deg:
+				case ETok::Deg:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = rhs.db() * 5.729578e+1F;
 					break;
-				case ETok_Rad:
+				case ETok::Rad:
 					if (!Eval(expr += 3, &rhs, 1, idx, tok)) return false;
 					result[ridx] = rhs.db() * 1.745329e-2F;
 					break;
-				case ETok_Comma:
+				case ETok::Comma:
 					if (ridx + 1 == rmax) throw std::exception("too many parameters");
 					++expr;
 					++ridx;
 					break;
-				case ETok_OpenParenthesis:
-					if (!Eval(++expr, result, rmax, ridx, ETok_Unknown)) return false;
+				case ETok::OpenParenthesis:
+					if (!Eval(++expr, result, rmax, ridx, ETok::None)) return false;
 					break;
-				case ETok_CloseParenthesis:
-					if (prev_op == ETok_Unknown) ++expr;
+				case ETok::CloseParenthesis:
+					if (parent_op == ETok::None) ++expr;
 					return true;
-				case ETok_If:
+				case ETok::If:
 					{
 						Val vals[2]; int valc = 0;
-						if (!Eval(++expr, vals, 2, valc, ETok_If)) return false;
+						if (!Eval(++expr, vals, 2, valc, ETok::None)) return false;
 						if (valc != 2) throw std::exception("incomplete if-else");
 						result[ridx] = result[ridx].ll() != 0 ? vals[0] : vals[1];
 					}break;
-				case ETok_Else:
-					if (!Eval(++expr, result, rmax, ++ridx, ETok_Else)) return false;
+				case ETok::Else:
+					if (!Eval(++expr, result, rmax, ++ridx, ETok::Else)) return false;
 					++ridx;
 					return true;
 				}
-				if (result[ridx].m_fp) result[ridx] = sign * result[ridx].db();  // don't convert to ?: as the result will always be double
-				else                   result[ridx] = sign * result[ridx].ll(); // result[ridx].ll() will get promoted to double
-				prev_tok = ETok_Value;
 			}
 			return true;
 		}
@@ -530,7 +630,7 @@ namespace pr
 	template <typename ResType> inline ResType Evaluate(char const* expr)
 	{
 		impl::Val result; int ridx = 0;
-		impl::Eval(expr, &result, 1, ridx, impl::ETok_Unknown);
+		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
 		return static_cast<ResType>(result.db());
 	}
 
@@ -538,7 +638,7 @@ namespace pr
 	template <typename ResType> inline ResType EvaluateI(char const* expr)
 	{
 		impl::Val result; int ridx = 0;
-		impl::Eval(expr, &result, 1, ridx, impl::ETok_Unknown);
+		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
 		return static_cast<ResType>(result.ll());
 	}
 
@@ -607,9 +707,12 @@ namespace pr
 			PR_CHECK(EXPR(1.0), true);
 			PR_CHECK(EXPR(+1.0), true);
 			PR_CHECK(EXPR(-1.0), true);
+			PR_CHECK(EXPR(-(1.0 + 2.0)), true);
 			PR_CHECK(EXPR(8.0 * -1.0), true);
+			PR_CHECK(EXPR(4.0 * -1.0 + 2.0), true);
 			PR_CHECK(EXPR(1.0 + +2.0), true);
-			PR_CHECK(EXPR(1.0 - 2.0), true);
+			PR_CHECK(EXPR(1.0 - -2.0), true);
+			PR_CHECK(EXPR(1.0 - 2.0 - 3.0 + 4.0), true);
 			PR_CHECK(EXPR(1.0 * +2.0), true);
 			PR_CHECK(EXPR(1 / 2), true);
 			PR_CHECK(EXPR(1.0 / 2.0), true);
@@ -678,7 +781,14 @@ namespace pr
 			}
 			PR_CHECK(Expr("1 != 2 ? 5 : 6", 5), true);
 			PR_CHECK(Expr("1 == 2 ? 5 : 6", 6), true);
+			PR_CHECK(Expr("true ? 5 : 6 + 1", 5), true);
+			PR_CHECK(Expr("false ? 5 : 6 + 1", 7), true);
 			PR_CHECK(Expr("sqr(-2) ? (1+2) : max(-2,-3)", 3), true);
+			PR_CHECK(Expr("-+1", -1),  true);
+			PR_CHECK(Expr("-++-1", 1),  true);
+			PR_CHECK(Expr("!!true", 1),  true);
+			PR_CHECK(Expr("-!!!false", -1),  true);
+			PR_CHECK(Expr("10 - 3 - 2", 5), true);
 		}
 	}
 }

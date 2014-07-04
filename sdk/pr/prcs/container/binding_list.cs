@@ -20,7 +20,7 @@ namespace pr.container
 		{
 			Init();
 		}
-		public BindingListEx(int initial_count, T value)
+		public BindingListEx(uint initial_count, T value)
 		{
 			Init();
 			for (;initial_count-- != 0;)

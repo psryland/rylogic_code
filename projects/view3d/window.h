@@ -35,11 +35,11 @@ namespace view3d
 		pr::ldr::AngleDlg         m_angle_tool_ui;
 		std::string               m_settings;                 // Allows a char const* to be returned
 
-		Window(pr::Renderer& rdr, HWND hwnd, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
+		Window(pr::Renderer& rdr, HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
 			:m_settings_cb(settings_cb)
 			,m_render_cb(render_cb)
 			,m_rdr(rdr)
-			,m_wnd(m_rdr, Settings(hwnd))
+			,m_wnd(m_rdr, Settings(hwnd, gdi_compat))
 			,m_scene(m_wnd)
 			,m_objects()
 			,m_camera()
@@ -93,11 +93,11 @@ namespace view3d
 			//m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
 		}
 
-		static pr::rdr::WndSettings Settings(HWND hwnd)
+		static pr::rdr::WndSettings Settings(HWND hwnd, BOOL gdi_compat)
 		{
 			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 			RECT rect; ::GetClientRect(hwnd, &rect);
-			return pr::rdr::WndSettings(hwnd, TRUE, FALSE, pr::To<pr::iv2>(rect));
+			return pr::rdr::WndSettings(hwnd, TRUE, gdi_compat, pr::To<pr::iv2>(rect));
 		}
 
 		// 'ctx' should be a Drawset

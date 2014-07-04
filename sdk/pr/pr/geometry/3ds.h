@@ -10,313 +10,901 @@
 #include <unordered_map>
 #include <cassert>
 #include "pr/common/cast.h"
+#include "pr/common/fmt.h"
+#include "pr/common/scope.h"
+#include "pr/common/colour.h"
 #include "pr/macros/enum.h"
 #include "pr/maths/maths.h"
+#include "pr/geometry/common.h"
 
 namespace pr
 {
 	namespace geometry
 	{
-		namespace impl
+		// See: http://www.the-labs.com/Blender/3DS-details.html
+		namespace max_3ds
 		{
-			inline unsigned int tell_pos(std::istream& src)                   { return static_cast<unsigned int>(src.tellg()); }
-			inline bool         seek_abs(std::istream& src, unsigned int pos) { return static_cast<bool>(src.seekg(pos)); }
-			inline bool         seek_rel(std::istream& src, unsigned int ofs) { return static_cast<bool>(src.seekg(ofs, src.cur)); }
+			typedef unsigned char  uchar;  static_assert(sizeof(uchar)  == 1, "3DS format specifies char as 1 byte");
+			typedef unsigned short ushort; static_assert(sizeof(ushort) == 2, "3DS format specifies short as 2 bytes");
+			typedef unsigned int   ulong;  static_assert(sizeof(ulong ) == 4, "3DS format specifies long as 4 bytes");
 
-			// Read a type
-			template <typename TOut> TOut read(std::istream& src)
-			{
-				TOut out;
-				if (src.read(char_ptr(&out), sizeof(out))) return out;
-				throw std::exception("incomplete chunk");
-			}
-			
-			// Peek at a type
-			template <typename TOut> TOut peek(std::istream& src)
-			{
-				TOut out = read<TOut>(src);
-				if (src.seekg(int(0 - sizeof(TOut)), src.cur)) return out;
-				throw std::exception("seek failed on input stream");
-			}
-		}
-
-		struct Max3DS
-		{
 			#pragma region Chunk Ids
 			#define PR_ENUM(x)                           /*
-				*/x(Null                      ,= 0x0000) /* 0x0000 // Null chunk id
-				*/x(Main                      ,= 0x4d4d) /* 0x4D4D // Main Chunk
-				*/x(M3DVersion                ,= 0x0002) /* ├─ 0x0002 // M3D Version
-				*/x(M3DEditor                 ,= 0x3D3D) /* ├─ 0x3D3D // 3D Editor Chunk
-				*/x(MeshVersion               ,= 0x3D3E) /* │  ├─ 0x3D3E // Mesh Version
-				*/x(ObjectBlock               ,= 0x4000) /* │  ├─ 0x4000 // Object Block
-				*/x(TriangularMesh            ,= 0x4100) /* │  │  ├─ 0x4100 // Triangular Mesh
-				*/x(VerticesList              ,= 0x4110) /* │  │  │  ├─ 0x4110 // Vertices List
-				*/x(FacesDescription          ,= 0x4120) /* │  │  │  ├─ 0x4120 // Faces Description
-				*/x(FacesMaterial             ,= 0x4130) /* │  │  │  │  ├─ 0x4130 // Faces Material
-				*/x(SmoothingGroupList        ,= 0x4150) /* │  │  │  │  └─ 0x4150 // Smoothing Group List
-				*/x(MappingCoordinatesList    ,= 0x4140) /* │  │  │  ├─ 0x4140 // Mapping Coordinates List
-				*/x(LocalCoordinatesSystem    ,= 0x4160) /* │  │  │  └─ 0x4160 // Local Coordinates System
-				*/x(Light                     ,= 0x4600) /* │  │  ├─ 0x4600 // Light
-				*/x(Spotlight                 ,= 0x4610) /* │  │  │  └─ 0x4610 // Spotlight
-				*/x(Camera                    ,= 0x4700) /* │  │  └─ 0x4700 // Camera
-				*/x(MaterialBlock             ,= 0xAFFF) /* │  └─ 0xAFFF // Material Block
-				*/x(MaterialName              ,= 0xA000) /* │     ├─ 0xA000 // Material Name
-				*/x(AmbientColor              ,= 0xA010) /* │     ├─ 0xA010 // Ambient Color
-				*/x(DiffuseColor              ,= 0xA020) /* │     ├─ 0xA020 // Diffuse Color
-				*/x(SpecularColor             ,= 0xA030) /* │     ├─ 0xA030 // Specular Color
-				*/x(TextureMap1               ,= 0xA200) /* │     ├─ 0xA200 // Texture Map 1
-				*/x(BumpMap                   ,= 0xA230) /* │     ├─ 0xA230 // Bump Map
-				*/x(ReflectionMap             ,= 0xA220) /* │     └─ 0xA220 // Reflection Map
-				*/x(MappingFilename           ,= 0xA300) /* │        ├─ 0xA300 // Mapping Filename    (Sub chunks for each map type)
-				*/x(MappingParameters         ,= 0xA351) /* │        └─ 0xA351 // Mapping Parameters
-				*/x(KeyframerChunk            ,= 0xB000) /* └─ 0xB000 // Keyframer Chunk
-				*/x(MeshInformationBlock      ,= 0xB002) /*    ├─ 0xB002 // Mesh Information Block
-				*/x(SpotLightInformationBlock ,= 0xB007) /*    ├─ 0xB007 // Spot Light Information Block
-				*/x(Frames                    ,= 0xB008) /*    └─ 0xB008 // Frames (Start and End)
-				*/x(ObjectName                ,= 0xB010) /* 	  ├─ 0xB010 // Object Name
-				*/x(ObjectPivotPoint          ,= 0xB013) /* 	  ├─ 0xB013 // Object Pivot Point
-				*/x(PositionTrack             ,= 0xB020) /* 	  ├─ 0xB020 // Position Track
-				*/x(RotationTrack             ,= 0xB021) /* 	  ├─ 0xB021 // Rotation Track
-				*/x(ScaleTrack                ,= 0xB022) /* 	  ├─ 0xB022 // Scale Track
-				*/x(HierarchyPosition         ,= 0xB030) /* 	  └─ 0xB030 // Hierarchy Position */
+				*/x(Null                      ,= 0x0000) /* Null chunk id
+				*/x(ColorF                    ,= 0x0010) /* float red, grn, blu
+				*/x(Color24                   ,= 0x0011) /* char red, grn, blu
+				*/x(LinColor24                ,= 0x0012) /* char red, grn, blu
+				*/x(LinColorF                 ,= 0x0013) /* float red, grn, blu
+				*/x(IntPercentage             ,= 0x0030) /* short percentage
+				*/x(FloatPercentage           ,= 0x0031) /* float percentage
+
+				Basic File Layout:
+				*/x(Main                      ,= 0x4d4d) /* Main Chunk
+				*/x(M3DVersion                ,= 0x0002) /* ├─ M3D Version
+				*/x(MasterScale               ,= 0x0100) /* ├─ Master Scale
+				*/x(M3DEditor                 ,= 0x3D3D) /* ├─ 3D Editor Chunk
+				*/x(MeshVersion               ,= 0x3D3E) /* │  ├─ Mesh Version
+				*/x(ObjectBlock               ,= 0x4000) /* │  ├─ Object Block
+				*/x(TriangularMesh            ,= 0x4100) /* │  │  ├─ Triangular Mesh
+				*/x(VerticesList              ,= 0x4110) /* │  │  │  ├─ Vertices List
+				*/x(FacesDescription          ,= 0x4120) /* │  │  │  ├─ Faces Description
+				*/x(MaterialGroup             ,= 0x4130) /* │  │  │  │  ├─ Faces using Material
+				*/x(SmoothingGroupList        ,= 0x4150) /* │  │  │  │  └─ Smoothing Group List
+				*/x(TexVertList               ,= 0x4140) /* │  │  │  ├─ Mapping Coordinates List
+				*/x(MeshMatrix                ,= 0x4160) /* │  │  │  └─ Local Coordinates System
+				*/x(Light                     ,= 0x4600) /* │  │  ├─ Light
+				*/x(Spotlight                 ,= 0x4610) /* │  │  │  └─ Spotlight
+				*/x(Camera                    ,= 0x4700) /* │  │  └─ Camera
+				*/x(MaterialBlock             ,= 0xAFFF) /* │  └─ Material Block
+				*/x(MaterialName              ,= 0xA000) /* │     ├─ Material Name
+				*/x(MatAmbientColor           ,= 0xA010) /* │     ├─ Ambient Color
+				*/x(MatDiffuseColor           ,= 0xA020) /* │     ├─ Diffuse Color
+				*/x(MatSpecularColor          ,= 0xA030) /* │     ├─ Specular Color
+				*/x(MatShininess              ,= 0xA040) /* │     ├─ Shininess Percentage
+				*/x(MatShininess2             ,= 0xA041) /* │     ├─ Shininess2 Percentage
+				*/x(MatShininess3             ,= 0xA042) /* │     ├─ Shininess3 Percentage
+				*/x(MatTransparency           ,= 0xA050) /* │     ├─ Transparency Percentage
+				*/x(TextureMap1               ,= 0xA200) /* │     ├─ Texture Map 1 (see Map sub chunks)
+				*/x(SpecularMap               ,= 0xA204) /* │     ├─ Specular Map
+				*/x(OpacityMap                ,= 0xA210) /* │     ├─ Opacity Map
+				*/x(ReflectionMap             ,= 0xA220) /* │     ├─ Reflection Map
+				*/x(BumpMap                   ,= 0xA230) /* │     └─ Bump Map
+				*/x(KeyframerChunk            ,= 0xB000) /* └─ Keyframer Chunk
+				*/x(MeshInformationBlock      ,= 0xB002) /*    ├─ Mesh Information Block
+				*/x(SpotLightInformationBlock ,= 0xB007) /*    ├─ Spot Light Information Block
+				*/x(Frames                    ,= 0xB008) /*    └─ Frames (Start and End)
+				*/x(ObjectName                ,= 0xB010) /*       ├─  Object Name
+				*/x(ObjectPivotPoint          ,= 0xB013) /*       ├─  Object Pivot Point
+				*/x(PositionTrack             ,= 0xB020) /*       ├─  Position Track
+				*/x(RotationTrack             ,= 0xB021) /*       ├─  Rotation Track
+				*/x(ScaleTrack                ,= 0xB022) /*       ├─  Scale Track
+				*/x(HierarchyPosition         ,= 0xB030) /*       └─  Hierarchy Position
+
+				Map sub chunks
+				*/x(MapFilename               ,= 0xA300) /* Map Filename
+				*/x(MapTiling                 ,= 0xA351) /* Map Tiling
+
+				Others
+				*/x(MatXPFall                 ,= 0xa052) /*
+				*/x(MatRefBlur                ,= 0xa053) /*
+				*/x(MatSELF_ILLUM             ,= 0xA080) /*
+				*/x(MatTWO_SIDE               ,= 0xA081) /*
+				*/x(MatDECAL                  ,= 0xA082) /*
+				*/x(MatADDITIVE               ,= 0xA083) /*
+				*/x(MatSELF_ILPCT             ,= 0xA084) /*
+				*/x(MatWIRE                   ,= 0xA085) /*
+				*/x(MatSUPERSMP               ,= 0xA086) /*
+				*/x(MatWIRESIZE               ,= 0xA087) /*
+				*/x(MatFACEMAP                ,= 0xA088) /*
+				*/x(MatXPFALLIN               ,= 0xA08a) /*
+				*/x(MatPHONGSOFT              ,= 0xA08c) /*
+				*/x(MatWIREABS                ,= 0xA08e) /*
+				*/x(MatSHADING                ,= 0xA100) /*
+				*/x(MAT_USE_XPFALL            ,= 0xA240) /*
+				*/x(MAT_USE_REFBLUR           ,= 0xA250) /*
+				*/x(MapBumpPercent            ,= 0xA252) /*
+				*/x(MatACUBIC                 ,= 0xA310) /*
+				*/x(MatSXP_TEXT_DATA          ,= 0xA320) /*
+				*/x(MatSXP_TEXT2_DATA         ,= 0xA321) /*
+				*/x(MatSXP_OPAC_DATA          ,= 0xA322) /*
+				*/x(MatSXP_BUMP_DATA          ,= 0xA324) /*
+				*/x(MatSXP_SPEC_DATA          ,= 0xA325) /*
+				*/x(MatSXP_SHIN_DATA          ,= 0xA326) /*
+				*/x(MatSXP_SELFI_DATA         ,= 0xA328) /*
+				*/x(MatSXP_TEXT_MASKDATA      ,= 0xA32a) /*
+				*/x(MatSXP_TEXT2_MASKDATA     ,= 0xA32c) /*
+				*/x(MatSXP_OPAC_MASKDATA      ,= 0xA32e) /*
+				*/x(MatSXP_BUMP_MASKDATA      ,= 0xA330) /*
+				*/x(MatSXP_SPEC_MASKDATA      ,= 0xA332) /*
+				*/x(MatSXP_SHIN_MASKDATA      ,= 0xA334) /*
+				*/x(MatSXP_SELFI_MASKDATA     ,= 0xA336) /*
+				*/x(MatSXP_REFL_MASKDATA      ,= 0xA338) /*
+				*/x(MatTEX2MAP                ,= 0xA33a) /*
+				*/x(MatSHINMAP                ,= 0xA33c) /*
+				*/x(MatSELFIMAP               ,= 0xA33d) /*
+				*/x(MatTEXMASK                ,= 0xA33e) /*
+				*/x(MatTEX2MASK               ,= 0xA340) /*
+				*/x(MatOPACMASK               ,= 0xA342) /*
+				*/x(MatBUMPMASK               ,= 0xA344) /*
+				*/x(MatSHINMASK               ,= 0xA346) /*
+				*/x(MatSPECMASK               ,= 0xA348) /*
+				*/x(MatSELFIMASK              ,= 0xA34a) /*
+				*/x(MatReflMask               ,= 0xA34c) /*
+				*/x(MatMAP_TILINGOLD          ,= 0xA350) /*
+				*/x(MatMapTEXBLUR_OLD         ,= 0xA352) /*
+				*/x(MatMapTEXBLUR             ,= 0xA353) /*
+				*/x(MatMapUSCALE              ,= 0xA354) /*
+				*/x(MatMapVSCALE              ,= 0xA356) /*
+				*/x(MatMapUOFFSET             ,= 0xA358) /*
+				*/x(MatMapVOFFSET             ,= 0xA35a) /*
+				*/x(MatMapANG                 ,= 0xA35c) /*
+				*/x(MatMapCOL1                ,= 0xA360) /*
+				*/x(MatMapCOL2                ,= 0xA362) /*
+				*/x(MatMapRCOL                ,= 0xA364) /*
+				*/x(MatMapGCOL                ,= 0xA366) /*
+				*/x(MatMapBCOL                ,= 0xA368) /*
+				*/
+
 			PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
 			#undef PR_ENUM
 			#pragma endregion
 
-			typedef unsigned short ushort;
-			typedef unsigned int ulong;
-			static_assert(sizeof(ushort) == 2, "3DS format specifies short as 2 bytes");
-			static_assert(sizeof(ulong) == 4, "3DS format specifies long as 4 bytes");
-			static unsigned int const ChunkHeaderSize = 6;
-
-			struct Chunk;
-			typedef std::vector<Chunk*> ChunkCont;
-
-			// Base class for 3ds file chunks
-			struct Chunk
+			#pragma pack(push, 1)
+			struct ChunkHeader
 			{
-				ulong     m_offset; // byte offset to the start of this chunk
-				EChunkId  m_id;     // Chunk id
-				ulong     m_length; // The length of the chunk (including the chunk header)
-				ChunkCont m_child;  // Nested chunks
+				ushort id;
+				ulong  len;
+			};
+			static_assert(sizeof(ChunkHeader) == 6, "Chunk header should have a size of 6 bytes");
+			#pragma pack(pop)
 
-				template <typename TSrc> Chunk(TSrc& src, EChunkId id)
-					:m_offset(impl::tell_pos(src))
-					,m_id    (static_cast<EChunkId>(impl::read<ushort>(src)))
-					,m_length(impl::read<ulong>(src))
-					,m_child ()
-				{
-					if (id != EChunkId::Null && id != m_id)
-						throw std::exception("chunk type mismatch");
-				}
-				virtual ~Chunk()
-				{
-					for (auto c : m_child)
-						delete c;
-				}
+			// 3DS Texture reference
+			struct Texture
+			{
+				std::string m_filepath; // Filepath
+				ushort      m_tiling;   // Clamp, Wrap, etc
 
-			protected:
+				Texture() :m_filepath() ,m_tiling() {}
+			};
 
-				template <typename TSrc> void seek_start(TSrc& src)
+			// 3DS Material
+			struct Material
+			{
+				std::string m_name;              // The name of the material
+				pr::Colour m_ambient;            // Object ambient colour
+				pr::Colour m_diffuse;            // Object diffuse colour
+				pr::Colour m_specular;           // Object specular colour
+				std::vector<Texture> m_textures; // 
+
+				Material() :m_name() ,m_ambient(pr::ColourBlack) ,m_diffuse(pr::ColourWhite) ,m_specular(pr::ColourZero), m_textures() {}
+			};
+
+			// 3DS Face
+			struct Face
+			{
+				ushort m_idx[3]; // three indices per face
+				ushort m_flags; // one value per face
+			};
+
+			// 3DS Material Group (nuggets, basically)
+			struct MaterialGroup
+			{
+				std::string m_name;         // The name of the material used by this group
+				std::vector<ushort> m_face; // The indices of the faces that use the material
+			};
+
+			// 3DS Triangle mesh
+			struct TriMesh
+			{
+				pr::m4x4 m_o2p;
+				std::vector<pr::v3> m_vert;
+				std::vector<pr::v2> m_uv;
+				std::vector<Face> m_face;
+				std::vector<MaterialGroup> m_matgroup;
+				std::vector<ulong> m_smoothing_groups;
+
+				TriMesh() :m_o2p() ,m_vert() ,m_uv() ,m_face() ,m_matgroup() ,m_smoothing_groups() {}
+			};
+
+			// 3DS Object
+			struct Object
+			{
+				std::string m_name;
+				TriMesh m_mesh;
+
+				Object() :m_name() ,m_mesh() {}
+			};
+
+			// Helpers for reading from a stream source
+			// Specialise for non std::istream's
+			template <typename TSrc> struct Src
+			{
+				static ulong TellPos(TSrc& src)            { return static_cast<ulong>(src.tellg()); }
+				static bool  SeekAbs(TSrc& src, ulong pos) { return static_cast<bool>(src.seekg(pos)); }
+				static bool  SeekRel(TSrc& src, int ofs)   { return static_cast<bool>(src.seekg(ofs, src.cur)); }
+
+				// Read an array
+				template <typename TOut> static void Read(TSrc& src, TOut* out, size_t count)
 				{
-					if (!impl::seek_abs(src, m_offset))
-						throw std::exception("seek chunk start failed on input stream");
+					if (src.read(char_ptr(out), count * sizeof(TOut))) return;
+					throw std::exception("partial read of input stream");
 				}
-				template <typename TSrc> void seek_end(TSrc& src)
+			};
+
+			// Read an array
+			template <typename TOut, typename TSrc>
+			inline void Read(TSrc& src, TOut* out, size_t count)
+			{
+				Src<TSrc>::Read(src, out, count);
+			}
+
+			// Read a single type
+			template <typename TOut, typename TSrc>
+			inline TOut Read(TSrc& src)
+			{
+				TOut out;
+				Read(src, &out, 1);
+				return out;
+			}
+
+			// Peek at a type
+			template <typename TOut, typename TSrc>
+			inline TOut Peek(TSrc& src)
+			{
+				TOut out = Read<TOut>(src);
+				if (Src<TSrc>::SeekRel(src, -int(sizeof(TOut)))) return out;
+				throw std::exception("seek failed on input stream");
+			}
+
+			// Generic chunk reading function
+			// 'src' should point to a sub chunk
+			// 'len' is the maximum available data remaining in the parent chunk
+			// 'func' is called back with the chunk header, it should return false to stop reading.
+			template <typename TSrc, typename Func>
+			void ReadChunks(TSrc& src, ulong len, Func func, ulong* len_out = nullptr)
+			{
+				while (len != 0)
 				{
-					if (!impl::seek_abs(src, m_offset + m_length))
-						throw std::exception("seek chunk end failed on input stream");
-				}
-				template <typename TSrc> std::string read_cstr(TSrc& src)
-				{
-					std::string str; char c;
-					int max_length = int(m_offset + m_length - impl::tell_pos(src));
-					for (int i = 0; i != max_length && (c = impl::read<char>(src)) != 0; ++i)
-						str.push_back(c);
-					return str;
-				}
-				template <typename TSrc> void read_nested(TSrc& src)
-				{
-					while (impl::tell_pos(src) - m_offset != m_length)
+					// Read the chunk header
+					auto start = Src<TSrc>::TellPos(src);
+					auto hdr = Read<ChunkHeader>(src);
+					if (hdr.len <= len) len -= hdr.len; else throw std::exception(pr::FmtS("invalid chunk found at offset 0x%X", start));
+					ulong data_len = hdr.len - sizeof(ChunkHeader);
+
+					// Parse the chunk
+					if (!func(hdr, src, data_len))
 					{
-						auto id = static_cast<EChunkId>(impl::peek<ushort>(src));
-						switch (id)
+						if (len_out) *len_out = len;
+						return;
+					}
+
+					// Seek to the next chunk
+					Src<TSrc>::SeekAbs(src, start + hdr.len);
+				}
+				if (len_out) *len_out = 0;
+			}
+
+			// Search from the current stream position to the next instance of chunk 'id'.
+			// Assumes 'src' is positioned at a chunk header within a parent chunk.
+			// 'len' is the number of bytes until the end of the parent chunk.
+			// 'len_out' is an output of the length until the end of the parent chunk on return.
+			// If 'next' is true and 'src' currently points to an 'id' chunk, then seeks to the next instance of 'id'
+			// Returns the found chunk header with the current position of 'src' set immediately after it.
+			template <typename TSrc>
+			ChunkHeader Find(EChunkId id, TSrc& src, ulong len, ulong* len_out = nullptr, bool next = false)
+			{
+				ChunkHeader chunk;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc&, ulong)
+				{
+					// If this is the chunk we're looking for
+					if (hdr.id == id && !next)
+					{
+						chunk = hdr;
+						return false;
+					}
+					next = false;
+					return true;
+				}, len_out);
+				return chunk;
+			}
+
+			// Read a null terminated string from a chunk.
+			// Assumes 'src' points to the start of the string.
+			template <typename TSrc>
+			std::string ReadCStr(TSrc& src, ulong len, ulong* len_out = nullptr)
+			{
+				std::string str;
+				for (char c; len-- != 0 && (c = Read<char>(src)) != 0;)
+					str.push_back(c);
+				
+				if (len_out) *len_out = len;
+				return str;
+			}
+
+			// Read a colour from 'src'
+			// Assumes 'src' points to a colour chunk header
+			template <typename TSrc>
+			pr::Colour ReadColour(TSrc& src, ulong)
+			{
+				auto hdr = Read<ChunkHeader>(src);
+				switch (hdr.id) {
+				default: throw std::exception(pr::FmtS("Unknown chunk id: %4.4x. Expected a colour chunk", hdr.id));
+				case EChunkId::ColorF: //float red, grn, blu;
+				case EChunkId::LinColorF: //float red, grn, blu;
+					{
+						float rgb[3];
+						Read(src, rgb, 3);
+						return pr::Colour::make(rgb[0], rgb[1], rgb[2], 1.0f);
+					}
+				case EChunkId::Color24: // char red, grn, blu;
+				case EChunkId::LinColor24: // char red, grn, blu;
+					{
+						uchar rgb[3];
+						Read(src, rgb, 3);
+						return pr::Colour::make(rgb[0], rgb[1], rgb[2], 255);
+					}
+				}
+			}
+
+			// Read a texture from 'src'
+			// Assumes 'src' points to a sub chunk within a TextureMap1, BumpMap, or ReflectionMap chunk
+			template <typename TSrc>
+			Texture ReadTexture(TSrc& src, ulong len)
+			{
+				Texture tex;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.id)
+					{
+					case EChunkId::MapFilename:
 						{
-						default:                               add(std::make_unique<Unknown                >(src)); break;
-						case EChunkId::M3DVersion:             add(std::make_unique<M3DVersion             >(src)); break;
-						case EChunkId::M3DEditor:              add(std::make_unique<M3DEditor              >(src)); break;
-						case EChunkId::MeshVersion:            add(std::make_unique<MeshVersion            >(src)); break;
-						case EChunkId::ObjectBlock:            add(std::make_unique<ObjectBlock            >(src)); break;
-						case EChunkId::MaterialBlock:          add(std::make_unique<MaterialBlock          >(src)); break;
-						case EChunkId::TriangularMesh:         add(std::make_unique<TriangularMesh         >(src)); break;
-						case EChunkId::VerticesList:           add(std::make_unique<VerticesList           >(src)); break;
-						case EChunkId::FacesDescription:       add(std::make_unique<FacesDescription       >(src)); break;
-						case EChunkId::MappingCoordinatesList: add(std::make_unique<MappingCoordinatesList >(src)); break;
-						case EChunkId::MaterialName:           add(std::make_unique<MaterialName           >(src)); break;
+							tex.m_filepath = ReadCStr(src, data_len);
+							break;
+						}
+					case EChunkId::MapTiling:
+						{
+							tex.m_tiling = Read<ushort>(src);
+							break;
 						}
 					}
-				}
-
-				void add(std::unique_ptr<Chunk> chunk)
-				{
-					m_child.push_back(chunk.get());
-					chunk.release();
-				}
-			};
-
-			// Chunks
-			struct Unknown :Chunk
-			{
-				template <typename TSrc> Unknown(TSrc& src) :Chunk(src, EChunkId::Null)
-				{
-					seek_end(src);
-				}
-			};
-			struct Main :Chunk
-			{
-				template <typename TSrc> Main(TSrc& src) :Chunk(src, EChunkId::Main)
-				{
-					read_nested(src);
-				}
-			};
-			struct M3DVersion :Chunk
-			{
-				ushort m_version;
-				template <typename TSrc> M3DVersion(TSrc& src) :Chunk(src, EChunkId::M3DVersion)
-					,m_version(impl::read<ushort>(src))
-				{
-					seek_end(src);
-				}
-			};
-			struct M3DEditor :Chunk
-			{
-				template <typename TSrc> M3DEditor(TSrc& src) :Chunk(src, EChunkId::M3DEditor)
-				{
-					read_nested(src);
-				}
-			};
-			struct MeshVersion :Chunk
-			{
-				ushort m_version;
-				template <typename TSrc> MeshVersion(TSrc& src) :Chunk(src, EChunkId::MeshVersion)
-					,m_version(impl::read<ushort>(src))
-				{
-					seek_end(src);
-				}
-			};
-			struct ObjectBlock :Chunk
-			{
-				std::string m_name;
-				template <typename TSrc> ObjectBlock(TSrc& src) :Chunk(src, EChunkId::ObjectBlock) ,m_name(read_cstr(src))
-				{
-					read_nested(src);
-				}
-			};
-			struct MaterialBlock :Chunk
-			{
-				template <typename TSrc> MaterialBlock(TSrc& src) :Chunk(src, EChunkId::MaterialBlock)
-				{
-					read_nested(src);
-				}
-			};
-			struct TriangularMesh :Chunk
-			{
-				template <typename TSrc> TriangularMesh(TSrc& src) :Chunk(src, EChunkId::TriangularMesh)
-				{
-					read_nested(src);
-				}
-			};
-			struct VerticesList :Chunk
-			{
-				std::vector<pr::v4> m_verts;
-				template <typename TSrc> VerticesList(TSrc& src) :Chunk(src, EChunkId::VerticesList)
-				{
-					int count = impl::read<ushort>(src);
-					m_verts.reserve(count);
-					for (int i = 0; i != count; ++i)
-					{
-						auto x = impl::read<float>(src);
-						auto y = impl::read<float>(src);
-						auto z = impl::read<float>(src);
-						m_verts.push_back(pr::v4::make(x,y,z,1.0f));
-					}
-					read_nested(src);
-				}
-			};
-			struct FacesDescription :Chunk
-			{
-				std::vector<ushort> m_faces; // three indices per face
-				std::vector<ushort> m_flags; // one value per face (3 m_faces indices)
-				template <typename TSrc> FacesDescription(TSrc& src) :Chunk(src, EChunkId::FacesDescription)
-				{
-					int count = impl::read<ushort>(src);
-					m_faces.reserve(count * 3);
-					m_flags.reserve(count);
-					for (int i = 0; i != count; ++i)
-					{
-						auto i0    = impl::read<ushort>(src);
-						auto i1    = impl::read<ushort>(src);
-						auto i2    = impl::read<ushort>(src);
-						auto flags = impl::read<ushort>(src);
-						m_faces.push_back(i0);
-						m_faces.push_back(i1);
-						m_faces.push_back(i2);
-						m_flags.push_back(flags);
-					}
-					read_nested(src);
-				}
-			};
-			struct MappingCoordinatesList :Chunk
-			{
-				std::vector<pr::v2> m_uv;
-				template <typename TSrc> MappingCoordinatesList(TSrc& src) :Chunk(src, EChunkId::MappingCoordinatesList)
-				{
-					int count = impl::read<ushort>(src);
-					m_uv.reserve(count);
-					for (int i = 0; i != count; ++i)
-					{
-						auto u = impl::read<float>(src);
-						auto v = impl::read<float>(src);
-						m_uv.push_back(pr::v2::make(u,v));
-					}
-				}
-			};
-			struct MaterialName :Chunk
-			{
-				std::string m_name;
-				template <typename TSrc> MaterialName(TSrc& src) :Chunk(src, EChunkId::MaterialName) ,m_name(read_cstr(src))
-				{
-					read_nested(src);
-				}
-			};
-
-			// Root of the 3ds tree
-			Main* m_main;
-
-			Max3DS() :m_main() {}
-			~Max3DS() { delete m_main; }
-			template <typename TSrc> Max3DS(TSrc& src) { Load(src); }
-			template <typename TSrc> void Load(TSrc& src)
-			{
-				m_main = new Main(src);
+					return true;
+				});
+				return tex;
 			}
-		};
+
+			// Read a material from 'src'
+			// Assumes 'src' points to a sub chunk within a MaterialBlock chunk
+			template <typename TSrc>
+			Material ReadMaterial(TSrc& src, ulong len)
+			{
+				Material mat;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.id)
+					{
+					case EChunkId::MaterialName:
+						{
+							mat.m_name = ReadCStr(src, data_len);
+							break;
+						}
+					case EChunkId::MatAmbientColor:
+						{
+							mat.m_ambient = ReadColour(src, data_len);
+							break;
+						}
+					case EChunkId::MatDiffuseColor:
+						{
+							mat.m_diffuse = ReadColour(src, data_len);
+							break;
+						}
+					case EChunkId::MatSpecularColor:
+						{
+							mat.m_specular = ReadColour(src, data_len);
+							break;
+						}
+					case EChunkId::TextureMap1:
+						{
+							mat.m_textures.push_back(ReadTexture(src, data_len));
+							break;
+						}
+					}
+					return true;
+				});
+				return mat;
+			}
+
+			// Read a face list description from 'src'
+			// Assumes 'src' points just past the FacesDescription chunk header
+			template <typename TSrc>
+			void ReadFaceList(TSrc& src, TriMesh& mesh, ulong len)
+			{
+				size_t count = Read<ushort>(src);
+				auto face_data_size = sizeof(ushort) + count * sizeof(Face);
+				if (len >= face_data_size) len -= ulong(face_data_size); else throw std::exception("invalid face list data");
+
+				// Read the face indices
+				mesh.m_face.resize(count);
+				Read(src, mesh.m_face.data(), count);
+
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.id)
+					{
+					case EChunkId::MaterialGroup:
+						{
+							MaterialGroup mgrp;
+							mgrp.m_name = ReadCStr(src, data_len, &data_len);
+
+							auto count = Read<ushort>(src);
+							mgrp.m_face.resize(count);
+							Read(src, mgrp.m_face.data(), count);
+
+							mesh.m_matgroup.emplace_back(std::move(mgrp));
+							break;
+						}
+					case EChunkId::SmoothingGroupList:
+						{
+							mesh.m_smoothing_groups.resize(data_len/sizeof(ulong));
+							Read(src, mesh.m_smoothing_groups.data(), mesh.m_smoothing_groups.size());
+							break;
+						}
+					}
+					return true;
+				});
+			}
+
+			// Read a trimesh from 'src'
+			// Assumes 'src' points to the first sub chunk of a tri mesh chunk
+			template <typename TSrc>
+			TriMesh ReadTriMesh(TSrc& src, ulong len)
+			{
+				TriMesh mesh;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.id)
+					{
+					case EChunkId::VerticesList:
+						{
+							size_t count = Read<ushort>(src);
+							mesh.m_vert.resize(count);
+							Read(src, mesh.m_vert.data(), count);
+							break;
+						}
+					case EChunkId::TexVertList:
+						{
+							size_t count = Read<ushort>(src);
+							mesh.m_uv.resize(count);
+							Read(src, mesh.m_uv.data(), count);
+							break;
+						}
+					case EChunkId::MeshMatrix:
+						{
+							float matrix[4][3];
+							Read(src, &matrix, 1);
+							mesh.m_o2p.x.set(matrix[0], 0.0f);
+							mesh.m_o2p.y.set(matrix[1], 0.0f);
+							mesh.m_o2p.z.set(matrix[2], 0.0f);
+							mesh.m_o2p.w.set(matrix[3], 1.0f);
+							break;
+						}
+					case EChunkId::FacesDescription:
+						{
+							ReadFaceList(src, mesh, data_len);
+							break;
+						}
+					}
+					return true;
+				});
+				return mesh;
+			}
+
+			// Read an object from 'src'
+			template <typename TSrc>
+			Object ReadObject(TSrc& src, ulong len)
+			{
+				Object obj;
+				obj.m_name = ReadCStr(src, len, &len);
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.id)
+					{
+					case EChunkId::TriangularMesh:
+						{
+							obj.m_mesh = ReadTriMesh(src, data_len);
+							break;
+						}
+					}
+					return true;
+				});
+				return obj;
+			}
+		}
+
+		// Extract the materials in the given 3DS stream
+		template <typename TSrc, typename TMatObj>
+		void Read3DSMaterials(TSrc& src, TMatObj mat_out)
+		{
+			using namespace pr::geometry::max_3ds;
+
+			// Restore the src position on return
+			auto start = Src<TSrc>::TellPos(src);
+			auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+
+			// Check that this is actually a 3DS stream
+			auto main = Read<ChunkHeader>(src);
+			if (main.id != EChunkId::Main)
+				throw std::exception("Source is not a 3ds model");
+
+			// Find the M3DEditor sub chunk
+			auto editor = Find(EChunkId::M3DEditor, src, main.len - sizeof(ChunkHeader));
+			if (editor.id != EChunkId::M3DEditor)
+				throw std::exception("Source contains no model data");
+
+			// Read the materials
+			ReadChunks(src, editor.len - sizeof(ChunkHeader), [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+			{
+				if (hdr.id == EChunkId::MaterialBlock)
+					mat_out(ReadMaterial(src, data_len));
+				return true;
+			});
+		}
+
+		// Extract the objects from a 3DS stream
+		template <typename TSrc, typename TObjOut>
+		void Read3DSModels(TSrc& src, TObjOut obj_out)
+		{
+			using namespace pr::geometry::max_3ds;
+
+			// Restore the src position on return
+			auto start = Src<TSrc>::TellPos(src);
+			auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
+
+			// Check that this is actually a 3DS stream
+			auto main = Read<ChunkHeader>(src);
+			if (main.id != EChunkId::Main)
+				throw std::exception("Source is not a 3ds model");
+
+			// Find the M3DEditor sub chunk
+			auto editor = Find(EChunkId::M3DEditor, src, main.len - sizeof(ChunkHeader));
+			if (editor.id != EChunkId::M3DEditor)
+				throw std::exception("Source contains no model data");
+
+			// Read the objects
+			ReadChunks(src, editor.len - sizeof(ChunkHeader), [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+			{
+				if (hdr.id == EChunkId::ObjectBlock)
+					obj_out(ReadObject(src, data_len));
+				return true;
+			});
+		}
+
+		// Given a 3DS file, generate verts/indices for a renderer model
+		template <typename TMatLookup, typename TNuggetOut, typename TVertOut, typename TIdxOut>
+		BBox Max3DSModel(max_3ds::Object const& obj, TMatLookup mats, TNuggetOut nugget_out, TVertOut v_out, TIdxOut i_out)
+		{
+			// Validate 'obj'
+			if (obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
+				throw std::exception("invalid 3DS object. Number of UVs != number of verts");
+			if (obj.m_mesh.m_face.size() != obj.m_mesh.m_smoothing_groups.size())
+				throw std::exception("invalid 3DS object. Number of faces != number of smoothing groups");
+
+			// Can't just output the verts directly.
+			// In a max model verts can have multiple normals.
+			// Create one of these 'Verts' per unique model vert.
+			struct Vert
+			{
+				pr::v4      m_norm;   // The accumulated vertex normal
+				pr::Colour  m_col;    // The material colour for this vert
+				uint        m_smooth; // The smoothing group bits
+				Vert*       m_next;   // Another copy of this vert with difference smoothing groups
+				pr::uint16  m_idx;    // The index into the obj.m_mesh.m_vert container
+
+				Vert(pr::uint16 idx, pr::v4 const& norm, pr::Colour const& col, uint sg)
+					:m_norm(norm)
+					,m_col(col)
+					,m_smooth(sg)
+					,m_next()
+					,m_idx(idx)
+				{}
+				pr::uint16 add(std::deque<Vert>& cont, pr::v4 const& norm, pr::Colour const& col, uint sg)
+				{
+					// If the smoothing group intersects, accumulate 'norm'
+					// and return the vertex indices of this vert
+					if ((sg & m_smooth) || m_norm == v4Zero)
+					{
+						m_norm += norm;
+						m_col = col;
+						m_smooth |= sg;
+						return m_idx;
+					}
+
+					// Otherwise if we have a 'next' try that vert
+					if (m_next != nullptr)
+						return m_next->add(cont, norm, col, sg);
+
+					// Otherwise, create a new Vert and add it to our linked list
+					cont.emplace_back(m_idx, norm, col, sg);
+					m_next = &cont.back();
+					return pr::uint16(cont.size() - 1);
+				}
+			};
+			std::deque<Vert> verts;
+
+			// Initialise the container 'verts'
+			BBox bbox = BBoxReset;
+			for (pr::uint16 i = 0, iend = checked_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
+			{
+				verts.emplace_back(i, v4Zero, ColourWhite, 0);
+				Encompass(bbox, obj.m_mesh.m_vert[i].w1());
+			}
+
+			// Loop over material groups, each material group is a nugget
+			pr::Range<pr::uint16> vrange, irange = pr::Range<pr::uint16>::Zero();
+			for (auto const& mgrp : obj.m_mesh.m_matgroup)
+			{
+				// Find the material
+				max_3ds::Material const& mat = mats(mgrp.m_name);
+
+				// Write out each face that belongs to this group
+				irange.m_begin = irange.m_end;
+				vrange = pr::Range<pr::uint16>::Invalid();
+				for (auto const& face_idx : mgrp.m_face)
+				{
+					// Get the face and it's smoothing group
+					auto const& face = obj.m_mesh.m_face[face_idx];
+					auto sg = obj.m_mesh.m_smoothing_groups[face_idx];
+
+					// Calculate the weighted normal for this face at each vertex
+					// Reason weights are needed: consider the (+x,+y,+z) corner of a box, the normal should point out along (1,1,1)
+					// but if one box face has two triangles, while the others have one, this wouldn't be true without weight values.
+					// Could use face area as the weight, it's cheaper but doesn't quite give the correct result.
+					auto v0 = obj.m_mesh.m_vert[face.m_idx[0]].w1();
+					auto v1 = obj.m_mesh.m_vert[face.m_idx[1]].w1();
+					auto v2 = obj.m_mesh.m_vert[face.m_idx[2]].w1();
+					pr::v4 norm = pr::Normalise3(pr::Cross3(v1-v0,v2-v1), pr::v4Zero);
+					pr::v4 angles = TriangleAngles(v0, v1, v2);
+
+					// Get the final vertex indices for the face
+					auto i0 = verts.at(face.m_idx[0]).add(verts, angles.x * norm, mat.m_diffuse, sg);
+					auto i1 = verts.at(face.m_idx[1]).add(verts, angles.y * norm, mat.m_diffuse, sg);
+					auto i2 = verts.at(face.m_idx[2]).add(verts, angles.z * norm, mat.m_diffuse, sg);
+
+					vrange.encompass(i0);
+					vrange.encompass(i1);
+					vrange.encompass(i2);
+					irange.m_end += 3;
+					
+					// Write out face indices
+					i_out(i0);
+					i_out(i1);
+					i_out(i2);
+				}
+
+				// Output a nugget for this material group
+				auto geom = EGeom::Vert | EGeom::Colr | EGeom::Norm | (!mat.m_textures.empty() ? EGeom::Tex0 : 0);
+				nugget_out(mat, geom, vrange, irange);
+			}
+
+			// Write out the verts including their normals
+			for (auto const& vert : verts)
+			{
+				auto  p = obj.m_mesh.m_vert[vert.m_idx].w1();
+				auto& c = vert.m_col;
+				auto  n = Normalise3(vert.m_norm, v4Zero);
+				auto& t = obj.m_mesh.m_uv[vert.m_idx];
+				v_out(p, c, n, t);
+			}
+
+			return bbox;
+		}
 	}
 }
 
 #if PR_UNITTESTS
-#include "pr/common/unittests.h"
 #include <fstream>
+#include "pr/common/unittests.h"
+#include "pr/renderer11/renderer.h"
 namespace pr
 {
 	namespace unittests
 	{
 		PRUnitTest(pr_geometry_3ds)
 		{
-			//std::ifstream ifile("D:\\dump\\test.3ds", std::ifstream::binary);
-			//pr::geometry::Max3DS _3ds(ifile);
+			using namespace pr::geometry;
+			std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
+			Read3DSMaterials(ifile, [](max_3ds::Material&&){});
+			Read3DSModels(ifile, [](max_3ds::Object&&){});
 		}
 	}
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+		//struct Max3DS
+		//{
+
+		//	struct Chunk;
+		//	typedef std::vector<Chunk*> ChunkCont;
+
+		//	// Base class for 3ds file chunks
+		//	struct Chunk
+		//	{
+		//		ulong     m_offset; // byte offset to the start of this chunk
+		//		EChunkId  m_id;     // Chunk id
+		//		ulong     m_length; // The length of the chunk (including the chunk header)
+		//		ChunkCont m_child;  // Nested chunks
+
+		//		template <typename TSrc> Chunk(TSrc& src, EChunkId id)
+		//			:m_offset(impl::tell_pos(src))
+		//			,m_id    (static_cast<EChunkId>(impl::read<ushort>(src)))
+		//			,m_length(impl::read<ulong>(src))
+		//			,m_child ()
+		//		{
+		//			if (id != EChunkId::Null && id != m_id)
+		//				throw std::exception("chunk type mismatch");
+		//		}
+		//		virtual ~Chunk()
+		//		{
+		//			for (auto c : m_child)
+		//				delete c;
+		//		}
+
+		//	protected:
+
+		//		template <typename TSrc> void seek_start(TSrc& src)
+		//		{
+		//			if (!impl::seek_abs(src, m_offset))
+		//				throw std::exception("seek chunk start failed on input stream");
+		//		}
+		//		template <typename TSrc> void seek_end(TSrc& src)
+		//		{
+		//			if (!impl::seek_abs(src, m_offset + m_length))
+		//				throw std::exception("seek chunk end failed on input stream");
+		//		}
+		//		template <typename TSrc> std::string read_cstr(TSrc& src)
+		//		{
+		//			std::string str; char c;
+		//			int max_length = int(m_offset + m_length - impl::tell_pos(src));
+		//			for (int i = 0; i != max_length && (c = impl::read<char>(src)) != 0; ++i)
+		//				str.push_back(c);
+		//			return str;
+		//		}
+		//		template <typename TSrc> void read_nested(TSrc& src)
+		//		{
+		//			while (impl::tell_pos(src) - m_offset != m_length)
+		//			{
+		//				auto id = static_cast<EChunkId>(impl::peek<ushort>(src));
+		//				switch (id)
+		//				{
+		//				default:                               add(std::make_unique<Unknown                >(src)); break;
+		//				case EChunkId::M3DVersion:             add(std::make_unique<M3DVersion             >(src)); break;
+		//				case EChunkId::M3DEditor:              add(std::make_unique<M3DEditor              >(src)); break;
+		//				case EChunkId::MeshVersion:            add(std::make_unique<MeshVersion            >(src)); break;
+		//				case EChunkId::ObjectBlock:            add(std::make_unique<ObjectBlock            >(src)); break;
+		//				case EChunkId::MaterialBlock:          add(std::make_unique<MaterialBlock          >(src)); break;
+		//				case EChunkId::TriangularMesh:         add(std::make_unique<TriangularMesh         >(src)); break;
+		//				case EChunkId::VerticesList:           add(std::make_unique<VerticesList           >(src)); break;
+		//				case EChunkId::FacesDescription:       add(std::make_unique<FacesDescription       >(src)); break;
+		//				case EChunkId::TexVertList: add(std::make_unique<TexVertList >(src)); break;
+		//				case EChunkId::MaterialName:           add(std::make_unique<MaterialName           >(src)); break;
+		//				}
+		//			}
+		//		}
+
+		//		void add(std::unique_ptr<Chunk> chunk)
+		//		{
+		//			m_child.push_back(chunk.get());
+		//			chunk.release();
+		//		}
+		//	};
+
+		//	// Chunks
+		//	struct Unknown :Chunk
+		//	{
+		//		template <typename TSrc> Unknown(TSrc& src) :Chunk(src, EChunkId::Null)
+		//		{
+		//			seek_end(src);
+		//		}
+		//	};
+		//	struct Main :Chunk
+		//	{
+		//		template <typename TSrc> Main(TSrc& src) :Chunk(src, EChunkId::Main)
+		//		{
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct M3DVersion :Chunk
+		//	{
+		//		ushort m_version;
+		//		template <typename TSrc> M3DVersion(TSrc& src) :Chunk(src, EChunkId::M3DVersion)
+		//			,m_version(impl::read<ushort>(src))
+		//		{
+		//			seek_end(src);
+		//		}
+		//	};
+		//	struct M3DEditor :Chunk
+		//	{
+		//		template <typename TSrc> M3DEditor(TSrc& src) :Chunk(src, EChunkId::M3DEditor)
+		//		{
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct MeshVersion :Chunk
+		//	{
+		//		ushort m_version;
+		//		template <typename TSrc> MeshVersion(TSrc& src) :Chunk(src, EChunkId::MeshVersion)
+		//			,m_version(impl::read<ushort>(src))
+		//		{
+		//			seek_end(src);
+		//		}
+		//	};
+		//	struct ObjectBlock :Chunk
+		//	{
+		//		std::string m_name;
+		//		template <typename TSrc> ObjectBlock(TSrc& src) :Chunk(src, EChunkId::ObjectBlock) ,m_name(read_cstr(src))
+		//		{
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct MaterialBlock :Chunk
+		//	{
+		//		template <typename TSrc> MaterialBlock(TSrc& src) :Chunk(src, EChunkId::MaterialBlock)
+		//		{
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct TriangularMesh :Chunk
+		//	{
+		//		template <typename TSrc> TriangularMesh(TSrc& src) :Chunk(src, EChunkId::TriangularMesh)
+		//		{
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct VerticesList :Chunk
+		//	{
+		//		std::vector<pr::v4> m_verts;
+		//		template <typename TSrc> VerticesList(TSrc& src) :Chunk(src, EChunkId::VerticesList)
+		//		{
+		//			int count = impl::read<ushort>(src);
+		//			m_verts.reserve(count);
+		//			for (int i = 0; i != count; ++i)
+		//			{
+		//				auto x = impl::read<float>(src);
+		//				auto y = impl::read<float>(src);
+		//				auto z = impl::read<float>(src);
+		//				m_verts.push_back(pr::v4::make(x,y,z,1.0f));
+		//			}
+		//			read_nested(src);
+		//		}
+		//	};
+		//	struct FacesDescription :Chunk
+		//	{
+		//		std::vector<ushort> m_faces; // three indices per face
+		//		std::vector<ushort> m_flags; // one value per face (3 m_faces indices)
+		//		template <typename TSrc> FacesDescription(TSrc& src) :Chunk(src, EChunkId::FacesDescription)
+		//		{
+		//			int count = impl::read<ushort>(src);
+		//			m_faces.reserve(count * 3);
+		//			m_flags.reserve(count);
+		//			for (int i = 0; i != count; ++i)
+		//			{
+		//				auto i0    = impl::read<ushort>(src);
+		//				auto i1    = impl::read<ushort>(src);
+		//				auto i2    = impl::read<ushort>(src);
+		//				auto flags = impl::read<ushort>(src);
+		//				m_faces.push_back(i0);
+		//				m_faces.push_back(i1);
+		//				m_faces.push_back(i2);
+		//				m_flags.push_back(flags);
+		//			}
+		//			read_nested(src);
+		//		}
+		//	};

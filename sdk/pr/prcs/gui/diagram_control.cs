@@ -3457,7 +3457,7 @@ namespace pr.gui
 			if (this.IsInDesignMode()) return;
 
 			m_view3d = new View3d();
-			m_window = new View3d.Window(m_view3d, Handle, Render);
+			m_window = new View3d.Window(m_view3d, Handle, false, Render);
 			m_tools  = new Tools();
 			m_camera = m_window.Camera;
 			m_camera.SetClipPlanes(0.5f, 1.1f, true);
@@ -3492,6 +3492,8 @@ namespace pr.gui
 					components.Dispose();
 				if (m_hoverscroll != null)
 					m_hoverscroll.Dispose();
+				if (m_tools != null)
+					m_tools.Dispose();
 			}
 			base.Dispose(disposing);
 		}

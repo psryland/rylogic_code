@@ -196,9 +196,9 @@ namespace pr
 					ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D(AutoId, SamplerDesc::LinearClamp(), tpath.c_str());
 
 					// Create the render nugget for this face of the skybox
-					rdr::Range vrange = rdr::Range::make(i*4, (i+1)*4);
-					rdr::Range irange = rdr::Range::make(i*6, (i+1)*6);
-					m_inst.m_model->CreateNugget(ddata, &vrange, &irange);
+					ddata.m_vrange = rdr::Range::make(i*4, (i+1)*4);
+					ddata.m_irange = rdr::Range::make(i*6, (i+1)*6);
+					m_inst.m_model->CreateNugget(ddata);
 				}
 			}
 		};

@@ -129,10 +129,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\3ds.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\box.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\cylinder.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\file.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\line.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\common.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\mesh_tools.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\model_file.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\shape2d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\sphere.h" />

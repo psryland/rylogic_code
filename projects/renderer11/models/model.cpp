@@ -46,33 +46,33 @@ namespace pr
 		// Call to create a render nugget for render step 'rstep' from a range within this model that uses 'ddata'.
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
-		void Model::CreateNugget(NuggetProps const& props, Range const* vrange_, Range const* irange_)
+		void Model::CreateNugget(NuggetProps props)
 		{
-			// If ranges aren't provided, use the entire model
-			Range vrange, irange;
-			if (vrange_) { vrange = *vrange_; vrange.shift((int)m_vrange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, vrange), "This range exceeds the size of this model"); }
-			else         { vrange = m_vrange; }
-			if (irange_) { irange = *irange_; irange.shift((int)m_irange.m_begin); PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, irange), "This range exceeds the size of this model"); }
-			else         { irange = m_irange; }
+			PR_ASSERT(PR_DBG_RDR, props.m_irange.empty() == props.m_vrange.empty(), "Illogical combination of Irange and Vrange");
+
+			// Empty ranges are assumed to mean the entire model
+			if (props.m_vrange.empty()) props.m_vrange = m_vrange;
+			else                        props.m_vrange.shift((int)m_vrange.m_begin);
+			if (props.m_irange.empty()) props.m_irange = m_irange;
+			else                        props.m_irange.shift((int)m_irange.m_begin);
+			PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, props.m_vrange), "This range exceeds the size of this model"); 
+			PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, props.m_irange), "This range exceeds the size of this model");
 
 			// Verify the ranges do not overlap with existing nuggets in this chain, that's probably an error
 			#if PR_DBG_RDR
-			PR_ASSERT(PR_DBG_RDR, irange.empty() == vrange.empty(), "Illogical combination of Irange and Vrange");
 			for (auto& nug : m_nuggets)
 			{
-				PR_ASSERT(PR_DBG_RDR, !Intersects(irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+				PR_ASSERT(PR_DBG_RDR, !Intersects(props.m_irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
 			}
 			#endif
 
 			// Create the nugget and add it to the model
-			if (!irange.empty())
+			if (!props.m_irange.empty())
 			{
 				m_nuggets.push_back(*m_model_buffer->m_mdl_mgr->m_alex_nugget.New(props));
 				Nugget& nugget        = m_nuggets.back();
 				nugget.m_model_buffer = m_model_buffer;
-				nugget.m_vrange       = vrange;
-				nugget.m_irange       = irange;
-				nugget.m_prim_count   = PrimCount(irange.size(), props.m_topo);
+				nugget.m_prim_count   = PrimCount(props.m_irange.size(), props.m_topo);
 				nugget.m_sort_key     = MakeSortKey(nugget);
 				nugget.m_owner        = this;
 			}

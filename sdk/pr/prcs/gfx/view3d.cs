@@ -585,14 +585,14 @@ namespace pr.gfx
 			private readonly EventBatcher m_eb_refresh;  // Batch refresh calls
 			private HWindow m_wnd;
 
-			public Window(View3d view, HWND hwnd, RenderCB render_cb = null, SettingsChangedCB settings_cb = null)
+			public Window(View3d view, HWND hwnd, bool gdi_compat, RenderCB render_cb = null, SettingsChangedCB settings_cb = null)
 			{
 				m_view = view;
 				m_render_cb = render_cb;
 				m_settings_cb = SettingsChgCB;
 				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
 
-				m_wnd = View3D_CreateWindow(hwnd, m_settings_cb, m_render_cb);
+				m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_settings_cb, m_render_cb);
 				if (m_wnd == null)
 					throw new Exception("Failed to create View3D window");
 
@@ -1442,7 +1442,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_Shutdown(HContext context);
 
 		// Windows
-		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, SettingsChangedCB settings_cb, RenderCB render_cb);
+		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, bool gdi_compat, SettingsChangedCB settings_cb, RenderCB render_cb);
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);

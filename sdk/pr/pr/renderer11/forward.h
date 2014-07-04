@@ -73,6 +73,8 @@
 #include "pr/geometry/sphere.h"
 #include "pr/geometry/cylinder.h"
 #include "pr/geometry/mesh.h"
+#include "pr/geometry/3ds.h"
+#include "pr/geometry/model_file.h"
 #include "pr/geometry/utility.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/script/reader.h"

@@ -47,7 +47,17 @@ struct Color24
     local int64 fpos = FTell();
 	ushort id <format=hex>;
 	uint len;
-    byte r,g,b;
+    byte r <format=hex>;
+    byte g <format=hex>;
+    byte b <format=hex>;
+    FSeek(fpos + len);
+};
+struct Container
+{
+    local int64 fpos = FTell();
+	ushort id <format=hex>;
+	uint len;
+    SubChunks(fpos + len);
     FSeek(fpos + len);
 };
 struct IntPercentage
@@ -116,6 +126,7 @@ struct ObjectBlock
 	uint len;
 	string name;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct TriMesh
 {
@@ -123,6 +134,7 @@ struct TriMesh
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct VertexList
 {
@@ -141,6 +153,7 @@ struct FaceList
     ushort count;
     Face face[count];
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct MaterialGroup
 {
@@ -157,7 +170,7 @@ struct SmoothingGroup
     local int64 fpos = FTell();
 	ushort id <format=hex>;
 	uint len;
-    ushort grouplist[(len-6)/2];
+    uint grouplist[(len-6)/4];
     FSeek(fpos + len);
 };
 struct TexVertList
@@ -183,6 +196,7 @@ struct MaterialBlock
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct MaterialName
 {
@@ -198,6 +212,7 @@ struct MaterialColour
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct Percentage
 {
@@ -205,6 +220,7 @@ struct Percentage
 	ushort id <format=hex>;
 	uint len;
 	SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct MaterialFlag
 {
@@ -212,6 +228,7 @@ struct MaterialFlag
 	ushort id <format=hex>;
 	uint len;
 	SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct M3DEditor
 {
@@ -219,6 +236,7 @@ struct M3DEditor
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 struct KeyFramer
 {
@@ -226,6 +244,25 @@ struct KeyFramer
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
+};
+struct KeyFrameHeader
+{
+    local int64 fpos = FTell();
+	ushort id <format=hex>;
+	uint len;
+    ushort version;
+    string filename;
+    ushort anim_len;
+    FSeek(fpos + len);
+};
+struct KeyFrameSeg
+{
+    local int64 fpos = FTell();
+	ushort id <format=hex>;
+	uint len;
+    ushort start,end;
+    FSeek(fpos + len);
 };
 struct MainChunk
 {
@@ -233,6 +270,7 @@ struct MainChunk
 	ushort id <format=hex>;
 	uint len;
     SubChunks(fpos + len);
+    FSeek(fpos + len);
 };
 
 void SubChunks(uint end)
@@ -286,6 +324,10 @@ void SubChunks(uint end)
         case 0xA08e: MaterialFlag mat_wireabs; break;
         case 0xA100: UShort shading_value; break;
 		case 0xB000: KeyFramer keyframer; break;
+        case 0xB002: Container object_node_tag; break;
+        case 0xB008: KeyFrameSeg kf_seg; break;
+        case 0xB009: UShort kf_currtime; break;
+        case 0xB00A: KeyFrameHeader kf_header; break;
 		default: UnknownChunk chunk; break;
 		}
 	}

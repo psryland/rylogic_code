@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <array>
+#include <set>
 #include <unordered_map>
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
@@ -177,23 +178,23 @@ namespace pr
 				}
 				case EKeyword::M4x4:
 				{
-					m4x4 o2w;
+					m4x4 o2w = m4x4Identity;
 					reader.ExtractMatrix4x4S(o2w);
 					p2w = o2w * p2w;
 					break;
 				}
 				case EKeyword::M3x3:
 				{
-					m3x4 rot;
-					reader.ExtractMatrix3x3S(rot);
-					p2w.rot = rot * p2w.rot;
+					m4x4 m = m4x4Identity;
+					reader.ExtractMatrix3x3S(m.rot);
+					p2w = m * p2w;
 					break;
 				}
 				case EKeyword::Pos:
 				{
-					pr::v4 pos;
-					reader.ExtractVector3S(pos, 0.0f);
-					p2w.pos += pos;
+					m4x4 m = m4x4Identity;
+					reader.ExtractVector3S(m.pos, 1.0f);
+					p2w = m * p2w;
 					break;
 				}
 				case EKeyword::Align:
@@ -212,15 +213,14 @@ namespace pr
 						break;
 					}
 
-					m3x4 rot = pr::Rotation3x3(axis, direction);
-					p2w.rot = rot * p2w.rot;
+					p2w = pr::Rotation4x4(axis, direction, v4Origin) * p2w;
 					break;
 				}
 				case EKeyword::Quat:
 				{
 					pr::Quat quat;
 					reader.ExtractVector4S(quat.xyzw);
-					p2w.rot = m3x4::make(quat) * p2w.rot;
+					p2w = Rotation4x4(quat, v4Origin) * p2w;
 					break;
 				}
 				case EKeyword::Rand4x4:
@@ -242,20 +242,21 @@ namespace pr
 					reader.ExtractVector3(centre, 1.0f);
 					reader.ExtractReal(radius);
 					reader.SectionEnd();
-					p2w.pos += Random3(centre, radius, 0.0f);
+					p2w = Translation4x4(Random3(centre, radius, 1.0f)) * p2w;
 					break;
 				}
 				case EKeyword::RandOri:
 				{
-					p2w.rot = pr::Random3x4() * p2w.rot;
+					m4x4 m = m4x4Identity;
+					m.rot = pr::Random3x4();
+					p2w = m * p2w;
 					break;
 				}
 				case EKeyword::Euler:
 				{
 					pr::v4 angles;
 					reader.ExtractVector3S(angles, 0.0f);
-					pr::m3x4 rot = pr::m3x4::make(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z));
-					p2w.rot = rot * p2w.rot;
+					p2w = Rotation4x4(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
 					break;
 				}
 				case EKeyword::Scale:
@@ -271,7 +272,7 @@ namespace pr
 						reader.ExtractReal(scale.z);
 					}
 					reader.SectionEnd();
-					p2w.rot = Scale3x3(scale.x, scale.y, scale.z) * p2w.rot;
+					p2w = Scale4x4(scale.x, scale.y, scale.z, v4Origin) * p2w;
 					break;
 				}
 				case EKeyword::Transpose:
@@ -1263,8 +1264,10 @@ namespace pr
 					nug.m_topo = EPrim::PointList;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
+					nug.m_vrange = vrange;
+					nug.m_irange = irange;
 					SetAlphaBlending(nug, cont.m_vcont[0].m_diff.a != 1.0f);
-					obj->m_model->CreateNugget(nug, &vrange, &irange);
+					obj->m_model->CreateNugget(nug);
 				}
 				{
 					vrange.set(vrange.m_end, vrange.m_end + m_point.size());
@@ -1272,8 +1275,10 @@ namespace pr
 					nug.m_topo = EPrim::LineStrip;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
+					nug.m_vrange = vrange;
+					nug.m_irange = irange;
 					SetAlphaBlending(nug, props.m_has_alpha);
-					obj->m_model->CreateNugget(nug, &vrange, &irange);
+					obj->m_model->CreateNugget(nug);
 				}
 				if (m_type & EArrowType::Fwd)
 				{
@@ -1282,8 +1287,10 @@ namespace pr
 					nug.m_topo = EPrim::PointList;
 					nug.m_geom = EGeom::Vert|EGeom::Colr;
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
+					nug.m_vrange = vrange;
+					nug.m_irange = irange;
 					SetAlphaBlending(nug, cont.m_vcont.back().m_diff.a != 1.0f);
-					obj->m_model->CreateNugget(nug, &vrange, &irange);
+					obj->m_model->CreateNugget(nug);
 				}
 			}
 		};
@@ -1837,6 +1844,59 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::Model
+		template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
+		{
+			string512 m_filepath;
+			bool m_generate_normals;
+
+			bool ParseKeyword(ParseParams& p, EKeyword kw) override
+			{
+				switch (kw) {
+				default: return IObjectCreator::ParseKeyword(p, kw);
+				case EKeyword::GenerateNormals: m_generate_normals = true; return true;
+				}
+			}
+			void Parse(ParseParams& p) override
+			{
+				p.m_reader.ExtractString(m_filepath);
+			}
+			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
+			{
+				using namespace pr::rdr;
+				using namespace pr::geometry;
+
+				// Validate
+				if (m_filepath.empty())
+				{
+					p.m_reader.ReportError("Model filepath not given");
+					return;
+				}
+
+				// Determine the format from the file extension
+				ModelFileInfo info = GetModelFileInfo(m_filepath.c_str());
+				if (info.m_format == EModelFileFormat::Unknown)
+				{
+					string512 msg = pr::Fmt("Mesh file '%s' is not supported.\nSupported Formats: ", m_filepath.c_str());
+					for (auto f : EModelFileFormat::MemberNames()) msg.append(f).append(" ");
+					p.m_reader.ReportError(msg.c_str());
+					return;
+				}
+
+				// Open the file
+				std::ifstream src(m_filepath.c_str(), info.m_is_binary ? std::ifstream::binary : 0);
+				if (!src)
+				{
+					p.m_reader.ReportError(pr::Fmt("Unable to open '%s' for reading", m_filepath.c_str()).c_str());
+					return;
+				}
+
+				// Create the model
+				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src);
+				obj->m_model->m_name = obj->TypeAndName();
+			}
+		};
+
 		#pragma endregion
 
 		#pragma region Special Objects
@@ -2004,6 +2064,7 @@ namespace pr
 			case ELdrObject::ConeHA:           Parse<ELdrObject::ConeHA          >(p); break;
 			case ELdrObject::Mesh:             Parse<ELdrObject::Mesh            >(p); break;
 			case ELdrObject::ConvexHull:       Parse<ELdrObject::ConvexHull      >(p); break;
+			case ELdrObject::Model:            Parse<ELdrObject::Model           >(p); break;
 			case ELdrObject::DirectionalLight: Parse<ELdrObject::DirectionalLight>(p); break;
 			case ELdrObject::PointLight:       Parse<ELdrObject::PointLight      >(p); break;
 			case ELdrObject::SpotLight:        Parse<ELdrObject::SpotLight       >(p); break;
@@ -2823,6 +2884,15 @@ out <<
 	*RandColour *o2w{*RandPos{0 0 -1 2}}
 }
 
+// Model from a 3d model file.
+// Supported formats: *.3ds
+//*Model model_from_file FFFFFFFF
+//{
+//	"filepath"           // The file to create the model from
+//	*Part { n }          // For model formats that contain multiple models, allows a specific one to be selected
+//	*GenerateNormals     // Generate normals for the model
+//}
+
 // A group of objects
 *Group group
 {
@@ -2897,11 +2967,29 @@ out <<
 		#if PR_DBG
 		struct LeakedLdrObjects
 		{
-			long m_ldr_objects_in_existance;
-			LeakedLdrObjects() :m_ldr_objects_in_existance(0) {}
-			~LeakedLdrObjects() { PR_ASSERT(PR_DBG, m_ldr_objects_in_existance == 0, "Leaked LdrObjects detected"); }
-			void operator ++() { ++m_ldr_objects_in_existance; }
-			void operator --() { --m_ldr_objects_in_existance; }
+			std::set<LdrObject const*> m_ldr_objects;
+			
+			LeakedLdrObjects()
+				:m_ldr_objects()
+			{}
+			~LeakedLdrObjects()
+			{
+				if (m_ldr_objects.empty()) return;
+
+				std::string msg = "Leaked LdrObjects detected:\n";
+				for (auto ldr : m_ldr_objects)
+					msg.append(ldr->TypeAndName()).append("\n");
+
+				PR_ASSERT(1, m_ldr_objects.empty(), msg.c_str());
+			}
+			void add(LdrObject const* ldr)
+			{
+				m_ldr_objects.insert(ldr);
+			}
+			void remove(LdrObject const* ldr)
+			{
+				m_ldr_objects.erase(ldr);
+			}
 		} g_ldr_object_tracker;
 		#endif
 
@@ -2925,12 +3013,12 @@ out <<
 		{
 			m_i2w = m4x4Identity;
 			m_colour = m_base_colour;
-			PR_EXPAND(PR_DBG, ++g_ldr_object_tracker);
+			PR_EXPAND(PR_DBG, g_ldr_object_tracker.add(this));
 		}
 		LdrObject::~LdrObject()
 		{
 			pr::events::Send(Evt_LdrObjectDelete(this));
-			PR_EXPAND(PR_DBG, --g_ldr_object_tracker);
+			PR_EXPAND(PR_DBG, g_ldr_object_tracker.remove(this));
 		}
 
 		// Return the declaration name of this object

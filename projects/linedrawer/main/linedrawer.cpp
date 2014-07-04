@@ -39,8 +39,8 @@ namespace ldr
 			return ldr::UserSettings(path, true);
 		}
 
-		static BOOL const gdi_support = TRUE;
-		#pragma message(PR_LINK "gdi support enabled")
+		static BOOL const gdi_support = FALSE;
+		//#pragma message(PR_LINK "gdi support enabled")
 
 		// Return settings to configure the render
 		pr::rdr::RdrSettings RdrSettings()
