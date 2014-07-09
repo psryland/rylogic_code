@@ -58,3 +58,8 @@ symbol_cache/*
 script/UserVars.py
 $RECYCLE.BIN*
 tools/HxDen/HxD.ini
+*.ncrunchproject
+*.ncrunchsolution
+*NCrunch*
+tools/GrepWin/grepwin.ini
+*.log
