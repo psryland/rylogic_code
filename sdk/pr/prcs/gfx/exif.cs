@@ -1402,9 +1402,9 @@ namespace pr
 	{
 		internal static class TestExif
 		{
-			private const string SrcImageWith    = @"\sdk\pr\prcs\unittest_resources\exif_image_with.jpg";
-			private const string SrcImageWithout = @"\sdk\pr\prcs\unittest_resources\exif_image_without.jpg";
-			private const string DstImage        = @"\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
+			private const string SrcImageWith    = @"P:\sdk\pr\prcs\unittest_resources\exif_image_with.jpg";
+			private const string SrcImageWithout = @"P:\sdk\pr\prcs\unittest_resources\exif_image_without.jpg";
+			private const string DstImage        = @"P:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
 
 			[Test] public static void LoadExifToMemory()
 			{

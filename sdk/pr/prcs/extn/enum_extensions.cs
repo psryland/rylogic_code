@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using pr.util;
 
@@ -291,6 +292,45 @@ namespace pr.extn
 			get { return Enum.GetValues(typeof(T)).Length; }
 		}
 
+		/// <summary>Return the result of OR'ing all enum values together</summary>
+		public static T All
+		{
+			get
+			{
+				// Throws if 'T' does not have the Flags attribute
+				if (typeof(T).FindAttribute<FlagsAttribute>() == null)
+					return default(T);
+
+				var all = default(T);
+				foreach (var i in Values)
+					all = BitwiseOr(all, i);
+
+				return (T)Convert.ChangeType(all, typeof(T));
+			}
+		}
+
+		private static T BitwiseOr(T a, T b)
+		{
+			if (m_impl_or == null)
+			{
+				// Declare the parameters
+				var paramA = Expression.Parameter(typeof(T), "a");
+				var paramB = Expression.Parameter(typeof(T), "b");
+
+				// OR the parameters together
+				var body = Expression.Convert(
+					Expression.Or(
+						Expression.Convert(paramA, typeof(long)),
+						Expression.Convert(paramB, typeof(long)))
+						,typeof(T));
+
+				// Compile it
+				m_impl_or = Expression.Lambda<Func<T,T,T>>(body, paramA, paramB).Compile();
+			}
+			return m_impl_or(a,b);
+		}
+		private static Func<T,T,T> m_impl_or;
+
 		static Enum()
 		{
 			var type = typeof(T);
@@ -415,6 +455,11 @@ namespace pr
 				Assert.AreEqual(BigFlags.A.ToString(), BigFlags.A.ToStringFast());
 				Assert.AreEqual(BigFlags.B.ToString(), BigFlags.B.ToStringFast());
 				Assert.AreEqual(BigFlags.C.ToString(), BigFlags.C.ToStringFast());
+			}
+			[Test] public static void TestEnumAll()
+			{
+				var all = Enum<FlagsEnum>.All;
+				Assert.AreEqual(FlagsEnum.A|FlagsEnum.B|FlagsEnum.C, all);
 			}
 		}
 	}

@@ -238,6 +238,7 @@ namespace pr.common
 		/// <param name="db_name">The name of the affected database</param>
 		/// <param name="table_name">The name of the table containing the changed item</param>
 		/// <param name="row_id">The row id of the changed row</param>
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void UpdateHookCB(IntPtr ctx, int change_type, string db_name, string table_name, long row_id);
 
 		/// <summary>
@@ -4634,8 +4635,8 @@ namespace pr
 			[TestFixtureSetUp] public static void Setup()
 			{
 				Sqlite.Dll.SelectDll(Environment.Is64BitProcess
-					? @"\sdk\sqlite\lib\x64\debug\sqlite3.dll"
-					: @"\sdk\sqlite\lib\x86\debug\sqlite3.dll");
+					? @"p:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
+					: @"p:\sdk\sqlite\lib\x86\debug\sqlite3.dll");
 
 				// Register custom type bind/read methods
 				Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);

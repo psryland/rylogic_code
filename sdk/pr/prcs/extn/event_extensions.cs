@@ -403,7 +403,7 @@ namespace pr
 				public event EventHandler<FiredArgs> Fired;
 				public class FiredArgs :EventArgs { public string Noise { get; set; } }
 
-				~Gun()              { collected.Add("gun"); }
+				~Gun() { collected.Add("gun"); }
 				public void Shoot()
 				{
 					Firing.Raise(this, EventArgs.Empty);
@@ -426,7 +426,7 @@ namespace pr
 			{
 				// Test event suspend/resume
 				int boo_raised = 0;
-				BooEvent += (i)=> { ++boo_raised; };
+				BooEvent += i => ++boo_raised;
 				BooEvent.Suspend(true);
 				BooEvent.Raise(0);
 				BooEvent.Raise(1);
@@ -451,6 +451,9 @@ namespace pr
 				bob = null;
 				fred = null;
 				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+				GC.WaitForPendingFinalizers();
+				GC.WaitForFullGCComplete();
+				GC.Collect();
 				Thread.Sleep(100); // bob collected here, but not fred
 				Assert.IsTrue(collected.Contains("bob"));
 				Assert.IsFalse(collected.Contains("fred"));
@@ -473,6 +476,9 @@ namespace pr
 				hit.Clear();
 				bob = null;
 				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+				GC.WaitForPendingFinalizers();
+				GC.WaitForFullGCComplete();
+				GC.Collect();
 				Thread.Sleep(100); // bob collected here, but not fred
 				Assert.IsTrue(collected.Contains("bob"));
 				gun.Shoot();

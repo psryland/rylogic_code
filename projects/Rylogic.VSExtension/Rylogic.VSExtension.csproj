@@ -21,8 +21,8 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Rylogic.VSExtension</RootNamespace>
     <AssemblyName>Rylogic.VSExtension</AssemblyName>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>Key.snk</AssemblyOriginatorKeyFile>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>Key.pfx</AssemblyOriginatorKeyFile>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -187,6 +187,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Key.pfx" />
     <None Include="source.extension.vsixmanifest">
       <SubType>Designer</SubType>
     </None>

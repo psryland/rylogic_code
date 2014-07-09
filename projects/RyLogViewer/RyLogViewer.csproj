@@ -267,6 +267,7 @@
       <DependentUpon>aggregate_files.htm</DependentUpon>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Resources\gray_cross.png" />
     <None Include="docs\aggregate_files.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>aggregate_files.html</LastGenOutput>
