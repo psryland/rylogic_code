@@ -45,6 +45,10 @@ namespace pr
 		struct Reader
 		{
 		private:
+			// Notes:
+			//  - Comment strip is used after the preprocessor because comment stripping has to
+			//    ignore literal strings/characters but #if/#endif blocks are allowed to contain
+			//    any old text including unclosed literal strings/characters.
 			PPMacroDB       m_dft_macros;
 			FileIncludes    m_dft_includes;
 			IErrorHandler   m_dft_errors;
