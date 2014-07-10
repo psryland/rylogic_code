@@ -63,9 +63,9 @@ namespace pr
 {
 	using NUnit.Framework;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
-		internal static partial class TestExtensions
+		public static partial class TestExtensions
 		{
 			[Test] public static void BindingSourceExtns()
 			{}

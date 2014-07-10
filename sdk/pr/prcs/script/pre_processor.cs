@@ -14,7 +14,7 @@ namespace pr
 	using NUnit.Framework;
 	using script;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static partial class TestScript
 		{

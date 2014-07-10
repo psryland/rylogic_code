@@ -239,7 +239,7 @@ namespace pr
 	using NUnit.Framework;
 	using container;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestCSVData
 		{

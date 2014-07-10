@@ -645,7 +645,7 @@ namespace pr.util
 				
 				if (extn.Count == 0) throw new Exception("Expected file extension patterns to follow description");
 				
-				sb.Append("(").Append(string.Join(",", extn)).Append(")");
+				sb.Append(" (").Append(string.Join(",", extn)).Append(")");
 				sb.Append("|").Append(string.Join(";", extn));
 			}
 
@@ -711,9 +711,9 @@ namespace pr
 	using NUnit.Framework;
 	using util;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
-		internal static partial class TestUtils
+		public static partial class TestUtils
 		{
 			[StructLayout(LayoutKind.Sequential, Pack = 1)]
 			public struct Struct

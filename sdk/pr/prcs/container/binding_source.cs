@@ -159,7 +159,7 @@ namespace pr
 	using maths;
 	using util;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		public static bool Contains<T>(this List<T> list, params T[] items)
 		{

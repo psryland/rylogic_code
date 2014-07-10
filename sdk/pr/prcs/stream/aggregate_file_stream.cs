@@ -236,7 +236,7 @@ namespace pr
 	using stream;
 
 	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestAggregateFileStream
 		{

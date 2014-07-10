@@ -209,9 +209,9 @@ namespace pr
 	using common;
 	using util;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
-		internal static class TestBase32
+		public static class TestBase32
 		{
 			[Test] public static void Base32()
 			{

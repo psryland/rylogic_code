@@ -1398,7 +1398,7 @@ namespace pr
 	using System.Drawing;
 	using gfx;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestExif
 		{

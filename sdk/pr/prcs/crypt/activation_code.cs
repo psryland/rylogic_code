@@ -107,7 +107,7 @@ namespace pr
 	using common;
 	using crypt;
 	
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
 		internal static class TestActivationCode
 		{

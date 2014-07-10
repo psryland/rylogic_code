@@ -95,7 +95,7 @@ namespace pr
 	using common;
 	using util;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestIterator
 		{

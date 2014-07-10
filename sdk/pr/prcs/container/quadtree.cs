@@ -479,7 +479,7 @@ namespace pr
 	using extn;
 	using maths;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
 		internal static partial class TestQuadTree
 		{

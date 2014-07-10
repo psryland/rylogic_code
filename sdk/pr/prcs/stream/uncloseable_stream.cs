@@ -101,7 +101,7 @@ namespace pr
 	using NUnit.Framework;
 
 	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		[Test] public static void TestUnclosableStream()
 		{

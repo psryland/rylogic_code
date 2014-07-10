@@ -312,8 +312,8 @@ namespace pr.extn
 			if (handler.Method.IsStatic || handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "handler");
 
 			var weh_type = typeof(WeakEventHandler<>).MakeGenericType(handler.Method.DeclaringType);
-			var weh_constructor = weh_type.GetConstructor(new[] {typeof(EventHandler), typeof(UnregisterEventHandler)});
-			var weh = (IWeakEventHandler)weh_constructor.Invoke(new object[] {handler, unregister});
+			var cons = weh_type.GetConstructor(new[] {typeof(EventHandler), typeof(UnregisterEventHandler)});
+			var weh = (IWeakEventHandler)cons.Invoke(new object[] {handler, unregister});
 			return weh.Handler;
 		}
 		public static EventHandler<E> MakeWeak<E>(this EventHandler<E> event_handler, UnregisterEventHandler<E> unregister) where E: EventArgs
@@ -322,8 +322,8 @@ namespace pr.extn
 			if (event_handler.Method.IsStatic || event_handler.Target == null) throw new ArgumentException("Only instance methods are supported.", "event_handler");
 
 			var weh_type = typeof(WeakEventHandler<,>).MakeGenericType(event_handler.Method.DeclaringType, typeof(E));
-			var weh_constructor = weh_type.GetConstructor(new[] {typeof(EventHandler<E>), typeof(UnregisterEventHandler<E>)});
-			var weh = (IWeakEventHandler<E>)weh_constructor.Invoke(new object[] {event_handler, unregister});
+			var cons = weh_type.GetConstructor(new[] {typeof(EventHandler<E>), typeof(UnregisterEventHandler<E>)});
+			var weh = (IWeakEventHandler<E>)cons.Invoke(new object[] {event_handler, unregister});
 			return weh.Handler;
 		}
 		public static Action MakeWeak(this Action action, UnregisterAction unregister)
@@ -331,9 +331,9 @@ namespace pr.extn
 			if (action == null) throw new ArgumentNullException("action");
 			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
 
-			Type type = typeof(WeakAction<>).MakeGenericType(action.Method.DeclaringType);
-			ConstructorInfo cons = type.GetConstructor(new[] {typeof(Action), typeof(UnregisterAction)});
-			IWeakAction weak_action = (IWeakAction)cons.Invoke(new object[] {action, unregister});
+			var type = typeof(WeakAction<>).MakeGenericType(action.Method.DeclaringType);
+			var cons = type.GetConstructor(new[] {typeof(Action), typeof(UnregisterAction)});
+			var weak_action = (IWeakAction)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1> MakeWeak<T1>(this Action<T1> action, UnregisterAction<T1> unregister)
@@ -341,9 +341,9 @@ namespace pr.extn
 			if (action == null) throw new ArgumentNullException("action");
 			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
 
-			Type type = typeof(WeakAction<,>).MakeGenericType(action.Method.DeclaringType, typeof(T1));
-			ConstructorInfo cons = type.GetConstructor(new[] {typeof(Action<T1>), typeof(UnregisterAction<T1>)});
-			IWeakAction<T1> weak_action = (IWeakAction<T1>)cons.Invoke(new object[] {action, unregister});
+			var type = typeof(WeakAction<,>).MakeGenericType(action.Method.DeclaringType, typeof(T1));
+			var cons = type.GetConstructor(new[] {typeof(Action<T1>), typeof(UnregisterAction<T1>)});
+			var weak_action = (IWeakAction<T1>)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2> MakeWeak<T1,T2>(this Action<T1,T2> action, UnregisterAction<T1,T2> unregister)
@@ -351,9 +351,9 @@ namespace pr.extn
 			if (action == null) throw new ArgumentNullException("action");
 			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
 
-			Type type = typeof(WeakAction<,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2));
-			ConstructorInfo cons = type.GetConstructor(new[] {typeof(Action<T1,T2>), typeof(UnregisterAction<T1,T2>)});
-			IWeakAction<T1,T2> weak_action = (IWeakAction<T1,T2>)cons.Invoke(new object[] {action, unregister});
+			var type = typeof(WeakAction<,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2));
+			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2>), typeof(UnregisterAction<T1,T2>)});
+			var weak_action = (IWeakAction<T1,T2>)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2,T3> MakeWeak<T1,T2,T3>(this Action<T1,T2,T3> action, UnregisterAction<T1,T2,T3> unregister)
@@ -361,9 +361,9 @@ namespace pr.extn
 			if (action == null) throw new ArgumentNullException("action");
 			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
 
-			Type type = typeof(WeakAction<,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3));
-			ConstructorInfo cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3>), typeof(UnregisterAction<T1,T2,T3>)});
-			IWeakAction<T1,T2,T3> weak_action = (IWeakAction<T1,T2,T3>)cons.Invoke(new object[] {action, unregister});
+			var type = typeof(WeakAction<,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3));
+			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3>), typeof(UnregisterAction<T1,T2,T3>)});
+			var weak_action = (IWeakAction<T1,T2,T3>)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
 		public static Action<T1,T2,T3,T4> MakeWeak<T1,T2,T3,T4>(this Action<T1,T2,T3,T4> action, UnregisterAction<T1,T2,T3,T4> unregister)
@@ -371,9 +371,9 @@ namespace pr.extn
 			if (action == null) throw new ArgumentNullException("action");
 			if (action.Method.IsStatic || action.Target == null) throw new ArgumentException("Only instance methods are supported.", "action");
 
-			Type type = typeof(WeakAction<,,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
-			ConstructorInfo cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3,T4>), typeof(UnregisterAction<T1,T2,T3,T4>)});
-			IWeakAction<T1,T2,T3,T4> weak_action = (IWeakAction<T1,T2,T3,T4>)cons.Invoke(new object[] {action, unregister});
+			var type = typeof(WeakAction<,,,,>).MakeGenericType(action.Method.DeclaringType, typeof(T1), typeof(T2), typeof(T3), typeof(T4));
+			var cons = type.GetConstructor(new[] {typeof(Action<T1,T2,T3,T4>), typeof(UnregisterAction<T1,T2,T3,T4>)});
+			var weak_action = (IWeakAction<T1,T2,T3,T4>)cons.Invoke(new object[] {action, unregister});
 			return weak_action.Handler;
 		}
 
@@ -388,9 +388,9 @@ namespace pr
 	using System.Threading;
 	using NUnit.Framework;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
-		internal static class TestEventExtensions
+		public static class TestEventExtensions
 		{
 			private static event Action<int> BooEvent;
 
@@ -435,9 +435,11 @@ namespace pr
 				Assert.IsTrue(BooEvent.Suspend(false));
 				Assert.AreEqual(0, boo_raised);
 			}
+
+			// These tests fail when run by ncrunch when instrumentation is turned on
+			// because it does things to the GC that prevent collection
 			[Test] public static void WeakActions()
 			{
-				// Test weak event handlers
 				var gun = new Gun();
 				var bob = new Target("bob");
 				var fred = new Target("fred");
@@ -451,9 +453,6 @@ namespace pr
 				bob = null;
 				fred = null;
 				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-				GC.WaitForPendingFinalizers();
-				GC.WaitForFullGCComplete();
-				GC.Collect();
 				Thread.Sleep(100); // bob collected here, but not fred
 				Assert.IsTrue(collected.Contains("bob"));
 				Assert.IsFalse(collected.Contains("fred"));
@@ -465,9 +464,9 @@ namespace pr
 			{
 				var gun = new Gun();
 				var bob = new Target("bob");
-				gun.Firing += new EventHandler(bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
-				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(eh => gun.Bang -= eh);
-				gun.Fired += new EventHandler<Gun.FiredArgs>(bob.OnFired).MakeWeak(eh => gun.Fired -= eh);
+				gun.Firing += new EventHandler               (bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
+				gun.Bang   += new Action<Gun>                (bob.OnHit   ).MakeWeak(eh => gun.Bang -= eh);
+				gun.Fired  += new EventHandler<Gun.FiredArgs>(bob.OnFired ).MakeWeak(eh => gun.Fired -= eh);
 				gun.Shoot();
 				Assert.IsTrue(hit.Contains("Dont Shoot"));
 				Assert.IsTrue(hit.Contains("bob"));
@@ -476,9 +475,6 @@ namespace pr
 				hit.Clear();
 				bob = null;
 				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-				GC.WaitForPendingFinalizers();
-				GC.WaitForFullGCComplete();
-				GC.Collect();
 				Thread.Sleep(100); // bob collected here, but not fred
 				Assert.IsTrue(collected.Contains("bob"));
 				gun.Shoot();

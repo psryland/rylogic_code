@@ -653,7 +653,7 @@ namespace pr
 	using NUnit.Framework;
 	using util;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
 		internal static class TestXml
 		{

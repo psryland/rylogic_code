@@ -48,6 +48,15 @@ namespace pr.gui
 			ShowIcon = Owner != null && Owner.Icon != null;
 			if (Owner != null) Icon = Owner.Icon;
 
+			m_message.LinkClicked += (s,a) =>
+				{
+					try { System.Diagnostics.Process.Start("explorer.exe", a.LinkText); }
+					catch (Exception ex)
+					{
+						MsgBox.Show(Owner, "Failed to navigate to link\r\nReason: " + ex.Message, "Link Failed", MessageBoxButtons.OK);
+					}
+				};
+
 			AcceptButton = null;
 			CancelButton = null;
 
@@ -387,7 +396,7 @@ namespace pr
 
 	//using gui;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestMsgBox
 		{

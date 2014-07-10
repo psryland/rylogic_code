@@ -187,7 +187,7 @@ namespace pr
 	using NUnit.Framework;
 	using inet;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		//[Test] hack. this is broken
 		public static void TestEmail()

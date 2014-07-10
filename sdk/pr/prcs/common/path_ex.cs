@@ -273,7 +273,7 @@ namespace pr
 	using System.Linq;
 	using common;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static partial class TestPathEx
 		{

@@ -238,7 +238,7 @@ namespace pr
 	using container;
 	using maths;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestKdTree
 		{

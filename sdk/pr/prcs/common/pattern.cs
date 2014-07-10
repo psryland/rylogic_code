@@ -398,7 +398,7 @@ namespace pr
 	using common;
 	using System.Linq;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestPattern
 		{

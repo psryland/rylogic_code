@@ -36,7 +36,7 @@ namespace pr
 {
 	using NUnit.Framework;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
 		[Test] public static void TestCRT()
 		{

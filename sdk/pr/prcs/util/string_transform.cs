@@ -87,9 +87,9 @@ namespace pr
 {
 	using NUnit.Framework;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
-		internal static partial class TestUtils
+		public static partial class TestUtils
 		{
 			[Test] public static void TestStringTransform()
 			{

@@ -156,7 +156,7 @@ namespace pr
 	using System.Collections.Generic;
 
 	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		[Test] public static void TestProgressStream()
 		{

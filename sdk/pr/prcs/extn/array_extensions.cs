@@ -45,9 +45,9 @@ namespace pr
 	using System.Linq;
 	using extn;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
-		internal static partial class TestExtensions
+		public static partial class TestExtensions
 		{
 			[Test] public static void ArrayExtns()
 			{

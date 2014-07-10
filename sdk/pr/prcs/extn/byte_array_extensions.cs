@@ -57,9 +57,9 @@ namespace pr
 	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] internal partial class UnitTests
+	[TestFixture] public partial class UnitTests
 	{
-		internal static partial class TestExtensions
+		public static partial class TestExtensions
 		{
 			[StructLayout(LayoutKind.Sequential,Pack = 1,CharSet = CharSet.Ansi)]
 			internal struct Thing

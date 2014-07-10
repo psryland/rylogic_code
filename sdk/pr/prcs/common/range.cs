@@ -325,7 +325,7 @@ namespace pr
 	using NUnit.Framework;
 	using common;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		internal static class TestRange
 		{

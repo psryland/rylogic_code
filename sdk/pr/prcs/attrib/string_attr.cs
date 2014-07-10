@@ -169,10 +169,10 @@ namespace pr
 	using NUnit.Framework;
 	using attrib;
 
-	[TestFixture] internal static partial class UnitTests
+	[TestFixture] public static partial class UnitTests
 	{
 		// ReSharper disable UnusedMember.Local
-		internal static class TestStringAttr
+		public static class TestStringAttr
 		{
 			private enum EType
 			{
