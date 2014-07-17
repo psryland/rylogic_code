@@ -259,6 +259,7 @@ namespace pr.gui
 			}
 
 			m_top_level_control = top;
+			Owner = m_top_level_control as Form;
 
 			if (m_top_level_control != null)
 			{

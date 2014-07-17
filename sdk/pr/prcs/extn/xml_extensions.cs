@@ -174,7 +174,7 @@ namespace pr.extn
 				for (;func == null;)
 				{
 					// See if 'obj' has a native 'ToXml' method
-					var mi = type.GetMethods().FirstOrDefault(IsToXmlFunc);
+					var mi = type.GetMethods(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
 					if (mi != null) { func = this[type] = ToXmlMethod; break; }
 
 					// Try DataContract binding
@@ -206,8 +206,8 @@ namespace pr.extn
 		{
 			// Find the native method on the type
 			var type = obj.GetType();
-			var mi = type.GetMethods().FirstOrDefault(IsToXmlFunc);
-			if (mi == null) throw new NotSupportedException("{0} does not have a 'ToXml' method");
+			var mi = type.GetMethods(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).FirstOrDefault(IsToXmlFunc);
+			if (mi == null) throw new NotSupportedException("{0} does not have a 'ToXml' method".Fmt(type.Name));
 
 			// Replace the mapping with a call directly to that method
 			ToMap[type] = (o,n) => (XElement)mi.Invoke(o, new object[]{n});
