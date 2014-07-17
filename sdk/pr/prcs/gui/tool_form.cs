@@ -69,6 +69,11 @@ namespace pr.gui
 			Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|Win32.MF_CHECKED);
 			m_pin_window = true;
 		}
+		protected override void Dispose(bool disposing)
+		{
+			PinTarget = null;
+			base.Dispose(disposing);
+		}
 
 		/// <summary>How this tool window is pinned to the owner</summary>
 		public EPin Pin
