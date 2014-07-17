@@ -98,7 +98,7 @@ namespace pr
 				// Creates the adjacency data
 				void BuildAdjacencyData(std::size_t num_indices, TIdxCIter indices, TGetV getv)
 				{
-					VIdx max_index = 0;
+					size_t max_index = 0;
 					int sg = 0;
 
 					// Generate a collection of faces including their normals and vertex angles
@@ -114,7 +114,7 @@ namespace pr
 						v4 const& v1 = getv(face.m_idx[1]);
 						v4 const& v2 = getv(face.m_idx[2]);
 
-						max_index = std::max<VIdx>(*std::max_element(std::begin(face.m_idx), std::end(face.m_idx)), max_index);
+						max_index = std::max(*std::max_element(std::begin(face.m_idx), std::end(face.m_idx)), max_index);
 						face.m_norm = Normalise3(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
 						face.m_angles = TriangleAngles(v0, v1, v2);
 						face.m_grp = ++sg; // each face is in a unique smoothing group to start with
@@ -123,7 +123,7 @@ namespace pr
 					}
 
 					// Generate a collection of verts
-					for (VIdx i = 0; i != max_index+1; ++i)
+					for (size_t i = 0; i != max_index+1; ++i)
 					{
 						Vert vert = {};
 						vert.m_orig_idx = i;
@@ -369,7 +369,7 @@ namespace pr
 				std::vector<Vert> vout;
 				std::vector<int> iout;
 				GenerateNormals(PR_COUNTOF(faces), &faces[0], pr::DegreesToRadians(10.0f)
-					,[&](int i)
+					,[&](size_t i)
 					{
 						assert(i < PR_COUNTOF(verts));
 						return verts[i].m_pos;
