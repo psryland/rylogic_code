@@ -19,6 +19,7 @@
 #include <exception>
 #include <functional>
 #include <iostream>
+#include <sstream>
 #include <cassert>
 
 // Macro enum generator functions
@@ -314,7 +315,7 @@ namespace pr
 	template <typename TEnum, typename THashFunc, typename TFailFunc> inline bool CheckHashEnum(THashFunc hash_func, TFailFunc on_fail)
 	{
 		bool result = true;
-		std::string str;
+		std::stringstream ss;
 		for (int i = 0; i != TEnum::NumberOf; ++i)
 		{
 			auto name = TEnum::MemberName(i);
@@ -322,11 +323,11 @@ namespace pr
 			auto hash = hash_func(name);
 			if (hash != static_cast<int>(val))
 			{
-				str += FmtS("\n%s::%-48s hash value should be 0x%08X", TEnum::EnumName(), name, hash);
+				ss << std::endl << TEnum::EnumName() << "::" << name << " hash value should be 0x" << std::hex << hash;
 				result = false;
 			}
 		}
-		if (!result) on_fail(str.c_str());
+		if (!result) on_fail(ss.str().c_str());
 		return result;
 	}
 	template <typename TEnum, typename THashFunc> inline bool CheckHashEnum(THashFunc hash_func)
