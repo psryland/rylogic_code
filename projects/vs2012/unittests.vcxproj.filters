@@ -492,9 +492,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\valuecast.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h">
       <Filter>pr\common</Filter>
     </ClInclude>

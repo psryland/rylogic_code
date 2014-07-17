@@ -20,9 +20,10 @@ using namespace pr::ph;
 
 struct ShapePolytopeNbrsEx
 {
-	ShapePolytopeNbrsEx() : m_normal(v4Zero) {}
-	pr::Array<PolyIdx>	m_nbr;
-	v4					m_normal;
+	pr::Array<PolyIdx> m_nbr;
+	v4                 m_normal;
+
+	ShapePolytopeNbrsEx() :m_normal(v4Zero) {}
 };
 
 namespace pr
@@ -31,9 +32,9 @@ namespace pr
 	{
 		inline void SetFace(ShapePolyFace& face, uint a, uint b, uint c)
 		{
-			face.m_index[0] = value_cast<uint8>(a);
-			face.m_index[1] = value_cast<uint8>(b);
-			face.m_index[2] = value_cast<uint8>(c);
+			face.m_index[0] = checked_cast<uint8>(a);
+			face.m_index[1] = checked_cast<uint8>(b);
+			face.m_index[2] = checked_cast<uint8>(c);
 			face.pad = 0;
 		}
 		inline void GetFace(ShapePolyFace const& face, uint& a, uint& b, uint& c)

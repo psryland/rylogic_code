@@ -38,8 +38,6 @@
 //  |     |
 
 #pragma once
-#ifndef PR_GEOMETRY_QUAD_H
-#define PR_GEOMETRY_QUAD_H
 
 #include "pr/geometry/common.h"
 
@@ -51,8 +49,8 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void QuadSize(size_t num_quads, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(4 * num_quads);
-			icount = value_cast<Tir>(6 * num_quads);
+			vcount = checked_cast<Tvr>(4 * num_quads);
+			icount = checked_cast<Tir>(6 * num_quads);
 		}
 		
 		// Returns the number of verts and indices needed to hold geometry for a quad strip
@@ -60,8 +58,8 @@ namespace pr
 		void QuadStripSize(size_t num_quads, Tvr& vcount, Tir& icount)
 		{
 			// A quad plus corner per quad
-			vcount = value_cast<Tvr>(4 * num_quads);
-			icount = value_cast<Tir>(4 * num_quads);
+			vcount = checked_cast<Tvr>(4 * num_quads);
+			icount = checked_cast<Tir>(4 * num_quads);
 		}
 
 		// Generate quads from sets of four points
@@ -119,12 +117,12 @@ namespace pr
 
 				// Set faces
 				std::size_t ibase = i * 6;
-				*i_out++ = value_cast<VIdx>(ibase);
-				*i_out++ = value_cast<VIdx>(ibase + 1);
-				*i_out++ = value_cast<VIdx>(ibase + 2);
-				*i_out++ = value_cast<VIdx>(ibase + 2);
-				*i_out++ = value_cast<VIdx>(ibase + 1);
-				*i_out++ = value_cast<VIdx>(ibase + 3);
+				*i_out++ = checked_cast<VIdx>(ibase);
+				*i_out++ = checked_cast<VIdx>(ibase + 1);
+				*i_out++ = checked_cast<VIdx>(ibase + 2);
+				*i_out++ = checked_cast<VIdx>(ibase + 2);
+				*i_out++ = checked_cast<VIdx>(ibase + 1);
+				*i_out++ = checked_cast<VIdx>(ibase + 3);
 			}
 
 			return props;
@@ -146,8 +144,8 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void QuadSize(iv2 const& divisions, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(1 * (divisions.x + 2) * (divisions.y + 2));
-			icount = value_cast<Tir>(6 * (divisions.x + 1) * (divisions.y + 1));
+			vcount = checked_cast<Tvr>(1 * (divisions.x + 2) * (divisions.y + 2));
+			icount = checked_cast<Tir>(6 * (divisions.x + 1) * (divisions.y + 1));
 		}
 
 		// Generate an NxM patch of triangles
@@ -190,13 +188,13 @@ namespace pr
 				for (int w = 0, wend = divisions.x+1; w != wend; ++w)
 				{
 					int col = row + w;
-					*i_out++ = value_cast<VIdx>(col);
-					*i_out++ = value_cast<VIdx>(col + verts_per_row);
-					*i_out++ = value_cast<VIdx>(col + 1);
+					*i_out++ = checked_cast<VIdx>(col);
+					*i_out++ = checked_cast<VIdx>(col + verts_per_row);
+					*i_out++ = checked_cast<VIdx>(col + 1);
 
-					*i_out++ = value_cast<VIdx>(col + 1);
-					*i_out++ = value_cast<VIdx>(col + verts_per_row);
-					*i_out++ = value_cast<VIdx>(col + verts_per_row + 1);
+					*i_out++ = checked_cast<VIdx>(col + 1);
+					*i_out++ = checked_cast<VIdx>(col + verts_per_row);
+					*i_out++ = checked_cast<VIdx>(col + verts_per_row + 1);
 				}
 			}
 
@@ -356,5 +354,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

@@ -17,9 +17,9 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void GeosphereSize(std::size_t divisions, Tvr& vcount, Tir& icount)
 		{
-			int div = value_cast<int>(divisions);
-			vcount = value_cast<Tvr>(3 + 10 * Pow2(2 * div) + 11 * Pow2(div));
-			icount = value_cast<Tir>(3 * 10 * Pow2(2 * div + 1));
+			int div = checked_cast<int>(divisions);
+			vcount = checked_cast<Tvr>(3 + 10 * Pow2(2 * div) + 11 * Pow2(div));
+			icount = checked_cast<Tir>(3 * 10 * Pow2(2 * div + 1));
 		}
 
 		namespace impl { namespace geosphere
@@ -204,9 +204,9 @@ namespace pr
 			for (auto i = begin(faces), iend = end(faces); i != iend; ++i)
 			{
 				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
-				*out_indices++ = value_cast<VIdx>(i->m_vidx[0]);
-				*out_indices++ = value_cast<VIdx>(i->m_vidx[1]);
-				*out_indices++ = value_cast<VIdx>(i->m_vidx[2]);
+				*out_indices++ = checked_cast<VIdx>(i->m_vidx[0]);
+				*out_indices++ = checked_cast<VIdx>(i->m_vidx[1]);
+				*out_indices++ = checked_cast<VIdx>(i->m_vidx[2]);
 			}
 
 			return props;

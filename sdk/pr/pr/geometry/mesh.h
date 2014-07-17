@@ -16,8 +16,8 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void MeshSize(std::size_t num_verts, std::size_t num_indices, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(num_verts  );
-			icount = value_cast<Tir>(num_indices);
+			vcount = checked_cast<Tvr>(num_verts  );
+			icount = checked_cast<Tir>(num_indices);
 		}
 
 		// Generate a model from mesh data

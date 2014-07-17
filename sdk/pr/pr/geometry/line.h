@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_LINE_H
-#define PR_GEOMETRY_LINE_H
 
 #include "pr/geometry/common.h"
 
@@ -17,14 +15,14 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void LineSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(2 * num_lines);
-			icount = value_cast<Tir>(2 * num_lines);
+			vcount = checked_cast<Tvr>(2 * num_lines);
+			icount = checked_cast<Tir>(2 * num_lines);
 		}
 		template <typename Tvr, typename Tir>
 		void LineStripSize(std::size_t num_lines, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(1 + num_lines);
-			icount = value_cast<Tir>(1 + num_lines);
+			vcount = checked_cast<Tvr>(1 + num_lines);
+			icount = checked_cast<Tir>(1 + num_lines);
 		}
 
 		// Generate lines from an array of start point, end point pairs.
@@ -106,5 +104,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

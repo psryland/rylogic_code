@@ -17,8 +17,8 @@ namespace pr
 		template <typename Tvr, typename Tir>
 		void BoxSize(std::size_t num_boxes, Tvr& vcount, Tir& icount)
 		{
-			vcount = value_cast<Tvr>(24 * num_boxes);
-			icount = value_cast<Tir>(36 * num_boxes);
+			vcount = checked_cast<Tvr>(24 * num_boxes);
+			icount = checked_cast<Tir>(36 * num_boxes);
 		}
 
 		// Generate boxes from an array of corners
@@ -118,12 +118,12 @@ namespace pr
 				std::size_t ibase = i * 24;
 				for (std::size_t j = 0; j != icount/6; ++j)
 				{
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
-					*i_out++ = value_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
+					*i_out++ = checked_cast<VIdx>(ibase + *ii++);
 				}
 			}
 			return props;

@@ -6,7 +6,7 @@
 #ifndef PR_GEOMETRY_COMMON_H
 #define PR_GEOMETRY_COMMON_H
 
-#include "pr/common/valuecast.h"
+#include "pr/common/cast.h"
 #include "pr/common/colour.h"
 #include "pr/common/range.h"
 #include "pr/common/array.h"

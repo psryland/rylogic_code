@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2013
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_CYLINDER_H
-#define PR_GEOMETRY_CYLINDER_H
 
 #include "pr/geometry/common.h"
 
@@ -18,8 +16,8 @@ namespace pr
 		{
 			if (wedges < 3) wedges = 3;
 			if (layers < 1) layers = 1;
-			vcount = value_cast<Tvr>(2 + (wedges + 1) * (layers + 3));
-			icount = value_cast<Tir>(6 * (wedges + 0) * (layers + 1));
+			vcount = checked_cast<Tvr>(2 + (wedges + 1) * (layers + 3));
+			icount = checked_cast<Tir>(6 * (wedges + 0) * (layers + 1));
 		}
 
 		// Generate a cylinder given by a height and radius at each end, orientated with the long axis along 'Z'
@@ -104,35 +102,33 @@ namespace pr
 			ibase = 1;
 			for (std::size_t w = 0; w != wedges; ++w) // Bottom face
 			{
-				*i_out++ = value_cast<VIdx>(0);
-				*i_out++ = value_cast<VIdx>(ibase + w + 1);
-				*i_out++ = value_cast<VIdx>(ibase + w);
+				*i_out++ = checked_cast<VIdx>(0);
+				*i_out++ = checked_cast<VIdx>(ibase + w + 1);
+				*i_out++ = checked_cast<VIdx>(ibase + w);
 			}
 			ibase += verts_per_layer;
 			for (std::size_t l = 0; l != layers; ++l) // The walls
 			{
 				for (std::size_t w = 0; w != wedges; ++w)
 				{
-					*i_out++ = value_cast<VIdx>(ibase + w);
-					*i_out++ = value_cast<VIdx>(ibase + w + 1);
-					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer);
-					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer);
-					*i_out++ = value_cast<VIdx>(ibase + w + 1);
-					*i_out++ = value_cast<VIdx>(ibase + w + verts_per_layer + 1);
+					*i_out++ = checked_cast<VIdx>(ibase + w);
+					*i_out++ = checked_cast<VIdx>(ibase + w + 1);
+					*i_out++ = checked_cast<VIdx>(ibase + w + verts_per_layer);
+					*i_out++ = checked_cast<VIdx>(ibase + w + verts_per_layer);
+					*i_out++ = checked_cast<VIdx>(ibase + w + 1);
+					*i_out++ = checked_cast<VIdx>(ibase + w + verts_per_layer + 1);
 				}
 				ibase += verts_per_layer;
 			}
 			ibase += verts_per_layer;
 			for (std::size_t w = 0; w != wedges; ++w) // Top face
 			{
-				*i_out++ = value_cast<VIdx>(ibase + w);
-				*i_out++ = value_cast<VIdx>(ibase + w + 1);
-				*i_out++ = value_cast<VIdx>(last);
+				*i_out++ = checked_cast<VIdx>(ibase + w);
+				*i_out++ = checked_cast<VIdx>(ibase + w + 1);
+				*i_out++ = checked_cast<VIdx>(last);
 			}
 
 			return props;
 		}
 	}
 }
-
-#endif

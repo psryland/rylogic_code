@@ -18,8 +18,8 @@ namespace pr
 		void EllipseSize(bool solid, int facets, Tvr& vcount, Tir& icount)
 		{
 			facets = std::max(facets, 3);
-			vcount = value_cast<Tvr>(facets + (solid ? 1 : 0));
-			icount = value_cast<Tir>(solid ? 1 + 2*facets : facets + 1);
+			vcount = checked_cast<Tvr>(facets + (solid ? 1 : 0));
+			icount = checked_cast<Tir>(solid ? 1 + 2*facets : facets + 1);
 		}
 
 		// Generate an ellipse shape
@@ -75,8 +75,8 @@ namespace pr
 		{
 			auto scale = abs(ang1 - ang0) / pr::maths::tau;
 			facets = std::max(int(scale * facets + 0.5f), 3);
-			vcount = value_cast<Tvr>(2 * (facets + 1));
-			icount = value_cast<Tir>(solid ? 2 * (facets + 1) : 2 * facets + 3);
+			vcount = checked_cast<Tvr>(2 * (facets + 1));
+			icount = checked_cast<Tir>(solid ? 2 * (facets + 1) : 2 * facets + 3);
 		}
 
 		// Generate a pie/wedge shape
@@ -142,8 +142,8 @@ namespace pr
 		void RoundedRectangleSize(bool solid, float corner_radius, int facets, Tvr& vcount, Tir& icount)
 		{
 			auto verts_per_cnr = corner_radius != 0.0f ? std::max(facets / 4, 0) + 1 : 1;
-			vcount = value_cast<Tvr>(4 * verts_per_cnr);
-			icount = value_cast<Tir>(solid ? 4 * verts_per_cnr : 4 * verts_per_cnr + 1);
+			vcount = checked_cast<Tvr>(4 * verts_per_cnr);
+			icount = checked_cast<Tir>(solid ? 4 * verts_per_cnr : 4 * verts_per_cnr + 1);
 		}
 
 		// Generate a Rectangle shape with rounded corners

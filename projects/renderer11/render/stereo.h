@@ -35,11 +35,11 @@ namespace pr
 			static NvStereoImageHeader make(std::size_t width, std::size_t height, std::size_t bbp, bool swap_eyes)
 			{
 				NvStereoImageHeader x = {};
-				x.dwSignature = value_cast<unsigned int>(NvSig);
-				x.dwWidth     = value_cast<unsigned int>(width);
-				x.dwHeight    = value_cast<unsigned int>(height);
-				x.dwBPP       = value_cast<unsigned int>(bbp);
-				x.dwFlags     = value_cast<unsigned int>(swap_eyes ? NvSwapEyes : 0);
+				x.dwSignature = checked_cast<unsigned int>(NvSig);
+				x.dwWidth     = checked_cast<unsigned int>(width);
+				x.dwHeight    = checked_cast<unsigned int>(height);
+				x.dwBPP       = checked_cast<unsigned int>(bbp);
+				x.dwFlags     = checked_cast<unsigned int>(swap_eyes ? NvSwapEyes : 0);
 				return x;
 			}
 
