@@ -38,9 +38,9 @@ namespace pr
 				{
 					pr::v4 m_norm;
 					pr::v4 m_angles;
-					VIdx   m_idx[3];
+					size_t m_idx[3];
 					int    m_grp;
-					pr::v4 normal(VIdx idx) const
+					pr::v4 normal(size_t idx) const
 					{
 						if (idx == m_idx[0]) return m_norm * m_angles.x;
 						if (idx == m_idx[1]) return m_norm * m_angles.y;
@@ -51,12 +51,12 @@ namespace pr
 				};
 				struct Edge
 				{
-					VIdx  m_eidx;      // Index of the other end of the edge
+					size_t m_eidx;      // Index of the other end of the edge
 					Face* m_lface;
 					Face* m_rface;     
 					Edge* m_next;      // Forms a linked list of edges
-					bool  m_nonplanar; // True if this edge has more than two left or right faces
-					bool  smooth(float cos_angle_threshold) const
+					bool m_nonplanar; // True if this edge has more than two left or right faces
+					bool smooth(float cos_angle_threshold) const
 					{
 						return
 							m_lface && m_rface && // two faces needed to be smooth
@@ -72,10 +72,14 @@ namespace pr
 					pr::v4 m_norm;     // Smoothed vertex normal
 					Edge*  m_edges;    // The edges that connect to this vertex
 					Vert*  m_next;     // Other vert the same as this, but in a different smoothing group
-					VIdx   m_orig_idx; // Index of the original vertex
-					VIdx   m_new_idx;  // Index of the vertex in 'm_verts'
+					size_t m_orig_idx; // Index of the original vertex
+					size_t m_new_idx;  // Index of the vertex in 'm_verts'
 					int    m_grp;      // The smoothing group number that all contributing faces have
 				};
+				static_assert(std::alignment_of<Face>::value == 16, "Face not aligned correctly");
+				static_assert(std::alignment_of<Vert>::value == 16, "Vert not aligned correctly");
+				static_assert((sizeof(Face) % sizeof(pr::v4)) == 0, "Face size not a multiple of pr::v4 alignment");
+				static_assert((sizeof(Vert) % sizeof(pr::v4)) == 0, "Vert size not a multiple of pr::v4 alignment");
 
 				std::vector<Face> m_faces;
 				std::deque<Vert> m_verts;
@@ -128,7 +132,7 @@ namespace pr
 					}
 
 					// Add edges to the corresponding vertices
-					auto add_edge = [&](VIdx i0, VIdx i1, Face* face)
+					auto add_edge = [&](size_t i0, size_t i1, Face* face)
 					{
 						Edge* eptr;
 
@@ -205,7 +209,7 @@ namespace pr
 				void CreateNormals()
 				{
 					// Return the new index for vertex 'idx' in smoothing group 'face.m_grp'
-					auto vert_index = [&](Face& face, VIdx idx)
+					auto vert_index = [&](Face& face, size_t idx)
 					{
 						auto* vptr = &m_verts[idx];
 
@@ -232,7 +236,7 @@ namespace pr
 
 						// Initialise the new vertex
 						vptr->m_orig_idx = idx;
-						vptr->m_new_idx = checked_cast<VIdx>(m_verts.size() - 1);
+						vptr->m_new_idx = m_verts.size() - 1;
 						vptr->m_norm = face.normal(idx);
 						vptr->m_grp = face.m_grp;
 						return vptr->m_new_idx;
@@ -254,16 +258,24 @@ namespace pr
 			// Output the new verts
 			for (auto& vert : gen.m_verts)
 			{
+				// On x86 release, vert.m_norm isn't aligned, don't know why.
+				// I think it's something to do with std::deque.
+				// Copying to stack makes it aligned
+				v4 norm = vert.m_norm;
+
 				// Output the original vertex index, and the normal.
 				// Callback function should duplicate the original vertex and set the normal to that provided.
-				v_out(vert.m_orig_idx, Normalise3(vert.m_norm, v4Zero));
+				v_out(checked_cast<VIdx>(vert.m_orig_idx), Normalise3(norm, v4Zero));
 			}
 
 			// Output the new faces
 			for (auto& face : gen.m_faces)
 			{
 				// Output faces, should be the same number as provided via 'indices'
-				i_out(face.m_idx[0], face.m_idx[1], face.m_idx[2]);
+				i_out(
+					checked_cast<VIdx>(face.m_idx[0]),
+					checked_cast<VIdx>(face.m_idx[1]),
+					checked_cast<VIdx>(face.m_idx[2]));
 			}
 		}
 
@@ -359,10 +371,12 @@ namespace pr
 				GenerateNormals(PR_COUNTOF(faces), &faces[0], pr::DegreesToRadians(10.0f)
 					,[&](int i)
 					{
+						assert(i < PR_COUNTOF(verts));
 						return verts[i].m_pos;
 					}
 					,[&](int i, pr::v4 const& norm)
 					{
+						assert(i < PR_COUNTOF(verts));
 						vout.emplace_back(verts[i].m_pos, norm);
 					}
 					,[&](int i0, int i1, int i2)

@@ -21,8 +21,8 @@ namespace pr
 
 #include <algorithm>
 #include "pr/common/unittests.h"
-//#include "unittests/unittests.h"
-#include "pr/geometry/3ds.h"
+#include "unittests/unittests.h"
+//#include "pr/geometry/utility.h"
 //#include "pr/common/expr_eval.h"
 
 // For faster build times, comment out the 'all headers' include
