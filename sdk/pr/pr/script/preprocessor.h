@@ -173,12 +173,12 @@ namespace pr
 					throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid preprocessor command");
 
 				// Find the hash of the pp command
-				EPPKeyword kw = EPPKeyword::From(Hash::String(id));
+				auto kw = (EPPKeyword::Enum_)Hash::String(id); // don't use EPPKeyword::From(), that throws
 				switch (kw)
 				{
 				default:
 				case EPPKeyword::Invalid:
-					throw Exception(EResult::UnknownPreprocessorCommand, m_buf.loc(), fmt("%s is an unknown preprocessor command", id.c_str()));
+					throw Exception(EResult::UnknownPreprocessorCommand, m_buf.loc(), fmt("%s (hash: %d) is an unknown preprocessor command", id.c_str(), kw));
 				case EPPKeyword::Pragma:
 				case EPPKeyword::Line:
 				case EPPKeyword::Warning:
@@ -199,9 +199,31 @@ namespace pr
 						if (*m_buf == end) ++m_buf; else throw Exception(EResult::InvalidInclude, m_buf.loc(), "include string incomplete");
 
 						// Open the include
-						Src* inc = m_includes ? m_includes->Open(include, m_buf.loc(), search_paths_only) : 0;
-						if (inc) m_src_stack.push(inc, true);
+						auto inc = m_includes ? m_includes->Open(include, m_buf.loc(), search_paths_only) : nullptr;
+						if (inc)
+						{
+							m_src_stack.push(inc.get(), true);
+							inc.release();
+						}
 					}break;
+				case EPPKeyword::IncludePath:
+					{
+						Eat::LineSpace(m_buf);
+						if (*m_buf != '<' && *m_buf != '\"')
+							throw Exception(EResult::InvalidInclude, m_buf.loc(), "expected a string following #include_path");
+
+						// Extract the include path
+						string include_path;
+						char end = *m_buf == '<' ? '>' : '\"';
+						for (++m_buf; *m_buf && *m_buf != '\n' && *m_buf != end; include_path += *m_buf, ++m_buf) {}
+						if (*m_buf == end) ++m_buf; else throw Exception(EResult::InvalidInclude, m_buf.loc(), "include path string incomplete");
+						Eat::Line(m_buf, true);
+
+						// Add the path to the include paths
+						if (m_includes)
+							m_includes->AddSearchPaths(include_path.c_str());
+						break;
+					}
 				case EPPKeyword::Define:
 					{
 						if (!m_macros) Eat::Line(m_buf, true);
@@ -661,6 +683,7 @@ namespace pr
 					"#pragma ignore this\n"
 					"#line ignore this\n"
 					"#warning ignore this\n"
+					"#include_path \"some_path\"\n"
 					"lastword"
 					"#define ONE 1\n"
 					"#eval{ONE+2-4+len2(3,4)}\n"
@@ -689,6 +712,7 @@ namespace pr
 				for (;*str_out; ++pp, ++str_out)
 					PR_CHECK(*pp, *str_out);
 				PR_CHECK(*pp, 0);
+				PR_CHECK(includes.m_paths[0], "some_path");
 			}
 			{// Preprocessor with no macro or include handler
 				char const* str_in =

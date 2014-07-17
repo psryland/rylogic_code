@@ -498,7 +498,7 @@ namespace pr
 			// Assumes an stl-like string interface, use 'pr::str::fixed_buffer' if necessary
 			template <typename String> bool ExtractSection(String& str, bool include_braces)
 			{
-				str.resize(0);
+				// Do not str.resize(0) here, that's the callers decision
 				if (IsSectionStart()) ++m_src; else return ReportError(EResult::TokenNotFound, "expected '{'");
 				if (include_braces) str.push_back('{');
 				for (int nest = 1; *m_src; ++m_src)
