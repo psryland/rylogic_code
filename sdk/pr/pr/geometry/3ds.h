@@ -580,7 +580,7 @@ namespace pr
 
 		// Given a 3DS file, generate verts/indices for a renderer model
 		template <typename TMatLookup, typename TNuggetOut, typename TVertOut, typename TIdxOut>
-		BBox Max3DSModel(max_3ds::Object const& obj, TMatLookup mats, TNuggetOut nugget_out, TVertOut v_out, TIdxOut i_out)
+		void Max3DSModel(max_3ds::Object const& obj, TMatLookup mats, TNuggetOut nugget_out, TVertOut v_out, TIdxOut i_out)
 		{
 			// Validate 'obj'
 			if (obj.m_mesh.m_vert.size() != obj.m_mesh.m_uv.size())
@@ -593,29 +593,33 @@ namespace pr
 			// Create one of these 'Verts' per unique model vert.
 			struct Vert
 			{
-				pr::v4      m_norm;   // The accumulated vertex normal
-				pr::Colour  m_col;    // The material colour for this vert
-				uint        m_smooth; // The smoothing group bits
-				Vert*       m_next;   // Another copy of this vert with difference smoothing groups
-				pr::uint16  m_idx;    // The index into the obj.m_mesh.m_vert container
+				pr::v4      m_norm;       // The accumulated vertex normal
+				pr::Colour  m_col;        // The material colour for this vert
+				uint        m_smooth;     // The smoothing group bits
+				Vert*       m_next;       // Another copy of this vert with difference smoothing groups
+				pr::uint16  m_orig_index; // The index into the original obj.m_mesh.m_vert container
+				pr::uint16  m_new_index;  // The index of this vert in the 'verts' container
 
-				Vert(pr::uint16 idx, pr::v4 const& norm, pr::Colour const& col, uint sg)
+				Vert(pr::uint16 orig_index, pr::uint16 new_index, pr::v4 const& norm, pr::Colour const& col, uint sg)
 					:m_norm(norm)
 					,m_col(col)
 					,m_smooth(sg)
 					,m_next()
-					,m_idx(idx)
+					,m_orig_index(orig_index)
+					,m_new_index(new_index)
 				{}
+
+				// Returns the new index for the vert in 'cont'
 				pr::uint16 add(std::deque<Vert>& cont, pr::v4 const& norm, pr::Colour const& col, uint sg)
 				{
 					// If the smoothing group intersects, accumulate 'norm'
-					// and return the vertex indices of this vert
-					if ((sg & m_smooth) || m_norm == v4Zero)
+					// and return the vertex index of this vert
+					if ((sg == 0 && m_smooth == 0) || (sg & m_smooth) || m_norm == v4Zero)
 					{
 						m_norm += norm;
 						m_col = col;
 						m_smooth |= sg;
-						return m_idx;
+						return m_new_index;
 					}
 
 					// Otherwise if we have a 'next' try that vert
@@ -623,20 +627,17 @@ namespace pr
 						return m_next->add(cont, norm, col, sg);
 
 					// Otherwise, create a new Vert and add it to our linked list
-					cont.emplace_back(m_idx, norm, col, sg);
+					auto new_index = checked_cast<pr::uint16>(cont.size());
+					cont.emplace_back(m_orig_index, new_index, norm, col, sg);
 					m_next = &cont.back();
-					return pr::uint16(cont.size() - 1);
+					return new_index;
 				}
 			};
 			std::deque<Vert> verts;
 
 			// Initialise the container 'verts'
-			BBox bbox = BBoxReset;
 			for (pr::uint16 i = 0, iend = checked_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
-			{
-				verts.emplace_back(i, v4Zero, ColourWhite, 0);
-				Encompass(bbox, obj.m_mesh.m_vert[i].w1());
-			}
+				verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
 
 			// Loop over material groups, each material group is a nugget
 			pr::Range<pr::uint16> vrange, irange = pr::Range<pr::uint16>::Zero();
@@ -661,7 +662,10 @@ namespace pr
 					auto v0 = obj.m_mesh.m_vert[face.m_idx[0]].w1();
 					auto v1 = obj.m_mesh.m_vert[face.m_idx[1]].w1();
 					auto v2 = obj.m_mesh.m_vert[face.m_idx[2]].w1();
-					pr::v4 norm = pr::Normalise3(pr::Cross3(v1-v0,v2-v1), pr::v4Zero);
+					auto e0 = v1 - v0;
+					auto e1 = v2 - v1;
+					auto cx = pr::Cross3(e0, e1);
+					pr::v4 norm = Normalise3(cx, pr::v4Zero);
 					pr::v4 angles = TriangleAngles(v0, v1, v2);
 
 					// Get the final vertex indices for the face
@@ -673,11 +677,9 @@ namespace pr
 					vrange.encompass(i1);
 					vrange.encompass(i2);
 					irange.m_end += 3;
-					
+
 					// Write out face indices
-					i_out(i0);
-					i_out(i1);
-					i_out(i2);
+					i_out(i0, i1, i2);
 				}
 
 				// Output a nugget for this material group
@@ -688,14 +690,12 @@ namespace pr
 			// Write out the verts including their normals
 			for (auto const& vert : verts)
 			{
-				auto  p = obj.m_mesh.m_vert[vert.m_idx].w1();
+				auto  p = obj.m_mesh.m_vert[vert.m_orig_index].w1();
 				auto& c = vert.m_col;
 				auto  n = Normalise3(vert.m_norm, v4Zero);
-				auto& t = obj.m_mesh.m_uv[vert.m_idx];
+				auto& t = obj.m_mesh.m_uv[vert.m_orig_index];
 				v_out(p, c, n, t);
 			}
-
-			return bbox;
 		}
 	}
 }
