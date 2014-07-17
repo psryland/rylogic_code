@@ -23,8 +23,8 @@ namespace pr
 			,m_feature_levels()
 		{
 			// Add the debug layer in debug mode
-			PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
-			#pragma message(PR_LINK "D3D11_CREATE_DEVICE_DEBUG enabled")
+			//PR_EXPAND(PR_DBG_RDR, m_device_layers |= D3D11_CREATE_DEVICE_DEBUG);
+			//#pragma message(PR_LINK "D3D11_CREATE_DEVICE_DEBUG enabled")
 		}
 
 		// Initialise the renderer state variables and creates the dx device and swap chain.
@@ -35,6 +35,9 @@ namespace pr
 			,m_d2dfactory()
 			,m_feature_level()
 		{
+			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_DEBUG       ) != 0, "D3D11_CREATE_DEVICE_DEBUG is enabled");
+			PR_INFO_IF(PR_DBG_RDR, (m_settings.m_device_layers & D3D11_CREATE_DEVICE_BGRA_SUPPORT) != 0, "D3D11_CREATE_DEVICE_BGRA_SUPPORT is enabled");
+
 			// Create the device interface
 			pr::Throw(D3D11CreateDevice(
 				m_settings.m_adapter.m_ptr,
