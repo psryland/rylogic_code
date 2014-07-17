@@ -848,7 +848,6 @@ namespace pr
 		auto a = v2 - v1;
 		auto b = v0 - v2;
 		auto c = v1 - v0;
-
 		auto asq = Length3Sq(a);
 		auto bsq = Length3Sq(b);
 		auto csq = Length3Sq(c);
@@ -860,8 +859,8 @@ namespace pr
 			auto bc = Dot3(b,c); auto d1 = bsq * csq;
 			auto ca = Dot3(c,a); auto d2 = csq * asq;
 
-			angles.x = FEqlZero(d1) ? 0.0f : 0.5f * ACos(Clamp(2*(bc*bc / d1) - 1, -1.0f, 1.0f));
-			angles.y = FEqlZero(d2) ? 0.0f : 0.5f * ACos(Clamp(2*(ca*ca / d2) - 1, -1.0f, 1.0f));
+			angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.z = maths::tau_by_2 - angles.x - angles.y;
 		}
 		else if (asq > bsq && asq > csq)
@@ -869,8 +868,8 @@ namespace pr
 			auto ab = Dot3(a,b); auto d0 = asq * bsq;
 			auto ca = Dot3(c,a); auto d2 = csq * asq;
 
-			angles.y = FEqlZero(d2) ? 0.0f : 0.5f * ACos(Clamp(2*(ca*ca / d2) - 1, -1.0f, 1.0f));
-			angles.z = FEqlZero(d0) ? 0.0f : 0.5f * ACos(Clamp(2*(ab*ab / d0) - 1, -1.0f, 1.0f));
+			angles.y = 0.5f * ACos(Clamp(2*(ca*ca / (d2 + (d2 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.x = maths::tau_by_2 - angles.y - angles.z;
 		}
 		else
@@ -878,8 +877,8 @@ namespace pr
 			auto ab = Dot3(a,b); auto d0 = asq * bsq;
 			auto bc = Dot3(b,c); auto d1 = bsq * csq;
 			
-			angles.x = FEqlZero(d1) ? 0.0f : 0.5f * ACos(Clamp(2*(bc*bc / d1) - 1, -1.0f, 1.0f));
-			angles.z = FEqlZero(d0) ? 0.0f : 0.5f * ACos(Clamp(2*(ab*ab / d0) - 1, -1.0f, 1.0f));
+			angles.x = 0.5f * ACos(Clamp(2*(bc*bc / (d1 + (d1 == 0.0f))) - 1, -1.0f, 1.0f));
+			angles.z = 0.5f * ACos(Clamp(2*(ab*ab / (d0 + (d0 == 0.0f))) - 1, -1.0f, 1.0f));
 			angles.y = maths::tau_by_2 - angles.x - angles.z;
 		}
 		angles.w = 0.0f;
