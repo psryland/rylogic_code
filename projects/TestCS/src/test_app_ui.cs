@@ -16,6 +16,8 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tree_grid;
 		private ToolStripMenuItem m_menu_checked_listbox;
 		private ToolStripMenuItem m_menu_diagram_control;
+		private TableLayoutPanel m_table;
+		private TextBox m_text1;
 		private ToolStripMenuItem m_menu_graph_control;
 
 		public FormTestApp()
@@ -54,7 +56,7 @@ namespace TestCS
 
 			m_menu_tool_form.Click += (s,a) =>
 				{
-					new ToolFormUI(this).Show(this);
+					new ToolFormUI(this, m_text1).Show(this);
 				};
 
 			m_menu_tree_grid.Click += (s,a) =>
@@ -111,7 +113,10 @@ namespace TestCS
 			this.m_menu_tool_form = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tree_grid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_table = new System.Windows.Forms.TableLayoutPanel();
+			this.m_text1 = new System.Windows.Forms.TextBox();
 			this.m_menu.SuspendLayout();
+			this.m_table.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_menu
@@ -121,7 +126,7 @@ namespace TestCS
             this.m_menu_tests});
 			this.m_menu.Location = new System.Drawing.Point(0, 0);
 			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(178, 24);
+			this.m_menu.Size = new System.Drawing.Size(515, 24);
 			this.m_menu.TabIndex = 0;
 			this.m_menu.Text = "m_menu";
 			// 
@@ -202,11 +207,37 @@ namespace TestCS
 			this.m_menu_checked_listbox.Size = new System.Drawing.Size(159, 22);
 			this.m_menu_checked_listbox.Text = "CheckedListBox";
 			// 
+			// m_table
+			// 
+			this.m_table.ColumnCount = 2;
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+			this.m_table.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
+			this.m_table.Controls.Add(this.m_text1, 0, 0);
+			this.m_table.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_table.Location = new System.Drawing.Point(0, 24);
+			this.m_table.Margin = new System.Windows.Forms.Padding(0);
+			this.m_table.Name = "m_table";
+			this.m_table.RowCount = 2;
+			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+			this.m_table.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
+			this.m_table.Size = new System.Drawing.Size(515, 418);
+			this.m_table.TabIndex = 1;
+			// 
+			// m_text1
+			// 
+			this.m_text1.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_text1.Location = new System.Drawing.Point(3, 3);
+			this.m_text1.Multiline = true;
+			this.m_text1.Name = "m_text1";
+			this.m_text1.Size = new System.Drawing.Size(251, 203);
+			this.m_text1.TabIndex = 0;
+			// 
 			// FormTestApp
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(178, 164);
+			this.ClientSize = new System.Drawing.Size(515, 442);
+			this.Controls.Add(this.m_table);
 			this.Controls.Add(this.m_menu);
 			this.MainMenuStrip = this.m_menu;
 			this.Name = "FormTestApp";
@@ -214,6 +245,8 @@ namespace TestCS
 			this.Text = "TestApp";
 			this.m_menu.ResumeLayout(false);
 			this.m_menu.PerformLayout();
+			this.m_table.ResumeLayout(false);
+			this.m_table.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 
