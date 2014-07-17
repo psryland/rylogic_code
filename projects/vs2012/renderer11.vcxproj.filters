@@ -256,6 +256,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\model_file.h">
       <Filter>geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\p3d.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\renderer11\util\stdafx.cpp">
