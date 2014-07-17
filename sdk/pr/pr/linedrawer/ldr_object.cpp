@@ -651,26 +651,26 @@ namespace pr
 				switch (kw) {
 				default: return IObjectCreator::ParseKeyword(p, kw);
 				case EKeyword::Range:
-				{
-					p.m_reader.SectionStart();
-					p.m_reader.ExtractReal(m_light.m_range);
-					p.m_reader.ExtractReal(m_light.m_falloff);
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.ExtractReal(m_light.m_range);
+						p.m_reader.ExtractReal(m_light.m_falloff);
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::Specular:
-				{
-					p.m_reader.SectionStart();
-					p.m_reader.ExtractInt(m_light.m_specular.m_aarrggbb, 16);
-					p.m_reader.ExtractReal(m_light.m_specular_power);
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						p.m_reader.ExtractInt(m_light.m_specular.m_aarrggbb, 16);
+						p.m_reader.ExtractReal(m_light.m_specular_power);
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::CastShadow:
-				{
-					p.m_reader.ExtractRealS(m_light.m_cast_shadow);
-					return true;
-				}
+					{
+						p.m_reader.ExtractRealS(m_light.m_cast_shadow);
+						return true;
+					}
 				}
 			}
 			void CreateModel(ParseParams&, LdrObjectPtr obj) override
@@ -873,96 +873,97 @@ namespace pr
 			TCont& m_texs;
 			ICont& m_indices;
 			EPrim::Enum_ m_prim_type;
-			bool m_generate_normals;
+			float m_gen_normals;
 
-			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_generate_normals(false) {}
+			IObjectCreatorMesh() :m_verts(Point()), m_normals(Norms()), m_colours(Color()), m_texs(Texts()), m_indices(Index()), m_prim_type(), m_gen_normals(-1.0f) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
 				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
 				case EKeyword::Verts:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(v, 1.0f); m_verts.push_back(v); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(v, 1.0f); m_verts.push_back(v); }
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::Normals:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(n, 0.0f); m_normals.push_back(n); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(n, 0.0f); m_normals.push_back(n); }
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::Colours:
-				{
-					p.m_reader.SectionStart();
-					for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractInt(c.m_aarrggbb, 16); m_colours.push_back(c); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractInt(c.m_aarrggbb, 16); m_colours.push_back(c); }
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::TexCoords:
-				{
-					p.m_reader.SectionStart();
-					for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector2(t); m_texs.push_back(t); }
-					p.m_reader.SectionEnd();
-					return true;
-				}
+					{
+						p.m_reader.SectionStart();
+						for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector2(t); m_texs.push_back(t); }
+						p.m_reader.SectionEnd();
+						return true;
+					}
 				case EKeyword::Lines:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
 					{
-						p.m_reader.ExtractIntArray(idx, 2, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
+						p.m_reader.SectionStart();
+						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.ExtractIntArray(idx, 2, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
+						}
+						p.m_reader.SectionEnd();
+						m_prim_type = EPrim::LineList;
+						return true;
 					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::LineList;
-					return true;
-				}
 				case EKeyword::Faces:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
 					{
-						p.m_reader.ExtractIntArray(idx, 3, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[2]);
+						p.m_reader.SectionStart();
+						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.ExtractIntArray(idx, 3, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[2]);
+						}
+						p.m_reader.SectionEnd();
+						m_prim_type = EPrim::TriList;
+						return true;
 					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::TriList;
-					return true;
-				}
 				case EKeyword::Tetra:
-				{
-					p.m_reader.SectionStart();
-					for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
 					{
-						p.m_reader.ExtractIntArray(idx, 4, 10);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[0]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[1]);
-						m_indices.push_back(idx[3]);
-						m_indices.push_back(idx[2]);
-						m_indices.push_back(idx[1]);
+						p.m_reader.SectionStart();
+						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
+						{
+							p.m_reader.ExtractIntArray(idx, 4, 10);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[0]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[1]);
+							m_indices.push_back(idx[3]);
+							m_indices.push_back(idx[2]);
+							m_indices.push_back(idx[1]);
+						}
+						p.m_reader.SectionEnd();
+						m_prim_type = EPrim::TriList;
+						return true;
 					}
-					p.m_reader.SectionEnd();
-					m_prim_type = EPrim::TriList;
-					return true;
-				}
 				case EKeyword::GenerateNormals:
-				{
-					m_generate_normals = true;
-					return true;
-				}
+					{
+						p.m_reader.ExtractRealS(m_gen_normals);
+						m_gen_normals = pr::DegreesToRadians(m_gen_normals);
+						return true;
+					}
 				}
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -977,13 +978,31 @@ namespace pr
 				}
 
 				// Generate normals if needed
-				if (m_generate_normals)
+				if (m_gen_normals >= 0.0f && m_prim_type == EPrim::TriList)
 				{
+					auto iout = std::begin(m_indices);
 					m_normals.resize(m_verts.size());
-					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(),
-						[&](std::size_t i){ return m_verts[i]; },
-						[&](std::size_t i){ return m_normals[i]; },
-						[&](std::size_t i, pr::v4 const& nm){ m_normals[i] = nm; });
+
+					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(), m_gen_normals,
+						[&](pr::uint16 i)
+						{
+							return m_verts[i];
+						},
+						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
+						{
+							if (new_idx >= m_verts.size())
+							{
+								m_verts  .push_back(m_verts[orig_idx]);
+								m_normals.push_back(m_normals[orig_idx]);
+							}
+							m_normals[new_idx] = norm;
+						},
+						[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
+						{
+							*iout++ = i0;
+							*iout++ = i1;
+							*iout++ = i2;
+						});
 				}
 
 				// Create the model
@@ -1809,20 +1828,16 @@ namespace pr
 				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Mesh object description invalid");
 				p.m_reader.FindSectionEnd();
 			}
-			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
-			{
-				if (m_prim_type == EPrim::LineList)
-				{
-					m_generate_normals = false;
-					m_normals.clear();
-				}
-				IObjectCreatorMesh::CreateModel(p, obj);
-			}
 		};
 
 		// ELdrObject::ConvexHull
 		template <> struct ObjectCreator<ELdrObject::ConvexHull> :IObjectCreatorMesh
 		{
+			ObjectCreator()
+			{
+				m_prim_type = EPrim::TriList;
+				m_gen_normals = 0.0f;
+			}
 			void Parse(ParseParams& p) override
 			{
 				p.m_reader.ReportError(pr::script::EResult::UnknownValue, "Convext hull object description invalid");
@@ -1830,6 +1845,7 @@ namespace pr
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
+				// Allocate space for the face indices
 				m_indices.resize(6 * (m_verts.size() - 2));
 
 				// Find the convex hull
@@ -1838,8 +1854,6 @@ namespace pr
 				m_verts.resize(num_verts);
 				m_indices.resize(3 * num_faces);
 
-				m_prim_type = EPrim::TriList;
-				m_generate_normals = true;
 				IObjectCreatorMesh::CreateModel(p, obj);
 			}
 		};
@@ -1849,15 +1863,24 @@ namespace pr
 		{
 			string512 m_filepath;
 			m4x4 m_bake;
-			bool m_generate_normals;
+			float m_gen_normals;
 
-			ObjectCreator() :m_filepath() ,m_bake(m4x4Identity) ,m_generate_normals(false) {}
+			ObjectCreator() :m_filepath() ,m_bake(m4x4Identity) ,m_gen_normals(-1.0f) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
 				default: return IObjectCreator::ParseKeyword(p, kw);
-				case EKeyword::GenerateNormals: m_generate_normals = true; return true;
-				case EKeyword::BakeTransform: ParseTransform(p.m_reader, m_bake); return true;
+				case EKeyword::GenerateNormals:
+					{
+						p.m_reader.ExtractRealS(m_gen_normals);
+						m_gen_normals = pr::DegreesToRadians(m_gen_normals);
+						return true;
+					}
+				case EKeyword::BakeTransform:
+					{
+						ParseTransform(p.m_reader, m_bake);
+						return true;
+					}
 				}
 			}
 			void Parse(ParseParams& p) override
@@ -1901,7 +1924,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr);
+				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};

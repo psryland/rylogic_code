@@ -49,10 +49,14 @@ namespace pr
 		// Don't set values that aren't given, allows these functions to be composed
 		inline void SetP   (Vert& vert, v4 const& pos)                                                  { vert.m_vert = pos; }
 		inline void SetC   (Vert& vert, Colour const& col)                                              { vert.m_diff = col; }
+		inline void SetN   (Vert& vert, v4 const& norm)                                                 { vert.m_norm = norm; }
 		inline void SetPC  (Vert& vert, v4 const& pos, Colour const& col)                               { vert.m_vert = pos; vert.m_diff = col; }
 		inline void SetPT  (Vert& vert, v4 const& pos, v2 const& uv)                                    { vert.m_vert = pos; vert.m_tex0 = uv; }
 		inline void SetPCN (Vert& vert, v4 const& pos, Colour const& col, v4 const& norm)               { vert.m_vert = pos; vert.m_diff = col; vert.m_norm = norm; }
 		inline void SetPCNT(Vert& vert, v4 const& pos, Colour const& col, v4 const& norm, v2 const& uv) { vert.m_vert = pos; vert.m_diff = col; vert.m_norm = norm; vert.m_tex0 = uv; }
+
 		inline void Encompass(BBox& bbox, Vert const& vert) { pr::Encompass(bbox, vert.m_vert); }
+
+		inline v4 const& GetP(Vert const& vert) { return vert.m_vert; }
 	}
 }

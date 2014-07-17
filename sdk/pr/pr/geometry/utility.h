@@ -1,6 +1,6 @@
 //********************************
 // Geometry
-//  Copyright (c) Rylogic Ltd 2013
+//  Copyright (c) Rylogic Ltd 2014
 //********************************
 #pragma once
 
@@ -19,10 +19,13 @@ namespace pr
 		// 'indices' is an iterator to model face data. Expects 3 indices per face.
 		// 'smoothing_angle' is the threshold above which normals are not merged and a new vertex is created (in radians)
 		// 'getv' is an accessor to the vertex for a given face index.
-		// 'v_out' outputs the new vertex normals: v_out(VIdx orig_index, v4 normal)
-		// 'i_out' outputs the new face indices: i_out(VIdx i0, VIdx i1, VIdx i2)
+		// 'vout' outputs the new vertex normals: vout(VIdx new_idx, VIdx orig_idx, v4 normal)
+		// 'iout' outputs the new face indices: iout(VIdx i0, VIdx i1, VIdx i2)
+		// This function will only adds verts, not remove any, so 'vout' can overwrite and add to the existing container
+		// It also outputs the verts in order, so if new_idx >= vert_cont.size() => push_back is fine.
+		// The number of indices returned will equal 'num_indices' so it's also fine to overwrite the index container
 		template <typename TIdxCIter, typename TGetV, typename TVertOut, typename TIdxOut>
-		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, TVertOut v_out, TIdxOut i_out)
+		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, TVertOut vout, TIdxOut iout)
 		{
 			// Notes:
 			// - Can't weld verts because that would destroy distinct texture
@@ -110,9 +113,9 @@ namespace pr
 						face.m_idx[1] = *indices++;
 						face.m_idx[2] = *indices++;
 
-						v4 const& v0 = getv(face.m_idx[0]);
-						v4 const& v1 = getv(face.m_idx[1]);
-						v4 const& v2 = getv(face.m_idx[2]);
+						v4 const& v0 = getv(checked_cast<VIdx>(face.m_idx[0]));
+						v4 const& v1 = getv(checked_cast<VIdx>(face.m_idx[1]));
+						v4 const& v2 = getv(checked_cast<VIdx>(face.m_idx[2]));
 
 						max_index = std::max(*std::max_element(std::begin(face.m_idx), std::end(face.m_idx)), max_index);
 						face.m_norm = Normalise3(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
@@ -265,14 +268,17 @@ namespace pr
 
 				// Output the original vertex index, and the normal.
 				// Callback function should duplicate the original vertex and set the normal to that provided.
-				v_out(checked_cast<VIdx>(vert.m_orig_idx), Normalise3(norm, v4Zero));
+				vout(
+					checked_cast<VIdx>(vert.m_new_idx),
+					checked_cast<VIdx>(vert.m_orig_idx),
+					Normalise3(norm, v4Zero));
 			}
 
 			// Output the new faces
 			for (auto& face : gen.m_faces)
 			{
 				// Output faces, should be the same number as provided via 'indices'
-				i_out(
+				iout(
 					checked_cast<VIdx>(face.m_idx[0]),
 					checked_cast<VIdx>(face.m_idx[1]),
 					checked_cast<VIdx>(face.m_idx[2]));
@@ -288,7 +294,7 @@ namespace pr
 		// Only reads/writes to the normals for vertices adjoining the provided faces
 		// Note: This is the simple version without vertex weights or edge detection
 		template <typename TIdxCIter, typename TGetV, typename TGetN, typename TSetN>
-		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, TGetV GetV, TGetN GetN, TSetN SetN)
+		void GenerateNormalsSpherical(std::size_t num_indices, TIdxCIter indices, TGetV GetV, TGetN GetN, TSetN SetN)
 		{
 			// Initialise all of the vertex normals to zero
 			auto ib = indices;
