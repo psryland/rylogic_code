@@ -48,7 +48,7 @@ namespace ldr
 
 		// Create one or more objects described by 'object_description'
 		// The last object created is returned. (hmm, could return a range of objects...)
-		pr::ldr::LdrObject* RegisterObject(char const* object_description, pr::ldr::ContextId ctx_id, bool async);
+		pr::ldr::LdrObject* RegisterObject(char const* object_description, char const* include_paths, pr::ldr::ContextId ctx_id, bool async);
 
 		// Remove 'object' from the store
 		void UnregisterObject(pr::ldr::LdrObject* object);

@@ -742,6 +742,26 @@ namespace pr
 			temp[len] = 0;
 			return temp;
 		}
+
+		// Attempt to resolve a partial filepath given a list of directories to search
+		template <typename String, typename Cont> inline String ResolvePath(String const& partial_path, Cont const& search_paths)
+		{
+			// File exists relative to the current directory
+			auto fullpath = GetFullPath(partial_path);
+			if (FileExists(fullpath))
+				return fullpath;
+
+			// Search the search paths
+			for (auto& dir : search_paths)
+			{
+				fullpath = CombinePath<String>(dir, partial_path);
+				if (FileExists(fullpath))
+					return fullpath;
+			}
+
+			// Return an empty string for unresolved
+			return String();
+		}
 	}
 }
 

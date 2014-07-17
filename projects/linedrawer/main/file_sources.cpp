@@ -38,22 +38,22 @@ namespace ldr
 		m_files.clear();
 
 		// Delete all objects belonging to these files
-		for (StrList::const_iterator i = files.begin(), iend = files.end(); i != iend; ++i)
+		for (auto& file : files)
 		{
-			int context_id = pr::hash::HashC(i->c_str());
+			int context_id = pr::hash::HashC(file.c_str());
 			pr::ldr::Remove(m_store, &context_id, 1, 0, 0);
 		}
 
 		// Add each file again
-		for (StrList::const_iterator i = files.begin(), iend = files.end(); i != iend; ++i)
-		{
-			Add(i->c_str());
-		}
+		for (auto& file : files)
+			Add(file.c_str());
 	}
 
 	// Add a file source
 	void FileSources::Add(char const* filepath)
 	{
+		using namespace pr::script;
+
 		// Ensure the same file is not added twice
 		Remove(filepath);
 
@@ -69,17 +69,21 @@ namespace ldr
 
 			// An include handler that records all of the files opened
 			// so that we can detect changes in those files
-			struct LdrIncludes :pr::script::FileIncludes
+			struct LdrIncludes :FileIncludes
 			{
 				StrCont m_paths;
-				pr::script::FileSrc* Open(pr::script::string const& include, pr::script::Loc const& loc, bool search_paths_only)
+				LdrIncludes(bool ignore_missing) :FileIncludes(ignore_missing) {}
+				std::unique_ptr<Src> Open(pr::script::string const& include, Loc const& loc, bool search_paths_only) override
 				{
-					pr::script::FileSrc* src = pr::script::FileIncludes::Open(include, loc, search_paths_only);
-					if (src) m_paths.push_back(src->m_file_loc.m_file);
+					auto src = FileIncludes::Open(include, loc, search_paths_only);
+					if (src)
+					{
+						auto fsrc = static_cast<FileSrc*>(src.get());
+						m_paths.push_back(fsrc->m_file_loc.m_file);
+					}
 					return src;
 				}
-			} includes;
-			includes.IgnoreMissing(m_settings.m_IgnoreMissingIncludes);
+			} includes(m_settings.m_IgnoreMissingIncludes);
 
 			// Add the file based on it's file type
 			std::string extn = pr::filesys::GetExtension(m_files.back());
@@ -92,11 +96,10 @@ namespace ldr
 			}
 			else // assume ldr script file
 			{
-				pr::script::Reader  reader;
-				pr::script::FileSrc src(m_files.back().c_str());
+				FileSrc src(m_files.back().c_str());
+				Reader  reader(src);
 				reader.CodeHandler()    = &m_lua_src;
 				reader.IncludeHandler() = &includes;
-				reader.AddSource(src);
 				pr::ldr::Add(m_rdr, reader, m_store, context_id);
 			}
 

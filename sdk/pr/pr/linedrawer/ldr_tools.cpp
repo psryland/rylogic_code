@@ -144,7 +144,7 @@ void pr::ldr::MeasureDlg::UpdateMeasurementInfo(bool raise_event)
 		pr::ldr::Line("distZ", 0xFF0000FF, p1, m_point1, str);
 		pr::ldr::GroupEnd(str);
 		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(m_rdr, str.c_str(), cont, LdrMeasurePrivateContextId);
+		pr::ldr::AddString(m_rdr, str.c_str(), nullptr, cont, LdrMeasurePrivateContextId);
 		if (!cont.empty()) m_measurement_gfx = cont.back();
 	}
 
@@ -319,7 +319,7 @@ void pr::ldr::AngleDlg::UpdateAngleInfo(bool raise_event)
 		pr::ldr::Line("edge2", 0xFF00FF00, m_point0, m_point1, str);
 		pr::ldr::GroupEnd(str);
 		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(m_rdr, str.c_str(), cont, LdrAngleDlgPrivateContextId);
+		pr::ldr::AddString(m_rdr, str.c_str(), nullptr, cont, LdrAngleDlgPrivateContextId);
 		if (!cont.empty()) m_angle_gfx = cont.back();
 	}
 

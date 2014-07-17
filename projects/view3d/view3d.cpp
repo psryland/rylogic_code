@@ -824,14 +824,15 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 
 // Create objects given in a file.
 // These objects will not have handles but can be added/removed by their context id.
+// 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 // Returns the number of objects added.
-VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async)
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, char const* include_paths, int context_id, BOOL async)
 {
 	try
 	{
 		DllLockGuard;
 		pr::ldr::ObjectCont cont;
-		pr::ldr::AddFile(Dll().m_rdr, ldr_filepath, cont, context_id, async != 0, 0, &Dll().m_lua);
+		pr::ldr::AddFile(Dll().m_rdr, ldr_filepath, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
 		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
 		return int(cont.size());
 	}
@@ -843,13 +844,14 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 }
 
 // If multiple objects are created, the handle returned is to the last object only
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, BOOL async)
+// 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, char const* include_paths, int context_id, BOOL async)
 {
 	try
 	{
 		DllLockGuard;
 		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(Dll().m_rdr, ldr_script, cont, context_id, async != 0, 0, &Dll().m_lua);
+		pr::ldr::AddString(Dll().m_rdr, ldr_script, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
 		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
 		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
@@ -1868,7 +1870,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 
 		DllLockGuard;
 		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), cont, pr::ldr::DefaultContext, true, 0, &Dll().m_lua);
+		pr::ldr::AddString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), nullptr, cont, pr::ldr::DefaultContext, true, 0, &Dll().m_lua);
 		for (auto& obj : cont)
 			View3D_AddObject(window, obj.m_ptr);
 	}

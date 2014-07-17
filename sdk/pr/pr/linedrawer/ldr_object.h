@@ -550,26 +550,28 @@ namespace pr
 		void Add(pr::Renderer& rdr, pr::script::Reader& reader, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true);
 
 		// Add models/instances from a text file containing linedrawer script
-		inline void AddFile(pr::Renderer& rdr, char const* filename, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true, pr::script::IErrorHandler* script_error_handler = 0, pr::script::IEmbeddedCode* lua_code_handler = 0)
+		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
+		inline void AddFile(pr::Renderer& rdr, char const* filename, char const* include_paths, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true, pr::script::IErrorHandler* script_error_handler = 0, pr::script::IEmbeddedCode* lua_code_handler = 0)
 		{
-			pr::script::Reader reader;
 			pr::script::FileSrc src(filename);
+			pr::script::Reader reader(src);
+			reader.IncludeHandler()->AddSearchPaths(include_paths);
 			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
 			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
-			reader.AddSource(src);
 			Add(rdr, reader, objects, context_id, async);
 		}
 
 		// Add models/instances from a string of linedrawer script
+		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
 		// Returns the number of top level objects added
-		inline void AddString(pr::Renderer& rdr, char const* ldr_script, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true, pr::script::IErrorHandler* script_error_handler = 0, pr::script::IEmbeddedCode* lua_code_handler = 0)
+		inline void AddString(pr::Renderer& rdr, char const* ldr_script, char const* include_paths, pr::ldr::ObjectCont& objects, pr::ldr::ContextId context_id = DefaultContext, bool async = true, pr::script::IErrorHandler* script_error_handler = 0, pr::script::IEmbeddedCode* lua_code_handler = 0)
 		{
 			pr::script::Loc    loc("ldr_string", 0, 0);
 			pr::script::PtrSrc src(ldr_script, &loc);
-			pr::script::Reader reader;
+			pr::script::Reader reader(src);
+			reader.IncludeHandler()->AddSearchPaths(include_paths);
 			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
 			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
-			reader.AddSource(src);
 			Add(rdr, reader, objects, context_id, async);
 		}
 
