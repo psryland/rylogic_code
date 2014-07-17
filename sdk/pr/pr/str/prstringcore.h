@@ -587,6 +587,8 @@ namespace pr
 		}
 
 		// Split a string at 'delims' outputting each sub string to 'out'
+		// 'out' should have the signature out(tstr1 const& s, size_t i, size_t j)
+		// where [i,j) is the range in 's' containing the substring
 		template <typename tstr1, typename tchar, typename tout> inline void Split(tstr1 const& src, tchar const* delims, tout out)
 		{
 			size_t i = 0, j = 0, jend = Length(src);

@@ -11,8 +11,6 @@
 //	for (int i = 0; i != PR_COUNTOF(ptr); ++i) {...}
 
 #pragma once
-#ifndef PR_MACRO_COUNT_OF_H
-#define PR_MACRO_COUNT_OF_H
 
 namespace pr
 {
@@ -24,5 +22,3 @@ namespace pr
 }
 
 #define PR_COUNTOF(arr) sizeof(pr::impl::countofhelper(arr))
-
-#endif

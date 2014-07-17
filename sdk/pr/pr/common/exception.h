@@ -27,6 +27,16 @@ namespace pr
 		Exception(CodeType code, std::string msg) :std::exception(msg.c_str()) ,m_code(code) {}
 		virtual CodeType code() const { return m_code; }
 	};
+
+	// Note:
+	//  To allow the exception message to be changed by intermediary catch handlers
+	//  do this:
+	//   catch (std::exception& ex)
+	//   {
+	//       // This is a slicing assignment, but that is actually what we want
+	//       ex = std::exception(FmtS("%s\nMore info...", ex.what()));
+	//       throw; // Preserves original exception type
+	//   }
 }
 
 #endif

@@ -116,4 +116,7 @@
       <Filter>sdk\linedrawer</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\sdk\pr\prcs\gfx\view3d.cs" />
+  </ItemGroup>
 </Project>
