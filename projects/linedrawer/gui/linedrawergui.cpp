@@ -61,7 +61,7 @@ namespace ldr
 		// This shouldn't really happen and needs investigating
 
 		// Create a step context for rendering
-		enum { force_render = true };
+		enum { force_render = false };
 		m_msg_loop.AddStepContext("rdr main loop", [this](double) { if (m_main) m_main->DoRender(force_render); }, 60.0f, false);
 
 		// Add a step context for stepping plugins
@@ -317,7 +317,7 @@ namespace ldr
 			m_main->m_settings.m_NewObjectString = dlg.m_body;
 			m_main->m_settings.Save();
 
-			pr::ldr::AddString(m_main->m_rdr, m_main->m_settings.m_NewObjectString.c_str(), m_main->m_store);
+			pr::ldr::AddString(m_main->m_rdr, m_main->m_settings.m_NewObjectString.c_str(), nullptr, m_main->m_store);
 			m_main->RenderNeeded();
 		}
 		catch (std::exception const& e)
