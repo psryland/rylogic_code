@@ -3,8 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*************************************
 #pragma once
-#ifndef PR_HASH_H
-#define PR_HASH_H
+#include <thread>
+#include <mutex>
 
 // Note: SSE4.2 has an intrinsic for crc32, I don't know how to optionally use it tho :-/
 //#include <intrin.h>
@@ -13,6 +13,10 @@ namespace pr
 {
 	namespace hash
 	{
+		// WARNING - There is a race condition on the initialisation of CRCTable<>.
+		// Make sure you call CRCTable32.Data()/CRCTable64.Data() in the main thread
+		// before worker threads start accessing the hash functions.
+
 		// 'HashValue' as a signed int so that comparisons
 		// with enum values don't generate signed/unsigned warnings
 		typedef int HashValue;
@@ -20,6 +24,20 @@ namespace pr
 		typedef unsigned char uint8_t;
 		typedef unsigned int  uint_t;
 		typedef unsigned long long uint64_t;
+
+		// Very basic hash function for null terminated strings
+		inline HashValue HashString(char const* str)
+		{
+			HashValue i = *str;
+			for (;*str != 0; ++str) i = i*397 ^ *str;
+			return i;
+		}
+		inline HashValue HashIString(char const* str)
+		{
+			HashValue i = tolower(*str);
+			for (;*str != 0; ++str) i = i*397 ^ tolower(*str);
+			return i;
+		}
 
 		// CRC32 table - the polynomial '0x1EDC6F41' is chosen because that's what the intrinsics are based on
 		// Hopefully, one day I can optionally compile in the intrinsic versions without changing the generated hashes
@@ -35,7 +53,11 @@ namespace pr
 					m_data[i] = part;
 				}
 			}
-			static Uint const* Data() { static CRCTable table; return table.m_data; }
+			static Uint const* Data()
+			{
+				static CRCTable table;
+				return table.m_data;
+			}
 		};
 		typedef CRCTable<uint_t  , 0x1EDC6F41U>   CRCTable32;
 		typedef CRCTable<uint64_t, 0x1EDC6F41ULL> CRCTable64;
@@ -363,6 +385,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif
