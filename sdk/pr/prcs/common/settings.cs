@@ -365,8 +365,9 @@ namespace pr.common
 				if (args.Cancel) return;
 
 				// Ensure the save directory exists
+				filepath = Path.GetFullPath(filepath);
 				var path = Path.GetDirectoryName(filepath);
-				if (path != null && !Directory.Exists(path))
+				if (PathEx.DirExists(path))
 					Directory.CreateDirectory(path);
 
 				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
