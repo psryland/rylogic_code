@@ -148,6 +148,7 @@ namespace pr
 			x(Faces              ,= 0x14903115)\
 			x(Tetra              ,= 0x092750d0)\
 			x(GenerateNormals    ,= 0x1c991230)\
+			x(BakeTransform      ,= 0x08648294)\
 			x(Step               ,= 0x0ad1d27d)\
 			x(Addr               ,= 0x0a215e87)\
 			x(Filter             ,= 0x183f6f0c)\

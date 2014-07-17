@@ -34,20 +34,33 @@ namespace pr
 
 			// Helper function for creating a model
 			template <typename GenFunc>
-			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, NuggetProps const* ddata_, GenFunc& GenerateFunc, m4x4 const* o2w = nullptr)
+			static ModelPtr Create(Renderer& rdr, std::size_t vcount, std::size_t icount, EPrim topo, NuggetProps const* ddata_, GenFunc& GenerateFunc, m4x4 const* bake = nullptr)
 			{
 				// Generate the model in local buffers
 				Cont cont(vcount, icount);
 				pr::geometry::Props props = GenerateFunc(begin(cont.m_vcont), begin(cont.m_icont));
 
 				// Bake a transform into the model
-				if (o2w)
+				if (bake)
 				{
-					props.m_bbox = *o2w * props.m_bbox;
+					props.m_bbox = *bake * props.m_bbox;
 					for (auto& v : cont.m_vcont)
 					{
-						v.m_vert = *o2w * v.m_vert;
-						v.m_norm = *o2w * v.m_norm;
+						v.m_vert = *bake * v.m_vert;
+						v.m_norm = *bake * v.m_norm;
+					}
+					if (Determinant3(*bake) < 0) // flip faces
+					{
+						switch (topo) {
+						case EPrim::TriList:
+							for (size_t i = 0, iend = cont.m_icont.size(); i != iend; i += 3)
+								std::swap(cont.m_icont[i+1], cont.m_icont[i+2]);
+							break;
+						case EPrim::TriStrip:
+							if (!cont.m_icont.empty())
+								cont.m_icont.insert(begin(cont.m_icont), *begin(cont.m_icont));
+							break;
+						}
 					}
 				}
 
@@ -274,10 +287,60 @@ namespace pr
 			}
 
 			// ModelFile **************************************************************************
-			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* parts = nullptr)
+			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* parts = nullptr, m4x4 const* bake = nullptr)
 			{
 				using namespace pr::geometry;
 
+				// A container for the verts and indices
+				Cont cont(0,0);
+				bool flip_faces = bake != nullptr && Determinant3(*bake) < 0;
+
+				// Bounding box
+				pr::BBox bbox = BBoxReset;
+				auto bb = [&](v4 const& v){ Encompass(bbox, v); return v; };
+
+				// Nugget properties and model sub-ranges
+				std::vector<NuggetProps> nuggets;
+
+				// Output callback functions
+				auto v_out = [&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
+				{
+					VType vert;
+					if (bake) SetPCNT(vert, bb(*bake * p), c, *bake * n, t);
+					else      SetPCNT(vert, bb(p), c, n, t);
+					cont.m_vcont.push_back(vert);
+				};
+				auto i_out = [&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2)
+				{
+					cont.m_icont.push_back(i0);
+					if (flip_faces)
+					{
+						cont.m_icont.push_back(i2);
+						cont.m_icont.push_back(i1);
+					}
+					else
+					{
+						cont.m_icont.push_back(i1);
+						cont.m_icont.push_back(i2);
+					}
+				};
+				auto nug_out = [&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
+				{
+					NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
+						
+					// Retrieve the texture pointer from 'rdr'
+					//if (!mat.m_textures.empty())
+					//	ddata.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(...);
+						
+					// If the material has alpha, set the alpha blending states in the nugget
+					if (!FEql(mat.m_diffuse.a, 1.0f))
+						SetAlphaBlending(ddata, true);
+						
+					// Save the nugget for creating later
+					nuggets.emplace_back(ddata);
+				};
+
+				// Material lookup
 				std::unordered_map<std::string, max_3ds::Material> mats;
 				auto matlookup = [&](std::string const& name)
 				{
@@ -295,13 +358,6 @@ namespace pr
 					mats[mat.m_name] = mat;
 				});
 
-				// Nugget properties and model sub-ranges
-				std::vector<NuggetProps> nuggets;
-
-				// A container for the verts and indices
-				Cont cont(0,0);
-				pr::BBox bbox = BBoxReset;
-
 				// Parse the model objects in the 3ds stream
 				Read3DSModels(src, [&](max_3ds::Object&& obj)
 				{
@@ -309,34 +365,7 @@ namespace pr
 					(void)parts;
 
 					// Convert the max model into a renderer model
-					auto bb = Max3DSModel(obj, matlookup
-						,[&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
-						{
-							NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
-						
-							// Retrieve the texture pointer from 'rdr'
-							//if (!mat.m_textures.empty())
-							//	ddata.m_tex_diffuse = rdr.m_tex_mgr.FindTexture(...);
-						
-							// If the material has alpha, set the alpha blending states in the nugget
-							if (!FEql(mat.m_diffuse.a, 1.0f))
-								SetAlphaBlending(ddata, true);
-						
-							// Save the nugget for creating later
-							nuggets.emplace_back(ddata);
-						}
-						,[&](v4 const& p, Colour const& c, v4 const& n, v2 const& t)
-						{
-							VType vert;
-							SetPCNT(vert, p, c, n, t);
-							cont.m_vcont.push_back(vert);
-						}
-						,[&](pr::uint16 i)
-						{
-							cont.m_icont.push_back(i);
-						});
-
-					Encompass(bbox, bb);
+					Max3DSModel(obj, matlookup, nug_out, v_out, i_out);
 				});
 
 				// Create the model
@@ -350,13 +379,13 @@ namespace pr
 
 				return model;
 			}
-			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, char const* parts = nullptr)
+			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, char const* parts = nullptr, m4x4 const* bake = nullptr)
 			{
 				using namespace pr::geometry;
 				switch (format)
 				{
 				default: throw std::exception("Unsupported model file format");
-				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, parts);
+				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, parts, bake);
 				}
 			}
 

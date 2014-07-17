@@ -1848,13 +1848,16 @@ namespace pr
 		template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 		{
 			string512 m_filepath;
+			m4x4 m_bake;
 			bool m_generate_normals;
 
+			ObjectCreator() :m_filepath() ,m_bake(m4x4Identity) ,m_generate_normals(false) {}
 			bool ParseKeyword(ParseParams& p, EKeyword kw) override
 			{
 				switch (kw) {
 				default: return IObjectCreator::ParseKeyword(p, kw);
 				case EKeyword::GenerateNormals: m_generate_normals = true; return true;
+				case EKeyword::BakeTransform: ParseTransform(p.m_reader, m_bake); return true;
 				}
 			}
 			void Parse(ParseParams& p) override
@@ -1872,27 +1875,33 @@ namespace pr
 					p.m_reader.ReportError("Model filepath not given");
 					return;
 				}
+				string512 filepath = pr::filesys::ResolvePath(m_filepath, p.m_reader.IncludeHandler()->m_paths);
+				if (filepath.empty())
+				{
+					p.m_reader.ReportError("Model relative filepath could not be resolved");
+					return;
+				}
 
 				// Determine the format from the file extension
-				ModelFileInfo info = GetModelFileInfo(m_filepath.c_str());
+				ModelFileInfo info = GetModelFileInfo(filepath.c_str());
 				if (info.m_format == EModelFileFormat::Unknown)
 				{
-					string512 msg = pr::Fmt("Mesh file '%s' is not supported.\nSupported Formats: ", m_filepath.c_str());
+					string512 msg = pr::Fmt("Mesh file '%s' is not supported.\nSupported Formats: ", filepath.c_str());
 					for (auto f : EModelFileFormat::MemberNames()) msg.append(f).append(" ");
 					p.m_reader.ReportError(msg.c_str());
 					return;
 				}
 
 				// Open the file
-				std::ifstream src(m_filepath.c_str(), info.m_is_binary ? std::ifstream::binary : 0);
+				std::ifstream src(filepath.c_str(), info.m_is_binary ? std::ifstream::binary : 0);
 				if (!src)
 				{
-					p.m_reader.ReportError(pr::Fmt("Unable to open '%s' for reading", m_filepath.c_str()).c_str());
+					p.m_reader.ReportError(pr::Fmt("Unable to open '%s' for reading", filepath.c_str()).c_str());
 					return;
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src);
+				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};
