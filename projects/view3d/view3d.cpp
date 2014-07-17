@@ -13,28 +13,6 @@ using namespace pr::rdr;
 using namespace pr::log;
 using namespace view3d;
 
-CAppModule g_module;
-
-#pragma region Dll entry point
-#ifdef _MANAGED
-#pragma managed(push, off)
-#endif
-BOOL APIENTRY DllMain(HMODULE hInstance, DWORD ul_reason_for_call, LPVOID)
-{
-	switch (ul_reason_for_call)
-	{
-	case DLL_THREAD_ATTACH:  break;
-	case DLL_THREAD_DETACH:  break;
-	case DLL_PROCESS_ATTACH: g_module.Init(0, hInstance); break;
-	case DLL_PROCESS_DETACH: g_module.Term(); break;
-	}
-	return TRUE;
-}
-#ifdef _MANAGED
-#pragma managed(pop)
-#endif
-#pragma endregion
-
 // The view3d dll is loaded once per application, although an application may have
 // multiple windows and may call Initialise/Shutdown a number of times.
 // We want to be able to create View3d objects in isolation which means one
@@ -46,6 +24,8 @@ static Context& Dll() { if (g_ctx) return *g_ctx; throw std::exception("View3d n
 #define DllReportError Dll().ReportError
 
 // Initialise the dll
+// The first call to initialise sets the error and log callbacks.
+// Subsequent calls merely add references
 VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb)
 {
 	try

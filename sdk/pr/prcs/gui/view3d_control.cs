@@ -299,9 +299,9 @@ namespace pr.gui
 				{// Motion lock
 				}
 				{// Orbit
-					var orbit_menu = new ToolStripMenuItem("Orbit");
-					rdr_menu.DropDownItems.Add(orbit_menu);
-					orbit_menu.Click += delegate {};
+				//	var orbit_menu = new ToolStripMenuItem("Orbit");
+				//	rdr_menu.DropDownItems.Add(orbit_menu);
+				//	orbit_menu.Click += delegate {};
 				}
 			}
 			{// Tools

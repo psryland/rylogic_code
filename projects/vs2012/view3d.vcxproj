@@ -243,6 +243,9 @@
     </ClCompile>
     <ClCompile Include="..\View3D\view3d.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\sdk\pr\prcs\gfx\view3d.cs" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
