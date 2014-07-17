@@ -6,5 +6,6 @@
 	<Function><Name>D3DPtr&lt;.*&gt;</Name><Action>NoStepInto</Action></Function>
 <!--<Function><Name>std::.*</Name><Action>NoStepInto</Action></Function>-->
 <!--<Function><Name>std::vector&lt;.*</Name><Action>NoStepInto</Action></Function>-->
+	<Function><Name>.*::c_str</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>operator new</Name><Action>NoStepInto</Action></Function>
 </StepFilter>
