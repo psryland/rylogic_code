@@ -141,7 +141,7 @@ namespace pr.container
 		}
 
 		/// <summary>Enumerate over data source elements</summary>
-		IEnumerator<TItem> IEnumerable<TItem>.GetEnumerator()
+		public new IEnumerator<TItem> GetEnumerator()
 		{
 			foreach (var item in List)
 				yield return (TItem)item;
@@ -347,6 +347,9 @@ namespace pr
 				var bs = new BindingSource<int>{DataSource = arr};
 				var res = bs.ToArray();
 				Assert.True(arr.SequenceEqual(res));
+
+				foreach (var i in bs)
+					Assert.True(i != 0); // Checking type inference
 			}
 		}
 	}
