@@ -80,8 +80,9 @@ namespace pr
 	static v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
 	static v4 const v4Half   = {0.5f, 0.5f, 0.5f, 0.5f};
 	static v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
-	static v4 const v4Min    = {maths::float_min, maths::float_min, maths::float_min, maths::float_min};
-	static v4 const v4Max    = {maths::float_max, maths::float_max, maths::float_max, maths::float_max};
+	static v4 const v4Min    = {+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
+	static v4 const v4Max    = {+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
+	static v4 const v4Lowest = {-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
 	static v4 const v4XAxis  = {1.0f, 0.0f, 0.0f, 0.0f};
 	static v4 const v4YAxis  = {0.0f, 1.0f, 0.0f, 0.0f};
 	static v4 const v4ZAxis  = {0.0f, 0.0f, 1.0f, 0.0f};
@@ -92,8 +93,9 @@ namespace pr
 	{
 		template <> struct limits<v4>
 		{
-			static v4 min() { return v4Min; }
-			static v4 max() { return v4Max; }
+			static v4 min()    { return v4Min; }
+			static v4 max()    { return v4Max; }
+			static v4 lowest() { return v4Lowest; }
 		};
 	}
 
