@@ -10,10 +10,9 @@ namespace TestCS
 {
 	public class ToolFormUI :pr.gui.ToolForm
 	{
-		public ToolFormUI(Form owner, Control child) :base(owner, EPin.TopRight)
+		public ToolFormUI(Control owner) :base(owner, EPin.TopRight)
 		{
 			InitializeComponent();
-			PinnedToChild = child;
 
 			m_combo_pin_to.Items.AddRange(Enum<EPin>.Values.Cast<object>().ToArray());
 			m_combo_pin_to.SelectedIndexChanged += (s,a) =>
@@ -21,11 +20,11 @@ namespace TestCS
 					Pin = (EPin)m_combo_pin_to.SelectedItem;
 				};
 
-			PopulateChildCombo(owner);
+			PopulateChildCombo(owner.TopLevelControl);
 			m_combo_child.DisplayMember = "Name";
 			m_combo_child.SelectedIndexChanged += (s,a) =>
 				{
-					PinnedToChild = (Control)m_combo_child.SelectedItem;
+					PinTarget = (Control)m_combo_child.SelectedItem;
 				};
 
 			m_track_autofade.Value = m_track_autofade.Maximum;

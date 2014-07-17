@@ -31,17 +31,17 @@ namespace pr.gui
 		public ToolForm()
 			:this(null, EPin.TopLeft, Point.Empty, Size.Empty, false)
 		{}
-		public ToolForm(Form owner)
-			:this(owner, EPin.TopLeft, Point.Empty, Size.Empty, false)
+		public ToolForm(Control target)
+			:this(target, EPin.TopLeft, Point.Empty, Size.Empty, false)
 		{}
-		public ToolForm(Form owner, EPin pin)
-			:this(owner, pin, Point.Empty, Size.Empty, false)
+		public ToolForm(Control target, EPin pin)
+			:this(target, pin, Point.Empty, Size.Empty, false)
 		{}
-		public ToolForm(Form owner, EPin pin, Point ofs)
-			:this(owner, pin, ofs, Size.Empty, false)
+		public ToolForm(Control target, EPin pin, Point ofs)
+			:this(target, pin, ofs, Size.Empty, false)
 		{}
-		public ToolForm(Form owner, Point ofs, Size size)
-			:this(owner, EPin.TopLeft, ofs, size, false)
+		public ToolForm(Control target, Point ofs, Size size)
+			:this(target, EPin.TopLeft, ofs, size, false)
 		{}
 
 		/// <summary>
@@ -50,11 +50,11 @@ namespace pr.gui
 		/// in the call to InitiailizeComponent(). Leaving the StartPosition property
 		/// as WindowDefaultPosition should prevent the designer adding an explicit set
 		/// of the StartPosition property.</summary>
-		public ToolForm(Form owner, EPin pin, Point ofs, Size size, bool modal)
+		public ToolForm(Control target, EPin pin, Point ofs, Size size, bool modal)
 		{
 			m_ofs = ofs;
 			m_pin = pin;
-			Owner = owner;
+			PinTarget = target;
 			StartPosition = FormStartPosition.Manual;
 			HideOnClose = !modal;
 			AutoFade = 1.0f;
@@ -99,61 +99,37 @@ namespace pr.gui
 		}
 		private Point m_ofs;
 
+		/// <summary>Automatically drop the opacity to this value when the mouse leaves the window bounds. Set to 1.0f to disable</summary>
+		public float AutoFade { get; set; }
+
 		/// <summary>Controls whether the form closes or just hides</summary>
 		protected bool HideOnClose { get; set; }
 
 		/// <summary>Get/Set the child control on the owner form that this tool window is pinned to. If null, assumes the form itself</summary>
-		public Control PinnedToChild
+		public Control PinTarget
 		{
-			get { return m_pinned_to_child; }
+			get { return m_pin_target; }
 			set
 			{
-				if (value == m_pinned_to_child) return;
-				if (m_pinned_to_child != null)
+				if (value == m_pin_target) return;
+				if (m_pin_target != null)
 				{
-					m_pinned_to_child.Move   -= UpdateLocation;
-					m_pinned_to_child.Resize -= UpdateLocation;
+					m_pin_target.Move   -= UpdateLocation;
+					m_pin_target.Resize -= UpdateLocation;
 				}
-				m_pinned_to_child = Owner != null && value != null && Owner.Contains(value) ? value : null;
-				if (m_pinned_to_child != null)
+
+				m_pin_target = value;
+				WatchTopLevelControl();
+
+				if (m_pin_target != null)
 				{
-					m_pinned_to_child.Move   += UpdateLocation;
-					m_pinned_to_child.Resize += UpdateLocation;
+					m_pin_target.Move   += UpdateLocation;
+					m_pin_target.Resize += UpdateLocation;
 				}
 				UpdateLocation();
 			}
 		}
-		private Control m_pinned_to_child;
-
-		/// <summary>Get/Set the owning form</summary>
-		public new Form Owner
-		{
-			get { return base.Owner; }
-			set
-			{
-				if (value == Owner) return;
-
-				// Watch the owning form for position/size changes
-				// Whenever the owner moves, move this form as well
-				if (base.Owner != null)
-				{
-					base.Owner.Move   -= UpdateLocation;
-					base.Owner.Resize -= UpdateLocation;
-				}
-
-				// If the child is not a child of 'value' then it will be set to null
-				var child = PinnedToChild;
-				base.Owner = value;
-				PinnedToChild = child;
-
-				if (base.Owner != null)
-				{
-					base.Owner.Move   += UpdateLocation;
-					base.Owner.Resize += UpdateLocation;
-				}
-				UpdateLocation();
-			}
-		}
+		private Control m_pin_target;
 
 		/// <summary>Display the UI</summary>
 		public void Display()
@@ -162,9 +138,6 @@ namespace pr.gui
 			if (!Visible) Show(Owner);
 			else          Focus();
 		}
-
-		/// <summary>Automatically drop the opacity to this value when the mouse leaves the window bounds. Set to 1.0f to disable</summary>
-		public float AutoFade { get; set; }
 
 		protected override void OnLoad(EventArgs e)
 		{
@@ -186,6 +159,11 @@ namespace pr.gui
 				}
 			}
 			UpdateLocation();
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			WatchTopLevelControl();
+			base.OnShown(e);
 		}
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
@@ -255,21 +233,44 @@ namespace pr.gui
 			base.OnControlRemoved(e);
 		}
 
+		/// <summary>Set the form opacity based on where the mouse is</summary>
 		private void HandleAutoFade(object sender = null, EventArgs args = null)
 		{
 			Opacity = ClientRectangle.Contains(PointToClient(MousePosition)) ? 1.0f : AutoFade;
 		}
+
+		/// <summary>Get/Set the owning form</summary>
+		private void WatchTopLevelControl()
+		{
+			var top = m_pin_target != null ? m_pin_target.TopLevelControl : null;
+			if (top == m_top_level_control) return;
+
+			// Watch the owning form for position/size changes
+			// Whenever the owner moves, move this form as well
+			if (m_top_level_control != null)
+			{
+				m_top_level_control.Move   -= UpdateLocation;
+				m_top_level_control.Resize -= UpdateLocation;
+			}
+
+			m_top_level_control = top;
+
+			if (m_top_level_control != null)
+			{
+				m_top_level_control.Move   += UpdateLocation;
+				m_top_level_control.Resize += UpdateLocation;
+			}
+			UpdateLocation();
+		}
+		private Control m_top_level_control;
 
 		/// <summary>Returns the bounds of the form/control that the tool is pinned to</summary>
 		protected Rectangle TargetFrame
 		{
 			get
 			{
-				Debug.Assert(Owner != null);
-				return PinnedToChild != null
-					? PinnedToChild.RectangleToScreen(PinnedToChild.Bounds)
-					: Owner.Bounds;
-				//Rectangle.FromLTRB(Owner.Left, Owner.Top, Owner.Right, Owner.Bottom);
+				Debug.Assert(PinTarget != null);
+				return PinTarget.RectangleToScreen(PinTarget.Bounds);
 			}
 		}
 

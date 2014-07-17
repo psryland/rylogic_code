@@ -56,7 +56,7 @@ namespace TestCS
 
 			m_menu_tool_form.Click += (s,a) =>
 				{
-					new ToolFormUI(this, m_text1).Show(this);
+					new ToolFormUI(m_text1).Show(this);
 				};
 
 			m_menu_tree_grid.Click += (s,a) =>
