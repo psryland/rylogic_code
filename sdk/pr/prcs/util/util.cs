@@ -39,6 +39,13 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		/// <summary>Convenience disposer</summary>
+		public static void Dispose<T>(ref T doomed) where T:class, IDisposable
+		{
+			if (doomed != null) doomed.Dispose();
+			doomed = null;
+		}
+
 		/// <summary>
 		/// State test for design mode.
 		/// Note: Use the Component extension method for a more reliable test</summary>

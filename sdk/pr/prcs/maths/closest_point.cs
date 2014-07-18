@@ -27,6 +27,30 @@ namespace pr.maths
 			return t / denom; // 'point' projects inside 'line', do deferred divide now
 		}
 
+		/// <summary>Return the closest point on 'rect' to 'pt'</summary>
+		public static v2 ClosestPoint(BRect rect, v2 pt)
+		{
+			v2 lower = rect.Lower;
+			v2 upper = rect.Upper;
+			v2 closest;
+			if (rect.IsWithin(pt))
+			{
+				// if pt.x/pt.y > rect.sizeX/rect.sizeY then the point
+				// is closer to the Y edge of the rectangle
+				if (Maths.Abs(pt.x * rect.SizeY) > Maths.Abs(pt.y * rect.SizeX))
+					closest = new v2(pt.x, Maths.SignF(pt.y) * rect.SizeY);
+				else
+					closest = new v2(Maths.SignF(pt.x) * rect.SizeX, pt.y);
+			}
+			else
+			{
+				closest = new v2(
+					Maths.Clamp(pt.x, lower.x, upper.x),
+					Maths.Clamp(pt.y, lower.y, upper.y));
+			}
+			return closest;
+		}
+
 		/// <summary>
 		/// Find the closest point on 'spline' to 'pt'
 		/// Note: the analytic solution to this problem involves solving a 5th order polynomial

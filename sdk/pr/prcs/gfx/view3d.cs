@@ -1013,6 +1013,14 @@ namespace pr.gfx
 				View3D_PositionCamera(m_window.Handle, position, lookat, up);
 			}
 
+			/// <summary>Set the camera position such that it's still looking at the current focus point</summary>
+			public void SetPosition(v4 position)
+			{
+				var up = AlignAxis;
+				if (up.Length3Sq == 0f) up = v4.YAxis;
+				SetPosition(position, FocusPoint, up);
+			}
+
 			/// <summary>Move the camera to a position that can see the whole scene given camera directions 'forward' and 'up'</summary>
 			public void ResetView(v4 forward, v4 up)
 			{

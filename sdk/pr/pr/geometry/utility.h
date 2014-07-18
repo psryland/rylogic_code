@@ -380,10 +380,10 @@ namespace pr
 						assert(i < PR_COUNTOF(verts));
 						return verts[i].m_pos;
 					}
-					,[&](int i, pr::v4 const& norm)
+					,[&](int, int orig_idx, pr::v4 const& norm)
 					{
-						assert(i < PR_COUNTOF(verts));
-						vout.emplace_back(verts[i].m_pos, norm);
+						assert(orig_idx < PR_COUNTOF(verts));
+						vout.emplace_back(verts[orig_idx].m_pos, norm);
 					}
 					,[&](int i0, int i1, int i2)
 					{

@@ -312,6 +312,7 @@
     <Compile Include="maths\brect.cs" />
     <Compile Include="maths\clip.cs" />
     <Compile Include="maths\closest_point.cs" />
+    <Compile Include="maths\distance.cs" />
     <Compile Include="maths\intersect.cs" />
     <Compile Include="maths\matrix2x2.cs" />
     <Compile Include="maths\matrix3x4.cs" />

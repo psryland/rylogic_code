@@ -2,7 +2,9 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace pr.gui
@@ -57,7 +59,8 @@ namespace pr.gui
 			PinTarget = target;
 			StartPosition = FormStartPosition.Manual;
 			HideOnClose = !modal;
-			AutoFade = 1.0f;
+			AutoFade = false;
+			FadeRange = new RangeF(1.0,1.0);
 			SetStyle(ControlStyles.SupportsTransparentBackColor, true);
 			if (size != Size.Empty)
 				Size = size;
@@ -104,8 +107,11 @@ namespace pr.gui
 		}
 		private Point m_ofs;
 
-		/// <summary>Automatically drop the opacity to this value when the mouse leaves the window bounds. Set to 1.0f to disable</summary>
-		public float AutoFade { get; set; }
+		/// <summary>Get/Set whether opacity is changed as the mouse enters/leaves the window bounds.</summary>
+		public bool AutoFade { get; set; }
+
+		/// <summary>The opacity range for fading</summary>
+		public RangeF FadeRange { get; set; }
 
 		/// <summary>Controls whether the form closes or just hides</summary>
 		protected bool HideOnClose { get; set; }
@@ -241,7 +247,14 @@ namespace pr.gui
 		/// <summary>Set the form opacity based on where the mouse is</summary>
 		private void HandleAutoFade(object sender = null, EventArgs args = null)
 		{
-			Opacity = ClientRectangle.Contains(PointToClient(MousePosition)) ? 1.0f : AutoFade;
+			if (!AutoFade)
+			{
+				Opacity = 1.0f;
+				return;
+			}
+
+			var pt = PointToClient(MousePosition);
+			Opacity = ClientRectangle.Contains(pt) ? FadeRange.End : FadeRange.Begin;
 		}
 
 		/// <summary>Get/Set the owning form</summary>

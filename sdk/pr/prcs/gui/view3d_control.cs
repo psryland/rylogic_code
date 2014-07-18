@@ -353,14 +353,23 @@ namespace pr.gui
 			}
 
 			// Allow users to add custom menu options to the context menu
-			if (CustomiseContextMenu != null)
-				CustomiseContextMenu(context_menu);
+			OnCustomiseContextMenu(new CustomContextMenuEventArgs(context_menu));
 
 			context_menu.Show(MousePosition);
 		}
 
 		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
-		public event Action<ContextMenuStrip> CustomiseContextMenu;
+		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
+		public class CustomContextMenuEventArgs :EventArgs
+		{
+			/// <summary>The context menu to be customised</summary>
+			public ContextMenuStrip Menu { get; private set; }
+
+			internal CustomContextMenuEventArgs(ContextMenuStrip menu)
+			{
+				Menu = menu;
+			}
+		}
 
 		/// <summary>On Resize</summary>
 		protected override void OnResize(EventArgs e)
@@ -390,6 +399,12 @@ namespace pr.gui
 				base.OnPaint(e);
 			else
 				Render();
+		}
+
+		/// <summary>Raises the CustomiseContextMenu event</summary>
+		protected virtual void OnCustomiseContextMenu(CustomContextMenuEventArgs e)
+		{
+			CustomiseContextMenu.Raise(this, e);
 		}
 
 		/// <summary>Render and present the scene</summary>
