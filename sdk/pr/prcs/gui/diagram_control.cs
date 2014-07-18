@@ -1288,7 +1288,7 @@ namespace pr.gui
 				base.FromXml(node);
 			}
 
-			/// <summary>The 'from' anchor</summary>
+			/// <summary>The 'from' anchor. Note: assigning to this anchor changes it's content, not the instance</summary>
 			public AnchorPoint Anc0
 			{
 				get { return m_anc0; }
@@ -2230,6 +2230,9 @@ namespace pr.gui
 			public AnchorPoint()
 				:this(null,v4.Origin,v4.YAxis)
 			{}
+			public AnchorPoint(AnchorPoint rhs)
+				:this(rhs.m_impl_elem, rhs.m_impl_location, rhs.m_impl_normal)
+			{}
 			public AnchorPoint(Element elem, v4 loc, v4 norm)
 			{
 				m_impl_elem     = elem;
@@ -2748,7 +2751,7 @@ namespace pr.gui
 			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward) :base(diag, forward)
 			{
 				m_conn = conn;
-				m_prev = forward ? m_conn.Anc1 : m_conn.Anc0;
+				m_prev = new AnchorPoint(forward ? m_conn.Anc1 : m_conn.Anc0);
 				m_fixed = forward ? conn.Node0 : conn.Node1;
 
 				// Replace the moving end with the proxy
@@ -2764,7 +2767,7 @@ namespace pr.gui
 			}
 			protected override DiagramChangedEventArgs GetNotifyArgs(Node target)
 			{
-				return new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.MovingLink, m_conn, target);
+				return new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.MovingLink, m_conn, target, m_fixed);
 			}
 		}
 
@@ -2851,9 +2854,12 @@ namespace pr.gui
 				AddingLink,
 
 				/// <summary>
-				/// An end of a connector is being moved to another node
+				/// An end of a connector is being moved to another node.
 				/// Setting 'Cancel' for this event will abort the move.
-				/// 'Elements' contains the connector being moved followed by the node being attached to.</summary>
+				/// 'Elements' contains:
+				///   [0] - the connector being moved,
+				///   [1] - the node being attached to,
+				///   [2] - the node that is at the fixed end of the connector</summary>
 				MovingLink,
 
 				/// <summary>

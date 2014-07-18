@@ -99,6 +99,16 @@ namespace TestCS
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
 			FormClosed += (s,a) => Application.RemoveMessageFilter(m_filter);
 
+			m_diag.DiagramChanged += (s,a) =>
+				{
+					switch (a.ChgType)
+					{
+					case DiagramControl.DiagramChangedEventArgs.EType.MovingLink:
+						a.Cancel = true;
+						break;
+					}
+				};
+	
 			//const string options_filepath = ;
 			//var xml = new XDocument();
 			//xml.Add2(new XElement("root")).Add2("options", m_diag.Options, false);

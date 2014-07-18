@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.maths;
 using pr.util;
 
 namespace TestCS
@@ -13,6 +14,7 @@ namespace TestCS
 		public ToolFormUI(Control owner) :base(owner, EPin.TopRight)
 		{
 			InitializeComponent();
+			AutoFade = true;
 
 			m_combo_pin_to.Items.AddRange(Enum<EPin>.Values.Cast<object>().ToArray());
 			m_combo_pin_to.SelectedIndexChanged += (s,a) =>
@@ -30,7 +32,7 @@ namespace TestCS
 			m_track_autofade.Value = m_track_autofade.Maximum;
 			m_track_autofade.ValueChanged += (s,a) =>
 				{
-					AutoFade = pr.maths.Maths.Frac(m_track_autofade.Minimum, m_track_autofade.Value, m_track_autofade.Maximum);
+					FadeRange = new RangeF(Maths.Frac(m_track_autofade.Minimum, m_track_autofade.Value, m_track_autofade.Maximum), 1f);
 				};
 		}
 
