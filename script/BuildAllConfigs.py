@@ -36,7 +36,7 @@ try:
 	procs = []
 
 	parallel = True
-	same_window = False
+	same_window = True #False
 
 	#Invoke MSBuild
 	for platform in platforms:
