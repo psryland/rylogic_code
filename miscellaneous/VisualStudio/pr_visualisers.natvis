@@ -120,6 +120,12 @@
 	<Type Name="pr::Colour32">
 		<DisplayString>{m_aarrggbb,x}</DisplayString>
 	</Type>
+	<Type Name="pr::geometry::p3d::ChunkHeader">
+		<DisplayString>[{m_id}] Len={m_length}</DisplayString>
+	</Type>
+	<Type Name="pr::geometry::p3d::ChunkIndex">
+		<DisplayString>[{m_id}] Len={m_length} Sub={m_chunks._Mylast - m_chunks._Myfirst}</DisplayString>
+	</Type>
 	<Type Name="pr::geometry::max_3ds::ChunkHeader">
 		<DisplayString>[{(pr::geometry::max_3ds::EChunkId::Enum_)id}] Len={len}</DisplayString>
 	</Type>

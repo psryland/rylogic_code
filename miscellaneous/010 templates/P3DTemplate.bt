@@ -1,0 +1,161 @@
+// P3D binary 3d model format
+
+void SubChunks(uint end);
+
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned long u32;
+typedef unsigned int64 u64;
+
+typedef char Str16[16];
+struct Vec4 { float x,y,z,w; };
+struct Col4 { float r,g,b,a; };
+struct Vec2 { float u,v; };
+struct Vert { Vec4 pos; Col4 col; Vec4 norm; Vec2 uv; };
+struct Range { u32 first, count; };
+struct Nugget { u32 topo; u32 geom; Range vrange, irange; Str16 mat; };
+
+enum EChunkId
+{
+	Null           = 0x00000000, // Null chunk
+	CStr           = 0x00000001, // Null terminated ascii string
+	Main           = 0x44335250, // PR3D File type indicator
+	FileVersion    = 0x00000100, // ├─ File Version
+	Scene          = 0x00001000, // └─ Scene
+	Materials      = 0x00002000, //    ├─ Materials
+	Material       = 0x00002100, //    │  └─ Material
+	DiffuseColour  = 0x00002110, //    │     ├─ Diffuse Colour
+	DiffuseTexture = 0x00002120, //    │     └─ Diffuse texture
+	TexFilepath    = 0x00002121, //    │        ├─ Texture filepath
+	TexTiling      = 0x00002122, //    │        └─ Texture tiling
+	Meshes         = 0x00003000, //    └─ Meshes
+	Mesh           = 0x00003100, //       └─ Mesh of lines,triangles,tetras
+	MeshName       = 0x00003101, //          ├─ Name (cstr)
+	MeshVertices   = 0x00003110, //          ├─ Vertex list (u32 count, count * [Vert])
+	MeshIndices    = 0x00003120, //          ├─ Index list (u32 count, count * [u16 i])
+	MeshIndices32  = 0x00003121, //          ├─ Index list (u32 count, count * [u32 i])
+	MeshNuggets    = 0x00003200, //          └─ Nugget list (u32 count, count * [Nugget])
+};
+
+struct UnknownChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id <format=hex>;
+	u32 length;
+	FSeek(fpos + length);
+};
+
+struct Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
+};
+
+struct CStrChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	string str;
+	FSeek(fpos + length);
+};
+
+struct U32Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 value;
+	FSeek(fpos + length);
+};
+
+struct Col4Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	Col4 colour;
+	FSeek(fpos + length);
+};
+
+struct MaterialChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	Str16 name;
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
+};
+
+struct VertsChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	Vert verts[count];
+	FSeek(fpos + length);
+};
+
+struct Idx16Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	u16 indices[count];
+	FSeek(fpos + length);
+};
+
+struct Idx32Chunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	u32 indices[count];
+	FSeek(fpos + length);
+};
+
+struct NuggetsChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	u32 count;
+	Nugget nuggets[count];
+	FSeek(fpos + length);
+};
+
+void SubChunks(uint end)
+{
+	while (FTell() < end)
+	{
+		switch ((EChunkId)ReadUInt(FTell()))
+		{
+		case Main           : Chunk main; break;
+		case FileVersion    : U32Chunk version; break;
+		case Scene          : Chunk scene; break;
+		case Materials      : Chunk materials; break;
+		case Material       : MaterialChunk material; break;
+		case DiffuseColour  : Col4Chunk diffuse; break;
+		case DiffuseTexture : Chunk texture; break;
+		case TexFilepath    : CStrChunk filepath; break;
+		case TexTiling      : U32Chunk tiling; break;
+		case Meshes         : Chunk meshes; break;
+		case Mesh           : Chunk mesh; break;
+		case MeshName       : CStrChunk name; break;
+		case MeshVertices   : VertsChunk verts; break;
+		case MeshIndices    : Idx16Chunk idx16; break;
+		case MeshIndices32  : Idx32Chunk idx32; break;
+		case MeshNuggets    : NuggetsChunk nuggets; break;
+		default: UnknownChunk chunk; break;
+		}
+	}
+}
+
+SubChunks(FileSize());
