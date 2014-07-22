@@ -117,6 +117,61 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Returns the index of the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
+		public static int IndexOfMaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		{
+			if (source   == null) throw new ArgumentNullException("source");
+			if (selector == null) throw new ArgumentNullException("selector");
+
+			comparer = comparer ?? Cmp<TKey>.Default;
+			using (var src_iter = source.GetEnumerator())
+			{
+				if (!src_iter.MoveNext())
+					throw new InvalidOperationException("Sequence contains no elements");
+
+				int index = 0;
+				int index_of_max = 0;
+				var max_key = selector(src_iter.Current);
+				while (src_iter.MoveNext())
+				{
+					++index;
+					var item = src_iter.Current;
+					var key = selector(item);
+					if (comparer.Compare(key, max_key) <= 0) continue;
+					max_key = key;
+					index_of_max = index;
+				}
+				return index_of_max;
+			}
+		}
+
+		/// <summary>Returns the index of the minimum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
+		public static int IndexOfMinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, Cmp<TKey> comparer = null)
+		{
+			if (source   == null) throw new ArgumentNullException("source");
+			if (selector == null) throw new ArgumentNullException("selector");
+
+			comparer = comparer ?? Cmp<TKey>.Default;
+			using (var src_iter = source.GetEnumerator())
+			{
+				if (!src_iter.MoveNext())
+					throw new InvalidOperationException("Sequence contains no elements");
+
+				int index = 0;
+				int index_of_min = 0;
+				var max_key = selector(src_iter.Current);
+				while (src_iter.MoveNext())
+				{
+					++index;
+					var key = selector(src_iter.Current);
+					if (comparer.Compare(key, max_key) >= 0) continue;
+					max_key = key;
+					index_of_min = index;
+				}
+				return index_of_min;
+			}
+		}
+
 		/// <summary>Returns this collection as pairs</summary>
 		public static IEnumerable<Tuple<TSource,TSource>> InPairs<TSource>(this IEnumerable<TSource> source)
 		{
@@ -222,7 +277,26 @@ namespace pr
 
 				Assert.True(r0.SequenceEqual(r1));
 			}
+			[Test] public static void MinMaxBy()
+			{
+				var a0 = new[]{4,2,7,1,8,3,4,6,8,9};
 
+				Assert.AreEqual(1, a0.MinBy(x => x));
+				Assert.AreEqual(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
+				Assert.AreEqual(9, a0.MinBy(x => 10 - x));
+
+				Assert.AreEqual(9, a0.MaxBy(x => x));
+				Assert.AreEqual(8, a0.MaxBy(x => (x % 2) == 0 ? x : -1000));
+				Assert.AreEqual(1, a0.MaxBy(x => 10 - x));
+
+				Assert.AreEqual(3, a0.IndexOfMinBy(x => x));
+				Assert.AreEqual(1, a0.IndexOfMinBy(x => (x % 2) == 0 ? x : 1000));
+				Assert.AreEqual(9, a0.IndexOfMinBy(x => 10 - x));
+
+				Assert.AreEqual(9, a0.IndexOfMaxBy(x => x));
+				Assert.AreEqual(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
+				Assert.AreEqual(3, a0.IndexOfMaxBy(x => 10 - x));
+			}
 		}
 	}
 }

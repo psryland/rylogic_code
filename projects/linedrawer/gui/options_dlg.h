@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 #pragma once
-#ifndef PR_LDR_OPTIONS_DLG_H
-#define PR_LDR_OPTIONS_DLG_H
 
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/user_settings.h"
@@ -305,4 +303,3 @@ namespace ldr
 		}
 	};
 }
-#endif

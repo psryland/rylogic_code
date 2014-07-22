@@ -5,6 +5,7 @@
 
 using System.ComponentModel;
 using System.Windows.Forms;
+using pr.container;
 using pr.util;
 
 namespace pr.extn
@@ -19,6 +20,10 @@ namespace pr.extn
 		public static T CurrentOrDefault<T>(this BindingSource bs)
 		{
 			return (T)bs.CurrentOrDefault();
+		}
+		public static T CurrentOrDefault<T>(this BindingSource<T> bs)
+		{
+			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : default(T);
 		}
 
 		/// <summary>Temporarily detaches the DataSource from this binding source</summary>

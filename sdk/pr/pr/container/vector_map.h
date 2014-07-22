@@ -7,8 +7,6 @@
 // have the same invalidation rules. It's really just an ordered vector
 
 #pragma once
-#ifndef PR_COMMON_VECTOR_MAP_H
-#define PR_COMMON_VECTOR_MAP_H
 
 #include <utility>
 #include <algorithm>
@@ -19,7 +17,7 @@ namespace pr
 	// Implements a std::map like interface using a contiguous container
 	// *Careful* invalidation rules are not the same as for std::map
 	template < typename Key, typename Type, typename Vec = std::vector< std::pair<Key,Type> > >
-	struct MapAdater
+	struct vector_map
 	{
 		typedef typename std::pair<Key, Type> Elem;
 		typedef typename Vec                  Cont;
@@ -70,5 +68,3 @@ namespace pr
 		}
 	};
 }
-
-#endif

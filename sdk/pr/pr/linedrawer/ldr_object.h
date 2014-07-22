@@ -16,12 +16,12 @@
 #include <regex>
 #include "pr/macros/enum.h"
 #include "pr/common/min_max_fix.h"
-#include "pr/common/array.h"
 #include "pr/common/hash.h"
 #include "pr/common/new.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
+#include "pr/container/array.h"
 #include "pr/maths/maths.h"
 #include "pr/str/prstdstring.h"
 #include "pr/script/reader.h"

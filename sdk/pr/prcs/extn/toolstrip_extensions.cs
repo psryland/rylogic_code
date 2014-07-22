@@ -196,11 +196,11 @@ namespace pr.extn
 		{
 			node.Add
 			(
-				m_name .    ToXml(Tag.Name    ,false),
-				m_top      .ToXml(Tag.Top     ,false),
-				m_left     .ToXml(Tag.Left    ,false),
-				m_right    .ToXml(Tag.Right   ,false),
-				m_bottom   .ToXml(Tag.Bottom  ,false)
+				m_name  .ToXml(Tag.Name    ,false),
+				m_top   .ToXml(Tag.Top     ,false),
+				m_left  .ToXml(Tag.Left    ,false),
+				m_right .ToXml(Tag.Right   ,false),
+				m_bottom.ToXml(Tag.Bottom  ,false)
 			);
 			return node;
 		}
@@ -214,26 +214,18 @@ namespace pr.extn
 		}
 		public void Apply(ToolStripContainer cont, bool layout_on_resume = true)
 		{
-			if (m_name != cont.Name) return;
-
-			// Helper for temporarily removing the parent of a tool strip panel
-			Func<ToolStripPanel,Scope> invis = panel =>
-				{
-					var vis = panel.Visible;
-					return Scope.Create(() => panel.Visible = false, () => panel.Visible = vis);
-				};
-
-			using (cont.SuspendLayout(layout_on_resume))
-			using (invis(cont.TopToolStripPanel   ))
-			using (invis(cont.LeftToolStripPanel  ))
-			using (invis(cont.RightToolStripPanel ))
-			using (invis(cont.BottomToolStripPanel))
+			// If these locations are for a different container, don't apply.
+			if (m_name != cont.Name)
 			{
-				m_top   .Apply(cont.TopToolStripPanel   );
-				m_left  .Apply(cont.LeftToolStripPanel  );
-				m_right .Apply(cont.RightToolStripPanel );
-				m_bottom.Apply(cont.BottomToolStripPanel);
+				System.Diagnostics.Debug.WriteLine("ToolStripContainer locations ignored due to name mismatch.\nToolStripContainer Name {0} != Layout Data Name {1}".Fmt(cont.Name, m_name));
+				return;
 			}
+
+			// Apply the layout to each panel
+			m_top   .Apply(cont.TopToolStripPanel   );
+			m_left  .Apply(cont.LeftToolStripPanel  );
+			m_right .Apply(cont.RightToolStripPanel );
+			m_bottom.Apply(cont.BottomToolStripPanel);
 		}
 	}
 }

@@ -116,7 +116,34 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\cex\cex.cpp" />
+    <ClCompile Include="..\cex\data_header_gen.cpp" />
+    <ClCompile Include="..\cex\input.h" />
+    <ClCompile Include="..\cex\main.cpp" />
+    <ClCompile Include="..\cex\open_vs.cpp">
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</MultiProcessorCompilation>
+      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MultiProcessorCompilation>
+    </ClCompile>
+    <ClCompile Include="..\cex\p3d_exporter.cpp" />
+    <ClCompile Include="..\cex\shell_file_op.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\cex\clip.h" />
+    <ClInclude Include="..\cex\data_header_gen.h" />
+    <ClInclude Include="..\cex\dir_path.h" />
+    <ClInclude Include="..\cex\exec.h" />
+    <ClInclude Include="..\cex\forward.h" />
+    <ClInclude Include="..\cex\guid.h" />
+    <ClInclude Include="..\cex\hash.h" />
+    <ClInclude Include="..\cex\icex.h" />
+    <ClInclude Include="..\cex\lower.h" />
+    <ClInclude Include="..\cex\msg_box.h" />
+    <ClInclude Include="..\cex\open_vs.h" />
+    <ClInclude Include="..\cex\p3d_exporter.h" />
+    <ClInclude Include="..\cex\shell_file_op.h" />
+    <ClInclude Include="..\cex\template.h" />
+    <ClInclude Include="..\cex\wait.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

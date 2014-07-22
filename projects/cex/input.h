@@ -5,6 +5,7 @@
 
 #include "cex/forward.h"
 #include "cex/icex.h"
+#include "pr/macros/stringise.h"
 
 namespace cex
 {
@@ -15,7 +16,7 @@ namespace cex
 
 		void ShowHelp() const override
 		{
-			std::cout <<
+			std::cout << ICex::Title() <<
 				"Input : Read user input into an environment variable\n"
 				" Syntax: Cex -input environment_variable_name [-msg \"Message\"]\n";
 		}

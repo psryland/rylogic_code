@@ -69,6 +69,7 @@ namespace pr.gui
 				m_impl_position = position;
 				m_impl_selected = false;
 				m_impl_visible  = true;
+				m_impl_enabled  = true;
 				EditControl     = null;
 				UserData        = new Dictionary<Guid, object>();
 			}
@@ -78,7 +79,9 @@ namespace pr.gui
 				Diagram     = null;
 				Id          = node.Element(XmlField.Id).As<Guid>();
 				Position    = node.Element(XmlField.Position).As<m4x4>();
+				Selected    = false;
 				Visible     = true;
+				Enabled     = true;
 				EditControl = null;
 				UserData    = new Dictionary<Guid, object>();
 			}
@@ -238,7 +241,7 @@ namespace pr.gui
 			}
 			private bool m_impl_selected;
 
-			/// <summary>Get/Set whether this node is visible in the diagram</summary>
+			/// <summary>Get/Set whether this element is visible in the diagram</summary>
 			public bool Visible
 			{
 				get { return m_impl_visible; }
@@ -246,9 +249,23 @@ namespace pr.gui
 				{
 					if (m_impl_visible == value) return;
 					m_impl_visible = value;
+					Invalidate();
 				}
 			}
 			private bool m_impl_visible;
+
+			/// <summary>Get/Set whether this element is enabled</summary>
+			public bool Enabled
+			{
+				get { return m_impl_enabled; }
+				set
+				{
+					if (m_impl_enabled == value) return;
+					m_impl_enabled = value;
+					Invalidate();
+				}
+			}
+			private bool m_impl_enabled;
 
 			/// <summary>Allow users to bind arbitrary data to the diagram element</summary>
 			public IDictionary<Guid, object> UserData { get; private set; }
@@ -696,8 +713,57 @@ namespace pr.gui
 			/// <summary>Try to untangle the connectors to this node</summary>
 			public void Untangle()
 			{
-				// Test each connector against the others
-				// Todo
+				// Copy of the connectors connected to this node
+				var connectors = Connectors.ToList();
+
+				// For each connector pair, see if they cross
+				for (int i =   0; i != connectors.Count; ++i)
+				for (int j = i+1; j != connectors.Count; ++j)
+				{
+					var c0 = connectors[i];
+					var c1 = connectors[j];
+					var pt00 = c0.Anc0.LocationDS.xy;
+					var pt01 = c0.Anc1.LocationDS.xy;
+					var pt10 = c1.Anc0.LocationDS.xy;
+					var pt11 = c1.Anc1.LocationDS.xy;
+
+					float t0,t1;
+					Geometry.ClosestPoint(pt00, pt01, pt10, pt11, out t0, out t1);
+					if (t0 != 0f && t0 != 1f && t1 != 0f && t1 != 1f)
+					{
+						// Swap location
+						var loc = c0.Anc(this).Location;
+						c1.Anc(this).Location = c0.Anc(this).Location;
+						c0.Anc(this).Location = loc;
+
+						// Swap normal
+						var norm = c0.Anc(this).Normal;
+						c1.Anc(this).Normal = c0.Anc(this).Normal;
+						c0.Anc(this).Normal = norm;
+					}
+				}
+
+				//// The anchor points used by those connectors
+				//var anchors = Connectors.Select(x => x.Anc(this));
+
+				//// For each used anchor point, find the connector
+				//// that will be the shortest if it uses this anchor
+				//foreach (var anc in anchors)
+				//{
+				//	var idx = connectors.IndexOfMinBy(x => (anc.Location - x.OtherAnc(this).Location).Length2Sq);
+				//	var conn_anc = connectors[idx].Anc(this);
+				//	conn_anc.Location = anc.Location;
+				//	conn_anc.Normal = anc.Normal;
+				//	connectors.RemoveAt(idx);
+				//	if (connectors.Count == 0)
+				//		break;
+				//}
+
+				//// For the remaining connectors, 
+				//while (connectors.Count != 0)
+				//{
+
+				//}
 			}
 
 			/// <summary>Check the self consistency of this element</summary>
@@ -947,7 +1013,7 @@ namespace pr.gui
 				if (!pt_in_element_space)
 					point = m4x4.InverseFast(Position) * point;
 
-				float bias_distance_sq = Maths.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 25f);
+				float bias_distance_sq = Maths.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 150f);
 
 				// Select the nearest anchor, but bias the anchor points that are already used
 				var used = Connectors.Where(x => x != existing).Select(x => x.Anc(this).Location).ToArray();
@@ -982,12 +1048,19 @@ namespace pr.gui
 					var rect = Bounds.ToRectangle();
 					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
 
-					tex.Gfx.Clear(Selected ? Style.Selected : Style.Fill);
-					tex.Gfx.CompositingMode = CompositingMode.SourceOver;
+					var fill_colour = Style.Fill;
+					if (Selected) fill_colour = Style.Selected;
+					if (!Enabled) fill_colour = Style.Disabled;
+
+					var text_colour = Style.Text;
+					if (!Enabled) text_colour = Style.TextDisabled;
+
+					tex.Gfx.CompositingMode    = CompositingMode.SourceOver;
 					tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
-					tex.Gfx.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-					tex.Gfx.SmoothingMode = SmoothingMode.AntiAlias;
-					using (var bsh = new SolidBrush(Style.Text))
+					tex.Gfx.SmoothingMode      = SmoothingMode.AntiAlias;
+
+					tex.Gfx.Clear(fill_colour);
+					using (var bsh = new SolidBrush(text_colour))
 						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
 				}
 			}
@@ -1323,6 +1396,15 @@ namespace pr.gui
 					null;
 			}
 
+			/// <summary>Get the anchor point not associated with 'node'</summary>
+			public AnchorPoint OtherAnc(Node node)
+			{
+				return
+					Node0 == node ? Anc1 :
+					Node1 == node ? Anc0 :
+					null;
+			}
+
 			/// <summary>The 'from' node</summary>
 			public Node Node0
 			{
@@ -1371,7 +1453,15 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>Get/Set the node</summary>
+			/// <summary>Returns the other connected node</summary>
+			public Node OtherNode(Node node)
+			{
+				if (Node0 == node) return Node1;
+				if (Node1 == node) return Node0;
+				throw new Exception("{0} is not connected to {1}".Fmt(ToString(), node.ToString()));
+			}
+
+			/// <summary>Get/Set the 'to' or 'from' end of the connector</summary>
 			internal Node Node(bool to)
 			{
 				return to ? Node1 : Node0;
@@ -1387,7 +1477,7 @@ namespace pr.gui
 			/// <summary>True if the connector is not attached at both ends</summary>
 			public bool Dangling { get { return Node0 == null || Node1 ==  null; } }
 
-			/// <summary>True at least one end of the connector is attached to a node</summary>
+			/// <summary>True if at least one end of the connector is attached to a node</summary>
 			public bool Attached { get { return Node0 != null || Node1 !=  null; } }
 
 			/// <summary>Detach from the nodes at each end of the connector</summary>
@@ -1644,14 +1734,6 @@ namespace pr.gui
 				throw new Exception("Connector '{0}' is not connected to node {0}".Fmt(ToString(), node.ToString()));
 			}
 
-			/// <summary>Returns the other connected node</summary>
-			internal Node OtherNode(Node node)
-			{
-				if (Node0 == node) return Node1;
-				if (Node1 == node) return Node0;
-				throw new Exception("{0} is not connected to {1}".Fmt(ToString(), node.ToString()));
-			}
-
 			/// <summary>Update the node anchors</summary>
 			public void Relink(bool find_previous_anchors)
 			{
@@ -1662,6 +1744,9 @@ namespace pr.gui
 				}
 				else
 				{
+					// Find the preferred 'anc0' position closest to the centre of element1,
+					// then update the position of 'anc1' given 'anc0's position,
+					// finally update 'anc0' again since 'anc1' has possibly changed.
 					m_anc0.Update(m_anc1.Elem.Position.pos.xy, false, this);
 					m_anc1.Update(m_anc0.LocationDS.xy, false, this);
 					m_anc0.Update(m_anc1.LocationDS.xy, false, this);
@@ -1887,27 +1972,31 @@ namespace pr.gui
 			{}
 			public NodeStyle(Guid id)
 			{
-				Id        = id;
-				AutoSize  = true;
-				Border    = Color.Black;
-				Fill      = Color.WhiteSmoke;
-				Selected  = Color.LightBlue;
-				Text      = Color.Black;
-				TextAlign = ContentAlignment.MiddleCenter;
-				Font      = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
-				Padding   = new Padding(10,10,10,10);
+				Id           = id;
+				AutoSize     = true;
+				Border       = Color.Black;
+				Fill         = Color.WhiteSmoke;
+				Selected     = Color.LightBlue;
+				Disabled     = Color.LightGray;
+				Text         = Color.Black;
+				TextDisabled = Color.DarkGray;
+				TextAlign    = ContentAlignment.MiddleCenter;
+				Font         = new Font(FontFamily.GenericSansSerif, 12f, GraphicsUnit.Point);
+				Padding      = new Padding(10,10,10,10);
 			}
 			public NodeStyle(XElement node) :this()
 			{
-				Id        = node.Element(XmlField.Id      ).As<Guid>            (Id       );
-				AutoSize  = node.Element(XmlField.AutoSize).As<bool>            (AutoSize );
-				Border    = node.Element(XmlField.Border  ).As<Color>           (Border   );
-				Fill      = node.Element(XmlField.Fill    ).As<Color>           (Fill     );
-				Selected  = node.Element(XmlField.Selected).As<Color>           (Selected );
-				Text      = node.Element(XmlField.Text    ).As<Color>           (Text     );
-				TextAlign = node.Element(XmlField.Align   ).As<ContentAlignment>(TextAlign);
-				Font      = node.Element(XmlField.Font    ).As<Font>            (Font     );
-				Padding   = node.Element(XmlField.Padding ).As<Padding>         (Padding  );
+				Id           = node.Element(XmlField.Id          ).As<Guid>            (Id          );
+				AutoSize     = node.Element(XmlField.AutoSize    ).As<bool>            (AutoSize    );
+				Border       = node.Element(XmlField.Border      ).As<Color>           (Border      );
+				Fill         = node.Element(XmlField.Fill        ).As<Color>           (Fill        );
+				Selected     = node.Element(XmlField.Selected    ).As<Color>           (Selected    );
+				Disabled     = node.Element(XmlField.Disabled    ).As<Color>           (Disabled    );
+				Text         = node.Element(XmlField.Text        ).As<Color>           (Text        );
+				TextDisabled = node.Element(XmlField.TextDisabled).As<Color>           (TextDisabled);
+				TextAlign    = node.Element(XmlField.Align       ).As<ContentAlignment>(TextAlign   );
+				Font         = node.Element(XmlField.Font        ).As<Font>            (Font        );
+				Padding      = node.Element(XmlField.Padding     ).As<Padding>         (Padding     );
 			}
 			public NodeStyle(NodeStyle rhs)
 			{
@@ -1916,7 +2005,9 @@ namespace pr.gui
 				Border               = rhs.Border            ;
 				Fill                 = rhs.Fill              ;
 				Selected             = rhs.Selected          ;
+				Disabled             = rhs.Disabled          ;
 				Text                 = rhs.Text              ;
+				TextDisabled         = rhs.TextDisabled      ;
 				TextAlign            = rhs.TextAlign         ;
 				Font                 = (Font)rhs.Font.Clone();
 				Padding              = rhs.Padding           ;
@@ -1926,15 +2017,17 @@ namespace pr.gui
 			/// <summary>Export to xml</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.Id       ,Id        ,false);
-				node.Add2(XmlField.AutoSize ,AutoSize  ,false);
-				node.Add2(XmlField.Border   ,Border    ,false);
-				node.Add2(XmlField.Fill     ,Fill      ,false);
-				node.Add2(XmlField.Selected ,Selected  ,false);
-				node.Add2(XmlField.Text     ,Text      ,false);
-				node.Add2(XmlField.Font     ,Font      ,false);
-				node.Add2(XmlField.Align    ,TextAlign ,false);
-				node.Add2(XmlField.Padding  ,Padding   ,false);
+				node.Add2(XmlField.Id           ,Id           ,false);
+				node.Add2(XmlField.AutoSize     ,AutoSize     ,false);
+				node.Add2(XmlField.Border       ,Border       ,false);
+				node.Add2(XmlField.Fill         ,Fill         ,false);
+				node.Add2(XmlField.Selected     ,Selected     ,false);
+				node.Add2(XmlField.Disabled     ,Disabled     ,false);
+				node.Add2(XmlField.Text         ,Text         ,false);
+				node.Add2(XmlField.TextDisabled ,TextDisabled ,false);
+				node.Add2(XmlField.Font         ,Font         ,false);
+				node.Add2(XmlField.Align        ,TextAlign    ,false);
+				node.Add2(XmlField.Padding      ,Padding      ,false);
 				return node;
 			}
 
@@ -1974,6 +2067,14 @@ namespace pr.gui
 			}
 			private Color m_impl_selected;
 
+			/// <summary>The colour of the node when disabled</summary>
+			public Color Disabled
+			{
+				get { return m_impl_disabled; }
+				set { Set(ref m_impl_disabled, value); }
+			}
+			private Color m_impl_disabled;
+
 			/// <summary>The node text colour</summary>
 			public Color Text
 			{
@@ -1981,6 +2082,15 @@ namespace pr.gui
 				set { Set(ref m_impl_text, value); }
 			}
 			private Color m_impl_text;
+
+			/// <summary>The node text colour when disabled</summary>
+			public Color TextDisabled
+			{
+				get { return m_impl_text_disabled; }
+				set { Set(ref m_impl_text_disabled, value); }
+			}
+			private Color m_impl_text_disabled;
+
 
 			/// <summary>The alignment of the text within the node</summary>
 			public ContentAlignment TextAlign
@@ -2366,53 +2476,45 @@ namespace pr.gui
 			{
 				Active = m_pending[idx];
 				m_pending[idx] = null;
+
+				// If the op starts immediately without a mouse down, fake
+				// a mouse down event as soon as it becomes active.
+				if (Active != null)
+				{
+					if (!Active.StartOnMouseDown) Active.MouseDown(null);
+				}
 			}
 			public void EndOp(EBtnIdx idx)
 			{
-				if (Active != null) Active.Dispose();
+				if (Active != null)
+				{
+					if (Active.Cancelled) Active.NotifyCancelled();
+					Active.Dispose();
+				}
 				Active = null;
 
+				// If the next op starts immediately, begin it now
 				if (m_pending[idx] != null && !m_pending[idx].StartOnMouseDown)
 					BeginOp(idx);
 			}
-
-			///// <summary>Get/Set the mouse op for the given mouse button</summary>
-			//public MouseOp this[EBtnIdx idx]
-			//{
-			//	get { return Active = m_ops[idx]; }
-			//	set
-			//	{
-			//		// If setting the op to null, dispose the existing op and copy any pending op
-			//		if (value == null)
-			//		{
-			//			if (m_ops[idx] != null) m_ops[idx].Dispose();
-			//			m_ops[idx] = m_pending[idx];
-			//			m_pending[idx] = null;
-			//		}
-
-			//		// If setting the op to a value, set directly if the op is currently null, otherwise set pending
-			//		else
-			//		{
-			//			if (m_ops[idx] != null)
-			//			{
-			//				if (m_pending[idx] != null) m_pending[idx].Dispose();
-			//				m_pending[idx] = value;
-			//			}
-			//			else
-			//			{
-			//				m_ops[idx] = value;
-			//			}
-			//		}
-			//	}
-			//}
 		}
 
 		/// <summary>Base class for a mouse operation performed with the mouse down->drag->up sequence</summary>
 		private abstract class MouseOp :IDisposable
 		{
-			protected DiagramControl m_diag; // The diagram
+			// The general process goes:
+			//  A mouse op is created and set as the pending operation in 'MouseOps'.
+			//  MouseDown on the diagram calls 'BeginOp' which moves the pending op to 'Active'.
+			//  Mouse events on the diagram are forwarded to the active op
+			//  MouseUp ends the current Active op, if the pending op should start immediately
+			//  then mouse up causes the next op to start (with a faked MouseDown event).
+			//  If at any point a mouse op is cancelled, no further mouse events are forwarded
+			//  to the op. When EndOp is called, a notification can be sent by the op to indicate cancelled.
 
-			//Selection data for a mouse button
+			/// <summary>The owning diagram</summary>
+			protected DiagramControl m_diag;
+
+			// Selection data for a mouse button
 			public bool  m_btn_down;   // True while the corresponding mouse button is down
 			public Point m_grab_cs;    // The client space location of where the diagram was "grabbed"
 			public v2    m_grab_ds;    // The diagram space location of where the diagram was "grabbed"
@@ -2424,8 +2526,7 @@ namespace pr.gui
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
-			public virtual void Dispose()
-			{}
+			public virtual void Dispose() {}
 
 			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
 			public bool StartOnMouseDown { get; set; }
@@ -2449,6 +2550,9 @@ namespace pr.gui
 
 			/// <summary>Called on mouse up</summary>
 			public abstract void MouseUp(MouseEventArgs e);
+
+			/// <summary>Called when the mouse operation is cancelled</summary>
+			public virtual void NotifyCancelled() {}
 		}
 
 		/// <summary>A mouse operation for dragging selected elements around</summary>
@@ -2581,6 +2685,11 @@ namespace pr.gui
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
+				// Allow the caller to cancel the AddNode before we start.
+				Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedNodeEventArgs(EDiagramChangeType.AddNodeBegin, null)).Cancel;
+				if (Cancelled)
+					return;
+
 				m_node = new BoxNode{PositionXY = m_grab_ds};
 				m_node.Diagram = m_diag;
 				m_node.PositionXY = m_grab_ds;
@@ -2589,14 +2698,16 @@ namespace pr.gui
 			{}
 			public override void MouseUp(MouseEventArgs e)
 			{
-				var args = m_diag.RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.AddingNode, m_node));
-				if (args.Cancel)
-				{
-					Cancelled = true;
+				// Allow the client to cancel the AddNode.
+				Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedNodeEventArgs(EDiagramChangeType.AddNodeEnd, m_node)).Cancel;
+				if (Cancelled)
 					return;
-				}
 
 				m_node = null; // Prevent the node being disposed
+			}
+			public override void NotifyCancelled()
+			{
+				m_diag.RaiseDiagramChanged(new DiagramChangedNodeEventArgs(EDiagramChangeType.AddNodeCancelled, null));
 			}
 		}
 
@@ -2607,11 +2718,13 @@ namespace pr.gui
 			protected readonly bool m_forward;    // Indicates whether the start or the end of the connector is floating
 			protected Connector m_conn;           // The connector being moved
 			protected Node m_fixed;               // The unmoving node
+			private bool m_is_add;
 			
-			public MouseOpMoveLinkBase(DiagramControl diag, bool forward) :base(diag)
+			public MouseOpMoveLinkBase(DiagramControl diag, bool forward, bool is_add) :base(diag)
 			{
 				m_proxy = new NodeProxy{Diagram = diag}; // Create a proxy for the floating end to attach to
 				m_forward = forward;
+				m_is_add = is_add;
 			}
 			public override void Dispose()
 			{
@@ -2622,7 +2735,11 @@ namespace pr.gui
 			{
 				return m_diag.HitTestCS(location_cs).Hits.FirstOrDefault(x => x.Entity == Entity.Node && x.Element != m_proxy && x.Element != m_fixed);
 			}
-			public override void MouseDown(MouseEventArgs e) {}
+			public override void MouseDown(MouseEventArgs e)
+			{
+				var ty = m_is_add ? EDiagramChangeType.AddLinkBegin : EDiagramChangeType.MoveLinkBegin;
+				Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(ty, m_conn, m_fixed, null)).Cancel;
+			}
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// If we're hovering over a node, find the nearest anchor on that node and snap to it
@@ -2652,6 +2769,7 @@ namespace pr.gui
 				// No node to link to? Just revert the link
 				if (target == null)
 				{
+					Cancelled = true;
 					Revert();
 				}
 				else
@@ -2673,17 +2791,20 @@ namespace pr.gui
 					}
 
 					// Notify the caller
-					var res = m_diag.RaiseDiagramChanged(GetNotifyArgs(target));
-					if (res.Cancel)
-						Revert();
-					else
-						Commit();
+					var ty = m_is_add ? EDiagramChangeType.AddLinkEnd : EDiagramChangeType.MoveLinkEnd;
+					Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(ty, m_conn, m_fixed, target)).Cancel;
+					if (Cancelled) Revert();
+					else           Commit();
 				}
 				m_diag.Refresh();
 			}
+			public override void NotifyCancelled()
+			{
+				var ty = m_is_add ? EDiagramChangeType.AddLinkAbort : EDiagramChangeType.MoveLinkAbort;
+				m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(ty, m_conn, m_fixed, null));
+			}
 			protected abstract void Commit();
 			protected abstract void Revert();
-			protected abstract DiagramChangedEventArgs GetNotifyArgs(Node target);
 		}
 
 		/// <summary>
@@ -2694,7 +2815,7 @@ namespace pr.gui
 		{
 			private readonly Connector.EType m_type;
 
-			public MouseOpCreateLink(DiagramControl diag, Connector.EType type) :base(diag, true)
+			public MouseOpCreateLink(DiagramControl diag, Connector.EType type) :base(diag, true, true)
 			{
 				m_type = type;
 			}
@@ -2718,7 +2839,7 @@ namespace pr.gui
 
 				// Create a link from the hit node to the proxy node
 				m_conn = new Connector(m_fixed, m_proxy){Type = m_type, Diagram = m_diag};
-
+				base.MouseDown(e);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -2734,10 +2855,6 @@ namespace pr.gui
 				if (m_conn != null) m_conn.Dispose();
 				m_conn = null;
 			}
-			protected override DiagramChangedEventArgs GetNotifyArgs(Node target)
-			{
-				return new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.AddingLink, m_conn);
-			}
 		}
 
 		/// <summary>
@@ -2748,7 +2865,7 @@ namespace pr.gui
 		{
 			private readonly AnchorPoint m_prev; // The anchor point that the moving end was originally attached to
 
-			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward) :base(diag, forward)
+			public MouseOpMoveLink(DiagramControl diag, Connector conn, bool forward) :base(diag, forward, false)
 			{
 				m_conn = conn;
 				m_prev = new AnchorPoint(forward ? m_conn.Anc1 : m_conn.Anc0);
@@ -2764,10 +2881,6 @@ namespace pr.gui
 				if (m_forward) m_conn.Anc1 = m_prev;
 				else           m_conn.Anc0 = m_prev;
 				m_conn.Relink(true);
-			}
-			protected override DiagramChangedEventArgs GetNotifyArgs(Node target)
-			{
-				return new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.MovingLink, m_conn, target, m_fixed);
 			}
 		}
 
@@ -2829,61 +2942,98 @@ namespace pr.gui
 
 		#region Event Args
 
+		public enum EDiagramChangeType
+		{
+			/// <summary>
+			/// Raised after the diagram has had data changed. This event will be raised
+			/// in addition to the more detailed modification notification events below</summary>
+			Edited,
+
+			/// <summary>
+			/// A new node is being created.
+			/// Setting 'Cancel' for this event will about the add.</summary>
+			AddNodeBegin,
+			AddNodeEnd,
+			AddNodeCancelled,
+
+			/// <summary>
+			/// A new link is being created.
+			/// Setting 'Cancel' for this event will abort the add.</summary>
+			AddLinkBegin,
+			AddLinkEnd,
+			AddLinkAbort,
+
+			/// <summary>
+			/// An end of a connector is being moved to another node.
+			/// Setting 'Cancel' for this event will abort the move.</summary>
+			MoveLinkBegin,
+			MoveLinkEnd,
+			MoveLinkAbort,
+
+			/// <summary>
+			/// Elements are about to be deleted from the diagram by the user.
+			/// Setting 'Cancel' for this event will abort the deletion.</summary>
+			RemovingElements,
+		}
+
 		/// <summary>Event args for the diagram changed event</summary>
 		public class DiagramChangedEventArgs :EventArgs
 		{
 			// Note: many events are available by attaching to the Elements binding list
 
-			public enum EType
-			{
-				/// <summary>
-				/// Raised after the diagram has had data changed. This event will be raised
-				/// in addition to the more detailed modification notification events below</summary>
-				Edited,
-
-				/// <summary>
-				/// A new node is being created.
-				/// Setting 'Cancel' for this event will about the add.
-				/// 'Elements' contains the new node being added.</summary>
-				AddingNode,
-
-				/// <summary>
-				/// A new link is being created.
-				/// Setting 'Cancel' for this event will abort the add.
-				/// 'Elements' contains the new connector being added.</summary>
-				AddingLink,
-
-				/// <summary>
-				/// An end of a connector is being moved to another node.
-				/// Setting 'Cancel' for this event will abort the move.
-				/// 'Elements' contains:
-				///   [0] - the connector being moved,
-				///   [1] - the node being attached to,
-				///   [2] - the node that is at the fixed end of the connector</summary>
-				MovingLink,
-
-				/// <summary>
-				/// Elements are about to be deleted from the diagram by the user.
-				/// Setting 'Cancel' for this event will abort the deletion.
-				/// 'Elements' contains the elements that will be deleted.
-				/// 'Elements' can be replaced with a different set of elements to remove</summary>
-				RemovingElements,
-			}
-
 			/// <summary>The type of change that occurred</summary>
-			public EType ChgType { get; private set; }
+			public EDiagramChangeType ChgType { get; private set; }
 
 			/// <summary>A cancel property for "about to change" events</summary>
 			public bool Cancel { get; set; }
 
-			/// <summary>The elements involved in the change.</summary>
-			public Element[] Elements { get; set; }
-
-			public DiagramChangedEventArgs(EType ty, params Element[] elements)
+			public DiagramChangedEventArgs(EDiagramChangeType ty)
 			{
 				ChgType  = ty;
-				Elements = elements;
 				Cancel   = false;
+			}
+		}
+		public class DiagramChangedNodeEventArgs :DiagramChangedEventArgs
+		{
+			/// <summary>The created node</summary>
+			public Node NewNode { get; private set; }
+
+			public DiagramChangedNodeEventArgs(EDiagramChangeType type, Node added)
+				:base(type)
+			{
+				NewNode = added;
+			}
+		}
+		public class DiagramChangedLinkEventArgs :DiagramChangedEventArgs
+		{
+			/// <summary>The link being changed or added</summary>
+			public Connector Link { get; private set; }
+
+			/// <summary>The node at the fixed end of the link</summary>
+			public Node Fixed { get; private set; }
+
+			/// <summary>The node that the dangling end of the link was dropped on to. (Null for AddLinkBegin)</summary>
+			public Node Target { get; private set; }
+
+			public DiagramChangedLinkEventArgs(EDiagramChangeType type, Connector link, Node fixed_end, Node target)
+				:base(type)
+			{
+				Link = link;
+				Fixed = fixed_end;
+				Target = target;
+			}
+		}
+		public class DiagramChangedRemoveElementsEventArgs :DiagramChangedEventArgs
+		{
+			/// <summary>
+			/// The elements flagged for removing.
+			/// This collection can be replaced with a different set of elements to remove</summary>
+			public Element[] Elements { get; set; }
+
+			public DiagramChangedRemoveElementsEventArgs(params Element[] elements)
+				:base(EDiagramChangeType.RemovingElements)
+			{
+				Elements = elements;
 			}
 		}
 
@@ -3063,6 +3213,8 @@ namespace pr.gui
 			public const string Border            = "border"             ;
 			public const string Fill              = "fill"               ;
 			public const string Selected          = "selected"           ;
+			public const string Disabled          = "disabled"           ;
+			public const string TextDisabled      = "text_disabled"      ;
 			public const string Dangling          = "dangling"           ;
 			public const string Font              = "font"               ;
 			public const string Type              = "type"               ;
@@ -3219,7 +3371,8 @@ namespace pr.gui
 		public class Tools :IDisposable
 		{
 			/// <summary>Graphic for area selection</summary>
-			public View3d.Object AreaSelect { get; private set; }
+			public View3d.Object AreaSelect { get { return m_area_select; } }
+			private View3d.Object m_area_select;
 
 			/// <summary>Graphics for the resizing grab zones</summary>
 			public ResizeGrabber[] Resizer { get; private set; }
@@ -3284,15 +3437,17 @@ namespace pr.gui
 
 			public Tools()
 			{
-				AreaSelect = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}");
+				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}");
 				Resizer = Util.NewArray<ResizeGrabber>(8, i => new ResizeGrabber(i));
 			}
 			public void Dispose()
 			{
-				if (AreaSelect != null)
-					AreaSelect.Dispose();
+				Util.Dispose(ref m_area_select);
 				if (Resizer != null)
+				{
 					Resizer.ForEach(x => x.Dispose());
+					Resizer = null;
+				}
 			}
 		}
 
@@ -3327,18 +3482,18 @@ namespace pr.gui
 				public NodeOptions()
 				{
 					AnchorSpacing     = 25f;
-					AnchorSharingBias = 70f;
+					AnchorSharingBias = 150f;
 					Margin            = 30f;
 					AutoRelink        = false;
 				}
-				public NodeOptions(XElement node) :this()
+				internal NodeOptions(XElement node) :this()
 				{
 					AnchorSpacing     = node.Element(XmlField.AnchorSpacing    ).As <float >(AnchorSpacing    );
 					AnchorSharingBias = node.Element(XmlField.AnchorSharingBias).As <float >(AnchorSharingBias);
 					Margin            = node.Element(XmlField.Margin           ).As <float >(Margin           );
 					AutoRelink        = node.Element(XmlField.AutoRelink       ).As <bool  >(AutoRelink       );
 				}
-				public XElement ToXml(XElement node)
+				internal XElement ToXml(XElement node)
 				{
 					node.Add2(XmlField.AnchorSpacing     , AnchorSpacing     , false);
 					node.Add2(XmlField.AnchorSharingBias , AnchorSharingBias , false);
@@ -3375,7 +3530,7 @@ namespace pr.gui
 					ConnectorScale  = 1f;
 					Equilibrium     = 0.01f;
 				}
-				public ScatterOptions(XElement node) :this()
+				internal ScatterOptions(XElement node) :this()
 				{
 					MaxIterations   = node.Element(XmlField.Iterations     ).As<int>  (MaxIterations  );
 					SpringConstant  = node.Element(XmlField.SpringConstant ).As<float>(SpringConstant );
@@ -3383,7 +3538,7 @@ namespace pr.gui
 					ConnectorScale  = node.Element(XmlField.ConnectorScale ).As<float>(ConnectorScale );
 					Equilibrium     = node.Element(XmlField.Equilibrium    ).As<float>(Equilibrium    );
 				}
-				public XElement ToXml(XElement node)
+				internal XElement ToXml(XElement node)
 				{
 					node.Add2(XmlField.Iterations      ,MaxIterations   ,false);
 					node.Add2(XmlField.SpringConstant  ,SpringConstant  ,false);
@@ -3434,17 +3589,17 @@ namespace pr.gui
 		#endregion
 
 		// Members
-		private readonly View3d            m_view3d;           // Renderer
-		private readonly View3d.Window     m_window;           // A view3d window for this control instance
-		private readonly EventBatcher      m_eb_update_diag;   // Event batcher for updating the diagram graphics
-		private readonly HoverScroll       m_hoverscroll;      // Hoverscroll
-		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
-		private readonly Tools             m_tools;            // Tools
-		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
-		private StyleCache<ConnectorStyle> m_connector_styles; //
-		private MouseOps                   m_mouse_op;         // Per button current mouse operation
-		private ToolStrip                  m_toolstrip_edit;   //
-		private readonly HashSet<Element>  m_dirty;            // Elements that need refreshing
+		private View3d                      m_view3d;           // Renderer
+		private View3d.Window               m_window;           // A view3d window for this control instance
+		private EventBatcher                m_eb_update_diag;   // Event batcher for updating the diagram graphics
+		private HoverScroll                 m_hoverscroll;      // Hoverscroll
+		private View3d.CameraControls       m_camera;           // The virtual window over the diagram
+		private Tools                       m_tools;            // Tools
+		private StyleCache<NodeStyle>       m_node_styles;      // The collection of node styles
+		private StyleCache<ConnectorStyle>  m_connector_styles; //
+		private MouseOps                    m_mouse_op;         // Per button current mouse operation
+		private ToolStrip                   m_toolstrip_edit;   //
+		private readonly HashSet<Element>   m_dirty;            // Elements that need refreshing
 
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
@@ -3457,6 +3612,7 @@ namespace pr.gui
 			m_node_styles      = new StyleCache<NodeStyle>();
 			m_connector_styles = new StyleCache<ConnectorStyle>();
 			m_mouse_op         = new MouseOps();
+			m_toolstrip_edit   = new ToolStrip(){Visible = false, Dock = DockStyle.Right};
 			m_dirty            = new HashSet<Element>();
 			Edited             = false;
 
@@ -3490,16 +3646,11 @@ namespace pr.gui
 			if (disposing)
 			{
 				ResetDiagram();
-				if (m_eb_update_diag != null)
-					m_eb_update_diag.Dispose();
-				if (m_view3d != null)
-					m_view3d.Dispose();
-				if (components != null)
-					components.Dispose();
-				if (m_hoverscroll != null)
-					m_hoverscroll.Dispose();
-				if (m_tools != null)
-					m_tools.Dispose();
+				Util.Dispose(ref components);
+				Util.Dispose(ref m_hoverscroll);
+				Util.Dispose(ref m_eb_update_diag);
+				Util.Dispose(ref m_tools);
+				Util.Dispose(ref m_view3d);
 			}
 			base.Dispose(disposing);
 		}
@@ -3559,6 +3710,9 @@ namespace pr.gui
 			}
 		}
 		private DiagramOptions m_impl_options;
+		
+		/// <summary>Raised after the options dialog is closed</summary>
+		public event EventHandler OptionsChanged;
 
 		/// <summary>Minimum bounding area for view reset</summary>
 		public BRect ResetMinBounds
@@ -3570,7 +3724,7 @@ namespace pr.gui
 		public HitTestResult HitTest(v2 ds_point)
 		{
 			var result = new HitTestResult(m_camera);
-			foreach (var elem in Elements)
+			foreach (var elem in Elements.Where(x => x.Enabled))
 			{
 				var hit = elem.HitTest(ds_point, m_camera);
 				if (hit != null)
@@ -3609,7 +3763,7 @@ namespace pr.gui
 					if (AllowEditing)
 					{
 						// Allow the caller to cancel the deletion or change the selection
-						var res = new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.RemovingElements, Selected.ToArray());
+						var res = new DiagramChangedRemoveElementsEventArgs(Selected.ToArray());
 						if (!RaiseDiagramChanged(res).Cancel)
 						{
 							foreach (var elem in res.Elements)
@@ -3673,6 +3827,8 @@ namespace pr.gui
 		public ConnectorStyle DefaultConnectorStyle { get { return m_connector_styles[Guid.Empty]; } }
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AllowEditing
 		{
 			get { return m_impl_allow_editing; }
@@ -3681,6 +3837,8 @@ namespace pr.gui
 		private bool m_impl_allow_editing;
 
 		/// <summary>True if users are allowed to select elements on the diagram</summary>
+		[Browsable(false)]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public bool AllowSelection { get; set; }
 
 		protected override void OnMouseDown(MouseEventArgs e)
@@ -4398,7 +4556,7 @@ namespace pr.gui
 				// Notify observers that the diagram has changed
 				if (Edited)
 				{
-					RaiseDiagramChanged(new DiagramChangedEventArgs(DiagramChangedEventArgs.EType.Edited));
+					RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
 					Edited = false;
 				}
 
@@ -4722,7 +4880,6 @@ namespace pr.gui
 		private void SetupEditToolstrip()
 		{
 			#region Create Edit Toolbar
-			m_toolstrip_edit = new ToolStrip(){Visible = false};
 			m_toolstrip_edit.SuspendLayout();
 
 			var btn_node = new ToolStripSplitButtonCheckable
@@ -4731,7 +4888,8 @@ namespace pr.gui
 				DisplayStyle        = ToolStripItemDisplayStyle.Image,
 				Image               = pr.Resources.boxes,
 				Name                = EditTools.Node.Key,
-				Size                = new Size(32, 22),
+				AutoSize            = true,
+				ImageScaling        = ToolStripItemImageScaling.SizeToFit,
 				Text                = "Node",
 				ToolTipText         = "Add Node",
 			};
@@ -4741,7 +4899,8 @@ namespace pr.gui
 				DisplayStyle        = ToolStripItemDisplayStyle.Image,
 				Image               = pr.Resources.connector1,
 				Name                = EditTools.Conn.Key,
-				Size                = new Size(32, 22),
+				AutoSize            = true,
+				ImageScaling        = ToolStripItemImageScaling.SizeToFit,
 				Text                = "Connector",
 				ToolTipText         = "Add Connector",
 			};
@@ -4751,6 +4910,7 @@ namespace pr.gui
 				Image        = global::pr.Resources.boxes,
 				Name         = EditTools.Node.BoxNode,
 				Size         = new Size(78, 22),
+				AutoSize     = true,
 				Text         = "Box Node",
 			};
 			var btn_conn_line = new ToolStripMenuItem
@@ -4759,6 +4919,7 @@ namespace pr.gui
 				Image        = global::pr.Resources.connector1,
 				Name         = EditTools.Conn.Line,
 				Size         = new Size(108, 22),
+				AutoSize     = true,
 				Text         = "Line Connector",
 			};
 			var btn_conn_fwd = new ToolStripMenuItem
@@ -4767,6 +4928,7 @@ namespace pr.gui
 				Image        = global::pr.Resources.connector2,
 				Name         = EditTools.Conn.Forward,
 				Size         = new Size(129, 22),
+				AutoSize     = true,
 				Text         = "Forward Connector",
 			};
 			var btn_conn_back = new ToolStripMenuItem
@@ -4775,6 +4937,7 @@ namespace pr.gui
 				Image        = global::pr.Resources.connector3,
 				Name         = EditTools.Conn.Back,
 				Size         = new Size(137, 22),
+				AutoSize     = true,
 				Text         = "Backward Connector",
 			};
 			var btn_conn_bidi = new ToolStripMenuItem
@@ -4783,6 +4946,7 @@ namespace pr.gui
 				Image        = global::pr.Resources.connector4,
 				Name         = EditTools.Conn.Bidir,
 				Size         = new Size(152, 22),
+				AutoSize            = true,
 				Text         = "Bidir Connector",
 			};
 
@@ -4826,6 +4990,9 @@ namespace pr.gui
 		/// <summary>Update the state of the edit toolbar as selections change</summary>
 		private void UpdateEditToolbar()
 		{
+			if (this.IsInDesignMode())
+				return;
+
 			// Note, visibility of items in the edit toolbar should not be changed
 			// as callers may set the visibility to suit their needs
 
@@ -4889,7 +5056,11 @@ namespace pr.gui
 			}
 
 			form.Controls.Add(props);
-			form.FormClosed += (s,a) => Refresh();
+			form.FormClosed += (s,a) =>
+				{
+					OptionsChanged.Raise(this, EventArgs.Empty);
+					Refresh();
+				};
 			form.Show(this);
 		}
 

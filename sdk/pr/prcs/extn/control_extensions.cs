@@ -316,6 +316,16 @@ namespace pr.extn
 	/// <summary>Used to persist control locations and sizes in xml</summary>
 	public class ControlLocations
 	{
+		// Produces this:
+		//  <ctrl>
+		//    <name/>
+		//    <location/>
+		//    <size/>
+		//    <ctrl/>
+		//    <ctrl/>
+		//    ...
+		//  </ctrl>
+
 		private static class Tag
 		{
 			public const string Ctrl     = "ctrl";
@@ -324,20 +334,10 @@ namespace pr.extn
 			public const string Size     = "size";
 			public const string Children = "children";
 		}
-		// Produces this:
-		//  <ctrl>
-		//    <name/>
-		//    <location/>
-		//    <size/>
-		//    <children>
-		//      <ctrl/>
-		//      <ctrl/>
-		//      ...
-		//    </children>
-		//  </ctrl>
+
 		private string m_name;
-		private Point m_location;
-		private Size m_size;
+		private Point  m_location;
+		private Size   m_size;
 		private Dictionary<string, ControlLocations> m_children;
 
 		public ControlLocations()
@@ -347,40 +347,29 @@ namespace pr.extn
 			m_size     = Size.Empty;
 			m_children = new Dictionary<string,ControlLocations>();
 		}
-		public ControlLocations(Control ctrl) :this(ctrl, 0, 0)
-		{}
-		private ControlLocations(Control ctrl, int level, int index)
+		public ControlLocations(Control ctrl, int level = 0, int index = 0) :this()
 		{
 			ReadInternal(ctrl, level, index);
 		}
-
-		/// <summary>Import from xml</summary>
 		public ControlLocations(XElement node)
 		{
 			m_name     = node.Element(Tag.Name).As<string>();
 			m_location = node.Element(Tag.Loc ).As<Point>();
 			m_size     = node.Element(Tag.Size).As<Size>();
-
-			var children = node.Element(Tag.Children);
-			m_children = children != null
-				? children.Elements(Tag.Ctrl).Select(s => new ControlLocations(s)).ToDictionary(s => s.m_name, s => s)
-				: new Dictionary<string, ControlLocations>();
+			m_children = new Dictionary<string, ControlLocations>();
+			foreach (var child in node.Elements(Tag.Ctrl))
+			{
+				var loc = new ControlLocations(child);
+				m_children.Add(loc.m_name, loc);
+			}
 		}
-
-		/// <summary>Export the location data as xml</summary>
 		public XElement ToXml(XElement node)
 		{
 			node.Add(m_name    .ToXml(Tag.Name ,false));
 			node.Add(m_location.ToXml(Tag.Loc  ,false));
 			node.Add(m_size    .ToXml(Tag.Size ,false));
-
-			if (m_children.Count != 0)
-			{
-				var children = node.Add2(new XElement(Tag.Children));
-				foreach (var ch in m_children.Values)
-					children.Add(ch.ToXml(Tag.Ctrl, true));
-			}
-
+			foreach (var ch in m_children.Values)
+				node.Add(ch.ToXml(Tag.Ctrl, false));
 			return node;
 		}
 
@@ -389,6 +378,22 @@ namespace pr.extn
 		{
 			ReadInternal(ctrl, 0, 0);
 		}
+
+		/// <summary>Apply the stored position data to 'ctrl'</summary>
+		public void Apply(Control ctrl, bool layout_on_resume = true)
+		{
+			var name = UniqueName(ctrl, 0, 0);
+			if (m_name != name)
+			{
+				System.Diagnostics.Debug.WriteLine("Control locations ignored due to name mismatch.\nControl Name {0} != Layout Data Name {1}".Fmt(name, m_name));
+				return;
+			}
+
+			using (ctrl.SuspendLayout(layout_on_resume))
+				ApplyInternal(ctrl, 0);
+		}
+
+		/// <summary>Recursively populate this object from 'ctrl'</summary>
 		private void ReadInternal(Control ctrl, int level, int index)
 		{
 			m_name     = UniqueName(ctrl, level, index);
@@ -398,42 +403,55 @@ namespace pr.extn
 			for (var i = 0; i != ctrl.Controls.Count; ++i)
 			{
 				var s = new ControlLocations(ctrl.Controls[i], level + 1, i);
-				try { m_children.Add(s.m_name, s); }
-				catch (ArgumentException ex) { throw new Exception("A sibling control with this name already exists. All controls must have a unique name in order to save position data", ex); }
+				try
+				{
+					m_children.Add(s.m_name, s);
+				}
+				catch (ArgumentException ex)
+				{
+					throw new Exception("A sibling control with this name already exists. All controls must have a unique name in order to save position data", ex);
+				}
 			}
 		}
 
-		/// <summary>Apply the stored position data to 'ctrl'</summary>
-		public void Apply(Control ctrl, bool layout_on_resume = true)
-		{
-			var name = UniqueName(ctrl, 0, 0);
-			if (m_name != name) return;
-
-			using (ctrl.SuspendLayout(layout_on_resume))
-				ApplyInternal(ctrl, 0);
-		}
+		// Recursively position 'ctrl' and it's children
 		private void ApplyInternal(Control ctrl, int level)
 		{
+			// Position the control
 			ctrl.Location = m_location;
-			ctrl.Size     = m_size;
+			if (ctrl.Dock == DockStyle.None && ctrl.Location != m_location)
+				System.Diagnostics.Debug.WriteLine("Setting control {0} location failed".Fmt(ctrl.Name));
+
+			// Set the control size
+			ctrl.Size = m_size;
+			if (!ctrl.AutoSize && ctrl.Size != m_size)
+				System.Diagnostics.Debug.WriteLine("Setting control {0} size failed".Fmt(ctrl.Name));
+
+			// Set the bounds of the child controls
 			for (var i = 0; i != ctrl.Controls.Count; ++i)
 			{
-				ControlLocations s;
 				var child = ctrl.Controls[i];
-				if (m_children.TryGetValue(UniqueName(child, level + 1, i), out s))
+				var name = UniqueName(child, level + 1, i);
+
+				// No idea why this helps, but it does...
+				if (ctrl is ToolStripPanel)
+					child.Dock = DockStyle.Right;
+
+				ControlLocations s;
+				if (m_children.TryGetValue(name, out s))
 					s.ApplyInternal(child, level + 1);
 			}
 		}
 
-		/// <summary>Tries to generate a unique name for unnamed controls</summary>
+		/// <summary>Generates a unique name for 'ctrl'</summary>
 		private string UniqueName(Control ctrl, int level, int index)
 		{
-			return ctrl.Name.HasValue() ? ctrl.Name : "{0}_{1}_{2}".Fmt(ctrl.GetType().Name, level, index);
+			return "{0}({1},{2})".Fmt(ctrl.Name.HasValue() ? ctrl.Name : ctrl.GetType().Name, level, index);
 		}
 
 		public override string ToString()
 		{
-			return "{0} ({1} children)".Fmt(m_name, m_children.Count);
+			return "{0} (child count: {1})".Fmt(m_name, m_children.Count);
 		}
 	}
 }

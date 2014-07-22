@@ -432,15 +432,15 @@ namespace pr
 				auto matlookup = [&](std::string const& name) { return mats.at(name); };
 
 				// Parse the materials in the 3ds stream
-				Read3DSMaterials(src, [&](max_3ds::Material&& mat)
+				max_3ds::ReadMaterials(src, [&](max_3ds::Material&& mat)
 					{
 						mats[mat.m_name] = mat;
 					});
 
 				// Parse the model objects in the 3ds stream
-				Read3DSModels(src, [&](max_3ds::Object&& obj)
+				max_3ds::ReadObjects(src, [&](max_3ds::Object&& obj)
 					{
-						Max3DSModel(obj, matlookup, nout, vout, iout);
+						max_3ds::CreateModel(obj, matlookup, nout, vout, iout);
 					});
 			}
 			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, m4x4 const* bake = nullptr, float gen_normals = -1.0f)

@@ -5,7 +5,6 @@
 #define IDR_MENU_MAIN                           101
 #define IDR_ACCELERATOR                         102
 #define IDI_ICON_MAIN                           103
-
 #define IDD_DIALOG_MAIN                         111
 #define IDD_DIALOG_OPTIONS                      112
 #define IDD_TAB_GENERAL                         113
@@ -14,7 +13,6 @@
 #define IDD_DIALOG_ABOUTBOX                     116
 #define IDD_DIALOG_TEXT_ENTRY                   117
 #define IDD_DIALOG_PLUGINS                      118
-
 #define IDC_CHECK_RESET_CAM_ON_LOAD             1001
 #define IDC_COMBO_GEOMETRY_QUALITY              1002
 #define IDC_COMBO_SHADER_VERSION                1003
@@ -37,7 +35,6 @@
 #define IDC_SLIDER_CAM_ORBIT_SPEED              1020
 #define IDC_SLIDER_FOCUS_POINT_SCALE            1021
 #define IDC_TAB_MAIN                            1022
-
 #define ID_FILE_NEW1                            40001
 #define ID_FILE_NEWSCRIPT                       40002
 #define ID_FILE_OPEN1                           40003
@@ -45,9 +42,7 @@
 #define ID_FILE_SAVE1                           40005
 #define ID_FILE_SAVEAS                          40006
 #define ID_FILE_RECENTFILES                     40007
-#define ID_FILE_RECENTFILES_LAST                40017
 #define ID_FILE_EXIT                            40018
-
 #define ID_NAV_RESETVIEW_ALL                    40101
 #define ID_NAV_RESETVIEW_SELECTED               40102
 #define ID_NAV_RESETVIEW_VISIBLE                40103
@@ -68,15 +63,12 @@
 #define ID_NAV_CLEARSAVEDVIEWS                  40118
 #define ID_NAV_SAVEVIEW                         40119
 #define ID_NAV_SAVEDVIEWS                       40120
-#define ID_NAV_SAVEDVIEWS_LAST                  40130
 #define ID_NAV_ORBIT                            40131
-
 #define ID_DATA_OBJECTMANAGER                   40201
 #define ID_DATA_EDITSOURCEFILES                 40202
 #define ID_DATA_CLEARSCENE                      40203
 #define ID_DATA_AUTOREFRESH                     40204
 #define ID_DATA_CREATE_DEMO_SCENE               40205
-
 #define ID_RENDERING_SHOWFOCUS                  40301
 #define ID_RENDERING_SHOWORIGIN                 40302
 #define ID_RENDERING_SHOWSELECTION              40303
@@ -85,18 +77,15 @@
 #define ID_RENDERING_RENDER2D                   40306
 #define ID_RENDERING_TECHNIQUE                  40307
 #define ID_RENDERING_LIGHTING                   40308
-
 #define ID_TOOLS_MEASURE                        40401
 #define ID_TOOLS_ANGLE                          40402
 #define ID_TOOLS_PLUGINMGR                      40403
 #define ID_TOOLS_OPTIONS                        40404
-
 #define ID_WINDOW_ALWAYSONTOP                   40501
 #define ID_WINDOW_BACKGROUNDCOLOUR              40502
 #define ID_WINDOW_EXAMPLESCRIPT                 40503
 #define ID_WINDOW_CHECKFORUPDATES               40504
 #define ID_WINDOW_ABOUTLINEDRAWER               40505
-
 #define ID_ACCELERATOR_FILENEW                  40601
 #define ID_ACCELERATOR_FILENEWSCRIPT            40602
 #define ID_ACCELERATOR_FILEOPEN                 40603

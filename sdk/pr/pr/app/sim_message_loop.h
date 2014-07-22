@@ -16,8 +16,8 @@
 #include <atlapp.h>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
-#include "pr/common/array.h"
 #include "pr/common/stop_watch.h"
+#include "pr/container/array.h"
 
 #define PR_LOOP_TIMING 0//PR_DBG
 #if PR_LOOP_TIMING

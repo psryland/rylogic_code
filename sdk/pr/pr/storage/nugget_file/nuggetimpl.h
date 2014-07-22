@@ -6,7 +6,7 @@
 #ifndef PR_NUGGET_FILE_NUGGET_IMPL_H
 #define PR_NUGGET_FILE_NUGGET_IMPL_H
 
-#include "pr/common/byte_data.h"
+#include "pr/container/byte_data.h"
 #include "pr/str/prstring.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/fileex.h"

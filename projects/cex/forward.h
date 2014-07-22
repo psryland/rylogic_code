@@ -8,9 +8,15 @@
 
 #define _WIN32_WINNT 0x0500
 
-#include <windows.h>
+#include <vector>
+#include <unordered_map>
 #include <iostream>
+#include <string>
+#include <sstream>
+#include <fstream>
 #include <iterator>
+
+#include <windows.h>
 #include <process.h>
 #include <shlobj.h>
 #include <atlbase.h>
@@ -27,6 +33,9 @@
 #include "pr/common/hash.h"
 #include "pr/common/guid.h"
 #include "pr/common/command_line.h"
+#include "pr/common/algorithm.h"
+#include "pr/maths/maths.h"
+#include "pr/maths/conversion.h"
 #include "pr/str/prstring.h"
 #include "pr/str/tostring.h"
 #include "pr/filesys/filesys.h"

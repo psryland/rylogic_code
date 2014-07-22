@@ -7,7 +7,7 @@
 #ifndef PR_PHYSICS_SHAPE_POLYTOPE_HELPER_H
 #define PR_PHYSICS_SHAPE_POLYTOPE_HELPER_H
 
-#include "pr/common/byte_data.h"
+#include "pr/container/byte_data.h"
 #include "pr/physics/types/forward.h"
 #include "pr/physics/shape/shapepolytope.h"
 

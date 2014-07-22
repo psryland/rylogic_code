@@ -53,7 +53,8 @@ VIEW3D_API void __stdcall View3D_Shutdown(View3DContext context)
 	if (!g_ctx) return;
 
 	g_ctx->m_inits.erase(context);
-	if (!g_ctx->m_inits.empty()) return;
+	if (!g_ctx->m_inits.empty())
+		return;
 
 	delete g_ctx;
 	g_ctx = nullptr;

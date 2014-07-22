@@ -132,12 +132,12 @@ namespace pr
 
 		// Project 'point' onto 'line', but defer divide by 'line.Length3Sq()'
 		t = Dot3(point - start, line);
-		if (t <= 0.0f)			{ t = 0.0f;		 return start; }			// 'point' projects outside 'line', clamp to 0.0f
+		if (t <= 0.0f) { t = 0.0f; return start; } // 'point' projects outside 'line', clamp to 0.0f
 		else
 		{
 			float denom = Length3Sq(line);
-			if (t >= denom)		{ t = 1.0f;		 return end; }				// 'point' projects outside 'line', clamp to 1.0f
-			else				{ t = t / denom; return start + t * line; }	// 'point' projects inside 'line', do deferred divide now
+			if (t >= denom) { t = 1.0f; return end; }        // 'point' projects outside 'line', clamp to 1.0f
+			else { t = t / denom; return start + t * line; } // 'point' projects inside 'line', do deferred divide now
 		}
 	}
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end)	{ float t; return ClosestPoint_PointToLineSegment(point, start, end, t); }
@@ -325,25 +325,22 @@ namespace pr
 		{
 			assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && e1.w == 1.0f);
 
-			v4 line0				= e0 - s0;
-			v4 line1				= e1 - s1;
-			v4 separation			= s0 - s1;
-			float f					= Dot3(line1, separation);
-			float c					= Dot3(line0, separation);
-			float line0_length_sq	= Length3Sq(line0);
-			float line1_length_sq	= Length3Sq(line1);
+			v4 line0 = e0 - s0;
+			v4 line1 = e1 - s1;
+			v4 separation = s0 - s1;
+			float f = Dot3(line1, separation);
+			float c = Dot3(line0, separation);
+			float line0_length_sq = Length3Sq(line0);
+			float line1_length_sq = Length3Sq(line1);
 
 			#pragma warning(disable: 4127)// conditional expression is constant
-			if( test_degenerates )
+			if (test_degenerates)
 			#pragma warning(default: 4127)
 			{
 				// Check if either or both segments are degenerate
-				if( FEqlZero(line0_length_sq) && FEqlZero(line1_length_sq) )
-				{	t0 = 0.0f; t1 = 0.0f; return; }
-				if( FEqlZero(line0_length_sq) )
-				{	t0 = 0.0f; t1 = Clamp<float>(f / line1_length_sq, 0.0f, 1.0f); return; }
-				if( FEqlZero(line1_length_sq) )
-				{	t1 = 0.0f; t0 = Clamp<float>(-c / line0_length_sq, 0.0f, 1.0f); return; }
+				if (FEqlZero(line0_length_sq) && FEqlZero(line1_length_sq)) { t0 = 0.0f; t1 = 0.0f; return; }
+				if (FEqlZero(line0_length_sq))                              { t0 = 0.0f; t1 = Clamp<float>(f / line1_length_sq, 0.0f, 1.0f); return; }
+				if (FEqlZero(line1_length_sq))                              { t1 = 0.0f; t0 = Clamp<float>(-c / line0_length_sq, 0.0f, 1.0f); return; }
 			}
 
 			// The general nondegenerate case starts here
@@ -352,8 +349,7 @@ namespace pr
 
 			// If segments not parallel, calculate closest point on infinite line 'line0'
 			// to infinite line 'line1', and clamp to segment 1. Otherwise pick arbitrary t0
-			if( denom != 0.0f )	{ t0 = Clamp<float>((b*f - c*line1_length_sq) / denom, 0.0f, 1.0f); }
-			else				{ t0 = 0.0f; }
+			t0 = (denom != 0.0f) ? Clamp<float>((b*f - c*line1_length_sq) / denom, 0.0f, 1.0f) : 0.0f;
 
 			// Calculate point on infinite line 'line1' closest to segment 'line0' at t0
 			// using t1 = Dot3(pt0 - s1, line1) / line1_length_sq = (b*t0 + f) / line1_length_sq
@@ -362,10 +358,10 @@ namespace pr
 			// If t1 in [0,1] then done. Otherwise, clamp t1, recompute t0 for the new value
 			// of t1 using t0 = Dot3(pt1 - s0, line0) / line0_length_sq = (b*t1 - c) / line0_length_sq
 			// and clamped t0 to [0, 1]
-			if     ( t1 < 0.0f )	{ t1 = 0.0f; t0 = Clamp<float>(( -c) / line0_length_sq, 0.0f, 1.0f); }
-			else if( t1 > 1.0f )	{ t1 = 1.0f; t0 = Clamp<float>((b-c) / line0_length_sq, 0.0f, 1.0f); }
+			if      (t1 < 0.0f) { t1 = 0.0f; t0 = Clamp<float>((   -c) / line0_length_sq, 0.0f, 1.0f); }
+			else if (t1 > 1.0f) { t1 = 1.0f; t0 = Clamp<float>((b - c) / line0_length_sq, 0.0f, 1.0f); }
 		}
-	}//namespace impl
+	}
 	inline void ClosestPoint_LineSegmentToLineSegment(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& e1, float& t0, float& t1)
 	{
 		impl::ClosestPoint_LineSegmentToLineSegment<true>(s0, e0, s1, e1, t0, t1);

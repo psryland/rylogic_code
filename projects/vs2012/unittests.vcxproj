@@ -136,7 +136,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\filesys\findfiles.h" />
     <ClInclude Include="..\..\sdk\pr\pr\filesys\recurse_directory.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\3ds.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\p3d.h" />
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\atlgdix.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\context_menu.h" />
     <ClInclude Include="..\..\sdk\pr\pr\gui\font_helper.h" />

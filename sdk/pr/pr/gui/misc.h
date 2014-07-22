@@ -10,7 +10,7 @@
 #include <windows.h>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
-#include "pr/common/byte_data.h"
+#include "pr/container/byte_data.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
 

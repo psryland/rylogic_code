@@ -11,8 +11,8 @@
 #define PR_COMMON_STREAM_H
 
 #include <cstring>
-#include "pr/common/byte_data.h"
 #include "pr/common/assert.h"
+#include "pr/container/byte_data.h"
 #include "pr/filesys/fileex.h"
 
 namespace pr

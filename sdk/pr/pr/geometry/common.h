@@ -3,17 +3,15 @@
 //  Copyright (c) Rylogic Ltd 2006
 //********************************
 #pragma once
-#ifndef PR_GEOMETRY_COMMON_H
-#define PR_GEOMETRY_COMMON_H
 
+#include "pr/macros/enum.h"
 #include "pr/common/cast.h"
 #include "pr/common/colour.h"
 #include "pr/common/range.h"
-#include "pr/common/array.h"
 #include "pr/common/repeater.h"
 #include "pr/common/interpolate.h"
+#include "pr/container/array.h"
 #include "pr/maths/maths.h"
-#include "pr/macros/enum.h"
 
 namespace pr
 {
@@ -29,11 +27,22 @@ namespace pr
 		PR_DEFINE_ENUM2_FLAGS(EGeom, PR_ENUM);
 		#undef PR_ENUM
 
+		// EPrim
+		#define PR_ENUM(x)\
+			x(Invalid   ,= 0)\
+			x(PointList ,= 1)\
+			x(LineList  ,= 2)\
+			x(LineStrip ,= 3)\
+			x(TriList   ,= 4)\
+			x(TriStrip  ,= 5)
+		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
+		#undef PR_ENUM
+
 		struct Props
 		{
-			pr::BBox m_bbox; // Bounding box in model space of the generated model
-			EGeom m_geom;           // The components of the generated geometry
-			bool m_has_alpha;       // True if the model contains any alpha
+			pr::BBox m_bbox;  // Bounding box in model space of the generated model
+			EGeom m_geom;     // The components of the generated geometry
+			bool m_has_alpha; // True if the model contains any alpha
 
 			Props()
 				:m_bbox(pr::BBoxReset)
@@ -61,5 +70,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

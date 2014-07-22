@@ -3,11 +3,10 @@
 //	Compression library based on Gzip/GUnzip
 //
 //******************************************************************
-#ifndef PR_ZIP_H
-#define PR_ZIP_H
+#pragma once
 
-#include "pr/common/byte_data.h"
 #include "pr/common/assert.h"
+#include "pr/container/byte_data.h"
 
 namespace pr
 {
@@ -69,11 +68,10 @@ namespace pr
 			return Decompress(data, data_length, &decompressed[0]);
 		}
 
-	}//namespace zip
+	}
 
 	// Result testing
 	inline bool Failed   (zip::EResult result)	{ return result <  0; }
 	inline bool Succeeded(zip::EResult result)	{ return result >= 0; }
 	inline void Verify   (zip::EResult result)	{ (void)result; PR_ASSERT(PR_DBG, Succeeded(result), "Verify failure"); }
-}//namespace pr
-#endif//PR_ZIP_H
+}

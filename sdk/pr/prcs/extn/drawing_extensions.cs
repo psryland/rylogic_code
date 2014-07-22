@@ -189,6 +189,13 @@ namespace pr.extn
 				(int)Maths.Clamp(src.B * (1f - frac) + dst.B * frac, 0f, 255f));
 		}
 
+		/// <summary>Convert this colour to it's associated grayscale value</summary>
+		public static Color ToGrayScale(this Color col)
+		{
+			int gray = (int)(0.3f*col.R + 0.59f*col.G + 0.11f*col.B);
+			return Color.FromArgb(col.A, gray, gray, gray);
+		}
+
 		/// <summary>Convert this colour to HSV</summary>
 		public static HSV ToHSV(this Color src)
 		{

@@ -7,7 +7,7 @@
 #include "pr/physics/shape/builder/shapepolytopehelper.h"
 #include "pr/physics/shape/shapepolytope.h"
 #include "pr/common/cast.h"
-#include "pr/common/array.h"
+#include "pr/container/array.h"
 #include "pr/maths/convexhull.h"
 
 //#define PH_SHAPE_POLYTOPE_LDR_OUTPUT 1

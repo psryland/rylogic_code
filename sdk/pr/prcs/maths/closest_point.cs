@@ -52,6 +52,99 @@ namespace pr.maths
 		}
 
 		/// <summary>
+		/// Returns the closest points between 'lhs' and 'rhs'.
+		/// If 'lhs' and 'rhs' overlap, returns the points of deepest penetration.</summary>
+		public static void ClosestPoint(BRect lhs, BRect rhs, out v2 pt0, out v2 pt1)
+		{
+			pt0 = lhs.Centre;
+			pt1 = rhs.Centre;
+			if (rhs.Centre.x > lhs.Centre.x) { pt0.x += lhs.Radius.x; pt1.x += rhs.Radius.x; }
+			if (rhs.Centre.x < lhs.Centre.x) { pt0.x -= lhs.Radius.x; pt1.x -= rhs.Radius.x; }
+			if (rhs.Centre.y > lhs.Centre.y) { pt0.y += lhs.Radius.y; pt1.y += rhs.Radius.y; }
+			if (rhs.Centre.y < lhs.Centre.y) { pt0.y -= lhs.Radius.y; pt1.y -= rhs.Radius.y; }
+		}
+		
+		/// <summary>Returns the average of the closest points between 'lhs' and 'rhs'.</summary>
+		public static v2 ClosestPoint(BRect lhs, BRect rhs)
+		{
+			v2 pt0, pt1;
+			ClosestPoint(lhs, rhs, out pt0, out pt1);
+			return (pt0 + pt1) * 0.5f;
+		}
+
+		/// <summary>Return the closest point between two line segments</summary>
+		public static void ClosestPoint(v2 s0, v2 e0, v2 s1, v2 e1, out float t0, out float t1)
+		{
+			v2 line0              = e0 - s0;
+			v2 line1              = e1 - s1;
+			v2 separation         = s0 - s1;
+			float f               = v2.Dot2(line1, separation);
+			float c               = v2.Dot2(line0, separation);
+			float line0_length_sq = line0.Length2Sq;
+			float line1_length_sq = line1.Length2Sq;
+
+			// Check if either or both segments are degenerate
+			if (Maths.FEql(line0_length_sq, 0f) && Maths.FEql(line1_length_sq, 0f)) { t0 = 0.0f; t1 = 0.0f; return; }
+			if (Maths.FEql(line0_length_sq, 0f))                                    { t0 = 0.0f; t1 = Maths.Clamp( f / line1_length_sq, 0.0f, 1.0f); return; }
+			if (Maths.FEql(line1_length_sq, 0f))                                    { t1 = 0.0f; t0 = Maths.Clamp(-c / line0_length_sq, 0.0f, 1.0f); return; }
+
+			// The general nondegenerate case starts here
+			float b = v2.Dot2(line0, line1);
+			float denom = line0_length_sq * line1_length_sq - b * b; // Always non-negative
+
+			// If segments not parallel, calculate closest point on infinite line 'line0'
+			// to infinite line 'line1', and clamp to segment 1. Otherwise pick arbitrary t0
+			t0 = denom != 0.0f ? Maths.Clamp((b*f - c*line1_length_sq) / denom, 0.0f, 1.0f) : 0.0f;
+
+			// Calculate point on infinite line 'line1' closest to segment 'line0' at t0
+			// using t1 = Dot3(pt0 - s1, line1) / line1_length_sq = (b*t0 + f) / line1_length_sq
+			t1 = (b*t0 + f) / line1_length_sq;
+
+			// If t1 in [0,1] then done. Otherwise, clamp t1, recompute t0 for the new value
+			// of t1 using t0 = Dot3(pt1 - s0, line0) / line0_length_sq = (b*t1 - c) / line0_length_sq
+			// and clamped t0 to [0, 1]
+			if      (t1 < 0.0f) { t1 = 0.0f; t0 = Maths.Clamp(( -c) / line0_length_sq, 0.0f, 1.0f); }
+			else if (t1 > 1.0f) { t1 = 1.0f; t0 = Maths.Clamp((b-c) / line0_length_sq, 0.0f, 1.0f); }
+		}
+
+		/// <summary>Return the closest point between two line segments</summary>
+		public static void ClosestPoint(v4 s0, v4 e0, v4 s1, v4 e1, out float t0, out float t1)
+		{
+			Debug.Assert(s0.w == 1f && e0.w == 1f && s1.w == 1f && e1.w == 1f);
+
+			v4 line0              = e0 - s0;
+			v4 line1              = e1 - s1;
+			v4 separation         = s0 - s1;
+			float f               = v4.Dot3(line1, separation);
+			float c               = v4.Dot3(line0, separation);
+			float line0_length_sq = line0.Length3Sq;
+			float line1_length_sq = line1.Length3Sq;
+
+			// Check if either or both segments are degenerate
+			if (Maths.FEql(line0_length_sq, 0f) && Maths.FEql(line1_length_sq, 0f)) { t0 = 0.0f; t1 = 0.0f; return; }
+			if (Maths.FEql(line0_length_sq, 0f))                                    { t0 = 0.0f; t1 = Maths.Clamp( f / line1_length_sq, 0.0f, 1.0f); return; }
+			if (Maths.FEql(line1_length_sq, 0f))                                    { t1 = 0.0f; t0 = Maths.Clamp(-c / line0_length_sq, 0.0f, 1.0f); return; }
+
+			// The general nondegenerate case starts here
+			float b = v4.Dot3(line0, line1);
+			float denom = line0_length_sq * line1_length_sq - b * b; // Always non-negative
+
+			// If segments not parallel, calculate closest point on infinite line 'line0'
+			// to infinite line 'line1', and clamp to segment 1. Otherwise pick arbitrary t0
+			t0 = denom != 0.0f ? Maths.Clamp((b*f - c*line1_length_sq) / denom, 0.0f, 1.0f) : 0.0f;
+
+			// Calculate point on infinite line 'line1' closest to segment 'line0' at t0
+			// using t1 = Dot3(pt0 - s1, line1) / line1_length_sq = (b*t0 + f) / line1_length_sq
+			t1 = (b*t0 + f) / line1_length_sq;
+
+			// If t1 in [0,1] then done. Otherwise, clamp t1, recompute t0 for the new value
+			// of t1 using t0 = Dot3(pt1 - s0, line0) / line0_length_sq = (b*t1 - c) / line0_length_sq
+			// and clamped t0 to [0, 1]
+			if      (t1 < 0.0f) { t1 = 0.0f; t0 = Maths.Clamp(( -c) / line0_length_sq, 0.0f, 1.0f); }
+			else if (t1 > 1.0f) { t1 = 1.0f; t0 = Maths.Clamp((b-c) / line0_length_sq, 0.0f, 1.0f); }
+		}
+
+		/// <summary>
 		/// Find the closest point on 'spline' to 'pt'
 		/// Note: the analytic solution to this problem involves solving a 5th order polynomial
 		/// This method uses Newton's method and relies on a "good" initial estimate of the nearest point
@@ -94,7 +187,30 @@ namespace pr.maths
 			if (d1 < d0 && d1 < d2) return t1;
 			return t2;
 		}
-
-
 	}
 }
+
+#if PR_UNITTESTS
+
+namespace pr
+{
+	using NUnit.Framework;
+	using maths;
+
+	[TestFixture] public static partial class UnitTests
+	{
+		internal static class TestClosestPoint
+		{
+			[Test] public static void PointToLine2d()
+			{
+				var a = new v2(1f,1f);
+				var b = new v2(4f,3f);
+				Assert.AreEqual(0f, Geometry.ClosestPoint(a,b,new v2(0f,0f)));
+				Assert.AreEqual(1f, Geometry.ClosestPoint(a,b,new v2(5f,2f)));
+				Assert.AreEqual(0.5f, Geometry.ClosestPoint(a,b,new v2(2.5f,2f)));
+			}
+		}
+	}
+}
+
+#endif

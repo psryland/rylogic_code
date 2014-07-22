@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <cassert>
 #include "pr/geometry/common.h"
+#include "pr/container/quadtree.h"
 
 namespace pr
 {
@@ -327,6 +328,13 @@ namespace pr
 			for (std::size_t i = 0; i != num_indices; ++i, ++ib)
 				SetN(*ib, Normalise3IfNonZero(GetN(*ib)));
 		}
+
+		// Remove degenerate verts
+		template <typename TVertCIter, typename TIdxCIter, typename TIdxIter>
+		void RemoveDegenerateVerts(size_t num_verts, TVertCIter verts, TIdxCIter indices, BBox const& bbox, TIdxIter iout, float tol = 1.0f / (1 << 8))
+		{
+		//	pr::QuadTree<> tree;
+		}
 	}
 }
 
@@ -338,7 +346,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_geometry_utility)
+		PRUnitTest(pr_geometry_utility_generatenormals)
 		{
 			using namespace pr::geometry;
 			struct Vert :pr::AlignTo<16>
@@ -404,7 +412,32 @@ namespace pr
 					break;
 				}
 			}
+		}
+		PRUnitTest(pr_geometry_utility_removedegenerates)
+		{
+			//using namespace pr::geometry;
+			//struct Vert :pr::AlignTo<16>
+			//{
+			//	pr::v4 m_pos;
+			//	pr::v4 m_norm;
 
+			//	Vert(){}
+			//	Vert(pr::v4 const& pos, pr::v4 const& norm) :m_pos(pos) ,m_norm(norm) {}
+			//};
+			//Vert verts[] =
+			//{
+			//	Vert(pr::v4::make(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+			//	Vert(pr::v4::make(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
+			//	Vert(pr::v4::make(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+			//	Vert(pr::v4::make(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
+			//};
+			//int faces[] =
+			//{
+			//	0, 1, 2,
+			//	0, 2, 3,
+			//};
+
+			//RemoveDegenerateVerts()
 		}
 	}
 }

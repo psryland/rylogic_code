@@ -16,6 +16,17 @@ namespace cex
 	struct ICex
 		:pr::cmdline::IOptionReceiver
 	{
+		static char const* Title()
+		{
+			return "\n"
+				"-------------------------------------------------------------\n"
+				"  Commandline Extensions \n" 
+				"   Copyright (c) Rylogic 2004 \n"
+				"   Version: v1.2\n"
+				"-------------------------------------------------------------\n"
+				"\n";
+		}
+
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
 		{
 			if (pr::str::EqualI(option, "/?") ||
@@ -27,9 +38,10 @@ namespace cex
 				return true;
 			}
 
-			std::cerr << "Error: Unknown option '" << option << "'\n";
+			std::cerr << "Error: Unknown  option '" << option << "' or incomplete parameters provided\nSee help for syntax information\n";
 			return false;
 		}
+
 		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter) override
 		{
 			std::cerr << "Error: Unknown option '" << *arg << "'\n";

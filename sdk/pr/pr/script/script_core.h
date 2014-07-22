@@ -11,13 +11,13 @@
 #include <stdarg.h>
 #include <exception>
 #include "pr/common/assert.h"
-#include "pr/common/array.h"
-#include "pr/common/stack.h"
-#include "pr/common/queue.h"
 #include "pr/common/hash.h"
 #include "pr/common/fmt.h"
 #include "pr/common/expr_eval.h"
 #include "pr/common/exception.h"
+#include "pr/container/array.h"
+#include "pr/container/stack.h"
+#include "pr/container/queue.h"
 #include "pr/str/prstring.h"
 #include "pr/script/keywords.h"
 

@@ -49,6 +49,8 @@ namespace TestCS
 			m_diag.Elements.Add(node0);
 			m_diag.Elements.Add(node1);
 			m_diag.Elements.Add(node2);
+			
+			node2.Enabled = false;
 
 			m_diag.DefaultConnectorStyle.Smooth = true;
 			var conn_type = DiagramControl.Connector.EType.BiDir;
@@ -94,19 +96,21 @@ namespace TestCS
 
 			m_toolstripcont.TopToolStripPanel.Controls.Add(m_diag.EditToolstrip);
 			m_diag.EditToolstrip.Visible = true;
-
+			m_diag.EditToolstrip.ImageScalingSize = new Size(22,22);
+			m_diag.EditToolstrip.AutoSize = true;
+			
 			m_filter = new Filter(this);
 			Load += (s,a) => Application.AddMessageFilter(m_filter);
 			FormClosed += (s,a) => Application.RemoveMessageFilter(m_filter);
 
 			m_diag.DiagramChanged += (s,a) =>
 				{
-					switch (a.ChgType)
-					{
-					case DiagramControl.DiagramChangedEventArgs.EType.MovingLink:
-						a.Cancel = true;
-						break;
-					}
+					//switch (a.ChgType)
+					//{
+					//case DiagramControl.EDiagramChangeType.MoveLinkBegin:
+					//	a.Cancel = true;
+					//	break;
+					//}
 				};
 	
 			//const string options_filepath = ;
@@ -250,11 +254,13 @@ namespace TestCS
 			// menuStrip1
 			// 
 			this.menuStrip1.Dock = System.Windows.Forms.DockStyle.None;
+			this.menuStrip1.GripStyle = System.Windows.Forms.ToolStripGripStyle.Visible;
 			this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolsToolStripMenuItem});
-			this.menuStrip1.Location = new System.Drawing.Point(0, 0);
+			this.menuStrip1.Location = new System.Drawing.Point(3, 0);
 			this.menuStrip1.Name = "menuStrip1";
-			this.menuStrip1.Size = new System.Drawing.Size(552, 24);
+			this.menuStrip1.Size = new System.Drawing.Size(152, 24);
+			this.menuStrip1.Stretch = false;
 			this.menuStrip1.TabIndex = 2;
 			this.menuStrip1.Text = "menuStrip1";
 			// 
@@ -317,7 +323,7 @@ namespace TestCS
 			// m_toolstripcont.ContentPanel
 			// 
 			this.m_toolstripcont.ContentPanel.Controls.Add(this.m_diag);
-			this.m_toolstripcont.ContentPanel.Size = new System.Drawing.Size(552, 520);
+			this.m_toolstripcont.ContentPanel.Size = new System.Drawing.Size(527, 520);
 			this.m_toolstripcont.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_toolstripcont.Location = new System.Drawing.Point(0, 0);
 			this.m_toolstripcont.Margin = new System.Windows.Forms.Padding(0);
@@ -332,8 +338,6 @@ namespace TestCS
 			// 
 			// m_diag
 			// 
-			this.m_diag.AllowEditing = true;
-			this.m_diag.AllowSelection = true;
 			this.m_diag.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_diag.Location = new System.Drawing.Point(0, 0);
 			this.m_diag.Name = "m_diag";
@@ -350,7 +354,7 @@ namespace TestCS
 			scatterOptions1.SpringConstant = 0.01F;
 			diagramOptions1.Scatter = scatterOptions1;
 			this.m_diag.Options = diagramOptions1;
-			this.m_diag.Size = new System.Drawing.Size(552, 520);
+			this.m_diag.Size = new System.Drawing.Size(527, 520);
 			this.m_diag.TabIndex = 0;
 			// 
 			// DiagramControlUI

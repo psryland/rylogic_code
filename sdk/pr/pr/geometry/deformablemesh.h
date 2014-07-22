@@ -7,7 +7,7 @@
 #define PR_GEOM_DEFORMABLE_MESH_H
 
 #include "pr/common/min_max_fix.h"
-#include "pr/common/byte_data.h"
+#include "pr/container/byte_data.h"
 #include "pr/maths/maths.h"
 #include "pr/geometry/tetramesh.h"
 

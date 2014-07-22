@@ -870,6 +870,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\geometry\quad.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.py">

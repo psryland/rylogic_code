@@ -47,15 +47,15 @@
 #include "pr/common/alloca.h"
 #include "pr/common/hash.h"
 #include "pr/common/range.h"
-#include "pr/common/array.h"
 #include "pr/common/imposter.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
 #include "pr/common/new.h"
 #include "pr/common/to.h"
 #include "pr/common/scope.h"
-#include "pr/common/container_functions.h"
+#include "pr/common/algorithm.h"
 #include "pr/common/user_data.h"
+#include "pr/container/array.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"
@@ -102,6 +102,7 @@ namespace pr
 		const Range RangeZero = {0,0};
 
 		typedef pr::geometry::EGeom EGeom;
+		typedef pr::geometry::EPrim EPrim;
 
 		// Render
 		struct Window;
@@ -179,17 +180,6 @@ namespace pr
 			*/x(Failed        ,= 0x80000000)/*
 			*/x(InvalidValue  ,)
 		PR_DEFINE_ENUM2(EResult, PR_ENUM);
-		#undef PR_ENUM
-
-		// EPrim
-		#define PR_ENUM(x)\
-			x(Invalid   ,= D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED)\
-			x(PointList ,= D3D11_PRIMITIVE_TOPOLOGY_POINTLIST)\
-			x(LineList  ,= D3D11_PRIMITIVE_TOPOLOGY_LINELIST)\
-			x(LineStrip ,= D3D11_PRIMITIVE_TOPOLOGY_LINESTRIP)\
-			x(TriList   ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST)\
-			x(TriStrip  ,= D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP)
-		PR_DEFINE_ENUM2(EPrim, PR_ENUM);
 		#undef PR_ENUM
 
 		// EShaderType (in order of execution on the HW) http://msdn.microsoft.com/en-us/library/windows/desktop/ff476882(v=vs.85).aspx

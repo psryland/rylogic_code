@@ -6,8 +6,70 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\cex\cex.cpp">
+    <ClCompile Include="..\cex\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\cex\input.h">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cex\open_vs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cex\shell_file_op.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cex\data_header_gen.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\cex\p3d_exporter.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\cex\icex.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\dir_path.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\msg_box.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\wait.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\open_vs.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\lower.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\exec.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\shell_file_op.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\clip.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\hash.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\guid.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\data_header_gen.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\template.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\cex\p3d_exporter.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

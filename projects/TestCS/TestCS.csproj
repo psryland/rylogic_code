@@ -63,6 +63,9 @@
     <Compile Include="src\test_app_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\toolstrip_positions_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\tree_grid_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -104,6 +107,9 @@
     </Compile>
     <EmbeddedResource Include="src\toolform_ui.resx">
       <DependentUpon>toolform_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\toolstrip_positions_ui.resx">
+      <DependentUpon>toolstrip_positions_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\tree_grid_ui.resx">
       <DependentUpon>tree_grid_ui.cs</DependentUpon>

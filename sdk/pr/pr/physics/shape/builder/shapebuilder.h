@@ -14,10 +14,10 @@
 #define PR_PHYSICS_SHAPE_BUILDER_H
 
 #include "pr/common/assert.h"
-#include "pr/common/array.h"
-#include "pr/common/byte_data.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
+#include "pr/container/array.h"
+#include "pr/container/byte_data.h"
 #include "pr/maths/maths.h"
 #include "pr/physics/types/forward.h"
 #include "pr/physics/material/material.h"
