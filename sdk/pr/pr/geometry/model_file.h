@@ -14,8 +14,9 @@ namespace pr
 	{
 		// Supported model file formats
 		#define PR_ENUM(x)\
-			x(Unknown , ""    ,= 0)\
-			x(Max3DS  , "3ds" ,= 1)         /* 3D Studio Max */
+			x(Unknown , ""    , = 0)\
+			x(P3D     , "p3d" , = 1)/* PR3D */\
+			x(Max3DS  , "3ds" , = 2)/* 3D Studio Max */
 		
 		PR_DEFINE_ENUM3(EModelFileFormat, PR_ENUM);
 		#undef PR_ENUM
@@ -46,6 +47,9 @@ namespace pr
 			switch (info.m_format)
 			{
 			default: throw std::exception("Unknown model file format");
+			case EModelFileFormat::P3D:
+				info.m_is_binary = true;
+				break;
 			case EModelFileFormat::Max3DS:
 				info.m_is_binary = true;
 				break;

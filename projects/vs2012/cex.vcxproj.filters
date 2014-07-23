@@ -9,9 +9,6 @@
     <ClCompile Include="..\cex\main.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\cex\input.h">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\cex\open_vs.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -21,7 +18,7 @@
     <ClCompile Include="..\cex\data_header_gen.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="..\cex\p3d_exporter.cpp">
+    <ClCompile Include="..\cex\p3d.cpp">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
@@ -68,7 +65,7 @@
     <ClInclude Include="..\cex\template.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\cex\p3d_exporter.h">
+    <ClInclude Include="..\cex\p3d.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>

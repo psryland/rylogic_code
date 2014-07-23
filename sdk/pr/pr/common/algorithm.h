@@ -53,7 +53,7 @@ namespace pr
 
 	// Insert 'val' into 'cont' if there is no element in 'cont' equal to 'val'
 	// 'cont' is assumed to be ordered. Returns true if 'val' was added to 'cont'
-	template <typename TCont, typename Value, typename OrderPred> inline bool insert_unique(TCont& cont, Value const& val, OrderPred order_pred)
+	template <typename TCont, typename TValue, typename OrderPred> inline bool insert_unique(TCont& cont, TValue const& val, OrderPred order_pred)
 	{
 		// '*iter' will be >= 'val'. So if 'val' is not < '*iter' it must be equal
 		auto iter = std::lower_bound(std::begin(cont), std::end(cont), val, order_pred);
@@ -61,7 +61,7 @@ namespace pr
 		cont.insert(iter, val);
 		return true;
 	}
-	template <typename TCont, typename Value> inline bool insert_unique(TCont& cont, Value const& val)
+	template <typename TCont, typename TValue> inline bool insert_unique(TCont& cont, TValue const& val)
 	{
 		// '*iter' will be >= 'val'. So if 'val' is not < '*iter' it must be equal
 		auto iter = std::lower_bound(std::begin(cont), std::end(cont), val);
@@ -95,5 +95,11 @@ namespace pr
 	{
 		auto end = std::remove_if(std::begin(cont), std::end(cont), pred);
 		cont.erase(end, std::end(cont));
+	}
+
+	// Sort a container
+	template <typename TCont, typename Pred> inline void sort(TCont& cont, Pred pred)
+	{
+		std::sort(std::begin(cont), std::end(cont), pred);
 	}
 }

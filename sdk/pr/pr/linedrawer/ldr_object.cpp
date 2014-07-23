@@ -1924,7 +1924,7 @@ namespace pr
 				}
 
 				// Create the model
-				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
+				obj->m_model = ModelGenerator<>::LoadModel(p.m_rdr, info.m_format, src, nullptr, m_bake != m4x4Identity ? &m_bake : nullptr, m_gen_normals);
 				obj->m_model->m_name = obj->TypeAndName();
 			}
 		};

@@ -8,12 +8,12 @@
 
 namespace cex
 {
-	struct P3dExport :ICex
+	struct P3d :ICex
 	{
 		struct Impl;
 		std::shared_ptr<Impl> m_ptr;
 
-		P3dExport();
+		P3d();
 		void ShowHelp() const override;
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override;
 		int Run() override;

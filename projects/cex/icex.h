@@ -29,6 +29,8 @@ namespace cex
 
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
 		{
+			ShowConsole();
+
 			if (pr::str::EqualI(option, "/?") ||
 				pr::str::EqualI(option, "-h") ||
 				pr::str::EqualI(option, "-help"))
@@ -44,8 +46,43 @@ namespace cex
 
 		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter) override
 		{
+			ShowConsole();
+
 			std::cerr << "Error: Unknown option '" << *arg << "'\n";
 			return false;
+		}
+
+		// Show the console for this process
+		void ShowConsole() const
+		{
+			// Attach to the current console
+			if (AttachConsole((DWORD)-1) || AllocConsole())
+			{
+				FILE *fp;
+				int h;
+
+				// redirect unbuffered STDOUT to the console
+				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
+				fp = _fdopen(h, "w");
+				*stdout = *fp;
+				setvbuf(stdout, NULL, _IONBF, 0);
+
+				// redirect unbuffered STDIN to the console
+				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
+				fp = _fdopen(h, "r");
+				*stdin = *fp;
+				setvbuf(stdin, NULL, _IONBF, 0);
+
+				// redirect unbuffered STDERR to the console
+				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
+				fp = _fdopen(h, "w");
+				*stderr = *fp;
+				setvbuf(stderr, NULL, _IONBF, 0);
+
+				// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
+				// point to console as well
+				std::ios::sync_with_stdio();
+			}
 		}
 
 		virtual void ShowHelp() const = 0;

@@ -243,7 +243,7 @@ namespace pr
 				// Generic chunk reading function
 				// 'src' should point to a sub chunk
 				// 'len' is the remaining bytes in the parent chunk from 'src' to the end of the parent chunk
-				// 'func' is called back with the chunk header, it should return false to stop reading.
+				// 'func' is called back with the chunk header, it should return true to stop reading.
 				template <typename TSrc, typename Func>
 				void ReadChunks(TSrc& src, u32 len, Func func, u32* len_out = nullptr)
 				{
@@ -257,7 +257,7 @@ namespace pr
 						u32 data_len = hdr.length - sizeof(ChunkHeader);
 
 						// Parse the chunk
-						if (!func(hdr, src, data_len))
+						if (func(hdr, src, data_len))
 						{
 							if (len_out) *len_out = len;
 							return;
@@ -294,10 +294,10 @@ namespace pr
 						if (hdr.id == id && !next)
 						{
 							chunk = hdr;
-							return false;
+							return true;
 						}
 						next = false;
-						return true;
+						return false;
 					}, len_out);
 					return chunk;
 				}
@@ -361,7 +361,7 @@ namespace pr
 								break;
 							}
 						}
-						return true;
+						return false;
 					});
 					return tex;
 				}
@@ -402,7 +402,7 @@ namespace pr
 								break;
 							}
 						}
-						return true;
+						return false;
 					});
 					return mat;
 				}
@@ -443,7 +443,7 @@ namespace pr
 								break;
 							}
 						}
-						return true;
+						return false;
 					});
 				}
 
@@ -487,7 +487,7 @@ namespace pr
 								break;
 							}
 						}
-						return true;
+						return false;
 					});
 					return mesh;
 				}
@@ -508,15 +508,15 @@ namespace pr
 								break;
 							}
 						}
-						return true;
+						return false;
 					});
 					return obj;
 				}
 			}
 
 			// Extract the materials in the given 3DS stream
-			template <typename TSrc, typename TMatObj>
-			void ReadMaterials(TSrc& src, TMatObj mat_out)
+			// 'mat_out' should return true to stop searching (i.e. material found!)
+			template <typename TSrc, typename TMatObj> void ReadMaterials(TSrc& src, TMatObj mat_out)
 			{
 				using namespace pr::geometry::max_3ds;
 
@@ -540,16 +540,17 @@ namespace pr
 					switch (hdr.id)
 					{
 					case EChunkId::MaterialBlock:
-						mat_out(impl::ReadMaterial(src, data_len));
+						if (mat_out(impl::ReadMaterial(src, data_len)))
+							return true;
 						break;
 					}
-					return true;
+					return false;
 				});
 			}
 
 			// Extract the objects from a 3DS stream
-			template <typename TSrc, typename TObjOut>
-			void ReadObjects(TSrc& src, TObjOut obj_out)
+			// 'out_out' should return true to stop searching (i.e. object found)
+			template <typename TSrc, typename TObjOut> void ReadObjects(TSrc& src, TObjOut obj_out)
 			{
 				using namespace pr::geometry::max_3ds;
 
@@ -573,10 +574,11 @@ namespace pr
 					switch (hdr.id)
 					{
 					case EChunkId::ObjectBlock:
-						obj_out(impl::ReadObject(src, data_len));
+						if (obj_out(impl::ReadObject(src, data_len)))
+							return true;
 						break;
 					}
-					return true;
+					return false;
 				});
 			}
 
@@ -715,8 +717,8 @@ namespace pr
 		{
 			using namespace pr::geometry;
 			std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
-			max_3ds::ReadMaterials(ifile, [](max_3ds::Material&&){});
-			max_3ds::ReadObjects(ifile, [](max_3ds::Object&&){});
+			max_3ds::ReadMaterials(ifile, [](max_3ds::Material&&){ return false; });
+			max_3ds::ReadObjects(ifile, [](max_3ds::Object&&){ return false; });
 		}
 	}
 }

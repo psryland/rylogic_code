@@ -97,7 +97,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <PrecompiledHeaderFile>sol/main/stdafx.h</PrecompiledHeaderFile>
-      <BrowseInformation>true</BrowseInformation>
+      <BrowseInformation>false</BrowseInformation>
       <PreprocessorDefinitions>PR_MATHS_USE_DIRECTMATH=1;PR_LOGGING=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>

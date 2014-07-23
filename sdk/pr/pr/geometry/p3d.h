@@ -36,26 +36,27 @@ namespace pr
 			static const u32 Version = 0x00001000;
 
 			#pragma region Chunk Ids
-			#define PR_ENUM(x)/*
-			*/x(Null           ,= 0x00000000)/* Null chunk
-			*/x(CStr           ,= 0x00000001)/* Null terminated ascii string
-			*/x(Main           ,= 0x44335250)/* PR3D File type indicator
-			*/x(FileVersion    ,= 0x00000100)/* ├─ File Version
-			*/x(Scene          ,= 0x00001000)/* └─ Scene
-			*/x(Materials      ,= 0x00002000)/*    ├─ Materials
-			*/x(Material       ,= 0x00002100)/*    │  └─ Material
-			*/x(DiffuseColour  ,= 0x00002110)/*    │     ├─ Diffuse Colour
-			*/x(DiffuseTexture ,= 0x00002120)/*    │     └─ Diffuse texture
-			*/x(TexFilepath    ,= 0x00002121)/*    │        ├─ Texture filepath
-			*/x(TexTiling      ,= 0x00002122)/*    │        └─ Texture tiling
-			*/x(Meshes         ,= 0x00003000)/*    └─ Meshes
-			*/x(Mesh           ,= 0x00003100)/*       └─ Mesh of lines,triangles,tetras
-			*/x(MeshName       ,= 0x00003101)/*          ├─ Name (cstr)
-			*/x(MeshVertices   ,= 0x00003110)/*          ├─ Vertex list (u32 count, count * [Vert])
-			*/x(MeshIndices    ,= 0x00003120)/*          ├─ Index list (u32 count, count * [u16 i])
-			*/x(MeshIndices32  ,= 0x00003121)/*          ├─ Index list (u32 count, count * [u32 i])
-			*/x(MeshNuggets    ,= 0x00003200)/*          └─ Nugget list (u32 count, count * [Nugget])
-			*/
+			#define PR_ENUM(x)\
+			x(Null           ,= 0x00000000)/* Null chunk                                            */\
+			x(CStr           ,= 0x00000001)/* Null terminated ascii string                          */\
+			x(Main           ,= 0x44335250)/* PR3D File type indicator                              */\
+			x(FileVersion    ,= 0x00000100)/* ├─ File Version                                       */\
+			x(Scene          ,= 0x00001000)/* └─ Scene                                              */\
+			x(Materials      ,= 0x00002000)/*    ├─ Materials                                       */\
+			x(Material       ,= 0x00002100)/*    │  └─ Material                                     */\
+			x(DiffuseColour  ,= 0x00002110)/*    │     ├─ Diffuse Colour                            */\
+			x(DiffuseTexture ,= 0x00002120)/*    │     └─ Diffuse texture                           */\
+			x(TexFilepath    ,= 0x00002121)/*    │        ├─ Texture filepath                       */\
+			x(TexTiling      ,= 0x00002122)/*    │        └─ Texture tiling                         */\
+			x(Meshes         ,= 0x00003000)/*    └─ Meshes                                          */\
+			x(Mesh           ,= 0x00003100)/*       └─ Mesh of lines,triangles,tetras               */\
+			x(MeshName       ,= 0x00003101)/*          ├─ Name (cstr)                               */\
+			x(MeshBBox       ,= 0x00003102)/*          ├─ Bounding box (BBox)                       */\
+			x(MeshVertices   ,= 0x00003110)/*          ├─ Vertex list (u32 count, count * [Vert])   */\
+			x(MeshIndices    ,= 0x00003120)/*          ├─ Index list (u32 count, count * [u16 i])   */\
+			x(MeshIndices32  ,= 0x00003121)/*          ├─ Index list (u32 count, count * [u32 i])   */\
+			x(MeshNuggets    ,= 0x00003200)/*          └─ Nugget list (u32 count, count * [Nugget]) */
+
 			PR_DEFINE_ENUM2(EChunkId, PR_ENUM);
 			#undef PR_ENUM
 			#pragma endregion
@@ -77,7 +78,7 @@ namespace pr
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{}
-				ChunkIndex(EChunkId::Enum_ id, u32 data_length, std::initializer_list<ChunkIndex>&& chunks)
+				ChunkIndex(EChunkId::Enum_ id, u32 data_length, std::initializer_list<ChunkIndex> chunks)
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{
@@ -118,12 +119,21 @@ namespace pr
 				Col4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
 				operator Colour() const { return Colour::make(r,g,b,a); }
 			};
+			struct BBox
+			{
+				Vec4 centre;
+				Vec4 radius;
+				BBox() { centre = pr::v4Origin; radius = -pr::v4One.w0(); }
+				BBox& operator = (pr::BBox const& rhs) { centre = rhs.m_centre; radius = rhs.m_radius; return *this; }
+				operator pr::BBox() const { return pr::BBox::make(centre, radius); }
+			};
 			struct Vert
 			{
-				Vec4 pos;
-				Col4 col;
-				Vec4 norm;
+				Vec4 pos;   // This type matches pr::rdr::Vert (which has 16-byte
+				Col4 col;   // alignment). Hence the 'pad' member.
+				Vec4 norm;  // That space might be handy for a future something
 				Vec2 uv;
+				Vec2 pad;
 			};
 			struct Range
 			{
@@ -198,13 +208,8 @@ namespace pr
 				// Diffuse textures
 				std::vector<Texture> m_tex_diffuse;
 
-				Material()
-					:m_id()
-					,m_diffuse(pr::ColourWhite)
-					,m_tex_diffuse()
-				{}
-				Material(char const* name, pr::Colour const& diff_colour)
-					:m_id(name)
+				Material(std::string name = std::string(), pr::Colour const& diff_colour = pr::ColourWhite)
+					:m_id(name.c_str())
 					,m_diffuse(diff_colour)
 					,m_tex_diffuse()
 				{}
@@ -224,12 +229,16 @@ namespace pr
 				// The nuggets to divide the mesh into for each material
 				std::vector<Nugget> m_nugget;
 
-				Mesh()
-					:m_name()
+				// Mesh bounding box
+				BBox m_bbox;
+
+				Mesh(std::string name = std::string())
+					:m_name(name)
 					,m_vert()
 					,m_idx16()
 					,m_idx32()
 					,m_nugget()
+					,m_bbox()
 				{}
 			};
 			struct Scene
@@ -258,7 +267,7 @@ namespace pr
 			// Build a chunk index from parts of a p3d model
 			inline ChunkIndex Index(Texture const& tex)
 			{
-				return ChunkIndex(EChunkId::DiffuseTexture, 0,
+				return ChunkIndex(EChunkId::DiffuseTexture, 0U,
 					{
 						ChunkIndex(EChunkId::TexFilepath, tex.m_filepath.size() + 1),
 						ChunkIndex(EChunkId::TexTiling, sizeof(u32))
@@ -280,6 +289,7 @@ namespace pr
 			{
 				auto index = ChunkIndex(EChunkId::Mesh, 0);
 				index.add(ChunkIndex(EChunkId::MeshName, mesh.m_name.size() + 1));
+				index.add(ChunkIndex(EChunkId::MeshBBox, sizeof(BBox)));
 				if (!mesh.m_vert.empty())   index.add(ChunkIndex(EChunkId::MeshVertices , sizeof(u32) + mesh.m_vert.size()   * sizeof(Vert  )));
 				if (!mesh.m_idx16.empty())  index.add(ChunkIndex(EChunkId::MeshIndices  , sizeof(u32) + mesh.m_idx16.size()  * sizeof(u16   )));
 				if (!mesh.m_idx32.empty())  index.add(ChunkIndex(EChunkId::MeshIndices32, sizeof(u32) + mesh.m_idx32.size()  * sizeof(u32   )));
@@ -305,7 +315,7 @@ namespace pr
 			}
 			inline ChunkIndex Index(File const& file)
 			{
-				return ChunkIndex(EChunkId::Main, 0,
+				return ChunkIndex(EChunkId::Main, 0U,
 					{
 						ChunkIndex(EChunkId::FileVersion, sizeof(32)),
 						{Index(file.m_scene)}
@@ -336,384 +346,525 @@ namespace pr
 				}
 			};
 
-			namespace impl
+			// Helper to return the data size for a chunk
+			inline u32 DataLength(ChunkHeader chunk)
 			{
-				// Read/Write an array
-				template <typename TOut, typename TSrc>
-				inline void Read(TSrc& src, TOut* out, size_t count)
-				{
-					Src<TSrc>::Read(src, out, count);
-				}
-				template <typename TIn, typename TSrc>
-				inline void Write(TSrc& dst, TIn const* in, size_t count)
-				{
-					Src<TSrc>::Write(dst, in, count);
-				}
+				assert(chunk.m_length >= sizeof(ChunkHeader));
+				return chunk.m_length - sizeof(ChunkHeader);
+			}
 
-				// Read/Write a single type
-				template <typename TOut, typename TSrc>
-				inline TOut Read(TSrc& src)
+			// Generic chunk reading function.
+			// 'src' should point to data after the chunk header.
+			// 'len' is the remaining bytes in the parent chunk from 'src' to the end of the parent chunk
+			// 'func' is called back with the chunk header and 'src' positioned at the start of the chunk data
+			// 'func' should return true to stop reading (i.e. chunk found!).
+			template <typename TSrc, typename Func> void ReadChunks(TSrc& src, u32 len, Func func, u32* len_out = nullptr)
+			{
+				while (len != 0)
 				{
-					TOut out; Read(src, &out, 1); return out;
-				}
-				template <typename TIn, typename TSrc>
-				inline void Write(TSrc& dst, TIn const& in)
-				{
-					Write(dst, &in, 1);
-				}
+					auto start = Src<TSrc>::TellPos(src);
 
-				// Generic chunk reading function
-				// 'src' should point to a sub chunk
-				// 'len' is the remaining bytes in the parent chunk from 'src' to the end of the parent chunk
-				// 'func' is called back with the chunk header, it should return false to stop reading.
-				template <typename TSrc, typename Func>
-				void ReadChunks(TSrc& src, u32 len, Func func, u32* len_out = nullptr)
-				{
-					while (len != 0)
+					// Read the chunk header
+					auto hdr = Read<ChunkHeader>(src);
+					if (hdr.m_length <= len) len -= hdr.m_length; else throw std::exception(pr::FmtS("invalid chunk found at offset 0x%X", start));
+					u32 data_len = DataLength(hdr);
+
+					// Parse the chunk
+					if (func(hdr, src, data_len))
 					{
-						auto start = Src<TSrc>::TellPos(src);
-
-						// Read the chunk header
-						auto hdr = Read<ChunkHeader>(src);
-						if (hdr.m_length <= len) len -= hdr.m_length; else throw std::exception(pr::FmtS("invalid chunk found at offset 0x%X", start));
-						u32 data_len = hdr.m_length - sizeof(ChunkHeader);
-
-						// Parse the chunk
-						if (!func(hdr, src, data_len))
-						{
-							if (len_out) *len_out = len;
-							return;
-						}
-
-						// Seek to the next chunk
-						Src<TSrc>::SeekAbs(src, start + hdr.m_length);
+						if (len_out) *len_out = len;
+						return;
 					}
-					if (len_out) *len_out = 0;
-				}
 
-				// Search from the current stream position to the next instance of chunk 'id'.
-				// Assumes 'src' is positioned at a chunk header within a parent chunk.
-				// 'len' is the number of bytes until the end of the parent chunk.
-				// 'len_out' is an output of the length until the end of the parent chunk on return.
-				// If 'next' is true and 'src' currently points to an 'id' chunk, then seeks to the next instance of 'id'
-				// Returns the found chunk header with the current position of 'src' set immediately after it.
-				template <typename TSrc>
-				ChunkHeader Find(EChunkId id, TSrc& src, u32 len, u32* len_out = nullptr, bool next = false)
+					// Seek to the next chunk
+					Src<TSrc>::SeekAbs(src, start + hdr.m_length);
+				}
+				if (len_out) *len_out = 0;
+			}
+
+			// Search from the current stream position to the next instance of chunk 'id'.
+			// Assumes 'src' is positioned at a chunk header within a parent chunk.
+			// 'len' is the number of bytes until the end of the parent chunk.
+			// 'len_out' is an output of the length until the end of the parent chunk on return.
+			// If 'next' is true and 'src' currently points to an 'id' chunk, then seeks to the next instance of 'id'
+			// Returns the found chunk header with the current position of 'src' set immediately after it.
+			template <typename TSrc> ChunkHeader Find(EChunkId id, TSrc& src, u32 len, u32* len_out = nullptr, bool next = false)
+			{
+				ChunkHeader chunk;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc&, u32)
 				{
-					ChunkHeader chunk;
-					ReadChunks(src, len, [&](ChunkHeader hdr, TSrc&, u32)
+					// If this is the chunk we're looking for return false to say "done"
+					if (hdr.m_id == id && !next)
 					{
-						// If this is the chunk we're looking for return false to say "done"
-						if (hdr.m_id == id && !next)
-						{
-							chunk = hdr;
-							return false;
-						}
-						next = false;
+						chunk = hdr;
 						return true;
-					}, len_out);
-					return chunk;
-				}
+					}
 
-				// Read a null terminated string from a chunk.
-				// Assumes 'src' points to the start of the string.
-				template <typename TSrc>
-				std::string ReadCStr(TSrc& src, u32 len, u32* len_out = nullptr)
+					next = false;
+					return false;
+				}, len_out);
+				return chunk;
+			}
+
+			// Search from the current stream position to the nested chunk described by the list
+			// 'src' is assume to be pointed to a chunk header.
+			template <typename TSrc> ChunkHeader Find(TSrc& src, u32 len, std::initializer_list<EChunkId> chunk_id)
+			{
+				ChunkHeader hdr = {};
+				for (auto id : chunk_id)
 				{
-					std::string str;
-					for (char c; len-- != 0 && (c = Read<char>(src)) != 0;)
-						str.push_back(c);
+					hdr = Find(id, src, len);
+					if (hdr.m_id != id)
+					{
+						// Special case the Main chunk, if it's missing assume 'src' is not a p3d stream and throw
+						if (id == EChunkId::Main) throw std::exception("Source is not a p3d stream");
+						return ChunkHeader();
+					}
+					len = DataLength(hdr);
+				}
+				return hdr;
+			}
+
+			#pragma region Read
+
+			// All of these Read functions assume 'src' points to the start of the chunk data
+			// of the corresponding chunk type.
+
+			// Read an array
+			template <typename TOut, typename TSrc> inline void Read(TSrc& src, TOut* out, size_t count)
+			{
+				Src<TSrc>::Read(src, out, count);
+			}
+
+			// Read a single type
+			template <typename TOut, typename TSrc> inline TOut Read(TSrc& src)
+			{
+				TOut out;
+				Read(src, &out, 1);
+				return out;
+			}
+
+			// Read a null terminated string. 'src' is assumed to point to the start of a null terminated string
+			template <typename TSrc, typename TStr = std::string> TStr ReadCStr(TSrc& src, u32 len, u32* len_out = nullptr)
+			{
+				TStr str;
+				for (char c; len-- != 0 && (c = Read<char>(src)) != 0;)
+					str.push_back(c);
 				
-					if (len_out) *len_out = len;
-					return str;
-				}
+				if (len_out) *len_out = len;
+				return str;
+			}
 
-				// Write a null terminated string to 'out'
-				template <typename TSrc>
-				void WriteCStr(TSrc& out, std::string const& str)
+			// Read a texture. 'src' is assumed to point to the start of EChunkId::Texture chunk data
+			template <typename TSrc> Texture ReadTexture(TSrc& src, u32 len)
+			{
+				Texture tex;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 				{
-					Write(out, str.c_str(), str.size() + 1);
-				}
-
-				// Read a texture from 'src'
-				// Assumes 'src' points to a sub chunk within a TextureMap1, BumpMap, or ReflectionMap chunk
-				template <typename TSrc>
-				Texture ReadTexture(TSrc& src, u32 len)
-				{
-					Texture tex;
-					ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+					switch (hdr.m_id)
 					{
-						switch (hdr.m_id)
+					case EChunkId::TexFilepath:
 						{
-						case EChunkId::TexFilepath:
-							{
-								tex.m_filepath = ReadCStr(src, data_len);
-								break;
-							}
-						case EChunkId::TexTiling:
-							{
-								tex.m_tiling = Read<u32>(src);
-								break;
-							}
+							tex.m_filepath = ReadCStr(src, data_len);
+							break;
 						}
-						return true;
-					});
-					return tex;
-				}
-
-				// Read a material from 'src'
-				// Assumes 'src' points to a sub chunk within a MaterialBlock chunk
-				template <typename TSrc>
-				Material ReadMaterial(TSrc& src, u32 len)
-				{
-					Material mat;
-
-					Read(src, mat.m_id.str, sizeof(Str16));
-					len -= sizeof(Str16);
-
-					ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-					{
-						switch (hdr.m_id)
+					case EChunkId::TexTiling:
 						{
-						case EChunkId::DiffuseColour:
-							{
-								auto col = Read<Col4>(src);
-								mat.m_diffuse = pr::Colour::make(col.r, col.g, col.b, col.a);
-								break;
-							}
-						case EChunkId::DiffuseTexture:
-							{
-								mat.m_tex_diffuse.push_back(ReadTexture(src, data_len));
-								break;
-							}
+							tex.m_tiling = Read<u32>(src);
+							break;
 						}
-						return true;
-					});
-					return mat;
-				}
+					}
+					return false;
+				});
+				return tex;
+			}
 
-				// Read a tri mesh from 'src'
-				template <typename TSrc>
-				Mesh ReadMesh(TSrc& src, u32 len)
+			// Read a material. 'src' is assumed to point to the start of EChunkId::Material chunk data
+			template <typename TSrc> Material ReadMaterial(TSrc& src, u32 len)
+			{
+				Material mat;
+
+				Read(src, mat.m_id.str, sizeof(Str16));
+				len -= sizeof(Str16);
+
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 				{
-					Mesh mesh;
-					ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+					switch (hdr.m_id)
 					{
-						switch (hdr.m_id)
+					case EChunkId::DiffuseColour:
 						{
-						case EChunkId::MeshName:
-							{
-								mesh.m_name = ReadCStr(src, data_len);
-								break;
-							}
-						case EChunkId::MeshVertices:
-							{
-								size_t count = Read<u32>(src);
-								data_len -= sizeof(u32);
-
-								if (count * sizeof(Vert) != data_len)
-									throw std::exception(FmtS("Vertex list count is invalid. Vertex count is %d, data available for %d verts.", count, data_len/sizeof(Vert)));
-
-								mesh.m_vert.resize(count);
-								Read(src, mesh.m_vert.data(), count);
-								break;
-							}
-						case EChunkId::MeshIndices:
-							{
-								size_t count = Read<u32>(src);
-								data_len -= sizeof(u32);
-
-								if (count * sizeof(u16) != data_len)
-									throw std::exception(FmtS("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len/sizeof(u16)));
-								
-								mesh.m_idx16.resize(count);
-								Read(src, mesh.m_idx16.data(), count);
-								break;
-							}
-						case EChunkId::MeshIndices32:
-							{
-								size_t count = Read<u32>(src);
-								data_len -= sizeof(u32);
-
-								if (count * sizeof(u32) != data_len)
-									throw std::exception(FmtS("Index32 list count is invalid. Index count is %d, data available for %d indices.", count, data_len/sizeof(u32)));
-								
-								mesh.m_idx32.resize(count);
-								Read(src, mesh.m_idx32.data(), count);
-								break;
-							}
-						case EChunkId::MeshNuggets:
-							{
-								size_t count = Read<u32>(src);
-								data_len -= sizeof(u32);
-
-								if (count * sizeof(Nugget) != data_len)
-									throw std::exception(FmtS("Nugget list count is invalid. Nugget count is %d, data available for %d nuggets.", count, data_len/sizeof(Nugget)));
-								
-								mesh.m_nugget.resize(count);
-								Read(src, mesh.m_nugget.data(), count);
-								break;
-							}
+							auto col = Read<Col4>(src);
+							mat.m_diffuse = pr::Colour::make(col.r, col.g, col.b, col.a);
+							break;
 						}
-						return true;
-					});
-					return mesh;
-				}
-
-				// Read a 'scene' from 'src'
-				template <typename TSrc>
-				void ReadScene(TSrc& src, u32 len, Scene& scene)
-				{
-					// Read the scene sub chunks
-					impl::ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-					{
-						switch (hdr.m_id)
+					case EChunkId::DiffuseTexture:
 						{
-						case EChunkId::Materials:
+							mat.m_tex_diffuse.push_back(ReadTexture(src, data_len));
+							break;
+						}
+					}
+					return false;
+				});
+				return mat;
+			}
+
+			// Fill a container of verts. 'src' is assumed to point to the start of EChunkId::MeshVertices chunk data
+			template <typename TCont, typename TSrc> TCont ReadMeshVertices(TSrc& src, u32 data_len)
+			{
+				TCont cont;
+
+				size_t count = Read<u32>(src);
+				data_len -= sizeof(u32);
+
+				static_assert(sizeof(Vert) == sizeof(std::remove_reference<decltype(cont[0])>::type), "Vertex type size mismatch");
+				if (count * sizeof(Vert) != data_len)
+					throw std::exception(FmtS("Vertex list count is invalid. Vertex count is %d, data available for %d verts.", count, data_len/sizeof(Vert)));
+
+				cont.resize(count);
+				Read(src, cont.data(), count);
+				return cont;
+			}
+
+			// Fill a container of indices. 'src' is assumed to point to the start of EChunkId::MeshIndices chunk data
+			template <typename TCont, typename TSrc> TCont ReadMeshIndices(TSrc& src, u32 data_len)
+			{
+				TCont cont;
+
+				size_t count = Read<u32>(src);
+				data_len -= sizeof(u32);
+
+				typedef std::remove_reference<decltype(cont[0])>::type TIndex;
+				if (count * sizeof(TIndex) != data_len)
+					throw std::exception(FmtS("Index list count is invalid. Index count is %d, data available for %d indices.", count, data_len/sizeof(TIndex)));
+
+				cont.resize(count);
+				Read(src, cont.data(), count);
+				return cont;
+			}
+
+			// Fill a container of nuggets. 'src' is assumed to point to the start of EChunkId::MeshNuggets chunk data
+			template <typename TCont, typename TSrc> TCont ReadMeshNuggets(TSrc& src, u32 data_len)
+			{
+				TCont cont;
+
+				size_t count = Read<u32>(src);
+				data_len -= sizeof(u32);
+
+				if (count * sizeof(Nugget) != data_len)
+					throw std::exception(FmtS("Nugget list count is invalid. Nugget count is %d, data available for %d nuggets.", count, data_len/sizeof(Nugget)));
+
+				cont.resize(count);
+				Read(src, cont.data(), count);
+				return cont;
+			}
+
+			// Read a mesh. 'src' is assumed to point to the start of EChunkId::Mesh chunk data
+			template <typename TSrc> Mesh ReadMesh(TSrc& src, u32 len)
+			{
+				Mesh mesh;
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, ulong data_len)
+				{
+					switch (hdr.m_id)
+					{
+					case EChunkId::MeshName:
+						{
+							mesh.m_name = ReadCStr(src, data_len);
+							break;
+						}
+					case EChunkId::MeshBBox:
+						{
+							mesh.m_bbox = Read<BBox>(src);
+							break;
+						}
+					case EChunkId::MeshVertices:
+						{
+							mesh.m_vert = ReadMeshVertices<decltype(mesh.m_vert)>(src, data_len);
+							break;
+						}
+					case EChunkId::MeshIndices:
+						{
+							mesh.m_idx16 = ReadMeshIndices<decltype(mesh.m_idx16)>(src, data_len);
+							break;
+						}
+					case EChunkId::MeshIndices32:
+						{
+							mesh.m_idx32 = ReadMeshIndices<decltype(mesh.m_idx32)>(src, data_len);
+							break;
+						}
+					case EChunkId::MeshNuggets:
+						{
+							mesh.m_nugget = ReadMeshNuggets<decltype(mesh.m_nugget)>(src, data_len);
+							break;
+						}
+					}
+					return false;
+				});
+				return mesh;
+			}
+
+			// Read a scene. 'src' is assumed to point to the start of EChunkId::Scene chunk data
+			template <typename TSrc> Scene ReadScene(TSrc& src, u32 len)
+			{
+				Scene scene;
+
+				// Read the scene sub chunks
+				ReadChunks(src, len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+				{
+					switch (hdr.m_id)
+					{
+					case EChunkId::Materials:
+						{
+							ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 							{
-								impl::ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+								switch (hdr.m_id)
 								{
-									switch (hdr.m_id)
-									{
-									case EChunkId::Material:
-										scene.m_materials.push_back(ReadMaterial(src, data_len));
-										break;
-									}
-									return true;
-								});
-								break;
-							}
-						case EChunkId::Meshes:
+								case EChunkId::Material:
+									scene.m_materials.push_back(ReadMaterial(src, data_len));
+									break;
+								}
+								return false;
+							});
+							break;
+						}
+					case EChunkId::Meshes:
+						{
+							ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 							{
-								impl::ReadChunks(src, data_len, [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+								switch (hdr.m_id)
 								{
-									switch (hdr.m_id)
-									{
-									case EChunkId::Mesh:
-										scene.m_meshes.push_back(ReadMesh(src, data_len));
-										break;
-									}
-									return true;
-								});
-								break;
-							}
+								case EChunkId::Mesh:
+									scene.m_meshes.push_back(ReadMesh(src, data_len));
+									break;
+								}
+								return false;
+							});
+							break;
 						}
-						return true;
-					});
-				}
+					}
+					return false;
+				});
+				return scene;
+			}
 
-				// Write a texture to 'out'
-				template <typename TSrc>
-				void WriteTexture(TSrc& out, ChunkIndex const& index, Texture const& tex)
+			// Read a p3d::File into memory from an istream-like source. Uses forward iteration only.
+			template <typename TSrc> File Read(TSrc& src)
+			{
+				File file;
+
+				// Check that this is actually a P3D stream
+				auto main = Read<ChunkHeader>(src);
+				if (main.m_id != EChunkId::Main)
+					throw std::exception("Source is not a p3d stream");
+
+				// Read the sub chunks
+				ReadChunks(src, DataLength(main), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
 				{
-					// Texture chunk header
-					Write<ChunkHeader>(out, index);
-
-					// Texture sub chunks
-					for (auto& index : index.m_chunks)
+					switch (hdr.m_id)
 					{
-						switch (index.m_id)
+					case EChunkId::FileVersion:
+						file.m_version = Read<u32>(src);
+						break;
+					case EChunkId::Scene:
+						file.m_scene = ReadScene(src, data_len);
+						break;
+					}
+					return false;
+				});
+
+				return file;
+			}
+
+			// Extract the materials in the given P3D stream
+			template <typename TSrc, typename TMatObj> void ReadMaterials(TSrc& src, TMatObj mat_out)
+			{
+				// Restore the src position on return
+				auto reset_stream = pr::CreateStateScope([&]{ return Src<TSrc>::TellPos(src); }, [&](u64 start){ Src<TSrc>::SeekAbs(src, start); });
+
+				// Check that this is actually a P3D stream
+				auto main = Read<ChunkHeader>(src);
+				if (main.m_id != EChunkId::Main)
+					throw std::exception("Source is not a p3d stream");
+
+				// Find the Materials sub chunk
+				auto mats = Find(src, {EChunkID::Scene, EChunkId::Materials});
+				if (mats.m_id != EChunkId::Materials)
+					return; // Source contains no materials
+
+				// Read the materials
+				ReadChunks(src, DataLength(mats), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+				{
+					switch (hdr.m_id)
+					{
+					case EChunkId::Material:
+						if (mat_out(ReadMaterial(src, data_len)))
+							return true; // Stop reading
+						break;
+					}
+					return false;
+				});
+			}
+
+			// Extract the meshes from a P3D stream
+			template <typename TSrc, typename TMeshOut> void ReadMeshes(TSrc& src, TMeshOut mesh_out)
+			{
+				// Restore the src position on return
+				auto reset_stream = pr::CreateStateScope([&]{ return Src<TSrc>::TellPos(src); }, [&](u64 start){ Src<TSrc>::SeekAbs(src, start); });
+
+				// Find the Meshes sub chunk
+				auto meshes = Find(src, ~0U, {EChunkId::Main, EChunkId::Scene, EChunkId::Meshes});
+				if (meshes.m_id != EChunkId::Meshes)
+					return; // Source contains no mesh data
+
+				// Read the meshes
+				ReadChunks(src, DataLength(meshes), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
+				{
+					switch (hdr.m_id)
+					{
+					case EChunkId::Mesh:
+						if (mesh_out(ReadMesh(src, data_len)))
+							return true; // stop reading
+						break;
+					}
+					return false;
+				});
+			}
+
+			#pragma endregion
+
+			#pragma region Write
+
+			// Write an array
+			template <typename TIn, typename TSrc> inline void Write(TSrc& dst, TIn const* in, size_t count)
+			{
+				Src<TSrc>::Write(dst, in, count);
+			}
+
+			// Write a single type
+			template <typename TIn, typename TSrc> inline void Write(TSrc& dst, TIn const& in)
+			{
+				Write(dst, &in, 1);
+			}
+
+			// Write a null terminated string to 'out'
+			template <typename TSrc> void WriteCStr(TSrc& out, std::string const& str)
+			{
+				Write(out, str.c_str(), str.size() + 1);
+			}
+
+			// Write a texture to 'out'
+			template <typename TSrc> void WriteTexture(TSrc& out, ChunkIndex const& index, Texture const& tex)
+			{
+				// Texture chunk header
+				Write<ChunkHeader>(out, index);
+
+				// Texture sub chunks
+				for (auto& index : index.m_chunks)
+				{
+					switch (index.m_id)
+					{
+					case EChunkId::TexFilepath:
 						{
-						case EChunkId::TexFilepath:
-							{
-								Write<ChunkHeader>(out, index);
-								WriteCStr(out, tex.m_filepath);
-								break;
-							}
-						case EChunkId::TexTiling:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<u32>(out, tex.m_tiling);
-								break;
-							}
+							Write<ChunkHeader>(out, index);
+							WriteCStr(out, tex.m_filepath);
+							break;
+						}
+					case EChunkId::TexTiling:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<u32>(out, tex.m_tiling);
+							break;
 						}
 					}
 				}
+			}
 
-				// Write a material to 'out'
-				template <typename TSrc>
-				void WriteMaterial(TSrc& out, ChunkIndex const& index, Material const& mat)
+			// Write a material to 'out'
+			template <typename TSrc> void WriteMaterial(TSrc& out, ChunkIndex const& index, Material const& mat)
+			{
+				// Material chunk header
+				Write<ChunkHeader>(out, index);
+
+				// Material name
+				Write(out, mat.m_id.str, sizeof(Str16));
+
+				// Material sub chunks
+				auto tex = std::begin(mat.m_tex_diffuse);
+				for (auto& index : index.m_chunks)
 				{
-					// Material chunk header
-					Write<ChunkHeader>(out, index);
-
-					// Material name
-					Write(out, mat.m_id.str, sizeof(Str16));
-
-					// Material sub chunks
-					auto tex = std::begin(mat.m_tex_diffuse);
-					for (auto& index : index.m_chunks)
+					switch (index.m_id)
 					{
-						switch (index.m_id)
+					case EChunkId::DiffuseColour:
 						{
-						case EChunkId::DiffuseColour:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<Col4>(out, {mat.m_diffuse.r, mat.m_diffuse.g, mat.m_diffuse.b, mat.m_diffuse.a});
-								break;
-							}
-						case EChunkId::DiffuseTexture:
-							{
-								WriteTexture(out, index, *tex++);
-								break;
-							}
+							Write<ChunkHeader>(out, index);
+							Write<Col4>(out, {mat.m_diffuse.r, mat.m_diffuse.g, mat.m_diffuse.b, mat.m_diffuse.a});
+							break;
+						}
+					case EChunkId::DiffuseTexture:
+						{
+							WriteTexture(out, index, *tex++);
+							break;
 						}
 					}
 				}
+			}
 
-				// Write a mesh to 'out'
-				template <typename TSrc>
-				void WriteMesh(TSrc& out, ChunkIndex const& index, Mesh const& mesh)
+			// Write a mesh to 'out'
+			template <typename TSrc> void WriteMesh(TSrc& out, ChunkIndex const& index, Mesh const& mesh)
+			{
+				// TriMesh chunk header
+				Write<ChunkHeader>(out, index);
+
+				// Mesh sub chunks
+				for (auto& index : index.m_chunks)
 				{
-					// TriMesh chunk header
-					Write<ChunkHeader>(out, index);
-
-					// Mesh sub chunks
-					for (auto& index : index.m_chunks)
+					switch (index.m_id)
 					{
-						switch (index.m_id)
+					case EChunkId::MeshName:
 						{
-						case EChunkId::MeshName:
-							{
-								Write<ChunkHeader>(out, index);
-								WriteCStr(out, mesh.m_name);
-								break;
-							}
-						case EChunkId::MeshVertices:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<u32>(out, checked_cast<u32>(mesh.m_vert.size()));
-								Write<Vert>(out, mesh.m_vert.data(), mesh.m_vert.size());
-								break;
-							}
-						case EChunkId::MeshIndices:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<u32>(out, checked_cast<u32>(mesh.m_idx16.size()));
-								Write<u16>(out, mesh.m_idx16.data(), mesh.m_idx16.size());
-								break;
-							}
-						case EChunkId::MeshIndices32:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<u32>(out, checked_cast<u32>(mesh.m_idx32.size()));
-								Write<u32>(out, mesh.m_idx32.data(), mesh.m_idx32.size());
-								break;
-							}
-						case EChunkId::MeshNuggets:
-							{
-								Write<ChunkHeader>(out, index);
-								Write<u32>(out, checked_cast<u32>(mesh.m_nugget.size()));
-								Write<Nugget>(out, mesh.m_nugget.data(), mesh.m_nugget.size());
-								break;
-							}
+							Write<ChunkHeader>(out, index);
+							WriteCStr(out, mesh.m_name);
+							break;
+						}
+					case EChunkId::MeshBBox:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<BBox>(out, mesh.m_bbox);
+							break;
+						}
+					case EChunkId::MeshVertices:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<u32>(out, checked_cast<u32>(mesh.m_vert.size()));
+							Write<Vert>(out, mesh.m_vert.data(), mesh.m_vert.size());
+							break;
+						}
+					case EChunkId::MeshIndices:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<u32>(out, checked_cast<u32>(mesh.m_idx16.size()));
+							Write<u16>(out, mesh.m_idx16.data(), mesh.m_idx16.size());
+							break;
+						}
+					case EChunkId::MeshIndices32:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<u32>(out, checked_cast<u32>(mesh.m_idx32.size()));
+							Write<u32>(out, mesh.m_idx32.data(), mesh.m_idx32.size());
+							break;
+						}
+					case EChunkId::MeshNuggets:
+						{
+							Write<ChunkHeader>(out, index);
+							Write<u32>(out, checked_cast<u32>(mesh.m_nugget.size()));
+							Write<Nugget>(out, mesh.m_nugget.data(), mesh.m_nugget.size());
+							break;
 						}
 					}
 				}
+			}
 
-				// Write a scene to 'out'
-				template <typename TSrc>
-				void WriteScene(TSrc& out, ChunkIndex const& index, Scene const& scene)
+			// Write a scene to 'out'
+			template <typename TSrc> void WriteScene(TSrc& out, ChunkIndex const& index, Scene const& scene)
 				{
 					Write<ChunkHeader>(out, index);
 					for (auto& index : index.m_chunks)
@@ -739,44 +890,15 @@ namespace pr
 						}
 					}
 				}
-			}
 
-			// Read a p3d into memory from an istream-like source
-			// Uses forward iteration only.
-			template <typename TSrc>
-			void Read(TSrc& src, File& file)
-			{
-				// Check that this is actually a P3D stream
-				auto main = impl::Read<ChunkHeader>(src);
-				if (main.m_id != EChunkId::Main)
-					throw std::exception("Source is not a p3d stream");
-
-				// Read the sub chunks
-				impl::ReadChunks(src, main.m_length - sizeof(ChunkHeader), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-				{
-					switch (hdr.m_id)
-					{
-					case EChunkId::FileVersion:
-						file.m_version = impl::Read<u32>(src);
-						break;
-					case EChunkId::Scene:
-						impl::ReadScene(src, data_len, file.m_scene);
-						break;
-					}
-					return true;
-				});
-			}
-
-			// Write the p3d file to an ostream-like output
-			// Uses forward iteration only.
-			template <typename TSrc>
-			void Write(TSrc& out, File const& file)
+			// Write the p3d file to an ostream-like output. Uses forward iteration only.
+			template <typename TSrc> void Write(TSrc& out, File const& file)
 			{
 				// Build an index of the file, calculating chunk sizes
 				ChunkIndex root = Index(file);
 
 				// Write the main file chunk header
-				impl::Write<ChunkHeader>(out, root);
+				Write<ChunkHeader>(out, root);
 
 				// Write the sub chunks
 				for (auto& index : root.m_chunks)
@@ -784,87 +906,17 @@ namespace pr
 					switch (index.m_id)
 					{
 					case EChunkId::FileVersion:
-						impl::Write<ChunkHeader>(out, index);
-						impl::Write<u32>(out, file.m_version);
+						Write<ChunkHeader>(out, index);
+						Write<u32>(out, file.m_version);
 						break;
 					case EChunkId::Scene:
-						impl::WriteScene(out, index, file.m_scene);
+						WriteScene(out, index, file.m_scene);
 						break;
 					}
 				}
 			}
 
-			// Extract the materials in the given P3D stream
-			template <typename TSrc, typename TMatObj>
-			void ReadMaterials(TSrc& src, TMatObj mat_out)
-			{
-				// Restore the src position on return
-				auto start = Src<TSrc>::TellPos(src);
-				auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
-
-				// Check that this is actually a P3D stream
-				auto main = impl::Read<ChunkHeader>(src);
-				if (main.m_id != EChunkId::Main)
-					throw std::exception("Source is not a p3d stream");
-
-				// Find the Scene sub chunk
-				auto scene = impl::Find(EChunkId::Scene, src, main.m_length - sizeof(ChunkHeader));
-				if (scene.m_id != EChunkId::Scene)
-					return; // Source contains no scene data
-
-				// Find the Materials sub chunk
-				auto mats = impl::Find(EChunkId::Materials, src, scene.m_length - sizeof(ChunkHeader));
-				if (mats.m_id != EChunkId::Materials)
-					return; // Source contains no materials
-
-				// Read the materials
-				impl::ReadChunks(src, mats.m_length - sizeof(ChunkHeader), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-				{
-					switch (hdr.m_id)
-					{
-					case EChunkId::Material:
-						mat_out(impl::ReadMaterial(src, data_len));
-						break;
-					}
-					return true;
-				});
-			}
-
-			// Extract the objects from a P3D stream
-			template <typename TSrc, typename TObjOut>
-			void ReadObjects(TSrc& src, TObjOut obj_out)
-			{
-				// Restore the src position on return
-				auto start = Src<TSrc>::TellPos(src);
-				auto reset_stream = pr::CreateScope([]{}, [&]{ Src<TSrc>::SeekAbs(src, start); });
-
-				// Check that this is actually a P3D stream
-				auto main = impl::Read<ChunkHeader>(src);
-				if (main.m_id != EChunkId::Main)
-					throw std::exception("Source is not a p3d stream");
-
-				// Find the Scene sub chunk
-				auto scene = impl::Find(EChunkId::Scene, src, main.m_length - sizeof(ChunkHeader));
-				if (scene.m_id != EChunkId::Scene)
-					return; // Source contains no scene data
-
-				// Find the Objects sub chunk
-				auto objs = Find(EChunkId::Objects, src, main.m_length - sizeof(ChunkHeader));
-				if (objs.m_id != EChunkId::Objects)
-					return; // Source contains no objects data
-
-				// Read the objects
-				impl::ReadChunks(src, objs.m_length - sizeof(ChunkHeader), [&](ChunkHeader hdr, TSrc& src, u32 data_len)
-				{
-					switch (hdr.m_id)
-					{
-					case EChunkId::TriMesh:
-						obj_out(impl::ReadTriMesh(src, data_len));
-						break;
-					}
-					return true;
-				});
-			}
+			#pragma endregion
 		}
 	}
 }
@@ -905,6 +957,7 @@ namespace pr
 
 			p3d::Mesh mesh;
 			mesh.m_name = "mesh";
+			mesh.m_bbox = pr::BBox::make(v4Origin, v4::make(1,2,3,0));
 			mesh.m_vert.push_back(p3d::Vert());
 			mesh.m_vert.push_back(p3d::Vert());
 			mesh.m_vert.push_back(p3d::Vert());
@@ -926,8 +979,7 @@ namespace pr
 			auto index = p3d::Index(file);
 			PR_CHECK(size_t(buf.tellp()), size_t(index.m_length));
 
-			p3d::File cmp;
-			p3d::Read(buf, cmp);
+			p3d::File cmp = p3d::Read(buf);
 
 			PR_CHECK(cmp.m_version                  , file.m_version);
 			PR_CHECK(cmp.m_scene.m_materials.size() , file.m_scene.m_materials.size());

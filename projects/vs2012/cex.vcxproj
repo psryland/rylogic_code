@@ -117,7 +117,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\cex\data_header_gen.cpp" />
-    <ClCompile Include="..\cex\input.h" />
     <ClCompile Include="..\cex\main.cpp" />
     <ClCompile Include="..\cex\open_vs.cpp">
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</MultiProcessorCompilation>
@@ -125,7 +124,7 @@
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</MultiProcessorCompilation>
       <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MultiProcessorCompilation>
     </ClCompile>
-    <ClCompile Include="..\cex\p3d_exporter.cpp" />
+    <ClCompile Include="..\cex\p3d.cpp" />
     <ClCompile Include="..\cex\shell_file_op.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -140,7 +139,7 @@
     <ClInclude Include="..\cex\lower.h" />
     <ClInclude Include="..\cex\msg_box.h" />
     <ClInclude Include="..\cex\open_vs.h" />
-    <ClInclude Include="..\cex\p3d_exporter.h" />
+    <ClInclude Include="..\cex\p3d.h" />
     <ClInclude Include="..\cex\shell_file_op.h" />
     <ClInclude Include="..\cex\template.h" />
     <ClInclude Include="..\cex\wait.h" />

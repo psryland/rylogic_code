@@ -19,12 +19,25 @@ namespace pr
 		// 'num_indices' is the number of indices available through 'indices'. Multiple of 3 expected.
 		// 'indices' is an iterator to model face data. Expects 3 indices per face.
 		// 'smoothing_angle' is the threshold above which normals are not merged and a new vertex is created (in radians)
-		// 'getv' is an accessor to the vertex for a given face index.
+		// 'getv' is an accessor to the vertex for a given face index: v4 const& getv(VIdx idx)
 		// 'vout' outputs the new vertex normals: vout(VIdx new_idx, VIdx orig_idx, v4 normal)
 		// 'iout' outputs the new face indices: iout(VIdx i0, VIdx i1, VIdx i2)
-		// This function will only adds verts, not remove any, so 'vout' can overwrite and add to the existing container
+		// This function will only adds verts, not remove any, so 'vout' can overwrite and add to the existing container.
 		// It also outputs the verts in order, so if new_idx >= vert_cont.size() => push_back is fine.
+		// e.g.
+		//   vout = [&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
+		//     {
+		//        if (new_idx == verts.size()) verts.push_back(verts[orig_idx]);
+		//        verts[new_idx].norm = normal;
+		//      }
 		// The number of indices returned will equal 'num_indices' so it's also fine to overwrite the index container
+		// e.g.
+		//    iout = [&](VIdx i0, VIdx i1, VIdx i2)
+		//      {
+		//         *iptr++ = i0;
+		//         *iptr++ = i1;
+		//         *iptr++ = i2;
+		//      }
 		template <typename TIdxCIter, typename TGetV, typename TVertOut, typename TIdxOut>
 		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, TVertOut vout, TIdxOut iout)
 		{

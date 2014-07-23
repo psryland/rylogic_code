@@ -1,7 +1,6 @@
 
 #include "cex/forward.h"
 #include "cex/icex.h"
-#include "cex/input.h"
 #include "cex/dir_path.h"
 #include "cex/msg_box.h"
 #include "cex/wait.h"
@@ -13,7 +12,7 @@
 #include "cex/hash.h"
 #include "cex/guid.h"
 #include "cex/data_header_gen.h"
-#include "cex/p3d_exporter.h"
+#include "cex/p3d.h"
 //#include "NEW_COMMAND.h"
 
 namespace cex
@@ -39,7 +38,6 @@ namespace cex
 			std::cout <<
 				ICex::Title() <<
 				"  Syntax: Cex -command [parameters]\n"
-				"    -input    : Read user input into an environment variable\n"
 				"    -dirpath  : Read a directory path into an environment variable\n"
 				"    -msgbox   : Display a message box\n"
 				"    -wait     : Wait for a specified length of time\n"
@@ -58,10 +56,6 @@ namespace cex
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type Cex -command -help for help on a particular command\n"
-				"  Remember to add the following to your batch file immediately\n"
-				"   after this command:\n"
-				"     call ~cex.bat\n"
-				"     del  ~cex.bat\n"
 				;
 		}
 
@@ -71,36 +65,49 @@ namespace cex
 			// Get the name of this executable
 			char exepath_[1024]; GetModuleFileNameA(0, exepath_, sizeof(exepath_));
 			std::string exepath = exepath_;
-			std::string path = pr::filesys::GetDirectory(exepath);
-			std::string name = pr::filesys::GetFiletitle(exepath);
-			std::string extn = pr::filesys::GetExtension(exepath);
+			std::string path = pr::str::LowerCase(pr::filesys::GetDirectory(exepath));
+			std::string name = pr::str::LowerCase(pr::filesys::GetFiletitle(exepath));
+			std::string extn = pr::str::LowerCase(pr::filesys::GetExtension(exepath));
 
 			// Look for an xml file with the same name as this program in the local directory
 			std::string config = path + "\\" + name + ".xml";
 			if (pr::filesys::FileExists(config))
 				return RunFromXml(config, args);
 
-			// If we get to here, run as the normal command line program
-			ShowConsole();
+			// If the name of the exe is not 'cex', assume an implicit -exename as the first command line argument
+			if (name != "cex")
+				args.insert(0, pr::FmtS("-%s", name.c_str()));
 
 			//NEW_COMMAND - Test the new command
-			if (!args.empty()) printf("warning: debugging overriding arguments");
-			//args = "-input blah -msg \"Type a value> \"";
-			//args = "-shcopy \"c:/deleteme/SQ.bin,c:/deleteme/TheList.txt\" \"c:/deleteme/cexitime/\" -title \"Testing shcopy\"";
-			//args = "-clip -lwr -bkslash \"C:/blah\" \"Boris\" \"F:\\\\Jef/wan\"";
-			args = "-p3d \"D:\\dump\\test.3ds\" -gen_normals 40 -remove_degenerates";
+			//if (!args.empty()) printf("warning: debugging overriding arguments");
+			//args = R("-input blah -msg "Type a value> ")";
+			//args = R("-shcopy "c:/deleteme/SQ.bin,c:/deleteme/TheList.txt" "c:/deleteme/cexitime/" -title "Testing shcopy")";
+			//args = R"(-clip -lwr -bkslash "C:/blah" "Boris" "F:\\Jef/wan")";
+			//args = R"(-p3d -export -fi "D:\dump\cyl.3ds" -remove_degenerates 0.0001 -gen_normals 40)";
 
 			// Parse the command line, show help if invalid
-			if (!pr::EnumCommandLine(args.c_str(), *this))
+			try
 			{
-				if (m_command)
-					return m_command->ShowHelp(), -1;
+				if (!pr::EnumCommandLine(args.c_str(), *this))
+				{
+					ShowConsole();
+
+					if (m_command)
+						return m_command->ShowHelp(), -1;
 				
-				ShowHelp();
+					ShowHelp();
+					return -1;
+				}
+			}
+			catch (std::exception const& ex)
+			{
+				ShowConsole();
+				std::cerr << "Command line error" << std::endl << ex.what() << std::endl;
 				return -1;
 			}
 
 			// Run the command
+			// It's the commands decision whether to display the console or not
 			if (m_command)
 				return m_command->Run(); // Note the returned value is accessed using %errorlevel% in batch files
 
@@ -114,7 +121,6 @@ namespace cex
 			for (;;)
 			{
 				if (m_command) break;
-				if (pr::str::EqualI(option, "-input"    )) { m_command = std::make_unique<cex::Input    >(); break; }
 				if (pr::str::EqualI(option, "-dirpath"  )) { m_command = std::make_unique<cex::DirPath  >(); break; }
 				if (pr::str::EqualI(option, "-msgbox"   )) { m_command = std::make_unique<cex::MsgBox   >(); break; }
 				if (pr::str::EqualI(option, "-wait"     )) { m_command = std::make_unique<cex::Wait     >(); break; }
@@ -129,7 +135,7 @@ namespace cex
 				if (pr::str::EqualI(option, "-hash"     )) { m_command = std::make_unique<cex::Hash     >(); break; }
 				if (pr::str::EqualI(option, "-guid"     )) { m_command = std::make_unique<cex::Guid     >(); break; }
 				if (pr::str::EqualI(option, "-hdata"    )) { m_command = std::make_unique<cex::HData    >(); break; }
-				if (pr::str::EqualI(option, "-p3d"      )) { m_command = std::make_unique<cex::P3dExport>(); break; }
+				if (pr::str::EqualI(option, "-p3d"      )) { m_command = std::make_unique<cex::P3d      >(); break; }
 				// NEW_COMMAND - handle the command
 				return ICex::CmdLineOption(option, arg, arg_end);
 			}
@@ -181,39 +187,6 @@ namespace cex
 			}
 
 			return -1;
-		}
-
-		// Show the console for this process
-		void ShowConsole()
-		{
-			// Attach to the current console
-			if (AttachConsole((DWORD)-1) || AllocConsole())
-			{
-				FILE *fp;
-				int h;
-
-				// redirect unbuffered STDOUT to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_OUTPUT_HANDLE)), _O_TEXT);
-				fp = _fdopen(h, "w");
-				*stdout = *fp;
-				setvbuf(stdout, NULL, _IONBF, 0);
-
-				// redirect unbuffered STDIN to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_INPUT_HANDLE )), _O_TEXT);
-				fp = _fdopen(h, "r");
-				*stdin = *fp;
-				setvbuf(stdin, NULL, _IONBF, 0);
-
-				// redirect unbuffered STDERR to the console
-				h = _open_osfhandle(reinterpret_cast<intptr_t>(GetStdHandle(STD_ERROR_HANDLE )), _O_TEXT);
-				fp = _fdopen(h, "w");
-				*stderr = *fp;
-				setvbuf(stderr, NULL, _IONBF, 0);
-
-				// make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog
-				// point to console as well
-				std::ios::sync_with_stdio();
-			}
 		}
 	};
 }

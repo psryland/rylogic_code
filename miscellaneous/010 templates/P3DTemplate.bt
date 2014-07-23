@@ -11,30 +11,32 @@ typedef char Str16[16];
 struct Vec4 { float x,y,z,w; };
 struct Col4 { float r,g,b,a; };
 struct Vec2 { float u,v; };
-struct Vert { Vec4 pos; Col4 col; Vec4 norm; Vec2 uv; };
+struct BBox { Vec4 centre, radius; };
+struct Vert { Vec4 pos; Col4 col; Vec4 norm; Vec2 uv; Vec2 pad; };
 struct Range { u32 first, count; };
 struct Nugget { u32 topo; u32 geom; Range vrange, irange; Str16 mat; };
 
 enum EChunkId
 {
-	Null           = 0x00000000, // Null chunk
-	CStr           = 0x00000001, // Null terminated ascii string
-	Main           = 0x44335250, // PR3D File type indicator
-	FileVersion    = 0x00000100, // ├─ File Version
-	Scene          = 0x00001000, // └─ Scene
-	Materials      = 0x00002000, //    ├─ Materials
-	Material       = 0x00002100, //    │  └─ Material
-	DiffuseColour  = 0x00002110, //    │     ├─ Diffuse Colour
-	DiffuseTexture = 0x00002120, //    │     └─ Diffuse texture
-	TexFilepath    = 0x00002121, //    │        ├─ Texture filepath
-	TexTiling      = 0x00002122, //    │        └─ Texture tiling
-	Meshes         = 0x00003000, //    └─ Meshes
-	Mesh           = 0x00003100, //       └─ Mesh of lines,triangles,tetras
-	MeshName       = 0x00003101, //          ├─ Name (cstr)
-	MeshVertices   = 0x00003110, //          ├─ Vertex list (u32 count, count * [Vert])
-	MeshIndices    = 0x00003120, //          ├─ Index list (u32 count, count * [u16 i])
-	MeshIndices32  = 0x00003121, //          ├─ Index list (u32 count, count * [u32 i])
-	MeshNuggets    = 0x00003200, //          └─ Nugget list (u32 count, count * [Nugget])
+	Null           = 0x00000000, /* Null chunk                                            */
+	CStr           = 0x00000001, /* Null terminated ascii string                          */
+	Main           = 0x44335250, /* PR3D File type indicator                              */
+	FileVersion    = 0x00000100, /* ├─ File Version                                       */
+	Scene          = 0x00001000, /* └─ Scene                                              */
+	Materials      = 0x00002000, /*    ├─ Materials                                       */
+	Material       = 0x00002100, /*    │  └─ Material                                     */
+	DiffuseColour  = 0x00002110, /*    │     ├─ Diffuse Colour                            */
+	DiffuseTexture = 0x00002120, /*    │     └─ Diffuse texture                           */
+	TexFilepath    = 0x00002121, /*    │        ├─ Texture filepath                       */
+	TexTiling      = 0x00002122, /*    │        └─ Texture tiling                         */
+	Meshes         = 0x00003000, /*    └─ Meshes                                          */
+	Mesh           = 0x00003100, /*       └─ Mesh of lines,triangles,tetras               */
+	MeshName       = 0x00003101, /*          ├─ Name (cstr)                               */
+	MeshBBox       = 0x00003102, /*          ├─ Bounding box (BBox)                       */
+	MeshVertices   = 0x00003110, /*          ├─ Vertex list (u32 count, count * [Vert])   */
+	MeshIndices    = 0x00003120, /*          ├─ Index list (u32 count, count * [u16 i])   */
+	MeshIndices32  = 0x00003121, /*          ├─ Index list (u32 count, count * [u32 i])   */
+	MeshNuggets    = 0x00003200, /*          └─ Nugget list (u32 count, count * [Nugget]) */
 };
 
 struct UnknownChunk
@@ -78,6 +80,15 @@ struct Col4Chunk
 	EChunkId id;
 	u32 length;
 	Col4 colour;
+	FSeek(fpos + length);
+};
+
+struct BBoxChunk
+{
+	local int64 fpos = FTell();
+	EChunkId id;
+	u32 length;
+	BBox bbox;
 	FSeek(fpos + length);
 };
 
@@ -149,6 +160,7 @@ void SubChunks(uint end)
 		case Meshes         : Chunk meshes; break;
 		case Mesh           : Chunk mesh; break;
 		case MeshName       : CStrChunk name; break;
+		case MeshBBox       : BBoxChunk name; break;
 		case MeshVertices   : VertsChunk verts; break;
 		case MeshIndices    : Idx16Chunk idx16; break;
 		case MeshIndices32  : Idx32Chunk idx32; break;

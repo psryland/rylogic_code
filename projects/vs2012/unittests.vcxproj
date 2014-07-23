@@ -41,6 +41,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h" />
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\algorithm.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\alloca.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\archiver.h" />

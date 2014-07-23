@@ -28,6 +28,7 @@ namespace pr
 				typedef typename ICont::iterator IIter;
 				typedef typename NCont::iterator NIter;
 
+				std::string m_name; // Model name
 				VCont m_vcont; // Model verts
 				ICont m_icont; // Model faces/lines/points/etc
 				NCont m_ncont; // Model nuggets
@@ -37,7 +38,8 @@ namespace pr
 				enum { GeomMask = VType::GeomMask };
 
 				Cont(std::size_t vcount = 0, std::size_t icount = 0, std::size_t ncount = 0)
-					:m_vcont(vcount)
+					:m_name()
+					,m_vcont(vcount)
 					,m_icont(icount)
 					,m_ncont(ncount)
 					,m_bbox(BBoxReset)
@@ -116,6 +118,7 @@ namespace pr
 				VBufferDesc vb(cont.m_vcont.size(), cont.m_vcont.data());
 				IBufferDesc ib(cont.m_icont.size(), cont.m_icont.data());
 				auto model = rdr.m_mdl_mgr.CreateModel(MdlSettings(vb, ib, cont.m_bbox));
+				model->m_name = cont.m_name;
 
 				// Create the render nuggets
 				for (auto& nug : cont.m_ncont)
@@ -383,10 +386,69 @@ namespace pr
 			}
 
 			// ModelFile **************************************************************************
-			static void Load3DSModel(Renderer& rdr, std::istream& src, Cont& cont)
+			// Populates 'cont' from 'src' which is expected to be a p3d model file stream.
+			// 'P3D' models can contain more than one mesh. If 'mesh_name' is nullptr, then the
+			// first mesh in the scene is loaded. If not null, then the first mesh that matches
+			// 'mesh_name' is loaded. If 'mesh_name' is non-null and 'src' does not contain a matching
+			// mesh, an exception is thrown.
+			static void LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cont& cont)
 			{
-				// Populates 'cont' from 'src'
-				using namespace pr::geometry;
+				using namespace pr::geometry::p3d;
+				static_assert(sizeof(Cont::VType) == sizeof(Vert), "P3D vert is a different size");
+				static_assert(sizeof(Cont::IType) == sizeof(u16), "P3D index is a different size");
+
+				std::vector<std::string> mats;
+
+				// Parse the meshes in the stream
+				// Todo, if you're not reading the first mesh in the file, the earlier
+				// meshes all get loaded into memory for no good reason... need a nice
+				// way to seek to the mesh we're after without loading the entire mesh into memory
+				ReadMeshes(src, [&](pr::geometry::p3d::Mesh const& mesh)
+				{
+					if (mesh_name != nullptr && mesh.m_name != mesh_name)
+						return false;
+
+					// Name/Bounding box
+					cont.m_name = mesh.m_name;
+					cont.m_bbox = mesh.m_bbox;
+
+					// Copy the verts
+					cont.m_vcont.resize(mesh.m_vert.size());
+					memcpy(cont.m_vcont.data(), mesh.m_vert.data(), sizeof(Vert) * mesh.m_vert.size());
+
+					// Copy the indices
+					cont.m_icont.resize(mesh.m_idx16.size());
+					memcpy(cont.m_icont.data(), mesh.m_idx16.data(), sizeof(u16) * mesh.m_idx16.size());
+
+					// Copy the nuggets
+					cont.m_ncont.reserve(mesh.m_nugget.size());
+					for (auto& nug : mesh.m_nugget)
+					{
+						cont.m_ncont.emplace_back(
+							static_cast<EPrim>(nug.m_topo),
+							static_cast<EGeom>(nug.m_geom),
+							nullptr,
+							nug.m_vrange,
+							nug.m_irange);
+
+						// Record the material as used
+						pr::insert_unique(mats, nug.m_mat.str);
+					}
+
+					// Stop searching
+					return true;
+				});
+
+				// Load the used materials into the renderer
+				for (auto& mat : mats)
+				{
+					// todo
+					(void)rdr,mat;
+				}
+			}
+			static void Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name, Cont& cont)
+			{
+				using namespace pr::geometry::max_3ds;
 
 				// Bounding box
 				cont.m_bbox = BBoxReset;
@@ -405,7 +467,7 @@ namespace pr
 					cont.m_icont.push_back(i1);
 					cont.m_icont.push_back(i2);
 				};
-				auto nout = [&](max_3ds::Material const& mat, EGeom geom, Range vrange, Range irange)
+				auto nout = [&](Material const& mat, EGeom geom, Range vrange, Range irange)
 				{
 					NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
 
@@ -427,35 +489,42 @@ namespace pr
 					cont.m_ncont.push_back(ddata);
 				};
 
-				// Material lookup
-				std::unordered_map<std::string, max_3ds::Material> mats;
+				// Parse the materials in the 3ds stream
+				std::unordered_map<std::string, Material> mats;
+				ReadMaterials(src, [&](Material&& mat){ mats[mat.m_name] = mat; return false; });
 				auto matlookup = [&](std::string const& name) { return mats.at(name); };
 
-				// Parse the materials in the 3ds stream
-				max_3ds::ReadMaterials(src, [&](max_3ds::Material&& mat)
-					{
-						mats[mat.m_name] = mat;
-					});
-
 				// Parse the model objects in the 3ds stream
-				max_3ds::ReadObjects(src, [&](max_3ds::Object&& obj)
+				ReadObjects(src, [&](Object&& obj)
 					{
-						max_3ds::CreateModel(obj, matlookup, nout, vout, iout);
+						// Wrong name, keep searching
+						if (mesh_name != nullptr && obj.m_name != mesh_name)
+							return false;
+
+						CreateModel(obj, matlookup, nout, vout, iout);
+						return true; // done, stop searching
 					});
 			}
-			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
+			static ModelPtr LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
 				Cont cont(0,0);
-				Load3DSModel(rdr, src, cont);
+				LoadP3DModel(rdr, src, mesh_name, cont);
 				return Create(rdr, cont, EPrim::TriList, nullptr, false, bake, gen_normals);
 			}
-			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
+			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
+			{
+				Cont cont(0,0);
+				Load3DSModel(rdr, src, mesh_name, cont);
+				return Create(rdr, cont, EPrim::TriList, nullptr, false, bake, gen_normals);
+			}
+			static ModelPtr LoadModel(Renderer& rdr, pr::geometry::EModelFileFormat format, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
 				using namespace pr::geometry;
 				switch (format)
 				{
 				default: throw std::exception("Unsupported model file format");
-				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, bake, gen_normals);
+				case EModelFileFormat::P3D:    return LoadP3DModel(rdr, src, mesh_name, bake, gen_normals);
+				case EModelFileFormat::Max3DS: return Load3DSModel(rdr, src, mesh_name, bake, gen_normals);
 				}
 			}
 

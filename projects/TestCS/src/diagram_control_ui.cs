@@ -85,7 +85,7 @@ namespace TestCS
 
 			m_diag.ResetView();
 
-			node0.BringToFront();
+			node0.BringToFront(false);
 
 			m_menu_tools_clear.Click += (s,a) => m_diag.ResetDiagram();
 			m_menu_tools_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml, m_diag.Elements.Count != 0);
