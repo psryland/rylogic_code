@@ -8,7 +8,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace pr.common
+namespace pr.container
 {
 	/// <summary>
 	/// Provides a generic collection that supports data binding and additionally supports sorting.
@@ -21,53 +21,42 @@ namespace pr.common
 		private PropertyDescriptor m_sort_property;
 		private ListSortDirection  m_sort_direction = ListSortDirection.Ascending;
 		private bool               m_sorted;
- 
-		/// <summary>
-		/// Gets a value indicating whether the list supports sorting.
-		/// </summary>
+
+		public SortableBindingList() :base() {}
+		public SortableBindingList(IList<T> list) :base(list) {}
+
+		/// <summary>Gets a value indicating whether the list supports sorting.</summary>
 		protected override bool SupportsSortingCore
 		{
 			get { return true; }
 		}
- 
-		/// <summary>
-		/// Gets a value indicating whether the list is sorted.
-		/// </summary>
+
+		/// <summary>Gets a value indicating whether the list is sorted.</summary>
 		protected override bool IsSortedCore
 		{
 			get { return m_sorted; }
 		}
  
-		/// <summary>
-		/// Gets the direction the list is sorted.
-		/// </summary>
+		/// <summary>Gets the direction the list is sorted.</summary>
 		protected override ListSortDirection SortDirectionCore
 		{
 			get { return m_sort_direction; }
 		}
  
-		/// <summary>
-		/// Gets the property descriptor that is used for sorting the list if sorting is implemented in a derived class; otherwise, returns null
-		/// </summary>
+		/// <summary>Gets the property descriptor that is used for sorting the list if sorting is implemented in a derived class; otherwise, returns null</summary>
 		protected override PropertyDescriptor SortPropertyCore
 		{
 			get { return m_sort_property; }
 		}
  
-		/// <summary>
-		/// Removes any sort applied with ApplySortCore if sorting is implemented
-		/// </summary>
+		/// <summary>Removes any sort applied with ApplySortCore if sorting is implemented</summary>
 		protected override void RemoveSortCore()
 		{
 			m_sort_direction = ListSortDirection.Ascending;
 			m_sort_property = null;
 		}
  
-		/// <summary>
-		/// Sorts the items if overridden in a derived class
-		/// </summary>
-		/// <param name="prop"></param>
-		/// <param name="direction"></param>
+		/// <summary>Sorts the items if overridden in a derived class</summary>
 		protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
 		{
 			m_sort_property = prop;

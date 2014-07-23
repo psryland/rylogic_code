@@ -203,7 +203,7 @@ namespace pr.gui
 			public event EventHandler DataChanged;
 			protected virtual void RaiseDataChanged()
 			{
-				if (Diagram != null) Diagram.Edited = true;
+				if (Diagram != null) Diagram.DiagramChangedPending = true;
 				DataChanged.Raise(this, EventArgs.Empty);
 			}
 
@@ -270,8 +270,10 @@ namespace pr.gui
 			/// <summary>Allow users to bind arbitrary data to the diagram element</summary>
 			public IDictionary<Guid, object> UserData { get; private set; }
 
-			/// <summary>Send this element to the bottom of the stack</summary>
-			public void SendToBack()
+			/// <summary>
+			/// Send this element to the bottom of the stack.
+			/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
+			public void SendToBack(bool temporary)
 			{
 				// Z order is determined by position in the Elements collection
 				if (m_diag == null) return;
@@ -284,12 +286,14 @@ namespace pr.gui
 					diag.Elements.Remove(this);
 					diag.Elements.Insert(0, this);
 				}
-				diag.UpdateElementZOrder();
+				diag.UpdateElementZOrder(temporary);
 				diag.Refresh();
 			}
 
-			/// <summary>Bring this element to top of the stack</summary>
-			public void BringToFront()
+			/// <summary>
+			/// Bring this element to top of the stack.
+			/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
+			public void BringToFront(bool temporary)
 			{
 				// Z order is determined by position in the Elements collection
 				if (m_diag == null) return;
@@ -302,7 +306,7 @@ namespace pr.gui
 					diag.Elements.Remove(this);
 					diag.Elements.Add(this);
 				}
-				diag.UpdateElementZOrder();
+				diag.UpdateElementZOrder(temporary);
 				diag.Refresh();
 			}
 
@@ -312,7 +316,7 @@ namespace pr.gui
 				get { return m_impl_position; }
 				set
 				{
-					if (Equals(m_impl_position, value)) return;
+					if (m4x4.FEql(m_impl_position, value)) return;
 					SetPosition(value);
 				}
 			}
@@ -338,7 +342,7 @@ namespace pr.gui
 			protected virtual void SetPosition(m4x4 pos)
 			{
 				m_impl_position = pos;
-				if (Diagram != null) Diagram.Edited = true;
+				if (Diagram != null) Diagram.DiagramChangedPending = true;
 				PositionChanged.Raise(this, EventArgs.Empty);
 			}
 			private m4x4 m_impl_position;
@@ -2946,7 +2950,7 @@ namespace pr.gui
 		{
 			/// <summary>
 			/// Raised after the diagram has had data changed. This event will be raised
-			/// in addition to the more detailed modification notification events below</summary>
+			/// in addition to the more detailed modification events below</summary>
 			Edited,
 
 			/// <summary>
@@ -3604,17 +3608,17 @@ namespace pr.gui
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
 		{
-			Elements           = new BindingListEx<Element>();
-			Selected           = new BindingListEx<Element>();
-			m_impl_options     = options ?? new DiagramOptions();
-			m_eb_update_diag   = new EventBatcher(UpdateDiagram);
-			m_hoverscroll      = new HoverScroll(Handle);
-			m_node_styles      = new StyleCache<NodeStyle>();
-			m_connector_styles = new StyleCache<ConnectorStyle>();
-			m_mouse_op         = new MouseOps();
-			m_toolstrip_edit   = new ToolStrip(){Visible = false, Dock = DockStyle.Right};
-			m_dirty            = new HashSet<Element>();
-			Edited             = false;
+			Elements              = new BindingListEx<Element>();
+			Selected              = new BindingListEx<Element>();
+			m_impl_options        = options ?? new DiagramOptions();
+			m_eb_update_diag      = new EventBatcher(UpdateDiagram);
+			m_hoverscroll         = new HoverScroll(Handle);
+			m_node_styles         = new StyleCache<NodeStyle>();
+			m_connector_styles    = new StyleCache<ConnectorStyle>();
+			m_mouse_op            = new MouseOps();
+			m_toolstrip_edit      = new ToolStrip(){Visible = false, Dock = DockStyle.Right};
+			m_dirty               = new HashSet<Element>();
+			DiagramChangedPending = false;
 
 			if (this.IsInDesignMode()) return;
 
@@ -3694,10 +3698,19 @@ namespace pr.gui
 		/// <summary>The set of selected diagram elements</summary>
 		public BindingListEx<Element> Selected { get; private set; }
 
-		/// <summary>True when the diagram has been edited and requires saving</summary>
+		/// <summary>True when the diagram has changed but 'DiagramChanged' has not yet been raised</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool Edited { get; set; }
+		public bool DiagramChangedPending
+		{
+			get { return m_impl_diag_change_pending; }
+			protected set
+			{
+				if (m_impl_diag_change_pending == value) return;
+				m_impl_diag_change_pending = value;
+			}
+		}
+		private bool m_impl_diag_change_pending;
 
 		/// <summary>Controls for how the diagram is rendered</summary>
 		public DiagramOptions Options
@@ -4402,20 +4415,25 @@ namespace pr.gui
 		/// <summary>The Z value of the lowest element in the diagram</summary>
 		private float LowestZ { get; set; }
 
-		/// <summary>Set the Z value for all elements</summary>
-		private void UpdateElementZOrder()
+		/// <summary>
+		/// Set the Z value for all elements.
+		/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
+		private void UpdateElementZOrder(bool temporary)
 		{
-			LowestZ = 0f;
-			HighestZ = 0f;
+			using (Scope<bool>.Create(() => DiagramChangedPending, dcp => DiagramChangedPending = !temporary || dcp))
+			{
+				LowestZ = 0f;
+				HighestZ = 0f;
 
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
-				elem.PositionZ = HighestZ += 0.001f;
+				foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
+					elem.PositionZ = HighestZ += 0.001f;
 
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Label))
-				elem.PositionZ = HighestZ += 0.001f;
+				foreach (var elem in Elements.Where(x => x.Entity == Entity.Label))
+					elem.PositionZ = HighestZ += 0.001f;
 
-			foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
-				elem.PositionZ = LowestZ -= 0.001f;
+				foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
+					elem.PositionZ = LowestZ -= 0.001f;
+			}
 		}
 
 		/// <summary>
@@ -4430,7 +4448,7 @@ namespace pr.gui
 				Elements.ForEach(x => x.Invalidate());
 
 			// Ensure the z order is up to date
-			UpdateElementZOrder();
+			UpdateElementZOrder(true);
 
 			// Add the elements to the window
 			foreach (var elem in Elements)
@@ -4546,6 +4564,12 @@ namespace pr.gui
 			using (Scope.Create(() => m_in_refresh = true, () => m_in_refresh = false))
 			{
 				base.Refresh();
+
+				// Record whether we should raise 'DiagramChanged' before refreshing elements
+				// Changes made by refresh should not require the diagram to be saved
+				var diag_change_pending = DiagramChangedPending;
+
+				// Refresh the invalidated elements
 				while (m_dirty.Count != 0)
 				{
 					var elem = m_dirty.First();
@@ -4554,11 +4578,9 @@ namespace pr.gui
 				}
 
 				// Notify observers that the diagram has changed
-				if (Edited)
-				{
+				if (diag_change_pending)
 					RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
-					Edited = false;
-				}
+				DiagramChangedPending = false;
 
 				// Update the selection area
 				UpdateSelectionGraphics();
@@ -4789,7 +4811,7 @@ namespace pr.gui
 					tofront.Click += (s,a) =>
 						{
 							foreach (var elem in Selected.ToArray())
-								elem.BringToFront();
+								elem.BringToFront(false);
 						};
 				}
 				#endregion
@@ -4801,7 +4823,7 @@ namespace pr.gui
 					toback.Click += (s,a) =>
 						{
 							foreach (var elem in Selected.ToArray())
-								elem.SendToBack();
+								elem.SendToBack(false);
 						};
 				}
 				#endregion

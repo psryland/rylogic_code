@@ -81,6 +81,28 @@ namespace pr.maths
 		public override bool Equals(object o)               { return o is m4x4 && (m4x4)o == this; }
 		public override int GetHashCode()                   { unchecked { return x.GetHashCode() + y.GetHashCode() + z.GetHashCode() + w.GetHashCode(); } }
 
+		public static v4 operator * (m4x4 lhs, v4 rhs)
+		{
+			Transpose4x4(ref lhs);
+			return new v4(
+				v4.Dot4(lhs.x, rhs),
+				v4.Dot4(lhs.y, rhs),
+				v4.Dot4(lhs.z, rhs),
+				v4.Dot4(lhs.w, rhs));
+		}
+		public static m4x4 operator * (m4x4 lhs, m4x4 rhs)
+		{
+			Transpose4x4(ref lhs);
+			return new m4x4(
+				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), v4.Dot4(lhs.w, rhs.x)),
+				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), v4.Dot4(lhs.w, rhs.y)),
+				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), v4.Dot4(lhs.w, rhs.z)),
+				new v4(v4.Dot4(lhs.x, rhs.w), v4.Dot4(lhs.y, rhs.w), v4.Dot4(lhs.z, rhs.w), v4.Dot4(lhs.w, rhs.w)));
+		}
+
+		public static bool FEql(m4x4 lhs, m4x4 rhs, float tol) { return v4.FEql4(lhs.x, rhs.x, tol) && v4.FEql4(lhs.y, rhs.y, tol) && v4.FEql4(lhs.z, rhs.z, tol) && v4.FEql4(lhs.w, rhs.w, tol); }
+		public static bool FEql(m4x4 lhs, m4x4 rhs)            { return FEql(lhs, rhs, Maths.TinyF); }
+
 		public static void Transpose3x3(ref m4x4 m)
 		{
 			m3x4.Transpose3x3(ref m.rot);
@@ -90,7 +112,6 @@ namespace pr.maths
 			Transpose3x3(ref m);
 			return m;
 		}
-
 		public static void Transpose4x4(ref m4x4 m)
 		{
 			Maths.Swap(ref m.x.y, ref m.y.x);
@@ -105,7 +126,6 @@ namespace pr.maths
 			Transpose4x4(ref m);
 			return m;
 		}
-
 		public static void InverseFast(ref m4x4 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
@@ -130,30 +150,9 @@ namespace pr.maths
 			Orthonormalise(ref m);
 			return m;
 		}
-
 		public static bool IsOrthonormal(m4x4 m)
 		{
 			return	m3x4.IsOrthonormal(m.rot);
-		}
-
-		public static v4 operator * (m4x4 lhs, v4 rhs)
-		{
-			Transpose4x4(ref lhs);
-			return new v4(
-				v4.Dot4(lhs.x, rhs),
-				v4.Dot4(lhs.y, rhs),
-				v4.Dot4(lhs.z, rhs),
-				v4.Dot4(lhs.w, rhs));
-		}
-
-		public static m4x4 operator * (m4x4 lhs, m4x4 rhs)
-		{
-			Transpose4x4(ref lhs);
-			return new m4x4(
-				new v4(v4.Dot4(lhs.x, rhs.x), v4.Dot4(lhs.y, rhs.x), v4.Dot4(lhs.z, rhs.x), v4.Dot4(lhs.w, rhs.x)),
-				new v4(v4.Dot4(lhs.x, rhs.y), v4.Dot4(lhs.y, rhs.y), v4.Dot4(lhs.z, rhs.y), v4.Dot4(lhs.w, rhs.y)),
-				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), v4.Dot4(lhs.w, rhs.z)),
-				new v4(v4.Dot4(lhs.x, rhs.w), v4.Dot4(lhs.y, rhs.w), v4.Dot4(lhs.z, rhs.w), v4.Dot4(lhs.w, rhs.w)));
 		}
 
 		// Permute the rotation vectors in a matrix by 'n'
