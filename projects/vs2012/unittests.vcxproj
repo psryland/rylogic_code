@@ -124,6 +124,18 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\user_data.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windowfunctions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\windows_com.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\deque.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\vector.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\bit_array.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\byte_data.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\kdtree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\list_in_array.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\quadtree.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\queue.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\segmented_list.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\stack.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\tri_table.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\container\vector_map.h" />
     <ClInclude Include="..\..\sdk\pr\pr\crypt\crypt.h" />
     <ClInclude Include="..\..\sdk\pr\pr\crypt\md5.h" />
     <ClInclude Include="..\..\sdk\pr\pr\crypt\rijndael.h" />
@@ -379,7 +391,7 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>

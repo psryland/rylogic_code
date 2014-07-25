@@ -35,6 +35,18 @@ namespace pr
 		return iter != std::end(cont);
 	}
 
+	// Return the index of 'val' in 'cont' or cont.size() if not found
+	template <typename TCont, typename TValue> inline size_t index_of(TCont const& cont, TValue const& val)
+	{
+		return static_cast<size_t>(std::find(std::begin(cont), std::end(cont), val) - std::begin(cont));
+	}
+
+	// Return the first element in 'cont' that matches 'pred' or nullptr
+	template <typename TCont, typename TValue> inline auto find(TCont& cont, TValue const& val) -> decltype(std::begin(cont))
+	{
+		return std::find(std::begin(cont), std::end(cont), val);
+	}
+
 	// Return the first element in 'cont' that matches 'pred' or nullptr
 	template <typename TCont, typename Pred> inline auto find_if(TCont& cont, Pred pred) -> decltype(&cont[0])
 	{
