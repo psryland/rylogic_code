@@ -15,14 +15,14 @@ namespace pr
 		struct ModelGenerator
 		{
 			// A container for the model data
-			struct Cont
+			struct Cont :AlignTo<16>
 			{
 				typedef VType VType;
 				typedef IType IType;
 
-				typedef std::vector<VType> VCont;
-				typedef std::vector<IType> ICont;
-				typedef std::vector<NuggetProps> NCont;
+				typedef pr::vector<VType> VCont;
+				typedef pr::vector<IType> ICont;
+				typedef pr::vector<NuggetProps> NCont;
 
 				typedef typename VCont::iterator VIter;
 				typedef typename ICont::iterator IIter;
@@ -46,6 +46,20 @@ namespace pr
 					,m_geom(GeomMask)
 				{}
 			};
+
+			// Return the thread local static instance of a 'Cont'
+			static Cont& CacheCont(std::size_t vcount = 0, std::size_t icount = 0, std::size_t ncount = 0)
+			{
+				thread_local static Cont* cont;
+				if (!cont) cont = new Cont();
+				cont->m_name.resize(0);
+				cont->m_vcont.resize(vcount);
+				cont->m_icont.resize(icount);
+				cont->m_ncont.resize(ncount);
+				cont->m_bbox = BBoxReset;
+				cont->m_geom = Cont::GeomMask;
+				return *cont;
+			}
 
 			// Create a model from 'cont'
 			// 'topo' is the topology of the model data. Ignored if 'cont' contains nuggets
@@ -74,7 +88,7 @@ namespace pr
 						else if (topo == EPrim::TriStrip)
 						{
 							if (!cont.m_icont.empty())
-								cont.m_icont.insert(begin(cont.m_icont), *begin(cont.m_icont));
+								cont.m_icont.insert(std::begin(cont.m_icont), *std::begin(cont.m_icont));
 						}
 					}
 				}
@@ -150,8 +164,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::LineSize(num_lines, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Lines(num_lines, points, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Lines(num_lines, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::LineList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -161,8 +175,8 @@ namespace pr
 				std::size_t vrange, irange;
 				pr::geometry::LineSize(num_lines, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::LinesD(num_lines, points, directions, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::LineList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -172,8 +186,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::LineStripSize(num_lines, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::LinesStrip(num_lines, points, num_colours, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::LinesStrip(num_lines, points, num_colours, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::LineStrip, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -185,8 +199,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(num_quads, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Quad(num_quads, verts, num_colours, colours, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -196,8 +210,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Quad(origin, quad_x, quad_z, divisions, colour, t2q, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -207,8 +221,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Quad(width, height, divisions, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Quad(width, height, divisions, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -218,8 +232,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::QuadSize(divisions, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Quad(centre, forward, top, width, height, divisions, colour, tex_origin, tex_dim, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -229,8 +243,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::QuadStripSize(num_quads, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::QuadStrip(num_quads, verts, width, num_normals, normals, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriStrip, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -242,8 +256,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::EllipseSize(solid, facets, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Ellipse(dimx, dimy, solid, facets, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Ellipse(dimx, dimy, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, props.m_has_alpha, o2w, -1.0f);
@@ -253,8 +267,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::PieSize(solid, ang0, ang1, facets, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Pie(dimx, dimy, ang0, ang1, radius0, radius1, solid, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, props.m_has_alpha, o2w, -1.0f);
@@ -264,8 +278,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::RoundedRectangleSize(solid, corner_radius, facets, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::RoundedRectangle(dimx, dimy, solid, corner_radius, facets, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, solid ? EPrim::TriStrip : EPrim::LineStrip, mat, props.m_has_alpha, o2w, -1.0f);
@@ -277,8 +291,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Boxes(num_boxes, points, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Boxes(num_boxes, points, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -288,8 +302,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Boxes(num_boxes, points, o2w, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -299,8 +313,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(1, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Box(rad, o2w, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Box(rad, o2w, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -314,8 +328,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::BoxSize(num_boxes, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::BoxList(num_boxes, positions, rad, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -327,8 +341,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::GeosphereSize(divisions, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Geosphere(radius, divisions, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Geosphere(radius, divisions, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -342,8 +356,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::SphereSize(wedges, layers, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Sphere(radius, wedges, layers, colour, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Sphere(radius, wedges, layers, colour, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -359,8 +373,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::CylinderSize(wedges, layers, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Cylinder(radius0, radius1, height, xscale, yscale, wedges, layers, num_colours, colours, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, EPrim::TriList, mat, props.m_has_alpha, o2w, -1.0f);
@@ -378,8 +392,8 @@ namespace pr
 				std::size_t vcount, icount;
 				pr::geometry::MeshSize(num_verts, num_indices, vcount, icount);
 
-				Cont cont(vcount, icount);
-				auto props = pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, num_normals, normals, tex_coords, begin(cont.m_vcont), begin(cont.m_icont));
+				auto& cont = CacheCont(vcount, icount);
+				auto props = pr::geometry::Mesh(num_verts, num_indices, verts, indices, num_colours, colours, num_normals, normals, tex_coords, std::begin(cont.m_vcont), std::begin(cont.m_icont));
 				cont.m_bbox = props.m_bbox;
 				cont.m_geom = props.m_geom;
 				return Create(rdr, cont, prim_type, mat, props.m_has_alpha, nullptr, -1.0f);
@@ -507,13 +521,13 @@ namespace pr
 			}
 			static ModelPtr LoadP3DModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
-				Cont cont(0,0);
+				auto& cont = CacheCont();
 				LoadP3DModel(rdr, src, mesh_name, cont);
 				return Create(rdr, cont, EPrim::TriList, nullptr, false, bake, gen_normals);
 			}
 			static ModelPtr Load3DSModel(Renderer& rdr, std::istream& src, char const* mesh_name = nullptr, m4x4 const* bake = nullptr, float gen_normals = -1.0f)
 			{
-				Cont cont(0,0);
+				auto& cont = CacheCont();
 				Load3DSModel(rdr, src, mesh_name, cont);
 				return Create(rdr, cont, EPrim::TriList, nullptr, false, bake, gen_normals);
 			}
