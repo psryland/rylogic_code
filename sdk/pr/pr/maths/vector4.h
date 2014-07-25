@@ -4,8 +4,6 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_VECTOR4_H
-#define PR_MATHS_VECTOR4_H
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -34,7 +32,9 @@ namespace pr
 
 		v4& set(float x_);
 		v4& set(float x_, float y_, float z_, float w_);
-
+		#if PR_MATHS_USE_INTRINSICS
+		v4& set(__m128 v);
+		#endif
 		template <typename T> v4& set(T const& v, float z_, float w_);
 		template <typename T> v4& set(T const& v, float w_);
 		template <typename T> v4& set(T const& v);
@@ -56,6 +56,9 @@ namespace pr
 
 		static v4                       make(float x)                               { v4 vec; return vec.set(x); }
 		static v4                       make(float x, float y, float z, float w)    { v4 vec; return vec.set(x, y, z, w); }
+		#if PR_MATHS_USE_INTRINSICS
+		static v4                       make(__m128 v)                              { v4 vec; return vec.set(v); }
+		#endif
 		template <typename T> static v4 make(T const& v, float z, float w)          { v4 vec; return vec.set(v, z, w); }
 		template <typename T> static v4 make(T const& v, float w)                   { v4 vec; return vec.set(v, w); }
 		template <typename T> static v4 make(T const& v)                            { v4 vec; return vec.set(v); }
@@ -142,22 +145,16 @@ namespace pr
 	inline DirectX::XMVECTOR&       dxv4(v4&       v) { assert(maths::is_aligned(&v)); return v.vec; }
 	#endif
 
-	// Conversion functions between vector types
-	inline v2 const&   cast_v2(v4 const& vec)   { return reinterpret_cast<v2 const&>  (vec); }
-	inline v2&         cast_v2(v4& vec)         { return reinterpret_cast<v2&>        (vec); }
-	inline v3 const&   cast_v3(v4 const& vec)   { return reinterpret_cast<v3 const&>  (vec); }
-	inline v3&         cast_v3(v4& vec)         { return reinterpret_cast<v3&>        (vec); }
-	inline Quat const& cast_q (v4 const& vec)   { return reinterpret_cast<Quat const&>(vec); }
-	inline Quat&       cast_q (v4& vec)         { return reinterpret_cast<Quat&>      (vec); }
-
-	// Min/Max/Clamp
-	template <> inline v4 Max(v4 const& lhs, v4 const& rhs)              { return v4::make(Max(lhs.x,rhs.x), Max(lhs.y,rhs.y), Max(lhs.z,rhs.z), Max(lhs.w,rhs.w)); }
-	template <> inline v4 Min(v4 const& lhs, v4 const& rhs)              { return v4::make(Min(lhs.x,rhs.x), Min(lhs.y,rhs.y), Min(lhs.z,rhs.z), Min(lhs.w,rhs.w)); }
-	template <> inline v4 Clamp(v4 const& x, v4 const& mn, v4 const& mx) { return v4::make(Clamp(x.x,mn.x,mx.x), Clamp(x.y,mn.y,mx.y), Clamp(x.z,mn.z,mx.z), Clamp(x.w,mn.w,mx.w)); }
-	inline v4             Clamp(v4 const& x, float mn, float mx)         { return v4::make(Clamp(x.x,mn,mx),     Clamp(x.y,mn,mx),     Clamp(x.z,mn,mx),     Clamp(x.w,mn,mx));     }
-
-	// Functions
-	v4&     Zero(v4& v);
+	v4      Max(v4 const& lhs, v4 const& rhs);
+	v4      Min(v4 const& lhs, v4 const& rhs);
+	v4      Clamp(v4 const& x, v4 const& mn, v4 const& mx);
+	v4      Clamp(v4 const& x, float mn, float mx);
+	float   Length2Sq(v4 const& x);
+	float   Length3Sq(v4 const& x);
+	float   Length4Sq(v4 const& x);
+	float   Length2(v4 const& x);
+	float   Length3(v4 const& x);
+	float   Length4(v4 const& x);
 	bool    IsFinite(v4 const& v);
 	bool    IsFinite(v4 const& v, float max_value);
 	int     SmallestElement2(v4 const& v);
@@ -190,5 +187,3 @@ namespace pr
 	v4      RotationVectorApprox(m4x4 const& from, m4x4 const& to);
 	float   CosAngle3(v4 const& lhs, v4 const& rhs);
 }
-
-#endif

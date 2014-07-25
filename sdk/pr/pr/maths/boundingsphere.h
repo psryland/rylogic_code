@@ -57,7 +57,7 @@ namespace pr
 	bool operator >= (BSphere const& lhs, BSphere const& rhs);
 
 	// Functions
-	float           Volume(BSphere const& bsph);
+	float    Volume(BSphere const& bsph);
 	BSphere& Encompass(BSphere& bsphere, v4 const& point);
 	BSphere  Encompass(BSphere const& bsphere, v4 const& point);
 	BSphere& Encompass(BSphere& lhs, BSphere const& rhs);
@@ -66,9 +66,9 @@ namespace pr
 	BSphere  EncompassLoose(BSphere const& bsphere, v4 const& point);
 	BSphere& EncompassLoose(BSphere& lhs, BSphere const& rhs);
 	BSphere  EncompassLoose(BSphere const& lhs, BSphere const& rhs);
-	bool            IsWithin(BSphere const& bsphere, v4 const& point);
-	bool            IsWithin(BSphere const& bsphere, BSphere const& test);
-	bool            IsIntersection(BSphere const& lhs, BSphere const& rhs);
+	bool     IsWithin(BSphere const& bsphere, v4 const& point);
+	bool     IsWithin(BSphere const& bsphere, BSphere const& test);
+	bool     IsIntersection(BSphere const& lhs, BSphere const& rhs);
 }
 
 #endif

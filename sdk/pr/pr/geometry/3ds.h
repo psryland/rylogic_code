@@ -603,7 +603,6 @@ namespace pr
 					Vert*       m_next;       // Another copy of this vert with different smoothing group
 					pr::uint16  m_orig_index; // The index into the original obj.m_mesh.m_vert container
 					pr::uint16  m_new_index;  // The index of this vert in the 'verts' container
-
 					Vert(pr::uint16 orig_index, pr::uint16 new_index, pr::v4 const& norm, pr::Colour const& col, uint sg)
 						:m_norm(norm)
 						,m_col(col)
@@ -612,33 +611,38 @@ namespace pr
 						,m_orig_index(orig_index)
 						,m_new_index(new_index)
 					{}
+				};
 
+				typedef std::deque<Vert, pr::aligned_alloc<Vert>> VertPool;
+				struct Verts :VertPool
+				{
 					// Returns the new index for the vert in 'cont'
-					pr::uint16 add(std::deque<Vert>& cont, pr::v4 const& norm, pr::Colour const& col, uint sg)
+					pr::uint16 add(pr::uint16 idx, pr::v4 const& norm, pr::Colour const& col, uint sg)
 					{
+						auto& vert = at(idx);
+
 						// If the smoothing group intersects, accumulate 'norm'
 						// and return the vertex index of this vert
-						if ((sg == 0 && m_smooth == 0) || (sg & m_smooth) || m_norm == v4Zero)
+						if ((sg == 0 && vert.m_smooth == 0) || (sg & vert.m_smooth) || vert.m_norm == v4Zero)
 						{
-							m_norm += norm;
-							m_col = col;
-							m_smooth |= sg;
-							return m_new_index;
+							vert.m_norm += norm;
+							vert.m_col = col;
+							vert.m_smooth |= sg;
+							return vert.m_new_index;
 						}
 
 						// Otherwise if we have a 'next' try that vert
-						if (m_next != nullptr)
-							return m_next->add(cont, norm, col, sg);
+						if (vert.m_next != nullptr)
+							return add(vert.m_next->m_new_index, norm, col, sg);
 
-						// Otherwise, create a new Vert and add it to our linked list
-						auto new_index = checked_cast<pr::uint16>(cont.size());
-						cont.emplace_back(m_orig_index, new_index, norm, col, sg);
-						m_next = &cont.back();
+						// Otherwise, create a new Vert and add it to the linked list
+						auto new_index = checked_cast<pr::uint16>(size());
+						emplace_back(vert.m_orig_index, new_index, norm, col, sg);
+						vert.m_next = &back();
 						return new_index;
 					}
-				};
-				std::deque<Vert> verts;
-
+				} verts;
+				
 				// Initialise the container 'verts'
 				for (pr::uint16 i = 0, iend = checked_cast<pr::uint16>(obj.m_mesh.m_vert.size()); i != iend; ++i)
 					verts.emplace_back(i, i, v4Zero, ColourWhite, 0);
@@ -652,7 +656,7 @@ namespace pr
 
 					// Write out each face that belongs to this group
 					irange.m_begin = irange.m_end;
-					vrange = pr::Range<pr::uint16>::Invalid();
+					vrange = pr::Range<pr::uint16>::Reset();
 					for (auto const& face_idx : mgrp.m_face)
 					{
 						// Get the face and it's smoothing group
@@ -673,9 +677,9 @@ namespace pr
 						pr::v4 angles = TriangleAngles(v0, v1, v2);
 
 						// Get the final vertex indices for the face
-						auto i0 = verts.at(face.m_idx[0]).add(verts, angles.x * norm, mat.m_diffuse, sg);
-						auto i1 = verts.at(face.m_idx[1]).add(verts, angles.y * norm, mat.m_diffuse, sg);
-						auto i2 = verts.at(face.m_idx[2]).add(verts, angles.z * norm, mat.m_diffuse, sg);
+						auto i0 = verts.add(face.m_idx[0], angles.x * norm, mat.m_diffuse, sg);
+						auto i1 = verts.add(face.m_idx[1], angles.y * norm, mat.m_diffuse, sg);
+						auto i2 = verts.add(face.m_idx[2], angles.z * norm, mat.m_diffuse, sg);
 
 						vrange.encompass(i0);
 						vrange.encompass(i1);

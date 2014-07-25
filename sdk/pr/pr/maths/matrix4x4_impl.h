@@ -280,9 +280,11 @@ namespace pr
 	// Transpose the matrix
 	inline m4x4& Transpose4x4(m4x4& mat)
 	{
-#if PR_MATHS_USE_DIRECTMATH
+		#if PR_MATHS_USE_DIRECTMATH
 		dxm4(mat) = DirectX::XMMatrixTranspose(dxm4(mat));
-#else
+		#elif PR_MATHS_USE_INTRINSICS
+		_MM_TRANSPOSE4_PS(mat.x.vec, mat.y.vec, mat.z.vec, mat.w.vec);
+		#else
 		{
 			Swap(mat.x.y, mat.y.x);
 			Swap(mat.x.z, mat.z.x);
@@ -291,7 +293,7 @@ namespace pr
 			Swap(mat.y.w, mat.w.y);
 			Swap(mat.z.w, mat.w.z);
 		}
-#endif
+		#endif
 		return mat;
 	}
 
@@ -584,9 +586,9 @@ namespace pr
 	inline m4x4 CrossProductMatrix4x4(v4 const& vec)
 	{
 		return m4x4::make(
-			v4::make(0.0f,  vec.z, -vec.y, 0.0f),
+			v4::make(+0.0f,  vec.z, -vec.y, 0.0f),
 			v4::make(-vec.z,   0.0f,  vec.x, 0.0f),
-			v4::make(vec.y, -vec.x,   0.0f, 0.0f),
+			v4::make(+vec.y, -vec.x,   0.0f, 0.0f),
 			v4Zero);
 	}
 
@@ -632,10 +634,6 @@ namespace pr
 		PRUnitTest(pr_maths_matrix4x4)
 		{
 			using namespace pr;
-#if PR_MATHS_USE_DIRECTMATH
-			{
-			}
-#endif
 			{
 				m4x4 m1 = m4x4Identity;
 				m4x4 m2 = m4x4Identity;

@@ -13,6 +13,7 @@ namespace pr
 {
 	// Type methods
 	inline BBox      BBox::make(v4 const& centre, v4 const& radius) { BBox bbox = {centre, radius}; return bbox; }
+	inline BBox      BBox::makeLU(v4 const& lower, v4 const& upper) { BBox bbox = {(upper + lower)*0.5f, (upper - lower)*0.5f}; return bbox; }
 	inline BBox&     BBox::reset()                                  { m_centre = pr::v4Origin; m_radius.set(-1.0f, -1.0f, -1.0f, 0.0f); return *this; }
 	inline BBox&     BBox::unit()                                   { m_centre = pr::v4Origin; m_radius.set(0.5f, 0.5f, 0.5f, 0.0f); return *this; }
 	inline BBox&     BBox::set(v4 const& centre, v4 const& radius)  { m_centre = centre; m_radius = radius; return *this; }
@@ -115,8 +116,20 @@ namespace pr
 	}
 
 	// Encompass 'point' within 'bbox'.
-	inline BBox&	Encompass(BBox& bbox, v4 const& point)
+	inline BBox& Encompass(BBox& bbox, v4 const& point)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		const __m128 zero = {+0.0f, +0.0f, +0.0f, +0.0f};
+		const __m128 half = {+0.5f, +0.5f, +0.5f, +0.5f};
+		auto init = _mm_cmplt_ps(bbox.m_radius.vec, zero);                          // init = radius == -1 ? FFFF... : 0000... 
+		auto lwr = _mm_sub_ps(bbox.m_centre.vec, bbox.m_radius.vec);                // lwr  = centre - radius
+		auto upr = _mm_add_ps(bbox.m_centre.vec, bbox.m_radius.vec);                // upr  = centre + radius
+		auto init_pt = _mm_and_ps(init, point.vec);                                 // init_pt = init & point
+		lwr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_min_ps(lwr, point.vec))); // lwr  = init_pt | (~init & min(lwr, point))
+		upr = _mm_or_ps(init_pt , _mm_andnot_ps(init, _mm_max_ps(upr, point.vec))); // upr  = init_pt | (~init & max(upr, point))
+		bbox.m_centre.vec = _mm_mul_ps(_mm_add_ps(upr,lwr), half);                  // center = (upr + lwr) / 2;
+		bbox.m_radius.vec = _mm_mul_ps(_mm_sub_ps(upr,lwr), half);                  // radius = (upr - lwr) / 2;
+		#else
 		for (int i = 0; i != 3; ++i)
 		{
 			if (bbox.m_radius[i] < 0.0f)
@@ -136,6 +149,7 @@ namespace pr
 				}
 			}
 		}
+		#endif
 		return bbox;
 	}
 
@@ -157,7 +171,7 @@ namespace pr
 	}
 
 	// Encompass 'rhs' in 'lhs'
-	inline BBox&	Encompass(BBox& lhs, BSphere const& rhs)
+	inline BBox& Encompass(BBox& lhs, BSphere const& rhs)
 	{
 		// Don't treat rhs.IsValid() as an error, it's the only way to Encompass a empty bsphere
 		if (!rhs.IsValid()) return lhs;
@@ -226,6 +240,23 @@ namespace pr
 	{
 		PRUnitTest(pr_maths_boundingbox)
 		{
+			v4 pt[] =
+			{
+				{+1,+1,+1,1},
+				{-1,+0,+1,1},
+				{+1,+1,+1,1},
+				{+0,-2,-1,1},
+			};
+			auto bbox = BBoxReset;
+			for (auto& p : pt) pr::Encompass(bbox, p);
+			PR_CHECK(bbox.Lower().x, -1.0f);
+			PR_CHECK(bbox.Lower().y, -2.0f);
+			PR_CHECK(bbox.Lower().z, -1.0f);
+			PR_CHECK(bbox.Lower().w, +1.0f);
+			PR_CHECK(bbox.Upper().x, +1.0f);
+			PR_CHECK(bbox.Upper().y, +1.0f);
+			PR_CHECK(bbox.Upper().z, +1.0f);
+			PR_CHECK(bbox.Upper().w, +1.0f);
 		}
 	}
 }

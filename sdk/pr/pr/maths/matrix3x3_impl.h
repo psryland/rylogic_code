@@ -131,12 +131,12 @@ namespace pr
 	}
 
 	// Assignment operators
-	inline m3x4& operator += (m3x4& lhs, float rhs)                { cast_v3(lhs.x) += rhs;   cast_v3(lhs.y) += rhs;   cast_v3(lhs.z) += rhs;   return lhs; }
-	inline m3x4& operator -= (m3x4& lhs, float rhs)                { cast_v3(lhs.x) -= rhs;   cast_v3(lhs.y) -= rhs;   cast_v3(lhs.z) -= rhs;   return lhs; }
-	inline m3x4& operator += (m3x4& lhs, m3x4 const& rhs)          { lhs.x += rhs.x; lhs.y += rhs.y; lhs.z += rhs.z; return lhs; }
-	inline m3x4& operator -= (m3x4& lhs, m3x4 const& rhs)          { lhs.x -= rhs.x; lhs.y -= rhs.y; lhs.z -= rhs.z; return lhs; }
-	inline m3x4& operator *= (m3x4& lhs, float rhs)                { lhs.x *= rhs;   lhs.y *= rhs;   lhs.z *= rhs;   return lhs; }
-	inline m3x4& operator /= (m3x4& lhs, float rhs)                { lhs.x /= rhs;   lhs.y /= rhs;   lhs.z /= rhs;   return lhs; }
+	inline m3x4& operator += (m3x4& lhs, float rhs)                { lhs.x.xyz += rhs;   lhs.y.xyz += rhs;   lhs.z.xyz += rhs;   return lhs; }
+	inline m3x4& operator -= (m3x4& lhs, float rhs)                { lhs.x.xyz -= rhs;   lhs.y.xyz -= rhs;   lhs.z.xyz -= rhs;   return lhs; }
+	inline m3x4& operator += (m3x4& lhs, m3x4 const& rhs)          { lhs.x     += rhs.x; lhs.y     += rhs.y; lhs.z     += rhs.z; return lhs; }
+	inline m3x4& operator -= (m3x4& lhs, m3x4 const& rhs)          { lhs.x     -= rhs.x; lhs.y     -= rhs.y; lhs.z     -= rhs.z; return lhs; }
+	inline m3x4& operator *= (m3x4& lhs, float rhs)                { lhs.x     *= rhs;   lhs.y     *= rhs;   lhs.z     *= rhs;   return lhs; }
+	inline m3x4& operator /= (m3x4& lhs, float rhs)                { lhs.x     /= rhs;   lhs.y     /= rhs;   lhs.z     /= rhs;   return lhs; }
 
 	// Binary operators
 	inline m3x4 operator + (m3x4 const& lhs, float rhs)            { m3x4 m = lhs; return m += rhs; }
@@ -176,24 +176,24 @@ namespace pr
 		v3 ans;
 		m3x4 lhs_t = Transpose3x3(lhs);
 		for (int i = 0; i < 3; ++i)
-			ans[i] = Dot3(cast_v3(lhs_t[i]), rhs);
+			ans[i] = Dot3(lhs_t[i].xyz, rhs);
 		return ans;
 	}
 	#pragma warning (pop)
 
 	// Unary operators
-	inline m3x4 operator + (m3x4 const& mat)                                { return mat; }
-	inline m3x4 operator - (m3x4 const& mat)                                { return m3x4::make(-mat.x, -mat.y, -mat.z); }
+	inline m3x4 operator + (m3x4 const& mat) { return mat; }
+	inline m3x4 operator - (m3x4 const& mat) { return m3x4::make(-mat.x, -mat.y, -mat.z); }
 
 	// Equality operators
-	inline bool FEql        (m3x4 const& lhs, m3x4 const& rhs, float tol)   { return FEql3(lhs.x, rhs.x, tol) && FEql3(lhs.y, rhs.y, tol) && FEql3(lhs.z, rhs.z, tol); }
-	inline bool FEqlZero    (m3x4 const& lhs, float tol)                    { return FEqlZero3(lhs.x, tol) && FEqlZero3(lhs.y, tol) && FEqlZero3(lhs.z, tol); }
-	inline bool operator == (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
-	inline bool operator >  (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
-	inline bool operator <= (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
-	inline bool operator >= (m3x4 const& lhs, m3x4 const& rhs)              { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
+	inline bool FEql        (m3x4 const& lhs, m3x4 const& rhs, float tol) { return FEql3(lhs.x, rhs.x, tol) && FEql3(lhs.y, rhs.y, tol) && FEql3(lhs.z, rhs.z, tol); }
+	inline bool FEqlZero    (m3x4 const& lhs, float tol)                  { return FEqlZero3(lhs.x, tol) && FEqlZero3(lhs.y, tol) && FEqlZero3(lhs.z, tol); }
+	inline bool operator == (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+	inline bool operator != (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+	inline bool operator <  (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
+	inline bool operator >  (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) >  0; }
+	inline bool operator <= (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) <= 0; }
+	inline bool operator >= (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
 	// Functions
 	// Return true if 'm' is finite

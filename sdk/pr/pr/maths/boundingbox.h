@@ -29,12 +29,13 @@ namespace pr
 		EBBoxPlane_NumberOf = 6
 	};
 
-	struct BBox
+	struct alignas(16) BBox
 	{
 		v4 m_centre;
 		v4 m_radius;
 
 		static BBox make(v4 const& centre, v4 const& radius);
+		static BBox makeLU(v4 const& lower, v4 const& upper);
 		BBox&       reset();
 		BBox&       unit();
 		BBox&       set(v4 const& centre, v4 const& radius);

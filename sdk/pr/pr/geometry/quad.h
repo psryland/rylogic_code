@@ -264,7 +264,8 @@ namespace pr
 			auto norm = pr::CreateLerpRepeater(normals, num_normals, num_verts, pr::v4ZAxis);
 
 			// Bounding box
-			auto bb = [&](v4 const& v) { pr::Encompass(props.m_bbox, v); return v; };
+			v4 lwr = v4Max, upr = -v4Max;
+			auto bb = [&](v4 const& v) { lwr = Min(lwr,v); upr = Max(upr,v); return v; };
 
 			// Texture coords (note: 1D texture)
 			v2 const t00 = v2::make(0.000f, 0.000f);
@@ -350,6 +351,7 @@ namespace pr
 			SetPCNT(*v_out++, bb(v2 + bi*hwidth), cc(c2), n2, t00); *i_out++ = index++;
 			SetPCNT(*v_out++, bb(v2 - bi*hwidth), cc(c2), n2, t10); *i_out++ = index++;
 
+			props.m_bbox = BBox::makeLU(lwr, upr);
 			return props;
 		}
 	}

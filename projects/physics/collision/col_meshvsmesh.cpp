@@ -612,8 +612,8 @@ namespace pr
 					// 'ra' and 'rb' are bounds for the line in the XY place
 					int i = 0;
 					v2 ra = v2Zero, rb = v2Zero;
-					while( i != first_new_r && FEql2(ra, v2Zero) ) { ra = cast_v2(M * r[i++]); }
-					while( i != first_new_r && FEql2(rb, v2Zero) ) { rb = cast_v2(M * r[i++]); }
+					while (i != first_new_r && FEql2(ra, v2Zero)) { ra = (M * r[i++]).xy; }
+					while (i != first_new_r && FEql2(rb, v2Zero)) { rb = (M * r[i++]).xy; }
 
 					// We need to ensure 'rb' is on the positive side of 'ra'
 					if( Line::Eqn(ra, rb) < 0.0f )
@@ -624,7 +624,7 @@ namespace pr
 					// Project the remaining 'r' into the XY plane
 					for( int i = 2; i != first_new_r + 1; ++i )
 					{
-						v2 t = cast_v2(M * r[i]);
+						v2 t = (M * r[i]).xy;
 						if( !FEql2(t, v2Zero) )
 						{
 							if( Line::Eqn(ra, t) >= 0.0f )

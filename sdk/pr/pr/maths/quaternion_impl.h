@@ -201,7 +201,7 @@ namespace pr
 	}
 	inline v3 Rotate(Quat const& lhs, v3 const& rhs)
 	{
-		return cast_v3(Rotate(lhs, v4::make(rhs, 0.0f)));
+		return Rotate(lhs, v4::make(rhs, 0.0f)).xyz;
 	}
 }
 

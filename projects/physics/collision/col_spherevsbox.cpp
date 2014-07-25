@@ -82,7 +82,7 @@ void pr::ph::SphereVsBox(Shape const& sphere, m4x4 const& a2w, Shape const& box,
 		contact.m_pointB = b2w * contact.m_pointB + b2w.pos;
 
 		// Get the normal in world space
-		Zero(contact.m_normal);
+		contact.m_normal = v4Zero;
 		contact.m_normal[largest] = sign * 1.0f;
 		contact.m_normal = b2w * contact.m_normal;
 		contact.m_depth  = sphere_shape.m_radius + box_shape.m_radius[largest] - Abs(b2s[largest]);

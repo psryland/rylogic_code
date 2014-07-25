@@ -16,6 +16,8 @@ namespace pr
 	{
 		#if PR_MATHS_USE_DIRECTMATH
 		vec = DirectX::XMVectorReplicate(x_);
+		#elif PR_MATHS_USE_INTRINSICS
+		vec = _mm_set1_ps(x_);
 		#else
 		x = y = z = w = x_;
 		#endif
@@ -25,54 +27,43 @@ namespace pr
 	{
 		#if PR_MATHS_USE_DIRECTMATH
 		vec = DirectX::XMVectorSet(x_, y_, z_, w_);
+		#elif PR_MATHS_USE_INTRINSICS
+		vec = _mm_set_ps(w_,z_,y_,x_);
 		#else
 		x = x_; y = y_; z = z_; w = w_;
 		#endif
 		return *this;
 	}
+	#if PR_MATHS_USE_INTRINSICS
+	inline v4& v4::set(__m128 v)
+	{
+		vec = v;
+		return *this;
+	}
+	#endif
 	template <typename T> inline v4& v4::set(T const& v, float z_, float w_)
 	{
-		x = GetXf(v);
-		y = GetYf(v);
-		z = z_;
-		w = w_;
-		return *this;
+		return set(GetXf(v), GetYf(v), z_, w_);
 	}
 	template <typename T> inline v4& v4::set(T const& v, float w_)
 	{
-		x = GetXf(v);
-		y = GetYf(v);
-		z = GetZf(v);
-		w = w_;
-		return *this;
+		return set(GetXf(v), GetYf(v), GetZf(v), w_);
 	}
 	template <typename T> inline v4& v4::set(T const& v)
 	{
-		x = GetXf(v);
-		y = GetYf(v);
-		z = GetZf(v);
-		w = GetWf(v);
-		return *this;
+		return set(GetXf(v), GetYf(v), GetZf(v), GetWf(v));
 	}
 	template <typename T> inline v4& v4::set(T const* v)
 	{
-		x = AsReal(v[0]);
-		y = AsReal(v[1]);
-		z = AsReal(v[2]);
-		w = AsReal(v[3]);
-		return *this;
+		return set(AsReal(v[0]), AsReal(v[1]), AsReal(v[2]), AsReal(v[3]));
 	}
 	template <typename T> inline v4& v4::set(T const* v, float w_)
 	{
-		x = AsReal(v[0]);
-		y = AsReal(v[1]);
-		z = AsReal(v[2]);
-		w = w_;
-		return *this;
+		return set(AsReal(v[0]), AsReal(v[1]), AsReal(v[2]), w_);
 	}
 
-	inline v4 v4::w0() const { pr::v4 v = *this; v.w = 0.0f; return v; }
-	inline v4 v4::w1() const { pr::v4 v = *this; v.w = 1.0f; return v; }
+	inline v4 v4::w0() const { return v4::make(x, y, z, 0.0f); }
+	inline v4 v4::w1() const { return v4::make(x, y, z, 1.0f); }
 
 	inline v4::Array const& v4::ToArray() const       { return reinterpret_cast<Array const&>(*this); }
 	inline v4::Array&       v4::ToArray()             { return reinterpret_cast<Array&>      (*this); }
@@ -91,25 +82,54 @@ namespace pr
 	{
 		return pr::v3::make(ToArray()[i0], ToArray()[i1], ToArray()[i2]);
 	}
-	inline v4& Zero(v4& v)
+
+	// Min/Max/Clamp
+	inline v4 Max(v4 const& lhs, v4 const& rhs)
 	{
-		return v = pr::v4Zero;
+		#if PR_MATHS_USE_INTRINSICS
+		return v4::make(_mm_max_ps(lhs.vec, rhs.vec));
+		#else
+		return v4::make(Max(lhs.x,rhs.x), Max(lhs.y,rhs.y), Max(lhs.z,rhs.z), Max(lhs.w,rhs.w)); }
+		#endif
 	}
+	inline v4 Min(v4 const& lhs, v4 const& rhs)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4::make(_mm_min_ps(lhs.vec,rhs.vec));
+		#else
+		return v4::make(Min(lhs.x,rhs.x), Min(lhs.y,rhs.y), Min(lhs.z,rhs.z), Min(lhs.w,rhs.w));
+		#endif
+	}
+	inline v4 Clamp(v4 const& x, v4 const& mn, v4 const& mx)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4::make(_mm_max_ps(mn.vec, _mm_min_ps(mx.vec, x.vec)));
+		#else
+		return v4::make(Clamp(x.x,mn.x,mx.x), Clamp(x.y,mn.y,mx.y), Clamp(x.z,mn.z,mx.z), Clamp(x.w,mn.w,mx.w));
+		#endif
+	}
+	inline v4 Clamp(v4 const& x, float mn, float mx)
+	{
+		v4 mn_ = {mn,mn,mn,mn};
+		v4 mx_ = {mx,mx,mx,mx};
+		return Clamp(x, mn_, mx_);
+	}
+
 	inline bool IsFinite(v4 const& v)
 	{
 		return IsFinite(v.x) && IsFinite(v.y) && IsFinite(v.z) && IsFinite(v.w);
 	}
-	inline bool  IsFinite(v4 const& v, float max_value)
+	inline bool IsFinite(v4 const& v, float max_value)
 	{
 		return IsFinite(v.x, max_value) && IsFinite(v.y, max_value) && IsFinite(v.z, max_value) && IsFinite(v.w, max_value);
 	}
 	inline int SmallestElement2(v4 const& v)
 	{
-		return SmallestElement2(cast_v2(v));
+		return SmallestElement2(v.xy);
 	}
 	inline int SmallestElement3(v4 const& v)
 	{
-		return SmallestElement3(cast_v3(v));
+		return SmallestElement3(v.xyz);
 	}
 	inline int SmallestElement4(v4 const& v)
 	{
@@ -118,23 +138,61 @@ namespace pr
 	}
 	inline int LargestElement2(v4 const& v)
 	{
-		return LargestElement2(cast_v2(v));
+		return LargestElement2(v.xy);
 	}
 	inline int LargestElement3(v4 const& v)
 	{
-		return LargestElement3(cast_v3(v));
+		return LargestElement3(v.xyz);
 	}
 	inline int LargestElement4(v4 const& v)
 	{
 		int i = (v.x < v.y), j = (v.z < v.w) + 2;
 		return (v[i] < v[j]) ? j : i;
 	}
+	inline float Length2Sq(v4 const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0x31).m128_f32[0];
+		#else
+		return Len2Sq(v.x, v.y);
+		#endif
+	}
+	inline float Length3Sq(v4 const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0x71).m128_f32[0];
+		#else
+		return Len3Sq(v.x, v.y, v.z);
+		#endif
+	}
+	inline float Length4Sq(v4 const& v)
+	{
+		#if PR_MATHS_USE_INTRINSICS
+		return _mm_dp_ps(v.vec, v.vec, 0xF1).m128_f32[0];
+		#else
+		return Len4Sq(v.x, v.y, v.z, v.w);
+		#endif
+	}
+	inline float Length2(v4 const& x)
+	{
+		return Sqrt(Length2Sq(x));
+	}
+	inline float Length3(v4 const& x)
+	{
+		return Sqrt(Length3Sq(x));
+	}
+	inline float Length4(v4 const& x)
+	{
+		return Sqrt(Length4Sq(x));
+	}
 	inline v4 Normalise3(v4 const& v)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		v4 vec;
-		dxv4(vec) = DirectX::XMVector3Normalize(v.vec);
+		v4 vec; dxv4(vec) = DirectX::XMVector3Normalize(v.vec);
 		return vec;
+		#elif PR_MATHS_USE_INTRINSICS
+		auto len = _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0x7F)); // _mm_rsqrt_ps isn't accurate enough
+		return v4::make(_mm_div_ps(v.vec, len));
 		#else
 		return v / Length3(v);
 		#endif
@@ -142,9 +200,11 @@ namespace pr
 	inline v4 Normalise4(v4 const& v)
 	{
 		#if PR_MATHS_USE_DIRECTMATH
-		v4 vec;
-		dxv4(vec) = DirectX::XMVector4Normalize(v.vec);
+		v4 vec; dxv4(vec) = DirectX::XMVector4Normalize(v.vec);
 		return vec;
+		#elif PR_MATHS_USE_INTRINSICS
+		auto len = _mm_sqrt_ps(_mm_dp_ps(v.vec, v.vec, 0xFF));
+		return v4::make(_mm_div_ps(v.vec, len));
 		#else
 		return v / Length4(v);
 		#endif
@@ -163,19 +223,40 @@ namespace pr
 	}
 	inline v4 Sqr(v4 const& v)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4::make(_mm_mul_ps(v.vec, v.vec));
+		#else
 		return v4::make(Sqr(v.x), Sqr(v.y), Sqr(v.z), Sqr(v.w));
+		#endif
 	}
 	inline float Dot3(v4 const& lhs, v4 const& rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto r = _mm_dp_ps(lhs.vec, rhs.vec, 0x71);
+		return r.m128_f32[0];
+		#else
 		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+		#endif
 	}
 	inline float Dot4(v4 const& lhs, v4 const& rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		auto r = _mm_dp_ps(lhs.vec, rhs.vec, 0xF1);
+		return r.m128_f32[0];
+		#else
 		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+		#endif
 	}
 	inline v4 Cross3(v4 const& lhs, v4 const& rhs)
 	{
+		#if PR_MATHS_USE_INTRINSICS
+		return v4::make(_mm_sub_ps(
+			_mm_mul_ps(_mm_shuffle_ps(lhs.vec, lhs.vec, _MM_SHUFFLE(3, 0, 2, 1)), _mm_shuffle_ps(rhs.vec, rhs.vec, _MM_SHUFFLE(3, 1, 0, 2))), 
+			_mm_mul_ps(_mm_shuffle_ps(lhs.vec, lhs.vec, _MM_SHUFFLE(3, 1, 0, 2)), _mm_shuffle_ps(rhs.vec, rhs.vec, _MM_SHUFFLE(3, 0, 2, 1)))
+			));
+		#else
 		return v4::make(lhs.y*rhs.z - lhs.z*rhs.y, lhs.z*rhs.x - lhs.x*rhs.z, lhs.x*rhs.y - lhs.y*rhs.x, 0.0f);
+		#endif
 	}
 	inline float Triple3(v4 const& a, v4 const& b, v4 const& c)
 	{
@@ -192,7 +273,7 @@ namespace pr
 	inline v4 SLerp3(v4 const& src, v4 const& dest, float frac)
 	{
 		v4 vec = src;
-		cast_v3(vec) = SLerp3(cast_v3(src), cast_v3(dest), frac);
+		vec.xyz = SLerp3(src.xyz, dest.xyz, frac);
 		return vec;
 	}
 
@@ -255,13 +336,13 @@ namespace pr
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
 		m4x4 cpm_x_i2wR = to - from;
-		m4x4 w2iR = GetTranspose3x3(from); Zero(w2iR.pos);
+		m4x4 w2iR = GetTranspose3x3(from); w2iR.pos = v4Zero;
 		m4x4 cpm = cpm_x_i2wR * w2iR;
 		return v4::make(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}
 	inline float CosAngle3(v4 const& lhs, v4 const& rhs)
 	{
-		return CosAngle3(cast_v3(lhs), cast_v3(rhs));
+		return CosAngle3(lhs.xyz, rhs.xyz);
 	}
 }
 
@@ -284,35 +365,60 @@ namespace pr
 				PR_CHECK(V0.w, VX0.f[3]);
 			}
 			#endif
-			{// Operations
+			{
+				v4 a; a.set(1,2,-3,-4);
+				PR_CHECK(a.x, +1);
+				PR_CHECK(a.y, +2);
+				PR_CHECK(a.z, -3);
+				PR_CHECK(a.w, -4);
+			}
+			{
+				v4 a = v4::make(3,-1,2,-4);
+				v4 b = {-2,-1,4,2};
+				PR_CHECK(Max(a,b), v4::make(3,-1,4,2));
+				PR_CHECK(Min(a,b), v4::make(-2,-1,2,-4));
+			}
+			{
+				v4 a = v4::make(3,-1,2,-4);
+				PR_CHECK(Length2Sq(a), a.x*a.x + a.y*a.y);
+				PR_CHECK(Length2(a), sqrt(Length2Sq(a)));
+				PR_CHECK(Length3Sq(a), a.x*a.x + a.y*a.y + a.z*a.z);
+				PR_CHECK(Length3(a), sqrt(Length3Sq(a)));
+				PR_CHECK(Length4Sq(a), a.x*a.x + a.y*a.y + a.z*a.z + a.w*a.w);
+				PR_CHECK(Length4(a), sqrt(Length4Sq(a)));
+			}
+			{
+				v4 a = v4::make(3,-1,2,-4);
+				v4 b = Normalise3(a);
+				v4 c = Normalise4(a);
+				PR_CHECK(Length3(b), 1.0f);
+				PR_CHECK(b.w, a.w / Length3(a));
+				PR_CHECK(sqrt(c.x*c.x + c.y*c.y + c.z*c.z + c.w*c.w), 1.0f);
+				PR_CHECK(IsNormal3(a), false);
+				PR_CHECK(IsNormal4(a), false);
+				PR_CHECK(IsNormal3(b), true);
+				PR_CHECK(IsNormal4(c), true);
+			}
+			{
 				PR_CHECK(IsZero3(pr::v4::make(0,0,0,1)), true);
 				PR_CHECK(IsZero4(pr::v4Zero), true);
 				PR_CHECK(FEqlZero3(pr::v4::make(1e-20f,0,0,1)), true);
 				PR_CHECK(FEqlZero4(pr::v4::make(1e-20f,0,0,1e-19f)), true);
+			}
+			{
+				v4 a = {-2,  4,  2,  6};
+				v4 b = { 3, -5,  2, -4};
+				m4x4 a2b = CrossProductMatrix4x4(a);
 
-				v4 V1 = {1,2,3,4};
-				float len1_3 = (float)::sqrt(1*1 + 2*2 + 3*3);
-				float len1_4 = (float)::sqrt(1*1 + 2*2 + 3*3 + 4*4);
-
-				PR_CLOSE(Length3(V1), len1_3, pr::maths::tiny);
-				PR_CLOSE(Length4(V1), len1_4, pr::maths::tiny);
-				PR_CHECK(IsNormal3(V1), false);
-				PR_CHECK(IsNormal4(V1), false);
-
-				v4 V2 = Normalise3(V1);
-				PR_CLOSE(Length3(V2) , 1.0f, pr::maths::tiny);
-				PR_CHECK(Length4(V2) > 1.0f, true);
-
-				v4 V3 = Normalise4(V1);
-				PR_CHECK(Length3(V3) < 1.0f, true);
-				PR_CLOSE(Length4(V3) , 1.0f, pr::maths::tiny);
-
-				V1.set(-2,  4,  2,  6);
-				V2.set( 3, -5,  2, -4);
-				m4x4 a2b = CrossProductMatrix4x4(V1);
-				v4 V4 = a2b * V2; V4;
-				V3 = Cross3(V1, V2);
-				PR_CHECK(FEql3(V4, V3), true);
+				v4 c = Cross3(a,b);
+				v4 d = a2b * b;
+				PR_CHECK(FEql3(c,d), true);
+			}
+			{
+				v4 a = {-2,  4,  2,  6};
+				v4 b = { 3, -5,  2, -4};
+				PR_CHECK(Dot4(a,b), -46);
+				PR_CHECK(Dot3(a,b), -22);
 			}
 		}
 	}
