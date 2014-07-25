@@ -8,8 +8,8 @@ import UserVars
 try:
 	print(
 		"*************************************************************************\n"
-		"LineDrawer Deploy\n"
-		"Copyright © Rylogic Limited 2014\n"
+		"Cex Deploy\n"
+		"Copyright (c) Rylogic Limited 2014\n"
 		"*************************************************************************")
 
 	Tools.CheckVersion(1)
@@ -17,15 +17,15 @@ try:
 	# Use the everything sln so that dependent projects get built as well
 	sln = UserVars.proj_dir + r"\everything.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
-		"linedrawer",
-		]
-	configs = [
-		"release",
-		"debug",
+		"cex",
 		]
 	platforms = [
 		"x64",
 		"x86",
+		]
+	configs = [
+		"release",
+		"debug",
 		]
 
 	# Build the project
@@ -34,9 +34,9 @@ try:
 
 	# Deploy
 	files = [
-		"linedrawer.exe",
+		"cex.exe",
 		]
-	Tools.DeployToBin("linedrawer", files, platforms, "release", CopyForArch=True)
+	Tools.DeployToBin("cex", files, platforms, "release", CopyForArch=True)
 
 	Tools.OnSuccess()
 

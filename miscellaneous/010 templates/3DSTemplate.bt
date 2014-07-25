@@ -6,271 +6,175 @@ struct Face { ushort i[3], flags; };
 
 struct UnknownChunk
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    FSeek(fpos + len);
+	uint length;
+	FSeek(fpos + length);
 };
 struct Flag
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    FSeek(fpos + len);
+	uint length;
+	FSeek(fpos + length);
 };
 struct Float
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    float value;    
-    FSeek(fpos + len);
+	uint length;
+	float value;    
+	FSeek(fpos + length);
 };
 struct UShort
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    ushort value;    
-    FSeek(fpos + len);
+	uint length;
+	ushort value;    
+	FSeek(fpos + length);
 };
 struct ColorF
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    float r,g,b;
-    FSeek(fpos + len);
+	uint length;
+	float r,g,b;
+	FSeek(fpos + length);
 };
 struct Color24
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    byte r <format=hex>;
-    byte g <format=hex>;
-    byte b <format=hex>;
-    FSeek(fpos + len);
+	uint length;
+	byte r <format=hex>;
+	byte g <format=hex>;
+	byte b <format=hex>;
+	FSeek(fpos + length);
 };
-struct Container
+struct Chunk
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
+	uint length;
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
 };
-struct IntPercentage
+struct CStr
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    ushort percentage;
-    FSeek(fpos + len);
-};
-struct FloatPercentage
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    float percentage;
-    FSeek(fpos + len);
-};
-struct MasterScale
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	float scale;
-    FSeek(fpos + len);
-};
-struct M3DVersion
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	ushort version;
-    FSeek(fpos + len);
-};
-struct MeshVersion
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	ushort version;
-    FSeek(fpos + len);
+	uint length;
+	string str;
+	FSeek(fpos + length);
 };
 struct Camera
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
+	uint length;
 	Vec3 pos;
 	Vec3 tangent;
 	float bank_angle;
 	float focus;
-    FSeek(fpos + len);
+	FSeek(fpos + length);
 };
 struct CameraRange
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    float near,far;
-    FSeek(fpos + len);
+	uint length;
+	float near,far;
+	FSeek(fpos + length);
 };
 struct ObjectBlock
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
+	uint length;
 	string name;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct TriMesh
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
 };
 struct VertexList
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
+	uint length;
 	ushort count;
 	Vec3 point[count];
-    FSeek(fpos + len);
+	FSeek(fpos + length);
 };
 struct FaceList
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    ushort count;
-    Face face[count];
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
+	uint length;
+	ushort count;
+	Face face[count];
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
 };
 struct MaterialGroup
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    string material_name;
-    ushort count;
-    ushort facenum[count];
-    FSeek(fpos + len);
+	uint length;
+	string material_name;
+	ushort count;
+	ushort facenum[count];
+	FSeek(fpos + length);
 };
 struct SmoothingGroup
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    uint grouplist[(len-6)/4];
-    FSeek(fpos + len);
+	uint length;
+	uint grouplist[(length-6)/4];
+	FSeek(fpos + length);
 };
 struct TexVertList
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
+	uint length;
 	ushort count;
-	Vec2 point[count];	
-    FSeek(fpos + len);
+	Vec2 point[count];
+	FSeek(fpos + length);
 };
 struct MeshMatrix
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    Vec3 x,y,z,pos;
-    FSeek(fpos + len);
-};
-struct MaterialBlock
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct MaterialName
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	string name;
-    FSeek(fpos + len);
-};
-struct MaterialColour
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct Percentage
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct MaterialFlag
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-	SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct M3DEditor
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
-};
-struct KeyFramer
-{
-    local int64 fpos = FTell();
-	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
+	uint length;
+	Vec3 x,y,z,pos;
+	FSeek(fpos + length);
 };
 struct KeyFrameHeader
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    ushort version;
-    string filename;
-    ushort anim_len;
-    FSeek(fpos + len);
+	uint length;
+	ushort version;
+	string filename;
+	ushort anim_len;
+	FSeek(fpos + length);
 };
 struct KeyFrameSeg
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    ushort start,end;
-    FSeek(fpos + len);
+	uint length;
+	ushort start,end;
+	FSeek(fpos + length);
 };
 struct MainChunk
 {
-    local int64 fpos = FTell();
+	local int64 fpos = FTell();
 	ushort id <format=hex>;
-	uint len;
-    SubChunks(fpos + len);
-    FSeek(fpos + len);
+	uint length;
+	SubChunks(fpos + length);
+	FSeek(fpos + length);
 };
 
 void SubChunks(uint end)
@@ -279,58 +183,59 @@ void SubChunks(uint end)
 	{
 		switch (ReadUShort(FTell()))
 		{
-		case 0x0002: M3DVersion version; break;
-        case 0x0010: ColorF colour; break;
-        case 0x0011: Color24 colour; break;
-        case 0x0012: Color24 colour; break;
-        case 0x0013: ColorF colour; break;
-        case 0x0030: IntPercentage percentage; break;
-        case 0x0031: FloatPercentage percentage; break;
-		case 0x0100: MasterScale scale; break;
-		case 0x3D3D: M3DEditor editor; break;
-		case 0x3D3E: MeshVersion mesh_version; break;
+		case 0x0002: UShort version; break;
+		case 0x0010: ColorF colour; break;
+		case 0x0011: Color24 colour; break;
+		case 0x0012: Color24 colour; break;
+		case 0x0013: ColorF colour; break;
+		case 0x0030: UShort percentage; break;
+		case 0x0031: Float percentage; break;
+		case 0x0100: Float scale; break;
+		case 0x3D3D: Chunk editor; break;
+		case 0x3D3E: UShort mesh_version; break;
 		case 0x4000: ObjectBlock object; break;
-		case 0x4100: TriMesh trimesh; break;
+		case 0x4100: Chunk trimesh; break;
 		case 0x4110: VertexList verts; break;
-        case 0x4120: FaceList faces; break;
-        case 0x4130: MaterialGroup mat_group; break;
-        case 0x4140: TexVertList uvs; break;
-        case 0x4150: SmoothingGroup smoothing_group; break;
-        case 0x4160: MeshMatrix o2p; break;
+		case 0x4120: FaceList faces; break;
+		case 0x4130: MaterialGroup mat_group; break;
+		case 0x4140: TexVertList uvs; break;
+		case 0x4150: SmoothingGroup smoothing_group; break;
+		case 0x4160: MeshMatrix o2p; break;
 		case 0x4700: Camera camera; break;
-        case 0x4720: CameraRange range; break;
-		case 0xAFFF: MaterialBlock material; break;
-		case 0xA000: MaterialName material_name; break;
-		case 0xA010: MaterialColour ambient; break;
-		case 0xA020: MaterialColour diffuse; break;
-		case 0xA030: MaterialColour specular; break;
-        case 0xA040: Percentage shininess; break;
-        case 0xA041: Percentage shin2pct; break;
-        case 0xA042: Percentage shin3pct; break;
-        case 0xA050: Percentage transparency; break;
-        case 0xA052: Percentage mat_xpfall; break;
-        case 0xA053: Percentage mat_reflection_blur; break;
-        case 0xA080: MaterialFlag self_illum; break;
-        case 0xA081: MaterialFlag mat_two_side; break;
-        case 0xA082: MaterialFlag mat_decal; break;
-        case 0xA083: MaterialFlag mat_additive; break;
-        case 0xA084: Percentage mat_self_illum_pc; break;
-        case 0xA085: MaterialFlag mat_wire; break;
-        case 0xA086: MaterialFlag mat_supersample; break;
-        case 0xA087: Float mat_wiresize; break;
-        case 0xA088: MaterialFlag mat_face_map; break;
-        case 0xA08a: MaterialFlag mat_xpfallin; break;
-        case 0xA08c: MaterialFlag mat_phong_soft; break;
-        case 0xA08e: MaterialFlag mat_wireabs; break;
-        case 0xA100: UShort shading_value; break;
-		case 0xB000: KeyFramer keyframer; break;
-        case 0xB002: Container object_node_tag; break;
-        case 0xB008: KeyFrameSeg kf_seg; break;
-        case 0xB009: UShort kf_currtime; break;
-        case 0xB00A: KeyFrameHeader kf_header; break;
+		case 0x4720: CameraRange range; break;
+		case 0x4d4d: Chunk main; break;
+		case 0xAFFF: Chunk material; break;
+		case 0xA000: CStr material_name; break;
+		case 0xA010: Chunk ambient; break;
+		case 0xA020: Chunk diffuse; break;
+		case 0xA030: Chunk specular; break;
+		case 0xA040: Chunk shininess; break;
+		case 0xA041: Chunk shin2pct; break;
+		case 0xA042: Chunk shin3pct; break;
+		case 0xA050: Chunk transparency; break;
+		case 0xA052: Chunk mat_xpfall; break;
+		case 0xA053: Chunk mat_reflection_blur; break;
+		case 0xA080: Chunk self_illum; break;
+		case 0xA081: Chunk mat_two_side; break;
+		case 0xA082: Chunk mat_decal; break;
+		case 0xA083: Chunk mat_additive; break;
+		case 0xA084: Chunk mat_self_illum_pc; break;
+		case 0xA085: Chunk mat_wire; break;
+		case 0xA086: Chunk mat_supersample; break;
+		case 0xA087: Float mat_wiresize; break;
+		case 0xA088: Chunk mat_face_map; break;
+		case 0xA08a: Chunk mat_xpfallin; break;
+		case 0xA08c: Chunk mat_phong_soft; break;
+		case 0xA08e: Chunk mat_wireabs; break;
+		case 0xA100: UShort shading_value; break;
+		case 0xB000: Chunk keyframer; break;
+		case 0xB002: Chunk object_node_tag; break;
+		case 0xB008: KeyFrameSeg kf_seg; break;
+		case 0xB009: UShort kf_currtime; break;
+		case 0xB00A: KeyFrameHeader kf_header; break;
 		default: UnknownChunk chunk; break;
 		}
 	}
 }
 
-MainChunk main;
+SubChunks(FileSize());

@@ -174,10 +174,10 @@ def UpdateFile(filepath, regex, repl, all=False):
 def EnumFiles(root):
 	for dirname, dirnames, filenames in os.walk(root):
 		# Return the files
-		for filename in filenames:
-			yield os.path.join(dirname, filename)
 		# We could remove entries from 'dirnames' to
 		# prevent recursion into those folders...
+		for filename in filenames:
+			yield os.path.join(dirname, filename)
 
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
@@ -201,3 +201,42 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 def TouchFile(fname, times=None):
 	with open(fname, mode='a') as f:
 		os.utime(fname, times=times)
+
+# Invoke MSBuild
+def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
+	projs = ";".join(projects)
+	procs = []
+	for platform in platforms:
+		for config in configs:
+			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
+			if parallel:
+				procs.extend([Tools.Spawn(args, same_window=same_window)])
+			else:
+				print("\n *** " + platform + " - " + config + " ***\n")
+				Exec(args)
+	
+	# Wait for all processes to finish, and check for error return codes
+	errors = False
+	for proc in procs:
+		proc.wait()
+		errors |= proc.returncode != 0
+	
+	print("\n")
+	return not errors
+
+# Deploy a bin tool
+def DeployToBin(appname, files, platforms, config, CopyForArch=False):
+	print("Deploying...")
+	for platform in platforms:
+		srcdir = UserVars.root + "\\obj\\v120\\" + appname + "\\" + platform + "\\" + config
+		dstdir = UserVars.root + "\\bin\\" + appname + "\\" + platform
+		for file in files:
+			Copy(srcdir+"\\"+file, dstdir+"\\"+file)
+	
+	# If this is a single file tool, copy the version for this platform to \bin
+	if CopyForArch:
+		srcdir = UserVars.root + "\\bin\\" + appname + "\\" + UserVars.arch
+		for file in files:
+			Copy(srcdir+"\\"+file, UserVars.root+"\\bin\\"+file)
+
+# End
