@@ -39,7 +39,7 @@ namespace pr
 			PR_RDR_DEFINE_INSTANCE(Instance, PR_RDR_INST);
 			#undef PR_RDR_INST
 
-			typedef pr::Array<pr::rdr::Texture2DPtr> TexCont;
+			typedef pr::vector<pr::rdr::Texture2DPtr> TexCont;
 
 			Instance m_inst;  // The skybox instance
 			TexCont  m_tex;   // The textures used in the skybox

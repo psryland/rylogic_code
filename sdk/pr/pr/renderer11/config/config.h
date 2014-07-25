@@ -20,7 +20,7 @@ namespace pr
 		// format needed.
 		struct SystemConfig
 		{
-			typedef pr::Array<DisplayMode> ModeCont;
+			typedef pr::vector<DisplayMode> ModeCont;
 			
 			// An output of a graphics adapter
 			struct Output
@@ -34,7 +34,7 @@ namespace pr
 				void GetDisplayModes(DXGI_FORMAT format, ModeCont& modes) const;
 				DisplayMode FindClosestMatchingMode(DisplayMode const& ideal) const;
 			};
-			typedef pr::Array<Output> OutputCont;
+			typedef pr::vector<Output> OutputCont;
 			
 			// A graphics adapter on the system
 			struct Adapter
@@ -45,7 +45,7 @@ namespace pr
 				
 				Adapter(D3DPtr<IDXGIAdapter>& adapter);
 			};
-			typedef pr::Array<Adapter> AdapterCont;
+			typedef pr::vector<Adapter> AdapterCont;
 			
 			AdapterCont m_adapters;
 			

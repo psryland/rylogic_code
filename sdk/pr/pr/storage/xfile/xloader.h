@@ -63,14 +63,14 @@ namespace pr
 			std::string                 m_xfilepath;
 			D3DPtr<ID3DXFile>           m_d3d_xfile;
 			TGUIDSet const*             m_partial_load_set;
-			pr::Array<v4>               m_vertex;
-			pr::Array<v4>               m_normal;
-			pr::Array<Colour32>         m_colour;
-			pr::Array<v2>               m_tex_coord;
-			pr::Array<Material>         m_material;
-			pr::Array<impl::XFace>      m_face;
-			pr::Array<impl::XVertex>    m_x_vertex;
-			pr::Array<impl::XVertex*>   m_px_vertex;
+			pr::vector<v4>               m_vertex;
+			pr::vector<v4>               m_normal;
+			pr::vector<Colour32>         m_colour;
+			pr::vector<v2>               m_tex_coord;
+			pr::vector<Material>         m_material;
+			pr::vector<impl::XFace>      m_face;
+			pr::vector<impl::XVertex>    m_x_vertex;
+			pr::vector<impl::XVertex*>   m_px_vertex;
 
 			bool	IsInLoadSet(GUID guid) const;
 			void	LoadFrame				(D3DPtr<ID3DXFileData> data, Geometry& geometry);

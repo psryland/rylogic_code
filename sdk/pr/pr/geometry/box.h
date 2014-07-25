@@ -165,7 +165,7 @@ namespace pr
 		Props BoxList(std::size_t num_boxes, TVertCIter positions, v4 const& rad, std::size_t num_colours, Colour32 const* colours, TVertIter out_verts, TIdxIter out_indices)
 		{
 			TVertCIter pos = positions;
-			std::vector<v4> points(8*num_boxes);
+			pr::vector<v4,64> points(8*num_boxes);
 			v4* pt = &points[0];
 			for (std::size_t i = 0; i != num_boxes; ++i, ++pos)
 			{

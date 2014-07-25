@@ -20,7 +20,7 @@
 #include "pr/common/events.h"
 #include "pr/common/allocator.h"
 #include "pr/container/tri_table.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/container/stack.h"
 #include "pr/maths/maths.h"
 #include "pr/meta/prime_gtreq.h"

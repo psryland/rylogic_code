@@ -21,7 +21,7 @@
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/user_data.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 #include "pr/str/prstdstring.h"
 #include "pr/script/reader.h"
@@ -39,7 +39,7 @@ namespace pr
 		// Forwards
 		struct ObjectAttributes;
 		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
-		typedef pr::Array<LdrObjectPtr, 8> ObjectCont;
+		typedef pr::vector<LdrObjectPtr, 8> ObjectCont;
 		typedef pr::string<char, 32> string32;
 
 		static HTREEITEM const INVALID_TREE_ITEM =  0;

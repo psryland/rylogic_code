@@ -73,8 +73,8 @@ namespace pr
 				// Modify a mesh to be just verts and faces
 				namespace reduce_mesh
 				{
-					typedef pr::Array<v4>			TVert;
-					typedef pr::Array<std::size_t>	TIdx;
+					typedef pr::vector<v4>			TVert;
+					typedef pr::vector<std::size_t>	TIdx;
 					struct Dict
 					{
 						TVert*	m_verts;

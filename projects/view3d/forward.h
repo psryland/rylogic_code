@@ -34,7 +34,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/assert.h"
 #include "pr/common/new.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
 #include "pr/script/reader.h"
 #include "pr/script/embedded_lua.h"

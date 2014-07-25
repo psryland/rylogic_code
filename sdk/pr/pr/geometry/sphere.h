@@ -43,10 +43,10 @@ namespace pr
 				Adjacent() {}
 				Adjacent(VIndex adj, VIndex child) :m_adjacent(adj) ,m_child(child) {}
 			};
-			typedef pr::Array<GeosphereVert, 1024> TVertCont;
-			typedef pr::Array<GeosphereFace, 1024> TFaceCont;
-			typedef pr::Array<Adjacent> TAdjacent;          // A collection of adjacent vertices
-			typedef pr::Array<TAdjacent> TVertexLookupCont; // A map from vertex -> adjacent vertices
+			typedef pr::vector<GeosphereVert, 1024> TVertCont;
+			typedef pr::vector<GeosphereFace, 1024> TFaceCont;
+			typedef pr::vector<Adjacent> TAdjacent;          // A collection of adjacent vertices
+			typedef pr::vector<TAdjacent> TVertexLookupCont; // A map from vertex -> adjacent vertices
 
 			// A struct to hold all of the generation data
 			struct CreateGeosphereData
@@ -88,9 +88,9 @@ namespace pr
 				auto& adj1 = data.m_adjacent[parent1];
 
 				// Try and find 'parent1' in 'adj0' or 'parent0' in 'adj1'
-				for (auto i = begin(adj0), iend = end(adj0); i != iend; ++i)
+				for (auto i = std::begin(adj0), iend = std::end(adj0); i != iend; ++i)
 					if (i->m_adjacent == parent1) return i->m_child;
-				for (auto i = begin(adj1), iend = end(adj1); i != iend; ++i)
+				for (auto i = std::begin(adj1), iend = std::end(adj1); i != iend; ++i)
 					if (i->m_adjacent == parent0) return i->m_child;
 
 				// If no child is found, add one
@@ -197,11 +197,11 @@ namespace pr
 			PR_ASSERT(PR_DBG, faces.size() == icount/3, "Number of faces in geosphere calculated incorrectly");
 
 			// Output the verts and indices
-			for (auto i = begin(verts), iend = end(verts); i != iend; ++i)
+			for (auto i = std::begin(verts), iend = std::end(verts); i != iend; ++i)
 			{
 				SetPCNT(*out_verts++, i->m_vert, colour, i->m_norm, v2::make(i->m_ang, (1.0f - i->m_norm.z) * 0.5f));
 			}
-			for (auto i = begin(faces), iend = end(faces); i != iend; ++i)
+			for (auto i = std::begin(faces), iend = std::end(faces); i != iend; ++i)
 			{
 				typedef decltype(impl::remove_ref(*out_indices)) VIdx;
 				*out_indices++ = checked_cast<VIdx>(i->m_vidx[0]);

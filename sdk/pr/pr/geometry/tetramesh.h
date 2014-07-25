@@ -32,7 +32,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/profile.h"
 #include "pr/common/profilemanager.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/maths/maths.h"
 
 #define PR_DBG_GEOM_TETRAMESH 0 //PR_DBG
@@ -93,9 +93,9 @@ namespace pr
 			TSize	m_num_tetra;		// The length of the array pointed to by 'm_tetra'
 		};
 
-		typedef pr::Array<VIndex> TVIndices;
-		typedef pr::Array<TIndex> TTIndices;
-		typedef pr::Array<Face>	TFaces;
+		typedef pr::vector<VIndex> TVIndices;
+		typedef pr::vector<TIndex> TTIndices;
+		typedef pr::vector<Face>	TFaces;
 
 		// Interface for creating polytopes from the decomposition
 		struct IPolytopeGenerator

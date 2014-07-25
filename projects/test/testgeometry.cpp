@@ -96,7 +96,7 @@ namespace TestGeometry
 
 	void TestSkin()
 	{
-		pr::Array<v4> verts(10);
+		pr::vector<v4> verts(10);
 		for (int i = 0; i != 10; ++i) verts[0] = v4Random3(0.5f, 2.0f, 1.0f);
 		
 		Geometry skin;

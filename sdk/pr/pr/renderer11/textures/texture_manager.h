@@ -41,7 +41,7 @@ namespace pr
 			D3DPtr<ID2D1Factory>       m_d2dfactory;
 			TextureLookup              m_lookup_tex;     // A map from texture id to existing texture instances
 			TexFileLookup              m_lookup_fname;   // A map from hash of filepath to an existing dx texture
-			pr::Array<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
+			pr::vector<Texture2DPtr>    m_stock_textures; // A collection of references to the stock textures
 			pr::GdiPlus                m_gdiplus;
 
 			TextureManager(TextureManager const&); // no copying

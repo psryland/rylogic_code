@@ -19,7 +19,7 @@ namespace pr
 		// A preprocessor macro definition
 		struct PPMacro
 		{
-			typedef pr::Array<string,5> Params;
+			typedef pr::vector<string,5> Params;
 
 			pr::hash::HashValue m_hash;      // The hash of the macro tag
 			string              m_tag;       // The macro tag

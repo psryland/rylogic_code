@@ -25,7 +25,7 @@ namespace sol
 
 		TestModel(pr::Renderer& rdr)
 		{
-			pr::Array<pr::v4> points;
+			pr::vector<pr::v4> points;
 			for (int i = 0; i != 20; ++i)
 				points.push_back(pr::Random4(pr::v4Origin, 5.0f));
 

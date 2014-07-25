@@ -16,7 +16,7 @@ namespace pr
 		// Interface for resolving preprocessor include statements
 		struct IIncludes
 		{
-			pr::Array<string> m_paths; // Search paths for looking up includes
+			pr::vector<string> m_paths; // Search paths for looking up includes
 			bool m_ignore_missing; // Allow missing includes to be ignored
 
 			IIncludes(bool ignore_missing = false) :m_paths() ,m_ignore_missing(ignore_missing) {}

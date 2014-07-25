@@ -313,8 +313,8 @@ namespace pr
 			return;
 		}
 
-		pr::Array<pr::v4, MaxPointsPerSpline, true> raster;
-		pr::Array<float , MaxPointsPerSpline, true> times;
+		pr::vector<pr::v4, MaxPointsPerSpline, true> raster;
+		pr::vector<float , MaxPointsPerSpline, true> times;
 		CreateSplines(points, [&](Spline const& spline, bool last)
 		{
 			raster.resize(0);

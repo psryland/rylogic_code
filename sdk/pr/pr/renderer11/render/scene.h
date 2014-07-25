@@ -28,7 +28,7 @@ namespace pr
 		{
 			// Fixed container of render steps. Doesn't really need to be fixed,
 			// but non-fixed means we need the pr::rdr::Allocator to construct it.
-			typedef pr::Array<RenderStepPtr, 16, true> RenderStepCont;
+			typedef pr::vector<RenderStepPtr, 16, true> RenderStepCont;
 
 			Window*        m_wnd;          // The controlling window
 			SceneView      m_view;         // Represents the camera properties used to project onto the screen

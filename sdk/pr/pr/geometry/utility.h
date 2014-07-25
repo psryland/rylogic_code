@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <cassert>
 #include "pr/geometry/common.h"
-#include "pr/container/quadtree.h"
 
 namespace pr
 {
@@ -98,7 +97,7 @@ namespace pr
 				static_assert((sizeof(Face) % sizeof(pr::v4)) == 0, "Face size not a multiple of pr::v4 alignment");
 				static_assert((sizeof(Vert) % sizeof(pr::v4)) == 0, "Vert size not a multiple of pr::v4 alignment");
 
-				std::vector<Face> m_faces;
+				pr::vector<Face> m_faces;
 				std::deque<Vert> m_verts;
 				std::deque<Edge> m_edge_alloc;
 
@@ -341,13 +340,6 @@ namespace pr
 			for (std::size_t i = 0; i != num_indices; ++i, ++ib)
 				SetN(*ib, Normalise3IfNonZero(GetN(*ib)));
 		}
-
-		// Remove degenerate verts
-		template <typename TVertCIter, typename TIdxCIter, typename TIdxIter>
-		void RemoveDegenerateVerts(size_t num_verts, TVertCIter verts, TIdxCIter indices, BBox const& bbox, TIdxIter iout, float tol = 1.0f / (1 << 8))
-		{
-		//	pr::QuadTree<> tree;
-		}
 	}
 }
 
@@ -425,32 +417,6 @@ namespace pr
 					break;
 				}
 			}
-		}
-		PRUnitTest(pr_geometry_utility_removedegenerates)
-		{
-			//using namespace pr::geometry;
-			//struct Vert :pr::AlignTo<16>
-			//{
-			//	pr::v4 m_pos;
-			//	pr::v4 m_norm;
-
-			//	Vert(){}
-			//	Vert(pr::v4 const& pos, pr::v4 const& norm) :m_pos(pos) ,m_norm(norm) {}
-			//};
-			//Vert verts[] =
-			//{
-			//	Vert(pr::v4::make(0.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-			//	Vert(pr::v4::make(1.0f, 0.0f, 0.0f, 1.0f), pr::v4Zero),
-			//	Vert(pr::v4::make(1.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
-			//	Vert(pr::v4::make(0.0f, 1.0f, 0.0f, 1.0f), pr::v4Zero),
-			//};
-			//int faces[] =
-			//{
-			//	0, 1, 2,
-			//	0, 2, 3,
-			//};
-
-			//RemoveDegenerateVerts()
 		}
 	}
 }

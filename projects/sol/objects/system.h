@@ -14,7 +14,7 @@ namespace sol
 	// A container for stars, planets, moons, etc
 	struct System
 	{
-		pr::Array<AstronomicalBody> m_bodies;
+		pr::vector<AstronomicalBody> m_bodies;
 		System(int seed);
 	
 	private:

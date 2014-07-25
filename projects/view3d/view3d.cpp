@@ -858,8 +858,8 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	// Create buffers to be filled by the user callback
 	auto vrange = model->m_vrange;
 	auto irange = model->m_irange;
-	pr::Array<View3DVertex> verts   (vrange.size());
-	pr::Array<pr::uint16>   indices (irange.size());
+	pr::vector<View3DVertex> verts   (vrange.size());
+	pr::vector<pr::uint16>   indices (irange.size());
 
 	// Get default values for the topo, geom, and material
 	auto model_type = EView3DPrim::Invalid;

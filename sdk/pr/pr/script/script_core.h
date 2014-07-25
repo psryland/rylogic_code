@@ -15,7 +15,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/expr_eval.h"
 #include "pr/common/exception.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/container/stack.h"
 #include "pr/container/queue.h"
 #include "pr/str/prstring.h"
@@ -162,11 +162,12 @@ namespace pr
 		struct Exception :pr::Exception<pr::script::EResult>
 		{
 			Loc m_loc;
+			std::string m_msg;
 
 			Exception() :pr::Exception<EResult>() ,m_loc() {}
-			Exception(EResult result, Loc const& loc, char const* msg) :pr::Exception<EResult>(result, msg) ,m_loc(loc) {}
-			Exception(EResult result, Loc const& loc, string const& msg) :pr::Exception<EResult>(result, msg.c_str()) ,m_loc(loc) {}
-			string msg() const             { return ErrMsg(code(), what(), loc()); }
+			Exception(EResult result, Loc const& loc, char const* msg)   :pr::Exception<EResult>(result, msg)         ,m_loc(loc) ,m_msg(ErrMsg(code(), msg        , loc)) {}
+			Exception(EResult result, Loc const& loc, string const& msg) :pr::Exception<EResult>(result, msg.c_str()) ,m_loc(loc) ,m_msg(ErrMsg(code(), msg.c_str(), loc)) {}
+			char const* what() const override { return m_msg.c_str(); }
 			virtual Loc const& loc() const { return m_loc; }
 		};
 

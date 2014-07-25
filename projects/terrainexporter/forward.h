@@ -66,17 +66,17 @@ namespace pr
 			bool operator () (Edge const* lhs, Edge const* rhs) const; // In Edge.h
 		};
 
-		typedef pr::Array<pr::uint>			TVertDict;
-		typedef pr::Array<Plane>			TPlaneVec;
-		typedef pr::Array<Vertex>			TVertVec;
-		typedef pr::Array<Edge>				TEdgeVec;
-		typedef pr::Array<Edge*>			TEdgePtrVec;
-		typedef pr::Array<Edge const*>		TEdgeCPtrVec;
+		typedef pr::vector<pr::uint>			TVertDict;
+		typedef pr::vector<Plane>			TPlaneVec;
+		typedef pr::vector<Vertex>			TVertVec;
+		typedef pr::vector<Edge>				TEdgeVec;
+		typedef pr::vector<Edge*>			TEdgePtrVec;
+		typedef pr::vector<Edge const*>		TEdgeCPtrVec;
 		typedef std::set<Edge const*, Pred>	TEdgeCPtrSet;
 		typedef std::multiset<Edge>			TEdgeSet;
-		typedef pr::Array<Face>				TFaceVec;
-		typedef pr::Array<Face*>			TFacePtrVec;
-		typedef pr::Array<Face const*>		TFaceCPtrVec;
+		typedef pr::vector<Face>				TFaceVec;
+		typedef pr::vector<Face*>			TFacePtrVec;
+		typedef pr::vector<Face const*>		TFaceCPtrVec;
 		typedef std::set<Face*, Pred>		TFacePtrSet;
 		typedef std::set<Face const*, Pred>	TFaceCPtrSet;
 
@@ -84,9 +84,9 @@ namespace pr
 		typedef std::list<pr::Proxy<BranchEx> > TBranchExList;
 		typedef std::list<TreeEx>               TTreeExList;
 		typedef std::list<pr::Proxy<CellEx> >   TCellExList;
-		typedef pr::Array<LeafEx const*>        TLeafExCPtrVec;
-		typedef pr::Array<BranchEx const*>      TBranchExCPtrVec;
-		typedef pr::Array<TreeEx const*>        TTreeExCPtrVec;
+		typedef pr::vector<LeafEx const*>        TLeafExCPtrVec;
+		typedef pr::vector<BranchEx const*>      TBranchExCPtrVec;
+		typedef pr::vector<TreeEx const*>        TTreeExCPtrVec;
 
 	}//namespace terrain
 

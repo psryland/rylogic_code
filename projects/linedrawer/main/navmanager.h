@@ -14,7 +14,7 @@ namespace ldr
 	// This object controls all input navigation and manipulation
 	struct NavManager
 	{
-		typedef pr::Array<pr::Camera, 4> ViewCont;
+		typedef pr::vector<pr::Camera, 4> ViewCont;
 
 		pr::Camera& m_camera;           // Camera we're controlling
 		ENavMode    m_ctrl_mode;        // The mode of control, either navigating or manipulating

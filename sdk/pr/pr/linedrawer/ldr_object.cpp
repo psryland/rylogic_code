@@ -24,11 +24,11 @@ namespace pr
 	namespace ldr
 	{
 		typedef pr::hash::HashValue HashValue;
-		typedef pr::Array<pr::v4> VCont;
-		typedef pr::Array<pr::v4> NCont;
-		typedef pr::Array<pr::uint16> ICont;
-		typedef pr::Array<pr::Colour32> CCont;
-		typedef pr::Array<pr::v2> TCont;
+		typedef pr::vector<pr::v4> VCont;
+		typedef pr::vector<pr::v4> NCont;
+		typedef pr::vector<pr::uint16> ICont;
+		typedef pr::vector<pr::Colour32> CCont;
+		typedef pr::vector<pr::v2> TCont;
 
 		// Cache the scratch buffers
 		VCont g_point;
@@ -1153,7 +1153,7 @@ namespace pr
 				p.m_reader.ExtractVector3(spline.w, 1.0f);
 
 				// Generate points for the spline
-				pr::Array<pr::v4, 30, true> raster;
+				pr::vector<pr::v4, 30, true> raster;
 				pr::Raster(spline, raster, 30);
 				m_point.insert(std::end(m_point), std::begin(raster), std::end(raster));
 
@@ -1640,7 +1640,7 @@ namespace pr
 		// ELdrObject::BoxList
 		template <> struct ObjectCreator<ELdrObject::BoxList> :IObjectCreatorTexture
 		{
-			pr::Array<pr::v4, 16> m_location;
+			pr::vector<pr::v4, 16> m_location;
 			pr::v4 m_dim;
 
 			ObjectCreator() :m_location(), m_dim() {}
@@ -2402,20 +2402,20 @@ namespace pr
 	*o2w
 	{
 		// An empty 'o2w' is equivalent to an identity transform
-		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}  // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major
-		*M3x3 {1 0 0  0 1 0  0 0 1}                 // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major
-		*Pos {0 1 0}                                // {x y z}
-		*Align {3 0 1 0}                            // {axis_id dx dy dz } - direction vector, and axis id to align to that direction
-		*Quat {0 1 0 0.3}                           // {x y z s} - quaternion
-		*Rand4x4 {0 1 0 2}                          // {cx cy cz r} - centre position, radius. Random orientation
-		*RandPos {0 1 0 2}                          // {cx cy cz r} - centre position, radius
-		*RandOri                                    // Randomises the orientation of the current transform
-		*Scale {1 1.2 1}                            // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values
-		*Transpose                                  // Transposes the current transform
-		*Inverse                                    // Inverts the current transform
-		*Euler {45 30 60}                           // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw
-		*Normalise                                  // Normalises the lengths of the vectors of the current transform
-		*Orthonormalise                             // Normalises the lengths and makes orthogonal the vectors of the current transform
+		*M4x4 {1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1}    // {xx xy xz xw  yx yy yz yw  zx zy zz zw  wx wy wz ww} - i.e. row major
+		*M3x3 {1 0 0  0 1 0  0 0 1}                   // {xx xy xz  yx yy yz  zx zy zz} - i.e. row major
+		*Pos {0 1 0}                                  // {x y z}
+		*Align {3 0 1 0}                              // {axis_id dx dy dz } - direction vector, and axis id to align to that direction
+		*Quat {0 #eval{sin(pi/2)} 0 #eval{cos(pi/2)}} // {x y z s} - quaternion
+		*Rand4x4 {0 1 0 2}                            // {cx cy cz r} - centre position, radius. Random orientation
+		*RandPos {0 1 0 2}                            // {cx cy cz r} - centre position, radius
+		*RandOri                                      // Randomises the orientation of the current transform
+		*Scale {1 1.2 1}                              // { sx sy sz } - multiples the lengths of x,y,z vectors of the current transform. Accepts 1 or 3 values
+		*Transpose *Transpose                         // Transposes the current transform
+		*Inverse *Inverse                             // Inverts the current transform
+		*Euler {45 30 60}                             // { pitch yaw roll } - all in degrees. Order of rotations is roll, pitch, yaw
+		*Normalise                                    // Normalises the lengths of the vectors of the current transform
+		*Orthonormalise                               // Normalises the lengths and makes orthogonal the vectors of the current transform
 	}
 }
 
@@ -2894,7 +2894,7 @@ out <<
 	12,13,14;,
 	14,15,12;;
 	}
-	*GenerateNormals
+	*GenerateNormals {30}
 }
 
 // Find the convex hull of a point cloud
@@ -3161,14 +3161,14 @@ out <<
 		LdrObjectPtr LdrObject::RemoveChild(LdrObjectPtr& child)
 		{
 			PR_ASSERT(PR_DBG, child->m_parent == this, "child is not a child of this object");
-			auto idx = std::find(begin(m_child), end(m_child), child) - begin(m_child);
+			auto idx = pr::index_of(m_child, child);
 			return RemoveChild(idx);
 		}
 		LdrObjectPtr LdrObject::RemoveChild(size_t i)
 		{
 			PR_ASSERT(PR_DBG, i >= 0 && i < m_child.size(), "child index out of range");
 			auto child = m_child[i];
-			m_child.erase(begin(m_child) + i);
+			m_child.erase(std::begin(m_child) + i);
 			child->m_parent = nullptr;
 			return child;
 		}

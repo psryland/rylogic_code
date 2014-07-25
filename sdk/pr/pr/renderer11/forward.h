@@ -55,7 +55,7 @@
 #include "pr/common/scope.h"
 #include "pr/common/algorithm.h"
 #include "pr/common/user_data.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/str/prstring.h"
 #include "pr/str/prstdstring.h"
 #include "pr/str/tostring.h"

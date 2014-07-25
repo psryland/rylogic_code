@@ -26,7 +26,7 @@ namespace pr
 				void cleanup() { if (m_cleanup) delete m_src; }
 			};
 
-			typedef pr::Array<Item, 16> Stack; // The stack of char sources
+			typedef pr::vector<Item, 16> Stack; // The stack of char sources
 			Stack m_stack;
 
 		public:

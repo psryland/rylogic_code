@@ -17,7 +17,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/stop_watch.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 
 #define PR_LOOP_TIMING 0//PR_DBG
 #if PR_LOOP_TIMING
@@ -113,7 +113,7 @@ namespace pr
 			// A sorting predicate
 			static bool Order(Context const* lhs, Context const* rhs) { return lhs->next_step_time() < rhs->next_step_time(); }
 		};
-		pr::Array<Context*> m_contexts;
+		pr::vector<Context*> m_contexts;
 
 	public:
 		SimMsgLoop() :m_contexts() {}
@@ -138,7 +138,7 @@ namespace pr
 		void AddStepContext(char const* name, StepFunc step, float frames_per_second, bool fixed_step_rate)
 		{
 			m_contexts.push_back(new Context(name, step, frames_per_second, fixed_step_rate));
-			std::sort(begin(m_contexts), end(m_contexts), Context::Order);
+			std::sort(std::begin(m_contexts), std::end(m_contexts), Context::Order);
 		}
 
 		// Runs the message loop until WM_QUIT

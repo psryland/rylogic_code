@@ -7,7 +7,7 @@
 #include "pr/physics/shape/builder/shapepolytopehelper.h"
 #include "pr/physics/shape/shapepolytope.h"
 #include "pr/common/cast.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/maths/convexhull.h"
 
 //#define PH_SHAPE_POLYTOPE_LDR_OUTPUT 1
@@ -20,7 +20,7 @@ using namespace pr::ph;
 
 struct ShapePolytopeNbrsEx
 {
-	pr::Array<PolyIdx> m_nbr;
+	pr::vector<PolyIdx> m_nbr;
 	v4                 m_normal;
 
 	ShapePolytopeNbrsEx() :m_normal(v4Zero) {}
@@ -47,7 +47,7 @@ namespace pr
 }
 
 // Use the faces to generate neighbour indices for each vertex
-void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace const* faces, std::size_t num_faces, pr::Array<ShapePolytopeNbrsEx>& neighbours)
+void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace const* faces, std::size_t num_faces, pr::vector<ShapePolytopeNbrsEx>& neighbours)
 {
 	neighbours.resize(num_verts);
 	for( ShapePolyFace const* f = faces, *f_end = faces + num_faces; f != f_end; ++f )
@@ -73,7 +73,7 @@ void GenerateNeighbours(v4 const* verts, std::size_t num_verts, ShapePolyFace co
 
 // Generate an artificial neighbour for each vertex
 // Returns the total number of neighbours in 'nbr_count'
-void GenerateArtificialNeighbours(v4 const* verts, std::size_t num_verts, pr::Array<ShapePolytopeNbrsEx>& neighbours, std::size_t& nbr_count)
+void GenerateArtificialNeighbours(v4 const* verts, std::size_t num_verts, pr::vector<ShapePolytopeNbrsEx>& neighbours, std::size_t& nbr_count)
 {
 	// For each vertex, find the vertex on the opposite side of the polytope and set this as an 'artificial' neighbour
 	for( std::size_t i = 0; i != num_verts; ++i )
@@ -203,8 +203,8 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	std::size_t vert_count, face_count;
 
 	// Generate faces by taking the convex hull of the verts
-	pr::Array<uint>			vindex(num_verts);
-	pr::Array<ShapePolyFace>	faces(2 * (num_verts - 2));
+	pr::vector<uint>			vindex(num_verts);
+	pr::vector<ShapePolyFace>	faces(2 * (num_verts - 2));
 	std::generate(vindex.begin(), vindex.end(), pr::ArithmeticSequence<uint>(0,1));
 	ConvexHull(verts, &vindex[0], &vindex[0] + vindex.size(), &faces[0], &faces[0] + faces.size(), vert_count, face_count);
 	vindex.resize(vert_count);
@@ -213,15 +213,15 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	PR_ASSERT(PR_DBG_PHYSICS, face_count > 0, "Polytope has no faces");
 
 	// Copy the verts
-	pr::Array<v4> verts_copy(vert_count);
-	pr::Array<v4>::iterator v_out = verts_copy.begin();
-	for( pr::Array<uint>::const_iterator i = vindex.begin(), i_end = vindex.end(); i != i_end; ++i, ++v_out )
+	pr::vector<v4> verts_copy(vert_count);
+	pr::vector<v4>::iterator v_out = verts_copy.begin();
+	for( pr::vector<uint>::const_iterator i = vindex.begin(), i_end = vindex.end(); i != i_end; ++i, ++v_out )
 	{
 		*v_out = verts[*i];
 	}
 
 	// Generate neighbour info
-	pr::Array<ShapePolytopeNbrsEx> neighbours;
+	pr::vector<ShapePolytopeNbrsEx> neighbours;
 	GenerateNeighbours(&verts_copy[0], vert_count, &faces[0], face_count, neighbours);
 
 	// Add an artificial neighbour
@@ -242,7 +242,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	PR_ASSERT(PR_DBG_PHYSICS, num_verts >= 4, "");
 
 	// Generate neighbour info
-	pr::Array<ShapePolytopeNbrsEx> neighbours;
+	pr::vector<ShapePolytopeNbrsEx> neighbours;
 	GenerateNeighbours(verts, num_verts, faces, num_faces, neighbours);
 
 	// Add an artificial neighbour

@@ -18,7 +18,7 @@ namespace pr
 		// Base class for render steps
 		struct RenderStep
 		{
-			typedef pr::Array<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>> TDrawList;
+			typedef pr::vector<DrawListElement, 1024, false, pr::rdr::Allocator<DrawListElement>> TDrawList;
 
 			Scene*         m_scene;       // The scene this render step is owned by
 			ShaderManager* m_shdr_mgr;    // Convenience pointer to the shader manager

@@ -16,7 +16,7 @@
 #include "pr/common/assert.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
-#include "pr/container/array.h"
+#include "pr/container/vector.h"
 #include "pr/container/byte_data.h"
 #include "pr/maths/maths.h"
 #include "pr/physics/types/forward.h"
@@ -48,7 +48,7 @@ namespace pr
 				ph::Shape const&    GetShape() const    { m_shape = (ph::Shape*)(&m_data[0]); return *reinterpret_cast<ph::Shape const*>(&m_data[0]); }
 				ph::Shape&          GetShape()          { m_shape = (ph::Shape*)(&m_data[0]); return *reinterpret_cast<ph::Shape*>(&m_data[0]); }
 			};
-			typedef pr::Array< pr::RefPtr<Prim> > TPrimList;
+			typedef pr::vector< pr::RefPtr<Prim> > TPrimList;
 			struct Model
 			{
 				TPrimList       m_prim_list;
