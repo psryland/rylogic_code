@@ -16,7 +16,6 @@ namespace cex
 {
 	enum class EP3dOp
 	{
-		Export,
 		RemoveDegenerates,
 		GenerateNormals,
 	};
@@ -31,6 +30,7 @@ namespace cex
 		float                m_smooth_threshold;
 		bool                 m_preserve_uvs;
 		bool                 m_preserve_colours;
+		int                  m_verbosity; // 0 = quiet, 1 = minimal, 2 = normal, 3 = verbose
 
 		Impl()
 			:m_p3d()
@@ -39,8 +39,9 @@ namespace cex
 			,m_ops()
 			,m_quantisation()
 			,m_smooth_threshold()
-			,m_preserve_uvs()
-			,m_preserve_colours()
+			,m_preserve_uvs(false)
+			,m_preserve_colours(false)
+			,m_verbosity(2)
 		{}
 		int Run()
 		{
@@ -62,6 +63,19 @@ namespace cex
 				else if (extn == "p3d") CreateFromP3D();
 				else if (extn == "3ds") CreateFrom3DS();
 				else throw std::exception(pr::FmtS("unsupported file format: '*.%s'", extn.c_str()));
+
+				if (m_verbosity >= 2)
+				{
+					std::cout << "  Loaded '" << m_infile << "'\n";
+					if (m_verbosity >= 3)
+						for (auto& mesh : m_p3d.m_scene.m_meshes)
+							std::cout 
+								<< "         Mesh: " << mesh.m_name << "\n"
+								<< "        Verts: " << mesh.m_vert.size() << "\n"
+								<< "        Idx16: " << mesh.m_idx16.size() << "\n"
+								<< "        Idx32: " << mesh.m_idx32.size() << "\n"
+								<< "      Nuggets: " << mesh.m_nugget.size() << "\n";
+				}
 			}
 			catch (std::exception const& ex)
 			{
@@ -76,8 +90,6 @@ namespace cex
 			{
 				switch (op)
 				{
-				case EP3dOp::Export:
-					break; // already loaded the file
 				case EP3dOp::RemoveDegenerates:
 					RemoveDegenerateVerts();
 					break;
@@ -197,6 +209,9 @@ namespace cex
 				if (mesh.m_vert.empty())
 					continue;
 
+				if (m_verbosity >= 2)
+					std::cout << "  Generating normals for mesh: " << mesh.m_name << std::endl;
+
 				// Generate normals per nugget because the topology can change per nugget
 				for (auto& nug : mesh.m_nugget)
 				{
@@ -241,7 +256,11 @@ namespace cex
 			std::vector<p3d::Vert*> map;
 			for (auto& mesh : m_p3d.m_scene.m_meshes)
 			{
-				if (mesh.m_vert.empty()) continue;
+				if (mesh.m_vert.empty())
+					continue;
+
+				if (m_verbosity >= 2)
+					std::cout << "  Removing degenerate verts for mesh: " << mesh.m_name << std::endl;
 
 				// Quantise all the verts
 				for (auto& vert : mesh.m_vert)
@@ -264,6 +283,7 @@ namespace cex
 					});
 
 				// Set each pointer to point at the first degenerate vert
+				size_t unique_count = map.size();
 				for (size_t i = 1, iend = map.size(); i != iend; ++i)
 				{
 					auto& vi = *map[i];
@@ -272,29 +292,64 @@ namespace cex
 						auto& vj = *map[j];
 
 						// If the vertex position is different, move to the next vert
-						if (vi.pos.x != vj.pos.x) break;
-						if (vi.pos.y != vj.pos.y) break;
-						if (vi.pos.z != vj.pos.z) break;
-
+						if (vi.pos != vj.pos)
+							break;
+						
 						// Keep searching backward if the colours don't match
-						if (m_preserve_colours && !(
-							pr::FEql(vi.col.r, vj.col.r) &&
-							pr::FEql(vi.col.g, vj.col.g) &&
-							pr::FEql(vi.col.b, vj.col.b) &&
-							pr::FEql(vi.col.a, vj.col.a)))
+						if (m_preserve_colours && !FEql(vi.col,vj.col))
 							continue;
 
 						// Keep searching backward if the UVs don't match
-						if (m_preserve_uvs && !(
-							pr::FEql(vi.uv.u, vj.uv.u) && 
-							pr::FEql(vi.uv.v, vj.uv.v)))
+						if (m_preserve_uvs && !FEql(vi.uv,vj.uv))
 							continue;
 
 						// Degenerate found
 						map[i] = map[j];
+						--unique_count;
 						break;
 					}
 				}
+
+				if (m_verbosity >= 3)
+				{
+					std::cout
+						<< "    " << (map.size() - unique_count) << " degenerate verts found\n"
+						<< "    " << unique_count << " verts remaining." << std::endl;
+				}
+
+				// Create a collection of verts without degenerates
+				std::vector<p3d::Vert> verts(unique_count);
+				auto vout = std::begin(verts);
+				for (size_t i = 0, iend = map.size(); i != iend;)
+				{
+					// Save a pointer to the vert
+					auto ptr = map[i];
+
+					// Map all pointers up to the next non-degenerate to the new container
+					for (; i != iend && ptr == map[i]; ++i)
+						map[i] = &*vout;
+
+					// Copy the vert to the new collection
+					*vout++  = *ptr;
+				}
+
+				// Update the indices to the non-degenerate vert indices
+				for (auto& idx : mesh.m_idx16)
+					idx = pr::checked_cast<p3d::u16>(map[idx] - verts.data());
+				for (auto& idx : mesh.m_idx32)
+					idx = pr::checked_cast<p3d::u32>(map[idx] - verts.data());
+
+				// Update the vrange for each nugget
+				for (auto& nug : mesh.m_nugget)
+				{
+					auto vrange = pr::Range<p3d::u32>::Reset();
+					for (auto i = nug.m_vrange.first, iend = i + nug.m_vrange.count; i != iend; ++i)
+						Encompass(vrange, static_cast<p3d::u32>(map[i] - verts.data()));
+					nug.m_vrange = vrange;
+				}
+
+				// Replace the vert container in the mesh
+				mesh.m_vert = std::move(verts);
 			}
 		}
 
@@ -303,6 +358,8 @@ namespace cex
 		{
 			std::ofstream ofile(m_outfile, std::ofstream::binary);
 			p3d::Write(ofile, m_p3d);
+			if (m_verbosity >= 1)
+				std::cout << " '" << m_outfile << "' saved." << std::endl;
 		}
 	};
 
@@ -316,17 +373,17 @@ namespace cex
 		std::cout << R"(
 P3D Export : Tools for creating p3d files
 Syntax:
-  Cex -p3d -export -fi 'filepath.ext' [-fo 'output_filepath.p3d']
-  Cex -p3d -remove_degenerates 'tolerence' -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] [-preserve_uvs] [-preserve_colours]
-  Cex -p3d -gen_normals 'threshold' -fi 'filepath.p3d' [-fo 'output_filepath.p3d']
+  Cex -p3d -fi 'filepath.ext' [-fo 'output_filepath.p3d']
+  Cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -remove_degenerates 'tolerence' [-preserve_uvs] [-preserve_colours]
+  Cex -p3d -fi 'filepath.p3d' [-fo 'output_filepath.p3d'] -gen_normals 'threshold'
 
-    -fi 'filepath.ext' - the input 3d model file to be converted to p3d.
+    -fi filepath - the input 3d model file to be converted to p3d.
           File type is determined from the file extension. (3ds only so far)
 
-    -fo 'output_filepath' - The p3d file that will be created, if omitted, then the output
+    -fo output_filepath - The p3d file that will be created, if omitted, then the output
           file will be named 'filepath.p3d' in the same directory.
 
-    -remove_degenerates 'tolerence' - Strip duplicate verts from the model.
+    -remove_degenerates tolerence - Strip duplicate verts from the model.
           By default only position is used to determine degeneracy. 'tolerence' is
           a power of 2 value such that verts are quantised to '1/tolerence'.
 
@@ -334,8 +391,10 @@ Syntax:
 
     -preserve_colours - Verts with differing colours will not be considered degenerate
 
-    -gen_normals 'threshold' - overwrite the model normal data using 'threshold' is the
+    -gen_normals threshold - overwrite the model normal data using 'threshold' is the
           tolerence for coplanar faces (in degrees)
+
+    -verbosity level - amount of text written to stdout, 0=quiet, 1=minimal, 2=normal, 3=verbose
 
   Note: All commands can be given on one command line, order of operations is in the order
   specified on the command line.
@@ -345,11 +404,6 @@ Syntax:
 	{
 		if (pr::str::EqualI(option, "-p3d"))
 		{
-			return true;
-		}
-		if (pr::str::EqualI(option, "-export"))
-		{
-			m_ptr->m_ops.push_back(EP3dOp::Export);
 			return true;
 		}
 		if (pr::str::EqualI(option, "-remove_degenerates") && arg != arg_end)
@@ -389,6 +443,13 @@ Syntax:
 		if (pr::str::EqualI(option, "-preserve_colours"))
 		{
 			m_ptr->m_preserve_colours = true;
+			return true;
+		}
+		if (pr::str::EqualI(option, "-verbosity") && arg != arg_end)
+		{
+			if (!pr::str::ExtractIntC(m_ptr->m_verbosity, 10, arg->c_str()))
+				throw std::exception("Verbosity level expected after -verbosity");
+			++arg;
 			return true;
 		}
 		return ICex::CmdLineOption(option, arg, arg_end);

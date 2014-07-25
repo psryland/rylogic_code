@@ -103,22 +103,29 @@ namespace pr
 
 			struct Vec2
 			{
-				float u,v;
-				Vec2& operator = (v2 const& rhs) { u = rhs.x; v = rhs.y; return *this; }
-				operator v2() const { return v2::make(u, v); }
+				float x,y;
+				Vec2& operator = (v2 const& rhs) { x = rhs.x; y = rhs.y; return *this; }
+				operator v2() const { return v2::make(x, y); }
 			};
+			inline bool operator == (Vec2 lhs, Vec2 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y; }
+			inline bool operator != (Vec2 lhs, Vec2 rhs) { return !(lhs == rhs); }
+			inline bool FEql(Vec2 lhs, Vec2 rhs) { return pr::FEql(lhs.x,rhs.x) && pr::FEql(lhs.y,rhs.y); }
 			struct Vec4
 			{
-				float x,y,z,w;
-				Vec4& operator = (v4 const& rhs) { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
-				operator v4() const { return v4::make(x,y,z,w); }
-			};
-			struct Col4
-			{
-				float r,g,b,a;
-				Col4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
+				#pragma warning (disable:4201)
+				union {
+				struct { float x,y,z,w; };
+				struct { float r,g,b,a; };
+				};
+				#pragma warning (default:4201)
+				Vec4& operator = (v4 const& rhs)     { x = rhs.x; y = rhs.y; z = rhs.z; w = rhs.w; return *this; }
+				Vec4& operator = (Colour const& rhs) { r = rhs.r; g = rhs.g; b = rhs.b; a = rhs.a; return *this; }
+				operator v4() const     { return v4::make(x,y,z,w); }
 				operator Colour() const { return Colour::make(r,g,b,a); }
 			};
+			inline bool operator == (Vec4 lhs, Vec4 rhs) { return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w; }
+			inline bool operator != (Vec4 lhs, Vec4 rhs) { return !(lhs == rhs); }
+			inline bool FEql(Vec4 lhs, Vec4 rhs) { return pr::FEql(lhs.x,rhs.x) && pr::FEql(lhs.y,rhs.y) && pr::FEql(lhs.z,rhs.z) && pr::FEql(lhs.w,rhs.w); }
 			struct BBox
 			{
 				Vec4 centre;
@@ -130,7 +137,7 @@ namespace pr
 			struct Vert
 			{
 				Vec4 pos;   // This type matches pr::rdr::Vert (which has 16-byte
-				Col4 col;   // alignment). Hence the 'pad' member.
+				Vec4 col;   // alignment). Hence the 'pad' member.
 				Vec4 norm;  // That space might be handy for a future something
 				Vec2 uv;
 				Vec2 pad;
@@ -150,6 +157,8 @@ namespace pr
 					return pr::Range<T>::make(checked_cast<T>(first), checked_cast<T>(first + count));
 				}
 			};
+			inline bool operator == (Range lhs, Range rhs) { return lhs.first == rhs.first && lhs.count == rhs.count; }
+			inline bool operator != (Range lhs, Range rhs) { return !(lhs == rhs); }
 			struct Str16
 			{
 				typedef char c16[16];
@@ -262,6 +271,35 @@ namespace pr
 				{}
 			};
 
+			// Helper to return the data size for a chunk
+			inline u32 DataLength(ChunkHeader chunk)
+			{
+				assert(chunk.m_length >= sizeof(ChunkHeader));
+				return chunk.m_length - sizeof(ChunkHeader);
+			}
+
+			// Helpers for reading/writing from/to an istream-like source
+			// Specialise these for non std::istream/std::ostream's
+			template <typename TSrc> struct Src
+			{
+				static u64  TellPos(TSrc& src)          { return static_cast<u64>(src.tellg()); }
+				static bool SeekAbs(TSrc& src, u64 pos) { return static_cast<bool>(src.seekg(pos)); }
+
+				// Read an array
+				template <typename TOut> static void Read(TSrc& src, TOut* out, size_t count)
+				{
+					if (src.read(char_ptr(out), count * sizeof(TOut))) return;
+					throw std::exception("partial read of input stream");
+				}
+
+				// Write an array
+				template <typename TIn> static void Write(TSrc& dst, TIn const* in, size_t count)
+				{
+					if (dst.write(char_ptr(in), count * sizeof(TIn))) return;
+					throw std::exception("partial write of output stream");
+				}
+			};
+
 			#pragma region Build Chunk Index
 
 			// Build a chunk index from parts of a p3d model
@@ -277,7 +315,7 @@ namespace pr
 			{
 				auto index = ChunkIndex(EChunkId::Material, sizeof(Str16),
 					{
-						ChunkIndex(EChunkId::DiffuseColour, sizeof(Col4))
+						ChunkIndex(EChunkId::DiffuseColour, sizeof(Vec4))
 					});
 
 				for (auto& tex : mat.m_tex_diffuse)
@@ -323,35 +361,6 @@ namespace pr
 			}
 
 			#pragma endregion
-
-			// Helpers for reading/writing from/to an istream-like source
-			// Specialise these for non std::istream/std::ostream's
-			template <typename TSrc> struct Src
-			{
-				static u64  TellPos(TSrc& src)          { return static_cast<u64>(src.tellg()); }
-				static bool SeekAbs(TSrc& src, u64 pos) { return static_cast<bool>(src.seekg(pos)); }
-
-				// Read an array
-				template <typename TOut> static void Read(TSrc& src, TOut* out, size_t count)
-				{
-					if (src.read(char_ptr(out), count * sizeof(TOut))) return;
-					throw std::exception("partial read of input stream");
-				}
-
-				// Write an array
-				template <typename TIn> static void Write(TSrc& dst, TIn const* in, size_t count)
-				{
-					if (dst.write(char_ptr(in), count * sizeof(TIn))) return;
-					throw std::exception("partial write of output stream");
-				}
-			};
-
-			// Helper to return the data size for a chunk
-			inline u32 DataLength(ChunkHeader chunk)
-			{
-				assert(chunk.m_length >= sizeof(ChunkHeader));
-				return chunk.m_length - sizeof(ChunkHeader);
-			}
 
 			// Generic chunk reading function.
 			// 'src' should point to data after the chunk header.
@@ -493,7 +502,7 @@ namespace pr
 					{
 					case EChunkId::DiffuseColour:
 						{
-							auto col = Read<Col4>(src);
+							auto col = Read<Vec4>(src);
 							mat.m_diffuse = pr::Colour::make(col.r, col.g, col.b, col.a);
 							break;
 						}
@@ -796,7 +805,7 @@ namespace pr
 					case EChunkId::DiffuseColour:
 						{
 							Write<ChunkHeader>(out, index);
-							Write<Col4>(out, {mat.m_diffuse.r, mat.m_diffuse.g, mat.m_diffuse.b, mat.m_diffuse.a});
+							Write<Vec4>(out, {mat.m_diffuse.r, mat.m_diffuse.g, mat.m_diffuse.b, mat.m_diffuse.a});
 							break;
 						}
 					case EChunkId::DiffuseTexture:

@@ -144,6 +144,9 @@
     <ClInclude Include="..\cex\template.h" />
     <ClInclude Include="..\cex\wait.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\cex\deploy.py" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
