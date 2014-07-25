@@ -20,8 +20,11 @@ LDR_EXPORT ldrapi::ObjectHandle ldrRegisterObject(ldrapi::PluginHandle handle, c
 {
 	if (!handle) return 0;
 	try { return handle->RegisterObject(object_description, include_paths, ctx_id, async); }
-	catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::Fmt("Failed to create plugin object.\nReason: %s", e.msg().c_str()))); return 0; }
-	catch (std::exception const& e)        { pr::events::Send(ldr::Event_Error(pr::Fmt("Failed to create plugin object.\nReason: %s", e.what()))); return 0; }
+	catch (std::exception const& e)
+	{
+		pr::events::Send(ldr::Event_Error(pr::Fmt("Failed to create plugin object.\nReason: %s", e.what())));
+		return 0;
+	}
 }
 
 // Return a particular object from the store

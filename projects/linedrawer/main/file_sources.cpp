@@ -112,7 +112,7 @@ namespace ldr
 		}
 		catch (pr::script::Exception const& e)
 		{
-			pr::script::string msg = pr::FmtS("Script error found while parsing source file '%s'.\n", filepath) + e.msg();
+			pr::script::string msg = pr::FmtS("Script error found while parsing source file '%s'.\n'%s'", filepath, e.what());
 			pr::events::Send(Event_Error(msg.c_str()));
 		}
 		catch (LdrException const& e)
