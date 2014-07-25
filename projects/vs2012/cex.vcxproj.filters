@@ -69,4 +69,7 @@
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\cex\deploy.py" />
+  </ItemGroup>
 </Project>

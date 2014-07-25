@@ -24,6 +24,7 @@ namespace pr
 #include "unittests/unittests.h"
 //#include "pr/geometry/utility.h"
 //#include "pr/common/expr_eval.h"
+//#include "pr/container/deque.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about

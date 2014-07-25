@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2008
 //******************************************
 // A version of std::string with configurable local caching
-// Note: this file is made to match pr::Array as much as possible
+// Note: this file is made to match pr::vector as much as possible
 #pragma once
 #ifndef PR_STD_STRING_H
 #define PR_STD_STRING_H

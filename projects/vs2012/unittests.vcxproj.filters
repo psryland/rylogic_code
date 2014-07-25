@@ -71,6 +71,12 @@
     <Filter Include="pr\geometry">
       <UniqueIdentifier>{7f4f044d-7196-421b-b40d-15cba420920e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\NewFilter1">
+      <UniqueIdentifier>{84229503-3b37-4a3c-836e-1ef4110bf399}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -878,6 +884,42 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\algorithm.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\bit_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\byte_data.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\kdtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\list_in_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\quadtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\queue.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\segmented_list.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\stack.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\tri_table.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\vector_map.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\vector.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\container\deque.h">
+      <Filter>pr\container</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

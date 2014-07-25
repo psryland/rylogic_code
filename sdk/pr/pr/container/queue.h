@@ -2,16 +2,10 @@
 // A very simple queue class
 //  Copyright (c) Rylogic Ltd 2007
 //******************************************
-
-#ifndef PR_QUEUE_H
-#define PR_QUEUE_H
+#pragma once
 
 #include <algorithm>
-
-#ifndef PR_ASSERT
-#	define PR_ASSERT_DEFINED
-#	define PR_ASSERT(grp, exp, str)
-#endif
+#include <cassert>
 
 namespace pr
 {
@@ -32,16 +26,16 @@ namespace pr
 		bool        full() const                           { return incr(m_end) == m_begin; }
 		std::size_t size() const                           { return size(m_begin, m_end); }
 		std::size_t capacity() const                       { return Capacity; }
-		Type const& back() const                           { PR_ASSERT(PR_DBG, !empty(), ""); return m_queue[decr(m_end)]; }
-		Type&       back()                                 { PR_ASSERT(PR_DBG, !empty(), ""); return m_queue[decr(m_end)]; }
-		Type const& front() const                          { PR_ASSERT(PR_DBG, !empty(), ""); return m_queue[m_begin]; }
-		Type&       front()                                { PR_ASSERT(PR_DBG, !empty(), ""); return m_queue[m_begin]; }
-		void        push_back(Type const& elem)            { PR_ASSERT(PR_DBG, !full(), "");  m_queue[m_end] = elem; m_end = incr(m_end); }
-		void        push_front(Type const& elem)           { PR_ASSERT(PR_DBG, !full(), "");  m_begin = decr(m_begin); m_queue[m_begin] = elem; }
-		Type        pop_back()                             { PR_ASSERT(PR_DBG, !empty(), ""); m_end = decr(m_end); return m_queue[m_end]; }
-		Type        pop_front()                            { PR_ASSERT(PR_DBG, !empty(), ""); int begin = m_begin; m_begin = incr(m_begin); return m_queue[begin]; }
-		Type const& operator[](int i) const                { PR_ASSERT(PR_DBG, i >= 0 && i < (int)size(), ""); return m_queue[incr(m_begin,i)]; }
-		Type&       operator[](int i)                      { PR_ASSERT(PR_DBG, i >= 0 && i < (int)size(), ""); return m_queue[incr(m_begin,i)]; }
+		Type const& back() const                           { assert(!empty()); return m_queue[decr(m_end)]; }
+		Type&       back()                                 { assert(!empty()); return m_queue[decr(m_end)]; }
+		Type const& front() const                          { assert(!empty()); return m_queue[m_begin]; }
+		Type&       front()                                { assert(!empty()); return m_queue[m_begin]; }
+		void        push_back(Type const& elem)            { assert(!full());  m_queue[m_end] = elem; m_end = incr(m_end); }
+		void        push_front(Type const& elem)           { assert(!full());  m_begin = decr(m_begin); m_queue[m_begin] = elem; }
+		Type        pop_back()                             { assert(!empty()); m_end = decr(m_end); return m_queue[m_end]; }
+		Type        pop_front()                            { assert(!empty()); int begin = m_begin; m_begin = incr(m_begin); return m_queue[begin]; }
+		Type const& operator[](int i) const                { assert(i >= 0 && i < (int)size()); return m_queue[incr(m_begin,i)]; }
+		Type&       operator[](int i)                      { assert(i >= 0 && i < (int)size()); return m_queue[incr(m_begin,i)]; }
 		void        push_back_overwrite(Type const& elem)  { if (full()) {m_begin = incr(m_begin);} push_back(elem); }
 		void        push_front_overwrite(Type const& elem) { if (full()) {m_end   = decr(m_end);}   push_front(elem); }
 		void        queue(Type const& elem)                { push_back(elem); }
@@ -62,10 +56,3 @@ namespace pr
 		}
 	};
 }
-
-#ifdef PR_ASSERT_DEFINED
-#	undef PR_ASSERT_DEFINED
-#	undef PR_ASSERT
-#endif
-
-#endif
