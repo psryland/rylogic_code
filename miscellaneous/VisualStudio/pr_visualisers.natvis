@@ -2,11 +2,11 @@
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-	<!-- pr::Array -->
-	<Type Name="pr::Array&lt;*,*,*,*&gt;">
-		<AlternativeType Name="pr::Array&lt;*,*,*&gt;" />
-		<AlternativeType Name="pr::Array&lt;*,*&gt;" />
-		<AlternativeType Name="pr::Array&lt;*&gt;" />
+	<!-- Containers -->
+	<Type Name="pr::vector&lt;*,*,*,*&gt;">
+		<AlternativeType Name="pr::vector&lt;*,*,*&gt;" />
+		<AlternativeType Name="pr::vector&lt;*,*&gt;" />
+		<AlternativeType Name="pr::vector&lt;*&gt;" />
 		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
 		<Expand>
 			<Item Name="[count]">m_count</Item>
@@ -17,7 +17,36 @@
 			</ArrayItems>
 		</Expand>
 	</Type>
-
+	<Type Name="pr::deque&lt;*,*,*&gt;">
+		<AlternativeType Name="pr::deque&lt;*,*&gt;" />
+		<AlternativeType Name="pr::deque&lt;*&gt;" />
+		<DisplayString Condition="m_last == m_first">[{m_last - m_first}] empty</DisplayString>
+		<DisplayString Condition="m_last != m_first">[{m_last - m_first}] {m_map.m_blocks[m_map.m_first]} ... </DisplayString>   
+		<Expand>
+			<Item Name="[count]">m_last - m_first</Item>
+			<Item Name="[blocks]">m_map</Item>
+			<IndexListItems>
+				<Size>m_last - m_first</Size>
+				<ValueNode>m_map.m_ptrs[m_map.m_first + (m_first+$i) / CountPerBlock][(m_first + $i) % CountPerBlock]</ValueNode>
+			</IndexListItems>
+		</Expand>
+	</Type>
+	<Type Name="pr::impl::deque::BlockPtrMap&lt;*,*,*&gt;">
+		<DisplayString>[{m_last - m_first}] {m_blocks[m_first]}</DisplayString>
+		<Expand>
+			<Item Name="[first]">m_first</Item>
+			<Item Name="[last]">m_last</Item>
+			<Item Name="[capacity]">m_capacity</Item>
+			<IndexListItems>
+				<Size>m_capacity</Size>
+				<ValueNode>m_blocks[$i]</ValueNode>
+			</IndexListItems>
+		</Expand>
+	</Type>
+	<Type Name="pr::impl::deque::iter&lt;*,*,*,*,*,*&gt;">
+		<DisplayString>{m_idx} {*m_map}</DisplayString>
+	</Type>
+	
 	<!-- Expression Evaluator -->
 	<Type Name="pr::impl::Val">
 		<DisplayString>{m_fp ? m_db : m_ll}</DisplayString>
