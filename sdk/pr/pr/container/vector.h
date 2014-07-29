@@ -30,11 +30,12 @@ namespace pr
 		{
 			template <typename Type> struct citer // const iterator
 			{
+				typedef std::random_access_iterator_tag iterator_category;
 				typedef std::ptrdiff_t                  difference_type;
 				typedef Type                            value_type;
 				typedef Type const&                     reference;
 				typedef Type const*                     pointer;
-				typedef std::random_access_iterator_tag iterator_category;
+
 				pointer m_ptr;
 
 				citer()                                 {}
@@ -48,11 +49,12 @@ namespace pr
 			};
 			template <typename Type> struct miter // mutable iterator
 			{
+				typedef std::random_access_iterator_tag iterator_category;
 				typedef std::ptrdiff_t                  difference_type;
 				typedef Type                            value_type;
 				typedef Type&                           reference;
 				typedef Type*                           pointer;
-				typedef std::random_access_iterator_tag iterator_category;
+
 				pointer m_ptr;
 
 				miter()                                 {}

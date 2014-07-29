@@ -814,7 +814,7 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 		DllLockGuard;
 		pr::ldr::ObjectCont cont;
 		pr::ldr::AddFile(Dll().m_rdr, ldr_filepath, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
-		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
+		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(cont), std::end(cont));
 		return int(cont.size());
 	}
 	catch (std::exception const& ex)
@@ -833,7 +833,7 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 		DllLockGuard;
 		pr::ldr::ObjectCont cont;
 		pr::ldr::AddString(Dll().m_rdr, ldr_script, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
-		Dll().m_obj_cont.insert(end(Dll().m_obj_cont), begin(cont), end(cont));
+		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(cont), std::end(cont));
 		return !cont.empty() ? cont.back().m_ptr : nullptr;
 	}
 	catch (std::exception const& ex)
@@ -899,14 +899,14 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 		model->m_bbox.reset();
 
 		// Copy the model data into the model
-		auto vin = begin(verts);
+		auto vin = std::begin(verts);
 		auto vout = mlock.m_vlock.ptr<Vert>();
 		for (size_t i = 0; i != new_vcount; ++i, ++vin)
 		{
 			SetPCNT(*vout++, view3d::To<pr::v4>(vin->pos), pr::Colour32::make(vin->col), view3d::To<pr::v4>(vin->norm), view3d::To<pr::v2>(vin->tex));
 			pr::Encompass(model->m_bbox, view3d::To<pr::v4>(vin->pos));
 		}
-		auto iin = begin(indices);
+		auto iin = std::begin(indices);
 		auto iout = mlock.m_ilock.ptr<pr::uint16>();
 		for (size_t i = 0; i != new_icount; ++i, ++iin)
 		{
