@@ -87,6 +87,9 @@ namespace pr.gui
 		/// <summary>Add a file to the recent files list</summary>
 		public void Add(string file, bool update_menu)
 		{
+			if (string.IsNullOrEmpty(file))
+				throw new Exception("Invalid recent file");
+
 			Remove(file, false);
 			m_files.Insert(0, file);
 			if (m_files.Count > MaxCount) m_files.RemoveAt(m_files.Count - 1);

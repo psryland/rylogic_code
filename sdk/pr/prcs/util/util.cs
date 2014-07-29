@@ -42,7 +42,14 @@ namespace pr.util
 		/// <summary>Convenience disposer</summary>
 		public static void Dispose<T>(ref T doomed) where T:class, IDisposable
 		{
-			if (doomed != null) doomed.Dispose();
+			if (doomed == null) return;
+			doomed.Dispose();
+			doomed = null;
+		}
+		public static void DisposeAll<T>(ref List<T> doomed) where T:class, IDisposable
+		{
+			if (doomed == null) return;
+			foreach (var d in doomed) d.Dispose();
 			doomed = null;
 		}
 

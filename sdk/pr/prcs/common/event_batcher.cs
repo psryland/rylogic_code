@@ -42,11 +42,15 @@ namespace pr.common
 			m_actioned_issue       = 0;
 			m_disposed             = false;
 			MaxSignalsBeforeAction = int.MaxValue;
+			Immediate              = false;
 		}
 		public void Dispose()
 		{
 			m_disposed = true;
 		}
+
+		/// <summary>Toogle switch for batching on/off</summary>
+		public bool Immediate { get; set; }
 
 		/// <summary>
 		/// Signal the event. Signal can be called multiple times during the processing of a windows message.
@@ -55,16 +59,23 @@ namespace pr.common
 		/// provided in the constructor of the event batcher</summary>
 		public void Signal(object sender = null, EventArgs args = null)
 		{
-			var issue = Interlocked.Increment(ref m_issue);
-			m_dispatcher.BeginInvokeDelayed(() =>
-				{
-					if (Action == null || m_disposed) return;
-					if (unchecked(issue - m_actioned_issue) < MaxSignalsBeforeAction &&
-						Interlocked.CompareExchange(ref m_issue, issue, issue) != issue)
-						return;
-					Action();
-					m_actioned_issue = issue;
-				}, m_delay);
+			if (Immediate)
+			{
+				Action();
+			}
+			else
+			{
+				var issue = Interlocked.Increment(ref m_issue);
+				m_dispatcher.BeginInvokeDelayed(() =>
+					{
+						if (Action == null || m_disposed) return;
+						if (unchecked(issue - m_actioned_issue) < MaxSignalsBeforeAction &&
+							Interlocked.CompareExchange(ref m_issue, issue, issue) != issue)
+							return;
+						Action();
+						m_actioned_issue = issue;
+					}, m_delay);
+			}
 		}
 	}
 }

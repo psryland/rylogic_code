@@ -34,12 +34,17 @@ namespace pr.extn
 		/// A map from type to 'ToXml' method
 		/// User ToXml functions can be added to this map.
 		/// Note, they are only needed if ToBinding.Convert() method fails</summary>
-		public static ToBinding ToMap { get { return m_impl_ToMap; } }
+		public static ToBinding ToMap { [DebuggerStepThrough] get { return m_impl_ToMap; } }
 		private static readonly ToBinding m_impl_ToMap = new ToBinding();
 		public class ToBinding :Dictionary<Type, ToFunc>
 		{
 			public ToBinding()
 			{
+				this[typeof(XElement)] = (obj, node) =>
+				{
+					node.Add(obj);
+					return node;
+				};
 				this[typeof(string         )] = ToXmlDefault;
 				this[typeof(bool           )] = ToXmlDefault;
 				this[typeof(byte           )] = ToXmlDefault;
@@ -276,13 +281,14 @@ namespace pr.extn
 		/// A map from type to 'As' method
 		/// User conversion functions can be added to this map
 		/// Note, they are only needed if AsBinding.Convert() method fails</summary>
-		public static AsBinding AsMap { get { return m_impl_AsMap; } }
+		public static AsBinding AsMap { [DebuggerStepThrough] get { return m_impl_AsMap; } }
 		private static readonly AsBinding m_impl_AsMap = new AsBinding();
 		public class AsBinding :Dictionary<Type, AsFunc>
 		{
 			private readonly char[] WhiteSpace = new[]{' ','\t','\r','\n','\v'};
 			public AsBinding()
 			{
+				this[typeof(XElement       )] = (elem, type, ctor) => elem;
 				this[typeof(string         )] = (elem, type, ctor) => elem.Value;
 				this[typeof(bool           )] = (elem, type, ctor) => bool           .Parse(elem.Value);
 				this[typeof(byte           )] = (elem, type, ctor) => byte           .Parse(elem.Value);
@@ -392,7 +398,7 @@ namespace pr.extn
 				}
 
 				// Empty elements return null or default instances
-				if (string.IsNullOrEmpty(elem.Value))
+				if (elem.IsEmpty)//string.IsNullOrEmpty(elem.Value))
 				{
 					if (type == typeof(string))
 					{

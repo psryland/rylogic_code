@@ -61,13 +61,18 @@ namespace pr.common
 	/// <summary>A base class for settings structures</summary>
 	public abstract class SettingsSet<T> :ISettingsSet where T:SettingsSet<T>, new()
 	{
-		protected readonly List<SettingsPair> Data = new List<SettingsPair>();
+		protected readonly List<SettingsPair> Data;
 
 		/// <summary>An event raised when a settings is about to change value</summary>
 		public event EventHandler<SettingChangingEventArgs> SettingChanging;
 
 		/// <summary>An event raised after a setting has been changed</summary>
 		public event EventHandler<SettingChangedEventArgs> SettingChanged;
+
+		protected SettingsSet()
+		{
+			Data = new List<SettingsPair>();
+		}
 
 		/// <summary>The default values for the settings</summary>
 		public static T Default { get { return m_default ?? (m_default = new T()); } }
@@ -147,7 +152,7 @@ namespace pr.common
 		}
 
 		/// <summary>Return the settings as an xml node tree</summary>
-		public XElement ToXml(XElement node)
+		public virtual XElement ToXml(XElement node)
 		{
 			foreach (var d in Data)
 				node.Add2("setting", d, false);
@@ -155,7 +160,7 @@ namespace pr.common
 		}
 
 		/// <summary>Populate this object from xml</summary>
-		public void FromXml(XElement node)
+		public virtual void FromXml(XElement node)
 		{
 			// Load data from settings
 			Data.Clear();
@@ -215,7 +220,7 @@ namespace pr.common
 	public abstract class SettingsBase<T> :SettingsSet<T> where T:SettingsBase<T>, new()
 	{
 		protected const string VersionKey = "__SettingsVersion";
-		private string m_filepath = "";
+		private string m_filepath;
 		private bool m_block_saving;
 		private bool m_auto_save;
 
@@ -253,17 +258,48 @@ namespace pr.common
 		/// <summary>An event raised whenever the settings are about to be saved to persistent storage</summary>
 		public event EventHandler<SettingsSavingEventArgs> SettingsSaving;
 
-		/// <summary>Default settings instance</summary>
-		protected SettingsBase() {}
+		protected SettingsBase()
+		{
+			m_filepath = "";
 
-		/// <summary>Initialise the settings object</summary>
-		protected SettingsBase(string filepath, bool read_only = false)
+			// Default to off so users can enable after startup completes
+			AutoSaveOnChanges = false;
+		}
+		protected SettingsBase(XElement node, bool read_only = false) :this()
+		{
+			try
+			{
+				FromXml(node, read_only);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+				Log.Exception(this, ex, "Failed to load settings from xml data");
+				Data.AddRange(new T().Data);
+			}
+		}
+		protected SettingsBase(Stream stream, bool read_only = false) :this()
+		{
+			Debug.Assert(stream != null);
+			try
+			{
+				Load(stream, read_only);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+				Log.Exception(this, ex, "Failed to load settings from stream");
+				Data.AddRange(new T().Data);
+			}
+		}
+		protected SettingsBase(string filepath, bool read_only = false) :this()
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			Filepath = filepath;
 			try
 			{
-				Data.Clear();
 				Load(Filepath, read_only);
 			}
 			catch (Exception ex)
@@ -273,7 +309,6 @@ namespace pr.common
 				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(filepath));
 				Data.AddRange(new T().Data);
 			}
-			AutoSaveOnChanges = true;
 		}
 
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
@@ -284,9 +319,12 @@ namespace pr.common
 			{
 				if (m_auto_save == value) return;
 				m_auto_save = value;
-				EventHandler<SettingChangedEventArgs> save = (s,a)=> Save();
-				if (m_auto_save) SettingChanged += save;
-				else             SettingChanged -= save;
+				
+				EventHandler<SettingChangedEventArgs> save = (s,a) => Save();
+				
+				SettingChanged -= save;
+				if (m_auto_save)
+					SettingChanged += save;
 			}
 		}
 
@@ -303,62 +341,105 @@ namespace pr.common
 			Load(Filepath);
 		}
 
-		/// <summary>
-		/// Refreshes the settings from persistent storage.
-		/// Starts with a copy of the Default.Data, then overwrites settings with those described in 'filepath'
-		/// After load, the settings is the union of Default.Data and those in the given file.</summary>
-		public void Load(string filepath, bool read_only = false)
+		/// <summary>Load the settings from xml</summary>
+		public override void FromXml(XElement node)
 		{
-			// Block saving during load/upgrade
-			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+			// Upgrade old settings
+			var vers = node.Element(VersionKey);
+			if (vers == null)
 			{
-				if (!PathEx.FileExists(filepath))
-				{
-					Log.Info(this,"Settings file {0} not found, using defaults".Fmt(filepath));
-					Reset();
-					return; // Reset will recursively call Load again
-				}
-
-				Log.Debug(this,"Loading settings file {0}".Fmt(filepath));
-
-				var settings = XDocument.Load(filepath).Root;
-				if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
-
-				// Upgrade old settings
-				var vers = settings.Element(VersionKey);
-				if (vers == null)
-				{
-					Log.Info(this,"Settings file {0} does not contain a version, using defaults".Fmt(filepath));
-					Reset();
-					return; // Reset will recursively call Load again
-				}
-				
-				vers.Remove();
-				if (vers.Value != Version)
-					Upgrade(settings, vers.Value);
-
-				// Load the settings from xml
-				FromXml(settings);
-				Filepath = filepath;
-				ReadOnly = read_only;
+				Log.Info(this,"Settings data does not contain a version, using defaults");
+				Reset();
+				return; // Reset will recursively call Load again
 			}
 
+			vers.Remove();
+			if (vers.Value != Version)
+				Upgrade(node, vers.Value);
+
+			// Load the settings from xml
+			base.FromXml(node);
 			Validate();
 
 			// Notify of settings loaded
 			if (SettingsLoaded != null)
-				SettingsLoaded(this,new SettingsLoadedEventArgs(filepath));
+				SettingsLoaded(this,new SettingsLoadedEventArgs(Filepath));
+		}
+		public void FromXml(XElement node, bool read_only)
+		{
+			FromXml(node);
+			ReadOnly = read_only;
+		}
+
+		/// <summary>
+		/// Refreshes the settings from a file storage.
+		/// Starts with a copy of the Default.Data, then overwrites settings with those described in 'filepath'
+		/// After load, the settings is the union of Default.Data and those in the given file.</summary>
+		public void Load(string filepath, bool read_only = false)
+		{
+			if (!PathEx.FileExists(filepath))
+			{
+				Log.Info(this,"Settings file {0} not found, using defaults".Fmt(filepath));
+				Reset();
+				return; // Reset will recursively call Load again
+			}
+
+			Log.Debug(this,"Loading settings file {0}".Fmt(filepath));
+
+			var settings = XDocument.Load(filepath).Root;
+			if (settings == null) throw new Exception("Invalidate settings file ({0})".Fmt(filepath));
+
+			// Set the filepath before loading so that it's valid for the SettingsLoaded event
+			Filepath = filepath;
+
+			// Load the settings from xml. Block saving during load/upgrade
+			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+				FromXml(settings);
+
+			// Set readonly after loading is complete
+			ReadOnly = read_only;
+		}
+		public void Load(Stream stream, bool read_only = false)
+		{
+			Log.Debug(this,"Loading settings stream");
+
+			var settings = XDocument.Load(stream).Root;
+			if (settings == null) throw new Exception("Invalidate settings source");
+
+			// Set the filepath before loading so that it's valid for the SettingsLoaded event
+			Filepath = string.Empty;
+
+			// Load the settings from xml. Block saving during load/upgrade
+			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+				FromXml(settings);
+
+			// Set readonly after loading is complete
+			ReadOnly = read_only;
+		}
+
+		/// <summary>Return the settings as xml</summary>
+		public XElement ToXml()
+		{
+			return ToXml(new XElement("settings"));
+		}
+		public override XElement ToXml(XElement node)
+		{
+			node.Add2(VersionKey, Version, false);
+			base.ToXml(node);
+			return node;
 		}
 
 		/// <summary>Persist current settings to storage</summary>
 		public void Save(string filepath)
 		{
-			if (m_block_saving) return;
+			if (m_block_saving)
+				return;
+
+			if (string.IsNullOrEmpty(filepath))
+				throw new ArgumentNullException("filepath", "No settings filepath set");
+
 			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
 			{
-				if (string.IsNullOrEmpty(filepath))
-					throw new ArgumentNullException("filepath", "No settings filepath set");
-
 				// Notify of a save about to happen
 				var args = new SettingsSavingEventArgs(false);
 				if (SettingsSaving != null) SettingsSaving(this, args);
@@ -373,11 +454,27 @@ namespace pr.common
 				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
 
 				// Perform the save
-				var settings = new XElement("settings");
-				settings.Add2(VersionKey, Version, false);
-				foreach (var d in Data)
-					settings.Add2("setting", d, false);
+				var settings = ToXml();
 				settings.Save(filepath, SaveOptions.None);
+			}
+		}
+		public void Save(Stream stream)
+		{
+			if (m_block_saving)
+				return;
+
+			using (Scope.Create(() => m_block_saving = true, () => m_block_saving = false))
+			{
+				// Notify of a save about to happen
+				var args = new SettingsSavingEventArgs(false);
+				if (SettingsSaving != null) SettingsSaving(this, args);
+				if (args.Cancel) return;
+
+				Log.Debug(this, "Saving settings to stream");
+
+				// Perform the save
+				var settings = ToXml();
+				settings.Save(stream, SaveOptions.None);
 			}
 		}
 
@@ -454,12 +551,37 @@ namespace pr.common
 
 namespace pr
 {
+	using extn;
 	using NUnit.Framework;
 
 	[TestFixture] public static partial class UnitTests
 	{
-		internal static class TextXmlExtensions
+		internal static class TestSettings
 		{
+			private sealed class SettingsThing
+			{
+				public int x,y,z;
+				
+				public SettingsThing()
+				{
+					x = 1;
+					y = 2;
+					z = 3;
+				}
+				public SettingsThing(XElement node)
+				{
+					x = node.Element("x").As<int>();
+					y = node.Element("y").As<int>();
+					z = node.Element("z").As<int>();
+				}
+				public XElement ToXml(XElement node)
+				{
+					node.Add2("x", x, false);
+					node.Add2("y", y, false);
+					node.Add2("z", z, false);
+					return node;
+				}
+			}
 			private sealed class SubSettings :SettingsSet<SubSettings>
 			{
 				public int Field     { get { return get(x => x.Field); } set { set(x => x.Field, value); } }
@@ -474,6 +596,7 @@ namespace pr
 				public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
 				public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
 				public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
+				public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
 
 				public Settings()
 				{
@@ -483,8 +606,10 @@ namespace pr
 					Font   = SystemFonts.StatusFont;
 					Floats = new[]{1f,2f,3f};
 					Sub    = new SubSettings();
+					Sub2   = new XElement("external");
 				}
 				public Settings(string filepath) :base(filepath) {}
+				public Settings(XElement node) : base(node) {}
 			}
 
 			[Test] public static void TestSettings1()
@@ -497,11 +622,13 @@ namespace pr
 				Assert.IsTrue(Settings.Default.Floats.SequenceEqual(s.Floats));
 				Assert.AreEqual(Settings.Default.Sub.Field, s.Sub.Field);
 				Assert.IsTrue(Settings.Default.Sub.Buffer.SequenceEqual(s.Sub.Buffer));
+				Assert.IsTrue(Settings.Default.Sub2.Name == s.Sub2.Name);
 				Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
 			}
 			[Test] public static void TestSettings2()
 			{
 				var file = Path.GetTempFileName();
+				var st = new SettingsThing();
 				var s = new Settings
 					{
 						Str = "Changed",
@@ -513,11 +640,13 @@ namespace pr
 						{
 							Field = 12,
 							Buffer = new byte[]{4,5,6}
-						}
+						},
+						Sub2 = st.ToXml(new XElement("external")),
 					};
-				s.Save(file);
+				var xml = s.ToXml();
 
-				var S = new Settings(file);
+				var S = new Settings(xml);
+
 				Assert.AreEqual(s.Str       , S.Str);
 				Assert.AreEqual(s.Int       , S.Int);
 				Assert.AreEqual(s.DTO       , S.DTO);
@@ -525,6 +654,11 @@ namespace pr
 				Assert.IsTrue(s.Floats.SequenceEqual(S.Floats));
 				Assert.AreEqual(s.Sub.Field , S.Sub.Field);
 				Assert.IsTrue(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
+
+				var st2 = new SettingsThing(s.Sub2);
+				Assert.AreEqual(st.x, st2.x);
+				Assert.AreEqual(st.y, st2.y);
+				Assert.AreEqual(st.z, st2.z);
 			}
 			[Test] public static void TestEvents()
 			{
