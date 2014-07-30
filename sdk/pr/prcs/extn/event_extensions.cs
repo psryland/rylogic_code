@@ -82,24 +82,26 @@ namespace pr.extn
 
 		/// <summary>Fire the event if not suspended</summary>
 		[DebuggerStepThrough]
-		public static void Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
+		public static TEventArgs Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
 		{
-			if (evt == null) return;
+			if (evt == null) return args;
 			if (Impl<EventHandler<TEventArgs>>.IsSuspended(evt))
 				Impl<EventHandler<TEventArgs>>.Signal(evt);
 			else
 				evt(sender, args);
+			return args;
 		}
 
 		/// <summary>Fire the event if not suspended</summary>
 		[DebuggerStepThrough]
-		public static void Raise(this EventHandler evt, object sender, EventArgs args)
+		public static EventArgs Raise(this EventHandler evt, object sender, EventArgs args)
 		{
-			if (evt == null) return;
+			if (evt == null) return args;
 			if (Impl<EventHandler>.IsSuspended(evt))
 				Impl<EventHandler>.Signal(evt);
 			else
 				evt(sender, args);
+			return args;
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>

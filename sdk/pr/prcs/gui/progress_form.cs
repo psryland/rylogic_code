@@ -127,7 +127,7 @@ namespace pr.gui
 		/// <summary>Show the dialog after a few milliseconds</summary>
 		public DialogResult ShowDialog(Form parent, int delay_ms = 0)
 		{
-			if (Done.WaitOne(delay_ms))
+			if (delay_ms != 0 && Done.WaitOne(delay_ms))
 				return DialogResult.OK; // done already
 
 			return base.ShowDialog(parent);
