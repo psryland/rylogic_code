@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <vector>
 #include <deque>
 #include <limits>
 #include <algorithm>
@@ -39,29 +40,36 @@ namespace pr
 		}
 
 		// Quad tree node
-		template <typename TItem, int N> struct Node :Coord<N>
+		template <typename TItem, int N, typename ItemCont> struct Node :Coord<N>
 		{
-			typedef std::deque<TItem> ItemCont;
+			typedef Node<TItem, N, ItemCont> node;
 
-			ItemCont        m_items;         // The items contained in this node
-			Node<TItem, N>* m_parent;        // Pointer to the parent node
-			Node<TItem, N>* m_child[1 << N]; // Pointers to the child nodes
-			Node(Coord<N> coord, Node<TItem, N>* parent) :Coord<N>(coord) ,m_items() ,m_parent(parent) ,m_child() {}
+			ItemCont m_items;         // The items contained in this node
+			node*    m_parent;        // Pointer to the parent node
+			node*    m_child[1 << N]; // Pointers to the child nodes
+			Node(Coord<N> coord, node* parent) :Coord<N>(coord) ,m_items() ,m_parent(parent) ,m_child() {}
 		};
 	}
 
 	// Loose quad tree
-	template <typename TItem, int N = 2> struct QuadTree
+	template
+	<
+		typename TItem,
+		int N = 2,
+		typename ItemCont = std::vector<TItem>,
+		typename NodePool = std::deque<quad_tree::Node<TItem,N,ItemCont>>
+	>
+	struct QuadTree
 	{
-		typedef quad_tree::Node<TItem, N> Node;
+		typedef quad_tree::Node<TItem, N, ItemCont> Node;
 		typedef quad_tree::Coord<N> Coord;
 
-		std::deque<Node>  m_nodes;         // Storage for the nodes. Note, references are not invalidated by push/pop at the front/back of a std::deque
-		Node*             m_root;          // The top node of the tree
-		float             m_min[N];        // The min x,y,z,.. corner of the region covered by the quad tree
-		float             m_size[N];       // The x,y,z,... size of the region covered by the quad tree
-		size_t            m_max_levels;    // The maximum depth the tree will grow to
-		size_t            m_count;         // The number of items added to the tree
+		NodePool  m_nodes;      // Storage for the nodes. Note, references are not invalidated by push/pop at the front/back of a std::deque
+		Node*     m_root;       // The top node of the tree
+		float     m_min[N];     // The min x,y,z,.. corner of the region covered by the quad tree
+		float     m_size[N];    // The x,y,z,... size of the region covered by the quad tree
+		size_t    m_max_levels; // The maximum depth the tree will grow to
+		size_t    m_count;      // The number of items added to the tree
 
 		QuadTree(float const (&min)[N], float const (&size)[N], size_t max_levels = 8)
 			:m_nodes()

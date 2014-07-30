@@ -11,6 +11,7 @@
 #include "pr/common/repeater.h"
 #include "pr/common/interpolate.h"
 #include "pr/container/vector.h"
+#include "pr/container/deque.h"
 #include "pr/maths/maths.h"
 
 namespace pr

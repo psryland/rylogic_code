@@ -83,8 +83,8 @@ namespace cex
 			//args = R("-input blah -msg "Type a value> ")";
 			//args = R("-shcopy "c:/deleteme/SQ.bin,c:/deleteme/TheList.txt" "c:/deleteme/cexitime/" -title "Testing shcopy")";
 			//args = R"(-clip -lwr -bkslash "C:/blah" "Boris" "F:\\Jef/wan")";
-			//args = R"(-p3d -fi "D:\dump\cyl.3ds" -remove_degenerates 0.0001 -gen_normals 40)";
-			//args = R"(-p3d -fi R:\localrepo\PC\vrex\res\pelvis.3ds -remove_degenerates 16384 -gen_normals 40 -verbosity 3)";
+			//args = R"(-p3d -fi "P:\dump\test.3ds" -verbosity 5 -remove_degenerates 4096 -gen_normals 40)";
+			//args = R"(-p3d -fi R:\localrepo\PC\vrex\res\pelvis.3ds -verbosity 3 -remove_degenerates 16384 -gen_normals 40)";
 
 			// Parse the command line, show help if invalid
 			try

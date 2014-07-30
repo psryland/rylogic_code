@@ -229,7 +229,7 @@ namespace pr
 				std::string m_name;
 
 				// The basic vertex data for the mesh
-				std::vector<Vert> m_vert;
+				std::vector<Vert> m_verts;
 
 				// The 16bit/32bit indices (only one should contain data)
 				std::vector<u16> m_idx16;
@@ -243,7 +243,7 @@ namespace pr
 
 				Mesh(std::string name = std::string())
 					:m_name(name)
-					,m_vert()
+					,m_verts()
 					,m_idx16()
 					,m_idx32()
 					,m_nugget()
@@ -328,7 +328,7 @@ namespace pr
 				auto index = ChunkIndex(EChunkId::Mesh, 0);
 				index.add(ChunkIndex(EChunkId::MeshName, mesh.m_name.size() + 1));
 				index.add(ChunkIndex(EChunkId::MeshBBox, sizeof(BBox)));
-				if (!mesh.m_vert.empty())   index.add(ChunkIndex(EChunkId::MeshVertices , sizeof(u32) + mesh.m_vert.size()   * sizeof(Vert  )));
+				if (!mesh.m_verts.empty())  index.add(ChunkIndex(EChunkId::MeshVertices , sizeof(u32) + mesh.m_verts.size()  * sizeof(Vert  )));
 				if (!mesh.m_idx16.empty())  index.add(ChunkIndex(EChunkId::MeshIndices  , sizeof(u32) + mesh.m_idx16.size()  * sizeof(u16   )));
 				if (!mesh.m_idx32.empty())  index.add(ChunkIndex(EChunkId::MeshIndices32, sizeof(u32) + mesh.m_idx32.size()  * sizeof(u32   )));
 				if (!mesh.m_nugget.empty()) index.add(ChunkIndex(EChunkId::MeshNuggets  , sizeof(u32) + mesh.m_nugget.size() * sizeof(Nugget)));
@@ -587,7 +587,7 @@ namespace pr
 						}
 					case EChunkId::MeshVertices:
 						{
-							mesh.m_vert = ReadMeshVertices<decltype(mesh.m_vert)>(src, data_len);
+							mesh.m_verts = ReadMeshVertices<decltype(mesh.m_verts)>(src, data_len);
 							break;
 						}
 					case EChunkId::MeshIndices:
@@ -843,8 +843,8 @@ namespace pr
 					case EChunkId::MeshVertices:
 						{
 							Write<ChunkHeader>(out, index);
-							Write<u32>(out, checked_cast<u32>(mesh.m_vert.size()));
-							Write<Vert>(out, mesh.m_vert.data(), mesh.m_vert.size());
+							Write<u32>(out, checked_cast<u32>(mesh.m_verts.size()));
+							Write<Vert>(out, mesh.m_verts.data(), mesh.m_verts.size());
 							break;
 						}
 					case EChunkId::MeshIndices:
@@ -967,10 +967,10 @@ namespace pr
 			p3d::Mesh mesh;
 			mesh.m_name = "mesh";
 			mesh.m_bbox = pr::BBox::make(v4Origin, v4::make(1,2,3,0));
-			mesh.m_vert.push_back(p3d::Vert());
-			mesh.m_vert.push_back(p3d::Vert());
-			mesh.m_vert.push_back(p3d::Vert());
-			mesh.m_vert.push_back(p3d::Vert());
+			mesh.m_verts.push_back(p3d::Vert());
+			mesh.m_verts.push_back(p3d::Vert());
+			mesh.m_verts.push_back(p3d::Vert());
+			mesh.m_verts.push_back(p3d::Vert());
 			mesh.m_idx16.push_back(0);
 			mesh.m_idx16.push_back(1);
 			mesh.m_idx16.push_back(2);
@@ -1013,7 +1013,7 @@ namespace pr
 				auto& m0 = cmp.m_scene.m_meshes[i];
 				auto& m1 = file.m_scene.m_meshes[i];
 				PR_CHECK(m0.m_name          , m1.m_name);
-				PR_CHECK(m0.m_vert.size()   , m1.m_vert.size());
+				PR_CHECK(m0.m_verts.size()  , m1.m_verts.size());
 				PR_CHECK(m0.m_idx16.size()  , m1.m_idx16.size());
 				PR_CHECK(m0.m_idx32.size()  , m1.m_idx32.size());
 				PR_CHECK(m0.m_nugget.size() , m1.m_nugget.size());

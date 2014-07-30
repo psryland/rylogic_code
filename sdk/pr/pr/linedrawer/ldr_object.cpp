@@ -984,16 +984,13 @@ namespace pr
 					m_normals.resize(m_verts.size());
 
 					pr::geometry::GenerateNormals(m_indices.size(), m_indices.data(), m_gen_normals,
-						[&](pr::uint16 i)
-						{
-							return m_verts[i];
-						},
+						[&](pr::uint16 i){ return m_verts[i]; }, 0,
 						[&](pr::uint16 new_idx, pr::uint16 orig_idx, v4 const& norm)
 						{
 							if (new_idx >= m_verts.size())
 							{
-								m_verts  .push_back(m_verts[orig_idx]);
-								m_normals.push_back(m_normals[orig_idx]);
+								m_verts  .resize(new_idx + 1, m_verts[orig_idx]);
+								m_normals.resize(new_idx + 1, m_normals[orig_idx]);
 							}
 							m_normals[new_idx] = norm;
 						},

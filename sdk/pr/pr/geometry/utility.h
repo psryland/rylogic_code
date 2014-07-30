@@ -4,8 +4,6 @@
 //********************************
 #pragma once
 
-#include <deque>
-#include <vector>
 #include <type_traits>
 #include <cassert>
 #include "pr/geometry/common.h"
@@ -19,14 +17,16 @@ namespace pr
 		// 'indices' is an iterator to model face data. Expects 3 indices per face.
 		// 'smoothing_angle' is the threshold above which normals are not merged and a new vertex is created (in radians)
 		// 'getv' is an accessor to the vertex for a given face index: v4 const& getv(VIdx idx)
+		// 'new_vidx' is the start index to assign to new vertices. Effectively, it's the size of the container 'getv' is
+		//   pulling from. You can set this to zero in which case one passed the largest vertex index encountered will be used.
 		// 'vout' outputs the new vertex normals: vout(VIdx new_idx, VIdx orig_idx, v4 normal)
 		// 'iout' outputs the new face indices: iout(VIdx i0, VIdx i1, VIdx i2)
-		// This function will only adds verts, not remove any, so 'vout' can overwrite and add to the existing container.
-		// It also outputs the verts in order, so if new_idx >= vert_cont.size() => push_back is fine.
+		// This function will only add verts, not remove any, so 'vout' can overwrite and add to the existing container.
+		// It also outputs the verts in order.
 		// e.g.
 		//   vout = [&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
 		//     {
-		//        if (new_idx == verts.size()) verts.push_back(verts[orig_idx]);
+		//        if (new_idx >= verts.size()) verts.resize(new_idx + 1, verts[orig_idx]);
 		//        verts[new_idx].norm = normal;
 		//      }
 		// The number of indices returned will equal 'num_indices' so it's also fine to overwrite the index container
@@ -38,7 +38,7 @@ namespace pr
 		//         *iptr++ = i2;
 		//      }
 		template <typename TIdxCIter, typename TGetV, typename TVertOut, typename TIdxOut>
-		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, TVertOut vout, TIdxOut iout)
+		void GenerateNormals(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, std::size_t new_vidx, TVertOut vout, TIdxOut iout)
 		{
 			// Notes:
 			// - Can't weld verts because that would destroy distinct texture
@@ -46,7 +46,8 @@ namespace pr
 			//  a discontinuous edge in the model and are therefore not edges that
 			//  should be smoothed anyway.
 			typedef std::remove_reference<decltype(*indices)>::type VIdx;
-			if ((num_indices % 3) != 0) throw std::exception("GenerateNormals expects triangle list data");
+			if ((num_indices % 3) != 0)
+				throw std::exception("GenerateNormals expects triangle list data");
 
 			struct L
 			{
@@ -98,17 +99,17 @@ namespace pr
 				static_assert((sizeof(Vert) % sizeof(pr::v4)) == 0, "Vert size not a multiple of pr::v4 alignment");
 
 				pr::vector<Face> m_faces;
-				std::deque<Vert> m_verts;
-				std::deque<Edge> m_edge_alloc;
+				pr::deque<Vert> m_verts;
+				pr::deque<Edge> m_edge_alloc;
 
-				L(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv)
+				L(std::size_t num_indices, TIdxCIter indices, float smoothing_angle, TGetV getv, std::size_t new_vidx)
 					:m_faces()
 					,m_verts()
 					,m_edge_alloc()
 				{
 					BuildAdjacencyData(num_indices, indices, getv);
 					AssignSmoothingGroups(smoothing_angle);
-					CreateNormals();
+					CreateNormals(new_vidx);
 				}
 
 				// Creates the adjacency data
@@ -200,12 +201,12 @@ namespace pr
 				void AssignSmoothingGroups(float smoothing_angle)
 				{
 					auto cos_angle_threshold = pr::Cos(smoothing_angle);
-					for (auto& vert : m_verts)
+					bool no_changes;
+					do
 					{
-						bool no_changes;
-						do
+						no_changes = true;
+						for (auto& vert : m_verts)
 						{
-							no_changes = true;
 							for (auto eptr = vert.m_edges; eptr != nullptr; eptr = eptr->m_next)
 							{
 								bool smooth_edge = eptr->smooth(cos_angle_threshold);
@@ -217,13 +218,16 @@ namespace pr
 								}
 							}
 						}
-						while (!no_changes);
 					}
+					while (!no_changes);
 				}
 
 				// Generate the normal for each vertex, adding new vertices for seperate smoothing groups
-				void CreateNormals()
+				void CreateNormals(std::size_t new_vidx)
 				{
+					// Set the starting index for any new verts created
+					new_vidx = std::max(new_vidx, m_verts.size());
+
 					// Return the new index for vertex 'idx' in smoothing group 'face.m_grp'
 					auto vert_index = [&](Face& face, size_t idx)
 					{
@@ -234,7 +238,7 @@ namespace pr
 						{
 							vptr->m_norm = face.normal(idx);
 							vptr->m_grp = face.m_grp;
-							return vptr->m_new_idx;
+							return vptr->m_new_idx;// == vptr->m_orig_idx
 						}
 
 						// Find a vertex with a matching smoothing group
@@ -252,7 +256,7 @@ namespace pr
 
 						// Initialise the new vertex
 						vptr->m_orig_idx = idx;
-						vptr->m_new_idx = m_verts.size() - 1;
+						vptr->m_new_idx = new_vidx++;
 						vptr->m_norm = face.normal(idx);
 						vptr->m_grp = face.m_grp;
 						return vptr->m_new_idx;
@@ -269,11 +273,15 @@ namespace pr
 			};
 			
 			// Generate the normals
-			L gen(num_indices, indices, smoothing_angle, getv);
+			L gen(num_indices, indices, smoothing_angle, getv, new_vidx);
 
 			// Output the new verts
 			for (auto& vert : gen.m_verts)
 			{
+				// Skip verts that weren't used
+				if (vert.m_grp == 0)
+					continue;
+
 				// On x86 release, vert.m_norm isn't aligned, don't know why.
 				// I think it's something to do with std::deque.
 				// Copying to stack makes it aligned
@@ -385,14 +393,15 @@ namespace pr
 					break;
 				}
 
-				std::vector<Vert> vout;
-				std::vector<int> iout;
+				pr::vector<Vert> vout;
+				pr::vector<int> iout;
 				GenerateNormals(PR_COUNTOF(faces), &faces[0], pr::DegreesToRadians(10.0f)
 					,[&](size_t i)
 					{
 						assert(i < PR_COUNTOF(verts));
 						return verts[i].m_pos;
 					}
+					,0
 					,[&](int, int orig_idx, pr::v4 const& norm)
 					{
 						assert(orig_idx < PR_COUNTOF(verts));

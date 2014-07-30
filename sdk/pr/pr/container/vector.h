@@ -26,7 +26,7 @@ namespace pr
 {
 	namespace impl
 	{
-		namespace arr
+		namespace vector
 		{
 			template <typename Type> struct citer // const iterator
 			{
@@ -147,16 +147,16 @@ namespace pr
 	{
 	public:
 		typedef vector<Type, LocalCount, Fixed, Allocator> type;
-		typedef impl::arr::citer<Type> const_iterator;    // A type that provides a random-access iterator that can read a const element in a array.
-		typedef impl::arr::miter<Type> iterator;          // A type that provides a random-access iterator that can read or modify any element in a array.
-		typedef Type const*            const_pointer;     // A type that provides a pointer to a const element in a array.
-		typedef Type*                  pointer;           // A type that provides a pointer to an element in a array.
-		typedef Type const&            const_reference;   // A type that provides a reference to a const element stored in a array for reading and performing const operations.
-		typedef Type&                  reference;         // A type that provides a reference to an element stored in a array.
-		typedef std::size_t            size_type;         // A type that counts the number of elements in a array.
-		typedef std::ptrdiff_t         difference_type;   // A type that provides the difference between the addresses of two elements in a array.
-		typedef Type                   value_type;        // A type that represents the data type stored in a array.
-		typedef Allocator              allocator_type;    // A type that represents the allocator class for the array object.
+		typedef pr::impl::vector::citer<Type> const_iterator;    // A type that provides a random-access iterator that can read a const element in a array.
+		typedef pr::impl::vector::miter<Type> iterator;          // A type that provides a random-access iterator that can read or modify any element in a array.
+		typedef Type const*                   const_pointer;     // A type that provides a pointer to a const element in a array.
+		typedef Type*                         pointer;           // A type that provides a pointer to an element in a array.
+		typedef Type const&                   const_reference;   // A type that provides a reference to a const element stored in a array for reading and performing const operations.
+		typedef Type&                         reference;         // A type that provides a reference to an element stored in a array.
+		typedef std::size_t                   size_type;         // A type that counts the number of elements in a array.
+		typedef std::ptrdiff_t                difference_type;   // A type that provides the difference between the addresses of two elements in a array.
+		typedef Type                          value_type;        // A type that represents the data type stored in a array.
+		typedef Allocator                     allocator_type;    // A type that represents the allocator class for the array object.
 		typedef typename std::remove_pointer<Allocator>::type AllocType; // The type of the allocator ignoring pointers
 
 		enum
@@ -196,7 +196,7 @@ namespace pr
 		};
 
 	private:
-		typedef typename impl::arr::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
+		typedef typename pr::impl::vector::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
 		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage doesn't hvae the correct alignment");
 
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays

@@ -350,9 +350,9 @@ namespace pr
 	{
 	public:
 		typedef deque<Type,BlockSize,Allocator> type;
-		typedef impl::deque::BlockPtrMap<Type, BlockSize, Allocator> BlockPtrMap;
-		typedef impl::deque::citer<Type, BlockSize, Allocator> const_iterator;
-		typedef impl::deque::miter<Type, BlockSize, Allocator> iterator;
+		typedef pr::impl::deque::BlockPtrMap<Type, BlockSize, Allocator> BlockPtrMap;
+		typedef pr::impl::deque::citer<Type, BlockSize, Allocator> const_iterator;
+		typedef pr::impl::deque::miter<Type, BlockSize, Allocator> iterator;
 		typedef typename BlockPtrMap::alloc_traits alloc_traits;
 		typedef typename BlockPtrMap::allocator_type allocator_type;
 		typedef typename BlockPtrMap::value_type value_type;

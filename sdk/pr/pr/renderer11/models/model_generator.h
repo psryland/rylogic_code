@@ -99,17 +99,14 @@ namespace pr
 					if (topo == EPrim::TriList)
 					{
 						auto iout = std::begin(cont.m_icont);
-						pr::geometry::GenerateNormals(cont.m_icont.size(), cont.m_icont.data(), gen_normals
-							,[&](Cont::IType idx)
+						pr::geometry::GenerateNormals(cont.m_icont.size(), cont.m_icont.data(), gen_normals,
+							[&](Cont::IType idx){ return GetP(cont.m_vcont[idx]); }, cont.m_vcont.size(),
+							[&](Cont::IType idx, Cont::IType orig, v4 const& norm)
 							{
-								return GetP(cont.m_vcont[idx]);
-							}
-							,[&](Cont::IType idx, Cont::IType orig, v4 const& norm)
-							{
-								if (idx >= cont.m_vcont.size()) cont.m_vcont.push_back(cont.m_vcont[orig]);
+								if (idx >= cont.m_vcont.size()) cont.m_vcont.resize(idx + 1, cont.m_vcont[orig]);
 								SetN(cont.m_vcont[idx], norm);
-							}
-							,[&](Cont::IType i0, Cont::IType i1, Cont::IType i2)
+							},
+							[&](Cont::IType i0, Cont::IType i1, Cont::IType i2)
 							{
 								*iout++ = i0;
 								*iout++ = i1;
@@ -427,8 +424,8 @@ namespace pr
 					cont.m_bbox = mesh.m_bbox;
 
 					// Copy the verts
-					cont.m_vcont.resize(mesh.m_vert.size());
-					memcpy(cont.m_vcont.data(), mesh.m_vert.data(), sizeof(Vert) * mesh.m_vert.size());
+					cont.m_vcont.resize(mesh.m_verts.size());
+					memcpy(cont.m_vcont.data(), mesh.m_verts.data(), sizeof(Vert) * mesh.m_verts.size());
 
 					// Copy the indices
 					cont.m_icont.resize(mesh.m_idx16.size());

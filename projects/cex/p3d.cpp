@@ -28,8 +28,9 @@ namespace cex
 		std::vector<EP3dOp>  m_ops;
 		int                  m_quantisation;
 		float                m_smooth_threshold;
-		bool                 m_preserve_uvs;
+		bool                 m_preserve_normals;
 		bool                 m_preserve_colours;
+		bool                 m_preserve_uvs;
 		int                  m_verbosity; // 0 = quiet, 1 = minimal, 2 = normal, 3 = verbose
 
 		Impl()
@@ -37,10 +38,11 @@ namespace cex
 			,m_infile()
 			,m_outfile()
 			,m_ops()
-			,m_quantisation()
+			,m_quantisation(65536)
 			,m_smooth_threshold()
-			,m_preserve_uvs(false)
+			,m_preserve_normals(false)
 			,m_preserve_colours(false)
+			,m_preserve_uvs(false)
 			,m_verbosity(2)
 		{}
 		int Run()
@@ -71,7 +73,7 @@ namespace cex
 						for (auto& mesh : m_p3d.m_scene.m_meshes)
 							std::cout 
 								<< "         Mesh: " << mesh.m_name << "\n"
-								<< "        Verts: " << mesh.m_vert.size() << "\n"
+								<< "        Verts: " << mesh.m_verts.size() << "\n"
 								<< "        Idx16: " << mesh.m_idx16.size() << "\n"
 								<< "        Idx32: " << mesh.m_idx32.size() << "\n"
 								<< "      Nuggets: " << mesh.m_nugget.size() << "\n";
@@ -137,7 +139,7 @@ namespace cex
 				auto& mesh = m_p3d.m_scene.m_meshes.back();
 
 				// Reserve space
-				mesh.m_vert.reserve(o.m_mesh.m_vert.size());
+				mesh.m_verts.reserve(o.m_mesh.m_vert.size());
 				mesh.m_idx16.reserve(o.m_mesh.m_face.size() * 3);
 				mesh.m_nugget.reserve(o.m_mesh.m_matgroup.size());
 
@@ -165,7 +167,7 @@ namespace cex
 						vert.col = c;
 						vert.norm = n;
 						vert.uv = t;
-						mesh.m_vert.push_back(vert);
+						mesh.m_verts.push_back(vert);
 					},
 					[&](pr::uint16 i0, pr::uint16 i1, pr::uint16 i2) // index out
 					{
@@ -204,40 +206,38 @@ namespace cex
 		{
 			using namespace pr::geometry;
 
+			// Generate normals for each mesh
 			for (auto& mesh : m_p3d.m_scene.m_meshes)
 			{
-				if (mesh.m_vert.empty())
+				if (mesh.m_verts.empty())
 					continue;
 
 				if (m_verbosity >= 2)
 					std::cout << "  Generating normals for mesh: " << mesh.m_name << std::endl;
 
-				// Generate normals per nugget because the topology can change per nugget
+				// Generate normals per nugget since the topology can change per nugget
 				for (auto& nug : mesh.m_nugget)
 				{
 					// Can only generate normals for triangle lists
 					if (nug.m_topo != EPrim::TriList)
 						continue;
 
-					if (!mesh.m_idx16.empty()) GenerateNormals(nug.m_irange, m_smooth_threshold, mesh.m_vert, mesh.m_idx16);
-					if (!mesh.m_idx32.empty()) GenerateNormals(nug.m_irange, m_smooth_threshold, mesh.m_vert, mesh.m_idx32);
+					if (!mesh.m_idx16.empty()) GenerateNormals(nug, mesh.m_verts, mesh.m_idx16);
+					if (!mesh.m_idx32.empty()) GenerateNormals(nug, mesh.m_verts, mesh.m_idx32);
 				}
 			}
 		}
 
 		// Generate normals for 16 or 32 bit indices
-		template <typename VCont, typename ICont> void GenerateNormals(pr::geometry::p3d::Range irange, float thres, VCont& vcont, ICont& icont)
+		template <typename VCont, typename ICont> void GenerateNormals(pr::geometry::p3d::Nugget const& nug, VCont& vcont, ICont& icont)
 		{
 			typedef std::remove_reference<decltype(icont[0])>::type VIdx;
-			auto iptr = std::begin(icont) + irange.first;
-			pr::geometry::GenerateNormals(irange.count, iptr, thres,
-				[&](VIdx idx)
-				{
-					return vcont[idx].pos;
-				},
+			auto iptr = std::begin(icont) + nug.m_irange.first;
+			pr::geometry::GenerateNormals(nug.m_irange.count, iptr, m_smooth_threshold,
+				[&](VIdx idx) { return vcont[idx].pos; }, vcont.size(),
 				[&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
 				{
-					if (new_idx == vcont.size()) vcont.push_back(vcont[orig_idx]);
+					if (new_idx >= vcont.size()) vcont.resize(new_idx + 1, vcont[orig_idx]);
 					vcont[new_idx].norm = normal;
 				},
 				[&](VIdx i0, VIdx i1, VIdx i2)
@@ -253,48 +253,61 @@ namespace cex
 		{
 			using namespace pr::geometry;
 
-			std::vector<p3d::Vert*> map;
+			// A map from original vertex to non-degenerate vertex
+			struct VP { p3d::Vert *orig, *nondeg; };
+			std::vector<VP> map;
+
 			for (auto& mesh : m_p3d.m_scene.m_meshes)
 			{
-				if (mesh.m_vert.empty())
+				if (mesh.m_verts.empty())
 					continue;
 
 				if (m_verbosity >= 2)
 					std::cout << "  Removing degenerate verts for mesh: " << mesh.m_name << std::endl;
 
 				// Quantise all the verts
-				for (auto& vert : mesh.m_vert)
+				for (auto& vert : mesh.m_verts)
 					vert.pos = pr::Quantise(vert.pos, m_quantisation);
 
-				// Initialise the map of pointers to verts
-				map.resize(mesh.m_vert.size());
+				// Initialise the map
+				map.resize(mesh.m_verts.size());
 				auto map_ptr = std::begin(map);
-				for (auto& vert : mesh.m_vert)
-					*map_ptr++ = &vert;
+				for (auto& vert : mesh.m_verts)
+				{
+					map_ptr->orig = map_ptr->nondeg = &vert;
+					++map_ptr;
+				}
 
-				// Sort the pointer map such that degenerate verts are next to each other
-				pr::sort(map,[&](p3d::Vert const* lhs, p3d::Vert const* rhs)
+				// Sort the map such that degenerate verts are next to each other
+				pr::sort(map,[&](VP const& lhs, VP const& rhs)
 					{
-						auto& v0 = *lhs;
-						auto& v1 = *rhs;
+						auto& v0 = *lhs.orig;
+						auto& v1 = *rhs.orig;
 						if (v0.pos.x != v1.pos.x) return v0.pos.x < v1.pos.x;
 						if (v0.pos.y != v1.pos.y) return v0.pos.y < v1.pos.y;
 						return v0.pos.z < v1.pos.z;
 					});
 
-				// Set each pointer to point at the first degenerate vert
+				// Set each pointer equal to the first degenerate vert
 				size_t unique_count = map.size();
 				for (size_t i = 1, iend = map.size(); i != iend; ++i)
 				{
-					auto& vi = *map[i];
+					auto& vi = *map[i].nondeg;
 					for (size_t j = i; j-- != 0;)
 					{
-						auto& vj = *map[j];
+						auto& vj = *map[j].nondeg;
 
 						// If the vertex position is different, move to the next vert
 						if (vi.pos != vj.pos)
 							break;
-						
+
+						// The verts are only sorted by position, so we need to check
+						// all verts back to where the positions no longer match
+
+						// Keep searching backward if the normals don't match
+						if (m_preserve_normals && !FEql(vi.norm, vj.norm))
+							continue;
+
 						// Keep searching backward if the colours don't match
 						if (m_preserve_colours && !FEql(vi.col,vj.col))
 							continue;
@@ -304,12 +317,11 @@ namespace cex
 							continue;
 
 						// Degenerate found
-						map[i] = map[j];
+						map[i].nondeg = map[j].nondeg;
 						--unique_count;
 						break;
 					}
 				}
-
 				if (m_verbosity >= 3)
 				{
 					std::cout
@@ -317,39 +329,61 @@ namespace cex
 						<< "    " << unique_count << " verts remaining." << std::endl;
 				}
 
+				// Returns true if 'ptr' points within 'cont'
+				auto is_within = [](std::vector<p3d::Vert> const& cont, p3d::Vert const* ptr) { return ptr >= cont.data() && ptr < cont.data() + cont.size(); };
+
 				// Create a collection of verts without degenerates
 				std::vector<p3d::Vert> verts(unique_count);
 				auto vout = std::begin(verts);
-				for (size_t i = 0, iend = map.size(); i != iend;)
+				for (size_t i = 0, iend = map.size(); i != iend; ++i)
 				{
-					// Save a pointer to the vert
-					auto ptr = map[i];
+					// If this vert is already pointing into the new container, skip on the next
+					if (is_within(verts, map[i].nondeg))
+						continue;
 
-					// Map all pointers up to the next non-degenerate to the new container
-					for (; i != iend && ptr == map[i]; ++i)
-						map[i] = &*vout;
+					// Save the pointer to the vert in the old container
+					auto ptr = map[i].nondeg;
+					auto pos = ptr->pos;
+
+					// Map all pointers up to the next non-degenerate to the new container.
+					// Test all verts after 'i' until the positions differ. The preserved properties
+					// mean that not all degenerate verts are adjacent in 'map'
+					for (size_t j = i; j != iend && map[j].nondeg->pos == pos; ++j)
+					{
+						// If 'map[j]' is actually degenerate with 'map[i]' set the pointer to
+						// point into the new container at where 'map[i]' is pointing.
+						// (Note: map[i] is set by this for loop as well)
+						if (map[j].nondeg == ptr)
+							map[j].nondeg = &*vout;
+					}
 
 					// Copy the vert to the new collection
 					*vout++  = *ptr;
 				}
 
+				// Resort the map back to the order of mesh.m_vert
+				pr::sort(map, [&](VP const& lhs, VP const& rhs)
+					{
+						return lhs.orig < rhs.orig;
+					});
+
 				// Update the indices to the non-degenerate vert indices
 				for (auto& idx : mesh.m_idx16)
-					idx = pr::checked_cast<p3d::u16>(map[idx] - verts.data());
+					idx = pr::checked_cast<p3d::u16>(map[idx].nondeg - verts.data());
 				for (auto& idx : mesh.m_idx32)
-					idx = pr::checked_cast<p3d::u32>(map[idx] - verts.data());
+					idx = pr::checked_cast<p3d::u32>(map[idx].nondeg - verts.data());
 
 				// Update the vrange for each nugget
 				for (auto& nug : mesh.m_nugget)
 				{
 					auto vrange = pr::Range<p3d::u32>::Reset();
 					for (auto i = nug.m_vrange.first, iend = i + nug.m_vrange.count; i != iend; ++i)
-						Encompass(vrange, static_cast<p3d::u32>(map[i] - verts.data()));
+						Encompass(vrange, static_cast<p3d::u32>(map[i].nondeg - verts.data()));
 					nug.m_vrange = vrange;
 				}
 
 				// Replace the vert container in the mesh
-				mesh.m_vert = std::move(verts);
+				mesh.m_verts = std::move(verts);
 			}
 		}
 
@@ -387,9 +421,11 @@ Syntax:
           By default only position is used to determine degeneracy. 'tolerence' is
           a power of 2 value such that verts are quantised to '1/tolerence'.
 
-    -preserve_uvs - Verts with differing UV coordinates will not be considered degenerate
+    -preserve_normals - Verts with differing normals will not be considered degenerate
 
     -preserve_colours - Verts with differing colours will not be considered degenerate
+
+    -preserve_uvs - Verts with differing UV coordinates will not be considered degenerate
 
     -gen_normals threshold - overwrite the model normal data using 'threshold' is the
           tolerence for coplanar faces (in degrees)
@@ -435,14 +471,19 @@ Syntax:
 			m_ptr->m_outfile = *arg++;
 			return true;
 		}
-		if (pr::str::EqualI(option, "-preserve_uvs"))
+		if (pr::str::EqualI(option, "-preserve_normals"))
 		{
-			m_ptr->m_preserve_uvs = true;
+			m_ptr->m_preserve_normals = true;
 			return true;
 		}
 		if (pr::str::EqualI(option, "-preserve_colours"))
 		{
 			m_ptr->m_preserve_colours = true;
+			return true;
+		}
+		if (pr::str::EqualI(option, "-preserve_uvs"))
+		{
+			m_ptr->m_preserve_uvs = true;
 			return true;
 		}
 		if (pr::str::EqualI(option, "-verbosity") && arg != arg_end)

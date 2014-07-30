@@ -110,6 +110,10 @@ namespace pr
 	}
 
 	// Sort a container
+	template <typename TCont> inline void sort(TCont& cont)
+	{
+		std::sort(std::begin(cont), std::end(cont));
+	}
 	template <typename TCont, typename Pred> inline void sort(TCont& cont, Pred pred)
 	{
 		std::sort(std::begin(cont), std::end(cont), pred);
