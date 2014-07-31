@@ -137,25 +137,31 @@ namespace pr
 			if (!reader.IsSectionStart()) { reader.ExtractToken(tok1, "{}"); ++count; }
 			if (!reader.IsSectionStart()) { reader.ExtractBool(attr.m_instance); }
 
-			// If not all tokens are given, allow the name to be optional
+			// If not all tokens are given, allow the name and/or colour to be optional
 			uint32 aarrggbb;
+			auto ExtractColour = [](string32 const& tok, uint32& col)
+			{
+				char const* end;
+				col = ::strtoul(tok.c_str(), (char**)&end, 16);
+				return std::size_t(end - tok.c_str()) == tok.size();
+			};
 
 			// If the second token is a valid colour, assume the first is the name
-			if (count == 2 && pr::str::ExtractIntC(aarrggbb, 16, std::begin(tok1)))
+			if (count == 2 && ExtractColour(tok1, aarrggbb))
 			{
 				if (!pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
 				attr.m_colour = aarrggbb;
 			}
 			// If the first token is a valid colour and no second token was given, assume the first token is the colour and no name was given
-			else if (count == 1 && pr::str::ExtractIntC(aarrggbb, 16, std::begin(tok0)))
+			else if (count == 1 && ExtractColour(tok0, aarrggbb))
 			{
 				attr.m_colour = aarrggbb;
 			}
 			// Otherwise, make no assumptions
 			else
 			{
-				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0)))           reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
-				if (count >= 2 && !pr::str::ExtractIntC(attr.m_colour.m_aarrggbb, 16, std::begin(tok1))) reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
+				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
+				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.m_aarrggbb))              reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
 			}
 			return attr;
 		}
@@ -3099,7 +3105,7 @@ out <<
 		// Set the visibility of this object or child objects matching 'name' (see Apply)
 		void LdrObject::Visible(bool visible, char const* name)
 		{
-			Apply([=](LdrObject* o){ o->m_visible = visible; }, name);
+			Apply([=](LdrObject* o){ o->m_visible = visible; return true; }, name);
 		}
 
 		// Set the render mode for this object or child objects matching 'name' (see Apply)
@@ -3110,6 +3116,7 @@ out <<
 				o->m_wireframe = wireframe;
 				if (o->m_wireframe) o->m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
 				else                o->m_rsb.Clear(ERS::FillMode);
+				return true;
 			}, name);
 		}
 
@@ -3124,6 +3131,7 @@ out <<
 				bool has_alpha = o->m_colour.a() != 0xFF;
 				o->m_sko.Alpha(has_alpha);
 				SetAlphaBlending(o->m_bsb, o->m_dsb, o->m_rsb, has_alpha);
+				return true;
 			}, name);
 		}
 
@@ -3135,7 +3143,7 @@ out <<
 		{
 			Apply([=](LdrObject* o)
 			{
-				if (o->m_model == nullptr) return;
+				if (o->m_model == nullptr) return true;
 				for (auto& nug : o->m_model->m_nuggets)
 				{
 					nug.m_tex_diffuse = tex;
@@ -3144,6 +3152,7 @@ out <<
 					SetAlphaBlending(nug, tex->m_has_alpha);
 					// The drawlists will need to be resorted...
 				}
+				return true;
 			}, name);
 		}
 

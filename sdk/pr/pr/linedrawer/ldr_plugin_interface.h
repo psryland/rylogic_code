@@ -69,7 +69,6 @@ LDR_API(LDR_EXPORT, void                  ,ObjectSetWireframe   ,(ldrapi::Object
 
 #include <windows.h>
 #include "pr/maths/maths.h"
-#include "pr/linedrawer/ldr_forward.h"
 
 // Note: Don't include "ldr_object.h" in here. Clients must choose to use this file
 // explicitly. If they include "ldr_object.h" but not "ldr_object.cpp" then they can

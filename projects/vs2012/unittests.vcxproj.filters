@@ -756,9 +756,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scope.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h">
-      <Filter>pr\linedrawer</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h">
       <Filter>pr\linedrawer</Filter>
     </ClInclude>

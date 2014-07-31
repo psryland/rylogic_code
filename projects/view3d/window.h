@@ -15,6 +15,7 @@ namespace view3d
 	{
 		View3D_SettingsChanged    m_settings_cb;              // Callback on settings changed
 		View3D_RenderCB           m_render_cb;                // Callback to invoke a render
+		HWND                      m_hwnd;                     // The associated window handle
 		pr::Renderer&             m_rdr;                      // Reference to the renderer
 		pr::rdr::Window           m_wnd;                      // The window being drawn on
 		pr::rdr::Scene            m_scene;                    // Scene manager
@@ -38,6 +39,7 @@ namespace view3d
 		Window(pr::Renderer& rdr, HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
 			:m_settings_cb(settings_cb)
 			,m_render_cb(render_cb)
+			,m_hwnd(hwnd)
 			,m_rdr(rdr)
 			,m_wnd(m_rdr, Settings(hwnd, gdi_compat))
 			,m_scene(m_wnd)
@@ -91,6 +93,22 @@ namespace view3d
 
 			//m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
 			//m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
+		}
+
+		// Close any window handles
+		void Close()
+		{
+			m_obj_cont_ui    .Close();
+			m_measure_tool_ui.Close();
+			m_angle_tool_ui  .Close();
+
+			m_obj_cont_ui    .Detach();
+			m_measure_tool_ui.Detach();
+			m_angle_tool_ui  .Detach();
+
+			// Don't destroy 'm_hwnd' because it doesn't belong to us,
+			// we're simply drawing on that window. Single close by nulling it;
+			m_hwnd = 0;
 		}
 
 		static pr::rdr::WndSettings Settings(HWND hwnd, BOOL gdi_compat)

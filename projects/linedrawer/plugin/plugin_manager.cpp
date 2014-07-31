@@ -106,7 +106,7 @@ namespace ldr
 {
 	// Plugin manager *****************************************************************
 
-	PluginManager::PluginManager(LineDrawer* ldr)
+	PluginManager::PluginManager(ldr::Main* ldr)
 		:m_plugins()
 		,m_ldr(ldr)
 		,m_last_poll(0)

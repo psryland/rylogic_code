@@ -60,6 +60,8 @@ namespace pr
 			// Return it
 			return iter->second;
 		}
+
+		// Access user data by type and unique id. User data is lazily created.
 		template <typename TData, typename Id = intptr_t> TData& get(Id id = Id())
 		{
 			return table<Id,TData>()[id];

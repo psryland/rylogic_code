@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #pragma once
-#ifndef LDR_FORWARD_H
-#define LDR_FORWARD_H
 
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
@@ -38,7 +36,6 @@
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/script_forward.h"
-#include "pr/linedrawer/ldr_forward.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
@@ -48,49 +45,60 @@
 #define LDR_EXPORTS 1
 #include "pr/linedrawer/ldr_plugin_interface.h"
 
-#define PR_ENUM(x)\
-	x(NotSpecified       )\
-	x(FileNotFound       )\
-	x(FailedToLoad       )\
-	x(IncorrectVersion   )\
-	x(InvalidUserSettings)\
-	x(SourceScriptError  )\
-	x(OperationCancelled )
-PR_DEFINE_ENUM1(ELdrException, PR_ENUM);
-#undef PR_ENUM
-
-#define PR_ENUM(x)\
-	x(Solid)\
-	x(Wireframe)\
-	x(SolidAndWire)
-PR_DEFINE_ENUM1(EGlobalRenderMode, PR_ENUM);
-#undef PR_ENUM
-
-#define PR_ENUM(x)\
-	x(Left   ,= 1 << 0)\
-	x(Right  ,= 1 << 1)\
-	x(Middle ,= 1 << 2)
-PR_DEFINE_ENUM2_FLAGS(EMouseButton, PR_ENUM);
-#undef PR_ENUM
-
-#define PR_ENUM(x)\
-	x(Navigation  )\
-	x(Manipulation)
-PR_DEFINE_ENUM1(ENavMode, PR_ENUM);
-#undef PR_ENUM
-
-#define PR_ENUM(x)\
-	x(Default)\
-	x(Stereo)
-PR_DEFINE_ENUM1(EScreenView, PR_ENUM);
-#undef PR_ENUM
-
-typedef pr::Exception<ELdrException> LdrException;
-
-typedef std::vector<pr::ldr::ContextId> ContextIdCont;
-
 namespace ldr
 {
+	#define PR_ENUM(x)\
+		x(NotSpecified       )\
+		x(FileNotFound       )\
+		x(FailedToLoad       )\
+		x(IncorrectVersion   )\
+		x(InvalidUserSettings)\
+		x(SourceScriptError  )\
+		x(OperationCancelled )
+	PR_DEFINE_ENUM1(ELdrException, PR_ENUM);
+	#undef PR_ENUM
+
+	// Fill mode
+	#define PR_ENUM(x)\
+		x(Solid)\
+		x(Wireframe)\
+		x(SolidAndWire)
+	PR_DEFINE_ENUM1(EFillMode, PR_ENUM);
+	#undef PR_ENUM
+
+	// Mouse buttons
+	#define PR_ENUM(x)\
+		x(Left   ,= 1 << 0)\
+		x(Right  ,= 1 << 1)\
+		x(Middle ,= 1 << 2)
+	PR_DEFINE_ENUM2_FLAGS(EMouseButton, PR_ENUM);
+	#undef PR_ENUM
+
+	// Navigation or Manipulation mode
+	#define PR_ENUM(x)\
+		x(Navigation  )\
+		x(Manipulation)
+	PR_DEFINE_ENUM1(ENavMode, PR_ENUM);
+	#undef PR_ENUM
+
+	// Stereo view
+	#define PR_ENUM(x)\
+		x(Default)\
+		x(Stereo)
+	PR_DEFINE_ENUM1(EScreenView, PR_ENUM);
+	#undef PR_ENUM
+
+	// Modes for bounding groups of objects
+	#define PR_ENUM(x)\
+		x(All)\
+		x(Selected)\
+		x(Visible)
+	PR_DEFINE_ENUM1(EObjectBounds, PR_ENUM);
+	#undef PR_ENUM
+
+	typedef pr::Exception<ELdrException> LdrException;
+	typedef std::vector<pr::ldr::ContextId> ContextIdCont;
+
 	wchar_t const* AppTitleW();
 	char const* AppTitleA();
 	char const* AppString();
@@ -108,9 +116,3 @@ namespace ldr
 	struct Plugin;
 	struct NavManager;
 }
-
-//hack
-typedef ldr::Main LineDrawer;
-typedef ldr::MainGUI LineDrawerGUI;
-
-#endif

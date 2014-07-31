@@ -123,7 +123,6 @@
 #include "pr/hardware/comm_port_io.h"
 #include "pr/hardware/cpuinfo.h"
 #include "pr/input/dinput.h"
-#include "pr/linedrawer/ldr_forward.h"
 #include "pr/linedrawer/ldr_helper.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"

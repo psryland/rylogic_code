@@ -82,9 +82,12 @@ VIEW3D_API void __stdcall View3D_DestroyWindow(View3DWindow window)
 	try
 	{
 		if (!window) throw std::exception("window is null");
-		
+
 		DllLockGuard;
 		Dll().m_wnd_cont.erase(window);
+
+		// We need to close and destroy any associated tool windows.
+		window->Close();
 		delete window;
 	}
 	catch (std::exception const& ex)

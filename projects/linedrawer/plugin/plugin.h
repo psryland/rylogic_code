@@ -26,7 +26,7 @@ namespace ldr
 		ldrapi::Plugin_Step          m_pi_step;
 		pr::ldr::ObjectCont          m_store;
 
-		Plugin(LineDrawer* ldr, char const* filepath, char const* args);
+		Plugin(ldr::Main* ldr, char const* filepath, char const* args);
 		~Plugin();
 
 		// Return a pointer to the name of this plugin

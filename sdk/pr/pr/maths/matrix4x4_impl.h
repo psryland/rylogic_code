@@ -418,7 +418,8 @@ namespace pr
 	// Return true if this matrix is orthonormal
 	inline bool IsOrthonormal(m4x4 const& mat)
 	{
-		return  FEql(Length3Sq(mat.x), 1.0f) &&
+		return
+			FEql(Length3Sq(mat.x), 1.0f) &&
 			FEql(Length3Sq(mat.y), 1.0f) &&
 			FEql(Length3Sq(mat.z), 1.0f) &&
 			FEql(Abs(Determinant3(mat)), 1.0f);//Zero3(Cross3(mat.x, mat.y) - mat.z);

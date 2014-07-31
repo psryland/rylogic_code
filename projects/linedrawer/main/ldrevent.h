@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #pragma once
-#ifndef LDR_EVENT_H
-#define LDR_EVENT_H
 
 #include "linedrawer/main/forward.h"
 
@@ -31,15 +29,13 @@ namespace ldr
 		Event& operator=(Event const&);
 	};
 
-	// Events containing general information as line drawer runs
-	// intended for log files or whatever
+	// Events containing general information as line drawer runs intended for log files or whatever
 	struct Event_Info :Event
 	{
 		Event_Info(std::string const& msg) :Event(msg) {}
 	};
 
-	// Events for conditions that don't need to interrupt the user
-	// but are useful for them to know.
+	// Events for conditions that don't need to interrupt the user but are useful for them to know.
 	struct Event_Warn :Event
 	{
 		Event_Warn(std::string const& msg) :Event(msg) {}
@@ -70,6 +66,13 @@ namespace ldr
 	struct Event_Refresh
 	{
 	};
-}
 
-#endif
+	// Event raised when the store of ldr objects is added to or removed from
+	struct Event_StoreChanged
+	{
+		// The store that was changed
+		pr::ldr::ObjectCont const* m_store;
+
+		Event_StoreChanged(pr::ldr::ObjectCont const& store) :m_store(&store) {}
+	};
+}

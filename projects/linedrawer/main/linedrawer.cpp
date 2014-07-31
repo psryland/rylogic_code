@@ -62,6 +62,7 @@ namespace ldr
 		,m_plugin_mgr(this)
 		,m_lua_src()
 		,m_files(m_settings, m_rdr, m_store, m_lua_src)
+		,m_bbox_scene(pr::BBoxReset)
 		,m_scene_rdr_pass(0)
 		,m_step_objects()
 		,m_focus_point()
@@ -80,9 +81,10 @@ namespace ldr
 	}
 
 	// Reset the camera to view all, selected, or visible objects
-	void Main::ResetView(pr::ldr::EObjectBounds view_type)
+	void Main::ResetView(EObjectBounds view_type)
 	{
-		m_nav.ResetView(m_gui.m_store_ui.GetBBox(view_type));
+		// Reset the scene to view the bounding box
+		m_nav.ResetView(GetSceneBounds(view_type));
 	}
 
 	// Update the display
@@ -128,7 +130,7 @@ namespace ldr
 		m_scene.Render();
 
 		// Render wire frame over solid
-		if (m_settings.m_GlobalRenderMode == EGlobalRenderMode::SolidAndWire)
+		if (m_settings.m_GlobalFillMode == EFillMode::SolidAndWire)
 		{
 			m_scene_rdr_pass = 1;
 			m_scene.Render();
@@ -321,6 +323,63 @@ namespace ldr
 		}
 	}
 
+	// Return the bounding box of objects in the current scene for the given bounds type
+	pr::BBox Main::GetSceneBounds(EObjectBounds bound_type) const
+	{
+		pr::BBox bbox;
+		switch (bound_type)
+		{
+		default:
+			{
+				PR_ASSERT(PR_DBG_LDR, false, "Unknown view type");
+				bbox = pr::BBoxUnit;
+				break;
+			}
+		case EObjectBounds::All:
+			{
+				// Update the scene bounding box if out of date
+				if (m_bbox_scene == pr::BBoxReset)
+				{
+					for (auto& obj : m_store)
+					{
+						auto bb = obj->BBoxWS(true);
+						if (bb.IsValid())
+							pr::Encompass(m_bbox_scene, bb);
+					}
+				}
+				bbox = m_bbox_scene;
+				break;
+			}
+		case EObjectBounds::Selected:
+			{
+				bbox = pr::BBoxReset;
+				int iter = -1;
+				for (auto obj = m_gui.m_store_ui.EnumSelected(iter); obj; obj = m_gui.m_store_ui.EnumSelected(iter))
+				{
+					auto bb = obj->BBoxWS(true);
+					if (bb.IsValid())
+						pr::Encompass(bbox, bb);
+				}
+				break;
+			}
+		case EObjectBounds::Visible:
+			{
+				bbox = pr::BBoxReset;
+				for (auto& obj : m_store)
+				{
+					obj->Apply([&](pr::ldr::LdrObject* o)
+					{
+						auto bb = o->BBoxWS(false);
+						if (bb.IsValid()) pr::Encompass(bbox, bb);
+						return true;
+					}, "");
+				}
+				break;
+			}
+		}
+		return bbox.IsValid() ? bbox : pr::BBoxUnit;
+	}
+
 	// User settings have been changed
 	void Main::OnEvent(pr::ldr::Evt_SettingsChanged const&)
 	{
@@ -355,13 +414,16 @@ namespace ldr
 	// The selected objects have changed
 	void Main::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
 	{
+		// Only do something while the selection box is visible
+		if (!m_settings.m_ShowSelectionBox)
+			return;
+
 		// Update the transform of the selection box
-		pr::BBox bbox = m_gui.m_store_ui.GetBBox(pr::ldr::EObjectBounds::Selected);
+		pr::BBox bbox = GetSceneBounds(EObjectBounds::Selected);
 		m_selection_box.m_i2w = pr::Scale4x4(bbox.SizeX(), bbox.SizeY(), bbox.SizeZ(), bbox.Centre());
 
 		// Request a refresh when the selection changes (if the selection box is visible)
-		if (m_settings.m_ShowSelectionBox)
-			pr::events::Send(ldr::Event_Refresh());
+		pr::events::Send(Event_Refresh());
 	}
 
 	// A camera description has been read from a script
@@ -427,17 +489,42 @@ namespace ldr
 
 		// Update the fill mode for the scene
 		auto& fr = e.m_rstep.as<pr::rdr::ForwardRender>();
-		if (m_scene_rdr_pass == 0 || e.m_complete)
+		switch (m_settings.m_GlobalFillMode)
 		{
+		default:
+			PR_ASSERT(PR_DBG_LDR, false, "Unknown fill mode");
+			break;
+		case EFillMode::Solid:
 			m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID);
 			m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
 			fr.m_clear_bb = true;
-		}
-		else
-		{
+			break;
+		case EFillMode::Wireframe:
 			m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
 			m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
-			fr.m_clear_bb = false;
+			fr.m_clear_bb = true;
+			break;
+		case EFillMode::SolidAndWire:
+			if (m_scene_rdr_pass == 0 || e.m_complete)
+			{
+				m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_SOLID);
+				m_scene.m_bsb.Clear(pr::rdr::EBS::BlendEnable, 0);
+				fr.m_clear_bb = true;
+			}
+			else
+			{
+				m_scene.m_rsb.Set(pr::rdr::ERS::FillMode, D3D11_FILL_WIREFRAME);
+				m_scene.m_bsb.Set(pr::rdr::EBS::BlendEnable, FALSE, 0);
+				fr.m_clear_bb = false;
+			}
+			break;
 		}
+	}
+
+	// Called when the store of objects has changed
+	void Main::OnEvent(ldr::Event_StoreChanged const&)
+	{
+		// Reset the scene bounding box
+		m_bbox_scene = pr::BBoxReset;
 	}
 }

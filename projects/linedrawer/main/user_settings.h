@@ -47,7 +47,7 @@ namespace ldr
 		x(bool                    ,EnableResourceMonitor  ,false                          ,0x0924652f        ,)\
 		x(bool                    ,RenderingEnabled       ,true                           ,0x12a0793e        ,)\
 		x(pr::Colour32            ,BackgroundColour       ,pr::Colour32Gray               ,0x13f2d4d2        ,"The background colour")\
-		x(EGlobalRenderMode       ,GlobalRenderMode       ,EGlobalRenderMode::Solid       ,0x106641db        ,)\
+		x(EFillMode               ,GlobalFillMode         ,EFillMode::Solid               ,0x199953BD        ,"Render all objects in the scene as solid, wireframe, or both")\
 		x(pr::rdr::Light          ,Light                  ,                               ,0x08eeae72        ,"Global lighting properties")\
 		x(bool                    ,LightIsCameraRelative  ,true                           ,0x0e1123a0        ,)\
 		x(bool                    ,IgnoreMissingIncludes  ,true                           ,0x13eca235        ,)\

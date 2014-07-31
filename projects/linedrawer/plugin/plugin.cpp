@@ -12,7 +12,7 @@
 namespace ldr
 {
 	// Constructor
-	Plugin::Plugin(LineDrawer* ldr, char const* filepath, char const* args)
+	Plugin::Plugin(ldr::Main* ldr, char const* filepath, char const* args)
 		:m_ldr(ldr)
 		,m_dll()
 		,m_filepath(pr::filesys::StandardiseC(pr::filesys::CanonicaliseC<std::string>(filepath)))

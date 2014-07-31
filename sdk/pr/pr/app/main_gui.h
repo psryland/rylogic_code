@@ -158,7 +158,7 @@ namespace pr
 			}
 			virtual void OnSysCommand(UINT nID, CPoint)
 			{
-				if (nID == IDCLOSE)
+				if (nID == SC_CLOSE || nID == IDCLOSE)
 				{
 					CloseApp(0);
 					return;

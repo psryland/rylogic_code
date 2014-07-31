@@ -5,13 +5,6 @@
 
 #pragma once
 
-#ifndef PR_LDR_OBJECT_H
-#define PR_LDR_OBJECT_H
-
-#ifndef PR_DBG_LDROBJMGR
-#define PR_DBG_LDROBJMGR PR_DBG
-#endif
-
 #include <string>
 #include <regex>
 #include "pr/macros/enum.h"
@@ -26,24 +19,19 @@
 #include "pr/str/prstdstring.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instance.h"
-#include "pr/linedrawer/ldr_forward.h"
-
-// Forward declare the tree control item.
-struct _TREEITEM;
-typedef struct _TREEITEM *HTREEITEM;
 
 namespace pr
 {
 	namespace ldr
 	{
 		// Forwards
+		struct LdrObject;
 		struct ObjectAttributes;
+		typedef int ContextId;
 		typedef pr::RefPtr<LdrObject> LdrObjectPtr;
 		typedef pr::vector<LdrObjectPtr, 8> ObjectCont;
 		typedef pr::string<char, 32> string32;
-
-		static HTREEITEM const INVALID_TREE_ITEM =  0;
-		static int const       INVALID_LIST_ITEM = -1;
+		ContextId const DefaultContext = 0;
 
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
@@ -160,14 +148,6 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Enums
-
-		// Modes for bounding groups of objects
-		#define PR_ENUM(x)\
-			x(All)\
-			x(Selected)\
-			x(Visible)
-		PR_DEFINE_ENUM1(EObjectBounds, PR_ENUM);
-		#undef PR_ENUM
 
 		// Simple animation styles
 		#define PR_ENUM(x)\
@@ -344,7 +324,9 @@ namespace pr
 			// If 'name' is "", then 'func' is applied to this object and all children recursively
 			// Otherwise, 'func' is applied to all child objects that match name.
 			// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
-			template <typename TFunc> void Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr)
+			// 'func' should have a signature: bool func(pr::ldr::LdrObject* obj);
+			// Returns 'true' if 'func' always returns 'true'.
+			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr)
 			{
 				if (obj == nullptr)
 				{
@@ -352,21 +334,26 @@ namespace pr
 				}
 				if (name == nullptr)
 				{
-					func(obj);
+					if (!func(obj))
+						return false;
 				}
 				else if (name[0] == '\0')
 				{
-					func(obj);
+					if (!func(obj)) return false;
 					for (auto& child : obj->m_child)
 						Apply(func, name, child.m_ptr);
 				}
 				else
 				{
 					if ((name[0] == '#' && std::regex_match(std::string(obj->m_name.c_str()), std::regex(&name[1]))) || obj->m_name == name)
-						func(obj);
+					{
+						if (!func(obj))
+							return false;
+					}
 					for (auto& child : obj->m_child)
 						Apply(func, name, child.m_ptr);
 				}
+				return true;
 			}
 
 			// Set the visibility of this object or child objects matching 'name' (see Apply)
@@ -517,17 +504,6 @@ namespace pr
 			Evt_Refresh(LdrObjectPtr obj) :m_obj(obj) {}
 		};
 
-		//// Callback progress event used during parsing
-		//struct Evt_LdrProgress
-		//{
-		//	int m_count;            // -1 for unknown
-		//	int m_total;            // -1 for unknown
-		//	char const* m_desc;     // A brief description of the operation that progress is for
-		//	bool m_allow_cancel;    // True if it's ok to cancel this operation
-		//	LdrObjectPtr m_obj;     // An object near the current progress point
-		//	Evt_LdrProgress(int count, int total, char const* desc, bool allow_cancel, LdrObjectPtr obj) :m_count(count) ,m_total(total) ,m_desc(desc) ,m_allow_cancel(allow_cancel) ,m_obj(obj) {}
-		//};
-
 		// Event fired from the UI when the selected object changes
 		struct Evt_LdrObjectSelectionChanged
 		{};
@@ -636,6 +612,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

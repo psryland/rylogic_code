@@ -3,11 +3,15 @@
 //	(c)opyright Rylogic Limited 2009
 //*****************************************************************************************
 #pragma once
-#ifndef PR_GUI_MISC_H
-#define PR_GUI_MISC_H
 
 #include <string>
-#include <windows.h>
+//#include <windows.h>
+#include <atlbase.h>
+#include <atlapp.h>
+//#include <atlwin.h>
+//#include <atlframe.h>
+//#include <atlctrls.h>
+//#include <atldlgs.h>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/container/byte_data.h"
@@ -254,5 +258,3 @@ namespace pr
 			throw std::exception("failed to write bmp file");
 	}
 }
-
-#endif

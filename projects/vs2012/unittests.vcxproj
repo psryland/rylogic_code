@@ -169,7 +169,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\gui\wtl_tab_view_ctrl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\hardware\comm_port_io.h" />
     <ClInclude Include="..\..\sdk\pr\pr\hardware\cpuinfo.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_forward.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\align.h" />

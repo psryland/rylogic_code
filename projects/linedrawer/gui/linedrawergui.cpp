@@ -102,7 +102,7 @@ namespace ldr
 		UpdateUI();
 
 		// Set the initial camera position
-		m_main->ResetView(pr::ldr::EObjectBounds::All);
+		m_main->ResetView(EObjectBounds::All);
 		m_main->m_nav.CameraAlign(m_main->m_settings.m_CameraAlignAxis);
 
 		// Register for drag drop
@@ -217,14 +217,14 @@ namespace ldr
 			SetMsgHandled(FALSE);
 			break;
 		case VK_SPACE:
-			m_store_ui.Show(true);
+			m_store_ui.Show(true, m_main->m_store);
 			break;
 		case VK_F5:
 			m_main->ReloadSourceData();
 			m_main->RenderNeeded();
 			break;
 		case VK_F7:
-			m_main->ResetView(pr::ldr::EObjectBounds::All);
+			m_main->ResetView(EObjectBounds::All);
 			m_main->RenderNeeded();
 			break;
 		}
@@ -392,9 +392,9 @@ namespace ldr
 		switch (wID)
 		{
 		default:
-		case ID_NAV_RESETVIEW_ALL:      m_main->ResetView(pr::ldr::EObjectBounds::All); break;
-		case ID_NAV_RESETVIEW_SELECTED: m_main->ResetView(pr::ldr::EObjectBounds::Selected); break;
-		case ID_NAV_RESETVIEW_VISIBLE:  m_main->ResetView(pr::ldr::EObjectBounds::Visible); break;
+		case ID_NAV_RESETVIEW_ALL:      m_main->ResetView(EObjectBounds::All); break;
+		case ID_NAV_RESETVIEW_SELECTED: m_main->ResetView(EObjectBounds::Selected); break;
+		case ID_NAV_RESETVIEW_VISIBLE:  m_main->ResetView(EObjectBounds::Visible); break;
 		}
 		m_main->RenderNeeded();
 		return S_OK;
@@ -501,7 +501,7 @@ namespace ldr
 	// Display the object manager UI
 	LRESULT MainGUI::OnShowObjectManagerUI(WORD, WORD, HWND, BOOL&)
 	{
-		m_store_ui.Show(true);
+		m_store_ui.Show(true, m_main->m_store);
 		return S_OK;
 	}
 
@@ -532,7 +532,7 @@ namespace ldr
 	LRESULT MainGUI::OnCreateDemoScene(WORD, WORD, HWND, BOOL&)
 	{
 		m_main->CreateDemoScene();
-		m_main->ResetView(pr::ldr::EObjectBounds::All);
+		m_main->ResetView(EObjectBounds::All);
 		m_main->RenderNeeded();
 		return S_OK;
 	}
@@ -576,8 +576,8 @@ namespace ldr
 	// Cycle through solid, wireframe, and solid+wire
 	LRESULT MainGUI::OnToggleFillMode(WORD, WORD, HWND, BOOL&)
 	{
-		int mode = (m_main->m_settings.m_GlobalRenderMode + 1) % EGlobalRenderMode::NumberOf;
-		m_main->m_settings.m_GlobalRenderMode = static_cast<EGlobalRenderMode>(mode);
+		int mode = (m_main->m_settings.m_GlobalFillMode + 1) % EFillMode::NumberOf;
+		m_main->m_settings.m_GlobalFillMode = static_cast<EFillMode>(mode);
 		UpdateUI();
 		m_main->RenderNeeded();
 		return S_OK;
@@ -703,8 +703,10 @@ namespace ldr
 	// Shut the app down
 	void MainGUI::CloseApp(int exit_code)
 	{
-		DestroyWindow();
-		PostQuitMessage(exit_code);
+		m_angle_tool_ui.Close();
+		m_measure_tool_ui.Close();
+		m_store_ui.Close();
+		base::CloseApp(exit_code);
 	}
 
 	// Create a new file
@@ -738,7 +740,7 @@ namespace ldr
 
 			// Reset the camera if flagged
 			if (m_main->m_settings.m_ResetCameraOnLoad)
-				m_main->ResetView(pr::ldr::EObjectBounds::All);
+				m_main->ResetView(EObjectBounds::All);
 
 			// Set the window title
 			pr::string<> title;
@@ -799,7 +801,7 @@ namespace ldr
 		CheckMenuItem(GetMenu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_main->m_settings.m_ShowObjectBBoxes ? MF_CHECKED : MF_UNCHECKED);
 
 		// Set the text to the "next" mode
-		switch (m_main->m_settings.m_GlobalRenderMode)
+		switch (m_main->m_settings.m_GlobalFillMode)
 		{
 		case 0: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wireframe\tCtrl+W");  break;
 		case 1: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wire + Solid\tCtrl+W"); break;

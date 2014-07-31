@@ -105,9 +105,10 @@ namespace ldr
 
 			// Add file watches for the file and everything it included
 			m_watcher.Add(filepath, this, context_id, &m_files.back()[0]);
-			for (StrCont::const_iterator i = includes.m_paths.begin(), iend = includes.m_paths.end(); i != iend; ++i)
-				m_watcher.Add(i->c_str(), this, context_id, &m_files.back()[0]);
+			for (auto path : includes.m_paths)
+				m_watcher.Add(path.c_str(), this, context_id, &m_files.back()[0]);
 
+			pr::events::Send(Event_StoreChanged(m_store));
 			pr::events::Send(Event_Refresh());
 		}
 		catch (pr::script::Exception const& e)
@@ -142,7 +143,7 @@ namespace ldr
 		m_watcher.RemoveAll(context_id);
 
 		// Remove it from the file list
-		StrList::iterator iter = std::find(m_files.begin(), m_files.end(), fpath);
+		auto iter = std::find(m_files.begin(), m_files.end(), fpath);
 		if (iter != m_files.end()) m_files.erase(iter);
 	}
 

@@ -140,6 +140,8 @@ namespace ldr
 		void OnMouseMove(UINT flags, CPoint point) override;
 		BOOL OnMouseWheel(UINT, short delta, CPoint) override;
 
+		void CloseApp(int exit_code) override;
+
 		LRESULT OnFileNew               (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnFileNewScript         (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnFileOpen              (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
@@ -174,7 +176,6 @@ namespace ldr
 		LRESULT OnCheckForUpdates       (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 		LRESULT OnWindowShowAboutBox    (WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 
-		void CloseApp(int exit_code);
 		void FileNew(char const* filepath);
 		void FileOpen(char const* filepath, bool additive);
 		void OpenTextEditor(StrList const& files);

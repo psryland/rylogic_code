@@ -144,19 +144,13 @@ size_t _WICBitsPerPixel( REFGUID targetGuid )
 
 IWICImagingFactory* _GetWIC()
 {
+	//todo: fix this, it should return a CComPtr and be cleaned up properly...
     static IWICImagingFactory* s_Factory = nullptr;
 
     if ( s_Factory )
         return s_Factory;
 
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        nullptr,
-        CLSCTX_INPROC_SERVER,
-        __uuidof(IWICImagingFactory),
-        (LPVOID*)&s_Factory
-        );
-
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (LPVOID*)&s_Factory);
     if ( FAILED(hr) )
     {
         s_Factory = nullptr;
