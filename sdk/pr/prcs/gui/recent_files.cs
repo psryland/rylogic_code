@@ -108,15 +108,19 @@ namespace pr.gui
 			m_menu.DropDownItems.Clear();
 			foreach (string f in m_files)
 			{
-				var item = new ToolStripMenuItem(f, null, (s,a) =>
+				var item = new ToolStripMenuItem(f)
 					{
-						var menu = (ToolStripMenuItem)s;
+						MergeAction = m_menu.MergeAction
+					};
+				item.Click += (s,a) =>
+					{
+						var menu = s.As<ToolStripMenuItem>();
 						Add(menu.Text, false);
 						m_on_click(menu.Text);
-					});
+					};
 				item.MouseDown += (s,a) =>
 					{
-						var menu = (ToolStripMenuItem)s;
+						var menu = s.As<ToolStripMenuItem>();
 						if (a.Button != MouseButtons.Right) return;
 						var dd = (ToolStripDropDown)menu.GetCurrentParent();
 						dd.AutoClose = false;
@@ -125,16 +129,19 @@ namespace pr.gui
 				m_menu.DropDownItems.Add(item);
 			}
 
+			m_menu.DropDownItems.Add(new ToolStripSeparator{MergeAction = m_menu.MergeAction});
+
 			// Add a menu item for clearing the recent files list
-			m_menu.DropDownItems.Add(new ToolStripSeparator());
-			m_menu.DropDownItems.Add(new ToolStripMenuItem(ResetListText, null, (s,a) =>
+			var clear_all = new ToolStripMenuItem(ResetListText){MergeAction = m_menu.MergeAction};
+			clear_all.Click += (s,a) =>
 				{
 					var menu = (ToolStripMenuItem)s;
 					((ToolStripDropDown)menu.GetCurrentParent()).Close();
 					var args = new CancelEventArgs();
 					ClearRecentFilesListEvent.Raise(this, args);
 					if (!args.Cancel) Clear();
-				}));
+				};
+			m_menu.DropDownItems.Add(clear_all);
 		}
 
 		/// <summary>Show a context menu with more options for individual menu items</summary>

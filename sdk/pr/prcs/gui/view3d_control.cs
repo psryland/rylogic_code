@@ -32,41 +32,30 @@ namespace pr.gui
 			if (this.IsInDesignMode()) return;
 
 			// A reference is held within View3d to the callbacks, so callers don't need to hold one
-			View3d = new View3d(error_cb, log_cb);
-			Window = new View3d.Window(View3d, Handle, gdi_compat, Render);
+			m_impl_view3d = new View3d(error_cb, log_cb);
+			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, Render);
 
 			InitializeComponent();
 
 			ClickTimeMS = 180;
 			MouseNavigation = true;
 			DefaultKeyboardShortcuts = true;
-
-			// Update the size of the control whenever we're added to a new parent
-			ParentChanged += (s,a) =>
-				{
-					if (View3d == null) return;
-					Window.RenderTargetSize = new Size(Width-2, Height-2);
-				};
 		}
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing)
-			{
-				if (View3d != null) View3d.Dispose();
-				View3d = null;
-			}
-			if (disposing && components != null)
-			{
-				components.Dispose();
-			}
+			Util.Dispose(ref m_impl_wnd);
+			Util.Dispose(ref m_impl_view3d);
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
 		/// <summary>The underlying interop wrapper</summary>
-		public View3d View3d { get; private set; }
+		public View3d View3d { get { return m_impl_view3d; } }
+		private View3d m_impl_view3d;
 
 		/// <summary>The binding to this control</summary>
-		public View3d.Window Window { get; private set; }
+		public View3d.Window Window { get { return m_impl_wnd; } }
+		private View3d.Window m_impl_wnd;
 
 		/// <summary>The main camera</summary>
 		public View3d.CameraControls Camera { get { return Window.Camera; } }
@@ -399,6 +388,14 @@ namespace pr.gui
 				base.OnPaint(e);
 			else
 				Render();
+		}
+
+		/// <summary>Update the size of the control whenever we're added to a new parent</summary>
+		protected override void OnParentChanged(EventArgs e)
+		{
+			base.OnParentChanged(e);
+			if (View3d == null) return;
+			Window.RenderTargetSize = new Size(Width-2, Height-2);
 		}
 
 		/// <summary>Raises the CustomiseContextMenu event</summary>
