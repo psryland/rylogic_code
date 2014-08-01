@@ -23,7 +23,7 @@
 	Maybe add an execute_on_load option to the user settings also a file scope keyword *ExecuteOnLoad
 	Lua code could control object transforms, colours, etc or the camera if at file scope
 
-- An idea: If the line drawer commands were sent via windows messages then external apps could interact with a running line drawer instance using postmessage/sendmessage
+- If the line drawer commands were sent via windows messages then external apps could interact with a running line drawer instance using postmessage/sendmessage
   Several apps could have objects in one linedrawer instance. This would break the current plugin with stepping pattern and custom objects callback... ?
 
 - Renders should only be initiated by the GUI objects

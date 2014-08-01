@@ -1,0 +1,22 @@
+App Shutdown:
+	1) call 'close' method which calls DestroyWindow() for itself and any nested controls
+	2) message queue gets pumped causing WM_DESTROY to be sent, handler calls PostQuitMessage(0)
+	3) message queue gets pumped again, but exits when the WM_QUIT is recieved.
+	This means you can't call DestroyWindow() in a destructor, because the object will be deleted
+	before WM_DESTROY and WM_QUIT are handled.
+	If the window class is heap allocated, you can call DestroyWindow() then drop references to
+	the pointer. In OnFinalMessage() the class can call 'delete this'. I don't think this is a good idea tho.
+	"OnFinalMessage is WTL's equivalent to MFC's PostNCDestroy"
+
+Group boxes:
+	To sum up: Apply the WS_EX_TRANSPARENT style to group boxes/tabs; apply the WS_CLIPCHILDREN style to dialogs.
+
+	WS_CLIPCHILDREN - Tells the control to exclude the regions for all child controls when painting
+	WS_EX_TRANSPARENT - on a child tells the parent control *not* to exclude it's region.
+		A window created with the WS_EX_TRANSPARENT style receives WM_PAINT messages only after all
+		sibling windows beneath it have been updated.
+	
+	http://www.drdobbs.com/resizable-dialogs-revisited/184416395
+	
+	
+	
