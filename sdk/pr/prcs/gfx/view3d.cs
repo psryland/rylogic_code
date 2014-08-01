@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.maths;
+using pr.util;
 
 using HWND     = System.IntPtr;
 using HContext = System.IntPtr;
@@ -478,13 +479,10 @@ namespace pr.gfx
 
 		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 		
-		public delegate void ReportErrorCB(string msg);
-		public delegate void LogOutputCB(ELogLevel level, long timestamp, string msg);
+		public delegate void ReportErrorCB(string msg, IntPtr ctx);
 		public delegate void SettingsChangedCB();
 		public delegate void RenderCB();
 
-		private readonly ReportErrorCB m_error_cb; // A local reference to prevent the callback being garbage collected
-		private readonly LogOutputCB   m_log_cb;   // A local reference to prevent the callback being garbage collected
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
 
@@ -510,20 +508,16 @@ namespace pr.gfx
 			throw new DllNotFoundException("Failed to load dependency 'view3d.dll'");
 		}
 
-		/// <summary>Provides an error callback. A reference is held within View3D, so callers don't need to hold one</summary>
-		public View3d(ReportErrorCB error_cb = null, LogOutputCB log_cb = null)
+		public View3d()
 		{
-			m_error_cb    = ErrorCB;
-			m_log_cb      = LogCB;
-			m_windows     = new List<Window>();
-
-			if (error_cb != null) OnError += error_cb;
-			if (log_cb != null) OnLog += log_cb;
+			m_windows  = new List<Window>();
 
 			// Initialise view3d
-			m_context = View3D_Initialise(m_error_cb, m_log_cb);
+			string init_error = null;
+			ReportErrorCB error_cb = (msg,ctx) => init_error = msg;
+			m_context = View3D_Initialise(error_cb, IntPtr.Zero);
 			if (m_context == HContext.Zero)
-				throw new Exception("Failed to initialised View3d");
+				throw new Exception(init_error ?? "Failed to initialised View3d");
 		}
 		public void Dispose()
 		{
@@ -533,24 +527,12 @@ namespace pr.gfx
 			View3D_Shutdown(m_context);
 		}
 
-		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
-		public event ReportErrorCB OnError;
-
-		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
-		public event LogOutputCB OnLog;
-
-		/// <summary>Callback function from the Dll when an error occurs</summary>
-		private void ErrorCB(string msg)
+		/// <summary>Add a global error callback, returned object pops the error callback when disposed</summary>
+		public static Scope PushGlobalErrorCB(ReportErrorCB error_cb)
 		{
-			if (OnError != null) OnError(msg);
-			else MessageBox.Show(msg, "View3D Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-		}
-
-		/// <summary>Callback function from the Dll when a log event occurs</summary>
-		private void LogCB(ELogLevel level, long timestamp, string msg)
-		{
-			if (OnLog != null) OnLog(level, timestamp, msg);
-			else Debug.Write(level.ToString() + "|" + timestamp.ToString() + "| " + msg);
+			return Scope.Create(
+				() => View3D_PushGlobalErrorCB(error_cb, IntPtr.Zero),
+				() => View3D_PopGlobalErrorCB(error_cb));
 		}
 
 		/// <summary>Convert a button enum to a button state int</summary>
@@ -580,21 +562,24 @@ namespace pr.gfx
 		public class Window :IDisposable
 		{
 			private readonly View3d m_view;
-			private readonly RenderCB m_render_cb;   // User call back to render the scene
+			private readonly RenderCB m_render_cb;            // User call back to render the scene
 			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
-			private readonly EventBatcher m_eb_refresh;  // Batch refresh calls
+			private readonly EventBatcher m_eb_refresh;       // Batch refresh calls
 			private HWindow m_wnd;
 
-			public Window(View3d view, HWND hwnd, bool gdi_compat, RenderCB render_cb = null, SettingsChangedCB settings_cb = null)
+			public Window(View3d view, HWND hwnd, bool gdi_compat, RenderCB render_cb = null)
 			{
-				m_view = view;
-				m_render_cb = render_cb;
-				m_settings_cb = SettingsChgCB;
+				m_view        = view;
+				m_render_cb   = render_cb;
+				m_settings_cb = () => OnSettingsChanged.Raise(this, EventArgs.Empty);
 				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
 
-				m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_settings_cb, m_render_cb);
-				if (m_wnd == null)
-					throw new Exception("Failed to create View3D window");
+				// Create the window
+				string error_msg = null;
+				using (PushGlobalErrorCB((msg,ctx) => error_msg = msg))
+					m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_settings_cb, m_render_cb);
+					if (m_wnd == null)
+						throw new Exception(error_msg ?? "Failed to create View3D window");
 
 				// Setup the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -618,16 +603,16 @@ namespace pr.gfx
 				}
 			}
 
-			/// <summary>Event notifying whenever rendering settings have changed</summary>
-			public event SettingsChangedCB OnSettingsChanged;
-
-			/// <summary>Callback function from the Dll whenever the settings are changed</summary>
-			private void SettingsChgCB()
+			/// <summary>Add an error callback. returned object pops the error callback when disposed</summary>
+			public Scope PushErrorCB(ReportErrorCB error_cb)
 			{
-				// Forward changed settings notification to anyone that cares
-				if (OnSettingsChanged != null)
-					OnSettingsChanged();
+				return Scope.Create(
+					() => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
+					() => View3D_PopErrorCB(m_wnd, error_cb));
 			}
+
+			/// <summary>Event notifying whenever rendering settings have changed</summary>
+			public event EventHandler OnSettingsChanged;
 
 			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 			public void SignalRefresh()
@@ -1450,12 +1435,17 @@ namespace pr.gfx
 		private const string Dll = "view3d";
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern HContext          View3D_Initialise(ReportErrorCB error_cb, LogOutputCB log_cb);
-		[DllImport(Dll)] private static extern void              View3D_Shutdown(HContext context);
+		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void              View3D_Shutdown               (HContext context);
+		[DllImport(Dll)] private static extern void              View3D_PushGlobalErrorCB      (ReportErrorCB error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void              View3D_PopGlobalErrorCB       (ReportErrorCB error_cb);
 
 		// Windows
 		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, bool gdi_compat, SettingsChangedCB settings_cb, RenderCB render_cb);
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_PushErrorCB            (HWindow window, ReportErrorCB error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void              View3D_PopErrorCB             (HWindow window, ReportErrorCB error_cb);
+
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
 		[DllImport(Dll)] private static extern void              View3D_AddObject              (HWindow window, HObject obj);

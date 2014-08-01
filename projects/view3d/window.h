@@ -13,6 +13,7 @@ namespace view3d
 		//,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		//,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
+		ErrorCBStack              m_error_cb;                 // Stack of error callback functions for the dll
 		View3D_SettingsChanged    m_settings_cb;              // Callback on settings changed
 		View3D_RenderCB           m_render_cb;                // Callback to invoke a render
 		HWND                      m_hwnd;                     // The associated window handle

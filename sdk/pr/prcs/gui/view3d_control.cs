@@ -26,14 +26,16 @@ namespace pr.gui
 
 	public class View3dControl :UserControl
 	{
-		public View3dControl() :this(false, null) {}
-		public View3dControl(bool gdi_compat, View3d.ReportErrorCB error_cb, View3d.LogOutputCB log_cb = null)
+		private Scope m_error_cb;
+
+		public View3dControl() :this(false) {}
+		public View3dControl(bool gdi_compat)
 		{
 			if (this.IsInDesignMode()) return;
 
-			// A reference is held within View3d to the callbacks, so callers don't need to hold one
-			m_impl_view3d = new View3d(error_cb, log_cb);
+			m_impl_view3d = new View3d();
 			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, Render);
+			m_error_cb = m_impl_wnd.PushErrorCB((msg,ctx) => OnReportError(new ReportErrorEventArgs(msg)));
 
 			InitializeComponent();
 
@@ -43,6 +45,7 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
+			Util.Dispose(ref m_error_cb);
 			Util.Dispose(ref m_impl_wnd);
 			Util.Dispose(ref m_impl_view3d);
 			Util.Dispose(ref components);
@@ -57,34 +60,38 @@ namespace pr.gui
 		public View3d.Window Window { get { return m_impl_wnd; } }
 		private View3d.Window m_impl_wnd;
 
-		/// <summary>The main camera</summary>
-		public View3d.CameraControls Camera { get { return Window.Camera; } }
-
 		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 		public void SignalRefresh()
 		{
 			Window.SignalRefresh();
 		}
 
-		/// <summary>Assign a handler to 'OnError' to hide the default message box</summary>
-		public event View3d.ReportErrorCB OnError
-		{
-			add    { View3d.OnError += value; }
-			remove { View3d.OnError -= value; }
-		}
+		/// <summary>The main camera</summary>
+		public View3d.CameraControls Camera { get { return Window.Camera; } }
 
-		/// <summary>Assign a handler to 'OnLog' to receive log output</summary>
-		public event View3d.LogOutputCB OnLog
+		/// <summary>Called whenever an error is generated in view3d</summary>
+		public event EventHandler<ReportErrorEventArgs> ReportError;
+		public class ReportErrorEventArgs :EventArgs
 		{
-			add    { View3d.OnLog += value; }
-			remove { View3d.OnLog -= value; }
+			/// <summary>Error message</summary>
+			public string Message { get; private set; }
+			internal ReportErrorEventArgs(string msg) { Message = msg; }
 		}
 
 		/// <summary>Event notifying whenever rendering settings have changed</summary>
-		public event View3d.SettingsChangedCB OnSettingsChanged
+		public event EventHandler OnSettingsChanged
 		{
 			add    { Window.OnSettingsChanged += value; }
 			remove { Window.OnSettingsChanged -= value; }
+		}
+
+		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
+		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
+		public class CustomContextMenuEventArgs :EventArgs
+		{
+			/// <summary>The context menu to be customised</summary>
+			public ContextMenuStrip Menu { get; private set; }
+			internal CustomContextMenuEventArgs(ContextMenuStrip menu) { Menu = menu; }
 		}
 
 		/// <summary>Set the background colour of the control</summary>
@@ -347,19 +354,6 @@ namespace pr.gui
 			context_menu.Show(MousePosition);
 		}
 
-		/// <summary>Event called just before displaying the context menu to allow users to add custom options to the menu</summary>
-		public event EventHandler<CustomContextMenuEventArgs> CustomiseContextMenu;
-		public class CustomContextMenuEventArgs :EventArgs
-		{
-			/// <summary>The context menu to be customised</summary>
-			public ContextMenuStrip Menu { get; private set; }
-
-			internal CustomContextMenuEventArgs(ContextMenuStrip menu)
-			{
-				Menu = menu;
-			}
-		}
-
 		/// <summary>On Resize</summary>
 		protected override void OnResize(EventArgs e)
 		{
@@ -402,6 +396,12 @@ namespace pr.gui
 		protected virtual void OnCustomiseContextMenu(CustomContextMenuEventArgs e)
 		{
 			CustomiseContextMenu.Raise(this, e);
+		}
+
+		/// <summary>Raises the Error event</summary>
+		protected virtual void OnReportError(ReportErrorEventArgs e)
+		{
+			ReportError.Raise(this, e);
 		}
 
 		/// <summary>Render and present the scene</summary>

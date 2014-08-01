@@ -56,6 +56,16 @@ namespace view3d
 	typedef std::set<View3DObject>  ObjectCont;
 	typedef std::set<View3DWindow>  WindowCont;
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
+	
+	struct ReportErrorCB
+	{
+		View3D_ReportErrorCB m_error_cb;
+		void* m_ctx;
+
+		ReportErrorCB(View3D_ReportErrorCB error_cb, void* ctx) :m_error_cb(error_cb) ,m_ctx(ctx) {}
+		void operator()(char const* msg) const { m_error_cb(msg, m_ctx); }
+	};
+	typedef std::vector<ReportErrorCB> ErrorCBStack;
 
 	#define PR_RDR_INST(x)\
 		x(pr::m4x4          ,m_i2w   ,pr::rdr::EInstComp::I2WTransform)\

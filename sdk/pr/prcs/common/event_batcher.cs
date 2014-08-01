@@ -26,12 +26,15 @@ namespace pr.common
 		/// Used to prevent an endless stream of Signals resulting in Action never being called</summary>
 		public int MaxSignalsBeforeAction { get; set; }
 
-		public EventBatcher() :this(TimeSpan.FromMilliseconds(10)) {}
-		public EventBatcher(Action action) :this() { Action += action; }
-		public EventBatcher(Action action, TimeSpan delay) :this(delay) { Action += action; }
-		public EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher) { Action += action; }
-		public EventBatcher(TimeSpan delay) :this(delay, Dispatcher.CurrentDispatcher) {}
-		public EventBatcher(TimeSpan delay, Dispatcher dispatcher)
+		public  EventBatcher()                                                     :this(TimeSpan.FromMilliseconds(10))               {}
+		public  EventBatcher(EventHandler action)                                  :this(action, TimeSpan.FromMilliseconds(10))       {}
+		public  EventBatcher(EventHandler action, TimeSpan delay)                  :this(() => action(null,null), delay)              {}
+		public  EventBatcher(Action action)                                        :this(action, TimeSpan.FromMilliseconds(10))       {}
+		public  EventBatcher(Action action, TimeSpan delay)                        :this(delay, Dispatcher.CurrentDispatcher, action) {}
+		public  EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher, action)                   {}
+		public  EventBatcher(TimeSpan delay)                                       :this(delay, Dispatcher.CurrentDispatcher)         {}
+		public  EventBatcher(TimeSpan delay, Dispatcher dispatcher)                :this(delay, dispatcher,null)                      {}
+		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action action)
 		{
 			if (dispatcher == null)
 				throw new ArgumentNullException("dispatcher","dispatcher can't be null");
@@ -43,6 +46,9 @@ namespace pr.common
 			m_disposed             = false;
 			MaxSignalsBeforeAction = int.MaxValue;
 			Immediate              = false;
+
+			if (action != null)
+				Action += action;
 		}
 		public void Dispose()
 		{

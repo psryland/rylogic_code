@@ -202,8 +202,7 @@ extern "C"
 
 	typedef void (__stdcall *View3D_SettingsChanged)(View3DWindow window);
 	typedef void (__stdcall *View3D_RenderCB)();
-	typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg);
-	typedef void (__stdcall *View3D_LogOutputCB)(EView3DLogLevel level, long long timestamp, char const* msg);
+	typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg, void* ctx);
 	typedef void (__stdcall *View3D_EditObjectCB)(
 		UINT32 vcount,      // The maximum size of 'verts'
 		UINT32 icount,      // The maximum size of 'indices'
@@ -217,12 +216,17 @@ extern "C"
 		void* ctx);              // User context data
 
 	// Initialise/shutdown the dll
-	VIEW3D_API View3DContext           __stdcall View3D_Initialise(View3D_ReportErrorCB error_cb, View3D_LogOutputCB log_cb);
-	VIEW3D_API void                    __stdcall View3D_Shutdown(View3DContext context);
+	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB error_cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_Shutdown         (View3DContext context);
+	VIEW3D_API void                    __stdcall View3D_PushGlobalErrorCB(View3D_ReportErrorCB error_cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_PopGlobalErrorCB (View3D_ReportErrorCB error_cb);
 
 	// Windows
 	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb);
 	VIEW3D_API void                    __stdcall View3D_DestroyWindow     (View3DWindow window);
+	VIEW3D_API void                    __stdcall View3D_PushErrorCB       (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_PopErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb);
+
 	VIEW3D_API char const*             __stdcall View3D_GetSettings       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_SetSettings       (View3DWindow window, char const* settings);
 	VIEW3D_API void                    __stdcall View3D_AddObject         (View3DWindow window, View3DObject object);
