@@ -205,6 +205,7 @@
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
+    <Compile Include="extn\textbox_extensions.cs" />
     <Compile Include="extn\toolstrip_extensions.cs" />
     <Compile Include="extn\type_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />
