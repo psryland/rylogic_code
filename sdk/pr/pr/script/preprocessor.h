@@ -527,12 +527,16 @@ namespace pr
 				char const* str_in =
 					"#  define ONE 1 // ignore me \n"
 					"#  define NOT_ONE (!ONE) /*and me*/ \n"
+					"#define TWO\\\n"
+					"   2\n"
 					"ONE\n"
 					"NOT_ONE\n"
+					"TWO\n"
 					;
 				char const* str_out =
 					"1\n"
 					"(!1)\n"
+					"2\n"
 					;
 				PtrSrc src(str_in);
 				PPMacroDB macros;

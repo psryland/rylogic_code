@@ -67,11 +67,11 @@ namespace pr
 				m_hash = Hash::String(m_tag);
 
 				// Extract the optional parameters
-				if (*src == '(') ReadParams<true>(src, m_params, loc);
-				else if (pr::str::IsNewLine(*src)) {}
-				else if (pr::str::IsLineSpace(*src)) Eat::LineSpace(src);
-				else throw Exception(EResult::InvalidMacroDefinition, loc, fmt("%c was unexpected following a macro identifier", *src));
+				if (*src == '(')
+					ReadParams<true>(src, m_params, loc);
 
+				Eat::LineSpace(src);
+				
 				// Extract the expansion and trim all leading and following whitespace
 				CommentStrip cs(src);
 				pr::str::ExtractLine(m_expansion, cs, true);
