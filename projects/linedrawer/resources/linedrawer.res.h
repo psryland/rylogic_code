@@ -5,7 +5,6 @@
 #define IDR_MENU_MAIN                           101
 #define IDR_ACCELERATOR                         102
 #define IDI_ICON_MAIN                           103
-#define IDD_DIALOG_MAIN                         111
 #define IDD_DIALOG_OPTIONS                      112
 #define IDD_TAB_GENERAL                         113
 #define IDD_TAB_RENDERING                       114
@@ -30,13 +29,16 @@
 #define IDC_BUTTON_BROWSE_PLUGIN                1015
 #define IDC_LBL_PLUGIN_DLL                      1016
 #define IDC_LBL_PLUGIN_ARGS                     1017
-#define IDC_STATIC_ERROR_OUTPUT                 1018
 #define IDC_LIST_PLUGINS                        1019
 #define IDC_SLIDER_CAM_ORBIT_SPEED              1020
 #define IDC_SLIDER_FOCUS_POINT_SCALE            1021
 #define IDC_TAB_MAIN                            1022
+#define IDC_STATIC_TEXT_EDITOR_CMD              40000
+#define IDC_GROUP_CAMERA                        40001
 #define ID_FILE_NEW1                            40001
+#define IDC_STATIC_FOCUS_POINT_SCALE            40002
 #define ID_FILE_NEWSCRIPT                       40002
+#define IDC_GROUP_ERROR_OUTPUT                  40003
 #define ID_FILE_OPEN1                           40003
 #define ID_FILE_ADDITIVEOPEN                    40004
 #define ID_FILE_SAVE1                           40005

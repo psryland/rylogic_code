@@ -36,7 +36,6 @@ namespace ldr
 	{
 		enum
 		{
-			IDD                = IDD_DIALOG_MAIN,
 			IDC_STATUSBAR_MAIN = 200,
 			ID_MAIN_TIMER      = 2000,
 		};

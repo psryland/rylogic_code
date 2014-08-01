@@ -1,7 +1,7 @@
-//***************************************************************************************************
+//*******************************************************************
 // Lighting Dialog
 //  Copyright (c) Rylogic Ltd 2009
-//***************************************************************************************************
+//*******************************************************************
 #pragma once
 
 #include "linedrawer/main/forward.h"
@@ -38,9 +38,13 @@ namespace ldr
 			CHAIN_MSG_MAP(CDialogResize<COptionsGeneralTab>)
 		END_MSG_MAP()
 		BEGIN_DLGRESIZE_MAP(COptionsGeneralTab)
+			DLGRESIZE_CONTROL(IDC_STATIC_TEXT_EDITOR_CMD        ,DLSZ_REPAINT)
 			DLGRESIZE_CONTROL(IDC_EDIT_TEXT_EDITOR_CMD          ,DLSZ_SIZE_X|DLSZ_REPAINT)
-			DLGRESIZE_CONTROL(IDC_SLIDER_FOCUS_POINT_SCALE      ,DLSZ_REPAINT)
+			DLGRESIZE_CONTROL(IDC_GROUP_CAMERA                  ,DLSZ_SIZE_X|DLSZ_REPAINT)
+			DLGRESIZE_CONTROL(IDC_STATIC_FOCUS_POINT_SCALE      ,DLSZ_REPAINT)
+			DLGRESIZE_CONTROL(IDC_SLIDER_FOCUS_POINT_SCALE      ,DLSZ_SIZE_X|DLSZ_REPAINT)
 			DLGRESIZE_CONTROL(IDC_CHECK_RESET_CAM_ON_LOAD       ,DLSZ_REPAINT)
+			DLGRESIZE_CONTROL(IDC_GROUP_ERROR_OUTPUT            ,DLSZ_SIZE_X|DLSZ_REPAINT)
 			DLGRESIZE_CONTROL(IDC_CHECK_MSGBOX_ERROR_MSGS       ,DLSZ_REPAINT)
 			DLGRESIZE_CONTROL(IDC_CHECK_IGNORE_MISSING_INCLUDES ,DLSZ_REPAINT)
 		END_DLGRESIZE_MAP()
@@ -91,8 +95,9 @@ namespace ldr
 			m_check_ignore_missing_includes .Attach(GetDlgItem(IDC_CHECK_IGNORE_MISSING_INCLUDES));
 
 			m_slider_focus_point_scale.SetRange(0, 100);
-			DlgResize_Init(false);
+
 			DoDataExchange(FALSE);
+			DlgResize_Init(false, false);
 			return S_OK;
 		}
 		LRESULT OnDestroy(UINT, WPARAM, LPARAM, BOOL&)
@@ -211,6 +216,8 @@ namespace ldr
 			m_slider_camera_orbit_speed.Attach(GetDlgItem(IDC_SLIDER_CAM_ORBIT_SPEED));
 			m_slider_camera_orbit_speed.SetRange(-CamOrbitSpeedLimit, CamOrbitSpeedLimit);
 			DoDataExchange(FALSE);
+
+			DlgResize_Init(false, false);
 			return S_OK;
 		}
 		LRESULT OnDestroy(UINT, WPARAM, LPARAM, BOOL&)
@@ -230,8 +237,8 @@ namespace ldr
 		:public CDialogImpl<COptionsDlg>
 		,public CDialogResize<COptionsDlg>
 	{
-		HWND            m_parent;
-		CWTLTabViewCtrl m_tab_main;
+		HWND               m_parent;
+		WTL::CTabViewCtrl  m_tab_main;
 
 	public:
 		COptionsGeneralTab m_tab_general;
@@ -248,33 +255,35 @@ namespace ldr
 			CHAIN_MSG_MAP(CDialogResize<COptionsDlg>)
 		END_MSG_MAP()
 		BEGIN_DLGRESIZE_MAP(COptionsDlg)
-			DLGRESIZE_CONTROL(IDC_TAB_MAIN		,DLSZ_SIZE_X|DLSZ_SIZE_Y)
-			DLGRESIZE_CONTROL(IDOK				,DLSZ_MOVE_X|DLSZ_MOVE_Y)
-			DLGRESIZE_CONTROL(IDCANCEL			,DLSZ_MOVE_X|DLSZ_MOVE_Y)
+			DLGRESIZE_CONTROL(IDC_TAB_MAIN ,DLSZ_SIZE_X|DLSZ_SIZE_Y)
+			DLGRESIZE_CONTROL(IDOK         ,DLSZ_MOVE_X|DLSZ_MOVE_Y)
+			DLGRESIZE_CONTROL(IDCANCEL     ,DLSZ_MOVE_X|DLSZ_MOVE_Y)
 		END_DLGRESIZE_MAP()
 
 		COptionsDlg(UserSettings const& settings, HWND parent = 0)
 			:m_parent(parent)
 			,m_tab_main()
 			,m_tab_general(settings)
-			//,m_tab_rendering(settings)
 			,m_tab_navigation(settings)
+			//,m_tab_rendering(settings)
 		{}
 
 		// Handler methods
 		LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 		{
 			CenterWindow(m_parent);
-			DlgResize_Init();
 
 			// Attach and initialise controls
 			m_tab_main.Attach(GetDlgItem(IDC_TAB_MAIN));
-			m_tab_general.Create(m_hWnd);
+			m_tab_general    .Create(m_tab_main.m_hWnd);
+			m_tab_navigation .Create(m_tab_main.m_hWnd);
 			//m_tab_rendering.Create(m_hWnd);
-			m_tab_navigation.Create(m_hWnd);
 			m_tab_main.AddTab("General"    ,m_tab_general    ,TRUE  ,-1 ,(LPARAM)&m_tab_general);
-			//m_tab_main.AddTab("Rendering"  ,m_tab_rendering  ,FALSE ,-1 ,(LPARAM)&m_tab_rendering);
 			m_tab_main.AddTab("Navigation" ,m_tab_navigation ,FALSE ,-1 ,(LPARAM)&m_tab_navigation);
+			//m_tab_main.AddTab("Rendering"  ,m_tab_rendering  ,FALSE ,-1 ,(LPARAM)&m_tab_rendering);
+			m_tab_main.UpdateViews();
+
+			DlgResize_Init(false, false);
 			return S_OK;
 		}
 		LRESULT OnCloseDialog(WORD, WORD wID, HWND, BOOL&)

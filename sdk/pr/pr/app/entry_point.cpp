@@ -45,7 +45,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		}
 
 		// Attempt to shut the window down gracefully
-		if (gui->IsWindow())
+		if (gui && gui->IsWindow())
 		{
 			try
 			{
