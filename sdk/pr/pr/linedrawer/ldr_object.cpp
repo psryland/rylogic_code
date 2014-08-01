@@ -615,9 +615,18 @@ namespace pr
 		struct IObjectCreator
 		{
 			virtual ~IObjectCreator() {}
-			virtual bool ParseKeyword(ParseParams&, EKeyword) { return false; }
-			virtual void Parse(ParseParams& p) { (void)p; }
-			virtual void CreateModel(ParseParams& p, LdrObjectPtr obj) { (void)p, obj; }
+			virtual bool ParseKeyword(ParseParams&, EKeyword)
+			{
+				return false;
+			}
+			virtual void Parse(ParseParams& p)
+			{
+				p.m_reader.ReportError(pr::script::EResult::UnknownToken);
+			}
+			virtual void CreateModel(ParseParams& p, LdrObjectPtr obj)
+			{
+				(void)p, obj;
+			}
 		};
 
 		// Base class for objects with a texture
