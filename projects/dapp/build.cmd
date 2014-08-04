@@ -34,9 +34,9 @@ set includes=^
  -IQ:\dlang\dmd2\src\druntime\import
 
 set libs=^
- -LQ:\sdk\pr\lib\prd.%platform%.%config%.lib^
- -LQ:\sdk\pr\lib\view3d.%platform%.%config%.lib^
- -LQ:\sdk\pr\lib\dgui.%platform%.%config%.lib^
+ -LQ:\sdk\lib\prd.%platform%.%config%.lib^
+ -LQ:\sdk\lib\view3d.%platform%.%config%.lib^
+ -LQ:\sdk\lib\dgui.%platform%.%config%.lib^
  -Lole32.lib^
  -Lkernel32.lib^
  -Luser32.lib^
@@ -47,6 +47,6 @@ echo building...
 "%dmd%" -m64 -%config% %src% %includes% %libs% -od%targetdir% -of%targetpath% 
 
 echo post build...
-call Q:\tools\_lib_copy.cmd view3d.dll %platform% %config% %targetdir%
+call P:\tools\_lib_copy.cmd view3d.dll %platform% %config% %targetdir%
  
  

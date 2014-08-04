@@ -17,8 +17,8 @@ namespace TestCS
 		static FormView3d()
 		{
 			View3d.SelectDll(Environment.Is64BitProcess
-				? @"\sdk\pr\lib\x64\debug\view3d.dll"
-				: @"\sdk\pr\lib\x86\debug\view3d.dll");
+				? @"\sdk\lib\x64\debug\view3d.dll"
+				: @"\sdk\lib\x86\debug\view3d.dll");
 		}
 		public FormView3d()
 		{

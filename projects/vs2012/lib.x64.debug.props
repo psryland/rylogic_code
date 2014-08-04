@@ -30,6 +30,7 @@
       <SDLCheck>true</SDLCheck>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <AdditionalOptions>/Zm200</AdditionalOptions>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <PostBuildEvent>
       <Command>\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
