@@ -918,6 +918,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\container\deque.h">
       <Filter>pr\container</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\gui\scintilla.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.py">

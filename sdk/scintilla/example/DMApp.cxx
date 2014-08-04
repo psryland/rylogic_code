@@ -5,8 +5,8 @@
 #include <richedit.h>
 #include <commdlg.h>
 
-#include "Scintilla.h"
-#include "SciLexer.h"
+#include "scintilla/scintilla.h"
+#include "scintilla/scilexer.h"
 #include "resource.h"
 
 #pragma comment(lib, "imm32.lib")
@@ -165,7 +165,7 @@ void DMApp::SaveAs() {
 	}
 }
 
-void DMApp::SaveFile(const char *fileName) {
+void DMApp::SaveFile(const char *) {
 	FILE *fp = fopen(fullPath, "wb");
 	if (fp) {
 		char data[blockSize + 1];
@@ -261,9 +261,9 @@ void DMApp::EnableAMenuItem(int id, bool enable) {
 
 void DMApp::CheckMenus() {
 	EnableAMenuItem(IDM_FILE_SAVE, isDirty);
-	EnableAMenuItem(IDM_EDIT_UNDO, SendEditor(EM_CANUNDO));
-	EnableAMenuItem(IDM_EDIT_REDO, SendEditor(SCI_CANREDO));
-	EnableAMenuItem(IDM_EDIT_PASTE, SendEditor(EM_CANPASTE));
+	EnableAMenuItem(IDM_EDIT_UNDO, SendEditor(EM_CANUNDO) != 0);
+	EnableAMenuItem(IDM_EDIT_REDO, SendEditor(SCI_CANREDO) != 0);
+	EnableAMenuItem(IDM_EDIT_PASTE, SendEditor(EM_CANPASTE) != 0);
 }
 
 void DMApp::Notify(SCNotification *notification) {
@@ -539,7 +539,7 @@ static void RegisterWindowClass() {
 		::exit(FALSE);
 }
 
-int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpszCmdLine, int nCmdShow) {
+int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR , int nCmdShow) {
 
 	app.hInstance = hInstance;
 
@@ -572,7 +572,7 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR lpszCmdLine, int nCmdSh
 	MSG msg;
 	msg.wParam = 0;
 	while (going) {
-		going = GetMessage(&msg, NULL, 0, 0);
+		going = GetMessage(&msg, NULL, 0, 0) != 0;
 		if (app.currentDialog && going) {
 			if (!IsDialogMessage(app.currentDialog, &msg)) {
 				if (TranslateAccelerator(msg.hwnd, hAccTable, &msg) == 0) {
