@@ -1,0 +1,36 @@
+# Make file for DMApp, a small demonstration application
+# for the SciLexer DLL.
+# This file should be in a directory which is a peer of the scintilla 
+# directory so Scintilla.h and SciLexer.h files can be found
+
+CC = cl
+RC = rc
+LD = link
+
+O = obj
+
+PROGDEMO = DMApp.EXE
+
+ALL:	$(PROGDEMO)
+
+clean:
+	del /q *.exe *.obj *.res
+
+LDFLAGS = /NODEFAULTLIB:LIBC KERNEL32.lib USER32.lib GDI32.lib COMDLG32.lib WINMM.lib COMCTL32.lib ADVAPI32.lib IMM32.lib SHELL32.LIB OLE32.LIB
+CXXFLAGS = /TP /MD /Ox 
+
+!IFDEF DEBUG
+CXXFLAGS=$(CXXFLAGS) /Zi 
+LDFLAGS=/DEBUG $(LDFLAGS)
+!ENDIF
+
+.cxx.$(O):
+	$(CC) /I ..\scintilla\include $(CXXFLAGS) -c $*.cxx -o $@
+
+.rc.res:
+	$(RC) $*.rc
+	
+DMApp.o: Scintilla.h SciLexer.h resource.h
+
+$(PROGDEMO):	DMApp.obj DMApp.res 
+	$(LD) DMApp.obj DMApp.res $(LDFLAGS)
