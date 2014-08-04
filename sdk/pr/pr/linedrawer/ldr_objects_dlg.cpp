@@ -13,6 +13,7 @@
 #include <atldlgs.h>
 #include <atlmisc.h>
 #include <atlcrack.h>
+
 #include "pr/common/assert.h"
 #include "pr/common/keystate.h"
 #include "pr/macros/enum.h"
@@ -20,6 +21,7 @@
 #include "pr/str/prstring.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/script/reader.h"
+#include "pr/gui/scintilla.h"
 
 #ifndef PR_DBG_LDROBJMGR
 #define PR_DBG_LDROBJMGR PR_DBG
@@ -56,24 +58,27 @@ namespace pr
 			:public CIndirectDialogImpl<ScriptWindow>
 			,public CDialogResize<ScriptWindow>
 		{
+			InitScintilla m_init_scint;
+			WTL::ScintillaCtrl m_info;
 			std::string m_text;
-			CEdit m_info;
-			CFont m_font;
 
 		public:
 			ScriptWindow(std::string text)
-				:m_text(text)
+				:m_init_scint()
+				,m_info()
+				,m_text(text)
 			{}
 			BOOL OnInitDialog(CWindow, LPARAM)
 			{
 				CenterWindow(GetParent());
-				m_font.CreatePointFont(80, "courier new");
 				m_info.Attach(GetDlgItem(IDC_TEXT));
-				m_info.SetTabStops(12);
-				m_info.SetFont(m_font);
-				m_info.SetWindowTextA(m_text.c_str());
-				m_info.SetSelNone();
-				DlgResize_Init();
+				m_info.SetCodePage(CP_UTF8);
+				m_info.SetText(m_text.c_str());
+				m_info.SetLexer(SCLEX_CPP);
+				m_info.SetLexerLanguage("cpp");
+				m_info.StyleSetFont(0, "courier new");
+				m_info.ReadOnly(true);
+				DlgResize_Init(true, false);
 				return TRUE;
 			}
 			void OnClose(UINT, int nID, CWindow)
@@ -82,13 +87,13 @@ namespace pr
 			}
 
 			enum { IDC_TEXT = 1000 };
-			BEGIN_DIALOG_EX(0, 0, 800, 600, 0)
+			BEGIN_DIALOG_EX(0, 0, 640, 480, 0)
 				DIALOG_STYLE(DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU|WS_VISIBLE)
 				DIALOG_CAPTION("Example Script:")
 				DIALOG_FONT(8, TEXT("MS Shell Dlg"))
 			END_DIALOG()
 			BEGIN_CONTROLS_MAP()
-				CONTROL_EDITTEXT(IDC_TEXT, 0, 0, 500, 490, WS_HSCROLL|WS_VSCROLL|ES_AUTOHSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_WANTRETURN, WS_EX_STATICEDGE)//NOT WS_BORDER|
+				CONTROL_CONTROL("", IDC_TEXT, ScintillaCtrl::GetWndClassName(), WS_HSCROLL|WS_VSCROLL|ES_AUTOHSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_WANTRETURN, 0, 0, 640, 480, WS_EX_STATICEDGE)//NOT WS_BORDER|
 			END_CONTROLS_MAP()
 			BEGIN_DLGRESIZE_MAP(ScriptWindow)
 				DLGRESIZE_CONTROL(IDC_TEXT, DLSZ_SIZE_X|DLSZ_SIZE_Y|DLSZ_REPAINT)
