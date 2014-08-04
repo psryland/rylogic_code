@@ -116,7 +116,7 @@ namespace pr
 				SetPCNT(*v_out++, bb(v3), cc(c3), norm(v2,v3,v1), t10);
 
 				// Set faces
-				std::size_t ibase = i * 6;
+				std::size_t ibase = i * 4;
 				*i_out++ = checked_cast<VIdx>(ibase);
 				*i_out++ = checked_cast<VIdx>(ibase + 1);
 				*i_out++ = checked_cast<VIdx>(ibase + 2);

@@ -35,7 +35,7 @@ namespace pr
 
 			// Disable multisampling when debugging as pix can't handle it
 			//PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
-			//#pragma message(PR_LINK "multisamp disabled")
+			//#pragma message(PR_LINK "WARNING: ************************************************** MultiSamp disabled")
 		}
 
 		Window::Window(Renderer& rdr, WndSettings const& settings)
