@@ -3647,15 +3647,12 @@ namespace pr.gui
 		protected override void Dispose(bool disposing)
 		{
 			// We don't own the elements, so don't dispose them
-			if (disposing)
-			{
-				ResetDiagram();
-				Util.Dispose(ref components);
-				Util.Dispose(ref m_hoverscroll);
-				Util.Dispose(ref m_eb_update_diag);
-				Util.Dispose(ref m_tools);
-				Util.Dispose(ref m_view3d);
-			}
+			ResetDiagram();
+			Util.Dispose(ref m_hoverscroll);
+			Util.Dispose(ref m_eb_update_diag);
+			Util.Dispose(ref m_tools);
+			Util.Dispose(ref m_view3d);
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 

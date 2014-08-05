@@ -103,7 +103,10 @@ namespace pr.gui
 			set
 			{
 				base.BackColor = value;
-				Window.BackgroundColour = value;
+				
+				// Need to handle Window == null because the designer still sets the base member
+				if (Window != null)
+					Window.BackgroundColour = value;
 			}
 		}
 

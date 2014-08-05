@@ -60,6 +60,11 @@ namespace pr.util
 			OnDragLeave = HandleDragLeave;
 			OnDragDrop  = HandleDragDrop;
 		}
+		public DragDrop(params object[] targets) :this()
+		{
+			foreach (var target in targets)
+				Attach(target);
+		}
 
 		/// <summary>Sign up this mux to 'target'</summary>
 		public void Attach(object target)

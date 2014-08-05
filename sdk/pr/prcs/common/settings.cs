@@ -451,8 +451,6 @@ namespace pr.common
 				if (PathEx.DirExists(path))
 					Directory.CreateDirectory(path);
 
-				Log.Debug(this, "Saving settings to file {0}".Fmt(filepath));
-
 				// Perform the save
 				var settings = ToXml();
 				settings.Save(filepath, SaveOptions.None);

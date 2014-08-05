@@ -40,13 +40,13 @@ namespace pr.util
 	public static class Util
 	{
 		/// <summary>Convenience disposer</summary>
-		public static void Dispose<T>(ref T doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed) where T:class, IDisposable
 		{
 			if (doomed == null) return;
 			doomed.Dispose();
 			doomed = null;
 		}
-		public static void DisposeAll<T>(ref List<T> doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static void DisposeAll<T>(ref List<T> doomed) where T:class, IDisposable
 		{
 			if (doomed == null) return;
 			foreach (var d in doomed) d.Dispose();
