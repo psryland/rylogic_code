@@ -7,6 +7,7 @@
 #include "linedrawer/gui/options_dlg.h"
 #include "linedrawer/gui/about_dlg.h"
 #include "linedrawer/gui/text_panel_dlg.h"
+#include "linedrawer/gui/script_editor_dlg.h"
 #include "linedrawer/resources/linedrawer.res.h"
 #include "linedrawer/main/ldrexception.h"
 #include "linedrawer/plugin/plugin_manager_dlg.h"
@@ -36,17 +37,14 @@ namespace ldr
 		,m_status()
 		,m_recent_files()
 		,m_saved_views()
-		,m_store_ui(m_hWnd)
+		,m_store_ui()
+		,m_editor_ui()
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, m_hWnd)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, m_hWnd)
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
-		//// Ignore internal context ids
-		//m_store_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
-		//m_store_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
-
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
 	}
@@ -91,7 +89,26 @@ namespace ldr
 		m_saved_views .Attach(pr::gui::GetMenuByName(GetMenu(), TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
 
 		// Initialise the object manager
+		m_store_ui.Create(m_hWnd);
 		m_store_ui.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
+
+		// Initialise the script editor
+		m_editor_ui.Create(m_hWnd);
+		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
+		m_editor_ui.Render = [&](std::string&& script)
+			{
+				try
+				{
+					m_main->m_settings.m_NewObjectString = std::move(script);
+					m_main->m_settings.Save();
+					m_main->m_sources.AddString(m_main->m_settings.m_NewObjectString);
+					m_main->RenderNeeded();
+				}
+				catch (std::exception const& e)
+				{
+					pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\n%s", e.what())));
+				}
+			};
 
 		// Initialise the recent files list and saved views
 		m_recent_files.MaxLength(m_main->m_settings.m_MaxRecentFiles);
@@ -118,7 +135,7 @@ namespace ldr
 	{
 		// If file watching is turned on, look for changed files
 		if (m_main->m_settings.m_WatchForChangedFiles)
-			m_main->m_files.RefreshChangedFiles();
+			m_main->m_sources.RefreshChangedFiles();
 
 		// Orbit the camera if enabled
 		if (m_main->m_settings.m_CameraOrbit)
@@ -160,7 +177,7 @@ namespace ldr
 
 		// Clear the data unless shift is held down
 		if (!pr::KeyDown(VK_SHIFT))
-			m_main->m_files.Clear();
+			m_main->m_sources.Clear();
 
 		// Load the files
 		std::string path;
@@ -168,7 +185,7 @@ namespace ldr
 		{
 			path.resize(::DragQueryFileA(hDropInfo, i, 0, 0) + 1, 0);
 			if (::DragQueryFile(hDropInfo, i, &path[0], UINT(path.size())) != 0)
-				m_main->m_files.Add(path.c_str());
+				m_main->m_sources.AddFile(path.c_str());
 		}
 	}
 
@@ -217,7 +234,7 @@ namespace ldr
 			SetMsgHandled(FALSE);
 			break;
 		case VK_SPACE:
-			m_store_ui.Show(true, m_main->m_store);
+			m_store_ui.Show(m_main->m_store, m_hWnd);
 			break;
 		case VK_F5:
 			m_main->ReloadSourceData();
@@ -306,24 +323,7 @@ namespace ldr
 	// Open a text panel for adding new ldr objects immediately
 	LRESULT MainGUI::OnFileNew(WORD, WORD, HWND, BOOL&)
 	{
-		try
-		{
-			CTextEntryDlg dlg(m_hWnd, "Create new ldr objects:", m_main->m_settings.m_NewObjectString.c_str(), true);
-			pr::IRect r  = pr::WindowBounds(m_hWnd);
-			dlg.m_width  = pr::Max(100, r.SizeX() - 50);
-			dlg.m_height = pr::Max(60,  r.SizeY() - 50);
-			if (dlg.DoModal() != IDOK) return S_OK;
-
-			m_main->m_settings.m_NewObjectString = dlg.m_body;
-			m_main->m_settings.Save();
-
-			pr::ldr::AddString(m_main->m_rdr, m_main->m_settings.m_NewObjectString.c_str(), nullptr, m_main->m_store);
-			m_main->RenderNeeded();
-		}
-		catch (std::exception const& e)
-		{
-			pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\nError details: %s", e.what())));
-		}
+		m_editor_ui.Visible(true);
 		return S_OK;
 	}
 
@@ -428,7 +428,7 @@ namespace ldr
 	// Set the position of the camera focus point in world space
 	LRESULT MainGUI::OnSetFocusPosition(WORD, WORD, HWND, BOOL&)
 	{
-		CTextEntryDlg dlg(m_hWnd, "Entry focus point position", "0 0 0", false);
+		CTextEntryDlg dlg(m_hWnd, "Enter focus point position", "0 0 0", false);
 		if (dlg.DoModal() != IDOK) return S_OK;
 
 		float pos[3];
@@ -501,14 +501,14 @@ namespace ldr
 	// Display the object manager UI
 	LRESULT MainGUI::OnShowObjectManagerUI(WORD, WORD, HWND, BOOL&)
 	{
-		m_store_ui.Show(true, m_main->m_store);
+		m_store_ui.Show(m_main->m_store, m_hWnd);
 		return S_OK;
 	}
 
 	// Spawn the text editor with the source files
 	LRESULT MainGUI::OnEditSourceFiles(WORD, WORD, HWND, BOOL&)
 	{
-		OpenTextEditor(m_main->m_files.List());
+		OpenTextEditor(m_main->m_sources.List());
 		return S_OK;
 	}
 
@@ -705,6 +705,7 @@ namespace ldr
 	{
 		m_angle_tool_ui.Close();
 		m_measure_tool_ui.Close();
+		m_editor_ui.Close();
 		m_store_ui.Close();
 		base::CloseApp(exit_code);
 	}
@@ -735,8 +736,8 @@ namespace ldr
 			m_recent_files.Add(filepath, true);
 
 			// Clear data from other files, unless this is an additive open
-			if (!additive) m_main->m_files.Clear();
-			m_main->m_files.Add(filepath);
+			if (!additive) m_main->m_sources.Clear();
+			m_main->m_sources.AddFile(filepath);
 
 			// Reset the camera if flagged
 			if (m_main->m_settings.m_ResetCameraOnLoad)
@@ -975,13 +976,13 @@ namespace ldr
 	}
 
 	// A number of objects are about to be added
-	void MainGUI::OnEvent(pr::ldr::Evt_AddBegin const&)
+	void MainGUI::OnEvent(ldr::Event_StoreChanging const&)
 	{
 		m_suspend_render = true;
 	}
 
 	// The last object in a group has been added
-	void MainGUI::OnEvent(pr::ldr::Evt_AddEnd const&)
+	void MainGUI::OnEvent(ldr::Event_StoreChanged const&)
 	{
 		m_suspend_render = false;
 		m_main->RenderNeeded();

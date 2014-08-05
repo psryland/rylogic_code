@@ -3,13 +3,12 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #pragma once
-#ifndef LDR_LINEDRAWER_GUI_H
-#define LDR_LINEDRAWER_GUI_H
 
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/linedrawer.h"
 #include "linedrawer/main/ldrevent.h"
 #include "linedrawer/resources/linedrawer.res.h"
+#include "linedrawer/gui/script_editor_dlg.h"
 #include "linedrawer/utility/misc.h"
 
 namespace ldr
@@ -23,14 +22,14 @@ namespace ldr
 		,pr::events::IRecv<ldr::Event_Error>
 		,pr::events::IRecv<ldr::Event_Status>
 		,pr::events::IRecv<ldr::Event_Refresh>
+		,pr::events::IRecv<ldr::Event_StoreChanging>
+		,pr::events::IRecv<ldr::Event_StoreChanged>
 		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		,pr::events::IRecv<pr::ldr::Evt_Refresh>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureCloseWindow>
 		,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgCloseWindow>
 		,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
-		,pr::events::IRecv<pr::ldr::Evt_AddBegin>
-		,pr::events::IRecv<pr::ldr::Evt_AddEnd>
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
 		,pr::AlignTo<16>
 	{
@@ -45,6 +44,7 @@ namespace ldr
 		pr::gui::RecentFiles      m_recent_files;         // The recent files
 		pr::gui::MenuList         m_saved_views;          // A list of camera snapshots
 		pr::ldr::ObjectManagerDlg m_store_ui;             // GUI window for manipulating ldr object properties
+		ldr::ScriptEditorDlg      m_editor_ui;            // An editor for ldr script
 		pr::ldr::MeasureDlg       m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::AngleDlg         m_angle_tool_ui;        // The UI for the angle measuring tool
 		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
@@ -192,14 +192,14 @@ namespace ldr
 		void OnEvent(ldr::Event_Error const& e) override;
 		void OnEvent(ldr::Event_Status const& e) override;
 		void OnEvent(ldr::Event_Refresh const& e) override;
+		void OnEvent(ldr::Event_StoreChanging const&) override;
+		void OnEvent(ldr::Event_StoreChanged const&) override;
 		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 		void OnEvent(pr::ldr::Evt_Refresh const& e) override;
 		void OnEvent(pr::ldr::Evt_LdrMeasureCloseWindow const&) override;
 		void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override;
 		void OnEvent(pr::ldr::Evt_LdrAngleDlgCloseWindow const&) override;
 		void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override;
-		void OnEvent(pr::ldr::Evt_AddBegin const&) override;
-		void OnEvent(pr::ldr::Evt_AddEnd const&) override;
 		void OnEvent(pr::settings::Evt<UserSettings> const&) override;
 
 		// Command line
@@ -277,4 +277,3 @@ public:
 	void    OnPaint                 (CDCHandle dc);
 };
 */
-#endif

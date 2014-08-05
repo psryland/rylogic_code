@@ -67,12 +67,42 @@ namespace ldr
 	{
 	};
 
+	// Raised just before parsing begins and 'm_store' is changed
+	struct Event_StoreChanging
+	{
+		// The store that will be added to
+		pr::ldr::ObjectCont const& m_store;
+
+		Event_StoreChanging(pr::ldr::ObjectCont const& store)
+			:m_store(store)
+		{}
+		PR_NO_COPY(Event_StoreChanging);
+	};
+
 	// Event raised when the store of ldr objects is added to or removed from
 	struct Event_StoreChanged
 	{
-		// The store that was changed
-		pr::ldr::ObjectCont const* m_store;
+		enum class EReason { NewData, Reload };
 
-		Event_StoreChanged(pr::ldr::ObjectCont const& store) :m_store(&store) {}
+		// The store that was added to
+		pr::ldr::ObjectCont const& m_store;
+
+		// Contains the results of parsing including the
+		// object container that the objects where added to
+		pr::ldr::ParseResult const& m_result;
+
+		// The number of objects added as a result of the parsing.
+		std::size_t m_count;
+
+		// The origin of the store change
+		EReason m_reason;
+
+		Event_StoreChanged(pr::ldr::ObjectCont const& store, std::size_t count, pr::ldr::ParseResult const& result, EReason why)
+			:m_store(store)
+			,m_count(count)
+			,m_result(result)
+			,m_reason(why)
+		{}
+		PR_NO_COPY(Event_StoreChanged);
 	};
 }

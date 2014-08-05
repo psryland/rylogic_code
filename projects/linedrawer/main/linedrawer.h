@@ -8,7 +8,7 @@
 #include "linedrawer/main/ldrevent.h"
 #include "linedrawer/main/user_settings.h"
 #include "linedrawer/main/navmanager.h"
-#include "linedrawer/main/file_sources.h"
+#include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/lua_source.h"
 #include "linedrawer/plugin/plugin_manager.h"
 
@@ -17,10 +17,7 @@ namespace ldr
 	struct Main
 		:pr::app::Main<UserSettings, MainGUI>
 		,pr::events::IRecv<pr::ldr::Evt_SettingsChanged>
-		,pr::events::IRecv<pr::ldr::Evt_LdrObjectAdd>
-		,pr::events::IRecv<pr::ldr::Evt_LdrObjectDelete>
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
-		,pr::events::IRecv<pr::ldr::Evt_LdrSetCamera>
 		,pr::events::IRecv<ldr::Event_StoreChanged>
 	{
 		// These types form part of the interface
@@ -28,7 +25,7 @@ namespace ldr
 		pr::ldr::ObjectCont  m_store;          // A container of all ldr objects created
 		PluginManager        m_plugin_mgr;     // The container of loaded plugins
 		LuaSource            m_lua_src;        // An object for processing lua files
-		FileSources          m_files;          // Manages files that are sources of ldr objects
+		ScriptSources        m_sources;        // Manages source scripts
 		mutable pr::BBox     m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
 		int                  m_scene_rdr_pass; // Index of the current scene.Render() call
 
@@ -71,10 +68,7 @@ namespace ldr
 
 		// Event handlers
 		void OnEvent(pr::ldr::Evt_SettingsChanged const&) override;
-		void OnEvent(pr::ldr::Evt_LdrObjectAdd const&) override;
-		void OnEvent(pr::ldr::Evt_LdrObjectDelete const&) override;
 		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&) override;
-		void OnEvent(pr::ldr::Evt_LdrSetCamera const&) override;
 		void OnEvent(pr::rdr::Evt_UpdateScene const&) override;
 		void OnEvent(pr::rdr::Evt_RenderStepExecute const&) override;
 		void OnEvent(ldr::Event_StoreChanged const&) override;

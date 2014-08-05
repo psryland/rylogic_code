@@ -33,6 +33,7 @@
 #include "pr/gui/menu_helper.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/progress_dlg.h"
+#include "pr/gui/scintilla.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/script/script_forward.h"

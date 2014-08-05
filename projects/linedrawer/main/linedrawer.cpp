@@ -11,6 +11,8 @@
 #include "linedrawer/utility/debug.h"
 #include "pr/linedrawer/ldr_object.h"
 
+using namespace pr::ldr;
+
 namespace ldr
 {
 	wchar_t const AppNameW[] = L"LineDrawer";
@@ -61,7 +63,7 @@ namespace ldr
 		,m_store()
 		,m_plugin_mgr(this)
 		,m_lua_src()
-		,m_files(m_settings, m_rdr, m_store, m_lua_src)
+		,m_sources(m_settings, m_rdr, m_store, m_lua_src)
 		,m_bbox_scene(pr::BBoxReset)
 		,m_scene_rdr_pass(0)
 		,m_step_objects()
@@ -144,7 +146,7 @@ namespace ldr
 	{
 		try
 		{
-			m_files.Reload();
+			m_sources.Reload();
 		}
 		catch (LdrException const& e)
 		{
@@ -230,8 +232,7 @@ namespace ldr
 			//*/
 			}
 
-			std::string scene = pr::ldr::CreateDemoScene();
-			pr::ldr::AddString(m_rdr, scene.c_str(), nullptr, m_store, pr::ldr::DefaultContext, false, 0, &m_lua_src);
+			m_sources.AddString(pr::ldr::CreateDemoScene());
 		}
 		catch (pr::script::Exception const& e) { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
 		catch (LdrException const& e)          { pr::events::Send(ldr::Event_Error(pr::FmtS("Error found while parsing demo scene\nError details: %s", e.what()))); }
@@ -386,31 +387,6 @@ namespace ldr
 		m_settings.m_ObjectManagerSettings = m_gui.m_store_ui.Settings();
 	}
 
-	// An object has been added to the object manager
-	void Main::OnEvent(pr::ldr::Evt_LdrObjectAdd const& e)
-	{
-		// Link it's step object with the others
-		pr::chain::Insert(m_step_objects, e.m_obj->m_step.m_link);
-
-		// If we're using deferred rendering and the object is a light source,
-		// add it to the lighting pass. If the light is a shadow caster, add a render step for it
-		auto lighting_pass = m_scene.FindRStep(pr::rdr::ERenderStep::DSLighting);
-		if (lighting_pass != nullptr)
-		{
-			// todo
-		}
-	}
-
-	// An object has been deleted from the object manager
-	void Main::OnEvent(pr::ldr::Evt_LdrObjectDelete const& e)
-	{
-		// Remove the step object
-		pr::chain::Remove(e.m_obj->m_step.m_link);
-
-		// If we're using deferred rendering and the object is a light source,
-		// remove it from the lighting pass. If the light is a shadow caster, remove it's render step
-	}
-
 	// The selected objects have changed
 	void Main::OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&)
 	{
@@ -424,20 +400,6 @@ namespace ldr
 
 		// Request a refresh when the selection changes (if the selection box is visible)
 		pr::events::Send(Event_Refresh());
-	}
-
-	// A camera description has been read from a script
-	void Main::OnEvent(pr::ldr::Evt_LdrSetCamera const& e)
-	{
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::C2W     ) m_cam.CameraToWorld   (e.m_cam.CameraToWorld());
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Focus   ) m_cam.FocusDist       (e.m_cam.FocusDist());
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Align   ) m_cam.SetAlign        (e.m_cam.m_align);
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Aspect  ) m_cam.Aspect          (e.m_cam.m_aspect);
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::FovY    ) m_cam.FovY            (e.m_cam.FovY());
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Near    ) m_cam.m_near           = e.m_cam.m_near;
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Far     ) m_cam.m_far            = e.m_cam.m_far;
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::AbsClip ) m_cam.m_focus_rel_clip = e.m_cam.m_focus_rel_clip;
-		if (e.m_set_fields & pr::ldr::Evt_LdrSetCamera::Ortho   ) m_cam.m_orthographic   = e.m_cam.m_orthographic;
 	}
 
 	// Called when the scene needs updating
@@ -522,9 +484,25 @@ namespace ldr
 	}
 
 	// Called when the store of objects has changed
-	void Main::OnEvent(ldr::Event_StoreChanged const&)
+	void Main::OnEvent(Event_StoreChanged const& evt)
 	{
 		// Reset the scene bounding box
 		m_bbox_scene = pr::BBoxReset;
+
+		// See if a camera description was given in the script
+		// If so, update the camera position (if not a reload)
+		if (evt.m_reason != Event_StoreChanged::EReason::Reload && evt.m_result.m_cam_fields != ParseResult::ECamField::None)
+		{
+			auto fields = evt.m_result.m_cam_fields;
+			if (fields & ParseResult::ECamField::C2W    ) m_cam.CameraToWorld     (evt.m_result.m_cam.CameraToWorld());
+			if (fields & ParseResult::ECamField::Focus  ) m_cam.FocusDist         (evt.m_result.m_cam.FocusDist());
+			if (fields & ParseResult::ECamField::Align  ) m_cam.SetAlign          (evt.m_result.m_cam.m_align);
+			if (fields & ParseResult::ECamField::Aspect ) m_cam.Aspect            (evt.m_result.m_cam.m_aspect);
+			if (fields & ParseResult::ECamField::FovY   ) m_cam.FovY              (evt.m_result.m_cam.FovY());
+			if (fields & ParseResult::ECamField::Near   ) m_cam.m_near           = evt.m_result.m_cam.m_near;
+			if (fields & ParseResult::ECamField::Far    ) m_cam.m_far            = evt.m_result.m_cam.m_far;
+			if (fields & ParseResult::ECamField::AbsClip) m_cam.m_focus_rel_clip = evt.m_result.m_cam.m_focus_rel_clip;
+			if (fields & ParseResult::ECamField::Ortho  ) m_cam.m_orthographic   = evt.m_result.m_cam.m_orthographic;
+		}
 	}
 }

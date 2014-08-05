@@ -3,18 +3,17 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #pragma once
-#ifndef LDR_FILE_SOURCES_H
-#define LDR_FILE_SOURCES_H
 
 #include "linedrawer/main/forward.h"
 #include "pr/filesys/filewatch.h"
 #include "pr/script/script_forward.h"
 #include "linedrawer/main/lua_source.h"
+#include "linedrawer/main/ldrevent.h"
 
 namespace ldr
 {
-	// This class is a collection of the file sources currently loaded in ldrdrawer
-	class FileSources
+	// This class is a collection of the file sources currently loaded in ldr
+	class ScriptSources
 		:pr::FileWatch::IFileChangedHandler
 	{
 		typedef std::list<std::string> StrList;
@@ -29,8 +28,11 @@ namespace ldr
 		// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
 		void FileWatch_OnFileChanged(char const* filepath, void* user_data, bool& handled);
 
+		// Internal add file
+		void AddFile(char const* filepath, ldr::Event_StoreChanged::EReason reason);
+
 	public:
-		FileSources(ldr::UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
+		ScriptSources(ldr::UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src);
 
 		// Return const access to the source files
 		StrList const& List() const { return m_files; }
@@ -41,8 +43,11 @@ namespace ldr
 		// Reload all files
 		void Reload();
 
+		// Add a string source
+		void AddString(std::string const& str);
+
 		// Add a file source
-		void Add(char const* filepath);
+		void AddFile(char const* filepath);
 
 		// Remove a file source
 		void Remove(char const* filepath);
@@ -51,4 +56,3 @@ namespace ldr
 		void RefreshChangedFiles();
 	};
 }
-#endif

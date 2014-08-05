@@ -156,7 +156,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp" />
-    <ClCompile Include="..\linedrawer\main\file_sources.cpp" />
+    <ClCompile Include="..\linedrawer\main\script_sources.cpp" />
     <ClCompile Include="..\linedrawer\main\linedrawer.cpp" />
     <ClCompile Include="..\linedrawer\main\lua_source.cpp" />
     <ClCompile Include="..\linedrawer\main\navmanager.cpp" />
@@ -222,7 +222,8 @@
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light_dlg.h" />
     <ClInclude Include="..\linedrawer\gui\linedrawergui.h" />
-    <ClInclude Include="..\linedrawer\main\file_sources.h" />
+    <ClInclude Include="..\linedrawer\gui\script_editor_dlg.h" />
+    <ClInclude Include="..\linedrawer\main\script_sources.h" />
     <ClInclude Include="..\linedrawer\main\forward.h" />
     <ClInclude Include="..\linedrawer\main\ldrevent.h" />
     <ClInclude Include="..\linedrawer\main\ldrexception.h" />

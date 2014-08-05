@@ -18,107 +18,80 @@
 #include "pr/renderer11/renderer.h"
 
 using namespace pr::rdr;
+using namespace pr::script;
 
 namespace pr
 {
 	namespace ldr
 	{
-		typedef pr::hash::HashValue HashValue;
-		typedef pr::vector<pr::v4> VCont;
-		typedef pr::vector<pr::v4> NCont;
-		typedef pr::vector<pr::uint16> ICont;
+		typedef pr::hash::HashValue      HashValue;
+		typedef pr::vector<pr::v4>       VCont;
+		typedef pr::vector<pr::v4>       NCont;
+		typedef pr::vector<pr::uint16>   ICont;
 		typedef pr::vector<pr::Colour32> CCont;
-		typedef pr::vector<pr::v2> TCont;
+		typedef pr::vector<pr::v2>       TCont;
+		typedef ParseResult::ModelLookup ModelCont;
 
-		// Cache the scratch buffers
-		VCont g_point;
-		NCont g_norms;
-		ICont g_index;
-		CCont g_color;
-		TCont g_texts;
-		inline VCont& Point() { g_point.resize(0); return g_point; }
-		inline NCont& Norms() { g_norms.resize(0); return g_norms; }
-		inline ICont& Index() { g_index.resize(0); return g_index; }
-		inline CCont& Color() { g_color.resize(0); return g_color; }
-		inline TCont& Texts() { g_texts.resize(0); return g_texts; }
-
-		// Convert an axis id to an axis
-		inline v4 AxisId(int id)
+		struct Cache
 		{
-			switch (id) {
-			default: return v4Zero;
-			case +1: return  v4XAxis;
-			case -1: return -v4XAxis;
-			case +2: return  v4YAxis;
-			case -2: return -v4YAxis;
-			case +3: return  v4ZAxis;
-			case -3: return -v4ZAxis;
+			VCont m_point;
+			NCont m_norms;
+			ICont m_index;
+			CCont m_color;
+			TCont m_texts;
+
+			void release()
+			{
+				m_point.clear();
+				m_norms.clear();
+				m_index.clear();
+				m_color.clear();
+				m_texts.clear();
 			}
-		}
+		} g_cache;
+		inline VCont& Point() { g_cache.m_point.resize(0); return g_cache.m_point; }
+		inline NCont& Norms() { g_cache.m_norms.resize(0); return g_cache.m_norms; }
+		inline ICont& Index() { g_cache.m_index.resize(0); return g_cache.m_index; }
+		inline CCont& Color() { g_cache.m_color.resize(0); return g_cache.m_color; }
+		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
 
 		// Check the hash values are correct
 		PR_EXPAND(PR_DBG, static bool s_eldrobject_kws_checked = pr::CheckHashEnum<ELdrObject>([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
-		PR_EXPAND(PR_DBG, static bool s_ekeyword_kws_checked = pr::CheckHashEnum<EKeyword  >([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
+		PR_EXPAND(PR_DBG, static bool s_ekeyword_kws_checked   = pr::CheckHashEnum<EKeyword  >([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
 
 		// LdrObject Creation functions *********************************************
-		typedef std::unordered_map<hash::HashValue, ModelPtr> ModelCont;
 
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
 		{
-			pr::Renderer&       m_rdr;
-			pr::script::Reader& m_reader;
-			ObjectCont&         m_objects;
-			ModelCont&          m_models;
-			ContextId           m_context_id;
-			HashValue           m_keyword;
-			LdrObject*          m_parent;
+			pr::Renderer&  m_rdr;
+			Reader&        m_reader;
+			ObjectCont&    m_objects;
+			ModelCont&     m_models;
+			ContextId      m_context_id;
+			HashValue      m_keyword;
+			LdrObject*     m_parent;
 
-			ParseParams(
-				pr::Renderer&       rdr,
-				pr::script::Reader& reader,
-				ObjectCont&         objects,
-				ModelCont&          models,
-				ContextId           context_id,
-				HashValue           keyword,
-				LdrObject*          parent)
+			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
 				:m_rdr(rdr)
-				, m_reader(reader)
-				, m_objects(objects)
-				, m_models(models)
-				, m_context_id(context_id)
-				, m_keyword(keyword)
-				, m_parent(parent)
+				,m_reader(reader)
+				,m_objects(objects)
+				,m_models(models)
+				,m_context_id(context_id)
+				,m_keyword(keyword)
+				,m_parent(parent)
 			{}
-
-			ParseParams(
-				ParseParams& p,
-				ObjectCont&  objects,
-				HashValue    keyword,
-				LdrObject*   parent)
+			ParseParams(ParseParams& p, ObjectCont& objects, HashValue keyword, LdrObject* parent)
 				:m_rdr(p.m_rdr)
-				, m_reader(p.m_reader)
-				, m_objects(objects)
-				, m_models(p.m_models)
-				, m_context_id(p.m_context_id)
-				, m_keyword(keyword)
-				, m_parent(parent)
+				,m_reader(p.m_reader)
+				,m_objects(objects)
+				,m_models(p.m_models)
+				,m_context_id(p.m_context_id)
+				,m_keyword(keyword)
+				,m_parent(parent)
 			{}
 
 			PR_NO_COPY(ParseParams);
-		};
-
-		// Parse results collection object
-		struct ParseResult
-		{
-			ObjectCont       m_objects_internal;
-			ObjectCont&      m_objects;
-			ModelCont        m_models;
-			Evt_LdrSetCamera m_cam;
-
-			ParseResult() :m_objects_internal(), m_objects(m_objects_internal), m_models(), m_cam() {}
-			ParseResult(ObjectCont& objects) :m_objects_internal(), m_objects(objects), m_models(), m_cam() {}
-			PR_NO_COPY(ParseResult);
 		};
 
 		// Forward declare the recursive object parsing function
@@ -313,7 +286,7 @@ namespace pr
 		}
 
 		// Parse a camera description
-		void ParseCamera(pr::script::Reader& reader, Evt_LdrSetCamera& evt)
+		void ParseCamera(pr::script::Reader& reader, ParseResult& out)
 		{
 			reader.SectionStart();
 			for (EKeyword kw; reader.NextKeywordH(kw);)
@@ -321,93 +294,93 @@ namespace pr
 				switch (kw)
 				{
 				default:
-				{
-					reader.ReportError(pr::script::EResult::UnknownToken);
-					break;
-				}
+					{
+						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
+					}
 				case EKeyword::O2W:
-				{
-					pr::m4x4 c2w = pr::m4x4Identity;
-					ParseTransform(reader, c2w);
-					evt.m_cam.CameraToWorld(c2w);
-					evt.m_set_fields |= Evt_LdrSetCamera::C2W;
-					break;
-				}
+					{
+						pr::m4x4 c2w = pr::m4x4Identity;
+						ParseTransform(reader, c2w);
+						out.m_cam.CameraToWorld(c2w);
+						out.m_cam_fields |= ParseResult::ECamField::C2W;
+						break;
+					}
 				case EKeyword::LookAt:
-				{
-					pr::v4 lookat;
-					reader.ExtractVector3S(lookat, 1.0f);
-					pr::m4x4 c2w = evt.m_cam.CameraToWorld();
-					evt.m_cam.LookAt(c2w.pos, lookat, c2w.y);
-					evt.m_set_fields |= Evt_LdrSetCamera::C2W;
-					evt.m_set_fields |= Evt_LdrSetCamera::Focus;
-					break;
-				}
+					{
+						pr::v4 lookat;
+						reader.ExtractVector3S(lookat, 1.0f);
+						pr::m4x4 c2w = out.m_cam.CameraToWorld();
+						out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
+						out.m_cam_fields |= ParseResult::ECamField::C2W;
+						out.m_cam_fields |= ParseResult::ECamField::Focus;
+						break;
+					}
 				case EKeyword::Align:
-				{
-					pr::v4 align;
-					reader.ExtractVector3S(align, 0.0f);
-					evt.m_cam.SetAlign(align);
-					evt.m_set_fields |= Evt_LdrSetCamera::Align;
-					break;
-				}
+					{
+						pr::v4 align;
+						reader.ExtractVector3S(align, 0.0f);
+						out.m_cam.SetAlign(align);
+						out.m_cam_fields |= ParseResult::ECamField::Align;
+						break;
+					}
 				case EKeyword::Aspect:
-				{
-					float aspect;
-					reader.ExtractRealS(aspect);
-					evt.m_cam.Aspect(aspect);
-					evt.m_set_fields |= Evt_LdrSetCamera::Align;
-					break;
-				}
+					{
+						float aspect;
+						reader.ExtractRealS(aspect);
+						out.m_cam.Aspect(aspect);
+						out.m_cam_fields |= ParseResult::ECamField::Align;
+						break;
+					}
 				case EKeyword::FovX:
-				{
-					float fovX;
-					reader.ExtractRealS(fovX);
-					evt.m_cam.FovX(fovX);
-					evt.m_set_fields |= Evt_LdrSetCamera::FovY;
-					break;
-				}
+					{
+						float fovX;
+						reader.ExtractRealS(fovX);
+						out.m_cam.FovX(fovX);
+						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						break;
+					}
 				case EKeyword::FovY:
-				{
-					float fovY;
-					reader.ExtractRealS(fovY);
-					evt.m_cam.FovY(fovY);
-					evt.m_set_fields |= Evt_LdrSetCamera::FovY;
-					break;
-				}
+					{
+						float fovY;
+						reader.ExtractRealS(fovY);
+						out.m_cam.FovY(fovY);
+						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						break;
+					}
 				case EKeyword::Fov:
-				{
-					float fov[2];
-					reader.ExtractRealArrayS(fov, 2);
-					evt.m_cam.Fov(fov[0], fov[1]);
-					evt.m_set_fields |= Evt_LdrSetCamera::Aspect;
-					evt.m_set_fields |= Evt_LdrSetCamera::FovY;
-					break;
-				}
+					{
+						float fov[2];
+						reader.ExtractRealArrayS(fov, 2);
+						out.m_cam.Fov(fov[0], fov[1]);
+						out.m_cam_fields |= ParseResult::ECamField::Aspect;
+						out.m_cam_fields |= ParseResult::ECamField::FovY;
+						break;
+					}
 				case EKeyword::Near:
-				{
-					reader.ExtractReal(evt.m_cam.m_near);
-					evt.m_set_fields |= Evt_LdrSetCamera::Near;
-					break;
-				}
+					{
+						reader.ExtractReal(out.m_cam.m_near);
+						out.m_cam_fields |= ParseResult::ECamField::Near;
+						break;
+					}
 				case EKeyword::Far:
-				{
-					reader.ExtractReal(evt.m_cam.m_far);
-					evt.m_set_fields |= Evt_LdrSetCamera::Far;
-					break;
-				}
+					{
+						reader.ExtractReal(out.m_cam.m_far);
+						out.m_cam_fields |= ParseResult::ECamField::Far;
+						break;
+					}
 				case EKeyword::AbsoluteClipPlanes:
-				{
-					evt.m_cam.m_focus_rel_clip = false;
-					evt.m_set_fields |= Evt_LdrSetCamera::AbsClip;
-					break;
-				}
+					{
+						out.m_cam.m_focus_rel_clip = false;
+						out.m_cam_fields |= ParseResult::ECamField::AbsClip;
+						break;
+					}
 				case EKeyword::Orthographic:
-				{
-					evt.m_cam.m_orthographic = true;
-					evt.m_set_fields |= Evt_LdrSetCamera::Ortho;
-					break;
-				}
+					{
+						out.m_cam.m_orthographic = true;
+						out.m_cam_fields |= ParseResult::ECamField::Ortho;
+						break;
+					}
 				}
 			}
 			reader.SectionEnd();
@@ -422,36 +395,36 @@ namespace pr
 				switch (kw)
 				{
 				default:
-				{
-					reader.ReportError(pr::script::EResult::UnknownToken);
-					break;
-				}
+					{
+						reader.ReportError(pr::script::EResult::UnknownToken);
+						break;
+					}
 				case EKeyword::Style:
-				{
-					char style[50];
-					reader.ExtractIdentifier(style);
-					if (pr::str::EqualI(style, "NoAnimation")) anim.m_style = EAnimStyle::NoAnimation;
-					else if (pr::str::EqualI(style, "PlayOnce")) anim.m_style = EAnimStyle::PlayOnce;
-					else if (pr::str::EqualI(style, "PlayReverse")) anim.m_style = EAnimStyle::PlayReverse;
-					else if (pr::str::EqualI(style, "PingPong")) anim.m_style = EAnimStyle::PingPong;
-					else if (pr::str::EqualI(style, "PlayContinuous")) anim.m_style = EAnimStyle::PlayContinuous;
-					break;
-				}
+					{
+						char style[50];
+						reader.ExtractIdentifier(style);
+						if      (pr::str::EqualI(style, "NoAnimation"   )) anim.m_style = EAnimStyle::NoAnimation;
+						else if (pr::str::EqualI(style, "PlayOnce"      )) anim.m_style = EAnimStyle::PlayOnce;
+						else if (pr::str::EqualI(style, "PlayReverse"   )) anim.m_style = EAnimStyle::PlayReverse;
+						else if (pr::str::EqualI(style, "PingPong"      )) anim.m_style = EAnimStyle::PingPong;
+						else if (pr::str::EqualI(style, "PlayContinuous")) anim.m_style = EAnimStyle::PlayContinuous;
+						break;
+					}
 				case EKeyword::Period:
-				{
-					reader.ExtractReal(anim.m_period);
-					break;
-				}
+					{
+						reader.ExtractReal(anim.m_period);
+						break;
+					}
 				case EKeyword::Velocity:
-				{
-					reader.ExtractVector3(anim.m_velocity, 0.0f);
-					break;
-				}
+					{
+						reader.ExtractVector3(anim.m_velocity, 0.0f);
+						break;
+					}
 				case EKeyword::AngVelocity:
-				{
-					reader.ExtractVector3(anim.m_ang_velocity, 0.0f);
-					break;
-				}
+					{
+						reader.ExtractVector3(anim.m_ang_velocity, 0.0f);
+						break;
+					}
 				}
 			}
 			reader.SectionEnd();
@@ -471,46 +444,45 @@ namespace pr
 			{
 			default: return false;
 			case EKeyword::O2W:
-			{
-				ParseTransform(p.m_reader, obj->m_o2p);
-				return true;
-			}
+				{
+					ParseTransform(p.m_reader, obj->m_o2p);
+					return true;
+				}
 			case EKeyword::Colour:
-			{
-				p.m_reader.ExtractIntS(obj->m_base_colour.m_aarrggbb, 16);
-				return true;
-			}
+				{
+					p.m_reader.ExtractIntS(obj->m_base_colour.m_aarrggbb, 16);
+					return true;
+				}
 			case EKeyword::ColourMask:
-			{
-				p.m_reader.ExtractIntS(obj->m_colour_mask, 16);
-				return true;
-			}
+				{
+					p.m_reader.ExtractIntS(obj->m_colour_mask, 16);
+					return true;
+				}
 			case EKeyword::RandColour:
-			{
-				obj->m_base_colour = pr::RandomRGB();
-				return true;
-			}
+				{
+					obj->m_base_colour = pr::RandomRGB();
+					return true;
+				}
 			case EKeyword::Animation:
-			{
-				ParseAnimation(p.m_reader, obj->m_anim);
-				return true;
-			}
+				{
+					ParseAnimation(p.m_reader, obj->m_anim);
+					return true;
+				}
 			case EKeyword::Hidden:
-			{
-				obj->m_visible = false;
-				return true;
-			}
+				{
+					obj->m_visible = false;
+					return true;
+				}
 			case EKeyword::Wireframe:
-			{
-				obj->m_wireframe = true;
-				return true;
-			}
+				{
+					obj->m_wireframe = true;
+					return true;
+				}
 			case EKeyword::Step:
-			{
-				ParseStep(p.m_reader, obj->m_step);
-				pr::events::Send(Evt_LdrObjectStepCode(obj));
-				return true;
-			}
+				{
+					ParseStep(p.m_reader, obj->m_step);
+					return true;
+				}
 			}
 		}
 
@@ -1586,7 +1558,7 @@ namespace pr
 					pr::Smooth(points, m_point);
 				}
 
-				auto normal = AxisId(m_axis_id);
+				pr::v4 normal = m_axis_id;
 				obj->m_model = ModelGenerator<>::QuadStrip(p.m_rdr, m_point.size() - 1, m_point.data(), m_width, 1, &normal, m_colour.size(), m_colour.data(), GetDrawData());
 				obj->m_model->m_name = obj->TypeAndName();
 			}
@@ -2135,94 +2107,93 @@ namespace pr
 				switch (kw)
 				{
 				default:
-				{
-					auto object_count = result.m_objects.size();
-					ParseParams pp(rdr, reader, result.m_objects, result.m_models, context_id, kw, nullptr);
-					if (!ParseLdrObject(pp))
 					{
-						reader.ReportError(pr::script::EResult::UnknownToken);
+						auto object_count = result.m_objects.size();
+						ParseParams pp(rdr, reader, result.m_objects, result.m_models, context_id, kw, nullptr);
+						if (!ParseLdrObject(pp))
+						{
+							reader.ReportError(pr::script::EResult::UnknownToken);
+							break;
+						}
+
+						// Notify of an object added. Cancel if 'add_cb' returns false
+						cancel = !add_cb(result.m_objects[object_count]);
 						break;
 					}
 
-					// Notify of an object added. Cancel if 'add_cb' returns false
-					cancel = !add_cb(result.m_objects[object_count]);
-					break;
-				}
-
-					// Camera position description
+				// Camera position description
 				case EKeyword::Camera:
-				{
-					ParseCamera(reader, result.m_cam);
-					break;
-				}
+					{
+						ParseCamera(reader, result);
+						break;
+					}
 
-					// Application commands
-				case EKeyword::Clear: break;
-				case EKeyword::Wireframe: break;
+				// Application commands
+				case EKeyword::Clear:
+					{
+						// Clear resets the scene up to the point of the clear, that includes
+						// objects we may have already parsed. A use for this is for a script
+						// that might be a work in progress, *Clear can be used to remove everything
+						// above a point in the script.
+						result.m_objects.clear();
+						result.m_clear = true;
+						break;
+					}
+				case EKeyword::Wireframe:
+					{
+						result.m_wireframe = true;
+						break;
+					}
 				case EKeyword::Lock: break;
 				case EKeyword::Delimiters: break;
 				}
 			}
 
 			// Release scratch buffers
-			Point().clear();
-			Norms().clear();
-			Index().clear();
-			Color().clear();
-			Texts().clear();
+			g_cache.release();
 		}
 
-		// Add the ldr objects described in 'reader' to 'objects'.
-		// If 'async' is true, a progress dialog is displayed and adding is done in a background thread.
-		// Raises 'Evt_LdrObjectAdd' events for each root level object added.
-		void Add(pr::Renderer& rdr, pr::script::Reader& reader, ObjectCont& objects, ContextId context_id, bool async)
+		// Parse the ldr script in 'reader' adding the results to 'out'
+		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, ContextId context_id)
 		{
 			// Does the work of parsing objects and adds them to 'models'
 			// 'total' is the total number of objects added
-			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg, ParseResult& result)
+			auto ParseObjects = [&](pr::gui::ProgressDlg* dlg, ParseResult& out)
 			{
 				// Note: your application needs to have called CoInitialise() before here
-				auto bcount = static_cast<int>(result.m_objects.size());
-				pr::events::Send(Evt_AddBegin());
-
 				std::size_t start_time = GetTickCount();
 				std::size_t last_update = start_time;
-				ParseLdrObjects(rdr, reader, context_id, result, [&](LdrObjectPtr& obj)
-				{
-					// Raise the Add event for root level objects only
-					if (obj->m_parent == nullptr)
-						pr::events::Send(Evt_LdrObjectAdd(obj));
+				ParseLdrObjects(rdr, reader, context_id, out, [&](LdrObjectPtr& obj)
+					{
+						// See if it's time for a progress update
+						if (dlg == nullptr) return true;
+						auto now = GetTickCount();
+						if (now - start_time < 200 || now - last_update < 100)
+							return true;
 
-					// See if it's time for a progress update
-					if (dlg == nullptr) return true;
-					auto now = GetTickCount();
-					if (now - start_time < 200 || now - last_update < 100)
-						return true;
-
-					last_update = now;
-					char const* type = obj ? ELdrObject::ToString(obj->m_type) : "";
-					std::string name = obj ? obj->m_name : "";
-					return dlg->Progress(-1.0f, pr::FmtS("Parsing scene...\r\nObject count: %d\r\n%s %s", result.m_objects.size(), type, name.c_str()));
-				});
-
-				auto ecount = static_cast<int>(result.m_objects.size());
-				pr::events::Send(Evt_AddEnd(bcount, ecount));
+						last_update = now;
+						char const* type = obj ? ELdrObject::ToString(obj->m_type) : "";
+						std::string name = obj ? obj->m_name : "";
+						return dlg->Progress(-1.0f, pr::FmtS("Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
+					});
 			};
 
-			ParseResult result(objects);
 			if (async)
 			{
 				// Run the adding process as a background task while displaying a progress dialog
-				pr::gui::ProgressDlg dlg("Processing script", "", ParseObjects, std::ref(result));
+				pr::gui::ProgressDlg dlg("Processing script", "", ParseObjects, std::ref(out));
 				dlg.DoModal(100);
 			}
 			else
 			{
-				ParseObjects(nullptr, result);
+				ParseObjects(nullptr, out);
 			}
 		}
 
-		// Add a custom object
+		// Add a custom object via callback
+		// Objects created by this method will have dynamic usage and are suitable for updating every frame
+		// They are intended to be used with the 'Edit' function.
 		LdrObjectPtr Add(pr::Renderer& rdr, ObjectAttributes attr, EPrim topo, int icount, int vcount, pr::uint16 const* indices, pr::v4 const* verts, int ccount, pr::Colour32 const* colours, int ncount, pr::v4 const* normals, pr::v2 const* tex_coords, ContextId context_id)
 		{
 			LdrObjectPtr obj(new LdrObject(attr, 0, context_id));
@@ -2236,7 +2207,6 @@ namespace pr
 			NuggetProps mat(topo, geom_type);
 			obj->m_model = ModelGenerator<>::Mesh(rdr, topo, vcount, icount, verts, indices, ccount, colours, ncount, normals, tex_coords, &mat);
 			obj->m_model->m_name = obj->TypeAndName();
-			pr::events::Send(Evt_LdrObjectAdd(obj));
 			return obj;
 		}
 
@@ -2258,8 +2228,14 @@ namespace pr
 
 			// Initialise it via the callback
 			edit_cb(obj->m_model, ctx, rdr);
-			pr::events::Send(Evt_LdrObjectAdd(obj));
 			return obj;
+		}
+
+		// Modify the geometry of an LdrObject
+		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx)
+		{
+			edit_cb(object->m_model, ctx, rdr);
+			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
 		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
@@ -2331,13 +2307,6 @@ namespace pr
 				return false;
 			});
 
-			pr::events::Send(Evt_LdrObjectChg(object));
-		}
-
-		// Modify the geometry of an LdrObject
-		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx)
-		{
-			edit_cb(object->m_model, ctx, rdr);
 			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
@@ -3061,7 +3030,6 @@ out <<
 		}
 		LdrObject::~LdrObject()
 		{
-			pr::events::Send(Evt_LdrObjectDelete(this));
 			PR_EXPAND(PR_DBG, g_ldr_object_tracker.remove(this));
 		}
 

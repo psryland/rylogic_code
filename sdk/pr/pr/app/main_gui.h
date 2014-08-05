@@ -183,6 +183,7 @@ namespace pr
 			}
 			BOOL PreTranslateMessage(MSG* pMsg)
 			{
+				if (pMsg->hwnd != m_hWnd) return FALSE;
 				if (m_hAccel != 0 && ::TranslateAccelerator(m_hWnd, m_hAccel, pMsg) != 0)
 					return TRUE;
 

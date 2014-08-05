@@ -770,10 +770,10 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 	try
 	{
 		DllLockGuard;
-		pr::ldr::ObjectCont cont;
-		pr::ldr::AddFile(Dll().m_rdr, ldr_filepath, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
-		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(cont), std::end(cont));
-		return int(cont.size());
+		pr::ldr::ParseResult out;
+		pr::ldr::ParseFile(Dll().m_rdr, ldr_filepath, include_paths, out, async != 0, context_id, 0, &Dll().m_lua);
+		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
+		return int(out.m_objects.size());
 	}
 	CatchAndReport(View3D_ObjectsCreateFromFile, , 0);
 }
@@ -785,10 +785,10 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 	try
 	{
 		DllLockGuard;
-		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(Dll().m_rdr, ldr_script, include_paths, cont, context_id, async != 0, 0, &Dll().m_lua);
-		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(cont), std::end(cont));
-		return !cont.empty() ? cont.back().m_ptr : nullptr;
+		pr::ldr::ParseResult out;
+		pr::ldr::ParseString(Dll().m_rdr, ldr_script, include_paths, out, async != 0, context_id, 0, &Dll().m_lua);
+		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
+		return !out.m_objects.empty() ? out.m_objects.back().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1642,9 +1642,9 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		pr::ldr::ObjectCont cont;
-		pr::ldr::AddString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), nullptr, cont, pr::ldr::DefaultContext, true, 0, &Dll().m_lua);
-		for (auto& obj : cont)
+		pr::ldr::ParseResult out;
+		pr::ldr::ParseString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), nullptr, out, true, pr::ldr::DefaultContext, 0, &Dll().m_lua);
+		for (auto& obj : out.m_objects)
 			View3D_AddObject(window, obj.m_ptr);
 	}
 	CatchAndReport(View3D_CreateDemoScene, window,);
@@ -1671,8 +1671,8 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL sho
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		(void)show;
-//		window->m_obj_cont_ui.Show(show != 0);
+		window->m_obj_cont_ui.Show(window->m_objects, window->m_hwnd);
+		window->m_obj_cont_ui.Visible(show != 0);
 	}
 	CatchAndReport(View3D_ShowObjectManager, window,);
 }

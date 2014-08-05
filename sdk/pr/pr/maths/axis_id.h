@@ -28,6 +28,18 @@ namespace pr
 		{
 			return value;
 		}
+		operator v4() const // Convert an axis id to an axis
+		{
+			switch (value) {
+			default: return  v4Zero;
+			case +1: return  v4XAxis;
+			case -1: return -v4XAxis;
+			case +2: return  v4YAxis;
+			case -2: return -v4YAxis;
+			case +3: return  v4ZAxis;
+			case -3: return -v4ZAxis;
+			}
+		}
 		static bool IsValid(AxisId axis_id)
 		{
 			return abs(axis_id) >= 1 && abs(axis_id) <= 3;

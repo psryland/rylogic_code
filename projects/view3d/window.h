@@ -56,7 +56,7 @@ namespace view3d
 			,m_origin_point_size(0.05f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
-			,m_obj_cont_ui(hwnd)
+			,m_obj_cont_ui()
 			,m_measure_tool_ui(ReadPoint, this, m_rdr, hwnd)
 			,m_angle_tool_ui(ReadPoint, this, m_rdr, hwnd)
 			,m_settings()
@@ -91,9 +91,6 @@ namespace view3d
 			m_focus_point .m_i2w   = pr::m4x4Identity;
 			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80, 0, 0);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
-
-			//m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrMeasurePrivateContextId, true);
-			//m_obj_cont_ui.IgnoreContextId(pr::ldr::LdrAngleDlgPrivateContextId, true);
 		}
 
 		// Close any window handles
@@ -108,7 +105,7 @@ namespace view3d
 			m_angle_tool_ui  .Detach();
 
 			// Don't destroy 'm_hwnd' because it doesn't belong to us,
-			// we're simply drawing on that window. Single close by nulling it;
+			// we're simply drawing on that window. Signal close by nulling it;
 			m_hwnd = 0;
 		}
 

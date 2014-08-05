@@ -72,6 +72,76 @@ namespace WTL
 		ScintillaCtrl() {}
 		virtual ~ScintillaCtrl() {}
 
+		// Initialise styles with reasonable defaults
+		void InitDefaults()
+		{
+			ClearDocumentStyle();
+			StyleBits(7);
+			IndentationGuides(true);
+			TabWidth(4);
+			Indent(4);
+			CaretPeriod(400);
+
+			// source folding section
+			// tell the lexer that we want folding information - the lexer supplies "folding levels"
+			Property("fold"                       , "1");
+			Property("fold.html"                  , "1");
+			Property("fold.html.preprocessor"     , "1");
+			Property("fold.comment"               , "1");
+			Property("fold.at.else"               , "1");
+			Property("fold.flags"                 , "1");
+			Property("fold.preprocessor"          , "1");
+			Property("styling.within.preprocessor", "1");
+			Property("asp.default.language"       , "1");
+
+			// Tell scintilla to draw folding lines UNDER the folded line
+			FoldFlags(16);
+
+			// Set margin 2 = folding margin to display folding symbols
+			MarginMaskN(2, SC_MASK_FOLDERS);
+
+			// allow notifications for folding actions
+			ModEventMask(SC_MOD_INSERTTEXT|SC_MOD_DELETETEXT);
+			//ModEventMask(SC_MOD_CHANGEFOLD|SC_MOD_INSERTTEXT|SC_MOD_DELETETEXT);
+
+			// make the folding margin sensitive to folding events = if you click into the margin you get a notification event
+			MarginSensitiveN(2, true);
+		
+			// define a set of markers to display folding symbols
+			MarkerDefine(SC_MARKNUM_FOLDEROPEN    , SC_MARK_MINUS);
+			MarkerDefine(SC_MARKNUM_FOLDER        , SC_MARK_PLUS);
+			MarkerDefine(SC_MARKNUM_FOLDERSUB     , SC_MARK_EMPTY);
+			MarkerDefine(SC_MARKNUM_FOLDERTAIL    , SC_MARK_EMPTY);
+			MarkerDefine(SC_MARKNUM_FOLDEREND     , SC_MARK_EMPTY);
+			MarkerDefine(SC_MARKNUM_FOLDEROPENMID , SC_MARK_EMPTY);
+			MarkerDefine(SC_MARKNUM_FOLDERMIDTAIL , SC_MARK_EMPTY);
+
+			// set the forground color for some styles
+			StyleSetFore(0 , RGB(0   ,0  ,0  ));
+			StyleSetFore(2 , RGB(0   ,64 ,0  ));
+			StyleSetFore(5 , RGB(0   ,0  ,255));
+			StyleSetFore(6 , RGB(200 ,20 ,0  ));
+			StyleSetFore(9 , RGB(0   ,0  ,255));
+			StyleSetFore(10, RGB(255 ,0  ,64 ));
+			StyleSetFore(11, RGB(0   ,0  ,0  ));
+
+			// set the backgroundcolor of brace highlights
+			StyleSetBack(STYLE_BRACELIGHT, RGB(0,255,0));
+		
+			// set end of line mode to CRLF
+			ConvertEOLs(2);
+			EOLMode(2);
+			//   SndMsg<void>(SCI_SETVIEWEOL, TRUE, 0);
+
+			// set markersymbol for marker type 0 - bookmark
+			MarkerDefine(0, SC_MARK_CIRCLE);
+		
+			//// display all margins
+			//DisplayLinenumbers(TRUE);
+			//SetDisplayFolding(TRUE);
+			//SetDisplaySelection(TRUE);
+		}
+
 		// Read contents from in istream
 		void Load(std::istream& in, bool readonly = false)
 		{
@@ -88,12 +158,12 @@ namespace WTL
 				auto bytes_read = in.tellg() - fstart;
 				if (bytes_read != sizeof(bom) || memcmp(buf, bom, sizeof(bom)) != 0)
 				{
-					SetCodePage(0);
+					CodePage(0);
 					AddText(buf, (int)bytes_read);
 				}
 				else
 				{
-					SetCodePage(SC_CP_UTF8);
+					CodePage(SC_CP_UTF8);
 				}
 			}
 
@@ -112,7 +182,7 @@ namespace WTL
 		void Save(std::ostream& out)
 		{
 			// Write the byte order mask
-			if (GetCodePage() == SC_CP_UTF8)
+			if (CodePage() == SC_CP_UTF8)
 			{
 				unsigned char const bom[] = {0xEF,0xBB,0xBF};
 				if (!out.write((char const*)bom, sizeof(bom)))
@@ -123,7 +193,7 @@ namespace WTL
 			char buf[8192];
 			std::size_t writ;
 			Sci_TextRange range = {{},buf};
-			for (std::size_t i = 0, iend = GetLength(); i != iend; i += writ)
+			for (std::size_t i = 0, iend = Length(); i != iend; i += writ)
 			{
 				writ = std::min(iend - i, sizeof(buf));
 				range.chrg.cpMin = long(i);
@@ -138,6 +208,115 @@ namespace WTL
 			SetSavePoint();
 		}
 
+		// Get/Set the text in the control
+		std::string Text() const
+		{
+			std::string str;
+			str.resize(Length() + 1);
+			GetText(&str[0], int(str.size()));
+			return str;
+		}
+		void Text(char const* str)
+		{
+			SetText(str);
+			SetSavePoint();
+		}
+
+		// Returns the length of the document in bytes (Same as SCI_GETTEXTLENGTH)
+		size_t Length() const
+		{
+			return SndMsg<size_t>(SCI_GETLENGTH, 0, 0L);
+		}
+		
+		/*
+#if defined(__ATLSTR_H__)
+		int GetCurLine(CStringA& text)
+		{
+			PR_ISWND;
+			int length=GetCurLine(0,0);
+			int result=GetCurLine(text.GetBuffer(length),length);
+			text.ReleaseBuffer(length-1);
+			return result;
+		}
+	#endif
+
+	#if defined(__ATLSTR_H__)
+		int GetLine(int line,CStringA& c)
+		{
+			PR_ISWND;
+			int length=GetLine(line,0);
+			int result=GetLine(line,c.GetBuffer(length));
+			c.ReleaseBuffer(length);
+			return result;
+		}
+		int GetSimpleLine(int line,CStringA& c)
+		{
+			PR_ISWND;
+			Sci_TextRange range;
+			range.chrg.cpMin=PositionFromLine(line);
+			range.chrg.cpMax=GetLineEndPosition(line);
+			int length=range.chrg.cpMax-range.chrg.cpMin;
+			range.lpstrText=c.GetBuffer(length);
+			int result=GetTextRange(range);
+			c.ReleaseBuffer(length);
+			return result;
+		}
+	#endif
+
+	#if defined(__ATLSTR_H__)
+		int GetSelText(CStringA& text)
+		{
+			PR_ISWND;
+			int length=GetSelText(0)-1;
+			int result=GetSelText(text.GetBuffer(length));
+			text.ReleaseBuffer(length);
+			return result;
+		}
+	#endif
+
+
+
+	#if defined(GTK)
+		int TargetAsUTF8(char* s)
+		{
+			PR_ISWND;
+			return ::SndMsg<>(m_hWnd,SCI_TARGETASUTF8,0,(int)s);
+		}
+		void SetLengthForEncode(int bytes)
+		{
+			PR_ISWND;
+			::SndMsg<>(m_hWnd,SCI_SETLENGTHFORENCODE,bytes);
+		}
+		int EncodedFromUTF8(const char* utf8,char* encoded)
+		{
+			PR_ISWND;
+			return ::SndMsg<>(m_hWnd,SCI_ENCODEDFROMUTF8,(int)utf8,(int)encoded);
+		}
+	#endif
+
+	#if defined(__ATLSTR_H__)
+		int GetProperty(const char* key,CStringA& buf)
+		{
+			PR_ISWND;
+			int length=GetProperty(key,0);
+			int result=GetProperty(key,buf.GetBuffer(length));
+			buf.ReleaseBuffer(length);
+			return result;
+		}
+	#endif
+
+	#if defined(__ATLSTR_H__)
+		int GetPropertyExpanded(const char* key,CStringA& buf)
+		{
+			PR_ISWND;
+			int length=GetPropertyExpanded(key,0);
+			int result=GetPropertyExpanded(key,buf.GetBuffer(length));
+			buf.ReleaseBuffer(length);
+			return result;
+		}
+	#endif
+	*/
+
 		// Text
 		void ClearAll          ()                                         { return SndMsg<void>(SCI_CLEARALL, 0, 0L); }
 		void ClearDocumentStyle()                                         { return SndMsg<void>(SCI_CLEARDOCUMENTSTYLE, 0, 0L); }
@@ -147,8 +326,6 @@ namespace WTL
 		int  GetLine           (int line, char * text) const              { return SndMsg<int >(SCI_GETLINE, line, text); }
 		int  GetLineLength     (int line) const                           { return SndMsg<int >(SCI_GETLINE, line, nullptr); }
 		int  GetLineCount      () const                                   { return SndMsg<int >(SCI_GETLINECOUNT, 0, 0L); }
-		int  GetTextLength     () const                                   { return SndMsg<int >(SCI_GETTEXTLENGTH, 0, 0L); }
-		int  GetLength         () const                                   { return SndMsg<int >(SCI_GETLENGTH, 0, 0L); }
 		int  GetTextRange      (Sci_TextRange & tr) const                 { return SndMsg<int >(SCI_GETTEXTRANGE, 0, &tr); }
 		void AppendText        (const char * text, int length)            { return SndMsg<void>(SCI_APPENDTEXT, length, text); }
 		void InsertText        (uint pos, const char * text)              { return SndMsg<void>(SCI_INSERTTEXT, pos, text); }
@@ -158,8 +335,8 @@ namespace WTL
 		int  GetStyleAt        (uint pos) const                           { return SndMsg<int >(SCI_GETSTYLEAT, pos, 0L); }
 		int  GetStyledText     (Sci_TextRange & tr) const                 { return SndMsg<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
 		int  GetStyledText     (char * text, long first, long last) const { TxtRng tr(text, first, last); return SndMsg<int >(SCI_GETSTYLEDTEXT, 0, &tr); }
-		int  GetStyleBits      () const                                   { return SndMsg<int >(SCI_GETSTYLEBITS, 0, 0L); }
-		void SetStyleBits      (int bits)                                 { return SndMsg<void>(SCI_SETSTYLEBITS, bits, 0L); }
+		int  StyleBits         () const                                   { return SndMsg<int >(SCI_GETSTYLEBITS, 0, 0L); }
+		void StyleBits         (int bits)                                 { return SndMsg<void>(SCI_SETSTYLEBITS, bits, 0L); }
 		int  TargetAsUTF8      (char * text)                              { return SndMsg<int >(SCI_TARGETASUTF8, 0, text); }
 		int  EncodedFromUTF8   (const char * utf8, char * encoded)        { return SndMsg<int >(SCI_ENCODEDFROMUTF8, ( WPARAM)utf8, (LPARAM )encoded); }
 		void SetLengthForEncode(int bytes)                                { return SndMsg<void>(SCI_SETLENGTHFORENCODE, bytes, 0L); }
@@ -174,7 +351,7 @@ namespace WTL
 		void SelectionStart         (uint pos)                          { return SndMsg<void>(SCI_SETSELECTIONSTART, pos, 0L); }
 		uint SelectionEnd           () const                            { return SndMsg<uint>(SCI_GETSELECTIONEND, 0, 0L); }
 		void SelectionEnd           (uint pos)                          { return SndMsg<void>(SCI_SETSELECTIONEND, pos, 0L); }
-		void SetSel                 (uint start, uint end)              { return SndMsg<void>(SCI_SETSEL, start, end); }
+		void SetSel                 (int start, int end)                { return SndMsg<void>(SCI_SETSEL, start, end); }
 		int  GetSelText             (char * text) const                 { return SndMsg<int >(SCI_GETSELTEXT, 0, text); }
 		int  GetCurLine             (char * text, int length) const     { return SndMsg<int >(SCI_GETCURLINE, length, text); }
 		uint GetLineSelStartPosition(int line) const                    { return SndMsg<uint>(SCI_GETLINESELSTARTPOSITION, line, 0L); }
@@ -279,11 +456,11 @@ namespace WTL
 		void SetMouseDownCaptures(bool captures) { return SndMsg<void>(SCI_SETMOUSEDOWNCAPTURES, captures, 0L); }
 
 		// End of Line
-		int  GetEOLMode () const       { return SndMsg<int >(SCI_GETEOLMODE, 0, 0L); }
-		void SetEOLMode (int eolMode)  { return SndMsg<void>(SCI_SETEOLMODE, eolMode, 0L); }
+		int  EOLMode    () const       { return SndMsg<int >(SCI_GETEOLMODE, 0, 0L); }
+		void EOLMode    (int eolMode)  { return SndMsg<void>(SCI_SETEOLMODE, eolMode, 0L); }
 		void ConvertEOLs(int eolMode)  { return SndMsg<void>(SCI_CONVERTEOLS, eolMode, 0L); }
-		bool GetViewEOL () const       { return SndMsg<int >(SCI_GETVIEWEOL, 0, 0L) != 0; }
-		void SetViewEOL (bool visible) { return SndMsg<void>(SCI_SETVIEWEOL, visible, 0L); }
+		bool ViewEOL    () const       { return SndMsg<int >(SCI_GETVIEWEOL, 0, 0L) != 0; }
+		void ViewEOL    (bool visible) { return SndMsg<void>(SCI_SETVIEWEOL, visible, 0L); }
 
 		// Style
 		void StyleClearAll       ()                                       { return SndMsg<void>(SCI_STYLECLEARALL, 0, 0L); }
@@ -314,22 +491,22 @@ namespace WTL
 		void SetControlCharSymbol(int symbol) { return SndMsg<void>(SCI_SETCONTROLCHARSYMBOL, symbol, 0L); }
 	
 		// Caret Style
-		void     SetXCaretPolicy    (int caretPolicy, int caretSlop)     { return SndMsg<void    >(SCI_SETXCARETPOLICY, caretPolicy, caretSlop); }
-		void     SetYCaretPolicy    (int caretPolicy, int caretSlop)     { return SndMsg<void    >(SCI_SETYCARETPOLICY, caretPolicy, caretSlop); }
-		void     SetVisiblePolicy   (int visiblePolicy, int visibleSlop) { return SndMsg<void    >(SCI_SETVISIBLEPOLICY, visiblePolicy, visibleSlop); }
-		COLORREF GetCaretFore       () const                             { return SndMsg<COLORREF>(SCI_GETCARETFORE, 0, 0L); }
-		void     SetCaretFore       (COLORREF fore)                      { return SndMsg<void    >(SCI_SETCARETFORE, fore, 0L); }
-		bool     GetCaretLineVisible() const                             { return SndMsg<int     >(SCI_GETCARETLINEVISIBLE, 0, 0L) != 0; }
-		void     SetCaretLineVisible(bool show)                          { return SndMsg<void    >(SCI_SETCARETLINEVISIBLE, show, 0L); }
-		COLORREF GetCaretLineBack   () const                             { return SndMsg<COLORREF>(SCI_GETCARETLINEBACK, 0, 0L); }
-		void     SetCaretLineBack   (COLORREF back)                      { return SndMsg<void    >(SCI_SETCARETLINEBACK, back, 0L); }
-		int      GetCaretPeriod     () const                             { return SndMsg<int     >(SCI_GETCARETPERIOD, 0, 0L); }
-		void     SetCaretPeriod     (int periodMilliseconds)             { return SndMsg<void    >(SCI_SETCARETPERIOD, periodMilliseconds, 0L); }
-		int      GetCaretWidth      () const                             { return SndMsg<int     >(SCI_GETCARETWIDTH, 0, 0L); }
-		void     SetCaretWidth      (int pixelWidth)                     { return SndMsg<void    >(SCI_SETCARETWIDTH, pixelWidth, 0L); }
-		bool     GetCaretSticky     () const                             { return SndMsg<int     >(SCI_GETCARETSTICKY, 0, 0L) != 0; }
-		void     SetCaretSticky     (bool useCaretStickyBehaviour)       { return SndMsg<void    >(SCI_SETCARETSTICKY, useCaretStickyBehaviour, 0L); }
-		void     ToggleCaretSticky  ()                                   { return SndMsg<void    >(SCI_TOGGLECARETSTICKY, 0, 0L); }
+		void     SetXCaretPolicy  (int caretPolicy, int caretSlop)     { return SndMsg<void    >(SCI_SETXCARETPOLICY, caretPolicy, caretSlop); }
+		void     SetYCaretPolicy  (int caretPolicy, int caretSlop)     { return SndMsg<void    >(SCI_SETYCARETPOLICY, caretPolicy, caretSlop); }
+		void     SetVisiblePolicy (int visiblePolicy, int visibleSlop) { return SndMsg<void    >(SCI_SETVISIBLEPOLICY, visiblePolicy, visibleSlop); }
+		void     ToggleCaretSticky()                                   { return SndMsg<void    >(SCI_TOGGLECARETSTICKY, 0, 0L); }
+		COLORREF CaretFore        () const                             { return SndMsg<COLORREF>(SCI_GETCARETFORE, 0, 0L); }
+		void     CaretFore        (COLORREF fore)                      { return SndMsg<void    >(SCI_SETCARETFORE, fore, 0L); }
+		bool     CaretLineVisible () const                             { return SndMsg<int     >(SCI_GETCARETLINEVISIBLE, 0, 0L) != 0; }
+		void     CaretLineVisible (bool show)                          { return SndMsg<void    >(SCI_SETCARETLINEVISIBLE, show, 0L); }
+		COLORREF CaretLineBack    () const                             { return SndMsg<COLORREF>(SCI_GETCARETLINEBACK, 0, 0L); }
+		void     CaretLineBack    (COLORREF back)                      { return SndMsg<void    >(SCI_SETCARETLINEBACK, back, 0L); }
+		int      CaretPeriod      () const                             { return SndMsg<int     >(SCI_GETCARETPERIOD, 0, 0L); }
+		void     CaretPeriod      (int periodMilliseconds)             { return SndMsg<void    >(SCI_SETCARETPERIOD, periodMilliseconds, 0L); }
+		int      CaretWidth       () const                             { return SndMsg<int     >(SCI_GETCARETWIDTH, 0, 0L); }
+		void     CaretWidth       (int pixelWidth)                     { return SndMsg<void    >(SCI_SETCARETWIDTH, pixelWidth, 0L); }
+		bool     CaretSticky      () const                             { return SndMsg<int     >(SCI_GETCARETSTICKY, 0, 0L) != 0; }
+		void     CaretSticky      (bool useCaretStickyBehaviour)       { return SndMsg<void    >(SCI_SETCARETSTICKY, useCaretStickyBehaviour, 0L); }
 
 		// Selection Style
 		void SetSelFore(bool useSetting, COLORREF fore) { return SndMsg<void>(SCI_SETSELFORE, useSetting, fore); }
@@ -342,20 +519,18 @@ namespace WTL
 		void SetHotspotSingleLine     (bool singleLine)                { return SndMsg<void>(SCI_SETHOTSPOTSINGLELINE, singleLine, 0L); }
 
 		// Margins
-		int  GetMarginTypeN       (int margin) const               { return SndMsg<int >(SCI_GETMARGINTYPEN, margin, 0L); }
-		void SetMarginTypeN       (int margin, int marginType)     { return SndMsg<void>(SCI_SETMARGINTYPEN, margin, marginType); }
-		int  GetMarginWidthN      (int margin) const               { return SndMsg<int >(SCI_GETMARGINWIDTHN, margin, 0L); }
-		void SetMarginWidthN      (int margin, int pixelWidth)     { return SndMsg<void>(SCI_SETMARGINWIDTHN, margin, pixelWidth); }
-		int  GetMarginMaskN       (int margin) const               { return SndMsg<int >(SCI_GETMARGINMASKN, margin, 0L); }
-		void SetMarginMaskN       (int margin, int mask)           { return SndMsg<void>(SCI_SETMARGINMASKN, margin, mask); }
-		bool GetMarginSensitiveN  (int margin) const               { return SndMsg<int >(SCI_GETMARGINSENSITIVEN, margin, 0L) != 0; }
-		void SetMarginSensitiveN  (int margin, bool sensitive)     { return SndMsg<void>(SCI_SETMARGINSENSITIVEN, margin, sensitive); }
-		int  GetMarginLeft        () const                         { return SndMsg<int >(SCI_GETMARGINLEFT, 0, 0L); }
-		void SetMarginLeft        (int pixelWidth)                 { return SndMsg<void>(SCI_SETMARGINLEFT, 0, pixelWidth); }
-		int  GetMarginRight       () const                         { return SndMsg<int >(SCI_GETMARGINRIGHT, 0, 0L); }
-		void SetMarginRight       (int pixelWidth)                 { return SndMsg<void>(SCI_SETMARGINRIGHT, 0, pixelWidth); }
-		void SetFoldMarginColour  (bool useSetting, COLORREF back) { return SndMsg<void>(SCI_SETFOLDMARGINCOLOUR, useSetting, back); }
-		void SetFoldMarginHiColour(bool useSetting, COLORREF fore) { return SndMsg<void>(SCI_SETFOLDMARGINHICOLOUR, useSetting, fore); }
+		int  MarginTypeN     (int margin) const               { return SndMsg<int >(SCI_GETMARGINTYPEN, margin, 0L); }
+		void MarginTypeN     (int margin, int marginType)     { return SndMsg<void>(SCI_SETMARGINTYPEN, margin, marginType); }
+		int  MarginWidthN    (int margin) const               { return SndMsg<int >(SCI_GETMARGINWIDTHN, margin, 0L); }
+		void MarginWidthN    (int margin, int pixelWidth)     { return SndMsg<void>(SCI_SETMARGINWIDTHN, margin, pixelWidth); }
+		int  MarginMaskN     (int margin) const               { return SndMsg<int >(SCI_GETMARGINMASKN, margin, 0L); }
+		void MarginMaskN     (int margin, int mask)           { return SndMsg<void>(SCI_SETMARGINMASKN, margin, mask); }
+		bool MarginSensitiveN(int margin) const               { return SndMsg<int >(SCI_GETMARGINSENSITIVEN, margin, 0L) != 0; }
+		void MarginSensitiveN(int margin, bool sensitive)     { return SndMsg<void>(SCI_SETMARGINSENSITIVEN, margin, sensitive); }
+		int  MarginLeft      () const                         { return SndMsg<int >(SCI_GETMARGINLEFT, 0, 0L); }
+		void MarginLeft      (int pixelWidth)                 { return SndMsg<void>(SCI_SETMARGINLEFT, 0, pixelWidth); }
+		int  MarginRight     () const                         { return SndMsg<int >(SCI_GETMARGINRIGHT, 0, 0L); }
+		void MarginRight     (int pixelWidth)                 { return SndMsg<void>(SCI_SETMARGINRIGHT, 0, pixelWidth); }
 
 		// Brace Highlighting
 		void BraceHighlight(uint pos1, uint pos2) { return SndMsg<void>(SCI_BRACEHIGHLIGHT, pos1, pos2); }
@@ -363,23 +538,23 @@ namespace WTL
 		uint BraceMatch    (uint pos)             { return SndMsg<uint>(SCI_BRACEMATCH, pos, 0L); }
 
 		// Tabs
-		int  GetTabWidth          () const                   { return SndMsg<int >(SCI_GETTABWIDTH, 0, 0); }
-		void SetTabWidth          (int tabWidth)             { return SndMsg<void>(SCI_SETTABWIDTH, tabWidth, 0); }
-		bool GetUseTabs           () const                   { return SndMsg<int >(SCI_GETUSETABS, 0, 0L) != 0; }
-		void SetUseTabs           (bool useTabs)             { return SndMsg<void>(SCI_SETUSETABS, useTabs, 0L); }
-		int  GetIndent            () const                   { return SndMsg<int >(SCI_GETINDENT, 0, 0L); }
-		void SetIndent            (int indentSize)           { return SndMsg<void>(SCI_SETINDENT, indentSize, 0L); }
-		bool GetTabIndents        () const                   { return SndMsg<int >(SCI_GETTABINDENTS, 0, 0L) != 0; }
-		void SetTabIndents        (bool tabIndents)          { return SndMsg<void>(SCI_SETTABINDENTS, tabIndents, 0L); }
-		bool GetBackSpaceUnIndents() const                   { return SndMsg<int >(SCI_GETBACKSPACEUNINDENTS, 0, 0L) != 0; }
-		void SetBackSpaceUnIndents(bool bsUnIndents)         { return SndMsg<void>(SCI_SETBACKSPACEUNINDENTS, bsUnIndents, 0L); }
-		int  GetLineIndentation   (int line) const           { return SndMsg<int >(SCI_GETLINEINDENTATION, line, 0L); }
-		void SetLineIndentation   (int line, int indentSize) { return SndMsg<void>(SCI_SETLINEINDENTATION, line, indentSize); }
-		uint GetLineIndentPosition(int line) const           { return SndMsg<uint>(SCI_GETLINEINDENTPOSITION, line, 0L); }
-		bool GetIndentationGuides () const                   { return SndMsg<int >(SCI_GETINDENTATIONGUIDES, 0, 0L) != 0; }
-		void SetIndentationGuides (bool show)                { return SndMsg<void>(SCI_SETINDENTATIONGUIDES, show, 0L); }
-		int  GetHighlightGuide    () const                   { return SndMsg<int >(SCI_GETHIGHLIGHTGUIDE, 0, 0L); }
-		void SetHighlightGuide    (int column)               { return SndMsg<void>(SCI_SETHIGHLIGHTGUIDE, column, 0L); }
+		int  TabWidth          () const                   { return SndMsg <int >(SCI_GETTABWIDTH, 0, 0); }
+		void TabWidth          (int tabWidth)             { return SndMsg <void>(SCI_SETTABWIDTH, tabWidth, 0); }
+		bool UseTabs           () const                   { return SndMsg<int >(SCI_GETUSETABS, 0, 0L) != 0; }
+		void UseTabs           (bool useTabs)             { return SndMsg<void>(SCI_SETUSETABS, useTabs, 0L); }
+		int  Indent            () const                   { return SndMsg<int >(SCI_GETINDENT, 0, 0L); }
+		void Indent            (int indentSize)           { return SndMsg<void>(SCI_SETINDENT, indentSize, 0L); }
+		bool TabIndents        () const                   { return SndMsg<int >(SCI_GETTABINDENTS, 0, 0L) != 0; }
+		void TabIndents        (bool tabIndents)          { return SndMsg<void>(SCI_SETTABINDENTS, tabIndents, 0L); }
+		bool BackSpaceUnIndents() const                   { return SndMsg<int >(SCI_GETBACKSPACEUNINDENTS, 0, 0L) != 0; }
+		void BackSpaceUnIndents(bool bsUnIndents)         { return SndMsg<void>(SCI_SETBACKSPACEUNINDENTS, bsUnIndents, 0L); }
+		int  LineIndentation   (int line) const           { return SndMsg<int >(SCI_GETLINEINDENTATION, line, 0L); }
+		void LineIndentation   (int line, int indentSize) { return SndMsg<void>(SCI_SETLINEINDENTATION, line, indentSize); }
+		uint LineIndentPosition(int line) const           { return SndMsg<uint>(SCI_GETLINEINDENTPOSITION, line, 0L); }
+		bool IndentationGuides () const                   { return SndMsg<int >(SCI_GETINDENTATIONGUIDES, 0, 0L) != 0; }
+		void IndentationGuides (bool show)                { return SndMsg<void>(SCI_SETINDENTATIONGUIDES, show, 0L); }
+		int  HighlightGuide    () const                   { return SndMsg<int >(SCI_GETHIGHLIGHTGUIDE, 0, 0L); }
+		void HighlightGuide    (int column)               { return SndMsg<void>(SCI_SETHIGHLIGHTGUIDE, column, 0L); }
 
 		// Markers
 		void MarkerDefine        (int markerNumber, int markerSymbol)    { return SndMsg<void>(SCI_MARKERDEFINE, markerNumber, markerSymbol); }
@@ -566,79 +741,81 @@ namespace WTL
 		void  ReleaseDocument(void * doc)     { return SndMsg<void >(SCI_RELEASEDOCUMENT, 0, doc); }
 
 		// Folding
-		int  VisibleFromDocLine        (int line) const             { return SndMsg<int >(SCI_VISIBLEFROMDOCLINE, line, 0L); }
-		int  DocLineFromVisible        (int lineDisplay) const      { return SndMsg<int >(SCI_DOCLINEFROMVISIBLE, lineDisplay, 0L); }
-		void ShowLines                 (int lineStart, int lineEnd) { return SndMsg<void>(SCI_SHOWLINES, lineStart, lineEnd); }
-		void HideLines                 (int lineStart, int lineEnd) { return SndMsg<void>(SCI_HIDELINES, lineStart, lineEnd); }
-		bool GetLineVisible            (int line) const             { return SndMsg<int >(SCI_GETLINEVISIBLE, line, 0L) != 0; }
-		int  GetFoldLevel              (int line) const             { return SndMsg<int >(SCI_GETFOLDLEVEL, line, 0L); }
-		void SetFoldLevel              (int line, int level)        { return SndMsg<void>(SCI_SETFOLDLEVEL, line, level); }
-		void SetFoldFlags              (int flags)                  { return SndMsg<void>(SCI_SETFOLDFLAGS, flags, 0L); }
-		int  GetLastChild              (int line, int level) const  { return SndMsg<int >(SCI_GETLASTCHILD, line, level); }
-		int  GetFoldParent             (int line) const             { return SndMsg<int >(SCI_GETFOLDPARENT, line, 0L); }
-		bool GetFoldExpanded           (int line) const             { return SndMsg<int >(SCI_GETFOLDEXPANDED, line, 0L) != 0; }
-		void SetFoldExpanded           (int line, bool expanded)    { return SndMsg<void>(SCI_SETFOLDEXPANDED, line, expanded); }
-		void ToggleFold                (int line)                   { return SndMsg<void>(SCI_TOGGLEFOLD, line, 0L); }
-		void EnsureVisible             (int line)                   { return SndMsg<void>(SCI_ENSUREVISIBLE, line, 0L); }
-		void EnsureVisibleEnforcePolicy(int line)                   { return SndMsg<void>(SCI_ENSUREVISIBLEENFORCEPOLICY, line, 0L); }
+		int  VisibleFromDocLine        (int line) const                 { return SndMsg<int >(SCI_VISIBLEFROMDOCLINE, line, 0L); }
+		int  DocLineFromVisible        (int lineDisplay) const          { return SndMsg<int >(SCI_DOCLINEFROMVISIBLE, lineDisplay, 0L); }
+		void ShowLines                 (int lineStart, int lineEnd)     { return SndMsg<void>(SCI_SHOWLINES, lineStart, lineEnd); }
+		void HideLines                 (int lineStart, int lineEnd)     { return SndMsg<void>(SCI_HIDELINES, lineStart, lineEnd); }
+		bool GetLineVisible            (int line) const                 { return SndMsg<int >(SCI_GETLINEVISIBLE, line, 0L) != 0; }
+		int  FoldLevel                 (int line) const                 { return SndMsg<int >(SCI_GETFOLDLEVEL, line, 0L); }
+		void FoldLevel                 (int line, int level)            { return SndMsg<void>(SCI_SETFOLDLEVEL, line, level); }
+		void FoldFlags                 (int flags)                      { return SndMsg<void>(SCI_SETFOLDFLAGS, flags, 0L); }
+		int  GetLastChild              (int line, int level) const      { return SndMsg<int >(SCI_GETLASTCHILD, line, level); }
+		int  GetFoldParent             (int line) const                 { return SndMsg<int >(SCI_GETFOLDPARENT, line, 0L); }
+		bool FoldExpanded              (int line) const                 { return SndMsg<int >(SCI_GETFOLDEXPANDED, line, 0L) != 0; }
+		void FoldExpanded              (int line, bool expanded)        { return SndMsg<void>(SCI_SETFOLDEXPANDED, line, expanded); }
+		void ToggleFold                (int line)                       { return SndMsg<void>(SCI_TOGGLEFOLD, line, 0L); }
+		void EnsureVisible             (int line)                       { return SndMsg<void>(SCI_ENSUREVISIBLE, line, 0L); }
+		void EnsureVisibleEnforcePolicy(int line)                       { return SndMsg<void>(SCI_ENSUREVISIBLEENFORCEPOLICY, line, 0L); }
+		void SetFoldMarginColour       (bool useSetting, COLORREF back) { return SndMsg<void>(SCI_SETFOLDMARGINCOLOUR, useSetting, back); }
+		void SetFoldMarginHiColour     (bool useSetting, COLORREF fore) { return SndMsg<void>(SCI_SETFOLDMARGINHICOLOUR, useSetting, fore); }
 
 		// Line Wrapping
-		int  GetWrapMode               () const                      { return SndMsg<int >(SCI_GETWRAPMODE, 0, 0L); }
-		void SetWrapMode               (int mode)                    { return SndMsg<void>(SCI_SETWRAPMODE, mode, 0L); }
-		int  GetWrapVisualFlags        () const                      { return SndMsg<int >(SCI_GETWRAPVISUALFLAGS, 0, 0L); }
-		void SetWrapVisualFlags        (int wrapVisualFlags)         { return SndMsg<void>(SCI_SETWRAPVISUALFLAGS, wrapVisualFlags, 0L); }
-		void SetWrapVisualFlagsLocation(int wrapVisualFlagsLocation) { return SndMsg<void>(SCI_SETWRAPVISUALFLAGSLOCATION, wrapVisualFlagsLocation, 0L); }
-		int  GetWrapVisualFlagsLocation() const                      { return SndMsg<int >(SCI_GETWRAPVISUALFLAGSLOCATION, 0, 0L); }
-		int  GetWrapStartIndent        () const                      { return SndMsg<int >(SCI_GETWRAPSTARTINDENT, 0, 0L); }
-		void SetWrapStartIndent        (int indent)                  { return SndMsg<void>(SCI_SETWRAPSTARTINDENT, indent, 0L); }
-		int  GetLayoutCache            () const                      { return SndMsg<int >(SCI_GETLAYOUTCACHE, 0, 0L); }
-		void SetLayoutCache            (int mode)                    { return SndMsg<void>(SCI_SETLAYOUTCACHE, mode, 0L); }
-		void LinesSplit                (int pixelWidth)              { return SndMsg<void>(SCI_LINESSPLIT, pixelWidth, 0L); }
-		void LinesJoin                 ()                            { return SndMsg<void>(SCI_LINESJOIN, 0, 0L); }
-		int  WrapCount                 (int line) const              { return SndMsg<int >(SCI_WRAPCOUNT, line, 0L); }
+		int  WrapMode               () const                      { return SndMsg<int >(SCI_GETWRAPMODE, 0, 0L); }
+		void WrapMode               (int mode)                    { return SndMsg<void>(SCI_SETWRAPMODE, mode, 0L); }
+		int  WrapVisualFlags        () const                      { return SndMsg<int >(SCI_GETWRAPVISUALFLAGS, 0, 0L); }
+		void WrapVisualFlags        (int wrapVisualFlags)         { return SndMsg<void>(SCI_SETWRAPVISUALFLAGS, wrapVisualFlags, 0L); }
+		int  WrapVisualFlagsLocation() const                      { return SndMsg<int >(SCI_GETWRAPVISUALFLAGSLOCATION, 0, 0L); }
+		void WrapVisualFlagsLocation(int wrapVisualFlagsLocation) { return SndMsg<void>(SCI_SETWRAPVISUALFLAGSLOCATION, wrapVisualFlagsLocation, 0L); }
+		int  WrapStartIndent        () const                      { return SndMsg<int >(SCI_GETWRAPSTARTINDENT, 0, 0L); }
+		void WrapStartIndent        (int indent)                  { return SndMsg<void>(SCI_SETWRAPSTARTINDENT, indent, 0L); }
+		int  LayoutCache            () const                      { return SndMsg<int >(SCI_GETLAYOUTCACHE, 0, 0L); }
+		void LayoutCache            (int mode)                    { return SndMsg<void>(SCI_SETLAYOUTCACHE, mode, 0L); }
+		void LinesSplit             (int pixelWidth)              { return SndMsg<void>(SCI_LINESSPLIT, pixelWidth, 0L); }
+		void LinesJoin              ()                            { return SndMsg<void>(SCI_LINESJOIN, 0, 0L); }
+		int  WrapCount              (int line) const              { return SndMsg<int >(SCI_WRAPCOUNT, line, 0L); }
 
 		// Zooming
-		void ZoomIn ()         { return SndMsg<void>(SCI_ZOOMIN, 0, 0L); }
-		void ZoomOut()         { return SndMsg<void>(SCI_ZOOMOUT, 0, 0L); }
-		int  GetZoom() const   { return SndMsg<int >(SCI_GETZOOM, 0, 0L); }
-		void SetZoom(int zoom) { return SndMsg<void>(SCI_SETZOOM, zoom, 0L); }
+		void ZoomIn ()      { return SndMsg<void>(SCI_ZOOMIN, 0, 0L); }
+		void ZoomOut()      { return SndMsg<void>(SCI_ZOOMOUT, 0, 0L); }
+		int  Zoom() const   { return SndMsg<int >(SCI_GETZOOM, 0, 0L); }
+		void Zoom(int zoom) { return SndMsg<void>(SCI_SETZOOM, zoom, 0L); }
 
 		// Long Lines
-		int      GetEdgeMode  () const              { return SndMsg<int     >(SCI_GETEDGEMODE, 0, 0L); }
-		void     SetEdgeMode  (int mode)            { return SndMsg<void    >(SCI_SETEDGEMODE, mode, 0L); }
-		int      GetEdgeColumn() const              { return SndMsg<int     >(SCI_GETEDGECOLUMN, 0, 0L); }
-		void     SetEdgeColumn(int column)          { return SndMsg<void    >(SCI_SETEDGECOLUMN, column, 0L); }
-		COLORREF GetEdgeColour() const              { return SndMsg<COLORREF>(SCI_GETEDGECOLOUR, 0, 0L); }
-		void     SetEdgeColour(COLORREF edgeColour) { return SndMsg<void    >(SCI_SETEDGECOLOUR, edgeColour, 0L); }
+		int      EdgeMode  () const              { return SndMsg<int     >(SCI_GETEDGEMODE, 0, 0L); }
+		void     EdgeMode  (int mode)            { return SndMsg<void    >(SCI_SETEDGEMODE, mode, 0L); }
+		int      EdgeColumn() const              { return SndMsg<int     >(SCI_GETEDGECOLUMN, 0, 0L); }
+		void     EdgeColumn(int column)          { return SndMsg<void    >(SCI_SETEDGECOLUMN, column, 0L); }
+		COLORREF EdgeColour() const              { return SndMsg<COLORREF>(SCI_GETEDGECOLOUR, 0, 0L); }
+		void     EdgeColour(COLORREF edgeColour) { return SndMsg<void    >(SCI_SETEDGECOLOUR, edgeColour, 0L); }
 
 		// Lexer
-		int  GetLexer           () const                                { return SndMsg<int >(SCI_GETLEXER, 0, 0L); }
-		void SetLexer           (int lexer)                             { return SndMsg<void>(SCI_SETLEXER, lexer, 0L); }
-		void SetLexerLanguage   (const char * language)                 { return SndMsg<void>(SCI_SETLEXERLANGUAGE, 0, language); }
+		int  Lexer              () const                                { return SndMsg<int >(SCI_GETLEXER, 0, 0L); }
+		void Lexer              (int lexer)                             { return SndMsg<void>(SCI_SETLEXER, lexer, 0L); }
+		void LexerLanguage      (const char * language)                 { return SndMsg<void>(SCI_SETLEXERLANGUAGE, 0, language); }
 		void LoadLexerLibrary   (const char * path)                     { return SndMsg<void>(SCI_LOADLEXERLIBRARY, 0, path); }
 		void Colourise          (uint start, uint end)                  { return SndMsg<void>(SCI_COLOURISE, start, end); }
-		int  GetProperty        (const char * key, char * buf) const    { return SndMsg<int >(SCI_GETPROPERTY, key, buf ); }
-		void SetProperty        (const char * key, const char * value)  { return SndMsg<void>(SCI_SETPROPERTY, key, value); }
+		int  Property           (const char * key, char * buf) const    { return SndMsg<int >(SCI_GETPROPERTY, key, buf ); }
+		void Property           (const char * key, const char * value)  { return SndMsg<void>(SCI_SETPROPERTY, key, value); }
 		int  GetPropertyExpanded(const char * key, char * buf) const    { return SndMsg<int >(SCI_GETPROPERTYEXPANDED, key, buf); }
 		int  GetPropertyInt     (const char * key) const                { return SndMsg<int >(SCI_GETPROPERTYINT, key, 0L); }
 		void SetKeyWords        (int keywordSet, const char * keyWords) { return SndMsg<void>(SCI_SETKEYWORDS, keywordSet, keyWords); }
 		int  GetStyleBitsNeeded () const                                { return SndMsg<int >(SCI_GETSTYLEBITSNEEDED, 0, 0L); }
 
 		// Notifications
-		int  GetModEventMask  () const                 { return SndMsg<int >(SCI_GETMODEVENTMASK, 0, 0L); }
-		void SetModEventMask  (int mask)               { return SndMsg<void>(SCI_SETMODEVENTMASK, mask, 0L); }
-		int  GetMouseDwellTime() const                 { return SndMsg<int >(SCI_GETMOUSEDWELLTIME, 0, 0L); }
-		void SetMouseDwellTime(int periodMilliseconds) { return SndMsg<void>(SCI_SETMOUSEDWELLTIME, periodMilliseconds, 0L); }
+		int  ModEventMask  () const                 { return SndMsg<int >(SCI_GETMODEVENTMASK, 0, 0L); }
+		void ModEventMask  (int mask)               { return SndMsg<void>(SCI_SETMODEVENTMASK, mask, 0L); }
+		int  MouseDwellTime() const                 { return SndMsg<int >(SCI_GETMOUSEDWELLTIME, 0, 0L); }
+		void MouseDwellTime(int periodMilliseconds) { return SndMsg<void>(SCI_SETMOUSEDWELLTIME, periodMilliseconds, 0L); }
 
 		// Misc
 		void Allocate          (int bytes)               { return SndMsg<void>(SCI_ALLOCATE, bytes, 0L); }
 		void SetSavePoint      ()                        { return SndMsg<void>(SCI_SETTEXT, 0, 0L); }
-		bool GetBufferedDraw   () const                  { return SndMsg<int >(SCI_GETBUFFEREDDRAW, 0, 0) != 0; }
-		void SetBufferedDraw   (bool buffered)           { return SndMsg<void>(SCI_SETBUFFEREDDRAW, buffered, 0L); }
-		bool GetTwoPhaseDraw   () const                  { return SndMsg<int >(SCI_GETTWOPHASEDRAW, 0, 0L) != 0; }
-		void SetTwoPhaseDraw   (bool twoPhase)           { return SndMsg<void>(SCI_SETTWOPHASEDRAW, twoPhase, 0L); }
-		int  GetCodePage       () const                  { return SndMsg<int >(SCI_GETCODEPAGE, 0, 0L); }
-		void SetCodePage       (int codePage)            { return SndMsg<void>(SCI_SETCODEPAGE, codePage, 0L); }
+		bool BufferedDraw      () const                  { return SndMsg<int >(SCI_GETBUFFEREDDRAW, 0, 0) != 0; }
+		void BufferedDraw      (bool buffered)           { return SndMsg<void>(SCI_SETBUFFEREDDRAW, buffered, 0L); }
+		bool TwoPhaseDraw      () const                  { return SndMsg<int >(SCI_GETTWOPHASEDRAW, 0, 0L) != 0; }
+		void TwoPhaseDraw      (bool twoPhase)           { return SndMsg<void>(SCI_SETTWOPHASEDRAW, twoPhase, 0L); }
+		int  CodePage          () const                  { return SndMsg<int >(SCI_GETCODEPAGE, 0, 0L); }
+		void CodePage          (int codePage)            { return SndMsg<void>(SCI_SETCODEPAGE, codePage, 0L); }
 		void SetWordChars      (const char * characters) { return SndMsg<void>(SCI_SETWORDCHARS, 0, characters); }
 		void SetWhitespaceChars(const char * characters) { return SndMsg<void>(SCI_SETWHITESPACECHARS, 0, characters); }
 		void SetCharsDefault   ()                        { return SndMsg<void>(SCI_SETCHARSDEFAULT, 0, 0L); }
@@ -651,123 +828,5 @@ namespace WTL
 		void Status  (int statusCode) { return SndMsg<void>(SCI_SETSTATUS, statusCode, 0L); }
 		bool ReadOnly() const         { return SndMsg<int >(SCI_GETREADONLY, 0, 0L) != 0; }
 		void ReadOnly(bool readOnly)  { return SndMsg<void>(SCI_SETREADONLY, readOnly, 0L); }
-};
-}
-/*
-#if defined(__ATLSTR_H__)
-		int GetCurLine(CStringA& text)
-		{
-			PR_ISWND;
-			int length=GetCurLine(0,0);
-			int result=GetCurLine(text.GetBuffer(length),length);
-			text.ReleaseBuffer(length-1);
-			return result;
-		}
-	#endif
-
-	#if defined(__ATLSTR_H__)
-		int GetLine(int line,CStringA& c)
-		{
-			PR_ISWND;
-			int length=GetLine(line,0);
-			int result=GetLine(line,c.GetBuffer(length));
-			c.ReleaseBuffer(length);
-			return result;
-		}
-		int GetSimpleLine(int line,CStringA& c)
-		{
-			PR_ISWND;
-			Sci_TextRange range;
-			range.chrg.cpMin=PositionFromLine(line);
-			range.chrg.cpMax=GetLineEndPosition(line);
-			int length=range.chrg.cpMax-range.chrg.cpMin;
-			range.lpstrText=c.GetBuffer(length);
-			int result=GetTextRange(range);
-			c.ReleaseBuffer(length);
-			return result;
-		}
-	#endif
-
-	#if defined(__ATLSTR_H__)
-		int GetSelText(CStringA& text)
-		{
-			PR_ISWND;
-			int length=GetSelText(0)-1;
-			int result=GetSelText(text.GetBuffer(length));
-			text.ReleaseBuffer(length);
-			return result;
-		}
-	#endif
-
-	#if defined(__ATLSTR_H__)
-		int GetText(CStringA& text)
-		{
-			PR_ISWND;
-			int length=GetText(0,0);
-			int result=GetText(text.GetBuffer(length),length+1);
-			text.ReleaseBuffer(length);
-			return result;
-		}
-	#endif
-
-	#if defined(GTK)
-		int TargetAsUTF8(char* s)
-		{
-			PR_ISWND;
-			return ::SndMsg<>(m_hWnd,SCI_TARGETASUTF8,0,(int)s);
-		}
-		void SetLengthForEncode(int bytes)
-		{
-			PR_ISWND;
-			::SndMsg<>(m_hWnd,SCI_SETLENGTHFORENCODE,bytes);
-		}
-		int EncodedFromUTF8(const char* utf8,char* encoded)
-		{
-			PR_ISWND;
-			return ::SndMsg<>(m_hWnd,SCI_ENCODEDFROMUTF8,(int)utf8,(int)encoded);
-		}
-	#endif
-
-	#if defined(__ATLSTR_H__)
-		int GetProperty(const char* key,CStringA& buf)
-		{
-			PR_ISWND;
-			int length=GetProperty(key,0);
-			int result=GetProperty(key,buf.GetBuffer(length));
-			buf.ReleaseBuffer(length);
-			return result;
-		}
-	#endif
-
-	#if defined(__ATLSTR_H__)
-		int GetPropertyExpanded(const char* key,CStringA& buf)
-		{
-			PR_ISWND;
-			int length=GetPropertyExpanded(key,0);
-			int result=GetPropertyExpanded(key,buf.GetBuffer(length));
-			buf.ReleaseBuffer(length);
-			return result;
-		}
-	#endif
-	*/
-/*
-class XPMImages
-{
-public:
-	enum image
-	{
-		xpmMethod = 0,
-		xpmMember = 23
 	};
-
-	static const char* Image(image nImage)
-	{
-		static const char* Images[]=
-		{
-			"16 16 6 1"," 	c #FFFFFF",".	c #000000","+	c #FF00FF","@	c #800080","#	c #808080","$	c #C0C0C0","                ","                ","                ","           .    ","          .+.   ","         .+@+.  ","        .+@+@+. "," ## ##  ..+@+@+.","        .+.+@+..","  $#$## .@+.+.@.","         .@+.@@.","   #$###  .@.@. ","           ...  ","            .   ","                ","                ",
-			"16 16 5 1"," 	c #FFFFFF",".	c #808080","+	c #00FFFF","@	c #008080","#	c #000000","                ","                ","                ","           .    ","          .+.   ","         .+@+.  ","        .+@+@+# ","       .+@+@+## ","       ..+@+#.# ","       .+.+#..# ","       .++#..#  ","        .+#.#   ","         .##    ","          #     ","                ","                "
-		};
-		return (const char*)(Images+nImage);
-	}
-};
-*/
+}

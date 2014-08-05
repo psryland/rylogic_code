@@ -147,7 +147,7 @@ namespace pr
 			duration_t const MinTimeBetweenFrames = pr::rtc::FromMSec(1.0);
 
 			PR_EXPAND(PR_LOOP_TIMING, pr::rtc::StopWatch sw);
-			for (pr::rtc::StopWatch clock(true); ; std::this_thread::yield())
+			for (pr::rtc::StopWatch clock(true); ; std::this_thread::sleep_for(std::chrono::milliseconds(1)))//yield())
 			{
 				auto msg_start = clock.now();
 

@@ -58,38 +58,98 @@ namespace pr
 			:public CIndirectDialogImpl<ScriptWindow>
 			,public CDialogResize<ScriptWindow>
 		{
-			InitScintilla m_init_scint;
-			WTL::ScintillaCtrl m_info;
-			std::string m_text;
+			typedef CIndirectDialogImpl<ScriptWindow> base;
+			WTL::InitScintilla m_init_scint;
+			WTL::ScintillaCtrl m_edit;
+
+			// Hide DoModal
+			INT_PTR DoModal(HWND parent = 0) { return base::DoModal(parent); }
 
 		public:
-			ScriptWindow(std::string text)
+			ScriptWindow()
 				:m_init_scint()
-				,m_info()
-				,m_text(text)
+				,m_edit()
 			{}
+			~ScriptWindow()
+			{
+				PR_ASSERT(PR_DBG, !IsWindow(), "DestroyWindow() must be called before destruction");
+			}
+
+			// Create the non-modal dialog
+			void Create(HWND parent = 0)
+			{
+				if (base::Create(parent) == 0)
+					throw std::exception("Failed to create example script window");
+			}
+
+			// Close and destroy the window
+			void Close()
+			{
+				if (!IsWindow()) return;
+				DestroyWindow();
+			}
+
+			// Show the dialog as a non-modal window
+			void Show(HWND parent = 0)
+			{
+				if (!IsWindow())
+					Create(parent);
+
+				Visible(true);
+			}
+
+			// Show the window as a modal dialog
+			INT_PTR ShowDialog(HWND parent = 0)
+			{
+				return DoModal(parent);
+			}
+
+			// Get/Set the visibility of the window
+			bool Visible() const
+			{
+				return IsWindowVisible() != 0;
+			}
+			void Visible(bool show)
+			{
+				ShowWindow(show ? SW_SHOW : SW_HIDE);
+				if (show) SetWindowPos(HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
+			}
+
+			// Get/Set the text in the dialog
+			std::string Text() const
+			{
+				return m_edit.Text();
+			}
+			void Text(char const* text)
+			{
+				m_edit.Text(text);
+				m_edit.Invalidate();
+			}
+
 			BOOL OnInitDialog(CWindow, LPARAM)
 			{
 				CenterWindow(GetParent());
-				m_info.Attach(GetDlgItem(IDC_TEXT));
-				m_info.SetCodePage(CP_UTF8);
-				m_info.SetText(m_text.c_str());
-				m_info.SetLexer(SCLEX_CPP);
-				m_info.SetLexerLanguage("cpp");
-				m_info.StyleSetFont(0, "courier new");
-				m_info.ReadOnly(true);
+
+				m_edit.Attach(GetDlgItem(IDC_TEXT));
+				m_edit.InitDefaults();
+				m_edit.StyleSetFont(0, "courier new");
+				m_edit.CodePage(CP_UTF8);
+				m_edit.Lexer(SCLEX_CPP);
+				m_edit.LexerLanguage("cpp");
+				m_edit.SetSel(-1, 0);
+
 				DlgResize_Init(true, false);
 				return TRUE;
 			}
-			void OnClose(UINT, int nID, CWindow)
+			void OnClose(UINT, int, CWindow)
 			{
-				EndDialog(nID);
+				Visible(false);
 			}
 
 			enum { IDC_TEXT = 1000 };
 			BEGIN_DIALOG_EX(0, 0, 640, 480, 0)
-				DIALOG_STYLE(DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU|WS_VISIBLE)
-				DIALOG_CAPTION("Example Script:")
+				DIALOG_STYLE(DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU)//|WS_VISIBLE
+				DIALOG_CAPTION("Script")
 				DIALOG_FONT(8, TEXT("MS Shell Dlg"))
 			END_DIALOG()
 			BEGIN_CONTROLS_MAP()
@@ -113,6 +173,8 @@ namespace pr
 			,public CDialogResize<ObjectManagerDlgImpl>
 			,IObjectManagerDlg
 		{
+			typedef CIndirectDialogImpl<ObjectManagerDlgImpl> base;
+
 			// UI data for an ldr object
 			struct UIData
 			{
@@ -124,7 +186,6 @@ namespace pr
 				{}
 			};
 
-			HWND                 m_parent;            // Parent window
 			WTL::CStatusBarCtrl  m_status;            // The status bar
 			WTL::CSplitterWindow m_split;             // Splitter window
 			WTL::CTreeViewCtrl   m_tree;              // Tree control
@@ -136,10 +197,10 @@ namespace pr
 			bool                 m_expanding;         // True during a recursive expansion of a node in the tree view
 			bool                 m_selection_changed; // Dirty flag for the selection bbox/object
 			bool                 m_suspend_layout;    // True while a block of changes are occurring.
+			ScriptWindow         m_script_ui;
 
-			ObjectManagerDlgImpl(HWND parent = 0)
-				:m_parent(parent)
-				,m_status()
+			ObjectManagerDlgImpl()
+				:m_status()
 				,m_split()
 				,m_tree()
 				,m_list()
@@ -150,67 +211,60 @@ namespace pr
 				,m_expanding(false)
 				,m_selection_changed(true)
 				,m_suspend_layout(false)
-			{
-				if (Create(0) == 0)
-					throw std::exception("Failed to create object manager ui");
-			}
+				,m_script_ui()
+			{}
 			~ObjectManagerDlgImpl()
 			{
 				PR_ASSERT(PR_DBG, !IsWindow(), "DestroyWindow() must be called before destruction");
 			}
 
-			// Return the LdrObject associated with a tree item or list item
-			LdrObject const& GetLdrObject(HTREEITEM item) const
+			// Create the non-modal window
+			void Create(HWND parent) override 
 			{
-				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_TREE_ITEM && m_tree.GetItemData(item) != 0, "Tree item does not refer to an LdrObject");
-				return *reinterpret_cast<LdrObject*>(m_tree.GetItemData(item));
-			}
-			LdrObject& GetLdrObject(HTREEITEM item)
-			{
-				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_TREE_ITEM && m_tree.GetItemData(item) != 0, "Tree item does not refer to an LdrObject");
-				return *reinterpret_cast<LdrObject*>(m_tree.GetItemData(item));
-			}
-			LdrObject const& GetLdrObject(int item) const
-			{
-				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_LIST_ITEM && m_list.GetItemData(item) != 0, "List item does not refer to an LdrObject");
-				return *reinterpret_cast<LdrObject*>(m_list.GetItemData(item));
-			}
-			LdrObject& GetLdrObject(int item)
-			{
-				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_LIST_ITEM && m_list.GetItemData(item) != 0, "List item does not refer to an LdrObject");
-				return *reinterpret_cast<LdrObject*>(m_list.GetItemData(item));
+				if (base::Create(parent) == 0)
+					throw std::exception("Failed to create object manager ui");
 			}
 
-			// Return the uidata for an object
-			static UIData* GetUIData(LdrObject& obj) { return &obj.m_user_data.get<UIData>(); }
-			static UIData* GetUIData(LdrObject* obj) { return obj ? GetUIData(*obj) : nullptr; }
-
-			// Return the sibbling immediately before 'obj' in it's parent (or nullptr)
-			static LdrObject* PrevSibbling(LdrObject* obj)
-			{
-				PR_ASSERT(PR_DBG_LDROBJMGR, obj != nullptr, "");
-
-				// No parent, then 'obj' isn't a child
-				if (!obj->m_parent)
-					return nullptr;
-
-				// Search the children for the object prior to 'obj'
-				auto& children = obj->m_parent->m_child;
-				for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
-				{
-					if (i->m_ptr != obj) continue;
-					if (i == std::begin(children)) break;
-					return (*(--i)).m_ptr;
-				}
-				return nullptr;
-			}
-
-			// Close/Destroy the dialog window
+			// Close and destroy the dialog window
 			void Close() override
 			{
-				if (!IsWindow()) return;
-				DestroyWindow();
+				m_script_ui.Close();
+				if (IsWindow()) DestroyWindow();
 			}
+
+			// Show the dialog as a non-modal window
+			void Show(HWND parent = 0)
+			{
+				if (!IsWindow()) Create(parent);
+				Visible(true);
+			}
+			void Show(pr::ldr::ObjectCont const& store, HWND parent) override
+			{
+				Show(parent);
+
+				Populate(store);
+				for (int i = 0; i != EColumn::NumberOf; ++i)
+					m_list.SetColumnWidth(i, LVSCW_AUTOSIZE);
+			}
+
+			// Show the window as a modal dialog
+			INT_PTR ShowDialog(HWND parent = 0)
+			{
+				return DoModal(parent);
+			}
+
+			// Get/Set the visibility of the window
+			bool Visible() const
+			{
+				return IsWindowVisible() != 0;
+			}
+			void Visible(bool show)
+			{
+				ShowWindow(show ? SW_SHOW : SW_HIDE);
+				if (show) SetWindowPos(HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
+			}
+
+			// Detach from the window handles
 			void Detach() override
 			{
 				m_list            .Detach();
@@ -221,7 +275,7 @@ namespace pr
 				m_btn_expand_all  .Detach();
 				m_status          .Detach();
 				m_split           .Detach();
-				CIndirectDialogImpl<ObjectManagerDlgImpl>::Detach();
+				base::Detach();
 			}
 
 			// Get/Set settings for the object manager window
@@ -262,29 +316,11 @@ namespace pr
 				}
 			}
 
-			// Automatically set the widths of the list view columns
-			void Show(bool show, pr::ldr::ObjectCont const& store) override
-			{
-				// Show/Hide the dialog
-				ShowWindow(show ? SW_SHOW : SW_HIDE);
-				if (show)
-				{
-					Populate(store);
-
-					for (int i = 0; i != EColumn::NumberOf; ++i)
-						m_list.SetColumnWidth(i, LVSCW_AUTOSIZE);
-
-					// Bring it to the front
-					SetWindowPos(HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
-				}
-			}
-
 			// Display a window containing the example script
 			void ShowScript(std::string script, HWND parent) override
 			{
-				pr::str::Replace(script, "\n", "\r\n");
-				ScriptWindow example(script);
-				example.DoModal(parent);
+				m_script_ui.Show(parent);
+				m_script_ui.Text(script.c_str());
 			}
 
 			// Return the number of selected objects
@@ -465,7 +501,7 @@ namespace pr
 
 				// Flag the selection data as invalid
 				m_selection_changed = true;
-				pr::events::Send(Evt_LdrObjectSelectionChanged());
+				pr::events::Send(Evt_LdrObjectSelectionChanged(this));
 			}
 
 			// Invert the selection from the tree and list controls
@@ -484,7 +520,7 @@ namespace pr
 					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_visible, include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
-				pr::events::Send(Evt_Refresh());
+				pr::events::Send(Evt_Refresh(this));
 			}
 
 			// Set wireframe for the currently selected objects
@@ -496,7 +532,7 @@ namespace pr
 					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_wireframe, include_children ? "" : nullptr);
 					UpdateListItem(object, include_children);
 				}
-				pr::events::Send(Evt_Refresh());
+				pr::events::Send(Evt_Refresh(this));
 			}
 
 			// Add/Remove items from the list view based on the filter
@@ -650,6 +686,52 @@ namespace pr
 				m_tree.Expand(GetUIData(object)->m_tree_item, TVE_EXPAND);
 			}
 
+			// Return the LdrObject associated with a tree item or list item
+			LdrObject const& GetLdrObject(HTREEITEM item) const
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_TREE_ITEM && m_tree.GetItemData(item) != 0, "Tree item does not refer to an LdrObject");
+				return *reinterpret_cast<LdrObject*>(m_tree.GetItemData(item));
+			}
+			LdrObject& GetLdrObject(HTREEITEM item)
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_TREE_ITEM && m_tree.GetItemData(item) != 0, "Tree item does not refer to an LdrObject");
+				return *reinterpret_cast<LdrObject*>(m_tree.GetItemData(item));
+			}
+			LdrObject const& GetLdrObject(int item) const
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_LIST_ITEM && m_list.GetItemData(item) != 0, "List item does not refer to an LdrObject");
+				return *reinterpret_cast<LdrObject*>(m_list.GetItemData(item));
+			}
+			LdrObject& GetLdrObject(int item)
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, item != INVALID_LIST_ITEM && m_list.GetItemData(item) != 0, "List item does not refer to an LdrObject");
+				return *reinterpret_cast<LdrObject*>(m_list.GetItemData(item));
+			}
+
+			// Return the uidata for an object
+			static UIData* GetUIData(LdrObject& obj) { return &obj.m_user_data.get<UIData>(); }
+			static UIData* GetUIData(LdrObject* obj) { return obj ? GetUIData(*obj) : nullptr; }
+
+			// Return the sibbling immediately before 'obj' in it's parent (or nullptr)
+			static LdrObject* PrevSibbling(LdrObject* obj)
+			{
+				PR_ASSERT(PR_DBG_LDROBJMGR, obj != nullptr, "");
+
+				// No parent, then 'obj' isn't a child
+				if (!obj->m_parent)
+					return nullptr;
+
+				// Search the children for the object prior to 'obj'
+				auto& children = obj->m_parent->m_child;
+				for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
+				{
+					if (i->m_ptr != obj) continue;
+					if (i == std::begin(children)) break;
+					return (*(--i)).m_ptr;
+				}
+				return nullptr;
+			}
+
 			// Handler methods
 			LRESULT OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 			{
@@ -722,7 +804,7 @@ namespace pr
 			LRESULT OnResized(UINT, WPARAM, LPARAM, BOOL&)
 			{
 				// Notify listeners that the settings have changed
-				pr::events::Send(Evt_SettingsChanged());
+				pr::events::Send(Evt_SettingsChanged(this));
 				return S_OK;
 			}
 			LRESULT OnMouseWheel(UINT msg, WPARAM wparam, LPARAM lparam, BOOL& handled)
@@ -743,8 +825,8 @@ namespace pr
 			LRESULT OnCloseDialog(WORD, WORD, HWND, BOOL&)
 			{
 				// Handle close window events by just hiding the window
-				pr::events::Send(Evt_SettingsChanged());
-				ShowWindow(SW_HIDE);
+				pr::events::Send(Evt_SettingsChanged(this));
+				Visible(false);
 				return S_OK;
 			}
 			LRESULT OnExpandAll(WORD, WORD, HWND, BOOL&)
@@ -851,7 +933,7 @@ namespace pr
 					if ((data->uNewState ^ data->uOldState) & LVIS_SELECTED) // If the selection has changed
 					{
 						m_selection_changed = true;
-						pr::events::Send(Evt_LdrObjectSelectionChanged());
+						pr::events::Send(Evt_LdrObjectSelectionChanged(this));
 						return S_OK;
 					}
 				}
@@ -898,7 +980,7 @@ namespace pr
 				case ID_SHOWALL:    SetVisibilty(ETriState::On      ,!pr::KeyDown(VK_SHIFT)); break;
 				case ID_INV_VIS:    SetVisibilty(ETriState::Toggle  ,!pr::KeyDown(VK_SHIFT)); break;
 				}
-				pr::events::Send(Evt_Refresh());
+				pr::events::Send(Evt_Refresh(this));
 				return S_OK;
 			}
 			LRESULT OnChangeSolidWire(WORD, WORD id, HWND, BOOL&)
@@ -911,7 +993,7 @@ namespace pr
 				case ID_WIREALL:    SetWireframe(ETriState::On      ,!pr::KeyDown(VK_SHIFT)); break;
 				case ID_INV_WIRE:   SetWireframe(ETriState::Toggle  ,!pr::KeyDown(VK_SHIFT)); break;
 				}
-				pr::events::Send(Evt_Refresh());
+				pr::events::Send(Evt_Refresh(this));
 				return S_OK;
 			}
 			LRESULT OnChangeInvertSelection(WORD, WORD, HWND, BOOL&)
@@ -993,8 +1075,8 @@ namespace pr
 
 		// ObjectManagerDlg ***********************************************************************
 
-		ObjectManagerDlg::ObjectManagerDlg(HWND parent)
-			:m_dlg(std::make_unique<ObjectManagerDlgImpl>(parent))
+		ObjectManagerDlg::ObjectManagerDlg()
+			:m_dlg(std::make_unique<ObjectManagerDlgImpl>())
 		{}
 	}
 }

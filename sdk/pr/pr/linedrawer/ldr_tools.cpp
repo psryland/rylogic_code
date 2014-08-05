@@ -145,9 +145,11 @@ namespace pr
 				Line("distY", 0xFF00FF00, p0, p1, str);
 				Line("distZ", 0xFF0000FF, p1, m_point1, str);
 				GroupEnd(str);
-				ObjectCont cont;
-				AddString(m_rdr, str.c_str(), nullptr, cont, LdrMeasurePrivateContextId);
-				if (!cont.empty()) m_measurement_gfx = cont.back();
+
+				ParseResult out;
+				ParseString(m_rdr, str.c_str(), nullptr, out, false, LdrMeasurePrivateContextId);
+				if (!out.m_objects.empty())
+					m_measurement_gfx = out.m_objects.back();
 			}
 
 			float len = pr::Length3(m_point1 - m_point0);
@@ -324,9 +326,11 @@ namespace pr
 				Line("edge1", 0xFFFFFF00, m_origin, m_point1, str);
 				Line("edge2", 0xFF00FF00, m_point0, m_point1, str);
 				GroupEnd(str);
-				ObjectCont cont;
-				AddString(m_rdr, str.c_str(), nullptr, cont, LdrAngleDlgPrivateContextId);
-				if (!cont.empty()) m_angle_gfx = cont.back();
+
+				ParseResult out;
+				ParseString(m_rdr, str.c_str(), nullptr, out, false, LdrAngleDlgPrivateContextId);
+				if (!out.m_objects.empty())
+					m_angle_gfx = out.m_objects.back();
 			}
 
 			pr::v4 e0   = m_point0 - m_origin;

@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #include "linedrawer/main/stdafx.h"
-#include "linedrawer/main/file_sources.h"
+#include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/user_settings.h"
 #include "linedrawer/main/ldrexception.h"
 #include "linedrawer/main/ldrevent.h"
@@ -12,9 +12,12 @@
 #include "pr/common/events.h"
 #include "pr/script/reader.h"
 
+using namespace pr::ldr;
+using namespace pr::script;
+
 namespace ldr
 {
-	FileSources::FileSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src)
+	ScriptSources::ScriptSources(UserSettings& settings, pr::Renderer& rdr, pr::ldr::ObjectCont& store, LuaSource& lua_src)
 		:m_files()
 		,m_watcher()
 		,m_settings(settings)
@@ -24,14 +27,14 @@ namespace ldr
 	{}
 
 	// Remove all file sources
-	void FileSources::Clear()
+	void ScriptSources::Clear()
 	{
 		while (!m_files.empty())
 			Remove(m_files.front().c_str());
 	}
 
 	// Reload all files
-	void FileSources::Reload()
+	void ScriptSources::Reload()
 	{
 		// Make a copy of the file list
 		StrList files = m_files;
@@ -46,14 +49,42 @@ namespace ldr
 
 		// Add each file again
 		for (auto& file : files)
-			Add(file.c_str());
+			AddFile(file.c_str(), Event_StoreChanged::EReason::Reload);
+	}
+
+	// Add a string source
+	void ScriptSources::AddString(std::string const& str)
+	{
+		try
+		{
+			ParseResult out(m_store);
+			std::size_t bcount = m_store.size();
+			ParseString(m_rdr, str.c_str(), nullptr, out, false, pr::ldr::DefaultContext, nullptr, &m_lua_src);
+
+			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
+			pr::events::Send(Event_Refresh());
+		}
+		catch (pr::script::Exception const& e)
+		{
+			auto msg = pr::FmtS("Script error found while parsing source string.\n%s", e.what());
+			pr::events::Send(Event_Error(msg));
+		}
+		catch (std::exception const& e)
+		{
+			auto msg = pr::FmtS("Error encountered while parsing source string.\n%s", e.what());
+			pr::events::Send(Event_Error(msg));
+		}
 	}
 
 	// Add a file source
-	void FileSources::Add(char const* filepath)
+	void ScriptSources::AddFile(char const* filepath)
 	{
-		using namespace pr::script;
+		AddFile(filepath, Event_StoreChanged::EReason::NewData);
+	}
 
+	// Internal add file
+	void ScriptSources::AddFile(char const* filepath, Event_StoreChanged::EReason reason)
+	{
 		// Ensure the same file is not added twice
 		Remove(filepath);
 
@@ -66,6 +97,8 @@ namespace ldr
 		try
 		{
 			typedef std::vector<std::string> StrCont;
+			std::size_t bcount = m_store.size();
+			ParseResult out(m_store);
 
 			// An include handler that records all of the files opened
 			// so that we can detect changes in those files
@@ -100,21 +133,21 @@ namespace ldr
 				Reader  reader(src);
 				reader.CodeHandler()    = &m_lua_src;
 				reader.IncludeHandler() = &includes;
-				pr::ldr::Add(m_rdr, reader, m_store, context_id);
+				Parse(m_rdr, reader, out, true, context_id);
 			}
 
-			// Add file watches for the file and everything it included
+			// Add file watchers for the file and everything it included
 			m_watcher.Add(filepath, this, context_id, &m_files.back()[0]);
 			for (auto path : includes.m_paths)
 				m_watcher.Add(path.c_str(), this, context_id, &m_files.back()[0]);
 
-			pr::events::Send(Event_StoreChanged(m_store));
+			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, reason));
 			pr::events::Send(Event_Refresh());
 		}
 		catch (pr::script::Exception const& e)
 		{
-			pr::script::string msg = pr::FmtS("Script error found while parsing source file '%s'.\n'%s'", filepath, e.what());
-			pr::events::Send(Event_Error(msg.c_str()));
+			auto msg = pr::FmtS("Script error found while parsing source file '%s'.\n%s", filepath, e.what());
+			pr::events::Send(Event_Error(msg));
 		}
 		catch (LdrException const& e)
 		{
@@ -132,7 +165,7 @@ namespace ldr
 	}
 
 	// Remove a file source
-	void FileSources::Remove(char const* filepath)
+	void ScriptSources::Remove(char const* filepath)
 	{
 		// Delete all objects belonging to this file
 		std::string fpath = pr::filesys::StandardiseC<std::string>(filepath);
@@ -148,19 +181,19 @@ namespace ldr
 	}
 
 	// Check all file sources for modifications and reload any that have changed
-	void FileSources::RefreshChangedFiles()
+	void ScriptSources::RefreshChangedFiles()
 	{
 		m_watcher.CheckForChangedFiles();
 	}
 
 	// 'filepath' is the name of the changed file
 	// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-	void FileSources::FileWatch_OnFileChanged(char const*, void* user_data, bool&)
+	void ScriptSources::FileWatch_OnFileChanged(char const*, void* user_data, bool&)
 	{
 		// Get the filepath of the root file and add it as though it is a new file.
 		// The changed file may have been included from other files.
 		// We want to reload from the root of the file hierarchy
 		std::string filepath = static_cast<char const*>(user_data);
-		Add(filepath.c_str());
+		AddFile(filepath.c_str());
 	}
 }
