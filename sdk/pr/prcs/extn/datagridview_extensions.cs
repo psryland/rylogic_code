@@ -371,7 +371,11 @@ namespace pr.extn
 			return row != null ? row.Index : -1;
 		}
 
-		/// <summary>Begin a row drag-drop operation on the grid</summary>
+		/// <summary>
+		/// Begin a row drag-drop operation on the grid.
+		/// Attach this method to the MouseDown event on the grid.
+		/// Also, attach 'DragDrop_DoDropMoveRow' to the 'DoDrop' handler and set AllowDrop = true.
+		/// See the 'DragDrop' class for more info</summary>
 		public static void DragDrop_DragRow(object sender, MouseEventArgs e)
 		{
 			var grid = (DataGridView)sender;
@@ -383,7 +387,11 @@ namespace pr.extn
 				grid.DoDragDrop(grid.Rows[hit.RowIndex], DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
 		}
 
-		/// <summary>A drag drop function for move a row in a grid to a new position</summary>
+		/// <summary>
+		/// A drag drop function for moving a row in a grid to a new position.
+		/// Attach this method to the 'DoDrop' handler.
+		/// Also, attach 'DragDrop_DragRow' to the MouseDown event and set AllowDrop = true on the grid.
+		/// See the 'DragDrop' class for more info.</summary>
 		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{
 			// This method could be hooked up to a pr.util.DragDrop so the
@@ -396,32 +404,81 @@ namespace pr.extn
 			if ((args.AllowedEffect & DragDropEffects.Move) == 0 || !args.Data.GetDataPresent(typeof(DataGridViewRow)))
 				return false;
 
-			// We'll use move thanks
-			args.Effect = DragDropEffects.Move;
-			if (mode != DragDrop.EDrop.Drop)
-				return true;
-
 			// Find where the mouse is over the grid
 			Point pt = grid.PointToClient(new Point(args.X, args.Y));
 			var hit = grid.HitTest(pt.X, pt.Y);
-			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= grid.RowCount)
+
+			// Set the drop effect
+			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount
+				? DragDropEffects.Move : DragDropEffects.None;
+			if (args.Effect != DragDropEffects.Move)
 				return true;
+
+			// The row the mouse is over
+			var hit_idx = hit.RowIndex;
+			var hit_row = grid.Rows[hit_idx];
+			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
+			var before_idx    = hit_idx - 1;
+			var after_idx     = hit_idx + 1;
+			var neighbour_idx = over_half ? after_idx : before_idx;
+
+			// If this is not the actual drop then keep returning true until the drop happens
+			if (mode != DragDrop.EDrop.Drop)
+			{
+				// Draw a line to show where the drop would go
+				// Use a self removing handler so that it doesn't matter how often we add it
+				DataGridViewRowPostPaintEventHandler LinePainter = null;
+				LinePainter = (s,a) =>
+					{
+						float Y = 0f;
+						if      (a.RowIndex == hit_idx      ) Y = over_half ? a.RowBounds.Bottom - 1f : a.RowBounds.Top + 1f;
+						else if (a.RowIndex == neighbour_idx) Y = over_half ? a.RowBounds.Top + 1f : a.RowBounds.Bottom - 1f;
+						else return;
+
+						const float line_thickness = 2f;
+						using (var pen = new Pen(Color.DeepSkyBlue, line_thickness))
+							a.Graphics.DrawLine(pen, a.RowBounds.Left, Y, a.RowBounds.Right, Y);
+
+						grid.RowPostPaint -= LinePainter;
+					};
+
+				// Add two, one for each row that needs a line
+				grid.RowPostPaint += LinePainter;
+				grid.RowPostPaint += LinePainter;
+
+				// Invalidate the hit rows to ensure repainting
+				grid.InvalidateRow(hit_idx);
+				if (before_idx >= 0          ) grid.InvalidateRow(before_idx);
+				if (after_idx < grid.RowCount) grid.InvalidateRow(after_idx);
+				return true;
+			}
 
 			// Get the drag data
 			var row = (DataGridViewRow)args.Data.GetData(typeof(DataGridViewRow));
-			int idx1 = row.Index;
-			int idx2 = hit.RowIndex;
+			int grab_idx = row.Index;
+			if (over_half) ++hit_idx;
 
-			// Swap the rows
+			// Insert 'grab_idx' at 'drop_idx'
 			var list = grid.DataSource as IList;
 			if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
-			object tmp = list[idx1];
-			list[idx1] = list[idx2];
-			list[idx2] = tmp;
+			if (grab_idx != hit_idx)
+			{
+				if (hit_idx > grab_idx) --hit_idx;
 
-			// Invalidate the rows so that they draw again
-			grid.InvalidateRow(idx1);
-			grid.InvalidateRow(idx2);
+				var tmp = list[grab_idx];
+				list.RemoveAt(grab_idx);
+				list.Insert(hit_idx, tmp);
+			}
+
+			// If the list is a binding source, set the current position to the item just moved
+			var bs = grid.DataSource as BindingSource;
+			if (bs != null)
+				bs.Position = hit_idx;
+
+			// Invalidate the hit rows to ensure repainting
+			grid.InvalidateRow(hit_idx);
+			if (before_idx >= 0          ) grid.InvalidateRow(before_idx);
+			if (after_idx < grid.RowCount) grid.InvalidateRow(after_idx);
 			return true;
 		}
 
