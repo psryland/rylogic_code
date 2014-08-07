@@ -61,7 +61,7 @@ namespace pr.gui
 		private View3d.Window m_impl_wnd;
 
 		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-		public void SignalRefresh()
+		public void SignalRefresh(object sender = null, EventArgs args = null)
 		{
 			Window.SignalRefresh();
 		}

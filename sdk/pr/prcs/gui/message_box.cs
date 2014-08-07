@@ -43,6 +43,7 @@ namespace pr.gui
 			Title = title;
 			Message = message;
 			Reflow = true;
+			ReflowAspectRatio = 7f;
 
 			Owner = owner as Form;
 			ShowIcon = Owner != null && Owner.Icon != null;
@@ -178,13 +179,15 @@ namespace pr.gui
 		/// <summary>Set to true to have the dialog automatically line wrap text. False to honour message new lines</summary>
 		public bool Reflow { get; set; }
 
+		/// <summary>The ratio of width to height used to decide where to wrap text</summary>
+		public float ReflowAspectRatio { get; set; }
+
 		/// <summary>Sets an appropriate size for the message box and lays out the controls</summary>
 		public void UpdateLayout()
 		{
 			const int text_margin = 27;
 			const int button_margin_h = 10;
 			const int button_margin_v = 12;
-			const float reflow_aspect = 5.0f;
 			var btn_size = m_btn_positive.Size;
 			var btns = new[]{m_btn_negative, m_btn_neutral, m_btn_positive};
 			var num_btns = btns.Count(b => b.Text != string.Empty);
@@ -205,9 +208,9 @@ namespace pr.gui
 			// Measure the text to be displayed
 			// If it's larger than the screen area, limit the size but enable scroll bars
 			var text_area = m_message.PreferredSize;
-			if (Reflow && text_area.Area() != 0f && text_area.Aspect() > reflow_aspect)
+			if (Reflow && text_area.Area() != 0f && text_area.Aspect() > ReflowAspectRatio)
 			{
-				var scale = Math.Sqrt(reflow_aspect / text_area.Aspect());
+				var scale = Math.Sqrt(ReflowAspectRatio / text_area.Aspect());
 				m_message.MaximumSize = new Size((int)(text_area.Width * scale), 0);
 				text_area = m_message.PreferredSize;
 				m_message.MaximumSize = Size.Empty;

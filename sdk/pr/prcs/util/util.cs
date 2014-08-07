@@ -42,15 +42,20 @@ namespace pr.util
 		/// <summary>Convenience disposer</summary>
 		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed) where T:class, IDisposable
 		{
+			// Set 'doomed' to null before disposing to catch accidental
+			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			doomed.Dispose();
-			doomed = null;
+			var junk = doomed; doomed = null;
+			junk.Dispose();
 		}
 		[DebuggerStepThrough] public static void DisposeAll<T>(ref List<T> doomed) where T:class, IDisposable
 		{
+			// Set 'doomed' to null before disposing to catch accidental
+			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			foreach (var d in doomed) d.Dispose();
-			doomed = null;
+			var junk = doomed; doomed = null;
+			foreach (var d in junk)
+				d.Dispose();
 		}
 
 		/// <summary>

@@ -4,11 +4,14 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+using pr.common;
+using pr.extn;
 using HWND=System.IntPtr;
 
 namespace pr.util
@@ -567,7 +570,18 @@ namespace pr.util
 		}
 		#endregion
 
+		#region Format Message
+		public const uint FORMAT_MESSAGE_IGNORE_INSERTS  = 0x00000200U;
+		public const uint FORMAT_MESSAGE_FROM_STRING     = 0x00000400U;
+		public const uint FORMAT_MESSAGE_FROM_HMODULE    = 0x00000800U;
+		public const uint FORMAT_MESSAGE_FROM_SYSTEM     = 0x00001000U;
+		public const uint FORMAT_MESSAGE_ARGUMENT_ARRAY  = 0x00002000U;
+		public const uint FORMAT_MESSAGE_MAX_WIDTH_MASK  = 0x000000FFU;
 		#endregion
+
+		#endregion
+
+		#region Window Native Structs
 
 		[StructLayout(LayoutKind.Sequential)]
 		public struct RECT
@@ -679,11 +693,43 @@ namespace pr.util
 			private static long ToLong(uint high, uint low)         { return ((long)high << 0x20) | low; }
 		}
 
+		#endregion
+
+		/// <summary>Helper method for loading a dll from a platform specific path</summary>
+		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)")
+		{
+			Func<string,IntPtr> TryLoad = path =>
+				{
+					var module = LoadLibrary(path);
+					if (module != IntPtr.Zero)
+						return module;
+				
+					var msg = GetLastErrorString();
+					throw new Exception("Found dependent library '{0}' but it failed to load.\r\nLast Error: {1}".Fmt(path, msg));
+				};
+
+			var searched = new List<string>();
+
+			// Search the local directory first
+			var dllpath = searched.Add2(Path.GetFullPath(dllname));
+			if (PathEx.FileExists(dllpath))
+				TryLoad(dllpath);
+
+			// Try the 'dir' folder. Load the appropriate dll for the platform
+			dllpath = searched.Add2(Path.GetFullPath(Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), dllname)));
+			if (PathEx.FileExists(dllpath))
+				TryLoad(dllpath);
+
+			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
+		}
+
+		/// <summary>Test the async state of a key</summary>
 		public static bool KeyDown(Keys vkey)
 		{
 			return (GetAsyncKeyState(vkey) & 0x8000) != 0;
 		}
 
+		/// <summary>Detect a key press using its async state</summary>
 		public static bool KeyPress(Keys vkey)
 		{
 			if   (!KeyDown(vkey)) return false;
@@ -703,6 +749,7 @@ namespace pr.util
 			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);
 		}
 
+		// Return the window under a screen space point
 		public static HWND WindowFromPoint(Point pt)
 		{
 			return WindowFromPoint(POINT.FromPoint(pt));
@@ -725,8 +772,28 @@ namespace pr.util
 
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
+		/// <summary>Returns the last error set by the last called native function with the "SetLastError" attribute</summary>
+		public static uint GetLastError()
+		{
+			return unchecked((uint)Marshal.GetLastWin32Error());
+		}
+		public static string GetLastErrorString()
+		{
+			return new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error()).Message;
+		}
+
+		// Kernel32
+		[DllImport("Kernel32.dll", SetLastError = true)] public static extern IntPtr LoadLibrary(string path);
+		[DllImport("Kernel32.dll", SetLastError = true)] public static extern bool   FreeLibrary(IntPtr module);
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   AllocConsole();
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   FreeConsole();
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   AttachConsole(int dwProcessId);
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
+		[DllImport("kernel32.dll", SetLastError = true)] public static extern uint   FormatMessage(uint dwFlags, IntPtr lpSource, uint dwMessageId, uint dwLanguageId, ref IntPtr lpBuffer, uint nSize, IntPtr pArguments);
+
+		// User32
 		[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
-		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
+		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool   PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
 		[DllImport("user32.dll", EntryPoint="PostThreadMessage")]                    public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
 		[DllImport("user32.dll")]                                                    public static extern int    CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
@@ -748,7 +815,7 @@ namespace pr.util
 		[DllImport("user32.dll")]                                                    public static extern HWND   GetForegroundWindow();
 		[DllImport("user32.dll")]                                                    public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
 		[DllImport("user32.dll")]                                                    public static extern bool   GetWindowRect(HWND hwnd, out RECT rect);
-		[DllImport("user32.dll"  , SetLastError = true)]                             public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
+		[DllImport("user32.dll", SetLastError = true)]                               public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 		[DllImport("user32.dll")]                                                    public static extern HWND   WindowFromPoint(POINT Point);
 		[DllImport("user32.dll")]                                                    public static extern bool   LockWindowUpdate(HWND hWndLock);
@@ -760,15 +827,6 @@ namespace pr.util
 		[DllImport("user32.dll")]                                                    public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
 		[DllImport("user32.dll")]                                                    public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
 		[DllImport("user32.dll", SetLastError=true)]                                 public static extern uint   GetWindowLong(HWND hWnd, int nIndex);
-		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   AllocConsole();
-		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   FreeConsole();
-		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   AttachConsole(int dwProcessId);
-		[DllImport("kernel32.dll", SetLastError = true)]                             public static extern bool   WriteConsole(IntPtr hConsoleOutput, string lpBuffer, uint nNumberOfCharsToWrite, out uint lpNumberOfCharsWritten, IntPtr lpReserved);
-		[DllImport("ole32.dll")]                                                     public static extern void   CoTaskMemFree(IntPtr ptr);
-		[DllImport("gdi32.dll")]                                                     public static extern int    SetGraphicsMode(IntPtr hdc, int iGraphicsMode);
-		[DllImport("gdi32.dll")]                                                     public static extern int    SetMapMode(IntPtr hdc, int fnMapMode);
-		[DllImport("gdi32.dll")]                                                     public static extern bool   SetWorldTransform(IntPtr hdc, ref XFORM lpXform);
-		[DllImport("gdi32.dll", EntryPoint="DeleteObject")]                          public static extern bool   DeleteObject(IntPtr hObject);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr GetSystemMenu(HWND hwnd, bool bRevert);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr CreatePopupMenu();
 		[DllImport("user32.dll", EntryPoint="AppendMenuW", CharSet=CharSet.Unicode)] public static extern bool   AppendMenu(IntPtr hMenu, uint uFlags, int uIDNewItem, string lpNewItem);
@@ -776,5 +834,15 @@ namespace pr.util
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, int wIDNewItem, string lpNewItem);
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, IntPtr wIDNewItem, string lpNewItem);
 		[DllImport("user32.dll", EntryPoint="CheckMenuItem")]                        public static extern int    CheckMenuItem(IntPtr hMenu,int uIDCheckItem, int uCheck);
+
+		// gdi32
+		[DllImport("gdi32.dll")] public static extern int  SetGraphicsMode(IntPtr hdc, int iGraphicsMode);
+		[DllImport("gdi32.dll")] public static extern int  SetMapMode(IntPtr hdc, int fnMapMode);
+		[DllImport("gdi32.dll")] public static extern bool SetWorldTransform(IntPtr hdc, ref XFORM lpXform);
+		[DllImport("gdi32.dll")] public static extern bool DeleteObject(IntPtr hObject);
+
+		// ole32
+		[DllImport("ole32.dll")] public static extern void CoTaskMemFree(IntPtr ptr);
+
 	}
 }

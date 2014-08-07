@@ -486,28 +486,6 @@ namespace pr.gfx
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
 
-		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
-		{
-			// Search the local directory first
-			var dllpath = "view3d.dll";
-			if (PathEx.FileExists(dllpath))
-			{
-				try { SelectDll(dllpath); return; }
-				catch (Exception) {}
-			}
-
-			// Try the lib folder. Load the appropriate dll for the platform
-			dllpath = Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), "view3d.dll");
-			if (PathEx.FileExists(dllpath))
-			{
-				try { SelectDll(dllpath); return; }
-				catch (Exception) {}
-			}
-
-			throw new DllNotFoundException("Failed to load dependency 'view3d.dll'");
-		}
-
 		public View3d()
 		{
 			m_windows  = new List<Window>();
@@ -1415,6 +1393,28 @@ namespace pr.gfx
 		//          ? @".\libs\x64\view3d.dll"
 		//          : @".\libs\x86\view3d.dll");
 		//  }
+
+		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
+		public static void LoadDll(string dir = @".\lib\$(platform)")
+		{
+			// Search the local directory first
+			var dllpath = "view3d.dll";
+			if (PathEx.FileExists(dllpath))
+			{
+				try { SelectDll(dllpath); return; }
+				catch (Exception) {}
+			}
+
+			// Try the lib folder. Load the appropriate dll for the platform
+			dllpath = Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), "view3d.dll");
+			if (PathEx.FileExists(dllpath))
+			{
+				try { SelectDll(dllpath); return; }
+				catch (Exception) {}
+			}
+
+			throw new DllNotFoundException("Failed to load dependency 'view3d.dll'");
+		}
 
 		/// <summary>Call this method to load a specific version of the view3d.dll. Call this before any DllImport'd functions</summary>
 		public static void SelectDll(string dllpath)
