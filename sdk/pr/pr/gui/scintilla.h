@@ -141,6 +141,53 @@ namespace WTL
 			//SetDisplayFolding(TRUE);
 			//SetDisplaySelection(TRUE);
 		}
+		void InitLdrStyle()
+		{
+			ClearDocumentStyle();
+			StyleBits(7);
+			IndentationGuides(true);
+			TabWidth(4);
+			Indent(4);
+			CaretFore(0xffffff);
+			CaretPeriod(400);
+			ConvertEOLs(SC_EOL_CR);
+			EOLMode(SC_EOL_CR);
+
+			struct { int id; int fore; int back; char const* font; } style[] =
+			{
+				{STYLE_DEFAULT     , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+				{STYLE_LINENUMBER  , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+				{STYLE_INDENTGUIDE , 0x484439 , 0x1e1e1e , "courier new"},
+				{STYLE_BRACELIGHT  , 0x98642b , 0x5e1e1e , "courier new"},
+				{SCE_LDR_DEFAULT   , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+				{SCE_LDR_COMMENT   , 0x4aa656 , 0x1e1e1e , "courier new"},
+				{SCE_LDR_STRING    , 0x859dd6 , 0x1e1e1e , "courier new"},
+				{SCE_LDR_NUMBER    , 0xf7f7f8 , 0x1e1e1e , "courier new"},
+				{SCE_LDR_KEYWORD   , 0xd69c56 , 0x1e1e1e , "courier new"},
+				{SCE_LDR_PREPROC   , 0xc563bd , 0x1e1e1e , "courier new"},
+				{SCE_LDR_OBJECT    , 0x81c93d , 0x1e1e1e , "courier new"},
+				{SCE_LDR_NAME      , 0xffffff , 0x1e1e1e , "courier new"},
+				{SCE_LDR_COLOUR    , 0x7c97c3 , 0x1e1e1e , "courier new"},
+			};
+			for (int i = 0; i != sizeof(style)/sizeof(style[0]); ++i)
+			{
+				auto& s = style[i];
+				StyleSetFont(s.id, s.font);
+				StyleSetFore(s.id, s.fore);
+				StyleSetBack(s.id, s.back);
+			}
+
+			// set markersymbol for marker type 0 - bookmark
+			MarkerDefine(0, SC_MARK_CIRCLE);
+
+			MarginWidthN(0, TextWidth(STYLE_LINENUMBER, "_9999"));
+			MarginWidthN(1, 0);
+
+			//// display all margins
+			//DisplayLinenumbers(TRUE);
+			//SetDisplayFolding(TRUE);
+			//SetDisplaySelection(TRUE);
+		}
 
 		// Read contents from in istream
 		void Load(std::istream& in, bool readonly = false)

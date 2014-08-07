@@ -8,7 +8,6 @@
 #include "linedrawer/main/linedrawer.h"
 #include "linedrawer/main/ldrevent.h"
 #include "linedrawer/resources/linedrawer.res.h"
-#include "linedrawer/gui/script_editor_dlg.h"
 #include "linedrawer/utility/misc.h"
 
 namespace ldr
@@ -33,6 +32,8 @@ namespace ldr
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
 		,pr::AlignTo<16>
 	{
+		typedef pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::SimMsgLoop> base;
+
 		enum
 		{
 			IDC_STATUSBAR_MAIN = 200,
@@ -44,7 +45,7 @@ namespace ldr
 		pr::gui::RecentFiles      m_recent_files;         // The recent files
 		pr::gui::MenuList         m_saved_views;          // A list of camera snapshots
 		pr::ldr::ObjectManagerDlg m_store_ui;             // GUI window for manipulating ldr object properties
-		ldr::ScriptEditorDlg      m_editor_ui;            // An editor for ldr script
+		pr::ldr::ScriptEditorDlg  m_editor_ui;            // An editor for ldr script
 		pr::ldr::MeasureDlg       m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::AngleDlg         m_angle_tool_ui;        // The UI for the angle measuring tool
 		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
@@ -124,6 +125,7 @@ namespace ldr
 		typedef std::list<std::string> StrList;
 
 		LRESULT OnCreate(LPCREATESTRUCT create) override;
+		void OnDestroy() override;
 		void OnTimer(UINT_PTR nIDEvent) override;
 		void OnPaint(HDC hDC) override;
 		void OnGetMinMaxInfo(LPMINMAXINFO lpMMI) override;

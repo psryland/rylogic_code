@@ -64,7 +64,7 @@
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
@@ -82,7 +82,7 @@ $(ProjectDir)\scripts\HFacer.py
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
@@ -100,7 +100,7 @@ $(ProjectDir)\scripts\HFacer.py
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
@@ -115,7 +115,7 @@ $(ProjectDir)\scripts\HFacer.py
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <PostBuildEvent />
@@ -127,6 +127,7 @@ $(ProjectDir)\scripts\HFacer.py
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lexers\LexLdr.cxx" />
     <ClCompile Include="lexers\LexLua.cxx" />
     <ClCompile Include="src\AutoComplete.cxx" />
     <ClCompile Include="src\CallTip.cxx" />
@@ -225,6 +226,9 @@ $(ProjectDir)\scripts\HFacer.py
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="win32\ScintRes.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\scintilla\Scintilla.iface" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

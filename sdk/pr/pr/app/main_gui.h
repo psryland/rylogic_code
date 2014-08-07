@@ -26,10 +26,6 @@ namespace pr
 			,WTL::CMessageFilter
 			,WTL::CIdleHandler
 		{
-			// Define this type as base as a helper for derived type constructors
-			// so they can call: MyType(...) :base(..) {}
-			typedef MainGUI<DerivedGUI, Main, MessageLoop> base;
-
 			pr::Logger            m_log;          // App log
 			MessageLoop           m_msg_loop;     // The message pump
 			std::unique_ptr<Main> m_main;         // The app logic object

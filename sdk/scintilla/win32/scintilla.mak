@@ -93,6 +93,7 @@ LEXOBJS=\
 	$(DIR_O)\LexCPP.obj \
 	$(DIR_O)\LexD.obj \
 	$(DIR_O)\LexHTML.obj \
+	$(DIR_O)\LexLdr.obj \
 	$(DIR_O)\LexLua.obj \
 	$(DIR_O)\LexPython.obj \
 
@@ -234,6 +235,8 @@ $(DIR_O)\LexCPP.obj: ..\lexers\LexCPP.cxx $(LEX_HEADERS)
 $(DIR_O)\LexD.obj: ..\lexers\LexD.cxx $(LEX_HEADERS)
 
 $(DIR_O)\LexHTML.obj: ..\lexers\LexHTML.cxx $(LEX_HEADERS)
+
+$(DIR_O)\LexLdr.obj: ..\lexers\LexLdr.cxx $(LEX_HEADERS)
 
 $(DIR_O)\LexLua.obj: ..\lexers\LexLua.cxx $(LEX_HEADERS)
 

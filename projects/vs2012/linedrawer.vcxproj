@@ -155,6 +155,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\linedrawer\gui\linedrawergui.cpp" />
     <ClCompile Include="..\linedrawer\main\script_sources.cpp" />
     <ClCompile Include="..\linedrawer\main\linedrawer.cpp" />
@@ -219,10 +225,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\lights\light_dlg.h" />
     <ClInclude Include="..\linedrawer\gui\linedrawergui.h" />
-    <ClInclude Include="..\linedrawer\gui\script_editor_dlg.h" />
     <ClInclude Include="..\linedrawer\main\script_sources.h" />
     <ClInclude Include="..\linedrawer\main\forward.h" />
     <ClInclude Include="..\linedrawer\main\ldrevent.h" />

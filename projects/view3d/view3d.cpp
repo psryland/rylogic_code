@@ -1658,7 +1658,8 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-//		window->m_obj_cont_ui.ShowScript(pr::ldr::CreateDemoScene(), 0);
+		auto& ui = window->m_obj_cont_ui;
+		ui.ShowScript(pr::ldr::CreateDemoScene(), window->m_hwnd);
 	}
 	CatchAndReport(View3D_ShowDemoScript, window,);
 }
@@ -1671,8 +1672,10 @@ VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL sho
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_obj_cont_ui.Show(window->m_objects, window->m_hwnd);
-		window->m_obj_cont_ui.Visible(show != 0);
+		auto& ui = window->m_obj_cont_ui;
+		ui.Show(window->m_hwnd);
+		ui.Populate(window->m_objects);
+		ui.Visible(show != 0);
 	}
 	CatchAndReport(View3D_ShowObjectManager, window,);
 }

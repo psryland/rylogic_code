@@ -86,6 +86,9 @@
     <ClCompile Include="..\linedrawer\main\script_sources.cpp">
       <Filter>main</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.cpp">
+      <Filter>objects</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\linedrawer\main\lua_source.h">
@@ -199,11 +202,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\app\sim_message_loop.h">
       <Filter>app</Filter>
     </ClInclude>
-    <ClInclude Include="..\linedrawer\gui\script_editor_dlg.h">
-      <Filter>gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\linedrawer\main\script_sources.h">
       <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h">
+      <Filter>objects</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -7,7 +7,6 @@
 #include "linedrawer/gui/options_dlg.h"
 #include "linedrawer/gui/about_dlg.h"
 #include "linedrawer/gui/text_panel_dlg.h"
-#include "linedrawer/gui/script_editor_dlg.h"
 #include "linedrawer/resources/linedrawer.res.h"
 #include "linedrawer/main/ldrexception.h"
 #include "linedrawer/plugin/plugin_manager_dlg.h"
@@ -130,6 +129,16 @@ namespace ldr
 		return TRUE;
 	}
 
+	// Destroy windows
+	void MainGUI::OnDestroy()
+	{
+		m_store_ui.Close();
+		m_editor_ui.Close();
+		m_measure_tool_ui.Close();
+		m_angle_tool_ui.Close();
+		base::OnDestroy();
+	}
+
 	// Handler timer messages
 	void MainGUI::OnTimer(UINT_PTR)
 	{
@@ -234,7 +243,8 @@ namespace ldr
 			SetMsgHandled(FALSE);
 			break;
 		case VK_SPACE:
-			m_store_ui.Show(m_main->m_store, m_hWnd);
+			m_store_ui.Show(m_hWnd);
+			m_store_ui.Populate(m_main->m_store);
 			break;
 		case VK_F5:
 			m_main->ReloadSourceData();
@@ -501,7 +511,8 @@ namespace ldr
 	// Display the object manager UI
 	LRESULT MainGUI::OnShowObjectManagerUI(WORD, WORD, HWND, BOOL&)
 	{
-		m_store_ui.Show(m_main->m_store, m_hWnd);
+		m_store_ui.Show(m_hWnd);
+		m_store_ui.Populate(m_main->m_store);
 		return S_OK;
 	}
 
@@ -672,7 +683,8 @@ namespace ldr
 	// Show a window containing the demo scene script
 	LRESULT MainGUI::OnWindowExampleScript(WORD, WORD, HWND, BOOL&)
 	{
-		m_store_ui.ShowScript(pr::ldr::CreateDemoScene(), m_hWnd);
+		m_editor_ui.Text(pr::ldr::CreateDemoScene().c_str());
+		m_editor_ui.Visible(true);
 		return S_OK;
 	}
 

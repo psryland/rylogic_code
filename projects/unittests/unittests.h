@@ -127,6 +127,7 @@
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_plugin_interface.h"
+#include "pr/linedrawer/ldr_script_editor_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
 #include "pr/lua/lua.h"
 #include "pr/lua/prluabindings.h"

@@ -36,10 +36,16 @@ namespace pr
 			virtual void Settings(std::string settings) = 0;
 
 			// Display the object manager window
-			virtual void Show(pr::ldr::ObjectCont const& store, HWND parent = 0) = 0;
+			virtual void Show(HWND parent = 0) = 0;
 
-			// Display a window containing the example script
-			virtual void ShowScript(std::string script, HWND parent) = 0;
+			// Begin repopulating the dlg
+			virtual void BeginPopulate() = 0;
+			
+			// Add a root level object recursively to the dlg
+			virtual void Add(LdrObject* obj) = 0;
+
+			// Finished populating the dlg
+			virtual void EndPopulate() = 0;
 
 			// Return the number of selected objects
 			virtual size_t SelectedCount() const = 0;
@@ -61,6 +67,27 @@ namespace pr
 			ObjectManagerDlg(ObjectManagerDlg const&);
 			ObjectManagerDlg& operator=(ObjectManagerDlg const&);
 
+			LdrObject* pointer(LdrObjectPtr p) { return p.m_ptr; }
+			LdrObject* pointer(LdrObject*   p) { return p; }
+
+			// Begin repopulating the dlg
+			void BeginPopulate()
+			{
+				m_dlg->BeginPopulate();
+			}
+			
+			// Add a root level object recursively to the dlg
+			void Add(LdrObject* obj)
+			{
+				m_dlg->Add(obj);
+			}
+
+			// Finished populating the dlg
+			void EndPopulate()
+			{
+				m_dlg->EndPopulate();
+			}
+
 		public:
 			ObjectManagerDlg();
 
@@ -78,6 +105,12 @@ namespace pr
 			void Detach() override
 			{
 				m_dlg->Detach();
+			}
+
+			// Display the object manager window
+			void Show(HWND parent) override
+			{
+				m_dlg->Show(parent);
 			}
 
 			// Get/Set the visibility of the window
@@ -100,16 +133,12 @@ namespace pr
 				m_dlg->Settings(settings);
 			}
 
-			// Display the object manager window
-			void Show(pr::ldr::ObjectCont const& store, HWND parent) override
+			// Repopulate the dialog with the collection 'cont'
+			template <typename ObjectCont> void Populate(ObjectCont const& cont)
 			{
-				m_dlg->Show(store, parent);
-			}
-
-			// Display a window containing the example script
-			void ShowScript(std::string script, HWND parent) override
-			{
-				m_dlg->ShowScript(script, parent);
+				BeginPopulate();
+				for (auto obj : cont) Add(pointer(obj));
+				EndPopulate();
 			}
 
 			// Return the number of selected objects

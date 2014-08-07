@@ -130,6 +130,9 @@
     <ClCompile Include="lexers\LexLua.cxx">
       <Filter>lexers</Filter>
     </ClCompile>
+    <ClCompile Include="lexers\LexLdr.cxx">
+      <Filter>lexers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lexlib\Accessor.h">
@@ -304,5 +307,10 @@
     <ResourceCompile Include="win32\ScintRes.rc">
       <Filter>win32</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="include\scintilla\Scintilla.iface">
+      <Filter>include</Filter>
+    </None>
   </ItemGroup>
 </Project>
