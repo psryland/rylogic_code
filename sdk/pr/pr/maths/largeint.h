@@ -14,13 +14,13 @@ namespace pr
 {
 	struct LargeInt
 	{
-		const unsigned int& uint() const	{ return data[MaxLength - 1]; }
-		      unsigned int& uint()			{ return data[MaxLength - 1]; }
-		LargeInt&			set(unsigned int* array, unsigned int length);
-		LargeInt&			operator = (unsigned int value);
-
 		enum { MaxLength = 16 };
 		unsigned int data[MaxLength];	// data are big endian. i.e. LSB is at data[MaxLength - 1]
+
+		unsigned int const& uint() const { return data[MaxLength - 1]; }
+		unsigned int& uint()             { return data[MaxLength - 1]; }
+		LargeInt& set(unsigned int* array, unsigned int length);
+		LargeInt& operator = (unsigned int value);
 	};
 
 	// Forward declare operators
@@ -32,29 +32,29 @@ namespace pr
 	LargeInt& operator >>=(LargeInt& lhs, unsigned int rhs);
 	LargeInt& operator %= (LargeInt& lhs, unsigned int rhs);
 
-	LargeInt& operator += (LargeInt& lhs, const LargeInt& rhs);
-	LargeInt& operator -= (LargeInt& lhs, const LargeInt& rhs);
-	LargeInt& operator *= (LargeInt& lhs, const LargeInt& rhs);
-	LargeInt& operator /= (LargeInt& lhs, const LargeInt& rhs);
-	LargeInt& operator %= (LargeInt& lhs, const LargeInt& rhs);
+	LargeInt& operator += (LargeInt& lhs, LargeInt const& rhs);
+	LargeInt& operator -= (LargeInt& lhs, LargeInt const& rhs);
+	LargeInt& operator *= (LargeInt& lhs, LargeInt const& rhs);
+	LargeInt& operator /= (LargeInt& lhs, LargeInt const& rhs);
+	LargeInt& operator %= (LargeInt& lhs, LargeInt const& rhs);
 
-	LargeInt operator +  (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator -  (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator *  (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator *  (unsigned int lhs, const LargeInt& rhs);
-	LargeInt operator /  (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator << (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator >> (const LargeInt& lhs, unsigned int rhs);
-	LargeInt operator %  (const LargeInt& lhs, unsigned int rhs);
+	LargeInt operator +  (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator -  (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator *  (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator *  (unsigned int lhs, LargeInt const& rhs);
+	LargeInt operator /  (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator << (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator >> (LargeInt const& lhs, unsigned int rhs);
+	LargeInt operator %  (LargeInt const& lhs, unsigned int rhs);
 
-	LargeInt operator + (const LargeInt& lhs, const LargeInt& rhs);
-	LargeInt operator - (const LargeInt& lhs, const LargeInt& rhs);
-	LargeInt operator * (const LargeInt& lhs, const LargeInt& rhs);
-	LargeInt operator / (const LargeInt& lhs, const LargeInt& rhs);
-	LargeInt operator % (const LargeInt& lhs, const LargeInt& rhs);
+	LargeInt operator + (LargeInt const& lhs, LargeInt const& rhs);
+	LargeInt operator - (LargeInt const& lhs, LargeInt const& rhs);
+	LargeInt operator * (LargeInt const& lhs, LargeInt const& rhs);
+	LargeInt operator / (LargeInt const& lhs, LargeInt const& rhs);
+	LargeInt operator % (LargeInt const& lhs, LargeInt const& rhs);
 
-	const LargeInt LargeIntZero = LargeInt();
-	const LargeInt LargeIntOne  = LargeIntZero + 1;
+	LargeInt const LargeIntZero = LargeInt();
+	LargeInt const LargeIntOne  = LargeIntZero + 1;
 
 	// This should be an array such as:
 	// unsigned int array[] = {0x01234567, 0x89ABCDEF};
@@ -73,30 +73,30 @@ namespace pr
 	}
 
 	// Equality operators
-	inline bool operator == (const LargeInt& lhs, const LargeInt& rhs)	{ return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
-	inline bool operator != (const LargeInt& lhs, const LargeInt& rhs)	{ return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
-	inline bool operator <  (const LargeInt& lhs, const LargeInt& rhs)
+	inline bool operator == (LargeInt const& lhs, LargeInt const& rhs)	{ return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
+	inline bool operator != (LargeInt const& lhs, LargeInt const& rhs)	{ return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
+	inline bool operator <  (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		unsigned int count = LargeInt::MaxLength;
 		const unsigned int *l_ptr = lhs.data, *r_ptr = rhs.data;
 		while( count && *l_ptr == *r_ptr ) { --count; ++l_ptr; ++r_ptr; }
 		return count && *l_ptr < *r_ptr;
 	}
-	inline bool operator >  (const LargeInt& lhs, const LargeInt& rhs)
+	inline bool operator >  (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		unsigned int count = LargeInt::MaxLength;
 		const unsigned int *l_ptr = lhs.data, *r_ptr = rhs.data;
 		while( count && *l_ptr == *r_ptr ) { --count; ++l_ptr; ++r_ptr; }
 		return count && *l_ptr > *r_ptr;
 	}
-	inline bool operator <= (const LargeInt& lhs, const LargeInt& rhs)
+	inline bool operator <= (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		unsigned int count = LargeInt::MaxLength;
 		const unsigned int *l_ptr = lhs.data, *r_ptr = rhs.data;
 		while( count && *l_ptr == *r_ptr ) { --count; ++l_ptr; ++r_ptr; }
 		return !count || *l_ptr < *r_ptr;
 	}
-	inline bool operator >= (const LargeInt& lhs, const LargeInt& rhs)
+	inline bool operator >= (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		unsigned int count = LargeInt::MaxLength;
 		const unsigned int *l_ptr = lhs.data, *r_ptr = rhs.data;
@@ -116,7 +116,7 @@ namespace pr
 	//	shift = ( ( n & 0x2        ) != 0 ) << 0; n >>= shift; r |= shift;
 	//	return r;
 	//}
-	inline unsigned int HighBit(const LargeInt& n)
+	inline unsigned int HighBit(LargeInt const& n)
 	{
 		for( const unsigned int* word = n.data; word != n.data + LargeInt::MaxLength; ++word )
 		{
@@ -237,7 +237,7 @@ namespace pr
 	}
 
 	// LargeInt assignment operators
-	inline LargeInt& operator += (LargeInt& lhs, const LargeInt& rhs)
+	inline LargeInt& operator += (LargeInt& lhs, LargeInt const& rhs)
 	{
 		const unsigned int* in  = rhs.data + LargeInt::MaxLength - 1;
 		      unsigned int* out = lhs.data + LargeInt::MaxLength - 1;
@@ -253,7 +253,7 @@ namespace pr
 		}
 		return lhs;
 	}
-	inline LargeInt& operator -= (LargeInt& lhs, const LargeInt& rhs)
+	inline LargeInt& operator -= (LargeInt& lhs, LargeInt const& rhs)
 	{
 		const unsigned int* in  = rhs.data + LargeInt::MaxLength - 1;
 		      unsigned int* out = lhs.data + LargeInt::MaxLength - 1;
@@ -269,22 +269,22 @@ namespace pr
 		}
 		return lhs;
 	}
-	inline LargeInt& operator *= (LargeInt& lhs, const LargeInt& rhs)		{ lhs = lhs * rhs; return lhs; }
-	inline LargeInt& operator /= (LargeInt& lhs, const LargeInt& rhs)		{ lhs = lhs / rhs; return lhs; }
-	inline LargeInt& operator %= (LargeInt& lhs, const LargeInt& rhs)		{ LargeInt div = lhs / rhs; return lhs -= div * rhs; }
+	inline LargeInt& operator *= (LargeInt& lhs, LargeInt const& rhs)		{ lhs = lhs * rhs; return lhs; }
+	inline LargeInt& operator /= (LargeInt& lhs, LargeInt const& rhs)		{ lhs = lhs / rhs; return lhs; }
+	inline LargeInt& operator %= (LargeInt& lhs, LargeInt const& rhs)		{ LargeInt div = lhs / rhs; return lhs -= div * rhs; }
 
-	inline LargeInt operator +  (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp += rhs; }
-	inline LargeInt operator -  (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp -= rhs; }
-	inline LargeInt operator *  (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp *= rhs; }
-	inline LargeInt operator *  (unsigned int lhs, const LargeInt& rhs)		{ LargeInt tmp = rhs; return tmp *= lhs; }
-	inline LargeInt operator /  (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp /= rhs; }
-	inline LargeInt operator << (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp <<= rhs; }
-	inline LargeInt operator >> (const LargeInt& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp >>= rhs; }
-	inline LargeInt operator %  (const LargeInt& lhs, unsigned int rhs)		{ LargeInt div = lhs / rhs; return lhs - div * rhs; }
+	inline LargeInt operator +  (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp += rhs; }
+	inline LargeInt operator -  (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp -= rhs; }
+	inline LargeInt operator *  (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp *= rhs; }
+	inline LargeInt operator *  (unsigned int lhs, LargeInt const& rhs)		{ LargeInt tmp = rhs; return tmp *= lhs; }
+	inline LargeInt operator /  (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp /= rhs; }
+	inline LargeInt operator << (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp <<= rhs; }
+	inline LargeInt operator >> (LargeInt const& lhs, unsigned int rhs)		{ LargeInt tmp = lhs; return tmp >>= rhs; }
+	inline LargeInt operator %  (LargeInt const& lhs, unsigned int rhs)		{ LargeInt div = lhs / rhs; return lhs - div * rhs; }
 
-	inline LargeInt operator + (const LargeInt& lhs, const LargeInt& rhs)	{ LargeInt tmp = lhs; return tmp += rhs; }
-	inline LargeInt operator - (const LargeInt& lhs, const LargeInt& rhs)	{ LargeInt tmp = lhs; return tmp -= rhs; }
-	inline LargeInt operator * (const LargeInt& lhs, const LargeInt& rhs)
+	inline LargeInt operator + (LargeInt const& lhs, LargeInt const& rhs)	{ LargeInt tmp = lhs; return tmp += rhs; }
+	inline LargeInt operator - (LargeInt const& lhs, LargeInt const& rhs)	{ LargeInt tmp = lhs; return tmp -= rhs; }
+	inline LargeInt operator * (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		LargeInt accumulator = LargeIntZero;
 		unsigned __int64 product;
@@ -304,7 +304,7 @@ namespace pr
 		}
 		return accumulator;
 	}
-	inline LargeInt operator / (const LargeInt& lhs, const LargeInt& rhs)
+	inline LargeInt operator / (LargeInt const& lhs, LargeInt const& rhs)
 	{
 		unsigned int highest_bit_lhs = HighBit(lhs);
 		unsigned int highest_bit_rhs = HighBit(rhs);
@@ -339,9 +339,9 @@ namespace pr
 		return result;
 	}
 
-	inline LargeInt operator % (const LargeInt& lhs, const LargeInt& rhs)	{ LargeInt div = lhs / rhs; return lhs - div * rhs; }
+	inline LargeInt operator % (LargeInt const& lhs, LargeInt const& rhs)	{ LargeInt div = lhs / rhs; return lhs - div * rhs; }
 
-	//inline unsigned int operator % (const LargeInt& lhs, unsigned int rhs)
+	//inline unsigned int operator % (LargeInt const& lhs, unsigned int rhs)
 	//{
 	//	lhs;
 	//	rhs;
@@ -379,7 +379,7 @@ namespace pr
 
 namespace pr
 {
-	inline std::string ToString(const LargeInt& large_int)
+	inline std::string ToString(LargeInt const& large_int)
 	{
 		std::string str;
 		for( int i = 0; i != LargeInt::MaxLength; ++i )
