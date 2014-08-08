@@ -89,7 +89,8 @@ namespace RyLogViewer
 				Misc.Humanise(m_encoding.GetString(m_row_delim)),
 				Misc.Humanise(m_encoding.GetString(m_col_delim)),
 				FileByteRange);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			if (dg.ShowDialog(this) != DialogResult.OK)
+				return;
 
 			IEnumerable<Range> rng;
 			switch (dg.RangeToExport)
