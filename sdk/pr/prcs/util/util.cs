@@ -623,7 +623,7 @@ namespace pr.util
 				}
 
 				// Get the pr libs directory
-				full = Path.Combine(@"q:\sdk\pr\lib", src_filepath);
+				full = Path.Combine(@"P:\sdk\lib", src_filepath);
 				if (File.Exists(full))
 				{
 					src_filepath = full;

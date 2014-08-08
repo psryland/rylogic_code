@@ -77,6 +77,7 @@
     <Reference Include="nunit.framework">
       <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
     </Reference>
+    <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
     </Reference>
@@ -90,6 +91,7 @@
     <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="WindowsBase" />
@@ -441,7 +443,7 @@
       <DependentUpon>view_video_control.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <CustomToolNamespace>pr</CustomToolNamespace>
     </EmbeddedResource>
@@ -502,6 +504,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\boxes.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="resources\Smiling gekko 140x110 nobkgd.png" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

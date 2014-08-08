@@ -371,6 +371,38 @@ namespace pr.extn
 			return row != null ? row.Index : -1;
 		}
 
+		/// <summary>Checks if the given column/row are within the grid and returns the associated column and cell</summary>
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn col, out DataGridViewCell cell)
+		{
+			col = null; cell = null;
+			if (column_index < 0 || column_index >= grid.ColumnCount) return false;
+			if (row_index    < 0 || row_index    >= grid.RowCount) return false;
+			col = grid.Columns[column_index];
+			cell = grid[column_index, row_index];
+			return true;
+		}
+
+		/// <summary>Checks if the given column/row are within the grid and returns the associated column</summary>
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewColumn col)
+		{
+			DataGridViewCell dummy;
+			return Within(grid, column_index, row_index, out col, out dummy);
+		}
+
+		/// <summary>Checks if the given column/row are within the grid and returns the associated cell</summary>
+		public static bool Within(this DataGridView grid, int column_index, int row_index, out DataGridViewCell cell)
+		{
+			DataGridViewColumn dummy;
+			return Within(grid, column_index, row_index, out dummy, out cell);
+		}
+
+		/// <summary>Checks if the given column/row are within the grid</summary>
+		public static bool Within(this DataGridView grid, int column_index, int row_index)
+		{
+			DataGridViewCell dummy;
+			return Within(grid, column_index, row_index, out dummy);
+		}
+
 		/// <summary>
 		/// Begin a row drag-drop operation on the grid.
 		/// Attach this method to the MouseDown event on the grid.

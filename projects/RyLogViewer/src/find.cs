@@ -13,8 +13,8 @@ namespace RyLogViewer
 	{
 		private readonly BindingSource m_find_history;
 
-		/// <summary>Initialise the app's find search support</summary>
-		private void InitFind()
+		/// <summary>Setup the app's find search support</summary>
+		private void SetupFind()
 		{
 			// When the find events are fired on m_find_ui, trigger find next/prev
 			m_find_ui.FindNext += FindNext;

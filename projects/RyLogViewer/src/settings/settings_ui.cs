@@ -18,14 +18,14 @@ namespace RyLogViewer
 {
 	public partial class SettingsUI :Form
 	{
-		private readonly Main        m_main;         // The main app
-		private readonly Settings    m_settings;     // The app settings changed by this UI
-		private readonly ToolTip     m_tt;           // Tooltips
-		private readonly HoverScroll m_hover_scroll; // Hover scroll for the pattern grid
-		private List<Highlight>      m_highlights;   // The highlight patterns currently in the grid
-		private List<Filter>         m_filters;      // The filter patterns currently in the grid
-		private List<Transform>      m_transforms;   // The transforms currently in the grid
-		private List<ClkAction>      m_actions;      // The actions currently in the grid
+		private readonly Main    m_main;         // The main app
+		private Settings         m_settings;     // Reference to m_main.Settings
+		private ToolTip          m_tt;           // Tooltips
+		private HoverScroll      m_hover_scroll; // Hover scroll for the pattern grid
+		private List<Highlight>  m_highlights;   // The highlight patterns currently in the grid
+		private List<Filter>     m_filters;      // The filter patterns currently in the grid
+		private List<Transform>  m_transforms;   // The transforms currently in the grid
+		private List<ClkAction>  m_actions;      // The actions currently in the grid
 
 		public enum ETab
 		{
@@ -85,18 +85,20 @@ namespace RyLogViewer
 		public PatternUI ActionUI { get { return m_pattern_ac; } }
 		public bool ActionsChanged { get; set; }
 
-		public SettingsUI(Main main, Settings settings, ETab tab, ESpecial special = ESpecial.None)
+		// The settings UI operates on the main settings. There is no cancel
+		// button, settings are modified as they're changed.
+		public SettingsUI(Main main, ETab tab, ESpecial special = ESpecial.None)
 		{
 			InitializeComponent();
 			KeyPreview     = true;
 			m_main         = main;
-			m_settings     = settings;
+			m_settings     = main.Settings;
 			m_special      = special;
 			m_tt           = new ToolTip();
 			m_hover_scroll = new HoverScroll();
 
 			ReadSettings();
-			m_settings.SettingChanged += UpdateUI;
+			m_main.Settings.SettingChanged += UpdateUI;
 
 			m_tabctrl.SelectedIndex = (int)tab;
 			m_pattern_hl.NewPattern(new Highlight());
@@ -118,51 +120,55 @@ namespace RyLogViewer
 			SetupTransformTab();
 			SetupActionTab();
 
-			Load += (s,a) =>
-				{
-					if (StartPosition == FormStartPosition.CenterParent)
-						CenterToParent();
-				};
-
-			Shown += (s,a) =>
-				{
-					FocusInput();
-					PerformSpecial();
-				};
-
-			// Watch for unsaved changes on closing
-			Closing += (s,a) =>
-				{
-					Focus(); // grab focus to ensure all controls persist their state
-					SavePatternChanges(a); // Watch for unsaved changes
-				};
-
-			// Save on close
-			Closed += (s,a) =>
-				{
-					Focus(); // grab focus to ensure all controls persist their state
-					m_settings.HighlightPatterns = m_highlights.ToArray();
-					m_settings.FilterPatterns    = m_filters.ToArray();
-					m_settings.TransformPatterns = m_transforms.ToArray();
-					m_settings.ActionPatterns    = m_actions.ToArray();
-					m_settings.SettingChanged   -= UpdateUI;
-
-					m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main, m_settings));
-					m_main.UseLicensedFeature(FeatureName.Filtering   , new FilteringCountLimiter(m_main, m_settings));
-				};
-
-			Disposed += (s,a) =>
-				{
-					m_tt.Dispose();
-					m_hover_scroll.Dispose();
-				};
-
 			UpdateUI();
 			WhatsChanged = EWhatsChanged.Nothing;
 		}
 		~SettingsUI()
 		{
 			Log.Debug(this, "SettingsUI collected");
+		}
+		protected override void Dispose(bool disposing)
+		{
+			m_main.Settings.SettingChanged -= UpdateUI;
+			Util.Dispose(ref m_tt);
+			Util.Dispose(ref m_hover_scroll);
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
+
+		// Handlers
+		protected override void OnLoad(EventArgs e)
+		{
+			base.OnLoad(e);
+			if (StartPosition == FormStartPosition.CenterParent)
+				CenterToParent();
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			FocusInput();
+			PerformSpecial();
+		}
+		protected override void OnClosing(CancelEventArgs e)
+		{
+			// Watch for unsaved changes on closing
+			base.OnClosing(e);
+			Focus(); // grab focus to ensure all controls persist their state
+			SavePatternChanges(e); // Watch for unsaved changes
+		}
+		protected override void OnClosed(EventArgs e)
+		{
+			// Save on close
+			base.OnClosed(e);
+			Focus(); // grab focus to ensure all controls persist their state
+			m_settings.HighlightPatterns = m_highlights.ToArray();
+			m_settings.FilterPatterns    = m_filters.ToArray();
+			m_settings.TransformPatterns = m_transforms.ToArray();
+			m_settings.ActionPatterns    = m_actions.ToArray();
+			m_settings.SettingChanged   -= UpdateUI;
+
+			m_main.UseLicensedFeature(FeatureName.Highlighting, new HighlightingCountLimiter(m_main));
+			m_main.UseLicensedFeature(FeatureName.Filtering   , new FilteringCountLimiter(m_main));
 		}
 
 		/// <summary>Populate the internal lists from the settings data</summary>
@@ -1054,7 +1060,7 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Update the UI state based on current settings</summary>
-		private void UpdateUI()
+		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
 			bool use_web_proxy = m_settings.UseWebProxy;
 			m_lbl_web_proxy_host.Enabled = use_web_proxy;
@@ -1101,21 +1107,16 @@ namespace RyLogViewer
 
 			m_text_settings.Text = m_settings.Filepath;
 
-			m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, m_settings, this));
-			m_main.UseLicensedFeature(FeatureName.Filtering, new SettingsFilteringCountLimiter(m_main, m_settings, this));
-		}
-
-		private void UpdateUI(object sender, EventArgs args)
-		{
-			UpdateUI();
+			m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, this));
+			m_main.UseLicensedFeature(FeatureName.Filtering, new SettingsFilteringCountLimiter(m_main, this));
 		}
 
 		/// <summary>A highlighting count limiter for when the settings dialog is displayed</summary>
 		private class SettingsHighlightingCountLimiter :HighlightingCountLimiter
 		{
 			private readonly SettingsUI m_ui;
-			public SettingsHighlightingCountLimiter(Main main, Settings settings, SettingsUI ui)
-				:base(main, settings)
+			public SettingsHighlightingCountLimiter(Main main, SettingsUI ui)
+				:base(main)
 			{
 				m_ui = ui;
 			}
@@ -1139,8 +1140,8 @@ namespace RyLogViewer
 		private class SettingsFilteringCountLimiter :FilteringCountLimiter
 		{
 			private readonly SettingsUI m_ui;
-			public SettingsFilteringCountLimiter(Main main, Settings settings, SettingsUI ui)
-				:base(main, settings)
+			public SettingsFilteringCountLimiter(Main main, SettingsUI ui)
+				:base(main)
 			{
 				m_ui = ui;
 			}

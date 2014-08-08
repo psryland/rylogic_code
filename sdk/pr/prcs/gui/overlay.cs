@@ -68,22 +68,21 @@ namespace pr.gui
 			get { return m_attachee; }
 			set
 			{
-				if (value != m_attachee)
+				if (m_attachee == value) return;
+				if (m_attachee != null)
 				{
-					if (m_attachee != null)
-					{
-						m_attachee.Controls.Remove(this);
-						m_attachee = null;
-					}
-					if (value != null)
-					{
-						m_attachee = value;
-						m_attachee.Controls.Add(this);
-						m_client_offset = m_attachee.Location - new Size(m_attachee.PointToScreen(Point.Empty));
-						BringToFront();
-					}
+					m_attachee.Controls.Remove(this);
 				}
-				SnapShot();
+
+				m_attachee = value;
+
+				if (m_attachee != null)
+				{
+					m_attachee.Controls.Add(this);
+					m_client_offset = m_attachee.Location - new Size(m_attachee.PointToScreen(Point.Empty));
+					BringToFront();
+					SnapShot();
+				}
 			}
 		}
 

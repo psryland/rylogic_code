@@ -218,11 +218,11 @@ namespace RyLogViewer
 				filepos            = Maths.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
 
-				max_line_length    = main.m_settings.MaxLineLength;
+				max_line_length    = main.Settings.MaxLineLength;
 				file_buffer_size   = main.m_bufsize;
 				line_cache_count   = main.m_line_cache_count;
 				line_index_count   = main.m_line_index.Count;
-				ignore_blanks      = main.m_settings.IgnoreBlankLines;
+				ignore_blanks      = main.Settings.IgnoreBlankLines;
 
 				// Find the byte range of the file currently loaded
 				cached_whole_line_range = main.LineStartIndexRange;
@@ -246,7 +246,7 @@ namespace RyLogViewer
 				// If the settings say auto detect encoding, and this is a reload
 				// then detect the encoding, otherwise use what it is currently set to
 				certain = false;
-				autodetect = main.m_settings.Encoding.Length == 0;
+				autodetect = main.Settings.Encoding.Length == 0;
 				encoding = reload_ && autodetect
 					? GuessEncoding(file_source, out certain)
 					: (Encoding)main.m_encoding.Clone();
@@ -255,9 +255,9 @@ namespace RyLogViewer
 				// If the settings say auto detect the row delimiters, and this is a reload
 				// then detect them, otherwise use what is currently set
 				certain = false;
-				autodetect = main.m_settings.RowDelimiter.Length == 0;
+				autodetect = main.Settings.RowDelimiter.Length == 0;
 				row_delim = reload_ && autodetect
-					? GuessRowDelimiter(file_source, encoding, main.m_settings.MaxLineLength, out certain)
+					? GuessRowDelimiter(file_source, encoding, main.Settings.MaxLineLength, out certain)
 					: (byte[])main.m_row_delim.Clone();
 				if (certain) main.m_row_delim = (byte[])row_delim.Clone();
 
@@ -464,7 +464,7 @@ namespace RyLogViewer
 		private void BuildLineIndexTerminatedWithError(Exception err)
 		{
 			// Disable watched files, so we don't get an endless blizzard of error messages
-			if (m_settings.WatchEnabled)
+			if (Settings.WatchEnabled)
 			{
 				EnableWatch(false);
 				Misc.ShowHint(m_btn_watch, "File watching disabled due to error.");
@@ -796,7 +796,7 @@ namespace RyLogViewer
 					// Trim the tail
 					Range line_range = LineStartIndexRange;
 					int i, iend = m_line_index.Count;
-					for (i = Math.Min(m_settings.LineCacheCount, iend); i-- != 0; )
+					for (i = Math.Min(Settings.LineCacheCount, iend); i-- != 0; )
 					{
 						if (m_line_index[i].Begin - line_range.Begin > cache_range) continue;
 						++i;
@@ -818,7 +818,7 @@ namespace RyLogViewer
 					// Trim the head
 					Range line_range = LineStartIndexRange;
 					int i, iend = m_line_index.Count;
-					for (i = Math.Max(0, iend - m_settings.LineCacheCount); i != iend; ++i)
+					for (i = Math.Max(0, iend - Settings.LineCacheCount); i != iend; ++i)
 					{
 						if (line_range.End - m_line_index[i].End > cache_range) continue;
 						--i;

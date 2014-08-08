@@ -7,6 +7,7 @@ using RyLogViewer.Properties;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -31,9 +32,8 @@ namespace RyLogViewer
 		}
 
 		private readonly Main m_main;
-		private readonly Settings m_settings;
-		private readonly SettingsUI m_settings_ui;
-		private readonly string m_settings_filepath;
+		private readonly Settings m_orig_settings;
+		private SettingsUI m_settings_ui;
 		private ETutPage m_page_index;
 		private PageBase m_current_page;
 		private WebBrowser m_html;
@@ -41,9 +41,11 @@ namespace RyLogViewer
 		private Button m_btn_back;
 		private Panel m_panel;
 
-		public FirstRunTutorial(Main main, Settings settings) :base(main, EPin.TopRight, new Point(-200,80))
+		public FirstRunTutorial(Main main)
+			:base(main, EPin.TopRight, new Point(-200,80))
 		{
 			InitializeComponent();
+			ShowInTaskbar = false;
 			Icon = main.Icon;
 			HideOnClose = false;
 
@@ -51,40 +53,41 @@ namespace RyLogViewer
 			// and load the default settings
 			m_main = main;
 			m_main.CloseLogFile();
-			m_settings_filepath = settings.Filepath;
 			m_page_index = ETutPage.First - 1;
 
-			m_settings = new Settings();
-			m_main.ApplySettings();
+			// Grab a reference to the main settings then replace the
+			// main settings with a default instance
+			m_orig_settings = m_main.Settings;
+			m_main.Settings = new Settings();
 
-			m_settings_ui = new SettingsUI(m_main, m_settings, SettingsUI.ETab.Highlights){StartPosition = FormStartPosition.CenterParent, Owner = m_main};
+			// Create a new settings UI for the tutorial
+			m_settings_ui = new SettingsUI(m_main, SettingsUI.ETab.Highlights){StartPosition = FormStartPosition.CenterParent, Owner = m_main};
 			m_current_page = new PageBase(this, m_main);
 
 			m_html.Navigate("about:blank");
 
 			m_btn_back.Click += (s,a) => SwitchPage(false);
 			m_btn_next.Click += (s,a) => SwitchPage(true);
-
-			Shown += (s,a) =>
-				{
-					SwitchPage(true);
-				};
-			FormClosed += (s,a) =>
-				{
-					// Restore the user's settings
-					m_settings.Load(m_settings_filepath);
-					m_main.ApplySettings();
-				};
 		}
 		protected override void Dispose(bool disposing)
 		{
-			//m_settings_ui.Dispose();
-			m_current_page.Dispose();
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
+			Util.Dispose(ref m_settings_ui);
+			Util.Dispose(ref m_current_page);
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
+		}
+
+		// Handlers
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			SwitchPage(true);
+		}
+		protected override void OnFormClosed(FormClosedEventArgs e)
+		{
+			// On shutdown, restore the original settings
+			base.OnFormClosed(e);
+			m_main.Settings = m_orig_settings;
 		}
 
 		/// <summary>Update the form to display the next/previous page</summary>
@@ -243,12 +246,16 @@ namespace RyLogViewer
 		public virtual void Enter()
 		{
 			m_tut.Html = Resources.firstrun.Replace("[Content]", HtmlContent);
+			m_tut.PinTarget = PinTarget;
 			m_tut.PinOffset = Offset;
 		}
 
 		/// <summary>State exit</summary>
 		public virtual void Exit(bool forward)
 		{}
+
+		/// <summary>Return the window or control to pin the tutorial to</summary>
+		protected virtual Control PinTarget { get { return m_main; } }
 
 		/// <summary>Paints the overlay</summary>
 		protected void PaintHighlight(Graphics gfx, Rectangle win_rect, Rectangle highlight_rect)
@@ -306,7 +313,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.CloseLogFile();
 				m_main.EnableHighlights(false);
 				m_main.EnableFilters(false);
@@ -343,7 +349,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.EnableHighlights(true);
 				m_main.EnableFilters(false);
 				m_main.EnableTransforms(false);
@@ -378,7 +383,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.EnableHighlights(true);
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(false);
@@ -413,7 +417,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.EnableHighlights(true);
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(true);
@@ -449,7 +452,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.EnableHighlights(true);
 				m_main.EnableFilters(true);
 				m_main.EnableTransforms(true);
@@ -486,7 +488,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_main.EnableWatch(false);
 				m_overlay.Attachee = m_main;
 			}
@@ -517,7 +518,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_overlay.Attachee = m_main;
 			}
 			protected override string HtmlContent
@@ -547,7 +547,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_main;
 				m_overlay.Attachee = m_main;
 			}
 			public override void Exit(bool forward)
@@ -577,7 +576,7 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_ui;
+				m_tut.PinTarget = m_ui;
 				m_main.Enabled = false;
 				m_ui.Visible = true;
 				m_overlay.Attachee = m_ui;
@@ -588,6 +587,7 @@ namespace RyLogViewer
 				m_ui.Visible = forward;
 				m_main.Enabled = !forward;
 			}
+			protected override Control PinTarget { get { return m_ui; } }
 			protected override string HtmlContent
 			{
 				get
@@ -616,7 +616,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_ui;
 				m_main.Enabled = false;
 				m_ui.Visible = true;
 				m_overlay.Attachee = m_ui;
@@ -627,6 +626,7 @@ namespace RyLogViewer
 				m_main.Enabled = false;
 				m_ui.Visible = true;
 			}
+			protected override Control PinTarget { get { return m_ui; } }
 			protected override string HtmlContent
 			{
 				get
@@ -656,7 +656,6 @@ namespace RyLogViewer
 			public override void Enter()
 			{
 				base.Enter();
-				m_tut.Owner = m_ui;
 				m_ui.Visible = true;
 				m_overlay.Attachee = m_ui;
 			}
@@ -666,6 +665,7 @@ namespace RyLogViewer
 				m_ui.Visible = !forward;
 				m_main.Enabled = forward;
 			}
+			protected override Control PinTarget { get { return m_ui; } }
 			protected override string HtmlContent
 			{
 				get

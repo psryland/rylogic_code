@@ -56,6 +56,9 @@ namespace pr.container
 					bl.ListChanging -= RaiseListChanging;
 
 				// Set new data source
+				// Note: this can cause a first chance exception in some controls
+				// that are bound to this source (e.g. ListBox, ComboBox, etc).
+				// They are handled internally, just continue.
 				base.DataSource = null;
 				base.DataSource = value;
 
@@ -146,6 +149,8 @@ namespace pr.container
 			foreach (var item in List)
 				yield return (TItem)item;
 		}
+
+		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
 	}
 }
 

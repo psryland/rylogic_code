@@ -7,19 +7,6 @@ using pr.extn;
 
 namespace RyLogViewer
 {
-	/// <summary>Interface for controlling time limited features</summary>
-	public interface ILicensedFeature
-	{
-		/// <summary>An html description of the licensed feature</summary>
-		string FeatureDescription { get; }
-
-		/// <summary>True if the licensed feature is still currently in use</summary>
-		bool FeatureInUse { get; }
-
-		/// <summary>Called to stop the use of the feature</summary>
-		void CloseFeature();
-	}
-
 	public sealed partial class Main
 	{
 		/// <summary>The collection of licensed features in use</summary>
@@ -53,9 +40,7 @@ namespace RyLogViewer
 
 			// Otherwise, the user wants to use the feature
 			m_licensed_features[key] = use;
-			this.BeginInvokeDelayed(
-				(int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds,
-				() =>
+			this.BeginInvokeDelayed((int)TimeSpan.FromMinutes(FreeEditionLimits.FeatureEnableTimeInMinutes).TotalMilliseconds, () =>
 				{
 					ILicensedFeature feat;
 					if (!m_licensed_features.TryGetValue(key, out feat)) return;
@@ -65,15 +50,26 @@ namespace RyLogViewer
 		}
 	}
 
+	/// <summary>Interface for controlling time limited features</summary>
+	public interface ILicensedFeature
+	{
+		/// <summary>An html description of the licensed feature</summary>
+		string FeatureDescription { get; }
+
+		/// <summary>True if the licensed feature is still currently in use</summary>
+		bool FeatureInUse { get; }
+
+		/// <summary>Called to stop the use of the feature</summary>
+		void CloseFeature();
+	}
+
 	/// <summary>Limits the number of highlighting patterns in use</summary>
 	public class HighlightingCountLimiter :ILicensedFeature
 	{
 		private readonly Main m_main;
-		private readonly Settings m_settings;
-		public HighlightingCountLimiter(Main main, Settings settings)
+		public HighlightingCountLimiter(Main main)
 		{
 			m_main = main;
-			m_settings = settings;
 		}
 
 		/// <summary>An html description of the licensed feature</summary>
@@ -85,16 +81,16 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get { return m_settings.HighlightPatterns.Length > FreeEditionLimits.MaxHighlights; }
+			get { return m_main.Settings.HighlightPatterns.Length > FreeEditionLimits.MaxHighlights; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = m_settings.HighlightPatterns.ToList();
+			var pats = m_main.Settings.HighlightPatterns.ToList();
 			pats.RemoveToEnd(FreeEditionLimits.MaxHighlights);
-			m_settings.HighlightPatterns = pats.ToArray();
+			m_main.Settings.HighlightPatterns = pats.ToArray();
 			m_main.ApplySettings();
 		}
 	}
@@ -103,11 +99,9 @@ namespace RyLogViewer
 	public class FilteringCountLimiter :ILicensedFeature
 	{
 		private readonly Main m_main;
-		private readonly Settings m_settings;
-		public FilteringCountLimiter(Main main, Settings settings)
+		public FilteringCountLimiter(Main main)
 		{
 			m_main = main;
-			m_settings = settings;
 		}
 
 		/// <summary>An html description of the licensed feature</summary>
@@ -119,16 +113,16 @@ namespace RyLogViewer
 		/// <summary>True if the licensed feature is still currently in use</summary>
 		public virtual bool FeatureInUse
 		{
-			get { return m_settings.FilterPatterns.Length> FreeEditionLimits.MaxFilters; }
+			get { return m_main.Settings.FilterPatterns.Length> FreeEditionLimits.MaxFilters; }
 		}
 
 		/// <summary>Called to stop the use of the feature</summary>
 		public virtual void CloseFeature()
 		{
 			// Read the patterns from the settings to see if more than the max allowed are in use
-			var pats = m_settings.FilterPatterns.ToList();
+			var pats = m_main.Settings.FilterPatterns.ToList();
 			pats.RemoveToEnd(FreeEditionLimits.MaxFilters);
-			m_settings.FilterPatterns = pats.ToArray();
+			m_main.Settings.FilterPatterns = pats.ToArray();
 			m_main.ApplySettings();
 		}
 	}

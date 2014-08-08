@@ -29,29 +29,17 @@ namespace pr.gui
 		private readonly IntPtr m_sys_menu_handle;
 		private const int m_menucmd_pin_window = 1000;
 
-		/// <summary>Default constructor for the designer</summary>
-		public ToolForm()
-			:this(null, EPin.TopLeft, Point.Empty, Size.Empty, false)
-		{}
-		public ToolForm(Control target)
-			:this(target, EPin.TopLeft, Point.Empty, Size.Empty, false)
-		{}
-		public ToolForm(Control target, EPin pin)
-			:this(target, pin, Point.Empty, Size.Empty, false)
-		{}
-		public ToolForm(Control target, EPin pin, Point ofs)
-			:this(target, pin, ofs, Size.Empty, false)
-		{}
-		public ToolForm(Control target, Point ofs, Size size)
-			:this(target, EPin.TopLeft, ofs, size, false)
-		{}
-
 		/// <summary>
 		/// Create and position the tool form.
 		/// Remember, for positioning to work you need to ensure it's not overwritten
 		/// in the call to InitiailizeComponent(). Leaving the StartPosition property
 		/// as WindowDefaultPosition should prevent the designer adding an explicit set
 		/// of the StartPosition property.</summary>
+		public ToolForm()                                     :this(null, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control target)                       :this(target, EPin.TopLeft, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control target, EPin pin)             :this(target, pin, Point.Empty, Size.Empty, false) {}
+		public ToolForm(Control target, EPin pin, Point ofs)  :this(target, pin, ofs, Size.Empty, false) {}
+		public ToolForm(Control target, Point ofs, Size size) :this(target, EPin.TopLeft, ofs, size, false) {}
 		public ToolForm(Control target, EPin pin, Point ofs, Size size, bool modal)
 		{
 			m_ofs = ofs;
@@ -272,6 +260,7 @@ namespace pr.gui
 			}
 
 			m_top_level_control = top;
+			if (Owner != null) Owner.RemoveOwnedForm(this);
 			Owner = m_top_level_control as Form;
 
 			if (m_top_level_control != null)
@@ -289,13 +278,14 @@ namespace pr.gui
 			get
 			{
 				Debug.Assert(PinTarget != null);
-				return PinTarget.RectangleToScreen(PinTarget.Bounds);
+				return PinTarget.TopLevelControl == PinTarget
+					? PinTarget.Bounds
+					: PinTarget.RectangleToScreen(PinTarget.Bounds);
 			}
 		}
 
 		/// <summary>Records the current offset of this form from the owner form</summary>
-		protected void RecordOffset() { RecordOffset(null, null); }
-		protected void RecordOffset(object sender, EventArgs args)
+		protected void RecordOffset(object sender = null, EventArgs args = null)
 		{
 			if (Owner == null || !PinWindow) return;
 			var frame = TargetFrame;
@@ -315,8 +305,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Called to update the position relative to the owner form</summary>
-		protected void UpdateLocation() { UpdateLocation(null, null); }
-		protected void UpdateLocation(object sender, EventArgs args)
+		protected void UpdateLocation(object sender = null, EventArgs args = null)
 		{
 			if (Owner == null || !PinWindow) return;
 			var frame = TargetFrame;

@@ -106,21 +106,21 @@ namespace RyLogViewer
 		private Button m_btn_prev;
 		private CheckBox m_check_show_on_startup;
 
-		public TipOfTheDay(Main main, Settings settings)
+		public TipOfTheDay(Main main)
 		{
 			InitializeComponent();
 			m_main      = main;
 			m_rng       = new Random();
-			m_order     = SetOrder(settings.FirstRun);
+			m_order     = SetOrder(m_main.Settings.FirstRun);
 			m_tip_index = 0;
 
 			m_html.Navigating += OnNavigating;
 			m_html.Navigate("about:blank");
 
-			m_check_show_on_startup.Checked = settings.ShowTOTD;
+			m_check_show_on_startup.Checked = main.Settings.ShowTOTD;
 			m_check_show_on_startup.CheckedChanged += (s,a)=>
 				{
-					settings.ShowTOTD = m_check_show_on_startup.Checked;
+					main.Settings.ShowTOTD = m_check_show_on_startup.Checked;
 				};
 			m_btn_next.Click += (s,a)=>
 				{

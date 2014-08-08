@@ -47,7 +47,7 @@ namespace RyLogViewer
 					{
 						// Create a new instance of the plugin, since it will be disposed once complete
 						var inst = (ICustomLogDataSource)Activator.CreateInstance(src_type);
-						var config = new LogDataSourceConfig(this, m_settings.OutputFilepathHistory);
+						var config = new LogDataSourceConfig(this, Settings.OutputFilepathHistory);
 						var launch = inst.ShowConfigUI(config);
 						if (!launch.DoLaunch) return;
 						launch.OutputFilepath = launch.OutputFilepath ?? string.Empty;
@@ -60,7 +60,7 @@ namespace RyLogViewer
 		private void PrepareForStreamedData(string output_filepath)
 		{
 			System.Diagnostics.Debug.Assert(output_filepath != null);
-			m_settings.OutputFilepathHistory = Util.AddToHistoryList(m_settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
+			Settings.OutputFilepathHistory = Util.AddToHistoryList(Settings.OutputFilepathHistory, output_filepath, true, Constants.MaxOutputFileHistoryLength);
 			ApplySettings();
 
 			EnableTail(true);
@@ -71,7 +71,7 @@ namespace RyLogViewer
 		/// <summary>Open a standard out connection</summary>
 		private void LogProgramOutput()
 		{
-			var dg = new ProgramOutputUI(m_settings);
+			var dg = new ProgramOutputUI(Settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LaunchProcess(dg.Launch);
 		}
@@ -79,7 +79,7 @@ namespace RyLogViewer
 		/// <summary>Open a serial port connection and log the received data</summary>
 		private void LogSerialPort()
 		{
-			var dg = new SerialConnectionUI(m_settings);
+			var dg = new SerialConnectionUI(Settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LogSerialConnection(dg.Conn);
 		}
@@ -87,7 +87,7 @@ namespace RyLogViewer
 		/// <summary>Open a network connection and log the received data</summary>
 		private void LogNetworkOutput()
 		{
-			var dg = new NetworkConnectionUI(m_settings);
+			var dg = new NetworkConnectionUI(Settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 
 			if (dg.Conn.ProtocolType == ProtocolType.Tcp)
@@ -99,7 +99,7 @@ namespace RyLogViewer
 		/// <summary>Open a named pipe and log the received data</summary>
 		private void LogNamedPipeOutput()
 		{
-			var dg = new NamedPipeUI(m_settings);
+			var dg = new NamedPipeUI(Settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LogNamedPipeConnection(dg.Conn);
 		}
@@ -107,7 +107,7 @@ namespace RyLogViewer
 		/// <summary>Show the android device log wizard</summary>
 		private void AndroidLogcatWizard()
 		{
-			var dg = new AndroidLogcatUI(m_settings);
+			var dg = new AndroidLogcatUI(Settings);
 			if (dg.ShowDialog(this) != DialogResult.OK) return;
 			LaunchProcess(dg.Launch);
 		}

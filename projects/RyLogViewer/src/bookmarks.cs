@@ -33,6 +33,15 @@ namespace RyLogViewer
 		private readonly BindingSource         m_bs_bookmarks;
 		private readonly EventBatcher          m_batch_refresh_bkmks;
 
+		/// <summary>Setup the app's bookmark support</summary>
+		private void SetupBookmarks()
+		{
+			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
+			m_bookmarks_ui.NextBookmark    += NextBookmark;
+			m_bookmarks_ui.PrevBookmark    += PrevBookmark;
+			m_batch_refresh_bkmks.Action   += RefreshBookmarks;
+		}
+
 		/// <summary>Show the bookmarks dialog</summary>
 		private void ShowBookmarksDialog()
 		{

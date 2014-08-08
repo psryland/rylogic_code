@@ -12,6 +12,79 @@ namespace RyLogViewer
 	/// <summary>RyLog Viewer settings</summary>
 	public sealed class Settings :SettingsBase<Settings>
 	{
+		public Settings()
+		{
+			LicenceHolder                   = Constants.FreeLicence;
+			Company                         = string.Empty;
+			RecentFiles                     = string.Empty;
+			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
+			RestoreScreenLoc                = false; // False so that first runs start in the default window position
+			ScreenPosition                  = new Point(100, 100);
+			WindowSize                      = new Size(640, 480);
+			AlternateLineColours            = true;
+			LineSelectBackColour            = Color.DarkGreen;
+			LineSelectForeColour            = Color.White;
+			LineBackColour1                 = Color.WhiteSmoke;
+			LineBackColour2                 = Color.White;
+			LineForeColour1                 = Color.Black;
+			LineForeColour2                 = Color.Black;
+			FileScrollWidth                 = Constants.FileScrollWidthDefault;
+			ScrollBarFileRangeColour        = Color.FromArgb(0x80, Color.White);
+			ScrollBarCachedRangeColour      = Color.FromArgb(0x40, Color.LightBlue);
+			ScrollBarDisplayRangeColour     = Color.FromArgb(0x80, Color.SteelBlue);
+			BookmarkColour                  = Color.Violet;
+			RowHeight                       = Constants.RowHeightDefault;
+			LoadLastFile                    = false;
+			LastLoadedFile                  = string.Empty;
+			OpenAtEnd                       = true;
+			FullPathInTitle                 = true;
+			TabSizeInSpaces                 = 4;
+			FileChangesAdditive             = true;
+			IgnoreBlankLines                = false;
+			AlwaysOnTop                     = false;
+			FirstRun                        = true;
+			ShowTOTD                        = true;
+			CheckForUpdates                 = false;
+			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
+			UseWebProxy                     = false;
+			WebProxyHost                    = string.Empty;
+			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
+			QuickFilterEnabled              = false;
+			HighlightsEnabled               = true;
+			FiltersEnabled                  = false;
+			TransformsEnabled               = false;
+			ActionsEnabled                  = false;
+			TailEnabled                     = true;
+			WatchEnabled                    = true;
+			FileBufSize                     = Constants.FileBufSizeDefault;
+			MaxLineLength                   = Constants.MaxLineLengthDefault;
+			LineCacheCount                  = Constants.LineCacheCountDefault;
+			HighlightPatterns               = DefaultHighlightingPatterns().ToArray();
+			FilterPatterns                  = DefaultFilters().ToArray();
+			TransformPatterns               = DefaultTransforms().ToArray();
+			ActionPatterns                  = DefaultClickActions().ToArray();
+			HighlightPatternSets            = "<root/>";
+			FilterPatternSets               = "<root/>";
+			TransformPatternSets            = "<root/>";
+			ActionPatternSets               = "<root/>";
+			RowDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
+			ColDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
+			ColumnCount                     = 1;
+			Encoding                        = string.Empty; // empty means auto detect
+			OutputFilepathHistory           = new string[0];
+			LogProgramOutputHistory         = new LaunchApp[0];
+			NetworkConnectionHistory        = new NetConn[0];
+			SerialConnectionHistory         = new SerialConn[0];
+			PipeConnectionHistory           = new PipeConn[0];
+			AndroidLogcat                   = new AndroidLogcat();
+			LogFilePath                     = string.Empty;
+		}
+		public Settings(string filepath) :base(filepath) {}
+		public Settings(Settings rhs) :base(rhs) {}
+
+		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
+		protected override string Version { get { return "v1.3"; } }
+
 		public string LicenceHolder
 		{
 			get { return get(x => x.LicenceHolder); }
@@ -332,81 +405,6 @@ namespace RyLogViewer
 			get { return get(x => x.LogFilePath); }
 			set { set(x => x.LogFilePath, value); }
 		}
-
-		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
-		protected override string Version { get { return "v1.3"; } }
-
-		// Default construct settings
-		public Settings()
-		{
-			LicenceHolder                   = Constants.FreeLicence;
-			Company                         = string.Empty;
-			RecentFiles                     = string.Empty;
-			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
-			RestoreScreenLoc                = false; // False so that first runs start in the default window position
-			ScreenPosition                  = new Point(100, 100);
-			WindowSize                      = new Size(640, 480);
-			AlternateLineColours            = true;
-			LineSelectBackColour            = Color.DarkGreen;
-			LineSelectForeColour            = Color.White;
-			LineBackColour1                 = Color.WhiteSmoke;
-			LineBackColour2                 = Color.White;
-			LineForeColour1                 = Color.Black;
-			LineForeColour2                 = Color.Black;
-			FileScrollWidth                 = Constants.FileScrollWidthDefault;
-			ScrollBarFileRangeColour        = Color.FromArgb(0x80, Color.White);
-			ScrollBarCachedRangeColour      = Color.FromArgb(0x40, Color.LightBlue);
-			ScrollBarDisplayRangeColour     = Color.FromArgb(0x80, Color.SteelBlue);
-			BookmarkColour                  = Color.Violet;
-			RowHeight                       = Constants.RowHeightDefault;
-			LoadLastFile                    = false;
-			LastLoadedFile                  = string.Empty;
-			OpenAtEnd                       = true;
-			FullPathInTitle                 = true;
-			TabSizeInSpaces                 = 4;
-			FileChangesAdditive             = true;
-			IgnoreBlankLines                = false;
-			AlwaysOnTop                     = false;
-			FirstRun                        = true;
-			ShowTOTD                        = true;
-			CheckForUpdates                 = false;
-			CheckForUpdatesServer           = "http://www.rylogic.co.nz:80/";
-			UseWebProxy                     = false;
-			WebProxyHost                    = string.Empty;
-			WebProxyPort                    = Constants.PortNumberWebProxyDefault;
-			QuickFilterEnabled              = false;
-			HighlightsEnabled               = true;
-			FiltersEnabled                  = false;
-			TransformsEnabled               = false;
-			ActionsEnabled                  = false;
-			TailEnabled                     = true;
-			WatchEnabled                    = true;
-			FileBufSize                     = Constants.FileBufSizeDefault;
-			MaxLineLength                   = Constants.MaxLineLengthDefault;
-			LineCacheCount                  = Constants.LineCacheCountDefault;
-			HighlightPatterns               = DefaultHighlightingPatterns().ToArray();
-			FilterPatterns                  = DefaultFilters().ToArray();
-			TransformPatterns               = DefaultTransforms().ToArray();
-			ActionPatterns                  = DefaultClickActions().ToArray();
-			HighlightPatternSets            = "<root/>";
-			FilterPatternSets               = "<root/>";
-			TransformPatternSets            = "<root/>";
-			ActionPatternSets               = "<root/>";
-			RowDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
-			ColDelimiter                    = string.Empty; // stored in humanised form, empty means auto detect
-			ColumnCount                     = 1;
-			Encoding                        = string.Empty; // empty means auto detect
-			OutputFilepathHistory           = new string[0];
-			LogProgramOutputHistory         = new LaunchApp[0];
-			NetworkConnectionHistory        = new NetConn[0];
-			SerialConnectionHistory         = new SerialConn[0];
-			PipeConnectionHistory           = new PipeConn[0];
-			AndroidLogcat                   = new AndroidLogcat();
-			LogFilePath                     = string.Empty;
-		}
-		public Settings(string filepath)
-		:base(filepath)
-		{}
 
 		/// <summary>Return the highlighting patterns for a default instance of the settings</summary>
 		private IEnumerable<Highlight> DefaultHighlightingPatterns()

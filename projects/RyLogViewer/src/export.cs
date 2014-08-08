@@ -39,8 +39,8 @@ namespace RyLogViewer
 						using (d.file)
 						{
 							var rng = new[] { new Range(0, long.MaxValue) };
-							string row_delimiter = Misc.Robitise(startup_options.RowDelim ?? m.m_settings.RowDelimiter);
-							string col_delimiter = Misc.Robitise(startup_options.ColDelim ?? m.m_settings.ColDelimiter);
+							string row_delimiter = Misc.Robitise(startup_options.RowDelim ?? m.Settings.RowDelimiter);
+							string col_delimiter = Misc.Robitise(startup_options.ColDelim ?? m.Settings.ColDelimiter);
 
 							if (startup_options.NoGUI)
 							{

@@ -265,6 +265,8 @@ namespace pr.common
 			// Default to off so users can enable after startup completes
 			AutoSaveOnChanges = false;
 		}
+		protected SettingsBase(SettingsBase<T> rhs, bool read_only = false) :this(rhs.ToXml(new XElement("root")), read_only)
+		{}
 		protected SettingsBase(XElement node, bool read_only = false) :this()
 		{
 			try
@@ -298,17 +300,7 @@ namespace pr.common
 		{
 			Debug.Assert(!string.IsNullOrEmpty(filepath));
 			Filepath = filepath;
-			try
-			{
-				Load(Filepath, read_only);
-			}
-			catch (Exception ex)
-			{
-				// If anything goes wrong, use the defaults
-				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
-				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(filepath));
-				Data.AddRange(new T().Data);
-			}
+			Reload(read_only);
 		}
 
 		/// <summary>Get/Set whether to automatically save whenever a setting is changed</summary>
@@ -336,9 +328,19 @@ namespace pr.common
 		}
 
 		/// <summary>Reload the current settings file</summary>
-		public void Reload()
+		public void Reload(bool read_only = false)
 		{
-			Load(Filepath);
+			try
+			{
+				Load(Filepath, read_only);
+			}
+			catch (Exception ex)
+			{
+				// If anything goes wrong, use the defaults
+				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
+				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(Filepath));
+				Data.AddRange(new T().Data);
+			}
 		}
 
 		/// <summary>Load the settings from xml</summary>

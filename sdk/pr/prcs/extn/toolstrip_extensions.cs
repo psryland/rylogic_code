@@ -118,40 +118,76 @@ namespace pr.extn
 			return parent.RectangleToScreen(item.Bounds);
 		}
 
-		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
-		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, string idle = null, bool bold = false, Color? frcol = null, Color? bkcol = null, TimeSpan? display_time_ms = null)
+		/// <summary>Set a status label with text plus optional colours, detail tooltip, callback click handler, display time</summary>
+		public static void SetStatusMessage(this ToolStripStatusLabel status,
+			string msg = null, string detail = null, string idle = null,
+			bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time_ms = null, EventHandler on_click = null)
 		{
-			status.Text = text ?? string.Empty;
-			status.Visible = text.HasValue();
-			status.ForeColor = frcol ?? SystemColors.ControlText;
-			status.BackColor = bkcol ?? SystemColors.Control;
-			if (status.Font.Bold != bold)
-				status.Font = new Font(status.Font, bold ? FontStyle.Bold : FontStyle.Regular);
+			status.Visible = msg.HasValue();
 
-			// If the status message has a timer already, dispose it
-			var timer = status.Tag as Timer;
-			if (timer != null)
+			// Set the text
+			status.Text = msg ?? string.Empty;
+
+			// Set the tool tip to the detailed message
+			status.ToolTipText = detail ?? string.Empty;
+
+			// Set colours
+			status.ForeColor = fr_color ?? SystemColors.ControlText;
+			status.BackColor = bk_color ?? SystemColors.Control;
+
+			// Choose the font to use
+			var font_style = FontStyle.Regular;
+			if (bold            ) font_style |= FontStyle.Bold;
+			if (on_click != null) font_style |= FontStyle.Underline;
+			if (status.Font.Style != font_style)
+				status.Font = new Font(status.Font, font_style);
+
+			// Ensure the status has tag data
+			if (status.Tag == null)
 			{
-				timer.Dispose();
-				status.Tag = null;
+				var tag_data = new StatusTagData();
+				status.Click += tag_data.HandleStatusClick;
+				status.Tag = tag_data;
+			}
+			else if (!(status.Tag is StatusTagData))
+				throw new Exception("Tag property already used for non-status data");
+
+			var data = status.Tag.As<StatusTagData>();
+
+			// If the status message has a timer, dispose it
+			Util.Dispose(ref data.m_timer);
+			if (display_time_ms != null)
+			{
+				// If the status has a display time, set a timer
+				data.m_timer = new Timer{Enabled = true, Interval = (int)display_time_ms.Value.TotalMilliseconds};
+				data.m_timer.Tick += (s,a) =>
+					{
+						// When the timer fires, if we're still associated with
+						// the status message, null out the text and remove our self
+						if (!ReferenceEquals(s, data.m_timer)) return;
+						status.SetStatusMessage(idle);
+					};
 			}
 
-			if (!text.HasValue() || display_time_ms == null)
-				return;
+			// If a click handler has been provided, subscribe
+			data.m_on_click = on_click;
+		}
 
-			// Attach a new timer to the status message
-			status.Tag = timer = new Timer{Enabled = true, Interval = (int)display_time_ms.Value.TotalMilliseconds};
-			timer.Tick += (s,a)=>
-				{
-					// When the timer fires, if we're still associated with
-					// the status message, null out the text and remove our self
-					if (s != status.Tag) return;
-					SetStatusMessage(status, idle);
-				};
+		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
+		private class StatusTagData
+		{
+			public Timer m_timer;
+			public EventHandler m_on_click;
+			public void HandleStatusClick(object sender, EventArgs args)
+			{
+				// Forward to the user handler
+				m_on_click.Raise(sender, args);
+			}
 		}
 		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, bool bold, Color frcol, Color bkcol)
 		{
-			status.SetStatusMessage(text, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2));
+			status.SetStatusMessage(text, null, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2), null);
 		}
 	}
 
