@@ -1,10 +1,10 @@
 ﻿using System;
 using RyLogViewer;
 
-namespace ExamplePlugin
+namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A substitution type that converts elements to lower case</summary>
-	[TransformSubstitution]
+	[pr.common.Plugin(typeof(ITransformSubstitution))]
 	public class ExampleSubstitution :TransformSubstitutionBase
 	{
 		/// <summary>

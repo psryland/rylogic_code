@@ -90,7 +90,7 @@ namespace RyLogViewer
 
 			InitializeComponent();
 
-			Settings              = new Settings(m_startup_options.SettingsPath);
+			Settings              = new Settings(m_startup_options.SettingsPath){AutoSaveOnChanges = true};
 			m_bufsize             = Settings.FileBufSize;
 			m_line_cache_count    = Settings.LineCacheCount;
 			m_tail_enabled        = Settings.TailEnabled;
@@ -196,16 +196,11 @@ namespace RyLogViewer
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
 			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
-			m_menu_free_version.Click                  += (s,a) => ShowFreeVersionInfo();
+			m_menu_free_version.Click                  += ShowFreeVersionInfo;
 
 			// Recent files menu
 			m_recent = new RecentFiles(m_menu_file_recent, fp => OpenSingleLogFile(fp, true));
 			m_recent.Import(Settings.RecentFiles);
-			m_recent.ClearRecentFilesListEvent += (s,a) =>
-				{
-					var res = MsgBox.Show(this, "Do you want to clear the recent files list?", "Clear Recent Files", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
-					a.Cancel = res == DialogResult.Cancel;
-				};
 		}
 
 		/// <summary>Setup the toolbar</summary>
@@ -415,7 +410,12 @@ namespace RyLogViewer
 			// Show the first run tutorial
 			if (Settings.FirstRun)
 			{
-				const string msg = "This appears to be the first time you've run RyLogViewer.\r\nWould you like a quick tour?";
+				Settings.FirstRun = false;
+				const string msg =
+					"This appears to be the first time you've run RyLogViewer.\r\n"+
+					"Would you like a quick tour?\r\n"+
+					"\r\n"+
+					"If not, you can always run this tutorial again by selecting it from the Help menu.";
 				if (MsgBox.Show(this, msg, "First Run", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
 					ShowFirstRunTutorial();
 				else
@@ -1552,9 +1552,9 @@ namespace RyLogViewer
 		}
 
 		/// <summary>Display info about the app being a free version</summary>
-		private void ShowFreeVersionInfo()
+		private void ShowFreeVersionInfo(object sender = null, EventArgs args = null)
 		{
-			var dlg = HelpUI.FromHtml(ParentForm, Resources.free_version, "RyLogViewer Free Edition", Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
+			var dlg = HelpUI.FromHtml(this, Resources.free_version, "RyLogViewer Free Edition", Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
 			dlg.FormBorderStyle = FormBorderStyle.Sizable;
 			dlg.ShowDialog(this);
 		}

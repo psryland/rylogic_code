@@ -34,7 +34,7 @@ namespace RyLogViewer
 		// -This interface represents the contract for a complete custom
 		//  data source, including any UI interaction needed for configuration.
 		//  To create a custom data source, create a class that implements this
-		//  interface and mark it with the CustomDataSourceAttribute.
+		//  interface and mark it with [pr.common.PluginAttribute(typeof(ICustomLogDataSource))].
 		// -RyLogViewer loads plugins using a background thread, however, Start(),
 		//  BeginRead(), EndRead(), and Dispose() are all called from the main thread.
 
@@ -105,7 +105,9 @@ namespace RyLogViewer
 	/// <summary>Data returned after configuring a custom log data source</summary>
 	public class LogDataSourceRunData
 	{
-		/// <summary>Continue and launch the custom data source</summary>
+		/// <summary>
+		/// Launch the custom data source if true.
+		/// This will be false if the 'ShowConfigUI' method detects that the user wants to cancel</summary>
 		public bool DoLaunch { get; set; }
 
 		/// <summary>The file to capture log data into (use null or empty to have a temp file used)</summary>

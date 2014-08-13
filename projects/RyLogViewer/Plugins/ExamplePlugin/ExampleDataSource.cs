@@ -8,10 +8,10 @@ using System.Windows.Forms;
 using System.Windows.Threading;
 using RyLogViewer;
 
-namespace ExamplePlugin
+namespace RyLogViewer.ExamplePlugin
 {
 	/// <summary>A data source that reads a file as hex formatted text</summary>
-	[CustomDataSource]
+	[pr.common.Plugin(typeof(ICustomLogDataSource))]
 	public class ExampleDataSource :ICustomLogDataSource
 	{
 		private const int TextBytesPerFileByte = 3; // Each byte is represented as 'XX '
@@ -68,13 +68,14 @@ namespace ExamplePlugin
 				"It reads an arbitrary file and outputs hexadecimal text\r\n" +
 				"data which is then displayed by RyLogViewer";
 			MessageBox.Show(config.MainUI.MainWindow, msg, "Custom Data Source Plugin Example");
+
 			var dlg = new OpenFileDialog{Title = "Choose a file"};
 			if (dlg.ShowDialog(config.MainUI.MainWindow) != DialogResult.OK)
 				return new LogDataSourceRunData(false);
 
 			m_source_filepath = dlg.FileName;
 
-			// Return launch data that indicates continue logging the data source
+			// Return 'LogDataSourceRunData' that indicates that logging the data source should continue
 			var res = new LogDataSourceRunData(true);
 			res.OutputFilepath = null;
 			res.AppendOutputFile = false;
@@ -85,7 +86,11 @@ namespace ExamplePlugin
 		public void Start()
 		{
 			CheckIsMainThread();
-			if (m_source_file != null) { m_source_file.Dispose(); m_source_file = null; }
+			if (m_source_file != null)
+			{
+				m_source_file.Dispose();
+				m_source_file = null;
+			}
 			m_source_file = new FileStream(m_source_filepath, FileMode.Open, FileAccess.Read, FileShare.Read|FileShare.Write);
 		}
 
@@ -102,7 +107,7 @@ namespace ExamplePlugin
 		/// <summary>
 		/// Begin an asynchronous read of the log data.
 		/// Buffer should be filled with the byte representation of the text from the
-		/// data source. (Using byte[] to be encoding independent)
+		/// data source. (Using byte[] to be text encoding independent)
 		/// 'buffer' is where read log data should be stored, beginning at 'offset',
 		/// and containing no more than 'count' bytes.
 		/// 'callback' should be called once the read is complete (unless EndRead is called first)
@@ -230,6 +235,10 @@ namespace ExamplePlugin
 		/// <summary>Checking multithreading..</summary>
 		[Conditional("DEBUG")] private void CheckIsMainThread()
 		{
+			// This debugging method serves to illustrate the thread contexts
+			// that the plugin is run in. Note that the plugin can be created
+			// on a background thread but after that will always be called on
+			// the same thread.
 			if (m_thread_id == -1)
 				m_thread_id = Thread.CurrentThread.ManagedThreadId;
 			if (m_thread_id != Thread.CurrentThread.ManagedThreadId)

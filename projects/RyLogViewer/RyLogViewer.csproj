@@ -77,12 +77,9 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="plugins\ILogDataSource.cs" />
-    <Compile Include="plugins\IMainUI.cs" />
-    <Compile Include="plugins\ITransformSubstitution.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
-      <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="src\about.cs">
@@ -267,7 +264,8 @@
       <DependentUpon>aggregate_files.htm</DependentUpon>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\gray_cross.png" />
+    <Content Include="project_howto.txt" />
+    <Content Include="Resources\meta.include.htm" />
     <None Include="docs\aggregate_files.htm">
       <Generator>HtmlExpander</Generator>
       <LastGenOutput>aggregate_files.html</LastGenOutput>
@@ -636,7 +634,7 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
@@ -661,22 +659,6 @@
     <EmbeddedResource Include="src\settings\transform_ui.resx">
       <DependentUpon>transform_ui.cs</DependentUpon>
     </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\executable.png" />
-    <None Include="Resources\edit_add.png" />
-    <None Include="Resources\edit_save.png" />
-    <None Include="Resources\edit_save_needed.png" />
-    <None Include="Resources\exchange.png" />
-    <None Include="Resources\Eyeball.png" />
-    <None Include="Resources\filter.png" />
-    <None Include="Resources\folder_with_file.png" />
-    <None Include="Resources\green_down.png" />
-    <None Include="Resources\green_up.png" />
-    <None Include="Resources\highlight.png" />
-    <None Include="Resources\important.png" />
-    <None Include="Resources\options.png" />
-    <None Include="Resources\Refresh.png" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.0,Profile=Client">
@@ -709,19 +691,12 @@
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\book.png" />
-    <None Include="Resources\quick_filter.png" />
-    <None Include="Resources\pencil.png" />
     <None Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
-    <None Include="Resources\bottom.png" />
-    <None Include="Resources\bookmark.png" />
-    <None Include="Resources\find_search.png" />
     <Content Include="examples\example logfile.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\green_tick.png" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -731,6 +706,10 @@
     <ProjectReference Include="..\..\sdk\pr\prcs\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
+    </ProjectReference>
+    <ProjectReference Include="RyLogViewer.Extensions.csproj">
+      <Project>{8aa5340a-5c36-4c9d-a6a4-b035aabd3547}</Project>
+      <Name>RyLogViewer.Extensions</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer", "RyLogViewer.csproj", "{6446F4F8-F2D3-4FA2-9CED-43F917B0B233}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -14,7 +14,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{2275
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\..\sdk\pr\prcs\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
 EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "installer", "installer\installer.vdproj", "{3753AC18-0B15-4CED-B3B6-43E05C47AC54}"
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "installer", "installer\installer.vdproj", "{9521E80D-8EB3-4F02-91D6-DF3D82A7B770}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547} = {8AA5340A-5C36-4C9D-A6A4-B035AABD3547}
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89} = {C054B079-AC66-4C7E-A201-D57E32FB4F89}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.Extensions", "RyLogViewer.Extensions.csproj", "{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1735C773-5477-45E6-9CBF-5F2B6DC707EF} = {1735C773-5477-45E6-9CBF-5F2B6DC707EF}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.ExamplePlugin", "plugins\ExamplePlugin\RyLogViewer.ExamplePlugin.csproj", "{C054B079-AC66-4C7E-A201-D57E32FB4F89}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,8 +45,18 @@ Global
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1735C773-5477-45E6-9CBF-5F2B6DC707EF}.Release|Any CPU.Build.0 = Release|Any CPU
-		{3753AC18-0B15-4CED-B3B6-43E05C47AC54}.Debug|Any CPU.ActiveCfg = Debug
-		{3753AC18-0B15-4CED-B3B6-43E05C47AC54}.Release|Any CPU.ActiveCfg = Release
+		{9521E80D-8EB3-4F02-91D6-DF3D82A7B770}.Debug|Any CPU.ActiveCfg = Debug
+		{9521E80D-8EB3-4F02-91D6-DF3D82A7B770}.Debug|Any CPU.Build.0 = Debug
+		{9521E80D-8EB3-4F02-91D6-DF3D82A7B770}.Release|Any CPU.ActiveCfg = Release
+		{9521E80D-8EB3-4F02-91D6-DF3D82A7B770}.Release|Any CPU.Build.0 = Release
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

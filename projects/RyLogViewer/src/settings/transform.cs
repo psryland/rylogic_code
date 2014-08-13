@@ -382,7 +382,6 @@ namespace RyLogViewer
 }
 
 #if PR_UNITTESTS
-
 namespace pr
 {
 	using NUnit.Framework;

@@ -1,0 +1,75 @@
+General:
+	Publishing:
+		The 'deploy.py' script in the main project should be a one-click deploy
+		producing:
+			P:\bin\rylogviewer\... uncompressed, ready for use with all docs, plugins, etc
+			P:\bin\rylogviewer.zip - zip of 'P:\bin\rylogviewer\'
+			P:\bin\RyLogViewerSetup.exe - one click installer
+
+	Folders:
+		.\art - contains art assets in paint.net format containing layers etc.
+			Used to create the *.pngs for the documentation and project resourses
+		.\docs - contains
+
+Documentation:
+	Note:
+	 Documentation is copied to the build output and is part of the release.
+	 Resources (which include png and html files as well) are built into the assembly.
+
+	- The documentation source files are *.htm and *.png files.
+	- *.htm files use a custom build tool called 'Rylogic.CustomTool.HtmlExpander'. Running the
+	   'deploy.py' script in that the HtmlExpander project folder should install the custom
+	   build tool needed to generate the *.html files from the *.htm templates.
+	- *.htm and *.include.htm files should be set to "No Build Action" and "Do Not Copy"
+	- *.html and *.png should be set to "Content" and "Copy If Newer"
+	- The output folder could contain a '.\docs\' folder with all the documentation needed.
+
+Resources:
+	Resources include: *.png, *.html files (used in ToTD, and quick ref windows)
+	- png files do not need to be included in the project\Resources\ folder, just in the Resources.resx file only.
+	- *.htm files should use the Custom Build Tool 'HtmlExpander', but not *.include.htm files.
+	- The resulting html files should be added to Resources.resx under 'Files'.
+	- If a png is used in the docs as well, edit the Resources.resx file and reference it directly from the ..\docs\ folder.
+
+HtmlExpander:
+	HtmlExpander is a compile time tool that works basically like server side includes,
+	it finds and text-replaces tokens such as:
+	   '<!--#include file=".\auto_refresh.include.htm"-->'.
+
+	- The resulting *.html files can contain template substitution fields [LikeThis]. These
+	are replaced at run time with other content (ToTD, etc). This is done by the Rylogic.dll
+	object 'TemplateReplacer'
+
+Licences:
+	- How licences work
+	- How to generate them
+
+Plugins:
+	- The interfaces
+	- The RyLogViewer.Extensions assembly
+
+
+Installer:
+	- Add the "Microsoft Visual Studio Installer Projects" extension for VS2013
+	- Open the 'installer.vdproj' in the ".\installer\" directory
+
+
+
+
+TODOs:
+	WebSite:
+		- Design a page for selling RyLogViewer
+		- Work out how to generate licence keys via the web site
+			(call C# code from php?)
+		- Add a paypal "Buy Now" button
+		- Work out how to add purchases to the MySQL db
+		- Get Check For Updates working with new site
+
+	RyLogViewer:
+		- Finish main documentation
+		- Check all ToTDs
+		- Fill in the "Free Edition" popup window
+		- Review the licence generation to include customer name and email in the key
+		- Update the 'Visit Store' menu
+		- Get automatic version update working
+		- Review bitbucket tickets

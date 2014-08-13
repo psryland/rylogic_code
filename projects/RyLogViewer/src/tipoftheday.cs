@@ -18,10 +18,10 @@ namespace RyLogViewer
 				new Tip
 				{
 					Title = "Welcome!",
-					Body  = "RyLogViewer is an application designed to make the viewing of log files or streaming " +
+					Body  = "RyLogViewer is designed to make the viewing of log files or streaming " +
 							"log data easier through the use of highlighting, filtering, and text transformations. " +
-							"However, that is just the beginning of what it can do!<br/><br/>" +
-							"Click next to explore some of the features of RyLogViewer"
+							"That is just the beginning of what RyLogViewer can do however!<br/><br/>" +
+							"Click next to explore some of the features of RyLogViewer."
 				}
 				,new Tip
 				{
@@ -73,9 +73,9 @@ namespace RyLogViewer
 				,new Tip
 				{
 					Title = "Multi-Column Data",
-					Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV) data. " +
+					Body  = "RyLogViewer can display multi-column data such as comma separated values (CSV). " +
 					        "On the general tab of the options dialog, <a href='"+Cmd.show_column_delimiter_options+"'>specify the column delimiter</a> and the number of " +
-					        "columns to display. If you need more than one column delimiter, you can always use text " +
+					        "columns to display.<br/><br/> If you need more than one column delimiter, you can always use text " +
 					        "transforms to convert the column delimiters into a single unique character sequence, and " +
 					        "then use that as the column delimiter."
 				}

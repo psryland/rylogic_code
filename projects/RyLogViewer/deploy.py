@@ -14,15 +14,20 @@ try:
 
 	Tools.CheckVersion(1)
 
+	installer_name = "RyLogViewerSetup.exe"
 	srcdir = UserVars.root + "\\projects\\rylogviewer"
 	dstdir = UserVars.root + "\\bin"
 	symdir = UserVars.root + "\\local\\symbols"
-	proj   = srcdir + "\\RylogViewer.sln"
+	sln    = srcdir + "\\RylogViewer.sln"
 	dst    = dstdir + "\\rylogviewer"
 	sym    = symdir + "\\rylogviewer"
 	config = input("Configuration (debug, release(default))? ")
 	if config == "": config = "release"
-	bindir = srcdir + "\\bin\\" + config
+
+	bindir     = srcdir + "\\bin\\" + config
+	objdir     = srcdir + "\\obj\\" + config
+	extndll    = srcdir + "\\extensionapi\\bin\\"+config+"\\RyLogViewerExtensions.dll"
+	exampledir = srcdir + "\\plugins\\exampleplugin"
 
 	input(
 		" Deploy Settings:\n"
@@ -30,13 +35,6 @@ try:
 		"    Destination: " + dst + "\n"
 		"  Configuration: " + config + "\n"
 		"Press enter to continue")
-
-	confirm = input(
-		"Is there an 'Upgrade Path' in the setup project and have you changed the Product GUID and version?\n"
-		"This is needed so that the new installer will replace the existing installation if there.\n"
-		"(y/n):")
-	if confirm != "y":
-		RylogicEnv.OnError()
 
 	#Build the docs
 	def ExportDirectory(dir):
@@ -50,10 +48,17 @@ try:
 	ExportDirectory(srcdir + r"\Resources")
 
 	#Invoke MSBuild
+	projects = [
+		"RyLogViewer",
+		"RyLogViewerExtensions",
+		"ExamplePlugin",
+		]
+	projs = ";".join(projects)
+	platform = "Any CPU"
 	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:RyLogViewer:Rebuild", "/p:Configuration="+config])
+	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
 
-	#Ensure directories exist and are empty
+	#Ensure output directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
 	if os.path.exists(sym): shutil.rmtree(sym)
 	os.makedirs(dst)
@@ -61,13 +66,15 @@ try:
 
 	#Copy build products to dst
 	print("Copying files to " + dst)
-	Tools.Copy(bindir + "\\rylogviewer.exe", dst + "\\rylogviewer.exe")
-	Tools.Copy(bindir + "\\rylogviewer.pdb", sym + "\\rylogviewer.pdb")
-	Tools.Copy(bindir + "\\rylogic.dll"    , dst + "\\rylogic.dll"  )
-	Tools.Copy(bindir + "\\rylogic.pdb"    , sym + "\\rylogic.pdb"  )
-	Tools.Copy(bindir + "\\docs"           , dst + "\\docs")
-	Tools.Copy(bindir + "\\examples"       , dst + "\\examples")
-	Tools.Copy(bindir + "\\plugins"        , dst + "\\plugins")
+	Tools.Copy(bindir + "\\rylogviewer.exe" , dst + "\\rylogviewer.exe")
+	Tools.Copy(bindir + "\\rylogviewer.pdb" , sym + "\\rylogviewer.pdb")
+	Tools.Copy(bindir + "\\rylogic.dll"     , dst + "\\rylogic.dll"  )
+	Tools.Copy(bindir + "\\rylogic.pdb"     , sym + "\\rylogic.pdb"  )
+	Tools.Copy(bindir + "\\docs"            , dst + "\\docs")
+	Tools.Copy(bindir + "\\examples"        , dst + "\\examples")
+	Tools.Copy(bindir + "\\plugins"         , dst + "\\plugins")
+	Tools.Copy(extndll                      , dst + "\\plugins")
+	Tools.Copy(
 
 	#Create a zip of the dstdir
 	dstzip = dst + ".zip"
@@ -75,11 +82,17 @@ try:
 	if os.path.exists(dstzip): os.unlink(dstzip)
 	Tools.Exec([UserVars.ziptool, "a", dstzip, dst])
 
+	#Build the installer
+	Tools.Exec([UserVars.devenv, srcdir+"\\installer\\installer.vdproj", "/Build"])
+
 	#Copy the installer to the web site
-	installer = srcdir + r"\setup\setup\express\singleimage\diskimages\disk1\setup.exe"
+	installer = objdir + r"\setup.exe"
 	if os.path.exists(installer):
 		print("Copying RylogViewerSetup.exe to www...")
-		Tools.Copy(installer, UserVars.wwwroot + r"\data\RylogViewerSetup.exe")
+		Tools.Copy(installer, dstdir + "\\" + RyLogViewerSetup.exe)
+		Tools.Copy(installer, UserVars.wwwroot + "\\data\\" + installer_name)
+	else:
+		print("No installer produced")
 
 	Tools.OnSuccess()
 

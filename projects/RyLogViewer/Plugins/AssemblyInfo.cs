@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("TransformSubstituions")]
+[assembly: AssemblyTitle("RyLogViewer.Extensions")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("TransformSubstituions")]
+[assembly: AssemblyProduct("RyLogViewer.Extensions")]
 [assembly: AssemblyCopyright("Copyright ©  2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("72f32f77-b086-47d2-a9f6-d03daadd70d0")]
+[assembly: Guid("27601272-7876-40a8-b73d-d29ec1f09541")]
 
 // Version information for an assembly consists of the following four values:
 //

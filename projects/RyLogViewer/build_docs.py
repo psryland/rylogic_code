@@ -8,7 +8,7 @@ import UserVars
 print(
 	"*************************************************************************\n"
 	"  RyLogViewer Documentation\n"
-	"   Copyright © Rylogic Limited 2012\n"
+	"   Copyright (c) Rylogic Limited 2012\n"
 	"*************************************************************************")
 
 Tools.CheckVersion(1)
