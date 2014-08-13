@@ -1,0 +1,11 @@
+﻿<Window x:Class="TestWPF.View3dUI"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:pr="clr-namespace:pr.gui;assembly=Rylogic"
+        Title="view3d_ui" Height="415" Width="543">
+	<Grid>
+		<WindowsFormsHost>
+			<pr:View3dControl x:Name="m_view3d" />
+		</WindowsFormsHost>
+	</Grid>
+</Window>

@@ -49,17 +49,17 @@ namespace pr.util
 				if (m_no_title == false && title.Length == 0)
 					return true;
 
-				m_wnds.Add(new Window(title.ToString(), hwnd, module.ToString()));
+				m_wnds.Add(new CWindow(title.ToString(), hwnd, module.ToString()));
 				return true;
 			};
 			EnumWindows(ewp, 0);
 		}
 
 		// Find all windows with a given name (or partial name)
-		public static List<Window> GetWindowsByName(string name) { return GetWindowsByName(name, false); }
-		public static List<Window> GetWindowsByName(string name, bool partial)
+		public static List<CWindow> GetWindowsByName(string name) { return GetWindowsByName(name, false); }
+		public static List<CWindow> GetWindowsByName(string name, bool partial)
 		{
-			List<Window> wnd = new List<Window>();
+			List<CWindow> wnd = new List<CWindow>();
 			EnumWindowsProc ewp = delegate(HWND hwnd, int lParam)
 			{
 				StringBuilder title = new StringBuilder(256);
@@ -72,29 +72,30 @@ namespace pr.util
 				if (!match)
 					return true;
 				
-				wnd.Add(new Window(wnd_title, hwnd, module.ToString()));
+				wnd.Add(new CWindow(wnd_title, hwnd, module.ToString()));
 				return true;
 			};
 			EnumWindows(ewp, 0);
 			return wnd;
 		}
-        
+
 		// IEnumerable implementation
 		public IEnumerator GetEnumerator()	{ return this; }
 		public object Current				{ get { return m_wnds[m_position]; } }
 		public void Reset()					{ m_position = -1; }
 		public bool MoveNext()				{ ++m_position; return m_position < m_wnds.Count; }
 	}
-	
-	// Represents another window
-	public class Window
-	{
-		private readonly HWND		m_hwnd;
-		private readonly string		m_title;
-		private readonly string		m_process;
-		private bool				m_visible = true;
 
-		public Window(HWND hwnd)
+	// Represents another window
+	// Wraps an HWND. No using 'Window' as it conflicts with 'System.Windows.Window'
+	public class CWindow
+	{
+		private readonly HWND m_hwnd;
+		private readonly string m_title;
+		private readonly string m_process;
+		private bool m_visible = true;
+
+		public CWindow(HWND hwnd)
 		{
 			StringBuilder title = new StringBuilder(256);
 			StringBuilder module = new StringBuilder(256);
@@ -103,16 +104,16 @@ namespace pr.util
 			m_title = title.ToString();
 			m_process = module.ToString();
 		}
-		public Window(string title, HWND hwnd, string process)
+		public CWindow(string title, HWND hwnd, string process)
 		{
 			m_title = title;
 			m_hwnd = hwnd;
 			m_process = process;
 		}
 
-		public HWND hwnd		{ get { return m_hwnd; } }
-		public string Title		{ get { return m_title; } }
-		public string Process	{ get { return m_process; } }
+		public HWND hwnd { get { return m_hwnd; } }
+		public string Title { get { return m_title; } }
+		public string Process { get { return m_process; } }
 
 		// Send a message to this window
 		public int SendMessage(uint msg, int wparam, int lparam)
@@ -154,9 +155,9 @@ namespace pr.util
 			IntPtr thread_id1 = Win32.GetWindowThreadProcessId(m_hwnd, ref proc_id);
 			if (thread_id0 != thread_id1)
 			{
-				Win32.AttachThreadInput(thread_id0, thread_id1,1);
+				Win32.AttachThreadInput(thread_id0, thread_id1, 1);
 				Win32.SetForegroundWindow(m_hwnd);
-				Win32.AttachThreadInput(thread_id0, thread_id1,0);
+				Win32.AttachThreadInput(thread_id0, thread_id1, 0);
 			}
 			else
 			{

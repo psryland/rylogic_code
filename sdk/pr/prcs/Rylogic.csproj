@@ -76,6 +76,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="nunit.framework">
       <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework">
@@ -97,7 +98,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="attrib\string_attr.cs" />
+    <Compile Include="attrib\desc_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
     <Compile Include="common\iterator.cs" />

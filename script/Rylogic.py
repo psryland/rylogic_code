@@ -194,7 +194,7 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
 	except Exception:
-		pass
+		print("Run as Admin failed")
 	sys.exit(0)
 
 # Touch a file to change it's timestamp

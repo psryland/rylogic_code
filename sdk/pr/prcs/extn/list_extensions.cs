@@ -77,6 +77,28 @@ namespace pr.extn
 			return true;
 		}
 
+		/// <summary>
+		/// Add 'item' to the list if 'replace' does not match any elements.
+		/// Returns true if 'item' was added, false if it replaced an element.</summary>
+		public static bool AddOrReplace<T>(this IList<T> list, T item, Func<T,T,bool> replace, out T replaced)
+		{
+			for (int i = 0; i != list.Count; ++i)
+			{
+				if (!replace(list[i], item)) continue;
+				replaced = list[i];
+				list[i] = item;
+				return false;
+			}
+			replaced = default(T);
+			list.Add(item);
+			return true;
+		}
+		public static bool AddOrReplace<T>(this IList<T> list, T item, Func<T,T,bool> replace)
+		{
+			T replaced;
+			return AddOrReplace(list, item, replace, out replaced);
+		}
+
 		/// <summary>Add a range of elements to the list</summary>
 		public static IList<T> AddRange<T>(this IList<T> list, IEnumerable<T> items)
 		{

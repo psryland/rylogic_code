@@ -39,6 +39,12 @@ namespace pr.util
 	/// <summary>Utility function container</summary>
 	public static class Util
 	{
+		#if DEBUG
+		public const bool IsDebug = true;
+		#else
+		public const bool IsDebug = false;
+		#endif
+
 		/// <summary>Convenience disposer</summary>
 		[DebuggerStepThrough] public static void Dispose<T>(ref T doomed) where T:class, IDisposable
 		{

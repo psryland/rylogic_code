@@ -1,0 +1,19 @@
+﻿<Window x:Class="TestWPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="350" Width="525">
+	<Grid>
+		<Menu HorizontalAlignment="Left" VerticalAlignment="Top" Width="517">
+			<MenuItem Name="m_menu_file" Header="_File">
+				<MenuItem Name="m_menu_file_open" Header="_Open" HorizontalAlignment="Left" Width="140"/>
+				<Separator/>
+				<MenuItem Name="m_menu_file_close" Header="_Close" HorizontalAlignment="Left" Width="140"/>
+			</MenuItem>
+			<MenuItem Header="_Tests">
+				<MenuItem Name="m_menu_tests_diagram" Header="_Diagram" HorizontalAlignment="Left" Width="140"/>
+				<MenuItem Name="m_menu_tests_view3d" Header="_View3D" HorizontalAlignment="Left" Width="140"/>
+			</MenuItem>
+		</Menu>
+
+	</Grid>
+</Window>

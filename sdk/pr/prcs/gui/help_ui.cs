@@ -88,7 +88,12 @@ namespace pr.gui
 			m_html.CanGoBackChanged    += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
 			m_html.Navigated           += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
 			m_html.Navigating          += (s,a) => m_url = a.Url;
-
+			m_html.PreviewKeyDown      += (s,a) =>
+				{
+					// Blocks Refresh which causes rendered html to vanish
+					if (a.KeyCode == Keys.F5)
+						a.IsInputKey = true;
+				};
 			m_lbl_status.Visible = false;
 			m_lbl_status.Text = m_html.StatusText;
 

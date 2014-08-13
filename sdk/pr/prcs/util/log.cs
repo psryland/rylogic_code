@@ -35,7 +35,6 @@ namespace pr.util
 		{
 			private class LogFile
 			{
-				public string Filepath;
 				public LogFile(string fname, bool reset)
 				{
 					Filepath = string.IsNullOrEmpty(fname) ? null : fname;
@@ -48,6 +47,12 @@ namespace pr.util
 					using (StreamWriter f = new StreamWriter(File.Open(Filepath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite)))
 						f.Write(str);
 				}
+				public string Filepath
+				{
+					get { return m_filepath; }
+					set { m_filepath = value; }
+				}
+				private string m_filepath;
 			}
 
 			/// <summary>Sync object</summary>

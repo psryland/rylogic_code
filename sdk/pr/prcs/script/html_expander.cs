@@ -27,6 +27,8 @@ namespace pr.script
 			//   'filepath' can be relative to directory of the template file, or a fullpath
 			// <!--#value name="count"-->
 			//   Substitute a previously defined variable called 'count'
+			// <!--#image file="filepath"-->
+			//   Substitute a base64 image file 'filepath'
 
 			var variables = new Dictionary<string,string>();
 
@@ -53,11 +55,12 @@ namespace pr.script
 							// Read the include filepath and check it exists
 							m = Regex.Match(kv, @".*file=""(?<file>.*?)"".*");
 							if (!m.Success) throw new Exception(string.Format("Invalid include: '{0}'.\nCould not match 'file' field.\nExpected form: {1}",match.ToString(), expected_form));
-							var filepath = m.Result("${file}");
-							filepath = Path.IsPathRooted(filepath) ? filepath : Path.Combine(current_dir, filepath);
-							if (!File.Exists(filepath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", filepath), filepath);
+							var fpath = m.Result("${file}");
 
-							tr.PushSource(new IndentSrc(new FileSrc(filepath), indent, true));
+							fpath = Path.IsPathRooted(fpath) ? fpath : Path.Combine(current_dir, fpath);
+							if (!File.Exists(fpath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", fpath), fpath);
+
+							tr.PushSource(new IndentSrc(new FileSrc(fpath), indent, true));
 							return string.Empty;
 						}
 						#endregion
@@ -111,6 +114,34 @@ namespace pr.script
 							string value;
 							if (!variables.TryGetValue(name, out value)) throw new Exception(string.Format("Invalid value declaration: '{0}'.\nVariable with 'name' {2} is not defined.\nExpected form: {1}", match.ToString(), expected_form, name));
 							return indent + value;
+						}
+						#endregion
+					case "image":
+						#region image
+						{
+							const string expected_form = "<!--#image file=\"filepath\"-->";
+
+							// Read the filename
+							m = Regex.Match(kv, @".*file=""(?<file>.*?)"".*");
+							if (!m.Success) throw new Exception(string.Format("Invalid image declaration: '{0}'.\nCould not match 'file' field.\nExpected form: {1}", match.ToString(), expected_form));
+							var fpath = m.Result("${file}");
+
+							fpath = Path.IsPathRooted(fpath) ? fpath : Path.Combine(current_dir, fpath);
+							if (!File.Exists(fpath)) throw new FileNotFoundException(string.Format("File reference not found: {0}", fpath), fpath);
+
+							// Determine the image type
+							var extn = (Path.GetExtension(fpath) ?? string.Empty).ToLowerInvariant();
+							if (string.IsNullOrEmpty(extn)) throw new Exception(string.Format("Could not determine image file format from path '{0}'", fpath));
+							
+							// Read the image file
+							var img = File.ReadAllBytes(fpath);
+							switch (extn)
+							{
+							default: throw new Exception(string.Format("Unsupported image format: {0}", extn));
+							case ".png": return string.Format("data:image/png;base64,{0}", Convert.ToBase64String(img));
+							case ".jpg": return string.Format("data:image/jpg;base64,{0}", Convert.ToBase64String(img));
+							}
+							
 						}
 						#endregion
 					}

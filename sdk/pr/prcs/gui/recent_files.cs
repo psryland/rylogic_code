@@ -34,13 +34,8 @@ namespace pr.gui
 		private ToolStripMenuItem m_menu = null;
 		private OnClickHandler m_on_click = null;
 
-		/// <summary>Raised whenever a file is added to the recent files list</summary>
-		public event EventHandler FileAdded;
-
-		/// <summary>
-		/// An event raised when the 'clear recent files' option is selected.
-		/// This event gives the caller the opportunity to cancel the clear</summary>
-		public event EventHandler<CancelEventArgs> ClearRecentFilesListEvent;
+		/// <summary>Raised whenever the recent file list changes</summary>
+		public event EventHandler RecentListChanged;
 
 		/// <summary>The signature of the click handler for a menu item</summary>
 		public delegate void OnClickHandler(string file);
@@ -94,7 +89,7 @@ namespace pr.gui
 			m_files.Insert(0, file);
 			if (m_files.Count > MaxCount) m_files.RemoveAt(m_files.Count - 1);
 			if (update_menu) UpdateMenu();
-			FileAdded.Raise(this, EventArgs.Empty);
+			RecentListChanged.Raise(this, EventArgs.Empty);
 		}
 		public void Add(string file)
 		{
@@ -137,9 +132,8 @@ namespace pr.gui
 				{
 					var menu = (ToolStripMenuItem)s;
 					((ToolStripDropDown)menu.GetCurrentParent()).Close();
-					var args = new CancelEventArgs();
-					ClearRecentFilesListEvent.Raise(this, args);
-					if (!args.Cancel) Clear();
+					Clear();
+					RecentListChanged.Raise(this, EventArgs.Empty);
 				};
 			m_menu.DropDownItems.Add(clear_all);
 		}

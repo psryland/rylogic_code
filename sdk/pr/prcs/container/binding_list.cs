@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Runtime.Serialization;
 using System.Text;
 using pr.extn;
@@ -20,7 +21,13 @@ namespace pr.container
 		{
 			Init();
 		}
-		public BindingListEx(uint initial_count, T value)
+		public BindingListEx(int initial_count, Func<int,T> gen)
+		{
+			Init();
+			for (int i = 0; initial_count-- != 0;)
+				Add(gen(i++));
+		}
+		public BindingListEx(int initial_count, T value = default(T))
 		{
 			Init();
 			for (;initial_count-- != 0;)
@@ -208,3 +215,31 @@ namespace pr.container
 		}
 	}
 }
+
+
+#if PR_UNITTESTS
+namespace pr
+{
+	using System.Collections.Generic;
+	using System.Linq;
+	using NUnit.Framework;
+	using container;
+
+	[TestFixture] public static partial class UnitTests
+	{
+		internal static class TestBindingListEx
+		{
+			[Test] public static void BindingList()
+			{
+				var a0 = new BindingListEx<double>(5, i => 2.0);
+				var a1 = new BindingListEx<double>(5, i =>
+					{
+						return i + 1.0;
+					});
+				Assert.IsTrue(a0.SequenceEqual(new[]{2.0, 2.0, 2.0, 2.0, 2.0}));
+				Assert.IsTrue(a1.SequenceEqual(new[]{1.0, 2.0, 3.0, 4.0, 5.0}));
+			}
+		}
+	}
+}
+#endif

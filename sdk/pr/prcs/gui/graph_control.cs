@@ -55,24 +55,43 @@ namespace pr.gui
 		{
 			public class RdrOpts
 			{
-				public enum PlotType { Point, Line, Bar }
-				public enum PlotZeros { Draw, Hide, Skip }
-				public bool      m_visible          = true;
-				public bool      m_draw_data        = true;
-				public PlotZeros m_draw_zeros       = PlotZeros.Draw;
-				public bool      m_draw_error_bars  = true;
-				public PlotType  m_plot_type        = PlotType.Line;
-				public Color     m_point_colour     = Color.FromArgb(0xff, 0x80, 0, 0);
-				public float     m_point_size       = 5f;
-				public Color     m_line_colour      = Color.FromArgb(0xff, 0, 0, 0);
-				public float     m_line_width       = 1f;
-				public Color     m_bar_colour       = Color.FromArgb(0xff, 0x80, 0, 0);
-				public float     m_bar_width        = 0.8f;
-				public Color     m_error_bar_colour = Color.FromArgb(0x80, 0xff, 0, 0);
-				public bool      m_draw_moving_avr  = false;
-				public int       m_ma_window_size   = 10;
-				public Color     m_ma_line_colour   = Color.FromArgb(0xff, 0, 0, 0xFF);
-				public float     m_ma_line_width    = 3f;
+				public enum EPlotType { Point, Line, Bar }
+				public enum EPlotZeros { Draw, Hide, Skip }
+				public bool       Visible        { get; set; }
+				public bool       DrawData       { get; set; }
+				public EPlotZeros DrawZeros      { get; set; }
+				public bool       DrawErrorBars  { get; set; }
+				public EPlotType  PlotType       { get; set; }
+				public Color      PointColour    { get; set; }
+				public float      PointSize      { get; set; }
+				public Color      LineColour     { get; set; }
+				public float      LineWidth      { get; set; }
+				public Color      BarColour      { get; set; }
+				public float      BarWidth       { get; set; }
+				public Color      ErrorBarColour { get; set; }
+				public bool       DrawMovingAvr  { get; set; }
+				public int        MAWindowSize   { get; set; }
+				public Color      MALineColour   { get; set; }
+				public float      MALineWidth    { get; set; }
+				public RdrOpts()
+				{
+					Visible        = true;
+					DrawData       = true;
+					DrawZeros      = EPlotZeros.Draw;
+					DrawErrorBars  = true;
+					PlotType       = EPlotType.Line;
+					PointColour    = Color.FromArgb(0xff, 0x80, 0, 0);
+					PointSize      = 5f;
+					LineColour     = Color.FromArgb(0xff, 0, 0, 0);
+					LineWidth      = 1f;
+					BarColour      = Color.FromArgb(0xff, 0x80, 0, 0);
+					BarWidth       = 0.8f;
+					ErrorBarColour = Color.FromArgb(0x80, 0xff, 0, 0);
+					DrawMovingAvr  = false;
+					MAWindowSize   = 10;
+					MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
+					MALineWidth    = 3f;
+				}
 				public RdrOpts Clone() { return (RdrOpts)MemberwiseClone(); }
 			}
 			private readonly List<GraphValue> m_values = new List<GraphValue>();
@@ -114,12 +133,21 @@ namespace pr.gui
 			/// <summary>Options related to rendering this axis</summary>
 			public class RdrOpts
 			{
-				public Font m_label_font    = new Font("tahoma", 10, FontStyle.Regular);
-				public Font m_tick_font     = new Font("tahoma", 8, FontStyle.Regular);
-				public Color m_axis_colour  = Color.Black;   // The colour of the main axes
-				public Color m_label_colour = Color.Black;   // The colour of the label text
-				public Color m_tick_colour  = Color.Black;   // The colour of the tick text
-				public int m_tick_length    = 5;             // The length of the tick marks
+				public Font   LabelFont   { get; set; }
+				public Font   TickFont    { get; set; }
+				public Color  AxisColour  { get; set; } // The colour of the main axes
+				public Color  LabelColour { get; set; } // The colour of the label text
+				public Color  TickColour  { get; set; } // The colour of the tick text
+				public int    TickLength  { get; set; } // The length of the tick marks
+				public RdrOpts()
+				{
+					LabelFont   = new Font("tahoma", 10, FontStyle.Regular);
+					TickFont    = new Font("tahoma", 8, FontStyle.Regular);
+					AxisColour  = Color.Black;   // The colour of the main axes
+					LabelColour = Color.Black;   // The colour of the label text
+					TickColour  = Color.Black;   // The colour of the tick text
+					TickLength  = 5;             // The length of the tick marks
+				}
 				public RdrOpts Clone()      { return (RdrOpts)MemberwiseClone(); }
 			}
 			private string           m_label;         // A label for the axis
@@ -188,18 +216,32 @@ namespace pr.gui
 		public class RdrOptions
 		{
 			// Colours for graph elements
-			public Color m_bg_colour      = Color.WhiteSmoke;               // The fill colour of the background of the graph
-			public Color m_title_colour   = Color.Black;                    // The colour of the title text
-			public Color m_grid_colour    = Color.FromArgb(230, 230, 230);  // The colour of the grid lines
+			public Color BkColour     { get; set; } // The fill colour of the background of the graph
+			public Color TitleColour  { get; set; } // The colour of the title text
+			public Color GridColour   { get; set; } // The colour of the grid lines
 
 			// Graph margins and constants
-			public float m_left_margin    = 0.01f; // Fractional distance from the left edge to the graph region
-			public float m_right_margin   = 0.01f;
-			public float m_top_margin     = 0.01f;
-			public float m_bottom_margin  = 0.01f;
-			public float m_title_top      = 0.01f;          // Fractional distance  down from the top of the client area to the top of the title text
-			public Font  m_title_font     = new Font("tahoma", 12, FontStyle.Bold);    // Font to use for the title text
-			public Font  m_note_font      = new Font("tahoma",  8, FontStyle.Regular); // Font to use for graph notes
+			public float LeftMargin   { get; set; } // Fractional distance from the left edge to the graph region
+			public float RightMargin  { get; set; }
+			public float TopMargin    { get; set; }
+			public float BottomMargin { get; set; }
+			public float TitleTop     { get; set; } // Fractional distance  down from the top of the client area to the top of the title text
+			public Font  TitleFont    { get; set; } // Font to use for the title text
+			public Font  NoteFont     { get; set; } // Font to use for graph notes
+
+			public RdrOptions()
+			{
+				BkColour      = Color.WhiteSmoke;               // The fill colour of the background of the graph
+				TitleColour   = Color.Black;                    // The colour of the title text
+				GridColour    = Color.FromArgb(230, 230, 230);  // The colour of the grid lines
+				LeftMargin    = 0.01f; // Fractional distance from the left edge to the graph region
+				RightMargin   = 0.01f;
+				TopMargin     = 0.01f;
+				BottomMargin  = 0.01f;
+				TitleTop      = 0.01f;          // Fractional distance  down from the top of the client area to the top of the title text
+				TitleFont     = new Font("tahoma", 12, FontStyle.Bold);    // Font to use for the title text
+				NoteFont      = new Font("tahoma",  8, FontStyle.Regular); // Font to use for graph notes
+			}
 			public RdrOptions Clone() { return (RdrOptions)MemberwiseClone(); }
 		}
 
@@ -262,10 +304,10 @@ namespace pr.gui
 
 		// Constructors
 		public GraphControl()
-		:this("", new Axis.Range(), new Axis.Range(), new Axis(), new Axis(), new RdrOptions(), new List<Series>())
+			:this("", new Axis.Range(), new Axis.Range(), new Axis(), new Axis(), new RdrOptions(), new List<Series>())
 		{}
 		public GraphControl(GraphControl src)
-		:this(src.Title, src.m_base_xrange, src.m_base_yrange, new Axis(src.m_xaxis), new Axis(src.m_yaxis), src.m_rdr_options.Clone(), new List<Series>(src.m_data))
+			:this(src.Title, src.m_base_xrange, src.m_base_yrange, new Axis(src.m_xaxis), new Axis(src.m_yaxis), src.m_rdr_options.Clone(), new List<Series>(src.m_data))
 		{
 			AddOverlaysOnRender = src.AddOverlaysOnRender;
 			AddOverlaysOnPaint = src.AddOverlaysOnPaint;
@@ -454,19 +496,19 @@ namespace pr.gui
 		/// <summary>Get the rectangular area of the graph for a given client area size.</summary>
 		public Rectangle GraphRegion(Size size)
 		{
-			var marginL = (int)(size.Width  * RenderOptions.m_left_margin  );
-			var marginT = (int)(size.Height * RenderOptions.m_top_margin   );
-			var marginR = (int)(size.Width  * RenderOptions.m_right_margin );
-			var marginB = (int)(size.Height * RenderOptions.m_bottom_margin);
+			var marginL = (int)(size.Width  * RenderOptions.LeftMargin  );
+			var marginT = (int)(size.Height * RenderOptions.TopMargin   );
+			var marginR = (int)(size.Width  * RenderOptions.RightMargin );
+			var marginB = (int)(size.Height * RenderOptions.BottomMargin);
 
-			if (m_title.Length != 0)       { marginT += TextRenderer.MeasureText(m_title      ,       RenderOptions.m_title_font).Height; }
-			if (m_yaxis.Label.Length != 0) { marginL += TextRenderer.MeasureText(m_yaxis.Label, YAxis.RenderOptions.m_label_font).Height; }
-			if (m_xaxis.Label.Length != 0) { marginB += TextRenderer.MeasureText(m_xaxis.Label, XAxis.RenderOptions.m_label_font).Height; }
+			if (m_title.Length != 0)       { marginT += TextRenderer.MeasureText(m_title      ,       RenderOptions.TitleFont).Height; }
+			if (m_yaxis.Label.Length != 0) { marginL += TextRenderer.MeasureText(m_yaxis.Label, YAxis.RenderOptions.LabelFont).Height; }
+			if (m_xaxis.Label.Length != 0) { marginB += TextRenderer.MeasureText(m_xaxis.Label, XAxis.RenderOptions.LabelFont).Height; }
 
-			var sx = TextRenderer.MeasureText(YAxis.TickText(AestheticTickValue(9999999.9)), YAxis.RenderOptions.m_tick_font);
-			var sy = TextRenderer.MeasureText(XAxis.TickText(AestheticTickValue(9999999.9)), XAxis.RenderOptions.m_tick_font);
-			marginL += YAxis.RenderOptions.m_tick_length + sx.Width;
-			marginB += XAxis.RenderOptions.m_tick_length + sy.Height;
+			var sx = TextRenderer.MeasureText(YAxis.TickText(AestheticTickValue(9999999.9)), YAxis.RenderOptions.TickFont);
+			var sy = TextRenderer.MeasureText(XAxis.TickText(AestheticTickValue(9999999.9)), XAxis.RenderOptions.TickFont);
+			marginL += YAxis.RenderOptions.TickLength + sx.Width;
+			marginB += XAxis.RenderOptions.TickLength + sy.Height;
 
 			var x      = Math.Max(0, marginL);
 			var y      = Math.Max(0, marginT);
@@ -539,7 +581,7 @@ namespace pr.gui
 			var yrange = new Axis.Range(double.MaxValue, -double.MaxValue, 1.0);
 			foreach (var series in m_data)
 			{
-				if (!series.RenderOptions.m_visible) continue;
+				if (!series.RenderOptions.Visible) continue;
 				foreach (var gv in series.Values)
 				{
 					// note: series.Sorted doesn't help because we
@@ -695,10 +737,10 @@ namespace pr.gui
 
 				// Add a note to indicate the graph is still rendering
 				const string rdring_msg = "rendering...";
-				var text_size = gfx.MeasureString(rdring_msg, m_rdr_options.m_title_font);
+				var text_size = gfx.MeasureString(rdring_msg, m_rdr_options.TitleFont);
 				Brush brush = new SolidBrush(Color.FromArgb(0x80, Color.Black));
 				var pt = new PointF(region.X + (region.Width - text_size.Width)*0.5f, region.Y + (region.Height - text_size.Height)*0.5f);
-				gfx.DrawString(rdring_msg, m_rdr_options.m_title_font, brush, pt);
+				gfx.DrawString(rdring_msg, m_rdr_options.TitleFont, brush, pt);
 
 				// Spawn a thread to render the graph into 'm_tmp_bm'
 				ThreadPool.QueueUserWorkItem(rdr_id =>
@@ -738,7 +780,7 @@ namespace pr.gui
 				gfx.Transform = data_xfrm;
 				foreach (var s in m_data)
 				{
-					if (s.RenderOptions.m_visible)
+					if (s.RenderOptions.Visible)
 						RenderData(s, gfx, scale_x, scale_y, cancel_pending);
 
 					if (cancel_pending()) break;
@@ -755,7 +797,7 @@ namespace pr.gui
 				// Add notes to the graph
 				foreach (var note in m_notes)
 				{
-					gfx.DrawString(note.m_msg, m_rdr_options.m_note_font, new SolidBrush(note.m_colour), new PointF(note.m_loc.X*scale_x, note.m_loc.Y*scale_y));
+					gfx.DrawString(note.m_msg, m_rdr_options.NoteFont, new SolidBrush(note.m_colour), new PointF(note.m_loc.X*scale_x, note.m_loc.Y*scale_y));
 					if (cancel_pending()) break;
 				}
 
@@ -766,7 +808,7 @@ namespace pr.gui
 			{
 				// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
 				gfx.Transform = text_xfrm;
-				gfx.DrawString("Rendering error occured: "+ex.Message, m_rdr_options.m_title_font, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
+				gfx.DrawString("Rendering error occured: "+ex.Message, m_rdr_options.TitleFont, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
 			}
 			return cancel_pending();
 		}
@@ -784,37 +826,37 @@ namespace pr.gui
 			gfx.Clear(Color.FromArgb(0xff, BackColor));
 
 			// Draw the graph background
-			gfx.FillRectangle(new SolidBrush(m_rdr_options.m_bg_colour), region);
+			gfx.FillRectangle(new SolidBrush(m_rdr_options.BkColour), region);
 
 			// Draw the graph title and labels
 			if( m_title.Length != 0 )
 			{
-				var text_size = gfx.MeasureString(m_title, m_rdr_options.m_title_font);
+				var text_size = gfx.MeasureString(m_title, m_rdr_options.TitleFont);
 				var textX = (size.Width - text_size.Width) * 0.5f;
-				gfx.DrawString(m_title, m_rdr_options.m_title_font, new SolidBrush(m_rdr_options.m_title_colour), textX, m_rdr_options.m_title_top);
+				gfx.DrawString(m_title, m_rdr_options.TitleFont, new SolidBrush(m_rdr_options.TitleColour), textX, m_rdr_options.TitleTop);
 			}
 			if( m_xaxis.Label.Length != 0 )
 			{
-				var text_size = gfx.MeasureString(m_xaxis.Label, m_xaxis.RenderOptions.m_label_font);
+				var text_size = gfx.MeasureString(m_xaxis.Label, m_xaxis.RenderOptions.LabelFont);
 				var textX = (size.Width - text_size.Width) * 0.5f;
-				gfx.DrawString(m_xaxis.Label, m_xaxis.RenderOptions.m_label_font, new SolidBrush(m_xaxis.RenderOptions.m_label_colour), textX, size.Height - text_size.Height);
+				gfx.DrawString(m_xaxis.Label, m_xaxis.RenderOptions.LabelFont, new SolidBrush(m_xaxis.RenderOptions.LabelColour), textX, size.Height - text_size.Height);
 			}
 			if( m_yaxis.Label.Length != 0 )
 			{
 				gfx.RotateTransform(-90);
-				var text_size = gfx.MeasureString(m_yaxis.Label, m_yaxis.RenderOptions.m_label_font);
+				var text_size = gfx.MeasureString(m_yaxis.Label, m_yaxis.RenderOptions.LabelFont);
 				var textX = (size.Height + text_size.Width) * 0.5f;
-				gfx.DrawString(m_yaxis.Label, m_yaxis.RenderOptions.m_label_font, new SolidBrush(m_yaxis.RenderOptions.m_label_colour), -textX, 0);
+				gfx.DrawString(m_yaxis.Label, m_yaxis.RenderOptions.LabelFont, new SolidBrush(m_yaxis.RenderOptions.LabelColour), -textX, 0);
 				gfx.RotateTransform(90);
 			}
 
-			var grid_line_pen = new Pen(m_rdr_options.m_grid_colour);
+			var grid_line_pen = new Pen(m_rdr_options.GridColour);
 
 			// Draw the x axis
 			{
 				var  axis       = m_xaxis;
-				var	  axis_pen   = new Pen(axis.RenderOptions.m_axis_colour);
-				Brush text_brush = new SolidBrush(axis.RenderOptions.m_tick_colour);
+				var	  axis_pen   = new Pen(axis.RenderOptions.AxisColour);
+				Brush text_brush = new SolidBrush(axis.RenderOptions.TickColour);
 				var x         = (axis.Min - Math.IEEERemainder(axis.Min, axis.Step)) - axis.Min;  if (x < 0.0) {x += axis.Step;}
 				double xmax      = axis.Span * 1.0001f;
 				double xstep     = axis.Step;
@@ -833,13 +875,13 @@ namespace pr.gui
 					gfx.DrawLine(grid_line_pen, X, region.Top, X, region.Bottom);
 
 					// Draw the tick
-					gfx.DrawLine(axis_pen, X, region.Bottom, X, region.Bottom + axis.RenderOptions.m_tick_length);
+					gfx.DrawLine(axis_pen, X, region.Bottom, X, region.Bottom + axis.RenderOptions.TickLength);
 
 					// Draw the text
 					var text = axis.TickText(AestheticTickValue(x + axis.Min));
-					var text_size = gfx.MeasureString(text, axis.RenderOptions.m_tick_font);
-					float textY	= region.Bottom + axis.RenderOptions.m_tick_length;
-					gfx.DrawString(text, axis.RenderOptions.m_tick_font, text_brush, X - text_size.Width*0.5f, textY);
+					var text_size = gfx.MeasureString(text, axis.RenderOptions.TickFont);
+					float textY	= region.Bottom + axis.RenderOptions.TickLength;
+					gfx.DrawString(text, axis.RenderOptions.TickFont, text_brush, X - text_size.Width*0.5f, textY);
 				}
 				gfx.DrawLine(axis_pen, region.Left , region.Top, region.Left , region.Bottom);
 				gfx.DrawLine(axis_pen, region.Right, region.Top, region.Right, region.Bottom);
@@ -848,8 +890,8 @@ namespace pr.gui
 			// Draw the y axis
 			{
 				var axis        = m_yaxis;
-				var axis_pen     = new Pen(axis.RenderOptions.m_axis_colour);
-				Brush text_brush = new SolidBrush(axis.RenderOptions.m_tick_colour);
+				var axis_pen     = new Pen(axis.RenderOptions.AxisColour);
+				Brush text_brush = new SolidBrush(axis.RenderOptions.TickColour);
 				var y         = (axis.Min - Math.IEEERemainder(axis.Min, axis.Step)) - axis.Min;  if (y < 0.0) {y += axis.Step;}
 				double ymax      = axis.Span * 1.0001f;
 				double ystep     = axis.Step;
@@ -868,13 +910,13 @@ namespace pr.gui
 					gfx.DrawLine(grid_line_pen, region.Left, Y, region.Right, Y);
 
 					// Draw the tick
-					gfx.DrawLine(axis_pen, region.Left, Y, region.Left - axis.RenderOptions.m_tick_length, Y);
+					gfx.DrawLine(axis_pen, region.Left, Y, region.Left - axis.RenderOptions.TickLength, Y);
 
 					// Draw the text
 					var text = axis.TickText(AestheticTickValue(y + axis.Min));
-					var text_size = gfx.MeasureString(text, axis.RenderOptions.m_tick_font);
-					var textX = region.Left - axis.RenderOptions.m_tick_length - text_size.Width;
-					gfx.DrawString(text, axis.RenderOptions.m_tick_font, text_brush, textX, Y - text_size.Height * 0.5f);
+					var text_size = gfx.MeasureString(text, axis.RenderOptions.TickFont);
+					var textX = region.Left - axis.RenderOptions.TickLength - text_size.Width;
+					gfx.DrawString(text, axis.RenderOptions.TickFont, text_brush, textX, Y - text_size.Height * 0.5f);
 				}
 				gfx.DrawLine(axis_pen, region.Left, region.Top   , region.Right, region.Top   );
 				gfx.DrawLine(axis_pen, region.Left, region.Bottom, region.Right, region.Bottom);
@@ -884,13 +926,13 @@ namespace pr.gui
 		/// <summary>Renders the data set onto the graph</summary>
 		private void RenderData(Series series, Graphics gfx, float scale_x, float scale_y, Func<bool> cancel_pending)
 		{
-			Brush pt_brush  = new SolidBrush(series.RenderOptions.m_point_colour);
-			Brush bar_brush = new SolidBrush(series.RenderOptions.m_bar_colour);
-			Brush err_brush = new SolidBrush(series.RenderOptions.m_error_bar_colour);
-			var   ln_pen    = new Pen(series.RenderOptions.m_line_colour, series.RenderOptions.m_line_width);
-			var   ma_pen    = new Pen(series.RenderOptions.m_ma_line_colour, series.RenderOptions.m_ma_line_width);
+			Brush pt_brush  = new SolidBrush(series.RenderOptions.PointColour);
+			Brush bar_brush = new SolidBrush(series.RenderOptions.BarColour);
+			Brush err_brush = new SolidBrush(series.RenderOptions.ErrorBarColour);
+			var   ln_pen    = new Pen(series.RenderOptions.LineColour, series.RenderOptions.LineWidth);
+			var   ma_pen    = new Pen(series.RenderOptions.MALineColour, series.RenderOptions.MALineWidth);
 
-			var pt_size = series.RenderOptions.m_point_size;
+			var pt_size = series.RenderOptions.PointSize;
 			var pt_radius = 0.5f * pt_size;
 
 			var first = true;      // True for the first point only
@@ -920,7 +962,7 @@ namespace pr.gui
 				// If the range is sorted we can stop drawing once we've gone passed the Max X graph value
 				if (series.Sorted)
 				{
-					var last_drawn_x_value = (series.RenderOptions.m_draw_zeros == Series.RdrOpts.PlotZeros.Skip) ? prev_gv_nonzero.m_valueX : prev_gv.m_valueX;
+					var last_drawn_x_value = (series.RenderOptions.DrawZeros == Series.RdrOpts.EPlotZeros.Skip) ? prev_gv_nonzero.m_valueX : prev_gv.m_valueX;
 					if (last_drawn_x_value > m_xaxis.Max) break;
 				}
 
@@ -929,21 +971,21 @@ namespace pr.gui
 				var y = gv.m_valueY * scale_y;
 
 				// Render the data point
-				switch (series.RenderOptions.m_plot_type)
+				switch (series.RenderOptions.PlotType)
 				{
 				// Draw the data point
-				case Series.RdrOpts.PlotType.Point:
+				case Series.RdrOpts.EPlotType.Point:
 					{
 						// If the point is a zero and we're not drawing zeros, skip
-						if (gv.m_valueY == 0f && rdr.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw)
+						if (gv.m_valueY == 0f && rdr.DrawZeros != Series.RdrOpts.EPlotZeros.Draw)
 							break;
 
 						// Draw error bars is on
-						if (rdr.m_draw_error_bars && (gv.m_upper_err - gv.m_lower_err) > 0)
+						if (rdr.DrawErrorBars && (gv.m_upper_err - gv.m_lower_err) > 0)
 							gfx.FillRectangle(err_brush, (float)(x - pt_radius), (float)(gv.m_lower_err * scale_y), pt_size, (float)((gv.m_upper_err - gv.m_lower_err) * scale_y));
 
 						// Plot the data point
-						if (rdr.m_draw_data)
+						if (rdr.DrawData)
 						{
 							// If the point lies on the previous one, then don't bother drawing it
 							var prev_x = prev_gv.m_valueX * scale_x;
@@ -954,18 +996,18 @@ namespace pr.gui
 					}break;
 
 				// Draw the data point and connect with a line
-				case Series.RdrOpts.PlotType.Line:
+				case Series.RdrOpts.EPlotType.Line:
 					{
 						// If the point is a zero and we're not drawing zeros, skip
-						if (gv.m_valueY == 0f && rdr.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw)
+						if (gv.m_valueY == 0f && rdr.DrawZeros != Series.RdrOpts.EPlotZeros.Draw)
 							break;
 
 						// Draw error bars is on
-						if (rdr.m_draw_error_bars && (gv.m_upper_err - gv.m_lower_err) > 0)
+						if (rdr.DrawErrorBars && (gv.m_upper_err - gv.m_lower_err) > 0)
 							gfx.FillRectangle(err_brush, (float)(x - pt_radius), (float)(gv.m_lower_err * scale_y), pt_size, (float)((gv.m_upper_err - gv.m_lower_err) * scale_y));
 
 						// Plot the point and line
-						if (rdr.m_draw_data)
+						if (rdr.DrawData)
 						{
 							// Plot the point - only draw it if the size is greater than zero
 							// otherwise we'll be covering it with the line anyway
@@ -973,7 +1015,7 @@ namespace pr.gui
 								gfx.FillEllipse(pt_brush, (float)(x - pt_radius), (float)(y - pt_radius), pt_size, pt_size);
 
 							// Draw the line
-							if (rdr.m_draw_zeros == Series.RdrOpts.PlotZeros.Draw && !first)
+							if (rdr.DrawZeros == Series.RdrOpts.EPlotZeros.Draw && !first)
 							{
 								var prev_x = prev_gv.m_valueX * scale_x;
 								var prev_y = prev_gv.m_valueY * scale_y;
@@ -982,7 +1024,7 @@ namespace pr.gui
 								if (x != prev_x || y != prev_y)
 									gfx.DrawLine(ln_pen, (float)prev_x, (float)prev_y, (float)x, (float)y);
 							}
-							else if (rdr.m_draw_zeros == Series.RdrOpts.PlotZeros.Skip && !first_zero)
+							else if (rdr.DrawZeros == Series.RdrOpts.EPlotZeros.Skip && !first_zero)
 							{
 								var prev_x = prev_gv_nonzero.m_valueX * scale_x;
 								var prev_y = prev_gv_nonzero.m_valueY * scale_y;
@@ -993,14 +1035,14 @@ namespace pr.gui
 							}
 						}
 					}break;
-				case Series.RdrOpts.PlotType.Bar:
+				case Series.RdrOpts.EPlotType.Bar:
 					{
 						// If the point is a zero and we're not drawing zeros, skip
-						if (gv.m_valueY == 0f && rdr.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw)
+						if (gv.m_valueY == 0f && rdr.DrawZeros != Series.RdrOpts.EPlotZeros.Draw)
 							break;
 
 						// Calc the left and right side of the bar
-						var width_scale = series.RenderOptions.m_bar_width;
+						var width_scale = series.RenderOptions.BarWidth;
 						var lhs = 0.0;
 						var rhs = 0.0;
 						if (i   != 0)                   { lhs = scale_x * width_scale * (gv.m_valueX                 - prev_gv.m_valueX) * 0.5; }
@@ -1009,11 +1051,11 @@ namespace pr.gui
 						if (rhs == 0.0) rhs = lhs;
 
 						// Draw error bars is on
-						if (rdr.m_draw_error_bars && (gv.m_upper_err - gv.m_lower_err) > 0)
+						if (rdr.DrawErrorBars && (gv.m_upper_err - gv.m_lower_err) > 0)
 							gfx.FillRectangle(err_brush, (float)(x - lhs), (float)(gv.m_lower_err * scale_y), (float)(rhs + lhs), (float)((gv.m_upper_err - gv.m_lower_err) * scale_y));
 
 						// Plot the bar
-						if (rdr.m_draw_data)
+						if (rdr.DrawData)
 						{
 							if      (y < 0) gfx.FillRectangle(bar_brush, (float)(x - lhs), (float)y, (float)(rhs + lhs), (float)Math.Abs(y));
 							else if (y > 0) gfx.FillRectangle(bar_brush, (float)(x - lhs), 0f, (float)(rhs + lhs), (float)y);
@@ -1023,17 +1065,17 @@ namespace pr.gui
 				}
 
 				// Add a moving average line
-				if (series.RenderOptions.m_draw_moving_avr)
+				if (series.RenderOptions.DrawMovingAvr)
 				{
 					// Find the sum of the values around 'i' for the moving average
 					var sum = 0.0;
 					var count = 0;
-					var avr_i0 = Math.Max(0                   ,i - series.RenderOptions.m_ma_window_size / 2);
-					var avr_i1 = Math.Min(series.Values.Count ,i + series.RenderOptions.m_ma_window_size / 2);
+					var avr_i0 = Math.Max(0                   ,i - series.RenderOptions.MAWindowSize / 2);
+					var avr_i1 = Math.Min(series.Values.Count ,i + series.RenderOptions.MAWindowSize / 2);
 					for (var j = avr_i0; j != avr_i1; ++j)
 					{
 						// Don't include zeros if they're not being drawn
-						if (series.Values[j].m_valueY == 0 && series.RenderOptions.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw) continue;
+						if (series.Values[j].m_valueY == 0 && series.RenderOptions.DrawZeros != Series.RdrOpts.EPlotZeros.Draw) continue;
 						sum += series.Values[j].m_valueY;
 						++count;
 					}
@@ -1045,7 +1087,7 @@ namespace pr.gui
 
 						// Draw a segment of the moving average line
 						var ma_y = (sum / count) * scale_y;
-						if (!first && (prev_ma_y != 0 || series.RenderOptions.m_draw_zeros == Series.RdrOpts.PlotZeros.Draw))
+						if (!first && (prev_ma_y != 0 || series.RenderOptions.DrawZeros == Series.RdrOpts.EPlotZeros.Draw))
 							gfx.DrawLine(ma_pen, (float)prev_x, (float)prev_ma_y, (float)curr_x, (float)ma_y);
 
 						prev_ma_y = ma_y;
@@ -1143,13 +1185,13 @@ namespace pr.gui
 
 						#region Visible
 						{
-							var state = m_data.Aggregate(0, (x,s) => x | (s.RenderOptions.m_visible ? 2 : 1));
+							var state = m_data.Aggregate(0, (x,s) => x | (s.RenderOptions.Visible ? 2 : 1));
 							var option = lvl1.Add2(new ToolStripMenuItem("Visible"));
 							option.CheckState = state == 2 ? CheckState.Checked : state == 1 ? CheckState.Unchecked : CheckState.Indeterminate;
 							option.Click += (s,a) =>
 								{
 									option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
-									foreach (var x in m_data) x.RenderOptions.m_visible = option.CheckState == CheckState.Checked;
+									foreach (var x in m_data) x.RenderOptions.Visible = option.CheckState == CheckState.Checked;
 									RegenBitmap = true;
 								};
 						}
@@ -1166,15 +1208,15 @@ namespace pr.gui
 						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: " + series.Name));
 						var lvl1 = new List<ToolStripItem>();
 
-						if      (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point) series_menu.ForeColor = series.RenderOptions.m_point_colour;
-						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line ) series_menu.ForeColor = series.RenderOptions.m_line_colour;
-						else if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar  ) series_menu.ForeColor = series.RenderOptions.m_bar_colour;
-						series_menu.Checked = series.RenderOptions.m_visible;
+						if      (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Point) series_menu.ForeColor = series.RenderOptions.PointColour;
+						else if (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Line ) series_menu.ForeColor = series.RenderOptions.LineColour;
+						else if (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Bar  ) series_menu.ForeColor = series.RenderOptions.BarColour;
+						series_menu.Checked = series.RenderOptions.Visible;
 						series_menu.Tag = index;
 						series_menu.Click += (s,a) =>
 							{
-								series.RenderOptions.m_visible = !series.RenderOptions.m_visible;
-								series_menu.Checked = series.RenderOptions.m_visible;
+								series.RenderOptions.Visible = !series.RenderOptions.Visible;
+								series_menu.Checked = series.RenderOptions.Visible;
 								RegenBitmap = true;
 							};
 
@@ -1186,10 +1228,10 @@ namespace pr.gui
 							#region Draw main data
 							{
 								var option = lvl2.Add2(new ToolStripMenuItem("Series data"));
-								option.Checked = series.RenderOptions.m_draw_data;
+								option.Checked = series.RenderOptions.DrawData;
 								option.Click += (s,a) =>
 									{
-										series.RenderOptions.m_draw_data = !series.RenderOptions.m_draw_data;
+										series.RenderOptions.DrawData = !series.RenderOptions.DrawData;
 										RegenBitmap = true;
 									};
 							}
@@ -1197,10 +1239,10 @@ namespace pr.gui
 							#region Draw error bars
 							{
 								var option = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
-								option.Checked = series.RenderOptions.m_draw_error_bars;
+								option.Checked = series.RenderOptions.DrawErrorBars;
 								option.Click += (s,a) =>
 									{
-										series.RenderOptions.m_draw_error_bars = !series.RenderOptions.m_draw_error_bars;
+										series.RenderOptions.DrawErrorBars = !series.RenderOptions.DrawErrorBars;
 										RegenBitmap = true;
 									};
 							}
@@ -1208,11 +1250,11 @@ namespace pr.gui
 							#region Draw zeros
 							{
 								var draw_zeros = lvl2.Add2(new ToolStripComboBox());
-								draw_zeros.Items.AddRange(Enum<Series.RdrOpts.PlotZeros>.Names.Select(x => x + " Zeros").Cast<object>().ToArray());
-								draw_zeros.SelectedIndex = (int)series.RenderOptions.m_draw_zeros;
+								draw_zeros.Items.AddRange(Enum<Series.RdrOpts.EPlotZeros>.Names.Select(x => x + " Zeros").Cast<object>().ToArray());
+								draw_zeros.SelectedIndex = (int)series.RenderOptions.DrawZeros;
 								draw_zeros.SelectedIndexChanged += (s,a) =>
 									{
-										series.RenderOptions.m_draw_zeros = (Series.RdrOpts.PlotZeros)draw_zeros.SelectedIndex;
+										series.RenderOptions.DrawZeros = (Series.RdrOpts.EPlotZeros)draw_zeros.SelectedIndex;
 										RegenBitmap = true;
 									};
 								draw_zeros.KeyDown += (s,a) =>
@@ -1233,11 +1275,11 @@ namespace pr.gui
 							{
 								var option = new ToolStripComboBox();
 								plot_type_menu.DropDownItems.Add(option);
-								option.Items.AddRange(Enum<Series.RdrOpts.PlotType>.Names.Cast<object>().ToArray());
-								option.SelectedIndex = (int)series.RenderOptions.m_plot_type;
+								option.Items.AddRange(Enum<Series.RdrOpts.EPlotType>.Names.Cast<object>().ToArray());
+								option.SelectedIndex = (int)series.RenderOptions.PlotType;
 								option.SelectedIndexChanged += (s,a) =>
 									{
-										series.RenderOptions.m_plot_type = (Series.RdrOpts.PlotType)option.SelectedIndex;
+										series.RenderOptions.PlotType = (Series.RdrOpts.EPlotType)option.SelectedIndex;
 										RegenBitmap = true;
 									};
 								option.KeyDown += (s,a) =>
@@ -1255,7 +1297,7 @@ namespace pr.gui
 							var lvl2 = new List<ToolStripItem>();
 
 							#region Points
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Point || series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
+							if (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Point || series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Line)
 							{
 								var point_menu = lvl2.Add2(new ToolStripMenuItem("Points"));
 								var lvl3 = new List<ToolStripItem>();
@@ -1266,12 +1308,12 @@ namespace pr.gui
 									{
 										var option = new ToolStripTextBox{AcceptsReturn = false};
 										size_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_point_size.ToString("0.00");
+										option.Text = series.RenderOptions.PointSize.ToString("0.00");
 										option.TextChanged += (s,a) =>
 											{
 												float size;
 												if (!float.TryParse(option.Text,out size)) return;
-												series.RenderOptions.m_point_size = size;
+												series.RenderOptions.PointSize = size;
 												RegenBitmap = true;
 											};
 									}
@@ -1281,13 +1323,13 @@ namespace pr.gui
 								{
 									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_point_colour};
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.PointColour};
 										colour_menu.DropDownItems.Add(option);
 										option.Click += (s,a) =>
 											{
 												var cd = new ColourUI{InitialColour = option.BackColor};
 												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_point_colour = cd.Colour;
+												series.RenderOptions.PointColour = cd.Colour;
 												RegenBitmap = true;
 											};
 									}
@@ -1298,7 +1340,7 @@ namespace pr.gui
 							}
 							#endregion
 							#region Lines
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Line)
+							if (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Line)
 							{
 								var line_menu = lvl2.Add2(new ToolStripMenuItem("Lines"));
 								var lvl3 = new List<ToolStripItem>();
@@ -1309,12 +1351,12 @@ namespace pr.gui
 									{
 										var option = new ToolStripTextBox();
 										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_line_width.ToString("0.00");
+										option.Text = series.RenderOptions.LineWidth.ToString("0.00");
 										option.TextChanged += (s,a) =>
 											{
 												float width;
 												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.m_line_width = width;
+												series.RenderOptions.LineWidth = width;
 												RegenBitmap = true;
 											};
 									}
@@ -1324,13 +1366,13 @@ namespace pr.gui
 								{
 									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_line_colour};
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.LineColour};
 										colour_menu.DropDownItems.Add(option);
 										option.Click += (s,a) =>
 											{
 												var cd = new ColourUI{InitialColour = option.BackColor};
 												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_line_colour = cd.Colour;
+												series.RenderOptions.LineColour = cd.Colour;
 												RegenBitmap = true;
 											};
 									}
@@ -1341,7 +1383,7 @@ namespace pr.gui
 							}
 							#endregion
 							#region Bars
-							if (series.RenderOptions.m_plot_type == Series.RdrOpts.PlotType.Bar)
+							if (series.RenderOptions.PlotType == Series.RdrOpts.EPlotType.Bar)
 							{
 								var bar_menu = lvl2.Add2(new ToolStripMenuItem("Bars"));
 								var lvl3 = new List<ToolStripItem>();
@@ -1352,12 +1394,12 @@ namespace pr.gui
 									{
 										var option = new ToolStripTextBox();
 										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.m_bar_width.ToString("0.00");
+										option.Text = series.RenderOptions.BarWidth.ToString("0.00");
 										option.TextChanged += (s,a) =>
 											{
 												float width;
 												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.m_bar_width = width;
+												series.RenderOptions.BarWidth = width;
 												RegenBitmap = true;
 											};
 										option.KeyDown += (s,a) =>
@@ -1372,13 +1414,13 @@ namespace pr.gui
 								{
 									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_bar_colour};
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.BarColour};
 										colour_menu.DropDownItems.Add(option);
 										option.Click += (s,a) =>
 											{
 												var cd = new ColourUI{InitialColour = option.BackColor};
 												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_bar_colour = cd.Colour;
+												series.RenderOptions.BarColour = cd.Colour;
 												RegenBitmap = true;
 											};
 									}
@@ -1389,7 +1431,7 @@ namespace pr.gui
 							}
 							#endregion
 							#region Error Bars
-							if (series.RenderOptions.m_draw_error_bars)
+							if (series.RenderOptions.DrawErrorBars)
 							{
 								var errorbar_menu = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
 								var lvl3 = new List<ToolStripItem>();
@@ -1398,13 +1440,13 @@ namespace pr.gui
 								{
 									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_error_bar_colour};
+										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.ErrorBarColour};
 										colour_menu.DropDownItems.Add(option);
 										option.Click += (s,a) =>
 											{
 												var cd = new ColourUI{InitialColour = option.BackColor};
 												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.m_error_bar_colour = cd.Colour;
+												series.RenderOptions.ErrorBarColour = cd.Colour;
 												RegenBitmap = true;
 											};
 									}
@@ -1426,10 +1468,10 @@ namespace pr.gui
 							{
 								var option = new ToolStripMenuItem("Draw Moving Average");
 								mv_avr_menu.DropDownItems.Add(option);
-								option.Checked = series.RenderOptions.m_draw_moving_avr;
+								option.Checked = series.RenderOptions.DrawMovingAvr;
 								option.Click += (s,a) =>
 									{
-										series.RenderOptions.m_draw_moving_avr = !series.RenderOptions.m_draw_moving_avr;
+										series.RenderOptions.DrawMovingAvr = !series.RenderOptions.DrawMovingAvr;
 										RegenBitmap = true;
 									};
 							}
@@ -1441,12 +1483,12 @@ namespace pr.gui
 								{
 									var option = new ToolStripTextBox();
 									win_size_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.m_ma_window_size.ToString(CultureInfo.InvariantCulture);
+									option.Text = series.RenderOptions.MAWindowSize.ToString(CultureInfo.InvariantCulture);
 									option.TextChanged += (s,a) =>
 										{
 											int size;
 											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.m_ma_window_size = size;
+											series.RenderOptions.MAWindowSize = size;
 											RegenBitmap = true;
 										};
 								}
@@ -1459,12 +1501,12 @@ namespace pr.gui
 								{
 									var option = new ToolStripTextBox();
 									line_width_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.m_ma_line_width.ToString(CultureInfo.InvariantCulture);
+									option.Text = series.RenderOptions.MALineWidth.ToString(CultureInfo.InvariantCulture);
 									option.TextChanged += (s,a) =>
 										{
 											int size;
 											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.m_ma_line_width = size;
+											series.RenderOptions.MALineWidth = size;
 											RegenBitmap = true;
 										};
 								}
@@ -1475,13 +1517,13 @@ namespace pr.gui
 								var line_colour_menu = new ToolStripMenuItem("Line Colour");
 								mv_avr_menu.DropDownItems.Add(line_colour_menu);
 								{
-									var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.m_ma_line_colour};
+									var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.MALineColour};
 									line_colour_menu.DropDownItems.Add(option);
 									option.Click += (s,a) =>
 										{
 											var cd = new ColourUI{InitialColour = option.BackColor};
 											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.m_ma_line_colour = cd.Colour;
+											series.RenderOptions.MALineColour = cd.Colour;
 											RegenBitmap = true;
 										};
 								}
@@ -1519,13 +1561,13 @@ namespace pr.gui
 					{
 						var bk_colour_menu = lvl1.Add2(new ToolStripMenuItem("Background Colour"));
 						{
-							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = m_rdr_options.m_bg_colour};
+							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = m_rdr_options.BkColour};
 							bk_colour_menu.DropDownItems.Add(option);
 							option.Click += (s,a) =>
 								{
 									var cd = new ColourUI{InitialColour = option.BackColor};
 									if (cd.ShowDialog() != DialogResult.OK) return;
-									m_rdr_options.m_bg_colour = cd.Colour;
+									m_rdr_options.BkColour = cd.Colour;
 									RegenBitmap = true;
 								};
 						}
@@ -1905,7 +1947,7 @@ namespace pr.gui
 			catch (OverflowException)
 			{
 				// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
-				e.Graphics.DrawString("Rendering error within .NET", m_rdr_options.m_title_font, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
+				e.Graphics.DrawString("Rendering error within .NET", m_rdr_options.TitleFont, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
 			}
 		}
 

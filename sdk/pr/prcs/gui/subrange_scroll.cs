@@ -261,8 +261,8 @@ namespace pr.gui
 		/// <summary>Add an indicator range</summary>
 		public void AddIndicatorRange(Range range, Color colour)
 		{
-			System.Diagnostics.Debug.Assert(m_total_range.Contains(range), "Indicator range outside total range");
-			range = Range.Constrain(range, m_total_range);
+			System.Diagnostics.Debug.Assert(TotalRange.Contains(range), "Indicator range outside total range");
+			range = Range.Constrain(range, TotalRange);
 			m_indicator_ranges.Add(new SubRange(range, colour));
 		}
 

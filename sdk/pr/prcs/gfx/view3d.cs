@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Windows.Interop;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -1383,56 +1385,116 @@ namespace pr.gfx
 			public override int GetHashCode()       { return m_handle.GetHashCode(); }
 		}
 
+		/// <summary>An ldr script editor window.</summary>
+		public class Editor :IDisposable
+		{
+			public Editor(IntPtr parent)
+			{
+				HWnd = View3D_LdrEditorCreate(parent);
+				if (HWnd == IntPtr.Zero)
+					throw new Exception("Failed to create editor window");
+			}
+			public void Dispose()
+			{
+				if (HWnd != IntPtr.Zero) View3D_LdrEditorDestroy(HWnd);
+				HWnd = IntPtr.Zero;
+			}
+
+			/// <summary>The native window handle</summary>
+			public HWND HWnd { get; private set; }
+
+			public void Show()
+			{
+				Win32.ShowWindow(HWnd, Win32.SW_SHOW);
+			}
+		}
+
+		/// <summary>
+		/// An ldr script editor control.
+		/// To use this in a winforms application, create a System.Windows.Forms.Integration.ElementHost
+		/// and assign an instance of this class to it's 'Child' property</summary>
+		public class HostableEditor :HwndHost
+		{
+			private Editor m_editor;
+
+			protected override void Dispose(bool disposing)
+			{
+				Util.Dispose(ref m_editor);
+				base.Dispose(disposing);
+			}
+			protected override HandleRef BuildWindowCore(HandleRef parent)
+			{
+				// Create the editor window
+				m_editor = new Editor(parent.Handle);
+				
+				// Make it a child of 'parent'
+				var style = Win32.GetWindowLong(m_editor.HWnd, Win32.GWL_STYLE);
+				Win32.SetWindowLong(m_editor.HWnd, Win32.GWL_STYLE, style | Win32.WS_CHILD);
+				return new HandleRef(this, m_editor.HWnd);
+			}
+			protected override void DestroyWindowCore(System.Runtime.InteropServices.HandleRef hwnd)
+			{
+				Util.Dispose(ref m_editor);
+			}
+			//protected override IntPtr WndProc(HWND hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+			//{
+			//	//return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+			//	handled = false;
+			//	return IntPtr.Zero;
+			//}
+			//bool IKeyboardInputSink.TabInto(System.Windows.Input.TraversalRequest request)
+			//{
+			//	Win32.SetFocus(m_hwnd);
+			//	return true;
+			//}
+		}
+
 		#region DLL extern functions
 
 		// A good idea is to add a static method in the class that is using this class
 		// e.g.
 		//  static MyThing()
 		//  {
-		//      View3d.SelectDll(System.Environment.Is64BitProcess
-		//          ? @".\libs\x64\view3d.dll"
-		//          : @".\libs\x86\view3d.dll");
+		//      View3d.LoadDll(@".\libs\$(platform)");
 		//  }
-
-		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
-		public static void LoadDll(string dir = @".\lib\$(platform)")
-		{
-			// Search the local directory first
-			var dllpath = "view3d.dll";
-			if (PathEx.FileExists(dllpath))
-			{
-				try { SelectDll(dllpath); return; }
-				catch (Exception) {}
-			}
-
-			// Try the lib folder. Load the appropriate dll for the platform
-			dllpath = Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), "view3d.dll");
-			if (PathEx.FileExists(dllpath))
-			{
-				try { SelectDll(dllpath); return; }
-				catch (Exception) {}
-			}
-
-			throw new DllNotFoundException("Failed to load dependency 'view3d.dll'");
-		}
-
-		/// <summary>Call this method to load a specific version of the view3d.dll. Call this before any DllImport'd functions</summary>
-		public static void SelectDll(string dllpath)
-		{
-			if (m_module != IntPtr.Zero)
-				return; // Already loaded
-
-			m_module = LoadLibrary(dllpath);
-			if (m_module == IntPtr.Zero)
-				throw new System.Exception(string.Format("Failed to load dll {0}", dllpath));
-		}
-		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
 		/// <summary>True if the view3d dll has been loaded</summary>
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
 		private static IntPtr m_module = IntPtr.Zero;
 
 		private const string Dll = "view3d";
+
+		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
+		public static void LoadDll(string dir = @".\lib\$(platform)")
+		{
+			if (m_module != IntPtr.Zero)
+				return; // Already loaded
+
+			// Search the local directory first
+			var dllname = Dll+".dll";
+			var dllpath = dllname;
+			if (PathEx.FileExists(dllpath))
+			{
+				m_module = LoadLibrary(dllpath);
+				if (m_module != IntPtr.Zero)
+					return;
+			}
+
+
+			// Try the lib folder. Load the appropriate dll for the platform
+			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
+			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
+			dllpath = Path.Combine(dir, dllname);
+			if (PathEx.FileExists(dllpath))
+			{
+				m_module = LoadLibrary(dllpath);
+				if (m_module != IntPtr.Zero)
+					return;
+			}
+
+			throw new DllNotFoundException("Failed to load dependency '{0}'".Fmt(dllname));
+		}
+		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
 		// Initialise / shutdown the dll
 		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB error_cb, IntPtr ctx);
@@ -1550,6 +1612,9 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowDemoScript           (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowObjectManager        (HWindow window, bool show);
 		[DllImport(Dll)] private static extern m4x4              View3D_ParseLdrTransform        (string ldr_script);
+
+		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
+		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);
 		#endregion
 	}
 }

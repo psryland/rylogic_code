@@ -398,7 +398,7 @@ namespace pr.extn
 				}
 
 				// Empty elements return null or default instances
-				if (elem.IsEmpty)//string.IsNullOrEmpty(elem.Value))
+				if (!elem.HasElements && !elem.Value.HasValue())
 				{
 					if (type == typeof(string))
 					{
@@ -826,7 +826,7 @@ namespace pr
 				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
-				Assert.True(arr.SequenceEqual(ARR));
+				Assert.IsTrue(arr.SequenceEqual(ARR));
 			}
 			[Test] public static void TestToXml13()
 			{
@@ -841,7 +841,7 @@ namespace pr
 				var arr = new int?[]{1, null, 2};
 				var node = arr.ToXml("arr", true);
 				var ARR = node.As<int?[]>();
-				Assert.True(arr.SequenceEqual(ARR));
+				Assert.IsTrue(arr.SequenceEqual(ARR));
 			}
 			[Test] public static void TestToXml15()
 			{

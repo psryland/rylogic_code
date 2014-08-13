@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using pr.attrib;
 using pr.util;
 
 namespace pr.extn
@@ -231,11 +232,13 @@ namespace pr.extn
 			return Converter.ToStringInternal(value.ToInt64(null));
 		}
 
+		/// <summary>Convert a string to an enum values, throws on failure</summary>
 		public static T Parse(string value, bool ignore_case = false, bool parse_numeric = true)
 		{
 			return (T) Enum.ToObject(typeof(T), Converter.ParseInternal(value, ignore_case, parse_numeric));
 		}
 
+		/// <summary>Convert a string into an enum value</summary>
 		public static bool TryParse(string value, bool ignoreCase, bool parseNumeric, out T result)
 		{
 			long ir;
@@ -243,7 +246,6 @@ namespace pr.extn
 			result = (T) Enum.ToObject(typeof(T), ir);
 			return b;
 		}
-
 		public static bool TryParse(string value, bool ignoreCase, out T result)
 		{
 			long ir;
@@ -251,7 +253,6 @@ namespace pr.extn
 			result = (T)Enum.ToObject(typeof(T), ir);
 			return b;
 		}
-
 		public static bool TryParse(string value, out T result)
 		{
 			long ir;
@@ -306,6 +307,16 @@ namespace pr.extn
 					all = BitwiseOr(all, i);
 
 				return (T)Convert.ChangeType(all, typeof(T));
+			}
+		}
+
+		/// <summary>Returns a list of strings DescAttributes attributed to the enum type</summary>
+		public static IEnumerable<string> Desc
+		{
+			get
+			{
+				foreach (var s in typeof(T).AllDesc())
+					yield return s;
 			}
 		}
 

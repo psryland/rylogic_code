@@ -85,11 +85,7 @@ namespace pr.common
 		public ISettingsSet Parent
 		{
 			get { return m_parent; }
-			set
-			{
-				Debug.Assert(m_parent == null || m_parent == value, "'value' is already parented to a different settings object");
-				m_parent = value;
-			}
+			set { m_parent = value; } // could notify of parent changed...
 		}
 		private ISettingsSet m_parent;
 
@@ -450,7 +446,7 @@ namespace pr.common
 				// Ensure the save directory exists
 				filepath = Path.GetFullPath(filepath);
 				var path = Path.GetDirectoryName(filepath);
-				if (PathEx.DirExists(path))
+				if (!PathEx.DirExists(path))
 					Directory.CreateDirectory(path);
 
 				// Perform the save
