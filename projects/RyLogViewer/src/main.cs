@@ -1909,6 +1909,7 @@ namespace RyLogViewer
 				m_status_filesize.Visible = false;
 				m_status_line_end.Visible = false;
 				m_status_encoding.Visible = false;
+				UpdateStatusProgress(0,0);
 			}
 			else
 			{
