@@ -61,7 +61,7 @@ namespace RyLogViewer
 
 		public Main(StartupOptions startup_options)
 		{
-			Log.Register(startup_options.SettingsPath, false);
+			Log.Register(startup_options.LogFilePath, false);
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
 
 			m_startup_options     = startup_options;
@@ -1424,12 +1424,6 @@ namespace RyLogViewer
 			{
 				var tut = new FirstRunTutorial(this);
 				tut.Display();
-				//if (m_first_run_tutorial == null)
-				//{
-				//	m_first_run_tutorial = new FirstRunTutorial(this);
-				//	m_first_run_tutorial.FormClosed += (s,a) => Util.Dispose(ref m_first_run_tutorial);
-				//}
-				//m_first_run_tutorial.Display();
 			}
 			catch (Exception ex)
 			{
@@ -1437,7 +1431,6 @@ namespace RyLogViewer
 				Misc.ShowMessage(this, "An error occurred when trying to display the first run tutorial", "First Run Tutorial Failed", MessageBoxIcon.Error, ex);
 			}
 		}
-		//private FirstRunTutorial m_first_run_tutorial;
 
 		/// <summary>Show the TotD dialog</summary>
 		private void ShowTotD()
@@ -1608,7 +1601,7 @@ namespace RyLogViewer
 			if (m_grid.RowCount == 0) return;
 			int displayed_rows = m_grid.DisplayedRowCount(false);
 			int first_row = Math.Max(0, m_grid.RowCount - displayed_rows);
-			m_grid.FirstDisplayedScrollingRowIndex = first_row;
+			m_grid.TryScrollToRowIndex(first_row);
 			Log.Info(this, "Showing last row. First({0}) + Displayed({1}) = {2}. RowCount = {3}".Fmt(first_row, displayed_rows, first_row + displayed_rows, m_grid.RowCount));
 		}
 
@@ -1773,6 +1766,7 @@ namespace RyLogViewer
 
 			// Grid
 			int col_count = Settings.ColDelimiter.Length != 0 ? Maths.Clamp(Settings.ColumnCount, 1, 255) : 1;
+			var col_count_changed = m_grid.ColumnCount != col_count;
 			m_grid.Font = Settings.Font;
 			m_grid.ColumnHeadersVisible = col_count > 1;
 			m_grid.ColumnCount = col_count;
@@ -1784,6 +1778,10 @@ namespace RyLogViewer
 				SelectionBackColor = Settings.LineSelectBackColour,
 				SelectionForeColor = Settings.LineSelectForeColour,
 			};
+			if (col_count_changed)
+			{
+				m_grid.AutoResizeColumns(DataGridViewAutoSizeColumnsMode.DisplayedCells);
+			}
 			if (Settings.AlternateLineColours)
 			{
 				m_grid.AlternatingRowsDefaultCellStyle = new DataGridViewCellStyle
@@ -1985,6 +1983,7 @@ namespace RyLogViewer
 		private void HeuristicHints()
 		{
 			int row_count = m_grid.RowCount;
+			int col_count = m_grid.ColumnCount;
 
 			// Show a hint if filters are active, the file isn't empty, but there are no visible rows
 			if (m_last_hint != EHeuristicHint.FiltersActive &&

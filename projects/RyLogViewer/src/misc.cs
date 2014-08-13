@@ -177,6 +177,7 @@ namespace RyLogViewer
 		public const string ShowHelp     = "-h";
 		public const string ShowHelp2    = "/?";
 		public const string SettingsPath = "-s";
+		public const string LogFilePath  = "-l";
 		public const string Portable     = "-p";
 		public const string HighlightSet = "-hl";
 		public const string FilterSet    = "-ft";

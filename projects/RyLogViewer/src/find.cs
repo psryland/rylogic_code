@@ -120,7 +120,7 @@ namespace RyLogViewer
 			long at = -1;
 			var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 				{
-					var d = new BLIData(this, m_file);
+					var d = new BLIData(this, m_file, fileend_:m_fileend);
 					int last_progress = 0;
 					d.progress = (scanned, length) =>
 						{
@@ -173,7 +173,7 @@ namespace RyLogViewer
 				// dialog box, so it should be ok to use class members directly
 				var search = new ProgressForm("Searching...", body, null, ProgressBarStyle.Marquee, (s,a,cb)=>
 					{
-						var d = new BLIData(this, m_file);
+						var d = new BLIData(this, m_file, fileend_:m_fileend);
 
 						int last_progress = 0;
 						d.progress = (scanned, length) =>

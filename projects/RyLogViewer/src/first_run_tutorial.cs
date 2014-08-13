@@ -88,6 +88,7 @@ namespace RyLogViewer
 			// On shutdown, restore the original settings
 			base.OnFormClosed(e);
 			m_main.Settings = m_orig_settings;
+			m_main.BringToFront();
 		}
 
 		/// <summary>Update the form to display the next/previous page</summary>

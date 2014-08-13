@@ -51,8 +51,8 @@ namespace RyLogViewer
 					Title = "Export",
 					Body  = "The export feature allows loaded data to be exported to a new file. Transforms and " +
 					        "filtering are applied during the export process, which means RyLogViewer can be used " +
-					        "as a powerful text data transformation tool. There is also command line support for " +
-					        "exporting allowing RyLogViewer to be used in batch files or scripting tasks."
+					        "as a powerful text data transformation tool. Exporting data is also supported from the " +
+							"command line allowing RyLogViewer to be used in batch files or scripting tasks."
 				}
 				,new Tip
 				{
@@ -86,6 +86,17 @@ namespace RyLogViewer
 					        "Right clicking on a file path within this menu brings up two useful options. The first is " +
 					        "<i>Remove</i> which allows the selected file to be removed from the recent files list. The " +
 					        "second is <i>Copy to Clipboard</i> which copies the file path to the system clipboard."
+				}
+				,new Tip
+				{
+					Title = "Keyboard Shortcuts",
+					Body  = "Here are a few handy keyboard shortcuts to make navigating through a log file easier:<br/>" +
+					        "<br/><i>Ctrl+PageUp</i><br/>Jump to the first line in the log file.<br/>" +
+							"<br/><i>Ctrl+PageDown</i><br/>Jump to the last line in the log file.<br/>" +
+							"<br/><i>Ctrl+F2</i><br/>Toggle a bookmark on the currently selected line<br/>" +
+							"<br/><i>F2</i>/<i>Shift+F2</i><br/>Jump to the next/previous bookmark<br/>" +
+							"<br/><i>Ctrl+F</i><br/>Show the Find dialog<br/>" +
+							"<br/><i>F3</i>/<i>Shift+F3</i><br/>Jump to the next/previous Find dialog match. (works even when the Find dialog is closed)<br/>"
 				}
 			};
 		private static class Cmd

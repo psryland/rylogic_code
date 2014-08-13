@@ -205,7 +205,7 @@ namespace RyLogViewer
 			public ProgressFunc progress;
 
 			// 'file_source' should be an open new instance of the file source
-			public BLIData(Main main, IFileSource file_source, long filepos_ = 0, bool reload_ = false, int build_issue_ = 0)
+			public BLIData(Main main, IFileSource file_source, long filepos_ = 0, long fileend_ = long.MaxValue, bool reload_ = false, int build_issue_ = 0)
 			{
 				reload             = reload_;
 				build_issue        = build_issue_;
@@ -214,7 +214,7 @@ namespace RyLogViewer
 				// build up. Reducing the file size during this will probably cause an
 				// exception but oh well...
 				file               = file_source.NewInstance().Open();
-				fileend            = file.Stream.Length;
+				fileend            = Math.Min(file.Stream.Length, fileend_);
 				filepos            = Maths.Clamp(filepos_, 0, fileend);
 				filepos_line_index = LineIndex(main.m_line_index, filepos);
 
@@ -289,7 +289,7 @@ namespace RyLogViewer
 				Log.Info(this, "build start request (id {0}, reload: {1})\n{2}".Fmt(m_build_issue, reload, string.Empty));//new StackTrace(0,true)));
 
 				// Make copies of variables for thread safety
-				var bli_data = new BLIData(this, m_file, filepos, reload, m_build_issue);
+				var bli_data = new BLIData(this, m_file, filepos_:filepos, reload_:reload, build_issue_:m_build_issue);
 
 				// Set up callbacks that marshal to the main thread
 				bli_data.progress = (scanned,length) =>

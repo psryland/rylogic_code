@@ -19,6 +19,9 @@ namespace RyLogViewer
 		/// <summary>The filepath to the settings file to use</summary>
 		public string SettingsPath { get; set; }
 
+		/// <summary>The file path to write log data do</summary>
+		public string LogFilePath { get; set; }
+
 		/// <summary>Settings for an export from the command line. Null if not an export</summary>
 		public string ExportPath { get; private set; }
 
@@ -63,7 +66,7 @@ namespace RyLogViewer
 			{
 				string arg = args[i].ToLowerInvariant();
 
-				if (arg[0] != '-')
+				if (arg[0] != '-' && arg[0] != '/')
 				{
 					if (FileToLoad != null) throw new ArgumentException("File to load already given");
 					FileToLoad = arg;
@@ -82,6 +85,7 @@ namespace RyLogViewer
 				else if (IsOption(CmdLineOption.TransformSet )) { TransformSetPath = arg.Substring(CmdLineOption.TransformSet.Length); }
 				else if (IsOption(CmdLineOption.Portable     )) { PortableMode = true; }
 				else if (IsOption(CmdLineOption.SettingsPath )) { SettingsPath = arg.Substring(CmdLineOption.SettingsPath.Length); }
+				else if (IsOption(CmdLineOption.LogFilePath  )) { LogFilePath = arg.Substring(CmdLineOption.LogFilePath.Length); }
 				else if (IsOption(CmdLineOption.Export       )) { ExportPath = arg.Substring(CmdLineOption.Export.Length); }
 				else if (IsOption(CmdLineOption.ShowHelp     )) { ShowHelp = true; }
 				else if (IsOption(CmdLineOption.ShowHelp2    )) { ShowHelp = true; }

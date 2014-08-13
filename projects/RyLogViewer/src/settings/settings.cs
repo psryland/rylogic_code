@@ -77,7 +77,6 @@ namespace RyLogViewer
 			SerialConnectionHistory         = new SerialConn[0];
 			PipeConnectionHistory           = new PipeConn[0];
 			AndroidLogcat                   = new AndroidLogcat();
-			LogFilePath                     = string.Empty;
 		}
 		public Settings(string filepath) :base(filepath) {}
 		public Settings(Settings rhs) :base(rhs) {}
@@ -399,11 +398,6 @@ namespace RyLogViewer
 		{
 			get { return get(x => x.AndroidLogcat); }
 			set { set(x => x.AndroidLogcat, value); }
-		}
-		public string LogFilePath
-		{
-			get { return get(x => x.LogFilePath); }
-			set { set(x => x.LogFilePath, value); }
 		}
 
 		/// <summary>Return the highlighting patterns for a default instance of the settings</summary>

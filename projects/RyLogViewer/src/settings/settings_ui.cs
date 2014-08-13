@@ -1109,7 +1109,23 @@ namespace RyLogViewer
 
 			m_main.UseLicensedFeature(FeatureName.Highlighting, new SettingsHighlightingCountLimiter(m_main, this));
 			m_main.UseLicensedFeature(FeatureName.Filtering, new SettingsFilteringCountLimiter(m_main, this));
+			HeuristicHints();
 		}
+
+		/// <summary>Show a hint balloon for situations that users might find confusing but are still valid</summary>
+		private void HeuristicHints()
+		{
+			// Show a hint if filters are active, the file isn't empty, but there are no visible rows
+			if (m_last_hint != EHeuristicHint.ColumnDelims &&
+				m_settings.ColDelimiter.Length != 0 &&
+				m_settings.ColumnCount == 1)
+			{
+				Misc.ShowHint(m_spinner_column_count, "Set maximum columns here");
+				m_last_hint = EHeuristicHint.ColumnDelims;
+			}
+		}
+		private enum EHeuristicHint { None, ColumnDelims }
+		private EHeuristicHint m_last_hint;
 
 		/// <summary>A highlighting count limiter for when the settings dialog is displayed</summary>
 		private class SettingsHighlightingCountLimiter :HighlightingCountLimiter
