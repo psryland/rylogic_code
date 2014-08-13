@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B66290DE-5FD0-4496-8077-2CDE3AEFB215}"
 	ProjectSection(SolutionItems) = preProject
@@ -58,6 +58,34 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "imagern", "imagern.vcxproj", "{D84F8457-9E20-477A-8594-D0384FB62FA5}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\..\sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestWPF", "..\TestWPF\TestWPF.csproj", "{2E8F773C-CC00-46C2-9912-8602472474CD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.ExamplePlugin", "..\RyLogViewer\plugins\ExamplePlugin\RyLogViewer.ExamplePlugin.csproj", "{C054B079-AC66-4C7E-A201-D57E32FB4F89}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.CustomTool.HtmlExpander", "..\Rylogic.CustomTool.HtmlExpander\Rylogic.CustomTool.HtmlExpander.csproj", "{9FEBE611-72AD-4871-B927-5379C477BA53}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{35F27363-2AFF-455F-A38F-9FE3452EC620}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\script\BatchBuild.py = ..\..\script\BatchBuild.py
+		..\..\script\BuildAllConfigs.py = ..\..\script\BuildAllConfigs.py
+		..\..\script\buildnpull_rylogic.py = ..\..\script\buildnpull_rylogic.py
+		..\..\script\buildnpull_view3d.py = ..\..\script\buildnpull_view3d.py
+		..\..\script\BuildShader.py = ..\..\script\BuildShader.py
+		..\..\script\DeployBin.py = ..\..\script\DeployBin.py
+		..\..\script\DeployLib.py = ..\..\script\DeployLib.py
+		..\..\script\DeployTemplate.py = ..\..\script\DeployTemplate.py
+		..\..\script\FormatCode.py = ..\..\script\FormatCode.py
+		..\..\script\LineCount.py = ..\..\script\LineCount.py
+		..\..\script\pp.py = ..\..\script\pp.py
+		..\..\script\Rylogic.py = ..\..\script\Rylogic.py
+		..\..\script\TextTemplate.py = ..\..\script\TextTemplate.py
+		..\..\script\UserVars.py = ..\..\script\UserVars.py
+		..\..\script\UserVars.template.py = ..\..\script\UserVars.template.py
+		..\..\script\UserVarsCheck.py = ..\..\script\UserVarsCheck.py
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.Extensions", "..\RyLogViewer\RyLogViewer.Extensions.csproj", "{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -203,6 +231,38 @@ Global
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.Build.0 = Release|x64
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.ActiveCfg = Release|Win32
 		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.Build.0 = Release|Win32
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Debug|x64.Build.0 = Debug|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Debug|x86.Build.0 = Debug|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Release|x64.ActiveCfg = Release|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Release|x64.Build.0 = Release|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Release|x86.ActiveCfg = Release|Any CPU
+		{2E8F773C-CC00-46C2-9912-8602472474CD}.Release|x86.Build.0 = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|x64.Build.0 = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Debug|x86.Build.0 = Debug|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x64.ActiveCfg = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x64.Build.0 = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x86.ActiveCfg = Release|Any CPU
+		{C054B079-AC66-4C7E-A201-D57E32FB4F89}.Release|x86.Build.0 = Release|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|x64.Build.0 = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Debug|x86.Build.0 = Debug|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|x64.ActiveCfg = Release|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|x64.Build.0 = Release|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|x86.ActiveCfg = Release|Any CPU
+		{9FEBE611-72AD-4871-B927-5379C477BA53}.Release|x86.Build.0 = Release|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|x64.Build.0 = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Debug|x86.Build.0 = Debug|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x64.ActiveCfg = Release|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x64.Build.0 = Release|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x86.ActiveCfg = Release|Any CPU
+		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

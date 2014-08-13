@@ -172,6 +172,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\hardware\cpuinfo.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_helper_c.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_plugin_interface.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\align.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\auto_do.h" />
     <ClInclude Include="..\..\sdk\pr\pr\macros\count_of.h" />
@@ -295,7 +300,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\embedded_code.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\embedded_lua.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\includes.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro_db.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\preprocessor.h" />

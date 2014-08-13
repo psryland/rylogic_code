@@ -96,6 +96,9 @@
     <ClInclude Include="..\..\sdk\pr\pr\view3d\prmaths.h" />
     <ClInclude Include="..\view3d\window.h" />
     <ClInclude Include="..\view3d\context.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h">
+      <Filter>sdk\linedrawer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_object.cpp">
@@ -113,6 +116,9 @@
     <ClCompile Include="..\view3d\stdafx.cpp" />
     <ClCompile Include="..\View3D\view3d.cpp" />
     <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.cpp">
+      <Filter>sdk\linedrawer</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.cpp">
       <Filter>sdk\linedrawer</Filter>
     </ClCompile>
   </ItemGroup>

@@ -14,6 +14,7 @@ namespace sol
 	struct MainGUI
 		:pr::app::MainGUI<MainGUI, Main, pr::SimMsgLoop>
 	{
+		typedef pr::app::MainGUI<MainGUI, Main, pr::SimMsgLoop> base;
 		static char const* AppName() { return "Sol"; }
 
 		explicit MainGUI(LPTSTR)

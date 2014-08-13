@@ -22,14 +22,16 @@ dstdir = UserVars.root + r"\bin\custom_tools"
 config = input("Configuration (debug, release(default))? ")
 if config == "": config = "release"
 
-proj = srcdir + r"\Rylogic.CustomTool.HtmlExpander.sln"
-regasm = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe"
+proj       = srcdir + r"\Rylogic.CustomTool.HtmlExpander.sln"
+regasm     = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe"
+vs_version = "12.0"
 
 input(
 	" Deploy Settings:\n"
 	"         Source: " + srcdir + "\n"
 	"    Destination: " + dstdir + "\n"
 	"  Configuration: " + config + "\n"
+	"       Reg Keys: SOFTWARE\\Microsoft\\VisualStudio\\"+vs_version+"_Config...\n"
 	"Press enter to continue")
 
 try:
@@ -51,13 +53,13 @@ try:
 
 	#Add the necessary VS registry entries
 	print("Adding a VS registry entry")
-	with winreg.CreateKey(winreg.HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\VisualStudio\\11.0_Config\\CLSID\\{a72434a4-0a4d-4cc2-aba2-42e1fcd61db4}\\") as key:
+	with winreg.CreateKey(winreg.HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\VisualStudio\\"+vs_version+"_Config\\CLSID\\{a72434a4-0a4d-4cc2-aba2-42e1fcd61db4}\\") as key:
 		winreg.SetValueEx(key, "InprocServer32", 0, winreg.REG_SZ, "C:\\Windows\\System32\\mscoree.dll")
 		winreg.SetValueEx(key, "ThreadingModel", 0, winreg.REG_SZ, "Both")
 		winreg.SetValueEx(key, "Class", 0, winreg.REG_SZ, "Rylogic.CustomTool.HtmlExpander")
 		winreg.SetValueEx(key, "Assembly", 0, winreg.REG_SZ, "Rylogic.CustomTool.HtmlExpander, Version=1.0.0.0, Culture=neutral")
 		winreg.SetValueEx(key, "CodeBase", 0, winreg.REG_SZ, "file:///"+UserVars.root+"\\bin\\custom_tools\\Rylogic.CustomTool.HtmlExpander.dll")
-	with winreg.CreateKey(winreg.HKEY_CURRENT_USER, "Software\\Microsoft\\VisualStudio\\11.0_Config\\Generators\\{FAE04EC1-301F-11D3-BF4B-00C04F79EFBC}\\HtmlExpander\\") as key:
+	with winreg.CreateKey(winreg.HKEY_CURRENT_USER, "Software\\Microsoft\\VisualStudio\\"+vs_version+"_Config\\Generators\\{FAE04EC1-301F-11D3-BF4B-00C04F79EFBC}\\HtmlExpander\\") as key:
 		winreg.SetValueEx(key, "CLSID", 0, winreg.REG_SZ, "{a72434a4-0a4d-4cc2-aba2-42e1fcd61db4}")
 		winreg.SetValueEx(key, "GeneratesDesignTimeSource", 0, winreg.REG_DWORD, 1)
 		winreg.SetValueEx(key, "@", 0, winreg.REG_SZ, "Rylogic template tool for expanding html files containing server side includes/commands")

@@ -4,21 +4,20 @@ using System.Windows.Forms;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
+using pr.util;
 
 namespace TestCS
 {
 	public class FormView3d : Form
 	{
-		private readonly View3dControl m_view3d;
-		private readonly View3d.Object m_obj0;
-		private readonly View3d.Object m_obj1;
-		private readonly View3d.Texture m_tex0;
+		private View3dControl m_view3d;
+		private View3d.Object m_obj0;
+		private View3d.Object m_obj1;
+		private View3d.Texture m_tex0;
 
 		static FormView3d()
 		{
-			View3d.SelectDll(Environment.Is64BitProcess
-				? @"\sdk\lib\x64\debug\view3d.dll"
-				: @"\sdk\lib\x86\debug\view3d.dll");
+			View3d.LoadDll(@"\sdk\lib\$(platform)\$(config)\");
 		}
 		public FormView3d()
 		{
@@ -70,14 +69,11 @@ namespace TestCS
 		}
 		protected override void Dispose(bool disposing)
 		{
-			if (m_tex0 != null) m_tex0.Dispose();
-			if (m_obj0 != null) m_obj0.Dispose();
-			if (m_obj1 != null) m_obj1.Dispose();
-			if (m_view3d != null) m_view3d.Dispose();
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
+			Util.Dispose(ref m_tex0  );
+			Util.Dispose(ref m_obj0  );
+			Util.Dispose(ref m_obj1  );
+			Util.Dispose(ref m_view3d);
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 

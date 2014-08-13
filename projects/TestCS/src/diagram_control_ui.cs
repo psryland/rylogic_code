@@ -26,9 +26,7 @@ namespace TestCS
 
 		static DiagramControlUI()
 		{
-			View3d.SelectDll(Environment.Is64BitProcess
-				? @"\sdk\lib\x64\debug\view3d.dll"
-				: @"\sdk\lib\x86\debug\view3d.dll");
+			View3d.LoadDll(@"\sdk\lib\$(platform)\$(config)\");
 		}
 
 		private StatusStrip statusStrip1;

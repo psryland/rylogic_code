@@ -74,9 +74,6 @@
     <Filter Include="pr\container">
       <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\NewFilter1">
-      <UniqueIdentifier>{84229503-3b37-4a3c-836e-1ef4110bf399}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\unittests\unittests.cpp">
@@ -726,9 +723,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\lua\lua.h">
       <Filter>pr\lua</Filter>
     </ClInclude>
@@ -920,6 +914,24 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\gui\scintilla.h">
       <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_object.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_objects_dlg.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_plugin_interface.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_tools.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\includes.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
