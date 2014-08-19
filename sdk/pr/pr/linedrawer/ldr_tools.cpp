@@ -147,7 +147,7 @@ namespace pr
 				GroupEnd(str);
 
 				ParseResult out;
-				ParseString(m_rdr, str.c_str(), nullptr, out, false, LdrMeasurePrivateContextId);
+				ParseString(m_rdr, str.c_str(), out, false, LdrMeasurePrivateContextId);
 				if (!out.m_objects.empty())
 					m_measurement_gfx = out.m_objects.back();
 			}
@@ -328,7 +328,7 @@ namespace pr
 				GroupEnd(str);
 
 				ParseResult out;
-				ParseString(m_rdr, str.c_str(), nullptr, out, false, LdrAngleDlgPrivateContextId);
+				ParseString(m_rdr, str.c_str(), out, false, LdrAngleDlgPrivateContextId);
 				if (!out.m_objects.empty())
 					m_angle_gfx = out.m_objects.back();
 			}

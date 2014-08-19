@@ -12,12 +12,15 @@ namespace view3d
 	struct Context :pr::AlignTo<16>
 	{
 		typedef std::set<View3DContext> InitSet;
+
+
 		InitSet                  m_inits;            // A unique id assigned to each Initialise call
 		ErrorCBStack             m_error_cb;         // A stack of error callback functions
 		bool                     m_compatible;       // True if the renderer will work on this system
 		pr::Renderer             m_rdr;              // The renderer
 		WindowCont               m_wnd_cont;         // The created windows
 		pr::ldr::ObjectCont      m_obj_cont;         // The created ldr objects
+		WTL::InitScintilla       m_init_scintilla;
 		pr::script::EmbeddedLua  m_lua;
 		std::recursive_mutex     m_mutex;
 
@@ -28,6 +31,7 @@ namespace view3d
 			,m_rdr(pr::rdr::RdrSettings(FALSE))
 			,m_wnd_cont()
 			,m_obj_cont()
+			,m_init_scintilla()
 			,m_lua()
 			,m_mutex()
 		{

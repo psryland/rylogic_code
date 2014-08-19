@@ -32,9 +32,11 @@ namespace view3d
 		float                     m_origin_point_size;        // The base size of the origin instance
 		bool                      m_focus_point_visible;      // True if we should draw the focus point
 		bool                      m_origin_point_visible;     // True if we should draw the origin point
+		pr::ldr::ScriptEditorDlg  m_editor_ui;                // Object manager for objects added to this window
 		pr::ldr::ObjectManagerDlg m_obj_cont_ui;              // Object manager for objects added to this window
 		pr::ldr::MeasureDlg       m_measure_tool_ui;
 		pr::ldr::AngleDlg         m_angle_tool_ui;
+		EditorCont                m_editors;                  // User created editors
 		std::string               m_settings;                 // Allows a char const* to be returned
 
 		Window(pr::Renderer& rdr, HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
@@ -56,9 +58,11 @@ namespace view3d
 			,m_origin_point_size(0.05f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
+			,m_editor_ui()
 			,m_obj_cont_ui()
 			,m_measure_tool_ui(ReadPoint, this, m_rdr, hwnd)
 			,m_angle_tool_ui(ReadPoint, this, m_rdr, hwnd)
+			,m_editors()
 			,m_settings()
 		{
 			// Set the initial aspect ratio
@@ -96,10 +100,13 @@ namespace view3d
 		// Close any window handles
 		void Close()
 		{
+			m_editor_ui      .Close();
 			m_obj_cont_ui    .Close();
 			m_measure_tool_ui.Close();
 			m_angle_tool_ui  .Close();
+			for (auto& e : m_editors) e->Close();
 
+			m_editor_ui      .Detach();
 			m_obj_cont_ui    .Detach();
 			m_measure_tool_ui.Detach();
 			m_angle_tool_ui  .Detach();

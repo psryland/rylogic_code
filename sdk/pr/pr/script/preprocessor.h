@@ -2,15 +2,14 @@
 // Script preprocessor
 //  Copyright (c) Rylogic Ltd 2011
 //**********************************
-#ifndef PR_SCRIPT_PREPROCESSOR_H
-#define PR_SCRIPT_PREPROCESSOR_H
+#pragma once
 
 #include "pr/script/script_core.h"
 #include "pr/script/stream_stack.h"
 #include "pr/script/keywords.h"
 #include "pr/script/pp_macro.h"
 #include "pr/script/pp_macro_db.h"
-#include "pr/script/pp_includes.h"
+#include "pr/script/includes.h"
 #include "pr/script/embedded_code.h"
 
 namespace pr
@@ -31,14 +30,16 @@ namespace pr
 			IPPMacroDB*    m_macros;    // Macro definitions
 			IIncludes*     m_includes;  // Include handler
 			IEmbeddedCode* m_embedded;  // Handler for embedded code
+			bool m_ignore_missing_includes;
 
-			Preprocessor(IPPMacroDB* macros, IIncludes* includes, IEmbeddedCode* embedded)
+			Preprocessor(IPPMacroDB* macros = nullptr, IIncludes* includes = nullptr, IEmbeddedCode* embedded = nullptr, bool ignore_missing_includes = false)
 				:Src()
 				,m_src_stack()
 				,m_buf(m_src_stack)
 				,m_macros(macros)
 				,m_includes(includes)
 				,m_embedded(embedded)
+				,m_ignore_missing_includes(ignore_missing_includes)
 				,m_if_stack()
 			{}
 			Preprocessor(Src& src, IPPMacroDB* macros, IIncludes* includes, IEmbeddedCode* embedded)
@@ -48,6 +49,7 @@ namespace pr
 				,m_macros(macros)
 				,m_includes(includes)
 				,m_embedded(embedded)
+				,m_ignore_missing_includes(false)
 				,m_if_stack()
 			{}
 
@@ -199,13 +201,22 @@ namespace pr
 						if (*m_buf == end) ++m_buf; else throw Exception(EResult::InvalidInclude, m_buf.loc(), "include string incomplete");
 
 						// Open the include
-						auto inc = m_includes ? m_includes->Open(include, m_buf.loc(), search_paths_only) : nullptr;
-						if (inc)
+						try
 						{
-							m_src_stack.push(inc.get(), true);
-							inc.release();
+							auto inc = m_includes ? m_includes->Open(include, m_buf.loc(), search_paths_only) : nullptr;
+							if (inc)
+							{
+								m_src_stack.push(inc.get(), true);
+								inc.release();
+							}
 						}
-					}break;
+						catch (std::exception const&)
+						{
+							if (!m_ignore_missing_includes)
+								throw;
+						}
+						break;
+					}
 				case EPPKeyword::IncludePath:
 					{
 						Eat::LineSpace(m_buf);
@@ -221,7 +232,7 @@ namespace pr
 
 						// Add the path to the include paths
 						if (m_includes)
-							m_includes->AddSearchPaths(include_path.c_str());
+							m_includes->SearchPaths(include_path.c_str());
 						break;
 					}
 				case EPPKeyword::Define:
@@ -786,9 +797,27 @@ namespace pr
 					PR_CHECK(*pp, *str_out);
 				PR_CHECK(*pp, 0);
 			}
+			{// Line continuation tests line endings
+				char const* str_in =
+					"#define BLAH(x)\\\r\n"
+					"   \\\r\n"
+					"	(x + 1)\r\n"
+					"BLAH(5)\r\n"
+					"#define BOB\\\r\n"
+					"	bob\r\n"
+					"BLAH(bob)\r\n";
+				char const* str_out =
+					"(5 + 1)\r\n"
+					"(bob + 1)\r\n"
+				;
+				PtrSrc src(str_in);
+				PPMacroDB macros;
+				Preprocessor pp(src, &macros, 0, 0);
+				for (;*str_out; ++pp, ++str_out)
+					PR_CHECK(*pp, *str_out);
+				PR_CHECK(*pp, 0);
+			}
 		}
 	}
 }
-#endif
-
 #endif

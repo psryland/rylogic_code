@@ -59,7 +59,7 @@ namespace ldr
 		{
 			ParseResult out(m_store);
 			std::size_t bcount = m_store.size();
-			ParseString(m_rdr, str.c_str(), nullptr, out, false, pr::ldr::DefaultContext, nullptr, &m_lua_src);
+			ParseString(m_rdr, str.c_str(), out, false, pr::ldr::DefaultContext, nullptr, nullptr, &m_lua_src);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
 			pr::events::Send(Event_Refresh());
@@ -105,7 +105,6 @@ namespace ldr
 			struct LdrIncludes :FileIncludes
 			{
 				StrCont m_paths;
-				LdrIncludes(bool ignore_missing) :FileIncludes(ignore_missing) {}
 				std::unique_ptr<Src> Open(pr::script::string const& include, Loc const& loc, bool search_paths_only) override
 				{
 					auto src = FileIncludes::Open(include, loc, search_paths_only);
@@ -116,7 +115,7 @@ namespace ldr
 					}
 					return src;
 				}
-			} includes(m_settings.m_IgnoreMissingIncludes);
+			} includes;
 
 			// Add the file based on it's file type
 			std::string extn = pr::filesys::GetExtension(m_files.back());
@@ -130,9 +129,10 @@ namespace ldr
 			else // assume ldr script file
 			{
 				FileSrc src(m_files.back().c_str());
-				Reader  reader(src);
-				reader.CodeHandler()    = &m_lua_src;
-				reader.IncludeHandler() = &includes;
+				Reader reader(src);
+				reader.IncludeHandler(&includes);
+				reader.CodeHandler(&m_lua_src);
+				reader.IgnoreMissingIncludes(m_settings.m_IgnoreMissingIncludes);
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 

@@ -72,6 +72,12 @@ namespace WTL
 		ScintillaCtrl() {}
 		virtual ~ScintillaCtrl() {}
 
+		// Create the control
+		HWND Create(HWND parent, _In_ _U_RECT rect = NULL, _In_opt_z_ LPCTSTR szWindowName = NULL, _In_ DWORD dwStyle = 0, _In_ DWORD dwExStyle = 0, _In_ _U_MENUorID MenuOrID = 0U, _In_opt_ LPVOID lpCreateParam = NULL) throw()
+		{
+			return CWindow::Create(GetWndClassName(), parent, rect, szWindowName, dwStyle, dwExStyle, MenuOrID, lpCreateParam);
+		}
+
 		// Initialise styles with reasonable defaults
 		void InitDefaults()
 		{

@@ -49,6 +49,7 @@
 #include "pr/common/keystate.h"
 #include "pr/common/log.h"
 #include "pr/common/mempool.h"
+#include "pr/common/memstream.h"
 #include "pr/common/min_max_fix.h"
 #include "pr/common/msgbox.h"
 #include "pr/common/multi_cast.h"

@@ -56,9 +56,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h">
       <Filter>sdk\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h">
-      <Filter>sdk\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h">
       <Filter>sdk\script</Filter>
     </ClInclude>
@@ -98,6 +95,9 @@
     <ClInclude Include="..\view3d\context.h" />
     <ClInclude Include="..\..\sdk\pr\pr\linedrawer\ldr_script_editor_dlg.h">
       <Filter>sdk\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\script\includes.h">
+      <Filter>sdk\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

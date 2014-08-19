@@ -75,6 +75,16 @@ namespace pr
 		}
 	}
 
+	// Puts a formatted string into 'str'
+	template <typename TString> inline TString& Fmt(TString& str, typename TString::value_type const* format, ...)
+	{
+		va_list arg_list;
+		va_start(arg_list, format);
+		impl::Format(str, 1024, format, arg_list);
+		va_end(arg_list);
+		return str;
+	}
+
 	// Returns a formatted TString
 	template <typename TString, typename TChar> inline TString Fmt(TChar const* format, va_list arg_list)
 	{
@@ -189,6 +199,10 @@ namespace pr
 	{
 		PRUnitTest(pr_common_fmt)
 		{
+			std::string s0;
+			pr::Fmt(s0, "String %d", 0);
+			PR_CHECK(s0, "String 0");
+
 			char const* s1 = pr::FmtS("String %d",1);
 			PR_CHECK(s1, "String 1");
 

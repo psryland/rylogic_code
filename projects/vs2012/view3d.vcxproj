@@ -170,8 +170,8 @@
     <ClInclude Include="..\..\sdk\pr\pr\script\comment_strip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\embedded_code.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\embedded_lua.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\script\includes.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\keywords.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\script\pp_includes.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\pp_macro_db.h" />
     <ClInclude Include="..\..\sdk\pr\pr\script\preprocessor.h" />

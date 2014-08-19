@@ -47,20 +47,18 @@ namespace pr
 		return std::find(std::begin(cont), std::end(cont), val);
 	}
 
-	// Return the first element in 'cont' that matches 'pred' or nullptr
-	template <typename TCont, typename Pred> inline auto find_if(TCont& cont, Pred pred) -> decltype(&cont[0])
+	// Returns the first element in 'cont' that matches 'pred' or end iterator
+	template <typename TCont, typename Pred> inline auto find_if(TCont& cont, Pred pred) -> decltype(std::begin(cont))
 	{
-		auto iter = std::find_if(std::begin(cont), std::end(cont), pred);
-		if (iter == std::end(cont)) return nullptr;
-		return &*iter;
+		return std::find_if(std::begin(cont), std::end(cont), pred);
 	}
 
 	// Return the first element in 'cont' that matches 'pred' or throw
-	template <typename TCont, typename Pred> inline auto get_if(TCont& cont, Pred pred) -> decltype(cont[0])
+	template <typename TCont, typename Pred> inline auto get_if(TCont& cont, Pred pred) -> decltype(*std::begin(cont))
 	{
-		auto ptr = find_if(cont, pred);
-		if (ptr == nullptr) throw std::exception("get_if() - no match found");
-		return *ptr;
+		auto iter = find_if(cont, pred);
+		if (iter == std::end(cont)) throw std::exception("get_if() - no match found");
+		return *iter;
 	}
 
 	// Insert 'val' into 'cont' if there is no element in 'cont' equal to 'val'

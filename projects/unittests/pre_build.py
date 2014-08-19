@@ -4,39 +4,43 @@
 # Generate a header file that includes all
 # headers in the pr library
 # Use:
-#   pre_build.py $(ProjectDir)..\unittests
+#   pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)
 
-import sys, os
+import sys, os, tempfile
 sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
 import Rylogic as Tools
 import UserVars
 
-Tools.CheckVersion(1)
-
-dir = sys.argv[1]
-outfile = dir + "\\unittests.h"
-tmpfile = outfile + ".tmp"
-
-srcdirs = [
-	"\\sdk\\pr\\pr"
-	]
-
-exclude = [
-	"pr/geometry/mesh_tools.h",
-	"pr/gui/",
-	"pr/image/",
-	"pr/linedrawer/customobjectdata.h",
-	"pr/linedrawer/ldr_helper_c.h",
-	"pr/linedrawer/ldr_ode.h",
-	"pr/macros/on_exit.h",
-	"pr/maths/pr_to_ode.h",
-	"pr/physics/",
-	"pr/sound/",
-	"pr/storage/xfile",
-	"pr/terrain/",
-	]
-
 try:
+	Tools.CheckVersion(1)
+
+	dir      = sys.argv[1]
+	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
+	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
+	outfile  = dir + "\\unittests.h"
+	tempdir  = tempfile.gettempdir() + "\\" + platform + "\\" + config
+	tmpfile  = tempdir + "\\unittests.h.tmp"
+	os.makedirs(tempdir, exist_ok=True)
+
+	srcdirs = [
+		"\\sdk\\pr\\pr"
+		]
+
+	exclude = [
+		"pr/geometry/mesh_tools.h",
+		"pr/gui/",
+		"pr/image/",
+		"pr/linedrawer/customobjectdata.h",
+		"pr/linedrawer/ldr_helper_c.h",
+		"pr/linedrawer/ldr_ode.h",
+		"pr/macros/on_exit.h",
+		"pr/maths/pr_to_ode.h",
+		"pr/physics/",
+		"pr/sound/",
+		"pr/storage/xfile",
+		"pr/terrain/",
+		]
+
 	# generate a file that includes all headers
 	with open(tmpfile, mode='w') as outf:
 		outf.write(

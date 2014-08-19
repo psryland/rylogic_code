@@ -270,8 +270,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, char const* include_paths, int context_id, BOOL async);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, char const* include_paths, int context_id, BOOL async);
+	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async, char const* include_paths);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, int context_id, BOOL async, char const* include_paths, HMODULE module);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
@@ -331,6 +331,10 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowDemoScript           (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_ShowObjectManager        (View3DWindow window, BOOL show);
 	VIEW3D_API View3DM4x4              __stdcall View3D_ParseLdrTransform        (char const* ldr_script);
+
+	// Ldr Editor Ctrl
+	VIEW3D_API HWND                    __stdcall View3D_LdrEditorCreate          (HWND parent);
+	VIEW3D_API void                    __stdcall View3D_LdrEditorDestroy         (HWND hwnd);
 }
 
 // Conversion to/from maths types

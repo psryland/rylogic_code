@@ -34,6 +34,7 @@
 #include "pr/common/hresult.h"
 #include "pr/common/assert.h"
 #include "pr/common/new.h"
+#include "pr/common/algorithm.h"
 #include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
 #include "pr/script/reader.h"
@@ -42,19 +43,23 @@
 #include "pr/meta/alignment_of.h"
 #include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
+#include "pr/gui/scintilla.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
+#include "pr/linedrawer/ldr_script_editor_dlg.h"
 
 #include "pr/view3d/view3d.h"
 #include "pr/view3d/prmaths.h"
 
 namespace view3d
 {
+	typedef std::unique_ptr<pr::ldr::ScriptEditorDlg> EditorPtr;
 	typedef std::set<View3DObject>  ObjectCont;
 	typedef std::set<View3DWindow>  WindowCont;
+	typedef std::set<EditorPtr> EditorCont;
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
 	
 	struct ReportErrorCB

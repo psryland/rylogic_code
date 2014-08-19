@@ -24,8 +24,6 @@
 //
 
 #pragma once
-#ifndef PR_RESOURCE_H
-#define PR_RESOURCE_H
 
 #include <windows.h>
 
@@ -34,8 +32,15 @@ namespace pr
 	template <typename Type>
 	struct Resource
 	{
+		union {
 		Type const* m_data; // Pointer to the resource
-		std::size_t m_size; // Size of the resource in bytes
+		char const* m_buf;
+		};
+		std::size_t m_len;  // The length of the resource in 'Type's
+		
+		Resource() :m_data() ,m_len() {}
+		Resource(Type const* data, std::size_t len) :m_data(data) ,m_len(len) {}
+		std::size_t size() const { return m_len * sizeof(Type); }
 	};
 
 	namespace resource
@@ -46,7 +51,6 @@ namespace pr
 		// Note: you can use pr::GetCurrentModule() for 'module' in windowsfunctions.h
 		template <typename Type> Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
 		{
-			Resource<Type> res;
 			HRSRC handle = FindResourceW(module, name, type);
 			if (!handle)
 			{
@@ -54,7 +58,7 @@ namespace pr
 				throw std::exception("resource not found",last_error);
 			}
 
-			res.m_size = SizeofResource(module, handle);
+			auto size = SizeofResource(module, handle);
 			HGLOBAL mem = LoadResource(module, handle);
 			if (!mem)
 			{
@@ -64,10 +68,9 @@ namespace pr
 
 			// Object a pointer to the resouce.
 			// Valid until the module is unloaded therefore don't need to worry about unlocking (according to MSDN)
-			res.m_data = static_cast<Type const*>(LockResource(mem));
-			return res;
+			auto data = static_cast<Type const*>(LockResource(mem));
+
+			return Resource<Type>(data, size / sizeof(Type));
 		}
 	}
 }
-
-#endif

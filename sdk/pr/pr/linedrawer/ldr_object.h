@@ -575,18 +575,18 @@ namespace pr
 		inline void ParseFile(
 			pr::Renderer& rdr,                                         // The renderer to create models for
 			char const* filename,                                      // The file containing the ldr script
-			char const* include_paths,                                 // The include paths (or nullptr)
-			ParseResult& out,                                            // The results of parsing the script
+			ParseResult& out,                                          // The results of parsing the script
 			bool async = true,                                         // True if parsing should be done in a background thread
 			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
+			pr::script::IIncludes* include_handler = nullptr,          // The include resolver
 			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
 			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // lua code handler to use instead of the default
 		{
 			pr::script::FileSrc src(filename);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler()->AddSearchPaths(include_paths);
-			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
-			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
+			reader.IncludeHandler(include_handler);
+			reader.ErrorHandler(script_error_handler);
+			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 
@@ -595,19 +595,19 @@ namespace pr
 		inline void ParseString(
 			pr::Renderer& rdr,                                         // The reader to create models for
 			char const* ldr_script,                                    // The literal string containing the script
-			char const* include_paths,                                 // Include paths (or nullptr) used to make #include mean something for strings
-			ParseResult& out,                                            // The results of parsing the script
+			ParseResult& out,                                          // The results of parsing the script
 			bool async = true,                                         // True if parsing should be done in a background thread
 			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
+			pr::script::IIncludes* include_handler = nullptr,          // Include paths (or nullptr) used to make #include mean something for strings
 			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
 			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // Lua code handler to use instead of the default
 		{
 			pr::script::Loc loc("ldr_string", 0, 0);
 			pr::script::PtrSrc src(ldr_script, &loc);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler()->AddSearchPaths(include_paths);
-			if (script_error_handler) reader.ErrorHandler() = script_error_handler;
-			if (lua_code_handler)     reader.CodeHandler() = lua_code_handler;
+			reader.IncludeHandler(include_handler);
+			reader.ErrorHandler(script_error_handler);
+			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 

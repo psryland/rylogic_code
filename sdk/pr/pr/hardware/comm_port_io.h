@@ -1,14 +1,13 @@
 //*********************************************************************
 // Serial IO port comms
 //*********************************************************************
-#ifndef PR_HARDWARE_COMM_PORT_IO_H
-#define PR_HARDWARE_COMM_PORT_IO_H
 #pragma once
 
 #include <cassert>
 #include <exception>
 #include <windows.h>
 #include "pr/common/fmt.h"
+#include "pr/common/hresult.h"
 
 namespace pr
 {
@@ -21,10 +20,10 @@ namespace pr
 		BYTE  m_stop_bits;  // Stop bits
 
 		CommPortSettings(DWORD baud = CBR_9600, BYTE data_bits = 8, BYTE parity = NOPARITY, BYTE stop_bits = ONESTOPBIT)
-		:m_baud     (baud)
-		,m_data_bits(data_bits)
-		,m_parity   (parity)
-		,m_stop_bits(stop_bits)
+			:m_baud     (baud)
+			,m_data_bits(data_bits)
+			,m_parity   (parity)
+			,m_stop_bits(stop_bits)
 		{}
 	};
 
@@ -39,7 +38,7 @@ namespace pr
 		void ApplyConfig()
 		{
 			// Read the comm state, update the data, then set it again
-			DCB comm_state; comm_state.DCBlength = sizeof(DCB);
+			DCB comm_state = {sizeof(DCB)};
 			Throw(::GetCommState(m_handle, &comm_state), "Failed to read comm state");
 			comm_state.BaudRate = m_settings.m_baud;
 			comm_state.ByteSize = m_settings.m_data_bits;
@@ -57,8 +56,9 @@ namespace pr
 		void Throw(BOOL res, char const* msg)
 		{
 			if (res) return;
-			GetLastError();
-			throw std::exception(msg);
+			auto last_error = GetLastError();
+			auto error_desc = pr::HrMsg(last_error);
+			throw std::exception(pr::FmtS("%s. 0x%08X - %s", msg, last_error, error_desc.c_str()));
 		}
 
 	public:
@@ -108,10 +108,10 @@ namespace pr
 			try
 			{
 				// Open for overlapped I/O
-				char port_name[] = "\\\\.\\COM\0\0\0\0\0";
-				_itoa_s(port_number, &port_name[7], 5, 10);
-				m_handle = ::CreateFileA(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
-				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open '%s'", port_name));
+				wchar_t port_name[] = L"\\\\.\\COM\0\0\0\0\0";
+				_itow_s(port_number, &port_name[7], 5, 10);
+				m_handle = ::CreateFileW(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH, 0);
+				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open 'COM%d'", port_number));
 
 				// Create a manual reset event for the overlapped i/o calls
 				m_io_complete = ::CreateEvent(0, TRUE, FALSE, 0);
@@ -129,10 +129,9 @@ namespace pr
 				SetBlockingReads(false);
 
 				// Setup the device with default settings
-				COMMCONFIG config = {0};
-				config.dwSize = sizeof(COMMCONFIG);
-				Throw(::GetDefaultCommConfigA(port_name + 4, &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG), "Failed to get default comm port configuration");
-				Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set comm port configuration");
+				COMMCONFIG config = {sizeof(COMMCONFIG)};
+				Throw(::GetDefaultCommConfigW(port_name + 4, &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG), "Failed to get default comm port configuration");
+				Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
 				ApplyConfig();
 			}
 			catch (...)
@@ -218,7 +217,9 @@ namespace pr
 		// Flush any buffered data
 		void Flush()
 		{
-			Throw(::FlushFileBuffers(m_handle), "Failed to flush write buffer");
+			auto res = ::FlushFileBuffers(m_handle);
+			if (res != 0 || GetLastError() == ERROR_NOT_SUPPORTED) return;
+			Throw(res, "Failed to flush write buffer");
 		}
 
 		// Set/Clear the break state
@@ -333,5 +334,3 @@ namespace pr
 		}
 	};
 }
-
-#endif

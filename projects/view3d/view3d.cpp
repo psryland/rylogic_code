@@ -765,30 +765,46 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 // These objects will not have handles but can be added/removed by their context id.
 // 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 // Returns the number of objects added.
-VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, char const* include_paths, int context_id, BOOL async)
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async, char const* include_paths)
 {
 	try
 	{
 		DllLockGuard;
+
+		pr::script::FileIncludes inc(include_paths);
+
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseFile(Dll().m_rdr, ldr_filepath, include_paths, out, async != 0, context_id, 0, &Dll().m_lua);
+		pr::ldr::ParseFile(Dll().m_rdr, ldr_filepath, out, async != 0, context_id, &inc, nullptr, &Dll().m_lua);
 		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
 		return int(out.m_objects.size());
 	}
 	CatchAndReport(View3D_ObjectsCreateFromFile, , 0);
 }
 
-// If multiple objects are created, the handle returned is to the last object only
+// Create objects given in an ldr string.
+// If multiple objects are created, the handle returned is to the first object only
 // 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, char const* include_paths, int context_id, BOOL async)
+// If 'module' is non-zero, then includes are resolved from the resources in that module
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, BOOL async, char const* include_paths, HMODULE module)
 {
 	try
 	{
 		DllLockGuard;
+
+		// Choose an include resolver based on the given parameters
+		pr::script::IIncludes* inc = nullptr;
+		pr::script::FileIncludes finc(include_paths);
+		pr::script::ResIncludes rinc(module);
+		if      (module != 0) inc = &rinc;
+		else if (include_paths != nullptr) inc = &finc;
+
+		// Parse the description
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseString(Dll().m_rdr, ldr_script, include_paths, out, async != 0, context_id, 0, &Dll().m_lua);
+		pr::ldr::ParseString(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
+		
+		// Return the first object
 		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
-		return !out.m_objects.empty() ? out.m_objects.back().m_ptr : nullptr;
+		return !out.m_objects.empty() ? out.m_objects.front().m_ptr : nullptr;
 	}
 	CatchAndReport(View3D_ObjectCreateLdr, , nullptr);
 }
@@ -1643,7 +1659,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 
 		DllLockGuard;
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), nullptr, out, true, pr::ldr::DefaultContext, 0, &Dll().m_lua);
+		pr::ldr::ParseString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), out, true, pr::ldr::DefaultContext, nullptr, nullptr, &Dll().m_lua);
 		for (auto& obj : out.m_objects)
 			View3D_AddObject(window, obj.m_ptr);
 	}
@@ -1658,8 +1674,9 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		auto& ui = window->m_obj_cont_ui;
-		ui.ShowScript(pr::ldr::CreateDemoScene(), window->m_hwnd);
+		auto& ui = window->m_editor_ui;
+		ui.Show(window->m_hwnd);
+		ui.Text(pr::ldr::CreateDemoScene().c_str());
 	}
 	CatchAndReport(View3D_ShowDemoScript, window,);
 }
@@ -1691,3 +1708,41 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 	}
 	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
+
+// Create/Destroy a scintilla editor window setup for ldr script editing
+VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
+{
+	try
+	{
+		// Create an instance of an editor window and save its pointer
+		// in the user data for the window. This means the 'hwnd' is
+		// effectively a handle for the allocated window.
+		// Do nothing other than create the window here, callers can
+		// then restyle, move, show/hide, etc the window as they want.
+		auto edt = std::make_unique<pr::ldr::ScriptEditorDlg>();
+		auto hwnd = edt->Create(parent);
+
+		::SetLastError(0);
+		auto prev = ::SetWindowLongPtrA(hwnd, GWLP_USERDATA, LONG_PTR(edt.get()));
+		if (prev != 0 || ::GetLastError() != 0) throw std::exception("Error while creating editor window");
+		edt.release();
+		return hwnd;
+	}
+	CatchAndReport(View3D_LdrEditorCreate, , 0);
+}
+VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
+{
+	try
+	{
+		if (hwnd == 0) return;
+
+		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorDlg*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
+		if (!edt) throw std::exception("No back reference pointer found for this window");
+
+		::SetWindowLongPtrA(hwnd, GWLP_USERDATA, 0);
+		edt->Close();
+		edt->Detach();
+	}
+	CatchAndReport(View3D_LdrEditorDestroy, ,);
+}
+

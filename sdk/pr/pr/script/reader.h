@@ -10,8 +10,6 @@
 //   Use an 'EmbeddedLua' char stream
 
 #pragma once
-#ifndef PR_SCRIPT_READER_H
-#define PR_SCRIPT_READER_H
 
 #include "pr/maths/maths.h"
 #include "pr/script/script.h"
@@ -90,10 +88,14 @@ namespace pr
 
 			// Interface pointers
 			// Set these for non-default handling of macros, includes, embedded code, or error reporting
-			IPPMacroDB*&    MacroHandler()   { return m_pp.m_macros; }
-			IIncludes*&     IncludeHandler() { return m_pp.m_includes; }
-			IEmbeddedCode*& CodeHandler()    { return m_pp.m_embedded; }
-			IErrorHandler*& ErrorHandler()   { return m_error_handler; }
+			IPPMacroDB*    MacroHandler() const                 { return m_pp.m_macros; }
+			void           MacroHandler(IPPMacroDB* handler)    { m_pp.m_macros = handler ? handler : &m_dft_macros; }
+			IIncludes*     IncludeHandler() const               { return m_pp.m_includes; }
+			void           IncludeHandler(IIncludes* handler)   { m_pp.m_includes = handler ? handler : &m_dft_includes; }
+			IEmbeddedCode* CodeHandler()                        { return m_pp.m_embedded; }
+			void           CodeHandler(IEmbeddedCode* handler)  { m_pp.m_embedded = handler; }
+			IErrorHandler* ErrorHandler() const                 { return m_error_handler; }
+			void           ErrorHandler(IErrorHandler* handler) { m_error_handler = handler ? handler : &m_dft_errors; }
 
 			// User delimiter characters
 			char const*& Delimiters() { return m_delim; }
@@ -121,6 +123,10 @@ namespace pr
 			{
 				m_case_sensitive_keywords = case_sensitive;
 			}
+
+			// Get/Set whether unresolved include files are ignored
+			bool IgnoreMissingIncludes() const      { return m_pp.m_ignore_missing_includes; }
+			void IgnoreMissingIncludes(bool ignore) { m_pp.m_ignore_missing_includes = ignore; }
 
 			// Return the hash of a keyword
 			static pr::hash::HashValue HashKeyword(char const* keyword, bool case_sensitive_keywords)
@@ -669,6 +675,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

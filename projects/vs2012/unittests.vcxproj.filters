@@ -306,9 +306,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\archiver.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\array.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\assert.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -316,12 +313,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\base64.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\bit_array.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\byte_data.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\chain.h">
@@ -337,9 +328,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\container_functions.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h">
@@ -396,9 +384,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\istream.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\kdtree.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\keystate.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -432,12 +417,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\profile.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -450,19 +429,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\proxy.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\prsegmentedlist.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prsortkey.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\prtypes.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\quadtree.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\queue.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\range.h">
@@ -484,9 +454,6 @@
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\stack.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h">
@@ -591,22 +558,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\app\skybox.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\and.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h">
@@ -615,37 +570,13 @@
     <ClInclude Include="..\..\sdk\pr\pr\meta\if.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\not.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\or.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\maths\isize.h">
@@ -673,9 +604,6 @@
       <Filter>pr\meta</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\enumerable.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\script\char_stream.h">
@@ -846,9 +774,6 @@
     <ClInclude Include="..\..\sdk\pr\pr\camera\camera.h">
       <Filter>pr\camera</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -932,6 +857,9 @@
     </ClInclude>
     <ClInclude Include="..\..\sdk\pr\pr\script\includes.h">
       <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\memstream.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

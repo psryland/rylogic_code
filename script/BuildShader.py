@@ -4,7 +4,7 @@
 #
 # Build shaders using fxc.exe
 # Use:
-#  BuildShader.py $(Fullpath) [pp] [obj] [debug] [trace]
+#  BuildShader.py $(Fullpath) $(PlatformTarget) $(Configuration) [pp] [obj] [dbg] [trace]
 #
 # Expected input is an hlsl file.
 # The file is scanned for: PR_RDR_SHADER_VS, PR_RDR_SHADER_PS, etc
@@ -28,11 +28,13 @@ try:
 
 	# The full path of the hlsl file to compile
 	fullpath = sys.argv[1]
+	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
+	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
 
 	# Check for optional parameters
 	pp    = True if "pp"    in [arg.lower() for arg in sys.argv] else False
 	obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
-	dbg   = True if "debug" in [arg.lower() for arg in sys.argv] else False
+	dbg   = True if "dbg"   in [arg.lower() for arg in sys.argv] else False
 	trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
 	#trace = True
 
@@ -70,11 +72,14 @@ try:
 			if trace: print("Building: " + shdr_name)
 
 			# Create temporary filepaths so that we only overwrite
-			# existing files if they've actually changed.
-			filepath_h   = tempfile.gettempdir() + "\\" + shdr_name + ".h"
-			filepath_cso = tempfile.gettempdir() + "\\" + shdr_name + ".cso"
+			# existing files if they've actually changed. Create temp
+			# files for each unique platform/config to allow parallel build
+			tempdir = tempfile.gettempdir() + "\\" + platform + "\\" + config;
+			filepath_h   = tempdir + "\\" + shdr_name + ".h"
+			filepath_cso = tempdir + "\\" + shdr_name + ".cso"
 
 			# Delete any potentially left over temporary output
+			os.makedirs(tempdir, exist_ok=True);
 			if os.path.exists(filepath_h):   os.remove(filepath_h)
 			if os.path.exists(filepath_cso): os.remove(filepath_cso)
 

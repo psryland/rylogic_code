@@ -98,7 +98,7 @@ static void StyleNameAndColour(StyleContext& sc)
 	sc.SetState(SCE_LDR_DEFAULT);
 }
 
-void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList *keywordlists[], Accessor &styler)
+void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor &styler)
 {
 	enum class ETok { None, Keyword, LineComment, BlockComment, StrLiteral, CharLiteral };
 

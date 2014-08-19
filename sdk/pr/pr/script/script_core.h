@@ -2,8 +2,7 @@
 // Script charactor source
 //  Copyright (c) Rylogic Ltd 2007
 //**********************************
-#ifndef PR_SCRIPT_SCRIPT_CORE_H
-#define PR_SCRIPT_SCRIPT_CORE_H
+#pragma once
 
 #include <string>
 #include <vector>
@@ -23,7 +22,6 @@
 
 #pragma warning (push)
 #pragma warning (disable: 4351) // warning C4351: new behavior: elements of array will be default initialized
-
 namespace pr
 {
 	namespace script
@@ -181,6 +179,7 @@ namespace pr
 		}
 	}
 }
+#pragma warning (pop)
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -222,7 +221,4 @@ namespace pr
 		}
 	}
 }
-#endif
-#pragma warning (pop)
-
 #endif

@@ -22,6 +22,8 @@
 #include <sstream>
 #include <cassert>
 
+// Note, enum flag operators are defined in <pr/meta/flags_enum.h>
+
 // Macro enum generator functions
 #define PR_ENUM_DEFINE1(id)           id,
 #define PR_ENUM_DEFINE2(id, val)      id val,

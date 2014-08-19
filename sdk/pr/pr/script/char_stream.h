@@ -2,8 +2,7 @@
 // Script charactor source
 //  Copyright (c) Rylogic Ltd 2007
 //**********************************
-#ifndef PR_SCRIPT_CHAR_STREAM_H
-#define PR_SCRIPT_CHAR_STREAM_H
+#pragma once
 
 #include <fstream>
 #include "pr/script/script_core.h"
@@ -119,8 +118,15 @@ namespace pr
 			template <typename Str, size_t Len> bool match(Str const (&str)[Len]) const        { return match(str, Len); }
 
 		private:
-			char peek() const override { return empty() ? *m_src : m_buf[0]; }
-			void next() override       { if (empty()) ++m_src; else pop_front(); }
+			char peek() const override
+			{
+				return empty() ? *m_src : m_buf[0];
+			}
+			void next() override
+			{
+				if (empty()) ++m_src;
+				else pop_front();
+			}
 		};
 
 		// A char stream that records a history of the characters that pass through it
@@ -150,7 +156,12 @@ namespace pr
 
 		protected:
 			char peek() const override { return *m_src; }
-			void next() override       { m_hist.back() = *m_src; m_hist.push_back_overwrite(0); ++m_src; }
+			void next() override
+			{
+				m_hist.back() = *m_src;
+				m_hist.push_back_overwrite(0);
+				++m_src;
+			}
 		};
 
 		// A char source formed from a pointer to a null terminated string
@@ -180,8 +191,21 @@ namespace pr
 
 		protected:
 			char peek() const override { return *m_ptr; }
-			void next() override       { if (m_loc) m_loc->inc(*m_ptr); ++m_ptr; }
-			void seek() override       { while (*m_ptr == '\\' && *(m_ptr+1) == '\n') {next(); next();} }
+			void next() override
+			{
+				if (m_loc) m_loc->inc(*m_ptr);
+				++m_ptr;
+			}
+			void seek() override
+			{
+				// Handle line continuations
+				for (; peek(); )
+				{
+					if (*m_ptr == '\\' && *(m_ptr+1) == '\n')                       { next(); next(); continue; }
+					if (*m_ptr == '\\' && *(m_ptr+1) == '\r' && *(m_ptr+2) == '\n') { next(); next(); next(); continue; }
+					break;
+				}
+			}
 		};
 
 		// A range of chars not necessarily terminated by a null
@@ -214,8 +238,20 @@ namespace pr
 
 		protected:
 			char peek() const override { return m_ptr == m_end ? 0 : *m_ptr; }
-			void next() override       { if (m_loc) m_loc->inc(*m_ptr); ++m_ptr; }
-			void seek() override       { while (m_end - m_ptr >= 2 && *m_ptr == '\\' && *(m_ptr+1) == '\n') {next(); next();} }
+			void next() override
+			{
+				if (m_loc) m_loc->inc(*m_ptr);
+				++m_ptr;
+			}
+			void seek() override
+			{
+				for (;peek();)
+				{
+					if (m_end - m_ptr >= 2 && *m_ptr == '\\' && *(m_ptr+1) == '\n')                       { next(); next(); continue; }
+					if (m_end - m_ptr >= 3 && *m_ptr == '\\' && *(m_ptr+1) == '\r' && *(m_ptr+2) == '\n') { next(); next(); next(); continue; }
+					break;
+				}
+			}
 		};
 
 		// A null terminated string char source that contains it's own buffer
@@ -244,8 +280,20 @@ namespace pr
 
 		protected:
 			char peek() const override { return *(m_str.c_str() + m_idx); }
-			void next() override       { if (m_loc) m_loc->inc(m_str[m_idx]); ++m_idx; }
-			void seek() override       { while (m_idx <= m_str.size()-2 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\n') {next(); next();} }
+			void next() override
+			{
+				if (m_loc) m_loc->inc(m_str[m_idx]);
+				++m_idx;
+			}
+			void seek() override
+			{
+				for (;peek();)
+				{
+					if (m_str.size() - m_idx >= 2 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\n')                           { next(); next(); continue; }
+					if (m_str.size() - m_idx >= 3 && m_str[m_idx] == '\\' && m_str[m_idx+1] == '\r' && m_str[m_idx+2] == '\n') { next(); next(); next(); continue; }
+					break;
+				}
+			}
 		};
 
 		// A file char source
@@ -282,8 +330,20 @@ namespace pr
 			}
 
 			char peek() const override { return m_buf[0]; }
-			void next() override       { if (m_loc) m_loc->inc(m_buf[0]); m_buf.shift(fget()); }
-			void seek() override       { while (m_buf[0] == '\\' && m_buf[1] == '\n') {next(); next();} }
+			void next() override
+			{
+				if (m_loc) m_loc->inc(m_buf[0]);
+				m_buf.shift(fget());
+			}
+			void seek() override
+			{
+				for (;peek();)
+				{
+					if (m_buf[0] == '\\' && m_buf[1] == '\n')                     { next(); next(); continue; }
+					if (m_buf[0] == '\\' && m_buf[1] == '\r' && m_buf[2] == '\n') { next(); next(); next(); continue; }
+					break;
+				}
+			}
 		};
 
 		// A file source that includes a 'Loc'
@@ -427,6 +487,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

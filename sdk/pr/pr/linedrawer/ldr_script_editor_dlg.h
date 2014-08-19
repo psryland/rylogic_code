@@ -17,11 +17,15 @@ namespace pr
 		{
 			virtual ~IScriptEditorDlg() {}
 
+			// Implicitly convertable to HWND
+			virtual operator HWND() = 0;
+
 			// Create the non-modal window
-			virtual void Create(HWND parent = 0) = 0;
+			virtual HWND Create(HWND parent = 0) = 0;
 
 			// Close and destroy the dialog window
 			virtual void Close() = 0;
+			virtual void Detach() = 0;
 
 			// Show the window as a non-modal window
 			virtual void Show(HWND parent = 0) = 0;
@@ -53,16 +57,26 @@ namespace pr
 		public:
 			ScriptEditorDlg();
 
-			// Create the non-modal window
-			void Create(HWND parent) override
+			// Implicitly convertable to HWND
+			operator HWND() override
 			{
-				m_dlg->Create(parent);
+				return m_dlg->operator HWND();
+			}
+
+			// Create the non-modal window
+			HWND Create(HWND parent) override
+			{
+				return m_dlg->Create(parent);
 			}
 
 			// Close and destroy the dialog window
 			void Close() override
 			{
 				m_dlg->Close();
+			}
+			void Detach() override
+			{
+				m_dlg->Detach();
 			}
 
 			// Show the window as a non-modal window

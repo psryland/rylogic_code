@@ -1140,7 +1140,7 @@ namespace pr
 			typedef pr::deque<Type, 16> Deque1;
 		}
 
-		PRUnitTest(pr_common_deque)
+		PRUnitTest(pr_container_deque)
 		{
 			using namespace pr::unittests::deque;
 			std::vector<uint> uints; uints.resize(16);

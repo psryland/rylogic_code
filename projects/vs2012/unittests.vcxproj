@@ -45,19 +45,15 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\alloca.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\allocator.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\archiver.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\array.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\assert.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\atl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\base64.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\bit_array.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\byte_data.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\cast.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\chain.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\clipboard.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\colour.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\command_line.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\console.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\container_functions.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\crc.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\d3dptr.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\datetime.h" />
@@ -78,12 +74,11 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\inplacealloc.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\ireport.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\istream.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\kdtree.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\keystate.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\interpolate.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\log.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\map_adapter.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\mempool.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\memstream.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\min_max_fix.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\msgbox.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\multi_cast.h" />
@@ -93,17 +88,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\pipe.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\predicate.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prlistinanarray.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\procttree.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\profile.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\profilemanager.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\property.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\proxy.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\prsegmentedlist.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prsortkey.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\prtypes.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\quadtree.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\queue.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\range.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\refcount.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\refptr.h" />
@@ -113,12 +103,10 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\scoped.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\stack.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\common\tri_table.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\tstring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\unittests.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\user_data.h" />
@@ -249,28 +237,16 @@
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector4_impl.h" />
     <ClInclude Include="..\..\sdk\pr\pr\maths\vector_rand.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\abs.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedstorage.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignedtype.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\alignmentof.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\and.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\constants.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\enableif.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\flags_enum.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\function_arity.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\gcf.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\if.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\isclass.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\ispod.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\ispointer.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\isprime.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\min_max.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\not.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\or.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\primegtreq.h" />
     <ClInclude Include="..\..\sdk\pr\pr\meta\remove_pointer.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\squareroot.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\typelist.h" />
-    <ClInclude Include="..\..\sdk\pr\pr\meta\typeof.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\tcpip.h" />
     <ClInclude Include="..\..\sdk\pr\pr\network\web_get.h" />
     <ClInclude Include="..\..\sdk\pr\pr\renderer11\textures\projected_texture.h" />
@@ -389,7 +365,7 @@
       <Outputs>nofile</Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -404,7 +380,7 @@
     </Link>
     <PostBuildEvent />
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <CustomBuildStep>
       <Command>$(ProjectDir)..\unittests\run_tests.py $(TargetPath)</Command>
@@ -432,7 +408,7 @@
       <Outputs>nofile</Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -453,7 +429,7 @@
       <Outputs>nofile</Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests</Command>
+      <Command>$(ProjectDir)..\unittests\pre_build.py $(ProjectDir)..\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

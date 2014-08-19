@@ -70,8 +70,11 @@ namespace ldr
 	pr::ldr::LdrObject* Plugin::RegisterObject(char const* object_description, char const* include_paths, pr::ldr::ContextId ctx_id, bool async)
 	{
 		size_t initial = m_store.size();
+
+		pr::script::FileIncludes finc(include_paths);
+
 		pr::ldr::ParseResult out(m_store);
-		pr::ldr::ParseString(m_ldr->m_rdr, object_description, include_paths, out, async, ctx_id);
+		pr::ldr::ParseString(m_ldr->m_rdr, object_description, out, async, ctx_id, &finc);
 		
 		if (initial == m_store.size()) return nullptr;
 		pr::events::Send(Event_StoreChanged(m_store, m_store.size() - initial, out, Event_StoreChanged::EReason::NewData));

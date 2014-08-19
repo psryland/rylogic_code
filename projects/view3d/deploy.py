@@ -29,7 +29,7 @@ try:
 		]
 
 	procs = []
-	parallel = False
+	parallel = True
 	same_window = True
 
 	#Invoke MSBuild

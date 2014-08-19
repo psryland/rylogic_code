@@ -14,18 +14,8 @@
 #include <atldlgs.h>
 #include <atlframe.h>
 #include <atlcrack.h>
-//#include <atlctrls.h>
-//#include <atlsplit.h>
-//#include <atlmisc.h>
 
 #include "pr/common/min_max_fix.h"
-//#include "pr/common/assert.h"
-//#include "pr/common/keystate.h"
-//#include "pr/macros/enum.h"
-//#include "pr/macros/count_of.h"
-//#include "pr/str/prstring.h"
-//#include "pr/linedrawer/ldr_objects_dlg.h"
-//#include "pr/script/reader.h"
 #include "pr/gui/scintilla.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 
@@ -33,6 +23,7 @@ namespace pr
 {
 	namespace ldr
 	{
+		// TODO: Make this CWindowImpl<> derived
 		class ScriptEditorDlgImpl
 			:public CIndirectDialogImpl<ScriptEditorDlgImpl>
 			,public CDialogResize<ScriptEditorDlgImpl>
@@ -68,12 +59,18 @@ namespace pr
 			{
 				assert(!IsWindow() && "DestroyWindow() must be called before destruction");
 			}
+			
+			operator HWND() override
+			{
+				return m_hWnd;
+			}
 
 			// Create the non-modal dialog
-			void Create(HWND parent = 0) override
+			HWND Create(HWND parent = 0) override
 			{
-				if (base::Create(parent) == 0)
-					throw std::exception("Failed to create script editor window");
+				auto hwnd = base::Create(parent);
+				if (hwnd == 0) throw std::exception("Failed to create script editor window");
+				return hwnd;
 			}
 
 			// Close and destroy the dialog window
@@ -81,6 +78,16 @@ namespace pr
 			{
 				if (!IsWindow()) return;
 				DestroyWindow();
+			}
+
+			// Detach from the window handles
+			void Detach() override
+			{
+				m_edit.Detach();
+				m_accel.Detach();
+				m_menu.Detach();
+				Render = nullptr;
+				base::Detach();
 			}
 
 			// Show the window as a non-modal window
@@ -201,7 +208,7 @@ namespace pr
 				DIALOG_FONT(8, TEXT("MS Shell Dlg"))
 			END_DIALOG()
 			BEGIN_CONTROLS_MAP()
-				CONTROL_CONTROL(_T(""), IDC_TEXT, ScintillaCtrl::GetWndClassName(), WS_HSCROLL|WS_VSCROLL|ES_AUTOHSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_WANTRETURN, 5, 5, 418, 338, WS_EX_STATICEDGE)//NOT WS_BORDER|
+				CONTROL_CONTROL(_T(""), IDC_TEXT, ScintillaCtrl::GetWndClassName(), WS_HSCROLL|WS_VSCROLL, 5, 5, 418, 338, WS_EX_STATICEDGE)//NOT WS_BORDER|
 				CONTROL_DEFPUSHBUTTON(_T("&Render"), IDC_BTN_RENDER, 320, 348, 50, 14, 0, WS_EX_LEFT)
 				CONTROL_PUSHBUTTON(_T("&Close"), IDC_BTN_CLOSE, 375, 348, 50, 14, 0, WS_EX_LEFT)
 			END_CONTROLS_MAP()
