@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Name>rylogic</Name>
+    <ProjectGuid>4207b3f9-3258-44ef-a02b-c7936a9c5b64</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>rylogic</RootNamespace>
+    <ProjectTypeGuids>{A0786B88-2ADB-4C21-ABE8-AA2D79766269}</ProjectTypeGuids>
+    <AssemblyName>rylogic</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <IncludeDebugInformation>true</IncludeDebugInformation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <IncludeDebugInformation>false</IncludeDebugInformation>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="priv\footer.php" />
+    <Compile Include="priv\header.php" />
+    <Compile Include="priv\leftmenu.php" />
+    <Compile Include="priv\logger.php" />
+    <Compile Include="priv\mailer.php" />
+    <Compile Include="priv\rmw_store_db.php" />
+    <Compile Include="priv\paypal_ipn.php" />
+    <Compile Include="priv\src.contact.php" />
+    <Compile Include="priv\src.index.php" />
+    <Compile Include="priv\src.order_action.php" />
+    <Compile Include="priv\src.order_create.php" />
+    <Compile Include="priv\tpl.main.php" />
+    <Compile Include="priv\news.php" />
+    <Compile Include="priv\src.order_complete.php" />
+    <Compile Include="priv\functions.php" />
+    <Compile Include="priv\vars.php" />
+    <Compile Include="pub\contact.php" />
+    <Compile Include="pub\index.php" />
+    <Compile Include="pub\order_action.php" />
+    <Compile Include="pub\order_create.php" />
+    <Compile Include="pub\order_complete.php" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="priv\" />
+    <Folder Include="pub\" />
+    <Folder Include="pub\img\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="composer.json" />
+    <Content Include="priv\paypal_controller.php" />
+    <Content Include="pub\img\main.png" />
+    <Content Include="pub\img\noise_bkgd.png" />
+    <Content Include="pub\rylogviewer_eula.txt" />
+    <Content Include="pub\style.css" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,20 @@
+Processing a payment.
+ProcessPost:
+array (
+  'name' => 'Paul Ryland',
+  'email' => 'psryland@yahoo.co.nz',
+  'company' => 'Rylogic Limited',
+)
+
+
+INVALID TRANSACTION! (Improper PayPal response received)
+Processing a payment.
+ProcessPost:
+array (
+  'name' => 'Paul Ryland',
+  'email' => 'psryland@yahoo.co.nz',
+  'company' => 'Rylogic Limited',
+)
+
+
+INVALID TRANSACTION! (Improper PayPal response received)
