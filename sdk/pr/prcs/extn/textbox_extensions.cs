@@ -76,20 +76,24 @@ namespace pr.extn
 		}
 
 		/// <summary>Add the current combo box text to the drop down list</summary>
-		public static void AddTextToDropDownList(this ComboBox cb, int max_history = 10)
+		public static void AddTextToDropDownList(this ComboBox cb, int max_history = 10, bool only_if_has_value = true)
 		{
 			// Need to take a copy of the text, because Remove() will delete the text
 			// if the current text is actually a selected item.
-			var text = cb.Text;
+			var text = cb.Text ?? string.Empty;
 			var selection = new Range(cb.SelectionStart, cb.SelectionStart + cb.SelectionLength);
 
-			cb.Items.Remove(text);
-			cb.Items.Insert(0, text);
+			if (text.HasValue() || !only_if_has_value)
+			{
+				cb.Items.Remove(text);
+				cb.Items.Insert(0, text);
 
-			while (cb.Items.Count > max_history)
-				cb.Items.RemoveAt(cb.Items.Count - 1);
+				while (cb.Items.Count > max_history)
+					cb.Items.RemoveAt(cb.Items.Count - 1);
 
-			cb.SelectedIndex = 0;
+				cb.SelectedIndex = 0;
+			}
+
 			cb.Select(selection.Begini, selection.Sizei);
 		}
 	}

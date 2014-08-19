@@ -111,6 +111,22 @@ namespace pr {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to (C) Copyright 2002-2013 Paul Ryland / Rylogic Limited
+        ///    All Rights Reserved
+        ///
+        ///Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+        ///
+        /// 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+        ///
+        /// 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation  [rest of string was truncated]&quot;;.
+        /// </summary>
+        public static string licence {
+            get {
+                return ResourceManager.GetString("licence", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;

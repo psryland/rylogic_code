@@ -1109,7 +1109,9 @@ namespace pr.gfx
 			public HObject m_handle;
 			public object Tag {get;set;}
 
-			/// <summary>Create an object from a ldr script description</summary>
+			/// <summary>
+			/// Create an object from a ldr script description.
+			/// If 'module' is non-zero then includes and filepaths are resolved from the resources in that module</summary>
 			public Object()
 				:this("*group{}")
 			{}
@@ -1119,9 +1121,9 @@ namespace pr.gfx
 			public Object(string ldr_script, string include_paths)
 				:this(ldr_script, include_paths, DefaultContextId, false)
 			{}
-			public Object(string ldr_script, string include_paths, int context_id, bool async)
+			public Object(string ldr_script, string include_paths, int context_id, bool async, IntPtr module = default(IntPtr))
 			{
-				m_handle = View3D_ObjectCreateLdr(ldr_script, include_paths, context_id, async);
+				m_handle = View3D_ObjectCreateLdr(ldr_script, context_id, async, include_paths, module);
 				if (m_handle == HObject.Zero) throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
 
@@ -1150,7 +1152,7 @@ namespace pr.gfx
 			/// This method is intended for creating static scenary</summary>
 			public static void CreateFromFile(string ldr_filepath, string include_paths, int context_id, bool async)
 			{
-				View3D_ObjectsCreateFromFile(ldr_filepath, include_paths, context_id, async);
+				View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async, include_paths);
 			}
 			public static void CreateFromFile(string ldr_filepath, string include_paths, bool async)
 			{
@@ -1551,8 +1553,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, string include_paths, int context_id, bool async);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, string include_paths, int context_id, bool async);
+		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async, string include_paths);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, int context_id, bool async, string include_paths, IntPtr module);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
