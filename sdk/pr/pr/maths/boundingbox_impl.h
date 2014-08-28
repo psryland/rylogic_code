@@ -118,6 +118,7 @@ namespace pr
 	// Encompass 'point' within 'bbox'.
 	inline BBox& Encompass(BBox& bbox, v4 const& point)
 	{
+		assert(point.w == 1.0f && "BBox encompass point must have w = 1");
 		#if PR_MATHS_USE_INTRINSICS
 		const __m128 zero = {+0.0f, +0.0f, +0.0f, +0.0f};
 		const __m128 half = {+0.5f, +0.5f, +0.5f, +0.5f};

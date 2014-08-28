@@ -3,25 +3,40 @@
 //  Copyright (c) Rylogic Ltd 2013
 //******************************************
 
-#ifndef PR_META_MIN_MAX_H
-#define PR_META_MIN_MAX_H
+#pragma once
+#include "pr/common/min_max_fix.h"
 
 namespace pr
 {
 	namespace meta
 	{
-		namespace impl
+		// Compile time min of N integral types
+		template <typename Type, Type L, Type R=L, Type... U> struct min
 		{
-			template <typename Type, Type L, Type R, bool LMin> struct min0     { static const Type value = R; };
-			template <typename Type, Type L, Type R> struct min0<Type,L,R,true> { static const Type value = L; };
-			
-			template <typename Type, Type L, Type R, bool LMin> struct max0     { static const Type value = L; };
-			template <typename Type, Type L, Type R> struct max0<Type,L,R,true> { static const Type value = R; };
-		}
-	
-		// minimum/maximum of L,R
-		template <typename Type, Type L, Type R> struct min :impl::min0<Type,L,R,L<R> {};
-		template <typename Type, Type L, Type R> struct max :impl::max0<Type,L,R,L<R> {};
+			static Type const value = min<Type, L, min<Type, R, U...>::value>::value;
+		};
+		template <typename Type, Type L, Type R> struct min<Type,L,R>
+		{
+			static Type const value = L < R ? L : R;
+		};
+		template <typename Type, Type L> struct min<Type,L>
+		{
+			static Type const value = L;
+		};
+
+		// Compile time max of N integral types
+		template <typename Type, Type L, Type R=L, Type... U> struct max
+		{
+			static Type const value = max<Type, L, max<Type, R, U...>::value>::value;
+		};
+		template <typename Type, Type L, Type R> struct max<Type,L,R>
+		{
+			static Type const value = L < R ? R : L;
+		};
+		template <typename Type, Type L> struct max<Type,L>
+		{
+			static Type const value = L;
+		};
 	}
 }
 
@@ -42,8 +57,19 @@ namespace pr
 			static_assert(pr::meta::max<int,-5,+2>::value == +2, "");
 			static_assert(pr::meta::max<int,+5,-2>::value == +5, "");
 			static_assert(pr::meta::max<int,-5,-2>::value == -2, "");
+
+			static_assert(pr::meta::max<int,-2,3,-1,4>::value == 4, "");
+			static_assert(pr::meta::min<char,-2,3,-1,4>::value == -2, "");
+			static_assert(pr::meta::max<int,-2>::value == -2, "");
+			static_assert(pr::meta::min<char,-2>::value == -2, "");
+
+			enum class EE :__int64
+			{
+				A = 0x10000000000LL,
+				B = -0x10000000000LL,
+			};
+			static_assert(pr::meta::max<EE, EE::A, EE::B>::value == EE::A, "");
 		}
 	}
 }
-#endif
 #endif

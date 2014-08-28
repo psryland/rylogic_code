@@ -67,7 +67,7 @@
 #define PR_ENUM_EXPAND(x) x
 
 // Enum generator
-#define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags)\
+#define PR_DEFINE_ENUM_IMPL(enum_name, enum_vals1, enum_vals2, enum_vals3, notflags, flags, base_type)\
 struct enum_name\
 {\
 	/* Type trait tag */\
@@ -84,7 +84,7 @@ struct enum_name\
 \
 	/* The members of the enum. This can't be called 'Enum' or 'Type' because
 	   it doesn't compile if the enum contains a member with the same name*/ \
-	enum Enum_\
+	enum Enum_ base_type\
 	{\
 		enum_vals1(PR_ENUM_DEFINE1)\
 		enum_vals2(PR_ENUM_DEFINE2)\
@@ -246,19 +246,24 @@ struct enum_name\
 }
 
 // Declares an enum where values are implicit, 'enum_vals' should be a macro with one parameter; id
-#define PR_DEFINE_ENUM1(enum_name, enum_vals)            PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL)
+#define PR_DEFINE_ENUM1(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
+#define PR_DEFINE_ENUM1_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
 // Declares an enum where the values are assigned explicitly, 'enum_vals' should be a macro with two paramters; id and value
-#define PR_DEFINE_ENUM2(enum_name, enum_vals)            PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL)
+#define PR_DEFINE_ENUM2(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, )
+#define PR_DEFINE_ENUM2_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
 // Declares an enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
-#define PR_DEFINE_ENUM3(enum_name, enum_vals)            PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL)
+#define PR_DEFINE_ENUM3(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, )
+#define PR_DEFINE_ENUM3_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_EXPAND, PR_ENUM_NULL, :base_type)
 
 // Declares a flags enum where the values are assigned explicitly, 'enum_vals' should be a macro with two paramters; id and value
-#define PR_DEFINE_ENUM2_FLAGS(enum_name, enum_vals)      PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND)
+#define PR_DEFINE_ENUM2_FLAGS(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, )
+#define PR_DEFINE_ENUM2_FLAGS_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_NULL, PR_ENUM_EXPAND, :base_type)
 
 // Declares a flags enum where the values are assigned explicitly and the string name of each member is explicit. 'enum_vals' should be a macro with three parameters; id, string, and value
-#define PR_DEFINE_ENUM3_FLAGS(enum_name, enum_vals)      PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND)
+#define PR_DEFINE_ENUM3_FLAGS(enum_name, enum_vals)                 PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, )
+#define PR_DEFINE_ENUM3_FLAGS_BASE(enum_name, enum_vals, base_type) PR_DEFINE_ENUM_IMPL(enum_name, PR_ENUM_NULL, PR_ENUM_NULL, enum_vals, PR_ENUM_NULL, PR_ENUM_EXPAND, :base_type)
 
 namespace pr
 {

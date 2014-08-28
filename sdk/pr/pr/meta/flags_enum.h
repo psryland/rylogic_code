@@ -18,35 +18,57 @@ namespace pr
 	}
 }
 
-#define PR_DEFINE_ENUM_FLAG_BINARYOP(op)\
-	template <typename TEnum>\
-	inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type\
-	operator op (TEnum lhs, TEnum rhs)\
-	{\
-		auto lhs_ = static_cast<std::underlying_type<TEnum>::type>(lhs);\
-		auto rhs_ = static_cast<std::underlying_type<TEnum>::type>(rhs);\
-		return static_cast<TEnum>(lhs_ op rhs_);\
-	}\
-	template <typename TEnum>\
-	inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type&\
-	operator op##= (TEnum& lhs, TEnum rhs)\
-	{\
-		return lhs = (lhs op rhs);\
-	}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator | (TEnum lhs, TEnum rhs)
+{
+	auto lhs_ = static_cast<std::underlying_type<TEnum>::type>(lhs);
+	auto rhs_ = static_cast<std::underlying_type<TEnum>::type>(rhs);
+	return static_cast<TEnum>(lhs_ | rhs_);
+}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator & (TEnum lhs, TEnum rhs)
+{
+	auto lhs_ = static_cast<std::underlying_type<TEnum>::type>(lhs);
+	auto rhs_ = static_cast<std::underlying_type<TEnum>::type>(rhs);
+	return static_cast<TEnum>(lhs_ & rhs_);
+}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator ^ (TEnum lhs, TEnum rhs)
+{
+	auto lhs_ = static_cast<std::underlying_type<TEnum>::type>(lhs);
+	auto rhs_ = static_cast<std::underlying_type<TEnum>::type>(rhs);
+	return static_cast<TEnum>(lhs_ ^ rhs_);
+}
 
-#define PR_DEFINE_ENUM_FLAG_UNARYOP(op)\
-	template <typename TEnum>\
-	inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type\
-	operator op (TEnum val)\
-	{\
-		auto val_ = static_cast<std::underlying_type<TEnum>::type>(val);\
-		return static_cast<TEnum>(op##val_);\
-	}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator |= (TEnum& lhs, TEnum rhs)
+{
+	return lhs = (lhs | rhs);
+}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator &= (TEnum& lhs, TEnum rhs)
+{
+	return lhs = (lhs & rhs);
+}
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator ^= (TEnum& lhs, TEnum rhs)
+{
+	return lhs = (lhs ^ rhs);
+}
 
-PR_DEFINE_ENUM_FLAG_BINARYOP(|)
-PR_DEFINE_ENUM_FLAG_BINARYOP(&)
-PR_DEFINE_ENUM_FLAG_BINARYOP(^)
-PR_DEFINE_ENUM_FLAG_UNARYOP(~)
+template <typename TEnum>
+inline typename std::enable_if<pr::meta::is_flags_enum<TEnum>::value, TEnum>::type
+operator ~ (TEnum val)
+{
+	auto val_ = static_cast<std::underlying_type<TEnum>::type>(val);
+	return static_cast<TEnum>(~val_);
+}
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -71,7 +93,10 @@ namespace pr
 	}
 }
 
-template <> struct ::pr::meta::is_flags_enum<pr::unittests::flag_enum::Flags> { enum { value = true }; };
+template <> struct ::pr::meta::is_flags_enum<pr::unittests::flag_enum::Flags>
+{
+	enum { value = true };
+};
 
 namespace pr
 {
