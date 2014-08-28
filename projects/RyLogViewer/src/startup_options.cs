@@ -19,6 +19,9 @@ namespace RyLogViewer
 		/// <summary>The filepath to the settings file to use</summary>
 		public string SettingsPath { get; set; }
 
+		/// <summary>The location of the licence file</summary>
+		public string LicenceFilepath { get; set; }
+
 		/// <summary>The file path to write log data do</summary>
 		public string LogFilePath { get; set; }
 
@@ -115,6 +118,10 @@ namespace RyLogViewer
 			// If a settings path has not been given, use the defaults
 			if (SettingsPath == null)
 				SettingsPath = Path.Combine(AppDataDir, "settings.xml");
+
+			// Set the licence file path
+			if (LicenceFilepath == null)
+				LicenceFilepath = Path.Combine(AppDataDir, "licence.xml");
 		}
 	}
 }

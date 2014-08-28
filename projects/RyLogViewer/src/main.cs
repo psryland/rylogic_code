@@ -65,7 +65,7 @@ namespace RyLogViewer
 			Log.Info(this, "App Startup: {0}".Fmt(DateTime.Now));
 
 			m_startup_options     = startup_options;
-			m_license             = new Licence(m_startup_options.AppDataDir);
+			m_license             = new Licence(m_startup_options.LicenceFilepath);
 			m_watch               = new FileWatch();
 			m_watch_timer         = new Timer{Interval = Constants.FilePollingRate};
 			m_batch_set_col_size  = new EventBatcher(SetGridColumnSizesImpl, TimeSpan.FromMilliseconds(100));
@@ -192,7 +192,7 @@ namespace RyLogViewer
 			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
 			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
 			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
-			m_menu_help_visit_store.Click              += (s,a) => VisitStore();
+			m_menu_help_visit_web_site.Click              += (s,a) => VisitWebSite();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
 			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();
@@ -1876,7 +1876,7 @@ namespace RyLogViewer
 				m_menu_tools_alwaysontop.Checked = Settings.AlwaysOnTop;
 
 				// Reread the licence
-				m_license = new Licence(m_startup_options.AppDataDir);
+				m_license = new Licence(m_startup_options.LicenceFilepath);
 				m_menu_free_version.Visible = !m_license.Valid;
 
 				// Toolbar

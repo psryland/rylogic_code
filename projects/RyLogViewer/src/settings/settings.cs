@@ -14,8 +14,6 @@ namespace RyLogViewer
 	{
 		public Settings()
 		{
-			LicenceHolder                   = Constants.FreeLicence;
-			Company                         = string.Empty;
 			RecentFiles                     = string.Empty;
 			Font                            = new Font("Consolas", 8.25f, GraphicsUnit.Point);
 			RestoreScreenLoc                = false; // False so that first runs start in the default window position
@@ -84,16 +82,6 @@ namespace RyLogViewer
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>
 		protected override string Version { get { return "v1.3"; } }
 
-		public string LicenceHolder
-		{
-			get { return get(x => x.LicenceHolder); }
-			set { set(x => x.LicenceHolder, value); }
-		}
-		public string Company
-		{
-			get { return get(x => x.Company); }
-			set { set(x => x.Company, value); }
-		}
 		public string RecentFiles
 		{
 			get { return get(x => x.RecentFiles); }

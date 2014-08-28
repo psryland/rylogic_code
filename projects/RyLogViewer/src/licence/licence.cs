@@ -16,167 +16,18 @@ using pr.util;
 
 namespace RyLogViewer
 {
-	/// <summary>Represents loaded licence information</summary>
-	public class Licence
-	{
-		/// <summary>Returns true if the code has the correct length</summary>
-		public bool ValidLength { get { return pr.common.ActivationCode.CheckLength(ActivationCode, Resources.public_key); } }
-
-		/// <summary>Returns true if the code is made up of valid characters</summary>
-		public bool ValidCharacters { get { return pr.common.ActivationCode.CheckChars(ActivationCode); } }
-
-		/// <summary>Returns true if the code at least looks right</summary>
-		public bool ValidCrC { get { return pr.common.ActivationCode.CheckCrc(ActivationCode); } }
-
-		/// <summary>True if the activation code is valid</summary>
-		public bool Valid { get { return pr.common.ActivationCode.Validate(ActivationCode, Resources.public_key); } }
-
-		/// <summary>True if the licence data has been modified</summary>
-		public bool Changed { get; private set; }
-
-		/// <summary>The name of the licence holder</summary>
-		public string LicenceHolder
-		{
-			get { return m_licence_holder; }
-			set { if (value != m_licence_holder) { m_licence_holder = value; Changed = true; } }
-		}
-		private string m_licence_holder;
-
-		/// <summary>The associated company name</summary>
-		public string Company
-		{
-			get { return m_company; }
-			set { if (value != m_company) { m_company = value; Changed = true; } }
-		}
-		private string m_company;
-
-		/// <summary>The activation code</summary>
-		public string ActivationCode
-		{
-			get { return m_activation_code; }
-			set { if (value != m_activation_code) { m_activation_code = value; Changed = true; } }
-		}
-		private string m_activation_code;
-
-		/// <summary>Returns a hash of the user details</summary>
-		private byte[] UserDetailsHash
-		{
-			get
-			{
-				var user_details = "Rylogic-"+LicenceHolder+"-Limited-"+Company+"-isAwesome";
-				var hash = new SHA1CryptoServiceProvider().ComputeHash(Encoding.Unicode.GetBytes(user_details));
-				return hash;
-			}
-		}
-
-		/// <summary>The software key is the combination of the activation code and user details</summary>
-		private string SoftwareKey
-		{
-			get
-			{
-				// Return a software key that is generated from the current activation code
-				var bytes = Base32Encoding.ToBytes(Base32Encoding.Sanitise(ActivationCode));
-				var lcg = new LCG(UserDetailsHash.Sum(b => b));
-				for (int i = 0, iend = bytes.Length; i != iend; ++i, lcg.next())
-					bytes[i] = (byte)(bytes[i] ^ (byte)lcg.value);
-				return Base32Encoding.ToString(bytes);
-			}
-			set
-			{
-				// Set the activation code from the provided software key
-				var bytes = Base32Encoding.ToBytes(Base32Encoding.Sanitise(value));
-				var lcg = new LCG(UserDetailsHash.Sum(b => b));
-				for (int i = 0, iend = bytes.Length; i != iend; ++i, lcg.next())
-					bytes[i] = (byte)(bytes[i] ^ (byte)lcg.value);
-				ActivationCode = Base32Encoding.ToString(bytes);
-			}
-		}
-
-		/// <summary>Linear congruential generator</summary>
-		private class LCG
-		{
-			public int value;
-			public void next() { value = (16807 * value + 0) % 2147483647; }
-			public LCG(int seed) { value = seed; }
-		}
-
-		/// <summary>Loads the licence info</summary>
-		public Licence(string dir)
-		{
-			try
-			{
-				var lic = Path.Combine(dir, "licence.xml");
-				if (PathEx.FileExists(lic))
-				{
-					// Load the licence file
-					var doc = XDocument.Load(lic, LoadOptions.None);
-					if (doc.Root == null) throw new InvalidDataException("licence file invalid");
-
-					// ReSharper disable PossibleNullReferenceException
-					LicenceHolder  = doc.Root.Element(XmlTag.LicenceHolder).Value;
-					Company        = doc.Root.Element(XmlTag.Company).Value;
-					SoftwareKey    = doc.Root.Element(XmlTag.SoftwareKey).Value;
-					// ReSharper restore PossibleNullReferenceException
-
-					return;
-				}
-			}
-			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
-			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
-
-			// No valid licence file found. Create a default free licence
-			LicenceHolder  = Constants.FreeLicence;
-			Company        = Constants.FreeLicence;
-			ActivationCode = "<paste your activation licence here>";
-		}
-
-		/// <summary>Use the unpredictability of the GC to do a file signing test</summary>
-		~Licence()
-		{
-			Main.PerformSigningVerification();
-		}
-
-		/// <summary>Output the licence details to a licence file</summary>
-		public void WriteFile(string dir)
-		{
-			// Create the licence xml document
-			var doc = new XDocument(new XElement(XmlTag.Root));
-			if (doc.Root == null) throw new Exception("Failed to create licence.xml root node");
-
-			// Save the elements
-			doc.Root.Add(new XElement(XmlTag.LicenceHolder, LicenceHolder));
-			doc.Root.Add(new XElement(XmlTag.Company, Company));
-			doc.Root.Add(new XElement(XmlTag.SoftwareKey, SoftwareKey));
-
-			// Save the licence file
-			var lic = Path.Combine(dir, "licence.xml");
-			doc.Save(lic);
-		}
-
-		/// <summary>Returns a text summary of the licence info</summary>
-		public Rtf.Builder InfoStringRtf()
-		{
-			var rtf = new Rtf.Builder();
-			if (!Valid)
-			{
-				rtf.Append(new Rtf.TextStyle{FontSize = 10, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
-				rtf.AppendLine("Free Edition Licence");
-				rtf.Append(new Rtf.TextStyle{FontSize = 8, FontStyle = Rtf.EFontStyle.Regular});
-				rtf.AppendLine("This copy of RyLogViewer is using the free edition licence.");
-				rtf.AppendLine("All features are available, however limits are in place.");
-				rtf.AppendLine("If you find RyLogViewer useful, please consider purchasing a license.");
-			}
-			else
-			{
-				rtf.AppendLine("Licenced To:");
-				rtf.Append(new Rtf.TextStyle{FontSize = 8, ForeColourIndex = rtf.ColourIndex(Color.DarkBlue)});
-				rtf.AppendLine(LicenceHolder);
-				if (Company.HasValue()) rtf.AppendLine(Company);
-			}
-			return rtf;
-		}
-	}
-
+	// Security measures:
+	//  The main exe is signed.
+	//    As a post build step the exe is sha1'd and the result appended to the end of the .exe
+	//    In the licence object destructor a thread is started that verifies the signature.
+	//    => Verifies unmodified exe
+	//  The licence file:
+	//     Make a Hash from username etc
+	//     Encode the Hash with the server-private-key
+	//     Ship the public key with the app, no need to hide it.
+	//    Runtime:
+	//     Decode the Hash with the public key and compare with a locally generated version
+	
 	public partial class Main
 	{
 		/// <summary>Check that the app has a correct signature</summary>
@@ -220,19 +71,20 @@ namespace RyLogViewer
 		private void ShowActivation()
 		{
 			// Load the licence file
-			var licence = new Licence(m_startup_options.AppDataDir);
+			var licence = new Licence(m_startup_options.LicenceFilepath);
 			bool initially_valid = licence.Valid;
 
 			// Display the UI for entering licence info
 			var dg = new Activation(licence);
-			if (dg.ShowDialog(this) != DialogResult.OK) return;
+			if (dg.ShowDialog(this) != DialogResult.OK)
+				return;
 
 			// Write the updated licence file (if changed)
 			if (!licence.Valid) return;
 			if (!licence.Changed) return;
 			try
 			{
-				licence.WriteFile(m_startup_options.AppDataDir);
+				licence.WriteLicenceFile(m_startup_options.LicenceFilepath);
 				if (!initially_valid)
 				{
 					MsgBox.Show(this,
@@ -254,27 +106,186 @@ namespace RyLogViewer
 			}
 		}
 
-		/// <summary>Launch a browser to the online store</summary>
-		private void VisitStore()
+		/// <summary>Launch a browser to the RyLogViewer web site</summary>
+		private void VisitWebSite()
 		{
-			Process.Start(Constants.StoreLink);
-			//Process p = new Process();
-			//p.StartInfo.Arguments = "url.dll,FileProtocolHandler " + "http://store.kagi.com/cgi-bin/store.cgi?storeID=6FFFY_LIVE";
-			//p.StartInfo.FileName = "rundll32";
-			//p.StartInfo.UseShellExecute = false;
-			//p.Start();
+			const string url = "http://www.rylogic.co.nz/rylogviewer/index.php";
+			try
+			{
+				Process.Start(Constants.StoreLink);
+				Process p = new Process();
+				p.StartInfo.Arguments = "url.dll,FileProtocolHandler " + url;
+				p.StartInfo.FileName = "rundll32";
+				p.StartInfo.UseShellExecute = false;
+				p.Start();
+			}
+			catch (Exception ex)
+			{
+				MsgBox.Show(this
+					,"An error occurred while attempting to view '{0}'".Fmt(url)
+					,"Visit Web Site"
+					,MessageBoxButtons.OK
+					,MessageBoxIcon.Information);
+			}
 		}
 	}
 
-	/// <summary>A class for managing crippled functionality</summary>
-	public static class Cripple
+	/// <summary>Represents loaded licence information</summary>
+	public class Licence
 	{
-		// have a timed "uncripple"... whenever a cripple limit is reached
-		// show a dialog saying:
-		// "This feature has been limited in the free version."
-		// "You can remove these limits for 5 minutes, after which time "
-		// "the limits will be automatically reapplied."
-		// "Please consider purchasing an activation code."
-		//       [Visit Store] [Remove Limits] [Continue]   <- switch these buttons randomly
+		/// <summary>Loads the licence info</summary>
+		public Licence(string lic)
+		{
+			LicenceHolder  = Constants.FreeLicence;
+			EmailAddress   = string.Empty;
+			Company        = string.Empty;
+			AppVersion     = "1.0";
+			ActivationCode = string.Empty;
+
+			try
+			{
+				if (PathEx.FileExists(lic))
+				{
+					// Load the licence file
+					var root = XDocument.Load(lic, LoadOptions.None).Root;
+					if (root == null)
+						throw new InvalidDataException("licence file invalid");
+
+					LicenceHolder  = root.Element(XmlTag.LicenceHolder ).As<string>(LicenceHolder );
+					EmailAddress   = root.Element(XmlTag.EmailAddr     ).As<string>(EmailAddress  );
+					Company        = root.Element(XmlTag.Company       ).As<string>(Company       );
+					AppVersion     = root.Element(XmlTag.AppVersion    ).As<string>(AppVersion    );
+					ActivationCode = root.Element(XmlTag.ActivationCode).As<string>(ActivationCode);
+					return;
+				}
+			}
+			catch (FileNotFoundException) { Log.Info(this, "Licence file not found"); }
+			catch (Exception ex) { Log.Exception(this, ex, "Licence file invalid"); }
+		}
+
+		/// <summary>Use the unpredictability of the GC to do a file signing test</summary>
+		~Licence()
+		{
+			Main.PerformSigningVerification();
+		}
+
+		/// <summary>The name of the licence holder</summary>
+		public string LicenceHolder
+		{
+			get { return m_licence_holder; }
+			set { SetProp(ref m_licence_holder, value); }
+		}
+		private string m_licence_holder;
+
+		/// <summary>The email address associated with the licence</summary>
+		public string EmailAddress
+		{
+			get { return m_email_address; }
+			set { SetProp(ref m_email_address, value); }
+		}
+		private string m_email_address;
+
+		/// <summary>The optional associated company name</summary>
+		public string Company
+		{
+			get { return m_company; }
+			set { SetProp(ref m_company, value); }
+		}
+		private string m_company;
+
+		/// <summary>The application version that the licence was issued for</summary>
+		public string AppVersion
+		{
+			get { return m_app_version; }
+			set { SetProp(ref m_app_version, value); }
+		}
+		private string m_app_version;
+
+		/// <summary>The code provided by the RyLogViewer web site</summary>
+		public string ActivationCode
+		{
+			get { return Convert.ToBase64String(m_activation_code, Base64FormattingOptions.InsertLineBreaks); }
+			set
+			{
+				var code = Convert.FromBase64String(value);
+				SetProp(ref m_activation_code, code);
+			}
+		}
+		private byte[]  m_activation_code;
+
+		/// <summary>Set the value of a property if different and notify</summary>
+		private void SetProp<T>(ref T prop, T value)
+		{
+			if (Equals(prop,value)) return;
+			prop = value;
+			OnChanged.Raise(this, EventArgs.Empty);
+			Changed = true;
+		}
+
+		/// <summary>Raised whenever the licence data changes</summary>
+		public event EventHandler OnChanged;
+		public bool Changed;
+
+		/// <summary>Returns a hash of the user details</summary>
+		private string UserDetails
+		{
+			get { return "{0}\n{1}\n{2}\n{3}\n{4}".Fmt(LicenceHolder,EmailAddress,Company,AppVersion,"Rylogic Limited Is Awesome"); }
+		}
+
+		/// <summary>True if the activation code is valid</summary>
+		public bool Valid
+		{
+			get { return pr.common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
+		}
+
+		/// <summary>Output the licence details to a licence file</summary>
+		public void WriteLicenceFile(string lic)
+		{
+			// Create the licence xml document
+			var doc = new XDocument(new XElement(XmlTag.Root));
+			var root = doc.Root;
+			if (root == null)
+				throw new Exception("Failed to create licence.xml root node");
+
+			// Save the elements
+			root.Add2(XmlTag.LicenceHolder  , LicenceHolder  , false);
+			root.Add2(XmlTag.EmailAddr      , EmailAddress   , false);
+			root.Add2(XmlTag.Company        , Company        , false);
+			root.Add2(XmlTag.AppVersion     , AppVersion     , false);
+			root.Add2(XmlTag.ActivationCode , ActivationCode , false);
+
+			// Save the licence file
+			doc.Save(lic);
+		}
+
+		/// <summary>Returns a text summary of the licence info</summary>
+		public Rtf.Builder InfoStringRtf()
+		{
+			var rtf = new Rtf.Builder();
+			if (!Valid)
+			{
+				rtf.Append(new Rtf.TextStyle{FontSize = 10, FontStyle = Rtf.EFontStyle.Bold, ForeColourIndex = rtf.ColourIndex(Color.DarkRed)});
+				rtf.AppendLine("Free Edition Licence");
+				rtf.Append(new Rtf.TextStyle{FontSize = 8, FontStyle = Rtf.EFontStyle.Regular});
+				rtf.AppendLine("This copy of RyLogViewer is using the free edition licence.");
+				rtf.AppendLine("All features are available, however limits are in place.");
+				rtf.AppendLine("If you find RyLogViewer useful, please consider purchasing a license.");
+			}
+			else
+			{
+				var blck = new Rtf.TextStyle{FontSize = 8, ForeColourIndex = rtf.ColourIndex(Color.Black)};
+				var blue = new Rtf.TextStyle{FontSize = 8, ForeColourIndex = rtf.ColourIndex(Color.DarkBlue)};
+				rtf.Append(blck).AppendLine("Licenced To:");
+				rtf.Append(blue).AppendLine(LicenceHolder);
+				rtf.Append(blck).AppendLine("Email Address:");
+				rtf.Append(blue).AppendLine(EmailAddress);
+				if (Company.HasValue())
+				{
+					rtf.Append(blck).AppendLine("Company:");
+					rtf.Append(blue).AppendLine(Company);
+				}
+			}
+			return rtf;
+		}
 	}
 }

@@ -119,9 +119,9 @@ namespace RyLogViewer
 		public const string Version        = "version";
 		public const string Name           = "name";
 		public const string LicenceHolder  = "licence_holder";
+		public const string EmailAddr      = "email_address";
 		public const string Company        = "company";
-		public const string EmailAddr      = "email";
-		public const string SoftwareKey    = "software_key";
+		public const string AppVersion     = "app_version";
 		public const string ActivationCode = "activation_code";
 		public const string Root           = "root";
 		public const string Expr           = "expr";

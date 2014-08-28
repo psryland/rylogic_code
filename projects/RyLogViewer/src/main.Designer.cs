@@ -99,7 +99,7 @@
 			this.m_menu_help_firstruntutorial = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_totd = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator11 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_help_visit_store = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_help_visit_web_site = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_help_register = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator12 = new System.Windows.Forms.ToolStripSeparator();
 			this.m_menu_help_check_for_updates = new System.Windows.Forms.ToolStripMenuItem();
@@ -773,7 +773,7 @@
             this.m_menu_help_firstruntutorial,
             this.m_menu_help_totd,
             this.toolStripSeparator11,
-            this.m_menu_help_visit_store,
+            this.m_menu_help_visit_web_site,
             this.m_menu_help_register,
             this.toolStripSeparator12,
             this.m_menu_help_check_for_updates,
@@ -807,17 +807,17 @@
 			this.toolStripSeparator11.Name = "toolStripSeparator11";
 			this.toolStripSeparator11.Size = new System.Drawing.Size(170, 6);
 			// 
-			// m_menu_help_visit_store
+			// m_menu_help_visit_web_site
 			// 
-			this.m_menu_help_visit_store.Name = "m_menu_help_visit_store";
-			this.m_menu_help_visit_store.Size = new System.Drawing.Size(173, 22);
-			this.m_menu_help_visit_store.Text = "&Visit Store";
+			this.m_menu_help_visit_web_site.Name = "m_menu_help_visit_web_site";
+			this.m_menu_help_visit_web_site.Size = new System.Drawing.Size(173, 22);
+			this.m_menu_help_visit_web_site.Text = "&Visit Web Site";
 			// 
 			// m_menu_help_register
 			// 
 			this.m_menu_help_register.Name = "m_menu_help_register";
 			this.m_menu_help_register.Size = new System.Drawing.Size(173, 22);
-			this.m_menu_help_register.Text = "&Register...";
+			this.m_menu_help_register.Text = "&Activate Licence...";
 			// 
 			// toolStripSeparator12
 			// 
@@ -1242,7 +1242,7 @@
 		private System.Windows.Forms.ToolStripButton m_btn_actions;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_tools_actions;
 		private System.Windows.Forms.ToolStripSeparator toolStripSeparator11;
-		private System.Windows.Forms.ToolStripMenuItem m_menu_help_visit_store;
+		private System.Windows.Forms.ToolStripMenuItem m_menu_help_visit_web_site;
 		private System.Windows.Forms.ToolStripMenuItem m_menu_help_register;
 		private System.Windows.Forms.ToolStripButton m_btn_tail;
 		private System.Windows.Forms.ToolStripButton m_btn_bookmarks;
