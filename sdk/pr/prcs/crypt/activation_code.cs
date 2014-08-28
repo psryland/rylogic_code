@@ -1,19 +1,38 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using pr.util;
 
 namespace pr.common
 {
-	// Licensing
-	//  Activation Code:
-	//    Generate a number where the first part is a random number (seed) and the
-	//    second part is the first part hashed and signed using the private key.
-	//    In the app, load the public key from a resource, hash and encrypt the
-	//    seed using the public key, it should equal the second part of the key
 	public static class ActivationCode
 	{
+		/// <summary>
+		/// Create an activation code from a string containing user data.
+		/// While not strictly necessary, 'salting' the string improves security.</summary>
+		public static byte[] Generate(string user_details, string private_key)
+		{
+			var user_data_bytes = Encoding.UTF8.GetBytes(user_details);
+
+			var rsa = RSAService(private_key);
+			var sig = rsa.SignData(user_data_bytes, new SHA1CryptoServiceProvider());
+			return sig;
+		}
+
+		/// <summary>Returns true if 'code' matches 'user_details' when decrypted using 'public_key'</summary>
+		public static bool Validate(string user_details, byte[] signature, string public_key)
+		{
+			var user_data_bytes = Encoding.UTF8.GetBytes(user_details);
+
+			var rsa = RSAService(public_key);
+			bool valid = rsa.VerifyData(user_data_bytes, new SHA1CryptoServiceProvider(), signature);
+			return valid;
+		}
+
+
+		#region Old version
 		private static readonly int SeedLength = Guid.Empty.ToByteArray().Length;
 
 		/// <summary>Returns true if the code is made up of valid characters</summary>
@@ -57,6 +76,12 @@ namespace pr.common
 			return valid;
 		}
 
+		// Licensing
+		//  Activation Code:
+		//    Generate a number where the first part is a random number (seed) and the
+		//    second part is the first part hashed and signed using the private key.
+		//    In the app, load the public key from a resource, hash and encrypt the
+		//    seed using the public key, it should equal the second part of the key
 		/// <summary>Generates an activation code using the provided private key</summary>
 		public static string Generate(string private_key)
 		{
@@ -97,6 +122,11 @@ namespace pr.common
 				crc = (byte)(((crc ^ poly) >> 1) ^ data[i]);
 			return crc;
 		}
+		private static byte CalcCrc(byte[] data)
+		{
+			return CalcCrc(data, 0, data.Length);
+		}
+		#endregion
 	}
 }
 
@@ -109,9 +139,26 @@ namespace pr
 	
 	[TestFixture] public partial class UnitTests
 	{
-		internal static class TestActivationCode
+		public static class TestActivationCode
 		{
-			[Test] public static void ActivationCodeGen()
+			[Test] public static void ActivationCodeGen1()
+			{
+				// Generate a public and private key.
+				// Save the public key in the app (in a resource file)
+				// Save the private key somewhere safe, you need that to generate more code numbers for the app
+				string pub, priv;
+				Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
+				Assert.AreNotEqual(pub, priv);
+
+				// This is the licence issuer
+				var user_data = "Pauls Test Data";
+				var key = ActivationCode.Generate(user_data, priv);
+
+				// This is the app, checking the licence
+				var valid = ActivationCode.Validate(user_data, key, pub);
+				Assert.IsTrue(valid);
+			}
+			[Test] public static void ActivationCodeGen2()
 			{
 				// Generate a public and private key.
 				// Save the public key in the app (in a resource file)

@@ -20,12 +20,15 @@ namespace pr.extn
 		/// <summary>BeginInvokes 'action' after 'delay'</summary>
 		public static void BeginInvokeDelayed(this Dispatcher dis, Action action, TimeSpan delay, DispatcherPriority priority = DispatcherPriority.Normal)
 		{
-			new DispatcherTimer(delay, priority, (s,a) =>
-				{
-					var dt = s.As<DispatcherTimer>();
-					dt.Stop();
-					action();
-				}, dis).Start();
+			if (delay == TimeSpan.Zero)
+				dis.BeginInvoke(action);
+			else
+				new DispatcherTimer(delay, priority, (s,a) =>
+					{
+						var dt = s.As<DispatcherTimer>();
+						dt.Stop();
+						action();
+					}, dis).Start();
 		}
 	}
 }

@@ -544,7 +544,7 @@ namespace pr.gfx
 			private readonly View3d m_view;
 			private readonly RenderCB m_render_cb;            // User call back to render the scene
 			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
-			private readonly EventBatcher m_eb_refresh;       // Batch refresh calls
+			private EventBatcher m_eb_refresh;                // Batch refresh calls
 			private HWindow m_wnd;
 
 			public Window(View3d view, HWND hwnd, bool gdi_compat, RenderCB render_cb = null)
@@ -552,7 +552,7 @@ namespace pr.gfx
 				m_view        = view;
 				m_render_cb   = render_cb;
 				m_settings_cb = () => OnSettingsChanged.Raise(this, EventArgs.Empty);
-				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.Zero);
+				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.FromMilliseconds(5)){TriggerOnFirst = false};
 
 				// Create the window
 				string error_msg = null;
@@ -573,9 +573,7 @@ namespace pr.gfx
 			}
 			public void Dispose()
 			{
-				if (m_eb_refresh != null)
-					m_eb_refresh.Dispose();
-
+				Util.Dispose(ref m_eb_refresh);
 				if (m_wnd != HWindow.Zero)
 				{
 					View3D_DestroyWindow(m_wnd);

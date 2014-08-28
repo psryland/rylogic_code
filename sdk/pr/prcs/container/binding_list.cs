@@ -96,6 +96,9 @@ namespace pr.container
 					return;
 			}
 
+			// Note: you can get first chance exceptions here when the list is bound to a BindingSource
+			// that is bound to a combo box or list box. It happens when the list goes to/from empty
+			// and is just shoddiness in the windows controls.
 			base.InsertItem(index, item);
 
 			if (RaiseListChangedEvents)

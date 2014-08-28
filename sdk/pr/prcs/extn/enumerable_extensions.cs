@@ -172,6 +172,18 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Counts the number of items in a sequence until 'pred' returns false</summary>
+		public static int CountWhile<TSource>(this IEnumerable<TSource> source, Func<TSource,bool> pred)
+		{
+			int count = 0;
+			foreach (var item in source)
+			{
+				if (pred(item)) ++count;
+				else break;
+			}
+			return count;
+		}
+
 		/// <summary>Returns this collection as pairs</summary>
 		public static IEnumerable<Tuple<TSource,TSource>> InPairs<TSource>(this IEnumerable<TSource> source)
 		{

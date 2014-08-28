@@ -425,7 +425,11 @@ namespace pr.gui
 			// which is just messy.
 		}
 
-		/// <summary>Get/Set the parent node for this node</summary>
+		/// <summary>
+		/// Get/Set the parent node for this node.
+		/// Note: The tree grid contains an internal root node. Root level tree items will
+		/// return this internal node.
+		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
 		public TreeGridNode Parent
 		{
 			get { return m_parent; }
@@ -472,7 +476,26 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>True if this node has no parent</summary>
+		/// <summary>
+		/// Returns the top most ancestor for this node (possibly itself if this is a root node)
+		/// Note: The tree grid contains an internal root node which items added to the tree
+		/// are parented to.
+		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
+		public TreeGridNode RootNode
+		{
+			get
+			{
+				var n = this;
+				while (n.Parent != null) n = n.Parent;
+				return n;
+			}
+		}
+
+		/// <summary>
+		/// True if this node has no parent.
+		/// Note: The tree grid contains an internal root node, so this will be false for what appear
+		/// to be root level items in the tree.
+		/// You can use node.Parent.IsRoot or node.Level == 0 to find root level tree items</summary>
 		public bool IsRoot
 		{
 			get { return m_parent == null; }
@@ -525,7 +548,7 @@ namespace pr.gui
 		/// <summary>The index of this node within the children of it's parent</summary>
 		public int NodeIndex
 		{
-			get { return m_parent == null ? -1 : m_parent.Nodes.IndexOf(this); }
+			get { return (m_parent == null ? Grid.Nodes : m_parent.Nodes).IndexOf(this); }
 		}
 
 		/// <summary>Gets the index of this row in the Grid</summary>

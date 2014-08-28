@@ -75,8 +75,7 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="nunit.framework">
-      <HintPath>..\..\nunit\net-2.0\framework\nunit.framework.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\projects\vs2012\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework">
@@ -199,6 +198,7 @@
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\gfx_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
+    <Compile Include="extn\lock_extensions.cs" />
     <Compile Include="extn\memberinfo_extensions.cs" />
     <Compile Include="extn\object_extensions.cs" />
     <Compile Include="common\path_ex.cs" />
