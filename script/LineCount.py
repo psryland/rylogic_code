@@ -2,19 +2,6 @@
 # -*- coding: utf-8 -*- 
 # Copyright Rylogic Ltd 2012
 #
-# Build shaders using fxc.exe
-# Use:
-#  BuildShader.py $(Fullpath) [pp] [obj] [debug] [trace]
-#
-# Expected input is an hlsl file.
-# The file is scanned for: PR_RDR_SHADER_VS, PR_RDR_SHADER_PS, etc
-# For each symbol found a compiled shader as header data is generated
-# in the output directory.
-#
-# Add 'pp' to the command line for preprocessed output
-# Add 'obj' to the command line for a 'compiled shader object' file
-#  that can be used with the runtime shader support in the renderer.
-#
 import sys, os, tempfile
 import Rylogic as Tools
 import UserVars
@@ -23,11 +10,13 @@ try:
 	Tools.CheckVersion(1)
 
 	dirs = [
-		r"P:\sdk\pr",
-		r"P:\projects",
+		r"R:\software\STM32",
+		r"R:\software\PC",
+#		r"R:\software\ARM7",
 		]
 
 	excludes = [
+		r"\STM32 Library",
 		r"\obj",
 		r"\Debug",
 		r"\Release",
@@ -41,8 +30,8 @@ try:
 		".cpp",
 		".h",
 		".hpp",
-		".hlsl",
-		".hlsli",
+		# ".hlsl",
+		# ".hlsli",
 		".cs",
 		]
 	

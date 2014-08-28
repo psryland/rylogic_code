@@ -1,5 +1,6 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
+# deploy.py [nowait]
 import sys, os, shutil, re
 sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
 import Rylogic as Tools
@@ -9,50 +10,36 @@ try:
 	print(
 		"*************************************************************************\n"
 		"View3d Deploy\n"
-		"Copyright Rylogic Limited 2014\n"
+		"Copyright (c) Rylogic Limited 2014\n"
 		"*************************************************************************")
 
 	Tools.CheckVersion(1)
 
+	# Check for optional parameters
+	nowait = True if "nowait" in [arg.lower() for arg in sys.argv] else False
+	trace  = True if "trace"  in [arg.lower() for arg in sys.argv] else False
+
 	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
-	# e.g: "\"folder\proj_name:Rebuild\""
-	projects = [
+	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"view3d",
-		]
-	configs = [
-		"debug",
-		"release"
 		]
 	platforms = [
 		"x86",
 		"x64"
 		]
+	configs = [
+		"debug",
+		"release"
+		]
 
-	procs = []
 	parallel = True
 	same_window = True
 
 	#Invoke MSBuild
-	projs = ";".join(projects)
-	for platform in platforms:
-		for config in configs:
-			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
-			if parallel:
-				procs.extend([Tools.Spawn(args, same_window=same_window)])
-			else:
-				print("\n *** " + platform + " - " + config + " ***\n")
-				Tools.Exec(args)
-
-	errors = False
-	for proc in procs:
-		proc.wait()
-		if proc.returncode != 0:
-			errors = True
-	
-	if errors:
+	if not Tools.MSBuild(sln, projects, platforms, configs, parallel, same_window):
 		Tools.OnError("Errors occurred")
 
-	Tools.OnSuccess()
+	Tools.OnSuccess(pause_time_seconds = (0 if nowait else 1))
 
 except Exception as ex:
 	Tools.OnException(ex)

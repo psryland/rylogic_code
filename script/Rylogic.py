@@ -210,7 +210,7 @@ def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True)
 		for config in configs:
 			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
 			if parallel:
-				procs.extend([Tools.Spawn(args, same_window=same_window)])
+				procs.extend([Spawn(args, same_window=same_window)])
 			else:
 				print("\n *** " + platform + " - " + config + " ***\n")
 				Exec(args)
