@@ -10,7 +10,7 @@ $items = array(
 	<div class='list'>
 		<?php foreach ($items as $name=>$link): ?>
 			<div class='list_item'>
-				<a class='menu_link' href='<?=$link?>'><?=$name?></a>
+				<a class='menu_link' href='http://<?=$host?>/<?=$link?>'><?=$name?></a>
 			</div>
 		<?php endforeach;?>
 	</div>
