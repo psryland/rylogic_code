@@ -104,6 +104,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\singleton.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\si_units.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stackdump.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\common\static_callback.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\stop_watch.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\to.h" />
     <ClInclude Include="..\..\sdk\pr\pr\common\repeater.h" />
@@ -263,6 +264,7 @@
     <ClInclude Include="..\..\sdk\pr\pr\str\prstringutility.h" />
     <ClInclude Include="..\..\sdk\pr\pr\str\tostring.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\concurrent_queue.h" />
+    <ClInclude Include="..\..\sdk\pr\pr\threads\spin_lock.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\name_thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\pause_thread.h" />
     <ClInclude Include="..\..\sdk\pr\pr\threads\process.h" />

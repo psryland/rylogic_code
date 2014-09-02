@@ -194,6 +194,7 @@ namespace pr.gui
 		{
 			// Whenever this window moves, save it's offset from the owner
 			base.OnMove(e);
+			Snap();
 			RecordOffset();
 		}
 		protected override void OnLocationChanged(EventArgs e)
@@ -323,6 +324,50 @@ namespace pr.gui
 			case EPin.CentreRight:  Location = new Point(frame.Right                , (frame.Top+frame.Bottom)/2) + m_ofs.ToSize(); break;
 			}
 		}
+
+		/// <summary>Snap to the parent window</summary>
+		private bool Snap()
+		{
+			if (Owner == null) { m_snapped = false; return false; }
+			var frame = TargetFrame;
+			int snap_dist = m_snapped ? 2 : 5;
+			
+			// Snap to frame left edge
+			if (Math.Abs(Right - frame.Left) < snap_dist && Maths.Clamp(Top, frame.Top, frame.Bottom) == Top)
+			{
+				Location = new Point(frame.Left - Bounds.Width, Top);
+				m_snapped = true;
+				return true;
+			}
+
+			// Snap to frame right edge
+			if (Math.Abs(Left - frame.Right) < snap_dist && Maths.Clamp(Top, frame.Top, frame.Bottom) == Top)
+			{
+				Location = new Point(frame.Right, Top);
+				m_snapped = true;
+				return true;
+			}
+
+			// Snap to frame top edge
+			if (Math.Abs(Bottom - frame.Top) < snap_dist && Maths.Clamp(Left, frame.Left, frame.Right) == Left)
+			{
+				Location = new Point(Left, frame.Top - Bounds.Height);
+				m_snapped = true;
+				return true;
+			}
+
+			// Snap to frame bottom edge
+			if (Math.Abs(Top - frame.Bottom) < snap_dist && Maths.Clamp(Left, frame.Left, frame.Right) == Left)
+			{
+				Location = new Point(Left, frame.Bottom);
+				m_snapped = true;
+				return true;
+			}
+
+			m_snapped = false;
+			return false;
+		}
+		private bool m_snapped;
 
 		/// <summary>Handle the system menu options</summary>
 		protected override void WndProc(ref Message m)

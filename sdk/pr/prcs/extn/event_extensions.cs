@@ -82,7 +82,7 @@ namespace pr.extn
 
 		/// <summary>Fire the event if not suspended</summary>
 		[DebuggerStepThrough]
-		public static TEventArgs Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender, TEventArgs args) where TEventArgs :EventArgs
+		public static TEventArgs Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
 		{
 			if (evt == null) return args;
 			if (Impl<EventHandler<TEventArgs>>.IsSuspended(evt))
@@ -94,7 +94,7 @@ namespace pr.extn
 
 		/// <summary>Fire the event if not suspended</summary>
 		[DebuggerStepThrough]
-		public static EventArgs Raise(this EventHandler evt, object sender, EventArgs args)
+		public static EventArgs Raise(this EventHandler evt, object sender = null, EventArgs args = null)
 		{
 			if (evt == null) return args;
 			if (Impl<EventHandler>.IsSuspended(evt))

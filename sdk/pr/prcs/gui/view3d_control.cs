@@ -63,6 +63,7 @@ namespace pr.gui
 		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 		public void SignalRefresh(object sender = null, EventArgs args = null)
 		{
+			if (Window == null) return;
 			Window.SignalRefresh();
 		}
 

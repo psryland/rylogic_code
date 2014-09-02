@@ -410,9 +410,6 @@
     <None Include="..\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
       <Filter>shaders\hlsl\deferred</Filter>
     </None>
-    <None Include="..\..\script\BuildShader.py">
-      <Filter>shaders\hlsl</Filter>
-    </None>
     <None Include="..\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
       <Filter>shaders\hlsl\shadow</Filter>
     </None>
@@ -436,6 +433,9 @@
     </None>
     <None Include="..\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
       <Filter>shaders\hlsl\screenspace</Filter>
+    </None>
+    <None Include="..\renderer11\shaders\hlsl\BuildShader.py">
+      <Filter>shaders\hlsl</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

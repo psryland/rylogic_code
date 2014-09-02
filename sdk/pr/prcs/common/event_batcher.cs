@@ -54,6 +54,7 @@ namespace pr.common
 		public void Dispose()
 		{
 			m_shutdown = true;
+			Action = null;
 		}
 
 		/// <summary>The callback called when events have been signalled</summary>

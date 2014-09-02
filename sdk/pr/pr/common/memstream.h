@@ -89,6 +89,7 @@ namespace pr
 	};
 	
 	// An istream wrapper around an immutable buffer
+	#pragma warning(disable:4355) // this used in initializer list
 	struct imemstream :virtual imemstreambuf, std::istream
 	{
 		imemstream(void const* data, std::size_t size)
@@ -96,6 +97,7 @@ namespace pr
 			,std::istream(static_cast<std::streambuf*>(this))
 		{}
 	};
+	#pragma warning(default:4355)
 }
 
 #if PR_UNITTESTS

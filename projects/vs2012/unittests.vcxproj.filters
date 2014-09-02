@@ -861,6 +861,12 @@
     <ClInclude Include="..\..\sdk\pr\pr\common\memstream.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\threads\spin_lock.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sdk\pr\pr\common\static_callback.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\unittests\run_tests.py">
