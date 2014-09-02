@@ -4,14 +4,20 @@
 //*********************************************
 #pragma once
 
-// Change these values to use different versions
-#define  WINVER       0x0501//0x0400//
-#define _WIN32_WINNT  0x0501//0x0400//
-#define _WIN32_IE     0x0501//0x0400//
-#define _RICHEDIT_VER 0x0200
+#ifndef _WIN32_WINNT 
+#define _WIN32_WINNT 0x0501
+#elif _WIN32_WINNT < 0x0500
+#error "_WIN32_WINNT >= 0x0500 required"
+#endif
 
-#pragma warning (disable: 4995) // deprecated
-#pragma warning (disable: 4996) // warning, you are using conforming code instead of microsoft bollox
+//// Change these values to use different versions
+//#define  WINVER       0x0501//0x0400//
+//#define _WIN32_IE     0x0501//0x0400//
+//#define _RICHEDIT_VER 0x0200
+
+
+//#pragma warning (disable: 4995) // deprecated
+//#pragma warning (disable: 4996) // warning, you are using conforming code instead of microsoft bollox
 
 #define _WTL_NO_CSTRING
 

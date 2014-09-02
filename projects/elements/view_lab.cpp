@@ -70,11 +70,11 @@ namespace ele
 		m_pad_detail.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight);
 
 		// Draw the experiment view
-		m_pad_experiment.Draw(m_cons, EAnchor::TopLeft, 0, TitleHeight + list.WindowHeight());
+		m_pad_experiment.Draw(m_cons, EAnchor::TopLeft, 0, TitleHeight + (int)list.WindowHeight());
 
 		// For the elements view, draw the materials that are known to include that element
 		if (m_show_elements)
-			m_pad_mats.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight + m_pad_detail.WindowHeight());
+			m_pad_mats.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight + (int)m_pad_detail.WindowHeight());
 
 		// Display the popup if visible
 		if (m_show_popup)
@@ -327,7 +327,7 @@ namespace ele
 	void ViewLab::KeyHandler_KeyDown(Pad& pad, Evt_KeyDown const& e)
 	{
 		auto selected = pad.Selected();
-		int shift = pad.Height() / 2;
+		int shift = (int)pad.Height() / 2;
 
 		// Page up/down, scrolls up/down on the focused pad
 		if (e.m_key.wVirtualKeyCode == VK_PRIOR) // ie. page up

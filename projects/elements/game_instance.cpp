@@ -36,12 +36,12 @@ namespace ele
 			m_lab.DiscoverElement(e3);
 		
 			// Discover some materials using these elements, plus some unknown elements
-			m_lab.DiscoverMaterial(MaterialIndex(e1,e2));
-			m_lab.DiscoverMaterial(MaterialIndex(e1,e3));
-			m_lab.DiscoverMaterial(MaterialIndex(e2,e3));
-			m_lab.DiscoverMaterial(MaterialIndex(e1,e4));
-			m_lab.DiscoverMaterial(MaterialIndex(e5,e3));
-			m_lab.DiscoverMaterial(MaterialIndex(e4,e5));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e1,e2));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e1,e3));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e2,e3));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e1,e4));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e5,e3));
+			m_lab.DiscoverMaterial((int)MaterialIndex(e4,e5));
 		}
 		
 		

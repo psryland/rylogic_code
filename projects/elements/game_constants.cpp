@@ -72,7 +72,7 @@ namespace ele
 		}
 		for (size_t i = 0; i != PR_COUNTOF(m_orbital_radius); ++i)
 		{
-			m_orbital_radius[i] = m_valence_levels[i]; // will do for now...
+			m_orbital_radius[i] = (double)m_valence_levels[i]; // will do for now...
 		}
 
 		// Pick a star mass approximately the same as the sun

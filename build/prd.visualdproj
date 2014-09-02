@@ -92,7 +92,7 @@
   <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
+  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="x64">
@@ -187,7 +187,7 @@
   <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
+  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Debug" platform="Win32">
@@ -282,7 +282,7 @@
   <cRuntime>2</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
+  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Config name="Release" platform="Win32">
@@ -377,7 +377,7 @@
   <cRuntime>1</cRuntime>
   <additionalOptions />
   <preBuildCommand />
-  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</postBuildCommand>
+  <postBuildCommand>..\script\DeployLib.py $(TargetPath) $(PlatformName) $(Configuration)</postBuildCommand>
   <filesToClean>*.obj;*.cmd;*.build;*.json;*.dep</filesToClean>
  </Config>
  <Folder name="prd">

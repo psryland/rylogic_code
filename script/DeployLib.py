@@ -18,13 +18,16 @@ import UserVars
 try:
 	Tools.CheckVersion(1)
 
+	trace = False
+	if trace:
+		print("Args: " + str(sys.argv))
+
 	targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
 	platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
 	config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
 	dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.root + "\\lib"
 	if platform.lower() == "win32": platform = "x86"
 
-	trace = False
 	targetpath  = targetpath.lower()
 	platform    = platform.lower()
 	config      = config.lower()

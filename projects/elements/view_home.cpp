@@ -52,7 +52,7 @@ namespace ele
 		pad.Width(PadRightSideWidth);
 		pad.AutoSize();
 		pad.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight);
-		PadCountDownHeight = pad.WindowHeight();
+		PadCountDownHeight = (int)pad.WindowHeight();
 	}
 
 	void ViewHome::RenderResearchStatus() const
@@ -106,7 +106,7 @@ namespace ele
 		pad.Width(PadRightSideWidth);
 		pad.AutoSize();
 		pad.Draw(m_cons, EAnchor::TopRight, 0, TitleHeight + PadCountDownHeight);
-		PadResourceHeight = pad.WindowHeight();
+		PadResourceHeight = (int)pad.WindowHeight();
 	}
 
 	void ViewHome::RenderShipSpec() const
