@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\projects\clicket\stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\clicket\aboutdlg.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\clicket\clicket.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\clicket\maindlg.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\clicket\aboutdlg.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\clicket\clicket.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\clicket\maindlg.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\clicket\resource.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\clicket\stdafx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\clicket\res\clicket.ico">
+      <Filter>res</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{703433b8-3346-49be-9d86-76b2187a43ec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{6a72001c-641e-4779-821a-3c46d39ed543}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\projects\clicket\clicket.rc">
+      <Filter>res</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

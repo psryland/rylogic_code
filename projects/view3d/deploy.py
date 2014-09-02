@@ -19,7 +19,7 @@ try:
 	nowait = True if "nowait" in [arg.lower() for arg in sys.argv] else False
 	trace  = True if "trace"  in [arg.lower() for arg in sys.argv] else False
 
-	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
+	sln = UserVars.root + "\\build\\rylogic.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"view3d",
 		]

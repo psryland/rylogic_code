@@ -2,6 +2,9 @@ PR Lib project organisation
 
 /root
 	/build           - Project files and property sheets
+		/packages    - Nuget created directory for nuget packages
+		/.nugget     - Nuget created directory for nuget packages
+		rylogic.sln  - "Everything" solution file
 		cex.vcxproj
 		etc
 	/include         - Public headers and interfaces. Third party projects should add an include path
@@ -17,11 +20,10 @@ PR Lib project organisation
 		Rylogic.py
 		etc
 	/sdk             - Third party libraries and source
+	/tools           - Binaries used to support scripts
 
 	*Generated directories*
 	/obj             - All object files for native projects
 	/lib             - Compiled libraries
 	/bin             - Compiled executables
-	/packages        - Nuget created directory for nuget packages
 
-	rylogic.sln      - "Everything" solution file

@@ -49,7 +49,7 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\..\sdk\pr\prcs\Rylogic.csproj">
+    <ProjectReference Include="..\..\..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
     </ProjectReference>

@@ -47,25 +47,25 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\sdk\pr\prcs\script\buffer.cs">
+    <Compile Include="..\Rylogic\script\buffer.cs">
       <Link>src\buffer.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\html_expander.cs">
+    <Compile Include="..\Rylogic\script\html_expander.cs">
       <Link>src\html_expander.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\loc.cs">
+    <Compile Include="..\Rylogic\script\loc.cs">
       <Link>src\loc.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\src.cs">
+    <Compile Include="..\Rylogic\script\src.cs">
       <Link>src\src.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\src_stack.cs">
+    <Compile Include="..\Rylogic\script\src_stack.cs">
       <Link>src\src_stack.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\src_type.cs">
+    <Compile Include="..\Rylogic\script\src_type.cs">
       <Link>src\src_type.cs</Link>
     </Compile>
-    <Compile Include="..\..\sdk\pr\prcs\script\template_replacer.cs">
+    <Compile Include="..\Rylogic\script\template_replacer.cs">
       <Link>src\template_replacer.cs</Link>
     </Compile>
     <Compile Include="src\HtmlExpander.cs" />

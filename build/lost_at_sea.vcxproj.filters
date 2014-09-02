@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="..\projects\lost_at_sea\src\cam\cam.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk\ogg\ogg.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\settings.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\ship\ship.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\world\skybox.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\lost_at_sea\src\world\terrain.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk\vorbis\vorbis.c">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\lost_at_sea\src\cam\cam.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\camera\camctrl_dinput_wasd.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\camera\camera.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\input\dinput.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\event.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\main.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\ogg\ogg_stream.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\player.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\settings.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\ship\ship.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\world\skybox.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\sound\sound.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\stdafx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\world\terrain.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\lost_at_sea\src\util.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{42f2d922-cbc7-48c4-ae0a-b581220dfb93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="res">
+      <UniqueIdentifier>{80e60689-fba2-48b3-aa45-106b7694b0ae}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\lost_at_sea\script\menu.ldr">
+      <Filter>res</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,461 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="config">
+      <UniqueIdentifier>{11a2d089-14e9-4307-8ad6-7e475adafcfa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="instances">
+      <UniqueIdentifier>{c3806097-069b-4f18-8be1-94fc978e551c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="models">
+      <UniqueIdentifier>{4151782e-6aca-4af0-8bb4-5e646d27e050}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="render">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{046fe0e7-692c-4ede-8633-41b96de1420b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="textures">
+      <UniqueIdentifier>{faf42226-0091-4cef-b5ca-8c77abffc798}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="util">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="geometry">
+      <UniqueIdentifier>{3d2fa85d-bf15-40ad-adb4-35386e2505df}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lights">
+      <UniqueIdentifier>{cc088da9-e2ac-4a6d-a7a8-7b3d89d4b0b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="directxtex">
+      <UniqueIdentifier>{705f984a-2f8f-42a1-b08f-130712f327da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="steps">
+      <UniqueIdentifier>{ed9c7a8f-f5fd-4478-99e0-000bbe24051b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl">
+      <UniqueIdentifier>{ac2023af-8753-474e-8e51-b83cc0f5c4a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\forward">
+      <UniqueIdentifier>{e7cb889b-829b-4303-8e43-0be4ffeff3bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\deferred">
+      <UniqueIdentifier>{18cc3075-d6e7-45c4-b3ef-4e500afbd89e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\shadow">
+      <UniqueIdentifier>{d679b4db-6cbe-41e9-88e9-5fd593c061d1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\screenspace">
+      <UniqueIdentifier>{5e0e9d84-d090-4b5f-a8a3-d92dfc76e305}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders\hlsl\lighting">
+      <UniqueIdentifier>{f4a19bcc-f66c-4c39-b094-b66f24601c81}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\renderer11\util\stdafx.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\renderer.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\config\config.h">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\scene.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\wrappers.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\sortkey.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\instances\instance.h">
+      <Filter>instances</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\model.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\model_buffer.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\model_manager.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\model_settings.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\allocator.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\nugget.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\lookup.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\util.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\stock_resources.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\models\model_generator.h">
+      <Filter>models</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\lock.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\demo_scene.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\scene_view.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\drawlist_element.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\shader_manager.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture2d.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_manager.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\renderer.h" />
+    <ClInclude Include="..\include\pr\renderer11\forward.h" />
+    <ClInclude Include="..\include\pr\geometry\line.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\box.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\common.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\lights\light.h">
+      <Filter>lights</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\sphere.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\quad.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\render\stereo.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\cylinder.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\mesh.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\mesh_tools.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\utility.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\instance.h" />
+    <ClInclude Include="..\include\pr\renderer11\render\raster_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\blend_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\depth_state.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\state_block.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\directxtex\BC.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\directxtex\DDS.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\directxtex\DirectXTexP.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\directxtex\scoped.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\textures\dds_texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\textures\wic_texture_loader.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\util\event_types.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\image.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\texture_gdi.h">
+      <Filter>textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\render\state_stack.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\render_step.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\input_layout.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\shaders\common.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\dslighting.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\forward_render.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\gbuffer.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\steps\shadow_map.h">
+      <Filter>steps</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\shader.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\shader_set.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\directxtex\DirectXTex.h">
+      <Filter>directxtex</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\renderer11\util\forward_private.h">
+      <Filter>util</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\shaders\screen_space_shaders.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\render\window.h">
+      <Filter>render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\shape2d.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\3ds.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\file.h" />
+    <ClInclude Include="..\include\pr\geometry\model_file.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\p3d.h">
+      <Filter>geometry</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\projects\renderer11\util\stdafx.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\renderer.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\config\config.cpp">
+      <Filter>config</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\scene.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\models\model_manager.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\models\model_buffer.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\models\model.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\renderer11\util\util.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\util\lock.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shader_manager.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture2d.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_manager.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\lights\light.cpp">
+      <Filter>lights</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\stereo.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\scene_view.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\BC.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\BC4BC5.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\BC6HBC7.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexCompress.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexConvert.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexD3D11.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexDDS.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexFlipRotate.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexImage.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexMipmaps.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexMisc.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexNormalMaps.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexResize.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexTGA.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexUtil.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\directxtex\DirectXTexWIC.cpp">
+      <Filter>directxtex</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\dds_texture_loader.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\wic_texture_loader.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\textures\texture_gdi.cpp">
+      <Filter>textures</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\state_stack.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\render_step.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\dslighting.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\forward_render.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\gbuffer.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\steps\shadow_map.cpp">
+      <Filter>steps</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\dslighting_shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\fwd_shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\gbuffer_shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\shadow_map_shader.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\shaders\screen_space_shaders.cpp">
+      <Filter>shaders</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\render\window.cpp">
+      <Filter>render</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map_cbuf.hlsli">
+      <Filter>shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\cbuf.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\renderer11\directxtex\DirectXTex.inl">
+      <Filter>directxtex</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\forward\forward_cbuf.hlsli">
+      <Filter>shaders\hlsl\forward</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\lighting\phong_lighting.hlsli">
+      <Filter>shaders\hlsl\lighting</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\types.hlsli">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_cast.hlsli">
+      <Filter>shaders\hlsl\shadow</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </None>
+    <None Include="..\projects\renderer11\shaders\hlsl\BuildShader.py">
+      <Filter>shaders\hlsl</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\shadow\shadow_map.hlsl">
+      <Filter>shaders\hlsl\shadow</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\deferred\dslighting.hlsl">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsl">
+      <Filter>shaders\hlsl\deferred</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\forward\forward.hlsl">
+      <Filter>shaders\hlsl\forward</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\thick_line.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\projects\renderer11\shaders\hlsl\screenspace\arrow_head.hlsl">
+      <Filter>shaders\hlsl\screenspace</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

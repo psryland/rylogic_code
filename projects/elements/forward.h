@@ -15,7 +15,7 @@
 #include "pr/common/datetime.h"
 #include "pr/common/hash.h"
 #include "pr/common/si_units.h"
-#include "pr/common/tri_table.h"
+#include "pr/container/tri_table.h"
 #include "pr/macros/enum.h"
 #include "pr/macros/no_copy.h"
 #include "pr/macros/count_of.h"

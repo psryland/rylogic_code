@@ -1,0 +1,187 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="ui">
+      <UniqueIdentifier>{80df82f9-5abb-42ba-9867-8acec82961fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{98f9b0f4-017e-40e4-829c-e8e7deffee96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\macros">
+      <UniqueIdentifier>{58ed8f1c-5ca2-4784-a12d-63e584585861}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{8dc16bfb-e835-4560-a13e-642272749bfc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\storage">
+      <UniqueIdentifier>{7b0f1b1d-3ac0-45af-bb7a-7ba92372e7c1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\str">
+      <UniqueIdentifier>{b3a8b120-eb19-412c-918b-7877dd047b09}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sqlite">
+      <UniqueIdentifier>{32149f03-f313-4523-ae2a-0c94a520eb42}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\elements\bond.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\console_ui.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\element.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\game_constants.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\game_events.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\game_instance.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_base.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_home.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_intro.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_lab.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_prompt_box.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\view_ship.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\world_state.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\stockpile.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\ship.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\research_effort.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\reaction.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sdk\sqlite\sqlite3.h">
+      <Filter>sqlite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\lab.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\material.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\console.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\datetime.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\event.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\events.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\fmt.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\no_copy.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\si_units.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\storage\sqlite.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\elements\stdafx.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\tostring.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\console_ui.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\element.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\game_instance.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\lab.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\game_constants.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\material.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\reaction.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\research_effort.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\ship.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\stdafx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\stockpile.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\view_base.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\view_home.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\view_intro.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\view_lab.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\view_ship.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\elements\world_state.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\projects\elements\design.txt" />
+  </ItemGroup>
+</Project>

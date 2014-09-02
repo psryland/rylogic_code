@@ -46,26 +46,31 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <Import Project="..\..\projects\vs2012\lib.x86.debug.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
-    <Import Project="..\..\projects\vs2012\lib.x64.debug.props" />
-  </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <Import Project="..\..\projects\vs2012\lib.x86.release.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
-    <Import Project="..\..\projects\vs2012\lib.x64.release.props" />
-  </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>obj\$(PlatformToolset)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>obj\$(PlatformToolset)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>obj\$(PlatformToolset)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>obj\$(PlatformToolset)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)</IntDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -77,13 +82,18 @@ $(ProjectDir)\scripts\LexGen.py
 $(ProjectDir)\scripts\HFacer.py
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent />
     <Lib>
@@ -95,13 +105,18 @@ $(ProjectDir)\scripts\LexGen.py
 $(ProjectDir)\scripts\HFacer.py
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -110,13 +125,18 @@ $(ProjectDir)\scripts\LexGen.py
 $(ProjectDir)\scripts\HFacer.py
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
     <Link />
     <ClCompile>
-      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\sdk\pr</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\include\scintilla;.\lexlib;.\src;..\..\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>SCI_NAMESPACE;STATIC_BUILD;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <PostBuildEvent />
     <PreBuildEvent>
@@ -125,6 +145,9 @@ $(ProjectDir)\scripts\LexGen.py
 $(ProjectDir)\scripts\HFacer.py
 </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="lexers\LexLdr.cxx" />

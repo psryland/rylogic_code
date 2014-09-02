@@ -23,7 +23,7 @@ try:
 	os.makedirs(tempdir, exist_ok=True)
 
 	srcdirs = [
-		"\\sdk\\pr\\pr"
+		UserVars.root + "\\include"
 		]
 
 	exclude = [

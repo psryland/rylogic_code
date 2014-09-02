@@ -7,7 +7,7 @@
 # 
 # This will copy mylib.lib (or dll) to "<dstdir>\platform\config\mylib.lib
 # and optionally the pdb as well if it exists.
-# 'dstdir' is optional, if not given it will default to root+"\sdk\lib"
+# 'dstdir' is optional, if not given it will default to root+"\lib"
 # Note: 
 #  pdb files are associated with the file name at the time they are build so it is
 #  not possible to rename the lib and pdb. 
@@ -21,7 +21,7 @@ try:
 	targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
 	platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")
 	config     = sys.argv[3] if len(sys.argv) > 3 else input("Configuration (debug,release)? ")
-	dstdir     = sys.argv[4] if len(sys.argv) > 4 else "\\sdk\\lib"
+	dstdir     = sys.argv[4] if len(sys.argv) > 4 else UserVars.root + "\\lib"
 	if platform.lower() == "win32": platform = "x86"
 
 	trace = False

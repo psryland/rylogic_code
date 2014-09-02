@@ -1,0 +1,875 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="sqlite3">
+      <UniqueIdentifier>{e77a3159-6dea-461d-a5f4-2e7ad5367749}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="pr">
+      <UniqueIdentifier>{019a8c89-fbb4-4a54-93cc-fdc5fbcea942}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\common">
+      <UniqueIdentifier>{fe0ac628-890b-4bfe-8d87-e873b38e4fda}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\str">
+      <UniqueIdentifier>{ebce1b8f-1215-430d-be29-f2fd16a54f4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\macros">
+      <UniqueIdentifier>{77b2edf5-8bf7-4c07-aaf7-dd10d7c9bd4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\maths">
+      <UniqueIdentifier>{454fdf8d-10ed-483d-9a12-eb4b7de1de16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\script">
+      <UniqueIdentifier>{055b786b-45c7-4f05-8fa8-b814b71d0a9b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\lua">
+      <UniqueIdentifier>{628b13d8-6de8-4a0a-817a-00189ee50909}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\threads">
+      <UniqueIdentifier>{350194ce-223c-4063-a01b-7f02ce0e1b2c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\storage">
+      <UniqueIdentifier>{6cf57857-2361-422f-a54e-c7a9b60f8a0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\filesys">
+      <UniqueIdentifier>{8f25f7c8-8312-4e4c-a497-837416ae7cef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\app">
+      <UniqueIdentifier>{3b2e8c0f-39bf-461e-9421-2f53ee2bfc0d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\meta">
+      <UniqueIdentifier>{90fa2bb6-0623-4d6c-ad98-77ce092a0a6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\network">
+      <UniqueIdentifier>{c6b2ab90-2d54-4ce5-8c83-84b1a254948f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\gui">
+      <UniqueIdentifier>{51c9bc32-69e7-4267-9ef9-44aaeffcff7e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\linedrawer">
+      <UniqueIdentifier>{811b143f-5d27-4d0b-941f-6a429943b4eb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\hardware">
+      <UniqueIdentifier>{884fa0a0-434f-4d8a-981f-74085358d4c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\crypt">
+      <UniqueIdentifier>{c50460bd-5fe1-465e-b37f-b74573df250c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\renderer11">
+      <UniqueIdentifier>{c542dbe3-26e9-4e3a-ae12-8facab33e382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\renderer11\textures">
+      <UniqueIdentifier>{203dae01-f4b1-454d-a93e-48daf8f28a4b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\camera">
+      <UniqueIdentifier>{e9ebf09f-ad1a-4108-ba5b-e8162aa01153}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\geometry">
+      <UniqueIdentifier>{7f4f044d-7196-421b-b40d-15cba420920e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pr\container">
+      <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\include\pr\crypt\crypt.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\crypt\md5.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\unittests\unittests.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\lua\lua_core.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\lua\lua_lib.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\pr\geometry\3ds.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\abs.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\algorithm.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\align.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\alloca.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\allocator.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\and.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\archiver.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\assert.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\atl.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\atlgdix.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\auto_do.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\autofile.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\base64.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\axis_id.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\bit_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\bitfunctions.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\boundingbox.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\boundingbox_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\boundingsphere.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\boundingsphere_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\byte_data.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\camera\camera.h">
+      <Filter>pr\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\cast.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\chain.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\char_stream.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\clipboard.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\colour.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\hardware\comm_port_io.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\command_line.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\comment_strip.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\compress.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\concurrent_queue.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\console.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\constants.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\constants.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\context_menu.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\conversion.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\convexhull.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\count_of.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\hardware\cpuinfo.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\crc.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\crypt.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\storage\csv.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\d3dptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\datetime.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\dependency.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\deque.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\directorytree.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\discretepidcontroller.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\embedded_code.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\embedded_lua.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\enum.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\enumerable.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\event.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\file.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\fileex.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\filesys.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\filesyswin.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\filewatch.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\expr_eval.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\events.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\exception.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\findfiles.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\flags_enum.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\font_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\fmt.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\for_each.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\foreach.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\forward.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\forward.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\frect.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\frect_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\frustum.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\frustum_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\function_arity.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\gcf.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\gdiplus.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\geometryfunctions.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\geometryfunctions_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\gimble.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\graph_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\kdtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\join.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\ivector4_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\ivector4.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\ivector2_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\ivector2.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\includes.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\grid_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\ienumoutput.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\hresult.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\hash.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\hardtypedef.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\guid.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\if.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\interpolate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\inplacealloc.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\imposter.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\irect_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\irect.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\line3_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\line3.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix4x4_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix4x4.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix3x3_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix3x3.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix2x2_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\matrix2x2.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\maths.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\quaternion.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\quaternion_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector4_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector4.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector3_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector3.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector2_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector2.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\vector_rand.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\md5.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_object.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_plugin_interface.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
+      <Filter>pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\isize.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\keystate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\istream.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\ireport.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\keywords.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\largeint.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\link.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\list_in_array.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\log.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\lua\lua.h">
+      <Filter>pr\lua</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\main.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\main_gui.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\memstream.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\mempool.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\mfc_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\menu_helper.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\min_max.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\min_max_fix.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\misc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\orientedbox.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\orientedbox_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\primes.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\msgbox.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\multi_cast.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\name_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\newline_strip.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\no_copy.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\not.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\on_exit.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\or.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\p3d.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\perlinnoise.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\observe.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\objectpool.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\new.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\pause_thread.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\plane.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\rand_mt19937.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\rand.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\polynomial.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\pp_macro_db.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\pp_macro.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\pr_to_ode.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\preprocessor.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\unittests\pp_output.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\process.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\pipe.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\pollingtoevent.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\predicate.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\profile.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\profilemanager.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\quad.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\quadtree.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstring.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstdstring.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstringcore.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstringextract.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstringstream.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\prstringutility.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
+      <Filter>pr\renderer11\textures</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\reader.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\progress_dlg.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\prtypes.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\property.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\proxy.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\prsortkey.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\queue.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\scalar.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\scalar_impl.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\recurse_directory.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\recent_files.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\remove_parenthesis.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\meta\remove_pointer.h">
+      <Filter>pr\meta</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\repeat.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\resource.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\repeater.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\registrykey.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\refptr.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\refcount.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\range.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script_forward.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script_core.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\stack.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\segmented_list.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\skybox.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\richedit.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\crypt\rijndael.h">
+      <Filter>pr\crypt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\round_button_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scaled_dc.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scintilla.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\storage\settings.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\app\sim_message_loop.h">
+      <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\sim_message_pump.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\spatial.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sdk\sqlite\sqlite3.h">
+      <Filter>sqlite3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\storage\sqlite.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\stringise.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\singleton.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\si_units.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\scoped.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\scope.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\spin_lock.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\spline.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\stat.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\maths\triangulate.h">
+      <Filter>pr\maths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\tri_table.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\stream_stack.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\tcpip.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\token.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\tokeniser.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\tostring.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\unittests.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\tstring.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\to.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\stop_watch.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\static_callback.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\stackdump.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\unittests\unittests.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\geometry\utility.h">
+      <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\vector.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\container\vector_map.h">
+      <Filter>pr\container</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\threads\wait_state.h">
+      <Filter>pr\threads</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\web_get.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\storage\xml.h">
+      <Filter>pr\storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\user_data.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\windowfunctions.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\windows_com.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\unittests\pre_build.py" />
+    <None Include="..\projects\unittests\run_tests.py" />
+  </ItemGroup>
+</Project>

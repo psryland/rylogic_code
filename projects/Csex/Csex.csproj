@@ -14,28 +14,32 @@
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
-    <PlatformTarget>x86</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|AnyCPU'">
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>Smiling gekko 140x110.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -44,21 +48,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cmd\Cmd.cs" />
+    <Compile Include="Cmd\ShowBase64.cs" />
+    <Compile Include="Cmd\FindAssemblyConflicts.cs" />
+    <Compile Include="Cmd\FindDuplicateFiles.cs" />
+    <Compile Include="Cmd\GenActivationCode.cs" />
+    <Compile Include="Cmd\MarkupExpand.cs" />
+    <Compile Include="Cmd\NewCommand.cs" />
+    <Compile Include="Cmd\PatternUI.cs" />
+    <Compile Include="Cmd\ShowExif.cs" />
+    <Compile Include="Cmd\ShowTree.cs" />
+    <Compile Include="Cmd\SignFile.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2010.csproj">
-      <Project>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</Project>
-      <Name>prcs_vs2010</Name>
-    </ProjectReference>
+    <None Include="deploy.py" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="release.cmd" />
+    <Content Include="Smiling gekko 140x110.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Rylogic\Rylogic.csproj">
+      <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
+      <Name>Rylogic</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>$(ProjectDir)release.cmd noexplorer 1&gt;nul</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -8,7 +8,7 @@ import UserVars
 
 try:
 	# build rylogic.dll
-	Tools.Exec([sys.executable, r"P:\sdk\pr\prcs\deploy.py", "nowait"])
+	Tools.Exec([sys.executable, UserVars.root + r"\projects\Rylogic\deploy.py", "nowait"])
 
 	# pull
 	Tools.Exec([sys.executable, r"R:\software\SDK\pr\lib\_pull_pr_libs.py", "nowait"])

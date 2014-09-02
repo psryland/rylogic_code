@@ -99,7 +99,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\sdk\pr\prcs\prcs_vs2012.csproj">
+    <ProjectReference Include="..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>prcs_vs2012</Name>
     </ProjectReference>
