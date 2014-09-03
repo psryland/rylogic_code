@@ -1,6 +1,6 @@
 //******************************************
 // Camera Ctrl WASD
-//  Copyright © Rylogic Ltd 2009
+//  Copyright (c) Rylogic Ltd 2009
 //******************************************
 
 #ifndef PR_CAMERA_CAMCTRL_DINPUT_WASD_H

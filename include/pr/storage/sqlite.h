@@ -4,8 +4,6 @@
 //*****************************************
 
 #pragma once
-#ifndef PR_STORAGE_SQLITE_H
-#define PR_STORAGE_SQLITE_H
 
 #include <ctype.h>
 #include <exception>
@@ -16,18 +14,6 @@
 #include <type_traits>
 #include <sqlite3.h>
 #include <cassert>
-
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str) assert((exp) && str)
-#endif
-#ifndef PR_SQL_ASSERTS
-#   ifdef NDEBUG
-#      define PR_SQL_ASSERTS 0
-#   else
-#      define PR_SQL_ASSERTS 1
-#   endif
-#endif
 
 namespace pr
 {
@@ -392,35 +378,35 @@ namespace pr
 		// Return the number of result columns in 'stmt'
 		inline size_t ColumnCount(sqlite3_stmt* stmt)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, stmt != 0, "Invalid result object");
+			assert(stmt != 0 && "Invalid result object");
 			return static_cast<size_t>(sqlite3_column_count(stmt));
 		}
 
 		// Return the column type for column number 'col' in 'stmt'
 		inline char const* DeclType(sqlite3_stmt* stmt, int col)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, col >= 0 || col < (int)ColumnCount(stmt), "Invalid result object");
+			assert(col >= 0 && col < (int)ColumnCount(stmt) && "Invalid result object");
 			return sqlite3_column_decltype(stmt, col);
 		}
 
 		// Return the data type for column number 'col'
 		inline int DataType(sqlite3_stmt* stmt, int col)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, col >= 0 || col < (int)ColumnCount(stmt), "Invalid result object");
+			assert(col >= 0 && col < (int)ColumnCount(stmt) && "Invalid result object");
 			return sqlite3_column_type(stmt, col);
 		}
 
 		// Return the name of column number 'col'
 		inline char const* ColumnName(sqlite3_stmt* stmt, int col)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, col >= 0 || col < (int)ColumnCount(stmt), "Invalid result object");
+			assert(col >= 0 && col < (int)ColumnCount(stmt) && "Invalid result object");
 			return sqlite3_column_name(stmt, col);
 		}
 
 		// Return the index of the column with name 'name'
 		inline size_t ColumnIndex(sqlite3_stmt* stmt, char const* name)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, name, "Invalid column name");
+			assert(name && "Invalid column name");
 			for (size_t i = 0, iend = ColumnCount(stmt); i != iend; ++i)
 				if (strcmp(name, sqlite3_column_name(stmt, (int)i)) == 0)
 					return i;
@@ -431,7 +417,7 @@ namespace pr
 		// Returns true if column 'col' in 'stmt' is null
 		inline bool IsNull(sqlite3_stmt* stmt, int col)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, col >= 0 || col < (int)ColumnCount(stmt), "Invalid result object");
+			assert(col >= 0 && col < (int)ColumnCount(stmt) && "Invalid result object");
 			return DataType(stmt, col) == SQLITE_NULL;
 		}
 
@@ -456,7 +442,7 @@ namespace pr
 		// Compile an sql string into an sqlite3 statement
 		inline sqlite3_stmt* Compile(sqlite3* db, char const* sql_string)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, db, "Database invalid");
+			assert(db && "Database invalid");
 
 			sqlite3_stmt* stmt; char const* end = 0;
 			int res = sqlite3_prepare_v2(db, sql_string, -1, &stmt, &end);
@@ -579,7 +565,7 @@ namespace pr
 		}
 		template <typename CharType> inline               CharType* read_text(sqlite3_stmt* stmt, int col, size_t max_length, CharType* value, size_t& length)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, max_length > 0 && value != 0, "Zero-length buffers not allowed");
+			assert(max_length > 0 && value != 0 && "Zero-length buffers not allowed");
 
 			std::basic_string<CharType> buf;
 			read_text(stmt, col, buf);
@@ -670,7 +656,7 @@ namespace pr
 		// Bind a set of primary keys to 'stmt' starting at parameter index '1+ofs'
 		template <typename DBRecord, typename PKArgs> void BindPKs(sqlite3_stmt* stmt, PKArgs const& pks, int ofs = 0)
 		{
-			PR_ASSERT(PR_SQL_ASSERTS, ofs >= 0, "parameter binding indices start at 1 so 'ofs' must be >= 0");
+			assert(ofs >= 0 && "parameter binding indices start at 1 so 'ofs' must be >= 0");
 			TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 			TableMetaData<DBRecord>::ColumnCont const& col = meta.PKs();
 			size_t col_count = col.size();
@@ -752,7 +738,7 @@ namespace pr
 				,IsCollate   (StrHelper::Contains(column_constraints, "collate"))
 				,NameLen     (strlen(name))
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, Name[0] == '[' && Name[NameLen-1] == ']', "Column names should be bracketted");
+				assert(Name[0] == '[' && Name[NameLen-1] == ']' && "Column names should be bracketted");
 				if (IsAutoInc && !IsPK)
 					throw Exception(SQLITE_MISUSE, "Only a primary key column can have the auto increment constraint", false);
 			}
@@ -766,28 +752,28 @@ namespace pr
 			// Set the value of this column in 'item' from 'value'.
 			template <typename ValueType> void Set(RecordType& item, ValueType const& value) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, typeid(ValueType) == ColumnTypeInfo(), "value is not the correct type for this column");
+				assert(typeid(ValueType) == ColumnTypeInfo() && "value is not the correct type for this column");
 				SetImpl(item, &value);
 			}
 
 			// Get the value of this column from 'item' into 'value'.
 			template <typename ValueType> void Get(RecordType const& item, ValueType& value) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, typeid(ValueType) == ColumnTypeInfo(), "value is not the correct type for this column");
+				assert(typeid(ValueType) == ColumnTypeInfo() && "value is not the correct type for this column");
 				GetImpl(item, &value);
 			}
 
 			// Bind 'value' (assumed to be of type ColumnType) to 'stmt'
 			template <typename ValueType> void Bind(sqlite3_stmt* stmt, int col, ValueType const& value) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, typeid(ValueType) == ColumnTypeInfo(), "value is not the correct type for this column");
+				assert(typeid(ValueType) == ColumnTypeInfo() && "value is not the correct type for this column");
 				BindImpl(stmt, col, &value);
 			}
 
 			// Set 'value' (assumed to be of type ColumnType) from 'stmt'
 			template <typename ValueType> void Read(sqlite3_stmt* stmt, int col, ValueType& value) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, typeid(ValueType) == ColumnTypeInfo(), "value is not the correct type for this column");
+				assert(typeid(ValueType) == ColumnTypeInfo() && "value is not the correct type for this column");
 				ReadImpl(stmt, col, &value);
 			}
 
@@ -904,7 +890,7 @@ namespace pr
 			// Add a column to the meta data
 			void AddColumn(ColMetaData* col)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, !col->IsAutoInc || m_autoinc == 0, "SQLite only allows one auto increment column");
+				assert((!col->IsAutoInc || m_autoinc == 0) && "SQLite only allows one auto increment column");
 
 				// If the primary keys where given as a table constraint, set the IsPK of
 				// the columns with names matching the list given in the constraint.
@@ -960,7 +946,7 @@ namespace pr
 			// 'column_name' should be in [] but without is accepted (just not as efficient)
 			ColMetaData const* Column(char const* column_name) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, column_name != nullptr, "");
+				assert(column_name != nullptr);
 
 				if (column_name[0] == '[')
 				{
@@ -975,7 +961,7 @@ namespace pr
 							return col;
 				}
 
-				PR_ASSERT(PR_SQL_ASSERTS, false, pr::FmtS("No column with name %s found", column_name));
+				assert(false && pr::FmtS("No column with name %s found", column_name));
 				return 0;
 			}
 
@@ -1015,7 +1001,7 @@ namespace pr
 			void Validate() const
 			{
 				// Check the primary key constraint uses bracketed column names
-				PR_ASSERT(PR_SQL_ASSERTS, m_pk_col_names == nullptr || !m_pks.empty(), "Primary key constraint was given, but no primary key columns found.");
+				assert((m_pk_col_names == nullptr || !m_pks.empty()) && "Primary key constraint was given, but no primary key columns found.");
 			}
 
 		private:
@@ -1075,21 +1061,21 @@ namespace pr
 			// Allow the query wrapper to convert to the sqlite statement handle
 			operator sqlite3_stmt*() const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_stmt != 0, "Invalid query object");
+				assert(m_stmt != 0 && "Invalid query object");
 				return m_stmt;
 			}
 
 			// Return the number of parameters in this statement
 			int ParmCount() const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_stmt != 0, "Invalid query object");
+				assert(m_stmt != 0 && "Invalid query object");
 				return sqlite3_bind_parameter_count(m_stmt);
 			}
 
 			// Return the index for the parameter named 'name'
 			int ParmIndex(char const* name)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_stmt != 0, "Invalid query object");
+				assert(m_stmt != 0 && "Invalid query object");
 				int idx = sqlite3_bind_parameter_index(m_stmt, name);
 				if (idx == 0) throw Exception(SQLITE_ERROR, "Parameter name not found", false);
 				return idx;
@@ -1098,7 +1084,7 @@ namespace pr
 			// Reset the prepared statement object back to its initial state, ready to be re-executed.
 			void Reset()
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_stmt != 0, "Invalid query object");
+				assert(m_stmt != 0 && "Invalid query object");
 				// The result from 'sqlite3_reset' reflects the error code of the last 'sqlite3_step'
 				// call. This is legacy behaviour, now step returns the error code immediately. For
 				// this reason we can ignore the error code returned by reset here.
@@ -1109,7 +1095,7 @@ namespace pr
 			// Returns true if there are more rows available
 			bool Step()
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_stmt != 0, "Invalid query object");
+				assert(m_stmt != 0 && "Invalid query object");
 				int res = sqlite3_step(m_stmt);
 				switch (res)
 				{
@@ -1155,7 +1141,7 @@ namespace pr
 			//// Return a value for a column for the current row
 			//template <typename Type> Type& ColumnValue(int col, Type& type) const
 			//{
-			//	PR_ASSERT(PR_SQL_ASSERTS, col < ColumnCount(), "Column index out of range");
+			//	assert(col < ColumnCount() && "Column index out of range");
 			//	pr::sqlite::Read(m_stmt, col, type);
 			//	return type;
 			//}
@@ -1261,7 +1247,7 @@ namespace pr
 			// of 'item' make sure you call 'Get()' to get the updated item.
 			int Insert(DBRecord const& item, EOnConstraint::Type on_constraint = EOnConstraint::Reject)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				InsertCmd<DBRecord> insert(*m_db, on_constraint); // Create the sql query
 				insert.Bind(item);   // Bind 'item' to it
 				return insert.Run(); // Run the query
@@ -1272,7 +1258,7 @@ namespace pr
 			// which, for integer autoincrement columns, is normally the last row id.
 			template <typename RowId> int Insert(DBRecord const& item, RowId& last_row_id, EOnConstraint::Type on_constraint = EOnConstraint::Reject)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				int res = Insert(item, on_constraint);
 				last_row_id = static_cast<RowId>(m_db->LastRowId());
 				return res;
@@ -1282,7 +1268,7 @@ namespace pr
 			// Use pr::sqlite::PKs() to create 'PRArgs'
 			template <typename PKArgs> int Delete(PKArgs const& pks)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 				Query query(*m_db, Sql("delete from ",meta.TableName()," where ",meta.PKConstraints()));
 				pr::sqlite::Bind(query, pks);
@@ -1293,7 +1279,7 @@ namespace pr
 			// Update item in the database
 			int Update(DBRecord const& item)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 				typedef ColumnMetaData<DBRecord> const* ColPtr;
 
@@ -1317,7 +1303,7 @@ namespace pr
 			// Use pr::sqlite::PKArgs() to create 'PKs'
 			template <typename ValueType, typename PKArgs> int Update(char const* column_name, ValueType const& value, PKArgs const& pks)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 				TableMetaData<DBRecord>::ColMetaData const& column = *meta.Column(column_name);
 
@@ -1332,7 +1318,7 @@ namespace pr
 			// Use pr::sqlite::PKs() to create 'PRArgs'
 			template <typename PKArgs> DBRecord& Get(PKArgs const& pks, DBRecord& item) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				GetCmd<DBRecord> get(*m_db); // Create the sql query
 				get.Bind(pks);               // Bind the primary keys
 				return get.Get(item);        // Run the query
@@ -1346,7 +1332,7 @@ namespace pr
 			// Search for a record from the database that mightn't be there
 			template <typename PKArgs> bool Find(PKArgs const& pks, DBRecord& item) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				GetCmd<DBRecord> get(*m_db);
 				get.Bind(pks);
 				return get.Find(item);
@@ -1360,7 +1346,7 @@ namespace pr
 			// Return the value of a specific column
 			template <typename Type, typename PKArgs> Type& GetColumn(PKArgs const& pks, int col, Type& value) const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db->IsOpen(), "Database closed");
+				assert(m_db->IsOpen() && "Database closed");
 				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 				TableMetaData<DBRecord>::ColMetaData const& column = *meta.Columns()[col];
 
@@ -1419,7 +1405,8 @@ namespace pr
 			void Open(char const* db_file, int flags = SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE, char const* vfs = 0)
 			{
 				int res = sqlite3_open_v2(db_file, &m_db, flags, vfs);
-				if (res != SQLITE_OK) throw Exception(res, sqlite3_errmsg(m_db), false);
+				if (res != SQLITE_OK)
+					throw Exception(res, sqlite3_errmsg(m_db), false);
 				BusyTimeout(BusyTimeoutDefault);
 			}
 
@@ -1428,7 +1415,8 @@ namespace pr
 			{
 				if (!m_db) return;
 				int res = sqlite3_close(m_db);
-				if (res != SQLITE_OK) throw Exception(res, "Failed to close database connection", false);
+				if (res != SQLITE_OK)
+					throw Exception(res, "Failed to close database connection", false);
 				m_db = 0;
 			}
 
@@ -1445,7 +1433,7 @@ namespace pr
 			// Executes an sql query string that doesn't require binding, returning a 'Query' result
 			int Execute(char const* sql_query)
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db, "Database not open");
+				assert(m_db && "Database not open");
 				Query query(m_db, sql_query);
 				return query.Run();
 			}
@@ -1521,7 +1509,7 @@ namespace pr
 			// Autocommit mode is re-enabled by a [COMMIT] or [ROLLBACK].
 			bool AutoCommit() const
 			{
-				PR_ASSERT(PR_SQL_ASSERTS, m_db, "Database not open");
+				assert(m_db && "Database not open");
 				return sqlite3_get_autocommit(m_db) ? true : false;
 			}
 		};
@@ -1564,21 +1552,21 @@ namespace pr
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 		// Cleanup macro definitions
-#undef PR_SQLITE_REP0
-#undef PR_SQLITE_REP1
-#undef PR_SQLITE_REP2
-#undef PR_SQLITE_REP3
-#undef PR_SQLITE_REP4
-#undef PR_SQLITE_REP5
-#undef PR_SQLITE_REP6
-#undef PR_SQLITE_REP7
-#undef PR_SQLITE_REP8
-#undef PR_SQLITE_REP9
-#undef PR_SQLITE_JOIN2
-#undef PR_SQLITE_JOIN
-#undef PR_SQLITE_REPEAT
-#undef PR_COMMA
-#undef PR_NEWLINE
+		#undef PR_SQLITE_REP0
+		#undef PR_SQLITE_REP1
+		#undef PR_SQLITE_REP2
+		#undef PR_SQLITE_REP3
+		#undef PR_SQLITE_REP4
+		#undef PR_SQLITE_REP5
+		#undef PR_SQLITE_REP6
+		#undef PR_SQLITE_REP7
+		#undef PR_SQLITE_REP8
+		#undef PR_SQLITE_REP9
+		#undef PR_SQLITE_JOIN2
+		#undef PR_SQLITE_JOIN
+		#undef PR_SQLITE_REPEAT
+		#undef PR_COMMA
+		#undef PR_NEWLINE
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	}
@@ -1588,7 +1576,6 @@ namespace pr
 #include "pr/common/unittests.h"
 #include "pr/filesys/filesys.h"
 #include "pr/common/guid.h"
-
 namespace pr
 {
 	namespace unittests
@@ -1618,8 +1605,21 @@ namespace pr
 
 			struct DB :pr::sqlite::Database
 			{
-				DB() :pr::sqlite::Database("..\\dump\\tmpDB.db") {}
-				~DB() { pr::filesys::EraseFile<std::string>("..\\dump\\tmpDB.db"); }
+				std::string m_dbfile;
+				DB(char const* dbfile = DB::TmpFile())
+					:pr::sqlite::Database(dbfile)
+					,m_dbfile(dbfile)
+				{}
+				~DB()
+				{
+					pr::filesys::EraseFile<std::string>(m_dbfile);
+				}
+				static char const* TmpFile()
+				{
+					static char f[MAX_PATH];
+					GetTempPathA(sizeof(f), f);
+					return strcat(f, "TmpDB.db");
+				}
 			};
 
 			// Set the log function
@@ -2189,11 +2189,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#endif
-
 #endif

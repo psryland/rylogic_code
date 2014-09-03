@@ -1,7 +1,6 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re
-sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
 import Rylogic as Tools
 import UserVars
 

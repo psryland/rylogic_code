@@ -252,7 +252,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\renderer11\directxtex\DirectXTex.inl" />
-    <None Include="..\projects\renderer11\shaders\hlsl\BuildShader.py" />
     <None Include="..\projects\renderer11\shaders\hlsl\cbuf.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli" />
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer_cbuf.hlsli" />

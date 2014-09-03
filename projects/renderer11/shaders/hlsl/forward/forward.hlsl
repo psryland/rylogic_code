@@ -1,6 +1,6 @@
 //***********************************************
 // Renderer
-//  Copyright © Rylogic Ltd 2010
+//  Copyright (c) Rylogic Ltd 2010
 //***********************************************
 // Shader for forward rendering face data
 

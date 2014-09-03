@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re, winreg
-sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
+sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
 import Rylogic as Tools
 import UserVars
 
@@ -22,7 +22,7 @@ dstdir = UserVars.root + r"\bin\custom_tools"
 config = input("Configuration (debug, release(default))? ")
 if config == "": config = "release"
 
-proj       = srcdir + r"\Rylogic.CustomTool.HtmlExpander.sln"
+proj       = srcdir + r"\Rylogic.CustomTool.HtmlExpander.csproj"
 regasm     = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe"
 vs_version = "12.0"
 

@@ -245,8 +245,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Command Line Syntax&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -255,7 +258,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVU [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhB [rest of string was truncated]&quot;;.
         /// </summary>
         public static string command_line_ref {
             get {
@@ -324,8 +327,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Aggregate Files Licensed Feature&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -334,7 +340,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmU [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdB [rest of string was truncated]&quot;;.
         /// </summary>
         public static string cripple_aggregate_files {
             get {
@@ -347,8 +353,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Filtering Patterns Licensed Feature&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -357,7 +366,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdh [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAAB [rest of string was truncated]&quot;;.
         /// </summary>
         public static string cripple_filtering {
             get {
@@ -370,14 +379,17 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Highlighting Patterns Licensed Feature&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
         ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
-        ///
-        ///
-        ///
-        ///
+        ///		﻿
+        ///		
+        ///		
+        ///		
+        ///		
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -386,7 +398,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAA [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA [rest of string was truncated]&quot;;.
         /// </summary>
         public static string cripple_highlighting {
             get {
@@ -587,6 +599,10 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;First Run Tutorial&lt;/title&gt;
+        ///		ï»¿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
@@ -594,7 +610,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAB5XElEQVR4Xu292XYjSbamxzu9g56k19L76Ervo0v1ZS/dSuo+fU6fqj5VWVmZlZVDZMzB4ExinmeQjDDt38wNMGz8Dt/gEBlk2L/yywABh09w [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFp [rest of string was truncated]&quot;;.
         /// </summary>
         public static string firstrun {
             get {
@@ -617,8 +633,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Free Version&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -627,7 +646,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwEAYAAAAHkiXEAAAABmJLR0T///////8JWPfcAAAACXBIWXMAADdcAAA3XAHLx6S5AAAACXZwQWcAAAAwAAAAMADO7oxXAAArJ0lEQVR42 [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAYAAACohjseAAAABGdBTUEAALGPC/xhBQAAAAlwSF [rest of string was truncated]&quot;;.
         /// </summary>
         public static string free_version {
             get {
@@ -981,7 +1000,11 @@ namespace RyLogViewer.Properties {
         ///   Looks up a localized string similar to &lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Swizzle - Quick Reference&lt;/title&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -990,7 +1013,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/39997n19lZ [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlz [rest of string was truncated]&quot;;.
         /// </summary>
         public static string swizzle_quick_ref {
             get {
@@ -1003,6 +1026,10 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;First Run Tutorial&lt;/title&gt;
+        ///		ï»¿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
         ///				font-family: sans-serif;
@@ -1010,7 +1037,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUoAAAFWCAYAAAAPPdTlAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAB5XElEQVR4Xu292XYjSbamxzu9g56k19L76Ervo0v1ZS/dSuo+fU6fqj5VWVmZlZVDZMzB4ExinmeQjDDt38wNMGz8Dt/gEBlk2L/yywABh09w [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADgAAAA4CAYAAACohjseAAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAA3WgAAN1oBS8TgIgAAABh0RVh0U29mdHdhcmUAcGFp [rest of string was truncated]&quot;;.
         /// </summary>
         public static string totd {
             get {
@@ -1023,8 +1050,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Transforms - Quick Reference&lt;/title&gt;
-        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		﻿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		﻿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -1033,7 +1063,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGF [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEA [rest of string was truncated]&quot;;.
         /// </summary>
         public static string transform_quick_ref {
             get {
@@ -1055,7 +1085,11 @@ namespace RyLogViewer.Properties {
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Version History&lt;/title&gt;
-        ///		&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
+        ///		ï»¿&lt;meta http-equiv=&quot;X-UA-Compatible&quot; content=&quot;IE=9&quot;&gt;
+        ///		&lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot; /&gt;
+        ///		
+        ///
+        ///		ï»¿&lt;!--&lt;meta http-equiv=&quot;refresh&quot; content=&quot;3&quot;/&gt;--&gt;
         ///
         ///		&lt;style type=&quot;text/css&quot;&gt;
         ///			* {
@@ -1064,7 +1098,7 @@ namespace RyLogViewer.Properties {
         ///			}
         ///		
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUXRAF4GFZNrKBzYAoJsyKZJUkBjBhzhm1KKji/399 [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhB [rest of string was truncated]&quot;;.
         /// </summary>
         public static string version_history {
             get {

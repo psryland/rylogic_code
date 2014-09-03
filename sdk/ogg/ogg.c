@@ -1,6 +1,6 @@
 //*********************************************
 // Ogg Amelgamation
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 
 #pragma warning(push,1)

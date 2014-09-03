@@ -147,12 +147,12 @@ namespace pr
 
 	// Return the greatest common factor between 'a' and 'b'
 	// Uses the Euclidean algorithm. If the greatest common factor is 1, then 'a' and 'b' are co-prime
-	inline int GreatestCommonFactor(int a, int b)
+	template <typename Int> inline Int GreatestCommonFactor(Int a, Int b)
 	{
-		while (b) { int t = b; b = a % b; a = t; }
+		while (b) { auto t = b; b = a % b; a = t; }
 		return a;
 	}
-	inline int LeastCommonMultiple(int a, int b)
+	template <typename Int> inline Int LeastCommonMultiple(Int a, Int b)
 	{
 		return (a*b) / GreatestCommonFactor(a,b);
 	}

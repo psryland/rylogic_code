@@ -22,21 +22,24 @@ import UserVars
 try:
 	Tools.CheckVersion(1)
 
+	trace = False
+	if trace:
+		print("Args: " + str(sys.argv));
+
 	# Check valid command line
 	if len(sys.argv) < 2:
 		Tools.OnError("No shader filepath given")
 
 	# The full path of the hlsl file to compile
-	fullpath = sys.argv[1]
-	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
-	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
+	fullpath = sys.argv[1].lower()
+	platform = sys.argv[2].lower() if len(sys.argv) > 2 else "any"
+	config   = sys.argv[3].lower() if len(sys.argv) > 3 else "release"
 
 	# Check for optional parameters
 	pp    = True if "pp"    in [arg.lower() for arg in sys.argv] else False
 	obj   = True if "obj"   in [arg.lower() for arg in sys.argv] else False
 	dbg   = True if "dbg"   in [arg.lower() for arg in sys.argv] else False
 	trace = True if "trace" in [arg.lower() for arg in sys.argv] else False
-	#trace = True
 
 	# Enable compiled shader objects in debug, for debugging and runtime shaders
 	if dbg:
@@ -51,7 +54,7 @@ try:
 	fname,extn  = os.path.splitext(file)
 	if trace: print("File: " + fname + extn)
 
-	outdir = r"P:\projects\renderer11\shaders\hlsl\compiled" + (r"\debug" if dbg else r"\release")
+	outdir = UserVars.root + "\\projects\\renderer11\\shaders\\hlsl\\compiled\\" + config
 	if not os.path.exists(outdir): os.makedirs(outdir)
 	if trace: print("Output directory: " + outdir)
 

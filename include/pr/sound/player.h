@@ -1,6 +1,6 @@
 //*********************************************
 // Sound IDecoder
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #ifndef PR_SOUNDS_PLAYER_H
 #define PR_SOUNDS_PLAYER_H

@@ -1,6 +1,6 @@
 //************************************
 // Lost at Sea
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //************************************
 
 #include "stdafx.h"
@@ -14,7 +14,7 @@ namespace las
 	char const* AppTitle()     { return "Lost at Sea"; }
 	char const* AppVersion()   { return "v0.00.01"; }
 	char const* AppVendor()    { return "Rylogic Ltd"; }
-	char const* AppCopyright() { return "Copyright © Rylogic Ltd 2011"; }
+	char const* AppCopyright() { return "Copyright (c) Rylogic Ltd 2011"; }
 }
 
 // Construct with defaults

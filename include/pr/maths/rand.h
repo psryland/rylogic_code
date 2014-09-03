@@ -81,8 +81,8 @@ namespace pr
 		inline float  fltr(float mn, float mx)   { return Rand().fltr(mn,mx); }
 		inline float  fltc(float avr, float d)   { return Rand().fltc(avr,d); }
 
-		template <typename T> T range(T mn, T mx)   { return static_cast<T>(Rand().u32r(mn,mx)); }
-		template <typename T> T centred(T mn, T mx) { return static_cast<T>(Rand().u32c(mn,mx)); }
+		template <typename T> T range(T mn, T mx)   { return static_cast<T>(Rand().u32r(static_cast<ulong>(mn),static_cast<ulong>(mx))); }
+		template <typename T> T centred(T mn, T mx) { return static_cast<T>(Rand().u32c(static_cast<ulong>(mn),static_cast<ulong>(mx))); }
 	}
 	
 	// Random integer generator

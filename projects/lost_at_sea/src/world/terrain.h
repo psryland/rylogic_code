@@ -1,6 +1,6 @@
 //************************************
 // Lost at Sea
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //************************************
 #ifndef LAS_TERRAIN_H
 #define LAS_TERRAIN_H

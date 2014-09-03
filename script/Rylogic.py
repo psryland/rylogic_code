@@ -88,6 +88,25 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False):
 	elif show_unchanged:
 		print(src + " --> unchanged")
 
+# Return the line number of a given byte offset into a file
+def LineNumber(fpath, ofs):
+	lineno = 0
+	with open(fpath, encoding="utf-8") as f:
+		for line in f:
+			ofs -= len(line)
+			if ofs < 0: break
+			lineno += 1
+	return lineno
+
+# Returns a VS style file link string: "full\filepath.ext(line): "
+# One of 'lineno' or 'ofs' must be non-null. 'ofs' is the byte offset into the file
+def VSLink(file,lineno=None,ofs=None):
+	if lineno is None:
+		if ofs is None: raise Exception("One of 'lineno' or 'ofs' must be given")
+		try: lineno = LineNumber(file,ofs)
+		except: lineno = 0
+	return "\n" + file + "(" + str(lineno + 1) + "): "
+
 # Executes a program and returns it's stdout/stderr as a string
 def Run(args, expected_return_code=0,show_arguments=False):
 	try:
@@ -97,7 +116,6 @@ def Run(args, expected_return_code=0,show_arguments=False):
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return True,e.output
 		return False,e.output
-		#raise
 
 # Executes a program echoing its output to stdout
 def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
@@ -107,6 +125,10 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 	except subprocess.CalledProcessError as e:
 		if e.returncode == expected_return_code: return
 		raise
+
+# Call another script. Remember, you can import and call directly.. probably preferable to this
+def Call(script, args, expected_return_code=0,show_arguments=False):
+	Exec([sys.executable, script] + args, expected_return_code=expected_return_code, show_arguments=show_arguments)
 
 # Run a program in a separate console window
 # Returns the process for the caller to call wait() on,
@@ -134,7 +156,7 @@ def Spawn(args, expected_return_code=0, same_window=False, show_window=True, sho
 # Returns the regex match object for the first match or null
 def Extract(filepath, regex):
 	pat = re.compile(regex)
-	with open(filepath) as f:
+	with open(filepath, encoding="utf-8") as f:
 		for line in f:
 			m = pat.search(line)
 			if m: return m
@@ -146,12 +168,39 @@ def Extract(filepath, regex):
 def ExtractMany(filepath, regex):
 	pat = re.compile(regex)
 	matches = []
-	with open(filepath) as f:
+	with open(filepath, encoding="utf-8") as f:
 		for line in f:
 			m = pat.search(line)
 			if m: matches = matches + [m]
 	return matches
-		
+
+# Template expander
+# 'template_filepath' is the template file
+# 'output_filepath' is the output file to create
+# 'regex_pattern' is a regular expression pattern for the template fields
+# 'subst_func' is the callback function that does the text substitution
+# To support include files, use a fancy regex pattern and return the entire
+# contents of the included file as the result of 'subst_func'
+# Usage:
+#   def Subst(match):
+#       print(match.group()[1:-1])
+#       return match.group()[1:-1]
+#   Expand(r"template.txt", r"template_output.txt", r"\[([-_\w]+)\]", Subst)
+#   Capture groups are defined like: (?P<name>.*) and accessed like: m.group("name")
+def Expand(template_filepath, output_filepath, regex_pattern, subst_func):
+	pat = re.compile(regex_pattern)
+	with open(template_filepath) as f:
+		buf = f.read(-1)
+		s = 0
+		while True:
+			m = pat.search(buf, s)
+			if not m: break
+			subst = subst_func(m)
+			buf = buf[:m.start()] + subst + buf[m.end():]
+			s = m.start()
+	with open(output_filepath, mode='w') as f:
+		f.write(buf)
+
 # Modify a file using regex
 # Capture groups are defined like: (?P<name>.*)
 # and accessed like: m.group("name")

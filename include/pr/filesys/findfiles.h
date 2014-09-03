@@ -18,8 +18,6 @@
 //	}
 
 #pragma once
-#ifndef PR_FILESYS_FINDFILES
-#define PR_FILESYS_FINDFILES
 
 #include <string>
 #include <windows.h>
@@ -125,8 +123,16 @@ namespace pr
 	{
 		PRUnitTest(pr_filesys_findfiles)
 		{
+			char curr_dir[MAX_PATH];
+			GetCurrentDirectoryA(sizeof(curr_dir), curr_dir);
+			std::string root = pr::filesys::CombinePath<std::string>(curr_dir, "..\\projects\\unittests");
+			if (!pr::filesys::DirectoryExists(root))
+			{
+				PR_CHECK(false && "FindFiles test failed, root directory not found", true);
+				return;
+			}
+
 			bool found_cpp = false, found_h = false;
-			std::string root = "\\projects\\unittests";
 			for (pr::filesys::FindFiles<> ff(root, "*.cpp;*.h"); !ff.done(); ff.next())
 			{
 				found_cpp |= pr::filesys::GetExtension<std::string>(ff.fullpath()).compare("cpp") == 0;
@@ -137,8 +143,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#pragma warning(default:4355) // 'this' used in constructor
-
 #endif

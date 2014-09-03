@@ -94,6 +94,8 @@ namespace pr
 			using namespace std::chrono;
 			try
 			{
+				out() << " **** Begin Unit Tests **** " << std::endl;
+
 				auto T0 = high_resolution_clock::now();
 				std::sort(std::begin(Tests()), std::end(Tests()));
 
@@ -116,7 +118,7 @@ namespace pr
 					}
 					catch (std::exception const& e)
 					{
-						out() << "failed." << std::endl << e.what() << std::endl;
+						out() << test.m_name << " failed: " << e.what() << std::endl;
 						++failed;
 					}
 				}

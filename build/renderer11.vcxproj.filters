@@ -282,9 +282,6 @@
     <ClCompile Include="..\projects\renderer11\models\model.cpp">
       <Filter>models</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\pr\renderer11\util\util.cpp">
-      <Filter>util</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\renderer11\util\lock.cpp">
       <Filter>util</Filter>
     </ClCompile>
@@ -402,6 +399,7 @@
     <ClCompile Include="..\projects\renderer11\render\window.cpp">
       <Filter>render</Filter>
     </ClCompile>
+    <ClCompile Include="..\projects\renderer11\util\util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
@@ -433,9 +431,6 @@
     </None>
     <None Include="..\projects\renderer11\shaders\hlsl\screenspace\screenspace_cbuf.hlsli">
       <Filter>shaders\hlsl\screenspace</Filter>
-    </None>
-    <None Include="..\projects\renderer11\shaders\hlsl\BuildShader.py">
-      <Filter>shaders\hlsl</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

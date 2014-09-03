@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2010
 //**************************************************************
 #pragma once
-#ifndef PR_FILESYS_RECURSE_DIRECTORY_H
-#define PR_FILESYS_RECURSE_DIRECTORY_H
 
 #include <stdio.h>
 #include <windows.h>
@@ -113,7 +111,15 @@ namespace pr
 					return true;
 				};
 
-			std::string root = "\\projects\\unittests";
+			char curr_dir[MAX_PATH];
+			GetCurrentDirectoryA(sizeof(curr_dir), curr_dir);
+			std::string root = pr::filesys::CombinePath<std::string>(curr_dir, "..\\projects\\unittests");
+			if (!pr::filesys::DirectoryExists(root))
+			{
+				PR_CHECK(false && "Recurse directory test failed, root directory not found", true);
+				return;
+			}
+
 			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, "*.cpp;*.c"), true);
 			PR_CHECK(pr::filesys::RecurseFiles(root, EnumFiles, "*.h;*.py"), true);
 			PR_CHECK(found[0] == 1, true);
@@ -125,4 +131,3 @@ namespace pr
 }
 #endif
 
-#endif

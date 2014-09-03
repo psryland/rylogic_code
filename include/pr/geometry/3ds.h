@@ -719,10 +719,10 @@ namespace pr
 	{
 		PRUnitTest(pr_geometry_3ds)
 		{
-			using namespace pr::geometry;
-			std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
-			max_3ds::ReadMaterials(ifile, [](max_3ds::Material&&){ return false; });
-			max_3ds::ReadObjects(ifile, [](max_3ds::Object&&){ return false; });
+			//using namespace pr::geometry;
+			//std::ifstream ifile("P:\\dump\\test2.3ds", std::ifstream::binary);
+			//max_3ds::ReadMaterials(ifile, [](max_3ds::Material&&){ return false; });
+			//max_3ds::ReadObjects(ifile, [](max_3ds::Object&&){ return false; });
 		}
 	}
 }

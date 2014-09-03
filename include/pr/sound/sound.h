@@ -1,6 +1,6 @@
 //*********************************************
 // DSound
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #pragma once
 #ifndef PR_SOUNDS_SOUND_H

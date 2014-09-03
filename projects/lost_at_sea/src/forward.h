@@ -1,6 +1,6 @@
 //************************************
 // Lost at Sea
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //************************************
 
 #ifndef LAS_FORWARD_H
@@ -30,8 +30,7 @@
 #include <atldlgs.h>
 #include <atlcrack.h>
 
-#include <d3d9.h>
-#include <d3dx9.h>
+#include <d3d11.h>
 #include <dsound.h>
 #include <sstream>
 #include <knownfolders.h>
@@ -46,17 +45,17 @@
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
 #include "pr/common/hash.h"
-#include "pr/common/timers.h"
+#include "pr/common/stop_watch.h"
 #include "pr/maths/maths.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/str/prstring.h"
-#include "pr/str/wstring.h"
+#include "pr/str/tostring.h"
 #include "pr/script/reader.h"
 #include "pr/camera/camera.h"
 //#include "pr/camera/camctrl_dinput_wasd.h"
 #include "pr/input/dinput.h"
-#include "pr/renderer/renderer.h"
+#include "pr/renderer11/renderer.h"
 #include "pr/sound/sound.h"
 #include "pr/sound/player.h"
 #include "pr/sound/ogg/ogg_stream.h"

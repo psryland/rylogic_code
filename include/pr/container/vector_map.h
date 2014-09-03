@@ -1,6 +1,6 @@
 //***********************************************************
 // Vector Map
-//  Copyright © Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2011
 //***********************************************************
 // An stl-like map implemented using std::vector-esk container
 // Note: it is not a replacement for std::map because it doesn't

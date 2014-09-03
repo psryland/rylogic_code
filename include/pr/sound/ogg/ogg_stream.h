@@ -1,6 +1,6 @@
 //*********************************************
 // Ogg Player
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 #ifndef PR_SOUNDS_OGG_OGGSTREAM_H
 #define PR_SOUNDS_OGG_OGGSTREAM_H

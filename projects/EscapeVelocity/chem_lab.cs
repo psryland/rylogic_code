@@ -165,13 +165,13 @@ m.CommonName = "common";
 
 		public void DumpElements()
 		{
-			var csv = new pr.util.CSVData ();
-			var header = new pr.util.CSVData.Row();
+			var csv = new CSVData();
+			var header = new pr.container.CSVData.Row();
 			header.Add("Name").Add("AtomicNumber").Add("ValenceElectrons").Add("ValenceHoles").Add("ValenceOrbitalRadius").Add("MolarMass").Add("Electronegativity").Add("Melting Point").Add("Boiling Point").Add("SolidDensity");
 			csv.Add(header);
 			foreach (var e in m_elements)
 			{
-				var row = new pr.util.CSVData.Row();
+				var row = new CSVData.Row();
 				row.Add(e.Name.Fullname).Add(e.AtomicNumber).Add(e.ValenceElectrons).Add(e.ValenceHoles).Add(e.ValenceOrbitalRadius).Add(e.MolarMass).Add(e.Electronegativity).Add(e.MeltingPoint).Add(e.BoilingPoint).Add(e.SolidDensity);
 				csv.Add(row);
 			}
@@ -180,13 +180,13 @@ m.CommonName = "common";
 
 		public void DumpCompounds()
 		{
-			var csv = new pr.util.CSVData ();
-			var header = new pr.util.CSVData.Row();
+			var csv = new CSVData ();
+			var header = new CSVData.Row();
 			header.Add("Scientific Name").Add("Symbolic Name").Add("Enthalpy").Add("Ionicity").Add("Melting Point").Add("Boiling Point").Add("Strength").Add("Density");
 			csv.Add(header);
 			foreach (var c in m_compounds)
 			{
-				var row = new pr.util.CSVData.Row();
+				var row = new CSVData.Row();
 				row.Add(c.ScientificName).Add(c.SymbolicName).Add(c.Enthalpy).Add(c.Ionicity).Add(c.MeltingPoint).Add(c.BoilingPoint).Add(c.Strength).Add(c.Density(0,0));
 				csv.Add(row);
 			}

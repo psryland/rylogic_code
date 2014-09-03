@@ -1,6 +1,6 @@
 //*********************************************
 // Vorbis Amelgamation
-//  Copyright © Rylogic Ltd 2007
+//  Copyright (c) Rylogic Ltd 2007
 //*********************************************
 
 #include <stdlib.h>

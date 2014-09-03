@@ -5,7 +5,7 @@
 # Use:
 #   run_tests $(TargetPath)
 import sys, os
-sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
+sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
 import Rylogic as Tools
 import UserVars
 

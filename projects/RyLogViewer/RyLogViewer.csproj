@@ -28,6 +28,8 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\build\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>RyLog.ico</ApplicationIcon>
@@ -258,171 +260,41 @@
     </Compile>
     <Content Include="build_docs.py" />
     <Content Include="deploy.py" />
-    <Content Include="docs\aggregate_files.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>aggregate_files.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="docs\img\aggregate_files.png" />
+    <Content Include="docs\img\background.png" />
+    <Content Include="docs\img\background2.png" />
+    <Content Include="docs\img\book.png" />
+    <Content Include="docs\img\find.png" />
+    <Content Include="docs\img\highlighting.png" />
+    <Content Include="docs\img\main_view.png" />
+    <Content Include="docs\img\main_view_context.png" />
+    <Content Include="docs\img\network_output.png" />
+    <Content Include="docs\img\pattern_editor.png" />
+    <Content Include="docs\img\pattern_wildcard.png" />
+    <Content Include="docs\img\pipe_output.png" />
+    <Content Include="docs\img\program_output.png" />
+    <Content Include="docs\img\serial_port_output.png" />
+    <Content Include="docs\img\settings_appearance.png" />
+    <Content Include="docs\img\settings_general.png" />
+    <Content Include="docs\img\tool_bar.png" />
     <Content Include="project_howto.txt" />
-    <Content Include="Resources\meta.include.htm" />
-    <None Include="docs\aggregate_files.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>aggregate_files.html</LastGenOutput>
-    </None>
-    <Content Include="docs\aggregate_files.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\android_logcat.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>android_logcat.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\android_logcat.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>android_logcat.html</LastGenOutput>
-    </None>
+    <None Include="Resources\inc\meta.include.htm" />
+    <HtmlExpandContent Include="docs\aggregate_files.htm" />
+    <HtmlExpandContent Include="docs\android_logcat.htm" />
     <None Include="docs\auto_refresh.include.htm" />
-    <Content Include="docs\command_line.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>command_line.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\command_line.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>command_line.html</LastGenOutput>
-    </None>
-    <Content Include="docs\data_sources.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>data_sources.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\data_sources.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>data_sources.html</LastGenOutput>
-    </None>
-    <Content Include="docs\faq.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>faq.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\faq.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>faq.html</LastGenOutput>
-    </None>
-    <Content Include="docs\installation.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>installation.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\installation.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>installation.html</LastGenOutput>
-    </None>
-    <Content Include="docs\main_window.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>main_window.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\main_window.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>main_window.html</LastGenOutput>
-    </None>
-    <Content Include="docs\network_output.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\options_appearance.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>options_appearance.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\options_appearance.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>options_appearance.html</LastGenOutput>
-    </None>
+    <HtmlExpandContent Include="docs\command_line.htm" />
+    <HtmlExpandContent Include="docs\data_sources.htm" />
+    <HtmlExpandContent Include="docs\faq.htm" />
+    <HtmlExpandContent Include="docs\installation.htm" />
+    <HtmlExpandContent Include="docs\main_window.htm" />
+    <HtmlExpandContent Include="docs\options_appearance.htm" />
     <None Include="docs\options_dialog.include.htm" />
-    <Content Include="docs\options_filtering.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>options_filtering.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\options_filtering.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>options_filtering.html</LastGenOutput>
-    </None>
-    <Content Include="docs\options_general.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>options_general.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\options_general.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>options_general.html</LastGenOutput>
-    </None>
-    <Content Include="docs\options_highlighting.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>options_highlighting.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\options_highlighting.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>options_highlighting.html</LastGenOutput>
-    </None>
-    <Content Include="docs\options_transforms.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>options_transforms.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\options_transforms.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>options_transforms.html</LastGenOutput>
-    </None>
-    <Content Include="docs\overview.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>overview.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\overview.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>overview.html</LastGenOutput>
-    </None>
-    <Content Include="docs\pattern_editor.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>pattern_editor.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="docs\pattern_editor.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>pattern_editor.html</LastGenOutput>
-    </None>
-    <Content Include="docs\pipe_output.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\program_output.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\serial_port_output.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\welcome.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>welcome.htm</DependentUpon>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <HtmlExpandContent Include="docs\options_filtering.htm" />
+    <HtmlExpandContent Include="docs\options_general.htm" />
+    <HtmlExpandContent Include="docs\options_highlighting.htm" />
+    <HtmlExpandContent Include="docs\options_transforms.htm" />
+    <HtmlExpandContent Include="docs\overview.htm" />
+    <HtmlExpandContent Include="docs\pattern_editor.htm" />
     <Content Include="examples\example_code_lookup.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -431,59 +303,13 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="packages.config" />
-    <None Include="Resources\auto_refresh.include.htm" />
+    <None Include="Resources\inc\auto_refresh.include.htm" />
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\cripple_aggregate_files.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>cripple_aggregate_files.htm</DependentUpon>
-    </None>
-    <None Include="Resources\cripple_css.include.htm" />
-    <None Include="Resources\cripple_filtering.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>cripple_filtering.htm</DependentUpon>
-    </None>
-    <None Include="Resources\cripple_highlighting.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>cripple_highlighting.htm</DependentUpon>
-    </None>
-    <None Include="Resources\firstrun.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>firstrun.htm</DependentUpon>
-    </None>
-    <None Include="Resources\firstrun.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>firstrun.html</LastGenOutput>
-    </None>
-    <None Include="Resources\free_edition.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>free_edition.htm</DependentUpon>
-    </None>
-    <None Include="Resources\swizzle_quick_ref.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>swizzle_quick_ref.htm</DependentUpon>
-    </None>
-    <None Include="Resources\totd.html">
-      <DependentUpon>totd.htm</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </None>
-    <None Include="Resources\transform_quick_ref.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>transform_quick_ref.htm</DependentUpon>
-    </None>
-    <None Include="docs\welcome.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>welcome.html</LastGenOutput>
-    </None>
+    <None Include="Resources\inc\cripple_css.include.htm" />
+    <HtmlExpandResource Include="Resources\firstrun.htm" />
+    <HtmlExpandContent Include="docs\welcome.htm" />
     <None Include="docs\help_title_panel.include.htm" />
     <None Include="docs\help_index_panel.include.htm">
       <SubType>Designer</SubType>
@@ -491,87 +317,20 @@
     <None Include="docs\help_head.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <Content Include="docs\book.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\find.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\main_view_context.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\main_view.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\pattern_editor.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\settings_appearance.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\settings_general.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\tool_bar.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\highlighting.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="docs\pattern_wildcard.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <None Include="Resources\command_line_ref.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>command_line_ref.htm</DependentUpon>
-    </None>
-    <None Include="Resources\quick_ref_css.include.htm" />
-    <None Include="Resources\cripple_filtering.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>cripple_filtering.html</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_highlighting.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>cripple_highlighting.html</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_aggregate_files.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>cripple_aggregate_files.html</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_meta.include.htm" />
-    <None Include="Resources\free_edition.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>free_edition.html</LastGenOutput>
-    </None>
-    <None Include="Resources\cripple_footer.include.htm">
+    <None Include="Resources\inc\quick_ref_css.include.htm" />
+    <HtmlExpandResource Include="Resources\cripple_filtering.htm" />
+    <HtmlExpandResource Include="Resources\cripple_highlighting.htm" />
+    <HtmlExpandResource Include="Resources\cripple_aggregate_files.htm" />
+    <None Include="Resources\inc\cripple_meta.include.htm" />
+    <HtmlExpandResource Include="Resources\free_edition.htm" />
+    <None Include="Resources\inc\cripple_footer.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Resources\swizzle_quick_ref.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>swizzle_quick_ref.html</LastGenOutput>
-    </None>
-    <None Include="Resources\command_line_ref.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>command_line_ref.html</LastGenOutput>
-    </None>
-    <None Include="Resources\totd.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>totd.html</LastGenOutput>
-    </None>
-    <None Include="Resources\transform_quick_ref.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>transform_quick_ref.html</LastGenOutput>
-    </None>
-    <None Include="Resources\version_history.html">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>version_history.htm</DependentUpon>
-    </None>
-    <None Include="Resources\version_history.htm">
-      <Generator>HtmlExpander</Generator>
-      <LastGenOutput>version_history.html</LastGenOutput>
-    </None>
+    <HtmlExpandResource Include="Resources\swizzle_quick_ref.htm" />
+    <HtmlExpandResource Include="Resources\command_line_ref.htm" />
+    <HtmlExpandResource Include="Resources\totd.htm" />
+    <HtmlExpandResource Include="Resources\transform_quick_ref.htm" />
+    <HtmlExpandResource Include="Resources\version_history.htm" />
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -684,15 +443,10 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="docs\background.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\public_key.xml" />
+    <HtmlExpandResource Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
     <Content Include="examples\example logfile.txt">
@@ -714,9 +468,17 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$(ProjectDir)..\..\build\props\html_expand.targets" />
   <PropertyGroup>
-    <PostBuildEvent>P:\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
+    <PostBuildEvent>$(ProjectDir)..\..\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
   </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

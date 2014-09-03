@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 import os, sys, imp, re, subprocess, shutil
-sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
+sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
 import Rylogic as Tools
 import UserVars
 
@@ -17,7 +17,7 @@ try:
 	dstdir = UserVars.root + "\\bin"
 	srcdir = UserVars.root + "\\projects\\Csex"
 	symdir = UserVars.root + "\\local\\symbols"
-	proj   = srcdir + "\\Csex_vs2012.csproj"
+	proj   = srcdir + "\\Csex.csproj"
 	config = "release"
 	dst    = dstdir + "\\csex"
 	sym    = symdir + "\\csex"

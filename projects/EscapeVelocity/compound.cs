@@ -154,6 +154,8 @@ namespace EscapeVelocity
 		/// <summary>Generates a bond configuration using the bond information</summary>
 		private void CalcBondConfiguration(GameConstants consts)
 		{
+			/* disabled to allow compiling... still needed:
+
 			// We are making a compound from e1 and e2, it doesn't matter if e1-e1 or e2-e2 are more stable,
 			// those combinations will have a higher enthalpy and are created by calling Compound(e1,e1,consts) or Compound(e2,e2,consts).
 
@@ -220,7 +222,7 @@ namespace EscapeVelocity
 			case EPerm.AB:
 				{
 					int pairs = Math.Min(Count1,Count2);
-					if ()
+					if (false)
 					{
 					}
 					break;
@@ -294,6 +296,7 @@ namespace EscapeVelocity
 			for (int i = 0; i != b.Count.Length; ++i) e += b.Order * b.Count[i];
 			Debug.Assert(Count1 * Elem1.ValenceElectrons == e, "Wrong number of electrons");
 			Debug.Assert(Count2 * Elem2.ValenceHoles     == e, "Wrong number of holes");
+				*/
 		}
 
 		/// <summary>Determine the density limits</summary>
