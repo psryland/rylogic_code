@@ -2,7 +2,7 @@
 
 	<PropertyGroup>
 		<PythonExe>$(WinDir)\py.exe</PythonExe>
-		<HtmlExpandScript>D:\Dump\pr\script\HtmlExpand.py</HtmlExpandScript>
+		<HtmlExpandScript>..\..\script\HtmlExpand.py</HtmlExpandScript>
 	</PropertyGroup>
 
 	<!-- Add Build Action options -->
