@@ -30,6 +30,12 @@
     <ClInclude Include="..\projects\clicket\stdafx.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\projects\clicket\user_data.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\clicket\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\clicket\res\clicket.ico">

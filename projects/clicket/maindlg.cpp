@@ -82,68 +82,8 @@ namespace EButton
 		}
 	}
 }
-namespace EFreq
-{
-	enum
-	{
-		MSec,
-		Sec,
-		Min,
-		Hr,
-		NumberOf
-	};
-	wchar_t const* Str(int id)
-	{
-		switch (id)
-		{
-		default: PR_ASSERT(PR_DBG, false, ""); return L"";
-		case MSec: return L"msec";
-		case Sec:  return L"sec";
-		case Min:  return L"min";
-		case Hr:   return L"hr";
-		}
-	}
-}
-UserData::UserData()
-{
-	_snwprintf_s(m_window_title, WindowTitleLen, L"<title of window to look for>");
-	_snwprintf_s(m_control_type, ControlTypeLen, L"<type of control to look for>");
-	_snwprintf_s(m_button_text,  ButtonTextLen,  L"<control text>");
-	m_pol_freq = 1;
-	m_pol_freq_unit = 1;
-}
-void UserData::Load()
-{
-	std::wstring path(MAX_PATH, 0);
-	GetModuleFileNameW(0, &path[0], static_cast<DWORD>(path.size()));
-	path = path.c_str();
-	path += L".user_data";
-	
-	UserData copy;
-	pr::Handle file = pr::FileOpen(path.c_str(), pr::EFileOpen::Reading);
-	if (!pr::FileRead(file, &copy, sizeof(copy))) return;
-	
-	copy.Validate();
-	*this = copy;
-}
-void UserData::Save()
-{
-	std::wstring path(MAX_PATH, 0);
-	GetModuleFileNameW(0, &path[0], static_cast<DWORD>(path.size()));
-	path = path.c_str();
-	path += L".user_data";
-	
-	pr::Handle file = pr::FileOpen(path.c_str(), pr::EFileOpen::Writing);
-	pr::FileWrite(file, this, sizeof(*this));
-}
-void UserData::Validate()
-{
-	m_window_title[WindowTitleLen - 1] = 0;
-	m_control_type[ControlTypeLen - 1] = 0;
-	m_button_text[ButtonTextLen - 1] = 0;
-	m_pol_freq      = (m_pol_freq       >= 1 && m_pol_freq      <= 100000)              ? m_pol_freq : 1;
-	m_pol_freq_unit = (m_pol_freq_unit  >= 0 && m_pol_freq_unit < EFreq::NumberOf)      ? m_pol_freq_unit : 1;
-}
+
+
 
 CMainDlg::CMainDlg()
 :m_poller(pr::PollingToEventSettings(CMainDlg::LookForButtonsToPress, 0, this))
@@ -220,7 +160,7 @@ LRESULT CMainDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	
 	m_ctrl_pol_freq_unit.Attach(GetDlgItem(IDC_COMBO_TIME));
 	for (int i = 0; i != EFreq::NumberOf; ++i)
-		m_ctrl_pol_freq_unit.AddString(EFreq::Str(i));
+		m_ctrl_pol_freq_unit.AddString(EFreq::ToWString((EFreq)i));
 	m_ctrl_pol_freq_unit.SetCurSel(m_user_data.m_pol_freq_unit);
 	
 	m_active = FALSE;
@@ -394,7 +334,8 @@ void CMainDlg::CloseApp(int)
 {
 	m_poller.Stop();
 	m_poller.BlockTillDead();
-	::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
+	DestroyWindow();
+	//::PostMessage(m_hWnd, WM_CLOSE, 0, 0);
 }
 
 // Activate/Deactivate the poller
