@@ -220,5 +220,6 @@
       <Filter>resources</Filter>
     </None>
     <None Include="..\projects\linedrawer\deploy.py" />
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
