@@ -15,7 +15,6 @@ try:
 	Tools.CheckVersion(1)
 
 	# Use the everything sln so that dependent projects get built as well
-	sln = UserVars.proj_dir + r"\everything.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"linedrawer",
 		]
@@ -25,11 +24,11 @@ try:
 		]
 	platforms = [
 		"x64",
-		"x86",
+		"x86"
 		]
 
 	# Build the project
-	if not Tools.MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
+	if not Tools.MSBuild(UserVars.root + "\\build\\Rylogic.sln", projects, platforms, configs, parallel=True, same_window=True):
 		Tools.OnError("Errors occurred")
 
 	# Deploy
