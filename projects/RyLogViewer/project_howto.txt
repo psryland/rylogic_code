@@ -9,19 +9,41 @@ General:
 	Folders:
 		.\art - contains art assets in paint.net format containing layers etc.
 			Used to create the *.pngs for the documentation and project resourses
-		.\docs - contains
+		.\docs - contains generated documentation files (.html) - Content, copied to output
+		.\docs\img - image files - Content, copied to output
+		see Documentation.
 
 Documentation:
-	Note:
-	 Documentation is copied to the build output and is part of the release.
-	 Resources (which include png and html files as well) are built into the assembly.
+	Documentation is copied to the build output and is part of the release.
+	Resources (which includes png and html files) are built into the assembly as embedded resources.
 
-	- The documentation source files are *.htm and *.png files.
-	- *.htm files use a custom build tool called 'Rylogic.CustomTool.HtmlExpander'. Running the
-	   'deploy.py' script in that the HtmlExpander project folder should install the custom
-	   build tool needed to generate the *.html files from the *.htm templates.
-	- *.htm and *.include.htm files should be set to "No Build Action" and "Do Not Copy"
-	- *.html and *.png should be set to "Content" and "Copy If Newer"
+	- The documentation source files are in:
+		.\documentation\docs - source files for documentation html files
+		.\documentation\res - source files for embedded html resources
+		.\documentation\inc - shared included html snippets
+		These files are used to generate the html files in ./docs and ./Resources
+
+	- *.htm should have properties:
+		Build Action: PyScript
+		Copy To Output: never
+		Custom Tool: ..\..\script\HtmlExpand.py
+		Custom Tool Namespace: ..\..\..\docs\ or ..\..\..\Resources\
+		The PyScript build action is made available in the project by editing the csproj and adding
+		"<Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />".
+		The PyScript build action passes the file to py.exe as follows:
+			py.exe <Custom Tool> <file> <Custom Tool Namespace>
+		So 'Custom Tool' should be the script to call
+		'Custom Tool Namespace' should contain additional arguments
+
+	- *.htm files contain template fields such as: <!--#include file=""-->.
+		The HtmlExpand.py script creates an expanded version of the file with the .html extension.
+
+	- The reason for this system is that it allows simple html code sharing without dependencies on anything
+		other than python. I used a custom build tool called 'Rylogic.CustomTool.HtmlExpander' for a while
+		but that requires installation on the local PC which means I can't easily build the project on someone
+		elses PC. Another option could have been a pre build step that calls a BuildDocs.py script.
+
+	- img/*.png files should be set to "Content" and "Copy If Newer"
 	- The output folder could contain a '.\docs\' folder with all the documentation needed.
 
 Resources:

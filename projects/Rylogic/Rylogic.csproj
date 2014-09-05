@@ -459,10 +459,9 @@
     <None Include="Rylogic Limited Key File.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <HtmlExpandResource Include="resources\regex_quick_ref.htm" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\quick_ref_css.include.htm" />
+    <PyScript Include="resources\regex_quick_ref.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+    </PyScript>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
@@ -509,7 +508,7 @@
     <None Include="resources\licence.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="..\..\build\props\html_expand.targets" />
+  <Import Project="..\..\build\props\python_script.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
