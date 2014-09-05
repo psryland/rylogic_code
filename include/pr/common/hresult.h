@@ -92,9 +92,9 @@ namespace pr
 		#endif
 
 		// else ask windows
-		TCHAR msg[16384];
-		DWORD length(sizeof(msg) / sizeof(TCHAR));
-		if (FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
+		char msg[16384];
+		DWORD length(sizeof(msg));
+		if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
 		{
 			return msg;
 		}
