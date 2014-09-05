@@ -8,7 +8,6 @@
 #include <windows.h>
 #include "pr/common/fmt.h"
 #include "pr/common/hresult.h"
-#include "pr/threads/spin_lock.h"
 
 namespace pr
 {
@@ -31,14 +30,10 @@ namespace pr
 	// RS232 communication interface
 	class CommPortIO
 	{
-		typedef pr::threads::SpinLock SpinLock;
-		typedef std::lock_guard<SpinLock> LockGuard;
-
 		CommPortSettings m_settings;    // Port settings
 		HANDLE           m_handle;      // File handle
 		HANDLE           m_io_complete; // Manual reset event for overlapped i/o operations
 		mutable DWORD    m_last_error;  // The last error returned from a call to ::GetLastError()
-		mutable SpinLock m_lock;        // Busy wait lock guard on async overlapped IO operations
 
 		void ApplyConfig()
 		{
@@ -52,17 +47,13 @@ namespace pr
 			comm_state.fParity  = m_settings.m_parity != NOPARITY;
 			Throw(::SetCommState(m_handle, &comm_state), "Failed to set comm state");
 		}
-		DWORD GetLastError() const
-		{
-			return m_last_error = ::GetLastError();
-		}
 
 		// Throws if 'res' is not TRUE
 		void Throw(BOOL res, char const* msg)
 		{
 			if (res) return;
-			auto last_error = GetLastError();
-			auto error_desc = pr::HrMsg(last_error);
+			std::string error_desc;
+			auto last_error = LastError(&error_desc);
 			throw std::exception(pr::FmtS("%s. 0x%08X - %s", msg, last_error, error_desc.c_str()));
 		}
 
@@ -73,7 +64,6 @@ namespace pr
 			,m_handle(INVALID_HANDLE_VALUE)
 			,m_io_complete(0)
 			,m_last_error(0)
-			,m_lock()
 		{}
 		~CommPortIO()
 		{
@@ -81,9 +71,11 @@ namespace pr
 		}
 
 		// Return the last error received
-		DWORD LastError() const
+		DWORD LastError(std::string* error_desc = nullptr) const
 		{
-			return m_last_error;
+			auto last_error = ::GetLastError();
+			if (error_desc) *error_desc = pr::HrMsg(m_last_error);
+			return m_last_error = last_error;
 		}
 
 		// Configure the port
@@ -109,9 +101,6 @@ namespace pr
 		void Open(int port_number) { Open(port_number, 0, 0); }
 		void Open(int port_number, size_t ibuf_size, size_t obuf_size)
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			if (IsOpen())
 			{
 				assert(false && "Serial port already open");
@@ -157,9 +146,6 @@ namespace pr
 		// Close the serial io connection
 		void Close()
 		{
-			// Prevent shutdown during an IO operation
-			LockGuard lock(m_lock);
-
 			if (m_io_complete != 0)
 			{
 				::CloseHandle(m_io_complete);
@@ -175,18 +161,12 @@ namespace pr
 		// Set the mask for comm events to watch for
 		void SetCommMask(DWORD mask) // EV_TXEMPTY etc
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			::SetCommMask(m_handle, mask);
 		}
 
 		// Waits for a comm event and returns the mask of the comms events that have occurred
 		bool WaitCommEvent(DWORD timeout, DWORD& mask)
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			// Write the data and wait for the overlapped operation to complete
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
 			Throw(::WaitCommEvent(m_handle, &mask, &ovrlap) || GetLastError() == ERROR_IO_PENDING, "");
@@ -202,13 +182,9 @@ namespace pr
 			}
 		}
 
-		// Send data over the i/o connection
+		// Send data over the i/o connection using overlapped io
 		bool Write(void const* data, size_t size, size_t& bytes_sent, DWORD timeout)
 		{
-			// Prevent multiple async IO operations, they can cause a BSOD for
-			// some virtual serial port drivers. Normally this should never be contested
-			LockGuard lock(m_lock);
-
 			bytes_sent = 0;
 			if (!IsOpen())
 			{
@@ -253,9 +229,6 @@ namespace pr
 		// Flush any buffered data
 		void Flush()
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			auto res = ::FlushFileBuffers(m_handle);
 			if (res != 0 || GetLastError() == ERROR_NOT_SUPPORTED) return;
 			Throw(res, "Failed to flush write buffer");
@@ -271,9 +244,6 @@ namespace pr
 		// If 'blocking' is true, the read functions will block until the requested data is available or a timeout occurs
 		void SetBlockingReads(bool blocking)
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			COMMTIMEOUTS cto;
 			Throw(::GetCommTimeouts(m_handle, &cto), "Failed to read comm port timeouts");
 			cto.ReadIntervalTimeout = blocking ? 0 : MAXDWORD;
@@ -285,9 +255,6 @@ namespace pr
 		// Set the read/write timeout values
 		void SetCommTimeouts(DWORD read_timeout, DWORD read_multiplier, DWORD read_constant, DWORD write_multiplier, DWORD write_constant)
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			COMMTIMEOUTS cto = {};
 			cto.ReadIntervalTimeout         = read_timeout;     // Maximum time between read chars.
 			cto.ReadTotalTimeoutMultiplier  = read_multiplier;  // Multiplier of characters.
@@ -305,10 +272,6 @@ namespace pr
 		// Returns true if data was read, false if the timeout was reached
 		bool Read(void* buffer, size_t size, size_t& bytes_read, DWORD timeout)
 		{
-			// Prevent multiple async IO operations, they can cause a BSOD for
-			// some virtual serial port drivers. Normally this should never be contested
-			LockGuard lock(m_lock);
-
 			bytes_read = 0;
 			if (!IsOpen())
 			{
@@ -355,9 +318,6 @@ namespace pr
 		// Purge the I/O buffers
 		void Purge()
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			if (!IsOpen()) return;
 
 			DWORD errors; COMSTAT stat;
@@ -379,9 +339,6 @@ namespace pr
 		// Return the number of bytes available for reading by the serial port
 		size_t BytesAvailable() const
 		{
-			// Prevent multiple async IO operations
-			LockGuard lock(m_lock);
-
 			if (!IsOpen()) return 0;
 
 			DWORD dwErrorFlags;
