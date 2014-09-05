@@ -260,41 +260,196 @@
     </Compile>
     <Content Include="build_docs.py" />
     <Content Include="deploy.py" />
-    <Content Include="docs\img\aggregate_files.png" />
-    <Content Include="docs\img\background.png" />
-    <Content Include="docs\img\background2.png" />
-    <Content Include="docs\img\book.png" />
-    <Content Include="docs\img\find.png" />
-    <Content Include="docs\img\highlighting.png" />
-    <Content Include="docs\img\main_view.png" />
-    <Content Include="docs\img\main_view_context.png" />
-    <Content Include="docs\img\network_output.png" />
-    <Content Include="docs\img\pattern_editor.png" />
-    <Content Include="docs\img\pattern_wildcard.png" />
-    <Content Include="docs\img\pipe_output.png" />
-    <Content Include="docs\img\program_output.png" />
-    <Content Include="docs\img\serial_port_output.png" />
-    <Content Include="docs\img\settings_appearance.png" />
-    <Content Include="docs\img\settings_general.png" />
-    <Content Include="docs\img\tool_bar.png" />
+    <Content Include="docs\aggregate_files.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\android_logcat.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\command_line.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\data_sources.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\faq.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\highlighting.t.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\aggregate_files.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\background.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\background2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\book.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\find.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\highlighting.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\main_view.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\main_view_context.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\network_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\pattern_editor.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\pattern_wildcard.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\pipe_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\program_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\serial_port_output.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\settings_appearance.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\settings_general.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\img\tool_bar.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\installation.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\main_window.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_appearance.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_filtering.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_general.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_highlighting.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\options_transforms.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\overview.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\pattern_editor.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="docs\welcome.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="project_howto.txt" />
-    <None Include="Resources\inc\meta.include.htm" />
-    <HtmlExpandContent Include="docs\aggregate_files.htm" />
-    <HtmlExpandContent Include="docs\android_logcat.htm" />
-    <None Include="docs\auto_refresh.include.htm" />
-    <HtmlExpandContent Include="docs\command_line.htm" />
-    <HtmlExpandContent Include="docs\data_sources.htm" />
-    <HtmlExpandContent Include="docs\faq.htm" />
-    <HtmlExpandContent Include="docs\installation.htm" />
-    <HtmlExpandContent Include="docs\main_window.htm" />
-    <HtmlExpandContent Include="docs\options_appearance.htm" />
-    <None Include="docs\options_dialog.include.htm" />
-    <HtmlExpandContent Include="docs\options_filtering.htm" />
-    <HtmlExpandContent Include="docs\options_general.htm" />
-    <HtmlExpandContent Include="docs\options_highlighting.htm" />
-    <HtmlExpandContent Include="docs\options_transforms.htm" />
-    <HtmlExpandContent Include="docs\overview.htm" />
-    <HtmlExpandContent Include="docs\pattern_editor.htm" />
+    <Content Include="Resources\bookmark.png" />
+    <Content Include="Resources\bottom.png" />
+    <Content Include="Resources\command_line_ref.html" />
+    <Content Include="Resources\cripple_aggregate_files.html" />
+    <Content Include="Resources\cripple_filtering.html" />
+    <Content Include="Resources\cripple_highlighting.html" />
+    <Content Include="Resources\edit_add.png" />
+    <Content Include="Resources\edit_save.png" />
+    <Content Include="Resources\edit_save_needed.png" />
+    <Content Include="Resources\exchange.png" />
+    <Content Include="Resources\executable.png" />
+    <Content Include="Resources\Eyeball.png" />
+    <Content Include="Resources\filter.png" />
+    <Content Include="Resources\find_search.png" />
+    <Content Include="Resources\firstrun.html" />
+    <Content Include="Resources\folder_with_file.png" />
+    <Content Include="Resources\free_edition.html" />
+    <Content Include="Resources\gray_cross.png" />
+    <Content Include="Resources\green_down.png" />
+    <Content Include="Resources\green_tick.png" />
+    <Content Include="Resources\green_up.png" />
+    <Content Include="Resources\highlight.png" />
+    <Content Include="Resources\important.png" />
+    <Content Include="Resources\options.png" />
+    <Content Include="Resources\pencil.png" />
+    <Content Include="Resources\quick_filter.png" />
+    <Content Include="Resources\Refresh.png" />
+    <Content Include="Resources\swizzle_quick_ref.html" />
+    <Content Include="Resources\totd.html" />
+    <Content Include="Resources\transform_quick_ref.html" />
+    <EmbeddedResource Include="Resources\version_history.html" />
+    <None Include="src\documentation\inc\meta.include.htm" />
+    <PyScript Include="src\documentation\docs\aggregate_files.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\android_logcat.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <None Include="src\documentation\inc\auto_refresh.include.htm" />
+    <PyScript Include="src\documentation\docs\command_line.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\data_sources.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\faq.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\installation.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\main_window.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\options_appearance.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <None Include="src\documentation\inc\options_dialog.include.htm" />
+    <PyScript Include="src\documentation\docs\options_filtering.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\options_general.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\options_highlighting.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\options_transforms.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\overview.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\pattern_editor.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
     <Content Include="examples\example_code_lookup.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -303,34 +458,66 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Include="packages.config" />
-    <None Include="Resources\inc\auto_refresh.include.htm" />
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\inc\cripple_css.include.htm" />
-    <HtmlExpandResource Include="Resources\firstrun.htm" />
-    <HtmlExpandContent Include="docs\welcome.htm" />
-    <None Include="docs\help_title_panel.include.htm" />
-    <None Include="docs\help_index_panel.include.htm">
+    <None Include="src\documentation\inc\cripple_css.include.htm" />
+    <PyScript Include="src\documentation\res\firstrun.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\docs\welcome.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\docs\</CustomToolNamespace>
+    </PyScript>
+    <None Include="src\documentation\inc\help_title_panel.include.htm" />
+    <None Include="src\documentation\inc\help_index_panel.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <None Include="docs\help_head.include.htm">
+    <None Include="src\documentation\inc\help_head.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Resources\inc\quick_ref_css.include.htm" />
-    <HtmlExpandResource Include="Resources\cripple_filtering.htm" />
-    <HtmlExpandResource Include="Resources\cripple_highlighting.htm" />
-    <HtmlExpandResource Include="Resources\cripple_aggregate_files.htm" />
-    <None Include="Resources\inc\cripple_meta.include.htm" />
-    <HtmlExpandResource Include="Resources\free_edition.htm" />
-    <None Include="Resources\inc\cripple_footer.include.htm">
+    <None Include="src\documentation\inc\quick_ref_css.include.htm" />
+    <PyScript Include="src\documentation\res\cripple_filtering.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\cripple_highlighting.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\cripple_aggregate_files.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <None Include="src\documentation\inc\cripple_meta.include.htm" />
+    <PyScript Include="src\documentation\res\free_edition.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <None Include="src\documentation\inc\cripple_footer.include.htm">
       <SubType>Designer</SubType>
     </None>
-    <HtmlExpandResource Include="Resources\swizzle_quick_ref.htm" />
-    <HtmlExpandResource Include="Resources\command_line_ref.htm" />
-    <HtmlExpandResource Include="Resources\totd.htm" />
-    <HtmlExpandResource Include="Resources\transform_quick_ref.htm" />
-    <HtmlExpandResource Include="Resources\version_history.htm" />
+    <PyScript Include="src\documentation\res\swizzle_quick_ref.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\command_line_ref.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\totd.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\transform_quick_ref.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
+    <PyScript Include="src\documentation\res\version_history.htm">
+      <Generator>..\..\script\HtmlExpand.py</Generator>
+      <CustomToolNamespace>..\..\..\Resources\</CustomToolNamespace>
+    </PyScript>
     <EmbeddedResource Include="src\about.resx">
       <DependentUpon>about.cs</DependentUpon>
     </EmbeddedResource>
@@ -446,7 +633,7 @@
     <EmbeddedResource Include="RyLog.ico" />
   </ItemGroup>
   <ItemGroup>
-    <HtmlExpandResource Include="Resources\public_key.xml" />
+    <EmbeddedResource Include="Resources\public_key.xml" />
     <None Include="Rylogic Limited Key File.pfx" />
     <None Include="src\licence\private_key.xml" />
     <Content Include="examples\example logfile.txt">
@@ -467,8 +654,9 @@
       <Name>RyLogViewer.Extensions</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(ProjectDir)..\..\build\props\html_expand.targets" />
+  <Import Project="$(ProjectDir)..\..\build\props\python_script.targets" />
   <PropertyGroup>
     <PostBuildEvent>$(ProjectDir)..\..\bin\csex\csex.exe -signfile -f "$(TargetPath)" -pk "$(ProjectDir)src\licence\private_key.xml"</PostBuildEvent>
   </PropertyGroup>

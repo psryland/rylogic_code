@@ -194,9 +194,11 @@
   <ItemGroup>
     <ClInclude Include="..\projects\clicket\aboutdlg.h" />
     <ClInclude Include="..\projects\clicket\clicket.h" />
+    <ClInclude Include="..\projects\clicket\forward.h" />
     <ClInclude Include="..\projects\clicket\maindlg.h" />
     <ClInclude Include="..\projects\clicket\resource.h" />
     <ClInclude Include="..\projects\clicket\stdafx.h" />
+    <ClInclude Include="..\projects\clicket\user_data.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\clicket\res\clicket.ico" />

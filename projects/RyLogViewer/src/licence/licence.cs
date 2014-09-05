@@ -122,7 +122,7 @@ namespace RyLogViewer
 			catch (Exception ex)
 			{
 				MsgBox.Show(this
-					,"An error occurred while attempting to view '{0}'".Fmt(url)
+					,"An error occurred while attempting to view '{0}'\n{1}".Fmt(url,ex.Message)
 					,"Visit Web Site"
 					,MessageBoxButtons.OK
 					,MessageBoxIcon.Information);

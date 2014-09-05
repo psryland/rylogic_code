@@ -19,10 +19,46 @@ def OnException(ex,enter_to_close=True):
 
 # Check that the UserVars file is the correct version
 def CheckVersion(check_version):
+	# Check variables version number
 	if check_version > UserVars.version:
 		raise ValueError("User variables are out of date, please update")
+
+	# Check machine name to detect UserVars copied from other machines
 	if UserVars.machine.lower() != socket.gethostname().lower():
-		raise ValueError("Machine name does not match UserVars.machine, Check you UserVars.py file")
+		raise ValueError("Machine name does not match UserVars.machine, Check your UserVars.py file")
+
+	def TestPath(path, missing):
+		if not path is None and not os.path.exists(path):
+			missing.append(path)
+
+	# Check for invalid UserVars paths
+	missing = [];
+	TestPath(UserVars.dumpdir          , missing)
+	TestPath(UserVars.textedit         , missing)
+	TestPath(UserVars.ziptool          , missing)
+	TestPath(UserVars.mergetool        , missing)
+	TestPath(UserVars.msbuild          , missing)
+	TestPath(UserVars.winsdk           , missing)
+	TestPath(UserVars.vs_dir           , missing)
+	TestPath(UserVars.vc_env           , missing)
+	TestPath(UserVars.devenv           , missing)
+	TestPath(UserVars.silverlight_root , missing)
+	TestPath(UserVars.java_sdkdir      , missing)
+	TestPath(UserVars.android_sdkdir   , missing)
+	TestPath(UserVars.adb              , missing)
+	TestPath(UserVars.fxc              , missing)
+	TestPath(UserVars.dmdroot          , missing)
+	TestPath(UserVars.dmd              , missing)
+	TestPath(UserVars.rdmd             , missing)
+	TestPath(UserVars.csex             , missing)
+	TestPath(UserVars.wwwroot          , missing)
+	TestPath(UserVars.elevate          , missing)
+	TestPath(UserVars.ttbuild          , missing)
+	TestPath(UserVars.linqpad          , missing)
+	if missing != []:
+		print("UserVars.py - Missing Paths:")
+		for p in missing: print(p)
+		raise ValueError("UserVars.py contains invalid values")
 
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):

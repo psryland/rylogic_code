@@ -1412,7 +1412,8 @@ namespace RyLogViewer
 					"Unable to display the help documentation do to an error.\r\n" +
 					"Error Message: {0}\r\n".Fmt(ex.Message) +
 					"\r\n" +
-					"The expected location of the main documentation file is <install directory>\\"+HelpStartPage,
+					"The expected location of the main documentation file is:\r\n" +
+					"  <install directory>\\"+HelpStartPage,
 					"Missing help files", MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}

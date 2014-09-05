@@ -188,7 +188,12 @@ def ExpandHtmlFile(srcpath, dstpath = None):
 
 	# Handle optional dstpath
 	if dstpath is None:
-		dstpath = srcdir + "\\" + fname + ".html"
+		dstpath = srcdir
+	elif not os.path.isabs(dstpath):
+		dstpath = os.path.join(srcdir, dstpath)
+	if not os.path.isfile(dstpath):
+		dstpath = os.path.join(dstpath, fname + ".html")
+	dstpath = os.path.realpath(dstpath)
 
 	# Start with a buffer filled from the source file
 	buf = []
@@ -199,7 +204,9 @@ def ExpandHtmlFile(srcpath, dstpath = None):
 	buf = Expand(buf, srcpath)
 
 	# Write the expanded buffer to 'dst'
-	with open(dstpath, mode='w', encoding="utf-8") as f:
+	dstdir,dstfile = os.path.split(dstpath)
+	if not os.path.exists(dstdir): os.makedirs(dstdir)
+	with open(dstpath, mode='w', encoding="utf-8-sig") as f:
 		f.write(buf)
 
 # Stand alone script

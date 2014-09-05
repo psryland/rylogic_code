@@ -1,0 +1,38 @@
+<!--
+ Enables 'PyScript' as a build action.
+ In the properties for a file, select PyScript for the build action.
+ Set 'Custom Tool' to the name of the script to run
+ Set 'Custom Tool Namespace' to any addition arguments you want to pass to the script
+-->
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+	<!-- Add PyScript as a Build Action -->
+	<ItemGroup>
+		<AvailableItemName Include="PyScript" />
+	</ItemGroup>
+
+	<!-- Target for building content using a python script -->
+	<Target Name="PyScriptTarget"
+			BeforeTargets="BeforeResGen"
+			Inputs="@(PyScript)"
+			Outputs="@(PyScript -> %(identity))"
+			Condition="'@(PyScript)' != ''">
+
+		<PropertyGroup>
+			<PythonExe>$(WinDir)\py.exe</PythonExe>
+			<Script>%(PyScript.Generator)</Script>
+			<File>%(PyScript.Fullpath)</File>
+			<Args>%(PyScript.CustomToolNamespace)</Args>
+		</PropertyGroup>
+
+		<!-- Error if py.exe isn't available -->
+		<Error Condition="!Exists('$(PythonExe)')" Text="'$(PythonExe)' not found. Please install Python 3."/>
+		
+		<!-- Execute the python script on the file -->
+		<Exec
+			Command="%22$(PythonExe)%22 %22$(Script)%22 %22$(File)%22 $(Args)"
+			ContinueOnError="ErrorAndContinue"/>
+
+	</Target>
+
+</Project>

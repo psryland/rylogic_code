@@ -63,3 +63,4 @@ tools/HxD/HxD.ini
 *NCrunch*
 tools/GrepWin/grepwin.ini
 *.log
+Rylogic/resources/*.html

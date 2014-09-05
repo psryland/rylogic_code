@@ -1,0 +1,221 @@
+﻿<!DOCTYPE HTML>
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<!--#include file="..\inc\help_head.include.htm"-->
+	<body id="main_help">
+		<!--#include file="..\inc\help_title_panel.include.htm"-->
+		<!--#include file="..\inc\help_index_panel.include.htm"-->
+		<div id="content_panel">
+			<!--#var name="FeatureEnableTime" file="..\..\misc.cs" value="const int FeatureEnableTimeInMinutes\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxHighlights"     file="..\..\misc.cs" value="const int MaxHighlights\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxFilters"        file="..\..\misc.cs" value="const int MaxFilters\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxTransforms"     file="..\..\misc.cs" value="const int MaxTransforms\s+= (?P<value>\d+);"-->
+			<!--#var name="MaxActions"        file="..\..\misc.cs" value="const int MaxActions\s+= (?P<value>\d+);"-->
+			<div class="title">Overview and Features</div>
+			<div class="content">
+				<div class="content">
+					Many computer systems output log data in various forms. From servers logging connection events, to embedded
+					systems streaming real-time state information, log output often contains vital diagnostic information.
+					Frequently this vital information is hidden within large volumes of general output making finding, analysing,
+					and diagnosing issues in the computer system a difficult and time consuming task. RyLogViewer was written to
+					make working with high-volume log data easier.<br/>
+					<br/>
+					The simplest, yet probably most useful, feature of RyLogViewer is the ability to highlight lines in the log
+					data based on a pattern. Patterns can be as simple as <i>"any line that contains the word 'error' "</i>
+					to complex regular expressions. Once familiar with the pattern system, the same knowledge can be applied to
+					search for specific text in the log data, create filters to strip out unwanted noise, transform and rearrange
+					text into more meaningful/human-readable forms, and even setup actions to perform when double clicking on lines
+					in the log data. (Check out the <a href="ideas.html">ideas section</a> for inspiration on ways in which RyLogViewer
+					 can be used).<br/>
+					<br/>
+					RylogViewer is a shareware application, meaning there are limits applied to the free version of the
+					application that are removed in the licensed version. However, these limits do not restrict or disable any
+					of the functionally of the application. The free version merely prompts the user when a limit is exceeded
+					giving the user the option to enable the licensed feature. After <!--#value name="FeatureEnableTime"-->
+					minutes, the prompt will reappear.
+					<b style="font-size:15px; color: #080">There is no time restriction or limit on the number of times licensed features can be enabled.</b><br/>
+					<br/>
+					The bullet points below give a summary of the main features and functionality of RyLogViewer, including
+					links to further information in the remainder of the documentation.
+				</div>
+				<ul>
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Unlimited File Sizes</div>
+							<div class="content">
+								RyLogViewer has been designed to intelligently spool and cache data dynamically, meaning that
+								it runs as smoothly on a 200Gb file as it does on a 2Kb file. There is no upper limit on the
+								size of displayed log files.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Highlighting</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								Important data in a log file can be made to stand out by creating a
+								<a href="pattern_editor.html">pattern</a> in the
+								<a href="options_highlighting.html">highlighting</a> options window. Highlighting can be
+								quickly enabled or disabled via the <a href="main_window.html#tool_bar">tool bar</a>. In the free
+								version, highlighting is limited to <!--#value name="MaxHighlights"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Filtering</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								<a href="pattern_editor.html">Patterns</a> can be created in the
+								<a href="options_filtering.html">filtering</a> options window to strip unwanted data from the log.
+								Filtering can be quickly enabled or disabled via the <a href="main_window.html#tool_bar">tool bar</a>.
+								In the free version, filtering is limited to <!--#value name="MaxFilters"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Transformations</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								<a href="options_transforms.html">Transformations</a> are used to reformat the text that is
+								displayed in the log. A <a href="pattern_editor.html">pattern</a> is used to match lines in the
+								log that are then substituted with the replacement pattern. Transforms are very flexible
+								allowing reordering of text, changes in case, "swizzling" of characters, and error code lookup
+								and substitution. Transforms can be quickly enabled or disabled via
+								<a href="main_window.html#tool_bar">tool bar</a>. In the free version, transforms are limited to
+								<!--#value name="MaxTransforms"--> patterns, however more patterns can be used by selecting
+								<i>enable</i> in the Free Edition Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Actions</div>
+							<div class="limited_feature">Limited in Free Edition</div>
+							<div class="content">
+								<a href="options_actions.html">Actions</a> allow custom behaviour to be executed when a particular
+								line in the log file is double clicked. For example, a <a href="pattern_editor.html">pattern</a>
+								that matches a file path and line number can be associated with an action that opens the file at
+								the given line number in a text editor, a useful feature when viewing application debug output.
+								In the free version, actions are limited to <!--#value name="MaxActions"-->
+								patterns, however more patterns can be used by selecting <i>enable</i> in the Free Edition
+								Limited Feature dialog.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Scratch Pad for Pattern Testing</div>
+							<div class="content">
+								The patterns that are at the core of many of the features in RyLogViewer can become quite complex.
+								To aid in ensuring a pattern behaves correctly, the <a href="pattern_editor.html">pattern editor</a>
+								features a <a href="pattern_editor.html#test_area">test area</a> that allows the behaviour of a
+								pattern to be previewed. This test area is a useful tool for learning regular expression syntax.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Aggregate Files</div>
+							<div class="licensed_feature">Licensed feature</div>
+							<div class="content">
+								The <a href="aggregate_files.html">aggregate files</a> feature allows multiple files to be
+								viewed as though they are a single file. All features (including highlighting, searching,
+								filtering, etc) operate on the aggregate file in the same manor as they do for a single file.
+								This is particularly useful for systems that produce sequentially numbered log files, common
+								in long running systems.<br/>
+								<br/>
+								In addition, the <a href="export.html">Export</a> function can by used to create a single
+								amalgamated file that is the result of all of the files concatenated together after filtering
+								and/or text transformations have been applied.<br/>
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Android Logcat output</div>
+							<div class="content">
+								One of the targeted uses for RyLogViewer is to aid Android application development. The
+								Android operating system has a system wide logging feature that gives great insight into the
+								applications running on the device. The <a href="android_logcat.html">Android Logcat Wizard</a>
+								simplifies the process of connecting and capturing this logcat data.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Program Output Logging</div>
+							<div class="content">
+								The <a href="data_sources.html#program_output">Log Program Output</a> dialog can be used to
+								launch another application and capture its standard output or standard error.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Serial Port Logging</div>
+							<div class="content">
+								Embedded systems frequently use RS232 serial comms as a simple means of transmitting internal
+								state to the outside world. RyLogViewer's
+								<a href="data_sources.html#serial_port">serial port logging</a> is ideally suited to this scenario
+								as it can receive data directly from a serial port and capture it into a file. Highlighting
+								can then be used to make errors stand out, or state machine states/transitions obvious.
+								The transforms feature can be used to replace error codes with meaningful error messages.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">TCP/UDP Network Connection Logging</div>
+							<div class="content">
+								The <a href="data_sources.html#tcpip">Log Network Connection</a> dialog allows the capture
+								of log data streamed over a network using either TCP or UDP protocols. The connection can be
+								direct or via a proxy server.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Named Pipe Logging</div>
+							<div class="content">
+								Named pipes are a common form of inter-process communication. Writing log output to a named
+								pipe is another method of getting log data out of an application or server. The
+								<a href="data_sources.html#named_pipe">Log Pipe Connection</a> dialog allows RyLogViewer to
+								connect directly to the named pipe and capture any output received.
+							</div>
+						</div>
+					</li>
+
+					<li class="child_list_elem">
+						<div>
+							<div class="tag_label">Export</div>
+							<div class="content">
+								The <a href="export.html">Export</a> option, under the file menu, writes the current log data
+								to a file applying all enabled filters and transforms. Exporting is therefore a flexible way
+								to transform a file and save the result. Exporting can also be performed by running RyLogViewer
+								from the <a href="command_line.html">command line</a> which allows RyLogViewer to be useful in
+								batch scripts.
+							</div>
+						</div>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</body>
+</html>
