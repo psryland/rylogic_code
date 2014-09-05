@@ -17,7 +17,6 @@
 #include "pr/common/allocator.h"
 #include "pr/common/archiver.h"
 #include "pr/common/assert.h"
-#include "pr/common/atl.h"
 #include "pr/common/base64.h"
 #include "pr/common/cast.h"
 #include "pr/common/chain.h"
