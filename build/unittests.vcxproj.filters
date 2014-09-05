@@ -76,23 +76,23 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\pr\crypt\crypt.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\include\pr\crypt\md5.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c">
-      <Filter>src</Filter>
+      <Filter>pr\lua</Filter>
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
-      <Filter>src</Filter>
+      <Filter>pr\lua</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\crypt\crypt.cpp">
+      <Filter>pr\crypt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\crypt\md5.cpp">
+      <Filter>pr\crypt</Filter>
     </ClCompile>
     <ClCompile Include="..\sdk\sqlite\sqlite3.c">
-      <Filter>src</Filter>
+      <Filter>sqlite3</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
