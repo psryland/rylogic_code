@@ -4,22 +4,20 @@
 //*********************************************
 // This file contains a helper object for creating a lua state and
 // a collection of useful lua functions that operate on a lua state.
-// The intended usage is:
-//	Create an instance of pr::Lua in your program
-//	Call lua functions,
-// e.g. 
-//	pr::Lua lua;
-//	std::string str = lua::ToString(lua.m_state, 0);	// Return the item on the stack as a string
-//	lua::RegisterFunction(lua.m_state, MyFunction);
+// Usage:
+//   Create an instance of 'pr::Lua' in your program
+//   Call lua functions like this:
+//      pr::Lua lua;
+//      std::string str = lua::ToString(lua.m_state, 0); // Return the item on the stack as a string
+//      lua::RegisterFunction(lua.m_state, MyFunction);
 
-#ifndef PR_LUA_H
-#define PR_LUA_H
+#pragma once
 
 extern "C"
 {
-	#include "lua.h"
-	#include "lualib.h"
-	#include "lauxlib.h"
+	#include "lua/src/lua.h"
+	#include "lua/src/lualib.h"
+	#include "lua/src/lauxlib.h"
 }
 #include <varargs.h>
 #include <string>
@@ -633,6 +631,4 @@ inline void DumpLuaTable(int i)
 	std::string str = pr::lua::DumpTable(dbg_lua(), i);
 	PR_INFO(PR_DBG_LUA, str.c_str());
 }
-#endif
-
 #endif
