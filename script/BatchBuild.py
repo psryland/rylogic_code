@@ -13,7 +13,7 @@ try:
 
 	Tools.CheckVersion(1)
 
-	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
+	sln = UserVars.root + "\\build\\Rylogic.sln"
 	# e.g: "\"folder\proj_name:Rebuild\""
 	projects = [
 		"renderer11",

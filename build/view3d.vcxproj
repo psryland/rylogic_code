@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h" />
+    <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />
@@ -251,7 +252,7 @@
     <ClCompile Include="..\projects\view3d\view3d.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\include\prcs\gfx\view3d.cs" />
+    <None Include="..\projects\Rylogic\gfx\view3d.cs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

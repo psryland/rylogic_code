@@ -21,6 +21,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer", "..\projects\
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic", "..\projects\Rylogic\Rylogic.csproj", "{1735C773-5477-45E6-9CBF-5F2B6DC707EF}"
+	ProjectSection(ProjectDependencies) = postProject
+		{363D015B-B545-4623-A5CE-61245C9BF1F8} = {363D015B-B545-4623-A5CE-61245C9BF1F8}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sol", "sol.vcxproj", "{1CBD335B-5C79-4ABB-89E9-CB7ADB06D754}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -84,6 +87,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "view3d.vcxproj", "{363D015B-B545-4623-A5CE-61245C9BF1F8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
+		{6EC3B435-2551-48FE-84F4-EDED821A48D0} = {6EC3B435-2551-48FE-84F4-EDED821A48D0}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EscapeVelocity", "..\projects\EscapeVelocity\EscapeVelocity.csproj", "{0B7DDDD0-AB67-4C51-9628-8CC3243C2D15}"

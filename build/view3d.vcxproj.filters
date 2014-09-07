@@ -114,6 +114,9 @@
     <ClInclude Include="..\include\pr\script\stream_stack.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h">
+      <Filter>src\pr\linedrawer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
@@ -142,7 +145,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\include\prcs\gfx\view3d.cs">
+    <None Include="..\projects\Rylogic\gfx\view3d.cs">
       <Filter>src</Filter>
     </None>
   </ItemGroup>

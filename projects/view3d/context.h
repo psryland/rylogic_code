@@ -13,7 +13,6 @@ namespace view3d
 	{
 		typedef std::set<View3DContext> InitSet;
 
-
 		InitSet                  m_inits;            // A unique id assigned to each Initialise call
 		ErrorCBStack             m_error_cb;         // A stack of error callback functions
 		bool                     m_compatible;       // True if the renderer will work on this system

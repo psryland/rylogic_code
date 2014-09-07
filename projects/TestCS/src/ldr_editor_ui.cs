@@ -15,18 +15,25 @@ namespace TestCS
 {
 	public class LdrEditorUI :Form
 	{
+		private View3d m_view3d;
 		private View3d.Editor m_editor;
 
+		static LdrEditorUI()
+		{
+			View3d.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
+		}
 		public LdrEditorUI()
 		{
-			//m_editor = new View3d.Editor(Handle, 200, 200);
-			
 			InitializeComponent();
+			m_view3d = new View3d();
 			m_host_editor.Child = new View3d.HostableEditor();
+			//m_editor = new View3d.Editor(Handle, 200, 200);
 		}
 		protected override void Dispose(bool disposing)
 		{
+			Util.Dispose(ref m_host_editor);
 			Util.Dispose(ref m_editor);
+			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}

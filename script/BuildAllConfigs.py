@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 # Use:
-#  BuildAllConfigs $(ProjectPath) [Rebuild|Clean]
+#  BuildAllConfigs $(TargetName)
 
 import sys, os, shutil, re
 import Rylogic as Tools
@@ -16,9 +16,17 @@ try:
 
 	Tools.CheckVersion(1)
 
-	proj = sys.argv[1]
-	target = sys.argv[2] if len(sys.argv) > 2 else ""
+	sln = UserVars.root + "\\build\\Rylogic.sln"
+
 	# e.g: "\"folder\proj_name:Rebuild\""
+	proj = sys.argv[1] if len(sys.argv) > 1 else input("project? ")
+	projects = [proj]
+
+	platforms = [
+		"x86",
+		"x64",
+		#"win32",
+		]
 
 	configs = [
 		"debug",
@@ -26,35 +34,9 @@ try:
 		#"dev_debug",
 		#"dev_release",
 		]
-	platforms = [
-		"x86",
-		"x64",
-		#"win32",
-		]
-
-	procs = []
-
-	parallel = True
-	same_window = True #False
 
 	#Invoke MSBuild
-	for platform in platforms:
-		for config in configs:
-			args = [UserVars.msbuild, UserVars.msbuild_props, proj, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
-			if target != "": args = args + ["/t:"+target]
-			if parallel:
-				procs.extend([Tools.Spawn(args, same_window=same_window)])
-			else:
-				print("\n *** " + platform + " - " + config + " ***\n")
-				Tools.Exec(args)
-
-	errors = False
-	for proc in procs:
-		proc.wait()
-		if proc.returncode != 0:
-			errors = True
-	
-	if errors:
+	if not Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True):
 		Tools.OnError("Errors occurred")
 
 	Tools.OnSuccess()

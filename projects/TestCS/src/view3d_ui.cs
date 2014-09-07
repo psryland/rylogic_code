@@ -17,7 +17,7 @@ namespace TestCS
 
 		static FormView3d()
 		{
-			View3d.LoadDll(@"\sdk\lib\$(platform)\$(config)\");
+			View3d.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
 		}
 		public FormView3d()
 		{

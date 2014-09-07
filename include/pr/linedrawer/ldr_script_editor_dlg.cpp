@@ -153,9 +153,6 @@ namespace pr
 				// Initialise the edit control
 				m_edit.Attach(GetDlgItem(IDC_TEXT));
 				m_edit.InitLdrStyle();
-				m_edit.CodePage(CP_UTF8);
-				m_edit.Lexer(SCLEX_LDR);
-				m_edit.LexerLanguage("ldr");
 				m_edit.SetSel(-1, 0);
 				m_edit.SetFocus();
 
