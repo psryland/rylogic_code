@@ -1746,3 +1746,17 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 	CatchAndReport(View3D_LdrEditorDestroy, ,);
 }
 
+// Initialise a scintilla control ready for ldr script
+VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control)
+{
+	try
+	{
+		if (!scintilla_control) throw std::exception("scintilla control handle is null");
+
+		WTL::ScintillaCtrl s;
+		s.Attach(scintilla_control);
+		s.InitLdrStyle();
+		s.Detach();
+	}
+	CatchAndReport(View3D_LdrEditorCtrlInit, ,);
+}

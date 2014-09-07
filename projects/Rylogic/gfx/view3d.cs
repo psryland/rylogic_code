@@ -1413,40 +1413,75 @@ namespace pr.gfx
 		/// An ldr script editor control.
 		/// To use this in a winforms application, create a System.Windows.Forms.Integration.ElementHost
 		/// and assign an instance of this class to it's 'Child' property</summary>
-		public class HostableEditor :HwndHost
+		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
-			private Editor m_editor;
+			private IntPtr m_wrap;
+			private IntPtr m_ctrl;
 
-			protected override void Dispose(bool disposing)
-			{
-				Util.Dispose(ref m_editor);
-				base.Dispose(disposing);
-			}
 			protected override HandleRef BuildWindowCore(HandleRef parent)
 			{
-				// Create the editor window
-				m_editor = new Editor(parent.Handle);
-				
-				// Make it a child of 'parent'
-				var style = Win32.GetWindowLong(m_editor.HWnd, Win32.GWL_STYLE);
-				Win32.SetWindowLong(m_editor.HWnd, Win32.GWL_STYLE, style | Win32.WS_CHILD);
-				return new HandleRef(this, m_editor.HWnd);
+				// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
+				m_wrap = Win32.CreateWindowEx(0, "static", "", Win32.WS_CHILD, 0, 0, 190, 190, parent.Handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+				if (m_wrap == IntPtr.Zero)
+					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
+
+				m_ctrl = Win32.CreateWindowEx(0, "Scintilla", "", Win32.WS_CHILD|Win32.WS_VISIBLE|Win32.WS_HSCROLL|Win32.WS_VSCROLL, 0, 0, 190, 190, m_wrap, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+				if (m_ctrl == IntPtr.Zero)
+					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
+
+				View3D_LdrEditorCtrlInit(m_ctrl);
+				return new HandleRef(this, m_wrap);
 			}
 			protected override void DestroyWindowCore(System.Runtime.InteropServices.HandleRef hwnd)
 			{
-				Util.Dispose(ref m_editor);
+				Win32.DestroyWindow(hwnd.Handle);
 			}
-			//protected override IntPtr WndProc(HWND hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-			//{
-			//	//return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
-			//	handled = false;
-			//	return IntPtr.Zero;
-			//}
-			//bool IKeyboardInputSink.TabInto(System.Windows.Input.TraversalRequest request)
-			//{
-			//	Win32.SetFocus(m_hwnd);
-			//	return true;
-			//}
+			bool IKeyboardInputSink.TranslateAccelerator(ref MSG msg, System.Windows.Input.ModifierKeys modifiers)
+			{
+				bool handled = false;
+				if (msg.message == Win32.WM_KEYDOWN)
+				{
+					if (Win32.GetFocus() == m_ctrl)
+					{
+						// We want tabs, arrow keys, and return/enter when the control is focused
+						if (msg.wParam == (IntPtr)Win32.VK_TAB ||
+							msg.wParam == (IntPtr)Win32.VK_UP ||
+							msg.wParam == (IntPtr)Win32.VK_DOWN ||
+							msg.wParam == (IntPtr)Win32.VK_LEFT ||
+							msg.wParam == (IntPtr)Win32.VK_RIGHT ||
+							msg.wParam == (IntPtr)Win32.VK_RETURN)
+						{
+							Win32.SendMessage(m_ctrl, (uint)msg.message, msg.wParam, msg.lParam);
+							handled = true;
+						}
+					}
+				}
+				return handled;
+			}
+			bool IKeyboardInputSink.TabInto(System.Windows.Input.TraversalRequest request)
+			{
+				Win32.SetFocus(m_ctrl);
+				return true;
+			}
+			protected override IntPtr WndProc(HWND hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+			{
+				//return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+				handled = false;
+
+				switch ((uint)msg)
+				{
+				// Since this is the WindowProc of the parent HWND, we need do extra work in order to 
+				// resize the Win32 listbox upon resize of the parent HWND.
+				case Win32.WM_SIZE:
+					int width  = (int)Win32.GetLoword(lParam.ToInt32());
+					int height = (int)Win32.GetHiword(lParam.ToInt32());
+					Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, width, height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
+					handled = true;
+					break;
+				}
+
+				return IntPtr.Zero;
+			}
 		}
 
 		#region DLL extern functions
@@ -1470,9 +1505,13 @@ namespace pr.gfx
 			if (m_module != IntPtr.Zero)
 				return; // Already loaded
 
-			// Search the local directory first
 			var dllname = Dll+".dll";
 			var dllpath = dllname;
+
+			// Try the lib folder. Load the appropriate dll for the platform
+			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
+			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
+			dllpath = Path.Combine(dir, dllname);
 			if (PathEx.FileExists(dllpath))
 			{
 				m_module = LoadLibrary(dllpath);
@@ -1480,11 +1519,7 @@ namespace pr.gfx
 					return;
 			}
 
-
-			// Try the lib folder. Load the appropriate dll for the platform
-			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
-			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
-			dllpath = Path.Combine(dir, dllname);
+			// Try the local directory
 			if (PathEx.FileExists(dllpath))
 			{
 				m_module = LoadLibrary(dllpath);
@@ -1615,6 +1650,7 @@ namespace pr.gfx
 
 		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
 		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);
+		[DllImport(Dll)] private static extern void              View3D_LdrEditorCtrlInit        (HWND scintilla_control);
 		#endregion
 	}
 }

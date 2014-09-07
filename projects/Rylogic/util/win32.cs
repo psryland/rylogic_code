@@ -336,9 +336,169 @@ namespace pr.util
 		#endregion
 
 		#region Virtual key VK_
-		public const byte VK_SHIFT                        = 0x10;
-		public const byte VK_CAPITAL                      = 0x14;
-		public const byte VK_NUMLOCK                      = 0x90;
+		// VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
+		// 0x40 : unassigned
+		// VK_A - VK_Z are the same as ASCII 'A' - 'Z' (0x41 - 0x5A)
+		public const byte VK_LBUTTON             = 0x01;
+		public const byte VK_RBUTTON             = 0x02;
+		public const byte VK_CANCEL              = 0x03;
+		public const byte VK_MBUTTON             = 0x04;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_XBUTTON1            = 0x05;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_XBUTTON2            = 0x06;    /* NOT contiguous with L & RBUTTON */
+		public const byte VK_BACK                = 0x08;
+		public const byte VK_TAB                 = 0x09;
+		public const byte VK_CLEAR               = 0x0C;
+		public const byte VK_RETURN              = 0x0D;
+		public const byte VK_SHIFT               = 0x10;
+		public const byte VK_CONTROL             = 0x11;
+		public const byte VK_MENU                = 0x12;
+		public const byte VK_PAUSE               = 0x13;
+		public const byte VK_CAPITAL             = 0x14;
+		public const byte VK_KANA                = 0x15;
+		public const byte VK_HANGEUL             = 0x15;  /* old name - should be here for compatibility */
+		public const byte VK_HANGUL              = 0x15;
+		public const byte VK_JUNJA               = 0x17;
+		public const byte VK_FINAL               = 0x18;
+		public const byte VK_HANJA               = 0x19;
+		public const byte VK_KANJI               = 0x19;
+		public const byte VK_ESCAPE              = 0x1B;
+		public const byte VK_CONVERT             = 0x1C;
+		public const byte VK_NONCONVERT          = 0x1D;
+		public const byte VK_ACCEPT              = 0x1E;
+		public const byte VK_MODECHANGE          = 0x1F;
+		public const byte VK_SPACE               = 0x20;
+		public const byte VK_PRIOR               = 0x21;
+		public const byte VK_NEXT                = 0x22;
+		public const byte VK_END                 = 0x23;
+		public const byte VK_HOME                = 0x24;
+		public const byte VK_LEFT                = 0x25;
+		public const byte VK_UP                  = 0x26;
+		public const byte VK_RIGHT               = 0x27;
+		public const byte VK_DOWN                = 0x28;
+		public const byte VK_SELECT              = 0x29;
+		public const byte VK_PRINT               = 0x2A;
+		public const byte VK_EXECUTE             = 0x2B;
+		public const byte VK_SNAPSHOT            = 0x2C;
+		public const byte VK_INSERT              = 0x2D;
+		public const byte VK_DELETE              = 0x2E;
+		public const byte VK_HELP                = 0x2F;
+		public const byte VK_LWIN                = 0x5B;
+		public const byte VK_RWIN                = 0x5C;
+		public const byte VK_APPS                = 0x5D;
+		public const byte VK_SLEEP               = 0x5F;
+		public const byte VK_NUMPAD0             = 0x60;
+		public const byte VK_NUMPAD1             = 0x61;
+		public const byte VK_NUMPAD2             = 0x62;
+		public const byte VK_NUMPAD3             = 0x63;
+		public const byte VK_NUMPAD4             = 0x64;
+		public const byte VK_NUMPAD5             = 0x65;
+		public const byte VK_NUMPAD6             = 0x66;
+		public const byte VK_NUMPAD7             = 0x67;
+		public const byte VK_NUMPAD8             = 0x68;
+		public const byte VK_NUMPAD9             = 0x69;
+		public const byte VK_MULTIPLY            = 0x6A;
+		public const byte VK_ADD                 = 0x6B;
+		public const byte VK_SEPARATOR           = 0x6C;
+		public const byte VK_SUBTRACT            = 0x6D;
+		public const byte VK_DECIMAL             = 0x6E;
+		public const byte VK_DIVIDE              = 0x6F;
+		public const byte VK_F1                  = 0x70;
+		public const byte VK_F2                  = 0x71;
+		public const byte VK_F3                  = 0x72;
+		public const byte VK_F4                  = 0x73;
+		public const byte VK_F5                  = 0x74;
+		public const byte VK_F6                  = 0x75;
+		public const byte VK_F7                  = 0x76;
+		public const byte VK_F8                  = 0x77;
+		public const byte VK_F9                  = 0x78;
+		public const byte VK_F10                 = 0x79;
+		public const byte VK_F11                 = 0x7A;
+		public const byte VK_F12                 = 0x7B;
+		public const byte VK_F13                 = 0x7C;
+		public const byte VK_F14                 = 0x7D;
+		public const byte VK_F15                 = 0x7E;
+		public const byte VK_F16                 = 0x7F;
+		public const byte VK_F17                 = 0x80;
+		public const byte VK_F18                 = 0x81;
+		public const byte VK_F19                 = 0x82;
+		public const byte VK_F20                 = 0x83;
+		public const byte VK_F21                 = 0x84;
+		public const byte VK_F22                 = 0x85;
+		public const byte VK_F23                 = 0x86;
+		public const byte VK_F24                 = 0x87;
+		public const byte VK_NUMLOCK             = 0x90;
+		public const byte VK_SCROLL              = 0x91;
+		public const byte VK_OEM_NEC_EQUAL       = 0x92;   // '=' key on numpad
+		public const byte VK_OEM_FJ_JISHO        = 0x92;   // 'Dictionary' key
+		public const byte VK_OEM_FJ_MASSHOU      = 0x93;   // 'Unregister word' key
+		public const byte VK_OEM_FJ_TOUROKU      = 0x94;   // 'Register word' key
+		public const byte VK_OEM_FJ_LOYA         = 0x95;   // 'Left OYAYUBI' key
+		public const byte VK_OEM_FJ_ROYA         = 0x96;   // 'Right OYAYUBI' key
+		public const byte VK_LSHIFT              = 0xA0;
+		public const byte VK_RSHIFT              = 0xA1;
+		public const byte VK_LCONTROL            = 0xA2;
+		public const byte VK_RCONTROL            = 0xA3;
+		public const byte VK_LMENU               = 0xA4;
+		public const byte VK_RMENU               = 0xA5;
+		public const byte VK_BROWSER_BACK        = 0xA6;
+		public const byte VK_BROWSER_FORWARD     = 0xA7;
+		public const byte VK_BROWSER_REFRESH     = 0xA8;
+		public const byte VK_BROWSER_STOP        = 0xA9;
+		public const byte VK_BROWSER_SEARCH      = 0xAA;
+		public const byte VK_BROWSER_FAVORITES   = 0xAB;
+		public const byte VK_BROWSER_HOME        = 0xAC;
+		public const byte VK_VOLUME_MUTE         = 0xAD;
+		public const byte VK_VOLUME_DOWN         = 0xAE;
+		public const byte VK_VOLUME_UP           = 0xAF;
+		public const byte VK_MEDIA_NEXT_TRACK    = 0xB0;
+		public const byte VK_MEDIA_PREV_TRACK    = 0xB1;
+		public const byte VK_MEDIA_STOP          = 0xB2;
+		public const byte VK_MEDIA_PLAY_PAUSE    = 0xB3;
+		public const byte VK_LAUNCH_MAIL         = 0xB4;
+		public const byte VK_LAUNCH_MEDIA_SELECT = 0xB5;
+		public const byte VK_LAUNCH_APP1         = 0xB6;
+		public const byte VK_LAUNCH_APP2         = 0xB7;
+		public const byte VK_OEM_1               = 0xBA;   // ';:' for US
+		public const byte VK_OEM_PLUS            = 0xBB;   // '+' any country
+		public const byte VK_OEM_COMMA           = 0xBC;   // ',' any country
+		public const byte VK_OEM_MINUS           = 0xBD;   // '-' any country
+		public const byte VK_OEM_PERIOD          = 0xBE;   // '.' any country
+		public const byte VK_OEM_2               = 0xBF;   // '/?' for US
+		public const byte VK_OEM_3               = 0xC0;   // '`~' for US
+		public const byte VK_OEM_4               = 0xDB;  //  '[{' for US
+		public const byte VK_OEM_5               = 0xDC;  //  '\|' for US
+		public const byte VK_OEM_6               = 0xDD;  //  ']}' for US
+		public const byte VK_OEM_7               = 0xDE;  //  ''"' for US
+		public const byte VK_OEM_8               = 0xDF;
+		public const byte VK_OEM_AX              = 0xE1;  //  'AX' key on Japanese AX kbd
+		public const byte VK_OEM_102             = 0xE2;  //  "<>" or "\|" on RT 102-key kbd.
+		public const byte VK_ICO_HELP            = 0xE3;  //  Help key on ICO
+		public const byte VK_ICO_00              = 0xE4;  //  00 key on ICO
+		public const byte VK_PROCESSKEY          = 0xE5;
+		public const byte VK_ICO_CLEAR           = 0xE6;
+		public const byte VK_PACKET              = 0xE7;
+		public const byte VK_OEM_RESET           = 0xE9;
+		public const byte VK_OEM_JUMP            = 0xEA;
+		public const byte VK_OEM_PA1             = 0xEB;
+		public const byte VK_OEM_PA2             = 0xEC;
+		public const byte VK_OEM_PA3             = 0xED;
+		public const byte VK_OEM_WSCTRL          = 0xEE;
+		public const byte VK_OEM_CUSEL           = 0xEF;
+		public const byte VK_OEM_ATTN            = 0xF0;
+		public const byte VK_OEM_FINISH          = 0xF1;
+		public const byte VK_OEM_COPY            = 0xF2;
+		public const byte VK_OEM_AUTO            = 0xF3;
+		public const byte VK_OEM_ENLW            = 0xF4;
+		public const byte VK_OEM_BACKTAB         = 0xF5;
+		public const byte VK_ATTN                = 0xF6;
+		public const byte VK_CRSEL               = 0xF7;
+		public const byte VK_EXSEL               = 0xF8;
+		public const byte VK_EREOF               = 0xF9;
+		public const byte VK_PLAY                = 0xFA;
+		public const byte VK_ZOOM                = 0xFB;
+		public const byte VK_NONAME              = 0xFC;
+		public const byte VK_PA1                 = 0xFD;
+		public const byte VK_OEM_CLEAR           = 0xFE;
 		#endregion
 
 		#region GWL_
@@ -724,6 +884,18 @@ namespace pr.util
 			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
 		}
 
+		/// <summary>Returns the upper 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
+		public static uint GetHiword(int dword)
+		{
+			return ((uint)dword >> 16 & 0xFFFF);
+		}
+
+		/// <summary>Returns the lower 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
+		public static uint GetLoword(int dword)
+		{
+			return ((uint)dword & 0xFFFF);
+		}
+
 		/// <summary>Test the async state of a key</summary>
 		public static bool KeyDown(Keys vkey)
 		{
@@ -804,6 +976,7 @@ namespace pr.util
 		[DllImport("user32.dll")]                                                    public static extern short  GetAsyncKeyState(Keys vKey);
 		[DllImport("user32.dll")]                                                    public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
 		[DllImport("user32.dll")]                                                    public static extern int    GetDoubleClickTime();
+		[DllImport("user32.dll")]                                                    public static extern HWND   GetFocus();
 		[DllImport("user32.dll")]                                                    public static extern HWND   GetForegroundWindow();
 		[DllImport("user32.dll")]                                                    public static extern int    GetKeyboardState(byte[] pbKeyState);
 		[DllImport("user32.dll")]                                                    public static extern short  GetKeyState(int vKey);
@@ -824,6 +997,7 @@ namespace pr.util
 		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool   PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		[DllImport("user32.dll", EntryPoint="PostThreadMessage")]                    public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
 		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll")]                                                    public static extern HWND   SetFocus(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern bool   SetForegroundWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);

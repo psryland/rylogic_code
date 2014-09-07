@@ -344,7 +344,7 @@ namespace pr.gui
 
 		/// <summary>
 		/// Writes 'text' into the control at the current position.
-		/// Parses the input for vt100 control sequences.</summary>
+		/// Parses the text for vt100 control sequences.</summary>
 		public void Output(string text)
 		{
 			if (!IsHandleCreated) return;
@@ -375,10 +375,9 @@ namespace pr.gui
 		/// <summary>Output the string 'text' as hex</summary>
 		private void OutputHex(string text)
 		{
-			UTF8Encoding enc = new UTF8Encoding();
-			byte[] buf = enc.GetBytes(text);
-			StringBuilder hex = new StringBuilder(3 * 16 + 2);
-			StringBuilder str = new StringBuilder(16 + 2);
+			byte[] buf = Encoding.UTF8.GetBytes(text);
+			var hex = new StringBuilder(3 * 16 + 2);
+			var str = new StringBuilder(16 + 2);
 			int i = 0;
 			foreach (byte b in buf)
 			{

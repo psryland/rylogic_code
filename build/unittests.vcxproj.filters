@@ -867,6 +867,9 @@
     <ClInclude Include="..\include\pr\common\windows_com.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\gui\vt100.h">
+      <Filter>pr\gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />
