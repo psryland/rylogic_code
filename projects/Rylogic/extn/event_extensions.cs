@@ -104,18 +104,32 @@ namespace pr.extn
 			return args;
 		}
 
-		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope<TEventArgs>(this EventHandler<TEventArgs> evt) where TEventArgs :EventArgs
+		/// <summary>
+		/// Returns an RAII object for suspending events.
+		/// The event will be raised if 'raise_on_resume' is true and it was signalled while suspended</summary>
+		public static Scope SuspendScope<TEventArgs>(this EventHandler<TEventArgs> evt, bool raise_if_signalled = false, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(() => Suspend(evt, true), () => Suspend(evt, false));
+			return Scope.Create(
+				() => Suspend(evt, true),
+				() =>
+				{
+					if (Suspend(evt, false) && raise_if_signalled)
+						evt.Raise(sender, args);
+				});
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this EventHandler evt)
+		public static Scope SuspendScope(this EventHandler evt, bool raise_if_signalled = false, object sender = null, EventArgs args = null)
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(() => Suspend(evt, true), () => Suspend(evt, false));
+			return Scope.Create(
+				() => Suspend(evt, true),
+				() =>
+				{
+					if (Suspend(evt, false) && raise_if_signalled)
+						evt.Raise(sender, args);
+				});
 		}
 
 		/// <summary>
@@ -163,10 +177,16 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns an RAII object for suspending events</summary>
-		public static Scope SuspendScope(this Action evt)
+		public static Scope SuspendScope(this Action evt, bool raise_if_signalled = false)
 		{
 			if (evt == null) return Scope.Create(null,null);
-			return Scope.Create(() => evt.Suspend(true), () => evt.Suspend(false));
+			return Scope.Create(
+				() => evt.Suspend(true),
+				() =>
+				{
+					if (evt.Suspend(false) && raise_if_signalled)
+						evt.Raise();
+				});
 		}
 
 		/// <summary>
@@ -184,14 +204,6 @@ namespace pr.extn
 		{
 			return evt != null && Impl<Action>.IsSuspended(evt);
 		}
-
-		///// <summary>Resume firing this event when Raise() is called.
-		///// if the event was signalled while suspended and 'raise_if_signalled' is true, will call Raise()</summary>
-		//public static void Resume(this Action evt, bool raise_if_signalled)
-		//{
-		//	if (evt == null) return;
-		//	if (ResumeImpl(evt) && raise_if_signalled) evt();
-		//}
 
 		#endregion
 

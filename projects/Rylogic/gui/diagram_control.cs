@@ -2517,6 +2517,7 @@ namespace pr.gui
 
 			/// <summary>The owning diagram</summary>
 			protected DiagramControl m_diag;
+			protected Scope m_suspend_scope;
 
 			// Selection data for a mouse button
 			public bool  m_btn_down;   // True while the corresponding mouse button is down
@@ -2530,7 +2531,10 @@ namespace pr.gui
 				StartOnMouseDown = true;
 				Cancelled = false;
 			}
-			public virtual void Dispose() {}
+			public virtual void Dispose()
+			{
+				Util.Dispose(ref m_suspend_scope);
+			}
 
 			/// <summary>True if mouse down starts the op, false if the op should start as soon as possible</summary>
 			public bool StartOnMouseDown { get; set; }
@@ -2579,7 +2583,7 @@ namespace pr.gui
 					elem.DragStartPosition = elem.Position;
 
 				// Prevent events while dragging the elements around
-				m_diag.RaiseEvents = false;
+				m_suspend_scope = m_diag.SuspendEvents(true);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -2614,7 +2618,7 @@ namespace pr.gui
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
-				m_diag.RaiseEvents = true;
+				Util.Dispose(ref m_suspend_scope);
 
 				// If this is a single click...
 				if (IsClick(e.Location))
@@ -3667,19 +3671,10 @@ namespace pr.gui
 		/// <summary>Event allowing callers to add options to the context menu</summary>
 		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
 
-		/// <summary>Get/Set whether DiagramChanged events are raised</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool RaiseEvents
+		/// <summary>Creates an RAII scope for suspending DiagramChanged events</summary>
+		public Scope SuspendEvents(bool raise_on_resume)
 		{
-			get { return !DiagramChanged.IsSuspended(); }
-			set { DiagramChanged.Suspend(!value); }
-		}
-		public Scope SuspendEvents()
-		{
-			return Scope.Create(
-				() => RaiseEvents = false,
-				() => RaiseEvents = true);
+			return DiagramChanged.SuspendScope(raise_on_resume, this, new DiagramChangedEventArgs(EDiagramChangeType.Edited));
 		}
 
 		/// <summary>Remove all data from the diagram</summary>
@@ -4678,7 +4673,7 @@ namespace pr.gui
 			using (Scope.Create(
 				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = (elem, type, ctor) => new AnchorPoint(map, elem),
 				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = null))
-			using (SuspendEvents())
+			using (SuspendEvents(false))
 			{
 				foreach (var n in node.Elements())
 				{
@@ -5089,7 +5084,7 @@ namespace pr.gui
 			try
 			{
 				// Allow inconsistency while events are suspended
-				if (RaiseEvents)
+				if (!DiagramChanged.IsSuspended())
 					CheckConsistencyInternal();
 				
 				return true;
