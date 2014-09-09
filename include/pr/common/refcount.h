@@ -105,3 +105,10 @@ namespace pr
 		return count;
 	}
 }
+namespace std
+{
+	template <typename T> void swap(pr::RefCount<T>& lhs, pr::RefCount<T>& rhs)
+	{
+		swap(lhs.m_ref_count, rhs.m_ref_count);
+	}
+}
