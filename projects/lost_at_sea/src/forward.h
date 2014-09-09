@@ -31,6 +31,7 @@
 #include <atlcrack.h>
 
 #include <d3d11.h>
+#include <mmreg.h>
 #include <dsound.h>
 #include <sstream>
 #include <knownfolders.h>

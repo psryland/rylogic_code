@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
 # Use:
-#  BuildAllConfigs $(TargetName)
+#  BuildAllConfigs $(SolutionDirectory)$(SolutionFileName) $(TargetName)
 
 import sys, os, shutil, re
 import Rylogic as Tools
@@ -16,10 +16,10 @@ try:
 
 	Tools.CheckVersion(1)
 
-	sln = UserVars.root + "\\build\\Rylogic.sln"
+	sln  = sys.argv[1] if len(sys.argv) > 1 else input("solution? ")
+	proj = sys.argv[2] if len(sys.argv) > 2 else input("project? ")
 
 	# e.g: "\"folder\proj_name:Rebuild\""
-	proj = sys.argv[1] if len(sys.argv) > 1 else input("project? ")
 	projects = [proj]
 
 	platforms = [
