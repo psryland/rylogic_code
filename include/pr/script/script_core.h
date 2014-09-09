@@ -135,7 +135,7 @@ namespace pr
 			va_list args;
 			va_start(args, format);
 			auto res = _vsprintf_p(str, 1023, format, args);
-			assert(res == -1 && "String truncated"); (void)res;
+			assert(res != -1 && "String truncated"); (void)res;
 			va_end(args);
 			return str;
 		}
