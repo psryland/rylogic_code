@@ -511,6 +511,35 @@ namespace pr
 			return true;
 		}
 
+		// Compare the contents of two files and return true if they are the same.
+		// Returns true if both files doesn't exist, or false if only one file exists.
+		template <typename String> inline bool EqualContents(String const& lhs, String const& rhs)
+		{
+			auto e0 = FileExists(lhs);
+			auto e1 = FileExists(rhs);
+			if (e0 != e1) return false;
+			if (!e0) return true;
+
+			std::ifstream f0(lhs.c_str(), std::ios::binary);
+			std::ifstream f1(rhs.c_str(), std::ios::binary);
+
+			auto s0 = f0.seekg(0, std::ifstream::end).tellg();
+			auto s1 = f1.seekg(0, std::ifstream::end).tellg();
+			if (s0 != s1) return false;
+
+			enum { BlockSize = 4096 };
+			char buf0[BlockSize];
+			char buf1[BlockSize];
+			for (;f0 && f1;)
+			{
+				auto r0 = static_cast<size_t>(f0.read(buf0, sizeof(buf0)).gcount());
+				auto r1 = static_cast<size_t>(f1.read(buf1, sizeof(buf1)).gcount());
+				if (r0 != r1) return false;
+				if (memcmp(buf0, buf1, r1) != 0) return false;
+			}
+			return f0.eof() == f1.eof(); // both files reached eof at the same time
+		}
+
 		// Move 'src' to 'dst' replacing 'dst' if it already exists
 		template <typename String> inline bool RepFile(String const& src, String const& dst)
 		{

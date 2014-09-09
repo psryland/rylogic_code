@@ -73,13 +73,13 @@ namespace pr
 			void clear()                   { m_ui = 0; m_len = 0; }
 			char* begin()                  { return m_ch; }
 			char* end()                    { return m_ch + m_len; }
-			void shift(char ch)            { PR_ASSERT(PR_DBG, m_len > 0, ""); m_ui >>= 8; m_ch[m_len-1] = ch; }
-			char front() const             { PR_ASSERT(PR_DBG, m_len > 0, ""); return m_ch[0]; }
-			char back() const              { PR_ASSERT(PR_DBG, m_len > 0, ""); return m_ch[m_len-1]; }
-			void push_back(char ch)        { PR_ASSERT(PR_DBG, m_len < 8, ""); m_ch[m_len++] = ch; }
-			void pop_front()               { PR_ASSERT(PR_DBG, m_len > 0, ""); m_ui >>= 8; --m_len; }
-			char  operator [](int i) const { PR_ASSERT(PR_DBG, i < m_len, ""); return m_ch[i]; }
-			char& operator [](int i)       { PR_ASSERT(PR_DBG, i < m_len, ""); return m_ch[i]; }
+			void shift(char ch)            { assert(m_len > 0); m_ui >>= 8; m_ch[m_len-1] = ch; }
+			char front() const             { assert(m_len > 0); return m_ch[0]; }
+			char back() const              { assert(m_len > 0); return m_ch[m_len-1]; }
+			void push_back(char ch)        { assert(m_len < 8); m_ch[m_len++] = ch; }
+			void pop_front()               { assert(m_len > 0); m_ui >>= 8; --m_len; }
+			char  operator [](int i) const { assert(i < m_len); return m_ch[i]; }
+			char& operator [](int i)       { assert(i < m_len); return m_ch[i]; }
 
 			// This returns true if 'buf' _contains_ 'this'. i.e. buf1.match(buf2) != buf2.match(buf1) generally
 			//bool match(Buf8 const& buf) const { return m_ui != 0 && (m_ui & buf.m_ui) == m_ui; }
@@ -134,7 +134,8 @@ namespace pr
 			char str[1024] = {};
 			va_list args;
 			va_start(args, format);
-			if (_vsprintf_p(str, 1023, format, args) == -1) { PR_ASSERT(PR_DBG, false, "String truncated"); }
+			auto res = _vsprintf_p(str, 1023, format, args);
+			assert(res == -1 && "String truncated"); (void)res;
 			va_end(args);
 			return str;
 		}
