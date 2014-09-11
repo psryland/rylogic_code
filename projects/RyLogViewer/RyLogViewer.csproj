@@ -65,7 +65,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="nunit.framework">
-      <HintPath>..\..\build\packages\NUnit.2.6.3\lib\nunit.framework.dll</HintPath>
+      <HintPath>..\..\sdk\nunit\nunit.framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="System" />
@@ -457,7 +457,6 @@
     <Content Include="examples\example_highlights_pattern_set.rylog_highlights">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <None Include="packages.config" />
     <Content Include="plugins\plugins.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

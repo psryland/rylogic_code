@@ -8,7 +8,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B66290
 		.nuget\NuGet.Config = .nuget\NuGet.Config
 		.nuget\NuGet.exe = .nuget\NuGet.exe
 		.nuget\NuGet.targets = .nuget\NuGet.targets
-		.nuget\packages.config = .nuget\packages.config
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
