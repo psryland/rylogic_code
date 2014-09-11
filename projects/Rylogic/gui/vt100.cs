@@ -112,10 +112,10 @@ namespace pr.gui
 				set { set(bits.conceal, value); }
 			}
 
-			public Style()
+			/// <summary>Debug style</summary>
+			public static Style Default
 			{
-				m_col = 0x8F;
-				m_sty = 0x00;
+				get { return new Style{m_col = 0x8F, m_sty = 0x00}; }
 			}
 		}
 
@@ -179,10 +179,9 @@ namespace pr.gui
 		{
 			public Point pos;
 			public Style style;
-			public State()
+			public static State Default
 			{
-				pos = Point.Empty;
-				style = new Style();
+				get { return new State{pos = Point.Empty, style = Style.Default}; }
 			}
 		}
 
@@ -300,7 +299,7 @@ namespace pr.gui
 		public readonly StringBuilder m_seq;
 
 		/// <summary>The state of the terminal</summary>
-		private readonly State m_state = new State();
+		private readonly State m_state;
 
 		public VT100_buf()
 		{
@@ -308,8 +307,8 @@ namespace pr.gui
 			ReadOnly = false;
 			m_lines  = new List<Line>();
 			m_input  = new StringBuilder(8192);
-			m_out    = new State();
-			m_state  = new State();
+			m_out    = State.Default;
+			m_state  = State.Default;
 			m_seq    = new StringBuilder();
 		}
 
@@ -739,7 +738,7 @@ namespace pr.gui
 						case 0:
 							// Esc[m Turn off character attributes SGR0
 							// Esc[0m Turn off character attributes SGR0
-							m_out.style = new Style();
+							m_out.style = Style.Default;
 							break;
 						case 1:
 							// Esc[1m Turn bold mode on SGR1
