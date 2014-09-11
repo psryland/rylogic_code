@@ -27,7 +27,6 @@ platform_toolset  = "v120"
 
 # The full path to the windows sdk
 winsdk = r"C:\Program Files (x86)\Windows Kits\8.1"
-fxc = winsdk + r"\bin\x86\fxc.exe"
 
 # The full path to the Visual Studio install
 vs_dir = r"C:\Program Files (x86)\Microsoft Visual Studio 12.0"

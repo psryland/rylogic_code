@@ -21,7 +21,9 @@ import UserVars
 
 try:
 	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.fxc, UserVars.textedit])
+	Tools.AssertPathsExist([UserVars.root, UserVars.winsdk, UserVars.textedit])
+
+	fxc = UserVars.winsdk + r"\bin\x86\fxc.exe"
 
 	trace = False
 	if trace:
@@ -111,7 +113,7 @@ try:
 			if not pp:
 				# Build the shader using fxc
 				if trace: print("Running fxc.exe...")
-				success,output = Tools.Run([UserVars.fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
+				success,output = Tools.Run([fxc, fullpath, profile] + varname + output + includes + defines + options, show_arguments=trace)
 				if not success:
 					print("Compiling: " + fullpath)
 					print(output)
