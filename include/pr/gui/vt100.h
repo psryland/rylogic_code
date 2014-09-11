@@ -422,24 +422,25 @@ namespace pr
 			case '>': //Esc> Set numeric keypad mode DECKPNM
 				break;
 
-			//Escc	Reset terminal to initial state	RIS
-
-			//EscN	Set single shift 2	SS2
-			//EscO	Set single shift 3	SS3
-
 			case 'A': //EscA Move cursor up one line cursorup
 				m_out.pos = MoveCaret(m_out.pos, 0,-1);
 				break;
+
 			case 'B': //EscB Move cursor down one line cursordn
 				m_out.pos = MoveCaret(m_out.pos, 0,+1);
 				break;
+
 			case 'C': //EscC Move cursor right one char cursorrt
 				m_out.pos = MoveCaret(m_out.pos, +1,0);
 				break;
+
 			case 'D': //EscD Move cursor left one char cursorlf
 				m_out.pos = MoveCaret(m_out.pos, -1,0);
 				break;
 
+			//Escc	Reset terminal to initial state	RIS
+			//EscN	Set single shift 2	SS2
+			//EscO	Set single shift 3	SS3
 			//EscD	Move/scroll window up one line	IND
 			//EscM	Move/scroll window down one line	RI
 			//EscE	Move to next line	NEL
@@ -447,6 +448,7 @@ namespace pr
 			case '7': //Esc7 Save cursor position and attributes DECSC
 				m_saved = m_out;
 				break;
+
 			case '8': //Esc8 Restore cursor position and attributes DECSC
 				m_out = m_saved;
 				break;
@@ -494,6 +496,7 @@ namespace pr
 					m_out.pos = MoveCaret(m_out.pos, 0, -std::max(n[0], 1));
 				}
 				break;
+
 			case 'B': // Esc[ValueB Move cursor down n lines CUD
 				{
 					int n[1];
@@ -501,6 +504,7 @@ namespace pr
 					m_out.pos = MoveCaret(m_out.pos, 0, +std::max(n[0], 1));
 				}
 				break;
+
 			case 'C': // Esc[ValueC Move cursor right n lines CUF
 				{
 					int n[1];
@@ -508,6 +512,7 @@ namespace pr
 					m_out.pos = MoveCaret(m_out.pos, +std::max(n[0], 1), 0);
 				}
 				break;
+
 			case 'D': // Esc[ValueD Move cursor left n lines CUB
 				{
 					int n[1];
@@ -515,6 +520,7 @@ namespace pr
 					m_out.pos = MoveCaret(m_out.pos, -std::max(n[0], 1), 0);
 				}
 				break;
+
 			case 'f':
 				//Esc[f             Move cursor to upper left corner hvhome
 				//Esc[;f            Move cursor to upper left corner hvhome
@@ -525,11 +531,13 @@ namespace pr
 					m_out.pos = MoveCaret(n[1], n[0]);
 				}
 				break;
+
 			case 'g':
 				//Esc[g  Clear a tab at the current column TBC
 				//Esc[0g Clear a tab at the current column TBC
 				//Esc[3g Clear all tabs TBC
 				break;
+
 			case 'H':
 				//Esc[H            Move cursor to upper left corner cursorhome
 				//Esc[;H           Move cursor to upper left corner cursorhome
@@ -540,6 +548,7 @@ namespace pr
 					m_out.pos = MoveCaret(n[1], n[0]);
 				}
 				break;
+
 			case 'h':
 				{
 					int n[1];
@@ -562,6 +571,7 @@ namespace pr
 					}
 				}
 				break;
+
 			case 'J':
 				{
 					int n[1];
@@ -593,6 +603,7 @@ namespace pr
 					}
 				}
 				break;
+
 			case 'K':
 				{
 					int n[1];
@@ -624,6 +635,7 @@ namespace pr
 					}
 				}
 				break;
+
 			case 'l':
 				{
 					int n[1];
@@ -647,6 +659,7 @@ namespace pr
 					}
 				}
 				break;
+
 			case 'm': // Esc[value;..;valuem 
 				{
 					int modes[5];
@@ -862,8 +875,10 @@ namespace pr
 			return MoveCaret(loc.X + dx, loc.Y + dy);
 		}
 
-		// Write 'str' into the screen buffer. Writes no more than 'max_count' characters
-		// Stops at the null terminator of 'str'. 'str' should not contain any non-printable
+		// Write 'str' into the screen buffer at 'm_out.pos'.
+		// Writes no more than 'max_count' characters.
+		// Stops at the null terminator of 'str'.
+		// 'str' should not contain any non-printable
 		// characters (including \n,\r). These are removed by ParseOutput
 		void Write(char const* str, size_t count)
 		{
