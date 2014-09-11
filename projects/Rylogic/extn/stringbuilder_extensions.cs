@@ -11,6 +11,18 @@ namespace pr.extn
 {
 	public static class StringBuilderExtensions
 	{
+		/// <summary>Return the list element in the list</summary>
+		public static char Back(this StringBuilder sb)
+		{
+			return sb[sb.Length - 1];
+		}
+
+		/// <summary>Return a substring starting at 'ofs'</summary>
+		public static string ToString(this StringBuilder sb, int ofs)
+		{
+			return sb.ToString(ofs, sb.Length - ofs);
+		}
+
 		/// <summary>Append a bunch of stuff</summary>
 		public static StringBuilder Append(this StringBuilder sb, params object[] parts)
 		{
