@@ -12,7 +12,8 @@ try:
 		"    Copyright (C) Rylogic Limited 2013\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.msbuild])
 
 	dstdir = UserVars.root + "\\bin"
 	srcdir = UserVars.root + "\\projects\\Csex"

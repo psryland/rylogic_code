@@ -12,8 +12,10 @@ try:
 		"Copyright Rylogic Limited 2013\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.csex, UserVars.msbuild, UserVars.ziptool, UserVars.devenv])
 
+	wwwroot = r"Z:\www\rylogic.co.nz"
 	installer_name = "RyLogViewerSetup.exe"
 	srcdir = UserVars.root + "\\projects\\rylogviewer"
 	dstdir = UserVars.root + "\\bin"
@@ -90,7 +92,7 @@ try:
 	if os.path.exists(installer):
 		print("Copying RylogViewerSetup.exe to www...")
 		Tools.Copy(installer, dstdir + "\\" + RyLogViewerSetup.exe)
-		Tools.Copy(installer, UserVars.wwwroot + "\\data\\" + installer_name)
+		Tools.Copy(installer, wwwroot + "\\data\\" + installer_name)
 	else:
 		print("No installer produced")
 

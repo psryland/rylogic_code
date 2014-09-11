@@ -69,6 +69,7 @@
     <Compile Include="priv\footer.php" />
     <Compile Include="priv\licence_info.php" />
     <Compile Include="priv\src.order_cancelled.php" />
+    <Compile Include="priv\src.resend_lic.php" />
     <Compile Include="priv\user_info.php" />
     <Compile Include="priv\product_info.php" />
     <Compile Include="priv\header.php" />
@@ -115,6 +116,7 @@
     <Compile Include="pub\order_cancelled.php" />
     <Compile Include="pub\order_create.php" />
     <Compile Include="pub\order_complete.php" />
+    <Compile Include="pub\resend_lic.php" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="phpmailer\" />

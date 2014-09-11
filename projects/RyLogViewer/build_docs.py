@@ -22,7 +22,8 @@ try:
 		"   Copyright (c) Rylogic Limited 2012\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	proj    = UserVars.root + r"\projects\RyLogViewer"
 	docsdir = proj + r"\docs"

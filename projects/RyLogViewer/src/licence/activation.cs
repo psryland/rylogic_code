@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
@@ -10,51 +11,97 @@ namespace RyLogViewer
 	{
 		private readonly Licence m_licence;
 		private readonly ToolTip m_tt;
+		private readonly Timer m_timer;
 		private TextBox m_edit_name;
 		private TextBox m_edit_email;
 		private TextBox m_edit_company;
+		private TextBox m_edit_activation_code;
 		private Button m_btn_ok;
 		private Button m_btn_cancel;
-		private Button m_btn_browse;
 		private Label m_lbl_company;
 		private Label m_lbl_name;
 		private Label m_lbl_email;
+		private Label m_lbl_activation_code;
+		private LinkLabel m_lbl_forgotten;
 		private Label m_lbl_valid;
 
 		public Activation(Licence licence)
 		{
 			InitializeComponent();
 			m_licence = licence;
-			m_btn_browse.Click += BrowseForLicenceFile;
+			m_tt = new ToolTip();
+
+			// Initialise fields from the licence
+			m_edit_name.ToolTip(m_tt, "The name of the license holder as given in the license information email");
+			m_edit_name.Text = m_licence.LicenceHolder;
+			m_edit_name.Validated += UpdateUI;
+
+			m_edit_email.ToolTip(m_tt, "The email address associated with the license as given in the license information email");
+			m_edit_email.Text = m_licence.EmailAddress;
+			m_edit_email.Validated += UpdateUI;
+
+			m_edit_company.ToolTip(m_tt, "The company name associated with the license");
+			m_edit_company.Text = m_licence.Company;
+			m_edit_company.Validated += UpdateUI;
+
+			m_edit_activation_code.ToolTip(m_tt, "Copy and paste the activation code given in your licence information email here");
+			m_edit_activation_code.Text = m_licence.ActivationCode;
+			m_edit_activation_code.Validated += UpdateUI;
+
+			m_lbl_forgotten.LinkClicked += HandleLostLink;
+
+			// Start a timer to scan the clipboard for valid licence info
+			m_timer = new Timer{Interval = 500, Enabled = true};
+			m_timer.Tick += ScanClipboard;
+
+			UpdateUI();
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
+
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			ScanClipboard();
+		}
+
+		/// <summary>Try to extract the license info from text data on the clipboard</summary>
+		private void ScanClipboard(object sender = null, EventArgs args = null)
+		{
+			// Don't do anything if the license is valid
+			if (m_licence.Valid)
+				return;
+
+			var lic = new Licence();
+			var text    = Clipboard.GetText(TextDataFormat.Text);
+			lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
+			lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
+			lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
+			lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
+			if (lic.Valid)
+			{
+				m_edit_name.Text            = lic.LicenceHolder  ;
+				m_edit_email.Text           = lic.EmailAddress   ;
+				m_edit_company.Text         = lic.Company        ;
+				m_edit_activation_code.Text = lic.ActivationCode ;
+			}
 
 			UpdateUI();
 		}
 
-		/// <summary>Find the licence file, and load data from it</summary>
-		private void BrowseForLicenceFile(object sender = null, EventArgs args = null)
+		/// <summary>Navigate the 'request my license info again' page</summary>
+		private void HandleLostLink(object sender, LinkLabelLinkClickedEventArgs e)
 		{
-			var fd = new OpenFileDialog{Title = "Select your Licence File", Filter = Util.FileDialogFilter("Licence Files","*.xml"), CheckFileExists = true};
-			if (fd.ShowDialog(this) != DialogResult.OK)
-				return;
 
-			// Rather than copying the file to the app directory, we load data from it,
-			// and if the licence is valid, it will be written out to a new licence file
-			var lic = new Licence(fd.FileName);
-			m_licence.LicenceHolder  = lic.LicenceHolder;
-			m_licence.EmailAddress   = lic.EmailAddress;
-			m_licence.Company        = lic.Company;
-			m_licence.ActivationCode = lic.ActivationCode;
-			UpdateUI();
 		}
 
 		/// <summary>Update the UI</summary>
-		private void UpdateUI()
+		private void UpdateUI(object sender = null, EventArgs args = null)
 		{
-			m_edit_name.Text    = m_licence.LicenceHolder;
-			m_edit_email.Text   = m_licence.EmailAddress;
-			m_edit_company.Text = m_licence.Company;
-
-			if (m_licence.ActivationCode.Length == 0)
+			if (m_edit_activation_code.Text.Length == 0)
 			{
 				m_lbl_valid.Text      = "Free Licence";
 				m_lbl_valid.BackColor = Color.LightGreen;
@@ -62,6 +109,11 @@ namespace RyLogViewer
 			}
 			else
 			{
+				m_licence.LicenceHolder  = m_edit_name.Text           ;
+				m_licence.EmailAddress   = m_edit_email.Text          ;
+				m_licence.Company        = m_edit_company.Text        ;
+				m_licence.ActivationCode = m_edit_activation_code.Text;
+
 				var valid = m_licence.Valid;
 				m_lbl_valid.Text      = valid ? "Valid Licence" : "Invalid Licence";
 				m_lbl_valid.BackColor = valid ? Color.LightGreen : Color.LightSalmon;
@@ -73,19 +125,6 @@ namespace RyLogViewer
 
 		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Clean up any resources being used.
-		/// </summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
 
 		/// <summary>
 		/// Required method for Designer support - do not modify
@@ -103,14 +142,16 @@ namespace RyLogViewer
 			this.m_lbl_valid = new System.Windows.Forms.Label();
 			this.m_lbl_email = new System.Windows.Forms.Label();
 			this.m_edit_email = new System.Windows.Forms.TextBox();
-			this.m_btn_browse = new System.Windows.Forms.Button();
+			this.m_edit_activation_code = new System.Windows.Forms.TextBox();
+			this.m_lbl_activation_code = new System.Windows.Forms.Label();
+			this.m_lbl_forgotten = new System.Windows.Forms.LinkLabel();
 			this.SuspendLayout();
 			// 
 			// m_btn_ok
 			// 
 			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(166, 201);
+			this.m_btn_ok.Location = new System.Drawing.Point(166, 267);
 			this.m_btn_ok.Name = "m_btn_ok";
 			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_ok.TabIndex = 5;
@@ -121,7 +162,7 @@ namespace RyLogViewer
 			// 
 			this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-			this.m_btn_cancel.Location = new System.Drawing.Point(248, 201);
+			this.m_btn_cancel.Location = new System.Drawing.Point(248, 267);
 			this.m_btn_cancel.Name = "m_btn_cancel";
 			this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
 			this.m_btn_cancel.TabIndex = 6;
@@ -134,7 +175,6 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_company.Location = new System.Drawing.Point(13, 120);
 			this.m_edit_company.Name = "m_edit_company";
-			this.m_edit_company.ReadOnly = true;
 			this.m_edit_company.Size = new System.Drawing.Size(310, 20);
 			this.m_edit_company.TabIndex = 2;
 			// 
@@ -153,7 +193,6 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_name.Location = new System.Drawing.Point(13, 28);
 			this.m_edit_name.Name = "m_edit_name";
-			this.m_edit_name.ReadOnly = true;
 			this.m_edit_name.Size = new System.Drawing.Size(310, 20);
 			this.m_edit_name.TabIndex = 0;
 			// 
@@ -170,7 +209,7 @@ namespace RyLogViewer
 			// 
 			this.m_lbl_valid.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_valid.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_lbl_valid.Location = new System.Drawing.Point(12, 201);
+			this.m_lbl_valid.Location = new System.Drawing.Point(12, 267);
 			this.m_lbl_valid.Margin = new System.Windows.Forms.Padding(20);
 			this.m_lbl_valid.Name = "m_lbl_valid";
 			this.m_lbl_valid.Size = new System.Drawing.Size(100, 23);
@@ -193,19 +232,39 @@ namespace RyLogViewer
             | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_edit_email.Location = new System.Drawing.Point(13, 72);
 			this.m_edit_email.Name = "m_edit_email";
-			this.m_edit_email.ReadOnly = true;
 			this.m_edit_email.Size = new System.Drawing.Size(310, 20);
 			this.m_edit_email.TabIndex = 1;
 			// 
-			// m_btn_browse
+			// m_edit_activation_code
 			// 
-			this.m_btn_browse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_browse.Location = new System.Drawing.Point(63, 153);
-			this.m_btn_browse.Name = "m_btn_browse";
-			this.m_btn_browse.Size = new System.Drawing.Size(211, 37);
-			this.m_btn_browse.TabIndex = 18;
-			this.m_btn_browse.Text = "Select Licence File";
-			this.m_btn_browse.UseVisualStyleBackColor = true;
+			this.m_edit_activation_code.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_edit_activation_code.Location = new System.Drawing.Point(13, 162);
+			this.m_edit_activation_code.Multiline = true;
+			this.m_edit_activation_code.Name = "m_edit_activation_code";
+			this.m_edit_activation_code.Size = new System.Drawing.Size(310, 82);
+			this.m_edit_activation_code.TabIndex = 18;
+			this.m_edit_activation_code.Text = "<paste your licence information here>";
+			// 
+			// m_lbl_activation_code
+			// 
+			this.m_lbl_activation_code.AutoSize = true;
+			this.m_lbl_activation_code.Location = new System.Drawing.Point(9, 146);
+			this.m_lbl_activation_code.Name = "m_lbl_activation_code";
+			this.m_lbl_activation_code.Size = new System.Drawing.Size(85, 13);
+			this.m_lbl_activation_code.TabIndex = 19;
+			this.m_lbl_activation_code.Text = "Activation Code:";
+			// 
+			// m_lbl_forgotten
+			// 
+			this.m_lbl_forgotten.AutoSize = true;
+			this.m_lbl_forgotten.Location = new System.Drawing.Point(12, 247);
+			this.m_lbl_forgotten.Name = "m_lbl_forgotten";
+			this.m_lbl_forgotten.Size = new System.Drawing.Size(259, 13);
+			this.m_lbl_forgotten.TabIndex = 20;
+			this.m_lbl_forgotten.TabStop = true;
+			this.m_lbl_forgotten.Text = "Lost your license information? Request it again here...";
 			// 
 			// Activation
 			// 
@@ -213,8 +272,10 @@ namespace RyLogViewer
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.CancelButton = this.m_btn_cancel;
-			this.ClientSize = new System.Drawing.Size(337, 232);
-			this.Controls.Add(this.m_btn_browse);
+			this.ClientSize = new System.Drawing.Size(337, 298);
+			this.Controls.Add(this.m_lbl_forgotten);
+			this.Controls.Add(this.m_lbl_activation_code);
+			this.Controls.Add(this.m_edit_activation_code);
 			this.Controls.Add(this.m_edit_email);
 			this.Controls.Add(this.m_lbl_email);
 			this.Controls.Add(this.m_lbl_valid);
@@ -224,6 +285,7 @@ namespace RyLogViewer
 			this.Controls.Add(this.m_lbl_company);
 			this.Controls.Add(this.m_edit_name);
 			this.Controls.Add(this.m_lbl_name);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "Activation";
 			this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;

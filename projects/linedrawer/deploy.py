@@ -12,7 +12,8 @@ try:
 		"Copyright © Rylogic Limited 2014\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	# Use the everything sln so that dependent projects get built as well
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""

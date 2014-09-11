@@ -18,47 +18,26 @@ def OnException(ex,enter_to_close=True):
 	OnError("ERROR: " + str(ex),enter_to_close=enter_to_close)
 
 # Check that the UserVars file is the correct version
-def CheckVersion(check_version):
-	# Check variables version number
-	if check_version > UserVars.version:
-		raise ValueError("User variables are out of date, please update")
+def AssertVersion(version):
+	if version > UserVars.version:
+		raise ValueError("UserVars.version is incorrect. Check your UserVars.py file")
 
-	# Check machine name to detect UserVars copied from other machines
+# Validate the machine name is correct for the current machine
+def AssertMachineName(machine):
 	if UserVars.machine.lower() != socket.gethostname().lower():
-		raise ValueError("Machine name does not match UserVars.machine, Check your UserVars.py file")
+		raise ValueError("Machine name does not correct for this PC. Check your UserVars.py file")
 
-	def TestPath(path, missing):
-		if not path is None and not os.path.exists(path):
-			missing.append(path)
-
-	# Check for invalid UserVars paths
+# Validate an array of paths for existance.
+# Intended for use at the start of a script to validate UserVars.py
+def AssertPathsExist(paths):
 	missing = [];
-	TestPath(UserVars.dumpdir          , missing)
-	TestPath(UserVars.textedit         , missing)
-	TestPath(UserVars.ziptool          , missing)
-	TestPath(UserVars.mergetool        , missing)
-	TestPath(UserVars.msbuild          , missing)
-	TestPath(UserVars.winsdk           , missing)
-	TestPath(UserVars.vs_dir           , missing)
-	TestPath(UserVars.vc_env           , missing)
-	TestPath(UserVars.devenv           , missing)
-	TestPath(UserVars.silverlight_root , missing)
-	TestPath(UserVars.java_sdkdir      , missing)
-	TestPath(UserVars.android_sdkdir   , missing)
-	TestPath(UserVars.adb              , missing)
-	TestPath(UserVars.fxc              , missing)
-	TestPath(UserVars.dmdroot          , missing)
-	TestPath(UserVars.dmd              , missing)
-	TestPath(UserVars.rdmd             , missing)
-	TestPath(UserVars.csex             , missing)
-	TestPath(UserVars.wwwroot          , missing)
-	TestPath(UserVars.elevate          , missing)
-	TestPath(UserVars.ttbuild          , missing)
-	TestPath(UserVars.linqpad          , missing)
-	if missing != []:
-		print("UserVars.py - Missing Paths:")
-		for p in missing: print(p)
-		raise ValueError("UserVars.py contains invalid values")
+	for path in paths:
+		if not os.path.exists(path):
+			missing.append(path)
+	if (len(missing) != 0):
+		msg = "Missing paths detected. Check your UserVars.py file\n"
+		for p in missing: msg += p + "\n"
+		raise FileExistsError(msg)
 
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
@@ -275,6 +254,7 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 		print("Running script under Administrator account...")
 	
 	try:
+		AssertPathsExist([UserVars.elevate])
 		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"];
 		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
@@ -291,6 +271,7 @@ def TouchFile(fname, times=None):
 def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
 	projs = ";".join(projects)
 	procs = []
+	AssertPathsExist([UserVars.msbuild])
 	for platform in platforms:
 		for config in configs:
 			args = [UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"]
@@ -311,6 +292,7 @@ def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True)
 
 # Deploy a bin tool
 def DeployToBin(appname, files, platforms, config, CopyForArch=False):
+	AssertPathsExist([UserVars.root])
 	print("Deploying...")
 	for platform in platforms:
 		srcdir = UserVars.root + "\\obj\\v120\\" + appname + "\\" + platform + "\\" + config

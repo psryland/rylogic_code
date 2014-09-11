@@ -222,6 +222,7 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\vt100.cs" />
     <Compile Include="gui\colour_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -299,7 +300,7 @@
     <Compile Include="gui\view_video_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\vt100.cs">
+    <Compile Include="gui\vt100_ui.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\zoom_scroll.cs">

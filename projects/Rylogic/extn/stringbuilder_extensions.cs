@@ -18,6 +18,16 @@ namespace pr.extn
 			return sb;
 		}
 
+		/// <summary>Resize the string builder to 'newsize', padding with 'fill' as needed</summary>
+		public static StringBuilder Resize(this StringBuilder sb, int newsize, char fill = '\0')
+		{
+			if (sb.Length <= newsize)
+				sb.Length = newsize;
+			else
+				sb.Append(fill, newsize - sb.Length);
+			return sb;
+		}
+	
 		/// <summary>Trim chars from the end of the string builder</summary>
 		public static StringBuilder TrimEnd(this StringBuilder sb, params char[] chars)
 		{

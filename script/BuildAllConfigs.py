@@ -14,7 +14,7 @@ try:
 		"Copyright Rylogic Limited 2013\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
 
 	sln  = sys.argv[1] if len(sys.argv) > 1 else input("solution? ")
 	proj = sys.argv[2] if len(sys.argv) > 2 else input("project? ")

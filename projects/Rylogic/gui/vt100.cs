@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
@@ -11,330 +13,281 @@ using pr.maths;
 using pr.util;
 
 namespace pr.gui
+
 {
 	/// <summary>
-	/// VT terminal emulation control
+	/// VT terminal emulation screen buffer
 	/// see: http://ascii-table.com/ansi-escape-sequences.php
+	/// 
+	/// Render the buffer into a window by requesting a rectangular area from the buffer
+	/// The buffer is a virtual space of Settings.m_width/m_height area. The virtual space
+	/// becomes allocated space when characters are written or style set for the given character
+	/// position.
+	/// Line endings are not stored
 	/// Usage:
 	///   Add the control to a form.
 	///   Use the 'GetUserInput()' method to retrieve user input (since last called)
 	///   Send the user input to the remote device/system
 	///   Receive data from the remote device/system
 	///   Use 'Output()' to display the terminal output in the control</summary>
-	public class VT100 :RichTextBox ,ISupportInitialize
+	public class VT100_buf
 	{
+		public enum ENewLineMode { CR, LF, CR_LF, }
+
+		/// <summary>Per character style</summary>
+		private struct Style
+		{
+			public byte m_col; // Fore/back colour (highbright,blue,green,red)
+			public byte m_sty; // bold, underline, etc...
+		}
+
+		/// <summary>A row of characters making up the line</summary>
+		private class Line
+		{
+			public StringBuilder m_line;
+			public List<Style>   m_styl;
+
+			public Line()
+			{
+				m_line = new StringBuilder();
+				m_styl = new List<Style>();
+			}
+
+			/// <summary>Length of the line</summary>
+			public int size
+			{
+				get { return m_line.Length; }
+			}
+
+			/// <summary>Set the line size</summary>
+			public void resize(int newsize, char fill, Style style)
+			{
+				m_line.Resize(newsize, fill);
+				m_styl.Resize(newsize, () => style);
+			}
+
+			// Erase a range within the line
+			public void erase(int ofs, int count)
+			{
+				if (ofs >= size) return;
+				var len = Math.Min(count, size - ofs);
+				m_line.Remove(ofs, len);
+				m_styl.RemoveRange(ofs, len);
+			}
+			
+			/// <summary>Write into/over the line from 'ofs'</summary>
+			public void write(int ofs, string str, int count, Style style)
+			{
+				if (size <= ofs + count)
+				{
+					m_line.Resize(ofs + count);
+					m_styl.Resize(ofs + count);
+				}
+				m_line.Remove(ofs, count);
+ 				m_line.Insert(ofs, str, 1);
+				m_styl.RemoveRange(ofs, count);
+				m_styl.InsertRange(ofs, Enumerable.Repeat(style, count));
+			}
+		}
+
 		/// <summary>The state of the terminal</summary>
 		private class State
 		{
-			/// <summary>The output cursor location</summary>
-			public Point m_cursor_location = new Point(0,0);
-
-			/// <summary>The text attributes when last saved</summary>
-			public Font m_saved_font = new Font(FontFamily.GenericMonospace, 10);
-
-			/// <summary>The cursor position when last saved</summary>
-			public Point m_saved_cursor_location = new Point(0,0);
+			public Point pos;
+			public Style sty;
+			public State()
+			{
+				pos = Point.Empty;
+				sty = new Style();
+			}
 		}
 
-		/// <summary>Terminal settings</summary>
-		public VT100Settings m_settings = new VT100Settings();
+		/// <summary>Terminal behaviour setting</summary>
+		public class Settings
+		{
+			public Settings()
+			{
+				LocalEcho = true;
+				TabSize = 8;
+				TerminalWidth = 100;
+				NewlineRecv = ENewLineMode.LF;
+				NewlineSend = ENewLineMode.CR;
+			}
 
-		/// <summary>The current control sequence</summary>
-		public readonly StringBuilder m_seq = new StringBuilder();
+			/// <summary>Occurs when vt100 settings are changed</summary>
+			public event EventHandler SettingsChanged;
+
+			/// <summary>Helper for setting a property and raising the settings changed event</summary>
+			private void SetProp<T>(ref T prop, T value)
+			{
+				if (Equals(prop, value)) return;
+				prop = value;
+				SettingsChanged.Raise(this);
+			}
+
+			/// <summary>True if input characters should be echoed into the screen buffer</summary>
+			public bool LocalEcho
+			{
+				get { return m_local_echo; }
+				set { SetProp(ref m_local_echo, value); }
+			}
+			private bool m_local_echo;
+
+			/// <summary>Get/Set the width of the terminal in columns</summary>
+			public int TerminalWidth
+			{
+				get { return m_terminal_width; }
+				set { SetProp(ref m_terminal_width, Math.Max(value,1)); }
+			}
+			private int m_terminal_width;
+
+			/// <summary>Get/Set the height of the terminal in lines</summary>
+			public int TerminalHeight
+			{
+				get { return m_terminal_height; }
+				set { SetProp(ref m_terminal_height, Math.Max(value,1)); }
+			}
+			private int m_terminal_height;
+
+			/// <summary>Get/Set the tab size in characters</summary>
+			public int TabSize
+			{
+				get { return m_tab_size; }
+				set { SetProp(ref m_tab_size, Math.Max(value,1)); }
+			}
+			private int m_tab_size;
+
+			/// <summary>Get/Set the newline mode for received newlines</summary>
+			public ENewLineMode NewlineRecv
+			{
+				get { return m_newline_recv; }
+				set { SetProp(ref m_newline_recv, value); }
+			}
+			private ENewLineMode m_newline_recv;
+
+			/// <summary>Get/Set the newline mode for sent newlines</summary>
+			public ENewLineMode NewlineSend
+			{
+				get { return m_newline_send; }
+				set { SetProp(ref m_newline_send, value); }
+			}
+			private ENewLineMode m_newline_send;
+
+			public XElement ToXml(XElement node)
+			{
+				node.Add
+				(
+					LocalEcho     .ToXml("local_echo"    , false),
+					TabSize       .ToXml("tab_size"      , false),
+					TerminalWidth .ToXml("terminal_width", false),
+					NewlineRecv   .ToXml("newline_recv"  , false),
+					NewlineSend   .ToXml("newline_send"  , false)
+				);
+				return node;
+			}
+			public void FromXml(XElement node)
+			{
+				foreach (var n in node.Elements())
+				{
+					switch (n.Name.LocalName)
+					{
+					default: break;
+					case "local_echo":     LocalEcho     = n.As<bool>(); break;
+					case "tab_size":       TabSize       = n.As<int>(); break;
+					case "terminal_width": TerminalWidth = n.As<int>(); break;
+					case "newline_recv":   NewlineRecv   = n.As<ENewLineMode>(); break;
+					case "newline_send":   NewlineSend   = n.As<ENewLineMode>(); break;
+					}
+				}
+			}		
+		}
+
+		/// <summary>The terminal screen buffer</summary>
+		private List<Line> m_lines;
 
 		/// <summary>User input buffer</summary>
-		private readonly StringBuilder m_input = new StringBuilder(8192);
+		private readonly StringBuilder m_input;
+
+		/// <summary>The current output caret state</summary>
+		private State m_out;
+		private State m_saved;
+
+		/// <summary>The current control sequence</summary>
+		public readonly StringBuilder m_seq;
 
 		/// <summary>The state of the terminal</summary>
 		private readonly State m_state = new State();
 
-		/// <summary>Occurs when vt100 settings are changed</summary>
-		public event Action<VT100> SettingsChanged;
-
-		public VT100()
+		public VT100_buf()
 		{
-			InitializeComponent();
-			DoubleBuffered = true;
-			Multiline = true;
-			HideSelection = false;
-			WordWrap = false;
-
-			LocalEcho = true;
-			TerminalWidth = 100;
-			Font = m_state.m_saved_font;
-			SelectionFont = m_state.m_saved_font;
-			MouseUp += (s,e)=> { if (e.Button == MouseButtons.Right) {ShowContextMenu(e.Location);} };
+			Settings = new Settings();
+			ReadOnly = false;
+			m_lines  = new List<Line>();
+			m_input  = new StringBuilder(8192);
+			m_out    = new State();
+			m_state  = null;
+			m_seq    = new StringBuilder();
 		}
 
+		/// <summary>Terminal settings</summary>
+		public Settings Settings { get; private set; }
+
+		/// <summary>Return the number of lines of text in the control</summary>
+		public int LineCount
+		{
+			get { return m_lines.Count; }
+		}
+
+		/// <summary>Get/Set whether user input is accepted</summary>
+		public bool ReadOnly { get; set; }
+
 		/// <summary>Return the buffered user input</summary>
-		public string GetUserInput() { return GetUserInput(true); }
+		public string UserInput()
+		{
+			return UserInput(true);
+		}
 
 		/// <summary>Return the buffered user input. 'clear' resets the buffer</summary>
-		public string GetUserInput(bool clear)
+		public string UserInput(bool clear)
 		{
 			string user_input = m_input.ToString();
 			if (clear) { m_input.Length = 0; }
 			return user_input;
 		}
 
-		/// <summary>A context menu for the vt100 terminal</summary>
-		private void ShowContextMenu(Point location)
-		{
-			ContextMenuStrip menu = new ContextMenuStrip();
-			{// Clear
-				ToolStripMenuItem item = new ToolStripMenuItem{Text="Clear"};
-				item.Click += (s,e)=> {Clear();};
-				menu.Items.Add(item);
-			}
-			menu.Items.Add(new ToolStripSeparator());
-			{// Copy
-				ToolStripMenuItem item = new ToolStripMenuItem{Text="Copy"};
-				item.Click += (s,e)=> {Copy();};
-				menu.Items.Add(item);
-			}
-			{// Paste
-				ToolStripMenuItem item = new ToolStripMenuItem{Text="Paste"};
-				item.Click += (s,e)=> {Paste();};
-				menu.Items.Add(item);
-			}
-			menu.Items.Add(new ToolStripSeparator());
-			{// Terminal Options
-				ToolStripMenuItem options = new ToolStripMenuItem{Text="Terminal Options"};
-				{// Local echo
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Local Echo", Checked=LocalEcho, CheckOnClick=true};
-					item.Click += (s,e)=> { LocalEcho = item.Checked; };
-					options.DropDownItems.Add(item);
-				}
-				{// Terminal width
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Terminal Width"};
-					ToolStripTextBox  edit = new ToolStripTextBox{Text=TerminalWidth.ToString()};
-					edit.KeyDown   += (s,e)=> { if (e.KeyCode == Keys.Return) menu.Close(); };
-					edit.LostFocus += (s,e)=> { int w; if (int.TryParse(edit.Text, out w)) {TerminalWidth = w;} };
-					item.DropDownItems.Add(edit);
-					options.DropDownItems.Add(item);
-				}
-				{// Tab size
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Tab Size"};
-					ToolStripTextBox  edit = new ToolStripTextBox{Text=TabSize.ToString()};
-					edit.KeyDown   += (s,e)=> { if (e.KeyCode == Keys.Return) menu.Close(); };
-					edit.LostFocus += (s,e)=> { int size; if (int.TryParse(edit.Text, out size)) {TabSize = size;} };
-					item.DropDownItems.Add(edit);
-					options.DropDownItems.Add(item);
-				}
-				{// newline receive
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Newline Recv"};
-					ToolStripComboBox edit = new ToolStripComboBox();
-					edit.Items.AddRange(Enum.GetNames(typeof(VT100Settings.ENewLineMode)));
-					edit.SelectedIndex = (int)NewlineRecv;
-					edit.SelectedIndexChanged += (s,e)=> { NewlineRecv = (VT100Settings.ENewLineMode)edit.SelectedIndex; };
-					item.DropDownItems.Add(edit);
-					options.DropDownItems.Add(item);
-				}
-				{// newline send
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Newline Send"};
-					ToolStripComboBox edit = new ToolStripComboBox();
-					edit.Items.AddRange(Enum.GetNames(typeof(VT100Settings.ENewLineMode)));
-					edit.SelectedIndex = (int)NewlineSend;
-					edit.SelectedIndexChanged += (s,e)=> { NewlineSend = (VT100Settings.ENewLineMode)edit.SelectedIndex; };
-					item.DropDownItems.Add(edit);
-					options.DropDownItems.Add(item);
-				}
-				{// Background colour
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Background Colour"};
-					ToolStripButton btn = new ToolStripButton{Text="   ", BackColor=BackColor, AutoToolTip=false};
-					btn.Click += (s,e)=> { ColorDialog cd = new ColorDialog(); if (cd.ShowDialog() == DialogResult.OK) {BackColor = cd.Color;} menu.Close(); };
-					item.DropDownItems.Add(btn);
-					options.DropDownItems.Add(item);
-				}
-				{// Text colour
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Text Colour"};
-					ToolStripButton btn = new ToolStripButton{Text="   ", BackColor=ForeColor, AutoToolTip=false};
-					btn.Click += (s,e)=> { ColorDialog cd = new ColorDialog(); if (cd.ShowDialog() == DialogResult.OK) {ForeColor = cd.Color;} menu.Close(); };
-					item.DropDownItems.Add(btn);
-					options.DropDownItems.Add(item);
-				}
-				{
-					ToolStripMenuItem item = new ToolStripMenuItem{Text="Hex Output", Checked=HexOutput, CheckOnClick=true};
-					item.Click += (s,e)=> { HexOutput = item.Checked; };
-					options.DropDownItems.Add(item);
-				}
-				menu.Items.Add(options);
-			}
-
-			// Show the context menu
-			menu.Show(this, location);
-		}
-
-		/// <summary>Get/Set the control background colour </summary>
-		public override Color BackColor
-		{
-			get { return base.BackColor; }
-			set { base.BackColor = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Get/Set the control foreground colour </summary>
-		public override Color ForeColor
-		{
-			get { return base.ForeColor; }
-			set { base.ForeColor = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>True if user input is displayed in the terminal</summary>
-		public bool LocalEcho
-		{
-			get { return m_settings.LocalEcho; }
-			set { m_settings.LocalEcho = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Get/Set the width of the terminal in columns</summary>
-		public int TerminalWidth
-		{
-			get { return m_settings.TerminalWidth; }
-			set { m_settings.TerminalWidth = Math.Max(value,1); SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Get/Set the tab size in characters</summary>
-		public int TabSize
-		{
-			get { return m_settings.TabSize; }
-			set { m_settings.TabSize = Math.Max(value,1); SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Get/Set the newline mode for received newlines</summary>
-		public VT100Settings.ENewLineMode NewlineRecv
-		{
-			get { return m_settings.NewlineRecv; }
-			set { m_settings.NewlineRecv = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Get/Set the newline mode for sent newlines</summary>
-		public VT100Settings.ENewLineMode NewlineSend
-		{
-			get { return m_settings.NewlineSend; }
-			set { m_settings.NewlineSend = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Output received data as hex</summary>
-		public bool HexOutput
-		{
-			get { return m_settings.HexOutput; }
-			set { m_settings.HexOutput = value; SettingsChanged.Raise(this); }
-		}
-
-		/// <summary>Return the number of lines of text in the control</summary>
-		public int LineCount
-		{
-			get { return TextLength == 0 ? 0 : GetLineFromCharIndex(TextLength) + 1; }
-		}
-
-		/// <summary>Return the length of a line in the control</summary>
-		public int LineLength(int line, bool include_newline)
-		{
-			return (int)IndexRangeFromLine(line, include_newline).Size;
-		}
-
-		/// <summary>Get/Set the line that SelectionStart is on</summary>
-		public int CurrentLine
-		{
-			get { return GetLineFromCharIndex(SelectionStart); }
-			set { SelectionStart = GetFirstCharIndexFromLine(value); }
-		}
-
-		/// <summary>Return the index range for the given line</summary>
-		public Range IndexRangeFromLine(int line, bool include_newline)
-		{
-			if (line <  0)         return new Range(0,0);
-			if (line >= LineCount) return new Range(TextLength, TextLength);
-			int idx0 = GetFirstCharIndexFromLine(line);
-			int idx1 = GetFirstCharIndexFromLine(line+1);
-			if (idx1 > idx0 && !include_newline) --idx1;
-			return new Range(idx0, idx1 >= idx0 ? idx1 : TextLength);
-		}
-
-		/// <summary>The current cursor location</summary>
-		public Point CursorLocation
-		{
-			get
-			{
-				int idx = SelectionStart;
-				int row = GetLineFromCharIndex(idx);
-				int col = idx - GetFirstCharIndexFromLine(row);
-				return new Point(col, row);
-			}
-			set
-			{
-				value = MoveCursor(value.X, value.Y);
-				SelectionStart = GetFirstCharIndexFromLine(value.Y) + value.X;
-				SelectionLength = 0;
-			}
-		}
-
-		/// <summary>The cursor position for output text (not the same as the user selection cursor)</summary>
-		public Point OutputCursorLocation
-		{
-			get { return m_state.m_cursor_location; }
-			set { m_state.m_cursor_location = value; }
-		}
-
-		/// <summary>Paste clipboard contents into the terminal window</summary>
-		public new void Paste()
-		{
-			string text = Clipboard.GetText();
-			Input(text);
-			if (LocalEcho) base.Paste();
-		}
-
-		/// <summary>Handle key down events</summary>
-		protected override void OnKeyDown(KeyEventArgs e)
-		{
-			if (e.Control)
-			{
-				switch (e.KeyCode)
-				{
-				default:break;
-				case Keys.V: Paste(); e.Handled = true; break;
-				case Keys.X: Copy(); e.Handled = true; break;
-				}
-			}
-			base.OnKeyDown(e);
-		}
-
-		/// <summary>Handle user input characters</summary>
-		protected override void OnKeyPress(KeyPressEventArgs e)
-		{
-			e.Handled = Input(e.KeyChar.ToString()) == 1 && !LocalEcho;
-			base.OnKeyPress(e);
-		}
-
 		/// <summary>
 		/// Add a string to the user input buffer
 		/// Returns the number of characters added to the input buffer</summary>
-		public int Input(string text)
+		public int AddInput(string text)
 		{
 			// If the control is readonly, ignore all input
 			if (ReadOnly)
-			{
-				m_input.Length = 0;
 				return 0;
-			}
 
 			int count = 0;
 			foreach (char c in text)
 			{
 				// Block input when the input buffer is full
-				if (m_input.Length >= m_input.Capacity - 2) return count;
+				if (m_input.Length + 2 >= m_input.Capacity)
+					return count;
 
 				// Add the user key to the input buffer
-				switch ((Keys)c)
+				switch (c)
 				{
-				default: m_input.Append(c); break;
-				case Keys.Return:
-					switch (m_settings.NewlineSend){
+				default:
+					m_input.Append(c);
+					break;
+				case '\r':
+					break;
+				case '\n':
+					switch (Settings.NewlineSend)
+					{
 					default: throw new ArgumentOutOfRangeException();
-					case VT100Settings.ENewLineMode.CR:    m_input.Append('\r'); break;
-					case VT100Settings.ENewLineMode.LF:    m_input.Append('\n'); break;
-					case VT100Settings.ENewLineMode.CR_LF: m_input.Append("\r\n"); break;
-					}break;
+					case ENewLineMode.CR:    m_input.Append('\r'); break;
+					case ENewLineMode.LF:    m_input.Append('\n'); break;
+					case ENewLineMode.CR_LF: m_input.Append("\r\n"); break;
+					}
+					break;
 				}
 
 				++count;
@@ -347,53 +300,33 @@ namespace pr.gui
 		/// Parses the text for vt100 control sequences.</summary>
 		public void Output(string text)
 		{
-			if (!IsHandleCreated) return;
-			if (InvokeRequired) { BeginInvoke(new Action<string>(Output), text); return; }
-
-			using (this.SuspendRedraw(true))
-			{
-				CursorLocation = OutputCursorLocation;
-
-				if (m_settings.HexOutput)
-					OutputHex(text);
-				else
-					ParseOutput(text);
-
-				OutputCursorLocation = CursorLocation;
-			}
-			ClearUndo();
+			var caret = m_out.pos;
+			using (Scope.Create(null, () => m_out.pos = caret))
+				ParseOutput(text);
 		}
 
-		/// <summary>Helper for writing a string to the control</summary>
-		private void Write(string str)
+		/// <summary>Clear the entire buffer</summary>
+		public void Clear()
 		{
-			Point loc = CursorLocation;
-			SelectionLength = Math.Min(str.Length, LineLength(loc.Y, str.EndsWith("\n") || str.EndsWith("\r")) - loc.X);
-			SelectedText = str;
+			m_lines.Clear();
+			m_out.pos = MoveCaret(0,0);
 		}
 
-		/// <summary>Output the string 'text' as hex</summary>
-		private void OutputHex(string text)
+		/// <summary>
+		/// Call to read a rectangular area of text from the screen buffer
+		/// Note, width is not a parameter, each returned line is a string
+		/// up to TerminalWidth - x. Callers can decide the width.</summary>
+		public IEnumerable<string> ReadTextArea(int x, int y, int height)
 		{
-			byte[] buf = Encoding.UTF8.GetBytes(text);
-			var hex = new StringBuilder(3 * 16 + 2);
-			var str = new StringBuilder(16 + 2);
-			int i = 0;
-			foreach (byte b in buf)
-			{
-				char c = char.IsControl((char)b) ? '.' : (char)b;
-				hex.AppendFormat("{0:x2} ", b);
-				str.Append(c);
-				if (++i == 16)  { Write(hex.Append(" | ").Append(str).Append('\n').ToString()); hex.Length = 0; str.Length = 0; i = 0; }
-			}
-			if (i != 0) { Write(hex.Append(' ', 3*(16-i)).Append(" | ").Append(str).Append('\n').ToString()); }
+			for (int j = y, jend = y + height; j != jend; ++j)
+				yield return LineAt(x, j);
 		}
 
 		/// <summary>Parse the vt100 console text in 'text'</summary>
 		private void ParseOutput(string text)
 		{
 			int first = 0, last = 0, text_end = text.Length;
-			for (;last != text_end; ++last)
+			for (;last != text_end;)
 			{
 				char c = text[last];
 				if (c == (char)Keys.Escape || m_seq.Length != 0)
@@ -406,11 +339,11 @@ namespace pr.gui
 				else if (c == '\n' || c == '\r')
 				{
 					string str = text.Substring(first, last - first);
-					switch (m_settings.NewlineRecv){
+					switch (Settings.NewlineRecv){
 						default:throw new ArgumentOutOfRangeException();
-						case VT100Settings.ENewLineMode.CR:    str += "\r"; break;
-						case VT100Settings.ENewLineMode.LF:    str += "\n"; break;
-						case VT100Settings.ENewLineMode.CR_LF: str += "\r\n"; break;
+						case VT100_bufSettings.ENewLineMode.CR:    str += "\r"; break;
+						case VT100_bufSettings.ENewLineMode.LF:    str += "\n"; break;
+						case VT100_bufSettings.ENewLineMode.CR_LF: str += "\r\n"; break;
 					}
 					Write(str);
 					if (last+1 != text_end && ((c == '\n' && text[last+1] == '\r') || (c == '\r' && text[last+1] == '\n'))) ++last;
@@ -815,7 +748,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Move the cursor to an absolute position</summary>
-		private Point MoveCursor(int x, int y)
+		private Point MoveCaret(int x, int y)
 		{
 			if (TextLength == 0) return Point.Empty;
 			Point loc = new Point(Maths.Clamp(x, 0, TerminalWidth - 1), Maths.Clamp(y, 0, LineCount - 1));
@@ -885,117 +818,6 @@ namespace pr.gui
 					+"8[2A   Y\t   Y\t   Y\t   Y\t   Y\t   Y\t   Y\t   Y\t   Y\t   Y\t"
 					+"8[1A   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t"
 					+"8";
-			}
-		}
-
-		/// <summary>Get/Set the terminal settings</summary>
-		[Browsable(false)] public VT100Settings Settings
-		{
-			get { return m_settings; }
-			set
-			{
-				m_settings = value;
-				base.BackColor = m_settings.BackColour;
-				base.ForeColor = m_settings.ForeColour;
-			}
-		}
-
-		#region C# designer code
-		/// <summary>Required designer variable.</summary>
-		private IContainer components;
-
-		/// <summary>Clean up any resources being used.</summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null)) components.Dispose();
-			base.Dispose(disposing);
-		}
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.</summary>
-		private void InitializeComponent()
-		{
-			components = new Container();
-		}
-
-		public void BeginInit(){}
-		public void EndInit(){}
-		#endregion
-	}
-
-	/// <summary>Settings for the VT100 terminal</summary>
-	[TypeConverter(typeof(VT100Settings))]
-	public class VT100Settings :GenericTypeConverter<VT100Settings>
-	{
-		public enum ENewLineMode { CR, LF, CR_LF, }
-
-		/// <summary>True if local characters are written into the control</summary>
-		public bool LocalEcho {get;set;}
-
-		/// <summary>The tab width</summary>
-		public int TabSize {get;set;}
-
-		/// <summary>The width of the terminal in characters</summary>
-		public int TerminalWidth {get;set;}
-
-		/// <summary>Describes the format of received new lines</summary>
-		public ENewLineMode NewlineRecv {get;set;}
-
-		/// <summary>Describes the format of sent new lines</summary>
-		public ENewLineMode NewlineSend {get;set;}
-
-		/// <summary>The back colour for the control</summary>
-		public Color BackColour {get;set;}
-
-		/// <summary>The fore colour for the control</summary>
-		public Color ForeColour {get;set;}
-
-		/// <summary>Output hex data rather than parsing terminal data</summary>
-		public bool HexOutput {get;set;}
-
-		public VT100Settings()
-		{
-			LocalEcho = true;
-			TabSize = 8;
-			TerminalWidth = 100;
-			NewlineRecv = ENewLineMode.LF;
-			NewlineSend = ENewLineMode.CR;
-			BackColour = Color.White;
-			ForeColour = Color.Black;
-			HexOutput = false;
-		}
-
-		public XElement ToXml(XElement node)
-		{
-			node.Add
-			(
-				LocalEcho     .ToXml("local_echo"    , false),
-				TabSize       .ToXml("tab_size"      , false),
-				TerminalWidth .ToXml("terminal_width", false),
-				NewlineRecv   .ToXml("newline_recv"  , false),
-				NewlineSend   .ToXml("newline_send"  , false),
-				BackColour    .ToXml("back_colour"   , false),
-				ForeColour    .ToXml("fore_colour"   , false)
-			);
-			return node;
-		}
-		public void FromXml(XElement node)
-		{
-			foreach (var n in node.Elements())
-			{
-				switch (n.Name.LocalName)
-				{
-				default: break;
-				case "local_echo":     LocalEcho     = n.As<bool>(); break;
-				case "tab_size":       TabSize       = n.As<int>(); break;
-				case "terminal_width": TerminalWidth = n.As<int>(); break;
-				case "newline_recv":   NewlineRecv   = n.As<ENewLineMode>(); break;
-				case "newline_send":   NewlineSend   = n.As<ENewLineMode>(); break;
-				case "back_colour":    BackColour    = n.As<Color>(); break;
-				case "fore_colour":    ForeColour    = n.As<Color>(); break;
-				}
 			}
 		}
 	}

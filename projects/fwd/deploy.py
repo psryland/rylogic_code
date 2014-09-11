@@ -5,35 +5,29 @@ sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")
 import Rylogic as Tools
 import UserVars
 
-print(
-	"*************************************************************************\n"
-	"  Fwd Deploy\n"
-	"    Copyright (C) Rylogic Limited 2013\n"
-	"*************************************************************************")
-
-Tools.CheckVersion(1)
-
-sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
-# e.g: "\"folder\proj_name:Rebuild\""
-projects = [
-	"fwd"
-	]
-configs = [
-	"debug",
-	"release"
-	]
-platforms = [
-	"x86",
-	"x64"
-	]
-
 try:
-	#Invoke MSBuild
-	projs = ";".join(projects)
-	for platform in platforms:
-		for config in configs:
-			print("\n *** " + platform + " - " + config + " ***\n")
-			Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
+	print(
+		"*************************************************************************\n"
+		"  Fwd Deploy\n"
+		"    Copyright (C) Rylogic Limited 2013\n"
+		"*************************************************************************")
+
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
+
+	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
+	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
+		"fwd"
+		]
+	platforms = [
+		"x86",
+		"x64"
+		]
+	configs = [
+		"debug",
+		"release"
+		]
+	Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True)
 
 	Tools.OnSuccess()
 

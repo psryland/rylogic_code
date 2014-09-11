@@ -13,7 +13,8 @@ try:
 		"Copyright (c) Rylogic Limited 2014\n"
 		"*************************************************************************")
 
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	# Check for optional parameters
 	nowait = True if "nowait" in [arg.lower() for arg in sys.argv] else False
@@ -32,11 +33,7 @@ try:
 		"release"
 		]
 
-	parallel = True
-	same_window = True
-
-	#Invoke MSBuild
-	if not Tools.MSBuild(sln, projects, platforms, configs, parallel, same_window):
+	if not Tools.MSBuild(sln, projects, platforms, configs, parallel = True, same_window = True):
 		Tools.OnError("Errors occurred")
 
 	Tools.OnSuccess(pause_time_seconds = (0 if nowait else 1))
