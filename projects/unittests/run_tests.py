@@ -10,7 +10,7 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
 
 	# Set this to false to disable running tests on compiling
 	RunTests = True

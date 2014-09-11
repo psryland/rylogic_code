@@ -16,7 +16,8 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	trace = False
 	if trace:

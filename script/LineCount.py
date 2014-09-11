@@ -7,7 +7,7 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
 
 	dirs = [
 		r"R:\software\STM32",

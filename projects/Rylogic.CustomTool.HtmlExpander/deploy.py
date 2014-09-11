@@ -5,36 +5,37 @@ sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script")
 import Rylogic as Tools
 import UserVars
 
-#Requires admin rights
-Tools.RunAsAdmin()
-
-print(
-	"*************************************************************************\n"
-	"HtmlExpander Deploy\n"
-	"Copyright Rylogic Limited 2013\n"
-	"*************************************************************************")
-
-Tools.CheckVersion(1)
-
-binname = "Rylogic.CustomTool.HtmlExpander.dll"
-srcdir = UserVars.root + r"\projects\Rylogic.CustomTool.HtmlExpander"
-dstdir = UserVars.root + r"\bin\custom_tools"
-config = input("Configuration (debug, release(default))? ")
-if config == "": config = "release"
-
-proj       = srcdir + r"\Rylogic.CustomTool.HtmlExpander.csproj"
-regasm     = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe"
-vs_version = "12.0"
-
-input(
-	" Deploy Settings:\n"
-	"         Source: " + srcdir + "\n"
-	"    Destination: " + dstdir + "\n"
-	"  Configuration: " + config + "\n"
-	"       Reg Keys: SOFTWARE\\Microsoft\\VisualStudio\\"+vs_version+"_Config...\n"
-	"Press enter to continue")
-
 try:
+	#Requires admin rights
+	Tools.RunAsAdmin()
+
+	print(
+		"*************************************************************************\n"
+		"HtmlExpander Deploy\n"
+		"Copyright Rylogic Limited 2013\n"
+		"*************************************************************************")
+
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.msbuild])
+
+	binname = "Rylogic.CustomTool.HtmlExpander.dll"
+	srcdir = UserVars.root + r"\projects\Rylogic.CustomTool.HtmlExpander"
+	dstdir = UserVars.root + r"\bin\custom_tools"
+	config = input("Configuration (debug, release(default))? ")
+	if config == "": config = "release"
+
+	proj       = srcdir + r"\Rylogic.CustomTool.HtmlExpander.csproj"
+	regasm     = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\regasm.exe"
+	vs_version = "12.0"
+
+	input(
+		" Deploy Settings:\n"
+		"         Source: " + srcdir + "\n"
+		"    Destination: " + dstdir + "\n"
+		"  Configuration: " + config + "\n"
+		"       Reg Keys: SOFTWARE\\Microsoft\\VisualStudio\\"+vs_version+"_Config...\n"
+		"Press enter to continue")
+
 	#Invoke MSBuild
 	print("Building...")
 	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, proj, "/t:Rebuild", "/p:Configuration="+config])

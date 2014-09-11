@@ -14,7 +14,8 @@ try:
 		"DMD Build Toolchain\n"
 		"*************************************************************************")
 
-	RylogicEnv.CheckVersion(1)
+	RylogicEnv.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.dmdroot, UserVars.msbuild])
 
 	dmdhead = UserVars.dmdroot + r"\..\head\dmd2"
 	mk      = dmdhead + r"\windows\bin\make.exe"

@@ -5,7 +5,8 @@ sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script")
 import Rylogic as Tools
 import UserVars
 
-Tools.CheckVersion(1)
+Tools.AssertVersion(1)
+Tools.AssertPathsExist([UserVars.csex])
 
 print(
 	"=============================\n"

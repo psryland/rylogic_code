@@ -10,11 +10,12 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.textedit])
 
-	filepath = sys.argv[1].lower() if len(sys.argv) > 1 else ""
-	outpath  = sys.argv[2].lower() if len(sys.argv) > 2 else ""
-	show     = sys.argv[3].lower() if len(sys.argv) > 3 else ""
+	filepath = (sys.argv[1] if len(sys.argv) > 1 else input("filepath? ")).lower()
+	outpath  = (sys.argv[2] if len(sys.argv) > 2 else "").lower()
+	show     = (sys.argv[3] if len(sys.argv) > 3 else "").lower()
 	if filepath == "": Tools.OnError("ERROR: no input file provided")
 	if outpath == "": outpath = filepath
 

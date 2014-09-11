@@ -10,7 +10,8 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	# if 'cl' is not in the path, create a command that runs the vc_env script,
 	# and recursively launches this script. The reason for this is no child

@@ -12,7 +12,8 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	dir      = sys.argv[1]
 	platform = sys.argv[2] if len(sys.argv) > 2 else "any"

@@ -9,7 +9,8 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root])
 
 	targetpath = sys.argv[1] if len(sys.argv) > 1 else input("TargetPath? ")
 	platform   = sys.argv[2] if len(sys.argv) > 2 else input("Platform (x86,x64)? ")

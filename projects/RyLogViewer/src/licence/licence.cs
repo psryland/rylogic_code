@@ -133,21 +133,22 @@ namespace RyLogViewer
 	/// <summary>Represents loaded licence information</summary>
 	public class Licence
 	{
-		/// <summary>Loads the licence info</summary>
-		public Licence(string lic)
+		public Licence()
 		{
 			LicenceHolder  = Constants.FreeLicence;
 			EmailAddress   = string.Empty;
 			Company        = string.Empty;
-			AppVersion     = "1.0";
 			ActivationCode = string.Empty;
-
+			AppVersion     = "1.0";
+		}
+		public Licence(string lic_file) :this()
+		{
 			try
 			{
-				if (PathEx.FileExists(lic))
+				if (PathEx.FileExists(lic_file))
 				{
 					// Load the licence file
-					var root = XDocument.Load(lic, LoadOptions.None).Root;
+					var root = XDocument.Load(lic_file, LoadOptions.None).Root;
 					if (root == null)
 						throw new InvalidDataException("licence file invalid");
 
@@ -207,8 +208,12 @@ namespace RyLogViewer
 			get { return Convert.ToBase64String(m_activation_code, Base64FormattingOptions.InsertLineBreaks); }
 			set
 			{
-				var code = Convert.FromBase64String(value);
-				SetProp(ref m_activation_code, code);
+				try
+				{
+					var code = Convert.FromBase64String(value);
+					SetProp(ref m_activation_code, code);
+				}
+				catch (Exception) {}
 			}
 		}
 		private byte[]  m_activation_code;

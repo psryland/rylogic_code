@@ -20,20 +20,17 @@ import Rylogic as Tools
 import UserVars
 
 try:
-	Tools.CheckVersion(1)
+	Tools.AssertVersion(1)
+	Tools.AssertPathsExist([UserVars.root, UserVars.fxc, UserVars.textedit])
 
 	trace = False
 	if trace:
 		print("Args: " + str(sys.argv));
 
-	# Check valid command line
-	if len(sys.argv) < 2:
-		Tools.OnError("No shader filepath given")
-
 	# The full path of the hlsl file to compile
-	fullpath = sys.argv[1].lower()
-	platform = sys.argv[2].lower() if len(sys.argv) > 2 else "any"
-	config   = sys.argv[3].lower() if len(sys.argv) > 3 else "release"
+	fullpath = (sys.argv[1] if len(sys.argv) > 1 else input("Shader File? ")).lower()
+	platform = (sys.argv[2] if len(sys.argv) > 2 else "any"                 ).lower()
+	config   = (sys.argv[3] if len(sys.argv) > 3 else "release"             ).lower()
 
 	# Check for optional parameters
 	pp    = True if "pp"    in [arg.lower() for arg in sys.argv] else False

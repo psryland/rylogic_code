@@ -192,7 +192,7 @@ namespace RyLogViewer
 			m_menu_help_view_help.Click                += (s,a) => ShowHelp();
 			m_menu_help_firstruntutorial.Click         += (s,a) => ShowFirstRunTutorial();
 			m_menu_help_totd.Click                     += (s,a) => ShowTotD();
-			m_menu_help_visit_web_site.Click              += (s,a) => VisitWebSite();
+			m_menu_help_visit_web_site.Click           += (s,a) => VisitWebSite();
 			m_menu_help_register.Click                 += (s,a) => ShowActivation();
 			m_menu_help_check_for_updates.Click        += (s,a) => CheckForUpdates(true);
 			m_menu_help_about.Click                    += (s,a) => ShowAbout();

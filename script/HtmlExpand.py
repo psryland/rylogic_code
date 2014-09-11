@@ -212,7 +212,7 @@ def ExpandHtmlFile(srcpath, dstpath = None):
 # Stand alone script
 if __name__ == "__main__":
 	try:
-		Tools.CheckVersion(1)
+		Tools.AssertVersion(1)
 
 		srcpath = sys.argv[1].lower() if len(sys.argv) > 1 else input("Source htm file? ")
 		dstpath = sys.argv[2].lower() if len(sys.argv) > 2 else None
