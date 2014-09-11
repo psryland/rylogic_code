@@ -7,9 +7,16 @@
 #ifndef PR_WINDOW_FUNCTIONS_H
 #define PR_WINDOW_FUNCTIONS_H
 
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0600
+#elif _WIN32_WINNT < 0x0500
+#error "_WIN32_WINNT >= 0x0500 required"
+#endif
+
 #include <tchar.h>
 #include <string>
 #include <knownfolders.h>
+#include <shlobj.h>
 
 namespace pr
 {
