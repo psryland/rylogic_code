@@ -170,7 +170,7 @@ namespace pr.extn
 				{
 					var name = node.Name.LocalName;
 					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
-					foreach (var i in obj_enum) i.ToXml(node, type_attr);//node.Add(Convert(i, new XElement(elem_name), type_attr));
+					foreach (var i in obj_enum) i.ToXml(node, type_attr);
 					return node;
 				}
 

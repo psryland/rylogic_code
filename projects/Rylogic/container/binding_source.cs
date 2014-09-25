@@ -150,6 +150,36 @@ namespace pr.container
 				yield return (TItem)item;
 		}
 
+		// Don't implement this, because it makes it ambiguous with IList
+		#region IList<TItem>
+		//int IList<TItem>.IndexOf(TItem item)
+		//{
+		//	return IndexOf(item);
+		//}
+		//void IList<TItem>.Insert(int index, TItem item)
+		//{
+		//	Insert(index, item);
+		//}
+		//void ICollection<TItem>.Add(TItem item)
+		//{
+		//	Add(item);
+		//}
+		//bool ICollection<TItem>.Contains(TItem item)
+		//{
+		//	return Contains(item);
+		//}
+		//void ICollection<TItem>.CopyTo(TItem[] arr, int index)
+		//{
+		//	CopyTo(arr, index);
+		//}
+		//bool ICollection<TItem>.Remove(TItem item)
+		//{
+		//	if (!Contains(item)) return false;
+		//	Remove(item);
+		//	return true;
+		//}
+		#endregion
+
 		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
 	}
 }

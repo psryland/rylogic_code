@@ -149,27 +149,29 @@ namespace pr.extn
 				max.Y = Math.Max(max.Y, item.RowIndex+1);
 			}
 
-			// Read the lines from the clipboard
+			// Read the cells from the clipboard
 			var lines = Clipboard.GetText().Split('\n');
-			var cells = new string[lines.Length][]; // cache split rows from the clipboard data
+			var cells = new string[lines.Length][];
+			for (var i = 0; i != lines.Length; ++i)
+				cells[i] = lines[i].Split('\t',',',';');
 
+			// Paste into the selected cells, filling if the selected cell area
+			// is bigger than the clipboard cells
 			foreach (DataGridViewCell cell in selected_cells)
 			{
 				if (cell.ReadOnly) continue;
 
-				var j = cell.RowIndex - min.Y;
-				if (j >= lines.Length) continue;
-				if (cells[j] == null) cells[j] = lines[j].Split('\t',',',';');
-
-				var i = cell.ColumnIndex - min.X;
-				if (i >= cells[j].Length) continue;
-
 				try
 				{
-					if (cells[j][i].Length != 0)
-						cell.Value = Convert.ChangeType(cells[j][i], cell.ValueType);
+					var row = Math.Min(cell.RowIndex    - min.Y, cells.Length      - 1);
+					var col = Math.Min(cell.ColumnIndex - min.X, cells[row].Length - 1);
+					if (cells[row][col].Length != 0)
+						cell.Value = Convert.ChangeType(cells[row][col], cell.ValueType);
 				}
-				catch (FormatException) { cell.Value = cell.DefaultNewRowValue; }
+				catch (FormatException)
+				{
+					cell.Value = cell.DefaultNewRowValue;
+				}
 			}
 			return true;
 		}

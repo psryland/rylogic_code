@@ -29,6 +29,12 @@ namespace pr.maths
 		}
 
 		/// <summary>Set/Clear bits in 'value'</summary>
+		public static UInt64 SetBits(UInt64 value, UInt64 mask, bool state)
+		{
+			return state ? value | mask : value & ~mask;
+		}
+
+		/// <summary>Set/Clear bits in 'value'</summary>
 		public static int SetBits(int value, int mask, bool state)
 		{
 			return state ? value | mask : value & ~mask;

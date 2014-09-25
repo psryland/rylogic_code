@@ -47,12 +47,11 @@ namespace pr.attrib
 		}
 
 		/// <summary>Return the associated description attribute for a property or field</summary>
-		public static string Desc(object obj, string member_name)
+		public static string Desc(Type ty, string member_name)
 		{
-			return (string)m_str_cache.Get(Key(obj,member_name), k =>
+			return (string)m_str_cache.Get(Key(ty,member_name), k =>
 				{
-					var type = obj.GetType();
-					var pi = type.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					var pi = ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
 					if (pi != null)
 					{
 						var d0 = Attribute.GetCustomAttribute(pi, typeof(DescAttribute), false) as DescAttribute;
@@ -61,7 +60,7 @@ namespace pr.attrib
 						if (d1 != null) return d1.Description;
 						return null; // Return null to distinguish between Desc("") and no DescAttribute
 					}
-					var fi = type.GetField(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+					var fi = ty.GetField(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
 					if (fi != null)
 					{
 						var d0 = Attribute.GetCustomAttribute(fi, typeof(DescAttribute), false) as DescAttribute;
@@ -75,9 +74,15 @@ namespace pr.attrib
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
+		public static string Desc<T,Ret>(Type type, Expression<Func<T,Ret>> expression)
+		{
+			return Desc(type, Reflect<T>.MemberName(expression));
+		}
+
+		/// <summary>The description attribute associated with a property or field</summary>
 		public static string Desc<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
 		{
-			return Desc(obj, Reflect<T>.MemberName(expression));
+			return Desc(obj.GetType(), Reflect<T>.MemberName(expression));
 		}
 
 		/// <summary>Return an array of the description strings associated with an enum type</summary>
@@ -132,7 +137,13 @@ namespace pr.attrib
 		/// <summary>A cache key for member of an object</summary>
 		private static string Key(object obj, string member_name)
 		{
-			return obj.GetType().Name + "." + member_name;
+			return Key(obj.GetType(), member_name);
+		}
+
+		/// <summary>A cache key for member of a type</summary>
+		private static string Key(Type type, string member_name)
+		{
+			return type.Name + "." + member_name;
 		}
 
 		/// <summary>A cache key for a type</summary>

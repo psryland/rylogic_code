@@ -37,6 +37,13 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Remove the last item in the list</summary>
+		public static void PopBack<T>(this IList<T> list)
+		{
+			System.Diagnostics.Debug.Assert(list.Count != 0, "Popback on non-empty container");
+			list.RemoveAt(list.Count - 1);
+		}
+
 		/// <summary>Resize a list default constructing objects to fill</summary>
 		public static void Resize<T>(this List<T> list, int newsize) where T:new()
 		{

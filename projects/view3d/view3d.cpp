@@ -243,8 +243,8 @@ VIEW3D_API void __stdcall View3D_RemoveObject(View3DWindow window, View3DObject 
 {
 	try
 	{
-		if (!window) throw std::exception("window is null");
 		if (!object) return;
+		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
 		window->m_objects.erase(object);

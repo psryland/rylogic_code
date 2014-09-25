@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 using pr.attrib;
 
 namespace pr.util
@@ -112,6 +113,12 @@ namespace pr.util
 			var d1 = Attrs(expression).FirstOrDefault(x => x is DescriptionAttribute) as DescriptionAttribute;
 			if (d1 != null) return d1.Description;
 			return null;
+		}
+
+		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
+		public static int SizeOf
+		{
+			get { return Marshal.SizeOf(typeof(T)); }
 		}
 	}
 }

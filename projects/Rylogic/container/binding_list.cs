@@ -60,7 +60,7 @@ namespace pr.container
 		/// <summary>Raised whenever an element in the list is changed</summary>
 		public event EventHandler<ItemChgEventArgs<T>> ItemChanged;
 
-		// Removes all items from the list
+		/// <summary>Removes all items from the list</summary>
 		protected override void ClearItems()
 		{
 			if (RaiseListChangedEvents)
@@ -85,7 +85,7 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Clear, -1, default(T)));
 		}
 
-		// Inserts the specified item in the list at the specified index.
+		/// <summary>Inserts the specified item in the list at the specified index.</summary>
 		protected override void InsertItem(int index, T item)
 		{
 			if (RaiseListChangedEvents)
@@ -105,7 +105,7 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
 		}
 
-		// Removes the item at the specified index.
+		/// <summary>Removes the item at the specified index.</summary>
 		protected override void RemoveItem(int index)
 		{
 			var item = this[index];
@@ -123,7 +123,7 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemRemoved, -1, item));
 		}
 		
-		// Replaces the item at the specified index with the specified item.
+		/// <summary>Replaces the item at the specified index with the specified item.</summary>
 		protected override void SetItem(int index, T item)
 		{
 			var old = this[index];
@@ -154,7 +154,7 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
 		}
 
-		// Reorders the list
+		/// <summary>Reorders the list</summary>
 		protected override void ApplySortCore(System.ComponentModel.PropertyDescriptor prop, System.ComponentModel.ListSortDirection direction)
 		{
 			if (RaiseListChangedEvents)
@@ -171,7 +171,7 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reordered, -1, default(T)));
 		}
 
-		// Notify observers of the entire list changing
+		/// <summary>Notify observers of the entire list changing</summary>
 		public new void ResetBindings()
 		{
 			if (RaiseListChangedEvents)
@@ -186,7 +186,7 @@ namespace pr.container
 			base.ResetBindings();
 		}
 		
-		// Notify observers of a specific item changing
+		/// <summary>Notify observers of a specific item changing</summary>
 		public new void ResetItem(int position)
 		{
 			if (RaiseListChangedEvents)
@@ -201,6 +201,14 @@ namespace pr.container
 			base.ResetItem(position);
 		}
 	
+		/// <summary>Notify observers of a specific item changing</summary>
+		public void ResetItem(T item)
+		{
+			var idx = IndexOf(item);
+			if (idx < 0 || idx >= Count) throw new Exception("Item is not within this container");
+			ResetItem(idx);
+		}
+
 		/// <summary>RAII object for suspending list events</summary>
 		public Scope SuspendEvents(bool reset_bindings_on_resume = false)
 		{
