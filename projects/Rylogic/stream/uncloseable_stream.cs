@@ -112,7 +112,7 @@ namespace pr
 			for (int i = 0; i != 2; ++i)
 			{
 				MemoryStream s = null;
-				TestDelegate func = () => { Assert.AreEqual(str.Length, s.Capacity); };
+				Action func = () => { Assert.AreEqual(str.Length, s.Capacity); };
 				
 				using (s = new MemoryStream(Encoding.ASCII.GetBytes(str)))
 				{

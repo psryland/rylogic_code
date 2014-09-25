@@ -181,9 +181,6 @@ namespace pr
 
 				var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
 				Assert.AreEqual(typeof(util.CRC32), ty1);
-
-				var ty2 = TypeExtensions.Resolve("NUnit.Framework.CultureAttribute[]");
-				Assert.AreEqual(typeof(CultureAttribute[]), ty2);
 			}
 		}
 	}

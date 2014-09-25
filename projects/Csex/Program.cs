@@ -96,6 +96,9 @@ namespace Csex
 				"    -showbase64\n" +
 				"       Display a tool for encoding/decoding base64 text\n" +
 				"\n" +
+				"    -runtests\n" +
+				"       Execute the unit tests in a .NET assembly\n" +
+				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
@@ -118,7 +121,8 @@ namespace Csex
 				case "-showexif": m_cmd = new ShowExif(); break;
 				case "-showtree": m_cmd = new ShowTree(); break;
 				case "-showbase64": m_cmd = new ShowBase64(); break;
-					// NEW_COMMAND - handle the command
+				case "-runtests": m_cmd = new RunUnitTests(); break;
+				// NEW_COMMAND - handle the command
 				}
 			}
 			return m_cmd == null
