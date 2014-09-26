@@ -1,20 +1,17 @@
 using System;
+using System.Reflection;
 using System.Windows.Forms;
-using test.test.ui;
 
-namespace test
+namespace pr
 {
-	static class Program
+	public static class Program
 	{
-		/// <summary>
-		/// The main entry point for the application.
-		/// </summary>
-		[STAThread]
-		static void Main()
+		/// <summary>The main entry point for the application.</summary>
+		[STAThread] public static void Main()
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new MainForm());
+			pr.unittest.UnitTest.RunTests(Assembly.GetExecutingAssembly());
 		}
 	}
 }
