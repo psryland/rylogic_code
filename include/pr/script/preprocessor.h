@@ -255,6 +255,17 @@ namespace pr
 							Eat::Line(m_buf, true);
 						}
 					}break;
+				case EPPKeyword::Defifndef:
+					{
+						if (!m_macros) Eat::Line(m_buf, true);
+						else
+						{
+							Eat::LineSpace(m_buf);
+							PPMacro mac(m_buf, m_buf.loc());
+							if (!m_macros->Find(mac.m_hash))
+								m_macros->Add(mac);
+						}
+					}break;
 				case EPPKeyword::If:
 					{
 						Eat::LineSpace(m_buf);
@@ -679,11 +690,15 @@ namespace pr
 					"#ifdef TWO\n"
 					"  two defined\n"
 					"#endif\n"
+					"#defifndef ONE 1\n"
+					"#defifndef ONE 2\n"
+					"ONE\n"
 					;
 				char const* str_out =
 					"  output\n"
 					"  output this\n"
 					"  two defined\n"
+					"1\n"
 					;
 				PtrSrc src(str_in);
 				PPMacroDB macros;
@@ -770,6 +785,8 @@ namespace pr
 					"#warning ignore this\n"
 					"lastword"
 					"#define ONE 1\n"
+					"#defifndef TWO 2\n"
+					"#defifndef ONE 3\n"
 					"#eval{ONE+2-4+len2(3,4)}\n"
 					"#lit Any old ch*rac#ers #if I {feel} #include --cheese like #en#end\n"
 					"// #if 1 comments \n"

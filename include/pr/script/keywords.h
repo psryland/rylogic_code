@@ -61,6 +61,7 @@ namespace pr
 			x(IncludePath  ,"include_path" ,= 0x1789F136)\
 			x(Define       ,"define"       ,= 0x0D22697A)\
 			x(Undef        ,"undef"        ,= 0x1450E770)\
+			x(Defifndef    ,"defifndef"    ,= 0x1169dadd)\
 			x(If           ,"if"           ,= 0x1DFA87FC)\
 			x(Ifdef        ,"ifdef"        ,= 0x11FAC604)\
 			x(Ifndef       ,"ifndef"       ,= 0x1FB3E42D)\
