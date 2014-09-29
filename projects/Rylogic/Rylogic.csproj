@@ -74,10 +74,6 @@
   <PropertyGroup>
     <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject>
-    </StartupObject>
-  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />

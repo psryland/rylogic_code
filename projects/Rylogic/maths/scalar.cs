@@ -104,5 +104,14 @@ namespace pr.maths
 			// The volume of a sphere, v = 2/3τr³ => r = ³root(3v/2τ)
 			return CubeRoot(1.5 * volume / Tau);
 		}
+
+		/// <summary>Returns the angle of the corner in a triangle with side lengths a,b,c for the corner opposite 'c'.</summary>
+		public static double Angle(double a, double b, double c)
+		{
+			var numer = Sqr(a) + Sqr(b) - Sqr(c);
+			var denom = 2 * a * b;
+			var cos_angle = Clamp(denom != 0 ? numer / denom : 1, -1, 1);
+			return Math.Acos(cos_angle);
+		}
 	}
 }

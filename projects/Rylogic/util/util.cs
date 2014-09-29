@@ -765,22 +765,22 @@ namespace pr.unittests
 		}
 
 		[Test] public void ByteArrayCompare()
-	{
-		byte[] lhs = new byte[]{1,2,3,4,5};
-		byte[] rhs = new byte[]{3,4,5,6,7};
-
-		Assert.AreEqual(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
-		Assert.AreEqual( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
-		Assert.AreEqual( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
-		Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
-		Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
-	}
+	    {
+		    byte[] lhs = new byte[]{1,2,3,4,5};
+		    byte[] rhs = new byte[]{3,4,5,6,7};
+    
+		    Assert.AreEqual(-1, Util.Compare(lhs, 0, 5, rhs, 0, 5));
+		    Assert.AreEqual( 0, Util.Compare(lhs, 2, 3, rhs, 0, 3));
+		    Assert.AreEqual( 1, Util.Compare(lhs, 3, 2, rhs, 0, 2));
+		    Assert.AreEqual(-1, Util.Compare(lhs, 2, 3, rhs, 0, 4));
+		    Assert.AreEqual( 1, Util.Compare(lhs, 2, 3, rhs, 0, 2));
+	    }
 		[Test] public void Convert()
-	{
-		int[] src = {1,2,3,4};
-		List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
-		for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
-	}
+	    {
+		    int[] src = {1,2,3,4};
+		    List<int> dst = new List<int>(Util.Conv(src, i=>i*2));
+		    for (int i = 0; i != src.Length; ++i) Assert.AreEqual(dst[i], 2*src[i]);
+	    }
 		[Test] public void ToFromByteArray()
 		{
 			const ulong num = 12345678910111213;
