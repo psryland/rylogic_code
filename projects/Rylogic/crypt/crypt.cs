@@ -96,44 +96,41 @@ namespace pr.crypt
 #if PR_UNITTESTS
 namespace pr.unittests
 {
-	internal static partial class UnitTests
-	{
-		[TestFixture] public class TestCrypt
-		{
-			[Test] public void SignFile()
-			{
-				// These would normally be stored as files and read into
-				// a string using File.ReadAllText()
-				string pub,prv;
-				Crypt.GenerateRSAKeyPair(out pub, out prv);
-			
-				const string filepath = "tmp.bin";
-				var data = new byte[]{0,1,2,3,4,5,6,7,8,9};
-			
-				// Create a file to sign
-				using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
-					fs.Write(data, 0, data.Length);
-			
-				// Sign the file
-				Crypt.SignFile(filepath, prv);
-			
-				// Check that the start of the file is the same
-				var buf1 = File.ReadAllBytes(filepath);
-				Assert.True(Util.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
-			
-				// Verify the signed file using the public key
-				Assert.True(Crypt.Validate(filepath, pub));
-			
-				// Sign it again to make sure the function handles the case that the signature is already there
-				Crypt.SignFile(filepath, prv);
-			
-				// Check that the whole file is the same
-				var buf2 = File.ReadAllBytes(filepath);
-				Assert.True(Util.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
-			
-				// Verify the signed file using the public key
-				Assert.True(Crypt.Validate(filepath, pub));
-			}
+    [TestFixture] public class TestCrypt
+    {
+        [Test] public void SignFile()
+        {
+			// These would normally be stored as files and read into
+			// a string using File.ReadAllText()
+			string pub,prv;
+			Crypt.GenerateRSAKeyPair(out pub, out prv);
+
+			const string filepath = "tmp.bin";
+			var data = new byte[]{0,1,2,3,4,5,6,7,8,9};
+
+			// Create a file to sign
+			using (var fs = new FileStream(filepath, FileMode.Create, FileAccess.Write))
+				fs.Write(data, 0, data.Length);
+
+			// Sign the file
+			Crypt.SignFile(filepath, prv);
+
+			// Check that the start of the file is the same
+			var buf1 = File.ReadAllBytes(filepath);
+			Assert.True(Util.Compare(buf1, 0, data.Length, data, 0, data.Length) == 0);
+
+			// Verify the signed file using the public key
+			Assert.True(Crypt.Validate(filepath, pub));
+
+			// Sign it again to make sure the function handles the case that the signature is already there
+			Crypt.SignFile(filepath, prv);
+
+			// Check that the whole file is the same
+			var buf2 = File.ReadAllBytes(filepath);
+			Assert.True(Util.Compare(buf2, 0, buf2.Length, buf1, 0, buf1.Length) == 0);
+
+			// Verify the signed file using the public key
+			Assert.True(Crypt.Validate(filepath, pub));
 		}
 	}
 }

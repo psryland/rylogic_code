@@ -658,331 +658,331 @@ namespace pr.unittests
 	using util;
 
 	[TestFixture] public class TestXml
-		{
+	{
 		#region Types
-			private enum EEnum
-			{
-				Dog
-			}
+		private enum EEnum
+		{
+			Dog
+		}
 
-			/// <summary>A custom type with an XElement constructor and explicit ToXml() method</summary>
-			private class Elem1
-			{
+		/// <summary>A custom type with an XElement constructor and explicit ToXml() method</summary>
+		private class Elem1
+		{
 			public readonly uint m_uint;
 
-				public Elem1() :this(0)              {}
+			public Elem1() :this(0)              {}
 			public Elem1(uint i)                 { m_uint = i; }
 			public Elem1(XElement elem)          { m_uint = uint.Parse(elem.Value.Substring(5)); }
 			public XElement ToXml(XElement node) { node.SetValue("elem_"+m_uint); return node; }
 			public override int GetHashCode()    { return (int)m_uint; }
 			private bool Equals(Elem1 other)     { return m_uint == other.m_uint; }
-				public override bool Equals(object obj)
-				{
-					if (ReferenceEquals(null, obj)) return false;
-					if (ReferenceEquals(this, obj)) return true;
-					if (obj.GetType() != GetType()) return false;
-					return Equals((Elem1)obj);
-				}
-			}
-
-			/// <summary>A custom DataContract type without a default constructor</summary>
-			[DataContract(Name = "ELEM2")] internal class Elem2
+			public override bool Equals(object obj)
 			{
-				[DataMember(Name = "eye")] public readonly int m_int;
-				[DataMember]               public readonly string m_string;
-
-				public Elem2(int i, string s)      { m_int = i; m_string = s; }
-				public override string ToString()  { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
-				public override int GetHashCode()  { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
-				private bool Equals(Elem2 other)   { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
-				public override bool Equals(object obj)
-				{
-					if (ReferenceEquals(null, obj)) return false;
-					if (ReferenceEquals(this, obj)) return true;
-					if (obj.GetType() != GetType()) return false;
-					return Equals((Elem2)obj);
-				}
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				if (obj.GetType() != GetType()) return false;
+				return Equals((Elem1)obj);
 			}
+		}
 
-			/// <summary>A custom DataContract type with a default constructor</summary>
-			[DataContract(Name = "ELEM3")] internal class Elem3
+		/// <summary>A custom DataContract type without a default constructor</summary>
+		[DataContract(Name = "ELEM2")] internal class Elem2
+		{
+			[DataMember(Name = "eye")] public readonly int m_int;
+			[DataMember]               public readonly string m_string;
+
+			public Elem2(int i, string s)      { m_int = i; m_string = s; }
+			public override string ToString()  { return m_int.ToString(CultureInfo.InvariantCulture) + " " + m_string; }
+			public override int GetHashCode()  { unchecked { return (m_int * 397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
+			private bool Equals(Elem2 other)   { return m_int == other.m_int && string.Equals(m_string, other.m_string); }
+			public override bool Equals(object obj)
 			{
-				[DataMember] public readonly int m_int;
-				[DataMember] public readonly string m_string;
-
-				public Elem3()                     { m_int = 0; m_string = string.Empty; }
-				public Elem3(int i, string s)      { m_int = i; m_string = s; }
-				public override int GetHashCode()  { unchecked { return (m_int*397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
-				private bool Equals(Elem3 other)   { return m_int == other.m_int && string.Equals(m_string,other.m_string); }
-				public override bool Equals(object obj)
-				{
-					if (ReferenceEquals(null,obj)) return false;
-					if (ReferenceEquals(this,obj)) return true;
-					if (obj.GetType() != GetType()) return false;
-					return Equals((Elem3)obj);
-				}
+				if (ReferenceEquals(null, obj)) return false;
+				if (ReferenceEquals(this, obj)) return true;
+				if (obj.GetType() != GetType()) return false;
+				return Equals((Elem2)obj);
 			}
+		}
 
-			private class Elem4
+		/// <summary>A custom DataContract type with a default constructor</summary>
+		[DataContract(Name = "ELEM3")] internal class Elem3
+		{
+			[DataMember] public readonly int m_int;
+			[DataMember] public readonly string m_string;
+
+			public Elem3()                     { m_int = 0; m_string = string.Empty; }
+			public Elem3(int i, string s)      { m_int = i; m_string = s; }
+			public override int GetHashCode()  { unchecked { return (m_int*397) ^ (m_string != null ? m_string.GetHashCode() : 0); } }
+			private bool Equals(Elem3 other)   { return m_int == other.m_int && string.Equals(m_string,other.m_string); }
+			public override bool Equals(object obj)
 			{
-				public int m_int;
-				public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
-				public void FromXml(XElement node) { m_int = int.Parse(node.Value.Substring(5)); }
+				if (ReferenceEquals(null,obj)) return false;
+				if (ReferenceEquals(this,obj)) return true;
+				if (obj.GetType() != GetType()) return false;
+				return Equals((Elem3)obj);
 			}
+		}
+
+		private class Elem4
+		{
+			public int m_int;
+			public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
+			public void FromXml(XElement node) { m_int = int.Parse(node.Value.Substring(5)); }
+		}
 		#endregion
 
 		[Test] public void ToXml1()
-			{
-				// Built in types
-				var node = 5.ToXml("five", false);
-				var five = node.As<int>();
-				Assert.AreEqual(5, five);
-			}
+		{
+			// Built in types
+			var node = 5.ToXml("five", false);
+			var five = node.As<int>();
+			Assert.AreEqual(5, five);
+		}
 		[Test] public void ToXml2()
-			{
-				var font = SystemFonts.DefaultFont;
-				var node = font.ToXml("font", false);
-				var FONT = node.As<Font>();
+		{
+			var font = SystemFonts.DefaultFont;
+			var node = font.ToXml("font", false);
+			var FONT = node.As<Font>();
 			Assert.True(font.Equals(FONT));
-			}
+		}
 		[Test] public void ToXml3()
-			{
-				var pt = new Point(1,2);
-				var node = pt.ToXml("pt", false);
-				var PT = node.As<Point>();
+		{
+			var pt = new Point(1,2);
+			var node = pt.ToXml("pt", false);
+			var PT = node.As<Point>();
 			Assert.True(pt.Equals(PT));
-			}
+		}
 		[Test] public void ToXml3a()
-			{
-				var pt = new PointF(1f,2f);
-				var node = pt.ToXml("pt", false);
-				var PT = node.As<PointF>();
+		{
+			var pt = new PointF(1f,2f);
+			var node = pt.ToXml("pt", false);
+			var PT = node.As<PointF>();
 			Assert.True(pt.Equals(PT));
-			}
+		}
 		[Test] public void ToXml4()
-			{
-				var node = DateTimeOffset.MinValue.ToXml("min_time", true);
-				var dto = node.As<DateTimeOffset>();
-				Assert.AreEqual(DateTimeOffset.MinValue, dto);
-			}
+		{
+			var node = DateTimeOffset.MinValue.ToXml("min_time", true);
+			var dto = node.As<DateTimeOffset>();
+			Assert.AreEqual(DateTimeOffset.MinValue, dto);
+		}
 		[Test] public void ToXml5()
-			{
-				var guid = Guid.NewGuid();
-				var node = guid.ToXml("guid", false);
-				var GUID = node.As<Guid>();
-				Assert.AreEqual(guid, GUID);
-			}
+		{
+			var guid = Guid.NewGuid();
+			var node = guid.ToXml("guid", false);
+			var GUID = node.As<Guid>();
+			Assert.AreEqual(guid, GUID);
+		}
 		[Test] public void ToXml6()
-			{
-				// XElement constructible class
-				var node = new Elem1(4).ToXml("four", false);
-				var four = node.As<Elem1>();
+		{
+			// XElement constructible class
+			var node = new Elem1(4).ToXml("four", false);
+			var four = node.As<Elem1>();
 			Assert.AreEqual(4U, four.m_uint);
-			}
+		}
 		[Test] public void ToXml7()
-			{
-				// DC class
-				var dc = new Elem2(2,"3");
-				var node = dc.ToXml("dc", false);
-				var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
-				Assert.AreEqual(dc.m_int, DC.m_int);
-				Assert.AreEqual(dc.m_string, DC.m_string);
-			}
+		{
+			// DC class
+			var dc = new Elem2(2,"3");
+			var node = dc.ToXml("dc", false);
+			var DC = node.As<Elem2>(factory:t => new Elem2(0,null));
+			Assert.AreEqual(dc.m_int, DC.m_int);
+			Assert.AreEqual(dc.m_string, DC.m_string);
+		}
 		[Test] public void ToXml8()
-			{
-				// Arrays
+		{
+			// Arrays
 			var arr = new int[]{0,1,2,3,4};
-				var node = arr.ToXml("arr", false);
-				var ARR = node.As<int[]>();
-				Assert.True(arr.SequenceEqual(ARR));
-			}
+			var node = arr.ToXml("arr", false);
+			var ARR = node.As<int[]>();
+			Assert.True(arr.SequenceEqual(ARR));
+		}
 		[Test] public void ToXml9()
-			{
+		{
 			var arr = new string[]{"hello", "world"};
-				var node = arr.ToXml("arr", false);
-				var ARR = node.As<string[]>();
-				Assert.True(arr.SequenceEqual(ARR));
-			}
+			var node = arr.ToXml("arr", false);
+			var ARR = node.As<string[]>();
+			Assert.True(arr.SequenceEqual(ARR));
+		}
 		[Test] public void ToXml10()
-			{
-				var arr = new[]{new Point(1,1), new Point(2,2)};
-				var node = arr.ToXml("arr", true);
-				var ARR = node.As<Point[]>();
-				Assert.True(arr.SequenceEqual(ARR));
-			}
+		{
+			var arr = new[]{new Point(1,1), new Point(2,2)};
+			var node = arr.ToXml("arr", true);
+			var ARR = node.As<Point[]>();
+			Assert.True(arr.SequenceEqual(ARR));
+		}
 		[Test] public void ToXml11()
-			{
-				var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
-				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
-				Assert.True(arr.SequenceEqual(ARR));
-			}
+		{
+			var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
+			var node = arr.ToXml("arr", false);
+			var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
+			Assert.True(arr.SequenceEqual(ARR));
+		}
 		[Test] public void ToXml12()
-			{
-				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
-				var node = arr.ToXml("arr", false);
-				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
+		{
+			var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
+			var node = arr.ToXml("arr", false);
+			var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
 			Assert.True(arr.SequenceEqual(ARR));
-			}
+		}
 		[Test] public void ToXml13()
-			{
-				// nullables
-				int? three = 3;
-				var node = three.ToXml("three", false);
-				var THREE = node.As<int?>();
-				Assert.True(three == THREE);
-			}
+		{
+			// nullables
+			int? three = 3;
+			var node = three.ToXml("three", false);
+			var THREE = node.As<int?>();
+			Assert.True(three == THREE);
+		}
 		[Test] public void ToXml14()
-			{
-				var arr = new int?[]{1, null, 2};
-				var node = arr.ToXml("arr", true);
-				var ARR = node.As<int?[]>();
+		{
+			var arr = new int?[]{1, null, 2};
+			var node = arr.ToXml("arr", true);
+			var ARR = node.As<int?[]>();
 			Assert.True(arr.SequenceEqual(ARR));
-			}
+		}
 		[Test] public void ToXml15()
-			{
-				var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
-				var node = arr.ToXml("arr", true);
-				var ARR = node.As<object[]>(factory:ty =>
-					{
-						if (ty == typeof(Elem1)) return new Elem1();
-						if (ty == typeof(Elem2)) return new Elem2(0,string.Empty);
-						if (ty == typeof(Elem3)) return new Elem3();
-						throw new Exception("Unexpected type");
-					});
-				Assert.True(arr.SequenceEqual(ARR));
-			}
+		{
+			var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
+			var node = arr.ToXml("arr", true);
+			var ARR = node.As<object[]>(factory:ty =>
+				{
+					if (ty == typeof(Elem1)) return new Elem1();
+					if (ty == typeof(Elem2)) return new Elem2(0,string.Empty);
+					if (ty == typeof(Elem3)) return new Elem3();
+					throw new Exception("Unexpected type");
+				});
+			Assert.True(arr.SequenceEqual(ARR));
+		}
 		[Test] public void ToXml16()
-			{
-			}
+		{
+		}
 		[Test] public void ToXml17()
-			{
-				var e4 = new Elem4{m_int = 3};
-				var node = e4.ToXml("e4", false);
-				var E4 = node.As<Elem4>();
-				Assert.AreEqual(e4.m_int, E4.m_int);
-			}
+		{
+			var e4 = new Elem4{m_int = 3};
+			var node = e4.ToXml("e4", false);
+			var E4 = node.As<Elem4>();
+			Assert.AreEqual(e4.m_int, E4.m_int);
+		}
 		[Test] public void ToXml18()
-			{
-				var rc = new Rectangle(1,2,3,4);
-				var node = rc.ToXml("rect", false);
-				var RC = node.As<Rectangle>();
+		{
+			var rc = new Rectangle(1,2,3,4);
+			var node = rc.ToXml("rect", false);
+			var RC = node.As<Rectangle>();
 			Assert.True(Equals(rc, RC));
-			}
+		}
 		[Test] public void ToXml19()
-			{
-				var rc = new RectangleF(1f,2f,3f,4f);
-				var node = rc.ToXml("rect", false);
-				var RC = node.As<RectangleF>();
+		{
+			var rc = new RectangleF(1f,2f,3f,4f);
+			var node = rc.ToXml("rect", false);
+			var RC = node.As<RectangleF>();
 			Assert.True(Equals(rc, RC));
-			}
+		}
 		[Test] public void XmlAs()
-			{
-				var xml = new XDocument(
-					new XElement("root",
-						new XElement("a", "1"),
-						new XElement("b", "2.0"),
-						new XElement("c", "cat"),
-						new XElement("d", "Dog"),
-						new XElement("e",
-							new XElement("i", "0"),
-							new XElement("j", "a"),
-							new XElement("i", "1"),
-							new XElement("j", "b"),
-							new XElement("i", "2"),
-							new XElement("j", "c"),
-							new XElement("i", "3"),
-							new XElement("j", "d"),
-							new XElement("i", "3"),
-							new XElement("j", "d")
-							)
+		{
+			var xml = new XDocument(
+				new XElement("root",
+					new XElement("a", "1"),
+					new XElement("b", "2.0"),
+					new XElement("c", "cat"),
+					new XElement("d", "Dog"),
+					new XElement("e",
+						new XElement("i", "0"),
+						new XElement("j", "a"),
+						new XElement("i", "1"),
+						new XElement("j", "b"),
+						new XElement("i", "2"),
+						new XElement("j", "c"),
+						new XElement("i", "3"),
+						new XElement("j", "d"),
+						new XElement("i", "3"),
+						new XElement("j", "d")
 						)
-					);
+					)
+				);
 
-				XElement root = xml.Root;
-				Assert.NotNull(root);
-				Assert.AreEqual(1         ,root.Element("a").As<int>());
-				Assert.AreEqual(2.0f      ,root.Element("b").As<float>());
-				Assert.AreEqual("cat"     ,root.Element("c").As<string>());
-				Assert.AreEqual(EEnum.Dog ,root.Element("d").As<EEnum>());
+			XElement root = xml.Root;
+			Assert.NotNull(root);
+			Assert.AreEqual(1         ,root.Element("a").As<int>());
+			Assert.AreEqual(2.0f      ,root.Element("b").As<float>());
+			Assert.AreEqual("cat"     ,root.Element("c").As<string>());
+			Assert.AreEqual(EEnum.Dog ,root.Element("d").As<EEnum>());
 
-				var ints = new List<int>();
-				root.Element("e").As(ints, "i");
-				Assert.AreEqual(5, ints.Count);
-				for (int i = 0; i != 4; ++i)
-					Assert.AreEqual(i, ints[i]);
+			var ints = new List<int>();
+			root.Element("e").As(ints, "i");
+			Assert.AreEqual(5, ints.Count);
+			for (int i = 0; i != 4; ++i)
+				Assert.AreEqual(i, ints[i]);
 
-				var chars = new List<char>();
-				root.Element("e").As(chars, "j");
-				Assert.AreEqual(5, chars.Count);
-				for (int j = 0; j != 4; ++j)
-				Assert.AreEqual((char)('a' + j), chars[j]);
+			var chars = new List<char>();
+			root.Element("e").As(chars, "j");
+			Assert.AreEqual(5, chars.Count);
+			for (int j = 0; j != 4; ++j)
+			Assert.AreEqual((char)('a' + j), chars[j]);
 
-				ints.Clear();
-				root.Element("e").As(ints, "i", (lhs,rhs) => lhs == rhs);
-				Assert.AreEqual(4, ints.Count);
-				for (int i = 0; i != 4; ++i)
-					Assert.AreEqual(i, ints[i]);
-			}
+			ints.Clear();
+			root.Element("e").As(ints, "i", (lhs,rhs) => lhs == rhs);
+			Assert.AreEqual(4, ints.Count);
+			for (int i = 0; i != 4; ++i)
+				Assert.AreEqual(i, ints[i]);
+		}
 		[Test] public void XmlAdd()
-			{
-				var xml  = new XDocument();
-				var cmt  = xml.Add2(new XComment("comments"));  Assert.AreEqual(cmt.Value, "comments");
-				var root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
+		{
+			var xml  = new XDocument();
+			var cmt  = xml.Add2(new XComment("comments"));  Assert.AreEqual(cmt.Value, "comments");
+			var root = xml.Add2(new XElement("root"));      Assert.AreSame(xml.Root, root);
 
-				var ints = new List<int>{0,1,2,3,4};
-				var elems = Util.NewArray(5, i => new Elem1((uint)i));
-				string s;
+			var ints = new List<int>{0,1,2,3,4};
+			var elems = Util.NewArray(5, i => new Elem1((uint)i));
+			string s;
 
-				var xint = root.Add2("elem", 42, true);
-				s = root.ToString(SaveOptions.DisableFormatting);
-				Assert.AreEqual(
-					"<root>" +
-						"<elem ty=\"System.Int32\">42</elem>" +
-					"</root>"
-					,s);
-				xint.Remove();
+			var xint = root.Add2("elem", 42, true);
+			s = root.ToString(SaveOptions.DisableFormatting);
+			Assert.AreEqual(
+				"<root>" +
+					"<elem ty=\"System.Int32\">42</elem>" +
+				"</root>"
+				,s);
+			xint.Remove();
 
-				var xelem = root.Add2("elem", elems[0], true);
-				s = root.ToString(SaveOptions.DisableFormatting);
-				Assert.AreEqual(
-					"<root>" +
-					"<elem ty=\"pr.unittests.TestXml+Elem1\">elem_0</elem>" +
-					"</root>"
-					,s);
-				xelem.Remove();
+			var xelem = root.Add2("elem", elems[0], true);
+			s = root.ToString(SaveOptions.DisableFormatting);
+			Assert.AreEqual(
+				"<root>" +
+				"<elem ty=\"pr.unittests.TestXml+Elem1\">elem_0</elem>" +
+				"</root>"
+				,s);
+			xelem.Remove();
 
-				var xints = root.Add2("ints", "i", ints, true);
-				s = root.ToString(SaveOptions.DisableFormatting);
-				Assert.AreEqual(
-					"<root>" +
-						"<ints>" +
-							"<i ty=\"System.Int32\">0</i>" +
-							"<i ty=\"System.Int32\">1</i>" +
-							"<i ty=\"System.Int32\">2</i>" +
-							"<i ty=\"System.Int32\">3</i>" +
-							"<i ty=\"System.Int32\">4</i>" +
-						"</ints>" +
-					"</root>"
-					,s);
-				xints.Remove();
+			var xints = root.Add2("ints", "i", ints, true);
+			s = root.ToString(SaveOptions.DisableFormatting);
+			Assert.AreEqual(
+				"<root>" +
+					"<ints>" +
+						"<i ty=\"System.Int32\">0</i>" +
+						"<i ty=\"System.Int32\">1</i>" +
+						"<i ty=\"System.Int32\">2</i>" +
+						"<i ty=\"System.Int32\">3</i>" +
+						"<i ty=\"System.Int32\">4</i>" +
+					"</ints>" +
+				"</root>"
+				,s);
+			xints.Remove();
 
-				var xelems = root.Add2("elems", "i", elems, true);
-				s = root.ToString(SaveOptions.DisableFormatting);
-				Assert.AreEqual(
-					"<root>" +
-						"<elems>" +
-						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_0</i>" +
-						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_1</i>" +
-						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_2</i>" +
-						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_3</i>" +
-						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_4</i>" +
-						"</elems>" +
-					"</root>"
-					,s);
-				xelems.Remove();
-			}
+			var xelems = root.Add2("elems", "i", elems, true);
+			s = root.ToString(SaveOptions.DisableFormatting);
+			Assert.AreEqual(
+				"<root>" +
+					"<elems>" +
+					"<i ty=\"pr.unittests.TestXml+Elem1\">elem_0</i>" +
+					"<i ty=\"pr.unittests.TestXml+Elem1\">elem_1</i>" +
+					"<i ty=\"pr.unittests.TestXml+Elem1\">elem_2</i>" +
+					"<i ty=\"pr.unittests.TestXml+Elem1\">elem_3</i>" +
+					"<i ty=\"pr.unittests.TestXml+Elem1\">elem_4</i>" +
+					"</elems>" +
+				"</root>"
+				,s);
+			xelems.Remove();
 		}
 	}
+}
 
 #endif
