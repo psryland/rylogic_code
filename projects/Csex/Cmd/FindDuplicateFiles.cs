@@ -19,8 +19,9 @@ namespace Csex
 		private string m_regex_ignore;
 		private bool m_jpg_date_taken;
 
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Finds duplicate files between two directory trees\n" +
 				" Syntax: Csex -FindDuplicateFiles -src src_dir -dst dst_dir [-mv dups_directory] [-lst list_filepath] [-ignore regex_patn] [-jpg_date_taken]\n" +

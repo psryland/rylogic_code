@@ -16,8 +16,9 @@ namespace Csex
 		private string m_dir;
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"This command checks .NET assemblies for mismatches in dependent assembly versions\n" +
 				" Syntax: Csex -find_assembly_conflicts [-p directory]\n" +

@@ -10,8 +10,9 @@ namespace Csex
 	{
 		private string m_jpg_filepath;
 
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Display Exif data from a jpg file\n" +
 				" Syntax: Csex -showexif jpg_file\n" +

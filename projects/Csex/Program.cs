@@ -55,11 +55,13 @@ namespace Csex
 		}
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex = null)
 		{
 			if (m_cmd != null)
-				m_cmd.ShowHelp();
+				m_cmd.ShowHelp(ex);
 			else
+			{
+				if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 				Console.WriteLine(
 				"\n"+
 				"***********************************************************\n"+
@@ -96,13 +98,11 @@ namespace Csex
 				"    -showbase64\n" +
 				"       Display a tool for encoding/decoding base64 text\n" +
 				"\n" +
-				"    -runtests\n" +
-				"       Execute the unit tests in a .NET assembly\n" +
-				"\n" +
 				// NEW_COMMAND - add a help string
 				"\n"+
 				"  Type Cex -command -help for help on a particular command\n"+
 				"");
+			}
 		}
 
 		/// <summary>Handle a command line option.</summary>
@@ -121,7 +121,6 @@ namespace Csex
 				case "-showexif": m_cmd = new ShowExif(); break;
 				case "-showtree": m_cmd = new ShowTree(); break;
 				case "-showbase64": m_cmd = new ShowBase64(); break;
-				case "-runtests": m_cmd = new RunUnitTests(); break;
 				// NEW_COMMAND - handle the command
 				}
 			}

@@ -10,8 +10,9 @@ namespace Csex
 	public class ShowBase64 :Cmd
 	{
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Display a tool for encoding/decoding base64 encoded text"
 				);

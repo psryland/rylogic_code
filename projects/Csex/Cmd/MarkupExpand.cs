@@ -11,8 +11,9 @@ namespace Csex
 		private string m_infile;
 		private string m_outfile;
 
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Expand special comments in a markup file\n" +
 				" Syntax: Csex -expand_template -f input_file -o output_file\n" +

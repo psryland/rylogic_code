@@ -14,8 +14,9 @@ namespace Csex
 		private string m_infile;
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Display a text file as a tree\n" +
 				" Syntax: Csex -ShowTree -f filepath\n"

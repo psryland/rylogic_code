@@ -48,7 +48,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cmd\RunUnitTests.cs" />
     <Compile Include="Cmd\Cmd.cs" />
     <Compile Include="Cmd\ShowBase64.cs" />
     <Compile Include="Cmd\FindAssemblyConflicts.cs" />

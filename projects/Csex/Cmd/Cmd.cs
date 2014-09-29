@@ -9,7 +9,7 @@ namespace Csex
 		public abstract int Run();
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public abstract void ShowHelp();
+		public abstract void ShowHelp(Exception ex = null);
 
 		/// <summary>Handle a command line option.</summary>
 		public virtual bool CmdLineOption(string option, string[] args, ref int arg)
