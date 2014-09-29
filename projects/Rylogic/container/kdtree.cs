@@ -232,53 +232,49 @@ namespace pr.container
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using container;
 	using maths;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestKdTree
 	{
-		internal static class TestKdTree
+		class Sorta :IKdTree<Sorta>
 		{
-			class Sorta :IKdTree<Sorta>
-			{
-				public v2 pos;
-				public int sortaxis;
+			public v2 pos;
+			public int sortaxis;
 
-				int   IKdTree<Sorta>.Dimensions                         { get { return 2; } }
-				float IKdTree<Sorta>.GetAxisValue(Sorta elem, int axis) { return elem.pos[axis]; }
-				void  IKdTree<Sorta>.SortAxis(Sorta elem, int axis)     { elem.sortaxis = axis; }
-				int   IKdTree<Sorta>.SortAxis(Sorta elem)               { return elem.sortaxis; }
-				public override string ToString()                       { return pos.ToString(); }
-			}
+			int   IKdTree<Sorta>.Dimensions                         { get { return 2; } }
+			float IKdTree<Sorta>.GetAxisValue(Sorta elem, int axis) { return elem.pos[axis]; }
+			void  IKdTree<Sorta>.SortAxis(Sorta elem, int axis)     { elem.sortaxis = axis; }
+			int   IKdTree<Sorta>.SortAxis(Sorta elem)               { return elem.sortaxis; }
+			public override string ToString()                       { return pos.ToString(); }
+		}
 
-			[Test] public static void KDTree()
-			{
-				var tree = new KdTree<Sorta>();
-				for (int j = 0; j != 10; ++j)
-					for (int i = 0; i != 10; ++i)
-						tree.Add(new Sorta{pos = new v2(i,j)});
+		[Test] public void KDTree()
+		{
+			var tree = new KdTree<Sorta>();
+			for (int j = 0; j != 10; ++j)
+				for (int i = 0; i != 10; ++i)
+					tree.Add(new Sorta{pos = new v2(i,j)});
 
-				tree.BuildTree();
+			tree.BuildTree();
 
-				var result = new List<v2>();
-				tree.FindInArea(new[]{5f,5f}, 1.1f, (p,rs) => result.Add(p.pos));
+			var result = new List<v2>();
+			tree.FindInArea(new[]{5f,5f}, 1.1f, (p,rs) => result.Add(p.pos));
 
-				result.Sort((l,r) =>
-					{
-						if (l.x != r.x) return l.x < r.x ? -1 : 1;
-						return l.y < r.y ? -1 : 1;
-					});
+			result.Sort((l,r) =>
+				{
+					if (l.x != r.x) return l.x < r.x ? -1 : 1;
+					return l.y < r.y ? -1 : 1;
+				});
 
-				Assert.AreEqual(result.Count, 5);
-				Assert.AreEqual(result[0], new v2(4f,5f));
-				Assert.AreEqual(result[1], new v2(5f,4f));
-				Assert.AreEqual(result[2], new v2(5f,5f));
-				Assert.AreEqual(result[3], new v2(5f,6f));
-				Assert.AreEqual(result[4], new v2(6f,5f));
-			}
+			Assert.AreEqual(result.Count, 5);
+			Assert.AreEqual(result[0], new v2(4f,5f));
+			Assert.AreEqual(result[1], new v2(5f,4f));
+			Assert.AreEqual(result[2], new v2(5f,5f));
+			Assert.AreEqual(result[3], new v2(5f,6f));
+			Assert.AreEqual(result[4], new v2(6f,5f));
 		}
 	}
 }

@@ -118,68 +118,62 @@ namespace pr.script
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestTemplateReplacer
 	{
-		internal static class TestTemplateReplacer
+		[Test] public void SimpleStringSubstitution()
 		{
-			[Test] public static void TestSimpleStringSubstitution()
-			{
-				const string template = "The [speed] [colour] [noun1] [adjective1] over the [adjective2] [noun2]";
-				const string substituted = "The quick brown fox jumped over the lazy dog";
+			const string template = "The [speed] [colour] [noun1] [adjective1] over the [adjective2] [noun2]";
+			const string substituted = "The quick brown fox jumped over the lazy dog";
 
-				var template_replacer = new TemplateReplacer(new StringSrc(template), @"\[(\w+)\]", (tr,match) =>
-					{
-						switch (match.Value)
-						{
-						default: throw new Exception("Unknown field");
-						case "[speed]": return "quick";
-						case "[colour]": return "brown";
-						case "[noun1]": return "fox";
-						case "[adjective1]": return "jumped";
-						case "[adjective2]": return "lazy";
-						case "[noun2]": return "dog";
-						}
-					});
-				using (template_replacer)
+			var template_replacer = new TemplateReplacer(new StringSrc(template), @"\[(\w+)\]", (tr,match) =>
 				{
-					var result = template_replacer.ReadToEnd();
-					Assert.AreEqual(substituted, result);
-				}
+					switch (match.Value)
+					{
+					default: throw new Exception("Unknown field");
+					case "[speed]": return "quick";
+					case "[colour]": return "brown";
+					case "[noun1]": return "fox";
+					case "[adjective1]": return "jumped";
+					case "[adjective2]": return "lazy";
+					case "[noun2]": return "dog";
+					}
+				});
+			using (template_replacer)
+			{
+				var result = template_replacer.ReadToEnd();
+				Assert.AreEqual(substituted, result);
 			}
-			[Test] public static void TestSubstitutionWithIncludes()
-			{
-				const string include = "over the [adjective2]";
-				const string template = "The [speed] [colour] [noun1] [adjective1] [include] [noun2]";
-				const string substituted = "The quick brown fox jumped over the lazy dog";
+		}
+		[Test] public void SubstitutionWithIncludes()
+		{
+			const string include = "over the [adjective2]";
+			const string template = "The [speed] [colour] [noun1] [adjective1] [include] [noun2]";
+			const string substituted = "The quick brown fox jumped over the lazy dog";
 
-				var template_replacer = new TemplateReplacer(new StringSrc(template), @"\[(\w+)\]", (tr,match) =>
-					{
-						switch (match.Value)
-						{
-						default: throw new Exception("Unknown field");
-						case "[speed]": return "quick";
-						case "[colour]": return "brown";
-						case "[noun1]": return "fox";
-						case "[adjective1]": return "jumped";
-						case "[adjective2]": return "lazy";
-						case "[noun2]": return "dog";
-						case "[include]":  tr.PushSource(new StringSrc(include)); return string.Empty;
-						}
-					});
-				using (template_replacer)
+			var template_replacer = new TemplateReplacer(new StringSrc(template), @"\[(\w+)\]", (tr,match) =>
 				{
-					var result = template_replacer.ReadToEnd();
-					Assert.AreEqual(substituted, result);
-				}
+					switch (match.Value)
+					{
+					default: throw new Exception("Unknown field");
+					case "[speed]": return "quick";
+					case "[colour]": return "brown";
+					case "[noun1]": return "fox";
+					case "[adjective1]": return "jumped";
+					case "[adjective2]": return "lazy";
+					case "[noun2]": return "dog";
+					case "[include]":  tr.PushSource(new StringSrc(include)); return string.Empty;
+					}
+				});
+			using (template_replacer)
+			{
+				var result = template_replacer.ReadToEnd();
+				Assert.AreEqual(substituted, result);
 			}
 		}
 	}
 }
-
 #endif

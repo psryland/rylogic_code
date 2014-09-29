@@ -544,154 +544,149 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
 	using extn;
-	using NUnit.Framework;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestSettings
 	{
-		internal static class TestSettings
+		private sealed class SettingsThing
 		{
-			private sealed class SettingsThing
-			{
-				public int x,y,z;
+			public int x,y,z;
 				
-				public SettingsThing()
-				{
-					x = 1;
-					y = 2;
-					z = 3;
-				}
-				public SettingsThing(XElement node)
-				{
-					x = node.Element("x").As<int>();
-					y = node.Element("y").As<int>();
-					z = node.Element("z").As<int>();
-				}
-				public XElement ToXml(XElement node)
-				{
-					node.Add2("x", x, false);
-					node.Add2("y", y, false);
-					node.Add2("z", z, false);
-					return node;
-				}
-			}
-			private sealed class SubSettings :SettingsSet<SubSettings>
+			public SettingsThing()
 			{
-				public int Field     { get { return get(x => x.Field); } set { set(x => x.Field, value); } }
-				public byte[] Buffer { get { return get(x => x.Buffer); } set { set(x => x.Buffer, value); } }
-				public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
+				x = 1;
+				y = 2;
+				z = 3;
 			}
-			private sealed class Settings :SettingsBase<Settings>
+			public SettingsThing(XElement node)
 			{
-				public string         Str    { get { return get(x => x.Str   ); } set { set(x => x.Str    , value); } }
-				public int            Int    { get { return get(x => x.Int   ); } set { set(x => x.Int    , value); } }
-				public DateTimeOffset DTO    { get { return get(x => x.DTO   ); } set { set(x => x.DTO    , value); } }
-				public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
-				public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
-				public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
-				public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
+				x = node.Element("x").As<int>();
+				y = node.Element("y").As<int>();
+				z = node.Element("z").As<int>();
+			}
+			public XElement ToXml(XElement node)
+			{
+				node.Add2("x", x, false);
+				node.Add2("y", y, false);
+				node.Add2("z", z, false);
+				return node;
+			}
+		}
+		private sealed class SubSettings :SettingsSet<SubSettings>
+		{
+			public int Field     { get { return get(x => x.Field); } set { set(x => x.Field, value); } }
+			public byte[] Buffer { get { return get(x => x.Buffer); } set { set(x => x.Buffer, value); } }
+			public SubSettings() { Field = 2; Buffer = new byte[]{1,2,3}; }
+		}
+		private sealed class Settings :SettingsBase<Settings>
+		{
+			public string         Str    { get { return get(x => x.Str   ); } set { set(x => x.Str    , value); } }
+			public int            Int    { get { return get(x => x.Int   ); } set { set(x => x.Int    , value); } }
+			public DateTimeOffset DTO    { get { return get(x => x.DTO   ); } set { set(x => x.DTO    , value); } }
+			public Font           Font   { get { return get(x => x.Font  ); } set { set(x => x.Font   , value); } }
+			public float[]        Floats { get { return get(x => x.Floats); } set { set(x => x.Floats , value); } }
+			public SubSettings    Sub    { get { return get(x => x.Sub   ); } set { set(x => x.Sub    , value); } }
+			public XElement       Sub2   { get { return get(x => x.Sub2  ); } set { set(x => x.Sub2   , value); } }
 
-				public Settings()
-				{
-					Str    = "default";
-					Int    = 4;
-					DTO    = DateTimeOffset.Parse("2013-01-02 12:34:56");
-					Font   = SystemFonts.StatusFont;
-					Floats = new[]{1f,2f,3f};
-					Sub    = new SubSettings();
-					Sub2   = new XElement("external");
-				}
-				public Settings(string filepath) :base(filepath) {}
-				public Settings(XElement node) : base(node) {}
+			public Settings()
+			{
+				Str    = "default";
+				Int    = 4;
+				DTO    = DateTimeOffset.Parse("2013-01-02 12:34:56");
+				Font   = SystemFonts.StatusFont;
+				Floats = new[]{1f,2f,3f};
+				Sub    = new SubSettings();
+				Sub2   = new XElement("external");
 			}
+			public Settings(string filepath) :base(filepath) {}
+			public Settings(XElement node) : base(node) {}
+		}
 
-			[Test] public static void TestSettings1()
-			{
-				var s = new Settings();
-				Assert.AreEqual(Settings.Default.Str, s.Str);
-				Assert.AreEqual(Settings.Default.Int, s.Int);
-				Assert.AreEqual(Settings.Default.DTO, s.DTO);
-				Assert.AreEqual(Settings.Default.Font, s.Font);
-				Assert.IsTrue(Settings.Default.Floats.SequenceEqual(s.Floats));
-				Assert.AreEqual(Settings.Default.Sub.Field, s.Sub.Field);
-				Assert.IsTrue(Settings.Default.Sub.Buffer.SequenceEqual(s.Sub.Buffer));
-				Assert.IsTrue(Settings.Default.Sub2.Name == s.Sub2.Name);
-				Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
-			}
-			[Test] public static void TestSettings2()
-			{
-				var file = Path.GetTempFileName();
-				var st = new SettingsThing();
-				var s = new Settings
+		[Test] public void TestSettings1()
+		{
+			var s = new Settings();
+			Assert.AreEqual(Settings.Default.Str, s.Str);
+			Assert.AreEqual(Settings.Default.Int, s.Int);
+			Assert.AreEqual(Settings.Default.DTO, s.DTO);
+			Assert.AreEqual(Settings.Default.Font, s.Font);
+			Assert.True(Settings.Default.Floats.SequenceEqual(s.Floats));
+			Assert.AreEqual(Settings.Default.Sub.Field, s.Sub.Field);
+			Assert.True(Settings.Default.Sub.Buffer.SequenceEqual(s.Sub.Buffer));
+			Assert.True(Settings.Default.Sub2.Name == s.Sub2.Name);
+			Assert.Throws(typeof(ArgumentNullException), s.Save); // no filepath set
+		}
+		[Test] public void TestSettings2()
+		{
+			var file = Path.GetTempFileName();
+			var st = new SettingsThing();
+			var s = new Settings
+				{
+					Str = "Changed",
+					Int = 42,
+					DTO = DateTimeOffset.UtcNow,
+					Font = SystemFonts.DialogFont,
+					Floats = new[]{4f,5f,6f},
+					Sub = new SubSettings
 					{
-						Str = "Changed",
-						Int = 42,
-						DTO = DateTimeOffset.UtcNow,
-						Font = SystemFonts.DialogFont,
-						Floats = new[]{4f,5f,6f},
-						Sub = new SubSettings
-						{
-							Field = 12,
-							Buffer = new byte[]{4,5,6}
-						},
-						Sub2 = st.ToXml(new XElement("external")),
-					};
-				var xml = s.ToXml();
+						Field = 12,
+						Buffer = new byte[]{4,5,6}
+					},
+					Sub2 = st.ToXml(new XElement("external")),
+				};
+			var xml = s.ToXml();
 
-				var S = new Settings(xml);
+			var S = new Settings(xml);
 
-				Assert.AreEqual(s.Str       , S.Str);
-				Assert.AreEqual(s.Int       , S.Int);
-				Assert.AreEqual(s.DTO       , S.DTO);
-				Assert.AreEqual(s.Font      , S.Font);
-				Assert.IsTrue(s.Floats.SequenceEqual(S.Floats));
-				Assert.AreEqual(s.Sub.Field , S.Sub.Field);
-				Assert.IsTrue(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
+			Assert.AreEqual(s.Str       , S.Str);
+			Assert.AreEqual(s.Int       , S.Int);
+			Assert.AreEqual(s.DTO       , S.DTO);
+			Assert.AreEqual(s.Font      , S.Font);
+			Assert.True(s.Floats.SequenceEqual(S.Floats));
+			Assert.AreEqual(s.Sub.Field , S.Sub.Field);
+			Assert.True(s.Sub.Buffer.SequenceEqual(S.Sub.Buffer));
 
-				var st2 = new SettingsThing(s.Sub2);
-				Assert.AreEqual(st.x, st2.x);
-				Assert.AreEqual(st.y, st2.y);
-				Assert.AreEqual(st.z, st2.z);
-			}
-			[Test] public static void TestEvents()
-			{
-				var i = 0;
-				int changing = 0, changed = 0, saving = 0, loading = 0;
+			var st2 = new SettingsThing(s.Sub2);
+			Assert.AreEqual(st.x, st2.x);
+			Assert.AreEqual(st.y, st2.y);
+			Assert.AreEqual(st.z, st2.z);
+		}
+		[Test] public void TestEvents()
+		{
+			var i = 0;
+			int changing = 0, changed = 0, saving = 0, loading = 0;
 
-				var file = Path.GetTempFileName();
-				var settings = new Settings();
-				settings.SettingChanging += (s,a) => changing = ++i;
-				settings.SettingChanged  += (s,a) => changed  = ++i;
-				settings.SettingsSaving  += (s,a) => saving   = ++i;
-				settings.SettingsLoaded  += (s,a) => loading  = ++i;
+			var file = Path.GetTempFileName();
+			var settings = new Settings();
+			settings.SettingChanging += (s,a) => changing = ++i;
+			settings.SettingChanged  += (s,a) => changed  = ++i;
+			settings.SettingsSaving  += (s,a) => saving   = ++i;
+			settings.SettingsLoaded  += (s,a) => loading  = ++i;
 
-				settings.Str = "Modified";
-				Assert.AreEqual(1, changing);
-				Assert.AreEqual(2, changed);
-				Assert.AreEqual(0, saving);
-				Assert.AreEqual(0, loading);
+			settings.Str = "Modified";
+			Assert.AreEqual(1, changing);
+			Assert.AreEqual(2, changed);
+			Assert.AreEqual(0, saving);
+			Assert.AreEqual(0, loading);
 
-				settings.Sub.Field = 23;
-				Assert.AreEqual(3, changing);
-				Assert.AreEqual(4, changed);
-				Assert.AreEqual(0, saving);
-				Assert.AreEqual(0, loading);
+			settings.Sub.Field = 23;
+			Assert.AreEqual(3, changing);
+			Assert.AreEqual(4, changed);
+			Assert.AreEqual(0, saving);
+			Assert.AreEqual(0, loading);
 
-				settings.Save(file);
-				Assert.AreEqual(3, changing);
-				Assert.AreEqual(4, changed);
-				Assert.AreEqual(5, saving);
-				Assert.AreEqual(0, loading);
+			settings.Save(file);
+			Assert.AreEqual(3, changing);
+			Assert.AreEqual(4, changed);
+			Assert.AreEqual(5, saving);
+			Assert.AreEqual(0, loading);
 
-				settings.Load(file);
-				Assert.AreEqual(3, changing);
-				Assert.AreEqual(4, changed);
-				Assert.AreEqual(5, saving);
-				Assert.AreEqual(6, loading);
-			}
+			settings.Load(file);
+			Assert.AreEqual(3, changing);
+			Assert.AreEqual(4, changed);
+			Assert.AreEqual(5, saving);
+			Assert.AreEqual(6, loading);
 		}
 	}
 }

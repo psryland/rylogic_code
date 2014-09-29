@@ -155,18 +155,17 @@ namespace pr.container
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
 	using System.Collections.Generic;
 	using System.Linq;
-	using NUnit.Framework;
 	using container;
 	using maths;
 	using util;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestBindingSource
 	{
-		public static bool Contains<T>(this List<T> list, params T[] items)
+		private static bool Contains<T>(List<T> list, params T[] items)
 		{
 			if (list.Count != items.Length) return false;
 			for (int i = 0; i != list.Count; ++i)
@@ -174,188 +173,186 @@ namespace pr
 					return false;
 			return true;
 		}
-		internal static class TestBindingSource
+
+		[Test] public void BindingSource()
 		{
-			[Test] public static void BindingSource()
-			{
-				var bl_evts = new List<ListChg>();
-				var bs_evts = new List<ListChg>();
+			var bl_evts = new List<ListChg>();
+			var bs_evts = new List<ListChg>();
 				
-				var bl = new BindingListEx<int>();
-				bl.ListChanging += (s,a) =>
-					{
-						bl_evts.Add(a.ChangeType);
-					};
-				var bs = new BindingSource<int>{DataSource = bl};
-				bs.ListChanging += (s,a) =>
-					{
-						bs_evts.Add(a.ChangeType);
-					};
+			var bl = new BindingListEx<int>();
+			bl.ListChanging += (s,a) =>
+				{
+					bl_evts.Add(a.ChangeType);
+				};
+			var bs = new BindingSource<int>{DataSource = bl};
+			bs.ListChanging += (s,a) =>
+				{
+					bs_evts.Add(a.ChangeType);
+				};
 
-				Action clear = () =>
-					{
-						bl_evts.Clear();
-						bs_evts.Clear();
-					};
+			Action clear = () =>
+				{
+					bl_evts.Clear();
+					bs_evts.Clear();
+				};
 
-				int i;
-				{// List Tests
-					bl.Add(42);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+			int i;
+			{// List Tests
+				bl.Add(42);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					bl.Remove(42);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					clear();
+				bl.Remove(42);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				clear();
 
-					bl.Insert(0, 42);
-					bl.Insert(0, 21);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+				bl.Insert(0, 42);
+				bl.Insert(0, 21);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					bl.RemoveAt(0);
-					bl.RemoveAt(0);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					clear();
+				bl.RemoveAt(0);
+				bl.RemoveAt(0);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				clear();
 
-					i = bl.AddNew();
-					bl.EndNew(i);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+				i = bl.AddNew();
+				bl.EndNew(i);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					i = bl.AddNew();
-					bl.CancelNew(i);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					clear();
+				i = bl.AddNew();
+				bl.CancelNew(i);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				clear();
 				
-					bl.Clear();
-					Assert.True(bl_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-					Assert.True(bs_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-					clear();
+				bl.Clear();
+				Assert.True(Contains(bl_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+				Assert.True(Contains(bs_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+				clear();
 
-					bl.Add(1);
-					bl.Add(2);
-					bl.Add(3);
-					bl.ResetBindings();
-					bl.ResetItem(1);
-					Assert.True(bl_evts.Contains
-						(ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.PreReset     ,ListChg.Reset
-						,ListChg.ItemPreReset ,ListChg.ItemReset));
-					Assert.True(bs_evts.Contains
-						(ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd   ,ListChg.ItemAdded
-						,ListChg.PreReset     ,ListChg.Reset
-						,ListChg.ItemPreReset ,ListChg.ItemReset));
-					clear();
-				}
+				bl.Add(1);
+				bl.Add(2);
+				bl.Add(3);
+				bl.ResetBindings();
+				bl.ResetItem(1);
+				Assert.True(Contains(bl_evts
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.PreReset     ,ListChg.Reset
+					,ListChg.ItemPreReset ,ListChg.ItemReset));
+				Assert.True(Contains(bs_evts
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd   ,ListChg.ItemAdded
+					,ListChg.PreReset     ,ListChg.Reset
+					,ListChg.ItemPreReset ,ListChg.ItemReset));
+				clear();
+			}
 
 
-				{// Binding Source Tests
-					bs.Add(42);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+			{// Binding Source Tests
+				bs.Add(42);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					bs.Remove(42);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					clear();
+				bs.Remove(42);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				clear();
 
-					bs.Insert(0, 42);
-					bs.Insert(0, 21);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+				bs.Insert(0, 42);
+				bs.Insert(0, 21);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					bs.RemoveAt(0);
-					bs.RemoveAt(0);
-					Assert.True(bl_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
-					clear();
+				bs.RemoveAt(0);
+				bs.RemoveAt(0);
+				Assert.True(Contains(bl_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreRemove, ListChg.ItemRemoved, ListChg.ItemPreRemove, ListChg.ItemRemoved));
+				clear();
 
-					bs.AddNew();
-					Assert.True(bl_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					Assert.True(bs_evts.Contains(ListChg.ItemPreAdd, ListChg.ItemAdded));
-					clear();
+				bs.AddNew();
+				Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
+				clear();
 
-					bs.Clear();
-					Assert.True(bl_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-					Assert.True(bs_evts.Contains(ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-					clear();
+				bs.Clear();
+				Assert.True(Contains(bl_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+				Assert.True(Contains(bs_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
+				clear();
 					
-					bs.Add(1);
-					bs.Add(2);
-					bs.Add(3);
-					bs.RemoveCurrent();
-					Assert.True(bl_evts.Contains
-						(ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreRemove ,ListChg.ItemRemoved
-						));
-					Assert.True(bs_evts.Contains
-						(ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreAdd    ,ListChg.ItemAdded
-						,ListChg.ItemPreRemove ,ListChg.ItemRemoved
-						));
-					clear();
+				bs.Add(1);
+				bs.Add(2);
+				bs.Add(3);
+				bs.RemoveCurrent();
+				Assert.True(Contains(bl_evts
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreRemove ,ListChg.ItemRemoved
+					));
+				Assert.True(Contains(bs_evts
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreAdd    ,ListChg.ItemAdded
+					,ListChg.ItemPreRemove ,ListChg.ItemRemoved
+					));
+				clear();
 
-					bs.ResetCurrentItem();
-					bs.ResetItem(1);
-					bs.ResetBindings(false);
-					Assert.True(bl_evts.Contains());
-					Assert.True(bs_evts.Contains
-						(ListChg.ItemPreReset ,ListChg.ItemReset
-						,ListChg.ItemPreReset ,ListChg.ItemReset
-						,ListChg.PreReset     ,ListChg.Reset
-						));
-					clear();
-				}
+				bs.ResetCurrentItem();
+				bs.ResetItem(1);
+				bs.ResetBindings(false);
+				Assert.True(Contains(bl_evts));
+				Assert.True(Contains(bs_evts
+					,ListChg.ItemPreReset ,ListChg.ItemReset
+					,ListChg.ItemPreReset ,ListChg.ItemReset
+					,ListChg.PreReset     ,ListChg.Reset
+					));
+				clear();
 			}
-			[Test] public static void BindingSourceCurrency()
-			{
-				var bl = new BindingListEx<int>();
-				bl.AddRange(new[]{1,2,3,4,5});
+		}
+		[Test] public void BindingSourceCurrency()
+		{
+			var bl = new BindingListEx<int>();
+			bl.AddRange(new[]{1,2,3,4,5});
 
-				var positions = new List<int>();
-				var bs = new BindingSource<int>{DataSource = bl};
-				bs.PositionChanging += (s,a) =>
-					{
-						positions.Add(a.OldIndex);
-						positions.Add(a.NewIndex);
-					};
+			var positions = new List<int>();
+			var bs = new BindingSource<int>{DataSource = bl};
+			bs.PositionChanging += (s,a) =>
+				{
+					positions.Add(a.OldIndex);
+					positions.Add(a.NewIndex);
+				};
 
-				bs.Position = 3;
-				bs.Position = 1;
-				Assert.True(positions.SequenceEqual(new[]{0,3,3,1}));
+			bs.Position = 3;
+			bs.Position = 1;
+			Assert.True(positions.SequenceEqual(new[]{0,3,3,1}));
 
-				bs.CurrencyManager.Position = 4;
-				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4}));
+			bs.CurrencyManager.Position = 4;
+			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4}));
 
-				bs.DataSource = null;
-				Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
-			}
-			[Test] public static void BindingSourceEnumeration()
-			{
-				var arr = new[]{1,2,3,4,5};
-				var bs = new BindingSource<int>{DataSource = arr};
-				var res = bs.ToArray();
-				Assert.True(arr.SequenceEqual(res));
+			bs.DataSource = null;
+			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
+		}
+		[Test] public void BindingSourceEnumeration()
+		{
+			var arr = new[]{1,2,3,4,5};
+			var bs = new BindingSource<int>{DataSource = arr};
+			var res = bs.ToArray();
+			Assert.True(arr.SequenceEqual(res));
 
-				foreach (var i in bs)
-					Assert.True(i != 0); // Checking type inference
-			}
+			foreach (var i in bs)
+				Assert.True(i != 0); // Checking type inference
 		}
 	}
 }

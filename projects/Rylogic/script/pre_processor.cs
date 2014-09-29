@@ -9,18 +9,14 @@ namespace pr.script
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public partial class TestScript
 	{
-		internal static partial class TestScript
-		{
-			[Test] public static void TestPreProcessor()
-			{}
-		}
+		[Test] public static void PreProcessor()
+		{}
 	}
 }
 #endif

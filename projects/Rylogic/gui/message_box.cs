@@ -392,27 +392,18 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	//using gui;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestMsgBox
 	{
-		internal static class TestMsgBox
+		[Test] public void Test()
 		{
-			[Test] public static void Test()
-			{
-				//var btns = MessageBoxButtons.OKCancel;
-				//var icon = MessageBoxIcon.Question;
-				//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
-				//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
-				//new MsgBox(msg, "Paul's", btns, icon).ShowDialog();
-			}
+			//var btns = MessageBoxButtons.OKCancel;
+			//var icon = MessageBoxIcon.Question;
+			//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
+			//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
+			//new MsgBox(msg, "Paul's", btns, icon).ShowDialog();
 		}
 	}
 }
-
 #endif

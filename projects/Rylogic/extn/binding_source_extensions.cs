@@ -63,18 +63,12 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public partial class UnitTests
+	[TestFixture] public class TestBindingSourceExtns
 	{
-		public static partial class TestExtensions
-		{
-			[Test] public static void BindingSourceExtns()
-			{}
-		}
+		[Test] public static void BindingSourceExtns()
+		{}
 	}
 }
 #endif

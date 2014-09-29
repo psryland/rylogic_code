@@ -224,30 +224,26 @@ namespace pr.ldr
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using ldr;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestLdr
 	{
-		internal static partial class TestLdr
+		[Test] public void LdrBuilder()
 		{
-			[Test] public static void LdrBuilder()
+			var ldr = new LdrBuilder();
+			using (ldr.Group("g"))
 			{
-				var ldr = new LdrBuilder();
-				using (ldr.Group("g"))
-				{
-					ldr.Box("b", Color.FromArgb(0,0xFF,0));
-					ldr.Sphere("s", Color.Red);
-				}
-				var expected =
-					"*Group g {\n"+
-					"*Box b FF00FF00 {1 }\n"+
-					"*Sphere s FFFF0000 {1 }\n"+
-					"}\n";
-				Assert.AreEqual(expected, ldr.ToString());
+				ldr.Box("b", Color.FromArgb(0,0xFF,0));
+				ldr.Sphere("s", Color.Red);
 			}
+			var expected =
+				"*Group g {\n"+
+				"*Box b FF00FF00 {1 }\n"+
+				"*Sphere s FFFF0000 {1 }\n"+
+				"}\n";
+			Assert.AreEqual(expected, ldr.ToString());
 		}
 	}
 }

@@ -75,7 +75,8 @@
     <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject />
+    <StartupObject>
+    </StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
@@ -523,6 +524,8 @@
   <PropertyGroup>
     <PreBuildEvent>
     </PreBuildEvent>
-    <PostBuildEvent>$(ProjectDir)..\..\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)</PostBuildEvent>
+    <PostBuildEvent>$(ProjectDir)..\..\script\deploylib.py $(TargetPath) $(PlatformName) $(ConfigurationName)
+$(ProjectDir)run_tests.py $(TargetPath)
+</PostBuildEvent>
   </PropertyGroup>
 </Project>

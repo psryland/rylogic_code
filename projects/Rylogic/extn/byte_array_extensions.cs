@@ -52,49 +52,45 @@ namespace pr.extn
 
 #if PR_UNITTESTS
 
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public partial class UnitTests
+	[TestFixture] public class TestByteArrayExtns
 	{
-		public static partial class TestExtensions
+		[StructLayout(LayoutKind.Sequential,Pack = 1,CharSet = CharSet.Ansi)]
+		internal struct Thing
 		{
-			[StructLayout(LayoutKind.Sequential,Pack = 1,CharSet = CharSet.Ansi)]
-			internal struct Thing
-			{
-				public int m_int;
-				public char m_char;
-				public byte m_byte;
-			}
-			[Test] public static void ByteArrayAs()
-			{
-				var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
-				var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
-				var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
-				Assert.AreEqual(0x01                  ,b0.AsUInt8 ());
-				Assert.AreEqual(0x0201                ,b0.AsUInt16());
-				Assert.AreEqual(0x04030201            ,b0.AsUInt32());
-				Assert.AreEqual(0x0807060504030201    ,b0.AsUInt64());
-				Assert.AreEqual(0x01                  ,b0.AsInt8  ());
-				Assert.AreEqual(0x0201                ,b0.AsInt16 ());
-				Assert.AreEqual(0x04030201            ,b0.AsInt32 ());
-				Assert.AreEqual(0x0807060504030201    ,b0.AsInt64 ());
-				Assert.AreEqual(1f                    ,b1.AsFloat ());
-				Assert.AreEqual(1.0                   ,b2.AsDouble());
-				Assert.AreEqual(true                  ,b0.AsBool  ());
-				Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
-			}
-			[Test] public static void ByteArrayAsStruct()
-			{
-				var b0 = new byte[]{0x01,0x02,0x03,0x04,0x41,0xAB};
-				var thing = b0.As<Thing>();
+			public int m_int;
+			public char m_char;
+			public byte m_byte;
+		}
+		[Test] public void ByteArrayAs()
+		{
+			var b0 = new byte[]{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
+			var b1 = new byte[]{0x00, 0x00, 0x80, 0x3f};
+			var b2 = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF0, 0x3F};
+			Assert.AreEqual((byte)0x01            ,b0.AsUInt8 ());
+			Assert.AreEqual((ushort)0x0201        ,b0.AsUInt16());
+			Assert.AreEqual((uint)0x04030201U     ,b0.AsUInt32());
+			Assert.AreEqual(0x0807060504030201UL  ,b0.AsUInt64());
+			Assert.AreEqual((sbyte)0x01           ,b0.AsInt8  ());
+			Assert.AreEqual((short)0x0201         ,b0.AsInt16 ());
+			Assert.AreEqual(0x04030201            ,b0.AsInt32 ());
+			Assert.AreEqual(0x0807060504030201L   ,b0.AsInt64 ());
+			Assert.AreEqual(1f                    ,b1.AsFloat ());
+			Assert.AreEqual(1.0                   ,b2.AsDouble());
+			Assert.AreEqual(true                  ,b0.AsBool  ());
+			Assert.AreEqual((char)0x0201          ,b0.AsChar  ());
+		}
+		[Test] public void ByteArrayAsStruct()
+		{
+			var b0 = new byte[]{0x01,0x02,0x03,0x04,0x41,0xAB};
+			var thing = b0.As<Thing>();
 
-				Assert.AreEqual(0x04030201 , thing.m_int );
-				Assert.AreEqual('A'        , thing.m_char);
-				Assert.AreEqual(0xab       , thing.m_byte);
-			}
+			Assert.AreEqual(0x04030201 , thing.m_int );
+			Assert.AreEqual('A'        , thing.m_char);
+			Assert.AreEqual((byte)0xab , thing.m_byte);
 		}
 	}
 }

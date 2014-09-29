@@ -181,16 +181,14 @@ namespace pr.inet
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using inet;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEmail
 	{
 		//[Test] hack. this is broken
-		public static void TestEmail()
+		public void SendEmail()
 		{
 			var email = new Email();
 			email.AddRecipient("paul@rylogic.co.nz", Email.MAPIRecipient.To);

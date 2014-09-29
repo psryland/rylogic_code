@@ -393,85 +393,80 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEnumExtns
 	{
-		internal static class TestEnumExtensions
+		public enum ArrayEnum
 		{
-			public enum ArrayEnum
-			{
-				One,
-				Two,
-				Three,
-			}
-			public enum SparceEnum
-			{
-				One = 1,
-				Four = 4,
-				Ten = 10,
-			}
-			[Flags] public enum FlagsEnum
-			{
-				A = 1 << 0,
-				B = 1 << 1,
-				C = 1 << 2
-			}
-			public enum Tags
-			{
-				SomeCompoundName,
-				ABBRValue01
-			}
-			[Flags] public enum BigFlags :uint
-			{
-				A = 0x80000000,
-				B = 0xC0000000,
-				C = 0xE0000000,
-			}
+			One,
+			Two,
+			Three,
+		}
+		public enum SparceEnum
+		{
+			One = 1,
+			Four = 4,
+			Ten = 10,
+		}
+		[Flags] public enum FlagsEnum
+		{
+			A = 1 << 0,
+			B = 1 << 1,
+			C = 1 << 2
+		}
+		public enum Tags
+		{
+			SomeCompoundName,
+			ABBRValue01
+		}
+		[Flags] public enum BigFlags :uint
+		{
+			A = 0x80000000,
+			B = 0xC0000000,
+			C = 0xE0000000,
+		}
 
-			[Test] public static void TestToString1()
-			{
-				Assert.AreEqual(ArrayEnum.One   .ToString(), ArrayEnum.One   .ToStringFast());
-				Assert.AreEqual(ArrayEnum.Two   .ToString(), ArrayEnum.Two   .ToStringFast());
-				Assert.AreEqual(ArrayEnum.Three .ToString(), ArrayEnum.Three .ToStringFast());
-			}
-			[Test] public static void TestToString2()
-			{
-				Assert.AreEqual(SparceEnum.One  .ToString(), SparceEnum.One  .ToStringFast());
-				Assert.AreEqual(SparceEnum.Four .ToString(), SparceEnum.Four .ToStringFast());
-				Assert.AreEqual(SparceEnum.Ten  .ToString(), SparceEnum.Ten  .ToStringFast());
-			}
-			[Test] public static void TestToString3()
-			{
-				var f = FlagsEnum.A;
-				Assert.AreEqual(f.ToString(), f.ToStringFast());
-				f = FlagsEnum.A|FlagsEnum.B;
-				Assert.AreEqual(f.ToString(), f.ToStringFast());
-				f = FlagsEnum.A|FlagsEnum.C;
-				Assert.AreEqual(f.ToString(), f.ToStringFast());
-				f = FlagsEnum.A|FlagsEnum.B|FlagsEnum.C;
-				Assert.AreEqual(f.ToString(), f.ToStringFast());
-			}
-			[Test] public static void TestToString4()
-			{
-				Assert.AreEqual("Some Compound Name", Tags.SomeCompoundName.ToPrettyString());
-				Assert.AreEqual("ABBR Value 01", Tags.ABBRValue01.ToPrettyString());
-			}
-			[Test] public static void TestToString5()
-			{
-				Assert.AreEqual(BigFlags.A.ToString(), BigFlags.A.ToStringFast());
-				Assert.AreEqual(BigFlags.B.ToString(), BigFlags.B.ToStringFast());
-				Assert.AreEqual(BigFlags.C.ToString(), BigFlags.C.ToStringFast());
-			}
-			[Test] public static void TestEnumAll()
-			{
-				var all = Enum<FlagsEnum>.All;
-				Assert.AreEqual(FlagsEnum.A|FlagsEnum.B|FlagsEnum.C, all);
-			}
+		[Test] public void TestToString1()
+		{
+			Assert.AreEqual(ArrayEnum.One   .ToString(), ArrayEnum.One   .ToStringFast());
+			Assert.AreEqual(ArrayEnum.Two   .ToString(), ArrayEnum.Two   .ToStringFast());
+			Assert.AreEqual(ArrayEnum.Three .ToString(), ArrayEnum.Three .ToStringFast());
+		}
+		[Test] public void TestToString2()
+		{
+			Assert.AreEqual(SparceEnum.One  .ToString(), SparceEnum.One  .ToStringFast());
+			Assert.AreEqual(SparceEnum.Four .ToString(), SparceEnum.Four .ToStringFast());
+			Assert.AreEqual(SparceEnum.Ten  .ToString(), SparceEnum.Ten  .ToStringFast());
+		}
+		[Test] public void TestToString3()
+		{
+			var f = FlagsEnum.A;
+			Assert.AreEqual(f.ToString(), f.ToStringFast());
+			f = FlagsEnum.A|FlagsEnum.B;
+			Assert.AreEqual(f.ToString(), f.ToStringFast());
+			f = FlagsEnum.A|FlagsEnum.C;
+			Assert.AreEqual(f.ToString(), f.ToStringFast());
+			f = FlagsEnum.A|FlagsEnum.B|FlagsEnum.C;
+			Assert.AreEqual(f.ToString(), f.ToStringFast());
+		}
+		[Test] public void TestToString4()
+		{
+			Assert.AreEqual("Some Compound Name", Tags.SomeCompoundName.ToPrettyString());
+			Assert.AreEqual("ABBR Value 01", Tags.ABBRValue01.ToPrettyString());
+		}
+		[Test] public void TestToString5()
+		{
+			Assert.AreEqual(BigFlags.A.ToString(), BigFlags.A.ToStringFast());
+			Assert.AreEqual(BigFlags.B.ToString(), BigFlags.B.ToStringFast());
+			Assert.AreEqual(BigFlags.C.ToString(), BigFlags.C.ToStringFast());
+		}
+		[Test] public void TestEnumAll()
+		{
+			var all = Enum<FlagsEnum>.All;
+			Assert.AreEqual(FlagsEnum.A|FlagsEnum.B|FlagsEnum.C, all);
 		}
 	}
 }

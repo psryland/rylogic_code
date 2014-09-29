@@ -247,70 +247,64 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEnumerableExtns
 	{
-		public static partial class TestExtensions
+		[Test] public void InPairs()
 		{
-			[Test] public static void InPairs()
-			{
-				var ints = new[]{1,2,3,4,5,6,7,8,9};
-				var sums = new List<int>();
-				foreach (var pair in ints.InPairs())
-					sums.Add(pair.Item1 + pair.Item2);
+			var ints = new[]{1,2,3,4,5,6,7,8,9};
+			var sums = new List<int>();
+			foreach (var pair in ints.InPairs())
+				sums.Add(pair.Item1 + pair.Item2);
 
-				Assert.AreEqual(5  ,sums.Count);
-				Assert.AreEqual(3  ,sums[0]);
-				Assert.AreEqual(7  ,sums[1]);
-				Assert.AreEqual(11 ,sums[2]);
-				Assert.AreEqual(15 ,sums[3]);
-				Assert.AreEqual(9  ,sums[4]);
-			}
-			[Test] public static void Merge()
-			{
-				var a0 = new[]{1,2,4,6,10};
-				var a1 = new[]{1,3,4,7,8};
-				var r0 = new[]{1,1,2,3,4,4,6,7,8,10};
-				var r1 = a0.Zip(a1, Cmp<int>.From((l,r) => l < r));
+			Assert.AreEqual(5  ,sums.Count);
+			Assert.AreEqual(3  ,sums[0]);
+			Assert.AreEqual(7  ,sums[1]);
+			Assert.AreEqual(11 ,sums[2]);
+			Assert.AreEqual(15 ,sums[3]);
+			Assert.AreEqual(9  ,sums[4]);
+		}
+		[Test] public void Merge()
+		{
+			var a0 = new[]{1,2,4,6,10};
+			var a1 = new[]{1,3,4,7,8};
+			var r0 = new[]{1,1,2,3,4,4,6,7,8,10};
+			var r1 = a0.Zip(a1, Cmp<int>.From((l,r) => l < r));
 
-				Assert.True(r0.SequenceEqual(r1));
-			}
-			[Test] public static void Differences()
-			{
-				var a0 = new[]{1,2,3,4,5};
-				var a1 = new[]{1,3,3,4,6,7};
-				var r0 = new[]{2,3,5,6,0,7};
-				var r1 = a0.Differences(a1).SelectMany(x => new[]{x.Item1, x.Item2}).ToArray();
+			Assert.True(r0.SequenceEqual(r1));
+		}
+		[Test] public void Differences()
+		{
+			var a0 = new[]{1,2,3,4,5};
+			var a1 = new[]{1,3,3,4,6,7};
+			var r0 = new[]{2,3,5,6,0,7};
+			var r1 = a0.Differences(a1).SelectMany(x => new[]{x.Item1, x.Item2}).ToArray();
 
-				Assert.True(r0.SequenceEqual(r1));
-			}
-			[Test] public static void MinMaxBy()
-			{
-				var a0 = new[]{4,2,7,1,8,3,4,6,8,9};
+			Assert.True(r0.SequenceEqual(r1));
+		}
+		[Test] public void MinMaxBy()
+		{
+			var a0 = new[]{4,2,7,1,8,3,4,6,8,9};
 
-				Assert.AreEqual(1, a0.MinBy(x => x));
-				Assert.AreEqual(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
-				Assert.AreEqual(9, a0.MinBy(x => 10 - x));
+			Assert.AreEqual(1, a0.MinBy(x => x));
+			Assert.AreEqual(2, a0.MinBy(x => (x % 2) == 0 ? x : 1000));
+			Assert.AreEqual(9, a0.MinBy(x => 10 - x));
 
-				Assert.AreEqual(9, a0.MaxBy(x => x));
-				Assert.AreEqual(8, a0.MaxBy(x => (x % 2) == 0 ? x : -1000));
-				Assert.AreEqual(1, a0.MaxBy(x => 10 - x));
+			Assert.AreEqual(9, a0.MaxBy(x => x));
+			Assert.AreEqual(8, a0.MaxBy(x => (x % 2) == 0 ? x : -1000));
+			Assert.AreEqual(1, a0.MaxBy(x => 10 - x));
 
-				Assert.AreEqual(3, a0.IndexOfMinBy(x => x));
-				Assert.AreEqual(1, a0.IndexOfMinBy(x => (x % 2) == 0 ? x : 1000));
-				Assert.AreEqual(9, a0.IndexOfMinBy(x => 10 - x));
+			Assert.AreEqual(3, a0.IndexOfMinBy(x => x));
+			Assert.AreEqual(1, a0.IndexOfMinBy(x => (x % 2) == 0 ? x : 1000));
+			Assert.AreEqual(9, a0.IndexOfMinBy(x => 10 - x));
 
-				Assert.AreEqual(9, a0.IndexOfMaxBy(x => x));
-				Assert.AreEqual(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
-				Assert.AreEqual(3, a0.IndexOfMaxBy(x => 10 - x));
-			}
+			Assert.AreEqual(9, a0.IndexOfMaxBy(x => x));
+			Assert.AreEqual(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
+			Assert.AreEqual(3, a0.IndexOfMaxBy(x => 10 - x));
 		}
 	}
 }
-
 #endif

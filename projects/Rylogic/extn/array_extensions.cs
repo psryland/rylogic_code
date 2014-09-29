@@ -39,27 +39,23 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Linq;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestArrayExtns
 	{
-		public static partial class TestExtensions
+		[Test] public void ArrayExtns()
 		{
-			[Test] public static void ArrayExtns()
-			{
-				var a0 = new[]{1,2,3,4};
-				var A0 = a0.Dup();
+			var a0 = new[]{1,2,3,4};
+			var A0 = a0.Dup();
 
-				Assert.AreEqual(typeof(int[]), A0.GetType());
-				Assert.IsTrue(A0.SequenceEqual(a0));
+			Assert.AreEqual(typeof(int[]), A0.GetType());
+			Assert.True(A0.SequenceEqual(a0));
 
-				Assert.AreEqual(2, A0.IndexOf(3));
-				Assert.AreEqual(-1, A0.IndexOf(5));
-			}
+			Assert.AreEqual(2, A0.IndexOf(3));
+			Assert.AreEqual(-1, A0.IndexOf(5));
 		}
 	}
 }

@@ -30,32 +30,27 @@
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public partial class TestScript
 	{
-		internal static partial class TestScript
+		[Test] public void TestCodeUtil()
 		{
-			[Test] public static void TestCodeUtil()
-			{
-				Assert.IsFalse(CodeUtil.IsWithinString(@"0'23\'67\\'12", 0 ));
-				Assert.IsFalse(CodeUtil.IsWithinString(@"0'23\'67\\'12", 1 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 2 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 3 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 4 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 5 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 6 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 7 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 8 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 9 ));
-				Assert.IsTrue (CodeUtil.IsWithinString(@"0'23\'67\\'12", 10));
-				Assert.IsFalse(CodeUtil.IsWithinString(@"0'23\'67\\'12", 11));
-				Assert.IsFalse(CodeUtil.IsWithinString(@"0'23\'67\\'12", 12));
-			}
+			Assert.False(CodeUtil.IsWithinString(@"0'23\'67\\'12", 0 ));
+			Assert.False(CodeUtil.IsWithinString(@"0'23\'67\\'12", 1 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 2 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 3 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 4 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 5 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 6 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 7 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 8 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 9 ));
+			Assert.True (CodeUtil.IsWithinString(@"0'23\'67\\'12", 10));
+			Assert.False(CodeUtil.IsWithinString(@"0'23\'67\\'12", 11));
+			Assert.False(CodeUtil.IsWithinString(@"0'23\'67\\'12", 12));
 		}
 	}
 }

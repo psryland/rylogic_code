@@ -320,110 +320,106 @@ namespace pr.common
 
 #if PR_UNITTESTS
 
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestRange
 	{
-		internal static class TestRange
+		[Test] public void Intersect()
 		{
-			[Test] public static void Intersect()
-			{
-				var a = new Range(-4, -1);
-				var b = new Range(-1,  3);
-				var c = new Range( 0,  5);
-				var d = new Range( 7, 12);
+			var a = new Range(-4, -1);
+			var b = new Range(-1,  3);
+			var c = new Range( 0,  5);
+			var d = new Range( 7, 12);
 
-				// Intersect
-				Assert.AreEqual(a               , a.Intersect(a));
-				Assert.AreEqual(new Range(-1,-1), a.Intersect(b));
-				Assert.AreEqual(new Range(-1,-1), a.Intersect(c));
-				Assert.AreEqual(new Range(-1,-1), b.Intersect(a));
-				Assert.AreEqual(new Range( 0, 3), b.Intersect(c));
-				Assert.AreEqual(new Range( 3, 3), b.Intersect(d));
-				Assert.AreEqual(new Range( 0, 0), c.Intersect(a));
-				Assert.AreEqual(new Range( 0, 3), c.Intersect(b));
-				Assert.AreEqual(new Range( 5, 5), c.Intersect(d));
-			}
-			[Test] public static void Encompass()
-			{
-				var r = Range.Invalid;
-				r.Encompass(4);
-				Assert.AreEqual(4, r.Begin);
-				Assert.AreEqual(5, r.End);
-				Assert.IsTrue(r.Contains(4));
+			// Intersect
+			Assert.AreEqual(a               , a.Intersect(a));
+			Assert.AreEqual(new Range(-1,-1), a.Intersect(b));
+			Assert.AreEqual(new Range(-1,-1), a.Intersect(c));
+			Assert.AreEqual(new Range(-1,-1), b.Intersect(a));
+			Assert.AreEqual(new Range( 0, 3), b.Intersect(c));
+			Assert.AreEqual(new Range( 3, 3), b.Intersect(d));
+			Assert.AreEqual(new Range( 0, 0), c.Intersect(a));
+			Assert.AreEqual(new Range( 0, 3), c.Intersect(b));
+			Assert.AreEqual(new Range( 5, 5), c.Intersect(d));
+		}
+		[Test] public void Encompass()
+		{
+			var r = Range.Invalid;
+			r.Encompass(4);
+			Assert.AreEqual(4L, r.Begin);
+			Assert.AreEqual(5L, r.End);
+			Assert.True(r.Contains(4));
 
-				r.Encompass(-2);
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 5, r.End);
-				Assert.IsTrue(r.Contains(-2));
-				Assert.IsTrue(r.Contains(4));
+			r.Encompass(-2);
+			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual( 5L, r.End);
+			Assert.True(r.Contains(-2));
+			Assert.True(r.Contains(4));
 
-				r.Encompass(new Range(1,7));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
-				Assert.IsTrue(r.Contains(-2));
-				Assert.IsFalse(r.Contains(7));
+			r.Encompass(new Range(1,7));
+			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual( 7L, r.End);
+			Assert.True(r.Contains(-2));
+			Assert.False(r.Contains(7));
 
-				var r2 = r.Union(new Range(-3,2));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
-				Assert.AreEqual(-3, r2.Begin);
-				Assert.AreEqual( 7, r2.End);
+			var r2 = r.Union(new Range(-3,2));
+			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual( 7L, r.End);
+			Assert.AreEqual(-3L, r2.Begin);
+			Assert.AreEqual( 7L, r2.End);
 
-				var r3 = r.Intersect(new Range(1,10));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
-				Assert.AreEqual( 1, r3.Begin);
-				Assert.AreEqual( 7, r3.End);
-			}
-			[Test] public static void IntersectF()
-			{
-				var a = new RangeF(-4.0, -1.0);
-				var b = new RangeF(-1.0,  3.0);
-				var c = new RangeF( 0.0,  5.0);
-				var d = new RangeF( 7.0, 12.0);
+			var r3 = r.Intersect(new Range(1,10));
+			Assert.AreEqual(-2L, r.Begin);
+			Assert.AreEqual( 7L, r.End);
+			Assert.AreEqual( 1L, r3.Begin);
+			Assert.AreEqual( 7L, r3.End);
+		}
+		[Test] public void IntersectF()
+		{
+			var a = new RangeF(-4.0, -1.0);
+			var b = new RangeF(-1.0,  3.0);
+			var c = new RangeF( 0.0,  5.0);
+			var d = new RangeF( 7.0, 12.0);
 
-				// Intersect
-				Assert.AreEqual(a                    , a.Intersect(a));
-				Assert.AreEqual(new RangeF(-1.0,-1.0), a.Intersect(b));
-				Assert.AreEqual(new RangeF(-1.0,-1.0), a.Intersect(c));
-				Assert.AreEqual(new RangeF(-1.0,-1.0), b.Intersect(a));
-				Assert.AreEqual(new RangeF( 0.0, 3.0), b.Intersect(c));
-				Assert.AreEqual(new RangeF( 3.0, 3.0), b.Intersect(d));
-				Assert.AreEqual(new RangeF( 0.0, 0.0), c.Intersect(a));
-				Assert.AreEqual(new RangeF( 0.0, 3.0), c.Intersect(b));
-				Assert.AreEqual(new RangeF( 5.0, 5.0), c.Intersect(d));
-			}
-			[Test] public static void EncompassF()
-			{
-				var r = RangeF.Invalid;
-				r.Encompass(4);
-				Assert.AreEqual(4, r.Begin);
-				Assert.AreEqual(4, r.End);
+			// Intersect
+			Assert.AreEqual(a                    , a.Intersect(a));
+			Assert.AreEqual(new RangeF(-1.0,-1.0), a.Intersect(b));
+			Assert.AreEqual(new RangeF(-1.0,-1.0), a.Intersect(c));
+			Assert.AreEqual(new RangeF(-1.0,-1.0), b.Intersect(a));
+			Assert.AreEqual(new RangeF( 0.0, 3.0), b.Intersect(c));
+			Assert.AreEqual(new RangeF( 3.0, 3.0), b.Intersect(d));
+			Assert.AreEqual(new RangeF( 0.0, 0.0), c.Intersect(a));
+			Assert.AreEqual(new RangeF( 0.0, 3.0), c.Intersect(b));
+			Assert.AreEqual(new RangeF( 5.0, 5.0), c.Intersect(d));
+		}
+		[Test] public void EncompassF()
+		{
+			var r = RangeF.Invalid;
+			r.Encompass(4);
+			Assert.AreEqual(4.0, r.Begin);
+			Assert.AreEqual(4.0, r.End);
 
-				r.Encompass(-2);
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 4, r.End);
+			r.Encompass(-2);
+			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual( 4.0, r.End);
 
-				r.Encompass(new RangeF(1,7));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
+			r.Encompass(new RangeF(1,7));
+			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual( 7.0, r.End);
 
-				var r2 = r.Union(new RangeF(-3,2));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
-				Assert.AreEqual(-3, r2.Begin);
-				Assert.AreEqual( 7, r2.End);
+			var r2 = r.Union(new RangeF(-3,2));
+			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual( 7.0, r.End);
+			Assert.AreEqual(-3.0, r2.Begin);
+			Assert.AreEqual( 7.0, r2.End);
 
-				var r3 = r.Intersect(new RangeF(1,10));
-				Assert.AreEqual(-2, r.Begin);
-				Assert.AreEqual( 7, r.End);
-				Assert.AreEqual( 1, r3.Begin);
-				Assert.AreEqual( 7, r3.End);
-			}
+			var r3 = r.Intersect(new RangeF(1,10));
+			Assert.AreEqual(-2.0, r.Begin);
+			Assert.AreEqual( 7.0, r.End);
+			Assert.AreEqual( 1.0, r3.Begin);
+			Assert.AreEqual( 7.0, r3.End);
 		}
 	}
 }

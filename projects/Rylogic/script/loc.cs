@@ -39,17 +39,12 @@
 
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public partial class TestScript
 	{
-		internal static partial class TestScript
-		{
-			[Test] public static void TestLoc()
-			{}
-		}
+		[Test] public static void Loc()
+		{}
 	}
 }
 #endif

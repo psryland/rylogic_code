@@ -32,13 +32,11 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public partial class UnitTests
+	[TestFixture] public class TestCrt
 	{
-		[Test] public static void TestCRT()
+		[Test] public void CRT()
 		{
 			{// memcpy
 				byte[] block0 = new byte[]{0,1,2,3,4,5,6,7,8,9};

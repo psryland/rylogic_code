@@ -152,32 +152,28 @@ namespace pr.attrib
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using attrib;
-	
-	[TestFixture] public static partial class UnitTests
+
+	[TestFixture] public class TestUnitsAttr
 	{
-		internal static class TestUnitsAttr
+		public class Whatsit
 		{
-			public class Whatsit
-			{
-				[Units("m", 1.0)]     public double Distance { get { return 2.0; } }
-				[Units("m/s", 0.001)] public double Speed { get { return 3.0; } }
-			}
+			[Units("m", 1.0)]     public double Distance { get { return 2.0; } }
+			[Units("m/s", 0.001)] public double Speed { get { return 3.0; } }
+		}
 
-			[Test] public static void Units()
-			{
-				Assert.AreEqual("m", Units<Whatsit>.Label(x => x.Distance));
-				Assert.AreEqual("m/s", Units<Whatsit>.Label(x => x.Speed));
+		[Test] public void Units()
+		{
+			Assert.AreEqual("m", Units<Whatsit>.Label(x => x.Distance));
+			Assert.AreEqual("m/s", Units<Whatsit>.Label(x => x.Speed));
 				
-				Assert.AreEqual(1.0, Units<Whatsit>.Scale(x => x.Distance));
-				Assert.AreEqual(0.001, Units<Whatsit>.Scale(x => x.Speed));
+			Assert.AreEqual(1.0, Units<Whatsit>.Scale(x => x.Distance));
+			Assert.AreEqual(0.001, Units<Whatsit>.Scale(x => x.Speed));
 
-				Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Distance));
-				Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Speed));
-			}
+			Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Distance));
+			Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Speed));
 		}
 	}
 }

@@ -106,68 +106,62 @@ namespace pr.script
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public partial class TestScript
 	{
-		internal static partial class TestScript
+		[Test] public void StripCppComments()
 		{
-			[Test] public static void TestStripCppComments()
-			{
-				const string str_in =
-					"123// comment         \n"+
-					"456/* block */789     \n"+
-					"// many               \n"+
-					"// lines              \n"+
-					"// \"string\"         \n"+
-					"/* \"string\" */      \n"+
-					"\"string \\\" /*a*/ //b\"  \n"+
-					"/not a comment\n"+
-					"/*\n"+
-					"  more lines\n"+
-					"*/\n"+
-					"/*back to*//*back*/ comment\n";
-				const string str_out =
-					"123\n"+
-					"456789     \n"+
-					"\n"+
-					"\n"+
-					"\n"+
-					"      \n"+
-					"\"string \\\" /*a*/ //b\"  \n"+
-					"/not a comment\n"+
-					"\n"+
-					" comment\n";
+			const string str_in =
+				"123// comment         \n"+
+				"456/* block */789     \n"+
+				"// many               \n"+
+				"// lines              \n"+
+				"// \"string\"         \n"+
+				"/* \"string\" */      \n"+
+				"\"string \\\" /*a*/ //b\"  \n"+
+				"/not a comment\n"+
+				"/*\n"+
+				"  more lines\n"+
+				"*/\n"+
+				"/*back to*//*back*/ comment\n";
+			const string str_out =
+				"123\n"+
+				"456789     \n"+
+				"\n"+
+				"\n"+
+				"\n"+
+				"      \n"+
+				"\"string \\\" /*a*/ //b\"  \n"+
+				"/not a comment\n"+
+				"\n"+
+				" comment\n";
 
-				var src = new StringSrc(str_in);
-				var strip = new CommentStrip(src);
-				var result = strip.ReadToEnd();
-				Assert.AreEqual(str_out, result);
-				Assert.AreEqual(0, strip.Peek);
-			}
-			[Test] public static void TestStripAsmComments()
-			{
-				const string str_in =
-					"; asm comments start with a ; character\r\n"+
-					"mov 43 2\r\n"+
-					"ldr $a 2 ; imaginary asm";
-				const string str_out =
-					"\r\n"+
-					"mov 43 2\r\n"+
-					"ldr $a 2 ";
+			var src = new StringSrc(str_in);
+			var strip = new CommentStrip(src);
+			var result = strip.ReadToEnd();
+			Assert.AreEqual(str_out, result);
+			Assert.AreEqual((char)0, strip.Peek);
+		}
+		[Test] public void StripAsmComments()
+		{
+			const string str_in =
+				"; asm comments start with a ; character\r\n"+
+				"mov 43 2\r\n"+
+				"ldr $a 2 ; imaginary asm";
+			const string str_out =
+				"\r\n"+
+				"mov 43 2\r\n"+
+				"ldr $a 2 ";
 
-				var src = new StringSrc(str_in);
-				var strip = new CommentStrip(src, "\r\n", ";", null, null);
-				for (int i = 0; i != str_out.Length; ++i, strip.Next())
-					Assert.AreEqual(str_out[i], strip.Peek);
-				Assert.AreEqual(0, strip.Peek);
-			}
+			var src = new StringSrc(str_in);
+			var strip = new CommentStrip(src, "\r\n", ";", null, null);
+			for (int i = 0; i != str_out.Length; ++i, strip.Next())
+				Assert.AreEqual(str_out[i], strip.Peek);
+			Assert.AreEqual((char)0, strip.Peek);
 		}
 	}
 }
-
 #endif

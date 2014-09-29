@@ -248,13 +248,11 @@ namespace pr.maths
 
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestStat
 	{
-		[Test] public static void TestStat()
+		[Test] public void Stat()
 		{
 			double[] num = new[]{2.0,4.0,7.0,3.0,2.0,-5.0,-4.0,1.0,-7.0,3.0,6.0,-8.0};
 			
@@ -262,7 +260,7 @@ namespace pr
 			for (int i = 0; i != num.Length; ++i)
 				s.Add(num[i]);
 			
-			Assert.AreEqual(num.Length, s.Count);
+			Assert.AreEqual((uint)num.Length, s.Count);
 			Assert.AreEqual(4.0                               ,s.Sum       ,Maths.TinyD);
 			Assert.AreEqual(-8.0                              ,s.Minimum   ,Maths.TinyD);
 			Assert.AreEqual(7.0                               ,s.Maximum   ,Maths.TinyD);
@@ -272,7 +270,7 @@ namespace pr
 			Assert.AreEqual(5.0512524699475787686684767441111 ,s.SamStdDev ,Maths.TinyD);
 			Assert.AreEqual(25.515151515151515151515151515152 ,s.SamStdVar ,Maths.TinyD);
 		}
-		[Test] public static void TestMovingWindowAvr()
+		[Test] public void MovingWindowAvr()
 		{
 			const int BufSz = 13;
 			
@@ -293,7 +291,7 @@ namespace pr
 				Assert.AreEqual(mean ,s.Mean ,0.00001);
 			}
 		}
-		[Test] public static void TestExpMovingAvr()
+		[Test] public void ExpMovingAvr()
 		{
 			const int BufSz = 13;
 			

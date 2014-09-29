@@ -117,38 +117,34 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using attrib;
 	using util;
 	
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestReflect
 	{
-		internal static class TestReflect
+		internal class Thing
 		{
-			internal class Thing
-			{
-				[Description("My name is Desc")] public void Desc() {}
-				[Desc("Short For")] public string Bob { get { return "kate"; } }
-			}
+			[Description("My name is Desc")] public void Desc() {}
+			[Desc("Short For")] public string Bob { get { return "kate"; } }
+		}
 
-			[Test] public static void MemberName()
-			{
-				Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
-				Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));
-				Assert.AreEqual("BaseStream", Reflect<StreamWriter>.MemberName(s => s.BaseStream));
-			}
-			[Test] public static void Attrib()
-			{
-				var attr = Reflect<Thing>.Attrs(x => x.Desc());
-				Assert.AreEqual(1, attr.Length);
-				Assert.IsTrue(attr[0] is DescriptionAttribute);
+		[Test] public void MemberName()
+		{
+			Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
+			Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));
+			Assert.AreEqual("BaseStream", Reflect<StreamWriter>.MemberName(s => s.BaseStream));
+		}
+		[Test] public void Attrib()
+		{
+			var attr = Reflect<Thing>.Attrs(x => x.Desc());
+			Assert.AreEqual(1, attr.Length);
+			Assert.True(attr[0] is DescriptionAttribute);
 
-				attr = Reflect<Thing>.Attrs(x => x.Bob);
-				Assert.AreEqual(1, attr.Length);
-				Assert.IsTrue(attr[0] is DescAttribute);
-			}
+			attr = Reflect<Thing>.Attrs(x => x.Bob);
+			Assert.AreEqual(1, attr.Length);
+			Assert.True(attr[0] is DescAttribute);
 		}
 	}
 }

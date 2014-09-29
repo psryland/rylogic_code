@@ -82,32 +82,26 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestStringTransforms
 	{
-		public static partial class TestUtils
+		[Test] public void StringTransform()
 		{
-			[Test] public static void TestStringTransform()
-			{
-				const string str0 = "SOME_stringWith_weird_Casing_Number03";
-				string str;
+			const string str0 = "SOME_stringWith_weird_Casing_Number03";
+			string str;
 
-				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.LowerCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, "_", "_");
-				Assert.AreEqual("some_string_with_weird_casing_number_03", str);
+			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.LowerCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, "_", "_");
+			Assert.AreEqual("some_string_with_weird_casing_number_03", str);
 
-				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Remove, null, "_");
-				Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
+			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Remove, null, "_");
+			Assert.AreEqual("SomeStringWithWeirdCasingNumber03", str);
 
-				str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.UpperCase, StrTxfm.ESeparate.Add, "^ ^", "_");
-				Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
+			str = StrTxfm.Apply(str0, StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.UpperCase, StrTxfm.ESeparate.Add, "^ ^", "_");
+			Assert.AreEqual("SOME^ ^STRING^ ^WITH^ ^WEIRD^ ^CASING^ ^NUMBER^ ^03", str);
 
-				str = StrTxfm.Apply("FieldCAPSBlah", StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
-				Assert.AreEqual("Field CAPS Blah", str);
-			}
+			str = StrTxfm.Apply("FieldCAPSBlah", StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate.Add, " ");
+			Assert.AreEqual("Field CAPS Blah", str);
 		}
 	}
 }

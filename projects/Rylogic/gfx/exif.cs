@@ -1391,108 +1391,143 @@ namespace pr.gfx
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Drawing;
 	using gfx;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestExif
 	{
-		internal static class TestExif
-		{
-			private const string SrcImageWith    = @"P:\sdk\pr\prcs\unittest_resources\exif_image_with.jpg";
-			private const string SrcImageWithout = @"P:\sdk\pr\prcs\unittest_resources\exif_image_without.jpg";
-			private const string DstImage        = @"P:\sdk\pr\prcs\unittest_resources\exif_image_out.jpg";
+		private string SrcImageWith;
+		private string SrcImageWithout;
 
-			[Test] public static void LoadExifToMemory()
+		[TestFixtureSetUp] public void Setup()
+		{
+			var dir = Environment.CurrentDirectory;
+			var idx = dir.IndexOf("Rylogic");
+			if (idx != -1) dir = dir.Substring(0, idx);
+
+			SrcImageWith    = Path.Combine(dir, @"Rylogic\unittest_resources\exif_image_with.jpg");
+			SrcImageWithout = Path.Combine(dir, @"Rylogic\unittest_resources\exif_image_without.jpg");
+		}
+		[Test] public void LoadExifToMemory()
+		{
 			{
-				{
-					var exif = Exif.Load(SrcImageWith);
-					Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
-				}
-				{
-					var exif = Exif.Load(SrcImageWithout);
-					Assert.AreEqual(0, exif.Count);
-				}
+				var exif = Exif.Load(SrcImageWith);
+				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal, float.Epsilon);
 			}
-			[Test] public static void ReadExifFromFile()
 			{
-				using (var fs = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					var exif = Exif.Read(fs);
-					Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
-				}
-				using (var fs = new FileStream(SrcImageWithout, FileMode.Open, FileAccess.Read, FileShare.Read))
-				{
-					var exif = Exif.Read(fs);
-					Assert.AreEqual(0, exif.Count);
-				}
+				var exif = Exif.Load(SrcImageWithout);
+				Assert.AreEqual(0, exif.Count);
 			}
-			[Test] public static void WriteExifToFile()
+		}
+		[Test] public void ReadExifFromFile()
+		{
+			using (var fs = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				var exif = Exif.Read(fs);
+				Assert.AreEqual(1.0/50.0, exif[Exif.Tag.ExposureTime].AsReal);
+			}
+			using (var fs = new FileStream(SrcImageWithout, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				var exif = Exif.Read(fs);
+				Assert.AreEqual(0, exif.Count);
+			}
+		}
+		[Test] public void WriteExifToFile()
+		{
+			using (var inf = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
+			using (var outf = new MemoryStream())
 			{
 				var exif_in = Exif.Load(SrcImageWith);
-				Exif.Save(SrcImageWith, exif_in, DstImage);
-				var exif_out = Exif.Load(DstImage);
+				Exif.Save(inf, exif_in, outf);
 
-				Assert.DoesNotThrow(() => new Bitmap(DstImage), "Output jpg image is invalid");
+				outf.Position = 0;
+				Assert.DoesNotThrow(() => new Bitmap(outf), "Output jpg image is invalid");
+
+				outf.Position = 0;
+				var exif_out = Exif.Load(outf);
 				Assert.AreEqual(exif_in.Count, exif_out.Count);
 				Assert.AreEqual(exif_in[Exif.Tag.FocalLength ].AsReal, exif_out[Exif.Tag.FocalLength ].AsReal);
 				Assert.AreEqual(exif_in[Exif.Tag.ExposureTime].AsReal, exif_out[Exif.Tag.ExposureTime].AsReal);
 			}
-			[Test] public static void AddRemoveFields()
+		}
+		[Test] public void AddRemoveFields()
+		{
+			var exif = Exif.Load(SrcImageWith);
+
+			// Update the field
+			exif.Set(Exif.Tag.Orientation, (ushort)3);
+			Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+
+			// Save to the file
+			using (var inf = new FileStream(SrcImageWith, FileMode.Open, FileAccess.Read, FileShare.Read))
 			{
-				var exif = Exif.Load(SrcImageWith);
+				using (var outf = new MemoryStream())
+				{
+					Exif.Save(inf, exif, outf);
 
-				// Update the field
-				exif.Set(Exif.Tag.Orientation, (ushort)3);
-				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
-
-				// Save to the file
-				Exif.Save(SrcImageWith, exif, DstImage);
-				exif = Exif.Load(DstImage);
-				Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+					outf.Position = 0;
+					exif = Exif.Load(outf);
+					Assert.AreEqual(3, exif[Exif.Tag.Orientation].AsInt);
+				}
 
 				// Remove the field
 				exif.Delete(Exif.Tag.Orientation);
-				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+				Assert.False(exif.HasTag(Exif.Tag.Orientation));
 
 				// Save to file
-				Exif.Save(SrcImageWith, exif, DstImage);
-				exif = Exif.Load(DstImage);
-				Assert.IsFalse(exif.HasTag(Exif.Tag.Orientation));
+				inf.Position = 0;
+				using (var outf = new MemoryStream())
+				{
+					Exif.Save(inf, exif, outf);
+
+					outf.Position = 0;
+					exif = Exif.Load(outf);
+					Assert.False(exif.HasTag(Exif.Tag.Orientation));
+				}
 
 				// Restore the field
 				exif.Set(Exif.Tag.Orientation, (ushort)1);
 				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
 
 				// Save to file
-				Exif.Save(SrcImageWith, exif, DstImage);
-				exif = Exif.Load(DstImage);
-				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
-			}
-			[Test] public static void AddExifToFileWithout()
-			{
-				// Check the file has none to start with
-				var exif = Exif.Load(SrcImageWithout);
-				Assert.AreEqual(0, exif.Count);
+				inf.Position = 0;
+				using (var outf = new MemoryStream())
+				{
+					Exif.Save(inf, exif, outf);
 
-				// Create a new instance of exif data and add a field
-				exif = Exif.Create();
-				exif.Set(Exif.Tag.Orientation, 1);
-				Exif.Save(SrcImageWithout, exif, DstImage);
+					outf.Position = 0;
+					exif = Exif.Load(outf);
+					Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
+				}
+			}
+		}
+		[Test] public void AddExifToFileWithout()
+		{
+			// Check the file has none to start with
+			var exif = Exif.Load(SrcImageWithout);
+			Assert.AreEqual(0, exif.Count);
+
+			// Create a new instance of exif data and add a field
+			exif = Exif.Create();
+			exif.Set(Exif.Tag.Orientation, 1);
+
+			using (var inf = new FileStream(SrcImageWithout, FileMode.Open, FileAccess.Read, FileShare.Read))
+			using (var outf = new MemoryStream())
+			{
+				Exif.Save(inf, exif, outf);
 
 				// Read the saved file and check the tag is there
-				exif = Exif.Load(DstImage);
+				outf.Position = 0;
+				exif = Exif.Load(outf);
 				Assert.AreEqual(1, exif[Exif.Tag.Orientation].AsInt);
 			}
-			[Test] public static void TestCase()
-			{
-				//var exif = Exif.Load(@"c:\users\paul\downloads\1380087187400.jpg");
-			}
+		}
+		[Test] public void TestCase()
+		{
+			//var exif = Exif.Load(@"c:\users\paul\downloads\1380087187400.jpg");
 		}
 	}
 }
-
 #endif

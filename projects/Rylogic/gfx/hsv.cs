@@ -184,35 +184,29 @@ namespace pr.gfx
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestHSV
 	{
-		internal static class TestHSV
+		private static bool Equal(Color lhs, Color rhs)
 		{
-			private static bool Equal(Color lhs, Color rhs)
-			{
-				return
-					lhs.A == rhs.A &&
-					lhs.R == rhs.R &&
-					lhs.G == rhs.G &&
-					lhs.B == rhs.B;
-			}
+			return
+				lhs.A == rhs.A &&
+				lhs.R == rhs.R &&
+				lhs.G == rhs.G &&
+				lhs.B == rhs.B;
+		}
 
-			[Test] public static void Rgb2Hsv2Rgb()
-			{
-				Assert.IsTrue(Equal(Color.White, Color.White.ToHSV().ToColor()));
-				Assert.IsTrue(Equal(Color.Black, Color.Black.ToHSV().ToColor()));
-				Assert.IsTrue(Equal(Color.Red  , Color.Red  .ToHSV().ToColor()));
-				Assert.IsTrue(Equal(Color.Green, Color.Green.ToHSV().ToColor()));
-				Assert.IsTrue(Equal(Color.Blue , Color.Blue .ToHSV().ToColor()));
-			}
+		[Test] public void Rgb2Hsv2Rgb()
+		{
+			Assert.True(Equal(Color.White, Color.White.ToHSV().ToColor()));
+			Assert.True(Equal(Color.Black, Color.Black.ToHSV().ToColor()));
+			Assert.True(Equal(Color.Red  , Color.Red  .ToHSV().ToColor()));
+			Assert.True(Equal(Color.Green, Color.Green.ToHSV().ToColor()));
+			Assert.True(Equal(Color.Blue , Color.Blue .ToHSV().ToColor()));
 		}
 	}
 }
-
 #endif

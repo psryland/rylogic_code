@@ -96,31 +96,27 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
-	
-	[TestFixture] public static partial class UnitTests
+
+	[TestFixture] public class TestEnumEx
 	{
-		internal static class TestEnumEx
+		public sealed class MyEnum :EnumEx<int, MyEnum>
 		{
-			public sealed class MyEnum :EnumEx<int, MyEnum>
-			{
-				public static readonly MyEnum One   = new MyEnum(1 << 0);
-				public static readonly MyEnum Two   = new MyEnum(1 << 1);
-				public static readonly MyEnum Three = new MyEnum(1 << 2);
-				public static readonly MyEnum Four  = new MyEnum(1 << 3);
+			public static readonly MyEnum One   = new MyEnum(1 << 0);
+			public static readonly MyEnum Two   = new MyEnum(1 << 1);
+			public static readonly MyEnum Three = new MyEnum(1 << 2);
+			public static readonly MyEnum Four  = new MyEnum(1 << 3);
 				
-				static MyEnum() { Init(); }
-				private MyEnum(int value) :base(value) {}
-				public static implicit operator MyEnum(int value) { return Convert(value); }
-			}
-			[Test] public static void Func()
-			{
-				MyEnum e = MyEnum.One;
-				Assert.AreEqual(e, 1 << 0);
-			}
+			static MyEnum() { Init(); }
+			private MyEnum(int value) :base(value) {}
+			public static implicit operator MyEnum(int value) { return Convert(value); }
+		}
+		[Test] public void Func()
+		{
+			MyEnum e = MyEnum.One;
+			Assert.AreEqual(e, 1 << 0);
 		}
 	}
 }

@@ -30,37 +30,32 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestDateTimeExtensions
 	{
-		internal static class TestDateTimeExtensions
+		[Test] public void TestClamp()
 		{
-			[Test] public static void TestClamp()
-			{
-				var min = new DateTimeOffset(2000,12,1,0,0,0,TimeSpan.Zero);
-				var max = new DateTimeOffset(2000,12,31,0,0,0,TimeSpan.Zero);
-				DateTimeOffset dt,DT;
+			var min = new DateTimeOffset(2000,12,1,0,0,0,TimeSpan.Zero);
+			var max = new DateTimeOffset(2000,12,31,0,0,0,TimeSpan.Zero);
+			DateTimeOffset dt,DT;
 
-				dt = new DateTimeOffset(2000,11,29,0,0,0,TimeSpan.Zero);
-				DT = dt.Clamp(min,max);
-				Assert.IsTrue(!Equals(dt,DT) && dt < min);
-				Assert.IsTrue(DT >= min && DT <= max);
+			dt = new DateTimeOffset(2000,11,29,0,0,0,TimeSpan.Zero);
+			DT = dt.Clamp(min,max);
+			Assert.True(!Equals(dt,DT) && dt < min);
+			Assert.True(DT >= min && DT <= max);
 
-				dt = new DateTimeOffset(2000,12,20,0,0,0,TimeSpan.Zero);
-				DT = dt.Clamp(min,max);
-				Assert.IsTrue(Equals(dt,DT));
-				Assert.IsTrue(DT >= min && DT <= max);
+			dt = new DateTimeOffset(2000,12,20,0,0,0,TimeSpan.Zero);
+			DT = dt.Clamp(min,max);
+			Assert.True(Equals(dt,DT));
+			Assert.True(DT >= min && DT <= max);
 
-				dt = new DateTimeOffset(2000,12,31,23,59,59,TimeSpan.Zero);
-				DT = dt.Clamp(min,max);
-				Assert.IsTrue(!dt.Equals(DT) && dt > max);
-				Assert.IsTrue(DT >= min && DT <= max);
-			}
+			dt = new DateTimeOffset(2000,12,31,23,59,59,TimeSpan.Zero);
+			DT = dt.Clamp(min,max);
+			Assert.True(!dt.Equals(DT) && dt > max);
+			Assert.True(DT >= min && DT <= max);
 		}
 	}
 }

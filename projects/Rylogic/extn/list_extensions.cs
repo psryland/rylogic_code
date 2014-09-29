@@ -420,52 +420,45 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using maths;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestListExtns
 	{
-		public static partial class TestExtensions
+		[Test] public void ListQuickSort()
 		{
-			[Test] public static void ListQuickSort()
-			{
-				var rng = new Random();
-				var list = new List<int>(99);
-				for (var i = 0; i != 99; ++i)
-					list.Add(rng.Next(10));
+			var rng = new Random();
+			var list = new List<int>(99);
+			for (var i = 0; i != 99; ++i)
+				list.Add(rng.Next(10));
 
-				list.Sort();
+			list.Sort();
 				
-				for (var i = 0; i != list.Count - 1; ++i)
-					Assert.True(list[i] <= list[i+1]);
-			}
-			[Test] public static void ListUnique()
-			{
-				var rng = new Random();
-				var list = new List<int>(100);
-				for (var i = 0; i != 100; ++i)
-					list.Add(rng.Next(10));
+			for (var i = 0; i != list.Count - 1; ++i)
+				Assert.True(list[i] <= list[i+1]);
+		}
+		[Test] public void ListUnique()
+		{
+			var rng = new Random();
+			var list = new List<int>(100);
+			for (var i = 0; i != 100; ++i)
+				list.Add(rng.Next(10));
 
-				list.Sort();
+			list.Sort();
 
-				int last = list.Unique(0, 50);
-				for (var i = 0; i < last; ++i)
-				for (var j = i+1; j < last; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+			int last = list.Unique(0, 50);
+			for (var i = 0; i < last; ++i)
+			for (var j = i+1; j < last; ++j)
+				Assert.AreNotEqual(list[i], list[j]);
 
-				list.Unique();
-				for (var i = 0; i < list.Count; ++i)
-				for (var j = i+1; j < list.Count; ++j)
-					Assert.AreNotEqual(list[i], list[j]);
+			list.Unique();
+			for (var i = 0; i < list.Count; ++i)
+			for (var j = i+1; j < list.Count; ++j)
+				Assert.AreNotEqual(list[i], list[j]);
 
-				Assert.AreEqual(5, list.Add2(5));
-			}
-
+			Assert.AreEqual(5, list.Add2(5));
 		}
 	}
 }
-
 #endif

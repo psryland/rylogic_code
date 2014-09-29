@@ -88,27 +88,23 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
 	using System.Linq;
-	using NUnit.Framework;
 	using common;
 	using util;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestIterator
 	{
-		internal static class TestIterator
+		[Test] public void Iter()
 		{
-			[Test] public static void Iter()
-			{
-				var items = new[]{1, 2, 3, 4, 5, 6, 7}.ToList();
-				var iout = new int[items.Count];
+			var items = new[]{1, 2, 3, 4, 5, 6, 7}.ToList();
+			var iout = new int[items.Count];
 
-				for (var i = items.GetIterator(); !i.AtEnd; i.MoveNext())
-					iout[i.Index] = i.Current;
+			for (var i = items.GetIterator(); !i.AtEnd; i.MoveNext())
+				iout[i.Index] = i.Current;
 				
-				Assert.True(items.SequenceEqual(iout));
-			}
+			Assert.True(items.SequenceEqual(iout));
 		}
 	}
 }
