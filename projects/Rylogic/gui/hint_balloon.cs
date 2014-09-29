@@ -397,33 +397,27 @@ namespace pr.gui
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using gui;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestTooltip
 	{
-		internal static class TestTooltip
+		[Test] public void Test()
 		{
-			[Test] public static void Test()
-			{
-				const string text =
-					"Short Msg\r\n"+
-					"Really long message goes here with lots of words\r\n"+
-					"Including some new lines\r\n"+
-					"..and really really really really really really really really really really really really really really really really really really really really really really really long sentences"+
-					"";
+			const string text =
+				"Short Msg\r\n"+
+				"Really long message goes here with lots of words\r\n"+
+				"Including some new lines\r\n"+
+				"..and really really really really really really really really really really really really really really really really really really really really really really really long sentences"+
+				"";
 
-				//var btns = MessageBoxButtons.OKCancel;
-				//var icon = MessageBoxIcon.Question;
-				//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
-				//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
-				new HintBalloon().Show(null, new Point(500,500), text);
-			}
+			//var btns = MessageBoxButtons.OKCancel;
+			//var icon = MessageBoxIcon.Question;
+			//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
+			//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
+			new HintBalloon().Show(null, new Point(500,500), text);
 		}
 	}
 }
-
 #endif

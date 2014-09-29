@@ -677,58 +677,53 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using util;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestProfile
 	{
-		internal static class TestProfile
+		public class Thing
 		{
-			public class Test
+			public void Func1()
 			{
-				public void Func1()
+				using (Profile.Scope("Func1"))
 				{
-					using (Profile.Scope("Func1"))
-					{
-						Func2();
-						Func3(10);
-					}
+					Func2();
+					Func3(10);
 				}
-				public void Func2()
+			}
+			public void Func2()
+			{
+				using (Profile.Scope("Func2"))
 				{
-					using (Profile.Scope("Func2"))
-					{
-						for (int i = 0; i != 5; ++i)
-							Func3(i);
-					}
+					for (int i = 0; i != 5; ++i)
+						Func3(i);
 				}
-				public void Func3(int i)
+			}
+			public void Func3(int i)
+			{
+				using (Profile.Scope("Func3"))
 				{
-					using (Profile.Scope("Func3"))
-					{
-						if (i == 4)
-							return;
-					}
+					if (i == 4)
+						return;
+				}
+			}
+		}
+
+		[Test] public void TestScopes()
+		{
+			// Collect profile data
+			for (var f = 0; f != 10; ++f)
+			{
+				using (Profile.FrameScope())
+				{
+					var thg = new Thing();
+					thg.Func1();
 				}
 			}
 
-			[Test] public static void TestScopes()
-			{
-				// Collect profile data
-				for (var f = 0; f != 10; ++f)
-				{
-					using (Profile.FrameScope())
-					{
-						var test = new Test();
-						test.Func1();
-					}
-				}
-
-				Debug.Write(Profile.Summary);
-			}
+			Debug.Write(Profile.Summary);
 		}
 	}
 }

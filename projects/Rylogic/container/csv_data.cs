@@ -234,49 +234,45 @@ namespace pr.container
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using container;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestCSVData
 	{
-		internal static class TestCSVData
+		[Test] public void CSVRoundTrip()
 		{
-			[Test] public static void CSVRoundTrip()
+			var csv = new CSVData();
+			csv.Add("One", "Two", "Three", "\"Four\"","\",\r\n\"");
+			csv.Add("1,1", "2\r2", "3\n3", "4\r\n");
+			csv.Add(new CSVData.Row());
+			csv.Add("1,1", "2\r2", "3\n3", "4\r\n");
+
+			var tmp = Path.GetTempFileName();
+			csv.Save(tmp);
+
+			try
 			{
-				var csv = new CSVData();
-				csv.Add("One", "Two", "Three", "\"Four\"","\",\r\n\"");
-				csv.Add("1,1", "2\r2", "3\n3", "4\r\n");
-				csv.Add(new CSVData.Row());
-				csv.Add("1,1", "2\r2", "3\n3", "4\r\n");
+				var load = CSVData.Load(tmp);
 
-				var tmp = Path.GetTempFileName();
-				csv.Save(tmp);
-
-				try
+				Assert.AreEqual(csv.RowCount, load.RowCount);
+				for (var i = 0; i != csv.RowCount; ++i)
 				{
-					var load = CSVData.Load(tmp);
+					var r0 = csv[i];
+					var r1 = load[i];
+					Assert.AreEqual(r0.Count, r1.Count);
 
-					Assert.AreEqual(csv.RowCount, load.RowCount);
-					for (var i = 0; i != csv.RowCount; ++i)
+					for (var j = 0; j != r0.Count; ++j)
 					{
-						var r0 = csv[i];
-						var r1 = load[i];
-						Assert.AreEqual(r0.Count, r1.Count);
-
-						for (var j = 0; j != r0.Count; ++j)
-						{
-							var e0 = r0[j];
-							var e1 = r1[j];
-							Assert.AreEqual(e0,e1);
-						}
+						var e0 = r0[j];
+						var e1 = r1[j];
+						Assert.AreEqual(e0,e1);
 					}
 				}
-				finally
-				{
-					File.Delete(tmp);
-				}
+			}
+			finally
+			{
+				File.Delete(tmp);
 			}
 		}
 	}

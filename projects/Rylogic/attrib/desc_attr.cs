@@ -155,17 +155,12 @@ namespace pr.attrib
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.ComponentModel;
 	using attrib;
 
-	[TestFixture] public static partial class UnitTests
-	{
-		// ReSharper disable UnusedMember.Local
-		public static class TestStringAttr
+	[TestFixture] public class TestDescAttr
 		{
 			private enum EType
 			{
@@ -198,15 +193,15 @@ namespace pr
 					NoAttr  = "Blah";
 				}
 			}
-			[Test] public static void DescAttr1()
+		[Test] public void DescAttr1()
 			{
 				const EType e = EType.Value0;
 				Assert.AreEqual("Value 0"    ,e.Desc());
 				Assert.AreEqual("Value 1"    ,EType.Value1.Desc());
 				Assert.AreEqual(string.Empty ,((EType)100).Desc());
-				Assert.IsTrue(Enum<EType>.Desc.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
+			Assert.True(Enum<EType>.Desc.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
 			}
-			[Test] public static void DescAttr2()
+		[Test] public void DescAttr2()
 			{
 				var c = new C();
 				Assert.AreEqual("Field Desc" ,c.Desc(x => x.m_field));
@@ -215,18 +210,16 @@ namespace pr
 				Assert.AreEqual(null ,c.Desc(x => x.NoAttr));
 				Assert.AreEqual(null ,Reflect<C>.Desc(x => x.NoAttr));
 			}
-			[Test] public static void DescAttr3()
+		[Test] public void DescAttr3()
 			{
 				var strs = typeof(EType).AllDesc();
-				Assert.IsTrue(strs.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
+			Assert.True(strs.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
 			}
-			[Test] public static void DescAttr4()
+		[Test] public void DescAttr4()
 			{
 				var strs = typeof(C).AllDesc();
-				Assert.IsTrue(strs.SequenceEqual(new[]{"Prop Desc","Field Desc"}));
-			}
+			Assert.True(strs.SequenceEqual(new[]{"Prop Desc","Field Desc"}));
 		}
-		// ReSharper restore UnusedMember.Local
 	}
 }
 #endif

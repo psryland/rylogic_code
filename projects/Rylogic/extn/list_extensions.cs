@@ -427,17 +427,13 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using maths;
 
-	[TestFixture] public static partial class UnitTests
-	{
-		public static partial class TestExtensions
+	[TestFixture] public class TestListExtns
 		{
-			[Test] public static void ListQuickSort()
+		[Test] public void ListQuickSort()
 			{
 				var rng = new Random();
 				var list = new List<int>(99);
@@ -449,7 +445,7 @@ namespace pr
 				for (var i = 0; i != list.Count - 1; ++i)
 					Assert.True(list[i] <= list[i+1]);
 			}
-			[Test] public static void ListUnique()
+		[Test] public void ListUnique()
 			{
 				var rng = new Random();
 				var list = new List<int>(100);
@@ -470,9 +466,6 @@ namespace pr
 
 				Assert.AreEqual(5, list.Add2(5));
 			}
-
 		}
 	}
-}
-
 #endif

@@ -10,8 +10,9 @@ namespace Csex
 {
 	public class PatternUI :Cmd
 	{
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Shows the regex pattern UI\n" +
 				" Syntax: Csex -PatternUI\n" +

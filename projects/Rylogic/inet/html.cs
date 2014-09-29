@@ -513,14 +513,13 @@ namespace pr.inet
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using inet;
 	
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestHtml
 	{
-		[Test] public static void TestHtml()
+		[Test] public void Convert()
 		{
 			const string s =
 				"This is some plain\r\n" +

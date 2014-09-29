@@ -11,8 +11,9 @@ namespace Csex
 		private string m_pk;
 
 		/// <summary>Display help information in the case of an invalid command line</summary>
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"Sign a file using RSA\n" +
 				" Syntax: Csex -gencode -pk private_key.xml\n" +

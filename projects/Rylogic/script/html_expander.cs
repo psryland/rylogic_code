@@ -152,48 +152,42 @@ namespace pr.script
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-	using extn;	
+	using extn;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestHtmlExpander
 	{
-		internal static class TestExpand
+		private const string IncludeFile = "TestExpandHtml_include.txt";
+		[SetUp] public void Setup()
 		{
-			private const string IncludeFile = "TestExpandHtml_include.txt";
-			[SetUp] public static void Setup()
-			{
-				File.WriteAllText(IncludeFile, "include file\r\ntext data");
-			}
-			[TearDown] public static void TearDown()
-			{
-				File.Delete(IncludeFile);
-			}
-			[Test] public static void TestExpandHtml()
-			{
-				var template =
-					"<root>\r\n" +
-					"\t\t <!--#include file=\"{0}\"-->\r\n".Fmt(IncludeFile) +
-					"<!--#var name=\"MyVar\" file=\"{0}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n".Fmt(IncludeFile) +
-					"  <!--#value name=\"MyVar\"-->\r\n"+
-					"    <!--#value name=\"MyVar\"-->\r\n"+
-					"</root>\r\n";
-				const string result =
-					"<root>\r\n" +
-					"\t\t include file\r\n" +
-					"\t\t text data\r\n" +
-					"\r\n" +
-					"  data\r\n" +
-					"    data\r\n" +
-					"</root>\r\n";
-				var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
-				Assert.AreEqual(result, r);
-			}
+			File.WriteAllText(IncludeFile, "include file\r\ntext data");
+		}
+		[TearDown] public void TearDown()
+		{
+			File.Delete(IncludeFile);
+		}
+		[Test] public void TestExpandHtml()
+		{
+			var template =
+				"<root>\r\n" +
+				"\t\t <!--#include file=\"{0}\"-->\r\n".Fmt(IncludeFile) +
+				"<!--#var name=\"MyVar\" file=\"{0}\" value=\"text\\s+(?<value>\\w+)\"-->\r\n".Fmt(IncludeFile) +
+				"  <!--#value name=\"MyVar\"-->\r\n"+
+				"    <!--#value name=\"MyVar\"-->\r\n"+
+				"</root>\r\n";
+			const string result =
+				"<root>\r\n" +
+				"\t\t include file\r\n" +
+				"\t\t text data\r\n" +
+				"\r\n" +
+				"  data\r\n" +
+				"    data\r\n" +
+				"</root>\r\n";
+			var r = Expand.Html(new StringSrc(template), Environment.CurrentDirectory);
+			Assert.AreEqual(result, r);
 		}
 	}
 }
-
 #endif

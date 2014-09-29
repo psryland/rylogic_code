@@ -239,34 +239,30 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Threading.Tasks;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestCache
 	{
-		internal static class TestCache
+		[Test] public void TestThreadSafety()
 		{
-			[Test] public static void TestThreadSafety()
+			var cache = new Cache<int,string>{ThreadSafe = true};
+			var tasks = new List<Task>();
+			for (var i = 0; i != 1000; ++i)
 			{
-				var cache = new Cache<int,string>{ThreadSafe = true};
-				var tasks = new List<Task>();
-				for (var i = 0; i != 1000; ++i)
-				{
-					var index = i;
-					var task = new Task(() => cache.Get(index % 10, k => k.ToString(CultureInfo.InvariantCulture)));
-					tasks.Add(task);
-					task.Start();
-				}
+				var index = i;
+				var task = new Task(() => cache.Get(index % 10, k => k.ToString(CultureInfo.InvariantCulture)));
+				tasks.Add(task);
+				task.Start();
+			}
 
-				Task.WaitAll(tasks.ToArray());
+			Task.WaitAll(tasks.ToArray());
 
-				for (var i = 0; i != 10; ++i)
-				{
-					Assert.IsTrue(cache.IsCached(i));
-				}
+			for (var i = 0; i != 10; ++i)
+			{
+				Assert.True(cache.IsCached(i));
 			}
 		}
 	}

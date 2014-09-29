@@ -264,13 +264,11 @@ namespace pr.stream
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestLinkStream
 	{
-		[Test] public static void TestLinkStream()
+		[Test] public void LinkStream()
 		{
 			const string src = "This is a longest message to test blocking and asynchronous communication using the link stream";
 			string msg = string.Empty;
@@ -302,8 +300,8 @@ namespace pr
 				});
 
 			wait.WaitOne();
-			Assert.IsNull(write_ex);
-			Assert.IsNull(read_ex);
+			Assert.Null(write_ex);
+			Assert.Null(read_ex);
 			Assert.AreEqual(src, msg);
 		}
 	}

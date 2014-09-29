@@ -72,39 +72,33 @@ namespace pr.script
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using script;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public partial class TestScript
 	{
-		internal static partial class TestScript
+		[Test] public void SrcStack()
 		{
-			[Test] public static void TestSrcStack()
-			{
-				const string str1 = "one";
-				const string str2 = "two";
-				var src1 = new StringSrc(str1);
-				var src2 = new StringSrc(str2);
-				var stack = new SrcStack(src1);
+			const string str1 = "one";
+			const string str2 = "two";
+			var src1 = new StringSrc(str1);
+			var src2 = new StringSrc(str2);
+			var stack = new SrcStack(src1);
 
-				for (int i = 0; i != 2; ++i, stack.Next())
-					Assert.AreEqual(str1[i], stack.Peek);
+			for (int i = 0; i != 2; ++i, stack.Next())
+				Assert.AreEqual(str1[i], stack.Peek);
 
-				stack.Push(src2);
+			stack.Push(src2);
 
-				for (int i = 0; i != 3; ++i, stack.Next())
-					Assert.AreEqual(str2[i], stack.Peek);
+			for (int i = 0; i != 3; ++i, stack.Next())
+				Assert.AreEqual(str2[i], stack.Peek);
 
-				for (int i = 2; i != 3; ++i, stack.Next())
-					Assert.AreEqual(str1[i], stack.Peek);
+			for (int i = 2; i != 3; ++i, stack.Next())
+				Assert.AreEqual(str1[i], stack.Peek);
 
-				Assert.AreEqual(0, stack.Peek);
-			}
+			Assert.AreEqual((char)0, stack.Peek);
 		}
 	}
 }
-
 #endif

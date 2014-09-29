@@ -150,15 +150,13 @@ namespace pr.stream
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Collections.Generic;
 
-	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestProgressStream
 	{
-		[Test] public static void TestProgressStream()
+		[Test] public static void ProgressStream()
 		{
 			const string str = "The quick brown fox jumped over the lazy dog";
 			byte[] buf = new byte[256];
@@ -208,6 +206,5 @@ namespace pr
 			}
 		}
 	}
-	// ReSharper restore PossibleNullReferenceException, AccessToModifiedClosure
 }
 #endif

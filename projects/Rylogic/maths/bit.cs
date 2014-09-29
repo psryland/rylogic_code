@@ -265,14 +265,9 @@ namespace pr.maths
 }
 
 #if PR_UNITTESTS
-
-namespace pr
-{
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+namespace pr.unittests
 	{
-		internal static class TestBit
+	[TestFixture] public class TestBit
 		{
 			public enum NonFlags
 			{
@@ -288,16 +283,16 @@ namespace pr
 				Five  = 1 << 4,
 			}
 
-			[Test] public static void HasFlag()
+		[Test] public void HasFlag()
 			{
 				const NonFlags nf = NonFlags.One;
 				const Flags f     = Flags.One;
 
 				Assert.Throws(typeof(ArgumentException), () => Assert.True(f.HasFlag(nf)));
-				Assert.IsTrue(f.HasFlag(Flags.One));
-				Assert.IsFalse(f.HasFlag(Flags.One|Flags.Two));
+			Assert.True(f.HasFlag(Flags.One));
+			Assert.False(f.HasFlag(Flags.One|Flags.Two));
 			}
-			[Test] public static void BitParse()
+		[Test] public void BitParse()
 			{
 				const string bitstr0 = "100100010100110010110";
 				const string bitstr1 = "011011101011001101001";
@@ -307,7 +302,7 @@ namespace pr
 				Assert.AreEqual(bitstr0 ,Bit.ToString(bits0));
 				Assert.AreEqual(bitstr1 ,Bit.ToString(bits1, bitstr1.Length));
 			}
-			[Test] public static void BitAnySet()
+		[Test] public void BitAnySet()
 			{
 				const string bitstr0 = "100100010100110010110";
 				const string bitstr1 = "011011101011001101001";
@@ -315,7 +310,7 @@ namespace pr
 				var bits1 = Bit.Parse(bitstr1);
 				Assert.False(Bit.AnySet(bits0,bits1));
 			}
-			[Test] public static void BitIndex()
+		[Test] public void BitIndex()
 			{
 				const string bitstr0 = "100100010100110010110";
 				var bits0 = Bit.Parse(bitstr0);
@@ -323,15 +318,15 @@ namespace pr
 				Assert.AreEqual(13 ,Bit.BitIndex(bits0, 6));
 				Assert.AreEqual(-1 ,Bit.BitIndex(bits0, 11));
 			}
-			[Test] public static void EnumBitIndices()
+		[Test] public void EnumBitIndices()
 			{
 				const string bitstr0 = "100100010100110010110";
 				var bits0 = Bit.Parse(bitstr0);
 				var bitidxs = new[]{1,2,4,7,8,11,13,17,20};
 				var idxs = Bit.EnumBitIndices(bits0).ToArray();
-				Assert.IsTrue(bitidxs.SequenceEqual(idxs));
+			Assert.True(bitidxs.SequenceEqual(idxs));
 			}
-			[Test] public static void EnumBitMasks()
+		[Test] public void EnumBitMasks()
 			{
 				const string bitstr0 = "100100010100110010110";
 				var bits0 = Bit.Parse(bitstr0);
@@ -348,10 +343,8 @@ namespace pr
 					Bit.Parse("100000000000000000000")
 				};
 				var masks = Bit.EnumBitMasks(bits0).ToArray();
-				Assert.IsTrue(bitmasks.SequenceEqual(masks));
+			Assert.True(bitmasks.SequenceEqual(masks));
 			}
 		}
 	}
-}
-
 #endif

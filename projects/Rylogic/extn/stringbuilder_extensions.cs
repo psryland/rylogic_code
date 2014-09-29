@@ -336,14 +336,11 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestStringBuilderExtns
 	{
-		[Test] public static void TestStringBuilderExtensions()
+		[Test] public void StringBuilderExtensions()
 		{
 			const string  s = "  \t\nA string XXX\n  \t  ";
 

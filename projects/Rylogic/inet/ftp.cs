@@ -629,13 +629,12 @@ namespace pr.inet
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-	
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestFtp
 	{
-		[Test] public static void TestFTPS()
+		//hack[Test]
+		public void FTPS()
 		{
 			try
 			{

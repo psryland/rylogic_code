@@ -8,7 +8,7 @@ namespace pr.common
 		public interface IReceiver
 		{
 			/// <summary>Display help information in the case of an invalid command line</summary>
-			void ShowHelp();
+			void ShowHelp(Exception ex = null);
 
 			/// <summary>
 			/// Handle a command line option. Return true to continue parsing, false to stop.
@@ -70,8 +70,7 @@ namespace pr.common
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Error parsing command line: {0}", ex.Message);
-				cr.ShowHelp();
+				cr.ShowHelp(ex);
 				result = Result.Failed;
 			}
 			return result;
@@ -80,108 +79,102 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestCmdLine
 	{
-		internal static class TestCmdLine
+		public class Thing :CmdLine.IReceiver
 		{
-			public class Thing :CmdLine.IReceiver
-			{
-				public int HelpShownCount;
-				public int ValidateCount;
-				public string Option;
-				public string OptionArg1;
-				public string OptionArg2;
-				public string Data1;
-				public string Data2;
+			public int HelpShownCount;
+			public int ValidateCount;
+			public string Option;
+			public string OptionArg1;
+			public string OptionArg2;
+			public string Data1;
+			public string Data2;
 
-				public bool CmdLineOptionResult = true;
-				public bool CmdLineDataResult = true;
+			public bool CmdLineOptionResult = true;
+			public bool CmdLineDataResult = true;
 
-				/// <summary>Display help information in the case of an invalid command line</summary>
-				public void ShowHelp() { ++HelpShownCount; }
+			/// <summary>Display help information in the case of an invalid command line</summary>
+			public void ShowHelp(Exception ex) { ++HelpShownCount; }
 
-				public bool CmdLineOption(string option, string[] args, ref int arg)
-				{
-					Option = option;
-					OptionArg1 = args[arg++];
-					OptionArg2 = args[arg++];
-					return CmdLineOptionResult;
-				}
+			public bool CmdLineOption(string option, string[] args, ref int arg)
+			{
+				Option = option;
+				OptionArg1 = args[arg++];
+				OptionArg2 = args[arg++];
+				return CmdLineOptionResult;
+			}
 
-				public bool CmdLineData(string data, string[] args, ref int arg)
-				{
-					Data1 = data;
-					Data2 = args[arg++];
-					return CmdLineDataResult;
-				}
+			public bool CmdLineData(string data, string[] args, ref int arg)
+			{
+				Data1 = data;
+				Data2 = args[arg++];
+				return CmdLineDataResult;
+			}
 
-				/// <summary>Return true if all required options have been given</summary>
-				public bool OptionsValid()
-				{
-					++ValidateCount;
-					return OptionArg1 == "B";
-				}
-			}
-			[Test] public static void TestParse0()
+			/// <summary>Return true if all required options have been given</summary>
+			public bool OptionsValid()
 			{
-				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
-				Assert.IsTrue(r == CmdLine.Result.Success);
-				Assert.AreEqual(0, t.HelpShownCount);
-				Assert.AreEqual(1, t.ValidateCount);
-				Assert.AreEqual("-a", t.Option);
-				Assert.AreEqual("B", t.OptionArg1);
-				Assert.AreEqual("C", t.OptionArg2);
-				Assert.AreEqual("D", t.Data1);
-				Assert.AreEqual("E", t.Data2);
+				++ValidateCount;
+				return OptionArg1 == "B";
 			}
-			[Test] public static void TestParse1()
-			{
-				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = false};
-				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
-				Assert.IsTrue(r == CmdLine.Result.Interrupted);
-				Assert.AreEqual(0, t.HelpShownCount);
-				Assert.AreEqual(1, t.ValidateCount);
-				Assert.AreEqual("-a", t.Option);
-				Assert.AreEqual("B", t.OptionArg1);
-				Assert.AreEqual("C", t.OptionArg2);
-				Assert.AreEqual("D", t.Data1);
-				Assert.AreEqual("E", t.Data2);
-			}
-			[Test] public static void TestParse2()
-			{
-				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D"});
-				Assert.IsTrue(r == CmdLine.Result.Failed);
-				Assert.AreEqual(1, t.HelpShownCount);
-				Assert.AreEqual(0, t.ValidateCount);
-				Assert.AreEqual("-a", t.Option);
-				Assert.AreEqual("B", t.OptionArg1);
-				Assert.AreEqual("C", t.OptionArg2);
-				Assert.AreEqual("D", t.Data1);
-				Assert.AreEqual(null, t.Data2);
-			}
-			[Test] public static void TestParse3()
-			{
-				var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
-				var r  = CmdLine.Parse(t, new[]{"-A","X", "C", "D", "E"});
-				Assert.IsTrue(r == CmdLine.Result.Failed);
-				Assert.AreEqual(1, t.HelpShownCount);
-				Assert.AreEqual(1, t.ValidateCount);
-				Assert.AreEqual("-a", t.Option);
-				Assert.AreEqual("X", t.OptionArg1);
-				Assert.AreEqual("C", t.OptionArg2);
-				Assert.AreEqual("D", t.Data1);
-				Assert.AreEqual("E", t.Data2);
-			}
+		}
+		[Test] public void TestParse0()
+		{
+			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
+			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
+			Assert.True(r == CmdLine.Result.Success);
+			Assert.AreEqual(0, t.HelpShownCount);
+			Assert.AreEqual(1, t.ValidateCount);
+			Assert.AreEqual("-a", t.Option);
+			Assert.AreEqual("B", t.OptionArg1);
+			Assert.AreEqual("C", t.OptionArg2);
+			Assert.AreEqual("D", t.Data1);
+			Assert.AreEqual("E", t.Data2);
+		}
+		[Test] public void TestParse1()
+		{
+			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = false};
+			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D", "E"});
+			Assert.True(r == CmdLine.Result.Interrupted);
+			Assert.AreEqual(0, t.HelpShownCount);
+			Assert.AreEqual(1, t.ValidateCount);
+			Assert.AreEqual("-a", t.Option);
+			Assert.AreEqual("B", t.OptionArg1);
+			Assert.AreEqual("C", t.OptionArg2);
+			Assert.AreEqual("D", t.Data1);
+			Assert.AreEqual("E", t.Data2);
+		}
+		[Test] public void TestParse2()
+		{
+			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
+			var r  = CmdLine.Parse(t, new[]{"-A","B", "C", "D"});
+			Assert.True(r == CmdLine.Result.Failed);
+			Assert.AreEqual(1, t.HelpShownCount);
+			Assert.AreEqual(0, t.ValidateCount);
+			Assert.AreEqual("-a", t.Option);
+			Assert.AreEqual("B", t.OptionArg1);
+			Assert.AreEqual("C", t.OptionArg2);
+			Assert.AreEqual("D", t.Data1);
+			Assert.AreEqual(null, t.Data2);
+		}
+		[Test] public void TestParse3()
+		{
+			var t = new Thing{CmdLineOptionResult = true, CmdLineDataResult = true};
+			var r  = CmdLine.Parse(t, new[]{"-A","X", "C", "D", "E"});
+			Assert.True(r == CmdLine.Result.Failed);
+			Assert.AreEqual(1, t.HelpShownCount);
+			Assert.AreEqual(1, t.ValidateCount);
+			Assert.AreEqual("-a", t.Option);
+			Assert.AreEqual("X", t.OptionArg1);
+			Assert.AreEqual("C", t.OptionArg2);
+			Assert.AreEqual("D", t.Data1);
+			Assert.AreEqual("E", t.Data2);
 		}
 	}
 }
-
 #endif

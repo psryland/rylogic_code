@@ -233,13 +233,11 @@ namespace pr.maths
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestVec4
 	{
-		[Test] public static void TestV4()
+		[Test] public void TestV4()
 		{
 			Assert.AreEqual(new v4(1,2,3,4), v4.Parse4("1 2,3\t4"));
 		}

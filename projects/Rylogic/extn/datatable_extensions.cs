@@ -188,47 +188,43 @@ namespace pr.extn
 
 #if PR_UNITTESTS
 
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestDataTableExtensions
 	{
-		public static partial class TestExtensions
+		public class Record :DataRow
 		{
-			public class Record :DataRow
+			public enum Columns
 			{
-				public enum Columns
-				{
-					[DataTableColumn(PrimaryKey = true, AutoInc = true)] Id,
-					Name,
-					Size
-				}
-
-				protected internal Record(DataRowBuilder builder) :base(builder) {}
-				public int Id { get; set; }
-				public string Name { get; set; }
-				public long Size { get; set; }
-			}
-			public class Table :TypedDataTable<Record, Record.Columns>
-			{
-				public Table(string name) :base(name) {}
+				[DataTableColumn(PrimaryKey = true, AutoInc = true)] Id,
+				Name,
+				Size
 			}
 
-			[Test] public static void DataTable()
-			{
-				var tbl = new Table("Record");
-				var row = tbl.NewRow();
-				row.Name = "First";
-				row.Size = 10;
-				tbl.AddRow(row);
+			protected internal Record(DataRowBuilder builder) :base(builder) {}
+			public int Id { get; set; }
+			public string Name { get; set; }
+			public long Size { get; set; }
+		}
+		public class Table :TypedDataTable<Record, Record.Columns>
+		{
+			public Table(string name) :base(name) {}
+		}
 
-				Assert.AreEqual("Id"   , tbl.Column(Record.Columns.Id  ).ColumnName);
-				Assert.AreEqual("Name" , tbl.Column(Record.Columns.Name).ColumnName);
-				Assert.AreEqual("Size" , tbl.Column(Record.Columns.Size).ColumnName);
-				Assert.AreEqual(1      , tbl.DefaultView.Count);
-			}
+		[Test] public void DataTable()
+		{
+			var tbl = new Table("Record");
+			var row = tbl.NewRow();
+			row.Name = "First";
+			row.Size = 10;
+			tbl.AddRow(row);
+
+			Assert.AreEqual("Id"   , tbl.Column(Record.Columns.Id  ).ColumnName);
+			Assert.AreEqual("Name" , tbl.Column(Record.Columns.Name).ColumnName);
+			Assert.AreEqual("Size" , tbl.Column(Record.Columns.Size).ColumnName);
+			Assert.AreEqual(1      , tbl.DefaultView.Count);
 		}
 	}
 }

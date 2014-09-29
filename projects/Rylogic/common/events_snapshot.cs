@@ -130,215 +130,210 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEventSnapshot
 	{
-		internal static class TestEventSnapshot
+		private class TestBase
 		{
-			private class TestBase
+			protected event EventHandler<Args> Event2;
+			public class Args :EventArgs {};
+
+			public int Event2HandlerCount { get { return Event2 != null ? Event2.GetInvocationList().Length : 0; } }
+
+			public virtual void ResetHandlers()
 			{
-				protected event EventHandler<Args> Event2;
-				public class Args :EventArgs {};
-
-				public int Event2HandlerCount { get { return Event2 != null ? Event2.GetInvocationList().Length : 0; } }
-
-				public virtual void ResetHandlers()
-				{
-					Event2 = null;
-				}
-				public virtual void RaiseEvents()
-				{
-					if (Event2 != null) Event2(this, new Args());
-				}
+				Event2 = null;
 			}
-			private sealed class Test :TestBase
+			public virtual void RaiseEvents()
 			{
-				public static string Result = string.Empty;
-
-				public Action Ignored;
-				public event EventHandler Event1;
-				public static event EventHandler Event3;
-
-				public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
-				public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }
-
-				public Test()
-				{
-					Result = string.Empty;
-					Ignored += () => { throw new Exception(); };
-					ResetHandlers();
-				}
-				public override void ResetHandlers()
-				{
-					Event1 = null;
-					base.ResetHandlers();
-					Event3 = null;
-				}
-				public override void RaiseEvents()
-				{
-					if (Event1 != null) Event1(this, EventArgs.Empty);
-					Result += "-";
-					base.RaiseEvents();
-					Result += "-";
-					if (Event3 != null) Event3(this, EventArgs.Empty);
-				}
-				public void AttachHandlerToEvent2() { Event2 += Handler; }
-				public void AttachHandlerToEvent3() { Event3 += Handler; }
-				public void Handler(object sender, EventArgs args) { Result += "A"; }
+				if (Event2 != null) Event2(this, new Args());
 			}
+		}
+		private sealed class Test :TestBase
+		{
+			public static string Result = string.Empty;
 
-			[Test] public static void TestRemoveAdded()
+			public Action Ignored;
+			public event EventHandler Event1;
+			public static event EventHandler Event3;
+
+			public int Event1HandlerCount { get { return Event1 != null ? Event1.GetInvocationList().Length : 0; } }
+			public int Event3HandlerCount { get { return Event3 != null ? Event3.GetInvocationList().Length : 0; } }
+
+			public Test()
 			{
-				var test = new Test();
+				Result = string.Empty;
+				Ignored += () => { throw new Exception(); };
+				ResetHandlers();
+			}
+			public override void ResetHandlers()
+			{
+				Event1 = null;
+				base.ResetHandlers();
+				Event3 = null;
+			}
+			public override void RaiseEvents()
+			{
+				if (Event1 != null) Event1(this, EventArgs.Empty);
+				Result += "-";
+				base.RaiseEvents();
+				Result += "-";
+				if (Event3 != null) Event3(this, EventArgs.Empty);
+			}
+			public void AttachHandlerToEvent2() { Event2 += Handler; }
+			public void AttachHandlerToEvent3() { Event3 += Handler; }
+			public void Handler(object sender, EventArgs args) { Result += "A"; }
+		}
 
-				EventHandler handler = (s,a) => Test.Result += "B";
+		[Test] public void TestRemoveAdded()
+		{
+			var test = new Test();
 
-				test.Event1 += handler;
-				test.Event1 += handler;
+			EventHandler handler = (s,a) => Test.Result += "B";
+
+			test.Event1 += handler;
+			test.Event1 += handler;
+			test.Event1 += test.Handler;
+			test.Event1 += (s,a) => Test.Result += "C";
+			Test.Event3 += test.Handler;
+			test.RaiseEvents();
+
+			Assert.AreEqual(4, test.Event1HandlerCount);
+			Assert.AreEqual(0, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BBAC--A", Test.Result);
+			Test.Result = string.Empty;
+
+			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.RemoveAdded))
+			{
+				test.Event1 += (s,a) => Test.Result += "D";
 				test.Event1 += test.Handler;
-				test.Event1 += (s,a) => Test.Result += "C";
-				Test.Event3 += test.Handler;
-				test.RaiseEvents();
-
-				Assert.AreEqual(4, test.Event1HandlerCount);
-				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BBAC--A", Test.Result);
-				Test.Result = string.Empty;
-
-				using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.RemoveAdded))
-				{
-					test.Event1 += (s,a) => Test.Result += "D";
-					test.Event1 += test.Handler;
-					test.Event1 += handler;
-					test.AttachHandlerToEvent2();
-					test.AttachHandlerToEvent3();
-					test.RaiseEvents();
-					Assert.AreEqual(7, test.Event1HandlerCount);
-					Assert.AreEqual(1, test.Event2HandlerCount);
-					Assert.AreEqual(2, test.Event3HandlerCount);
-					Assert.AreEqual("BBACDAB-A-AA", Test.Result);
-					Test.Result = string.Empty;
-
-					test.Event1 -= handler;
-					test.Event1 -= handler;
-					test.AttachHandlerToEvent2();
-					test.AttachHandlerToEvent3();
-					test.RaiseEvents();
-					Assert.AreEqual(5, test.Event1HandlerCount);
-					Assert.AreEqual(2, test.Event2HandlerCount);
-					Assert.AreEqual(3, test.Event3HandlerCount);
-					Assert.AreEqual("BACDA-AA-AAA", Test.Result);
-					Test.Result = string.Empty;
-				}
-				test.RaiseEvents();
-				Assert.AreEqual(3, test.Event1HandlerCount);
-				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BAC--A", Test.Result);
-				Test.Result = string.Empty;
-			}
-			[Test] public static void TestAddRemoved()
-			{
-				var test = new Test();
-
-				EventHandler handler = (s,a) => Test.Result += "B";
-
 				test.Event1 += handler;
-				test.Event1 += handler;
-				test.Event1 += test.Handler;
-				test.Event1 += (s,a) => Test.Result += "C";
 				test.AttachHandlerToEvent2();
-				Test.Event3 += test.Handler;
+				test.AttachHandlerToEvent3();
 				test.RaiseEvents();
-
-				Assert.AreEqual(4, test.Event1HandlerCount);
+				Assert.AreEqual(7, test.Event1HandlerCount);
 				Assert.AreEqual(1, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BBAC-A-A", Test.Result);
+				Assert.AreEqual(2, test.Event3HandlerCount);
+				Assert.AreEqual("BBACDAB-A-AA", Test.Result);
 				Test.Result = string.Empty;
 
-				using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.AddRemoved))
-				{
-					test.ResetHandlers();
-					test.RaiseEvents();
-					Assert.AreEqual(0, test.Event1HandlerCount);
-					Assert.AreEqual(0, test.Event2HandlerCount);
-					Assert.AreEqual(0, test.Event3HandlerCount);
-					Assert.AreEqual("--", Test.Result);
-					Test.Result = string.Empty;
-
-					test.Event1 += handler;
-					test.RaiseEvents();
-					Assert.AreEqual(1, test.Event1HandlerCount);
-					Assert.AreEqual(0, test.Event2HandlerCount);
-					Assert.AreEqual(0, test.Event3HandlerCount);
-					Assert.AreEqual("B--", Test.Result);
-					Test.Result = string.Empty;
-				}
-
+				test.Event1 -= handler;
+				test.Event1 -= handler;
+				test.AttachHandlerToEvent2();
+				test.AttachHandlerToEvent3();
 				test.RaiseEvents();
-				Assert.AreEqual(4, test.Event1HandlerCount);
-				Assert.AreEqual(1, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BBAC-A-A", Test.Result);
+				Assert.AreEqual(5, test.Event1HandlerCount);
+				Assert.AreEqual(2, test.Event2HandlerCount);
+				Assert.AreEqual(3, test.Event3HandlerCount);
+				Assert.AreEqual("BACDA-AA-AAA", Test.Result);
 				Test.Result = string.Empty;
 			}
-			[Test] public static void TestBoth()
+			test.RaiseEvents();
+			Assert.AreEqual(3, test.Event1HandlerCount);
+			Assert.AreEqual(0, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BAC--A", Test.Result);
+			Test.Result = string.Empty;
+		}
+		[Test] public void TestAddRemoved()
+		{
+			var test = new Test();
+
+			EventHandler handler = (s,a) => Test.Result += "B";
+
+			test.Event1 += handler;
+			test.Event1 += handler;
+			test.Event1 += test.Handler;
+			test.Event1 += (s,a) => Test.Result += "C";
+			test.AttachHandlerToEvent2();
+			Test.Event3 += test.Handler;
+			test.RaiseEvents();
+
+			Assert.AreEqual(4, test.Event1HandlerCount);
+			Assert.AreEqual(1, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BBAC-A-A", Test.Result);
+			Test.Result = string.Empty;
+
+			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.AddRemoved))
 			{
-				var test = new Test();
-
-				EventHandler handler = (s,a) => Test.Result += "B";
-
-				test.Event1 += handler;
-				test.Event1 += handler;
-				test.Event1 += test.Handler;
-				test.Event1 += (s,a) => Test.Result += "C";
-				Test.Event3 += test.Handler;
+				test.ResetHandlers();
 				test.RaiseEvents();
-
-				Assert.AreEqual(4, test.Event1HandlerCount);
+				Assert.AreEqual(0, test.Event1HandlerCount);
 				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BBAC--A", Test.Result);
+				Assert.AreEqual(0, test.Event3HandlerCount);
+				Assert.AreEqual("--", Test.Result);
 				Test.Result = string.Empty;
 
-				using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.Both))
-				{
-					test.Event1 -= handler;
-					test.Event1 += test.Handler;
-					test.Event1 += test.Handler;
-					test.Event1 += (s,a) => Test.Result += "D";
-					test.RaiseEvents();
-					Assert.AreEqual(6, test.Event1HandlerCount);
-					Assert.AreEqual(0, test.Event2HandlerCount);
-					Assert.AreEqual(1, test.Event3HandlerCount);
-					Assert.AreEqual("BACAAD--A", Test.Result);
-					Test.Result = string.Empty;
-
-					test.Event1 += (s,a) => Test.Result += "E";
-					test.AttachHandlerToEvent2();
-					Test.Event3 -= test.Handler;
-					test.RaiseEvents();
-					Assert.AreEqual(7, test.Event1HandlerCount);
-					Assert.AreEqual(1, test.Event2HandlerCount);
-					Assert.AreEqual(0, test.Event3HandlerCount);
-					Assert.AreEqual("BACAADE-A-", Test.Result);
-					Test.Result = string.Empty;
-				}
-
+				test.Event1 += handler;
 				test.RaiseEvents();
-				Assert.AreEqual(4, test.Event1HandlerCount);
+				Assert.AreEqual(1, test.Event1HandlerCount);
 				Assert.AreEqual(0, test.Event2HandlerCount);
-				Assert.AreEqual(1, test.Event3HandlerCount);
-				Assert.AreEqual("BACB--A", Test.Result);
+				Assert.AreEqual(0, test.Event3HandlerCount);
+				Assert.AreEqual("B--", Test.Result);
 				Test.Result = string.Empty;
 			}
+
+			test.RaiseEvents();
+			Assert.AreEqual(4, test.Event1HandlerCount);
+			Assert.AreEqual(1, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BBAC-A-A", Test.Result);
+			Test.Result = string.Empty;
+		}
+		[Test] public void TestBoth()
+		{
+			var test = new Test();
+
+			EventHandler handler = (s,a) => Test.Result += "B";
+
+			test.Event1 += handler;
+			test.Event1 += handler;
+			test.Event1 += test.Handler;
+			test.Event1 += (s,a) => Test.Result += "C";
+			Test.Event3 += test.Handler;
+			test.RaiseEvents();
+
+			Assert.AreEqual(4, test.Event1HandlerCount);
+			Assert.AreEqual(0, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BBAC--A", Test.Result);
+			Test.Result = string.Empty;
+
+			using (EventsSnapshot.Capture(test, EventsSnapshot.Restore.Both))
+			{
+				test.Event1 -= handler;
+				test.Event1 += test.Handler;
+				test.Event1 += test.Handler;
+				test.Event1 += (s,a) => Test.Result += "D";
+				test.RaiseEvents();
+				Assert.AreEqual(6, test.Event1HandlerCount);
+				Assert.AreEqual(0, test.Event2HandlerCount);
+				Assert.AreEqual(1, test.Event3HandlerCount);
+				Assert.AreEqual("BACAAD--A", Test.Result);
+				Test.Result = string.Empty;
+
+				test.Event1 += (s,a) => Test.Result += "E";
+				test.AttachHandlerToEvent2();
+				Test.Event3 -= test.Handler;
+				test.RaiseEvents();
+				Assert.AreEqual(7, test.Event1HandlerCount);
+				Assert.AreEqual(1, test.Event2HandlerCount);
+				Assert.AreEqual(0, test.Event3HandlerCount);
+				Assert.AreEqual("BACAADE-A-", Test.Result);
+				Test.Result = string.Empty;
+			}
+
+			test.RaiseEvents();
+			Assert.AreEqual(4, test.Event1HandlerCount);
+			Assert.AreEqual(0, test.Event2HandlerCount);
+			Assert.AreEqual(1, test.Event3HandlerCount);
+			Assert.AreEqual("BACB--A", Test.Result);
+			Test.Result = string.Empty;
 		}
 	}
 }

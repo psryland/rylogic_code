@@ -326,54 +326,48 @@ return sb.ToString();
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestStringExtns
 	{
-		public static partial class TestExtensions
+		[Test] public void StringWordWrap()
 		{
-			[Test] public static void StringWordWrap()
-			{
-				//                    "123456789ABCDE"
-				const string text   = "   A long string that\nis\r\nto be word wrapped";
-				const string result = "   A long\n"+
-									  "string that\n"+
-									  "is to be word\n"+
-									  "wrapped";
-				string r = text.WordWrap(14);
-				Assert.AreEqual(result, r);
-			}
-			[Test] public static void TestAppendLines()
-			{
-				const string s = "\n\n\rLine \n Line\n\r";
-				var str = s.LineList(s,s);
-				Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
-			}
-			[Test] public static void Substring()
-			{
-				const string s1 = "aa {one} bb {two}";
-				const string s2 = "aa {} bb {two}";
-				const string s3 = "Begin dasd End";
-				const string s4 = "first:second";
-				const string s5 = "<32> regex </32>";
+			//                    "123456789ABCDE"
+			const string text   = "   A long string that\nis\r\nto be word wrapped";
+			const string result = "   A long\n"+
+									"string that\n"+
+									"is to be word\n"+
+									"wrapped";
+			string r = text.WordWrap(14);
+			Assert.AreEqual(result, r);
+		}
+		[Test] public void TestAppendLines()
+		{
+			const string s = "\n\n\rLine \n Line\n\r";
+			var str = s.LineList(s,s);
+			Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
+		}
+		[Test] public void Substring()
+		{
+			const string s1 = "aa {one} bb {two}";
+			const string s2 = "aa {} bb {two}";
+			const string s3 = "Begin dasd End";
+			const string s4 = "first:second";
+			const string s5 = "<32> regex </32>";
 
-				Assert.AreEqual("one", s1.Substring("{","}"));
-				Assert.AreEqual("", s2.Substring("{","}"));
-				Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
-				Assert.AreEqual("first", s4.Substring(null,":"));
-				Assert.AreEqual("second", s4.Substring(":", null));
-				Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
-				Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
-				Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
-			}
+			Assert.AreEqual("one", s1.Substring("{","}"));
+			Assert.AreEqual("", s2.Substring("{","}"));
+			Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
+			Assert.AreEqual("first", s4.Substring(null,":"));
+			Assert.AreEqual("second", s4.Substring(":", null));
+			Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
+			Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
+			Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
 		}
 	}
 }
-
 #endif
 
 	//    /// <summary>Scanf style string parsing</summary>

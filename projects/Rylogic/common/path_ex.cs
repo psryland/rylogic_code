@@ -266,60 +266,54 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Linq;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestPathEx
 	{
-		internal static partial class TestPathEx
+		[Test] public void TestPathValidation()
 		{
-			[Test] public static void TestPathValidation()
-			{
-				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
-				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
-				Assert.IsTrue(PathEx.IsValidDirectory(@".\dir1\..\.\dir2", false));
-				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
-				Assert.IsTrue(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
-				Assert.IsTrue(PathEx.IsValidDirectory(@".\dir1\..\.\dir2\", false));
-				Assert.IsFalse(PathEx.IsValidDirectory(@".\dir1?\..\.\", false));
+			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", true));
+			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2", false));
+			Assert.True(PathEx.IsValidDirectory(@".\dir1\..\.\dir2", false));
+			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", true));
+			Assert.True(PathEx.IsValidDirectory(@"A:\dir1\..\.\dir2\", false));
+			Assert.True(PathEx.IsValidDirectory(@".\dir1\..\.\dir2\", false));
+			Assert.False(PathEx.IsValidDirectory(@".\dir1?\..\.\", false));
 
-				Assert.IsTrue(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
-				Assert.IsTrue(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
-				Assert.IsTrue(PathEx.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
-				Assert.IsFalse(PathEx.IsValidFilepath(@".\dir1\", false));
-				Assert.IsFalse(PathEx.IsValidFilepath(@".\dir1\file*.txt", false));
-			}
-			[Test] public static void TestPathNames()
-			{
-				string path;
+			Assert.True(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file.txt", true));
+			Assert.True(PathEx.IsValidFilepath(@"A:\dir1\..\.\dir2\file", false));
+			Assert.True(PathEx.IsValidFilepath(@".\dir1\..\.\dir2\file", false));
+			Assert.False(PathEx.IsValidFilepath(@".\dir1\", false));
+			Assert.False(PathEx.IsValidFilepath(@".\dir1\file*.txt", false));
+		}
+		[Test] public void TestPathNames()
+		{
+			string path;
 
-				path = PathEx.MakeRelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
-				Assert.AreEqual(@".\subdir\file.ext", path);
+			path = PathEx.MakeRelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
+			Assert.AreEqual(@".\subdir\file.ext", path);
 
-				path = PathEx.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
-				Assert.AreEqual(@"A:\dir\subdir\file.ext", path);
+			path = PathEx.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");
+			Assert.AreEqual(@"A:\dir\subdir\file.ext", path);
 
-				path = PathEx.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
-				Assert.AreEqual("1_pathAA[{+A!AAAA^^&A()'AA", path);
+			path = PathEx.SanitiseFileName("1_path@\"[{+\\!@#$%^^&*()\'/?", "@#$%", "A");
+			Assert.AreEqual("1_pathAA[{+A!AAAA^^&A()'AA", path);
 
-				const string noquotes   = "C:\\a b\\path.ext";
-				const string withquotes = "\"C:\\a b\\path.ext\"";
-				Assert.AreEqual(withquotes ,PathEx.Quote(noquotes, true));
-				Assert.AreEqual(withquotes ,PathEx.Quote(withquotes, true));
-				Assert.AreEqual(noquotes   ,PathEx.Quote(noquotes, false));
-				Assert.AreEqual(noquotes   ,PathEx.Quote(withquotes, false));
-			}
-			[Test] public static void TestEnumerateFiles()
-			{
-				var path = Environment.CurrentDirectory;
-				var files = PathEx.EnumerateFiles(path, @".*\.dll", SearchOption.AllDirectories);
-				var dlls = files.ToList();
-				Assert.IsTrue(dlls.Count != 0);
-			}
+			const string noquotes   = "C:\\a b\\path.ext";
+			const string withquotes = "\"C:\\a b\\path.ext\"";
+			Assert.AreEqual(withquotes ,PathEx.Quote(noquotes, true));
+			Assert.AreEqual(withquotes ,PathEx.Quote(withquotes, true));
+			Assert.AreEqual(noquotes   ,PathEx.Quote(noquotes, false));
+			Assert.AreEqual(noquotes   ,PathEx.Quote(withquotes, false));
+		}
+		[Test] public void TestEnumerateFiles()
+		{
+			var files = PathEx.EnumerateFiles(@"C:\Windows\System32", @".*\.dll", SearchOption.TopDirectoryOnly);
+			var dlls = files.ToList();
+			Assert.True(dlls.Count != 0);
 		}
 	}
 }

@@ -51,72 +51,68 @@ namespace pr.util
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using util;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestSherlock
 	{
-		internal static class TestSherlock
+		// ReSharper disable UnusedMember.Local, ClassNeverInstantiated.Local, EventNeverSubscribedTo.Local
+		#pragma warning disable 67, 169, 649
+		private class Thing
 		{
-			// ReSharper disable UnusedMember.Local, ClassNeverInstantiated.Local, EventNeverSubscribedTo.Local
-			#pragma warning disable 67, 169, 649
-			private class Thing
-			{
-				private event EventHandler PrivateEvent;
-				protected event EventHandler ProtectedEvent;
-				public event EventHandler PublicEvent;
-				private event EventHandler<CustEventArgs> PrivateCustomEvent;
-				public event EventHandler<CustEventArgs> PublicCustomEvent;
-				public class CustEventArgs :EventArgs {}
+			private event EventHandler PrivateEvent;
+			protected event EventHandler ProtectedEvent;
+			public event EventHandler PublicEvent;
+			private event EventHandler<CustEventArgs> PrivateCustomEvent;
+			public event EventHandler<CustEventArgs> PublicCustomEvent;
+			public class CustEventArgs :EventArgs {}
 
-				public Thing()
-				{
-					PrivateEvent       += Handler;
-					PrivateCustomEvent += Handler;
-				}
-				public void Handler(object sender, EventArgs e)
-				{}
+			public Thing()
+			{
+				PrivateEvent       += Handler;
+				PrivateCustomEvent += Handler;
 			}
-			#pragma warning restore 67, 169, 649
-			// ReSharper restore UnusedMember.Local, ClassNeverInstantiated.Local, EventNeverSubscribedTo.Local
+			public void Handler(object sender, EventArgs e)
+			{}
+		}
+		#pragma warning restore 67, 169, 649
+		// ReSharper restore UnusedMember.Local, ClassNeverInstantiated.Local, EventNeverSubscribedTo.Local
 
-			[Test] public static void EventRefCount()
-			{
-				var thing = new Thing();
-				thing.PublicEvent       += thing.Handler;
-				thing.PublicCustomEvent += thing.Handler;
-				thing.PublicEvent       += thing.Handler;
-				thing.PublicCustomEvent += thing.Handler;
-				thing.PublicEvent       += thing.Handler;
-				thing.PublicEvent       += thing.Handler;
+		[Test] public void EventRefCount()
+		{
+			var thing = new Thing();
+			thing.PublicEvent       += thing.Handler;
+			thing.PublicCustomEvent += thing.Handler;
+			thing.PublicEvent       += thing.Handler;
+			thing.PublicCustomEvent += thing.Handler;
+			thing.PublicEvent       += thing.Handler;
+			thing.PublicEvent       += thing.Handler;
 				
-				var expected = new List<string>
-				{
-					"Thing.PrivateEvent - 1 handlers"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+			var expected = new List<string>
+			{
+				"Thing.PrivateEvent - 1 handlers"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
 					
-					"Thing.ProtectedEvent - 0 handlers"+Environment.NewLine,
+				"Thing.ProtectedEvent - 0 handlers"+Environment.NewLine,
 					
-					"Thing.PublicEvent - 4 handlers"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+				"Thing.PublicEvent - 4 handlers"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
 					
-					"Thing.PrivateCustomEvent - 1 handlers"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+				"Thing.PrivateCustomEvent - 1 handlers"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
 
-					"Thing.PublicCustomEvent - 2 handlers"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
-					"   pr.UnitTests+TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
-				};
-				var report = Sherlock.CheckEvents(thing);
-				Assert.AreEqual(expected.Count, report.Count);
-				for (int i = 0; i != expected.Count; ++i)
-					Assert.AreEqual(expected[i], report[i]);
-			}
+				"Thing.PublicCustomEvent - 2 handlers"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine+
+				"   pr.unittests.TestSherlock+Thing.Handler(System.Object, System.EventArgs)"+Environment.NewLine,
+			};
+			var report = Sherlock.CheckEvents(thing);
+			Assert.AreEqual(expected.Count, report.Count);
+			for (int i = 0; i != expected.Count; ++i)
+				Assert.AreEqual(expected[i], report[i]);
 		}
 	}
 }

@@ -229,141 +229,134 @@ namespace pr.stream
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using stream;
 
-	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestAggregateFileStream
 	{
-		internal static class TestAggregateFileStream
+		[TestFixtureSetUp] public void Setup()
 		{
-			[TestFixtureSetUp] public static void Setup()
+			File.WriteAllText("file0.txt", Content0);
+			File.WriteAllText("file1.txt", Content1);
+			File.WriteAllText("file2.txt", Content2);
+		}
+		[TestFixtureTearDown] public void CleanUp()
+		{
+			File.Delete("file0.txt");
+			File.Delete("file1.txt");
+			File.Delete("file2.txt");
+			File.Delete("fileN.txt");
+		}
+		private static IEnumerable<string> Files
+		{
+			get { return new[]{"file0.txt","file1.txt","file2.txt"}; }
+		}
+		private static string Content0
+		{
+			get { return "Line0\n"; }
+		}
+		private static string Content1
+		{
+			get { return "Line1\n"; }
+		}
+		private static string Content2
+		{
+			get { return "Line2\n"; }
+		}
+		private static string CombinedContent
+		{
+			get { return Content0 + Content1 + Content2; }
+		}
+		[Test] public void TestGeneral()
+		{
+			using (var f = new AggregateFileStream(Files))
 			{
-				File.WriteAllText("file0.txt", Content0);
-				File.WriteAllText("file1.txt", Content1);
-				File.WriteAllText("file2.txt", Content2);
+				Assert.True(f.CanRead);
+				Assert.True(f.CanSeek);
+				Assert.False(f.CanWrite);
+				Assert.AreEqual((long)CombinedContent.Length, f.Length);
 			}
-			[TestFixtureTearDown] public static void CleanUp()
+		}
+		[Test] public void TestFileIndex()
+		{
+			using (var f = new AggregateFileStream(Files))
 			{
-				File.Delete("file0.txt");
-				File.Delete("file1.txt");
-				File.Delete("file2.txt");
-				File.Delete("fileN.txt");
+				Assert.AreEqual(0, f.FileIndexAtOffset(0));
+				Assert.AreEqual(0, f.FileIndexAtOffset(Content0.Length - 1));
+				Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length));
+				Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
+				Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
+				Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
 			}
-			private static IEnumerable<string> Files
+		}
+		[Test] public void TestStream()
+		{
+			using (var f = new AggregateFileStream(Files))
+			using (var s = new FileStream("fileN.txt", FileMode.Create, FileAccess.Write, FileShare.Read))
 			{
-				get { return new[]{"file0.txt","file1.txt","file2.txt"}; }
+				f.CopyTo(s);
 			}
-			private static string Content0
+
+			var combined = File.ReadAllText("fileN.txt");
+			Assert.AreEqual(CombinedContent, combined);
+		}
+		[Test] public void TestRead()
+		{
+			using (var f = new AggregateFileStream(Files))
 			{
-				get { return "Line0\n"; }
+				var s = "abcdefghijklmnopqrstuvwxyz";
+				var bytes = Encoding.UTF8.GetBytes(s);
+				var offset = 5; // into 'bytes'
+				int pos = 0;    // file pos
+
+				Assert.AreEqual((long)pos, f.Position);
+				var read = f.Read(bytes, offset, Content0.Length/2);
+				Assert.AreEqual(Content0.Length/2, read);
+				Assert.AreEqual((long)(pos + read), f.Position);
+				Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
+
+				s = Encoding.UTF8.GetString(bytes);
+
+				pos = CombinedContent.Length / 3;
+				f.Seek(pos, SeekOrigin.Begin);
+				Assert.AreEqual((long)pos, f.Position);
+
+				offset = 11;
+				read = f.Read(bytes, offset, Content1.Length);
+				Assert.AreEqual(Content1.Length, read);
+				Assert.AreEqual((long)(pos + read), f.Position);
+				Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
 			}
-			private static string Content1
+		}
+		[Test] public void TestReadByte()
+		{
+			var bytes = new List<byte>();
+			using (var f = new AggregateFileStream(Files))
 			{
-				get { return "Line1\n"; }
-			}
-			private static string Content2
-			{
-				get { return "Line2\n"; }
-			}
-			private static string CombinedContent
-			{
-				get { return Content0 + Content1 + Content2; }
-			}
-			[Test] public static void TestGeneral()
-			{
-				using (var f = new AggregateFileStream(Files))
+				for (;;)
 				{
-					Assert.IsTrue(f.CanRead);
-					Assert.IsTrue(f.CanSeek);
-					Assert.IsFalse(f.CanWrite);
-					Assert.AreEqual(CombinedContent.Length, f.Length);
+					var b = f.ReadByte();
+					if (b == -1) break;
+					bytes.Add((byte)b);
 				}
 			}
-			[Test] public static void TestFileIndex()
+			Assert.AreEqual(CombinedContent, Encoding.UTF8.GetString(bytes.ToArray()));
+		}
+		[Test] public void TestPosition()
+		{
+			using (var f = new AggregateFileStream(Files))
 			{
-				using (var f = new AggregateFileStream(Files))
+				var bytes = Encoding.UTF8.GetBytes(CombinedContent);
+				var rnd = new Random(0);
+				for (int i = 0; i != bytes.Length; ++i)
 				{
-					Assert.AreEqual(0, f.FileIndexAtOffset(0));
-					Assert.AreEqual(0, f.FileIndexAtOffset(Content0.Length - 1));
-					Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length));
-					Assert.AreEqual(1, f.FileIndexAtOffset(Content0.Length + Content1.Length - 1));
-					Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length));
-					Assert.AreEqual(2, f.FileIndexAtOffset(Content0.Length + Content1.Length + Content2.Length - 1));
-				}
-			}
-			[Test] public static void TestStream()
-			{
-				using (var f = new AggregateFileStream(Files))
-				using (var s = new FileStream("fileN.txt", FileMode.Create, FileAccess.Write, FileShare.Read))
-				{
-					f.CopyTo(s);
-				}
-
-				var combined = File.ReadAllText("fileN.txt");
-				Assert.AreEqual(CombinedContent, combined);
-			}
-			[Test] public static void TestRead()
-			{
-				using (var f = new AggregateFileStream(Files))
-				{
-					var s = "abcdefghijklmnopqrstuvwxyz";
-					var bytes = Encoding.UTF8.GetBytes(s);
-					var offset = 5; // into 'bytes'
-					int pos = 0;    // file pos
-
-					Assert.AreEqual(pos, f.Position);
-					var read = f.Read(bytes, offset, Content0.Length/2);
-					Assert.AreEqual(Content0.Length/2, read);
-					Assert.AreEqual(pos + read, f.Position);
-					Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
-
-					s = Encoding.UTF8.GetString(bytes);
-
-					pos = CombinedContent.Length / 3;
-					f.Seek(pos, SeekOrigin.Begin);
-					Assert.AreEqual(pos, f.Position);
-
-					offset = 11;
-					read = f.Read(bytes, offset, Content1.Length);
-					Assert.AreEqual(Content1.Length, read);
-					Assert.AreEqual(pos + read, f.Position);
-					Assert.AreEqual(s.Substring(0,offset) + CombinedContent.Substring(pos, read) + s.Substring(offset+read), Encoding.UTF8.GetString(bytes));
-				}
-			}
-			[Test] public static void TestReadByte()
-			{
-				var bytes = new List<byte>();
-				using (var f = new AggregateFileStream(Files))
-				{
-					for (;;)
-					{
-						var b = f.ReadByte();
-						if (b == -1) break;
-						bytes.Add((byte)b);
-					}
-				}
-				Assert.AreEqual(CombinedContent, Encoding.UTF8.GetString(bytes.ToArray()));
-			}
-			[Test] public static void TestPosition()
-			{
-				using (var f = new AggregateFileStream(Files))
-				{
-					var bytes = Encoding.UTF8.GetBytes(CombinedContent);
-					var rnd = new Random(0);
-					for (int i = 0; i != bytes.Length; ++i)
-					{
-						var pos = rnd.Next(bytes.Length);
-						f.Position = pos;
-						Assert.AreEqual(bytes[pos], f.ReadByte());
-					}
+					var pos = rnd.Next(bytes.Length);
+					f.Position = pos;
+					Assert.AreEqual((int)bytes[pos], f.ReadByte());
 				}
 			}
 		}
 	}
-	// ReSharper restore PossibleNullReferenceException, AccessToModifiedClosure
 }
 #endif

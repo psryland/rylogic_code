@@ -170,7 +170,7 @@ namespace pr.extn
 				{
 					var name = node.Name.LocalName;
 					var elem_name = name.Length > 1 && name.EndsWith("s") ? name.Substring(0,name.Length-1) : "_";
-					foreach (var i in obj_enum) i.ToXml(node, type_attr);
+					foreach (var i in obj_enum) node.Add(Convert(i, new XElement(elem_name), type_attr));
 					return node;
 				}
 
@@ -652,18 +652,14 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
 	using System.Drawing;
-	using NUnit.Framework;
 	using util;
 
-	[TestFixture] public partial class UnitTests
-	{
-		internal static class TestXml
+	[TestFixture] public class TestXml
 		{
-			// ReSharper disable UnusedMember.Local
+		#region Types
 			private enum EEnum
 			{
 				Dog
@@ -672,14 +668,14 @@ namespace pr
 			/// <summary>A custom type with an XElement constructor and explicit ToXml() method</summary>
 			private class Elem1
 			{
-				public readonly uint m_int;
+			public readonly uint m_uint;
 
 				public Elem1() :this(0)              {}
-				public Elem1(uint i)                 { m_int = i; }
-				public Elem1(XElement elem)          { m_int = uint.Parse(elem.Value.Substring(5)); }
-				public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
-				public override int GetHashCode()    { return (int)m_int; }
-				private bool Equals(Elem1 other)     { return m_int == other.m_int; }
+			public Elem1(uint i)                 { m_uint = i; }
+			public Elem1(XElement elem)          { m_uint = uint.Parse(elem.Value.Substring(5)); }
+			public XElement ToXml(XElement node) { node.SetValue("elem_"+m_uint); return node; }
+			public override int GetHashCode()    { return (int)m_uint; }
+			private bool Equals(Elem1 other)     { return m_uint == other.m_uint; }
 				public override bool Equals(object obj)
 				{
 					if (ReferenceEquals(null, obj)) return false;
@@ -733,57 +729,57 @@ namespace pr
 				public XElement ToXml(XElement node) { node.SetValue("elem_"+m_int); return node; }
 				public void FromXml(XElement node) { m_int = int.Parse(node.Value.Substring(5)); }
 			}
-			// ReSharper restore UnusedMember.Local
+		#endregion
 
-			[Test] public static void TestToXml1()
+		[Test] public void ToXml1()
 			{
 				// Built in types
 				var node = 5.ToXml("five", false);
 				var five = node.As<int>();
 				Assert.AreEqual(5, five);
 			}
-			[Test] public static void TestToXml2()
+		[Test] public void ToXml2()
 			{
 				var font = SystemFonts.DefaultFont;
 				var node = font.ToXml("font", false);
 				var FONT = node.As<Font>();
-				Assert.IsTrue(font.Equals(FONT));
+			Assert.True(font.Equals(FONT));
 			}
-			[Test] public static void TestToXml3()
+		[Test] public void ToXml3()
 			{
 				var pt = new Point(1,2);
 				var node = pt.ToXml("pt", false);
 				var PT = node.As<Point>();
-				Assert.IsTrue(pt.Equals(PT));
+			Assert.True(pt.Equals(PT));
 			}
-			[Test] public static void TestToXml3a()
+		[Test] public void ToXml3a()
 			{
 				var pt = new PointF(1f,2f);
 				var node = pt.ToXml("pt", false);
 				var PT = node.As<PointF>();
-				Assert.IsTrue(pt.Equals(PT));
+			Assert.True(pt.Equals(PT));
 			}
-			[Test] public static void TestToXml4()
+		[Test] public void ToXml4()
 			{
 				var node = DateTimeOffset.MinValue.ToXml("min_time", true);
 				var dto = node.As<DateTimeOffset>();
 				Assert.AreEqual(DateTimeOffset.MinValue, dto);
 			}
-			[Test] public static void TestToXml5()
+		[Test] public void ToXml5()
 			{
 				var guid = Guid.NewGuid();
 				var node = guid.ToXml("guid", false);
 				var GUID = node.As<Guid>();
 				Assert.AreEqual(guid, GUID);
 			}
-			[Test] public static void TestToXml6()
+		[Test] public void ToXml6()
 			{
 				// XElement constructible class
 				var node = new Elem1(4).ToXml("four", false);
 				var four = node.As<Elem1>();
-				Assert.AreEqual(4, four.m_int);
+			Assert.AreEqual(4U, four.m_uint);
 			}
-			[Test] public static void TestToXml7()
+		[Test] public void ToXml7()
 			{
 				// DC class
 				var dc = new Elem2(2,"3");
@@ -792,43 +788,43 @@ namespace pr
 				Assert.AreEqual(dc.m_int, DC.m_int);
 				Assert.AreEqual(dc.m_string, DC.m_string);
 			}
-			[Test] public static void TestToXml8()
+		[Test] public void ToXml8()
 			{
 				// Arrays
-				var arr = new[]{0,1,2,3,4};
+			var arr = new int[]{0,1,2,3,4};
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<int[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml9()
+		[Test] public void ToXml9()
 			{
-				var arr = new[]{"hello", "world"};
+			var arr = new string[]{"hello", "world"};
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<string[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml10()
+		[Test] public void ToXml10()
 			{
 				var arr = new[]{new Point(1,1), new Point(2,2)};
 				var node = arr.ToXml("arr", true);
 				var ARR = node.As<Point[]>();
 				Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml11()
+		[Test] public void ToXml11()
 			{
 				var arr = new[]{new Elem2(1,"1"), new Elem2(2,"2"), new Elem2(3,"3")};
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,null));
 				Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml12()
+		[Test] public void ToXml12()
 			{
 				var arr = new[]{new Elem2(1,"1"), null, new Elem2(3,"3")};
 				var node = arr.ToXml("arr", false);
 				var ARR = node.As<Elem2[]>(factory:t => new Elem2(0,""));
-				Assert.IsTrue(arr.SequenceEqual(ARR));
+			Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml13()
+		[Test] public void ToXml13()
 			{
 				// nullables
 				int? three = 3;
@@ -836,14 +832,14 @@ namespace pr
 				var THREE = node.As<int?>();
 				Assert.True(three == THREE);
 			}
-			[Test] public static void TestToXml14()
+		[Test] public void ToXml14()
 			{
 				var arr = new int?[]{1, null, 2};
 				var node = arr.ToXml("arr", true);
 				var ARR = node.As<int?[]>();
-				Assert.IsTrue(arr.SequenceEqual(ARR));
+			Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml15()
+		[Test] public void ToXml15()
 			{
 				var arr = new object[]{null, new Elem1(1), new Elem2(2,"2"), new Elem3(3,"3")};
 				var node = arr.ToXml("arr", true);
@@ -856,31 +852,31 @@ namespace pr
 					});
 				Assert.True(arr.SequenceEqual(ARR));
 			}
-			[Test] public static void TestToXml16()
+		[Test] public void ToXml16()
 			{
 			}
-			[Test] public static void TestToXml17()
+		[Test] public void ToXml17()
 			{
 				var e4 = new Elem4{m_int = 3};
 				var node = e4.ToXml("e4", false);
 				var E4 = node.As<Elem4>();
 				Assert.AreEqual(e4.m_int, E4.m_int);
 			}
-			[Test] public static void TestToXml18()
+		[Test] public void ToXml18()
 			{
 				var rc = new Rectangle(1,2,3,4);
 				var node = rc.ToXml("rect", false);
 				var RC = node.As<Rectangle>();
-				Assert.IsTrue(Equals(rc, RC));
+			Assert.True(Equals(rc, RC));
 			}
-			[Test] public static void TestToXml19()
+		[Test] public void ToXml19()
 			{
 				var rc = new RectangleF(1f,2f,3f,4f);
 				var node = rc.ToXml("rect", false);
 				var RC = node.As<RectangleF>();
-				Assert.IsTrue(Equals(rc, RC));
+			Assert.True(Equals(rc, RC));
 			}
-			[Test] public static void TestXmlAs()
+		[Test] public void XmlAs()
 			{
 				var xml = new XDocument(
 					new XElement("root",
@@ -920,7 +916,7 @@ namespace pr
 				root.Element("e").As(chars, "j");
 				Assert.AreEqual(5, chars.Count);
 				for (int j = 0; j != 4; ++j)
-					Assert.AreEqual('a' + j, chars[j]);
+				Assert.AreEqual((char)('a' + j), chars[j]);
 
 				ints.Clear();
 				root.Element("e").As(ints, "i", (lhs,rhs) => lhs == rhs);
@@ -928,7 +924,7 @@ namespace pr
 				for (int i = 0; i != 4; ++i)
 					Assert.AreEqual(i, ints[i]);
 			}
-			[Test] public static void TestXmlAdd()
+		[Test] public void XmlAdd()
 			{
 				var xml  = new XDocument();
 				var cmt  = xml.Add2(new XComment("comments"));  Assert.AreEqual(cmt.Value, "comments");
@@ -951,7 +947,7 @@ namespace pr
 				s = root.ToString(SaveOptions.DisableFormatting);
 				Assert.AreEqual(
 					"<root>" +
-						"<elem ty=\"pr.UnitTests+TestXml+Elem1\">elem_0</elem>" +
+					"<elem ty=\"pr.unittests.TestXml+Elem1\">elem_0</elem>" +
 					"</root>"
 					,s);
 				xelem.Remove();
@@ -976,11 +972,11 @@ namespace pr
 				Assert.AreEqual(
 					"<root>" +
 						"<elems>" +
-							"<i ty=\"pr.UnitTests+TestXml+Elem1\">elem_0</i>" +
-							"<i ty=\"pr.UnitTests+TestXml+Elem1\">elem_1</i>" +
-							"<i ty=\"pr.UnitTests+TestXml+Elem1\">elem_2</i>" +
-							"<i ty=\"pr.UnitTests+TestXml+Elem1\">elem_3</i>" +
-							"<i ty=\"pr.UnitTests+TestXml+Elem1\">elem_4</i>" +
+						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_0</i>" +
+						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_1</i>" +
+						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_2</i>" +
+						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_3</i>" +
+						"<i ty=\"pr.unittests.TestXml+Elem1\">elem_4</i>" +
 						"</elems>" +
 					"</root>"
 					,s);
@@ -988,6 +984,5 @@ namespace pr
 			}
 		}
 	}
-}
 
 #endif

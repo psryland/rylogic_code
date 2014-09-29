@@ -49,43 +49,38 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Linq;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestDictExtensions
 	{
-		internal static class TestDictExtensions
+		[Test] public void Merge()
 		{
-			[Test] public static void Merge()
-			{
-				var d0 = new Dictionary<int,string>();
-				var d1 = new Dictionary<int,string>();
-				var d2 = new Dictionary<int,string>();
-				d1.Add(1,"one");
-				d1.Add(2,"two");
-				d2.Add(2,"too");
-				d2.Add(3,"free");
-				d0.Merge(d1,d2);
+			var d0 = new Dictionary<int,string>();
+			var d1 = new Dictionary<int,string>();
+			var d2 = new Dictionary<int,string>();
+			d1.Add(1,"one");
+			d1.Add(2,"two");
+			d2.Add(2,"too");
+			d2.Add(3,"free");
+			d0.Merge(d1,d2);
 
-				Assert.AreEqual("one"  , d0[1]);
-				Assert.AreEqual("too"  , d0[2]);
-				Assert.AreEqual("free" , d0[3]);
-			}
-			[Test] public static void UnorderedEqual()
-			{
-				var d1 = new[]{1,2,3,4}.ToDictionary(k=>k,v=>v);
-				var d2 = new[]{4,3,2,1}.ToDictionary(k=>k,v=>v);
-				var d3 = new[]{4,2}.ToDictionary(k=>k,v=>v);
+			Assert.AreEqual("one"  , d0[1]);
+			Assert.AreEqual("too"  , d0[2]);
+			Assert.AreEqual("free" , d0[3]);
+		}
+		[Test] public void UnorderedEqual()
+		{
+			var d1 = new[]{1,2,3,4}.ToDictionary(k=>k,v=>v);
+			var d2 = new[]{4,3,2,1}.ToDictionary(k=>k,v=>v);
+			var d3 = new[]{4,2}.ToDictionary(k=>k,v=>v);
 
-				Assert.True(d1.EqualUnordered(d2));
-				Assert.True(d2.EqualUnordered(d1));
-				Assert.False(d1.EqualUnordered(d3));
-				Assert.False(d3.EqualUnordered(d1));
-			}
+			Assert.True(d1.EqualUnordered(d2));
+			Assert.True(d2.EqualUnordered(d1));
+			Assert.False(d1.EqualUnordered(d3));
+			Assert.False(d3.EqualUnordered(d1));
 		}
 	}
 }

@@ -96,14 +96,11 @@ namespace pr.stream
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	// ReSharper disable PossibleNullReferenceException, AccessToModifiedClosure
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestUncloseableStream
 	{
-		[Test] public static void TestUnclosableStream()
+		[Test] public void UnclosableStream()
 		{
 			const string str = "The quick brown fox jumped over the lazy dog";
 			
@@ -112,7 +109,7 @@ namespace pr
 			for (int i = 0; i != 2; ++i)
 			{
 				MemoryStream s = null;
-				TestDelegate func = () => { Assert.AreEqual(str.Length, s.Capacity); };
+				Action func = () => { Assert.AreEqual(str.Length, s.Capacity); };
 				
 				using (s = new MemoryStream(Encoding.ASCII.GetBytes(str)))
 				{
@@ -129,6 +126,5 @@ namespace pr
 			}
 		}
 	}
-	// ReSharper restore PossibleNullReferenceException, AccessToModifiedClosure
 }
 #endif

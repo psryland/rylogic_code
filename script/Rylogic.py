@@ -39,6 +39,12 @@ def AssertPathsExist(paths):
 		for p in missing: msg += p + "\n"
 		raise FileExistsError(msg)
 
+# Convert a relative or full filepath that might be wrapped in quotes into a full file path
+def NormaliseFilepath(filepath):
+	filepath = filepath.replace('"','')
+	filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
+	return filepath
+	
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
 	sfound = os.path.exists(src)

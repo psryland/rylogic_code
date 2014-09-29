@@ -57,22 +57,20 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestStreamExtns
 	{
-		[Test] public static void TestStreamExtn_CopyNTo()
+		[Test] public void CopyNTo()
 		{
 			using (var ms0 = new MemoryStream(new byte[]{1,2,3,4,5,6,7,8}, false))
 			using (var ms1 = new MemoryStream())
 			{
 				ms0.CopyTo(5, ms1);
-				Assert.AreEqual(8, ms0.Length);
-				Assert.AreEqual(5, ms1.Length);
+				Assert.AreEqual(8L, ms0.Length);
+				Assert.AreEqual(5L, ms1.Length);
 
 				var b0 = ms0.ToArray();
 				var b1 = ms1.ToArray();

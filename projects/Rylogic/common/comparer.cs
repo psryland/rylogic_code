@@ -70,13 +70,11 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
-
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestComparer
 	{
-		[Test] public static void TestEql()
+		[Test] public void TestEql()
 		{
 			List<int> ints = new List<int>{0,1,2,3,4,5};
 			ints.Exists(i=>i == 3);

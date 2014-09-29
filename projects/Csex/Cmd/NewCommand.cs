@@ -5,8 +5,9 @@ namespace Csex
 	// NEW_COMMAND - implement
 	public class NEW_COMMAND :Cmd
 	{
-		public override void ShowHelp()
+		public override void ShowHelp(Exception ex)
 		{
+			if (ex != null) Console.WriteLine("Error parsing command line: {0}", ex.Message);
 			Console.Write(
 				"This is a template command\n" +
 				" Syntax: Csex -NEW_COMMAND -o option\n" +

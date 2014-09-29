@@ -59,23 +59,37 @@ namespace pr.extn
 			return baseOrInterface.IsAssignableFrom(type);
 		}
 
-		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
 		public static Attribute FindAttribute(this Type type, Type attribute_type, bool inherit = true)
 		{
+			if (!attribute_type.Inherits(typeof(Attribute))) throw new Exception("Expected 'attribute_type' to be a subclass of 'Attribute'");
 			return type.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
 		}
 
-		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
+		/// <summary>Returns the first instance of 'attribute_type' for this method or null.</summary>
+		public static Attribute FindAttribute(this MethodInfo mi, Type attribute_type, bool inherit = true)
+		{
+			if (!attribute_type.Inherits(typeof(Attribute))) throw new Exception("Expected 'attribute_type' to be a subclass of 'Attribute'");
+			return mi.GetCustomAttributes(attribute_type, inherit).Cast<Attribute>().FirstOrDefault();
+		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
 		public static T FindAttribute<T>(this Type type, bool inherit = true) where T:Attribute
 		{
 			return (T)type.FindAttribute(typeof(T), inherit);
+		}
+
+		/// <summary>Returns the first instance of 'attribute_type' for this type or null.</summary>
+		public static T FindAttribute<T>(this MethodInfo mi, bool inherit = true) where T:Attribute
+		{
+			return (T)mi.FindAttribute(typeof(T), inherit);
 		}
 
 		/// <summary>Returns the first instance of 'attribute_type' for this type. Throws if not found</summary>
 		public static Attribute GetAttribute(this Type type, Type attribute_type, bool inherit = true)
 		{
 			var attr = FindAttribute(type, attribute_type, inherit);
-			if (attr == null) throw new Exception("Class '{0}' does not provide a '{1}' attribute.".Fmt(type.FullName, attribute_type.FullName));
+			if (attr == null) throw new Exception("Type '{0}' is not decorated with the '{1}' attribute.".Fmt(type.FullName, attribute_type.FullName));
 			return attr;
 		}
 
@@ -84,107 +98,111 @@ namespace pr.extn
 		{
 			return (T)type.GetAttribute(typeof(T), inherit);
 		}
+
+		/// <summary>Returns the methods on this type that are decorated with the attribute 'attribute_type'</summary>
+		public static IEnumerable<MethodInfo> FindMethodsWithAttribute(this Type type, Type attribute_type, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		{
+			return type.GetMethods(flags).Where(x => x.FindAttribute(attribute_type) != null);
+		}
+
+		/// <summary>Returns the methods on this type that are decorated with the attribute 'attribute_type'</summary>
+		public static IEnumerable<MethodInfo> FindMethodsWithAttribute<T>(this Type type, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance) where T:Attribute
+		{
+			return type.FindMethodsWithAttribute(typeof(T), flags);
+		}
 	}
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using extn;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestTypeExtns
 	{
-		internal static class TestTypeExtensions
+		// ReSharper disable UnusedMember.Local
+		#pragma warning disable 169, 649
+		private class ThingBase
 		{
-			// ReSharper disable UnusedMember.Local
-			#pragma warning disable 169, 649
-			private class ThingBase
-			{
-				private          int B_PrivateField            ;
-				protected        int B_ProtectedField          ;
-				internal         int B_InternalField           ;
-				public           int B_PublicField             ;
-				private          int B_PrivateAutoProp         { get; set; }
-				protected        int B_ProtectedAutoProp       { get; set; }
-				internal         int B_InternalAutoProp        { get; set; }
-				public           int B_PublicAutoProp          { get; set; }
-				private          int B_PrivateMethod        () { return 0; }
-				protected        int B_ProtectedMethod      () { return 0; }
-				internal         int B_InternalMethod       () { return 0; }
-				public           int B_PublicMethod         () { return 0; }
-				private   static int B_PrivateStaticMethod  () { return 0; }
-				protected static int B_ProtectedStaticMethod() { return 0; }
-				internal  static int B_InternalStaticMethod () { return 0; }
-				public    static int B_PublicStaticMethod   () { return 0; }
-			}
-			private class Thing :ThingBase
-			{
-				private          int D_PrivateField            ;
-				protected        int D_ProtectedField          ;
-				internal         int D_InternalField           ;
-				public           int D_PublicField             ;
-				private          int D_PrivateAutoProp         { get; set; }
-				protected        int D_ProtectedAutoProp       { get; set; }
-				internal         int D_InternalAutoProp        { get; set; }
-				public           int D_PublicAutoProp          { get; set; }
-				private          int D_PrivateMethod        () { return 0; }
-				protected        int D_ProtectedMethod      () { return 0; }
-				internal         int D_InternalMethod       () { return 0; }
-				public           int D_PublicMethod         () { return 0; }
-				private   static int D_PrivateStaticMethod  () { return 0; }
-				protected static int D_ProtectedStaticMethod() { return 0; }
-				internal  static int D_InternalStaticMethod () { return 0; }
-				public    static int D_PublicStaticMethod   () { return 0; }
-			}
-			#pragma warning restore 169, 649
-			// ReSharper restore UnusedMember.Local
+			private          int B_PrivateField            ;
+			protected        int B_ProtectedField          ;
+			internal         int B_InternalField           ;
+			public           int B_PublicField             ;
+			private          int B_PrivateAutoProp         { get; set; }
+			protected        int B_ProtectedAutoProp       { get; set; }
+			internal         int B_InternalAutoProp        { get; set; }
+			public           int B_PublicAutoProp          { get; set; }
+			private          int B_PrivateMethod        () { return 0; }
+			protected        int B_ProtectedMethod      () { return 0; }
+			internal         int B_InternalMethod       () { return 0; }
+			public           int B_PublicMethod         () { return 0; }
+			private   static int B_PrivateStaticMethod  () { return 0; }
+			protected static int B_ProtectedStaticMethod() { return 0; }
+			internal  static int B_InternalStaticMethod () { return 0; }
+			public    static int B_PublicStaticMethod   () { return 0; }
+		}
+		private class Thing :ThingBase
+		{
+			private          int D_PrivateField            ;
+			protected        int D_ProtectedField          ;
+			internal         int D_InternalField           ;
+			public           int D_PublicField             ;
+			private          int D_PrivateAutoProp         { get; set; }
+			protected        int D_ProtectedAutoProp       { get; set; }
+			internal         int D_InternalAutoProp        { get; set; }
+			public           int D_PublicAutoProp          { get; set; }
+			private          int D_PrivateMethod        () { return 0; }
+			protected        int D_ProtectedMethod      () { return 0; }
+			internal         int D_InternalMethod       () { return 0; }
+			public           int D_PublicMethod         () { return 0; }
+			private   static int D_PrivateStaticMethod  () { return 0; }
+			protected static int D_ProtectedStaticMethod() { return 0; }
+			internal  static int D_InternalStaticMethod () { return 0; }
+			public    static int D_PublicStaticMethod   () { return 0; }
+		}
+		#pragma warning restore 169, 649
+		// ReSharper restore UnusedMember.Local
 
-			[Test] public static void AllMembers()
-			{
-				// In base:
-				//  4 - 4 - fields
-				//  8 - 4 - auto properties
-				// 12 - 4 - auto prop backing fields
-				// 20 - 8 - get/set auto prop methods
-				// 24 - 4 - instance methods
-				// 28 - 4 - static methods
-				// 29 - 1 - constructor
-				// 58 - x2 - for the same again in derived
-				var members = typeof(Thing).AllMembers(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-				Assert.AreEqual(58, members.Count);
+		[Test] public void AllMembers()
+		{
+			// In base:
+			//  4 - 4 - fields
+			//  8 - 4 - auto properties
+			// 12 - 4 - auto prop backing fields
+			// 20 - 8 - get/set auto prop methods
+			// 24 - 4 - instance methods
+			// 28 - 4 - static methods
+			// 29 - 1 - constructor
+			// 58 - x2 - for the same again in derived
+			var members = typeof(Thing).AllMembers(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			Assert.AreEqual(58, members.Count);
 
-				members = typeof(Thing).AllMembers(BindingFlags.Instance|BindingFlags.Public).ToList();
-				Assert.AreEqual(12, members.Count);
-			}
-			[Test] public static void AllFields()
-			{
-				var fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-				Assert.AreEqual(16, fields.Count);
+			members = typeof(Thing).AllMembers(BindingFlags.Instance|BindingFlags.Public).ToList();
+			Assert.AreEqual(12, members.Count);
+		}
+		[Test] public void AllFields()
+		{
+			var fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			Assert.AreEqual(16, fields.Count);
 
-				fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public).ToList();
-				Assert.AreEqual(2, fields.Count);
-			}
-			[Test] public static void AllProps()
-			{
-				var props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
-				Assert.AreEqual(8, props.Count);
+			fields = typeof(Thing).AllFields(BindingFlags.Instance|BindingFlags.Public).ToList();
+			Assert.AreEqual(2, fields.Count);
+		}
+		[Test] public void AllProps()
+		{
+			var props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
+			Assert.AreEqual(8, props.Count);
 
-				props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public).ToList();
-				Assert.AreEqual(2, props.Count);
-			}
-			[Test] public static void Resolve()
-			{
-				var ty0 = TypeExtensions.Resolve("System.String");
-				Assert.AreEqual(typeof(string), ty0);
+			props = typeof(Thing).AllProps(BindingFlags.Instance|BindingFlags.Public).ToList();
+			Assert.AreEqual(2, props.Count);
+		}
+		[Test] public void Resolve()
+		{
+			var ty0 = TypeExtensions.Resolve("System.String");
+			Assert.AreEqual(typeof(string), ty0);
 
-				var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
-				Assert.AreEqual(typeof(util.CRC32), ty1);
-
-				var ty2 = TypeExtensions.Resolve("NUnit.Framework.CultureAttribute[]");
-				Assert.AreEqual(typeof(CultureAttribute[]), ty2);
-			}
+			var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
+			Assert.AreEqual(typeof(util.CRC32), ty1);
 		}
 	}
 }

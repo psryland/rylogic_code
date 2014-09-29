@@ -131,67 +131,63 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
 	using crypt;
 	
-	[TestFixture] public partial class UnitTests
+	[TestFixture] public class TestActivationCode
 	{
-		public static class TestActivationCode
+		[Test] public void ActivationCodeGen1()
 		{
-			[Test] public static void ActivationCodeGen1()
+			// Generate a public and private key.
+			// Save the public key in the app (in a resource file)
+			// Save the private key somewhere safe, you need that to generate more code numbers for the app
+			string pub, priv;
+			Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
+			Assert.AreNotEqual(pub, priv);
+
+			// This is the licence issuer
+			var user_data = "Pauls Test Data";
+			var key = ActivationCode.Generate(user_data, priv);
+
+			// This is the app, checking the licence
+			var valid = ActivationCode.Validate(user_data, key, pub);
+			Assert.True(valid);
+		}
+		[Test] public static void ActivationCodeGen2()
+		{
+			// Generate a public and private key.
+			// Save the public key in the app (in a resource file)
+			// Save the private key somewhere safe, you need that to generate more code numbers for the app
+			string pub, priv;
+			Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
+			Assert.AreNotEqual(pub, priv);
+			
+			// Generate a code number for the app
+			var key = ActivationCode.Generate(priv);
+			
+			// Pretend this is in the app:
+			
+			// Quick check that the key is entered correctly
+			var valid = ActivationCode.CheckCrc(key);
+			Assert.True(valid);
+
+			// Validate the code number
+			valid = ActivationCode.Validate(key, pub);
+			Assert.True(valid);
+			
 			{
-				// Generate a public and private key.
-				// Save the public key in the app (in a resource file)
-				// Save the private key somewhere safe, you need that to generate more code numbers for the app
-				string pub, priv;
-				Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
-				Assert.AreNotEqual(pub, priv);
-
-				// This is the licence issuer
-				var user_data = "Pauls Test Data";
-				var key = ActivationCode.Generate(user_data, priv);
-
-				// This is the app, checking the licence
-				var valid = ActivationCode.Validate(user_data, key, pub);
-				Assert.IsTrue(valid);
+				var sb = new StringBuilder(key); sb[2] = sb[2] == 'A' ? 'B' : 'A';
+				var key1 = sb.ToString();
+				valid = ActivationCode.Validate(key1, pub);
+				Assert.False(valid);
 			}
-			[Test] public static void ActivationCodeGen2()
 			{
-				// Generate a public and private key.
-				// Save the public key in the app (in a resource file)
-				// Save the private key somewhere safe, you need that to generate more code numbers for the app
-				string pub, priv;
-				Crypt.GenerateRSAKeyPair(out pub, out priv, 384);
-				Assert.AreNotEqual(pub, priv);
-			
-				// Generate a code number for the app
-				var key = ActivationCode.Generate(priv);
-			
-				// Pretend this is in the app:
-			
-				// Quick check that the key is entered correctly
-				var valid = ActivationCode.CheckCrc(key);
-				Assert.IsTrue(valid);
-
-				// Validate the code number
-				valid = ActivationCode.Validate(key, pub);
-				Assert.IsTrue(valid);
-			
-				{
-					var sb = new StringBuilder(key); sb[2] = sb[2] == 'A' ? 'B' : 'A';
-					var key1 = sb.ToString();
-					valid = ActivationCode.Validate(key1, pub);
-					Assert.IsFalse(valid);
-				}
-				{
-					var sb = new StringBuilder(key); var tmp = sb[2]; sb[2] = sb[3]; sb[3] = tmp;
-					var key1 = sb.ToString();
-					valid = ActivationCode.Validate(key1, pub);
-					Assert.IsFalse(valid);
-				}
+				var sb = new StringBuilder(key); var tmp = sb[2]; sb[2] = sb[3]; sb[3] = tmp;
+				var key1 = sb.ToString();
+				valid = ActivationCode.Validate(key1, pub);
+				Assert.False(valid);
 			}
 		}
 	}

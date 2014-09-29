@@ -396,105 +396,98 @@ namespace pr.extn
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
 	using System.Threading;
-	using NUnit.Framework;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEventExtns
 	{
-		public static class TestEventExtensions
+		private static event Action<int> BooEvent;
+
+		private static readonly List<string> collected = new List<string>();
+		private static readonly List<string> hit       = new List<string>();
+		private class Gun
 		{
-			private static event Action<int> BooEvent;
+			public event EventHandler Firing;
+			public event Action<Gun> Bang;
+			public event EventHandler<FiredArgs> Fired;
+			public class FiredArgs :EventArgs { public string Noise { get; set; } }
 
-			private static readonly List<string> collected = new List<string>();
-			private static readonly List<string> hit       = new List<string>();
-			private class Gun
+			~Gun() { collected.Add("gun"); }
+			public void Shoot()
 			{
-				public event EventHandler Firing;
-				public event Action<Gun> Bang;
-				public event EventHandler<FiredArgs> Fired;
-				public class FiredArgs :EventArgs { public string Noise { get; set; } }
-
-				~Gun() { collected.Add("gun"); }
-				public void Shoot()
-				{
-					Firing.Raise(this, EventArgs.Empty);
-					Bang.Raise(this);
-					Fired.Raise(this, new FiredArgs{Noise = "Bang!"});
-				}
+				Firing.Raise(this, EventArgs.Empty);
+				Bang.Raise(this);
+				Fired.Raise(this, new FiredArgs{Noise = "Bang!"});
 			}
-			private class Target
-			{
-				private readonly string m_name;
-				public Target(string name)                     { m_name = name; }
-				~Target()                                      { collected.Add(m_name); }
-				public void OnHit(Gun gun)                     { hit.Add(m_name); }
-				public void OnFiring(object s, EventArgs a)    { hit.Add("Dont Shoot"); }
-				public void OnFired(object s, Gun.FiredArgs a) { hit.Add(a.Noise); }
-			}
+		}
+		private class Target
+		{
+			private readonly string m_name;
+			public Target(string name)                     { m_name = name; }
+			~Target()                                      { collected.Add(m_name); }
+			public void OnHit(Gun gun)                     { hit.Add(m_name); }
+			public void OnFiring(object s, EventArgs a)    { hit.Add("Dont Shoot"); }
+			public void OnFired(object s, Gun.FiredArgs a) { hit.Add(a.Noise); }
+		}
 
-			// ReSharper disable RedundantAssignment
-			[Test] public static void SuspendResume()
-			{
-				// Test event suspend/resume
-				int boo_raised = 0;
-				BooEvent += i => ++boo_raised;
-				BooEvent.Suspend(true);
-				BooEvent.Raise(0);
-				BooEvent.Raise(1);
-				BooEvent.Raise(2);
-				BooEvent.Raise(3);
-				Assert.IsTrue(BooEvent.Suspend(false));
-				Assert.AreEqual(0, boo_raised);
-			}
+		[Test] public void SuspendResume()
+		{
+			// Test event suspend/resume
+			int boo_raised = 0;
+			BooEvent += i => ++boo_raised;
+			BooEvent.Suspend(true);
+			BooEvent.Raise(0);
+			BooEvent.Raise(1);
+			BooEvent.Raise(2);
+			BooEvent.Raise(3);
+			Assert.True(BooEvent.Suspend(false));
+			Assert.AreEqual(0, boo_raised);
+		}
 
-			// These tests fail when run by ncrunch when instrumentation is turned on
-			// because it does things to the GC that prevent collection
-			[Test] public static void WeakActions()
-			{
-				var gun = new Gun();
-				var bob = new Target("bob");
-				var fred = new Target("fred");
-				gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(h => gun.Bang -= h);
-				gun.Bang += fred.OnHit;
-				gun.Shoot();
-				Assert.IsTrue(hit.Contains("bob"));
-				Assert.IsTrue(hit.Contains("fred"));
+		// These tests fail when run by ncrunch when instrumentation is turned on
+		// because it does things to the GC that prevent collection
+		[Test] public void WeakActions()
+		{
+			var gun = new Gun();
+			var bob = new Target("bob");
+			var fred = new Target("fred");
+			gun.Bang += new Action<Gun>(bob.OnHit).MakeWeak(h => gun.Bang -= h);
+			gun.Bang += fred.OnHit;
+			gun.Shoot();
+			Assert.True(hit.Contains("bob"));
+			Assert.True(hit.Contains("fred"));
 
-				hit.Clear();
-				bob = null;
-				fred = null;
-				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-				Thread.Sleep(100); // bob collected here, but not fred
-				Assert.IsTrue(collected.Contains("bob"));
-				Assert.IsFalse(collected.Contains("fred"));
-				gun.Shoot(); // fred still shot here
-				Assert.IsFalse(hit.Contains("bob"));
-				Assert.IsTrue(hit.Contains("fred"));
-			}
-			[Test] public static void WeakEventHandlers()
-			{
-				var gun = new Gun();
-				var bob = new Target("bob");
-				gun.Firing += new EventHandler               (bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
-				gun.Bang   += new Action<Gun>                (bob.OnHit   ).MakeWeak(eh => gun.Bang -= eh);
-				gun.Fired  += new EventHandler<Gun.FiredArgs>(bob.OnFired ).MakeWeak(eh => gun.Fired -= eh);
-				gun.Shoot();
-				Assert.IsTrue(hit.Contains("Dont Shoot"));
-				Assert.IsTrue(hit.Contains("bob"));
-				Assert.IsTrue(hit.Contains("Bang!"));
+			hit.Clear();
+			bob = null;
+			fred = null;
+			GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+			Thread.Sleep(100); // bob collected here, but not fred
+			Assert.True(collected.Contains("bob"));
+			Assert.False(collected.Contains("fred"));
+			gun.Shoot(); // fred still shot here
+			Assert.False(hit.Contains("bob"));
+			Assert.True(hit.Contains("fred"));
+		}
+		[Test] public void WeakEventHandlers()
+		{
+			var gun = new Gun();
+			var bob = new Target("bob");
+			gun.Firing += new EventHandler               (bob.OnFiring).MakeWeak(eh => gun.Firing -= eh);
+			gun.Bang   += new Action<Gun>                (bob.OnHit   ).MakeWeak(eh => gun.Bang -= eh);
+			gun.Fired  += new EventHandler<Gun.FiredArgs>(bob.OnFired ).MakeWeak(eh => gun.Fired -= eh);
+			gun.Shoot();
+			Assert.True(hit.Contains("Dont Shoot"));
+			Assert.True(hit.Contains("bob"));
+			Assert.True(hit.Contains("Bang!"));
 
-				hit.Clear();
-				bob = null;
-				GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
-				Thread.Sleep(100); // bob collected here, but not fred
-				Assert.IsTrue(collected.Contains("bob"));
-				gun.Shoot();
-				Assert.IsTrue(hit.Count == 0);
-			}
-			// ReSharper restore RedundantAssignment
+			hit.Clear();
+			bob = null;
+			GC.Collect(GC.MaxGeneration,GCCollectionMode.Forced);
+			Thread.Sleep(100); // bob collected here, but not fred
+			Assert.True(collected.Contains("bob"));
+			gun.Shoot();
+			Assert.True(hit.Count == 0);
 		}
 	}
 }

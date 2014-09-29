@@ -200,68 +200,63 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using common;
 
-	[TestFixture] public static partial class UnitTests
+	[TestFixture] public class TestEventBatcher
 	{
-		internal static partial class TestPathEx
+		[Test] public void TestEventBatch()
 		{
-			[Test] public static void TestEventBatch()
-			{
-				var count = new int[2];
-				var dis = Dispatcher.CurrentDispatcher;
-				var thread_id = Thread.CurrentThread.ManagedThreadId;
-				var mre_eb1 = new ManualResetEvent(false);
-				var mre_eb2 = new ManualResetEvent(false);
+			var count = new int[2];
+			var dis = Dispatcher.CurrentDispatcher;
+			var thread_id = Thread.CurrentThread.ManagedThreadId;
+			var mre_eb1 = new ManualResetEvent(false);
+			var mre_eb2 = new ManualResetEvent(false);
 
-				// Not trigger on first, expect one call after the delay period
-				var eb1 = new EventBatcher(() =>
-					{
-						if (thread_id != Thread.CurrentThread.ManagedThreadId)
-							throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
+			// Not trigger on first, expect one call after the delay period
+			var eb1 = new EventBatcher(() =>
+				{
+					if (thread_id != Thread.CurrentThread.ManagedThreadId)
+						throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
 						
-						++count[0];
-						mre_eb1.Set();
-					}){TriggerOnFirst = false};
+					++count[0];
+					mre_eb1.Set();
+				}){TriggerOnFirst = false};
 
-				// Trigger on first, expect one call at the start, and one after the delay period
-				var eb2 = new EventBatcher(() =>
-					{
-						if (thread_id != Thread.CurrentThread.ManagedThreadId)
-							throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
+			// Trigger on first, expect one call at the start, and one after the delay period
+			var eb2 = new EventBatcher(() =>
+				{
+					if (thread_id != Thread.CurrentThread.ManagedThreadId)
+						throw new Exception("Event Batch should be called in the thread context that the batcher was created in");
 
-						++count[1];
-						eb1.Signal();
-						mre_eb2.Set();
-					}){TriggerOnFirst = true};
+					++count[1];
+					eb1.Signal();
+					mre_eb2.Set();
+				}){TriggerOnFirst = true};
 
-				ThreadPool.QueueUserWorkItem(x =>
-					{
-						for (var i = 0; i != 10; ++i)
-							eb2.Signal();
+			ThreadPool.QueueUserWorkItem(x =>
+				{
+					for (var i = 0; i != 10; ++i)
+						eb2.Signal();
 
-						mre_eb1.WaitOne();
-						mre_eb2.WaitOne();
-						dis.BeginInvokeShutdown(DispatcherPriority.Normal);
-					});
+					mre_eb1.WaitOne();
+					mre_eb2.WaitOne();
+					dis.BeginInvokeShutdown(DispatcherPriority.Normal);
+				});
 
-				// The unit test framework runs the test in a worker thread.
-				// Dispatcher.CurrentDispatcher causes a new dispatcher to be
-				// created but it isn't running. Calling Run starts a message
-				// loop for this thread
-				Dispatcher.Run();
+			// The unit test framework runs the test in a worker thread.
+			// Dispatcher.CurrentDispatcher causes a new dispatcher to be
+			// created but it isn't running. Calling Run starts a message
+			// loop for this thread
+			Dispatcher.Run();
 
-				// Don't Signal() from this thread, need to test cross-thread support
+			// Don't Signal() from this thread, need to test cross-thread support
 
-				Assert.AreEqual(true, mre_eb1.WaitOne(0));
-				Assert.AreEqual(true, mre_eb2.WaitOne(0));
-				Assert.AreEqual(1, count[0]); // !TriggerOnFirst
-				Assert.AreEqual(2, count[1]); //  TriggerOnFirst
-			}
+			Assert.AreEqual(true, mre_eb1.WaitOne(0));
+			Assert.AreEqual(true, mre_eb2.WaitOne(0));
+			Assert.AreEqual(1, count[0]); // !TriggerOnFirst
+			Assert.AreEqual(2, count[1]); //  TriggerOnFirst
 		}
 	}
 }

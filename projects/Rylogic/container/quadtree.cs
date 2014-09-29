@@ -471,127 +471,123 @@ namespace pr.container
 
 
 #if PR_UNITTESTS
-namespace pr
+namespace pr.unittests
 {
-	using NUnit.Framework;
 	using System.Linq;
 	using container;
 	using extn;
 	using maths;
 
-	[TestFixture] public partial class UnitTests
+	[TestFixture] public class TestQuadTree
 	{
-		internal static partial class TestQuadTree
+		private static int Id { get { return ++m_impl_id; } }
+		private static int m_impl_id = 0;
+			
+		public class Watzit
 		{
-			private static int Id { get { return ++m_impl_id; } }
-			private static int m_impl_id = 0;
-			
-			public class Watzit
+			public float[] pos;
+			public float radius;
+			public int id;
+			public bool flag;
+			public Watzit(float x, float y, float r)
 			{
-				public float[] pos;
-				public float radius;
-				public int id;
-				public bool flag;
-				public Watzit(float x, float y, float r)
+				pos = new[]{x, y};
+				radius = r;
+				id = Id;
+				flag = false;
+			}
+		}
+			
+		public static bool Collide(Watzit lhs, Watzit rhs)
+		{
+			float[] diff = new[]{rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
+			return Maths.Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+		}
+
+		[Test] public void QuadTree()
+		{
+			var qtree = new QuadTree<Watzit>(-10,-5,20,10);
+
+			// just inside quad0 at the root level
+			var w0 = new Watzit(-0.5f*qtree.CellSizeX(15),-0.5f*qtree.CellSizeY(15), 0);
+			var n0 = qtree.Insert(w0, w0.pos, w0.radius);
+			Assert.AreEqual(2, qtree.Nodes.Count);
+			Assert.AreEqual(15U, n0.m_level);
+			Assert.AreEqual(0x4000U - 1, n0.m_x);
+			Assert.AreEqual(0x4000U - 1, n0.m_y);
+
+			// somewhere in quad3 at the root level
+			var w1 = new Watzit(2.5f, 2.5f, 0.2f);
+			var n1 = qtree.Insert(w1, w1.pos, w1.radius);
+			Assert.AreEqual(3, qtree.Nodes.Count);
+			Assert.AreEqual(4U, n1.m_level);
+			Assert.AreEqual(10U, n1.m_x);
+			Assert.AreEqual(12U, n1.m_y);
+
+			// Outside the reqion but within the overhang at level 1
+			var w2 = new Watzit(-14.99f, -7.2499f, 0);
+			var n2 = qtree.Insert(w2, w2.pos, w2.radius);
+			Assert.AreEqual(4, qtree.Nodes.Count);
+			Assert.AreEqual(1U, n2.m_level);
+			Assert.AreEqual(0U, n2.m_x);
+			Assert.AreEqual(0U, n2.m_y);
+
+			// Outside the reqion on y but within on x
+			var w3 = new Watzit(6.5f, 7.24449f, 0);
+			var n3 = qtree.Insert(w3, w3.pos, w3.radius);
+			Assert.AreEqual(5, qtree.Nodes.Count);
+			Assert.AreEqual(1U, n3.m_level);
+			Assert.AreEqual(1U, n3.m_x);
+			Assert.AreEqual(1U, n3.m_y);
+
+			var rand = new Rand();
+			Func<float,float,float> fltc = (avr,d) => rand.FloatC(avr, d);
+			Func<float,float,float> fltr = (mn,mx) => rand.Float(mn, mx);
+
+			for (int i = 0; i != 10000; ++i)
+			{
+				var w = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Maths.Len2(qtree.Size.Width, qtree.Size.Height)));
+				var n = qtree.Insert(w, w.pos, w.radius);
+
+				// the root node can have arbitrarily large objects in it
+				if (n.m_level != 0)
 				{
-					pos = new[]{x, y};
-					radius = r;
-					id = Id;
-					flag = false;
+					float[] min,max;
+					qtree.NodeBounds(n, true, out min, out max);
+					Assert.True(w.pos[0] - w.radius >= min[0]);
+					Assert.True(w.pos[1] - w.radius >= min[1]);
+					Assert.True(w.pos[0] + w.radius <  max[0]);
+					Assert.True(w.pos[1] + w.radius <  max[1]);
 				}
 			}
-			
-			public static bool Collide(Watzit lhs, Watzit rhs)
+
+			// Sanity check
+			int count = 0;
+			foreach (var node in qtree.Nodes)
 			{
-				float[] diff = new[]{rhs.pos[0] - lhs.pos[0], rhs.pos[1] - lhs.pos[1]};
-				return Maths.Len2(diff[0], diff[1]) < lhs.radius + rhs.radius;
+				Assert.True(qtree.SanityCheck(node));
+				count += node.m_items.Count;
 			}
+			Assert.AreEqual(qtree.Count, count);
 
-			[Test] public static void QuadTree()
+			for (int i = 0; i != 100; ++i)
 			{
-				var qtree = new QuadTree<Watzit>(-10,-5,20,10);
-
-				// just inside quad0 at the root level
-				var w0 = new Watzit(-0.5f*qtree.CellSizeX(15),-0.5f*qtree.CellSizeY(15), 0);
-				var n0 = qtree.Insert(w0, w0.pos, w0.radius);
-				Assert.AreEqual(2, qtree.Nodes.Count);
-				Assert.AreEqual(15U, n0.m_level);
-				Assert.AreEqual(0x4000U - 1, n0.m_x);
-				Assert.AreEqual(0x4000U - 1, n0.m_y);
-
-				// somewhere in quad3 at the root level
-				var w1 = new Watzit(2.5f, 2.5f, 0.2f);
-				var n1 = qtree.Insert(w1, w1.pos, w1.radius);
-				Assert.AreEqual(3, qtree.Nodes.Count);
-				Assert.AreEqual(4U, n1.m_level);
-				Assert.AreEqual(10U, n1.m_x);
-				Assert.AreEqual(12U, n1.m_y);
-
-				// Outside the reqion but within the overhang at level 1
-				var w2 = new Watzit(-14.99f, -7.2499f, 0);
-				var n2 = qtree.Insert(w2, w2.pos, w2.radius);
-				Assert.AreEqual(4, qtree.Nodes.Count);
-				Assert.AreEqual(1U, n2.m_level);
-				Assert.AreEqual(0U, n2.m_x);
-				Assert.AreEqual(0U, n2.m_y);
-
-				// Outside the reqion on y but within on x
-				var w3 = new Watzit(6.5f, 7.24449f, 0);
-				var n3 = qtree.Insert(w3, w3.pos, w3.radius);
-				Assert.AreEqual(5, qtree.Nodes.Count);
-				Assert.AreEqual(1, n3.m_level);
-				Assert.AreEqual(1U, n3.m_x);
-				Assert.AreEqual(1U, n3.m_y);
-
-				var rand = new Rand();
-				Func<float,float,float> fltc = (avr,d) => rand.FloatC(avr, d);
-				Func<float,float,float> fltr = (mn,mx) => rand.Float(mn, mx);
-
-				for (int i = 0; i != 10000; ++i)
-				{
-					var w = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Maths.Len2(qtree.Size.Width, qtree.Size.Height)));
-					var n = qtree.Insert(w, w.pos, w.radius);
-
-					// the root node can have arbitrarily large objects in it
-					if (n.m_level != 0)
-					{
-						float[] min,max;
-						qtree.NodeBounds(n, true, out min, out max);
-						Assert.IsTrue(w.pos[0] - w.radius >= min[0]);
-						Assert.IsTrue(w.pos[1] - w.radius >= min[1]);
-						Assert.IsTrue(w.pos[0] + w.radius <  max[0]);
-						Assert.IsTrue(w.pos[1] + w.radius <  max[1]);
-					}
-				}
-
-				// Sanity check
-				int count = 0;
+				// reset flags
 				foreach (var node in qtree.Nodes)
-				{
-					Assert.IsTrue(qtree.SanityCheck(node));
-					count += node.m_items.Count;
-				}
-				Assert.AreEqual(qtree.Count, count);
+					foreach (var item in node.m_items)
+						item.flag = false;
 
-				for (int i = 0; i != 100; ++i)
-				{
-					// reset flags
-					foreach (var node in qtree.Nodes)
-						foreach (var item in node.m_items)
-							item.flag = false;
+				var W = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Maths.Len2(qtree.Size.Width, qtree.Size.Height)));
+				qtree.Traverse(W.pos, W.radius, (w,n) =>
+					{
+						w.flag = Collide(W, w);
+						return true;
+					});
 
-					var W = new Watzit(fltc(0.0f, qtree.Size.Width), fltc(0.0f, qtree.Size.Height), 0.2f*fltr(0.0f, 0.5f * Maths.Len2(qtree.Size.Width, qtree.Size.Height)));
-					qtree.Traverse(W.pos, W.radius, (w,n) =>
-						{
-							w.flag = Collide(W, w);
-							return true;
-						});
-
-					// All flagged should collide, not flagged should not
-					foreach (var node in qtree.Nodes)
-						foreach (var item in node.m_items)
-							Assert.AreEqual(item.flag, Collide(W, item));
-				}
+				// All flagged should collide, not flagged should not
+				foreach (var node in qtree.Nodes)
+					foreach (var item in node.m_items)
+						Assert.AreEqual(item.flag, Collide(W, item));
 			}
 		}
 	}
