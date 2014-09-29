@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.InteropServices;
 using pr.attrib;
 
 namespace pr.util
@@ -113,6 +114,12 @@ namespace pr.util
 			if (d1 != null) return d1.Description;
 			return null;
 		}
+
+		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
+		public static int SizeOf
+		{
+			get { return Marshal.SizeOf(typeof(T)); }
+		}
 	}
 }
 
@@ -123,27 +130,27 @@ namespace pr.unittests
 	using util;
 	
 	[TestFixture] public class TestReflect
-	{
-		internal class Thing
 		{
-			[Description("My name is Desc")] public void Desc() {}
-			[Desc("Short For")] public string Bob { get { return "kate"; } }
-		}
+			internal class Thing
+			{
+				[Description("My name is Desc")] public void Desc() {}
+				[Desc("Short For")] public string Bob { get { return "kate"; } }
+			}
 
 		[Test] public void MemberName()
-		{
-			Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
-			Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));
-			Assert.AreEqual("BaseStream", Reflect<StreamWriter>.MemberName(s => s.BaseStream));
-		}
+			{
+				Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
+				Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));
+				Assert.AreEqual("BaseStream", Reflect<StreamWriter>.MemberName(s => s.BaseStream));
+			}
 		[Test] public void Attrib()
-		{
-			var attr = Reflect<Thing>.Attrs(x => x.Desc());
-			Assert.AreEqual(1, attr.Length);
+			{
+				var attr = Reflect<Thing>.Attrs(x => x.Desc());
+				Assert.AreEqual(1, attr.Length);
 			Assert.True(attr[0] is DescriptionAttribute);
 
-			attr = Reflect<Thing>.Attrs(x => x.Bob);
-			Assert.AreEqual(1, attr.Length);
+				attr = Reflect<Thing>.Attrs(x => x.Bob);
+				Assert.AreEqual(1, attr.Length);
 			Assert.True(attr[0] is DescAttribute);
 		}
 	}

@@ -37,6 +37,13 @@ namespace pr.extn
 			return list[list.Count - 1];
 		}
 
+		/// <summary>Remove the last item in the list</summary>
+		public static void PopBack<T>(this IList<T> list)
+		{
+			System.Diagnostics.Debug.Assert(list.Count != 0, "Popback on non-empty container");
+			list.RemoveAt(list.Count - 1);
+		}
+
 		/// <summary>Resize a list default constructing objects to fill</summary>
 		public static void Resize<T>(this List<T> list, int newsize) where T:new()
 		{
@@ -425,40 +432,40 @@ namespace pr.unittests
 	using maths;
 
 	[TestFixture] public class TestListExtns
-	{
+		{
 		[Test] public void ListQuickSort()
-		{
-			var rng = new Random();
-			var list = new List<int>(99);
-			for (var i = 0; i != 99; ++i)
-				list.Add(rng.Next(10));
+			{
+				var rng = new Random();
+				var list = new List<int>(99);
+				for (var i = 0; i != 99; ++i)
+					list.Add(rng.Next(10));
 
-			list.Sort();
+				list.Sort();
 				
-			for (var i = 0; i != list.Count - 1; ++i)
-				Assert.True(list[i] <= list[i+1]);
-		}
+				for (var i = 0; i != list.Count - 1; ++i)
+					Assert.True(list[i] <= list[i+1]);
+			}
 		[Test] public void ListUnique()
-		{
-			var rng = new Random();
-			var list = new List<int>(100);
-			for (var i = 0; i != 100; ++i)
-				list.Add(rng.Next(10));
+			{
+				var rng = new Random();
+				var list = new List<int>(100);
+				for (var i = 0; i != 100; ++i)
+					list.Add(rng.Next(10));
 
-			list.Sort();
+				list.Sort();
 
-			int last = list.Unique(0, 50);
-			for (var i = 0; i < last; ++i)
-			for (var j = i+1; j < last; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				int last = list.Unique(0, 50);
+				for (var i = 0; i < last; ++i)
+				for (var j = i+1; j < last; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
 
-			list.Unique();
-			for (var i = 0; i < list.Count; ++i)
-			for (var j = i+1; j < list.Count; ++j)
-				Assert.AreNotEqual(list[i], list[j]);
+				list.Unique();
+				for (var i = 0; i < list.Count; ++i)
+				for (var j = i+1; j < list.Count; ++j)
+					Assert.AreNotEqual(list[i], list[j]);
 
-			Assert.AreEqual(5, list.Add2(5));
+				Assert.AreEqual(5, list.Add2(5));
+			}
 		}
 	}
-}
 #endif
