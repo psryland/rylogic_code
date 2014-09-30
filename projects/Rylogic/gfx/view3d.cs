@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Interop;
 using System.Windows.Forms;
+using System.Windows.Forms.Integration;
 using pr.common;
 using pr.extn;
 using pr.maths;
@@ -1415,19 +1416,20 @@ namespace pr.gfx
 		/// and assign an instance of this class to it's 'Child' property</summary>
 		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
+			// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
+			private ElementHost m_host;
 			private IntPtr m_wrap;
 			private IntPtr m_ctrl;
 			private uint m_ctrl_id;
 
-			public HostableEditor(ushort ctrl_id = 0x4039)
+			/// <summary>'host' is the WPF control host that will contain this editor</summary>
+			public HostableEditor(ElementHost host, ushort ctrl_id = 0x4039)
 			{
+				m_host = host;
 				m_ctrl_id = (uint)ctrl_id;
-				//new TextBox().Text;
-			}
-			protected override HandleRef BuildWindowCore(HandleRef parent)
-			{
-				// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
-				m_wrap = Win32.CreateWindowEx(0, "static", "", Win32.WS_CHILD, 0, 0, 190, 190, parent.Handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+
+				// Create the control at construction time so that the text content can be set before the control is displayed.
+				m_wrap = Win32.CreateWindowEx(0, "static", "", Win32.WS_CHILD, 0, 0, 190, 190, m_host.Handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
 				if (m_wrap == IntPtr.Zero)
 					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
 
@@ -1435,7 +1437,14 @@ namespace pr.gfx
 				if (m_ctrl == IntPtr.Zero)
 					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
 
+				// Initialise the scintilla control in "Ldr mode"
 				View3D_LdrEditorCtrlInit(m_ctrl);
+
+				m_host.Child = this;
+			}
+			protected override HandleRef BuildWindowCore(HandleRef parent)
+			{
+				Win32.SetParent(m_wrap, parent.Handle);
 				return new HandleRef(this, m_wrap);
 			}
 			protected override void DestroyWindowCore(System.Runtime.InteropServices.HandleRef hwnd)
