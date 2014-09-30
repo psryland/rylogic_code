@@ -217,6 +217,7 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\scintilla.cs" />
     <Compile Include="gui\vt100.cs" />
     <Compile Include="gui\colour_ui.cs">
       <SubType>Form</SubType>

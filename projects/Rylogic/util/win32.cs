@@ -511,61 +511,148 @@ namespace pr.util
 		#endregion
 
 		#region TM_
-		public const int TM_PLAINTEXT                     = 1;
-		public const int TM_RICHTEXT                      = 2; // default behaviour
-		public const int TM_SINGLELEVELUNDO               = 4;
-		public const int TM_MULTILEVELUNDO                = 8; // default behaviour
-		public const int TM_SINGLECODEPAGE                = 16;
-		public const int TM_MULTICODEPAGE                 = 32; // default behaviour
+		public const int TM_PLAINTEXT       = 1;
+		public const int TM_RICHTEXT        = 2; // default behaviour
+		public const int TM_SINGLELEVELUNDO = 4;
+		public const int TM_MULTILEVELUNDO  = 8; // default behaviour
+		public const int TM_SINGLECODEPAGE  = 16;
+		public const int TM_MULTICODEPAGE   = 32; // default behaviour
 		#endregion
 
-		#region RichEdit messages EM_
-		public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
-		public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
-		public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
-		public const uint EM_SCROLLCARET                  = (WM_USER + 49);
-		public const uint EM_CANPASTE                     = (WM_USER + 50);
-		public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
-		public const uint EM_EXGETSEL                     = (WM_USER + 52);
-		public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
-		public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
-		public const uint EM_EXSETSEL                     = (WM_USER + 55);
-		public const uint EM_FINDTEXT                     = (WM_USER + 56);
-		public const uint EM_FORMATRANGE                  = (WM_USER + 57);
-		public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
-		public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
-		public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
-		public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
-		public const uint EM_GETSELTEXT                   = (WM_USER + 62);
-		public const uint EM_HIDESELECTION                = (WM_USER + 63);
-		public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
-		public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
-		public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
-		public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
-		public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
-		public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
-		public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
-		public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
-		public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
-		public const uint EM_STREAMIN                     = (WM_USER + 73);
-		public const uint EM_STREAMOUT                    = (WM_USER + 74);
-		public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
-		public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
-		public const uint EM_SETOPTIONS                   = (WM_USER + 77);
-		public const uint EM_GETOPTIONS                   = (WM_USER + 78);
-		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
-		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
-		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
+		#region Edit Control
+		public static class EditCtrl
+		{
+			// Edit Control Styles
+			public const int ES_LEFT        = 0x0000;
+			public const int ES_CENTER      = 0x0001;
+			public const int ES_RIGHT       = 0x0002;
+			public const int ES_MULTILINE   = 0x0004;
+			public const int ES_UPPERCASE   = 0x0008;
+			public const int ES_LOWERCASE   = 0x0010;
+			public const int ES_PASSWORD    = 0x0020;
+			public const int ES_AUTOVSCROLL = 0x0040;
+			public const int ES_AUTOHSCROLL = 0x0080;
+			public const int ES_NOHIDESEL   = 0x0100;
+			public const int ES_OEMCONVERT  = 0x0400;
+			public const int ES_READONLY    = 0x0800;
+			public const int ES_WANTRETURN  = 0x1000;
+			public const int ES_NUMBER      = 0x2000;
 
-		// RichEdit 2.0 messages
-		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
-		public const uint EM_REDO                         = (WM_USER + 84);
-		public const uint EM_CANREDO                      = (WM_USER + 85);
-		public const uint EM_GETUNDONAME                  = (WM_USER + 86);
-		public const uint EM_GETREDONAME                  = (WM_USER + 87);
-		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
-		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
-		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+			// Edit Control Notification Codes
+			public const int EN_SETFOCUS     = 0x0100;
+			public const int EN_KILLFOCUS    = 0x0200;
+			public const int EN_CHANGE       = 0x0300;
+			public const int EN_UPDATE       = 0x0400;
+			public const int EN_ERRSPACE     = 0x0500;
+			public const int EN_MAXTEXT      = 0x0501;
+			public const int EN_HSCROLL      = 0x0601;
+			public const int EN_VSCROLL      = 0x0602;
+			public const int EN_ALIGN_LTR_EC = 0x0700;
+			public const int EN_ALIGN_RTL_EC = 0x0701;
+
+			// Edit control EM_SETMARGIN parameters
+			public const int EC_LEFTMARGIN  = 0x0001;
+			public const int EC_RIGHTMARGIN = 0x0002;
+			public const int EC_USEFONTINFO = 0xffff;
+
+			// Edit Control Messages
+			public const int EM_GETSEL               = 0x00B0;
+			public const int EM_SETSEL               = 0x00B1;
+			public const int EM_GETRECT              = 0x00B2;
+			public const int EM_SETRECT              = 0x00B3;
+			public const int EM_SETRECTNP            = 0x00B4;
+			public const int EM_SCROLL               = 0x00B5;
+			public const int EM_LINESCROLL           = 0x00B6;
+			public const int EM_SCROLLCARET          = 0x00B7;
+			public const int EM_GETMODIFY            = 0x00B8;
+			public const int EM_SETMODIFY            = 0x00B9;
+			public const int EM_GETLINECOUNT         = 0x00BA;
+			public const int EM_LINEINDEX            = 0x00BB;
+			public const int EM_SETHANDLE            = 0x00BC;
+			public const int EM_GETHANDLE            = 0x00BD;
+			public const int EM_GETTHUMB             = 0x00BE;
+			public const int EM_LINELENGTH           = 0x00C1;
+			public const int EM_REPLACESEL           = 0x00C2;
+			public const int EM_GETLINE              = 0x00C4;
+			public const int EM_LIMITTEXT            = 0x00C5;
+			public const int EM_CANUNDO              = 0x00C6;
+			public const int EM_UNDO                 = 0x00C7;
+			public const int EM_FMTLINES             = 0x00C8;
+			public const int EM_LINEFROMCHAR         = 0x00C9;
+			public const int EM_SETTABSTOPS          = 0x00CB;
+			public const int EM_SETPASSWORDCHAR      = 0x00CC;
+			public const int EM_EMPTYUNDOBUFFER      = 0x00CD;
+			public const int EM_GETFIRSTVISIBLELINE  = 0x00CE;
+			public const int EM_SETREADONLY          = 0x00CF;
+			public const int EM_SETWORDBREAKPROC     = 0x00D0;
+			public const int EM_GETWORDBREAKPROC     = 0x00D1;
+			public const int EM_GETPASSWORDCHAR      = 0x00D2;
+			public const int EM_SETMARGINS           = 0x00D3;
+			public const int EM_GETMARGINS           = 0x00D4;
+			public const int EM_SETLIMITTEXT         = EM_LIMITTEXT;//;win40 Name change 
+			public const int EM_GETLIMITTEXT         = 0x00D5;
+			public const int EM_POSFROMCHAR          = 0x00D6;
+			public const int EM_CHARFROMPOS          = 0x00D7;
+			public const int EM_SETIMESTATUS         = 0x00D8;
+			public const int EM_GETIMESTATUS         = 0x00D9;
+
+			// EDITWORDBREAKPROC code values
+			public const int WB_LEFT        = 0;
+			public const int WB_RIGHT       = 1;
+			public const int WB_ISDELIMITER = 2;
+		}
+		#endregion
+
+		#region Rich Edit Control
+		public static class RichEditCtrl
+		{
+			public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
+			public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
+			public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
+			public const uint EM_SCROLLCARET                  = (WM_USER + 49);
+			public const uint EM_CANPASTE                     = (WM_USER + 50);
+			public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
+			public const uint EM_EXGETSEL                     = (WM_USER + 52);
+			public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
+			public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
+			public const uint EM_EXSETSEL                     = (WM_USER + 55);
+			public const uint EM_FINDTEXT                     = (WM_USER + 56);
+			public const uint EM_FORMATRANGE                  = (WM_USER + 57);
+			public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
+			public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
+			public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
+			public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
+			public const uint EM_GETSELTEXT                   = (WM_USER + 62);
+			public const uint EM_HIDESELECTION                = (WM_USER + 63);
+			public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
+			public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
+			public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
+			public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
+			public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
+			public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
+			public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
+			public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
+			public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
+			public const uint EM_STREAMIN                     = (WM_USER + 73);
+			public const uint EM_STREAMOUT                    = (WM_USER + 74);
+			public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
+			public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
+			public const uint EM_SETOPTIONS                   = (WM_USER + 77);
+			public const uint EM_GETOPTIONS                   = (WM_USER + 78);
+			public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
+			public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
+			public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
+
+			// RichEdit 2.0 messages
+			public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
+			public const uint EM_REDO                         = (WM_USER + 84);
+			public const uint EM_CANREDO                      = (WM_USER + 85);
+			public const uint EM_GETUNDONAME                  = (WM_USER + 86);
+			public const uint EM_GETREDONAME                  = (WM_USER + 87);
+			public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
+			public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
+			public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+		}
 		#endregion
 
 		#region Window Styles WS_

@@ -1410,14 +1410,20 @@ namespace pr.gfx
 		}
 
 		/// <summary>
-		/// An ldr script editor control.
+		/// An ldr script editor control. A very lightweight wrapper of a scintilla control.
 		/// To use this in a winforms application, create a System.Windows.Forms.Integration.ElementHost
 		/// and assign an instance of this class to it's 'Child' property</summary>
 		public class HostableEditor :HwndHost ,IKeyboardInputSink
 		{
 			private IntPtr m_wrap;
 			private IntPtr m_ctrl;
+			private uint m_ctrl_id;
 
+			public HostableEditor(ushort ctrl_id = 0x4039)
+			{
+				m_ctrl_id = (uint)ctrl_id;
+				//new TextBox().Text;
+			}
 			protected override HandleRef BuildWindowCore(HandleRef parent)
 			{
 				// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
@@ -1425,7 +1431,7 @@ namespace pr.gfx
 				if (m_wrap == IntPtr.Zero)
 					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
 
-				m_ctrl = Win32.CreateWindowEx(0, "Scintilla", "", Win32.WS_CHILD|Win32.WS_VISIBLE|Win32.WS_HSCROLL|Win32.WS_VSCROLL, 0, 0, 190, 190, m_wrap, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+				m_ctrl = Win32.CreateWindowEx(0, "Scintilla", "", Win32.WS_CHILD|Win32.WS_VISIBLE|Win32.WS_HSCROLL|Win32.WS_VSCROLL, 0, 0, 190, 190, m_wrap, (IntPtr)m_ctrl_id, IntPtr.Zero, IntPtr.Zero);
 				if (m_ctrl == IntPtr.Zero)
 					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
 
@@ -1436,6 +1442,41 @@ namespace pr.gfx
 			{
 				Win32.DestroyWindow(hwnd.Handle);
 			}
+			protected override IntPtr WndProc(HWND hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+			{
+				handled = false;
+
+				switch ((uint)msg)
+				{
+				// Since this is the WindowProc of the parent HWND, we need do extra work in order to 
+				// resize the child control upon resize of the parent HWND.
+				case Win32.WM_SIZE:
+					{
+						int width  = (int)Win32.GetLoword(lParam.ToInt32());
+						int height = (int)Win32.GetHiword(lParam.ToInt32());
+						Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, width, height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
+						handled = true;
+						break;
+					}
+
+				// Watch for edit notifications
+				case Win32.WM_COMMAND:
+					{
+						var notif = Win32.GetHiword(wParam.ToInt32());
+						var id    = Win32.GetLoword(wParam.ToInt32());
+						if (notif == Win32.EditCtrl.EN_CHANGE && id == m_ctrl_id)
+							TextChanged.Raise(this);
+						break;
+					}
+				}
+				
+				if (handled)
+					return IntPtr.Zero;
+				else
+					return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
+			}
+
+			#region IKeyboardInputSink
 			bool IKeyboardInputSink.TranslateAccelerator(ref MSG msg, System.Windows.Input.ModifierKeys modifiers)
 			{
 				bool handled = false;
@@ -1463,25 +1504,52 @@ namespace pr.gfx
 				Win32.SetFocus(m_ctrl);
 				return true;
 			}
-			protected override IntPtr WndProc(HWND hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+			#endregion
+
+			/// <summary>Read the text out of the control</summary>
+			private string GetText()
 			{
-				//return base.WndProc(hwnd, msg, wParam, lParam, ref handled);
-				handled = false;
-
-				switch ((uint)msg)
+				var len = TextLength;
+				using (var bytes = MarshalEx.AllocHGlobal(len + 1))
 				{
-				// Since this is the WindowProc of the parent HWND, we need do extra work in order to 
-				// resize the Win32 listbox upon resize of the parent HWND.
-				case Win32.WM_SIZE:
-					int width  = (int)Win32.GetLoword(lParam.ToInt32());
-					int height = (int)Win32.GetHiword(lParam.ToInt32());
-					Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, width, height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
-					handled = true;
-					break;
+					var num = Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXT, (IntPtr)(len + 1), bytes.State);
+					return Marshal.PtrToStringAnsi(bytes.State, num);
 				}
-
-				return IntPtr.Zero;
 			}
+
+			/// <summary>Set the text in the control</summary>
+			private void SetText(string text)
+			{
+				if (!text.HasValue())
+					ClearAll();
+				else
+				{
+					using (var str = MarshalEx.AllocAnsiString(text))
+						Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_SETTEXT, IntPtr.Zero, str.State);
+				}
+			}
+
+			/// <summary>Clear all text from the control</summary>
+			public void ClearAll()
+			{
+				Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_CLEARALL, IntPtr.Zero, IntPtr.Zero);
+			}
+
+			/// <summary>Gets the length of the text in the control</summary>
+			public int TextLength
+			{
+				get { return Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
+			}
+
+			/// <summary>Gets or sets the current text</summary>
+			public string Text
+			{
+				get { return GetText(); }
+				set { SetText(value); }
+			}
+
+			/// <summary>Raised when text in the control is changed</summary>
+			public event EventHandler TextChanged;
 		}
 
 		#region DLL extern functions
