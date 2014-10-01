@@ -98,7 +98,8 @@ static void StyleNameAndColour(StyleContext& sc)
 	sc.SetState(SCE_LDR_DEFAULT);
 }
 
-void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor &styler)
+// Colourise an ldr script
+static void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*keywordlists*/[], Accessor &styler)
 {
 	enum class ETok { None, Keyword, LineComment, BlockComment, StrLiteral, CharLiteral };
 
@@ -192,6 +193,149 @@ void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*key
 		}
 	}
 	sc.Complete();
+}
+
+// Fold an ldr script
+static void FoldLdrDoc(unsigned int startPos, int length, int /* initStyle */, WordList *[], Accessor &styler)
+{
+	auto line_idx = styler.GetLine(startPos);
+	auto fold_level = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
+	auto fold_flags = SC_FOLDLEVELWHITEFLAG;
+
+	for (auto i = startPos, iend = startPos + length; i != iend; ++i)
+	{
+		auto ch_curr = styler.SafeGetCharAt(i);
+		auto ch_next = styler.SafeGetCharAt(i+1);
+		auto eol = ch_curr == '\n' || (ch_curr == '\r' && ch_next == '\n');
+
+		// Non-whitespace chars on the line?
+		if ((fold_flags & SC_FOLDLEVELWHITEFLAG) != 0 && !isspacechar(ch_curr))
+			fold_flags &= ~SC_FOLDLEVELWHITEFLAG;
+
+		switch (styler.StyleAt(i))
+		{
+		case SCE_LDR_COMMENT:
+			{
+				if (ch_curr == '/' && ch_next == '/')
+				{
+					if (styler.SafeGetCharAt(i+2) == '{' && styler.SafeGetCharAt(i+3) == '{')
+					{
+						++fold_level;
+						fold_flags |= SC_FOLDLEVELHEADERFLAG;
+					}
+					if (styler.SafeGetCharAt(i+2) == '}' && styler.SafeGetCharAt(i+3) == '}')
+					{
+						--fold_level;
+					}
+				}
+				break;
+			}
+		case SCE_LDR_DEFAULT:
+			{
+				if (ch_curr == '{')
+				{
+					++fold_level;
+					fold_flags |= SC_FOLDLEVELHEADERFLAG;
+				}
+				if (ch_curr == '}')
+				{
+					--fold_level;
+				}
+				break;
+			}
+		}
+
+		if (eol)
+		{
+			auto lev = fold_flags & fold_level;
+			styler.SetLevel(line_idx, lev);
+			fold_flags = SC_FOLDLEVELWHITEFLAG;
+			line_idx++;
+		}
+	}
+/*	int line_idx = styler.GetLine(startPos);
+	int levelPrev = styler.LevelAt(line_idx) & SC_FOLDLEVELNUMBERMASK;
+	int levelCurrent = levelPrev;
+	int visibleChars = 0;
+	bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
+
+	char ch_next = styler.SafeGetCharAt(startPos);//[startPos];
+	int style_next = styler.StyleAt(startPos);
+	for (auto i = startPos, iend = startPos + length; i != iend; ++i)
+	{
+		// Get the current and next char
+		char ch = ch_next;
+		ch_next = styler.SafeGetCharAt(i + 1);
+
+		// Get the current and next style
+		int style = style_next;
+		style_next = styler.StyleAt(i + 1);
+
+		bool atEOL = (ch == '\r' && ch_next != '\n') || (ch == '\n');
+		if (style == SCE_LUA_WORD)
+		{
+			if (ch == 'i' || ch == 'd' || ch == 'f' || ch == 'e' || ch == 'r' || ch == 'u') {
+				char s[10] = "";
+				for (unsigned int j = 0; j < 8; j++) {
+					if (!iswordchar(styler[i + j])) {
+						break;
+					}
+					s[j] = styler[i + j];
+					s[j + 1] = '\0';
+				}
+
+				if ((strcmp(s, "if") == 0) || (strcmp(s, "do") == 0) || (strcmp(s, "function") == 0) || (strcmp(s, "repeat") == 0)) {
+					levelCurrent++;
+				}
+				if ((strcmp(s, "end") == 0) || (strcmp(s, "elseif") == 0) || (strcmp(s, "until") == 0)) {
+					levelCurrent--;
+				}
+			}
+		} else if (style == SCE_LUA_OPERATOR) {
+			if (ch == '{' || ch == '(') {
+				levelCurrent++;
+			} else if (ch == '}' || ch == ')') {
+				levelCurrent--;
+			}
+		} else if (style == SCE_LUA_LITERALSTRING || style == SCE_LUA_COMMENT) {
+			if (ch == '[') {
+				levelCurrent++;
+			} else if (ch == ']') {
+				levelCurrent--;
+			}
+		}
+
+		if (atEOL) {
+			int lev = levelPrev;
+			if (visibleChars == 0 && foldCompact) {
+				lev |= SC_FOLDLEVELWHITEFLAG;
+			}
+			if ((levelCurrent > levelPrev) && (visibleChars > 0)) {
+				lev |= SC_FOLDLEVELHEADERFLAG;
+			}
+			if (lev != styler.LevelAt(line_idx)) {
+				styler.SetLevel(line_idx, lev);
+			}
+			line_idx++;
+			levelPrev = levelCurrent;
+			visibleChars = 0;
+		}
+		if (!isspacechar(ch)) {
+			visibleChars++;
+		}
+	}
+	// Fill in the real level of the next line, keeping the current flags as they will be filled in later
+
+	int flagsNext = styler.LevelAt(line_idx) & ~SC_FOLDLEVELNUMBERMASK;
+	styler.SetLevel(line_idx, levelPrev | flagsNext);
+	*/
+}
+
+LexerModule lmLdr(SCLEX_LDR, LexLdrDoc, "ldr", FoldLdrDoc, LdrWordListDesc);
+
+
+
+
 	/*
 	WordList &keywords = *keywordlists[0];
 	WordList &keywords2 = *keywordlists[1];
@@ -479,79 +623,3 @@ void LexLdrDoc(unsigned int startPos, int length, int initStyle, WordList* /*key
 		}
 	}
 	*/
-}
-
-static void FoldLdrDoc(unsigned int startPos, int length, int /* initStyle */, WordList *[], Accessor &styler) {
-	unsigned int lengthDoc = startPos + length;
-	int visibleChars = 0;
-	int lineCurrent = styler.GetLine(startPos);
-	int levelPrev = styler.LevelAt(lineCurrent) & SC_FOLDLEVELNUMBERMASK;
-	int levelCurrent = levelPrev;
-	char chNext = styler[startPos];
-	bool foldCompact = styler.GetPropertyInt("fold.compact", 1) != 0;
-	int styleNext = styler.StyleAt(startPos);
-
-	for (unsigned int i = startPos; i < lengthDoc; i++) {
-		char ch = chNext;
-		chNext = styler.SafeGetCharAt(i + 1);
-		int style = styleNext;
-		styleNext = styler.StyleAt(i + 1);
-		bool atEOL = (ch == '\r' && chNext != '\n') || (ch == '\n');
-		if (style == SCE_LUA_WORD) {
-			if (ch == 'i' || ch == 'd' || ch == 'f' || ch == 'e' || ch == 'r' || ch == 'u') {
-				char s[10] = "";
-				for (unsigned int j = 0; j < 8; j++) {
-					if (!iswordchar(styler[i + j])) {
-						break;
-					}
-					s[j] = styler[i + j];
-					s[j + 1] = '\0';
-				}
-
-				if ((strcmp(s, "if") == 0) || (strcmp(s, "do") == 0) || (strcmp(s, "function") == 0) || (strcmp(s, "repeat") == 0)) {
-					levelCurrent++;
-				}
-				if ((strcmp(s, "end") == 0) || (strcmp(s, "elseif") == 0) || (strcmp(s, "until") == 0)) {
-					levelCurrent--;
-				}
-			}
-		} else if (style == SCE_LUA_OPERATOR) {
-			if (ch == '{' || ch == '(') {
-				levelCurrent++;
-			} else if (ch == '}' || ch == ')') {
-				levelCurrent--;
-			}
-		} else if (style == SCE_LUA_LITERALSTRING || style == SCE_LUA_COMMENT) {
-			if (ch == '[') {
-				levelCurrent++;
-			} else if (ch == ']') {
-				levelCurrent--;
-			}
-		}
-
-		if (atEOL) {
-			int lev = levelPrev;
-			if (visibleChars == 0 && foldCompact) {
-				lev |= SC_FOLDLEVELWHITEFLAG;
-			}
-			if ((levelCurrent > levelPrev) && (visibleChars > 0)) {
-				lev |= SC_FOLDLEVELHEADERFLAG;
-			}
-			if (lev != styler.LevelAt(lineCurrent)) {
-				styler.SetLevel(lineCurrent, lev);
-			}
-			lineCurrent++;
-			levelPrev = levelCurrent;
-			visibleChars = 0;
-		}
-		if (!isspacechar(ch)) {
-			visibleChars++;
-		}
-	}
-	// Fill in the real level of the next line, keeping the current flags as they will be filled in later
-
-	int flagsNext = styler.LevelAt(lineCurrent) & ~SC_FOLDLEVELNUMBERMASK;
-	styler.SetLevel(lineCurrent, levelPrev | flagsNext);
-}
-
-LexerModule lmLdr(SCLEX_LDR, LexLdrDoc, "ldr", FoldLdrDoc, LdrWordListDesc);

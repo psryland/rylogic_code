@@ -151,38 +151,59 @@ namespace WTL
 			//SetDisplayFolding(TRUE);
 			//SetDisplaySelection(TRUE);
 		}
-		void InitLdrStyle()
+		void InitLdrStyle(bool dark = false)
 		{
 			ClearDocumentStyle();
 			StyleBits(7);
 			IndentationGuides(true);
 			TabWidth(4);
 			Indent(4);
-			CaretFore(0xffffff);
+			CaretFore(dark ? 0xffffff : 0x000000);
 			CaretPeriod(400);
 			ConvertEOLs(SC_EOL_CR);
 			EOLMode(SC_EOL_CR);
+			Property("fold", "1");
 			MultipleSelection(true);
 			AdditionalSelectionTyping(true);
 			VirtualSpace(SCVS_RECTANGULARSELECTION);
 
-			struct { int id; int fore; int back; char const* font; } style[] =
-			{
-				{STYLE_DEFAULT     , 0xc8c8c8 , 0x1e1e1e , "courier new"},
-				{STYLE_LINENUMBER  , 0xc8c8c8 , 0x1e1e1e , "courier new"},
-				{STYLE_INDENTGUIDE , 0x484439 , 0x1e1e1e , "courier new"},
-				{STYLE_BRACELIGHT  , 0x98642b , 0x5e1e1e , "courier new"},
-				{SCE_LDR_DEFAULT   , 0xc8c8c8 , 0x1e1e1e , "courier new"},
-				{SCE_LDR_COMMENT   , 0x4aa656 , 0x1e1e1e , "courier new"},
-				{SCE_LDR_STRING    , 0x859dd6 , 0x1e1e1e , "courier new"},
-				{SCE_LDR_NUMBER    , 0xf7f7f8 , 0x1e1e1e , "courier new"},
-				{SCE_LDR_KEYWORD   , 0xd69c56 , 0x1e1e1e , "courier new"},
-				{SCE_LDR_PREPROC   , 0xc563bd , 0x1e1e1e , "courier new"},
-				{SCE_LDR_OBJECT    , 0x81c93d , 0x1e1e1e , "courier new"},
-				{SCE_LDR_NAME      , 0xffffff , 0x1e1e1e , "courier new"},
-				{SCE_LDR_COLOUR    , 0x7c97c3 , 0x1e1e1e , "courier new"},
-			};
-			for (int i = 0; i != sizeof(style)/sizeof(style[0]); ++i)
+			struct StyleDesc { int id; int fore; int back; char const* font; };
+			StyleDesc dark_style[] =
+				{
+					{STYLE_DEFAULT     , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+					{STYLE_LINENUMBER  , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+					{STYLE_INDENTGUIDE , 0x484439 , 0x1e1e1e , "courier new"},
+					{STYLE_BRACELIGHT  , 0x98642b , 0x5e1e1e , "courier new"},
+					{SCE_LDR_DEFAULT   , 0xc8c8c8 , 0x1e1e1e , "courier new"},
+					{SCE_LDR_COMMENT   , 0x4aa656 , 0x1e1e1e , "courier new"},
+					{SCE_LDR_STRING    , 0x859dd6 , 0x1e1e1e , "courier new"},
+					{SCE_LDR_NUMBER    , 0xf7f7f8 , 0x1e1e1e , "courier new"},
+					{SCE_LDR_KEYWORD   , 0xd69c56 , 0x1e1e1e , "courier new"},
+					{SCE_LDR_PREPROC   , 0xc563bd , 0x1e1e1e , "courier new"},
+					{SCE_LDR_OBJECT    , 0x81c93d , 0x1e1e1e , "courier new"},
+					{SCE_LDR_NAME      , 0xffffff , 0x1e1e1e , "courier new"},
+					{SCE_LDR_COLOUR    , 0x7c97c3 , 0x1e1e1e , "courier new"},
+				};
+			StyleDesc light_style[] =
+				{
+					{STYLE_DEFAULT     , 0x120700 , 0xffffff , "courier new"},
+					{STYLE_LINENUMBER  , 0x120700 , 0xffffff , "courier new"},
+					{STYLE_INDENTGUIDE , 0x394448 , 0xffffff , "courier new"},
+					{STYLE_BRACELIGHT  , 0x2b6498 , 0xffffff , "courier new"},
+					{SCE_LDR_DEFAULT   , 0x120700 , 0xffffff , "courier new"},
+					{SCE_LDR_COMMENT   , 0x008100 , 0xffffff , "courier new"},
+					{SCE_LDR_STRING    , 0x154dc7 , 0xffffff , "courier new"},
+					{SCE_LDR_NUMBER    , 0x1e1e1e , 0xffffff , "courier new"},
+					{SCE_LDR_KEYWORD   , 0xff0000 , 0xffffff , "courier new"},
+					{SCE_LDR_PREPROC   , 0x8a0097 , 0xffffff , "courier new"},
+					{SCE_LDR_OBJECT    , 0x81962a , 0xffffff , "courier new"},
+					{SCE_LDR_NAME      , 0x000000 , 0xffffff , "courier new"},
+					{SCE_LDR_COLOUR    , 0x83573c , 0xffffff , "courier new"},
+				};
+			static_assert(_countof(dark_style) == _countof(light_style), "");
+
+			auto style = dark ? dark_style : light_style;
+			for (int i = 0; i != _countof(dark_style); ++i)
 			{
 				auto& s = style[i];
 				StyleSetFont(s.id, s.font);
@@ -190,11 +211,16 @@ namespace WTL
 				StyleSetBack(s.id, s.back);
 			}
 
-			// set markersymbol for marker type 0 - bookmark
-			MarkerDefine(0, SC_MARK_CIRCLE);
+			MarginTypeN(0, SC_MARGIN_NUMBER);
+			MarginTypeN(1, SC_MARGIN_SYMBOL);
+			
+			MarginMaskN(1, SC_MASK_FOLDERS);
 
 			MarginWidthN(0, TextWidth(STYLE_LINENUMBER, "_9999"));
 			MarginWidthN(1, 0);
+
+			// set markersymbol for marker type 0 - bookmark
+			MarkerDefine(0, SC_MARK_CIRCLE);
 
 			//// display all margins
 			//DisplayLinenumbers(TRUE);

@@ -30,7 +30,7 @@ namespace TestCS
 			InitializeComponent();
 			m_view3d = new View3d();
 			
-			var editor = new View3d.HostableEditor(m_host_editor, 0x1000);
+			var editor = new View3d.HostableEditor(m_host_editor, false);
 			editor.Text = "Test Text";
 			editor.TextChanged += (s,a) => m_status.SetStatusMessage(msg:editor.Text.Summary(50), on_click:(ss,aa) => editor.Text = Text.Summary(50));
 

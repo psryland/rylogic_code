@@ -335,7 +335,7 @@ extern "C"
 	// Ldr Editor Ctrl
 	VIEW3D_API HWND                    __stdcall View3D_LdrEditorCreate          (HWND parent);
 	VIEW3D_API void                    __stdcall View3D_LdrEditorDestroy         (HWND hwnd);
-	VIEW3D_API void                    __stdcall View3D_LdrEditorCtrlInit        (HWND scintilla_control);
+	VIEW3D_API void                    __stdcall View3D_LdrEditorCtrlInit        (HWND scintilla_control, BOOL dark);
 }
 
 // Conversion to/from maths types

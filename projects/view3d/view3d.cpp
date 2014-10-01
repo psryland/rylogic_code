@@ -1747,7 +1747,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 }
 
 // Initialise a scintilla control ready for ldr script
-VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control)
+VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control, BOOL dark)
 {
 	try
 	{
@@ -1755,7 +1755,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control)
 
 		WTL::ScintillaCtrl s;
 		s.Attach(scintilla_control);
-		s.InitLdrStyle();
+		s.InitLdrStyle(dark != 0);
 		s.Detach();
 	}
 	CatchAndReport(View3D_LdrEditorCtrlInit, ,);

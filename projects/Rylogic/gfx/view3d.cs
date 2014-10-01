@@ -1422,8 +1422,11 @@ namespace pr.gfx
 			private IntPtr m_ctrl;
 			private uint m_ctrl_id;
 
-			/// <summary>'host' is the WPF control host that will contain this editor</summary>
-			public HostableEditor(ElementHost host, ushort ctrl_id = 0x4039)
+			/// <summary>
+			/// 'host' is the WPF control host that will contain this editor.
+			/// 'dark' selects between the light and dark style for ldr script
+			/// 'ctrl_id' sets the id of the control</summary>
+			public HostableEditor(ElementHost host, bool dark, ushort ctrl_id = 0)
 			{
 				m_host = host;
 				m_ctrl_id = (uint)ctrl_id;
@@ -1438,7 +1441,7 @@ namespace pr.gfx
 					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
 
 				// Initialise the scintilla control in "Ldr mode"
-				View3D_LdrEditorCtrlInit(m_ctrl);
+				View3D_LdrEditorCtrlInit(m_ctrl, dark);
 
 				m_host.Child = this;
 			}
@@ -1727,7 +1730,7 @@ namespace pr.gfx
 
 		[DllImport(Dll)] private static extern HWND              View3D_LdrEditorCreate          (HWND parent);
 		[DllImport(Dll)] private static extern void              View3D_LdrEditorDestroy         (HWND hwnd);
-		[DllImport(Dll)] private static extern void              View3D_LdrEditorCtrlInit        (HWND scintilla_control);
+		[DllImport(Dll)] private static extern void              View3D_LdrEditorCtrlInit        (HWND scintilla_control, bool dark);
 		#endregion
 	}
 }
