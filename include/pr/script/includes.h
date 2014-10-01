@@ -63,7 +63,7 @@ namespace pr
 			FileIncludes(char const* search_paths = nullptr) :IIncludes(search_paths) {}
 			
 			// Returns an input stream corresponding to 'include'
-			// 'mode' indicates if the stream is text or binary
+			// 'binary' indicates if the stream is text or binary
 			// 'loc' is the current position in the source (used to open streams relative to the current file)
 			std::unique_ptr<std::istream> OpenStream(string const& include, bool binary = false, Loc const& loc = Loc()) override
 			{
