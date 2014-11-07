@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.ConstrainedExecution;
@@ -13,8 +14,11 @@ using System.Security;
 using System.Security.Permissions;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Windows.Forms;
 using Microsoft.Win32.SafeHandles;
 using pr.extn;
+using pr.gui;
 using pr.util;
 
 namespace pr.common
@@ -145,6 +149,21 @@ namespace pr.common
 			return path;
 		}
 
+		/// <summary>Hueristic test to see if a file contains text data or binary data</summary>
+		public static bool IsProbableTextFile(string path)
+		{
+			var buf = new byte[1024];
+			using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buf.Length))
+			{
+				bool is_text = true;
+				int n = fs.Read(buf, 0, buf.Length);
+				for (int i = 0; i+1 < n && is_text; ++i)
+					is_text &= buf[i] != 0 && buf[i+1] != 0;
+				
+				return is_text;
+			}
+		}
+
 		/// <summary>Contains information about a file</summary>
 		[Serializable] public class FileData
 		{
@@ -244,7 +263,6 @@ namespace pr.common
 			}
 		}
 
-		// ReSharper disable ClassNeverInstantiated.Local
 		/// <summary>Wraps a FindFirstFile handle.</summary>
 		private sealed class SafeFindHandle :SafeHandleZeroOrMinusOneIsInvalid
 		{
@@ -252,7 +270,6 @@ namespace pr.common
 			public SafeFindHandle() :base(true) {}
 			protected override bool ReleaseHandle() { return FindClose(handle); }
 		}
-		// ReSharper restore ClassNeverInstantiated.Local
 
 		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 		private static extern SafeFindHandle FindFirstFile(string fileName, [In, Out] Win32.WIN32_FIND_DATA data);
@@ -262,6 +279,116 @@ namespace pr.common
 
 		[DllImport("kernel32.dll")][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		private static extern bool FindClose(IntPtr handle);
+
+		/// <summary>Returns the process(es) that have a lock on the specified files.</summary>
+		public static IEnumerable<Process> FileLockHolders(string[] filepaths)
+		{
+			// See also:
+			// http://msdn.microsoft.com/en-us/library/windows/desktop/aa373661(v=vs.85).aspx
+			// http://wyupdate.googlecode.com/svn-history/r401/trunk/frmFilesInUse.cs (no copyright in code at time of viewing)
+
+			// Begin a session. Only 64 of these can exist at any one time
+			uint handle;
+			int res = Win32.RmStartSession(out handle, 0, Guid.NewGuid().ToString());
+			if (res != 0)
+				throw new Exception("Could not begin restart session. Unable to determine file locker.\nError Code {0}".Fmt(res));
+
+			// Create an array to store the retrieved processes in (have an initial guess at the required size)
+			var process_info = new Win32.RM_PROCESS_INFO[16];
+			var process_count = (uint)process_info.Length;
+
+			// Ensure cleanup of session handle
+			using (Scope.Create(null, () => Win32.RmEndSession(handle)))
+			{
+				// Register the filepaths we're interested in
+				res = Win32.RmRegisterResources(handle, (uint)filepaths.Length, filepaths, 0, null, 0, null);
+				if (res != 0)
+					throw new Exception("Could not register resource.\nError Code {0}".Fmt(res));
+
+				// Get the list of processes/services holding locks on 'filepaths'
+				for (;;)
+				{
+					uint size_needed, reboot_reasons = Win32.RmRebootReasonNone;
+					res = Win32.RmGetList(handle, out size_needed, ref process_count, process_info, ref reboot_reasons);
+					if (res == 0) break;
+					if (res != Win32.ERROR_MORE_DATA) throw new Exception("Failed to retrieve list of processes holding file locks\r\nError Code: {0}".Fmt(Win32.ErrorCodeToString(res)));
+					process_info = new Win32.RM_PROCESS_INFO[size_needed];
+					process_count = (uint)process_info.Length;
+				}
+			}
+
+			// Enumerate the results
+			for (int i = 0; i != process_count; ++i)
+			{
+				Process proc = null;
+				try { proc = Process.GetProcessById(process_info[i].Process.dwProcessId); }
+				catch (ArgumentException) { continue; } // The process might have ended
+				yield return proc;
+			}
+		}
+
+		/// <summary>Delete a directory and all contained files/subdirectories. Returns true if successful</summary>
+		public static bool DelTree(string root, bool even_if_not_empty, Control parent)
+		{
+			for (;;)
+			{
+				try
+				{
+					// Generate a list of all contained files
+					var files = Directory.GetFiles(root, "*", SearchOption.AllDirectories);
+					if (files.Length != 0)
+					{
+						if (!even_if_not_empty)
+							throw new IOException("Cannot delete {0}, directory still contains {1} files".Fmt(root, files.Length));
+
+						// Check for processes holding locks to the files
+						for (;;)
+						{
+							// Find the lock holding processes/services
+							var lockers = FileLockHolders(files);
+							if (!lockers.Any()) break;
+
+							// Prompt the user, Abort, Retry or Ignore
+							var msg = "The following processes hold locks on files within {0}:\r\n\t{1}".Fmt(root, string.Join("\r\n\t", lockers.Select(x => x.ProcessName)));
+							var r = MsgBox.Show(parent, msg, "Locked Files Detected", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Information);
+							if (r == DialogResult.Abort || r == DialogResult.Cancel)
+								return false;
+							if (r == DialogResult.Ignore)
+								break;
+						}
+					}
+
+					// Delete the contained files
+					files.ForEach(File.Delete);
+
+					// Try to delete the root directory. This can fail because the file system
+					// doesn't necessarily update as soon as the files are deleted. Try to delete,
+					// if that fails, wait a bit, then try again. If that fails, defer to the user.
+					for (int retries = 3; retries-- != 0;)
+					{
+						try
+						{
+							Directory.Delete(root, true);
+							return true;
+						}
+						catch (IOException)
+						{
+							if (retries == 0) throw;
+							Thread.Sleep(500);
+						}
+					}
+				}
+				catch (Exception ex)
+				{
+					var msg = "Failed to delete directory '{0}'\r\n{1}\r\n".Fmt(root, ex.Message);
+					var res = MsgBox.Show(parent, msg, "Deleting Directory", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Error);
+					if (res == DialogResult.Abort)
+						return false;
+					if (res == DialogResult.Ignore)
+						return true;
+				}
+			}
+		}
 	}
 }
 
@@ -317,5 +444,4 @@ namespace pr.unittests
 		}
 	}
 }
-
 #endif
