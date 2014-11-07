@@ -79,9 +79,11 @@ namespace pr.common
 		private static T m_default;
 
 		/// <summary>True to block all writes to the settings</summary>
+		[Browsable(false)]
 		public bool ReadOnly { get; set; }
 
 		/// <summary>Parent settings for this settings object</summary>
+		[Browsable(false)]
 		public ISettingsSet Parent
 		{
 			get { return m_parent; }

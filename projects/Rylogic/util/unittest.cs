@@ -33,7 +33,8 @@ namespace pr.unittests
 		{
 			try
 			{
-				bool all_passed = true;
+				int passed = 0;
+				int failed = 0;
 				using (var outp = new StreamWriter(new UncloseableStream(outstream)))
 				{
 					// Look for test fixtures
@@ -46,7 +47,7 @@ namespace pr.unittests
 						{
 							outp.WriteLine("{0} - Failed to create an instance of test fixture\n{1}".Fmt(fixture.Name, ex.Message));
 							outp.Flush();
-							all_passed = false;
+							++failed;
 							continue;
 						}
 
@@ -61,7 +62,8 @@ namespace pr.unittests
 						{
 							outp.WriteLine("{0} - Test fixture setup function threw\n{1}".Fmt(fixture.Name, ex.Message));
 							outp.Flush();
-							all_passed = false;
+							++failed;
+							continue;
 						}
 
 						// Find the setup/cleanup method to call before each unit test
@@ -69,6 +71,7 @@ namespace pr.unittests
 						var test_clean = fixture.FindMethodsWithAttribute<TearDownAttribute>().FirstOrDefault();
 
 						// Find the unit tests
+						int pass_count = 0;
 						foreach (var test in fixture.FindMethodsWithAttribute<TestAttribute>())
 						{
 							try
@@ -83,13 +86,15 @@ namespace pr.unittests
 								// Call cleanup for the test
 								if (test_clean != null)
 									test_clean.Invoke(inst, null);
+
+								++pass_count;
 							}
 							catch (Exception ex)
 							{
 								if (ex is TargetInvocationException) ex = ex.InnerException;
 								outp.WriteLine("\r\nTest {0} Failed\r\n{1}".Fmt(test.Name, ex.MessageFull()));
 								outp.Flush();
-								all_passed = false;
+								++failed;
 							}
 						}
 
@@ -103,11 +108,20 @@ namespace pr.unittests
 						{
 							outp.WriteLine("{0} - Test fixture cleanup function threw\n{1}".Fmt(fixture.Name, ex.Message));
 							outp.Flush();
-							all_passed = false;
+							++failed;
+							continue;
 						}
+
+						passed += pass_count;
 					}
+					
+					if (failed == 0)
+					{
+						outp.WriteLine("\r\n *** All {0} unit tests passed *** \r\n".Fmt(passed));
+						outp.Flush();
+					}
+					return failed == 0;
 				}
-				return all_passed;
 			}
 			catch (Exception)
 			{
@@ -164,26 +178,35 @@ namespace pr.unittests
 			if (ptr != null) return;
 			throw new Exception(VSLink + "reference is Null");
 		}
+
+		/// <summary>Tests reference equality</summary>
 		public static void AreSame(object lhs, object rhs)
 		{
 			if (ReferenceEquals(lhs, rhs)) return;
 			throw new Exception(VSLink + "references are not equal");
 		}
+
+		/// <summary>Tests value equality</summary>
 		public static void AreEqual(object lhs, object rhs)
 		{
 			if (Equals(lhs, rhs)) return;
 			throw new Exception(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}".Fmt(lhs.ToString(), rhs.ToString()));
 		}
+
+		/// <summary>Tests value equality</summary>
 		public static void AreEqual(double lhs, double rhs, double tol)
 		{
 			if (Math.Abs(rhs - lhs) < tol) return;
 			throw new Exception(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}\r\n  tol: {2}".Fmt(lhs, rhs, tol));
 		}
+
+		/// <summary>Tests value inequality</summary>
 		public static void AreNotEqual(object lhs, object rhs)
 		{
 			if (!Equals(lhs, rhs)) return;
 			throw new Exception(VSLink + "values are equal");
 		}
+
 		public static void Throws(Type exception_type, Action action)
 		{
 			try

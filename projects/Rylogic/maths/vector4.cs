@@ -214,6 +214,11 @@ namespace pr.maths
 			if (values.Length != 4) throw new FormatException("v4.Parse4() string argument does not represent a 4 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
 		}
+		public static bool TryParse3(string s)
+		{
+			v4 dummy;
+			return TryParse3(s, out dummy, 0f);
+		}
 		public static bool TryParse3(string s, out v4 vec, float w)
 		{
 			vec = Zero;
@@ -221,6 +226,11 @@ namespace pr.maths
 			string[] values = s.Split(new char[]{' ',',','\t'},3);
 			vec.w = w;
 			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
+		}
+		public static bool TryParse4(string s)
+		{
+			v4 dummy;
+			return TryParse4(s, out dummy);
 		}
 		public static bool TryParse4(string s, out v4 vec)
 		{

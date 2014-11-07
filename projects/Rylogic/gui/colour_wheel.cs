@@ -118,11 +118,19 @@ namespace pr.gui
 		private Measurements m_measurements;
 
 		/// <summary>An event raised whenever the selected colour is changed</summary>
-		public event EventHandler ColourChanged;
+		public event EventHandler<ColourEventArgs> ColourChanged;
+		public class ColourEventArgs :EventArgs
+		{
+			/// <summary>The selected colour</summary>
+			public Color Colour { get; private set; }
+			public ColourEventArgs(Color colour)
+			{
+				Colour = colour;
+			}
+		}
 		private void RaiseColourChanged()
 		{
-			if (ColourChanged == null) return;
-			ColourChanged(this, EventArgs.Empty);
+			ColourChanged.Raise(this, new ColourEventArgs(Colour));
 		}
 
 		/// <summary>

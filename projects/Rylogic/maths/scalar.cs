@@ -40,6 +40,8 @@ namespace pr.maths
 		public static int       SignI(int x)                                    { return SignI(x >= 0.0f); }
 		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
 		public static float     SignF(float x)                                  { return SignF(x >= 0.0f); }
+		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
+		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
 		public static double    Abs(double d)                                   { return Math.Abs(d); }
 		public static float     Sqr(float x)                                    { return x * x; }
 		public static double    Sqr(double x)                                   { return x * x; }
@@ -63,6 +65,7 @@ namespace pr.maths
 		public static ulong     Clamp(ulong x, ulong min, ulong max)            { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static float     Clamp(float x, float min, float max)            { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static double    Clamp(double x, double min, double max)         { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
+		public static decimal   Clamp(decimal x, decimal min, decimal max)      { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static float     DegreesToRadians(float degrees)                 { return degrees * TauBy360; }
 		public static double    DegreesToRadians(double degrees)                { return degrees * TauBy360; }
 		public static float     RadiansToDegrees(float radians)                 { return radians * _360ByTau; }

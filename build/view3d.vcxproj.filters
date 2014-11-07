@@ -22,6 +22,9 @@
     <Filter Include="src\pr\camera">
       <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\pr\gui">
+      <UniqueIdentifier>{5a5d25db-8b40-43ab-b93e-6590684aa9b8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h">
@@ -116,6 +119,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h">
       <Filter>src\pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scintilla.h">
+      <Filter>src\pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

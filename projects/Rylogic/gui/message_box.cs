@@ -182,6 +182,15 @@ namespace pr.gui
 		/// <summary>The ratio of width to height used to decide where to wrap text</summary>
 		public float ReflowAspectRatio { get; set; }
 
+		/// <summary>Get/Set the text on the positive button</summary>
+		public string PositiveBtnText { get { return m_btn_positive.Text; } set { m_btn_positive.Text = value; } }
+
+		/// <summary>Get/Set the text on the neutral button</summary>
+		public string NeutralBtnText { get { return m_btn_neutral.Text; } set { m_btn_neutral.Text = value; } }
+
+		/// <summary>Get/Set the text on the negative button</summary>
+		public string NegativeBtnText { get { return m_btn_negative.Text; } set { m_btn_negative.Text = value; } }
+
 		/// <summary>Sets an appropriate size for the message box and lays out the controls</summary>
 		public void UpdateLayout()
 		{

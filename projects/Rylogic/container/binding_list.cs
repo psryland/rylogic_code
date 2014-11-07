@@ -51,7 +51,12 @@ namespace pr.container
 		public bool ReadOnly
 		{
 			get { return !AllowNew && !AllowEdit && !AllowRemove; }
-			set { AllowNew = AllowEdit = AllowRemove = !value; }
+			set
+			{
+				// For some reason, setting these causes list changed events...
+				using (SuspendEvents())
+					AllowNew = AllowEdit = AllowRemove = !value;
+			}
 		}
 
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
@@ -227,7 +232,6 @@ namespace pr.container
 	}
 }
 
-
 #if PR_UNITTESTS
 namespace pr.unittests
 {
@@ -238,12 +242,12 @@ namespace pr.unittests
 	[TestFixture] public class TestBindingListEx
 	{
 		[Test] public void BindingList()
-			{
-				var a0 = new BindingListEx<double>(5, i => 2.0);
-				var a1 = new BindingListEx<double>(5, i =>
-					{
-						return i + 1.0;
-					});
+		{
+			var a0 = new BindingListEx<double>(5, i => 2.0);
+			var a1 = new BindingListEx<double>(5, i =>
+				{
+					return i + 1.0;
+				});
 			Assert.True(a0.SequenceEqual(new[]{2.0, 2.0, 2.0, 2.0, 2.0}));
 			Assert.True(a1.SequenceEqual(new[]{1.0, 2.0, 3.0, 4.0, 5.0}));
 		}

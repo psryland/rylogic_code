@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h" />
+    <ClInclude Include="..\include\pr\gui\scintilla.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />

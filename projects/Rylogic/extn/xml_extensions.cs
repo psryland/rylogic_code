@@ -648,6 +648,26 @@ namespace pr.extn
 			foreach (var item in list) list_elem.Add2(elem_name, item, type_attr);
 			return list_elem;
 		}
+
+		/// <summary>Returns all child elements from the combined path of child element tags</summary>
+		public static IEnumerable<XElement> Elements(this XElement node, params XName[] name)
+		{
+			return Elements(node, name, 0);
+		}
+		private static IEnumerable<XElement> Elements(XElement node, XName[] name, int index)
+		{
+			if (index < name.Length - 1)
+			{
+				foreach (var n in node.Elements(name[index]))
+					foreach (var e in Elements(n, name, index + 1))
+						yield return e;
+			}
+			else if (index < name.Length)
+			{
+				foreach (var n in node.Elements(name[index]))
+					yield return n;
+			}
+		}
 	}
 }
 
@@ -982,7 +1002,24 @@ namespace pr.unittests
 				,s);
 			xelems.Remove();
 		}
+		[Test] public void XmlElements()
+		{
+			const string src =
+				"<root>"+
+					"<one>"+
+						"<red/>"+
+						"<red/>"+
+					"</one>"+
+					"<one>"+
+						"<red/>"+
+						"<red/>"+
+					"</one>"+
+					"<one/>"+
+				"</root>";
+			var xml = XDocument.Parse(src);
+			var cnt = xml.Root.Elements("one","red").Count();
+			Assert.AreEqual(cnt, 4);
+		}
 	}
 }
-
 #endif

@@ -188,7 +188,7 @@ namespace WTL
 				{
 					{STYLE_DEFAULT     , 0x120700 , 0xffffff , "courier new"},
 					{STYLE_LINENUMBER  , 0x120700 , 0xffffff , "courier new"},
-					{STYLE_INDENTGUIDE , 0x394448 , 0xffffff , "courier new"},
+					{STYLE_INDENTGUIDE , 0xc0c0c0 , 0xffffff , "courier new"},
 					{STYLE_BRACELIGHT  , 0x2b6498 , 0xffffff , "courier new"},
 					{SCE_LDR_DEFAULT   , 0x120700 , 0xffffff , "courier new"},
 					{SCE_LDR_COMMENT   , 0x008100 , 0xffffff , "courier new"},

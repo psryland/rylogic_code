@@ -114,8 +114,9 @@ namespace pr.gfx
 			// Saturation == 0f means 'sec' is undefined
 			if (Math.Abs(s) < float.Epsilon)
 			{
-				var i = (int)Maths.Clamp(v * 255, 0, 255);
-				return Color.FromArgb(i,i,i);
+				var A = (int)Maths.Clamp(a * 255, 0, 255);
+				var I = (int)Maths.Clamp(v * 255, 0, 255);
+				return Color.FromArgb(A,I,I,I);
 			}
 
 			// Hue is divided into 6 sectors: red -> magenta -> blue -> cyan -> green -> yellow -> red

@@ -2983,9 +2983,18 @@ out <<
 			{
 				if (m_ldr_objects.empty()) return;
 
+				size_t const msg_max_len = 4096;
 				std::string msg = "Leaked LdrObjects detected:\n";
 				for (auto ldr : m_ldr_objects)
+				{
 					msg.append(ldr->TypeAndName()).append("\n");
+					if (msg.size() > msg_max_len)
+					{
+						msg.resize(msg_max_len - 3);
+						msg.append("...");
+						break;
+					}
+				}
 
 				PR_ASSERT(1, m_ldr_objects.empty(), msg.c_str());
 			}

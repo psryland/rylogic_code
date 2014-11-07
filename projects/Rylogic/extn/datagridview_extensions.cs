@@ -30,6 +30,7 @@ namespace pr.extn
 		/// <summary>Select all rows</summary>
 		public static void SelectAll(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.A) return;
 			SelectAll(dgv);
@@ -48,6 +49,7 @@ namespace pr.extn
 		/// <summary>KeyDown handler for copying selected cells to the clipboard</summary>
 		public static void Copy(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.C) return;
 			if (!Copy(dgv)) return;
@@ -71,6 +73,7 @@ namespace pr.extn
 		/// <summary>Cut the selected cells to the clipboard. Cut cells replaced with default values</summary>
 		public static void Cut(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.X) return;
 			if (!Cut(dgv)) return;
@@ -95,27 +98,75 @@ namespace pr.extn
 		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
 		public static bool PasteReplace(DataGridView grid)
 		{
-			if (grid.SelectedCells.Count != 1) return false;
-
-			// Read the lines from the clipboard
-			var lines = Clipboard.GetText().Split('\n');
-
-			var row = grid.CurrentCell.RowIndex;
-			var col = grid.CurrentCell.ColumnIndex;
-
-			for (var j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
+			if (grid.SelectedCells.Count == 1)
 			{
-				// Skip blank lines
-				if (lines[j].Length == 0) continue;
+				// Read the lines from the clipboard
+				var lines = Clipboard.GetText().Split('\n');
 
-				var cells = lines[j].Split('\t',',',';');
-				for (var i = 0; i != cells.Length && col != grid.ColumnCount; ++i, ++col)
+				var row = grid.CurrentCell.RowIndex;
+				for (var j = 0; j != lines.Length && row != grid.RowCount; ++j, ++row)
 				{
-					var cell = grid[col,row];
+					// Skip blank lines
+					if (lines[j].Length == 0) continue;
+
+					var col = grid.CurrentCell.ColumnIndex;
+					var cells = lines[j].Split('\t',',',';');
+					for (var i = 0; i != cells.Length && col != grid.ColumnCount; ++i, ++col)
+					{
+						var cell = grid[col,row];
+						if (cell.ReadOnly) continue;
+						if (cells[i].Length == 0) continue;
+						try
+						{
+							var val = Util.ConvertTo(cells[i].Trim(), cell.ValueType);
+							cell.Value = val;
+						}
+						catch (FormatException)
+						{
+							cell.Value = cell.DefaultNewRowValue;
+						}
+					}
+				}
+			}
+			else if (grid.SelectedCells.Count > 1)
+			{
+				// Get a snapshot of the selected grid cells
+				var selected_cells = grid.SelectedCells;
+
+				// Find the bounds of the selected cells
+				var min = new Point(selected_cells[0].ColumnIndex, selected_cells[0].RowIndex);
+				var max = min;
+				foreach (DataGridViewCell item in selected_cells)
+				{
+					min.X = Math.Min(min.X, item.ColumnIndex);
+					min.Y = Math.Min(min.Y, item.RowIndex);
+					max.X = Math.Max(max.X, item.ColumnIndex+1);
+					max.Y = Math.Max(max.Y, item.RowIndex+1);
+				}
+
+				// Read the cells from the clipboard
+				var lines = Clipboard.GetText().Split('\n');
+				var cells = new string[lines.Length][];
+				for (var i = 0; i != lines.Length; ++i)
+					cells[i] = lines[i].Split('\t',',',';');
+
+				// Paste into the selected cells, filling if the selected cell area
+				// is bigger than the clipboard cells
+				foreach (DataGridViewCell cell in selected_cells)
+				{
 					if (cell.ReadOnly) continue;
-					if (cells[i].Length == 0) continue;
-					try { cell.Value = Convert.ChangeType(cells[i], cell.ValueType); }
-					catch (FormatException) { cell.Value = cell.DefaultNewRowValue; }
+
+					try
+					{
+						var row = Math.Min(cell.RowIndex    - min.Y, cells.Length      - 1);
+						var col = Math.Min(cell.ColumnIndex - min.X, cells[row].Length - 1);
+						if (cells[row][col].Length != 0)
+							cell.Value = Convert.ChangeType(cells[row][col], cell.ValueType);
+					}
+					catch (FormatException)
+					{
+						cell.Value = cell.DefaultNewRowValue;
+					}
 				}
 			}
 			return true;
@@ -124,64 +175,10 @@ namespace pr.extn
 		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
 		public static void PasteReplace(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.V) return;
 			if (!PasteReplace(dgv)) return;
-			e.Handled = true;
-		}
-
-		/// <summary>Paste over selected cells. Only replaces those selected. Must be >= 2 cells selected</summary>
-		public static bool PasteReplaceSelected(DataGridView grid)
-		{
-			if (grid.SelectedCells.Count < 2) return false;
-
-			// Get a snapshot of the selected grid cells
-			var selected_cells = grid.SelectedCells;
-
-			// Find the bounds of the selected cells
-			var min = new Point(selected_cells[0].ColumnIndex, selected_cells[0].RowIndex);
-			var max = min;
-			foreach (DataGridViewCell item in selected_cells)
-			{
-				min.X = Math.Min(min.X, item.ColumnIndex);
-				min.Y = Math.Min(min.Y, item.RowIndex);
-				max.X = Math.Max(max.X, item.ColumnIndex+1);
-				max.Y = Math.Max(max.Y, item.RowIndex+1);
-			}
-
-			// Read the cells from the clipboard
-			var lines = Clipboard.GetText().Split('\n');
-			var cells = new string[lines.Length][];
-			for (var i = 0; i != lines.Length; ++i)
-				cells[i] = lines[i].Split('\t',',',';');
-
-			// Paste into the selected cells, filling if the selected cell area
-			// is bigger than the clipboard cells
-			foreach (DataGridViewCell cell in selected_cells)
-			{
-				if (cell.ReadOnly) continue;
-
-				try
-				{
-					var row = Math.Min(cell.RowIndex    - min.Y, cells.Length      - 1);
-					var col = Math.Min(cell.ColumnIndex - min.X, cells[row].Length - 1);
-					if (cells[row][col].Length != 0)
-						cell.Value = Convert.ChangeType(cells[row][col], cell.ValueType);
-				}
-				catch (FormatException)
-				{
-					cell.Value = cell.DefaultNewRowValue;
-				}
-			}
-			return true;
-		}
-
-		/// <summary>Paste over selected cells. Only replaces those selected. Must be >= 2 cells selected</summary>
-		public static void PasteReplaceSelected(object sender, KeyEventArgs e)
-		{
-			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.V) return;
-			if (!PasteReplaceSelected(dgv)) return;
 			e.Handled = true;
 		}
 
@@ -226,6 +223,7 @@ namespace pr.extn
 		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary</summary>
 		public static void PasteGrow(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (!e.Control || e.KeyCode != Keys.V) return;
 			if (!PasteGrow(dgv)) return;
@@ -235,11 +233,11 @@ namespace pr.extn
 		/// <summary>Combined handler for cut, copy, and paste replace functions</summary>
 		public static void CutCopyPasteReplace(object sender, KeyEventArgs e)
 		{
-			SelectAll            (sender, e); if (e.Handled) return;
-			Cut                  (sender, e); if (e.Handled) return;
-			Copy                 (sender, e); if (e.Handled) return;
-			PasteReplace         (sender, e); if (e.Handled) return;
-			PasteReplaceSelected (sender, e);//if (e.Handled) return;
+			if (e.Handled) return; // already handled
+			SelectAll   (sender, e);
+			Cut         (sender, e);
+			Copy        (sender, e);
+			PasteReplace(sender, e);
 		}
 
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
@@ -405,6 +403,20 @@ namespace pr.extn
 			return Within(grid, column_index, row_index, out dummy);
 		}
 
+		private class DGV_DragDropData
+		{
+			public DataGridViewRow Row { get; private set; }
+			public int GrabX { get; private set; }
+			public int GrabY { get; private set; }
+
+			public DGV_DragDropData(DataGridViewRow row, int x, int y)
+			{
+				Row = row;
+				GrabX = x;
+				GrabY = y;
+			}
+		}
+
 		/// <summary>
 		/// Begin a row drag-drop operation on the grid.
 		/// Attach this method to the MouseDown event on the grid.
@@ -418,7 +430,10 @@ namespace pr.extn
 
 			var hit = grid.HitTest(e.X, e.Y);
 			if (hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount)
-				grid.DoDragDrop(grid.Rows[hit.RowIndex], DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
+			{
+				var data = new DGV_DragDropData(grid.Rows[hit.RowIndex], e.X, e.Y);
+				grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
+			}
 		}
 
 		/// <summary>
@@ -431,20 +446,25 @@ namespace pr.extn
 			// This method could be hooked up to a pr.util.DragDrop so the
 			// events could come from anything. Only accept dgvs
 			var grid = sender as DataGridView;
-			if (grid == null)
+			if (grid == null || args == null)
 				return false;
 
 			// Must allow move and contain a row
-			if ((args.AllowedEffect & DragDropEffects.Move) == 0 || !args.Data.GetDataPresent(typeof(DataGridViewRow)))
+			if ((args.AllowedEffect & DragDropEffects.Move) == 0 || !args.Data.GetDataPresent(typeof(DGV_DragDropData)))
 				return false;
 
-			// Find where the mouse is over the grid
-			Point pt = grid.PointToClient(new Point(args.X, args.Y));
-			var hit = grid.HitTest(pt.X, pt.Y);
+			// Get the drag data
+			var data = (DGV_DragDropData)args.Data.GetData(typeof(DGV_DragDropData));
+			
+			// Check the mouse has moved enough to start dragging
+			Point pt = grid.PointToClient(new Point(args.X, args.Y)); // Find where the mouse is over the grid
+			var distsq = Maths.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
+			if (distsq < 25)
+				return false;
 
 			// Set the drop effect
-			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount
-				? DragDropEffects.Move : DragDropEffects.None;
+			var hit = grid.HitTest(pt.X, pt.Y);
+			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount ? DragDropEffects.Move : DragDropEffects.None;
 			if (args.Effect != DragDropEffects.Move)
 				return true;
 
@@ -487,9 +507,7 @@ namespace pr.extn
 				return true;
 			}
 
-			// Get the drag data
-			var row = (DataGridViewRow)args.Data.GetData(typeof(DataGridViewRow));
-			int grab_idx = row.Index;
+			int grab_idx = data.Row.Index;
 			if (over_half) ++hit_idx;
 
 			// Insert 'grab_idx' at 'drop_idx'

@@ -63,7 +63,7 @@ namespace pr.gui
 		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
 		public void SignalRefresh(object sender = null, EventArgs args = null)
 		{
-			if (Window == null) return;
+			if (Window == null || !Visible) return;
 			Window.SignalRefresh();
 		}
 
@@ -353,6 +353,7 @@ namespace pr.gui
 			}
 
 			// Allow users to add custom menu options to the context menu
+			// Do this last so that users have the option of removing options they don't want displayed
 			OnCustomiseContextMenu(new CustomContextMenuEventArgs(context_menu));
 
 			context_menu.Show(MousePosition);

@@ -26,6 +26,18 @@ namespace pr.extn
 				action(item);
 		}
 
+		/// <summary>Compare subranges within arrays for value equality</summary>
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len)
+		{
+			return SequenceEqual(lhs,rhs,0,0,len);
+		}
+
+		/// <summary>Compare subranges within arrays for value equality</summary>
+		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len)
+		{
+			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len));
+		}
+
 		/// <summary>Exactly the same as 'Reverse' but doesn't clash with List.Reverse()</summary>
 		public static IEnumerable<TSource> Reversed<TSource>(this IEnumerable<TSource> source)
 		{

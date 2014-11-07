@@ -80,6 +80,18 @@ namespace pr.extn
 			return new string(str.ToCharArray().Reversed().ToArray());
 		}
 
+		/// <summary>Return a string with 'chars' removed</summary>
+		public static string Strip(this string str, params char[] chars)
+		{
+			return new string(str.ToCharArray().Where(x => !chars.Contains(x)).ToArray());
+		}
+
+		/// <summary>Return a string with characters that match the predicate removed</summary>
+		public static string Strip(this string str, Func<char, bool> pred)
+		{
+			return new string(str.ToCharArray().Where(x => !pred(x)).ToArray());
+		}
+
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
 		/// <param name="text">Text to be word wrapped</param>
 		/// <param name="width">Width, in characters, to which the text should be word wrapped</param>

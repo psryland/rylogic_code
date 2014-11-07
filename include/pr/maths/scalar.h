@@ -181,6 +181,9 @@ namespace pr
 	int     GreatestCommonFactor(int a, int b);
 	int     LeastCommonMultiple(int a, int b);
 
+	// Returns the number to add to pad 'size' up to 'alignment'
+	template <typename T> inline T Pad(T size, T alignment) { return (alignment - (size % alignment)) % alignment; }
+
 	// Function objects for generating sequences
 	template <typename Type> struct ArithmeticSequence
 	{
