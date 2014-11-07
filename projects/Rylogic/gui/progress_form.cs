@@ -5,6 +5,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using pr.maths;
+using pr.util;
 
 namespace pr.gui
 {
@@ -45,7 +46,112 @@ namespace pr.gui
 		private readonly ProgressBar m_progress;
 		private readonly Label m_description;
 		private readonly Button m_button;
+		private Thread m_thread;
 		private Exception m_error;
+
+		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
+		{
+			Done         = new ManualResetEvent(false);
+			CancelSignal = new ManualResetEvent(false);
+
+			m_progress = new ProgressBar
+				{
+					Style = style,
+					Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top
+				};
+			m_description = new Label
+				{
+					Text = desc ?? string.Empty,
+					AutoSize = false,
+					Anchor = AnchorStyles.Top|AnchorStyles.Left
+				};
+			
+			m_button = new Button
+				{
+					Text = "Cancel",
+					UseVisualStyleBackColor = true,
+					TabIndex = 1,
+					Anchor = AnchorStyles.Bottom|AnchorStyles.Right
+				};
+			m_button.Click += (s,a) =>
+				{
+					CancelSignal.Set();
+					m_button.Text = "Cancelling...";
+					m_button.Enabled = false;
+				};
+
+			// Start the task
+			var dispatcher = Dispatcher.CurrentDispatcher;
+			m_thread = new Thread(new ThreadStart(() =>
+				{
+					try
+					{
+						func(this, arg, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
+						dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
+					}
+					catch (OperationCanceledException)
+					{
+						CancelSignal.Set();
+					}
+					catch (AggregateException ex)
+					{
+						m_error = ex.InnerExceptions.FirstOrDefault(e => !(e is OperationCanceledException));
+						if (m_error == null) CancelSignal.Set();
+					}
+					catch (Exception ex)
+					{
+						m_error = ex;
+					}
+					Done.Set();
+					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{CloseDialog = true});
+				}))
+				{
+					Name = "ProgressForm",
+					Priority = priority,
+					IsBackground = true,
+				};
+			m_thread.Start();
+
+			Text = title ?? string.Empty;
+			if (icon != null) Icon = icon;
+
+			AutoSizeMode        = AutoSizeMode.GrowOnly;
+			ClientSize          = new Size(136, 20);
+			StartPosition       = FormStartPosition.CenterParent;
+			FormBorderStyle     = FormBorderStyle.FixedDialog;
+			AutoScaleDimensions = new SizeF(6F, 13F);
+			AutoScaleMode       = AutoScaleMode.Font;
+			Controls.Add(m_description);
+			Controls.Add(m_progress);
+			Controls.Add(m_button);
+		}
+		protected override void Dispose(bool disposing)
+		{
+			m_thread.Join();
+			base.Dispose(disposing);
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			DoLayout();
+			base.OnShown(e);
+		}
+		protected override void OnSizeChanged(EventArgs e)
+		{
+			DoLayout();
+			base.OnSizeChanged(e);
+		}
+		protected override void OnFormClosed(FormClosedEventArgs e)
+		{
+			// If an error was raised and caught in the background thread, re-raise it here
+			if (Done.WaitOne(0) && m_error != null)
+				throw m_error;
+
+			DialogResult = CancelSignal.WaitOne(0)
+				? DialogResult.Cancel
+				: DialogResult.OK;
+
+			base.OnFormClosed(e);
+		}
 
 		/// <summary>An event raised when the task is complete</summary>
 		public ManualResetEvent Done { get; private set; }
@@ -64,72 +170,13 @@ namespace pr.gui
 		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
 		public delegate void Progress(UserState us);
 
-		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null)
-		{
-			m_progress = new ProgressBar{Style = style, Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top};
-			m_description = new Label{Text = desc ?? string.Empty, AutoSize = false, Anchor = AnchorStyles.Top|AnchorStyles.Left};
-			m_button = new Button{Text = "Cancel", UseVisualStyleBackColor = true, TabIndex = 1, Anchor = AnchorStyles.Bottom|AnchorStyles.Right};
-			m_button.Click += (s,a) => { CancelSignal.Set(); m_button.Text = "Cancelling..."; m_button.Enabled = false; };
-
-			Done         = new ManualResetEvent(false);
-			CancelSignal = new ManualResetEvent(false);
-			var dispatcher = Dispatcher.CurrentDispatcher;
-
-			// Start the task
-			ThreadPool.QueueUserWorkItem(x =>
-				{
-					try
-					{
-						func(this, x, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
-						dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
-					}
-					catch (OperationCanceledException)
-					{
-						CancelSignal.Set();
-					}
-					catch (AggregateException ex)
-					{
-						m_error = ex.InnerExceptions.FirstOrDefault(e => !(e is OperationCanceledException));
-						if (m_error == null) CancelSignal.Set();
-					}
-					catch (Exception ex)
-					{
-						m_error = ex;
-					}
-					Done.Set();
-					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{CloseDialog = true});
-				}, arg);
-
-			Text = title ?? string.Empty;
-			if (icon != null) Icon = icon;
-
-			StartPosition       = FormStartPosition.CenterParent;
-			FormBorderStyle     = FormBorderStyle.FixedDialog;
-			AutoScaleDimensions = new SizeF(6F, 13F);
-			AutoScaleMode       = AutoScaleMode.Font;
-			Controls.Add(m_description);
-			Controls.Add(m_progress);
-			Controls.Add(m_button);
-			DoLayout();
-
-			SizeChanged += (s,e) => DoLayout();
-			FormClosing += (s,a) =>
-				{
-					if (Done.WaitOne(0) && m_error != null)
-						throw m_error;
-
-					DialogResult = CancelSignal.WaitOne(0)
-						? DialogResult.Cancel
-						: DialogResult.OK;
-				};
-		}
-
 		/// <summary>Show the dialog after a few milliseconds</summary>
 		public DialogResult ShowDialog(Form parent, int delay_ms = 0)
 		{
 			if (delay_ms != 0 && Done.WaitOne(delay_ms))
 				return DialogResult.OK; // done already
 
+			// Show the dialog after the delay
 			return base.ShowDialog(parent);
 		}
 
@@ -184,7 +231,18 @@ namespace pr.gui
 				bounds = Rectangle.Union(bounds, c.Bounds);
 
 			// Set the dialog size
-			ClientSize = bounds.Size + new Size(space, space);
+			var preferred_size = bounds.Size + new Size(space, space);
+			switch (AutoSizeMode)
+			{
+			case AutoSizeMode.GrowAndShrink:
+				ClientSize = preferred_size;
+				break;
+			case AutoSizeMode.GrowOnly:
+				ClientSize = new Size(
+					Math.Max(preferred_size.Width, ClientSize.Width),
+					Math.Max(preferred_size.Height, ClientSize.Height));
+				break;
+			}
 
 			ResumeLayout(false);
 			PerformLayout();
