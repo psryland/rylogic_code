@@ -74,6 +74,9 @@
   <PropertyGroup>
     <RunPostBuildEvent>Always</RunPostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
@@ -137,6 +140,7 @@
     <Compile Include="container\ring_buffer.cs" />
     <Compile Include="container\sortable_binding_list.cs" />
     <Compile Include="crypt\crypt.cs" />
+    <Compile Include="crypt\rijndael.cs" />
     <Compile Include="directshow.net\amstream.cs" />
     <Compile Include="directshow.net\amvideo.cs" />
     <Compile Include="directshow.net\atscpsipparser.cs" />

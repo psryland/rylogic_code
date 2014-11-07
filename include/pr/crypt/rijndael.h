@@ -21,39 +21,19 @@ namespace pr
 {
 	namespace crypt
 	{
+		// Implements AES-128, AES-192, AES-256.
+		// These are a subset of Rijndael's original algorithm which allowed for custom
+		// block sizes as well. This implementation however only works for the blocksize
+		// = 16 case, which is what the AES standard requires.
 		class Rijndael
 		{
-			enum { DEFAULT_KEY_LENGTH = 16, DEFAULT_BLOCK_SIZE=16 };
-			enum { MAX_BLOCK_SIZE=32, MAX_ROUNDS=14, MAX_KC=8, MAX_BC=8 };
-
-			// Encryption (m_Ke) round key
-			int m_Ke[MAX_ROUNDS+1][MAX_BC];
-
-			// Decryption (m_Kd) round key
-			int m_Kd[MAX_ROUNDS+1][MAX_BC];
-
-			// Key Length
-			size_t m_key_length;
-
-			// Block Size
-			size_t m_block_size;
-
-			// Number of Rounds
-			size_t m_rounds;
-
-			// Chain Block
-			char m_chain0[MAX_BLOCK_SIZE];
-			char m_chain[MAX_BLOCK_SIZE];
-
-			// Auxiliary private use buffers
-			int tk[MAX_KC];
-			int a[MAX_BC];
-			int t[MAX_BC];
-
+			typedef unsigned char byte;
+			enum { DEFAULT_KEY_LENGTH = 16, BLOCK_SIZE = 16 };
+			enum { MAX_ROUNDS=14, MAX_KC=8, MAX_BC=8 };
 			#pragma region Data Tables
-			static const unsigned char sm_alog(int i)
+			static byte sm_alog(int i)
 			{
-				static const unsigned char sm_alog[256] =
+				static const byte sm_alog[256] =
 				{
 					1, 3, 5, 15, 17, 51, 85, 255, 26, 46, 114, 150, 161, 248, 19, 53,
 					95, 225, 56, 72, 216, 115, 149, 164, 247, 2, 6, 10, 30, 34, 102, 170,
@@ -75,9 +55,9 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_alog[i];
 			}
-			static const unsigned char sm_log(int i)
+			static byte sm_log(int i)
 			{
-				static const unsigned char sm_log[256] =
+				static const byte sm_log[256] =
 				{
 					0, 0, 25, 1, 50, 2, 26, 198, 75, 199, 27, 104, 51, 238, 223, 3,
 					100, 4, 224, 14, 52, 141, 129, 239, 76, 113, 8, 200, 248, 105, 28, 193,
@@ -99,7 +79,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_log[i];
 			}
-			static const char sm_S(int i)
+			static char sm_S(int i)
 			{
 				static const char sm_S[256] =
 				{
@@ -123,7 +103,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_S[i];
 			}
-			static const char sm_Si(int i)
+			static char sm_Si(int i)
 			{
 				static const char sm_Si[256] =
 				{
@@ -147,7 +127,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_Si[i];
 			}
-			static const int  sm_T1(int i)
+			static int  sm_T1(int i)
 			{
 				static const int sm_T1[256] =
 				{
@@ -219,7 +199,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T1[i];
 			}
-			static const int  sm_T2(int i)
+			static int  sm_T2(int i)
 			{
 				static const int sm_T2[256] =
 				{
@@ -291,7 +271,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T2[i];
 			}
-			static const int  sm_T3(int i)
+			static int  sm_T3(int i)
 			{
 				static const int sm_T3[256] =
 				{
@@ -363,7 +343,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T3[i];
 			}
-			static const int  sm_T4(int i)
+			static int  sm_T4(int i)
 			{
 				static const int sm_T4[256] =
 				{
@@ -435,7 +415,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T4[i];
 			}
-			static const int  sm_T5(int i)
+			static int  sm_T5(int i)
 			{
 				static const int sm_T5[256] =
 				{
@@ -507,7 +487,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T5[i];
 			}
-			static const int  sm_T6(int i)
+			static int  sm_T6(int i)
 			{
 				static const int sm_T6[256] =
 				{
@@ -579,7 +559,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T6[i];
 			}
-			static const int  sm_T7(int i)
+			static int  sm_T7(int i)
 			{
 				static const int sm_T7[256] =
 				{
@@ -651,7 +631,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T7[i];
 			}
-			static const int  sm_T8(int i)
+			static int  sm_T8(int i)
 			{
 				static const int sm_T8[256] =
 				{
@@ -723,7 +703,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_T8[i];
 			}
-			static const int  sm_U1(int i)
+			static int  sm_U1(int i)
 			{
 				static const int sm_U1[256] =
 				{
@@ -795,7 +775,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_U1[i];
 			}
-			static const int  sm_U2(int i)
+			static int  sm_U2(int i)
 			{
 				static const int sm_U2[256] =
 				{
@@ -867,7 +847,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_U2[i];
 			}
-			static const int  sm_U3(int i)
+			static int  sm_U3(int i)
 			{
 				static const int sm_U3[256] =
 				{
@@ -939,7 +919,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_U3[i];
 			}
-			static const int  sm_U4(int i)
+			static int  sm_U4(int i)
 			{
 				static const int sm_U4[256] =
 				{
@@ -1011,7 +991,7 @@ namespace pr
 				assert(i >= 0 && i < 256);
 				return sm_U4[i];
 			}
-			static const char sm_rcon(int i)
+			static char sm_rcon(int i)
 			{
 				static const char sm_rcon[30] =
 				{
@@ -1024,7 +1004,7 @@ namespace pr
 				assert(i >= 0 && i < 30);
 				return sm_rcon[i];
 			}
-			static const int  sm_shifts(int i, int j, int k)
+			static int  sm_shifts(int i, int j, int k)
 			{
 				static const int sm_shifts[3][4][2] =
 				{
@@ -1039,84 +1019,126 @@ namespace pr
 			}
 			#pragma endregion
 
-			// Multiply two elements of GF(2^m)
-			static int Mul(int a, int b)
+			// Encryption (m_Ke) round key
+			int m_Ke[MAX_ROUNDS+1][MAX_BC];
+
+			// Decryption (m_Kd) round key
+			int m_Kd[MAX_ROUNDS+1][MAX_BC];
+
+			// Key Length
+			int m_key_length;
+
+			// Number of Rounds
+			int m_rounds;
+
+			// Auxiliary private use buffers
+			int m_tk[MAX_KC];
+			int m_a[MAX_BC];
+			int m_t[MAX_BC];
+
+			// Encrypt exactly one block of data.
+			//  in     - The data to be encrypted.
+			//  result - The returned encrypted data.
+			//  'in' and 'result' must point to 'BlockSize' bytes. In-place encryption is supported
+			template <int BlockSize> void EncryptBlock(byte const* in, byte* result)
 			{
-				return (a != 0 && b != 0) ? sm_alog((sm_log(a & 0xFF) + sm_log(b & 0xFF)) % 0xFF) : 0;
-			}
+				static_assert(BlockSize == 16 || BlockSize == 24 || BlockSize == 32, "BlockSize must be one of 16,24,32");
+				size_t block_count_in_words = BlockSize / 4;
+				int SC = (block_count_in_words == 4) ? 0 : (block_count_in_words == 6 ? 1 : 2);
+				int s1 = sm_shifts(SC,1,0);
+				int s2 = sm_shifts(SC,2,0);
+				int s3 = sm_shifts(SC,3,0);
 
-			// Convenience method used in generating Transposition Boxes
-			static int Mul4(int a, char b[])
-			{
-				if (a == 0) return 0;
-				a = sm_log(a & 0xFF);
-				int a0 = (b[0] != 0) ? sm_alog((a + sm_log(b[0] & 0xFF)) % 255) & 0xFF : 0;
-				int a1 = (b[1] != 0) ? sm_alog((a + sm_log(b[1] & 0xFF)) % 255) & 0xFF : 0;
-				int a2 = (b[2] != 0) ? sm_alog((a + sm_log(b[2] & 0xFF)) % 255) & 0xFF : 0;
-				int a3 = (b[3] != 0) ? sm_alog((a + sm_log(b[3] & 0xFF)) % 255) & 0xFF : 0;
-				return a0 << 24 | a1 << 16 | a2 << 8 | a3;
-			}
-
-			// buff ^= chain. length = m_block_size
-			void Xor(char* buff, char const* chain)
-			{
-				for (size_t i=0; i<m_block_size; i++)
-					*(buff++) ^= *(chain++);
-			}
-
-			// Convenience method to encrypt exactly one block of plaintext, assuming
-			// Rijndael's default block size (128-bit).
-			//  in         - The plaintext
-			//  result     - The ciphertext generated from a plaintext using the key
-			void DefEncryptBlock(char const* in, char* result)
-			{
-				int* Ker = m_Ke[0];
-				int t0,t1,t2,t3;
-				t0  = ((unsigned char)*(in++) << 24);
-				t0 |= ((unsigned char)*(in++) << 16);
-				t0 |= ((unsigned char)*(in++) << 8);
-				(t0 |= (unsigned char)*(in++)) ^= Ker[0];
-
-				t1  = ((unsigned char)*(in++) << 24);
-				t1 |= ((unsigned char)*(in++) << 16);
-				t1 |= ((unsigned char)*(in++) << 8);
-				(t1 |= (unsigned char)*(in++)) ^= Ker[1];
-
-				t2  = ((unsigned char)*(in++) << 24);
-				t2 |= ((unsigned char)*(in++) << 16);
-				t2 |= ((unsigned char)*(in++) << 8);
-				(t2 |= (unsigned char)*(in++)) ^= Ker[2];
-
-				t3  = ((unsigned char)*(in++) << 24);
-				t3 |= ((unsigned char)*(in++) << 16);
-				t3 |= ((unsigned char)*(in++) << 8);
-				(t3 |= (unsigned char)*(in++)) ^= Ker[3];
+				int* pi = m_t;
+				for (auto i = 0; i != block_count_in_words; ++i, ++pi)
+				{
+					*pi  = *in++ << 24;
+					*pi |= *in++ << 16;
+					*pi |= *in++ <<  8;
+					*pi |= *in++
+					*pi ^= m_Ke[0][i];
+				}
 
 				// Apply Round Transforms
-				int a0, a1, a2, a3;
-				for (size_t r = 1; r < m_rounds; r++)
+				for (auto r = 1; r < m_rounds; ++r)
 				{
-					Ker = m_Ke[r];
+					for (auto i = 0; i != block_count_in_words; ++i)
+					{
+						m_a[i] =
+							sm_T1((m_t[(i     )                       ] >> 24) & 0xFF) ^
+							sm_T2((m_t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^
+							sm_T3((m_t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^
+							sm_T4((m_t[(i + s3) % block_count_in_words]      ) & 0xFF);
+						m_a[i] ^= m_Ke[r][i];
+					}
+					memcpy(m_t, m_a, 4 * sizeof(a[0]));
+				}
+
+				// Write out the encrypted data
+				for (auto i = 0, j = 0; i != block_count_in_words; ++i)
+				{
+					int tt = m_Ke[m_rounds][i];
+					result[j++] = static_cast<byte>(0xff & (sm_S((m_t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
+					result[j++] = static_cast<byte>(0xff & (sm_S((m_t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
+					result[j++] = static_cast<byte>(0xff & (sm_S((m_t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
+					result[j++] = static_cast<byte>(0xff & (sm_S((m_t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
+				}
+			}
+
+			// Specialised EncryptBlock for the standard 16-byte block size
+			template <> void EncryptBlock<BLOCK_SIZE>(byte const* in, byte* result)
+			{
+				int t0, t1, t2, t3;
+				int a0, a1, a2, a3;
+				int tt;
+
+				t0  = *in++ << 24;
+				t0 |= *in++ << 16;
+				t0 |= *in++ << 8;
+				t0 |= *in++;
+				t0 ^= m_Ke[0][0];
+
+				t1  = *in++ << 24;
+				t1 |= *in++ << 16;
+				t1 |= *in++ << 8;
+				t1 |= *in++;
+				t1 ^= m_Ke[0][1];
+
+				t2  = *in++ << 24;
+				t2 |= *in++ << 16;
+				t2 |= *in++ << 8;
+				t2 |= *in++;
+				t2 ^= m_Ke[0][2];
+
+				t3  = *in++ << 24;
+				t3 |= *in++ << 16;
+				t3 |= *in++ << 8;
+				t3 |= *in++;
+				t3 ^= m_Ke[0][3];
+
+				// Apply Round Transforms
+				for (auto r = 1; r < m_rounds; ++r)
+				{
 					a0 = (
 						sm_T1((t0 >> 24) & 0xFF) ^
 						sm_T2((t1 >> 16) & 0xFF) ^
 						sm_T3((t2 >>  8) & 0xFF) ^
-						sm_T4((t3      ) & 0xFF)) ^ Ker[0];
+						sm_T4((t3      ) & 0xFF)) ^ m_Ke[r][0];
 					a1 = (
 						sm_T1((t1 >> 24) & 0xFF) ^
 						sm_T2((t2 >> 16) & 0xFF) ^
 						sm_T3((t3 >>  8) & 0xFF) ^
-						sm_T4((t0      ) & 0xFF)) ^ Ker[1];
+						sm_T4((t0      ) & 0xFF)) ^ m_Ke[r][1];
 					a2 = (
 						sm_T1((t2 >> 24) & 0xFF) ^
 						sm_T2((t3 >> 16) & 0xFF) ^
 						sm_T3((t0 >>  8) & 0xFF) ^
-						sm_T4((t1      ) & 0xFF)) ^ Ker[2];
+						sm_T4((t1      ) & 0xFF)) ^ m_Ke[r][2];
 					a3 = (
 						sm_T1((t3 >> 24) & 0xFF) ^
 						sm_T2((t0 >> 16) & 0xFF) ^
 						sm_T3((t1 >>  8) & 0xFF) ^
-						sm_T4((t2      ) & 0xFF)) ^ Ker[3];
+						sm_T4((t2      ) & 0xFF)) ^ m_Ke[r][3];
 					t0 = a0;
 					t1 = a1;
 					t2 = a2;
@@ -1124,82 +1146,131 @@ namespace pr
 				}
 
 				// Last Round is special
-				Ker = m_Ke[m_rounds];
-				int tt = Ker[0];
-				result[0] = static_cast<char>(0xff & (sm_S((t0 >> 24) & 0xFF) ^ (tt >> 24)));
-				result[1] = static_cast<char>(0xff & (sm_S((t1 >> 16) & 0xFF) ^ (tt >> 16)));
-				result[2] = static_cast<char>(0xff & (sm_S((t2 >>  8) & 0xFF) ^ (tt >>  8)));
-				result[3] = static_cast<char>(0xff & (sm_S((t3      ) & 0xFF) ^ (tt      )));
-				tt = Ker[1];
-				result[4] = static_cast<char>(0xff & (sm_S((t1 >> 24) & 0xFF) ^ (tt >> 24)));
-				result[5] = static_cast<char>(0xff & (sm_S((t2 >> 16) & 0xFF) ^ (tt >> 16)));
-				result[6] = static_cast<char>(0xff & (sm_S((t3 >>  8) & 0xFF) ^ (tt >>  8)));
-				result[7] = static_cast<char>(0xff & (sm_S((t0      ) & 0xFF) ^ (tt      )));
-				tt = Ker[2];
-				result[8]  = static_cast<char>(0xff & (sm_S((t2 >> 24) & 0xFF) ^ (tt >> 24)));
-				result[9]  = static_cast<char>(0xff & (sm_S((t3 >> 16) & 0xFF) ^ (tt >> 16)));
-				result[10] = static_cast<char>(0xff & (sm_S((t0 >>  8) & 0xFF) ^ (tt >>  8)));
-				result[11] = static_cast<char>(0xff & (sm_S((t1      ) & 0xFF) ^ (tt      )));
-				tt = Ker[3];
-				result[12] = static_cast<char>(0xff & (sm_S((t3 >> 24) & 0xFF) ^ (tt >> 24)));
-				result[13] = static_cast<char>(0xff & (sm_S((t0 >> 16) & 0xFF) ^ (tt >> 16)));
-				result[14] = static_cast<char>(0xff & (sm_S((t1 >>  8) & 0xFF) ^ (tt >>  8)));
-				result[15] = static_cast<char>(0xff & (sm_S((t2      ) & 0xFF) ^ (tt      )));
+				tt = m_Ke[m_rounds][0];
+				result[0] = static_cast<byte>(0xff & (sm_S((t0 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[1] = static_cast<byte>(0xff & (sm_S((t1 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[2] = static_cast<byte>(0xff & (sm_S((t2 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[3] = static_cast<byte>(0xff & (sm_S((t3      ) & 0xFF) ^ (tt      )));
+				tt = m_Ke[m_rounds][1];
+				result[4] = static_cast<byte>(0xff & (sm_S((t1 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[5] = static_cast<byte>(0xff & (sm_S((t2 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[6] = static_cast<byte>(0xff & (sm_S((t3 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[7] = static_cast<byte>(0xff & (sm_S((t0      ) & 0xFF) ^ (tt      )));
+				tt = m_Ke[m_rounds][2];
+				result[8]  = static_cast<byte>(0xff & (sm_S((t2 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[9]  = static_cast<byte>(0xff & (sm_S((t3 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[10] = static_cast<byte>(0xff & (sm_S((t0 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[11] = static_cast<byte>(0xff & (sm_S((t1      ) & 0xFF) ^ (tt      )));
+				tt = m_Ke[m_rounds][3];
+				result[12] = static_cast<byte>(0xff & (sm_S((t3 >> 24) & 0xFF) ^ (tt >> 24)));
+				result[13] = static_cast<byte>(0xff & (sm_S((t0 >> 16) & 0xFF) ^ (tt >> 16)));
+				result[14] = static_cast<byte>(0xff & (sm_S((t1 >>  8) & 0xFF) ^ (tt >>  8)));
+				result[15] = static_cast<byte>(0xff & (sm_S((t2      ) & 0xFF) ^ (tt      )));
 			}
 
-			// Convenience method to decrypt exactly one block of plaintext, assuming
-			// Rijndael's default block size (128-bit).
-			//  in         - The ciphertext.
-			//  result     - The plaintext generated from a ciphertext using the session key.
-			void DefDecryptBlock(char const* in, char* result)
+			// Decrypt exactly one block of data.
+			//  in         - The encrypted data to be decrypted.
+			//  result     - The returned decrypted data.
+			//  'in' and 'result' must point to 'BlockSize' bytes. In-place decryption is supported
+			template <int BlockSize> void DecryptBlock(byte const* in, byte* result)
 			{
-				int* Kdr = m_Kd[0];
-				int t0,t1,t2,t3;
-				t0  = ((unsigned char)*(in++) << 24);
-				t0 |= ((unsigned char)*(in++) << 16);
-				t0 |= ((unsigned char)*(in++) << 8);
-				(t0 |= (unsigned char)*(in++)) ^= Kdr[0];
+				static_assert(BlockSize == 16 || BlockSize == 24 || BlockSize == 32, "BlockSize must be one of 16,24,32");
+				size_t block_count_in_words = BlockSize / 4;
+				int SC = block_count_in_words == 4 ? 0 : (block_count_in_words == 6 ? 1 : 2);
+				int s1 = sm_shifts(SC,1,1);
+				int s2 = sm_shifts(SC,2,1);
+				int s3 = sm_shifts(SC,3,1);
 
-				t1  = ((unsigned char)*(in++) << 24);
-				t1 |= ((unsigned char)*(in++) << 16);
-				t1 |= ((unsigned char)*(in++) << 8);
-				(t1 |= (unsigned char)*(in++)) ^= Kdr[1];
+				int* pi = m_t;
+				for (auto i = 0; i < block_count_in_words; ++i, ++pi)
+				{
+					*pi  = *in++ << 24;
+					*pi |= *in++ << 16;
+					*pi |= *in++ <<  8;
+					*pi |= *in++
+					*pi ^= m_Kd[0][i];
+				}
 
-				t2  = ((unsigned char)*(in++) << 24);
-				t2 |= ((unsigned char)*(in++) << 16);
-				t2 |= ((unsigned char)*(in++) << 8);
-				(t2 |= (unsigned char)*(in++)) ^= Kdr[2];
+				// Apply Round Transforms
+				for (auto r = 1; r < m_rounds; ++r)
+				{
+					for (auto i = 0; i < block_count_in_words; ++i)
+					{
+						m_a[i] =
+							sm_T5((m_t[(i     )                       ] >> 24) & 0xFF) ^
+							sm_T6((m_t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^
+							sm_T7((m_t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^
+							sm_T8((m_t[(i + s3) % block_count_in_words]      ) & 0xFF);
+						m_a[i] ^= m_Kd[r][i];
+					}
+					memcpy(m_t, m_a, 4 * sizeof(a[0]));
+				}
 
-				t3  = ((unsigned char)*(in++) << 24);
-				t3 |= ((unsigned char)*(in++) << 16);
-				t3 |= ((unsigned char)*(in++) << 8);
-				(t3 |= (unsigned char)*(in++)) ^= Kdr[3];
+				// Write out the decrypted data
+				for (auto i = 0, j = 0; i < block_count_in_words; ++i)
+				{
+					int tt = m_Kd[m_rounds][i];
+					result[j++] = static_cast<byte>(0xff & (sm_Si((m_t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
+					result[j++] = static_cast<byte>(0xff & (sm_Si((m_t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
+					result[j++] = static_cast<byte>(0xff & (sm_Si((m_t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
+					result[j++] = static_cast<byte>(0xff & (sm_Si((m_t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
+				}
+			}
+
+			// Specialised DecryptBlock for the standard 16-byte block size
+			template <> void DecryptBlock<BLOCK_SIZE>(byte const* in, byte* result)
+			{
+				int t0, t1, t2, t3;
+				int a0, a1, a2, a3;
+				int tt;
+
+				t0  = *in++ << 24;
+				t0 |= *in++ << 16;
+				t0 |= *in++ <<  8;
+				t0 |= *in++;
+				t0 ^= m_Kd[0][0];
+
+				t1  = *in++ << 24;
+				t1 |= *in++ << 16;
+				t1 |= *in++ <<  8;
+				t1 |= *in++;
+				t1 ^= m_Kd[0][1];
+
+				t2  = *in++ << 24;
+				t2 |= *in++ << 16;
+				t2 |= *in++ <<  8;
+				t2 |= *in++;
+				t2 ^= m_Kd[0][2];
+
+				t3  = *in++ << 24;
+				t3 |= *in++ << 16;
+				t3 |= *in++ <<  8;
+				t3 |= *in++;
+				t3 ^= m_Kd[0][3];
 
 				// Apply round transforms
-				int a0, a1, a2, a3;
-				for(size_t r = 1; r < m_rounds; r++)
+				for (auto r = 1; r < m_rounds; ++r)
 				{
-					Kdr = m_Kd[r];
 					a0 = (
 						sm_T5((t0 >> 24) & 0xFF) ^
 						sm_T6((t3 >> 16) & 0xFF) ^
 						sm_T7((t2 >>  8) & 0xFF) ^
-						sm_T8((t1      ) & 0xFF) ) ^ Kdr[0];
+						sm_T8((t1      ) & 0xFF) ) ^ m_Kd[r][0];
 					a1 = (
 						sm_T5((t1 >> 24) & 0xFF) ^
 						sm_T6((t0 >> 16) & 0xFF) ^
 						sm_T7((t3 >>  8) & 0xFF) ^
-						sm_T8((t2      ) & 0xFF) ) ^ Kdr[1];
+						sm_T8((t2      ) & 0xFF) ) ^ m_Kd[r][1];
 					a2 = (
 						sm_T5((t2 >> 24) & 0xFF) ^
 						sm_T6((t1 >> 16) & 0xFF) ^
 						sm_T7((t0 >>  8) & 0xFF) ^
-						sm_T8((t3      ) & 0xFF) ) ^ Kdr[2];
+						sm_T8((t3      ) & 0xFF) ) ^ m_Kd[r][2];
 					a3 = (
 						sm_T5((t3 >> 24) & 0xFF) ^
 						sm_T6((t2 >> 16) & 0xFF) ^
 						sm_T7((t1 >>  8) & 0xFF) ^
-						sm_T8((t0      ) & 0xFF) ) ^ Kdr[3];
+						sm_T8((t0      ) & 0xFF) ) ^ m_Kd[r][3];
 					t0 = a0;
 					t1 = a1;
 					t2 = a2;
@@ -1207,109 +1278,126 @@ namespace pr
 				}
 
 				//Last Round is special
-				Kdr = m_Kd[m_rounds];
-				int tt = Kdr[0];
+				tt = m_Kd[m_rounds][0];
 				result[ 0] = static_cast<char>(0xff & (sm_Si((t0 >> 24) & 0xFF) ^ (tt >> 24)));
 				result[ 1] = static_cast<char>(0xff & (sm_Si((t3 >> 16) & 0xFF) ^ (tt >> 16)));
 				result[ 2] = static_cast<char>(0xff & (sm_Si((t2 >>  8) & 0xFF) ^ (tt >>  8)));
 				result[ 3] = static_cast<char>(0xff & (sm_Si((t1      ) & 0xFF) ^ (tt      )));
-				tt = Kdr[1];
+				tt = m_Kd[m_rounds][1];
 				result[ 4] = static_cast<char>(0xff & (sm_Si((t1 >> 24) & 0xFF) ^ (tt >> 24)));
 				result[ 5] = static_cast<char>(0xff & (sm_Si((t0 >> 16) & 0xFF) ^ (tt >> 16)));
 				result[ 6] = static_cast<char>(0xff & (sm_Si((t3 >>  8) & 0xFF) ^ (tt >>  8)));
 				result[ 7] = static_cast<char>(0xff & (sm_Si((t2      ) & 0xFF) ^ (tt      )));
-				tt = Kdr[2];
+				tt = m_Kd[m_rounds][2];
 				result[ 8] = static_cast<char>(0xff & (sm_Si((t2 >> 24) & 0xFF) ^ (tt >> 24)));
 				result[ 9] = static_cast<char>(0xff & (sm_Si((t1 >> 16) & 0xFF) ^ (tt >> 16)));
 				result[10] = static_cast<char>(0xff & (sm_Si((t0 >>  8) & 0xFF) ^ (tt >>  8)));
 				result[11] = static_cast<char>(0xff & (sm_Si((t3      ) & 0xFF) ^ (tt      )));
-				tt = Kdr[3];
+				tt = m_Kd[m_rounds][3];
 				result[12] = static_cast<char>(0xff & (sm_Si((t3 >> 24) & 0xFF) ^ (tt >> 24)));
 				result[13] = static_cast<char>(0xff & (sm_Si((t2 >> 16) & 0xFF) ^ (tt >> 16)));
 				result[14] = static_cast<char>(0xff & (sm_Si((t1 >>  8) & 0xFF) ^ (tt >>  8)));
 				result[15] = static_cast<char>(0xff & (sm_Si((t0      ) & 0xFF) ^ (tt      )));
 			}
 
+			// XOR 'buf' into 'result'. i.e. result ^= buf.
+			// 'result' and 'buf' should have length = BLOCK_SIZE
+			void Xor(byte* result, byte const* buf)
+			{
+				for (size_t i = 0; i != BLOCK_SIZE; ++i)
+					*result++ ^= *buf++;
+			}
+
 		public:
 
-			// Operation Modes - Electronic Code Book (ECB), Cipher Block Chaining (CBC) and Cipher Feedback Block (CFB) modes are implemented.
 			enum class EMode
 			{
-				ECB = 0, // In ECB mode if the same block is encrypted twice with the same key, the resulting ciphertext blocks are the same.
-				CBC = 1, // In CBC mode a ciphertext block is obtained by first xoring the plaintext block with the previous ciphertext block, and encrypting the resulting value.
-				CFB = 2, // In CFB mode a ciphertext block is obtained by encrypting the previous ciphertext block and xoring the resulting value with the plaintext.
+				// Electronic Code Book (ECB)
+				// In ECB mode if the same block is encrypted twice with
+				// the same key, the resulting ciphertext blocks are the same.
+				ECB = 0,
+
+				// Cipher Block Chaining (CBC)
+				// In CBC mode a ciphertext block is obtained by first xoring the
+				// plaintext block with the previous ciphertext block, and encrypting the resulting value.
+				CBC = 1,
+
+				// Cipher Feedback Block (CFB)
+				// In CFB mode a ciphertext block is obtained by encrypting the previous
+				// ciphertext block and xoring the resulting value with the plaintext.
+				CFB = 2,
+			};
+
+			// A chain block for use with CBC and CFB modes
+			struct Chain
+			{
+				byte m_buf[BLOCK_SIZE];
+				Chain(byte const* initial_chain = nullptr)
+					:m_buf()
+				{
+					if (initial_chain)
+						memcpy(m_buf, initial_chain, BLOCK_SIZE);
+				}
 			};
 
 			// Expand a user-supplied key into a session key.
 			//  key        - The 128/192/256-bit user-key to use.
 			//  key_length - 16, 24 or 32 bytes
-			//  block_size - The block size in bytes of this Rijndael (16, 24 or 32 bytes).
-			//  chain      - initial chain block for CBC and CFB modes.
-			Rijndael(char const* key, size_t key_length = DEFAULT_KEY_LENGTH, size_t block_size = DEFAULT_BLOCK_SIZE, char const* chain = nullptr)
+			Rijndael(byte const* key, int key_length = DEFAULT_KEY_LENGTH)
 				:m_key_length(key_length)
-				,m_block_size(block_size)
 				,m_rounds()
 			{
-				assert(key != 0 && "Empty key");
+				assert(key != nullptr && "Empty key");
 				assert((key_length == 16 || key_length == 24 || key_length == 32) && "Unsupported key length");
-				assert((block_size == 16 || block_size == 24 || block_size == 32) && "Unsupported block length");
-
-				static char const null_chain0[32] = {};
-				if (chain == nullptr) chain = null_chain0;
-
-				// Initialize the chain
-				memcpy(m_chain0, chain, m_block_size);
-				memcpy(m_chain, chain, m_block_size);
 
 				// Calculate number of rounds
 				switch (m_key_length)
 				{
-				case 16: m_rounds = (m_block_size == 16) ? 10 : (m_block_size == 24 ? 12 : 14); break;
-				case 24: m_rounds = (m_block_size != 32) ? 12 : 14; break;
+				case 16: m_rounds = 10; break;
+				case 24: m_rounds = 12; break;
 				default: m_rounds = 14; break; // 32 bytes = 256 bits
 				}
 
-				size_t key_length_in_words  = m_key_length / 4;
-				size_t block_count_in_words = m_block_size / 4;
-				size_t round_key_count = (m_rounds + 1) * block_count_in_words;
+				auto key_length_in_words  = m_key_length / 4;
+				auto block_count_in_words = BLOCK_SIZE / 4;
+				auto round_key_count = (m_rounds + 1) * block_count_in_words;
 
 				// Initialise the encryption/decryption keys
-				for (size_t i = 0; i <= m_rounds; i++)
+				for (auto i = 0; i <= m_rounds; ++i)
 				{
-					for (size_t j = 0; j != block_count_in_words; ++j)
+					for (auto j = 0; j != block_count_in_words; ++j)
 						m_Ke[i][j] = 0;
 				}
-				for (size_t i = 0; i <= m_rounds; i++)
+				for (auto i = 0; i <= m_rounds; ++i)
 				{
-					for (size_t j = 0; j != block_count_in_words; ++j)
+					for (auto j = 0; j != block_count_in_words; ++j)
 						m_Kd[i][j] = 0;
 				}
 
 				// Copy user material bytes into temporary ints
-				int* pi = tk;
-				char const* pc = key;
-				for (size_t i = 0; i != key_length_in_words; ++i)
+				int* pi = m_tk; byte const* pc = key;
+				for (auto i = 0; i != key_length_in_words; ++i, ++pi)
 				{
-					*pi      = (unsigned char)*(pc++) << 24;
-					*pi     |= (unsigned char)*(pc++) << 16;
-					*pi     |= (unsigned char)*(pc++) << 8;
-					*(pi++) |= (unsigned char)*(pc++);
+					*pi  = *pc++ << 24;
+					*pi |= *pc++ << 16;
+					*pi |= *pc++ << 8;
+					*pi |= *pc++;
 				}
 
 				// Copy values into round key arrays
-				size_t t = 0;
-				for (size_t j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
+				auto t = 0;
+				for (auto j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
 				{
-					m_Ke[           t / block_count_in_words][t % block_count_in_words] = tk[j];
-					m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = tk[j];
+					m_Ke[           t / block_count_in_words][t % block_count_in_words] = m_tk[j];
+					m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = m_tk[j];
 				}
 
-				int rconpointer = 0;
+				auto rconpointer = 0;
 				while (t < round_key_count)
 				{
 					// Extrapolate using phi (the round key evolution function)
-					int tt = tk[key_length_in_words - 1];
-					tk[0] ^=
+					int tt = m_tk[key_length_in_words - 1];
+					m_tk[0] ^=
 						(sm_S((tt >> 16) & 0xFF) & 0xFF) << 24 ^
 						(sm_S((tt >>  8) & 0xFF) & 0xFF) << 16 ^
 						(sm_S((tt      ) & 0xFF) & 0xFF) << 8  ^
@@ -1318,37 +1406,37 @@ namespace pr
 
 					if (key_length_in_words != 8)
 					{
-						for (size_t i = 1, j = 0; i < key_length_in_words;)
-							tk[i++] ^= tk[j++];
+						for (auto i = 1, j = 0; i < key_length_in_words;)
+							m_tk[i++] ^= m_tk[j++];
 					}
 					else
 					{
-						for (size_t i = 1, j = 0; i < key_length_in_words / 2;)
-							tk[i++] ^= tk[j++];
+						for (auto i = 1, j = 0; i < key_length_in_words / 2;)
+							m_tk[i++] ^= m_tk[j++];
 
-						tt = tk[key_length_in_words / 2 - 1];
-						tk[key_length_in_words / 2] ^=
+						tt = m_tk[key_length_in_words / 2 - 1];
+						m_tk[key_length_in_words / 2] ^=
 							(sm_S((tt      ) & 0xFF) & 0xFF)       ^
 							(sm_S((tt >>  8) & 0xFF) & 0xFF) << 8  ^
 							(sm_S((tt >> 16) & 0xFF) & 0xFF) << 16 ^
 							(sm_S((tt >> 24) & 0xFF) & 0xFF) << 24;
 
-						for (size_t j = key_length_in_words / 2, i = j + 1; i < key_length_in_words;)
-							tk[i++] ^= tk[j++];
+						for (auto j = key_length_in_words / 2, i = j + 1; i < key_length_in_words;)
+							m_tk[i++] ^= m_tk[j++];
 					}
 
 					// Copy values into round key arrays
-					for (size_t j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
+					for (auto j = 0; j < key_length_in_words && t < round_key_count; ++j, ++t)
 					{
-						m_Ke[           t / block_count_in_words][t % block_count_in_words] = tk[j];
-						m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = tk[j];
+						m_Ke[           t / block_count_in_words][t % block_count_in_words] = m_tk[j];
+						m_Kd[m_rounds - t / block_count_in_words][t % block_count_in_words] = m_tk[j];
 					}
 				}
 
 				// Inverse MixColumn where needed
-				for (size_t r = 1; r < m_rounds; r++)
+				for (auto r = 1; r < m_rounds; ++r)
 				{
-					for (size_t j = 0; j != block_count_in_words; ++j)
+					for (auto j = 0; j != block_count_in_words; ++j)
 					{
 						int tt = m_Kd[r][j];
 						m_Kd[r][j] =
@@ -1360,245 +1448,143 @@ namespace pr
 				}
 			}
 
-			// Encrypt exactly one block of plaintext.
-			//  in           - The plaintext.
-			//  result       - The ciphertext generated from plaintext using the key.
-			//  'in' and 'result' must point to 'm_block_size' bytes
-			// Note: in-place decryption *is* supported
-			void EncryptBlock(char const* in, char* result)
-			{
-				if (m_block_size == DEFAULT_BLOCK_SIZE)
-				{
-					DefEncryptBlock(in, result);
-					return;
-				}
-
-				size_t block_count_in_words = m_block_size / 4;
-				int SC = (block_count_in_words == 4) ? 0 : (block_count_in_words == 6 ? 1 : 2);
-				int s1 = sm_shifts(SC,1,0);
-				int s2 = sm_shifts(SC,2,0);
-				int s3 = sm_shifts(SC,3,0);
-
-				int* pi = t;
-				for (size_t i = 0; i != block_count_in_words; ++i)
-				{
-					*pi       = ((unsigned char)*(in++) << 24);
-					*pi      |= ((unsigned char)*(in++) << 16);
-					*pi      |= ((unsigned char)*(in++) <<  8);
-					(*(pi++) |=  (unsigned char)*(in++)) ^= m_Ke[0][i];
-				}
-
-				// Apply Round Transforms
-				for (size_t r = 1; r < m_rounds; r++)
-				{
-					for (size_t i = 0; i != block_count_in_words; ++i)
-					{
-						a[i] = (
-							sm_T1((t[(i     )                       ] >> 24) & 0xFF) ^
-							sm_T2((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^
-							sm_T3((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^
-							sm_T4((t[(i + s3) % block_count_in_words]      ) & 0xFF)) ^ m_Ke[r][i];
-					}
-					memcpy(t, a, 4 * block_count_in_words);
-				}
-
-				// Last Round is Special
-				for (size_t i = 0, j = 0; i != block_count_in_words; ++i)
-				{
-					int tt = m_Ke[m_rounds][i];
-					result[j++] = static_cast<char>(0xff & (sm_S((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
-					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
-					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
-					result[j++] = static_cast<char>(0xff & (sm_S((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
-				}
-			}
-
-			// Decrypt exactly one block of ciphertext.
-			//  in         - The ciphertext.
-			//  result     - The plaintext generated from a ciphertext using the session key.
-			//  result_len - The length of the buffer 'result' in bytes
-			// Note: in-place decryption *is* supported
-			void DecryptBlock(char const* in, char* result)
-			{
-				if (DEFAULT_BLOCK_SIZE == m_block_size)
-				{
-					DefDecryptBlock(in, result);
-					return;
-				}
-
-				size_t block_count_in_words = m_block_size / 4;
-				int SC = block_count_in_words == 4 ? 0 : (block_count_in_words == 6 ? 1 : 2);
-				int s1 = sm_shifts(SC,1,1);
-				int s2 = sm_shifts(SC,2,1);
-				int s3 = sm_shifts(SC,3,1);
-
-				int* pi = t;
-				for (size_t i = 0; i < block_count_in_words; i++)
-				{
-					*pi       = ((unsigned char)*(in++) << 24);
-					*pi      |= ((unsigned char)*(in++) << 16);
-					*pi      |= ((unsigned char)*(in++) <<  8);
-					(*(pi++) |=  (unsigned char)*(in++)) ^= m_Kd[0][i];
-				}
-
-				// Apply Round Transforms
-				for (size_t r = 1; r < m_rounds; r++)
-				{
-					for (size_t i = 0; i < block_count_in_words; i++)
-					{
-						a[i] = (
-							sm_T5((t[(i     )                       ] >> 24) & 0xFF) ^
-							sm_T6((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^
-							sm_T7((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^
-							sm_T8((t[(i + s3) % block_count_in_words]      ) & 0xFF) ) ^ m_Kd[r][i];
-					}
-					memcpy(t, a, 4*block_count_in_words);
-				}
-
-				// Last Round is Special
-				for (size_t i = 0, j = 0; i < block_count_in_words; i++)
-				{
-					int tt = m_Kd[m_rounds][i];
-					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i     )                       ] >> 24) & 0xFF) ^ (tt >> 24)));
-					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s1) % block_count_in_words] >> 16) & 0xFF) ^ (tt >> 16)));
-					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s2) % block_count_in_words] >>  8) & 0xFF) ^ (tt >>  8)));
-					result[j++] = static_cast<char>(0xff & (sm_Si((t[(i + s3) % block_count_in_words]      ) & 0xFF) ^ (tt      )));
-				}
-			}
-
-			// Encrypt a string.
-			//  result     - The buffer that receives the encrypted text
-			//  len        - The size in bytes of 'in' and 'result'. Must be a multiple of the block size
-			//  mode       - The encryption mode to use
-			// Note: in-place decryption *is* supported for ECB mode
-			void Encrypt(char const* in, char* result, size_t len, EMode mode=EMode::ECB)
-			{
-				assert(((len % m_block_size) == 0) && "Data not multiple of Block Size");
-
-				char const* pin = in;
-				char* presult = result;
-				switch (mode)
-				{
-				default:
-					{
-						assert(false && "Unknown encryption mode");
-						break;
-					}
-				case EMode::CBC: //CBC mode, using the Chain
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							Xor(m_chain, pin);
-							EncryptBlock(m_chain, presult);
-							memcpy(m_chain, presult, m_block_size);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				case EMode::CFB: //CFB mode, using the Chain
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							EncryptBlock(m_chain, presult);
-							Xor(presult, pin);
-							memcpy(m_chain, presult, m_block_size);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				case EMode::ECB: //ECB mode, not using the Chain
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							EncryptBlock(pin, presult);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				}
-			}
-
-			// Decrypt a string.
-			//  in         - The encrypt string data
-			//  result     - The buffer that receives the decrypted text
-			//  len        - The size in bytes of 'in' and 'result'. Must be a multiple of 'm_block_size'
-			//  mode       - The encryption mode used.
-			// Note: in-place decryption *is* supported for ECB mode
-			void Decrypt(char const* in, char* result, size_t len, EMode mode=EMode::ECB)
-			{
-				assert(((len % m_block_size) == 0) && "Data not multiple of Block Size");
-
-				char const* pin = in;
-				char* presult = result;
-				switch (mode)
-				{
-				default:
-					{
-						assert(false && "Unknown encryption mode");
-						break;
-					}
-				case EMode::CBC: //CBC mode, using the Chain
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							DecryptBlock(pin, presult);
-							Xor(presult, m_chain);
-							memcpy(m_chain, pin, m_block_size);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				case EMode::CFB: //CFB mode, using the Chain, not using Decrypt()
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							EncryptBlock(m_chain, presult);
-							Xor(presult, pin);
-							memcpy(m_chain, pin, m_block_size);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				case EMode::ECB: //ECB mode, not using the Chain
-					{
-						for (size_t i = 0, iend = len / m_block_size; i != iend; ++i)
-						{
-							DecryptBlock(pin, presult);
-							pin += m_block_size;
-							presult += m_block_size;
-						}
-						break;
-					}
-				}
-			}
-
 			// Key Length
-			size_t KeyLength() const
+			int KeyLength() const
 			{
 				return m_key_length;
 			}
 
 			// Block Size
-			size_t BlockSize() const
+			int BlockSize() const
 			{
-				return m_block_size;
+				return BLOCK_SIZE;
 			}
 
 			// Number of Rounds
-			size_t Rounds() const
+			int Rounds() const
 			{
 				return m_rounds;
 			}
 
-			// Reset the chain when using CBC or CFB
-			void ResetChain()
+			// Encrypt data.
+			//  in     - The source data to be encrypted
+			//  result - The buffer that receives the encrypted data. In-place encryption is supported for ECB mode, 'result' can alias 'in'
+			//  len    - The size in bytes of 'in' and 'result'. Must be a multiple of the block size
+			//  mode   - The encryption mode to use
+			//  chain  - Required for CBC or CFB modes. A chain instance should be used to encrypt successive blocks of data.
+			void Encrypt(byte const* in, byte* result, size_t len, EMode mode = EMode::ECB, Chain* chain = nullptr)
 			{
-				memcpy(m_chain, m_chain0, m_block_size);
+				if ((len % BLOCK_SIZE) != 0)
+					throw std::exception("Data length is not a multiple of the block size");
+				if (mode != EMode::ECB && chain == nullptr)
+					throw std::exception("A chain instance is required for this encryption mode");
+				if (mode != EMode::ECB && in == result)
+					throw std::exception("Inplace encryption is only support for ECB mode");
+
+				auto src = in;
+				auto dst = result;
+				switch (mode)
+				{
+				default:
+					{
+						throw std::exception("Unknown encryption mode");
+					}
+				case EMode::ECB: //ECB mode, not using the Chain
+					{
+						for (int i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							EncryptBlock<BLOCK_SIZE>(src, dst);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				case EMode::CBC: //CBC mode, using the Chain
+					{
+						for (size_t i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							Xor(chain->m_buf, src);
+							EncryptBlock<BLOCK_SIZE>(chain->m_buf, dst);
+							memcpy(chain->m_buf, dst, BLOCK_SIZE);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				case EMode::CFB: //CFB mode, using the Chain
+					{
+						for (size_t i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							EncryptBlock<BLOCK_SIZE>(chain->m_buf, dst);
+							Xor(dst, src);
+							memcpy(chain->m_buf, dst, BLOCK_SIZE);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				}
+			}
+
+			// Decrypt data.
+			//  in      - The source data to be decrypted
+			//  result  - The buffer that receives the decrypted data. In-plane decryption is supported for ECB mode, 'result' can alias 'in'
+			//  len     - The size in bytes of 'in' and 'result'. Must be a multiple of the block size
+			//  mode    - The encryption mode to use
+			//  chain   - Required for CBC or CFB modes. A chain instance should be used to decrypt successive blocks of data.
+			void Decrypt(byte const* in, byte* result, size_t len, EMode mode = EMode::ECB, Chain* chain = nullptr)
+			{
+				if ((len % BLOCK_SIZE) != 0)
+					throw std::exception("Data length is not multiple of the block size");
+				if (mode != EMode::ECB && chain == nullptr)
+					throw std::exception("A chain instance is required for this decryption mode");
+				if (mode != EMode::ECB && in == result)
+					throw std::exception("Inplace decryption is only support for ECB mode");
+
+				auto src = in;
+				auto dst = result;
+				switch (mode)
+				{
+				default:
+					{
+						throw std::exception("Unknown encryption mode");
+					}
+				case EMode::ECB: //ECB mode, not using the Chain
+					{
+						for (int i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							DecryptBlock<BLOCK_SIZE>(src, dst);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				case EMode::CBC: //CBC mode, using the Chain
+					{
+						for (size_t i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							DecryptBlock<BLOCK_SIZE>(src, dst);
+							Xor(dst, chain->m_buf);
+							memcpy(chain->m_buf, src, BLOCK_SIZE);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				case EMode::CFB: //CFB mode, using the Chain
+					{
+						for (size_t i = 0, iend = (int)len / BLOCK_SIZE; i != iend; ++i)
+						{
+							// Note: not using Decrypt(), this is not a bug
+							EncryptBlock<BLOCK_SIZE>(chain->m_buf, dst);
+							Xor(dst, src);
+							memcpy(chain->m_buf, src, BLOCK_SIZE);
+							src += BLOCK_SIZE;
+							dst += BLOCK_SIZE;
+						}
+						break;
+					}
+				}
 			}
 		};
 	}
@@ -1613,46 +1599,577 @@ namespace pr
 	{
 		PRUnitTest(pr_crypt_rijndeal)
 		{
-			{
-				char const src_[] = "0123456789abcdef";
-				char out_[sizeof(src_)] = {};
-				char ret_[sizeof(src_)] = {};
+			using namespace pr::crypt;
+			typedef unsigned char byte;
 
-				char const key[17] = "abcdefghabcdefgh"; // 128bit
-				pr::crypt::Rijndael rijndael(key);
-				rijndael.EncryptBlock(src_, out_);
-				rijndael.DecryptBlock(out_, ret_);
-				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) == 0, true);
+			byte const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
+			byte const data[] = {"Paul was here. Here's some data to be encrypted. 1234567890abcde"};
+			byte enc[sizeof(data)] = {};
+			byte dec[sizeof(data)] = {};
+
+			{// Test ECB mode
+				for (auto keysize : {16,24,32})
+				{
+					Rijndael rj(key, keysize);
+					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
+
+					rj.Encrypt(data, enc, len, Rijndael::EMode::ECB);
+					rj.Decrypt(enc, dec, len, Rijndael::EMode::ECB);
+					PR_CHECK(memcmp(data, enc, len) != 0, true);
+					PR_CHECK(memcmp(data, dec, len) == 0, true);
+				}
 			}
-			{
-				const int block_size = 16;
-				char src_[block_size * 9];
-				char out_[sizeof(src_)] = {};
-				char ret_[sizeof(src_)] = {};
-				for (int i = 0; i != sizeof(src_); ++i)
-					src_[i] = char(i % 256);
+			{// Test ECB in-place mode
+				for (auto keysize : {16,24,32})
+				{
+					Rijndael rj(key, keysize);
+					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
 
-				char const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
-				pr::crypt::Rijndael rijndael(key, 32, block_size);
-				rijndael.Encrypt(src_, out_, sizeof(src_));
-				rijndael.Decrypt(out_, ret_, sizeof(src_));
-				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) == 0, true);
+					memcpy(enc, data, sizeof(data));
+					rj.Encrypt(enc, enc, len, Rijndael::EMode::ECB);
+					PR_CHECK(memcmp(data, enc, len) != 0, true);
+					rj.Decrypt(enc, enc, len, Rijndael::EMode::ECB);
+					PR_CHECK(memcmp(data, enc, len) == 0, true);
+				}
 			}
-			{// In-place encryption/decryption
-				const int block_size = 16;
-				char src_[block_size * 30];
-				char ret_[sizeof(src_)] = {};
-				for (int i = 0; i != sizeof(src_); ++i)
-					src_[i] = ret_[i] = char(i % 256);
+			{// Test CBC and CFB modes
+				for (auto mode : {Rijndael::EMode::CBC, Rijndael::EMode::CFB})
+				for (auto keysize : {16,24,32})
+				{
+					Rijndael rj(key, keysize);
+					auto len = rj.BlockSize() * (sizeof(data) / rj.BlockSize());
 
-				char const key[33] = "PaulRulz!!OhYeah!!InYourFacePunk"; // 256bit
-				pr::crypt::Rijndael rijndael(key, 32, block_size);
-				rijndael.Encrypt(ret_, ret_, sizeof(src_));
-				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) != 0, true);
-				rijndael.Decrypt(ret_, ret_, sizeof(src_));
-				PR_CHECK(memcmp(src_, ret_, sizeof(src_)) == 0, true);
+					{
+						Rijndael::Chain chain;
+						rj.Encrypt(data, enc, len, mode, &chain);
+					}
+					{
+						Rijndael::Chain chain;
+						rj.Decrypt(enc, dec, len, mode, &chain);
+					}
+					PR_CHECK(memcmp(data, enc, len) != 0, true);
+					PR_CHECK(memcmp(data, dec, len) == 0, true);
+				}
 			}
 		}
 	}
 }
 #endif
+
+
+
+
+
+			//// Multiply two elements of GF(2^m)
+			//static int Mul(int a, int b)
+			//{
+			//	return (a != 0 && b != 0) ? sm_alog((sm_log(a & 0xFF) + sm_log(b & 0xFF)) % 0xFF) : 0;
+			//}
+
+			//// Convenience method used in generating Transposition Boxes
+			//static int Mul4(int a, char b[])
+			//{
+			//	if (a == 0) return 0;
+			//	a = sm_log(a & 0xFF);
+			//	int a0 = (b[0] != 0) ? sm_alog((a + sm_log(b[0] & 0xFF)) % 255) & 0xFF : 0;
+			//	int a1 = (b[1] != 0) ? sm_alog((a + sm_log(b[1] & 0xFF)) % 255) & 0xFF : 0;
+			//	int a2 = (b[2] != 0) ? sm_alog((a + sm_log(b[2] & 0xFF)) % 255) & 0xFF : 0;
+			//	int a3 = (b[3] != 0) ? sm_alog((a + sm_log(b[3] & 0xFF)) % 255) & 0xFF : 0;
+			//	return a0 << 24 | a1 << 16 | a2 << 8 | a3;
+			//}
+
+
+
+///*	$OpenBSD: rijndael.c,v 1.2 2000/10/15 14:14:01 markus Exp $	*/
+//
+///* This is an independent implementation of the encryption algorithm:   */
+///*                                                                      */
+///*         RIJNDAEL by Joan Daemen and Vincent Rijmen                   */
+///*                                                                      */
+///* which is a candidate algorithm in the Advanced Encryption Standard   */
+///* programme of the US National Institute of Standards and Technology.  */
+///*                                                                      */
+///* Copyright in this implementation is held by Dr B R Gladman but I     */
+///* hereby give permission for its free direct or derivative use subject */
+///* to acknowledgment of its origin and compliance with any conditions   */
+///* that the originators of the algorithm place on its exploitation.     */
+///*                                                                      */
+///* Dr Brian Gladman (gladman@seven77.demon.co.uk) 14th January 1999     */
+//
+///* Timing data for Rijndael (rijndael.c)
+//
+//Algorithm: rijndael (rijndael.c)
+//
+//128 bit key:
+//Key Setup:    305/1389 cycles (encrypt/decrypt)
+//Encrypt:       374 cycles =    68.4 mbits/sec
+//Decrypt:       352 cycles =    72.7 mbits/sec
+//Mean:          363 cycles =    70.5 mbits/sec
+//
+//192 bit key:
+//Key Setup:    277/1595 cycles (encrypt/decrypt)
+//Encrypt:       439 cycles =    58.3 mbits/sec
+//Decrypt:       425 cycles =    60.2 mbits/sec
+//Mean:          432 cycles =    59.3 mbits/sec
+//
+//256 bit key:
+//Key Setup:    374/1960 cycles (encrypt/decrypt)
+//Encrypt:       502 cycles =    51.0 mbits/sec
+//Decrypt:       498 cycles =    51.4 mbits/sec
+//Mean:          500 cycles =    51.2 mbits/sec
+//
+//*/
+//
+//#include "config.h"
+//#include "rijndael.h"
+//
+//void gen_tabs	__P((void));
+//
+///* 3. Basic macros for speeding up generic operations               */
+//
+///* Circular rotate of 32 bit values                                 */
+//
+//#define rotr(x,n)   (((x) >> ((int)(n))) | ((x) << (32 - (int)(n))))
+//#define rotl(x,n)   (((x) << ((int)(n))) | ((x) >> (32 - (int)(n))))
+//
+///* Invert byte order in a 32 bit variable                           */
+//
+//#define bswap(x)    (rotl(x, 8) & 0x00ff00ff | rotr(x, 8) & 0xff00ff00)
+//
+///* Extract byte from a 32 bit quantity (little endian notation)     */ 
+//
+//#define byte(x,n)   ((u1byte)((x) >> (8 * n)))
+//
+//#if BYTE_ORDER != LITTLE_ENDIAN
+//#define BLOCK_SWAP
+//#endif
+//
+///* For inverting byte order in input/output 32 bit words if needed  */
+//
+//#ifdef  BLOCK_SWAP
+//#define BYTE_SWAP
+//#define WORD_SWAP
+//#endif
+//
+//#ifdef  BYTE_SWAP
+//#define io_swap(x)  bswap(x)
+//#else
+//#define io_swap(x)  (x)
+//#endif
+//
+///* For inverting the byte order of input/output blocks if needed    */
+//
+//#ifdef  WORD_SWAP
+//
+//#define get_block(x)                            \
+//    ((u4byte*)(x))[0] = io_swap(in_blk[3]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_blk[2]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_blk[1]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_blk[0])
+//
+//#define put_block(x)                            \
+//    out_blk[3] = io_swap(((u4byte*)(x))[0]);    \
+//    out_blk[2] = io_swap(((u4byte*)(x))[1]);    \
+//    out_blk[1] = io_swap(((u4byte*)(x))[2]);    \
+//    out_blk[0] = io_swap(((u4byte*)(x))[3])
+//
+//#define get_key(x,len)                          \
+//    ((u4byte*)(x))[4] = ((u4byte*)(x))[5] =     \
+//    ((u4byte*)(x))[6] = ((u4byte*)(x))[7] = 0;  \
+//    switch((((len) + 63) / 64)) {               \
+//    case 2:                                     \
+//    ((u4byte*)(x))[0] = io_swap(in_key[3]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_key[2]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_key[1]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_key[0]);     \
+//    break;                                      \
+//    case 3:                                     \
+//    ((u4byte*)(x))[0] = io_swap(in_key[5]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_key[4]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_key[3]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_key[2]);     \
+//    ((u4byte*)(x))[4] = io_swap(in_key[1]);     \
+//    ((u4byte*)(x))[5] = io_swap(in_key[0]);     \
+//    break;                                      \
+//    case 4:                                     \
+//    ((u4byte*)(x))[0] = io_swap(in_key[7]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_key[6]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_key[5]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_key[4]);     \
+//    ((u4byte*)(x))[4] = io_swap(in_key[3]);     \
+//    ((u4byte*)(x))[5] = io_swap(in_key[2]);     \
+//    ((u4byte*)(x))[6] = io_swap(in_key[1]);     \
+//    ((u4byte*)(x))[7] = io_swap(in_key[0]);     \
+//    }
+//
+//#else
+//
+//#define get_block(x)                            \
+//    ((u4byte*)(x))[0] = io_swap(in_blk[0]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_blk[1]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_blk[2]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_blk[3])
+//
+//#define put_block(x)                            \
+//    out_blk[0] = io_swap(((u4byte*)(x))[0]);    \
+//    out_blk[1] = io_swap(((u4byte*)(x))[1]);    \
+//    out_blk[2] = io_swap(((u4byte*)(x))[2]);    \
+//    out_blk[3] = io_swap(((u4byte*)(x))[3])
+//
+//#define get_key(x,len)                          \
+//    ((u4byte*)(x))[4] = ((u4byte*)(x))[5] =     \
+//    ((u4byte*)(x))[6] = ((u4byte*)(x))[7] = 0;  \
+//    switch((((len) + 63) / 64)) {               \
+//    case 4:                                     \
+//    ((u4byte*)(x))[6] = io_swap(in_key[6]);     \
+//    ((u4byte*)(x))[7] = io_swap(in_key[7]);     \
+//    case 3:                                     \
+//    ((u4byte*)(x))[4] = io_swap(in_key[4]);     \
+//    ((u4byte*)(x))[5] = io_swap(in_key[5]);     \
+//    case 2:                                     \
+//    ((u4byte*)(x))[0] = io_swap(in_key[0]);     \
+//    ((u4byte*)(x))[1] = io_swap(in_key[1]);     \
+//    ((u4byte*)(x))[2] = io_swap(in_key[2]);     \
+//    ((u4byte*)(x))[3] = io_swap(in_key[3]);     \
+//    }
+//
+//#endif
+//
+//#define LARGE_TABLES
+//
+//u1byte  pow_tab[256];
+//u1byte  log_tab[256];
+//u1byte  sbx_tab[256];
+//u1byte  isb_tab[256];
+//u4byte  rco_tab[ 10];
+//u4byte  ft_tab[4][256];
+//u4byte  it_tab[4][256];
+//
+//#ifdef  LARGE_TABLES
+//  u4byte  fl_tab[4][256];
+//  u4byte  il_tab[4][256];
+//#endif
+//
+//u4byte  tab_gen = 0;
+//
+//#define ff_mult(a,b)    (a && b ? pow_tab[(log_tab[a] + log_tab[b]) % 255] : 0)
+//
+//#define f_rn(bo, bi, n, k)                          \
+//    bo[n] =  ft_tab[0][byte(bi[n],0)] ^             \
+//             ft_tab[1][byte(bi[(n + 1) & 3],1)] ^   \
+//             ft_tab[2][byte(bi[(n + 2) & 3],2)] ^   \
+//             ft_tab[3][byte(bi[(n + 3) & 3],3)] ^ *(k + n)
+//
+//#define i_rn(bo, bi, n, k)                          \
+//    bo[n] =  it_tab[0][byte(bi[n],0)] ^             \
+//             it_tab[1][byte(bi[(n + 3) & 3],1)] ^   \
+//             it_tab[2][byte(bi[(n + 2) & 3],2)] ^   \
+//             it_tab[3][byte(bi[(n + 1) & 3],3)] ^ *(k + n)
+//
+//#ifdef LARGE_TABLES
+//
+//#define ls_box(x)                \
+//    ( fl_tab[0][byte(x, 0)] ^    \
+//      fl_tab[1][byte(x, 1)] ^    \
+//      fl_tab[2][byte(x, 2)] ^    \
+//      fl_tab[3][byte(x, 3)] )
+//
+//#define f_rl(bo, bi, n, k)                          \
+//    bo[n] =  fl_tab[0][byte(bi[n],0)] ^             \
+//             fl_tab[1][byte(bi[(n + 1) & 3],1)] ^   \
+//             fl_tab[2][byte(bi[(n + 2) & 3],2)] ^   \
+//             fl_tab[3][byte(bi[(n + 3) & 3],3)] ^ *(k + n)
+//
+//#define i_rl(bo, bi, n, k)                          \
+//    bo[n] =  il_tab[0][byte(bi[n],0)] ^             \
+//             il_tab[1][byte(bi[(n + 3) & 3],1)] ^   \
+//             il_tab[2][byte(bi[(n + 2) & 3],2)] ^   \
+//             il_tab[3][byte(bi[(n + 1) & 3],3)] ^ *(k + n)
+//
+//#else
+//
+//#define ls_box(x)                            \
+//    ((u4byte)sbx_tab[byte(x, 0)] <<  0) ^    \
+//    ((u4byte)sbx_tab[byte(x, 1)] <<  8) ^    \
+//    ((u4byte)sbx_tab[byte(x, 2)] << 16) ^    \
+//    ((u4byte)sbx_tab[byte(x, 3)] << 24)
+//
+//#define f_rl(bo, bi, n, k)                                      \
+//    bo[n] = (u4byte)sbx_tab[byte(bi[n],0)] ^                    \
+//        rotl(((u4byte)sbx_tab[byte(bi[(n + 1) & 3],1)]),  8) ^  \
+//        rotl(((u4byte)sbx_tab[byte(bi[(n + 2) & 3],2)]), 16) ^  \
+//        rotl(((u4byte)sbx_tab[byte(bi[(n + 3) & 3],3)]), 24) ^ *(k + n)
+//
+//#define i_rl(bo, bi, n, k)                                      \
+//    bo[n] = (u4byte)isb_tab[byte(bi[n],0)] ^                    \
+//        rotl(((u4byte)isb_tab[byte(bi[(n + 3) & 3],1)]),  8) ^  \
+//        rotl(((u4byte)isb_tab[byte(bi[(n + 2) & 3],2)]), 16) ^  \
+//        rotl(((u4byte)isb_tab[byte(bi[(n + 1) & 3],3)]), 24) ^ *(k + n)
+//
+//#endif
+//
+//void
+//gen_tabs(void)
+//{
+//	u4byte  i, t;
+//	u1byte  p, q;
+//
+//	/* log and power tables for GF(2**8) finite field with  */
+//	/* 0x11b as modular polynomial - the simplest prmitive  */
+//	/* root is 0x11, used here to generate the tables       */
+//
+//	for(i = 0,p = 1; i < 256; ++i) {
+//		pow_tab[i] = (u1byte)p; log_tab[p] = (u1byte)i;
+//
+//		p = p ^ (p << 1) ^ (p & 0x80 ? 0x01b : 0);
+//	}
+//
+//	log_tab[1] = 0; p = 1;
+//
+//	for(i = 0; i < 10; ++i) {
+//		rco_tab[i] = p; 
+//
+//		p = (p << 1) ^ (p & 0x80 ? 0x1b : 0);
+//	}
+//
+//	/* note that the affine byte transformation matrix in   */
+//	/* rijndael specification is in big endian format with  */
+//	/* bit 0 as the most significant bit. In the remainder  */
+//	/* of the specification the bits are numbered from the  */
+//	/* least significant end of a byte.                     */
+//
+//	for(i = 0; i < 256; ++i) {
+//		p = (i ? pow_tab[255 - log_tab[i]] : 0); q = p; 
+//		q = (q >> 7) | (q << 1); p ^= q; 
+//		q = (q >> 7) | (q << 1); p ^= q; 
+//		q = (q >> 7) | (q << 1); p ^= q; 
+//		q = (q >> 7) | (q << 1); p ^= q ^ 0x63; 
+//		sbx_tab[i] = (u1byte)p; isb_tab[p] = (u1byte)i;
+//	}
+//
+//	for(i = 0; i < 256; ++i) {
+//		p = sbx_tab[i]; 
+//
+//#ifdef  LARGE_TABLES        
+//        
+//		t = p; fl_tab[0][i] = t;
+//		fl_tab[1][i] = rotl(t,  8);
+//		fl_tab[2][i] = rotl(t, 16);
+//		fl_tab[3][i] = rotl(t, 24);
+//#endif
+//		t = ((u4byte)ff_mult(2, p)) |
+//			((u4byte)p <<  8) |
+//			((u4byte)p << 16) |
+//			((u4byte)ff_mult(3, p) << 24);
+//        
+//		ft_tab[0][i] = t;
+//		ft_tab[1][i] = rotl(t,  8);
+//		ft_tab[2][i] = rotl(t, 16);
+//		ft_tab[3][i] = rotl(t, 24);
+//
+//		p = isb_tab[i]; 
+//
+//#ifdef  LARGE_TABLES        
+//        
+//		t = p; il_tab[0][i] = t; 
+//		il_tab[1][i] = rotl(t,  8); 
+//		il_tab[2][i] = rotl(t, 16); 
+//		il_tab[3][i] = rotl(t, 24);
+//#endif 
+//		t = ((u4byte)ff_mult(14, p)) |
+//			((u4byte)ff_mult( 9, p) <<  8) |
+//			((u4byte)ff_mult(13, p) << 16) |
+//			((u4byte)ff_mult(11, p) << 24);
+//        
+//		it_tab[0][i] = t; 
+//		it_tab[1][i] = rotl(t,  8); 
+//		it_tab[2][i] = rotl(t, 16); 
+//		it_tab[3][i] = rotl(t, 24); 
+//	}
+//
+//	tab_gen = 1;
+//}
+//
+//#define star_x(x) (((x) & 0x7f7f7f7f) << 1) ^ ((((x) & 0x80808080) >> 7) * 0x1b)
+//
+//#define imix_col(y,x)       \
+//    u   = star_x(x);        \
+//    v   = star_x(u);        \
+//    w   = star_x(v);        \
+//    t   = w ^ (x);          \
+//   (y)  = u ^ v ^ w;        \
+//   (y) ^= rotr(u ^ t,  8) ^ \
+//          rotr(v ^ t, 16) ^ \
+//          rotr(t,24)
+//
+///* initialise the key schedule from the user supplied key   */
+//
+//#define loop4(i)                                    \
+//{   t = ls_box(rotr(t,  8)) ^ rco_tab[i];           \
+//    t ^= e_key[4 * i];     e_key[4 * i + 4] = t;    \
+//    t ^= e_key[4 * i + 1]; e_key[4 * i + 5] = t;    \
+//    t ^= e_key[4 * i + 2]; e_key[4 * i + 6] = t;    \
+//    t ^= e_key[4 * i + 3]; e_key[4 * i + 7] = t;    \
+//}
+//
+//#define loop6(i)                                    \
+//{   t = ls_box(rotr(t,  8)) ^ rco_tab[i];           \
+//    t ^= e_key[6 * i];     e_key[6 * i + 6] = t;    \
+//    t ^= e_key[6 * i + 1]; e_key[6 * i + 7] = t;    \
+//    t ^= e_key[6 * i + 2]; e_key[6 * i + 8] = t;    \
+//    t ^= e_key[6 * i + 3]; e_key[6 * i + 9] = t;    \
+//    t ^= e_key[6 * i + 4]; e_key[6 * i + 10] = t;   \
+//    t ^= e_key[6 * i + 5]; e_key[6 * i + 11] = t;   \
+//}
+//
+//#define loop8(i)                                    \
+//{   t = ls_box(rotr(t,  8)) ^ rco_tab[i];           \
+//    t ^= e_key[8 * i];     e_key[8 * i + 8] = t;    \
+//    t ^= e_key[8 * i + 1]; e_key[8 * i + 9] = t;    \
+//    t ^= e_key[8 * i + 2]; e_key[8 * i + 10] = t;   \
+//    t ^= e_key[8 * i + 3]; e_key[8 * i + 11] = t;   \
+//    t  = e_key[8 * i + 4] ^ ls_box(t);              \
+//    e_key[8 * i + 12] = t;                          \
+//    t ^= e_key[8 * i + 5]; e_key[8 * i + 13] = t;   \
+//    t ^= e_key[8 * i + 6]; e_key[8 * i + 14] = t;   \
+//    t ^= e_key[8 * i + 7]; e_key[8 * i + 15] = t;   \
+//}
+//
+//rijndael_ctx *
+//rijndael_set_key(rijndael_ctx *ctx, const u4byte *in_key, const u4byte key_len,
+//		 int encrypt)
+//{  
+//	u4byte  i, t, u, v, w;
+//	u4byte *e_key = ctx->e_key;
+//	u4byte *d_key = ctx->d_key;
+//
+//	ctx->decrypt = !encrypt;
+//
+//	if(!tab_gen)
+//		gen_tabs();
+//
+//	ctx->k_len = (key_len + 31) / 32;
+//
+//	e_key[0] = in_key[0]; e_key[1] = in_key[1];
+//	e_key[2] = in_key[2]; e_key[3] = in_key[3];
+//	
+//	switch(ctx->k_len) {
+//        case 4: t = e_key[3];
+//                for(i = 0; i < 10; ++i) 
+//			loop4(i);
+//                break;
+//
+//        case 6: e_key[4] = in_key[4]; t = e_key[5] = in_key[5];
+//                for(i = 0; i < 8; ++i) 
+//			loop6(i);
+//                break;
+//
+//        case 8: e_key[4] = in_key[4]; e_key[5] = in_key[5];
+//                e_key[6] = in_key[6]; t = e_key[7] = in_key[7];
+//                for(i = 0; i < 7; ++i) 
+//			loop8(i);
+//                break;
+//	}
+//
+//	if (!encrypt) {
+//		d_key[0] = e_key[0]; d_key[1] = e_key[1];
+//		d_key[2] = e_key[2]; d_key[3] = e_key[3];
+//
+//		for(i = 4; i < 4 * ctx->k_len + 24; ++i) {
+//			imix_col(d_key[i], e_key[i]);
+//		}
+//	}
+//
+//	return ctx;
+//}
+//
+///* encrypt a block of text  */
+//
+//#define f_nround(bo, bi, k) \
+//    f_rn(bo, bi, 0, k);     \
+//    f_rn(bo, bi, 1, k);     \
+//    f_rn(bo, bi, 2, k);     \
+//    f_rn(bo, bi, 3, k);     \
+//    k += 4
+//
+//#define f_lround(bo, bi, k) \
+//    f_rl(bo, bi, 0, k);     \
+//    f_rl(bo, bi, 1, k);     \
+//    f_rl(bo, bi, 2, k);     \
+//    f_rl(bo, bi, 3, k)
+//
+//void
+//rijndael_encrypt(rijndael_ctx *ctx, const u4byte *in_blk, u4byte *out_blk)
+//{   
+//	u4byte k_len = ctx->k_len;
+//	u4byte *e_key = ctx->e_key;
+//	u4byte  b0[4], b1[4], *kp;
+//
+//	b0[0] = in_blk[0] ^ e_key[0]; b0[1] = in_blk[1] ^ e_key[1];
+//	b0[2] = in_blk[2] ^ e_key[2]; b0[3] = in_blk[3] ^ e_key[3];
+//
+//	kp = e_key + 4;
+//
+//	if(k_len > 6) {
+//		f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	}
+//
+//	if(k_len > 4) {
+//		f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	}
+//
+//	f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	f_nround(b1, b0, kp); f_nround(b0, b1, kp);
+//	f_nround(b1, b0, kp); f_lround(b0, b1, kp);
+//
+//	out_blk[0] = b0[0]; out_blk[1] = b0[1];
+//	out_blk[2] = b0[2]; out_blk[3] = b0[3];
+//}
+//
+///* decrypt a block of text  */
+//
+//#define i_nround(bo, bi, k) \
+//    i_rn(bo, bi, 0, k);     \
+//    i_rn(bo, bi, 1, k);     \
+//    i_rn(bo, bi, 2, k);     \
+//    i_rn(bo, bi, 3, k);     \
+//    k -= 4
+//
+//#define i_lround(bo, bi, k) \
+//    i_rl(bo, bi, 0, k);     \
+//    i_rl(bo, bi, 1, k);     \
+//    i_rl(bo, bi, 2, k);     \
+//    i_rl(bo, bi, 3, k)
+//
+//void
+//rijndael_decrypt(rijndael_ctx *ctx, const u4byte *in_blk, u4byte *out_blk)
+//{  
+//	u4byte  b0[4], b1[4], *kp;
+//	u4byte k_len = ctx->k_len;
+//	u4byte *e_key = ctx->e_key;
+//	u4byte *d_key = ctx->d_key;
+//
+//	b0[0] = in_blk[0] ^ e_key[4 * k_len + 24]; b0[1] = in_blk[1] ^ e_key[4 * k_len + 25];
+//	b0[2] = in_blk[2] ^ e_key[4 * k_len + 26]; b0[3] = in_blk[3] ^ e_key[4 * k_len + 27];
+//
+//	kp = d_key + 4 * (k_len + 5);
+//
+//	if(k_len > 6) {
+//		i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	}
+//
+//	if(k_len > 4) {
+//		i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	}
+//
+//	i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	i_nround(b1, b0, kp); i_nround(b0, b1, kp);
+//	i_nround(b1, b0, kp); i_lround(b0, b1, kp);
+//
+//	out_blk[0] = b0[0]; out_blk[1] = b0[1];
+//	out_blk[2] = b0[2]; out_blk[3] = b0[3];
+//}
