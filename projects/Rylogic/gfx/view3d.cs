@@ -553,7 +553,7 @@ namespace pr.gfx
 				m_view        = view;
 				m_render_cb   = render_cb;
 				m_settings_cb = () => OnSettingsChanged.Raise(this, EventArgs.Empty);
-				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.FromMilliseconds(5)){TriggerOnFirst = false};
+				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.FromMilliseconds(5)){TriggerOnFirst = false, Priority = System.Windows.Threading.DispatcherPriority.Render};
 
 				// Create the window
 				string error_msg = null;
@@ -597,6 +597,20 @@ namespace pr.gfx
 			public void SignalRefresh()
 			{
 				m_eb_refresh.Signal();
+			}
+
+			/// <summary>Get/Set whether calling SignalRefresh causes a redraw immediately</summary>
+			public bool RefreshOnFirstSignal
+			{
+				get { return m_eb_refresh.TriggerOnFirst; }
+				set { m_eb_refresh.TriggerOnFirst = value; }
+			}
+
+			/// <summary>Get/Set how long to batch 'SignalRefresh' calls for before actually doing the refresh</summary>
+			public TimeSpan RefreshSignalBatchTime
+			{
+				get { return m_eb_refresh.Delay; }
+				set { m_eb_refresh.Delay = value; }
 			}
 
 			/// <summary>Triggers the callback to render and present the scene</summary>
@@ -1480,6 +1494,13 @@ namespace pr.gfx
 							TextChanged.Raise(this);
 						break;
 					}
+
+				case Win32.WM_DESTROY:
+					{
+						// Copy the control text before WM_DESTROY
+						m_text = Text;
+						break;
+					}
 				}
 				
 				if (handled)
@@ -1539,6 +1560,8 @@ namespace pr.gfx
 					using (var str = MarshalEx.AllocAnsiString(text))
 						Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_SETTEXT, IntPtr.Zero, str.State);
 				}
+
+				TextChanged.Raise(this);
 			}
 
 			/// <summary>Clear all text from the control</summary>
@@ -1550,15 +1573,16 @@ namespace pr.gfx
 			/// <summary>Gets the length of the text in the control</summary>
 			public int TextLength
 			{
-				get { return Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
+				get { return m_text != null ? m_text.Length : Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
 			}
 
 			/// <summary>Gets or sets the current text</summary>
 			public string Text
 			{
-				get { return GetText(); }
+				get { return m_text != null ? m_text : GetText(); }
 				set { SetText(value); }
 			}
+			private string m_text;
 
 			/// <summary>Raised when text in the control is changed</summary>
 			public event EventHandler TextChanged;
