@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Linq.Expressions;
+using pr.extn;
 using pr.util;
 
 namespace pr.attrib
@@ -27,6 +28,10 @@ namespace pr.attrib
 	//			double scale = Units.Scale(typeof(Test).GetField("m_speed_mm_p_s"));
 	//		}
 	//	}
+	//
+	// EType.Value0.Label(true);
+	// EType.Value0.Scale();
+	// Units<Test>.Scale(x => x.Mass);
 
 	// A custom attribute for adding units to a value
 	[AttributeUsage(AttributeTargets.Enum|AttributeTargets.Property|AttributeTargets.Field)]
@@ -38,115 +43,92 @@ namespace pr.attrib
 		public UnitsAttribute(string units, double scale)                       { Label = units; Scale = scale; DecimalPlaces = 0; }
 		public UnitsAttribute(string units, double scale, int decimal_places)   { Label = units; Scale = scale; DecimalPlaces = decimal_places; }
 		public string Label                                                     { get; private set; }
+		public string LabelInBrackets                                           { get { return Label.HasValue() ? " ("+Label+")" : string.Empty; } }
 		public double Scale                                                     { get; private set; }
 		public int    DecimalPlaces                                             { get; private set; }
 	}
 
-	// Helper class for accessing the units attribute
 	public static class UnitsAttr
 	{
-		// Return the units attributes for a field
-		public static UnitsAttribute[] Get(FieldInfo fi)             { return fi.GetCustomAttributes(typeof(UnitsAttribute), false) as UnitsAttribute[]; }
-		public static UnitsAttribute[] Get(PropertyInfo pi)          { return pi.GetCustomAttributes(typeof(UnitsAttribute), false) as UnitsAttribute[]; }
-		public static UnitsAttribute[] Get(Type type)                { return type.GetCustomAttributes(typeof(UnitsAttribute), false) as UnitsAttribute[]; }
-		public static UnitsAttribute[] Get(Enum value)               { return Get(value.GetType().GetField(value.ToString())); }
+		/// <summary>Return the UnitsAttribute for an enum value</summary>
+		private static UnitsAttribute GetAttr<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		{
+			var fi = enum_.GetType().GetField(enum_.ToString());
+			return fi.FindAttribute<UnitsAttribute>(false);
+		}
 
-		// Return a string representation of the units
-		// Use: Units.Str(typeof(MyType).GetField("field_name"))
-		private static string Str(UnitsAttribute[] attrs)            { return (attrs == null || attrs.Length == 0) ? "" : attrs[0].Label; }
-		public static string Str(FieldInfo fi)                       { return Str(Get(fi)); }
-		public static string Str(PropertyInfo pi)                    { return Str(Get(pi)); }
-		public static string Str(Type type)                          { return Str(Get(type)); }
-		public static string Str(Enum value)                         { return Str(value.GetType().GetField(value.ToString())); }
+		/// <summary>Returns the unit label associated with an enum value</summary>
+		[DebuggerStepThrough]
+		public static string Label<TEnum>(this TEnum enum_, bool in_brackets = false) where TEnum :struct ,IConvertible
+		{
+			var attr = GetAttr(enum_);
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return in_brackets ? attr.LabelInBrackets : attr.Label;
+		}
 
-		// Return the units string in the form " (units)"
-		private static string StrWithBrackets(string units)          { return string.IsNullOrEmpty(units) ? "" : " ("+units+")"; }
-		public static string StrWithBrackets(FieldInfo fi)           { return StrWithBrackets(Str(fi)); }
-		public static string StrWithBrackets(PropertyInfo pi)        { return StrWithBrackets(Str(pi)); }
-		public static string StrWithBrackets(Type type)              { return StrWithBrackets(Str(type)); }
-		public static string StrWithBrackets(Enum value)             { return StrWithBrackets(value.GetType().GetField(value.ToString())); }
+		/// <summary>Returns the unit scale associated with an enum value</summary>
+		[DebuggerStepThrough]
+		public static double Scale<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		{
+			var attr = GetAttr(enum_);
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return attr.Scale;
+		}
 
-		// Return the scaling factor associated with the units
-		private static double Scale(UnitsAttribute[] attrs)          { return (attrs == null || attrs.Length == 0) ? 1.0 : attrs[0].Scale; }
-		public static double Scale(FieldInfo fi)                     { return Scale(Get(fi)); }
-		public static double Scale(PropertyInfo pi)                  { return Scale(Get(pi)); }
-		public static double Scale(Type type)                        { return Scale(Get(type)); }
-		public static double Scale(Enum value)                       { return Scale(value.GetType().GetField(value.ToString())); }
-
-		// Return the number of decimal places associated with a unit
-		private static int DecimalPlaces(UnitsAttribute[] attrs)     { return (attrs == null || attrs.Length == 0) ? 0 : attrs[0].DecimalPlaces; }
-		public static int DecimalPlaces(FieldInfo fi)                { return DecimalPlaces(Get(fi)); }
-		public static int DecimalPlaces(PropertyInfo pi)             { return DecimalPlaces(Get(pi)); }
-		public static int DecimalPlaces(Type type)                   { return DecimalPlaces(Get(type)); }
-		public static int DecimalPlaces(Enum value)                  { return DecimalPlaces(value.GetType().GetField(value.ToString())); }
+		/// <summary>Returns the unit decimal places associated with an enum value</summary>
+		[DebuggerStepThrough]
+		public static int DecimalPlaces<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		{
+			var attr = GetAttr(enum_);
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return attr.DecimalPlaces;
+		}
 	}
 
 	public static class Units<T>
 	{
-		/// <summary>
-		/// Returns the unit scale of a property from the given lambda expression.
-		/// Example: Units&lt;Thing&gt;.Scale(s => s.Speed)</summary>
+		/// <summary>Returns the unit label associated with a member</summary>
 		[DebuggerStepThrough]
-		public static string Label<Ret>(Expression<Func<T,Ret>> expression)
+		public static string Label<Ret>(Expression<Func<T,Ret>> expression, bool in_brackets = false)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.Label;
+			var attr = Reflect<T>.Units(expression);
+			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
-		/// <summary>
-		/// Derives the name of a property or method from the given lambda expression and returns it as string.
-		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		/// <summary>Returns the unit label associated with a member</summary>
 		[DebuggerStepThrough]
-		public static string Label(Expression<Action<T>> expression)
+		public static string Label(Expression<Action<T>> expression, bool in_brackets = false)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.Label;
+			var attr = Reflect<T>.Units(expression);
+			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
-		/// <summary>
-		/// Returns the unit scale of a property from the given lambda expression.
-		/// Example: Units&lt;Thing&gt;.Scale(s => s.Speed)</summary>
+		/// <summary>Returns the unit scale associated with a member</summary>
 		[DebuggerStepThrough]
 		public static double Scale<Ret>(Expression<Func<T,Ret>> expression)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.Scale;
+			return Reflect<T>.Units(expression).Scale;
 		}
 
-		/// <summary>
-		/// Derives the name of a property or method from the given lambda expression and returns it as string.
-		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		/// <summary>Returns the unit scale associated with a member</summary>
 		[DebuggerStepThrough]
 		public static double Scale(Expression<Action<T>> expression)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.Scale;
+			return Reflect<T>.Units(expression).Scale;
 		}
 
-		/// <summary>
-		/// Returns the unit scale of a property from the given lambda expression.
-		/// Example: Units&lt;Thing&gt;.Scale(s => s.Speed)</summary>
+		/// <summary>Returns the unit decimal places associated with a member</summary>
 		[DebuggerStepThrough]
 		public static int DecimalPlaces<Ret>(Expression<Func<T,Ret>> expression)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.DecimalPlaces;
+			return Reflect<T>.Units(expression).DecimalPlaces;
 		}
 
-		/// <summary>
-		/// Derives the name of a property or method from the given lambda expression and returns it as string.
-		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		/// <summary>Returns the unit decimal places associated with a member</summary>
 		[DebuggerStepThrough]
 		public static int DecimalPlaces(Expression<Action<T>> expression)
 		{
-			var attr = (UnitsAttribute)Reflect<T>.Attrs(expression).FirstOrDefault(x => x is UnitsAttribute);
-			if (attr == null) throw new Exception("Expression result does not have the UnitsAttribute");
-			return attr.DecimalPlaces;
+			return Reflect<T>.Units(expression).DecimalPlaces;
 		}
 	}
 }
