@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using pr.attrib;
 
@@ -55,6 +56,23 @@ namespace pr.util
 			throw new NotImplementedException("Unknown expression type");
 		}
 
+		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
+		public static int SizeOf
+		{
+			[DebuggerStepThrough] get { return Marshal.SizeOf(typeof(T)); }
+		}
+
+		#region Attributes
+
+		/// <summary>Returns an array of attributes associated with the member with name 'member_name'</summary>
+		[DebuggerStepThrough]
+		public static Attribute[] Attrs(string member_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance|BindingFlags.Static)
+		{
+			var member = typeof(T).GetMember(member_name, flags);
+			if (member == null) return new Attribute[0];
+			return member.SelectMany(x => x.GetCustomAttributes(false)).Cast<Attribute>().ToArray();
+		}
+
 		/// <summary>Returns an array of attributes associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
 		public static Attribute[] Attrs<Ret>(Expression<Func<T,Ret>> expression)
@@ -93,6 +111,19 @@ namespace pr.util
 			throw new NotImplementedException("Unknown expression type");
 		}
 
+		#endregion
+
+		#region DescAttribute
+
+		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
+		[DebuggerStepThrough]
+		public static string Desc(string member_name)
+		{
+			var d0 = Attrs(member_name).FirstOrDefault(x => x is DescAttribute) as DescAttribute;
+			if (d0 != null) return d0.Str;
+			return null;
+		}
+
 		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
 		public static string Desc<Ret>(Expression<Func<T,Ret>> expression)
@@ -104,7 +135,7 @@ namespace pr.util
 			return null;
 		}
 
-		/// <summary>Returns an array of attributes associated with the return type of 'expression'</summary>
+		/// <summary>Returns a string description from the DescAttribute or DescriptionAttribute associated with the return type of 'expression'</summary>
 		[DebuggerStepThrough]
 		public static string Desc(Expression<Action<T>> expression)
 		{
@@ -115,11 +146,37 @@ namespace pr.util
 			return null;
 		}
 
-		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
-		public static int SizeOf
+		#endregion
+
+		#region UnitsAttribute
+
+		[DebuggerStepThrough]
+		public static UnitsAttribute Units(string member_name)
 		{
-			get { return Marshal.SizeOf(typeof(T)); }
+			var attr = Attrs(member_name).FirstOrDefault(x => x is UnitsAttribute) as UnitsAttribute;
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return attr;
 		}
+
+		/// <summary>Returns the UnitsAttribute associated with the return type of 'expression'</summary>
+		[DebuggerStepThrough]
+		public static UnitsAttribute Units<Ret>(Expression<Func<T,Ret>> expression)
+		{
+			var attr = Attrs(expression).FirstOrDefault(x => x is UnitsAttribute) as UnitsAttribute;
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return attr;
+		}
+
+		/// <summary>Returns the UnitsAttribute associated with the return type of 'expression'</summary>
+		[DebuggerStepThrough]
+		public static UnitsAttribute Units(Expression<Action<T>> expression)
+		{
+			var attr = Attrs(expression).FirstOrDefault(x => x is UnitsAttribute) as UnitsAttribute;
+			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
+			return attr;
+		}
+
+		#endregion
 	}
 }
 

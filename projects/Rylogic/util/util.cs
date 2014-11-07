@@ -97,6 +97,70 @@ namespace pr.util
 			foreach (U i in collection) yield return conv(i);
 		}
 
+		/// <summary>Parse and return 'val' as type 'T' or return ' def' on parse error</summary>
+		public static byte   ParseOrDefault(string val, byte   def) { byte   o; return byte  .TryParse(val, out o) ? o : def; }
+		public static short  ParseOrDefault(string val, short  def) { short  o; return short .TryParse(val, out o) ? o : def; }
+		public static int    ParseOrDefault(string val, int    def) { int    o; return int   .TryParse(val, out o) ? o : def; }
+		public static uint   ParseOrDefault(string val, uint   def) { uint   o; return uint  .TryParse(val, out o) ? o : def; }
+		public static float  ParseOrDefault(string val, float  def) { float  o; return float .TryParse(val, out o) ? o : def; }
+		public static double ParseOrDefault(string val, double def) { double o; return double.TryParse(val, out o) ? o : def; }
+
+		/// <summary>Attempts to robustly convert 'value' into type 'T' using reflection and a load of special cases</summary>
+		public static object ConvertTo(object value, Type result_type)
+		{
+			var is_nullable = Nullable.GetUnderlyingType(result_type) != null;
+			var root_type   = Nullable.GetUnderlyingType(result_type) ?? result_type;
+
+			// 'value' is null? If T is not a value type return default(T)
+			if (value == null)
+			{
+				if (result_type.IsValueType || !is_nullable) throw new ArgumentNullException("Cannot convert null to type {0}".Fmt(result_type));
+				return null;
+			}
+
+			var value_type = value.GetType();
+
+			// 'value' is already the desired type
+			if (result_type.IsAssignableFrom(value_type))
+				return value;
+
+			// Convert from string or integral to enum
+			if (root_type.IsEnum)
+			{
+				// Parse string
+				if (value is string)
+					return Enum.Parse(root_type, (string)value);
+
+				// Convert from integral type
+				if (new[]{typeof(SByte), typeof(Int16), typeof(Int32), typeof(Int64), typeof(Byte), typeof(UInt16), typeof(UInt32), typeof(UInt64), typeof(String)}.Contains(value_type))
+					if (Enum.IsDefined(result_type, value))
+						return Enum.ToObject(root_type, value);
+
+				throw new Exception("Cannot convert {0}(of type {1}) to type {2}".Fmt(value, value_type.Name, result_type.Name));
+			}
+
+			// Convert to guid
+			if (root_type == typeof(Guid))
+			{
+				if (value is string) value = new Guid((string)value);
+				if (value is byte[]) value = new Guid((byte[])value);
+				return Convert.ChangeType(value, root_type);
+			}
+
+			// System.Convert only works with IConvertible
+			if (value is IConvertible)
+				return Convert.ChangeType(value, root_type);
+
+			throw new Exception("Conversion from {0} to {1} failed".Fmt(value_type.Name, result_type.Name));
+		}
+		
+		/// <summary>Attempts to robustly convert 'value' into type 'T' using reflection and a load of special cases</summary>
+		public static T ConvertTo<T>(object value)
+		{
+			if (value is T) return (T)value;
+			return (T)ConvertTo(value, typeof(T));
+		}
+
 		/// <summary>Helper for allocating an array of default constructed classes</summary>
 		public static T[] NewArray<T>(int count) where T : new()
 		{
@@ -137,7 +201,7 @@ namespace pr.util
 		/// <summary>Return the next value in an enum, rolling over at the last value. Must be used only on Enums with range [0, count)</summary>
 		public static int Next<T>(T zoom_type)
 		{
-			var v = Convert.ToInt32(zoom_type);
+			var v = System.Convert.ToInt32(zoom_type);
 			return (v + 1) % Count(typeof(T));
 		}
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
@@ -28,20 +29,27 @@ namespace pr.common
 		//   (TInterface)Activator.CreateInstance(Plugins[0].GetType())
 
 		/// <summary>Initialises the plugin loader with instances of the found plugins</summary>
-		public PluginLoader(string directory, object[] args, bool recursive, string regex_pattern = @".*\.dll", Action<string> progress_cb = null, Dispatcher dispatcher = null)
+		public PluginLoader(string directory, object[] args, bool recursive, string regex_pattern = @".*\.dll", Action<string, float> progress_cb = null, Dispatcher dispatcher = null)
 		{
 			Plugins  = new List<TInterface>();
 			Failures = new List<Tuple<string, Exception>>();
 			dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
 
 			Log.Debug(this, "Loading plugins for interface: {0}".Fmt(typeof(TInterface).Name));
-			foreach (var dll in PathEx.EnumerateFiles(directory, regex_pattern, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly))
+
+			// Build a list of assemblies to check
+			var filepaths = PathEx.EnumerateFiles(directory, regex_pattern, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Select(x => x.FullPath).ToList();
+
+			// Load each assembly
+			int i = 0, imax = filepaths.Count;
+			foreach (var dll in filepaths)
 			{
 				try
 				{
-					if (progress_cb != null) progress_cb(dll.FullPath);
+					if (progress_cb != null)
+						progress_cb(dll,  (float)i / (imax - 1));
 
-					var ass = Assembly.LoadFile(dll.FullPath);
+					var ass = Assembly.LoadFile(dll);
 					foreach (var type in ass.GetExportedTypes())
 					{
 						var attr = type.FindAttribute<PluginAttribute>(false);
@@ -53,14 +61,15 @@ namespace pr.common
 						var ty = type;
 						dispatcher.Invoke(() =>
 							{
+								// An exception here means the constructor for the type being created has thrown.
 								Plugins.Add((TInterface)Activator.CreateInstance(ty, args));
-								Log.Debug(this, "   Found implementation: {0} from {1}".Fmt(ty.Name, lib.FullPath));
+								Log.Debug(this, "   Found implementation: {0} from {1}".Fmt(ty.Name, lib));
 							});
 					}
 				}
 				catch (Exception ex)
 				{
-					Failures.Add(new Tuple<string, Exception>(dll.FullPath, ex));
+					Failures.Add(new Tuple<string, Exception>(dll, ex));
 					Log.Debug(this, "   Error: {0}".Fmt(ex.Message));
 				}
 			}
@@ -74,11 +83,11 @@ namespace pr.common
 
 			var dis = Dispatcher.CurrentDispatcher;
 			PluginLoader<TInterface> loader = null;
-			var progress = new ProgressForm(title, desc, icon, ProgressBarStyle.Marquee, (s,a,cb) =>
+			var progress = new ProgressForm(title, desc, icon, ProgressBarStyle.Continuous, (s,a,cb) =>
 				{
-					loader = new PluginLoader<TInterface>(directory, args, recursive, regex_pattern, file =>
+					loader = new PluginLoader<TInterface>(directory, args, recursive, regex_pattern, (file,frac) =>
 						{
-							cb(new ProgressForm.UserState{Description = "{0}\r\n{1}".Fmt(desc, file)});
+							cb(new ProgressForm.UserState{Description = "{0}\r\n{1}".Fmt(desc, file), FractionComplete = frac});
 							if (s.CancelPending) throw new OperationCanceledException();
 						}, dis);
 				});

@@ -6,6 +6,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using Timer = System.Windows.Forms.Timer;
 
@@ -52,17 +53,17 @@ namespace pr.util
 				m_onchange = onchange;
 				m_id       = id;
 				m_ctx      = ctx;
-				m_stamp0   = m_info.LastWriteTimeUtc.Ticks;
+				m_stamp0   = m_info.Exists ? m_info.LastWriteTimeUtc.Ticks : 0;
 				m_stamp1   = m_stamp0;
-				m_size0    = m_info.Length;
+				m_size0    = m_info.Exists ? m_info.Length : 0;
 				m_size1    = m_size0;
 				m_exists0  = m_info.Exists;
 				m_exists1  = m_exists0;
 			}
 		}
-		private readonly List<WatchedFile> m_files = new List<WatchedFile>();
-		private readonly Timer             m_timer = new Timer{Interval = 1000, Enabled = false};
-		private readonly List<WatchedFile> m_changed_files = new List<WatchedFile>(); // Recycle the changed files collection
+		private readonly List<WatchedFile> m_files;
+		private readonly Timer             m_timer;
+		private readonly List<WatchedFile> m_changed_files; // Recycle the changed files collection
 		private bool m_in_check_for_changes;
 		
 		/// <summary>
@@ -71,12 +72,24 @@ namespace pr.util
 		/// again next time CheckForChangedFiles() is called. </summary>
 		public delegate bool FileChangedHandler(string filepath, object ctx);
 
-		public FileWatch() {}
+		public FileWatch()
+		{
+			m_files = new List<WatchedFile>();
+			m_timer = new Timer{Interval = 1000, Enabled = false};
+			m_timer.Tick += CheckForChangedFiles;
+			m_changed_files = new List<WatchedFile>();
+		}
 		public FileWatch(FileChangedHandler on_changed, params string[] files) :this(on_changed, 0, null, files) {}
-		public FileWatch(FileChangedHandler on_changed, int id, object ctx, params string[] files)
+		public FileWatch(FileChangedHandler on_changed, int id, object ctx, params string[] files) :this()
 		{
 			foreach (string file in files)
 				m_files.Add(new WatchedFile(file, on_changed, id, ctx));
+		}
+
+		/// <summary>The collection of watched filepaths</summary>
+		public IEnumerable<string> Files
+		{
+			get { return m_files.Select(x => x.m_filepath); }
 		}
 
 		/// <summary>Get/Set the auto-polling period. If the period is 0 polling is disabled</summary>
@@ -135,7 +148,7 @@ namespace pr.util
 		}
 
 		/// <summary>Check the collection of filepaths for those that have changed</summary>
-		public void CheckForChangedFiles()
+		public void CheckForChangedFiles(object sender = null, EventArgs args = null)
 		{
 			// Prevent reentrancy.
 			// This is not done in a worker thread because the main blocking call is
