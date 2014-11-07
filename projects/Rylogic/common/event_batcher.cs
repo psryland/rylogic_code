@@ -47,6 +47,7 @@ namespace pr.common
 			m_count          = 0;
 			Immediate        = false;
 			TriggerOnFirst   = false;
+			Priority         = DispatcherPriority.Normal;
 
 			if (action != null)
 				Action += action;
@@ -64,8 +65,15 @@ namespace pr.common
 		public bool TriggerOnFirst { get; set; }
 
 		/// <summary>The time between subsequent Action invocations</summary>
-		public TimeSpan Delay { get { return m_delay; } }
-		private readonly TimeSpan m_delay;
+		public TimeSpan Delay
+		{
+			get { return m_delay; }
+			set { m_delay = value; }
+		}
+		private TimeSpan m_delay;
+
+		/// <summary>Priority of the action</summary>
+		public DispatcherPriority Priority { get; set; }
 
 		/// <summary>The thread context in which to invoke 'Action'</summary>
 		public Dispatcher Dispatcher { get { return m_dispatcher; } }
@@ -116,7 +124,7 @@ namespace pr.common
 							if (Action == null || m_shutdown) return;
 							Action();
 						}
-					}, Delay);
+					}, Delay, Priority);
 			}
 		}
 	}
