@@ -169,12 +169,14 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h" />
     <ClInclude Include="..\include\pr\macros\align.h" />
     <ClInclude Include="..\include\pr\macros\auto_do.h" />
+    <ClInclude Include="..\include\pr\macros\constexpr.h" />
     <ClInclude Include="..\include\pr\macros\count_of.h" />
     <ClInclude Include="..\include\pr\macros\enum.h" />
     <ClInclude Include="..\include\pr\macros\foreach.h" />
     <ClInclude Include="..\include\pr\macros\for_each.h" />
     <ClInclude Include="..\include\pr\macros\join.h" />
     <ClInclude Include="..\include\pr\macros\link.h" />
+    <ClInclude Include="..\include\pr\macros\noexcept.h" />
     <ClInclude Include="..\include\pr\macros\no_copy.h" />
     <ClInclude Include="..\include\pr\macros\on_exit.h" />
     <ClInclude Include="..\include\pr\macros\remove_parenthesis.h" />

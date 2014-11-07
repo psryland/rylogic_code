@@ -21,13 +21,15 @@ namespace pr
 
 #include <algorithm>
 #include "pr/common/unittests.h"
-#include "unittests/unittests.h"
+#include "unittests/unittests.h" // all tests
 //#include "pr/geometry/utility.h"
 //#include "pr/common/expr_eval.h"
-//#include "pr/container/deque.h"
+//#include "pr/crypt/rijndael.h"
+//#include "pr/common/datetime.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
+using namespace std;
 
 int main(int argc, char const* argv[])
 //int _tmain(int argc, _TCHAR* argv[])

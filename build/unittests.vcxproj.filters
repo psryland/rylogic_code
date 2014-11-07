@@ -870,6 +870,12 @@
     <ClInclude Include="..\include\pr\gui\vt100.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\macros\constexpr.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\noexcept.h">
+      <Filter>pr\macros</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

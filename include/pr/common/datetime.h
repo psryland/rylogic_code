@@ -3,11 +3,11 @@
 //  Copyright (c) Rylogic Ltd 2013
 //***********************************************
 #pragma once
-#ifndef PR_COMMON_TIME_H
-#define PR_COMMON_TIME_H
 
 #include <chrono>
 #include <exception>
+#include "pr/macros/constexpr.h"
+#include "pr/macros/noexcept.h"
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/str/prstring.h"
@@ -70,6 +70,114 @@ namespace pr
 			}
 			s.resize(s.size() - 1);
 			return s;
+		}
+
+		// These functions are from the 'chrono-Compatible Low-Level Date Algorithms'
+		// by http://howardhinnant.github.io/date_algorithms.html
+		// Notes:
+		//  These algorithms internally assume that March 1 is the first day of the year.
+		//  This is convenient because it puts the leap day, Feb. 29 as the last day of
+		//  the year, or actually the preceding year.
+
+		// Returns number of days since civil 1970-01-01.
+		// Negative values indicate days prior to 1970-01-01.
+		//  y-m-d represents a date in the civil (Gregorian) calendar
+		//  m is in [1, 12]
+		//  d is in [1, last_day_of_month(y, m)]
+		//  y is "approximately" in     [numeric_limits<Int>::min()/366, numeric_limits<Int>::max()/366]
+		//  Exact range of validity is: [civil_from_days(numeric_limits<Int>::min()), civil_from_days(numeric_limits<Int>::max()-719468)]
+		template <class Int> constexpr Int days_from_civil(Int y, unsigned m, unsigned d) noexcept
+		{
+			static_assert(std::numeric_limits<unsigned>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
+			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
+			y -= m <= 2;
+			const Int era = (y >= 0 ? y : y-399) / 400;
+			const unsigned yoe = static_cast<unsigned>(y - era * 400);      // [0, 399]
+			const unsigned doy = (153*(m + (m > 2 ? -3 : 9)) + 2)/5 + d-1;  // [0, 365]
+			const unsigned doe = yoe * 365 + yoe/4 - yoe/100 + doy;         // [0, 146096]
+			return era * 146097 + static_cast<Int>(doe) - 719468;
+		}
+
+		// Returns year/month/day triple in civil calendar
+		//  z is number of days since 1970-01-01 and is in the range: [numeric_limits<Int>::min(), numeric_limits<Int>::max()-719468].
+		template <class Int> constexpr std::tuple<Int, unsigned, unsigned> civil_from_days(Int z) noexcept
+		{
+			static_assert(std::numeric_limits<unsigned>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
+			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
+			z += 719468;
+			const Int era = (z >= 0 ? z : z - 146096) / 146097;
+			const unsigned doe = static_cast<unsigned>(z - era * 146097);          // [0, 146096]
+			const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
+			const Int y = static_cast<Int>(yoe) + era * 400;
+			const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
+			const unsigned mp = (5*doy + 2)/153;                                   // [0, 11]
+			const unsigned d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
+			const unsigned m = mp + (mp < 10 ? 3 : -9);                            // [1, 12]
+			return std::tuple<Int, unsigned, unsigned>(y + (m <= 2), m, d);
+		}
+
+		// Returns: true if y is a leap year in the civil calendar, else false
+		template <class Int> constexpr inline bool is_leap(Int y) noexcept
+		{
+			return  y % 4 == 0 && (y % 100 != 0 || y % 400 == 0);
+		}
+
+		// Preconditions: m is in [1, 12]
+		// Returns: The number of days in the month m of common year
+		// The result is always in the range [28, 31].
+		constexpr inline unsigned last_day_of_month_common_year(unsigned m) noexcept
+		{
+			constexpr unsigned char a[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+			return a[m-1];
+		}
+
+		// Preconditions: m is in [1, 12]
+		// Returns: The number of days in the month m of leap year
+		// The result is always in the range [29, 31].
+		constexpr inline unsigned last_day_of_month_leap_year(unsigned m) noexcept
+		{
+			constexpr unsigned char a[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+			return a[m-1];
+		}
+
+		// Preconditions: m is in [1, 12]
+		// Returns: The number of days in the month m of year y
+		// The result is always in the range [28, 31].
+		template <class Int> constexpr inline unsigned last_day_of_month(Int y, unsigned m) noexcept
+		{
+			return m != 2 || !is_leap(y) ? last_day_of_month_common_year(m) : 29u;
+		}
+
+		// Returns day of week in civil calendar [0, 6] -> [Sun, Sat]
+		// z is number of days since 1970-01-01 and is in the range: [numeric_limits<Int>::min(), numeric_limits<Int>::max()-4].
+		template <class Int> constexpr inline unsigned weekday_from_days(Int z) noexcept
+		{
+			return static_cast<unsigned>(z >= -4 ? (z+4) % 7 : (z+5) % 7 + 6);
+		}
+
+		// Returns: The number of days from the weekday y to the weekday x.
+		// Preconditions: x <= 6 && y <= 6
+		// The result is always in the range [0, 6].
+		constexpr inline unsigned weekday_difference(unsigned x, unsigned y) noexcept
+		{
+			x -= y;
+			return x <= 6 ? x : x + 7;
+		}
+
+		// Returns: The weekday following wd
+		// Preconditions: wd <= 6
+		// The result is always in the range [0, 6].
+		constexpr inline unsigned next_weekday(unsigned wd) noexcept
+		{
+			return wd < 6 ? wd+1 : 0;
+		}
+
+		// Returns: The weekday prior to wd
+		// Preconditions: wd <= 6
+		// The result is always in the range [0, 6].
+		constexpr inline unsigned prev_weekday(unsigned wd) noexcept
+		{
+			return wd > 0 ? wd-1 : 6;
 		}
 	}
 
@@ -270,6 +378,7 @@ namespace pr
 }
 
 #if PR_UNITTESTS
+#include <iomanip>
 #include "pr/common/unittests.h"
 namespace pr
 {
@@ -278,6 +387,7 @@ namespace pr
 		PRUnitTest(pr_common_datetime)
 		{
 			using namespace std::chrono;
+			using namespace pr::datetime;
 
 			{
 				auto t = seconds(1234);
@@ -289,9 +399,103 @@ namespace pr
 				auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
 				PR_CHECK(s, "01:23:45.067");
 			}
+			{ // unit test of chrono-Compatible Low-Level Date Algorithms
+				PR_CHECK(days_from_civil(1970, 1, 1) == 0, true);                    // 1970-01-01 is day 0
+				PR_CHECK(civil_from_days(0) == std::make_tuple(1970, 1, 1), true);   // 1970-01-01 is day 0
+				PR_CHECK(weekday_from_days(days_from_civil(1970, 1, 1)) == 4, true); // 1970-01-01 is a Thursday
+
+				auto ystart = -10;// for speed instead of -1000000;
+				auto prev_z = days_from_civil(ystart, 1, 1) - 1;
+				PR_CHECK(prev_z < 0, true);
+				
+				auto prev_wd = weekday_from_days(prev_z);
+				PR_CHECK(0 <= prev_wd && prev_wd <= 6, true);
+
+				for (auto y = ystart; y <= -ystart; ++y)
+				{
+					for (auto m = 1U; m <= 12; ++m)
+					{
+						auto e = last_day_of_month(y, m);
+						for (auto d = 1U; d <= e; ++d)
+						{
+							int z = days_from_civil(y, m, d);
+							PR_CHECK(prev_z < z, true);
+							PR_CHECK(z == prev_z+1, true);
+
+							int yp; unsigned mp, dp;
+							std::tie(yp, mp, dp) = civil_from_days(z);
+							PR_CHECK(y == yp, true);
+							PR_CHECK(m == mp, true);
+							PR_CHECK(d == dp, true);
+
+							auto wd = weekday_from_days(z);
+							PR_CHECK(0 <= wd && wd <= 6, true);
+							PR_CHECK(wd == next_weekday(prev_wd), true);
+							PR_CHECK(prev_wd == prev_weekday(wd), true);
+							prev_z = z;
+							prev_wd = wd;
+						}
+					}
+				}
+				auto count_days = days_from_civil(1000000, 12, 31) - days_from_civil(-1000000, 1, 1);
+				PR_CHECK(count_days, 730485365);
+			}
+			{// Example of using the datetime functions to avoid C time interfaces
+				typedef duration<int, ratio_multiply<hours::period, ratio<24>>> days;
+				int year; unsigned month; unsigned day;
+				hours h; minutes m; seconds s; microseconds us;
+				std::stringstream ss; std::string str;
+				auto utc_offset = hours(+12);  // my current UTC offset
+
+				// Get duration in local units
+				auto now = system_clock::now().time_since_epoch() + utc_offset;
+
+				// Get duration in days
+				auto today = duration_cast<days>(now);
+
+				// Convert days into year/month/day
+				std::tie(year, month, day) = civil_from_days(today.count());
+
+				// Subtract off days, leaving now containing time since local midnight
+				now -= today; h  = duration_cast<hours>(now);
+				now -= h;     m  = duration_cast<minutes>(now);
+				now -= m;     s  = duration_cast<seconds>(now);
+				now -= s;     us = duration_cast<microseconds>(now);
+
+				ss = std::stringstream{};
+				ss << "Today is "
+					 << year << '-' << std::setw(2) << month << '-' << std::setw(2) << day << " at "
+					 << std::setw(2) << h.count() << ':'
+					 << std::setw(2) << m.count() << ':'
+					 << std::setw(2) << s.count() << '.'
+					 << std::setw(6) << us.count();
+				str = ss.str();
+
+				// Can also go the other way: Specify a date in terms of a year/month/day triple and then convert that into a system_clock::time_point:
+				// Build a time point in local days::hours::minutes and then convert to UTC
+				auto birthdate = system_clock::time_point(days(days_from_civil(1976, 12, 29)) + hours(03) + minutes(45) - utc_offset);
+				ss = std::stringstream{};
+				ss << "Paul is " << duration_cast<seconds>(system_clock::now() - birthdate).count() << " seconds old\n";
+				str = ss.str();
+
+				// current utc date time
+				now = system_clock::now().time_since_epoch();
+				today = duration_cast<days>(now);
+
+				std::tie(year, month, day) = civil_from_days(today.count());
+
+				now -= today; h = duration_cast<hours>(now);
+				now -= h;     m = duration_cast<minutes>(now);
+				now -= m;     s = duration_cast<seconds>(now);
+
+				ss = std::stringstream{};
+				ss << "Today is " << year << '-' << setw(2) << (unsigned)month << '-' << setw(2) << (unsigned)day << " at "
+					<< setw(2) << h.count() << ':'
+					<< setw(2) << m.count() << ':'
+					<< setw(2) << s.count() << " UTC\n";
+				str = ss.str();
+			}
 		}
 	}
 }
-#endif
-
 #endif
