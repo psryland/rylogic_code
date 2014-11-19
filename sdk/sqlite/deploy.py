@@ -17,7 +17,7 @@ try:
 
 	sln = UserVars.root + "\\sdk\\sqlite\\sqlite3.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
-		"sqlite3dll"
+		"sqlite3"
 		]
 	platforms = [
 		"x86",
