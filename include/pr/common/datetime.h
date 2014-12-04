@@ -4,66 +4,68 @@
 //***********************************************
 #pragma once
 
+#include <cassert>
+#include <ctime>
 #include <chrono>
 #include <exception>
 #include "pr/macros/constexpr.h"
 #include "pr/macros/noexcept.h"
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
+#include "pr/maths/maths.h"
 #include "pr/str/prstring.h"
 
 namespace pr
 {
 	// Julian year, these are not in the standard because of ambiguity over calender type
-	typedef std::chrono::duration<int, std::ratio<86400>> days;
-	typedef std::chrono::duration<int, std::ratio<31557600>> years;
+	typedef std::chrono::duration<long long, std::ratio<86400>>    days;
+	typedef std::chrono::duration<long long, std::ratio<31557600>> years;
 
 	namespace datetime
 	{
-		enum EMaxUnit { Years, Days, Hours, Minutes, Seconds };
-
-		// Ignores leap years
-		static double const seconds_p_min  = 60.0;
-		static double const seconds_p_hour = 60.0 * seconds_p_min;
-		static double const seconds_p_day  = 24.0 * seconds_p_hour;
-		static double const seconds_p_year = 365.0 * seconds_p_day;
-
-		// Conversion helpers
-		inline double DaysToSeconds(double days) { return days * seconds_p_day; }
-		inline double SecondsToDays(double secs) { return secs / seconds_p_day; }
+		//// Conversion helpers
+		//inline double DaysToSeconds(double days) { return days * seconds_p_day; }
+		//inline double SecondsToDays(double secs) { return secs / seconds_p_day; }
 
 		// Convert a duration into a count down
 		// XXX days XX hours XX mins XX secs
+		enum class EMaxUnit { Years, Days, Hours, Minutes, Seconds };
 		inline std::string ToCountdownString(double seconds, EMaxUnit max_unit)
 		{
+			// Ignores leap years
+			static double const seconds_p_min  = 60.0;
+			static double const seconds_p_hour = 60.0 * seconds_p_min;
+			static double const seconds_p_day  = 24.0 * seconds_p_hour;
+			static double const seconds_p_year = 365.0 * seconds_p_day;
+
 			std::string s;
 			switch (max_unit)
 			{
-			case Years:
+			case EMaxUnit::Years:
 				{
 					long years = long(seconds / seconds_p_year);
 					s.append(pr::FmtS("%dyrs ", years));
 					seconds -= years * seconds_p_year;
 				}// fallthru
-			case Days:
+			case EMaxUnit::Days:
 				{
 					long days = long(seconds / seconds_p_day);
 					s.append(pr::FmtS("%ddays ", days));
 					seconds -= days * seconds_p_day;
 				}// fallthru
-			case Hours:
+			case EMaxUnit::Hours:
 				{
 					long hours = long(seconds / seconds_p_hour);
 					s.append(pr::FmtS("%dhrs ", hours));
 					seconds -= hours * seconds_p_hour;
 				}// fallthru
-			case Minutes:
+			case EMaxUnit::Minutes:
 				{
 					long mins = long(seconds / seconds_p_min);
 					s.append(pr::FmtS("%dmins ", mins));
 					seconds -= mins * seconds_p_min;
 				}// fallthru
-			case Seconds:
+			case EMaxUnit::Seconds:
 				{
 					s.append(pr::FmtS("%2.3fsecs ", seconds));
 				}// fallthru
@@ -86,34 +88,34 @@ namespace pr
 		//  d is in [1, last_day_of_month(y, m)]
 		//  y is "approximately" in     [numeric_limits<Int>::min()/366, numeric_limits<Int>::max()/366]
 		//  Exact range of validity is: [civil_from_days(numeric_limits<Int>::min()), civil_from_days(numeric_limits<Int>::max()-719468)]
-		template <class Int> constexpr Int days_from_civil(Int y, unsigned m, unsigned d) noexcept
+		template <class Int> constexpr Int days_from_civil(Int y, int m, int d) noexcept
 		{
-			static_assert(std::numeric_limits<unsigned>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
+			static_assert(std::numeric_limits<int>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
 			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
 			y -= m <= 2;
 			const Int era = (y >= 0 ? y : y-399) / 400;
-			const unsigned yoe = static_cast<unsigned>(y - era * 400);      // [0, 399]
-			const unsigned doy = (153*(m + (m > 2 ? -3 : 9)) + 2)/5 + d-1;  // [0, 365]
-			const unsigned doe = yoe * 365 + yoe/4 - yoe/100 + doy;         // [0, 146096]
+			const int yoe = static_cast<int>(y - era * 400);      // [0, 399]
+			const int doy = (153*(m + (m > 2 ? -3 : 9)) + 2)/5 + d-1;  // [0, 365]
+			const int doe = yoe * 365 + yoe/4 - yoe/100 + doy;         // [0, 146096]
 			return era * 146097 + static_cast<Int>(doe) - 719468;
 		}
 
 		// Returns year/month/day triple in civil calendar
 		//  z is number of days since 1970-01-01 and is in the range: [numeric_limits<Int>::min(), numeric_limits<Int>::max()-719468].
-		template <class Int> constexpr std::tuple<Int, unsigned, unsigned> civil_from_days(Int z) noexcept
+		template <class Int> constexpr std::tuple<Int, int, int> civil_from_days(Int z) noexcept
 		{
-			static_assert(std::numeric_limits<unsigned>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
+			static_assert(std::numeric_limits<int>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
 			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
 			z += 719468;
 			const Int era = (z >= 0 ? z : z - 146096) / 146097;
-			const unsigned doe = static_cast<unsigned>(z - era * 146097);          // [0, 146096]
-			const unsigned yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
+			const int doe = static_cast<int>(z - era * 146097);          // [0, 146096]
+			const int yoe = (doe - doe/1460 + doe/36524 - doe/146096) / 365;  // [0, 399]
 			const Int y = static_cast<Int>(yoe) + era * 400;
-			const unsigned doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
-			const unsigned mp = (5*doy + 2)/153;                                   // [0, 11]
-			const unsigned d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
-			const unsigned m = mp + (mp < 10 ? 3 : -9);                            // [1, 12]
-			return std::tuple<Int, unsigned, unsigned>(y + (m <= 2), m, d);
+			const int doy = doe - (365*yoe + yoe/4 - yoe/100);                // [0, 365]
+			const int mp = (5*doy + 2)/153;                                   // [0, 11]
+			const int d = doy - (153*mp+2)/5 + 1;                             // [1, 31]
+			const int m = mp + (mp < 10 ? 3 : -9);                            // [1, 12]
+			return std::tuple<Int, int, int>(y + (m <= 2), m, d);
 		}
 
 		// Returns: true if y is a leap year in the civil calendar, else false
@@ -125,7 +127,7 @@ namespace pr
 		// Preconditions: m is in [1, 12]
 		// Returns: The number of days in the month m of common year
 		// The result is always in the range [28, 31].
-		constexpr inline unsigned last_day_of_month_common_year(unsigned m) noexcept
+		constexpr inline int last_day_of_month_common_year(int m) noexcept
 		{
 			constexpr unsigned char a[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 			return a[m-1];
@@ -134,7 +136,7 @@ namespace pr
 		// Preconditions: m is in [1, 12]
 		// Returns: The number of days in the month m of leap year
 		// The result is always in the range [29, 31].
-		constexpr inline unsigned last_day_of_month_leap_year(unsigned m) noexcept
+		constexpr inline int last_day_of_month_leap_year(int m) noexcept
 		{
 			constexpr unsigned char a[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 			return a[m-1];
@@ -143,22 +145,22 @@ namespace pr
 		// Preconditions: m is in [1, 12]
 		// Returns: The number of days in the month m of year y
 		// The result is always in the range [28, 31].
-		template <class Int> constexpr inline unsigned last_day_of_month(Int y, unsigned m) noexcept
+		template <class Int> constexpr inline int last_day_of_month(Int y, int m) noexcept
 		{
 			return m != 2 || !is_leap(y) ? last_day_of_month_common_year(m) : 29u;
 		}
 
 		// Returns day of week in civil calendar [0, 6] -> [Sun, Sat]
 		// z is number of days since 1970-01-01 and is in the range: [numeric_limits<Int>::min(), numeric_limits<Int>::max()-4].
-		template <class Int> constexpr inline unsigned weekday_from_days(Int z) noexcept
+		template <class Int> constexpr inline int weekday_from_days(Int z) noexcept
 		{
-			return static_cast<unsigned>(z >= -4 ? (z+4) % 7 : (z+5) % 7 + 6);
+			return static_cast<int>(z >= -4 ? (z+4) % 7 : (z+5) % 7 + 6);
 		}
 
 		// Returns: The number of days from the weekday y to the weekday x.
 		// Preconditions: x <= 6 && y <= 6
 		// The result is always in the range [0, 6].
-		constexpr inline unsigned weekday_difference(unsigned x, unsigned y) noexcept
+		constexpr inline int weekday_difference(int x, int y) noexcept
 		{
 			x -= y;
 			return x <= 6 ? x : x + 7;
@@ -167,7 +169,7 @@ namespace pr
 		// Returns: The weekday following wd
 		// Preconditions: wd <= 6
 		// The result is always in the range [0, 6].
-		constexpr inline unsigned next_weekday(unsigned wd) noexcept
+		constexpr inline int next_weekday(int wd) noexcept
 		{
 			return wd < 6 ? wd+1 : 0;
 		}
@@ -175,7 +177,7 @@ namespace pr
 		// Returns: The weekday prior to wd
 		// Preconditions: wd <= 6
 		// The result is always in the range [0, 6].
-		constexpr inline unsigned prev_weekday(unsigned wd) noexcept
+		constexpr inline int prev_weekday(int wd) noexcept
 		{
 			return wd > 0 ? wd-1 : 6;
 		}
@@ -233,6 +235,40 @@ namespace pr
 	{
 		DateTimeStruct() :tm() {}
 
+		// yr   = year (e.g. 1976, 2014, etc)
+		// mon  = month [1,12] -> [Jan,Dec]
+		// mday = month_day [1,31]
+		// hr   = hour [0,23]
+		// min  = minute [0,59]
+		// sec  = second [0,60]
+		// dls  = daylight savings time in effect
+		DateTimeStruct(int yr, int mon, int mday, int hr, int min, int sec, int dls = -1) :tm()
+		{
+			tm_year = yr - 1900; // years since 1900                 
+			tm_mon  = mon - 1;   // months since January - [0,11]    
+			tm_mday = mday;      // day of the month - [1,31]        
+			tm_hour = hr;        // hours since midnight - [0,23]    
+			tm_min  = min;       // minutes after the hour - [0,59]  
+			tm_sec  = sec;       // seconds after the minute - [0,59]
+			tm_isdst = dls;      // daylight savings time flag       
+
+			// time_t mktime (struct tm * timeptr);
+			//  Convert tm structure to time_t
+			//  Returns the value of type time_t that represents the local time described
+			//  by the tm structure pointed by timeptr (which may be modified).
+			//  This function performs the reverse translation that localtime() does.
+			//  The values of the members tm_wday and tm_yday of timeptr are ignored, and
+			//  the values of the other members are interpreted even if out of their valid
+			//  ranges (see struct tm). For example, tm_mday may contain values above 31,
+			//  which are interpreted accordingly as the days that follow the last day of the selected month.
+			//  A call to this function automatically adjusts the values of the members of
+			//  timeptr if they are off-range or -in the case of tm_wday and tm_yday- if they
+			// have values that do not match the date described by the other members.
+			auto ticks = _mkgmtime(this);
+			if (ticks == -1)
+				throw std::exception("calender time cannot be represented");
+		}
+
 		enum EDaylightSaving { Unknown = -1, NotInEffect = 0, InEffect = 1 };
 		EDaylightSaving daylight_savings() const { return EDaylightSaving((tm_isdst > 0) - (tm_isdst < 0)); }
 
@@ -268,6 +304,12 @@ namespace pr
 		// Get/Set the year day[1,365]
 		int year_day() const { return tm_yday + 1; }
 		void year_day(int yday) { tm_yday = yday - 1; }
+
+		// Return the DateTimeStruct tm's are relative to
+		static DateTimeStruct Epoch()
+		{
+			return DateTimeStruct(1970,1,1,0,0,0,0);
+		}
 
 		// Return the time as a string
 		std::string ToString() const
@@ -318,63 +360,188 @@ namespace pr
 		}
 	};
 
+	// Represents a time_point (modelled off the .NET DateTimeOffset class)
 	struct DateTime
 	{
-		time_t ticks;  // Seconds since 1970-1-1 00:00:00
-		time_t offset; // The offset from utc to the local time
+		typedef std::chrono::system_clock              clock_t;      // The system clock
+		typedef std::chrono::nanoseconds               duration_t;   // In units of nanoseconds
+		typedef std::chrono::time_point<clock_t, days> date_point_t; // In units of days
 
-		DateTime() {}
-		DateTime(time_t t, time_t ofs) :ticks(t) ,offset(ofs) {}
-		DateTime(int yr, int mon, int mday, int hr, int min, int sec, time_t ofs = 0) :ticks() ,offset(ofs)
+		date_point_t m_date;    // days relative to 1970-1-1 00:00:00
+		duration_t   m_time;    // UTC time (in ns), relative to 'm_date'
+		duration_t   m_offset;  // Offset (in ns) from utc to local time
+
+		DateTime()
+			:m_date()
+			,m_time()
+			,m_offset()
+		{}
+		DateTime(date_point_t date, duration_t time, duration_t offset = duration_t::zero())
+			:m_date(date)
+			,m_time(time)
+			,m_offset(offset)
+		{}
+
+		// yr   = year (e.g. 1976, 2014, etc)
+		// mon  = month [1,12] -> [Jan,Dec]
+		// mday = month_day [1,31]
+		// hr   = hour [0,23]
+		// min  = minute [0,59]
+		// sec  = second [0,60]
+		// ofs  = offset from utc
+		DateTime(int yr, int mon, int mday, int hr, int min, int sec, std::chrono::hours utc_ofs = std::chrono::hours::zero())
+			:m_date(days(pr::datetime::days_from_civil(yr, mon, mday)))
+			,m_time(std::chrono::hours(hr) + std::chrono::minutes(min) + std::chrono::seconds(sec))
+			,m_offset(utc_ofs)
 		{
-			DateTimeStruct t;
-			t.tm_year = yr - 1900;
-			t.tm_mon  = mon - 1;
-			t.tm_mday = mday;
-			t.tm_hour = hr;
-			t.tm_min  = min;
-			t.tm_sec  = sec;
-			ticks = _mkgmtime(&t);
-			if (ticks == -1) throw ::std::exception();
+			assert(mday >= 1 && mday <= (int)pr::datetime::last_day_of_month(yr, mon) && "month day is invalid");
 		}
 
-		// Return a structure describing this datetime as local time
-		DateTimeStruct local_time() const
+		// Construct from C's time_t
+		DateTime(time_t t, std::chrono::hours utc_ofs = std::chrono::hours::zero())
 		{
-			DateTimeStruct t;
-			errno_t err = localtime_s(&t, &ticks);
-			if (err != 0) throw ::std::exception();
-			return t;
+			from_time_t(t, utc_ofs);
 		}
 
-		// Return a structure describing this datetime as utc time
-		DateTimeStruct utc_time() const
+		// Local time value
+		duration_t local_time() const { return m_time + m_offset; }
+
+		// Convert this time to/from a C time_t (throws if out of range)
+		std::time_t to_time_t() const
 		{
-			DateTimeStruct t;
-			errno_t err = gmtime_s(&t, &ticks);
-			if (err != 0) throw ::std::exception();
-			return t;
+			using namespace std::chrono;
+			return clock_t::to_time_t(time_point_cast<seconds>(m_date + m_time));
+		}
+		void from_time_t(time_t t, std::chrono::hours utc_ofs = std::chrono::hours::zero())
+		{
+			using namespace std::chrono;
+
+			// time_t is not necessarily since 1970, need to use difftime() to get the time difference
+			// Likewise, the epoch for clock_t is unknown
+			auto unix_epoch      = DateTimeStruct::Epoch();
+			auto t0              = _mkgmtime(&unix_epoch);                              // Get a time_t representing 1/1/1970
+			auto secs_since_1970 = seconds::rep(std::difftime(t, t0));                  // Find the number of seconds since 1970
+			auto timepoint_at_t  = clock_t::from_time_t(t0) + seconds(secs_since_1970); // The clock_t::time_point at 't' = the clock_t value at 1/1/1970 and add on the number of seconds
+
+			m_date = time_point_cast<days>(timepoint_at_t);
+			m_time = timepoint_at_t - m_date;
+			m_offset = utc_ofs;
 		}
 
-		static DateTime NowUTC() { return DateTime(time(nullptr), 0); }
+		//// Return a structure describing this datetime as local time
+		//DateTimeStruct local_tm() const
+		//{
+		//	DateTimeStruct();
+		//	t;
+		//	if (localtime_s(&t, &ticks) != 0) throw ::std::exception();
+		//	return t;
+		//}
+
+		//// Return a structure describing this datetime as utc time
+		//DateTimeStruct utc_time() const
+		//{
+		//	DateTimeStruct t;
+		//	errno_t err = gmtime_s(&t, &ticks);
+		//	if (err != 0) throw ::std::exception();
+		//	return t;
+		//}
+
+		std::string ToString() const
+		{
+			return "ToDo";
+			//::ctime(&dt.ticks)
+		}
+
+		// Return the DateTime that DateTime's are relative to
+		static DateTime Epoch()
+		{
+			return DateTime(1970,1,1,0,0,0);
+		}
+
+		// The current system time in UTC
+		static DateTime NowUTC()
+		{
+			return DateTime(time(nullptr));
+		}
+
+		// The current system time in local time
 		static DateTime Now()
 		{
-			time_t now = time(nullptr);
-			tm localtm; if (localtime_s(&localtm, &now) != 0) throw ::std::exception();
-			time_t local_now = _mkgmtime(&localtm);
-			return DateTime(now, local_now - now);
-		}
-		static DateTime Min() { return DateTime(1900,1,1,0,0,0); }
-		static DateTime Max() { return DateTime(3000,12,31,23,59,59); }
+			using namespace std::chrono;
 
-		static DateTime FromSeconds(double seconds, time_t ofs = 0) { return DateTime(static_cast<time_t>(seconds), ofs); }
+			tm tmp;
+			auto now = time(nullptr);
+			if (gmtime_s(&tmp, &now) != 0) throw std::exception("failed to convert 'now' to UTC");
+			auto utc_ofs = seconds(seconds::rep(std::difftime(now, mktime(&tmp))));
+			return DateTime(now, duration_cast<hours>(utc_ofs));
+		}
+
+		//static DateTime Min() { return DateTime(1900,1,1,0,0,0); }
+		//static DateTime Max() { return DateTime(3000,12,31,23,59,59); }
 	};
-	inline bool operator == (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks == rhs.ticks; }
-	inline bool operator != (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks != rhs.ticks; }
-	inline bool operator <= (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks <= rhs.ticks; }
-	inline bool operator >= (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks >= rhs.ticks; }
-	inline bool operator <  (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks <  rhs.ticks; }
-	inline bool operator >  (DateTime const& lhs, DateTime const& rhs) { return lhs.ticks >  rhs.ticks; }
+
+	// Represents a difference of DateTimes
+	struct TimeSpan
+	{
+		typedef DateTime::clock_t                clock_t;         // The system clock
+		typedef DateTime::duration_t             time_duration_t; // In units of nanoseconds
+		typedef DateTime::date_point_t::duration date_duration_t; // In units of days
+
+		date_duration_t m_ddate;   // delta date
+		time_duration_t m_dtime;   // delta time
+		// Note, delta timezone represents a geographical location difference, not a time difference
+
+		TimeSpan()
+			:m_ddate()
+			,m_dtime()
+		{}
+		TimeSpan(date_duration_t ddate, time_duration_t dtime)
+			:m_ddate(ddate)
+			,m_dtime(dtime)
+		{}
+		
+		// Construct from a std::chrono::duration
+		template <typename Rep,typename Period> TimeSpan(std::chrono::duration<Rep,Period> duration)
+			:m_ddate(std::chrono::duration_cast<date_duration_t>(duration))
+			,m_dtime(std::chrono::duration_cast<time_duration_t>(duration - m_ddate))
+		{}
+
+		// Converts the timespan into a std::chrono::duration
+		template <typename Duration> Duration To() const
+		{
+			return std::chrono::duration_cast<Duration>(m_ddate + m_dtime);
+		}
+	};
+
+	// Time points are equivalent if they represent the same UTC time
+	// The utc offset describes geographical location, not time.
+	inline bool operator == (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date == rhs.m_date && lhs.m_time == rhs.m_time; }
+	inline bool operator != (DateTime const& lhs, DateTime const& rhs) { return !(lhs == rhs); }
+	inline bool operator <  (DateTime const& lhs, DateTime const& rhs) { return lhs.m_date != rhs.m_date ? lhs.m_date < rhs.m_date : lhs.m_time < rhs.m_time; }
+	inline bool operator >  (DateTime const& lhs, DateTime const& rhs) { return rhs < lhs; }
+	inline bool operator <= (DateTime const& lhs, DateTime const& rhs) { return !(lhs > rhs); }
+	inline bool operator >= (DateTime const& lhs, DateTime const& rhs) { return !(lhs < rhs); }
+
+	inline TimeSpan operator - (TimeSpan const& rhs)
+	{
+		return TimeSpan(-rhs.m_ddate, -rhs.m_dtime);
+	}
+	inline DateTime operator + (DateTime const& lhs, TimeSpan const& rhs)
+	{
+		return DateTime(lhs.m_date + rhs.m_ddate, lhs.m_time + rhs.m_dtime, lhs.m_offset);
+	}
+	inline TimeSpan operator - (DateTime const& lhs, DateTime const& rhs)
+	{
+		return TimeSpan(lhs.m_date - rhs.m_date, lhs.m_time - rhs.m_time);
+	}
+	inline TimeSpan operator + (TimeSpan const& lhs, TimeSpan const& rhs)
+	{
+		return TimeSpan(lhs.m_ddate + rhs.m_ddate, lhs.m_dtime + rhs.m_dtime);
+	}
+	inline TimeSpan operator - (TimeSpan const& lhs, TimeSpan const& rhs)
+	{
+		return lhs + (-rhs);
+	}
 }
 
 #if PR_UNITTESTS
@@ -399,6 +566,23 @@ namespace pr
 				auto s = pr::To<std::string>(t, "%hh:%mm:%ss.%fff");
 				PR_CHECK(s, "01:23:45.067");
 			}
+
+			{// Testing DateTime
+				auto dt1 = DateTime::NowUTC();
+				auto dt2 = DateTime::Now();
+				auto ofs1 = dt2 - dt1;
+				PR_CHECK(ofs1.To<seconds>().count() == 0, true);
+				PR_CHECK(duration_cast<hours>(dt2.m_offset - dt1.m_offset).count() == 12, true);
+
+				auto dt3 = DateTime(1976,12,29,3,45,0,hours(12));
+				auto dt4 = DateTime(1977,12,8,10,15,0,hours(12));
+				auto ofs2 = dt4 - dt3;
+				PR_CHECK(ofs2.To<seconds>().count() == 29745000, true);
+
+				auto ts1 = TimeSpan(days(1) + seconds(5000));
+				PR_CHECK(ts1.To<minutes>().count() == 1523, true);
+			}
+
 			{ // unit test of chrono-Compatible Low-Level Date Algorithms
 				PR_CHECK(days_from_civil(1970, 1, 1) == 0, true);                    // 1970-01-01 is day 0
 				PR_CHECK(civil_from_days(0) == std::make_tuple(1970, 1, 1), true);   // 1970-01-01 is day 0
@@ -413,16 +597,16 @@ namespace pr
 
 				for (auto y = ystart; y <= -ystart; ++y)
 				{
-					for (auto m = 1U; m <= 12; ++m)
+					for (auto m = 1; m <= 12; ++m)
 					{
 						auto e = last_day_of_month(y, m);
-						for (auto d = 1U; d <= e; ++d)
+						for (auto d = 1; d <= e; ++d)
 						{
 							int z = days_from_civil(y, m, d);
 							PR_CHECK(prev_z < z, true);
 							PR_CHECK(z == prev_z+1, true);
 
-							int yp; unsigned mp, dp;
+							int yp; int mp, dp;
 							std::tie(yp, mp, dp) = civil_from_days(z);
 							PR_CHECK(y == yp, true);
 							PR_CHECK(m == mp, true);

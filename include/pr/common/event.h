@@ -202,6 +202,7 @@ namespace pr
 		struct EventTest
 		{
 			int m_evt0_handled;
+			int m_evt5_handled;
 
 			pr::Event<void()>                        OnEvtNoUsed;
 			pr::Event<void()>                        OnEvt0;
@@ -212,9 +213,12 @@ namespace pr
 			pr::Event<void(int,int,int,int,int)>     OnEvt5;
 
 			EventTest()
-				:m_evt0_handled(0)
+				:m_evt0_handled()
+				,m_evt5_handled()
 			{
+				using namespace std::placeholders;
 				OnEvt0 += std::bind(&EventTest::Evt0Handler, this);
+				OnEvt5 += std::bind(&EventTest::Evt5Handler, this, _1, _2, _3, _4, _5);
 			}
 
 			void RaiseEvents()
@@ -231,6 +235,10 @@ namespace pr
 			void Evt0Handler()
 			{
 				++m_evt0_handled;
+			}
+			void Evt5Handler(int,int,int,int,int)
+			{
+				++m_evt5_handled;
 			}
 		};
 
@@ -291,6 +299,7 @@ namespace pr
 			PR_CHECK(y, 3);
 
 			PR_CHECK(test.m_evt0_handled, 9);
+			PR_CHECK(test.m_evt5_handled, 9);
 		}
 	}
 }

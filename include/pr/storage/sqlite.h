@@ -3,6 +3,7 @@
 //  Copyright (c) Paul Ryland 2012
 //*****************************************
 
+// Note: to build the sqlite3.h/.c files, disable SDL
 #pragma once
 
 #include <ctype.h>

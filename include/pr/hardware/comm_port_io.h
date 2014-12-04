@@ -346,5 +346,37 @@ namespace pr
 			::ClearCommError(m_handle, &dwErrorFlags, &ComStat);
 			return ComStat.cbInQue;
 		}
+
+		// Enumerate the comm port names on the current machine
+		template <typename Func> static void EnumPortNames(Func func)
+		{
+			struct HKey
+			{
+				HKEY m_key;
+				HKey(HKEY key, char const* subkey)
+				{
+					auto r = RegOpenKeyExA(key, subkey, 0, KEY_READ, &m_key);
+					if (r != ERROR_SUCCESS)
+						throw std::exception(std::string("Failed to open registry key ").append(subkey).append(" to enumerate comm ports. RegOpenKeyA returned ").append(std::to_string(r)).c_str());
+				}
+				~HKey() { RegCloseKey(m_key); }
+				operator HKEY() const { return m_key; }
+			} hk(HKEY_LOCAL_MACHINE, "HARDWARE\\DEVICEMAP\\SERIALCOMM");
+
+			LSTATUS r;
+			enum { MAX_VALUE_NAME_SIZE = 256, MAX_DATA_LENGTH = 16384 };
+			char data[MAX_DATA_LENGTH]; DWORD datalen = _countof(data);
+			char value[MAX_VALUE_NAME_SIZE]; DWORD vallen = _countof(value); DWORD type;
+			for (DWORD i = 0; (r = RegEnumValueA(hk, i, &value[0], &vallen, NULL, &type, (BYTE*)&data[0], &datalen)) != ERROR_NO_MORE_ITEMS; ++i, vallen = _countof(value), datalen = _countof(data))
+			{
+				if (r != ERROR_SUCCESS)
+					throw std::exception(std::string("Enumerating comm ports failed. RegEnumKey returned ").append(std::to_string(r)).c_str());
+				if (type != REG_SZ)
+					continue;
+
+				data[datalen] = 0;
+				func(data);
+			}
+		}
 	};
 }

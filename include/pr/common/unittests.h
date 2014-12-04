@@ -118,7 +118,7 @@ namespace pr
 					}
 					catch (std::exception const& e)
 					{
-						out() << test.m_name << " failed: " << e.what() << std::endl;
+						out() << test.m_name << " failed:" << std::endl << e.what() << std::endl;
 						++failed;
 					}
 				}
