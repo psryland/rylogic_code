@@ -30,6 +30,7 @@ namespace ele
 	typedef double man_days_t;
 	typedef double man_power_t;
 	typedef std::vector<std::string> strvec_t;
+	const double seconds_per_day = 60.0*60.0*24.0;
 
 	struct GameInstance;
 	struct GameConstants;

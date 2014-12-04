@@ -469,6 +469,6 @@ ADDIN_API HRESULT WINAPI AddIn_DateTime(DWORD, DbgHelper* pHelper, int, BOOL, ch
 	if (FAILED(pHelper->Read(dt))) return E_FAIL;
 	//auto tm = dt.utc_time();
 	//tm.pretty();
-	_snprintf(pResult, max, "%s", ::ctime(&dt.ticks));
+	_snprintf(pResult, max, "%s", dt.ToString().c_str());
 	return S_OK;
 }

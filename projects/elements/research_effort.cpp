@@ -19,7 +19,7 @@ namespace ele
 	{
 		// Reduce the remaining effort by the assigned man power working for 'elapsed' seconds
 		man_power_t man_power = m_assigned_resources * m_consts.m_total_man_power;
-		m_remaining_effort -= pr::datetime::SecondsToDays(man_power * elapsed);
+		m_remaining_effort -= (man_power * elapsed) / seconds_per_day;
 		if (m_remaining_effort <= std::numeric_limits<man_days_t>::epsilon())
 			m_remaining_effort = 0.0;
 
@@ -27,7 +27,7 @@ namespace ele
 		m_time_till_discovery = std::numeric_limits<pr::seconds_t>::max();
 		if (man_power > std::numeric_limits<man_power_t>::epsilon())
 		{
-			m_time_till_discovery -= pr::datetime::DaysToSeconds(m_remaining_effort / man_power);
+			m_time_till_discovery -= (m_remaining_effort / man_power) * seconds_per_day;
 			if (m_time_till_discovery <= std::numeric_limits<pr::seconds_t>::epsilon())
 				m_time_till_discovery = 0.0;
 		}

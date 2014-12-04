@@ -73,7 +73,7 @@ namespace ele
 			if (r.Complete())
 				pad << "   " << EColour::Green << pr::str::PrettyNumber(consts.m_star_mass, 15, 1) << " million trillion kg\n";
 			else if (r.m_time_till_discovery < ws.m_time_till_nova)
-				pad << "   " << EColour::Red << pr::FmtS("(estimated discovery in %1.0f days)\n", pr::datetime::SecondsToDays(r.m_time_till_discovery));
+				pad << "   " << EColour::Red << pr::FmtS("(estimated discovery in %1.0f days)\n", r.m_time_till_discovery/seconds_per_day);
 			else
 				pad << "   " << EColour::BrightRed << "(research needed!)\n";
 		}
@@ -83,7 +83,7 @@ namespace ele
 			if (r.Complete())
 				pad << "   " << EColour::Green << pr::str::PrettyNumber(consts.m_star_distance, 6, 1) << " million km\n";
 			else if (r.m_time_till_discovery < ws.m_time_till_nova)
-				pad << "   " << EColour::Red << pr::FmtS("(estimated discovery in %1.0f days)\n", pr::datetime::SecondsToDays(r.m_time_till_discovery));
+				pad << "   " << EColour::Red << pr::FmtS("(estimated discovery in %1.0f days)\n", r.m_time_till_discovery/seconds_per_day);
 			else
 				pad << "   " << EColour::BrightRed << "(research needed!)\n";
 		}
