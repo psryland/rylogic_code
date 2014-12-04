@@ -115,7 +115,7 @@ namespace pr.unittests
 						passed += pass_count;
 					}
 					
-					if (failed == 0)
+					if (failed == 0 && passed > 0)
 					{
 						outp.WriteLine("\r\n *** All {0} unit tests passed *** \r\n".Fmt(passed));
 						outp.Flush();

@@ -9,6 +9,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -47,8 +48,12 @@ using System.Threading;
 //  an interface is not appropriate for getting this type.
 //  For custom types use the BindFunction/ReadFunction map to convert your
 //  custom type to one of the supported sqlite data types.
+//
+// Thread Safety:
+//  Sqlite is thread safe if the dll has been built with SQLITE_THREADSAFE
+//  defined != 0 and the db connection is opened with OpenFlags.FullMutex.
+//  For performance however, sqlite should be used in a single-threaded way.
 
-// ReSharper disable AccessToStaticMemberViaDerivedType
 namespace pr.common
 {
 	/// <summary>A simple sqlite .net ORM</summary>
@@ -289,6 +294,7 @@ namespace pr.common
 		/// <summary>A helper for gluing strings together</summary>
 		public static string Sql(params object[] parts)
 		{
+			m_sql_cached_sb = m_sql_cached_sb ?? new StringBuilder();
 			return Sql(m_sql_cached_sb, parts);
 		}
 		public static string Sql(StringBuilder sb, params object[] parts)
@@ -305,7 +311,7 @@ namespace pr.common
 			foreach (var p in parts)
 				sb.Append(p);
 		}
-		private static readonly StringBuilder m_sql_cached_sb = new StringBuilder();
+		[ThreadStatic] private static StringBuilder m_sql_cached_sb; // no initialised for thread statics
 
 		/// <summary>
 		/// Returns the primary key values read from 'item'.
@@ -1076,8 +1082,12 @@ namespace pr.common
 		#endregion
 
 		#region Database
-		// ReSharper disable MemberHidesStaticFromOuterClass
-		/// <summary>Represents a connection to an sqlite database file</summary>
+		/// <summary>
+		/// Represents a connection to an sqlite database file.<para/>
+		/// SQLite provides isolation between operations in separate database connections.
+		/// However, there is no isolation between operations that occur within the same
+		/// database connection.<para/>
+		/// ie. you can have multiple of these concurrently, e.g. one per thread</summary>
 		public class Database :IDisposable
 		{
 			private readonly sqlite3 m_db;
@@ -1086,19 +1096,9 @@ namespace pr.common
 			private readonly UpdateHookCB m_update_cb_handle;
 			private GCHandle m_this_handle;
 
-			private readonly int m_creation_thread;
-			[Conditional("DEBUG")] public void AssertCorrectThread()
-			{
-				if (m_creation_thread != Thread.CurrentThread.ManagedThreadId)
-				{
-					var ex = Exception.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
-					Log.Exception(this, ex, "Cross-thread use of Sqlite ORM");
-					throw ex;
-				}
-			}
-
-			/// <summary>The filepath of the database file opened</summary>
-			public string Filepath { get; set; }
+			// The Id of the thread that created this db handle.
+			// For asynchronous access to the database, create 'Database' instances for each thread.
+			private int m_owning_thread_id;
 
 			/// <summary>Opens a connection to the database</summary>
 			public Database(string filepath, OpenFlags flags = OpenFlags.Create|OpenFlags.ReadWrite)
@@ -1106,7 +1106,7 @@ namespace pr.common
 				Filepath = filepath;
 				ReadItemHook = x => x;
 				WriteItemHook = x => x;
-				m_creation_thread = Thread.CurrentThread.ManagedThreadId;
+				m_owning_thread_id = Thread.CurrentThread.ManagedThreadId;
 				m_this_handle = GCHandle.Alloc(this);
 				m_update_cb_handle = UpdateCB;
 
@@ -1124,13 +1124,14 @@ namespace pr.common
 				// Default to no busy timeout
 				BusyTimeout = 0;
 			}
-
-			/// <summary>IDisposable interface</summary>
 			public void Dispose()
 			{
 				Close();
 				m_this_handle.Free();
 			}
+
+			/// <summary>The filepath of the database file opened</summary>
+			public string Filepath { get; set; }
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
 			public sqlite3 Handle
@@ -1252,6 +1253,12 @@ namespace pr.common
 					if (query.Step()) throw Exception.New(Result.Error, "Scalar query returned more than one result");
 					return value;
 				}
+			}
+
+			/// <summary>Returns the RowId for the last inserted row</summary>
+			public long LastInsertRowId
+			{
+				get { return Dll.LastInsertRowId(m_db); }
 			}
 
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
@@ -1401,8 +1408,10 @@ namespace pr.common
 			/// <summary>Factory method for creating Sqlite.Transaction instances</summary>
 			public Transaction NewTransaction()
 			{
-				return new Transaction(this);
+				if (m_transaction_in_progress != null) throw new Exception("Nested transactions on a single db connection are not allowed");
+				return m_transaction_in_progress = new Transaction(this, () => m_transaction_in_progress = null);
 			}
+			private Transaction m_transaction_in_progress;
 
 			/// <summary>General sql query on table(T)</summary>
 			public Query Query(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
@@ -1534,6 +1543,16 @@ namespace pr.common
 				else
 				{
 					Trace.WriteLine(ETrace.ObjectCache, string.Format("Table {0} has no cache", args.TableName));
+				}
+			}
+
+			[Conditional("DEBUG")] internal void AssertCorrectThread()
+			{
+				if (m_owning_thread_id != Thread.CurrentThread.ManagedThreadId)
+				{
+					var ex = Exception.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
+					Log.Exception(this, ex, "Cross-thread use of Sqlite ORM");
+					throw ex;
 				}
 			}
 		}
@@ -3492,50 +3511,47 @@ namespace pr.common
 		/// <summary>An RAII class for transactional interaction with a database</summary>
 		public class Transaction :IDisposable
 		{
-			private readonly static object m_lock = new object();
-			private static bool m_transaction_in_progress;
 			private readonly Database m_db;
+			private readonly Action m_disposed;
 			private bool m_completed;
 
-			public Transaction(Database db)
+			// Create using the Database.NewTransaction() method
+			internal Transaction(Database db, Action on_dispose)
 			{
 				m_db = db;
+				m_disposed = on_dispose;
 				m_completed = false;
-				lock (m_lock)
-				{
-					if (m_transaction_in_progress) throw new Exception("Nested transactions are not allowed");
-					m_db.Execute("begin transaction");
-					m_transaction_in_progress = true;
-				}
+
+				// Begin the transaction
+				m_db.Execute("begin transaction");
 			}
 			public void Commit()
 			{
-				lock (m_lock)
-				{
-					if (m_completed) throw new Exception("Transaction already completed");
-					m_db.Execute("commit");
-					m_completed = true;
-					m_transaction_in_progress = false;
-				}
+				if (m_completed)
+					throw new Exception("Transaction already completed");
+
+				m_db.Execute("commit");
+				m_completed = true;
 			}
 			public void Rollback()
 			{
-				lock (m_lock)
-				{
-					if (m_completed) throw new Exception("Transaction already completed");
-					m_db.Execute("rollback");
-					m_completed = true;
-					m_transaction_in_progress = false;
-				}
+				if (m_completed)
+					throw new Exception("Transaction already completed");
+
+				m_db.Execute("rollback");
+				m_completed = true;
 			}
 			public void Dispose()
 			{
 				try
 				{
-					lock (m_lock) if (m_completed) return;
+					if (m_completed) return;
 					Rollback();
 				}
-				finally { m_transaction_in_progress = false; }
+				finally
+				{
+					m_disposed();
+				}
 			}
 		}
 
@@ -3832,12 +3848,39 @@ namespace pr.common
 			private const string SqliteDll =  "sqlite3";
 			private static IntPtr m_module;
 
-			/// <summary>Call this method to load a specific version of the sqlite dll. Call this before any DllImport'd functions</summary>
-			public static void SelectDll(string dllpath)
+			/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
+			public static void LoadDll(string dir = @".\lib\$(platform)")
 			{
-				m_module = LoadLibrary(dllpath);
-				if (m_module == IntPtr.Zero)
-					throw new System.Exception(string.Format("Failed to load dll {0}", dllpath));
+				if (m_module != IntPtr.Zero)
+					return; // Already loaded
+
+				var dllname = SqliteDll+".dll";
+				var dllpath = dllname;
+
+				// Try the lib folder. Load the appropriate dll for the platform
+				dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
+				#if DEBUG
+				dir = dir.Replace("$(config)", "debug");
+				#else
+				dir = dir.Replace("$(config)", "release");
+				#endif
+				dllpath = Path.Combine(dir, dllname);
+				if (PathEx.FileExists(dllpath))
+				{
+					m_module = LoadLibrary(dllpath);
+					if (m_module != IntPtr.Zero)
+						return;
+				}
+
+				// Try the local directory
+				if (PathEx.FileExists(dllpath))
+				{
+					m_module = LoadLibrary(dllpath);
+					if (m_module != IntPtr.Zero)
+						return;
+				}
+
+				throw new DllNotFoundException(string.Format("Failed to load dependency '{0}'",dllname));
 			}
 			[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
@@ -3943,6 +3986,13 @@ namespace pr.common
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_libversion_number", CallingConvention = CallingConvention.Cdecl)]
 			private static extern int sqlite3_libversion_number();
 
+			public static bool ThreadSafe
+			{
+				get { return sqlite3_threadsafe() != 0; }
+			}
+			[DllImport(SqliteDll, EntryPoint = "sqlite3_libversion_number", CallingConvention = CallingConvention.Cdecl)]
+			private static extern int sqlite3_threadsafe();
+
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_close", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_close(IntPtr db);
 
@@ -3961,6 +4011,9 @@ namespace pr.common
 			/// <summary>Set a configuration setting for the database</summary>
 			public static Result Config(ConfigOption option)
 			{
+				if (!ThreadSafe && option != ConfigOption.SingleThread)
+					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
+
 				return sqlite3_config(option);
 			}
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_config", CallingConvention=CallingConvention.Cdecl)]
@@ -3969,6 +4022,9 @@ namespace pr.common
 			/// <summary>Open a database file</summary>
 			public static sqlite3 Open(string filepath, OpenFlags flags)
 			{
+				if ((flags & OpenFlags.FullMutex) != 0 && !ThreadSafe)
+					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
+
 				NativeSqlite3Handle db;
 				var res = sqlite3_open_v2(filepath, out db, (int)flags, IntPtr.Zero);
 				if (res != Result.OK) throw Exception.New(res, "Failed to open database connection to file "+filepath);
@@ -3995,7 +4051,7 @@ namespace pr.common
 				if (res != Result.OK)
 				{
 					var err = ErrorMsg(db);
-					var msg = string.Format("Error compiling sql string '{0}' "+Environment.NewLine+"Sqlite Error: {1}" ,sql_string, err);
+					var msg = string.Format("Error compiling sql string '{0}'\n{1}" ,sql_string, err);
 					Log.Debug(null, msg);
 					throw Exception.New(res, msg);
 				}

@@ -18,7 +18,6 @@ namespace pr
 }
 #endif
 */
-
 #include <algorithm>
 #include "pr/common/unittests.h"
 #include "unittests/unittests.h" // all tests

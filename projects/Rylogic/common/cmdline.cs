@@ -12,14 +12,16 @@ namespace pr.common
 
 			/// <summary>
 			/// Handle a command line option. Return true to continue parsing, false to stop.
-			/// 'arg' is the index of the argument immediately after 'option'. If additional arguments
-			/// are used, implementers should increment 'arg' for each arg used.</summary>
+			/// 'arg' is the index of the argument immediately after 'option'. If args[arg] is
+			/// used (i.e. its a parameter related to the option) then arg should be incremented.
+			/// If additional arguments are used, 'arg' should be incremented for each arg used.</summary>
 			bool CmdLineOption(string option, string[] args, ref int arg);
 
 			/// <summary>
 			/// Handle anything not preceded by '-'. Return true to continue parsing, false to stop.
-			/// 'arg' is the index of the argument immediately after 'data'. If additional arguments
-			/// are used, implementers should increment 'arg' for each arg used.</summary>
+			/// 'arg' is the index of the argument immediately after 'data'. If args[arg] is
+			/// used then arg should be incremented. If additional arguments are used, 'arg'
+			/// should be incremented for each arg used.</summary>
 			bool CmdLineData(string data, string[] args, ref int arg);
 
 			/// <summary>Return true if all required options have been given</summary>

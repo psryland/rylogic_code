@@ -244,6 +244,38 @@ namespace pr.util
 				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
 
+		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>
+		public static string ToHexString(byte[] arr, string sep = " ", string line_sep = "\n", int width = 16)
+		{
+			var sb = new StringBuilder();
+			for (var i = 0; i != arr.Length; ++i)
+			{
+				if (sb.Length != 0)
+					sb.Append((i % width) != 0 ? sep : line_sep);
+				sb.Append(arr[i].ToString("X2"));
+			}
+			return sb.ToString();
+		}
+
+		/// <summary>Returns true if 'x' is a valid hexadecimal character</summary>
+		public static bool IsHexChar(char x)
+		{
+			return (x >= '0' && x <= '9') || (x >= 'a' && x <= 'f') || (x >= 'A' && x <= 'F');			
+		}
+
+		/// <summary>Convert a hex string to a byte array</summary>
+		public static byte[] FromHexString(string hex)
+		{
+			var str = hex.Strip(x => !IsHexChar(x));
+			if ((str.Length & 1) != 0)
+				throw new ArgumentException("Hex string must have each byte represented by 2 characters","hex");
+
+			var arr = new byte[str.Length/2];
+			for (int i = 0; i != arr.Length; ++i)
+				arr[i] = byte.Parse(str.Substring(i*2, 2), System.Globalization.NumberStyles.HexNumber);
+			return arr;
+		}
+
 		/// <summary>Add 'item' to a history list of items.</summary>
 		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, Func<T,T,bool> cmp = null)
 		{
@@ -902,6 +934,14 @@ namespace pr.unittests
 			Assert.AreEqual(  "29.0GB 27.0GiB"  , pretty(28991029248));
 			Assert.AreEqual(   "1.9TB 1.7TiB"   , pretty(1855425871872));
 			Assert.AreEqual(   "9.2EB 8.0EiB"   , pretty(9223372036854775807));
+		}
+		[Test] public void ToFromHexString()
+		{
+			var data = new byte[]{1,3,5,7,9,10,8,6,4,2,0,255,128};
+			var s = Util.ToHexString(data,",","\r\n",4);
+			Assert.AreEqual(s, "01,03,05,07\r\n09,0A,08,06\r\n04,02,00,FF\r\n80");
+			var d = Util.FromHexString(s);
+			Assert.True(data.SequenceEqual(d));
 		}
 	}
 }
