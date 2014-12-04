@@ -26,11 +26,15 @@
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_core.c" />
     <ClCompile Include="..\include\pr\lua\lua_lib.c" />
-    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
+    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
       <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</SDLCheck>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -157,6 +161,7 @@
     <ClInclude Include="..\include\pr\gui\scaled_dc.h" />
     <ClInclude Include="..\include\pr\gui\scintilla.h" />
     <ClInclude Include="..\include\pr\gui\vt100.h" />
+    <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h" />
     <ClInclude Include="..\include\pr\hardware\comm_port_io.h" />
     <ClInclude Include="..\include\pr\hardware\cpuinfo.h" />
@@ -292,8 +297,8 @@
     <ClInclude Include="..\include\pr\script\stream_stack.h" />
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
-    <ClInclude Include="..\sdk\sqlite\sqlite3.h" />
     <ClInclude Include="..\projects\unittests\unittests.h" />
+    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

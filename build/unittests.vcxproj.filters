@@ -91,7 +91,7 @@
     <ClCompile Include="..\include\pr\crypt\md5.cpp">
       <Filter>pr\crypt</Filter>
     </ClCompile>
-    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
+    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
       <Filter>sqlite3</Filter>
     </ClCompile>
   </ItemGroup>
@@ -765,9 +765,6 @@
     <ClInclude Include="..\include\pr\maths\spatial.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\sdk\sqlite\sqlite3.h">
-      <Filter>sqlite3</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\storage\sqlite.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
@@ -875,6 +872,12 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\macros\noexcept.h">
       <Filter>pr\macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h">
+      <Filter>sqlite3</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
