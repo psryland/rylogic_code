@@ -1,5 +1,21 @@
-// Win32 Control wrappers
-// (like ATL/WTL, or MFC, but a lot less code, and no macros)
+//*****************************************************************************************
+// Win32 API 
+//  Copyright (c) Rylogic Ltd 2014
+//*****************************************************************************************
+// A collection of structs that wrap the win32 api and expose an
+// interface similar to C# .NET winforms. Inspired by ATL\WTL.
+// Specs:
+//   - As fast as ATL\WTL. Uses ATL thunks for WNDPROC
+//   - Doesn't use macros. Much easier to debug/read
+//   - Single file with minimal dependencies. Depends on standard
+//     C++ headers, atlbase.h, and other standard headers (no external
+//     libraries needed)
+//   - Automatic support for resizing
+//   - C#.NET style event handlers
+//
+// Example Use:
+//  See the end of this file for the #if 0,#endif
+//  block showing basic use.
 #pragma once
 
 #include <vector>
@@ -29,11 +45,51 @@ namespace pr
 {
 	namespace wingui
 	{
+		// Special HWND valid used to indicate that a window is
+		// the main application window and that, when closed, the
+		// application should exit. Pass as the 'parent' parameter.
+		HWND const ApplicationMainWindow = HWND(~0ULL);
+
 		// Forwards
 		struct Point;
 		struct Rect;
 		struct Size;
-		HWND const ApplicationMainWindow = HWND(~0);
+
+		#pragma region Enumerations
+
+		enum class ECommonControl
+		{
+			ListViewClasses = ICC_LISTVIEW_CLASSES   , // listview, header
+			TreeViewClasses = ICC_TREEVIEW_CLASSES   , // treeview, tooltips
+			BarClasses      = ICC_BAR_CLASSES        , // toolbar, statusbar, trackbar, tooltips
+			TabClasses      = ICC_TAB_CLASSES        , // tab, tooltips
+			UpDown          = ICC_UPDOWN_CLASS       , // updown
+			Progress        = ICC_PROGRESS_CLASS     , // progress
+			Hotkey          = ICC_HOTKEY_CLASS       , // hotkey
+			Animate         = ICC_ANIMATE_CLASS      , // animate
+			Win95Classes    = ICC_WIN95_CLASSES      , //
+			DateClasses     = ICC_DATE_CLASSES       , // month picker, date picker, time picker, updown
+			ComboEx         = ICC_USEREX_CLASSES     , // comboex
+			Rebar           = ICC_COOL_CLASSES       , // rebar (coolbar) control
+			Internet        = ICC_INTERNET_CLASSES   , //
+			PageScroller    = ICC_PAGESCROLLER_CLASS , // page scroller
+			NativeFontCtrl  = ICC_NATIVEFNTCTL_CLASS , // native font control
+			StandardClasses = ICC_STANDARD_CLASSES   ,
+			LinkClass       = ICC_LINK_CLASS         ,
+		};
+
+		// Autosize anchors
+		enum class EAnchor { Left = 1 << 0, Top = 1 << 1, Right = 1 << 2, Bottom = 1 << 3 };
+		inline EAnchor operator | (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) | int(rhs)); }
+		inline EAnchor operator & (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) & int(rhs)); }
+
+		enum class EDialogResult
+		{
+			Ok,
+			Cancel,
+		};
+
+		#pragma endregion
 
 		#pragma region Support Functions
 		// Convert an error code into an error message
@@ -57,6 +113,13 @@ namespace pr
 			if (result != 0) return;
 			auto hr = HRESULT(GetLastError());
 			Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
+		}
+
+		// Initialise common controls (makes them look modern)
+		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
+		{
+			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
+			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
 		}
 		#pragma endregion
 
@@ -202,40 +265,31 @@ namespace pr
 			~PaintStruct()                       { EndPaint(m_hwnd, this); }
 		};
 
-		#pragma endregion
-
-		#pragma region Enumerations
-
-		enum class ECommonControl
+		// Basic message loop
+		struct MessageLoop
 		{
-			ListViewClasses = ICC_LISTVIEW_CLASSES   , // listview, header
-			TreeViewClasses = ICC_TREEVIEW_CLASSES   , // treeview, tooltips
-			BarClasses      = ICC_BAR_CLASSES        , // toolbar, statusbar, trackbar, tooltips
-			TabClasses      = ICC_TAB_CLASSES        , // tab, tooltips
-			UpDown          = ICC_UPDOWN_CLASS       , // updown
-			Progress        = ICC_PROGRESS_CLASS     , // progress
-			Hotkey          = ICC_HOTKEY_CLASS       , // hotkey
-			Animate         = ICC_ANIMATE_CLASS      , // animate
-			Win95Classes    = ICC_WIN95_CLASSES      , //
-			DateClasses     = ICC_DATE_CLASSES       , // month picker, date picker, time picker, updown
-			ComboEx         = ICC_USEREX_CLASSES     , // comboex
-			Rebar           = ICC_COOL_CLASSES       , // rebar (coolbar) control
-			Internet        = ICC_INTERNET_CLASSES   , //
-			PageScroller    = ICC_PAGESCROLLER_CLASS , // page scroller
-			NativeFontCtrl  = ICC_NATIVEFNTCTL_CLASS , // native font control
-			StandardClasses = ICC_STANDARD_CLASSES   ,
-			LinkClass       = ICC_LINK_CLASS         ,
-		};
+			HACCEL m_accel;
 
-		// Autosize anchors
-		enum class EAnchor { Left = 1 << 0, Top = 1 << 1, Right = 1 << 2, Bottom = 1 << 3 };
-		inline EAnchor operator | (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) | int(rhs)); }
-		inline EAnchor operator & (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) & int(rhs)); }
-
-		enum class EDialogResult
-		{
-			Ok,
-			Cancel,
+			MessageLoop(HACCEL accel = 0)
+				:m_accel(accel)
+			{}
+			MessageLoop(HINSTANCE hinst, int accel_idd)
+				:MessageLoop(::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_idd)))
+			{}
+			int Run()
+			{
+				MSG msg;
+				for (; ::GetMessage(&msg, NULL, 0, 0); )
+				{
+					if (m_accel && ::TranslateAccelerator(msg.hwnd, m_accel, &msg)) continue;
+					if (!PreTranslateMessage(&msg)) // IsDialogMessage()
+					{
+						::TranslateMessage(&msg);
+						::DispatchMessage(&msg);
+					}
+				}
+				return (int)msg.wParam;
+			}
 		};
 
 		#pragma endregion
@@ -337,7 +391,7 @@ namespace pr
 				if (hook && !m_oldproc)
 					m_oldproc = (WNDPROC)::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_thunk.GetCodeAddress()));
 				else if (!hook && m_oldproc)
-					::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc));
+					::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc)), m_oldproc = nullptr;
 			}
 			static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			{
@@ -398,6 +452,12 @@ namespace pr
 			{
 				switch (message)
 				{
+				case WM_DESTROY:
+					{
+						HookWndProc(false);
+						m_hwnd = nullptr;
+						break;
+					}
 				case WM_ERASEBKGND:
 					{
 						if (m_dbl_buffer)
@@ -460,6 +520,12 @@ namespace pr
 					{
 						ResizeToParent(true);
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+						break;
+					}
+				case WM_DESTROY:
+					{
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+						::DestroyWindow(m_hwnd); // Parent window is being destroy, destroy this window to
 						break;
 					}
 				}
@@ -895,20 +961,23 @@ namespace pr
 				case WM_INITDIALOG:
 					{
 						// Handle WM_INITDIALOG because we attach to the hwnd in InitWndProc
-						if (ForwardToChildren(m_hwnd, message, wparam, lparam, result)) return true;
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						return true;
 					}
 				case WM_CLOSE:
 					{
 						Close();
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
 				case WM_DESTROY:
 					{
-						m_hwnd = nullptr;
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						if (m_app_main_window)
 							::PostQuitMessage(0);
-						break;
+						HookWndProc(false);
+						m_hwnd = nullptr;
+						return true;
 					}
 				}
 				return false;
@@ -1349,34 +1418,6 @@ namespace pr
 			{}
 		};
 		#pragma endregion
-
-		// Basic message loop
-		struct MessageLoop
-		{
-			HACCEL m_accel;
-
-			MessageLoop(HINSTANCE hinst, int accel_idd)
-				:m_accel(accel_idd != 0 ? ::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_idd)) : 0)
-			{}
-			int Run()
-			{
-				MSG msg;
-				for (; ::GetMessage(&msg, NULL, 0, 0); )
-				{
-					if (m_accel && TranslateAccelerator(msg.hwnd, m_accel, &msg)) continue;
-					TranslateMessage(&msg);
-					DispatchMessage(&msg);
-				}
-				return (int)msg.wParam;
-			}
-		};
-
-		// Initialise common controls (makes them look modern)
-		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
-		{
-			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
-			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
-		}
 	}
 }
 
@@ -1393,4 +1434,56 @@ namespace pr
 #ifdef thread_local_defined
 #undef thread_local_defined
 #undef thread_local
+#endif
+
+// Example code showing basic use
+#if 0
+using namespace pr::wingui;
+
+// About dialog
+struct About :Form<About>
+{
+	Button m_btn_ok;
+
+	enum { IDD = IDD_ABOUTBOX };
+	About()
+		:Form<About>()
+		,m_btn_ok(IDOK, this)
+	{
+		// Hook up an event handler to close the dialog when the ok button is clicked
+		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
+	}
+};
+
+// Application frame window
+struct Main :Form<Main>
+{
+	Label m_lbl;
+	Button m_btn;
+
+	// Note: IDD not needed since Main isn't created from a dialog resource
+	enum { IDC_BTN = 100, };
+	Main()
+		:Form<Main>(_T("Demo Window"), ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
+		,m_lbl(_T("hello world"), 80, 20, 100, 16, -1, m_hwnd, this)
+		,m_btn(_T("click me!"), 200, 130, 80, 20, IDC_BTN, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
+	{
+		// Show a modal dialog when the button is clicked
+		m_btn.Click += [&](Button&,EmptyArgs const&)
+			{
+				About about;
+				about.ShowDialog(*this);
+			};
+	}
+};
+
+// WinMain
+int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+{
+	InitCtrls();
+
+	Main main;
+	MessageLoop loop;
+	return loop.Run();
+}
 #endif
