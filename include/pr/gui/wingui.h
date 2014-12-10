@@ -45,15 +45,12 @@ namespace pr
 {
 	namespace wingui
 	{
-		// Special HWND valid used to indicate that a window is
-		// the main application window and that, when closed, the
-		// application should exit. Pass as the 'parent' parameter.
-		HWND const ApplicationMainWindow = HWND(~0ULL);
-
 		// Forwards
 		struct Point;
 		struct Rect;
 		struct Size;
+		struct Control;
+		template <typename D> struct Form;
 
 		#pragma region Enumerations
 
@@ -276,17 +273,19 @@ namespace pr
 			MessageLoop(HINSTANCE hinst, int accel_idd)
 				:MessageLoop(::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_idd)))
 			{}
-			int Run()
+			virtual int Run()
 			{
 				MSG msg;
-				for (; ::GetMessage(&msg, NULL, 0, 0); )
+				for (int result; (result = ::GetMessage(&msg, NULL, 0, 0)) != 0; )
 				{
+					// GetMessage actually returns negative values for errors
+					Throw(result > 0, "GetMessage failed");
+
+					// This is not a typical message loop, we don't call 'TranslateMessage' or
+					// 'IsDialogMessage' in the main loop because we want each window to have
+					// the option of not translating the message, or of calling 'IsDialogMessage' first.
 					if (m_accel && ::TranslateAccelerator(msg.hwnd, m_accel, &msg)) continue;
-					if (!PreTranslateMessage(&msg)) // IsDialogMessage()
-					{
-						::TranslateMessage(&msg);
-						::DispatchMessage(&msg);
-					}
+					::DispatchMessage(&msg);
 				}
 				return (int)msg.wParam;
 			}
@@ -365,25 +364,34 @@ namespace pr
 
 		#pragma endregion
 
+		// Special handle value used to indicate that a window is
+		// the main application window and that, when closed, the
+		// application should exit. Pass as the 'parent' parameter.
+		struct ApplicationMainWindowHandle
+		{
+			operator HWND() const                           { return reinterpret_cast<HWND>(~0ULL); }
+			template <typename D> operator Form<D>*() const { return reinterpret_cast<Form<D>*>(~0ULL); }
+		} const ApplicationMainWindow;
+
 		// Base class for all windows/controls
 		struct Control
 		{
 			using Controls = std::vector<Control*>;
 		
 		protected:
-			HWND               m_hwnd;
-			int                m_id;
-			TCHAR const*       m_name;
-			Control*           m_parent;
-			Controls           m_child;
-			EAnchor            m_anchor;
-			Rect               m_pos_offset;
-			COLORREF           m_colour_fore;
-			COLORREF           m_colour_back;
-			bool               m_dbl_buffer;
-			ATL::CStdCallThunk m_thunk;
-			WNDPROC            m_oldproc;
-			std::thread::id    m_thread_id;
+			HWND               m_hwnd;        // Window handle for the control
+			int                m_id;          // Dialog control id, used to detect windows messages for this control
+			TCHAR const*       m_name;        // Debugging name for the control
+			Control*           m_parent;      // The parent that contains this control
+			Controls           m_child;       // The controls nested with this control
+			EAnchor            m_anchor;      // How the control resizes with it's parent
+			Rect               m_pos_offset;  // Distances from this control to the edges of the parent client area
+			COLORREF           m_colour_fore; // Foreground colour
+			COLORREF           m_colour_back; // Background colour
+			bool               m_dbl_buffer;  // True if the control is double buffered
+			ATL::CStdCallThunk m_thunk;       // WndProc thunk, turns a __stdcall into a __thiscall
+			WNDPROC            m_oldproc;     // The window class default wndproc function
+			std::thread::id    m_thread_id;   // The thread that this control was created on
 
 			// Hook or unhook the window proc for this control
 			void HookWndProc(bool hook)
@@ -836,9 +844,13 @@ namespace pr
 		template <typename Derived> struct Form :Control
 		{
 		protected:
-			HINSTANCE m_hinst;
-			bool m_app_main_window;
-			bool m_modal;
+			template <typename D> friend struct Form;
+
+			HINSTANCE      m_hinst;           // Module instance
+			Form<Derived>* m_parent_form;     // The parent of this form. Note, actually == reinterpret_cast<Form<Derived>*>(Form<Whatever>*),
+			Form<Derived>* m_child_form;      // A linked list of child dialogs. Note, actually == reinterpret_cast<Form<Derived>*>(Form<Whatever>*)
+			bool           m_app_main_window; // True if this is the main application window
+			bool           m_modal;           // True if this is a dialog being display modally
 
 			struct InitParam
 			{
@@ -927,13 +939,19 @@ namespace pr
 				return name;
 			}
 
-			// Helpers for accessing 'this' as a Derived&
-			Derived const& derived() const { return *static_cast<Derived const*>(this); }
-			Derived&       derived()       { return *static_cast<Derived*>(this); }
-
 			// Window proc
 			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
 			{
+				// Check if this message is actually for a dialog
+				auto msg = MSG{m_hwnd, message, wparam, lparam, ::GetMessageTime(), ::GetMessagePos()};
+				for (auto child = m_child_form; child != nullptr; child = child->m_child_form)
+					if (::IsDialogMessage(child->m_hwnd, &msg))
+						return S_OK;
+
+				// 'TranslateMessage' doesn't change 'msg' it only adds WM_CHAR,etc
+				// messages to the message queue for WK_KEYDOWN,etc events
+				::TranslateMessage(&msg);
+
 				// Forward the message to the message map function which will forward
 				// the message to nested controls
 				LRESULT result = S_OK;
@@ -976,11 +994,35 @@ namespace pr
 						if (m_app_main_window)
 							::PostQuitMessage(0);
 						HookWndProc(false);
+						Unlink();
 						m_hwnd = nullptr;
 						return true;
 					}
 				}
 				return false;
+			}
+
+			// Add this form to the linked list of child forms in 'parent'
+			void Link(Form<Derived>* parent)
+			{
+				assert(m_parent_form == nullptr && m_child_form == nullptr && "Form already parented to a form");
+				m_child_form = parent->m_child_form;
+				parent->m_child_form = this;
+				m_parent_form = parent;
+			}
+
+			// Remove this form from its parent form
+			void Unlink()
+			{
+				if (m_parent_form == nullptr) return;
+				for (auto c = &m_parent_form->m_child_form; *c; c = &(*c)->m_child_form)
+				{
+					if (*c != this) continue;
+					*c = m_child_form;
+					m_parent_form = nullptr;
+					m_child_form = nullptr;
+					break;
+				}
 			}
 
 		public:
@@ -1000,15 +1042,18 @@ namespace pr
 				,LPARAM init_param = 0)
 				:Control(-1, nullptr, title)
 				,m_hinst(GetModuleHandle(nullptr))
+				,m_parent_form()
+				,m_child_form()
 				,m_app_main_window(parent == ApplicationMainWindow)
 				,m_modal(false)
 			{
+				parent = !m_app_main_window ? parent : nullptr;
+				
 				// Ensure the class is registered
 				auto atom = RegisterWndClass(this);
 
 				// Create an instance of the window class
 				InitParam lparam(this, init_param);
-				parent = m_app_main_window ? nullptr : parent;
 				::CreateWindowEx(ex_style, MAKEINTATOM(atom), title, style, x, y, w, h, parent, menu, m_hinst, &lparam);
 				Throw(m_hwnd != 0, "CreateWindowEx failed");
 			}
@@ -1016,41 +1061,61 @@ namespace pr
 			// Dialog Constructor
 			// Use this constructor to create a window from a dialog resource description
 			//  - hwnd is not created until Show() or ShowDialog() are called
-			Form(int idd = Derived::IDD, TCHAR const* name = nullptr)
+			Form(int idd, TCHAR const* name = nullptr)
 				:Control(idd, nullptr, name)
 				,m_hinst(GetModuleHandle(nullptr))
+				,m_parent_form()
+				,m_child_form()
 				,m_app_main_window(false)
 				,m_modal(false)
 			{}
 			~Form()
 			{
 				Close();
+				Unlink();
 			}
 
 			// Display the form non-modally
-			void Show(HWND parent = ::GetActiveWindow(), LPARAM init_param = 0)
+			template <typename D> void Show(Form<D>* parent = nullptr, LPARAM init_param = 0)
 			{
+				m_modal = false;
+
+				// Create the dialog from its dialog resource id if not created yet
 				if (m_hwnd == nullptr && m_id != -1)
 				{
-					InitParam lparam(this, init_param);
 					m_app_main_window = parent == ApplicationMainWindow;
-					parent = m_app_main_window ? nullptr : parent;
-					m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
-					Throw(m_hwnd != 0, "CreateDialogParam failed");
+					parent = !m_app_main_window ? parent : nullptr;
+
+					InitParam lparam(this, init_param);
+					HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
+					m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitWndProc, LPARAM(&lparam));
+					Throw(m_hwnd != nullptr, "CreateDialogParam failed");
+
+					// Link this dialog to its parent
+					if (parent != nullptr)
+						Link(reinterpret_cast<Form<Derived>*>(parent));
 				}
+				Throw(m_hwnd != nullptr, "Window not created");
+
 				ShowWindow(m_hwnd, SW_SHOW);
 				UpdateWindow(m_hwnd);
 			}
 
 			// Display the form modally
-			EDialogResult ShowDialog(HWND parent = ::GetActiveWindow(), LPARAM init_param = 0)
+			template <typename D> EDialogResult ShowDialog(Form<D>* parent = nullptr, LPARAM init_param = 0)
 			{
 				assert(m_hwnd == nullptr);
 				m_modal = true;
+
+				if (parent != nullptr)
+				{
+					m_app_main_window = parent == ApplicationMainWindow;
+					parent = !m_app_main_window ? parent : nullptr;
+				}
+
 				InitParam lparam(this, init_param);
-				m_app_main_window = parent == ApplicationMainWindow;
-				parent = m_app_main_window ? nullptr : parent;
-				return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam)));
+				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
+				return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitWndProc, LPARAM(&lparam)));
 			}
 
 			// Close this form
