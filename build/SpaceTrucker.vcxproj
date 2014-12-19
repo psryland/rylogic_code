@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -19,36 +19,36 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{3DD0D661-8EDD-4638-9ABB-A375B1D3A79F}</ProjectGuid>
+    <ProjectGuid>{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>elements</RootNamespace>
+    <RootNamespace>SpaceTrucker</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>NotSet</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -65,9 +65,7 @@
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="props\app.x64.release.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros">
-    <NuGetPackageImportStamp>29ebc2f2</NuGetPackageImportStamp>
-  </PropertyGroup>
+  <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
@@ -75,100 +73,81 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>SpaceTrucker/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>SpaceTrucker/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>SpaceTrucker/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <PrecompiledHeaderFile>elements/stdafx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile>SpaceTrucker/src/forward.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\pr\common\console.h" />
-    <ClInclude Include="..\include\pr\common\datetime.h" />
-    <ClInclude Include="..\include\pr\common\event.h" />
-    <ClInclude Include="..\include\pr\common\events.h" />
-    <ClInclude Include="..\include\pr\common\fmt.h" />
-    <ClInclude Include="..\include\pr\common\si_units.h" />
-    <ClInclude Include="..\include\pr\macros\no_copy.h" />
-    <ClInclude Include="..\include\pr\storage\sqlite.h" />
-    <ClInclude Include="..\include\pr\str\tostring.h" />
-    <ClInclude Include="..\projects\elements\bond.h" />
-    <ClInclude Include="..\projects\elements\console_ui.h" />
-    <ClInclude Include="..\projects\elements\element.h" />
-    <ClInclude Include="..\projects\elements\game_events.h" />
-    <ClInclude Include="..\projects\elements\view_base.h" />
-    <ClInclude Include="..\projects\elements\lab.h" />
-    <ClInclude Include="..\projects\elements\reaction.h" />
-    <ClInclude Include="..\projects\elements\research_effort.h" />
-    <ClInclude Include="..\projects\elements\stockpile.h" />
-    <ClInclude Include="..\projects\elements\view_home.h" />
-    <ClInclude Include="..\projects\elements\view_intro.h" />
-    <ClInclude Include="..\projects\elements\view_lab.h" />
-    <ClInclude Include="..\projects\elements\view_prompt_box.h" />
-    <ClInclude Include="..\projects\elements\view_ship.h" />
-    <ClInclude Include="..\projects\elements\world_state.h" />
-    <ClInclude Include="..\projects\elements\material.h" />
-    <ClInclude Include="..\projects\elements\forward.h" />
-    <ClInclude Include="..\projects\elements\game_instance.h" />
-    <ClInclude Include="..\projects\elements\game_constants.h" />
-    <ClInclude Include="..\projects\elements\ship.h" />
-    <ClInclude Include="..\projects\elements\stdafx.h" />
+    <ClInclude Include="..\include\pr\gui\wingui.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\res\resources.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\src\trade_db.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\src\dx_state.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\src\forward.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\src\settings.h" />
+    <ClInclude Include="..\projects\SpaceTrucker\src\settings_ui.h" />
     <ClInclude Include="..\sdk\sqlite\include\sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\elements\console_ui.cpp" />
-    <ClCompile Include="..\projects\elements\element.cpp" />
-    <ClCompile Include="..\projects\elements\game_instance.cpp" />
-    <ClCompile Include="..\projects\elements\lab.cpp" />
-    <ClCompile Include="..\projects\elements\main.cpp" />
-    <ClCompile Include="..\projects\elements\game_constants.cpp" />
-    <ClCompile Include="..\projects\elements\material.cpp" />
-    <ClCompile Include="..\projects\elements\reaction.cpp" />
-    <ClCompile Include="..\projects\elements\research_effort.cpp" />
-    <ClCompile Include="..\projects\elements\ship.cpp" />
-    <ClCompile Include="..\projects\elements\stdafx.cpp">
+    <ClCompile Include="..\projects\SpaceTrucker\src\main.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\projects\elements\stockpile.cpp" />
-    <ClCompile Include="..\projects\elements\view_base.cpp" />
-    <ClCompile Include="..\projects\elements\view_home.cpp" />
-    <ClCompile Include="..\projects\elements\view_intro.cpp" />
-    <ClCompile Include="..\projects\elements\view_lab.cpp" />
-    <ClCompile Include="..\projects\elements\view_ship.cpp" />
-    <ClCompile Include="..\projects\elements\world_state.cpp" />
-    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c" />
+    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Level3</WarningLevel>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Level3</WarningLevel>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</SDLCheck>
+      <SDLCheck Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</SDLCheck>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4351;4355;4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4351;4355;4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4351;4355;4996</DisableSpecificWarnings>
+      <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4351;4355;4996</DisableSpecificWarnings>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="..\projects\elements\design.txt" />
+    <ResourceCompile Include="..\projects\SpaceTrucker\res\resources.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

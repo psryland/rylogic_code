@@ -44,7 +44,7 @@ def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
 	filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
 	return filepath
-	
+
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
 	sfound = os.path.exists(src)
@@ -82,7 +82,15 @@ def DiffContent(src,dst,trace=False):
 	return False
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-def Copy(src, dst, only_if_modified=True, show_unchanged=False):
+def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False):
+	
+	# Check that source exists
+	if not os.path.exists(src):
+		if ignore_non_existing:
+			return
+		else:
+			raise FileNotFoundError("ERROR: "+src+" does not exist")
+		
 	# If the 'src' is a directory, copy each file to 'dst' (which must also be a directory)
 	if os.path.isdir(src):
 		# if 'dst' doesn't exist, create it as a directory or if it does
@@ -100,7 +108,7 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False):
 		dst = dst.rstrip("/\\") + "\\" + srcfile
 	
 	# Copy the file to 'dst'
-	if not only_if_modified or Diff(src,dst):
+	if not only_if_modified or DiffContent(src,dst):
 		dstdir = os.path.dirname(dst)
 		if not os.path.exists(dstdir): os.makedirs(dstdir)
 		print(src + " --> " + dst)
@@ -274,6 +282,21 @@ def TouchFile(fname, times=None):
 		os.utime(fname, times=times)
 
 # Invoke MSBuild
+# e.g.
+#   sln = "C:\path\mysolution.sln"
+#	projects = [
+#		"project_name",
+#		"\"folder\proj_name:Rebuild\""
+#		]
+#	platforms = [
+#		"x64",
+#		"x86"
+#		]
+#	configs = [
+#		"release",
+#		"debug",
+#		]
+#	Tools.MSBuild(sln, projects, platforms, configs, True, True)
 def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True):
 	projs = ";".join(projects)
 	procs = []
@@ -284,7 +307,7 @@ def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True)
 			if parallel:
 				procs.extend([Spawn(args, same_window=same_window)])
 			else:
-				print("\n *** " + platform + " - " + config + " ***\n")
+				print(" *** " + platform + " - " + config + " ***")
 				Exec(args)
 	
 	# Wait for all processes to finish, and check for error return codes
@@ -312,4 +335,14 @@ def DeployToBin(appname, files, platforms, config, CopyForArch=False):
 		for file in files:
 			Copy(srcdir+"\\"+file, UserVars.root+"\\bin\\"+file)
 
+# Create a zip of a directory
+def ZipDirectory(zip_path, root_dir):
+	zipf = zipfile.ZipFile(zip_path, 'w')
+	for root, dirs, files in os.walk(root_dir):
+		for file in files:
+			filepath = os.path.join(root, file)
+			arcpath  = os.path.relpath(filepath, root_dir)
+			zipf.write(filepath, arcpath)
+	zipf.close()
+	
 # End

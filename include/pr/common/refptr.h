@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <type_traits>
 
 #define PR_REFPTR_TRACE 0

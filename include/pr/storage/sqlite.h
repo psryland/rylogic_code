@@ -49,6 +49,28 @@ namespace pr
 		//  This wrapper uses simplified string searching. All constraints and datatype identifiers
 		//  must be given in lower case, separated by single ' ' characters.
 
+		// Register functions that sqlite can use
+		//  Here's how to create a function that finds the first character of a string.
+		//  static void firstchar(sqlite3_context *context, int argc, sqlite3_value **argv)
+		//  {
+		//  	if (argc == 1) {
+		//  		char *text = sqlite3_value_text(argv[0]);
+		//  		if (text && text[0]) {
+		//  			char result[2]; 
+		//  			result[0] = text[0]; result[1] = '\0';
+		//  			sqlite3_result_text(context, result, -1, SQLITE_TRANSIENT);
+		//  			return;
+		//  		}
+		//  	}
+		//  	sqlite3_result_null(context);
+		//  }
+		//
+		// Then attach the function to the database.
+		// sqlite3_create_function(db, "firstchar", 1, SQLITE_UTF8, NULL, &firstchar, NULL, NULL)
+		//
+		// Finally, use the function in a sql statement.
+		// SELECT firstchar(textfield) from table
+
 		#pragma region Table definition macros
 
 		#define PR_SQLITE_TABLE(type_name, table_constraints)\
@@ -131,10 +153,10 @@ namespace pr
 		class Database;
 
 		// Behaviours on constraint
-		namespace EOnConstraint
+		enum class EOnConstraint
 		{
-			enum Type { Reject, Ignore, Replace };
-		}
+			Reject, Ignore, Replace,
+		};
 
 		// Sql exception type
 		struct Exception :std::exception
@@ -149,29 +171,26 @@ namespace pr
 
 		//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-		namespace EConfig
+		enum class EConfig
 		{
-			enum Type
-			{
-				SingleThreaded  = SQLITE_CONFIG_SINGLETHREAD,        // Disable all mutexing
-				MultiThreaded   = SQLITE_CONFIG_MULTITHREAD,         // Disable mutexing of database connections, Enable mutexing of core data structures
-				Serialised      = SQLITE_CONFIG_SERIALIZED,          // Enable all mutexing
-				Mutex           = SQLITE_CONFIG_MUTEX,               // Specify an alternative mutex implementation
-				GetMutex        = SQLITE_CONFIG_GETMUTEX,            // Retrieve the current mutex implementation
-				Malloc          = SQLITE_CONFIG_MALLOC,              // Specify an alternative malloc implementation
-				GetMalloc       = SQLITE_CONFIG_GETMALLOC,           // Retrieve the current malloc() implementation
-				MemStatus       = SQLITE_CONFIG_MEMSTATUS,           // Enable or disable the malloc status collection
-				Scratch         = SQLITE_CONFIG_SCRATCH,             // Designate a buffer for scratch memory space
-				PageCache       = SQLITE_CONFIG_PAGECACHE,           // Designate a buffer for page cache memory space
-				PCache2         = SQLITE_CONFIG_PCACHE2,             // Specify an alternative page cache implementation
-				GetPCache2      = SQLITE_CONFIG_GETPCACHE2,          // Retrieve the current page cache implementation
-				Heap            = SQLITE_CONFIG_HEAP,                // Designate a buffer for heap memory space
-				LookAside       = SQLITE_CONFIG_LOOKASIDE,           // ?
-				Log             = SQLITE_CONFIG_LOG,                 // Record a pointer to the logger funcction and its first argument. The default is NULL. Logging is disabled if the function pointer is NULL.
-				Uri             = SQLITE_CONFIG_URI,                 // ?
-				CoveringIdxScan = SQLITE_CONFIG_COVERING_INDEX_SCAN, // ?
-			};
-		}
+			SingleThreaded  = SQLITE_CONFIG_SINGLETHREAD,        // Disable all mutexing
+			MultiThreaded   = SQLITE_CONFIG_MULTITHREAD,         // Disable mutexing of database connections, Enable mutexing of core data structures
+			Serialised      = SQLITE_CONFIG_SERIALIZED,          // Enable all mutexing
+			Mutex           = SQLITE_CONFIG_MUTEX,               // Specify an alternative mutex implementation
+			GetMutex        = SQLITE_CONFIG_GETMUTEX,            // Retrieve the current mutex implementation
+			Malloc          = SQLITE_CONFIG_MALLOC,              // Specify an alternative malloc implementation
+			GetMalloc       = SQLITE_CONFIG_GETMALLOC,           // Retrieve the current malloc() implementation
+			MemStatus       = SQLITE_CONFIG_MEMSTATUS,           // Enable or disable the malloc status collection
+			Scratch         = SQLITE_CONFIG_SCRATCH,             // Designate a buffer for scratch memory space
+			PageCache       = SQLITE_CONFIG_PAGECACHE,           // Designate a buffer for page cache memory space
+			PCache2         = SQLITE_CONFIG_PCACHE2,             // Specify an alternative page cache implementation
+			GetPCache2      = SQLITE_CONFIG_GETPCACHE2,          // Retrieve the current page cache implementation
+			Heap            = SQLITE_CONFIG_HEAP,                // Designate a buffer for heap memory space
+			LookAside       = SQLITE_CONFIG_LOOKASIDE,           // ?
+			Log             = SQLITE_CONFIG_LOG,                 // Record a pointer to the logger funcction and its first argument. The default is NULL. Logging is disabled if the function pointer is NULL.
+			Uri             = SQLITE_CONFIG_URI,                 // ?
+			CoveringIdxScan = SQLITE_CONFIG_COVERING_INDEX_SCAN, // ?
+		};
 
 		// Configure sqlite. Must be called before any db connections are opened
 		// E.g
@@ -282,30 +301,38 @@ namespace pr
 			static bool Null(char c) { return c == 0; }
 			template <typename Type> static bool False(Type const&) { return false; }
 
+			// Return the length of 'src' as a string, limited to 'max'
+			template <typename Char> static size_t Length(Char const* src, size_t max = size_t(~0))
+			{
+				auto s = src;
+				for (; max-- != 0 && *s; ++s) {}
+				return s - src;
+			}
+
 			// Returns a pointer into 'src' at the first occurrence of 'ch' or a pointer to the terminator
-			template <typename Term> static char const* FindChar(char const* src, char ch, Term term)
+			template <typename Char, typename Term> static Char const* FindChar(Char const* src, Char ch, Term term)
 			{
 				for (;!term(*src) && *src != ch; ++src) {}
 				return src;
 			}
-			static char const* FindChar(char const* src, char ch)
+			template <typename Char> static Char const* FindChar(Char const* src, Char ch)
 			{
 				return FindChar(src, ch, Null);
 			}
 
 			// Returns a pointer to the first occurrence of any character in 'any_of_these'.
-			template <typename Term> static char const* FindAny(char const* src, char const* any_of_these, Term term)
+			template <typename Char, typename Term> static Char const* FindAny(Char const* src, Char const* any_of_these, Term term)
 			{
 				for (;!term(*src) && *FindChar(any_of_these, *src) == 0; ++src) {}
 				return src;
 			}
-			static char const* FindAny(char const* src, char const* any_of_these)
+			template <typename Char> static Char const* FindAny(Char const* src, Char const* any_of_these)
 			{
 				return FindAny(src, any_of_these, Null);
 			}
 
 			// Returns a pointer to the start of 'substring' in 'src' or null if 'substring' is not found.
-			template <typename Term> static char const* FindStr(char const* src, char const* substring, char const* sep, Term term)
+			template <typename Char, typename Term> static Char const* FindStr(Char const* src, Char const* substring, Char const* sep, Term term)
 			{
 				for (;!term(*src); ++src)
 				{
@@ -313,7 +340,7 @@ namespace pr
 					for (; !term(*src) && *FindChar(sep, *src, Null) != 0; ++src) {}
 
 					// Compare the word starting at 'src' with 'substring'
-					char const *a = src, *b = substring;
+					Char const *a = src, *b = substring;
 					for (; !term(*a) && *b != 0 && *a == *b; ++a, ++b) {}
 					if (*b == 0) break; // match
 
@@ -322,15 +349,16 @@ namespace pr
 				}
 				return src;
 			}
-			static char const* FindStr(char const* src, char const* substring, char const* sep)
+			template <typename Char> static Char const* FindStr(Char const* src, Char const* substring, Char const* sep)
 			{
 				return FindStr(src, substring, sep, Null);
 			}
 
 			// Returns true if 'substring' is contained within 'src'
-			static bool Contains(char const* src, char const* substring)
+			template <typename Char> static bool Contains(Char const* src, Char const* substring)
 			{
-				return *FindStr(src, substring, " ", Null) != 0;
+				Char sep[] = {Char(' '), Char(0)};
+				return *FindStr(src, substring, sep, Null) != 0;
 			}
 
 			// Returns a string containing the elements of 'cont' separated by 'sep'
@@ -495,7 +523,7 @@ namespace pr
 		}
 		template <typename CharType, size_t Size> inline void bind_text(sqlite3_stmt* stmt, int idx, CharType const (&value)[Size])
 		{
-			std::basic_string<CharType> str(value, value + Size);
+			std::basic_string<CharType> str(value, value + StrHelper::Length(value, Size));
 			bind_text(stmt, idx, str);
 		}
 		inline                              void bind_blob(sqlite3_stmt* stmt, int idx, void const* blob, size_t length)
@@ -1157,7 +1185,7 @@ namespace pr
 		template <typename DBRecord> struct InsertCmd :Query
 		{
 			// Returns the sql string for the insert command for type 'DBRecord'
-			static char const* SqlString(EOnConstraint::Type on_constraint = EOnConstraint::Reject)
+			static char const* SqlString(EOnConstraint on_constraint = EOnConstraint::Reject)
 			{
 				TableMetaData<DBRecord> const& meta = DBRecord::Sqlite_TableMetaData();
 				typedef ColumnMetaData<DBRecord> const* ColPtr;
@@ -1178,7 +1206,7 @@ namespace pr
 
 			// Creates a compiled query for inserting an object of type 'DBRecord' into a database.
 			// Users can then bind values, and run the query repeatedly to insert multiple items
-			explicit InsertCmd(sqlite3* db, EOnConstraint::Type on_constraint = EOnConstraint::Reject)
+			explicit InsertCmd(sqlite3* db, EOnConstraint on_constraint = EOnConstraint::Reject)
 				:Query(db, SqlString(on_constraint))
 			{}
 
@@ -1246,7 +1274,7 @@ namespace pr
 			// Insert an item into the database.
 			// Note: insert will *NOT* change the primary keys/autoincrement members
 			// of 'item' make sure you call 'Get()' to get the updated item.
-			int Insert(DBRecord const& item, EOnConstraint::Type on_constraint = EOnConstraint::Reject)
+			int Insert(DBRecord const& item, EOnConstraint on_constraint = EOnConstraint::Reject)
 			{
 				assert(m_db->IsOpen() && "Database closed");
 				InsertCmd<DBRecord> insert(*m_db, on_constraint); // Create the sql query
@@ -1257,7 +1285,7 @@ namespace pr
 			// Inserts 'item' into the database and then sets 'at_row' to the row at which
 			// 'item' was inserted. This is typically used to update the primary key in 'item'
 			// which, for integer autoincrement columns, is normally the last row id.
-			template <typename RowId> int Insert(DBRecord const& item, RowId& last_row_id, EOnConstraint::Type on_constraint = EOnConstraint::Reject)
+			template <typename RowId> int Insert(DBRecord const& item, RowId& last_row_id, EOnConstraint on_constraint = EOnConstraint::Reject)
 			{
 				assert(m_db->IsOpen() && "Database closed");
 				int res = Insert(item, on_constraint);
@@ -1599,10 +1627,7 @@ namespace pr
 			typedef unsigned __int64 uint64;
 			typedef std::vector<byte> buffer;
 
-			struct Enum
-			{
-				enum Type { One, Two, Three };
-			};
+			enum class Enum { One, Two, Three };
 
 			struct DB :pr::sqlite::Database
 			{
@@ -1644,7 +1669,7 @@ namespace pr
 					double       m_double;
 					char         m_char_array[10];
 					int          m_int_array[10];
-					Enum::Type   m_enum;
+					Enum         m_enum;
 					std::string  m_string;
 					buffer       m_buf;
 					buffer       m_empty_buf;
@@ -1761,11 +1786,11 @@ namespace pr
 
 					// Create sqlite table mapping meta data
 					PR_SQLITE_TABLE(Record, "") // whitespace shouldn't affect constraints
-						PR_SQLITE_COLUMN(Key    ,m_key  ,integer , "primary key not null")
-						PR_SQLITE_COLUMN(Bool   ,m_char ,integer , "unique")
-						PR_SQLITE_TABLE_END()
+					PR_SQLITE_COLUMN(Key    ,m_key  ,integer , "primary key not null")
+					PR_SQLITE_COLUMN(Bool   ,m_char ,integer , "unique")
+					PR_SQLITE_TABLE_END()
 
-						Record() :m_key() ,m_char() {}
+					Record() :m_key() ,m_char() {}
 					Record(int key, char ch) :m_key(key) ,m_char(ch) {}
 				};
 

@@ -26,6 +26,14 @@ namespace pr.extn
 				action(item);
 		}
 
+		/// <summary>Apply 'action' to each item in the collection</summary>
+		public static TRet ForEach<TSource,TRet>(this IEnumerable<TSource> source, TRet initial, Func<TSource, TRet, TRet> action)
+		{
+			foreach (var item in source)
+				initial = action(item, initial);
+			return initial;
+		}
+
 		/// <summary>Compare subranges within arrays for value equality</summary>
 		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len)
 		{

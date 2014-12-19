@@ -4,10 +4,13 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing.Design;
+using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.Design;
+using pr.extn;
 using pr.util;
 
 namespace pr.gui
@@ -18,43 +21,59 @@ namespace pr.gui
 		private Type m_enum_type;
 		private Enum m_enum_value;
 		private bool m_is_updating_check_states;
+		private List<ItemCheckEventArgs> m_pending_itemcheck_events;
 
 		public FlagCheckedListBox()
 		{
+			m_pending_itemcheck_events = new List<ItemCheckEventArgs>();
 			InitializeComponent();
 		}
 
-		// Adds an integer value and its associated description
+		/// <summary>
+		/// Adds a bitmask value and its associated description.
+		/// The bitmask can contain more than one set bit.</summary>
+		public FlagCheckedListBoxItem Add(int value, string description)
+		{
+			return Add(new FlagCheckedListBoxItem(value, description));
+		}
 		public FlagCheckedListBoxItem Add(FlagCheckedListBoxItem item)
 		{
 			Items.Add(item);
 			return item;
 		}
-		public FlagCheckedListBoxItem Add(int v, string c)
-		{
-			return Add(new FlagCheckedListBoxItem(v, c));
-		}
 
+		/// <summary>Handle items in the list being checked or unchecked</summary>
 		protected override void OnItemCheck(ItemCheckEventArgs e)
 		{
-			base.OnItemCheck(e);
-			if (m_is_updating_check_states) return;
-			UpdateCheckedItems(Items[e.Index] as FlagCheckedListBoxItem, e.NewValue);
-		}
-
-		/// <summary>Owner draw handler for custom drawing of list items</summary>
-		public event DrawItemEventHandler OwnerDraw;
-		protected override void OnDrawItem(DrawItemEventArgs e)
-		{
-			if (OwnerDraw == null)
-				base.OnDrawItem(e);
+			// While 'UpdateCheckedItems' is in progress, we need to buffer the
+			// 'ItemCheck' events and only raise them once all items have been changed.
+			// This is because clients that handle ItemCheck will want to read the 
+			// Bitmask/EnumValue which we want to be correct
+			if (m_is_updating_check_states)
+				m_pending_itemcheck_events.Add(e);
 			else
-				OwnerDraw(this, e);
+				UpdateCheckedItems(Items[e.Index].As<FlagCheckedListBoxItem>(), e.NewValue);
 		}
 
-		/// <summary>Checks / Un-checks items depending on the give bit value</summary>
-		protected void UpdateCheckedItems(int value)
+		/// <summary>
+		/// Updates items in the checked list box
+		/// item = The item that was checked/unchecked (can represent more than 1 bit)
+		/// cs = The check state of that item</summary>
+		protected void UpdateCheckedItems(FlagCheckedListBoxItem item, CheckState cs)
 		{
+			// If the value of the item is 0, uncheck all non-zero items
+			if (item.Value == 0)
+				UpdateCheckedItems(cs == CheckState.Checked ? 0 : Items.Cast<FlagCheckedListBoxItem>().ForEach(0, (x,i) => i |= x.Value));
+			else
+				UpdateCheckedItems(cs == CheckState.Checked ? (Bitmask | item.Value) : (Bitmask & ~item.Value));
+		}
+
+		/// <summary>Checks/Unchecks items depending on the given bit mask</summary>
+		protected void UpdateCheckedItems(int bitmask)
+		{
+			// See comments in OnItemCheck
+			// Update all the check states, buffering the events, then raise the events at the end
+			if (m_is_updating_check_states) return;
 			using (Scope.Create(() => m_is_updating_check_states = true, () => m_is_updating_check_states = false))
 			{
 				for (int i = 0; i != Items.Count; ++i)
@@ -62,48 +81,38 @@ namespace pr.gui
 					var item = (FlagCheckedListBoxItem)Items[i];
 					if (item.Value == 0)
 					{
-						SetItemChecked(i, value == 0);
+						SetItemChecked(i, bitmask == 0);
 					}
 					else
 					{
 						// If the bit for the current item is on in the bit value, check it
-						SetItemChecked(i, ((item.Value & value) == item.Value) && item.Value != 0);
+						var check = (item.Value & bitmask) == item.Value;
+						SetItemChecked(i, check);
 					}
 				}
 			}
-		}
 
-		/// <summary>
-		/// Updates items in the checked list box
-		/// composite = The item that was checked/unchecked
-		/// cs = The check state of that item</summary>
-		protected void UpdateCheckedItems(FlagCheckedListBoxItem composite, CheckState cs)
-		{
-			// If the value of the item is 0, call directly.
-			if (composite.Value == 0)
-				UpdateCheckedItems(0);
+			// Raise buffered ItemCheck events
+			foreach (var e in m_pending_itemcheck_events)
+				base.OnItemCheck(e);
 
-			// If the item has been unchecked, remove its bits from the sum, otherwise combine its bits with the sum
-			int sum = GetCurrentValue();
-			if (cs == CheckState.Unchecked)
-				sum &= ~composite.Value;
-			else
-				sum |= composite.Value;
-
-			// Update all items in the check list box based on the final bit value
-			UpdateCheckedItems(sum);
+			m_pending_itemcheck_events.Clear();
+			Invalidate();
 		}
 
 		/// <summary>Gets the current bit value corresponding to all checked items</summary>
-		public int GetCurrentValue()
+		public int Bitmask
 		{
-			int sum = 0;
-			for (int i = 0; i != Items.Count; ++i)
+			get
 			{
-				if (!GetItemChecked(i)) continue;
-				sum |= ((FlagCheckedListBoxItem)Items[i]).Value;
+				int mask = 0;
+				for (int i = 0; i != Items.Count; ++i)
+				{
+					if (!GetItemChecked(i)) continue;
+					mask |= Items[i].As<FlagCheckedListBoxItem>().Value;
+				}
+				return mask;
 			}
-			return sum;
 		}
 
 		/// <summary>Adds items to the check list box based on the members of the enum</summary>
@@ -117,18 +126,30 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Set an enum value that implicitly creates the members of the checklist</summary>
 		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
 		public Enum EnumValue
 		{
-			get { return (Enum)Enum.ToObject(m_enum_type, GetCurrentValue()); }
+			get { return (Enum)Enum.ToObject(m_enum_type, Bitmask); }
 			set
 			{
+				if (Equals(m_enum_value,value) && Equals(m_enum_type,value.GetType())) return;
 				Items.Clear();
 				m_enum_value = value; // Store the current enum value
 				m_enum_type = value.GetType(); // Store enum type
 				FillEnumMembers(); // Add items for enum members
 				UpdateCheckedItems((int)Convert.ChangeType(m_enum_value, typeof(int))); // Check/uncheck items depending on enum value
 			}
+		}
+
+		/// <summary>Owner draw handler for custom drawing of list items</summary>
+		public new event DrawItemEventHandler DrawItem;
+		protected override void OnDrawItem(DrawItemEventArgs e)
+		{
+			if (DrawItem == null)
+				base.OnDrawItem(e);
+			else
+				DrawItem(this, e);
 		}
 
 		#region Component Designer generated code

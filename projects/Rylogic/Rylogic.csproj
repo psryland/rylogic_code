@@ -364,6 +364,7 @@
     <Compile Include="gui\flag_checked_listbox.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="util\Dynamic.cs" />
     <Compile Include="util\LoadSaveTag.cs" />
     <Compile Include="util\sherlock.cs" />
     <Compile Include="util\file_watch.cs" />

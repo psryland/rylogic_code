@@ -82,9 +82,6 @@
     <ClInclude Include="..\projects\elements\reaction.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\sdk\sqlite\sqlite3.h">
-      <Filter>sqlite</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\elements\lab.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -121,11 +118,11 @@
     <ClInclude Include="..\include\pr\str\tostring.h">
       <Filter>pr\str</Filter>
     </ClInclude>
+    <ClInclude Include="..\sdk\sqlite\include\sqlite3.h">
+      <Filter>sqlite</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\sdk\sqlite\sqlite3.c">
-      <Filter>src</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\elements\console_ui.cpp">
       <Filter>src</Filter>
     </ClCompile>
@@ -179,6 +176,9 @@
     </ClCompile>
     <ClCompile Include="..\projects\elements\world_state.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\sdk\sqlite\src\sqlite3.c">
+      <Filter>sqlite</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

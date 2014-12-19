@@ -7,14 +7,15 @@ namespace ele
 	struct ViewBase
 	{
 		enum { TitleHeight = 2, MenuHeight = 10 };
-	
-		pr::Console&  m_cons;
+		using Console = pr::Console<char>;
+
+		Console&      m_cons;
 		GameInstance& m_inst;
 		EView         m_view;   // The view id that will next be returned from Step
-		const int m_panel_width;
-		const int m_panel_height;
+		const int     m_panel_width;
+		const int     m_panel_height;
 
-		ViewBase(pr::Console& cons, GameInstance& inst);
+		ViewBase(Console& cons, GameInstance& inst);
 		virtual ~ViewBase();
 
 		// Step the view, returns the next view to display

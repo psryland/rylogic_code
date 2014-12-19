@@ -27,8 +27,9 @@ namespace pr.common
 			get { return m_ptr; }
 		}
 
-		public PinnedObject()
+		public PinnedObject(T obj)
 		{
+			m_managed_object = obj;
 			m_handle = GCHandle.Alloc(m_managed_object, GCHandleType.Pinned);
 			m_ptr = m_handle.AddrOfPinnedObject();
 		}

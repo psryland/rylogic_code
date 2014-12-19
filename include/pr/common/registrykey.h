@@ -135,13 +135,13 @@ namespace pr
 		{
 			if (!m_valid) return false;
 			auto str = std::to_string(value);
-			return RegSetValueEx(m_hkey, key, 0, REG_SZ, (const unsigned char*)str.c_str(), str.size() + 1) == ERROR_SUCCESS;
+			return RegSetValueEx(m_hkey, key, 0, REG_SZ, (const unsigned char*)str.c_str(), DWORD(str.size() + 1)) == ERROR_SUCCESS;
 		}
 		// Write a string into the registry key. Return true if successful
 		bool Write(const char* key, const char* string)
 		{
 			if (!m_valid) return false;
-			DWORD length = (DWORD)(strlen(string) + 1);
+			auto length = DWORD(strlen(string) + 1);
 			return RegSetValueEx(m_hkey, key, 0, REG_SZ, (const unsigned char*)string, length) == ERROR_SUCCESS;
 		}
 

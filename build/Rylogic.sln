@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.30723.0
+VisualStudioVersion = 12.0.31101.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unittests", "unittests.vcxproj", "{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}"
 EndProject
@@ -91,6 +91,11 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "elements", "elements.vcxproj", "{3DD0D661-8EDD-4638-9ABB-A375B1D3A79F}"
 EndProject
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "prd", "prd.visualdproj", "{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SpaceTrucker", "SpaceTrucker.vcxproj", "{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6EC3B435-2551-48FE-84F4-EDED821A48D0} = {6EC3B435-2551-48FE-84F4-EDED821A48D0}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -308,6 +313,14 @@ Global
 		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x64.Build.0 = Release|x64
 		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x86.ActiveCfg = Release|Win32
 		{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}.Release|x86.Build.0 = Release|Win32
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Debug|x64.ActiveCfg = Debug|x64
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Debug|x64.Build.0 = Debug|x64
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Debug|x86.ActiveCfg = Debug|Win32
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Debug|x86.Build.0 = Debug|Win32
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Release|x64.ActiveCfg = Release|x64
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Release|x64.Build.0 = Release|x64
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Release|x86.ActiveCfg = Release|Win32
+		{0A3AAB0E-356D-4929-8F4F-1097D0BA7B44}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

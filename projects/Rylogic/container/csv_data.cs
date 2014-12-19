@@ -106,10 +106,12 @@ namespace pr.container
 			}
 		}
 
-		/// <summary>Read csv rows from a stream</summary>
-		public static IEnumerable<Row> Parse(Stream src)
+		/// <summary>
+		/// Read csv rows from a stream.
+		/// If 'support_comments' is true, rows that start with a '#' character are treated as comments</summary>
+		public static IEnumerable<Row> Parse(Stream src, bool support_comments = false)
 		{
-			using (var file = new StreamReader(src))//new UncloseableStream(src)))
+			using (var file = new StreamReader(src))
 			{
 				// Fields can optionally be in quotes.
 				// Quotes are escaped using double quotes.
@@ -117,9 +119,16 @@ namespace pr.container
 				var row = new Row();
 				var esc = false;
 				var quoted = false;
-				while (!file.EndOfStream)
+				for (int chint; (chint = file.Read()) >= 0; )
 				{
-					var ch = (char)file.Read();
+					var ch = (char)chint;
+
+					// If comments are supported, and the row starts with the comment symbol, consume the line
+					if (support_comments && str.Length == 0 && ch == '#')
+					{
+						for (; (chint = file.Read()) >= 0 && (char)chint != '\n'; ) {} // consume the line
+						continue;
+					}
 
 					// If the first character is a '"', this is a quoted item
 					if (str.Length == 0 && ch == '"' && !quoted)
@@ -176,16 +185,16 @@ namespace pr.container
 		}
 
 		/// <summary>Stream rows from a csv file</summary>
-		public static IEnumerable<Row> Parse(string filepath)
+		public static IEnumerable<Row> Parse(string filepath, bool support_comments = false)
 		{
-			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read));
+			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read), support_comments);
 		}
 
 		/// <summary>Load and parse a csv file</summary>
-		public static CSVData Load(string filepath)
+		public static CSVData Load(string filepath, bool support_comments = false)
 		{
 			var csv = new CSVData();
-			foreach (var row in Parse(filepath))
+			foreach (var row in Parse(filepath, support_comments))
 				csv.Add(row);
 			return csv;
 		}

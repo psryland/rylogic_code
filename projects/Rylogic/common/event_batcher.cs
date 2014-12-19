@@ -92,8 +92,8 @@ namespace pr.common
 
 		/// <summary>
 		/// Signal the event. Signal can be called multiple times.
-		/// Note: this can be called from any thread, the resulting event will be marshalled to the Dispatcher
-		/// provided in the constructor of the event batcher</summary>
+		/// Note: this can be called from any thread, the resulting event will be marshalled
+		/// to the Dispatcher provided in the constructor of the event batcher</summary>
 		public void Signal(object sender = null, EventArgs args = null)
 		{
 			// If immediate mode is enabled, call Action now
@@ -127,84 +127,17 @@ namespace pr.common
 					}, Delay, Priority);
 			}
 		}
-	}
-/*
-	public class EventBatcher :IDisposable
-	{
-		private readonly Dispatcher m_dispatcher;
-		private readonly TimeSpan m_delay;
-		private int m_issue;
-		private int m_actioned_issue;
-		private bool m_disposed;
-
-		/// <summary>The callback called when this event has been signalled</summary>
-		public event Action Action;
 
 		/// <summary>
-		/// The maximum number of times Signal can be called before 'Action' is called.
-		/// Used to prevent an endless stream of Signals resulting in Action never being called</summary>
-		public int MaxSignalsBeforeAction { get; set; }
-
-		public  EventBatcher()                                                     :this(TimeSpan.FromMilliseconds(10))               {}
-		public  EventBatcher(EventHandler action)                                  :this(action, TimeSpan.FromMilliseconds(10))       {}
-		public  EventBatcher(EventHandler action, TimeSpan delay)                  :this(() => action(null,null), delay)              {}
-		public  EventBatcher(Action action)                                        :this(action, TimeSpan.FromMilliseconds(10))       {}
-		public  EventBatcher(Action action, TimeSpan delay)                        :this(delay, Dispatcher.CurrentDispatcher, action) {}
-		public  EventBatcher(Action action, TimeSpan delay, Dispatcher dispatcher) :this(delay, dispatcher, action)                   {}
-		public  EventBatcher(TimeSpan delay)                                       :this(delay, Dispatcher.CurrentDispatcher)         {}
-		public  EventBatcher(TimeSpan delay, Dispatcher dispatcher)                :this(delay, dispatcher,null)                      {}
-		private EventBatcher(TimeSpan delay, Dispatcher dispatcher, Action action)
+		/// Signal the event synchronously.
+		/// Note: this can be called from any thread, the resulting event will be marshalled
+		/// to the Dispatcher provided in the constructor of the event batcher</summary>
+		public void SignalImmediate(object sender = null, EventArgs args = null)
 		{
-			if (dispatcher == null)
-				throw new ArgumentNullException("dispatcher","dispatcher can't be null");
-
-			m_dispatcher           = dispatcher;
-			m_delay                = delay;
-			m_issue                = 0;
-			m_actioned_issue       = 0;
-			m_disposed             = false;
-			MaxSignalsBeforeAction = int.MaxValue;
-			Immediate              = false;
-
-			if (action != null)
-				Action += action;
-		}
-		public void Dispose()
-		{
-			m_disposed = true;
-		}
-
-		/// <summary>Toogle switch for batching on/off</summary>
-		public bool Immediate { get; set; }
-
-		/// <summary>
-		/// Signal the event. Signal can be called multiple times during the processing of a windows message.
-		/// The event will be delayed to a later windows message and will only be called once.
-		/// Note: this can be called from any thread, the resulting event will be marshalled to the Dispatcher
-		/// provided in the constructor of the event batcher</summary>
-		public void Signal(object sender = null, EventArgs args = null)
-		{
-			if (Immediate)
-			{
-				Action();
-			}
-			else
-			{
-				var issue = Interlocked.Increment(ref m_issue);
-				m_dispatcher.BeginInvokeDelayed(() =>
-					{
-						if (Action == null || m_disposed) return;
-						if (unchecked(issue - m_actioned_issue) < MaxSignalsBeforeAction &&
-							Interlocked.CompareExchange(ref m_issue, issue, issue) != issue)
-							return;
-						Action();
-						m_actioned_issue = issue;
-					}, m_delay);
-			}
+			if (Action == null || m_shutdown) return;
+			m_dispatcher.Invoke(Action);
 		}
 	}
-
- */
 }
 
 #if PR_UNITTESTS

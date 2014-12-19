@@ -2254,7 +2254,9 @@ namespace pr.common
 						}
 						#endregion
 					case ExpressionType.Convert:
+					case ExpressionType.ConvertChecked:
 						#region Convert
+						checked
 						{
 							var ue = (UnaryExpression)expr;
 							var ty = ue.Type;
@@ -4382,7 +4384,7 @@ namespace pr.common
 
 // ReSharper restore AccessToStaticMemberViaDerivedType
 
-#if PR_UNITTESTS
+#if PR_UNITTESTS_DISABLED
 namespace pr.unittests
 {
 	using System.Data.Linq.SqlClient;
@@ -4686,7 +4688,7 @@ namespace pr.unittests
 
 		[TestFixtureSetUp] public void Setup()
 		{
-			Sqlite.Dll.SelectDll(Environment.Is64BitProcess
+			Sqlite.Dll.LoadDll(Environment.Is64BitProcess
 				? @"p:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
 				: @"p:\sdk\sqlite\lib\x86\debug\sqlite3.dll");
 

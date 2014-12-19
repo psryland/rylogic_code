@@ -89,6 +89,7 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Support Functions
+
 		// Convert an error code into an error message
 		inline std::string ErrorMessage(HRESULT result)
 		{
@@ -118,6 +119,50 @@ namespace pr
 			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
 			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
 		}
+
+		#pragma endregion
+
+		#pragma region Unicode conversion
+
+		// A static instance of the locale, because this thing takes ages to construct
+		inline std::locale const& locale()
+		{
+			static std::locale s_locale("");
+			return s_locale;
+		}
+
+		// Narrow
+		inline std::string Narrow(char const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = strlen(from);
+			return std::string(from, from+len);
+		}
+		inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = wcslen(from);
+			std::vector<char> buffer(len + 1);
+			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
+			return std::string(&buffer[0], &buffer[len]);
+		}
+		template <std::size_t Len> inline std::string Narrow(char const (&from)[Len])    { return Narrow(from, Len); }
+		template <std::size_t Len> inline std::string Narrow(wchar_t const (&from)[Len]) { return Narrow(from, Len); }
+
+		// Widen
+		inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = wcslen(from);
+			return std::wstring(from, from+len);
+		}
+		inline std::wstring Widen(char const* from, std::size_t len = 0)
+		{
+			if (len == 0) len = strlen(from);
+			std::vector<wchar_t> buffer(len + 1);
+			std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
+			return std::wstring(&buffer[0], &buffer[len]);
+		}
+		template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
+		template <std::size_t Len> inline std::wstring Widen (char    const (&from)[Len]) { return Widen(from, Len); }
+
 		#pragma endregion
 
 		#pragma region Support structures
@@ -291,6 +336,17 @@ namespace pr
 			}
 		};
 
+		// Helper for changing the state of a variable, restoring it on destruction
+		template <typename T> struct RAII
+		{
+			T* m_var;
+			T old_value;
+			RAII(T& var, bool new_value) :m_var(&var) ,old_value(var) { *m_var = new_value; }
+			~RAII()                                                   { *m_var = old_value; }
+			RAII(RAII const&) = delete;
+			RAII& operator =(RAII const&) = delete;
+		};
+
 		#pragma endregion
 
 		#pragma region EventHandler
@@ -377,6 +433,7 @@ namespace pr
 		struct Control
 		{
 			using Controls = std::vector<Control*>;
+			static int const IDC_UNUSED = -1;
 		
 		protected:
 			HWND               m_hwnd;        // Window handle for the control
@@ -577,7 +634,7 @@ namespace pr
 			Control(TCHAR const* wndclass_name
 				,TCHAR const* text
 				,int x, int y, int w, int h
-				,int id = -1
+				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
@@ -604,7 +661,7 @@ namespace pr
 			// Attach constructor
 			// Use this constructor when you intend to Attach this instance to an existing hwnd
 			// Set 'id' != -1 to have the control automatically attach during WM_INITDIALOG
-			Control(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			Control(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(Internal(), id, parent, name, anchor)
 			{}
 			~Control()
@@ -846,11 +903,11 @@ namespace pr
 		protected:
 			template <typename D> friend struct Form;
 
-			HINSTANCE      m_hinst;           // Module instance
-			Form<Derived>* m_parent_form;     // The parent of this form. Note, actually == reinterpret_cast<Form<Derived>*>(Form<Whatever>*),
-			Form<Derived>* m_child_form;      // A linked list of child dialogs. Note, actually == reinterpret_cast<Form<Derived>*>(Form<Whatever>*)
-			bool           m_app_main_window; // True if this is the main application window
-			bool           m_modal;           // True if this is a dialog being display modally
+			HINSTANCE m_hinst;           // Module instance
+			bool      m_app_main_window; // True if this is the main application window
+			int       m_menu_id;         // The id of the main menu
+			bool      m_is_dialog;       // True if the form is a modal or modeless dialog
+			bool      m_modal;           // True if this is a dialog being display modally
 
 			struct InitParam
 			{
@@ -898,19 +955,22 @@ namespace pr
 					init->m_this->Attach(hwnd);
 					return init->m_this->WndProc(message, wparam, lparam);
 				}
+				return ::DefWindowProc(hwnd, message, wparam, lparam);
+			}
+			static LRESULT __stdcall InitDlgProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
+			{
 				if (message == WM_INITDIALOG)
 				{
 					// Only 'Form' derived windows will have this function as the window proc,
 					// so we can replace the wndproc with DefWindowProc before calling 'HookWndProc'
 					// This prevents an infinite recursion when me->DefWndProc is called.
-					::SetWindowLongPtr(hwnd, GWLP_WNDPROC, LONG_PTR(&::DefDlgProc));
+					::SetWindowLongPtr(hwnd, GWLP_WNDPROC, LONG_PTR(&::DefWindowProc));
 					auto init = reinterpret_cast<InitParam*>(lparam);
 					init->m_this->Attach(hwnd);
 					return init->m_this->WndProc(message, wparam, init->m_lparam);
 				}
 				return ::DefWindowProc(hwnd, message, wparam, lparam);
 			}
-			static_assert(sizeof(INT_PTR) == sizeof(LONG_PTR), "DLGPROC and WNDPROC differ only by return type. Checking DLGPROC cast");
 
 			// Default wndclass description for windows of this type
 			// Derived can override this for custom wndclass definitions
@@ -942,11 +1002,14 @@ namespace pr
 			// Window proc
 			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override
 			{
-				// Check if this message is actually for a dialog
+				// Check if this message is a dialog message
 				auto msg = MSG{m_hwnd, message, wparam, lparam, ::GetMessageTime(), ::GetMessagePos()};
-				for (auto child = m_child_form; child != nullptr; child = child->m_child_form)
-					if (::IsDialogMessage(child->m_hwnd, &msg))
+				if (m_is_dialog)
+				{
+					RAII<bool> prevent_recursion(m_is_dialog, false);
+					if (::IsDialogMessage(m_hwnd, &msg))
 						return S_OK;
+				}
 
 				// 'TranslateMessage' doesn't change 'msg' it only adds WM_CHAR,etc
 				// messages to the message queue for WK_KEYDOWN,etc events
@@ -994,38 +1057,35 @@ namespace pr
 						if (m_app_main_window)
 							::PostQuitMessage(0);
 						HookWndProc(false);
-						Unlink();
 						m_hwnd = nullptr;
 						return true;
+					}
+				case WM_COMMAND:
+					{
+						// Handle commands from the main menu
+						if (HIWORD(wparam) == 0 && HandleMenu(LOWORD(wparam))) return true;
+						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 				}
 				return false;
 			}
 
-			// Add this form to the linked list of child forms in 'parent'
-			void Link(Form<Derived>* parent)
+			// Default main menu handler
+			virtual bool HandleMenu(WORD)
 			{
-				assert(m_parent_form == nullptr && m_child_form == nullptr && "Form already parented to a form");
-				m_child_form = parent->m_child_form;
-				parent->m_child_form = this;
-				m_parent_form = parent;
-			}
-
-			// Remove this form from its parent form
-			void Unlink()
-			{
-				if (m_parent_form == nullptr) return;
-				for (auto c = &m_parent_form->m_child_form; *c; c = &(*c)->m_child_form)
-				{
-					if (*c != this) continue;
-					*c = m_child_form;
-					m_parent_form = nullptr;
-					m_child_form = nullptr;
-					break;
-				}
+				return false;
+				// Example implementation
+				// switch (menu_id)
+				// {
+				// default: return false;
+				// case ID_FILE_EXIT: Close(); return true;
+				// }
 			}
 
 		public:
+
+			enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE };
+			enum { DefaultFormStyleEx = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW | WS_EX_COMPOSITED };
 
 			// Frame Window Constructor
 			// Use this constructor to create frame windows (i.e. windows not based on a dialog resource)
@@ -1036,21 +1096,24 @@ namespace pr
 				,HWND parent = nullptr
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT
 				,int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
-				,DWORD style = DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_VISIBLE
-				,DWORD ex_style = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW | WS_EX_COMPOSITED
-				,HMENU menu = nullptr
+				,DWORD style = DefaultFormStyle
+				,DWORD ex_style = DefaultFormStyleEx
+				,int menu_id = IDC_UNUSED
 				,LPARAM init_param = 0)
-				:Control(-1, nullptr, title)
-				,m_hinst(GetModuleHandle(nullptr))
-				,m_parent_form()
-				,m_child_form()
+				:Control(IDC_UNUSED, nullptr, title)
+				,m_hinst(::GetModuleHandle(nullptr))
 				,m_app_main_window(parent == ApplicationMainWindow)
+				,m_menu_id(menu_id)
+				,m_is_dialog(false)
 				,m_modal(false)
 			{
 				parent = !m_app_main_window ? parent : nullptr;
 				
 				// Ensure the class is registered
 				auto atom = RegisterWndClass(this);
+
+				// Load the optional menu
+				HMENU menu = menu_id != IDC_UNUSED ? ::LoadMenu(m_hinst, MAKEINTRESOURCE(menu_id)) : nullptr;
 
 				// Create an instance of the window class
 				InitParam lparam(this, init_param);
@@ -1063,16 +1126,15 @@ namespace pr
 			//  - hwnd is not created until Show() or ShowDialog() are called
 			Form(int idd, TCHAR const* name = nullptr)
 				:Control(idd, nullptr, name)
-				,m_hinst(GetModuleHandle(nullptr))
-				,m_parent_form()
-				,m_child_form()
+				,m_hinst(::GetModuleHandle(nullptr))
 				,m_app_main_window(false)
+				,m_menu_id(IDC_UNUSED)
+				,m_is_dialog(true)
 				,m_modal(false)
 			{}
 			~Form()
 			{
 				Close();
-				Unlink();
 			}
 
 			// Display the form non-modally
@@ -1081,19 +1143,16 @@ namespace pr
 				m_modal = false;
 
 				// Create the dialog from its dialog resource id if not created yet
-				if (m_hwnd == nullptr && m_id != -1)
+				if (m_hwnd == nullptr && m_is_dialog)
 				{
+					assert(m_id != IDC_UNUSED && "Modeless dialog without a resource id");
 					m_app_main_window = parent == ApplicationMainWindow;
 					parent = !m_app_main_window ? parent : nullptr;
 
 					InitParam lparam(this, init_param);
 					HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
-					m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitWndProc, LPARAM(&lparam));
+					m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
 					Throw(m_hwnd != nullptr, "CreateDialogParam failed");
-
-					// Link this dialog to its parent
-					if (parent != nullptr)
-						Link(reinterpret_cast<Form<Derived>*>(parent));
 				}
 				Throw(m_hwnd != nullptr, "Window not created");
 
@@ -1115,7 +1174,7 @@ namespace pr
 
 				InitParam lparam(this, init_param);
 				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
-				return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitWndProc, LPARAM(&lparam)));
+				return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
 			}
 
 			// Close this form
@@ -1131,9 +1190,10 @@ namespace pr
 		#pragma region Controls
 		struct Label :Control
 		{
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Label(TCHAR const* text
 				,int x, int y, int w, int h
-				,int id = -1
+				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
@@ -1144,7 +1204,7 @@ namespace pr
 				:Control(_T("STATIC"), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 
-			Label(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			Label(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 
@@ -1176,9 +1236,10 @@ namespace pr
 		};
 		struct Button :Control
 		{
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Button(TCHAR const* text
 				,int x, int y, int w, int h
-				,int id = -1
+				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
@@ -1189,7 +1250,7 @@ namespace pr
 				:Control(_T("BUTTON"), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 
-			Button(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			Button(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 
@@ -1221,7 +1282,8 @@ namespace pr
 		};
 		struct CheckBox :Control
 		{
-			CheckBox(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			CheckBox(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 
@@ -1273,7 +1335,8 @@ namespace pr
 		};
 		struct TextBox :Control
 		{
-			TextBox(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			TextBox(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 
@@ -1372,7 +1435,8 @@ namespace pr
 		};
 		struct ComboBox :Control
 		{
-			ComboBox(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			ComboBox(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 
@@ -1427,12 +1491,12 @@ namespace pr
 			}
 
 			// Add a string to the combo box dropdown list
-			int AddItem(char const* item)
+			int AddItem(LPCTSTR item)
 			{
 				assert(::IsWindow(m_hwnd));
 				return int(::SendMessage(m_hwnd, CB_ADDSTRING, 0, (LPARAM)item));
 			}
-			void AddItems(std::initializer_list<char const*> items)
+			void AddItems(std::initializer_list<LPCTSTR> items)
 			{
 				for (auto i : items)
 					AddItem(i);
@@ -1472,13 +1536,15 @@ namespace pr
 		};
 		struct GroupBox :Control
 		{
-			GroupBox(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			GroupBox(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 		};
 		struct RichTextBox :TextBox
 		{
-			RichTextBox(int id = -1, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			RichTextBox(int id = IDC_UNUSED, Control* parent = nullptr, TCHAR const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:TextBox(id, parent, name, anchor)
 			{}
 		};
@@ -1530,7 +1596,7 @@ struct Main :Form<Main>
 	enum { IDC_BTN = 100, };
 	Main()
 		:Form<Main>(_T("Demo Window"), ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl(_T("hello world"), 80, 20, 100, 16, -1, m_hwnd, this)
+		,m_lbl(_T("hello world"), 80, 20, 100, 16, IDC_UNUSED, m_hwnd, this)
 		,m_btn(_T("click me!"), 200, 130, 80, 20, IDC_BTN, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
 	{
 		// Show a modal dialog when the button is clicked

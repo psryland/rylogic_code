@@ -7,6 +7,14 @@ namespace pr.common
 	/// <summary>Extra methods related to Marshal</summary>
 	public static class MarshalEx
 	{
+		// Notes:
+		//  C# does not support structure alignment (as of 2015)
+		//  If you need to pass an aligned structure to a native api it's
+		//  probably better if the native api can be made to handle unaligned
+		//  data, rather than try to deal with it in C#. Have the native dll
+		//  take unaligned types through the interface and internally convert
+		//  them to aligned types.
+
 		/// <summary>RAII scope for allocated global memory</summary>
 		public static Scope<IntPtr> AllocHGlobal(int size_in_bytes)
 		{
