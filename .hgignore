@@ -11,6 +11,7 @@ syntax: glob
 *.pidb
 *.ipch
 *.ncb
+*.aps
 *.opensdf
 *.sdf
 *.suo
