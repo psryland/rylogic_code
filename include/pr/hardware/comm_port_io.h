@@ -130,10 +130,15 @@ namespace pr
 				// Set non-blocking reads/writes as default
 				SetBlockingReads(false);
 
-				// Setup the device with default settings
+				// Try to setup the device with default settings
 				COMMCONFIG config = {sizeof(COMMCONFIG)};
-				Throw(::GetDefaultCommConfigW(port_name + 4, &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG), "Failed to get default comm port configuration");
-				Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
+				if (::GetDefaultCommConfigW(port_name + 4, &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG))
+				{
+					// 'GetDefaultCommConfigW' can fail for bluetooth ports and some virtual ports
+					// ('http://stackoverflow.com/questions/6850965/how-come-getdefaultcommconfig-doesnt-work-with-bluetooth-spp-devices')
+					// Try to set defaults but if we can't, just hope for the best.
+					Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
+				}
 				ApplyConfig();
 			}
 			catch (...)
