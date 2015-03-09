@@ -337,7 +337,8 @@ namespace pr.common
 				// If anything goes wrong, use the defaults
 				// Use 'new T().Data' so that reference types can be used, otherwise we'll change the defaults
 				Log.Exception(this, ex, "Failed to load settings from {0}".Fmt(Filepath));
-				Data.AddRange(new T().Data);
+				foreach (var d in new T().Data) // use 'set' so that ISettingsSets are parented correctly
+					set(d.Key, d.Value);
 			}
 		}
 
@@ -692,5 +693,4 @@ namespace pr.unittests
 		}
 	}
 }
-
 #endif
