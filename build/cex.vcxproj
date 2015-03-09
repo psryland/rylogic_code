@@ -72,6 +72,7 @@
     <PostBuildEvent />
     <ClCompile>
       <PreprocessorDefinitions>_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -84,6 +85,7 @@
     <PostBuildEvent />
     <ClCompile>
       <PreprocessorDefinitions>_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -99,6 +101,7 @@
     <PostBuildEvent />
     <ClCompile>
       <PreprocessorDefinitions>_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -113,37 +116,35 @@
     <PostBuildEvent />
     <ClCompile>
       <PreprocessorDefinitions>_WIN32_WINNT=0x0500;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\cex\data_header_gen.cpp" />
-    <ClCompile Include="..\projects\cex\main.cpp" />
-    <ClCompile Include="..\projects\cex\open_vs.cpp">
-      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</MultiProcessorCompilation>
-      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</MultiProcessorCompilation>
-      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</MultiProcessorCompilation>
-      <MultiProcessorCompilation Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</MultiProcessorCompilation>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\p3d.cpp" />
-    <ClCompile Include="..\projects\cex\shell_file_op.cpp" />
-    <ClInclude Include="..\projects\cex\clip.h" />
-    <ClInclude Include="..\projects\cex\data_header_gen.h" />
-    <ClInclude Include="..\projects\cex\dir_path.h" />
-    <ClInclude Include="..\projects\cex\exec.h" />
-    <ClInclude Include="..\projects\cex\forward.h" />
-    <ClInclude Include="..\projects\cex\guid.h" />
-    <ClInclude Include="..\projects\cex\hash.h" />
-    <ClInclude Include="..\projects\cex\icex.h" />
-    <ClInclude Include="..\projects\cex\lower.h" />
-    <ClInclude Include="..\projects\cex\msg_box.h" />
-    <ClInclude Include="..\projects\cex\open_vs.h" />
-    <ClInclude Include="..\projects\cex\p3d.h" />
-    <ClInclude Include="..\projects\cex\shell_file_op.h" />
-    <ClInclude Include="..\projects\cex\template.h" />
-    <ClInclude Include="..\projects\cex\wait.h" />
+    <None Include="..\projects\cex\deploy.py" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\cex\deploy.py" />
+    <ClInclude Include="..\projects\cex\src\clip.h" />
+    <ClInclude Include="..\projects\cex\src\data_header_gen.h" />
+    <ClInclude Include="..\projects\cex\src\dir_path.h" />
+    <ClInclude Include="..\projects\cex\src\exec.h" />
+    <ClInclude Include="..\projects\cex\src\forward.h" />
+    <ClInclude Include="..\projects\cex\src\guid.h" />
+    <ClInclude Include="..\projects\cex\src\hash.h" />
+    <ClInclude Include="..\projects\cex\src\icex.h" />
+    <ClInclude Include="..\projects\cex\src\lower.h" />
+    <ClInclude Include="..\projects\cex\src\msg_box.h" />
+    <ClInclude Include="..\projects\cex\src\open_vs.h" />
+    <ClInclude Include="..\projects\cex\src\p3d.h" />
+    <ClInclude Include="..\projects\cex\src\shell_file_op.h" />
+    <ClInclude Include="..\projects\cex\src\template.h" />
+    <ClInclude Include="..\projects\cex\src\wait.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\projects\cex\src\data_header_gen.cpp" />
+    <ClCompile Include="..\projects\cex\src\main.cpp" />
+    <ClCompile Include="..\projects\cex\src\open_vs.cpp" />
+    <ClCompile Include="..\projects\cex\src\p3d.cpp" />
+    <ClCompile Include="..\projects\cex\src\shell_file_op.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

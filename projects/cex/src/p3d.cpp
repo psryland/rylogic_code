@@ -3,9 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2014
 //**********************************************
 
-#include "cex/forward.h"
-#include "cex/icex.h"
-#include "cex/p3d.h"
+#include "cex/src/forward.h"
+#include "cex/src/icex.h"
+#include "cex/src/p3d.h"
 #include "pr/geometry/p3d.h"
 #include "pr/geometry/3ds.h"
 #include "pr/geometry/utility.h"

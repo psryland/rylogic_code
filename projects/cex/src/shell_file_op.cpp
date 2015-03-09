@@ -3,9 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 
-#include "cex/forward.h"
-#include "cex/icex.h"
-#include "cex/shell_file_op.h"
+#include "cex/src/forward.h"
+#include "cex/src/icex.h"
+#include "cex/src/shell_file_op.h"
 
 namespace cex
 {

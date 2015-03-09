@@ -4,7 +4,7 @@
 //**********************************************
 
 #include <atlcomcli.h>
-#include "cex/open_vs.h"
+#include "cex/src/open_vs.h"
 
 // import EnvDTE
 #pragma warning(disable : 4278)

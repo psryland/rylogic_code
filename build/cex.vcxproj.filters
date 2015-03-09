@@ -6,68 +6,70 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\projects\cex\main.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\open_vs.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\shell_file_op.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\data_header_gen.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\cex\p3d.cpp">
-      <Filter>src</Filter>
-    </ClCompile>
-    <ClInclude Include="..\projects\cex\icex.h">
+    <None Include="..\projects\cex\deploy.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\projects\cex\src\clip.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\forward.h">
+    <ClInclude Include="..\projects\cex\src\data_header_gen.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\dir_path.h">
+    <ClInclude Include="..\projects\cex\src\dir_path.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\msg_box.h">
+    <ClInclude Include="..\projects\cex\src\exec.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\wait.h">
+    <ClInclude Include="..\projects\cex\src\forward.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\open_vs.h">
+    <ClInclude Include="..\projects\cex\src\guid.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\lower.h">
+    <ClInclude Include="..\projects\cex\src\hash.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\exec.h">
+    <ClInclude Include="..\projects\cex\src\icex.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\shell_file_op.h">
+    <ClInclude Include="..\projects\cex\src\lower.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\clip.h">
+    <ClInclude Include="..\projects\cex\src\msg_box.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\hash.h">
+    <ClInclude Include="..\projects\cex\src\open_vs.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\guid.h">
+    <ClInclude Include="..\projects\cex\src\p3d.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\data_header_gen.h">
+    <ClInclude Include="..\projects\cex\src\shell_file_op.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\template.h">
+    <ClInclude Include="..\projects\cex\src\template.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\cex\p3d.h">
+    <ClInclude Include="..\projects\cex\src\wait.h">
       <Filter>src</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\projects\cex\deploy.py" />
+    <ClCompile Include="..\projects\cex\src\data_header_gen.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\cex\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\cex\src\open_vs.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\cex\src\p3d.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\cex\src\shell_file_op.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

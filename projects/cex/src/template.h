@@ -3,38 +3,33 @@
 //  Copyright (c) Rylogic Ltd 2004
 //**********************************************
 
-#include "cex/forward.h"
-#include "cex/icex.h"
+#include "cex/src/forward.h"
+#include "cex/src/icex.h"
 
 namespace cex
 {
-	struct Hash :ICex
+	struct NEW_COMMAND :ICex
 	{
-		std::string m_text;
+		NEW_COMMAND() {}
 
 		void ShowHelp() const override
 		{
 			std::cout <<
-				"Hash the given stdin data\n"
-				" Syntax: Cex -hash data_to_hash...\n"
-				;
+				"";
 		}
 
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
 		{
-			if (pr::str::EqualI(option, "-hash")) { return true; }
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
-		
-		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter) override
+
+		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
 		{
-			m_text += *arg++;
-			return true;
+			return ICex::CmdLineData(arg, arg_end);
 		}
 
 		int Run() override
 		{
-			printf("%08X", pr::hash::HashC(m_text.c_str()));
 			return 0;
 		}
 	};
