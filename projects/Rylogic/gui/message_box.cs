@@ -302,7 +302,7 @@ namespace pr.gui
 			this.m_btn_negative = new System.Windows.Forms.Button();
 			this.m_btn_neutral = new System.Windows.Forms.Button();
 			this.m_btn_positive = new System.Windows.Forms.Button();
-			this.m_message = new System.Windows.Forms.RichTextBox();
+			this.m_message = new RichTextBox();
 			this.m_image = new System.Windows.Forms.PictureBox();
 			this.m_panel = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.m_image)).BeginInit();

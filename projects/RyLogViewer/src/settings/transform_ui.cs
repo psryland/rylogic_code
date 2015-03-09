@@ -9,6 +9,7 @@ using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.gui;
+using RichTextBox = pr.gui.RichTextBox;
 
 namespace RyLogViewer
 {
@@ -411,7 +412,7 @@ namespace RyLogViewer
 			get
 			{
 				Debug.Assert(ParentForm != null);
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(ParentForm, Resources.transform_quick_ref, "Transform Help", new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
+				return m_dlg_help ?? (m_dlg_help = HelpUI.From(ParentForm, HelpUI.EContent.Html, "Transform Help", Resources.transform_quick_ref, new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
 			}
 		}
 
@@ -447,8 +448,8 @@ namespace RyLogViewer
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_btn_add = new System.Windows.Forms.Button();
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
-			this.m_edit_test = new System.Windows.Forms.RichTextBox();
-			this.m_edit_result = new System.Windows.Forms.RichTextBox();
+			this.m_edit_test = new RichTextBox();
+			this.m_edit_result = new RichTextBox();
 			this.m_lbl_replace = new System.Windows.Forms.Label();
 			this.m_edit_replace = new System.Windows.Forms.TextBox();
 			this.m_check_ignore_case = new System.Windows.Forms.CheckBox();

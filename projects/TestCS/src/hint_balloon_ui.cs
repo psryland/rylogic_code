@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Windows.Forms;
 using pr.gui;
+using RichTextBox = pr.gui.RichTextBox;
 
 namespace TestCS
 {
@@ -50,7 +51,7 @@ namespace TestCS
 		/// the contents of this method with the code editor.
 		/// </summary>
 		private void InitializeComponent()
-		{			this.m_rtb = new System.Windows.Forms.RichTextBox();
+		{			this.m_rtb = new RichTextBox();
 			this.SuspendLayout();
 			//
 			// m_rtb

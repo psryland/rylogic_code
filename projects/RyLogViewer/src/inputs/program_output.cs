@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
 using pr.util;
+using pr.win32;
 
 namespace RyLogViewer
 {

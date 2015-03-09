@@ -8,6 +8,7 @@ using pr.common;
 using pr.extn;
 using pr.gui;
 using pr.util;
+using RichTextBox = pr.gui.RichTextBox;
 
 namespace RyLogViewer
 {
@@ -47,7 +48,7 @@ namespace RyLogViewer
 			// Version history
 			m_btn_version_history.Click += (s,a)=>
 				{
-					HelpUI.ShowHtml(this, Resources.version_history, "Version History");
+					HelpUI.ShowDialog(this, HelpUI.EContent.Html, "Version History", Resources.version_history);
 				};
 
 			// Update the text fields
@@ -136,7 +137,7 @@ namespace RyLogViewer
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_lbl_licence = new System.Windows.Forms.Label();
 			this.m_btn_version_history = new System.Windows.Forms.Button();
-			this.m_edit_licence = new System.Windows.Forms.RichTextBox();
+			this.m_edit_licence = new RichTextBox();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			//

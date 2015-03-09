@@ -7,6 +7,7 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using RichTextBox = pr.gui.RichTextBox;
 
 namespace pr.gui
 {
@@ -229,8 +230,8 @@ namespace pr.gui
 		public static HelpUI CreateRegexHelpUI(Form parent)
 		{
 			Debug.Assert(parent != null);
-			var ui = HelpUI.FromHtml(parent, string.Empty, "Regular Expressions Quick Reference", new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
-			ui.Html = Resources.regex_quick_ref;
+			var ui = HelpUI.From(parent, HelpUI.EContent.Html, "Regular Expressions Quick Reference", string.Empty, new Point(1,1) ,new Size(640,480) ,ToolForm.EPin.TopRight);
+			ui.Content = Resources.regex_quick_ref;
 			ui.ResetView();
 			return ui;
 		}
@@ -270,7 +271,7 @@ namespace pr.gui
 			this.m_image_list = new System.Windows.Forms.ImageList(this.components);
 			this.m_lbl_match = new System.Windows.Forms.Label();
 			this.m_edit_match = new System.Windows.Forms.TextBox();
-			this.m_edit_test = new System.Windows.Forms.RichTextBox();
+			this.m_edit_test = new RichTextBox();
 			this.m_btn_regex_help = new System.Windows.Forms.Button();
 			this.m_radio_substring = new System.Windows.Forms.RadioButton();
 			this.m_radio_wildcard = new System.Windows.Forms.RadioButton();
