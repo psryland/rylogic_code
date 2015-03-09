@@ -22,10 +22,7 @@ namespace RyLogViewer
 		/// <summary>Return the Form for displaying the quick help for the match field syntax (lazy loaded)</summary>
 		private HelpUI SwizzleHelpUI
 		{
-			get
-			{
-				return m_dlg_help ?? (m_dlg_help = HelpUI.FromHtml(this, Resources.swizzle_quick_ref, "Swizzle Help", new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight));
-			}
+			get { return m_dlg_help ?? (m_dlg_help = HelpUI.From(this, HelpUI.EContent.Html, "Swizzle Help", Resources.swizzle_quick_ref, new Point(1,1), new Size(640,480), ToolForm.EPin.TopRight)); }
 		}
 
 		public SwizzleUI()

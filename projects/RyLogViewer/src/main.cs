@@ -20,6 +20,7 @@ using pr.gui;
 using pr.inet;
 using pr.maths;
 using pr.util;
+using pr.win32;
 using RyLogViewer.Properties;
 using Timer = System.Windows.Forms.Timer;
 
@@ -1548,7 +1549,7 @@ namespace RyLogViewer
 		/// <summary>Display info about the app being a free version</summary>
 		private void ShowFreeVersionInfo(object sender = null, EventArgs args = null)
 		{
-			var dlg = HelpUI.FromHtml(this, Resources.free_version, "RyLogViewer Free Edition", Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
+			var dlg = HelpUI.From(this, HelpUI.EContent.Html, "RyLogViewer Free Edition", Resources.free_version, Point.Empty, new Size(480,640), ToolForm.EPin.Centre);
 			dlg.FormBorderStyle = FormBorderStyle.Sizable;
 			dlg.ShowDialog(this);
 		}

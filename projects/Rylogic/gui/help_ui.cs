@@ -1,156 +1,239 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 using System.IO;
-using System.Reflection;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
+using pr.win32;
+using RichTextBox = pr.gui.RichTextBox;
 
 namespace pr.gui
 {
-	public sealed class HelpUI :ToolForm
+	public class HelpUI :ToolForm
 	{
-		private Panel      m_panel;
-		private WebBrowser m_html;
-		private Button m_btn_back;
-		private Button m_btn_forward;
-		private Label m_lbl_status;
-		private Button     m_btn_ok;
-
-		// Create modal instances
-		public static DialogResult ShowText(Form owner, string text, string title)
+		/// <summary>Create a help dialog from plain text, rtf, or html</summary>
+		public static HelpUI From(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
 		{
-			return ShowHtml(owner, inet.Html.FromText(text), title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static DialogResult ShowText(Form owner, string text, string title, Point ofs, Size size, EPin pin)
-		{
-			return ShowHtml(owner, inet.Html.FromText(text), title, ofs, size, pin);
-		}
-		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title)
-		{
-			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static DialogResult ShowResource(Form owner, string resource_name, Assembly ass, string title, Point ofs, Size size, EPin pin)
-		{
-			return ShowHtml(owner, Util.TextResource(resource_name, ass), title, ofs, size, pin);
-		}
-		public static DialogResult ShowHtml(Form owner, string html, string title)
-		{
-			return ShowHtml(owner, html, title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static DialogResult ShowHtml(Form owner, string html, string title, Point ofs, Size size, EPin pin)
-		{
-			return new HelpUI(owner, html, title, ofs, size, pin, true).ShowDialog(owner);
+			return new HelpUI(parent, type, title, content, ofs, size, pin, false);
 		}
 
-		// Create non-modal instances
-		public static HelpUI FromText(Form parent, string text, string title)
+		/// <summary>Show a modal help dialog from plain text, rtf, or html</summary>
+		public static DialogResult ShowDialog(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
 		{
-			return FromHtml(parent, inet.Html.FromText(text), title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static HelpUI FromText(Form parent, string text, string title, Point ofs, Size size, EPin pin)
-		{
-			return FromHtml(parent, inet.Html.FromText(text), title, ofs, size, pin);
-		}
-		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title)
-		{
-			return FromHtml(parent, Util.TextResource(resource_name, ass), title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static HelpUI FromResource(Form parent, string resource_name, Assembly ass, string title, Point ofs, Size size, EPin pin)
-		{
-			return FromHtml(parent, Util.TextResource(resource_name, ass), title, ofs, size, pin);
-		}
-		public static HelpUI FromHtml(Form parent, string html, string title)
-		{
-			return FromHtml(parent, html, title, Point.Empty, Size.Empty, EPin.TopRight);
-		}
-		public static HelpUI FromHtml(Form parent, string html, string title, Point ofs, Size size, EPin pin)
-		{
-			return new HelpUI(parent, html, title, ofs, size, pin, false);
+			var ui = new HelpUI(parent, type, title, content, ofs, size, pin, true);
+			return ui.ShowDialog(parent);
 		}
 
+		/// <summary>Contains m_text</summary>
+		private Panel m_panel;
+
+		/// <summary>The control that displays the content</summary>
+		private Control m_text;
+
+		/// <summary>Link url</summary>
 		private Uri m_url;
 		private readonly Uri m_about_blank = new Uri("about:blank");
 
-		/// <summary>Construct from html. Private constructor so we can create overloads for resources, plain text, and html</summary>
-		private HelpUI(Form owner, string html, string title, Point ofs, Size size, EPin pin, bool modal)
-		:base(owner, pin, ofs, size, modal)
+		/// <summary>Status label used during navigation</summary>
+		private Label m_lbl_status;
+
+		private Button m_btn_forward;
+		private Button m_btn_back;
+		private Button m_btn_ok;
+
+		private HelpUI(Control parent, EContent type, string title, string content, Point? ofs, Size? size, EPin pin, bool modal)
+			:base(parent, pin, ofs ?? Point.Empty, size ?? Size.Empty, modal)
 		{
 			InitializeComponent();
+			Type = type;
 			Text = title;
-			Html = html;
-			m_url = m_about_blank;
-
-			m_html.AllowNavigation = true;
-			m_html.StatusTextChanged   += (s,a) => SetStatusText(m_html.StatusText != "Done" ? m_html.StatusText : string.Empty);
-			m_html.CanGoForwardChanged += (s,a) => m_btn_forward.Enabled = m_html.CanGoForward;
-			m_html.CanGoBackChanged    += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
-			m_html.Navigated           += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
-			m_html.Navigating          += (s,a) => m_url = a.Url;
-			m_html.PreviewKeyDown      += (s,a) =>
-				{
-					// Blocks Refresh which causes rendered html to vanish
-					if (a.KeyCode == Keys.F5)
-						a.IsInputKey = true;
-				};
-			m_lbl_status.Visible = false;
-			m_lbl_status.Text = m_html.StatusText;
-
-			m_btn_back.Click += (s,a) =>
-				{
-					if (!m_html.GoBack())
-						ResetView();
-				};
-			m_btn_forward.Click += (s,a) =>
-				{
-					if (!m_html.GoForward())
-						ResetView();
-				};
-			m_btn_ok.Click += (s,a)=>
-				{
-					Close();
-				};
-
-			Shown += (s,a) => ResetView();
-
+			Content = content;
 			m_btn_back.Enabled = false;
 			m_btn_forward.Enabled = false;
+			SetStatusText(null);
+
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				var txt = new TextBox
+				{
+					Dock        = DockStyle.Fill,
+					BorderStyle = BorderStyle.None,
+					Multiline   = true,
+					ScrollBars  = ScrollBars.Both,
+					ReadOnly    = true,
+				};
+				txt.Text = Content;
+				m_text = txt;
+				break;
+			case EContent.Rtf:
+				var rtb = new RichTextBox
+				{
+					Dock = DockStyle.Fill,
+					BorderStyle = BorderStyle.None,
+					DetectUrls = true,
+					ReadOnly = true,
+				};
+				rtb.Rtf = Content;
+				rtb.LinkClicked += OnLinkClicked;
+				m_text = rtb;
+				break;
+			case EContent.Html:
+				var web = new WebBrowser{Dock = DockStyle.Fill, AllowNavigation = true};
+				web.StatusTextChanged   += (s,a) => SetStatusText(web.StatusText != "Done" ? web.StatusText : string.Empty);
+				web.CanGoForwardChanged += (s,a) => m_btn_forward.Enabled = web.CanGoForward;
+				web.CanGoBackChanged    += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
+				web.Navigated           += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
+				web.Navigating          += (s,a) => OnLinkClicked(s, new LinkClickedEventArgs(a.Url.AbsoluteUri));
+				web.PreviewKeyDown      += (s,a) => { if (a.KeyCode == Keys.F5) a.IsInputKey = true; };// Blocks Refresh which causes rendered html to vanish
+				m_text = web;
+				ShowNavigationButtons = true;
+				break;
+			}
+			m_text.BackColor = SystemColors.Window;
+			m_panel.Controls.Add(m_text);
+
+			m_btn_ok.Click += Close;
+			m_btn_forward.Click += OnForward;
+			m_btn_back.Click += OnBack;
+		}
+		protected override void Dispose(bool disposing)
+		{
+			Util.Dispose(ref components);
+			base.Dispose(disposing);
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			ResetView();
 		}
 
-		/// <summary>Set the html for the dialog</summary>
-		public string Html { get; set; }
+		/// <summary>The type of text content to display</summary>
+		public EContent Type { get; private set; }
+		public enum EContent { Text, Rtf, Html }
+
+		/// <summary>The text to display in the window</summary>
+		public string Content { get; set; }
+
+		/// <summary>Show/Hide the navigation buttons</summary>
+		public bool ShowNavigationButtons
+		{
+			get { return m_btn_forward.Visible && m_btn_back.Visible; }
+			set { m_btn_forward.Visible = m_btn_back.Visible = value; }
+		}
 
 		/// <summary>Restores the help UI to the Html view</summary>
-		public void ResetView()
+		public virtual void ResetView()
 		{
-			m_html.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(Html));
 			m_btn_back.Enabled = false;
 			m_url = m_about_blank;
+
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				{
+					var txt = m_text.As<TextBox>();
+					txt.Text = Content;
+					txt.Select(0,0);
+					Win32.HideCaret(txt.Handle);
+					break;
+				}
+			case EContent.Rtf:
+				{
+					var rtf = m_text.As<RichTextBox>();
+					rtf.Rtf = Content;
+					rtf.Select(0,0);
+					Win32.HideCaret(rtf.Handle);
+					break;
+				}
+			case EContent.Html:
+				{
+					var web = m_text.As<WebBrowser>();
+					web.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(Content));
+					break;
+				}
+			}
 		}
 
 		/// <summary>Set the text of the status text. Clear to hide</summary>
-		public void SetStatusText(string text)
+		public virtual void SetStatusText(string text)
 		{
-			m_lbl_status.Text = text;
+			m_lbl_status.Text = text ?? string.Empty;
 			m_lbl_status.Visible = m_lbl_status.Text.HasValue();
+		}
+
+		/// <summary>Handles the back button click</summary>
+		protected virtual void OnBack(object sender, EventArgs args)
+		{
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				{
+					ResetView();
+					break;
+				}
+			case EContent.Rtf:
+				{
+					ResetView();
+					break;
+				}
+			case EContent.Html:
+				{
+					var web = m_text.As<WebBrowser>();
+					if (!web.GoBack())
+						ResetView();
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handles the forward button click</summary>
+		protected virtual void OnForward(object sender, EventArgs args)
+		{
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				{
+					ResetView();
+					break;
+				}
+			case EContent.Rtf:
+				{
+					ResetView();
+					break;
+				}
+			case EContent.Html:
+				{
+					var web = m_text.As<WebBrowser>();
+					if (!web.GoForward())
+						ResetView();
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handle a link click in RTF text</summary>
+		public event LinkClickedEventHandler LinkClicked;
+		protected virtual void OnLinkClicked(object sender, LinkClickedEventArgs args)
+		{
+			m_url = new Uri(args.LinkText);
+			if (LinkClicked == null) return;
+			LinkClicked(sender, args);
 		}
 
 		#region Windows Form Designer generated code
 
 		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>Clean up any resources being used.</summary>
-		/// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-		protected override void Dispose(bool disposing)
-		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
-			base.Dispose(disposing);
-		}
 
 		/// <summary>
 		/// Required method for Designer support - do not modify
@@ -160,99 +243,92 @@ namespace pr.gui
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(HelpUI));
 			this.m_panel = new System.Windows.Forms.Panel();
-			this.m_lbl_status = new System.Windows.Forms.Label();
-			this.m_html = new System.Windows.Forms.WebBrowser();
-			this.m_btn_ok = new System.Windows.Forms.Button();
-			this.m_btn_back = new System.Windows.Forms.Button();
 			this.m_btn_forward = new System.Windows.Forms.Button();
-			this.m_panel.SuspendLayout();
+			this.m_btn_back = new System.Windows.Forms.Button();
+			this.m_btn_ok = new System.Windows.Forms.Button();
+			this.m_lbl_status = new System.Windows.Forms.Label();
 			this.SuspendLayout();
-			//
-			// m_panel
-			//
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-			| System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			// 
+			// m_panel_rtf
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.m_panel.Controls.Add(this.m_lbl_status);
-			this.m_panel.Controls.Add(this.m_html);
 			this.m_panel.Location = new System.Drawing.Point(0, 0);
-			this.m_panel.Name = "m_panel";
-			this.m_panel.Size = new System.Drawing.Size(624, 411);
-			this.m_panel.TabIndex = 6;
-			//
+			this.m_panel.Margin = new System.Windows.Forms.Padding(0);
+			this.m_panel.Name = "m_panel_rtf";
+			this.m_panel.Size = new System.Drawing.Size(656, 625);
+			this.m_panel.TabIndex = 1;
+			// 
+			// m_btn_forward
+			// 
+			this.m_btn_forward.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_forward.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.m_btn_forward.Location = new System.Drawing.Point(128, 643);
+			this.m_btn_forward.Margin = new System.Windows.Forms.Padding(4);
+			this.m_btn_forward.Name = "m_btn_forward";
+			this.m_btn_forward.Size = new System.Drawing.Size(100, 28);
+			this.m_btn_forward.TabIndex = 12;
+			this.m_btn_forward.Text = "Forward ▶\r\n";
+			this.m_btn_forward.UseVisualStyleBackColor = true;
+			this.m_btn_forward.Visible = false;
+			// 
+			// m_btn_back
+			// 
+			this.m_btn_back.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+			this.m_btn_back.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.m_btn_back.Location = new System.Drawing.Point(20, 643);
+			this.m_btn_back.Margin = new System.Windows.Forms.Padding(4);
+			this.m_btn_back.Name = "m_btn_back";
+			this.m_btn_back.Size = new System.Drawing.Size(100, 28);
+			this.m_btn_back.TabIndex = 11;
+			this.m_btn_back.Text = "◀ Back\r\n";
+			this.m_btn_back.UseVisualStyleBackColor = true;
+			this.m_btn_back.Visible = false;
+			// 
+			// m_btn_ok
+			// 
+			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
+			this.m_btn_ok.Location = new System.Drawing.Point(539, 644);
+			this.m_btn_ok.Margin = new System.Windows.Forms.Padding(4);
+			this.m_btn_ok.Name = "m_btn_ok";
+			this.m_btn_ok.Size = new System.Drawing.Size(100, 28);
+			this.m_btn_ok.TabIndex = 10;
+			this.m_btn_ok.Text = "OK";
+			this.m_btn_ok.UseVisualStyleBackColor = true;
+			// 
 			// m_lbl_status
-			//
+			// 
 			this.m_lbl_status.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
 			this.m_lbl_status.AutoSize = true;
 			this.m_lbl_status.BackColor = System.Drawing.Color.LemonChiffon;
-			this.m_lbl_status.Location = new System.Drawing.Point(2, 394);
+			this.m_lbl_status.Location = new System.Drawing.Point(0, 625);
+			this.m_lbl_status.Margin = new System.Windows.Forms.Padding(0);
 			this.m_lbl_status.Name = "m_lbl_status";
-			this.m_lbl_status.Size = new System.Drawing.Size(24, 13);
-			this.m_lbl_status.TabIndex = 3;
+			this.m_lbl_status.Size = new System.Drawing.Size(30, 17);
+			this.m_lbl_status.TabIndex = 4;
 			this.m_lbl_status.Text = "Idle";
-			//
-			// m_html
-			//
-			this.m_html.AllowWebBrowserDrop = false;
-			this.m_html.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_html.IsWebBrowserContextMenuEnabled = false;
-			this.m_html.Location = new System.Drawing.Point(0, 0);
-			this.m_html.MinimumSize = new System.Drawing.Size(20, 20);
-			this.m_html.Name = "m_html";
-			this.m_html.ScriptErrorsSuppressed = true;
-			this.m_html.Size = new System.Drawing.Size(622, 409);
-			this.m_html.TabIndex = 2;
-			//
-			// m_btn_ok
-			//
-			this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-			this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
-			this.m_btn_ok.Location = new System.Drawing.Point(528, 416);
-			this.m_btn_ok.Name = "m_btn_ok";
-			this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_ok.TabIndex = 7;
-			this.m_btn_ok.Text = "OK";
-			this.m_btn_ok.UseVisualStyleBackColor = true;
-			//
-			// m_btn_back
-			//
-			this.m_btn_back.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_btn_back.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.m_btn_back.Location = new System.Drawing.Point(12, 416);
-			this.m_btn_back.Name = "m_btn_back";
-			this.m_btn_back.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_back.TabIndex = 8;
-			this.m_btn_back.Text = "◀ Back\r\n";
-			this.m_btn_back.UseVisualStyleBackColor = true;
-			//
-			// m_btn_forward
-			//
-			this.m_btn_forward.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-			this.m_btn_forward.Font = new System.Drawing.Font("Segoe UI Symbol", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.m_btn_forward.Location = new System.Drawing.Point(93, 416);
-			this.m_btn_forward.Name = "m_btn_forward";
-			this.m_btn_forward.Size = new System.Drawing.Size(75, 23);
-			this.m_btn_forward.TabIndex = 9;
-			this.m_btn_forward.Text = "Forward ▶\r\n";
-			this.m_btn_forward.UseVisualStyleBackColor = true;
-			//
-			// HelpUI
-			//
+			this.m_lbl_status.Visible = false;
+			// 
+			// HelpUI2
+			// 
 			this.AcceptButton = this.m_btn_ok;
-			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+			this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(624, 446);
+			this.ClientSize = new System.Drawing.Size(652, 685);
+			this.Controls.Add(this.m_lbl_status);
 			this.Controls.Add(this.m_btn_forward);
 			this.Controls.Add(this.m_btn_back);
 			this.Controls.Add(this.m_btn_ok);
 			this.Controls.Add(this.m_panel);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-			this.Name = "HelpUI";
+			this.Name = "HelpUI2";
 			this.Text = "Help";
-			this.m_panel.ResumeLayout(false);
-			this.m_panel.PerformLayout();
 			this.ResumeLayout(false);
+			this.PerformLayout();
+
 		}
 
 		#endregion

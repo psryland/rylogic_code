@@ -66,6 +66,9 @@
     <Compile Include="src\graph_control_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\help_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\hint_balloon_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -100,6 +103,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\diagram_control_ui.resx">
       <DependentUpon>diagram_control_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\help_ui.resx">
+      <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\ldr_editor_ui.resx">
       <DependentUpon>ldr_editor_ui.cs</DependentUpon>
