@@ -171,7 +171,7 @@ namespace pr.gui
 		public delegate void Progress(UserState us);
 
 		/// <summary>Show the dialog after a few milliseconds</summary>
-		public DialogResult ShowDialog(Form parent, int delay_ms = 0)
+		public DialogResult ShowDialog(Control parent, int delay_ms = 0)
 		{
 			if (delay_ms != 0 && Done.WaitOne(delay_ms))
 				return DialogResult.OK; // done already

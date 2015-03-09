@@ -22,7 +22,7 @@ namespace TestCS
 			InitializeComponent();
 
 			m_chklist.EnumValue = Things.One | Things.Three;
-			m_chklist.OwnerDraw += (s,a) =>
+			m_chklist.DrawItem += (s,a) =>
 				{
 					var checkSize = CheckBoxRenderer.GetGlyphSize(a.Graphics, System.Windows.Forms.VisualStyles.CheckBoxState.MixedNormal);
 					var dx = (a.Bounds.Height - checkSize.Width)/2;

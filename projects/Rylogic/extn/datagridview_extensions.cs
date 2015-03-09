@@ -27,7 +27,7 @@ namespace pr.extn
 			grid.SelectAll();
 		}
 
-		/// <summary>Select all rows</summary>
+		/// <summary>Select all rows. Attach to the KeyDown handler</summary>
 		public static void SelectAll(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
@@ -46,7 +46,7 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>KeyDown handler for copying selected cells to the clipboard</summary>
+		/// <summary>Copy selected cells to the clipboard. Attach to the KeyDown handler</summary>
 		public static void Copy(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
@@ -70,7 +70,7 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>Cut the selected cells to the clipboard. Cut cells replaced with default values</summary>
+		/// <summary>Cut the selected cells to the clipboard. Cut cells replaced with default values. Attach to the KeyDown handler</summary>
 		public static void Cut(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
@@ -87,7 +87,7 @@ namespace pr.extn
 				c.Value = null;
 		}
 
-		/// <summary>Delete the contents of the selected cells</summary>
+		/// <summary>Delete the contents of the selected cells. Attach to the KeyDown handler</summary>
 		public static void Delete(object sender, KeyEventArgs e)
 		{
 			var dgv = (DataGridView)sender;
@@ -172,7 +172,7 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
+		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only. Attach to the KeyDown handler</summary>
 		public static void PasteReplace(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
@@ -220,7 +220,7 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary</summary>
+		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary. Attach to the KeyDown handler</summary>
 		public static void PasteGrow(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
@@ -230,7 +230,7 @@ namespace pr.extn
 			e.Handled = true;
 		}
 
-		/// <summary>Combined handler for cut, copy, and paste replace functions</summary>
+		/// <summary>Combined handler for cut, copy, and paste replace functions. Attach to the KeyDown handler</summary>
 		public static void CutCopyPasteReplace(object sender, KeyEventArgs e)
 		{
 			if (e.Handled) return; // already handled
