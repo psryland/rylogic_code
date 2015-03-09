@@ -47,7 +47,7 @@ namespace pr.common
 				try
 				{
 					if (progress_cb != null)
-						progress_cb(dll,  (float)i / (imax - 1));
+						progress_cb(dll, (i + 1f) / imax);
 
 					var ass = Assembly.LoadFile(dll);
 					foreach (var type in ass.GetExportedTypes())
