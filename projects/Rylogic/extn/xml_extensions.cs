@@ -394,7 +394,16 @@ namespace pr.extn
 						if (string.IsNullOrEmpty(elem.Value)) return null;
 						throw new Exception("Cannot determine the type for xml element: {0}" + elem);
 					}
-					type = TypeExtensions.Resolve(attr.Value);
+					try { type = TypeExtensions.Resolve(attr.Value); }
+					catch (Exception ex)
+					{
+						// If you get this error you can use GC.KeepAlive(typeof(TheTypeName)); to force
+						// the assembly to be loaded before you try to load the xml.
+						throw new Exception(
+							"Failed to resolve type name {0}. No type with this name found in the loaded assemblies.\r\n".Fmt(attr.Value)+
+							"This error indicates that the XML being parsed contains a type that this application does not recognise.\r\n"+
+							"If the type should be recognised by this application, it may be that the assembly has not been loaded yet. ", ex);
+					}
 				}
 
 				// Empty elements return null or default instances
@@ -666,6 +675,16 @@ namespace pr.extn
 			{
 				foreach (var n in node.Elements(name[index]))
 					yield return n;
+			}
+		}
+
+		/// <summary>Remove child nodes for which pred(child) returns true</summary>
+		public static void RemoveNodes(this XContainer parent, Func<XElement, bool> pred)
+		{
+			foreach (var elem in parent.Elements().ToList())
+			{
+				if (!pred(elem)) continue;
+				elem.Remove();
 			}
 		}
 	}
