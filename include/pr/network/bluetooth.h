@@ -1,0 +1,355 @@
+#pragma once
+
+#include <string>
+#include <sstream>
+#include <vector>
+#include <algorithm>
+#include <mutex>
+#include <thread>
+#include <condition_variable>
+#include <atomic>
+#include <cassert>
+#include <exception>
+
+#include "pr/network/sockets.h"
+
+#include <cguid.h>
+#include <ws2bth.h>
+#include <bthsdpdef.h>
+#include <bluetoothapis.h>
+#pragma comment(lib, "bthprops.lib")
+
+namespace pr
+{
+	namespace network
+	{
+		// Helper for querying the available bluetooth services
+		struct BluetoothServices
+		{
+			// A query set is a header followed by a blob of memory
+			std::vector<unsigned char> m_buf;
+			HANDLE m_handle;
+			bool m_more; // true if there are more services available
+
+			// Use LUP_FLUSHCACHE to refresh BT devices
+			BluetoothServices(ULONG flags = LUP_CONTAINERS)
+				:m_buf()
+				,m_handle()
+				,m_more(true)
+			{
+				m_buf.resize(sizeof(WSAQUERYSETW));
+				auto& qs = query_set();
+				qs.dwSize = DWORD(m_buf.size());
+				qs.dwNameSpace = NS_BTH;
+				auto r = WSALookupServiceBeginW(&qs, flags, &m_handle);
+				if (r == NO_ERROR && m_handle != nullptr)
+					return;
+
+				r = WSAGetLastError();
+				if (r == WSANO_DATA) { m_more = false; return; }
+				pr::network::ThrowSocketError(r);
+			}
+			~BluetoothServices()
+			{
+				if (m_handle == nullptr) return;
+				WSALookupServiceEnd(m_handle);
+			}
+
+			// Get information about next bluetooth device
+			bool next(ULONG flags = LUP_RETURN_NAME | LUP_RETURN_ADDR |LUP_RETURN_TYPE)
+			{
+				for (;m_more;)
+				{
+					auto& qs = query_set();
+					qs.dwSize = DWORD(m_buf.size());
+					qs.dwNameSpace = NS_BTH;
+					DWORD size = qs.dwSize;
+					
+					auto r = WSALookupServiceNextW(m_handle, flags, &size, &qs);
+					if (r == NO_ERROR)
+						break;
+
+					r = WSAGetLastError();
+					if (r == WSA_E_NO_MORE) { m_more = false; break; }
+					if (r == WSAEFAULT) { m_buf.resize(size); continue; }
+					pr::network::ThrowSocketError(r);
+				}
+				return m_more;
+			}
+
+			// Find the next service associated with the given device
+			bool next(wchar_t const* device_name, ULONG flags = LUP_RETURN_NAME | LUP_RETURN_ADDR |LUP_RETURN_TYPE)
+			{
+				for (;next(flags);)
+				{
+					// Compare the name to see if this is the device we are looking for.
+					auto const& qs = query_set();
+					if (qs.lpszServiceInstanceName != nullptr && _wcsicmp(qs.lpszServiceInstanceName, device_name) == 0)
+						return true;
+				}
+				return false;
+			}
+			WSAQUERYSETW const& query_set() const { return *reinterpret_cast<WSAQUERYSETW const*>(m_buf.data()); }
+			WSAQUERYSETW& query_set()             { return *reinterpret_cast<WSAQUERYSETW*>(m_buf.data()); }
+		};
+
+		// A specific bluetooth device
+		struct BluetoothDeviceInfo :BLUETOOTH_DEVICE_INFO_STRUCT
+		{
+			BluetoothDeviceInfo(BLUETOOTH_DEVICE_INFO_STRUCT const& info)
+				:BLUETOOTH_DEVICE_INFO_STRUCT(info)
+			{}
+		};
+
+		// Wrapper for displaying a 'choose bluetooth device' gui
+		struct BluetoothDeviceUI
+		{
+			BLUETOOTH_SELECT_DEVICE_PARAMS m_params;
+			bool m_valid;
+
+			BluetoothDeviceUI(BLUETOOTH_SELECT_DEVICE_PARAMS params = {sizeof(BLUETOOTH_SELECT_DEVICE_PARAMS)})
+				:m_params(params)
+				,m_valid(false)
+			{}
+			~BluetoothDeviceUI()
+			{
+				if (!m_valid) return;
+				BluetoothSelectDevicesFree(&m_params);
+			}
+			int ShowDialog()
+			{
+				m_valid = BluetoothSelectDevices(&m_params) != 0;
+				return m_valid ? IDOK : IDCANCEL;
+			}
+			BluetoothDeviceInfo device() const
+			{
+				return BluetoothDeviceInfo(m_params.pDevices[0]);
+			}
+		};
+
+		// Convert a bluetooth device name to a bluetooth address by performing inquiry with remote name requests.
+		inline bool DeviceNameToBluetoothAddr(wchar_t const* name, SOCKADDR_BTH& addr, int inquiry_delay_s = 15)
+		{
+			addr = SOCKADDR_BTH{};
+
+			// Search for the device with the correct name
+			for (int i = 0, max_attempts = 3; i < max_attempts; ++i)
+			{
+				// WSALookupService is used for both service search and device inquiry
+				ULONG flags =
+					LUP_CONTAINERS  | // LUP_CONTAINERS is the flag which signals that we're doing a device inquiry.
+					LUP_RETURN_NAME | // Friendly device name (if available) will be returned in lpszServiceInstanceName
+					LUP_RETURN_ALL | 
+					LUP_RETURN_ADDR;  // BTH_ADDR will be returned in lpcsaBuffer member of WSAQUERYSET;
+
+				// On the first attempt, inquire device from cache
+				if (i != 0)
+				{
+					// Flush the device cache for all inquiries, except for the first inquiry
+					// By setting LUP_FLUSHCACHE flag, we're asking the lookup service to do
+					// a fresh lookup instead of pulling the information from device cache.
+					flags |= LUP_FLUSHCACHE;
+				}
+
+				// Lookup services
+				BluetoothServices svc(flags);
+				for (;svc.next(name);)
+				{
+					// Found a remote bluetooth device with matching name.
+					// Get the address of the device and exit the lookup.
+					auto const& qs = svc.query_set();
+					addr = *reinterpret_cast<SOCKADDR_BTH*>(qs.lpcsaBuffer->RemoteAddr.lpSockaddr);
+					return true;
+				}
+
+				// Pause for some time before all the inquiries after the first inquiry
+				// Remote Name requests will arrive after device inquiry has completed.
+				// Without a window to receive IN_RANGE notifications, we don't have a
+				// direct mechanism to determine when remote name requests have completed.
+				Sleep(inquiry_delay_s * 1000);
+			}
+			return false;
+		}
+
+		// Get address from formated address-string of the remote device
+		inline bool DeviceAddrToBluetoothAddr(wchar_t const* addr_string, SOCKADDR_BTH& addr)
+		{
+			std::wstring addr_str = addr_string;
+			addr_str.append(L'\0');
+			
+			int len = sizeof(addr);
+			auto r = WSAStringToAddressW(&addr_str[0], AF_BTH, nullptr, (SOCKADDR*)&addr, &len);
+			if (r != NO_ERROR)
+				pr::network::ThrowSocketError(WSAGetLastError());
+		}
+
+		// A bluetooth socket with server behaviour
+		class BTServer :public ServerSocket
+		{
+			typedef std::vector<GUID> TServices;
+			TServices m_services;
+
+			BTServer(BTServer const&); // no copying
+			BTServer& operator =(BTServer const&);
+
+			// Create m_listen_socket to use for listening on
+			virtual void CreateListenSocket() override
+			{
+				// Create the listen socket using the RFCOMM protocol
+				m_listen_socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
+				if (m_listen_socket == INVALID_SOCKET)
+					pr::network::ThrowSocketError(WSAGetLastError());
+
+				// Bind the local address to the socket
+				SOCKADDR_BTH my_address = {};
+				my_address.addressFamily = AF_BTH;
+				my_address.port = BT_PORT_ANY;
+				auto r = ::bind(m_listen_socket, (sockaddr const*)&my_address, sizeof(my_address));
+				if (r == SOCKET_ERROR)
+					ThrowSocketError(WSAGetLastError());
+			}
+
+		public:
+
+			explicit BTServer(Winsock const& winsock)
+				:ServerSocket(winsock)
+				,m_services()
+			{}
+			~BTServer()
+			{
+				for (;!m_services.empty();)
+					WithdrawService(m_services.back());
+			}
+			
+			// Bluetooth servers register services with the OS which clients query in order
+			// to establish the port to connect to (since only ports 1-31 are valid in RFCOMM).
+			// Services are typically registered just before the server 'accepts' incoming connections
+			void PublishService(GUID const& guid, wchar_t const* service_name)
+			{
+				if (std::find(std::begin(m_services), std::end(m_services), guid) != std::end(m_services))
+					throw std::exception("Bluetooth service already registered");
+
+				SOCKADDR_BTH addr;
+				addr.addressFamily  = AF_BTH;
+				addr.btAddr         = 0;
+				addr.serviceClassId = GUID_NULL;
+				addr.port           = BT_PORT_ANY;
+
+				CSADDR_INFO csa;
+				csa.LocalAddr.iSockaddrLength = sizeof(SOCKADDR_BTH);
+				csa.LocalAddr.lpSockaddr      = (SOCKADDR*)&addr;
+				csa.iSocketType               = SOCK_STREAM;
+				csa.iProtocol                 = BTHPROTO_RFCOMM;
+
+				WSAQUERYSETW reg_info            = {sizeof(WSAQUERYSETW)};
+				reg_info.lpszServiceInstanceName = const_cast<wchar_t*>(service_name);
+				reg_info.lpServiceClassId        = const_cast<GUID*>(&guid);
+				reg_info.lpVersion               = nullptr;
+				reg_info.lpszComment             = nullptr;
+				reg_info.dwNameSpace             = NS_BTH;
+				reg_info.lpNSProviderId          = nullptr;
+				reg_info.dwNumberOfCsAddrs       = 1;
+				reg_info.lpcsaBuffer             = &csa;
+
+				auto r = WSASetServiceW(&reg_info, RNRSERVICE_REGISTER, 0);
+				if (r == SOCKET_ERROR)
+					pr::network::ThrowSocketError(WSAGetLastError());
+
+				m_services.push_back(guid);
+			}
+			void WithdrawService(GUID const& guid)
+			{
+				WSAQUERYSETW reg_info = {sizeof(WSAQUERYSETW)};
+				reg_info.lpServiceClassId = const_cast<GUID*>(&guid);
+				auto r = WSASetServiceW(&reg_info, RNRSERVICE_DELETE, 0);
+				if (r == SOCKET_ERROR)
+					pr::network::ThrowSocketError(WSAGetLastError());
+
+				m_services.erase(std::remove(std::begin(m_services), std::end(m_services), guid), std::end(m_services));
+			}
+		};
+
+		// A bluetooth socket with client behaviour
+		class BTClient :public ClientSocket
+		{
+			BTClient(BTClient const&); // no copying
+			BTClient& operator =(BTClient const&);
+
+			// Connect 'm_socket' to 'addr'
+			bool ConnectToHost(SOCKADDR_BTH const& addr, int timeout_ms)
+			{
+				// Connect to the remote socket
+				auto r = ::connect(m_socket, (struct sockaddr *)&addr, sizeof(addr));
+				if (r == SOCKET_ERROR)
+					pr::network::ThrowSocketError(WSAGetLastError());
+
+				// Wait for the socket to say it's writable (meaning it's connected)
+				fd_set set = {};
+				FD_SET(m_socket, &set);
+				auto timeout = pr::network::TimeVal(timeout_ms);
+				r = ::select(0, 0, &set, 0, timeout_ms == ~0 ? nullptr : &timeout);
+				if (r == NO_ERROR)
+					return false;
+				if (r == SOCKET_ERROR)
+					ThrowSocketError(WSAGetLastError());
+
+				return true;
+			}
+
+		public:
+
+			struct ServiceOrPort
+			{
+				GUID m_service;
+				int m_port;
+				ServiceOrPort(GUID const& service) :m_service(service), m_port(0) {}
+				ServiceOrPort(int port) :m_service(GUID_NULL), m_port(port) {}
+			};
+
+			explicit BTClient(Winsock const& winsock)
+				:ClientSocket(winsock)
+			{}
+
+			// (Re)create 'm_socket'
+			// Typically applications can just call 'Connect', however some socket options
+			// need to be set after creating the socket but before connecting, in this case
+			// applications can call 'CreateSocket' first, then connect.
+			void CreateSocket()
+			{
+				Disconnect();
+
+				// Create a bluetooth socket using the RFCOMM protocol
+				m_socket = ::socket(AF_BTH, SOCK_STREAM, BTHPROTO_RFCOMM);
+				if (m_socket == INVALID_SOCKET)
+					pr::network::ThrowSocketError(WSAGetLastError());
+			}
+
+			// Connect to a bt device
+			bool Connect(BluetoothDeviceInfo const& device, ServiceOrPort service_or_port, int timeout_ms = ~0)
+			{
+				if (m_socket == INVALID_SOCKET)
+					CreateSocket();
+
+				SOCKADDR_BTH addr = {};
+				addr.addressFamily = AF_BTH;
+				addr.btAddr = device.Address.ullLong;
+				addr.serviceClassId = service_or_port.m_service;
+				addr.port = service_or_port.m_port;
+				return ConnectToHost(addr, timeout_ms);
+			}
+
+			// Connect to a device by name
+			bool Connect(wchar_t const* device_name, ServiceOrPort service_or_port, int timeout_ms = ~0)
+			{
+				if (m_socket == INVALID_SOCKET)
+					CreateSocket();
+
+				SOCKADDR_BTH addr = {};
+				pr::network::DeviceNameToBluetoothAddr(device_name, addr);
+				addr.serviceClassId = service_or_port.m_service;
+				addr.port = service_or_port.m_port;
+				return ConnectToHost(addr, timeout_ms);
+			}
+		};
+	}
+}
