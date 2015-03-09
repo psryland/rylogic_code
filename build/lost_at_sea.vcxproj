@@ -66,64 +66,51 @@
     <Import Project="props\app.x64.release.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LinkIncremental>true</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LinkIncremental>false</LinkIncremental>
-  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer.$(platformname).$(configurationname).lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;dxguid.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>py.exe $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>renderer.$(platformname).$(configurationname).lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;dxguid.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>py.exe $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\sdk\vorbis\include;..\sdk\ogg\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>lost_at_sea/src/stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer.$(platformname).$(configurationname).lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;dxguid.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>py.exe $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -138,13 +125,19 @@
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>renderer.$(platformname).$(configurationname).lib;d3d9.lib;d3dx9.lib;dsound.lib;dinput8.lib;dxguid.lib;dxerr.lib;strmiids.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>renderer11.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PreBuildEvent>
+      <Command>py.exe $(ProjectDir)..\projects\lost_at_sea\pre_build.py $(TargetPath) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\include\pr\app\entry_point.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\sdk\ogg\ogg.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
@@ -159,7 +152,6 @@
     </ClCompile>
     <ClCompile Include="..\projects\lost_at_sea\src\cam\cam.cpp" />
     <ClCompile Include="..\projects\lost_at_sea\src\main.cpp" />
-    <ClCompile Include="..\projects\lost_at_sea\src\settings.cpp" />
     <ClCompile Include="..\projects\lost_at_sea\src\ship\ship.cpp" />
     <ClCompile Include="..\projects\lost_at_sea\src\stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -167,10 +159,15 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\projects\lost_at_sea\src\world\skybox.cpp" />
     <ClCompile Include="..\projects\lost_at_sea\src\world\terrain.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\app\forward.h" />
+    <ClInclude Include="..\include\pr\app\main.h" />
+    <ClInclude Include="..\include\pr\app\main_gui.h" />
+    <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
+    <ClInclude Include="..\include\pr\app\skybox.h" />
+    <ClInclude Include="..\include\pr\app\wingui.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camctrl_dinput_wasd.h" />
     <ClInclude Include="..\include\pr\input\dinput.h" />
@@ -185,11 +182,16 @@
     <ClInclude Include="..\projects\lost_at_sea\src\ship\ship.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\stdafx.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\util.h" />
-    <ClInclude Include="..\projects\lost_at_sea\src\world\skybox.h" />
     <ClInclude Include="..\projects\lost_at_sea\src\world\terrain.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\projects\lost_at_sea\pre_build.py" />
     <None Include="..\projects\lost_at_sea\script\menu.ldr" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\projects\lost_at_sea\data\skybox\SkyBox-Clouds-Few-Noon.png">
+      <DeploymentContent>true</DeploymentContent>
+    </Image>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
