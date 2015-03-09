@@ -30,7 +30,13 @@ namespace pr.common
 		public PinnedObject(T obj)
 		{
 			m_managed_object = obj;
-			m_handle = GCHandle.Alloc(m_managed_object, GCHandleType.Pinned);
+			m_handle = GCHandle.Alloc(obj);
+			m_ptr = m_handle.AddrOfPinnedObject();
+		}
+		public PinnedObject(T obj, GCHandleType type)
+		{
+			m_managed_object = obj;
+			m_handle = GCHandle.Alloc(obj, type);
 			m_ptr = m_handle.AddrOfPinnedObject();
 		}
 
