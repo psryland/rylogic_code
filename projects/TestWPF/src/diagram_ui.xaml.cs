@@ -20,6 +20,7 @@ using pr.maths;
 using pr.gfx;
 using pr.gui;
 using pr.util;
+using pr.win32;
 
 namespace TestWPF
 {

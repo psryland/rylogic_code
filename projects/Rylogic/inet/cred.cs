@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using pr.util;
+using pr.win32;
 
 namespace pr.inet
 {

@@ -9,10 +9,12 @@ using System.Drawing;
 using System.Text;
 using System.Collections;
 using System.Runtime.InteropServices;
-using HWND=System.IntPtr;
+using pr.win32;
 
 namespace pr.util
 {
+	using HWND = System.IntPtr;
+
 	// Collection used to enumerate Window Objects
 	public class Windows :IEnumerable, IEnumerator
 	{
@@ -87,7 +89,7 @@ namespace pr.util
 	}
 
 	// Represents another window
-	// Wraps an HWND. No using 'Window' as it conflicts with 'System.Windows.Window'
+	// Wraps an HWND. Not using 'Window' as it conflicts with 'System.Windows.Window'
 	public class CWindow
 	{
 		private readonly HWND m_hwnd;

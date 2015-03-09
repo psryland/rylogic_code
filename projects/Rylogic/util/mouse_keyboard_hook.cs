@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using pr.win32;
 
 namespace pr.util
 {

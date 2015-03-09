@@ -2,6 +2,7 @@
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using pr.win32;
 
 namespace pr.inet
 {
@@ -133,7 +134,7 @@ namespace pr.inet
 
 			//clear the memory allocated by CredUIPromptForWindowsCredentials 
 			//SecureZeroMem(outCredBuffer, outCredSize); // ms documentation says we should call this but i can't get it to work
-			util.Win32.CoTaskMemFree(out_cred_buffer);
+			Win32.CoTaskMemFree(out_cred_buffer);
 
 			username_buf.Length = max_user_name;
 			password_buf.Length = max_password;

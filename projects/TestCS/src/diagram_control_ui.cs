@@ -7,6 +7,7 @@ using pr.gui;
 using pr.gfx;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace TestCS
 {

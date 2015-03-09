@@ -14,6 +14,7 @@ using System.Xml.Linq;
 using pr.common;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.extn
 {

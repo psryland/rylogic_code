@@ -20,6 +20,7 @@ using Microsoft.Win32.SafeHandles;
 using pr.extn;
 using pr.gui;
 using pr.util;
+using pr.win32;
 
 namespace pr.common
 {

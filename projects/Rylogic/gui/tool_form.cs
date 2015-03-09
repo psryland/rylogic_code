@@ -6,6 +6,7 @@ using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
@@ -136,6 +137,12 @@ namespace pr.gui
 			UpdateLocation();
 			if (!Visible) Show(Owner);
 			else          Focus();
+		}
+
+		/// <summary>An overload for close used for hooking up to event handlers</summary>
+		public void Close(object sender, EventArgs e)
+		{
+			base.Close();
 		}
 
 		protected override void OnLoad(EventArgs e)

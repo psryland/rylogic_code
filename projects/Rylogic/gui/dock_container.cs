@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {

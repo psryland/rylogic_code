@@ -222,6 +222,15 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\help_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\open_folder_ui.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\rich_text_box.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\scintilla.cs" />
     <Compile Include="gui\vt100.cs" />
     <Compile Include="gui\colour_ui.cs">
@@ -256,9 +265,6 @@
     </Compile>
     <Compile Include="gui\graph_control.cs">
       <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Include="gui\help_ui.cs">
-      <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\hover_scroll.cs">
     </Compile>
@@ -384,10 +390,20 @@
     <Compile Include="undo\undo.cs" />
     <Compile Include="script\template_replacer.cs" />
     <Compile Include="util\unittest.cs" />
-    <Compile Include="util\win32.cs" />
+    <Compile Include="win32\com_guids.cs" />
+    <Compile Include="win32\error_codes.cs" />
+    <Compile Include="win32\gdi32.cs" />
+    <Compile Include="win32\interop_structs.cs" />
+    <Compile Include="win32\kernel32.cs" />
+    <Compile Include="win32\ole32.cs" />
+    <Compile Include="win32\rstrtmgr.cs" />
+    <Compile Include="win32\shell32.cs" />
+    <Compile Include="win32\user32.cs" />
+    <Compile Include="win32\win32.cs" />
     <Compile Include="util\windows.cs" />
     <Compile Include="util\util.cs" />
     <Compile Include="util\winmm.cs" />
+    <Compile Include="win32\hwnd.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">

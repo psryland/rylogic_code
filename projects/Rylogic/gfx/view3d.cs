@@ -12,15 +12,16 @@ using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
-
-using HWND     = System.IntPtr;
-using HContext = System.IntPtr;
-using HWindow  = System.IntPtr;
-using HObject  = System.IntPtr;
-using HTexture = System.IntPtr;
+using pr.win32;
 
 namespace pr.gfx
 {
+	using HWND     = System.IntPtr;
+	using HContext = System.IntPtr;
+	using HWindow  = System.IntPtr;
+	using HObject  = System.IntPtr;
+	using HTexture = System.IntPtr;
+
 	/// <summary>.NET wrapper for View3D.dll</summary>
 	public class View3d :IDisposable
 	{

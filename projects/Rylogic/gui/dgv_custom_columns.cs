@@ -6,6 +6,7 @@ using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
