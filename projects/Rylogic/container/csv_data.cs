@@ -23,6 +23,38 @@ namespace pr.container
 
 			public new Row Add(string s) { base.Add(s); return this; }
 			public Row Add<T>(T s) { base.Add(s.ToString()); return this; }
+
+			/// <summary>Write this row as a line of csv data</summary>
+			public void Save(StreamWriter file, bool quoted = true)
+			{
+				var first = true;
+				foreach (var e in this)
+				{
+					var elem = e ?? string.Empty;
+
+					// Comma separate
+					if (!first) file.Write(',');
+					first = false;
+
+					if (!quoted)
+					{
+						file.Write(elem);
+					}
+					else
+					{
+						file.Write('"');
+						foreach (var ch in elem)
+						{
+							file.Write(ch);
+							if (ch == '"') file.Write('"');
+						}
+						file.Write('"');
+					}
+				}
+
+				// Empty rows still add a newline to preserve row counts
+				file.Write('\n');
+			}
 		}
 
 		private readonly List<Row> m_data = new List<Row>();
@@ -206,38 +238,8 @@ namespace pr.container
 		public void Save(string filepath, bool quoted = true)
 		{
 			using (var file = new StreamWriter(filepath))
-			{
 				foreach (var row in m_data)
-				{
-					var first = true;
-					foreach (var e in row)
-					{
-						var elem = e ?? string.Empty;
-
-						// Comma separate
-						if (!first) file.Write(',');
-						first = false;
-
-						if (!quoted)
-						{
-							file.Write(elem);
-						}
-						else
-						{
-							file.Write('"');
-							foreach (var ch in elem)
-							{
-								file.Write(ch);
-								if (ch == '"') file.Write('"');
-							}
-							file.Write('"');
-						}
-					}
-
-					// Empty rows still add a newline to preserve row counts
-					file.Write('\n');
-				}
-			}
+					row.Save(file, quoted);
 		}
 	}
 }
