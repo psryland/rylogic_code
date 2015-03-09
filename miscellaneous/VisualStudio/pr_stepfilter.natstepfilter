@@ -8,4 +8,10 @@
 <!--<Function><Name>std::vector&lt;.*</Name><Action>NoStepInto</Action></Function>-->
 	<Function><Name>.*::c_str</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>operator new</Name><Action>NoStepInto</Action></Function>
+	<!-- Operators as defined in the dinkumware stuff -->
+	<Function><Name>std::.*::operator\*</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>std::.*::operator-&gt;</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>std::.*::operator==</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>std::begin</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>std::end</Name><Action>NoStepInto</Action></Function>
 </StepFilter>
