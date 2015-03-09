@@ -1,11 +1,13 @@
 //************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2015
 //************************************
-#include "stdafx.h"
-#include "world\skybox.h"
+#include "lost_at_sea/src/stdafx.h"
+#include "lost_at_sea/src/world/skybox.h"
 
-las::Skybox::Skybox(pr::Renderer& rdr, string const& texpath)
+namespace las
+{
+	Skybox::Skybox(pr::Renderer& rdr, string const& texpath)
 :m_inst()
 ,m_tex()
 {

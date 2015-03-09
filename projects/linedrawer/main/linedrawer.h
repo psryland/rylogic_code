@@ -56,7 +56,7 @@ namespace ldr
 		void CreateDemoScene();
 
 		// The size of the window has changed
-		void Resize(pr::iv2 const& size) override;
+		void Resize(pr::IRect const& area) override;
 
 	private:
 

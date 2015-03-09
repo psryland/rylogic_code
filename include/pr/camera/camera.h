@@ -352,7 +352,7 @@ namespace pr
 		// The start of a mouse movement is indicated by 'btn_state' being non-zero
 		// The end of the mouse movement is indicated by 'btn_state' being zero
 		// 'ref_point' should be true on the mouse down/up event, false while dragging
-		void MouseControl(pr::v2 const& point, int btn_state, bool ref_point)
+		void MouseControl(pr::v2 const& point, camera::ENavBtn btn_state, bool ref_point)
 		{
 			// Button states
 			bool lbtn = (btn_state & camera::ENavBtn::Left) != 0;

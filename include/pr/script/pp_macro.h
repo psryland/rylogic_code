@@ -20,12 +20,16 @@ namespace pr
 		struct PPMacro
 		{
 			typedef pr::vector<string,5> Params;
+			typedef pr::hash::HashValue  HashValue;
 
-			pr::hash::HashValue m_hash;      // The hash of the macro tag
-			string              m_tag;       // The macro tag
-			Params              m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
-			string              m_expansion; // The substitution text
-			Loc                 m_loc;       // The source location of where the macro was defined
+			HashValue m_hash;      // The hash of the macro tag
+			string    m_tag;       // The macro tag
+			Params    m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
+			string    m_expansion; // The substitution text
+			Loc       m_loc;       // The source location of where the macro was defined
+
+			// Return the hashed version of a macro name
+			static HashValue Hash(char const* name) { return pr::hash::HashC(name); }
 
 			PPMacro()
 				:m_hash()
@@ -36,7 +40,7 @@ namespace pr
 			{}
 
 			// Construct a simple macro expansion
-			explicit PPMacro(pr::hash::HashValue hash, char const* expansion = "", Params const& params = Params(), Loc const& loc = Loc())
+			explicit PPMacro(HashValue hash, char const* expansion = "", Params const& params = Params(), Loc const& loc = Loc())
 				:m_hash(hash)
 				,m_tag()
 				,m_params(params)
@@ -44,7 +48,7 @@ namespace pr
 				,m_loc(loc)
 			{}
 			explicit PPMacro(char const* tag, char const* expansion = "", Params const& params = Params(), Loc const& loc = Loc())
-				:m_hash(pr::hash::HashC(tag))
+				:m_hash(Hash(tag))
 				,m_tag(tag)
 				,m_params(params)
 				,m_expansion(expansion)

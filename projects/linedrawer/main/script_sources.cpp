@@ -123,8 +123,12 @@ namespace ldr
 			{
 				m_lua_src.Add(filepath);
 			}
-			else if (pr::str::EqualI(extn, "x"))
+			else if (pr::str::EqualI(extn, "p3d"))
 			{
+				BufferedSrc src(pr::Fmt("*Model {\"%s\"}", filepath));
+				Reader reader(src);
+				reader.IncludeHandler(&includes);
+				Parse(m_rdr, reader, out, true, context_id);
 			}
 			else // assume ldr script file
 			{

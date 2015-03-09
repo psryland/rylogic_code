@@ -98,7 +98,7 @@ struct enum_name\
 	static char const* ToString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: notflags(assert(false && "Not a member of enum "#enum_name);) return "";\
+		default: return "";\
 		enum_vals1(PR_ENUM_TOSTRING1)\
 		enum_vals2(PR_ENUM_TOSTRING2)\
 		enum_vals3(PR_ENUM_TOSTRING3)\
@@ -107,7 +107,7 @@ struct enum_name\
 	static wchar_t const* ToWString(Enum_ e)\
 	{\
 		switch (e) {\
-		default: notflags(assert(false && "Not a member of enum "#enum_name);) return L"";\
+		default: return L"";\
 		enum_vals1(PR_ENUM_TOWSTRING1)\
 		enum_vals2(PR_ENUM_TOWSTRING2)\
 		enum_vals3(PR_ENUM_TOWSTRING3)\

@@ -3,22 +3,16 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***********************************************************************
 // String types:
-//	std::string, std::wstring, etc
+//	std::string, std::wstring, pr::string<>, etc
 //	char[], wchar_t[], etc
 //	char*, wchar_t*, etc
 
-#ifndef PR_STR_STRING_CORE_H
-#define PR_STR_STRING_CORE_H
+#pragma once
 
 #include <cstddef>
 #include <ctype.h>
 #include <functional>
-
-//"pr/common/assert.h" should be included prior to this for pr asserts
-#ifndef PR_ASSERT
-#   define PR_ASSERT_STR_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
+#include <cassert>
 
 #pragma warning (push)
 #pragma warning (disable: 4351) // warning C4351: new behavior: elements of array will be default initialized
@@ -27,6 +21,32 @@ namespace pr
 {
 	namespace str
 	{
+		// Traits for getting the iterator type for a string
+		template <typename Type> struct Traits
+		{
+			typedef typename Type::const_iterator citer;
+			typedef typename Type::iterator       iter;
+			typedef typename Type::value_type     value_type;
+		};
+		template <typename Type> struct Traits<Type*>
+		{
+			typedef Type const* citer;
+			typedef Type*       iter;
+			typedef Type        value_type;
+		};
+		template <typename Type> struct Traits<Type* const>
+		{
+			typedef Type const* citer;
+			typedef Type*       iter;
+			typedef Type        value_type;
+		};
+		template <typename Type, size_t Len> struct Traits<Type[Len]>
+		{
+			typedef Type const* citer;
+			typedef Type*       iter;
+			typedef Type        value_type;
+		};
+
 		// Helper object for converting a fixed buffer to an stl-like container
 		template <typename Char> struct fixed_buffer
 		{
@@ -65,32 +85,6 @@ namespace pr
 			tchar         operator [](int i) const { return tchar(m_iter[i]); }
 		};
 
-		// Traits for getting the iterator type for a string
-		template <typename Type> struct Traits
-		{
-			typedef typename Type::const_iterator citer;
-			typedef typename Type::iterator       iter;
-			typedef typename Type::value_type     value_type;
-		};
-		template <typename Type> struct Traits<Type*>
-		{
-			typedef Type const* citer;
-			typedef Type*       iter;
-			typedef Type        value_type;
-		};
-		template <typename Type> struct Traits<Type* const>
-		{
-			typedef Type const* citer;
-			typedef Type*       iter;
-			typedef Type        value_type;
-		};
-		template <typename Type, size_t Len> struct Traits<Type[Len]>
-		{
-			typedef Type const* citer;
-			typedef Type*       iter;
-			typedef Type        value_type;
-		};
-
 		// Character classes
 		template <typename Char> inline bool IsNewLine(Char ch)                 { return ch == Char('\n'); }
 		template <typename Char> inline bool IsLineSpace(Char ch)               { return ch == Char(' ') || ch == Char('\t') || ch == Char('\r'); }
@@ -105,29 +99,29 @@ namespace pr
 
 		// Iterator access to strings
 		template <typename tstr> inline typename Traits<tstr>::citer  Begin (tstr const& str)             { return str.begin(); }
-		template <typename tstr> inline typename Traits<tstr>::citer  BeginC(tstr& str)                   { return const_cast<tstr const&>(str).begin(); }
 		template <typename tstr> inline typename Traits<tstr>::iter   Begin (tstr& str)                   { return str.begin(); }
+		template <typename tstr> inline typename Traits<tstr>::citer  BeginC(tstr& str)                   { return const_cast<tstr const&>(str).begin(); }
 		template <typename tstr> inline typename Traits<tstr>::citer  End   (tstr const& str)             { return str.end(); }
-		template <typename tstr> inline typename Traits<tstr>::citer  EndC  (tstr& str)                   { return const_cast<tstr const&>(str).end(); }
 		template <typename tstr> inline typename Traits<tstr>::iter   End   (tstr& str)                   { return str.end(); }
+		template <typename tstr> inline typename Traits<tstr>::citer  EndC  (tstr& str)                   { return const_cast<tstr const&>(str).end(); }
 		template <typename tstr> inline typename Traits<tstr*>::citer Begin (tstr const* str)             { return str; }
-		template <typename tstr> inline typename Traits<tstr*>::citer BeginC(tstr* str)                   { return const_cast<tstr const*>(str); }
 		template <typename tstr> inline typename Traits<tstr*>::iter  Begin (tstr* str)                   { return str; }
+		template <typename tstr> inline typename Traits<tstr*>::citer BeginC(tstr* str)                   { return const_cast<tstr const*>(str); }
 		template <typename tstr> inline typename Traits<tstr*>::citer End   (tstr const* str)             { for (; *str; ++str){} return str; }
-		template <typename tstr> inline typename Traits<tstr*>::citer EndC  (tstr* str)                   { for (; *str; ++str){} return const_cast<tstr const*>(str); }
 		template <typename tstr> inline typename Traits<tstr*>::iter  End   (tstr* str)                   { for (; *str; ++str){} return str; }
+		template <typename tstr> inline typename Traits<tstr*>::citer EndC  (tstr* str)                   { for (; *str; ++str){} return const_cast<tstr const*>(str); }
 		template <typename tstr> inline typename Traits<tstr>::citer  End   (tstr const& str , size_t)    { return End (str); }
-		template <typename tstr> inline typename Traits<tstr>::citer  EndC  (tstr& str       , size_t)    { return EndC(str); }
 		template <typename tstr> inline typename Traits<tstr>::iter   End   (tstr& str       , size_t)    { return End (str); }
+		template <typename tstr> inline typename Traits<tstr>::citer  EndC  (tstr& str       , size_t)    { return EndC(str); }
 		template <typename tstr> inline typename Traits<tstr*>::citer End   (tstr const* str , size_t N)  { for (; N-- && *str; ++str){} return str; }
-		template <typename tstr> inline typename Traits<tstr*>::citer EndC  (tstr const* str , size_t N)  { for (; N-- && *str; ++str){} return const_cast<tstr const*>(str); }
 		template <typename tstr> inline typename Traits<tstr*>::iter  End   (tstr* str       , size_t N)  { for (; N-- && *str; ++str){} return str; }
-		inline char const* End      (char const* str)              { return str + strlen(str); }
-		inline char const* EndC     (char* str)                    { return str + strlen(str); }
-		inline char*       End      (char* str)                    { return str + strlen(str); }
+		template <typename tstr> inline typename Traits<tstr*>::citer EndC  (tstr const* str , size_t N)  { for (; N-- && *str; ++str){} return const_cast<tstr const*>(str); }
+		inline char const*    End   (char const* str)              { return str + strlen(str); }
+		inline char*          End   (char* str)                    { return str + strlen(str); }
+		inline char const*    EndC  (char* str)                    { return str + strlen(str); }
 		inline wchar_t const* End   (wchar_t const* str)           { return str + wcslen(str); }
-		inline wchar_t const* EndC  (wchar_t* str)                 { return str + wcslen(str); }
 		inline wchar_t*       End   (wchar_t* str)                 { return str + wcslen(str); }
+		inline wchar_t const* EndC  (wchar_t* str)                 { return str + wcslen(str); }
 		
 		// Return true if 'str' is a zero length string
 		template <typename tstr> inline bool Empty(tstr const& str)
@@ -135,7 +129,7 @@ namespace pr
 			return Begin(str) == End(str, 1);
 		}
 
-		// Return the length of a string. This version is for std::vector-like strings
+		// Return the length of a string.
 		template <typename tstr> inline size_t Length(tstr const& str)
 		{
 			return static_cast<size_t>(str.size());
@@ -150,11 +144,11 @@ namespace pr
 		}
 
 		// Lower/upper case
-		template <typename tchar> inline tchar Lwr(tchar ch) { return (ch >= 'A' && ch <= 'Z') ? ch + ('a'-'A') : ch; }
-		template <typename tchar> inline tchar Upr(tchar ch) { return (ch >= 'a' && ch <= 'z') ? ch - ('a'-'A') : ch; }
+		template <typename tchar> inline tchar Lwr(tchar ch) { return (ch >= tchar('A') && ch <= tchar('Z')) ? ch + ('a'-'A') : ch; }
+		template <typename tchar> inline tchar Upr(tchar ch) { return (ch >= tchar('a') && ch <= tchar('z')) ? ch - ('a'-'A') : ch; }
 
 		// Predicates for char comparisons
-		struct Pred_Equal       { template <typename L, typename R> bool operator()(L lhs, R rhs) const { return lhs == rhs; }               };
+		struct Pred_Equal       { template <typename L, typename R> bool operator()(L lhs, R rhs) const { return lhs == rhs; }           };
 		struct Pred_EqualNoCase { template <typename L, typename R> bool operator()(L lhs, R rhs) const { return Lwr(lhs) == Lwr(rhs); } };
 
 		// Test strings for equality
@@ -397,8 +391,8 @@ namespace pr
 			template <typename tchar> bool operator()(tchar ch) const { return !m_pred(ch); }
 		};
 
-		struct Pred_Find       { template <typename tstr1, typename tstr2> bool operator() (tstr1 const* src, tstr2 const* what, size_t len) const {return EqualN (src, what, len);} };
-		struct Pred_FindNoCase { template <typename tstr1, typename tstr2> bool operator() (tstr1 const* src, tstr2 const* what, size_t len) const {return EqualNI(src, what, len);} };
+		struct Pred_Find       { template <typename iter1, typename iter2> bool operator() (iter1 src, iter2 what, size_t len) const { return EqualN (src, what, len); } };
+		struct Pred_FindNoCase { template <typename iter1, typename iter2> bool operator() (iter1 src, iter2 what, size_t len) const { return EqualNI(src, what, len); } };
 
 		// Find the sub string 'what' in the range of characters provided.
 		// Returns an iterator to the sub string or to the end of the range.
@@ -406,15 +400,12 @@ namespace pr
 		{
 			if (Empty(what)) return last;
 			size_t what_len = Length(what);
-			for (; src != last && !pred(&*src, BeginC(what), what_len); ++src) {}
-			return src;
+			for (; last - src >= std::ptrdiff_t(what_len) && !pred(&*src, &*BeginC(what), what_len); ++src) {}
+			return last - src >= std::ptrdiff_t(what_len) ? src : last;
 		}
 		template <typename iter, typename tstr, typename Pred> inline iter FindStrIf(iter src, tstr const& what, Pred pred)
 		{
-			if (Empty(what)) return End(src);
-			size_t what_len = Length(what);
-			for (; *src && !pred(&*src, BeginC(what), what_len); ++src) {}
-			return src;
+			return FindStrIf(src, End(src), what, pred);
 		}
 		template <typename iter, typename tstr> inline iter FindStr(iter src, iter last, tstr const& what)
 		{
@@ -899,11 +890,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#ifdef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT
-#endif
-
 #endif

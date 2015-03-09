@@ -1039,10 +1039,18 @@ namespace pr
 		}
 
 		// look for right beginnng at or after ofs
+		// CAREFUL! this method is a bit dangerous because literal strings have a length 1 character
+		// longer than you'd expect. This method has been setup for the common case like this:
+		//    find("Me") searches for {'M','e'}
+		// If you do this:
+		//    char me[] = {'M','e','\0'};      find(me); <=== the last '\0' character will not be matched.
+		//    char me[] = {'M','e','\0','\0'}; find(me); <=== the last '\0' character will not be matched but the first '\0' will.
+		// These are equivalent
+		//    char me[] = {'M','e'};  find(me) == find("Me");
 		template <int Len> size_type find(Type const (&right)[Len], size_type ofs = 0) const
 		{
 			// Note: Len will include the null terminator for literal strings
-			return find(&right[0], ofs, Len);
+			return find(&right[0], ofs, Len - (right[Len-1] == 0));
 		}
 
 		// look for right beginnng at or after ofs
@@ -1391,10 +1399,11 @@ namespace std
 	struct hash<pr::string<T,L,F,A>> :public unary_function<pr::string<T,L,F,A>, size_t>
 	{
 		typedef pr::string<T,L,F,A> _Kty;
-		size_t operator()(const _Kty& _Keyval) const
+
+		// hash 'key' to a size_t value by pseudorandomizing transform
+		size_t operator()(_Kty const& key) const
 		{
-			// hash _Keyval to size_t value by pseudorandomizing transform
-			return _Hash_seq((unsigned char const *)_Keyval.c_str(), _Keyval.size() * sizeof(_Elem));
+			return _Hash_seq(reinterpret_cast<unsigned char const *>(key.c_str()), key.size() * sizeof(_Kty::value_type));
 		}
 	};
 }

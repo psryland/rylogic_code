@@ -4,402 +4,248 @@
 //*****************************************************************************************
 // See pr/app/main.h for usage instructions
 #pragma once
-#ifndef PR_APP_MAIN_GUI_H
-#define PR_APP_MAIN_GUI_H
 
 #include "pr/app/forward.h"
+#pragma warning (disable:4355)
 
 namespace pr
 {
 	namespace app
 	{
+		// App interface
+		struct IAppMainGui
+		{
+			virtual ~IAppMainGui() {}
+			virtual int Run() = 0;
+		};
+
 		// A base class for a main app window.
 		// Provides the common code support for a main 3D graphics window
 		template
-			<
+		<
 			typename DerivedGUI,
 			typename Main,
-			typename MessageLoop = CMessageLoop // Alternatives are: SimMsgLoop
-			>
+			typename MessageLoop = pr::gui::MessageLoop // Alternatives are: SimMsgLoop
+		>
 		struct MainGUI
-			:WTL::CFrameWindowImpl<DerivedGUI>
-			,WTL::CMessageFilter
-			,WTL::CIdleHandler
+			:pr::gui::Form<DerivedGUI>
+			,IAppMainGui
 		{
-			pr::Logger            m_log;          // App log
-			MessageLoop           m_msg_loop;     // The message pump
-			std::unique_ptr<Main> m_main;         // The app logic object
-			DWORD                 m_my_thread_id; // The thread this gui object was created on
-			bool                  m_resizing;     // True during a resize of the main window
-			bool                  m_nav_enabled;  // True to allow default mouse navigation
-			LONG                  m_click_thres;  // Single click time threshold in ms
-			LONG                  m_down_at[4];   // Button down timestamp
-			int                   m_exit_code;    // Exit code
+			typedef pr::gui::Form<DerivedGUI> base;
 
-			MainGUI()
-				:m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
-				,m_msg_loop()
-				,m_main(nullptr)
+			pr::Logger            m_log;                       // App log
+			MessageLoop           m_msg_loop;                  // The message pump
+			std::unique_ptr<Main> m_main;                      // The app logic object
+			DWORD                 m_my_thread_id;              // The thread this gui object was created on
+			bool                  m_resizing;                  // True during a resize of the main window
+			bool                  m_nav_enabled;               // True while a mouse button is down during default mouse navigation
+			bool                  m_fullscreen_toggle_enabled; // Allow Alt+Enter to toggle between full screen and windowed
+			LONG                  m_click_thres;               // Single click time threshold in ms
+			LONG                  m_down_at[4];                // Button down timestamp
+			int                   m_exit_code;                 // Exit code
+
+			//static HBRUSH WndBackground() { return nullptr; }
+
+			// Create the main application window.
+			// This class is subclassed from pr::gui::Form which actually does the 'CreateWindowEx' call in
+			// it's constructor. This means the HWND is valid after the base class has been constructed.
+			MainGUI(TCHAR const* title
+				,int x = CW_USEDEFAULT ,int y = CW_USEDEFAULT
+				,int w = CW_USEDEFAULT ,int h = CW_USEDEFAULT
+				,DWORD style = DefaultFormStyle
+				,DWORD ex_style = DefaultFormStyleEx
+				,int menu_id = IDC_UNUSED
+				,int accel_id = IDC_UNUSED
+				,char const* name = nullptr
+				,LPARAM init_param = 0)
+				:base(title, pr::gui::ApplicationMainWindow, x, y, w, h, style, ex_style, menu_id, name, init_param)
+				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
+				,m_msg_loop(m_hinst, accel_id)
+				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
 				,m_my_thread_id(GetCurrentThreadId())
 				,m_resizing(false)
 				,m_nav_enabled(false)
+				,m_fullscreen_toggle_enabled(true)
 				,m_click_thres(200)
 				,m_down_at()
 				,m_exit_code()
 			{
 				// Initialise common controls support
-				AtlInitCommonControls(IccClasses());
-
-				// Register this class for message filtering and idle updates
-				m_msg_loop.AddMessageFilter(this);
-				m_msg_loop.AddIdleHandler(this);
-
-				// The main window message loop
-				// The app module maintains a map from thread id to message loop.
-				// We could use this to add method loops for other threads if needed
-				pr::app::Module().AddMessageLoop(&m_msg_loop);
-			}
-			virtual ~MainGUI()
-			{
-				// It's too late to call DestroyWindow here, because that posts a WM_DESTROY
-				// message to the thread queue which should be handled resulting in a WM_QUIT
-				// being posted which causes the msg loop to return.
-				PR_ASSERT(PR_DBG, m_main == nullptr && m_hWnd == 0, "Destructing MainGUI before DestroyWindow has been called");
-				
-				// This should only happen during an unhandled exception
-				//PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
-				//if (IsWindow())
-				//	DestroyWindow();
-				
-				pr::app::Module().RemoveMessageLoop();
-			}
-
-			// Return the common control classes to support
-			virtual DWORD IccClasses() const
-			{
-				return
-					ICC_LISTVIEW_CLASSES   | // listview, header
-					ICC_TREEVIEW_CLASSES   | // treeview, tooltips
-					ICC_BAR_CLASSES        | // toolbar, statusbar, trackbar, tooltips
-					ICC_TAB_CLASSES        | // tab, tooltips
-					ICC_UPDOWN_CLASS       | // updown
-					ICC_PROGRESS_CLASS     | // progress
-					ICC_HOTKEY_CLASS       | // hotkey
-					ICC_ANIMATE_CLASS      | // animate
-					ICC_WIN95_CLASSES      | //
-					ICC_DATE_CLASSES       | // month picker, date picker, time picker, updown
-					ICC_USEREX_CLASSES     | // comboex
-					ICC_COOL_CLASSES       | // rebar (coolbar) control
-					ICC_INTERNET_CLASSES   | //
-					ICC_PAGESCROLLER_CLASS | // page scroller
-					ICC_NATIVEFNTCTL_CLASS | // native font control
-					ICC_STANDARD_CLASSES   |
-					ICC_LINK_CLASS;
-			}
-
-			// Create/Destroy the main window
-			virtual LRESULT OnCreate(LPCREATESTRUCT)
-			{
-				// Create the main app logic
-				try { m_main.reset(new Main(static_cast<DerivedGUI&>(*this))); }
-				catch (std::exception const& ex)
-				{
-					char const* err_msg = pr::FmtS("Failed to create application\nReturned error: %s", ex.what());
-					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					PR_LOG(m_log, Error, err_msg);
-					CloseApp(E_FAIL);
-					return E_FAIL;
-				}
-				catch (...)
-				{
-					char const* err_msg = pr::FmtS("Failed to create application due to an unknown exception");
-					MessageBox(err_msg, "Application Startup Error", MB_OK|MB_ICONERROR);
-					PR_LOG(m_log, Error, err_msg);
-					CloseApp(E_FAIL);
-					return E_FAIL;
-				}
-
-				// Window title
-				SetWindowTextW(m_hWnd, m_main->AppTitle());
-
-				// Example derived class code:
-
-				// Set icons
-				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,TRUE);
-				//SetIcon((HICON)::LoadImage(create->hInstance, "MainIcon", IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,FALSE);
-
-				// Load menu
-				//SetMenu(LoadMenu(create->hInstance, MAKEINTRESOURCE(IDR_MENU_MAIN)));
-
-				// Load accelerators (m_hAccel is a member of CFrameWindowImpl)
-				//m_hAccel = (HACCEL)::LoadAccelerators(create->hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR2));
+				pr::gui::InitCtrls(IccClasses());
 
 				// Note: derived classes may need to set up a method for rendering,
 				// By default, rendering occurs in OnPaint(), however if a SimMsgLoop
 				// is used, the derived class will need to register a step context that
 				// calls Render()
-				return S_OK;
+				Show();
 			}
-			virtual void OnDestroy()
+			virtual ~MainGUI()
 			{
-				OutputDebugStringA("Main window OnDestroy called\n");
+				PR_ASSERT(PR_DBG, GetCurrentThreadId() == m_my_thread_id, "Cross-thread destruction of Main GUI");
+
 				m_main = nullptr;
-				CMessageLoop* loop = pr::app::Module().GetMessageLoop();
-				loop->RemoveMessageFilter(this);
-				loop->RemoveIdleHandler(this);
+
+				//// It's too late to call DestroyWindow here, because that posts a WM_DESTROY
+				//// message to the thread queue which should be handled resulting in a WM_QUIT
+				//// being posted which causes the msg loop to return.
+				//PR_ASSERT(PR_DBG, m_main == nullptr && m_hwnd == 0, "Destructing MainGUI before DestroyWindow has been called");
 				
-				// Let WM_DESTROY carry on to base classes which will eventually
-				// call PostQuitMessage to exit the message loop.
-				SetMsgHandled(FALSE);
+				// This should only happen during an unhandled exception
+				//PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
+				//if (IsWindow())
+				//	DestroyWindow();
 			}
-			virtual void OnSysCommand(UINT nID, CPoint)
+
+			// Return the common control classes to support
+			virtual pr::gui::ECommonControl IccClasses() const
 			{
-				if (nID == SC_CLOSE || nID == IDCLOSE)
+				using namespace pr::gui;
+				return
+					ECommonControl::ListViewClasses | // listview, header
+					ECommonControl::TreeViewClasses | // treeview, tooltips
+					ECommonControl::BarClasses      | // toolbar, statusbar, trackbar, tooltips
+					ECommonControl::TabClasses      | // tab, tooltips
+					ECommonControl::UpDown          | // updown
+					ECommonControl::Progress        | // progress
+					ECommonControl::Hotkey          | // hotkey
+					ECommonControl::Animate         | // animate
+					ECommonControl::Win95Classes    | //
+					ECommonControl::DateClasses     | // month picker, date picker, time picker, updown
+					ECommonControl::ComboEx         | // comboex
+					ECommonControl::Rebar           | // rebar (coolbar) control
+					ECommonControl::Internet        | //
+					ECommonControl::PageScroller    | // page scroller
+					ECommonControl::NativeFontCtrl  | // native font control
+					ECommonControl::StandardClasses |
+					ECommonControl::LinkClass       ;
+			}
+
+			// Pump messages
+			virtual int Run() override
+			{
+				return m_msg_loop.Run();
+			}
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				switch (message)
 				{
-					CloseApp(0);
-					return;
+				case WM_SYSKEYDOWN:
+					{
+						auto vk_key  = UINT(wparam);
+						auto repeats = UINT(lparam & 0xFFFF);
+						auto flags   = UINT((lparam & 0xFFFF0000) >> 16);
+						OnSysKeyDown(vk_key, repeats, flags);
+						break;
+					}
 				}
-				SetMsgHandled(FALSE);
+				return base::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 
-			// Initiate app shutdown
-			virtual void CloseApp(int exit_code)
+			// Invalidate the control for redraw
+			virtual void Invalidate(bool erase = false, pr::gui::Rect* rect = nullptr)
 			{
-				PR_ASSERT(PR_DBG, GetCurrentThreadId() == m_my_thread_id, "Close must be called from the thread with the associated message loop");
-
-				// Post the WM_DESTROY message to this thread's queue
-				m_exit_code = exit_code;
-				DestroyWindow();
+				if (m_main) m_main->RenderNeeded();
+				return base::Invalidate(erase, rect);
 			}
 
-			// Idle handler
-			BOOL OnIdle()
+			// Called when the system menu key command to switch between fullscreen and windowed is detected.
+			// Derived types need to actually implement the mode switch as well as hide or show status bars, menus etc
+			virtual void OnFullScreenToggle(bool enable_fullscreen)
 			{
-				return FALSE;
-			}
-			BOOL PreTranslateMessage(MSG* pMsg)
-			{
-				if (pMsg->hwnd != m_hWnd) return FALSE;
-				if (m_hAccel != 0 && ::TranslateAccelerator(m_hWnd, m_hAccel, pMsg) != 0)
-					return TRUE;
-
-				return FALSE;
-			}
-
-			// Timers
-			virtual void OnTimer(UINT_PTR nIDEvent)
-			{
-				(void)nIDEvent;
+				(void)enable_fullscreen;
 			}
 
 			// Rendering the window
-			virtual LRESULT OnEraseBkGnd(HDC hdc)
+			virtual bool OnPaint(pr::gui::PaintEventArgs const& args) override
 			{
-				(void)hdc;
-				if (m_resizing)
+				// Render the scene
+				if (m_main)
 				{
-					CBrush brush; brush.CreateSolidBrush(0xFF808080);
-					CRect r; GetClientRect(&r);
-					CPoint ctr = r.CenterPoint();
-					CDCHandle dc(hdc);
-					dc.FillRect(&r, brush);
-					dc.SetTextAlign(TA_CENTER|TA_BASELINE);
-					dc.SetBkMode(TRANSPARENT);
-					dc.TextOutA(ctr.x, ctr.y, "...resizing...");
+					m_main->DoRender(true); // We've been asked to paint, so paint, regardless of RenderNeeded()
+
+					// Tell windows we're drawn the viewport area
+					pr::gui::Rect cr = m_main->m_scene.m_viewport.AsRECT();
+					Validate(&cr);
 				}
-				//if (m_sizing)
-				//{
-				//	HBRUSH hbrush = CreateSolidBrush(m_ldr->Settings().m_background_colour.GetColorRef());
-				//	CRect r; GetClientRect(&r);
-				//	CPoint ctr = r.CenterPoint();
-				//	CDCHandle dc(GetDC());
-				//	dc.FillRect(&r, hbrush);
-				//	dc.SetTextAlign(TA_CENTER|TA_BASELINE);
-				//	dc.SetBkMode(TRANSPARENT);
-				//	dc.TextOutA(ctr.x, ctr.y, "...resizing...");
-				//	DeleteObject(hbrush);
-				//}
-				return S_OK;
-			}
-			virtual void OnPaint(HDC)
-			{
-				if (m_main/* && !m_resizing*/) m_main->DoRender();
-				SetMsgHandled(FALSE);
-			}
 
-			// Resizing handlers
-			virtual void OnGetMinMaxInfo(LPMINMAXINFO lpMMI)
-			{
-				lpMMI->ptMinTrackSize.x = 160;
-				lpMMI->ptMinTrackSize.x = 90;
+				// Call the base to raise the paint event
+				return base::OnPaint(args);
 			}
-			virtual void OnSizing(UINT, LPRECT)
+			virtual bool OnEraseBkGnd(pr::gui::EmptyArgs const& args) override
 			{
-				SetMsgHandled(FALSE);
-				m_resizing = true;
-			}
-			virtual void OnExitSizeMove()
-			{
-				SetMsgHandled(FALSE);
-				m_resizing = false;
-				OnSize(0, CSize());
-			}
-			virtual void OnSize(UINT type, CSize)
-			{
-				SetMsgHandled(FALSE);
-				if (m_resizing)
-					return;
-
-				if (type != SIZE_MINIMIZED)
-				{
-					// Find the new client area
-					pr::IRect area = pr::ClientArea(m_hWnd);
-
-					// Don't subtract these heights, client area already includes them
-					//if (m_hWndStatusBar) area.m_max.y -= pr::WindowBounds(m_hWndStatusBar).SizeY();
-					//if (m_hWndToolBar  ) area.m_max.y -= pr::WindowBounds(m_hWndToolBar).SizeY();
-
-					//SaveWindowBounds();
-					//UpdateUI();
-					UpdateLayout(true);
-					if (m_main)
-					{
-						m_main->Resize(area.Size());
-						m_main->RenderNeeded();
-					}
-				}
-			}
-
-			// Key down/up
-			virtual void OnSysKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
-			{
-				(void)nChar,nRepCnt,nFlags;
-				SetMsgHandled(FALSE);
-			}
-			virtual void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags)
-			{
-				(void)nChar,nRepCnt,nFlags;
-				SetMsgHandled(FALSE);
-			}
-			virtual void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
-			{
-				(void)nChar,nRepCnt,nFlags;
-				SetMsgHandled(FALSE);
-			}
-
-			// Returns the index of the first mouse button that is down. 0 = None, Left = 1, Right = 2, Middle = 3
-			int BtnIndex(UINT mk_key) const
-			{
-				if (mk_key & MK_LBUTTON) return 1;
-				if (mk_key & MK_RBUTTON) return 2;
-				if (mk_key & MK_MBUTTON) return 3;
-				return 0;
-			}
-
-			// Mouse click detection. Call from OnMouseDown/Up handlers
-			// Returns true on mouse up with within the click threshold
-			bool IsClick(UINT mk_key, bool up)
-			{
-				auto btn_index = BtnIndex(mk_key);
-				if (up)
-				{
-					bool click = btn_index != 0 && GetMessageTime() - m_down_at[btn_index] < m_click_thres;
-					m_down_at[btn_index] = 0;
-					return click;
-				}
-				else
-				{
-					m_down_at[btn_index] = GetMessageTime();
-					return false;
-				}
+				// We paint the entire window so no need to erase
+				return Minimised() ? base::OnEraseBkGnd(args) : true;
 			}
 
 			// Default mouse navigation behaviour
-			virtual void OnMouseDown(UINT btn, UINT flags, CPoint point)
+			virtual bool OnMouseButton(pr::gui::MouseEventArgs const& args) override
 			{
-				(void)flags;
-				m_nav_enabled = true;
-				m_main->Nav(pr::NormalisePoint(m_hWnd, point), btn, true);
-				IsClick(btn, false);
+				m_nav_enabled = args.m_down;
+				m_main->Nav(pr::NormalisePoint(*this, args.m_point), args.m_down ? args.m_button : pr::gui::EMouseKey::None, true);
+				Invalidate();
+				return base::OnMouseButton(args);
 			}
-			virtual void OnMouseUp(UINT btn, UINT flags, CPoint point)
+			virtual bool OnMouseClick(pr::gui::MouseEventArgs const& args) override
 			{
-				m_nav_enabled = false;
-				if (IsClick(btn, true))
+				m_main->NavRevert(); // If a mouse single click is detected, revert any navigation
+				Invalidate();
+				return base::OnMouseClick(args);
+			}
+			virtual void OnMouseMove(pr::gui::MouseEventArgs const& args) override
+			{
+				if (m_nav_enabled)
 				{
-					OnMouseClick(btn, flags, point);
-					m_main->NavRevert();
+					m_main->Nav(pr::NormalisePoint(*this, args.m_point), args.m_keystate, false);
+					Invalidate();
+				}
+				return base::OnMouseMove(args);
+			}
+			virtual bool OnMouseWheel(pr::gui::MouseWheelArgs const& args) override
+			{
+				m_main->NavZ(args.m_delta / (float)WHEEL_DELTA);
+				Invalidate();
+				return base::OnMouseWheel(args);
+			}
+
+			// Resizing handlers
+			virtual void OnWindowPosChange(pr::gui::SizeEventArgs const& args) override
+			{
+				if (args.m_before)
+				{
+					m_resizing = true;
 				}
 				else
 				{
-					m_main->Nav(pr::NormalisePoint(m_hWnd, point), 0, true);
+					m_resizing = false;
+
+					// Find the new client area
+					auto area = ClientRect(*this, true);
+					if (m_main && area.width() > 0 && area.height() > 0)
+					{
+						m_main->Resize(pr::To<IRect>(area));
+						m_main->RenderNeeded();
+					}
+				}
+				base::OnWindowPosChange(args);
+			}
+
+			// Handle system menu keys
+			virtual void OnSysKeyDown(uint vk_key, UINT repeats, UINT flags)
+			{
+				(void)repeats,flags;
+
+				// Watch for full screen alt-enter transitions
+				if (m_fullscreen_toggle_enabled && vk_key == VK_RETURN)
+				{
+					// If currently in full screen mode, switch to windowed or visa versa
+					OnFullScreenToggle(!m_main->m_window.FullScreenMode());
+
+					m_main->DoRender(true);
 				}
 			}
-			virtual void OnMouseClick(UINT btn, UINT flags, CPoint point) { (void)btn,flags,point; }
-			virtual void OnMouseMove(UINT flags, CPoint point)
-			{
-				if (m_nav_enabled)
-					m_main->Nav(pr::NormalisePoint(m_hWnd, point), flags, false);
-			}
-			virtual BOOL OnMouseWheel(UINT, short delta, CPoint)
-			{
-				m_main->NavZ(delta / (float)WHEEL_DELTA);
-				return FALSE; // ie. we handled this wheel message
-			}
-
-			void OnLMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_LBUTTON, flags, point); }
-			void OnRMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_RBUTTON, flags, point); }
-			void OnMMouseDown(UINT flags, CPoint point)              { OnMouseDown(MK_MBUTTON, flags, point); }
-			void OnLMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_LBUTTON, flags, point); }
-			void OnRMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_RBUTTON, flags, point); }
-			void OnMMouseUp(UINT flags, CPoint point)                { OnMouseUp  (MK_MBUTTON, flags, point); }
-			void OnXMouseDown(int fwButton, int flags, CPoint point) { OnMouseDown(fwButton, flags, point); }
-			void OnXMouseUp  (int fwButton, int flags, CPoint point) { OnMouseUp  (fwButton, flags, point); }
-
-			// Drag-drop
-			virtual HCURSOR OnQueryDragIcon()
-			{
-				return nullptr; // Return non-null for drag-drop to work
-			}
-			virtual void OnDropFiles(HDROP hDropInfo)
-			{
-				(void)hDropInfo;
-			}
-
-			// Message Map
-			// Derived app should create there own msg map, and use CHAIN_MSG_MAP(base)
-			BEGIN_MSG_MAP(x)
-				MSG_WM_CREATE(OnCreate)
-				MSG_WM_DESTROY(OnDestroy)
-				MSG_WM_SYSCOMMAND(OnSysCommand)
-				MSG_WM_SYSKEYDOWN(OnSysKeyDown)
-				MSG_WM_TIMER(OnTimer)
-				MSG_WM_ERASEBKGND(OnEraseBkGnd)
-				MSG_WM_PAINT(OnPaint)
-				MSG_WM_GETMINMAXINFO(OnGetMinMaxInfo)
-				MSG_WM_SIZING(OnSizing)
-				MSG_WM_EXITSIZEMOVE(OnExitSizeMove)
-				MSG_WM_SIZE(OnSize)
-				MSG_WM_KEYDOWN(OnKeyDown)
-				MSG_WM_KEYUP(OnKeyUp)
-				MSG_WM_LBUTTONDOWN(OnLMouseDown)
-				MSG_WM_RBUTTONDOWN(OnRMouseDown)
-				MSG_WM_MBUTTONDOWN(OnMMouseDown)
-				MSG_WM_XBUTTONDOWN(OnXMouseDown)
-				MSG_WM_LBUTTONUP(OnLMouseUp)
-				MSG_WM_RBUTTONUP(OnRMouseUp)
-				MSG_WM_MBUTTONUP(OnMMouseUp)
-				MSG_WM_XBUTTONUP(OnXMouseUp)
-				MSG_WM_MOUSEMOVE(OnMouseMove)
-				MSG_WM_MOUSEWHEEL(OnMouseWheel)
-				MSG_WM_QUERYDRAGICON(OnQueryDragIcon)
-				MSG_WM_DROPFILES(OnDropFiles)
-				CHAIN_MSG_MAP(CFrameWindowImpl<DerivedGUI>)
-			END_MSG_MAP()
-
-			enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
-			DECLARE_FRAME_WND_CLASS(_T("PR_APP_MAIN_GUI"), IDR_MAINFRAME);
 		};
 	}
 }
-#endif
+

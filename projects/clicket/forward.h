@@ -27,11 +27,11 @@
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/command_line.h"
-#include "pr/common/windows_com.h"
 #include "pr/common/pollingtoevent.h"
 #include "pr/macros/enum.h"
 #include "pr/filesys/fileex.h"
 #include "pr/str/tostring.h"
+#include "pr/gui/windows_com.h"
 
 extern CAppModule _Module;
 

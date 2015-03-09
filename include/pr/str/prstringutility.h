@@ -66,15 +66,14 @@ namespace pr
 		template <typename tstr1, typename tstr2> size_t Count(tstr1 const& str, tstr2 const& what)
 		{
 			typedef typename Traits<tstr1>::citer citer;
-			size_t count = 0;
-			size_t what_len = Length(what);
-			citer str_end = EndC(str);
-			citer pos = FindStr(BeginC(str), str_end, what);
-			while( pos != str_end )
-			{
+
+			auto count    = 0;
+			auto what_len = Length(what);
+			auto pos      = BeginC(str);
+			auto str_end  = EndC(str);
+			for (pos = FindStr(pos, str_end, what); pos != str_end; pos = FindStr(pos + what_len, str_end, what))
 				++count;
-				pos = FindStr(pos + what_len, str_end, what);
-			}
+
 			return count;
 		}
 
@@ -171,42 +170,47 @@ namespace pr
 			return Strip(src, "/*", "*/", "//");
 		}
 
-		// Replace instances of 'what' with 'with'
+		// Replace instances of 'what' with 'with' in place
 		template <typename tstr1, typename tstr2, typename tstr3> size_t Replace(tstr1& src, tstr2 const& what, tstr3 const& with)
 		{
 			typedef typename Traits<tstr1>::value_type tchar;
 			if (Empty(src)) return 0;
-			size_t src_len  = Length(src);
-			size_t what_len = Length(what);
-			size_t with_len = Length(with);
+			auto src_len  = Length(src);
+			auto what_len = Length(what);
+			auto with_len = Length(with);
+
+			// This in an inplace substitution so we need to copy from the start or end depending
+			// on whether 'with' is longer or shorter than 'what'
 			size_t count = 0;
 			if (what_len >= with_len)
 			{
-				tchar* out = &src[0];
-				for (tchar const* s = &src[0]; *s;)
+				auto out = &src[0];
+				for (auto s = &src[0]; *s;)
 				{
-					if (!EqualN(s, what, what_len)) { *out++ = *s++; continue; }
-					for (size_t i = 0; i != with_len; ++i) { out[i] = with[i]; }
-					out += with_len;
+					if (!EqualN(s, what, what_len))        { *out++ = *s++; continue; }
+					for (size_t i = 0; i != with_len; ++i) { *out++ = with[i]; }
 					s += what_len;
 					++count;
 				}
 
-				size_t new_size = src_len - what_len*count + with_len*count;
+				auto new_size = src_len - what_len*count + with_len*count;
 				Resize(src, new_size);
 			}
 			else
 			{
+				// Note that if count == 0, then 's != out' in the for will be false immediately
 				count = Count(src, what);
-				size_t new_size = src_len - what_len*count + with_len*count;
+				auto new_size = src_len - what_len*count + with_len*count;
 				Resize(src, new_size);
 
-				tchar* out = &src[0] + new_size;
-				for (tchar const* s = &src[0] + src_len; s != out;)
+				auto out = &src[0] + new_size;
+				for (auto s = &src[0] + src_len; s != out;)
 				{
-					if (!EqualN(out, what, what_len)) { *(--out) = *(--s); continue; }
-					out -= with_len - what_len;
-					for (size_t i = 0; i != with_len; ++i) { out[i] = with[i]; }
+					// Back fill chars until s - what_len points to 'what'
+					// Note: s - what_len >= &src[0] because there is >0 instances of 'what' in src
+					if (!EqualN(s - what_len, what, what_len)) { *(--out) = *(--s); continue; }
+					for (auto i = with_len; i-- != 0;)         { *(--out) = with[i]; } // Insert 'with' into 'src'
+					s -= what_len;
 				}
 			}
 			return count;

@@ -14,9 +14,7 @@
 //   type.OnEvent += Func;
 //   type.OnEvent += [](int,float){};
 //   type.OnEvent(1, 3.14f);
-
-#ifndef PR_COMMON_EVENT_H
-#define PR_COMMON_EVENT_H
+#pragma once
 
 #include <list>
 #include <algorithm>
@@ -304,5 +302,3 @@ namespace pr
 	}
 }
 #endif
-#endif
-

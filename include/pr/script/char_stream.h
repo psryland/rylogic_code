@@ -267,6 +267,12 @@ namespace pr
 				,m_idx(0)
 				,m_loc(loc)
 			{}
+			explicit BufferedSrc(string str, Loc* loc = 0)
+				:Src(ESrcType::Buffered)
+				,m_str(str)
+				,m_idx(0)
+				,m_loc(loc)
+			{}
 
 			Loc  loc() const override { return m_loc ? *m_loc : Loc(); }
 			void loc(Loc& l) override { if (m_loc) *m_loc = l; }

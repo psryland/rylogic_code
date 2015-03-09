@@ -224,8 +224,10 @@
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
     <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
+    <ClInclude Include="..\include\pr\app\wingui.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camera_dlg.h" />
+    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h" />

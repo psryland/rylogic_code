@@ -40,12 +40,12 @@ namespace pr
 			// 'root' is the directory to search for files in.
 			// 'file_masks' is a semicolon separated, null terminated, list of file masks.
 			FindFiles(String const& root, char const* file_masks)
-			:WIN32_FIND_DATAA()
-			,m_root(root)
-			,m_root_len(root.size())
-			,m_file_masks(file_masks)
-			,m_handle(INVALID_HANDLE_VALUE)
-			,m_more(false)
+				:WIN32_FIND_DATAA()
+				,m_root(root)
+				,m_root_len(root.size())
+				,m_file_masks(file_masks)
+				,m_handle(INVALID_HANDLE_VALUE)
+				,m_more(false)
 			{
 				if (m_root.empty()) m_root.push_back('.');
 				if (m_root[m_root_len-1] != '\\' && m_root[m_root_len-1] != '/') m_root.push_back('\\');

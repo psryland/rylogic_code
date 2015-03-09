@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*****************************************************************************************
 #pragma once
-#ifndef PR_APP_SKYBOX_H
-#define PR_APP_SKYBOX_H
 
 #include "pr/app/forward.h"
 
@@ -16,7 +14,7 @@ namespace pr
 		struct Skybox :pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 		{
 			// Skybox styles - implies texture organisation as well
-			enum Style
+			enum class EStyle
 			{
 				// This is a geosphere with inward facing normals
 				Geosphere,
@@ -48,7 +46,7 @@ namespace pr
 
 			// Constructs a skybox model and instance.
 			// 'texpath' should be an unrolled cube texture
-			Skybox(pr::Renderer& rdr, wstring const& texpath, Style tex_style, float scale = 1000.0f)
+			Skybox(pr::Renderer& rdr, wstring const& texpath, EStyle tex_style, float scale = 1000.0f)
 				:m_inst()
 				,m_tex()
 				,m_scale(scale)
@@ -57,9 +55,9 @@ namespace pr
 				switch (tex_style)
 				{
 				default: PR_ASSERT(PR_DBG, false, "Unsupported texture style");
-				case Geosphere:     InitGeosphere(rdr, texpath); break;
-				case FiveSidedCube: InitFiveSidedCube(rdr, texpath); break;
-				case SixSidedCube:  InitSixSidedCube(rdr, texpath); break;
+				case EStyle::Geosphere:     InitGeosphere(rdr, texpath); break;
+				case EStyle::FiveSidedCube: InitFiveSidedCube(rdr, texpath); break;
+				case EStyle::SixSidedCube:  InitSixSidedCube(rdr, texpath); break;
 				}
 
 				// Set the sortkey so that the skybox draws last
@@ -204,5 +202,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

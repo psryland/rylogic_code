@@ -163,10 +163,10 @@ namespace ldr
 	}
 
 	// The size of the window has changed
-	void Main::Resize(pr::iv2 const& size)
+	void Main::Resize(pr::IRect const& area)
 	{
-		base::Resize(size);
-		m_nav.SetViewSize(size);
+		base::Resize(area);
+		m_nav.SetViewSize(area.Size());
 		m_settings.Save();
 	}
 

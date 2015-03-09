@@ -101,8 +101,7 @@ namespace pr
 			}
 
 			// Dequeue blocks until data is available in the queue
-			// Returns true if an item was dequeued, or false if no
-			// more data will be added to the queue.
+			// Returns true if an item was dequeued, or false if not (due to timeout or LastAdded())
 			template <typename Pred> bool Dequeue(T& item, MLock& lock, Pred pred, int timeout_ms)
 			{
 				// Notify before we block. Waiting threads won't see 'm_queue'

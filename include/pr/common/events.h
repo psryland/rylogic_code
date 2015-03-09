@@ -4,8 +4,6 @@
 //******************************************
 
 #pragma once
-#ifndef PR_COMMON_EVENTS_H
-#define PR_COMMON_EVENTS_H
 
 #include <cassert>
 #include <mutex>
@@ -380,5 +378,3 @@ namespace pr
 #endif
 
 #pragma warning (pop)
-
-#endif

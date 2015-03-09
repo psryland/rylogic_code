@@ -8,6 +8,7 @@
 
 #include <list>
 #include <mutex>
+#include <algorithm>
 
 namespace pr
 {
@@ -41,6 +42,18 @@ namespace pr
 			iter  end()         { return m_mc.m_cont.end(); }
 		};
 
+		// A reference to a handler and the multicast delegate it's attached to
+		struct Handler
+		{
+			MultiCast<Type>* m_mc;
+			iter             m_iter;
+			bool             m_auto_detach;
+			Handler() :m_mc(nullptr) ,m_iter() ,m_auto_detach(false) {}
+			Handler(MultiCast<Type>* mc, iter const& it) :m_mc(mc) ,m_iter(it) ,m_auto_detach(false) {}
+			~Handler()    { if (m_auto_detach) detach(); }
+			void detach() { if (m_mc) *m_mc -= *this; m_mc = nullptr; }
+		};
+
 		MultiCast() :m_cont() ,m_cs() {}
 		MultiCast(MultiCast const&) = delete;
 		MultiCast& operator=(MultiCast const&) = delete;
@@ -49,36 +62,58 @@ namespace pr
 		// Note: std::function<> is not equality comparable so if your Type
 		// is a std::function<> you can only attach, never detach.
 		// Unless you record the returned iterator and use that for deletion
-		iter operator =  (Type handler)
+		Handler operator =  (Type handler)
 		{
 			std::lock_guard<std::mutex> lock(m_cs);
 			m_cont.resize(0);
 			m_cont.push_back(handler);
-			return --m_cont.end();
+			return Handler(this, --m_cont.end());
 		}
-		iter operator += (Type handler)
+		Handler operator += (Type handler)
 		{
 			std::lock_guard<std::mutex> lock(m_cs);
 			m_cont.push_back(handler);
-			return --m_cont.end();
+			return Handler(this, --m_cont.end());
 		}
 		void operator -= (Type handler)
 		{
 			std::lock_guard<std::mutex> lock(m_cs);
-			for (auto i = m_cont.begin(), iend = m_cont.end(); i != iend; ++i)
-				if (*i == handler) { m_cont.erase(i); break; }
+			auto i = std::find(begin(m_cont), end(m_cont), handler);
+			if (i != end(m_cont)) m_cont.erase(i);
 		}
-		void operator -= (iter at)
+		void operator -= (Handler handler)
 		{
 			std::lock_guard<std::mutex> lock(m_cs);
-			m_cont.erase(at);
+			if (handler.m_mc != this) throw std::exception("'handler' is not attached to this delegate");
+			m_cont.erase(handler.m_iter);
+		}
+
+		// Attach/Remove event handlers (advanced)
+		Handler add_unique(Type handler) // Add if not already added
+		{
+			std::lock_guard<std::mutex> lock(m_cs);
+			auto i = std::find(begin(m_cont), end(m_cont), handler);
+			if (i == end(m_cont)) { m_cont.push_back(handler); i = --end(m_cont); }
+			return Handler(this, i);
 		}
 
 		// Raise the event passing 'args' to the event handler
 		template <typename... Args> void Raise(Args&&... args)
 		{
-			Lock lock(*this);
-			for (auto i : lock)
+			// Reentry issues here. Raising the event may result in handlers being added or removed.
+			// Three options:
+			//  1) Don't allow the event to be modified during 'Raise' (forbids self removing handlers)
+			//  2) Copy 'm_cont' and call all handlers (a handler may cause another handler object to be delete = access violation)
+			//  3) Iterate through the handlers assuming 'm_cont' is changing with each call (possible missed handlers, lots of locking)
+
+			// Make a copy of the handlers so that modifying the
+			// event during the handlers is allowed.
+			TypeCont cont;
+			{
+				std::lock_guard<std::mutex> lock(m_cs);
+				cont = m_cont;
+			}
+			for (auto i : cont)
 				get(i)(std::forward<Args>(args)...);
 		}
 	};

@@ -11,9 +11,9 @@
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/common/assert.h"
 #include "pr/common/hash.h"
-#include "pr/common/windows_com.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/convexhull.h"
+#include "pr/gui/windows_com.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/renderer11/renderer.h"
 

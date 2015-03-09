@@ -6,28 +6,21 @@
 #include "pr/app/main.h"
 #include "pr/app/main_gui.h"
 
-int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
+int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lpstrCmdLine, int nCmdShow)
 {
+	(void)hInstance;
 	int nRet;
 	{
 		std::string err_msg;
-		std::shared_ptr<ATL::CWindow> gui;
+		std::shared_ptr<pr::app::IAppMainGui> gui;
 		try
 		{
 			// CoInitialise COM
 			pr::InitCom init_com;
 
-			// this resolves ATL window thunking problem when Microsoft Layer for Unicode (MSLU) is used
-			::DefWindowProc(NULL, 0, 0, 0L);
-
-			// Initialise the WTL module singleton
-			pr::Throw(pr::app::Module().Init(NULL, hInstance));
-
 			// Create an instance of the main window and start it running
-			gui = pr::app::CreateGUI(lpstrCmdLine);
-			gui->ShowWindow(nCmdShow);
-			gui->UpdateWindow();
-			nRet = pr::app::Module().GetMessageLoop()->Run();
+			gui = pr::app::CreateGUI(lpstrCmdLine, nCmdShow);
+			nRet = gui->Run();
 		}
 		catch (std::exception const& ex)
 		{
@@ -45,22 +38,13 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 		}
 
 		// Attempt to shut the window down gracefully
-		if (gui && gui->IsWindow())
-		{
-			try
-			{
-				gui->DestroyWindow();
-				pr::app::Module().GetMessageLoop()->Run();
-			}
-			catch (...) {}
-		}
+		gui = nullptr;
 
 		if (nRet == -1)
 		{
 			std::thread([&] { ::MessageBoxA(0, err_msg.c_str(), "Application Error", MB_OK|MB_ICONERROR); }).join();
 		}
 	}
-	pr::app::Module().Term();
 	return nRet;
 }
 

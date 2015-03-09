@@ -20,8 +20,8 @@
 #include <shobjidl.h>
 #include <shlguid.h>
 #include "pr/common/hresult.h"
-#include "pr/common/windows_com.h"
 #include "pr/filesys/filesys.h"
+#include "pr/gui/windows_com.h"
 
 namespace pr
 {

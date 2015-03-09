@@ -6,14 +6,11 @@
 // apps based on WTL and pr::Renderer.
 //
 #pragma once
-#ifndef PR_APP_SIM_MESSAGE_LOOP_H
-#define PR_APP_SIM_MESSAGE_LOOP_H
 
 #include <string>
+#include <exception>
 #include <functional>
 #include <thread>
-#include <atlbase.h>
-#include <atlapp.h>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
 #include "pr/common/stop_watch.h"
@@ -27,9 +24,11 @@
 
 namespace pr
 {
-	// Message loop for simulation applications
 	// In a WTL app, replace the CMessageLoop instance for the main thread with one of these
-	class SimMsgLoop :public CMessageLoop
+	// You'll need to derive from CMessageLoop
+
+	// Message loop for simulation applications
+	class SimMsgLoop
 	{
 	public:
 		// The step function for a context.
@@ -114,10 +113,17 @@ namespace pr
 			static bool Order(Context const* lhs, Context const* rhs) { return lhs->next_step_time() < rhs->next_step_time(); }
 		};
 		pr::vector<Context*> m_contexts;
+		HACCEL m_accel;
 
 	public:
-		SimMsgLoop() :m_contexts() {}
-		~SimMsgLoop()
+		SimMsgLoop(HACCEL accel = nullptr)
+			:m_contexts()
+			,m_accel(accel)
+		{}
+		SimMsgLoop(HINSTANCE hinst, int accel_id)
+			:SimMsgLoop(::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_id)))
+		{}
+		virtual ~SimMsgLoop()
 		{
 			for (auto ctx : m_contexts)
 				delete ctx;
@@ -144,6 +150,7 @@ namespace pr
 		// Runs the message loop until WM_QUIT
 		virtual int Run()
 		{
+			MSG msg;
 			duration_t const MinTimeBetweenFrames = pr::rtc::FromMSec(1.0);
 
 			PR_EXPAND(PR_LOOP_TIMING, pr::rtc::StopWatch sw);
@@ -153,13 +160,17 @@ namespace pr
 
 				// Pumping needed?
 				PR_EXPAND(PR_LOOP_TIMING, sw.start(true));
-				if (::PeekMessage(&m_msg, 0, 0, 0, PM_REMOVE) && m_msg.message != WM_QUIT)
+				int result = ::PeekMessage(&msg, 0, 0, 0, PM_REMOVE);
+				if (result != 0 && msg.message != WM_QUIT)
 				{
-					if (!PreTranslateMessage(&m_msg))
-					{
-						::TranslateMessage(&m_msg);
-						::DispatchMessage(&m_msg);
-					}
+					if (result < 0)
+						throw std::exception("PeekMessage failed");
+
+					// This is not a typical message loop, we don't call 'TranslateMessage' or
+					// 'IsDialogMessage' in the main loop because we want each window to have
+					// the option of not translating the message, or of calling 'IsDialogMessage' first.
+					if (m_accel && ::TranslateAccelerator(msg.hwnd, m_accel, &msg)) continue;
+					::DispatchMessage(&msg);
 				}
 				PR_EXPAND(PR_LOOP_TIMING, sw.stop());
 				PR_EXPAND(PR_LOOP_TIMING, m_msg_time.Add(sw.period_ms()));
@@ -170,7 +181,7 @@ namespace pr
 				clock.m_start += std::max(duration_t::zero(), (msg_end - msg_start) - MinTimeBetweenFrames);
 
 				// Exit the message pump when WM_QUIT is received
-				if (m_msg.message == WM_QUIT)
+				if (msg.message == WM_QUIT)
 					break;
 
 				// No contexts...
@@ -210,16 +221,14 @@ namespace pr
 					}
 					#endif
 
-					// Buble sort the contexts so that the front of the list is the next to be stepped
+					// Bubble sort the contexts so that the front of the list is the next to be stepped
 					// The list should be in order except for the first so bubble sort is best
 					for (size_t i = 0, iend = m_contexts.size() - 1; i < iend; ++i)
 						if (!Context::Order(m_contexts[i], m_contexts[i+1]))
 							std::swap(m_contexts[i], m_contexts[i+1]);
 				}
 			}
-			return (int)m_msg.wParam;
+			return (int)msg.wParam;
 		}
 	};
 }
-
-#endif

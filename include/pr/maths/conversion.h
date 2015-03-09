@@ -124,7 +124,7 @@ namespace pr
 	// To<RECT>
 	template <typename TFrom> struct Convert<RECT,TFrom>
 	{
-		static RECT To(IRect const& x) { RECT r = {x.left, x.top, x.right, x.bottom}; return r; }
+		static RECT To(IRect const& x) { RECT r = {x.m_min.x, x.m_min.y, x.m_max.x, x.m_max.y}; return r; }
 		static RECT To(SIZE const& x)  { RECT r = {0, 0, x.cx, x.cy}; return r; }
 	};
 

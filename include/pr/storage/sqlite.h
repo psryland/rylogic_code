@@ -1649,7 +1649,7 @@ namespace pr
 			};
 
 			// Set the log function
-			pr::sqlite::Configure(EConfig::Log, SqliteLog, 0);
+			pr::sqlite::Configure((int)EConfig::Log, SqliteLog, 0);
 			sqlite3_log(-1, "%s", "test");
 
 			{//SimpleTypeStorage
@@ -1760,8 +1760,8 @@ namespace pr
 				PR_CHECK(R.m_double ,r.m_double );
 				for (int i = 0; i != 10; ++i) PR_CHECK(R.m_char_array[i] , r.m_char_array[i]);
 				for (int i = 0; i != 10; ++i) PR_CHECK(R.m_int_array[i]  , r.m_int_array[i] );
-				PR_CHECK(R.m_enum       , r.m_enum      );
-				PR_CHECK(R.m_string     , r.m_string    );
+				PR_CHECK(R.m_enum == r.m_enum, true);
+				PR_CHECK(R.m_string == r.m_string, true);
 				PR_CHECK(R.m_buf.size() , r.m_buf.size());
 				for (size_t i = 0; i != r.m_buf.size() && i != R.m_buf.size(); ++i) PR_CHECK(R.m_buf[i], r.m_buf[i]);
 				PR_CHECK(R.m_empty_buf.size(), 0U);

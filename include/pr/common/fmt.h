@@ -86,7 +86,7 @@ namespace pr
 	}
 
 	// Returns a formatted TString
-	template <typename TString, typename TChar> inline TString Fmt(TChar const* format, va_list arg_list)
+	template <typename TString, typename TChar> inline TString FmtArgs(TChar const* format, va_list arg_list)
 	{
 		TString str;
 		return impl::Format(str, 1024, format, arg_list);
@@ -140,7 +140,7 @@ namespace pr
 	}
 
 	// Static, use with caution, but fast string format
-	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtX(TChar const* format, va_list arg_list)
+	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtArgs(TChar const* format, va_list arg_list)
 	{
 		thread_local static TChar buf[Sz];
 		int result = impl::Format(buf, Sz-1, format, arg_list);
@@ -152,7 +152,7 @@ namespace pr
 	{
 		va_list arg_list;
 		va_start(arg_list, format);
-		auto s = FmtX<Ctx, Sz, TChar>(format, arg_list);
+		auto s = FmtArgs<Ctx, Sz, TChar>(format, arg_list);
 		va_end(arg_list);
 		return s;
 	}
@@ -161,7 +161,7 @@ namespace pr
 		struct S;
 		va_list arg_list;
 		va_start(arg_list, format);
-		auto s = FmtX<S, 1024, TChar>(format, arg_list);
+		auto s = FmtArgs<S, 1024, TChar>(format, arg_list);
 		va_end(arg_list);
 		return s;
 	}

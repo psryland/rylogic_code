@@ -26,14 +26,12 @@
 //      };
 //  }
 //  // Create the GUI window
-//  extern std::shared_ptr<ATL::CWindow> pr::app::CreateGUI(LPTSTR lpstrCmdLine)
+//  extern std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine)
 //  {
 //      return CreateGUI<sol::MainGUI>(lpstrCmdLine);
 //  }
 
 #pragma once
-#ifndef PR_APP_MAIN_H
-#define PR_APP_MAIN_H
 
 #include "pr/app/forward.h"
 
@@ -41,21 +39,13 @@ namespace pr
 {
 	namespace app
 	{
-		// The WTL app module singleton
-		inline CAppModule& Module()
-		{
-			static CAppModule s_module;
-			return s_module;
-		}
-
 		// Custom apps must implement this function.
 		// Note: they can simply call the template version below for default creation
-		std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR lpstrCmdLine);
-		template <typename WinType> std::shared_ptr<ATL::CWindow> CreateGUI(LPTSTR cmdline)
+		std::shared_ptr<pr::app::IAppMainGui> CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow);
+		template <typename WinType> std::shared_ptr<pr::app::IAppMainGui> CreateGUI(LPTSTR cmdline, int nCmdShow)
 		{
 			WinType* gui;
-			std::shared_ptr<ATL::CWindow> ptr(gui = new WinType(cmdline));
-			if (gui->Create(0) == 0) throw pr::Exception<HRESULT>(E_FAIL, "Main window creation failed");
+			std::shared_ptr<pr::app::IAppMainGui> ptr(gui = new WinType(cmdline, nCmdShow));
 			return ptr;
 		}
 
@@ -117,7 +107,7 @@ namespace pr
 			Main(Setup setup, MainGUI& gui)
 				:m_settings(setup.UserSettings())
 				,m_rdr(setup.RdrSettings())
-				,m_window(m_rdr, setup.RdrWindowSettings(gui.m_hWnd, pr::ClientArea(gui.m_hWnd).Size()))
+				,m_window(m_rdr, setup.RdrWindowSettings(gui, pr::ClientArea(gui).Size()))
 				,m_scene(m_window,{pr::rdr::ERenderStep::ForwardRender})
 				//,m_scene(m_window,{pr::rdr::ERenderStep::ShadowMap, pr::rdr::ERenderStep::ForwardRender})
 				//,m_scene(m_window,{pr::rdr::ERenderStep::GBufferCreate, pr::rdr::ERenderStep::DSLighting})
@@ -135,15 +125,19 @@ namespace pr
 					pr::v4::make(0, 0, 1.0f / (float)tan(m_cam.m_fovY/2.0f), 1.0f),
 					pr::v4Origin,
 					pr::v4YAxis, true);
-			}
 
+				// The first frame is needed
+				RenderNeeded();
+			}
 			virtual ~Main()
 			{}
 
 			// Mouse navigation
-			virtual void Nav(pr::v2 const& pt, int btn_state, bool nav_start_stop)
+			virtual void Nav(pr::v2 const& pt, pr::gui::EMouseKey btn_state, bool nav_start_stop)
 			{
-				m_cam.MouseControl(pt, btn_state, nav_start_stop);
+				// EMouseKey and ENavBtn are both enums based on the MK_ macros
+				auto btnstate = static_cast<pr::camera::ENavBtn::Enum_>(btn_state);
+				m_cam.MouseControl(pt, btnstate, nav_start_stop);
 				RenderNeeded();
 			}
 			virtual void NavZ(float delta)
@@ -158,14 +152,23 @@ namespace pr
 			}
 
 			// The size of the window has changed
-			virtual void Resize(pr::iv2 const& size)
+			virtual void Resize(pr::IRect const& area)
 			{
-				m_window.RenderTargetSize(size);
-				m_cam.Aspect(size.x / float(size.y));
+				// Change the render target size
+				m_window.RenderTargetSize(area.Size());
+
+				// Adjust the viewport
+				m_scene.m_viewport.TopLeftX = float(area.Left ());
+				m_scene.m_viewport.TopLeftY = float(area.Top  ());
+				m_scene.m_viewport.Width    = float(area.SizeX());
+				m_scene.m_viewport.Height   = float(area.SizeY());
+
+				// Update the camera
+				m_cam.Aspect(area.Aspect());
 			}
 
 			// Request a render.
-			// Note: this can be called many times per frame which minimal cost
+			// Note: this can be called many times per frame with minimal cost
 			virtual void RenderNeeded()
 			{
 				m_rdr_pending = true;
@@ -175,9 +178,8 @@ namespace pr
 			// This is left to the derived app to call when appropriate.
 			// For game-style apps that use a pr::SimMsgLoop, DoRender can be called in a step context
 			//  e.g.
-			//   // In Gui::OnCreate()
 			//   m_msg_loop.AddStepContext("render loop", [this](double){ m_main->DoRender(true); }, 60.0f, false);
-			// For general apps, DoRender could be called from a Timer, or on demand
+			// For general apps, DoRender could be called from a Timer, or in Paint
 			virtual void DoRender(bool force = false)
 			{
 				// Only render if asked to
@@ -198,6 +200,12 @@ namespace pr
 				m_scene.Render();
 
 				// Show the result
+				Present();
+			}
+
+			// Show the result
+			virtual void Present()
+			{
 				m_window.Present();
 			}
 
@@ -221,4 +229,3 @@ namespace pr
 		};
 	}
 }
-#endif

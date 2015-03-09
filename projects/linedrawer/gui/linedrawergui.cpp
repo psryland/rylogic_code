@@ -14,9 +14,9 @@
 #include "linedrawer/utility/debug.h"
 
 // Create the GUI window
-std::shared_ptr<ATL::CWindow> pr::app::CreateGUI(LPTSTR lpstrCmdLine)
+std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow)
 {
-	return pr::app::CreateGUI<::ldr::MainGUI>(lpstrCmdLine);
+	return pr::app::CreateGUI<::ldr::MainGUI>(lpstrCmdLine, nCmdShow);
 }
 
 namespace ldr
@@ -30,69 +30,46 @@ namespace ldr
 		return static_cast<pr::Camera*>(ctx)->FocusPoint();
 	}
 
-	MainGUI::MainGUI(LPTSTR cmdline)
-		:base()
-		,m_menu()
-		,m_status()
+	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
+		:base(AppTitleA(), CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR, "ldr_main")
+		,m_status(this, IDC_STATUSBAR_MAIN, TEXT("Ready"), TEXT("status bar"))
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui()
 		,m_editor_ui()
-		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, m_hWnd)
-		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, m_hWnd)
+		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
+		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
+		,m_menu(Menu())
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
-	}
-
-	// Init Window
-	LRESULT MainGUI::OnCreate(LPCREATESTRUCT create)
-	{
-		pr::Throw(base::OnCreate(create));
 
 		// Note, 'm_main' can be null if the SimMsgLoop runs these contexts after the
 		// window has been destroyed, but before the message loop has been shutdown.
 		// This shouldn't really happen and needs investigating
 
-		// Create a step context for rendering
-		enum { force_render = false };
-		m_msg_loop.AddStepContext("rdr main loop", [this](double) { if (m_main) m_main->DoRender(force_render); }, 60.0f, false);
-
-		// Add a step context for stepping plugins
-		m_msg_loop.AddStepContext("plugin step", [this](double elapsed_s){ if (m_main) m_main->m_plugin_mgr.Poll(elapsed_s); }, 30.0f, true);
-
 		// Set icons
-		SetIcon((HICON)::LoadImage(create->hInstance, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,TRUE);
-		SetIcon((HICON)::LoadImage(create->hInstance, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,FALSE);
-
-		// Load menu
-		HMENU hMenu = LoadMenu(create->hInstance, MAKEINTRESOURCE(IDR_MENU_MAIN));
-		m_menu.Attach(hMenu);
-		SetMenu(hMenu);
-
-		// Load accelerators
-		m_hAccel = (HACCEL)::LoadAccelerators(create->hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR));
-		m_hand_cursor.Attach((HCURSOR)LoadCursorA(create->hInstance, MAKEINTRESOURCE(IDC_HAND)));
+		Icon((HICON)::LoadImage(m_hinst, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,true);
+		Icon((HICON)::LoadImage(m_hinst, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,false);
 
 		// Status bar
-		CreateSimpleStatusBar(TEXT(""), WS_CHILD|WS_VISIBLE|CCS_BOTTOM|CCS_ADJUSTABLE|SBARS_SIZEGRIP);
-		m_status.Attach(m_hWndStatusBar);
 		int status_panes[] = {-1};
-		m_status.SetParts(1, status_panes);
+		m_status.Parts(1, status_panes);
+		m_status.Visible(true);
 
 		// Initialise the menu lists
-		m_recent_files.Attach(pr::gui::GetMenuByName(GetMenu(), TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES ,0xffffffff ,this);
-		m_saved_views .Attach(pr::gui::GetMenuByName(GetMenu(), TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
+		m_recent_files.Attach(pr::gui::GetMenuByName(Menu(), TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES ,0xffffffff ,this);
+		m_saved_views .Attach(pr::gui::GetMenuByName(Menu(), TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
 
 		// Initialise the object manager
-		m_store_ui.Create(m_hWnd);
+		m_store_ui.Create(*this);
 		m_store_ui.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
 
 		// Initialise the script editor
-		m_editor_ui.Create(m_hWnd);
+		m_editor_ui.Create(*this);
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
 		m_editor_ui.Render = [&](std::string&& script)
 			{
@@ -122,29 +99,73 @@ namespace ldr
 		m_main->m_nav.CameraAlign(m_main->m_settings.m_CameraAlignAxis);
 
 		// Register for drag drop
-		DragAcceptFiles(m_hWnd, true);
+		AllowDrop(true);
 
-		// Start the main timer
-		OnTimer(0);
-		return TRUE;
+		// Set the window minimum size
+		m_min_max_info.ptMinTrackSize.x = 320;
+		m_min_max_info.ptMinTrackSize.y = 200;
+
+		// Create a step context for rendering
+		enum { force_render = false };
+		m_msg_loop.AddStepContext("rdr main loop", [this](double)
+		{
+			if (m_main && !m_suspend_render)
+			m_main->DoRender(force_render);
+		}, 60.0f, false);
+
+		// Add a step context for 30Hz stepping
+		m_msg_loop.AddStepContext("plugin step", [this](double s)
+		{
+			Step30Hz(s);
+		}, 30.0f, true);
+
+		// Add a step context for polling file state
+		m_msg_loop.AddStepContext("watch_files", [this](double)
+		{
+			// If file watching is turned on, look for changed files
+			if (m_main->m_settings.m_WatchForChangedFiles)
+				m_main->m_sources.RefreshChangedFiles();
+		}, 1.0f, false);
+
+		//m_msg_loop.AddStepContext("debug", [this](double)
+		//{
+		//	auto nc = NonClientAreas();
+		//	auto h = {50,300,500,700,1000,700,500,300};
+		//	static int i = 0;
+		//	OutputDebugStringA(pr::FmtS("\n%s PreMoveWindow (%d,%d) %d %d\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
+		//	::MoveWindow(*this,
+		//		2500,0,
+		//		h.begin()[i]-nc.left+nc.right,
+		//		h.begin()[i]-nc.top+nc.bottom, TRUE);
+		//	OutputDebugStringA(pr::FmtS("%s PostMoveWindow (%d,%d) %d %d\n\n", m_name, WindowRect().left, WindowRect().top, ClientRect().width(), ClientRect().height()));
+		//	++i %= h.size();
+		//}, 0.5f, false);
+
+		Show(showwnd);
 	}
-
-	// Destroy windows
-	void MainGUI::OnDestroy()
+	MainGUI::~MainGUI()
 	{
 		m_store_ui.Close();
 		m_editor_ui.Close();
 		m_measure_tool_ui.Close();
 		m_angle_tool_ui.Close();
-		base::OnDestroy();
+	}
+
+	// Message map function
+	bool MainGUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
+	{
+		return
+			m_recent_files.ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
+			m_saved_views .ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
+			base::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 	}
 
 	// Handler timer messages
-	void MainGUI::OnTimer(UINT_PTR)
+	void MainGUI::Step30Hz(double elapsed_seconds)
 	{
-		// If file watching is turned on, look for changed files
-		if (m_main->m_settings.m_WatchForChangedFiles)
-			m_main->m_sources.RefreshChangedFiles();
+		// Poll plugins
+		if (m_main)
+			m_main->m_plugin_mgr.Poll(elapsed_seconds);
 
 		// Orbit the camera if enabled
 		if (m_main->m_settings.m_CameraOrbit)
@@ -152,36 +173,19 @@ namespace ldr
 			m_main->m_nav.OrbitCamera(m_main->m_settings.m_CameraOrbitSpeed);
 			m_main->RenderNeeded();
 		}
-
-		SetTimer(ID_MAIN_TIMER, 1, 0);
 	}
 
 	// Paint the window
-	void MainGUI::OnPaint(HDC hDC)
+	bool MainGUI::OnPaint(PaintEventArgs const& args)
 	{
-		SetMsgHandled(FALSE);
-		if (m_suspend_render) return;
-		base::OnPaint(hDC);
-	}
-
-	// Set minimum window size
-	void MainGUI::OnGetMinMaxInfo(LPMINMAXINFO lpMMI)
-	{
-		lpMMI->ptMinTrackSize.x = 320;
-		lpMMI->ptMinTrackSize.x = 200;
-	}
-
-	// Get the cursor to show for drag-drop operations
-	HCURSOR MainGUI::OnQueryDragIcon()
-	{
-		return m_hand_cursor;
+		if (m_suspend_render) return false;
+		return base::OnPaint(args);
 	}
 
 	// Handle files dropped onto the main window
-	void MainGUI::OnDropFiles(HDROP hDropInfo)
+	void MainGUI::OnDropFiles(DropFilesEventArgs const& drop)
 	{
-		UINT num_files = ::DragQueryFileA(hDropInfo, 0xFFFFFFFF, NULL, 0);
-		if (num_files == 0)
+		if (drop.m_filepaths.empty())
 			return;
 
 		// Clear the data unless shift is held down
@@ -189,61 +193,48 @@ namespace ldr
 			m_main->m_sources.Clear();
 
 		// Load the files
-		std::string path;
-		for (UINT i = 0; i != num_files; ++i)
-		{
-			path.resize(::DragQueryFileA(hDropInfo, i, 0, 0) + 1, 0);
-			if (::DragQueryFile(hDropInfo, i, &path[0], UINT(path.size())) != 0)
-				m_main->m_sources.AddFile(path.c_str());
-		}
+		for (auto const& path : drop.m_filepaths)
+			m_main->m_sources.AddFile(path.c_str());
 	}
 
-	// Handle system menu keys
-	void MainGUI::OnSysKeyDown(UINT nChar, UINT, UINT)
+	// Handle switching to/from full screen
+	void MainGUI::OnFullScreenToggle(bool enable_fullscreen)
 	{
-		// Watch for full screen alt-enter transitions
-		if (nChar == VK_RETURN)
+		if (enable_fullscreen)
 		{
-			// If currently in full screen mode, switch to windowed
-			if (m_main->m_window.FullScreenMode())
-			{
-				pr::rdr::DisplayMode mode;
-				m_main->m_window.FullScreenMode(false, mode);
+			// Hide the menu and status bar so that the the client area
+			// is calculated correctly.
+			m_menu = Menu();
+			Menu(nullptr);
+			m_status.Visible(false);
 
-				// Show the status and menu controls again
-				SetMenu(m_menu);
-				m_status.ShowWindow(SW_SHOW);
-			}
-			else
-			{
-				// Hide the menu and status bar so that the the client area
-				// is calculated correctly.
-				SetMenu(0);
-				m_status.ShowWindow(SW_HIDE);
+			//todo, make this correct
+			pr::rdr::SystemConfig config;
+			pr::rdr::SystemConfig::ModeCont modes;
+			config.m_adapters[0].m_outputs[0].GetDisplayModes(DXGI_FORMAT_R8G8B8A8_UNORM, modes);
 
-				pr::rdr::SystemConfig config;
-				pr::rdr::SystemConfig::ModeCont modes;
-				config.m_adapters[0].m_outputs[0].GetDisplayModes(DXGI_FORMAT_R8G8B8A8_UNORM, modes);
+			// Get the full screen display mode from the settings
+			pr::rdr::DisplayMode mode(1920, 1080);
+			m_main->m_window.FullScreenMode(true, mode);
+		}
+		else
+		{
+			pr::rdr::DisplayMode mode;
+			m_main->m_window.FullScreenMode(false, mode);
 
-				// Get the full screen display mode from the settings
-				pr::rdr::DisplayMode mode(1920, 1080);
-				m_main->m_window.FullScreenMode(true, mode);
-			}
-			m_main->RenderNeeded();
-			m_main->DoRender();
+			// Show the status and menu controls again
+			Menu(m_menu);
+			m_status.Visible(true);
 		}
 	}
 
 	// Handle key presses
-	void MainGUI::OnKeyDown(UINT nChar, UINT, UINT)
+	bool MainGUI::OnKey(KeyEventArgs const& args)
 	{
-		switch (nChar)
+		switch (args.m_vk_key)
 		{
-		default:
-			SetMsgHandled(FALSE);
-			break;
 		case VK_SPACE:
-			m_store_ui.Show(m_hWnd);
+			m_store_ui.Show(*this);
 			m_store_ui.Populate(m_main->m_store);
 			break;
 		case VK_F5:
@@ -255,356 +246,331 @@ namespace ldr
 			m_main->RenderNeeded();
 			break;
 		}
+		return base::OnKey(args);
 	}
 
-	// Convert a windows message wParam into a pr::camera::ENavBtn mask
-	inline int ButtonState(WPARAM wParam)
+	// Override mouse navigation
+	bool MainGUI::OnMouseButton(MouseEventArgs const& args)
 	{
-		int button_state = 0;
-		if (wParam & MK_LBUTTON)  button_state |= pr::camera::ENavBtn::Left;
-		if (wParam & MK_RBUTTON)  button_state |= pr::camera::ENavBtn::Right;
-		if (wParam & MK_MBUTTON)  button_state |= pr::camera::ENavBtn::Middle;
-		if (wParam & MK_SHIFT)    button_state |= pr::camera::ENavBtn::Shift;
-		if (wParam & MK_CONTROL)  button_state |= pr::camera::ENavBtn::Ctrl;
-		if (wParam & MK_XBUTTON1) button_state |= pr::camera::ENavBtn::XButton1;
-		if (wParam & MK_XBUTTON2) button_state |= pr::camera::ENavBtn::XButton2;
-		return button_state;
-	}
+		auto mouse_loc = pr::To<pr::v2>(args.m_point);
+		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 
-	void MainGUI::OnMouseDown(UINT btn, UINT, CPoint point)
-	{
-		IsClick(btn, false);
-
-		SetCapture();
-		int btn_state = ButtonState(btn);
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		if (m_main->m_nav.MouseInput(mouse_loc, btn_state, true))
-			m_main->RenderNeeded();
-
-		MouseStatusUpdate(mouse_loc);
-	}
-	void MainGUI::OnMouseUp(UINT btn, UINT flags, CPoint point)
-	{
-		ReleaseCapture();
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		if (IsClick(btn, true))
-		{
-			OnMouseClick(btn, flags, point);
-			m_main->RenderNeeded();
-		}
+		if (args.m_down)
+			::SetCapture(*this);
 		else
+			::ReleaseCapture();
+
+		if (m_main->m_nav.MouseInput(mouse_loc, args.m_down ? btn : 0, true))
 		{
-			if (m_main->m_nav.MouseInput(mouse_loc, 0, true))
-				m_main->RenderNeeded();
+			m_main->RenderNeeded();
+			Invalidate();
+		}
+
+		MouseStatusUpdate(mouse_loc);
+		return false;
+	}
+	void MainGUI::OnMouseMove(MouseEventArgs const& args)
+	{
+		auto mouse_loc = pr::To<pr::v2>(args.m_point);
+		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
+
+		if (m_main->m_nav.MouseInput(mouse_loc, btn, false))
+		{
+			m_main->RenderNeeded();
+			Invalidate();
 		}
 
 		MouseStatusUpdate(mouse_loc);
 	}
-	void MainGUI::OnMouseMove(UINT flags, CPoint point)
+	bool MainGUI::OnMouseClick(MouseEventArgs const& args)
 	{
-		int btn_state = ButtonState(flags);
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		if (m_main->m_nav.MouseInput(mouse_loc, btn_state, false))
+		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
+		auto mouse_loc = pr::To<pr::v2>(args.m_point);
+		if (m_main->m_nav.MouseClick(mouse_loc, btn))
+		{
 			m_main->RenderNeeded();
+			Invalidate();
+		}
 
 		MouseStatusUpdate(mouse_loc);
+		return false;
 	}
-	void MainGUI::OnMouseClick(UINT btn, UINT, CPoint point)
+	bool MainGUI::OnMouseWheel(MouseWheelArgs const& args)
 	{
-		int  btn_state = ButtonState(btn);
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
-		if (m_main->m_nav.MouseClick(mouse_loc, btn_state))
-			m_main->RenderNeeded();
-
-		MouseStatusUpdate(mouse_loc);
-	}
-	BOOL MainGUI::OnMouseWheel(UINT, short delta, CPoint point)
-	{
-		pr::v2 mouse_loc = pr::To<pr::v2>(point);
+		pr::v2 mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		// delta is '1.0f' for a single wheel click
-		if (m_main->m_nav.MouseWheel(mouse_loc, delta/120.0f))
+		if (m_main->m_nav.MouseWheel(mouse_loc, args.m_delta/120.0f))
+		{
 			m_main->RenderNeeded();
+			Invalidate();
+		}
 
 		MouseStatusUpdate(mouse_loc);
-		return FALSE; // ie. we handled this wheel message
+		return false;
+	}
+
+	// Handle the main menu
+	bool MainGUI::HandleMenu(UINT item_id, UINT, HWND)
+	{
+		switch (item_id)
+		{
+		default: return false;
+		case ID_ACCELERATOR_FILENEW          : OnFileNew(); break;
+		case ID_ACCELERATOR_FILENEWSCRIPT    : OnFileNewScript(); break;
+		case ID_ACCELERATOR_FILEOPEN         : OnFileOpen(false); break;
+		case ID_ACCELERATOR_FILEOPEN_ADDITIVE: OnFileOpen(true); break;
+		case ID_ACCELERATOR_WIREFRAME        : OnToggleFillMode(); break;
+		case ID_ACCELERATOR_EDITOR           : OnEditSourceFiles(); break;
+		case ID_ACCELERATOR_CAMERAPOS        : OnSetCameraPosition(); break;
+		case ID_ACCELERATOR_PLUGINMGR        : OnShowPluginMgr(); break;
+		case ID_ACCELERATOR_LIGHTING_DLG     : OnShowLightingDlg(); break;
+		case ID_FILE_NEW1                    : OnFileNew(); break;
+		case ID_FILE_NEWSCRIPT               : OnFileNewScript(); break;
+		case ID_FILE_OPEN1                   : OnFileOpen(false); break;
+		case ID_FILE_ADDITIVEOPEN            : OnFileOpen(true); break;
+		case ID_FILE_EXIT                    : CloseApp(0); break;
+		case IDCLOSE                         : CloseApp(0); break;
+		case ID_NAV_RESETVIEW_ALL            : OnResetView(EObjectBounds::All); break;
+		case ID_NAV_RESETVIEW_SELECTED       : OnResetView(EObjectBounds::Selected); break;
+		case ID_NAV_RESETVIEW_VISIBLE        : OnResetView(EObjectBounds::Visible); break;
+		case ID_NAV_ALIGN_NONE               : OnNavAlign(pr::v4XAxis); break;
+		case ID_NAV_ALIGN_X                  : OnNavAlign(pr::v4Zero); break;
+		case ID_NAV_ALIGN_Y                  : OnNavAlign(pr::v4YAxis); break;
+		case ID_NAV_ALIGN_Z                  : OnNavAlign(pr::v4ZAxis); break;
+		case ID_NAV_ALIGN_CURRENT            : OnNavAlign(m_main->m_nav.CameraToWorld().y); break;
+		case ID_NAV_VIEW_AXIS_POSX           : OnViewAxis( pr::v4XAxis); break;
+		case ID_NAV_VIEW_AXIS_NEGX           : OnViewAxis(-pr::v4XAxis); break;
+		case ID_NAV_VIEW_AXIS_POSY           : OnViewAxis( pr::v4YAxis); break;
+		case ID_NAV_VIEW_AXIS_NEGY           : OnViewAxis(-pr::v4YAxis); break;
+		case ID_NAV_VIEW_AXIS_POSZ           : OnViewAxis( pr::v4ZAxis); break;
+		case ID_NAV_VIEW_AXIS_NEGZ           : OnViewAxis(-pr::v4ZAxis); break;
+		case ID_NAV_VIEW_AXIS_POSXYZ         : OnViewAxis(-pr::v4::make(0.577350f, 0.577350f, 0.577350f, 0.0f)); break;
+		case ID_NAV_CLEARSAVEDVIEWS          : OnSaveView(true); break;
+		case ID_NAV_SAVEVIEW                 : OnSaveView(false); break;
+		case ID_NAV_SETFOCUSPOSITION         : OnSetFocusPosition(); break;
+		case ID_NAV_SETCAMERAPOSITION        : OnSetCameraPosition(); break;
+		case ID_NAV_ORBIT                    : OnOrbit(); break;
+		case ID_DATA_OBJECTMANAGER           : OnShowObjectManagerUI(); break;
+		case ID_DATA_EDITSOURCEFILES         : OnEditSourceFiles(); break;
+		case ID_DATA_CLEARSCENE              : OnDataClearScene(); break;
+		case ID_DATA_AUTOREFRESH             : OnDataAutoRefresh(); break;
+		case ID_DATA_CREATE_DEMO_SCENE       : OnCreateDemoScene(); break;
+		case ID_RENDERING_SHOWFOCUS          : OnShowFocus(); break;
+		case ID_RENDERING_SHOWORIGIN         : OnShowOrigin(); break;
+		case ID_RENDERING_SHOWSELECTION      : OnShowSelection(); break;
+		case ID_RENDERING_SHOWOBJECTBBOXES   : OnShowObjBBoxes(); break;
+		case ID_RENDERING_WIREFRAME          : OnToggleFillMode(); break;
+		case ID_RENDERING_RENDER2D           : OnRender2D(); break;
+		case ID_RENDERING_TECHNIQUE          : OnRenderTechnique(); break;
+		case ID_RENDERING_LIGHTING           : OnShowLightingDlg(); break;
+		case ID_TOOLS_MEASURE                : OnShowToolDlg(ID_TOOLS_MEASURE); break;
+		case ID_TOOLS_ANGLE                  : OnShowToolDlg(ID_TOOLS_ANGLE); break;
+		case ID_TOOLS_OPTIONS                : OnShowOptions(); break;
+		case ID_TOOLS_PLUGINMGR              : OnShowPluginMgr(); break;
+		case ID_WINDOW_ALWAYSONTOP           : OnWindowAlwaysOnTop(); break;
+		case ID_WINDOW_BACKGROUNDCOLOUR      : OnWindowBackgroundColour(); break;
+		case ID_WINDOW_EXAMPLESCRIPT         : OnWindowExampleScript(); break;
+		case ID_WINDOW_CHECKFORUPDATES       : OnCheckForUpdates(); break;
+		case ID_WINDOW_ABOUTLINEDRAWER       : OnWindowShowAboutBox(); break;
+		}
+		return true;
 	}
 
 	// Open a text panel for adding new ldr objects immediately
-	LRESULT MainGUI::OnFileNew(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnFileNew()
 	{
 		m_editor_ui.Visible(true);
-		return S_OK;
 	}
 
 	// Create a new text file for ldr script
-	LRESULT MainGUI::OnFileNewScript(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnFileNewScript()
 	{
 		try
 		{
-			WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,m_hWnd);
-			if (fd.DoModal() != IDOK) return S_OK;
+			WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,*this);
+			if (fd.DoModal() != IDOK) return;
 			FileNew(fd.m_szFileName);
 		}
 		catch (std::exception const& e)
 		{
 			pr::events::Send(Event_Error(pr::FmtS("Creating a new script failed.\nError details: %s", e.what())));
 		}
-		return S_OK;
 	}
 
-	// Open a line drawer script file
-	LRESULT MainGUI::OnFileOpen(WORD, WORD, HWND, BOOL&)
+	// Open a line drawer script file and optionally add it to the current scene
+	void MainGUI::OnFileOpen(bool additive)
 	{
-		WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,m_hWnd);
-		if (fd.DoModal() != IDOK) return S_OK;
-		FileOpen(fd.m_szFileName, false);
-		return S_OK;
-	}
-
-	// Open a file and add it to the current scene
-	LRESULT MainGUI::OnFileOpenAdditive(WORD, WORD, HWND, BOOL&)
-	{
-		CFileDialog fd(TRUE,0,0,0,FileOpenFilter,m_hWnd);
-		if (fd.DoModal() != IDOK) return S_OK;
-		FileOpen(fd.m_szFileName, true);
-		return S_OK;
-	}
-
-	// Display the options dialog
-	LRESULT MainGUI::OnShowOptions(WORD, WORD, HWND, BOOL&)
-	{
-		COptionsDlg dlg(m_main->m_settings, m_hWnd);
-		if (dlg.DoModal() != IDOK) return S_OK;
-		dlg.GetSettings(m_main->m_settings);
-		m_main->RenderNeeded();
-		return S_OK;
-	}
-
-	// Display the plugin manager dialog
-	LRESULT MainGUI::OnShowPluginMgr(WORD, WORD, HWND, BOOL&)
-	{
-		PluginManagerDlg dlg(m_main->m_plugin_mgr, m_hWnd);
-		if (dlg.DoModal() != IDOK) return S_OK;
-		return S_OK;
-	}
-
-	// Close the dialog event
-	LRESULT MainGUI::OnAppClose(WORD, WORD wID, HWND, BOOL&)
-	{
-		CloseApp(wID);
-		return S_OK;
+		WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,*this);
+		if (fd.DoModal() != IDOK) return;
+		FileOpen(fd.m_szFileName, additive);
 	}
 
 	// Reset the view to all, selected, or visible objects
-	LRESULT MainGUI::OnResetView(WORD, WORD wID, HWND, BOOL&)
+	void MainGUI::OnResetView(EObjectBounds bounds)
 	{
-		switch (wID)
-		{
-		default:
-		case ID_NAV_RESETVIEW_ALL:      m_main->ResetView(EObjectBounds::All); break;
-		case ID_NAV_RESETVIEW_SELECTED: m_main->ResetView(EObjectBounds::Selected); break;
-		case ID_NAV_RESETVIEW_VISIBLE:  m_main->ResetView(EObjectBounds::Visible); break;
-		}
+		m_main->ResetView(bounds);
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// View the current focus point looking down the selected axis
-	LRESULT MainGUI::OnViewAxis(WORD, WORD wID, HWND, BOOL&)
+	void MainGUI::OnViewAxis(pr::v4 const& axis)
 	{
-		pr::v4 axis;
-		switch (wID)
-		{
-		default: axis = m_main->m_nav.CameraToWorld().z; break;
-		case ID_NAV_VIEW_AXIS_POSX:   axis =  pr::v4XAxis; break;
-		case ID_NAV_VIEW_AXIS_NEGX:   axis = -pr::v4XAxis; break;
-		case ID_NAV_VIEW_AXIS_POSY:   axis =  pr::v4YAxis; break;
-		case ID_NAV_VIEW_AXIS_NEGY:   axis = -pr::v4YAxis; break;
-		case ID_NAV_VIEW_AXIS_POSZ:   axis =  pr::v4ZAxis; break;
-		case ID_NAV_VIEW_AXIS_NEGZ:   axis = -pr::v4ZAxis; break;
-		case ID_NAV_VIEW_AXIS_POSXYZ: axis = -pr::v4::make(0.577350f, 0.577350f, 0.577350f, 0.0f); break;
-		}
-
+		// axis = m_main->m_nav.CameraToWorld().z; use this for non-menu option
 		pr::m4x4 c2w = m_main->m_nav.CameraToWorld();
 		pr::v4 focus = m_main->m_nav.FocusPoint();
 		pr::v4 cam = focus + axis * m_main->m_nav.FocusDistance();
 		pr::v4 up = pr::Parallel(axis, c2w.y) ? pr::Cross3(axis, c2w.x) : c2w.y;
 		m_main->m_nav.LookAt(cam, focus, up);
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Set the position of the camera focus point in world space
-	LRESULT MainGUI::OnSetFocusPosition(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnSetFocusPosition()
 	{
-		CTextEntryDlg dlg(m_hWnd, "Enter focus point position", "0 0 0", false);
-		if (dlg.DoModal() != IDOK) return S_OK;
+		CTextEntryDlg dlg(*this, "Enter focus point position", "0 0 0", false);
+		if (dlg.DoModal() != IDOK) return;
 
 		float pos[3];
 		if (pr::str::ExtractRealArrayC(&pos[0], 3, dlg.m_body.c_str()))
 			m_main->m_nav.FocusPoint(pr::v4::make(pos, 1.0f));
 		else
-			MessageBoxA("Format incorrect", "Focus point not set", MB_OK|MB_ICONERROR);
+			::MessageBoxA(*this, "Format incorrect", "Focus point not set", MB_OK|MB_ICONERROR);
 
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Set the position of the camera
-	LRESULT MainGUI::OnSetCameraPosition(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnSetCameraPosition()
 	{
 		pr::camera::PositionDlg dlg;
 		dlg.m_cam = m_main->m_cam;
-		if (dlg.DoModal(m_hWnd) != IDOK) return S_OK;
+		if (dlg.DoModal(*this) != IDOK) return;
 		m_main->m_cam = dlg.m_cam;
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Align the camera to the selected axis
-	LRESULT MainGUI::OnNavAlign(WORD, WORD wID, HWND, BOOL&)
+	void MainGUI::OnNavAlign(pr::v4 const& axis)
 	{
-		switch (wID)
-		{
-		default:
-		case ID_NAV_ALIGN_NONE:    m_main->m_nav.CameraAlign(pr::v4Zero); break;
-		case ID_NAV_ALIGN_X:       m_main->m_nav.CameraAlign(pr::v4XAxis); break;
-		case ID_NAV_ALIGN_Y:       m_main->m_nav.CameraAlign(pr::v4YAxis); break;
-		case ID_NAV_ALIGN_Z:       m_main->m_nav.CameraAlign(pr::v4ZAxis); break;
-		case ID_NAV_ALIGN_CURRENT: m_main->m_nav.CameraAlign(m_main->m_nav.CameraToWorld().y); break;
-		}
+		m_main->m_nav.CameraAlign(axis);
 		m_main->m_settings.m_CameraAlignAxis = m_main->m_nav.CameraAlign();
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Record the current camera position as a saved camera view
-	LRESULT MainGUI::OnSaveView(WORD, WORD wID, HWND, BOOL&)
+	void MainGUI::OnSaveView(bool clear_saves)
 	{
-		if (wID == ID_NAV_CLEARSAVEDVIEWS)
+		if (clear_saves)
 		{
 			m_main->m_nav.ClearSavedViews();
 			m_saved_views.Clear();
 		}
 		else
 		{
-			CTextEntryDlg dlg(m_hWnd, "Label for this view", pr::FmtS("view%d", m_saved_views.Items().size()), false);
-			if (dlg.DoModal() != IDOK) return S_OK;
+			CTextEntryDlg dlg(*this, "Label for this view", pr::FmtS("view%d", m_saved_views.Items().size()), false);
+			if (dlg.DoModal() != IDOK) return;
 
 			NavManager::SavedViewID id = m_main->m_nav.SaveView();
 			m_saved_views.Add(dlg.m_body.c_str(), (void*)id, false, true);
 		}
-		return S_OK;
 	}
 
 	// Toggle camera orbit mode
-	LRESULT MainGUI::OnOrbit(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnOrbit()
 	{
 		m_main->m_settings.m_CameraOrbit = !m_main->m_settings.m_CameraOrbit;
 		m_main->m_nav.OrbitCamera(0.0f);
 		UpdateUI();
-		return S_OK;
 	}
 
 	// Display the object manager UI
-	LRESULT MainGUI::OnShowObjectManagerUI(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowObjectManagerUI()
 	{
-		m_store_ui.Show(m_hWnd);
+		m_store_ui.Show(*this);
 		m_store_ui.Populate(m_main->m_store);
-		return S_OK;
 	}
 
 	// Spawn the text editor with the source files
-	LRESULT MainGUI::OnEditSourceFiles(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnEditSourceFiles()
 	{
 		OpenTextEditor(m_main->m_sources.List());
-		return S_OK;
 	}
 
 	// Remove all objects from the object manager
-	LRESULT MainGUI::OnDataClearScene(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnDataClearScene()
 	{
 		m_main->m_store.clear();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle auto refresh file sources
-	LRESULT MainGUI::OnDataAutoRefresh(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnDataAutoRefresh()
 	{
 		m_main->m_settings.m_WatchForChangedFiles = !m_main->m_settings.m_WatchForChangedFiles;
 		UpdateUI();
-		return S_OK;
 	}
 
 	// Generate a self created scene of objects
-	LRESULT MainGUI::OnCreateDemoScene(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnCreateDemoScene()
 	{
 		m_main->CreateDemoScene();
 		m_main->ResetView(EObjectBounds::All);
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle visibility of the focus point
-	LRESULT MainGUI::OnShowFocus(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowFocus()
 	{
 		m_main->m_settings.m_ShowFocusPoint = !m_main->m_settings.m_ShowFocusPoint;
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle visibility of the origin point
-	LRESULT MainGUI::OnShowOrigin(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowOrigin()
 	{
 		m_main->m_settings.m_ShowOrigin = !m_main->m_settings.m_ShowOrigin;
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle visibility of the selection box
-	LRESULT MainGUI::OnShowSelection(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowSelection()
 	{
 		m_main->m_settings.m_ShowSelectionBox = !m_main->m_settings.m_ShowSelectionBox;
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle visibility of the object space bounding boxes
-	LRESULT MainGUI::OnShowObjBBoxes(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowObjBBoxes()
 	{
 		m_main->m_settings.m_ShowObjectBBoxes = !m_main->m_settings.m_ShowObjectBBoxes;
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Cycle through solid, wireframe, and solid+wire
-	LRESULT MainGUI::OnToggleFillMode(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnToggleFillMode()
 	{
 		int mode = (m_main->m_settings.m_GlobalFillMode + 1) % EFillMode::NumberOf;
 		m_main->m_settings.m_GlobalFillMode = static_cast<EFillMode>(mode);
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle between perspective and orthographic
-	LRESULT MainGUI::OnRender2D(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnRender2D()
 	{
 		m_main->m_nav.Render2D(!m_main->m_nav.Render2D());
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Toggle between forward and deferred rendering
-	LRESULT MainGUI::OnRenderTechnique(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnRenderTechnique()
 	{
 		auto fwd = {pr::rdr::ERenderStep::ForwardRender};
 		auto def = {pr::rdr::ERenderStep::GBuffer, pr::rdr::ERenderStep::DSLighting};
@@ -616,11 +582,10 @@ namespace ldr
 
 		UpdateUI();
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Display the lighting dialog
-	LRESULT MainGUI::OnShowLightingDlg(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnShowLightingDlg()
 	{
 		struct PreviewLighting
 		{
@@ -642,54 +607,65 @@ namespace ldr
 		pr::rdr::LightingDlg<PreviewLighting> dlg(pv);
 		dlg.m_light           = m_main->m_settings.m_Light;
 		dlg.m_camera_relative = m_main->m_settings.m_LightIsCameraRelative;
-		if (dlg.DoModal(m_hWnd) != IDOK) return S_OK;
+		if (dlg.DoModal(*this) != IDOK) return;
 		m_main->m_settings.m_Light                 = dlg.m_light;
 		m_main->m_settings.m_LightIsCameraRelative = dlg.m_camera_relative;
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Display a tool dialog
-	LRESULT MainGUI::OnShowToolDlg(WORD, WORD wID, HWND, BOOL&)
+	void MainGUI::OnShowToolDlg(int tool)
 	{
-		switch (wID)
+		switch (tool)
 		{
 		case ID_TOOLS_MEASURE: m_measure_tool_ui.Show(m_measure_tool_ui.IsWindowVisible() == FALSE); break;
 		case ID_TOOLS_ANGLE:   m_angle_tool_ui  .Show(m_angle_tool_ui  .IsWindowVisible() == FALSE); break;
 		}
 		UpdateUI();
-		return S_OK;
+	}
+
+	// Display the options dialog
+	void MainGUI::OnShowOptions()
+	{
+		COptionsDlg dlg(m_main->m_settings, *this);
+		if (dlg.DoModal() != IDOK) return;
+		dlg.GetSettings(m_main->m_settings);
+		m_main->RenderNeeded();
+	}
+
+	// Display the plugin manager dialog
+	void MainGUI::OnShowPluginMgr()
+	{
+		PluginManagerDlg dlg(m_main->m_plugin_mgr, *this);
+		if (dlg.DoModal() != IDOK) return;
 	}
 
 	// Set the window draw order so that the line drawer window is always on top
-	LRESULT MainGUI::OnWindowAlwaysOnTop(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnWindowAlwaysOnTop()
 	{
 		m_main->m_settings.m_AlwaysOnTop = !m_main->m_settings.m_AlwaysOnTop;
-		SetWindowPos(m_main->m_settings.m_AlwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
+		::SetWindowPos(*this, m_main->m_settings.m_AlwaysOnTop ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE);
 		UpdateUI();
-		return S_OK;
 	}
 
 	// Set the background colour
-	LRESULT MainGUI::OnWindowBackgroundColour(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnWindowBackgroundColour()
 	{
-		CColorDialog dlg(m_main->m_settings.m_BackgroundColour.GetColorRef(), 0, m_hWnd);
-		if (dlg.DoModal() != IDOK) return S_OK;
+		CColorDialog dlg(m_main->m_settings.m_BackgroundColour.GetColorRef(), 0, *this);
+		if (dlg.DoModal() != IDOK) return;
 		m_main->m_settings.m_BackgroundColour = dlg.GetColor() & 0x00FFFFFF;
 		m_main->RenderNeeded();
-		return S_OK;
 	}
 
 	// Show a window containing the demo scene script
-	LRESULT MainGUI::OnWindowExampleScript(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnWindowExampleScript()
 	{
 		m_editor_ui.Text(pr::ldr::CreateDemoScene().c_str());
 		m_editor_ui.Visible(true);
-		return S_OK;
 	}
 
 	// Check the web for the latest version
-	LRESULT MainGUI::OnCheckForUpdates(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnCheckForUpdates()
 	{
 		std::string version;
 		pr::network::WebGet("http://www.rylogic.co.nz/latest_versions.html", version);
@@ -698,18 +674,14 @@ namespace ldr
 		try { pr::xml::Load(version.c_str(), version.size(), root); }
 		catch (std::exception const&)
 		{
-			MessageBoxA("Version information invalid", "Check For Updates", MB_OK|MB_ICONERROR);
-			return S_OK;
+			::MessageBoxA(*this, "Version information invalid", "Check For Updates", MB_OK|MB_ICONERROR);
 		}
-
-		return S_OK;
 	}
 
 	// Show the about box
-	LRESULT MainGUI::OnWindowShowAboutBox(WORD, WORD, HWND, BOOL&)
+	void MainGUI::OnWindowShowAboutBox()
 	{
 		ShowAbout();
-		return S_OK;
 	}
 
 	// Shut the app down
@@ -719,7 +691,7 @@ namespace ldr
 		m_measure_tool_ui.Close();
 		m_editor_ui.Close();
 		m_store_ui.Close();
-		base::CloseApp(exit_code);
+		Close(exit_code);
 	}
 
 	// Create a new file
@@ -760,7 +732,7 @@ namespace ldr
 			title += AppTitleA();
 			title += " - ";
 			title += filepath;
-			SetWindowTextA(title.c_str());
+			Text(title);
 
 			// Refresh
 			m_main->RenderNeeded();
@@ -802,43 +774,43 @@ namespace ldr
 	void MainGUI::UpdateUI()
 	{
 		// Camera orbit
-		CheckMenuItem(GetMenu(), ID_NAV_ORBIT ,m_main->m_settings.m_CameraOrbit ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_NAV_ORBIT ,m_main->m_settings.m_CameraOrbit ? MF_CHECKED : MF_UNCHECKED);
 
 		// Auto refresh
-		CheckMenuItem(GetMenu(), ID_DATA_AUTOREFRESH ,m_main->m_settings.m_WatchForChangedFiles ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_DATA_AUTOREFRESH ,m_main->m_settings.m_WatchForChangedFiles ? MF_CHECKED : MF_UNCHECKED);
 
 		// Stock models
-		CheckMenuItem(GetMenu(), ID_RENDERING_SHOWFOCUS        ,m_main->m_settings.m_ShowFocusPoint   ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu(), ID_RENDERING_SHOWORIGIN       ,m_main->m_settings.m_ShowOrigin        ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu(), ID_RENDERING_SHOWSELECTION    ,m_main->m_settings.m_ShowSelectionBox ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_main->m_settings.m_ShowObjectBBoxes ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_RENDERING_SHOWFOCUS        ,m_main->m_settings.m_ShowFocusPoint   ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_RENDERING_SHOWORIGIN       ,m_main->m_settings.m_ShowOrigin        ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_RENDERING_SHOWSELECTION    ,m_main->m_settings.m_ShowSelectionBox ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_main->m_settings.m_ShowObjectBBoxes ? MF_CHECKED : MF_UNCHECKED);
 
 		// Set the text to the "next" mode
 		switch (m_main->m_settings.m_GlobalFillMode)
 		{
-		case 0: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wireframe\tCtrl+W");  break;
-		case 1: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wire + Solid\tCtrl+W"); break;
-		case 2: ModifyMenu(GetMenu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Solid\tCtrl+W");      break;
+		case 0: ModifyMenu(Menu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wireframe\tCtrl+W");  break;
+		case 1: ModifyMenu(Menu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Wire + Solid\tCtrl+W"); break;
+		case 2: ModifyMenu(Menu(), ID_RENDERING_WIREFRAME, MF_BYCOMMAND, ID_RENDERING_WIREFRAME, "&Solid\tCtrl+W");      break;
 		}
 
 		// Align axis checked items
 		pr::v4 cam_align = m_main->m_settings.m_CameraAlignAxis;
-		CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_NONE    ,cam_align == pr::v4Zero  ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_X       ,cam_align == pr::v4XAxis ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_Y       ,cam_align == pr::v4YAxis ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_Z       ,cam_align == pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu() ,ID_NAV_ALIGN_CURRENT ,cam_align != pr::v4Zero && cam_align != pr::v4XAxis &&  cam_align != pr::v4YAxis && cam_align != pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu() ,ID_NAV_ALIGN_NONE    ,cam_align == pr::v4Zero  ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu() ,ID_NAV_ALIGN_X       ,cam_align == pr::v4XAxis ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu() ,ID_NAV_ALIGN_Y       ,cam_align == pr::v4YAxis ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu() ,ID_NAV_ALIGN_Z       ,cam_align == pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu() ,ID_NAV_ALIGN_CURRENT ,cam_align != pr::v4Zero && cam_align != pr::v4XAxis &&  cam_align != pr::v4YAxis && cam_align != pr::v4ZAxis ? MF_CHECKED : MF_UNCHECKED);
 
 		// Render 2d menu item
-		ModifyMenu(GetMenu(), ID_RENDERING_RENDER2D, MF_BYCOMMAND, ID_RENDERING_RENDER2D, m_main->m_nav.Render2D() ? "&Perspective" : "&Orthographic");
-		ModifyMenu(GetMenu(), ID_RENDERING_TECHNIQUE, MF_BYCOMMAND, ID_RENDERING_TECHNIQUE, m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() ? "&Deferred Rendering" : "&Forward Rendering");
+		ModifyMenu(Menu(), ID_RENDERING_RENDER2D, MF_BYCOMMAND, ID_RENDERING_RENDER2D, m_main->m_nav.Render2D() ? "&Perspective" : "&Orthographic");
+		ModifyMenu(Menu(), ID_RENDERING_TECHNIQUE, MF_BYCOMMAND, ID_RENDERING_TECHNIQUE, m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() ? "&Deferred Rendering" : "&Forward Rendering");
 
 		// The tools windows
-		CheckMenuItem(GetMenu(), ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(GetMenu(), ID_TOOLS_ANGLE   ,m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_TOOLS_ANGLE   ,m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
 
 		// Topmost window
-		CheckMenuItem(GetMenu(), ID_WINDOW_ALWAYSONTOP, m_main->m_settings.m_AlwaysOnTop ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_WINDOW_ALWAYSONTOP, m_main->m_settings.m_AlwaysOnTop ? MF_CHECKED : MF_UNCHECKED);
 	}
 
 	// Update the status text
@@ -869,7 +841,7 @@ namespace ldr
 	void MainGUI::ShowAbout() const
 	{
 		CAboutLineDrawer dlg;
-		dlg.DoModal(m_hWnd);
+		dlg.DoModal(*this);
 	}
 
 	// Recent files on click
@@ -917,7 +889,7 @@ namespace ldr
 	void MainGUI::OnEvent(Event_Error const& e)
 	{
 		if (!m_main || m_main->m_settings.m_ErrorOutputMsgBox)
-			::MessageBoxA(m_hWnd, e.m_msg.c_str(), pr::FmtS("%s Error", AppTitleA()), MB_OK|MB_ICONERROR);
+			::MessageBoxA(*this, e.m_msg.c_str(), pr::FmtS("%s Error", AppTitleA()), MB_OK|MB_ICONERROR);
 		else
 		{} // error msg on status line
 	}
@@ -932,8 +904,8 @@ namespace ldr
 			m_status_pri.m_last_update = now;
 			m_status_pri.m_priority = e.m_priority;
 			m_status_pri.m_min_display_time_ms = e.m_min_display_time_ms;
-			m_status.SetWindowText(e.m_msg.c_str());
-			m_status.SetFont(e.m_bold ? m_status_pri.m_bold_font : m_status_pri.m_normal_font);
+			m_status.Text(0, e.m_msg.c_str());
+			m_status.Font(e.m_bold ? m_status_pri.m_bold_font : m_status_pri.m_normal_font);
 		}
 	}
 
@@ -1003,7 +975,7 @@ namespace ldr
 	// Occurs when an error happens during UserSetting parsing
 	void MainGUI::OnEvent(pr::settings::Evt<UserSettings> const& e)
 	{
-		MessageBox(e.m_msg.c_str(), "Settings Error", MB_OK);
+		MessageBoxA(*this, e.m_msg.c_str(), "Settings Error", MB_OK);
 	}
 
 	// Parse command line options

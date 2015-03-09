@@ -144,7 +144,7 @@ namespace pr
 		template <typename String> inline bool IsFullPath(String const& path)
 		{
 			typedef String::value_type Char;
-			Char const colon[] = {Char(':'), 0};
+			Char const colon[] = {Char(':')}; // no null, because 'find' is templated on array len, and so tries to match the string ":\0" (i.e. length 2)
 			return path.find(colon) != String::npos;
 		}
 
@@ -771,6 +771,13 @@ namespace pr
 		template <typename String, typename Cont> inline String ResolvePath(String const& partial_path, Cont const& search_paths, String const* current_dir = nullptr, bool check_working_dir = true, String* searched_paths = nullptr)
 		{
 			String path;
+
+			// If the partial path is actually a full path
+			if (IsFullPath(partial_path))
+			{
+				if (FileExists(partial_path))
+					return partial_path;
+			}
 
 			// If 'current_dir' != null
 			if (current_dir)

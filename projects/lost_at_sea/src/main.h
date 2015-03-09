@@ -1,66 +1,53 @@
 //************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2015
 //************************************
 
-#ifndef LAS_MAIN_GUI_H
-#define LAS_MAIN_GUI_H
 #pragma once
 
-#include "forward.h"
-#include "settings.h"
-#include "cam/cam.h"
-#include "world/skybox.h"
-#include "world/terrain.h"
-#include "ship/ship.h"
+#include "lost_at_sea/src/forward.h"
+#include "lost_at_sea/src/settings.h"
+//#include "cam/cam.h"
+//#include "world/terrain.h"
+//#include "ship/ship.h"
 
 namespace las
 {
-	struct Main
+	// Main application logic container
+	struct Main :pr::app::Main<Settings, MainGUI>
 	{
-		las::Settings      m_settings;
-		pr::rdr::Allocator m_alloc;
-		pr::Renderer       m_rdr;
-		pr::rdr::Viewport  m_view;
-		MainGUI*           m_gui;
-		pr::Camera         m_cam;
-		ICamPtr            m_cam_ctrl;
-		Skybox             m_skybox;
-		Ship               m_ship;
-		Terrain            m_terrain;
-		
-		Main(MainGUI* gui);
-		
+	//	pr::Camera     m_cam;
+	//	ICamPtr        m_cam_ctrl;
+		pr::app::Skybox m_skybox;
+	//	Ship           m_ship;
+	//	Terrain        m_terrain;
+
+		Main(MainGUI& gui);
+
 		// Advance the game by one frame
-		void Step(float elapsed_s);
-		
-		// Draw the scene
-		void Render();
-		
-		// The size of the window has changed
-		void Resize(pr::IRect const& client_area);
+		void Step(double elapsed_seconds);
+
+	//	// Draw the scene
+	//	void Render();
+	//	
+	//	// The size of the window has changed
+	//	void Resize(pr::IRect const& client_area);
 	};
 
 	// Main app window
-	struct MainGUI
-		:WTL::CFrameWindowImpl<MainGUI>
-		,WTL::CMessageLoop
+	struct MainGUI :pr::app::MainGUI<MainGUI, Main, pr::SimMsgLoop>
 	{
-		HINSTANCE m_hInstance;  // The app instance
-		Main*     m_main;       // The main app logic
-		DWORD     m_last_time;  // The tick count when the last frame was rendered
-		bool      m_resizing;   // True while the window is resizing
-		
-		MainGUI(HINSTANCE hInstance, LPTSTR lpstrCmdLine);
-		~MainGUI();
-		BOOL    OnIdle(int);
-		LRESULT OnCreate(LPCREATESTRUCT);
+		MainGUI(LPTSTR lpstrCmdLine, int nCmdShow);
+		static char const* AppName() { return "Lost At Sea"; }
+
+		//BOOL    OnIdle(int);
+		//LRESULT OnCreate(LPCREATESTRUCT);
 		//void    OnDestroy();
 		//BOOL    PreTranslateMessage(MSG*);
-		void    OnSysCommand(UINT code, WTL::CPoint const& point);
+		//void    OnSysCommand(UINT code, WTL::CPoint const& point);
 		//void    OnCommand(UINT wNotifyCode, INT wID, HWND hWndCtl);
 		//LRESULT OnEraseBkGnd(HDC hdc);
-		void    OnPaint(CDCHandle dc);
+	//	void    OnPaint(CDCHandle dc);
 		//void    OnSizing(UINT side, LPRECT rect);
 		//void    OnExitSizeMove();
 		//void    OnSize(UINT type, CSize size);
@@ -77,21 +64,21 @@ namespace las
 		//void Status(char const* msg, bool bold);
 	
 		// Shutdown the app
-		void CloseApp(int exit_code);
+		//void CloseApp(int exit_code);
 	
 		//// Event handlers
 		//void OnEvent(Event_MediaSet const& e);
 		//void OnEvent(Event_Message const& e);
 	
-		enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
-		DECLARE_FRAME_WND_CLASS(_T("LostAtSeaWinClass"), IDR_MAINFRAME);
-		BEGIN_MSG_MAP(MainGUI)
-			MSG_WM_CREATE(OnCreate)
+		//enum { IDR_MAINFRAME = 100, IDC_STATUSBAR = 100 };
+		//DECLARE_FRAME_WND_CLASS(_T("LostAtSeaWinClass"), IDR_MAINFRAME);
+		//BEGIN_MSG_MAP(MainGUI)
+		//	MSG_WM_CREATE(OnCreate)
 		//	MSG_WM_DESTROY(OnDestroy)
-			MSG_WM_SYSCOMMAND(OnSysCommand)
+		//	MSG_WM_SYSCOMMAND(OnSysCommand)
 		//	MSG_WM_COMMAND(OnCommand)
 		//	MSG_WM_ERASEBKGND(OnEraseBkGnd)
-			MSG_WM_PAINT(OnPaint)
+		//	MSG_WM_PAINT(OnPaint)
 		//	MSG_WM_SIZING(OnSizing)
 		//	MSG_WM_EXITSIZEMOVE(OnExitSizeMove)
 		//	MSG_WM_SIZE(OnSize)
@@ -103,7 +90,6 @@ namespace las
 		//	MSG_WM_MOUSEWHEEL(OnMouseWheel)
 		//	CHAIN_MSG_MAP(CFrameWindowImpl<MainGUI>)
 		//	CHAIN_MSG_MAP_MEMBER(m_recent)
-		END_MSG_MAP()
+		//END_MSG_MAP()
 	};
 }
-#endif

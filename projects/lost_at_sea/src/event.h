@@ -1,9 +1,8 @@
 //************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2015
 //************************************
-#ifndef LAS_EVENT_H
-#define LAS_EVENT_H
+
 #pragma once
 
 #include "forward.h"
@@ -37,5 +36,3 @@ namespace las
 		Evt_AddToViewport(pr::rdr::Viewport& vp, pr::Camera& cam) :m_vp(&vp) ,m_cam(&cam) {}
 	};
 }
-
-#endif

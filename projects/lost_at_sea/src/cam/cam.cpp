@@ -1,11 +1,10 @@
 //************************************
 // Lost at Sea
-//  Copyright (c) Rylogic Ltd 2011
+//  Copyright (c) Rylogic Ltd 2015
 //************************************
-#include "stdafx.h"
-#include "cam/cam.h"
+#include "lost_at_sea/src/stdafx.h"
+#include "lost_at_sea/src/cam/cam.h"
 
-using namespace las;
-
-
-
+namespace las
+{
+}

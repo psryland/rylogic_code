@@ -4,6 +4,7 @@ using System.Threading;
 using System.Windows.Forms;
 using pr.gui;
 using pr.util;
+using pr.win32;
 
 namespace EscapeVelocity
 {

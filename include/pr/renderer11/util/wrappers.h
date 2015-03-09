@@ -473,6 +473,10 @@ namespace pr
 
 			size_t WidthUI() const  { return static_cast<size_t>(Width); }
 			size_t HeightUI() const { return static_cast<size_t>(Height); }
+
+			pr::FRect AsFRect() const { return pr::FRect::make(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height); }
+			pr::IRect AsIRect() const { return pr::IRect::make(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height)); }
+			RECT      AsRECT() const  { return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)}; }
 		};
 	}
 }

@@ -1,2 +1,0 @@
-The idea of this project was to create a space environment that you can fly a space ship round in. Right down to procedurally generated planet surfaces. It would use real gravity calculations to influence the ship, and a path prediction line extending out in front of the ship to help with piloting.
-I also wanted to try 'wrap' jumps, where the entire view would be wrapped by a non-linear transform in the shader

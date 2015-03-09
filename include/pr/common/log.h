@@ -124,10 +124,10 @@ namespace pr
 		{
 			void operator ()(Event const& ev)
 			{
-				char delim[] = {0,0};
+				char const* delim = " ";
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim[0] = ' '; }
-				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim[0] = ' '; }
+				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim = " "; }
+				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim = " "; }
 				std::cout << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
 			}
 		};
@@ -136,13 +136,15 @@ namespace pr
 		struct ToFile
 		{
 			std::shared_ptr<std::ofstream> m_outf;
-			ToFile(string filepath) :m_outf(std::make_shared<std::ofstream>(filepath)) {}
+			ToFile(string filepath, std::ios_base::openmode mode = std::ios_base::out)
+				:m_outf(std::make_shared<std::ofstream>(filepath, mode))
+			{}
 			void operator ()(Event const& ev)
 			{
-				char delim[] = {0,0};
+				char const* delim = "";
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
-				if (!ev.m_file.empty()) { *m_outf << ev.m_file;                delim[0] = ' '; }
-				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim[0] = ' '; }
+				if (!ev.m_file.empty()) { *m_outf << ev.m_file;                delim = " "; }
+				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim = " "; }
 				*m_outf << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
 			}
 		};

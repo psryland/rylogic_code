@@ -51,7 +51,7 @@ LDR_EXPORT void ldrRender(ldrapi::PluginHandle)
 LDR_EXPORT HWND ldrMainWindowHandle(ldrapi::PluginHandle handle)
 {
 	if (!handle) return 0;
-	return handle->m_ldr->m_gui.m_hWnd;
+	return handle->m_ldr->m_gui;
 }
 
 // Report an error via the ldr error reporting system

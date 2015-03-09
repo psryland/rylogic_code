@@ -4,8 +4,6 @@
 //*******************************************************************
 
 #pragma once
-#ifndef PR_COMMON_WINDOWS_COM_H
-#define PR_COMMON_WINDOWS_COM_H
 
 #include <windows.h>
 #include "pr/common/hresult.h"
@@ -22,5 +20,3 @@ namespace pr
 		~InitCom()                                            { ::CoUninitialize(); }
 	};
 }
-
-#endif
