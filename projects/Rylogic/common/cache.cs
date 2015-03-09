@@ -20,17 +20,45 @@ namespace pr.common
 		/// <summary>Return performance data for the cache</summary>
 		CacheStats Stats { get; }
 
-		/// <summary>Returns true if an object with the given key is in the cache</summary>
+		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
 		bool IsCached(TKey key);
 
-		/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+		/// <summary>Preload the cache with an item</summary>
+		void Add(TKey key, TItem item);
+
+		/// <summary>Preload the cache with a range of items.</summary>
+		void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items);
+
+		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
+		bool Remove(TKey key);
+
+		/// <summary>
+		/// Returns an object from the cache if available, otherwise calls 'on_miss'.
+		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
+		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
+		/// need to call 'Add' to return the object to the cache.</summary>
 		TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null);
 
-		/// <summary>Handles notification from the database that a row has changed</summary>
+		/// <summary>Deletes (i.e. Disposes) and removes any object associated with 'key' from the cache</summary>
 		void Invalidate(TKey key);
 
-		/// <summary>Removed all cached items from the cache</summary>
+		/// <summary>Delete (i.e. Dispose) and remove all items from the cache</summary>
 		void Flush();
+	}
+
+	public enum CacheMode
+	{
+		/// <summary>
+		/// Standard cache, where objects returned in 'Get' remain in the 
+		/// cache until flushed or removed. Used for performance when accessing
+		/// a slow data source.</summary>
+		StandardCache,
+
+		/// <summary>
+		/// An object pool removes items from the cache when they are returned
+		/// from 'Get'. Users return the object to the cache when finished with
+		/// it. Object pools are used for recycling expensive objects.</summary>
+		ObjectPool
 	}
 
 	public struct CacheStats
@@ -44,22 +72,246 @@ namespace pr.common
 	/// <summary>Generic, count limited, cache implementation</summary>
 	public class Cache<TKey,TItem> :ICache<TKey,TItem> ,IDisposable
 	{
+		// The cache is an ordered linked list and a map from keys to list nodes
+		// The order of items in the linked list is the order of last accessed.
+
+		/// <summary>The cache entry</summary>
 		private class Entry
 		{
 			public TKey  Key  { get; set; }
 			public TItem Item { get; set; }
+			public override string ToString() { return string.Format("{0} -> {1}", Key, Item); }
 		}
 
 		/// <summary>A linked list of the cached items, sorted by most recently accessed</summary>
-		private readonly LinkedList<Entry> m_cache = new LinkedList<Entry>();
+		private readonly LinkedList<Entry> m_cache;
 
 		/// <summary>A lookup table from 'key' to node in 'm_cache'</summary>
-		private readonly Dictionary<TKey,LinkedListNode<Entry>> m_lookup = new Dictionary<TKey,LinkedListNode<Entry>>();
+		private readonly Dictionary<TKey,LinkedListNode<Entry>> m_lookup;
 
 		/// <summary>A lock object for synchronisation</summary>
-		private readonly object m_lock = new object();
+		private readonly object m_lock;
 
-		/// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
+		public Cache()
+		{
+			m_cache    = new LinkedList<Entry>();
+			m_lookup   = new Dictionary<TKey,LinkedListNode<Entry>>();
+			m_lock     = new object();
+			Mode       = CacheMode.StandardCache;
+			ThreadSafe = false;
+			m_capacity = 100;
+			m_stats    = new CacheStats();
+		}
+
+		/// <summary>Get/Set the behaviour of the Get method</summary>
+		public CacheMode Mode { get; set; }
+
+		/// <summary>Get/Set whether the cache should use thread locking</summary>
+		public bool ThreadSafe { get; set; }
+
+		/// <summary>The number of items in the cache</summary>
+		public int Count { get { return m_cache.Count; } }
+
+		/// <summary>Get/Set an upper limit on the number of cached items</summary>
+		public int Capacity
+		{
+			get { return m_capacity; }
+			set
+			{
+				using (Lock)
+				{
+					m_capacity = value;
+					LimitCacheSize();
+				}
+			}
+		}
+		private int m_capacity;
+
+		/// <summary>Return performance data for the cache</summary>
+		public CacheStats Stats { get { return m_stats; } }
+		private CacheStats m_stats;
+
+		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
+		public bool IsCached(TKey key) { return m_lookup.ContainsKey(key); }
+
+		/// <summary>Preload the cache with an item</summary>
+		public void Add(TKey key, TItem item)
+		{
+			if (Capacity == 0)
+				return;
+
+			using (Lock)
+			{
+				// Create a new node and add to the cache
+				var node = m_cache.AddFirst(new Entry{Key = key, Item = item});
+				m_lookup[key] = node;
+				LimitCacheSize();
+			}
+		}
+
+		/// <summary>Preload the cache with a range of items.</summary>
+		public void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items)
+		{
+			if (Capacity == 0)
+				return;
+
+			using (Lock)
+			{
+				var k = keys.GetIterator<TKey>();
+				var i = items.GetIterator<TItem>();
+				for (; !k.AtEnd && !i.AtEnd; k.MoveNext(), i.MoveNext())
+				{
+					// Create a new node and add to the cache
+					var node = m_cache.AddFirst(new Entry{Key = k.Current, Item = i.Current});
+					m_lookup[k.Current] = node;
+				}
+				LimitCacheSize();
+			}
+		}
+
+		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
+		public bool Remove(TKey key)
+		{
+			// Use the lookup map to find the node in the cache
+			LinkedListNode<Entry> node;
+			if (!m_lookup.TryGetValue(key, out node))
+				return false;
+
+			using (Lock)
+				DeleteCachedItem(node, false);
+
+			return true;
+		}
+
+		/// <summary>
+		/// Returns an object from the cache if available, otherwise calls 'on_miss'.
+		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
+		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
+		/// need to call 'Add' to return the object to the cache.</summary>
+		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
+		{
+			// Special case 0 capacity caches
+			if (Capacity == 0)
+				return on_miss(key);
+
+			// Use the lookup map to find the node in the cache
+			LinkedListNode<Entry> node;
+			if (m_lookup.TryGetValue(key, out node))
+			{
+				// Found!
+				Interlocked.Increment(ref m_stats.Hits);
+
+				// For standard caches, move the item to the head of the cache list.
+				// For object pools, remove the item from the cache before returning it.
+				using (Lock)
+				{
+					switch (Mode) {
+					default: throw new Exception("Unknown cache mode");
+					case CacheMode.StandardCache:
+						m_cache.Remove(node);
+						m_cache.AddFirst(node);
+						break;
+					case CacheMode.ObjectPool:
+						DeleteCachedItem(node, false);
+						break;
+					}
+				}
+
+				// Allow callers to do something on a cache hit
+				if (on_hit != null)
+					on_hit(key, node.Value.Item);
+			}
+			else
+			{
+				// Not found
+				Interlocked.Increment(ref m_stats.Misses);
+
+				// Cache miss, read it
+				var item = on_miss(key);
+				if (Equals(item, default(TItem)))
+					return default(TItem);
+
+				// For standard caches, store the new item in the cache before returning it.
+				// For object pools, do nothing, the user will put it in the cache when finished with it.
+				switch (Mode) {
+				default: throw new Exception("Unknown cache mode");
+				case CacheMode.StandardCache:
+					using (Lock)
+					{
+						// Check again if 'key' is not in the cache, it might have been
+						// added by another thread while we weren't holding the lock.
+						if (!m_lookup.TryGetValue(key, out node))
+						{
+							// Create a new node and add to the cache
+							node = m_cache.AddFirst(new Entry{Key = key, Item = item});
+							m_lookup[key] = node;
+							LimitCacheSize();
+						}
+					}
+					break;
+				case CacheMode.ObjectPool:
+					node = new LinkedListNode<Entry>(new Entry{Key = key, Item = item});
+					break;
+				}
+			}
+
+			// Return the cached object.
+			// For standard caches this item should really be immutable
+			// For object pools, it doesn't matter because it's not in our cache now.
+			return node.Value.Item;
+		}
+
+		/// <summary>Deletes (i.e. Disposes) and removes any object associated with 'key' from the cache</summary>
+		public void Invalidate(TKey key)
+		{
+			if (Capacity == 0)
+				return;
+
+			using (Lock)
+			{
+				LinkedListNode<Entry> node;
+				if (m_lookup.TryGetValue(key, out node))
+					DeleteCachedItem(node, true);
+			}
+		}
+
+		/// <summary>Delete (i.e. Dispose) and remove all items from the cache</summary>
+		public void Flush()
+		{
+			using (Lock)
+			{
+				int cap = Capacity;
+				Capacity = 0;
+				Capacity = cap;
+			}
+		}
+
+		/// <summary>Reduces the size of the cache to 'MaxCachedItemsCount' items</summary>
+		private void LimitCacheSize()
+		{
+			using (Lock)
+			{
+				while (m_cache.Count > Capacity)
+					DeleteCachedItem(m_cache.Last, true);
+			}
+		}
+
+		/// <summary>Delete a cached item. This method should only be called from within a 'Lock'</summary>
+		private void DeleteCachedItem(LinkedListNode<Entry> node, bool dispose)
+		{
+			// Remove the node from the list/lookup
+			m_lookup.Remove(node.Value.Key);
+			node.List.Remove(node);
+
+			// Dispose the item if disposable
+			if (dispose)
+			{
+				var disposable = node.Value.Item as IDisposable;
+				if (disposable != null) disposable.Dispose();
+			}
+		}
+
+		/// <summary>Calls Dispose() on all cached items</summary>
 		public void Dispose()
 		{
 			if (typeof(IDisposable).IsAssignableFrom(typeof(TItem)))
@@ -84,124 +336,6 @@ namespace pr.common
 					: Scope.Create(()=>{},()=>{});
 			}
 		}
-
-		/// <summary>Get/Set whether the cache should use thread locking</summary>
-		public bool ThreadSafe { get; set; }
-
-		/// <summary>The number of items in the cache</summary>
-		public int Count { get { return m_cache.Count; } }
-
-		/// <summary>Get/Set an upper limit on the number of cached items</summary>
-		public int Capacity
-		{
-			get { return m_capacity; }
-			set
-			{
-				using (Lock)
-				{
-					m_capacity = value;
-					LimitCacheSize();
-				}
-			}
-		}
-		private int m_capacity = 100;
-
-		/// <summary>Return performance data for the cache</summary>
-		public CacheStats Stats { get { return m_stats; } }
-		private CacheStats m_stats = new CacheStats();
-
-		/// <summary>Returns true if an object with the given key is in the cache</summary>
-		public bool IsCached(TKey key) { return m_lookup.ContainsKey(key); }
-
-		/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
-		{
-			// Use the lookup map to find the node in the cache
-			LinkedListNode<Entry> node;
-			if (m_lookup.TryGetValue(key, out node))
-			{
-				Interlocked.Increment(ref m_stats.Hits);
-
-				// If found, move it to the head of the cache list
-				using (Lock)
-				{
-					m_cache.Remove(node);
-					m_cache.AddFirst(node);
-				}
-
-				// Allow callers to do something on a cache hit
-				if (on_hit != null)
-					on_hit(key, node.Value.Item);
-			}
-			else
-			{
-				Interlocked.Increment(ref m_stats.Misses);
-
-				// Cache miss, read it
-				var item = on_miss(key);
-				if (Equals(item, default(TItem)))
-					return default(TItem);
-
-				using (Lock)
-				{
-					// Check again if 'key' is not in the cache, it might have been added by another thread
-					if (!m_lookup.TryGetValue(key, out node))
-					{
-						// Create a new node and add to the cache
-						node = m_cache.AddFirst(new Entry{Key = key, Item = item});
-						m_lookup[key] = node;
-						LimitCacheSize();
-					}
-				}
-			}
-			return node.Value.Item; // Danger, this should really be immutable
-		}
-
-		/// <summary>Handles notification from the database that a row has changed</summary>
-		public void Invalidate(TKey key)
-		{
-			using (Lock)
-			{
-				// See if we have this row cached and if so, remove it
-				LinkedListNode<Entry> node;
-				if (m_lookup.TryGetValue(key, out node))
-					DeleteCachedItem(node);
-			}
-		}
-
-		/// <summary>Removed all cached items from the cache</summary>
-		public void Flush()
-		{
-			using (Lock)
-			{
-				int cap = Capacity;
-				Capacity = 0;
-				Capacity = cap;
-			}
-		}
-
-		/// <summary>Reduces the size of the cache to 'MaxCachedItemsCount' items</summary>
-		private void LimitCacheSize()
-		{
-			using (Lock)
-			{
-				while (m_cache.Count > Capacity)
-					DeleteCachedItem(m_cache.Last);
-			}
-		}
-
-		/// <summary>Delete a cached item</summary>
-		private void DeleteCachedItem(LinkedListNode<Entry> node)
-		{
-			using (Lock)
-			{
-				m_lookup.Remove(node.Value.Key);
-				node.List.Remove(node);
-
-				var disposable = node.Value.Item as IDisposable;
-				if (disposable != null) disposable.Dispose();
-			}
-		}
 	}
 
 	/// <summary>A dummy cache that does no caching</summary>
@@ -220,20 +354,33 @@ namespace pr.common
 		public CacheStats Stats { get { return m_stats; } }
 		private CacheStats m_stats;
 
-		/// <summary>Returns true if an object with a primary key matching 'key' is currently cached</summary>
+		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
 		public bool IsCached(TKey key) { return false; }
 
-		/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
+		/// <summary>Preload the cache with an item</summary>
+		public void Add(TKey key, TItem item) {}
+
+		/// <summary>Preload the cache with a range of items.</summary>
+		public void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items) {}
+
+		/// <summary>Remove an item from the cache (does not delete/dispose it). Returns true if an item is removed</summary>
+		public bool Remove(TKey key) { return false; }
+
+		/// <summary>
+		/// Returns an object from the cache if available, otherwise calls 'on_miss'.
+		/// If the Mode is StandardCache, the result of 'on_miss' is stored in the cache.
+		/// If the Mode is ObjectPool, the returned object will not be in the cache, users
+		/// need to call 'Add' to return the object to the cache.</summary>
 		public TItem Get(TKey key, Func<TKey,TItem> on_miss, Action<TKey,TItem> on_hit = null)
 		{
 			Interlocked.Increment(ref m_stats.Misses);
 			return on_miss(key);
 		}
 
-		/// <summary>Remove a cached item with a given key</summary>
+		/// <summary>Deletes (i.e. Disposes) and removes any object associated with 'key' from the cache</summary>
 		public void Invalidate(TKey key) {}
 
-		/// <summary>Removed all cached items from the cache</summary>
+		/// <summary>Delete (i.e. Dispose) and remove all items from the cache</summary>
 		public void Flush() {}
 	}
 }
@@ -241,11 +388,35 @@ namespace pr.common
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using System.Linq;
 	using System.Threading.Tasks;
 	using common;
 
 	[TestFixture] public class TestCache
 	{
+		[Test] public void ObjectPoolBehaviour()
+		{
+			var cache = new Cache<int, object>{Mode = CacheMode.ObjectPool};
+			cache.Add(1, (object)1);
+			cache.Add(2, (object)2);
+			cache.Add(3, (object)3);
+
+			var item = cache.Get(2, k => (object)k);
+			Assert.True((int)item == 2);
+			Assert.True(cache.IsCached(2) == false);
+			cache.Add(2, item);
+
+			item = cache.Get(4, k => (object)k);
+			Assert.True((int)item == 4);
+			Assert.True(cache.IsCached(4) == false);
+		}
+		[Test] public void TestCachePreloading()
+		{
+			var cache = new Cache<int, string>();
+			cache.Add(Enumerable.Range(0, 100), Enumerable.Range(0, 100).Select(x => x.ToString()));
+			for (var i = 0; i != 100; ++i)
+				Assert.True(cache.IsCached(i));
+		}
 		[Test] public void TestThreadSafety()
 		{
 			var cache = new Cache<int,string>{ThreadSafe = true};
