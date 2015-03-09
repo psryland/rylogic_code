@@ -159,7 +159,7 @@ namespace pr.gui
 				if (size <= ofs + count)
 				{
 					m_line.Resize(ofs + count);
-					m_styl.Resize(ofs + count);
+					m_styl.Resize(ofs + count, () => new Style());
 				}
 				m_line.Remove(ofs, count);
  				m_line.Insert(ofs, str, 1);
@@ -654,7 +654,7 @@ namespace pr.gui
 						// Esc[0J Clear screen from cursor down ED0
 						if (m_out.pos.Y < m_lines.Count)
 						{
-							m_lines.Resize(m_out.pos.Y + 1);
+							m_lines.Resize(m_out.pos.Y + 1, () => new Line());
 							LineAt(m_out.pos.Y).resize(m_out.pos.X, '\0', m_out.style);
 						}
 						break;

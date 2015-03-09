@@ -45,9 +45,9 @@ namespace pr.extn
 		}
 
 		/// <summary>Resize a list default constructing objects to fill</summary>
-		public static void Resize<T>(this List<T> list, int newsize) where T:new()
+		public static void Resize<T>(this List<T> list, int newsize)
 		{
-			list.Resize(newsize,() => new T());
+			list.Resize(newsize, () => default(T));
 		}
 		public static void Resize<T>(this List<T> list, int newsize, Func<T> factory)
 		{
