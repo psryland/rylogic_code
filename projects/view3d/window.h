@@ -39,7 +39,7 @@ namespace view3d
 		EditorCont                m_editors;                  // User created editors
 		std::string               m_settings;                 // Allows a char const* to be returned
 
-		Window(pr::Renderer& rdr, HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
+		Window(pr::Renderer& rdr, HWND hwnd, bool gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
 			:m_settings_cb(settings_cb)
 			,m_render_cb(render_cb)
 			,m_hwnd(hwnd)
@@ -116,11 +116,11 @@ namespace view3d
 			m_hwnd = 0;
 		}
 
-		static pr::rdr::WndSettings Settings(HWND hwnd, BOOL gdi_compat)
+		static pr::rdr::WndSettings Settings(HWND hwnd, bool gdi_compat)
 		{
 			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 			RECT rect; ::GetClientRect(hwnd, &rect);
-			return pr::rdr::WndSettings(hwnd, TRUE, gdi_compat, pr::To<pr::iv2>(rect));
+			return pr::rdr::WndSettings(hwnd, true, gdi_compat, pr::To<pr::iv2>(rect));
 		}
 
 		// 'ctx' should be a Drawset

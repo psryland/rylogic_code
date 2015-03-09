@@ -123,7 +123,7 @@ VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat
 {
 	try
 	{
-		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat, settings_cb, render_cb));
+		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, settings_cb, render_cb));
 
 		DllLockGuard;
 		Dll().m_wnd_cont.insert(win.get());

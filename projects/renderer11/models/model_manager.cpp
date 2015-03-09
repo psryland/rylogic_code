@@ -31,6 +31,11 @@ namespace pr
 		// Create a model buffer in which one or more models can be created
 		ModelBufferPtr ModelManager::CreateModelBuffer(MdlSettings const& settings)
 		{
+			if (settings.m_vb.ElemCount == 0)
+				throw std::exception("Attempt to create 0-length model vertex buffer");
+			if (settings.m_ib.ElemCount == 0)
+				throw std::exception("Attempt to create 0-length model index buffer");
+
 			// Create a new model buffer
 			ModelBufferPtr mb(m_alex_mdlbuf.New());
 			mb->m_mdl_mgr = this;

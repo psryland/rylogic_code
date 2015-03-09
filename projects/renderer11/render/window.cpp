@@ -11,13 +11,13 @@ namespace pr
 	namespace rdr
 	{
 		// Default WndSettings
-		WndSettings::WndSettings(HWND hwnd, BOOL windowed, BOOL gdi_compat, pr::iv2 const& client_area)
+		WndSettings::WndSettings(HWND hwnd, bool windowed, bool gdi_compat, pr::iv2 const& client_area)
 			:m_hwnd(hwnd)
 			,m_windowed(windowed)
 			,m_mode(client_area)
 			,m_multisamp(4, ~0U)
 			,m_buffer_count(2)
-			,m_swap_effect(DXGI_SWAP_EFFECT_SEQUENTIAL)
+			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multisampling
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)

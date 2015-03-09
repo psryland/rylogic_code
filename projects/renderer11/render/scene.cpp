@@ -127,10 +127,14 @@ namespace pr
 		// Resize the viewport on back buffer resize
 		void Scene::OnEvent(Evt_Resize const& evt)
 		{
-			// Todo, this is assuming the viewport covers the entire back buffer
-			// it won't work for viewports that are sub regions of the screen
 			if (evt.m_done && evt.m_window == m_wnd)
-				m_viewport = evt.m_area;
+			{
+				// Only adjust the width/height of the viewport to the new area.
+				// If an application is using a different viewport region they'll
+				// have to adjust it after this (and before the next frame is drawn)
+				m_viewport.Width = float(evt.m_area.x);
+				m_viewport.Height = float(evt.m_area.y);
+			}
 		}
 	}
 }
