@@ -522,9 +522,6 @@
     <ClInclude Include="..\include\pr\gui\mfc_helper.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\menu_helper.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -878,6 +875,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\wingui.h">
       <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\bluetooth.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\network\sockets.h">
+      <Filter>pr\network</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
+      <Filter>pr\app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

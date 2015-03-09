@@ -152,6 +152,7 @@
     <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\grid_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\menu_helper.h" />
+    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\gui\mfc_helper.h" />
     <ClInclude Include="..\include\pr\gui\misc.h" />
     <ClInclude Include="..\include\pr\gui\progress_dlg.h" />
@@ -256,6 +257,8 @@
     <ClInclude Include="..\include\pr\meta\not.h" />
     <ClInclude Include="..\include\pr\meta\or.h" />
     <ClInclude Include="..\include\pr\meta\remove_pointer.h" />
+    <ClInclude Include="..\include\pr\network\bluetooth.h" />
+    <ClInclude Include="..\include\pr\network\sockets.h" />
     <ClInclude Include="..\include\pr\network\tcpip.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
@@ -279,7 +282,6 @@
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h" />
     <ClInclude Include="..\include\pr\threads\wait_state.h" />
     <ClInclude Include="..\projects\unittests\pp_output.h" />
-    <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\include\pr\script\char_stream.h" />
     <ClInclude Include="..\include\pr\script\comment_strip.h" />
@@ -370,6 +372,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -392,6 +395,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -413,6 +417,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -434,6 +439,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
