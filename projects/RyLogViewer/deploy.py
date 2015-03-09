@@ -1,5 +1,10 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*- 
+#
+# This script is setup to build projects in the RyLogViewer.sln file
+# If you get errors, check that you can get this solution to build
+# If projects have moved/changed/etc they'll need sorting in this solution
+
 import sys, os, shutil, re
 sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
 import Rylogic as Tools
@@ -17,26 +22,19 @@ try:
 
 	wwwroot = r"Z:\www\rylogic.co.nz"
 	installer_name = "RyLogViewerSetup.exe"
-	srcdir = UserVars.root + "\\projects\\rylogviewer"
 	dstdir = UserVars.root + "\\bin"
 	symdir = UserVars.root + "\\local\\symbols"
-	sln    = srcdir + "\\RylogViewer.sln"
+	sln    = UserVars.root + "\\projects\\RylogViewer\\RylogViewer.sln"
 	dst    = dstdir + "\\rylogviewer"
 	sym    = symdir + "\\rylogviewer"
-	config = input("Configuration (debug, release(default))? ")
-	if config == "": config = "release"
+	config = "release"
+	#config = input("Configuration (debug, release(default))? ")
+	#if config == "": config = "release"
 
+	srcdir     = UserVars.root + "\\projects\\rylogviewer"
 	bindir     = srcdir + "\\bin\\" + config
 	objdir     = srcdir + "\\obj\\" + config
-	extndll    = srcdir + "\\extensionapi\\bin\\"+config+"\\RyLogViewerExtensions.dll"
 	exampledir = srcdir + "\\plugins\\exampleplugin"
-
-	input(
-		" Deploy Settings:\n"
-		"         Source: " + bindir + "\n"
-		"    Destination: " + dst + "\n"
-		"  Configuration: " + config + "\n"
-		"Press enter to continue")
 
 	#Build the docs
 	def ExportDirectory(dir):
@@ -50,15 +48,20 @@ try:
 	ExportDirectory(srcdir + r"\Resources")
 
 	#Invoke MSBuild
+	print("Building...")
 	projects = [
 		"RyLogViewer",
-		"RyLogViewerExtensions",
-		"ExamplePlugin",
+		"RyLogViewer.Extensions",
+		"RyLogViewer.ExamplePlugin",
 		]
-	projs = ";".join(projects)
-	platform = "Any CPU"
-	print("Building the exe...")
-	Tools.Exec([UserVars.msbuild, UserVars.msbuild_props, sln, "/t:"+projs, "/p:Configuration="+config+";Platform="+platform, "/m", "/verbosity:minimal", "/nologo"])
+	platforms = [
+		"Any CPU",
+		]
+	configs = [
+		"release",
+		"debug",
+		]
+	Tools.MSBuild(sln, projects, platforms, configs, False, False)
 
 	#Ensure output directories exist and are empty
 	if os.path.exists(dst): shutil.rmtree(dst)
@@ -75,8 +78,6 @@ try:
 	Tools.Copy(bindir + "\\docs"            , dst + "\\docs")
 	Tools.Copy(bindir + "\\examples"        , dst + "\\examples")
 	Tools.Copy(bindir + "\\plugins"         , dst + "\\plugins")
-	Tools.Copy(extndll                      , dst + "\\plugins")
-	Tools.Copy(
 
 	#Create a zip of the dstdir
 	dstzip = dst + ".zip"
