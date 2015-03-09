@@ -281,16 +281,16 @@ namespace pr.common
 				ForeColourIndex = rhs.ForeColourIndex ;
 			}
 
-			/// <summary>Writes control words for the differences in style begin 'prev' and 'next'</summary>
-			public static void Write(StrBuild sb, TextStyle next, TextStyle prev)
+			/// <summary>Writes control words for the differences in style begin 'prev' and 'next'. Pass 'prev' as null to write all control words</summary>
+			public static StrBuild Write(StrBuild sb, TextStyle next, TextStyle prev)
 			{
-				if (next.FontStyle != prev.FontStyle)
+				if (prev == null || next.FontStyle != prev.FontStyle)
 				{
 					if (next.FontStyle == EFontStyle.Regular)
 						sb.Append(StrBuild.EType.Control, @"\plain");
 					else
 					{
-						var diff = next.FontStyle ^ prev.FontStyle;
+						var diff = next.FontStyle ^ (prev != null ? prev.FontStyle : 0);
 						if ((diff & EFontStyle.Bold     ) != 0) sb.Append(StrBuild.EType.Control, (next.FontStyle & EFontStyle.Bold     ) != 0 ? @"\b"      : @"\b0"         );
 						if ((diff & EFontStyle.Italic   ) != 0) sb.Append(StrBuild.EType.Control, (next.FontStyle & EFontStyle.Italic   ) != 0 ? @"\i"      : @"\i0"         );
 						if ((diff & EFontStyle.Underline) != 0) sb.Append(StrBuild.EType.Control, (next.FontStyle & EFontStyle.Underline) != 0 ? @"\ul"     : @"\ulnone"     );
@@ -300,11 +300,13 @@ namespace pr.common
 					}
 				}
 
-				if (next.ForeColourIndex != prev.ForeColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\cf{0}" ,next.ForeColourIndex);
-				if (next.BackColourIndex != prev.BackColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\highlight{0}" ,next.BackColourIndex); // \cbN doesn't work, MS didn't implement it...fail
+				if (prev == null || next.ForeColourIndex != prev.ForeColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\cf{0}" ,next.ForeColourIndex);
+				if (prev == null || next.BackColourIndex != prev.BackColourIndex) sb.AppendFormat(StrBuild.EType.Control, @"\highlight{0}" ,next.BackColourIndex); // \cbN doesn't work, MS didn't implement it...fail
 
-				if (next.FontIndex != prev.FontIndex) sb.AppendFormat(StrBuild.EType.Control, @"\f{0}"  ,next.FontIndex);
-				if (next.FontSize  != prev.FontSize ) sb.AppendFormat(StrBuild.EType.Control, @"\fs{0}" ,next.FontSize * 2); // \fs is in 'half-points'
+				if (prev == null || next.FontIndex != prev.FontIndex) sb.AppendFormat(StrBuild.EType.Control, @"\f{0}"  ,next.FontIndex);
+				if (prev == null || next.FontSize  != prev.FontSize ) sb.AppendFormat(StrBuild.EType.Control, @"\fs{0}" ,next.FontSize * 2); // \fs is in 'half-points'
+
+				return sb;
 			}
 		}
 
@@ -525,6 +527,7 @@ namespace pr.common
 			/// <summary>Append rtf content</summary>
 			public Builder Append(Paragraph para)     { m_root.Content.Add(para); return this; }
 			public Builder Append(PageBreak pbreak)   { m_root.Content.Add(pbreak); return this; }
+			public Builder Append(Hyperlink hlink)    { m_root.Content.Add(hlink); return this; }
 			public Builder Append(BulletList blist)   { m_root.Content.Add(blist); return this; }
 			public Builder Append(Table table)        { m_root.Content.Add(table); return this; }
 			public Builder Append(EmbeddedImage img)  { m_root.Content.Add(img); return this; }
@@ -753,6 +756,36 @@ namespace pr.common
 		{
 			/// <summary>Writes this object as rtf into the provided string builder</summary>
 			public override void ToRtf(StrBuild sb, Content parent) { sb.Append(StrBuild.EType.Control, @"\page"); }
+		}
+
+		/// <summary>Inserts a hyper link</summary>
+		public class Hyperlink :Content
+		{
+			public Hyperlink(string url, string friendly_text = null, TextStyle style = null)
+			{
+				Style        = style ?? new TextStyle{FontStyle = EFontStyle.Underline, ForeColourIndex = 0};
+				Url          = url;
+				FriendlyText = friendly_text;
+			}
+
+			/// <summary>The style applied to the text</summary>
+			public TextStyle Style { get; set; }
+
+			/// <summary>The hyperlink url</summary>
+			public string Url { get; set; }
+
+			/// <summary>Alternate text to display instead of the Url. If null, the Url is displayed</summary>
+			public string FriendlyText { get; set; }
+
+			/// <summary>Writes this object as rtf into the provided string builder</summary>
+			public override void ToRtf(StrBuild sb, Content parent)
+			{
+				var friendly = !string.IsNullOrEmpty(FriendlyText) ? FriendlyText : Url;
+				var style = TextStyle.Write(new StrBuild(), Style, null);
+				var link = @"{\field{\*\fldinst{HYPERLINK """+Url+@"""}}{\fldrslt{"+style.ToString()+" "+friendly+"}}}";
+				if (!sb.LineStart) sb.AppendLine(StrBuild.EType.Control);
+				sb.Append(StrBuild.EType.Control, link);
+			}
 		}
 
 		/// <summary>A block of text that uses a specific style</summary>
@@ -1566,6 +1599,10 @@ namespace pr.unittests
 			var rtf = new Rtf.Builder();
 			rtf.Append("A basic string\n");
 
+			rtf.Append(new Rtf.Hyperlink("http://www.google.com", "Google")).AppendLine();
+			rtf.Append("An inline link: ").Append(new Rtf.Hyperlink("http://www.facebook.com", "Facebook")).Append(" followed by more text").AppendLine();
+			rtf.Append(new Rtf.Hyperlink("http://www.msn.com")).AppendLine();
+
 			rtf.TextStyle = new Rtf.TextStyle
 			{
 				FontIndex = rtf.FontIndex(Rtf.FontDesc.CourierNew),
@@ -1670,6 +1707,9 @@ namespace pr.unittests
 			table.SetColumnStyle(1, new Rtf.Table.CellStyle{CellSize = 4000});
 			table.SetColumnStyle(2, new Rtf.Table.CellStyle{CellSize = 3000});
 			rtf.Append(table);
+
+			rtf.TextStyle = Rtf.TextStyle.Default;
+			rtf.Append("This is the last line").AppendLine();
 
 			var str = rtf.ToString();
 			File.WriteAllText("tmp.rtf", str);
