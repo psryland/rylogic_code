@@ -1,4 +1,4 @@
-import sys, os, time, shutil, subprocess, re, socket
+import sys, os, time, shutil, glob, subprocess, re, socket, zipfile
 import UserVars
 
 # Terminate the script indicating success
@@ -45,6 +45,15 @@ def NormaliseFilepath(filepath):
 	filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
 	return filepath
 
+# Enumerate recursively through a directory
+def EnumFiles(root):
+	for dirname, dirnames, filenames in os.walk(root):
+		# Return the files
+		# We could remove entries from 'dirnames' to
+		# prevent recursion into those folders...
+		for filename in filenames:
+			yield os.path.join(dirname, filename)
+
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
 	sfound = os.path.exists(src)
@@ -83,39 +92,58 @@ def DiffContent(src,dst,trace=False):
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
 def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False):
-	
-	# Check that source exists
-	if not os.path.exists(src):
-		if ignore_non_existing:
-			return
+
+	src_is_dir = os.path.isdir(src)
+	dst_is_dir = os.path.isdir(dst) or dst.endswith("/") or dst.endswith("\\") or src_is_dir
+
+	# Find the names of the source files to copy
+	files = []
+	if src_is_dir:
+		files += [f for f in EnumFiles(src)]
+	elif os.path.exists(src):
+		files += [src]
+	elif "*" in src or "?" in src:
+		files += glob.glob(src)
+	elif not ignore_non_existing:
+		raise FileNotFoundError("ERROR: "+src+" does not exist")
+
+	# If the 'src' represents multiple files, 'dst' must be a directory
+	if src_is_dir or len(files) > 1:
+		# if 'dst' doesn't exist, assume it's a directory
+		if not os.path.exists(dst):
+			dst_is_dir = True
+		# or if it does exist, check that it is actually a directory
+		elif not dst_is_dir:
+			raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
+
+	# Ensure the dstdir exists
+	dstdir = (dst if dst_is_dir else os.path.dirname(dst)).rstrip("/\\")
+	if not os.path.exists(dstdir):
+		os.makedirs(dstdir)
+
+	# Copy the file(s) to 'dst'
+	for srcfile in files:
+		# All src directories should have been converted to a list of files
+		if os.path.isdir(srcfile):
+			raise AssertionError("ERROR: "+srcfile+" is a directory, not a file");
+		
+		# If 'dst' is a directory, use the same filename from 'srcfile'
+		if dst_is_dir:
+			spath = os.path.relpath(srcfile, src) if src_is_dir else os.path.split(srcfile)[1]
+			dstfile = os.path.join(dstdir, spath)
 		else:
-			raise FileNotFoundError("ERROR: "+src+" does not exist")
-		
-	# If the 'src' is a directory, copy each file to 'dst' (which must also be a directory)
-	if os.path.isdir(src):
-		# if 'dst' doesn't exist, create it as a directory or if it does
-		# exist, check that it is actually a directory
-		if not os.path.exists(dst): os.makedirs(dst)
-		elif not os.path.isdir(dst): raise FileNotFoundError("ERROR: "+dst+" is not a valid directory")
-		# Copy each file in 'src' to 'dst'
-		for file in os.listdir(src):
-			Copy(src + "\\" + file, dst + "\\" + file, only_if_modified)
-		return
-	
-	# If 'dst' is a directory, use the same filename from 'src'
-	if os.path.isdir(dst):
-		srcdir,srcfile = os.path.split(src)
-		dst = dst.rstrip("/\\") + "\\" + srcfile
-	
-	# Copy the file to 'dst'
-	if not only_if_modified or DiffContent(src,dst):
-		dstdir = os.path.dirname(dst)
-		if not os.path.exists(dstdir): os.makedirs(dstdir)
-		print(src + " --> " + dst)
-		shutil.copy2(src, dst)
-		
-	elif show_unchanged:
-		print(src + " --> unchanged")
+			dstfile = dst
+
+		# Copy if modified or always based on the flag
+		if only_if_modified and not DiffContent(srcfile,dstfile):
+			if show_unchanged: print(srcfile + " --> unchanged")
+			continue
+
+		# Ensure the directory path exists
+		d,f = os.path.split(dstfile);
+		if not os.path.exists(d): os.makedirs(d);
+		print(srcfile + " --> " + dstfile)
+		shutil.copy2(srcfile, dstfile)
 
 # Return the line number of a given byte offset into a file
 def LineNumber(fpath, ofs):
@@ -247,15 +275,6 @@ def UpdateFile(filepath, regex, repl, all=False):
 				outf.write(line)
 	os.unlink(filepath)
 	os.rename(filepath+".tmp", filepath)
-
-# Enumerate recursively through a directory
-def EnumFiles(root):
-	for dirname, dirnames, filenames in os.walk(root):
-		# Return the files
-		# We could remove entries from 'dirnames' to
-		# prevent recursion into those folders...
-		for filename in filenames:
-			yield os.path.join(dirname, filename)
 
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
