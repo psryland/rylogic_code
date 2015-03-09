@@ -8,6 +8,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -272,6 +273,7 @@ namespace pr.common
 				type == typeof(Int64)          ||
 				type == typeof(UInt64)         ||
 				type == typeof(DateTimeOffset) ||
+				type == typeof(Color) ||
 				type.IsEnum)
 				return DataType.Integer;
 			if (type == typeof(Single)         ||
@@ -292,18 +294,18 @@ namespace pr.common
 		}
 
 		/// <summary>A helper for gluing strings together</summary>
-		public static string Sql(params object[] parts)
+		[DebuggerStepThrough] public static string Sql(params object[] parts)
 		{
 			m_sql_cached_sb = m_sql_cached_sb ?? new StringBuilder();
 			return Sql(m_sql_cached_sb, parts);
 		}
-		public static string Sql(StringBuilder sb, params object[] parts)
+		[DebuggerStepThrough] public static string Sql(StringBuilder sb, params object[] parts)
 		{
 			sb.Length = 0;
 			SqlAppend(sb, parts);
 			return sb.ToString();
 		}
-		public static void SqlAppend(StringBuilder sb, params object[] parts)
+		[DebuggerStepThrough] public static void SqlAppend(StringBuilder sb, params object[] parts)
 		{
 			// Do not change this to automatically add white space,
 			// 'p' might be within quoted string which can turn this:
@@ -519,6 +521,15 @@ namespace pr.common
 					Long(stmt, idx, dto.Ticks);
 				}
 			}
+			public static void Color(sqlite3_stmt stmt, int idx, object value)
+			{
+				if (value == null) Null(stmt, idx);
+				else
+				{
+					var col = (Color)value;
+					Int(stmt, idx, col.ToArgb());
+				}
+			}
 
 			public delegate void Func(sqlite3_stmt stmt, int index, object obj);
 			public class Map :Dictionary<Type, Func>
@@ -543,6 +554,7 @@ namespace pr.common
 					Add(typeof(int[])          ,IntArray      );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
+					Add(typeof(Color)          ,Color         );
 				}
 			}
 
@@ -678,6 +690,11 @@ namespace pr.common
 				long ticks = (long)Long(stmt, idx);
 				return new DateTimeOffset(ticks, TimeSpan.Zero);
 			}
+			public static object Color(sqlite3_stmt stmt, int idx)
+			{
+				var argb = (int)Int(stmt, idx);
+				return System.Drawing.Color.FromArgb(argb);
+			}
 
 			public delegate object Func(sqlite3_stmt stmt, int index);
 			public class Map :Dictionary<Type, Func>
@@ -702,6 +719,7 @@ namespace pr.common
 					Add(typeof(int[])          ,IntArray      );
 					Add(typeof(Guid)           ,Guid          );
 					Add(typeof(DateTimeOffset) ,DateTimeOffset); // Note: DateTime deliberately not supported, use DateTimeOffset instead
+					Add(typeof(Color)          ,Color         );
 				}
 			}
 
@@ -917,16 +935,25 @@ namespace pr.common
 			private readonly Cache<long,object> m_cache = new Cache<long, object>();
 			private readonly TableMetaData m_meta;
 
-			public ObjectCache(Type type)
+			public ObjectCache(Type type, bool thread_safe)
 			{
-				m_meta = TableMetaData.GetMetaData(type);
+				m_meta       = TableMetaData.GetMetaData(type);
+				m_cache.Mode = CacheMode.StandardCache;
+				ThreadSafe   = thread_safe;
 			}
 
 			/// <summary>Get/Set whether the cache should use thread locking</summary>
-			public bool ThreadSafe { get { return m_cache.ThreadSafe; } set { m_cache.ThreadSafe = value; } }
+			public bool ThreadSafe
+			{
+				get { return m_cache.ThreadSafe; }
+				set { m_cache.ThreadSafe = value; }
+			}
 
 			/// <summary>The number of items in the cache</summary>
-			public int Count { get { return m_cache.Count; } }
+			public int Count
+			{
+				get { return m_cache.Count; }
+			}
 
 			/// <summary>Get/Set an upper limit on the number of cached objects</summary>
 			public int Capacity
@@ -936,20 +963,41 @@ namespace pr.common
 			}
 
 			/// <summary>Return performance data for the cache</summary>
-			public CacheStats Stats { get { return m_cache.Stats; } }
+			public CacheStats Stats
+			{
+				get { return m_cache.Stats; }
+			}
 
 			/// <summary>Returns true if an object with the given primary key is in the cache</summary>
 			public bool IsCached(object key)
 			{
-				var row_id = Convert.ToInt64(key);
-				return m_cache.IsCached(row_id);
+				return m_cache.IsCached(Convert.ToInt64(key));
+			}
+
+			/// <summary>Preload the cache with an item</summary>
+			public void Add(object key, object item)
+			{
+				m_cache.Add(Convert.ToInt64(key), item);
+			}
+
+			/// <summary>
+			/// Preload the cache with a range of items.
+			/// 'keys.Count' must be greater or equal to 'items.Count'.</summary>
+			public void Add(IEnumerable<object> keys, IEnumerable<object> items)
+			{
+				m_cache.Add(keys.Select(x => Convert.ToInt64(x)), items);
+			}
+
+			/// <summary>Remove and item from the cache (does not delete/dispose it)</summary>
+			public bool Remove(object key)
+			{
+				return m_cache.Remove(Convert.ToInt64(key));
 			}
 
 			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
 			public object Get(object key, Func<object,object> on_miss, Action<object,object> on_hit = null)
 			{
-				var row_id = Convert.ToInt64(key);
-				var obj = m_cache.Get(row_id,
+				var obj = m_cache.Get(Convert.ToInt64(key),
 					k =>
 						{
 							Trace.WriteLine(ETrace.ObjectCache, string.Format("Object Cache Miss: key={0}", key.ToString()));
@@ -979,7 +1027,10 @@ namespace pr.common
 			}
 
 			/// <summary>Removed all cached items from the cache</summary>
-			public void Flush() { m_cache.Flush(); }
+			public void Flush()
+			{
+				m_cache.Flush();
+			}
 		}
 
 		/// <summary>A cache of compiled queries</summary>
@@ -988,27 +1039,86 @@ namespace pr.common
 			private readonly Cache<string,Query> m_cache = new Cache<string, Query>();
 			private readonly Database m_db;
 
-			public QueryCache(Database db) { m_db = db; }
+			public QueryCache(Database db, bool thread_safe)
+			{
+				m_db         = db;
+				m_cache.Mode = CacheMode.ObjectPool;
+				ThreadSafe   = thread_safe;
+			}
 
 			/// <summary>Get/Set whether the cache should use thread locking</summary>
-			public bool ThreadSafe { get { return m_cache.ThreadSafe; } set { m_cache.ThreadSafe = value; } }
+			public bool ThreadSafe
+			{
+				get { return m_cache.ThreadSafe; }
+				set { m_cache.ThreadSafe = value; }
+			}
 
 			/// <summary>The number of items in the cache</summary>
-			public int Count { get { return m_cache.Count; } }
+			public int Count
+			{
+				get { return m_cache.Count; }
+			}
 
 			/// <summary>Get/Set an upper limit on the number of cached items</summary>
-			public int Capacity { get { return m_cache.Capacity; } set { m_cache.Capacity = value; } }
+			public int Capacity
+			{
+				get { return m_cache.Capacity; }
+				set { m_cache.Capacity = value; }
+			}
 
 			/// <summary>Return performance data for the cache</summary>
-			public CacheStats Stats { get { return m_cache.Stats; } }
+			public CacheStats Stats
+			{
+				get { return m_cache.Stats; }
+			}
 
 			/// <summary>Returns true if an object with the given key is in the cache</summary>
-			public bool IsCached(string key) { return m_cache.IsCached(key); }
+			public bool IsCached(string key)
+			{
+				return m_cache.IsCached(key);
+			}
+
+			/// <summary>Preload the cache with an item</summary>
+			public void Add(string key, Query item)
+			{
+				m_cache.Add(key, item);
+			}
+
+			/// <summary>Preload the cache with a range of items.</summary>
+			public void Add(IEnumerable<string> keys, IEnumerable<Query> items)
+			{
+				m_cache.Add(keys, items);
+			}
+
+			/// <summary>Remove and item from the cache (does not delete/dispose it)</summary>
+			public bool Remove(string key)
+			{
+				return m_cache.Remove(key);
+			}
 
 			/// <summary>Returns an object from the cache if available, otherwise calls 'on_miss' and caches the result</summary>
-			Query ICache<string, Query>.Get(string key, Func<string, Query> on_miss, Action<string, Query> on_hit)
+			Query ICache<string,Query>.Get(string key, Func<string, Query> on_miss, Action<string, Query> on_hit)
 			{
 				return GetQuery(key);
+			}
+
+			/// <summary>
+			/// A delegate attached to the Closing handler of a query that returns it to the
+			/// pool. This is only attached while the query is "out in the wild"</summary>
+			private void ReturnToPool(object sender, Query.QueryClosingEventArgs args)
+			{
+				var query = (Query)sender;
+				Trace.QueryInUse(query, false);
+
+				// Reset the query to release any locks on associated tables
+				query.Reset();
+
+				// Remove the delegate, if the query is disposed while in the pool we don't want to re-add it to the pool
+				query.Closing -= ReturnToPool;
+
+				// Return the query to the cache on closing
+				m_cache.Add(query.SqlString, query);
+				args.Cancel = true;
 			}
 
 			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
@@ -1018,20 +1128,21 @@ namespace pr.common
 
 				// Create a new compiled query.
 				var query = new_query();
-				query.Closing += (s,a) =>
-					{
-						a.Cancel = m_cache.IsCached(key); // Cancel closing while the query is still in the cache.
-						query.Reset();
-						Trace.QueryInUse(query, false);
-					};
+
+				// Attach a delegate to ensure the query gets returned to the pool when closed
+				query.Closing += ReturnToPool;
+
 				Trace.QueryInUse(query, true);
 				return query;
 			}
 
-			/// <summary>Helper method for creating new queries when a query is not in the cache</summary>
-			private void OnHit(Query query, IEnumerable<object> parms = null, int first_idx = 1)
+			/// <summary>Helper method for resetting an existing query that has been pulled from the cache</summary>
+			private void OnHit(string key, Query query, int first_idx, IEnumerable<object> parms)
 			{
 				Trace.WriteLine(ETrace.QueryCache, string.Format("Query Cache Hit: {0}", query));
+
+				// Attach a delegate to ensure the query gets returned to the pool when closed
+				query.Closing += ReturnToPool;
 
 				// Before returning the cached query, reset it
 				query.Reset();
@@ -1042,11 +1153,11 @@ namespace pr.common
 			}
 
 			/// <summary>Returns a query from the cache</summary>
-			public Query GetQuery(string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
+			public Query GetQuery(string sql_string, int first_idx = 1, IEnumerable<object> parms = null)
 			{
 				return m_cache.Get(sql_string
-					,k     => OnMiss(k, () => new Query(m_db, sql_string, parms, first_idx))
-					,(k,v) => OnHit(v, parms, first_idx));
+					,k     => OnMiss(k, () => new Query(m_db, sql_string, first_idx, parms))
+					,(k,v) => OnHit(k, v, first_idx, parms));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
@@ -1054,15 +1165,15 @@ namespace pr.common
 			{
 				return (InsertCmd)m_cache.Get(SqlInsertCmd(type, on_constraint)
 					,k     => OnMiss(k, () => new InsertCmd(type, m_db, on_constraint))
-					,(k,v) => OnHit(v));
+					,(k,v) => OnHit(k, v, 1, null));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
 			public UpdateCmd UpdateCmd(Type type)
 			{
 				return (UpdateCmd)m_cache.Get(SqlUpdateCmd(type)
-					,k => OnMiss(k, () => new UpdateCmd(type, m_db))
-					,(k,v) => OnHit(v));
+					,k     => OnMiss(k, () => new UpdateCmd(type, m_db))
+					,(k,v) => OnHit(k, v, 1, null));
 			}
 
 			/// <summary>Returns an insert query from the cache</summary>
@@ -1070,7 +1181,7 @@ namespace pr.common
 			{
 				return (GetCmd)m_cache.Get(SqlGetCmd(type)
 					,k     => OnMiss(k, () => new GetCmd(type, m_db))
-					,(k,v) => OnHit(v));
+					,(k,v) => OnHit(k, v, 1, null));
 			}
 
 			/// <summary>Handles notification from the database that a row has changed</summary>
@@ -1119,19 +1230,19 @@ namespace pr.common
 				DataChanged += InvalidateCachesOnDataChanged;
 
 				// Initialise the query cache
-				m_query_cache = new QueryCache(this){Capacity = 50};
+				m_query_cache = new QueryCache(this, Dll.ThreadSafe){Capacity = 50};
 
 				// Default to no busy timeout
 				BusyTimeout = 0;
 			}
-			public void Dispose()
+			public virtual void Dispose()
 			{
 				Close();
 				m_this_handle.Free();
 			}
 
 			/// <summary>The filepath of the database file opened</summary>
-			public string Filepath { get; set; }
+			public string Filepath { get; private set; }
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
 			public sqlite3 Handle
@@ -1192,7 +1303,7 @@ namespace pr.common
 				{
 					var meta = TableMetaData(type);
 					if (meta.SingleIntegralPK)
-						m_caches.Add(type.Name, c = new ObjectCache(type));
+						m_caches.Add(type.Name, c = new ObjectCache(type, Dll.ThreadSafe));
 					else
 						m_caches.Add(type.Name, c = new PassThruCache<object,object>());
 				}
@@ -1235,18 +1346,18 @@ namespace pr.common
 			/// <summary>
 			/// Executes an sql command that is expected to not return results. (e.g. Insert/Update/Delete).
 			/// Returns the number of rows affected by the operation</summary>
-			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			public int Execute(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
 				AssertCorrectThread();
-				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, first_idx, parms))
 					return query.Run();
 			}
 
 			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
-			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			public int ExecuteScalar(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
 				AssertCorrectThread();
-				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, first_idx, parms))
 				{
 					if (!query.Step()) throw Exception.New(Result.Error, "Scalar query returned no results");
 					int value = (int)Read.Int(query.Stmt, 0);
@@ -1261,17 +1372,26 @@ namespace pr.common
 				get { return Dll.LastInsertRowId(m_db); }
 			}
 
+			///<remarks>
+			/// How to Enumerate rows of queries that select specific columns, or use functions:
+			/// Use (or create) a type with members mapped to the column names returned.
+			/// e.g. Create a type and use the Sqlite.Column attribute to set the Name for
+			/// each member so that is matches the names returned in the query.
+			/// Or, change the query so that the returned columns are given names matching the
+			/// members of your type.
+			///</remarks>
+
 			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
-			public IEnumerable EnumRows(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			public IEnumerable EnumRows(Type type, string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
 				AssertCorrectThread();
-				using (var query = QueryCache.GetQuery(sql, parms, first_idx))
+				using (var query = QueryCache.GetQuery(sql, first_idx, parms))
 					foreach (var r in query.Rows(type))
 						yield return r; // Can't just return query.Rows(type) because Dispose() is called on query
 			}
-			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			public IEnumerable<T> EnumRows<T>(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
-				return EnumRows(typeof(T), sql, parms, first_idx).Cast<T>();
+				return EnumRows(typeof(T), sql, first_idx, parms).Cast<T>();
 			}
 
 			/// <summary>Drop any existing table created for type 'T'</summary>
@@ -1413,16 +1533,10 @@ namespace pr.common
 			}
 			private Transaction m_transaction_in_progress;
 
-			/// <summary>General sql query on table(T)</summary>
-			public Query Query(Type type, string sql, IEnumerable<object> parms = null, int first_idx = 1)
+			/// <summary>General sql querysummary>
+			public Query Query(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
-				return Table(type).Query(sql, parms, first_idx);
-			}
-
-			/// <summary>General sql query on table(T)</summary>
-			public Query Query<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return Query(typeof(T), sql, parms, first_idx);
+				return QueryCache.GetQuery(sql, first_idx, parms);
 			}
 
 			/// <summary>Find a row in a table of type 'T'</summary>
@@ -1457,6 +1571,12 @@ namespace pr.common
 			public int Delete(object item)
 			{
 				return Table(item.GetType()).Delete(item);
+			}
+
+			/// <summary>Returns free db pages to the OS reducing the db file size</summary>
+			public void Vacuum()
+			{
+				Execute("vacuum");
 			}
 
 			/// <summary>Returns the table meta data for 'T'</summary>
@@ -1548,7 +1668,11 @@ namespace pr.common
 
 			[Conditional("DEBUG")] internal void AssertCorrectThread()
 			{
-				if (m_owning_thread_id != Thread.CurrentThread.ManagedThreadId)
+				// This is not strictly correct but is probably good enough.
+				// If ConfigOption.SingleThreaded is used, all access must be from the thread that opened the db connection.
+				// If ConfigOption.MultiThreaded is used, only one thread at a time can use the db connection.
+				// If ConfigOption.Serialized is used, it's open session for any threads
+				if (m_owning_thread_id != Thread.CurrentThread.ManagedThreadId && !Dll.ThreadSafe)
 				{
 					var ex = Exception.New(Result.Misuse, string.Format("Cross-thread use of Sqlite ORM.\n{0}", new StackTrace()));
 					Log.Exception(this, ex, "Cross-thread use of Sqlite ORM");
@@ -1582,6 +1706,12 @@ namespace pr.common
 				get { return m_meta.Name; }
 			}
 
+			/// <summary>Get the database connection associated with this table</summary>
+			public Database DB
+			{
+				get { return m_db; }
+			}
+
 			/// <summary>Return the meta data for this table</summary>
 			public TableMetaData MetaData
 			{
@@ -1597,46 +1727,14 @@ namespace pr.common
 				get { return m_meta.ColumnCount; }
 			}
 
-			/// <summary>Returns the number of rows in this table</summary>
+			/// <summary>Get the number of rows in this table</summary>
 			public int RowCount
 			{
 				get
 				{
 					GenerateExpression(null, "count");
-					try { return m_db.ExecuteScalar(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+					try { return m_db.ExecuteScalar(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
 				}
-			}
-
-			// ReSharper disable MemberHidesStaticFromOuterClass
-			/// <summary>General sql query on the table</summary>
-			public Query Query(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return m_db.QueryCache.GetQuery(sql, parms, first_idx);
-			}
-			// ReSharper restore MemberHidesStaticFromOuterClass
-
-			/// <summary>
-			/// Executes an sql command that is expected to not return results. (e.g. Insert/Update/Delete).
-			/// Returns the number of rows affected by the operation</summary>
-			public int Execute(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return m_db.Execute(sql, parms, first_idx);
-			}
-
-			/// <summary>Executes an sql query that returns a scalar (i.e. int) result</summary>
-			public int ExecuteScalar(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return m_db.ExecuteScalar(sql, parms, first_idx);
-			}
-
-			/// <summary>Executes a query and enumerates the rows, returning each row as an instance of type 'T'</summary>
-			public IEnumerable EnumRows(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return m_db.EnumRows(m_meta.Type, sql, parms, first_idx);
-			}
-			public IEnumerable<T> EnumRows<T>(string sql, IEnumerable<object> parms = null, int first_idx = 1)
-			{
-				return EnumRows(sql, parms, first_idx).Cast<T>();
 			}
 
 			/// <summary>Returns a row in the table or null if not found</summary>
@@ -1730,6 +1828,23 @@ namespace pr.common
 					m_meta.SetAutoIncPK(item, m_db.Handle);
 					return count;
 				}
+			}
+
+			/// <summary>Insert many items into the table.</summary>
+			public int Insert(IEnumerable<object> items, OnInsertConstraint on_constraint = OnInsertConstraint.Reject)
+			{
+				int count = 0;
+				using (var insert = m_db.QueryCache.InsertCmd(m_meta.Type, on_constraint))
+				{
+					foreach (var item in items)
+					{
+						insert.BindObj(item); // Bind 'item' to it
+						count += insert.Run();  // Run the query
+						m_meta.SetAutoIncPK(item, m_db.Handle);
+						insert.Reset();
+					}
+				}
+				return count;
 			}
 
 			/// <summary>Update 'item' in the table</summary>
@@ -1833,7 +1948,7 @@ namespace pr.common
 			{
 				GenerateExpression();
 				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
-				return m_db.EnumRows(m_meta.Type, m_cmd.SqlString, m_cmd.Arguments).GetEnumerator();
+				return m_db.EnumRows(m_meta.Type, m_cmd.SqlString, 1, m_cmd.Arguments).GetEnumerator();
 			}
 
 			/// <summary>Generate the sql string and arguments</summary>
@@ -1892,7 +2007,7 @@ namespace pr.common
 			public int Delete()
 			{
 				GenerateExpression("delete");
-				try { return m_db.Execute(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+				try { return m_db.Execute(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
 			}
 
 			/// <summary>Add a 'select' clause to row enumeration</summary>
@@ -1900,7 +2015,7 @@ namespace pr.common
 			{
 				m_cmd.Select(pred);
 				GenerateExpression();
-				try { return m_db.EnumRows<U>(m_cmd.SqlString, m_cmd.Arguments); } finally { ResetExpression(); }
+				try { return m_db.EnumRows<U>(m_cmd.SqlString, 1, m_cmd.Arguments); } finally { ResetExpression(); }
 			}
 
 			/// <summary>Add a 'where' clause to row enumeration</summary>
@@ -2445,7 +2560,7 @@ namespace pr.common
 			{
 				GenerateExpression();
 				ResetExpression(); // Don't put this in a finally block because it gets called for each yield return
-				return m_db.EnumRows<T>(m_cmd.SqlString, m_cmd.Arguments).GetEnumerator();
+				return m_db.EnumRows<T>(m_cmd.SqlString, 1, m_cmd.Arguments).GetEnumerator();
 			}
 		}
 		#endregion
@@ -2457,8 +2572,6 @@ namespace pr.common
 			protected readonly Database m_db;
 			protected readonly sqlite3_stmt m_stmt; // sqlite managed memory for this query
 
-			public override string ToString()  { return SqlString; }
-
 			public Query(Database db, sqlite3_stmt stmt)
 			{
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
@@ -2467,8 +2580,8 @@ namespace pr.common
 				Trace.QueryCreated(this);
 				Trace.WriteLine(ETrace.Query, string.Format("Query created '{0}'", SqlString));
 			}
-			public Query(Database db, string sql_string, IEnumerable<object> parms = null, int first_idx = 1)
-			:this(db, Compile(db, sql_string))
+			public Query(Database db, string sql_string, int first_idx = 1, IEnumerable<object> parms = null)
+				:this(db, Compile(db, sql_string))
 			{
 				if (parms != null)
 					BindParms(first_idx, parms);
@@ -2560,14 +2673,6 @@ namespace pr.common
 			}
 
 			/// <summary>
-			/// Bind a sequence of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
-			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
-			public void BindParms(int first_idx, params object[] parms)
-			{
-				BindParms(first_idx, parms.AsEnumerable());
-			}
-
-			/// <summary>
 			/// Bind an array of parameters starting at parameter index 'first_idx' (remember parameter indices start at 1)
 			/// To reuse the Query, call Reset(), then bind new keys, then call Step() again</summary>
 			public void BindParms(int first_idx, object parm1, object parm2) // overload for performance
@@ -2627,12 +2732,16 @@ namespace pr.common
 			public bool Step()
 			{
 				m_db.AssertCorrectThread();
-				var res = Dll.Step(Stmt);
-				switch (res)
+				for (;;)
 				{
-				default: throw Exception.New(res, Dll.ErrorMsg(m_db.Handle));
-				case Result.Done: return false;
-				case Result.Row: return true;
+					var res = Dll.Step(Stmt);
+					switch (res)
+					{
+					default: throw Exception.New(res, Dll.ErrorMsg(m_db.Handle));
+					case Result.Busy: Thread.Yield(); break;
+					case Result.Done: return false;
+					case Result.Row: return true;
+					}
 				}
 			}
 
@@ -2694,6 +2803,8 @@ namespace pr.common
 			{
 				return Rows(typeof(T)).Cast<T>();
 			}
+
+			public override string ToString()  { return SqlString; }
 		}
 		#endregion
 
@@ -3264,7 +3375,7 @@ namespace pr.common
 			public MemberInfo MemberInfo;
 
 			/// <summary>The name of the column</summary>
-			public string Name { get { return MemberInfo != null ? MemberInfo.Name : string.Empty; } }
+			public string Name;
 			public string NameBracketed { get { return "[" + Name + "]"; } }
 
 			/// <summary>The data type of the column</summary>
@@ -3331,6 +3442,7 @@ namespace pr.common
 				var is_nullable = Nullable.GetUnderlyingType(type) != null;
 
 				MemberInfo      = mi;
+				Name            = !string.IsNullOrEmpty(attr.Name) ? attr.Name : (mi != null ? mi.Name : string.Empty);
 				SqlDataType     = attr.SqlDataType != DataType.Null ? attr.SqlDataType : SqlType(type);
 				Constraints     = attr.Constraints ?? "";
 				IsPk            = attr.PrimaryKey;
@@ -3462,6 +3574,9 @@ namespace pr.common
 			/// <summary>True if this column should auto increment. Default is false</summary>
 			public bool AutoInc { get; set; }
 
+			/// <summary>The column name to use. If null or empty, the member name is used</summary>
+			public string Name { get; set; }
+
 			/// <summary>Defines the relative order of columns in the table. Default is '0'</summary>
 			public int Order { get; set; }
 
@@ -3478,6 +3593,7 @@ namespace pr.common
 			{
 				PrimaryKey  = false;
 				AutoInc     = false;
+				Name        = string.Empty;
 				Order       = 0;
 				SqlDataType = DataType.Null;
 				Constraints = null;
@@ -3517,8 +3633,8 @@ namespace pr.common
 			private readonly Action m_disposed;
 			private bool m_completed;
 
-			// Create using the Database.NewTransaction() method
-			internal Transaction(Database db, Action on_dispose)
+			/// <summary>Typically created using the Database.NewTransaction() method</summary>
+			public Transaction(Database db, Action on_dispose)
 			{
 				m_db = db;
 				m_disposed = on_dispose;
@@ -3527,6 +3643,7 @@ namespace pr.common
 				// Begin the transaction
 				m_db.Execute("begin transaction");
 			}
+			public Database DB { get { return m_db; } }
 			public void Commit()
 			{
 				if (m_completed)
@@ -3656,8 +3773,9 @@ namespace pr.common
 			/// <summary>Set a configuration setting for the database</summary>
 			public static Result Config(ConfigOption option)
 			{
-				return (Result)SqliteWp8.Sqlite3.sqlite3_config((int)option);
+				return (Result)SqliteWp8.Sqlite3.sqlite3_config((int)(m_config_option = option));
 			}
+			public static ConfigOption m_config_option = ConfigOption.SingleThread;
 
 			/// <summary>Open a database file</summary>
 			public static sqlite3 Open(string filepath, OpenFlags flags)
@@ -3988,9 +4106,10 @@ namespace pr.common
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_libversion_number", CallingConvention = CallingConvention.Cdecl)]
 			private static extern int sqlite3_libversion_number();
 
+			/// <summary>True if asynchronous support is enabled (via separate db connections)</summary>
 			public static bool ThreadSafe
 			{
-				get { return sqlite3_threadsafe() != 0; }
+				get { return sqlite3_threadsafe() != 0 && m_config_option != ConfigOption.SingleThread; }
 			}
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_libversion_number", CallingConvention = CallingConvention.Cdecl)]
 			private static extern int sqlite3_threadsafe();
@@ -4013,13 +4132,17 @@ namespace pr.common
 			/// <summary>Set a configuration setting for the database</summary>
 			public static Result Config(ConfigOption option)
 			{
-				if (!ThreadSafe && option != ConfigOption.SingleThread)
+				if (sqlite3_threadsafe() == 0 && option != ConfigOption.SingleThread)
 					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
 
-				return sqlite3_config(option);
+				return sqlite3_config(m_config_option = option);
 			}
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_config", CallingConvention=CallingConvention.Cdecl)]
 			private static extern Result sqlite3_config(ConfigOption option);
+
+			/// <summary>Return the threading mode (config option) that the dll has been set to</summary>
+			public static ConfigOption ThreadingMode { get { return m_config_option; } }
+			private static ConfigOption m_config_option = ConfigOption.SingleThread;
 
 			/// <summary>Open a database file</summary>
 			public static sqlite3 Open(string filepath, OpenFlags flags)
@@ -4384,7 +4507,7 @@ namespace pr.common
 
 // ReSharper restore AccessToStaticMemberViaDerivedType
 
-#if PR_UNITTESTS_DISABLED
+#if PR_UNITTESTS
 namespace pr.unittests
 {
 	using System.Data.Linq.SqlClient;
@@ -4395,6 +4518,7 @@ namespace pr.unittests
 	[TestFixture] public class TestSqlite
 	{
 		private static string FilePath;
+		private const string InMemoryDB = ":memory:";
 
 		#region DomTypes
 		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
@@ -4688,9 +4812,7 @@ namespace pr.unittests
 
 		[TestFixtureSetUp] public void Setup()
 		{
-			Sqlite.Dll.LoadDll(Environment.Is64BitProcess
-				? @"p:\sdk\sqlite\lib\x64\debug\sqlite3.dll"
-				: @"p:\sdk\sqlite\lib\x86\debug\sqlite3.dll");
+			Sqlite.Dll.LoadDll(@"p:\sdk\sqlite\lib\$(platform)\$(config)");
 
 			// Register custom type bind/read methods
 			Sqlite.Bind.FunctionMap.Add(typeof(Custom), Custom.SqliteBind);
@@ -4699,12 +4821,15 @@ namespace pr.unittests
 			// Use single threading
 			Sqlite.Configure(Sqlite.ConfigOption.SingleThread);
 
-			//FilePath = ":memory:";
-			FilePath = new FileInfo("tmpDB.db").FullName;
+			// Use an in-memory db for normal unit tests,
+			// use an actual file when debugging
+			FilePath = InMemoryDB;
+			//FilePath = new FileInfo("tmpDB.db").FullName;
 		}
 		[TestFixtureTearDown] public void Cleanup()
 		{
-			File.Delete(FilePath);
+			if (FilePath != InMemoryDB)
+				File.Delete(FilePath);
 		}
 		[Test] public void DefaultUse()
 		{
@@ -4720,7 +4845,7 @@ namespace pr.unittests
 				var table = db.Table<DomType0>();
 				Assert.AreEqual(3, table.ColumnCount);
 				var column_names = new[]{"Inc_Key", "Inc_Value", "Inc_Enum"};
-				using (var q = table.Query("select * from "+table.Name))
+				using (var q = db.Query("select * from "+table.Name))
 				{
 					Assert.AreEqual(3, q.ColumnCount);
 					Assert.True(column_names.Contains(q.ColumnName(0)));
@@ -4741,7 +4866,7 @@ namespace pr.unittests
 				Assert.AreEqual(3, table.RowCount);
 
 				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
+				using (var q = db.Query(sql_count))
 					Assert.AreEqual(sql_count, q.SqlString);
 			}
 		}
@@ -4758,7 +4883,7 @@ namespace pr.unittests
 				// Check the table
 				var table = db.Table<DomType1>();
 				Assert.AreEqual(25, table.ColumnCount);
-				using (var q = table.Query("select * from "+table.Name))
+				using (var q = db.Query("select * from "+table.Name))
 				{
 					Assert.AreEqual(25, q.ColumnCount);
 					Assert.AreEqual("m_key"       ,q.ColumnName( 0));
@@ -4815,7 +4940,7 @@ namespace pr.unittests
 				Assert.True(obj3.Equals(OBJ3));
 
 				// Check parameter binding
-				using (var q = table.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
+				using (var q = db.Query(Sqlite.Sql("select m_string,m_int from ",table.Name," where m_string = @p1 and m_int = @p2")))
 				{
 					Assert.AreEqual(2, q.ParmCount);
 					Assert.AreEqual("@p1", q.ParmName(1));
@@ -4904,7 +5029,7 @@ namespace pr.unittests
 				// Check the table
 				var table = db.Table<DomType3>();
 				Assert.AreEqual(9, table.ColumnCount);
-				using (var q = table.Query("select * from "+table.Name))
+				using (var q = db.Query("select * from "+table.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.AreEqual(9, q.ColumnCount);
@@ -4998,7 +5123,7 @@ namespace pr.unittests
 				var table = db.Table<DomType2>();
 				Assert.AreEqual(3, table.ColumnCount);
 				var column_names = new[]{"PK", "UniStr", "Inc_Explicit"};
-				using (var q = table.Query("select * from "+table.Name))
+				using (var q = db.Query("select * from "+table.Name))
 				{
 					Assert.AreEqual(3        ,q.ColumnCount);
 					Assert.AreEqual("PK"     ,q.ColumnName(0));
@@ -5112,7 +5237,7 @@ namespace pr.unittests
 				// Check the table
 				var table3 = db.Table<DomType3>();
 				Assert.AreEqual(9, table3.ColumnCount);
-				using (var q = table3.Query("select * from "+table3.Name))
+				using (var q = db.Query("select * from "+table3.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.AreEqual(9, q.ColumnCount);
@@ -5152,7 +5277,7 @@ namespace pr.unittests
 				// Check the table
 				var table4 = db.Table<DomType4>();
 				Assert.AreEqual(6, table4.ColumnCount);
-				using (var q = table4.Query("select * from "+table4.Name))
+				using (var q = db.Query("select * from "+table4.Name))
 				{
 					var cols = q.ColumnNames.ToList();
 					Assert.AreEqual(10, q.ColumnCount);
@@ -5189,7 +5314,7 @@ namespace pr.unittests
 				Assert.AreEqual(10, table.RowCount);
 
 				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
+				using (var q = db.Query(sql_count))
 					Assert.AreEqual(sql_count, q.SqlString);
 
 				// Do some expression tree queries
@@ -5417,7 +5542,7 @@ namespace pr.unittests
 				Assert.AreEqual(10, table.RowCount);
 
 				string sql_count = "select count(*) from "+table.Name;
-				using (var q = table.Query(sql_count))
+				using (var q = db.Query(sql_count))
 					Assert.AreEqual(sql_count, q.SqlString);
 
 				// Do some expression tree queries
@@ -5825,6 +5950,52 @@ namespace pr.unittests
 				// Check deleting an object also removes it from the cache
 				table.Delete(obj2);
 				Assert.False(table.Cache.IsCached(obj2.PK));
+			}
+		}
+		[Test] public void QueryCache()
+		{
+			// Create/Open the database connection
+			using (var db = new Sqlite.Database(FilePath, Sqlite.OpenFlags.Create|Sqlite.OpenFlags.ReadWrite|Sqlite.OpenFlags.NoMutex))
+			{
+				// Create a simple table
+				db.DropTable<DomType5>();
+				db.CreateTable<DomType5>();
+				Assert.True(db.TableExists<DomType5>());
+				var table = db.Table<DomType5>();
+
+				var obj1 = new DomType5("One");
+				var obj2 = new DomType5("Two");
+				var obj3 = new DomType5("Fre");
+
+				// Insert some stuff
+				table.Insert(obj1);
+				table.Insert(obj2);
+				table.Insert(obj3);
+
+				var cache_count = db.QueryCache.Count;
+
+				var sql = "select * from DomType5 where Data = ?";
+				using (var q = db.Query(sql, 1, new object[]{"One"}))
+				{
+					var r = q.Rows<DomType5>();
+					var r0 = r.FirstOrDefault();
+					Assert.True(r0 != null);
+					Assert.True(r0.Data == "One");
+				}
+
+				Assert.True(db.QueryCache.IsCached(sql)); // in the cache while not in use
+
+				using (var q = db.Query(sql, 1, new object[]{"Two"}))
+				{
+					Assert.True(!db.QueryCache.IsCached(sql)); // not in the cache while in use
+
+					var r = q.Rows<DomType5>();
+					var r0 = r.FirstOrDefault();
+					Assert.True(r0 != null);
+					Assert.True(r0.Data == "Two");
+				}
+
+				Assert.True(db.QueryCache.Count == cache_count + 1); // back in the cache while not in use
 			}
 		}
 	}
