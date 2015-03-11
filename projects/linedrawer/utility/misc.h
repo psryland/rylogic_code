@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*****************************************************************************************
 #pragma once
-#ifndef LDR_MISC_H
-#define LDR_MISC_H
 
 #include "linedrawer/main/forward.h"
 #include "pr/gui/misc.h"
@@ -30,5 +28,30 @@ namespace ldr
 			m_bold_font.CreatePointFont(80, "Sans Merif", 0, true);
 		}
 	};
+
+	// A interface for classes that handle user input
+	struct IInputHandler
+	{
+		virtual ~IInputHandler() {}
+
+		// Called when input focus is given or removed. Implementors should use
+		// LostInputFocus() to abort any control operations in progress.
+		virtual void GainInputFocus(IInputHandler* gained_from) = 0;
+		virtual void LostInputFocus(IInputHandler* lost_to) = 0;
+
+		// Keyboard input.
+		// Return true if the key was handled and should not be
+		// passed to anything else that might want the key event.
+		virtual bool KeyInput(UINT vk_key, bool down, UINT flags, UINT repeats) = 0;
+
+		// Mouse input.
+		// 'pos_ns' is the normalised screen space position of the mouse
+		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
+		// 'start_or_end' is true on mouse down/up
+		// Returns true if the camera has moved or objects in the scene have moved
+		virtual void MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) = 0;
+		virtual void MouseClick(pr::v2 const& pos_ns, int button_state) = 0;
+		virtual void MouseWheel(pr::v2 const& pos_ns, float delta) = 0;
+	};
 }
-#endif

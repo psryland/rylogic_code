@@ -64,6 +64,7 @@
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
+#include "pr/linedrawer/ldr_gizmo.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
@@ -103,11 +104,11 @@ namespace ldr
 	PR_DEFINE_ENUM2_FLAGS(EMouseButton, PR_ENUM);
 	#undef PR_ENUM
 
-	// Navigation or Manipulation mode
+	// Input control mode, Navigation or Manipulation
 	#define PR_ENUM(x)\
 		x(Navigation  )\
 		x(Manipulation)
-	PR_DEFINE_ENUM1(ENavMode, PR_ENUM);
+	PR_DEFINE_ENUM1(EControlMode, PR_ENUM);
 	#undef PR_ENUM
 
 	// Stereo view
@@ -144,4 +145,7 @@ namespace ldr
 	class  PluginManager;
 	struct Plugin;
 	struct NavManager;
+
+	// The context id for application ldr objects
+	extern pr::ldr::ContextId LdrContext;
 }

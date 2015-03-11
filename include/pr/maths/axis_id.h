@@ -66,8 +66,8 @@ namespace pr
 		switch (to_axis)
 		{
 		default: assert(false && "axis_id must one of ±1, ±2, ±3"); o2t = pr::m3x4Identity; break;
-		case -1: o2t = pr::Rotation3x3(0.0f, +pr::maths::tau_by_4, 0.0f); break;
-		case +1: o2t = pr::Rotation3x3(0.0f, -pr::maths::tau_by_4, 0.0f); break;
+		case -1: o2t = pr::Rotation3x3(0.0f, -pr::maths::tau_by_4, 0.0f); break; // I know this sign looks wrong, but it isn't. Must be something to do with signs passed to cos()/sin()
+		case +1: o2t = pr::Rotation3x3(0.0f, +pr::maths::tau_by_4, 0.0f); break;
 		case -2: o2t = pr::Rotation3x3(+pr::maths::tau_by_4, 0.0f, 0.0f); break;
 		case +2: o2t = pr::Rotation3x3(-pr::maths::tau_by_4, 0.0f, 0.0f); break;
 		case -3: o2t = pr::Rotation3x3(0.0f, +pr::maths::tau_by_2, 0.0f); break;

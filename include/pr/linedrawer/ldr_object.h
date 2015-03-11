@@ -325,6 +325,7 @@ namespace pr
 			// Otherwise, 'func' is applied to all child objects that match name.
 			// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
 			// 'func' should have a signature: bool func(pr::ldr::LdrObject* obj);
+			// 'obj' is a recursion parameter, callers should use 'nullptr'
 			// Returns 'true' if 'func' always returns 'true'.
 			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr)
 			{
@@ -364,6 +365,9 @@ namespace pr
 
 			// Set the colour of this object or child objects matching 'name' (see Apply)
 			void SetColour(pr::Colour32 colour, pr::uint mask, char const* name = nullptr);
+
+			// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
+			void ResetColour(char const* name = nullptr);
 
 			// Set the texture on this object or child objects matching 'name' (see Apply)
 			// Note for difference mode drawlist management, if the object is currently in

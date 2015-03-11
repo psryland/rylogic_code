@@ -44,9 +44,6 @@
     <ClCompile Include="..\projects\linedrawer\main\lua_source.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\linedrawer\main\navmanager.cpp">
-      <Filter>main</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\linedrawer\main\stdafx.cpp">
       <Filter>main</Filter>
     </ClCompile>
@@ -89,12 +86,18 @@
     <ClCompile Include="..\include\pr\linedrawer\ldr_script_editor_dlg.cpp">
       <Filter>objects</Filter>
     </ClCompile>
+    <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\linedrawer\main\navigation.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\linedrawer\main\manipulator.cpp">
+      <Filter>main</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\projects\linedrawer\main\lua_source.h">
-      <Filter>main</Filter>
-    </ClInclude>
-    <ClInclude Include="..\projects\linedrawer\main\navmanager.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\stdafx.h">
@@ -208,11 +211,20 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_script_editor_dlg.h">
       <Filter>objects</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\app\wingui.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
       <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\linedrawer\main\manipulator.h">
+      <Filter>main</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\linedrawer\main\navigation.h">
+      <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

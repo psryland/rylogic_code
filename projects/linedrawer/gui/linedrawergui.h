@@ -99,6 +99,7 @@ namespace ldr
 		void OnRenderTechnique();
 		void OnShowLightingDlg();
 		void OnShowToolDlg(int tool);
+		void OnManipulateMode();
 		void OnShowOptions();
 		void OnShowPluginMgr();
 		void OnWindowAlwaysOnTop();
@@ -111,9 +112,10 @@ namespace ldr
 		void FileNew(char const* filepath);
 		void FileOpen(char const* filepath, bool additive);
 		void OpenTextEditor(StrList const& files);
-		void UpdateUI();
+		pr::v2 ToNormSS(pr::v2 const& pt_ss);
 		void MouseStatusUpdate(pr::v2 const& mouse_location);
 		void ShowAbout() const;
+		void UpdateUI();
 
 		// Recent files callbacks
 		void MenuList_OnClick(pr::gui::MenuList* sender, pr::gui::MenuList::Item const& item);

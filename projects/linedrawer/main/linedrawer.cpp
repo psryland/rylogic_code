@@ -59,12 +59,15 @@ namespace ldr
 
 	Main::Main(MainGUI& gui)
 		:base(Setup(), gui)
-		,m_nav(m_cam, m_window.RenderTargetSize(), m_settings.m_CameraAlignAxis)
 		,m_store()
+		,m_nav(m_cam, m_window.RenderTargetSize(), m_settings.m_CameraAlignAxis)
+		,m_manip(m_cam, m_rdr)
 		,m_plugin_mgr(this)
 		,m_lua_src()
 		,m_sources(m_settings, m_rdr, m_store, m_lua_src)
 		,m_bbox_scene(pr::BBoxReset)
+		,m_ctrl_mode(EControlMode::Navigation)
+		,m_input(&m_nav)
 		,m_scene_rdr_pass(0)
 		,m_step_objects()
 		,m_focus_point()
@@ -79,7 +82,40 @@ namespace ldr
 	}
 	Main::~Main()
 	{
+		m_input->LostInputFocus(nullptr);
+		m_input = nullptr;
 		m_settings.Save();
+	}
+
+	// Get/Set the nav mode
+	EControlMode Main::ControlMode() const
+	{
+		return m_ctrl_mode;
+	}
+	void Main::ControlMode(EControlMode mode)
+	{
+		if (m_ctrl_mode == mode)
+			return;
+
+		m_ctrl_mode = mode;
+
+		// Switch input handler
+		IInputHandler* new_handler = nullptr;
+		switch (m_ctrl_mode)
+		{
+		default:
+			assert(false && "Unknown control mode");
+			break;
+		case EControlMode::Navigation:
+			new_handler = &m_nav;
+			break;
+		case EControlMode::Manipulation:
+			new_handler = &m_manip;
+			break;
+		}
+		m_input->LostInputFocus(new_handler);
+		new_handler->GainInputFocus(m_input);
+		m_input = new_handler;
 	}
 
 	// Reset the camera to view all, selected, or visible objects
@@ -166,7 +202,7 @@ namespace ldr
 	void Main::Resize(pr::IRect const& area)
 	{
 		base::Resize(area);
-		m_nav.SetViewSize(area.Size());
+		m_nav.ViewSize(area.Size());
 		m_settings.Save();
 	}
 

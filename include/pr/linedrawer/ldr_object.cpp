@@ -3115,6 +3115,20 @@ out <<
 			}, name);
 		}
 
+		// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
+		void LdrObject::ResetColour(char const* name)
+		{
+			Apply([=](LdrObject* o)
+			{
+				o->m_colour = o->m_base_colour;
+
+				bool has_alpha = o->m_colour.a() != 0xFF;
+				o->m_sko.Alpha(has_alpha);
+				SetAlphaBlending(o->m_bsb, o->m_dsb, o->m_rsb, has_alpha);
+				return true;
+			}, name);
+		}
+
 		// Set the texture on this object or child objects matching 'name' (see Apply)
 		// Note for difference mode drawlist management, if the object is currently in
 		// one or more drawlists (i.e. added to a scene) it will need to be removed and

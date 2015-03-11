@@ -81,8 +81,9 @@
 #define ID_RENDERING_LIGHTING                   40308
 #define ID_TOOLS_MEASURE                        40401
 #define ID_TOOLS_ANGLE                          40402
-#define ID_TOOLS_PLUGINMGR                      40403
-#define ID_TOOLS_OPTIONS                        40404
+#define ID_TOOLS_MOVE                           40403
+#define ID_TOOLS_PLUGINMGR                      40404
+#define ID_TOOLS_OPTIONS                        40405
 #define ID_WINDOW_ALWAYSONTOP                   40501
 #define ID_WINDOW_BACKGROUNDCOLOUR              40502
 #define ID_WINDOW_EXAMPLESCRIPT                 40503

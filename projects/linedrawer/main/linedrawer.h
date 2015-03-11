@@ -7,10 +7,12 @@
 #include "linedrawer/main/forward.h"
 #include "linedrawer/main/ldrevent.h"
 #include "linedrawer/main/user_settings.h"
-#include "linedrawer/main/navmanager.h"
+#include "linedrawer/main/navigation.h"
+#include "linedrawer/main/manipulator.h"
 #include "linedrawer/main/script_sources.h"
 #include "linedrawer/main/lua_source.h"
 #include "linedrawer/plugin/plugin_manager.h"
+#include "linedrawer/utility/misc.h"
 
 namespace ldr
 {
@@ -21,13 +23,16 @@ namespace ldr
 		,pr::events::IRecv<ldr::Event_StoreChanged>
 	{
 		// These types form part of the interface
-		NavManager           m_nav;            // Controls user input and camera navigation
-		pr::ldr::ObjectCont  m_store;          // A container of all ldr objects created
-		PluginManager        m_plugin_mgr;     // The container of loaded plugins
-		LuaSource            m_lua_src;        // An object for processing lua files
-		ScriptSources        m_sources;        // Manages source scripts
-		mutable pr::BBox     m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
-		int                  m_scene_rdr_pass; // Index of the current scene.Render() call
+		pr::ldr::ObjectCont m_store;          // A container of all ldr objects created
+		Navigation          m_nav;            // Implements camera navigation from user input
+		Manipulator         m_manip;          // Implements object manipulation from user input
+		PluginManager       m_plugin_mgr;     // The container of loaded plugins
+		LuaSource           m_lua_src;        // An object for processing lua files
+		ScriptSources       m_sources;        // Manages source scripts
+		mutable pr::BBox    m_bbox_scene;     // Bounding box for all objects in the scene (Lazy updated)
+		EControlMode        m_ctrl_mode;      // The mode of control, either navigating or manipulating
+		IInputHandler*      m_input;
+		int                 m_scene_rdr_pass; // Index of the current scene.Render() call
 
 		pr::ldr::LdrObjectStepData::Link m_step_objects;
 		pr::ldr::StockInstance           m_focus_point;
@@ -42,6 +47,10 @@ namespace ldr
 
 		// App title string
 		wchar_t const* AppTitle() const { return ldr::AppTitleW(); }
+
+		// Get/Set the control mode
+		EControlMode ControlMode() const;
+		void ControlMode(EControlMode mode);
 
 		// Reset the camera to view all, selected, or visible objects
 		void ResetView(EObjectBounds view_type);

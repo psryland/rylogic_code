@@ -246,52 +246,51 @@ namespace ldr
 			m_main->RenderNeeded();
 			break;
 		}
+
+		// Forward key presses to the input handler
+		if (m_main->m_input->KeyInput(args.m_vk_key, args.m_down, args.m_flags, args.m_repeats))
+			return true;
+
 		return base::OnKey(args);
+	}
+
+	// Convert screen space to normalised screen space
+	pr::v2 MainGUI::ToNormSS(pr::v2 const& pt_ss)
+	{
+		auto view = m_main->m_nav.ViewSize();
+		return m_main->m_cam.NormalisePoint(pt_ss, float(view.x), float(-view.y));
 	}
 
 	// Override mouse navigation
 	bool MainGUI::OnMouseButton(MouseEventArgs const& args)
 	{
-		auto mouse_loc = pr::To<pr::v2>(args.m_point);
-		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
-
 		if (args.m_down)
 			::SetCapture(*this);
 		else
 			::ReleaseCapture();
 
-		if (m_main->m_nav.MouseInput(mouse_loc, args.m_down ? btn : 0, true))
-		{
-			m_main->RenderNeeded();
-			Invalidate();
-		}
+		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
+		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 
+		// Forward to the input handler
+		m_main->m_input->MouseInput(ToNormSS(mouse_loc), args.m_down ? btn : 0, true);
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
 	void MainGUI::OnMouseMove(MouseEventArgs const& args)
 	{
-		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
+		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 
-		if (m_main->m_nav.MouseInput(mouse_loc, btn, false))
-		{
-			m_main->RenderNeeded();
-			Invalidate();
-		}
-
+		m_main->m_input->MouseInput(ToNormSS(mouse_loc), btn, false);
 		MouseStatusUpdate(mouse_loc);
 	}
 	bool MainGUI::OnMouseClick(MouseEventArgs const& args)
 	{
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
-		if (m_main->m_nav.MouseClick(mouse_loc, btn))
-		{
-			m_main->RenderNeeded();
-			Invalidate();
-		}
-
+		
+		m_main->m_input->MouseClick(ToNormSS(mouse_loc), btn);
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
@@ -300,12 +299,7 @@ namespace ldr
 		pr::v2 mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		// delta is '1.0f' for a single wheel click
-		if (m_main->m_nav.MouseWheel(mouse_loc, args.m_delta/120.0f))
-		{
-			m_main->RenderNeeded();
-			Invalidate();
-		}
-
+		m_main->m_input->MouseWheel(ToNormSS(mouse_loc), args.m_delta/120.0f);
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
@@ -366,6 +360,7 @@ namespace ldr
 		case ID_RENDERING_LIGHTING           : OnShowLightingDlg(); break;
 		case ID_TOOLS_MEASURE                : OnShowToolDlg(ID_TOOLS_MEASURE); break;
 		case ID_TOOLS_ANGLE                  : OnShowToolDlg(ID_TOOLS_ANGLE); break;
+		case ID_TOOLS_MOVE                   : OnManipulateMode(); break;
 		case ID_TOOLS_OPTIONS                : OnShowOptions(); break;
 		case ID_TOOLS_PLUGINMGR              : OnShowPluginMgr(); break;
 		case ID_WINDOW_ALWAYSONTOP           : OnWindowAlwaysOnTop(); break;
@@ -472,7 +467,7 @@ namespace ldr
 			CTextEntryDlg dlg(*this, "Label for this view", pr::FmtS("view%d", m_saved_views.Items().size()), false);
 			if (dlg.DoModal() != IDOK) return;
 
-			NavManager::SavedViewID id = m_main->m_nav.SaveView();
+			auto id = m_main->m_nav.SaveView();
 			m_saved_views.Add(dlg.m_body.c_str(), (void*)id, false, true);
 		}
 	}
@@ -621,6 +616,14 @@ namespace ldr
 		case ID_TOOLS_MEASURE: m_measure_tool_ui.Show(m_measure_tool_ui.IsWindowVisible() == FALSE); break;
 		case ID_TOOLS_ANGLE:   m_angle_tool_ui  .Show(m_angle_tool_ui  .IsWindowVisible() == FALSE); break;
 		}
+		UpdateUI();
+	}
+
+	// Switch the nav mode
+	void MainGUI::OnManipulateMode()
+	{
+		auto turn_on = m_main->ControlMode() != EControlMode::Manipulation;
+		m_main->ControlMode(turn_on ? EControlMode::Manipulation : EControlMode::Navigation);
 		UpdateUI();
 	}
 
@@ -781,7 +784,7 @@ namespace ldr
 
 		// Stock models
 		CheckMenuItem(Menu(), ID_RENDERING_SHOWFOCUS        ,m_main->m_settings.m_ShowFocusPoint   ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(Menu(), ID_RENDERING_SHOWORIGIN       ,m_main->m_settings.m_ShowOrigin        ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu(), ID_RENDERING_SHOWORIGIN       ,m_main->m_settings.m_ShowOrigin       ? MF_CHECKED : MF_UNCHECKED);
 		CheckMenuItem(Menu(), ID_RENDERING_SHOWSELECTION    ,m_main->m_settings.m_ShowSelectionBox ? MF_CHECKED : MF_UNCHECKED);
 		CheckMenuItem(Menu(), ID_RENDERING_SHOWOBJECTBBOXES ,m_main->m_settings.m_ShowObjectBBoxes ? MF_CHECKED : MF_UNCHECKED);
 
@@ -806,8 +809,10 @@ namespace ldr
 		ModifyMenu(Menu(), ID_RENDERING_TECHNIQUE, MF_BYCOMMAND, ID_RENDERING_TECHNIQUE, m_main->m_scene.FindRStep<pr::rdr::ForwardRender>() ? "&Deferred Rendering" : "&Forward Rendering");
 
 		// The tools windows
-		CheckMenuItem(Menu(), ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
-		CheckMenuItem(Menu(), ID_TOOLS_ANGLE   ,m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu()  ,ID_TOOLS_MEASURE ,m_measure_tool_ui.IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu()  ,ID_TOOLS_ANGLE   ,m_angle_tool_ui  .IsWindowVisible() ? MF_CHECKED : MF_UNCHECKED);
+		CheckMenuItem(Menu()  ,ID_TOOLS_MOVE    ,m_main->ControlMode() == EControlMode::Manipulation ? MF_CHECKED : MF_UNCHECKED);
+		//EnableMenuItem(Menu() ,ID_TOOLS_MOVE    ,m_main->m_store.empty() ? MF_DISABLED : MF_ENABLED);
 
 		// Topmost window
 		CheckMenuItem(Menu(), ID_WINDOW_ALWAYSONTOP, m_main->m_settings.m_AlwaysOnTop ? MF_CHECKED : MF_UNCHECKED);
@@ -853,7 +858,7 @@ namespace ldr
 		}
 		if (sender == &m_saved_views)
 		{
-			m_main->m_nav.RestoreView((NavManager::SavedViewID)item.m_tag);
+			m_main->m_nav.RestoreView((Navigation::SavedViewID)item.m_tag);
 			UpdateUI();
 			m_main->RenderNeeded();
 		}
@@ -970,6 +975,7 @@ namespace ldr
 	{
 		m_suspend_render = false;
 		m_main->RenderNeeded();
+		UpdateUI();
 	}
 
 	// Occurs when an error happens during UserSetting parsing

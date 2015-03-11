@@ -4,8 +4,6 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_GEOMETRY_FUNCTIONS_H
-#define PR_MATHS_GEOMETRY_FUNCTIONS_H
 
 #include "pr/maths/forward.h"
 #include "pr/maths/constants.h"
@@ -72,5 +70,3 @@ namespace pr
 	float CircumRadius(v4 const& a, v4 const& b, v4 const& c, v4& centre);
 	v4    TriangleAngles(v4 const& a, v4 const& b, v4 const& c);
 }
-
-#endif
