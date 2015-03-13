@@ -21,7 +21,6 @@ namespace ldr
 		pr::v4            m_reset_forward; // The forward direction of the camera after a view reset
 		pr::uint32        m_orbit_timer;   // A timer to ensuring constant orbit speed
 		ViewCont          m_views;         // Saved views
-		pr::ldr::GizmoPtr m_gizmo;         // A gizmo instance, non-null in manipulation mode
 
 		Navigation(pr::Camera& camera, pr::iv2 view_size, pr::v4 const& reset_up);
 
@@ -66,9 +65,10 @@ namespace ldr
 		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
-		void IInputHandler::MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
-		void IInputHandler::MouseClick(pr::v2 const& pos_ns, int button_state) override;
-		void IInputHandler::MouseWheel(pr::v2 const& pos_ns, float delta) override;
+		// Returns true if the scene needs refreshing
+		bool IInputHandler::MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
+		bool IInputHandler::MouseClick(pr::v2 const& pos_ns, int button_state) override;
+		bool IInputHandler::MouseWheel(pr::v2 const& pos_ns, float delta) override;
 
 		// Return the distance from the camera to the focus point
 		float FocusDistance() const { return m_camera.FocusDist(); }

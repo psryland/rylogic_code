@@ -352,7 +352,8 @@ namespace pr
 		// The start of a mouse movement is indicated by 'btn_state' being non-zero
 		// The end of the mouse movement is indicated by 'btn_state' being zero
 		// 'ref_point' should be true on the mouse down/up event, false while dragging
-		void MouseControl(pr::v2 const& point, camera::ENavBtn btn_state, bool ref_point)
+		// Returns true if the camera has moved
+		bool MouseControl(pr::v2 const& point, camera::ENavBtn btn_state, bool ref_point)
 		{
 			// Button states
 			bool lbtn = (btn_state & camera::ENavBtn::Left) != 0;
@@ -393,10 +394,12 @@ namespace pr
 				if (Length2(m_Rref) < 0.80f) Rotate((point.y - m_Rref.y) * maths::tau_by_4, (m_Rref.x - point.x) * maths::tau_by_4, 0.0f, false);
 				else                         Rotate(0.0f, 0.0f, ATan2(m_Rref.y, m_Rref.x) - ATan2(point.y, point.x), false);
 			}
+			return m_moved;
 		}
 
 		// Translate by a camera relative amount
-		void Translate(float dx, float dy, float dz, bool commit = true)
+		// Returns true if the camera has moved (for consistency with MouseControl)
+		bool Translate(float dx, float dy, float dz, bool commit = true)
 		{
 			if (m_lock_mask && m_lock_mask[camera::LockMask::CameraRelative])
 			{
@@ -439,10 +442,12 @@ namespace pr
 			if (commit) Commit();
 
 			m_moved = true;
+			return m_moved;
 		}
 
 		// Rotate the camera by Euler angles about the focus point
-		void Rotate(float pitch, float yaw, float roll, bool commit = true)
+		// Returns true if the camera has moved (for consistency with MouseControl)
+		bool Rotate(float pitch, float yaw, float roll, bool commit = true)
 		{
 			if (m_lock_mask)
 			{
@@ -480,14 +485,16 @@ namespace pr
 			if (commit) Commit();
 
 			m_moved = true;
+			return m_moved;
 		}
 
 		// Zoom the field of view. 'zoom' should be in the range (-1, 1) where negative numbers zoom in, positive out
-		void Zoom(float zoom, bool commit = true)
+		// Returns true if the camera has moved (for consistency with MouseControl)
+		bool Zoom(float zoom, bool commit = true)
 		{
 			if (m_lock_mask)
 			{
-				if (m_lock_mask[camera::LockMask::Zoom]) return;
+				if (m_lock_mask[camera::LockMask::Zoom]) return false;
 			}
 			if (KeyDown(m_key[camera::ENavKey::Accurate]))
 			{
@@ -503,6 +510,7 @@ namespace pr
 			if (commit) Commit();
 
 			m_moved = true;
+			return m_moved;
 		}
 
 		// Set the current position, fov, and focus distance as the position reference

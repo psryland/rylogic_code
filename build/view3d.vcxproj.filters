@@ -123,6 +123,9 @@
     <ClInclude Include="..\include\pr\gui\scintilla.h">
       <Filter>src\pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
+      <Filter>src\pr\linedrawer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\linedrawer\ldr_object.cpp">
@@ -148,6 +151,9 @@
     </ClCompile>
     <ClCompile Include="..\projects\view3d\view3d.cpp">
       <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\include\pr\linedrawer\ldr_gizmo.cpp">
+      <Filter>src\pr\linedrawer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

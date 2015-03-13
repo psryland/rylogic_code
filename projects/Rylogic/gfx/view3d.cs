@@ -20,6 +20,7 @@ namespace pr.gfx
 	using HContext = System.IntPtr;
 	using HWindow  = System.IntPtr;
 	using HObject  = System.IntPtr;
+	using HGizmo   = System.IntPtr;
 	using HTexture = System.IntPtr;
 
 	/// <summary>.NET wrapper for View3D.dll</summary>
@@ -629,6 +630,29 @@ namespace pr.gfx
 			/// <summary>Camera controls</summary>
 			public CameraControls Camera { get; private set; }
 
+			/// <summary>
+			/// Mouse navigation and/or object manipulation.
+			/// 'point' is a point in client rect space.
+			/// 'mouse_btns' is the state of the mouse buttons (MK_LBUTTON etc)
+			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement
+			/// Returns true if the scene requires refreshing</summary>
+			public bool MouseNavigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
+			{
+				// This function is not in the CameraControls object because it is not solely used
+				// for camera navigation. It can also be used to manipulate objects in the scene.
+				return View3D_MouseNavigate(Handle, NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
+			}
+
+			/// <summary>
+			/// Direct camera relative navigation or manipulation.
+			/// Returns true if the scene requires refreshing</summary>
+			public bool Navigate(float dx, float dy, float dz)
+			{
+				// This function is not in the CameraControls object because it is not solely used
+				// for camera navigation. It can also be used to manipulate objects in the scene.
+				return View3D_Navigate(Handle, dx, dy, dz);
+			}
+
 			/// <summary>Get the render target texture</summary>
 			public Texture RenderTarget
 			{
@@ -646,6 +670,12 @@ namespace pr.gfx
 			public void AddObject(Object obj)
 			{
 				View3D_AddObject(m_wnd, obj.m_handle);
+			}
+
+			/// <summary>Add a gizmo to the window</summary>
+			public void AddGizmo(Gizmo giz)
+			{
+				View3D_AddGizmo(m_wnd, giz.m_handle);
 			}
 
 			/// <summary>Add multiple objects by context id</summary>
@@ -1028,22 +1058,6 @@ namespace pr.gfx
 			public void ResetZoom()
 			{
 				View3D_ResetZoom(m_window.Handle);
-			}
-
-			/// <summary>
-			/// Mouse navigation.
-			/// 'point' is a point in client rect space.
-			/// 'mouse_btns' is the state of the mouse buttons
-			/// 'nav_start_or_end' should be true on mouse button down or up, and false during mouse movement</summary>
-			public void MouseNavigate(Point point, MouseButtons mouse_btns, bool nav_start_or_end)
-			{
-				View3D_MouseNavigate(m_window.Handle, m_window.NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
-			}
-
-			/// <summary>Direct camera relative navigation</summary>
-			public void Navigate(float dx, float dy, float dz)
-			{
-				View3D_Navigate(m_window.Handle, dx, dy, dz);
 			}
 
 			/// <summary>
@@ -1589,6 +1603,57 @@ namespace pr.gfx
 			public event EventHandler TextChanged;
 		}
 
+		/// <summary>A 3D manipulation gizmo</summary>
+		public class Gizmo :IDisposable
+		{
+			// Use:
+			//  Create a gizmo, attach objects or other gizmos to it,
+			//  add it to a window to make it visible, enable it to have
+			//  it watch for mouse interaction. Moving the gizmo automatically
+			//  moves attached objects as well
+			public enum EMode { Translate, Rotate, Scale, };
+			public HGizmo m_handle;
+
+			public Gizmo(EMode mode, m4x4 o2w)
+			{
+				m_handle = View3D_GizmoCreate(mode, ref o2w);
+			}
+			public virtual void Dispose()
+			{
+				if (m_handle != HObject.Zero)
+				{
+					View3D_GizmoDelete(m_handle);
+					m_handle = HObject.Zero;
+				}
+			}
+
+			/// <summary>Attach an object to the gizmo that will move with it</summary>
+			public void Attach(Object obj)
+			{
+				View3D_GizmoAttach(m_handle, obj.m_handle);
+			}
+
+			/// <summary>Detach an object from the gizmo</summary>
+			public void Detach(Object obj)
+			{
+				View3D_GizmoDetach(m_handle, obj.m_handle);
+			}
+
+			/// <summary>Get/Set the mode of the gizmo between translate, rotate, scale</summary>
+			public EMode Mode
+			{
+				get { return View3D_GizmoGetMode(m_handle); }
+				set { View3D_GizmoSetMode(m_handle, value); }
+			}
+
+			/// <summary>Get/Set whether the gizmo is looking for mouse interaction</summary>
+			public bool Enabled
+			{
+				get { return View3D_GizmoEnabled(m_handle); }
+				set { View3D_GizmoSetEnabled(m_handle, value); }
+			}
+		}
+
 		#region DLL extern functions
 
 		// A good idea is to add a static method in the class that is using this class
@@ -1647,7 +1712,6 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_PushErrorCB            (HWindow window, ReportErrorCB error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_PopErrorCB             (HWindow window, ReportErrorCB error_cb);
-
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
 		[DllImport(Dll)] private static extern void              View3D_AddObject              (HWindow window, HObject obj);
@@ -1657,6 +1721,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern int               View3D_ObjectCount            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_AddObjectsById         (HWindow window, int context_id);
 		[DllImport(Dll)] private static extern void              View3D_RemoveObjectsById      (HWindow window, int context_id);
+		[DllImport(Dll)] private static extern void              View3D_AddGizmo               (HWindow window, HGizmo giz);
+		[DllImport(Dll)] private static extern void              View3D_RemoveGizmo            (HWindow window, HGizmo giz);
 
 		// Camera
 		[DllImport(Dll)] private static extern void              View3D_CameraToWorld          (HWindow window, out m4x4 c2w);
@@ -1671,8 +1737,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HWindow window, float fovY);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern void              View3D_MouseNavigate          (HWindow window, v2 point, int button_state, bool nav_start_or_end);
-		[DllImport(Dll)] private static extern void              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
+		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern bool              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HWindow window, out v4 axis);
 		[DllImport(Dll)] private static extern void              View3D_AlignCamera            (HWindow window, v4 axis);
@@ -1737,6 +1803,16 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowMeasureTool          (HWindow window, bool show);
 		[DllImport(Dll)] private static extern bool              View3D_AngleToolVisible         (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_ShowAngleTool            (HWindow window, bool show);
+
+		// Gizmos
+		[DllImport(Dll)] private static extern HGizmo            View3D_GizmoCreate              (Gizmo.EMode mode, ref m4x4 o2w);
+		[DllImport(Dll)] private static extern void              View3D_GizmoDelete              (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoAttach              (HGizmo gizmo, HObject obj);
+		[DllImport(Dll)] private static extern void              View3D_GizmoDetach              (HGizmo gizmo, HObject obj);
+		[DllImport(Dll)] private static extern Gizmo.EMode       View3D_GizmoGetMode             (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoSetMode             (HGizmo gizmo, Gizmo.EMode mode);
+		[DllImport(Dll)] private static extern bool              View3D_GizmoEnabled             (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoSetEnabled          (HGizmo gizmo, bool enabled);
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);

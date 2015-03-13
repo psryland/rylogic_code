@@ -54,6 +54,7 @@
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
+#include "pr/linedrawer/ldr_gizmo.h"
 #include "pr/linedrawer/ldr_tools.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 
@@ -64,8 +65,9 @@ namespace view3d
 {
 	typedef std::unique_ptr<pr::ldr::ScriptEditorDlg> EditorPtr;
 	typedef std::set<View3DObject>  ObjectCont;
+	typedef std::set<View3DGizmo>   GizmoCont;
 	typedef std::set<View3DWindow>  WindowCont;
-	typedef std::set<EditorPtr> EditorCont;
+	typedef std::set<EditorPtr>     EditorCont;
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
 	
 	struct ReportErrorCB

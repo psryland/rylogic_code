@@ -17,22 +17,26 @@
 	namespace pr
 	{
 		namespace ldr { struct LdrObject; }
+		namespace ldr { struct LdrGizmo; }
 		namespace rdr { struct Texture2D; }
 	}
 	namespace view3d
 	{
 		typedef pr::ldr::LdrObject Object;
+		typedef pr::ldr::LdrGizmo  Gizmo;
 		typedef pr::rdr::Texture2D Texture;
 		struct Window;
 	}
-	typedef unsigned char* View3DContext;
+	typedef unsigned char*   View3DContext;
 	typedef view3d::Window*  View3DWindow;
 	typedef view3d::Object*  View3DObject;
+	typedef view3d::Gizmo*   View3DGizmo;
 	typedef view3d::Texture* View3DTexture;
 #else
 	typedef void* View3DContext;
 	typedef void* View3DWindow;
 	typedef void* View3DObject;
+	typedef void* View3DGizmo;
 	typedef void* View3DTexture;
 #endif
 
@@ -96,6 +100,12 @@ extern "C"
 		Visibility  = 1 << 7,
 		Animation   = 1 << 8,
 		StepData    = 1 << 9,
+	};
+	enum class EView3DGizmoMode :int
+	{
+		Translate,
+		Rotate,
+		Scale,
 	};
 
 	typedef struct
@@ -226,7 +236,6 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_DestroyWindow     (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_PushErrorCB       (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_PopErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb);
-
 	VIEW3D_API char const*             __stdcall View3D_GetSettings       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_SetSettings       (View3DWindow window, char const* settings);
 	VIEW3D_API void                    __stdcall View3D_AddObject         (View3DWindow window, View3DObject object);
@@ -236,6 +245,8 @@ extern "C"
 	VIEW3D_API int                     __stdcall View3D_ObjectCount       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_AddObjectsById    (View3DWindow window, int context_id);
 	VIEW3D_API void                    __stdcall View3D_RemoveObjectsById (View3DWindow window, int context_id);
+	VIEW3D_API void                    __stdcall View3D_AddGizmo          (View3DWindow window, View3DGizmo giz);
+	VIEW3D_API void                    __stdcall View3D_RemoveGizmo       (View3DWindow window, View3DGizmo giz);
 
 	// Camera
 	VIEW3D_API void                    __stdcall View3D_CameraToWorld          (View3DWindow window, View3DM4x4& c2w);
@@ -250,8 +261,8 @@ extern "C"
 	VIEW3D_API float                   __stdcall View3D_CameraFovY             (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraSetFovY          (View3DWindow window, float fovY);
 	VIEW3D_API void                    __stdcall View3D_CameraSetClipPlanes    (View3DWindow window, float near_, float far_, BOOL focus_relative);
-	VIEW3D_API void                    __stdcall View3D_MouseNavigate          (View3DWindow window, View3DV2 point, int button_state, BOOL nav_start_or_end);
-	VIEW3D_API void                    __stdcall View3D_Navigate               (View3DWindow window, float dx, float dy, float dz);
+	VIEW3D_API BOOL                    __stdcall View3D_MouseNavigate          (View3DWindow window, View3DV2 point, int button_state, BOOL nav_start_or_end);
+	VIEW3D_API BOOL                    __stdcall View3D_Navigate               (View3DWindow window, float dx, float dy, float dz);
 	VIEW3D_API void                    __stdcall View3D_ResetZoom              (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis        (View3DWindow window, View3DV4& axis);
 	VIEW3D_API void                    __stdcall View3D_AlignCamera            (View3DWindow window, View3DV4 axis);
@@ -316,6 +327,16 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowMeasureTool          (View3DWindow window, BOOL show);
 	VIEW3D_API BOOL                    __stdcall View3D_AngleToolVisible         (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_ShowAngleTool            (View3DWindow window, BOOL show);
+
+	// Gizmos
+	VIEW3D_API View3DGizmo             __stdcall View3D_GizmoCreate              (EView3DGizmoMode mode, View3DM4x4 const& o2w);
+	VIEW3D_API void                    __stdcall View3D_GizmoDelete              (View3DGizmo gizmo);
+	VIEW3D_API void                    __stdcall View3D_GizmoAttach              (View3DGizmo gizmo, View3DObject obj);
+	VIEW3D_API void                    __stdcall View3D_GizmoDetach              (View3DGizmo gizmo, View3DObject obj);
+	VIEW3D_API EView3DGizmoMode        __stdcall View3D_GizmoGetMode             (View3DGizmo gizmo);
+	VIEW3D_API void                    __stdcall View3D_GizmoSetMode             (View3DGizmo gizmo, EView3DGizmoMode mode);
+	VIEW3D_API BOOL                    __stdcall View3D_GizmoEnabled             (View3DGizmo gizmo);
+	VIEW3D_API void                    __stdcall View3D_GizmoSetEnabled          (View3DGizmo gizmo, BOOL enabled);
 
 	// Miscellaneous
 	VIEW3D_API void                    __stdcall View3D_RestoreMainRT            (View3DWindow window);

@@ -8,6 +8,7 @@
 #include "pr/common/cast.h"
 #include "pr/common/colour.h"
 #include "pr/common/range.h"
+#include "pr/common/fmt.h"
 #include "pr/common/repeater.h"
 #include "pr/common/interpolate.h"
 #include "pr/container/vector.h"

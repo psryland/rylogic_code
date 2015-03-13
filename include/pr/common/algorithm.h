@@ -21,6 +21,20 @@ namespace pr
 		return N;
 	}
 
+	// Return the minimum of a set of values
+	template <typename Type> inline Type min(Type const& a) { return a; }
+	template <typename Type, typename... Args> inline Type min(Type const& a, Args&&... args)
+	{
+		return std::min(a, pr::min(std::forward<Args>(args)...));
+	}
+
+	// Return the maximum of a set of values
+	template <typename Type> inline Type max(Type const& a) { return a; }
+	template <typename Type, typename... Args> inline Type max(Type const& a, Args&&... args)
+	{
+		return std::max(a, pr::max(std::forward<Args>(args)...));
+	}
+
 	// True if 'func' returns true for any element in 'cont'
 	template <typename TCont> inline bool contains(TCont const& cont, decltype(cont[0]) const& item)
 	{
@@ -90,6 +104,14 @@ namespace pr
 	{
 		auto iter = std::lower_bound(std::begin(cont), std::end(cont), val);
 		cont.insert(iter, val);
+	}
+
+	// Erase the first instance of 'value' from 'cont'
+	template <typename TCont, typename Value = TCont::value_type> inline void erase(TCont& cont, Value const& value)
+	{
+		auto iter = std::remove(std::begin(cont), std::end(cont), value);
+		if (iter == std::end(cont)) return;
+		cont.erase(iter);
 	}
 
 	// Erase the first match to pred from 'cont'

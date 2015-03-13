@@ -59,6 +59,7 @@ namespace pr
 					int    m_grp;
 					pr::v4 normal(size_t idx) const
 					{
+						// 'idx' is the vertex index in m_verts
 						if (idx == m_idx[0]) return m_norm * m_angles.x;
 						if (idx == m_idx[1]) return m_norm * m_angles.y;
 						if (idx == m_idx[2]) return m_norm * m_angles.z;
@@ -68,12 +69,13 @@ namespace pr
 				};
 				struct Edge
 				{
+					size_t m_sidx;      // Index of the start of the edge
 					size_t m_eidx;      // Index of the other end of the edge
-					Face* m_lface;
-					Face* m_rface;     
-					Edge* m_next;      // Forms a linked list of edges
-					bool m_nonplanar; // True if this edge has more than two left or right faces
-					bool smooth(float cos_angle_threshold) const
+					Face*  m_lface;     // The face to the left of the edge
+					Face*  m_rface;     // The face to the right of the edge
+					Edge*  m_next;      // Forms a linked list of edges
+					bool   m_nonplanar; // True if this edge has more than two left or right faces
+					bool   smooth(float cos_angle_threshold) const
 					{
 						return
 							m_lface && m_rface && // two faces needed to be smooth
@@ -83,15 +85,23 @@ namespace pr
 								(Dot3(m_lface->m_norm, m_rface->m_norm) > cos_angle_threshold)  // Normals within the tolerance
 							);
 					}
+					//pr::v4 norm() const
+					//{
+					//	// Return the edge normal assuming this is a smooth edge
+					//	assert(m_lface && m_rface && !m_nonplanar && "Edge normal is only defined for smooth edges");
+					//	auto n0 = m_lface->normal(m_sidx);
+					//	auto n1 = m_rface->normal(m_eidx);
+					//}
 				};
 				struct Vert
 				{
-					pr::v4 m_norm;     // Smoothed vertex normal
-					Edge*  m_edges;    // The edges that connect to this vertex
-					Vert*  m_next;     // Other vert the same as this, but in a different smoothing group
-					size_t m_orig_idx; // Index of the original vertex
-					size_t m_new_idx;  // Index of the vertex in 'm_verts'
-					int    m_grp;      // The smoothing group number that all contributing faces have
+					pr::v4 m_norm;       // Smoothed vertex normal
+					Edge*  m_edges;      // The edges that connect to this vertex
+					Vert*  m_next;       // Other vert the same as this, but in a different smoothing group
+					size_t m_orig_idx;   // Index of the original vertex
+					size_t m_new_idx;    // Index of the vertex in 'm_verts'
+					int    m_edge_count; // The number of edges connecting to this vertex
+					int    m_grp;        // The smoothing group number that all contributing faces have
 				};
 				static_assert(std::alignment_of<Face>::value == 16, "Face not aligned correctly");
 				static_assert(std::alignment_of<Vert>::value == 16, "Vert not aligned correctly");
@@ -108,6 +118,7 @@ namespace pr
 					,m_edge_alloc()
 				{
 					BuildAdjacencyData(num_indices, indices, getv);
+					//todo GenerateDegenerateVerts(smoothing_angle);
 					AssignSmoothingGroups(smoothing_angle);
 					CreateNormals(new_vidx);
 				}
@@ -131,7 +142,7 @@ namespace pr
 						v4 const& v1 = getv(checked_cast<VIdx>(face.m_idx[1]));
 						v4 const& v2 = getv(checked_cast<VIdx>(face.m_idx[2]));
 
-						max_index = std::max(*std::max_element(std::begin(face.m_idx), std::end(face.m_idx)), max_index);
+						max_index = pr::max(max_index, face.m_idx[0], face.m_idx[1], face.m_idx[2]);
 						face.m_norm = Normalise3(Cross3(v1 - v0, v2 - v1), pr::v4Zero);
 						face.m_angles = TriangleAngles(v0, v1, v2);
 						face.m_grp = ++sg; // each face is in a unique smoothing group to start with
@@ -164,10 +175,12 @@ namespace pr
 						else
 						{
 							Edge& edge = (m_edge_alloc.emplace_back(), m_edge_alloc.back());
+							edge.m_sidx = i0;
 							edge.m_eidx = i1;
 							edge.m_lface = face;
 							edge.m_next = m_verts[i0].m_edges;
 							m_verts[i0].m_edges = &edge;
+							++m_verts[i0].m_edge_count;
 						}
 
 						// Right side
@@ -181,10 +194,12 @@ namespace pr
 						else
 						{
 							Edge& edge = (m_edge_alloc.emplace_back(), m_edge_alloc.back());
+							edge.m_sidx = i1;
 							edge.m_eidx = i0;
 							edge.m_rface = face;
 							edge.m_next = m_verts[i1].m_edges;
 							m_verts[i1].m_edges = &edge;
+							++m_verts[i1].m_edge_count;
 						}
 					};
 
@@ -196,6 +211,25 @@ namespace pr
 						add_edge(face.m_idx[2], face.m_idx[0], &face);
 					}
 				}
+
+				//// Create vertices with distinct normals
+				//void GenerateDegenerateVerts(float smoothing_angle)
+				//{
+				//	// For each original model vertex...
+				//	for (size_t i = 0, iend = m_verts.size(); i != iend; ++i)
+				//	{
+				//		auto& vert = m_verts[i];
+
+				//		//TODO
+				//		// Build a set of all the norms this vertex could have
+				//		// i.e. one for each face, one for each smooth edge
+				//		// Partition the group of normals into sets where all
+				//		// normals in each set are within a solid angle of 'smoothing_angle'
+				//		// Create a degenerate vert for each normal set
+				//		// Later, for each face, find the vertex with the normal
+				//		// closest to the face normal
+				//	}
+				//}
 
 				// Partition the edges for each vert into seperate groups
 				void AssignSmoothingGroups(float smoothing_angle)
@@ -231,6 +265,8 @@ namespace pr
 					// Return the new index for vertex 'idx' in smoothing group 'face.m_grp'
 					auto vert_index = [&](Face& face, size_t idx)
 					{
+						// m_verts[idx] is the head of a linked list of verts added for
+						// each vertex with a unique normal.
 						auto* vptr = &m_verts[idx];
 
 						// Vertex has not yet been assigned a smoothing group
@@ -347,6 +383,89 @@ namespace pr
 			ib = indices;
 			for (std::size_t i = 0; i != num_indices; ++i, ++ib)
 				SetN(*ib, Normalise3IfNonZero(GetN(*ib)));
+		}
+
+		// Generate C++ code declaration from vertex, index, and nugget buffers
+		template <typename TName, typename TVertCIter, typename TIdxCIter, typename TNugCIter, typename TOut>
+		void GenerateModelCode(TName const& name, std::size_t num_verts, std::size_t num_indices, std::size_t num_nuggets, TVertCIter verts, TIdxCIter indices, TNugCIter nuggets, TOut& out, char const* indent = "")
+		{
+			out << "// " << name << "\n";
+
+			// Write the model vertices
+			if (num_verts != 0)
+			{
+				out << indent << "#pragma region Verts\n";
+				out << indent << "static pr::rdr::Vert const verts[] =\n";
+				out << indent << "{\n";
+				for (std::size_t i = 0; i != num_verts; ++i)
+				{
+					auto& vert = *verts++;
+					auto p = GetP(vert);
+					auto c = GetC(vert);
+					auto n = GetN(vert);
+					auto t = GetT(vert);
+					out << indent << "\t{"
+						<< pr::Fmt("{%+ff, %+ff, %+ff, 1.0f}, ", p.x, p.y, p.z)
+						<< pr::Fmt("{%+ff, %+ff, %+ff, %+ff}, ", c.r, c.g, c.b, c.a)
+						<< pr::Fmt("{%+ff, %+ff, %+ff, 0.0f}, ", n.x, n.y, n.z)
+						<< pr::Fmt("{%+ff, %+ff}", t.x, t.y)
+						<< "},\n";
+				}
+				out << indent << "};\n";
+				out << indent << "#pragma endregion\n";
+			}
+
+			// Write the model indices
+			if (num_indices != 0)
+			{
+				out << indent << "#pragma region Indices\n";
+				if      (sizeof(*indices) <= 2) out << indent << "static pr::uint16 const idxs[] =\n";
+				else if (sizeof(*indices) <= 4) out << indent << "static pr::uint32 const idxs[] =\n";
+				else if (sizeof(*indices) <= 8) out << indent << "static pr::uint64 const idxs[] =\n";
+				else throw std::exception("Index type > 8 bytes is unsupported");
+				
+				auto wrap = 32U;
+				out << indent << "{\n";
+				for (std::size_t i = 0; i != num_indices; ++i)
+				{
+					auto& idx = *indices++;
+					if ((i%wrap) == 0) out << indent << '\t'; else out << ' ';
+					out << idx << ",";
+					if ((i%wrap) == wrap-1) out << '\n'; else out << ' ';
+				}
+				if (num_indices != wrap-1) out << '\n';
+				out << indent << "};\n";
+				out << indent << "#pragma endregion\n";
+			}
+
+			// Write out model nuggets
+			if (num_nuggets != 0)
+			{
+				out << indent << "#pragma region Nuggets\n";
+				out << indent << "static pr::rdr::NuggetProps const nuggets[] = \n{\n";
+				for (std::size_t i = 0; i != num_nuggets; ++i)
+				{
+					auto& nug = *nuggets++;
+					out << indent << "pr::rdr::NuggetProps("
+						<< "pr::rdr::EPrim(" << nug.m_topo << "), "
+						<< "pr::rdr::EGeom(" << nug.m_geom << "), "
+						<< "nullptr, "
+						<< "pr::rdr::Range::make(" << std::begin(nug.m_vrange) << "," << std::end(nug.m_vrange) << "), "
+						<< "pr::rdr::Range::make(" << std::begin(nug.m_irange) << "," << std::end(nug.m_irange) << ")"
+						<< "),\n";
+				}
+				out << indent << "};\n";
+				out << indent << "#pragma endregion\n";
+			}
+		}
+
+		// Generate C++ code declaration from vertex and index buffers
+		template <typename TName, typename TVertCIter, typename TIdxCIter, typename TOut>
+		void GenerateModelCode(TName const& name, std::size_t num_verts, std::size_t num_indices, TVertCIter verts, TIdxCIter indices, TOut& out, char const* indent = "")
+		{
+			// Dummy nugget type
+			struct Nug { int m_topo, m_geom; pr::Range<int> m_vrange, m_irange; };
+			GenerateModelCode(name, num_verts, num_indices, 0, verts, indices, static_cast<Nug*>(nullptr), out, indent);
 		}
 	}
 }

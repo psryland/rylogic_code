@@ -46,6 +46,11 @@ namespace pr
 			}
 		};
 
+		inline v4 const&     GetP(Vert& vert) { return vert.m_vert; }
+		inline Colour const& GetC(Vert& vert) { return vert.m_diff; }
+		inline v4 const&     GetN(Vert& vert) { return vert.m_norm; }
+		inline v2 const&     GetT(Vert& vert) { return vert.m_tex0; }
+
 		// Don't set values that aren't given, allows these functions to be composed
 		inline void SetP   (Vert& vert, v4 const& pos)                                                  { vert.m_vert = pos; }
 		inline void SetC   (Vert& vert, Colour const& col)                                              { vert.m_diff = col; }

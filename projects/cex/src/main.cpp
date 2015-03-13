@@ -195,9 +195,17 @@ namespace cex
 // Run as a windows program so that the console window is not shown
 int __stdcall WinMain(HINSTANCE,HINSTANCE,LPSTR lpCmdLine,int)
 {
-	//MessageBox(0, "Paws'd", "Cex", MB_OK);
-	cex::Main m;
-	return m.Run(lpCmdLine);
+	try
+	{
+		//MessageBox(0, "Paws'd", "Cex", MB_OK);
+		cex::Main m;
+		return m.Run(lpCmdLine);
+	}
+	catch (std::exception const& ex)
+	{
+		std::cout << ex.what() << std::endl;
+		return -1;
+	}
 }
 
 int main(int argc, char* argv[])

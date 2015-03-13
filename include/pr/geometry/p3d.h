@@ -34,6 +34,9 @@ namespace pr
 			typedef unsigned long u32;      static_assert(sizeof(u32) == 4, "4byte u32 expected");
 			typedef unsigned long long u64; static_assert(sizeof(u64) == 8, "8byte u64 expected");
 			static const u32 Version = 0x00001000;
+			struct ChunkHeader;
+			struct ChunkIndex;
+			ChunkIndex const& NullChunk();
 
 			#pragma region Chunk Ids
 			#define PR_ENUM(x)\
@@ -99,6 +102,23 @@ namespace pr
 					std::stringstream ss; ss << "Child chunk " << id.ToString() << " not a member of chunk " << EChunkId::ToString(m_id);
 					throw std::exception(ss.str().c_str());
 				}
+				ChunkIndex const& find(std::initializer_list<EChunkId> chunk_id) const
+				{
+					auto* chunks = &m_chunks;
+					auto b = std::begin(chunk_id);
+					auto e = std::end(chunk_id);
+					for (;b != e; ++b)
+					{
+						for (auto& c : *chunks)
+						{
+							if (c.m_id != *b) continue;
+							if ((b + 1) == e) return c;
+							chunks = &c.m_chunks;
+							break;
+						}
+					}
+					return NullChunk();
+				}
 			};
 
 			struct Vec2
@@ -142,6 +162,10 @@ namespace pr
 				Vec2 uv;
 				Vec2 pad;
 			};
+			inline Vec4 GetP(Vert const& vert) { return vert.pos; }
+			inline Vec4 GetC(Vert const& vert) { return vert.col; }
+			inline Vec4 GetN(Vert const& vert) { return vert.norm; }
+			inline Vec2 GetT(Vert const& vert) { return vert.uv; }
 			struct Range
 			{
 				u32 first, count;
@@ -156,6 +180,8 @@ namespace pr
 				{
 					return pr::Range<T>::make(checked_cast<T>(first), checked_cast<T>(first + count));
 				}
+				u32 begin() const { return first; }
+				u32 end() const   { return first + count; }
 			};
 			inline bool operator == (Range lhs, Range rhs) { return lhs.first == rhs.first && lhs.count == rhs.count; }
 			inline bool operator != (Range lhs, Range rhs) { return !(lhs == rhs); }
@@ -270,6 +296,13 @@ namespace pr
 					,m_scene()
 				{}
 			};
+
+			// Static null chunk
+			inline ChunkIndex const& NullChunk()
+			{
+				static ChunkIndex nullchunk(EChunkId::Null, 0);
+				return nullchunk;
+			}
 
 			// Helper to return the data size for a chunk
 			inline u32 DataLength(ChunkHeader chunk)
@@ -695,7 +728,7 @@ namespace pr
 					throw std::exception("Source is not a p3d stream");
 
 				// Find the Materials sub chunk
-				auto mats = Find(src, {EChunkID::Scene, EChunkId::Materials});
+				auto mats = Find(src, {EChunkId::Scene, EChunkId::Materials});
 				if (mats.m_id != EChunkId::Materials)
 					return; // Source contains no materials
 
@@ -874,31 +907,31 @@ namespace pr
 
 			// Write a scene to 'out'
 			template <typename TSrc> void WriteScene(TSrc& out, ChunkIndex const& index, Scene const& scene)
+			{
+				Write<ChunkHeader>(out, index);
+				for (auto& index : index.m_chunks)
 				{
-					Write<ChunkHeader>(out, index);
-					for (auto& index : index.m_chunks)
+					switch (index.m_id)
 					{
-						switch (index.m_id)
+					case EChunkId::Materials:
 						{
-						case EChunkId::Materials:
-							{
-								Write<ChunkHeader>(out, index);
-								auto mat = std::begin(scene.m_materials);
-								for (auto& index : index.m_chunks)
-									WriteMaterial(out, index, *mat++);
-								break;
-							}
-						case EChunkId::Meshes:
-							{
-								Write<ChunkHeader>(out, index);
-								auto mesh = std::begin(scene.m_meshes);
-								for (auto& index : index.m_chunks)
-									WriteMesh(out, index, *mesh++);
-								break;
-							}
+							Write<ChunkHeader>(out, index);
+							auto mat = std::begin(scene.m_materials);
+							for (auto& index : index.m_chunks)
+								WriteMaterial(out, index, *mat++);
+							break;
+						}
+					case EChunkId::Meshes:
+						{
+							Write<ChunkHeader>(out, index);
+							auto mesh = std::begin(scene.m_meshes);
+							for (auto& index : index.m_chunks)
+								WriteMesh(out, index, *mesh++);
+							break;
 						}
 					}
 				}
+			}
 
 			// Write the p3d file to an ostream-like output. Uses forward iteration only.
 			template <typename TSrc> void Write(TSrc& out, File const& file)
@@ -922,6 +955,24 @@ namespace pr
 						WriteScene(out, index, file.m_scene);
 						break;
 					}
+				}
+			}
+
+			// Write the p3d file as code
+			template <typename TSrc> void WriteAsCode(TSrc& out, File const& file, char const* indent = "")
+			{
+				for (auto& mesh : file.m_scene.m_meshes)
+				{
+					if (!mesh.m_idx16.empty())
+						pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx16.size(), std::begin(mesh.m_verts), std::begin(mesh.m_idx16), out, indent);
+					else
+						pr::geometry::GenerateModelCode(mesh.m_name, mesh.m_verts.size(), mesh.m_idx32.size(), std::begin(mesh.m_verts), std::begin(mesh.m_idx32), out, indent);
+
+					out << indent << "#pragma region BoundingBox\n";
+					out << indent << "static pr::BBox const bbox = {";
+					out << pr::Fmt("{%+ff, %+ff, %+ff, 1.0f}, "   , mesh.m_bbox.centre.x, mesh.m_bbox.centre.y, mesh.m_bbox.centre.z);
+					out << pr::Fmt("{%+ff, %+ff, %+ff, 0.0f}};\n" , mesh.m_bbox.radius.x, mesh.m_bbox.radius.y, mesh.m_bbox.radius.z);
+					out << indent << "#pragma endregion\n";
 				}
 			}
 

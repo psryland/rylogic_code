@@ -14,6 +14,7 @@ namespace TestCS
 		private View3d.Object m_obj0;
 		private View3d.Object m_obj1;
 		private View3d.Texture m_tex0;
+		private View3d.Gizmo m_giz;
 
 		static FormView3d()
 		{
@@ -62,6 +63,13 @@ namespace TestCS
 			}
 			m_obj0.SetTexture(m_tex0);
 
+			// Create a gizmo for moving objects in the scene
+			// Position it at the origin of m_obj0 and scale by 2
+			m_giz = new View3d.Gizmo(View3d.Gizmo.EMode.Scale, m_obj0.O2P * m4x4.Scale(2f, v4.Origin));
+			m_giz.Attach(m_obj0);
+			m_giz.Enabled = true;
+			m_view3d.Window.AddGizmo(m_giz);
+
 			//m_view3d.View3d.CreateDemoScene();
 			
 			m_view3d.Camera.ResetView();
@@ -69,6 +77,7 @@ namespace TestCS
 		}
 		protected override void Dispose(bool disposing)
 		{
+			Util.Dispose(ref m_giz   );
 			Util.Dispose(ref m_tex0  );
 			Util.Dispose(ref m_obj0  );
 			Util.Dispose(ref m_obj1  );

@@ -123,7 +123,7 @@ VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat
 {
 	try
 	{
-		std::unique_ptr<view3d::Window> win(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, settings_cb, render_cb));
+		auto win = std::unique_ptr<view3d::Window>(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, settings_cb, render_cb));
 
 		DllLockGuard;
 		Dll().m_wnd_cont.insert(win.get());
@@ -318,6 +318,34 @@ VIEW3D_API void __stdcall View3D_RemoveObjectsById(View3DWindow window, int cont
 	CatchAndReport(View3D_RemoveObjectsById, window,);
 }
 
+// Add/Remove a gizmo from 'window'
+VIEW3D_API void __stdcall View3D_AddGizmo(View3DWindow window, View3DGizmo gizmo)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		if (!gizmo) throw std::exception("gizmo is null");
+		
+		DllLockGuard;
+		auto iter = window->m_gizmos.find(gizmo);
+		if (iter == end(window->m_gizmos))
+			window->m_gizmos.insert(iter, gizmo);
+	}
+	CatchAndReport(View3D_AddGizmo, window,);
+}
+VIEW3D_API void __stdcall View3D_RemoveGizmo(View3DWindow window, View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) return;
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		window->m_gizmos.erase(gizmo);
+	}
+	CatchAndReport(View3D_RemoveGizmo, window,);
+}
+
 // Camera ********************************************************
 
 // Return the camera to world transform
@@ -477,33 +505,53 @@ VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float 
 }
 
 // General mouse navigation
+// 'point_nss' is the mouse pointer position in normalised screen space
+// 'button_state' is the state of the mouse buttons and control keys (i.e. MF_LBUTTON, etc)
+// 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
 // void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, TRUE); }
 // void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
 // void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
-VIEW3D_API void __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 point, int button_state, BOOL nav_start_or_end)
+VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 point_nss, int button_state, BOOL nav_start_or_end)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_camera.MouseControl(view3d::To<pr::v2>(point), button_state, nav_start_or_end != 0);
+		auto pos_nss = view3d::To<pr::v2>(point_nss);
+
+		auto refresh = false;
+		auto gizmo_in_use = false;
+
+		// Check any gizmos in the scene for interaction with the mouse
+		for (auto& giz : window->m_gizmos)
+		{
+			refresh |= giz->MouseControl(window->m_camera, pos_nss, button_state, nav_start_or_end != 0);
+			gizmo_in_use |= giz->m_manipulating;
+			if (gizmo_in_use) break;
+		}
+
+		// If no gizmos are using the mouse, use standard mouse control
+		if (!gizmo_in_use)
+			refresh |= window->m_camera.MouseControl(pos_nss, button_state, nav_start_or_end != 0);
+
+		return refresh;
 	}
-	CatchAndReport(View3D_MouseNavigate, window,);
+	CatchAndReport(View3D_MouseNavigate, window, FALSE);
 }
 
 // Direct movement of the camera
-VIEW3D_API void __stdcall View3D_Navigate(View3DWindow window, float dx, float dy, float dz)
+VIEW3D_API BOOL __stdcall View3D_Navigate(View3DWindow window, float dx, float dy, float dz)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		window->m_camera.Translate(dx, dy, dz);
+		return window->m_camera.Translate(dx, dy, dz);
 	}
-	CatchAndReport(View3D_Navigate, window,);
+	CatchAndReport(View3D_Navigate, window, FALSE);
 }
 
 // Reset to the default zoom
@@ -1248,6 +1296,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 	try
 	{
 		if (!window) throw std::exception("window is null");
+
 		auto& wnd = *window;
 		auto& scene = wnd.m_scene;
 		DllLockGuard;
@@ -1255,9 +1304,13 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 		// Reset the drawlist
 		scene.ClearDrawlists();
 
-		// Add objects from the window to the viewport
+		// Add objects from the window to the scene
 		for (auto& obj : wnd.m_objects)
 			obj->AddToScene(scene);
+
+		// Add gizmos from the window to the scene
+		for (auto& giz : wnd.m_gizmos)
+			giz->AddToScene(scene);
 
 		// Add the measure tool objects if the window is visible
 		if (wnd.m_measure_tool_ui.IsWindowVisible() && wnd.m_measure_tool_ui.Gfx())
@@ -1483,6 +1536,8 @@ VIEW3D_API void __stdcall View3D_SetBackgroundColour(View3DWindow window, int aa
 	CatchAndReport(View3D_SetBackgroundColour, window,);
 }
 
+// Tools *******************************************************************
+
 // Show the measurement tool
 VIEW3D_API BOOL __stdcall View3D_MeasureToolVisible(View3DWindow window)
 {
@@ -1531,6 +1586,107 @@ VIEW3D_API void __stdcall View3D_ShowAngleTool(View3DWindow window, BOOL show)
 		window->m_angle_tool_ui.Show(show != 0);
 	}
 	CatchAndReport(View3D_ShowAngleTool, window,);
+}
+
+// Gizmos *******************************************************************
+
+// Create a new instance of a gizmo
+VIEW3D_API View3DGizmo __stdcall View3D_GizmoCreate(EView3DGizmoMode mode, View3DM4x4 const& o2w)
+{
+	using namespace pr::ldr;
+
+	try
+	{
+		DllLockGuard;
+		auto giz = LdrGizmoPtr(new LdrGizmo(Dll().m_rdr, static_cast<LdrGizmo::EMode>(mode), view3d::To<pr::m4x4>(o2w)));
+		Dll().m_giz_cont.push_back(giz);
+		return giz.m_ptr;
+	}
+	CatchAndReport(View3D_GizmoCreate, , nullptr);
+}
+
+// Delete a gizmo instance
+VIEW3D_API void __stdcall View3D_GizmoDelete(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) return;
+		
+		DllLockGuard;
+
+		// Remove the gizmo from any windows it's in
+		for (auto wnd : Dll().m_wnd_cont)
+			View3D_RemoveGizmo(wnd, gizmo);
+		
+		// Delete the gizmo from the gizmo container (removing the last reference)
+		pr::erase_first(Dll().m_giz_cont, [&](pr::ldr::LdrGizmoPtr p){ return p.m_ptr == gizmo; });
+	}
+	CatchAndReport(View3D_GizmoDelete, ,);
+}
+
+// Attach/Detach an object to the gizmo that will be moved as the gizmo moves
+VIEW3D_API void __stdcall View3D_GizmoAttach(View3DGizmo gizmo, View3DObject obj)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!obj) throw std::exception("Object is null");
+
+		DllLockGuard;
+		gizmo->Attach(obj->m_o2p);
+	}
+	CatchAndReport(View3D_GizmoAttach, ,);
+}
+VIEW3D_API void __stdcall View3D_GizmoDetach(View3DGizmo gizmo, View3DObject obj)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+
+		DllLockGuard;
+		gizmo->Detach(obj->m_o2p);
+	}
+	CatchAndReport(View3D_GizmoDetach, ,);
+}
+
+// Get/Set the current mode of the gizmo
+VIEW3D_API EView3DGizmoMode __stdcall View3D_GizmoGetMode(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		return static_cast<EView3DGizmoMode>(gizmo->Mode());
+	}
+	CatchAndReport(View3D_GizmoGetMode, ,static_cast<EView3DGizmoMode>(-1));
+}
+VIEW3D_API void __stdcall View3D_GizmoSetMode(View3DGizmo gizmo, EView3DGizmoMode mode)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		gizmo->Mode(static_cast<pr::ldr::LdrGizmo::EMode>(mode));
+	}
+	CatchAndReport(View3D_GizmoSetMode, ,);
+}
+
+// Get/Set whether the gizmo is active to mouse interaction
+VIEW3D_API BOOL __stdcall View3D_GizmoEnabled(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		return gizmo->Enabled();
+	}
+	CatchAndReport(View3D_GizmoEnabled, ,FALSE);
+}
+VIEW3D_API void __stdcall View3D_GizmoSetEnabled(View3DGizmo gizmo, BOOL enabled)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		gizmo->Enabled(enabled != 0);
+	}
+	CatchAndReport(View3D_GizmoSetEnabled, ,);
 }
 
 // Restore the main render target and depth buffer

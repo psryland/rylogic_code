@@ -49,9 +49,9 @@ namespace ldr
 		//   i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
-		// Returns true if the camera has moved or objects in the scene have moved
-		virtual void MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) = 0;
-		virtual void MouseClick(pr::v2 const& pos_ns, int button_state) = 0;
-		virtual void MouseWheel(pr::v2 const& pos_ns, float delta) = 0;
+		// Returns true if the scene needs refreshing
+		virtual bool MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) = 0;
+		virtual bool MouseClick(pr::v2 const& pos_ns, int button_state) = 0;
+		virtual bool MouseWheel(pr::v2 const& pos_ns, float delta) = 0;
 	};
 }

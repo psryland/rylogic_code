@@ -147,6 +147,7 @@ namespace pr.gui
 				{
 					MouseDown        += OnMouseDown;
 					MouseUp          += OnMouseUp;
+					MouseMove        += OnMouseMove;
 					MouseWheel       += OnMouseWheel;
 					MouseDoubleClick += OnMouseDblClick;
 				}
@@ -160,19 +161,18 @@ namespace pr.gui
 		{
 			if (Window == null) return;
 			Cursor = Cursors.SizeAll;
-			MouseMove -= OnMouseMove;
-			MouseMove += OnMouseMove;
 			Capture = true;
-			Camera.MouseNavigate(e.Location, e.Button, true);
 			m_mouse_down_at = Environment.TickCount;
+			if (Window.MouseNavigate(e.Location, e.Button, true))
+				SignalRefresh();
 		}
 		public void OnMouseUp(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
 			Cursor = Cursors.Default;
-			MouseMove -= OnMouseMove;
 			Capture = false;
-			Camera.MouseNavigate(e.Location, 0, true);
+			if (Window.MouseNavigate(e.Location, 0, true))
+				SignalRefresh();
 
 			// Short clicks bring up the context menu
 			if (e.Button == MouseButtons.Right && Environment.TickCount - m_mouse_down_at < ClickTimeMS)
@@ -181,14 +181,14 @@ namespace pr.gui
 		public void OnMouseMove(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			Camera.MouseNavigate(e.Location, e.Button, false);
-			SignalRefresh();
+			if (Window.MouseNavigate(e.Location, e.Button, false))
+				SignalRefresh();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
-			Camera.Navigate(0f, 0f, e.Delta / 120f);
-			SignalRefresh();
+			if (Window.Navigate(0f, 0f, e.Delta / 120f))
+				SignalRefresh();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)
 		{

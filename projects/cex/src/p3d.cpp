@@ -31,6 +31,8 @@ namespace cex
 		bool                 m_preserve_normals;
 		bool                 m_preserve_colours;
 		bool                 m_preserve_uvs;
+		bool                 m_codeout;
+		std::string          m_indent;
 		int                  m_verbosity; // 0 = quiet, 1 = minimal, 2 = normal, 3 = verbose
 
 		Impl()
@@ -43,22 +45,28 @@ namespace cex
 			,m_preserve_normals(false)
 			,m_preserve_colours(false)
 			,m_preserve_uvs(false)
+			,m_codeout(false)
+			,m_indent()
 			,m_verbosity(2)
 		{}
 		int Run()
 		{
 			if (!pr::filesys::FileExists(m_infile))
-				throw std::exception(pr::FmtS("'%s' does not exist", m_infile.c_str()));
+				throw std::exception(pr::FmtS("Input file '%s' does not exist", m_infile.c_str()));
 
 			// Set the outfile based on the infile if not given
 			if (m_outfile.empty())
-				m_outfile = pr::filesys::ChangeExtn<std::string>(m_infile, "p3d");
+			{
+				m_outfile = m_codeout
+					? pr::filesys::ChangeExtn<std::string>(m_infile, "cpp")
+					: pr::filesys::ChangeExtn<std::string>(m_infile, "p3d");
+			}
 
 			// Get the infile file extension
 			m_infile = pr::filesys::StandardiseC(m_infile);
 			auto extn = pr::filesys::GetExtension(m_infile);
 
-			// Populate the p3d file from 'm_infile'
+			// Populate the p3d object from 'm_infile'
 			try
 			{
 				if (extn.empty())  throw std::exception("unknown file extension");
@@ -229,10 +237,18 @@ namespace cex
 		}
 
 		// Generate normals for 16 or 32 bit indices
-		template <typename VCont, typename ICont> void GenerateNormals(pr::geometry::p3d::Nugget const& nug, VCont& vcont, ICont& icont)
+		template <typename VCont, typename ICont> void GenerateNormals(pr::geometry::p3d::Nugget& nug, VCont& vcont, ICont& icont)
 		{
 			typedef std::remove_reference<decltype(icont[0])>::type VIdx;
+
+			// Pointer to the first index of this nugget
 			auto iptr = std::begin(icont) + nug.m_irange.first;
+
+			// Reset the vrange in the nugget, since generating normals will create new verts
+			VIdx mn = pr::maths::limits<VIdx>::max();
+			VIdx mx = pr::maths::limits<VIdx>::min();
+
+			// Generate the normals
 			pr::geometry::GenerateNormals(nug.m_irange.count, iptr, m_smooth_threshold,
 				[&](VIdx idx) { return vcont[idx].pos; }, vcont.size(),
 				[&](VIdx new_idx, VIdx orig_idx, pr::v4 const& normal)
@@ -245,7 +261,13 @@ namespace cex
 					*iptr++ = i0;
 					*iptr++ = i1;
 					*iptr++ = i2;
+					mn = pr::min(mn, i0, i1, i2);
+					mx = pr::max(mx, i0, i1, i2);
 				});
+
+			// Reset the vrange in the nugget, since generating normals will create new verts
+			nug.m_vrange.first = mn;
+			nug.m_vrange.count = mx - mn;
 		}
 
 		// Remove degenerate verts
@@ -390,8 +412,16 @@ namespace cex
 		// Write the p3d file to a file stream
 		void WriteP3d()
 		{
-			std::ofstream ofile(m_outfile, std::ofstream::binary);
-			p3d::Write(ofile, m_p3d);
+			if (!m_codeout)
+			{
+				std::ofstream ofile(m_outfile, std::ofstream::binary);
+				p3d::Write(ofile, m_p3d);
+			}
+			else
+			{
+				std::ofstream ofile(m_outfile);
+				p3d::WriteAsCode(ofile, m_p3d, m_indent.c_str());
+			}
 			if (m_verbosity >= 1)
 				std::cout << " '" << m_outfile << "' saved." << std::endl;
 		}
@@ -416,6 +446,9 @@ Syntax:
 
     -fo output_filepath - The p3d file that will be created, if omitted, then the output
           file will be named 'filepath.p3d' in the same directory.
+
+    -codeout - Output the model as C++ code.
+    -indent s - A string to indent each line with
 
     -remove_degenerates tolerence - Strip duplicate verts from the model.
           By default only position is used to determine degeneracy. 'tolerence' is
@@ -484,6 +517,16 @@ Syntax:
 		if (pr::str::EqualI(option, "-preserve_uvs"))
 		{
 			m_ptr->m_preserve_uvs = true;
+			return true;
+		}
+		if (pr::str::EqualI(option, "-codeout"))
+		{
+			m_ptr->m_codeout = true;
+			return true;
+		}
+		if (pr::str::EqualI(option, "-indent") && arg != arg_end)
+		{
+			m_ptr->m_indent = *arg++;
 			return true;
 		}
 		if (pr::str::EqualI(option, "-verbosity") && arg != arg_end)

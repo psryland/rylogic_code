@@ -21,6 +21,7 @@ namespace view3d
 		pr::rdr::Window           m_wnd;                      // The window being drawn on
 		pr::rdr::Scene            m_scene;                    // Scene manager
 		view3d::ObjectCont        m_objects;                  // References to objects to draw
+		view3d::GizmoCont         m_gizmos;                   // References to gizmos to draw
 		pr::Camera                m_camera;                   // Camera control
 		pr::rdr::Light            m_light;                    // Light source for the set
 		bool                      m_light_is_camera_relative; // Whether the light is attached to the camera or not

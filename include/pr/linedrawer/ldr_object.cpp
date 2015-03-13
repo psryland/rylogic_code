@@ -1987,9 +1987,9 @@ namespace pr
 		template <ELdrObject::Enum_ ShapeType> void Parse(ParseParams& p)
 		{
 			// Read the object attributes: name, colour, instance
-			ObjectAttributes attr = ParseAttributes(p.m_reader, ShapeType);
-			LdrObjectPtr obj(new LdrObject(attr, p.m_parent, p.m_context_id));
-			ObjectCreator<ShapeType> creator;
+			auto attr    = ParseAttributes(p.m_reader, ShapeType);
+			auto obj     = LdrObjectPtr(new LdrObject(attr, p.m_parent, p.m_context_id));
+			auto creator = ObjectCreator<ShapeType>{};
 
 			// Read the description of the model
 			p.m_reader.SectionStart();

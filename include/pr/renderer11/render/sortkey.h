@@ -56,8 +56,10 @@ namespace pr
 		#define PR_ENUM(x)\
 			x(Default    ,= ((sortkey::MaxSortGroups >> 1) & 0xFFFFFFFF))\
 			x(Skybox     ,= Default + 1U)\
-			x(AlphaBack  ,= Default + 5U)\
-			x(AlphaFront ,= Default + 6U)
+			x(PreAlpha   ,= Default + 5U)\
+			x(AlphaBack  ,= Default + 6U)\
+			x(AlphaFront ,= Default + 7U)\
+			x(PostAlpha  ,= Default + 8U)
 		PR_DEFINE_ENUM2(ESortGroup, PR_ENUM);
 		#undef PR_ENUM
 

@@ -15,10 +15,10 @@ namespace ldr
 		,pr::events::IRecv<pr::ldr::Evt_LdrObjectSelectionChanged>
 		,pr::events::IRecv<pr::rdr::Evt_UpdateScene>
 	{
-		pr::Camera&       m_cam; 
-		pr::Renderer&     m_rdr;
-		pr::ldr::GizmoPtr m_gizmo;
-		IInputHandler*    m_fwd_input; // The input handler to forward unused input to
+		pr::Camera&          m_cam; 
+		pr::Renderer&        m_rdr;
+		pr::ldr::LdrGizmoPtr m_gizmo;
+		IInputHandler*       m_fwd_input; // The input handler to forward unused input to
 
 		Manipulator(pr::Camera& cam, pr::Renderer& rdr);
 
@@ -40,9 +40,9 @@ namespace ldr
 		// 'button_state' is the state of the mouse buttons (pr::camera::ENavKey)
 		// 'start_or_end' is true on mouse down/up
 		// Returns true if the camera has moved or objects in the scene have moved
-		void IInputHandler::MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
-		void IInputHandler::MouseClick(pr::v2 const& pos_ns, int button_state) override;
-		void IInputHandler::MouseWheel(pr::v2 const& pos_ns, float delta) override;
+		bool IInputHandler::MouseInput(pr::v2 const& pos_ns, int button_state, bool start_or_end) override;
+		bool IInputHandler::MouseClick(pr::v2 const& pos_ns, int button_state) override;
+		bool IInputHandler::MouseWheel(pr::v2 const& pos_ns, float delta) override;
 
 		// Event handlers
 		void OnEvent(pr::ldr::Evt_LdrObjectSelectionChanged const&) override;

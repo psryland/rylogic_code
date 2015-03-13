@@ -3905,8 +3905,8 @@ namespace pr.gui
 			base.OnMouseWheel(e);
 
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
-			m_camera.Navigate(0, 0, e.Delta / 120f);
-			Refresh();
+			if (m_window.Navigate(0, 0, e.Delta / 120f))
+				Refresh();
 		}
 
 		/// <summary>Create the default navigation mouse operation based on mouse button</summary>
@@ -4023,8 +4023,8 @@ namespace pr.gui
 		{
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
 			var dst = ClientToDiagram(cs);
-			m_camera.Navigate(ds.x - dst.x, ds.y - dst.y, 0);
-			Refresh();
+			if (m_window.Navigate(ds.x - dst.x, ds.y - dst.y, 0))
+				Refresh();
 		}
 
 		/// <summary>Move the selected elements by 'delta'</summary>

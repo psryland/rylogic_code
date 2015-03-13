@@ -273,7 +273,9 @@ namespace ldr
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		// Forward to the input handler
-		m_main->m_input->MouseInput(ToNormSS(mouse_loc), args.m_down ? btn : 0, true);
+		if (m_main->m_input->MouseInput(ToNormSS(mouse_loc), args.m_down ? btn : 0, true))
+			pr::events::Send(Event_Refresh());
+
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
@@ -282,7 +284,9 @@ namespace ldr
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 
-		m_main->m_input->MouseInput(ToNormSS(mouse_loc), btn, false);
+		if (m_main->m_input->MouseInput(ToNormSS(mouse_loc), btn, false))
+			pr::events::Send(Event_Refresh());
+
 		MouseStatusUpdate(mouse_loc);
 	}
 	bool MainGUI::OnMouseClick(MouseEventArgs const& args)
@@ -290,7 +294,9 @@ namespace ldr
 		auto btn = static_cast<pr::camera::ENavBtn::Enum_>(args.m_button);
 		auto mouse_loc = pr::To<pr::v2>(args.m_point);
 		
-		m_main->m_input->MouseClick(ToNormSS(mouse_loc), btn);
+		if (m_main->m_input->MouseClick(ToNormSS(mouse_loc), btn))
+			pr::events::Send(Event_Refresh());
+
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
@@ -299,7 +305,9 @@ namespace ldr
 		pr::v2 mouse_loc = pr::To<pr::v2>(args.m_point);
 
 		// delta is '1.0f' for a single wheel click
-		m_main->m_input->MouseWheel(ToNormSS(mouse_loc), args.m_delta/120.0f);
+		if (m_main->m_input->MouseWheel(ToNormSS(mouse_loc), args.m_delta/120.0f))
+			pr::events::Send(Event_Refresh());
+
 		MouseStatusUpdate(mouse_loc);
 		return false;
 	}
@@ -328,8 +336,8 @@ namespace ldr
 		case ID_NAV_RESETVIEW_ALL            : OnResetView(EObjectBounds::All); break;
 		case ID_NAV_RESETVIEW_SELECTED       : OnResetView(EObjectBounds::Selected); break;
 		case ID_NAV_RESETVIEW_VISIBLE        : OnResetView(EObjectBounds::Visible); break;
-		case ID_NAV_ALIGN_NONE               : OnNavAlign(pr::v4XAxis); break;
-		case ID_NAV_ALIGN_X                  : OnNavAlign(pr::v4Zero); break;
+		case ID_NAV_ALIGN_NONE               : OnNavAlign(pr::v4Zero); break;
+		case ID_NAV_ALIGN_X                  : OnNavAlign(pr::v4XAxis); break;
 		case ID_NAV_ALIGN_Y                  : OnNavAlign(pr::v4YAxis); break;
 		case ID_NAV_ALIGN_Z                  : OnNavAlign(pr::v4ZAxis); break;
 		case ID_NAV_ALIGN_CURRENT            : OnNavAlign(m_main->m_nav.CameraToWorld().y); break;

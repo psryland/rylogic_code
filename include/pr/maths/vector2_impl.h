@@ -98,13 +98,13 @@ namespace pr
 	}
 	inline float Cross2(v2 const& lhs, v2 const& rhs)
 	{
-		return lhs.y * rhs.x - lhs.x * rhs.y; // Dot2(Rotate90CW(lhs), rhs)
+		return lhs.y * rhs.x - lhs.x * rhs.y; // == Dot2(Rotate90CW(lhs), rhs)
 	}
-	inline v2 Rotate90CW(v2 const& v)
+	inline v2 Rotate90CW(v2 const& v) // note: when looking down the Z axis
 	{
 		return v2::make(-v.y, v.x);
 	}
-	inline v2 Rotate90CCW(v2 const& v)
+	inline v2 Rotate90CCW(v2 const& v) // note: when looking down the Z axis
 	{
 		return v2::make(v.y, -v.x);
 	}

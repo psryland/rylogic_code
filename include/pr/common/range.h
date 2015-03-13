@@ -41,6 +41,24 @@ namespace pr
 			return m_begin == m_end;
 		}
 
+		// begin/end range support
+		T begin() const
+		{
+			return m_begin;
+		}
+		T& begin()
+		{
+			return m_begin;
+		}
+		T end() const
+		{
+			return m_end;
+		}
+		T& end()
+		{
+			return m_end;
+		}
+
 		// The number of elements in or length of the range
 		auto size() const -> decltype(T() - T())
 		{
