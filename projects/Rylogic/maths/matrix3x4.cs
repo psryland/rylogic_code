@@ -20,6 +20,7 @@ namespace pr.maths
 		public m3x4(v4 axis_norm, v4 axis_sine_angle, float cos_angle) :this() { set(axis_norm, axis_sine_angle, cos_angle); }
 		public m3x4(v4 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
 		public m3x4(v4 from, v4 to) :this()                                    { set(from, to); }
+		public m3x4(float pitch, float yaw, float roll) :this()                { set(pitch, yaw, roll); }
 
 		public v4 this[int i]
 		{
@@ -27,12 +28,15 @@ namespace pr.maths
 			set { switch(i){case 0:x=value;break;case 1:y=value;break;case 2:z=value;break;default: throw new ArgumentException("index out of range", "i");} }
 		}
 
+		/// <summary>Create from vectors</summary>
 		public void set(v4 x_, v4 y_, v4 z_)
 		{
 			x = x_;
 			y = y_;
 			z = z_;
 		}
+
+		/// <summary>Create from an axis, angle</summary>
 		public void set(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
 		{
 			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
@@ -57,11 +61,17 @@ namespace pr.maths
 			z.y = trace_vec.y - axis_sine_angle.x;
 			z.w = 0.0f;
 		}
+
+		/// <summary>Create from an axis and angle. 'axis' should be normalised</summary>
 		public void set(v4 axis_norm, float angle)
 		{
 			Debug.Assert(Maths.FEql(axis_norm.Length3Sq, 1f, 2*Maths.TinyF), "'axis_norm' should be normalised");
 			set(axis_norm, axis_norm * (float)Math.Sin(angle), (float)Math.Cos(angle));
 		}
+
+		/// <summary>
+		/// Create a transform representing the rotation from one vector to another.
+		/// 'from' and 'to' should be normalised</summary>
 		public void set(v4 from, v4 to)
 		{
 			Debug.Assert(Maths.FEql(from.Length3Sq, 1f, 2*Maths.TinyF) && Maths.FEql(to.Length3Sq, 1f, 2*Maths.TinyF), "'from' and 'to' should be normalised");
@@ -75,6 +85,19 @@ namespace pr.maths
 				v4 axis_norm       = v4.Normalise3(axis_sine_angle);
 				set(axis_norm, axis_sine_angle, cos_angle);
 			}
+		}
+
+		/// <summary>
+		/// Create from an pitch, yaw, and roll.
+		/// Order is roll, pitch, yaw because objects usually face along Z and have Y as up.</summary>
+		public void set(float pitch, float yaw, float roll)
+		{
+			float cos_p = (float)Math.Cos(pitch), sin_p = (float)Math.Sin(pitch);
+			float cos_y = (float)Math.Cos(yaw  ), sin_y = (float)Math.Sin(yaw  );
+			float cos_r = (float)Math.Cos(roll ), sin_r = (float)Math.Sin(roll );
+			x.Set( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f);
+			y.Set(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f);
+			z.Set( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f);
 		}
 
 		// Static m3x4 types
@@ -189,22 +212,28 @@ namespace pr.maths
 			return OriFromDir(direction, axis, v4.Perpendicular(direction));
 		}
 
-		// Create a rotation from an axis and angle
+		/// <summary>Create a rotation from an axis and angle</summary>
 		public static m3x4 Rotation(v4 axis_norm, v4 axis_sine_angle, float cos_angle)
 		{
 			return new m3x4(axis_norm, axis_sine_angle, cos_angle);
 		}
 
-		// Create from an axis and angle. 'axis' should be normalised
+		/// <summary>Create from an axis and angle. 'axis' should be normalised</summary>
 		public static m3x4 Rotation(v4 axis_norm, float angle)
 		{
 			return new m3x4(axis_norm, angle);
 		}
 
-		// Create a rotation from 'from' to 'to'
+		/// <summary>Create a rotation from 'from' to 'to'</summary>
 		public static m3x4 Rotation(v4 from, v4 to)
 		{
 			return new m3x4(from, to);
+		}
+
+		/// <summary>Create a rotation from 'from' to 'to'</summary>
+		public static m3x4 Rotation(float pitch, float yaw, float roll)
+		{
+			return new m3x4(pitch, yaw, roll);
 		}
 	}
 }

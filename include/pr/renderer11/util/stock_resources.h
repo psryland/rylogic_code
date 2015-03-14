@@ -23,6 +23,7 @@ namespace pr
 			x(Invalid ,= InvalidId)\
 			x(Black   ,)\
 			x(White   ,)\
+			x(Gray    ,)\
 			x(Checker ,)
 		PR_DEFINE_ENUM2(EStockTexture, PR_ENUM);
 		#undef PR_ENUM

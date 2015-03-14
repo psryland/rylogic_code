@@ -8,6 +8,7 @@
 #include "pr/renderer11/render/blend_state.h"
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/depth_state.h"
+#include "pr/renderer11/render/sortkey.h"
 #include "pr/renderer11/textures/texture2d.h"
 #include "pr/renderer11/models/model_buffer.h"
 #include "pr/renderer11/shaders/shader_set.h"
@@ -17,38 +18,64 @@ namespace pr
 	namespace rdr
 	{
 		// Notes:
+		// Shader/Nugget Requirements:
+		// There is some data that is model specific and used by multiple shaders (e.g. topo, geom type, diffuse texture),
+		//  these data might as well be in the nuggets to prevent duplication in each shader.
+		// Usability requires that we can add a model (i.e. a collection of nuggets) to any/all render steps automatically.
+		// Noramlly, render steps have a shader they want to use but sometimes we need to override the shader a render step uses.
+		// We don't want to have to resolve the shaders per frame
+		//
+		// Render Steps:
+		// Nuggets may be referenced in the drawlists of several render steps. i.e. each render step has
+		// its own drawlist, so the same nugget can be pointed to from multiple drawlists.
+		// This leads to the conclusion that a nugget shouldn't contain shader specific data (e.g. why should all nuggets have a
+		// variable only used in one shader from one render step? This wouldn't scale as more shaders/render steps are added)
+		// ShaderBase derived objects are light weight instances of dx shaders. These shader instances contain per-nugget data
+		// (such as line width, projection texture, etc). They can be duplicated as needed.
+		//
+		// Drawlist Sorting and sortkeys:
+		// Since there is a drawlist per render step, each nugget needs a sortkey per drawlist. These are composed on demand
+		// when the nuggets are added to the render steps:
+		//  - nugget sortkey has sort group, alpha, and diff texture id set
+		//  - per render step (aka drawlist)
+		//    - hash the sort ids of all shaders together into a shader id and set that in the sortkey
+		//    - apply sort key overrides from the owning instance (these are needed because the instance might tint with alpha)
+		//
+		// ShaderMap:
+		// A nugget contains a collection of ShaderPtrs as well as model specific data. The shader map contains the pointers
+		// to the shaders to be used by each render step. Users can set these pointers as needed for specific functionally or
+		// leave them as null. When a nugget is added to a render step, the render step ensures that there are appropriate
+		// shaders in the shader map for it to be rendererd by that render step. If they're missing it adds them.
+		//
+		// ModelBufferPtr:
 		// Nuggets can only reference the model buffer, not the model, because if they contained
 		// ModelPtr's that could mean models contain nuggets which contain references to them-
 		// selves, meaning the reference count will not automatically clean up the model.
 		//
-		// Nuggets may be referenced in the drawlists of several render steps.
-		// This means they shouldn't contain shader specific data (e.g. why should all nuggets have a 'line width'?)
-		// There is some data that is model specific and used by multiple shaders (e.g. topo, geom type, diffuse texture)
-		// We need an automatic way of adding a model to an arbitrary renderstep, i.e. sensible defaults
-		// Render steps have a shader they want to use but require extra data like geom type, textures, line width, etc
-		// We don't want to have to resolve the shader per frame
-		// ShaderBase derived objects are instances of dx shaders. We can have Shaders that contain per-nugget data (line width, projection texture, etc)
-		//
-		// A nugget contains a collection of ShaderPtrs as well as model specific data. There might be none, or multiple VSs,
-		// PSs, etc in the collection. When a nugget is added to a render step, it ensures that there are appropriate shaders
-		// in the collection for it to be rendererd by that render step. If they're missing it adds them.
 
 		// Nugget construction data
 		struct NuggetProps
 		{
-			EPrim          m_topo;        // The primitive topology for this nugget
-			EGeom          m_geom;        // The valid geometry components within this range
-			ShaderMap      m_smap;        // The shaders to use (optional, some render steps use their own shaders)
-			Texture2DPtr   m_tex_diffuse; // Diffuse texture
-			BSBlock        m_bsb;         // Rendering states
-			DSBlock        m_dsb;         // Rendering states
-			RSBlock        m_rsb;         // Rendering states
+			EPrim        m_topo;        // The primitive topology for this nugget
+			EGeom        m_geom;        // The valid geometry components within this range
+			ShaderMap    m_smap;        // The shaders to use (optional, some render steps use their own shaders)
+			Texture2DPtr m_tex_diffuse; // Diffuse texture
+			BSBlock      m_bsb;         // Rendering states
+			DSBlock      m_dsb;         // Rendering states
+			RSBlock      m_rsb;         // Rendering states
+			SortKey      m_sort_key;    // A base sort key for this nugget (typically leave as 0, tex id, alpha, group added automatically if 0)
 
 			// When passed in to Model->CreateNugget(), these ranges should be relative to the model.
 			// When copied to the nugget collection for the model they are converted to model buffer relative ranges.
 			// If the ranges are zero length, they are assume to mean the entire model
 			Range m_vrange;
 			Range m_irange;
+
+			// Set this flag to true if you want to add a nugget that overlaps the range
+			// of an existing nugget. This is used when rendering a model using multiple
+			// passes, but for simple models, it's usually an error if the nugget ranges
+			// overlap, but in advanced cases it isn't.
+			bool m_range_overlaps;
 
 			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range())
 				:m_topo(topo)
@@ -58,8 +85,10 @@ namespace pr
 				,m_bsb()
 				,m_dsb()
 				,m_rsb()
+				,m_sort_key()
 				,m_vrange(vrange)
 				,m_irange(irange)
+				,m_range_overlaps(false)
 			{}
 		};
 
@@ -71,16 +100,38 @@ namespace pr
 		{
 			ModelBufferPtr m_model_buffer; // The vertex and index buffers.
 			size_t         m_prim_count;   // The number of primitives in this nugget
-			SortKey        m_sort_key;     // A cached sort key derived from this nugget
 			Model*         m_owner;        // The model that this nugget belongs to (for debugging mainly)
 
 			Nugget(NuggetProps const& props)
 				:NuggetProps(props)
 				,m_model_buffer()
 				,m_prim_count()
-				,m_sort_key()
 				,m_owner()
 			{}
+
+			// Return the sortkey composed from the base 'm_sort_key' plus any shaders in 'm_smap'
+			SortKey sort_key(ERenderStep rstep) const
+			{
+				auto sk = m_sort_key;
+
+				// Set the texture id part of the key if not set already
+				if ((sk & SortKey::TextureIdMask) == 0 && m_tex_diffuse != nullptr)
+					sk |= (m_tex_diffuse->m_sort_id << SortKey::TextureIdOfs) & SortKey::TextureIdMask;
+
+				// Set the shader id part of the key if not set already
+				if ((sk & SortKey::ShaderIdMask) == 0)
+				{
+					auto shdr_id = 0;
+					for (auto& shdr : m_smap[rstep].Enumerate())
+					{
+						if (shdr == nullptr) continue;
+						shdr_id = shdr_id*13 ^ shdr->m_sort_id; // hash the sort ids together
+					}
+					sk |= (shdr_id << SortKey::ShaderIdOfs) & SortKey::ShaderIdMask;
+				}
+
+				return sk;
+			}
 		};
 	}
 }

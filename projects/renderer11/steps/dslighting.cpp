@@ -95,7 +95,7 @@ namespace pr
 				DrawListElement dle;
 				dle.m_nugget   = &m_unit_quad.m_model->m_nuggets.front();
 				dle.m_instance = &m_unit_quad.m_base;
-				dle.m_sort_key = 0;
+				dle.m_sort_key = SortKey();
 
 				StateStack::DleFrame frame(ss, dle);
 				ss.Commit();

@@ -89,6 +89,9 @@ namespace pr
 			void Attach(pr::m4x4& o2w);
 			void Detach(pr::m4x4 const& o2w);
 
+			// Record the current matrices as the reference
+			void Reference(pr::v2 const& pos_nss);
+
 			// Reset all attached objects back to the reference position and end manipulation
 			void Revert();
 

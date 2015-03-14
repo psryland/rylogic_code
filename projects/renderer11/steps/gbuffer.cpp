@@ -144,10 +144,14 @@ namespace pr
 				nug.m_smap[Id].m_vs = m_vs;
 				nug.m_smap[Id].m_ps = m_ps;
 
+				// Create the sort key for this nugget
+				auto sk = nug.sort_key(Id);
+				if (sko) sk = sko->Combine(sk);
+
 				DrawListElement dle;
 				dle.m_instance = &inst;
 				dle.m_nugget   = &nug;
-				dle.m_sort_key = sko ? sko->Combine(nug.m_sort_key) : nug.m_sort_key;
+				dle.m_sort_key = sk;
 				m_drawlist.push_back_fast(dle);
 			}
 

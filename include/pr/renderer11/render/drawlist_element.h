@@ -5,6 +5,7 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
+#include "pr/renderer11/render/sortkey.h"
 
 namespace pr
 {

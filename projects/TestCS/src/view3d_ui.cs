@@ -14,6 +14,10 @@ namespace TestCS
 		private View3d.Object m_obj0;
 		private View3d.Object m_obj1;
 		private View3d.Texture m_tex0;
+		private ToolStrip toolStrip1;
+		private ToolStripButton m_btn_translate;
+		private ToolStripButton m_btn_rotate;
+		private ToolStripButton m_btn_scale;
 		private View3d.Gizmo m_giz;
 
 		static FormView3d()
@@ -33,6 +37,7 @@ namespace TestCS
 
 			// Simple create object
 			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}");
+			m_obj0.O2P = m4x4.Rotation(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
 
 			// Create object via callback
@@ -70,6 +75,10 @@ namespace TestCS
 			m_giz.Enabled = true;
 			m_view3d.Window.AddGizmo(m_giz);
 
+			m_btn_translate.Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Translate;
+			m_btn_rotate   .Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Rotate;
+			m_btn_scale    .Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Scale;
+
 			//m_view3d.View3d.CreateDemoScene();
 			
 			m_view3d.Camera.ResetView();
@@ -97,9 +106,66 @@ namespace TestCS
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.components = new System.ComponentModel.Container();
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormView3d));
+			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+			this.m_btn_translate = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_scale = new System.Windows.Forms.ToolStripButton();
+			this.m_btn_rotate = new System.Windows.Forms.ToolStripButton();
+			this.toolStrip1.SuspendLayout();
+			this.SuspendLayout();
+			// 
+			// toolStrip1
+			// 
+			this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_btn_translate,
+            this.m_btn_rotate,
+            this.m_btn_scale});
+			this.toolStrip1.Location = new System.Drawing.Point(0, 0);
+			this.toolStrip1.Name = "toolStrip1";
+			this.toolStrip1.Size = new System.Drawing.Size(352, 25);
+			this.toolStrip1.TabIndex = 0;
+			this.toolStrip1.Text = "toolStrip1";
+			// 
+			// m_btn_translate
+			// 
+			this.m_btn_translate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_btn_translate.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_translate.Image")));
+			this.m_btn_translate.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_translate.Name = "m_btn_translate";
+			this.m_btn_translate.Size = new System.Drawing.Size(59, 22);
+			this.m_btn_translate.Text = "Translate";
+			// 
+			// m_btn_scale
+			// 
+			this.m_btn_scale.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_btn_scale.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_scale.Image")));
+			this.m_btn_scale.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_scale.Name = "m_btn_scale";
+			this.m_btn_scale.Size = new System.Drawing.Size(38, 22);
+			this.m_btn_scale.Text = "Scale";
+			// 
+			// m_btn_rotate
+			// 
+			this.m_btn_rotate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_btn_rotate.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_rotate.Image")));
+			this.m_btn_rotate.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_rotate.Name = "m_btn_rotate";
+			this.m_btn_rotate.Size = new System.Drawing.Size(45, 22);
+			this.m_btn_rotate.Text = "Rotate";
+			// 
+			// FormView3d
+			// 
+			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.ClientSize = new System.Drawing.Size(352, 342);
+			this.Controls.Add(this.toolStrip1);
+			this.Name = "FormView3d";
 			this.Text = "FormView3d";
+			this.toolStrip1.ResumeLayout(false);
+			this.toolStrip1.PerformLayout();
+			this.ResumeLayout(false);
+			this.PerformLayout();
+
 		}
 
 		#endregion

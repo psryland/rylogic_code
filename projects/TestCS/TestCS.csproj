@@ -138,6 +138,9 @@
     <EmbeddedResource Include="src\tree_grid_ui.resx">
       <DependentUpon>tree_grid_ui.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="src\view3d_ui.resx">
+      <DependentUpon>view3d_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>

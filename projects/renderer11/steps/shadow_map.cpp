@@ -150,7 +150,7 @@ namespace pr
 				DrawListElement dle;
 				dle.m_instance = &inst;
 				dle.m_nugget   = &nug;
-				dle.m_sort_key = 0;
+				dle.m_sort_key = SortKey();
 				m_drawlist.push_back_fast(dle);
 			}
 

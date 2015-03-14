@@ -66,7 +66,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Allocate a new texture instance and dx texture resource
-			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, src, tdesc, sdesc, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
@@ -118,7 +118,7 @@ namespace pr
 			}
 
 			// Allocate the texture instance
-			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, tex, srv, sam_desc, sort_id);
 			inst->m_id     = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_src_id = texfile_id;
@@ -152,7 +152,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, "Gdi textures require the MipLevels == 1");
 
 			// Allocate a new texture instance and dx texture resource
-			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			TextureGdiPtr inst = m_alex_texgdi.New(this, src, tdesc, sdesc, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
@@ -184,7 +184,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Allocate a new texture instance that reuses the dx texture resource
-			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, *existing.m_ptr, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
@@ -208,7 +208,7 @@ namespace pr
 				throw pr::Exception<HRESULT>(E_FAIL, pr::FmtS("Texture Id '%d' is already in use", id));
 
 			// Allocate a new texture instance that reuses the dx texture resource
-			SortKeyId sort_id = m_lookup_tex.size() % sortkey::MaxTextureId;
+			SortKeyId sort_id = m_lookup_tex.size() % SortKey::MaxTextureId;
 			Texture2DPtr inst = m_alex_tex2d.New(this, existing_tex, existing_srv, sam_desc, sort_id);
 			inst->m_id = id == AutoId ? MakeId(inst.m_ptr) : id;
 			inst->m_name = name ? name : "";
@@ -255,6 +255,11 @@ namespace pr
 				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
 				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
 				m_stock_textures.push_back(CreateTexture2D(EStockTexture::White, src, tdesc, SamplerDesc::LinearClamp(), "#white"));
+			}{
+				pr::uint const data[] = {0xFF808080};
+				Image src = Image::make(1, 1, data, DXGI_FORMAT_R8G8B8A8_UNORM);
+				TextureDesc tdesc(src, 1, D3D11_USAGE_IMMUTABLE);
+				m_stock_textures.push_back(CreateTexture2D(EStockTexture::Gray, src, tdesc, SamplerDesc::LinearClamp(), "#gray"));
 			}{
 				pr::uint const data[] =
 				{

@@ -5,157 +5,151 @@
 #pragma once
 
 #include "pr/renderer11/forward.h"
-#include "pr/renderer11/textures/texture2d.h"
-#include "pr/renderer11/shaders/shader.h"
-#include "pr/renderer11/models/nugget.h"
 
 namespace pr
 {
 	namespace rdr
 	{
+		// Bit layout:
+		// 11111111 11111111 11111111 11111111
+		//                     ###### ######## texture id  lowest priority, most common thing changed when processing the drawlist
+		//          ######## ##                shader id
+		//        #                            has alpha
+		// #######                             sort group  highest priority, least common thing changed when processing the drawlist
+		//
 		// General sorting notes: From the word of Al:
 		// Z Buffering:
 		//   Always try to maintain the z buffer (i.e. writeenable) even for huds etc
-		//   Stereoscope rendering requires everything to have correct depth
+		//   Stereoscopic rendering requires everything to have correct depth
 		//   Render the skybox after all opaques to reduce overdraw
 		// Alpha:
 		//   Two sided objects should be rendered twice, 1st with front face
 		//   culling, 2nd with back face culling
-		namespace sortkey
-		{
-			SortKey const Min = 0x00000000U;
-			SortKey const Max = 0xFFFFFFFFU;
+		//
 
-			// Bit layout:
-			// 11111111 11111111 11111111 11111111
-			//                     ###### ######## texture id  lowest priority, most common thing changed when processing the drawlist
-			//          ######## ##                shader id
-			//        #                            has alpha
-			// #######                             sort group  highest priority, least common thing changed when processing the drawlist
-			SortKey const SortKeyBits   (8U * sizeof(SortKey));
-
-			SortKey const TextureIdBits (14U);
-			SortKey const ShaderIdBits  (10U);
-			SortKey const AlphaBits     (1U );
-			SortKey const SortGroupBits (SortKeyBits - (AlphaBits + ShaderIdBits + TextureIdBits));
-
-			SortKey const MaxTextureId  (1U << TextureIdBits);
-			SortKey const MaxShaderId   (1U << ShaderIdBits );
-			SortKey const MaxSortGroups (1U << SortGroupBits);
-
-			SortKey const TextureIdOfs  (0U);
-			SortKey const ShaderIdOfs   (0U + TextureIdBits);
-			SortKey const AlphaOfs      (0U + TextureIdBits + ShaderIdBits);
-			SortKey const SortGroupOfs  (0U + TextureIdBits + ShaderIdBits + AlphaBits);
-
-			SortKey const TextureIdMask ((~0U >> (SortKeyBits - TextureIdBits)) << TextureIdOfs);
-			SortKey const ShaderIdMask  ((~0U >> (SortKeyBits - ShaderIdBits )) << ShaderIdOfs );
-			SortKey const AlphaMask     ((~0U >> (SortKeyBits - AlphaBits    )) << AlphaOfs    );
-			SortKey const SortGroupMask ((~0U >> (SortKeyBits - SortGroupBits)) << SortGroupOfs);
-		}
-		#define PR_ENUM(x)\
-			x(Default    ,= ((sortkey::MaxSortGroups >> 1) & 0xFFFFFFFF))\
-			x(Skybox     ,= Default + 1U)\
-			x(PreAlpha   ,= Default + 5U)\
-			x(AlphaBack  ,= Default + 6U)\
-			x(AlphaFront ,= Default + 7U)\
-			x(PostAlpha  ,= Default + 8U)
+		// Define sort groups
+		#define PR_ENUM(x                  )/*
+			*/x(Default     ,= 64          ) /* Make opaques the middle group
+			*/x(Skybox      ,              )/* Skybox after opaques
+			*/x(PostOpaques ,              )/*
+			*/x(PreAlpha    ,= 80          )/*
+			*/x(AlphaBack   ,              )/*
+			*/x(AlphaFront  ,              )/*
+			*/x(PostAlpha   ,              )
 		PR_DEFINE_ENUM2(ESortGroup, PR_ENUM);
 		#undef PR_ENUM
+
+		// The sort key type (wraps a uint32)
+		struct SortKey
+		{
+			typedef pr::uint32 value_type;
+			static value_type const Bits   = 32U;
+
+			static value_type const TextureIdBits = 14U;
+			static value_type const ShaderIdBits  = 10U;
+			static value_type const AlphaBits     = 1U ;
+			static value_type const SortGroupBits = Bits - (AlphaBits + ShaderIdBits + TextureIdBits);
+			static_assert(Bits > AlphaBits + ShaderIdBits + TextureIdBits, "Sortkey is not large enough");
+
+			static value_type const MaxTextureId  = 1U << TextureIdBits;
+			static value_type const MaxShaderId   = 1U << ShaderIdBits ;
+			static value_type const MaxSortGroups = 1U << SortGroupBits;
+
+			static value_type const TextureIdOfs  = 0U;
+			static value_type const ShaderIdOfs   = 0U + TextureIdBits;
+			static value_type const AlphaOfs      = 0U + TextureIdBits + ShaderIdBits;
+			static value_type const SortGroupOfs  = 0U + TextureIdBits + ShaderIdBits + AlphaBits;
+
+			static value_type const TextureIdMask = (~0U >> (Bits - TextureIdBits)) << TextureIdOfs;
+			static value_type const ShaderIdMask  = (~0U >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
+			static value_type const AlphaMask     = (~0U >> (Bits - AlphaBits    )) << AlphaOfs    ;
+			static value_type const SortGroupMask = (~0U >> (Bits - SortGroupBits)) << SortGroupOfs;
+
+			value_type m_value;
+
+			static SortKey make(value_type value) { return SortKey{value}; }
+			operator value_type() const           { return m_value; }
+
+			// Get/Set the sort group
+			ESortGroup Group() const
+			{
+				return static_cast<ESortGroup>(m_value & SortGroupMask);
+			}
+			void Group(ESortGroup group)
+			{
+				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < MaxSortGroups, "sort group out of range");
+				m_value &= ~SortGroupMask;
+				m_value |= (group << SortGroupOfs) & SortGroupMask;
+			}
+		};
+		static_assert(std::is_pod<SortKey>::value, "SortKey must be a pod type");
+		static_assert(8U * sizeof(SortKey) == SortKey::Bits, "8 * sizeof(Sortkey) != SortKey::Bits");
+		static_assert(ESortGroup::Default == SortKey::MaxSortGroups/2, "ESortGroup::Default should be the middle");
+		inline SortKey& operator |= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value |= rhs; return lhs; }
+		inline SortKey& operator &= (SortKey& lhs, SortKey::value_type rhs) { lhs.m_value &= rhs; return lhs; }
 
 		// A sort key override is a mask that is applied to a sort key
 		// to override specific parts of the sort key.
 		struct SKOverride
 		{
-			SortKey m_mask; // Set the bits to override
-			SortKey m_key;  // Set the overridden bit values
+			SortKey::value_type m_mask; // The bits to override
+			SortKey::value_type m_key;  // The overridden bit values
 
-			SKOverride() :m_mask(0) ,m_key(0) {}
-			SortKey Combine(SortKey key) const { return (key & ~m_mask) | m_key; }
+			SKOverride()
+				:m_mask(0)
+				,m_key(0)
+			{}
+
+			// Combine this override with a sort key to produce a new sort key
+			SortKey Combine(SortKey key) const
+			{
+				return SortKey{(key.m_value & ~m_mask) | m_key};
+			}
 
 			// Get/Set the alpha component of the sort key
 			bool HasAlpha() const
 			{
-				return (m_mask & sortkey::AlphaMask) != 0;
+				return (m_mask & SortKey::AlphaMask) != 0;
 			}
 			bool Alpha() const
 			{
-				return ((m_key & sortkey::AlphaMask) >> sortkey::AlphaOfs) != 0;
+				return ((m_key & SortKey::AlphaMask) >> SortKey::AlphaOfs) != 0;
 			}
 			SKOverride& ClearAlpha()
 			{
-				m_mask &= ~sortkey::AlphaMask;
-				m_key  &= ~sortkey::AlphaMask;
+				m_mask &= ~SortKey::AlphaMask;
+				m_key  &= ~SortKey::AlphaMask;
 				return *this;
 			}
 			SKOverride& Alpha(bool has_alpha)
 			{
-				m_mask |= static_cast<SortKey>(sortkey::AlphaMask);
-				m_key  |= static_cast<SortKey>((has_alpha << sortkey::AlphaOfs) & sortkey::AlphaMask);
+				m_mask |= SortKey::AlphaMask;
+				m_key  |= (has_alpha << SortKey::AlphaOfs) & SortKey::AlphaMask;
 				return *this;
 			}
 
 			// Get/Set the sort group component of the sort key
-			// 'group' = 0 is the default group, negative groups draw earlier, positive groups draw later
 			bool HasGroup() const
 			{
-				return (m_mask & sortkey::SortGroupMask) != 0;
+				return (m_mask & SortKey::SortGroupMask) != 0;
 			}
 			int Group() const
 			{
-				return static_cast<int>(((m_key & sortkey::SortGroupMask) >> sortkey::SortGroupOfs) - ESortGroup::Default);
+				return static_cast<int>(((m_key & SortKey::SortGroupMask) >> SortKey::SortGroupOfs) - ESortGroup::Default);
 			}
 			SKOverride& ClearGroup()
 			{
-				m_mask &= ~sortkey::SortGroupMask;
-				m_key  &= ~sortkey::SortGroupMask;
+				m_mask &= ~SortKey::SortGroupMask;
+				m_key  &= ~SortKey::SortGroupMask;
 				return *this;
 			}
 			SKOverride& Group(ESortGroup group)
 			{
-				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < sortkey::MaxSortGroups, "sort group out of range");
-				m_mask |= static_cast<SortKey>(sortkey::SortGroupMask);
-				m_key  |= static_cast<SortKey>((group << sortkey::SortGroupOfs) & sortkey::SortGroupMask);
+				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < SortKey::MaxSortGroups, "sort group out of range");
+				m_mask |= SortKey::SortGroupMask;
+				m_key  |= (group << SortKey::SortGroupOfs) & SortKey::SortGroupMask;
 				return *this;
 			}
 		};
-
-		// Construct a standard sort key for a render nugget
-		inline pr::rdr::SortKey MakeSortKey(NuggetProps const& ddata)
-		{
-			(void)ddata;
-			bool alpha = false;
-
-			// Make a sort key that is the same for all nuggets with the  same shaders and same state
-			SortKey key = 0;
-			//if (ddata.m_sset.m_vs != nullptr)
-			//{
-			//	key ^= ddata.m_sset.m_vs->m_sort_id;
-			//}
-
-
-//todo
-			//if (ddata.m_shader)
-			//{
-			//	key |= ddata.m_shader->m_sort_id << sortkey::ShaderIdOfs;
-			//	PR_ASSERT(PR_DBG_RDR, ddata.m_shader->m_sort_id < sortkey::MaxShaderId, "shader sort id overflow");
-			//}
-			//if (ddata.m_tex_diffuse)
-			//{
-			//	key   |= ddata.m_tex_diffuse->m_sort_id << sortkey::TextureIdOfs;
-			//	alpha |= ddata.m_tex_diffuse->m_has_alpha;
-			//	PR_ASSERT(PR_DBG_RDR, ddata.m_tex_diffuse->m_sort_id < sortkey::MaxTextureId, "texture sort id overflow");
-			//}
-
-			//rs::State const* rsb = mat.m_rsb.Find(D3DRS_ALPHABLENDENABLE);
-			//if (rsb && rsb->m_state == TRUE)
-			//{
-			//	alpha |= true;
-			//}
-
-			key |= alpha ? ESortGroup::AlphaBack : ESortGroup::Default;
-			key |= alpha << sortkey::AlphaOfs;
-			return key;
-		}
 	}
 }

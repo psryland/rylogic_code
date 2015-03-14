@@ -168,7 +168,7 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, FindShader(shdr->m_id) == 0, "A shader with this Id already exists");
 
 			// Setup a sort id for the shader
-			shdr->m_sort_id = m_lookup_shader.size() % sortkey::MaxShaderId;
+			shdr->m_sort_id = m_lookup_shader.size() % SortKey::MaxShaderId;
 
 			// Add the shader instance to the lookup map
 			AddLookup(m_lookup_shader, shdr->m_id, shdr);

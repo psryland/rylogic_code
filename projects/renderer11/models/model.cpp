@@ -43,7 +43,7 @@ namespace pr
 			return m_model_buffer->MapIndices(lock, map_type, flags, irange);
 		}
 
-		// Call to create a render nugget for render step 'rstep' from a range within this model that uses 'ddata'.
+		// Create a nugget from a range within this model
 		// Ranges are model relative, i.e. the first vert in the model is range [0,1)
 		// Remember you might need to delete render nuggets first
 		void Model::CreateNugget(NuggetProps props)
@@ -58,11 +58,14 @@ namespace pr
 			PR_ASSERT(PR_DBG_RDR, IsWithin(m_vrange, props.m_vrange), "This range exceeds the size of this model"); 
 			PR_ASSERT(PR_DBG_RDR, IsWithin(m_irange, props.m_irange), "This range exceeds the size of this model");
 
-			// Verify the ranges do not overlap with existing nuggets in this chain, that's probably an error
+			// Verify the ranges do not overlap with existing nuggets in this chain, unless explicitly allowed.
 			#if PR_DBG_RDR
-			for (auto& nug : m_nuggets)
+			if (!props.m_range_overlaps)
 			{
-				PR_ASSERT(PR_DBG_RDR, !Intersects(props.m_irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+				for (auto& nug : m_nuggets)
+				{
+					PR_ASSERT(PR_DBG_RDR, !Intersects(props.m_irange, nug.m_irange), "A render nugget covering this index range already exists. DeleteNuggets() call may be needed");
+				}
 			}
 			#endif
 
@@ -73,7 +76,6 @@ namespace pr
 				Nugget& nugget        = m_nuggets.back();
 				nugget.m_model_buffer = m_model_buffer;
 				nugget.m_prim_count   = PrimCount(props.m_irange.size(), props.m_topo);
-				nugget.m_sort_key     = MakeSortKey(nugget);
 				nugget.m_owner        = this;
 			}
 		}

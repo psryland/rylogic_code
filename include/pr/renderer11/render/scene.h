@@ -78,6 +78,12 @@ namespace pr
 			void ClearDrawlists();
 			void UpdateDrawlists();
 
+			// Rendering multi-pass models:
+			// To render a model that needs to be done in multiple passes, add addition nuggets to
+			// the model that overlap with existing nuggets but have different render states/shaders
+			// e.g. To render back faces first, then front faces: Add a nugget for the whole model
+			// with front face culling, then another nugget for the whole model with back face culling.
+
 			// Add an instance. The instance must be resident for the entire time that it is
 			// in the scene, i.e. until 'RemoveInstance' or 'ClearDrawlist' is called.
 			// This method will add the instance to all render steps for which the model has appropriate nuggets.

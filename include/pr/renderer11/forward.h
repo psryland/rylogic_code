@@ -90,7 +90,6 @@ namespace pr
 	{
 		typedef pr::uint8  byte;
 		typedef uintptr_t  RdrId;
-		typedef pr::uint32 SortKey;
 		typedef pr::uint16 SortKeyId;
 		static RdrId const AutoId = ~0U; // A special value for automatically generating an Id
 		static RdrId const InvalidId = 0U;
@@ -111,6 +110,7 @@ namespace pr
 		struct SceneView;
 
 		// Rendering
+		struct SortKey;
 		struct DrawListElement;
 		struct BSBlock;
 		struct DSBlock;

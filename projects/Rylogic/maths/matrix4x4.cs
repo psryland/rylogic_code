@@ -27,6 +27,7 @@ namespace pr.maths
 		public m4x4(v4 axis_norm, v4 axis_sine_angle, float cos_angle, v4 translation) :this() { set(axis_norm, axis_sine_angle, cos_angle, translation); }
 		public m4x4(v4 axis_norm, float angle, v4 translation) :this()                         { set(axis_norm, angle, translation); }
 		public m4x4(v4 from, v4 to, v4 translation) :this()                                    { set(from, to, translation); }
+		public m4x4(float pitch, float yaw, float roll, v4 translation) :this()                { set(pitch, yaw, roll, translation); }
 
 		public v4 this[int i]
 		{
@@ -56,6 +57,12 @@ namespace pr.maths
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
 			rot.set(from, to);
+			pos = translation;
+		}
+		public void set(float pitch, float yaw, float roll, v4 translation)
+		{
+			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
+			rot.set(pitch, yaw, roll);
 			pos = translation;
 		}
 
@@ -201,6 +208,10 @@ namespace pr.maths
 		public static m4x4 Rotation(v4 from, v4 to, v4 translation)
 		{
 			return new m4x4(from, to, translation);
+		}
+		public static m4x4 Rotation(float pitch, float yaw, float roll, v4 translation)
+		{
+			return new m4x4(pitch, yaw, roll, translation);
 		}
 
 		// Create a scale matrix

@@ -37,15 +37,19 @@ namespace pr
 			for (auto& nug : nuggets)
 			{
 				// Ensure the nugget contains forward shaders vs/ps
-				// Note, the nugget may contain other shaders that are used by this render step as well
-				nug.m_smap[Id].m_vs = m_vs;
-				nug.m_smap[Id].m_ps = m_ps;
+				// Note, the nugget may contain other shaders (e.g. gs) that is used by this render step as well
+				if (!nug.m_smap[Id].m_vs) nug.m_smap[Id].m_vs = m_vs;
+				if (!nug.m_smap[Id].m_ps) nug.m_smap[Id].m_ps = m_ps;
+
+				// Create the sort key for this nugget
+				auto sk = nug.sort_key(Id);
+				if (sko) sk = sko->Combine(sk);
 
 				// Add a dle for this nugget
 				DrawListElement dle;
 				dle.m_instance = &inst;
 				dle.m_nugget   = &nug;
-				dle.m_sort_key = sko ? sko->Combine(nug.m_sort_key) : nug.m_sort_key;
+				dle.m_sort_key = sk;
 				m_drawlist.push_back_fast(dle);
 			}
 
