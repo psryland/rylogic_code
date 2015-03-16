@@ -8,16 +8,17 @@ import UserVars
 try:
 	print(
 		"*************************************************************************\n"
-		"  Fwd Deploy\n"
+		"  Elevate Deploy\n"
 		"    Copyright (C) Rylogic Limited 2013\n"
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	sln = UserVars.root + "\\projects\\vs2012\\everything.sln"
+	# Build
+	sln = UserVars.root + "\\build\\Rylogic.sln"
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
-		"fwd"
+		"elevate"
 		]
 	platforms = [
 		"x86",
@@ -28,6 +29,8 @@ try:
 		"release"
 		]
 	Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True)
+
+	# Set app properties to 'Run As Admin'
 
 	Tools.OnSuccess()
 

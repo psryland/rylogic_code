@@ -7,8 +7,11 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\fwd\fwd.cpp">
+    <ClCompile Include="..\projects\elevate\elevate.cpp">
       <Filter>src</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\projects\elevate\deploy.py" />
   </ItemGroup>
 </Project>

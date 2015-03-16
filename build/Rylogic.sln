@@ -30,7 +30,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TextFormatter", "TextFormat
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "physics", "physics.vcxproj", "{8C5E848D-B91C-49E0-8E9C-E47A67731AC2}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fwd", "fwd.vcxproj", "{50944CED-7FC2-4B57-95E6-7CE85BADB08E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "elevate", "elevate.vcxproj", "{50944CED-7FC2-4B57-95E6-7CE85BADB08E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Rylogic.VSExtension", "..\projects\Rylogic.VSExtension\Rylogic.VSExtension.csproj", "{852C66A1-A9AA-4BD9-A762-C94B61838F96}"
 EndProject
