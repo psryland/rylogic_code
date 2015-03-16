@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -19,6 +20,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
 using pr.common;
+using pr.container;
 using pr.maths;
 using pr.extn;
 
@@ -60,8 +62,15 @@ namespace pr.util
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
 			var junk = doomed; doomed = null;
-			foreach (var d in junk)
-				d.Dispose();
+			junk.ForEach(d => d.Dispose());
+		}
+		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingListEx<T> doomed) where T:class, IDisposable
+		{
+			// Set 'doomed' to null before disposing to catch accidental
+			// use of 'doomed' in a partially disposed state
+			if (doomed == null) return;
+			var junk = doomed; doomed = null;
+			junk.ForEach(d => d.Dispose());
 		}
 
 		/// <summary>

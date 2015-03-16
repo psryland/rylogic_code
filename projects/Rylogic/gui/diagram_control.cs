@@ -2739,9 +2739,11 @@ namespace pr.gui
 				if (m_proxy != null) m_proxy.Dispose();
 				base.Dispose();
 			}
-			private HitTestResult.Hit HitTestNode(Point location_cs)
+			private IEnumerable<HitTestResult.Hit> HitTestNode(Point location_cs)
 			{
-				return m_diag.HitTestCS(location_cs).Hits.FirstOrDefault(x => x.Entity == Entity.Node && x.Element != m_proxy && x.Element != m_fixed);
+				// This returns all nodes under 'location_cs' including !Enabled ones
+				Func<Element,bool> pred = x => x.Entity == Entity.Node && x != m_proxy && x != m_fixed;
+				return m_diag.HitTestCS(location_cs, pred).Hits;
 			}
 			public override void MouseDown(MouseEventArgs e)
 			{
@@ -2750,11 +2752,18 @@ namespace pr.gui
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
-				// If we're hovering over a node, find the nearest anchor on that node and snap to it
-				var hit = HitTestNode(e.Location);
+				// Find the node we're hovering over
+				var hits = HitTestNode(e.Location);
+				
+				// Look for the first hit enabled node, if none, first any-state node
+				var hit = hits.FirstOrDefault(x => x.Element.Enabled) ?? hits.FirstOrDefault();
 				var target = hit != null ? hit.Element.As<Node>() : null;
-
+				
 				if (target != null)
+					Cancelled = m_diag.RaiseDiagramChanged(new DiagramChangedLinkEventArgs(EDiagramChangeType.LinkMoving, m_conn, m_fixed, target)).Cancel;
+
+				// If we're hovering over a node, find the nearest anchor on that node and snap to it
+				if (target != null && target.Enabled)
 				{
 					var anchor = target.NearestAnchor(hit.Point, true, m_conn);
 					m_proxy.PositionXY = anchor.LocationDS.xy;
@@ -2771,7 +2780,7 @@ namespace pr.gui
 			public override void MouseUp(MouseEventArgs e)
 			{
 				// Find the node to make the link with
-				var hit = HitTestNode(e.Location);
+				var hit = HitTestNode(e.Location).FirstOrDefault(x => x.Element.Enabled);
 				var target = hit != null ? hit.Element.As<Node>() : null;
 
 				// No node to link to? Just revert the link
@@ -2977,6 +2986,12 @@ namespace pr.gui
 			MoveLinkBegin,
 			MoveLinkEnd,
 			MoveLinkAbort,
+
+			/// <summary>
+			/// An end of a connector is being moved around on the diagram.
+			/// Called whenever the end is above a node (even if !Enabled).
+			/// Setting 'Cancel' for this event will abort the move/add</summary>
+			LinkMoving,
 
 			/// <summary>
 			/// Elements are about to be deleted from the diagram by the user.
@@ -3726,10 +3741,11 @@ namespace pr.gui
 		}
 
 		/// <summary>Perform a hit test on the diagram</summary>
-		public HitTestResult HitTest(v2 ds_point)
+		public HitTestResult HitTest(v2 ds_point, Func<Element, bool> pred)
 		{
 			var result = new HitTestResult(m_camera);
-			foreach (var elem in Elements.Where(x => x.Enabled))
+			var elements = pred != null ? Elements.Where(pred) : Elements;
+			foreach (var elem in elements)
 			{
 				var hit = elem.HitTest(ds_point, m_camera);
 				if (hit != null)
@@ -3744,9 +3760,9 @@ namespace pr.gui
 				});
 			return result;
 		}
-		public HitTestResult HitTestCS(Point cs_point)
+		public HitTestResult HitTestCS(Point cs_point, Func<Element, bool> pred)
 		{
-			return HitTest(ClientToDiagram(cs_point));
+			return HitTest(ClientToDiagram(cs_point), pred);
 		}
 
 		/// <summary>Standard keyboard shortcuts</summary>
@@ -3869,7 +3885,7 @@ namespace pr.gui
 				op.m_btn_down   = true;
 				op.m_grab_cs    = e.Location;
 				op.m_grab_ds    = ClientToDiagram(op.m_grab_cs);
-				op.m_hit_result = HitTest(op.m_grab_ds);
+				op.m_hit_result = HitTest(op.m_grab_ds, null);
 				op.MouseDown(e);
 				Capture = true;
 			}
@@ -3952,7 +3968,7 @@ namespace pr.gui
 				return;
 
 			// Find what was hit
-			var ht = HitTestCS(e.Location);
+			var ht = HitTestCS(e.Location, x => x.Enabled);
 			var hit = ht.Hits.FirstOrDefault();
 			if (hit == null)
 				return;
@@ -4162,7 +4178,7 @@ namespace pr.gui
 			var is_click = r.DiametreSq < MinDragPixelDistanceSq;
 			if (is_click)
 			{
-				var hits = HitTest(rect.Location);
+				var hits = HitTest(rect.Location, x => x.Enabled);
 
 				// If control is down, deselect the first selected element in the hit list
 				if (Bit.AllSet((int)modifiers, (int)Keys.Control))

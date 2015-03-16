@@ -128,6 +128,21 @@ namespace pr.gui
 			set { m_btn_forward.Visible = m_btn_back.Visible = value; }
 		}
 
+		/// <summary>Use the old RichEdit control rather than RICHEDIT50W</summary>
+		public void UseRichEdit2()
+		{
+			m_panel.Controls.Clear();
+			m_text = new System.Windows.Forms.RichTextBox
+				{
+					Dock = DockStyle.Fill,
+					BorderStyle = BorderStyle.None,
+					DetectUrls = true,
+					ReadOnly = true,
+				};
+			m_panel.Controls.Add(m_text);
+			ResetView();
+		}
+
 		/// <summary>Restores the help UI to the Html view</summary>
 		public virtual void ResetView()
 		{
@@ -147,7 +162,7 @@ namespace pr.gui
 				}
 			case EContent.Rtf:
 				{
-					var rtf = m_text.As<RichTextBox>();
+					var rtf = m_text.As<System.Windows.Forms.RichTextBox>();
 					rtf.Rtf = Content;
 					rtf.Select(0,0);
 					Win32.HideCaret(rtf.Handle);

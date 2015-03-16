@@ -124,6 +124,9 @@ namespace pr.extn
 			bool bold = false, Color? fr_color = null, Color? bk_color = null,
 			TimeSpan? display_time_ms = null, EventHandler on_click = null)
 		{
+			if (status == null)
+				return;
+
 			status.Visible = msg.HasValue();
 
 			// Set the text
@@ -173,6 +176,10 @@ namespace pr.extn
 			// If a click handler has been provided, subscribe
 			data.m_on_click = on_click;
 		}
+		public static void SetStatusMessage(this ToolStripStatusLabel status, string msg, bool bold, Color fr_color, Color bk_color)
+		{
+			status.SetStatusMessage(msg, null, null, bold, fr_color, bk_color, TimeSpan.FromSeconds(2), null);
+		}
 
 		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
 		private class StatusTagData
@@ -184,10 +191,6 @@ namespace pr.extn
 				// Forward to the user handler
 				m_on_click.Raise(sender, args);
 			}
-		}
-		public static void SetStatusMessage(this ToolStripStatusLabel status, string text, bool bold, Color frcol, Color bkcol)
-		{
-			status.SetStatusMessage(text, null, null, bold, frcol, bkcol, TimeSpan.FromSeconds(2), null);
 		}
 	}
 

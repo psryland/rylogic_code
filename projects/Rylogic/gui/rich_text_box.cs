@@ -20,7 +20,9 @@ namespace pr.gui
 			{
 				var cparams = base.CreateParams; 
 				if (Win32.LoadLibrary("msftedit.dll") != IntPtr.Zero)
+				{
 					cparams.ClassName = "RICHEDIT50W";
+				}
 				return cparams;
 			 }
 		}
