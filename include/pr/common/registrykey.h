@@ -10,24 +10,27 @@
 
 namespace pr
 {
-	enum class ERegKeyAccess
+	namespace registry
 	{
-		QueryValue       = KEY_QUERY_VALUE,        // (0x0001)
-		SetValue         = KEY_SET_VALUE,          // (0x0002)
-		CreateSubKey     = KEY_CREATE_SUB_KEY,     // (0x0004)
-		EnumerateSubKeys = KEY_ENUMERATE_SUB_KEYS, // (0x0008)
-		Notify           = KEY_NOTIFY,             // (0x0010)
-		CreateLink       = KEY_CREATE_LINK,        // (0x0020)
-		WOW64_32Key      = KEY_WOW64_32KEY,        // (0x0200)
-		WOW64_64Key      = KEY_WOW64_64KEY,        // (0x0100)
-		WOW64_Res        = KEY_WOW64_RES,          // (0x0300)
-		KeyRead          = KEY_READ,               // ((STANDARD_RIGHTS_READ|KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS|KEY_NOTIFY)&(~SYNCHRONIZE))
-		KeyWrite         = KEY_WRITE,              // ((STANDARD_RIGHTS_WRITE|KEY_SET_VALUE|KEY_CREATE_SUB_KEY)&(~SYNCHRONIZE))
-		KeyExecute       = KEY_EXECUTE,            // ((KEY_READ)&(~SYNCHRONIZE))
-		AllAccess        = KEY_ALL_ACCESS,         // ((STANDARD_RIGHTS_ALL|KEY_QUERY_VALUE|KEY_SET_VALUE|KEY_CREATE_SUB_KEY|KEY_ENUMERATE_SUB_KEYS|KEY_NOTIFY|KEY_CREATE_LINK)&(~SYNCHRONIZE))
-	};
-	inline ERegKeyAccess operator | (ERegKeyAccess lhs, ERegKeyAccess rhs) { return ERegKeyAccess(int(lhs) | int(rhs)); }
-	inline ERegKeyAccess operator & (ERegKeyAccess lhs, ERegKeyAccess rhs) { return ERegKeyAccess(int(lhs) & int(rhs)); }
+		enum EAccess
+		{
+			QueryValue       = KEY_QUERY_VALUE,        // (0x0001)
+			SetValue         = KEY_SET_VALUE,          // (0x0002)
+			CreateSubKey     = KEY_CREATE_SUB_KEY,     // (0x0004)
+			EnumerateSubKeys = KEY_ENUMERATE_SUB_KEYS, // (0x0008)
+			Notify           = KEY_NOTIFY,             // (0x0010)
+			CreateLink       = KEY_CREATE_LINK,        // (0x0020)
+			WOW64_32Key      = KEY_WOW64_32KEY,        // (0x0200)
+			WOW64_64Key      = KEY_WOW64_64KEY,        // (0x0100)
+			WOW64_Res        = KEY_WOW64_RES,          // (0x0300)
+			KeyRead          = KEY_READ,               // ((STANDARD_RIGHTS_READ|KEY_QUERY_VALUE|KEY_ENUMERATE_SUB_KEYS|KEY_NOTIFY)&(~SYNCHRONIZE))
+			KeyWrite         = KEY_WRITE,              // ((STANDARD_RIGHTS_WRITE|KEY_SET_VALUE|KEY_CREATE_SUB_KEY)&(~SYNCHRONIZE))
+			KeyExecute       = KEY_EXECUTE,            // ((KEY_READ)&(~SYNCHRONIZE))
+			AllAccess        = KEY_ALL_ACCESS,         // ((STANDARD_RIGHTS_ALL|KEY_QUERY_VALUE|KEY_SET_VALUE|KEY_CREATE_SUB_KEY|KEY_ENUMERATE_SUB_KEYS|KEY_NOTIFY|KEY_CREATE_LINK)&(~SYNCHRONIZE))
+		};
+		inline EAccess operator | (EAccess lhs, EAccess rhs) { return EAccess(int(lhs) | int(rhs)); }
+		inline EAccess operator & (EAccess lhs, EAccess rhs) { return EAccess(int(lhs) & int(rhs)); }
+	}
 
 	// The Key. Note: to nest keys pass this object to the 'Open' method (3rd parameter)
 	class RegistryKey
@@ -61,7 +64,7 @@ namespace pr
 			,m_last_error(ERROR_SUCCESS)
 			,m_was_created(false)
 		{}
-		RegistryKey(HKEY key, TCHAR const* subkey, ERegKeyAccess access, int reg_option = REG_OPTION_NON_VOLATILE)
+		RegistryKey(HKEY key, TCHAR const* subkey, registry::EAccess access, int reg_option = REG_OPTION_NON_VOLATILE)
 			:RegistryKey()
 		{
 			if (!Open(key, subkey, access, reg_option))
@@ -93,7 +96,7 @@ namespace pr
 		static bool Exists(HKEY key, TCHAR const* subkey)
 		{
 			RegistryKey k;
-			return k.Open(key, subkey, ERegKeyAccess::KeyRead);
+			return k.Open(key, subkey, registry::EAccess::KeyRead);
 		}
 
 		// Open the registry key
@@ -101,11 +104,11 @@ namespace pr
 		// 'subkey' = the "subfolders" under 'key'
 		// 'access' = the desired access to the key
 		// If unicode is used, 'subkey' must be aligned.
-		bool Open(HKEY key, TCHAR const* subkey, ERegKeyAccess access, int reg_option = REG_OPTION_NON_VOLATILE)
+		bool Open(HKEY key, TCHAR const* subkey, registry::EAccess access, int reg_option = REG_OPTION_NON_VOLATILE)
 		{
 			Close();
 
-			if ((access & ERegKeyAccess::SetValue) != ERegKeyAccess(0))
+			if ((access & registry::EAccess::SetValue) != registry::EAccess(0))
 			{
 				DWORD was_created;
 				m_last_error = RegCreateKeyEx(key, subkey, 0, nullptr, reg_option, REGSAM(access), nullptr, &m_hkey, &was_created);
@@ -297,7 +300,7 @@ namespace pr
 			char const* subkey = "Software\\Rylogic Limited\\unittest\\";
 
 			{// Create a dummy key
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, ERegKeyAccess::KeyWrite);
+				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
 
 				// Write some values
 				rkey.Write("String", "Paul Was Here");
@@ -306,7 +309,7 @@ namespace pr
 				rkey.Write("Blob", "ABCD", sizeof("ABCD"), REG_BINARY);
 			}
 			{// Check values exist
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, ERegKeyAccess::KeyRead);
+				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
 				PR_CHECK(rkey.HasValue("String"), true);
 				PR_CHECK(rkey.HasValue("DWord"), true);
@@ -323,7 +326,7 @@ namespace pr
 				PR_CHECK(memcmp(blob, "ABCD", 4) == 0, true);
 			}
 			{// Delete the values
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, ERegKeyAccess::KeyWrite);
+				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
 
 				rkey.DeleteValue("String");
 				rkey.DeleteValue("DWord");
@@ -331,7 +334,7 @@ namespace pr
 				rkey.DeleteValue("Blob");
 			}
 			{// Check values deleted
-				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, ERegKeyAccess::KeyRead);
+				auto rkey = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 
 				PR_CHECK(rkey.HasValue("String"), false);
 				PR_CHECK(rkey.HasValue("DWord"), false);

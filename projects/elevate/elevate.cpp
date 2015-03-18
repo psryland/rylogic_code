@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
 		// Don't do this automatically because if something causes this not to work unlimited processes will start
 		bool reg_value_found = false;
 		{
-			auto key = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::ERegKeyAccess::KeyRead);
+			auto key = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyRead);
 			reg_value_found = key.HasValue(elevate_path.c_str());
 		}
 		if (!reg_value_found)
@@ -96,7 +96,7 @@ int main(int argc, char* argv[])
 			auto ch = std::getchar();
 			if (ch == 'y' || ch == 'Y')
 			{
-				auto key = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::ERegKeyAccess::KeyWrite);
+				auto key = pr::RegistryKey(HKEY_CURRENT_USER, subkey, pr::registry::EAccess::KeyWrite);
 				key.Write(elevate_path.c_str(), "~ RUNASADMIN");
 			
 				std::cerr << "You will need to re-run this process for the changes to take effect\n";
