@@ -16,7 +16,7 @@ try:
 	Tools.AssertPathsExist([UserVars.root])
 
 	# Use the everything sln so that dependent projects get built as well
-	sln = UserVars.root + r"\build\Rylogic.sln"
+	sln = UserVars.rylogic_sln
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"cex",
 		]

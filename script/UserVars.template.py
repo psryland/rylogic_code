@@ -22,6 +22,9 @@ dumpdir = r"C:\temp"
 msbuild = r"C:\Program Files (x86)\MSBuild\12.0\Bin\MSBuild.exe"
 msbuild_props     = ""#r"/p:VCTargetsPath=C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V120"
 
+# The main rylogic code solution
+rylogic_sln = root + "\\build\\Rylogic.sln"
+
 # The version of MSbuild in use. VS2013=v120, VS2012 = v110, VS2010=v100
 platform_toolset  = "v120"
 

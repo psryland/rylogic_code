@@ -16,7 +16,7 @@ try:
 	Tools.AssertPathsExist([UserVars.root])
 
 	# Build
-	sln = UserVars.root + "\\build\\Rylogic.sln"
+	sln = UserVars.rylogic_sln
 	projects = [ # e.g: "\"folder\proj_name:Rebuild\""
 		"elevate"
 		]
@@ -29,9 +29,6 @@ try:
 		"release"
 		]
 	Tools.MSBuild(sln, projects, platforms, configs, parallel=True, same_window=True)
-
-	# Set app properties to 'Run As Admin'
-
 	Tools.OnSuccess()
 
 except Exception as ex:
