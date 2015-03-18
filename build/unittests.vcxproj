@@ -178,6 +178,7 @@
     <ClInclude Include="..\include\pr\macros\constexpr.h" />
     <ClInclude Include="..\include\pr\macros\count_of.h" />
     <ClInclude Include="..\include\pr\macros\enum.h" />
+    <ClInclude Include="..\include\pr\macros\flags_enum.h" />
     <ClInclude Include="..\include\pr\macros\foreach.h" />
     <ClInclude Include="..\include\pr\macros\for_each.h" />
     <ClInclude Include="..\include\pr\macros\join.h" />
@@ -249,7 +250,6 @@
     <ClInclude Include="..\include\pr\meta\abs.h" />
     <ClInclude Include="..\include\pr\meta\and.h" />
     <ClInclude Include="..\include\pr\meta\constants.h" />
-    <ClInclude Include="..\include\pr\meta\flags_enum.h" />
     <ClInclude Include="..\include\pr\meta\function_arity.h" />
     <ClInclude Include="..\include\pr\meta\gcf.h" />
     <ClInclude Include="..\include\pr\meta\if.h" />

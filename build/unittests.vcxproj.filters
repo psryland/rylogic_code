@@ -288,9 +288,6 @@
     <ClInclude Include="..\include\pr\filesys\findfiles.h">
       <Filter>pr\filesys</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\meta\flags_enum.h">
-      <Filter>pr\meta</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\font_helper.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -884,6 +881,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
       <Filter>pr\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\macros\flags_enum.h">
+      <Filter>pr\macros</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
