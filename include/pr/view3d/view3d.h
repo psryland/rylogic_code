@@ -101,6 +101,13 @@ extern "C"
 		Animation   = 1 << 8,
 		StepData    = 1 << 9,
 	};
+	enum class EView3DGizmoEvent :int // ELdrGizmoEvent 
+	{
+		StartManip,
+		Moving,
+		Commit,
+		Revert,
+	};
 	enum class EView3DGizmoMode :int
 	{
 		Translate,
@@ -210,9 +217,16 @@ extern "C"
 		float m_max_depth;
 	} View3DViewport;
 
+	typedef struct
+	{
+		View3DGizmo       m_gizmo;
+		EView3DGizmoEvent m_state;
+	} View3DGizmoEvent;
+
 	typedef void (__stdcall *View3D_SettingsChanged)(View3DWindow window);
 	typedef void (__stdcall *View3D_RenderCB)();
 	typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg, void* ctx);
+	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
 	typedef void (__stdcall *View3D_EditObjectCB)(
 		UINT32 vcount,      // The maximum size of 'verts'
 		UINT32 icount,      // The maximum size of 'indices'
@@ -261,7 +275,7 @@ extern "C"
 	VIEW3D_API float                   __stdcall View3D_CameraFovY             (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraSetFovY          (View3DWindow window, float fovY);
 	VIEW3D_API void                    __stdcall View3D_CameraSetClipPlanes    (View3DWindow window, float near_, float far_, BOOL focus_relative);
-	VIEW3D_API BOOL                    __stdcall View3D_MouseNavigate          (View3DWindow window, View3DV2 point, int button_state, BOOL nav_start_or_end);
+	VIEW3D_API BOOL                    __stdcall View3D_MouseNavigate          (View3DWindow window, View3DV2 ss_point, int button_state, BOOL nav_start_or_end);
 	VIEW3D_API BOOL                    __stdcall View3D_Navigate               (View3DWindow window, float dx, float dy, float dz);
 	VIEW3D_API void                    __stdcall View3D_ResetZoom              (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_CameraAlignAxis        (View3DWindow window, View3DV4& axis);
@@ -270,9 +284,10 @@ extern "C"
 	VIEW3D_API View3DV2                __stdcall View3D_ViewArea               (View3DWindow window, float dist);
 	VIEW3D_API void                    __stdcall View3D_GetFocusPoint          (View3DWindow window, View3DV4& position);
 	VIEW3D_API void                    __stdcall View3D_SetFocusPoint          (View3DWindow window, View3DV4 position);
-	VIEW3D_API View3DV4                __stdcall View3D_WSPointFromNormSSPoint (View3DWindow window, View3DV4 screen);
-	VIEW3D_API View3DV4                __stdcall View3D_NormSSPointFromWSPoint (View3DWindow window, View3DV4 world);
-	VIEW3D_API void                    __stdcall View3D_WSRayFromNormSSPoint   (View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction);
+	VIEW3D_API View3DV2                __stdcall View3D_SSPointToNSSPoint      (View3DWindow window, View3DV2 screen);
+	VIEW3D_API View3DV4                __stdcall View3D_NSSPointToWSPoint      (View3DWindow window, View3DV4 screen);
+	VIEW3D_API View3DV4                __stdcall View3D_WSPointToNSSPoint      (View3DWindow window, View3DV4 world);
+	VIEW3D_API void                    __stdcall View3D_NSSPointToWSRay        (View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction);
 
 	// Lights
 	VIEW3D_API View3DLight             __stdcall View3D_LightProperties          (View3DWindow window);
@@ -291,6 +306,7 @@ extern "C"
 	VIEW3D_API View3DM4x4              __stdcall View3D_ObjectGetO2P             (View3DObject object);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, View3DM4x4 const& o2p);
 	VIEW3D_API void                    __stdcall View3D_SetVisibility            (View3DObject obj, BOOL visible, char const* name);
+	VIEW3D_API View3DColour            __stdcall View3D_ObjectGetColour          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
 	VIEW3D_API View3DBBox              __stdcall View3D_ObjectBBoxMS             (View3DObject object);
@@ -331,12 +347,18 @@ extern "C"
 	// Gizmos
 	VIEW3D_API View3DGizmo             __stdcall View3D_GizmoCreate              (EView3DGizmoMode mode, View3DM4x4 const& o2w);
 	VIEW3D_API void                    __stdcall View3D_GizmoDelete              (View3DGizmo gizmo);
+	VIEW3D_API void                    __stdcall View3D_GizmoAttachCB            (View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx);
+	VIEW3D_API void                    __stdcall View3D_GizmoDetachCB            (View3DGizmo gizmo, View3D_GizmoMovedCB cb);
 	VIEW3D_API void                    __stdcall View3D_GizmoAttach              (View3DGizmo gizmo, View3DObject obj);
 	VIEW3D_API void                    __stdcall View3D_GizmoDetach              (View3DGizmo gizmo, View3DObject obj);
 	VIEW3D_API EView3DGizmoMode        __stdcall View3D_GizmoGetMode             (View3DGizmo gizmo);
 	VIEW3D_API void                    __stdcall View3D_GizmoSetMode             (View3DGizmo gizmo, EView3DGizmoMode mode);
+	VIEW3D_API View3DM4x4              __stdcall View3D_GizmoGetO2W              (View3DGizmo gizmo);
+	VIEW3D_API void                    __stdcall View3D_GizmoSetO2W              (View3DGizmo gizmo, View3DM4x4 const& o2w);
+	VIEW3D_API View3DM4x4              __stdcall View3D_GizmoGetOffset           (View3DGizmo gizmo);
 	VIEW3D_API BOOL                    __stdcall View3D_GizmoEnabled             (View3DGizmo gizmo);
 	VIEW3D_API void                    __stdcall View3D_GizmoSetEnabled          (View3DGizmo gizmo, BOOL enabled);
+	VIEW3D_API BOOL                    __stdcall View3D_GizmoManipulating        (View3DGizmo gizmo);
 
 	// Miscellaneous
 	VIEW3D_API void                    __stdcall View3D_RestoreMainRT            (View3DWindow window);

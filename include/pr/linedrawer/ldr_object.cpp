@@ -1950,7 +1950,7 @@ namespace pr
 				// Object modifiers applied to groups are applied recursively to children within the group
 				// Apply colour to all children
 				if (obj->m_colour_mask != 0)
-					obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
+					obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
 
 				// Apply wireframe to all children
 				if (obj->m_wireframe)
@@ -2026,11 +2026,11 @@ namespace pr
 		{
 			// Set colour on 'obj' (so that render states are set correctly)
 			// Note that the colour is 'blended' with 'm_base_colour' so m_base_colour * White = m_base_colour.
-			obj->SetColour(obj->m_base_colour, 0xFFFFFFFF);
+			obj->Colour(obj->m_base_colour, 0xFFFFFFFF);
 
 			// Apply the colour of 'obj' to all children using a mask
 			if (obj->m_colour_mask != 0)
-				obj->SetColour(obj->m_base_colour, obj->m_colour_mask, "");
+				obj->Colour(obj->m_base_colour, obj->m_colour_mask, "");
 
 			// If flagged as wireframe, set wireframe
 			if (obj->m_wireframe)
@@ -3100,9 +3100,20 @@ out <<
 			}, name);
 		}
 
-		// Set the colour of this object or child objects matching 'name' (see Apply)
-		// Object base colour is not changed, only the tint colour = tint
-		void LdrObject::SetColour(pr::Colour32 colour, pr::uint mask, char const* name)
+		// Get/Set the colour of this object or child objects matching 'name' (see Apply)
+		// For 'Get', the colour of the first object to match 'name' is returned
+		// For 'Set', the object base colour is not changed, only the tint colour = tint
+		pr::Colour32 LdrObject::Colour(bool base_colour, char const* name) const
+		{
+			pr::Colour32 col;
+			Apply([&](LdrObject const* o)
+			{
+				col = base_colour ? o->m_base_colour : o->m_colour;
+				return false; // stop at the first match
+			}, name);
+			return col;
+		}
+		void LdrObject::Colour(pr::Colour32 colour, pr::uint mask, char const* name)
 		{
 			Apply([=](LdrObject* o)
 			{
@@ -3130,7 +3141,7 @@ out <<
 		}
 
 		// Set the texture on this object or child objects matching 'name' (see Apply)
-		// Note for difference mode drawlist management, if the object is currently in
+		// Note for 'difference-mode' drawlist management: if the object is currently in
 		// one or more drawlists (i.e. added to a scene) it will need to be removed and
 		// re-added so that the sort order is correct.
 		void LdrObject::SetTexture(Texture2DPtr tex, char const* name)

@@ -612,7 +612,11 @@ namespace pr.gfx
 			public TimeSpan RefreshSignalBatchTime
 			{
 				get { return m_eb_refresh.Delay; }
-				set { m_eb_refresh.Delay = value; }
+				set
+				{
+					m_eb_refresh.Immediate = value == TimeSpan.Zero;
+					m_eb_refresh.Delay = value;
+				}
 			}
 
 			/// <summary>Triggers the callback to render and present the scene</summary>
@@ -640,7 +644,7 @@ namespace pr.gfx
 			{
 				// This function is not in the CameraControls object because it is not solely used
 				// for camera navigation. It can also be used to manipulate objects in the scene.
-				return View3D_MouseNavigate(Handle, NormalisePoint(point), (int)ButtonState(mouse_btns), nav_start_or_end);
+				return View3D_MouseNavigate(Handle, v2.From(point), (int)ButtonState(mouse_btns), nav_start_or_end);
 			}
 
 			/// <summary>
@@ -695,6 +699,12 @@ namespace pr.gfx
 			public void RemoveObject(Object obj)
 			{
 				View3D_RemoveObject(m_wnd, obj.m_handle);
+			}
+
+			/// <summary>Remove a gizmo from the window</summary>
+			public void RemoveGizmo(Gizmo giz)
+			{
+				View3D_RemoveGizmo(m_wnd, giz.m_handle);
 			}
 
 			/// <summary>Remove multiple objects by context id</summary>
@@ -848,10 +858,9 @@ namespace pr.gfx
 			}
 
 			/// <summary>Convert a screen space point to a normalised point</summary>
-			public v2 NormalisePoint(Point pt)
+			public v2 SSPointToNSSPoint(Point screen)
 			{
-				var da = RenderTargetSize;
-				return new v2(2f * pt.X / da.Width - 1f, 1f - 2f * pt.Y / da.Height);
+				return View3D_SSPointToNSSPoint(m_wnd, v2.From(screen));
 			}
 
 			/// <summary>Convert a normalised point into a screen space point</summary>
@@ -1064,70 +1073,76 @@ namespace pr.gfx
 			/// Return a point in world space corresponding to a normalised screen space point.
 			/// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 			/// The z component should be the world space distance from the camera.</summary>
-			public v4 WSPointFromNormSSPoint(v4 screen)
+			public v4 NSSPointToWSPoint(v4 screen)
 			{
-				return View3D_WSPointFromNormSSPoint(m_window.Handle, screen);
+				return View3D_NSSPointToWSPoint(m_window.Handle, screen);
 			}
-			public v4 WSPointFromSSPoint(Point screen)
+			public v4 SSPointToWSPoint(Point screen)
 			{
-				var nss = m_window.NormalisePoint(screen);
-				return WSPointFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f));
+				var nss = SSPointToNSSPoint(screen);
+				return NSSPointToWSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f));
+			}
+
+			/// <summary>Return the normalised screen space point corresponding to a screen space point</summary>
+			public v2 SSPointToNSSPoint(Point screen)
+			{
+				return m_window.SSPointToNSSPoint(screen);
 			}
 
 			/// <summary>
 			/// Return a point in normalised screen space corresponding to 'world'
 			/// The returned 'z' component will be the world space distance from the camera.</summary>
-			public v4 NormSSPointFromWSPoint(v4 world)
+			public v4 WSPointToNSSPoint(v4 world)
 			{
-				return View3D_NormSSPointFromWSPoint(m_window.Handle, world);
+				return View3D_WSPointToNSSPoint(m_window.Handle, world);
 			}
-			public Point SSPointFromWSPoint(v4 world)
+			public Point WSPointToSSPoint(v4 world)
 			{
-				var nss = NormSSPointFromWSPoint(world);
+				var nss = WSPointToNSSPoint(world);
 				return m_window.ScreenSpacePoint(new v2(nss.x, nss.y));
 			}
-			public Point SSPointFromWSPoint(v2 world)
+			public Point WSPointToSSPoint(v2 world)
 			{
-				return SSPointFromWSPoint(new v4(world, 0, 1));
+				return WSPointToSSPoint(new v4(world, 0, 1));
 			}
 
 			/// <summary>
 			/// Return a screen space vector that is the world space line a->b
 			/// projected onto the screen.</summary>
-			public v2 SSVecFromWSVec(v4 s, v4 e)
+			public v2 WSVecToSSVec(v4 s, v4 e)
 			{
-				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
+				return v2.From(WSPointToSSPoint(e)) - v2.From(WSPointToSSPoint(s));
 			}
-			public v2 SSVecFromWSVec(v2 s, v2 e)
+			public v2 WSVecToSSVec(v2 s, v2 e)
 			{
-				return v2.From(SSPointFromWSPoint(e)) - v2.From(SSPointFromWSPoint(s));
+				return v2.From(WSPointToSSPoint(e)) - v2.From(WSPointToSSPoint(s));
 			}
 
 			/// <summary>
 			/// Return a world space vector that is the screen space line a->b
 			/// at the focus depth from the camera.</summary>
-			public v4 WSVecFromSSVec(Point s, Point e)
+			public v4 SSVecToWSVec(Point s, Point e)
 			{
-				var nss_s = m_window.NormalisePoint(s);
-				var nss_e = m_window.NormalisePoint(e);
+				var nss_s = SSPointToNSSPoint(s);
+				var nss_e = SSPointToNSSPoint(e);
 				var z = View3D_CameraFocusDistance(m_window.Handle);
 				return
-					WSPointFromNormSSPoint(new v4(nss_e.x, nss_e.y, z, 1.0f)) -
-					WSPointFromNormSSPoint(new v4(nss_s.x, nss_s.y, z, 1.0f));
+					NSSPointToWSPoint(new v4(nss_e.x, nss_e.y, z, 1.0f)) -
+					NSSPointToWSPoint(new v4(nss_s.x, nss_s.y, z, 1.0f));
 			}
 
 			/// <summary>
 			/// Convert a screen space point into a position and direction in world space.
 			/// 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1) (lower left to upper right)
 			/// The z component of 'screen' should be the world space distance from the camera</summary>
-			public void WSRayFromNormSSPoint(v4 screen, out v4 ws_point, out v4 ws_direction)
+			public void NSSPointToWSRay(v4 screen, out v4 ws_point, out v4 ws_direction)
 			{
-				View3D_WSRayFromNormSSPoint(m_window.Handle, screen, out ws_point, out ws_direction);
+				View3D_NSSPointToWSRay(m_window.Handle, screen, out ws_point, out ws_direction);
 			}
-			public void WSRayFromSSPoint(Point screen, out v4 ws_point, out v4 ws_direction)
+			public void SSPointToWSRay(Point screen, out v4 ws_point, out v4 ws_direction)
 			{
-				var nss = m_window.NormalisePoint(screen);
-				WSRayFromNormSSPoint(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f), out ws_point, out ws_direction);
+				var nss = SSPointToNSSPoint(screen);
+				NSSPointToWSRay(new v4(nss.x, nss.y, View3D_CameraFocusDistance(m_window.Handle), 1.0f), out ws_point, out ws_direction);
 			}
 		}
 
@@ -1261,6 +1276,123 @@ namespace pr.gfx
 			public void SetTexture(Texture tex, string name = null)
 			{
 				View3D_ObjectSetTexture(m_handle, tex.m_handle, name);
+			}
+		}
+
+		/// <summary>A 3D manipulation gizmo</summary>
+		public class Gizmo :IDisposable
+		{
+			// Use:
+			//  Create a gizmo, attach objects or other gizmos to it,
+			//  add it to a window to make it visible, enable it to have
+			//  it watch for mouse interaction. Moving the gizmo automatically
+			//  moves attached objects as well. MouseControl of the gizmo
+			//  is provided by the window it's been added to
+
+			public enum EMode { Translate, Rotate, Scale, };
+			public enum EEvent { StartManip, Moving, Commit, Revert };
+			
+			public HGizmo m_handle; // The handle to the gizmo
+			private Callback m_cb;
+			private bool m_owned;   // True if 'm_handle' was created with this class
+
+			public Gizmo(EMode mode, m4x4 o2w)
+			{
+				m_handle = View3D_GizmoCreate(mode, ref o2w);
+				if (m_handle == IntPtr.Zero) throw new Exception("View3D.Gizmo creation failed");
+				m_owned = true;
+				View3D_GizmoAttachCB(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero);
+			}
+			public Gizmo(HGizmo handle)
+			{
+				if (handle == IntPtr.Zero) throw new ArgumentNullException("handle");
+				m_handle = handle;
+				m_owned = false;
+				View3D_GizmoAttachCB(m_handle, m_cb = HandleGizmoMoved, IntPtr.Zero);
+			}
+			public virtual void Dispose()
+			{
+				if (m_handle == HObject.Zero) return;
+				View3D_GizmoDetachCB(m_handle, m_cb);
+				if (m_owned) View3D_GizmoDelete(m_handle);
+				m_cb = null;
+				m_handle = HObject.Zero;
+			}
+
+			/// <summary>Get/Set whether the gizmo is looking for mouse interaction</summary>
+			public bool Enabled
+			{
+				get { return View3D_GizmoEnabled(m_handle); }
+				set { View3D_GizmoSetEnabled(m_handle, value); }
+			}
+
+			/// <summary>True while manipulation is in progress</summary>
+			public bool Manipulating
+			{
+				get { return View3D_GizmoManipulating(m_handle); }
+			}
+
+			/// <summary>Get/Set the mode of the gizmo between translate, rotate, scale</summary>
+			public EMode Mode
+			{
+				get { return View3D_GizmoGetMode(m_handle); }
+				set { View3D_GizmoSetMode(m_handle, value); }
+			}
+
+			/// <summary>Get/Set the gizmo object to world transform (scale is allowed)</summary>
+			public m4x4 O2W
+			{
+				get { return View3D_GizmoGetO2W(m_handle); }
+				set { View3D_GizmoSetO2W(m_handle, ref value); }
+			}
+
+			/// <summary>
+			/// Get the offset transform that represents the difference between the gizmo's
+			/// transform at the start of manipulation and now</summary>
+			public m4x4 Offset
+			{
+				get { return View3D_GizmoGetOffset(m_handle); }
+			}
+
+			/// <summary>Raised whenever the gizmo is manipulated</summary>
+			public event EventHandler<MovedEventArgs> Moved;
+			public class MovedEventArgs :EventArgs
+			{
+				/// <summary>The type of movement event this is</summary>
+				public EEvent Type { get; private set; }
+
+				[System.Diagnostics.DebuggerStepThrough] public MovedEventArgs(EEvent type)
+				{
+					Type = type;
+				}
+			}
+
+			/// <summary>Attach an object directly to the gizmo that will move with it</summary>
+			public void Attach(Object obj)
+			{
+				View3D_GizmoAttach(m_handle, obj.m_handle);
+			}
+
+			/// <summary>Detach an object from the gizmo</summary>
+			public void Detach(Object obj)
+			{
+				View3D_GizmoDetach(m_handle, obj.m_handle);
+			}
+
+			/// <summary>Handle the callback from the native code for when the gizmo moves</summary>
+			private void HandleGizmoMoved(HGizmo ctx, ref Evt_Gizmo args)
+			{
+				if (args.m_gizmo != m_handle) throw new Exception("Gizmo move event from a different gizmo instance received");
+				Moved.Raise(this, new MovedEventArgs(args.m_state));
+			}
+
+			/// <summary>Callback function type and data from the native gizmo object</summary>
+			internal delegate void Callback(IntPtr ctx, ref Evt_Gizmo args);
+			[StructLayout(LayoutKind.Sequential)]
+			internal struct Evt_Gizmo
+			{
+				public IntPtr m_gizmo;
+				public EEvent m_state;
 			}
 		}
 
@@ -1603,57 +1735,6 @@ namespace pr.gfx
 			public event EventHandler TextChanged;
 		}
 
-		/// <summary>A 3D manipulation gizmo</summary>
-		public class Gizmo :IDisposable
-		{
-			// Use:
-			//  Create a gizmo, attach objects or other gizmos to it,
-			//  add it to a window to make it visible, enable it to have
-			//  it watch for mouse interaction. Moving the gizmo automatically
-			//  moves attached objects as well
-			public enum EMode { Translate, Rotate, Scale, };
-			public HGizmo m_handle;
-
-			public Gizmo(EMode mode, m4x4 o2w)
-			{
-				m_handle = View3D_GizmoCreate(mode, ref o2w);
-			}
-			public virtual void Dispose()
-			{
-				if (m_handle != HObject.Zero)
-				{
-					View3D_GizmoDelete(m_handle);
-					m_handle = HObject.Zero;
-				}
-			}
-
-			/// <summary>Attach an object to the gizmo that will move with it</summary>
-			public void Attach(Object obj)
-			{
-				View3D_GizmoAttach(m_handle, obj.m_handle);
-			}
-
-			/// <summary>Detach an object from the gizmo</summary>
-			public void Detach(Object obj)
-			{
-				View3D_GizmoDetach(m_handle, obj.m_handle);
-			}
-
-			/// <summary>Get/Set the mode of the gizmo between translate, rotate, scale</summary>
-			public EMode Mode
-			{
-				get { return View3D_GizmoGetMode(m_handle); }
-				set { View3D_GizmoSetMode(m_handle, value); }
-			}
-
-			/// <summary>Get/Set whether the gizmo is looking for mouse interaction</summary>
-			public bool Enabled
-			{
-				get { return View3D_GizmoEnabled(m_handle); }
-				set { View3D_GizmoSetEnabled(m_handle, value); }
-			}
-		}
-
 		#region DLL extern functions
 
 		// A good idea is to add a static method in the class that is using this class
@@ -1737,7 +1818,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern float             View3D_CameraFovY             (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetFovY          (HWindow window, float fovY);
 		[DllImport(Dll)] private static extern void              View3D_CameraSetClipPlanes    (HWindow window, float near, float far, bool focus_relative);
-		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 point, int button_state, bool nav_start_or_end);
+		[DllImport(Dll)] private static extern bool              View3D_MouseNavigate          (HWindow window, v2 ss_point, int button_state, bool nav_start_or_end);
 		[DllImport(Dll)] private static extern bool              View3D_Navigate               (HWindow window, float dx, float dy, float dz);
 		[DllImport(Dll)] private static extern void              View3D_ResetZoom              (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_CameraAlignAxis        (HWindow window, out v4 axis);
@@ -1746,9 +1827,10 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern v2                View3D_ViewArea               (HWindow window, float dist);
 		[DllImport(Dll)] private static extern void              View3D_GetFocusPoint          (HWindow window, out v4 position);
 		[DllImport(Dll)] private static extern void              View3D_SetFocusPoint          (HWindow window, v4 position);
-		[DllImport(Dll)] private static extern v4                View3D_WSPointFromNormSSPoint (HWindow window, v4 screen);
-		[DllImport(Dll)] private static extern v4                View3D_NormSSPointFromWSPoint (HWindow window, v4 world);
-		[DllImport(Dll)] private static extern void              View3D_WSRayFromNormSSPoint   (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
+		[DllImport(Dll)] private static extern v2                View3D_SSPointToNSSPoint      (HWindow window, v2 screen);
+		[DllImport(Dll)] private static extern v4                View3D_NSSPointToWSPoint      (HWindow window, v4 screen);
+		[DllImport(Dll)] private static extern v4                View3D_WSPointToNSSPoint      (HWindow window, v4 world);
+		[DllImport(Dll)] private static extern void              View3D_NSSPointToWSRay        (HWindow window, v4 screen, out v4 ws_point, out v4 ws_direction);
 
 		// Lights
 		[DllImport(Dll)] private static extern Light             View3D_LightProperties          (HWindow window);
@@ -1807,12 +1889,18 @@ namespace pr.gfx
 		// Gizmos
 		[DllImport(Dll)] private static extern HGizmo            View3D_GizmoCreate              (Gizmo.EMode mode, ref m4x4 o2w);
 		[DllImport(Dll)] private static extern void              View3D_GizmoDelete              (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoAttachCB            (HGizmo gizmo, Gizmo.Callback cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern void              View3D_GizmoDetachCB            (HGizmo gizmo, Gizmo.Callback cb);
 		[DllImport(Dll)] private static extern void              View3D_GizmoAttach              (HGizmo gizmo, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_GizmoDetach              (HGizmo gizmo, HObject obj);
 		[DllImport(Dll)] private static extern Gizmo.EMode       View3D_GizmoGetMode             (HGizmo gizmo);
 		[DllImport(Dll)] private static extern void              View3D_GizmoSetMode             (HGizmo gizmo, Gizmo.EMode mode);
+		[DllImport(Dll)] private static extern m4x4              View3D_GizmoGetO2W              (HGizmo gizmo);
+		[DllImport(Dll)] private static extern void              View3D_GizmoSetO2W              (HGizmo gizmo, ref m4x4 o2w);
+		[DllImport(Dll)] private static extern m4x4              View3D_GizmoGetOffset           (HGizmo gizmo);
 		[DllImport(Dll)] private static extern bool              View3D_GizmoEnabled             (HGizmo gizmo);
 		[DllImport(Dll)] private static extern void              View3D_GizmoSetEnabled          (HGizmo gizmo, bool enabled);
+		[DllImport(Dll)] private static extern bool              View3D_GizmoManipulating        (HGizmo gizmo);
 
 		// Miscellaneous
 		[DllImport(Dll)] private static extern void              View3D_RestoreMainRT            (HWindow window);

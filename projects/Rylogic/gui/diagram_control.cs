@@ -1633,7 +1633,7 @@ namespace pr.gui
 				}
 
 				// Convert separating distance screen space
-				var dist_cs = cam.SSVecFromWSVec(closest_pt, point);
+				var dist_cs = cam.WSVecToSSVec(closest_pt, point);
 				if (dist_cs.Length2Sq > MinCSSelectionDistanceSq) return null;
 				return new HitTestResult.Hit(this, closest_pt - Position.pos.xy);
 			}
@@ -1646,9 +1646,9 @@ namespace pr.gui
 				{
 					// Hit point in screen space
 					var hit_point_ds = Position.pos + new v4(hit.Point,0,0);
-					var hit_point_cs = v2.From(cam.SSPointFromWSPoint(hit_point_ds));
-					var anc0_cs = v2.From(cam.SSPointFromWSPoint(Anc0.LocationDS));
-					var anc1_cs = v2.From(cam.SSPointFromWSPoint(Anc1.LocationDS));
+					var hit_point_cs = v2.From(cam.WSPointToSSPoint(hit_point_ds));
+					var anc0_cs = v2.From(cam.WSPointToSSPoint(Anc0.LocationDS));
+					var anc1_cs = v2.From(cam.WSPointToSSPoint(Anc1.LocationDS));
 
 					// If the click was at the ends of the connector and diagram editing
 					// is allowed, detach the connector and start a move link mouse op
@@ -2934,7 +2934,7 @@ namespace pr.gui
 			public override void MouseMove(MouseEventArgs e)
 			{
 				// The resize delta in diagram space
-				var vec_ds = m_diag.m_camera.WSVecFromSSVec(m_grab_cs, e.Location);
+				var vec_ds = m_diag.m_camera.SSVecToWSVec(m_grab_cs, e.Location);
 				var delta = v2.Dot2(vec_ds.xy, m_grabber.Direction);
 
 				// Scale all of the resizable selected elements
@@ -3938,7 +3938,7 @@ namespace pr.gui
 					{
 						var pt_ds = ClientToDiagram(pt_cs);
 						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).Length2Sq);
-						if (m_camera.SSVecFromWSVec(pt_ds, nearest.O2P.pos.xy).Length2Sq < MinCSSelectionDistanceSq)
+						if (m_camera.WSVecToSSVec(pt_ds, nearest.O2P.pos.xy).Length2Sq < MinCSSelectionDistanceSq)
 							return new MouseOpResize(this, nearest);
 					}
 
@@ -4006,7 +4006,7 @@ namespace pr.gui
 		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
 		public v2 ClientToDiagram(Point point)
 		{
-			var ws = m_camera.WSPointFromSSPoint(point);
+			var ws = m_camera.SSPointToWSPoint(point);
 			return new v2(ws.x, ws.y);
 		}
 
@@ -4023,7 +4023,7 @@ namespace pr.gui
 		public Point DiagramToClient(v2 point)
 		{
 			var ws = new v4(point, 0.0f, 1.0f);
-			return m_camera.SSPointFromWSPoint(ws);
+			return m_camera.WSPointToSSPoint(ws);
 		}
 
 		/// <summary>Returns a rectangle in client space from a rectangle in diagram space. Inverse of ClientToDiagram</summary>

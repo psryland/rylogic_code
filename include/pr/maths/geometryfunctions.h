@@ -59,6 +59,8 @@ namespace pr
 	bool  Intersect2D_InfiniteLineToInfiniteLine(v2 const& b, v2 const& a, v2 const& d, v2 const& c, v2& intersect);
 	bool  Intersect_LineToTriangle(v4 const& s, v4 const& e, v4 const& a, v4 const& b, v4 const& c, float* t = 0, v4* bary = 0, float* f2b = 0, float tmin = -pr::maths::float_max, float tmax = pr::maths::float_max);
 	bool  Intersect_LineToTriangle(v4 const& s, v4 const& e, v4 const& a, v4 const& b, v4 const& c, float& front_to_back, v4& bary);
+	bool  Intersect_LineToSphere(v4 const& s, v4 const& d, float radius, float& tmin, float& tmax);
+	bool  Intersect_LineToBBox(v4 const& s, v4 const& d, BBox const& box, float& tmin, float& tmax);
 	bool  Intersect_LineSegmentToBoundingBox(v4 const& lineS, v4 const& lineE, BBox const& bbox);
 	bool  Intersect_LineToPlane(Plane const& plane, v4 const& s, v4 const& e, float* t = 0, float tmin = -pr::maths::float_max, float tmax = pr::maths::float_max);
 	bool  Clip_LineSegmentToPlane(Plane const& plane, v4 const& lineS, v4 const& lineE, float& t0, float& t1);

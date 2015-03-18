@@ -45,10 +45,12 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'line'
-	inline float DistanceSq_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& line)
+	inline float DistanceSq_PointToInfiniteLine(v4 const& point, v4 const& s, v4 const& d)
 	{
-		v4 sp = point - start;
-		return Length3Sq(sp) - Sqr(Dot3(sp, line)) / Length3Sq(line);
+		auto sp   = point - s;
+		auto d_sq = Dot3(d,d);
+		assert(d_sq != 0.0f && "divide by zero in DistanceSq_PointToInfiniteLine");
+		return Dot3(sp,sp) - Sqr(Dot3(sp,d))/d_sq;
 	}
 
 	// Returns the squared distance from 'point' to 'line'
@@ -120,9 +122,9 @@ namespace pr
 		t = Dot3(point - start, line) / Length3Sq(line);
 		return start + t * line;
 	}
-	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end)	{ float t; return ClosestPoint_PointToInfiniteLine(point, start, end, t); }
-	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line, float& t)	{		   return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
-	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line)				{ float t; return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
+	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, v4 const& start, v4 const& end) { float t; return ClosestPoint_PointToInfiniteLine(point, start, end, t); }
+	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line, float& t)    {          return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
+	inline v4 ClosestPoint_PointToInfiniteLine(v4 const& point, const Line3& line)              { float t; return ClosestPoint_PointToInfiniteLine(point, line.m_point, line.m_point + line.m_line, t); }
 
 	// Returns the parametric value of the closest point on 'line'
 	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end, float& t)
@@ -140,9 +142,9 @@ namespace pr
 			else { t = t / denom; return start + t * line; } // 'point' projects inside 'line', do deferred divide now
 		}
 	}
-	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end)	{ float t; return ClosestPoint_PointToLineSegment(point, start, end, t); }
-	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line, float& t)		{          return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
-	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line)				{ float t; return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
+	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, v4 const& start, v4 const& end) { float t; return ClosestPoint_PointToLineSegment(point, start, end, t); }
+	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line, float& t)    {          return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
+	inline v4 ClosestPoint_PointToLineSegment(v4 const& point, const Line3& line)              { float t; return ClosestPoint_PointToLineSegment(point, line.m_point, line.m_point + line.m_line, t); }
 
 	// Returns the point on an AABB that is closest to 'point'
 	inline v4 ClosestPoint_PointToBoundingBox(v4 const& point, BBox const& bbox)
@@ -194,8 +196,7 @@ namespace pr
 	// Returns the closest point on a triangle to 'point'. From "Real time collision detection" by Christer Ericson
 	namespace impl
 	{
-		template <typename T>
-		v4 ClosestPoint_PointToTriangle(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4& barycentric)
+		template <typename T> v4 ClosestPoint_PointToTriangle(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4& barycentric)
 		{
 			assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f);
 
@@ -253,17 +254,16 @@ namespace pr
 			barycentric.set(1.0f - v - w, v, w, 0.0f);
 			return a + ab * v + ac * w;					// = u*a + v*b + w*c, u = va * denom = 1.0f - v - w
 		}
-	}//namespace impl
-	inline v4 ClosestPoint_PointToTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4& barycentric)	{ return impl::ClosestPoint_PointToTriangle<void>(point, a, b, c, barycentric); }
-	inline v4 ClosestPoint_PointToTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c)					{ v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, a, b, c, barycentric); }
-	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri, v4& barycentric)							{ return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
-	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri)											{ v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
+	}
+	inline v4 ClosestPoint_PointToTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4& barycentric) { return impl::ClosestPoint_PointToTriangle<void>(point, a, b, c, barycentric); }
+	inline v4 ClosestPoint_PointToTriangle(v4 const& point, v4 const& a, v4 const& b, v4 const& c)                  { v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, a, b, c, barycentric); }
+	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri, v4& barycentric)                         { return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
+	inline v4 ClosestPoint_PointToTriangle(v4 const& point, const v4* tri)                                          { v4 barycentric; return impl::ClosestPoint_PointToTriangle<void>(point, tri[0], tri[1], tri[2], barycentric); }
 
 	namespace impl
 	{
 		// Returns the closest point on a tetrahedron to 'point'. From "Real time collision detection" by Christer Ericson
-		template <typename T>
-        v4 ClosestPoint_PointToTetrahedron(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4 const& d, v4& barycentric)
+		template <typename T> v4 ClosestPoint_PointToTetrahedron(v4 const& p, v4 const& a, v4 const& b, v4 const& c, v4 const& d, v4& barycentric)
 		{
 			assert(p.w == 1.0f && a.w == 1.0f && b.w == 1.0f && c.w == 1.0f && d.w == 1.0f);
 
@@ -307,11 +307,11 @@ namespace pr
 			}
 			return closest_point;
 		}
-	}//namespace impl
-	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d, v4& barycentric)	{ return impl::ClosestPoint_PointToTetrahedron<void>(point, a, b, c, d, barycentric); }
-	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d)					{ v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, a, b, c, d, barycentric); }
-	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra, v4& barycentric)									{ return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
-	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra)														{ v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
+	}
+	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d, v4& barycentric) { return impl::ClosestPoint_PointToTetrahedron<void>(point, a, b, c, d, barycentric); }
+	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, v4 const& a, v4 const& b, v4 const& c, v4 const& d)                  { v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, a, b, c, d, barycentric); }
+	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra, v4& barycentric)                                    { return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
+	inline v4 ClosestPoint_PointToTetrahedron(v4 const& point, const v4* tetra)                                                     { v4 barycentric; return impl::ClosestPoint_PointToTetrahedron<void>(point, tetra[0], tetra[1], tetra[2], tetra[3], barycentric); }
 
 	// TODO: These should really do the minimal work in the impl:: versions and the extra work in the inline versions
 	// Make distanceSq a parameter to impl::XXX
@@ -320,8 +320,7 @@ namespace pr
 		// Finds the closest points between two line segments and also
 		// the parametric values on each line.
 		// From "Real time collision detection" by Christer Ericson
-		template <bool test_degenerates>
-		void ClosestPoint_LineSegmentToLineSegment(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& e1, float& t0, float& t1)
+		template <bool test_degenerates> void ClosestPoint_LineSegmentToLineSegment(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& e1, float& t0, float& t1)
 		{
 			assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && e1.w == 1.0f);
 
@@ -397,8 +396,7 @@ namespace pr
 		// Finds the closest point on a line segment to an infinite line.
 		// Also the parametric values on each line.
 		// From "Real time collision detection" by Christer Ericson
-		template <typename T>
-		void ClosestPoint_LineSegmentToInfiniteLine(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& line1, float& t0, float& t1)
+		template <typename T> void ClosestPoint_LineSegmentToInfiniteLine(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 		{
 			assert(s0.w == 1.0f && e0.w == 1.0f && s1.w == 1.0f && line1.w == 0.0f);
 			assert(!IsZero3(line1) && "The infinite line should not be degenerate");
@@ -431,7 +429,7 @@ namespace pr
 			// using t1 = Dot3(pt0 - s1, line1) / line1_length_sq = (b*t0 + f) / line1_length_sq
 			t1 = (b*t0 + s0_on_line1) / line1_length_sq;
 		}
-	}//namespace impl
+	}
 	inline void ClosestPoint_LineSegmentToInfiniteLine(v4 const& s0, v4 const& e0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 	{
 		impl::ClosestPoint_LineSegmentToInfiniteLine<void>(s0, e0, s1, line1, t0, t1);
@@ -447,11 +445,11 @@ namespace pr
 	namespace impl
 	{
 		// Returns the parametric values of the closest points on two infinite lines
-		template <typename T>
-		void ClosestPoint_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1, float& t0, float& t1)
+		template <typename T> void ClosestPoint_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 		{
 			// Degenerate lines should not be passed to this function
-			assert(!IsZero3(line0) && !IsZero3(line1));
+			assert(!IsZero3(line0));
+			assert(!IsZero3(line1));
 			assert(s0.w == 1.0f && line0.w == 0.0f && s1.w == 1.0f && line1.w == 0.0f);
 
 			v4 r    = s0 - s1;
@@ -466,7 +464,7 @@ namespace pr
 			t0 = (b*f - c*e) / d;
 			t1 = (a*f - b*c) / d;
 		}
-	}//namespace impl
+	}
 	inline void  ClosestPoint_InfiniteLineToInfiniteLine(v4 const& s0, v4 const& line0, v4 const& s1, v4 const& line1, float& t0, float& t1)
 	{
 		impl::ClosestPoint_InfiniteLineToInfiniteLine<void>(s0, line0, s1, line1, t0, t1);
@@ -618,7 +616,7 @@ namespace pr
 		// intersection point r, r = u*a + v*b + w*c. Note: If the line lies
 		// in the plane of the triangle then 'sum' will be zero
 		float sum = bary.x + bary.y + bary.z;
-		if( FEqlZero(sum) )
+		if (FEqlZero(sum))
 			return false;
 
 		float denom = 1.0f / sum;
@@ -627,6 +625,78 @@ namespace pr
 		bary.z *= denom; // w = 1.0f - u - v;
 		front_to_back = (denom > 0.0f) * 2.0f - 1.0f;
 		return bary.x > -maths::tiny && bary.y > -maths::tiny && bary.z > -maths::tiny;
+	}
+
+	// Given a line passing through 's' with direction 'd', and initial parametric range [tmin,tmax],
+	// returns true if the line pierces the sphere within the initial range.
+	// The sphere is centred on the origin, 's' and 'd' should be in sphere space
+	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
+	// Returns the parametric values of the intersection points.
+	inline bool Intersect_LineToSphere(v4 const& s, v4 const& d, float radius, float& tmin, float& tmax)
+	{
+		auto d_sq = Dot3(d,d);
+		if (d_sq < maths::tiny)
+			return false; // zero length line
+
+		// Find the closest point to the line
+		auto c = s - d * (Dot3(d,s) / d_sq);
+		auto c_sq = Dot3(c,c);
+
+		// If the closest point is not within the sphere then there is no intersection
+		auto rad_sq = radius * radius;
+		if (rad_sq < c_sq)
+			return false;
+
+		// Get the distance from the closest point to the intersection with the boundary of the sphere
+		auto x = Sqrt((rad_sq - c_sq) / d_sq); // include the normalising 1/d in x
+
+		// Get the parametric values of the intersection
+		auto offset = d * x;
+		auto lstart = c - offset;
+		auto lend   = c + offset;
+		tmin = std::max(tmin, Dot3(d, lstart - s) / d_sq);
+		tmax = std::min(tmax, Dot3(d, lend   - s) / d_sq);
+		return true;
+	}
+
+	// Given a line passing through 's' with direction 'd', and initial parametric range [tmin,tmax],
+	// returns true if the line pierces the axis aligned box within the initial range.
+	// 'tmin' and 'tmax' should be initialised to -FLT_MAX and FLT_MAX respectively for infinite line intersection.
+	// Returns the parametric values of the intersection points.
+	inline bool Intersect_LineToBBox(v4 const& s, v4 const& d, BBox const& box, float& tmin, float& tmax)
+	{
+		auto bb_min = box.Lower();
+		auto bb_max = box.Upper();
+
+		// For all three slabs
+		for (int i = 0; i != 3; ++i)
+		{
+			// If the line is parallel to the slab, then no hit if origin not within slab
+			if (FEql(d[i], 0.0f))
+			{
+				if (s[i] < bb_min[i] || s[i] > bb_max[i])
+					return false;
+			}
+			else
+			{
+				// Compute intersection t value of ray with near and far plane of slab
+				auto ood = 1.0f / d[i];
+				auto t1 = (bb_min[i] - s[i]) * ood;
+				auto t2 = (bb_max[i] - s[i]) * ood;
+
+				// Make t1 be intersection with near plane, t2 with far plane
+				if (t1 > t2) Swap(t1, t2);
+
+				// Compute the intersection of slab intersections intervals
+				if (t1 > tmin) tmin = t1;
+				if (t2 < tmax) tmax = t2;
+
+				// Exit with no collision as soon as slab intersection becomes empty
+				if (tmin > tmax)
+					return false;
+			}
+		}
+		return true;
 	}
 
 	// Test if a line segment specified by points 'lineS' and 'lineE' intersects AABB b
@@ -717,39 +787,7 @@ namespace pr
 	// Returns true if some part of the line is within the bounding box
 	inline bool Clip_LineSegmentToBoundingBox(v4 const& point, v4 const& line, BBox const& bbox, float& t0, float& t1)
 	{
-		v4 lower = bbox.Lower();
-		v4 upper = bbox.Upper();
-
-		// For all three slabs
-		for( int i = 0; i != 3; ++i )
-		{
-			if( Abs(line[i]) < maths::tiny )
-			{
-				// Ray is parallel to slab. No hit if origin not within slab
-				if( point[i] < lower[i] || point[i] > upper[i] )
-					return false;
-			}
-			else
-			{
-				// Compute intersection t value of ray with near and far plane of slab
-				float u0 = (lower[i] - point[i]) / line[i];
-				float u1 = (upper[i] - point[i]) / line[i];
-
-				// Make u0 be intersection with near plane, u1 with far plane
-				if( u0 > u1 ) Swap(u0, u1);
-
-				// Record the tightest bounds on the line segment
-				if( u0 > t0 ) t0 = u0;
-				if( u1 < t1 ) t1 = u1;
-
-				// Exit with no collision as soon as slab intersection becomes empty
-				if( t0 > t1 )
-					return false;
-			}
-		}
-
-		// Ray intersects all 3 slabs
-		return true;
+		return Intersect_LineToBBox(point, line, bbox, t0, t1);
 	}
 
 	// Clip 'line' to the infinite plane 'plane'. Returns true if the line is not wholely clipped away
@@ -903,6 +941,38 @@ namespace pr
 				PR_CHECK(FEql(angles.y, 45.0f    , 0.0001f), true);
 				PR_CHECK(FEql(angles.z, 108.4349f, 0.0001f), true);
 			}
+			{// Intersect_LineToBBox
+				float tmin = 0.0f, tmax = 1.0f;
+				auto s = pr::v4::make(+1.0f, +0.2f, +0.5f, 1.0f);
+				auto e = pr::v4::make(-1.0f, -0.2f, -0.4f, 1.0f);
+				auto d = e - s;
+				auto bbox = pr::BBox::make(pr::v4Origin, pr::v4::make(0.25f, 0.15f, 0.2f, 0.0f));
+				
+				auto r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
+				PR_CHECK(r, true);
+				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4::make(+0.25f, +0.05f, +0.163f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4::make(-0.25f, -0.05f, -0.063f, 1.0f), 0.001f), true);
+
+				s = pr::v4::make(+1.0f, +0.2f, -0.22f, 1.0f);
+				r = Intersect_LineToBBox(s, d, bbox, tmin, tmax);
+				PR_CHECK(r, false);
+			}
+			{// Intersect_LineToSphere
+				float tmin = 0.0f, tmax = 1.0f;
+				auto s = pr::v4::make(+1.0f, +0.2f, +0.5f, 1.0f);
+				auto e = pr::v4::make(-1.0f, -0.2f, -0.4f, 1.0f);
+				auto d = e - s;
+				auto rad = 0.3f;
+				
+				auto r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
+				PR_CHECK(r, true);
+				PR_CHECK(pr::FEql3(s + tmin*d, pr::v4::make(+0.247f, +0.049f, +0.161f, 1.0f), 0.001f), true);
+				PR_CHECK(pr::FEql3(s + tmax*d, pr::v4::make(-0.284f, -0.057f, -0.078f, 1.0f), 0.001f), true);
+
+				s = pr::v4::make(+1.0f, +0.2f, -0.22f, 1.0f);
+				r = Intersect_LineToSphere(s, d, rad, tmin, tmax);
+				PR_CHECK(r, false);
+			}
 		}
 	}
 }
@@ -1015,7 +1085,6 @@ namespace pr
 //        q += (dist / maxdist) * ac;
 //}
 //
-
 //
 //
 //--------------------------------------------------------------------------------
@@ -1386,36 +1455,6 @@ namespace pr
 //
 //=== Section 5.3.3: =============================================================
 //
-//// Intersect ray R(t) = p + t*d against AABB a. When intersecting,
-//// return intersection distance tmin and point q of intersection
-//int IntersectRayAABB(Point p, Vector d, AABB a, float &tmin, Point &q)
-//{
-//    tmin = 0.0f;          // set to -FLT_MAX to get first hit on line
-//    float tmax = FLT_MAX; // set to max distance ray can travel (for segment)
-//
-//    // For all three slabs
-//    for (int i = 0; i < 3; i++) {
-//        if (Abs(d[i]) < EPSILON) {
-//            // Ray is parallel to slab. No hit if origin not within slab
-//            if (p[i] < a.min[i] || p[i] > a.max[i]) return 0;
-//        } else {
-//            // Compute intersection t value of ray with near and far plane of slab
-//            float ood = 1.0f / d[i];
-//            float t1 = (a.min[i] - p[i]) * ood;
-//            float t2 = (a.max[i] - p[i]) * ood;
-//            // Make t1 be intersection with near plane, t2 with far plane
-//            if (t1 > t2) Swap(t1, t2);
-//            // Compute the intersection of slab intersections intervals
-//            if (t1 > tmin) tmin = t1;
-//            if (t2 > tmax) tmax = t2;
-//            // Exit with no collision as soon as slab intersection becomes empty
-//            if (tmin > tmax) return 0;
-//        }
-//    }
-//    // Ray intersects all 3 slabs. Return point (q) and intersection t value (tmin)
-//    q = p + d * tmin;
-//    return 1;
-//}
 //
 //--------------------------------------------------------------------------------
 //

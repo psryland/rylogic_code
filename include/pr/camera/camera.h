@@ -161,50 +161,40 @@ namespace pr
 			return CameraToScreen(Near(), Far());
 		}
 
-		// Return a point in normalised screen space, i.e. (-1,-1)->(1,1)
-		// 'size_x' is the width of the view area
-		// 'size_y' is the height of the view area
-		// Use -size_x or -size_y to invert the x or y coordinate.
-		// e.g. if (0,0) is the top left, use size_x, -size_y
-		static pr::v2 NormalisePoint(pr::v2 const& point, float size_x, float size_y)
-		{
-			float sx = pr::Sign(size_x); size_x = pr::Abs(size_x);
-			float sy = pr::Sign(size_y); size_y = pr::Abs(size_y);
-			return pr::v2::make(
-				sx * (2.0f * point.x - size_x) / size_x,
-				sy * (2.0f * point.y - size_y) / size_y);
-		}
+		// Note, the camera does not contain any info about the size of the screen
+		// that the camera view is on. Therefore, there are no screen space to normalised
+		// screen space methods in here. You need the Window for that.
 
 		// Return a point in world space corresponding to a normalised screen space point.
-		// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
-		// The z component should be the world space distance from the camera
-		pr::v4 WSPointFromNormSSPoint(pr::v4 const& screen) const
+		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+		// The z component should be the depth into the screen (i.e. d*-c2w.z, where 'd' is typically positive)
+		pr::v4 NSSPointToWSPoint(pr::v4 const& nss_point) const
 		{
 			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
 
 			// Calculate the point in camera space
 			pr::v4 point;
-			point.x = screen.x * m_aspect * half_height;
-			point.y = screen.y * half_height;
+			point.x = nss_point.x * m_aspect * half_height;
+			point.y = nss_point.y * half_height;
 			if (!m_orthographic)
 			{
-				float sz = screen.z / m_focus_dist;
+				float sz = nss_point.z / m_focus_dist;
 				point.x *= sz;
 				point.y *= sz;
 			}
-			point.z = -screen.z;
+			point.z = -nss_point.z;
 			point.w = 1.0f;
-			return m_c2w * point;
+			return m_c2w * point; // camera space to world space
 		}
 
-		// Return a point in normalised screen space corresponding to 'world'
+		// Return a point in normalised screen space corresponding to 'ws_point'
 		// The returned 'z' component will be the world space distance from the camera
-		pr::v4 NormSSPointFromWSPoint(pr::v4 const& world) const
+		pr::v4 WSPointToNSSPoint(pr::v4 const& ws_point) const
 		{
 			float half_height = m_focus_dist * pr::Tan(m_fovY * 0.5f);
 
 			// Get the point in camera space and project into normalised screen space
-			pr::v4 cam = InvertFast(m_c2w) * world;
+			pr::v4 cam = InvertFast(m_c2w) * ws_point;
 
 			pr::v4 point;
 			point.x = cam.x / (m_aspect * half_height);
@@ -221,11 +211,11 @@ namespace pr
 		}
 
 		// Return a point and direction in world space corresponding to a normalised sceen space point.
-		// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+		// The x,y components of 'nss_point' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 		// The z component should be the world space distance from the camera
-		void WSRayFromNormSSPoint(pr::v4 const& screen, pr::v4& ws_point, pr::v4& ws_direction) const
+		void NSSPointToWSRay(pr::v4 const& nss_point, pr::v4& ws_point, pr::v4& ws_direction) const
 		{
-			pr::v4 pt = WSPointFromNormSSPoint(screen);
+			pr::v4 pt = NSSPointToWSPoint(nss_point);
 			ws_point = m_c2w.pos;
 			ws_direction = pr::Normalise3(pt - ws_point);
 		}

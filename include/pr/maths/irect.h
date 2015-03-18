@@ -83,7 +83,8 @@ namespace pr
 	FRect   Encompass(FRect const& lhs, FRect const& rhs);
 	bool    IsWithin(IRect const& rect, iv2 const& point);
 	bool    IsIntersection(IRect const& lhs, IRect const& rhs);
-	pr::v2  NormalisePoint(IRect const& rect, pr::v2 const& point, float ysign);
+	pr::v2  NormalisePoint(IRect const& rect, pr::v2 const& point, float xsign = 1.0f, float ysign = 1.0f);
+	pr::v2  ScalePoint(IRect const& rect, pr::v2 const& point, float xsign = 1.0f, float ysign = 1.0f);
 }
 
 #endif

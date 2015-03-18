@@ -35,7 +35,7 @@ namespace pr
 					float rad = dGeomSphereGetRadius(geom);
 					pr::v4 pos = pr::v4::make(dGeomGetOffsetPosition(geom), 1.0f);
 					pr::variant v = { dGeomGetData(geom) };
-					Sphere("sphere", v.ptr == 0 ? 0xFFFF0000 : v.ui, pos, rad, str);
+					Sphere("sphere", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad, str);
 				}break;
 			case dBoxClass:
 				{
@@ -43,14 +43,14 @@ namespace pr
 					pr::v4 dim = pr::v4::make(box_size, 0.0f);
 					pr::m4x4 o2p = pr::pr_m4x4(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Box("box", v.ptr == 0 ? 0xFFFF0000 : v.ui, o2p, dim, str);
+					Box("box", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim, str);
 				}break;
 			case dCapsuleClass:
 				{
 					float rad, len; dGeomCapsuleGetParams(geom, &rad, &len);
 					pr::m4x4 o2p = pr::pr_m4x4(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Cylinder("caps", v.ptr == 0 ? 0xFFFF0000 : v.ui, o2p, 1, len, rad, str);
+					Cylinder("caps", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, 1, len, rad, str);
 					//Capsule("caps", v.ptr == 0 ? 0xFFFF0000 : v.ui, o2p, rad, len, str);
 				}break;
 			}

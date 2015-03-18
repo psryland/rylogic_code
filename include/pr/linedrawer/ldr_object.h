@@ -327,11 +327,12 @@ namespace pr
 			// 'func' should have a signature: bool func(pr::ldr::LdrObject* obj);
 			// 'obj' is a recursion parameter, callers should use 'nullptr'
 			// Returns 'true' if 'func' always returns 'true'.
-			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr)
+			template <typename TFunc> bool Apply(TFunc func, char const* name = nullptr, LdrObject* obj = nullptr) const
 			{
 				if (obj == nullptr)
 				{
-					obj = this;
+					// The constness of this function depends on 'func'
+					obj = const_cast<LdrObject*>(this);
 				}
 				if (name == nullptr)
 				{
@@ -363,8 +364,11 @@ namespace pr
 			// Set the render mode for this object or child objects matching 'name' (see Apply)
 			void Wireframe(bool wireframe, char const* name = nullptr);
 
-			// Set the colour of this object or child objects matching 'name' (see Apply)
-			void SetColour(pr::Colour32 colour, pr::uint mask, char const* name = nullptr);
+			// Get/Set the colour of this object or child objects matching 'name' (see Apply)
+			// For 'Get', the colour of the first object to match 'name' is returned
+			// For 'Set', the object base colour is not changed, only the tint colour = tint
+			pr::Colour32 Colour(bool base_colour, char const* name = nullptr) const;
+			void Colour(pr::Colour32 colour, pr::uint mask, char const* name = nullptr);
 
 			// Restore the colour to the initial colour for this object or child objects matching 'name' (see Apply)
 			void ResetColour(char const* name = nullptr);

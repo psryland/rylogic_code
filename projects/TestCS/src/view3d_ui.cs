@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gfx;
 using pr.gui;
 using pr.maths;
@@ -14,10 +15,6 @@ namespace TestCS
 		private View3d.Object m_obj0;
 		private View3d.Object m_obj1;
 		private View3d.Texture m_tex0;
-		private ToolStrip toolStrip1;
-		private ToolStripButton m_btn_translate;
-		private ToolStripButton m_btn_rotate;
-		private ToolStripButton m_btn_scale;
 		private View3d.Gizmo m_giz;
 
 		static FormView3d()
@@ -70,9 +67,12 @@ namespace TestCS
 
 			// Create a gizmo for moving objects in the scene
 			// Position it at the origin of m_obj0 and scale by 2
-			m_giz = new View3d.Gizmo(View3d.Gizmo.EMode.Scale, m_obj0.O2P * m4x4.Scale(2f, v4.Origin));
+			m_giz = new View3d.Gizmo(View3d.Gizmo.EMode.Scale, m_obj0.O2P * m4x4.Scale(0.1f, v4.Origin));
 			m_giz.Attach(m_obj0);
-			m_giz.Enabled = true;
+			m_giz.Moved += (s,a) =>
+				{
+					m_status.SetStatusMessage("Gizmo", display_time_ms:TimeSpan.FromSeconds(2));
+				};
 			m_view3d.Window.AddGizmo(m_giz);
 
 			m_btn_translate.Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Translate;
@@ -95,6 +95,13 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
+		private ToolStrip m_ts;
+		private ToolStripButton m_btn_translate;
+		private ToolStripButton m_btn_rotate;
+		private ToolStripButton m_btn_scale;
+		private StatusStrip m_ss;
+		private ToolStripStatusLabel m_status;
+
 		#region Windows Form Designer generated code
 
 		/// <summary>Required designer variable.</summary>
@@ -107,24 +114,27 @@ namespace TestCS
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormView3d));
-			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+			this.m_ts = new System.Windows.Forms.ToolStrip();
 			this.m_btn_translate = new System.Windows.Forms.ToolStripButton();
-			this.m_btn_scale = new System.Windows.Forms.ToolStripButton();
 			this.m_btn_rotate = new System.Windows.Forms.ToolStripButton();
-			this.toolStrip1.SuspendLayout();
+			this.m_btn_scale = new System.Windows.Forms.ToolStripButton();
+			this.m_ss = new System.Windows.Forms.StatusStrip();
+			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_ts.SuspendLayout();
+			this.m_ss.SuspendLayout();
 			this.SuspendLayout();
 			// 
-			// toolStrip1
+			// m_ts
 			// 
-			this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+			this.m_ts.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.m_btn_translate,
             this.m_btn_rotate,
             this.m_btn_scale});
-			this.toolStrip1.Location = new System.Drawing.Point(0, 0);
-			this.toolStrip1.Name = "toolStrip1";
-			this.toolStrip1.Size = new System.Drawing.Size(352, 25);
-			this.toolStrip1.TabIndex = 0;
-			this.toolStrip1.Text = "toolStrip1";
+			this.m_ts.Location = new System.Drawing.Point(0, 0);
+			this.m_ts.Name = "m_ts";
+			this.m_ts.Size = new System.Drawing.Size(352, 25);
+			this.m_ts.TabIndex = 0;
+			this.m_ts.Text = "toolStrip1";
 			// 
 			// m_btn_translate
 			// 
@@ -135,15 +145,6 @@ namespace TestCS
 			this.m_btn_translate.Size = new System.Drawing.Size(59, 22);
 			this.m_btn_translate.Text = "Translate";
 			// 
-			// m_btn_scale
-			// 
-			this.m_btn_scale.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
-			this.m_btn_scale.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_scale.Image")));
-			this.m_btn_scale.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.m_btn_scale.Name = "m_btn_scale";
-			this.m_btn_scale.Size = new System.Drawing.Size(38, 22);
-			this.m_btn_scale.Text = "Scale";
-			// 
 			// m_btn_rotate
 			// 
 			this.m_btn_rotate.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
@@ -153,16 +154,44 @@ namespace TestCS
 			this.m_btn_rotate.Size = new System.Drawing.Size(45, 22);
 			this.m_btn_rotate.Text = "Rotate";
 			// 
+			// m_btn_scale
+			// 
+			this.m_btn_scale.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+			this.m_btn_scale.Image = ((System.Drawing.Image)(resources.GetObject("m_btn_scale.Image")));
+			this.m_btn_scale.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.m_btn_scale.Name = "m_btn_scale";
+			this.m_btn_scale.Size = new System.Drawing.Size(38, 22);
+			this.m_btn_scale.Text = "Scale";
+			// 
+			// m_ss
+			// 
+			this.m_ss.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_status});
+			this.m_ss.Location = new System.Drawing.Point(0, 320);
+			this.m_ss.Name = "m_ss";
+			this.m_ss.Size = new System.Drawing.Size(352, 22);
+			this.m_ss.TabIndex = 1;
+			this.m_ss.Text = "statusStrip1";
+			// 
+			// m_status
+			// 
+			this.m_status.Name = "m_status";
+			this.m_status.Size = new System.Drawing.Size(56, 17);
+			this.m_status.Text = "Stay Tuss";
+			// 
 			// FormView3d
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(352, 342);
-			this.Controls.Add(this.toolStrip1);
+			this.Controls.Add(this.m_ss);
+			this.Controls.Add(this.m_ts);
 			this.Name = "FormView3d";
 			this.Text = "FormView3d";
-			this.toolStrip1.ResumeLayout(false);
-			this.toolStrip1.PerformLayout();
+			this.m_ts.ResumeLayout(false);
+			this.m_ts.PerformLayout();
+			this.m_ss.ResumeLayout(false);
+			this.m_ss.PerformLayout();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

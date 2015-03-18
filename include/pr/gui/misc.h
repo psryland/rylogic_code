@@ -70,7 +70,7 @@ namespace pr
 	// Convert a client space point to a normalised point
 	inline pr::v2 NormalisePoint(HWND hwnd, POINT const& pt)
 	{
-		return pr::NormalisePoint(ClientArea(hwnd), pr::To<pr::v2>(pt), -1.0f);
+		return pr::NormalisePoint(ClientArea(hwnd), pr::To<pr::v2>(pt), 1.0f, -1.0f);
 	}
 
 	// Register a window class for a type that inherits WTL::CWindowImpl<> (e.g custom control)

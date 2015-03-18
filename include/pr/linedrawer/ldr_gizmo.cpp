@@ -669,6 +669,7 @@ namespace pr
 			,m_rdr(&rdr)
 			,m_mode(static_cast<EMode>(-1))
 			,m_gfx()
+			,m_offset(m4x4Identity)
 			,m_ref_pt()
 			,m_col_hover(pr::Colour32::make(0xFFBBBB00))
 			,m_col_manip(pr::Colour32::make(0xFFFFFF00))
@@ -694,6 +695,12 @@ namespace pr
 		{
 			Revert();
 			m_impl_enabled = enabled;
+		}
+
+		// True while manipulation is in progress
+		bool LdrGizmo::Manipulating() const
+		{
+			return m_manipulating;
 		}
 
 		// Get/Set the mode the gizmo is in
@@ -723,7 +730,6 @@ namespace pr
 				nugget.m_sort_key.Group(ESortGroup::PostOpaques);
 				nugget.m_rsb.Set(ERS::CullMode, D3D11_CULL_BACK);
 				nugget.m_dsb.Set(EDS::DepthFunc, D3D11_COMPARISON_GREATER);
-			//	nugget.m_dsb.Set(EDS::DepthWriteMask, D3D11_DEPTH_WRITE_MASK_ZERO);
 				nugget.m_tex_diffuse = m_rdr->m_tex_mgr.FindTexture(EStockTexture::Gray);
 				m_gfx.m_model->CreateNugget(nugget);
 			}
@@ -746,6 +752,7 @@ namespace pr
 			// Update the matrix for this graphics object in m_attached
 			m_attached_ptr[0] = &m_gfx.m_o2w;
 			m_attached_ref[0] = m_gfx.m_o2w;
+			m_offset = pr::m4x4Identity;
 		}
 
 		// Get/Set the gizmo object to world transform
@@ -759,6 +766,8 @@ namespace pr
 			*m_attached_ptr[0] = o2w;
 			if (!m_manipulating)
 				m_attached_ref[0] = o2w;
+
+			m_offset = pr::m4x4Identity;
 		}
 
 		// Attach/Detach objects by reference to their transform what will be moved as the gizmo moves
@@ -777,14 +786,26 @@ namespace pr
 			}
 		}
 
-		// Record the current matrices as the reference
-		void LdrGizmo::Reference(pr::v2 const& pos_nss)
+		// Attach/Detach a callback that will be called whenever the gizmo moves
+		void LdrGizmo::Attach(LdrGizmoCB::Func func, void* ctx)
 		{
-			m_ref_pt = pos_nss;
+			m_callbacks.push_back(LdrGizmoCB(func, ctx));
+		}
+		void LdrGizmo::Detach(LdrGizmoCB::Func func)
+		{
+			pr::erase_if(m_callbacks, [=](LdrGizmoCB& cb){ return cb.m_func == func; });
+		}
+
+		// Record the current matrices as the reference
+		void LdrGizmo::Reference(pr::v2 const& nss_point)
+		{
+			m_ref_pt = nss_point;
 
 			// Set all references equal to the new transforms
 			for (size_t i = 0, iend = m_attached_ptr.size(); i != iend; ++i)
 				m_attached_ref[i] = *m_attached_ptr[i];
+
+			m_offset = pr::m4x4Identity;
 		}
 
 		// Reset all attached objects back to the reference position and end manipulation
@@ -795,6 +816,13 @@ namespace pr
 				*m_attached_ptr[i] = m_attached_ref[i];
 
 			m_manipulating = false;
+			m_offset = pr::m4x4Identity;
+
+			// Call after reverting transforms so that callee's can Detach() after
+			// their transforms have been changed (if they decided to Attach on StartManip)
+			auto args = Evt_Gizmo(*this, ELdrGizmoEvent::Revert);
+			for (auto& cb : m_callbacks) cb(args);
+			pr::events::Send(args);
 		}
 
 		// Set the ref matrices equal to the controlled matrices
@@ -810,24 +838,31 @@ namespace pr
 			// Set all references equal to the new transforms
 			for (size_t i = 1, iend = m_attached_ptr.size(); i < iend; ++i)
 				m_attached_ref[i] = *m_attached_ptr[i];
+
+			m_offset = pr::m4x4Identity;
+
+			// Call after committing transforms so that callee's can Detach() after
+			// their transforms have been changed (if they decided to Attach on StartManip)
+			auto args = Evt_Gizmo(*this, ELdrGizmoEvent::Commit);
+			for (auto& cb : m_callbacks) cb(args);
+			pr::events::Send(args);
 		}
 
 		// Returns the transform offset between the position when
 		// manipulating started and the current gizmo position
 		pr::m4x4 LdrGizmo::Offset() const
 		{
-			// w-2-o1 * o0-2-w = o0-2-o1
-			return pr::Invert(*m_attached_ptr[0]) * m_attached_ref[0];
+			return m_offset;
 		}
 
 		// Interact with the gizmo based on mouse movement.
-		// 'pos_nss' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
+		// 'nss_point' should be normalised. i.e. x=[-1, -1], y=[-1,1] with (-1,-1) == (left,bottom). i.e. normal cartesian axes
 		// The start of a mouse movement is indicated by 'btn_state' being non-zero
 		// The end of the mouse movement is indicated by 'btn_state' being zero
 		// 'btn_state' is one of the MK_LBUTTON, MK_RBUTTON, values
 		// 'ref_point' should be true on the mouse down/up event, false while mouse moving
 		// Returns true if the gizmo has moved or changed colour
-		bool LdrGizmo::MouseControl(pr::Camera& camera, pr::v2 const& pos_nss, int btn_state, bool ref_point)
+		bool LdrGizmo::MouseControl(pr::Camera& camera, pr::v2 const& nss_point, int btn_state, bool ref_point)
 		{
 			// Not enabled? ignore mouse input
 			if (!Enabled())
@@ -839,11 +874,17 @@ namespace pr
 				// On left mouse down, if we're not currently manipulating an axis, hit test to see if we should start
 				if (pr::AllSet(btn_state, MK_LBUTTON) && m_component == EComponent::None)
 				{
-					auto hit = HitTest(camera, pos_nss);
+					auto hit = HitTest(camera, nss_point);
 					SetAxisColour(hit, m_col_manip);
 					if (hit != EComponent::None)
 					{
-						Reference(pos_nss);
+						// Send the initial moving event before 'Reference' so that watchers
+						// can attach themselves to the gizmo for the duration of the manipulation
+						auto args = Evt_Gizmo(*this, ELdrGizmoEvent::StartManip);
+						for (auto& cb : m_callbacks) cb(args);
+						pr::events::Send(args);
+
+						Reference(nss_point);
 						m_component = hit;
 						m_manipulating = true;
 					}
@@ -855,7 +896,7 @@ namespace pr
 				if (!pr::AllSet(btn_state, MK_LBUTTON) && m_component != EComponent::None)
 				{
 					Commit();
-					auto hit = HitTest(camera, pos_nss);
+					auto hit = HitTest(camera, nss_point);
 					SetAxisColour(hit, m_col_hover);
 					m_component = EComponent::None;
 					m_manipulating = false;
@@ -870,17 +911,21 @@ namespace pr
 				switch (m_mode)
 				{
 				default: throw std::exception("Unknown gizmo mode");
-				case EMode::Translate: DoTranslation(camera, pos_nss); break;
-				case EMode::Rotate:    DoRotation(camera, pos_nss); break;
-				case EMode::Scale:     DoScale(camera, pos_nss); break;
+				case EMode::Translate: DoTranslation(camera, nss_point); break;
+				case EMode::Rotate:    DoRotation(camera, nss_point); break;
+				case EMode::Scale:     DoScale(camera, nss_point); break;
 				}
+
+				auto args = Evt_Gizmo(*this, ELdrGizmoEvent::Moving);
+				for (auto& cb : m_callbacks) cb(args);
+				pr::events::Send(args);
 				return true;
 			}
 
 			// If we're not currently manipulating, check for mouse hover over the gizmo
 			if (btn_state == 0)
 			{
-				auto hit = HitTest(camera, pos_nss);
+				auto hit = HitTest(camera, nss_point);
 				if (hit != m_last_hit)
 				{
 					SetAxisColour(hit, m_col_hover);
@@ -892,13 +937,13 @@ namespace pr
 		}
 
 		// Perform a hit test given a normalised screen-space point
-		LdrGizmo::EComponent LdrGizmo::HitTest(pr::Camera& camera, pr::v2 const& pos_nss)
+		LdrGizmo::EComponent LdrGizmo::HitTest(pr::Camera& camera, pr::v2 const& nss_point)
 		{
 			auto hit = EComponent::None;
 
 			// Cast a ray into the scene to get a line in world space
 			pr::v4 p, d;
-			camera.WSRayFromNormSSPoint(pr::v4::make(pos_nss, 1.0f, 0.0f), p, d);
+			camera.NSSPointToWSRay(pr::v4::make(nss_point, 1.0f, 0.0f), p, d);
 
 			// Then transform the ray from world space to gizmo space (note, it might be scaled)
 			auto w2o = pr::Invert(O2W());
@@ -995,30 +1040,43 @@ namespace pr
 		}
 
 		// Perform translation
-		void LdrGizmo::DoTranslation(pr::Camera& camera, pr::v2 const& pos_nss)
+		void LdrGizmo::DoTranslation(pr::Camera& camera, pr::v2 const& nss_point)
 		{
 			auto k = (int)m_component - 1;
 			auto p = m_attached_ref[0].pos;
 			auto d = m_attached_ref[0][k];
+			auto c2w = camera.CameraToWorld();
+			if (FEql(pr::Length3Sq(d), 0.0f))
+			{
+				// If 'd' is zero, try construct it from the other two axes
+				d = pr::Cross3(m_attached_ref[0][(k+1)%3], m_attached_ref[0][(k+2)%3]);
+				if (FEql(pr::Length3Sq(d), 0.0f))
+					return; // Still zero... give up
+			}
 
-			// Project the component axis back into normalised screen space
-			auto p0 = camera.NormSSPointFromWSPoint(p).xy;
-			auto p1 = camera.NormSSPointFromWSPoint(p + d).xy;
-			auto axis = p1 - p0;
-			auto axis_lensq = pr::Length2Sq(axis);
-			if (axis_lensq < pr::maths::tiny)
-				return;
+			// Get the WS ray for 'm_ref_pt'
+			pr::v4 p0, dir0;
+			camera.NSSPointToWSRay(pr::v4::make(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
 
-			// Compare the mouse movement to the on-screen component axis
-			auto t = pr::Dot2(pos_nss - m_ref_pt, axis) / axis_lensq;
+			// Get the WS ray for 'nss_point'
+			pr::v4 p1, dir1;
+			camera.NSSPointToWSRay(pr::v4::make(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
 
-			// Translate attached objects by t * the component axis
-			for (auto a : m_attached_ptr)
-				a->pos = m_attached_ref[0].pos + t * m_attached_ref[0][k];
+			// Find the nearest points on 'd' for 'dir0' and 'dir1'
+			float t0, t1, tdummy;
+			pr::ClosestPoint_InfiniteLineToInfiniteLine(p, d, p0, dir0, t0, tdummy);
+			pr::ClosestPoint_InfiniteLineToInfiniteLine(p, d, p1, dir1, t1, tdummy);
+
+			// Move to the nearest point
+			m_offset = pr::Translation4x4(((t1 - t0)*d).w1()); // world space translation (since axis is in world space)
+
+			// Translate attached objects by d * the component axis
+			for (int i = 0, iend = int(m_attached_ptr.size()); i != iend; ++i)
+				*m_attached_ptr[i] = m_offset * m_attached_ref[i];
 		}
 
 		// Perform rotation
-		void LdrGizmo::DoRotation(pr::Camera& camera, pr::v2 const& pos_nss)
+		void LdrGizmo::DoRotation(pr::Camera& camera, pr::v2 const& nss_point)
 		{
 			auto k = (int)m_component - 1;
 			auto p = m_attached_ref[0].pos;
@@ -1031,53 +1089,72 @@ namespace pr
 			axis /= sqrt(axis_lensq);
 
 			// Project the component axis back into normalised screen space
-			auto p0 = camera.NormSSPointFromWSPoint(p);
-			auto p1 = camera.NormSSPointFromWSPoint(p + d);
+			auto p0 = camera.WSPointToNSSPoint(p);
+			auto p1 = camera.WSPointToNSSPoint(p + d);
 			auto s  = pr::Sign(p1.z - p0.z);
 			auto a  = pr::Normalise2(m_ref_pt - p0.xy, pr::v2Zero);
 			auto b  = pr::Rotate90CCW(a);
-			auto c  = pos_nss - p0.xy;
+			auto c  = nss_point - p0.xy;
 			auto t  = s * pr::ATan2(pr::Dot2(c,b), pr::Dot2(c,a));
+
+			m_offset = pr::Translation4x4(p) * pr::Rotation4x4(axis, t, pr::v4Origin) * pr::Translation4x4((-p).w1()); // World space rotation about 'axis'
 
 			// Rotate attached objects by t radians about the component axis
 			for (int i = 0, iend = int(m_attached_ptr.size()); i != iend; ++i)
-				m_attached_ptr[i]->rot = pr::Rotation3x3(axis, t) * m_attached_ref[i].rot;
+				m_attached_ptr[i]->rot = m_offset.rot * m_attached_ref[i].rot;
 		}
 
 		// Perform scale
-		void LdrGizmo::DoScale(pr::Camera& camera, pr::v2 const& pos_nss)
+		void LdrGizmo::DoScale(pr::Camera& camera, pr::v2 const& nss_point)
 		{
 			auto k = (int)m_component - 1;
 			auto p = m_attached_ref[0].pos;
 			auto d = m_attached_ref[0][k];
+			auto c2w = camera.CameraToWorld();
+			if (FEql(pr::Length3Sq(d), 0.0f))
+			{
+				// If 'd' is zero, try construct it from the other two axes
+				d = pr::Cross3(m_attached_ref[0][(k+1)%3], m_attached_ref[0][(k+2)%3]);
+				if (FEql(pr::Length3Sq(d), 0.0f))
+					return; // Still zero... give up
+			}
 
-			// Project the component axis back into normalised screen space
-			auto p0 = camera.NormSSPointFromWSPoint(p).xy;
-			auto p1 = camera.NormSSPointFromWSPoint(p + d).xy;
-			auto axis = p1 - p0;
-			auto axis_lensq = pr::Length2Sq(axis);
-			if (axis_lensq < pr::maths::tiny)
+			// Get the WS ray for 'm_ref_pt'
+			pr::v4 p0, dir0;
+			camera.NSSPointToWSRay(pr::v4::make(m_ref_pt, c2w.pos.z - p.z,1.0f), p0, dir0);
+
+			// Get the WS ray for 'nss_point'
+			pr::v4 p1, dir1;
+			camera.NSSPointToWSRay(pr::v4::make(nss_point, c2w.pos.z - p.z,1.0f), p1, dir1);
+
+			// Find the nearest points on 'd' for 'dir0' and 'dir1'
+			float t0, t1, tdummy;
+			pr::ClosestPoint_InfiniteLineToInfiniteLine(p, d, p0, dir0, t0, tdummy);
+			pr::ClosestPoint_InfiniteLineToInfiniteLine(p, d, p1, dir1, t1, tdummy);
+			if (FEql(t0, 0.0f))
 				return;
 
-			// Compare the mouse movement to the on-screen component axis
-			float t[3] = {1.0f,1.0f,1.0f};
-			t[k] = 1.0f + pr::Dot2(pos_nss - m_ref_pt, axis) / sqrt(axis_lensq);
+			// Scale
+			float t[3] = {1.0f, 1.0f, 1.0f};
+			t[k] = t1 / t0;
 
-			// Special case the gizmo transform, since we don't want to scale the gizmo
-			auto s = t[k] > 1.0f ? 0.1f : -0.1f;
-			auto& giz2w = m_attached_ref[0].rot;
-			m_attached_ptr[0]->rot = giz2w * pr::Scale3x3(1.0f+s*(k==0), 1.0f+s*(k==1), 1.0f+s*(k==2));
+			auto& giz2w = m_attached_ref[0];
+			auto  w2giz = pr::Invert(giz2w);
+			w2giz.x.w = 0.0f; // Have to fix up the w components because 'Invert'
+			w2giz.y.w = 0.0f; // is only an approximate matrix inverse
+			w2giz.z.w = 0.0f;
+			w2giz.w.w = 1.0f;
 
-			auto w2giz = pr::Invert(giz2w);
-			auto scale = giz2w * pr::Scale3x3(t[0],t[1],t[2]) * w2giz;
+			m_offset = giz2w * pr::Scale4x4(t[0], t[1], t[2], pr::v4Origin) * w2giz;
 
 			// Scale attached objects in their local space, but by a scale
 			// matrix with the same orientation as the gimzo.
 			for (int i = 1, iend = int(m_attached_ptr.size()); i < iend; ++i)
-			{
-				auto& o2w = m_attached_ref[i].rot;
-				m_attached_ptr[i]->rot = scale * o2w;
-			}
+				m_attached_ptr[i]->rot = m_offset.rot * m_attached_ref[i].rot;
+
+			// Special case the gizmo transform, since we don't want to scale the gizmo
+			t[k] = t[k] > 1.0f ? 1.05f : 0.95f;
+			m_attached_ptr[0]->rot = giz2w.rot * pr::Scale3x3(t[0], t[1], t[2]);
 		}
 	}
 }

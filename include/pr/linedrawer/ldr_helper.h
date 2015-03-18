@@ -52,7 +52,7 @@ namespace pr
 		}
 		template <typename TStr> inline TStr& GroupStart(char const* name, TStr& str)
 		{
-			if (name == 0 || *name == 0) name = "unnamed";
+			if (name == 0) name = "";
 			return str += FmtS("*Group %s {\n", name);
 		}
 		template <typename TStr> inline TStr& GroupEnd(TStr& str)

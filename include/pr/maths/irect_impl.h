@@ -4,8 +4,6 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_IRECT_IMPL_H
-#define PR_MATHS_IRECT_IMPL_H
 
 #include "pr/maths/irect.h"
 
@@ -123,12 +121,60 @@ namespace pr
 				 lhs.m_max.y < rhs.m_min.y || lhs.m_min.y > rhs.m_max.y);
 	}
 
-	// Return 'point' scaled by the transform that maps 'rect' to the square (-1,-1), (1,-1), (1,1), (-1,1)
-	// 'ysign' should be -1 if point.y is a screen space point (i.e. origin in the top left)
-	inline pr::v2 NormalisePoint(IRect const& rect, pr::v2 const& point, float ysign)
+	// Return 'point' scaled by the transform that maps 'rect' to the square (bottomleft:-1,-1)->(topright:1,1) 
+	// 'xsign' should be -1 if the rect origin is on the right, false if on the left
+	// 'ysign' should be -1 if the rect origin is at the top, false if at the bottom
+	// Inverse of 'ScalePoint'
+	inline pr::v2 NormalisePoint(IRect const& rect, pr::v2 const& point, float xsign, float ysign)
 	{
-		return pr::v2::make(2.0f * point.x / rect.SizeX() - 1.0f, ysign * (2.0f * point.y / rect.SizeY() - 1.0f));
+		return pr::v2::make(
+			xsign * (2.0f * (point.x - rect.m_min.x) / rect.SizeX() - 1.0f),
+			ysign * (2.0f * (point.y - rect.m_min.y) / rect.SizeY() - 1.0f));
+	}
+
+	// Scales a normalised 'point' by the transform that maps the square (bottomleft:-1,-1)->(topright:1,1) to 'rect'
+	// 'xsign' should be -1 if the rect origin is on the right, false if on the left
+	// 'ysign' should be -1 if the rect origin is at the top, false if at the bottom
+	// Inverse of 'NormalisedPoint'
+	inline pr::v2 ScalePoint(IRect const& rect, pr::v2 const& point, float xsign, float ysign)
+	{
+		return pr::v2::make(
+			rect.m_min.x + rect.SizeX() * (1.0f + xsign*point.x) / 2.0f,
+			rect.m_min.y + rect.SizeY() * (1.0f + ysign*point.y) / 2.0f);
 	}
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_maths_irect)
+		{
+			{//NormalisePoint/ScalePoint
+				auto pt = pr::v2::make(200, 300);
+				auto rt = pr::IRect::make(50,50,200,300);
+				auto nss = pr::NormalisePoint(rt, pt, 1.0f, 1.0f);
+				auto ss  = pr::ScalePoint(rt, nss, 1.0f, 1.0f);
+				PR_CHECK(FEql2(nss, pr::v2::make(1.0f, 1.0f)), true);
+				PR_CHECK(FEql2(pt, ss), true);
+
+				pt = pr::v2::make(200, 300);
+				rt = pr::IRect::make(50,50,200,300);
+				nss = pr::NormalisePoint(rt, pt, 1.0f, -1.0f);
+				ss  = pr::ScalePoint(rt, nss, 1.0f, -1.0f);
+				PR_CHECK(FEql2(nss, pr::v2::make(1.0f, -1.0f)), true);
+				PR_CHECK(FEql2(pt, ss), true);
+
+				pt = pr::v2::make(75, 130);
+				rt = pr::IRect::make(50,50,200,300);
+				nss = pr::NormalisePoint(rt, pt, 1.0f, -1.0f);
+				ss  = pr::ScalePoint(rt, nss, 1.0f, -1.0f);
+				PR_CHECK(FEql2(nss, pr::v2::make(-0.666667f, 0.36f)), true);
+				PR_CHECK(FEql2(pt, ss), true);
+			}
+		}
+	}
+}
 #endif

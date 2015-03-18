@@ -477,6 +477,16 @@ namespace pr
 			pr::FRect AsFRect() const { return pr::FRect::make(TopLeftX, TopLeftY, TopLeftX + Width, TopLeftY + Height); }
 			pr::IRect AsIRect() const { return pr::IRect::make(int(TopLeftX), int(TopLeftY), int(TopLeftX + Width), int(TopLeftY + Height)); }
 			RECT      AsRECT() const  { return RECT{LONG(TopLeftX), LONG(TopLeftY), LONG(TopLeftX + Width), LONG(TopLeftY + Height)}; }
+
+			// Convert a screen space point to normalised screen space
+			pr::v2 SSPointToNSSPoint(pr::v2 const& ss_point) const
+			{
+				return pr::NormalisePoint(AsIRect(), ss_point, 1.0f, -1.0f);
+			}
+			pr::v2 NSSPointToSSPoint(pr::v2 const& nss_point) const
+			{
+				return pr::ScalePoint(AsIRect(), nss_point, 1.0f, -1.0f);
+			}
 		};
 	}
 }

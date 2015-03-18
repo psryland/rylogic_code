@@ -505,21 +505,22 @@ VIEW3D_API void __stdcall View3D_CameraSetClipPlanes(View3DWindow window, float 
 }
 
 // General mouse navigation
-// 'point_nss' is the mouse pointer position in normalised screen space
+// 'ss_pos' is the mouse pointer position in 'window's screen space
 // 'button_state' is the state of the mouse buttons and control keys (i.e. MF_LBUTTON, etc)
 // 'nav_start_or_end' should be TRUE on mouse down/up events, FALSE for mouse move events
-// void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, TRUE); }
-// void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
-// void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, pr::NormalisePoint(m_hWnd, point, -1.0f), 0, TRUE); }
+// void OnMouseDown(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nFlags, TRUE); }
+// void OnMouseMove(UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, nFlags, FALSE); } if 'nFlags' is zero, this will have no effect
+// void OnMouseUp  (UINT nFlags, CPoint point) { View3D_Navigate(m_drawset, point, 0, TRUE); }
 // BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint) { if (nFlags == 0) View3D_Navigate(m_drawset, 0, 0, zDelta / 120.0f); return TRUE; }
-VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 point_nss, int button_state, BOOL nav_start_or_end)
+VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_pos, int button_state, BOOL nav_start_or_end)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		auto pos_nss = view3d::To<pr::v2>(point_nss);
+		auto ss_point = view3d::To<pr::v2>(ss_pos);
+		auto nss_point = window->SSPointToNSSPoint(ss_point);
 
 		auto refresh = false;
 		auto gizmo_in_use = false;
@@ -527,14 +528,14 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 poi
 		// Check any gizmos in the scene for interaction with the mouse
 		for (auto& giz : window->m_gizmos)
 		{
-			refresh |= giz->MouseControl(window->m_camera, pos_nss, button_state, nav_start_or_end != 0);
+			refresh |= giz->MouseControl(window->m_camera, nss_point, button_state, nav_start_or_end != 0);
 			gizmo_in_use |= giz->m_manipulating;
 			if (gizmo_in_use) break;
 		}
 
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
-			refresh |= window->m_camera.MouseControl(pos_nss, button_state, nav_start_or_end != 0);
+			refresh |= window->m_camera.MouseControl(nss_point, button_state, nav_start_or_end != 0);
 
 		return refresh;
 	}
@@ -648,39 +649,52 @@ VIEW3D_API void __stdcall View3D_SetFocusPoint(View3DWindow window, View3DV4 pos
 	CatchAndReport(View3D_SetFocusPoint, window,);
 }
 
-// Return a point in world space corresponding to a normalised screen space point.
-// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
-// The z component should be the world space distance from the camera
-VIEW3D_API View3DV4 __stdcall View3D_WSPointFromNormSSPoint(View3DWindow window, View3DV4 screen)
+// Convert a point in 'window' screen space to normalised screen space
+VIEW3D_API View3DV2 __stdcall View3D_SSPointToNSSPoint(View3DWindow window, View3DV2 screen)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.WSPointFromNormSSPoint(view3d::To<pr::v4>(screen)));
+		return view3d::To<View3DV2>(window->SSPointToNSSPoint(view3d::To<pr::v2>(screen)));
 	}
-	CatchAndReport(View3D_WSPointFromNormSSPoint, window, view3d::To<View3DV4>(pr::v4Zero));
+	CatchAndReport(View3D_NSSPointToWSPoint, window, View3DV2());
+}
+
+// Return a point in world space corresponding to a normalised screen space point.
+// The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
+// The z component should be the world space distance from the camera
+VIEW3D_API View3DV4 __stdcall View3D_NSSPointToWSPoint(View3DWindow window, View3DV4 screen)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+
+		DllLockGuard;
+		return view3d::To<View3DV4>(window->m_camera.NSSPointToWSPoint(view3d::To<pr::v4>(screen)));
+	}
+	CatchAndReport(View3D_NSSPointToWSPoint, window, View3DV4());
 }
 
 // Return a point in normalised screen space corresponding to a world space point.
 // The returned z component will be the world space distance from the camera.
-VIEW3D_API View3DV4 __stdcall View3D_NormSSPointFromWSPoint(View3DWindow window, View3DV4 world)
+VIEW3D_API View3DV4 __stdcall View3D_WSPointToNSSPoint(View3DWindow window, View3DV4 world)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
-		return view3d::To<View3DV4>(window->m_camera.NormSSPointFromWSPoint(view3d::To<pr::v4>(world)));
+		return view3d::To<View3DV4>(window->m_camera.WSPointToNSSPoint(view3d::To<pr::v4>(world)));
 	}
-	CatchAndReport(View3D_NormSSPointFromWSPoint, window, view3d::To<View3DV4>(pr::v4Zero));
+	CatchAndReport(View3D_WSPointToNSSPoint, window, view3d::To<View3DV4>(pr::v4Zero));
 }
 
 // Return a point and direction in world space corresponding to a normalised sceen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
-VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
+VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
 {
 	try
 	{
@@ -688,11 +702,11 @@ VIEW3D_API void __stdcall View3D_WSRayFromNormSSPoint(View3DWindow window, View3
 
 		DllLockGuard;
 		pr::v4 pt,dir;
-		window->m_camera.WSRayFromNormSSPoint(view3d::To<pr::v4>(screen), pt, dir);
+		window->m_camera.NSSPointToWSRay(view3d::To<pr::v4>(screen), pt, dir);
 		ws_point = view3d::To<View3DV4>(pt);
 		ws_direction = view3d::To<View3DV4>(dir);
 	}
-	CatchAndReport(View3D_WSRayFromNormSSPoint, window,);
+	CatchAndReport(View3D_NSSPointToWSRay, window,);
 }
 
 // Lighting ********************************************************
@@ -1051,6 +1065,20 @@ VIEW3D_API void __stdcall View3D_SetVisibility(View3DObject object, BOOL visible
 	CatchAndReport(View3D_SetVisibility, ,);
 }
 
+// Return the current or base colour of an object (the first object to match 'name')
+// See LdrObject::Apply for docs on the format of 'name'
+VIEW3D_API View3DColour __stdcall View3D_ObjectGetColour(View3DObject object, BOOL base_colour, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		return object->Colour(base_colour != 0, name);
+	}
+	CatchAndReport(View3D_ObjectGetColour, ,View3DColour(0xFFFFFFFF));
+}
+
 // Set the object colour
 // See LdrObject::Apply for docs on the format of 'name'
 VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColour colour, UINT32 mask, char const* name)
@@ -1060,7 +1088,7 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColo
 		if (!object) throw std::exception("Object is null");
 
 		DllLockGuard;
-		object->SetColour(pr::Colour32::make(colour), mask, name);
+		object->Colour(pr::Colour32::make(colour), mask, name);
 	}
 	CatchAndReport(View3D_ObjectSetColour, ,);
 }
@@ -1624,6 +1652,32 @@ VIEW3D_API void __stdcall View3D_GizmoDelete(View3DGizmo gizmo)
 	CatchAndReport(View3D_GizmoDelete, ,);
 }
 
+// Attach?Detach callbacks that are called when the gizmo moves
+VIEW3D_API void __stdcall View3D_GizmoAttachCB(View3DGizmo gizmo, View3D_GizmoMovedCB cb, void* ctx)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!cb) throw std::exception("Callback function is null");
+
+		DllLockGuard;
+		gizmo->Attach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb), ctx);
+	}
+	CatchAndReport(View3D_GizmoAttachCB, ,);
+}
+VIEW3D_API void __stdcall View3D_GizmoDetachCB(View3DGizmo gizmo, View3D_GizmoMovedCB cb)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		if (!cb) throw std::exception("Callback function is null");
+
+		DllLockGuard;
+		gizmo->Detach(reinterpret_cast<pr::ldr::LdrGizmoCB::Func>(cb));
+	}
+	CatchAndReport(View3D_GizmoDetachCB, ,);
+}
+
 // Attach/Detach an object to the gizmo that will be moved as the gizmo moves
 VIEW3D_API void __stdcall View3D_GizmoAttach(View3DGizmo gizmo, View3DObject obj)
 {
@@ -1669,6 +1723,38 @@ VIEW3D_API void __stdcall View3D_GizmoSetMode(View3DGizmo gizmo, EView3DGizmoMod
 	CatchAndReport(View3D_GizmoSetMode, ,);
 }
 
+// Get/Set the object to world transform for the gizmo
+VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetO2W(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		return view3d::To<View3DM4x4>(gizmo->O2W());
+	}
+	CatchAndReport(View3D_GizmoGetO2W, ,View3DM4x4());
+}
+VIEW3D_API void __stdcall View3D_GizmoSetO2W(View3DGizmo gizmo, View3DM4x4 const& o2w)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		gizmo->O2W(view3d::To<pr::m4x4>(o2w));
+	}
+	CatchAndReport(View3D_GizmoSetO2W, ,);
+}
+
+// Get the offset transform that represents the difference between
+// the gizmo's transform at the start of manipulation and now.
+VIEW3D_API View3DM4x4 __stdcall View3D_GizmoGetOffset(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		return view3d::To<View3DM4x4>(gizmo->Offset());
+	}
+	CatchAndReport(View3D_GizmoGetOffset, ,View3DM4x4());
+}
+
 // Get/Set whether the gizmo is active to mouse interaction
 VIEW3D_API BOOL __stdcall View3D_GizmoEnabled(View3DGizmo gizmo)
 {
@@ -1688,6 +1774,19 @@ VIEW3D_API void __stdcall View3D_GizmoSetEnabled(View3DGizmo gizmo, BOOL enabled
 	}
 	CatchAndReport(View3D_GizmoSetEnabled, ,);
 }
+
+// Returns true while manipulation is in progress
+VIEW3D_API BOOL __stdcall View3D_GizmoManipulating(View3DGizmo gizmo)
+{
+	try
+	{
+		if (!gizmo) throw std::exception("Gizmo is null");
+		return gizmo->Manipulating();
+	}
+	CatchAndReport(View3D_GizmoManipulating, ,FALSE);
+}
+
+// Miscellaneous **********************************************************************
 
 // Restore the main render target and depth buffer
 VIEW3D_API void __stdcall View3D_RestoreMainRT(View3DWindow window)
@@ -1916,3 +2015,76 @@ VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control, BOOL 
 	}
 	CatchAndReport(View3D_LdrEditorCtrlInit, ,);
 }
+
+#pragma region API Constants Consistency
+
+template <typename T, typename U> struct equal_size_and_alignment
+{
+	enum { value = sizeof(T) == sizeof(U) && std::alignment_of<T>::value == std::alignment_of<U>::value };
+};
+
+// EView3DFillMode - only used in this file
+
+static_assert(int(EView3DGeom::Unknown) == int(pr::rdr::EGeom::Invalid), "");
+static_assert(int(EView3DGeom::Vert   ) == int(pr::rdr::EGeom::Vert   ), "");
+static_assert(int(EView3DGeom::Colr   ) == int(pr::rdr::EGeom::Colr   ), "");
+static_assert(int(EView3DGeom::Norm   ) == int(pr::rdr::EGeom::Norm   ), "");
+static_assert(int(EView3DGeom::Tex0   ) == int(pr::rdr::EGeom::Tex0   ), "");
+
+static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip), "");
+static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ), "");
+static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ), "");
+static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ), "");
+
+
+static_assert(int(EView3DPrim::Invalid  ) == int(pr::rdr::EPrim::Invalid  ), "");
+static_assert(int(EView3DPrim::PointList) == int(pr::rdr::EPrim::PointList), "");
+static_assert(int(EView3DPrim::LineList ) == int(pr::rdr::EPrim::LineList ), "");
+static_assert(int(EView3DPrim::LineStrip) == int(pr::rdr::EPrim::LineStrip), "");
+static_assert(int(EView3DPrim::TriList  ) == int(pr::rdr::EPrim::TriList  ), "");
+static_assert(int(EView3DPrim::TriStrip ) == int(pr::rdr::EPrim::TriStrip ), "");
+
+static_assert(int(EView3DLight::Ambient    ) == int(pr::rdr::ELight::Ambient    ), "");
+static_assert(int(EView3DLight::Directional) == int(pr::rdr::ELight::Directional), "");
+static_assert(int(EView3DLight::Point      ) == int(pr::rdr::ELight::Point      ), "");
+static_assert(int(EView3DLight::Spot       ) == int(pr::rdr::ELight::Spot       ), "");
+	
+// EView3DLogLevel - unused?
+
+static_assert(int(EView3DUpdateObject::None      ) == int(pr::ldr::EUpdateObject::None      ), "");
+static_assert(int(EView3DUpdateObject::All       ) == int(pr::ldr::EUpdateObject::All       ), "");
+static_assert(int(EView3DUpdateObject::Name      ) == int(pr::ldr::EUpdateObject::Name      ), "");
+static_assert(int(EView3DUpdateObject::Model     ) == int(pr::ldr::EUpdateObject::Model     ), "");
+static_assert(int(EView3DUpdateObject::Transform ) == int(pr::ldr::EUpdateObject::Transform ), "");
+static_assert(int(EView3DUpdateObject::Children  ) == int(pr::ldr::EUpdateObject::Children  ), "");
+static_assert(int(EView3DUpdateObject::Colour    ) == int(pr::ldr::EUpdateObject::Colour    ), "");
+static_assert(int(EView3DUpdateObject::ColourMask) == int(pr::ldr::EUpdateObject::ColourMask), "");
+static_assert(int(EView3DUpdateObject::Wireframe ) == int(pr::ldr::EUpdateObject::Wireframe ), "");
+static_assert(int(EView3DUpdateObject::Visibility) == int(pr::ldr::EUpdateObject::Visibility), "");
+static_assert(int(EView3DUpdateObject::Animation ) == int(pr::ldr::EUpdateObject::Animation ), "");
+static_assert(int(EView3DUpdateObject::StepData  ) == int(pr::ldr::EUpdateObject::StepData  ), "");
+
+static_assert(int(EView3DGizmoEvent::StartManip) == int(pr::ldr::ELdrGizmoEvent::StartManip), "");
+static_assert(int(EView3DGizmoEvent::Moving    ) == int(pr::ldr::ELdrGizmoEvent::Moving    ), "");
+static_assert(int(EView3DGizmoEvent::Commit    ) == int(pr::ldr::ELdrGizmoEvent::Commit    ), "");
+static_assert(int(EView3DGizmoEvent::Revert    ) == int(pr::ldr::ELdrGizmoEvent::Revert    ), "");
+
+static_assert(int(EView3DGizmoMode::Translate) == int(pr::ldr::LdrGizmo::EMode::Translate), "");
+static_assert(int(EView3DGizmoMode::Rotate   ) == int(pr::ldr::LdrGizmo::EMode::Rotate   ), "");
+static_assert(int(EView3DGizmoMode::Scale    ) == int(pr::ldr::LdrGizmo::EMode::Scale    ), "");
+
+// Specifically used to avoid alignment problems
+static_assert(sizeof(View3DV2    ) == sizeof(pr::v2       ), "");
+static_assert(sizeof(View3DV4    ) == sizeof(pr::v4       ), "");
+static_assert(sizeof(View3DM4x4  ) == sizeof(pr::m4x4     ), "");
+static_assert(sizeof(View3DBBox  ) == sizeof(pr::BBox     ), "");
+// View3DVertex - only used in this file
+// View3DImageInfo - only used in this file
+// View3DLight - only used in this file
+// View3DTextureOptions - only used in this file
+// View3DUpdateModelKeep - only used in this file
+// View3DMaterial - only used in this file
+// View3DViewport - only used in this file
+static_assert(equal_size_and_alignment<View3DGizmoEvent, pr::ldr::Evt_Gizmo>::value, "");
+
+#pragma endregion

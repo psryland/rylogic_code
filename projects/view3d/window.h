@@ -132,6 +132,15 @@ namespace view3d
 			return static_cast<Window const*>(ctx)->m_camera.FocusPoint();
 		}
 
+		// Convert a screen space point to a normalised screen space point
+		pr::v2 SSPointToNSSPoint(pr::v2 const& ss_point) const
+		{
+			return m_scene.m_viewport.SSPointToNSSPoint(ss_point);
+		}
+		pr::v2 NSSPointToSSPoint(pr::v2 const& nss_point) const
+		{
+			return m_scene.m_viewport.NSSPointToSSPoint(nss_point);
+		}
 		// Invoke the settings changed callback
 		void NotifySettingsChanged()
 		{
