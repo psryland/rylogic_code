@@ -1113,9 +1113,8 @@ namespace pr
 				static void RefCountZero(RefCount<Single>*) {}
 			} g_single;
 
-			int g_start_object_count, g_object_count = 0;;
-			inline void ConstrCall() { ++g_object_count; }
-			inline void DestrCall() { --g_object_count; }
+			int& StartObjectCount() { static int start_object_count; return start_object_count; }
+			int& ObjectCount() { static int object_count; return object_count; }
 
 			typedef unsigned int uint;
 			struct Type
@@ -1124,12 +1123,12 @@ namespace pr
 				pr::RefPtr<Single> ptr;
 				operator uint() const                             { return val; }
 
-				Type()       :val(0) ,ptr(&g_single)              { ConstrCall(); }
-				Type(uint w) :val(w) ,ptr(&g_single)              { ConstrCall(); }
-				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ConstrCall(); }
+				Type()       :val(0) ,ptr(&g_single)              { ++ObjectCount(); }
+				Type(uint w) :val(w) ,ptr(&g_single)              { ++ObjectCount(); }
+				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ++ObjectCount(); }
 				~Type()
 				{
-					DestrCall();
+					--ObjectCount();
 					if (ptr.m_ptr != &g_single)
 						throw std::exception("destructing an invalid Type");
 					val = 0xcccccccc;
@@ -1151,15 +1150,15 @@ namespace pr
 				types[i] = Type(i);
 			}
 
-			g_start_object_count = g_object_count;
+			StartObjectCount() = ObjectCount();
 			{
 				// default constructor
 				Deque0 deq;
 				PR_CHECK(deq.empty(), true);
 				PR_CHECK(deq.size(), 0U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
- 			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+ 			StartObjectCount() = ObjectCount();
 			{
 				// construct with allocator
 				std::allocator<int> al;
@@ -1174,16 +1173,16 @@ namespace pr
 				PR_CHECK(deq1.size(), 1U);
 				PR_CHECK(deq1[0], 42);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// count constructor
 				Deque1 deq(15);
 				PR_CHECK(!deq.empty(), true);
 				PR_CHECK(deq.size(), 15U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// count + instance constructor
 				Deque0 deq(5U, 3);
@@ -1191,8 +1190,8 @@ namespace pr
 				for (size_t i = 0; i != 5; ++i)
 					PR_CHECK(deq[i], 3U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// copy constructor
 				Deque0 deq0(5U,3);
@@ -1201,8 +1200,8 @@ namespace pr
 				for (size_t i = 0; i != deq0.size(); ++i)
 					PR_CHECK(deq1[i], deq0[i]);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// Construct from a std::deque
 				std::deque<uint> deq0(4U, 6);
@@ -1211,9 +1210,9 @@ namespace pr
 				for (size_t i = 0; i != deq0.size(); ++i)
 					PR_CHECK(deq1[i], deq0[i]);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// Construct from range
 				uint r[] = {1,2,3,4};
@@ -1224,8 +1223,8 @@ namespace pr
 				PR_CHECK(deq1[2], r[2]);
 				PR_CHECK(deq1[3], r[3]);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				// Move construct
 				Deque0 deq0(4U, 6);
@@ -1235,12 +1234,12 @@ namespace pr
 				for (size_t i = 0; i != deq1.size(); ++i)
 					PR_CHECK(deq1[i], 6U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
+			PR_CHECK(ObjectCount(), StartObjectCount());
 			{//RefCounting0
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Assign
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					// Copy assign
 					Deque0 deq0(4U, 5);
@@ -1250,8 +1249,8 @@ namespace pr
 					for (size_t i = 0; i != deq0.size(); ++i)
 						PR_CHECK(deq1[i], deq0[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// Move assign
 					Deque0 deq0(4U, 5);
@@ -1262,8 +1261,8 @@ namespace pr
 					for (auto i : deq1)
 						PR_CHECK(i, 5U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// assign method
 					Deque0 deq0;
@@ -1279,13 +1278,13 @@ namespace pr
 					for (size_t i = 0; i != 8; ++i)
 						PR_CHECK(deq1[i], types[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting1
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Clear
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					pr::deque<int,8> deq0({0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15});
 					PR_CHECK(!deq0.empty(), true);
@@ -1294,13 +1293,13 @@ namespace pr
 					deq0.clear();
 					PR_CHECK(deq0.empty(), true);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting2
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Erase
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					// erase range non-pods
 					Deque0 deq0(std::begin(types), std::end(types));
@@ -1310,8 +1309,8 @@ namespace pr
 					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], types[i]  );
 					for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], types[i+10]);
 				}
-				PR_CHECK(g_object_count,g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(),StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// erase range pods
 					pr::deque<uint,8> deq0(std::begin(uints), std::end(uints));
@@ -1321,8 +1320,8 @@ namespace pr
 					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], uints[i]  );
 					for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], uints[i+10]);
 				}
-				PR_CHECK(g_object_count,g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(),StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// erase at
 					Deque1 deq1(types.begin(), types.begin() + 4);
@@ -1331,13 +1330,13 @@ namespace pr
 					for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i], types[i]  );
 					for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i], types[i+1]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting3
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Insert
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					// insert count*val at 'at'
 					Deque0 deq0;
@@ -1346,8 +1345,8 @@ namespace pr
 					for (size_t i = 0; i != 4; ++i)
 						PR_CHECK(deq0[i], 9U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// insert range
 					Deque1 deq1(4U, 6);
@@ -1357,13 +1356,13 @@ namespace pr
 					for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i], types[i]);
 					for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i], 6U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting4
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//PushPop
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					// pop_back
 					Deque0 deq;
@@ -1381,8 +1380,8 @@ namespace pr
 					for (size_t i = 0; i != deq.size(); ++i)
 						PR_CHECK(deq[i], types[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// push_back
 					Deque1 deq;
@@ -1401,8 +1400,8 @@ namespace pr
 					for (size_t i = 0; i != deq.size(); ++i)
 						PR_CHECK(deq[i], types[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// pop_front
 					Deque0 deq;
@@ -1420,8 +1419,8 @@ namespace pr
 					for (size_t i = 0; i != deq.size(); ++i)
 						PR_CHECK(deq[i], types[i+4]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// push_front
 					Deque1 deq;
@@ -1440,8 +1439,8 @@ namespace pr
 					for (size_t i = 0; i != deq.size(); ++i)
 						PR_CHECK(deq[i], 8 - types[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// resize
 					Deque0 deq;
@@ -1458,13 +1457,13 @@ namespace pr
 					for (size_t i = 7U; i != 12U; ++i)
 						PR_CHECK(deq[i], 0U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting5
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Operators
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					// assign and equality
 					Deque0 deq0(4U, 1);
@@ -1476,8 +1475,8 @@ namespace pr
 					for (size_t i = 0; i != 4; ++i)
 						PR_CHECK(deq1[i], deq0[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// inequality between different types
 					Deque0 deq0(4U, 1);
@@ -1485,8 +1484,8 @@ namespace pr
 					deq1 = deq0;
 					PR_CHECK(deq0 != deq1, false);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					// implicit conversion to std::deque
 					struct L {
@@ -1499,13 +1498,13 @@ namespace pr
 					for (size_t i = 0; i != 4; ++i)
 						PR_CHECK(deq1[i], deq0[i]);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting6
 				PR_CHECK(g_single.m_ref_count, 16);
 			}
 			{//Mem
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					pr::deque<int,8> deq0;
 					const int count = 20;
@@ -1540,14 +1539,14 @@ namespace pr
 					PR_CHECK(deq0.capacity_front(), 0U);
 					PR_CHECK(deq0.capacity_front(), 0U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting
 				types.clear();
 				PR_CHECK(g_single.m_ref_count, 0);
 			}
 			{//GlobalConstrDestrCount
-				PR_CHECK(g_object_count, 0);
+				PR_CHECK(ObjectCount(), 0);
 			}
 		}
 	}

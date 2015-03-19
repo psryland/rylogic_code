@@ -17,6 +17,7 @@
 #include "pr/common/colour.h"
 #include "pr/maths/maths.h"
 #include "pr/geometry/common.h"
+#include "pr/geometry/triangle.h"
 
 namespace pr
 {

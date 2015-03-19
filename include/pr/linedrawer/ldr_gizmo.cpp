@@ -4,8 +4,8 @@
 //***************************************************************************************************
 
 #include <exception>
-#include "pr/maths/geometryfunctions.h"
 #include "pr/geometry/cylinder.h"
+#include "pr/geometry/geometry.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/linedrawer/ldr_gizmo.h"
 

@@ -24,6 +24,7 @@
 #include "pr/container/stack.h"
 #include "pr/maths/maths.h"
 #include "pr/meta/prime_gtreq.h"
+#include "pr/geometry/geometry.h"
 
 namespace pr
 {

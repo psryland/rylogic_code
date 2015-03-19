@@ -38,7 +38,6 @@
 #include "pr/maths/frustum.h"
 #include "pr/maths/polynomial.h"
 #include "pr/maths/bitfunctions.h"
-#include "pr/maths/geometryfunctions.h"
 #include "pr/maths/axis_id.h"
 #include "pr/maths/compress.h"
 #include "pr/maths/conversion.h"
@@ -60,6 +59,5 @@
 #include "pr/maths/irect_impl.h"
 #include "pr/maths/frect_impl.h"
 #include "pr/maths/frustum_impl.h"
-#include "pr/maths/geometryfunctions_impl.h"
 
 #endif

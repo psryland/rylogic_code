@@ -66,7 +66,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, void* context)
 	{
 		for (BPEntityCont::const_iterator j = i + 1, j_end = m_entity.end(); j != j_end; ++j)
 		{
-			if (IsIntersection(*(*i)->m_bbox, *(*j)->m_bbox))
+			if (Intersect_BBoxToBBox(*(*i)->m_bbox, *(*j)->m_bbox))
 			{
 				BPPair pair;
 				pair.m_objectA = *i;
@@ -83,7 +83,7 @@ void BPBruteForce::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void* c
 	PR_EXPAND(PR_DBG_PHYSICS, Scoped<bool> enumer(m_enumerating, true, false));
 	for (BPEntityCont::const_iterator i = m_entity.begin(), i_end = m_entity.end(); i != i_end; ++i)
 	{	
-		if (IsIntersection(*(*i)->m_bbox, *entity.m_bbox))
+		if (Intersect_BBoxToBBox(*(*i)->m_bbox, *entity.m_bbox))
 		{
 			BPPair pair;
 			pair.m_objectA = *i;

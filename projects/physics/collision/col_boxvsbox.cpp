@@ -96,7 +96,7 @@ namespace pr
 							int const& axis = overlap.m_pointB.m_dof_info[i];
 							float const& r  = overlap.m_shapeB.m_radius[axis];
 							float distB = Dot3(overlap.m_b2w[axis], overlap.m_b2w.pos);
-							ClipToSlab(overlap.m_b2w[axis], distB - r, distB + r, s, e);
+							Intersect_LineToSlab(overlap.m_b2w[axis], distB - r, distB + r, s, e, s, e);
 						}
 						v4 avr = (s + e) / 2.0f;
 						pointA = avr;
@@ -112,7 +112,7 @@ namespace pr
 							int const& axis = overlap.m_pointA.m_dof_info[i];
 							float const& r  = overlap.m_shapeA.m_radius[axis];
 							float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-							ClipToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e);
+							Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e);
 						}
 						v4 avr = (s + e) / 2.0f;
 						pointA = avr + overlap.m_penetration * overlap.m_axis;
@@ -151,12 +151,12 @@ namespace pr
 								int const& axis = pointB.m_dof_info[0];
 								float const& r  = shapeB.m_radius[axis];
 								float distB = Dot3(b2w[axis], b2w.pos);
-								if( ClipToSlab(b2w[axis], distB - r, distB + r, s, e) )
+								if( Intersect_LineToSlab(b2w[axis], distB - r, distB + r, s, e, s, e) )
 								{
 									int const& axis = pointB.m_dof_info[1];
 									float const& r  = shapeB.m_radius[axis];
 									float distB = Dot3(b2w[axis], b2w.pos);
-									if( ClipToSlab(b2w[axis], distB - r, distB + r, s, e) )
+									if( Intersect_LineToSlab(b2w[axis], distB - r, distB + r, s, e, s, e) )
 									{
 										avr += s + e;
 										count += 2.0f;

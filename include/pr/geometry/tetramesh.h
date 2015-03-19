@@ -56,11 +56,11 @@ namespace pr
 		// A face within the tetramesh. If 'm_tetra1' == ExtnFace then it is an external face of the mesh
 		struct Face
 		{
-			VIndex	m_i[3];				// The verts of the face
-			TIndex	m_tetra0;			// The tetra on the "from" side of the face
-			TIndex	m_tetra1;			// The tetra on the "to" side of the face
-			Plane	m_plane;			// The plane for this face
-			int		m_order;			// 3 bitpacked indices describing the face indices in ascending order (see the operator ==())
+			VIndex m_i[3];   // The verts of the face
+			TIndex m_tetra0; // The tetra on the "from" side of the face
+			TIndex m_tetra1; // The tetra on the "to" side of the face
+			Plane  m_plane;  // The plane for this face
+			int    m_order;  // 3 bitpacked indices describing the face indices in ascending order (see the operator ==())
 		};
 		bool operator == (tetramesh::Face const& lhs, tetramesh::Face const& rhs);
 		bool operator <  (tetramesh::Face const& lhs, tetramesh::Face const& rhs);

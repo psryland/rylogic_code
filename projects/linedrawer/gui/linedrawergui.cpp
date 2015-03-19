@@ -257,8 +257,8 @@ namespace ldr
 	// Convert screen space to normalised screen space
 	pr::v2 MainGUI::ToNormSS(pr::v2 const& pt_ss)
 	{
-		auto view = m_main->m_nav.ViewSize();
-		return m_main->m_cam.NormalisePoint(pt_ss, float(view.x), float(-view.y));
+		auto view = pr::IRect::make(pr::iv2Zero, m_main->m_nav.ViewSize());
+		return pr::NormalisePoint(view, pt_ss, 1.0f, -1.0f);
 	}
 
 	// Override mouse navigation
@@ -834,7 +834,7 @@ namespace ldr
 		{
 			// Display mouse coordinates
 			pr::v4 mouse_ss = pr::v4::make(mouse_location, m_main->m_nav.FocusDistance(), 0.0f);
-			pr::v4 mouse_ws = m_main->m_nav.WSPointFromSSPoint(mouse_ss);
+			pr::v4 mouse_ws = m_main->m_nav.SSPointToWSPoint(mouse_ss);
 			pr::v4 focus_ws = m_main->m_nav.FocusPoint();
 			status += pr::FmtS("Mouse: {%3.3f %3.3f %3.3f} Focus: {%3.3f %3.3f %3.3f} Focus Distance: %3.3f"
 				,mouse_ws.x ,mouse_ws.y ,mouse_ws.z

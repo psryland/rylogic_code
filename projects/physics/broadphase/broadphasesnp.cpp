@@ -124,7 +124,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, void* context)
 			if (bboxA.Upper(m_axis) < bboxB.Lower(m_axis))
 				break;
 
-			if (IsIntersection(bboxA, bboxB))
+			if (Intersect_BBoxToBBox(bboxA, bboxB))
 			{
 				BPPair pair;
 				pair.m_objectA = &entityA;
@@ -167,7 +167,7 @@ void BPSweepAndPrune::EnumPairs(EnumPairsFunc func, BPEntity const& entity, void
 			break;
 
 		// If there is an overlap on all axes
-		if (bboxA.Upper(m_axis) > bboxB.Lower(m_axis) && IsIntersection(bboxA, bboxB))
+		if (bboxA.Upper(m_axis) > bboxB.Lower(m_axis) && Intersect_BBoxToBBox(bboxA, bboxB))
 		{
 			BPPair pair;
 			pair.m_objectA = &entityA;

@@ -5,7 +5,7 @@
 
 #include <algorithm>
 #include "pr/common/profile.h"
-#include "pr/common/byte_ptr_cast.h"
+#include "pr/common/cast.h"
 #include "pr/geometry/tetramesh.h"
 #include "pr/geometry/deformablemesh.h"
 
@@ -13,22 +13,22 @@
 #include "pr/common/Fmt.h"
 #include "pr/filesys/Autofile.h"
 #include "pr/LineDrawerHelper/LineDrawerHelper.h"
-#endif//PR_LDR_TETRAMESH == 1
+#endif
 
 namespace pr
 {
 	namespace deformable
 	{
-		float const MinDisplacement = 0.01f;			// Displacements must be greater than this otherwise they are ignored
+		float const MinDisplacement = 0.01f; // Displacements must be greater than this otherwise they are ignored
 		float const MinDisplacementSq = Sqr(MinDisplacement);
 
 		// Per vertex deformation data
 		struct VertData
 		{
-			v4					m_base_pos;				// The initial position of the vertex before deformation
-			v4					m_displacement;			// Impulse applied to the vertex
-			tetramesh::TIndex	m_tetra_idx;			// The index of a tetra that uses this vertex
-			DefVData			m_vdata;				// Per vertex deformation data
+			v4                m_base_pos;     // The initial position of the vertex before deformation
+			v4                m_displacement; // Impulse applied to the vertex
+			tetramesh::TIndex m_tetra_idx;    // The index of a tetra that uses this vertex
+			DefVData          m_vdata;        // Per vertex deformation data
 		};
 
 		// Returns the magnitude of a displacement for 'position'. This function assumes
@@ -48,10 +48,10 @@ namespace pr
 		void DumpImpact(m4x4 const& shape, char const* filename);
 		void DumpDentSurface(m4x4 const& shape, float plasticity, float z, char const* name, char const* colour, char const* filename);
 		void DumpDisplacements(deformable::Mesh const& mesh, char const* colour, char const* filename);
-		#endif//PR_LDR_TETRAMESH == 1
+		#endif
 
-	}//namespace deformable
-}//namespace pr
+	}
+}
 
 using namespace pr;
 using namespace pr::tetramesh;
@@ -230,7 +230,7 @@ void pr::deformable::Deform(deformable::Mesh& mesh, m4x4 const& shape, float pla
 	
 	// Get a transform from mesh space to normalised deform function space
 	PR_ASSERT(PR_DBG_GEOM_TETRAMESH, shape.IsInvertable(), "The provided shape matrix is degenerate");
-	m4x4 mesh_to_df = GetInverse(shape);
+	m4x4 mesh_to_df = Invert(shape);
 	float max_displacement = Length3(shape.z);
 
 	// Loop over the verts setting the displacements

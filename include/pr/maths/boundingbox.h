@@ -14,7 +14,6 @@
 #include "pr/maths/plane.h"
 #include "pr/maths/boundingsphere.h"
 #include "pr/maths/line3.h"
-#include "pr/maths/geometryfunctions.h"
 
 namespace pr
 {
@@ -89,9 +88,6 @@ namespace pr
 	BBox    Encompass(BBox const& lhs, BBox const& rhs);
 	bool    IsWithin(BBox const& bbox, v4 const& point, float tol);
 	bool    IsWithin(BBox const& bbox, BBox const& test);
-	bool    IsIntersection(BBox const& bbox, Line3 const& line);
-	bool    IsIntersection(BBox const& bbox, Plane const& plane);
-	bool    IsIntersection(BBox const& lhs, BBox const& rhs);
 }
 
 #endif

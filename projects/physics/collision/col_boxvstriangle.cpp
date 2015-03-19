@@ -103,9 +103,9 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 			tri_plane[0] = plane::make(overlap.m_b2w.pos + overlap.m_tri_verts[0], Cross3(Cross3(edge[0], edge[1]), edge[0]));
 			tri_plane[1] = plane::make(overlap.m_b2w.pos + overlap.m_tri_verts[1], Cross3(Cross3(edge[1], edge[2]), edge[1]));
 			tri_plane[2] = plane::make(overlap.m_b2w.pos + overlap.m_tri_verts[2], Cross3(Cross3(edge[2], edge[0]), edge[2]));
-			Clip_LineSegmentToPlane(tri_plane[0], s, e);
-			Clip_LineSegmentToPlane(tri_plane[1], s, e);
-			Clip_LineSegmentToPlane(tri_plane[2], s, e);
+			Intersect_LineSegmentToPlane(tri_plane[0], s, e, s, e);
+			Intersect_LineSegmentToPlane(tri_plane[1], s, e, s, e);
+			Intersect_LineSegmentToPlane(tri_plane[2], s, e, s, e);
 			v4 avr = (s + e) / 2.0f;
 			pointA = avr;
 			pointB = avr - overlap.m_penetration * overlap.m_axis;
@@ -120,7 +120,7 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 				int const& axis = overlap.m_pointA.m_dof_info[i];
 				float const& r  = overlap.m_box.m_radius[axis];
 				float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-				ClipToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e);
+				Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e);
 			}
 			v4 avr = (s + e) / 2.0f;
 			pointA = avr + overlap.m_penetration * overlap.m_axis;
@@ -139,12 +139,12 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 				int const& axis = overlap.m_pointA.m_dof_info[0];
 				float const& r  = overlap.m_box.m_radius[axis];
 				float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-				if( ClipToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e) )
+				if( Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e) )
 				{
 					int const& axis = overlap.m_pointA.m_dof_info[1];
 					float const& r  = overlap.m_box.m_radius[axis];
 					float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-					if( ClipToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e) )
+					if( Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e) )
 					{
 						avr += s + e;
 						count += 2.0f;
@@ -174,9 +174,9 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 			for( int i = 0; i != 4; ++i )
 			{
 				v4 s = box_pts[i], e = box_pts[(i+1)%4];
-				if( Clip_LineSegmentToPlane(tri_plane[0], s, e) &&
-					Clip_LineSegmentToPlane(tri_plane[1], s, e) &&
-					Clip_LineSegmentToPlane(tri_plane[2], s, e) )
+				if( Intersect_LineSegmentToPlane(tri_plane[0], s, e, s, e) &&
+					Intersect_LineSegmentToPlane(tri_plane[1], s, e, s, e) &&
+					Intersect_LineSegmentToPlane(tri_plane[2], s, e, s, e) )
 				{
 					avr += s + e;
 					count += 2.0f;

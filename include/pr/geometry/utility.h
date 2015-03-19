@@ -12,6 +12,16 @@ namespace pr
 {
 	namespace geometry
 	{
+		// Calculate the model space axis aligned bounding box
+		template <typename TVertCIter>
+		pr::BBox CalculateBBox(std::size_t num_verts, TVertCIter verts)
+		{
+			auto bbox = pr::BBoxReset;
+			for (; num_verts-- != 0; ++verts)
+				pr::Encompass(bbox, GetP(*vert));
+			return bbox;
+		}
+
 		// Generate normals for a collection of faces.
 		// 'num_indices' is the number of indices available through 'indices'. Multiple of 3 expected.
 		// 'indices' is an iterator to model face data. Expects 3 indices per face.

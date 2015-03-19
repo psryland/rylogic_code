@@ -446,7 +446,7 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 		v4 c = shape.vertex(face.m_index[2]);
 		v4 plane = plane::make(a, c, b);	// Outward facing plane
 		float t_min = result.m_t0;
-		if( !Clip_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1) )
+		if( !Intersect_LineSegmentToPlane(plane, lineS, lineE, result.m_t0, result.m_t1) )
 			return false;
 		
 		// Record the plane normal of the last plane to clip the line

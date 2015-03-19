@@ -13,7 +13,6 @@
 #include "pr/maths/vector4.h"
 #include "pr/maths/matrix4x4.h"
 #include "pr/maths/boundingsphere.h"
-#include "pr/maths/geometryfunctions.h"
 
 namespace pr
 {
@@ -56,17 +55,10 @@ namespace pr
 	inline bool operator >= (OrientedBox const& lhs, OrientedBox const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) >= 0; }
 
 	// Functions
-	float           Volume(OrientedBox const& ob);
-	m4x4 const&     Getm4x4(OrientedBox const& ob);
-	m4x4&           Getm4x4(OrientedBox& ob);
-	BSphere  GetBoundingSphere(OrientedBox const& ob);
-	v4              SupportVertex(OrientedBox const& ob, v4 const& direction, int& feature_type);
-	v4              SupportVertex(OrientedBox const& ob, v4 const& direction);
-	void            SupportFeature(OrientedBox const& ob, v4 const& direction, v4* points, int& feature_type);
-	void            SupportFeature(OrientedBox const& ob, v4 const& direction, v4* points);
-	bool            IsIntersection(OrientedBox const& lhs, OrientedBox const& rhs);
-	bool            IsIntersection(OrientedBox const& lhs, OrientedBox const& rhs, v4& axis, float& penetration);
-	bool            IsIntersection(OrientedBox const& lhs, OrientedBox const& rhs, v4& axis, float& penetration, v4& pointA, v4& pointB);
+	float       Volume(OrientedBox const& ob);
+	m4x4 const& Getm4x4(OrientedBox const& ob);
+	m4x4&       Getm4x4(OrientedBox& ob);
+	BSphere     GetBoundingSphere(OrientedBox const& ob);
 }
 
 #endif
