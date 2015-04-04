@@ -3,12 +3,18 @@
 //  Copyright (c) Rylogic Ltd 2009
 //***********************************************
 
+#pragma once
 #ifndef PR_GUI_GRAPH_CTRL_H
 #define PR_GUI_GRAPH_CTRL_H
 
-#include "pr/common/min_max_fix.h"
 #include <vector>
 #include <algorithm>
+#include <mutex>
+#include <thread>
+
+#include <gdiplus.h>
+
+#include "pr/common/min_max_fix.h"
 #include <atlbase.h>
 #include <atlwin.h>
 #include <atlapp.h>
@@ -17,19 +23,15 @@
 #include <atlctrlw.h>
 #include <atlmisc.h>
 #include <atlcrack.h>
-#include <gdiplus.h>
 #include "pr/common/assert.h"
 #include "pr/common/colour.h"
 #include "pr/common/fmt.h"
 #include "pr/common/multi_cast.h"
 #include "pr/maths/maths.h"
-#include "pr/maths/windows_conv.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/font_helper.h"
 #include "pr/gui/misc.h"
-#include "pr/threads/background_task.h"
-#include "pr/threads/critical_section.h"
 
 namespace pr
 {
@@ -47,9 +49,9 @@ namespace pr
 			};
 			typedef std::vector<Elem> DataCont;
 			DataCont m_data;
-			
+
 			// A custom data source must implement these methods:
-			
+
 			// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
 			// Note: in general, this range should include one point to the left of xmin and one to the right
 			// of xmax so that line graphs plot a line up to the border of the plot area
@@ -61,28 +63,27 @@ namespace pr
 				imin = iter_lwr - m_data.begin(); imin -= imin != 0;
 				imax = iter_upr - m_data.begin(); imax += imax != m_data.size();
 			}
-			
+
 			// Return the value for a given index
 			void Value(size_t idx, float& x, float& y) const
 			{
 				x = m_data[idx].m_x;
 				y = m_data[idx].m_y;
 			}
-			
+
 			// Return the range of y values for a given data index
 			void ErrValues(size_t, float& ymin, float& ymax) const
 			{
 				ymin = ymax = 0.0f;
 			}
 		};
-		
+
 		// A control for rendering a graph
 		template <typename DataSrc = CGraphData>
-		class CGraphCtrl 
-			:public CWindowImpl< CGraphCtrl<DataSrc> >
-			,private pr::threads::BackgroundTask
-			,private pr::threads::BackgroundTask::IEvent
+		class CGraphCtrl :public CWindowImpl< CGraphCtrl<DataSrc> >
 		{
+			pr::GdiPlus m_gdiplus;
+
 		public:
 			struct RdrOptions
 			{
@@ -110,20 +111,20 @@ namespace pr
 				pr::v2 m_pixels_per_tick;
 				
 				RdrOptions()
-				:m_txfm_title      (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
-				,m_col_bkgd        (0xFF000000 | ::GetSysColor(COLOR_BTNFACE))
-				,m_col_plot_bkgd   (Gdiplus::ARGB(Gdiplus::Color::WhiteSmoke))
-				,m_col_title       (Gdiplus::ARGB(Gdiplus::Color::Black))
-				,m_col_axis        (Gdiplus::ARGB(Gdiplus::Color::Black))
-				,m_col_grid        (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,230,230,230)))
-				,m_col_select      (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,128,128,128)))
-				,m_margin_left     (10)
-				,m_margin_top      (10)
-				,m_margin_right    (10)
-				,m_margin_bottom   (10)
-				,m_font_title      (L"tahoma", 18, Gdiplus::FontStyleBold)
-				,m_font_note       (L"tahoma",  8, Gdiplus::FontStyleRegular)
-				,m_pixels_per_tick (pr::v2::make(30.0f, 24.0f))
+					:m_txfm_title      (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
+					,m_col_bkgd        (0xFF000000 | ::GetSysColor(COLOR_BTNFACE))
+					,m_col_plot_bkgd   (Gdiplus::ARGB(Gdiplus::Color::WhiteSmoke))
+					,m_col_title       (Gdiplus::ARGB(Gdiplus::Color::Black))
+					,m_col_axis        (Gdiplus::ARGB(Gdiplus::Color::Black))
+					,m_col_grid        (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,230,230,230)))
+					,m_col_select      (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,128,128,128)))
+					,m_margin_left     (10)
+					,m_margin_top      (10)
+					,m_margin_right    (10)
+					,m_margin_bottom   (10)
+					,m_font_title      (L"tahoma", 18, Gdiplus::FontStyleBold)
+					,m_font_note       (L"tahoma",  8, Gdiplus::FontStyleRegular)
+					,m_pixels_per_tick (pr::v2::make(30.0f, 24.0f))
 				{}
 			};
 			struct Series
@@ -205,12 +206,12 @@ namespace pr
 					int             m_tick_length;  // Length of axis ticks
 					
 					RdrOptions()
-					:m_txfm_label  (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
-					,m_font_label  (L"tahoma", 14, Gdiplus::FontStyleRegular)
-					,m_font_tick   (L"tahoma", 10, Gdiplus::FontStyleRegular)
-					,m_col_label   (Gdiplus::ARGB(Gdiplus::Color::Black))
-					,m_col_tick    (Gdiplus::ARGB(Gdiplus::Color::Black))
-					,m_tick_length (5)
+						:m_txfm_label  (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
+						,m_font_label  (L"tahoma", 14, Gdiplus::FontStyleRegular)
+						,m_font_tick   (L"tahoma", 10, Gdiplus::FontStyleRegular)
+						,m_col_label   (Gdiplus::ARGB(Gdiplus::Color::Black))
+						,m_col_tick    (Gdiplus::ARGB(Gdiplus::Color::Black))
+						,m_tick_length (5)
 					{}
 				};
 				
@@ -252,7 +253,6 @@ namespace pr
 			
 			typedef std::vector<Series*> SeriesCont;
 			typedef typename Axis::Range AxisRange;
-			typedef pr::threads::CritSection CSect;
 			
 			std::wstring m_title;  // The graph title
 			SeriesCont   m_series; // The container of graph data
@@ -260,9 +260,9 @@ namespace pr
 			Axis         m_xaxis;  // The x axis
 			Axis         m_yaxis;  // The y axis
 			
-			// A critical section that is held by the control during rendering.
+			// A mutex that is held by the control during rendering.
 			// This should be used to synchronise source data changes with rendering.
-			CSect m_rdring;
+			std::mutex m_mutex_rdring;
 			
 		protected:
 			struct Tooltip :CWindowImpl<Tooltip>
@@ -314,22 +314,24 @@ namespace pr
 				Gdiplus::Rect rect() const { return Gdiplus::Rect(Gdiplus::Point(), size()); }
 			};
 			
-			Snapshot        m_tmp;             // A temporary bitmap used for background thread rendering
-			Snapshot        m_snap;            // A snapshot of the plot area, used as a temporary copy during drag/zoom operations
-			CSect           m_cs_snap;         // A critical section for accessing the snapshot bitmap
-			Gdiplus::Rect   m_plot_area;       // The area containing the graph data
-			AxisRange       m_base_xrange;     // The default x range of the data
-			AxisRange       m_base_yrange;     // The default y range of the data
-			AxisRange       m_zoom;            // The amount of zoom (plus limits)
-			CCursor         m_cur_arrow;       // The normal cursor
-			CCursor         m_cur_cross;       // The cross cursor
-			CCursor         m_cur_grab;        // The grab cursor
-			Tooltip         m_tt;              // Tracking tooltip for displaying coordinates
-			pr::v2          m_pt_grab;         // The grab start location
-			CRect           m_selection;       // The selection area
-			bool            m_dragging;        // True when the graph is being dragged around
-			bool            m_selecting;       // True while performing an area selection
-			bool            m_dirty;           // True when the graph must be redrawn
+			std::thread      m_rdr_thread;      // A thread used to render
+			std::atomic_bool m_rdr_cancel;      // Cancel renderering flag
+			Snapshot         m_tmp;             // A temporary bitmap used for background thread rendering
+			Snapshot         m_snap;            // A snapshot of the plot area, used as a temporary copy during drag/zoom operations
+			std::mutex       m_mutex_snap;      // A mutex to protect access to the snapshot bitmap
+			Gdiplus::Rect    m_plot_area;       // The area containing the graph data
+			AxisRange        m_base_xrange;     // The default x range of the data
+			AxisRange        m_base_yrange;     // The default y range of the data
+			AxisRange        m_zoom;            // The amount of zoom (plus limits)
+			CCursor          m_cur_arrow;       // The normal cursor
+			CCursor          m_cur_cross;       // The cross cursor
+			CCursor          m_cur_grab;        // The grab cursor
+			Tooltip          m_tt;              // Tracking tooltip for displaying coordinates
+			pr::v2           m_pt_grab;         // The grab start location
+			CRect            m_selection;       // The selection area
+			bool             m_dragging;        // True when the graph is being dragged around
+			bool             m_selecting;       // True while performing an area selection
+			bool             m_dirty;           // True when the graph must be redrawn
 			
 		public:
 			DECLARE_WND_CLASS_EX(_T("PRWTLGRAPH"),CS_DBLCLKS,COLOR_BTNFACE)
@@ -346,31 +348,36 @@ namespace pr
 			END_MSG_MAP()
 			
 			CGraphCtrl()
-			:m_title(L"Graph")
-			,m_opts()
-			,m_xaxis()
-			,m_yaxis()
-			,m_rdring()
-			,m_tmp()
-			,m_snap()
-			,m_cs_snap()
-			,m_base_xrange()
-			,m_base_yrange()
-			,m_zoom(pr::maths::tiny, pr::maths::float_max)
-			,m_cur_arrow()
-			,m_cur_cross()
-			,m_cur_grab()
-			,m_tt()
-			,m_pt_grab()
-			,m_selection()
-			,m_dragging(false)
-			,m_selecting(false)
-			,m_dirty(true)
-			{
-				BackgroundTask::OnEvent += this;
-			}
+				:m_gdiplus()
+				,m_title(L"Graph")
+				,m_opts()
+				,m_xaxis()
+				,m_yaxis()
+				,m_mutex_rdring()
+				,m_rdr_thread()
+				,m_rdr_cancel()
+				,m_tmp()
+				,m_snap()
+				,m_mutex_snap()
+				,m_base_xrange()
+				,m_base_yrange()
+				,m_zoom(pr::maths::tiny, pr::maths::float_max)
+				,m_cur_arrow()
+				,m_cur_cross()
+				,m_cur_grab()
+				,m_tt()
+				,m_pt_grab()
+				,m_selection()
+				,m_dragging(false)
+				,m_selecting(false)
+				,m_dirty(true)
+			{}
 			~CGraphCtrl()
 			{
+				m_rdr_cancel = true;
+				if (m_rdr_thread.joinable())
+					m_rdr_thread.join();
+
 				delete m_tmp.m_bm;
 				delete m_snap.m_bm;
 				if (IsWindow()) DestroyWindow();
@@ -601,54 +608,55 @@ namespace pr
 			}
 			void DoPaint(CDCHandle dc)
 			{
-				using namespace Gdiplus;
-				
 				CRect client; GetClientRect(&client);
 				CMemoryDC memdc(dc, client);
 				
-				Graphics gfx(memdc); PR_ASSERT(PR_DBG, gfx.GetLastStatus() == Gdiplus::Ok, "GDI+ not initialised");
-				Rect area = pr::To<Rect>(client);
+				Gdiplus::Graphics gfx(memdc); PR_ASSERT(PR_DBG, gfx.GetLastStatus() == Gdiplus::Ok, "GDI+ not initialised");
+				auto area = pr::To<Gdiplus::Rect>(client);
 				m_plot_area = PlotArea(gfx, area);
 				
 				// If the graph is dirty, begin an asynchronous render of the plot into 'm_tmp'
 				if (m_dirty)
 				{
-					Cancel();
-					Join();
-					
+					m_rdr_cancel = true;
+					if (m_rdr_thread.joinable())
+						m_rdr_thread.join();
+					m_rdr_cancel = false;
+
 					// Make sure the temporary bitmap and the snapshot bitmp are the correct size
-					Size plot_size; m_plot_area.GetSize(&plot_size);
+					Gdiplus::Size plot_size; m_plot_area.GetSize(&plot_size);
 					if (!m_tmp.size().Equals(plot_size))
 					{
-						delete m_tmp .m_bm; m_tmp .m_bm = new Bitmap(plot_size.Width, plot_size.Height);
-						delete m_snap.m_bm; m_snap.m_bm = new Bitmap(plot_size.Width, plot_size.Height);
+						delete m_tmp .m_bm; m_tmp .m_bm = new Gdiplus::Bitmap(plot_size.Width, plot_size.Height);
+						delete m_snap.m_bm; m_snap.m_bm = new Gdiplus::Bitmap(plot_size.Width, plot_size.Height);
 					}
 					m_tmp.m_xrange = m_xaxis.m_range;
 					m_tmp.m_yrange = m_yaxis.m_range;
 					
-					Run(true);
+					m_rdr_thread = std::thread([&]{ RenderGraphAsync(); });
 					m_dirty = false;
 				}
 					
 				// In the mean time, compose the graph in 'm_bm' by rendering the frame
 				// synchronously and blt'ing the last snapshot into the plot area
 				RenderGraphFrame(gfx, area, m_plot_area);
+
 				{
-					pr::threads::CSLock lock(m_cs_snap);
+					std::lock_guard<std::mutex> lock(m_mutex_snap);
 					pr::v2 tl = GraphToPoint(pr::v2::make(m_snap.m_xrange.m_min, m_snap.m_yrange.m_max));
 					pr::v2 br = GraphToPoint(pr::v2::make(m_snap.m_xrange.m_max, m_snap.m_yrange.m_min));
-					Rect dst_rect(int(tl.x), int(tl.y), int(br.x - tl.x), int(br.y - tl.y));
-					Rect src_rect(m_snap.rect());
+					Gdiplus::Rect dst_rect(int(tl.x), int(tl.y), int(br.x - tl.x), int(br.y - tl.y));
+					Gdiplus::Rect src_rect(m_snap.rect());
 					
-					Rect clip = m_plot_area; clip.Offset(1,1); clip.Inflate(-1,-1);
+					auto clip = m_plot_area; clip.Offset(1,1); clip.Inflate(-1,-1);
 					gfx.SetClip(clip);
-					gfx.SetSmoothingMode(SmoothingModeHighQuality);
+					gfx.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 					gfx.DrawImage(m_snap.m_bm, dst_rect, src_rect.X, src_rect.Y, src_rect.Width, src_rect.Height, Gdiplus::UnitPixel);
 					
 					// Allow clients to draw on the graph
-					pr::MultiCast<IOverlayOnPaint*>::Lock overlays(AddOverlayOnPaint);
-					for (pr::MultiCast<IOverlayOnPaint*>::iter i = overlays.begin(), iend = overlays.end(); i != iend; ++i)
-						(*i)->CGraphCtrl_OnPaint(this, gfx);
+					pr::MultiCast<IOverlayOnPaint*>::Lock handlers(AddOverlayOnPaint);
+					for (auto handler : handlers)
+						handler->CGraphCtrl_OnPaint(this, gfx);
 					
 					gfx.ResetClip();
 				}
@@ -657,48 +665,38 @@ namespace pr
 				if (m_selection.Width() != 0 && m_selection.Height() != 0)
 				{
 					CRect sel = m_selection; sel.NormalizeRect();
-					Pen pen(m_opts.m_col_select);
-					pen.SetDashStyle(DashStyleDot);
-					gfx.DrawRectangle(&pen, pr::To<Rect>(sel));
+					Gdiplus::Pen pen(m_opts.m_col_select);
+					pen.SetDashStyle(Gdiplus::DashStyleDot);
+					gfx.DrawRectangle(&pen, pr::To<Gdiplus::Rect>(sel));
 				}
 			}
 			
 			// Plot rendering (done in a background thread)
 			// This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
-			void DoWork(void*)
+			void RenderGraphAsync()
 			{
 				// Hold the rendering CS. Clients should hold this if they want to
 				// modify the data while the graph is potentially rendering
-				pr::threads::CSLock lock(m_rdring);
+				std::lock_guard<std::mutex> lock(m_mutex_rdring);
 				
 				// Render the plot into 'm_tmp'
 				RenderData(*Gdiplus::Graphics::FromImage(m_tmp.m_bm), m_tmp.rect());
-			}
-			
-			// Called when the background renderer completes
-			void BGT_TaskComplete(BackgroundTask* sender)
-			{
+
 				// If the render was cancelled, ignore the result
 				// Otherwise get the main thread to do something with the plot bitmap
-				if (sender->Cancelled())
-					return;
-				
-				{// Update the snapshot
-					pr::threads::CSLock lock(m_cs_snap);
+				if (!m_rdr_cancel)
+				{
+					// Update the snapshot
+					std::lock_guard<std::mutex> lock(m_mutex_snap);
 					Snapshot tmp = m_snap;
 					m_snap = m_tmp;
 					m_tmp = tmp;
+
+					// Cause a refresh
+					Invalidate();
 				}
-				
-				// Cause a refresh
-				Invalidate();
 			}
-			
-			void BGT_ReportProgress(BackgroundTask* sender, int count, int total, char const* text)
-			{
-				(void)sender; (void)count; (void)total; (void)text;
-			}
-			
+
 			// Mouse Navigation
 			void OnMouseDown(UINT nFlags, CPoint point)
 			{
@@ -977,7 +975,7 @@ namespace pr
 				gfx.MeasureString(lbl, lbl_len, &m_xaxis.m_opts.m_font_tick ,PointF(), &r); rect.Height -= r.Height;
 				gfx.MeasureString(lbl, lbl_len, &m_yaxis.m_opts.m_font_tick ,PointF(), &r); rect.X += r.Width; rect.Width -= r.Width;
 				
-				return Rect(int(rect.X), int(rect.Y), int(rect.Width), int(rect.Height));
+				return Gdiplus::Rect(int(rect.X), int(rect.Y), int(rect.Width), int(rect.Height));
 			}
 			
 			// Return the min, max, and step size for the x/y axes
@@ -1130,9 +1128,7 @@ namespace pr
 			// Render the series data into the graph (within 'area')
 			void RenderData(Gdiplus::Graphics& gfx, Gdiplus::Rect const& plot_area)
 			{
-				using namespace Gdiplus;
-				
-				Rect plot = plot_area;
+				auto plot = plot_area;
 				plot.Offset(1,1);
 				plot.Inflate(-1,-1);
 				gfx.SetClip(plot);
@@ -1145,23 +1141,26 @@ namespace pr
 				pr::v2 scale = pr::v2::make(plot.Width / m_xaxis.span(), plot.Height / m_yaxis.span());
 				if (!pr::IsFinite(scale.x)) scale.x = scale.x >= 0 ? pr::maths::float_max : -pr::maths::float_max;
 				if (!pr::IsFinite(scale.y)) scale.y = scale.y >= 0 ? pr::maths::float_max : -pr::maths::float_max;
-				Matrix data_xfrm(1.0f, 0.0f, 0.0f, -1.0f, plot.X - m_xaxis.min() * scale.x, plot.Y + plot.Height + m_yaxis.min() * scale.y);
+				Gdiplus::Matrix data_xfrm(1.0f, 0.0f, 0.0f, -1.0f, plot.X - m_xaxis.min() * scale.x, plot.Y + plot.Height + m_yaxis.min() * scale.y);
 				gfx.SetTransform(&data_xfrm);
 				
 				// Plot each series
-				for (SeriesCont::const_iterator s = m_series.begin(), send = m_series.end(); s != send && !Cancelled(); ++s)
+				for (auto s : m_series)
 				{
-					Series const& series = **s;
-					Series::RdrOptions const& opts = series.m_opts;
-					if (!opts.m_visible) continue;
+					if (m_rdr_cancel)
+						break;
 					
-					SolidBrush bsh_pt  (opts.m_col_point);
-					SolidBrush bsh_bar (opts.m_col_bar);
-					SolidBrush bsh_err (opts.m_col_error_bars);
-					Pen        pen_line(opts.m_col_line, 0.0f);
-					Pen        pen_bar (opts.m_col_bar, 0.0f);
-					int pt_size   = int(opts.m_point_size);
-					int pt_radius = int(opts.m_point_size * 0.5f);
+					auto& series = *s;
+					auto& opts = series.m_opts;
+					if (!opts.m_visible) continue;
+
+					Gdiplus::SolidBrush bsh_pt  (opts.m_col_point);
+					Gdiplus::SolidBrush bsh_bar (opts.m_col_bar);
+					Gdiplus::SolidBrush bsh_err (opts.m_col_error_bars);
+					Gdiplus::Pen        pen_line(opts.m_col_line, 0.0f);
+					Gdiplus::Pen        pen_bar (opts.m_col_bar, 0.0f);
+					auto pt_size   = int(opts.m_point_size);
+					auto pt_radius = int(opts.m_point_size * 0.5f);
 					
 					// Find the range of indices to consider
 					size_t imin = 0, imax = 0;
@@ -1169,9 +1168,10 @@ namespace pr
 					
 					// Loop over data points
 					pr::v2 gv = pr::v2Zero, prev_gv = pr::v2Zero; bool first = true;
-					for (size_t i = imin; i != imax && !Cancelled(); ++i)
+					for (size_t i = imin; i != imax; ++i)
 					{
-						//ReportProgress(m_index, 100);
+						if (m_rdr_cancel)
+							break;
 						
 						// Get the data point
 						series.m_values.Value(i, gv.x, gv.y);
@@ -1195,7 +1195,7 @@ namespace pr
 									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
 									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
 									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
+										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
 								}
 								
 								// Plot the data point
@@ -1203,7 +1203,7 @@ namespace pr
 								{
 									// If the point lies on the previous one then don't bother drawing it
 									if (x != px || y != py)
-										gfx.FillEllipse(&bsh_pt, Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
+										gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
 								}
 							}break;
 							#pragma endregion
@@ -1222,7 +1222,7 @@ namespace pr
 									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
 									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
 									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
+										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
 								}
 								
 								// Plot the point and line
@@ -1237,7 +1237,7 @@ namespace pr
 										
 										// Plot the point (if it's size is non-zero)
 										if (opts.m_point_size > 0)
-											gfx.FillEllipse(&bsh_pt, Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
+											gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
 									}
 								}
 							}break;
@@ -1265,14 +1265,14 @@ namespace pr
 									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
 									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
 									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Rect(int(x - lhs), iymin, int(rhs + lhs), iymax - iymin));
+										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(int(x - lhs), iymin, int(rhs + lhs), iymax - iymin));
 								}
 								
 								// Plot the bar
 								if (opts.m_draw_data)
 								{
-									if      (y < 0) { gfx.FillRectangle(&bsh_bar, Rect(int(x - lhs), y, int(lhs + rhs), -y)); }
-									else if (y > 0) { gfx.FillRectangle(&bsh_bar, Rect(int(x - lhs), 0, int(lhs + rhs),  y)); }
+									if      (y < 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), y, int(lhs + rhs), -y)); }
+									else if (y > 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), 0, int(lhs + rhs),  y)); }
 									else            { gfx.DrawLine(&pen_bar, int(x - lhs), 0, int(lhs + rhs), 0); }
 								}
 							}break;
@@ -1315,9 +1315,9 @@ namespace pr
 				gfx.ResetTransform();
 				
 				// Allow clients to draw on the graph
-				pr::MultiCast<IOverlayOnRender*>::Lock overlays(AddOverlayOnRender);
-				for (pr::MultiCast<IOverlayOnRender*>::iter i = overlays.begin(), iend = overlays.end(); i != iend; ++i)
-					(*i)->CGraphCtrl_OnRender(this, gfx);
+				pr::MultiCast<IOverlayOnRender*>::Lock handlers(AddOverlayOnRender);
+				for (auto handler : handlers)
+					handler->CGraphCtrl_OnRender(this, gfx);
 				
 				gfx.ResetClip();
 			}

@@ -7,6 +7,7 @@
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/event_types.h"
 #include "pr/renderer11/steps/render_step.h"
+#include "pr/renderer11/shaders/shader_set.h"
 
 namespace pr
 {
@@ -29,8 +30,7 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;
 			D3DPtr<ID3D11Buffer>             m_cbuf_camera;  // Per-frame camera constants
 			D3DPtr<ID3D11Buffer>             m_cbuf_nugget;  // Per-nugget constants
-			ShaderPtr                        m_vs;
-			ShaderPtr                        m_ps;
+			ShaderSet                        m_sset;
 
 			explicit GBuffer(Scene& scene);
 

@@ -1324,9 +1324,9 @@ namespace pr.gui
 			private void Init(bool find_previous_anchors)
 			{
 				// Create graphics for the connector
-				m_gfx_line = new View3d.Object("*Group{}");
-				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
-				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}");
+				m_gfx_line = new View3d.Object("*Group{}", false);
+				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
+				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
 
 				Style.StyleChanged += Invalidate;
 				Relink(find_previous_anchors);
@@ -3401,7 +3401,7 @@ namespace pr.gui
 			public ResizeGrabber[] Resizer { get; private set; }
 			public class ResizeGrabber :View3d.Object
 			{
-				public ResizeGrabber(int corner) :base("*Box {5}")
+				public ResizeGrabber(int corner) :base("*Box {5}", false)
 				{
 					switch (corner)
 					{
@@ -3460,7 +3460,7 @@ namespace pr.gui
 
 			public Tools()
 			{
-				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}");
+				m_area_select = new View3d.Object("*Rect selection 80000000 {3 1 1 *Solid}", false);
 				Resizer = Util.NewArray<ResizeGrabber>(8, i => new ResizeGrabber(i));
 			}
 			public void Dispose()
@@ -3642,7 +3642,7 @@ namespace pr.gui
 			if (this.IsInDesignMode()) return;
 
 			m_view3d = new View3d();
-			m_window = new View3d.Window(m_view3d, Handle, false, Render);
+			m_window = new View3d.Window(m_view3d, Handle, false);
 			m_tools  = new Tools();
 			m_camera = m_window.Camera;
 			m_camera.SetClipPlanes(0.5f, 1.1f, true);
@@ -4593,7 +4593,7 @@ namespace pr.gui
 				// Update the selection area
 				UpdateSelectionGraphics();
 
-				m_window.SignalRefresh();
+				m_window.Invalidate();
 			}
 		}
 		private bool m_in_refresh;
@@ -4624,7 +4624,7 @@ namespace pr.gui
 			if (m_window == null)
 				base.OnPaint(e);
 			else
-				m_window.Refresh();
+				Render();
 		}
 
 		/// <summary>Render and Present the scene</summary>

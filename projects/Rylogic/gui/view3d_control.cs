@@ -26,16 +26,13 @@ namespace pr.gui
 
 	public class View3dControl :UserControl
 	{
-		private Scope m_error_cb;
-
 		public View3dControl() :this(false) {}
 		public View3dControl(bool gdi_compat)
 		{
 			if (this.IsInDesignMode()) return;
 
 			m_impl_view3d = new View3d();
-			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, Render);
-			m_error_cb = m_impl_wnd.PushErrorCB((msg,ctx) => OnReportError(new ReportErrorEventArgs(msg)));
+			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, (ctx,msg) => OnReportError(new ReportErrorEventArgs(msg)));
 
 			InitializeComponent();
 
@@ -45,7 +42,6 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref m_error_cb);
 			Util.Dispose(ref m_impl_wnd);
 			Util.Dispose(ref m_impl_view3d);
 			Util.Dispose(ref components);
@@ -59,13 +55,6 @@ namespace pr.gui
 		/// <summary>The binding to this control</summary>
 		public View3d.Window Window { get { return m_impl_wnd; } }
 		private View3d.Window m_impl_wnd;
-
-		/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-		public void SignalRefresh(object sender = null, EventArgs args = null)
-		{
-			if (Window == null || !Visible) return;
-			Window.SignalRefresh();
-		}
 
 		/// <summary>The main camera</summary>
 		public View3d.CameraControls Camera { get { return Window.Camera; } }
@@ -164,7 +153,7 @@ namespace pr.gui
 			Capture = true;
 			m_mouse_down_at = Environment.TickCount;
 			if (Window.MouseNavigate(e.Location, e.Button, true))
-				SignalRefresh();
+				Invalidate();
 		}
 		public void OnMouseUp(object sender, MouseEventArgs e)
 		{
@@ -172,7 +161,7 @@ namespace pr.gui
 			Cursor = Cursors.Default;
 			Capture = false;
 			if (Window.MouseNavigate(e.Location, 0, true))
-				SignalRefresh();
+				Invalidate();
 
 			// Short clicks bring up the context menu
 			if (e.Button == MouseButtons.Right && Environment.TickCount - m_mouse_down_at < ClickTimeMS)
@@ -182,21 +171,23 @@ namespace pr.gui
 		{
 			if (Window == null) return;
 			if (Window.MouseNavigate(e.Location, e.Button, false))
-				SignalRefresh();
+				Invalidate();
 		}
 		public void OnMouseWheel(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
 			if (Window.Navigate(0f, 0f, e.Delta / 120f))
-				SignalRefresh();
+				Invalidate();
 		}
 		public void OnMouseDblClick(object sender, MouseEventArgs e)
 		{
 			if (Window == null) return;
 			if (Bit.AllSet((int)e.Button, (int)MouseButtons.Middle) ||
 				Bit.AllSet((int)e.Button, (int)(MouseButtons.Left|MouseButtons.Right)))
+			{
 				Camera.ResetZoom();
-			SignalRefresh();
+				Invalidate();
+			}
 		}
 		private int m_mouse_down_at;
 
@@ -359,31 +350,31 @@ namespace pr.gui
 			context_menu.Show(MousePosition);
 		}
 
+		/// <summary>Allow Invalidate to be signed up to an event handler</summary>
+		public void Invalidate(object sender, EventArgs args)
+		{
+			base.Invalidate();
+		}
+
 		/// <summary>On Resize</summary>
 		protected override void OnResize(EventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnResize(e); return; }
-
 			base.OnResize(e);
-			if (Window != null)
+			if (Window != null && !this.IsInDesignMode())
 				Window.RenderTargetSize = new Size(Width-2, Height-2);
 		}
 
 		/// <summary>Absorb PaintBackground events</summary>
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnPaintBackground(e); return; }
-
-			if (Window == null)
+			if (Window == null || this.IsInDesignMode())
 				base.OnPaintBackground(e);
 		}
 
 		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
-
-			if (Window == null)
+			if (Window == null || this.IsInDesignMode())
 				base.OnPaint(e);
 			else
 				Render();

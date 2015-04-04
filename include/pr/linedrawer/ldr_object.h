@@ -358,6 +358,13 @@ namespace pr
 				return true;
 			}
 
+			// Get the first child object of this object that matches 'name' (see Apply)
+			LdrObjectPtr Child(char const* name) const;
+
+			// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
+			pr::m4x4 O2P(char const* name = nullptr) const;
+			void O2P(pr::m4x4 const& o2p, char const* name = nullptr);
+
 			// Set the visibility of this object or child objects matching 'name' (see Apply)
 			void Visible(bool visible, char const* name = nullptr);
 

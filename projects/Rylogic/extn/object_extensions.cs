@@ -9,7 +9,7 @@ namespace pr.extn
 	public static class ObjectExtensions
 	{
 		/// <summary>Static cast this object to type 'T'</summary>
-		public static T As<T>(this object obj) where T : class
+		[System.Diagnostics.DebuggerStepThrough] public static T As<T>(this object obj) where T : class
 		{
 			// Don't use 'To' because that implies conversion.
 			// Can't use 'Cast' because clashes with IEnumerable extensions

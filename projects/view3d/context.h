@@ -45,6 +45,21 @@ namespace view3d
 				View3D_DestroyWindow(*m_wnd_cont.begin());
 		}
 
+		// Push/Pop error callbacks from the error callback stack
+		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
+		{
+			m_error_cb.emplace_back(ReportErrorCB(cb, ctx));
+		}
+		void PopErrorCB(View3D_ReportErrorCB cb)
+		{
+			if (m_error_cb.empty())
+				throw std::exception("Error callback stack is empty, cannot pop");
+			if (m_error_cb.back().m_cb != cb)
+				throw std::exception("Attempt to pop an error callback that is not the most recently pushed callback. This is likely a destruction order probably");
+
+			m_error_cb.pop_back();
+		}
+
 	private:
 		Context(Context const&);
 		Context& operator=(Context const&);

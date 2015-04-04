@@ -484,9 +484,8 @@ namespace pr.gfx
 
 		//public delegate void OutputTerrainDataCB(IntPtr data, int size, IntPtr ctx);
 		
-		public delegate void ReportErrorCB(string msg, IntPtr ctx);
-		public delegate void SettingsChangedCB();
-		public delegate void RenderCB();
+		public delegate void ReportErrorCB(IntPtr ctx, string msg);
+		public delegate void SettingsChangedCB(IntPtr ctx, HWindow wnd);
 
 		private readonly List<Window>  m_windows;  // Groups of objects to render
 		private readonly HContext      m_context;  // Unique id per Initialise call
@@ -497,7 +496,7 @@ namespace pr.gfx
 
 			// Initialise view3d
 			string init_error = null;
-			ReportErrorCB error_cb = (msg,ctx) => init_error = msg;
+			ReportErrorCB error_cb = (ctx,msg) => init_error = msg;
 			m_context = View3D_Initialise(error_cb, IntPtr.Zero);
 			if (m_context == HContext.Zero)
 				throw new Exception(init_error ?? "Failed to initialised View3d");
@@ -545,24 +544,26 @@ namespace pr.gfx
 		public class Window :IDisposable
 		{
 			private readonly View3d m_view;
-			private readonly RenderCB m_render_cb;            // User call back to render the scene
+			private readonly ReportErrorCB m_error_cb;        // A reference to prevent the GC from getting it
 			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
-			private EventBatcher m_eb_refresh;                // Batch refresh calls
 			private HWindow m_wnd;
 
-			public Window(View3d view, HWND hwnd, bool gdi_compat, RenderCB render_cb = null)
+			public Window(View3d view, HWND hwnd, bool gdi_compat, ReportErrorCB error_cb = null)
 			{
-				m_view        = view;
-				m_render_cb   = render_cb;
-				m_settings_cb = () => OnSettingsChanged.Raise(this, EventArgs.Empty);
-				m_eb_refresh  = new EventBatcher(Refresh, TimeSpan.FromMilliseconds(5)){TriggerOnFirst = false, Priority = System.Windows.Threading.DispatcherPriority.Render};
+				m_view = view;
+
+				// Create a default error callback
+				if (error_cb == null)
+					error_cb = (c,m) => { throw new Exception(m); };
 
 				// Create the window
-				string error_msg = null;
-				using (PushGlobalErrorCB((msg,ctx) => error_msg = msg))
-					m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_settings_cb, m_render_cb);
-					if (m_wnd == null)
-						throw new Exception(error_msg ?? "Failed to create View3D window");
+				m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_error_cb = error_cb, IntPtr.Zero);
+				if (m_wnd == null)
+					throw new Exception("Failed to create View3D window");
+
+				// Setup a callback for when settings are changed
+				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
+				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, true);
 
 				// Setup the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
@@ -576,53 +577,29 @@ namespace pr.gfx
 			}
 			public void Dispose()
 			{
-				Util.Dispose(ref m_eb_refresh);
 				if (m_wnd != HWindow.Zero)
 				{
+					View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, false);
 					View3D_DestroyWindow(m_wnd);
 					m_wnd = HWindow.Zero;
 				}
 			}
 
 			/// <summary>Add an error callback. returned object pops the error callback when disposed</summary>
-			public Scope PushErrorCB(ReportErrorCB error_cb)
+			public Scope<ReportErrorCB> PushErrorCB(ReportErrorCB error_cb)
 			{
-				return Scope.Create(
-					() => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
-					() => View3D_PopErrorCB(m_wnd, error_cb));
+				return Scope<ReportErrorCB>.Create(
+					() => { View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero); return error_cb; },
+					cb => { View3D_PopErrorCB(m_wnd, cb); });
 			}
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;
 
 			/// <summary>Cause a redraw to happen the near future. This method can be called multiple times</summary>
-			public void SignalRefresh()
+			public void Invalidate()
 			{
-				m_eb_refresh.Signal();
-			}
-
-			/// <summary>Get/Set whether calling SignalRefresh causes a redraw immediately</summary>
-			public bool RefreshOnFirstSignal
-			{
-				get { return m_eb_refresh.TriggerOnFirst; }
-				set { m_eb_refresh.TriggerOnFirst = value; }
-			}
-
-			/// <summary>Get/Set how long to batch 'SignalRefresh' calls for before actually doing the refresh</summary>
-			public TimeSpan RefreshSignalBatchTime
-			{
-				get { return m_eb_refresh.Delay; }
-				set
-				{
-					m_eb_refresh.Immediate = value == TimeSpan.Zero;
-					m_eb_refresh.Delay = value;
-				}
-			}
-
-			/// <summary>Triggers the callback to render and present the scene</summary>
-			public void Refresh()
-			{
-				m_render_cb();
+				View3D_Invalidate(m_wnd, false);
 			}
 
 			/// <summary>The associated view3d object</summary>
@@ -1150,24 +1127,33 @@ namespace pr.gfx
 		public class Object :IDisposable
 		{
 			public HObject m_handle;
-			public object Tag {get;set;}
+			private bool m_owned;
+			public object Tag { get; set; }
 
 			/// <summary>
-			/// Create an object from a ldr script description.
-			/// If 'module' is non-zero then includes and filepaths are resolved from the resources in that module</summary>
+			/// Create objects given in an ldr string or file.
+			/// If multiple objects are created, the handle returned is to the first object only
+			/// 'ldr_script' - an ldr string, or filepath to a file containing ldr script
+			/// 'file' - TRUE if 'ldr_script' is a filepath, FALSE if 'ldr_script' is a string containing ldr script
+			/// 'context_id' - the context id to create the LdrObjects with
+			/// 'async' - if objects should be created by a background thread
+			/// 'include_paths' - is a comma separated list of include paths to use to resolve #include directives (or nullptr)
+			/// 'module' - if non-zero causes includes to be resolved from the resources in that module</summary>
 			public Object()
-				:this("*group{}")
+				:this("*group{}", false)
 			{}
-			public Object(string ldr_script)
-				:this(ldr_script, null)
+			public Object(string ldr_script, bool file)
+				:this(ldr_script, file, null)
 			{}
-			public Object(string ldr_script, string include_paths)
-				:this(ldr_script, include_paths, DefaultContextId, false)
+			public Object(string ldr_script, bool file, string include_paths)
+				:this(ldr_script, file, include_paths, DefaultContextId, false)
 			{}
-			public Object(string ldr_script, string include_paths, int context_id, bool async, IntPtr module = default(IntPtr))
+			public Object(string ldr_script, bool file, string include_paths, int context_id, bool async, IntPtr module = default(IntPtr))
 			{
-				m_handle = View3D_ObjectCreateLdr(ldr_script, context_id, async, include_paths, module);
-				if (m_handle == HObject.Zero) throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
+				m_owned = true;
+				m_handle = View3D_ObjectCreateLdr(ldr_script, file, context_id, async, include_paths, module);
+				if (m_handle == HObject.Zero)
+					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
 
 			/// <summary>Create an object via callback</summary>
@@ -1176,16 +1162,23 @@ namespace pr.gfx
 			{}
 			public Object(string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, int context_id)
 			{
+				m_owned = true;
 				m_handle = View3D_ObjectCreate(name, colour, icount, vcount, edit_cb, IntPtr.Zero, context_id);
 				if (m_handle == HObject.Zero) throw new Exception("Failed to create object '{0}' via edit callback".Fmt(name));
 			}
+
+			/// <summary>Attach to an existing object handle</summary>
+			private Object(HObject handle, bool owned)
+			{
+				m_owned = owned;
+				m_handle = handle;
+			}
+
 			public virtual void Dispose()
 			{
-				if (m_handle != HObject.Zero)
-				{
-					View3D_ObjectDelete(m_handle);
-					m_handle = HObject.Zero;
-				}
+				if (m_handle == HObject.Zero) return;
+				if (m_owned) View3D_ObjectDelete(m_handle);
+				m_handle = HObject.Zero;
 			}
 
 			/// <summary>
@@ -1220,17 +1213,38 @@ namespace pr.gfx
 				View3D_ObjectEdit(m_handle, edit_cb, IntPtr.Zero);
 			}
 
-			/// <summary>Get/Set the object to parent transform</summary>
+			/// <summary>Get/Set the object to parent transform of the root object</summary>
 			public m4x4 O2P
 			{
-				get { return View3D_ObjectGetO2P(m_handle); }
-				set { View3D_ObjectSetO2P(m_handle, ref value); }
+				get { return View3D_ObjectGetO2P(m_handle, null); }
+				set { View3D_ObjectSetO2P(m_handle, ref value, null); }
 			}
 
 			/// <summary>Get the model space bounding box of this object</summary>
 			public BBox BBoxMS
 			{
 				get { return View3D_ObjectBBoxMS(m_handle); }
+			}
+
+			/// <summary>Return a child object of this object</summary>
+			public Object Child(string name)
+			{
+				return new Object(View3D_ObjectGetChild(m_handle, name), false);
+			}
+
+			/// <summary>
+			/// Get/Set the object to world transform for this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public m4x4 GetO2P(string name = null)
+			{
+				return View3D_ObjectGetO2P(m_handle, name);
+			}
+			public void SetO2P(m4x4 o2p, string name = null)
+			{
+				View3D_ObjectSetO2P(m_handle, ref o2p, name);
 			}
 
 			/// <summary>
@@ -1241,7 +1255,7 @@ namespace pr.gfx
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
 			public void SetVisible(bool vis, string name = null)
 			{
-				View3D_SetVisibility(m_handle, vis, name);
+				View3D_ObjectSetVisibility(m_handle, vis, name);
 			}
 
 			/// <summary>
@@ -1783,18 +1797,19 @@ namespace pr.gfx
 		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
 		// Initialise / shutdown the dll
-		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_Shutdown               (HContext context);
 		[DllImport(Dll)] private static extern void              View3D_PushGlobalErrorCB      (ReportErrorCB error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_PopGlobalErrorCB       (ReportErrorCB error_cb);
 
 		// Windows
-		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, bool gdi_compat, SettingsChangedCB settings_cb, RenderCB render_cb);
+		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, bool gdi_compat, ReportErrorCB error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_PushErrorCB            (HWindow window, ReportErrorCB error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_PopErrorCB             (HWindow window, ReportErrorCB error_cb);
 		[DllImport(Dll)] private static extern IntPtr            View3D_GetSettings            (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_SetSettings            (HWindow window, string settings);
+		[DllImport(Dll)] private static extern void              View3D_SettingsChanged        (HWindow window, SettingsChangedCB settings_changed_cb, IntPtr ctx, bool add);
 		[DllImport(Dll)] private static extern void              View3D_AddObject              (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_RemoveObject           (HWindow window, HObject obj);
 		[DllImport(Dll)] private static extern void              View3D_RemoveAllObjects       (HWindow window);
@@ -1840,15 +1855,16 @@ namespace pr.gfx
 
 		// Objects
 		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async, string include_paths);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, int context_id, bool async, string include_paths, IntPtr module);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, int context_id, bool async, string include_paths, IntPtr module);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
-		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj);
-		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p);
-		[DllImport(Dll)] private static extern void              View3D_SetVisibility            (HObject obj, bool visible, string name);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChild           (HObject obj, string name);
+		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetVisibility      (HObject obj, bool visible, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
@@ -1867,6 +1883,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern HTexture          View3D_TextureRenderTarget         (HWindow window);
 
 		// Rendering
+		[DllImport(Dll)] private static extern void              View3D_Invalidate               (HWindow window, bool erase);
+		[DllImport(Dll)] private static extern void              View3D_InvalidateRect           (HWindow window, ref Win32.RECT rect, bool erase);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (HWindow window, out int width, out int height);

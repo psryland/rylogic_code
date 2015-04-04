@@ -339,7 +339,8 @@ namespace pr.util
 			if (ass == null) ass = Assembly.GetExecutingAssembly();
 			return ass.GetName().Version;
 		}
-		public static Version AssemblyVersion() { return AssemblyVersion(null); }
+		public static Version AssemblyVersion(Type type) { return AssemblyVersion(Assembly.GetAssembly(type)); }
+		public static Version AssemblyVersion()          { return AssemblyVersion((Assembly)null); }
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly ass)

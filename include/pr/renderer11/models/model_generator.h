@@ -121,7 +121,7 @@ namespace pr
 					NuggetProps nug;
 					if (mat != nullptr) nug = *mat;
 					nug.m_topo = topo;
-					SetAlphaBlending(nug, alpha);
+					nug.m_has_alpha = alpha;
 					cont.m_ncont.push_back(nug);
 				}
 
@@ -481,6 +481,7 @@ namespace pr
 				auto nout = [&](Material const& mat, EGeom geom, Range vrange, Range irange)
 				{
 					NuggetProps ddata(EPrim::TriList, geom, nullptr, vrange, irange);
+					ddata.m_has_alpha = !FEql(mat.m_diffuse.a, 1.0f);
 
 					// Register any materials with the renderer
 					if (!mat.m_textures.empty())
@@ -492,10 +493,6 @@ namespace pr
 						(void)rdr;
 						//ddata.m_tex_diffuse = rdr.m_tex_mgr.CreateTexture2D();
 					}
-
-					// If the material has alpha, set the alpha blending states in the nugget
-					if (!FEql(mat.m_diffuse.a, 1.0f))
-						SetAlphaBlending(ddata, true);
 
 					cont.m_ncont.push_back(ddata);
 				};

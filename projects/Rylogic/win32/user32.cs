@@ -35,6 +35,8 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern int    HideCaret(IntPtr hwnd);
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, int wIDNewItem, string lpNewItem);
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]  public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, IntPtr wIDNewItem, string lpNewItem);
+		[DllImport("user32.dll")]                                                    public static extern bool   InvalidateRect(IntPtr hwnd, IntPtr lpRect, bool bErase);
+		[DllImport("user32.dll")]                                                    public static extern bool   InvalidateRect(IntPtr hwnd, ref Win32.RECT lpRect, bool bErase);
 		[DllImport("user32.dll")]                                                    public static extern bool   IsIconic(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern bool   IsWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern bool   IsWindowVisible(HWND hwnd);

@@ -17,6 +17,7 @@
 #include "pr/container/vector.h"
 #include "pr/container/stack.h"
 #include "pr/container/queue.h"
+#include "pr/filesys/filesys.h"
 #include "pr/str/prstring.h"
 #include "pr/script/keywords.h"
 

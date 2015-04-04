@@ -1,15 +1,23 @@
 ﻿using System;
+using System.Windows.Forms;
 
 namespace pr.extn
 {
 	public static class DateTimeExtensions
 	{
-		/// <summary>Returns a DateTimeOffset from a DateTime. If DateTime.Kind is Unspecified then UTC is assumed</summary>
-		public static DateTimeOffset AsUTCDateTimeOffset(this DateTime dt)
+		/// <summary>
+		/// Return a date time reinterpreted as 'kind'.
+		/// If the datetime already has a known kind that is different to 'kind' then an exception is raised.</summary>
+		public static DateTime As(this DateTime dt, DateTimeKind kind)
 		{
+			if (kind == dt.Kind)
+				return dt;
+			if (kind == DateTimeKind.Unspecified)
+				return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
 			if (dt.Kind == DateTimeKind.Unspecified)
-				dt = new DateTime(dt.Ticks, DateTimeKind.Utc);
-			return new DateTimeOffset(dt);
+				return DateTime.SpecifyKind(dt, kind);
+			else
+				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
 		}
 
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
@@ -19,12 +27,53 @@ namespace pr.extn
 			if (time > max) return max;
 			return time;
 		}
+
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
 		public static DateTimeOffset Clamp(this DateTimeOffset time, DateTimeOffset min, DateTimeOffset max)
 		{
 			if (time < min) return min;
 			if (time > max) return max;
 			return time;
+		}
+
+		/// <summary>Set the MinDate, MaxDate, and Value members all at once, avoiding out of range exceptions.</summary>
+		public static void Set(this DateTimePicker dtp, DateTime value, DateTime min, DateTime max)
+		{
+			if (min > max)
+				throw new Exception("Minimum date/time value is greater than the maximum date/time value");
+			if (value != value.Clamp(min,max))
+				throw new Exception("Date/time value is not within the given range of date/time values");
+
+			// Setting to MinimumDateTime/MaximumDateTime first avoids problems if min > MaxDate or max < MinDate
+			dtp.MinDate = DateTimePicker.MinimumDateTime;
+			dtp.MaxDate = DateTimePicker.MaximumDateTime;
+
+			min = Clamp(min, DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
+			max = Clamp(max, DateTimePicker.MinimumDateTime, DateTimePicker.MaximumDateTime);
+
+			// Setting Value before MinDate/MaxDate avoids setting Value twice when Value < MinDate or Value > MaxDate
+			dtp.Value = Clamp(value, min, max);
+
+			dtp.MinDate = min;
+			dtp.MaxDate = max;
+		}
+
+		/// <summary>Sets the MinDate, MaxDate, and Value members all to Universal time.</summary>
+		public static void ToUniversalTime(this DateTimePicker dtp)
+		{
+			var min = dtp.MinDate.ToUniversalTime();
+			var max = dtp.MaxDate.ToUniversalTime();
+			var val = dtp.Value.ToUniversalTime();
+			dtp.Set(val, min, max);
+		}
+
+		/// <summary>Sets the MinDate, MaxDate, and Value members all to Local time.</summary>
+		public static void ToLocalTime(this DateTimePicker dtp)
+		{
+			var min = dtp.MinDate.ToLocalTime();
+			var max = dtp.MaxDate.ToLocalTime();
+			var val = dtp.Value.ToLocalTime();
+			dtp.Set(val, min, max);
 		}
 	}
 }

@@ -29,6 +29,7 @@ namespace pr
 			// Delete methods that models/model buffers call to clean themselves up
 			friend struct ModelBuffer;
 			friend struct Model;
+			friend struct Nugget;
 			void Delete(ModelBuffer* model_buffer);
 			void Delete(Model* model);
 			void Delete(Nugget* nugget);

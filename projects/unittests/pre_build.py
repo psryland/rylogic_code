@@ -40,6 +40,8 @@ try:
 		"pr/sound/",
 		"pr/storage/xfile",
 		"pr/terrain/",
+		"pr/collision/todo/",
+		"pr/collision/builder/",
 		]
 
 	# generate a file that includes all headers

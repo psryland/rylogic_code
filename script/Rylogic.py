@@ -1,5 +1,13 @@
-import sys, os, time, shutil, glob, subprocess, re, socket, zipfile
+import sys, enum, os, time, shutil, glob, subprocess, re, socket, zipfile
 import UserVars
+
+# Enumeration of repository systems
+class ERepo(enum.Enum):
+	Unknown = 0,
+	Plastic = 1
+	SVN     = 2,
+	Hg      = 3,
+	Git     = 4,
 
 # Terminate the script indicating success
 def OnSuccess(pause_time_seconds=5):
@@ -44,6 +52,14 @@ def NormaliseFilepath(filepath):
 	filepath = filepath.replace('"','')
 	filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
 	return filepath
+
+# Delete a file or directory tree using the shell
+def ShellDelete(path, wait_time_ms = 100):
+	if os.path.exists(path):
+		shutil.rmtree(path, ignore_errors=True)
+		time.sleep(wait_time_ms * 0.001) # Give the OS time to do it
+		if os.path.exists(path):
+			raise Exception("Failed to delete '"+path+"'. Check for locked files")
 
 # Enumerate recursively through a directory
 def EnumFiles(root):
@@ -363,5 +379,42 @@ def ZipDirectory(zip_path, root_dir):
 			arcpath  = os.path.relpath(filepath, root_dir)
 			zipf.write(filepath, arcpath)
 	zipf.close()
-	
+
+# Return the revision/changeset number for a revision controlled directory 'repo_root'
+# This is the revision of the local directory, *not* the latest version in the Repo
+def RepoRevision(repo_root, repo:ERepo):
+	if repo == ERepo.Plastic:
+		success,state = Tools.Run(["cm","ls",repo_root,"--format={changeset}"])
+		if not success: raise Exception("Plastic command 'cm ls' failed")
+		rev = state.split('\n',1)[0]
+		return rev
+
+	elif repo == ERepo.SVN:
+		success,state = Tools.Run(["SubWCRev", repo_root])
+		if not success: raise Exception("SubWCRev failed")
+		m = re.search(r"Updated to revision (\d+)\n", state)
+		if not m: raise Exception("Could not match 'Updated to revision' in output from SubWCRev")
+		rev = m.group(1)
+		return rev
+
+	else:
+		raise Exception("Unsupported repo system: " + str(repo))
+
+# Returns true if the direction 'repo_root' has local changes
+def HasLocalChanges(repo_root, repo:ERepo):
+	if repo == ERepo.Plastic:
+		success,res = Tools.Run(["cm", "fc", repo_root, "-R"])
+		if not success: raise Exception("Plastic command 'cm fc' failed")
+		local_changes = res.strip() != ""
+		return local_changes
+
+	elif repo == ERepo.SVN:
+		success,state = Tools.Run(["SubWCRev", repo_root])
+		if not success: raise Exception("SubWCRev failed")
+		m = re.search(r"Local modifications found\n", state)
+		return not not m #convert 'm' to a boolean
+
+	else:
+		raise Exception("Unsupported repo system: " + str(repo))
+
 # End

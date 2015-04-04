@@ -17,16 +17,16 @@ namespace pr
 	{
 		// Generate an ldr string that describes the geometry in 'geom'
 		// Each geom object should have it's data pointer set as a pr::variant, with the unsigned int value being the colour
-		template <typename TStr> inline void Geom(dGeomID geom, TStr& str)
+		template <typename TStr> inline TStr& Geom(TStr& str, dGeomID geom)
 		{
 			switch (dGeomGetClass(geom))
 			{
 			default:
 				if (dGeomIsSpace(geom))
 				{
-					GroupStart("submodel", 0, str);
+					GroupStart(str, "submodel", 0);
 					for (int i = 0, i_end = dSpaceGetNumGeoms((dSpaceID)geom); i != i_end; ++i)
-						Geom(dSpaceGetGeom((dSpaceID)geom, i), str);
+						Geom(str, dSpaceGetGeom((dSpaceID)geom, i));
 					GroupEnd(str);
 				}
 				break;
@@ -35,25 +35,26 @@ namespace pr
 					float rad = dGeomSphereGetRadius(geom);
 					pr::v4 pos = pr::v4::make(dGeomGetOffsetPosition(geom), 1.0f);
 					pr::variant v = { dGeomGetData(geom) };
-					Sphere("sphere", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad, str);
+					Sphere(str, "sphere", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad);
 				}break;
 			case dBoxClass:
 				{
 					dVector3 box_size; dGeomBoxGetLengths(geom, box_size);
 					pr::v4 dim = pr::v4::make(box_size, 0.0f);
-					pr::m4x4 o2p = pr::pr_m4x4(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
+					pr::m4x4 o2p = pr::ode(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Box("box", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim, str);
+					Box(str, "box", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim);
 				}break;
 			case dCapsuleClass:
 				{
 					float rad, len; dGeomCapsuleGetParams(geom, &rad, &len);
-					pr::m4x4 o2p = pr::pr_m4x4(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
+					pr::m4x4 o2p = pr::ode(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Cylinder("caps", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, 1, len, rad, str);
+					Cylinder(str, "caps", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, 1, len, rad);
 					//Capsule("caps", v.ptr == 0 ? 0xFFFF0000 : v.ui, o2p, rad, len, str);
 				}break;
 			}
+			return str;
 		}
 	}
 }

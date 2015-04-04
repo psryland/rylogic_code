@@ -32,7 +32,7 @@ static Context& Dll()
 }
 
 // Default error callback
-void __stdcall DefaultErrorCB(char const* msg, void*) { std::cerr << msg << std::endl; }
+void __stdcall DefaultErrorCB(void*, char const* msg) { std::cerr << msg << std::endl; }
 
 // Report an error message via the window error callback
 inline void ReportError(char const* func_name, View3DWindow wnd, std::exception const* ex)
@@ -56,9 +56,9 @@ inline void ReportError(char const* func_name, View3DWindow wnd, std::exception 
 
 // Initialise the dll
 // Initialise calls are reference counted and must be matched with Shutdown calls
-// 'error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
+// 'initialise_error_cb' is used to report dll initialisation errors only (i.e. it isn't stored)
 // Note: this function is not thread safe, avoid race calls
-VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB error_cb, void* ctx)
+VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB initialise_error_cb, void* ctx)
 {
 	try
 	{
@@ -73,12 +73,12 @@ VIEW3D_API View3DContext __stdcall View3D_Initialise(View3D_ReportErrorCB error_
 	}
 	catch (std::exception const& e)
 	{
-		error_cb(pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()), ctx);
+		if (initialise_error_cb) initialise_error_cb(ctx, pr::FmtS("Failed to initialise View3D.\nReason: %s\n", e.what()));
 		return nullptr;
 	}
 	catch (...)
 	{
-		error_cb("Failed to initialise View3D.\nReason: An unknown exception occurred\n", ctx);
+		if (initialise_error_cb) initialise_error_cb(ctx, "Failed to initialise View3D.\nReason: An unknown exception occurred\n");
 		return nullptr;
 	}
 }
@@ -99,7 +99,7 @@ VIEW3D_API void __stdcall View3D_PushGlobalErrorCB(View3D_ReportErrorCB error_cb
 {
 	try
 	{
-		Dll().m_error_cb.emplace_back(error_cb, ctx);
+		Dll().PushErrorCB(error_cb, ctx);
 	}
 	CatchAndReport(View3D_PushGlobalErrorCB,,);
 }
@@ -107,29 +107,33 @@ VIEW3D_API void __stdcall View3D_PopGlobalErrorCB(View3D_ReportErrorCB error_cb)
 {
 	try
 	{
-		if (!Dll().m_error_cb.empty())
-		{
-			if (Dll().m_error_cb.back().m_error_cb != error_cb)
-				throw std::exception("attempt to remove a mismatched error callback");
-			
-			Dll().m_error_cb.pop_back();
-		}
+		Dll().PopErrorCB(error_cb);
 	}
 	CatchAndReport(View3D_PopGlobalErrorCB,,);
 }
 
 // Create/Destroy a window
-VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
+// 'error_cb' must be a valid function pointer for the lifetime of the window
+VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat, View3D_ReportErrorCB error_cb, void* ctx)
 {
 	try
 	{
-		auto win = std::unique_ptr<view3d::Window>(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, settings_cb, render_cb));
+		auto win = std::unique_ptr<view3d::Window>(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, error_cb, ctx));
 
 		DllLockGuard;
 		Dll().m_wnd_cont.insert(win.get());
 		return win.release();
 	}
-	CatchAndReport(View3D_CreateWindow,,nullptr);
+	catch (std::exception const& e)
+	{
+		if (error_cb) error_cb(ctx, pr::FmtS("Failed to create View3D Window.\n%s", e.what()));
+		return nullptr;
+	}
+	catch (...)
+	{
+		if (error_cb) error_cb(ctx, pr::FmtS("Failed to create View3D Window.\nUnknown reason"));
+		return nullptr;
+	}
 }
 VIEW3D_API void __stdcall View3D_DestroyWindow(View3DWindow window)
 {
@@ -153,7 +157,7 @@ VIEW3D_API void __stdcall View3D_PushErrorCB(View3DWindow window, View3D_ReportE
 	try
 	{
 		if (!window) throw std::exception("window is null");
-		window->m_error_cb.emplace_back(error_cb, ctx);
+		window->PushErrorCB(error_cb, ctx);
 	}
 	CatchAndReport(View3D_PushGlobalErrorCB,window,);
 }
@@ -162,13 +166,7 @@ VIEW3D_API void __stdcall View3D_PopErrorCB(View3DWindow window, View3D_ReportEr
 	try
 	{
 		if (!window) throw std::exception("window is null");
-		if (!window->m_error_cb.empty())
-		{
-			if (window->m_error_cb.back().m_error_cb != error_cb)
-				throw std::exception("attempt to remove a mismatched error callback from window.");
-
-			window->m_error_cb.pop_back();
-		}
+		window->PopErrorCB(error_cb);
 	}
 	CatchAndReport(View3D_PopGlobalErrorCB, window,);
 }
@@ -222,6 +220,20 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DWindow window, char const* se
 		window->NotifySettingsChanged();
 	}
 	CatchAndReport(View3D_SetSettings, window,);
+}
+
+// Add/Remove a callback that is called when settings change
+VIEW3D_API void __stdcall View3D_SettingsChanged(View3DWindow window, View3D_SettingsChangedCB settings_changed_cb, void* ctx, BOOL add)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		if (add)
+			window->OnSettingsChanged += pr::StaticCallBack(settings_changed_cb, ctx);
+		else
+			window->OnSettingsChanged -= pr::StaticCallBack(settings_changed_cb, ctx);
+	}
+	CatchAndReport(View3D_SettingsChanged, window,);
 }
 
 // Add/Remove objects to/from a window
@@ -535,7 +547,10 @@ VIEW3D_API BOOL __stdcall View3D_MouseNavigate(View3DWindow window, View3DV2 ss_
 
 		// If no gizmos are using the mouse, use standard mouse control
 		if (!gizmo_in_use)
-			refresh |= window->m_camera.MouseControl(nss_point, button_state, nav_start_or_end != 0);
+		{
+			if (window->m_camera.MouseControl(nss_point, button_state, nav_start_or_end != 0))
+				refresh |= true;
+		}
 
 		return refresh;
 	}
@@ -843,11 +858,15 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 	CatchAndReport(View3D_ObjectsCreateFromFile, , 0);
 }
 
-// Create objects given in an ldr string.
+// Create objects given in an ldr string or file.
 // If multiple objects are created, the handle returned is to the first object only
-// 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
-// If 'module' is non-zero, then includes are resolved from the resources in that module
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, int context_id, BOOL async, char const* include_paths, HMODULE module)
+// 'ldr_script' - an ldr string, or filepath to a file containing ldr script
+// 'file' - TRUE if 'ldr_script' is a filepath, FALSE if 'ldr_script' is a string containing ldr script
+// 'context_id' - the context id to create the LdrObjects with
+// 'async' - if objects should be created by a background thread
+// 'include_paths' - is a comma separated list of include paths to use to resolve #include directives (or nullptr)
+// 'module' - if non-zero causes includes to be resolved from the resources in that module
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module)
 {
 	try
 	{
@@ -862,8 +881,11 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 
 		// Parse the description
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseString(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
-		
+		if (file)
+			pr::ldr::ParseFile(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
+		else
+			pr::ldr::ParseString(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
+
 		// Return the first object
 		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
 		return !out.m_objects.empty() ? out.m_objects.front().m_ptr : nullptr;
@@ -1024,21 +1046,35 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 	CatchAndReport(View3D_ObjectDelete, ,);
 }
 
-// Get/Set the object to parent transform for an object
-// This is the object to world transform for objects without parents
-// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
-VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object)
+// Return a child object of 'object'
+VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild(View3DObject object, char const* name)
 {
 	try
 	{
 		if (!object) throw std::exception("object is null");
 
 		DllLockGuard;
-		return view3d::To<View3DM4x4>(object->m_o2p);
+		auto ptr = object->Child(name);
+		return ptr.m_ptr;
+	}
+	CatchAndReport(View3D_ObjectGetChild, , nullptr);
+}
+
+// Get/Set the object to parent transform for an object
+// This is the object to world transform for objects without parents
+// Note: In "*Box b { 1 1 1 *o2w{*pos{1 2 3}} }" setting this transform overwrites the "*o2w{*pos{1 2 3}}"
+VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2P(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
+		return view3d::To<View3DM4x4>(object->O2P(name));
 	}
 	CatchAndReport(View3D_ObjectGetO2P, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
-VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p)
+VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 const& o2p, char const* name)
 {
 	try
 	{
@@ -1046,14 +1082,14 @@ VIEW3D_API void __stdcall View3D_ObjectSetO2P(View3DObject object, View3DM4x4 co
 		if (!pr::FEql(o2p.w.w,1.0f)) throw std::exception("invalid object to parent transform");
 
 		DllLockGuard;
-		object->m_o2p = view3d::To<pr::m4x4>(o2p);
+		object->O2P(view3d::To<pr::m4x4>(o2p), name);
 	}
 	CatchAndReport(View3D_ObjectSetO2P, ,);
 }
 
 // Set the object visibility
 // See LdrObject::Apply for docs on the format of 'name'
-VIEW3D_API void __stdcall View3D_SetVisibility(View3DObject object, BOOL visible, char const* name)
+VIEW3D_API void __stdcall View3D_ObjectSetVisibility(View3DObject object, BOOL visible, char const* name)
 {
 	try
 	{
@@ -1062,7 +1098,7 @@ VIEW3D_API void __stdcall View3D_SetVisibility(View3DObject object, BOOL visible
 		DllLockGuard;
 		object->Visible(visible != 0, name);
 	}
-	CatchAndReport(View3D_SetVisibility, ,);
+	CatchAndReport(View3D_ObjectSetVisibility, ,);
 }
 
 // Return the current or base colour of an object (the first object to match 'name')
@@ -1318,6 +1354,23 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureRenderTarget(View3DWindow windo
 
 // Rendering ***************************************************************
 
+// Call InvalidateRect on the HWND associated with 'window'
+VIEW3D_API void __stdcall View3D_Invalidate(View3DWindow window, BOOL erase)
+{
+	View3D_InvalidateRect(window, nullptr, erase);
+}
+
+// Call InvalidateRect on the HWND associated with 'window'
+VIEW3D_API void __stdcall View3D_InvalidateRect(View3DWindow window, RECT const* rect, BOOL erase)
+{
+	try
+	{
+		if (!window) throw std::exception("window is null");
+		window->InvalidateRect(rect, erase != 0);
+	}
+	CatchAndReport(View3D_InvalidateRect, window,);
+}
+
 // Render a window. Remember to call View3D_Present() after all render calls
 VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 {
@@ -1366,6 +1419,7 @@ VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 		// Set the view and projection matrices
 		pr::Camera& cam = wnd.m_camera;
 		scene.SetView(cam);
+		cam.m_moved = false;
 
 		// Set the light source
 		Light& light = scene.m_global_light;

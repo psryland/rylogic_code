@@ -14,8 +14,6 @@ namespace view3d
 		//,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
 		ErrorCBStack              m_error_cb;                 // Stack of error callback functions for the dll
-		View3D_SettingsChanged    m_settings_cb;              // Callback on settings changed
-		View3D_RenderCB           m_render_cb;                // Callback to invoke a render
 		HWND                      m_hwnd;                     // The associated window handle
 		pr::Renderer&             m_rdr;                      // Reference to the renderer
 		pr::rdr::Window           m_wnd;                      // The window being drawn on
@@ -40,9 +38,16 @@ namespace view3d
 		EditorCont                m_editors;                  // User created editors
 		std::string               m_settings;                 // Allows a char const* to be returned
 
-		Window(pr::Renderer& rdr, HWND hwnd, bool gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb)
-			:m_settings_cb(settings_cb)
-			,m_render_cb(render_cb)
+		// Default window construction settings
+		static pr::rdr::WndSettings Settings(HWND hwnd, bool gdi_compat)
+		{
+			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
+			RECT rect; ::GetClientRect(hwnd, &rect);
+			return pr::rdr::WndSettings(hwnd, true, gdi_compat, pr::To<pr::iv2>(rect));
+		}
+
+		Window(pr::Renderer& rdr, HWND hwnd, bool gdi_compat, View3D_ReportErrorCB error_cb, void* ctx)
+			:m_error_cb({pr::StaticCallBack(error_cb, ctx)})
 			,m_hwnd(hwnd)
 			,m_rdr(rdr)
 			,m_wnd(m_rdr, Settings(hwnd, gdi_compat))
@@ -97,6 +102,29 @@ namespace view3d
 			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80, 0, 0);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
+		~Window()
+		{
+			if (m_error_cb.empty()) throw std::exception("Error callback stack is in consistent. Number of pushes != number of pops");
+			m_error_cb.pop_back();
+		}
+
+		// Settings changed event
+		pr::MultiCast<SettingsChangedCB> OnSettingsChanged;
+
+		// Push/Pop error callbacks from the error callback stack
+		void PushErrorCB(View3D_ReportErrorCB cb, void* ctx)
+		{
+			m_error_cb.emplace_back(ReportErrorCB(cb, ctx));
+		}
+		void PopErrorCB(View3D_ReportErrorCB cb)
+		{
+			if (m_error_cb.empty())
+				throw std::exception("Error callback stack is empty, cannot pop");
+			if (m_error_cb.back().m_cb != cb)
+				throw std::exception("Attempt to pop an error callback that is not the most recently pushed callback. This is likely a destruction order probably");
+
+			m_error_cb.pop_back();
+		}
 
 		// Close any window handles
 		void Close()
@@ -117,13 +145,6 @@ namespace view3d
 			m_hwnd = 0;
 		}
 
-		static pr::rdr::WndSettings Settings(HWND hwnd, bool gdi_compat)
-		{
-			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
-			RECT rect; ::GetClientRect(hwnd, &rect);
-			return pr::rdr::WndSettings(hwnd, true, gdi_compat, pr::To<pr::iv2>(rect));
-		}
-
 		// 'ctx' should be a Drawset
 		// Return the focus point of the camera in this drawset
 		static pr::v4 __stdcall ReadPoint(void* ctx)
@@ -141,20 +162,21 @@ namespace view3d
 		{
 			return m_scene.m_viewport.NSSPointToSSPoint(nss_point);
 		}
+
 		// Invoke the settings changed callback
 		void NotifySettingsChanged()
 		{
-			if (m_settings_cb) return;
-			m_settings_cb(this);
+			OnSettingsChanged.Raise(this);
+		}
+
+		// Call InvalidateRect on the HWND associated with this window
+		void InvalidateRect(RECT const* rect, bool erase)
+		{
+			::InvalidateRect(m_hwnd, rect, erase);
 		}
 
 	private:
-		Window(Window const&);
-		Window& operator=(Window const&);
-
-		//// Event handlers
-		//void OnEvent(pr::ldr::Evt_Refresh const&) override { m_render_cb(); }
-		//void OnEvent(pr::ldr::Evt_LdrMeasureUpdate const&) override { m_render_cb(); }
-		//void OnEvent(pr::ldr::Evt_LdrAngleDlgUpdate const&) override { m_render_cb(); }
+		Window(Window const&) = delete;
+		Window& operator=(Window const&) = delete;
 	};
 }

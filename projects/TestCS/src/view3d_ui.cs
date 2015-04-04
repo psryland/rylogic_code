@@ -33,7 +33,7 @@ namespace TestCS
 			Controls.Add(m_view3d);
 
 			// Simple create object
-			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}");
+			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
 			m_obj0.O2P = m4x4.Rotation(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
 

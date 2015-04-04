@@ -768,7 +768,7 @@ namespace pr
 		}
 
 		// Attempt to resolve a partial filepath given a list of directories to search
-		template <typename String, typename Cont> inline String ResolvePath(String const& partial_path, Cont const& search_paths, String const* current_dir = nullptr, bool check_working_dir = true, String* searched_paths = nullptr)
+		template <typename String, typename Cont = std::vector<String>> inline String ResolvePath(String const& partial_path, Cont const& search_paths = Cont(), String const* current_dir = nullptr, bool check_working_dir = true, String* searched_paths = nullptr)
 		{
 			String path;
 

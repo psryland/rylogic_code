@@ -232,6 +232,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\scintilla.cs" />
+    <Compile Include="gui\single_select_button_set.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\vt100.cs" />
     <Compile Include="gui\colour_ui.cs">
       <SubType>Form</SubType>

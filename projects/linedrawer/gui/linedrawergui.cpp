@@ -940,6 +940,7 @@ namespace ldr
 	void MainGUI::OnEvent(Event_Refresh const&)
 	{
 		m_main->RenderNeeded();
+		Invalidate();
 	}
 	void MainGUI::OnEvent(pr::ldr::Evt_Refresh const&)
 	{

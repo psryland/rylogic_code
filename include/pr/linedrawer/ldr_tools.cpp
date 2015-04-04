@@ -139,11 +139,11 @@ namespace pr
 				pr::v4 p1 = p0;        p1.y = m_point1.y;
 
 				std::string str;
-				GroupStart("Measurement", str);
-				Line("dist" , 0xFFFFFFFF, m_point0, m_point1, str);
-				Line("distX", 0xFFFF0000, m_point0, p0, str);
-				Line("distY", 0xFF00FF00, p0, p1, str);
-				Line("distZ", 0xFF0000FF, p1, m_point1, str);
+				GroupStart(str, "Measurement");
+				Line(str, "dist" , 0xFFFFFFFF, m_point0, m_point1);
+				Line(str, "distX", 0xFFFF0000, m_point0, p0);
+				Line(str, "distY", 0xFF00FF00, p0, p1);
+				Line(str, "distZ", 0xFF0000FF, p1, m_point1);
 				GroupEnd(str);
 
 				ParseResult out;
@@ -321,10 +321,10 @@ namespace pr
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
 				std::string str;
-				GroupStart("AngleDlg", str);
-				Line("edge0", 0xFFFFFFFF, m_origin, m_point0, str);
-				Line("edge1", 0xFFFFFF00, m_origin, m_point1, str);
-				Line("edge2", 0xFF00FF00, m_point0, m_point1, str);
+				GroupStart(str, "AngleDlg");
+				Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
+				Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
+				Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
 				GroupEnd(str);
 
 				ParseResult out;

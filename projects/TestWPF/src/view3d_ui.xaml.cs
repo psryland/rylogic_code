@@ -40,7 +40,7 @@ namespace TestWPF
 			m_view3d.BorderStyle = BorderStyle.FixedSingle;
 
 			// Simple create object
-			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}");
+			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
 			m_view3d.Window.AddObject(m_obj0);
 
 			// Create object via callback

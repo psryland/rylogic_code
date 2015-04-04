@@ -9,9 +9,10 @@
 #include "pr/renderer11/render/raster_state.h"
 #include "pr/renderer11/render/depth_state.h"
 #include "pr/renderer11/render/sortkey.h"
-#include "pr/renderer11/textures/texture2d.h"
-#include "pr/renderer11/models/model_buffer.h"
+#include "pr/renderer11/render/drawlist_element.h"
 #include "pr/renderer11/shaders/shader_set.h"
+#include "pr/renderer11/models/model_buffer.h"
+#include "pr/renderer11/textures/texture2d.h"
 
 namespace pr
 {
@@ -53,8 +54,8 @@ namespace pr
 		// selves, meaning the reference count will not automatically clean up the model.
 		//
 
-		// Nugget construction data
-		struct NuggetProps
+		// Nugget data. Common base for NuggetProps and Nugget
+		struct NuggetData
 		{
 			EPrim        m_topo;        // The primitive topology for this nugget
 			EGeom        m_geom;        // The valid geometry components within this range
@@ -71,67 +72,70 @@ namespace pr
 			Range m_vrange;
 			Range m_irange;
 
+			NuggetData(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+		};
+
+		// Nugget construction data
+		struct NuggetProps :NuggetData
+		{
 			// Set this flag to true if you want to add a nugget that overlaps the range
 			// of an existing nugget. This is used when rendering a model using multiple
 			// passes, but for simple models, it's usually an error if the nugget ranges
 			// overlap, but in advanced cases it isn't.
 			bool m_range_overlaps;
 
-			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range())
-				:m_topo(topo)
-				,m_geom(geom)
-				,m_smap(smap ? *smap : ShaderMap())
-				,m_tex_diffuse()
-				,m_bsb()
-				,m_dsb()
-				,m_rsb()
-				,m_sort_key()
-				,m_vrange(vrange)
-				,m_irange(irange)
-				,m_range_overlaps(false)
-			{}
+			// Set this flag to true if the nugget should be set up for alpha blending
+			bool m_has_alpha;
+
+			NuggetProps(EPrim topo = EPrim::Invalid, EGeom geom = EGeom::Invalid, ShaderMap* smap = nullptr, Range vrange = Range(), Range irange = Range());
+			NuggetProps(NuggetData const& data);
 		};
 
 		// A nugget is a sub range within a model buffer containing any data needed to render
 		// that sub range. Not all data is necessarily needed to render each nugget (depends on
 		// the shader that the render step uses), but each nugget can be rendered with a single
 		// DrawIndexed call for any possible shader.
-		struct Nugget :pr::chain::link<Nugget, ChainGroupNugget> ,NuggetProps
+		struct Nugget :pr::chain::link<Nugget, ChainGroupNugget> ,NuggetData
 		{
-			ModelBufferPtr m_model_buffer; // The vertex and index buffers.
-			size_t         m_prim_count;   // The number of primitives in this nugget
-			Model*         m_owner;        // The model that this nugget belongs to (for debugging mainly)
+			ModelBufferPtr m_model_buffer;  // The vertex and index buffers.
+			size_t         m_prim_count;    // The number of primitives in this nugget
+			Model*         m_owner;         // The model that this nugget belongs to (for debugging mainly)
+			TNuggetChain   m_nuggets;       // The dependent nuggets associated with this nugget
+			bool           m_alpha_enabled; // True if the nugget is configured for alpha blending
 
-			Nugget(NuggetProps const& props)
-				:NuggetProps(props)
-				,m_model_buffer()
-				,m_prim_count()
-				,m_owner()
-			{}
+			Nugget(NuggetProps const& props, ModelBufferPtr& model_buffer, Model* owner);
+			~Nugget();
 
 			// Return the sortkey composed from the base 'm_sort_key' plus any shaders in 'm_smap'
-			SortKey sort_key(ERenderStep rstep) const
+			SortKey SortKey(ERenderStep rstep) const;
+
+			// Add this nugget and any dependent nuggets to a drawlist
+			template <typename TDrawList> void AddToDrawlist(TDrawList& drawlist, BaseInstance const& inst, SKOverride const* sko, ERenderStep id, ShaderSet sset)
 			{
-				auto sk = m_sort_key;
+				// Ensure the nugget contains gbuffer shaders vs/ps
+				// Note, the nugget may contain other shaders that are used by this render step as well
+				if (!m_smap[id].m_vs) m_smap[id].m_vs = sset.m_vs;
+				if (!m_smap[id].m_gs) m_smap[id].m_gs = sset.m_gs;
+				if (!m_smap[id].m_ps) m_smap[id].m_ps = sset.m_ps;
 
-				// Set the texture id part of the key if not set already
-				if ((sk & SortKey::TextureIdMask) == 0 && m_tex_diffuse != nullptr)
-					sk |= (m_tex_diffuse->m_sort_id << SortKey::TextureIdOfs) & SortKey::TextureIdMask;
+				// Create the sort key for this nugget
+				auto sk = SortKey(id);
+				if (sko) sk = sko->Combine(sk);
 
-				// Set the shader id part of the key if not set already
-				if ((sk & SortKey::ShaderIdMask) == 0)
-				{
-					auto shdr_id = 0;
-					for (auto& shdr : m_smap[rstep].Enumerate())
-					{
-						if (shdr == nullptr) continue;
-						shdr_id = shdr_id*13 ^ shdr->m_sort_id; // hash the sort ids together
-					}
-					sk |= (shdr_id << SortKey::ShaderIdOfs) & SortKey::ShaderIdMask;
-				}
+				DrawListElement dle;
+				dle.m_instance = &inst;
+				dle.m_nugget   = this;
+				dle.m_sort_key = sk;
+				drawlist.push_back(dle);
 
-				return sk;
+				// Recursively add dependent nuggets
+				for (auto& nug : m_nuggets)
+					nug.AddToDrawlist(drawlist, inst, sko, id, sset);
 			}
+
+			// Enable/Disable alpha for this nugget
+			bool Alpha() const;
+			void Alpha(bool enable);
 		};
 	}
 }

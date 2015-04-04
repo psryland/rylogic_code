@@ -6,6 +6,7 @@
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/steps/render_step.h"
+#include "pr/renderer11/shaders/shader_set.h"
 
 namespace pr
 {
@@ -18,8 +19,7 @@ namespace pr
 			D3DPtr<ID3D11Buffer> m_cbuf_frame;   // Per-frame constant buffer
 			D3DPtr<ID3D11Buffer> m_cbuf_nugget;  // Per-nugget constant buffer
 			bool                 m_clear_bb;     // True if this render step clears the backbuffer before rendering
-			ShaderPtr            m_vs;
-			ShaderPtr            m_ps;
+			ShaderSet            m_sset;
 
 			ForwardRender(Scene& scene, bool clear_bb = true);
 

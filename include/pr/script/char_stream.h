@@ -314,9 +314,11 @@ namespace pr
 			explicit FileSrc0(char const* filepath, Loc* loc = 0)
 				:Src(ESrcType::File)
 				,m_buf()
-				,m_file(filepath)
+				,m_file(pr::filesys::ResolvePath<string>(filepath))
 				,m_loc(loc)
 			{
+				if (!m_file.good())
+					throw std::exception(FmtS("Failed to open file %s", filepath));
 				for (int i = 0; i != 8; ++i)
 					m_buf.push_back(fget());
 			}

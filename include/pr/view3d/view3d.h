@@ -13,6 +13,8 @@
 #include <windows.h>
 #include <d3d11.h>
 
+#pragma comment(lib, "view3d.lib")
+
 #ifdef VIEW3D_EXPORTS
 	namespace pr
 	{
@@ -223,9 +225,9 @@ extern "C"
 		EView3DGizmoEvent m_state;
 	} View3DGizmoEvent;
 
-	typedef void (__stdcall *View3D_SettingsChanged)(View3DWindow window);
-	typedef void (__stdcall *View3D_RenderCB)();
-	typedef void (__stdcall *View3D_ReportErrorCB)(char const* msg, void* ctx);
+	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
+	typedef void (__stdcall *View3D_RenderCB)(void* ctx);
+	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, char const* msg);
 	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
 	typedef void (__stdcall *View3D_EditObjectCB)(
 		UINT32 vcount,      // The maximum size of 'verts'
@@ -240,18 +242,19 @@ extern "C"
 		void* ctx);              // User context data
 
 	// Initialise/shutdown the dll
-	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB error_cb, void* ctx);
+	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_Shutdown         (View3DContext context);
 	VIEW3D_API void                    __stdcall View3D_PushGlobalErrorCB(View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_PopGlobalErrorCB (View3D_ReportErrorCB error_cb);
 
 	// Windows
-	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, BOOL gdi_compat, View3D_SettingsChanged settings_cb, View3D_RenderCB render_cb);
+	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, BOOL gdi_compat, View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_DestroyWindow     (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_PushErrorCB       (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_PopErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb);
 	VIEW3D_API char const*             __stdcall View3D_GetSettings       (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_SetSettings       (View3DWindow window, char const* settings);
+	VIEW3D_API void                    __stdcall View3D_SettingsChanged   (View3DWindow window, View3D_SettingsChangedCB settings_changed_cb, void* ctx, BOOL add);
 	VIEW3D_API void                    __stdcall View3D_AddObject         (View3DWindow window, View3DObject object);
 	VIEW3D_API void                    __stdcall View3D_RemoveObject      (View3DWindow window, View3DObject object);
 	VIEW3D_API void                    __stdcall View3D_RemoveAllObjects  (View3DWindow window);
@@ -297,15 +300,16 @@ extern "C"
 
 	// Objects
 	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async, char const* include_paths);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, int context_id, BOOL async, char const* include_paths, HMODULE module);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_ObjectsDeleteById        (int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectDelete             (View3DObject object);
-	VIEW3D_API View3DM4x4              __stdcall View3D_ObjectGetO2P             (View3DObject object);
-	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, View3DM4x4 const& o2p);
-	VIEW3D_API void                    __stdcall View3D_SetVisibility            (View3DObject obj, BOOL visible, char const* name);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectGetChild           (View3DObject object, char const* name);
+	VIEW3D_API View3DM4x4              __stdcall View3D_ObjectGetO2P             (View3DObject object, char const* name);
+	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, View3DM4x4 const& o2p, char const* name);
+	VIEW3D_API void                    __stdcall View3D_ObjectSetVisibility      (View3DObject obj, BOOL visible, char const* name);
 	VIEW3D_API View3DColour            __stdcall View3D_ObjectGetColour          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetTexture         (View3DObject object, View3DTexture tex, char const* name);
@@ -325,6 +329,8 @@ extern "C"
 	VIEW3D_API View3DTexture           __stdcall View3D_TextureRenderTarget         (View3DWindow window);
 
 	// Rendering
+	VIEW3D_API void                    __stdcall View3D_Invalidate               (View3DWindow window, BOOL erase);
+	VIEW3D_API void                    __stdcall View3D_InvalidateRect           (View3DWindow window, RECT const* rect, BOOL erase);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_Present                  (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_RenderTargetSize         (View3DWindow window, int& width, int& height);

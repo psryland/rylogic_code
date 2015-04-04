@@ -32,16 +32,16 @@ namespace pr.gui
 		public DateTimeOffset MinDate
 		{
 			get { return DateTimePicker.MinDate; }
-			set { DateTimePicker.MinDate = value.DateTime; }
+			set { DateTimePicker.MinDate = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
 		}
 
 		/// <summary>
-		/// Gets or sets the maximum date and time that can be selected in the control.
+		/// Gets or sets the maximum date and time that cann be selected in the control.
 		/// If 'Value' is outside the new [MinDate,MaxDate] range it gets clamped to the new range</summary>
 		public DateTimeOffset MaxDate
 		{
 			get { return DateTimePicker.MaxDate; }
-			set { DateTimePicker.MaxDate = value.DateTime; }
+			set { DateTimePicker.MaxDate = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
 		}
 
 		/// <summary>
@@ -50,7 +50,7 @@ namespace pr.gui
 		public DateTimeOffset Value
 		{
 			get { return DateTimePicker.Value; }
-			set { DateTimePicker.Value = value.DateTime; }
+			set { DateTimePicker.Value = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
 		}
 	}
 }

@@ -256,7 +256,7 @@ namespace pr
 					}
 				case EKeyword::Transpose:
 					{
-						p2w = pr::Transpose4x4(p2w);
+						p2w = pr::Transpose4x4_(p2w);
 						break;
 					}
 				case EKeyword::Inverse:
@@ -1270,7 +1270,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					SetAlphaBlending(nug, cont.m_vcont[0].m_diff.a != 1.0f);
+					nug.m_has_alpha = cont.m_vcont[0].m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 				{
@@ -1281,7 +1281,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = m_line_width != 0 ? static_cast<ShaderPtr>(thk_shdr) : ShaderPtr();
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					SetAlphaBlending(nug, props.m_has_alpha);
+					nug.m_has_alpha = props.m_has_alpha;
 					obj->m_model->CreateNugget(nug);
 				}
 				if (m_type & EArrowType::Fwd)
@@ -1293,7 +1293,7 @@ namespace pr
 					nug.m_smap[ERenderStep::ForwardRender].m_gs = arw_shdr;
 					nug.m_vrange = vrange;
 					nug.m_irange = irange;
-					SetAlphaBlending(nug, cont.m_vcont.back().m_diff.a != 1.0f);
+					nug.m_has_alpha = cont.m_vcont.back().m_diff.a != 1.0f;
 					obj->m_model->CreateNugget(nug);
 				}
 			}
@@ -3082,6 +3082,25 @@ out <<
 				child->AddBBoxToScene(scene, bbox_model, time_s, &m_i2w);
 		}
 
+		// Get the first child object of this object that matches 'name' (see Apply)
+		LdrObjectPtr LdrObject::Child(char const* name) const
+		{
+			LdrObjectPtr obj = nullptr;
+			Apply([&](LdrObject* o){ obj = o; return false; }, name);
+			return obj;
+		}
+
+		// Set the object to parent transform of this object or child objects matching 'name' (see Apply)
+		pr::m4x4 LdrObject::O2P(char const* name) const
+		{
+			auto obj = Child(name);
+			return obj ? obj->m_o2p : pr::m4x4Identity;
+		}
+		void LdrObject::O2P(pr::m4x4 const& o2p, char const* name)
+		{
+			Apply([&](LdrObject* o){ o->m_o2p = o2p; return true; }, name);
+		}
+
 		// Set the visibility of this object or child objects matching 'name' (see Apply)
 		void LdrObject::Visible(bool visible, char const* name)
 		{
@@ -3118,10 +3137,12 @@ out <<
 			Apply([=](LdrObject* o)
 			{
 				o->m_colour.m_aarrggbb = SetBits(o->m_base_colour.m_aarrggbb, mask, colour.m_aarrggbb);
+				if (o->m_model == nullptr) return true;
 
-				bool has_alpha = o->m_colour.a() != 0xFF;
-				o->m_sko.Alpha(has_alpha);
-				SetAlphaBlending(o->m_bsb, o->m_dsb, o->m_rsb, has_alpha);
+				auto has_alpha = o->m_colour.a() != 0xFF;
+				for (auto& nug : o->m_model->m_nuggets)
+					nug.Alpha(has_alpha);
+
 				return true;
 			}, name);
 		}
@@ -3132,10 +3153,12 @@ out <<
 			Apply([=](LdrObject* o)
 			{
 				o->m_colour = o->m_base_colour;
+				if (o->m_model == nullptr) return true;
 
-				bool has_alpha = o->m_colour.a() != 0xFF;
-				o->m_sko.Alpha(has_alpha);
-				SetAlphaBlending(o->m_bsb, o->m_dsb, o->m_rsb, has_alpha);
+				auto has_alpha = o->m_colour.a() != 0xFF;
+				for (auto& nug : o->m_model->m_nuggets)
+					nug.Alpha(has_alpha);
+
 				return true;
 			}, name);
 		}
@@ -3152,10 +3175,7 @@ out <<
 				for (auto& nug : o->m_model->m_nuggets)
 				{
 					nug.m_tex_diffuse = tex;
-
-					o->m_sko.Alpha(tex->m_has_alpha);
-					SetAlphaBlending(nug, tex->m_has_alpha);
-					// The drawlists will need to be resorted...
+					nug.Alpha(tex->m_has_alpha);
 				}
 				return true;
 			}, name);

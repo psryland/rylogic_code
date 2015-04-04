@@ -41,6 +41,8 @@
 #include "pr/common/assert.h"
 #include "pr/common/new.h"
 #include "pr/common/algorithm.h"
+#include "pr/common/static_callback.h"
+#include "pr/common/multi_cast.h"
 #include "pr/container/vector.h"
 #include "pr/filesys/fileex.h"
 #include "pr/script/reader.h"
@@ -69,15 +71,8 @@ namespace view3d
 	typedef std::set<View3DWindow>  WindowCont;
 	typedef std::set<EditorPtr>     EditorCont;
 	typedef std::lock_guard<std::recursive_mutex> LockGuard;
-	
-	struct ReportErrorCB
-	{
-		View3D_ReportErrorCB m_error_cb;
-		void* m_ctx;
-
-		ReportErrorCB(View3D_ReportErrorCB error_cb, void* ctx) :m_error_cb(error_cb) ,m_ctx(ctx) {}
-		void operator()(char const* msg) const { m_error_cb(msg, m_ctx); }
-	};
+	typedef pr::StaticCB<void,char const*> ReportErrorCB;
+	typedef pr::StaticCB<void,Window*> SettingsChangedCB;
 	typedef std::vector<ReportErrorCB> ErrorCBStack;
 
 	#define PR_RDR_INST(x)\

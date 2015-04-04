@@ -75,21 +75,28 @@ namespace RyLogViewer
 			if (m_licence.Valid)
 				return;
 
-			var lic = new Licence();
-			var text    = Clipboard.GetText(TextDataFormat.Text);
-			lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
-			lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
-			lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
-			lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
-			if (lic.Valid)
+			try
 			{
-				m_edit_name.Text            = lic.LicenceHolder  ;
-				m_edit_email.Text           = lic.EmailAddress   ;
-				m_edit_company.Text         = lic.Company        ;
-				m_edit_activation_code.Text = lic.ActivationCode ;
-			}
+				var lic = new Licence();
+				var text    = Clipboard.GetText(TextDataFormat.Text);
+				lic.LicenceHolder  = text.SubstringRegex(@"\s*License Holder:\s+", "($|<br/>)");
+				lic.EmailAddress   = text.SubstringRegex(@"\s*Email:\s+", "($|<br/>)");
+				lic.Company        = text.SubstringRegex(@"\s*Company:\s+", "($|<br/>)");
+				lic.ActivationCode = text.SubstringRegex(@"\s*Activation Code:\s+", "($|<br/>)", RegexOptions.Multiline);
+				if (lic.Valid)
+				{
+					m_edit_name.Text            = lic.LicenceHolder  ;
+					m_edit_email.Text           = lic.EmailAddress   ;
+					m_edit_company.Text         = lic.Company        ;
+					m_edit_activation_code.Text = lic.ActivationCode ;
+				}
 
-			UpdateUI();
+				UpdateUI();
+			}
+			catch (Exception ex)
+			{
+				Log.Warn(this, "Exception during ScanClipboard\n{0}".Fmt(ex.Message));
+			}
 		}
 
 		/// <summary>Navigate the 'request my license info again' page</summary>
