@@ -131,27 +131,19 @@ namespace pr
 			for (auto& nug : nuggets)
 			{
 				// Ensure the nugget contains the required vs/gs/ps shaders
-				nug.m_smap[Id].m_vs = m_vs;
-				switch (nug.m_topo) {
+				auto sset = ShaderSet{};
+				sset.m_vs = m_vs;
+				sset.m_ps = m_ps;
+				switch (nug.m_topo)
+				{
 				case EPrim::LineList:
-				case EPrim::LineStrip:
-					nug.m_smap[Id].m_gs = m_gs_line;
-					break;
+				case EPrim::LineStrip: sset.m_gs = m_gs_line; break;
 				case EPrim::TriList:
-				case EPrim::TriStrip:
-					nug.m_smap[Id].m_gs = m_gs_face;
-					break;
-				default:
-					continue; // Ignore point lists.. can a point cast a shadow anyway?
+				case EPrim::TriStrip: sset.m_gs = m_gs_face; break;
+				default: continue; // Ignore point lists.. can a point cast a shadow anyway?
 				}
-				nug.m_smap[Id].m_ps = m_ps;
 
-				// Add a dle for this nugget
-				DrawListElement dle;
-				dle.m_instance = &inst;
-				dle.m_nugget   = &nug;
-				dle.m_sort_key = SortKey();
-				m_drawlist.push_back_fast(dle);
+				nug.AddToDrawlist(m_drawlist, inst, nullptr, Id, sset);
 			}
 
 			m_sort_needed = true;

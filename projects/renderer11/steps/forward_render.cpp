@@ -22,9 +22,11 @@ namespace pr
 			,m_cbuf_frame (m_shdr_mgr->GetCBuf<hlsl::fwd::CBufFrame>("Fwd::CBufFrame"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::fwd::CBufModel>("Fwd::CBufModel"))
 			,m_clear_bb(clear_bb)
-			,m_vs(m_shdr_mgr->FindShader(EStockShader::FwdShaderVS))
-			,m_ps(m_shdr_mgr->FindShader(EStockShader::FwdShaderPS))
-		{}
+			,m_sset()
+		{
+			m_sset.m_vs = m_shdr_mgr->FindShader(EStockShader::FwdShaderVS);
+			m_sset.m_ps = m_shdr_mgr->FindShader(EStockShader::FwdShaderPS);
+		}
 
 		// Add model nuggets to the draw list for this render step
 		void ForwardRender::AddNuggets(BaseInstance const& inst, TNuggetChain& nuggets)
@@ -35,23 +37,7 @@ namespace pr
 			// Add a drawlist element for each nugget in the instance's model
 			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-			{
-				// Ensure the nugget contains forward shaders vs/ps
-				// Note, the nugget may contain other shaders (e.g. gs) that is used by this render step as well
-				if (!nug.m_smap[Id].m_vs) nug.m_smap[Id].m_vs = m_vs;
-				if (!nug.m_smap[Id].m_ps) nug.m_smap[Id].m_ps = m_ps;
-
-				// Create the sort key for this nugget
-				auto sk = nug.sort_key(Id);
-				if (sko) sk = sko->Combine(sk);
-
-				// Add a dle for this nugget
-				DrawListElement dle;
-				dle.m_instance = &inst;
-				dle.m_nugget   = &nug;
-				dle.m_sort_key = sk;
-				m_drawlist.push_back_fast(dle);
-			}
+				nug.AddToDrawlist(m_drawlist, inst, sko, Id, m_sset);
 
 			m_sort_needed = true;
 		}

@@ -197,6 +197,7 @@
     <ClInclude Include="..\projects\renderer11\textures\wic_texture_loader.h" />
     <ClInclude Include="..\projects\renderer11\util\forward_private.h" />
     <ClInclude Include="..\projects\renderer11\util\stdafx.h" />
+    <ClCompile Include="..\projects\renderer11\models\nugget.cpp" />
     <ClCompile Include="..\projects\renderer11\util\util.cpp" />
     <ClCompile Include="..\projects\renderer11\config\config.cpp" />
     <ClCompile Include="..\projects\renderer11\directxtex\BC.cpp" />

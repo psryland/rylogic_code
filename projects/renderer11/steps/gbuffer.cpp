@@ -26,9 +26,11 @@ namespace pr
 			,m_main_dsv()
 			,m_cbuf_camera(m_shdr_mgr->GetCBuf<hlsl::ds::CBufCamera>("ds::CBufCamera"))
 			,m_cbuf_nugget(m_shdr_mgr->GetCBuf<hlsl::ds::CBufModel >("ds::CBufModel"))
-			,m_vs(m_shdr_mgr->FindShader(EStockShader::GBufferVS))
-			,m_ps(m_shdr_mgr->FindShader(EStockShader::GBufferPS))
+			,m_sset()
 		{
+			m_sset.m_vs = m_shdr_mgr->FindShader(EStockShader::GBufferVS);
+			m_sset.m_ps = m_shdr_mgr->FindShader(EStockShader::GBufferPS);
+
 			InitRT(true);
 
 			m_rsb = RSBlock::SolidCullBack();
@@ -138,22 +140,7 @@ namespace pr
 			// correspond to the render nuggets of the renderable
 			m_drawlist.reserve(m_drawlist.size() + nuggets.size());
 			for (auto& nug : nuggets)
-			{
-				// Ensure the nugget contains gbuffer shaders vs/ps
-				// Note, the nugget may contain other shaders that are used by this render step as well
-				nug.m_smap[Id].m_vs = m_vs;
-				nug.m_smap[Id].m_ps = m_ps;
-
-				// Create the sort key for this nugget
-				auto sk = nug.sort_key(Id);
-				if (sko) sk = sko->Combine(sk);
-
-				DrawListElement dle;
-				dle.m_instance = &inst;
-				dle.m_nugget   = &nug;
-				dle.m_sort_key = sk;
-				m_drawlist.push_back_fast(dle);
-			}
+				nug.AddToDrawlist(m_drawlist, inst, sko, Id, m_sset);
 
 			m_sort_needed = true;
 		}

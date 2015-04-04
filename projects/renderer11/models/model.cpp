@@ -72,11 +72,8 @@ namespace pr
 			// Create the nugget and add it to the model
 			if (!props.m_irange.empty())
 			{
-				m_nuggets.push_back(*m_model_buffer->m_mdl_mgr->m_alex_nugget.New(props));
-				Nugget& nugget        = m_nuggets.back();
-				nugget.m_model_buffer = m_model_buffer;
-				nugget.m_prim_count   = PrimCount(props.m_irange.size(), props.m_topo);
-				nugget.m_owner        = this;
+				auto nug = m_model_buffer->m_mdl_mgr->m_alex_nugget.New(props, m_model_buffer, this);
+				m_nuggets.push_back(*nug);
 			}
 		}
 

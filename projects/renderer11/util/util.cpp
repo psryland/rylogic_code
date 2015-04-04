@@ -177,34 +177,6 @@ namespace pr
 			*num_bytes = *row_bytes * *num_rows;
 		}
 
-		// Helper for setting alpha blending states
-		void SetAlphaBlending(BSBlock& bsb, DSBlock& dsb, RSBlock& rsb, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
-		{
-			if (on)
-			{
-				// ZWrites need to be disabled too
-				bsb.Set(EBS::BlendEnable    ,TRUE      ,render_target);
-				bsb.Set(EBS::BlendOp        ,blend_op  ,render_target);
-				bsb.Set(EBS::SrcBlend       ,src_blend ,render_target);
-				bsb.Set(EBS::DestBlend      ,dst_blend ,render_target);
-				dsb.Set(EDS::DepthWriteMask ,D3D11_DEPTH_WRITE_MASK_ZERO);
-				rsb.Set(ERS::CullMode       ,D3D11_CULL_NONE);
-			}
-			else
-			{
-				bsb.Clear(EBS::BlendEnable ,render_target);
-				bsb.Clear(EBS::BlendOp     ,render_target);
-				bsb.Clear(EBS::SrcBlend    ,render_target);
-				bsb.Clear(EBS::DestBlend   ,render_target);
-				dsb.Clear(EDS::DepthWriteMask);
-				rsb.Clear(ERS::CullMode);
-			}
-		}
-		void SetAlphaBlending(NuggetProps& ddata, bool on, int render_target, D3D11_BLEND_OP blend_op, D3D11_BLEND src_blend, D3D11_BLEND dst_blend)
-		{
-			SetAlphaBlending(ddata.m_bsb, ddata.m_dsb, ddata.m_rsb, on, render_target, blend_op, src_blend, dst_blend);
-		}
-
 		// Performs a bunch of checks to ensure the system that the renderer is running supports the necessary features
 		bool TestSystemCompatibility()
 		{

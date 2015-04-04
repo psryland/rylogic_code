@@ -399,7 +399,12 @@
     <ClCompile Include="..\projects\renderer11\render\window.cpp">
       <Filter>render</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\renderer11\util\util.cpp" />
+    <ClCompile Include="..\projects\renderer11\util\util.cpp">
+      <Filter>util</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\renderer11\models\nugget.cpp">
+      <Filter>models</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\renderer11\shaders\hlsl\deferred\gbuffer.hlsli">
