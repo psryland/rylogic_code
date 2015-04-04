@@ -107,7 +107,15 @@ namespace pr
 			BLUETOOTH_SELECT_DEVICE_PARAMS m_params;
 			bool m_valid;
 
-			BluetoothDeviceUI(BLUETOOTH_SELECT_DEVICE_PARAMS params = {sizeof(BLUETOOTH_SELECT_DEVICE_PARAMS)})
+			static BLUETOOTH_SELECT_DEVICE_PARAMS DefaultParams()
+			{
+				auto params = BLUETOOTH_SELECT_DEVICE_PARAMS{sizeof(BLUETOOTH_SELECT_DEVICE_PARAMS)};
+				params.fShowRemembered = TRUE;
+				params.fShowUnknown = TRUE;
+				return params;
+			}
+
+			BluetoothDeviceUI(BLUETOOTH_SELECT_DEVICE_PARAMS params = DefaultParams())
 				:m_params(params)
 				,m_valid(false)
 			{}

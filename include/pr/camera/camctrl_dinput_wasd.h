@@ -86,7 +86,7 @@ namespace pr
 				if (m_kb.KeyDown(DIK_D)) rot += turn;       // yaw right
 				
 				// Decelerate if not accelerating
-				if (pr::FEqlZero3(lin_acc))
+				if (pr::FEql3(lin_acc, pr::v4Zero))
 				{
 					float vel = pr::Length3(m_velocity);
 					if (vel < ldec * dt) lin_acc = -m_velocity;

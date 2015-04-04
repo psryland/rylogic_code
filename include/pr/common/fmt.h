@@ -142,7 +142,7 @@ namespace pr
 	// Static, use with caution, but fast string format
 	template <typename Ctx, size_t Sz, typename TChar> inline TChar const* FmtArgs(TChar const* format, va_list arg_list)
 	{
-		thread_local static TChar buf[Sz];
+		static thread_local TChar buf[Sz];
 		int result = impl::Format(buf, Sz-1, format, arg_list);
 		assert(result >= 0 && result < Sz-1 && "formatted string truncated");
 		buf[result] = 0;
@@ -179,7 +179,7 @@ namespace pr
 
 	static __inline char const* FmtS(char const* format, ...)
 	{
-		static char buffer[256];
+		static thread_local char buffer[256];
 		va_list arg_list;
 		va_start(arg_list, format);
 		vsnprintf(buffer, sizeof(buffer), format, arg_list);

@@ -107,7 +107,7 @@ namespace pr
 				auto up       = pr::To<pr::v3>(GetCtrlText(m_edit_up)).w0();
 				auto hfov     = pr::DegreesToRadians(pr::To<float>(GetCtrlText(m_edit_horz_fov)));
 
-				if (pr::FEqlZero3(lookat - position))
+				if (pr::FEql3(lookat - position, pr::v4Zero))
 					lookat = position + pr::v4ZAxis;
 				if (pr::Parallel(lookat - position, up))
 					up = pr::Perpendicular(up);

@@ -21,6 +21,7 @@
 #include <iostream>
 #include <memory>
 #include <chrono>
+#include <atomic>
 #include <mutex>
 #include <thread>
 #include <cassert>
@@ -124,11 +125,11 @@ namespace pr
 		{
 			void operator ()(Event const& ev)
 			{
-				char const* delim = " ";
+				char const* delim = "";
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
 				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim = " "; }
 				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim = " "; }
-				std::cout << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+				std::cout << delim << FmtS("%8s",ev.m_context.c_str()) << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
 			}
 		};
 
@@ -145,7 +146,7 @@ namespace pr
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
 				if (!ev.m_file.empty()) { *m_outf << ev.m_file;                delim = " "; }
 				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim = " "; }
-				*m_outf << delim << ev.m_context << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+				*m_outf << delim << FmtS("%8s",ev.m_context.c_str()) << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
 			}
 		};
 	}
@@ -269,27 +270,37 @@ namespace pr
 			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size = 0)
 				:m_context_name(context_name)
 				,m_context(new Context(log_cb, occurrences_batch_size))
-			{}
+				,Enabled()
+			{
+				Enabled = true;
+			}
 			Logger(Logger const& rhs, log::string context_name)
 				:m_context_name(context_name)
 				,m_context(rhs.m_context)
+				,Enabled(rhs.Enabled)
 			{}
+
+			// On/Off switch for logging
+			std::atomic_bool Enabled;
 
 			// Log a message
 			void Write(log::ELevel level, log::string msg, char const* file = "", int line = -1)
 			{
+				if (!Enabled) return;
 				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg, file, line));
 			}
 
 			// Log an exception with message 'msg'
 			void Write(log::ELevel level, std::exception const& ex, log::string msg, char const* file = "", int line = -1)
 			{
+				if (!Enabled) return;
 				m_context->Enqueue(log::Event(level, m_context->m_time_zero, m_context_name, msg + " - Exception: " + ex.what(), file, line));
 			}
 
 			// Block the caller until the logger is idle
 			void Flush()
 			{
+				if (!Enabled) return;
 				m_context->WaitTillIdle(true);
 			}
 		};

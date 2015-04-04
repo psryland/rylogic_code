@@ -23,43 +23,7 @@
 //  Use these to remove dependencies in standalone files:
 //
 //"pr/common/assert.h" should be included prior to this for pr asserts
-
-//#ifndef PR_ASSERT
-//#   define PR_ASSERT_DEFINED
-//#   define PR_ASSERT(grp, exp, str)
-//#endif
-//#ifdef PR_ASSERT_DEFINED
-//#   undef PR_ASSERT_DEFINED
-//#   undef PR_ASSERT
-//#endif
-//#ifndef PR_EXPAND
-//#   define PR_EXPAND_DEFINED
-//#   define PR_EXPAND(grp, exp)
-//#endif
-//#ifdef PR_EXPAND_DEFINED
-//#   undef PR_EXPAND_DEFINED
-//#   undef PR_EXPAND
-//#endif
-//#ifndef PR_INFO
-//#   define PR_INFO_DEFINED
-//#   define PR_INFO(grp, str)
-//#endif
-//#ifdef PR_INFO_DEFINED
-//#   undef PR_INFO_DEFINED
-//#   undef PR_INFO
-//#endif
-//#ifndef PR_INFO_EXP
-//#   define PR_INFO_EXP_DEFINED
-//#   define PR_INFO_EXP(grp, exp, str)
-//#endif
-//#ifdef PR_INFO_EXP_DEFINED
-//#   undef PR_INFO_EXP_DEFINED
-//#   undef PR_INFO_EXP
-//#endif
-//
 #pragma once
-#ifndef PR_COMMON_ASSERT_H
-#define PR_COMMON_ASSERT_H
 
 // Assert enabler for common headers
 // If not defined, set it based on whether it's a debug build
@@ -206,6 +170,4 @@
 
 #ifndef PR_UNUSED
 #   define PR_UNUSED(exp) sizeof(exp)
-#endif
-
 #endif

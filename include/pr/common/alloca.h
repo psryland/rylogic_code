@@ -3,8 +3,7 @@
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
 
-#ifndef PR_COMMON_ALLOCA_H
-#define PR_COMMON_ALLOCA_H
+#pragma once
 
 namespace pr
 {
@@ -86,6 +85,3 @@ namespace pr
 #define PR_MALLOCA(pointer, type, count)\
 	0;\
 	pr::MAllocAScope<type> malloca_scope_##_pointer(pointer, (count), _malloca((count)*sizeof(type)))
-
-#endif
-
