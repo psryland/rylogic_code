@@ -3,10 +3,9 @@
 //  Copyright (c) Rylogic Ltd 2002
 //*****************************************************************************
 // Usage:
-
+#pragma once
 #ifndef PR_GUI_CONTEXT_MENU_H
 #define PR_GUI_CONTEXT_MENU_H
-#pragma once
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -101,20 +100,18 @@ namespace pr
 			static Gdiplus::Rect MeasureBitmap(BitmapPtr const& bm, int width)
 			{
 				// Measure the size of a bitmap rescaled to fit widthwise within 'width'
-				using namespace Gdiplus;
-				if (!bm) return Rect(0,0,0,0);
-				Rect rect(0, 0, bm->GetWidth(), bm->GetHeight());
+				if (!bm) return Gdiplus::Rect(0,0,0,0);
+				Gdiplus::Rect rect(0, 0, bm->GetWidth(), bm->GetHeight());
 				rect.Height = rect.Height * width / rect.Width;
 				rect.Width  = width;
 				return rect;
 			}
 			static void Bkgd(Gdiplus::Graphics& gfx, Gdiplus::Rect const& rect, bool selected, StylePtr const& style)
 			{
-				using namespace Gdiplus;
-				Color col_bkgd = selected ? style->m_col_select : style->m_col_bkgd;
-				Pen   pen_3dhi(ColAdj(col_bkgd, 10, 10, 10));
-				Pen   pen_3dlo(ColAdj(col_bkgd,-10,-10,-10));
-				SolidBrush bsh_bkgd(col_bkgd);
+				Gdiplus::Color col_bkgd = selected ? style->m_col_select : style->m_col_bkgd;
+				Gdiplus::Pen   pen_3dhi(ColAdj(col_bkgd, 10, 10, 10));
+				Gdiplus::Pen   pen_3dlo(ColAdj(col_bkgd,-10,-10,-10));
+				Gdiplus::SolidBrush bsh_bkgd(col_bkgd);
 
 				gfx.FillRectangle(&bsh_bkgd, rect);
 				int x = rect.X + style->m_margin_left;
@@ -123,20 +120,18 @@ namespace pr
 			}
 			static void Bitmap(Gdiplus::Graphics& gfx, Gdiplus::Rect const& rect, BitmapPtr const& bm, StylePtr const& style)
 			{
-				using namespace Gdiplus;
 				if (bm == 0) return;
-				Rect bm_sz = MeasureBitmap(bm, style->m_margin_left - 2);
-				Rect r(rect.X + 1, rect.Y + 1, bm_sz.Width, bm_sz.Height);
+				Gdiplus::Rect bm_sz = MeasureBitmap(bm, style->m_margin_left - 2);
+				Gdiplus::Rect r(rect.X + 1, rect.Y + 1, bm_sz.Width, bm_sz.Height);
 				gfx.DrawImage(bm.get(), r);
 			}
 			static void Check(Gdiplus::Graphics& gfx, Gdiplus::Rect const& rect, int check_state, bool disabled, StylePtr const& style)
 			{
-				using namespace Gdiplus;
 				if (check_state == 0) return;
-				SolidBrush bsh_text(disabled ? style->m_col_text_da : style->m_col_text);
+				Gdiplus::SolidBrush bsh_text(disabled ? style->m_col_text_da : style->m_col_text);
 				wchar_t const* tick = (check_state == 1) ? L"a" : L"h"; int const tick_len = 1;
-				RectF sz; gfx.MeasureString(tick, tick_len, style->m_font_marks.get(), PointF(), &sz);
-				PointF pt(float(rect.X + (style->m_margin_left - sz.Width)*0.5f), float(rect.Y + (rect.Height - sz.Height)*0.5f));
+				Gdiplus::RectF sz; gfx.MeasureString(tick, tick_len, style->m_font_marks.get(), Gdiplus::PointF(), &sz);
+				Gdiplus::PointF pt(float(rect.X + (style->m_margin_left - sz.Width)*0.5f), float(rect.Y + (rect.Height - sz.Height)*0.5f));
 				gfx.DrawString(tick, tick_len, style->m_font_marks.get(), pt, &bsh_text);
 			}
 		};
@@ -174,14 +169,13 @@ namespace pr
 				}
 				void DrawItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di)
 				{
-					using namespace Gdiplus;
 					StylePtr const& style = menu->m_def_style;
 
 					ContextMenuItemDraw::Bkgd(gfx, ToRect(di->rcItem), false, style);
-					Rect rect = ToRect(di->rcItem);
+					Gdiplus::Rect rect = ToRect(di->rcItem);
 
-					Pen pen_3dhi(ColAdj(style->m_col_bkgd, 10, 10, 10));
-					Pen pen_3dlo(ColAdj(style->m_col_bkgd,-10,-10,-10));
+					Gdiplus::Pen pen_3dhi(ColAdj(style->m_col_bkgd, 10, 10, 10));
+					Gdiplus::Pen pen_3dlo(ColAdj(style->m_col_bkgd,-10,-10,-10));
 					int x0 = rect.X + style->m_margin_left + 1;
 					int x1 = rect.X + rect.Width;
 					int y = rect.Y + rect.Height / 2;
@@ -221,29 +215,27 @@ namespace pr
 				}
 				void MeasureItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPMEASUREITEMSTRUCT mi)
 				{
-					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 
 					// Measure the text size
 					Gdiplus::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					RectF text_sz; gfx.MeasureString(m_text.c_str(), int(m_text.size()), style->m_font_text.get(), PointF(), &fmt, &text_sz);
+					Gdiplus::RectF text_sz; gfx.MeasureString(m_text.c_str(), int(m_text.size()), style->m_font_text.get(), Gdiplus::PointF(), &fmt, &text_sz);
 					m_rect_text = ToRect(text_sz);
 
 					// Measure the bitmap size
-					Rect bm_sz = ContextMenuItemDraw::MeasureBitmap(m_bitmap, style->m_margin_left - 2*BmpMargin);
+					auto bm_sz = ContextMenuItemDraw::MeasureBitmap(m_bitmap, style->m_margin_left - 2*BmpMargin);
 
 					// Set item dimensions
-					Rect sz = m_rect_text; sz.Inflate(TextMargin, TextMargin);
+					auto sz = m_rect_text; sz.Inflate(TextMargin, TextMargin);
 					mi->itemWidth  = style->m_margin_left + sz.Width;
 					mi->itemHeight = std::max(sz.Height, std::max(bm_sz.Height, GetSystemMetrics(SM_CYMENU)));
 				}
 				void DrawItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di)
 				{
-					using namespace Gdiplus;
-					StylePtr const& style = m_style ? m_style : menu->m_def_style;
+					auto style = m_style ? m_style : menu->m_def_style;
 					bool selected = (di->itemState & ODS_SELECTED) != 0;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
-					Rect rect = ToRect(di->rcItem);
+					auto rect = ToRect(di->rcItem);
 
 					// Draw background and left margin items
 					ContextMenuItemDraw::Bkgd  (gfx, rect, selected, style);
@@ -251,9 +243,9 @@ namespace pr
 					ContextMenuItemDraw::Check (gfx, rect, m_check_state, disabled, style);
 
 					// Draw the label text
-					SolidBrush bsh_text(disabled ? style->m_col_text_da : style->m_col_text);
+					Gdiplus::SolidBrush bsh_text(disabled ? style->m_col_text_da : style->m_col_text);
 					Gdiplus::StringFormat fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
-					PointF pt(float(rect.X + style->m_margin_left + TextMargin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
+					Gdiplus::PointF pt(float(rect.X + style->m_margin_left + TextMargin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
 					gfx.DrawString(m_text.c_str(), int(m_text.size()), style->m_font_text.get(), pt, &fmt, &bsh_text);
 				}
 				void Selected(ContextMenu*, RECT const&, MENUITEMINFO const&) {}
@@ -290,42 +282,40 @@ namespace pr
 				}
 				void MeasureItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPMEASUREITEMSTRUCT mi)
 				{
-					using namespace Gdiplus;
-					StylePtr const& style = m_style ? m_style : menu->m_def_style;
+					auto style = m_style ? m_style : menu->m_def_style;
 
 					// Measure the label portion of the item
 					Label::MeasureItem(menu, gfx, mi);
 
 					// Measure the edit box portion
-					RectF text_sz; gfx.MeasureString(m_value.c_str(), int(m_value.size()), style->m_font_text.get(), PointF(), 0, &text_sz);
+					Gdiplus::RectF text_sz; gfx.MeasureString(m_value.c_str(), int(m_value.size()), style->m_font_text.get(), Gdiplus::PointF(), 0, &text_sz);
 					m_rect_value = ToRect(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
 
 					// Expand the item dimensions
-					Rect r = m_rect_value; r.Inflate(InnerMargin+OuterMargin, InnerMargin+OuterMargin);
+					auto r = m_rect_value; r.Inflate(InnerMargin+OuterMargin, InnerMargin+OuterMargin);
 					mi->itemWidth += r.Width;
 					mi->itemHeight = std::max(int(mi->itemHeight), r.Height);
 				}
 				void DrawItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di)
 				{
-					using namespace Gdiplus;
-					StylePtr const& style = m_style ? m_style : menu->m_def_style;
+					auto style = m_style ? m_style : menu->m_def_style;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
-					Rect rect = ToRect(di->rcItem);
+					auto rect = ToRect(di->rcItem);
 
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
 
 					// Draw edit box
-					Rect r = CtrlRect(rect, style->m_margin_left);
-					SolidBrush bsh_bkgd(disabled ? Color((ARGB)Color::LightGray) : Color((ARGB)Color::WhiteSmoke));
-					Pen        pen_brdr(Color((ARGB)Color::Black), 0);
+					auto r = CtrlRect(rect, style->m_margin_left);
+					Gdiplus::SolidBrush bsh_bkgd(disabled ? Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::LightGray) : Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::WhiteSmoke));
+					Gdiplus::Pen        pen_brdr(Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::Black), 0);
 					gfx.FillRectangle(&bsh_bkgd, r);
 					gfx.DrawRectangle(&pen_brdr, r);
 
 					// Write the edit box text
-					SolidBrush bsh_edittxt(style->m_col_text);
-					PointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
+					Gdiplus::SolidBrush bsh_edittxt(style->m_col_text);
+					Gdiplus::PointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
 					gfx.DrawString(m_value.c_str(), int(m_value.size()), style->m_font_text.get(), pt, 0, &bsh_edittxt);
 				}
 				void Selected(ContextMenu* menu, RECT const& rect, MENUITEMINFO const&)
@@ -417,24 +407,23 @@ namespace pr
 				}
 				void MeasureItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPMEASUREITEMSTRUCT mi)
 				{
-					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 
 					// Measure the label portion of the item
 					Label::MeasureItem(menu, gfx, mi);
 
 					// Measure the combo box portion
-					RectF text_sz(0,0,0,0);
-					for (ValueCont::const_iterator i = m_values.begin(), iend = m_values.end(); i != iend; ++i)
+					Gdiplus::RectF text_sz(0,0,0,0);
+					for (auto value : m_values)
 					{
-						RectF sz; gfx.MeasureString(i->c_str(), int(i->size()), style->m_font_text.get(), PointF(), 0, &sz);
-						RectF::Union(text_sz, text_sz, sz);
+						Gdiplus::RectF sz; gfx.MeasureString(value.c_str(), int(value.size()), style->m_font_text.get(), Gdiplus::PointF(), 0, &sz);
+						Gdiplus::RectF::Union(text_sz, text_sz, sz);
 					}
 					m_rect_value = ToRect(text_sz);
 					m_rect_value.Width = std::max(m_rect_value.Width, m_min_width);
 
 					// Expand the item dimensions
-					Rect r = m_rect_value;
+					auto r = m_rect_value;
 					r.Inflate(InnerMargin, InnerMargin);
 					r.Width += ArwBtnWidth;
 					r.Inflate(OuterMargin, OuterMargin);
@@ -443,17 +432,16 @@ namespace pr
 				}
 				void DrawItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di)
 				{
-					using namespace Gdiplus;
 					StylePtr const& style = m_style ? m_style : menu->m_def_style;
 					bool disabled = (di->itemState & ODS_DISABLED) != 0;
-					Rect rect = ToRect(di->rcItem);
-					Rect rect_ctrl = CtrlRect(rect, style->m_margin_left);
-					Rect rect_btn  = rect_ctrl; rect_btn.X = rect_btn.GetRight() - ArwBtnWidth; rect_btn.Width = ArwBtnWidth;
+					auto rect = ToRect(di->rcItem);
+					auto rect_ctrl = CtrlRect(rect, style->m_margin_left);
+					auto rect_btn  = rect_ctrl; rect_btn.X = rect_btn.GetRight() - ArwBtnWidth; rect_btn.Width = ArwBtnWidth;
 
-					SolidBrush bsh_edittxt(style->m_col_text);
-					SolidBrush bsh_bkgd(disabled ? Color((ARGB)Color::LightGray) : Color((ARGB)Color::WhiteSmoke));
-					SolidBrush bsh_bkgdarw(Color((ARGB)Color::LightGray));
-					Pen        pen_brdr(Color((ARGB)Color::Black), 0);
+					Gdiplus::SolidBrush bsh_edittxt(style->m_col_text);
+					Gdiplus::SolidBrush bsh_bkgd(disabled ? Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::LightGray) : Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::WhiteSmoke));
+					Gdiplus::SolidBrush bsh_bkgdarw(Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::LightGray));
+					Gdiplus::Pen        pen_brdr(Gdiplus::Color((Gdiplus::ARGB)Gdiplus::Color::Black), 0);
 
 					// Draw the label
 					Label::DrawItem(menu, gfx, di);
@@ -464,14 +452,14 @@ namespace pr
 					gfx.DrawRectangle(&pen_brdr, rect_ctrl);
 					gfx.FillRectangle(&bsh_bkgdarw, rect_btn);
 					gfx.DrawRectangle(&pen_brdr, rect_btn);
-					RectF rect_arw; gfx.MeasureString(arw, 1, style->m_font_marks.get(), PointF(), &rect_arw);
-					PointF pt(rect_btn.X + (rect_btn.Width - rect_arw.Width) * 0.5f, rect_btn.Y + (rect_btn.Height - rect_arw.Height) * 0.5f);
+					Gdiplus::RectF rect_arw; gfx.MeasureString(arw, 1, style->m_font_marks.get(), Gdiplus::PointF(), &rect_arw);
+					Gdiplus::PointF pt(rect_btn.X + (rect_btn.Width - rect_arw.Width) * 0.5f, rect_btn.Y + (rect_btn.Height - rect_arw.Height) * 0.5f);
 					gfx.DrawString(arw, 1, style->m_font_marks.get(), pt, &bsh_edittxt);
 
 					// Draw the selected value text
 					if (m_index < int(m_values.size()))
 					{
-						PointF pt(float(rect_ctrl.X + InnerMargin), float(rect_ctrl.Y + InnerMargin));
+						Gdiplus::PointF pt(float(rect_ctrl.X + InnerMargin), float(rect_ctrl.Y + InnerMargin));
 						gfx.DrawString(m_values[m_index].c_str(), int(m_values[m_index].size()), style->m_font_text.get(), pt, 0, &bsh_edittxt);
 					}
 				}
@@ -547,11 +535,11 @@ namespace pr
 			Label    m_label;     // The text for this menu (used when added as a submenu)
 
 			ContextMenu(wchar_t const* text = L"Menu", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr())
-			:m_items()
-			,m_root(::CreatePopupMenu())
-			,m_def_style(new ContextMenuStyle())
-			,m_label(text, id, check_state, style)
-			,m_sel()
+				:m_items()
+				,m_root(::CreatePopupMenu())
+				,m_def_style(new ContextMenuStyle())
+				,m_label(text, id, check_state, style)
+				,m_sel()
 			{}
 			~ContextMenu()
 			{
