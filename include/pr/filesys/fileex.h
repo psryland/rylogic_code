@@ -70,17 +70,11 @@
 //  Seek    = SetFilePointer()
 //  Flush   = FlushFileBuffers()
 #pragma once
-#ifndef PR_FILE_EX_H
-#define PR_FILE_EX_H
 
-#include <windows.h>
 #include <sstream>
 #include <exception>
-
-#ifndef PR_ASSERT
-#   define PR_ASSERT_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
+#include <cassert>
+#include <windows.h>
 
 namespace pr
 {
@@ -88,39 +82,76 @@ namespace pr
 	struct Handle
 	{
 		HANDLE m_handle;
-		Handle() :m_handle(INVALID_HANDLE_VALUE) {}
-		Handle(HANDLE handle) :m_handle(handle) {}
-		Handle(Handle const& rhs) :m_handle(rhs.m_handle)   { PR_ASSERT(1, rhs.m_handle == INVALID_HANDLE_VALUE, "pr::Handle should only be copied when the file isn't open"); }
-		~Handle()                                           { close(); }
-		Handle& operator = (HANDLE rhs)                     { close(); m_handle = rhs; return *this; }
-		//use release() Handle& operator = (Handle const& rhs); { close(); m_handle = rhs.m_handle; PR_ASSERT(1, rhs.m_handle == INVALID_HANDLE_VALUE, "pr::Handle should only be copied when the file isn't open"); return *this; }
-		operator HANDLE& ()                                 { return m_handle; }
-		operator HANDLE const& () const                     { return m_handle; }
-		void close()                                        { if (m_handle != INVALID_HANDLE_VALUE) CloseHandle(m_handle); m_handle = INVALID_HANDLE_VALUE; }
-		HANDLE release()                                    { HANDLE h = m_handle; m_handle = INVALID_HANDLE_VALUE; return h; }
+
+		~Handle()
+		{
+			close();
+		}
+		Handle()
+			:m_handle(INVALID_HANDLE_VALUE)
+		{}
+		Handle(HANDLE handle)
+			:m_handle(handle)
+		{}
+		Handle(Handle const& rhs)
+			:m_handle(rhs.m_handle)
+		{
+			assert(rhs.m_handle == INVALID_HANDLE_VALUE && "pr::Handle should only be copied when the handle isn't valid");
+		}
+		Handle(Handle&& rhs)
+			:m_handle(rhs.m_handle)
+		{
+			rhs.m_handle = INVALID_HANDLE_VALUE;
+		}
+		Handle& operator = (Handle const& rhs)
+		{
+			if (this == &rhs) return *this;
+			assert(rhs.m_handle == INVALID_HANDLE_VALUE && "pr::Handle should only be copied when the handle isn't valid");
+			close();
+			return *this;
+		}
+		Handle& operator = (Handle&& rhs)
+		{
+			if (this == &rhs) return *this;
+			std::swap(m_handle, rhs.m_handle);
+			return *this;
+		}
+
+		void close()
+		{
+			if (m_handle == INVALID_HANDLE_VALUE) return;
+			CloseHandle(m_handle);
+			m_handle = INVALID_HANDLE_VALUE;
+		}
+		HANDLE release()
+		{
+			HANDLE h = m_handle;
+			m_handle = INVALID_HANDLE_VALUE;
+			return h;
+		}
+
+		operator HANDLE() const { return m_handle; }
 	};
 	
 	// A template version of FileOpen equal to CreateFile that handles unicode better
-	template <typename tchar> inline HANDLE FileOpen(tchar const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-	template <> inline HANDLE FileOpen(char const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+	inline HANDLE FileOpen(char const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 	{
 		return CreateFileA(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 	}
-	template <> inline HANDLE FileOpen(wchar_t const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+	inline HANDLE FileOpen(wchar_t const* lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
 	{
 		return CreateFileW(lpFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 	}
 	
 	// Delete a file or directory
-	template <typename tchar> inline void FileDelete(tchar const* filename);
-	template <> inline void FileDelete(char const* filename)
+	inline void FileDelete(char const* filename)
 	{
 		DWORD err;
 		if (DeleteFileA(filename) || (err = GetLastError()) == ERROR_FILE_NOT_FOUND) return;
 		std::stringstream msg; msg << "failed to delete file '" << filename << "'. Error code: " << err;
 		throw std::exception(msg.str().c_str());
 	}
-	template <> inline void FileDelete(wchar_t const* filename)
+	inline void FileDelete(wchar_t const* filename)
 	{
 		DWORD err;
 		if (DeleteFileW(filename) || (err = GetLastError()) == ERROR_FILE_NOT_FOUND) return;
@@ -130,17 +161,13 @@ namespace pr
 	
 	// Helper version of CreateFile with less options
 	// Except 'CreateFile' is a macro so we can't overload it *sigh*...
-	namespace EFileOpen
+	enum class EFileOpen
 	{
-		enum Type
-		{
-			Reading,
-			Writing,
-			Append,
-		};
-	}
-	template <typename tchar> inline HANDLE FileOpen(tchar const* filepath, EFileOpen::Type open_for);
-	template <> inline HANDLE FileOpen(char const* filepath, EFileOpen::Type open_for)
+		Reading,
+		Writing,
+		Append,
+	};
+	inline HANDLE FileOpen(char const* filepath, EFileOpen open_for)
 	{
 		switch (open_for)
 		{
@@ -150,7 +177,7 @@ namespace pr
 		case EFileOpen::Append : return CreateFileA(filepath, GENERIC_WRITE, FILE_SHARE_READ,                  0, OPEN_ALWAYS  , FILE_ATTRIBUTE_NORMAL, 0);
 		}
 	}
-	template <> inline HANDLE FileOpen(wchar_t const* filepath, EFileOpen::Type open_for)
+	inline HANDLE FileOpen(wchar_t const* filepath, EFileOpen open_for)
 	{
 		switch (open_for)
 		{
@@ -209,9 +236,11 @@ namespace pr
 	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing)
 	{
 		Handle h = FileOpen(filename, GENERIC_READ, sharing, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if (h == INVALID_HANDLE_VALUE) return false;
-		DWORD file_size = GetFileSize(h, 0);
-		std::size_t buf_size = buffer.size();
+		if (h == INVALID_HANDLE_VALUE)
+			return false;
+		
+		auto file_size = GetFileSize(h, 0);
+		auto buf_size = buffer.size();
 		buffer.resize(buf_size + file_size);
 		return FileRead(h, &buffer[buf_size], file_size);
 	}
@@ -250,10 +279,3 @@ namespace pr
 		return BufferToFile(buffer, filename, false);
 	}
 }
-
-#ifdef PR_ASSERT_DEFINED
-#   undef PR_ASSERT_DEFINED
-#   undef PR_ASSERT
-#endif
-
-#endif
