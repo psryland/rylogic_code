@@ -1,14 +1,12 @@
 //*****************************************************************************
-// Maths library
-//	(c)opyright Paul Ryland 2002
+// ODE/pr compatibility
+//	Copyright (c) Rylogic Limited 2015
 //*****************************************************************************
 
-#ifndef PR_MATHS_PR_TO_ODE_H
-#define PR_MATHS_PR_TO_ODE_H
 #pragma once
 
-#include "pr/maths/maths.h"
 #include <ode/ode.h>
+#include "pr/maths/maths.h"
 
 struct dV4
 {
@@ -50,7 +48,7 @@ namespace pr
 	inline dM4x4 ode(pr::m4x4 const& o2w)
 	{
 		dM4x4 m;
-		impl::copy(m.m_rot, GetTranspose3x3(o2w).x.ToArray(), 12);
+		impl::copy(m.m_rot, Transpose3x3_(o2w).x.ToArray(), 12);
 		impl::copy(m.m_pos, o2w.pos.ToArray(), 4);
 		return m;
 	}
@@ -62,7 +60,7 @@ namespace pr
 		impl::copy(o2w.x.ToArray(), rot, 12);
 		impl::copy(o2w.pos.ToArray(), pos, 4);
 		o2w.x.w = o2w.y.w = o2w.z.w = 0.0f; o2w.w.w = 1.0f;
-		return pr::Transpose3x3(o2w);
+		return pr::Transpose3x3_(o2w);
 	}
 	
 	// Convert a dM4x4 to a pr::m4x4
@@ -71,31 +69,23 @@ namespace pr
 		return ode(o2w.m_pos, o2w.m_rot);
 	}
 	
-	// Old
-	inline dVector3& ode_v3(pr::v4 const& vec, dVector3& out)
+	// Convert ode geometry into pr geometry
+	template <int dGeomClass> struct OdeShape {};
+	template <> struct OdeShape<dSphereClass>
 	{
-		impl::copy(out, vec.ToArray(), 4);
-		return out;
-	}
-
-	inline pr::v4 pr_v4(dVector3 const& vec, float w)
+		static pr::BSphere make(dGeomID geom, pr::m4x4 const& o2w)
+		{
+			auto radius = dGeomSphereGetRadius(geom);
+			return pr::BSphere::make(o2w.pos, radius);
+		}
+	};
+	template <> struct OdeShape<dBoxClass>
 	{
-		pr::v4 out; out.w = w;
-		impl::copy(out.ToArray(), vec, 3);
-		return out;
-	}
-
-	inline pr::m4x4 pr_m4x4(dReal const* pos, dReal const* rot)
-	{
-		return ode(pos, rot);
-	}
-
-	inline void ode_posrot(pr::m4x4 const& o2w, dVector3& pos, dMatrix3& rot)
-	{
-		impl::copy(pos, o2w.pos.ToArray(), 4);
-		impl::copy(rot, GetTranspose3x3(o2w).x.ToArray(), 12);
-	}
-	// Old
+		static pr::OBox make(dGeomID geom, pr::m4x4 const& o2w)
+		{
+			dVector3 d;
+			auto radius = (dGeomBoxGetLengths(geom, d), ode(d,0.0f));
+			return pr::OBox::make(o2w.pos, radius, o2w.rot);
+		}
+	};
 }
-
-#endif

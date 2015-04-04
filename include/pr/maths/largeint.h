@@ -4,11 +4,12 @@
 //*****************************************************************************
 
 #pragma once
-#ifndef PR_MATHS_LARGE_INT_H
-#define PR_MATHS_LARGE_INT_H
 
+#include <cassert>
+#include "pr/common/fmt.h"
 #include "pr/maths/forward.h"
 #include "pr/maths/bitfunctions.h"
+#include "pr/str/prstring.h"
 
 namespace pr
 {
@@ -338,7 +339,6 @@ namespace pr
 		}
 		return result;
 	}
-
 	inline LargeInt operator % (LargeInt const& lhs, LargeInt const& rhs)	{ LargeInt div = lhs / rhs; return lhs - div * rhs; }
 
 	//inline unsigned int operator % (LargeInt const& lhs, unsigned int rhs)
@@ -372,13 +372,7 @@ namespace pr
 	//	}
 	//	return reminder;
 	//}
-}//namespace pr
 
-#include "pr/common/fmt.h"
-#include "pr/str/prstring.h"
-
-namespace pr
-{
 	inline std::string ToString(LargeInt const& large_int)
 	{
 		std::string str;
@@ -411,6 +405,4 @@ namespace pr
 	//			u32Array[i] |= ((unsigned int)fgetc(file)) << (j << 3);
 	//	}
 	//}
-}//namespace pr
-
-#endif//PR_MATHS_LARGE_INT_H
+}

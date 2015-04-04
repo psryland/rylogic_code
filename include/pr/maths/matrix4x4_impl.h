@@ -123,7 +123,7 @@ namespace pr
 			dxm4(ans) = DirectX::XMMatrixMultiply(dxm4(rhs), dxm4(lhs));
 			return ans;
 		#else
-			m4x4 ans, tlhs = GetTranspose4x4(lhs);
+			m4x4 ans, tlhs = Transpose4x4_(lhs);
 			ans.x.x = Dot4(tlhs.x, rhs.x);
 			ans.y.x = Dot4(tlhs.x, rhs.y);
 			ans.z.x = Dot4(tlhs.x, rhs.z);
@@ -153,7 +153,7 @@ namespace pr
 			dxv4(ans) = DirectX::XMVector4Transform(dxv4(rhs), dxm4(lhs));
 			return ans;
 		#else
-			v4 ans; m4x4 tlhs = GetTranspose4x4(lhs);
+			v4 ans; m4x4 tlhs = Transpose4x4_(lhs);
 			ans.x = Dot4(tlhs.x, rhs);
 			ans.y = Dot4(tlhs.y, rhs);
 			ans.z = Dot4(tlhs.z, rhs);
@@ -168,7 +168,6 @@ namespace pr
 
 	// Equality operators
 	inline bool FEql(m4x4 const& lhs, m4x4 const& rhs, float tol)  { return FEql4(lhs.x, rhs.x, tol) && FEql4(lhs.y, rhs.y, tol) && FEql4(lhs.z, rhs.z, tol) && FEql4(lhs.pos, rhs.pos, tol); }
-	inline bool FEqlZero(m4x4 const& lhs, float tol)               { return FEqlZero4(lhs.x, tol) && FEqlZero4(lhs.y, tol) && FEqlZero4(lhs.z, tol) && FEqlZero4(lhs.pos, tol); }
 	inline bool operator == (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
 	inline bool operator <  (m4x4 const& lhs, m4x4 const& rhs)     { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }
@@ -277,47 +276,35 @@ namespace pr
 		return v4::make(mat.y.y*mat.z.z - mat.y.z*mat.z.y, -mat.y.x*mat.z.z + mat.y.z*mat.z.x, mat.y.x*mat.z.y - mat.y.y*mat.z.x, 0.0f);
 	}
 
-	// Transpose the matrix
-	inline m4x4& Transpose4x4(m4x4& mat)
-	{
-		#if PR_MATHS_USE_DIRECTMATH
-		dxm4(mat) = DirectX::XMMatrixTranspose(dxm4(mat));
-		#elif PR_MATHS_USE_INTRINSICS
-		_MM_TRANSPOSE4_PS(mat.x.vec, mat.y.vec, mat.z.vec, mat.w.vec);
-		#else
-		{
-			Swap(mat.x.y, mat.y.x);
-			Swap(mat.x.z, mat.z.x);
-			Swap(mat.x.w, mat.w.x);
-			Swap(mat.y.z, mat.z.y);
-			Swap(mat.y.w, mat.w.y);
-			Swap(mat.z.w, mat.w.z);
-		}
-		#endif
-		return mat;
-	}
-
-	// Transpose the rotation part of a matrix
-	inline m4x4& Transpose3x3(m4x4& mat)
-	{
-		Swap(mat.x.y, mat.y.x);
-		Swap(mat.x.z, mat.z.x);
-		Swap(mat.y.z, mat.z.y);
-		return mat;
-	}
-
 	// Return the 4x4 transpose of 'mat'
-	inline m4x4 GetTranspose4x4(m4x4 const& mat)
+	inline m4x4 Transpose4x4_(m4x4 const& mat)
 	{
 		m4x4 m = mat;
-		return Transpose4x4(m);
+		#if PR_MATHS_USE_DIRECTMATH && 0
+		dxm4(m) = DirectX::XMMatrixTranspose(dxm4(mat));
+		#elif PR_MATHS_USE_INTRINSICS
+		_MM_TRANSPOSE4_PS(m.x.vec, m.y.vec, m.z.vec, m.w.vec);
+		#else
+		{
+			Swap(m.x.y, m.y.x);
+			Swap(m.x.z, m.z.x);
+			Swap(m.x.w, m.w.x);
+			Swap(m.y.z, m.z.y);
+			Swap(m.y.w, m.w.y);
+			Swap(m.z.w, m.w.z);
+		}
+		#endif
+		return m;
 	}
 
 	// Return the 3x3 transpose of 'mat'
-	inline m4x4 GetTranspose3x3(m4x4 const& mat)
+	inline m4x4 Transpose3x3_(m4x4 const& mat)
 	{
 		m4x4 m = mat;
-		return Transpose3x3(m);
+		Swap(m.x.y, m.y.x);
+		Swap(m.x.z, m.z.x);
+		Swap(m.y.z, m.z.y);
+		return m;
 	}
 
 	// Returns 'mat' with no translation component
@@ -344,7 +331,7 @@ namespace pr
 		dxm4(mat) = DirectX::XMMatrixInverse(&dxv4(det), dxm4(mat));
 		assert(det.x != 0.f && "Matrix has no inverse");
 #else
-		m4x4  A = GetTranspose4x4(mat); // Take the transpose so that row operations are faster
+		m4x4  A = Transpose4x4_(mat); // Take the transpose so that row operations are faster
 		m4x4& B = mat; B = m4x4Identity;
 
 		// Loop through columns
@@ -388,7 +375,7 @@ namespace pr
 		}
 		// When these operations have been completed, A should have been transformed to the identity matrix
 		// and B should have been transformed into the inverse of the original A
-		Transpose4x4(B);
+		B = Transpose4x4_(B);
 #endif
 		return mat;
 	}
@@ -397,7 +384,7 @@ namespace pr
 	inline m4x4 InvertFast(m4x4 const& mat_)
 	{
 		assert(IsOrthonormal(mat_) && "Matrix is not orthonormal");
-		m4x4 mat = GetTranspose3x3(mat_);
+		m4x4 mat = Transpose3x3_(mat_);
 		mat.pos.x = -Dot3(mat_.x, mat_.pos);
 		mat.pos.y = -Dot3(mat_.y, mat_.pos);
 		mat.pos.z = -Dot3(mat_.z, mat_.pos);

@@ -420,6 +420,7 @@ namespace pr.extn
 		/// <summary>
 		/// Begin a row drag-drop operation on the grid.
 		/// Attach this method to the MouseDown event on the grid.
+		/// Note: Do not attach to MouseMove as well, DoDragDrop handles mouse move
 		/// Also, attach 'DragDrop_DoDropMoveRow' to the 'DoDrop' handler and set AllowDrop = true.
 		/// See the 'DragDrop' class for more info</summary>
 		public static void DragDrop_DragRow(object sender, MouseEventArgs e)

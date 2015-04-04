@@ -59,7 +59,6 @@ namespace pr
 	inline FRect operator - (FRect const& lhs, v2 const& offset) { FRect f = lhs; return f -= offset; }
 
 	// Equality operators
-	inline bool FEqlZero(FRect const& rect)                      { return FEqlZero2(rect.m_min) && FEqlZero2(rect.m_max); }
 	inline bool FEql(FRect const& lhs, FRect const& rhs)         { return FEql2(lhs.m_min, rhs.m_min) && FEql2(lhs.m_max, rhs.m_max); }
 	inline bool operator == (FRect const& lhs, FRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (FRect const& lhs, FRect const& rhs) { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }

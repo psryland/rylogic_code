@@ -33,6 +33,8 @@ namespace pr.maths
 		public v4(float x_, float y_, float z_, float w_) :this() { x = x_; y = y_; z = z_; w = w_; }
 		public v4(v2 xy_, float z_, float w_) :this()             { xy = xy_; z = z_; w = w_; }
 		public v4(v2 xy_, v2 zw_) :this()                         { xy = xy_; zw = zw_; }
+		public v4(float[] arr) :this()                            { x = arr[0]; y = arr[1]; z = arr[2]; w = arr[3]; }
+		public v4(float[] arr, float w_) :this()                  { x = arr[0]; y = arr[1]; z = arr[2]; w = w_; }
 
 		public float this[int i]
 		{

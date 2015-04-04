@@ -95,9 +95,6 @@ namespace pr
 	template <typename T> inline bool   FEql2    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql(GetX(lhs), GetX(rhs), tol) && FEql(GetY(lhs), GetY(rhs), tol); }
 	template <typename T> inline bool   FEql3    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql2(lhs, rhs, tol) && FEql(GetZ(lhs), GetZ(rhs), tol); }
 	template <typename T> inline bool   FEql4    (T const& lhs, T const& rhs, float tol = pr::maths::tiny) { return FEql3(lhs, rhs, tol) && FEql(GetW(lhs), GetW(rhs), tol); }
-	template <typename T> inline bool   FEqlZero2(T const& lhs, float tol = pr::maths::tiny)               { return Length2Sq(lhs) < Sqr(tol); }
-	template <typename T> inline bool   FEqlZero3(T const& lhs, float tol = pr::maths::tiny)               { return Length3Sq(lhs) < Sqr(tol); }
-	template <typename T> inline bool   FEqlZero4(T const& lhs, float tol = pr::maths::tiny)               { return Length4Sq(lhs) < Sqr(tol); }
 
 	template <typename T, typename Pred> inline bool Any2(T const& v, Pred pred)                { return pred(GetX(v)) || pred(GetY(v)); }
 	template <typename T, typename Pred> inline bool Any3(T const& v, Pred pred)                { return Any2(v, pred) || pred(GetZ(v)); }

@@ -28,6 +28,7 @@ namespace pr.maths
 		public m4x4(v4 axis_norm, float angle, v4 translation) :this()                         { set(axis_norm, angle, translation); }
 		public m4x4(v4 from, v4 to, v4 translation) :this()                                    { set(from, to, translation); }
 		public m4x4(float pitch, float yaw, float roll, v4 translation) :this()                { set(pitch, yaw, roll, translation); }
+		public m4x4(v4 quaternion, v4 translation) :this()                                     { set(quaternion, translation); }
 
 		public v4 this[int i]
 		{
@@ -63,6 +64,11 @@ namespace pr.maths
 		{
 			Debug.Assert(Maths.FEql(translation.w, 1f), "'translation' must be a position vector");
 			rot.set(pitch, yaw, roll);
+			pos = translation;
+		}
+		public void set(v4 quaternion, v4 translation)
+		{
+			rot.set(quaternion);
 			pos = translation;
 		}
 

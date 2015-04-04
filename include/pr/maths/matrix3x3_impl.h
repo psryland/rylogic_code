@@ -187,7 +187,6 @@ namespace pr
 
 	// Equality operators
 	inline bool FEql        (m3x4 const& lhs, m3x4 const& rhs, float tol) { return FEql3(lhs.x, rhs.x, tol) && FEql3(lhs.y, rhs.y, tol) && FEql3(lhs.z, rhs.z, tol); }
-	inline bool FEqlZero    (m3x4 const& lhs, float tol)                  { return FEqlZero3(lhs.x, tol) && FEqlZero3(lhs.y, tol) && FEqlZero3(lhs.z, tol); }
 	inline bool operator == (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) == 0; }
 	inline bool operator != (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) != 0; }
 	inline bool operator <  (m3x4 const& lhs, m3x4 const& rhs)            { return memcmp(&lhs, &rhs, sizeof(lhs)) <  0; }

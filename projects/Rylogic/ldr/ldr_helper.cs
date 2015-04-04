@@ -216,6 +216,14 @@ namespace pr.ldr
 			Append("*Quad ",name," ",colour,"{",bl," ",br," ",tr," ",tl," ",Ldr.Position(position),"}\n");
 		}
 
+		public void Axis()                        { Axis(string.Empty, m4x4.Identity, 0.1f); }
+		public void Axis(m4x4 basis)              { Axis(string.Empty, basis, 0.1f); }
+		public void Axis(string name, m4x4 basis) { Axis(name, basis, 0.1f); }
+		public void Axis(string name, m4x4 basis, float scale)
+		{
+			Append("*Matrix3x3 ",name," {",basis.x*scale," ",basis.y*scale," ",basis.z*scale," ",Ldr.Position(basis.pos),"}\n");
+		}
+
 		public override string ToString()
 		{
 			return m_sb.ToString();

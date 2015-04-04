@@ -26,7 +26,7 @@ namespace pr
 		m_Tnorms.y = Normalise3(m_Tnorms.y);
 		m_Tnorms.z = Normalise3(m_Tnorms.z);
 		m_Tnorms.w = Normalise3(m_Tnorms.w);
-		Transpose4x4(m_Tnorms);
+		m_Tnorms = Transpose4x4_(m_Tnorms);
 		ZDist(zfar);
 		return *this;
 	}
@@ -103,7 +103,7 @@ namespace pr
 	// where: x=left, y=right, z=top, w=bottom. Note, the far plane normal isn't included
 	inline pr::m4x4 Frustum::Normals() const
 	{
-		return GetTranspose4x4(m_Tnorms);
+		return Transpose4x4_(m_Tnorms);
 	}
 
 	// Return the (inward pointing) plane vector for a face of the frustum [0,5)
@@ -115,7 +115,7 @@ namespace pr
 	// Binary operators
 	inline Frustum operator * (m4x4 const& m, Frustum const& rhs)
 	{
-		Frustum f = {rhs.m_Tnorms * GetTranspose4x4(m)}; // = Transpose(m * Transpose(rhs))
+		Frustum f = {rhs.m_Tnorms * Transpose4x4_(m)}; // = Transpose(m * Transpose(rhs))
 		return f;
 	}
 

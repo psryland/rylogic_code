@@ -125,10 +125,8 @@ namespace pr
 	float Trace3(m4x4 const& mat);
 	float Trace4(m4x4 const& mat);
 	v4    Kernel(m4x4 const& mat);
-	m4x4& Transpose4x4(m4x4& mat);
-	m4x4& Transpose3x3(m4x4& mat);
-	m4x4  GetTranspose4x4(m4x4 const& mat);
-	m4x4  GetTranspose3x3(m4x4 const& mat);
+	m4x4  Transpose4x4_(m4x4 const& mat);
+	m4x4  Transpose3x3_(m4x4 const& mat);
 	m4x4  GetRotation(m4x4 const& mat);
 	bool  IsInvertable(m4x4 const& mat);
 	m4x4  Invert(m4x4 const& mat);

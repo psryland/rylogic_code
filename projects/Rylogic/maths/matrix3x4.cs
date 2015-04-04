@@ -21,6 +21,7 @@ namespace pr.maths
 		public m3x4(v4 axis_norm, float angle) :this()                         { set(axis_norm, angle); }
 		public m3x4(v4 from, v4 to) :this()                                    { set(from, to); }
 		public m3x4(float pitch, float yaw, float roll) :this()                { set(pitch, yaw, roll); }
+		public m3x4(v4 quaternion) :this()                                     { set(quaternion); }
 
 		public v4 this[int i]
 		{
@@ -98,6 +99,26 @@ namespace pr.maths
 			x.Set( cos_y*cos_r + sin_y*sin_p*sin_r , cos_p*sin_r , -sin_y*cos_r + cos_y*sin_p*sin_r , 0.0f);
 			y.Set(-cos_y*sin_r + sin_y*sin_p*cos_r , cos_p*cos_r ,  sin_y*sin_r + cos_y*sin_p*cos_r , 0.0f);
 			z.Set( sin_y*cos_p                     ,      -sin_p ,                      cos_y*cos_p , 0.0f);
+		}
+
+		/// <summary>Create from a quaternion</summary>
+		public void set(v4 quaterion)
+		{
+			Debug.Assert(!v4.FEql4(quaterion, v4.Zero), "'quaternion' is a zero quaternion");
+
+			var q = quaterion;
+			float quat_length_sq = q.Length4Sq;
+			float s              = 2.0f / quat_length_sq;
+
+			float xs = q.x *  s, ys = q.y *  s, zs = q.z *  s;
+			float wx = q.w * xs, wy = q.w * ys, wz = q.w * zs;
+			float xx = q.x * xs, xy = q.x * ys, xz = q.x * zs;
+			float yy = q.y * ys, yz = q.y * zs, zz = q.z * zs;
+
+			x.x = 1.0f - (yy + zz); y.x = xy - wz;          z.x = xz + wy;
+			x.y = xy + wz;          y.y = 1.0f - (xx + zz); z.y = yz - wx;
+			x.z = xz - wy;          y.z = yz + wx;          z.z = 1.0f - (xx + yy);
+			x.w =                   y.w =                   z.w = 0.0f;
 		}
 
 		// Static m3x4 types

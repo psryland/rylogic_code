@@ -11,29 +11,29 @@
 
 namespace pr
 {
-	inline OrientedBox operator * (m4x4 const& m, OrientedBox const& ob)
+	inline OBox operator * (m4x4 const& m, OBox const& ob)
 	{
-		OrientedBox obox;
+		OBox obox;
 		obox.m_box_to_world = m * ob.m_box_to_world;
 		obox.m_radius       = ob.m_radius;
 		return obox;
 	}
 
-	inline float Volume(OrientedBox const& ob)
+	inline float Volume(OBox const& ob)
 	{
 		return ob.SizeX() * ob.SizeY() * ob.SizeZ();
 	}
 
-	inline m4x4 const& Getm4x4(OrientedBox const& ob)
+	inline m4x4 const& Getm4x4(OBox const& ob)
 	{
 		return ob.m_box_to_world;
 	}
-	inline m4x4& Getm4x4(OrientedBox& ob)
+	inline m4x4& Getm4x4(OBox& ob)
 	{
 		return ob.m_box_to_world;
 	}
 
-	inline BSphere GetBoundingSphere(OrientedBox const& ob)
+	inline BSphere GetBoundingSphere(OBox const& ob)
 	{
 		return BSphere::make(ob.m_box_to_world.pos, Length3(ob.m_radius));
 	}

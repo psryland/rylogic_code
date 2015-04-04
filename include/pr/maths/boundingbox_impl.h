@@ -43,7 +43,7 @@ namespace pr
 	{
 		assert(rhs.IsValid() && "Transforming an invalid bounding box");
 		BBox bb = BBox::make(m.pos, v4Zero);
-		m4x4 mat = GetTranspose3x3(m);
+		m4x4 mat = Transpose3x3_(m);
 		for (int i = 0; i != 3; ++i)
 		{
 			bb.m_centre[i] += Dot4(    mat[i] , rhs.m_centre);
@@ -202,38 +202,6 @@ namespace pr
 				Abs(test.m_centre.y - bbox.m_centre.y) <= (bbox.m_radius.y - test.m_radius.y) &&
 				Abs(test.m_centre.z - bbox.m_centre.z) <= (bbox.m_radius.z - test.m_radius.z);
 	}
-
-	// Use Intersect_LineToBBox
-	// Returns true if 'line' intersects 'bbox'
-	//inline bool IsIntersection(BBox const& bbox, Line3 const& line)
-	//{
-	//	Line3 l = line;
-	//	Clip(bbox, l);
-	//	return Length3(l) > 0.0f;
-	//}
-
-	// Use Intersect_BBoxToPlane
-	//// Returns true if 'plane' intersects 'bbox'
-	//inline bool IsIntersection(BBox const& bbox, Plane const& plane)
-	//{
-	//	// If the eight corners of the box are on the same side of the plane then there's no intersect
-	//	bool first_side = Dot4(GetCorner(bbox, 0), plane) > 0.0f;
-	//	for (uint corner = 1; corner != 8; ++corner)
-	//	{
-	//		bool this_side = Dot4(GetCorner(bbox, corner), plane) > 0.0f;
-	//		if (this_side != first_side) return false;
-	//	}
-	//	return true;
-	//}
-
-	//Intersect_BBoxToBBox
-	//// Returns true if 'lhs' and 'rhs' intersect
-	//inline bool IsIntersection(BBox const& lhs, BBox const& rhs)
-	//{
-	//	return	Abs(lhs.m_centre.x - rhs.m_centre.x) <= (lhs.m_radius.x + rhs.m_radius.x) &&
-	//			Abs(lhs.m_centre.y - rhs.m_centre.y) <= (lhs.m_radius.y + rhs.m_radius.y) &&
-	//			Abs(lhs.m_centre.z - rhs.m_centre.z) <= (lhs.m_radius.z + rhs.m_radius.z);
-	//}
 }
 
 #if PR_UNITTESTS

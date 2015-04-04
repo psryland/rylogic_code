@@ -74,7 +74,7 @@ ADDIN_API HRESULT WINAPI AddIn_v2(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v2 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "%f %f //Len2: %f", vec.x, vec.y, pr::Length2(vec));
+	_snprintf(pResult, max, "(%+.6ff, %+.6ff); //Len2: %f", vec.x, vec.y, pr::Length2(vec));
 	return S_OK;
 }
 
@@ -84,7 +84,7 @@ ADDIN_API HRESULT WINAPI AddIn_v3(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v3 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "%f %f %f //Len3: %f", vec.x, vec.y, vec.z, Length3(vec));
+	_snprintf(pResult, max, "(%+.6ff, %+.6ff, %+.6ff); //Len3: %f", vec.x, vec.y, vec.z, Length3(vec));
 	return S_OK;
 }
 
@@ -94,7 +94,7 @@ ADDIN_API HRESULT WINAPI AddIn_v4(DWORD, DbgHelper* pHelper, int, BOOL, char *pR
 	ReentryGuard guard;
 	pr::v4 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "%f %f %f %f //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
+	_snprintf(pResult, max, "(%+.6ff, %+.6ff, %+.6ff, %+.6ff); //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
 	return S_OK;
 }
 
@@ -104,7 +104,7 @@ ADDIN_API HRESULT WINAPI AddIn_iv4(DWORD, DbgHelper* pHelper, int, BOOL, char *p
 	ReentryGuard guard;
 	pr::iv4 vec;
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "%d %d %d %d //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
+	_snprintf(pResult, max, "(%+d, %+d, %+d, %+d); //Len3: %f Len4: %f", vec.x, vec.y, vec.z, vec.w, Length3(vec), Length4(vec));
 	return S_OK;
 }
 
@@ -114,7 +114,7 @@ ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char 
 	ReentryGuard guard;
 	pr::int64 vec[4];
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "%lld %lld %lld %lld //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], pr::Len3(vec[0], vec[1], vec[2]), pr::Len4(vec[0], vec[1], vec[2], vec[3]));
+	_snprintf(pResult, max, "(%+lld, %+lld, %+lld, %+lld); //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], pr::Len3(vec[0], vec[1], vec[2]), pr::Len4(vec[0], vec[1], vec[2], vec[3]));
 	return S_OK;
 }
 
@@ -129,15 +129,15 @@ ADDIN_API HRESULT WINAPI AddIn_m3x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		_snprintf(pResult, max, "identity 3x4");
 	else
 		_snprintf(pResult, max,
-			"\r\n%f \t%f \t%f "
-			"\r\n%f \t%f \t%f "
-			"\r\n%f \t%f \t%f "
-			"\r\nLen:%f \t%f \t%f "
-			"\r\nOrtho: %f Det: %f "
-			"\r\n"
-			,mat.x.x ,mat.y.x ,mat.z.x
-			,mat.x.y ,mat.y.y ,mat.z.y
-			,mat.x.z ,mat.y.z ,mat.z.z
+			"auto m = pr::m3x4 {\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff},\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff},\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff}};\n"
+			"//L:\t %+.6ff  %+.6ff  %+.6ff\n"
+			"//Ortho: %f Det: %f\n"
+			,mat.x.x ,mat.x.y ,mat.x.z
+			,mat.y.x ,mat.y.y ,mat.y.z
+			,mat.z.x ,mat.z.y ,mat.z.z
 			,Length3(mat.x), Length3(mat.y), Length3(mat.z)
 			,ortho, Determinant3(mat));
 	return S_OK;
@@ -154,17 +154,17 @@ ADDIN_API HRESULT WINAPI AddIn_m4x4(DWORD, DbgHelper* pHelper, int, BOOL, char *
 		_snprintf(pResult, max, "identity 4x4");
 	else
 		_snprintf(pResult, max,
-			"\r\n%f \t%f \t%f \t%f "
-			"\r\n%f \t%f \t%f \t%f "
-			"\r\n%f \t%f \t%f \t%f "
-			"\r\n%f \t%f \t%f \t%f "
-			"\r\nLen:%f \t%f \t%f \t%f "
-			"\r\nOrtho: %f Det: %f "
-			"\r\n"
-			,mat.x.x ,mat.y.x ,mat.z.x ,mat.w.x
-			,mat.x.y ,mat.y.y ,mat.z.y ,mat.w.y
-			,mat.x.z ,mat.y.z ,mat.z.z ,mat.w.z
-			,mat.x.w ,mat.y.w ,mat.z.w ,mat.w.w
+			"auto m = pr::m4x4 {\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff},\n"
+			"\t{%+.6ff, %+.6ff, %+.6ff, %+.6ff}};\n"
+			"//L:\t %+.6ff  %+.6ff  %+.6ff  %+.6ff\n"
+			"//Ortho: %f Det: %f\n"
+			,mat.x.x ,mat.x.y ,mat.x.z ,mat.x.w
+			,mat.y.x ,mat.y.y ,mat.y.z ,mat.y.w
+			,mat.z.x ,mat.z.y ,mat.z.z ,mat.z.w
+			,mat.w.x ,mat.w.y ,mat.w.z ,mat.w.w
 			,Length3(mat.x), Length3(mat.y), Length3(mat.z) ,Length3(mat.w)
 			,ortho ,Determinant4(mat));
 	return S_OK;

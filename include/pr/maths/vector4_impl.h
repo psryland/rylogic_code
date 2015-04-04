@@ -336,7 +336,7 @@ namespace pr
 		assert(IsOrthonormal(from) && IsOrthonormal(to) && "This only works for orthonormal matrices");
 
 		m4x4 cpm_x_i2wR = to - from;
-		m4x4 w2iR = GetTranspose3x3(from); w2iR.pos = v4Zero;
+		m4x4 w2iR = Transpose3x3_(from); w2iR.pos = v4Zero;
 		m4x4 cpm = cpm_x_i2wR * w2iR;
 		return v4::make(cpm.y.z, cpm.z.x, cpm.x.y, 0.0f);
 	}
@@ -402,8 +402,8 @@ namespace pr
 			{
 				PR_CHECK(IsZero3(pr::v4::make(0,0,0,1)), true);
 				PR_CHECK(IsZero4(pr::v4Zero), true);
-				PR_CHECK(FEqlZero3(pr::v4::make(1e-20f,0,0,1)), true);
-				PR_CHECK(FEqlZero4(pr::v4::make(1e-20f,0,0,1e-19f)), true);
+				PR_CHECK(FEql3(pr::v4::make(1e-20f,0,0,1)     , pr::v4Zero), true);
+				PR_CHECK(FEql4(pr::v4::make(1e-20f,0,0,1e-19f), pr::v4Zero), true);
 			}
 			{
 				v4 a = {-2,  4,  2,  6};

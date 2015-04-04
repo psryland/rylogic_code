@@ -74,7 +74,7 @@ namespace pr
 	struct m4x4;
 	struct Quat;
 	struct BBox;
-	struct OrientedBox;
+	struct OBox;
 	struct BSphere;
 	struct Line3;
 	struct FRect;
