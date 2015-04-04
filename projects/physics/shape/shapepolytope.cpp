@@ -71,7 +71,7 @@ v4 pr::ph::CalcCentreOfMass(ShapePolytope const& shape)
 void pr::ph::ShiftCentre(ShapePolytope& shape, v4& shift)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, shift.w == 0.0f, "");
-	if( FEqlZero3(shift) ) return;
+	if( FEql3(shift,pr::v4Zero) ) return;
 	for( v4 *v = shape.vert_begin(), *v_end = shape.vert_end(); v != v_end; ++v )
 	    *v -= shift;
 	shape.m_base.m_shape_to_model.pos += shift;
@@ -207,7 +207,7 @@ v4 pr::ph::SupportVertex(ShapePolytope const& shape, v4 const& direction, std::s
 				nbrs.y = shape.vertex(*(n + 1));
 				nbrs.z = shape.vertex(*(n + 2));
 				nbrs.w = shape.vertex(*(n + 3));
-				Transpose4x4(nbrs);
+				nbrs = Transpose4x4_(nbrs);
 				v4 dots = nbrs * direction;
 
 				std::size_t id = sup_vert_id;

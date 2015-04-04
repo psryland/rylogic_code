@@ -49,7 +49,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeSphere const& shape, float densi
 // Shift the centre of a sphere
 void pr::ph::ShiftCentre(ShapeSphere&, v4& shift)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, FEqlZero3(shift), ""); shift; // Impossible to shift the centre of an implicit object
+	PR_ASSERT(PR_DBG_PHYSICS, FEql3(shift,pr::v4Zero), ""); shift; // Impossible to shift the centre of an implicit object
 }
 
 // Return a support vertex for a sphere

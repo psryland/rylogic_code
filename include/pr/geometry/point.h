@@ -77,4 +77,88 @@ namespace pr
 				!PointInFrontOfPlane(point, a, d, b) &&
 				!PointInFrontOfPlane(point, d, c, b);
 	}
+
+	// Returns true if 'point' projects along 'norm' into the convex polygon 'poly'
+	// On the edge of the polygon counts as outside so that polygons with
+	// degenerate edges are all classed as outside. 
+	inline bool PointWithinConvexPolygon(v4 const& point, v4 const* poly, int count, v4 const& norm)
+	{
+		if (count < 3)
+			return false;
+
+		auto TriangleIsCCW = [&](v4 const& a, v4 const& b, v4 const& c) { return Triple3(norm, b - a, c - a) > 0.0f; };
+
+		// Do a binary search over polygon vertices to find the triangle fan
+		// (poly[0], poly[lo], poly[hi]) that 'point' lies in.
+		int lo = 0, hi = count;
+		do
+		{
+			auto mid = (lo + hi) / 2;
+			if (TriangleIsCCW(poly[0], poly[mid], point))
+				lo = mid;
+			else
+				hi = mid;
+		}
+		while (lo + 1 < hi);
+
+		// If point outside last (or first) edge, then it is not inside the n-gon
+		if (lo == 0 || hi == count)
+			return false;
+
+		// 'point' is inside the polygon if it is left of the edge from v[low] to v[high]
+		return TriangleIsCCW(poly[lo], poly[hi], point);
+	}
+	inline bool PointWithinConvexPolygon(v4 const& point, v4 const* poly, int count)
+	{
+		if (count < 3)
+			return false;
+
+		// Find the face direction
+		for (int i = 2; i != count; ++i)
+		{
+			auto norm = Cross3(poly[i-1] - poly[0], poly[i] - poly[0]);
+			if (FEql3(norm, pr::v4Zero)) continue;
+			return PointWithinConvexPolygon(point, poly, count, norm);
+		}
+		
+		// degenerate polygon, no face normal
+		return false;
+	}
+
+	// Returns true if 'point' is on the positive side of all of 'planes'
+	inline bool PointWithinHalfSpaces(v4 const& point, Plane const* planes, int count, float tol = pr::maths::tiny)
+	{
+		for (auto i = 0; i != count; ++i)
+		{
+			if (Distance_PointToPlane(point, planes[i]) < -tol)
+				return false;
+		}
+		return true;
+	}
 }
+
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_geometry_point)
+		{
+			{// PointWithinConvexPolygon
+				pr::v4 poly[] =
+				{
+					pr::v4::make(-2.0f, -1.0f, 0.0f, 1.0f),
+					pr::v4::make(+2.5f, -1.5f, 0.0f, 1.0f),
+					pr::v4::make(+2.0f, +0.5f, 0.0f, 1.0f),
+					pr::v4::make(-0.5f, +2.0f, 0.0f, 1.0f),
+				};
+				PR_CHECK(PointWithinConvexPolygon(pr::v4Origin                          , poly, _countof(poly)), true);
+				PR_CHECK(PointWithinConvexPolygon(poly[0]                               , poly, _countof(poly)), false);
+				PR_CHECK(PointWithinConvexPolygon(pr::v4::make(-1.0f, +2.0f, 0.0f, 1.0f), poly, _countof(poly)), false);
+				PR_CHECK(PointWithinConvexPolygon(pr::v4::make(+1.0f, -0.5f, 0.0f, 1.0f), poly, _countof(poly)), true);
+			}
+		}
+	}
+}
+#endif

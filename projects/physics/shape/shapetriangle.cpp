@@ -72,7 +72,7 @@ MassProperties& pr::ph::CalcMassProperties(ShapeTriangle const& shape, float den
 void pr::ph::ShiftCentre(ShapeTriangle& shape, v4& shift)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, shift.w == 0.0f, "");
-	if( FEqlZero3(shift) ) return;
+	if( FEql3(shift,pr::v4Zero) ) return;
 	shape.m_v.x -= shift;
 	shape.m_v.y -= shift;
 	shape.m_v.z -= shift;

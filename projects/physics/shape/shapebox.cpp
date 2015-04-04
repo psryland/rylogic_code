@@ -47,7 +47,7 @@ MassProperties& pr::ph::CalcMassProperties(const ShapeBox& shape, float density,
 // Shift the centre of a box
 void pr::ph::ShiftCentre(ShapeBox&, v4& shift)
 {
-	PR_ASSERT(PR_DBG_PHYSICS, FEqlZero3(shift), ""); (void)shift; //impossible to shift the centre of an implicit object
+	PR_ASSERT(PR_DBG_PHYSICS, FEql3(shift,pr::v4Zero), ""); (void)shift; //impossible to shift the centre of an implicit object
 }
 
 // Return a support vertex for a box

@@ -175,7 +175,7 @@ namespace pr
 			bool VerifyHalfSpace(v4 const* r, uint r_size, v4 const& half_space_normal)
 			{
 				r; half_space_normal;
-				PR_ASSERT(PR_DBG_PHYSICS, !FEqlZero3(half_space_normal), "");
+				PR_ASSERT(PR_DBG_PHYSICS, !FEql3(half_space_normal,pr::v4Zero), "");
 				for( uint i = 0; i != r_size; ++i )
 				{
 					PR_ASSERT(PR_DBG_PHYSICS, Dot3(half_space_normal, r[i]) > -0.01f, "");
@@ -199,7 +199,7 @@ namespace pr
 				for( int i = 0; i != 3; ++i )
 				{
 					v4 norm = Cross3(face_norm, tri[(i+1)%3] - tri[i]);
-					if( FEqlZero3(norm) ) continue;
+					if( FEql3(norm,pr::v4Zero) ) continue;
 					norm = Normalise3(norm);
 					if( Dot3(norm, tri[(i+2)%3] - tri[i]) < 0.0f ) norm = -norm;
 					float d1 = Dot3(norm, s - tri[i]);
@@ -561,7 +561,7 @@ namespace pr
 					// Initialise the half space normal once we have two r's
 					// If the product is zero, then any vector perpendicular to 'r[0]' should do
 					half_space_normal = r[0] + r[1];
-					if( FEqlZero3(half_space_normal) )	{ half_space_normal = Perpendicular(r[0]); }
+					if( FEql3(half_space_normal,pr::v4Zero) )	{ half_space_normal = Perpendicular(r[0]); }
 					else								{ half_space_normal = Normalise3(half_space_normal); }
 					first_new_r = 2;
 

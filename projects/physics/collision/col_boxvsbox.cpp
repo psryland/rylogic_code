@@ -226,7 +226,7 @@ namespace pr
 					for( int j = 0; j != 3; ++j )
 					{
 						v4 axis = Cross3(data.m_a2w[i], data.m_b2w[j]);
-						if( !FEqlZero3(axis) )
+						if( !FEql3(axis,pr::v4Zero) )
 						{
 							axis = Normalise3(axis);
 							Point pointA(data.m_a2w.pos);

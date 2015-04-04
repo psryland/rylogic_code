@@ -721,30 +721,6 @@
 //    return 1;
 //}
 //
-//=== Section 5.4.1: =============================================================
-//
-//// Test if point p lies inside ccw-specified convex n-gon given by vertices v[]
-//int PointInConvexPolygon(Point p, int n, Point v[])
-//{
-//    // Do binary search over polygon vertices to find the fan triangle
-//    // (v[0], v[low], v[high]) the point p lies within the near sides of
-//    int low = 0, high = n;
-//    do {
-//        int mid = (low + high) / 2;
-//        if (TriangleIsCCW(v[0], v[mid], p))
-//            low = mid;
-//        else
-//            high = mid;
-//    } while (low + 1 < high);
-//
-//    // If point outside last (or first) edge, then it is not inside the n-gon
-//    if (low == 0 || high == n) return 0;
-//
-//    // p is inside the polygon if it is left of
-//    // the directed edge from v[low] to v[high]
-//    return TriangleIsCCW(v[low], v[high], p);
-//}
-//
 //=== Section 5.4.2: =============================================================
 //
 //// Test if point P lies inside the counterclockwise triangle ABC
@@ -824,20 +800,6 @@
 //    // P left or right of all edges, so must be in (or on) the triangle
 //    return 1;
 //}
-//
-//=== Section 5.4.3: =============================================================
-//
-//// Test if point p inside polyhedron given as the intersection volume of n halfspaces
-//int TestPointPolyhedron(Point p, Plane *h, int n)
-//{
-//    for (int i = 0; i < n; i++) {
-//        // Exit with ‘no containment’ if p ever found outside a halfspace
-//        if (DistPointPlane(p, h[i]) > 0.0f) return 0;
-//    }
-//    // p inside all halfspaces, so p must be inside intersection volume
-//    return 1;
-//}
-//
 //=== Section 5.4.4: =============================================================
 //
 //// Given planes p1 and p2, compute line L = p+t*d of their intersection.

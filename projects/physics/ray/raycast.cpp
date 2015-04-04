@@ -278,7 +278,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	PR_EXPAND(PR_PH_DBG_RAY_CAST,	StartFile("C:/Deleteme/raycast_dir.pr_script");EndFile();)
 	PR_EXPAND(PR_PH_DBG_RAY_CAST,	StartFile("C:/Deleteme/raycast_result.pr_script");EndFile();)
 	
-	PR_ASSERT(PR_DBG_PHYSICS, !FEqlZero3(ray.m_direction), "");
+	PR_ASSERT(PR_DBG_PHYSICS, !FEql3(ray.m_direction,pr::v4Zero), "");
 
 	Ray ray_ = ShiftRay(ray);
 	v4 lineS = ray_.m_point;
@@ -296,7 +296,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 	// then the line cannot penetrate the polytope
 	v4 dir = ClosestPoint_PointToInfiniteLine(v4Origin, lineS, lineE, t) - v4Origin;
 	//dir = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
-	if( !FEqlZero3(dir) )
+	if( !FEql3(dir,pr::v4Zero) )
 	{
 		start_vert = SupportVertex(shape, dir, id, id);
 			PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/Deleteme/raycast_vert.pr_script");)
@@ -332,7 +332,7 @@ bool pr::ph::RayCast(Ray const& ray, ShapePolytope const& shape, RayCastResult& 
 		{
 			dir = smplx.FindNearest(line_s, line_e, back);
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, smplx.Dump("raycast_smplx");)
-			if( FEqlZero3(dir) ) dir = line_s - line_e;
+			if( FEql3(dir,pr::v4Zero) ) dir = line_s - line_e;
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, StartFile("C:/DeleteMe/raycast_nearest.pr_script");)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::Box("Nearest", "FFFF0000", smplx.m_nearest, 0.02f);)
 				PR_EXPAND(PR_PH_DBG_RAY_CAST, ldr::LineD("Sep_axis", "FFFFFF00", smplx.m_nearest, Normalise3(dir));)
@@ -430,7 +430,7 @@ bool pr::ph::RayCastBruteForce(Ray const& ray, ShapePolytope const& shape, RayCa
 	// Attempt a quick out for the line vs. shape test
 	float t; std::size_t id = 0;
 	v4 nearest = ClosestPoint_PointToLineSegment(v4Origin, lineS, lineE, t) - v4Origin;
-	if( !FEqlZero3(nearest) )
+	if( !FEql3(nearest,pr::v4Zero) )
 	{
 		v4 support = SupportVertex(shape, nearest, id, id);
 		if( Dot3(support, nearest) < Length3Sq(nearest) ) return false;

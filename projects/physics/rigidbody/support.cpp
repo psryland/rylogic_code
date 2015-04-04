@@ -90,7 +90,7 @@ void Support::Add(Rigidbody& on_obj, v4 const& gravity, v4 const& point)
 	// Get the rigidbody that owns this support
 	Rigidbody& rb = GetRB(*this);
 	PR_ASSERT(PR_DBG_PHYSICS, &rb != &on_obj, "Objects cannot support themselves");
-	PR_ASSERT(PR_DBG_PHYSICS, !FEqlZero3(gravity), "This object has no gravity and therefore can't come to rest");
+	PR_ASSERT(PR_DBG_PHYSICS, !FEql3(gravity,pr::v4Zero), "This object has no gravity and therefore can't come to rest");
 	PR_ASSERT(PR_DBG_PHYSICS, rb.HasMicroVelocity() && on_obj.HasMicroVelocity(), "One of these objects has a velocity above the threshold");
 	PR_EXPAND(PR_LDR_SLEEPING, ldr::PhSupport(*this, "sleeping_support");)
 

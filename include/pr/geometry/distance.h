@@ -36,11 +36,14 @@ namespace pr
 	{
 		v4 a = s1 - s0;
 		float a_len_sq = Length3Sq(a);
-		if (a_len_sq == 0.0f) return 0.0f;
+		if (a_len_sq == 0.0f)
+			return 0.0f;
 
 		v4 b = Cross3(line0, line1);
-		if (FEqlZero3(b))	return Sqrt(a_len_sq - Sqr(Dot3(a, line0)) / Length3Sq(line0));
-		else				return Dot3(a, b) / Length3Sq(b);
+		if (FEql3(b, pr::v4Zero))
+			return Sqrt(a_len_sq - Sqr(Dot3(a, line0)) / Length3Sq(line0));
+		else
+			return Dot3(a, b) / Length3Sq(b);
 	}
 
 	// Returns the squared distance from 'point' to 'line'
@@ -53,17 +56,20 @@ namespace pr
 	}
 
 	// Returns the squared distance from 'point' to 'line'
-	inline float DistanceSq_PointToLineSegment(v4 const& point, const Line3& line)
+	inline float DistanceSq_PointToLineSegment(v4 const& point, v4 const& s, v4 const& e)
 	{
-		v4 point_to_line = point - line.start();
+		auto a = point - s;
+		auto d = e - s;
 
-		float p_dot_l = Dot3(point_to_line, line.m_line);
-		if (p_dot_l <= 0.0f) return Length3Sq(point_to_line);
+		float ad = Dot3(a,d);
+		if (ad <= 0.0f)
+			return Length3Sq(a);
 
-		float l_dot_l = Length3Sq(line);
-		if (p_dot_l >= l_dot_l) return Length3Sq(point - line.end());
+		float dd = Dot3(d,d);
+		if (ad >= dd)
+			return Length3Sq(point - e);
 
-		return Length3Sq(point_to_line) - p_dot_l * p_dot_l / l_dot_l;
+		return Length3Sq(a) - Sqr(ad) / dd;
 	}
 
 	// Returns the squared distance from 'point' to 'bbox'
@@ -89,7 +95,17 @@ namespace pr
 	namespace unittests
 	{
 		PRUnitTest(pr_geometry_distance)
-		{}
+		{
+			{// DistanceSq_PointToLineSegment
+				auto s = pr::v4::make(1.0f, 1.0f, 0.0f, 1.0f);
+				auto e = pr::v4::make(3.0f, 2.0f, 0.0f, 1.0f);
+				auto a = pr::v4::make(2.0f, 1.0f, 0.0f, 1.0f);
+				PR_CHECK(FEql(DistanceSq_PointToLineSegment(s, s, e), 0.0f), true);
+				PR_CHECK(FEql(DistanceSq_PointToLineSegment(e, s, e), 0.0f), true);
+				PR_CHECK(FEql(DistanceSq_PointToLineSegment((s+e)*0.5f, s, e), 0.0f), true);
+				PR_CHECK(FEql(DistanceSq_PointToLineSegment(a, s, e), Sqr(sin(atan(0.5f)))), true);
+			}
+		}
 	}
 }
 #endif

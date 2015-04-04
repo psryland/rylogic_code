@@ -4,6 +4,7 @@
 //********************************
 #pragma once
 
+#include <cassert>
 #include "pr/maths/maths.h"
 #include "pr/geometry/distance.h"
 #include "pr/geometry/point.h"

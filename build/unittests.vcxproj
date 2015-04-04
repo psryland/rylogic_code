@@ -45,6 +45,17 @@
     <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\app\skybox.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
+    <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\collision.h" />
+    <ClInclude Include="..\include\pr\collision\ldr_helper.h" />
+    <ClInclude Include="..\include\pr\collision\penetration.h" />
+    <ClInclude Include="..\include\pr\collision\shape.h" />
+    <ClInclude Include="..\include\pr\collision\shapes.h" />
+    <ClInclude Include="..\include\pr\collision\shape_box.h" />
+    <ClInclude Include="..\include\pr\collision\shape_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h" />
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h" />
+    <ClInclude Include="..\include\pr\collision\support.h" />
     <ClInclude Include="..\include\pr\common\algorithm.h" />
     <ClInclude Include="..\include\pr\common\alloca.h" />
     <ClInclude Include="..\include\pr\common\allocator.h" />
@@ -68,6 +79,7 @@
     <ClInclude Include="..\include\pr\common\events.h" />
     <ClInclude Include="..\include\pr\common\exception.h" />
     <ClInclude Include="..\include\pr\common\expr_eval.h" />
+    <ClInclude Include="..\include\pr\common\flags_enum.h" />
     <ClInclude Include="..\include\pr\common\fmt.h" />
     <ClInclude Include="..\include\pr\common\guid.h" />
     <ClInclude Include="..\include\pr\common\hardtypedef.h" />
@@ -144,8 +156,6 @@
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\box.h" />
     <ClInclude Include="..\include\pr\geometry\closest_point.h" />
-    <ClInclude Include="..\include\pr\geometry\collision.h" />
-    <ClInclude Include="..\include\pr\geometry\col_box_vs_box.h" />
     <ClInclude Include="..\include\pr\geometry\common.h" />
     <ClInclude Include="..\include\pr\geometry\cylinder.h" />
     <ClInclude Include="..\include\pr\geometry\deformablemesh.h" />
@@ -197,7 +207,6 @@
     <ClInclude Include="..\include\pr\macros\constexpr.h" />
     <ClInclude Include="..\include\pr\macros\count_of.h" />
     <ClInclude Include="..\include\pr\macros\enum.h" />
-    <ClInclude Include="..\include\pr\macros\flags_enum.h" />
     <ClInclude Include="..\include\pr\macros\foreach.h" />
     <ClInclude Include="..\include\pr\macros\for_each.h" />
     <ClInclude Include="..\include\pr\macros\join.h" />

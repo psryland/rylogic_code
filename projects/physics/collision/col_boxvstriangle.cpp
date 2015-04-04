@@ -238,7 +238,7 @@ void pr::ph::BoxVsTriangle(Shape const& objA, m4x4 const& a2w, Shape const& objB
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Box("box", "FFFF0000", m4x4Identity, box.m_radius * 2.0f);)
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, ldr::Triangle("tri", "FF0000FF", tri_bs.x, tri_bs.y, tri_bs.z);)
 	PR_EXPAND(PR_DBG_BOX_TRI_COLLISION, EndFile();)
-	Transpose3x3(tri_bs);
+	tri_bs = Transpose3x3_(tri_bs);
 	
 	// Test against the faces of the box
 	for( int i = 0; i != 3; ++i )

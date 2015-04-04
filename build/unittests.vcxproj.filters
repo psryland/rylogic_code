@@ -74,6 +74,9 @@
     <Filter Include="pr\container">
       <UniqueIdentifier>{1d0d510b-a1e0-433f-a636-c6593da59fcf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\collision">
+      <UniqueIdentifier>{00177e26-fdc4-451b-84d3-d212e96c0a56}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -876,9 +879,6 @@
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h">
       <Filter>pr\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\macros\flags_enum.h">
-      <Filter>pr\macros</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\box.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
@@ -909,12 +909,6 @@
     <ClInclude Include="..\include\pr\geometry\tetramesh.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\col_box_vs_box.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\collision.h">
-      <Filter>pr\geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\distance.h">
       <Filter>pr\geometry</Filter>
     </ClInclude>
@@ -935,6 +929,42 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\geometry\geometry.h">
       <Filter>pr\geometry</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\collision.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\penetration.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\support.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shape_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\shapes.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\ldr_helper.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_box_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_box.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\collision\col_sphere_vs_sphere.h">
+      <Filter>pr\collision</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\common\flags_enum.h">
+      <Filter>pr\common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

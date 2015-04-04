@@ -43,7 +43,7 @@ CollisionCache::CollisionCache()
 //	- true , cache_entry != 0 -> Cached data was found for this pair of primitives
 //	- false, cache_entry != 0 -> Cached data was not found but a cache entry slot is available
 //	- false, cache_entry == 0 -> Cached data was not found and the appropriate slot is unavailable
-bool CollisionCache::Lookup(Shape const* shapeA, Shape const* shapeB, collision::CacheData*& cache_entry)
+bool CollisionCache::Lookup(Shape const* shapeA, Shape const* shapeB, pr::ph::collision::CacheData*& cache_entry)
 {
 	//#if ASSERTS_PHYSICS == 1
 	static bool enable_collision_cache = true;
