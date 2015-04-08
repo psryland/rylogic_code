@@ -16,11 +16,10 @@
 #include <gdiplus.h>
 
 #include "pr/common/min_max_fix.h"
-//#include "pr/common/assert.h"
-//#include "pr/common/colour.h"
-//#include "pr/common/fmt.h"
 #include "pr/common/multi_cast.h"
+#include "pr/common/range.h"
 #include "pr/maths/maths.h"
+#include "pr/maths/stat.h"
 #include "pr/gui/gdiplus.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/wingui.h"
@@ -30,93 +29,89 @@ namespace pr
 	namespace gui
 	{
 		// A default/example data source for the graph control
-		struct GraphData
+		struct GraphDatum
 		{
-			struct Elem
-			{
-				float m_x, m_y;
-				Elem() :m_x() ,m_y() {}
-				Elem(float x, float y) :m_x(x) ,m_y(y) {}
-				static bool CmpX(Elem const& lhs, Elem const& rhs) { return lhs.m_x < rhs.m_x; }
-			};
-			typedef std::vector<Elem> DataCont;
-			DataCont m_data;
+			typedef double real;
 
-			// A custom data source must implement these methods:
+			// Example Get/Set properties
+			struct { real m_value;
+			operator real () const        { return m_value; }
+			real& operator = (real value) { return m_value = value; }
+			} x, y;
 
-			// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
-			// Note: in general, this range should include one point to the left of xmin and one to the right
-			// of xmax so that line graphs plot a line up to the border of the plot area
-			void IndexRange(float xmin, float xmax, size_t& imin, size_t& imax) const
-			{
-				Elem lwr(xmin, 0.0f), upr(xmax, 0.0f);
-				auto iter_lwr = std::lower_bound(m_data.begin(), m_data.end(), lwr, Elem::CmpX);
-				auto iter_upr = std::upper_bound(iter_lwr      , m_data.end(), upr, Elem::CmpX);
-				imin = iter_lwr - m_data.begin(); imin -= imin != 0;
-				imax = iter_upr - m_data.begin(); imax += imax != m_data.size();
-			}
+			// Place holder for impersonating a realonly member
+			struct {
+			operator real () const { return 0; }
+			} ylo, yhi;
 
-			// Return the value for a given index
-			void Value(size_t idx, float& x, float& y) const
-			{
-				x = m_data[idx].m_x;
-				y = m_data[idx].m_y;
-			}
-
-			// Return the range of y values for a given data index
-			void ErrValues(size_t, float& ymin, float& ymax) const
-			{
-				ymin = ymax = 0.0f;
-			}
+			GraphDatum(real x_ = 0, real y_ = 0) { x = x_; y = y_; }
 		};
 
 		// A control for rendering a graph
-		template <typename DataSrc = GraphData>
+		template <typename Elem = GraphDatum, typename real = double>
 		struct GraphCtrl :Control
 		{
+			using Graphics   = Gdiplus::Graphics;
+			using Color      = Gdiplus::Color;
+			using PointF     = Gdiplus::PointF;
+			using RectF      = Gdiplus::RectF;
+			using ARGB       = Gdiplus::ARGB;
+			using SolidBrush = Gdiplus::SolidBrush;
+			using Pen        = Gdiplus::Pen;
+			using Font       = Gdiplus::Font;
+			using Bitmap     = Gdiplus::Bitmap;
+			using Matrix     = Gdiplus::Matrix;
+			struct Point
+			{
+				real x, y;
+				Point(real x_ = 0, real y_ = 0) :x(x_) ,y(y_) {}
+				Point(pr::gui::Point const& pt) :x(real(pt.x)) ,y(real(pt.y)) {}
+				Point(PointF const& pt) :x(real(pt.X)) ,y(real(pt.Y)) {}
+			};
+
 			struct RdrOptions
 			{
 				// Transform for positioning the graph title, offset from top centre
-				Gdiplus::Matrix m_txfm_title;
+				Matrix TitleTransform;
 				
 				// Graph element Colours
-				Gdiplus::Color m_col_bkgd;       // Control background colour
-				Gdiplus::Color m_col_plot_bkgd;  // Plot background colour
-				Gdiplus::Color m_col_title;      // Title string colour
-				Gdiplus::Color m_col_axis;       // Axis colour
-				Gdiplus::Color m_col_grid;       // Grid line colour
-				Gdiplus::Color m_col_select;     // Area selection colour
+				Color BkColour;        // Control background colour
+				Color PlotBkColour;    // Plot background colour
+				Color TitleColour;     // Title string colour
+				Color AxisColour;      // Axis colour
+				Color GridColour;      // Grid line colour
+				Color SelectionColour; // Area selection colour
 
 				// Graph margins
-				int m_margin_left;
-				int m_margin_top;
-				int m_margin_right;
-				int m_margin_bottom;
+				int LeftMargin;
+				int TopMargin;
+				int RightMargin;
+				int BottomMargin;
 
 				// Fonts
-				Gdiplus::Font m_font_title;
-				Gdiplus::Font m_font_note;
+				Font TitleFont;
+				Font NoteFont;
 
 				enum class EBorder { None, Single };
-				EBorder m_border;
-				pr::v2 m_pixels_per_tick;
+				EBorder Border;
+				PointF PixelsPerTick;
 
 				RdrOptions()
-					:m_txfm_title      (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
-					,m_col_bkgd        (0xFF000000 | ::GetSysColor(COLOR_BTNFACE))
-					,m_col_plot_bkgd   (Gdiplus::ARGB(Gdiplus::Color::WhiteSmoke))
-					,m_col_title       (Gdiplus::ARGB(Gdiplus::Color::Black))
-					,m_col_axis        (Gdiplus::ARGB(Gdiplus::Color::Black))
-					,m_col_grid        (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,230,230,230)))
-					,m_col_select      (Gdiplus::ARGB(Gdiplus::Color::MakeARGB(255,128,128,128)))
-					,m_margin_left     (3)
-					,m_margin_top      (3)
-					,m_margin_right    (3)
-					,m_margin_bottom   (3)
-					,m_font_title      (L"tahoma", 18, Gdiplus::FontStyleBold)
-					,m_font_note       (L"tahoma",  8, Gdiplus::FontStyleRegular)
-					,m_border          (EBorder::None)
-					,m_pixels_per_tick (pr::v2::make(30.0f, 24.0f))
+					:TitleTransform (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
+					,BkColour       (0xFF000000 | ::GetSysColor(COLOR_BTNFACE))
+					,PlotBkColour   (ARGB(Color::WhiteSmoke))
+					,TitleColour    (ARGB(Color::Black))
+					,AxisColour     (ARGB(Color::Black))
+					,GridColour     (ARGB(Color::MakeARGB(255,230,230,230)))
+					,SelectionColour(ARGB(Color::MakeARGB(255,128,128,128)))
+					,LeftMargin     (3)
+					,TopMargin      (3)
+					,RightMargin    (3)
+					,BottomMargin   (3)
+					,TitleFont      (L"tahoma", 18, Gdiplus::FontStyleBold)
+					,NoteFont       (L"tahoma",  8, Gdiplus::FontStyleRegular)
+					,Border         (EBorder::None)
+					,PixelsPerTick  (30, 24)
 				{}
 			};
 			struct Series
@@ -124,106 +119,185 @@ namespace pr
 				struct RdrOptions
 				{
 					enum class EPlotType  { Point, Line, Bar };
-					enum class EPlotZeros { Draw, Hide, Skip };
 
-					bool           m_visible;
-					bool           m_draw_data;
-					EPlotZeros     m_draw_zeros;
-					bool           m_draw_error_bars;
-					EPlotType      m_plot_type;
-					Gdiplus::Color m_col_point;
-					float          m_point_size;
-					Gdiplus::Color m_col_line;
-					float          m_line_width;
-					Gdiplus::Color m_col_bar;
-					float          m_bar_width;
-					Gdiplus::Color m_col_error_bars;
-					bool           m_draw_moving_avr;
-					int            m_ma_window_size;
-					Gdiplus::Color m_col_ma_line;
-					float          m_ma_line_width;
+					bool      Visible;
+					bool      DrawData;
+					bool      DrawErrorBars;
+					EPlotType PlotType;
+					Color     PointColour;
+					float     PointSize;
+					Color     LineColour;
+					float     LineWidth;
+					Color     BarColour;
+					float     BarWidth;
+					Color     ErrorBarColour;
+					bool      DrawMovingAvr;
+					int       MAWindowSize;
+					Color     MALineColour;
+					float     MALineWidth;
 
 					RdrOptions()
-						:m_visible         (true)
-						,m_draw_data       (true)
-						,m_draw_zeros      (EPlotZeros::Draw)
-						,m_draw_error_bars (false)
-						,m_plot_type       (EPlotType::Line)
-						,m_col_point       (0xff, 0x80, 0, 0xff)
-						,m_point_size      (5.0f)
-						,m_col_line        (0xff, 0, 0, 0xff)
-						,m_line_width      (1.0f)
-						,m_col_bar         (0xff, 0x80, 0, 0xff)
-						,m_bar_width       (0.8f)
-						,m_col_error_bars  (0x80, 0xff, 0, 0xff)
-						,m_draw_moving_avr (false)
-						,m_ma_window_size  (10)
-						,m_col_ma_line     (0xff, 0, 0, 0xFF)
-						,m_ma_line_width   (3.0f)
+						:Visible       (true)
+						,DrawData      (true)
+						,DrawErrorBars (false)
+						,PlotType      (EPlotType::Line)
+						,PointColour   (0xff, 0x80, 0, 0xff)
+						,PointSize     (5.0f)
+						,LineColour    (0xff, 0, 0, 0xff)
+						,LineWidth     (1.0f)
+						,BarColour     (0xff, 0x80, 0, 0xff)
+						,BarWidth      (0.8f)
+						,ErrorBarColour(0x80, 0xff, 0, 0xff)
+						,DrawMovingAvr (false)
+						,MAWindowSize  (10)
+						,MALineColour  (0xff, 0, 0, 0xFF)
+						,MALineWidth   (3.0f)
 					{}
-					Gdiplus::Color color() const
+					Color color() const
 					{
 						return
-							m_plot_type == EPlotType::Point ? m_col_point :
-							m_plot_type == EPlotType::Line  ? m_col_line : m_col_bar;
+							PlotType == EPlotType::Point ? PointColour :
+							PlotType == EPlotType::Line  ? LineColour :
+							BarColour;
 					}
 				};
+				using DataCont = std::vector<Elem>;
+				using DataCIter = typename DataCont::const_iterator;
 
 				std::wstring m_name;
 				RdrOptions   m_opts;
-				DataSrc      m_values;
+				DataCont     m_values;
 
 				Series(std::wstring const& name = L"")
 					:m_name(name)
 					,m_opts()
 					,m_values()
 				{}
+
+				size_t size() const
+				{
+					return m_values.size();
+				}
+				DataCIter begin() const
+				{
+					return begin(m_values);
+				}
+				DataCIter end() const
+				{
+					return end(m_values);
+				}
+				Elem const& first() const
+				{
+					assert(size() != 0);
+					return m_values.front();
+				}
+				Elem const& last() const
+				{
+					assert(size() != 0);
+					return m_values.back();
+				}
+				Elem const& operator[](size_t i) const
+				{
+					return m_values[i];
+				}
+				Elem& operator[](size_t i)
+				{
+					return m_values[i];
+				}
+
+				// Return the range of indices that need to be considered when plotting from 'xmin' to 'xmax'
+				// Note: in general, this range should include one point to the left of xmin and one to the right
+				// of xmax so that line graphs plot a line up to the border of the plot area
+				void IndexRange(real xmin, real xmax, size_t& imin, size_t& imax) const
+				{
+					Elem lwr(xmin, 0), upr(xmax, 0);
+					auto cmpx = [](Elem const& l, Elem const& r){ return l.x < r.x; };
+					auto i0 = std::lower_bound(std::begin(m_values), std::end(m_values), lwr, cmpx);
+					auto i1 = std::upper_bound(i0                  , std::end(m_values), upr, cmpx);
+					imin = i0 - std::begin(m_values); imin -= imin != 0;
+					imax = i1 - std::begin(m_values); imax += imax != m_values.size();
+				}
+
+				// Apply an operation over the range of values by index [i0,i1)
+				template <typename Op> void Values(size_t i0, size_t i1, Op op) const
+				{
+					for (auto i = i0; i != i1; ++i)
+						op(m_values[i]);
+				}
+				template <typename Op> void Values(Op op) const
+				{
+					Values(0, m_values.size(), op);
+				}
+
+				// Apply an operation over the range of values by x-axis range [xmin,xmax]
+				template <typename Op> void Values(real xmin, real xmax, Op op) const
+				{
+					size_t i0,i1;
+					IndexRange(xmin, xmax, i0, i1);
+					Values(i0, i1, op);
+				}
+
+				// Plot colour generator
+				static Color Colour(int i)
+				{
+					using namespace Gdiplus;
+					static const Color s_colours[] =
+					{
+						Color::Black     ,
+						Color::Blue      , Color::Red         , Color::Green      ,
+						Color::DarkBlue  , Color::DarkRed     , Color::DarkGreen  ,
+						Color::LightBlue , Color::LightSalmon , Color::LightGreen ,
+						Color::Yellow    , Color::Orange      , Color::Magenta    ,
+						Color::Purple    , Color::Turquoise   ,
+					};
+					return s_colours[i % _countof(s_colours)];
+				}
 			};
 			struct Axis
 			{
 				struct Range
 				{
-					float m_min;
-					float m_max;
+					real m_min;
+					real m_max;
 
-					Range() :m_min(0.0f) ,m_max(1.0f) {}
-					Range(float mn, float mx) :m_min(mn) ,m_max(mx) {}
-					float span() const    { return m_max - m_min; }
-					void  span(float s)   { float c = centre(); m_min = c - s*0.5f; m_max = c + s*0.5f; }
-					float centre() const  { return (m_min + m_max) * 0.5f; }
-					void  centre(float c) { float d = c - centre(); m_min += d; m_max += d; }
+					Range() :m_min(0) ,m_max(1) {}
+					Range(real mn, real mx) :m_min(mn) ,m_max(mx) {}
+					real span() const   { return m_max - m_min; }
+					real span(real s)   { auto c = centre(); m_min = c - s/2; m_max = c + s/2; return s; }
+					real centre() const { return (m_min + m_max) / 2; }
+					real centre(real c) { auto d = c - centre(); m_min += d; m_max += d; return c; }
 				};
 				struct RdrOptions
 				{
-					Gdiplus::Matrix m_txfm_label;   // Offset transform from default label position
-					Gdiplus::Font   m_font_label;   // Font of axis label
-					Gdiplus::Font   m_font_tick;    // Font of tick labels
-					Gdiplus::Color  m_col_label;    // Colour of axis label
-					Gdiplus::Color  m_col_tick;     // Colour of tick labels
-					int             m_tick_length;  // Length of axis ticks
+					Matrix LabelTransform; // Offset transform from default label position
+					Font   LabelFont;      // Font of axis label
+					Font   TickFont;       // Font of tick labels
+					Color  LabelColour;    // Colour of axis label
+					Color  TickColour;     // Colour of tick labels
+					int    TickLength;     // Length of axis ticks
 
 					RdrOptions()
-						:m_txfm_label  (1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
-						,m_font_label  (L"tahoma", 14, Gdiplus::FontStyleRegular)
-						,m_font_tick   (L"tahoma", 10, Gdiplus::FontStyleRegular)
-						,m_col_label   (Gdiplus::ARGB(Gdiplus::Color::Black))
-						,m_col_tick    (Gdiplus::ARGB(Gdiplus::Color::Black))
-						,m_tick_length (5)
+						:LabelTransform(1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f)
+						,LabelFont     (L"tahoma", 14, Gdiplus::FontStyleRegular)
+						,TickFont      (L"tahoma", 10, Gdiplus::FontStyleRegular)
+						,LabelColour   (ARGB(Color::Black))
+						,TickColour    (ARGB(Color::Black))
+						,TickLength    (5)
 					{}
 				};
 
-				typedef std::wstring (*TickText)(float tick);
-				static std::wstring ToText(float tick)
+				using TickTextFunc = std::wstring (*)(real tick);
+				static std::wstring ToText(real tick)
 				{
-					tick = std::round(tick * 1000.0f) / 1000.0f;
-					wchar_t buf[20]; _snwprintf_s(buf, sizeof(buf), L"%.4g", tick);
+					tick = std::round(tick * 1000) / 1000;
+					wchar_t buf[20]; _snwprintf_s(buf, _countof(buf), L"%.4g", tick);
 					return buf;
 				}
 
 				std::wstring m_label;
 				RdrOptions   m_opts;
 				Range        m_range;
-				TickText     m_tick_text;
+				TickTextFunc m_tick_text;
 				bool         m_allow_scroll;
 				bool         m_allow_zoom;
 				bool         m_lock_range;
@@ -237,15 +311,15 @@ namespace pr
 					,m_allow_zoom(true)
 					,m_lock_range(false)
 				{}
-				float min() const     { return m_range.m_min; }
-				void  min(float x)    { m_range.m_min = x; }
-				float max() const     { return m_range.m_max; }
-				void  max(float x)    { m_range.m_max = x; }
-				float span() const    { return m_range.span(); }
-				void  span(float x)   { m_range.span(x); }
-				float centre() const  { return m_range.centre(); }
-				void  centre(float x) { m_range.centre(x); }
-				void shift(float delta)
+				real min() const    { return m_range.m_min; }
+				real min(real x)    { return m_range.m_min = x; }
+				real max() const    { return m_range.m_max; }
+				real max(real x)    { return m_range.m_max = x; }
+				real span() const   { return m_range.span(); }
+				real span(real x)   { return m_range.span(x); }
+				real centre() const { return m_range.centre(); }
+				real centre(real x) { return m_range.centre(x); }
+				void shift(real delta)
 				{
 					if (!m_allow_scroll) return;
 					m_range.m_min += delta;
@@ -253,23 +327,25 @@ namespace pr
 				}
 			};
 
-			typedef std::vector<Series*> SeriesCont;
-			typedef typename Axis::Range AxisRange;
+			using SeriesCont       = std::vector<Series*>;
+			using AxisRange        = typename Axis::Range;
+			using SeriesRdrOptions = typename Series::RdrOptions;
+
 			static LPCTSTR WndClassName()
 			{
 				return _T("PRGRAPHCTRL");
 			}
 			static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
 			{
-				return Control::WndClassInfo<GraphCtrl<DataSrc>>(hinst);
+				return Control::WndClassInfo<GraphCtrl<Elem>>(hinst);
 			}
 
-		private:
+		protected:
 			struct Snapshot
 			{
-				std::shared_ptr<Gdiplus::Bitmap> m_bm;     // A copy of the plot area at a moment in time
-				AxisRange                        m_xrange; // The x axis range when the snapshot was taken
-				AxisRange                        m_yrange; // The y axis range when the snapshot was taken
+				std::shared_ptr<Bitmap> m_bm;     // A copy of the plot area at a moment in time
+				AxisRange               m_xrange; // The x axis range when the snapshot was taken
+				AxisRange               m_yrange; // The y axis range when the snapshot was taken
 
 				Snapshot() :m_bm() ,m_xrange() ,m_yrange() {}
 				Size size() const { return Size(m_bm?m_bm->GetWidth():0, m_bm?m_bm->GetHeight():0); }
@@ -324,40 +400,39 @@ namespace pr
 				}
 			};
 
-			pr::GdiPlus      m_gdiplus;    // Initialises the Gdiplus library
-			std::thread      m_rdr_thread; // A thread used to render
-			std::atomic_bool m_rdr_cancel; // Cancel renderering flag
-			std::mutex       m_mutex_snap; // A mutex to protect access to the snapshot bitmap
-			Snapshot         m_tmp;        // A temporary bitmap used for background thread rendering
-			Snapshot         m_snap;       // A snapshot of the plot area, used as a temporary copy during drag/zoom operations
+			pr::GdiPlus      m_gdiplus;     // Initialises the Gdiplus library
+			std::thread      m_rdr_thread;  // A thread used to render
+			std::atomic_bool m_rdr_cancel;  // Cancel renderering flag
+			std::mutex       m_mutex_snap;  // A mutex to protect access to the snapshot bitmap
+			Snapshot         m_snap;        // A snapshot of the plot area, used as a temporary copy during drag/zoom operations
+			Snapshot         m_tmp;         // A temporary bitmap used for background thread rendering
+			Rect             m_plot_area;   // The area containing the graph data
+			AxisRange        m_base_xrange; // The default x range of the data
+			AxisRange        m_base_yrange; // The default y range of the data
+			float            m_zoom;        // The amount of zoom
+			pr::Range<float> m_zoom_limits; // The limits for zoom
+			HCURSOR          m_cur_arrow;   // The normal cursor
+			HCURSOR          m_cur_cross;   // The cross cursor
+			HCURSOR          m_cur_grab;    // The grab cursor
+			Tooltip          m_tt;          // Tracking tooltip for displaying coordinates
+			Point            m_pt_grab;     // The grab start location
+			Rect             m_selection;   // The selection area
+			bool             m_dragging;    // True when the graph is being dragged around
+			bool             m_selecting;   // True while performing an area selection
+			bool             m_impl_dirty;  // True when the graph must be redrawn
 
 		public:
-			std::wstring m_title;  // The graph title
-			SeriesCont   m_series; // The container of graph data
-			RdrOptions   m_opts;   // Global graph rendering options
-			Axis         m_xaxis;  // The x axis
-			Axis         m_yaxis;  // The y axis
 
+			std::wstring     m_title;       // The graph title
+			RdrOptions       m_opts;        // Global graph rendering options
+			Axis             m_xaxis;       // The x axis
+			Axis             m_yaxis;       // The y axis
+			SeriesCont       m_series;      // The container of graph data
+			
 			// A mutex that is held by the control during rendering.
 			// This should be used to synchronise source data changes with rendering.
-			std::mutex m_mutex_rdring;
+			std::mutex MutexRendering;
 
-		protected:
-			Rect      m_plot_area;   // The area containing the graph data
-			AxisRange m_base_xrange; // The default x range of the data
-			AxisRange m_base_yrange; // The default y range of the data
-			AxisRange m_zoom;        // The amount of zoom (plus limits)
-			HCURSOR   m_cur_arrow;   // The normal cursor
-			HCURSOR   m_cur_cross;   // The cross cursor
-			HCURSOR   m_cur_grab;    // The grab cursor
-			Tooltip   m_tt;          // Tracking tooltip for displaying coordinates
-			pr::v2    m_pt_grab;     // The grab start location
-			Rect      m_selection;   // The selection area
-			bool      m_dragging;    // True when the graph is being dragged around
-			bool      m_selecting;   // True while performing an area selection
-			bool      m_impl_dirty;  // True when the graph must be redrawn
-
-		public:
 			GraphCtrl(int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -366,21 +441,18 @@ namespace pr
 				,DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP
 				,DWORD ex_style = 0
 				,char const* name = nullptr)
-				:Control(MAKEINTATOM(RegisterWndClass<GraphCtrl<DataSrc>>()), nullptr, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name)
+				:Control(MAKEINTATOM(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()
 				,m_mutex_snap()
-				,m_tmp()
 				,m_snap()
-				,m_title(L"Graph")
-				,m_opts()
-				,m_xaxis()
-				,m_yaxis()
-				,m_mutex_rdring()
+				,m_tmp()
+				,m_plot_area()
 				,m_base_xrange()
 				,m_base_yrange()
-				,m_zoom(pr::maths::tiny, pr::maths::float_max)
+				,m_zoom(1.0f)
+				,m_zoom_limits({pr::maths::tiny, pr::maths::float_max})
 				,m_cur_arrow()
 				,m_cur_cross()
 				,m_cur_grab()
@@ -390,6 +462,13 @@ namespace pr
 				,m_dragging(false)
 				,m_selecting(false)
 				,m_impl_dirty(true)
+				,m_title(L"Graph")
+				,m_opts()
+				,m_xaxis()
+				,m_yaxis()
+				,m_series()
+				,MutexRendering()
+				,MouseNavigation(true)
 			{
 				m_cur_arrow = ::LoadCursor(nullptr, IDC_ARROW);
 				m_cur_cross = ::LoadCursor(nullptr, IDC_CROSS);
@@ -403,103 +482,97 @@ namespace pr
 					m_rdr_thread.join();
 			}
 
-			// Returns a point in graph space from a point in client space
-			// Use to convert mouse (client-space) locations to graph coordinates
-			pr::v2 PointToGraph(pr::v2 const& point) const
+			#pragma region Data Access
+		public:
+			// Returns the 'Y' for a given 'X' value in a series in the graph (lerped)
+			real GetValueAt(int series_index, real x) const
 			{
-				return pr::v2::make(
-					m_xaxis.min() + (point.x - m_plot_area.left  ) * m_xaxis.span() / m_plot_area.width(),
-					m_yaxis.min() - (point.y - m_plot_area.bottom) * m_yaxis.span() / m_plot_area.height());
+				if (series_index < 0 || series_index >= int(m_series.size()))
+					throw std::exception("series index out of range");
+
+				// Get the series
+				auto& series = *m_series[series_index];
+				if (series.size() == 0)
+					return 0;
+
+				// Find the index range that contains 'x'
+				size_t i0 = 0, i1 = 0;
+				series.IndexRange(x, x, i0, i1);
+
+				// Search for the nearest on the left and right of 'x'
+				// (note: not assuming the series is sorted here)
+				auto lhs = &series.first();
+				auto rhs = &series.last();
+				for (auto i = i0; i != i1; ++i)
+				{
+					auto tmp = &series[i];
+					if (lhs->x < tmp->x && tmp->x < x) lhs = tmp;
+					if (rhs->x > tmp->x && tmp->x > x) rhs = tmp;
+				}
+				if (lhs->x > x && rhs->x < x) return 0;
+				if (lhs->x > x) return rhs->y;
+				if (rhs->x < x) return lhs->y;
+				auto t = (x - lhs->x) / (rhs->x - lhs->x);
+				return (1 - t) * lhs->y + (t) * rhs->y;
 			}
 
-			// Returns a point in client space from a point in graph space.
-			// Inverse of PointToGraph
-			pr::v2 GraphToPoint(pr::v2 const& gs_point) const
+			// Returns the nearest graph data point (gv) to 'pt' given a selection tolerance.
+			// 'pt' should be in graph space (use PointToGraph).
+			// Returns false if no point is within the selection tolerance
+			bool GetValueAt(int series_index, PointF const& pt, Elem& gv, int px_tol = 5)
 			{
-				return pr::v2::make(
-					(m_plot_area.left   + (gs_point.x - m_xaxis.min()) * m_plot_area.width()  / m_xaxis.span()),
-					(m_plot_area.bottom - (gs_point.y - m_yaxis.min()) * m_plot_area.height() / m_yaxis.span()));
+				if (series_index < 0 || series_index >= int(m_series.size()))
+					throw std::exception("Series index out of range");
+
+				auto& series = *m_series[series_index];
+				auto tol = px_tol * m_plot_area.Width / m_xaxis.span();
+				auto dist_sq = tol * tol;
+
+				series.Values(pt.x - tol, pt.x + tol, [&](Elem const& e)
+				{
+					auto d = pr::Len2Sq(e.x - pt.x, e.y - pt.y);
+					if (d < dist_sq)
+					{
+						dist_sq = d;
+						gv = e;
+					}
+				});
+				return dist_sq < tol * tol;
 			}
 
-			// Shifts the X and Y range of the graph so that graph space position
-			// 'gs_point' is at client space position 'cs_point'
-			void PositionGraph(pr::v2 const& cs_point, pr::v2 const& gs_point)
-			{
-				pr::v2 dst = PointToGraph(cs_point);
-				m_xaxis.shift(gs_point.x - dst.x);
-				m_yaxis.shift(gs_point.y - dst.y);
-				Dirty(true);
-			}
+			#pragma endregion
 
-			// Get/Set the centre of the graph.
-			pr::v2 Centre() const
-			{
-				return pr::v2::make(
-					m_xaxis.min() + m_xaxis.span()*0.5f,
-					m_yaxis.min() + m_yaxis.span()*0.5f);
-			}
-			void Centre(pr::v2 ctr)
-			{
-				m_xaxis.min(ctr.x - m_xaxis.span()*0.5f);
-				m_yaxis.min(ctr.y - m_yaxis.span()*0.5f);
-				Dirty(true);
-			}
-
-			// Zoom in/out on the graph. Remember to call refresh.
-			// Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification
-			float Zoom() const
-			{
-				return 
-					m_xaxis.m_allow_zoom ? m_xaxis.span() / m_base_xrange.span() :
-					m_yaxis.m_allow_zoom ? m_yaxis.span() / m_base_yrange.span() : 1.0f;
-			}
-			void Zoom(float zm)
-			{
-				zm = pr::Clamp(zm, m_zoom.m_min, m_zoom.m_max);
-				auto aspect = (m_yaxis.span() * m_base_xrange.span()) / (m_base_yrange.span() * m_xaxis.span());
-				aspect = pr::Clamp(pr::IsFinite(aspect) ? aspect : 1.0f, 0.001f, 1000.0f);
-				if (m_xaxis.m_allow_zoom) m_xaxis.span(m_base_xrange.span() * zm         );
-				if (m_yaxis.m_allow_zoom) m_yaxis.span(m_base_yrange.span() * zm * aspect);
-				Dirty(true);
-			}
-
-			// Get/Set the Zoom limits
-			float ZoomMin() const  { return m_zoom.m_min; }
-			void  ZoomMin(float x) { assert(x > 0.0f); m_zoom.m_min = x; }
-			float ZoomMax() const  { return m_zoom.m_max; }
-			void  ZoomMax(float x) { assert(x > 0.0f); m_zoom.m_max = x; }
+			#pragma region Navigation
+		public:
 
 			// Get/Set the default ranges for the x/y axes
-			AxisRange DefaultXRange() const               { return m_base_xrange; }
-			void      DefaultXRange(AxisRange const& rng) { m_base_xrange = rng; }
-			AxisRange DefaultYRange() const               { return m_base_yrange; }
-			void      DefaultYRange(AxisRange const& rng) { m_base_yrange = rng; }
+			AxisRange BaseRangeX() const               { return m_base_xrange; }
+			void      BaseRangeX(AxisRange const& rng) { m_base_xrange = rng; }
+			AxisRange BaseRangeY() const               { return m_base_yrange; }
+			void      BaseRangeY(AxisRange const& rng) { m_base_yrange = rng; }
 
 			// Find the appropriate range for all data in the graph
 			// Call ResetToDefaultRange() to zoom the graph to this range
 			void FindDefaultRange()
 			{
-				AxisRange xrng(pr::maths::float_max, -pr::maths::float_max);
-				AxisRange yrng(pr::maths::float_max, -pr::maths::float_max);
+				auto xrng = AxisRange(pr::maths::float_max, -pr::maths::float_max);
+				auto yrng = AxisRange(pr::maths::float_max, -pr::maths::float_max);
 				for (auto& s : m_series)
 				{
 					if (m_rdr_cancel)
 						break;
 
 					auto& series = *s;
-					if (!series.m_opts.m_visible)
+					if (!series.m_opts.Visible)
 						continue;
 
-					size_t imin = 0, imax = 0;
-					series.m_values.IndexRange(-pr::maths::float_max, pr::maths::float_max, imin, imax);
-					for (size_t i = imin; i != imax; ++i)
+					series.Values([&](Elem const& e)
 					{
-						float x,y; series.m_values.Value(i,x,y);
-						if (x < xrng.m_min) xrng.m_min = x;
-						if (x > xrng.m_max) xrng.m_max = x;
-						if (y < yrng.m_min) yrng.m_min = y;
-						if (y > yrng.m_max) yrng.m_max = y;
-					}
+						if (e.x < xrng.m_min) xrng.m_min = e.x;
+						if (e.x > xrng.m_max) xrng.m_max = e.x;
+						if (e.y < yrng.m_min) yrng.m_min = e.y;
+						if (e.y > yrng.m_max) yrng.m_max = e.y;
+					});
 				}
 				if (xrng.span() > 0.0f) xrng.span(xrng.span() * 1.05f); else xrng.span(1.0f);
 				if (yrng.span() > 0.0f) yrng.span(yrng.span() * 1.05f); else yrng.span(1.0f);
@@ -516,221 +589,78 @@ namespace pr
 				Dirty(true);
 			}
 
-			// Returns the 'Y' value for a given 'X' value in a series in the graph
-			float GetValueAt(int series_index, float x) const
+			// Returns a point in graph space from a point in client space
+			// Use to convert mouse (client-space) locations to graph coordinates
+			Point PointToGraph(Point const& point) const
 			{
-				if (series_index < 0 || series_index >= int(m_series.size())) return 0.0f;
-				auto& series = *m_series[series_index];
-
-				size_t imin = 0, imax = 0;
-				series.m_values.IndexRange(x, x, imin, imax);
-				if (imax - imin == 0) { return 0.0f; }
-
-				// Search for the nearest on the left and right of 'x'
-				// (note: not assuming the series is sorted here)
-				pr::v2 lhs = -pr::v2Max, rhs =  pr::v2Max;
-				for (size_t i = imin; i != imax; ++i)
-				{
-					pr::v2 tmp; series.m_values.Value(i, tmp.x. tmp.y);
-					if (lhs.x < tmp.x && tmp.x < x) lhs = tmp;
-					if (rhs.x > tmp.x && tmp.x > x) rhs = tmp;
-				}
-				if (lhs.x > x && rhs.x < x) return 0.0f;
-				if (lhs.x > x) return rhs.y;
-				if (rhs.x < x) return lhs.y;
-				return pr::Lerp(lhs.y, rhs.y, (x-lhs.x)/(rhs.x-lhs.x));
+				return Point(
+					m_xaxis.min() + (point.x - m_plot_area.left  ) * m_xaxis.span() / m_plot_area.width(),
+					m_yaxis.min() - (point.y - m_plot_area.bottom) * m_yaxis.span() / m_plot_area.height());
 			}
 
-			// Returns the nearest graph data point, 'gv' to 'pt' given
-			// a selection tolerance. 'pt' should be in graph space (use PointToGraph).
-			// Returns false if no point is within the selection tolerance
-			bool GetValueAt(int series_index, pr::v2 const& pt, pr::v2& gv, int px_tol = 5)
+			// Returns a point in client space from a point in graph space.
+			// Inverse of PointToGraph
+			Point GraphToPoint(Point const& gs_point) const
 			{
-				if (series_index < 0 || series_index >= int(m_series.size())) return false;
-				auto& series = *m_series[series_index];
-
-				auto tol = px_tol * m_plot_area.Width / m_xaxis.span();
-
-				size_t imin = 0, imax = 0;
-				series.m_values.IndexRange(pt.x - tol, pt.x + tol, imin, imax);
-				if (imax - imin == 0)
-					return false;
-
-				// Find the closesd within this range of indices
-				auto dist_sq = tol * tol;
-				for (auto i = imin; i != imax; ++i)
-				{
-					pr::v2 tmp; series.m_values.Value(i, tmp.x, tmp.y);
-					auto d = pr::Length2Sq(tmp - pt);
-					if (d < dist_sq) { dist_sq = d; gv = tmp; }
-				}
-				return dist_sq < tol * tol;
+				return Point(
+					m_plot_area.left   + (gs_point.x - m_xaxis.min()) * m_plot_area.width()  / m_xaxis.span(),
+					m_plot_area.bottom - (gs_point.y - m_yaxis.min()) * m_plot_area.height() / m_yaxis.span());
 			}
 
-			// Render the graph into a device context (synchronously).
-			// To use this to create bitmaps use:
-			//   CSize size(100,100);
-			//   CDC dc;     dc.CreateCompatibleDC();
-			//   CBitmap bm; bm.CreateCompatibleBitmap(dc, size.cx, size.cy);
-			//   pr::DCSelect<HBITMAP>(dc, bm, false);
-			//   CRect area(POINT(), size);
-			//   RenderGraph(dc, area);
-			void RenderGraph(HDC hdc, RECT const& graph_area, RECT* plot_area = 0) const
+			// Shifts the X and Y range of the graph so that graph space position
+			// 'gs_point' is at client space position 'cs_point'
+			void PositionGraph(Point const& cs_point, Point const& gs_point)
 			{
-				Gdiplus::Graphics gfx(hdc);
-				auto area      = pr::To<Rect>(graph_area);
-				auto plot_rect = PlotArea(gfx, area);
-				if (plot_area)
-					*plot_area = pr::To<RECT>(plot_rect);
-
-				RenderGraphFrame(gfx, area, plot_rect);
-				RenderData(gfx, plot_rect);
+				auto dst = PointToGraph(cs_point);
+				m_xaxis.shift(gs_point.x - dst.x);
+				m_yaxis.shift(gs_point.y - dst.y);
+				Dirty(true);
 			}
 
-			// Get the transform from client space to graph space in 'c2g' and the x/y scaling factor in 'scale'.
-			// 'c2g' is an out parameter because Gdiplus::Matrix is non-copyable.
-			// Note: The returned transform has no scale because lines and points would also be scaled turning them into elipses or caligraphy etc
-			void ClientToGraphSpace(Rect const& plot_area, Gdiplus::Matrix& c2g, pr::v2& scale) const
+			// Get/Set the centre of the graph.
+			Point Centre() const
 			{
-				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
-				scale = pr::v2::make(plot.width() / m_xaxis.span(), plot.height() / m_yaxis.span());
-				if (!pr::IsFinite(scale.x)) scale.x = scale.x >= 0 ? pr::maths::float_max : -pr::maths::float_max;
-				if (!pr::IsFinite(scale.y)) scale.y = scale.y >= 0 ? pr::maths::float_max : -pr::maths::float_max;
-				c2g.SetElements(1.0f, 0.0f, 0.0f, -1.0f, plot.left - m_xaxis.min() * scale.x, plot.bottom + m_yaxis.min() * scale.y);
+				return Point(
+					m_xaxis.min() + m_xaxis.span()*0.5f,
+					m_yaxis.min() + m_yaxis.span()*0.5f);
 			}
-			void ClientToGraphSpace(Gdiplus::Matrix& c2g, pr::v2& scale) const
+			void Centre(Point ctr)
 			{
-				return ClientToGraphSpace(m_plot_area, c2g, scale);
-			}
-			void ClientToGraphSpace(Gdiplus::Matrix& c2g) const
-			{
-				pr::v2 scale;
-				return ClientToGraphSpace(c2g, scale);
+				m_xaxis.min(ctr.x - m_xaxis.span()*0.5f);
+				m_yaxis.min(ctr.y - m_yaxis.span()*0.5f);
+				Dirty(true);
 			}
 
-			// Called whenever the control is repainted to allow user graphics to be overlayed over the cached bitmap
-			// 'sender' is this control
-			// 'gfx' is the graphics object to use when adding graphics
-			// Rendering is in screen space, use GraphToPoint(),PointToGraph(),ClientToGraphSpace()
-			pr::MultiCast<std::function<void(GraphCtrl& sender, Gdiplus::Graphics& gfx)>> AddOverlayOnPaint;
+			// Zoom in/out on the graph. Remember to call refresh.
+			// Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification
+			float Zoom() const
+			{
+				return static_cast<float>(
+					m_xaxis.m_allow_zoom ? m_xaxis.span() / m_base_xrange.span() :
+					m_yaxis.m_allow_zoom ? m_yaxis.span() / m_base_yrange.span() :
+					1.0f);
+			}
+			void Zoom(float zm)
+			{
+				auto aspect = (m_yaxis.span() * m_base_xrange.span()) / (m_base_yrange.span() * m_xaxis.span());
+				aspect = pr::Clamp(pr::IsFinite(aspect) ? aspect : 1.0, 0.001, 1000.0);
 
-			// Called when the cached graph bitmap is created to allow user graphics to be baked into the cached bitmap.
-			// 'sender' is this control
-			// 'gfx' is the graphics object to use when adding graphics
-			// Rendering is in screen space, use GraphToPoint(),PointToGraph(),ClientToGraphSpace()
-			// Note: this method is called in the worker thread context.
-			pr::MultiCast<std::function<void(GraphCtrl& sender, Gdiplus::Graphics& gfx)>> AddOverlayOnRender;
+				zm = pr::Clamp(zm, m_zoom_limits.m_begin, m_zoom_limits.m_end);
+				if (m_xaxis.m_allow_zoom) m_xaxis.span(m_base_xrange.span() * zm         );
+				if (m_yaxis.m_allow_zoom) m_yaxis.span(m_base_yrange.span() * zm * aspect);
+				Dirty(true);
+			}
+
+			// Get/Set the Zoom limits
+			float ZoomMin() const  { return m_zoom_limits.m_min; }
+			float ZoomMin(float x) { return m_zoom_limits.m_min = x; assert(x > 0.0f); }
+			float ZoomMax() const  { return m_zoom_limits.m_max; }
+			float ZoomMax(float x) { return m_zoom_limits.m_max = x; assert(x > 0.0f); }
+
+			// Enable/Disable mouse navigation
+			bool MouseNavigation;
 
 		protected:
-
-			// Mark the control as needing a repaint
-			bool Dirty() const
-			{
-				return m_impl_dirty;
-			}
-			void Dirty(bool dirty)
-			{
-				if (!m_impl_dirty) Invalidate();
-				m_impl_dirty |= dirty;
-			}
-
-			void OnWindowPosChange(SizeEventArgs const& args) override
-			{
-				Dirty(true);
-				Control::OnWindowPosChange(args);
-			}
-			bool OnEraseBkGnd(EmptyArgs const&) override
-			{
-				return true;
-			}
-			bool OnPaint(PaintEventArgs const& args) override
-			{
-				if (args.m_alternate_hdc) { DoPaint(args.m_alternate_hdc); }
-				else                      { PaintStruct ps(m_hwnd); DoPaint(ps.hdc); }
-				return Control::OnPaint(args);
-			}
-			void DoPaint(HDC dc)
-			{
-				auto area = ClientRect();
-				MemDC memdc(dc, area);
-
-				Gdiplus::Graphics gfx(memdc); assert(gfx.GetLastStatus() == Gdiplus::Ok && "GDI+ not initialised");
-				m_plot_area = PlotArea(gfx, area);
-
-				// If the graph is dirty, begin an asynchronous render of the plot into 'm_tmp'
-				if (Dirty())
-				{
-					m_rdr_cancel = true;
-					if (m_rdr_thread.joinable())
-						m_rdr_thread.join();
-					m_rdr_cancel = false;
-
-					// Make sure the temporary bitmap and the snapshot bitmp are the correct size
-					auto plot_size = m_plot_area.size();
-					if (m_tmp.size() != plot_size)
-						m_tmp.m_bm = std::make_shared<Gdiplus::Bitmap>(plot_size.cx, plot_size.cy);
-
-					m_tmp.m_xrange = m_xaxis.m_range;
-					m_tmp.m_yrange = m_yaxis.m_range;
-
-					m_rdr_thread = std::thread([&]{ RenderGraphAsync(); });
-					m_impl_dirty = false;
-				}
-
-				// In the mean time, compose the graph in 'm_bm' by rendering the frame
-				// synchronously and blt'ing the last snapshot into the plot area
-				RenderGraphFrame(gfx, area, m_plot_area);
-
-				gfx.SetClip(pr::To<Gdiplus::Rect>(m_plot_area.Offset(1,1).Inflate(0, 0, -1,-1)));
-				gfx.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
-				{
-					std::lock_guard<std::mutex> lock(m_mutex_snap);
-					if (m_snap.m_bm)
-					{
-						auto tl = GraphToPoint(pr::v2::make(m_snap.m_xrange.m_min, m_snap.m_yrange.m_max));
-						auto br = GraphToPoint(pr::v2::make(m_snap.m_xrange.m_max, m_snap.m_yrange.m_min));
-						Rect dst_rect(int(tl.x), int(tl.y), int(br.x), int(br.y));
-						Rect src_rect(m_snap.rect());
-						gfx.DrawImage(m_snap.m_bm.get(), pr::To<Gdiplus::Rect>(dst_rect), int(src_rect.left), int(src_rect.top), int(src_rect.width()), int(src_rect.height()), Gdiplus::UnitPixel);
-					}
-				}
-
-				// Allow clients to draw on the graph
-				AddOverlayOnPaint.Raise(*this, gfx);
-
-				// Draw the selection rubber band
-				if (m_selection.width() != 0 && m_selection.height() != 0)
-				{
-					auto sel = m_selection.NormalizeRect();
-					Gdiplus::Pen pen(m_opts.m_col_select);
-					pen.SetDashStyle(Gdiplus::DashStyleDot);
-					gfx.DrawRectangle(&pen, pr::To<Gdiplus::Rect>(sel));
-				}
-				gfx.ResetClip();
-			}
-
-			// Plot rendering (done in a background thread). This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
-			void RenderGraphAsync()
-			{
-				// Hold the rendering CS. Clients should hold this if they want to
-				// modify the data while the graph is potentially rendering
-				std::lock_guard<std::mutex> lock(m_mutex_rdring);
-
-				// Render the plot into 'm_tmp'
-				RenderData(*Gdiplus::Graphics::FromImage(m_tmp.m_bm.get()), m_tmp.rect());
-
-				// If the render was cancelled, ignore the result
-				// Otherwise get the main thread to do something with the plot bitmap
-				if (!m_rdr_cancel)
-				{
-					// Update the snapshot
-					std::lock_guard<std::mutex> lock(m_mutex_snap);
-					std::swap(m_snap, m_tmp);
-
-					// Cause a refresh
-					Invalidate();
-				}
-			}
 
 			// Mouse Navigation
 			bool OnMouseButton(MouseEventArgs const& args) override
@@ -740,10 +670,10 @@ namespace pr
 				if (args.m_down)
 				{
 					m_selection = Rect(args.m_point, Size());
-					if (int(args.m_button & EMouseKey::Left) != 0)
+					if (MouseNavigation && int(args.m_button & EMouseKey::Left) != 0)
 					{
 						m_dragging = true;
-						m_pt_grab = PointToGraph(pr::To<pr::v2>(args.m_point));
+						m_pt_grab = PointToGraph(args.m_point);
 						::SetCursor(m_cur_grab);
 						::SetCapture(m_hwnd);
 					}
@@ -769,8 +699,8 @@ namespace pr
 							auto sel = m_selection.NormalizeRect();
 
 							// Rescale the graph
-							auto lower = PointToGraph(pr::v2::make(float(sel.left), float(sel.bottom)));
-							auto upper = PointToGraph(pr::v2::make(float(sel.right), float(sel.top)));
+							auto lower = PointToGraph(Point(float(sel.left), float(sel.bottom)));
+							auto upper = PointToGraph(Point(float(sel.right), float(sel.top)));
 							m_xaxis.min(lower.x);
 							m_xaxis.max(upper.x);
 							m_yaxis.min(lower.y);
@@ -801,7 +731,7 @@ namespace pr
 					auto dx = args.m_point.x - grab_loc.x;
 					auto dy = args.m_point.y - grab_loc.y;
 					if (dx*dx + dy*dy >= 25.0f) // must drag at least 5 pixels
-						PositionGraph(pr::To<pr::v2>(args.m_point), m_pt_grab);
+						PositionGraph(Point(args.m_point), m_pt_grab);
 				}
 				if (int(args.m_button & EMouseKey::Right) != 0 && m_selecting)
 				{
@@ -814,7 +744,7 @@ namespace pr
 				}
 				if (m_tt.IsWindowVisible())
 				{
-					auto pt = PointToGraph(pr::v2::make(float(args.m_point.x), float(args.m_point.y)));
+					auto pt = PointToGraph(Point(float(args.m_point.x), float(args.m_point.y)));
 					m_tt.SetTipText(args.m_point.x, args.m_point.y - 40, pr::FmtS(L"%f %f", pt.x, pt.y));
 				}
 			}
@@ -827,13 +757,663 @@ namespace pr
 				if (!m_plot_area.Contains(point))
 					return true;
 
-				auto pt = PointToGraph(pr::To<pr::v2>(point));
+				auto pt = PointToGraph(point);
 				int delta = pr::Clamp<short>(args.m_delta, -999, 999);
 				Zoom(Zoom() * (1.0f + delta * 0.001f));
-				PositionGraph(pr::To<pr::v2>(point), pt);
+				PositionGraph(Point(point), pt);
 				Dirty(true);
 				return true;
 			}
+
+			#pragma endregion
+
+			#pragma region Rendering
+
+			// Mark the control as needing a repaint
+			bool Dirty() const
+			{
+				return m_impl_dirty;
+			}
+			void Dirty(bool dirty)
+			{
+				if (!m_impl_dirty) Invalidate();
+				m_impl_dirty |= dirty;
+			}
+
+			// Render the graph into a device context (synchronously).
+			// To use this to create bitmaps use:
+			//   CSize size(100,100);
+			//   CDC dc;     dc.CreateCompatibleDC();
+			//   CBitmap bm; bm.CreateCompatibleBitmap(dc, size.cx, size.cy);
+			//   pr::DCSelect<HBITMAP>(dc, bm, false);
+			//   CRect area(POINT(), size);
+			//   RenderGraph(dc, area);
+			void RenderGraph(HDC hdc, Rect const& graph_area, Rect& plot_area) const
+			{
+				Graphics gfx(hdc);
+				auto area = pr::To<Rect>(graph_area);
+				plot_area = PlotArea(gfx, area);
+				RenderGraphFrame(gfx, area, plot_area);
+				RenderData(gfx, plot_area);
+			}
+			void RenderGraph(HDC hdc, Rect const& graph_area) const
+			{
+				Rect plot_area;
+				RenderGraph(hdc, graph_area, plot_area);
+			}
+
+			// Get the transform from client space to graph space in 'c2g' and the x/y scaling factor in 'scale'.
+			// 'c2g' is an out parameter because Matrix is non-copyable.
+			// Note: The returned transform has no scale because lines and points would also be scaled turning them into elipses or caligraphy etc
+			void ClientToGraphSpace(Rect const& plot_area, Matrix& c2g, Point& scale) const
+			{
+				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
+				scale = Point(plot.width()/m_xaxis.span(), plot.height()/m_yaxis.span());
+				if (!pr::IsFinite(scale.x)) scale.x = scale.x >= 0 ? pr::maths::float_max : -pr::maths::float_max;
+				if (!pr::IsFinite(scale.y)) scale.y = scale.y >= 0 ? pr::maths::float_max : -pr::maths::float_max;
+				c2g.SetElements(1.0f, 0.0f, 0.0f, -1.0f
+					,float(plot.left   - m_xaxis.min() * scale.x)
+					,float(plot.bottom + m_yaxis.min() * scale.y));
+			}
+			void ClientToGraphSpace(Matrix& c2g, Point& scale) const
+			{
+				return ClientToGraphSpace(m_plot_area, c2g, scale);
+			}
+			void ClientToGraphSpace(Matrix& c2g) const
+			{
+				Point scale;
+				return ClientToGraphSpace(c2g, scale);
+			}
+
+		protected:
+
+			// Render the graph in to 'dc'
+			void DoPaint(HDC dc, Rect const& area)
+			{
+				MemDC memdc(dc, area);
+				Graphics gfx(memdc);
+				assert(gfx.GetLastStatus() == Gdiplus::Ok && "GDI+ not initialised");
+
+				try
+				{
+					m_plot_area = PlotArea(gfx, area);
+
+					// If the graph is dirty, begin an asynchronous render of the plot into 'm_tmp'
+					if (Dirty())
+					{
+						m_rdr_cancel = true;
+						if (m_rdr_thread.joinable())
+							m_rdr_thread.join();
+						m_rdr_cancel = false;
+
+						// Make sure the temporary bitmap and the snapshot bitmp are the correct size
+						auto plot_size = m_plot_area.size();
+						if (m_tmp.size() != plot_size)
+							m_tmp.m_bm = std::make_shared<Bitmap>(plot_size.cx, plot_size.cy);
+
+						m_tmp.m_xrange = m_xaxis.m_range;
+						m_tmp.m_yrange = m_yaxis.m_range;
+
+						// Plot rendering (done in a background thread).
+						// This thread renders the plot into the bitmap in 'm_tmp' using readonly access to the series data.
+						m_rdr_thread = std::thread([&]
+						{
+							// Hold the rendering CS. Clients should hold this if they want to
+							// modify the data while the graph is potentially rendering
+							{
+								std::lock_guard<std::mutex> lock(MutexRendering);
+
+								// Render the plot into 'm_tmp'
+								auto& g = *Graphics::FromImage(m_tmp.m_bm.get());
+								RenderData(g, m_tmp.rect());
+							}
+
+							// If the render was cancelled, ignore the result
+							if (m_rdr_cancel)
+								return;
+
+							// Otherwise get the main thread to do something with the plot bitmap
+							{
+								std::lock_guard<std::mutex> lock(m_mutex_snap);
+								std::swap(m_snap, m_tmp);
+							}
+
+							// Cause a refresh
+							Invalidate();
+						});
+						m_impl_dirty = false;
+					}
+
+					// In the mean time, compose the graph in 'm_bm' by rendering the frame
+					// synchronously and blt'ing the last snapshot into the plot area
+					RenderGraphFrame(gfx, area, m_plot_area);
+
+					gfx.SetClip(pr::To<Gdiplus::Rect>(m_plot_area.Offset(1,1).Inflate(0, 0, -1,-1)));
+					gfx.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
+					{
+						std::lock_guard<std::mutex> lock(m_mutex_snap);
+						if (m_snap.m_bm)
+						{
+							auto tl = GraphToPoint(Point(m_snap.m_xrange.m_min, m_snap.m_yrange.m_max));
+							auto br = GraphToPoint(Point(m_snap.m_xrange.m_max, m_snap.m_yrange.m_min));
+							Rect dst_rect(int(tl.x), int(tl.y), int(br.x), int(br.y));
+							Rect src_rect(m_snap.rect());
+							gfx.DrawImage(m_snap.m_bm.get(), pr::To<Gdiplus::Rect>(dst_rect), int(src_rect.left), int(src_rect.top), int(src_rect.width()), int(src_rect.height()), Gdiplus::UnitPixel);
+						}
+					}
+
+					// Allow clients to draw on the graph
+					AddOverlayOnPaint.Raise(*this, gfx);
+
+					// Draw the selection rubber band
+					if (m_selection.width() != 0 && m_selection.height() != 0)
+					{
+						auto sel = m_selection.NormalizeRect();
+						Pen pen(m_opts.SelectionColour);
+						pen.SetDashStyle(Gdiplus::DashStyleDot);
+						gfx.DrawRectangle(&pen, pr::To<Gdiplus::Rect>(sel));
+					}
+
+					gfx.ResetClip();
+				}
+				catch (std::exception const&)
+				{
+					SolidBrush bsh(static_cast<ARGB>(Color::Red));
+					wchar_t msg[] = L"Rendering error in GDI+";
+					gfx.DrawString(msg, _countof(msg), &m_opts.TitleFont, PointF(), &bsh);
+				}
+			}
+
+			// Returns an area for the plot part of the graph given a bitmap with size 'size'. (i.e. excl titles, axis labels, etc)
+			Rect PlotArea(Graphics const& gfx, Rect const& area) const
+			{
+				RectF rect(0.0f, 0.0f, float(area.width()), float(area.height()));
+				RectF r;
+
+				// Add margins
+				rect.X      += m_opts.LeftMargin;
+				rect.Y      += m_opts.TopMargin;
+				rect.Width  -= m_opts.LeftMargin + m_opts.RightMargin;
+				rect.Height -= m_opts.TopMargin  + m_opts.BottomMargin;
+
+				// Add space for tick marks
+				rect.X      += m_yaxis.m_opts.TickLength;
+				rect.Width  -= m_yaxis.m_opts.TickLength;
+				rect.Height -= m_xaxis.m_opts.TickLength;
+
+				// Add space for the title and axis labels
+				if (!m_title.empty())
+				{
+					gfx.MeasureString(m_title.c_str(), int(m_title.size()), &m_opts.TitleFont, PointF(), &r);
+					rect.Y      += r.Height;
+					rect.Height -= r.Height;
+				}
+				if (!m_xaxis.m_label.empty())
+				{
+					gfx.MeasureString(m_xaxis.m_label.c_str() ,int(m_xaxis.m_label.size()) ,&m_xaxis.m_opts.LabelFont ,PointF(), &r);
+					rect.Height -= r.Height;
+				}
+				if (!m_yaxis.m_label.empty())
+				{
+					gfx.MeasureString(m_yaxis.m_label.c_str() ,int(m_yaxis.m_label.size()) ,&m_yaxis.m_opts.LabelFont ,PointF(), &r);
+					rect.X     += r.Height; // will be rotated by 90°
+					rect.Width -= r.Height;
+				}
+
+				// Add space for tick labels
+				wchar_t const lbl[] = L"9.999";
+				int const lbl_len = sizeof(lbl)/sizeof(lbl[0]);
+
+				gfx.MeasureString(lbl, lbl_len, &m_xaxis.m_opts.TickFont ,PointF(), &r);
+				rect.Height -= r.Height;
+
+				gfx.MeasureString(lbl, lbl_len, &m_yaxis.m_opts.TickFont ,PointF(), &r);
+				rect.X     += r.Width;
+				rect.Width -= r.Width;
+
+				return Rect(int(rect.X), int(rect.Y), int(rect.X + rect.Width), int(rect.Y + rect.Height));
+			}
+
+			// Return the min, max, and step size for the x/y axes
+			void PlotGrid(Rect const& plot_area, PointF& min, PointF& max, PointF& step)
+			{
+				// Choose step sizes
+				auto max_ticks_x = plot_area.width()  / m_opts.PixelsPerTick.X;
+				auto max_ticks_y = plot_area.height() / m_opts.PixelsPerTick.Y;
+				auto xspan = m_xaxis.span();
+				auto yspan = m_yaxis.span();
+				auto step_x = float(pow(10.0, (int)log10(xspan))); step.X = step_x;
+				auto step_y = float(pow(10.0, (int)log10(yspan))); step.Y = step_y;
+				for (auto s : {0.05f, 0.1f, 0.2f, 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 5.0f, 10.0f, 20.0f, 50.0f})
+				{
+					if (s * xspan / step_x <= max_ticks_x) step.X = step_x / s;
+					if (s * yspan / step_y <= max_ticks_y) step.Y = step_y / s;
+				}
+
+				min.X  = float((m_xaxis.min() - fmod(m_xaxis.min(), step.X)) - m_xaxis.min()); if (min.X < 0.0) min.X += step.X;
+				min.Y  = float((m_yaxis.min() - fmod(m_yaxis.min(), step.Y)) - m_yaxis.min()); if (min.Y < 0.0) min.Y += step.Y;
+				max.X  = float(m_xaxis.span() * 1.0001);
+				max.Y  = float(m_yaxis.span() * 1.0001);
+
+				// protect against increments smaller than can be represented by a float
+				if (min.X + step.X == min.X) step.X = (max.X - min.X) * 0.01f;
+				if (min.Y + step.Y == min.Y) step.Y = (max.Y - min.Y) * 0.01f;
+
+				// protect against too many ticks along the axis
+				if (max.X - min.X > step.X*100) step.X = (max.X - min.X) * 0.01f;
+				if (max.Y - min.Y > step.Y*100) step.Y = (max.Y - min.Y) * 0.01f;
+			}
+
+			// Render the basic graph, axes, title, labels, etc
+			void RenderGraphFrame(Graphics& gfx, Rect const& area, Rect const& plot_area)
+			{
+				// This is not enforced in the axis.Min/Max accessors because it's useful
+				// to be able to change the min/max independently of each other, set them
+				// to float max etc. It's only invalid to render a graph with a negative range
+				assert(m_xaxis.span() > 0 && "Negative x range");
+				assert(m_yaxis.span() > 0 && "Negative y range");
+
+				// Clear to the background colour
+				gfx.Clear(m_opts.BkColour);
+
+				// Draw the graph title and labels
+				Gdiplus::RectF r;
+				if (!m_title.empty())
+				{
+					SolidBrush bsh(m_opts.TitleColour);
+					gfx.MeasureString(m_title.c_str(), int(m_title.size()), &m_opts.TitleFont, PointF(), &r);
+					auto x = float(area.width() - r.Width) * 0.5f;
+					auto y = float(area.top + m_opts.TopMargin);
+					gfx.TranslateTransform(x, y);
+					gfx.MultiplyTransform(&m_opts.TitleTransform);
+					gfx.DrawString(m_title.c_str(), int(m_title.size()), &m_opts.TitleFont, PointF(), &bsh);
+					gfx.ResetTransform();
+				}
+				if (!m_xaxis.m_label.empty())
+				{
+					SolidBrush bsh(m_xaxis.m_opts.LabelColour);
+					gfx.MeasureString(m_xaxis.m_label.c_str(), int(m_xaxis.m_label.size()), &m_xaxis.m_opts.LabelFont, PointF(), &r);
+					auto x = float(area.width() - r.Width) * 0.5f;
+					auto y = float(area.bottom - m_opts.BottomMargin - r.Height);
+					gfx.TranslateTransform(x, y);
+					gfx.MultiplyTransform(&m_xaxis.m_opts.LabelTransform);
+					gfx.DrawString(m_xaxis.m_label.c_str(), int(m_xaxis.m_label.size()), &m_xaxis.m_opts.LabelFont, PointF(), &bsh);
+					gfx.ResetTransform();
+				}
+				if (!m_yaxis.m_label.empty())
+				{
+					SolidBrush bsh(m_yaxis.m_opts.LabelColour);
+					gfx.MeasureString(m_yaxis.m_label.c_str(), int(m_yaxis.m_label.size()), &m_yaxis.m_opts.LabelFont, PointF(), &r);
+					auto x = float(area.left + m_opts.LeftMargin);
+					auto y = float(area.height() + r.Width) * 0.5f;
+					gfx.TranslateTransform(x, y);
+					gfx.RotateTransform(-90.0f);
+					gfx.MultiplyTransform(&m_yaxis.m_opts.LabelTransform);
+					gfx.DrawString(m_yaxis.m_label.c_str(), int(m_yaxis.m_label.size()), &m_yaxis.m_opts.LabelFont, PointF(), &bsh);
+					gfx.ResetTransform();
+				}
+
+				{// Draw the graph frame and background
+					SolidBrush bsh_bkgd(m_opts.BkColour);
+					SolidBrush bsh_axis(m_opts.AxisColour);
+					Pen        pen_axis(m_opts.AxisColour, 0.0f);
+
+					// Background
+					RenderPlotBkgd(gfx, plot_area);
+
+					PointF min,max,step;
+					PlotGrid(plot_area, min, max, step);
+
+					// Tick marks and labels
+					SolidBrush bsh_xtick(m_xaxis.m_opts.TickColour);
+					SolidBrush bsh_ytick(m_yaxis.m_opts.TickColour);
+					auto lblx = float(plot_area.left - m_yaxis.m_opts.TickLength - 1);
+					auto lbly = float(plot_area.top + plot_area.height() + m_xaxis.m_opts.TickLength + 1);
+					for (auto x = min.X; x < max.X; x += step.X)
+					{
+						int X = int(plot_area.left + x * plot_area.width() / m_xaxis.span());
+						auto s = m_xaxis.m_tick_text(x + m_xaxis.min());
+						gfx.MeasureString(s.c_str(), int(s.size()), &m_xaxis.m_opts.TickFont, PointF(), &r);
+						gfx.DrawString   (s.c_str(), int(s.size()), &m_xaxis.m_opts.TickFont, PointF(X - r.Width*0.5f, lbly), &bsh_xtick);
+						gfx.DrawLine(&pen_axis, X, plot_area.top + plot_area.height(), X, plot_area.top + plot_area.height() + m_xaxis.m_opts.TickLength);
+					}
+					for (auto y = min.Y; y < max.Y; y += step.Y)
+					{
+						int Y = int(plot_area.top + plot_area.height() - y * plot_area.height() / m_yaxis.span());
+						auto s = m_yaxis.m_tick_text(y + m_yaxis.min());
+						gfx.MeasureString(s.c_str(), int(s.size()), &m_yaxis.m_opts.TickFont, PointF(), &r);
+						gfx.DrawString   (s.c_str(), int(s.size()), &m_yaxis.m_opts.TickFont, PointF(lblx - r.Width, Y - r.Height*0.5f), &bsh_ytick);
+						gfx.DrawLine(&pen_axis, plot_area.left - m_yaxis.m_opts.TickLength, Y, plot_area.left, Y);
+					}
+
+					// Graph border
+					gfx.DrawRectangle(&pen_axis, pr::To<Gdiplus::Rect>(plot_area));
+				}
+
+				// Control border
+				switch (m_opts.Border)
+				{
+				default: throw std::exception("");
+				case RdrOptions::EBorder::None: break;
+				case RdrOptions::EBorder::Single:
+					{
+						Pen pen_border(static_cast<ARGB>(Color::Black), 0.0f);
+						gfx.DrawRectangle(&pen_border, pr::To<Gdiplus::Rect>(area.Inflate(0, 0, -1,-1)));
+						break;
+					}
+				}
+			}
+
+			// Render the plot background including gridlines
+			void RenderPlotBkgd(Graphics& gfx, Rect const& plot_area)
+			{
+				SolidBrush bsh_plot(m_opts.PlotBkColour);
+				Pen        pen_grid(m_opts.GridColour, 0.0f);
+
+				PointF min,max,step;
+				PlotGrid(plot_area, min, max, step);
+
+				// Background
+				gfx.FillRectangle(&bsh_plot, pr::To<Gdiplus::Rect>(plot_area));
+
+				// Grid lines
+				for (auto x = min.X; x < max.X; x += step.X)
+				{
+					auto X = int(plot_area.left + x * plot_area.width() / m_xaxis.span());
+					gfx.DrawLine(&pen_grid, X, plot_area.top, X, plot_area.bottom);
+				}
+				for (auto y = min.Y; y < max.Y; y += step.Y)
+				{
+					auto Y = int(plot_area.bottom - y * plot_area.height() / m_yaxis.span());
+					gfx.DrawLine(&pen_grid, plot_area.left, Y, plot_area.right, Y);
+				}
+			}
+
+			// Render the series data into the graph (within 'area')
+			void RenderData(Graphics& gfx, Rect const& plot_area)
+			{
+				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
+				gfx.SetClip(pr::To<Gdiplus::Rect>(plot));
+
+				RenderPlotBkgd(gfx, plot_area);
+
+				// Set the transform so that we can draw directly in graph space.
+				// Note: We can't use a scale transform here because the lines and
+				// points will also be scaled, into elipses or caligraphy etc
+				Matrix c2g; Point scale;
+				ClientToGraphSpace(plot_area, c2g, scale);
+				gfx.SetTransform(&c2g);
+
+				// Plot each series
+				for (auto s : m_series)
+				{
+					if (m_rdr_cancel)
+						break;
+
+					auto& series = *s;
+					auto& opts = series.m_opts;
+					if (!opts.Visible)
+						continue;
+
+					SolidBrush bsh_pt  (opts.PointColour);
+					SolidBrush bsh_bar (opts.BarColour);
+					SolidBrush bsh_err (opts.ErrorBarColour);
+					Pen        pen_line(opts.LineColour, 0.0f);
+					Pen        pen_bar (opts.BarColour, 0.0f);
+
+					// Find the range of indices to consider
+					size_t i0, i1;
+					series.IndexRange(m_xaxis.min(), m_xaxis.max(), i0, i1);
+
+					// Loop over data points
+					for (auto i = i0; i != i1;)
+					{
+						if (m_rdr_cancel)
+							break;
+
+						// Get the data point
+						ScreenPoint pt(series, plot_area, scale, i, i1);
+
+						// Render the data point
+						switch (opts.PlotType)
+						{
+						// Draw the data point
+						case Series::RdrOptions::EPlotType::Point:
+							PlotPoint(gfx, pt, opts, bsh_pt, bsh_err);
+							break;
+
+						// Draw the data point and connect with a line
+						case Series::RdrOptions::EPlotType::Line:
+							PlotLine(gfx, pt, opts, bsh_pt, pen_line, bsh_err);
+							break;
+
+						// Draw the data as columns in a bar graph
+						case Series::RdrOptions::EPlotType::Bar:
+							PlotBar(gfx, pt, opts, bsh_bar, pen_bar, bsh_err);
+							break;
+						}
+					}
+
+					// Add a moving average line
+					if (opts.DrawMovingAvr)
+					{
+						i0 = std::max<size_t>(0            , i0 - opts.MAWindowSize);
+						i1 = std::min<size_t>(series.size(), i1 + opts.MAWindowSize);
+						PlotMovingAverage(gfx, opts, scale, series, i0, i1);
+					}
+				}
+
+				gfx.ResetTransform();
+
+				// Allow clients to draw on the graph
+				AddOverlayOnRender.Raise(*this, gfx);
+
+				gfx.ResetClip();
+			}
+
+			// A helper for rendering that finds the bounds of all points at the same screen space X position
+			struct ScreenPoint
+			{
+				Series const& m_series;       // The series that this point came from
+				Rect const&   m_plot_area;    // The screen space area that the point must be within
+				Point const&  m_scale;        // Graph space to screen space scaling factors
+				size_t        m_imin, m_imax; // The index range of the data points included
+				real          m_xmin, m_xmax; // The range of data point X values
+				real          m_ymin, m_ymax; // The range of data point Y values
+				real          m_ylo , m_yhi ; // The bounds on the error bars of the Y values
+				mutable int   m_lhs , m_rhs ; // Error bars/Bar graph width in screen space
+				
+				// Scan 'i' forward to the next data point that has a screen space X value not equal to that of the i'th data point
+				ScreenPoint(Series const& series, Rect const& plot_area, Point const& scale, size_t& i, size_t iend)
+					:m_series(series)
+					,m_plot_area(plot_area)
+					,m_scale(scale)
+				{
+					// Get the data point
+					auto& gv = series[i];
+					auto sx = (int)(gv.x * scale.x);
+
+					// Init members
+					m_imin = m_imax = i;
+					m_xmin = m_xmax = gv.x;
+					m_ymin = m_ymax = gv.y;
+					m_ylo  = gv.y + gv.ylo;
+					m_yhi  = gv.y + gv.yhi;
+
+					// While the data point still represents the same X coordinate on-screen
+					// scan forward until x != sx, finding the bounds on points that fall at this X
+					for (++i; i != iend; ++i)
+					{
+						auto& gv = series[i];
+						auto x = (int)(gv.x * scale.x);
+						if (x != sx) break;
+
+						m_imax = i;
+						m_xmax = gv.x;
+						m_ymin = std::min<real>(m_ymin , gv.y);
+						m_ymax = std::max<real>(m_ymax , gv.y);
+						m_ylo  = std::min<real>(m_ylo  , gv.y + gv.ylo);
+						m_yhi  = std::max<real>(m_yhi  , gv.y + gv.yhi);
+					}
+				}
+				ScreenPoint(ScreenPoint const&) = delete;
+				ScreenPoint& operator =(ScreenPoint const&) = delete;
+
+				// True if this is a single point, false if it represents multiple points
+				bool IsSingle() const { return m_imin == m_imax; }
+
+				// Calculate the on-screen bar width for error bars or bar graphs
+				void CalcBarWidth(float width_scale = 1.0f) const
+				{
+					// Calc the left and right side of the bar
+					if (m_imin != 0)
+					{
+						auto prev_x = m_series[m_imin - 1].x;
+						m_lhs = int(std::max(0.0, 0.5*(m_xmin - prev_x) * width_scale * m_scale.x));
+					}
+					if (m_imax+1 != int(m_series.size()))
+					{
+						auto next_x = m_series[m_imax + 1].x;
+						m_rhs = int(std::max(1.0, 0.5*(next_x - m_xmax) * width_scale * m_scale.x));
+					}
+					if (m_lhs == 0) m_lhs = m_rhs; // i_min == 0 case
+					if (m_rhs == 0) m_rhs = m_lhs; // i_max == Count-1 case
+				}
+			};
+
+			// Draw error bars. lhs/rhs are the screen space size of the bar
+			void PlotErrorBars(Graphics& gfx, ScreenPoint const& pt, SolidBrush const& bsh_err)
+			{
+				auto x   = (int)(pt.m_xmin * pt.m_scale.x);
+				auto ylo = (int)(pt.m_ylo * pt.m_scale.y);
+				auto yhi = (int)(pt.m_yhi * pt.m_scale.y);
+				if (yhi - ylo > 0)
+					gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt.m_lhs, ylo, pt.m_lhs + pt.m_rhs, yhi - ylo));
+			}
+
+			// Plot a point on the graph
+			void PlotPoint(Graphics& gfx, ScreenPoint const& pt, SeriesRdrOptions const& opts, SolidBrush const& bsh_pt, SolidBrush const& bsh_err)
+			{
+				// Draw error bars is on
+				if (opts.DrawErrorBars)
+				{
+					pt.CalcBarWidth();
+					PlotErrorBars(gfx, pt, bsh_err);
+				}
+
+				// Plot the data point
+				if (opts.DrawData)
+				{
+					auto x = (int)(pt.m_xmin * pt.m_scale.x);
+					auto y = (int)(pt.m_ymin * pt.m_scale.y);
+					auto h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
+					gfx.FillEllipse(&bsh_pt, RectF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
+				}
+			}
+
+			// Plot a line segment on the graph
+			void PlotLine(Graphics& gfx, ScreenPoint const& pt, SeriesRdrOptions const& opts, SolidBrush const& bsh_pt, Pen const& pen_line, SolidBrush const& bsh_err)
+			{
+				// Draw error bars is on
+				if (opts.DrawErrorBars)
+				{
+					pt.CalcBarWidth();
+					PlotErrorBars(gfx, pt, bsh_err);
+				}
+
+				// Plot the point and line
+				if (opts.DrawData)
+				{
+					// Draw the line from the previous point
+					if (pt.m_imin != 0) // if this is not the first point
+					{
+						auto px = (int)(pt.m_series[pt.m_imin - 1].x * pt.m_scale.x);
+						auto py = (int)(pt.m_series[pt.m_imin - 1].y * pt.m_scale.y);
+						auto x  = (int)(pt.m_series[pt.m_imin    ].x * pt.m_scale.x);
+						auto y  = (int)(pt.m_series[pt.m_imin    ].y * pt.m_scale.y);
+						gfx.DrawLine(&pen_line, px, py, x, y);
+					}
+
+					// Draw a vertical line if the screen point represents multiple points
+					if (!pt.IsSingle())
+					{
+						auto x   = (int)(pt.m_xmin * pt.m_scale.x);
+						auto ylo = (int)(pt.m_ymin * pt.m_scale.y);
+						auto yhi = (int)(pt.m_ymax * pt.m_scale.y);
+						gfx.DrawLine(&pen_line, x, ylo, x, yhi);
+					}
+
+					// Plot the point (if it's size is non-zero)
+					if (opts.PointSize > 0)
+					{
+						auto x = (int) (pt.m_xmin * pt.m_scale.x);
+						auto y = (int) (pt.m_ymin * pt.m_scale.y);
+						auto h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
+						gfx.FillEllipse(&bsh_pt, RectF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
+					}
+				}
+			}
+
+			// Plot a single bar on the graph
+			void PlotBar(Graphics& gfx, ScreenPoint const& pt, SeriesRdrOptions opts, SolidBrush const& bsh_bar, Pen const& pen_bar, SolidBrush const& bsh_err)
+			{
+				// Calc the left and right side of the bar
+				pt.CalcBarWidth(opts.BarWidth);
+
+				// Draw error bars is on
+				if (opts.DrawErrorBars)
+					PlotErrorBars(gfx, pt, bsh_err);
+
+				// Plot the bar
+				if (opts.DrawData)
+				{
+					auto x   = static_cast<int>( pt.m_xmin                        * pt.m_scale.x);
+					auto ylo = static_cast<int>((pt.m_ymin > 0 ? 0.0 : pt.m_ymin) * pt.m_scale.y);
+					auto yhi = static_cast<int>((pt.m_ymax < 0 ? 0.0 : pt.m_ymax) * pt.m_scale.y);
+				
+					if (yhi - ylo > 0)
+						gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(x - pt.m_lhs, ylo, std::max(1, pt.m_lhs + pt.m_rhs), yhi - ylo));
+					else 
+						gfx.DrawLine(&pen_bar, x - pt.m_lhs, 0, pt.m_lhs + pt.m_rhs, 0);
+				}
+			}
+
+			// Plot a moving average curve over the data
+			void PlotMovingAverage(Graphics& gfx, SeriesRdrOptions const& opts, Point const& scale, Series const& series, size_t i0, size_t i1)
+			{
+				pr::ExpMovingAvr<> max(opts.MAWindowSize);
+				pr::ExpMovingAvr<> may(opts.MAWindowSize);
+				Pen ma_pen(opts.MALineColour, opts.MALineWidth);
+
+				bool first = true;
+				int px = 0, py = 0;
+				for (auto i = i0; i != i1; ++i)
+				{
+					auto& gv = series[i];
+					max.Add(gv.x);
+					may.Add(gv.y);
+
+					auto x = static_cast<int>(max.Mean() * scale.x);
+					auto y = static_cast<int>(may.Mean() * scale.y);
+					if (first)
+					{
+						first = false;
+						px = x;
+						py = y;
+					}
+					else if (x != px)
+					{
+						gfx.DrawLine(&ma_pen, px, py, x, y);
+						px = x;
+						py = y;
+					}
+				}
+			}
+
+			#pragma endregion
+
+			#pragma region Context Menu
+		public:
 
 			// Show a right click context menu
 			void ShowContextMenu(Point point)
@@ -868,7 +1448,7 @@ namespace pr
 
 					int vis = 0, invis = 0;
 					for (auto& series : m_series)
-						(series->m_opts.m_visible ? vis : invis) = 1;
+						(series->m_opts.Visible ? vis : invis) = 1;
 
 					// All series options
 					auto& series_all = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"Series: All"));
@@ -884,30 +1464,30 @@ namespace pr
 						// Create a sub menu for this series
 						StylePtr style(new ContextMenuStyle());
 						style->m_col_text = series.m_opts.color();
-						auto& series_m = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(series.m_name.c_str(), 0, series.m_opts.m_visible, style));
+						auto& series_m = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(series.m_name.c_str(), 0, series.m_opts.Visible, style));
 
 						// Visibility
-						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible"     ,MAKEWPARAM(ECmd::Visible          ,idx_series), series.m_opts.m_visible));
-						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"Series &Data" ,MAKEWPARAM(ECmd::VisibleData      ,idx_series), series.m_opts.m_draw_data));
-						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Error Bars"  ,MAKEWPARAM(ECmd::VisibleErrorBars ,idx_series), series.m_opts.m_draw_error_bars));
+						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible"     ,MAKEWPARAM(ECmd::Visible          ,idx_series), series.m_opts.Visible));
+						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"Series &Data" ,MAKEWPARAM(ECmd::VisibleData      ,idx_series), series.m_opts.DrawData));
+						series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Error Bars"  ,MAKEWPARAM(ECmd::VisibleErrorBars ,idx_series), series.m_opts.DrawErrorBars));
 
 						// Plot Type
 						series_m.AddItem(std::make_shared<ContextMenu::Combo>(L"&Plot Type"   ,&plot_types, MAKEWPARAM(ECmd::PlotType ,idx_series)));
 
 						{// Appearance menu
 							auto& appearance = series_m.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"&Appearance"));
-							if (series.m_opts.m_plot_type == Series::RdrOptions::EPlotType::Point ||
-								series.m_opts.m_plot_type == Series::RdrOptions::EPlotType::Line)
+							if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Point ||
+								series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
 							{
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Size:", L"9", MAKEWPARAM(ECmd::PointSize, idx_series)));
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Colour:", L"9", MAKEWPARAM(ECmd::PointColour, idx_series)));
 							}
-							if (series.m_opts.m_plot_type == Series::RdrOptions::EPlotType::Line)
+							if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
 							{
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Width:", L"9", MAKEWPARAM(ECmd::LineWidth, idx_series)));
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Colour:", L"9", MAKEWPARAM(ECmd::LineColour, idx_series)));
 							}
-							if (series.m_opts.m_plot_type == Series::RdrOptions::EPlotType::Bar)
+							if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Bar)
 							{
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Width:", L"9", MAKEWPARAM(ECmd::BarWidth, idx_series)));
 								appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Colour:", L"9", MAKEWPARAM(ECmd::BarColour, idx_series)));
@@ -916,7 +1496,7 @@ namespace pr
 					}
 				}
 				
-				int res = menu.Show(m_hwnd, point.x, point.y);
+				int res = menu.Show(m_hwnd, int(point.x), int(point.y));
 				ECmd cmd = (ECmd)LOWORD(res);
 				int  idx = (int)HIWORD(res);
 				switch (cmd)
@@ -985,413 +1565,192 @@ namespace pr
 				//
 			}
 
-			// Returns an area for the plot part of the graph given a bitmap with size 'size'. (i.e. excl titles, axis labels, etc)
-			Rect PlotArea(Gdiplus::Graphics const& gfx, Rect const& area) const
+			#pragma endregion
+
+			#pragma region Events
+		public:
+			// Called whenever the control is repainted to allow user graphics to be overlayed over the cached bitmap
+			// 'sender' is this control
+			// 'gfx' is the graphics object to use when adding graphics
+			// Rendering is in screen space, use GraphToPoint(),PointToGraph(),ClientToGraphSpace()
+			pr::MultiCast<std::function<void(GraphCtrl& sender, Graphics& gfx)>> AddOverlayOnPaint;
+
+			// Called when the cached graph bitmap is created to allow user graphics to be baked into the cached bitmap.
+			// 'sender' is this control
+			// 'gfx' is the graphics object to use when adding graphics
+			// Rendering is in screen space, use GraphToPoint(),PointToGraph(),ClientToGraphSpace()
+			// Note: this method is called in the worker thread context.
+			pr::MultiCast<std::function<void(GraphCtrl& sender, Graphics& gfx)>> AddOverlayOnRender;
+			#pragma endregion
+
+		protected:
+
+			void OnWindowPosChange(SizeEventArgs const& args) override
 			{
-				Gdiplus::RectF rect(0.0f, 0.0f, float(area.width()), float(area.height()));
-
-				// Add margins
-				rect.X      += m_opts.m_margin_left;
-				rect.Y      += m_opts.m_margin_top;
-				rect.Width  -= m_opts.m_margin_left + m_opts.m_margin_right;
-				rect.Height -= m_opts.m_margin_top  + m_opts.m_margin_bottom;
-
-				// Add space for tick marks
-				rect.X      += m_yaxis.m_opts.m_tick_length;
-				rect.Width  -= m_yaxis.m_opts.m_tick_length;
-				rect.Height -= m_xaxis.m_opts.m_tick_length;
-
-				// Add space for the title and axis labels
-				Gdiplus::RectF r;
-				if (!m_title.empty())
-				{
-					gfx.MeasureString(m_title.c_str(), int(m_title.size()), &m_opts.m_font_title, Gdiplus::PointF(), &r);
-					rect.Y      += r.Height;
-					rect.Height -= r.Height;
-				}
-				if (!m_xaxis.m_label.empty())
-				{
-					gfx.MeasureString(m_xaxis.m_label.c_str() ,int(m_xaxis.m_label.size()) ,&m_xaxis.m_opts.m_font_label ,Gdiplus::PointF(), &r);
-					rect.Height -= r.Height;
-				}
-				if (!m_yaxis.m_label.empty())
-				{
-					gfx.MeasureString(m_yaxis.m_label.c_str() ,int(m_yaxis.m_label.size()) ,&m_yaxis.m_opts.m_font_label ,Gdiplus::PointF(), &r);
-					rect.X     += r.Height; // will be rotated by 90°
-					rect.Width -= r.Height;
-				}
-
-				// Add space for tick labels
-				wchar_t const lbl[] = L"9.999";
-				int const lbl_len = sizeof(lbl)/sizeof(lbl[0]);
-
-				gfx.MeasureString(lbl, lbl_len, &m_xaxis.m_opts.m_font_tick ,Gdiplus::PointF(), &r);
-				rect.Height -= r.Height;
-
-				gfx.MeasureString(lbl, lbl_len, &m_yaxis.m_opts.m_font_tick ,Gdiplus::PointF(), &r);
-				rect.X     += r.Width;
-				rect.Width -= r.Width;
-
-				return Rect(int(rect.X), int(rect.Y), int(rect.X + rect.Width), int(rect.Y + rect.Height));
+				Dirty(true);
+				Control::OnWindowPosChange(args);
 			}
-
-			// Return the min, max, and step size for the x/y axes
-			void PlotGrid(Rect const& plot_area, pr::v2& min, pr::v2& max, pr::v2& step)
+			bool OnEraseBkGnd(EmptyArgs const&) override
 			{
-				// Choose step sizes
-				float const scale[] = {0.05f, 0.1f, 0.2f, 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 5.0f, 10.0f, 20.0f, 50.0f};
-				auto max_ticks_x = plot_area.width()  / m_opts.m_pixels_per_tick.x;
-				auto max_ticks_y = plot_area.height() / m_opts.m_pixels_per_tick.y;
-				auto xspan = m_xaxis.span();
-				auto yspan = m_yaxis.span();
-				auto step_x = (float)pow(10.0, (int)log10f(xspan)); step.x = step_x;
-				auto step_y = (float)pow(10.0, (int)log10f(yspan)); step.y = step_y;
-				for (float const *s = scale, *send = s + sizeof(scale)/sizeof(scale[0]); s != send; ++s)
-				{
-					if (*s * xspan / step_x <= max_ticks_x) step.x = step_x / *s;
-					if (*s * yspan / step_y <= max_ticks_y) step.y = step_y / *s;
-				}
-
-				min.x  = (m_xaxis.min() - fmodf(m_xaxis.min(), step.x)) - m_xaxis.min(); if (min.x < 0.0) min.x += step.x;
-				min.y  = (m_yaxis.min() - fmodf(m_yaxis.min(), step.y)) - m_yaxis.min(); if (min.y < 0.0) min.y += step.y;
-				max.x  = m_xaxis.span() * 1.0001f;
-				max.y  = m_yaxis.span() * 1.0001f;
-
-				// protect against increments smaller than can be represented by a float
-				if (min.x + step.x == min.x)    step.x = (max.x - min.x) * 0.01f;
-				if (min.y + step.y == min.y)    step.y = (max.y - min.y) * 0.01f;
-
-				// protect against too many ticks along the axis
-				if (max.x - min.x > step.x*100) step.x = (max.x - min.x) * 0.01f;
-				if (max.y - min.y > step.y*100) step.y = (max.y - min.y) * 0.01f;
+				return true;
 			}
-
-			// Render the basic graph, axes, title, labels, etc
-			void RenderGraphFrame(Gdiplus::Graphics& gfx, Rect const& area, Rect const& plot_area)
+			bool OnPaint(PaintEventArgs const& args) override
 			{
-				// This is not enforced in the axis.Min/Max accessors because it's useful
-				// to be able to change the min/max independently of each other, set them
-				// to float max etc. It's only invalid to render a graph with a negative range
-				assert(m_xaxis.span() > 0 && "Negative x range");
-				assert(m_yaxis.span() > 0 && "Negative y range");
-
-				// Clear to the background colour
-				gfx.Clear(m_opts.m_col_bkgd);
-
-				// Draw the graph title and labels
-				Gdiplus::RectF str_size;
-				if (!m_title.empty())
-				{
-					Gdiplus::SolidBrush bsh(m_opts.m_col_title);
-					gfx.MeasureString(m_title.c_str(), int(m_title.size()), &m_opts.m_font_title, Gdiplus::PointF(), &str_size);
-					auto x = float(area.width() - str_size.Width) * 0.5f;
-					auto y = float(area.top + m_opts.m_margin_top);
-					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(&m_opts.m_txfm_title);
-					gfx.DrawString(m_title.c_str(), int(m_title.size()), &m_opts.m_font_title, Gdiplus::PointF(), &bsh);
-					gfx.ResetTransform();
-				}
-				if (!m_xaxis.m_label.empty())
-				{
-					Gdiplus::SolidBrush bsh(m_xaxis.m_opts.m_col_label);
-					gfx.MeasureString(m_xaxis.m_label.c_str(), int(m_xaxis.m_label.size()), &m_xaxis.m_opts.m_font_label, Gdiplus::PointF(), &str_size);
-					auto x = float(area.width() - str_size.Width) * 0.5f;
-					auto y = float(area.bottom - m_opts.m_margin_bottom - str_size.Height);
-					gfx.TranslateTransform(x, y);
-					gfx.MultiplyTransform(&m_xaxis.m_opts.m_txfm_label);
-					gfx.DrawString(m_xaxis.m_label.c_str(), int(m_xaxis.m_label.size()), &m_xaxis.m_opts.m_font_label, Gdiplus::PointF(), &bsh);
-					gfx.ResetTransform();
-				}
-				if (!m_yaxis.m_label.empty())
-				{
-					Gdiplus::SolidBrush bsh(m_yaxis.m_opts.m_col_label);
-					gfx.MeasureString(m_yaxis.m_label.c_str(), int(m_yaxis.m_label.size()), &m_yaxis.m_opts.m_font_label, Gdiplus::PointF(), &str_size);
-					auto x = float(area.left + m_opts.m_margin_left);
-					auto y = float(area.height() + str_size.Width) * 0.5f;
-					gfx.TranslateTransform(x, y);
-					gfx.RotateTransform(-90.0f);
-					gfx.MultiplyTransform(&m_yaxis.m_opts.m_txfm_label);
-					gfx.DrawString(m_yaxis.m_label.c_str(), int(m_yaxis.m_label.size()), &m_yaxis.m_opts.m_font_label, Gdiplus::PointF(), &bsh);
-					gfx.ResetTransform();
-				}
-
-				{// Draw the graph frame and background
-					Gdiplus::SolidBrush bsh_bkgd(m_opts.m_col_bkgd);
-					Gdiplus::SolidBrush bsh_axis(m_opts.m_col_axis);
-					Gdiplus::Pen        pen_axis(m_opts.m_col_axis, 0.0f);
-
-					// Background
-					RenderPlotBkgd(gfx, plot_area);
-
-					pr::v2 min,max,step;
-					PlotGrid(plot_area, min, max, step);
-
-					// Tick marks and labels
-					Gdiplus::SolidBrush bsh_xtick(m_xaxis.m_opts.m_col_tick);
-					Gdiplus::SolidBrush bsh_ytick(m_yaxis.m_opts.m_col_tick);
-					auto lblx = float(plot_area.left - m_yaxis.m_opts.m_tick_length - 1);
-					auto lbly = float(plot_area.top + plot_area.height() + m_xaxis.m_opts.m_tick_length + 1);
-					for (float x = min.x; x < max.x; x += step.x)
-					{
-						int X = int(plot_area.left + x * plot_area.width() / m_xaxis.span());
-						auto s = m_xaxis.m_tick_text(x + m_xaxis.min());
-						gfx.MeasureString(s.c_str(), int(s.size()), &m_xaxis.m_opts.m_font_tick, Gdiplus::PointF(), &str_size);
-						gfx.DrawString   (s.c_str(), int(s.size()), &m_xaxis.m_opts.m_font_tick, Gdiplus::PointF(X - str_size.Width*0.5f, lbly), &bsh_xtick);
-						gfx.DrawLine(&pen_axis, X, plot_area.top + plot_area.height(), X, plot_area.top + plot_area.height() + m_xaxis.m_opts.m_tick_length);
-					}
-					for (float y = min.y; y < max.y; y += step.y)
-					{
-						int Y = int(plot_area.top + plot_area.height() - y * plot_area.height() / m_yaxis.span());
-						auto s = m_yaxis.m_tick_text(y + m_yaxis.min());
-						gfx.MeasureString(s.c_str(), int(s.size()), &m_yaxis.m_opts.m_font_tick, Gdiplus::PointF(), &str_size);
-						gfx.DrawString   (s.c_str(), int(s.size()), &m_yaxis.m_opts.m_font_tick, Gdiplus::PointF(lblx - str_size.Width, Y - str_size.Height*0.5f), &bsh_ytick);
-						gfx.DrawLine(&pen_axis, plot_area.left - m_yaxis.m_opts.m_tick_length, Y, plot_area.left, Y);
-					}
-
-					// Graph border
-					gfx.DrawRectangle(&pen_axis, pr::To<Gdiplus::Rect>(plot_area));
-				}
-
-				// Control border
-				switch (m_opts.m_border)
-				{
-				default: throw std::exception("");
-				case RdrOptions::EBorder::None: break;
-				case RdrOptions::EBorder::Single:
-					{
-						Gdiplus::Pen pen_border(static_cast<Gdiplus::ARGB>(Gdiplus::Color::Black), 0.0f);
-						gfx.DrawRectangle(&pen_border, pr::To<Gdiplus::Rect>(area.Inflate(0, 0, -1,-1)));
-						break;
-					}
-				}
-			}
-
-			// Render the plot background including gridlines
-			void RenderPlotBkgd(Gdiplus::Graphics& gfx, Rect const& plot_area)
-			{
-				Gdiplus::SolidBrush bsh_plot(m_opts.m_col_plot_bkgd);
-				Gdiplus::Pen        pen_grid(m_opts.m_col_grid, 0.0f);
-
-				pr::v2 min,max,step;
-				PlotGrid(plot_area, min, max, step);
-
-				// Background
-				gfx.FillRectangle(&bsh_plot, pr::To<Gdiplus::Rect>(plot_area));
-
-				// Grid lines
-				for (float x = min.x; x < max.x; x += step.x)
-				{
-					int X = int(plot_area.left + x * plot_area.width() / m_xaxis.span());
-					gfx.DrawLine(&pen_grid, X, plot_area.top, X, plot_area.bottom);
-				}
-				for (float y = min.y; y < max.y; y += step.y)
-				{
-					int Y = int(plot_area.bottom - y * plot_area.height() / m_yaxis.span());
-					gfx.DrawLine(&pen_grid, plot_area.left, Y, plot_area.right, Y);
-				}
-			}
-
-			// Render the series data into the graph (within 'area')
-			void RenderData(Gdiplus::Graphics& gfx, Rect const& plot_area)
-			{
-				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
-				gfx.SetClip(pr::To<Gdiplus::Rect>(plot));
-
-				RenderPlotBkgd(gfx, plot_area);
-
-				// Set the transform so that we can draw directly in graph space.
-				// Note: We can't use a scale transform here because the lines and
-				// points will also be scaled, into elipses or caligraphy etc
-				Gdiplus::Matrix c2g; pr::v2 scale;
-				ClientToGraphSpace(m_plot_area, c2g, scale);
-				gfx.SetTransform(&c2g);
-
-				// Plot each series
-				for (auto s : m_series)
-				{
-					if (m_rdr_cancel)
-						break;
-
-					auto& series = *s;
-					auto& opts = series.m_opts;
-					if (!opts.m_visible)
-						continue;
-
-					Gdiplus::SolidBrush bsh_pt  (opts.m_col_point);
-					Gdiplus::SolidBrush bsh_bar (opts.m_col_bar);
-					Gdiplus::SolidBrush bsh_err (opts.m_col_error_bars);
-					Gdiplus::Pen        pen_line(opts.m_col_line, 0.0f);
-					Gdiplus::Pen        pen_bar (opts.m_col_bar, 0.0f);
-					auto pt_size   = int(opts.m_point_size);
-					auto pt_radius = int(opts.m_point_size * 0.5f);
-
-					// Find the range of indices to consider
-					size_t imin = 0, imax = 0;
-					series.m_values.IndexRange(m_xaxis.min(), m_xaxis.max(), imin, imax);
-
-					// Loop over data points
-					auto curr_gv = pr::v2Zero;
-					auto prev_gv = pr::v2Zero;
-					auto first = true;
-					for (size_t i = imin; i != imax; ++i)
-					{
-						if (m_rdr_cancel)
-							break;
-
-						// Get the data point
-						series.m_values.Value(i, curr_gv.x, curr_gv.y);
-						int x = int(curr_gv.x * scale.x) , px = int(prev_gv.x * scale.x);
-						int y = int(curr_gv.y * scale.y) , py = int(prev_gv.y * scale.y);
-
-						// Render the data point
-						switch (opts.m_plot_type)
-						{
-						// Draw the data point
-						case Series::RdrOptions::EPlotType::Point:
-							#pragma region Plot Points
-							{
-								// If the point is a zero and we're not drawing zeros, skip
-								if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
-									break;
-
-								// Draw error bars is on
-								if (opts.m_draw_error_bars)
-								{
-									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
-									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
-									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
-								}
-
-								// Plot the data point
-								if (opts.m_draw_data)
-								{
-									// If the point lies on the previous one then don't bother drawing it
-									if (x != px || y != py)
-										gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
-								}
-								break;
-							}
-							#pragma endregion
-
-						// Draw the data point and connect with a line
-						case Series::RdrOptions::EPlotType::Line:
-							#pragma region Plot_Lines
-							{
-								// If the point is a zero and we're not drawing zeros, skip
-								if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
-									break;
-
-								// Draw error bars is on
-								if (opts.m_draw_error_bars)
-								{
-									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
-									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
-									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
-								}
-
-								// Plot the point and line
-								if (opts.m_draw_data)
-								{
-									// If the point lies on the previous one then don't bother drawing it
-									if (x != px || y != py)
-									{
-										// Draw the line from the previous point (i.e. don't draw if this is the first point)
-										if (!first)
-											gfx.DrawLine(&pen_line, px, py, x, y);
-										
-										// Plot the point (if it's size is non-zero)
-										if (opts.m_point_size > 0)
-											gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
-									}
-								}
-								break;
-							}
-							#pragma endregion
-
-						// Draw the data as columns in a bar graph
-						case Series::RdrOptions::EPlotType::Bar:
-							#pragma region Plot_Bars
-							{
-								// If the point is a zero and we're not drawing zeros, skip
-								if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
-									break;
-
-								// Calc the left and right side of the bar
-								float width_scale = opts.m_bar_width, lhs = 0.0f, rhs = 0.0f;
-								auto next_gv = pr::v2Zero; if (i+1 != imax) series.m_values.Value(i+1, next_gv.x, next_gv.y);
-								if (i   != imin) { lhs = (curr_gv.x - prev_gv.x) * scale.x * width_scale * 0.5f; }
-								if (i+1 != imax) { rhs = (next_gv.x - curr_gv.x) * scale.x * width_scale * 0.5f; }
-								if (lhs == 0.0f) lhs = rhs;
-								if (rhs == 0.0f) rhs = lhs;
-
-								// Draw error bars is on
-								if (opts.m_draw_error_bars)
-								{
-									float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
-									int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
-									if ((iymax - iymin) > 0)
-										gfx.FillRectangle(&bsh_err, Gdiplus::Rect(int(x - lhs), iymin, int(rhs + lhs), iymax - iymin));
-								}
-
-								// Plot the bar
-								if (opts.m_draw_data)
-								{
-									if      (y < 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), y, int(lhs + rhs), -y)); }
-									else if (y > 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), 0, int(lhs + rhs),  y)); }
-									else            { gfx.DrawLine(&pen_bar, int(x - lhs), 0, int(lhs + rhs), 0); }
-								}
-								break;
-							}
-							#pragma endregion
-						}
-
-						//// Add a moving average line
-						//if (opts.m_draw_moving_avr)
-						//{
-						//	// Find the sum of the values around 'i' for the moving average
-						//	float sum = 0;
-						//	int count = 0;
-						//	int avr_i0 = Math.Max(0                   ,i - series.RenderOptions.m_ma_window_size / 2);
-						//	int avr_i1 = Math.Min(series.Values.Count ,i + series.RenderOptions.m_ma_window_size / 2);
-						//	for (int j = avr_i0; j != avr_i1; ++j)
-						//	{
-						//		// Don't include zeros if they're not being drawn
-						//		if (series.Values[j].m_valueY == 0 && series.RenderOptions.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw) continue;
-						//		sum += series.Values[j].m_valueY;
-						//		++count;
-						//	}
-						//	if (count != 0)
-						//	{
-						//		// Get the data point in screen space
-						//		float curr_x = curr_gv     .m_valueX * scale.x;
-						//		float prev_x = prev_gv.m_valueX * scale.x;
-						//		// Draw a segment of the moving average line
-						//		float ma_y = (sum / count) * scale.y;
-						//		if (!first && (prev_ma_y != 0 || series.RenderOptions.m_draw_zeros == Series.RdrOpts.PlotZeros.Draw))
-						//			gfx.DrawLine(ma_pen, prev_x, prev_ma_y, curr_x, ma_y);
-						//		
-						//		prev_ma_y = ma_y;
-						//	}
-						//}
-
-						if (curr_gv.y != 0.0f || opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Skip)
-						{
-							prev_gv = curr_gv;
-							first = false;
-						}
-					}
-				}
-				gfx.ResetTransform();
-
-				// Allow clients to draw on the graph
-				AddOverlayOnRender.Raise(*this, gfx);
-
-				gfx.ResetClip();
+				if (args.m_alternate_hdc) { DoPaint(args.m_alternate_hdc, ClientRect()); }
+				else                      { PaintStruct ps(m_hwnd); DoPaint(ps.hdc, ClientRect()); }
+				return Control::OnPaint(args);
 			}
 		};
 	}
 }
 
 #endif
+
+
+
+					//// Loop over data points
+					//auto curr_gv = pr::v2Zero;
+					//auto prev_gv = pr::v2Zero;
+					//auto first = true;
+					//for (size_t i = imin; i != imax; ++i)
+					//{
+					//	if (m_rdr_cancel)
+					//		break;
+
+					//	// Get the data point
+					//	series.m_values.Value(i, curr_gv.x, curr_gv.y);
+					//	int x = int(curr_gv.x * scale.x) , px = int(prev_gv.x * scale.x);
+					//	int y = int(curr_gv.y * scale.y) , py = int(prev_gv.y * scale.y);
+
+					//	// Render the data point
+					//	switch (opts.m_plot_type)
+					//	{
+					//	// Draw the data point
+					//	case Series::RdrOptions::EPlotType::Point:
+					//		#pragma region Plot Points
+					//		{
+					//			// If the point is a zero and we're not drawing zeros, skip
+					//			if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
+					//				break;
+
+					//			// Draw error bars is on
+					//			if (opts.m_draw_error_bars)
+					//			{
+					//				float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
+					//				int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
+					//				if ((iymax - iymin) > 0)
+					//					gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
+					//			}
+
+					//			// Plot the data point
+					//			if (opts.m_draw_data)
+					//			{
+					//				// If the point lies on the previous one then don't bother drawing it
+					//				if (x != px || y != py)
+					//					gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
+					//			}
+					//			break;
+					//		}
+					//		#pragma endregion
+
+					//	// Draw the data point and connect with a line
+					//	case Series::RdrOptions::EPlotType::Line:
+					//		#pragma region Plot_Lines
+					//		{
+					//			// If the point is a zero and we're not drawing zeros, skip
+					//			if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
+					//				break;
+
+					//			// Draw error bars is on
+					//			if (opts.m_draw_error_bars)
+					//			{
+					//				float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
+					//				int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
+					//				if ((iymax - iymin) > 0)
+					//					gfx.FillRectangle(&bsh_err, Gdiplus::Rect(x - pt_radius, iymin, pt_size, iymax - iymin));
+					//			}
+
+					//			// Plot the point and line
+					//			if (opts.m_draw_data)
+					//			{
+					//				// If the point lies on the previous one then don't bother drawing it
+					//				if (x != px || y != py)
+					//				{
+					//					// Draw the line from the previous point (i.e. don't draw if this is the first point)
+					//					if (!first)
+					//						gfx.DrawLine(&pen_line, px, py, x, y);
+					//					
+					//					// Plot the point (if it's size is non-zero)
+					//					if (opts.m_point_size > 0)
+					//						gfx.FillEllipse(&bsh_pt, Gdiplus::Rect(x - pt_radius, y - pt_radius, pt_size, pt_size));
+					//				}
+					//			}
+					//			break;
+					//		}
+					//		#pragma endregion
+
+					//	// Draw the data as columns in a bar graph
+					//	case Series::RdrOptions::EPlotType::Bar:
+					//		#pragma region Plot_Bars
+					//		{
+					//			// If the point is a zero and we're not drawing zeros, skip
+					//			if (curr_gv.y == 0.0f && opts.m_draw_zeros != Series::RdrOptions::EPlotZeros::Draw)
+					//				break;
+
+					//			// Calc the left and right side of the bar
+					//			float width_scale = opts.m_bar_width, lhs = 0.0f, rhs = 0.0f;
+					//			auto next_gv = pr::v2Zero; if (i+1 != imax) series.m_values.Value(i+1, next_gv.x, next_gv.y);
+					//			if (i   != imin) { lhs = (curr_gv.x - prev_gv.x) * scale.x * width_scale * 0.5f; }
+					//			if (i+1 != imax) { rhs = (next_gv.x - curr_gv.x) * scale.x * width_scale * 0.5f; }
+					//			if (lhs == 0.0f) lhs = rhs;
+					//			if (rhs == 0.0f) rhs = lhs;
+
+					//			// Draw error bars is on
+					//			if (opts.m_draw_error_bars)
+					//			{
+					//				float ymin,ymax; series.m_values.ErrValues(i, ymin, ymax);
+					//				int iymin = int(ymin * scale.y), iymax = int(ymax * scale.y);
+					//				if ((iymax - iymin) > 0)
+					//					gfx.FillRectangle(&bsh_err, Gdiplus::Rect(int(x - lhs), iymin, int(rhs + lhs), iymax - iymin));
+					//			}
+
+					//			// Plot the bar
+					//			if (opts.m_draw_data)
+					//			{
+					//				if      (y < 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), y, int(lhs + rhs), -y)); }
+					//				else if (y > 0) { gfx.FillRectangle(&bsh_bar, Gdiplus::Rect(int(x - lhs), 0, int(lhs + rhs),  y)); }
+					//				else            { gfx.DrawLine(&pen_bar, int(x - lhs), 0, int(lhs + rhs), 0); }
+					//			}
+					//			break;
+					//		}
+					//		#pragma endregion
+					//	}
+
+					//	//// Add a moving average line
+					//	//if (opts.m_draw_moving_avr)
+					//	//{
+					//	//	// Find the sum of the values around 'i' for the moving average
+					//	//	float sum = 0;
+					//	//	int count = 0;
+					//	//	int avr_i0 = Math.Max(0                   ,i - series.RenderOptions.m_ma_window_size / 2);
+					//	//	int avr_i1 = Math.Min(series.Values.Count ,i + series.RenderOptions.m_ma_window_size / 2);
+					//	//	for (int j = avr_i0; j != avr_i1; ++j)
+					//	//	{
+					//	//		// Don't include zeros if they're not being drawn
+					//	//		if (series.Values[j].m_valueY == 0 && series.RenderOptions.m_draw_zeros != Series.RdrOpts.PlotZeros.Draw) continue;
+					//	//		sum += series.Values[j].m_valueY;
+					//	//		++count;
+					//	//	}
+					//	//	if (count != 0)
+					//	//	{
+					//	//		// Get the data point in screen space
+					//	//		float curr_x = curr_gv     .m_valueX * scale.x;
+					//	//		float prev_x = prev_gv.m_valueX * scale.x;
+					//	//		// Draw a segment of the moving average line
+					//	//		float ma_y = (sum / count) * scale.y;
+					//	//		if (!first && (prev_ma_y != 0 || series.RenderOptions.m_draw_zeros == Series.RdrOpts.PlotZeros.Draw))
+					//	//			gfx.DrawLine(ma_pen, prev_x, prev_ma_y, curr_x, ma_y);
+					//	//		
+					//	//		prev_ma_y = ma_y;
+					//	//	}
+					//	//}

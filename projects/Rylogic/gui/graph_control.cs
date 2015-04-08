@@ -32,13 +32,10 @@ namespace pr.gui
 			public double y;
 
 			/// <summary>Lower error bound for the y value. Use delta, i.e plotted as y + y_lo, i.e. probably a negative number</summary>
-			public double y_lo;
+			public double ylo;
 
 			/// <summary>Upper error bound for the y value. Use delta, i.e plotted as y + y_hi, i.e. probably a positive number</summary>
-			public double y_hi;
-
-			/// <summary>The index of this graph value within a series (populated automatically)</summary>
-			public int m_index;
+			public double yhi;
 
 			/// <summary>Allow users to attach data to each value in the graph</summary>
 			public object m_tag;
@@ -51,16 +48,18 @@ namespace pr.gui
 				Debug.Assert(Maths.IsFinite(x) && Maths.IsFinite(y));
 				this.x       = x;
 				this.y       = y;
-				this.y_lo    = y_lo;
-				this.y_hi    = y_hi;
-				this.m_index = -1;
+				this.ylo    = y_lo;
+				this.yhi    = y_hi;
 				this.m_tag   = tag;
 			}
-			public override string ToString() { return "({0},{1})[{2}]".Fmt(x,y,m_index); }
-		}
-		private class SortX :IComparer<GraphValue>
-		{
-			public int Compare(GraphValue lhs, GraphValue rhs) { return (lhs.x > rhs.x ? 1 : 0) - (lhs.x < rhs.x ? 1 : 0); }
+			public override string ToString()
+			{
+				return "({0},{1})".Fmt(x,y);
+			}
+			public static Comparer<GraphValue> SortX
+			{
+				get { return Cmp<GraphValue>.From((lhs,rhs) => (lhs.x > rhs.x ? 1 : 0) - (lhs.x < rhs.x ? 1 : 0)); }
+			}
 		}
 
 		/// <summary>Rendering options</summary>
@@ -134,15 +133,13 @@ namespace pr.gui
 		}
 
 		/// <summary>Graph data series</summary>
-		public class Series
+		public class Series :List<GraphValue>
 		{
 			public class RdrOptions
 			{
 				public enum EPlotType { Point, Line, Bar }
-				public enum EPlotZeros { Draw, Hide, Skip }
 				public bool       Visible        { get; set; }
 				public bool       DrawData       { get; set; }
-				public EPlotZeros DrawZeros      { get; set; }
 				public bool       DrawErrorBars  { get; set; }
 				public EPlotType  PlotType       { get; set; }
 				public Color      PointColour    { get; set; }
@@ -156,14 +153,12 @@ namespace pr.gui
 				public int        MAWindowSize   { get; set; }
 				public Color      MALineColour   { get; set; }
 				public float      MALineWidth    { get; set; }
-				public double     YOffset        { get; set; }
 
 				public RdrOptions()
 				{
 					Visible        = true;
 					DrawData       = true;
-					DrawZeros      = EPlotZeros.Draw;
-					DrawErrorBars  = true;
+					DrawErrorBars  = false;
 					PlotType       = EPlotType.Line;
 					PointColour    = Color.FromArgb(0xff, 0x80, 0, 0);
 					PointSize      = 5f;
@@ -176,63 +171,26 @@ namespace pr.gui
 					MAWindowSize   = 10;
 					MALineColour   = Color.FromArgb(0xff, 0, 0, 0xFF);
 					MALineWidth    = 3f;
-					YOffset        = 0.0;
 				}
 				public RdrOptions Clone() { return (RdrOptions)MemberwiseClone(); }
 			}
 
-			/// <summary>The series data</summary>
-			private List<GraphValue> m_values;
-
-			public Series()
+			public Series() :this(string.Empty) {}
+			public Series(string name) :this(string.Empty, 100) {}
+			public Series(string name, int capacity) :this(name, capacity, new RdrOptions()) {}
+			public Series(string name, int capacity, RdrOptions rdr_opts) :base(capacity)
 			{
-				m_values      = new List<GraphValue>();
-				Name          = string.Empty;
-				RenderOptions = new RdrOptions();
+				Name          = name;
+				RenderOptions = rdr_opts;
 				AllowDelete   = false;
 				Sorted        = true; // Assume sorted because this is more efficient for rendering
 			}
-			public Series(string name) :this()
+			public Series(Series src) :base(src)
 			{
-				Name = name;
-			}
-			public Series(string name, int capacity) :this(name)
-			{
-				m_values = new List<GraphValue>(capacity);
-			}
-			public Series(string name, int capacity, RdrOptions rdr_opts) :this(name, capacity)
-			{
-				RenderOptions = rdr_opts;
-			}
-			public Series(Series src) :this()
-			{
-				Name = src.Name;
+				Name          = src.Name;
 				RenderOptions = src.RenderOptions.Clone();
-				m_values = new List<GraphValue>(src.m_values);
-			}
-
-			/// <summary>The number of data points in the series</summary>
-			public int Count
-			{
-				get { return m_values.Count; }
-			}
-
-			/// <summary>Add data to the series</summary>
-			public void Add(GraphValue value)
-			{
-				value.m_index = m_values.Count;
-				m_values.Add(value);
-			}
-
-			/// <summary>Array access to series data</summary>
-			public GraphValue this[int index]
-			{
-				get { return m_values[index]; }
-				set
-				{
-					value.m_index = index;
-					m_values[index] = value;
-				}
+				AllowDelete   = src.AllowDelete;
+				Sorted        = src.Sorted;
 			}
 
 			///<summary>
@@ -244,28 +202,27 @@ namespace pr.gui
 				var lwr = new GraphValue(xmin, 0.0f);
 				var upr = new GraphValue(xmax, 0.0f);
 
-				imin = m_values.BinarySearch(0, m_values.Count, lwr, new SortX());
+				imin = BinarySearch(0, Count, lwr, GraphValue.SortX);
 				if (imin < 0) imin = ~imin;
 				if (imin != 0) --imin;
 
-				imax = m_values.BinarySearch(imin, m_values.Count - imin, upr, new SortX());
+				imax = BinarySearch(imin, Count - imin, upr, GraphValue.SortX);
 				if (imax < 0) imax = ~imax;
-				if (imax != m_values.Count) ++imax;
+				if (imax != Count) ++imax;
 			}
 
 			/// <summary>Enumerable access to the data given an index range</summary>
 			public IEnumerable<GraphValue> Values(int i0 = 0, int i1 = int.MaxValue)
 			{
-				for (int i = i0, iend = Math.Min(i1, m_values.Count); i != iend; ++i)
+				for (int i = i0, iend = Math.Min(i1, Count); i != iend; ++i)
 				{
-					var gv = m_values[i];
-					if (gv.y == 0 && RenderOptions.DrawZeros != RdrOptions.EPlotZeros.Draw) continue;
+					var gv = this[i];
 					yield return gv;
 				}
 			}
 
 			/// <summary>
-			/// Returns the range of series data to consider when plotting from 'xmin' to 'max'
+			/// Returns the range of series data to consider when plotting from 'xmin' to 'xmax'
 			/// Note: in general, this range should include one point to the left of xmin and one to
 			/// the right of xmax so that line graphs plot a line up to the border of the plot area</summary>
 			public IEnumerable<GraphValue> Values(double xmin, double xmax)
@@ -273,6 +230,17 @@ namespace pr.gui
 				int i0,i1;
 				IndexRange(xmin, xmax, out i0, out i1);
 				return Values(i0, i1);
+			}
+
+			/// <summary>
+			/// Returns the range of indices to consider when plotting from 'xmin' to 'xmax'
+			/// Note: in general, this range should include one point to the left of xmin and one to
+			/// the right of xmax so that line graphs plot a line up to the border of the plot area</summary>
+			public IEnumerable<int> Indices(double xmin, double xmax)
+			{
+				int i0,i1;
+				IndexRange(xmin, xmax, out i0, out i1);
+				return Enumerable.Range(i0, i1 - i0);
 			}
 
 			/// <summary>A label for the series</summary>
@@ -288,26 +256,16 @@ namespace pr.gui
 			public bool Sorted { get; set; }
 
 			/// <summary>Sort the series by it's X value</summary>
-			public void Sort()
+			public void SortX()
 			{
-				m_values.Sort(new SortX());
+				Sort(Cmp<GraphValue>.From((l,r) => l.x < r.x));
 				Sorted = true;
-			}
-
-			/// <summary></summary>
-			public int BinarySearch(GraphValue item, IComparer<GraphValue> comparer)
-			{
-				return m_values.BinarySearch(item, comparer);
-			}
-			public int BinarySearch(int index, int count, GraphValue item, IComparer<GraphValue> comparer)
-			{
-				return m_values.BinarySearch(index, count, item, comparer);
 			}
 
 			/// <summary>ToString</summary>
 			public override string ToString()
 			{
-				return "{0} - count:{1}".Fmt(Name, m_values.Count);
+				return "{0} - count:{1}".Fmt(Name, Count);
 			}
 
 			/// <summary>Plot colour generator</summary>
@@ -500,8 +458,7 @@ namespace pr.gui
 			public void Shift(float delta)
 			{
 				if (!AllowScroll) return;
-				Min += delta;
-				Max += delta;
+				Rng = new Range(Min + delta, Max + delta);
 			}
 
 			public override string ToString()
@@ -662,23 +619,32 @@ namespace pr.gui
 		public double GetValueAt(int series_index, double x)
 		{
 			if (series_index < 0 || series_index >= Data.Count)
-				return 0.0;
+				throw new Exception("series index out of range");
 
 			// Binary search on X for the nearest data point
 			var series = Data[series_index];
-			if (series.Count == 0) return 0f;
+			if (series.Count == 0)
+				return 0;
 
-			// Find the nearest element to 'x'
-			var i0 = series.BinarySearch(new GraphValue(x, 0, null), new SortX());
-			if (i0 < 0) i0 = ~i0;
+			// Find the index range that cotnains 'x'
+			int i0,i1;
+			series.IndexRange(x, x, out i0, out i1);
 
-			// find the next element with an x value greater than values[i0].x
-			int i1; for (i1 = i0; i1 != series.Count && series[i1].x <= series[i0].x; ++i1) {}
-			if (i1 == series.Count) return series[i0].y;
-
-			// linearly interpolate between 'i0' and 'i1'
-			var t = (x - series[i0].x) / (series[i1].x - series[i0].x);
-			return (1f - t) * series[i0].y + (t) * series[i1].y;
+			// Search for the nearest on the left and right of 'x'
+			// (note: not assuming the series is sorted here)
+			var lhs = 0;
+			var rhs = series.Count - 1;
+			for (var i = i0; i != i1; ++i)
+			{
+				var tmp = series[i];
+				if (series[lhs].x < tmp.x && tmp.x < x) lhs = i;
+				if (series[rhs].x > tmp.x && tmp.x > x) rhs = i;
+			}
+			if (series[lhs].x > x && series[rhs].x < x) return 0;
+			if (series[lhs].x > x) return series[rhs].y;
+			if (series[rhs].x < x) return series[lhs].y;
+			var t = (x - series[lhs].x) / (series[rhs].x - series[lhs].x);
+			return (1f - t) * series[lhs].y + (t) * series[rhs].y;
 		}
 
 		/// <summary>Returns the nearest graph data point to 'location' given
@@ -686,14 +652,14 @@ namespace pr.gui
 		/// Returns null if no point is within the selection tolerance</summary>
 		public bool GetValueAt(int series_index, PointF pt, out GraphValue gv, int px_tol = 5)
 		{
-			gv = new GraphValue();
 			if (series_index < 0 || series_index >= Data.Count)
-				return false;
+				throw new Exception("series index out of range");
 
 			var series = Data[series_index];
 			var tol = px_tol * m_plot_area.Width / XAxis.Span;
 			var dist_sq = tol * tol;
 
+			gv = new GraphValue();
 			foreach (var v in series.Values(pt.X - tol, pt.X + tol))
 			{
 				var tmp = new v2((float)v.x, (float)v.y);
@@ -735,12 +701,6 @@ namespace pr.gui
 		}
 		private Axis.Range m_base_range_y;
 
-		/// <summary>The location in graph space of where the graph was "grabbed"</summary>
-		private PointF m_grab_location;
-
-		/// <summary>Area selection, has width, height of zero when the user isn't selecting</summary>
-		private Rectangle m_selection;
-
 		/// <summary>
 		/// Find the appropriate range for all data in the graph.
 		/// Call ResetToDefaultRange() to zoom the graph to this range</summary>
@@ -766,8 +726,8 @@ namespace pr.gui
 					if (v.y > yrng.m_max) yrng.m_max = v.y;
 				}
 			}
-			if (xrng.m_span > 0) xrng.m_span = xrng.m_span * 1.05f; else xrng = new Axis.Range();
-			if (yrng.m_span > 0) yrng.m_span = yrng.m_span * 1.05f; else yrng = new Axis.Range();
+			if (xrng.m_span > 0) xrng.m_span = xrng.m_span * 1.05f; else xrng = Axis.Range.Default;
+			if (yrng.m_span > 0) yrng.m_span = yrng.m_span * 1.05f; else yrng = Axis.Range.Default;
 			BaseRangeX = xrng;
 			BaseRangeY = yrng;
 		}
@@ -832,9 +792,10 @@ namespace pr.gui
 			}
 			set
 			{
-				value = Maths.Clamp(value, m_impl_zoom.m_min, m_impl_zoom.m_max);
 				var aspect = (YAxis.Span * BaseRangeX.m_span) / (BaseRangeY.m_span * XAxis.Span);
 				aspect = Maths.Clamp(Maths.IsFinite(aspect) ? aspect : 1.0, 0.001, 1000);
+				
+				value = Maths.Clamp(value, m_impl_zoom.m_min, m_impl_zoom.m_max);
 				if (XAxis.AllowZoom) XAxis.Span = BaseRangeX.m_span * value         ;
 				if (YAxis.AllowZoom) YAxis.Span = BaseRangeY.m_span * value * aspect;
 				Dirty = true;
@@ -880,6 +841,12 @@ namespace pr.gui
 				}
 			}
 		}
+
+		/// <summary>The location in graph space of where the graph was "grabbed"</summary>
+		private PointF m_grab_location;
+
+		/// <summary>Area selection, has width, height of zero when the user isn't selecting</summary>
+		private Rectangle m_selection;
 
 		// Mouse navigation - public to allow users to forward mouse calls to us.
 		public void OnMouseDown(object sender, MouseEventArgs e)
@@ -981,7 +948,7 @@ namespace pr.gui
 		#region Rendering
 
 		/// <summary>True when the bitmap needs to be regenerated</summary>
-		private bool Dirty
+		public bool Dirty
 		{
 			get { return m_impl_dirty; }
 			set
@@ -1234,7 +1201,7 @@ namespace pr.gui
 				{
 					var r = gfx.MeasureString(Title, RenderOptions.TitleFont);
 					var x = (float)(area.Width - r.Width) * 0.5f;
-					var y = (float)(area.Y + RenderOptions.TopMargin);
+					var y = (float)(area.Top + RenderOptions.TopMargin);
 					gfx.TranslateTransform(x, y);
 					gfx.MultiplyTransform(RenderOptions.TitleTransform);
 					gfx.DrawString(Title, RenderOptions.TitleFont, bsh, PointF.Empty);
@@ -1259,7 +1226,7 @@ namespace pr.gui
 				using (var bsh = new SolidBrush(YAxis.RenderOptions.LabelColour))
 				{
 					var r = gfx.MeasureString(YAxis.Label, YAxis.RenderOptions.LabelFont);
-					var x = (float)(area.X + RenderOptions.LeftMargin);
+					var x = (float)(area.Left + RenderOptions.LeftMargin);
 					var y = (float)(area.Height + r.Width) * 0.5f;
 					gfx.TranslateTransform(x, y);
 					gfx.RotateTransform(-90.0f);
@@ -1284,23 +1251,23 @@ namespace pr.gui
 				using (var bsh_xtick = new SolidBrush(XAxis.RenderOptions.TickColour))
 				using (var bsh_ytick = new SolidBrush(YAxis.RenderOptions.TickColour))
 				{
-					var lblx = (float)(plot_area.X - YAxis.RenderOptions.TickLength - 1);
-					var lbly = (float)(plot_area.Y + plot_area.Height + XAxis.RenderOptions.TickLength + 1);
+					var lblx = (float)(plot_area.Left - YAxis.RenderOptions.TickLength - 1);
+					var lbly = (float)(plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength + 1);
 					for (float x = min.x; x < max.x; x += step.x)
 					{
-						var X = (int)(plot_area.X + x * plot_area.Width / XAxis.Span);
+						var X = (int)(plot_area.Left + x * plot_area.Width / XAxis.Span);
 						var s = XAxis.TickText(x + XAxis.Min);
 						var r = gfx.MeasureString(s, XAxis.RenderOptions.TickFont);
 						gfx.DrawString(s, XAxis.RenderOptions.TickFont, bsh_xtick, new PointF(X - r.Width*0.5f, lbly));
-						gfx.DrawLine(pen_axis, X, plot_area.Y + plot_area.Height, X, plot_area.Y + plot_area.Height + XAxis.RenderOptions.TickLength);
+						gfx.DrawLine(pen_axis, X, plot_area.Top + plot_area.Height, X, plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength);
 					}
 					for (float y = min.y; y < max.y; y += step.y)
 					{
-						var Y = (int)(plot_area.Y + plot_area.Height - y * plot_area.Height / YAxis.Span);
+						var Y = (int)(plot_area.Top + plot_area.Height - y * plot_area.Height / YAxis.Span);
 						var s = YAxis.TickText(y + YAxis.Min);
 						var r = gfx.MeasureString(s, YAxis.RenderOptions.TickFont);
 						gfx.DrawString(s, YAxis.RenderOptions.TickFont, bsh_ytick, new PointF(lblx - r.Width, Y - r.Height*0.5f));
-						gfx.DrawLine(pen_axis, plot_area.X - YAxis.RenderOptions.TickLength, Y, plot_area.X, Y);
+						gfx.DrawLine(pen_axis, plot_area.Left - YAxis.RenderOptions.TickLength, Y, plot_area.Left, Y);
 					}
 
 					// Graph border
@@ -1337,13 +1304,13 @@ namespace pr.gui
 				// Grid lines
 				for (float x = min.x; x < max.x; x += step.x)
 				{
-					var X = (int)(plot_area.X + x * plot_area.Width / XAxis.Span);
-					gfx.DrawLine(pen_grid, X, plot_area.Y, X, plot_area.Bottom);
+					var X = (int)(plot_area.Left + x * plot_area.Width / XAxis.Span);
+					gfx.DrawLine(pen_grid, X, plot_area.Top, X, plot_area.Bottom);
 				}
 				for (float y = min.y; y < max.y; y += step.y)
 				{
 					var Y = (int)(plot_area.Bottom - y * plot_area.Height / YAxis.Span);
-					gfx.DrawLine(pen_grid, plot_area.X, Y, plot_area.Right, Y);
+					gfx.DrawLine(pen_grid, plot_area.Left, Y, plot_area.Right, Y);
 				}
 			}
 		}
@@ -1380,8 +1347,8 @@ namespace pr.gui
 				using (var pen_bar  = new Pen(opts.BarColour, 0.0f))
 				{
 					// Loop over data points
-					var values = series.Values(XAxis.Min, XAxis.Max);
-					for (var iter = values.GetIterator(); !iter.AtEnd;)
+					var indices = series.Indices(XAxis.Min, XAxis.Max);
+					for (var iter = indices.GetIterator(); !iter.AtEnd;)
 					{
 						if (m_rdr_cancel)
 							break;
@@ -1432,65 +1399,65 @@ namespace pr.gui
 		/// <summary>A helper for rendering that finds the bounds of all points at the same screen space X position</summary>
 		private class ScreenPoint
 		{
-			public Series    series;    // The series that this point came from
-			public Rectangle plot_area; // The screen space area that the point must be within
-			public v2        scale;     // Graph space to screen space scaling factors
-			public int    i_min, i_max; // The index range of the data points included
-			public double x_min, x_max; // The range of data point X values
-			public double y_min, y_max; // The range of data point Y values
-			public double y_lo , y_hi ; // The bounds on the error bars of the Y values
+			public Series    m_series;    // The series that this point came from
+			public Rectangle m_plot_area; // The screen space area that the point must be within
+			public v2        m_scale;     // Graph space to screen space scaling factors
+			public int    m_imin, m_imax; // The index range of the data points included
+			public double m_xmin, m_xmax; // The range of data point X values
+			public double m_ymin, m_ymax; // The range of data point Y values
+			public double m_ylo , m_yhi ; // The bounds on the error bars of the Y values
 
 			/// <summary>Scan 'i' forward to the next data point that has a screen space X value not equal to that of the i'th data point</summary>
-			public ScreenPoint(Series series, Rectangle plot_area, v2 scale, Iterator<GraphValue> iter)
+			public ScreenPoint(Series series, Rectangle plot_area, v2 scale, Iterator<int> iter)
 			{
 				// Get the data point
-				var gv = iter.Current;
+				var gv = series[iter.Current];
 				var sx = (int)(gv.x * scale.x);
 
 				// Init members
-				this.series    = series;
-				this.plot_area = plot_area;
-				this.scale     = scale;
-				this.i_min     = this.i_max = gv.m_index;
-				this.x_min     = this.x_max = gv.x;
-				this.y_min     = this.y_max = gv.y;
-				this.y_lo      = gv.y + gv.y_lo;
-				this.y_hi      = gv.y + gv.y_hi;
+				this.m_series    = series;
+				this.m_plot_area = plot_area;
+				this.m_scale     = scale;
+				this.m_imin     = this.m_imax = iter.Current;
+				this.m_xmin     = this.m_xmax = gv.x;
+				this.m_ymin     = this.m_ymax = gv.y;
+				this.m_ylo      = gv.y + gv.ylo;
+				this.m_yhi      = gv.y + gv.yhi;
 
 				// While the data point still represents the same X coordinate on-screen
 				// scan forward until x != sx, finding the bounds on points that fall at this X
 				for (iter.MoveNext(); !iter.AtEnd; iter.MoveNext())
 				{
-					gv = iter.Current;
+					gv = series[iter.Current];
 					var x = (int)(gv.x * scale.x);
 					if (x != sx) break;
 
-					this.i_max = gv.m_index;
-					this.x_max = gv.x;
-					this.y_min = Math.Min(this.y_min , gv.y);
-					this.y_max = Math.Max(this.y_max , gv.y);
-					this.y_lo  = Math.Min(this.y_lo  , gv.y + gv.y_lo);
-					this.y_hi  = Math.Max(this.y_hi  , gv.y + gv.y_hi);
+					this.m_imax = iter.Current;
+					this.m_xmax = gv.x;
+					this.m_ymin = Math.Min(this.m_ymin , gv.y);
+					this.m_ymax = Math.Max(this.m_ymax , gv.y);
+					this.m_ylo  = Math.Min(this.m_ylo  , gv.y + gv.ylo);
+					this.m_yhi  = Math.Max(this.m_yhi  , gv.y + gv.yhi);
 				}
 			}
 
 			/// <summary>True if this is a single point, false if it represents multiple points</summary>
-			public bool IsSingle { get { return x_min == x_max; } }
+			public bool IsSingle { get { return m_imin == m_imax; } }
 
 			// Error bars/Bar graph width in screen space
 			public int lhs, rhs;
 			public void CalcBarWidth(float width_scale = 1.0f)
 			{
 				// Calc the left and right side of the bar
-				if (i_min != 0)
+				if (m_imin != 0)
 				{
-					var prev_x = series[i_min - 1].x;
-					lhs = (int)Math.Max(0, 0.5*(x_min - prev_x) * width_scale * scale.x);
+					var prev_x = m_series[m_imin - 1].x;
+					lhs = (int)Math.Max(0, 0.5*(m_xmin - prev_x) * width_scale * m_scale.x);
 				}
-				if (i_max+1 != series.Count)
+				if (m_imax+1 != m_series.Count)
 				{
-					var next_x = series[i_max + 1].x;
-					rhs = (int)Math.Max(1, 0.5*(next_x - x_max) * width_scale * scale.x);
+					var next_x = m_series[m_imax + 1].x;
+					rhs = (int)Math.Max(1, 0.5*(next_x - m_xmax) * width_scale * m_scale.x);
 				}
 				if (lhs == 0) lhs = rhs; // i_min == 0 case
 				if (rhs == 0) rhs = lhs; // i_max == Count-1 case
@@ -1500,9 +1467,9 @@ namespace pr.gui
 		/// <summary>Draw error bars. lhs/rhs are the screen space size of the bar</summary>
 		private void PlotErrorBars(Graphics gfx, ScreenPoint pt, int lhs, int rhs, SolidBrush bsh_err)
 		{
-			var x   = (int)(pt.x_min * pt.scale.x);
-			var ylo = (int)(pt.y_lo * pt.scale.y);
-			var yhi = (int)(pt.y_hi * pt.scale.y);
+			var x   = (int)(pt.m_xmin * pt.m_scale.x);
+			var ylo = (int)(pt.m_ylo * pt.m_scale.y);
+			var yhi = (int)(pt.m_yhi * pt.m_scale.y);
 			if (yhi - ylo > 0)
 				gfx.FillRectangle(bsh_err, new Rectangle(x - lhs, ylo, lhs + rhs, yhi - ylo));
 		}
@@ -1520,9 +1487,9 @@ namespace pr.gui
 			// Plot the data point
 			if (opts.DrawData)
 			{
-				var x = (int)(pt.x_min * pt.scale.x);
-				var y = (int)(pt.y_min * pt.scale.y);
-				var h = (int)((pt.y_max - pt.y_min) * pt.scale.y);
+				var x = (int)(pt.m_xmin * pt.m_scale.x);
+				var y = (int)(pt.m_ymin * pt.m_scale.y);
+				var h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
 				gfx.FillEllipse(bsh_pt, new RectangleF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
 			}
 		}
@@ -1541,30 +1508,30 @@ namespace pr.gui
 			if (opts.DrawData)
 			{
 				// Draw the line from the previous point
-				if (pt.i_min != 0) // if this is not the first point
+				if (pt.m_imin != 0) // if this is not the first point
 				{
-					var x  = (int)(pt.series[pt.i_min    ].x * pt.scale.x);
-					var px = (int)(pt.series[pt.i_min - 1].x * pt.scale.x);
-					var y  = (int)(pt.series[pt.i_min    ].y * pt.scale.y);
-					var py = (int)(pt.series[pt.i_min - 1].y * pt.scale.y);
+					var px = (int)(pt.m_series[pt.m_imin - 1].x * pt.m_scale.x);
+					var py = (int)(pt.m_series[pt.m_imin - 1].y * pt.m_scale.y);
+					var x  = (int)(pt.m_series[pt.m_imin    ].x * pt.m_scale.x);
+					var y  = (int)(pt.m_series[pt.m_imin    ].y * pt.m_scale.y);
 					gfx.DrawLine(pen_line, px, py, x, y);
 				}
 
 				// Draw a vertical line if the screen point represents multiple points
 				if (!pt.IsSingle)
 				{
-					var x   = (int)(pt.x_min * pt.scale.x);
-					var ylo = (int)(pt.y_min * pt.scale.y);
-					var yhi = (int)(pt.y_max * pt.scale.y);
+					var x   = (int)(pt.m_xmin * pt.m_scale.x);
+					var ylo = (int)(pt.m_ymin * pt.m_scale.y);
+					var yhi = (int)(pt.m_ymax * pt.m_scale.y);
 					gfx.DrawLine(pen_line, x, ylo, x, yhi);
 				}
 
 				// Plot the point (if it's size is non-zero)
 				if (opts.PointSize > 0)
 				{
-					var x = (int)(pt.x_min * pt.scale.x);
-					var y = (int)(pt.y_min * pt.scale.y);
-					var h = (int)((pt.y_max - pt.y_min) * pt.scale.y);
+					var x = (int)(pt.m_xmin * pt.m_scale.x);
+					var y = (int)(pt.m_ymin * pt.m_scale.y);
+					var h = (int)((pt.m_ymax - pt.m_ymin) * pt.m_scale.y);
 					gfx.FillEllipse(bsh_pt, new RectangleF(x - opts.PointSize*0.5f, y - opts.PointSize*0.5f, opts.PointSize, h + opts.PointSize));
 				}
 			}
@@ -1583,9 +1550,9 @@ namespace pr.gui
 			// Plot the bar
 			if (opts.DrawData)
 			{
-				var x   = Maths.Clamp((int)( pt.x_min                       * pt.scale.x), pt.plot_area.Left, pt.plot_area.Right);
-				var ylo = Maths.Clamp((int)((pt.y_min > 0 ? 0.0 : pt.y_min) * pt.scale.y), pt.plot_area.Top, pt.plot_area.Bottom);
-				var yhi = Maths.Clamp((int)((pt.y_max < 0 ? 0.0 : pt.y_max) * pt.scale.y), pt.plot_area.Top, pt.plot_area.Bottom);
+				var x   = Maths.Clamp((int)( pt.m_xmin                       * pt.m_scale.x), pt.m_plot_area.Left, pt.m_plot_area.Right);
+				var ylo = Maths.Clamp((int)((pt.m_ymin > 0 ? 0.0 : pt.m_ymin) * pt.m_scale.y), pt.m_plot_area.Top, pt.m_plot_area.Bottom);
+				var yhi = Maths.Clamp((int)((pt.m_ymax < 0 ? 0.0 : pt.m_ymax) * pt.m_scale.y), pt.m_plot_area.Top, pt.m_plot_area.Bottom);
 				
 				if (yhi - ylo > 0)
 					gfx.FillRectangle(bsh_bar, new Rectangle(x - pt.lhs, ylo, Math.Max(1, pt.lhs + pt.rhs), yhi - ylo));
@@ -1785,23 +1752,6 @@ namespace pr.gui
 									{
 										series.RenderOptions.DrawErrorBars = !series.RenderOptions.DrawErrorBars;
 										Dirty = true;
-									};
-							}
-							#endregion
-							#region Draw zeros
-							{
-								var draw_zeros = lvl2.Add2(new ToolStripComboBox());
-								draw_zeros.Items.AddRange(Enum<Series.RdrOptions.EPlotZeros>.Names.Select(x => x + " Zeros").Cast<object>().ToArray());
-								draw_zeros.SelectedIndex = (int)series.RenderOptions.DrawZeros;
-								draw_zeros.SelectedIndexChanged += (s,a) =>
-									{
-										series.RenderOptions.DrawZeros = (Series.RdrOptions.EPlotZeros)draw_zeros.SelectedIndex;
-										Dirty = true;
-									};
-								draw_zeros.KeyDown += (s,a) =>
-									{
-										if (a.KeyCode == Keys.Return)
-											context_menu.Close();
 									};
 							}
 							#endregion
@@ -2557,7 +2507,7 @@ namespace pr.gui
 						file.WriteLine(Data[i].Name);
 						file.WriteLine(XAxis.Label+","+YAxis.Label+",Lower Bound,Upper Bound");
 						foreach (var gv in Data[i].Values())
-							file.WriteLine(gv.x+","+gv.y+","+gv.y_lo+","+gv.y_hi);
+							file.WriteLine(gv.x+","+gv.y+","+gv.ylo+","+gv.yhi);
 					}
 				}
 			}

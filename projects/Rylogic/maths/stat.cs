@@ -139,8 +139,8 @@ namespace pr.maths
 		// Use the population standard deviation when all data values in a set have been considered.
 		// Use the sample standard deviation when the data values used are only a sample of the total population
 		// Note: for a moving variance the choice between population/sample sd is a bit arbitrary
-		public double PopStdDev { get { return Maths.Sqrt(PopStdVar); } }
-		public double SamStdDev { get { return Maths.Sqrt(SamStdVar); } }
+		public double PopStdDev { get { return Math.Sqrt(PopStdVar); } }
+		public double SamStdDev { get { return Math.Sqrt(SamStdVar); } }
 		public double PopStdVar { get { return m_count > 0 ? m_var * (1.0 / (m_count - 0)) : 0.0; } }
 		public double SamStdVar { get { return m_count > 1 ? m_var * (1.0 / (m_count - 1)) : 0.0; } }
 		
