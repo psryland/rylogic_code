@@ -86,7 +86,7 @@ namespace pr.util
 		{
 			T tmp = lhs;
 			lhs = rhs;
-			rhs = lhs;
+			rhs = tmp;
 		}
 
 		/// <summary>Compare two ranges within a byte array</summary>

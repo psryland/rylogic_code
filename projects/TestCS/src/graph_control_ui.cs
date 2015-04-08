@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 using pr.maths;
 
@@ -15,17 +17,18 @@ namespace TestCS
 			InitializeComponent();
 
 			m_graph.SetLabels("Test Graph", "X Axis", "Y Axis");
-/*			Add("Sine Wave", 1000
+			m_graph.BorderStyle = BorderStyle.FixedSingle;
+			Add("Sine Wave", 1000
 				,i =>
 					{
 						var x = i * Maths.Tau / 1000.0;
 						var y = Math.Sin(x);
-						return new { X = x, Y = y, ErrLo = y, ErrHi = y };
+						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
 					}
-				,new GraphControl.Series.RdrOpts
+				,new GraphControl.Series.RdrOptions
 					{
-						m_line_width = 2f,
-						m_line_colour = Color.Blue,
+						LineWidth = 2f,
+						LineColour = Color.Blue,
 					});
 
 			Add("Cosine Wave", 1000
@@ -33,12 +36,12 @@ namespace TestCS
 					{
 						var x = i * Maths.Tau / 1000.0;
 						var y = Math.Cos(x);
-						return new { X = x, Y = y, ErrLo = y, ErrHi = y };
+						return new { X = x, Y = y, ErrLo = 0, ErrHi = 0 };
 					}
-				,new GraphControl.Series.RdrOpts
+				,new GraphControl.Series.RdrOptions
 					{
-						m_line_width = 2f,
-						m_line_colour = Color.Red,
+						LineWidth = 2f,
+						LineColour = Color.Red,
 					});
 
 			Add("Thing", 1000
@@ -48,35 +51,40 @@ namespace TestCS
 						var y = Math.Cos(x) * Math.Sin(x);
 						var errlo = Math.Abs(0.1 * Math.Cos(x - Maths.TauBy16));
 						var errhi = Math.Abs(0.1 * Math.Cos(x + Maths.TauBy16));
-						return new { X = x, Y = y, ErrLo = y - errlo, ErrHi = y + errhi };
+						return new { X = x, Y = y, ErrLo = -errlo, ErrHi = +errhi };
 					}
-				,new GraphControl.Series.RdrOpts
+				,new GraphControl.Series.RdrOptions
 					{
-						m_line_width = 2f,
-						m_line_colour = Color.Green,
+						LineWidth = 2f,
+						LineColour = Color.Green,
 					});
-
+/*			*/
 			m_graph.FindDefaultRange();
-			m_graph.ResetToDefaultRange();*/
-			m_graph.AddOverlaysOnPaint += DrawOverlays;
+			m_graph.ResetToDefaultRange();
+			m_graph.AddOverlayOnPaint += DrawOverlays;
 		}
 
-		private void DrawOverlays(GraphControl sender,Graphics gfx,float scale_x,float scale_y)
+		private void DrawOverlays(object sender, GraphControl.OverlaysEventArgs args)
 		{
-			gfx.DrawEllipse(Pens.Red,0.25f*scale_x,0.25f*scale_y,0.5f*scale_x,0.5f*scale_y);
+			Matrix c2g; v2 scale;
+			sender.As<GraphControl>().ClientToGraphSpace(out c2g, out scale);
+			args.Gfx.Transform = c2g;
+			args.Gfx.DrawEllipse(Pens.Red, 0.25f * scale.x, 0.25f * scale.y, 0.5f * scale.x, 0.5f * scale.y);
+			args.Gfx.ResetTransform();
 		}
 
 		/// <summary>Add a function as a series</summary>
-		private void Add(string title, int points, Func<int,dynamic> Func, GraphControl.Series.RdrOpts opts)
+		private void Add(string title, int points, Func<int,dynamic> Func, GraphControl.Series.RdrOptions opts)
 		{
 			var series = new GraphControl.Series(title, points, opts);
 			for (var i = 0; i != 1000; ++i)
 			{
 				var d = Func(i);
-				series.Values.Add(new GraphControl.GraphValue(d.X,d.Y,d.ErrLo,d.ErrHi,null));
+				series.Add(new GraphControl.GraphValue(d.X,d.Y,d.ErrLo,d.ErrHi,null));
 			}
 			m_graph.Data.Add(series);
 		}
+
 		#region Windows Form Designer generated code
 
 		/// <summary>
@@ -105,7 +113,6 @@ namespace TestCS
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(GraphControlUI));
 			this.m_graph = new pr.gui.GraphControl();
-			((System.ComponentModel.ISupportInitialize)(this.m_graph)).BeginInit();
 			this.SuspendLayout();
 			//
 			// m_graph
@@ -129,7 +136,6 @@ namespace TestCS
 			this.Controls.Add(this.m_graph);
 			this.Name = "GraphControl";
 			this.Text = "GraphControl";
-			((System.ComponentModel.ISupportInitialize)(this.m_graph)).EndInit();
 			this.ResumeLayout(false);
 		}
 

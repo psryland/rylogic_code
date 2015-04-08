@@ -32,6 +32,8 @@ namespace pr.maths
 
 		public static float     TinyF                                           { get { return Tiny; } }
 		public static double    TinyD                                           { get { return Tiny; } }
+		public static bool      IsFinite(float x)                               { return !float.IsInfinity(x) && !float.IsNaN(x); }
+		public static bool      IsFinite(double x)                              { return !double.IsInfinity(x) && !double.IsNaN(x); }
 		public static bool      FEql(float lhs, float rhs, float tol)           { return Math.Abs(lhs - rhs) < tol; }
 		public static bool      FEql(float lhs, float rhs)                      { return FEql(lhs, rhs, TinyF); }
 		public static bool      FEql(double lhs, double rhs, double tol)        { return Math.Abs(lhs - rhs) < tol; }

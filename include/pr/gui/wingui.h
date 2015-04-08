@@ -228,28 +228,44 @@ namespace pr
 		// Rect
 		struct Rect :RECT
 		{
-			Rect() :RECT()                        {}
-			Rect(RECT const& r) :RECT(r)          {}
-			Rect(int l, int t, int r, int b)      { left = l; top = t; right = r; bottom = b; }
-			explicit Rect(Size s)                 { left = top = 0; right = s.cx; bottom = s.cy; }
-			LONG width() const                    { return right - left; }
-			LONG height() const                   { return bottom - top; }
-			Size size() const                     { return Size{width(), height()}; }
-			void size(Size sz)                    { right = left + sz.cx; bottom = top + sz.cy; }
-			Point& topleft()                      { return *reinterpret_cast<Point*>(&left); }
-			Point& bottomright()                  { return *reinterpret_cast<Point*>(&right); }
+			Rect() :RECT()                                {}
+			Rect(RECT const& r) :RECT(r)                  {}
+			Rect(POINT const& pt, SIZE const& sz) :RECT() { left = pt.x; top = pt.y; right = pt.x + sz.cx; bottom = pt.y + sz.cy; }
+			Rect(int l, int t, int r, int b)              { left = l; top = t; right = r; bottom = b; }
+			explicit Rect(Size s)                         { left = top = 0; right = s.cx; bottom = s.cy; }
+			LONG width() const                            { return right - left; }
+			LONG height() const                           { return bottom - top; }
+			Size size() const                             { return Size{width(), height()}; }
+			void size(Size sz)                            { right = left + sz.cx; bottom = top + sz.cy; }
+			Point& topleft()                              { return *reinterpret_cast<Point*>(&left); }
+			Point& bottomright()                          { return *reinterpret_cast<Point*>(&right); }
 
 			// This functions return false if the result is a zero rect (that's why I'm not using Throw())
 			// The returned rect is the the bounding box of the geometric operation (note how that effects subtract)
-			Rect Offset(int dx, int dy) const     { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
-			Rect Inflate(int dx, int dy) const    { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
-			Rect Intersect(Rect const& rhs) const { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
-			Rect Union(Rect const& rhs) const     { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
-			Rect Subtract(Rect const& rhs) const  { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
+			bool Contains(Point const& pt) const               { return pt.x >= left && pt.x < right && pt.y >= top && pt.y < bottom; }
+			Rect Offset(int dx, int dy) const                  { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
+			Rect Inflate(int dx, int dy) const                 { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
+			Rect Inflate(int dl, int dt, int dr, int db) const { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
+			Rect Intersect(Rect const& rhs) const              { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
+			Rect Union(Rect const& rhs) const                  { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
+			Rect Subtract(Rect const& rhs) const               { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
+			Rect NormalizeRect() const
+			{
+				auto r = *this;
+				if (r.left > r.right) std::swap(r.left, r.right);
+				if (r.top > r.bottom) std::swap(r.top, r.bottom);
+				return r;
+			}
+
 			operator Size() const                { return size(); }
 		};
 
 		inline Point operator + (Point p, Size s) { return Point(p.x + s.cx, p.y + s.cy); }
+		inline Size  operator - (Point l, Point r) { return Size(l.x + r.x, l.y - r.y); }
+		inline bool  operator == (Point const& l, Point const& r) { return l.x == r.x && l.y == r.y; }
+		inline bool  operator != (Point const& l, Point const& r) { return !(l == r); }
+		inline bool  operator == (Size const& l, Size const& r) { return l.cx == r.cx && l.cy == r.cy; }
+		inline bool  operator != (Size const& l, Size const& r) { return !(l == r); }
 		inline Size::operator Rect() const { return Rect(*this); }
 
 		// Range
@@ -732,7 +748,7 @@ namespace pr
 						WNDCLASSEX wc;
 						auto a = ATOM(::GetClassInfoEx(hinst, WndType::WndClassName(), &wc));
 						if (a != 0) return a;
-						
+
 						// Allow 'Derived' to override the WndClassInfo. If the WndProc is not
 						// null, assume that Derived has it's own special WndProc.
 						wc = WndType::WndClassInfo(hinst);
@@ -745,6 +761,9 @@ namespace pr
 					}();
 				return atom;
 			}
+
+			// Helper methods that allow derived types to implement their WndClassInfo() and
+			// WndClassName() functions by instantiating these methods templated with their type
 			template <typename WndType> static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
 			{
 				// This is a default implementation of WndClassInfo that gets parameters
@@ -752,7 +771,7 @@ namespace pr
 				// will pick up the defaults below unless explicitly defined in the derived type
 				WNDCLASSEX wc;
 				wc.cbSize        = sizeof(WNDCLASSEX);
-				wc.style         = CS_HREDRAW | CS_VREDRAW;
+				wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 				wc.cbClsExtra    = 0;
 				wc.cbWndExtra    = 0;
 				wc.hInstance     = hinst;
@@ -765,16 +784,23 @@ namespace pr
 				wc.lpfnWndProc   = nullptr; // Leave as null to use the thunk
 				return wc;
 			}
+			static LPCTSTR DefaultWndClassName()
+			{
+				// Auto name, derived can overload this function
+				static thread_local TCHAR name[64];
+				_stprintf_s(name, TEXT("wingui::%p"), &name[0]);
+				return name;
+			}
+
+			// These methods are provided so that windows that inherit from control
+			// can implement their WndClassInfo(), and WndClassName() functions using defaults
 			static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
 			{
 				return WndClassInfo<Control>(hinst);
 			}
 			static LPCTSTR WndClassName()
 			{
-				// Auto name, derived can overload this function
-				static thread_local TCHAR name[64];
-				_stprintf_s(name, TEXT("wingui::%p"), &name[0]);
-				return name;
+				return DefaultWndClassName();
 			}
 			static HICON WndIcon(HINSTANCE hinst, bool large)
 			{
@@ -869,8 +895,7 @@ namespace pr
 			// This method is the window procedure for this control.
 			// 'ProcessWindowMessage' is used to process messages sent
 			// to the parent window that contains this control.
-			// WndProc is called by windows, Forms forward messages to their child
-			// controls using 'ProcessWindowMessage'
+			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
 				//WndProcDebug(message, wparam, lparam);
@@ -923,14 +948,6 @@ namespace pr
 
 						break;
 					}
-				//case WM_SIZE:
-				//	{
-				//		auto flags = UINT(wparam);
-				//		auto size = pr::gui::Size(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam));
-				//		OnSize(SizeEventArgs(SizeEventArgs::EState::Sizing, size, flags));
-				//		Invalidate(true);
-				//		break;
-				//	}
 				case WM_WINDOWPOSCHANGING:
 				case WM_WINDOWPOSCHANGED:
 					{
@@ -947,6 +964,66 @@ namespace pr
 						if ((b.m_mask & MinMaxInfo::EMask::MaxPosition ) != 0) a.ptMaxPosition  = b.ptMaxPosition ; else b.ptMaxPosition  = a.ptMaxPosition ;
 						if ((b.m_mask & MinMaxInfo::EMask::MinTrackSize) != 0) a.ptMinTrackSize = b.ptMinTrackSize; else b.ptMinTrackSize = a.ptMinTrackSize;
 						if ((b.m_mask & MinMaxInfo::EMask::MaxTrackSize) != 0) a.ptMaxTrackSize = b.ptMaxTrackSize; else b.ptMaxTrackSize = a.ptMaxTrackSize;
+						break;
+					}
+				case WM_KEYDOWN:
+				case WM_KEYUP:
+					{
+						auto vk_key = UINT(wparam);
+						auto repeats = UINT(lparam & 0xFFFF);
+						auto flags = UINT((lparam & 0xFFFF0000) >> 16);
+						if (OnKey(KeyEventArgs(vk_key, message == WM_KEYDOWN, repeats, flags)))
+							return true;
+						break;
+					}
+				case WM_LBUTTONDOWN:
+				case WM_RBUTTONDOWN:
+				case WM_MBUTTONDOWN:
+				case WM_XBUTTONDOWN:
+				case WM_LBUTTONUP:
+				case WM_RBUTTONUP:
+				case WM_MBUTTONUP:
+				case WM_XBUTTONUP:
+					{
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
+						auto down =
+							message == WM_LBUTTONDOWN ||
+							message ==  WM_RBUTTONDOWN ||
+							message == WM_MBUTTONDOWN ||
+							message == WM_XBUTTONDOWN;
+						auto btn =
+							(message == WM_LBUTTONDOWN || message == WM_LBUTTONUP) ? EMouseKey::Left :
+							(message == WM_RBUTTONDOWN || message == WM_RBUTTONUP) ? EMouseKey::Right :
+							(message == WM_MBUTTONDOWN || message == WM_MBUTTONUP) ? EMouseKey::Middle :
+							(message == WM_XBUTTONDOWN || message == WM_XBUTTONUP) ? EMouseKey::XButton1|EMouseKey::XButton2 :
+							EMouseKey();
+						
+						// Event order is down, click, up
+						bool handled = false;
+						if (down)
+							handled |= OnMouseButton(MouseEventArgs(btn, true, pt, keystate));
+						if (IsClick(btn, down))
+							handled |= OnMouseClick(MouseEventArgs(btn, true, pt, keystate));
+						if (!down)
+							handled |= OnMouseButton(MouseEventArgs(btn, false, pt, keystate));
+						if (handled) return true;
+						break;
+					}
+				case WM_MOUSEWHEEL:
+					{
+						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
+							return true;
+						break;
+					}
+				case WM_MOUSEMOVE:
+					{
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						OnMouseMove(MouseEventArgs(keystate, false, pt, keystate));
 						break;
 					}
 				}
@@ -990,79 +1067,6 @@ namespace pr
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
-				//case WM_ENTERSIZEMOVE:
-				//case WM_EXITSIZEMOVE:
-				//	{
-				//		if (message == WM_SIZE) ResizeToParent(true);
-				//		auto state = message == WM_ENTERSIZEMOVE ? SizeEventArgs::EState::Enter : SizeEventArgs::EState::Exit;
-				//		Rect bounds;
-				//		Throw(::GetWindowRect(*this, &bounds), "Failed to get window bounds during WM_ENTERSIZEMOVE or WM_EXITSIZEMOVE");
-				//		OnSize(SizeEventArgs(state, pr::gui::Size(bounds.width(), bounds.height()), 0));
-				//		if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-				//		break;
-				//	}
-				case WM_KEYDOWN:
-				case WM_KEYUP:
-					{
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						auto vk_key = UINT(wparam);
-						auto repeats = UINT(lparam & 0xFFFF);
-						auto flags = UINT((lparam & 0xFFFF0000) >> 16);
-						if (OnKey(KeyEventArgs(vk_key, message == WM_KEYDOWN, repeats, flags)))
-							return true;
-						break;
-					}
-				case WM_LBUTTONDOWN:
-				case WM_RBUTTONDOWN:
-				case WM_MBUTTONDOWN:
-				case WM_XBUTTONDOWN:
-				case WM_LBUTTONUP:
-				case WM_RBUTTONUP:
-				case WM_MBUTTONUP:
-				case WM_XBUTTONUP:
-					{
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
-						auto down =
-							message == WM_LBUTTONDOWN ||
-							message ==  WM_RBUTTONDOWN ||
-							message == WM_MBUTTONDOWN ||
-							message == WM_XBUTTONDOWN;
-						auto btn =
-							(message == WM_LBUTTONDOWN || message == WM_LBUTTONUP) ? EMouseKey::Left :
-							(message == WM_RBUTTONDOWN || message == WM_RBUTTONUP) ? EMouseKey::Right :
-							(message == WM_MBUTTONDOWN || message == WM_MBUTTONUP) ? EMouseKey::Middle :
-							(message == WM_XBUTTONDOWN || message == WM_XBUTTONUP) ? EMouseKey::XButton1|EMouseKey::XButton2 :
-							EMouseKey();
-						
-						// Event order is down, click, up
-						bool handled = false;
-						if (down)
-							handled |= OnMouseButton(MouseEventArgs(btn, true, pt, keystate));
-						if (IsClick(btn, down))
-							handled |= OnMouseClick(MouseEventArgs(btn, true, pt, keystate));
-						if (!down)
-							handled |= OnMouseButton(MouseEventArgs(btn, false, pt, keystate));
-						if (handled) return true;
-						break;
-					}
-				case WM_MOUSEWHEEL:
-					{
-						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
-							return true;
-						break;
-					}
-				case WM_MOUSEMOVE:
-					{
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
-						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
-						OnMouseMove(MouseEventArgs(keystate, false, pt, keystate));
-						break;
-					}
 				case WM_TIMER:
 					{
 						auto event_id = UINT_PTR(wparam);
@@ -1088,6 +1092,19 @@ namespace pr
 						}
 						break;
 					}
+				case WM_MOUSEWHEEL:
+					{
+						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse button/move messages
+						// which are sent to the control with focus
+						
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
+						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
+							return true;
+						break;
+					}
 				}
 
 				return false;
@@ -1096,6 +1113,9 @@ namespace pr
 			// Forward a windows message to child controls
 			bool ForwardToChildren(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 			{
+				// This needs thinking about, should we be forwarding all messages to all child controls
+				// all the time? or just some? or just to the control with Focus? some to the controls the
+				// mouse is over?
 				for (auto& c : m_child)
 					if (c->ProcessWindowMessage(hwnd, message, wparam, lparam, result))
 						return true;
@@ -1710,8 +1730,7 @@ namespace pr
 				WindowPosChange(*this, args);
 			}
 
-			// Handle the Paint event
-			// Return true, to prevent anything else handling the event
+			// Handle the Paint event. Return true, to prevent anything else handling the event
 			virtual bool OnPaint(PaintEventArgs const& args)
 			{
 				Paint(*this, args);
@@ -1736,8 +1755,7 @@ namespace pr
 				return false;
 			}
 
-			// Handle the Erase background event
-			// Return true, to prevent anything else handling the event
+			// Handle the Erase background event. Return true, to prevent anything else handling the event
 			virtual bool OnEraseBkGnd(EmptyArgs const& args)
 			{
 				EraseBkGnd(*this, args);
@@ -1748,22 +1766,20 @@ namespace pr
 				return false;
 			}
 
-			// Handle keyboard key down/up events
-			// Return true, to prevent anything else handling the event
+			// Handle keyboard key down/up events. Return true, to prevent anything else handling the event
 			virtual bool OnKey(KeyEventArgs const& args)
 			{
 				Key(*this, args);
 				return false;
 			}
 
-			// Handle mouse button down/up events
-			// Return true, to prevent anything else handling the event
+			// Handle mouse button down/up events. Return true, to prevent anything else handling the event
 			virtual bool OnMouseButton(MouseEventArgs const& args)
 			{
 				MouseButton(*this, args);
 				return false;
 			}
-			
+
 			// Handle mouse button single click events
 			// Single clicks occur between down and up events
 			// Return true, to prevent anything else handling the event
@@ -1779,8 +1795,7 @@ namespace pr
 				MouseMove(*this, args);
 			}
 
-			// Handle mouse wheel events
-			// Return true, to prevent anything else handling the event
+			// Handle mouse wheel events. Return true, to prevent anything else handling the event
 			virtual bool OnMouseWheel(MouseWheelArgs const& args)
 			{
 				MouseWheel(*this, args);
@@ -1891,12 +1906,6 @@ namespace pr
 						m_hwnd = nullptr;
 						return true;
 					}
-				//case WM_ACTIVATE:
-				//	{
-				//		if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-				//		::UpdateWindow(m_hwnd);
-				//		break;
-				//	}
 				case WM_COMMAND:
 					{
 						// Handle commands from the main menu
@@ -1914,6 +1923,7 @@ namespace pr
 							Close();
 							return true;
 						}
+						break;
 					}
 				}
 				return false;

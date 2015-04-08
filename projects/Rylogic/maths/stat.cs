@@ -133,6 +133,7 @@ namespace pr.maths
 		private uint   m_size;
 		private uint   m_count;
 		
+		public uint Count { get { return m_count; } }
 		public double Mean { get { return m_mean; } }
 		
 		// Use the population standard deviation when all data values in a set have been considered.

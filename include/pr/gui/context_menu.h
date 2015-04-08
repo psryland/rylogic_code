@@ -15,12 +15,23 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+
 #include <atlbase.h>
 #include <atlapp.h>
 #include <atluser.h>
 #include <atlmisc.h>
 #include <atldlgs.h>
 #include <atlcrack.h>
+
+#include <atlbase.h>
+#include <atlwin.h>
+#include <atlapp.h>
+#include <atlgdi.h>
+#include <atlctrls.h>
+#include <atlctrlw.h>
+#include <atlmisc.h>
+#include <atlcrack.h>
+
 #include <gdiplus.h>
 
 namespace pr
@@ -553,10 +564,10 @@ namespace pr
 			}
 
 			// Add a context menu item to this menu, 'item' *MUST* be allocated using 'new'
-			template <typename Item> Item& AddItem(Item* item)
+			template <typename Item> Item& AddItem(ItemPtr item)
 			{
-				AddItem(ItemPtr(item));
-				return *item;
+				AddItem(item);
+				return static_cast<Item&>(*item);
 			}
 
 			// Show the context menu. Blocks until the menu is closed

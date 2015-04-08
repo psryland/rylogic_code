@@ -3,6 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
 
+using System;
 using System.Drawing;
 using pr.gfx;
 using pr.maths;
@@ -177,6 +178,24 @@ namespace pr.extn
 		public static RectangleF Inflated(this RectangleF r, float dleft, float dtop, float dright, float dbottom)
 		{
 			return new RectangleF(r.X - dleft, r.Y - dtop, r.Width + dleft + dright, r.Height + dtop + dbottom);
+		}
+
+		/// <summary>Returns a rectangle with a positive Width/Height</summary>
+		public static Rectangle NormalizeRect(this Rectangle r)
+		{
+			return new Rectangle(
+				r.Width  >= 0 ? r.X : r.X + r.Width,
+				r.Height >= 0 ? r.Y : r.Y + r.Height,
+				(int)Math.Abs(r.Width),
+				(int)Math.Abs(r.Height));
+		}
+		public static RectangleF NormalizeRect(this RectangleF r)
+		{
+			return new RectangleF(
+				r.Width  >= 0 ? r.X : r.X + r.Width,
+				r.Height >= 0 ? r.Y : r.Y + r.Height,
+				(float)Math.Abs(r.Width),
+				(float)Math.Abs(r.Height));
 		}
 
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
