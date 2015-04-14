@@ -264,7 +264,7 @@ namespace pr.common
 			public int ForeColourIndex { get; set; }
 
 			public TextStyle() :this(0, 10, EFontStyle.Regular) {}
-			public TextStyle(int font_index, int font_size = 12, EFontStyle font_style = EFontStyle.Regular)
+			public TextStyle(int font_index, int font_size, EFontStyle font_style = EFontStyle.Regular)
 			{
 				FontIndex       = font_index;
 				FontSize        = font_size;

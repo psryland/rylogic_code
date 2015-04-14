@@ -73,6 +73,16 @@ namespace pr {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap check_marks {
+            get {
+                object obj = ResourceManager.GetObject("check_marks", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap connector1 {
             get {
                 object obj = ResourceManager.GetObject("connector1", resourceCulture);
@@ -127,7 +137,7 @@ namespace pr {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to &lt;!DOCTYPE HTML&gt;
+        ///   Looks up a localized string similar to ﻿&lt;!DOCTYPE HTML&gt;
         ///&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;
         ///	&lt;head&gt;
         ///		&lt;title&gt;Regular Expressions - Quick Reference&lt;/title&gt;
@@ -139,7 +149,7 @@ namespace pr {
         ///			}
         ///
         ///			body {
-        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MUX [rest of string was truncated]&quot;;.
+        ///				background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACkAAAApCAYAAACoYAD2AAAABGdBTUEAALGPC/xhBQAAAAlwSFlzAAAOwgAADsIBFShKgAAAABp0RVh0U29mdHdhcmUAUGFpbnQuTkVUIHYzLjUuMTAw9HKhAAAKQElEQVRYRzXYZ1MU [rest of string was truncated]&quot;;.
         /// </summary>
         public static string regex_quick_ref {
             get {

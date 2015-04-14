@@ -46,6 +46,11 @@ namespace pr.extn
 			while (sb.Length != 0 && chars.IndexOf(sb[sb.Length-1]) != -1) --sb.Length;
 			return sb;
 		}
+		public static StringBuilder TrimEnd(this StringBuilder sb, string str)
+		{
+			while (sb.Length >= str.Length && string.CompareOrdinal(str, 0, sb.ToString(), sb.Length-str.Length, str.Length) == 0) sb.Length -= str.Length;
+			return sb;
+		}
 
 		/// <summary>Trim chars from the start of the string builder</summary>
 		public static StringBuilder TrimStart(this StringBuilder sb, params char[] chars)
@@ -54,13 +59,23 @@ namespace pr.extn
 			while (i != sb.Length && chars.IndexOf(sb[i]) != -1) ++i;
 			return sb.Remove(0, i);
 		}
+		public static StringBuilder TrimStart(this StringBuilder sb, string str)
+		{
+			int i = 0;
+			while (sb.Length - i >= str.Length && string.CompareOrdinal(str, 0, sb.ToString(), i, str.Length) == 0) i += str.Length;
+			return sb.Remove(0, i);
+		}
 
 		/// <summary>Trim characters from the start/end of the string</summary>
 		public static StringBuilder Trim(this StringBuilder sb, params char[] chars)
 		{
-			return sb.TrimStart(chars).TrimEnd(chars);
+			return sb.TrimEnd(chars).TrimStart(chars);
 		}
-
+		public static StringBuilder Trim(this StringBuilder sb, string str)
+		{
+			return sb.TrimEnd(str).TrimStart(str);
+		}
+		
 		/// <summary>Append 'lines' ensuring exactly one new line between each</summary>
 		public static StringBuilder AppendLineList(this StringBuilder sb, params string[] lines)
 		{

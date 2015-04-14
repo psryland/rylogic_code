@@ -7,7 +7,9 @@
 
 #include <vector>
 #include <windows.h>
+#include <shlwapi.h>
 #include <gdiplus.h>
+
 #pragma comment(lib, "gdiplus.lib")
 
 namespace pr

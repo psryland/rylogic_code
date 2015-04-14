@@ -11,6 +11,8 @@ using pr.win32;
 
 namespace TestCS
 {
+	using ComboBox = pr.gui.ComboBox;
+
 	public class DiagramControlUI :Form
 	{
 		private DiagramControl m_diag;

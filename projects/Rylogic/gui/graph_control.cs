@@ -276,11 +276,11 @@ namespace pr.gui
 			private static Color[] m_colours =
 			{
 				Color.Black     ,
-				Color.Blue      , Color.Red         , Color.Green      ,
-				Color.DarkBlue  , Color.DarkRed     , Color.DarkGreen  ,
+				Color.Blue      , Color.Red       , Color.Green      ,
+				Color.DarkBlue  , Color.DarkRed   , Color.DarkGreen  ,
+				Color.Purple    , Color.Turquoise , Color.Magenta    ,
+				Color.Orange    , Color.Yellow    ,
 				Color.LightBlue , Color.LightSalmon , Color.LightGreen ,
-				Color.Yellow    , Color.Orange      , Color.Magenta    ,
-				Color.Purple    , Color.Turquoise   ,
 			};
 		}
 
@@ -917,7 +917,7 @@ namespace pr.gui
 
 			var point = PointToGraph(e.Location);
 			var delta = Maths.Clamp(e.Delta, -999, 999);
-			Zoom *= (1.0f + delta * 0.001f);
+			Zoom *= (1.0f - delta * 0.001f);
 			PositionGraph(e.Location, point);
 			Dirty = true;
 		}

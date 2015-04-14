@@ -13,8 +13,7 @@
 namespace cex
 {
 	// Base class for ICex commands
-	struct ICex
-		:pr::cmdline::IOptionReceiver
+	struct ICex :pr::cmdline::IOptionReceiver
 	{
 		static char const* Title()
 		{
@@ -27,6 +26,7 @@ namespace cex
 				"\n";
 		}
 
+		// Command line callbacks
 		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
 		{
 			ShowConsole();
@@ -43,7 +43,6 @@ namespace cex
 			std::cerr << "Error: Unknown  option '" << option << "' or incomplete parameters provided\nSee help for syntax information\n";
 			return false;
 		}
-
 		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter) override
 		{
 			ShowConsole();
@@ -51,6 +50,10 @@ namespace cex
 			std::cerr << "Error: Unknown option '" << *arg << "'\n";
 			return false;
 		}
+
+		// Called after command line parsing, allows derived types to set default params
+		virtual void ValidatedInput()
+		{}
 
 		// Show the console for this process
 		void ShowConsole() const
@@ -85,7 +88,10 @@ namespace cex
 			}
 		}
 
+		// Show command help
 		virtual void ShowHelp() const = 0;
+
+		// Execute the command
 		virtual int Run() = 0;
 	};
 }

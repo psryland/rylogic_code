@@ -40,6 +40,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -49,9 +50,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cmd\Cmd.cs" />
+    <Compile Include="Cmd\FindDuplicateFiles\FindDuplicateFilesUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Cmd\ShowBase64.cs" />
     <Compile Include="Cmd\FindAssemblyConflicts.cs" />
-    <Compile Include="Cmd\FindDuplicateFiles.cs" />
+    <Compile Include="Cmd\FindDuplicateFiles\FindDuplicateFiles.cs" />
     <Compile Include="Cmd\GenActivationCode.cs" />
     <Compile Include="Cmd\MarkupExpand.cs" />
     <Compile Include="Cmd\NewCommand.cs" />
@@ -69,10 +73,19 @@
     <Content Include="Smiling gekko 140x110.ico" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\sdk\dockpanelsuite\DockPanel.csproj">
+      <Project>{c75532c4-765b-418e-b09b-46d36b2abdb1}</Project>
+      <Name>DockPanel</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Cmd\FindDuplicateFiles\FindDuplicateFilesUI.resx">
+      <DependentUpon>FindDuplicateFilesUI.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

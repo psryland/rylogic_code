@@ -126,6 +126,7 @@
     <ClInclude Include="..\projects\cex\src\clip.h" />
     <ClInclude Include="..\projects\cex\src\data_header_gen.h" />
     <ClInclude Include="..\projects\cex\src\dir_path.h" />
+    <ClInclude Include="..\projects\cex\src\dll_proxy.h" />
     <ClInclude Include="..\projects\cex\src\exec.h" />
     <ClInclude Include="..\projects\cex\src\forward.h" />
     <ClInclude Include="..\projects\cex\src\guid.h" />

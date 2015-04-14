@@ -11,6 +11,7 @@ namespace Csex
 	/// <summary>Search a directory tree for files that are duplicates of files in another directory tree</summary>
 	public class FindDuplicateFiles :Cmd
 	{
+		private bool m_interactive;
 		private string m_src_dir;
 		private string m_dst_dir;
 		private bool m_show_dups;
@@ -25,6 +26,7 @@ namespace Csex
 			Console.Write(
 				"Finds duplicate files between two directory trees\n" +
 				" Syntax: Csex -FindDuplicateFiles -src src_dir -dst dst_dir [-mv dups_directory] [-lst list_filepath] [-ignore regex_patn] [-jpg_date_taken]\n" +
+				"  -interactive       : Use the GUI to manage duplicate files\n" +
 				"  -src src_dir       : The directory tree containing potential duplicates\n" +
 				"  -dst dst_dir       : The directory tree containing existing files\n" +
 				"  -show              : Output the duplicates to stdout\n" +
@@ -40,24 +42,43 @@ namespace Csex
 			switch (option)
 			{
 			default: return base.CmdLineOption(option, args, ref arg);
-			case "-find_duplicate_files": return true;
-			case "-src":    m_src_dir      = args[arg++]; return true;
-			case "-dst":    m_dst_dir      = args[arg++]; return true;
-			case "-show":   m_show_dups = true; return true;
-			case "-mv":     m_mv_dir       = args[arg++]; return true;
-			case "-lst":    m_lst          = args[arg++]; return true;
-			case "-ignore": m_regex_ignore = args[arg++]; return true;
-			case "-jpg_date_taken": m_jpg_date_taken = true; return true;
+			case "-find_duplicate_files":                           return true;
+			case "-interactive":    m_interactive    = true;        return true;
+			case "-src":            m_src_dir        = args[arg++]; return true;
+			case "-dst":            m_dst_dir        = args[arg++]; return true;
+			case "-show":           m_show_dups      = true;        return true;
+			case "-mv":             m_mv_dir         = args[arg++]; return true;
+			case "-lst":            m_lst            = args[arg++]; return true;
+			case "-ignore":         m_regex_ignore   = args[arg++]; return true;
+			case "-jpg_date_taken": m_jpg_date_taken = true;        return true;
 			}
 		}
 
 		/// <summary>Return true if all required options have been given</summary>
 		public override bool OptionsValid()
 		{
+			if (m_interactive) return true;
 			return m_src_dir.HasValue() && m_dst_dir.HasValue();
 		}
 
+		/// <summary>Execute the command</summary>
 		public override int Run()
+		{
+			if (!m_interactive)
+				return RunCmdline();
+
+			pr.win32.Win32.FreeConsole();
+			var dlg = new pr.gui.SelectDirectoriesUI();
+			//dlg.Paths.Add("P:\\projects\\Rylogic");
+			using (dlg)
+			//using (var dlg = new FindDuplicateFilesUI())
+				dlg.ShowDialog();
+
+			return 0;
+		}
+
+		/// <summary>Search for duplicate files using the command line parameters</summary>
+		private int RunCmdline()
 		{
 			try
 			{
@@ -118,7 +139,7 @@ namespace Csex
 			var dir = root.ToLowerInvariant();
 
 			var map = new Dictionary<string,PathEx.FileData>();
-			foreach (var finfo in PathEx.EnumerateFiles(root, flags:SearchOption.AllDirectories))
+			foreach (var finfo in PathEx.EnumFileSystem(root, search_flags:SearchOption.AllDirectories))
 			{
 				var d = (Path.GetDirectoryName(finfo.FullPath) ?? string.Empty).ToLowerInvariant();
 				if (d != dir)

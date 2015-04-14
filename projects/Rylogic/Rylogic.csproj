@@ -214,6 +214,7 @@
     <Compile Include="extn\string_extensions.cs" />
     <Compile Include="extn\textbox_extensions.cs" />
     <Compile Include="extn\toolstrip_extensions.cs" />
+    <Compile Include="extn\treeview_extensions.cs" />
     <Compile Include="extn\type_extensions.cs" />
     <Compile Include="extn\xml_extensions.cs" />
     <Compile Include="gfx\colour128.cs" />
@@ -222,8 +223,14 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\combo_box.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\help_ui.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="gui\list_box.cs">
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\open_folder_ui.cs">
       <SubType>Component</SubType>
@@ -232,6 +239,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\scintilla.cs" />
+    <Compile Include="gui\select_directories_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="gui\single_select_button_set.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -468,6 +478,9 @@
     <EmbeddedResource Include="gui\hint_balloon.resx">
       <DependentUpon>hint_balloon.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="gui\select_directories_ui.resx">
+      <DependentUpon>select_directories_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\view_video_control.resx">
       <DependentUpon>view_video_control.cs</DependentUpon>
     </EmbeddedResource>
@@ -532,6 +545,7 @@
     <None Include="resources\licence.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="resources\check_marks.bmp" />
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

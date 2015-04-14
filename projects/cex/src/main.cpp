@@ -13,6 +13,7 @@
 #include "cex/src/guid.h"
 #include "cex/src/data_header_gen.h"
 #include "cex/src/p3d.h"
+#include "cex/src/dll_proxy.h"
 //#include "cex/src/NEW_COMMAND.h"
 
 namespace cex
@@ -53,6 +54,7 @@ namespace cex
 				"    -guid     : Generate a guid\n"
 				"    -hdata    : Convert a file to C/C++ header file data\n"
 				"    -p3d      : P3d model file format converter\n"
+				"    -dllproxy : Generate a proxy dll\n"
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type Cex -command -help for help on a particular command\n"
@@ -99,6 +101,8 @@ namespace cex
 					ShowHelp();
 					return -1;
 				}
+				if (m_command)
+					m_command->ValidatedInput();
 			}
 			catch (std::exception const& ex)
 			{
@@ -137,6 +141,7 @@ namespace cex
 				if (pr::str::EqualI(option, "-guid"     )) { m_command = std::make_unique<cex::Guid     >(); break; }
 				if (pr::str::EqualI(option, "-hdata"    )) { m_command = std::make_unique<cex::HData    >(); break; }
 				if (pr::str::EqualI(option, "-p3d"      )) { m_command = std::make_unique<cex::P3d      >(); break; }
+				if (pr::str::EqualI(option, "-dllproxy" )) { m_command = std::make_unique<cex::DllProxy >(); break; }
 				// NEW_COMMAND - handle the command
 				return ICex::CmdLineOption(option, arg, arg_end);
 			}
