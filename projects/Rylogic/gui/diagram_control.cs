@@ -387,7 +387,7 @@ namespace pr.gui
 			{
 				var point = new v4(pt, PositionZ, 1f);
 				if (!pt_in_element_space)
-					point = m4x4.InverseFast(Position) * point;
+					point = m4x4.InvertFast(Position) * point;
 
 				return AnchorPoints().MinBy(x => (x.Location - point).Length3Sq);
 			}
@@ -1015,7 +1015,7 @@ namespace pr.gui
 			{
 				var point = new v4(pt, PositionZ, 1f);
 				if (!pt_in_element_space)
-					point = m4x4.InverseFast(Position) * point;
+					point = m4x4.InvertFast(Position) * point;
 
 				float bias_distance_sq = Maths.Sqr(Diagram != null ? Diagram.Options.Node.AnchorSharingBias : 150f);
 

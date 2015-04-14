@@ -148,7 +148,7 @@ namespace pr.maths
 			m.w.y = -(trans.x * m.x.y + trans.y * m.y.y + trans.z * m.z.y);
 			m.w.z = -(trans.x * m.x.z + trans.y * m.y.z + trans.z * m.z.z);
 		}
-		public static m4x4 InverseFast(m4x4 m)
+		public static m4x4 InvertFast(m4x4 m)
 		{
 			InverseFast(ref m);
 			return m;

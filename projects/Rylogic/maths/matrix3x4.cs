@@ -128,6 +128,7 @@ namespace pr.maths
 		public static m3x4 Identity { get { return m_identity; } }
 
 		// Functions
+		public static m3x4 operator - (m3x4 rhs)            { return new m3x4(-rhs.x, -rhs.y, -rhs.z); }
 		public static m3x4 operator + (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z); }
 		public static m3x4 operator - (m3x4 lhs, m3x4 rhs)  { return new m3x4(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z); }
 		public static m3x4 operator * (m3x4 lhs, float rhs) { return new m3x4(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs); }
@@ -150,14 +151,14 @@ namespace pr.maths
 			return m;
 		}
 
-		public static void InverseFast(ref m3x4 m)
+		public static void InvertFast(ref m3x4 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
 			Transpose3x3(ref m);
 		}
-		public static m3x4 InverseFast(m3x4 m)
+		public static m3x4 InvertFast(m3x4 m)
 		{
-			InverseFast(ref m);
+			InvertFast(ref m);
 			return m;
 		}
 
@@ -191,7 +192,6 @@ namespace pr.maths
 				v4.Dot4(lhs.z, rhs),
 				rhs.w);
 		}
-
 		public static m3x4 operator * (m3x4 lhs, m3x4 rhs)
 		{
 			Transpose3x3(ref lhs);
@@ -201,7 +201,11 @@ namespace pr.maths
 				new v4(v4.Dot4(lhs.x, rhs.z), v4.Dot4(lhs.y, rhs.z), v4.Dot4(lhs.z, rhs.z), 0f));
 		}
 
-		// Permute the rotation vectors in a matrix by 'n'
+		/// <summary>
+		/// Permute the rotation vectors in a matrix by 'n'.<para/>
+		/// n == 0 : x  y  z<para/>
+		/// n == 1 : z  x  y<para/>
+		/// n == 2 : y  z  x<para/></summary>
 		public static m3x4 PermuteRotation(m3x4 mat, int n)
 		{
 			switch (n%3)
@@ -251,7 +255,7 @@ namespace pr.maths
 			return new m3x4(from, to);
 		}
 
-		/// <summary>Create a rotation from 'from' to 'to'</summary>
+		/// <summary>Create a rotation from Euler angles (in radians)</summary>
 		public static m3x4 Rotation(float pitch, float yaw, float roll)
 		{
 			return new m3x4(pitch, yaw, roll);
