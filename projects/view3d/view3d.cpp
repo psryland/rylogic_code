@@ -1046,6 +1046,19 @@ VIEW3D_API void __stdcall View3D_ObjectDelete(View3DObject object)
 	CatchAndReport(View3D_ObjectDelete, ,);
 }
 
+// Return the immediate parent of 'object'
+VIEW3D_API View3DObject __stdcall View3D_ObjectGetParent(View3DObject object)
+{
+	try
+	{
+		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
+		return object->m_parent;
+	}
+	CatchAndReport(View3D_ObjectGetParent, , nullptr);
+}
+
 // Return a child object of 'object'
 VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild(View3DObject object, char const* name)
 {
@@ -1058,6 +1071,34 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectGetChild(View3DObject object, cha
 		return ptr.m_ptr;
 	}
 	CatchAndReport(View3D_ObjectGetChild, , nullptr);
+}
+
+// Get/Set the object to world transform for this object or the first child object that matches 'name'.
+// If 'name' is null, then the state of the root object is returned
+// If 'name' begins with '#' then the remainder of the name is treated as a regular expression
+/// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent
+VIEW3D_API View3DM4x4 __stdcall View3D_ObjectGetO2W(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("object is null");
+
+		DllLockGuard;
+		return view3d::To<View3DM4x4>(object->O2W(name));
+	}
+	CatchAndReport(View3D_ObjectGetO2W, , view3d::To<View3DM4x4>(pr::m4x4Identity));
+}
+VIEW3D_API void __stdcall View3D_ObjectSetO2W(View3DObject object, View3DM4x4 const& o2w, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+		if (!pr::FEql(o2w.w.w,1.0f)) throw std::exception("invalid object to world transform");
+
+		DllLockGuard;
+		object->O2W(view3d::To<pr::m4x4>(o2w), name);
+	}
+	CatchAndReport(View3D_ObjectSetO2W, ,);
 }
 
 // Get/Set the object to parent transform for an object
@@ -1127,6 +1168,19 @@ VIEW3D_API void __stdcall View3D_ObjectSetColour(View3DObject object, View3DColo
 		object->Colour(pr::Colour32::make(colour), mask, name);
 	}
 	CatchAndReport(View3D_ObjectSetColour, ,);
+}
+
+// Reset the object colour back to its default
+VIEW3D_API void __stdcall View3D_ObjectResetColour(View3DObject object, char const* name)
+{
+	try
+	{
+		if (!object) throw std::exception("Object is null");
+
+		DllLockGuard;
+		object->ResetColour(name);
+	}
+	CatchAndReport(View3D_ObjectResetColour, ,);
 }
 
 // Set the texture

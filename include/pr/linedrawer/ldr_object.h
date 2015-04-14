@@ -47,6 +47,7 @@ namespace pr
 			x(Pie              ,= 0x1198851C)\
 			x(Rect             ,= 0x12E8C1AD)\
 			x(Matrix3x3        ,= 0x1bd46252)\
+			x(CoordFrame       ,= 0x0b1d370b)\
 			x(Triangle         ,= 0x118ad8f6)\
 			x(Quad             ,= 0x083b7f24)\
 			x(Plane            ,= 0x0ed56051)\
@@ -360,6 +361,11 @@ namespace pr
 
 			// Get the first child object of this object that matches 'name' (see Apply)
 			LdrObjectPtr Child(char const* name) const;
+
+			// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
+			// Note, it is more efficient to set O2P.
+			pr::m4x4 O2W(char const* name = nullptr) const;
+			void O2W(pr::m4x4 const& o2w, char const* name = nullptr);
 
 			// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
 			pr::m4x4 O2P(char const* name = nullptr) const;

@@ -1226,6 +1226,12 @@ namespace pr.gfx
 				get { return View3D_ObjectBBoxMS(m_handle); }
 			}
 
+			/// <summary>Return the object that is the immediate parent of this object</summary>
+			public Object Parent
+			{
+				get { return new Object(View3D_ObjectGetParent(m_handle), false); }
+			}
+
 			/// <summary>Return a child object of this object</summary>
 			public Object Child(string name)
 			{
@@ -1233,7 +1239,21 @@ namespace pr.gfx
 			}
 
 			/// <summary>
-			/// Get/Set the object to world transform for this object or any of its child objects that match 'name'.
+			/// Get/Set the object to world transform for this object or the first child object that matches 'name'.
+			/// If 'name' is null, then the state of the root object is returned
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression.
+			/// Note, setting the o2w for a child object results in a transform that is relative to it's immediate parent</summary>
+			public m4x4 GetO2W(string name = null)
+			{
+				return View3D_ObjectGetO2W(m_handle, name);
+			}
+			public void SetO2W(m4x4 o2w, string name = null)
+			{
+				View3D_ObjectSetO2W(m_handle, ref o2w, name);
+			}
+
+			/// <summary>
+			/// Get/Set the object to parent transform for this object or any of its child objects that match 'name'.
 			/// If 'name' is null, then the state change is applied to this object only
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
@@ -1259,6 +1279,14 @@ namespace pr.gfx
 			}
 
 			/// <summary>
+			/// Get the colour of this object or the first child object that matches 'name'.
+			/// 'base_colour', if true returns the objects base colour, if false, returns the current colour</summary>
+			public uint GetColour(bool base_colour, string name = null)
+			{
+				return View3D_ObjectGetColour(m_handle, base_colour, name);
+			}
+
+			/// <summary>
 			/// Set the colour of this object or any of its child objects that match 'name'.
 			/// If 'name' is null, then the state change is applied to this object only
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
@@ -1279,6 +1307,17 @@ namespace pr.gfx
 			public void SetColour(Color colour, string name = null)
 			{
 				SetColour(colour, 0xFFFFFFFF, name);
+			}
+
+			/// <summary>
+			/// Reset the colour to the base colour for this object or any of its child objects that match 'name'.
+			/// If 'name' is null, then the state change is applied to this object only
+			/// If 'name' is "", then the state change is applied to this object and all children recursively
+			/// Otherwise, the state change is applied to all child objects that match name.
+			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public void ResetColour(string name = null)
+			{
+				View3D_ObjectResetColour(m_handle, name);
 			}
 
 			/// <summary>
@@ -1861,11 +1900,16 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_ObjectsDeleteById        (int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectDelete             (HObject obj);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetParent          (HObject obj);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectGetChild           (HObject obj, string name);
+		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2W             (HObject obj, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2W             (HObject obj, ref m4x4 o2w, string name);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetVisibility      (HObject obj, bool visible, string name);
+		[DllImport(Dll)] private static extern uint              View3D_ObjectGetColour          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);
+		[DllImport(Dll)] private static extern void              View3D_ObjectResetColour        (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetTexture         (HObject obj, HTexture tex, string name);
 		[DllImport(Dll)] private static extern BBox              View3D_ObjectBBoxMS             (HObject obj);
 

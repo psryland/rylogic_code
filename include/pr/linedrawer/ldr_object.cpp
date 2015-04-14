@@ -1318,6 +1318,29 @@ namespace pr
 			}
 		};
 
+		// ELdrObject::CoordFrame
+		template <> struct ObjectCreator<ELdrObject::CoordFrame> :IObjectCreatorLine
+		{
+			ObjectCreator()
+				:IObjectCreatorLine(false, true)
+			{
+				pr::v4       pts[] = { pr::v4Origin, pr::v4XAxis.w1(), pr::v4Origin, pr::v4YAxis.w1(), pr::v4Origin, pr::v4ZAxis.w1() };
+				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
+				pr::uint16   idx[] = { 0, 1, 2, 3, 4, 5 };
+
+				m_point .insert(m_point .end(), pts, pts + PR_COUNTOF(pts));
+				m_colour.insert(m_colour.end(), col, col + PR_COUNTOF(col));
+				m_index .insert(m_index .end(), idx, idx + PR_COUNTOF(idx));
+			}
+			void Parse(ParseParams& p) override
+			{
+				float scale;
+				p.m_reader.ExtractReal(scale);
+				for (auto& pt : m_point)
+					pt.xyz *= scale;
+			}
+		};
+
 		#pragma endregion
 
 		#pragma region Shapes2d
@@ -2061,6 +2084,7 @@ namespace pr
 			case ELdrObject::Rect:             Parse<ELdrObject::Rect            >(p); break;
 			case ELdrObject::Pie:              Parse<ELdrObject::Pie             >(p); break;
 			case ELdrObject::Matrix3x3:        Parse<ELdrObject::Matrix3x3       >(p); break;
+			case ELdrObject::CoordFrame:       Parse<ELdrObject::CoordFrame      >(p); break;
 			case ELdrObject::Triangle:         Parse<ELdrObject::Triangle        >(p); break;
 			case ELdrObject::Quad:             Parse<ELdrObject::Quad            >(p); break;
 			case ELdrObject::Plane:            Parse<ELdrObject::Plane           >(p); break;
@@ -2675,6 +2699,12 @@ out <<
 	0 0 1      // Z
 }
 
+// A standard right-handed set of basis vectors
+*CoordFrame a2b
+{
+	0.1                                // Optional, scale
+}
+
 // A list of triangles
 *Triangle triangle FFFFFFFF
 {
@@ -3088,6 +3118,32 @@ out <<
 			LdrObjectPtr obj = nullptr;
 			Apply([&](LdrObject* o){ obj = o; return false; }, name);
 			return obj;
+		}
+
+		// Get/Set the object to world transform of this object or the first child object matching 'name' (see Apply)
+		pr::m4x4 LdrObject::O2W(char const* name) const
+		{
+			auto obj = Child(name);
+			if (obj == nullptr)
+				return pr::m4x4Identity;
+
+			// Combine parent transforms back to the root
+			auto o2w = obj->m_o2p;
+			for (auto p = obj->m_parent; p != nullptr; p = p->m_parent)
+				o2w = p->m_o2p * o2w;
+
+			return o2w;
+		}
+		void LdrObject::O2W(pr::m4x4 const& o2w, char const* name)
+		{
+			Apply([&](LdrObject* o)
+			{
+				if (!o->m_parent)
+					o->m_o2p = o2w;
+				else
+					o->m_o2p = pr::InvertFast(o->m_parent->O2W()) * o2w;
+				return true;
+			}, name);
 		}
 
 		// Set the object to parent transform of this object or child objects matching 'name' (see Apply)
