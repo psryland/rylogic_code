@@ -178,6 +178,7 @@ namespace pr.common
 
 			/// <summary>Attributes of the file.</summary>
 			public FileAttributes Attributes { get { return m_find_data.Attributes; } }
+			public bool IsDirectory { get { return (Attributes & FileAttributes.Directory) == FileAttributes.Directory; } }
 
 			/// <summary>The file size</summary>
 			public long FileSize { get { return m_find_data.FileSize; } }
@@ -218,41 +219,51 @@ namespace pr.common
 		/// to check each file in a directory to see if it was modified after a specific date).
 		/// </remarks>
 
-		/// <summary>Gets FileDatafor all files in a directory that  match a specific filter including all sub directories.</summary>
+		/// <summary>Gets FileData for all files/directories in a directory that match a specific filter including all sub directories.</summary>
 		[SuppressUnmanagedCodeSecurity]
-		public static IEnumerable<FileData> EnumerateFiles(string path, string regex_filter = ".*", SearchOption flags = SearchOption.TopDirectoryOnly, RegexOptions regex_options = RegexOptions.None, Func<string,bool> progress = null)
+		public static IEnumerable<FileData> EnumFileSystem(string path, SearchOption search_flags = SearchOption.TopDirectoryOnly, string regex_filter = null, RegexOptions regex_options = RegexOptions.None, FileAttributes exclude = FileAttributes.Hidden, Func<string,bool> progress = null)
 		{
-			var stack = new Stack<string>(20);
-			stack.Push(path);
-
 			// Default progress callback
 			if (progress == null)
 				progress = s => true;
 
-			while (stack.Count != 0)
+			// File/Directory name filter
+			var filter = regex_filter != null ? new Regex(regex_filter, regex_options) : null;
+
+			// For drive letters, add a \, 'FileIOPermission' needs it
+			if (path.EndsWith(":"))
+				path += "\\";
+
+			// Local stack for recursion
+			var stack = new Stack<string>(20);
+			for (stack.Push(path); stack.Count != 0;)
 			{
+				// Report progress
 				var dir = stack.Pop();
 				if (!progress(dir))
 					break;
 
+				// Skip paths we don't have access to
 				try { new FileIOPermission(FileIOPermissionAccess.PathDiscovery, dir).Demand(); }
-				catch { continue; } // skip paths we don't have access to
+				catch { continue; }
 
-				var filter = new Regex(regex_filter, regex_options);
+				// Use the win32 find files
 				var pattern = Path.Combine(dir, "*");
 				var find_data = new Win32.WIN32_FIND_DATA();
 				var handle = FindFirstFile(pattern, find_data);
 				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
 				{
-					// If the found object is not a directory, assume it's a file
-					if ((find_data.Attributes & FileAttributes.Directory) != FileAttributes.Directory)
-					{
-						// Yield return files only
-						if (filter.IsMatch(find_data.FileName))
+					// Exclude files with any of the exclude attributes
+					if ((find_data.Attributes & exclude) != 0)
+						continue;
+
+					// Filter if provided
+					if (find_data.FileName != "." && find_data.FileName != "..")
+						if (filter == null || filter.IsMatch(find_data.FileName))
 							yield return new FileData(dir, find_data);
-					}
-					// Otherwise, it's a directory, see if we should be recursing
-					else if (flags == SearchOption.AllDirectories)
+
+					// If the found object is a directory, see if we should be recursing
+					if (search_flags == SearchOption.AllDirectories && (find_data.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
 					{
 						if (find_data.FileName == "." || find_data.FileName == "..")
 							continue;
@@ -439,7 +450,7 @@ namespace pr.unittests
 		}
 		[Test] public void TestEnumerateFiles()
 		{
-			var files = PathEx.EnumerateFiles(@"C:\Windows\System32", @".*\.dll", SearchOption.TopDirectoryOnly);
+			var files = PathEx.EnumFileSystem(@"C:\Windows\System32", SearchOption.TopDirectoryOnly, @".*\.dll");
 			var dlls = files.ToList();
 			Assert.True(dlls.Count != 0);
 		}

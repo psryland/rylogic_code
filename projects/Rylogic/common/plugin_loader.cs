@@ -38,7 +38,10 @@ namespace pr.common
 			Log.Debug(this, "Loading plugins for interface: {0}".Fmt(typeof(TInterface).Name));
 
 			// Build a list of assemblies to check
-			var filepaths = PathEx.EnumerateFiles(directory, regex_pattern, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly).Select(x => x.FullPath).ToList();
+			var filepaths = PathEx.EnumFileSystem(directory, recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly, regex_pattern)
+				.Where(x => !x.IsDirectory)
+				.Select(x => x.FullPath)
+				.ToList();
 
 			// Load each assembly
 			int i = 0, imax = filepaths.Count;

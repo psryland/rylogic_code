@@ -312,7 +312,7 @@ namespace RyLogViewer
 								return !s.CancelPending;
 							};
 
-						foreach (var fi in PathEx.EnumerateFiles(path, @"adb\.exe", SearchOption.AllDirectories, progress:progress))
+						foreach (var fi in PathEx.EnumFileSystem(path, SearchOption.AllDirectories, regex_filter:@"adb\.exe", progress:progress))
 						{
 							// Found one!
 							adb_path = fi.FullPath;
