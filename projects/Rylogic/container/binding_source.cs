@@ -93,7 +93,7 @@ namespace pr.container
 			ListChanging.Raise(sender, args);
 		}
 
-		/// <summary>Raised just before the current list position changes</summary>
+		/// <summary>Raised after the current list position changes (includes the previous poition)</summary>
 		public event EventHandler<PositionChgEventArgs> PositionChanging;
 
 		/// <summary>Position changed handler</summary>

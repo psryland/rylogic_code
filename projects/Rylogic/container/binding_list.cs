@@ -95,10 +95,14 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, -1, item);
+				var args = new ListChgEventArgs<T>(ListChg.ItemPreAdd, index, item);
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
 					return;
+
+				// Allow PreAdd to modify 'item' and 'index'
+				item = args.Item;
+				index = args.Index;
 			}
 
 			// Note: you can get first chance exceptions here when the list is bound to a BindingSource
@@ -226,6 +230,22 @@ namespace pr.container
 				{
 					RaiseListChangedEvents = true;
 					if (reset_bindings_on_resume)
+						ResetBindings();
+				});
+		}
+
+		/// <summary>RAII object for suspending list events</summary>
+		public Scope SuspendEvents(Func<bool> reset_bindings_on_resume)
+		{
+			return Scope.Create(
+				() =>
+				{
+					RaiseListChangedEvents = false;
+				},
+				() =>
+				{
+					RaiseListChangedEvents = true;
+					if (reset_bindings_on_resume())
 						ResetBindings();
 				});
 		}

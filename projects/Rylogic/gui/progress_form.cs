@@ -244,6 +244,9 @@ namespace pr.gui
 				break;
 			}
 
+			m_progress.Width = ClientSize.Width - 2*space;
+			m_button.Location = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);
+
 			ResumeLayout(false);
 			PerformLayout();
 		}

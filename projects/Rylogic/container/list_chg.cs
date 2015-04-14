@@ -50,11 +50,17 @@ namespace pr.container
 		/// <summary>The change this event represents</summary>
 		public ListChg ChangeType { get; private set; }
 
-		/// <summary>The index of the item while in the list, or -1 if not in the list</summary>
-		public int Index { get; private set; }
+		/// <summary>
+		/// The index of the item in the list, or where it will be in the list.
+		/// Writable to allow PreAdd to change the index, note however that when
+		/// events are suspended PreAdd will not be called.</summary>
+		public int Index { get; set; }
 
-		/// <summary>The item added/remove</summary>
-		public T Item { get; private set; }
+		/// <summary>
+		/// The item added/remove.
+		/// Writable to allow PreAdd to change the item, note however that when
+		/// events are suspended PreAdd will not be called.</summary>
+		public T Item { get; set; }
 
 		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
 		public bool Cancel { get; set; }

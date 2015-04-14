@@ -117,7 +117,7 @@ namespace pr.gui
 			this.m_lbl_info = new System.Windows.Forms.Label();
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_btn_cancel = new System.Windows.Forms.Button();
-			this.m_list = new System.Windows.Forms.ListBox();
+			this.m_list = new ListBox();
 			this.SuspendLayout();
 			// 
 			// m_lbl_info

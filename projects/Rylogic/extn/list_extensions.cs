@@ -251,6 +251,13 @@ namespace pr.extn
 			return count;
 		}
 
+		/// <summary>Remove a range of items from this list</summary>
+		public static void RemoveRange<T>(this IList<T> list, int start, int count)
+		{
+			for (int i = count; i-- != 0;)
+				list.RemoveAt(start + i);
+		}
+
 		/// <summary>Remove the range of elements from [startIndex, list.Count)</summary>
 		public static List<T> RemoveToEnd<T>(this List<T> list, int startIndex)
 		{
@@ -276,12 +283,27 @@ namespace pr.extn
 				if (c >  0) { if (m == b){return ~b;} e = m; }
 			}
 		}
+		public static int BinarySearch<T>(this IList<T> list, T item, Cmp<T> cmp)
+		{
+			return list.BinarySearch(x => cmp.Compare(x, item));
+		}
 
 		/// <summary>Binary search for an element in 'list'. Returns the element if found, or default(T) if not.</summary>
 		public static T BinarySearchFind<T>(this IList<T> list, Func<T,int> cmp)
 		{
 			var idx = list.BinarySearch(cmp);
 			return idx >= 0 ? list[idx] : default(T);
+		}
+
+		/// <summary>
+		/// Insert 'item' into this list assuming the list is sorted by 'cmp'.
+		/// Returns the index of where 'item' was inserted</summary>
+		public static int AddOrdered<T>(this IList<T> list, T item, Cmp<T> cmp)
+		{
+			var idx = list.BinarySearch(item, cmp);
+			if (idx < 0) idx = ~idx;
+			list.Insert(idx, item);
+			return idx;
 		}
 
 		/// <summary>
