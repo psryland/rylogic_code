@@ -21,6 +21,14 @@ namespace pr.container
 			m_impl_previous_position = -1;
 		}
 
+		/// <summary>Set the current position</summary>
+		public new int Position
+		{
+			// An overload just for debugging
+			get { return base.Position; }
+			set { base.Position = value; }
+		}
+
 		/// <summary>The current item</summary>
 		public new TItem Current
 		{

@@ -142,10 +142,6 @@ namespace pr.gui
 		}
 		protected override void OnFormClosed(FormClosedEventArgs e)
 		{
-			// If an error was raised and caught in the background thread, re-raise it here
-			if (Done.WaitOne(0) && m_error != null)
-				throw m_error;
-
 			DialogResult = CancelSignal.WaitOne(0)
 				? DialogResult.Cancel
 				: DialogResult.OK;
@@ -173,11 +169,16 @@ namespace pr.gui
 		/// <summary>Show the dialog after a few milliseconds</summary>
 		public DialogResult ShowDialog(Control parent, int delay_ms = 0)
 		{
-			if (delay_ms != 0 && Done.WaitOne(delay_ms))
-				return DialogResult.OK; // done already
-
 			// Show the dialog after the delay
-			return base.ShowDialog(parent);
+			var result = DialogResult.OK;
+			if (delay_ms == 0 || !Done.WaitOne(delay_ms)) // not done already?
+				result = base.ShowDialog(parent);
+
+			// If an error was raised in the background thread, rethrow it
+			if (m_error != null)
+				throw m_error;
+
+			return result;
 		}
 
 		/// <summary>Update the state of the progress form</summary>

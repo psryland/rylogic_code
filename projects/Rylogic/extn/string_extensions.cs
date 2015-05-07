@@ -4,6 +4,7 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -68,10 +69,16 @@ namespace pr.extn
 			return sub.Substring(0, eidx);
 		}
 
-		/// <summary>Returns a string containing this str repeated 'count' times</summary>
+		/// <summary>Returns a string containing this character repeated 'count' times</summary>
+		public static string Repeat(this char ch, int count)
+		{
+			return new string(ch, count);
+		}
+
+		/// <summary>Returns a string containing this str repeated 'count' times. Note: use the char.Repeat function for single characters</summary>
 		public static string Repeat(this string str, int count)
 		{
-			return string.Join("", Enumerable.Repeat(str, count));
+			return new StringBuilder().Insert(0, str, count).ToString();
 		}
 
 		/// <summary>Return a string with the characters in reverse order</summary>
@@ -90,6 +97,21 @@ namespace pr.extn
 		public static string Strip(this string str, Func<char, bool> pred)
 		{
 			return new string(str.ToCharArray().Where(x => !pred(x)).ToArray());
+		}
+
+		/// <summary>Enumerate over the lines in this string (returned lines do not include new line characters)</summary>
+		public static IEnumerable<string> Lines(this string str, StringSplitOptions opts = StringSplitOptions.None)
+		{
+			int s = 0, e = 0;
+			do
+			{
+				for (;e != str.Length && str[e] != '\n'; ++e) {}
+				if (e-s > 1 || opts != StringSplitOptions.RemoveEmptyEntries)
+					yield return str.Substring(s, e-s);
+				s = e + 1;
+				++e;
+			}
+			while (s != str.Length);
 		}
 
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
@@ -158,6 +180,46 @@ namespace pr.extn
 			return new MemoryStream(str.ToBytes(), false);
 		}
 
+		/// <summary>Parse this string against 'regex'</summary>
+		public static void Parse<P0>(this string str, string regex, out P0 p0)
+		{
+			var m = Regex.Match(str, regex);
+			if (!m.Success || m.Groups.Count != 2) throw new Exception("Failed to parse formatted string");
+			p0 = (P0)Convert.ChangeType(m.Groups[1].Value, typeof(P0));
+		}
+		public static void Parse<P0,P1>(this string str, string regex, out P0 p0, out P1 p1)
+		{
+			var m = Regex.Match(str, regex);
+			if (!m.Success || m.Groups.Count != 3) throw new Exception("Failed to parse formatted string");
+			p0 = (P0)Convert.ChangeType(m.Groups[1].Value, typeof(P0));
+			p1 = (P1)Convert.ChangeType(m.Groups[2].Value, typeof(P1));
+		}
+		public static void Parse<P0,P1,P2>(this string str, string regex, out P0 p0, out P1 p1, out P2 p2)
+		{
+			var m = Regex.Match(str, regex);
+			if (!m.Success || m.Groups.Count != 4) throw new Exception("Failed to parse formatted string");
+			p0 = (P0)Convert.ChangeType(m.Groups[1].Value, typeof(P0));
+			p1 = (P1)Convert.ChangeType(m.Groups[2].Value, typeof(P1));
+			p2 = (P2)Convert.ChangeType(m.Groups[3].Value, typeof(P2));
+		}
+
+		/// <summary>Parse this string agains 'regex'</summary>
+		public static bool TryParse<P0>(this string str, string regex, out P0 p0)
+		{
+			try { str.Parse(regex, out p0); return true; }
+			catch { p0 = default(P0); return false; }
+		}
+		public static bool TryParse<P0,P1>(this string str, string regex, out P0 p0, out P1 p1)
+		{
+			try { str.Parse(regex, out p0, out p1); return true; }
+			catch { p0 = default(P0); p1 = default(P1); return false; }
+		}
+		public static bool TryParse<P0,P1,P2>(this string str, string regex, out P0 p0, out P1 p1, out P2 p2)
+		{
+			try { str.Parse(regex, out p0, out p1, out p2); return true; }
+			catch { p0 = default(P0); p1 = default(P1); p2 = default(P2); return false; }
+		}
+		
 		//public static string HaackFormat(this string format, object source)
 		//{
 		//    var formattedStrings = (from expression in SplitFormat(format) select expression.Eval(source)).ToArray();

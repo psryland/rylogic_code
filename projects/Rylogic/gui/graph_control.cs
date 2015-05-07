@@ -2317,13 +2317,15 @@ namespace pr.gui
 
 		/// <summary>
 		/// Called during rendering of the graph to allow clients to add graphics to the cached bitmap.<para/>
-		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()</summary>
+		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
+		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnRender;
 
 		/// <summary>
 		/// Called each time the cached plot bitmap is drawn to the control to allow clients to add graphics.<para/>
 		/// The overlays can change without affecting cached graph bitmap.<para/>
-		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()</summary>
+		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
+		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnPaint;
 
 		/// <summary>Event allowing callers to add options to the context menu</summary>

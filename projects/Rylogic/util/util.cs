@@ -371,6 +371,14 @@ namespace pr.util
 				return src.ReadToEnd();
 		}
 
+		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
+		public static string ResolveAppPath(string relative_path = "")
+		{
+			var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
+			var path = Path.Combine(dir, relative_path);
+			return path;
+		}
+
 		/// <summary>
 		/// Event handler used to load a dll from an embedded resource.<para/>
 		/// Use:<para/>

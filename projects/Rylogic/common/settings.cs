@@ -234,10 +234,16 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>Returns the directory in which to store app settings</summary>
+		/// <summary>Returns a filepath for storing app settings in the app data directory</summary>
 		public static string DefaultFilepath
 		{
 			get { return Path.Combine(DefaultAppDataDirectory, "settings.xml"); }
+		}
+
+		/// <summary>Returns a filepath for storing settings in the same directory as the application executable</summary>
+		public static string DefaultLocalFilepath
+		{
+			get { return Util.ResolveAppPath("settings.xml"); }
 		}
 
 		/// <summary>The settings version, used to detect when 'Upgrade' is needed</summary>

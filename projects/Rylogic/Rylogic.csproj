@@ -201,6 +201,7 @@
     <Compile Include="extn\event_extensions.cs" />
     <Compile Include="extn\exception_extensions.cs" />
     <Compile Include="extn\gfx_extensions.cs" />
+    <Compile Include="extn\listbox_extensions.cs" />
     <Compile Include="extn\list_extensions.cs" />
     <Compile Include="extn\lock_extensions.cs" />
     <Compile Include="extn\memberinfo_extensions.cs" />
@@ -213,6 +214,7 @@
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
     <Compile Include="extn\textbox_extensions.cs" />
+    <Compile Include="extn\thread_extensions.cs" />
     <Compile Include="extn\toolstrip_extensions.cs" />
     <Compile Include="extn\treeview_extensions.cs" />
     <Compile Include="extn\type_extensions.cs" />
@@ -243,6 +245,9 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\single_select_button_set.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\toolstrip_combobox.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\vt100.cs" />
@@ -374,6 +379,7 @@
     <Compile Include="common\base64.cs" />
     <Compile Include="undo\text_undo.cs" />
     <Compile Include="util\clrdump.cs" />
+    <Compile Include="util\compile.cs" />
     <Compile Include="util\crc16.cs" />
     <Compile Include="util\crc32.cs" />
     <Compile Include="util\crt.cs" />

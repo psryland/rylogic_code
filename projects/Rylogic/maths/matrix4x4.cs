@@ -139,7 +139,7 @@ namespace pr.maths
 			Transpose4x4(ref m);
 			return m;
 		}
-		public static void InverseFast(ref m4x4 m)
+		public static void InvertFast(ref m4x4 m)
 		{
 			Debug.Assert(IsOrthonormal(m), "Matrix is not orthonormal");
 			v4 trans = m.w;
@@ -150,7 +150,7 @@ namespace pr.maths
 		}
 		public static m4x4 InvertFast(m4x4 m)
 		{
-			InverseFast(ref m);
+			InvertFast(ref m);
 			return m;
 		}
 

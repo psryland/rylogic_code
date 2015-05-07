@@ -1268,11 +1268,15 @@ namespace pr.gfx
 			}
 
 			/// <summary>
-			/// Set the visibility of this object or any of its child objects that match 'name'.
+			/// Get/Set the visibility of this object or any of its child objects that match 'name'.
 			/// If 'name' is null, then the state change is applied to this object only
 			/// If 'name' is "", then the state change is applied to this object and all children recursively
 			/// Otherwise, the state change is applied to all child objects that match name.
 			/// If 'name' begins with '#' then the remainder of the name is treated as a regular expression</summary>
+			public bool GetVisible(string name = null)
+			{
+				return View3D_ObjectGetVisibility(m_handle, name);
+			}
 			public void SetVisible(bool vis, string name = null)
 			{
 				View3D_ObjectSetVisibility(m_handle, vis, name);
@@ -1906,6 +1910,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2W             (HObject obj, ref m4x4 o2w, string name);
 		[DllImport(Dll)] private static extern m4x4              View3D_ObjectGetO2P             (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetO2P             (HObject obj, ref m4x4 o2p, string name);
+		[DllImport(Dll)] private static extern bool              View3D_ObjectGetVisibility      (HObject obj, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetVisibility      (HObject obj, bool visible, string name);
 		[DllImport(Dll)] private static extern uint              View3D_ObjectGetColour          (HObject obj, bool base_colour, string name);
 		[DllImport(Dll)] private static extern void              View3D_ObjectSetColour          (HObject obj, uint colour, uint mask, string name);

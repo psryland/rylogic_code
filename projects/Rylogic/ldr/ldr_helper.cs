@@ -156,6 +156,13 @@ namespace pr.ldr
 				);
 		}
 
+		public void Line(v4 start, v4 end)               { Line(Color.White, start, end); }
+		public void Line(Color colour, v4 start, v4 end) { Line(string.Empty, colour, start, end); }
+		public void Line(string name, Color colour, v4 start, v4 end)
+		{
+			Append("*Line ",name," ",colour," {",start," ",end,"}\n");
+		}
+
 		public void Box()                                          { Box(string.Empty, Color.White); }
 		public void Box(Color colour, float size)                  { Box(colour, size, v4.Origin); }
 		public void Box(Color colour, float size, v4 position)     { Box(string.Empty, colour, size, position); }
@@ -213,12 +220,15 @@ namespace pr.ldr
 		public void Quad(string name, Color colour, v4 tl, v4 tr, v4 br, v4 bl) { Quad(name, colour, tl, tr, br, bl, v4.Origin); }
 		public void Quad(string name, Color colour, v4 tl, v4 tr, v4 br, v4 bl, v4 position)
 		{
-			Append("*Quad ",name," ",colour,"{",bl," ",br," ",tr," ",tl," ",Ldr.Position(position),"}\n");
+			Append("*Quad ",name," ",colour," {",bl," ",br," ",tr," ",tl," ",Ldr.Position(position),"}\n");
 		}
 
-		public void Axis()                        { Axis(string.Empty, m4x4.Identity, 0.1f); }
-		public void Axis(m4x4 basis)              { Axis(string.Empty, basis, 0.1f); }
-		public void Axis(string name, m4x4 basis) { Axis(name, basis, 0.1f); }
+		public void Axis()                                     { Axis(m4x4.Identity); }
+		public void Axis(m3x4 basis)                           { Axis(new m4x4(basis, v4.Origin)); }
+		public void Axis(m4x4 basis)                           { Axis(string.Empty, basis); }
+		public void Axis(string name, m3x4 basis)              { Axis(name, new m4x4(basis, v4.Origin)); }
+		public void Axis(string name, m4x4 basis)              { Axis(name, basis, 0.1f); }
+		public void Axis(string name, m3x4 basis, float scale) { Axis(name, new m4x4(basis, v4.Origin), scale); }
 		public void Axis(string name, m4x4 basis, float scale)
 		{
 			Append("*Matrix3x3 ",name," {",basis.x*scale," ",basis.y*scale," ",basis.z*scale," ",Ldr.Position(basis.pos),"}\n");
@@ -227,6 +237,11 @@ namespace pr.ldr
 		public override string ToString()
 		{
 			return m_sb.ToString();
+		}
+		public void ToFile(string filepath, bool append = false)
+		{
+			using (var f = new StreamWriter(new FileStream(filepath, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read)))
+				f.Write(ToString());
 		}
 	}
 }

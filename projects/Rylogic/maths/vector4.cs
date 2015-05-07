@@ -202,6 +202,11 @@ namespace pr.maths
 			Debug.Assert(lhs.Length3Sq != 0 && rhs.Length3Sq != 0, "CosAngle undefined for zero vectors");
 			return Maths.Clamp(Dot3(lhs,rhs) / (float)Math.Sqrt(lhs.Length3Sq * rhs.Length3Sq), -1f, 1f);
 		}
+		public static float Angle3(v4 lhs, v4 rhs)
+		{
+			// Return the angle between two vectors
+			return (float)Math.Acos(CosAngle3(lhs, rhs));
+		}
 		public static v4 Parse3(string s, float w)
 		{
 			if (s == null) throw new ArgumentNullException("s", "v4.Parse3() string argument was null");

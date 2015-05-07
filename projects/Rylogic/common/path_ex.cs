@@ -208,6 +208,11 @@ namespace pr.common
 				m_find_data = find_data;
 				FullPath = Path.Combine(dir, FileName);
 			}
+			public FileData(FileData rhs)
+			{
+				m_find_data = rhs.m_find_data.ShallowCopy();
+				FullPath    = rhs.FullPath;
+			}
 		}
 
 		/// <remarks>

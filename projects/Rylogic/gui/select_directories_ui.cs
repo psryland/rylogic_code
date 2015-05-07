@@ -31,6 +31,10 @@ namespace pr.gui
 			m_hs = new HoverScroll(m_tree.Handle, m_listbox.Handle);
 			m_listbox.DataSource = new BindingSource{DataSource = Paths};
 		}
+		public SelectDirectoriesUI(IEnumerable<string> paths) :this()
+		{
+			AddPaths(paths);
+		}
 		protected override void Dispose(bool disposing)
 		{
 			Util.Dispose(ref components);
@@ -91,6 +95,8 @@ namespace pr.gui
 					m_tree.SelectedNode = m_tree.GetNode(path.Name);
 					m_tree.SelectedNode.EnsureVisible();
 				};
+			m_listbox.KeyDown += ListBoxExtensions.SelectAll;
+			m_listbox.KeyDown += ListBoxExtensions.Copy;
 		}
 
 		/// <summary>Initialise the list of directories to search</summary>
@@ -172,6 +178,19 @@ namespace pr.gui
 			/// <summary>Compare function for Path</summary>
 			public int CompareTo(Path rhs) { return string.CompareOrdinal(Name, rhs.Name); }
 			public static Cmp<Path> Compare = Cmp<Path>.From((l,r) => l.CompareTo(r));
+		}
+
+		/// <summary>Add a path to 'Paths' obeying the ordering requirements</summary>
+		public void AddPath(string path)
+		{
+			Paths.AddOrdered(path, Path.Compare);
+		}
+
+		/// <summary>Add a collection of paths to 'Paths' obeying the ordering requirements</summary>
+		public void AddPaths(IEnumerable<string> paths)
+		{
+			foreach (var path in paths)
+				AddPath(path);
 		}
 
 		/// <summary>Called after 'path' has been added to the collectionsummary>
@@ -516,7 +535,7 @@ namespace pr.gui
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SelectDirectoriesUI));
 			this.m_btn_ok = new System.Windows.Forms.Button();
 			this.m_tree = new pr.gui.SelectDirectoriesUI.TreeView();
-			this.m_listbox = new pr.gui.ListBox();
+			this.m_listbox = new ListBox();
 			this.m_split = new System.Windows.Forms.SplitContainer();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
@@ -552,6 +571,7 @@ namespace pr.gui
 			this.m_listbox.Location = new System.Drawing.Point(0, 0);
 			this.m_listbox.Margin = new System.Windows.Forms.Padding(0);
 			this.m_listbox.Name = "m_listbox";
+			this.m_listbox.SelectionMode = System.Windows.Forms.SelectionMode.MultiExtended;
 			this.m_listbox.Size = new System.Drawing.Size(157, 368);
 			this.m_listbox.TabIndex = 3;
 			// 

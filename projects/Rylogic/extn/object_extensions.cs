@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using pr.util;
 
 namespace pr.extn
 {
@@ -17,6 +18,12 @@ namespace pr.extn
 			// 'T' must be a reference type, because casting between boxed value types doesn't work
 			// i.e.   3.As<short>() fails
 			return (T)obj;
+		}
+
+		/// <summary>Overload ToString with options for transforming the string</summary>
+		[System.Diagnostics.DebuggerStepThrough] public static string ToString(this object obj, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case = StrTxfm.ECapitalise.DontChange, StrTxfm.ESeparate word_sep = StrTxfm.ESeparate.DontChange, string sep = " ")
+		{
+			return StrTxfm.Apply(obj.ToString(), word_start, word_case, word_sep, sep);
 		}
 
 		/// <summary>Returns a string containing a description of this object and its member values</summary>

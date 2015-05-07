@@ -273,48 +273,143 @@ namespace pr.extn
 			return w;
 		}
 
-		/// <summary>Resize the columns intelligently based on currently displayed content</summary>
-		public static void SetGridColumnSizes(this DataGridView grid, bool auto_hide_single_column_headers = false)
+		/// <summary>Scale the fill weights so that they sum up to 1f</summary>
+		public static void NormaliseFillWeights(this DataGridView grid)
 		{
-			if (grid.ColumnCount == 0)
-				return;
+			var sum = (float)grid.Columns.Cast<DataGridViewColumn>().Sum(x => x.FillWeight);
+			foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+				col.FillWeight /= sum;
+		}
 
-			var grid_width = grid.DisplayRectangle.Width - 2;
-			var col_count  = grid.ColumnCount;
+		/// <summary>Options for smart column resizing</summary>
+		[Flags] public enum EColumnSizeOptions
+		{
+			None                 = 0,
+			Preferred            = 1 << 0,
+			IncludeColumnHeaders = 1 << 1,
+			GrowToDisplayWidth   = 1 << 2,
+			ShrinkToDisplayWidth = 1 << 3,
+			FitToDisplayWidth    = GrowToDisplayWidth | ShrinkToDisplayWidth,
+		}
 
-			if (auto_hide_single_column_headers)
-				grid.ColumnHeadersVisible = col_count > 1;
+		/// <summary>Return the array of ideal widths for the columns</summary>
+		public static float[] GetColumnWidths(this DataGridView grid, EColumnSizeOptions opts)
+		{
+			var columns     = grid.Columns.Cast<DataGridViewColumn>();
+			var grid_width  = Math.Max(grid.DisplayRectangle.Width - 3f, 1f);
+			var widths      = columns.Select(x => grid_width * x.FillWeight).ToArray();
+			var total_width = Math.Max(widths.Sum(), 1f);
 
 			// Measure each column's preferred width
-			var col_widths = grid.Columns.Cast<DataGridViewColumn>().Select(x => x.FillWeight).ToArray();//Enumerable.Repeat(30f, col_count).ToArray();
+			var pref_widths = widths.ToArray();
 			using (var gfx = grid.CreateGraphics())
 			{
-				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
-				{
-					for (int i = 0, iend = Math.Min(col_count, row.Cells.Count); i != iend; ++i)
+				// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
+				Func<DataGridViewCell,float> preferred_width = (cell) =>
 					{
-						// For some reason, cell.GetPreferredSize or col.GetPreferredWidth don't return correct values
-						var cell = row.Cells[i];
 						SizeF sz;
 						if      (cell.Value is string) sz = gfx.MeasureString((string)cell.Value, cell.InheritedStyle.Font);
 						else if (cell.Value is Image ) sz = ((Image)cell.Value).Size;
 						else sz = SizeF.Empty;
-
 						var w = Maths.Clamp(sz.Width + 10, 30, 64000); // DGV throws if width is greater than 65535
-						col_widths[i] = Math.Max(col_widths[i], w);
-					}
+						return w;
+					};
+
+				if ((opts & EColumnSizeOptions.IncludeColumnHeaders) != 0)
+					for (int i = 0, iend = grid.ColumnCount; i != iend; ++i)
+						pref_widths[i] = Math.Max(pref_widths[i], preferred_width(grid.Columns[i].HeaderCell));
+
+				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
+					for (int i = 0, iend = Math.Min(grid.ColumnCount, row.Cells.Count); i != iend; ++i)
+						pref_widths[i] = Math.Max(pref_widths[i], preferred_width(row.Cells[i]));
+			}
+			var total_pref_width = Math.Max(pref_widths.Sum(), 1f);
+
+			if ((opts & EColumnSizeOptions.Preferred) != 0)
+			{
+				if ((total_pref_width < grid_width && (opts & EColumnSizeOptions.GrowToDisplayWidth  ) != 0) ||
+					(total_pref_width > grid_width && (opts & EColumnSizeOptions.ShrinkToDisplayWidth) != 0))
+				{
+					var scale = grid_width / total_pref_width;
+					Enumerable.Range(0,widths.Length).ForEach(i => pref_widths[i] *= scale);
+				}
+				return pref_widths;
+			}
+			if ((total_width < grid_width && (opts & EColumnSizeOptions.GrowToDisplayWidth  ) != 0) ||
+				(total_width > grid_width && (opts & EColumnSizeOptions.ShrinkToDisplayWidth) != 0))
+			{
+				var scale = grid_width / total_width;
+				Enumerable.Range(0,widths.Length).ForEach(i => widths[i] *= scale);
+			}
+			return widths;
+		}
+
+		/// <summary>Set the FillWeights based on the current column widths</summary>
+		public static void SetFillWeightsFromCurrentWidths(this DataGridView grid)
+		{
+			// Sum the column widths
+			var sum = (float)grid.Columns.Cast<DataGridViewColumn>().Sum(x => x.Width);
+			foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+				col.FillWeight = col.Width / sum;
+		}
+
+		/// <summary>When a column width is changed, adjust the fill weights to preserve the column's width, squashing up the columns with indices > 'column_index'</summary>
+		public static void SetFillWeightsOnColumnWidthChanged(this DataGridView grid, int column_index)
+		{
+			if (grid.ColumnCount == 0)
+				return;
+
+			// Get the display area width and the total column widths
+			var columns     = grid.Columns.Cast<DataGridViewColumn>();
+			var grid_width  = Math.Max(grid.DisplayRectangle.Width - 3f, 1f);
+			var total_width = columns.Sum(x => x.Width);
+			var left_width  = columns.Take(column_index+1).Sum(x => x.Width);
+
+			if (left_width >= grid_width)
+			{
+				// Set fill weights based on column widths only
+				grid.SetFillWeightsFromCurrentWidths();
+			}
+			else
+			{
+				// Scale columns > column_index to fill the remaining space
+				var scale = (float)(grid_width - left_width) / (total_width - left_width);
+				foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+				{
+					if (col.Index <= column_index)
+						col.FillWeight = (float)col.Width / grid_width;
+					else
+						col.FillWeight = (float)col.Width * scale / grid_width;
 				}
 			}
-			var total_width = Math.Max(col_widths.Sum(), 1);
+		}
 
-			// Resize columns. If the total width is less than the control width use the control width instead
-			var remainder = 0f;
-			var scale = Maths.Max(grid_width / total_width, 1f);
-			foreach (DataGridViewColumn col in grid.Columns)
+		/// <summary>
+		/// Resize the columns intelligently based on currently displayed content
+		/// To handle user resized columns, call SetFillWeightsFromCurrentWidths() in the OnColumnWidthChanged() handler, then SetGridColumnSizes()
+		/// You'll need to prevent recursion with a flag however</summary>
+		public static void SetGridColumnSizes(this DataGridView grid, EColumnSizeOptions opts, bool auto_hide_single_column_header = false)
+		{
+			if (grid.ColumnCount == 0)
+				return;
+
+			if (auto_hide_single_column_header)
+				grid.ColumnHeadersVisible = grid.ColumnCount > 1;
+
+			// Get the ideal column widths
+			grid.NormaliseFillWeights();
+			var col_widths = grid.GetColumnWidths(opts);
+
+			// Resize columns.
+			using (grid.SuspendLayout(true))
 			{
-				var width = (int)(col_widths[col.Index] * scale + remainder);
-				remainder = col_widths[col.Index] * scale - (float)width;
-				col.Width = width;
+				var remainder = 0f;
+				foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+				{
+					var fwidth = col_widths[col.Index] + remainder;
+					remainder  = fwidth - (float)(int)fwidth;
+					col.Width  = (int)fwidth;
+				}
 			}
 		}
 
@@ -323,7 +418,6 @@ namespace pr.extn
 		{
 			var i = grid.Rows.GetFirstRow(DataGridViewElementStates.Selected);
 			return i != -1 ? grid.Rows[i] : null;
-			//return grid.GetCellCount(DataGridViewElementStates.Selected) != 0 ? grid.SelectedRows[0] : null;
 		}
 
 		/// <summary>Attempts to scroll the grid to 'first_row_index' clamped by the number of rows in the grid</summary>
