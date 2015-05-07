@@ -91,6 +91,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestWingui", "TestWingui.vc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DockPanel", "..\sdk\dockpanelsuite\DockPanel.csproj", "{C75532C4-765B-418E-B09B-46D36B2ABDB1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "neuralnet", "neuralnet.vcxproj", "{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -315,6 +317,14 @@ Global
 		{C75532C4-765B-418E-B09B-46D36B2ABDB1}.Release|x64.Build.0 = Release|Any CPU
 		{C75532C4-765B-418E-B09B-46D36B2ABDB1}.Release|x86.ActiveCfg = Release|Any CPU
 		{C75532C4-765B-418E-B09B-46D36B2ABDB1}.Release|x86.Build.0 = Release|Any CPU
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Debug|x64.ActiveCfg = Debug|x64
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Debug|x64.Build.0 = Debug|x64
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Debug|x86.ActiveCfg = Debug|Win32
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Debug|x86.Build.0 = Debug|Win32
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Release|x64.ActiveCfg = Release|x64
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Release|x64.Build.0 = Release|x64
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Release|x86.ActiveCfg = Release|Win32
+		{48FEFC0A-D989-4215-AE6B-E62DCF07BBD2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
