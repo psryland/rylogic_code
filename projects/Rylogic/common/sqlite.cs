@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Threading;
 
 // Usage:
 // - Your domain objects must be classes with a default constructor.
@@ -1219,7 +1220,6 @@ namespace pr.common
 				WriteItemHook = x => x;
 				m_owning_thread_id = Thread.CurrentThread.ManagedThreadId;
 				m_this_handle = GCHandle.Alloc(this);
-				m_update_cb_handle = UpdateCB;
 
 				// Open the database file
 				m_db = Dll.Open(filepath, flags);
@@ -1227,10 +1227,14 @@ namespace pr.common
 
 				// Initialise the per-table object caches
 				m_caches = new Dictionary<string, ICache<object,object>>();
-				DataChanged += InvalidateCachesOnDataChanged;
+				DataChangedImmediate += InvalidateCachesOnDataChanged;
 
 				// Initialise the query cache
 				m_query_cache = new QueryCache(this, Dll.ThreadSafe){Capacity = 50};
+
+				// Connect the update callback
+				m_update_cb_handle = UpdateCB;
+				Dll.UpdateHook(m_db, m_update_cb_handle, GCHandle.ToIntPtr(m_this_handle));
 
 				// Default to no busy timeout
 				BusyTimeout = 0;
@@ -1533,6 +1537,14 @@ namespace pr.common
 			}
 			private Transaction m_transaction_in_progress;
 
+			/// <summary>Factory method for creating an Sqlite.Transaction from a different thread</summary>
+			public Transaction NewAsyncTransaction(int busy_timeout = 10000)
+			{
+				// Create a database handle for this thread
+				var db = new Database(Filepath){BusyTimeout = busy_timeout};
+				return new Transaction(db, db.Dispose);
+			}
+
 			/// <summary>General sql querysummary>
 			public Query Query(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
@@ -1592,29 +1604,28 @@ namespace pr.common
 			}
 
 			/// <summary>
+			/// Raised whenever a row in the database is inserted, updated, or deleted. This event
+			/// is invoked on Dispatcher.CurrentDispatcher to prevent accidentally modifying the database
+			/// connection during the sqlite update callback. For immediate DataChanged notification use
+			/// DataChangedImmediate.</summary>
+			public event EventHandler<DataChangedArgs> DataChanged;
+
+			/// <summary>
 			/// Raised whenever a row in the database is inserted, updated, or deleted.
 			/// Handlers of this event *must not* do anything that will modify the database connection
 			/// that invoked this event. Any actions to modify the database connection must be deferred
 			/// until after the completion of the Step() call that triggered the update event. Note that
 			/// sqlite3_prepare_v2() and sqlite3_step() both modify their database connections.</summary>
-			public event EventHandler<DataChangedArgs> DataChanged
-			{
-				add
-				{
-					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, m_update_cb_handle, GCHandle.ToIntPtr(m_this_handle));
-					m_RowChangedInternal += value;
-				}
-				remove
-				{
-					m_RowChangedInternal -= value;
-					if (m_RowChangedInternal == null) Dll.UpdateHook(m_db, null, IntPtr.Zero);
-				}
-			}
-			private EventHandler<DataChangedArgs> m_RowChangedInternal;
+			public event EventHandler<DataChangedArgs> DataChangedImmediate;
+
+			/// <summary>Raise the data changed events</summary>
 			private void RaiseDataChangedEvent(ChangeType change_type, string table_name, long row_id)
 			{
-				if (m_RowChangedInternal == null) return;
-				m_RowChangedInternal(this, new DataChangedArgs(change_type, table_name, row_id));
+				var args = new DataChangedArgs(change_type, table_name, row_id);
+				if (DataChangedImmediate != null)
+					DataChangedImmediate(this, args);
+				if (DataChanged != null)
+					Dispatcher.CurrentDispatcher.BeginInvoke(DataChanged, this,  args);
 			}
 
 			/// <summary>Callback passed to the sqlite dll when DataChanged is subscribed to</summary>
@@ -1666,7 +1677,7 @@ namespace pr.common
 				}
 			}
 
-			[Conditional("DEBUG")] internal void AssertCorrectThread()
+			[Conditional("DEBUG")] public void AssertCorrectThread()
 			{
 				// This is not strictly correct but is probably good enough.
 				// If ConfigOption.SingleThreaded is used, all access must be from the thread that opened the db connection.
@@ -2906,10 +2917,10 @@ namespace pr.common
 			/// <summary>The name of the changed table</summary>
 			public string TableName { get; set; }
 
-			/// <summary>The id of the effected row</summary>
+			/// <summary>The rowid/primary key of the effected row</summary>
 			public long RowId { get; set; }
 
-			public DataChangedArgs(ChangeType change_type, string table_name, long row_id)
+			[System.Diagnostics.DebuggerStepThrough] public DataChangedArgs(ChangeType change_type, string table_name, long row_id)
 			{
 				ChangeType   = change_type;
 				TableName    = table_name;
@@ -3682,7 +3693,7 @@ namespace pr.common
 		public class Exception :System.Exception
 		{
 			/// <summary>Helper for constructing new exceptions</summary>
-			public static Exception New(Result res, string message)
+			public static Exception New(Result res, string message, string sql_error_msg = null)
 			{
 				// If tracing is enabled, append a list of the active query objects
 				#if SQLITE_TRACE
@@ -3691,16 +3702,19 @@ namespace pr.common
 				message += sb.ToString();
 				#endif
 
-				return new Exception(message){Result = res};
+				return new Exception(message){Result = res, SqlErrMsg = sql_error_msg ?? string.Empty};
 			}
+
+			public Exception() {}
+			public Exception(string message) :base(message) {}
+			public Exception(string message, System.Exception inner_exception):base(message, inner_exception) {}
+			public override string ToString() { return string.Format("{0} - {1}" ,Result ,Message); }
 
 			/// <summary>The result code associated with this exception</summary>
 			public Result Result { get; private set; }
 
-			public Exception() {}
-			public Exception(string message):base(message) {}
-			public Exception(string message, System.Exception inner_exception):base(message, inner_exception) {}
-			public override string ToString() { return string.Format("{0} - {1}" ,Result ,Message); }
+			/// <summary>The sqlite error message</summary>
+			public string SqlErrMsg { get; private set; }
 		}
 
 		#endregion
@@ -4178,7 +4192,7 @@ namespace pr.common
 					var err = ErrorMsg(db);
 					var msg = string.Format("Error compiling sql string '{0}'\n{1}" ,sql_string, err);
 					Log.Debug(null, msg);
-					throw Exception.New(res, msg);
+					throw Exception.New(res, msg, err);
 				}
 				return stmt;
 			}
