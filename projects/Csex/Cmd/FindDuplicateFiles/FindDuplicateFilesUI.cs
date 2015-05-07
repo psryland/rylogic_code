@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using WeifenLuo.WinFormsUI.Docking;
+using pr.extn;
 using pr.gui;
 using pr.util;
 
@@ -14,11 +15,15 @@ namespace Csex
 {
 	public class FindDuplicateFilesUI :Form
 	{
+		private Model m_model;
+
 		public FindDuplicateFilesUI()
 		{
 			InitializeComponent();
+			m_model = new Model(this);
 
 			SetupMenu();
+			SetupDockContent();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -39,13 +44,23 @@ namespace Csex
 				};
 		}
 
+		/// <summary>Hook up the dock panels</summary>
+		private void SetupDockContent()
+		{
+			var main    = MakeDockable(new MainControls(m_model), "Main", m_dock, m_menu_window);
+			var results = MakeDockable(new DuplicateResults(m_model), "Duplicates", m_dock, m_menu_window);
+
+			results.Show(m_dock, DockState.Document);
+			main.Show(m_dock, DockState.DockLeft);
+		}
+
 		/// <summary>Select the directories to look in for duplicate files</summary>
 		private void ChooseDirectories()
 		{
-			using (var dlg = new SelectDirectoriesUI())
+			using (var dlg = new SelectDirectoriesUI(m_model.Settings.SearchPaths))
 			{
-				dlg.Paths.Add("P:\\projects\\Rylogic");
 				dlg.ShowDialog();
+				m_model.Settings.SearchPaths = dlg.Paths.Select(x => x.Text).ToArray();
 			}
 		}
 
@@ -63,6 +78,7 @@ namespace Csex
 				MinimizeBox = true,
 				ControlBox = true,
 			};
+			ctrl.Dock = DockStyle.Fill;
 			form.Controls.Add(ctrl);
 			//form.DockStateChanged += (s,a) => settings.Save();
 
@@ -102,6 +118,7 @@ namespace Csex
 		private ToolStripMenuItem m_menu_file_exit;
 		private ToolStripStatusLabel m_status;
 		private DockPanel m_dock;
+		private ToolStripMenuItem m_menu_window;
 
 		#region Windows Form Designer generated code
 
@@ -131,20 +148,21 @@ namespace Csex
 			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient7 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FindDuplicateFilesUI));
 			this.m_tsc = new System.Windows.Forms.ToolStripContainer();
-			this.m_menu = new System.Windows.Forms.MenuStrip();
 			this.m_ss = new System.Windows.Forms.StatusStrip();
-			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_search_dirs = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_dock = new WeifenLuo.WinFormsUI.Docking.DockPanel();
 			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_dock = new WeifenLuo.WinFormsUI.Docking.DockPanel();
+			this.m_menu = new System.Windows.Forms.MenuStrip();
+			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_search_dirs = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
 			this.m_tsc.SuspendLayout();
-			this.m_menu.SuspendLayout();
 			this.m_ss.SuspendLayout();
+			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// m_tsc
@@ -170,17 +188,6 @@ namespace Csex
 			// 
 			this.m_tsc.TopToolStripPanel.Controls.Add(this.m_menu);
 			// 
-			// m_menu
-			// 
-			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
-			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_file});
-			this.m_menu.Location = new System.Drawing.Point(0, 0);
-			this.m_menu.Name = "m_menu";
-			this.m_menu.Size = new System.Drawing.Size(738, 24);
-			this.m_menu.TabIndex = 0;
-			this.m_menu.Text = "menuStrip1";
-			// 
 			// m_ss
 			// 
 			this.m_ss.Dock = System.Windows.Forms.DockStyle.None;
@@ -191,37 +198,17 @@ namespace Csex
 			this.m_ss.Size = new System.Drawing.Size(738, 22);
 			this.m_ss.TabIndex = 0;
 			// 
-			// m_menu_file
+			// m_status
 			// 
-			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_file_search_dirs,
-            this.m_menu_file_sep0,
-            this.m_menu_file_exit});
-			this.m_menu_file.Name = "m_menu_file";
-			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
-			this.m_menu_file.Text = "&File";
-			// 
-			// m_menu_file_exit
-			// 
-			this.m_menu_file_exit.Name = "m_menu_file_exit";
-			this.m_menu_file_exit.Size = new System.Drawing.Size(168, 22);
-			this.m_menu_file_exit.Text = "E&xit";
-			// 
-			// m_menu_file_sep0
-			// 
-			this.m_menu_file_sep0.Name = "m_menu_file_sep0";
-			this.m_menu_file_sep0.Size = new System.Drawing.Size(165, 6);
-			// 
-			// m_menu_file_search_dirs
-			// 
-			this.m_menu_file_search_dirs.Name = "m_menu_file_search_dirs";
-			this.m_menu_file_search_dirs.Size = new System.Drawing.Size(168, 22);
-			this.m_menu_file_search_dirs.Text = "Search Directories";
+			this.m_status.Name = "m_status";
+			this.m_status.Size = new System.Drawing.Size(26, 17);
+			this.m_status.Text = "Idle";
 			// 
 			// m_dock
 			// 
 			this.m_dock.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_dock.DocumentStyle = WeifenLuo.WinFormsUI.Docking.DocumentStyle.DockingSdi;
 			this.m_dock.Location = new System.Drawing.Point(0, 0);
 			this.m_dock.Margin = new System.Windows.Forms.Padding(0);
 			this.m_dock.Name = "m_dock";
@@ -274,11 +261,50 @@ namespace Csex
 			this.m_dock.Skin = dockPanelSkin1;
 			this.m_dock.TabIndex = 0;
 			// 
-			// m_status
+			// m_menu
 			// 
-			this.m_status.Name = "m_status";
-			this.m_status.Size = new System.Drawing.Size(26, 17);
-			this.m_status.Text = "Idle";
+			this.m_menu.Dock = System.Windows.Forms.DockStyle.None;
+			this.m_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file,
+            this.m_menu_window});
+			this.m_menu.Location = new System.Drawing.Point(0, 0);
+			this.m_menu.Name = "m_menu";
+			this.m_menu.Size = new System.Drawing.Size(738, 24);
+			this.m_menu.TabIndex = 0;
+			this.m_menu.Text = "menuStrip1";
+			// 
+			// m_menu_file
+			// 
+			this.m_menu_file.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.m_menu_file_search_dirs,
+            this.m_menu_file_sep0,
+            this.m_menu_file_exit});
+			this.m_menu_file.Name = "m_menu_file";
+			this.m_menu_file.Size = new System.Drawing.Size(37, 20);
+			this.m_menu_file.Text = "&File";
+			// 
+			// m_menu_file_search_dirs
+			// 
+			this.m_menu_file_search_dirs.Name = "m_menu_file_search_dirs";
+			this.m_menu_file_search_dirs.Size = new System.Drawing.Size(168, 22);
+			this.m_menu_file_search_dirs.Text = "Search Directories";
+			// 
+			// m_menu_file_sep0
+			// 
+			this.m_menu_file_sep0.Name = "m_menu_file_sep0";
+			this.m_menu_file_sep0.Size = new System.Drawing.Size(165, 6);
+			// 
+			// m_menu_file_exit
+			// 
+			this.m_menu_file_exit.Name = "m_menu_file_exit";
+			this.m_menu_file_exit.Size = new System.Drawing.Size(168, 22);
+			this.m_menu_file_exit.Text = "E&xit";
+			// 
+			// m_menu_window
+			// 
+			this.m_menu_window.Name = "m_menu_window";
+			this.m_menu_window.Size = new System.Drawing.Size(63, 20);
+			this.m_menu_window.Text = "&Window";
 			// 
 			// FindDuplicateFilesUI
 			// 
@@ -297,10 +323,10 @@ namespace Csex
 			this.m_tsc.TopToolStripPanel.PerformLayout();
 			this.m_tsc.ResumeLayout(false);
 			this.m_tsc.PerformLayout();
-			this.m_menu.ResumeLayout(false);
-			this.m_menu.PerformLayout();
 			this.m_ss.ResumeLayout(false);
 			this.m_ss.PerformLayout();
+			this.m_menu.ResumeLayout(false);
+			this.m_menu.PerformLayout();
 			this.ResumeLayout(false);
 
 		}

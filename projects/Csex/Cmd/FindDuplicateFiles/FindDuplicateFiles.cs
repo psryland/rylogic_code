@@ -68,10 +68,7 @@ namespace Csex
 				return RunCmdline();
 
 			pr.win32.Win32.FreeConsole();
-			var dlg = new pr.gui.SelectDirectoriesUI();
-			//dlg.Paths.Add("P:\\projects\\Rylogic");
-			using (dlg)
-			//using (var dlg = new FindDuplicateFilesUI())
+			using (var dlg = new FindDuplicateFilesUI())
 				dlg.ShowDialog();
 
 			return 0;
@@ -162,6 +159,7 @@ namespace Csex
 						Console.WriteLine("Existing duplicate found:\n  {0}\n  {1}\n".Fmt(finfo.FullPath, existing.FullPath));
 						continue;
 					}
+
 
 					map.Add(k, finfo);
 				}

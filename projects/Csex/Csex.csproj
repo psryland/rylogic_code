@@ -47,12 +47,21 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cmd\Cmd.cs" />
+    <Compile Include="Cmd\FindDuplicateFiles\DuplicateResults.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Cmd\FindDuplicateFiles\FindDuplicateFilesUI.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Cmd\FindDuplicateFiles\MainControls.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Cmd\FindDuplicateFiles\Model.cs" />
+    <Compile Include="Cmd\FindDuplicateFiles\Settings.cs" />
     <Compile Include="Cmd\ShowBase64.cs" />
     <Compile Include="Cmd\FindAssemblyConflicts.cs" />
     <Compile Include="Cmd\FindDuplicateFiles\FindDuplicateFiles.cs" />
@@ -83,8 +92,14 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Cmd\FindDuplicateFiles\DuplicateResults.resx">
+      <DependentUpon>DuplicateResults.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Cmd\FindDuplicateFiles\FindDuplicateFilesUI.resx">
       <DependentUpon>FindDuplicateFilesUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Cmd\FindDuplicateFiles\MainControls.resx">
+      <DependentUpon>MainControls.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
