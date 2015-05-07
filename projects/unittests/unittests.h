@@ -247,6 +247,8 @@
 #include "pr/network/sockets.h"
 #include "pr/network/tcpip.h"
 #include "pr/network/web_get.h"
+#include "pr/neuralnet/forward.h"
+#include "pr/neuralnet/neuralnet.h"
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/instance.h"
 #include "pr/renderer11/renderer.h"

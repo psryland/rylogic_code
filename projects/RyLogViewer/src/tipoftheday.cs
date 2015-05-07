@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using RyLogViewer.Properties;
 using pr.extn;
 using pr.script;
+using pr.util;
 
 namespace RyLogViewer
 {
@@ -212,7 +213,7 @@ namespace RyLogViewer
 				case Cmd.open_example_logfile:
 					m_main.SetLineEnding(ELineEnding.Detect);
 					m_main.SetEncoding(null);
-					m_main.OpenSingleLogFile(Misc.ResolveAppPath(@"examples\example logfile.txt"), false);
+					m_main.OpenSingleLogFile(Util.ResolveAppPath(@"examples\example logfile.txt"), false);
 					Close();
 					break;
 				case Cmd.show_pattern_sets:

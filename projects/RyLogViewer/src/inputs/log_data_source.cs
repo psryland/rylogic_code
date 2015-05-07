@@ -25,7 +25,7 @@ namespace RyLogViewer
 					m_custom_data_sources = new List<ICustomLogDataSource>();
 
 					// Loads dlls from the plugins directory looking for transform substitutions
-					var loader = PluginLoader<ICustomLogDataSource>.LoadWithUI(this, Misc.ResolveAppPath("plugins"), null, true);
+					var loader = PluginLoader<ICustomLogDataSource>.LoadWithUI(this, Util.ResolveAppPath("plugins"), null, true);
 					foreach (var sub in loader.Plugins)
 						m_custom_data_sources.Add(sub);
 				}

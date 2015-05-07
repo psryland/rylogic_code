@@ -1404,7 +1404,7 @@ namespace RyLogViewer
 			const string HelpStartPage = @"docs\welcome.html";
 			try
 			{
-				var path = Misc.ResolveAppPath(HelpStartPage);
+				var path = Util.ResolveAppPath(HelpStartPage);
 				Process.Start(path);
 			}
 			catch (Exception ex)

@@ -289,14 +289,6 @@ namespace RyLogViewer
 			form.BeginInvoke(action);
 		}
 
-		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
-		public static string ResolveAppPath(string relative_path = "")
-		{
-			var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
-			var path = Path.Combine(dir, relative_path);
-			return path;
-		}
-
 		/// <summary>
 		/// Returns the index in 'buf' of one past the next delimiter, starting from 'start'.
 		/// If not found, returns -1 when searching backwards, or length when searching forwards</summary>
