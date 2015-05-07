@@ -80,27 +80,17 @@ namespace pr
 	static_assert(std::alignment_of<v4>::value == 16, "v4 should have 16 byte alignment");
 	static_assert(std::is_pod<v4>::value, "Should be a pod type");
 
-	static v4 const v4Zero   = {0.0f, 0.0f, 0.0f, 0.0f};
-	static v4 const v4Half   = {0.5f, 0.5f, 0.5f, 0.5f};
-	static v4 const v4One    = {1.0f, 1.0f, 1.0f, 1.0f};
-	static v4 const v4Min    = {+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
-	static v4 const v4Max    = {+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
-	static v4 const v4Lowest = {-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
-	static v4 const v4XAxis  = {1.0f, 0.0f, 0.0f, 0.0f};
-	static v4 const v4YAxis  = {0.0f, 1.0f, 0.0f, 0.0f};
-	static v4 const v4ZAxis  = {0.0f, 0.0f, 1.0f, 0.0f};
-	static v4 const v4Origin = {0.0f, 0.0f, 0.0f, 1.0f};
-
-	// Limits
-	namespace maths
-	{
-		template <> struct limits<v4>
-		{
-			static v4 min()    { return v4Min; }
-			static v4 max()    { return v4Max; }
-			static v4 lowest() { return v4Lowest; }
-		};
-	}
+	static v4 const v4Zero    = {0.0f, 0.0f, 0.0f, 0.0f};
+	static v4 const v4Half    = {0.5f, 0.5f, 0.5f, 0.5f};
+	static v4 const v4One     = {1.0f, 1.0f, 1.0f, 1.0f};
+	static v4 const v4Min     = {+maths::float_min, +maths::float_min, +maths::float_min, +maths::float_min};
+	static v4 const v4Max     = {+maths::float_max, +maths::float_max, +maths::float_max, +maths::float_max};
+	static v4 const v4Lowest  = {-maths::float_max, -maths::float_max, -maths::float_max, -maths::float_max};
+	static v4 const v4Epsilon = {+maths::float_eps, +maths::float_eps, +maths::float_eps, +maths::float_eps};
+	static v4 const v4XAxis   = {1.0f, 0.0f, 0.0f, 0.0f};
+	static v4 const v4YAxis   = {0.0f, 1.0f, 0.0f, 0.0f};
+	static v4 const v4ZAxis   = {0.0f, 0.0f, 1.0f, 0.0f};
+	static v4 const v4Origin  = {0.0f, 0.0f, 0.0f, 1.0f};
 
 	// Element access
 	inline float GetX(v4 const& v) { return v.x; }
@@ -121,11 +111,16 @@ namespace pr
 	template <typename T> inline v4 operator * (v4 const& lhs, T const& rhs) { v4 v = lhs; return v *= rhs; }
 	template <typename T> inline v4 operator / (v4 const& lhs, T const& rhs) { v4 v = lhs; return v /= rhs; }
 	template <typename T> inline v4 operator % (v4 const& lhs, T const& rhs) { v4 v = lhs; return v %= rhs; }
-	inline v4 operator + (float lhs, v4 const& rhs)                          { v4 v = rhs; return v += lhs; }
-	inline v4 operator - (float lhs, v4 const& rhs)                          { v4 v = rhs; return v -= lhs; }
-	inline v4 operator * (float lhs, v4 const& rhs)                          { v4 v = rhs; return v *= lhs; }
-	inline v4 operator / (float lhs, v4 const& rhs)                          { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     lhs /GetXf(rhs),       lhs /GetYf(rhs),       lhs /GetZf(rhs),       lhs /GetWf(rhs)); }
-	inline v4 operator % (float lhs, v4 const& rhs)                          { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(lhs, GetXf(rhs)), Fmod(lhs, GetYf(rhs)), Fmod(lhs, GetZf(rhs)), Fmod(lhs, GetWf(rhs))); }
+	inline v4 operator + (float lhs, v4 const& rhs) { v4 v = rhs; return v += lhs; }
+	inline v4 operator - (float lhs, v4 const& rhs) { v4 v = rhs; return v -= lhs; }
+	inline v4 operator * (float lhs, v4 const& rhs) { v4 v = rhs; return v *= lhs; }
+	inline v4 operator / (float lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     GetXf(lhs)/rhs.x,       GetYf(lhs)/rhs.y,       GetZf(lhs)/rhs.z,       GetWf(lhs)/rhs.w); }
+	inline v4 operator % (float lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(GetXf(lhs),rhs.x), Fmod(GetYf(lhs),rhs.y), Fmod(GetZf(lhs),rhs.z), Fmod(GetWf(lhs),rhs.w)); }
+	inline v4 operator + (double lhs, v4 const& rhs) { return GetXf(lhs) + rhs; }
+	inline v4 operator - (double lhs, v4 const& rhs) { return GetXf(lhs) - rhs; }
+	inline v4 operator * (double lhs, v4 const& rhs) { return GetXf(lhs) * rhs; }
+	inline v4 operator / (double lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(     GetXf(lhs)/rhs.x,       GetYf(lhs)/rhs.y,       GetZf(lhs)/rhs.z,       GetWf(lhs)/rhs.w); }
+	inline v4 operator % (double lhs, v4 const& rhs) { assert(All4(rhs,maths::NonZero<float>)); return v4::make(Fmod(GetXf(lhs),rhs.x), Fmod(GetYf(lhs),rhs.y), Fmod(GetZf(lhs),rhs.z), Fmod(GetWf(lhs),rhs.w)); }
 
 	// Unary operators
 	inline v4 operator + (v4 const& v) { return v; }
@@ -186,4 +181,45 @@ namespace pr
 	v4      RotationVectorApprox(m3x4 const& from, m3x4 const& to);
 	v4      RotationVectorApprox(m4x4 const& from, m4x4 const& to);
 	float   CosAngle3(v4 const& lhs, v4 const& rhs);
+}
+
+namespace std
+{
+	template <> class numeric_limits<pr::v4>
+	{
+	public:
+		static pr::v4 min() throw()     { return pr::v4Min; }
+		static pr::v4 max() throw()     { return pr::v4Max; }
+		static pr::v4 lowest() throw()  { return pr::v4Lowest; }
+		static pr::v4 epsilon() throw() { return pr::v4Epsilon; }
+		
+		static const bool is_specialized = true;
+		static const bool is_signed = true;
+		static const bool is_integer = false;
+		static const bool is_exact = false;
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const bool has_denorm_loss = true;
+		static const float_denorm_style has_denorm = denorm_present;
+		static const int radix = 10;
+
+		//static const int digits = 128;
+		//static const int digits10 = 38;
+		//static T round_error() throw() { return 0; }
+		//static const int min_exponent = 0;
+		//static const int min_exponent10 = 0;
+		//static const int max_exponent = 0;
+		//static const int max_exponent10 = 0;
+		//static T infinity() throw() { return 0; }
+		//static T quiet_NaN() throw() { return 0; }
+		//static T signaling_NaN() throw() { return 0; }
+		//static T denorm_min() throw() { return 0; }
+		//static const bool is_iec559 = false;
+		//static const bool is_bounded = true;
+		//static const bool is_modulo = true;
+		//static const bool traps = false;
+		//static const bool tinyness_before = false;
+		//static const float_round_style round_style = round_toward_zero;
+	};
 }

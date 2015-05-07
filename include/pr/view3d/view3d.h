@@ -13,8 +13,6 @@
 #include <windows.h>
 #include <d3d11.h>
 
-#pragma comment(lib, "view3d.lib")
-
 #ifdef VIEW3D_EXPORTS
 	namespace pr
 	{
@@ -312,6 +310,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2W             (View3DObject object, View3DM4x4 const& o2w, char const* name);
 	VIEW3D_API View3DM4x4              __stdcall View3D_ObjectGetO2P             (View3DObject object, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetO2P             (View3DObject object, View3DM4x4 const& o2p, char const* name);
+	VIEW3D_API BOOL                    __stdcall View3D_ObjectGetVisibility      (View3DObject object, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetVisibility      (View3DObject obj, BOOL visible, char const* name);
 	VIEW3D_API View3DColour            __stdcall View3D_ObjectGetColour          (View3DObject object, BOOL base_colour, char const* name);
 	VIEW3D_API void                    __stdcall View3D_ObjectSetColour          (View3DObject object, View3DColour colour, UINT32 mask, char const* name);

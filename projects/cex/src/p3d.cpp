@@ -245,8 +245,8 @@ namespace cex
 			auto iptr = std::begin(icont) + nug.m_irange.first;
 
 			// Reset the vrange in the nugget, since generating normals will create new verts
-			VIdx mn = pr::maths::limits<VIdx>::max();
-			VIdx mx = pr::maths::limits<VIdx>::min();
+			VIdx mn = pr::limits<VIdx>::max();
+			VIdx mx = pr::limits<VIdx>::min();
 
 			// Generate the normals
 			pr::geometry::GenerateNormals(nug.m_irange.count, iptr, m_smooth_threshold,

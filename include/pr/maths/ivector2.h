@@ -34,22 +34,13 @@ namespace pr
 		template <typename T> inline iv2 make(T const& pt)      { iv2 v; return v.set(GetXi(pt), GetYi(pt)); }
 	};
 
-	static iv2 const iv2Zero   = {0, 0};
-	static iv2 const iv2One    = {1, 1};
-	static iv2 const iv2Min    = {maths::int_min, maths::int_min};
-	static iv2 const iv2Max    = {maths::int_max, maths::int_max};
-	static iv2 const iv2XAxis  = {1, 0};
-	static iv2 const iv2YAxis  = {0, 1};
-
-	// Limits
-	namespace maths
-	{
-		template <> struct limits<iv2>
-		{
-			static iv2 min() { return iv2Min; }
-			static iv2 max() { return iv2Max; }
-		};
-	}
+	static iv2 const iv2Zero    = {0, 0};
+	static iv2 const iv2One     = {1, 1};
+	static iv2 const iv2Min     = {+maths::int_min, +maths::int_min};
+	static iv2 const iv2Max     = {+maths::int_max, +maths::int_max};
+	static iv2 const iv2Lowest  = {-maths::int_max, -maths::int_max};
+	static iv2 const iv2XAxis   = {1, 0};
+	static iv2 const iv2YAxis   = {0, 1};
 
 	// Element accessors
 	inline int GetX(iv2 const& v) { return v.x; }
@@ -92,5 +83,25 @@ namespace pr
 	iv2     Abs(iv2 const& v);
 	int     Dot2(iv2 const& lhs, iv2 const& rhs);
 }
+namespace std
+{
+	template <> class numeric_limits<pr::iv2>
+	{
+	public:
+		static pr::iv2 min() throw()     { return pr::iv2Min; }
+		static pr::iv2 max() throw()     { return pr::iv2Max; }
+		static pr::iv2 lowest() throw()  { return pr::iv2Lowest; }
 
+		static const bool is_specialized = true;
+		static const bool is_signed = true;
+		static const bool is_integer = true;
+		static const bool is_exact = true;
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const bool has_denorm_loss = false;
+		static const float_denorm_style has_denorm = denorm_absent;
+		static const int radix = 10;
+	};
+}
 #endif

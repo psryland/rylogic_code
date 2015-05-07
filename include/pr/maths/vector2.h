@@ -36,23 +36,15 @@ namespace pr
 	};
 	static_assert(std::is_pod<v2>::value, "Should be a pod type");
 
-	static v2 const v2Zero  = {0.0f, 0.0f};
-	static v2 const v2Half  = {0.5f, 0.5f};
-	static v2 const v2One   = {1.0f, 1.0f};
-	static v2 const v2Min   = {maths::float_min, maths::float_min};
-	static v2 const v2Max   = {maths::float_max, maths::float_max};
-	static v2 const v2XAxis = {1.0f, 0.0f};
-	static v2 const v2YAxis = {0.0f, 1.0f};
-
-	// Limits
-	namespace maths
-	{
-		template <> struct limits<v2>
-		{
-			static v2 min() { return v2Min; }
-			static v2 max() { return v2Max; }
-		};
-	}
+	static v2 const v2Zero    = {0.0f, 0.0f};
+	static v2 const v2Half    = {0.5f, 0.5f};
+	static v2 const v2One     = {1.0f, 1.0f};
+	static v2 const v2Min     = {+maths::float_min, +maths::float_min};
+	static v2 const v2Max     = {+maths::float_max, +maths::float_max};
+	static v2 const v2Lowest  = {-maths::float_max, -maths::float_max};
+	static v2 const v2Epsilon = {+maths::float_eps, +maths::float_eps};
+	static v2 const v2XAxis   = {1.0f, 0.0f};
+	static v2 const v2YAxis   = {0.0f, 1.0f};
 
 	// Element accessors
 	inline float GetX(v2 const& v) { return v.x; }
@@ -118,5 +110,29 @@ namespace pr
 	int   Sector(v2 const& v, int sectors);
 	float CosAngle2(v2 const& lhs, v2 const& rhs);
 }
+
+namespace std
+{
+	template <> class numeric_limits<pr::v2>
+	{
+	public:
+		static pr::v2 min() throw()     { return pr::v2Min; }
+		static pr::v2 max() throw()     { return pr::v2Max; }
+		static pr::v2 lowest() throw()  { return pr::v2Lowest; }
+		static pr::v2 epsilon() throw() { return pr::v2Epsilon; }
+
+		static const bool is_specialized = true;
+		static const bool is_signed = true;
+		static const bool is_integer = false;
+		static const bool is_exact = false;
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const bool has_denorm_loss = true;
+		static const float_denorm_style has_denorm = denorm_present;
+		static const int radix = 10;
+	};
+}
+
 
 #endif

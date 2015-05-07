@@ -63,7 +63,7 @@ namespace pr
 	inline double  Trunc(double x)                            { return static_cast<double>(static_cast<int>(x)); }
 	inline float   Frac(float x)                              { float n; return modff(x, &n); }
 	inline double  Frac(double x)                             { double n; return modf(x, &n); }
-	template <typename T> inline bool IsFinite(T value)       { return value >= maths::limits<T>::lowest() && value <= maths::limits<T>::max(); }
+	template <typename T> inline bool IsFinite(T value)       { return value >= limits<T>::lowest() && value <= limits<T>::max(); }
 	inline bool    IsFinite(double value)                     { return _finite(value) != 0; }
 	inline bool    IsFinite(float value)                      { return _finite(value) != 0; }
 	inline bool    IsFinite(double value, double max_value)   { return IsFinite(value) && Abs(value) < max_value; }

@@ -986,7 +986,7 @@ namespace pr
 				}
 			case EMode::Rotate:
 				{
-					float t, t_min = pr::maths::limits<float>::max();
+					float t, t_min = pr::maths::float_max;
 					
 					// Intersect YZ plane for rotation about X? Closest pt in the range [0.25,1] on the xaxis
 					// and within the threshold distance. Also, on the positive side of the ray

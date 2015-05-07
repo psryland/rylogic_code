@@ -3138,15 +3138,13 @@ out <<
 		{
 			Apply([&](LdrObject* o)
 			{
-				if (!o->m_parent)
-					o->m_o2p = o2w;
-				else
-					o->m_o2p = pr::InvertFast(o->m_parent->O2W()) * o2w;
+				o->m_o2p = o->m_parent ? pr::InvertFast(o->m_parent->O2W()) * o2w : o2w;
+				assert(pr::FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
 				return true;
 			}, name);
 		}
 
-		// Set the object to parent transform of this object or child objects matching 'name' (see Apply)
+		// Get/Set the object to parent transform of this object or child objects matching 'name' (see Apply)
 		pr::m4x4 LdrObject::O2P(char const* name) const
 		{
 			auto obj = Child(name);
@@ -3154,16 +3152,31 @@ out <<
 		}
 		void LdrObject::O2P(pr::m4x4 const& o2p, char const* name)
 		{
-			Apply([&](LdrObject* o){ o->m_o2p = o2p; return true; }, name);
+			Apply([&](LdrObject* o)
+			{
+				o->m_o2p = o2p;
+				assert(pr::FEql(o->m_o2p.w.w, 1.0f) && "Invalid instance transform");
+				return true;
+			}, name);
 		}
 
-		// Set the visibility of this object or child objects matching 'name' (see Apply)
+		// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
+		bool LdrObject::Visible(char const* name)
+		{
+			auto obj = Child(name);
+			return obj ? obj->m_visible : false;
+		}
 		void LdrObject::Visible(bool visible, char const* name)
 		{
 			Apply([=](LdrObject* o){ o->m_visible = visible; return true; }, name);
 		}
 
-		// Set the render mode for this object or child objects matching 'name' (see Apply)
+		// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
+		bool LdrObject::Wireframe(char const* name)
+		{
+			auto obj = Child(name);
+			return obj ? obj->m_wireframe : false;
+		}
 		void LdrObject::Wireframe(bool wireframe, char const* name)
 		{
 			Apply([=](LdrObject* o)

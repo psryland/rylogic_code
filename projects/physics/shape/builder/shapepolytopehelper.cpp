@@ -209,7 +209,7 @@ ShapePolytope& ShapePolytopeHelper::set(v4 const* verts, std::size_t num_verts, 
 	ConvexHull(verts, &vindex[0], &vindex[0] + vindex.size(), &faces[0], &faces[0] + faces.size(), vert_count, face_count);
 	vindex.resize(vert_count);
 	faces .resize(face_count);
-	PR_ASSERT(PR_DBG_PHYSICS, vert_count <= maths::max<PolyIdx>(), "Polytope contains too many vertices");
+	PR_ASSERT(PR_DBG_PHYSICS, vert_count <= limits<PolyIdx>::max(), "Polytope contains too many vertices");
 	PR_ASSERT(PR_DBG_PHYSICS, face_count > 0, "Polytope has no faces");
 
 	// Copy the verts

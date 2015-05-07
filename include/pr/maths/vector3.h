@@ -47,24 +47,16 @@ namespace pr
 	};
 	static_assert(std::is_pod<v3>::value, "Should be a pod type");
 
-	static v3 const v3Zero  = {0.0f, 0.0f, 0.0f};
-	static v3 const v3Half  = {0.5f, 0.5f, 0.5f};
-	static v3 const v3One   = {1.0f, 1.0f, 1.0f};
-	static v3 const v3Min   = {maths::float_min, maths::float_min, maths::float_min};
-	static v3 const v3Max   = {maths::float_max, maths::float_max, maths::float_max};
-	static v3 const v3XAxis = {1.0f, 0.0f, 0.0f};
-	static v3 const v3YAxis = {0.0f, 1.0f, 0.0f};
-	static v3 const v3ZAxis = {0.0f, 0.0f, 1.0f};
-
-	// Limits
-	namespace maths
-	{
-		template <> struct limits<v3>
-		{
-			static v3 min() { return v3Min; }
-			static v3 max() { return v3Min; }
-		};
-	}
+	static v3 const v3Zero    = {0.0f, 0.0f, 0.0f};
+	static v3 const v3Half    = {0.5f, 0.5f, 0.5f};
+	static v3 const v3One     = {1.0f, 1.0f, 1.0f};
+	static v3 const v3Min     = {+maths::float_min, +maths::float_min, +maths::float_min};
+	static v3 const v3Max     = {+maths::float_max, +maths::float_max, +maths::float_max};
+	static v3 const v3Lowest  = {-maths::float_max, -maths::float_max, -maths::float_max};
+	static v3 const v3Epsilon = {+maths::float_eps, +maths::float_eps, +maths::float_eps};
+	static v3 const v3XAxis   = {1.0f, 0.0f, 0.0f};
+	static v3 const v3YAxis   = {0.0f, 1.0f, 0.0f};
+	static v3 const v3ZAxis   = {0.0f, 0.0f, 1.0f};
 
 	// Element accessors
 	inline float GetX(v3 const& v) { return v.x; }
@@ -135,4 +127,26 @@ namespace pr
 	v3    Permute3(v3 const& v, int n);
 }
 
+namespace std
+{
+	template <> class numeric_limits<pr::v3>
+	{
+	public:
+		static pr::v3 min() throw()     { return pr::v3Min; }
+		static pr::v3 max() throw()     { return pr::v3Max; }
+		static pr::v3 lowest() throw()  { return pr::v3Lowest; }
+		static pr::v3 epsilon() throw() { return pr::v3Epsilon; }
+		
+		static const bool is_specialized = true;
+		static const bool is_signed = true;
+		static const bool is_integer = false;
+		static const bool is_exact = false;
+		static const bool has_infinity = false;
+		static const bool has_quiet_NaN = false;
+		static const bool has_signaling_NaN = false;
+		static const bool has_denorm_loss = true;
+		static const float_denorm_style has_denorm = denorm_present;
+		static const int radix = 10;
+	};
+}
 #endif

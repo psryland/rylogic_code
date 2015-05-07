@@ -371,10 +371,12 @@ namespace pr
 			pr::m4x4 O2P(char const* name = nullptr) const;
 			void O2P(pr::m4x4 const& o2p, char const* name = nullptr);
 
-			// Set the visibility of this object or child objects matching 'name' (see Apply)
+			// Get/Set the visibility of this object or child objects matching 'name' (see Apply)
+			bool Visible(char const* name = nullptr);
 			void Visible(bool visible, char const* name = nullptr);
 
-			// Set the render mode for this object or child objects matching 'name' (see Apply)
+			// Get/Set the render mode for this object or child objects matching 'name' (see Apply)
+			bool Wireframe(char const* name = nullptr);
 			void Wireframe(bool wireframe, char const* name = nullptr);
 
 			// Get/Set the colour of this object or child objects matching 'name' (see Apply)

@@ -7,16 +7,17 @@
 #ifndef PR_MATHS_FORWARD_H
 #define PR_MATHS_FORWARD_H
 
+#include <iterator>
+#include <algorithm>
+#include <thread>
+#include <limits>
+#include <cassert>
+#include <type_traits>
 #include <intrin.h>
 #include <math.h>
 #include <float.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <iterator>
-#include <algorithm>
-#include <thread>
-#include <cassert>
-#include <type_traits>
 
 // Libraries built to use directmath should be fine when linked in projects
 // that don't use directmath because all of the maths types have the same

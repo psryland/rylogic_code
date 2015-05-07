@@ -12,6 +12,7 @@
 #include <cfloat>
 #include <cassert>
 #include <functional>
+#include <limits>
 #include <utility>
 
 namespace pr
@@ -79,8 +80,8 @@ namespace pr
 			m_count = 0;
 			m_mean  = real();
 			m_var   = real();
-			m_min   = std::numerical_limits<real>::max();
-			m_max   = std::numerical_limits<real>::lowest();
+			m_min   = std::numeric_limits<real>::max();
+			m_max   = std::numeric_limits<real>::lowest();
 		}
 
 		// Accumulate statistics for 'value' in a single pass.
@@ -180,16 +181,16 @@ namespace pr
 				auto diff = value - m_mean;
 				auto a = 2.0 / (m_size + 1.0);
 				auto b = 1 - a;
-				m_mean += diff * a;
-				m_var = (b*m_count/(m_count-1)) * (a*b*(m_count-1)*diff*diff + m_var);
+				m_mean = static_cast<real>(m_mean + diff * a);
+				m_var  = static_cast<real>((b*m_count/(m_count-1)) * (a*b*(m_count-1)*diff*diff + m_var));
 			}
 			else // use standard mean/var until 'm_size' is reached
 			{
 				++m_count;
 				auto diff = value - m_mean;
 				auto inv_count = 1.0f / m_count;
-				m_mean += diff * inv_count;
-				m_var  += diff * diff * ((m_count - 1) * inv_count);
+				m_mean += static_cast<real>(diff * inv_count);
+				m_var  += static_cast<real>(diff * diff * ((m_count - 1) * inv_count));
 			}
 		}
 	};
