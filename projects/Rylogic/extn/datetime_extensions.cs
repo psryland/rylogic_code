@@ -13,11 +13,17 @@ namespace pr.extn
 			if (kind == dt.Kind)
 				return dt;
 			if (kind == DateTimeKind.Unspecified)
-				return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+				return System.DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
 			if (dt.Kind == DateTimeKind.Unspecified)
-				return DateTime.SpecifyKind(dt, kind);
+				return System.DateTime.SpecifyKind(dt, kind);
 			else
 				throw new Exception("Reinterpret between UTC/Local, convert to Unspecified first");
+		}
+
+		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
+		public static DateTime DateTime(this DateTimeOffset time, DateTimeKind kind)
+		{
+			return time.DateTime.As(kind);
 		}
 
 		/// <summary>Returns a new DateTimeOffset object clamped to within the given range</summary>
@@ -43,6 +49,12 @@ namespace pr.extn
 				throw new Exception("Minimum date/time value is greater than the maximum date/time value");
 			if (value != value.Clamp(min,max))
 				throw new Exception("Date/time value is not within the given range of date/time values");
+			if (value.Kind == DateTimeKind.Unspecified)
+				throw new Exception("DateTimePicker Value has an unspecified timezone");
+			if (min.Kind == DateTimeKind.Unspecified)
+				throw new Exception("DateTimePicker Minimum Value has an unspecified timezone");
+			if (max.Kind == DateTimeKind.Unspecified)
+				throw new Exception("DateTimePicker Maximum Value has an unspecified timezone");
 
 			// Setting to MinimumDateTime/MaximumDateTime first avoids problems if min > MaxDate or max < MinDate
 			dtp.MinDate = DateTimePicker.MinimumDateTime;
@@ -85,6 +97,43 @@ namespace pr.unittests
 
 	[TestFixture] public class TestDateTimeExtensions
 	{
+		[Test] public void TestConversion()
+		{
+			var ofs     = DateTimeOffset.Now.Offset;
+			var dto_utc = DateTimeOffset.UtcNow;
+			var dto_loc = DateTimeOffset.Now;
+			var dt_utc  = DateTime.UtcNow;
+			var dt_loc  = DateTime.Now;
+			var dt_unk  = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
+			Assert.True(dto_utc.Offset == TimeSpan.Zero);
+			Assert.True(dto_loc.Offset == ofs);
+			Assert.True(dt_utc.Kind == DateTimeKind.Utc);
+			Assert.True(dt_loc.Kind == DateTimeKind.Local);
+			Assert.True(dt_unk.Kind == DateTimeKind.Unspecified);
+
+			{// The Offset value in DTO is the difference between the DTO value and its value in UTC
+				Assert.True(dto_utc.UtcTicks == dto_loc.UtcTicks);
+			}
+
+			// Conversion from DTO to DT leaves Kind as unspecified
+			{
+				var a = dto_utc.DateTime;      Assert.True(a.Kind == DateTimeKind.Unspecified);
+				var b = dto_loc.DateTime;      Assert.True(b.Kind == DateTimeKind.Unspecified);
+				var c = dto_utc.LocalDateTime; Assert.True(c.Kind == DateTimeKind.Local);
+				var d = dto_loc.LocalDateTime; Assert.True(d.Kind == DateTimeKind.Local);
+				var e = dto_utc.UtcDateTime;   Assert.True(e.Kind == DateTimeKind.Utc);
+				var f = dto_loc.UtcDateTime;   Assert.True(f.Kind == DateTimeKind.Utc);
+			}
+
+			// Implicit conversion from DT to DTO sets Offset.
+			// If DT.Kind is unspecified, the local timezone offset is assumed
+			{
+				DateTimeOffset a = dt_utc; Assert.True(a.Offset == TimeSpan.Zero);
+				DateTimeOffset b = dt_loc; Assert.True(b.Offset == ofs);
+				DateTimeOffset c = dt_unk; Assert.True(c.Offset == ofs);
+			}
+
+		}
 		[Test] public void TestClamp()
 		{
 			var min = new DateTimeOffset(2000,12,1,0,0,0,TimeSpan.Zero);

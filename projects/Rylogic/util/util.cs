@@ -288,6 +288,7 @@ namespace pr.util
 		/// <summary>Add 'item' to a history list of items.</summary>
 		public static T[] AddToHistoryList<T>(IEnumerable<T> history, T item, int max_history_length, Func<T,T,bool> cmp = null)
 		{
+			if (Equals(item, null)) throw new NullReferenceException("Null cannot be added to a history list");
 			cmp = cmp ?? ((l,r) => Equals(l,r));
 
 			var list = history.ToList();

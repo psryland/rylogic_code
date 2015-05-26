@@ -45,7 +45,6 @@ namespace pr.gui
 		{
 			m_ofs = ofs;
 			m_pin = pin;
-			PinTarget = target;
 			StartPosition = FormStartPosition.Manual;
 			HideOnClose = !modal;
 			AutoFade = false;
@@ -58,8 +57,10 @@ namespace pr.gui
 			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
 			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
 			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
-			Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|Win32.MF_CHECKED);
-			m_pin_window = true;
+
+			// Pin to the target window
+			PinWindow = true;
+			PinTarget = target;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -103,7 +104,7 @@ namespace pr.gui
 		public RangeF FadeRange { get; set; }
 
 		/// <summary>Controls whether the form closes or just hides</summary>
-		protected bool HideOnClose { get; set; }
+		public bool HideOnClose { get; set; }
 
 		/// <summary>Get/Set the child control on the owner form that this tool window is pinned to. If null, assumes the form itself</summary>
 		public Control PinTarget
@@ -148,6 +149,25 @@ namespace pr.gui
 		protected override void OnLoad(EventArgs e)
 		{
 			base.OnLoad(e);
+
+			// Close on accept button
+			var accept = AcceptButton as Button;
+			if (accept != null)
+				accept.Click += (s,a) =>
+					{
+						DialogResult = AcceptButton.DialogResult;
+						Close();
+					};
+
+			// Close on cancel button
+			var cancel = CancelButton as Button;
+			if (cancel != null)
+				cancel.Click += (s,a) =>
+					{
+						DialogResult = CancelButton.DialogResult;
+						Close();
+					};
+
 			if (m_ofs == Point.Empty)
 			{
 				switch (m_pin)

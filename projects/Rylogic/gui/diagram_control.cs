@@ -1,26 +1,21 @@
 using System;
-using System.Diagnostics;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Data;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.container;
 using pr.extn;
-using pr.maths;
 using pr.gfx;
 using pr.ldr;
+using pr.maths;
 using pr.util;
-
-using EBtn    = pr.gfx.View3d.EBtn;
 using EBtnIdx = pr.gfx.View3d.EBtnIdx;
 
 namespace pr.gui
@@ -778,8 +773,10 @@ namespace pr.gui
 				{
 					if (conn.Node0 != this && conn.Node1 != this)
 						throw new Exception("Node {0} contains connector {1} but is not referenced by the connector".Fmt(ToString(), conn.ToString()));
-					if (conn.Node0 == this && conn.Node1 == this)
-						throw new Exception("Node {0} contains connector {1} that is attached to it at both ends".Fmt(ToString(), conn.ToString()));
+					
+					// Allow the connectors to be connected to this node at both ends
+					//if (conn.Node0 == this && conn.Node1 == this)
+					//	throw new Exception("Node {0} contains connector {1} that is attached to it at both ends".Fmt(ToString(), conn.ToString()));
 				}
 
 				// The style should be known to the diagram
@@ -1415,7 +1412,8 @@ namespace pr.gui
 				get { return Anc0.Elem.As<Node>(); }
 				set
 				{
-					Debug.Assert(Node1 == null || Node1 != value, "Don't allow connections between anchors on the same element");
+					// Allowing this now
+					//Debug.Assert(Node1 == null || Node1 != value, "Don't allow connections between anchors on the same element");
 					if (Anc0.Elem == value) return;
 					if (Node0 != null)
 					{
@@ -1439,7 +1437,8 @@ namespace pr.gui
 				get { return Anc1.Elem.As<Node>(); }
 				set
 				{
-					Debug.Assert(Node0 == null || Node0 != value, "Don't allow connections between anchors on the same element");
+					// Allowing this now
+					//Debug.Assert(Node0 == null || Node0 != value, "Don't allow connections between anchors on the same element");
 					if (Anc1.Elem == value) return;
 					if (Node1 != null)
 					{
@@ -1824,9 +1823,10 @@ namespace pr.gui
 			/// <summary>Check the self consistency of this element</summary>
 			public override bool CheckConsistency()
 			{
-				// Should be connected to different nodes
-				if (Node0 == Node1 && Node0 != null)
-					throw new Exception("Connector {0} is connected to the same node at each end".Fmt(ToString()));
+				// Allowing this now
+				//// Should be connected to different nodes
+				//if (Node0 == Node1 && Node0 != null)
+				//	throw new Exception("Connector {0} is connected to the same node at each end".Fmt(ToString()));
 
 				// The connected nodes should contain a reference to this connector
 				if (Node0 != null && Node0.Connectors.FirstOrDefault(x => x.Id == Id) == null)
@@ -2739,10 +2739,10 @@ namespace pr.gui
 				if (m_proxy != null) m_proxy.Dispose();
 				base.Dispose();
 			}
-			private IEnumerable<HitTestResult.Hit> HitTestNode(Point location_cs)
+			protected virtual IEnumerable<HitTestResult.Hit> HitTestNode(Point location_cs)
 			{
 				// This returns all nodes under 'location_cs' including !Enabled ones
-				Func<Element,bool> pred = x => x.Entity == Entity.Node && x != m_proxy && x != m_fixed;
+				Func<Element,bool> pred = x => x.Entity == Entity.Node && x != m_proxy;// Allow linking to self && x != m_fixed;
 				return m_diag.HitTestCS(location_cs, pred).Hits;
 			}
 			public override void MouseDown(MouseEventArgs e)

@@ -256,6 +256,12 @@ namespace pr.common
 			get { return ValidateExpr() == null; }
 		}
 
+		/// <summary>Returns a string describing what's wrong with the expression</summary>
+		public string SyntaxErrorDescription
+		{
+			get { var ex = ValidateExpr(); return ex == null ? string.Empty : ex.Message; }
+		}
+
 		/// <summary>Returns the names of the capture groups in this pattern</summary>
 		public string[] CaptureGroupNames
 		{
@@ -391,7 +397,6 @@ namespace pr.common
 }
 
 #if PR_UNITTESTS
-
 namespace pr.unittests
 {
 	using common;

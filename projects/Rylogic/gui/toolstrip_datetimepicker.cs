@@ -12,6 +12,13 @@ namespace pr.gui
 		/// <summary>The hosted control</summary>
 		public DateTimePicker DateTimePicker { get { return Control.As<DateTimePicker>(); } }
 
+		/// <summary>The default DateTime.Kind</summary>
+		public DateTimeKind Kind
+		{
+			get { return DateTimePicker.Kind; }
+			set { DateTimePicker.Kind = value; }
+		}
+
 		/// <summary>Gets or sets the custom date/time format string.</summary>
 		public string CustomFormat
 		{
@@ -26,31 +33,25 @@ namespace pr.gui
 			set { DateTimePicker.Format = value; }
 		}
 
-		/// <summary>
-		/// Gets or sets the minimum date and time that can be selected in the control.
-		/// If 'Value' is outside the new [MinDate,MaxDate] range it gets clamped to the new range</summary>
-		public DateTimeOffset MinDate
-		{
-			get { return DateTimePicker.MinDate; }
-			set { DateTimePicker.MinDate = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
-		}
-
-		/// <summary>
-		/// Gets or sets the maximum date and time that cann be selected in the control.
-		/// If 'Value' is outside the new [MinDate,MaxDate] range it gets clamped to the new range</summary>
-		public DateTimeOffset MaxDate
-		{
-			get { return DateTimePicker.MaxDate; }
-			set { DateTimePicker.MaxDate = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
-		}
-
-		/// <summary>
-		/// The selected date time value.
-		/// Value must be within [MinDate,MaxDate] or an exception is thrown</summary>
-		public DateTimeOffset Value
+		///<summary>Gets or sets the date/time value assigned to the control.</summary>
+		public DateTime Value
 		{
 			get { return DateTimePicker.Value; }
-			set { DateTimePicker.Value = DateTime.SpecifyKind(value.DateTime, DateTimeKind.Utc); }
+			set { DateTimePicker.Value = value; }
+		}
+
+		///<summary>Gets or sets the minimum date and time that can be selected in the control.</summary>
+		public DateTime MinDate
+		{
+			get { return DateTimePicker.MinDate; }
+			set { DateTimePicker.MinDate = value; }
+		}
+
+		///<summary>Gets or sets the maximum date and time that can be selected in the control.</summary>
+		public DateTime MaxDate
+		{
+			get { return DateTimePicker.MaxDate; }
+			set { DateTimePicker.MaxDate = value; }
 		}
 	}
 }

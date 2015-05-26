@@ -21,8 +21,6 @@ if __name__ == "__main__":
 
 			# Use the power shell to run the unit tests
 			Tools.Exec(["powershell", "-noninteractive", "-noprofile", "-sta", "-nologo", "-command", "[Reflection.Assembly]::LoadFile('"+target+"')|Out-Null;exit [pr.Program]::Main();"])
-		else:
-			print("   **** Unit tests not run ****   ")
 
 	except Exception as ex:
 		print("   **** Unit tests failed ****   ")

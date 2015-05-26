@@ -45,6 +45,7 @@ namespace pr.container
 		Clear,
 	}
 
+	/// <summary>Args for the event raised whenever the list is changed</summary>
 	public class ListChgEventArgs<T> :EventArgs
 	{
 		/// <summary>The change this event represents</summary>
@@ -57,7 +58,7 @@ namespace pr.container
 		public int Index { get; set; }
 
 		/// <summary>
-		/// The item added/remove.
+		/// The item added/removed.
 		/// Writable to allow PreAdd to change the item, note however that when
 		/// events are suspended PreAdd will not be called.</summary>
 		public T Item { get; set; }
@@ -74,6 +75,7 @@ namespace pr.container
 		}
 	}
 
+	/// <summary>Args for the event raised whenever an item in the list is changed</summary>
 	public class ItemChgEventArgs<T> :EventArgs
 	{
 		/// <summary>Index position of the item that was changed</summary>

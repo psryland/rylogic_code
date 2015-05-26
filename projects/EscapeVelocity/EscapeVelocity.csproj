@@ -102,7 +102,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
-      <Name>prcs_vs2012</Name>
+      <Name>Rylogic</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

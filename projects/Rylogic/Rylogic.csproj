@@ -87,8 +87,6 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
-    <Reference Include="System.Data" />
-    <Reference Include="System.Data.Linq" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Serialization" />
@@ -104,6 +102,8 @@
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
     <Compile Include="common\iterator.cs" />
+    <Compile Include="common\sequence.cs" />
+    <Compile Include="container\binding_dictionary.cs" />
     <Compile Include="container\binding_source.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -124,6 +124,7 @@
     <Compile Include="container\csv_data.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="container\dict_chg.cs" />
     <Compile Include="container\kdtree.cs" />
     <Compile Include="container\list_chg.cs" />
     <Compile Include="container\quadtree.cs" />
@@ -188,9 +189,6 @@
     <Compile Include="extn\binding_source_extensions.cs" />
     <Compile Include="extn\byte_array_extensions.cs" />
     <Compile Include="extn\control_extensions.cs" />
-    <Compile Include="extn\datatable_extensions.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="extn\datetime_extensions.cs" />
     <Compile Include="extn\dict_extensions.cs" />
     <Compile Include="extn\datagridview_extensions.cs" />
@@ -227,6 +225,12 @@
     <Compile Include="gfx\view3d.cs" />
     <Compile Include="gui\combo_box.cs">
       <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\date_time_picker.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\find_ui.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="gui\help_ui.cs">
       <SubType>Form</SubType>
@@ -466,6 +470,9 @@
     <EmbeddedResource Include="gui\diagram_control.resx">
       <DependentUpon>diagram_control.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="gui\find_ui.resx">
+      <DependentUpon>find_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\help_ui.resx">
       <DependentUpon>help_ui.cs</DependentUpon>
     </EmbeddedResource>
@@ -552,6 +559,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\check_marks.bmp" />
+    <None Include="resources\green_left.png" />
+    <None Include="resources\green_right.png" />
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

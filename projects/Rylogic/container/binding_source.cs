@@ -35,9 +35,10 @@ namespace pr.container
 			get { return (TItem)base.Current; }
 			set
 			{
-				if (List.Count == 0 && Equals(value, default(TItem))) return;
 				var idx = List.IndexOf(value);
-				if (idx < 0 || idx >= List.Count) throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
+				if ((idx < 0 || idx >= List.Count) && !Equals(value, default(TItem)))
+					throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
+
 				CurrencyManager.Position = idx;
 			}
 		}

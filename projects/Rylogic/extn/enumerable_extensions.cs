@@ -52,6 +52,14 @@ namespace pr.extn
 			return source.Reverse();
 		}
 
+		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
+		public static IEnumerable<TSource> ExceptBy<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> rhs, Eql<TSource> comparer = null)
+		{
+			comparer = comparer ?? Eql<TSource>.Default;
+			var exclude = rhs.ToHashSet();
+			return source.Where(x => !exclude.Contains(x, comparer));
+		}
+
 		/// <summary>Returns the indices of 'element' within this collection</summary>
 		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, Eql<TSource> comparer = null)
 		{
@@ -324,6 +332,20 @@ namespace pr.unittests
 			Assert.AreEqual(9, a0.IndexOfMaxBy(x => x));
 			Assert.AreEqual(4, a0.IndexOfMaxBy(x => (x % 2) == 0 ? x : -1000));
 			Assert.AreEqual(3, a0.IndexOfMaxBy(x => 10 - x));
+		}
+		[Test] public void ExceptBy()
+		{
+			var i0 = new[]{1,2,3,4,5,6,7,8,9};
+			var i1 = new[]{1,3,5,7,9};
+
+			var cmp = Eql<int>.From((l,r) => l+1 == r);
+
+			var res = i0.ExceptBy(i1, cmp).ToArray();
+			Assert.True(res.SequenceEqual(new[]{1,3,5,7,9}));
+
+			// Notice how the built in one doesn't actually work...
+			var wrong = i0.Except(i1, cmp).ToArray();
+			Assert.False(wrong.SequenceEqual(new[]{1,3,5,7,9}));
 		}
 	}
 }

@@ -1,29 +1,29 @@
-import sys, enum, os, time, shutil, glob, subprocess, re, socket, zipfile
+import sys, os, time, shutil, glob, subprocess, re, socket, zipfile
 import UserVars
 
-# Enumeration of repository systems
-class ERepo(enum.Enum):
-	Unknown = 0,
-	Plastic = 1
-	SVN     = 2,
-	Hg      = 3,
-	Git     = 4,
-
 # Terminate the script indicating success
-def OnSuccess(pause_time_seconds=5):
-	print("\n   Success\n\n")
-	time.sleep(pause_time_seconds)
+def OnSuccess(msg = "\nSuccess\n", enter_to_close=False, pause_time_seconds=5):
+	print(msg)
+	try:
+		if enter_to_close: input("Press enter to close")
+		else: time.sleep(pause_time_seconds)
+	except:
+		pass
 	sys.exit(0)
 
 # Terminate the script indicating an error
-def OnError(msg,enter_to_close=True):
-	print(msg + "\n\n   Failed\n\n")
-	if enter_to_close: input("Press enter to close")
+def OnError(msg = "\nFailed\n", enter_to_close=True, pause_time_seconds=0):
+	print(msg)
+	try:
+		if enter_to_close: input("Press enter to close")
+		else: time.sleep(pause_time_seconds)
+	except:
+		pass
 	sys.exit(-1)
 
 # Terminate on exception
-def OnException(ex,enter_to_close=True):
-	OnError("ERROR: " + str(ex),enter_to_close=enter_to_close)
+def OnException(ex,enter_to_close=True, pause_time_seconds=0):
+	OnError("ERROR: " + str(ex), enter_to_close=enter_to_close, pause_time_seconds=pause_time_seconds)
 
 # Check that the UserVars file is the correct version
 def AssertVersion(version):
@@ -35,7 +35,7 @@ def AssertMachineName(machine):
 	if UserVars.machine.lower() != socket.gethostname().lower():
 		raise ValueError("Machine name does not correct for this PC. Check your UserVars.py file")
 
-# Validate an array of paths for existance.
+# Validate an array of paths for existence.
 # Intended for use at the start of a script to validate UserVars.py
 def AssertPathsExist(paths):
 	missing = [];
@@ -69,6 +69,16 @@ def EnumFiles(root):
 		# prevent recursion into those folders...
 		for filename in filenames:
 			yield os.path.join(dirname, filename)
+
+# Read the contents of a file into a buffer
+def ReadFile(path, mode='rb', encoding="utf-8"):
+	with open(path, mode, encoding=encoding) as f:
+		return f.read()
+
+# Write the contents of a buffer into a file called 'path'
+def SaveFile(path, buf, mode='wb', encoding="utf-8"):
+	with open(path, mode, encoding=encoding) as f:
+		f.write(buf)
 
 # Compare the timestamps of two files and return true if they are different
 def Diff(src,dst):
@@ -107,7 +117,7 @@ def DiffContent(src,dst,trace=False):
 	return False
 
 # Copy 'src' to 'dst' optionally if 'src' is newer than 'dst'
-def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False):
+def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_existing=False, quiet=False):
 
 	src_is_dir = os.path.isdir(src)
 	dst_is_dir = os.path.isdir(dst) or dst.endswith("/") or dst.endswith("\\") or src_is_dir
@@ -152,13 +162,13 @@ def Copy(src, dst, only_if_modified=True, show_unchanged=False, ignore_non_exist
 
 		# Copy if modified or always based on the flag
 		if only_if_modified and not DiffContent(srcfile,dstfile):
-			if show_unchanged: print(srcfile + " --> unchanged")
+			if not quiet and show_unchanged: print(srcfile + " --> unchanged")
 			continue
 
 		# Ensure the directory path exists
 		d,f = os.path.split(dstfile);
 		if not os.path.exists(d): os.makedirs(d);
-		print(srcfile + " --> " + dstfile)
+		if not quiet: print(srcfile + " --> " + dstfile)
 		shutil.copy2(srcfile, dstfile)
 
 # Return the line number of a given byte offset into a file
@@ -201,7 +211,7 @@ def Exec(args, expected_return_code=0, working_dir=".\\", show_arguments=False):
 
 # Call another script. Remember, you can import and call directly.. probably preferable to this
 def Call(script, args, expected_return_code=0,show_arguments=False):
-	Exec([sys.executable, script] + args, expected_return_code=expected_return_code, show_arguments=show_arguments)
+	Exec(["py.exe", script] + args, expected_return_code=expected_return_code, show_arguments=show_arguments)
 
 # Run a program in a separate console window
 # Returns the process for the caller to call wait() on,
@@ -307,8 +317,8 @@ def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 		args = [UserVars.elevate, sys.executable] + sys.argv + ["elevated"];
 		if show_arguments: print(args)
 		subprocess.check_call(args, cwd=working_dir)
-	except Exception:
-		print("Run as Admin failed")
+	except Exception as ex:
+		print("Run as Admin failed\n" + str(ex))
 	sys.exit(0)
 
 # Touch a file to change it's timestamp
@@ -342,7 +352,7 @@ def MSBuild(sln, projects, platforms, configs, parallel=False, same_window=True)
 			if parallel:
 				procs.extend([Spawn(args, same_window=same_window)])
 			else:
-				print(" *** " + platform + " - " + config + " ***")
+				print(platform + "|" + config + ":")
 				Exec(args)
 	
 	# Wait for all processes to finish, and check for error return codes
@@ -380,41 +390,6 @@ def ZipDirectory(zip_path, root_dir):
 			zipf.write(filepath, arcpath)
 	zipf.close()
 
-# Return the revision/changeset number for a revision controlled directory 'repo_root'
-# This is the revision of the local directory, *not* the latest version in the Repo
-def RepoRevision(repo_root, repo:ERepo):
-	if repo == ERepo.Plastic:
-		success,state = Tools.Run(["cm","ls",repo_root,"--format={changeset}"])
-		if not success: raise Exception("Plastic command 'cm ls' failed")
-		rev = state.split('\n',1)[0]
-		return rev
-
-	elif repo == ERepo.SVN:
-		success,state = Tools.Run(["SubWCRev", repo_root])
-		if not success: raise Exception("SubWCRev failed")
-		m = re.search(r"Updated to revision (\d+)\n", state)
-		if not m: raise Exception("Could not match 'Updated to revision' in output from SubWCRev")
-		rev = m.group(1)
-		return rev
-
-	else:
-		raise Exception("Unsupported repo system: " + str(repo))
-
-# Returns true if the direction 'repo_root' has local changes
-def HasLocalChanges(repo_root, repo:ERepo):
-	if repo == ERepo.Plastic:
-		success,res = Tools.Run(["cm", "fc", repo_root, "-R"])
-		if not success: raise Exception("Plastic command 'cm fc' failed")
-		local_changes = res.strip() != ""
-		return local_changes
-
-	elif repo == ERepo.SVN:
-		success,state = Tools.Run(["SubWCRev", repo_root])
-		if not success: raise Exception("SubWCRev failed")
-		m = re.search(r"Local modifications found\n", state)
-		return not not m #convert 'm' to a boolean
-
-	else:
-		raise Exception("Unsupported repo system: " + str(repo))
-
-# End
+# Testing
+if __name__ == "__main__":
+	pass

@@ -68,7 +68,7 @@ namespace pr.gui
 			public RdrOptions()
 			{
 				BkColour        = SystemColors.Control;
-				PlotBkColour    = Color.WhiteSmoke;
+				PlotBkColour    = Color.White;
 				TitleColour     = Color.Black;
 				TitleFont       = new Font("tahoma", 12, FontStyle.Bold);
 				TitleTransform  = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
@@ -133,6 +133,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Graph data series</summary>
+		[Serializable]
 		public class Series :List<GraphValue>
 		{
 			public class RdrOptions
@@ -351,6 +352,8 @@ namespace pr.gui
 					LabelColour    = Color.Black;
 					TickColour     = Color.Black;
 					TickLength     = 5;
+					DrawTickMarks  = true;
+					DrawTickLabels = true;
 					LabelTransform = new Matrix(1f, 0f, 0f, 1f, 0f, 0f);
 				}
 
@@ -371,6 +374,12 @@ namespace pr.gui
 
 				/// <summary>The length of the tick marks</summary>
 				public int TickLength { get; set; }
+
+				/// <summary>True if tick marks should be drawn</summary>
+				public bool DrawTickMarks { get; set; }
+
+				/// <summary>True if tick labels should be drawn</summary>
+				public bool DrawTickLabels { get; set; }
 
 				/// <summary>Offset transform from default label position</summary>
 				public Matrix LabelTransform { get; set; }
@@ -590,6 +599,7 @@ namespace pr.gui
 		public RdrOptions RenderOptions { get; private set; }
 
 		/// <summary>The colleciton of series' that make up the graph data</summary>
+		[Browsable(false)]
 		public List<Series> Data
 		{
 			get { return m_impl_data; }
@@ -603,6 +613,7 @@ namespace pr.gui
 		private List<Series> m_impl_data;
 
 		/// <summary>Notes to add to the graph</summary>
+		[Browsable(false)]
 		public List<Note> Notes { get; private set; }
 
 		/// <summary>Set the title and axis labels of the graph</summary>
@@ -770,7 +781,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Get/Set the centre of the graph</summary>
-		public PointF Centre
+		[Browsable(false)] public PointF Centre
 		{
 			get { return new PointF((float)(XAxis.Min + XAxis.Span*0.5), (float)(YAxis.Min + YAxis.Span*0.5)); }
 			set
@@ -782,7 +793,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Zoom in/out on the graph. Remember to call refresh. Zoom is a floating point value where 1f = no zoom, 2f = 2x magnification</summary>
-		public double Zoom
+		[Browsable(false)] public double Zoom
 		{
 			get
 			{
@@ -948,7 +959,7 @@ namespace pr.gui
 		#region Rendering
 
 		/// <summary>True when the bitmap needs to be regenerated</summary>
-		public bool Dirty
+		[Browsable(false)] public bool Dirty
 		{
 			get { return m_impl_dirty; }
 			set
@@ -1117,9 +1128,15 @@ namespace pr.gui
 			rect.Height -= RenderOptions.TopMargin  + RenderOptions.BottomMargin;
 
 			// Add space for tick marks
-			rect.X      += YAxis.RenderOptions.TickLength;
-			rect.Width  -= YAxis.RenderOptions.TickLength;
-			rect.Height -= XAxis.RenderOptions.TickLength;
+			if (YAxis.RenderOptions.DrawTickMarks)
+			{
+				rect.X      += YAxis.RenderOptions.TickLength;
+				rect.Width  -= YAxis.RenderOptions.TickLength;
+			}
+			if (XAxis.RenderOptions.DrawTickMarks)
+			{
+				rect.Height -= XAxis.RenderOptions.TickLength;
+			}
 
 			// Add space for the title and axis labels
 			if (Title.HasValue())
@@ -1142,12 +1159,17 @@ namespace pr.gui
 
 			// Add space for the tick labels
 			const string lbl = "9.999";
-			r = gfx.MeasureString(lbl, XAxis.RenderOptions.TickFont);
-			rect.Height -= r.Height;
-
-			r = gfx.MeasureString(lbl, YAxis.RenderOptions.TickFont);
-			rect.X     += r.Width;
-			rect.Width -= r.Width;
+			if (XAxis.RenderOptions.DrawTickLabels)
+			{
+				r = gfx.MeasureString(lbl, XAxis.RenderOptions.TickFont);
+				rect.Height -= r.Height;
+			}
+			if (YAxis.RenderOptions.DrawTickLabels)
+			{
+				r = gfx.MeasureString(lbl, YAxis.RenderOptions.TickFont);
+				rect.X     += r.Width;
+				rect.Width -= r.Width;
+			}
 
 			return new Rectangle((int)rect.X, (int)rect.Y, (int)rect.Width, (int)rect.Height);
 		}
@@ -1253,26 +1275,36 @@ namespace pr.gui
 				{
 					var lblx = (float)(plot_area.Left - YAxis.RenderOptions.TickLength - 1);
 					var lbly = (float)(plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength + 1);
-					for (float x = min.x; x < max.x; x += step.x)
+					if (XAxis.RenderOptions.DrawTickLabels || XAxis.RenderOptions.DrawTickMarks)
 					{
-						var X = (int)(plot_area.Left + x * plot_area.Width / XAxis.Span);
-						var s = XAxis.TickText(x + XAxis.Min);
-						var r = gfx.MeasureString(s, XAxis.RenderOptions.TickFont);
-						gfx.DrawString(s, XAxis.RenderOptions.TickFont, bsh_xtick, new PointF(X - r.Width*0.5f, lbly));
-						gfx.DrawLine(pen_axis, X, plot_area.Top + plot_area.Height, X, plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength);
+						for (float x = min.x; x < max.x; x += step.x)
+						{
+							var X = (int)(plot_area.Left + x * plot_area.Width / XAxis.Span);
+							var s = XAxis.TickText(x + XAxis.Min);
+							var r = gfx.MeasureString(s, XAxis.RenderOptions.TickFont);
+							if (XAxis.RenderOptions.DrawTickLabels)
+								gfx.DrawString(s, XAxis.RenderOptions.TickFont, bsh_xtick, new PointF(X - r.Width*0.5f, lbly));
+							if (XAxis.RenderOptions.DrawTickMarks)
+								gfx.DrawLine(pen_axis, X, plot_area.Top + plot_area.Height, X, plot_area.Top + plot_area.Height + XAxis.RenderOptions.TickLength);
+						}
 					}
-					for (float y = min.y; y < max.y; y += step.y)
+					if (YAxis.RenderOptions.DrawTickLabels || YAxis.RenderOptions.DrawTickMarks)
 					{
-						var Y = (int)(plot_area.Top + plot_area.Height - y * plot_area.Height / YAxis.Span);
-						var s = YAxis.TickText(y + YAxis.Min);
-						var r = gfx.MeasureString(s, YAxis.RenderOptions.TickFont);
-						gfx.DrawString(s, YAxis.RenderOptions.TickFont, bsh_ytick, new PointF(lblx - r.Width, Y - r.Height*0.5f));
-						gfx.DrawLine(pen_axis, plot_area.Left - YAxis.RenderOptions.TickLength, Y, plot_area.Left, Y);
+						for (float y = min.y; y < max.y; y += step.y)
+						{
+							var Y = (int)(plot_area.Top + plot_area.Height - y * plot_area.Height / YAxis.Span);
+							var s = YAxis.TickText(y + YAxis.Min);
+							var r = gfx.MeasureString(s, YAxis.RenderOptions.TickFont);
+							if (YAxis.RenderOptions.DrawTickLabels)
+								gfx.DrawString(s, YAxis.RenderOptions.TickFont, bsh_ytick, new PointF(lblx - r.Width, Y - r.Height*0.5f));
+							if (YAxis.RenderOptions.DrawTickMarks)
+								gfx.DrawLine(pen_axis, plot_area.Left - YAxis.RenderOptions.TickLength, Y, plot_area.Left, Y);
+						}
 					}
-
-					// Graph border
-					gfx.DrawRectangle(pen_axis, plot_area);
 				}
+
+				// Graph border
+				gfx.DrawRectangle(pen_axis, plot_area);
 			}
 
 			// Control border
@@ -1343,7 +1375,7 @@ namespace pr.gui
 				using (var bsh_pt   = new SolidBrush(opts.PointColour))
 				using (var bsh_bar  = new SolidBrush(opts.BarColour))
 				using (var bsh_err  = new SolidBrush(opts.ErrorBarColour))
-				using (var pen_line = new Pen(opts.LineColour, 0.0f))
+				using (var pen_line = new Pen(opts.LineColour, opts.LineWidth))
 				using (var pen_bar  = new Pen(opts.BarColour, 0.0f))
 				{
 					// Loop over data points
@@ -2048,12 +2080,12 @@ namespace pr.gui
 					var appearance_menu = lvl0.Add2(new ToolStripMenuItem("Appearance"));
 					var lvl1 = new List<ToolStripItem>();
 
-					#region Background Colour
+					#region Frame Background Colour
 					{
-						var bk_colour_menu = lvl1.Add2(new ToolStripMenuItem("Background Colour"));
+						var item = lvl1.Add2(new ToolStripMenuItem("Frame Background Colour"));
 						{
 							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour};
-							bk_colour_menu.DropDownItems.Add(option);
+							item.DropDownItems.Add(option);
 							option.Click += (s,a) =>
 								{
 									var cd = new ColourUI{InitialColour = option.BackColor};
@@ -2064,13 +2096,29 @@ namespace pr.gui
 						}
 					}
 					#endregion
+					#region Plot Background Colour
+					{
+						var item = lvl1.Add2(new ToolStripMenuItem("Plot Background Colour"));
+						{
+							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour};
+							item.DropDownItems.Add(option);
+							option.Click += (s,a) =>
+								{
+									var cd = new ColourUI{InitialColour = option.BackColor};
+									if (cd.ShowDialog() != DialogResult.OK) return;
+									RenderOptions.PlotBkColour = cd.Colour;
+									Dirty = true;
+								};
+						}
+					}
+					#endregion
 					#region Opacity
 					if (ParentForm != null)
 					{
-						var opacity_menu = lvl1.Add2(new ToolStripMenuItem("Opacity"));
+						var item = lvl1.Add2(new ToolStripMenuItem("Opacity"));
 						{
 							var option = new ToolStripTextBox();
-							opacity_menu.DropDownItems.Add(option);
+							item.DropDownItems.Add(option);
 							option.Text = ParentForm.Opacity.ToString("0.00");
 							option.TextChanged += (s,a) =>
 								{

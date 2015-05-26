@@ -6,6 +6,9 @@ using System.Text;
 
 namespace pr.win32
 {
+	using DWORD    = System.UInt32;
+	using COLORREF = System.UInt32;
+
 	public static partial class Win32
 	{
 		[StructLayout(LayoutKind.Sequential)]
@@ -149,6 +152,21 @@ namespace pr.win32
 			public uint dwAttributes;
 			public KF_DEFINITION_FLAGS kfdFlags;
 			public Guid ftidType;
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 4)]
+		public struct COLORSCHEME
+		{
+			public DWORD    dwSize;
+			public COLORREF clrBtnHighlight;       // highlight color
+			public COLORREF clrBtnShadow;          // shadow color
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 4)]
+		public struct PBRANGE
+		{
+			public int iLow;
+			public int iHigh;
 		}
 	}
 }

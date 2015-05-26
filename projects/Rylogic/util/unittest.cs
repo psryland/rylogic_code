@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using pr.extn;
 using pr.stream;
 
@@ -41,6 +42,7 @@ namespace pr.unittests
 					var test_fixtures = FindTestFixtures(ass).ToList();
 					foreach (var fixture in test_fixtures)
 					{
+						// Create an instance of the unit test
 						object inst = null;
 						try { inst = Activator.CreateInstance(fixture); }
 						catch (Exception ex)
@@ -50,7 +52,6 @@ namespace pr.unittests
 							++failed;
 							continue;
 						}
-
 
 						// Call the fixture setup method
 						var setup = fixture.FindMethodsWithAttribute<TestFixtureSetUpAttribute>().FirstOrDefault();
@@ -143,6 +144,15 @@ namespace pr.unittests
 		}
 	}
 
+	/// <summary>Exceptions thrown by unittest failures</summary>
+	public class UnitTestException :System.Exception
+	{
+		public UnitTestException() :base() {}
+		public UnitTestException(string message) :base(message) {}
+		public UnitTestException(string message, Exception innerException) :base(message, innerException) {}
+		protected UnitTestException(SerializationInfo info, StreamingContext context) :base(info, context) {}
+	}
+
 	public class Assert
 	{
 		/// <summary>Return a file and line link</summary>
@@ -161,50 +171,50 @@ namespace pr.unittests
 		public static void True(bool test)
 		{
 			if (test) return;
-			throw new Exception(VSLink + "result is not 'True'");
+			throw new UnitTestException(VSLink + "result is not 'True'");
 		}
 		public static void False(bool test)
 		{
 			if (!test) return;
-			throw new Exception(VSLink + "result is not 'False'");
+			throw new UnitTestException(VSLink + "result is not 'False'");
 		}
 		public static void Null(object ptr)
 		{
 			if (ptr == null) return;
-			throw new Exception(VSLink + "reference is not Null");
+			throw new UnitTestException(VSLink + "reference is not Null");
 		}
 		public static void NotNull(object ptr)
 		{
 			if (ptr != null) return;
-			throw new Exception(VSLink + "reference is Null");
+			throw new UnitTestException(VSLink + "reference is Null");
 		}
 
 		/// <summary>Tests reference equality</summary>
 		public static void AreSame(object lhs, object rhs)
 		{
 			if (ReferenceEquals(lhs, rhs)) return;
-			throw new Exception(VSLink + "references are not equal");
+			throw new UnitTestException(VSLink + "references are not equal");
 		}
 
 		/// <summary>Tests value equality</summary>
 		public static void AreEqual(object lhs, object rhs)
 		{
 			if (Equals(lhs, rhs)) return;
-			throw new Exception(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}".Fmt(lhs.ToString(), rhs.ToString()));
+			throw new UnitTestException(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}".Fmt(lhs.ToString(), rhs.ToString()));
 		}
 
 		/// <summary>Tests value equality</summary>
 		public static void AreEqual(double lhs, double rhs, double tol)
 		{
 			if (Math.Abs(rhs - lhs) < tol) return;
-			throw new Exception(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}\r\n  tol: {2}".Fmt(lhs, rhs, tol));
+			throw new UnitTestException(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}\r\n  tol: {2}".Fmt(lhs, rhs, tol));
 		}
 
 		/// <summary>Tests value inequality</summary>
 		public static void AreNotEqual(object lhs, object rhs)
 		{
 			if (!Equals(lhs, rhs)) return;
-			throw new Exception(VSLink + "values are equal");
+			throw new UnitTestException(VSLink + "values are equal");
 		}
 
 		public static void Throws(Type exception_type, Action action)
@@ -212,12 +222,12 @@ namespace pr.unittests
 			try
 			{
 				action();
-				throw new Exception(VSLink + "no exception was thrown");
+				throw new UnitTestException(VSLink + "no exception was thrown");
 			}
 			catch (Exception ex)
 			{
 				if (exception_type.IsAssignableFrom(ex.GetType())) return;
-				throw new Exception(VSLink + "exception of the wrong type thrown", ex);
+				throw new UnitTestException(VSLink + "exception of the wrong type thrown", ex);
 			}
 		}
 		public static void Throws<T>(Action action) where T:Exception
@@ -226,13 +236,10 @@ namespace pr.unittests
 		}
 		public static void DoesNotThrow(Action action, string msg = null)
 		{
-			try
-			{
-				action();
-			}
+			try { action(); }
 			catch (Exception ex)
 			{
-				throw new Exception(VSLink + (msg ?? "exception was thrown"), ex);
+				throw new UnitTestException(VSLink + (msg ?? "exception was thrown"), ex);
 			}
 		}
 	}

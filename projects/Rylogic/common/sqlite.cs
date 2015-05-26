@@ -69,6 +69,9 @@ namespace pr.common
 
 		#region Constants
 
+		/// <summary>Use this as the file path when you want a database in RAM</summary>
+		public const string DBInMemory = ":memory:";
+
 		/// <summary>
 		/// The data types supported by sqlite.<para/>
 		/// SQLite uses these data types:<para/>
@@ -4021,19 +4024,52 @@ namespace pr.common
 			/// <summary>Based class for wrappers of native sqlite handles</summary>
 			private abstract class SQLiteHandle :SafeHandle
 			{
-				/// <summary>The result from the 'sqlite3_close' call</summary>
-				public Result CloseResult { get; set; }
+				/// <summary>Ensure sqlite handles are created and released from the same thread</summary>
+				private int m_thread_id;
+
+				#if SQLITE_HANDLES
+				private StackTrace m_stack_at_creation;
+				#endif
 
 				/// <summary>Default constructor contains an owned, but invalid handle</summary>
-				protected SQLiteHandle() :base(IntPtr.Zero, true)
-				{}
+				protected SQLiteHandle() :this(IntPtr.Zero, true) {}
 
 				/// <summary>Internal constructor used to create safehandles that optionally own the handle</summary>
 				protected SQLiteHandle(IntPtr initial_ptr, bool owns_handle) :base(IntPtr.Zero, owns_handle)
 				{
+					m_thread_id = Thread.CurrentThread.ManagedThreadId;
 					CloseResult = Result.Empty; // Initialise to 'empty' so we know when its been set
 					SetHandle(initial_ptr);
+
+					#if SQLITE_HANDLES
+					m_stack_at_creation = new StackTrace();
+					#endif
 				}
+
+				/// <summary>Frees the handle.</summary>
+				protected sealed override bool ReleaseHandle()
+				{
+					if (Thread.CurrentThread.ManagedThreadId != m_thread_id)
+					{
+						#if SQLITE_HANDLES
+						throw new Exception(string.Format(
+							"Sqlite handle released from a different thread to the one it was created on\r\n{0}"
+							,m_stack_at_creation != null ? m_stack_at_creation.ToString() : string.Empty));
+						#else
+						throw new Exception("Sqlite handle released from a different thread to the one it was created on");
+						#endif
+					}
+
+					CloseResult = Release();
+					handle = IntPtr.Zero;
+					return true;
+				}
+
+				/// <summary>Release the handle</summary>
+				protected abstract Result Release();
+
+				/// <summary>The result from the 'sqlite3_close' call</summary>
+				public Result CloseResult { get; private set; }
 
 				/// <summary>True if the contained handle is invalid</summary>
 				public override bool IsInvalid
@@ -4043,18 +4079,14 @@ namespace pr.common
 			}
 
 			/// <summary>A wrapper for unmanaged sqlite database connection handles</summary>
-			private class NativeSqlite3Handle :SQLiteHandle ,sqlite3
+			private class NativeSqlite3Handle :SQLiteHandle, sqlite3
 			{
 				public NativeSqlite3Handle() {}
 				public NativeSqlite3Handle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
-
-				/// <summary>Frees the handle.</summary>
-				protected override bool ReleaseHandle()
+				protected override Result Release()
 				{
 					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3 handle ({0})", handle));
-					CloseResult = sqlite3_close(handle);
-					handle = IntPtr.Zero;
-					return true;
+					return sqlite3_close(handle);
 				}
 			}
 
@@ -4063,14 +4095,10 @@ namespace pr.common
 			{
 				public NativeSqlite3StmtHandle() {}
 				public NativeSqlite3StmtHandle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
-
-				/// <summary>Frees the handle.</summary>
-				protected override bool ReleaseHandle()
+				protected override Result Release()
 				{
 					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3_stmt handle ({0})", handle));
-					CloseResult = sqlite3_finalize(handle);
-					handle = IntPtr.Zero;
-					return true;
+					return sqlite3_finalize(handle);
 				}
 			}
 
@@ -4314,13 +4342,15 @@ namespace pr.common
 			public static void ColumnBlob(sqlite3_stmt stmt, int index, out IntPtr ptr, out int len)
 			{
 				// Read the blob size limit
-				var db = sqlite3_db_handle((NativeSqlite3StmtHandle)stmt);
-				var max_size = sqlite3_limit(db, Limit.Length, -1);
+				using (var db = sqlite3_db_handle((NativeSqlite3StmtHandle)stmt))
+				{
+					var max_size = sqlite3_limit(db, Limit.Length, -1);
 
-				// sqlite returns null if this column is null
-				ptr = sqlite3_column_blob((NativeSqlite3StmtHandle)stmt, index); // have to call this first
-				len = sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
-				if (len < 0 || len > max_size) throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+					// sqlite returns null if this column is null
+					ptr = sqlite3_column_blob((NativeSqlite3StmtHandle)stmt, index); // have to call this first
+					len = sqlite3_column_bytes((NativeSqlite3StmtHandle)stmt, index);
+					if (len < 0 || len > max_size) throw Exception.New(Result.Corrupt, "Blob data size exceeds database maximum size limit");
+				}
 			}
 			[DllImport(SqliteDll, EntryPoint = "sqlite3_column_blob", CallingConvention=CallingConvention.Cdecl)]
 			private static extern IntPtr sqlite3_column_blob(NativeSqlite3StmtHandle stmt, int index);
@@ -4524,7 +4554,6 @@ namespace pr.common
 #if PR_UNITTESTS
 namespace pr.unittests
 {
-	using System.Data.Linq.SqlClient;
 	using System.IO;
 	using common;
 	using util;
@@ -4532,7 +4561,6 @@ namespace pr.unittests
 	[TestFixture] public class TestSqlite
 	{
 		private static string FilePath;
-		private const string InMemoryDB = ":memory:";
 
 		#region DomTypes
 		// ReSharper disable FieldCanBeMadeReadOnly.Local,MemberCanBePrivate.Local,UnusedMember.Local,NotAccessedField.Local,ValueParameterNotUsed
@@ -4837,12 +4865,12 @@ namespace pr.unittests
 
 			// Use an in-memory db for normal unit tests,
 			// use an actual file when debugging
-			FilePath = InMemoryDB;
+			FilePath = Sqlite.DBInMemory;
 			//FilePath = new FileInfo("tmpDB.db").FullName;
 		}
 		[TestFixtureTearDown] public void Cleanup()
 		{
-			if (FilePath != InMemoryDB)
+			if (FilePath != Sqlite.DBInMemory)
 				File.Delete(FilePath);
 		}
 		[Test] public void DefaultUse()
@@ -5356,8 +5384,8 @@ namespace pr.unittests
 					// ReSharper restore RedundantCast
 				}
 				{// Where clause with 'like' method calling 'RowCount'
-					var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
-					Assert.AreEqual(1, q);
+					//var q = (from x in table where SqlMethods.Like(x.Inc_Value, "5") select x).RowCount;
+					//Assert.AreEqual(1, q);
 				}
 				{// Where clause with x => true
 					var q = table.Where(x => true);
@@ -5579,8 +5607,8 @@ namespace pr.unittests
 					// ReSharper restore RedundantCast
 				}
 				{// Where clause with 'like' method calling 'RowCount'
-					var q = table.Where<DomType0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
-					Assert.AreEqual(1, q);
+					//var q = table.Where<DomType0>(x => SqlMethods.Like(x.Inc_Value, "5")).RowCount;
+					//Assert.AreEqual(1, q);
 				}
 				{// Where clause with x => true
 					var q = table.Where<DomType0>(x => true).Cast<DomType0>();
@@ -5852,7 +5880,7 @@ namespace pr.unittests
 			{
 				// Sign up a handler for row changed
 				Sqlite.DataChangedArgs args = null;
-				db.DataChanged += (s,a) => args = a;
+				db.DataChangedImmediate += (s,a) => args = a;
 
 				// Create a simple table
 				db.DropTable<DomType5>();

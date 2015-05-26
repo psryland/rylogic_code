@@ -76,9 +76,13 @@ namespace pr.gui
 		/// <summary>Restore the selection</summary>
 		private void RestoreSelection()
 		{
-			// Note, this order is important, also base.Select() uses the wrong order
-			base.SelectionLength = m_selection.Sizei;
-			base.SelectionStart  = m_selection.Begini;
+			// Only allow selection setting for editable combo box styles
+			if (DropDownStyle != System.Windows.Forms.ComboBoxStyle.DropDownList)
+			{
+				// Note, this order is important, also base.Select() uses the wrong order
+				base.SelectionLength = m_selection.Sizei;
+				base.SelectionStart  = m_selection.Begini;
+			}
 			//System.Diagnostics.Trace.WriteLine("Selection Restored: [{0},{1}] -> [{2},{3}]".Fmt(m_selection.Begini, m_selection.Sizei, SelectionStart, SelectionLength));
 		}
 

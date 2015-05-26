@@ -17,7 +17,7 @@ namespace pr.extn
 	public static class StringExtensions
 	{
 		/// <summary>Treats this string as a format string</summary>
-		public static string Fmt(this string fmt, params object[] args)
+		[System.Diagnostics.DebuggerStepThrough] public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
 		}
@@ -178,6 +178,48 @@ namespace pr.extn
 		public static Stream ToStream(this string str)
 		{
 			return new MemoryStream(str.ToBytes(), false);
+		}
+
+		/// <summary>
+		/// Returns the minimum edit distance between two strings.
+		/// Useful for determining how "close" two strings are to each other</summary>
+		public static int LevenshteinDistance(this string str, string rhs)
+		{
+			// Degenerate cases
+			if (str == rhs) return 0;
+			if (str.Length == 0) return rhs.Length;
+			if (rhs.Length == 0) return str.Length;
+ 
+			// Create two work vectors of integer distances
+			var bufs = new []{new int[rhs.Length+1], new int[rhs.Length+1]};
+			var v0 = bufs[0];
+			var v1 = bufs[1];
+
+			// Initialize v0 (the previous row of distances)
+			// this row is A[0][i]: edit distance for an empty s
+			// the distance is just the number of characters to delete from t
+			for (int i = 0; i != v0.Length; ++i)
+				v0[i] = i;
+ 
+			// Calculate v1 (current row distances) from the previous row v0
+			for (int i = 0; i != str.Length; ++i)
+			{
+				// First element of v1 is A[i+1][0] edit distance is delete (i+1) chars from s to match empty t
+				v1[0] = i + 1;
+ 
+				// Use formula to fill in the rest of the row
+				for (int j = 0; j != rhs.Length; ++j)
+				{
+					var cost = str[i] == rhs[j] ? 0 : 1;
+					v1[j+1] = Math.Min(v1[j] + 1, Math.Min(v0[j+1] + 1, v0[j] + cost));
+				}
+ 
+				// Swap buffers
+				v0 = bufs[(i+1)&1];
+				v1 = bufs[(i+0)&1];
+			}
+ 
+			return v0[rhs.Length];
 		}
 
 		/// <summary>Parse this string against 'regex'</summary>
@@ -439,6 +481,13 @@ namespace pr.unittests
 			Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
 			Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
 			Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
+		}
+		[Test] public void Levenshtein()
+		{
+			var str1 = "Paul Rulz";
+			var str2 = "Paul Was Here";
+			var d = str1.LevenshteinDistance(str2);
+			Assert.AreEqual(d, 8);
 		}
 	}
 }

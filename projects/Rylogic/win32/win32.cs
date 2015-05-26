@@ -541,6 +541,22 @@ namespace pr.win32
 		public const int TM_MULTICODEPAGE   = 32; // default behaviour
 		#endregion
 
+		#region Common Control Messages CCM_
+		public const uint CCM_FIRST               = 0x2000;    // Common control shared messages
+		public const uint CCM_LAST                = (CCM_FIRST + 0x200);
+		public const uint CCM_SETBKCOLOR          = (CCM_FIRST + 0x1); // lParam is bkColor
+		public const uint CCM_SETCOLORSCHEME      = (CCM_FIRST + 0x2); // lParam is color scheme
+		public const uint CCM_GETCOLORSCHEME      = (CCM_FIRST + 0x3); // fills in COLORSCHEME pointed to by lParam
+		public const uint CCM_GETDROPTARGET       = (CCM_FIRST + 0x4);
+		public const uint CCM_SETUNICODEFORMAT    = (CCM_FIRST + 0x5);
+		public const uint CCM_GETUNICODEFORMAT    = (CCM_FIRST + 0x6);
+		public const uint CCM_SETVERSION          = (CCM_FIRST + 0x7);
+		public const uint CCM_GETVERSION          = (CCM_FIRST + 0x8);
+		public const uint CCM_SETNOTIFYWINDOW     = (CCM_FIRST + 0x9); // wParam == hwndParent.
+		public const uint CCM_SETWINDOWTHEME      = (CCM_FIRST + 0xb);
+		public const uint CCM_DPISCALE            = (CCM_FIRST + 0xc); // wParam == Awareness
+		#endregion
+
 		#region Edit Control
 		public static class EditCtrl
 		{
@@ -674,6 +690,38 @@ namespace pr.win32
 			public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
 			public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
 			public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+		}
+		#endregion
+
+		#region Progress Bar
+		public static class ProgressBar
+		{
+			public const uint PBS_SMOOTH              = 0x01;
+			public const uint PBS_VERTICAL            = 0x04;
+			public const uint PBS_MARQUEE             = 0x08;
+			public const uint PBS_SMOOTHREVERSE       = 0x10;
+
+			public const uint PBM_SETRANGE            = (WM_USER+1);
+			public const uint PBM_SETPOS              = (WM_USER+2);
+			public const uint PBM_DELTAPOS            = (WM_USER+3);
+			public const uint PBM_SETSTEP             = (WM_USER+4);
+			public const uint PBM_STEPIT              = (WM_USER+5);
+			public const uint PBM_SETRANGE32          = (WM_USER+6);  // lParam = high, wParam = low
+
+			public const uint PBM_GETRANGE            = (WM_USER+7);    // wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
+			public const uint PBM_GETPOS              = (WM_USER+8);
+			public const uint PBM_SETBARCOLOR         = (WM_USER+9);    // lParam = bar color
+			public const uint PBM_SETMARQUEE          = (WM_USER+10);
+			public const uint PBM_GETSTEP             = (WM_USER+13);
+			public const uint PBM_GETBKCOLOR          = (WM_USER+14);
+			public const uint PBM_GETBARCOLOR         = (WM_USER+15);
+			public const uint PBM_SETSTATE            = (WM_USER+16); // wParam = PBST_[State] (NORMAL, ERROR, PAUSED)
+			public const uint PBM_GETSTATE            = (WM_USER+17);
+			public const uint PBM_SETBKCOLOR          = CCM_SETBKCOLOR; // lParam = bkColor
+
+			public const int PBST_NORMAL = 0x0001;
+			public const int PBST_ERROR  = 0x0002;
+			public const int PBST_PAUSED = 0x0003;
 		}
 		#endregion
 

@@ -1,6 +1,9 @@
 ﻿//***************************************************
 //  Copyright (c) Rylogic Ltd 2008
 //***************************************************
+// DGV helpers
+// Notes:
+//   Useful link of CellStyle inheritance: https://msdn.microsoft.com/en-us/library/1yef90x0.aspx
 
 using System;
 using System.Collections;
@@ -90,6 +93,7 @@ namespace pr.extn
 		/// <summary>Delete the contents of the selected cells. Attach to the KeyDown handler</summary>
 		public static void Delete(object sender, KeyEventArgs e)
 		{
+			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
 			if (e.KeyCode != Keys.Delete) return;
 			Delete(dgv);
@@ -297,7 +301,16 @@ namespace pr.extn
 		{
 			var columns     = grid.Columns.Cast<DataGridViewColumn>();
 			var grid_width  = Math.Max(grid.DisplayRectangle.Width - 3f, 1f);
-			var widths      = columns.Select(x => grid_width * x.FillWeight).ToArray();
+
+			// Adjust for the RowHeaders being visible
+			if (grid.RowHeadersVisible)
+				grid_width -= grid.RowHeadersWidth;
+
+			// Adjust for the vertical scroll bar being visible
+			if ((grid.GetScrollBarVisibility() & ScrollBars.Vertical) != 0)
+				grid_width -= SystemInformation.VerticalScrollBarWidth;
+
+			var widths      = columns.Select(x => x.Visible ? grid_width * x.FillWeight : 0).ToArray();
 			var total_width = Math.Max(widths.Sum(), 1f);
 
 			// Measure each column's preferred width
@@ -316,12 +329,22 @@ namespace pr.extn
 					};
 
 				if ((opts & EColumnSizeOptions.IncludeColumnHeaders) != 0)
+				{
 					for (int i = 0, iend = grid.ColumnCount; i != iend; ++i)
+					{
+						if (!grid.Columns[i].Visible) continue;
 						pref_widths[i] = Math.Max(pref_widths[i], preferred_width(grid.Columns[i].HeaderCell));
+					}
+				}
 
 				foreach (var row in grid.GetRowsWithState(DataGridViewElementStates.Displayed))
+				{
 					for (int i = 0, iend = Math.Min(grid.ColumnCount, row.Cells.Count); i != iend; ++i)
+					{
+						if (!grid.Columns[i].Visible) continue;
 						pref_widths[i] = Math.Max(pref_widths[i], preferred_width(row.Cells[i]));
+					}
+				}
 			}
 			var total_pref_width = Math.Max(pref_widths.Sum(), 1f);
 
@@ -390,28 +413,35 @@ namespace pr.extn
 		/// You'll need to prevent recursion with a flag however</summary>
 		public static void SetGridColumnSizes(this DataGridView grid, EColumnSizeOptions opts, bool auto_hide_single_column_header = false)
 		{
-			if (grid.ColumnCount == 0)
-				return;
-
-			if (auto_hide_single_column_header)
-				grid.ColumnHeadersVisible = grid.ColumnCount > 1;
-
-			// Get the ideal column widths
-			grid.NormaliseFillWeights();
-			var col_widths = grid.GetColumnWidths(opts);
-
-			// Resize columns.
-			using (grid.SuspendLayout(true))
+			if (m_set_grid_columns_sizes != null) return;
+			using (Scope.Create(() => m_set_grid_columns_sizes = grid, () => m_set_grid_columns_sizes = null))
 			{
-				var remainder = 0f;
-				foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+				if (grid.ColumnCount == 0)
+					return;
+
+				if (auto_hide_single_column_header)
+					grid.ColumnHeadersVisible = grid.ColumnCount > 1;
+
+				// Get the ideal column widths
+				grid.NormaliseFillWeights();
+				var col_widths = grid.GetColumnWidths(opts);
+
+				// Resize columns.
+				using (grid.SuspendLayout(true))
 				{
-					var fwidth = col_widths[col.Index] + remainder;
-					remainder  = fwidth - (float)(int)fwidth;
-					col.Width  = (int)fwidth;
+					var remainder = 0f;
+					foreach (var col in grid.Columns.Cast<DataGridViewColumn>())
+					{
+						var fwidth = col_widths[col.Index] + remainder;
+						remainder  = fwidth - (float)(int)fwidth;
+
+						if (col.Visible)
+							col.Width  = (int)fwidth;
+					}
 				}
 			}
 		}
+		[ThreadStatic] private static object m_set_grid_columns_sizes;
 
 		/// <summary>Return the first selected row, regardless of multi-select grids</summary>
 		public static DataGridViewRow FirstSelectedRow(this DataGridView grid)
@@ -497,17 +527,36 @@ namespace pr.extn
 			return Within(grid, column_index, row_index, out dummy);
 		}
 
+		/// <summary>Checks if the given row index is within the range of grid rows</summary>
+		public static bool WithinRows(this DataGridView grid, int row_index)
+		{
+			return row_index >= 0 && row_index < grid.RowCount;
+		}
+
+		/// <summary>Checks if the given column index is within the range of grid columns</summary>
+		public static bool WithinCols(this DataGridView grid, int col_index)
+		{
+			return col_index >= 0 && col_index < grid.ColumnCount;
+		}
+
+		/// <summary>Data used for dragging rows around</summary>
 		private class DGV_DragDropData
 		{
 			public DataGridViewRow Row { get; private set; }
 			public int GrabX { get; private set; }
 			public int GrabY { get; private set; }
 
+			/// <summary>The rows with the indicator line drawn on them, last update</summary>
+			public int Idx0 { get; set; }
+			public int Idx1 { get; set; }
+
 			public DGV_DragDropData(DataGridViewRow row, int x, int y)
 			{
 				Row = row;
 				GrabX = x;
 				GrabY = y;
+				Idx0 = -1;
+				Idx1 = -1;
 			}
 		}
 
@@ -523,6 +572,7 @@ namespace pr.extn
 			if (!(grid.DataSource is IList))
 				throw new InvalidOperationException("Drag-drop requires a grid with a data source convertable to an IList");
 
+			// Drag by grabbing row headers
 			var hit = grid.HitTest(e.X, e.Y);
 			if (hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount)
 			{
@@ -552,81 +602,120 @@ namespace pr.extn
 			var data = (DGV_DragDropData)args.Data.GetData(typeof(DGV_DragDropData));
 			
 			// Check the mouse has moved enough to start dragging
-			Point pt = grid.PointToClient(new Point(args.X, args.Y)); // Find where the mouse is over the grid
+			var pt = grid.PointToClient(new Point(args.X, args.Y)); // Find where the mouse is over the grid
 			var distsq = Maths.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
 			if (distsq < 25)
 				return false;
 
 			// Set the drop effect
 			var hit = grid.HitTest(pt.X, pt.Y);
-			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount ? DragDropEffects.Move : DragDropEffects.None;
+			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader &&
+				((hit.RowIndex >= 0 && hit.RowIndex < data.Row.Index) || (hit.RowIndex > data.Row.Index && hit.RowIndex < grid.RowCount))
+				? DragDropEffects.Move : DragDropEffects.None;
 			if (args.Effect != DragDropEffects.Move)
 				return true;
 
 			// The row the mouse is over
 			var hit_idx = hit.RowIndex;
 			var hit_row = grid.Rows[hit_idx];
+
+			// Find the two rows on either side of the line
 			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
-			var before_idx    = hit_idx - 1;
-			var after_idx     = hit_idx + 1;
-			var neighbour_idx = over_half ? after_idx : before_idx;
+			var idx0 = over_half ? hit_idx : hit_idx - 1;
+			var idx1 = over_half ? hit_idx + 1 : hit_idx;
 
 			// If this is not the actual drop then keep returning true until the drop happens
 			if (mode != DragDrop.EDrop.Drop)
 			{
-				// Draw a line to show where the drop would go
-				// Use a self removing handler so that it doesn't matter how often we add it
-				DataGridViewRowPostPaintEventHandler LinePainter = null;
-				LinePainter = (s,a) =>
-					{
-						float Y = 0f;
-						if      (a.RowIndex == hit_idx      ) Y = over_half ? a.RowBounds.Bottom - 1f : a.RowBounds.Top + 1f;
-						else if (a.RowIndex == neighbour_idx) Y = over_half ? a.RowBounds.Top + 1f : a.RowBounds.Bottom - 1f;
-						else return;
+				grid.RowPostPaint -= DragDrop_LinePainter;
+				grid.RowPostPaint += DragDrop_LinePainter;
 
-						const float line_thickness = 2f;
-						using (var pen = new Pen(Color.DeepSkyBlue, line_thickness))
-							a.Graphics.DrawLine(pen, a.RowBounds.Left, Y, a.RowBounds.Right, Y);
+				// Only invalidate rows when idx0,idx1 change
+				if (idx0 != data.Idx0)
+				{
+					if (grid.WithinRows(data.Idx0)) grid.InvalidateRow(data.Idx0);
+					if (grid.WithinRows(idx0     )) grid.InvalidateRow(idx0);
+					data.Idx0 = idx0;
+				}
+				if (idx1 != data.Idx1)
+				{
+					if (grid.WithinRows(data.Idx1)) grid.InvalidateRow(data.Idx1);
+					if (grid.WithinRows(idx1     )) grid.InvalidateRow(idx1);
+					data.Idx1 = idx1;
+				}
 
-						grid.RowPostPaint -= LinePainter;
-					};
+				// Auto scroll when at the first or last displayed row
+				if (idx0 >= grid.FirstDisplayedScrollingRowIndex + grid.DisplayedRowCount(false) && idx0 < grid.RowCount - 1)
+					grid.FirstDisplayedScrollingRowIndex++;
+				if (idx1 <= grid.FirstDisplayedScrollingRowIndex && idx1 > 0)
+					grid.FirstDisplayedScrollingRowIndex--;
+			}
 
-				// Add two, one for each row that needs a line
-				grid.RowPostPaint += LinePainter;
-				grid.RowPostPaint += LinePainter;
+			// Otherwise, this is the drop
+			else
+			{
+				grid.RowPostPaint -= DragDrop_LinePainter;
+
+				int grab_idx = data.Row.Index;
+				if (over_half) ++hit_idx;
+
+				// Insert 'grab_idx' at 'drop_idx'
+				var list = grid.DataSource as IList;
+				if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
+				if (grab_idx != hit_idx)
+				{
+					if (hit_idx > grab_idx)
+						--hit_idx;
+
+					var tmp = list[grab_idx];
+					list.RemoveAt(grab_idx);
+					list.Insert(hit_idx, tmp);
+				}
+
+				// If the list is a binding source, set the current position to the item just moved
+				var bs = grid.DataSource as BindingSource;
+				if (bs != null)
+					bs.Position = hit_idx;
 
 				// Invalidate the hit rows to ensure repainting
-				grid.InvalidateRow(hit_idx);
-				if (before_idx >= 0          ) grid.InvalidateRow(before_idx);
-				if (after_idx < grid.RowCount) grid.InvalidateRow(after_idx);
-				return true;
+				grid.InvalidateRow(data.Idx0);
+				grid.InvalidateRow(data.Idx1);
+				grid.InvalidateRow(idx0);
+				grid.InvalidateRow(idx1);
 			}
-
-			int grab_idx = data.Row.Index;
-			if (over_half) ++hit_idx;
-
-			// Insert 'grab_idx' at 'drop_idx'
-			var list = grid.DataSource as IList;
-			if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
-			if (grab_idx != hit_idx)
-			{
-				if (hit_idx > grab_idx) --hit_idx;
-
-				var tmp = list[grab_idx];
-				list.RemoveAt(grab_idx);
-				list.Insert(hit_idx, tmp);
-			}
-
-			// If the list is a binding source, set the current position to the item just moved
-			var bs = grid.DataSource as BindingSource;
-			if (bs != null)
-				bs.Position = hit_idx;
-
-			// Invalidate the hit rows to ensure repainting
-			grid.InvalidateRow(hit_idx);
-			if (before_idx >= 0          ) grid.InvalidateRow(before_idx);
-			if (after_idx < grid.RowCount) grid.InvalidateRow(after_idx);
 			return true;
+		}
+
+		/// <summary>A handler used in DGV drag/drop operations when dragging rows around</summary>
+		private static void DragDrop_LinePainter(object sender, DataGridViewRowPostPaintEventArgs args)
+		{
+			var grid = sender.As<DataGridView>();
+			var pt = grid.PointToClient(Control.MousePosition);
+
+			// Only paint on the rows the mouse is over
+			var hit = grid.HitTest(pt.X, pt.Y);
+			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= grid.RowCount)
+				return;
+
+			// The row the mouse is over
+			var hit_idx = hit.RowIndex;
+			var hit_row = grid.Rows[hit_idx];
+
+			// Find the two rows on either side of the line
+			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
+			var idx0 = over_half ? hit_idx : hit_idx - 1;
+			var idx1 = over_half ? hit_idx + 1 : hit_idx;
+
+			// Only need to draw on the row the mouse is over
+			float Y = 0f;
+			if      (args.RowIndex == idx0) Y = args.RowBounds.Bottom - 1f;
+			else if (args.RowIndex == idx1) Y = args.RowBounds.Top    + 1f;
+			else return;
+
+			// Draw a line to show where the drop would go
+			const float line_thickness = 2f;
+			using (var pen = new Pen(Color.DeepSkyBlue, line_thickness))
+				args.Graphics.DrawLine(pen, args.RowBounds.Left, Y, args.RowBounds.Right, Y);
 		}
 
 		/// <summary>Temporarily remove the data source from this grid</summary>

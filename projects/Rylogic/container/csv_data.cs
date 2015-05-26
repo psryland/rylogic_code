@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using pr.extn;
 using pr.stream;
 
 namespace pr.container
@@ -21,8 +22,9 @@ namespace pr.container
 			public Row(IEnumerable<object> values) :base(values.Select(x => x.ToString())) {}
 			public Row(params object[] values) :base(values.Select(x => x.ToString())) {}
 
-			public new Row Add(string s) { base.Add(s); return this; }
-			public Row Add<T>(T s) { base.Add(s.ToString()); return this; }
+			public new Row Add(string s)                 { base.Add(s); return this; }
+			public Row Add<T>(T s)                       { base.Add(s.ToString()); return this; }
+			public Row AddRange<T>(IEnumerable<T> range) { range.ForEach(x => Add(x)); return this; }
 
 			/// <summary>Write this row as a line of csv data</summary>
 			public void Save(StreamWriter file, bool quoted = true)

@@ -230,6 +230,16 @@ namespace pr.extn
 				() => ctrl.Cursor = new_cursor,
 				() => ctrl.Cursor = old_cursor);
 		}
+
+		/// <summary>Return the ScrollBars value that represents the current visibility of the scroll bars</summary>
+		public static ScrollBars GetScrollBarVisibility(this Control ctrl)
+		{
+			var sty = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_STYLE);
+			var vis = ScrollBars.None;
+			if ((sty & Win32.WS_HSCROLL) != 0) vis |= ScrollBars.Horizontal;
+			if ((sty & Win32.WS_VSCROLL) != 0) vis |= ScrollBars.Vertical;
+			return vis;
+		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in xml</summary>
