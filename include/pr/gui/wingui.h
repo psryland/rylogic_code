@@ -2330,7 +2330,8 @@ namespace pr
 			template <typename D> void Show(int show, Form<D>* parent = nullptr, LPARAM init_param = 0)
 			{
 				// Get the parent hwnd
-				m_app_main_window = parent == ApplicationMainWindow;
+				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
+				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
 				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
 
@@ -2370,7 +2371,8 @@ namespace pr
 			template <typename D> EDialogResult ShowDialog(Form<D>* parent = nullptr, LPARAM init_param = 0)
 			{
 				// Get the parent hwnd
-				m_app_main_window = parent == ApplicationMainWindow;
+				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
+				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
 				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
 
