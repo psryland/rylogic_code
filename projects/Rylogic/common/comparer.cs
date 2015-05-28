@@ -40,13 +40,6 @@ namespace pr.common
 		public static Cmp<T> From(Func<T,T,bool> c) { return (Cmp<T>)c; }
 		public static Cmp<T> From(Comparer<T>    c) { return (Cmp<T>)c; }
 	}
-	public static class Cmp
-	{
-		public static Cmp<T> From<T>(Func<T,T,int> func)
-		{
-			return Cmp<T>.From(func);
-		}
-	}
 
 	/// <summary>
 	/// A generic IEqualityComparer implementation that is implicitly convertable

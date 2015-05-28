@@ -1,13 +1,12 @@
-// Win32Project1.cpp : Defines the entry point for the application.
-//
+#include "forward.h"
+#include "about.h"
+#include "modeless.h"
+//#include "graph.h"
+#include "pr/gui/progress_dlg.h"
+#include "pr/gui/context_menu.h"
 
-#include <sdkddkver.h>
-#include "testwingui/res/resource.h"
-#include "pr/common/min_max_fix.h"
-#include "pr/gui/wingui.h"
-#include "pr/gui/graph_ctrl.h"
-#include "pr/gui/windows_com.h"
-
+//#define USE_ATL
+#ifdef USE_ATL
 #include <atlapp.h>
 //#include <atldwm.h>
 #include <atlwin.h>
@@ -21,81 +20,6 @@
 #include <atlcrack.h>
 //#include <shellapi.h>
 //#include <atlctrlx.h>
-
-using namespace pr::gui;
-
-// About dialog
-struct About :Form<About>
-{
-	Button m_btn_ok;
-
-	About()
-		:Form<About>(IDD_ABOUTBOX, "about")
-		,m_btn_ok(IDOK,this,"btn_ok", EAnchor::Bottom)
-	{
-		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
-	}
-};
-
-// Modeless dialog
-struct Modeless :Form<Modeless>
-{
-	Button m_btn_ok;
-
-	Modeless()
-		:Form<Modeless>(IDD_DLG, "modeless")
-		,m_btn_ok(IDOK, this, "ok_btn", EAnchor::Bottom|EAnchor::Right)
-	{
-		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
-	}
-};
-
-// Application window
-struct Main :Form<Main>
-{
-	Label m_lbl;
-	Button m_btn1;
-	Button m_btn2;
-	Modeless m_modeless;
-	GraphCtrl<> m_graph;
-	GraphCtrl<>::Series m_series0;
-	GraphCtrl<>::Series m_series1;
-
-	enum { IDC_BTN1 = 100, IDC_BTN2 };
-	Main()
-		:Form<Main>(_T("Pauls Window"), ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl(_T("hello world"), 80, 20, 100, 16, -1, m_hwnd, this)
-		,m_btn1(_T("click me!"), 200, 130, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
-		,m_btn2(_T("show modeless"), 10, 130, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
-		,m_graph(10, 40, 280, 80, -1, m_hwnd, this, EAnchor::All)
-		,m_series0(L"Sin")
-		,m_series1(L"Cos")
-		,m_modeless()
-	{
-		float j = 0.0f;
-		for (int i = 0; i != 3600; ++i, j += 0.1f)
-		{
-			m_series0.m_values.push_back(GraphDatum(j, sinf(j/pr::maths::tau)));
-			m_series1.m_values.push_back(GraphDatum(j, cosf(j/pr::maths::tau)));
-		}
-		m_graph.m_series.push_back(&m_series0);
-		m_graph.m_series.push_back(&m_series1);
-
-		m_graph.m_opts.Border = GraphCtrl<>::RdrOptions::EBorder::Single;
-		m_graph.FindDefaultRange();
-		m_graph.ResetToDefaultRange();
-
-		m_btn1.Click += [&](Button&,EmptyArgs const&)
-			{
-				About about;
-				about.ShowDialog(this);
-			};
-		m_btn2.Click += [&](Button&,EmptyArgs const&)
-			{
-				m_modeless.Show();
-			};
-	}
-};
 
 struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 {
@@ -112,6 +36,193 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 		return S_OK;
 	}
 };
+#endif
+
+// Application window
+struct Main :Form<Main>
+{
+	Label m_lbl;
+	Button m_btn1;
+	Button m_btn2;
+	Button m_btn3;
+	Button m_btn4;
+	Modeless m_modeless;
+
+	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4 };
+	Main()
+		:Form<Main>(_T("Pauls Window"), ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
+		,m_lbl(_T("hello world"), 10, 10, 100, 16, -1, m_hwnd, this)
+		,m_btn1(_T("click me!"), 200, 130, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
+		,m_btn2(_T("show modeless"), 10, 130, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn3(_T("context menu"), 120, 130, 80, 20, IDC_BTN3, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn4(_T("progress"), 10, 30, 80, 20, IDC_BTN4, m_hwnd, this)
+		,m_modeless()
+	{
+		m_btn1.Click += [&](Button&,EmptyArgs const&)
+			{
+				About about;
+				about.ShowDialog(this);
+			};
+		m_btn2.Click += [&](Button&,EmptyArgs const&)
+			{
+				m_modeless.Show();
+			};
+		m_btn3.Click += [&](Button&,EmptyArgs const&)
+			{
+				enum class ECmd { Label };
+
+				//todo
+
+				// Construct the menu
+				ContextMenu menu;
+				menu.AddItem(std::make_shared<ContextMenu::Label>(_T("&Label"), (int)ECmd::Label));
+				menu.Show<ECmd>(int(0), int(0));
+				//ECmd cmd = (ECmd)LOWORD(res);
+				//int  idx = (int)HIWORD(res);
+				
+				#if 0
+				//menu.AddItem(std::make_shared<ContextMenu::Label>(L"&Reset Zoom", MAKEWPARAM(ECmd::ResetZoom, idx_all)));
+				//if (!m_series.empty())
+				//{
+				//	std::vector<std::wstring> plot_types;
+				//	plot_types.push_back(L"Point");
+				//	plot_types.push_back(L"Line");
+				//	plot_types.push_back(L"Bar");
+
+				//	int vis = 0, invis = 0;
+				//	for (auto& series : m_series)
+				//		(series->m_opts.Visible ? vis : invis) = 1;
+
+				//	// All series options
+				//	auto& series_all = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"Series: All"));
+				//	series_all.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible", MAKEWPARAM(ECmd::Visible, idx_all), vis + invis));
+
+				//	// Specific series options
+				//	int idx_series = -1;
+				//	for (auto s : m_series)
+				//	{
+				//		auto& series = *s;
+				//		++idx_series;
+
+				//		// Create a sub menu for this series
+				//		StylePtr style(new ContextMenuStyle());
+				//		style->m_col_text = series.m_opts.color();
+				//		auto& series_m = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(series.m_name.c_str(), 0, series.m_opts.Visible, style));
+
+				//		// Visibility
+				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible"     ,MAKEWPARAM(ECmd::Visible          ,idx_series), series.m_opts.Visible));
+				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"Series &Data" ,MAKEWPARAM(ECmd::VisibleData      ,idx_series), series.m_opts.DrawData));
+				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Error Bars"  ,MAKEWPARAM(ECmd::VisibleErrorBars ,idx_series), series.m_opts.DrawErrorBars));
+
+				//		// Plot Type
+				//		series_m.AddItem(std::make_shared<ContextMenu::Combo>(L"&Plot Type"   ,&plot_types, MAKEWPARAM(ECmd::PlotType ,idx_series)));
+
+				//		{// Appearance menu
+				//			auto& appearance = series_m.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"&Appearance"));
+				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Point ||
+				//				series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
+				//			{
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Size:", L"9", MAKEWPARAM(ECmd::PointSize, idx_series)));
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Colour:", L"9", MAKEWPARAM(ECmd::PointColour, idx_series)));
+				//			}
+				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
+				//			{
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Width:", L"9", MAKEWPARAM(ECmd::LineWidth, idx_series)));
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Colour:", L"9", MAKEWPARAM(ECmd::LineColour, idx_series)));
+				//			}
+				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Bar)
+				//			{
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Width:", L"9", MAKEWPARAM(ECmd::BarWidth, idx_series)));
+				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Colour:", L"9", MAKEWPARAM(ECmd::BarColour, idx_series)));
+				//			}
+				//		}
+				//	}
+				//}
+				//
+				//int res = menu.Show(m_hwnd, int(point.x), int(point.y));
+				//ECmd cmd = (ECmd)LOWORD(res);
+				//int  idx = (int)HIWORD(res);
+				//switch (cmd)
+				//{
+				//default: break;
+				//case ECmd::ShowValues:
+				//	m_tt.ShowWindow(m_tt.IsWindowVisible() ? SW_HIDE : SW_SHOW);
+				//	break;
+				//case ECmd::ResetZoom:
+				//	ResetToDefaultRange();
+				//	Dirty(true);
+				//	break;
+				//case ECmd::Visible:
+				//	if (idx == idx_all)
+				//	{
+				//		for (SeriesCont::iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i)
+				//		{
+				//		}
+				//	}
+				//	break;
+				//}
+				//
+				////ContextMenu::Label show_values(L"&Show Values", ECmd_ShowValues, 0, m_tt.IsWindowVisible());
+				////menu.AddItem(show_values);
+				////
+				////ContextMenu::Label reset_zoom(L"&Reset Zoom", ECmd_ResetZoom);
+				////menu.AddItem(reset_zoom);
+				////
+				////Series::Menu series_all(L"Series: &All");
+				////ContextMenu::Label all_visible(L"&Visible", ECmd_All_Visible);
+				////series_all.AddItem(all_visible);
+				////if (!m_series.empty()) menu.AddItem(series_all);
+				////int invis = 0, vis = 0;
+				////for (SeriesCont::const_iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i) (*i)->m_opts.m_visible ? vis : invis) = 1;
+				////all_visible.m_check_state = vis + invis;
+				////
+				////
+				////struct Menu :pr::gui::ContextMenu
+				////{
+				////	pr::gui::ContextMenuStyle m_style;
+				////	pr::gui::ContextMenu::Label m_vis;
+				////	
+				////	Menu()
+				////	:pr::gui::ContextMenu(L"", &m_style)
+				////	,m_vis(L"&Visible", ECmd_Series)
+				////	{}
+				////};
+				////
+				////
+				////for (SeriesCont::iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i)
+				////{
+				////	Series& series = **i;
+				////	series.m_menu_style
+				////	(*i)->m_opts.m_visible ? vis : invis) = 1;
+				////
+				////	
+				////	series.AppendMenu(menu);
+
+				////		series.m_menu.m_label.m_text      = series.m_name;
+				////		series.m_menu.m_style.m_col_text  = series.m_opts.color();
+				////		series.m_menu.m_vis.m_check_state = series.m_opts.m_visible;
+				////		series.m_menu.AddItem(series.m_menu.m_vis);
+				////		menu.AddItem(series.m_menu);
+				////	}
+				////}
+				#endif
+			};
+		m_btn4.Click += [&](Button&,EmptyArgs const&)
+			{
+				auto task = [](ProgressDlg* dlg)
+				{
+					for (int i = 0, iend = 50; dlg->Progress(i*1.f/iend) && i != iend; ++i)
+					{
+						Sleep(100);
+					}
+					if (dlg->Progress(1.0f))
+						Sleep(1000);
+				};
+				ProgressDlg progress("Busy work", "workin...", task);
+				progress.ShowDialog(*this);
+			};
+	}
+};
 
 int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
@@ -120,9 +231,11 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 	try
 	{
+		#ifdef USE_ATL
 		//WtlMain wtl;
 		//wtl.Create(nullptr);
 		//wtl.ShowWindow(SW_SHOW);
+		#endif
 
 		Main main;
 		main.Show();

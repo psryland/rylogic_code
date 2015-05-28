@@ -4,44 +4,41 @@
 //*****************************************************************************
 // Usage:
 #pragma once
-#ifndef PR_GUI_CONTEXT_MENU_H
-#define PR_GUI_CONTEXT_MENU_H
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 
 #include <memory>
 #include <string>
 #include <vector>
 #include <algorithm>
 
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atluser.h>
-#include <atlmisc.h>
-#include <atldlgs.h>
-#include <atlcrack.h>
+//#include <atlbase.h>
+//#include <atlapp.h>
+//#include <atluser.h>
+//#include <atlmisc.h>
+//#include <atldlgs.h>
+//#include <atlcrack.h>
+//
+//#include <atlbase.h>
+//#include <atlwin.h>
+//#include <atlapp.h>
+//#include <atlgdi.h>
+//#include <atlctrls.h>
+//#include <atlctrlw.h>
+//#include <atlmisc.h>
+//#include <atlcrack.h>
 
-#include <atlbase.h>
-#include <atlwin.h>
-#include <atlapp.h>
-#include <atlgdi.h>
-#include <atlctrls.h>
-#include <atlctrlw.h>
-#include <atlmisc.h>
-#include <atlcrack.h>
-
-#include <gdiplus.h>
+#include "pr/gui/wingui.h"
+#include "pr/gui/gdiplus.h"
 
 namespace pr
 {
 	namespace gui
 	{
 		// Forward
-		class ContextMenu;
+		struct ContextMenu;
 		struct ContextMenuStyle;
 		struct IContextMenuItem;
+		typedef std::shared_ptr<Gdiplus::Bitmap> BitmapPtr;
+		typedef std::shared_ptr<Gdiplus::Font>   FontPtr;
 
 		// Helper functions
 		inline Gdiplus::Rect  ToRect (RECT const& rect)            { return Gdiplus::Rect(rect.left, rect.top, rect.right-rect.left, rect.bottom-rect.top); }
@@ -72,12 +69,8 @@ namespace pr
 			virtual void DrawItem   (ContextMenu* menu, Gdiplus::Graphics& gfx, LPDRAWITEMSTRUCT di) = 0;
 			virtual void Selected   (ContextMenu* menu, RECT const& rect, MENUITEMINFO const& mii) = 0;
 		};
-
-		// Reference counted pointers
 		typedef std::shared_ptr<IContextMenuItem> ItemPtr;
-		typedef std::shared_ptr<ContextMenuStyle> StylePtr;
-		typedef std::shared_ptr<Gdiplus::Bitmap>  BitmapPtr;
-		typedef std::shared_ptr<Gdiplus::Font>    FontPtr;
+		typedef std::vector<ItemPtr>              ItemCont;
 
 		// Style object used to give menu items individual styles
 		struct ContextMenuStyle
@@ -104,6 +97,7 @@ namespace pr
 			,m_margin_left (20)
 			{}
 		};
+		typedef std::shared_ptr<ContextMenuStyle> StylePtr;
 
 		// Helper methods for drawing context menu items
 		struct ContextMenuItemDraw
@@ -147,24 +141,23 @@ namespace pr
 			}
 		};
 
-		// Helper dialog for hosting controls within the context menu
-		template <typename Ctrl> class ControlHost :public WTL::CIndirectDialogImpl<Ctrl>
-		{
-		public:
-			BEGIN_DIALOG_EX(0,0,0,0,0)
-				DIALOG_STYLE(DS_CENTER|DS_SHELLFONT|WS_VISIBLE|WS_GROUP|WS_POPUP)
-				DIALOG_FONT(8, _T("MS Shell Dlg"))
-			END_DIALOG()
-			BEGIN_CONTROLS_MAP()
-			END_CONTROLS_MAP()
-		};
+		//// Helper dialog for hosting controls within the context menu
+		//template <typename Ctrl> struct ControlHost :public Form<Ctrl>
+		//{
+		////public:
+		////	BEGIN_DIALOG_EX(0,0,0,0,0)
+		////		DIALOG_STYLE(DS_CENTER|DS_SHELLFONT|WS_VISIBLE|WS_GROUP|WS_POPUP)
+		////		DIALOG_FONT(8, _T("MS Shell Dlg"))
+		////	END_DIALOG()
+		////	BEGIN_CONTROLS_MAP()
+		////	END_CONTROLS_MAP()
+		//};
 
 		// A context menu
-		class ContextMenu
-			:public ControlHost<ContextMenu>
-			,public IContextMenuItem
+		struct ContextMenu
+			:Control
+			,IContextMenuItem
 		{
-		public:
 			class Separator :public IContextMenuItem
 			{
 			public:
@@ -203,17 +196,17 @@ namespace pr
 
 			public:
 				std::wstring m_text;          // The label text
-				UINT_PTR     m_id;            // An id for this item
+				int          m_id;            // An id for this item
 				int          m_check_state;   // 0-Unchecked, 1-checked, 2-unknown
 				StylePtr     m_style;         // The style to use to draw the menu item (null means use the default for the menu)
 				BitmapPtr    m_bitmap;        // A bitmap to draw next to the item (null means no bitmap)
 
-				Label(wchar_t const* text = L"Menu item", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr(), BitmapPtr bm = BitmapPtr())
-				:m_text(text)
-				,m_id(id)
-				,m_check_state(check_state)
-				,m_style(style)
-				,m_bitmap(bm)
+				Label(TCHAR const* text = _T("Menu item"), int id = 0, int check_state = 0, StylePtr style = StylePtr(), BitmapPtr bm = BitmapPtr())
+					:m_text(Widen(text))
+					,m_id(id)
+					,m_check_state(check_state)
+					,m_style(style)
+					,m_bitmap(bm)
 				{}
 				int  GetId() const
 				{
@@ -221,7 +214,8 @@ namespace pr
 				}
 				void AddToMenu(HMENU menu, int index)
 				{
-					IContextMenuItem* cmi = static_cast<IContextMenuItem*>(this);
+					// Pass "this" to the owner draw function
+					auto cmi = static_cast<IContextMenuItem*>(this);
 					::AppendMenuW(menu, MF_STRING|MF_OWNERDRAW, index, LPCWSTR(cmi));
 				}
 				void MeasureItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPMEASUREITEMSTRUCT mi)
@@ -261,13 +255,14 @@ namespace pr
 				}
 				void Selected(ContextMenu*, RECT const&, MENUITEMINFO const&) {}
 			};
+#if 0
 			class Edit :public ControlHost<Edit> ,public Label
 			{
 			protected:
 				enum { InnerMargin = 2, OuterMargin = 2 };
-				CEdit         m_edit;         // The hosted edit control
+				TextBox       m_edit;         // The hosted edit control
 				Gdiplus::Rect m_rect_value;   // The dimensions of the value text
-				CFont         m_font;         // The font to use in the edit control
+				Font          m_font;         // The font to use in the edit control
 
 			public:
 				std::wstring   m_value;       // The value to display in the edit box
@@ -523,43 +518,39 @@ namespace pr
 					}
 				}
 			};
-
+#endif
 		protected:
 			struct Selection
 			{
-				CMenuHandle m_menu;
+				HMENU       m_menu;
 				UINT        m_flags;
 				UINT        m_id;
-				CRect       m_rect;
-				Selection() :m_menu() ,m_flags(0) ,m_id(0) ,m_rect() {}
+				Rect        m_rect;
+				Selection():m_menu() ,m_flags(0) ,m_id(0) ,m_rect() {}
 			};
 
-		protected:
-			typedef std::vector<ItemPtr> ItemCont;
-			ItemCont  m_items;    // The items in this menu
-			CMenu     m_root;     // The handle to the root menu
-			int       m_result;   // The id of the item selected
-			Selection m_sel;      // The menu item that was selected
+			ItemCont      m_items;    // The items in this menu
+			pr::gui::Menu m_root;     // The handle to the root menu
+			Selection     m_sel;      // The menu item that was selected
 
 		public:
 			StylePtr m_def_style; // A default style for when 'm_style' pointers are null
 			Label    m_label;     // The text for this menu (used when added as a submenu)
 
-			ContextMenu(wchar_t const* text = L"Menu", UINT_PTR id = 0, int check_state = 0, StylePtr style = StylePtr())
-				:m_items()
+			ContextMenu(TCHAR const* text = _T("Menu"), int id = 0, int check_state = 0, StylePtr style = StylePtr())
+				:Control(WndClassName(), text, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, id)
+				,m_items()
 				,m_root(::CreatePopupMenu())
 				,m_def_style(new ContextMenuStyle())
 				,m_label(text, id, check_state, style)
 				,m_sel()
 			{}
-			~ContextMenu()
-			{
-				if (IsWindow()) DestroyWindow();
-			}
 
 			// Add a context menu item to this menu
 			void AddItem(ItemPtr item)
 			{
+				// Note: item ID's for the menu items are indices.
+				item->AddToMenu(m_root, int(m_items.size()));
 				m_items.push_back(item);
 			}
 
@@ -572,95 +563,103 @@ namespace pr
 
 			// Show the context menu. Blocks until the menu is closed
 			// Returns the id of the item selected
-			int Show(HWND parent, int x, int y)
+			int Show(int x, int y)
 			{
-				CRect rect(x, y, x, y);
-				DoModal(parent, (LPARAM)&rect);
-				return m_result;
+				// This window is the parent because it handles the measure/draw item messages
+				auto align = GetSystemMetrics(SM_MENUDROPALIGNMENT);
+				TrackPopupMenu(m_root, align|TPM_LEFTBUTTON, x, y, 0, m_hwnd, nullptr);
+				return m_sel.m_id;
 			}
-
-			BEGIN_MSG_MAP(ContextMenu)
-				MSG_WM_INITDIALOG(OnInitDialog)
-				MSG_WM_CAPTURECHANGED(OnCaptureChanged)
-				MSG_WM_MENUSELECT(OnMenuSelect)
-				MSG_WM_MENUCHAR(OnMenuChar)
-				MSG_WM_MEASUREITEM(OnMeasureItem)
-				MSG_WM_DRAWITEM(OnDrawItem)
-			END_MSG_MAP()
+			template <typename TRet> TRet Show(int x, int y)
+			{
+				return TRet(Show(x,y));
+			}
 
 		protected:
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				switch (message)
+				{
+				case WM_MENUSELECT:
+					{
+						auto item  = (UINT)LOWORD(wparam);
+						auto flags = (UINT)HIWORD(wparam);
+						auto menu  = (HMENU)lparam;
+
+						//OutputDebugStringA(pr::FmtS("OnMenuSelect: id: %d, flags: %x, handle: %x\n", nItemID, nFlags, menu.m_hMenu));
+						if (flags != 0x0000FFFF) // Menu closing notification
+						{
+							m_sel.m_menu  = menu;
+							m_sel.m_flags = flags;
+							m_sel.m_id    = item;
+							GetMenuItemRect(m_hwnd, menu, item, &m_sel.m_rect);
+						}
+						break;
+					}
+				case WM_CAPTURECHANGED:
+					{
+						// Capture changed occurs just as the menu is closing
+						// but, crucially, while the window is still visible
+						// :-/ doesn't work for sub menus...
+						//m_result = ApplySelection();
+						break;
+					}
+				case WM_MENUCHAR:
+					{
+						auto ch    = (TCHAR)LOWORD(wparam);
+						auto flags = (UINT)HIWORD(wparam);
+						auto menu  = (HMENU)lparam;
+						OutputDebugStringA("OnMenuChar\n");
+						(void)ch,flags,menu;
+						break;
+					}
+				case WM_MEASUREITEM:
+					{
+						auto mi = reinterpret_cast<MEASUREITEMSTRUCT*>(lparam);
+
+						// If you get a crash in here, check that a "static_cast<IContextMenuItem*>(this)" pointer was used in AppendMenuW()
+						if (mi->CtlType == ODT_MENU)
+						{
+							Gdiplus::Graphics gfx(m_hwnd);
+							auto item = static_cast<IContextMenuItem*>((void*)(mi->itemData));
+							item->MeasureItem(this, gfx, mi);
+						}
+						break;
+					}
+				case WM_DRAWITEM:
+					{
+						auto di = reinterpret_cast<DRAWITEMSTRUCT*>(lparam);
+
+						// If you get a crash in here, check that a "static_cast<IContextMenuItem*>(this)" pointer was used in AppendMenuW()
+						if (di->CtlType == ODT_MENU)
+						{
+							Gdiplus::Graphics gfx(di->hDC);
+							auto item = static_cast<IContextMenuItem*>((void*)(di->itemData));
+							item->DrawItem(this, gfx, di);
+						}
+						break;
+					}
+				}
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
 			int ApplySelection()
 			{
-				if (m_sel.m_menu.IsNull() || (m_sel.m_flags & (MF_POPUP|MF_DISABLED|MF_GRAYED)) != 0)
+				if (!m_sel.m_menu || (m_sel.m_flags & (MF_POPUP|MF_DISABLED|MF_GRAYED)) != 0)
 					return 0;
-				else
-				{
-					CMenuItemInfo mii; mii.fMask = MIIM_DATA;
-					m_sel.m_menu.GetMenuItemInfo(m_sel.m_id, TRUE, &mii);
-					IContextMenuItem* item = static_cast<IContextMenuItem*>((void*)(mii.dwItemData));
-					item->Selected(this, m_sel.m_rect, mii);
-					return item->GetId();
-				}
-			}
-			BOOL OnInitDialog(CWindow, LPARAM lInitParam)
-			{
-				// Link up the menu items
-				// Note: item ID's for the menu items are indices.
-				int index = 0;
-				for (ItemCont::iterator i = m_items.begin(), iend = m_items.end(); i != iend; ++i)
-					(*i)->AddToMenu(m_root, index++);
 
-				// This window is the parent because it handles the measure/draw item messages
-				m_result = 0;
-				CRect const& rect = *(CRect const*)lInitParam;
-				DWORD align = GetSystemMetrics(SM_MENUDROPALIGNMENT);
-				m_root.TrackPopupMenu(align|TPM_LEFTBUTTON, rect.left, rect.top, m_hWnd);
-				EndDialog(0);
-				return FALSE;
-			}
-			void OnCaptureChanged(CWindow)
-			{
-				// Capture changed occurs just as the menu is closing
-				// but, crucially, while the window is still visible
-				// :-/ doesn't work for sub menus...
-				m_result = ApplySelection();
-			}
-			void OnMenuSelect(UINT nItemID, UINT nFlags, CMenuHandle menu)
-			{
-				//OutputDebugStringA(pr::FmtS("OnMenuSelect: id: %d, flags: %x, handle: %x\n", nItemID, nFlags, menu.m_hMenu));
-				if (nFlags == 0x0000FFFF) return; // Menu closing notification
-				m_sel.m_menu  = menu;
-				m_sel.m_flags = nFlags;
-				m_sel.m_id    = nItemID;
-				menu.GetMenuItemRect(m_hWnd, nItemID, &m_sel.m_rect);
-			}
-			LRESULT OnMenuChar(UINT nChar, UINT nFlags, CMenuHandle menu)
-			{
-				OutputDebugStringA("OnMenuChar\n");
-				(void)nChar;
-				(void)nFlags;
-				(void)menu;
-				return S_OK;
-			}
-			void OnMeasureItem(int, LPMEASUREITEMSTRUCT mi)
-			{
-				// If you get a crash in here, check that a "static_cast<IContextMenuItem*>(this)"
-				// pointer was used in AppendMenuW()
-				if (mi->CtlType != ODT_MENU) return;
-				Gdiplus::Graphics gfx(m_hWnd);
-				static_cast<IContextMenuItem*>((void*)(mi->itemData))->MeasureItem(this, gfx, mi);
-			}
-			void OnDrawItem(int, LPDRAWITEMSTRUCT di)
-			{
-				// If you get a crash in here, check that a "static_cast<IContextMenuItem*>(this)"
-				// pointer was used in AppendMenuW()
-				if (di->CtlType != ODT_MENU) return;
-				Gdiplus::Graphics gfx(di->hDC);
-				static_cast<IContextMenuItem*>((void*)(di->itemData))->DrawItem(this, gfx, di);
+				MenuItemInfo mii; mii.fMask = MIIM_DATA;
+				GetMenuItemInfo(m_sel.m_menu, m_sel.m_id, TRUE, &mii);
+				IContextMenuItem* item = static_cast<IContextMenuItem*>((void*)(mii.dwItemData));
+				item->Selected(this, m_sel.m_rect, mii);
+				return item->GetId();
 			}
 
 			// IContextMenuItem interface implementation
-			int  GetId() const { return m_label.GetId(); }
+			int GetId() const
+			{
+				return m_label.GetId();
+			}
 			void AddToMenu(HMENU menu, int)
 			{
 				// Link up the submenu items
@@ -669,7 +668,7 @@ namespace pr
 					(*i)->AddToMenu(m_root, index++);
 
 				IContextMenuItem* cmi = static_cast<IContextMenuItem*>(this);
-				::AppendMenuW(menu, MF_POPUP|MF_OWNERDRAW, UINT_PTR(m_root.m_hMenu), LPCWSTR(cmi));
+				::AppendMenuW(menu, MF_POPUP|MF_OWNERDRAW, UINT_PTR(m_root.m_menu), LPCWSTR(cmi));
 			}
 			void MeasureItem(ContextMenu* menu, Gdiplus::Graphics& gfx, LPMEASUREITEMSTRUCT mi)
 			{
@@ -685,5 +684,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

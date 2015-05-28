@@ -13,6 +13,18 @@
     <ClInclude Include="..\projects\TestWingui\res\resource.h">
       <Filter>res</Filter>
     </ClInclude>
+    <ClInclude Include="..\projects\TestWingui\src\about.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\TestWingui\src\forward.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\projects\TestWingui\src\modeless.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\wingui.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\projects\TestWingui\res\resource.rc">
@@ -21,6 +33,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\TestWingui\src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\projects\TestWingui\src\graph.h">
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>

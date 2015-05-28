@@ -103,8 +103,18 @@ namespace pr
 		// Dialog result
 		enum class EDialogResult
 		{
-			Ok,
-			Cancel,
+			Ok       = IDOK,
+			Cancel   = IDCANCEL,
+			Abort    = IDABORT,
+			Retry    = IDRETRY,
+			Ignore   = IDIGNORE,
+			Yes      = IDYES,
+			No       = IDNO,
+			Close    = IDCLOSE,
+			Help     = IDHELP,
+			TryAgain = IDTRYAGAIN,
+			Continue = IDCONTINUE,
+			Timeout  = IDTIMEOUT,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -122,6 +132,20 @@ namespace pr
 		};
 		inline EMouseKey operator | (EMouseKey lhs, EMouseKey rhs) { return EMouseKey(int(lhs) | int(rhs)); }
 		inline EMouseKey operator & (EMouseKey lhs, EMouseKey rhs) { return EMouseKey(int(lhs) & int(rhs)); }
+
+
+		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
+		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
+		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
+		enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
+		enum { DefaultFormStyleEx = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
+
+		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
+		enum { DefaultDialogStyle = DefaultFormStyle };//DS_SETFONT | DS_FIXEDSYS | WS_POPUPWINDOW | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_CAPTION | WS_THICKFRAME };
+		enum { DefaultDialogStyleEx = DefaultFormStyleEx };//WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
+
+		enum { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP };
+		enum { DefaultControlStyleEx = 0 };
 
 		#pragma endregion
 
@@ -160,6 +184,16 @@ namespace pr
 		// Replace macros from windowsx.h
 		inline int GetXLParam(LPARAM lparam) { return int(short(LOWORD(lparam))); } //GET_X_LPARAM
 		inline int GetYLParam(LPARAM lparam) { return int(short(HIWORD(lparam))); } // GET_Y_LPARAM
+
+		// Convert to byte pointer
+		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
+		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
+
+		// Append bytes
+		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
+		{
+			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
+		}
 		#pragma endregion
 
 		#pragma region Unicode conversion
@@ -453,6 +487,13 @@ namespace pr
 			~Menu() { if (m_owned) DestroyMenu(m_menu); }
 			operator HMENU() const { return m_menu; }
 		};
+		struct MenuItemInfo :MENUITEMINFO
+		{
+			MenuItemInfo() :MENUITEMINFO()
+			{
+				cbSize = sizeof(MENUITEMINFO);
+			}
+		};
 
 		// Basic message loop
 		struct MessageLoop
@@ -513,6 +554,15 @@ namespace pr
 		// Placeholder for events that take no arguments. (Makes the templating consistent)
 		struct EmptyArgs
 		{};
+
+		// Event args used in cancellable operations
+		struct CancelEventArgs
+		{
+			bool m_cancel;
+			CancelEventArgs()
+				:m_cancel(false)
+			{}
+		};
 
 		// Event args for paint events
 		struct PaintEventArgs
@@ -670,6 +720,189 @@ namespace pr
 			operator HWND() const                           { return reinterpret_cast<HWND>(~0ULL); }
 			template <typename D> operator Form<D>*() const { return reinterpret_cast<Form<D>*>(~0ULL); }
 		} const ApplicationMainWindow;
+		#pragma endregion
+
+		#pragma region Dialog Template
+		// A structure for defining a dialog template
+		struct DlgTemplate
+		{
+			enum { DefaultStyle = DefaultDialogStyle };
+			enum { DefaultStyleEx = DefaultDialogStyleEx };
+			enum { DefaultItemStyle = DefaultControlStyle };
+
+			std::vector<byte> m_mem;
+
+			// Notes:
+			//  - if x == CW_USEDEFAULT in CreateWindowEx then the system positions the window, (ignoring y). Only valid for overlapped windows, if used for popup windows will be treated as zero
+			//  - if w == CW_USEDEFAULT in CreateWindowEx then the system chooses the width and height. Only valid for overlapped windows, if used for popup windows will be treated as zero
+			DlgTemplate() {}
+			DlgTemplate(TCHAR const* caption
+				,short x = 0, short y = 0, short w = 0, short h = 0
+				,DWORD style = DefaultStyle, DWORD ex_style = DefaultStyleEx
+				,TCHAR const* font_name = _T("MS Shell Dlg"), WORD font_size = 8
+				,int menu_id = -1, TCHAR const* class_name = nullptr)
+			{
+				// In a standard template for a dialog box, the DLGTEMPLATE structure is always immediately followed
+				// by three variable-length arrays that specify the menu, class, and title for the dialog box.
+				// When the DS_SETFONT style is specified, these arrays are also followed by a 16-bit value specifying
+				// point size and another variable-length array specifying a typeface name. Each array consists of one
+				// or more 16-bit elements. The menu, class, title, and font arrays must be aligned on WORD boundaries.
+
+				// If 'style' includes DS_SETFONT then windows expects the header to be followed by
+				// font data consisting of a 16-bit font size, and unicode font name string
+				if (font_name != nullptr)
+					style |= DS_SETFONT;
+				else
+					style &= ~DS_SETFONT;
+
+				// Add the header
+				DLGTEMPLATE hd = {style, ex_style, 0, x, y, w, h};
+				append(m_mem, &hd, sizeof(hd));
+
+				// Immediately following the DLGTEMPLATE structure is a menu array that identifies a menu resource for the dialog box.
+				// If the first element of this array is 0x0000, the dialog box has no menu and the array has no other elements.
+				// If the first element is 0xFFFF, the array has one additional element that specifies the ordinal value of a menu
+				// resource in an executable file. If the first element has any other value, the system treats the array as a
+				// null-terminated Unicode string that specifies the name of a menu resource in an executable file.
+				AddWord(menu_id != -1 ? WORD(MAKEINTRESOURCE(menu_id)) : 0);
+
+				// Following the menu array is a class array that identifies the window class of the control. If the first element
+				// of the array is 0x0000, the system uses the predefined dialog box class for the dialog box and the array has no
+				// other elements. If the first element is 0xFFFF, the array has one additional element that specifies the ordinal
+				// value of a predefined system window class. If the first element has any other value, the system treats the array
+				// as a null-terminated Unicode string that specifies the name of a registered window class.
+				AddString(class_name);
+
+				// Following the class array is a title array that specifies a null-terminated Unicode string that contains the title
+				// of the dialog box. If the first element of this array is 0x0000, the dialog box has no title and the array has no other elements.
+				AddString(caption);
+
+				// The 16-bit point size value and the typeface array follow the title array, but only if the style member specifies the
+				// DS_SETFONT style. The point size value specifies the point size of the font to use for the text in the dialog box and
+				// its controls. The typeface array is a null-terminated Unicode string specifying the name of the typeface for the font.
+				// When these values are specified, the system creates a font having the specified size and typeface (if possible) and
+				// sends a WM_SETFONT message to the dialog box procedure and the control window procedures as it creates the dialog box and controls.
+				if (style & DS_SETFONT)
+				{
+					append(m_mem, &font_size, sizeof(font_size));
+					AddString(font_name);
+				}
+
+				// Following the DLGTEMPLATE header in a standard dialog box template are one or more DLGITEMTEMPLATE structures that
+				// define the dimensions and style of the controls in the dialog box. The cdit member specifies the number of
+				// DLGITEMTEMPLATE structures in the template. These DLGITEMTEMPLATE structures must be aligned on *DWORD* boundaries.
+			}
+
+			// Add a control to the template
+			void Add(WORD id, TCHAR const* wndclass, TCHAR const* text, short x = 0, short y = 0, short w = 0, short h = 0, DWORD style = DefaultItemStyle, DWORD ex_style = 0, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
+			{
+				// In a standard template for a dialog box, the DLGITEMTEMPLATE structure is always immediately followed by three
+				// variable-length arrays specifying the class, title, and creation data for the control. Each array consists of
+				// one or more 16-bit elements.
+
+				// Each DLGITEMTEMPLATE structure in the template must be aligned on a DWORD boundary. The class and title arrays
+				// must be aligned on WORD boundaries. The creation data array must be aligned on a WORD boundary.
+				auto pad = m_mem.size() & 0x3;
+				if (pad)
+				{
+					byte const padding[4] = {};
+					append(m_mem, &padding[0], 4 - pad);
+				}
+
+				// Add the dialog item to the header count
+				hdr().cdit++;
+
+				// Add a description of the item
+				DLGITEMTEMPLATE item = {style, ex_style, x, y, w, h, id};
+				append(m_mem, &item, sizeof(item));
+
+				// Immediately following each DLGITEMTEMPLATE structure is a class array that specifies the window class of the control.
+				// If the first element of this array is any value other than 0xFFFF, the system treats the array as a null-terminated
+				// Unicode string that specifies the name of a registered window class. If the first element is 0xFFFF, the array has
+				// one additional element that specifies the ordinal value of a predefined system class. The ordinal can be one of the following atom values.
+				enum class EStdCtrlType :WORD { None = 0, BUTTON = 0x0080, EDIT = 0x0081, STATIC = 0x0082, LISTBOX = 0x0083, SCROLLBAR = 0x0084, COMBOBOX = 0x0085};
+				EStdCtrlType ctrl_atom = EStdCtrlType::None;
+				if      (wndclass == nullptr) {}
+				else if (_tcscmp(wndclass, _T("BUTTON"   )) == 0) ctrl_atom = EStdCtrlType::BUTTON;
+				else if (_tcscmp(wndclass, _T("EDIT"     )) == 0) ctrl_atom = EStdCtrlType::EDIT;
+				else if (_tcscmp(wndclass, _T("STATIC"   )) == 0) ctrl_atom = EStdCtrlType::STATIC;
+				else if (_tcscmp(wndclass, _T("LISTBOX"  )) == 0) ctrl_atom = EStdCtrlType::LISTBOX;
+				else if (_tcscmp(wndclass, _T("SCROLLBAR")) == 0) ctrl_atom = EStdCtrlType::SCROLLBAR;
+				else if (_tcscmp(wndclass, _T("COMBOBOX" )) == 0) ctrl_atom = EStdCtrlType::COMBOBOX;
+				if (ctrl_atom != EStdCtrlType::None)
+					AddWord(WORD(ctrl_atom));
+				else
+					AddString(wndclass);
+
+				// Following the class array is a title array that contains the initial text or resource identifier of the control.
+				// If the first element of this array is 0xFFFF, the array has one additional element that specifies an ordinal value
+				// of a resource, such as an icon, in an executable file. You can use a resource identifier for controls, such as
+				// static icon controls, that load and display an icon or other resource rather than text. If the first element is any
+				// value other than 0xFFFF, the system treats the array as a null-terminated Unicode string that specifies the initial text.
+				AddString(text);
+
+				// The creation data array begins at the next WORD boundary after the title array. This creation data can be of any size
+				// and format. If the first word of the creation data array is nonzero, it indicates the size, in bytes, of the creation
+				// data (including the size word). The control's window procedure must be able to interpret the data. When the system
+				// creates the control, it passes a pointer to this data in the lParam parameter of the WM_CREATE message that it sends to the control.
+				creation_data_size_in_bytes += (creation_data_size_in_bytes != 0) * sizeof(creation_data_size_in_bytes); // include the size of 'creation_data_size_in_bytes'
+				append(m_mem, &creation_data_size_in_bytes, sizeof(creation_data_size_in_bytes));
+				if (creation_data_size_in_bytes != 0)
+					append(m_mem, creation_data, creation_data_size_in_bytes);
+			}
+
+			// True if the template contains a dialog description, false if not
+			bool valid() const
+			{
+				return !m_mem.empty();
+			}
+
+			// Access to the template header
+			DLGTEMPLATE const& hdr() const
+			{
+				return *reinterpret_cast<DLGTEMPLATE const*>(m_mem.data());
+			}
+			DLGTEMPLATE& hdr()
+			{
+				return *reinterpret_cast<DLGTEMPLATE*>(m_mem.data());
+			}
+			operator DLGTEMPLATE const*() const
+			{
+				return &hdr();
+			}
+
+		private:
+
+			// Append a string or null terminator to the memory buffer
+			void AddString(TCHAR const* str)
+			{
+				if (str == nullptr)
+				{
+					WORD x = 0;
+					append(m_mem, &x, sizeof(x));
+				}
+				else
+				{
+					auto s = Widen(str); s.push_back(0);
+					append(m_mem, s.data(), s.size() * sizeof(wchar_t));
+				}
+			}
+
+			// Append a {0xffff, val} pattern to the memory buffer
+			void AddWord(WORD val)
+			{
+				if (val == 0)
+				{
+					WORD m = 0;
+					append(m_mem, &m, sizeof(m));
+				}
+				else
+				{
+					WORD m[2] = {0xFFFF, val};
+					append(m_mem, &m[0], sizeof(m));
+				}
+			}
+		};
 		#pragma endregion
 
 		// Base class for all windows/controls
@@ -1128,7 +1361,7 @@ namespace pr
 				// Store distances so that this control's position equals
 				// parent.left + m_pos_offset.left, parent.right + m_pos_offset.right, etc..
 				// (i.e. right and bottom offsets are typically negative)
-				if (!m_parent) return;
+				if (!m_parent || !m_hwnd) return;
 				auto r = WindowRect();
 				auto p = m_parent->WindowRect();
 				m_pos_offset = Rect(r.left - p.left, r.top - p.top, r.right - p.right, r.bottom - p.bottom);
@@ -1137,7 +1370,7 @@ namespace pr
 			// Adjust the size of this control relative to it's parent
 			void ResizeToParent(bool repaint = true)
 			{
-				if (!m_parent) return;
+				if (!m_parent || !m_hwnd) return;
 				auto r = WindowRect();
 				auto p = m_parent->WindowRect();
 				auto w = r.width(); auto h = r.height();
@@ -1244,18 +1477,21 @@ namespace pr
 			// Use this constructor to create a new instance of a window
 			Control(TCHAR const* wndclass_name
 				,TCHAR const* text
-				,int x, int y, int w, int h
+				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = 0
-				,DWORD ex_style = 0
+				,DWORD style = DefaultControlStyle
+				,DWORD ex_style = DefaultControlStyleEx
 				,char const* name = nullptr
 				,HMENU menu = nullptr
 				,void* init_param = nullptr)
 				:Control(Internal(), id, parent, name, anchor)
 			{
+				// CreateWindowEx failure reasons:
+				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
+				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, 0);
 				if (!init_param) init_param = &init;
 				m_hwnd = ::CreateWindowEx(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
@@ -1578,6 +1814,28 @@ namespace pr
 				Throw(::SetWindowPos(m_hwnd,::GetWindow(m_hwnd, GW_HWNDPREV),r.left,r.top,r.width(),r.height(),flags), "SetWindowPos failed");
 			}
 
+			// Move the control to a new location/size in client space
+			// If a top-level control, then 'r' is in screen space
+			// if 'repaint' is true, then system sends the WM_PAINT message to the window procedure immediately
+			// after moving the window (that is, the MoveWindow function calls the UpdateWindow function).
+			// If 'repaint' is false, then this function will invalidate the parent at the old and new location.
+			void MoveWindow(Rect r, bool repaint = false)
+			{
+				auto parent = Parent();
+				if (!repaint && parent)
+				{
+					auto old_r = ClientRect();
+					parent->Invalidate(false, &old_r);
+				}
+				::MoveWindow(m_hwnd, r.left, r.top, r.width(), r.height(), repaint);
+				RecordPosOffset();
+				if (!repaint && parent)
+				{
+					parent->Invalidate(false, &r);
+				}
+				Invalidate(false);
+			}
+
 			// Return the dimensions of the non-client area for the window
 			// WindowRect() - NonClientArea() = ClientRect()
 			// Note: Menus are part of the non-client area. pt(0,0) is the top left
@@ -1831,12 +2089,13 @@ namespace pr
 			template <typename D> friend struct Form;
 			friend struct Control;
 
-			HINSTANCE m_hinst;           // Module instance
-			bool      m_app_main_window; // True if this is the main application window
-			int       m_menu_id;         // The id of the main menu
-			int       m_exit_code;       // The code to return when the form closes
-			bool      m_is_dialog;       // True if the form is a modal or modeless dialog
-			bool      m_modal;           // True if this is a dialog being display modally
+			HINSTANCE   m_hinst;            // Module instance
+			bool        m_app_main_window;  // True if this is the main application window
+			DlgTemplate m_template;         // The indirect dialog template (if given)
+			int         m_menu_id;          // The id of the main menu
+			int         m_exit_code;        // The code to return when the form closes
+			bool        m_dialog_behaviour; // True if the form is a modal or modeless dialog (determines whether IsDialogMessage() is called)
+			bool        m_modal;            // True if this is a dialog being displayed modally
 
 			// Window proc. Derived forms should not override WndProc.
 			// All messages are passed to 'ProcessWindowMessage' so use that.
@@ -1847,9 +2106,9 @@ namespace pr
 
 				// Check if this message is a dialog message
 				auto msg = MSG{m_hwnd, message, wparam, lparam, ::GetMessageTime(), ::GetMessagePos()};
-				if (m_is_dialog)
+				if (m_dialog_behaviour)
 				{
-					RAII<bool> prevent_recursion(m_is_dialog, false);
+					RAII<bool> prevent_recursion(m_dialog_behaviour, false);
 					if (::IsDialogMessage(m_hwnd, &msg))
 						return S_OK;
 				}
@@ -1949,17 +2208,13 @@ namespace pr
 
 		public:
 
-			// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
-			enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME };
-
-			// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
-			enum { DefaultFormStyleEx = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
-
 			// Frame Window Constructor
 			// Use this constructor to create frame windows (i.e. windows not based on a dialog resource)
 			//  - hwnd created in constructor
 			//  - use Show() to display the window
 			//  - use 'parent == ApplicationMainWindow' to cause the app to exit when this window is closed
+			//  - if x == CW_USEDEFAULT in CreateWindowEx then the system positions the window, (ignoring y). Only valid for overlapped windows, if used for popup windows will be treated as zero
+			//  - if w == CW_USEDEFAULT in CreateWindowEx then the system chooses the width and height. Only valid for overlapped windows, if used for popup windows will be treated as zero
 			Form(TCHAR const* title
 				,HWND parent = nullptr
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT
@@ -1972,9 +2227,10 @@ namespace pr
 				:Control(IDC_UNUSED, nullptr, name)
 				,m_hinst(::GetModuleHandle(nullptr))
 				,m_app_main_window(parent == ApplicationMainWindow)
+				,m_template()
 				,m_menu_id(menu_id)
 				,m_exit_code()
-				,m_is_dialog(false)
+				,m_dialog_behaviour(false)
 				,m_modal(false)
 			{
 				parent = !m_app_main_window ? parent : nullptr;
@@ -1995,63 +2251,130 @@ namespace pr
 				// class is not constructed. Derived classes should call 'Show'.
 			}
 
-			// Dialog Constructor
+			// Dialog Resource Constructor
 			// Use this constructor to create a window from a dialog resource description
 			//  - hwnd is not created until Show() or ShowDialog() are called
 			Form(int idd, char const* name = nullptr)
 				:Control(idd, nullptr, name)
 				,m_hinst(::GetModuleHandle(nullptr))
 				,m_app_main_window(false)
+				,m_template()
 				,m_menu_id(IDC_UNUSED)
 				,m_exit_code()
-				,m_is_dialog(true)
+				,m_dialog_behaviour(true)
 				,m_modal(false)
 			{}
+
+			// Indirect Dialog Constructor
+			// Use this constructor to create a window from a dialog template
+			//  - hwnd is not created until Show() or ShowDialog() are called
+			//  - if 'modal' is true then the window handle is not created until Show() or ShowDialog() is called
+			Form(DlgTemplate const& templ, char const* name = nullptr)
+				:Control(IDC_UNUSED, nullptr, name)
+				,m_hinst(::GetModuleHandle(nullptr))
+				,m_app_main_window(false)
+				,m_template(templ)
+				,m_menu_id(IDC_UNUSED)
+				,m_exit_code()
+				,m_dialog_behaviour(true)
+				,m_modal(false)
+			{}
+
+			// Close on destruction
 			~Form()
 			{
 				Close();
 			}
 
+			// Get/Set whether the form uses dialog-like message handling
+			bool DialogBehaviour() const
+			{
+				 return m_dialog_behaviour;
+			}
+			void DialogBehaviour(bool enabled)
+			{
+				m_dialog_behaviour = enabled;
+			}
+
 			// Display the form non-modally
-			template <typename D> void Show(int show, Form<D>* parent = nullptr, LPARAM init_param = 0)
+			// A form created via any constructor can be displayed non-modally.
+			// If not created already, the window handle will be created in this method
+			void Show(int show, HWND parent, LPARAM init_param = 0)
 			{
 				m_modal = false;
 
-				// Create the dialog from its dialog resource id if not created yet
-				if (m_hwnd == nullptr && m_is_dialog)
+				// If the window has not been created yet, create it now
+				if (m_hwnd == nullptr)
 				{
-					assert(m_id != IDC_UNUSED && "Modeless dialog without a resource id");
-					m_app_main_window = parent == ApplicationMainWindow;
-					parent = !m_app_main_window ? parent : nullptr;
-
 					InitParam lparam(this, init_param);
-					HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
-					m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
-					Throw(m_hwnd != nullptr, "CreateDialogParam failed");
+
+					// If a template is given, create the window from the template
+					if (m_template.valid())
+					{
+						m_hwnd = ::CreateDialogIndirectParam(m_hinst, m_template, parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
+						Throw(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
+					}
+					else
+					{
+						assert(m_id != IDC_UNUSED && "Modeless dialog without a resource id");
+						m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
+						Throw(m_hwnd != nullptr, "CreateDialogParam failed");
+					}
 				}
 				Throw(m_hwnd != nullptr, "Window not created");
 
+				// Show the window, non-modally
 				ShowWindow(m_hwnd, show);
 				UpdateWindow(m_hwnd);
 			}
-			void Show(int show) { Show<Form<Derived>>(show); }
-			void Show() { Show<Form<Derived>>(SW_SHOW); }
+			template <typename D> void Show(int show, Form<D>* parent = nullptr, LPARAM init_param = 0)
+			{
+				// Get the parent hwnd
+				m_app_main_window = parent == ApplicationMainWindow;
+				parent = !m_app_main_window ? parent : nullptr;
+				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
+
+				Show(show, parenthwnd, init_param);
+			}
+			void Show(int show)
+			{
+				Show<Form<Derived>>(show);
+			}
+			void Show()
+			{
+				Show<Form<Derived>>(SW_SHOW);
+			}
 
 			// Display the form modally
-			template <typename D> EDialogResult ShowDialog(Form<D>* parent = nullptr, LPARAM init_param = 0)
+			EDialogResult ShowDialog(HWND parent, LPARAM init_param = 0)
 			{
-				assert(m_hwnd == nullptr);
 				m_modal = true;
 
-				if (parent != nullptr)
-				{
-					m_app_main_window = parent == ApplicationMainWindow;
-					parent = !m_app_main_window ? parent : nullptr;
-				}
+				// Modal dialogs should not have their window handle created yet, the
+				// DialogBox() functions create the window and the message loop
+				assert(m_hwnd == nullptr);
 
 				InitParam lparam(this, init_param);
+
+				// If a template is given, create the window from the template
+				if (m_template.valid())
+				{
+					return EDialogResult(::DialogBoxIndirectParam(m_hinst, m_template, parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
+				}
+				else
+				{
+					assert(m_id != IDC_UNUSED && "Modal dialog without a resource id");
+					return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
+				}
+			}
+			template <typename D> EDialogResult ShowDialog(Form<D>* parent = nullptr, LPARAM init_param = 0)
+			{
+				// Get the parent hwnd
+				m_app_main_window = parent == ApplicationMainWindow;
+				parent = !m_app_main_window ? parent : nullptr;
 				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
-				return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parenthwnd, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
+
+				return ShowDialog(parenthwnd, init_param);
 			}
 			void ShowDialog()
 			{
@@ -2076,20 +2399,24 @@ namespace pr
 		#pragma region Controls
 		struct Label :Control
 		{
+			enum { DefW = 20, DefH = 23 };
+			enum { DefaultStyle = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("STATIC"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Label(TCHAR const* text
-				,int x, int y, int w, int h
+				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = WS_CHILD | WS_VISIBLE | SS_LEFT
-				,DWORD ex_style = 0
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(_T("STATIC"), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
-
 			Label(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
@@ -2122,20 +2449,25 @@ namespace pr
 		};
 		struct Button :Control
 		{
+			enum { DefW = 75, DefH = 23 };
+			enum { DefaultStyle = DefaultControlStyle | BS_PUSHBUTTON | BS_CENTER | BS_TEXT };
+			enum { DefaultStyleDefBtn = (DefaultStyle | BS_DEFPUSHBUTTON) & ~BS_PUSHBUTTON };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("BUTTON"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Button(TCHAR const* text
-				,int x, int y, int w, int h
+				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_TEXT
-				,DWORD ex_style = 0
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(_T("BUTTON"), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
-
 			Button(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
@@ -2168,7 +2500,24 @@ namespace pr
 		};
 		struct CheckBox :Control
 		{
+			enum { DefW = 75, DefH = 23 };
+			enum { DefaultStyle = DefaultControlStyle | BS_AUTOCHECKBOX | BS_LEFT | BS_TEXT };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("BUTTON"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			CheckBox(TCHAR const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+			{}
 			CheckBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
@@ -2221,7 +2570,24 @@ namespace pr
 		};
 		struct TextBox :Control
 		{
+			enum { DefW = 80, DefH = 23 };
+			enum { DefaultStyle = DefaultControlStyle | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("EDIT"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			TextBox(TCHAR const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+			{}
 			TextBox(int id = IDC_UNUSED, Control* parent = nullptr, char  const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
@@ -2321,7 +2687,24 @@ namespace pr
 		};
 		struct ComboBox :Control
 		{
+			enum { DefW = 121, DefH = 21 };
+			enum { DefaultStyle = DefaultControlStyle | CBS_DROPDOWN | CBS_AUTOHSCROLL };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("COMBOBOX"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			ComboBox(TCHAR const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+			{}
 			ComboBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
@@ -2420,15 +2803,187 @@ namespace pr
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 		};
+		struct ProgressBar :Control
+		{
+			enum { DefW = 100, DefH = 23 };
+			enum { DefaultStyle = (DefaultControlStyle | PBS_SMOOTH) & ~WS_TABSTOP };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("msctls_progress32"); }
+
+			ProgressBar(int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), _T(""), x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, nullptr, init_param)
+			{}
+			ProgressBar(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+				:Control(id, parent, name, anchor)
+			{}
+
+			// Get/Set the progress bar position
+			int Pos() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(::SendMessage(m_hwnd, PBM_GETPOS, 0, 0L));
+			}
+			int Pos(int pos)
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_SETPOS, pos, 0L))));
+			}
+
+			// Move the bar position by a delta
+			int OffsetPos(int delta)
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_DELTAPOS, delta, 0L))));
+			}
+
+			// Get/Set the progress range
+			RangeI Range() const
+			{
+				assert(::IsWindow(m_hwnd));
+				PBRANGE range = {};
+				::SendMessage(m_hwnd, PBM_GETRANGE, TRUE, (LPARAM)&range);
+				return RangeI(range.iLow, range.iHigh);
+			}
+			void Range(RangeI rng)
+			{
+				assert(::IsWindow(m_hwnd));
+				::SendMessage(m_hwnd, PBM_SETRANGE32, rng.beg, rng.end);
+			}
+			void Range(int min, int max)
+			{
+				Range(RangeI(min,max));
+			}
+
+			// Get/Set marquee mode
+			bool Marquee() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (Style() & PBS_MARQUEE) != 0;
+			}
+			bool Marquee(bool marquee, UINT update_time = 0U)
+			{
+				assert(::IsWindow(m_hwnd));
+				return ::SendMessage(m_hwnd, PBM_SETMARQUEE, WPARAM(marquee), LPARAM(update_time)) != 0;
+			}
+
+			// Get/Set the step size
+			int StepSize() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(::SendMessage(m_hwnd, PBM_GETSTEP, 0, 0L));
+			}
+			int StepSize(int step_size)
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_SETSTEP, step_size, 0L))));
+			}
+
+			// Get/Set the bar colour
+			COLORREF BarColor() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return COLORREF(::SendMessage(m_hwnd, PBM_GETBARCOLOR, 0, 0L));
+			}
+			COLORREF BarColor(COLORREF clr)
+			{
+				assert(::IsWindow(m_hwnd));
+				return COLORREF(::SendMessage(m_hwnd, PBM_SETBARCOLOR, 0, (LPARAM)clr));
+			}
+
+			// Get/Set the bar background colour
+			COLORREF BarBkgdColor() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return COLORREF(::SendMessage(m_hwnd, PBM_GETBKCOLOR, 0, 0L));
+			}
+			COLORREF BarBkgdColor(COLORREF clr)
+			{
+				assert(::IsWindow(m_hwnd));
+				return COLORREF(::SendMessage(m_hwnd, PBM_SETBKCOLOR, 0, (LPARAM)clr));
+			}
+
+			// Get/Set the state
+			int State() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(::SendMessage(m_hwnd, PBM_GETSTATE, 0, 0L));
+			}
+			int State(int state)
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(::SendMessage(m_hwnd, PBM_SETSTATE, state, 0L));
+			}
+
+			// Step the bar
+			int StepIt()
+			{
+				assert(::IsWindow(m_hwnd));
+				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_STEPIT, 0, 0L))));
+			}
+
+			// Events
+			EventHandler<ProgressBar&, EmptyArgs const&> ProgressUpdate;
+
+			// Handlers
+			virtual void OnProgressUpdate()
+			{
+				ProgressUpdate(*this, EmptyArgs());
+			}
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				/*switch (message)
+				{
+				case WM_PROGRESS_UPDATE:
+					if (LOWORD(wparam) != m_id) break;
+					switch (HIWORD(wparam))
+					{
+					case BN_CLICKED:
+						OnClick();
+						break;
+					}
+				}*/
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+
+		};
 		struct GroupBox :Control
 		{
+			enum { DefW = 80, DefH = 80 };
+			enum { DefaultStyle = DefaultControlStyle | BS_GROUPBOX };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return _T("BUTTON"); } // yes, groupbox's use the button window class
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			GroupBox(TCHAR const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+			{}
 			GroupBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
 		};
 		struct RichTextBox :TextBox
 		{
+			static LPCTSTR WndClassName() { return ::LoadLibrary("msftedit.dll") ? _T("RICHEDIT50W") : _T("RICHEDIT20W"); }
+
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			RichTextBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:TextBox(id, parent, name, anchor)
@@ -2436,8 +2991,11 @@ namespace pr
 		};
 		struct StatusBar :Control
 		{
-			enum { DefaultStatusBarStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
-			StatusBar(Control* parent, int id, TCHAR const* text, char const* name = nullptr, DWORD style = DefaultStatusBarStyle)
+			enum { DefaultStyle = DefaultControlStyle | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static LPCTSTR WndClassName() { return STATUSCLASSNAME; }
+
+			StatusBar(Control* parent, int id, TCHAR const* text, char const* name = nullptr, DWORD style = DefaultStyle)
 				:Control(id, parent, name)
 			{
 				Attach(::CreateStatusWindow(style, text, *parent, id));

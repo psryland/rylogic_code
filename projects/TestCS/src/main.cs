@@ -140,12 +140,12 @@ namespace TestCS
 			this.m_menu_graph_control = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_helpui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_hint_balloon = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_subclassed_controls = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tool_form = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_toolstrip_positions = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tree_grid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_subclassed_controls = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -236,6 +236,12 @@ namespace TestCS
 			this.m_menu_hint_balloon.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_hint_balloon.Text = "HintBalloon";
 			// 
+			// m_menu_subclassed_controls
+			// 
+			this.m_menu_subclassed_controls.Name = "m_menu_subclassed_controls";
+			this.m_menu_subclassed_controls.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_subclassed_controls.Text = "&Subclassed Controls";
+			// 
 			// m_menu_tool_form
 			// 
 			this.m_menu_tool_form.Name = "m_menu_tool_form";
@@ -265,12 +271,6 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor.Name = "m_menu_tests_view3d_editor";
 			this.m_menu_tests_view3d_editor.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_view3d_editor.Text = "&View3d Editor";
-			// 
-			// m_menu_subclassed_controls
-			// 
-			this.m_menu_subclassed_controls.Name = "m_menu_subclassed_controls";
-			this.m_menu_subclassed_controls.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_subclassed_controls.Text = "&Subclassed Controls";
 			// 
 			// FormTestApp
 			// 

@@ -4,8 +4,6 @@
 //***********************************************
 
 #pragma once
-#ifndef PR_GUI_GRAPH_CTRL_H
-#define PR_GUI_GRAPH_CTRL_H
 
 #include <vector>
 #include <algorithm>
@@ -1414,10 +1412,12 @@ namespace pr
 
 			#pragma region Context Menu
 		public:
-
 			// Show a right click context menu
 			void ShowContextMenu(Point point)
 			{
+				(void)point;
+				// Todo, waiting for context menu to be convert to wingui
+/*
 				enum class ECmd
 				{
 					ShowValues = 1,
@@ -1563,6 +1563,7 @@ namespace pr
 				//	}
 				//}
 				//
+*/
 			}
 
 			#pragma endregion
@@ -1603,5 +1604,3 @@ namespace pr
 		};
 	}
 }
-
-#endif
