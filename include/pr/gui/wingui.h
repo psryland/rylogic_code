@@ -559,8 +559,8 @@ namespace pr
 		struct CancelEventArgs
 		{
 			bool m_cancel;
-			CancelEventArgs()
-				:m_cancel(false)
+			CancelEventArgs(bool cancel = false)
+				:m_cancel(cancel)
 			{}
 		};
 

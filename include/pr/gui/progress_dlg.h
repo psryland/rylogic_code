@@ -206,10 +206,10 @@ namespace pr
 						auto id = int(LOWORD(wparam));
 						if (id == IDCANCEL)
 						{
-							// Query for cancel before holding the lock so that background thread continues
+							// Query to cancel the 'cancel' button click
 							CancelEventArgs args;
 							OnCancel(args);
-							if (args.m_cancel)
+							if (!args.m_cancel) // Cancelling was not cancelled, so cancel...
 							{
 								Lock lock(m_mutex);
 								m_cancel = true;
