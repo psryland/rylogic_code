@@ -139,152 +139,6 @@ namespace pr
 			return attr;
 		}
 
-		// Parse a transform description
-		void ParseTransform(pr::script::Reader& reader, pr::m4x4& o2w)
-		{
-			assert(pr::IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it premultiplies the transform with the one read from the script");
-			pr::m4x4 p2w = pr::m4x4Identity;
-
-			reader.SectionStart();
-			for (EKeyword kw; reader.NextKeywordH(kw);)
-			{
-				switch (kw)
-				{
-				default:
-					{
-						reader.ReportError(pr::script::EResult::UnknownToken);
-						break;
-					}
-				case EKeyword::M4x4:
-					{
-						m4x4 o2w = m4x4Identity;
-						reader.ExtractMatrix4x4S(o2w);
-						p2w = o2w * p2w;
-						break;
-					}
-				case EKeyword::M3x3:
-					{
-						m4x4 m = m4x4Identity;
-						reader.ExtractMatrix3x3S(m.rot);
-						p2w = m * p2w;
-						break;
-					}
-				case EKeyword::Pos:
-					{
-						m4x4 m = m4x4Identity;
-						reader.ExtractVector3S(m.pos, 1.0f);
-						p2w = m * p2w;
-						break;
-					}
-				case EKeyword::Align:
-					{
-						int axis_id;
-						pr::v4 direction;
-						reader.SectionStart();
-						reader.ExtractInt(axis_id, 10);
-						reader.ExtractVector3(direction, 0.0f);
-						reader.SectionEnd();
-
-						v4 axis = AxisId(axis_id);
-						if (IsZero3(axis))
-						{
-							reader.ReportError(pr::script::EResult::UnknownValue, "axis_id must one of ±1, ±2, ±3");
-							break;
-						}
-
-						p2w = pr::Rotation4x4(axis, direction, v4Origin) * p2w;
-						break;
-					}
-				case EKeyword::Quat:
-					{
-						pr::Quat quat;
-						reader.ExtractVector4S(quat.xyzw);
-						p2w = Rotation4x4(quat, v4Origin) * p2w;
-						break;
-					}
-				case EKeyword::Rand4x4:
-					{
-						float radius;
-						pr::v4 centre;
-						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
-						reader.SectionEnd();
-						p2w = pr::Random4x4(centre, radius) * p2w;
-						break;
-					}
-				case EKeyword::RandPos:
-					{
-						float radius;
-						pr::v4 centre;
-						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
-						reader.SectionEnd();
-						p2w = Translation4x4(Random3(centre, radius, 1.0f)) * p2w;
-						break;
-					}
-				case EKeyword::RandOri:
-					{
-						m4x4 m = m4x4Identity;
-						m.rot = pr::Random3x4();
-						p2w = m * p2w;
-						break;
-					}
-				case EKeyword::Euler:
-					{
-						pr::v4 angles;
-						reader.ExtractVector3S(angles, 0.0f);
-						p2w = Rotation4x4(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
-						break;
-					}
-				case EKeyword::Scale:
-					{
-						pr::v4 scale;
-						reader.SectionStart();
-						reader.ExtractReal(scale.x);
-						if (reader.IsSectionEnd())
-							scale.z = scale.y = scale.x;
-						else
-						{
-							reader.ExtractReal(scale.y);
-							reader.ExtractReal(scale.z);
-						}
-						reader.SectionEnd();
-						p2w = Scale4x4(scale.x, scale.y, scale.z, v4Origin) * p2w;
-						break;
-					}
-				case EKeyword::Transpose:
-					{
-						p2w = pr::Transpose4x4_(p2w);
-						break;
-					}
-				case EKeyword::Inverse:
-					{
-						p2w = pr::IsOrthonormal(p2w) ? pr::InvertFast(p2w) : pr::Invert(p2w);
-						break;
-					}
-				case EKeyword::Normalise:
-					{
-						p2w.x = pr::Normalise3(p2w.x);
-						p2w.y = pr::Normalise3(p2w.y);
-						p2w.z = pr::Normalise3(p2w.z);
-						break;
-					}
-				case EKeyword::Orthonormalise:
-					{
-						p2w = pr::Orthonorm(p2w);
-						break;
-					}
-				}
-			}
-			reader.SectionEnd();
-
-			// Premultiply the object to world transform
-			o2w = p2w * o2w;
-			PR_INFO_IF(PR_DBG, o2w.w.w != 1.0f, "o2w.w.w != 1.0f - non orthonormal transform");
-		}
-
 		// Parse a camera description
 		void ParseCamera(pr::script::Reader& reader, ParseResult& out)
 		{
@@ -301,7 +155,7 @@ namespace pr
 				case EKeyword::O2W:
 					{
 						pr::m4x4 c2w = pr::m4x4Identity;
-						ParseTransform(reader, c2w);
+						ParseLdrTransform(reader, c2w);
 						out.m_cam.CameraToWorld(c2w);
 						out.m_cam_fields |= ParseResult::ECamField::C2W;
 						break;
@@ -445,7 +299,7 @@ namespace pr
 			default: return false;
 			case EKeyword::O2W:
 				{
-					ParseTransform(p.m_reader, obj->m_o2p);
+					ParseLdrTransform(p.m_reader, obj->m_o2p);
 					return true;
 				}
 			case EKeyword::Colour:
@@ -509,7 +363,7 @@ namespace pr
 					}
 					case EKeyword::O2W:
 					{
-						ParseTransform(p.m_reader, t2s);
+						ParseLdrTransform(p.m_reader, t2s);
 						break;
 					}
 					case EKeyword::Addr:
@@ -1886,7 +1740,7 @@ namespace pr
 					}
 				case EKeyword::BakeTransform:
 					{
-						ParseTransform(p.m_reader, m_bake);
+						ParseLdrTransform(p.m_reader, m_bake);
 						return true;
 					}
 				}
@@ -2201,7 +2055,7 @@ namespace pr
 			{
 				// Run the adding process as a background task while displaying a progress dialog
 				pr::gui::ProgressDlg dlg("Processing script", "", ParseObjects, std::ref(out));
-				dlg.DoModal(100);
+				dlg.ShowDialog(::GetActiveWindow(), 100);
 			}
 			else
 			{
@@ -2352,16 +2206,6 @@ namespace pr
 				objects.erase(i);
 				break;
 			}
-		}
-
-		// Parse the source data in 'reader' using the same syntax
-		// as we use for ldr object '*o2w' transform descriptions.
-		// The source should begin with '{' and end with '}', i.e. *o2w { ... } with the *o2w already read
-		pr::m4x4 ParseLdrTransform(pr::script::Reader& reader)
-		{
-			pr::m4x4 o2w = pr::m4x4Identity;
-			ParseTransform(reader, o2w);
-			return o2w;
 		}
 
 		// Generate a scene that demos the supported object types and modifers.

@@ -141,8 +141,8 @@ namespace pr
 		enum { DefaultFormStyleEx = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
 
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
-		enum { DefaultDialogStyle = DefaultFormStyle };//DS_SETFONT | DS_FIXEDSYS | WS_POPUPWINDOW | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_CAPTION | WS_THICKFRAME };
-		enum { DefaultDialogStyleEx = DefaultFormStyleEx };//WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
+		enum { DefaultDialogStyle = DefaultFormStyle };
+		enum { DefaultDialogStyleEx = DefaultFormStyleEx };
 
 		enum { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP };
 		enum { DefaultControlStyleEx = 0 };

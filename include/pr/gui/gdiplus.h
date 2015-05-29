@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <windows.h>
+#include <objidl.h>
 #include <shlwapi.h>
 #include <gdiplus.h>
 
