@@ -526,6 +526,8 @@ namespace pr
 			auto s0 = f0.seekg(0, std::ifstream::end).tellg();
 			auto s1 = f1.seekg(0, std::ifstream::end).tellg();
 			if (s0 != s1) return false;
+			f0.seekg(0, std::ifstream::beg);
+			f1.seekg(0, std::ifstream::beg);
 
 			enum { BlockSize = 4096 };
 			char buf0[BlockSize];
