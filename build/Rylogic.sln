@@ -95,6 +95,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "neuralnet", "neuralnet.vcxp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Visualisers", "..\projects\Visualisers\Visualisers.csproj", "{F21CF373-7B6B-41B5-91F3-870A3D83334B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mergebin", "mergebin.vcxproj", "{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -335,6 +337,14 @@ Global
 		{F21CF373-7B6B-41B5-91F3-870A3D83334B}.Release|x64.Build.0 = Release|Any CPU
 		{F21CF373-7B6B-41B5-91F3-870A3D83334B}.Release|x86.ActiveCfg = Release|Any CPU
 		{F21CF373-7B6B-41B5-91F3-870A3D83334B}.Release|x86.Build.0 = Release|Any CPU
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Debug|x64.ActiveCfg = Debug|x64
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Debug|x64.Build.0 = Debug|x64
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Debug|x86.ActiveCfg = Debug|Win32
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Debug|x86.Build.0 = Debug|Win32
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x64.ActiveCfg = Release|x64
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x64.Build.0 = Release|x64
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x86.ActiveCfg = Release|Win32
+		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

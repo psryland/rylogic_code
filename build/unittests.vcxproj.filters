@@ -966,6 +966,9 @@
     <ClInclude Include="..\include\pr\common\flags_enum.h">
       <Filter>pr\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\common\pe_file.h">
+      <Filter>pr\common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

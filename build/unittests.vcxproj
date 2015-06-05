@@ -101,6 +101,7 @@
     <ClInclude Include="..\include\pr\common\new.h" />
     <ClInclude Include="..\include\pr\common\objectpool.h" />
     <ClInclude Include="..\include\pr\common\observe.h" />
+    <ClInclude Include="..\include\pr\common\pe_file.h" />
     <ClInclude Include="..\include\pr\common\pipe.h" />
     <ClInclude Include="..\include\pr\common\pollingtoevent.h" />
     <ClInclude Include="..\include\pr\common\predicate.h" />

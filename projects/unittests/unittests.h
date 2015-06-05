@@ -67,6 +67,7 @@
 #include "pr/common/new.h"
 #include "pr/common/objectpool.h"
 #include "pr/common/observe.h"
+#include "pr/common/pe_file.h"
 #include "pr/common/pipe.h"
 #include "pr/common/pollingtoevent.h"
 #include "pr/common/predicate.h"
