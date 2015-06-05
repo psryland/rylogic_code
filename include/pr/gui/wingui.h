@@ -33,20 +33,22 @@
 #include <commctrl.h>
 #include <richedit.h>
 #include <shellapi.h>
+#include <uxtheme.h>
 
 #include "pr/common/fmt.h"
 #include "pr/gui/messagemap_dbg.h"
 
 #pragma comment(lib, "comctl32.lib")
-
-#pragma warning(push)
-#pragma warning(disable: 4351) // new behavior: elements of array will be default initialized
+#pragma comment(lib, "uxtheme.lib")
 
 // C++11's thread_local
 #ifndef thread_local
 #define thread_local __declspec(thread)
 #define thread_local_defined
 #endif
+
+#pragma warning(push)
+#pragma warning(disable: 4351) // new behavior: elements of array will be default initialized
 
 namespace pr
 {
@@ -85,7 +87,7 @@ namespace pr
 		inline ECommonControl operator & (ECommonControl lhs, ECommonControl rhs) { return ECommonControl(int(lhs) & int(rhs)); }
 
 		// Autosize anchors
-		enum class EAnchor { Left = 1 << 0, Top = 1 << 1, Right = 1 << 2, Bottom = 1 << 3, All = Left|Top|Right|Bottom };
+		enum class EAnchor { None = 0, Left = 1 << 0, Top = 1 << 1, Right = 1 << 2, Bottom = 1 << 3, All = Left|Top|Right|Bottom };
 		inline EAnchor operator | (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) | int(rhs)); }
 		inline EAnchor operator & (EAnchor lhs, EAnchor rhs) { return EAnchor(int(lhs) & int(rhs)); }
 
@@ -117,6 +119,25 @@ namespace pr
 			Timeout  = IDTIMEOUT,
 		};
 
+		// Control key state
+		enum class EControlKey
+		{
+			None   = 0,
+			LShift = 1 << 0,
+			RShift = 1 << 1,
+			Shift  = LShift|RShift,
+			LCtrl  = 1 << 2,
+			RCtrl  = 1 << 3,
+			Ctrl   = LCtrl | RCtrl,
+			LAlt   = 1 << 4,
+			RAlt   = 1 << 5,
+			Alt    = LAlt | RAlt,
+		};
+		inline EControlKey operator |  (EControlKey lhs, EControlKey rhs) { return EControlKey(int(lhs) | int(rhs)); }
+		inline EControlKey operator &  (EControlKey lhs, EControlKey rhs) { return EControlKey(int(lhs) & int(rhs)); }
+		inline EControlKey operator |= (EControlKey& lhs, EControlKey rhs) { return lhs = lhs | rhs; }
+		inline EControlKey operator &= (EControlKey& lhs, EControlKey rhs) { return lhs = lhs & rhs; }
+
 		// Mouse key state, used in mouse down/up events
 		enum class EMouseKey
 		{
@@ -133,7 +154,6 @@ namespace pr
 		inline EMouseKey operator | (EMouseKey lhs, EMouseKey rhs) { return EMouseKey(int(lhs) | int(rhs)); }
 		inline EMouseKey operator & (EMouseKey lhs, EMouseKey rhs) { return EMouseKey(int(lhs) & int(rhs)); }
 
-
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
@@ -144,12 +164,29 @@ namespace pr
 		enum { DefaultDialogStyle = DefaultFormStyle };
 		enum { DefaultDialogStyleEx = DefaultFormStyleEx };
 
-		enum { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_TABSTOP };
+		enum { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
 		enum { DefaultControlStyleEx = 0 };
 
 		#pragma endregion
 
 		#pragma region Support Functions
+
+		// Cast with overflow check
+		template <typename TTo, typename TFrom> TTo cast(TFrom from)
+		{
+			assert(static_cast<TFrom>(static_cast<TTo>(from)) == from && "overflow or underflow in cast");
+			return static_cast<TTo>(from);
+		}
+
+		// Convert to byte pointer
+		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
+		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
+
+		// Append bytes
+		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
+		{
+			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
+		}
 
 		// Convert an error code into an error message
 		inline std::string ErrorMessage(HRESULT result)
@@ -185,15 +222,6 @@ namespace pr
 		inline int GetXLParam(LPARAM lparam) { return int(short(LOWORD(lparam))); } //GET_X_LPARAM
 		inline int GetYLParam(LPARAM lparam) { return int(short(HIWORD(lparam))); } // GET_Y_LPARAM
 
-		// Convert to byte pointer
-		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
-		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
-
-		// Append bytes
-		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
-		{
-			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
-		}
 		#pragma endregion
 
 		#pragma region Unicode conversion
@@ -268,7 +296,9 @@ namespace pr
 			Rect(int l, int t, int r, int b)              { left = l; top = t; right = r; bottom = b; }
 			explicit Rect(Size s)                         { left = top = 0; right = s.cx; bottom = s.cy; }
 			LONG width() const                            { return right - left; }
+			void width(LONG w)                            { right = left + w; }
 			LONG height() const                           { return bottom - top; }
+			void height(LONG h)                           { bottom = top + h; }
 			Size size() const                             { return Size{width(), height()}; }
 			void size(Size sz)                            { right = left + sz.cx; bottom = top + sz.cy; }
 			Point& topleft()                              { return *reinterpret_cast<Point*>(&left); }
@@ -383,6 +413,16 @@ namespace pr
 			MonitorInfo() :MONITORINFO() { cbSize = sizeof(MONITORINFO); }
 		};
 
+		// Metrics for the non-client regions of windows
+		struct NonClientMetrics :NONCLIENTMETRICSW
+		{
+			NonClientMetrics() :NONCLIENTMETRICSW()
+			{
+				cbSize = sizeof(NONCLIENTMETRICSW);
+				Throw(::SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(NONCLIENTMETRICS), this, 0), "Failed to read non-client system metrics");
+			}
+		};
+
 		// Device context
 		struct DC
 		{
@@ -495,6 +535,59 @@ namespace pr
 			}
 		};
 
+		// Theme
+		struct Theme
+		{
+			static bool Available() { return ::IsAppThemed() != 0; }
+
+			HTHEME m_htheme;
+
+			// 'class_list' is a semi-colon separated list of class names
+			Theme(HWND hwnd, wchar_t const* class_list)
+				:m_htheme(::OpenThemeData(hwnd, class_list))
+			{}
+			~Theme()
+			{
+				::CloseThemeData(m_htheme);
+			}
+			operator HTHEME() const
+			{
+				return m_htheme;
+			}
+
+			// 'hdc' = what to draw on
+			// 'part_id','state_id' = see https://msdn.microsoft.com/en-us/library/windows/desktop/bb773210(v=vs.85).aspx
+			// 'text' = the text to draw
+			// 'count' = the number of characters in 'text' to draw, use -1 for all up to null terminator
+			// 'flags' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773199(v=vs.85).aspx
+			// 'rect' = where to draw the text (in logical units) (or where it would be drawn)
+			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773236(v=vs.85).aspx
+			void Text(HDC hdc, int part_id, int state_id, LPCWSTR text, int count, DWORD flags, RECT* rect, DTTOPTS const* opts)
+			{
+				Throw(m_htheme != nullptr, "Themes not available");
+				Throw(::DrawThemeTextEx(m_htheme, hdc, part_id, state_id, text, count, flags, rect, opts), "Draw theme text failed");
+			}
+
+			// 'hdc' = what to draw on
+			// 'part_id','state_id' = see https://msdn.microsoft.com/en-us/library/windows/desktop/bb773210(v=vs.85).aspx
+			// 'rect' = where to draw (in logical units)
+			// 'opts' = https://msdn.microsoft.com/en-us/library/windows/desktop/bb773233(v=vs.85).aspx
+			void Bkgd(HDC hdc, int part_id, int state_id, RECT const* rect, DTBGOPTS const* opts)
+			{
+				Throw(m_htheme != nullptr, "Themes not available");
+				Throw(::DrawThemeBackgroundEx(m_htheme, hdc, part_id, state_id, rect, opts), "Draw themed background failed");
+			}
+
+			// Retrieves the size of the content area for the background defined by the visual style.
+			Rect BkgdContentRect(HDC hdc, int part_id, int state_id, RECT const* bounding_rect)
+			{
+				Rect res;
+				Throw(m_htheme != nullptr, "Themes not available");
+				Throw(::GetThemeBackgroundContentRect(m_htheme, hdc, part_id, state_id, bounding_rect, &res), "Get themed background content rect failed");
+				return res;
+			}
+		};
+
 		// Basic message loop
 		struct MessageLoop
 		{
@@ -556,7 +649,7 @@ namespace pr
 		{};
 
 		// Event args used in cancellable operations
-		struct CancelEventArgs
+		struct CancelEventArgs :EmptyArgs
 		{
 			bool m_cancel;
 			CancelEventArgs(bool cancel = false)
@@ -565,7 +658,7 @@ namespace pr
 		};
 
 		// Event args for paint events
-		struct PaintEventArgs
+		struct PaintEventArgs :EmptyArgs
 		{
 			Rect m_update_rect;   // The area needing updating
 			bool m_dopaint;       // True if there is a non-zero update rectangle
@@ -578,7 +671,7 @@ namespace pr
 		};
 
 		// Event args for window sizing events
-		struct SizeEventArgs
+		struct SizeEventArgs :EmptyArgs
 		{
 			WindowPos m_pos;    // The new position/size info
 			Point     m_point;  // Convenience position value
@@ -593,7 +686,7 @@ namespace pr
 		};
 
 		// Event args for keyboard key events
-		struct KeyEventArgs
+		struct KeyEventArgs :EmptyArgs
 		{
 			UINT m_vk_key;
 			bool m_down; // True if this is a key down event, false if key up
@@ -608,7 +701,7 @@ namespace pr
 		};
 
 		// Event args for mouse button events
-		struct MouseEventArgs
+		struct MouseEventArgs :EmptyArgs
 		{
 			Point     m_point;    // The screen location of the mouse at the button event
 			EMouseKey m_button;   // The button that triggered the event
@@ -623,7 +716,7 @@ namespace pr
 		};
 
 		// Event args for mouse wheel events
-		struct MouseWheelArgs
+		struct MouseWheelArgs :EmptyArgs
 		{
 			short     m_delta;    // The amount the mouse wheel has turned
 			Point     m_point;    // The screen location of the mouse at the time of the event
@@ -636,7 +729,7 @@ namespace pr
 		};
 
 		// Event args for timer events
-		struct TimerEventArgs
+		struct TimerEventArgs :EmptyArgs
 		{
 			UINT_PTR m_event_id;
 			TimerEventArgs(UINT_PTR event_id)
@@ -645,7 +738,7 @@ namespace pr
 		};
 
 		// Event args for dropped files
-		struct DropFilesEventArgs
+		struct DropFilesEventArgs :EmptyArgs
 		{
 			HDROP               m_drop_info; // The windows drop info
 			std::vector<string> m_filepaths; // The file paths dropped
@@ -905,6 +998,7 @@ namespace pr
 		};
 		#pragma endregion
 
+		#pragma region Control
 		// Base class for all windows/controls
 		struct Control
 		{
@@ -1281,7 +1375,7 @@ namespace pr
 					}
 				case WM_INITDIALOG:
 					{
-						Attach(::GetDlgItem(hwnd, m_id));
+						if (m_id != IDC_UNUSED) Attach(::GetDlgItem(hwnd, m_id));
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
@@ -1475,6 +1569,8 @@ namespace pr
 
 			// Create constructor
 			// Use this constructor to create a new instance of a window
+			// 'hwndparent' is the hwnd of the top level window
+			// 'parent' is the control that contains this control (not necessarily the same as hwndparent)
 			Control(TCHAR const* wndclass_name
 				,TCHAR const* text
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
@@ -1513,7 +1609,7 @@ namespace pr
 			Control(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(Internal(), id, parent, name, anchor)
 			{}
-			~Control()
+			virtual ~Control()
 			{
 				Parent(nullptr);
 			}
@@ -1944,6 +2040,31 @@ namespace pr
 				// Map screen coordinates to child coordinates
 				Throw(::SetWindowPos(m_hwnd, ::GetWindow(m_hwnd, GW_HWNDPREV), l, t, -1, -1, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE), "Failed to centre window");
 			}
+
+			// Return the mouse location at the time of the last message
+			Point MousePosition() const
+			{
+				auto pos = ::GetMessagePos();
+				return Point(GetXLParam(pos), GetYLParam(pos));
+			}
+
+			// Return the key state at the time of the last message
+			EControlKey KeyState() const
+			{
+				auto state = EControlKey::None;
+				if (::GetKeyState(VK_LSHIFT  ) & 0x8000) state |= EControlKey::LShift;
+				if (::GetKeyState(VK_RSHIFT  ) & 0x8000) state |= EControlKey::RShift;
+				if (::GetKeyState(VK_LCONTROL) & 0x8000) state |= EControlKey::LCtrl;
+				if (::GetKeyState(VK_RCONTROL) & 0x8000) state |= EControlKey::RCtrl;
+				if (::GetKeyState(VK_LMENU   ) & 0x8000) state |= EControlKey::LAlt;
+				if (::GetKeyState(VK_RMENU   ) & 0x8000) state |= EControlKey::RAlt;
+				return state;
+			}
+			bool KeyState(int vk_key) const
+			{
+				return (::GetKeyState(vk_key) & 0x8000) != 0;
+			}
+
 			#pragma endregion
 
 			#pragma region Events
@@ -2074,7 +2195,9 @@ namespace pr
 
 			#pragma endregion
 		};
+		#pragma endregion
 
+		#pragma region Form
 		// Base class for an application or dialog window
 		template <typename Derived> struct Form :Control
 		{
@@ -2134,7 +2257,7 @@ namespace pr
 			// Messages processed here are the messages sent to the parent window, *not* messages for this window
 			// Only change 'result' when specifically returning a result (it defaults to S_OK)
 			// Return true to halt message processing, false to allow other controls to process the message
-			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
+			virtual bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
 				switch (message)
 				{
@@ -2281,7 +2404,7 @@ namespace pr
 			{}
 
 			// Close on destruction
-			~Form()
+			virtual ~Form()
 			{
 				Close();
 			}
@@ -2397,6 +2520,7 @@ namespace pr
 				Close(int(dialog_result));
 			}
 		};
+		#pragma endregion
 
 		#pragma region Controls
 		struct Label :Control
@@ -2452,7 +2576,7 @@ namespace pr
 		struct Button :Control
 		{
 			enum { DefW = 75, DefH = 23 };
-			enum { DefaultStyle = DefaultControlStyle | BS_PUSHBUTTON | BS_CENTER | BS_TEXT };
+			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_TEXT };
 			enum { DefaultStyleDefBtn = (DefaultStyle | BS_DEFPUSHBUTTON) & ~BS_PUSHBUTTON };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
 			static LPCTSTR WndClassName() { return _T("BUTTON"); }
@@ -2503,7 +2627,7 @@ namespace pr
 		struct CheckBox :Control
 		{
 			enum { DefW = 75, DefH = 23 };
-			enum { DefaultStyle = DefaultControlStyle | BS_AUTOCHECKBOX | BS_LEFT | BS_TEXT };
+			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | BS_AUTOCHECKBOX | BS_LEFT | BS_TEXT };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
 			static LPCTSTR WndClassName() { return _T("BUTTON"); }
 
@@ -2573,7 +2697,7 @@ namespace pr
 		struct TextBox :Control
 		{
 			enum { DefW = 80, DefH = 23 };
-			enum { DefaultStyle = DefaultControlStyle | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
+			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
 			static LPCTSTR WndClassName() { return _T("EDIT"); }
 
@@ -2690,7 +2814,7 @@ namespace pr
 		struct ComboBox :Control
 		{
 			enum { DefW = 121, DefH = 21 };
-			enum { DefaultStyle = DefaultControlStyle | CBS_DROPDOWN | CBS_AUTOHSCROLL };
+			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWN | CBS_AUTOHSCROLL };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
 			static LPCTSTR WndClassName() { return _T("COMBOBOX"); }
 

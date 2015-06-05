@@ -2,6 +2,7 @@
 #include "about.h"
 #include "modeless.h"
 //#include "graph.h"
+#include "pr/gui/wingui.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/gui/context_menu.h"
 
@@ -69,14 +70,28 @@ struct Main :Form<Main>
 			};
 		m_btn3.Click += [&](Button&,EmptyArgs const&)
 			{
-				enum class ECmd { Label };
+				enum class ECmd { Label, Label2, TextBox };
 
-				//todo
-
-				// Construct the menu
-				ContextMenu menu;
-				menu.AddItem(std::make_shared<ContextMenu::Label>(_T("&Label"), (int)ECmd::Label));
-				menu.Show<ECmd>(int(0), int(0));
+				auto pt = MousePosition();
+				if (KeyState(VK_SHIFT))
+				{
+					auto m = ::CreatePopupMenu();
+					::AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
+					::TrackPopupMenu(m, ::GetSystemMetrics(SM_MENUDROPALIGNMENT)|TPM_LEFTBUTTON, pt.x, pt.y, 0, *this, nullptr);
+				}
+				else
+				{
+					// Construct the menu
+					ContextMenu menu;
+					ContextMenu::Label     lbl1(menu, _T("&Label1"), (int)ECmd::Label);
+					ContextMenu::Separator sep (menu);
+					ContextMenu::Label     lbl2(menu, _T("&Label2"), (int)ECmd::Label2);
+					ContextMenu::TextBox   tb  (menu, _T("&Text Box"), _T("xox"), (int)ECmd::TextBox);
+					
+					ContextMenu submenu(&menu, _T("Sub Menu"));
+					ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
+					menu.Show(*this, pt.x, pt.y);
+				}
 				//ECmd cmd = (ECmd)LOWORD(res);
 				//int  idx = (int)HIWORD(res);
 				
@@ -227,6 +242,8 @@ struct Main :Form<Main>
 int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
 	pr::InitCom com;
+	pr::GdiPlus gdi;
+
 	InitCtrls();
 
 	try
