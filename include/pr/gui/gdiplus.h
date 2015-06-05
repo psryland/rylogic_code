@@ -10,6 +10,7 @@
 #include <objidl.h>
 #include <shlwapi.h>
 #include <gdiplus.h>
+#include "pr/common/to.h"
 
 #pragma comment(lib, "gdiplus.lib")
 
@@ -24,6 +25,31 @@ namespace pr
 
 		GdiPlus()  { Gdiplus::GdiplusStartup(&m_token, &m_startup_input, &m_startup_output); }
 		~GdiPlus() { Gdiplus::GdiplusShutdown(m_token); }
+	};
+
+	// Conversion
+	template <typename TFrom> struct Convert<Gdiplus::Color, TFrom>
+	{
+		static Gdiplus::Color To(COLORREF col) { Gdiplus::Color c; c.SetFromCOLORREF(col); return c; }
+	};
+
+	// To<Gdiplus::Rect>
+	template <typename TFrom> struct Convert<Gdiplus::Rect, TFrom>
+	{
+		static Gdiplus::Rect To(RECT const& r)           { return Gdiplus::Rect(r.left, r.top, r.right - r.left, r.bottom - r.top); }
+		static Gdiplus::Rect To(Gdiplus::RectF const& r) { return Gdiplus::Rect(int(r.X), int(r.Y), int(r.Width), int(r.Height)); }
+	};
+
+	// To<Gdiplus::RectF>
+	template <typename TFrom> struct Convert<Gdiplus::RectF,TFrom>
+	{
+		static Gdiplus::RectF To(RECT const& x) { return Gdiplus::RectF(float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top)); }
+	};
+
+	// To<RECT>
+	template <> struct Convert<RECT, Gdiplus::Rect>
+	{
+		static RECT To(Gdiplus::Rect const& r) { return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()}; }
 	};
 }
 

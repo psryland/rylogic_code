@@ -130,22 +130,6 @@ namespace pr
 
 	#endif
 
-	#ifdef _GDIPLUS_H
-
-	// To<Gdiplus::Rect>
-	template <typename TFrom> struct Convert<Gdiplus::Rect,TFrom>
-	{
-		static Gdiplus::Rect  To(RECT const& x) { return Gdiplus::Rect(x.left, x.top, x.right - x.left, x.bottom - x.top); }
-	};
-
-	// To<Gdiplus::RectF>
-	template <typename TFrom> struct Convert<Gdiplus::RectF,TFrom>
-	{
-		static Gdiplus::RectF To(RECT const& x) { return Gdiplus::RectF(float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top)); }
-	};
-
-	#endif
-
 	// Convert an integer to a string of binary
 	template <typename T> inline std::string ToBinary(T n)
 	{

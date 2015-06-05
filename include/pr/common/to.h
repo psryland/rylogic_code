@@ -4,10 +4,6 @@
 //***********************************************************************
 
 #pragma once
-#ifndef PR_COMMON_TO_H
-#define PR_COMMON_TO_H
-
-#include <string>
 
 namespace pr
 {
@@ -19,6 +15,15 @@ namespace pr
 	//  {
 	//     static X To(int from, int radix) { return To(static_cast<long long>(from), radix); }
 	//  };
+	//
+	// More examples:
+	//   // To<std::wstring>
+	//   template <typename TFrom> struct Convert<std::wstring,TFrom>
+	//   {
+	//       static std::wstring To(bool from)                           { return from ? L"true" : L"false"; }
+	//       static std::wstring To(char from)                           { return std::wstring(1, from); }
+	//   };
+	//
 	template <typename TTo, typename TFrom> struct Convert
 	{
 		static TTo To(TFrom const&) { static_assert(false, "No conversion from this type available"); }
@@ -39,5 +44,3 @@ namespace pr
 		return Convert<TTo,TFrom>::To(from, std::forward<Args>(args)...);
 	}
 }
-
-#endif
