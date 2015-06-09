@@ -4,12 +4,14 @@
 //*******************************************************
 
 #pragma once
+#ifndef NOGDI
 
 #include <vector>
 #include <windows.h>
+#include <gdiplus.h>
 #include <objidl.h>
 #include <shlwapi.h>
-#include <gdiplus.h>
+
 #include "pr/common/to.h"
 
 #pragma comment(lib, "gdiplus.lib")
@@ -103,3 +105,5 @@ namespace Gdiplus
 		return const_cast<Image&>(image).Save(filepath, &ImageCodec::Clsid(mime.c_str()));
 	}
 }
+
+#endif

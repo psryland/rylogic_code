@@ -126,7 +126,6 @@ void DumpCLRPragma(LPCTSTR assembly_filepath, LPCTSTR section_name)
 
 #pragma data_seg(push, clrseg, "%s")
 #pragma comment(linker, "/SECTION:%s,ER")
-
 char __ph[%d] = {0}; // The number of bytes to reserve
 #pragma data_seg(pop, clrseg)
 
@@ -417,7 +416,7 @@ Syntax: MERGEBIN [/I:assembly] [/S:sectionname assembly nativedll]
                     to a C++ app to reserve a section block large enough for the managed code.
    /B:objectfile  - Windows CE workaround, changes the attributes of the .BSS section
                     of an object file to generate a DLL that doesn't have a .bss section
-                    whos virtualsize is larger than the rawdata size.
+                    whose virtual size is larger than the rawdata size.
 
 The native DLL must have an unused section in it, into which the .NET assembly will be inserted. 
 You can do this with the following code:

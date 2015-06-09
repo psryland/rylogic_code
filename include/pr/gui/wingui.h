@@ -236,11 +236,13 @@ namespace pr
 		// Narrow
 		inline std::string Narrow(char const* from, std::size_t len = 0)
 		{
+			if (!from) return std::string();
 			if (len == 0) len = strlen(from);
 			return std::string(from, from+len);
 		}
 		inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
 		{
+			if (!from) return std::string();
 			if (len == 0) len = wcslen(from);
 			std::vector<char> buffer(len + 1);
 			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
@@ -252,11 +254,13 @@ namespace pr
 		// Widen
 		inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
 		{
+			if (!from) return std::wstring();
 			if (len == 0) len = wcslen(from);
 			return std::wstring(from, from+len);
 		}
 		inline std::wstring Widen(char const* from, std::size_t len = 0)
 		{
+			if (!from) return std::wstring();
 			if (len == 0) len = strlen(from);
 			std::vector<wchar_t> buffer(len + 1);
 			std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);

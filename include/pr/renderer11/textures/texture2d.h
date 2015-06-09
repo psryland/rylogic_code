@@ -62,6 +62,7 @@ namespace pr
 			HDC GetDC();
 			void ReleaseDC();
 
+			#ifdef _GDIPLUS_H
 			// A scoped device context to allow GDI+ edits of the texture
 			class Gfx :public Gdiplus::Graphics
 			{
@@ -72,6 +73,7 @@ namespace pr
 				Gfx(Texture2DPtr& tex) :Gdiplus::Graphics(tex->GetDC()) ,m_tex(tex) {}
 				~Gfx() { m_tex->ReleaseDC(); }
 			};
+			#endif
 
 			// Ref counting cleanup
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);
