@@ -31,6 +31,9 @@ platform_toolset  = "v120"
 # The full path to the windows sdk
 winsdk = r"C:\Program Files (x86)\Windows Kits\8.1"
 
+# The root of the .NET framework directory
+dotnet = r"C:\Windows\Microsoft.NET\Framework\v4.0.30319"
+
 # The full path to the Visual Studio install
 vs_dir = r"C:\Program Files (x86)\Microsoft Visual Studio 12.0"
 vc_env = vs_dir + r"\VC\vcvarsall.bat"

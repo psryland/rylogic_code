@@ -1,4 +1,4 @@
-import sys, os, time, shutil, glob, subprocess, re, socket, zipfile
+import sys, os, time, shutil, glob, subprocess, re, socket, zipfile, ctypes, enum
 import UserVars
 
 # Terminate the script indicating success
@@ -389,6 +389,19 @@ def ZipDirectory(zip_path, root_dir):
 			arcpath  = os.path.relpath(filepath, root_dir)
 			zipf.write(filepath, arcpath)
 	zipf.close()
+
+# Popup a message box
+class EMsgBoxBtns(enum.IntEnum):
+	Ok = 0,
+	OkCancel = 1
+	AbortRetryIgnore = 2
+	YesNoCancel = 3
+	YesNo = 4
+	RetryNo = 5
+	CancelTryAgainContinue = 6
+def MsgBox(msg:str, title:str, btns=EMsgBoxBtns.Ok):
+	ctypes.windll.user32.MessageBoxW(0, msg, title, btns
+	)
 
 # Testing
 if __name__ == "__main__":
