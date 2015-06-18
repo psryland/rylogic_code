@@ -15,7 +15,7 @@ namespace pr.util
 	/// or SHA512 in the System.Security.Cryptography namespace.</remarks>
 	public class CRC32 :HashAlgorithm
 	{
-		private const uint m_all_ones = 0xffffffff;
+		public const uint InitialValue = 0xffffffffU;
 		private static readonly CRC32 DefaultCrc;
 		private static readonly Hashtable Crc32TablesCache;
 		private readonly uint[] m_crc32_table;
@@ -53,7 +53,7 @@ namespace pr.util
 		/// <summary>Initializes an implementation of HashAlgorithm.</summary>
 		public override sealed void Initialize()
 		{
-			m_crc = m_all_ones;
+			m_crc = InitialValue;
 		}
 	
 		/// <summary>Routes data written to the object into the hash algorithm for computing the hash.</summary>
@@ -71,7 +71,7 @@ namespace pr.util
 		protected override byte[] HashFinal()
 		{
 			byte[] finalHash = new byte[4];
-			ulong finalCRC = m_crc ^ m_all_ones;
+			ulong finalCRC = m_crc ^ InitialValue;
 		
 			finalHash[0] = (byte)((finalCRC >> 0) & 0xFF);
 			finalHash[1] = (byte)((finalCRC >> 8) & 0xFF);
@@ -96,16 +96,15 @@ namespace pr.util
 		}
 	
 		/// <summary>Computes the CRC32 value for the input data using the <see cref="DefaultPolynomial"/>.</summary>
-		public static int Compute(byte[] buffer)
+		public static int Compute(byte[] buffer, uint initial_value = InitialValue)
 		{
-			DefaultCrc.Initialize();
-			return ToInt32(DefaultCrc.ComputeHash(buffer));
+			return Compute(buffer, 0, buffer.Length, initial_value);
 		}
 	
 		/// <summary>Computes the hash value for the input data using the <see cref="DefaultPolynomial"/>.</summary>
-		public static int Compute(byte[] buffer, int offset, int count)
+		public static int Compute(byte[] buffer, int offset, int count, uint initial_value = InitialValue)
 		{
-			DefaultCrc.Initialize();
+			DefaultCrc.m_crc = initial_value;
 			return ToInt32(DefaultCrc.ComputeHash(buffer, offset, count));
 		}
 	

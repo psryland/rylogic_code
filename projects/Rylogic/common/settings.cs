@@ -118,7 +118,7 @@ namespace pr.common
 		/// <summary>Read a settings value</summary>
 		protected Value get<Value>(Expression<Func<T,Value>> expression)
 		{
-			return get<Value>(Reflect<T>.MemberName(expression));
+			return get<Value>(R<T>.Name(expression));
 		}
 
 		/// <summary>Write a settings value</summary>
@@ -146,7 +146,7 @@ namespace pr.common
 		/// <summary>Write a settings value</summary>
 		protected void set<Value>(Expression<Func<T,Value>> expression, Value value)
 		{
-			set(Reflect<T>.MemberName(expression), value);
+			set(R<T>.Name(expression), value);
 		}
 
 		/// <summary>Return the settings as an xml node tree</summary>

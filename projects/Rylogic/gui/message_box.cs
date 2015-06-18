@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using pr.extn;
 using pr.maths;
@@ -20,13 +21,15 @@ namespace pr.gui
 		/// <summary>Display a modal message box</summary>
 		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
 		{
-			return new MsgBox(null, message,title, btns, icon, dflt_btn).ShowDialog();
+			using (var dlg = new MsgBox(null, message,title, btns, icon, dflt_btn))
+				return dlg.ShowDialog();
 		}
 
 		/// <summary>Display a modal message box</summary>
 		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
 		{
-			return new MsgBox(owner, message,title, btns, icon, dflt_btn).ShowDialog(owner);
+			using (var dlg = new MsgBox(owner, message,title, btns, icon, dflt_btn))
+				return dlg.ShowDialog(owner);
 		}
 
 		public MsgBox()                                                                          :this(null, string.Empty, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
@@ -41,7 +44,7 @@ namespace pr.gui
 			InitializeComponent();
 			StartPosition = FormStartPosition.CenterParent;
 			Title = title;
-			Message = message;
+			Message = Regex.Replace(message, @"[^\r]\n", "\r\n");
 			Reflow = true;
 			ReflowAspectRatio = 7f;
 

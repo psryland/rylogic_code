@@ -212,7 +212,7 @@ namespace EscapeVelocity
 			}
 			else
 			{
-				StableShellCount = rnd.NextRange(6,11); // [6,10]
+				StableShellCount = rnd.Next(6,11); // [6,10]
 
 				// The total numbers of electrons at each orbital level
 				ValenceLevels[0] = 0;
@@ -220,7 +220,7 @@ namespace EscapeVelocity
 				for (int i = 2; i != ValenceLevels.Length; ++i)
 				{
 					int v = 1 + ValenceLevels[i-1];
-					ValenceLevels[i] = (int)rnd.NextDoubleRange(1.3*v, 2.9*v);
+					ValenceLevels[i] = (int)rnd.NextDouble(1.3*v, 2.9*v);
 				}
 			}
 
@@ -243,7 +243,7 @@ namespace EscapeVelocity
 			// Pick a distance from the star, somewhere between mercury and mars
 			const double sun_to_mercury = 5.79e10;
 			const double sun_to_mars    = 2.279e11;
-			StarDistance = rnd.NextDoubleRange(sun_to_mercury, sun_to_mars);
+			StarDistance = rnd.NextDouble(sun_to_mercury, sun_to_mars);
 
 			// The acceleration due to the star's gravity at the given distance
 			m_star_gravitational_acceleration = m_gravitational_constant * StarMass / Maths.Sqr(StarDistance);

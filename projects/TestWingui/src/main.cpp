@@ -50,13 +50,13 @@ struct Main :Form<Main>
 	Modeless m_modeless;
 
 	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4 };
-	Main()
-		:Form<Main>(_T("Pauls Window"), ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl(_T("hello world"), 10, 10, 100, 16, -1, m_hwnd, this)
-		,m_btn1(_T("click me!"), 200, 130, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
-		,m_btn2(_T("show modeless"), 10, 130, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn3(_T("context menu"), 120, 130, 80, 20, IDC_BTN3, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn4(_T("progress"), 10, 30, 80, 20, IDC_BTN4, m_hwnd, this)
+	Main(                                                                                         )
+		:Form<Main>(L"Pauls Window", ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
+		,m_lbl (L"hello world"  , 10, 10, 100, 16, -1, m_hwnd, this)
+		,m_btn1(L"click me!"    , 200, 130, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
+		,m_btn2(L"show modeless", 10, 130, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn3(L"context menu" , 120, 130, 80, 20, IDC_BTN3, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn4(L"progress"     , 10, 30, 80, 20, IDC_BTN4, m_hwnd, this)
 		,m_modeless()
 	{
 		m_btn1.Click += [&](Button&,EmptyArgs const&)
@@ -83,14 +83,19 @@ struct Main :Form<Main>
 				{
 					// Construct the menu
 					ContextMenu menu;
-					ContextMenu::Label     lbl1(menu, _T("&Label1"), (int)ECmd::Label);
-					ContextMenu::Separator sep (menu);
-					ContextMenu::Label     lbl2(menu, _T("&Label2"), (int)ECmd::Label2);
-					ContextMenu::TextBox   tb  (menu, _T("&Text Box"), _T("xox"), (int)ECmd::TextBox);
+					ContextMenu::Label     lbl1(menu, L"&Label1", 0);
+					ContextMenu::Separator sep1(menu);
+					ContextMenu::Label     lbl2(menu, L"&Label2", 2);
+					ContextMenu::Label     lbl3(menu, L"&Label3", 3);
+					ContextMenu::Separator sep3(menu);
+					ContextMenu::Label     lbl4(menu, L"&Label4", 5);
+					ContextMenu::TextBox   tb  (menu, L"&Text Box1", L"xox", 6);
+					ContextMenu::Label     lbl5(menu, L"&Label5", 7);
+					ContextMenu::Label     lbl6(menu, L"&Label6", 8);
 					
-					ContextMenu submenu(&menu, _T("Sub Menu"));
-					ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
-					menu.Show(*this, pt.x, pt.y);
+					//ContextMenu submenu(&menu, _T("Sub Menu"));
+					//ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
+					menu.Show(this, pt.x, pt.y);
 				}
 				//ECmd cmd = (ECmd)LOWORD(res);
 				//int  idx = (int)HIWORD(res);
@@ -233,7 +238,7 @@ struct Main :Form<Main>
 					if (dlg->Progress(1.0f))
 						Sleep(1000);
 				};
-				ProgressDlg progress("Busy work", "workin...", task);
+				ProgressDlg progress(L"Busy work", L"workin...", task);
 				progress.ShowDialog(*this);
 			};
 	}

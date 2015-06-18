@@ -8,17 +8,18 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using pr.attrib;
+using pr.extn;
 
 namespace pr.util
 {
-	/// <summary>Type specific utility methods</summary>
-	public static class Reflect<T>
+	/// <summary>Type Reflection methods</summary>
+	public static class R<T>
 	{
 		/// <summary>
 		/// Derives the name of a property from the given lambda expression and returns it as string.
-		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		/// Example: Reflect&lt;DateTime&gt;.Name(s => s.Ticks) returns "Ticks" </summary>
 		[DebuggerStepThrough]
-		public static string MemberName<Ret>(Expression<Func<T,Ret>> expression)
+		public static string Name<Ret>(Expression<Func<T,Ret>> expression)
 		{
 			var ue = expression.Body as UnaryExpression;
 			if (ue != null && ue.NodeType == ExpressionType.Convert)
@@ -37,9 +38,9 @@ namespace pr.util
 
 		/// <summary>
 		/// Derives the name of a property or method from the given lambda expression and returns it as string.
-		/// Example: Reflect&lt;DateTime&gt;.MemberName(s => s.Ticks) returns "Ticks" </summary>
+		/// Example: Reflect&lt;DateTime&gt;.Name(s => s.Ticks) returns "Ticks" </summary>
 		[DebuggerStepThrough]
-		public static string MemberName(Expression<Action<T>> expression)
+		public static string Name(Expression<Action<T>> expression)
 		{
 			var ue = expression.Body as UnaryExpression;
 			if (ue != null && ue.NodeType == ExpressionType.Convert)
@@ -54,6 +55,48 @@ namespace pr.util
 				return me.Member.Name;
 
 			throw new NotImplementedException("Unknown expression type");
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it within brackets</summary>
+		[DebuggerStepThrough]
+		public static string NameBkt<Ret>(Expression<Func<T,Ret>> expression, string open="[", string close="]")
+		{
+			return open + R<T>.Name(expression) + close;
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it within brackets</summary>
+		[DebuggerStepThrough]
+		public static string NameBkt<Ret>(Expression<Action<T>> expression, string open="[", string close="]")
+		{
+			return open + R<T>.Name(expression) + close;
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it in the form 'TypeName.Name'</summary>
+		[DebuggerStepThrough]
+		public static string TypeName<Ret>(Expression<Func<T,Ret>> expression)
+		{
+			return typeof(T).Name + "." + Name(expression);
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it in the form 'TypeName.Name'</summary>
+		[DebuggerStepThrough]
+		public static string TypeName<Ret>(Expression<Action<T>> expression)
+		{
+			return typeof(T).Name + "." + Name(expression);
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it in the form 'TypeName.[name]'</summary>
+		[DebuggerStepThrough]
+		public static string TypeNameBkt<Ret>(Expression<Func<T,Ret>> expression, string open="[", string close="]")
+		{
+			return typeof(T).Name + "." + NameBkt(expression, open, close);
+		}
+
+		/// <summary>Derives the name of a property from the given lambda and returns it in the form 'TypeName.[name]'</summary>
+		[DebuggerStepThrough]
+		public static string TypeNameBkt<Ret>(Expression<Action<T>> expression, string open="[", string close="]")
+		{
+			return typeof(T).Name + "." + NameBkt<Ret>(expression, open, close);
 		}
 
 		/// <summary>Return the size of type 'T' as determined by the interop marshaller</summary>
@@ -177,6 +220,37 @@ namespace pr.util
 		}
 
 		#endregion
+
+		#region AssocAttribute
+
+		/// <summary>Returns the item of type 'Ret' associated with the member named 'member_name'</summary>
+		[DebuggerStepThrough]
+		public static Ret Assoc<Ret>(string member_name)
+		{
+			var attr = Attrs(member_name).FirstOrDefault(x => x is AssocAttribute && ((AssocAttribute)x).AssocItem is Ret) as AssocAttribute;
+			if (attr == null) throw new Exception("Member does not have the AssocAttribute for type {0}".Fmt(typeof(Ret).Name));
+			return (Ret)attr.AssocItem;
+		}
+
+		/// <summary>Returns the item of type 'Ret' associated with the member returned in 'expression'</summary>
+		[DebuggerStepThrough]
+		public static Ret Assoc<Ret,Res>(Expression<Func<T,Res>> expression)
+		{
+			var attr = Attrs(expression).FirstOrDefault(x => x is AssocAttribute && ((AssocAttribute)x).AssocItem is Ret) as AssocAttribute;
+			if (attr == null) throw new Exception("Member does not have the AssocAttribute for type {0}".Fmt(typeof(Ret).Name));
+			return (Ret)attr.AssocItem;
+		}
+
+		/// <summary>Returns the item of type 'Ret' associated with the member returned in 'expression'</summary>
+		[DebuggerStepThrough]
+		public static Ret Assoc<Ret>(Expression<Action<T>> expression)
+		{
+			var attr = Attrs(expression).FirstOrDefault(x => x is AssocAttribute && ((AssocAttribute)x).AssocItem is Ret) as AssocAttribute;
+			if (attr == null) throw new Exception("Member does not have the AssocAttribute for type {0}".Fmt(typeof(Ret).Name));
+			return (Ret)attr.AssocItem;
+		}
+
+		#endregion
 	}
 }
 
@@ -187,27 +261,27 @@ namespace pr.unittests
 	using util;
 	
 	[TestFixture] public class TestReflect
+	{
+		internal class Thing
 		{
-			internal class Thing
-			{
-				[Description("My name is Desc")] public void Desc() {}
-				[Desc("Short For")] public string Bob { get { return "kate"; } }
-			}
+			[Description("My name is Desc")] public void Desc() {}
+			[Desc("Short For")] public string Bob { get { return "kate"; } }
+		}
 
 		[Test] public void MemberName()
-			{
-				Assert.AreEqual("X", Reflect<Point>.MemberName(p => p.X));
-				Assert.AreEqual("Offset", Reflect<Point>.MemberName(p => p.Offset(0,0)));
-				Assert.AreEqual("BaseStream", Reflect<StreamWriter>.MemberName(s => s.BaseStream));
-			}
+		{
+			Assert.AreEqual("X", R<Point>.Name(p => p.X));
+			Assert.AreEqual("Offset", R<Point>.Name(p => p.Offset(0,0)));
+			Assert.AreEqual("BaseStream", R<StreamWriter>.Name(s => s.BaseStream));
+		}
 		[Test] public void Attrib()
-			{
-				var attr = Reflect<Thing>.Attrs(x => x.Desc());
-				Assert.AreEqual(1, attr.Length);
+		{
+			var attr = R<Thing>.Attrs(x => x.Desc());
+			Assert.AreEqual(1, attr.Length);
 			Assert.True(attr[0] is DescriptionAttribute);
 
-				attr = Reflect<Thing>.Attrs(x => x.Bob);
-				Assert.AreEqual(1, attr.Length);
+			attr = R<Thing>.Attrs(x => x.Bob);
+			Assert.AreEqual(1, attr.Length);
 			Assert.True(attr[0] is DescAttribute);
 		}
 	}

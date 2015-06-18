@@ -12,7 +12,7 @@ namespace EscapeVelocity
 		public double TimeTillNova
 		{
 			get { return m_time_till_nova; }
-			private set { m_time_till_nova = value; OnPropertyChanged(Reflect<WorldState>.MemberName(x => x.TimeTillNova)); }
+			private set { m_time_till_nova = value; OnPropertyChanged(R<WorldState>.Name(x => x.TimeTillNova)); }
 		}
 		private double m_time_till_nova;
 

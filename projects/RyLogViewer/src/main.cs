@@ -687,7 +687,7 @@ namespace RyLogViewer
 							// Otherwise, highlight only the matching parts of the line
 						else
 						{
-							using (gfx.SaveState())
+							using (gfx.StateScope())
 							{
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
@@ -765,7 +765,7 @@ namespace RyLogViewer
 						// Otherwise, highlight only the matching parts of the line
 						else
 						{
-							using (gfx.SaveState())
+							using (gfx.StateScope())
 							{
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);

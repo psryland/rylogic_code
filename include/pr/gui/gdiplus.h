@@ -53,6 +53,10 @@ namespace pr
 	{
 		static RECT To(Gdiplus::Rect const& r) { return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()}; }
 	};
+	template <> struct Convert<RECT, Gdiplus::RectF>
+	{
+		static RECT To(Gdiplus::RectF const& r) { return RECT{int(r.GetLeft()), int(r.GetTop()), int(r.GetRight()), int(r.GetBottom())}; }
+	};
 }
 
 namespace Gdiplus

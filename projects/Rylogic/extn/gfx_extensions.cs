@@ -9,7 +9,7 @@ namespace pr.extn
 	public static class GfxExtensions
 	{
 		/// <summary>Save the transform and clip state in an RAII object</summary>
-		public static Scope<GraphicsContainer> SaveState(this Graphics gfx)
+		public static Scope<GraphicsContainer> StateScope(this Graphics gfx)
 		{
 			return Scope<GraphicsContainer>.Create(gfx.BeginContainer, gfx.EndContainer);
 		}

@@ -8,7 +8,7 @@ namespace pr.util
 	public static class crt
 	{
 		/// <summary>Memory copy</summary>
-		[DllImport("msvcrt.dll")]  public static extern int memcpy(byte[] dst, byte[] src, long num);
+		[DllImport("msvcrt.dll", CallingConvention=CallingConvention.Cdecl)]  public static extern int memcpy(byte[] dst, byte[] src, long num);
 
 		/// <summary>Memory compare using implicit array lengths</summary>
 		public static int memcpy(byte[] lhs, byte[] rhs)
@@ -17,7 +17,7 @@ namespace pr.util
 		}
 
 		/// <summary>Memory compare</summary>
-		[DllImport("msvcrt.dll")]  public static extern int memcmp(byte[] b1, byte[] b2, long count);
+		[DllImport("msvcrt.dll", CallingConvention=CallingConvention.Cdecl)]  public static extern int memcmp(byte[] b1, byte[] b2, long count);
 
 		/// <summary>Memory compare using implicit array lengths</summary>
 		public static int memcmp(byte[] lhs, byte[] rhs)

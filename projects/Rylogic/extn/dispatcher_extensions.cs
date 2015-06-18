@@ -6,15 +6,15 @@ namespace pr.extn
 	public static class DispatcherExtensions
 	{
 		/// <summary>Allow a lambda to be passed to Invoke</summary>
-		public static object Invoke(this Dispatcher dis, Action action, params object[] args)
+		public static object Invoke(this Dispatcher dis, Action action)
 		{
-			return dis.Invoke(action, args);
+			return dis.Invoke(action);
 		}
 
 		/// <summary>Allow a lambda to be passed to BeginInvoke</summary>
-		public static DispatcherOperation BeginInvoke(this Dispatcher dis, Action action, params object[] args)
+		public static DispatcherOperation BeginInvoke(this Dispatcher dis, Action action)
 		{
-			return dis.BeginInvoke(action, args);
+			return dis.BeginInvoke(action);
 		}
 
 		/// <summary>BeginInvokes 'action' after 'delay'</summary>

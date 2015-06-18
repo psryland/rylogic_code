@@ -25,6 +25,9 @@
     <ClInclude Include="..\include\pr\gui\wingui.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\gui\context_menu.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\projects\TestWingui\res\resource.rc">

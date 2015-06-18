@@ -76,8 +76,9 @@ namespace las
 	struct Main;
 	struct MainGUI;
 
-	char const* AppTitle();
-	char const* AppVersion();
-	char const* AppVendor();
-	char const* AppCopyright();
+	wchar_t const* AppTitle();
+	wchar_t const* AppVersionW();
+	char const*    AppVersionA();
+	wchar_t const* AppVendor();
+	wchar_t const* AppCopyright();
 }

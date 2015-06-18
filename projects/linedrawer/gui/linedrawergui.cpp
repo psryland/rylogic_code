@@ -31,8 +31,8 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
-		:base(AppTitleA(), CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR, "ldr_main")
-		,m_status(this, IDC_STATUSBAR_MAIN, TEXT("Ready"), TEXT("status bar"))
+		:base(AppTitleW(), CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR, "ldr_main")
+		,m_status(this, IDC_STATUSBAR_MAIN, L"Ready", "status bar")
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui()
@@ -194,7 +194,7 @@ namespace ldr
 
 		// Load the files
 		for (auto const& path : drop.m_filepaths)
-			m_main->m_sources.AddFile(path.c_str());
+			m_main->m_sources.AddFile(Narrow(path).c_str());
 	}
 
 	// Handle switching to/from full screen
@@ -739,10 +739,10 @@ namespace ldr
 				m_main->ResetView(EObjectBounds::All);
 
 			// Set the window title
-			pr::string<> title;
-			title += AppTitleA();
-			title += " - ";
-			title += filepath;
+			pr::gui::string title;
+			title += AppTitleW();
+			title += L" - ";
+			title += Widen(filepath);
 			Text(title);
 
 			// Refresh
@@ -917,7 +917,7 @@ namespace ldr
 			m_status_pri.m_last_update = now;
 			m_status_pri.m_priority = e.m_priority;
 			m_status_pri.m_min_display_time_ms = e.m_min_display_time_ms;
-			m_status.Text(0, e.m_msg.c_str());
+			m_status.Text(0, Widen(e.m_msg));
 			m_status.Font(e.m_bold ? m_status_pri.m_bold_font : m_status_pri.m_normal_font);
 		}
 	}

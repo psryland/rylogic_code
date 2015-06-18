@@ -32,9 +32,9 @@ namespace pr
 				bool         m_has_title;
 				bool         m_has_desc;
 
-				State(TCHAR const* title = nullptr, TCHAR const* desc = nullptr, float pc = 0.0f)
-					:m_title(title ? Widen(title) : L"")
-					,m_desc(desc ? Widen(desc) : L"")
+				State(wchar_t const* title = nullptr, wchar_t const* desc = nullptr, float pc = 0.0f)
+					:m_title(title ? title : L"")
+					,m_desc(desc ? desc : L"")
 					,m_pc(pc)
 					,m_has_title(title != nullptr)
 					,m_has_desc(desc != nullptr)
@@ -63,12 +63,12 @@ namespace pr
 			std::thread             m_worker;    // The worker thread
 
 			// A dialog layout description used for this indirect dialog
-			DlgTemplate Template(TCHAR const* title, TCHAR const* desc) const
+			DlgTemplate Template(wchar_t const* title, wchar_t const* desc) const
 			{
 				DlgTemplate templ(title, 0, 0, 240, 100, DefaultFormStyle, DefaultFormStyleEx);
-				templ.Add(IDC_TEXT_DESC   , Label::WndClassName()      , desc         , 0, 0, 0, 0);
-				templ.Add(IDC_PROGRESS_BAR, ProgressBar::WndClassName(), nullptr      , 0, 0, 0, 0);
-				templ.Add(IDCANCEL        , Button::WndClassName()     , _T("Cancel") , 0, 0, 0, 0, Button::DefaultStyle|BS_DEFPUSHBUTTON);
+				templ.Add(IDC_TEXT_DESC   , Label::WndClassName()      , desc      , 0, 0, 0, 0);
+				templ.Add(IDC_PROGRESS_BAR, ProgressBar::WndClassName(), nullptr   , 0, 0, 0, 0);
+				templ.Add(IDCANCEL        , Button::WndClassName()     , L"Cancel" , 0, 0, 0, 0, Button::DefaultStyle|BS_DEFPUSHBUTTON);
 				return templ;
 			}
 
@@ -227,7 +227,7 @@ namespace pr
 
 			// 'func' should have 'ProgressDlg*' as the first parameter
 			template <typename Func, typename... Args>
-			ProgressDlg(TCHAR const* title, TCHAR const* desc, Func&& func, Args&&... args)
+			ProgressDlg(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)
 				:base(Template(title, desc), "progress_dlg")
 				,m_state(title, desc, 0.0f)
 				,m_done(false)
@@ -301,13 +301,13 @@ namespace pr
 			}
 
 			// Called by the worker thread to update the UI
-			bool Progress(float pc = -1.0f, char const* desc = nullptr, char const* title = nullptr)
+			bool Progress(float pc = -1.0f, wchar_t const* desc = nullptr, wchar_t const* title = nullptr)
 			{
 				Lock lock(m_mutex);
 				m_state = State(title, desc, pc);
 
 				if (IsWindow(m_hwnd))
-					PostMessageA(m_hwnd, WM_PROGRESS_UPDATE, 0, 0);
+					PostMessageW(m_hwnd, WM_PROGRESS_UPDATE, 0, 0);
 
 				return !m_cancel;
 			}

@@ -5983,7 +5983,7 @@ namespace pr.unittests
 
 				// Check that changes via individual column updates also invalidate the cache
 				obj2.Data = "ChangedAgain";
-				table.Update(Reflect<DomType5>.MemberName(x => x.Data), obj2.Data, obj2.PK);
+				table.Update(R<DomType5>.Name(x => x.Data), obj2.Data, obj2.PK);
 				Assert.False(table.Cache.IsCached(obj2.PK));
 				var o2_e = table.Get<DomType5>(2);
 				Assert.True(table.Cache.IsCached(obj2.PK));

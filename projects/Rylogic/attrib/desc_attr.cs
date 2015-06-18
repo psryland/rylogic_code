@@ -76,13 +76,13 @@ namespace pr.attrib
 		/// <summary>The description attribute associated with a property or field</summary>
 		public static string Desc<T,Ret>(Type type, Expression<Func<T,Ret>> expression)
 		{
-			return Desc(type, Reflect<T>.MemberName(expression));
+			return Desc(type, R<T>.Name(expression));
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
 		public static string Desc<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
 		{
-			return Desc(obj.GetType(), Reflect<T>.MemberName(expression));
+			return Desc(obj.GetType(), R<T>.Name(expression));
 		}
 
 		/// <summary>Return an array of the description strings associated with an enum type</summary>
@@ -205,10 +205,10 @@ namespace pr.unittests
 			{
 				var c = new C();
 				Assert.AreEqual("Field Desc" ,c.Desc(x => x.m_field));
-				Assert.AreEqual("Field Desc" ,Reflect<C>.Desc(x => x.m_field));
-				Assert.AreEqual("Prop Desc"  ,Reflect<C>.Desc(x => x.Prop));
+				Assert.AreEqual("Field Desc" ,R<C>.Desc(x => x.m_field));
+				Assert.AreEqual("Prop Desc"  ,R<C>.Desc(x => x.Prop));
 				Assert.AreEqual(null ,c.Desc(x => x.NoAttr));
-				Assert.AreEqual(null ,Reflect<C>.Desc(x => x.NoAttr));
+				Assert.AreEqual(null ,R<C>.Desc(x => x.NoAttr));
 			}
 		[Test] public void DescAttr3()
 			{

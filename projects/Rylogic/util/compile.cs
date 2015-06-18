@@ -116,10 +116,12 @@ namespace pr.unittests
 	{
 		[Test] public void Test0()
 		{
+			var rylogic_dll = Assembly.GetExecutingAssembly().Location;;
+
 			var source = @"
 			//Assembly: System.dll
 			//Assembly: System.Windows.Forms.dll
-			//Assembly: P:\lib\anycpu\debug\rylogic.dll
+			//Assembly: "+rylogic_dll+@"
 
 			using System.Windows.Forms;
 			using pr.maths;

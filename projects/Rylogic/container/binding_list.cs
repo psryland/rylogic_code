@@ -1,17 +1,20 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text;
+using pr.common;
 using pr.extn;
 using pr.util;
 
 namespace pr.container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingListEx<T> :System.ComponentModel.BindingList<T>
+	[DataContract] public class BindingListEx<T> :BindingList<T>
 	{
 		public BindingListEx() :base()
 		{
@@ -35,6 +38,11 @@ namespace pr.container
 		}
 		private void Init()
 		{
+			IsSorted = false;
+			SupportsSorting = false;
+			SortDirection = ListSortDirection.Ascending;
+			SortComparer = Comparer.DefaultInvariant;
+
 			// ResetBindings and ResetItem aren't overridable.
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
@@ -85,7 +93,8 @@ namespace pr.container
 
 			// Reset event is raised from attached handler
 			base.ClearItems();
-
+			IsSorted = true;
+	
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Clear, -1, default(T)));
 		}
@@ -109,7 +118,8 @@ namespace pr.container
 			// that is bound to a combo box or list box. It happens when the list goes to/from empty
 			// and is just shoddiness in the windows controls.
 			base.InsertItem(index, item);
-
+			IsSorted = false;
+	
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
 		}
@@ -125,9 +135,10 @@ namespace pr.container
 				if (args.Cancel)
 					return;
 			}
-			
-			base.RemoveItem(index);
 
+			base.RemoveItem(index);
+			IsSorted = false;
+	
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemRemoved, -1, item));
 		}
@@ -153,6 +164,7 @@ namespace pr.container
 			}
 
 			base.SetItem(index, item);
+			IsSorted = false;
 
 			if (RaiseListChangedEvents)
 				ItemChanged.Raise(this, new ItemChgEventArgs<T>(index, old, item));
@@ -163,8 +175,39 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
 		}
 
+		#region Sorting
+
+		/// <summary>The comparer used for sorting</summary>
+		public IComparer SortComparer
+		{
+			get { return m_impl_cmp; }
+			set
+			{
+				if (m_impl_cmp == value) return;
+				m_impl_cmp = value;
+				SupportsSorting = m_impl_cmp != null;
+			}
+		}
+		private IComparer m_impl_cmp;
+
+		/// <summary>True if the list supports sorting; otherwise, false. The default is false.</summary>
+		private bool SupportsSorting { get; set; }
+		protected override bool SupportsSortingCore { get { return SupportsSorting; } }
+
+		/// <summary>Get/Set the direction the list is sorted. The default is ListSortDirection.Ascending.</summary>
+		public ListSortDirection SortDirection { get; set; }
+		protected override ListSortDirection SortDirectionCore { get { return SortDirection; } }
+
+		/// <summary>Get/Set the property descriptor that is used for sorting the list.</summary>
+		public PropertyDescriptor SortProperty { get; set; }
+		protected override PropertyDescriptor SortPropertyCore { get { return SortProperty; } }
+
+		/// <summary>true if the list is sorted; otherwise, false. The default is false.</summary>
+		public bool IsSorted { get; private set; }
+		protected override bool IsSortedCore { get { return IsSorted; } }
+
 		/// <summary>Reorders the list</summary>
-		protected override void ApplySortCore(System.ComponentModel.PropertyDescriptor prop, System.ComponentModel.ListSortDirection direction)
+		protected override void ApplySortCore(PropertyDescriptor prop, ListSortDirection direction)
 		{
 			if (RaiseListChangedEvents)
 			{
@@ -173,12 +216,33 @@ namespace pr.container
 				if (args.Cancel)
 					return;
 			}
-			
-			base.ApplySortCore(prop, direction);
+
+			using (SuspendEvents())
+			{
+				var sign = direction == ListSortDirection.Ascending ? +1 : -1;
+				var cmp = Cmp<T>.From((lhs,rhs) =>
+					{
+						var l = prop.GetValue(lhs);
+						var r = prop.GetValue(rhs);
+						return sign * SortComparer.Compare(l,r);
+					});
+				this.QuickSort(cmp);
+
+				SortDirection = direction;
+				IsSorted = true;
+			}
 
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reordered, -1, default(T)));
 		}
+
+		/// <summary>Removes any sort applied with ApplySortCore()</summary>
+		protected override void RemoveSortCore()
+		{
+			IsSorted = false;
+		}
+
+		#endregion
 
 		/// <summary>Notify observers of the entire list changing</summary>
 		public new void ResetBindings()

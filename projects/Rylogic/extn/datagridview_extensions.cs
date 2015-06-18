@@ -244,6 +244,39 @@ namespace pr.extn
 			PasteReplace(sender, e);
 		}
 
+		/// <summary>
+		/// Handle column sorting for grids with data sources that don't support sorting by default.
+		/// 'handle_sort' will be called after the column header glyph has changed.
+		/// *WARNING*: 'handle_sort' cannot be removed so only call once and be careful with reference lifetimes</summary>
+		public static void SupportSorting(this DataGridView grid, EventHandler<DGVSortEventArgs> handle_sort)
+		{
+			// TODO, using reflection, you could search the invocation list of ColumnHeaderMouseClick for
+			// DGVSortDelegate (subclassed from Delegate) and remove it if 'handle_sort' is null.
+			// DGVSortDelegate could also contain the reference to 'handle_sort'
+
+			grid.ColumnHeaderMouseClick += (s,a) =>
+				{
+					var dgv = s.As<DataGridView>();
+					if (a.Button == MouseButtons.Left && Control.ModifierKeys == Keys.None)
+					{
+						// Reset the sort glyph for the other columns
+						foreach (var c in dgv.Columns.Cast<DataGridViewColumn>())
+						{
+							if (c.Index == a.ColumnIndex) continue;
+							c.HeaderCell.SortGlyphDirection = SortOrder.None;
+						}
+
+						// Set the glyph on the selected column
+						var col = dgv.Columns[a.ColumnIndex];
+						var hdr = col.HeaderCell;
+						hdr.SortGlyphDirection = Enum<SortOrder>.Cycle(hdr.SortGlyphDirection);
+
+						// Apply the sort
+						handle_sort.Raise(dgv, new DGVSortEventArgs(a.ColumnIndex, hdr.SortGlyphDirection));
+					}
+				};
+		}
+
 		/// <summary>Display a context menu for showing/hiding columns in the grid (at 'location' relative to the grid).</summary>
 		public static void ColumnVisibilityContextMenu(this DataGridView grid, Point location, Action<DataGridViewColumn> on_vis_changed = null)
 		{
@@ -751,5 +784,21 @@ namespace pr.extn
 	public interface IDGVVirtualDataSource
 	{
 		void DGVCellValueNeeded(object sender, DataGridViewCellValueEventArgs args);
+	}
+
+	/// <summary>Event args for sorting a DGV using the DataGridViewExtensions</summary>
+	public class DGVSortEventArgs :EventArgs
+	{
+		public DGVSortEventArgs(int column_index, SortOrder direction)
+		{
+			ColumnIndex = column_index;
+			Direction  = direction;
+		}
+
+		/// <summary>The column to sort</summary>
+		public int ColumnIndex { get; private set; }
+
+		/// <summary>The direction to sort it in</summary>
+		public SortOrder Direction { get; private set; }
 	}
 }

@@ -47,6 +47,19 @@ namespace pr.extn
 			using (var handle = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
 				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
 		}
+
+		/// <summary>Return the checksum of this array of bytes</summary>
+		public static int Crc32(this byte[] arr, uint initial_value = 0xFFFFFFFF)
+		{
+			return pr.util.CRC32.Compute(arr, initial_value);
+		}
+
+		/// <summary>Return the MD5 hash of this array of bytes. The hash is a 16byte array</summary>
+		public static byte[] Md5(this byte[] arr)
+		{
+			var alg = System.Security.Cryptography.MD5.Create();
+			return alg.ComputeHash(arr);
+		}
 	}
 }
 

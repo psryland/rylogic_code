@@ -1719,7 +1719,7 @@ namespace pr
 		}
 
 		// Output info about a windows message
-		inline char const* DebugMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+		inline char const* DebugMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, char const* newline = "\r\n")
 		{
 			INT wParamLo = LOWORD(wParam);
 			INT wParamHi = HIWORD(wParam);
@@ -1734,13 +1734,13 @@ namespace pr
 			switch (uMsg)
 			{
 			default:
-				return fmt("%s %s wParam: %x(%x,%x)  lParam: %x(%x,%x)"
+				return fmt("%s %s wParam: %x(%x,%x)  lParam: %x(%x,%x)%s"
 					,hdr ,hwnd
 					,wParam ,wParamHi ,wParamLo
 					,lParam ,lParamHi ,lParamLo
-					);
+					,newline);
 			case WM_LBUTTONDOWN:
-				return fmt("%s button state = %s%s%s%s%s%s%s  x,y=(%d,%d)"
+				return fmt("%s button state = %s%s%s%s%s%s%s  x,y=(%d,%d)%s"
 					,hdr
 					,(wParam&MK_CONTROL?"|Ctrl":"")
 					,(wParam&MK_LBUTTON?"|LBtn":"")
@@ -1750,33 +1750,33 @@ namespace pr
 					,(wParam&MK_XBUTTON1?"|XBtn1":"")
 					,(wParam&MK_XBUTTON2?"|XBtn2":"")
 					,lParamLo ,lParamHi
-					);
+					,newline);
 			case WM_ACTIVATEAPP:
-				return fmt("%s %s Other Thread: %p"
+				return fmt("%s %s Other Thread: %p%s"
 					,hdr
 					,(wParam?"ACTIVE":"INACTIVE")
 					,lParam 
-					);
+					,newline);
 			case WM_ACTIVATE:
-				return fmt("%s %s Other Window: %p"
+				return fmt("%s %s Other Window: %p%s"
 					,hdr
 					,(LOWORD(wParam)==WA_ACTIVE?"ACTIVE":LOWORD(wParam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE")
 					,lParam 
-					);
+					,newline);
 			case WM_NCACTIVATE:
-				return fmt("%s %s lParam:%x(%x,%x)"
+				return fmt("%s %s lParam:%x(%x,%x)%s"
 					,hdr
 					,(wParam?"ACTIVE":"INACTIVE")
 					,lParam ,lParamHi ,lParamLo
-					);
+					,newline);
 			case WM_MOUSEACTIVATE:
-				return fmt("%s top level parent window = %p  lParam: %x(%x,%x)"
+				return fmt("%s top level parent window = %p  lParam: %x(%x,%x)%s"
 					,hdr
 					,wParam
 					,lParam ,lParamHi ,lParamLo
-					);
+					,newline);
 			case WM_SHOWWINDOW:
-				return fmt("%s %s %s"
+				return fmt("%s %s %s%s"
 					,hdr
 					,(wParam?"VISIBLE":"HIDDEN")
 					,(lParam==SW_OTHERUNZOOM?"OtherUnzoom":
@@ -1784,12 +1784,12 @@ namespace pr
 					  lParam==SW_OTHERZOOM?"OtherZoom":
 					  lParam==SW_PARENTOPENING?"ParentOpening":
 					  "ShowWindow called")
-					);
+					,newline);
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
 				{
 					auto& wp = *reinterpret_cast<WINDOWPOS*>(lParam);
-					return fmt("%s x,y=(%d,%d) size=(%d,%d) after=%p flags=%s%s%s%s%s%s%s%s%s%s%s%s%s"
+					return fmt("%s x,y=(%d,%d) size=(%d,%d) after=%p flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 						,hdr
 						,wp.x ,wp.y
 						,wp.cx ,wp.cy
@@ -1807,13 +1807,13 @@ namespace pr
 						,(wp.flags&SWP_NOSIZE        ?"|SWP_NOSIZE"        :"")
 						,(wp.flags&SWP_NOZORDER      ?"|SWP_NOZORDER"      :"")
 						,(wp.flags&SWP_SHOWWINDOW    ?"|SWP_SHOWWINDOW"    :"")
-						);
+						,newline);
 				}
 			case WM_KILLFOCUS:
-				return fmt("%s Focused Window: %p"
+				return fmt("%s Focused Window: %p%s"
 					,hdr
 					,wParam
-					);
+					,newline);
 			case WM_NOTIFY:
 				{
 					char const* notify_type = "unknown";
@@ -1855,31 +1855,31 @@ namespace pr
 					if (nmhdr->code == LVN_HOTTRACK)
 						return "";
 
-					return fmt("%s SourceCtrlId = %d  from_hWnd: %p  from_id: %d  code: %d:%s"
+					return fmt("%s SourceCtrlId = %d  from_hWnd: %p  from_id: %d  code: %d:%s%s"
 						,hdr
 						,wParam
 						,nmhdr->hwndFrom
 						,nmhdr->idFrom
 						,nmhdr->code
 						,notify_type
-						);
+						,newline);
 				}
 			case WM_SYSKEYDOWN:
-				return fmt("%s vk_key = %d (%s)  Repeats: %d  lParam: %d"
+				return fmt("%s vk_key = %d (%s)  Repeats: %d  lParam: %d%s"
 					,hdr
 					,wParam ,VKtoString((int)wParam)
 					,lParamLo
 					,lParam
-					);
+					,newline);
 			case WM_PAINT:
 				{
 					RECT r;
 					::GetUpdateRect(hWnd, &r, FALSE);
-					return fmt("%s update=(%d,%d) size=(%d,%d)  HDC: %p"
+					return fmt("%s update=(%d,%d) size=(%d,%d)  HDC: %p%s"
 						,hdr
 						,r.left ,r.top ,r.right - r.left ,r.bottom - r.top
 						,wParam
-						);
+						,newline);
 				}
 			case WM_NCHITTEST:
 			case WM_SETCURSOR:
@@ -1900,6 +1900,13 @@ namespace pr
 			case WM_NULL:
 				return "";//ignore
 			}
+		}
+
+		// Display a text description of a windows message if it passes 'pred'
+		template <typename Pred> inline char const* DebugMessage(Pred pred, HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, char const* newline = "\r\n")
+		{
+			if (!pred(hwnd, msg, wparam, lparam)) return "";
+			return DebugMessage(hwnd, msg, wparam, lparam, newline);
 		}
 
 		// Displays a text description of a windows message.

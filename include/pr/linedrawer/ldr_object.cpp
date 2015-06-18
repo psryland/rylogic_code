@@ -2047,14 +2047,14 @@ namespace pr
 						last_update = now;
 						char const* type = obj ? ELdrObject::ToString(obj->m_type) : "";
 						std::string name = obj ? obj->m_name : "";
-						return dlg->Progress(-1.0f, pr::FmtS("Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
+						return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
 					});
 			};
 
 			if (async)
 			{
 				// Run the adding process as a background task while displaying a progress dialog
-				pr::gui::ProgressDlg dlg("Processing script", "", ParseObjects, std::ref(out));
+				pr::gui::ProgressDlg dlg(L"Processing script", L"", ParseObjects, std::ref(out));
 				dlg.ShowDialog(::GetActiveWindow(), 100);
 			}
 			else

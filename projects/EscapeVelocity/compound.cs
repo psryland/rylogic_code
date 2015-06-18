@@ -145,7 +145,7 @@ namespace EscapeVelocity
 			// the molecule to be less ionic. The result should be the vector sum of each
 			// bond but there isn't a 3D model of the molecule.
 			// Use the ionicity of the most dominant bond
-			Ionicity = Bonds[EPerm.AB].Ionicity * rnd.NextDoubleRange(0.7, 1.0);
+			Ionicity = Bonds[EPerm.AB].Ionicity * rnd.NextDouble(0.7, 1.0);
 
 			// Determine the density values.
 			CalculateDensity(consts, rnd);
@@ -323,7 +323,7 @@ namespace EscapeVelocity
 			// The liquid_density0 value can only be lower than the solid density when
 			// the Compound is strongly ionic such that it forms a crystals
 			var ionicity_solid_density_scaler = 0.1 * Maths.Max(0, norm_ionicity - 0.75);
-			m_liquid_density0 = m_solid_density * rnd.NextDoubleRange(1.0,1.0-ionicity_solid_density_scaler);
+			m_liquid_density0 = m_solid_density * rnd.NextDouble(1.0,1.0-ionicity_solid_density_scaler);
 			m_liquid_density1 = m_liquid_density0 * rnd.NextDoubleCentred(0.8,0.0); // at boiling point, density is roughly 20% less
 			
 		}

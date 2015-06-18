@@ -214,17 +214,17 @@ namespace TestCS
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Name",
-					DataPropertyName = Reflect<Record>.MemberName(x => x.Name),
+					DataPropertyName = R<Record>.Name(x => x.Name),
 				});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Value",
-					DataPropertyName = Reflect<Record>.MemberName(x => x.Value),
+					DataPropertyName = R<Record>.Name(x => x.Value),
 				});
 			m_grid.Columns.Add(new DataGridViewComboBoxColumn
 				{
 					Name = "Value",
-					DataPropertyName = Reflect<Record>.MemberName(x => x.Option),
+					DataPropertyName = R<Record>.Name(x => x.Option),
 					FlatStyle = System.Windows.Forms.FlatStyle.Flat,
 					DataSource = Enum<EOptions>.Values,
 				});

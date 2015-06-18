@@ -90,6 +90,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\pr\gui\context_menu.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\projects\TestWingui\res\resource.h" />
     <ClInclude Include="..\projects\TestWingui\src\about.h" />

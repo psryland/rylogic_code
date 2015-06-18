@@ -49,7 +49,7 @@ namespace pr
 			// Create the main application window.
 			// This class is subclassed from pr::gui::Form which actually does the 'CreateWindowEx' call in
 			// it's constructor. This means the HWND is valid after the base class has been constructed.
-			MainGUI(TCHAR const* title
+			MainGUI(wchar_t const* title
 				,int x = CW_USEDEFAULT ,int y = CW_USEDEFAULT
 				,int w = CW_USEDEFAULT ,int h = CW_USEDEFAULT
 				,DWORD style = DefaultFormStyle

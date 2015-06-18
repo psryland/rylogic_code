@@ -1000,9 +1000,9 @@ namespace pr.crypt
 		}
 
 		/// <summary>
-		/// Expand a user-supplied key into a session key.
-		///  key        - The 128/192/256-bit user-key to use.</para>
-		///  key_length - 16, 24, or 32 bytes</para>
+		/// Expand a user-supplied key into a session key.<para/>
+		///  key        - The 128/192/256-bit user-key to use.<para/>
+		///  key_length - 16, 24, or 32 bytes<para/>
 		///  chain      - initial chain block for CBC and CFB modes.</summary>
 		public Rijndael(byte[] key, int key_length = 0)
 		{

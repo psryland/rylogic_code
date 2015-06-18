@@ -219,8 +219,12 @@ namespace pr
 		}
 
 		// Replace macros from windowsx.h
-		inline int GetXLParam(LPARAM lparam) { return int(short(LOWORD(lparam))); } //GET_X_LPARAM
+		inline int GetXLParam(LPARAM lparam) { return int(short(LOWORD(lparam))); } // GET_X_LPARAM
 		inline int GetYLParam(LPARAM lparam) { return int(short(HIWORD(lparam))); } // GET_Y_LPARAM
+		inline LPARAM MakeLParam(int x, int y) { return LPARAM(short(x) | short(y) << 16); }
+
+		// Replace the MAKEINTATOM macro
+		inline wchar_t const* MakeIntAtomW(ATOM atom) { return reinterpret_cast<wchar_t const*>(ULONG_PTR(WORD(atom))); } // MAKEINTATOM
 
 		#pragma endregion
 
@@ -248,6 +252,8 @@ namespace pr
 			std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
 			return std::string(&buffer[0], &buffer[len]);
 		}
+		inline std::string Narrow(std::string const& from)  { return from; }
+		inline std::string Narrow(std::wstring const& from) { return Narrow(from.c_str(), from.size()); }
 		template <std::size_t Len> inline std::string Narrow(char const (&from)[Len])    { return Narrow(from, Len); }
 		template <std::size_t Len> inline std::string Narrow(wchar_t const (&from)[Len]) { return Narrow(from, Len); }
 
@@ -266,6 +272,8 @@ namespace pr
 			std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
 			return std::wstring(&buffer[0], &buffer[len]);
 		}
+		inline std::wstring Widen(std::wstring const& from) { return from; }
+		inline std::wstring Widen(std::string const& from)  { return Widen(from.c_str(), from.size()); }
 		template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
 		template <std::size_t Len> inline std::wstring Widen (char    const (&from)[Len]) { return Widen(from, Len); }
 
@@ -274,13 +282,14 @@ namespace pr
 		#pragma region Support structures
 
 		// String
-		using string = std::basic_string<TCHAR>;
+		using string = std::wstring;
 
 		// Point
 		struct Point :POINT
 		{
 			Point() :POINT() {}
 			Point(long x_, long y_) { x = x_; y = y_; }
+			explicit Point(SIZE sz) { x = sz.cx; y = sz.cy; }
 		};
 
 		// Size
@@ -288,6 +297,7 @@ namespace pr
 		{
 			Size() :SIZE() {}
 			Size(long sx, long sy) { cx = sx; cy = sy; }
+			explicit Size(POINT pt) { cx = pt.x; cy = pt.y; }
 			operator Rect() const;
 		};
 
@@ -299,24 +309,31 @@ namespace pr
 			Rect(POINT const& pt, SIZE const& sz) :RECT() { left = pt.x; top = pt.y; right = pt.x + sz.cx; bottom = pt.y + sz.cy; }
 			Rect(int l, int t, int r, int b)              { left = l; top = t; right = r; bottom = b; }
 			explicit Rect(Size s)                         { left = top = 0; right = s.cx; bottom = s.cy; }
-			LONG width() const                            { return right - left; }
-			void width(LONG w)                            { right = left + w; }
-			LONG height() const                           { return bottom - top; }
-			void height(LONG h)                           { bottom = top + h; }
+			long width() const                            { return right - left; }
+			void width(long w)                            { right = left + w; }
+			long height() const                           { return bottom - top; }
+			void height(long h)                           { bottom = top + h; }
 			Size size() const                             { return Size{width(), height()}; }
 			void size(Size sz)                            { right = left + sz.cx; bottom = top + sz.cy; }
+			Point centre() const                          { return Point((left + right) / 2, (top + bottom) / 2); }
+			void centre(Point pt)                         { long w = width(), h = height(); left = pt.x-w/2; right = left+w; top = pt.y-h/2; bottom = top+h; }
 			Point& topleft()                              { return *reinterpret_cast<Point*>(&left); }
 			Point& bottomright()                          { return *reinterpret_cast<Point*>(&right); }
 
 			// This functions return false if the result is a zero rect (that's why I'm not using Throw())
 			// The returned rect is the the bounding box of the geometric operation (note how that effects subtract)
-			bool Contains(Point const& pt) const               { return pt.x >= left && pt.x < right && pt.y >= top && pt.y < bottom; }
-			Rect Offset(int dx, int dy) const                  { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
-			Rect Inflate(int dx, int dy) const                 { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
-			Rect Inflate(int dl, int dt, int dr, int db) const { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
-			Rect Intersect(Rect const& rhs) const              { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
-			Rect Union(Rect const& rhs) const                  { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
-			Rect Subtract(Rect const& rhs) const               { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
+			bool Contains(Point const& pt, bool incl = false) const
+			{
+				return incl
+					? pt.x >= left && pt.x <= right && pt.y >= top && pt.y <= bottom
+					: pt.x >= left && pt.x <  right && pt.y >= top && pt.y <  bottom;
+			}
+			Rect Offset(int dx, int dy) const                       { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
+			Rect Inflate(int dx, int dy) const                      { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
+			Rect Inflate(int dl, int dt, int dr, int db) const      { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
+			Rect Intersect(Rect const& rhs) const                   { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
+			Rect Union(Rect const& rhs) const                       { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
+			Rect Subtract(Rect const& rhs) const                    { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
 			Rect NormalizeRect() const
 			{
 				auto r = *this;
@@ -325,11 +342,13 @@ namespace pr
 				return r;
 			}
 
-			operator Size() const                { return size(); }
+			operator Size() const { return size(); }
 		};
 
 		inline Point operator + (Point p, Size s) { return Point(p.x + s.cx, p.y + s.cy); }
+		inline Size  operator + (Size l, Size r) { return Size(l.cx + r.cx, l.cy + r.cy); }
 		inline Size  operator - (Point l, Point r) { return Size(l.x + r.x, l.y - r.y); }
+		inline Point operator - (Point l, Size r) { return Point(l.x - r.cx, l.y - r.cy); }
 		inline bool  operator == (Point const& l, Point const& r) { return l.x == r.x && l.y == r.y; }
 		inline bool  operator != (Point const& l, Point const& r) { return !(l == r); }
 		inline bool  operator == (Size const& l, Size const& r) { return l.cx == r.cx && l.cy == r.cy; }
@@ -474,16 +493,16 @@ namespace pr
 			bool m_owned;
 			Font() :m_obj((HFONT)GetStockObject(DEFAULT_GUI_FONT)) ,m_owned(false) {}
 			Font(HFONT obj, bool owned = true) :m_obj(obj) ,m_owned(owned) {}
-			Font(int nPointSize, LPCTSTR lpszFaceName, HDC hdc = nullptr, bool bBold = false, bool bItalic = false)
+			Font(int nPointSize, wchar_t const* lpszFaceName, HDC hdc = nullptr, bool bBold = false, bool bItalic = false)
 			{
 				ClientDC clientdc(nullptr);
 				auto hdc_ = hdc ? hdc : clientdc.m_hdc;
 
-				auto lf = LOGFONT{};
+				auto lf = LOGFONTW{};
 				lf.lfCharSet = DEFAULT_CHARSET;
 				lf.lfWeight = bBold ? FW_BOLD : FW_NORMAL;
 				lf.lfItalic = BYTE(bItalic ? TRUE : FALSE);
-				::_tcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), lpszFaceName, _TRUNCATE);
+				::wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), lpszFaceName, _TRUNCATE);
 
 				// convert nPointSize to logical units based on hDC
 				auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), nPointSize, 720)); // 72 points/inch, 10 decipoints/point
@@ -492,7 +511,7 @@ namespace pr
 				::DPtoLP(hdc_, &ptOrg, 1);
 				lf.lfHeight = -abs(pt.y - ptOrg.y);
 		
-				m_obj = ::CreateFontIndirect(&lf);
+				m_obj = ::CreateFontIndirectW(&lf);
 				m_owned = true;
 			}
 			~Font() { if (m_owned) ::DeleteObject(m_obj); }
@@ -533,10 +552,34 @@ namespace pr
 		};
 		struct MenuItemInfo :MENUITEMINFO
 		{
-			MenuItemInfo() :MENUITEMINFO()
+			MenuItemInfo()
+				:MENUITEMINFO()
 			{
 				cbSize = sizeof(MENUITEMINFO);
 			}
+			MenuItemInfo(MENUITEMINFO const& mii)
+				:MENUITEMINFO(mii)
+			{}
+		};
+
+		// TrackMouseEvent
+		struct TrackMouseEvent :TRACKMOUSEEVENT
+		{
+			TrackMouseEvent()
+				:TRACKMOUSEEVENT()
+			{
+				cbSize = sizeof(TRACKMOUSEEVENT);
+			}
+			TrackMouseEvent(DWORD flags, HWND wnd_to_track, DWORD hovertime_ms = HOVER_DEFAULT)
+				:TrackMouseEvent()
+			{
+				dwFlags     = flags;
+				hwndTrack   = wnd_to_track;
+				dwHoverTime = hovertime_ms;
+			}
+			TrackMouseEvent(TRACKMOUSEEVENT tme)
+				:TRACKMOUSEEVENT(tme)
+			{}
 		};
 
 		// Theme
@@ -815,6 +858,7 @@ namespace pr
 		struct ApplicationMainWindowHandle
 		{
 			operator HWND() const                           { return reinterpret_cast<HWND>(~0ULL); }
+			operator Control*() const                       { return reinterpret_cast<Control*>(~0ULL); }
 			template <typename D> operator Form<D>*() const { return reinterpret_cast<Form<D>*>(~0ULL); }
 		} const ApplicationMainWindow;
 		#pragma endregion
@@ -833,11 +877,11 @@ namespace pr
 			//  - if x == CW_USEDEFAULT in CreateWindowEx then the system positions the window, (ignoring y). Only valid for overlapped windows, if used for popup windows will be treated as zero
 			//  - if w == CW_USEDEFAULT in CreateWindowEx then the system chooses the width and height. Only valid for overlapped windows, if used for popup windows will be treated as zero
 			DlgTemplate() {}
-			DlgTemplate(TCHAR const* caption
+			DlgTemplate(wchar_t const* caption
 				,short x = 0, short y = 0, short w = 0, short h = 0
 				,DWORD style = DefaultStyle, DWORD ex_style = DefaultStyleEx
-				,TCHAR const* font_name = _T("MS Shell Dlg"), WORD font_size = 8
-				,int menu_id = -1, TCHAR const* class_name = nullptr)
+				,wchar_t const* font_name = L"MS Shell Dlg", WORD font_size = 8
+				,int menu_id = -1, char const* class_name = nullptr)
 			{
 				// In a standard template for a dialog box, the DLGTEMPLATE structure is always immediately followed
 				// by three variable-length arrays that specify the menu, class, and title for the dialog box.
@@ -891,7 +935,7 @@ namespace pr
 			}
 
 			// Add a control to the template
-			void Add(WORD id, TCHAR const* wndclass, TCHAR const* text, short x = 0, short y = 0, short w = 0, short h = 0, DWORD style = DefaultItemStyle, DWORD ex_style = 0, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
+			void Add(WORD id, wchar_t const* wndclass, wchar_t const* text, short x = 0, short y = 0, short w = 0, short h = 0, DWORD style = DefaultItemStyle, DWORD ex_style = 0, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
 			{
 				// In a standard template for a dialog box, the DLGITEMTEMPLATE structure is always immediately followed by three
 				// variable-length arrays specifying the class, title, and creation data for the control. Each array consists of
@@ -920,12 +964,12 @@ namespace pr
 				enum class EStdCtrlType :WORD { None = 0, BUTTON = 0x0080, EDIT = 0x0081, STATIC = 0x0082, LISTBOX = 0x0083, SCROLLBAR = 0x0084, COMBOBOX = 0x0085};
 				EStdCtrlType ctrl_atom = EStdCtrlType::None;
 				if      (wndclass == nullptr) {}
-				else if (_tcscmp(wndclass, _T("BUTTON"   )) == 0) ctrl_atom = EStdCtrlType::BUTTON;
-				else if (_tcscmp(wndclass, _T("EDIT"     )) == 0) ctrl_atom = EStdCtrlType::EDIT;
-				else if (_tcscmp(wndclass, _T("STATIC"   )) == 0) ctrl_atom = EStdCtrlType::STATIC;
-				else if (_tcscmp(wndclass, _T("LISTBOX"  )) == 0) ctrl_atom = EStdCtrlType::LISTBOX;
-				else if (_tcscmp(wndclass, _T("SCROLLBAR")) == 0) ctrl_atom = EStdCtrlType::SCROLLBAR;
-				else if (_tcscmp(wndclass, _T("COMBOBOX" )) == 0) ctrl_atom = EStdCtrlType::COMBOBOX;
+				else if (wcscmp(wndclass, L"BUTTON"   ) == 0) ctrl_atom = EStdCtrlType::BUTTON;
+				else if (wcscmp(wndclass, L"EDIT"     ) == 0) ctrl_atom = EStdCtrlType::EDIT;
+				else if (wcscmp(wndclass, L"STATIC"   ) == 0) ctrl_atom = EStdCtrlType::STATIC;
+				else if (wcscmp(wndclass, L"LISTBOX"  ) == 0) ctrl_atom = EStdCtrlType::LISTBOX;
+				else if (wcscmp(wndclass, L"SCROLLBAR") == 0) ctrl_atom = EStdCtrlType::SCROLLBAR;
+				else if (wcscmp(wndclass, L"COMBOBOX" ) == 0) ctrl_atom = EStdCtrlType::COMBOBOX;
 				if (ctrl_atom != EStdCtrlType::None)
 					AddWord(WORD(ctrl_atom));
 				else
@@ -971,7 +1015,7 @@ namespace pr
 		private:
 
 			// Append a string or null terminator to the memory buffer
-			void AddString(TCHAR const* str)
+			template <typename Char> void AddString(Char const* str)
 			{
 				if (str == nullptr)
 				{
@@ -1069,22 +1113,22 @@ namespace pr
 			// expects the 'HWND' parameter to actually be a pointer to the class instance (thanks to the thunk). Use a WndProc
 			// function that handles the WM_NCCREATE message and updates the WndProc for the pointer passed via the CREATESTRUCT
 			// 'WndType' is the class that implements the Control being registered.
-			template <typename WndType> static ATOM RegisterWndClass(HINSTANCE hinst =  GetModuleHandle(nullptr))
+			template <typename WndType> static ATOM RegisterWndClass(HINSTANCE hinst =  GetModuleHandleW(nullptr))
 			{
 				// Ensure the window class for this form has been registered
 				// As of C++11, static initialisation is thread safe
 				static ATOM atom = [=]
 					{
 						// Register the window class if not already registered
-						WNDCLASSEX wc;
-						auto a = ATOM(::GetClassInfoEx(hinst, WndType::WndClassName(), &wc));
+						WNDCLASSEXW wc;
+						auto a = ATOM(::GetClassInfoExW(hinst, WndType::WndClassName(), &wc));
 						if (a != 0) return a;
 
 						// Allow 'Derived' to override the WndClassInfo. If the WndProc is not
 						// null, assume that Derived has it's own special WndProc.
 						wc = WndType::WndClassInfo(hinst);
 						wc.lpfnWndProc = wc.lpfnWndProc ? wc.lpfnWndProc : &InitWndProc;
-						a = ATOM(::RegisterClassEx(&wc));
+						a = ATOM(::RegisterClassExW(&wc));
 						if (a != 0) return a;
 
 						Throw(false, "RegisterClassEx failed");
@@ -1095,13 +1139,13 @@ namespace pr
 
 			// Helper methods that allow derived types to implement their WndClassInfo() and
 			// WndClassName() functions by instantiating these methods templated with their type
-			template <typename WndType> static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
+			template <typename WndType> static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
 			{
 				// This is a default implementation of WndClassInfo that gets parameters
 				// from static functions on 'WndType'. Types that derive from Control
 				// will pick up the defaults below unless explicitly defined in the derived type
-				WNDCLASSEX wc;
-				wc.cbSize        = sizeof(WNDCLASSEX);
+				WNDCLASSEXW wc;
+				wc.cbSize        = sizeof(WNDCLASSEXW);
 				wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 				wc.cbClsExtra    = 0;
 				wc.cbWndExtra    = 0;
@@ -1115,21 +1159,21 @@ namespace pr
 				wc.lpfnWndProc   = nullptr; // Leave as null to use the thunk
 				return wc;
 			}
-			static LPCTSTR DefaultWndClassName()
+			static wchar_t const* DefaultWndClassName()
 			{
 				// Auto name, derived can overload this function
-				static thread_local TCHAR name[64];
-				_stprintf_s(name, TEXT("wingui::%p"), &name[0]);
+				static thread_local wchar_t name[64];
+				_swprintf_c(name, _countof(name), L"wingui::%p", &name[0]);
 				return name;
 			}
 
 			// These methods are provided so that windows that inherit from control
 			// can implement their WndClassInfo(), and WndClassName() functions using defaults
-			static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
+			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
 			{
 				return WndClassInfo<Control>(hinst);
 			}
-			static LPCTSTR WndClassName()
+			static wchar_t const* WndClassName()
 			{
 				return DefaultWndClassName();
 			}
@@ -1152,7 +1196,7 @@ namespace pr
 				// Returning null forces handling of WM_ERASEBKGND
 				return reinterpret_cast<HBRUSH>(COLOR_3DFACE+1);
 			}
-			static LPCTSTR WndMenu()
+			static wchar_t const* WndMenu()
 			{
 				// Typically you might return: MAKEINTRESOURCE(IDM_MENU);
 				return nullptr; 
@@ -1181,9 +1225,9 @@ namespace pr
 				}
 				#else
 				if (hook && !m_oldproc)
-					m_oldproc = (WNDPROC)::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_thunk.GetCodeAddress()));
+					m_oldproc = (WNDPROC)::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_thunk.GetCodeAddress()));
 				else if (!hook && m_oldproc)
-					::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc)), m_oldproc = nullptr;
+					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc)), m_oldproc = nullptr;
 				#endif
 			}
 			static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
@@ -1198,8 +1242,8 @@ namespace pr
 			LRESULT DefWndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
 				return m_oldproc != nullptr
-					? ::CallWindowProc(m_oldproc, m_hwnd, message, wparam, lparam)
-					: ::DefWindowProc(m_hwnd, message, wparam, lparam);
+					? ::CallWindowProcW(m_oldproc, m_hwnd, message, wparam, lparam)
+					: ::DefWindowProcW(m_hwnd, message, wparam, lparam);
 			}
 
 			// Handy debugging method for displaying WM_MESSAGES
@@ -1207,7 +1251,7 @@ namespace pr
 			{
 				#if 0
 				RAII<int> nest(m_wnd_proc_nest, m_wnd_proc_nest+1);
-				//if (strcmp(m_name,"status bar") == 0)
+				if (/*m_name && strcmp(m_name,"ctx-menu") == 0 && message == WM_KEYDOWN*/true)
 				{
 					static int msg_idx = 0; ++msg_idx;
 					auto m = pr::gui::DebugMessage(m_hwnd, message, wparam, lparam);
@@ -1257,7 +1301,7 @@ namespace pr
 							// area using the current background colour.
 							auto hdc = (HDC)wparam;
 							auto rect = ClientRect();
-							::ExtTextOut(hdc, 0, 0, ETO_OPAQUE, &rect, TEXT(""), 0, 0);
+							::ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &rect, L"", 0, 0);
 							return S_FALSE;
 						}
 						break;
@@ -1412,11 +1456,11 @@ namespace pr
 							DropFilesEventArgs drop(drop_info);
 							
 							int i = 0;
-							drop.m_filepaths.resize(::DragQueryFile(drop_info, 0xFFFFFFFF, nullptr, 0));
+							drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
 							for (auto& path : drop.m_filepaths)
 							{
-								path.resize(::DragQueryFile(drop_info, i, 0, 0) + 1, 0);
-								Throw(::DragQueryFile(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
+								path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
+								Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
 								++i;
 							}
 							OnDropFiles(drop);
@@ -1574,27 +1618,57 @@ namespace pr
 			// Create constructor
 			// Use this constructor to create a new instance of a window
 			// 'hwndparent' is the hwnd of the top level window
-			// 'parent' is the control that contains this control (not necessarily the same as hwndparent)
-			Control(TCHAR const* wndclass_name
-				,TCHAR const* text
+			// 'parent' is the control that contains this control (not necessarily the same as hwndparent, e.g. a group control)
+			Control(wchar_t const* wndclass_name ,wchar_t const* text
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = DefaultControlStyle
-				,DWORD ex_style = DefaultControlStyleEx
+				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
 				,char const* name = nullptr
 				,HMENU menu = nullptr
 				,void* init_param = nullptr)
 				:Control(Internal(), id, parent, name, anchor)
 			{
+				Create(wndclass_name, text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
+			}
+
+			// Attach or delayed creation constructor
+			// Use this constructor when you intend to Attach this instance to an existing hwnd,
+			// or when you need to create the control at a later time after a parent window has been created.
+			// Set 'id' != -1 to have the control automatically attach to a dialog resouce control during WM_INITDIALOG
+			Control(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+				:Control(Internal(), id, parent, name, anchor)
+			{
+				// You can call 'Create' once the parent has an HWND, or if the parent
+				// is based on a resource and 'id' is not IDC_UNUSED, then it will automatically
+				// be created and attached to the control from the resource
+			}
+			virtual ~Control()
+			{
+				Parent(nullptr);
+			}
+
+			operator HWND() const { return m_hwnd; }
+
+			// Create the HWND for the control
+			void Create(wchar_t const* wndclass_name, wchar_t const* text
+				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
+				,HWND hwndparent = 0
+				,HMENU menu = nullptr
+				,void* init_param = nullptr)
+			{
+				// Don't call this when using the first constructor
+				assert(m_hwnd == 0 && "Window handle already exists");
+
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, 0);
 				if (!init_param) init_param = &init;
-				m_hwnd = ::CreateWindowEx(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
+				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
 				Throw(m_hwnd != 0, "CreateWindowEx failed");
 
 				RecordPosOffset();
@@ -1606,19 +1680,6 @@ namespace pr
 					UpdateWindow(m_hwnd);
 				}
 			}
-
-			// Attach constructor
-			// Use this constructor when you intend to Attach this instance to an existing hwnd
-			// Set 'id' != -1 to have the control automatically attach during WM_INITDIALOG
-			Control(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
-				:Control(Internal(), id, parent, name, anchor)
-			{}
-			virtual ~Control()
-			{
-				Parent(nullptr);
-			}
-
-			operator HWND() const { return m_hwnd; }
 
 			// Attach/Detach this control wrapper to/form the associated window handle
 			void Attach(HWND hwnd)
@@ -1696,14 +1757,14 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				string s;
-				s.resize(::GetWindowTextLength(m_hwnd) + 1, 0);
-				if (!s.empty()) s.resize(::GetWindowText(m_hwnd, &s[0], int(s.size())));
+				s.resize(::GetWindowTextLengthW(m_hwnd) + 1, 0);
+				if (!s.empty()) s.resize(::GetWindowTextW(m_hwnd, &s[0], int(s.size())));
 				return s;
 			}
 			void Text(string text)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SetWindowText(m_hwnd, text.c_str());
+				::SetWindowTextW(m_hwnd, text.c_str());
 			}
 
 			// Enable/Disable the control
@@ -1783,12 +1844,12 @@ namespace pr
 			HFONT Font() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return HFONT(::SendMessage(m_hwnd, WM_GETFONT, 0, 0));
+				return HFONT(::SendMessageW(m_hwnd, WM_GETFONT, 0, 0));
 			}
 			void Font(HFONT font)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, WM_SETFONT, WPARAM(font), TRUE);
+				::SendMessageW(m_hwnd, WM_SETFONT, WPARAM(font), TRUE);
 			}
 
 			// Invalidate the control for redraw
@@ -1837,6 +1898,15 @@ namespace pr
 				Invalidate();
 			}
 
+			// Returns a copy of 'rect' increased by the non-client areas of the window
+			// Remember, ClientRect is [inclusive,inclusive] (if 'rect' is the client rect)
+			Rect AdjRect(Rect const& rect) const
+			{
+				auto r = rect;
+				Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+				return r;
+			}
+
 			// Get/Set the client rect for the window
 			// Note: Menus are part of the non-client area, you don't need to offset
 			// the client rect for the menu.
@@ -1850,8 +1920,7 @@ namespace pr
 			void ClientRect(Rect const& r, bool repaint = false)
 			{
 				assert(::IsWindow(m_hwnd));
-				auto rect = r;
-				Throw(::AdjustWindowRectEx(&rect, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
+				auto rect = AdjRect(r);
 				auto wnd = WindowRect();
 				rect.left += wnd.left;
 				rect.right += wnd.left;
@@ -1943,9 +2012,33 @@ namespace pr
 			Rect NonClientAreas() const
 			{
 				// Pass a zero rect to AdjustWindowRectEx to get the non-client dimensions
-				Rect rect;
-				Throw(::AdjustWindowRectEx(&rect, DWORD(Style()), BOOL(Menu() != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed");
-				return rect;
+				return AdjRect(Rect());
+			}
+
+			// Convert a screen space point to client window space
+			Point PointToClient(Point pt) const
+			{
+				Throw(::ScreenToClient(m_hwnd, &pt), "ScreenToClient failed");
+				return pt;
+			}
+
+			// Convert a client window space point to screen space
+			Point PointToScreen(Point pt) const
+			{
+				Throw(::ClientToScreen(m_hwnd, &pt), "ClientToScreen failed");
+				return pt;
+			}
+
+			// Convert a screen space rectangle to client window space
+			Rect RectToClient(Rect rect) const
+			{
+				return Rect(PointToClient(rect.topleft()), rect.size());
+			}
+
+			// Convert a client window space rectangle to screen space
+			Rect RectToScreen(Rect rect) const
+			{
+				return Rect(PointToScreen(rect.topleft()), rect.size());
 			}
 
 			// Get/Set the menu. Set returns the previous menu.
@@ -1967,19 +2060,19 @@ namespace pr
 			HICON Icon(bool big_icon = true) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return HICON(::SendMessage(m_hwnd, WM_GETICON, WPARAM(big_icon), 0));
+				return HICON(::SendMessageW(m_hwnd, WM_GETICON, WPARAM(big_icon), 0));
 			}
 			HICON Icon(HICON icon, bool big_icon = true)
 			{
 				assert(::IsWindow(m_hwnd));
-				return HICON(::SendMessage(m_hwnd, WM_SETICON, WPARAM(big_icon), LPARAM(icon)));
+				return HICON(::SendMessageW(m_hwnd, WM_SETICON, WPARAM(big_icon), LPARAM(icon)));
 			}
 
 			// Set redraw mode on or off
 			void Redraw(bool redraw)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, WM_SETREDRAW, WPARAM(redraw ? TRUE : FALSE), 0);
+				::SendMessageW(m_hwnd, WM_SETREDRAW, WPARAM(redraw ? TRUE : FALSE), 0);
 			}
 
 			// Centre this control within another control or the desktop
@@ -2236,7 +2329,7 @@ namespace pr
 				if (m_dialog_behaviour)
 				{
 					RAII<bool> prevent_recursion(m_dialog_behaviour, false);
-					if (::IsDialogMessage(m_hwnd, &msg))
+					if (::IsDialogMessageW(m_hwnd, &msg))
 						return S_OK;
 				}
 
@@ -2252,7 +2345,7 @@ namespace pr
 					result = Control::WndProc(message, wparam, lparam);
 				
 				// This is used for DialogProc somehow
-				::SetWindowLongPtr(m_hwnd, DWLP_MSGRESULT, result);
+				::SetWindowLongPtrW(m_hwnd, DWLP_MSGRESULT, result);
 				return result;
 			}
 
@@ -2342,7 +2435,7 @@ namespace pr
 			//  - use 'parent == ApplicationMainWindow' to cause the app to exit when this window is closed
 			//  - if x == CW_USEDEFAULT in CreateWindowEx then the system positions the window, (ignoring y). Only valid for overlapped windows, if used for popup windows will be treated as zero
 			//  - if w == CW_USEDEFAULT in CreateWindowEx then the system chooses the width and height. Only valid for overlapped windows, if used for popup windows will be treated as zero
-			Form(TCHAR const* title
+			Form(wchar_t const* title
 				,HWND parent = nullptr
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT
 				,int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
@@ -2366,16 +2459,15 @@ namespace pr
 				auto atom = RegisterWndClass<Form<Derived>>(m_hinst);
 
 				// Load the optional menu
-				HMENU menu = menu_id != IDC_UNUSED ? ::LoadMenu(m_hinst, MAKEINTRESOURCE(menu_id)) : nullptr;
-
+				HMENU menu = menu_id != IDC_UNUSED ? ::LoadMenuW(m_hinst, MAKEINTRESOURCEW(menu_id)) : nullptr;
+				
 				// Create an instance of the window class
-				InitParam lparam(this, init_param);
-				::CreateWindowEx(ex_style, MAKEINTATOM(atom), title, style, x, y, w, h, parent, menu, m_hinst, &lparam);
-				Throw(m_hwnd != 0, "CreateWindowEx failed");
-
 				// Note: the virtual functions called as a result of CreateWindowEx will
 				// not call the derived class' overrides because at this point the derived
 				// class is not constructed. Derived classes should call 'Show'.
+				InitParam lparam(this, init_param);
+				::CreateWindowExW(ex_style, MakeIntAtomW(atom), title, style, x, y, w, h, parent, menu, m_hinst, &lparam);
+				Throw(m_hwnd != 0, "CreateWindowEx failed");
 			}
 
 			// Dialog Resource Constructor
@@ -2454,23 +2546,19 @@ namespace pr
 				ShowWindow(m_hwnd, show);
 				UpdateWindow(m_hwnd);
 			}
-			template <typename D> void Show(int show, Form<D>* parent = nullptr, LPARAM init_param = 0)
+			void Show(int show, Control* parent, LPARAM init_param = 0)
 			{
 				// Get the parent hwnd
 				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
 				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
-				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
+				auto parenthwnd = parent ? (HWND)*parent : (HWND)nullptr;
 
 				Show(show, parenthwnd, init_param);
 			}
-			void Show(int show)
+			void Show(int show = SW_SHOW)
 			{
-				Show<Form<Derived>>(show);
-			}
-			void Show()
-			{
-				Show<Form<Derived>>(SW_SHOW);
+				Show(show, (HWND)nullptr);
 			}
 
 			// Display the form modally
@@ -2495,23 +2583,23 @@ namespace pr
 					return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
 				}
 			}
-			template <typename D> EDialogResult ShowDialog(Form<D>* parent = nullptr, LPARAM init_param = 0)
+			EDialogResult ShowDialog(Control* parent = nullptr, LPARAM init_param = 0)
 			{
 				// Get the parent hwnd
 				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
 				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
-				HWND parenthwnd = parent ? parent->m_hwnd : nullptr;
+				auto parenthwnd = parent ? (HWND)*parent : (HWND)nullptr;
 
 				return ShowDialog(parenthwnd, init_param);
 			}
 			void ShowDialog()
 			{
-				ShowDialog<Form<Derived>>();
+				ShowDialog();
 			}
 
 			// Close this form
-			bool Close(int exit_code = 0)
+			virtual bool Close(int exit_code = 0)
 			{
 				if (m_hwnd == nullptr) return false;
 				m_exit_code = exit_code;
@@ -2519,9 +2607,9 @@ namespace pr
 					? ::EndDialog(m_hwnd, INT_PTR(m_exit_code))
 					: ::DestroyWindow(m_hwnd)) != 0;
 			}
-			bool Close(EDialogResult dialog_result)
+			virtual bool Close(EDialogResult dialog_result)
 			{
-				Close(int(dialog_result));
+				return Close(int(dialog_result));
 			}
 		};
 		#pragma endregion
@@ -2532,10 +2620,10 @@ namespace pr
 			enum { DefW = 20, DefH = 23 };
 			enum { DefaultStyle = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("STATIC"); }
+			static wchar_t const* WndClassName() { return L"STATIC"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			Label(TCHAR const* text
+			Label(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -2583,10 +2671,10 @@ namespace pr
 			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_TEXT };
 			enum { DefaultStyleDefBtn = (DefaultStyle | BS_DEFPUSHBUTTON) & ~BS_PUSHBUTTON };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("BUTTON"); }
+			static wchar_t const* WndClassName() { return L"BUTTON"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			Button(TCHAR const* text
+			Button(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -2633,10 +2721,10 @@ namespace pr
 			enum { DefW = 75, DefH = 23 };
 			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | BS_AUTOCHECKBOX | BS_LEFT | BS_TEXT };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("BUTTON"); }
+			static wchar_t const* WndClassName() { return L"BUTTON"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			CheckBox(TCHAR const* text
+			CheckBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -2656,13 +2744,13 @@ namespace pr
 			bool Checked() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return ::SendMessage(m_hwnd, BM_GETCHECK, 0, 0) == BST_CHECKED;
+				return ::SendMessageW(m_hwnd, BM_GETCHECK, 0, 0) == BST_CHECKED;
 			}
 			void Checked(bool checked)
 			{
 				assert(::IsWindow(m_hwnd));
 				auto is_checked = Checked();
-				::SendMessage(m_hwnd, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
+				::SendMessageW(m_hwnd, BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
 				if (is_checked != checked) OnCheckedChanged();
 			}
 
@@ -2703,10 +2791,10 @@ namespace pr
 			enum { DefW = 80, DefH = 23 };
 			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_LEFT };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("EDIT"); }
+			static wchar_t const* WndClassName() { return L"EDIT"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			TextBox(TCHAR const* text
+			TextBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -2718,23 +2806,34 @@ namespace pr
 				,void* init_param = nullptr)
 				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
-			TextBox(int id = IDC_UNUSED, Control* parent = nullptr, char  const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+			TextBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
 			{}
+
+			// Create the HWND for the control
+			void Create(wchar_t const* text
+				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
+				,HWND hwndparent = 0 // The top level parent window
+				,HMENU menu = nullptr
+				,void* init_param = nullptr)
+			{
+				Control::Create(WndClassName(), text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
+			}
 
 			// The number of characters in the text
 			int TextLength() const
 			{
 				assert(::IsWindow(m_hwnd));
 				auto len = GETTEXTLENGTHEX{GTL_DEFAULT, CP_ACP};
-				return int(::SendMessage(m_hwnd, EM_GETTEXTLENGTHEX, WPARAM(&len), 0));
+				return int(::SendMessageW(m_hwnd, EM_GETTEXTLENGTHEX, WPARAM(&len), 0));
 			}
 
 			// The number of lines of text
 			int LineCount() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, EM_GETLINECOUNT, 0, 0));
+				return int(::SendMessageW(m_hwnd, EM_GETLINECOUNT, 0, 0));
 			}
 
 			// The length (in characters) of the line containing the character at the given index
@@ -2742,7 +2841,7 @@ namespace pr
 			int LineLength(int char_index) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, EM_LINELENGTH, WPARAM(char_index), 0));
+				return int(::SendMessageW(m_hwnd, EM_LINELENGTH, WPARAM(char_index), 0));
 			}
 
 			// Gets the character index of the first character on the given line
@@ -2750,27 +2849,27 @@ namespace pr
 			int CharFromLine(int line_index) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, EM_LINEINDEX, WPARAM(line_index), 0));
+				return int(::SendMessageW(m_hwnd, EM_LINEINDEX, WPARAM(line_index), 0));
 			}
 
 			// Gets the index of the line that contains 'char_index'
 			int LineFromChar(int char_index) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, EM_EXLINEFROMCHAR, 0, LPARAM(char_index)));
+				return int(::SendMessageW(m_hwnd, EM_EXLINEFROMCHAR, 0, LPARAM(char_index)));
 			}
 
 			RangeI Selection() const
 			{
 				assert(::IsWindow(m_hwnd));
 				RangeI r;
-				::SendMessage(m_hwnd, EM_GETSEL, WPARAM(&r.beg), LPARAM(&r.end));
+				::SendMessageW(m_hwnd, EM_GETSEL, WPARAM(&r.beg), LPARAM(&r.end));
 				return r;
 			}
 			void Selection(RangeI range, bool scroll_to_caret = true)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, EM_SETSEL, range.beg, range.end);
+				::SendMessageW(m_hwnd, EM_SETSEL, range.beg, range.end);
 				if (scroll_to_caret) ScrollToCaret();
 			}
 			void SelectAll()
@@ -2785,7 +2884,7 @@ namespace pr
 				// There is a workaround however, using hide selection
 				auto nohidesel = Style() & ES_NOHIDESEL;
 				Style(Style() | ES_NOHIDESEL);
-				::SendMessage(m_hwnd, EM_SCROLLCARET, 0, 0);
+				::SendMessageW(m_hwnd, EM_SCROLLCARET, 0, 0);
 				Style((Style() & ~ES_NOHIDESEL) | nohidesel);
 			}
 
@@ -2820,10 +2919,10 @@ namespace pr
 			enum { DefW = 121, DefH = 21 };
 			enum { DefaultStyle = DefaultControlStyle | WS_TABSTOP | CBS_DROPDOWN | CBS_AUTOHSCROLL };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("COMBOBOX"); }
+			static wchar_t const* WndClassName() { return L"COMBOBOX"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			ComboBox(TCHAR const* text
+			ComboBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -2843,7 +2942,7 @@ namespace pr
 			int Count() const
 			{
 				assert(::IsWindow(m_hwnd));
-				auto c = int(::SendMessage(m_hwnd, CB_GETCOUNT, 0, 0L));
+				auto c = int(::SendMessageW(m_hwnd, CB_GETCOUNT, 0, 0L));
 				Throw(c != CB_ERR, "Error retrieving combo box item count");
 				return c;
 			}
@@ -2854,12 +2953,12 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 
 				string s;
-				auto len = ::SendMessage(m_hwnd, CB_GETLBTEXTLEN, index, 0);
+				auto len = ::SendMessageW(m_hwnd, CB_GETLBTEXTLEN, index, 0);
 				Throw(len != CB_ERR, std::string("ComboBox: Invalid item index ").append(std::to_string(index)));
 				if (len == 0) return s;
 
 				s.resize(len);
-				s.resize(::SendMessage(m_hwnd, CB_GETLBTEXT, index, (LPARAM)&s[0]));
+				s.resize(::SendMessageW(m_hwnd, CB_GETLBTEXT, index, (LPARAM)&s[0]));
 				return s;
 			}
 
@@ -2867,13 +2966,13 @@ namespace pr
 			int SelectedIndex() const
 			{
 				assert(::IsWindow(m_hwnd));
-				auto index = int(::SendMessage(m_hwnd, CB_GETCURSEL, 0, 0L));
+				auto index = int(::SendMessageW(m_hwnd, CB_GETCURSEL, 0, 0L));
 				return index;
 			}
 			void SelectedIndex(int index)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, CB_SETCURSEL, index, 0L);
+				::SendMessageW(m_hwnd, CB_SETCURSEL, index, 0L);
 			}
 
 			// Get the selected item
@@ -2886,16 +2985,16 @@ namespace pr
 			void ResetContent()
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, CB_RESETCONTENT, 0, 0L);
+				::SendMessageW(m_hwnd, CB_RESETCONTENT, 0, 0L);
 			}
 
 			// Add a string to the combo box dropdown list
-			int AddItem(LPCTSTR item)
+			int AddItem(wchar_t const* item)
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, CB_ADDSTRING, 0, (LPARAM)item));
+				return int(::SendMessageW(m_hwnd, CB_ADDSTRING, 0, (LPARAM)item));
 			}
-			void AddItems(std::initializer_list<LPCTSTR> items)
+			void AddItems(std::initializer_list<wchar_t const*> items)
 			{
 				for (auto i : items)
 					AddItem(i);
@@ -2938,7 +3037,7 @@ namespace pr
 			enum { DefW = 100, DefH = 23 };
 			enum { DefaultStyle = (DefaultControlStyle | PBS_SMOOTH) & ~WS_TABSTOP };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("msctls_progress32"); }
+			static wchar_t const* WndClassName() { return L"msctls_progress32"; }
 
 			ProgressBar(int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
@@ -2949,7 +3048,7 @@ namespace pr
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), _T(""), x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, nullptr, init_param)
+				:Control(WndClassName(), L"", x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, nullptr, init_param)
 			{}
 			ProgressBar(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -2959,19 +3058,19 @@ namespace pr
 			int Pos() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, PBM_GETPOS, 0, 0L));
+				return int(::SendMessageW(m_hwnd, PBM_GETPOS, 0, 0L));
 			}
 			int Pos(int pos)
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_SETPOS, pos, 0L))));
+				return int(short(LOWORD(::SendMessageW(m_hwnd, PBM_SETPOS, pos, 0L))));
 			}
 
 			// Move the bar position by a delta
 			int OffsetPos(int delta)
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_DELTAPOS, delta, 0L))));
+				return int(short(LOWORD(::SendMessageW(m_hwnd, PBM_DELTAPOS, delta, 0L))));
 			}
 
 			// Get/Set the progress range
@@ -2979,13 +3078,13 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				PBRANGE range = {};
-				::SendMessage(m_hwnd, PBM_GETRANGE, TRUE, (LPARAM)&range);
+				::SendMessageW(m_hwnd, PBM_GETRANGE, TRUE, (LPARAM)&range);
 				return RangeI(range.iLow, range.iHigh);
 			}
 			void Range(RangeI rng)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, PBM_SETRANGE32, rng.beg, rng.end);
+				::SendMessageW(m_hwnd, PBM_SETRANGE32, rng.beg, rng.end);
 			}
 			void Range(int min, int max)
 			{
@@ -3001,62 +3100,62 @@ namespace pr
 			bool Marquee(bool marquee, UINT update_time = 0U)
 			{
 				assert(::IsWindow(m_hwnd));
-				return ::SendMessage(m_hwnd, PBM_SETMARQUEE, WPARAM(marquee), LPARAM(update_time)) != 0;
+				return ::SendMessageW(m_hwnd, PBM_SETMARQUEE, WPARAM(marquee), LPARAM(update_time)) != 0;
 			}
 
 			// Get/Set the step size
 			int StepSize() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, PBM_GETSTEP, 0, 0L));
+				return int(::SendMessageW(m_hwnd, PBM_GETSTEP, 0, 0L));
 			}
 			int StepSize(int step_size)
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_SETSTEP, step_size, 0L))));
+				return int(short(LOWORD(::SendMessageW(m_hwnd, PBM_SETSTEP, step_size, 0L))));
 			}
 
 			// Get/Set the bar colour
 			COLORREF BarColor() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return COLORREF(::SendMessage(m_hwnd, PBM_GETBARCOLOR, 0, 0L));
+				return COLORREF(::SendMessageW(m_hwnd, PBM_GETBARCOLOR, 0, 0L));
 			}
 			COLORREF BarColor(COLORREF clr)
 			{
 				assert(::IsWindow(m_hwnd));
-				return COLORREF(::SendMessage(m_hwnd, PBM_SETBARCOLOR, 0, (LPARAM)clr));
+				return COLORREF(::SendMessageW(m_hwnd, PBM_SETBARCOLOR, 0, (LPARAM)clr));
 			}
 
 			// Get/Set the bar background colour
 			COLORREF BarBkgdColor() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return COLORREF(::SendMessage(m_hwnd, PBM_GETBKCOLOR, 0, 0L));
+				return COLORREF(::SendMessageW(m_hwnd, PBM_GETBKCOLOR, 0, 0L));
 			}
 			COLORREF BarBkgdColor(COLORREF clr)
 			{
 				assert(::IsWindow(m_hwnd));
-				return COLORREF(::SendMessage(m_hwnd, PBM_SETBKCOLOR, 0, (LPARAM)clr));
+				return COLORREF(::SendMessageW(m_hwnd, PBM_SETBKCOLOR, 0, (LPARAM)clr));
 			}
 
 			// Get/Set the state
 			int State() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, PBM_GETSTATE, 0, 0L));
+				return int(::SendMessageW(m_hwnd, PBM_GETSTATE, 0, 0L));
 			}
 			int State(int state)
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(::SendMessage(m_hwnd, PBM_SETSTATE, state, 0L));
+				return int(::SendMessageW(m_hwnd, PBM_SETSTATE, state, 0L));
 			}
 
 			// Step the bar
 			int StepIt()
 			{
 				assert(::IsWindow(m_hwnd));
-				return int(short(LOWORD(::SendMessage(m_hwnd, PBM_STEPIT, 0, 0L))));
+				return int(short(LOWORD(::SendMessageW(m_hwnd, PBM_STEPIT, 0, 0L))));
 			}
 
 			// Events
@@ -3091,10 +3190,10 @@ namespace pr
 			enum { DefW = 80, DefH = 80 };
 			enum { DefaultStyle = DefaultControlStyle | BS_GROUPBOX };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return _T("BUTTON"); } // yes, groupbox's use the button window class
+			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, groupbox's use the button window class
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			GroupBox(TCHAR const* text
+			GroupBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
@@ -3112,7 +3211,7 @@ namespace pr
 		};
 		struct RichTextBox :TextBox
 		{
-			static LPCTSTR WndClassName() { return ::LoadLibrary("msftedit.dll") ? _T("RICHEDIT50W") : _T("RICHEDIT20W"); }
+			static wchar_t const* WndClassName() { return ::LoadLibraryW(L"msftedit.dll") ? L"RICHEDIT50W" : L"RICHEDIT20W"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			RichTextBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
@@ -3123,12 +3222,12 @@ namespace pr
 		{
 			enum { DefaultStyle = DefaultControlStyle | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | SBARS_SIZEGRIP };
 			enum { DefaultStyleEx = DefaultControlStyleEx };
-			static LPCTSTR WndClassName() { return STATUSCLASSNAME; }
+			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
 
-			StatusBar(Control* parent, int id, TCHAR const* text, char const* name = nullptr, DWORD style = DefaultStyle)
+			StatusBar(Control* parent, int id, wchar_t const* text, char const* name = nullptr, DWORD style = DefaultStyle)
 				:Control(id, parent, name)
 			{
-				Attach(::CreateStatusWindow(style, text, *parent, id));
+				Attach(::CreateStatusWindowW(style, text, *parent, id));
 				Throw(IsWindow(m_hwnd), "Failed to create the status bar");
 				Dock(EDock::Bottom);
 			}
@@ -3141,12 +3240,12 @@ namespace pr
 			int Parts(int count, int* parts) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return (int)::SendMessage(m_hwnd, SB_GETPARTS, WPARAM(count), LPARAM(parts));
+				return (int)::SendMessageW(m_hwnd, SB_GETPARTS, WPARAM(count), LPARAM(parts));
 			}
 			bool Parts(int count, int* widths)
 			{
 				assert(::IsWindow(m_hwnd));
-				return ::SendMessage(m_hwnd, SB_SETPARTS, WPARAM(count), LPARAM(widths)) != 0;
+				return ::SendMessageW(m_hwnd, SB_SETPARTS, WPARAM(count), LPARAM(widths)) != 0;
 			}
 
 			// Get/Set the text in a pane in the status bar
@@ -3155,10 +3254,10 @@ namespace pr
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
 
 				string s;
-				s.resize(LOWORD(::SendMessage(m_hwnd, SB_GETTEXTLENGTH, WPARAM(pane), LPARAM(0))) + 1, 0);
+				s.resize(LOWORD(::SendMessageW(m_hwnd, SB_GETTEXTLENGTH, WPARAM(pane), LPARAM(0))) + 1, 0);
 				if (!s.empty())
 				{
-					auto ret = DWORD(::SendMessage(m_hwnd, SB_GETTEXT, WPARAM(pane), LPARAM(&s[0])));
+					auto ret = DWORD(::SendMessageW(m_hwnd, SB_GETTEXT, WPARAM(pane), LPARAM(&s[0])));
 					if (type) *type = (int)(short)HIWORD(ret);
 					s.resize(LOWORD(ret));
 				}
@@ -3167,7 +3266,7 @@ namespace pr
 			void Text(int pane, string text, int type = 0)
 			{
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
-				Throw(::SendMessage(m_hwnd, SB_SETTEXT, WPARAM(pane | type), LPARAM(text.c_str())) != 0, "Failed to set status bar pane text");
+				Throw(::SendMessageW(m_hwnd, SB_SETTEXT, WPARAM(pane | type), LPARAM(text.c_str())) != 0, "Failed to set status bar pane text");
 			}
 
 			// Get the client area of a pane in the status bar
@@ -3175,7 +3274,7 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd) && pane >= 0 && pane < 256);
 				pr::gui::Rect rect;
-				Throw(::SendMessage(m_hwnd, SB_GETRECT, WPARAM(pane), LPARAM(&rect)) != 0, "Failed to get the client rect for a status bar pane");
+				Throw(::SendMessageW(m_hwnd, SB_GETRECT, WPARAM(pane), LPARAM(&rect)) != 0, "Failed to get the client rect for a status bar pane");
 				return rect;
 			}
 
@@ -3183,14 +3282,14 @@ namespace pr
 			BOOL GetBorders(int* pBorders) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessage(m_hwnd, SB_GETBORDERS, 0, (LPARAM)pBorders);
+				return (BOOL)::SendMessageW(m_hwnd, SB_GETBORDERS, 0, (LPARAM)pBorders);
 			}
 
 			BOOL GetBorders(int& nHorz, int& nVert, int& nSpacing) const
 			{
 				assert(::IsWindow(m_hwnd));
 				int borders[3] = { 0, 0, 0 };
-				BOOL bResult = (BOOL)::SendMessage(m_hwnd, SB_GETBORDERS, 0, (LPARAM)&borders);
+				BOOL bResult = (BOOL)::SendMessageW(m_hwnd, SB_GETBORDERS, 0, (LPARAM)&borders);
 				if(bResult)
 				{
 					nHorz = borders[0];
@@ -3203,65 +3302,65 @@ namespace pr
 			void SetMinHeight(int nMin)
 			{
 				assert(::IsWindow(m_hwnd));
-				::SendMessage(m_hwnd, SB_SETMINHEIGHT, nMin, 0L);
+				::SendMessageW(m_hwnd, SB_SETMINHEIGHT, nMin, 0L);
 			}
 
 			BOOL SetSimple(BOOL bSimple = TRUE)
 			{
 				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessage(m_hwnd, SB_SIMPLE, bSimple, 0L);
+				return (BOOL)::SendMessageW(m_hwnd, SB_SIMPLE, bSimple, 0L);
 			}
 
 			BOOL IsSimple() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessage(m_hwnd, SB_ISSIMPLE, 0, 0L);
+				return (BOOL)::SendMessageW(m_hwnd, SB_ISSIMPLE, 0, 0L);
 			}
 
 			BOOL GetUnicodeFormat() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessage(m_hwnd, SB_GETUNICODEFORMAT, 0, 0L);
+				return (BOOL)::SendMessageW(m_hwnd, SB_GETUNICODEFORMAT, 0, 0L);
 			}
 
 			BOOL SetUnicodeFormat(BOOL bUnicode = TRUE)
 			{
 				assert(::IsWindow(m_hwnd));
-				return (BOOL)::SendMessage(m_hwnd, SB_SETUNICODEFORMAT, bUnicode, 0L);
+				return (BOOL)::SendMessageW(m_hwnd, SB_SETUNICODEFORMAT, bUnicode, 0L);
 			}
 
 			void GetTipText(int nPane, LPTSTR lpstrText, int nSize) const
 			{
 				assert(::IsWindow(m_hwnd));
 				assert(nPane < 256);
-				::SendMessage(m_hwnd, SB_GETTIPTEXT, MAKEWPARAM(nPane, nSize), (LPARAM)lpstrText);
+				::SendMessageW(m_hwnd, SB_GETTIPTEXT, MAKEWPARAM(nPane, nSize), (LPARAM)lpstrText);
 			}
 
 			void SetTipText(int nPane, LPCTSTR lpstrText)
 			{
 				assert(::IsWindow(m_hwnd));
 				assert(nPane < 256);
-				::SendMessage(m_hwnd, SB_SETTIPTEXT, nPane, (LPARAM)lpstrText);
+				::SendMessageW(m_hwnd, SB_SETTIPTEXT, nPane, (LPARAM)lpstrText);
 			}
 
 			COLORREF SetBkColor(COLORREF clrBk)
 			{
 				assert(::IsWindow(m_hwnd));
-				return (COLORREF)::SendMessage(m_hwnd, SB_SETBKCOLOR, 0, (LPARAM)clrBk);
+				return (COLORREF)::SendMessageW(m_hwnd, SB_SETBKCOLOR, 0, (LPARAM)clrBk);
 			}
 
 			HICON GetIcon(int nPane) const
 			{
 				assert(::IsWindow(m_hwnd));
 				assert(nPane < 256);
-				return (HICON)::SendMessage(m_hwnd, SB_GETICON, nPane, 0L);
+				return (HICON)::SendMessageW(m_hwnd, SB_GETICON, nPane, 0L);
 			}
 
 			BOOL SetIcon(int nPane, HICON hIcon)
 			{
 				assert(::IsWindow(m_hwnd));
 				assert(nPane < 256);
-				return (BOOL)::SendMessage(m_hwnd, SB_SETICON, nPane, (LPARAM)hIcon);
+				return (BOOL)::SendMessageW(m_hwnd, SB_SETICON, nPane, (LPARAM)hIcon);
 			}
 			#endif
 		};

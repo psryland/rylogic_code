@@ -91,6 +91,12 @@ namespace pr.common
 			return DirExists(path) && (File.GetAttributes(path) & FileAttributes.Directory) != 0;
 		}
 
+		/// <summary>True if 'path' is a directory containing no files or subdirectories</summary>
+		public static bool IsEmptyDirectory(string path)
+		{
+			return IsDirectory(path) && !Directory.EnumerateFileSystemEntries(path).Any();
+		}
+
 		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
 		public static string MakeRelativePath(string full_file_path, string rel_path)
 		{

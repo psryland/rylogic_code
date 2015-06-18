@@ -49,11 +49,9 @@ namespace pr.gui
 		private Thread m_thread;
 		private Exception m_error;
 
-		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
+		/// <summary>Create a progress form for external control via the UpdateProgress method</summary>
+		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style)
 		{
-			Done         = new ManualResetEvent(false);
-			CancelSignal = new ManualResetEvent(false);
-
 			m_progress = new ProgressBar
 				{
 					Style = style,
@@ -75,10 +73,36 @@ namespace pr.gui
 				};
 			m_button.Click += (s,a) =>
 				{
-					CancelSignal.Set();
+					if (CancelSignal != null)
+						CancelSignal.Set();
+
 					m_button.Text = "Cancelling...";
 					m_button.Enabled = false;
 				};
+
+			Text = title ?? string.Empty;
+			if (icon != null) Icon = icon;
+
+			AutoSizeMode        = AutoSizeMode.GrowOnly;
+			ClientSize          = new Size(136, 20);
+			StartPosition       = FormStartPosition.CenterParent;
+			FormBorderStyle     = FormBorderStyle.FixedDialog;
+			AutoScaleDimensions = new SizeF(6F, 13F);
+			AutoScaleMode       = AutoScaleMode.Font;
+			DialogResult        = DialogResult.OK;
+			HideOnClose         = false;
+
+			Controls.Add(m_description);
+			Controls.Add(m_progress);
+			Controls.Add(m_button);
+		}
+
+		/// <summary>Creates a progress form starting a background thread immediately</summary>
+		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style, Action<ProgressForm, object, Progress> func, object arg = null, ThreadPriority priority = ThreadPriority.Normal)
+			:this(title, desc, icon, style)
+		{
+			Done         = new ManualResetEvent(false);
+			CancelSignal = new ManualResetEvent(false);
 
 			// Start the task
 			var dispatcher = Dispatcher.CurrentDispatcher;
@@ -111,23 +135,10 @@ namespace pr.gui
 					IsBackground = true,
 				};
 			m_thread.Start();
-
-			Text = title ?? string.Empty;
-			if (icon != null) Icon = icon;
-
-			AutoSizeMode        = AutoSizeMode.GrowOnly;
-			ClientSize          = new Size(136, 20);
-			StartPosition       = FormStartPosition.CenterParent;
-			FormBorderStyle     = FormBorderStyle.FixedDialog;
-			AutoScaleDimensions = new SizeF(6F, 13F);
-			AutoScaleMode       = AutoScaleMode.Font;
-			Controls.Add(m_description);
-			Controls.Add(m_progress);
-			Controls.Add(m_button);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			m_thread.Join();
+			if (m_thread != null) m_thread.Join();
 			base.Dispose(disposing);
 		}
 		protected override void OnShown(EventArgs e)
@@ -135,18 +146,33 @@ namespace pr.gui
 			DoLayout();
 			base.OnShown(e);
 		}
+		protected override void OnVisibleChanged(EventArgs e)
+		{
+			base.OnVisibleChanged(e);
+			if (Visible && StartPosition == FormStartPosition.CenterParent)
+				CenterToParent();
+		}
 		protected override void OnSizeChanged(EventArgs e)
 		{
 			DoLayout();
 			base.OnSizeChanged(e);
 		}
-		protected override void OnFormClosed(FormClosedEventArgs e)
+		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
-			DialogResult = CancelSignal.WaitOne(0)
-				? DialogResult.Cancel
-				: DialogResult.OK;
+			if (CancelSignal != null)
+				DialogResult = CancelSignal.WaitOne(0)
+					? DialogResult.Cancel
+					: DialogResult.OK;
 
-			base.OnFormClosed(e);
+			base.OnFormClosing(e);
+
+			if (HideOnClose && e.CloseReason == CloseReason.UserClosing)
+			{
+				Hide();
+				e.Cancel = true;
+				if (Owner != null)
+					Owner.Focus();
+			}
 		}
 
 		/// <summary>An event raised when the task is complete</summary>
@@ -162,6 +188,9 @@ namespace pr.gui
 		/// <summary>An event used to signal the other thread to cancel</summary>
 		public ManualResetEvent CancelSignal { get; private set; }
 		public bool CancelPending { get { return CancelSignal.WaitOne(0); } }
+
+		/// <summary>Controls whether the form closes or just hides</summary>
+		public bool HideOnClose { get; set; }
 
 		/// <summary>Progress callback function, called from 'func' to update the progress bar</summary>
 		public delegate void Progress(UserState us);
@@ -182,7 +211,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Update the state of the progress form</summary>
-		private void UpdateProgress(UserState us)
+		public void UpdateProgress(UserState us)
 		{
 			if (us.FractionComplete != null)
 				m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(us.FractionComplete.Value,0f,1f));

@@ -91,7 +91,7 @@ namespace pr.attrib
 		[DebuggerStepThrough]
 		public static string Label<Ret>(Expression<Func<T,Ret>> expression, bool in_brackets = false)
 		{
-			var attr = Reflect<T>.Units(expression);
+			var attr = R<T>.Units(expression);
 			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
@@ -99,7 +99,7 @@ namespace pr.attrib
 		[DebuggerStepThrough]
 		public static string Label(Expression<Action<T>> expression, bool in_brackets = false)
 		{
-			var attr = Reflect<T>.Units(expression);
+			var attr = R<T>.Units(expression);
 			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
@@ -107,28 +107,28 @@ namespace pr.attrib
 		[DebuggerStepThrough]
 		public static double Scale<Ret>(Expression<Func<T,Ret>> expression)
 		{
-			return Reflect<T>.Units(expression).Scale;
+			return R<T>.Units(expression).Scale;
 		}
 
 		/// <summary>Returns the unit scale associated with a member</summary>
 		[DebuggerStepThrough]
 		public static double Scale(Expression<Action<T>> expression)
 		{
-			return Reflect<T>.Units(expression).Scale;
+			return R<T>.Units(expression).Scale;
 		}
 
 		/// <summary>Returns the unit decimal places associated with a member</summary>
 		[DebuggerStepThrough]
 		public static int DecimalPlaces<Ret>(Expression<Func<T,Ret>> expression)
 		{
-			return Reflect<T>.Units(expression).DecimalPlaces;
+			return R<T>.Units(expression).DecimalPlaces;
 		}
 
 		/// <summary>Returns the unit decimal places associated with a member</summary>
 		[DebuggerStepThrough]
 		public static int DecimalPlaces(Expression<Action<T>> expression)
 		{
-			return Reflect<T>.Units(expression).DecimalPlaces;
+			return R<T>.Units(expression).DecimalPlaces;
 		}
 	}
 }

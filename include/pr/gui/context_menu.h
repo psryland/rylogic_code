@@ -22,22 +22,33 @@ namespace pr
 		struct ContextMenu;
 		struct ContextMenuStyle;
 		struct IContextMenuItem;
-		using GdiGraphics   = ::Gdiplus::Graphics;
-		using GdiPoint      = ::Gdiplus::Point;
-		using GdiPointF     = ::Gdiplus::PointF;
-		using GdiSize       = ::Gdiplus::Size;
-		using GdiSizeF      = ::Gdiplus::SizeF;
-		using GdiRect       = ::Gdiplus::Rect;
-		using GdiRectF      = ::Gdiplus::RectF;
-		using GdiColor      = ::Gdiplus::Color;
-		using GdiARGB       = ::Gdiplus::ARGB;
-		using GdiBitmap     = ::Gdiplus::Bitmap;
-		using GdiFont       = ::Gdiplus::Font;
-		using GdiPen        = ::Gdiplus::Pen;
-		using GdiSolidBrush = ::Gdiplus::SolidBrush;
-		using GdiStrFmt     = ::Gdiplus::StringFormat;
+		using StylePtr = std::shared_ptr<ContextMenuStyle>;
+		using GdiGraphics   = Gdiplus::Graphics;
+		using GdiPoint      = Gdiplus::Point;
+		using GdiPointF     = Gdiplus::PointF;
+		using GdiSize       = Gdiplus::Size;
+		using GdiSizeF      = Gdiplus::SizeF;
+		using GdiRect       = Gdiplus::Rect;
+		using GdiRectF      = Gdiplus::RectF;
+		using GdiColor      = Gdiplus::Color;
+		using GdiARGB       = Gdiplus::ARGB;
+		using GdiBitmap     = Gdiplus::Bitmap;
+		using GdiFont       = Gdiplus::Font;
+		using GdiPen        = Gdiplus::Pen;
+		using GdiSolidBrush = Gdiplus::SolidBrush;
+		using GdiStrFmt     = Gdiplus::StringFormat;
 		using BitmapPtr     = std::shared_ptr<GdiBitmap>;
 		using FontPtr       = std::shared_ptr<GdiFont>;
+
+		enum EMenuItemState
+		{
+			Normal   = 0           ,
+			Selected = ODS_SELECTED,
+			Grayed   = ODS_GRAYED  ,
+			Disabled = ODS_DISABLED,
+			Checked  = ODS_CHECKED ,
+			Focus    = ODS_FOCUS   ,
+		};
 
 		#pragma region HelperFunctions
 		namespace impl
@@ -64,52 +75,794 @@ namespace pr
 		// Style object used to give menu items individual styles
 		struct ContextMenuStyle
 		{
-			struct ColPair
+			struct ColGrp
 			{
 				GdiColor m_text; // The text colour for an item
 				GdiColor m_bkgd; // The backgroud colour for an item
-				ColPair(GdiColor text, GdiColor bkgd)
+				GdiColor m_brdr; // Border colour for an item
+				ColGrp(GdiColor text, GdiColor bkgd, GdiColor brdr)
 					:m_text(text)
 					,m_bkgd(bkgd)
+					,m_brdr(brdr)
 				{}
 			};
 
-			NonClientMetrics  m_metrics;     // system metrics
-			FontPtr           m_font_text;   // The font to display the text in
-			FontPtr           m_font_marks;  // The font containing glyphs
-			ColPair           m_col_norm;    // Colours for a normal state menu item
-			ColPair           m_col_select;  // Colours for a selected menu item
-			ColPair           m_col_disable; // Colours for a disabled menu item
-			int               m_margin_left; // The space to allow for bitmaps, check marks, etc
-			int               m_text_margin; // The margin surrounding text in the item
-			int               m_bmp_margin;  // The margin surrounding the bitmap in the item
-
+			NonClientMetrics m_metrics;     // system metrics
+			FontPtr          m_font_text;   // The font to display the text in
+			FontPtr          m_font_marks;  // The font containing glyphs
+			ColGrp           m_col_norm;    // Colours for a normal state menu item
+			ColGrp           m_col_select;  // Colours for a selected menu item
+			ColGrp           m_col_disable; // Colours for a disabled menu item
+			int              m_margin_left; // The space to allow for bitmaps, check marks, etc
+			int              m_text_margin; // The margin surrounding text in the item
+			int              m_bmp_margin;  // The margin surrounding the bitmap in the item
 
 			ContextMenuStyle()
 				:m_metrics     ()
 				,m_font_text   (std::make_shared<GdiFont>(::GetDC(0), &m_metrics.lfMenuFont))
 				,m_font_marks  (std::make_shared<GdiFont>(L"Marlett", m_font_text->GetSize()))
-				,m_col_norm    (To<GdiColor>(::GetSysColor(COLOR_MENUTEXT))     , To<GdiColor>(::GetSysColor(COLOR_MENU)))
-				,m_col_select  (To<GdiColor>(::GetSysColor(COLOR_HIGHLIGHTTEXT)), To<GdiColor>(::GetSysColor(COLOR_MENUHILIGHT)))
-				,m_col_disable (To<GdiColor>(::GetSysColor(COLOR_GRAYTEXT))     , To<GdiColor>(::GetSysColor(COLOR_MENU)))
+				,m_col_norm    (To<GdiColor>(::GetSysColor(COLOR_MENUTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENU)) , GdiColor())
+				,m_col_select  (To<GdiColor>(::GetSysColor(COLOR_MENUTEXT)) , GdiColor(0xFF,0xD1,0xE2,0xF2)           , GdiColor(0xFF,0x78,0xAE,0xE5))
+				,m_col_disable (To<GdiColor>(::GetSysColor(COLOR_GRAYTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENU)) , GdiColor())
 				,m_margin_left (20)
 				,m_text_margin (2)
 				,m_bmp_margin  (1)
 			{}
 
-			// Return the colour pair for the given item state
-			ColPair Col(UINT item_state) const
+			// XP style menu highlighting
+			static StylePtr WinXP()
 			{
-				bool selected = (item_state & ODS_SELECTED) != 0;
-				bool disabled = (item_state & ODS_DISABLED) != 0;
+				auto sty = std::make_shared<ContextMenuStyle>();
+				sty->m_col_norm    = ColGrp(To<GdiColor>(::GetSysColor(COLOR_MENUTEXT))      , To<GdiColor>(::GetSysColor(COLOR_MENU))        , GdiColor());
+				sty->m_col_select  = ColGrp(To<GdiColor>(::GetSysColor(COLOR_HIGHLIGHTTEXT)) , To<GdiColor>(::GetSysColor(COLOR_MENUHILIGHT)) , GdiColor());
+				sty->m_col_disable = ColGrp(To<GdiColor>(::GetSysColor(COLOR_GRAYTEXT))      , To<GdiColor>(::GetSysColor(COLOR_MENU))        , GdiColor());
+				return sty;
+			}
+
+			// Return the colour pair for the given item state
+			ColGrp Col(EMenuItemState item_state) const
+			{
+				bool selected = (item_state & EMenuItemState::Selected) != 0;
+				bool disabled = (item_state & EMenuItemState::Disabled) != 0;
 				if (disabled) return m_col_disable;
 				if (selected) return m_col_select;
 				return m_col_norm;
 			}
 		};
-		typedef std::shared_ptr<ContextMenuStyle> StylePtr;
 		#pragma endregion
 
+		// Menu item base class
+		struct ContextMenuItem
+		{
+			int              m_id;     // Menu item id
+			ContextMenuItem* m_menu;   // The containing menu if not null
+			EMenuItemState   m_state;  // Menu item state
+			StylePtr         m_style;  // Item specific style if not null
+			BitmapPtr        m_bitmap; // A bitmap to draw next to the item (null means no bitmap)
+			Size             m_size;   // The size if this item within the containing menu
+
+			// 'id' is the menu item id
+			// 'parent' is the containing menu item that properties are inherited from
+			ContextMenuItem(int id = -1, ContextMenuItem* menu = nullptr, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
+				:m_id(id)
+				,m_menu(menu)
+				,m_state(state)
+				,m_style(style)
+				,m_bitmap(bm)
+				,m_size()
+			{}
+			virtual ~ContextMenuItem()
+			{}
+
+			// Called when the containing menu's HWND is created to allow menu items to create hosted controls
+			virtual void CreateHostedControls()
+			{}
+
+			//// The window acting as the parent for hosted controls
+			//virtual HWND CtrlHost() const
+			//{
+			//	assert(m_menu != nullptr && "Item is not contained within a ContextMenu"); // ContextMenu overrides this method
+			//	return m_menu->CtrlHost();
+			//}
+
+			// Return the style to use for a context menu item
+			virtual ContextMenuStyle const& Style() const
+			{
+				if (m_style) return *m_style;
+				assert(m_menu != nullptr && "Item is not contained within a ContextMenu"); // ContextMenu overrides this method
+				return m_menu->Style();
+			}
+
+			// True if the menu item can be selected
+			virtual bool Selectable() const
+			{
+				return true;
+			}
+
+			// True if the given key matches the hotkey prefix for this item
+			virtual bool HotkeyPrefix(wchar_t) const
+			{
+				return false;
+			}
+
+			// Get/Set whether this item has the given item state
+			bool ItemState(EMenuItemState state) const
+			{
+				return (m_state & state) != 0;
+			}
+			void ItemState(EMenuItemState state, bool on)
+			{
+				if (on) m_state = EMenuItemState(m_state |  state);
+				else    m_state = EMenuItemState(m_state & ~state);
+
+				// Ensure states are consistent
+				if ((m_state & EMenuItemState::Disabled) != 0)
+				{
+					m_state = EMenuItemState(m_state & ~EMenuItemState::Selected);
+				}
+			}
+
+			virtual Size MeasureItem(GdiGraphics& gfx) = 0;
+			virtual void DrawItem   (GdiGraphics& gfx, Rect const& rect) = 0;
+		};
+
+		// Context menu
+		// Note: this class requires GdiPlus, remember to instantiate an instance
+		// of 'pr::GdiPlus' somewhere so that the gdi+ dll is loaded
+		struct ContextMenu :Form<ContextMenu> ,ContextMenuItem
+		{
+			using BForm = Form<ContextMenu>;
+			using BMenu = ContextMenuItem;
+
+			#pragma region Draw Helpers
+
+			// Helper methods for drawing context menu items
+			struct Draw
+			{
+				// Notes:
+				// For GUI rendering, turn off antialiasing and smoothing
+				// FillRectangle is [inclusive,exclusive)
+				// DrawRectangle is [inclusive,inclusive]
+
+				static Rect MeasureText(GdiGraphics const& gfx, std::wstring const& text, GdiFont const& font)
+				{
+					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					GdiRectF text_sz; gfx.MeasureString(text.c_str(), int(text.size()), &font, GdiPointF(), &fmt, &text_sz);
+					text_sz.Height += 1.0f; text_sz.Width += 1.0f; // Round up
+					return To<RECT>(text_sz);
+				}
+				static Rect MeasureBitmap(BitmapPtr const& bm, int width)
+				{
+					// Measure the size of a bitmap rescaled to fit widthwise within 'width'
+					if (!bm) return Rect();
+					Rect rect(0, 0, bm->GetWidth(), bm->GetHeight());
+					rect.height(rect.height() * width / rect.width());
+					rect.width(width);
+					return rect;
+				}
+				static void Bkgd(GdiGraphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
+				{
+					auto col = style.Col(item_state);
+					GdiSolidBrush bsh_bkgd(col.m_bkgd);
+					int x = rect.left + style.m_margin_left;
+
+					gfx.FillRectangle(&bsh_bkgd, To<GdiRect>(rect));
+					if ((item_state & EMenuItemState::Selected) == 0)
+					{
+						GdiPen pen_3dhi(impl::ColAdj(col.m_bkgd, 10, 10, 10));
+						GdiPen pen_3dlo(impl::ColAdj(col.m_bkgd,-10,-10,-10));
+						gfx.DrawLine(&pen_3dlo, x+0, rect.top, x+0, rect.bottom - 1);
+						gfx.DrawLine(&pen_3dhi, x+1, rect.top, x+1, rect.bottom - 1);
+					}
+					else
+					{
+						if (col.m_brdr.GetValue() != GdiColor().GetValue())
+						{
+							GdiPen pen_brdr(col.m_brdr);
+							auto border = To<GdiRect>(rect.Inflate(0,0,-1,-1));
+							gfx.DrawRectangle(&pen_brdr, border);
+						}
+					}
+				}
+				static void Border(GdiGraphics& gfx, Rect const& rect, EMenuItemState item_state, ContextMenuStyle const& style)
+				{
+					auto col = style.Col(item_state);
+					GdiPen pen(col.m_text);
+					auto border = To<GdiRect>(rect.Inflate(0,0,-1,-1));
+					gfx.DrawRectangle(&pen, border);
+				}
+				static void Bitmap(GdiGraphics& gfx, Rect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
+				{
+					if (bm == 0) return;
+					auto bm_sz = MeasureBitmap(bm, style.m_margin_left - 2);
+					GdiRect r(int(rect.left + 1), int(rect.top + 1), int(bm_sz.width()), int(bm_sz.height()));
+					gfx.DrawImage(bm.get(), r);
+				}
+				static void Check(GdiGraphics& gfx, Rect const& rect, int check_state, EMenuItemState item_state, ContextMenuStyle const& style)
+				{
+					if (check_state == 0) return;
+					auto col = style.Col(item_state);
+					auto tick = (check_state == 1) ? L"a" : L"h";
+					int const tick_len = 1;
+					
+					GdiSolidBrush bsh_text(col.m_text);
+					GdiRectF sz; gfx.MeasureString(tick, tick_len, style.m_font_marks.get(), GdiPointF(), &sz);
+					GdiPointF pt(float(rect.left + (style.m_margin_left - sz.Width)*0.5f), float(rect.top + (rect.height() - sz.Height)*0.5f));
+					gfx.DrawString(tick, tick_len, style.m_font_marks.get(), pt, &bsh_text);
+				}
+				//static void Label(GdiGraphics& gfx, GdiRect const& rect, UINT item_state, int check_state, std::wstring const& text, BitmapPtr bitmap, ContextMenuStyle const& style)
+				//{
+				//	// Draw background and left margin items
+				//	Bkgd  (gfx, rect, item_state, style);
+				//	Bitmap(gfx, rect, bitmap, style);
+				//	Check (gfx, rect, check_state, item_state, style);
+
+				//	// Draw the label text
+				//	auto col = style.Col(item_state);
+				//	GdiSolidBrush bsh_text(col.m_text);
+				//	GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+				//	GdiPointF pt(float(rect.X + style.m_margin_left + style.m_text_margin), float(rect.Y + (rect.Height - m_rect_text.Height)*0.5f));
+				//	gfx.DrawString(text.c_str(), int(text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
+				//}
+			};
+
+			#pragma endregion
+
+			#pragma region Menu Items
+
+			// Separator menu item
+			struct Separator :ContextMenuItem
+			{
+				Separator(ContextMenu& menu)
+					:ContextMenuItem(-1, &menu)
+				{
+					menu.m_items.push_back(this);
+				}
+				bool Selectable() const override
+				{
+					return false;
+				}
+				Size MeasureItem(GdiGraphics&) override
+				{
+					// Height = 6, 2 bkgd rows, dark row, light row, 2 bkgd rows
+					return Size(20, 6);
+				}
+				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				{
+					auto& style = Style();
+					Draw::Bkgd(gfx, rect, EMenuItemState::Normal, style);
+
+					// Draw the separator line
+					GdiPen pen_3dhi(impl::ColAdj(style.m_col_norm.m_bkgd, +10, +10, +10));
+					GdiPen pen_3dlo(impl::ColAdj(style.m_col_norm.m_bkgd, -10, -10, -10));
+					auto x0 = rect.left + style.m_margin_left + 1;
+					auto x1 = rect.right - MenuMargin;
+					auto y  = rect.top + 2;
+					if (x0 < x1)
+					{
+						gfx.DrawLine(&pen_3dlo, x0, y+0, x1, y+0);
+						gfx.DrawLine(&pen_3dhi, x0, y+1, x1, y+1);
+					}
+				}
+			};
+
+			// Label menu item
+			struct Label :ContextMenuItem
+			{
+				std::wstring m_text;      // The label text
+				Rect         m_rect_text; // The dimensions of the text
+
+				Label(ContextMenu& menu, wchar_t const* text = L"<menu item>", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
+					:ContextMenuItem(id, &menu, state, style, bm)
+					,m_text(text)
+					,m_rect_text()
+				{
+					menu.m_items.push_back(this);
+				}
+				bool HotkeyPrefix(wchar_t hk) const override
+				{
+					auto* p = m_text.c_str();
+					for (; *p && (*p != L'&' || towupper(*(p+1)) != hk); ++p) {}
+					return *p != 0;
+				}
+				Size MeasureItem(GdiGraphics& gfx) override
+				{
+					auto& style = Style();
+
+					// Measure the text size
+					auto tx_sz = Draw::MeasureText(gfx, m_text, *style.m_font_text);
+					m_rect_text = tx_sz;
+
+					// Measure the bitmap size
+					auto bm_sz = Draw::MeasureBitmap(m_bitmap, style.m_margin_left - 2*style.m_bmp_margin);
+
+					// Return the item dimensions
+					Size sz;
+					sz.cx = tx_sz.width() + style.m_margin_left + 2*style.m_text_margin;
+					sz.cy = std::max({tx_sz.height(), bm_sz.height(), long(GetSystemMetrics(SM_CYMENU))});
+					return sz;
+				}
+				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				{
+					auto& style = Style();
+					auto col = style.Col(m_state);
+					auto check_state = ItemState(EMenuItemState::Checked) ? 1 : 0;
+
+					// Draw background and left margin items
+					Draw::Bkgd  (gfx, rect, m_state, style);
+					Draw::Bitmap(gfx, rect, m_bitmap, style);
+					Draw::Check (gfx, rect, check_state, m_state, style);
+
+					// Draw the label text
+					GdiSolidBrush bsh_text(col.m_text);
+					GdiStrFmt fmt; fmt.SetHotkeyPrefix(Gdiplus::HotkeyPrefixShow);
+					GdiPointF pt(float(rect.left) + style.m_margin_left + style.m_text_margin, float(rect.top) + 0.5f*(rect.height() - m_rect_text.height()));
+					gfx.DrawString(m_text.c_str(), int(m_text.size()), style.m_font_text.get(), pt, &fmt, &bsh_text);
+				}
+			};
+
+			// Textbox menu item. Consists of a label followed by an edit box
+			struct TextBox :Label
+			{
+				using TBox = pr::gui::TextBox;
+				enum { InnerMargin = 2, OuterMargin = 2 };
+
+				TBox         m_edit;       // The hosted control
+				Rect         m_rect_value; // The dimensions of the value text
+				std::wstring m_value;      // The value to display in the edit box
+				FontPtr      m_value_font; // The font to use for the value, if null the label font is used
+				int          m_min_width;  // The minimum width of the edit box
+
+				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
+					:Label(menu, text, id, state, style, bm)
+					,m_edit(IDC_UNUSED, &menu, nullptr, EAnchor::Left | EAnchor::Right | EAnchor::Top)
+					,m_rect_value()
+					,m_value(value)
+					,m_value_font()
+					,m_min_width(60)
+				{}
+				void CreateHostedControls() override
+				{
+					HWND parent = *static_cast<ContextMenu*>(m_menu);
+					m_edit.Create(m_value.c_str(), 0, 0, TBox::DefW, TBox::DefH, TBox::DefaultStyle, TBox::DefaultStyleEx, parent);
+				}
+				Size MeasureItem(GdiGraphics& gfx) override
+				{
+					auto& style = Style();
+
+					// Measure the label portion of the item
+					auto lbl_sz = Label::MeasureItem(gfx);
+
+					// Measure the edit box portion
+					auto edit_sz = m_edit.WindowRect();
+
+					// Return the item dimensions
+					Size sz;
+					sz.cx = lbl_sz.cx + style.m_margin_left + 2*style.m_text_margin + edit_sz.width();
+					sz.cy = std::max({lbl_sz.cy, edit_sz.height(), long(GetSystemMetrics(SM_CYMENU))});
+					return sz;
+				}
+				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
+				{
+					auto& style = Style();
+					auto col = style.Col(m_state);
+
+					// Draw the label
+					Label::DrawItem(gfx, rect);
+
+					// Position the edit box
+					m_edit.MoveWindow(m_rect_value);
+					m_edit.Enabled(!ItemState(EMenuItemState::Disabled));
+					//auto disabled = (di->itemState & ODS_DISABLED) != 0;
+					//auto r = CtrlRect(rect, style.m_margin_left);
+					//GdiSolidBrush bsh_bkgd(disabled ? GdiColor((GdiARGB)GdiColor::LightGray) : GdiColor((GdiARGB)GdiColor::WhiteSmoke));
+					//GdiPen        pen_brdr(GdiColor((GdiARGB)GdiColor::Black), 0);
+					//gfx.FillRectangle(&bsh_bkgd, r);
+					//gfx.DrawRectangle(&pen_brdr, r);
+
+					//// Write the edit box text
+					//GdiSolidBrush bsh_edittxt(style.m_col_norm.m_text);
+					//GdiPointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
+					//gfx.DrawString(m_value.c_str(), int(m_value.size()), style.m_font_text.get(), pt, 0, &bsh_edittxt);
+				}
+			};
+
+			#pragma endregion
+
+			ContextMenu(StylePtr style = nullptr)
+				:ContextMenu(nullptr, nullptr, EMenuItemState::Normal, style, nullptr)
+			{}
+			ContextMenu(ContextMenu& menu, TCHAR const* text = _T("<submenu>"), EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
+				:ContextMenu(&menu, text, state, style, bm)
+			{}
+
+			// Child menu items
+			std::vector<ContextMenuItem*> const& Items() const
+			{
+				return m_items;
+			}
+
+			// Show the context menu
+			void Show(Control* parent, int x, int y)
+			{
+				// Show the context menu as a modal dialog because the menu closes when this function returns
+				if (!m_items.empty())
+					Form<ContextMenu>::ShowDialog(parent, MakeLParam(x, y));
+			}
+
+			// Result of a high test on the menu
+			struct HitTestResult
+			{
+				// Note, menu's have a margin
+				// The topleft of the first item is at (MenuMargin,MenuMargin)
+				ContextMenuItem* m_item;   // The item under the hit point
+				int              m_index;  // Index of the hit item
+				Point            m_point;  // The point at which the hit test was performed (in menu client space)
+				Rect             m_bounds; // The menu-relative bounds of the hit item (in menu client space)
+
+				HitTestResult()
+					:m_item()
+					,m_index()
+					,m_point()
+					,m_bounds()
+				{}
+				HitTestResult(ContextMenuItem* item, int index, Point pt, Rect bounds)
+					:m_item(item)
+					,m_index(index)
+					,m_point(pt)
+					,m_bounds(bounds)
+				{}
+			};
+
+			// Hit test the menu. 'pt' should be in client space
+			HitTestResult HitTest(Point const& pt)
+			{
+				// Find the menu item that the mouse is over
+				auto index = -1;
+				auto bounds = Rect(MenuMargin, MenuMargin, MenuMargin + m_size.cx, MenuMargin);
+				for (auto item : m_items)
+				{
+					// Find the bounds for the item ([tl,br)]
+					++index;
+					bounds.top = bounds.bottom;
+					bounds.bottom += item->m_size.cy;
+					if (bounds.Contains(pt))
+						return HitTestResult(item, index, pt, bounds);
+				}
+				return HitTestResult();
+			}
+
+			// Get/Set the menu item that was selected by the mouse or with keys
+			HitTestResult Selected() const
+			{
+				return m_selected;
+			}
+			void Selected(HitTestResult hit, bool final_selection)
+			{
+				// Deselect the previously 'm_selected' item
+				if (m_selected.m_item != nullptr)
+				{
+					m_selected.m_item->ItemState(EMenuItemState::Selected, false);
+					Invalidate(false, &m_selected.m_bounds);
+				}
+
+				m_selected = hit;
+
+				// Update 'm_selected' with the new hit item
+				if (m_selected.m_item != nullptr)
+				{
+					if (!m_selected.m_item->ItemState(EMenuItemState::Disabled))
+					{
+						m_selected.m_item->ItemState(EMenuItemState::Selected, true);
+						Invalidate(false, &m_selected.m_bounds);
+					}
+				}
+
+				// Close the menu on the final selection
+				if (final_selection)
+				{
+					if (m_selected.m_item != nullptr && m_selected.m_item->Selectable())
+					{
+						OnItemSelected();
+						Close(EDialogResult::Ok);
+					}
+					else
+					{
+						Close(EDialogResult::Cancel);
+					}
+				}
+			}
+
+			// Select a menu item by index
+			void Selected(int index, bool final_selection)
+			{
+				if (index < 0 || index >= int(m_items.size()))
+					throw std::exception(pr::FmtS("menu item index (%d) out of Range [0,%d)", index, int(m_items.size())));
+
+				// Calculate the item bounds
+				Rect bounds(MenuMargin, MenuMargin, MenuMargin + m_size.cx, MenuMargin);
+				for (int i = 0; i <= index; ++i)
+				{
+					bounds.top = bounds.bottom;
+					bounds.bottom += m_items[i]->m_size.cy;
+				}
+
+				// Selected the item
+				Selected(HitTestResult(m_items[index], index, bounds.centre(), bounds), final_selection);
+			}
+
+			// Raised when a menu item is selected
+			EventHandler<ContextMenu&, EmptyArgs const&> ItemSelected;
+
+			// Handlers
+			virtual void OnItemSelected()
+			{
+				ItemSelected(*this, EmptyArgs());
+			}
+
+		private:
+
+			enum
+			{
+				// Minimum width of items in the menu
+				MinimumWidth = 100,
+
+				// The border around the items
+				MenuMargin = 2,
+			};
+
+			// The name for the submenu
+			std::wstring m_submenu_name;
+
+			// Child menu items
+			std::vector<ContextMenuItem*> m_items;
+
+			// The last item that the mouse was over or key events have selected
+			// Note: while the menu is open, this is the highlighted item, after the
+			// menu is closed, then it becomes the selected item
+			HitTestResult m_selected;
+
+			using HookMap = std::unordered_map<DWORD, ContextMenu*>;
+			static HookMap& ThreadHookMap() { static HookMap s_thread_hook_map; return s_thread_hook_map; }
+			HHOOK m_mouse_hook;
+
+			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
+				:Form<ContextMenu>(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0), "ctx-menu")
+				,ContextMenuItem(-1, menu, state, style, bm)
+				,m_submenu_name(Widen(text))
+				,m_items()
+				,m_mouse_hook()
+				,m_selected()
+			{
+				// If no style is given and no parent to inherit the style from, create a default style
+				if (!m_style && !m_parent)
+					m_style = std::make_shared<ContextMenuStyle>();
+			}
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				//OutputDebugStringA(DebugMessage(parent_hwnd, message, wparam, lparam));
+				switch (message)
+				{
+				case WM_INITDIALOG:
+					#pragma region 
+					{
+						// Allow child menu items to create hosted controls
+						for (auto& item : m_items)
+							item->CreateHostedControls();
+
+						// Measure the size of the menu
+						GdiGraphics gfx(m_hwnd);
+						Point pt(GetXLParam(lparam), GetYLParam(lparam));
+						m_size = MeasureItem(gfx);
+
+						// Client area is the contained item size plus margins
+						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
+						auto bounds = AdjRect(client).Offset(pt.x, pt.y);
+						WindowRect(bounds, true, WindowPos::EFlags::NoActivate|WindowPos::EFlags::NoZorder);
+
+						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events
+						m_dialog_behaviour = false;
+
+						// Mouse hook static callback
+						auto MouseHook = [](int code, WPARAM wparam, LPARAM lparam)
+						{
+							auto This = ThreadHookMap()[GetCurrentThreadId()];
+							auto& mhs = *reinterpret_cast<MOUSEHOOKSTRUCT*>(lparam);
+							if (code >= 0)
+							{
+								// Messages ids are contiguous in the range [WM_LBUTTONUP,WM_MBUTTONDBLCLK]
+								// this subset does not include WM_MOUSEMOVE, WM_MOUSEWHEEL and a few others
+								if ((wparam >= WM_LBUTTONDOWN && wparam <= WM_MBUTTONDBLCLK) ||
+									(wparam >= WM_NCLBUTTONDOWN && wparam <= WM_NCXBUTTONDBLCLK))
+								{
+									if (mhs.hwnd != This->m_hwnd)
+										This->Close(EDialogResult::Cancel);
+								}
+							}
+							return CallNextHookEx(This->m_mouse_hook, code, wparam, lparam);
+						};
+
+						// Hook the mouse to watch for mouse events outside of the context menu
+						auto thread_id = GetCurrentThreadId();
+						ThreadHookMap()[thread_id] = this;
+						m_mouse_hook = SetWindowsHookExW(WH_MOUSE, static_cast<HOOKPROC>(MouseHook), 0, thread_id);
+						Throw(m_mouse_hook != nullptr, "Failed to install mouse hook procedure");
+
+						break;
+					}
+					#pragma endregion
+				case WM_DESTROY:
+					#pragma region 
+					{
+						// Remove the mouse hook
+						auto thread_id = GetCurrentThreadId();
+						UnhookWindowsHookEx(m_mouse_hook);
+						ThreadHookMap().erase(thread_id);
+						break;
+					}
+					#pragma endregion
+				case WM_NCACTIVATE:
+					#pragma region 
+					{
+//						if (wparam == 0)
+//							Close(EDialogResult::Cancel);
+						break;
+					}
+					#pragma endregion
+				case WM_PAINT:
+					#pragma region 
+					{
+						PaintStruct ps(m_hwnd);
+						GdiGraphics gfx(ps.hdc);
+						DrawItem(gfx, Rect());
+						break;
+					}
+					#pragma endregion
+				case WM_MOUSEMOVE:
+					#pragma region 
+					{
+						// Only retest for hits when outside the last hit rect
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						if (Selected().m_item != nullptr && Selected().m_bounds.Contains(pt))
+							break;
+
+						// Mouse is no longer over the last hit item, retest
+						auto hit = HitTest(pt);
+						if (hit.m_item != nullptr || Selected().m_item != nullptr)
+							Selected(hit, false);
+
+						break;
+					}
+					#pragma endregion
+				case WM_LBUTTONUP:
+					#pragma region
+					{
+						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto hit = HitTest(pt);
+						Selected(hit, true);
+						return true;
+					}
+					#pragma endregion
+				case WM_KEYUP:
+					#pragma region
+					{
+						// Handle key selection of menu items
+						auto item_count = int(m_items.size());
+						if (item_count == 0) break;
+						auto ch    = TCHAR(wparam);
+						int index = Selected().m_item != nullptr ? Selected().m_index : item_count;
+
+						auto prev = [=](int idx) { return int(idx - 1 + item_count) % item_count; };
+						auto next = [=](int idx) { return int(idx + 1 + item_count) % item_count; };
+
+						if (ch == VK_RETURN) // Select the current menu item
+						{
+							if (index != item_count && m_items[index]->Selectable())
+							{
+								Selected(index, true);
+								return true;
+							}
+						}
+						else if (ch == VK_HOME) // First selectable item
+						{
+							for (index = 0; index != item_count && !m_items[index]->Selectable(); ++index) {}
+							if (index != item_count) Selected(index, false);
+							return true;
+						}
+						else if (ch == VK_ESCAPE) // Cancel
+						{
+							Close(EDialogResult::Cancel);
+							return true;
+						}
+						else if (ch == VK_END) // Last selectable item
+						{
+							for (index = item_count; index-- != 0 && !m_items[index]->Selectable(); ) {}
+							if (index != -1) Selected(index, false);
+							return true;
+						}
+						else if (ch == VK_DOWN) // Next selectable item
+						{
+							index = index != item_count ? next(index) : 0;
+							int i; for (i = 0; i != item_count && !m_items[index]->Selectable(); ++i, index = next(index)) {}
+							if (i != item_count) Selected(index, false);
+							return true;
+						}
+						else if (ch == VK_UP) // Prev selectable item
+						{
+							index = index != item_count ? prev(index) : item_count - 1;
+							int i; for (i = 0; i != item_count && !m_items[index]->Selectable(); ++i, index = prev(index)) {}
+							if (i != item_count) Selected(index, false);
+							return true;
+						}
+						else if (IsCharAlphaNumeric(ch)) // Next/Prev item with a matching Hotkey Prefix
+						{
+							wchar_t hk = Widen(&ch, 1)[0];
+							if (!KeyState(VK_SHIFT))
+							{
+								index = index != item_count ? next(index) : 0;
+								int i; for (i = 0; i != item_count && !m_items[index]->HotkeyPrefix(hk); ++i, index = next(index)) {}
+								if (i != item_count) Selected(index, false);
+							}
+							else
+							{
+								index = index != item_count ? prev(index) : item_count - 1;
+								int i; for (i = 0; i != item_count && !m_items[index]->HotkeyPrefix(hk); ++i, index = prev(index)) {}
+								if (i != item_count) Selected(index, false);
+							}
+							return true;
+						}
+						break;
+					}
+					#pragma endregion
+				}
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+
+			// Measure the size of the context menu
+			Size MeasureItem(GdiGraphics& gfx) override
+			{
+				// Measure the required size of the context menu
+				Size sz;
+				for (auto item : m_items)
+				{
+					item->m_size = item->MeasureItem(gfx);
+					sz.cx = std::max(sz.cx, item->m_size.cx);
+					sz.cy += item->m_size.cy;
+				}
+
+				// Enforce a minimum menu width
+				sz.cx = std::max(sz.cx, long(MinimumWidth));
+				return sz;
+			}
+			void DrawItem(GdiGraphics& gfx, Rect const&) override
+			{
+				auto& style = BMenu::Style();
+
+				// Background
+				GdiSolidBrush bsh(style.m_col_norm.m_bkgd);
+				gfx.FillRectangle(&bsh, 0, 0, m_size.cx + MenuMargin*2 + 1, m_size.cy + MenuMargin*2 + 1);
+
+				// Menu items
+				Rect bounds(MenuMargin, MenuMargin, MenuMargin + m_size.cx, MenuMargin); // [inclusive,exclusive)
+				for (auto item : m_items)
+				{
+					// Find the bounds for the item ([tl,br)]
+					bounds.top = bounds.bottom;
+					bounds.bottom += item->m_size.cy;
+
+					// Tell the item to draw
+					//gfx.SetClip(To<GdiRect>(bounds.Inflate(0,0,1,1)));
+					item->DrawItem(gfx, bounds);
+				}
+			}
+		};
+
+	// TODO: do this as a modal dialog
+		#if 0
+		namespace old
+		{
 		// Menu item base class
 		struct ContextMenuItem
 		{
@@ -157,8 +910,6 @@ namespace pr
 			virtual void DrawItem   (ContextMenu& menu, GdiGraphics& gfx, DRAWITEMSTRUCT* di) = 0;
 			virtual void Selected   (ContextMenu& /*menu*/, Rect const& /*rect*/, MENUITEMINFO const& /*mii*/) {}
 		};
-
-	// TODO: do this as a modal dialog
 
 		// Context menu
 		// Note: this class requires GdiPlus, remember to instantiate an instance
@@ -851,5 +1602,7 @@ namespace pr
 
 		};
 */
+		}
+		#endif
 	}
 }

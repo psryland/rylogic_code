@@ -19,10 +19,11 @@ extern std::shared_ptr<IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, int 
 
 namespace las
 {
-	char const* AppTitle()     { return "Lost at Sea"; }
-	char const* AppVersion()   { return "v0.00.01"; }
-	char const* AppVendor()    { return "Rylogic Ltd"; }
-	char const* AppCopyright() { return "Copyright (c) Rylogic Ltd 2011"; }
+	wchar_t const* AppTitle()     { return L"Lost at Sea"; }
+	wchar_t const* AppVersionW()  { return L"v0.00.01"; }
+	char const*    AppVersionA()  { return "v0.00.01"; }
+	wchar_t const* AppVendor()    { return L"Rylogic Ltd"; }
+	wchar_t const* AppCopyright() { return L"Copyright (c) Rylogic Ltd 2011"; }
 
 	struct Setup
 	{

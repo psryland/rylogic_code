@@ -9,10 +9,10 @@
 namespace las
 {
 	#define LAS_SETTING(x) \
-		x(std::string ,Version     ,AppVersion() ,0x1f8417ed ,"Application version number")\
-		x(bool        ,FullScreen  ,false        ,0x1f8412ed ,"Full screen mode enabled"  )\
-		x(pr::uint    ,XResolution ,1024         ,0x138412ed ,"Screen X resolution"       )\
-		x(pr::uint    ,YResolution ,768          ,0x138412ee ,"Screen Y resolution"       )
+		x(std::string ,Version     ,AppVersionA() ,0x1f8417ed ,"Application version number")\
+		x(bool        ,FullScreen  ,false         ,0x1f8412ed ,"Full screen mode enabled"  )\
+		x(pr::uint    ,XResolution ,1024          ,0x138412ed ,"Screen X resolution"       )\
+		x(pr::uint    ,YResolution ,768           ,0x138412ee ,"Screen Y resolution"       )
 	
 	PR_DEFINE_SETTINGS(Settings, LAS_SETTING);
 	#undef LAS_SETTING

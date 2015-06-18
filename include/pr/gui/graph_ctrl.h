@@ -329,11 +329,11 @@ namespace pr
 			using AxisRange        = typename Axis::Range;
 			using SeriesRdrOptions = typename Series::RdrOptions;
 
-			static LPCTSTR WndClassName()
+			static wchar_t const* WndClassName()
 			{
-				return _T("PRGRAPHCTRL");
+				return L"PRGRAPHCTRL";
 			}
-			static WNDCLASSEX WndClassInfo(HINSTANCE hinst)
+			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
 			{
 				return Control::WndClassInfo<GraphCtrl<Elem>>(hinst);
 			}
@@ -439,7 +439,7 @@ namespace pr
 				,DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP
 				,DWORD ex_style = 0
 				,char const* name = nullptr)
-				:Control(MAKEINTATOM(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name)
+				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()

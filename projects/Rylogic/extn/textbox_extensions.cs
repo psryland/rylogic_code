@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -95,6 +96,25 @@ namespace pr.extn
 			}
 
 			cb.Select(selection.Begini, selection.Sizei);
+		}
+
+		/// <summary>Set the textbox into a state indicating error or success.</summary>
+		public static void HintState(this TextBoxBase tb, bool success
+			,Color? success_col = null ,Color? error_col = null
+			,ToolTip tt = null ,string success_tt = null ,string error_tt = null)
+		{
+			if (success)
+			{
+				tb.BackColor = success_col ?? Color.LightGreen;
+				if (tt != null)
+					tb.ToolTip(tt, success_tt ?? string.Empty);
+			}
+			else
+			{
+				tb.BackColor = error_col ?? Color.LightSalmon;
+				if (tt != null)
+					tb.ToolTip(tt, error_tt ?? string.Empty);
+			}
 		}
 	}
 }

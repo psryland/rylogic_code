@@ -29,7 +29,7 @@ namespace pr.util
 				if (multicast_delegate != null)
 				{
 					// Get the mcd's invocation list
-					var invocation_list = multicast_delegate.GetType().GetMethod(Reflect<MulticastDelegate>.MemberName(x => x.GetInvocationList()));
+					var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
 
 					// Get the delegates subscribed to the event
 					var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);

@@ -16,3 +16,5 @@
 #include "pr/script/preprocessor.h"
 #include "pr/script/token.h"
 #include "pr/script/tokeniser.h"
+
+#pragma message("TODO: change pr::script::Reader to use wchar_t")
