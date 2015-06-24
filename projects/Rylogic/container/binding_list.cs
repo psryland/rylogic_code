@@ -24,6 +24,11 @@ namespace pr.container
 		{
 			Init();
 		}
+		public BindingListEx(IEnumerable<T> collection) :base()
+		{
+			collection.ForEach(x => Add(x));
+			Init();
+		}
 		public BindingListEx(int initial_count, Func<int,T> gen)
 		{
 			Init();

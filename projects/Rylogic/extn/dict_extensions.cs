@@ -5,6 +5,13 @@ namespace pr.extn
 {
 	public static class DictExtensions
 	{
+		/// <summary>Insert the given key,value pair into this dictionary, returning this for method chaining</summary>
+		public static Dictionary<K,V> Add2<K,V>(this Dictionary<K,V> dic, K key, V value)
+		{
+			dic.Add(key, value);
+			return dic;
+		}
+
 		/// <summary>Merge 'rhs' into this dictionary, key duplicates in 'rhs' replace items in this dictionary</summary>
 		public static IDictionary<K,V> Merge<TDict,K,V>(this TDict dic, params IDictionary<K,V>[] rhs) where TDict :IDictionary<K,V>, new()
 		{

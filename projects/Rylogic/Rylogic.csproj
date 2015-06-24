@@ -105,6 +105,7 @@
     <Compile Include="common\html.cs" />
     <Compile Include="common\iterator.cs" />
     <Compile Include="common\sequence.cs" />
+    <Compile Include="container\binding.cs" />
     <Compile Include="container\binding_dictionary.cs" />
     <Compile Include="container\binding_source.cs">
       <SubType>Component</SubType>

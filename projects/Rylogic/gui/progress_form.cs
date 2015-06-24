@@ -210,6 +210,14 @@ namespace pr.gui
 			return result;
 		}
 
+		/// <summary>Show the dialog non-modally</summary>
+		public Scope ShowScope(Control parent)
+		{
+			return Scope.Create(
+				() => { if (!Visible) Show(parent); },
+				() => { if (HideOnClose) Hide(); else Close(); });
+		}
+
 		/// <summary>Update the state of the progress form</summary>
 		public void UpdateProgress(UserState us)
 		{

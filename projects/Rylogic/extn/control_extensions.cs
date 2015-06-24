@@ -20,6 +20,45 @@ namespace pr.extn
 {
 	public static class ControlExtensions
 	{
+		/// <summary>Get the user data for this control associated with 'guid'. If not found, and 'make' != null then 'make' is called with the result added and returned</summary>
+		public static T UserData<T>(this Control ctrl, Guid guid, Func<T> make = null)
+		{
+			object user = default(T);
+
+			// Look for existing user data associated with 'guid'
+			var map = m_ctrl_user_data.GetOrAdd(ctrl);
+			if (map.TryGetValue(guid, out user))
+				return (T)user;
+
+			// If not found, but a construction delegate is provided, create the user
+			// data, add it to the map, and return it
+			if (make != null)
+				map.Add(guid, user = make());
+
+			return (T)user;
+		}
+
+		/// <summary>Set some user data for this control. Setting 'data' == null removes the user data associated with 'guid'</summary>
+		public static void UserData<T>(this Control ctrl, Guid guid, T data)
+		{
+			if (data != null)
+			{
+				var map = m_ctrl_user_data.GetOrAdd(ctrl);
+				map[guid] = data;
+			}
+			else
+			{
+				Dictionary<Guid,object> map;
+				if (m_ctrl_user_data.TryGetValue(ctrl, out map))
+				{
+					map.Remove(guid);
+					if (map.Count == 0)
+						m_ctrl_user_data.Remove(ctrl);
+				}
+			}
+		}
+		[ThreadStatic] private static Dictionary<Control, Dictionary<Guid, object>> m_ctrl_user_data = new Dictionary<Control,Dictionary<Guid,object>>();
+
 		/// <summary>Tests if this component is being used by the VS designer</summary>
 		public static bool IsInDesignMode<TComponent>(this TComponent c) where TComponent:Component
 		{
@@ -90,16 +129,23 @@ namespace pr.extn
 		}
 
 		/// <summary>Display a hint balloon.</summary>
-		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000)
+		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000, Point? pt = null)
 		{
-			//var parent = ctrl.FindForm();
-			//if (parent == null) return;
-			var pt = ctrl.ClientRectangle.Centre();
+			// Only show the tool tip if not currently showing or it's different
+			var prev = tt.GetToolTip(ctrl);
+			if (prev != msg)
+			{
+				// Show the tt
+				tt.Show(msg, ctrl, pt ?? ctrl.ClientRectangle.Centre(), duration);
 
-			tt.SetToolTip(ctrl, msg);
-			tt.Show(msg, ctrl, pt, duration);
-			tt.BeginInvokeDelayed(duration, () => tt.SetToolTip(ctrl, null));
-			//tt.Popup += (s,a) => tt.SetToolTip(ctrl,null);
+				// Set the tt for the control so we can detect expired
+				tt.SetToolTip(ctrl, msg);
+				tt.BeginInvokeDelayed(duration, () =>
+					{
+						if (tt.GetToolTip(ctrl) == msg)
+							tt.SetToolTip(ctrl, null);
+					});
+			}
 		}
 
 		/// <summary>Returns the location of this item in screen space</summary>

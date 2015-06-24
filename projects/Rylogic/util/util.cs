@@ -791,6 +791,28 @@ namespace pr.util
 
 			return sb.ToString();
 		}
+
+		/// <summary>
+		/// Attempts to locate an application installation directory on the local machine.
+		/// Returns the folder location if found, or null.
+		/// 'look_in' are optional extra directories to check</summary>
+		public static string LocateDir(string relative_path, params string[] look_in)
+		{
+			if (look_in.Length == 0)
+				look_in = new []
+				{
+					Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+					Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+					@"C:\Program Files",
+					@"C:\Program Files (x86)",
+					@"D:\Program Files",
+					@"D:\Program Files (x86)",
+				};
+				
+			return look_in
+				.Select(x => PathEx.CombinePath(x, relative_path))
+				.FirstOrDefault(PathEx.DirExists);
+		}
 	}
 
 	/// <summary>Type specific utility methods</summary>

@@ -94,11 +94,11 @@ namespace pr.common
 		/// <summary>True if 'path' is a directory containing no files or subdirectories</summary>
 		public static bool IsEmptyDirectory(string path)
 		{
-			return IsDirectory(path) && !Directory.EnumerateFileSystemEntries(path).Any();
+			return IsDirectory(path) && !System.IO.Directory.EnumerateFileSystemEntries(path).Any();
 		}
 
 		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
-		public static string MakeRelativePath(string full_file_path, string rel_path)
+		public static string RelativePath(string full_file_path, string rel_path)
 		{
 			const int FILE_ATTRIBUTE_DIRECTORY = 0x10;
 			const int FILE_ATTRIBUTE_NORMAL = 0x80;
@@ -108,6 +108,36 @@ namespace pr.common
 			return path.Length == 0 ? full_file_path : path;
 		}
 		[DllImport("shlwapi.dll")] private static extern int PathRelativePathTo(StringBuilder pszPath, string pszFrom, int dwAttrFrom, string pszTo, int dwAttrTo);
+
+		/// <summary>Return the directory part of 'path' (or empty string)</summary>
+		public static string Directory(string path)
+		{
+			return Path.GetDirectoryName(path) ?? string.Empty;
+		}
+
+		/// <summary>Return the filename part of 'path' (or empty string)</summary>
+		public static string FileName(string path)
+		{
+			return Path.GetFileName(path) ?? string.Empty;
+		}
+
+		/// <summary>Return the file title part of 'path' (or empty string)</summary>
+		public static string FileTitle(string path)
+		{
+			return Path.GetFileNameWithoutExtension(path) ?? string.Empty;
+		}
+
+		/// <summary>Return the file extension of 'path' (or empty string)</summary>
+		public static string Extn(string path)
+		{
+			return Path.GetExtension(path) ?? string.Empty;
+		}
+
+		/// <summary>Returns the drive (i.e. root) of 'path' (or empty string)</summary>
+		public static string Drive(string path)
+		{
+			return Path.GetPathRoot(path) ?? string.Empty;
+		}
 
 		/// <summary>Return a path consisting of the concatenation of path fragments</summary>
 		public static string CombinePath(params string[] paths)
@@ -358,7 +388,7 @@ namespace pr.common
 				try
 				{
 					// Generate a list of all contained files
-					var files = Directory.GetFiles(root, "*", SearchOption.AllDirectories);
+					var files = System.IO.Directory.GetFiles(root, "*", SearchOption.AllDirectories);
 					if (files.Length != 0)
 					{
 						if (!even_if_not_empty)
@@ -391,7 +421,7 @@ namespace pr.common
 					{
 						try
 						{
-							Directory.Delete(root, true);
+							System.IO.Directory.Delete(root, true);
 							return true;
 						}
 						catch (IOException)
@@ -443,7 +473,7 @@ namespace pr.unittests
 		{
 			string path;
 
-			path = PathEx.MakeRelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
+			path = PathEx.RelativePath(@"A:\dir\subdir\file.ext", @"A:\dir");
 			Assert.AreEqual(@".\subdir\file.ext", path);
 
 			path = PathEx.CombinePath(@"A:\", @".\dir\subdir2", @"..\subdir\", "file.ext");

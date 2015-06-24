@@ -64,28 +64,28 @@ namespace pr.maths
 			return (value & mask) == mask;
 		}
 
-		/// <summary>Iterator over the index positions of bits in a bit field</summary>
+		/// <summary>Iterate over the index positions of bits in a bit field</summary>
 		public static IEnumerable<int> EnumBitIndices(int value)
 		{
 			for (var i = 0; value != 0; ++i, value >>= 1)
 				if ((value&1) != 0) yield return i;
 		}
 
-		/// <summary>Iterator over the index positions of bits in a bit field</summary>
+		/// <summary>Iterate over the index positions of bits in a bit field</summary>
 		public static IEnumerable<int> EnumBitIndices(uint value)
 		{
 			for (var i = 0; value != 0; ++i, value >>= 1)
 				if ((value&1) != 0) yield return i;
 		}
 
-		/// <summary>Iterator over the set bits in a bit field</summary>
+		/// <summary>Iterate over the set bits in a bit field</summary>
 		public static IEnumerable<int> EnumBitMasks(int value)
 		{
 			for (int mask; value != 0; value -= mask)
 				yield return mask = value & (value ^ (value - 1));
 		}
 
-		/// <summary>Iterator over the set bits in a bit field</summary>
+		/// <summary>Iterate over the set bits in a bit field</summary>
 		public static IEnumerable<uint> EnumBitMasks(uint value)
 		{
 			for (uint mask; value != 0; value -= mask)

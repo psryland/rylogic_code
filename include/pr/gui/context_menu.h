@@ -415,16 +415,22 @@ namespace pr
 
 				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:Label(menu, text, id, state, style, bm)
-					,m_edit(IDC_UNUSED, &menu, nullptr, EAnchor::Left | EAnchor::Right | EAnchor::Top)
+					,m_edit(IDC_UNUSED, &menu, nullptr, EAnchor::None) // positioned manually
 					,m_rect_value()
 					,m_value(value)
 					,m_value_font()
 					,m_min_width(60)
-				{}
+				{
+					m_edit.Key += [&](Control const&, KeyEventArgs const& a)
+						{
+							if (a.m_vk_key == VK_RETURN)
+								menu.Close(EDialogResult::Ok);
+						};
+				}
 				void CreateHostedControls() override
 				{
 					HWND parent = *static_cast<ContextMenu*>(m_menu);
-					m_edit.Create(m_value.c_str(), 0, 0, TBox::DefW, TBox::DefH, TBox::DefaultStyle, TBox::DefaultStyleEx, parent);
+					m_edit.Create(m_value.c_str(), 0, 0, 50, 18, TBox::DefaultStyle, TBox::DefaultStyleEx, parent);
 				}
 				Size MeasureItem(GdiGraphics& gfx) override
 				{
@@ -434,12 +440,12 @@ namespace pr
 					auto lbl_sz = Label::MeasureItem(gfx);
 
 					// Measure the edit box portion
-					auto edit_sz = m_edit.WindowRect();
+					auto edit_sz = m_edit.ClientRect(); // same as WindowRect();
 
 					// Return the item dimensions
 					Size sz;
-					sz.cx = lbl_sz.cx + style.m_margin_left + 2*style.m_text_margin + edit_sz.width();
-					sz.cy = std::max({lbl_sz.cy, edit_sz.height(), long(GetSystemMetrics(SM_CYMENU))});
+					sz.cx = style.m_margin_left + m_rect_text.width() + edit_sz.width() + 3*style.m_text_margin;
+					sz.cy = std::max({lbl_sz.cy, edit_sz.height()+4, long(GetSystemMetrics(SM_CYMENU))});
 					return sz;
 				}
 				void DrawItem(GdiGraphics& gfx, Rect const& rect) override
@@ -451,19 +457,13 @@ namespace pr
 					Label::DrawItem(gfx, rect);
 
 					// Position the edit box
-					m_edit.MoveWindow(m_rect_value);
+					auto r = m_edit.ClientRect();
+					auto pt = Point(
+						style.m_margin_left + m_rect_text.width() + 2*style.m_text_margin,
+						rect.top + (rect.height() - r.height()) / 2);
+					
+					m_edit.MoveWindow(Rect(pt, r.size()));
 					m_edit.Enabled(!ItemState(EMenuItemState::Disabled));
-					//auto disabled = (di->itemState & ODS_DISABLED) != 0;
-					//auto r = CtrlRect(rect, style.m_margin_left);
-					//GdiSolidBrush bsh_bkgd(disabled ? GdiColor((GdiARGB)GdiColor::LightGray) : GdiColor((GdiARGB)GdiColor::WhiteSmoke));
-					//GdiPen        pen_brdr(GdiColor((GdiARGB)GdiColor::Black), 0);
-					//gfx.FillRectangle(&bsh_bkgd, r);
-					//gfx.DrawRectangle(&pen_brdr, r);
-
-					//// Write the edit box text
-					//GdiSolidBrush bsh_edittxt(style.m_col_norm.m_text);
-					//GdiPointF pt(float(r.X + InnerMargin), float(r.Y + InnerMargin));
-					//gfx.DrawString(m_value.c_str(), int(m_value.size()), style.m_font_text.get(), pt, 0, &bsh_edittxt);
 				}
 			};
 
@@ -677,7 +677,8 @@ namespace pr
 								if ((wparam >= WM_LBUTTONDOWN && wparam <= WM_MBUTTONDBLCLK) ||
 									(wparam >= WM_NCLBUTTONDOWN && wparam <= WM_NCXBUTTONDBLCLK))
 								{
-									if (mhs.hwnd != This->m_hwnd)
+									// Close when clicking on a window that isn't a child of 'This'
+									if (!::IsChild(This->m_hwnd, mhs.hwnd))
 										This->Close(EDialogResult::Cancel);
 								}
 							}
@@ -706,8 +707,8 @@ namespace pr
 				case WM_NCACTIVATE:
 					#pragma region 
 					{
-//						if (wparam == 0)
-//							Close(EDialogResult::Cancel);
+						if (wparam == 0)
+							Close(EDialogResult::Cancel);
 						break;
 					}
 					#pragma endregion

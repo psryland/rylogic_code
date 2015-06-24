@@ -164,6 +164,16 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
 		}
 
+		/// <summary>Reset bindings for 'item'</summary>
+		public void ResetItem(TItem item)
+		{
+			var idx = List.IndexOf(item);
+			if ((idx < 0 || idx >= List.Count) && !Equals(item, default(TItem)))
+				throw new IndexOutOfRangeException("Cannot reset a value that isn't in this collection");
+
+			ResetItem(idx);
+		}
+
 		/// <summary>Enumerate over data source elements</summary>
 		public new IEnumerator<TItem> GetEnumerator()
 		{

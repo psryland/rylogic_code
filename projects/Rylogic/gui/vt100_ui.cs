@@ -221,54 +221,6 @@ namespace pr.gui
 			set { m_settings.HexOutput = value; SettingsChanged.Raise(this); }
 		}
 
-		/// <summary>Return the number of lines of text in the control</summary>
-		public int LineCount
-		{
-			get { return TextLength == 0 ? 0 : GetLineFromCharIndex(TextLength) + 1; }
-		}
-
-		/// <summary>Return the length of a line in the control</summary>
-		public int LineLength(int line, bool include_newline)
-		{
-			return (int)IndexRangeFromLine(line, include_newline).Size;
-		}
-
-		/// <summary>Get/Set the line that SelectionStart is on</summary>
-		public int CurrentLine
-		{
-			get { return GetLineFromCharIndex(SelectionStart); }
-			set { SelectionStart = GetFirstCharIndexFromLine(value); }
-		}
-
-		/// <summary>Return the index range for the given line</summary>
-		public Range IndexRangeFromLine(int line, bool include_newline)
-		{
-			if (line <  0)         return new Range(0,0);
-			if (line >= LineCount) return new Range(TextLength, TextLength);
-			int idx0 = GetFirstCharIndexFromLine(line);
-			int idx1 = GetFirstCharIndexFromLine(line+1);
-			if (idx1 > idx0 && !include_newline) --idx1;
-			return new Range(idx0, idx1 >= idx0 ? idx1 : TextLength);
-		}
-
-		/// <summary>The current cursor location</summary>
-		public Point CursorLocation
-		{
-			get
-			{
-				int idx = SelectionStart;
-				int row = GetLineFromCharIndex(idx);
-				int col = idx - GetFirstCharIndexFromLine(row);
-				return new Point(col, row);
-			}
-			set
-			{
-				value = MoveCursor(value.X, value.Y);
-				SelectionStart = GetFirstCharIndexFromLine(value.Y) + value.X;
-				SelectionLength = 0;
-			}
-		}
-
 		/// <summary>The cursor position for output text (not the same as the user selection cursor)</summary>
 		public Point OutputCursorLocation
 		{
@@ -352,14 +304,14 @@ namespace pr.gui
 
 			using (this.SuspendRedraw(true))
 			{
-				CursorLocation = OutputCursorLocation;
+				CaretLocation = OutputCursorLocation;
 
 				if (m_settings.HexOutput)
 					OutputHex(text);
 				else
 					ParseOutput(text);
 
-				OutputCursorLocation = CursorLocation;
+				OutputCursorLocation = CaretLocation;
 			}
 			ClearUndo();
 		}
@@ -367,7 +319,7 @@ namespace pr.gui
 		/// <summary>Helper for writing a string to the control</summary>
 		private void Write(string str)
 		{
-			Point loc = CursorLocation;
+			Point loc = CaretLocation;
 			SelectionLength = Math.Min(str.Length, LineLength(loc.Y, str.EndsWith("\n") || str.EndsWith("\r")) - loc.X);
 			SelectedText = str;
 		}
@@ -419,9 +371,9 @@ namespace pr.gui
 				else if (char.IsControl(c)) // ignore non printable text
 				{
 					if (first != last) Write(text.Substring(first, last - first));
-					if (c == '\b') CursorLocation = MoveCursor(CursorLocation, -1, 0);
-					if (c == '\r') CursorLocation = MoveCursor(CursorLocation, -CursorLocation.X, 0);
-					if (c == '\t') Write("".PadRight(TabSize - (CursorLocation.X % TabSize), ' '));
+					if (c == '\b') CaretLocation = MoveCursor(CaretLocation, -1, 0);
+					if (c == '\r') CaretLocation = MoveCursor(CaretLocation, -CaretLocation.X, 0);
+					if (c == '\t') Write("".PadRight(TabSize - (CaretLocation.X % TabSize), ' '));
 					first = last + 1;
 				}
 			}
@@ -478,16 +430,16 @@ namespace pr.gui
 			//EscO	Set single shift 3	SS3
 
 			case 'A': //EscA Move cursor up one line cursorup
-				CursorLocation = MoveCursor(CursorLocation, 0,-1);
+				CaretLocation = MoveCursor(CaretLocation, 0,-1);
 				break;
 			case 'B': //EscB Move cursor down one line cursordn
-				CursorLocation = MoveCursor(CursorLocation, 0,+1);
+				CaretLocation = MoveCursor(CaretLocation, 0,+1);
 				break;
 			case 'C': //EscC Move cursor right one char cursorrt
-				CursorLocation = MoveCursor(CursorLocation, +1,0);
+				CaretLocation = MoveCursor(CaretLocation, +1,0);
 				break;
 			case 'D': //EscD Move cursor left one char cursorlf
-				CursorLocation = MoveCursor(CursorLocation, -1,0);
+				CaretLocation = MoveCursor(CaretLocation, -1,0);
 				break;
 
 			//EscD	Move/scroll window up one line	IND
@@ -495,11 +447,11 @@ namespace pr.gui
 			//EscE	Move to next line	NEL
 
 			case '7': //Esc7 Save cursor position and attributes DECSC
-				m_state.m_saved_cursor_location = CursorLocation;
+				m_state.m_saved_cursor_location = CaretLocation;
 				m_state.m_saved_font = (Font)SelectionFont.Clone();
 				break;
 			case '8': //Esc8 Restore cursor position and attributes DECSC
-				CursorLocation = m_state.m_saved_cursor_location;
+				CaretLocation = m_state.m_saved_cursor_location;
 				SelectionFont = m_state.m_saved_font;
 				break;
 
@@ -538,23 +490,23 @@ namespace pr.gui
 				return;
 
 			case 'A': // Esc[ValueA Move cursor up n lines CUU
-				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CursorLocation = MoveCursor(CursorLocation, 0,-Math.Max(n[0],1)); }
+				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CaretLocation = MoveCursor(CaretLocation, 0,-Math.Max(n[0],1)); }
 				break;
 			case 'B': // Esc[ValueB Move cursor down n lines CUD
-				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CursorLocation = MoveCursor(CursorLocation, 0,+Math.Max(n[0],1)); }
+				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CaretLocation = MoveCursor(CaretLocation, 0,+Math.Max(n[0],1)); }
 				break;
 			case 'C': // Esc[ValueC Move cursor right n lines CUF
-				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CursorLocation = MoveCursor(CursorLocation, +Math.Max(n[0],1),0); }
+				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CaretLocation = MoveCursor(CaretLocation, +Math.Max(n[0],1),0); }
 				break;
 			case 'D': // Esc[ValueD Move cursor left n lines CUB
-				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CursorLocation = MoveCursor(CursorLocation, -Math.Max(n[0],1),0); }
+				{ int[] n = Params(1, m_seq.ToString(2,m_seq.Length-3)); CaretLocation = MoveCursor(CaretLocation, -Math.Max(n[0],1),0); }
 				break;
 
 			case 'f':
 				//Esc[f             Move cursor to upper left corner hvhome
 				//Esc[;f            Move cursor to upper left corner hvhome
 				//Esc[Line;Columnf  Move cursor to screen location v,h CUP
-				{ int[] n = Params(2, m_seq.ToString(2, m_seq.Length-3)); CursorLocation = MoveCursor(n[1], n[0]); }
+				{ int[] n = Params(2, m_seq.ToString(2, m_seq.Length-3)); CaretLocation = MoveCursor(n[1], n[0]); }
 				break;
 
 			case 'g':
@@ -567,7 +519,7 @@ namespace pr.gui
 				//Esc[H            Move cursor to upper left corner cursorhome
 				//Esc[;H           Move cursor to upper left corner cursorhome
 				//Esc[Line;ColumnH Move cursor to screen location v,h CUP
-				{ int[] n = Params(2, m_seq.ToString(2, m_seq.Length-3)); CursorLocation = MoveCursor(n[1], n[0]); }
+				{ int[] n = Params(2, m_seq.ToString(2, m_seq.Length-3)); CaretLocation = MoveCursor(n[1], n[0]); }
 				break;
 
 			case 'h':
@@ -609,19 +561,19 @@ namespace pr.gui
 				switch (m_seq.ToString()){
 				case "\u001b[K":  //Esc[K  Clear line from cursor right EL0
 				case "\u001b[0K":{//Esc[0K Clear line from cursor right EL0
-					Range rg = IndexRangeFromLine(CurrentLine, false);
+					Range rg = IndexRangeFromLine(CurrentLineIndex, false);
 					SelectionLength = (int)rg.End - SelectionStart;
 					SelectedText = "";
 					}break;
 				case "\u001b[1K":{//Esc[1K Clear line from cursor left EL1
-					Range rg = IndexRangeFromLine(CurrentLine, false);
+					Range rg = IndexRangeFromLine(CurrentLineIndex, false);
 					rg.End = SelectionStart;
 					SelectionStart = (int)rg.Begin;
 					SelectionLength = (int)rg.Size;
 					SelectedText = "";
 					}break;
 				case "\u001b[2K":{//Esc[2K Clear entire line EL2
-					Range rg = IndexRangeFromLine(CurrentLine, false);
+					Range rg = IndexRangeFromLine(CurrentLineIndex, false);
 					SelectionStart = (int)rg.Begin;
 					SelectionLength = (int)rg.Size;
 					SelectedText = "";
@@ -812,6 +764,13 @@ namespace pr.gui
 
 			// Escape sequence complete and processed
 			m_seq.Length = 0;
+		}
+
+		/// <summary>Get/Set the caret location</summary>
+		public override Point CaretLocation
+		{
+			get { return base.CaretLocation; }
+			set { base.CaretLocation = MoveCursor(value.X, value.Y); }
 		}
 
 		/// <summary>Move the cursor to an absolute position</summary>

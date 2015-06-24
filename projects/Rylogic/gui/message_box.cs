@@ -19,17 +19,16 @@ namespace pr.gui
 		private Panel m_panel;
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
+		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
 		{
-			using (var dlg = new MsgBox(null, message,title, btns, icon, dflt_btn))
-				return dlg.ShowDialog();
+			using (var dlg = new MsgBox(owner, message, title, btns, icon, dflt_btn))
+				return dlg.ShowDialog(owner);
 		}
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
+		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
 		{
-			using (var dlg = new MsgBox(owner, message,title, btns, icon, dflt_btn))
-				return dlg.ShowDialog(owner);
+			return Show(null, message,title, btns, icon, dflt_btn);
 		}
 
 		public MsgBox()                                                                          :this(null, string.Empty, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
@@ -44,7 +43,7 @@ namespace pr.gui
 			InitializeComponent();
 			StartPosition = FormStartPosition.CenterParent;
 			Title = title;
-			Message = Regex.Replace(message, @"[^\r]\n", "\r\n");
+			Message = Regex.Replace(message, @"(?<!\r)\n", "\r\n"); // Replace instances of \n with \r\n (if not already \r\n)
 			Reflow = true;
 			ReflowAspectRatio = 7f;
 

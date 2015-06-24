@@ -1,4 +1,5 @@
-﻿//#define SQLITE_TRACE
+﻿//#define SQLITE_HANDLES
+//#define SQLITE_TRACE
 //#define WP8_SQLITE
 #if !MONOTOUCH
 #define COMPILED_LAMBDAS
