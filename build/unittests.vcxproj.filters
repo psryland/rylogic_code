@@ -633,24 +633,6 @@
     <ClInclude Include="..\include\pr\container\quadtree.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstring.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstdstring.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstringcore.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstringextract.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstringstream.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\prstringutility.h">
-      <Filter>pr\str</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
       <Filter>pr\renderer11\textures</Filter>
     </ClInclude>
@@ -803,9 +785,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\script\tokeniser.h">
       <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\str\tostring.h">
-      <Filter>pr\str</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\unittests.h">
       <Filter>pr\common</Filter>
@@ -975,11 +954,20 @@
     <ClInclude Include="..\include\pr\script2\char_stream.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\extract.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\str\string_core.h">
+      <Filter>pr\str</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\string_core.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\str\extract.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\string.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\to_string.h">
+      <Filter>pr\str</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\str\string_util.h">
+      <Filter>pr\str</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

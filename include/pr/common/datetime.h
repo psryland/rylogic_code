@@ -13,7 +13,7 @@
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/maths/maths.h"
-#include "pr/str/prstring.h"
+#include "pr/str/string.h"
 
 namespace pr
 {

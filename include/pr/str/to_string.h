@@ -4,8 +4,6 @@
 //***********************************************************************
 
 #pragma once
-#ifndef PR_STR_TOSTRING_H
-#define PR_STR_TOSTRING_H
 
 #include <string>
 #include <sstream>
@@ -13,53 +11,11 @@
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
-#include "pr/str/prstring.h"
+#include "pr/str/string_core.h"
+#include "pr/str/string.h"
 
 namespace pr
 {
-	// A static instance of the locale, because this thing takes ages to construct
-	inline std::locale const& locale()
-	{
-		static std::locale s_locale("");
-		return s_locale;
-	}
-
-	// Narrow
-	inline std::string Narrow(char const* from, std::size_t len = 0)
-	{
-		if (!from) return std::string();
-		if (len == 0) len = strlen(from);
-		return std::string(from, from+len);
-	}
-	inline std::string Narrow(wchar_t const* from, std::size_t len = 0)
-	{
-		if (!from) return std::string();
-		if (len == 0) len = wcslen(from);
-		std::vector<char> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
-		return std::string(&buffer[0], &buffer[len]);
-	}
-	template <std::size_t Len> inline std::string Narrow(char const (&from)[Len])    { return Narrow(from, Len); }
-	template <std::size_t Len> inline std::string Narrow(wchar_t const (&from)[Len]) { return Narrow(from, Len); }
-
-	// Widen
-	inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
-	{
-		if (!from) return std::wstring();
-		if (len == 0) len = wcslen(from);
-		return std::wstring(from, from+len);
-	}
-	inline std::wstring Widen(char const* from, std::size_t len = 0)
-	{
-		if (!from) return std::wstring();
-		if (len == 0) len = strlen(from);
-		std::vector<wchar_t> buffer(len + 1);
-		std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
-		return std::wstring(&buffer[0], &buffer[len]);
-	}
-	template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
-	template <std::size_t Len> inline std::wstring Widen (char    const (&from)[Len]) { return Widen(from, Len); }
-
 	namespace impl
 	{
 		// Convert a signed/unsigned int to a string. buf should be at least 65 characters long
@@ -254,5 +210,4 @@ namespace pr
 		}
 	}
 }
-#endif
 #endif

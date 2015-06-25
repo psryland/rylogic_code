@@ -29,7 +29,7 @@
 
 #include <string>
 #include <vector>
-#include "pr/str/prstring.h" // for pr::str::Tokenise()
+#include "pr/str/string_util.h" // for pr::str::Tokenise()
 
 namespace pr
 {

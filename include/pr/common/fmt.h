@@ -191,7 +191,7 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include "pr/str/prstring.h"
+#include "pr/str/string.h"
 
 namespace pr
 {

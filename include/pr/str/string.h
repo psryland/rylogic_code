@@ -1411,12 +1411,12 @@ namespace std
 #if PR_UNITTESTS
 #include <string>
 #include "pr/common/unittests.h"
-#include "pr/str/prstringcore.h"
+#include "pr/str/string_core.h"
 namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_str_prstdstring)
+		PRUnitTest(pr_str_string)
 		{
 			char const*    src = "abcdefghij";
 			wchar_t const* wsrc = L"abcdefghij";
