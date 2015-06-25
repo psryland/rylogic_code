@@ -254,8 +254,6 @@ namespace pr
 		}
 		inline std::string Narrow(std::string const& from)  { return from; }
 		inline std::string Narrow(std::wstring const& from) { return Narrow(from.c_str(), from.size()); }
-		template <std::size_t Len> inline std::string Narrow(char const (&from)[Len])    { return Narrow(from, Len); }
-		template <std::size_t Len> inline std::string Narrow(wchar_t const (&from)[Len]) { return Narrow(from, Len); }
 
 		// Widen
 		inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
@@ -274,8 +272,6 @@ namespace pr
 		}
 		inline std::wstring Widen(std::wstring const& from) { return from; }
 		inline std::wstring Widen(std::string const& from)  { return Widen(from.c_str(), from.size()); }
-		template <std::size_t Len> inline std::wstring Widen (wchar_t const (&from)[Len]) { return Widen(from, Len); }
-		template <std::size_t Len> inline std::wstring Widen (char    const (&from)[Len]) { return Widen(from, Len); }
 
 		#pragma endregion
 

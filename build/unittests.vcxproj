@@ -289,6 +289,9 @@
     <ClInclude Include="..\include\pr\network\tcpip.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
+    <ClInclude Include="..\include\pr\script2\char_stream.h" />
+    <ClInclude Include="..\include\pr\script2\extract.h" />
+    <ClInclude Include="..\include\pr\script2\string_core.h" />
     <ClInclude Include="..\include\pr\script\newline_strip.h" />
     <ClInclude Include="..\include\pr\storage\csv.h" />
     <ClInclude Include="..\include\pr\storage\settings.h" />

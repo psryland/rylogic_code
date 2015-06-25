@@ -77,6 +77,9 @@
     <Filter Include="pr\collision">
       <UniqueIdentifier>{00177e26-fdc4-451b-84d3-d212e96c0a56}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\script2">
+      <UniqueIdentifier>{3e862334-5c56-46b2-8db6-4612bfd5b3ad}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -968,6 +971,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\pe_file.h">
       <Filter>pr\common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\char_stream.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\extract.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\string_core.h">
+      <Filter>pr\script2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
