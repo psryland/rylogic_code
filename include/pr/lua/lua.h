@@ -23,7 +23,7 @@ extern "C"
 #include <string>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
-#include "pr/str/prstring.h"
+#include "pr/str/string_util.h"
 
 #ifndef PR_DBG_LUA
 #define PR_DBG_LUA PR_DBG

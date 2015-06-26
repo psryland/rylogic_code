@@ -11,7 +11,7 @@
 #include "pr/maths/maths.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
-#include "pr/str/prstring.h"
+//#include "pr/str/prstring.h"
 #include "pr/script/script.h"
 
 typedef std::unique_ptr<pr::script::Src> SrcPtr;
@@ -65,8 +65,8 @@ struct Main :pr::cmdline::IOptionReceiver
 			if (pr::str::EqualI(option, "-newlines"))
 			{
 				if (arg_end - arg < 2) throw std::exception("<newlines> insufficient arguments");
-				size_t lines_min = pr::str::as<pr::uint>(*arg++, 0, 10);
-				size_t lines_max = pr::str::as<pr::uint>(*arg++, 0, 10);
+				size_t lines_min = pr::To<pr::uint>(*arg++, 10);
+				size_t lines_max = pr::To<pr::uint>(*arg++, 10);
 				m_src = std::make_unique<pr::script::NewLineStrip>(*m_src.release(), lines_max, lines_min);
 				return true;
 			}

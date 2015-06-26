@@ -8,6 +8,7 @@
 #include <string>
 #include <sstream>
 #include <clocale>
+#include <cstdlib>
 #include <locale>
 #include <vector>
 #include "pr/common/to.h"
@@ -163,19 +164,57 @@ namespace pr
 	// To<int>
 	template <typename TFrom> struct Convert<int,TFrom>
 	{
-		static int To(char const* from, int radix)               { return static_cast<int>(::strtol(from, 0, radix)); }
-		static int To(wchar_t const* from, int radix)            { return static_cast<int>(::wcstol(from, 0, radix)); }
-		static int To(std::string const& from, int radix)        { return static_cast<int>(::strtol(from.c_str(), 0, radix)); }
-		static int To(std::wstring const& from, int radix)       { return static_cast<int>(::wcstol(from.c_str(), 0, radix)); }
+		static int To(char const* from, int radix)               { return int(::strtol(from, nullptr, radix)); }
+		static int To(wchar_t const* from, int radix)            { return int(::wcstol(from, nullptr, radix)); }
+		static int To(std::string const& from, int radix)        { return int(::strtol(from.c_str(), nullptr, radix)); }
+		static int To(std::wstring const& from, int radix)       { return int(::wcstol(from.c_str(), nullptr, radix)); }
+
+		static int To(char const* from, char const** end, int radix)            { return int(::strtol(from, end, radix)); }
+		static int To(wchar_t const* from, wchar_t const** end, int radix)      { return int(::wcstol(from, end, radix)); }
+		static int To(std::string const& from, char const** end, int radix)     { return int(::strtol(from.c_str(), end, radix)); }
+		static int To(std::wstring const& from, wchar_t const** end, int radix) { return int(::wcstol(from.c_str(), end, radix)); }
 	};
 
-	// To<size_t>
-	template <typename TFrom> struct Convert<size_t,TFrom>
+	// To<uint>
+	template <typename TFrom> struct Convert<unsigned int,TFrom>
 	{
-		static size_t To(char const* from, int radix)               { return static_cast<size_t>(::strtoul(from, 0, radix)); }
-		static size_t To(wchar_t const* from, int radix)            { return static_cast<size_t>(::wcstoul(from, 0, radix)); }
-		static size_t To(std::string const& from, int radix)        { return static_cast<size_t>(::strtoul(from.c_str(), 0, radix)); }
-		static size_t To(std::wstring const& from, int radix)       { return static_cast<size_t>(::wcstoul(from.c_str(), 0, radix)); }
+		static unsigned int To(char const* from, int radix)         { return unsigned int(::strtoul(from, nullptr, radix)); }
+		static unsigned int To(wchar_t const* from, int radix)      { return unsigned int(::wcstoul(from, nullptr, radix)); }
+		static unsigned int To(std::string const& from, int radix)  { return unsigned int(::strtoul(from.c_str(), nullptr, radix)); }
+		static unsigned int To(std::wstring const& from, int radix) { return unsigned int(::wcstoul(from.c_str(), nullptr, radix)); }
+
+		static unsigned int To(char const* from, char const** end, int radix)            { return unsigned int(::strtoul(from, end, radix)); }
+		static unsigned int To(wchar_t const* from, wchar_t const** end, int radix)      { return unsigned int(::wcstoul(from, end, radix)); }
+		static unsigned int To(std::string const& from, char const** end, int radix)     { return unsigned int(::strtoul(from.c_str(), end, radix)); }
+		static unsigned int To(std::wstring const& from, wchar_t const** end, int radix) { return unsigned int(::wcstoul(from.c_str(), end, radix)); }
+	};
+
+	// To<long long>
+	template <typename TFrom> struct Convert<long long, TFrom>
+	{
+		static long long To(char const* from, int radix)               { return ::strtoll(from, nullptr, radix); }
+		static long long To(wchar_t const* from, int radix)            { return ::wcstoll(from, nullptr, radix); }
+		static long long To(std::string const& from, int radix)        { return ::strtoll(from.c_str(), nullptr, radix); }
+		static long long To(std::wstring const& from, int radix)       { return ::wcstoll(from.c_str(), nullptr, radix); }
+
+		static long long To(char const* from, char const** end, int radix)            { return ::strtoll(from, end, radix); }
+		static long long To(wchar_t const* from, wchar_t const** end, int radix)      { return ::wcstoll(from, end, radix); }
+		static long long To(std::string const& from, char const** end, int radix)     { return ::strtoll(from.c_str(), end, radix); }
+		static long long To(std::wstring const& from, wchar_t const** end, int radix) { return ::wcstoll(from.c_str(), end, radix); }
+	};
+
+	// To<unsigned long long>
+	template <typename TFrom> struct Convert<unsigned long long, TFrom>
+	{
+		static unsigned long long To(char const* from, int radix)         { return ::strtoull(from, nullptr, radix); }
+		static unsigned long long To(wchar_t const* from, int radix)      { return ::wcstoull(from, nullptr, radix); }
+		static unsigned long long To(std::string const& from, int radix)  { return ::strtoull(from.c_str(), nullptr, radix); }
+		static unsigned long long To(std::wstring const& from, int radix) { return ::wcstoull(from.c_str(), nullptr, radix); }
+
+		static unsigned long long To(char const* from, char const** end, int radix)            { return ::strtoull(from, end, radix); }
+		static unsigned long long To(wchar_t const* from, wchar_t const** end, int radix)      { return ::wcstoull(from, end, radix); }
+		static unsigned long long To(std::string const& from, char const** end, int radix)     { return ::strtoull(from.c_str(), end, radix); }
+		static unsigned long long To(std::wstring const& from, wchar_t const** end, int radix) { return ::wcstoull(from.c_str(), end, radix); }
 	};
 }
 

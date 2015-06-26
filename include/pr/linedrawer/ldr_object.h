@@ -16,7 +16,7 @@
 #include "pr/common/user_data.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
-#include "pr/str/prstdstring.h"
+#include "pr/str/string.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instance.h"
 

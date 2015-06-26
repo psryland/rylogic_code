@@ -130,8 +130,8 @@ namespace pr
 						if (wide) ++m_buf;
 						bool is_char = (*m_buf == '\'');
 						m_tok = Token(EConstant::Integral, 0.0, 0);
-						if (wide) { if (!pr::str::ExtractCString(m_tok.m_wvalue, m_buf)) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid wide literal constant"); }
-						else      { if (!pr::str::ExtractCString(m_tok.m_avalue, m_buf)) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid literal constant"); }
+						if (wide) { if (!pr::str::ExtractString(m_tok.m_wvalue, m_buf, '\\')) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid wide literal constant"); }
+						else      { if (!pr::str::ExtractString(m_tok.m_avalue, m_buf, '\\')) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid literal constant"); }
 						if (is_char) m_tok.m_ivalue   = wide ? m_tok.m_wvalue[0]         : m_tok.m_avalue[0]; // char literals are actually integral constants
 						else         m_tok.m_constant = wide ? EConstant::WStringLiteral : EConstant::StringLiteral;
 					}break;

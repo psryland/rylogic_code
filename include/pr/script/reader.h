@@ -320,7 +320,7 @@ namespace pr
 			// A string is a sequence of characters between quotes.
 			template <typename StrType> bool ExtractString(StrType& string)
 			{
-				if (pr::str::ExtractString(string, m_src, m_delim)) return true;
+				if (pr::str::ExtractString(string, m_src, 0, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
 			template <typename StrType> bool ExtractStringS(StrType& string)
@@ -331,7 +331,7 @@ namespace pr
 			// Extract a C-style string from the source.
 			template <typename StrType> bool ExtractCString(StrType& cstring)
 			{
-				if (pr::str::ExtractCString(cstring, m_src, m_delim)) return true;
+				if (pr::str::ExtractString(cstring, m_src, '\\', m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "cstring expected");
 			}
 			template <typename StrType> bool ExtractCStringS(StrType& cstring)

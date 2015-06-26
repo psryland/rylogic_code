@@ -18,7 +18,8 @@
 #include "pr/container/stack.h"
 #include "pr/container/queue.h"
 #include "pr/filesys/filesys.h"
-#include "pr/str/prstring.h"
+#include "pr/str/extract.h"
+#include "pr/str/string_util.h"
 #include "pr/script/keywords.h"
 
 #pragma warning (push)

@@ -20,9 +20,9 @@ namespace pr
 */
 #include <algorithm>
 #include "pr/common/unittests.h"
-//#include "unittests/unittests.h" // all tests
-#include "pr/str/string_core.h"
-#include "pr/str/string_util.h"
+#include "unittests/unittests.h" // all tests
+//#include "pr/str/string_core.h"
+//#include "pr/str/string_util.h"
 //#include "pr/str/extract.h"
 //#include "pr/common/expr_eval.h"
 //#include "pr/crypt/rijndael.h"

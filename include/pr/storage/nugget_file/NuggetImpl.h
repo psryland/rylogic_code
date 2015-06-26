@@ -7,7 +7,8 @@
 #define PR_NUGGET_FILE_NUGGET_IMPL_H
 
 #include "pr/container/byte_data.h"
-#include "pr/str/prstring.h"
+//#include "pr/str/prstring.h"
+#include "pr/str/string_core.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/fileex.h"
 #include "pr/storage/nugget_file/nuggetfileassertenable.h"
@@ -32,7 +33,7 @@ namespace pr
 			void CopyDescription(const char* description)
 			{
 				memset(m_description, 0, MaxDescriptionLength);
-				str::Assign(description, m_description, MaxDescriptionLength);
+				pr::str::Assign(m_description, 0, MaxDescriptionLength, description);
 			}
 			static Header Construct(std::size_t four_cc, std::size_t id, std::size_t user_flags, std::size_t version, const char* description)
 			{

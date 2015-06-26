@@ -21,7 +21,7 @@
 #include "pr/macros/enum.h"
 #include "pr/macros/count_of.h"
 #include "pr/common/keystate.h"
-#include "pr/str/prstring.h"
+//#include "pr/str/prstring.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 
@@ -733,7 +733,7 @@ namespace pr
 				for (int i = m_list.GetNextItem(-1, LVNI_ALL); i != -1; i = m_list.GetNextItem(i, LVNI_ALL))
 				{
 					int count = m_list.GetItemText(i, EColumn::Name, buf, 256);
-					bool match = pr::str::FindStrNoCase(&buf[0], &buf[count], filter) != &buf[count];
+					bool match = pr::str::FindStrI(&buf[0], &buf[count], filter) != &buf[count];
 					m_list.SetItemState(i, int(match)*LVIS_SELECTED, LVIS_SELECTED);
 				}
 				return S_OK;

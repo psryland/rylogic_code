@@ -140,7 +140,7 @@ namespace cex
 		int Run() override
 		{
 			throw std::exception("Needs debugging, this currently deletes the source dll!");
-
+#if 0
 			// Read exports
 			std::cout << "Parsing " << m_ifile << "...\n";
 			FILE* fp = _tfopen(m_ifile.c_str(), _T("rb"));
@@ -359,6 +359,7 @@ namespace cex
 				system("pause");
 			}
 			return 0;
+#endif
 		}
 	};
 }

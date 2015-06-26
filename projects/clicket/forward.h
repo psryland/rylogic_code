@@ -30,7 +30,7 @@
 #include "pr/common/pollingtoevent.h"
 #include "pr/macros/enum.h"
 #include "pr/filesys/fileex.h"
-#include "pr/str/tostring.h"
+#include "pr/str/to_string.h"
 #include "pr/gui/windows_com.h"
 
 extern CAppModule _Module;

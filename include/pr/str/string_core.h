@@ -16,6 +16,7 @@
 #include <type_traits>
 #include <locale>
 #include <cstring>
+#include <cstdarg>
 
 namespace pr
 {
@@ -69,22 +70,26 @@ namespace pr
 	namespace str
 	{
 		#pragma region Char Traits
-		// char/wchar_t traits
+		// char traits
 		template <typename TChar> struct char_traits;
 		template <> struct char_traits<char>
 		{
 			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
 			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
 		};
+		template <> struct char_traits<char&      > :char_traits<char> {};
+		template <> struct char_traits<char const > :char_traits<char> {};
+		template <> struct char_traits<char const&> :char_traits<char const> {};
+
+		// wchar_t traits
 		template <> struct char_traits<wchar_t>
 		{
 			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
 			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
 		};
-		template <> struct char_traits<char const> :char_traits<char>
-		{};
-		template <> struct char_traits<wchar_t const> :char_traits<wchar_t>
-		{};
+		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
+		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
+		template <> struct char_traits<wchar_t const&> :char_traits<wchar_t const> {};
 		#pragma endregion
 
 		#pragma region String Traits
@@ -93,6 +98,13 @@ namespace pr
 			using citer      = typename Str::const_iterator;
 			using miter      = typename Str::iterator;
 			using iter       = typename Str::iterator;
+			using value_type = typename Str::value_type;
+		};
+		template <typename Str> struct traits<Str const>
+		{
+			using citer      = typename Str::const_iterator;
+			using miter      = typename Str::iterator;
+			using iter       = typename Str::const_iterator;
 			using value_type = typename Str::value_type;
 		};
 		template <typename Char> struct traits<Char const*>
@@ -117,6 +129,36 @@ namespace pr
 		{};
 		template <typename Char, size_t Len> struct traits<Char[Len]> :traits<Char*>
 		{};
+		#pragma endregion
+
+		#pragma region Standard Library Functions
+		// Variable arg sprintf, overloaded for all char type combinations
+		inline int vsprintf(char* buf, size_t buf_size_in_bytes, char const* format, va_list args)
+		{
+			return vsprintf_s(buf, buf_size_in_bytes, format, args);
+		}
+		inline int vsprintf(char* buf, size_t buf_size_in_bytes, wchar_t const* format, va_list args)
+		{
+			return vsprintf_s(buf, buf_size_in_bytes, Narrow(format).c_str(), args);
+		}
+		inline int vsprintf(wchar_t* buf, size_t buf_size_in_words, wchar_t const* format, va_list args)
+		{
+			return vswprintf_s(buf, buf_size_in_words, format, args);
+		}
+		inline int vsprintf(wchar_t* buf, size_t buf_size_in_words, char const* format, va_list args)
+		{
+			return vswprintf_s(buf, buf_size_in_words, Widen(format).c_str(), args);
+		}
+
+		// sprintf accepting any char type
+		template <typename Char1, typename Char2> inline int sprintf(Char1* buf, size_t buf_size_in_words, Char2 const* format, ...)
+		{
+			va_list arg_list;
+			va_start(arg_list, format);
+			auto r = vsprintf(buf, buf_size_in_words, format, arg_list);
+			va_end(arg_list);
+			return r;
+		}
 		#pragma endregion
 
 		#pragma region Character classes
@@ -181,7 +223,7 @@ namespace pr
 		{
 			return str.begin();
 		}
-		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter BeginC(Str& str)
+		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter BeginC(Str const& str)
 		{
 			return Begin<Str const>(str);
 		}
@@ -189,7 +231,7 @@ namespace pr
 		{
 			return str;
 		}
-		template <typename Char> inline Char const* BeginC(Char* str)
+		template <typename Char> inline Char const* BeginC(Char const* str)
 		{
 			return Begin<Char const>(str);
 		}
@@ -199,7 +241,7 @@ namespace pr
 		{
 			return Begin(str) + Length(str);
 		}
-		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter EndC(Str& str)
+		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter EndC(Str const& str)
 		{
 			return End<Str const>(str);
 		}
@@ -207,7 +249,7 @@ namespace pr
 		{
 			return Begin(str) + Length(str);
 		}
-		template <typename Char> inline Char const* EndC(Char* str)
+		template <typename Char> inline Char const* EndC(Char const* str)
 		{
 			return End<Char const>(str);
 		}
@@ -217,28 +259,28 @@ namespace pr
 		{
 			return Begin(str) + std::min(N, Length(str));
 		}
-		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter EndC(Str& str, size_t N)
+		template <typename Str, typename Iter = traits<Str>::citer, typename = Str::value_type> inline Iter EndC(Str const& str, size_t N)
 		{
-			return EndC<Str const>(str, N);
+			return End<Str const>(str, N);
 		}
 		template <typename Char> inline Char* End(Char* str, size_t N)
 		{
 			return Begin(str) + std::min(N, Length(str));
 		}
-		template <typename Char> inline Char const* End(Char* str, size_t N)
+		template <typename Char> inline Char const* EndC(Char const* str, size_t N)
 		{
-			return EndC<Char const>(str, N);
+			return End<Char const>(str, N);
 		}
 		#pragma endregion
 
 		#pragma region Equal
-		// Return true if the ranges [i,iend) and [j, jend) are equal
+		// Return true if the ranges [i,iend) and [j,jend) are equal
 		template <typename Iter1, typename Iter2, typename Pred> inline bool Equal(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend, Pred pred)
 		{
 			for (; !(i == iend) && !(j == jend) && pred(*i, *j); ++i, ++j) {}
 			return i == iend && j == jend;
 		}
-		template <typename Iter1, typename Iter2, typename Pred> inline bool Equal(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend)
+		template <typename Iter1, typename Iter2> inline bool Equal(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend)
 		{
 			using Char1 = decltype(*i);
 			using Char2 = decltype(*j);
@@ -280,17 +322,21 @@ namespace pr
 		#pragma endregion
 
 		#pragma region EqualI
+		// Return true if the ranges [i,iend) and [j,jend) are equal, ignoring case
+		template <typename Iter1, typename Iter2, typename Char1 = decltype(*Iter1()), typename Char2 = decltype(*Iter2())> inline bool EqualI(Iter1 i, Iter1 iend, Iter2 j, Iter2 jend)
+		{
+			return Equal(i, iend, j, jend, [](Char1 lhs, Char2 rhs)
+				{
+					auto l = char_traits<Char1>::lwr(lhs);
+					auto r = char_traits<Char2>::lwr(rhs);
+					return l == r;
+				});
+		}
+
 		// Return true if lhs and rhs are equal, ignoring case
 		template <typename Str1, typename Str2> inline bool EqualI(Str1 const& str1, Str2 const& str2)
 		{
-			using Char1 = traits<Str1>::value_type;
-			using Char2 = traits<Str2>::value_type;
-			return Equal(str1, str2, [](Char1 lhs, Char2 rhs)
-				{
-					auto l = char_traits<Char1>::lwr(lhs);
-					auto r = char_traits<Char1>::lwr(rhs);
-					return l == r;
-				});
+			return EqualI(BeginC(str1), EndC(str1), BeginC(str2), EndC(str2));
 		}
 
 		// Specialisations for char/wchar_t
@@ -333,10 +379,8 @@ namespace pr
 
 		#pragma region EqualNI
 		// Return true if lhs and rhs are equal, up to the given length
-		template <typename Str1, typename Str2> inline bool EqualNI(Str1 const& str1, Str2 const& str2, size_t length)
+		template <typename Str1, typename Str2, typename Char1 = traits<Str1>::value_type, typename Char2 = traits<Str2>::value_type> inline bool EqualNI(Str1 const& str1, Str2 const& str2, size_t length)
 		{
-			using Char1 = traits<Str1>::value_type;
-			using Char2 = traits<Str2>::value_type;
 			return EqualN(str1, str2, length, [](Char1 lhs, Char2 rhs)
 				{
 					auto l = char_traits<Char1>::lwr(lhs);
@@ -352,7 +396,11 @@ namespace pr
 		{
 			return ::_wcsnicmp(str1, str2, length) == 0;
 		}
-		#pragma endregion
+		template <typename Str, typename Char, int N> inline bool EqualNI(Str const& str, Char const (&str2)[N])
+		{
+			return EqualNI(str, str2, N);
+		}
+#pragma endregion
 
 		#pragma region FindChar
 		// Return a pointer to the first occurrance of 'ch' in a string or the string null terminator
@@ -384,20 +432,18 @@ namespace pr
 		template <typename Iter, typename Str, typename Pred> inline Iter FindStr(Iter first, Iter last, Str const& what, Pred pred)
 		{
 			if (Empty(what)) return last;
-			auto what_len = Length(what);
+			auto what_len = int(Length(what));
 			auto what_beg = BeginC(what);
 			for (; last - first >= what_len; ++first)
-				if (pred(first, last, what_beg, what_len))
+				if (pred(first, first + what_len, what_beg, what_beg + what_len))
 					return first;
 
 			return last;
 		}
 		template <typename Iter, typename Str> inline Iter FindStr(Iter first, Iter last, Str const& what)
 		{
-			using Char1 = std::remove_reference_t<decltype(*first)>;
-			using Char2 = traits<Str>::value_type;
-			auto eql = EqualN<Char1 const*, Char2 const*>;
-			return FindStr(first, last, what, [](Iter lhs, Char2 const* rhs){ return });
+			using Iter2 = traits<Str>::citer;
+			return FindStr(first, last, what, [](Iter i, Iter iend, Iter2 j, Iter2 jend){ return Equal(i, iend, j, jend); });
 		}
 		template <typename Str1, typename Str2, typename Iter = traits<Str1>::iter> inline Iter FindStr(Str1& str, Str2 const& what)
 		{
@@ -408,8 +454,8 @@ namespace pr
 		// Returns an iterator to the sub string or to the end of the range.
 		template <typename Iter, typename Str> inline Iter FindStrI(Iter first, Iter last, Str const& what)
 		{
-			auto eql = EqualNI<Iter, traits<Str>::value_type const*>;
-			return FindStr(first, last, what, eql);
+			using Iter2 = traits<Str>::citer;
+			return FindStr(first, last, what, [](Iter i, Iter iend, Iter2 j, Iter2 jend){ return EqualI(i, iend, j, jend); });
 		}
 		template <typename Str1, typename Str2, typename Iter = traits<Str1>::iter> inline Iter FindStrI(Str1& str, Str2 const& what)
 		{
@@ -555,45 +601,6 @@ namespace pr
 		}
 		#pragma endregion
 
-		#pragma region Assign
-		// Assign a range of characters to a subrange within a string.
-		// 'dest' is the string to be assigned to
-		// 'offset' is the index position of where to start copying to
-		// 'count' is the maximum number of characters to copy. The capacity of dest *must* be >= offset + count
-		// 'first','last' the range of characters to assign to 'dest'
-		// On return, dest will be resized to 'offset + (last - first)' or 'offset + count', whichever is less.
-		template <typename Str, typename Char2> void Assign(Str& dest, size_t offset, size_t count, Char2 const* first, Char2 const* last)
-		{
-			// The number of characters to be copied to 'dest'
-			auto size = static_cast<size_t>(last - first);
-
-			// Clamp this by 'count'
-			if (size > count)
-				size = count;
-
-			// Set 'dest' to be the correct size
-			Resize(dest, offset + size);
-
-			// Assign the characters
-			using Char1 = traits<Str>::value_type;
-			for (auto out = Begin(dest) + offset; size--; ++out, ++first)
-				*out = Char1(*first);
-		}
-		template <typename Str, typename Char2> void Assign(Str& dest, Char2 const* first, Char2 const* last)
-		{
-			// The number of characters to be copied to 'dest'
-			auto size = static_cast<size_t>(last - first);
-
-			// Assume 'dest' can be resized to 'size'
-			return Assign(dest, 0, size, first, last);
-		}
-		template <typename Str, typename Char2> void Assign(Str& dest, size_t offset, Char2 ch)
-		{
-			// Note: 'dest' will be truncated to a length of 'offset + 1'
-			Assign(dest, offset, 1, &ch, &ch + 1);
-		}
-		#pragma endregion
-
 		#pragma region Append
 		// Append a char to the end of 'str'
 		// 'len' is an optimisation for pointer-like strings, so that Length() doesn't need to be called for each Append
@@ -607,6 +614,44 @@ namespace pr
 		template <typename Str, typename Char2, typename Char1 = traits<Str>::value_type> Str& Append(Str& str, Char2 ch)
 		{
 			return Append(str, Length(str), ch);
+		}
+		#pragma endregion
+
+		#pragma region Assign
+		// Assign a range of characters to a subrange within a string.
+		// 'dest' is the string to be assigned to
+		// 'offset' is the index position of where to start copying to
+		// 'count' is the maximum number of characters to copy. The capacity of dest *must* be >= offset + count
+		// 'first','last' the range of characters to assign to 'dest'
+		// On return, dest will be resized to 'offset + min(count, last-first)'.
+		template <typename Str, typename Iter, typename Char = traits<Str>::value_type> void Assign(Str& dest, size_t offset, size_t count, Iter first, Iter last)
+		{
+			// The number of characters to be copied to 'dest', clamped by 'count'
+			auto size = std::min(count, size_t(last - first));
+
+			// Set 'dest' to be the correct size
+			// Assume 'dest' can be resized to 'offset + size'
+			Resize(dest, offset + size);
+
+			// Assign the characters
+			for (auto out = Begin(dest) + offset; size--; ++out, ++first)
+				*out = Char(*first);
+		}
+		template <typename Str, typename Iter> void Assign(Str& dest, Iter first, Iter last)
+		{
+			Assign(dest, 0, size_t(last - first), first, last);
+		}
+
+		// Assign a null terminated string to 'dest'
+		template <typename Str, typename Char> void Assign(Str& dest, size_t offset, size_t count, Char const* first)
+		{
+			Resize(dest, offset);
+			for (;count-- != 0 && *first; ++first)
+				Append(dest, *first);
+		}
+		template <typename Str, typename Char> void Assign(Str& dest, Char const* first)
+		{
+			return Assign(dest, 0, ~size_t(), first);
 		}
 		#pragma endregion
 
@@ -684,14 +729,16 @@ namespace pr
 		// Returns 'str' for method chaining
 		template <typename Str, typename Pred, typename Char = Str::value_type> inline Str& Trim(Str& str, Pred pred, bool front, bool back)
 		{
-			auto first = front ? FindFirst(Begin(str), End(str), [&](Char ch){ return !pred(ch); }) : Begin(str);
-			auto last  = back  ? FindLast (first     , End(str), [&](Char ch){ return !pred(ch); }) : End(str);
-			last += int(last != first);
+			auto beg = Begin(str);
+			auto end = End(str);
+			auto first = front ? FindFirst(beg  , end, [&](Char ch){ return !pred(ch); }) : beg;
+			auto last  = back  ? FindLast (first, end, [&](Char ch){ return !pred(ch); }) : end;
+			last += int(last != end);
 
 			// Move the non-trimed characters to the front of the string and trim the tail
-			auto out = Begin(str);
+			auto out = beg;
 			for (; first != last; ++first, ++out) { *out = *first; }
-			Resize(str, out - Begin(str));
+			Resize(str, out - beg);
 			return str;
 		}
 		template <typename Str, typename Pred, typename Char = Str::value_type> inline Str Trim(Str const& str, Pred pred, bool front, bool back)
@@ -782,12 +829,12 @@ namespace pr
 				wchar_t         warr[] = L"range";
 				std::wstring    wstr   = L"range";
 
-				PR_CHECK(*Begin(aptr) ==  'r' && *End(aptr) == 0 && *(End(aptr)-1) ==  'e', true);
-				PR_CHECK(*Begin(aarr) ==  'r' && *End(aarr) == 0 && *(End(aarr)-1) ==  'e', true);
-				PR_CHECK(*Begin(astr) ==  'r' && *End(astr) == 0 && *(End(astr)-1) ==  'e', true);
-				PR_CHECK(*Begin(wptr) == L'r' && *End(wptr) == 0 && *(End(wptr)-1) == L'e', true);
-				PR_CHECK(*Begin(warr) == L'r' && *End(warr) == 0 && *(End(warr)-1) == L'e', true);
-				PR_CHECK(*Begin(wstr) == L'r' && *End(wstr) == 0 && *(End(wstr)-1) == L'e', true);
+				PR_CHECK(*Begin(aptr) ==  'r' && *(End(aptr)-1) ==  'e', true);
+				PR_CHECK(*Begin(aarr) ==  'r' && *(End(aarr)-1) ==  'e', true);
+				PR_CHECK(*Begin(astr) ==  'r' && *(End(astr)-1) ==  'e', true);
+				PR_CHECK(*Begin(wptr) == L'r' && *(End(wptr)-1) == L'e', true);
+				PR_CHECK(*Begin(warr) == L'r' && *(End(warr)-1) == L'e', true);
+				PR_CHECK(*Begin(wstr) == L'r' && *(End(wstr)-1) == L'e', true);
 			}
 			{// Equal
 				char const*     aptr   =  "equal";
@@ -896,12 +943,12 @@ namespace pr
 				wchar_t         warr[] = L"find in str";
 				std::wstring    wstr   = L"find in str";
 
-				PR_CHECK(*FindStr(aptr, "str") ==  's' && *FindStr(aptr,  "bob") == 0, true);
-				PR_CHECK(*FindStr(aarr,L"str") ==  's' && *FindStr(aarr, L"bob") == 0, true);
-				PR_CHECK(*FindStr(astr, "str") ==  's' && *FindStr(astr,  "bob") == 0, true);
-				PR_CHECK(*FindStr(wptr, "str") == L's' && *FindStr(wptr, L"bob") == 0, true);
-				PR_CHECK(*FindStr(warr,L"str") == L's' && *FindStr(warr,  "bob") == 0, true);
-				PR_CHECK(*FindStr(wstr, "str") == L's' && *FindStr(wstr, L"bob") == 0, true);
+				PR_CHECK(*FindStr(aptr, "str") ==  's' && FindStr(aptr,  "bob") == End(aptr), true);
+				PR_CHECK(*FindStr(aarr,L"str") ==  's' && FindStr(aarr, L"bob") == End(aarr), true);
+				PR_CHECK(*FindStr(astr, "str") ==  's' && FindStr(astr,  "bob") == End(astr), true);
+				PR_CHECK(*FindStr(wptr, "str") == L's' && FindStr(wptr, L"bob") == End(wptr), true);
+				PR_CHECK(*FindStr(warr,L"str") == L's' && FindStr(warr,  "bob") == End(warr), true);
+				PR_CHECK(*FindStr(wstr, "str") == L's' && FindStr(wstr, L"bob") == End(wstr), true);
 
 				PR_CHECK(FindStr(aptr + 2, aptr + 9, "in") - Begin(aptr) == 5, true);
 				PR_CHECK(FindStr(wptr + 2, wptr + 9, "in") - Begin(wptr) == 5, true);
@@ -914,19 +961,19 @@ namespace pr
 				wchar_t         warr[] = L"find first";
 				std::wstring    wstr   = L"find first";
 
-				PR_CHECK(Equal(&*FindFirst(aptr, [](char ch){ return ch == 'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(aarr, [](char ch){ return ch == 'i'; }), "ind first"), true);
-				PR_CHECK(Equal(&*FindFirst(astr, [](char ch){ return ch == 'i'; }), "ind first"), true);
+				PR_CHECK(Equal(&*FindFirst(aptr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
+				PR_CHECK(Equal(&*FindFirst(aarr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
+				PR_CHECK(Equal(&*FindFirst(astr, [](char    ch){ return ch ==  'i'; }), "ind first"), true);
 				PR_CHECK(Equal(&*FindFirst(wptr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
 				PR_CHECK(Equal(&*FindFirst(warr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
 				PR_CHECK(Equal(&*FindFirst(wstr, [](wchar_t ch){ return ch == L'i'; }), "ind first"), true);
 
-				PR_CHECK(Equal(&*FindFirst(aptr, [](char ch){ return ch == 'x'; }), ""), true);
-				PR_CHECK(Equal(&*FindFirst(aarr, [](char ch){ return ch == 'x'; }), ""), true);
-				PR_CHECK(Equal(&*FindFirst(astr, [](char ch){ return ch == 'x'; }), ""), true);
-				PR_CHECK(Equal(&*FindFirst(wptr, [](wchar_t ch){ return ch == L'x'; }), ""), true);
-				PR_CHECK(Equal(&*FindFirst(warr, [](wchar_t ch){ return ch == L'x'; }), ""), true);
-				PR_CHECK(Equal(&*FindFirst(wstr, [](wchar_t ch){ return ch == L'x'; }), ""), true);
+				PR_CHECK(FindFirst(aptr, [](char    ch){ return ch ==  'x'; }) == End(aptr), true);
+				PR_CHECK(FindFirst(aarr, [](char    ch){ return ch ==  'x'; }) == End(aarr), true);
+				PR_CHECK(FindFirst(astr, [](char    ch){ return ch ==  'x'; }) == End(astr), true);
+				PR_CHECK(FindFirst(wptr, [](wchar_t ch){ return ch == L'x'; }) == End(wptr), true);
+				PR_CHECK(FindFirst(warr, [](wchar_t ch){ return ch == L'x'; }) == End(warr), true);
+				PR_CHECK(FindFirst(wstr, [](wchar_t ch){ return ch == L'x'; }) == End(wstr), true);
 			}
 			{//FindLast
 				char const*     aptr   =  "find flast";
@@ -936,16 +983,16 @@ namespace pr
 				wchar_t         warr[] = L"find flast";
 				std::wstring    wstr   = L"find flast";
 
-				PR_CHECK(Equal(&*FindLast(aptr, [](char ch){ return ch == 'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(aarr, [](char ch){ return ch == 'f'; }), "flast"), true);
-				PR_CHECK(Equal(&*FindLast(astr, [](char ch){ return ch == 'f'; }), "flast"), true);
+				PR_CHECK(Equal(&*FindLast(aptr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
+				PR_CHECK(Equal(&*FindLast(aarr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
+				PR_CHECK(Equal(&*FindLast(astr, [](char    ch){ return ch ==  'f'; }), "flast"), true);
 				PR_CHECK(Equal(&*FindLast(wptr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
 				PR_CHECK(Equal(&*FindLast(warr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
 				PR_CHECK(Equal(&*FindLast(wstr, [](wchar_t ch){ return ch == L'f'; }), "flast"), true);
 
-				PR_CHECK(Equal(&*FindLast(aptr, [](char ch){ return ch == 'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(aarr, [](char ch){ return ch == 'x'; }), "find flast"), true);
-				PR_CHECK(Equal(&*FindLast(astr, [](char ch){ return ch == 'x'; }), "find flast"), true);
+				PR_CHECK(Equal(&*FindLast(aptr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
+				PR_CHECK(Equal(&*FindLast(aarr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
+				PR_CHECK(Equal(&*FindLast(astr, [](char    ch){ return ch ==  'x'; }), "find flast"), true);
 				PR_CHECK(Equal(&*FindLast(wptr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
 				PR_CHECK(Equal(&*FindLast(warr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
 				PR_CHECK(Equal(&*FindLast(wstr, [](wchar_t ch){ return ch == L'x'; }), "find flast"), true);
@@ -958,11 +1005,10 @@ namespace pr
 
 				PR_CHECK(Equal(FindFirstOf(aarr, "A"), "AaAaAa"), true);
 				PR_CHECK(Equal(FindFirstOf(warr, "a"),  "aAaAa"), true);
-				PR_CHECK(*FindFirstOf(astr, "B") == 0, true);
-				PR_CHECK(*FindFirstOf(wstr, "B") == 0, true);
+				PR_CHECK(FindFirstOf(astr, "B") == End(astr), true);
+				PR_CHECK(FindFirstOf(wstr, "B") == End(wstr), true);
 				PR_CHECK(FindFirstOf(astr, "A") - Begin(astr), 0);
 				PR_CHECK(FindFirstOf(wstr, "a") - Begin(wstr), 1);
-				PR_CHECK(FindFirstOf(wstr, "B") == End(wstr), true);
 			}
 			{//FindLastOf
 				char         aarr[] =  "AaAaAa";
@@ -971,11 +1017,10 @@ namespace pr
 				std::wstring wstr   = L"Aaaaa";
 				PR_CHECK(Equal(FindLastOf(aarr, L"A"), "Aa"), true);
 				PR_CHECK(Equal(FindLastOf(warr, L"A"), "Aaa"), true);
-				PR_CHECK(*FindLastOf(astr, L"B") == 0, true);
-				PR_CHECK(*FindLastOf(wstr, L"B") == 0, true);
+				PR_CHECK(FindLastOf(astr, L"B") == End(astr), true);
+				PR_CHECK(FindLastOf(wstr, L"B") == End(wstr), true);
 				PR_CHECK(FindLastOf(astr, "A") - Begin(astr), 2);
 				PR_CHECK(FindLastOf(wstr, "A") - Begin(wstr), 0);
-				PR_CHECK(FindLastOf(wstr, "B") == End(wstr), true);
 			}
 			{//FindFirstNotOf
 				char         aarr[] =  "junk_str_junk";
@@ -984,11 +1029,10 @@ namespace pr
 				std::wstring wstr   = L"junk_str_junk";
 				PR_CHECK(Equal(FindFirstNotOf(aarr, "_knuj"), "str_junk"), true);
 				PR_CHECK(Equal(FindFirstNotOf(warr, "_knuj"), "str_junk"), true);
-				PR_CHECK(*FindFirstNotOf(astr, "_knujstr") == 0, true);
-				PR_CHECK(*FindFirstNotOf(wstr, "_knujstr") == 0, true);
+				PR_CHECK(FindFirstNotOf(astr, "_knujstr") == End(astr), true);
+				PR_CHECK(FindFirstNotOf(wstr, "_knujstr") == End(wstr), true);
 				PR_CHECK(FindFirstNotOf(astr, "_knuj") - Begin(astr), 5);
 				PR_CHECK(FindFirstNotOf(wstr, "_knuj") - Begin(wstr), 5);
-				PR_CHECK(FindFirstNotOf(wstr, "_knujstr") == End(wstr), true);
 			}
 			{//FindLastNotOf
 				char         aarr[] =  "junk_str_junk";
@@ -997,11 +1041,10 @@ namespace pr
 				std::wstring wstr   = L"junk_str_junk";
 				PR_CHECK(Equal(FindLastNotOf(aarr, "_knuj"), "r_junk"), true);
 				PR_CHECK(Equal(FindLastNotOf(warr, "_knuj"), "r_junk"), true);
-				PR_CHECK(*FindLastNotOf(astr, "_knujstr") == 0, true);
-				PR_CHECK(*FindLastNotOf(wstr, "_knujstr") == 0, true);
+				PR_CHECK(FindLastNotOf(astr, "_knujstr") == End(astr), true);
+				PR_CHECK(FindLastNotOf(wstr, "_knujstr") == End(wstr), true);
 				PR_CHECK(FindLastNotOf(astr, "_knuj") - Begin(astr) ,7);
 				PR_CHECK(FindLastNotOf(wstr, "_knuj") - Begin(wstr) ,7);
-				PR_CHECK(FindLastNotOf(wstr, "_knujstr") == End(wstr), true);
 			}
 			{// Resize
 				char            aarr[] = {'a','a','a','a'};
@@ -1018,6 +1061,17 @@ namespace pr
 				Resize(warr, 3, 'b'); PR_CHECK(Equal(warr, "aab"), true);
 				Resize(astr, 3, 'b'); PR_CHECK(Equal(astr, "aab"), true);
 				Resize(wstr, 3, 'b'); PR_CHECK(Equal(wstr, "aab"), true);
+			}
+			{// Append
+				char         aarr[5] = {};
+				wchar_t      warr[5] = {};
+				std::string  astr;
+				std::wstring wstr;
+
+				Append(aarr, 'a'); Append(aarr, L'b'); Append(aarr, 'c'); PR_CHECK(Equal(aarr, "abc"), true);
+				Append(warr, 'a'); Append(warr, L'b'); Append(warr, 'c'); PR_CHECK(Equal(warr, "abc"), true);
+				Append(astr, 'a'); Append(astr, L'b'); Append(astr, 'c'); PR_CHECK(Equal(astr, "abc"), true);
+				Append(wstr, 'a'); Append(wstr, L'b'); Append(wstr, 'c'); PR_CHECK(Equal(wstr, "abc"), true);
 			}
 			{// Assign
 				char const*     asrc = "string";
@@ -1051,21 +1105,15 @@ namespace pr
 				Assign(wstr, 2, ~0U, asrc, asrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
 				Assign(wstr, 2, ~0U, wsrc, wsrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
 
-				Assign(aarr, 2, 'a'); PR_CHECK(Equal(aarr, "sta"), true);
-				Assign(warr, 2, 'a'); PR_CHECK(Equal(warr, "sta"), true);
-				Assign(astr, 2, 'a'); PR_CHECK(Equal(astr, "sta"), true);
-				Assign(wstr, 2, 'a'); PR_CHECK(Equal(wstr, "sta"), true);
-			}
-			{// Append
-				char         aarr[5] = {};
-				wchar_t      warr[5] = {};
-				std::string  astr;
-				std::wstring wstr;
+				Assign(astr, 2, ~0U, "ab"); PR_CHECK(Equal(astr, "stab"), true);
+				Assign(astr, 2, ~0U, "ab"); PR_CHECK(Equal(astr, "stab"), true);
+				Assign(wstr, 2, ~0U, "ab"); PR_CHECK(Equal(wstr, "stab"), true);
+				Assign(wstr, 2, ~0U, "ab"); PR_CHECK(Equal(wstr, "stab"), true);
 
-				Append(aarr, 'a'); Append(aarr, L'b'); Append(aarr, 'c'); PR_CHECK(Equal(aarr, "abc"), true);
-				Append(warr, 'a'); Append(warr, L'b'); Append(warr, 'c'); PR_CHECK(Equal(warr, "abc"), true);
-				Append(astr, 'a'); Append(astr, L'b'); Append(astr, 'c'); PR_CHECK(Equal(astr, "abc"), true);
-				Append(wstr, 'a'); Append(wstr, L'b'); Append(wstr, 'c'); PR_CHECK(Equal(wstr, "abc"), true);
+				Assign(astr, "done"); PR_CHECK(Equal(astr, "done"), true);
+				Assign(astr, "done"); PR_CHECK(Equal(astr, "done"), true);
+				Assign(wstr, "done"); PR_CHECK(Equal(wstr, "done"), true);
+				Assign(wstr, "done"); PR_CHECK(Equal(wstr, "done"), true);
 			}
 			{//UpperCase
 				char         aarr[5] =  "CaSe";

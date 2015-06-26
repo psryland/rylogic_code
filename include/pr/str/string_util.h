@@ -12,9 +12,7 @@
 
 #pragma once
 
-#include <cstring>
-#include <type_traits>
-#include <locale>
+#include <cmath>
 #include "pr/str/string_core.h"
 
 namespace pr
@@ -118,58 +116,67 @@ namespace pr
 			return CompressDelimiters(str, Delim<traits<Str>::value_type>(nullptr), ws_char, preserve_newlines);
 		}
 
-#if 0
 		// Convert a string into an array of tokens
-		template <typename tstr1, typename tstr_cont, typename tstr2> void Tokenise(tstr1 const& str, tstr_cont& tokens, tstr2 const* delim)
+		template <typename Str, typename StrCont, typename Char = traits<Str>::value_type> void Tokenise(Str const& str, StrCont& tokens, Char const* delim)
 		{
-			typedef typename Traits<tstr1>::citer citer;
-			typedef typename tstr_cont::value_type tstr3;
-			for (citer i = Begin(str), i_end = End(str); i != i_end; ++i)
+			using StrOut = StrCont::value_type;
+
+			auto i = BeginC(str);
+			auto iend = EndC(str);
+			for (; i != iend; ++i)
 			{
-				if (*i == '"') // Extract whole strings
+				if (*i == Char('"')) // Extract whole strings
 				{
-					tstr3 tok; tok.reserve(256);
-					for (++i; i != i_end && *i != '"'; ++i) { tok.push_back(*i); }
+					StrOut tok;
+					for (++i; i != iend && *i != Char('"'); ++i)
+						Append(tok, *i);
+
 					tokens.push_back(tok);
-					if (i == i_end) return;
+					if (i == iend)
+						return;
 				}
 				else if (*FindChar(delim, *i) == 0)
 				{
-					tstr3 tok; tok.reserve(256);
-					for (; i != i_end && *FindChar(delim, *i) == 0; ++i) { tok.push_back(*i); }
+					StrOut tok;
+					for (; i != iend && *FindChar(delim, *i) == 0; ++i)
+						Append(tok, *i);
+
 					tokens.push_back(tok);
-					if (i == i_end) return;
+					if (i == iend)
+						return;
 				}
 			}
 		}
-		template <typename tstr, typename tstr_cont> inline void Tokenise(tstr const& str, tstr_cont& tokens)
+		template <typename Str, typename StrCont> inline void Tokenise(Str const& str, StrCont& tokens)
 		{
-			typedef typename Traits<tstr>::value_type value_type;
-			return Tokenise(str, tokens, Delim(static_cast<value_type const*>(0)));
+			return Tokenise(str, tokens, Delim<traits<Str>::value_type>());
 		}
 
 		// Strip sections from a string
 		// Pass null to 'block_start','block_end' or 'line' to ignore that section type
-		template <typename tstr1, typename tstr2> tstr1& Strip(tstr1& str, tstr2* block_start, tstr2* block_end, tstr2* line)
+		template <typename Str, typename Char = traits<Str>::value_type> Str& Strip(Str& str, Char const* block_start, Char const* block_end, Char const* line)
 		{
-			typedef typename Traits<tstr1>::value_type tchar;
-			if (Empty(str)) return str;
+			if (Empty(str))
+				return str;
 
-			bool block = block_start != 0 && block_end != 0;
-			size_t lc_len  = line  ? Length(line)        : 0;
-			size_t bcs_len = block ? Length(block_start) : 0;
-			size_t bce_len = block ? Length(block_end)   : 0;
-			tchar* out = &str[0];
-			for (tchar const *s = &str[0]; *s;)
+			// Find the length of the block start/end and line section markers
+			auto block = block_start != 0 && block_end != 0;
+			auto lc_len  = line  ? Length(line)        : 0;
+			auto bcs_len = block ? Length(block_start) : 0;
+			auto bce_len = block ? Length(block_end)   : 0;
+
+			// Compress 'str' by stripping out the characters within the marked sections
+			Char* out = &str[0];
+			for (Char const *s = &str[0]; *s;)
 			{
 				if (line && EqualN(line, s, lc_len))
 				{
-					while( *s && *s != '\n' && *s != '\r' ) {++s;}
-					while( *s && (*s == '\n'||*s == '\r') ) {++s;}
+					for (; *s && (*s != '\n' && *s != '\r'); ++s) {}
+					for (; *s && (*s == '\n' || *s == '\r'); ++s) {}
 				}
-				else if( block && EqualN(block_start, s, bcs_len) )
+				else if (block && EqualN(block_start, s, bcs_len))
 				{
-					while( *s && !EqualN(block_end, s, bce_len) )	{++s;}
+					for (; *s && !EqualN(block_end, s, bce_len); ++s) {}
 					s += bce_len;
 				}
 				else
@@ -177,28 +184,34 @@ namespace pr
 					*out++ = *s++;
 				}
 			}
-			Resize(str, static_cast<size_t>(out - &str[0]));
+			Resize(str, size_t(out - &str[0]));
 			return str;
 		}
 
 		// Strip C++ style comments from a string
-		template <typename tstr> inline tstr& StripCppComments(tstr& str)
+		template <typename Str> inline Str& StripCppComments(Str& str)
 		{
-			return Strip(str, "/*", "*/", "//");
+			using Char = traits<Str>::value_type;
+			Char const bs[] = {'/','*',0};
+			Char const be[] = {'*','/',0};
+			Char const ln[] = {'/','/',0};
+			return Strip(str, bs, be, ln);
 		}
 
-		// Replace instances of 'what' with 'with' in place
-		template <typename tstr1, typename tstr2, typename tstr3> size_t Replace(tstr1& str, tstr2 const& what, tstr3 const& with)
+		// Replace instances of 'what' with 'with' in-place
+		// Returns the number of instances of 'what' that where replaced
+		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type> size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
 		{
-			typedef typename Traits<tstr1>::value_type tchar;
-			if (Empty(str)) return 0;
+			if (Empty(str))
+				return 0;
+
 			auto str_len  = Length(str);
 			auto what_len = Length(what);
 			auto with_len = Length(with);
 
-			// This in an inplace substitution so we need to copy from the start or end depending
-			// on whether 'with' is longer or shorter than 'what'
-			size_t count = 0;
+			// This in an inplace substitution so we need to copy from the
+			// start or end depending on whether 'with' is longer or shorter than 'what'
+			auto count = size_t();
 			if (what_len >= with_len)
 			{
 				auto out = &str[0];
@@ -217,9 +230,12 @@ namespace pr
 			{
 				// Note that if count == 0, then 's != out' in the for will be false immediately
 				count = Count(str, what);
-				auto new_size = str_len - what_len*count + with_len*count;
+				auto new_size = str_len + count * (with_len - what_len);
+
+				// Grow 'str' to allow for count * (with_len - what_len) extra characters
 				Resize(str, new_size);
 
+				// Back fill
 				auto out = &str[0] + new_size;
 				for (auto s = &str[0] + str_len; s != out;)
 				{
@@ -232,44 +248,45 @@ namespace pr
 			}
 			return count;
 		}
-		template <typename tstr1, typename tstr2, typename tstr3> size_t Replace(tstr1 const& src, tstr1& dst, tstr2 const& what, tstr3 const& with)
+		template <typename Str1, typename Str2, typename Str3> size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 		{
-			dst = src;
+			Assign(dst, BeginC(src), EndC(src));
 			return Replace(dst, what, with);
 		}
 
-		// Hash the contents of a string using crc32
-		template <typename tstr> inline size_t Hash(tstr const& src, size_t initial_crc = size_t(~0))
-		{
-			if (Empty(src)) return initial_crc;
-			void const* data = reinterpret_cast<void const*>(&src[0]);
-			size_t size = Length(src) * sizeof(Traits<tstr>::value_type);
-			return Crc(data, size);
-		}
+		//// Hash the contents of a string using crc32
+		//template <typename Str, typename Char = traits<Str>::value_type> inline size_t Hash(Str const& src, size_t initial_crc = size_t(~0))
+		//{
+		//	if (Empty(src))
+		//		return initial_crc;
+
+		//	auto data = reinterpret_cast<void const*>(&src[0]);
+		//	auto size = size_t(Length(src) * sizeof(Char));
+		//	return Crc(data, size);
+		//}
 
 		// Convert a normal string into a C-style string
 		// This is the std::string -esk version. char* version not implemented yet...
-		template <typename tstr2, typename tstr1> inline tstr2 StringToCString(tstr1 const& src)
+		template <typename Str2, typename Str1, typename = Str2::value_type> inline Str2 StringToCString(Str1 const& src)
 		{
-			typedef typename Traits<tstr1>::value_type tchar;
+			Str2 dst;
 			if (Empty(src)) return src;
-			tstr2 dst;
-			for (tchar const* s = &src[0]; *s; ++s)
+			for (auto const* s = &src[0]; *s; ++s)
 			{
 				switch (*s)
 				{
-				default:   dst.push_back(*s); break;
-				case '\a': dst.push_back('\\'); dst.push_back('a'); break;
-				case '\b': dst.push_back('\\'); dst.push_back('b'); break;
-				case '\f': dst.push_back('\\'); dst.push_back('f'); break;
-				case '\n': dst.push_back('\\'); dst.push_back('n'); break;
-				case '\r': dst.push_back('\\'); dst.push_back('r'); break;
-				case '\t': dst.push_back('\\'); dst.push_back('t'); break;
-				case '\v': dst.push_back('\\'); dst.push_back('v'); break;
-				case '\\': dst.push_back('\\'); dst.push_back('\\'); break;
-				case '\?': dst.push_back('\\'); dst.push_back('?');  break;
-				case '\'': dst.push_back('\\'); dst.push_back('\''); break;
-				case '\"': dst.push_back('\\'); dst.push_back('"');  break;
+				default:   Append(dst,   *s); break;
+				case '\a': Append(dst, '\\'); Append(dst, 'a' ); break;
+				case '\b': Append(dst, '\\'); Append(dst, 'b' ); break;
+				case '\f': Append(dst, '\\'); Append(dst, 'f' ); break;
+				case '\n': Append(dst, '\\'); Append(dst, 'n' ); break;
+				case '\r': Append(dst, '\\'); Append(dst, 'r' ); break;
+				case '\t': Append(dst, '\\'); Append(dst, 't' ); break;
+				case '\v': Append(dst, '\\'); Append(dst, 'v' ); break;
+				case '\\': Append(dst, '\\'); Append(dst, '\\'); break;
+				case '\?': Append(dst, '\\'); Append(dst, '?' ); break;
+				case '\'': Append(dst, '\\'); Append(dst, '\''); break;
+				case '\"': Append(dst, '\\'); Append(dst, '"' ); break;
 				}
 			}
 			return dst;
@@ -277,90 +294,94 @@ namespace pr
 
 		// Convert a C-style string into a normal string
 		// This is the std::string -esk version. char* version not implemented yet...
-		template <typename tstr2, typename tstr1> inline tstr2 CStringToString(tstr1 const& src)
+		template <typename Str2, typename Str1, typename = Str2::value_type> inline Str2 CStringToString(Str1 const& src)
 		{
-			typedef typename Traits<tstr1>::value_type tchar;
-			if (Empty(src)) return src;
-
-			tstr1 dst;
-			for (tchar const* s = &src[0]; *s; ++s)
+			Str2 dst;
+			if (Empty(src)) return dst;
+			for (auto const* s = &src[0]; *s; ++s)
 			{
 				if (*s == '\\')
 				{
-					switch (*(++s))
+					switch (*++s)
 					{
 					default: break; // might be '0'
-					case 'a':  dst.push_back('\a'); break;
-					case 'b':  dst.push_back('\b'); break;
-					case 'f':  dst.push_back('\f'); break;
-					case 'n':  dst.push_back('\n'); break;
-					case 'r':  dst.push_back('\r'); break;
-					case 't':  dst.push_back('\t'); break;
-					case 'v':  dst.push_back('\v'); break;
-					case '\\': dst.push_back('\\'); break;
-					case '?':  dst.push_back('\?'); break;
-					case '\'': dst.push_back('\''); break;
-					case '"':  dst.push_back('\"'); break;
+					case 'a':  Append(dst, '\a'); break;
+					case 'b':  Append(dst, '\b'); break;
+					case 'f':  Append(dst, '\f'); break;
+					case 'n':  Append(dst, '\n'); break;
+					case 'r':  Append(dst, '\r'); break;
+					case 't':  Append(dst, '\t'); break;
+					case 'v':  Append(dst, '\v'); break;
+					case '\\': Append(dst, '\\'); break;
+					case '?':  Append(dst, '\?'); break;
+					case '\'': Append(dst, '\''); break;
+					case '"':  Append(dst, '\"'); break;
 					}
 				}
 				else
 				{
-					dst.push_back(*s);
+					Append(dst, *s);
 				}
 			}
 			return dst;
 		}
 
-		// Look for 'identifier' within the range [ofs, ofs+count) of 'src'
-		// returning the index of it's position or ofs+count if not found.
-		// identifier will be a complete identifier based on the char class IsIdentifier()
-		template <typename tstr1, typename tstr2> inline size_t FindIdentifier(tstr1 const& src, tstr2 const& identifier, size_t ofs, size_t count)
+		// Look for 'identifier' within the range [ofs, ofs+count) of 'src'.
+		// Returns the index of it's position or ofs+count if not found.
+		// Identifier will be a complete identifier based on the character class IsIdentifier()
+		template <typename Str1, typename Str2> inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
 		{
-			Traits<tstr1>::citer begin = BeginC(src);
-			Traits<tstr1>::citer iter  = begin + ofs;
-			Traits<tstr1>::citer end   = iter + count;
-			size_t id_len = Length(identifier);
-			for(;;++iter)
-			{
-				iter = FindStr(iter, end, identifier);
-				if (iter == end) return ofs + count;
+			auto begin  = BeginC(src);
+			auto iter   = begin + ofs;
+			auto end    = iter + count;
+			auto id_len = Length(identifier);
 
-				// Look for any identifier characters after iter + id_len
-				Traits<tstr1>::citer j = iter + id_len;
-				if (j != end && IsIdentifier(*j, false)) continue;
+			for (;;++iter)
+			{
+				// Find the next instance of 'identifier'
+				iter = FindStr(iter, end, identifier);
+				if (iter == end)
+					return ofs + count;
+
+				// Check for identifier characters after iter + id_len
+				// i.e. don't return "bobble" if "bob" is the identifier
+				auto j = iter + id_len;
+				if (j != end && IsIdentifier(*j, false))
+					continue;
 
 				// Look for any identifier characters before iter
-				for (j = iter; j > begin && IsIdentifier(*(--j), false);) {}
+				// i.e. don't return "plumbob" if "bob" is the identifier
+				for (j = iter; j > begin && IsIdentifier(*--j, false);) {}
 				for (        ; j != iter && !IsIdentifier(*j, true); ++j) {}
-				if  (j != iter) continue;
+				if  (j != iter)
+					continue;
 
-				return static_cast<size_t>(iter - begin);
+				// Found one
+				return size_t(iter - begin);
 			}
 		}
-		template <typename tstr1, typename tstr2> inline size_t FindIdentifier(tstr1 const& src, tstr2 const& identifier, size_t ofs)
+		template <typename Str1, typename Str2> inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs)
 		{
 			return FindIdentifier(src, identifier, ofs, Length(src) - ofs);
 		}
-		template <typename tstr1, typename tstr2> inline size_t FindIdentifier(tstr1 const& src, tstr2 const& identifier)
+		template <typename Str1, typename Str2> inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier)
 		{
 			return FindIdentifier(src, identifier, 0);
 		}
 
 		// Add/Remove quotes from a string if it doesn't already have them
-		template <typename tstr> inline tstr& Quotes(tstr& str, bool add)
+		template <typename Str, typename Char = traits<Str>::value_type> inline Str& Quotes(Str& str, bool add)
 		{
-			typedef Traits<tstr>::value_type tchar;
-
-			size_t i,len = Length(str);
-			Traits<tstr>::citer begin = BeginC(str);
-			if ( add && (len >= 2 && *begin == tchar('\"') && *(begin + len - 1) == tchar('\"'))) return str; // already quoted
-			if (!add && (len <  2 || *begin != tchar('\"') || *(begin + len - 1) != tchar('\"'))) return str; // already not quoted
+			size_t i, len = Length(str);
+			auto begin = BeginC(str);
+			if ( add && (len >= 2 && *begin == Char('\"') && *(begin + len - 1) == Char('\"'))) return str; // already quoted
+			if (!add && (len <  2 || *begin != Char('\"') || *(begin + len - 1) != Char('\"'))) return str; // already not quoted
 			if (add)
 			{
 				Resize(str, len+2);
-				str[len+1] = tchar('\"');
+				str[len+1] = Char('\"');
 				for (i = len; i-- != 0;) str[i+1] = str[i];
-				str[0] = tchar('\"');
+				str[0] = Char('\"');
 			}
 			else
 			{
@@ -369,9 +390,9 @@ namespace pr
 			}
 			return str;
 		}
-		template <typename tstr> inline tstr  Quotes(tstr const& str, bool add)
+		template <typename Str> inline Str Quotes(Str const& str, bool add)
 		{
-			tstr s = str;
+			Str s(str);
 			return Quotes(s, add);
 		}
 
@@ -379,55 +400,75 @@ namespace pr
 		// 'bytes' - the input data size
 		// 'si' - true to use 1000bytes = 1kb, false for 1024bytes = 1kb
 		// 'dp' - number of decimal places to use
-		inline std::string PrettyBytes(long long bytes, bool si, int dp)
+		template <typename Str = std::string, typename Char = traits<Str>::value_type> Str PrettyBytes(long long bytes, bool si, int dp)
 		{
-			int unit = si ? 1000 : 1024;
-			if (bytes < unit) return std::to_string(bytes) + (si ? "B" : "iB");
-			int exp = int(::log(bytes) / ::log(unit));
-			double pretty_size = bytes/::pow(unit, exp);
+			auto unit = si ? 1000 : 1024;
+			if (bytes < unit)
+			{
+				Char dst[16];
+				sprintf(&dst[0], _countof(dst), "%lld%s", bytes, si?"B":"iB");
+				return dst;
+			}
+
+			auto exp = int(::log(bytes) / ::log(unit));
+			auto pretty_size = bytes/::pow(unit, exp);
 			char prefix = "KMGTPE"[exp-1];
-			
-			char fmt[32];
-			if (_snprintf_s(fmt, sizeof(fmt), "%%1.%df%%c%%s", dp) < 0)
+
+			Char fmt[32];
+			if (sprintf(&fmt[0], _countof(fmt), "%%1.%df%%c%%s", dp) < 0)
 				throw std::exception("PrettySize failed");
 			
-			char buf[128];
-			int len = _snprintf_s(buf, sizeof(buf), fmt, pretty_size, prefix, si?"B":"iB");
-			if (len < 0 || len >= sizeof(buf)) throw std::exception("PrettySize failed");
-			return std::string(buf, len);
+			Char buf[128];
+			auto len = sprintf(&buf[0], _countof(buf), fmt, pretty_size, prefix, si?"B":"iB");
+			if (len < 0 || len >= _countof(buf))
+				throw std::exception("PrettySize failed");
+
+			return buf;
 		}
 
 		// Convert a number into a 'pretty' number
 		// e.g. 1.234e10 = 12,340,000,000
 		// 'num' should be a number in base units
-		// 'unit' is the power of 10 to round to
+		// 'decade' is the power of 10 to round to
 		// 'dp' is the number of decimal places to write
 		// 'sep' is the separator character to use
-		inline std::string PrettyNumber(double num, long decade, int dp, char sep = ',')
+		template <typename Str = std::string, typename Char = traits<Str>::value_type> Str PrettyNumber(double num, long decade, int dp, char sep = ',')
 		{
-			double unit = ::pow(10,decade);
-			double pretty_size = num / unit;
+			auto unit = ::pow(10, decade);
+			auto pretty_size = num / unit;
 
-			char fmt[32];
-			if (_snprintf_s(fmt, sizeof(fmt), "%%1.%df", dp) < 0)
+			// Create the format string for the next sprintf
+			Char fmt[32];
+			if (sprintf(&fmt[0], _countof(fmt), "%%1.%df", dp) < 0)
 				throw std::exception("PrettyNumber failed");
 
-			char buf[128];
-			int len = _snprintf_s(buf, sizeof(buf), fmt, pretty_size);
-			if (len < 0 || len >= sizeof(buf)) throw std::exception("PrettyNumber failed");
+			// Printf the number into buf
+			Char buf[128];
+			auto len = sprintf(&buf[0], _countof(buf), fmt, pretty_size);
+			if (len < 0 || len >= _countof(buf))
+				throw std::exception("PrettyNumber failed");
 
-			std::string str = std::string(buf, len);
+			// Insert separators into buf
 			if (sep != 0)
 			{
-				for (int i = int(str.size() - dp - 1); (i -= 3) > 0;)
-					str.insert(i, 1, sep);
+				// length, minus decimal point, minus digits after dp,
+				// shifted by 1 because 'sep' inserted at zero-based character
+				// index 3,6,9, div 3 digits per separator
+				auto sep_count = (len - 1 - dp - 1) / 3;
+				buf[len + sep_count] = 0;
+
+				// Expand buf, inserting separators
+				for (int in = len, out = len + sep_count, i = -dp - 1; in != out; ++i)
+				{
+					buf[--out] = buf[--in];
+					if ((i%3) == 2)
+						buf[--out] = sep;
+				}
 			}
-			return str;
+			return buf;
 		}
-#endif
 	}
 }
-
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -469,13 +510,13 @@ namespace pr
 				PR_CHECK(CompareI(src, "strinG"  ),  1);
 			}
 			{//Count
-				char            narr[] = "s0tr0";
-				wchar_t         wide[] = L"s0tr0";
-				std::string     cstr   = "s0tr0";
+				char            aarr[] =  "s0tr0";
+				wchar_t         warr[] = L"s0tr0";
+				std::string     astr   =  "s0tr0";
 				std::wstring    wstr   = L"s0tr0";
-				PR_CHECK(Count(narr, "0t"), 1U);
-				PR_CHECK(Count(wide, "0") , 2U);
-				PR_CHECK(Count(cstr, "0") , 2U);
+				PR_CHECK(Count(aarr, "0t"), 1U);
+				PR_CHECK(Count(warr, "0") , 2U);
+				PR_CHECK(Count(astr, "0") , 2U);
 				PR_CHECK(Count(wstr, "0t"), 1U);
 			}
 			{//CompressDelimiters
@@ -484,7 +525,6 @@ namespace pr
 				CompressDelimiters(src, " \n", ' ', true);
 				PR_CHECK(src, res);
 			}
-#if 0
 			{//Tokenise
 				char const src[] = "tok0 tok1 tok2 \"tok3 and tok3\" tok4";
 				std::vector<std::string> tokens;
@@ -517,15 +557,17 @@ namespace pr
 			{//ConvertToCString
 				char const str[] = "Not a \"Cstring\". \a \b \f \n \r \t \v \\ \? \' ";
 				char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
-				std::string cstr1 = StringToCString<std::string>(str);
-				PR_CHECK(str::Equal(cstr1, res), true);
-				std::string str1 = CStringToString<std::string>(cstr1);
-				PR_CHECK(str::Equal(str1, str), true);
+				
+				auto cstr1 = StringToCString<std::string>(str);
+				auto str1  = CStringToString<std::wstring>(cstr1);
+				PR_CHECK(Equal(cstr1, res), true);
+				PR_CHECK(Equal(str1, str), true);
 			}
 			{//FindIdentifier
 				char const str[] = "aid id iid    id aiden";
 				wchar_t id[] = L"id";
-				size_t idx = FindIdentifier(str, id);    PR_CHECK(idx, 4U);
+				size_t idx;
+				idx = FindIdentifier(str, id);           PR_CHECK(idx, 4U);
 				idx = FindIdentifier(str, id, idx+1, 3); PR_CHECK(idx, 8U);
 				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 14U);
 				idx = FindIdentifier(str, id, idx+1);    PR_CHECK(idx, 22U);
@@ -544,40 +586,11 @@ namespace pr
 				PR_CHECK(str::Equal("two"    ,Quotes(two   ,false)), true);
 				PR_CHECK(str::Equal(L"three" ,Quotes(three ,false)), true);
 			}
-			{//ParseNumber
-				char const* str = "-3.12e+03F,0x1234abcd,077,1ULL,";
-				pr::str::NumType::Type type; bool unsignd; bool ll;
-				char const* s = str;
-				size_t count;
-				count = pr::str::ParseNumber(s, type, unsignd, ll);
-				PR_CHECK(count   ,10U);
-				PR_CHECK(type    ,pr::str::NumType::FP);
-				PR_CHECK(unsignd ,false);
-				PR_CHECK(ll      ,false);
-
-				s += 1;
-				count = pr::str::ParseNumber(s, type, unsignd, ll);
-				PR_CHECK(count   ,10U);
-				PR_CHECK(type    ,pr::str::NumType::Hex);
-				PR_CHECK(unsignd ,false);
-				PR_CHECK(ll      ,false);
-
-				s += 1;
-				count = pr::str::ParseNumber(s, type, unsignd, ll);
-				PR_CHECK(count   ,3U);
-				PR_CHECK(type    ,pr::str::NumType::Oct);
-				PR_CHECK(unsignd ,false);
-				PR_CHECK(ll      ,false);
-
-				s += 1;
-				count = pr::str::ParseNumber(s, type, unsignd, ll);
-				PR_CHECK(count   ,4U);
-				PR_CHECK(type    ,pr::str::NumType::Dec);
-				PR_CHECK(unsignd ,true);
-				PR_CHECK(ll      ,true);
-			}
-			{//Pretty size
-				auto pretty = [](long long bytes){ return PrettyBytes(bytes, true, 1) + " " + PrettyBytes(bytes, false, 1); };
+			{// Pretty Bytes
+				auto pretty = [](long long bytes)
+				{
+					return PrettyBytes<>(bytes, true, 1) + " " + PrettyBytes<>(bytes, false, 1);
+				};
 				PR_CHECK(pretty(0)                   ,      "0B 0iB"      );
 				PR_CHECK(pretty(27)                  ,     "27B 27iB"     );
 				PR_CHECK(pretty(999)                 ,    "999B 999iB"    );
@@ -592,13 +605,12 @@ namespace pr
 				PR_CHECK(pretty(1855425871872)       ,   "1.9TB 1.7TiB"   );
 				PR_CHECK(pretty(9223372036854775807) ,   "9.2EB 8.0EiB"   );
 			}
-			{//Pretty Number
-				PR_CHECK(PrettyNumber(1.234e10, 6, 3) , "12,340.000");
-				PR_CHECK(PrettyNumber(1.234e10, 3, 3) , "12,340,000.000");
-				PR_CHECK(PrettyNumber(1.234e-10, -3, 3) , "0.000");
-				PR_CHECK(PrettyNumber(1.234e-10, -12, 3) , "123.400");
+			{// Pretty Number
+				PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 6, 3)    , L"12,340.000"    );
+				PR_CHECK(PrettyNumber<std::wstring>(1.234e10, 3, 3)    , L"12,340,000.000");
+				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -3, 3)  , L"0.000"         );
+				PR_CHECK(PrettyNumber<std::wstring>(1.234e-10, -12, 3) , L"123.400"       );
 			}
-#endif
 		}
 	}
 }

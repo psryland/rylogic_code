@@ -67,9 +67,9 @@ namespace cex
 			// Get the name of this executable
 			char exepath_[1024]; GetModuleFileNameA(0, exepath_, sizeof(exepath_));
 			std::string exepath = exepath_;
-			std::string path = pr::str::LowerCase(pr::filesys::GetDirectory(exepath));
-			std::string name = pr::str::LowerCase(pr::filesys::GetFiletitle(exepath));
-			std::string extn = pr::str::LowerCase(pr::filesys::GetExtension(exepath));
+			std::string path = pr::str::LowerCaseC(pr::filesys::GetDirectory(exepath));
+			std::string name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
+			std::string extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
 
 			// Look for an xml file with the same name as this program in the local directory
 			std::string config = path + "\\" + name + ".xml";
