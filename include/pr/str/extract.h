@@ -139,17 +139,16 @@ namespace pr
 
 			// Copy the string
 			auto len = Length(str);
-			if (escape != 0)
+			if (auto esc_chr = Char(escape))
 			{
 				// Copy to the closing ", allowing for the escape character
-				auto esc_chr = Char(escape);
-				for (bool esc = false; *src && (*src != quote || esc); esc = *src == esc_chr, ++src)
+				for (; *src && *src != quote; ++src)
 				{
-					if (esc)
+					if (*src == esc_chr)
 					{
-						switch (*src)
+						switch (*++src)
 						{
-						default: break; // invalid escape sequence...
+						default: break;
 						case 'a':  Append(str, len++, '\a'); break;
 						case 'b':  Append(str, len++, '\b'); break;
 						case 'f':  Append(str, len++, '\f'); break;
@@ -182,7 +181,7 @@ namespace pr
 							}
 						}
 					}
-					else if (*src != esc_chr)
+					else
 					{
 						Append(str, len++, *src);
 					}
@@ -678,10 +677,9 @@ namespace pr
 	{
 		PRUnitTest(pr_str_extract)
 		{
-			using namespace pr;
-			using namespace pr::str;
-
 			{// Line
+				using namespace pr::str;
+
 				wchar_t const* src = L"abcefg\nhijk\nlmnop", *s;
 				char         aarr[16] = {};
 				wchar_t      warr[16] = {};
@@ -705,6 +703,8 @@ namespace pr
 				PR_CHECK(ExtractLineC(wstr, ++s, true) && Equal(wstr, "abcefghijk\n") && *s == L'h', true);
 			}
 			{// Token
+				using namespace pr::str;
+
 				wchar_t const* src = L"token1 token2:token3", *s;
 				char         aarr[16] = {};
 				wchar_t      warr[16] = {};
@@ -728,6 +728,8 @@ namespace pr
 				PR_CHECK(ExtractTokenC(wstr, ++s, " \n:") && Equal(wstr, "token1token2") && *s == L't', true);
 			}
 			{// Identifier
+				using namespace pr::str;
+
 				wchar_t const* src = L"_ident ident2:token3", *s;
 				char         aarr[16] = {};
 				wchar_t      warr[16] = {};
@@ -751,29 +753,33 @@ namespace pr
 				PR_CHECK(ExtractIdentifierC(wstr, ++s) && Equal(wstr, "_identident2") && *s == L'i', true);
 			}
 			{// String
-				wchar_t const* src = LR"("string1" "str\"ing2")", *s;
-				char         aarr[16] = {};
-				wchar_t      warr[16] = {};
+				using namespace pr::str;
+
+				wchar_t const* src = LR"("string1" "str\"i\\ng2")", *s;
+				char         aarr[20] = {};
+				wchar_t      warr[20] = {};
 				std::string  astr;
 				std::wstring wstr;
 
 				s = src;
 				PR_CHECK(ExtractString(aarr, s, '\\') && Equal(aarr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(aarr, ++s, '\\') && Equal(aarr, "string1str\"ing2") && *s == L'"', true);
+				PR_CHECK(ExtractStringC(aarr, ++s, '\\') && Equal(aarr, R"(string1str"i\ng2)") && *s == L'"', true);
 
 				s = src;
 				PR_CHECK(ExtractString(warr, s) && Equal(warr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(warr, ++s) && Equal(warr, "string1str\\") && *s == L'"', true);
+				PR_CHECK(ExtractStringC(warr, ++s) && Equal(warr, R"(string1str\)") && *s == L'"', true);
 
 				s = src;
 				PR_CHECK(ExtractString(astr, s, '\\') && Equal(astr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(astr, ++s, '\\') && Equal(astr, "string1str\"ing2") && *s == L'"', true);
+				PR_CHECK(ExtractStringC(astr, ++s, '\\') && Equal(astr, R"(string1str"i\ng2)") && *s == L'"', true);
 
 				s = src;
 				PR_CHECK(ExtractString(wstr, s) && Equal(wstr, "string1") && *s == L' ', true);
-				PR_CHECK(ExtractStringC(wstr, ++s) && Equal(wstr, "string1str\\") && *s == L'"', true);
+				PR_CHECK(ExtractStringC(wstr, ++s) && Equal(wstr, R"(string1str\)") && *s == L'"', true);
 			}
 			{// Bool
+				using namespace pr::str;
+
 				char  src[] = "true false 1", *s = src;
 				bool  bbool = 0;
 				int   ibool = 0;
@@ -784,6 +790,8 @@ namespace pr
 				PR_CHECK(ExtractBool(fbool, s) ,true); PR_CHECK(fbool ,1.0f);
 			}
 			{// Int
+				using namespace pr::str;
+
 				char  c = 0;      unsigned char  uc = 0;
 				short s = 0;      unsigned short us = 0;
 				int   i = 0;      unsigned int   ui = 0;
@@ -818,6 +826,8 @@ namespace pr
 				}
 			}
 			{// Real
+				using namespace pr::str;
+
 				float f = 0; double d = 0; int i = 0;
 				{
 					char src[] = "\n 6.28 ";
@@ -832,35 +842,41 @@ namespace pr
 					PR_CHECK(*ptr, 'Z');
 				}
 			}
-			{// Bool Array
-				char src[] = "\n true 1 TRUE ";
-				float f[3] = {0,0,0};
-				PR_CHECK(ExtractBoolArrayC(f, 3, src), true);
-				PR_CHECK(f[0], 1.0f);
-				PR_CHECK(f[1], 1.0f);
-				PR_CHECK(f[2], 1.0f);
+			{// Arrays
+				using namespace pr::str;
+
+				{// Bool Array
+					char src[] = "\n true 1 TRUE ";
+					float f[3] = {0,0,0};
+					PR_CHECK(ExtractBoolArrayC(f, 3, src), true);
+					PR_CHECK(f[0], 1.0f);
+					PR_CHECK(f[1], 1.0f);
+					PR_CHECK(f[2], 1.0f);
+				}
+				{// Int Array
+					char src[] = "\n \t3  1 \n -2\t ";
+					int i[3] = {0,0,0};
+					unsigned int u[3] = {0,0,0};
+					float        f[3] = {0,0,0};
+					double       d[3] = {0,0,0};
+					PR_CHECK(ExtractIntArrayC(i, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
+					PR_CHECK(ExtractIntArrayC(u, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
+					PR_CHECK(ExtractIntArrayC(f, 3, 10, src), true); PR_CLOSE(f[0], 3.f, 0.00001f);   PR_CLOSE(f[1], 1.f, 0.00001f);   PR_CLOSE(f[2], -2.f, 0.00001f);
+					PR_CHECK(ExtractIntArrayC(d, 3, 10, src), true); PR_CLOSE(d[0], 3.0, 0.00001);    PR_CLOSE(d[1], 1.0, 0.00001);    PR_CLOSE(d[2], -2.0, 0.00001);
+				}
+				{// Real Array
+					char src[] = "\n 6.28\t6.28e0\n-6.28 ";
+					float  f[3] = {0,0,0};
+					double d[3] = {0,0,0};
+					int    i[3] = {0,0,0};
+					PR_CHECK(ExtractRealArrayC(f, 3, src) ,true);    PR_CLOSE(f[0], 6.28f, 0.00001f); PR_CLOSE(f[1], 6.28f, 0.00001f); PR_CLOSE(f[2], -6.28f, 0.00001f);
+					PR_CHECK(ExtractRealArrayC(d, 3, src) ,true);    PR_CLOSE(d[0], 6.28 , 0.00001);  PR_CLOSE(d[1], 6.28 , 0.00001);  PR_CLOSE(d[2], -6.28 , 0.00001);
+					PR_CHECK(ExtractRealArrayC(i, 3, src) ,true);    PR_CHECK(i[0], 6);               PR_CHECK(i[1] ,6);               PR_CHECK(i[2], -6);
+				}
 			}
-			{// Int Array
-				char src[] = "\n \t3  1 \n -2\t ";
-				int i[3] = {0,0,0};
-				unsigned int u[3] = {0,0,0};
-				float        f[3] = {0,0,0};
-				double       d[3] = {0,0,0};
-				PR_CHECK(ExtractIntArrayC(i, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
-				PR_CHECK(ExtractIntArrayC(u, 3, 10, src), true); PR_CHECK(i[0], 3);               PR_CHECK(i[1], 1);               PR_CHECK(i[2], -2);
-				PR_CHECK(ExtractIntArrayC(f, 3, 10, src), true); PR_CLOSE(f[0], 3.f, 0.00001f);   PR_CLOSE(f[1], 1.f, 0.00001f);   PR_CLOSE(f[2], -2.f, 0.00001f);
-				PR_CHECK(ExtractIntArrayC(d, 3, 10, src), true); PR_CLOSE(d[0], 3.0, 0.00001);    PR_CLOSE(d[1], 1.0, 0.00001);    PR_CLOSE(d[2], -2.0, 0.00001);
-			}
-			{// Real Array
-				char src[] = "\n 6.28\t6.28e0\n-6.28 ";
-				float  f[3] = {0,0,0};
-				double d[3] = {0,0,0};
-				int    i[3] = {0,0,0};
-				PR_CHECK(ExtractRealArrayC(f, 3, src) ,true);    PR_CLOSE(f[0], 6.28f, 0.00001f); PR_CLOSE(f[1], 6.28f, 0.00001f); PR_CLOSE(f[2], -6.28f, 0.00001f);
-				PR_CHECK(ExtractRealArrayC(d, 3, src) ,true);    PR_CLOSE(d[0], 6.28 , 0.00001);  PR_CLOSE(d[1], 6.28 , 0.00001);  PR_CLOSE(d[2], -6.28 , 0.00001);
-				PR_CHECK(ExtractRealArrayC(i, 3, src) ,true);    PR_CHECK(i[0], 6);               PR_CHECK(i[1] ,6);               PR_CHECK(i[2], -6);
-			}
-			{//ExtractNumber
+			{// Number
+				using namespace pr::str;
+
 				char    src0[] =  "-3.24e-39f";
 				wchar_t src1[] = L"0x123abcUL";
 				char    src2[] =  "01234567";

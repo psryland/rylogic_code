@@ -17,6 +17,7 @@
 #include <locale>
 #include <cstring>
 #include <cstdarg>
+#include <cassert>
 
 namespace pr
 {
@@ -76,6 +77,7 @@ namespace pr
 		{
 			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
 			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
+			static size_t strlen(char const* str) { return ::strlen(str); }
 		};
 		template <> struct char_traits<char&      > :char_traits<char> {};
 		template <> struct char_traits<char const > :char_traits<char> {};
@@ -86,6 +88,7 @@ namespace pr
 		{
 			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
 			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
+			static size_t strlen(wchar_t const* str) { return ::wcslen(str); }
 		};
 		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
@@ -201,19 +204,16 @@ namespace pr
 		{
 			return str.size();
 		}
-		template <typename Char> inline size_t Length(Char const* str)
+		template <typename Str, typename = std::enable_if_t<std::is_pointer<Str>::value>> inline size_t Length(Str str)
 		{
-			auto s = str;
-			for (; *s; ++s) {}
-			return size_t(s - str);
+			using Char = traits<Str>::value_type;
+			return char_traits<Char>::strlen(str);
 		}
-		inline size_t Length(char const* str)
+		template <typename Char, size_t N> inline size_t Length(Char (&str)[N])
 		{
-			return ::strlen(str);
-		}
-		inline size_t Length(wchar_t const* str)
-		{
-			return ::wcslen(str);
+			auto len = Length(&str[0]);
+			assert(len < N && "Fixed array buffer exceeded");
+			return len;
 		}
 		#pragma endregion
 
@@ -580,24 +580,27 @@ namespace pr
 		{
 			str.resize(new_size, Char1(ch));
 		}
-
-		// Resize 'str', initialising with 'ch'
-		template <typename Char1, typename Char2 = char> inline void Resize(Char1* str, size_t new_size, Char2 ch)
+		template <typename Str, typename Char2 = char, typename = std::enable_if_t<std::is_pointer<Str>::value>> inline void Resize(Str str, size_t new_size, Char2 ch)
 		{
-			// Should really assert this: assert(End(str) - Begin(str) >= new_size);
-			// but can't guarantee 'str' has been initialised
-			auto c = Char1(ch);
-			auto i = End(str, new_size); auto iend = str + new_size;
-			for (; i < iend; ++i) *i = c;
+			using Char1 = traits<Str>::value_type;
+			auto i = End(str, new_size);
+			auto iend = str + new_size;
+			for (; i < iend; ++i) *i = Char1(ch);
 			str[new_size] = 0;
 		}
-
-		// Resize 'str' without initialisation
-		template <typename Char1, typename Char2 = char> inline void Resize(Char1* str, size_t new_size)
+		template <typename Char1, size_t N, typename Char2 = char> inline void Resize(Char1 (&str)[N], size_t new_size, Char2 ch)
 		{
-			// Should really assert this: assert(End(str) - Begin(str) >= new_size);
-			// but can't guarantee 'str' has been initialised
+			assert(new_size < N && "Fixed array buffer exceeded");
+			Resize(&str[0], new_size, ch);
+		}
+		template <typename Str, typename = std::enable_if_t<std::is_pointer<Str>::value>> inline void Resize(Str str, size_t new_size)
+		{
 			str[new_size] = 0;
+		}
+		template <typename Char1, size_t N> inline void Resize(Char1 (&str)[N], size_t new_size)
+		{
+			assert(new_size < N && "Fixed array buffer exceeded");
+			Resize(&str[0], new_size);
 		}
 		#pragma endregion
 

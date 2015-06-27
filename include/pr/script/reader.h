@@ -229,8 +229,10 @@ namespace pr
 					++m_src;
 				}
 				if (*m_src == '*') ++m_src; else return false;
-				if (m_case_sensitive_keywords) return pr::str::ExtractIdentifier(kw, m_src, m_delim);
-				else { TxfmSrc src(m_src, ::tolower); return pr::str::ExtractIdentifier(kw, src, m_delim); }
+				pr::str::Resize(kw, 0);
+				if (!pr::str::ExtractIdentifier(kw, m_src, m_delim)) return false;
+				if (!m_case_sensitive_keywords) pr::str::LowerCase(kw);
+				return true;
 			}
 
 			// As above except the hash of the keyword is returned instead (converted to an enum value)
@@ -269,6 +271,7 @@ namespace pr
 			// A token is a contiguous block of non-separater characters
 			template <typename StrType> bool ExtractToken(StrType& token)
 			{
+				pr::str::Resize(token, 0);
 				if (pr::str::ExtractToken(token, m_src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
 			}
@@ -279,6 +282,7 @@ namespace pr
 			template <typename StrType> bool ExtractToken(StrType& token, char const* delim)
 			{
 				std::string sep = m_delim; sep += delim;
+				pr::str::Resize(token, 0);
 				if (pr::str::ExtractToken(token, m_src, sep.c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
 			}
@@ -291,6 +295,7 @@ namespace pr
 			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
 			template <typename StrType> bool ExtractIdentifier(StrType& word)
 			{
+				pr::str::Resize(word, 0);
 				if (pr::str::ExtractIdentifier(word, m_src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
@@ -302,11 +307,13 @@ namespace pr
 			// Extract identifiers from the source separated by 'sep'
 			template <typename StrType> bool ExtractIdentifiers(char, StrType& word)
 			{
+				pr::str::Resize(word, 0);
 				if (pr::str::ExtractIdentifier(word, m_src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
 			template <typename StrType, typename... StrTypes> bool ExtractIdentifiers(char sep, StrType& word, StrTypes&&... words)
 			{
+				pr::str::Resize(word, 0);
 				if (!pr::str::ExtractIdentifier(word, m_src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
 				if (*m_src == sep) ++m_src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
 				return ExtractIdentifiers(sep, std::forward<StrTypes>(words)...);
@@ -320,6 +327,7 @@ namespace pr
 			// A string is a sequence of characters between quotes.
 			template <typename StrType> bool ExtractString(StrType& string)
 			{
+				pr::str::Resize(string, 0);
 				if (pr::str::ExtractString(string, m_src, 0, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
@@ -331,6 +339,7 @@ namespace pr
 			// Extract a C-style string from the source.
 			template <typename StrType> bool ExtractCString(StrType& cstring)
 			{
+				pr::str::Resize(cstring, 0);
 				if (pr::str::ExtractString(cstring, m_src, '\\', m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "cstring expected");
 			}

@@ -294,10 +294,11 @@ namespace pr
 
 		// Convert a C-style string into a normal string
 		// This is the std::string -esk version. char* version not implemented yet...
-		template <typename Str2, typename Str1, typename = Str2::value_type> inline Str2 CStringToString(Str1 const& src)
+		template <typename Str2, typename Str1, typename Char = Str2::value_type> inline Str2 CStringToString(Str1 const& src)
 		{
 			Str2 dst;
 			if (Empty(src)) return dst;
+			auto len = 0;
 			for (auto const* s = &src[0]; *s; ++s)
 			{
 				if (*s == '\\')
@@ -305,22 +306,41 @@ namespace pr
 					switch (*++s)
 					{
 					default: break; // might be '0'
-					case 'a':  Append(dst, '\a'); break;
-					case 'b':  Append(dst, '\b'); break;
-					case 'f':  Append(dst, '\f'); break;
-					case 'n':  Append(dst, '\n'); break;
-					case 'r':  Append(dst, '\r'); break;
-					case 't':  Append(dst, '\t'); break;
-					case 'v':  Append(dst, '\v'); break;
-					case '\\': Append(dst, '\\'); break;
-					case '?':  Append(dst, '\?'); break;
-					case '\'': Append(dst, '\''); break;
-					case '"':  Append(dst, '\"'); break;
+					case 'a':  Append(dst, len++, '\a'); break;
+					case 'b':  Append(dst, len++, '\b'); break;
+					case 'f':  Append(dst, len++, '\f'); break;
+					case 'n':  Append(dst, len++, '\n'); break;
+					case 'r':  Append(dst, len++, '\r'); break;
+					case 't':  Append(dst, len++, '\t'); break;
+					case 'v':  Append(dst, len++, '\v'); break;
+					case '\'': Append(dst, len++, '\''); break;
+					case '\"': Append(dst, len++, '\"'); break;
+					case '\\': Append(dst, len++, '\\'); break;
+					case '?':  Append(dst, len++, '\?'); break;
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+						{
+							// ascii character in octal
+							wchar_t oct[9] = {};
+							for (int i = 0; i != 8 && IsOctDigit(*s); ++i, ++s) oct[i] = wchar_t(*s);
+							Append(dst, len++, Char(::wcstoul(oct, nullptr, 8)));
+							break;
+						}
+					case 'x':
+						{
+							// ascii or unicode character in hex
+							wchar_t hex[9] = {};
+							for (int i = 0; i != 8 && IsHexDigit(*s); ++i, ++s) hex[i] = wchar_t(*s);
+							Append(dst, len++, Char(::wcstoul(hex, nullptr, 16)));
+							break;
+						}
 					}
 				}
 				else
 				{
-					Append(dst, *s);
+					Append(dst, len++, *s);
 				}
 			}
 			return dst;

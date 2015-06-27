@@ -170,17 +170,17 @@ namespace pr
 				Eat::LineSpace(m_buf);
 
 				// Read the pp command
-				string id;
-				if (!pr::str::ExtractIdentifier(id, m_buf))
+				string pp_command;
+				if (!pr::str::ExtractIdentifier(pp_command, m_buf))
 					throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid preprocessor command");
 
 				// Find the hash of the pp command
-				auto kw = (EPPKeyword::Enum_)Hash::String(id); // don't use EPPKeyword::From(), that throws
+				auto kw = (EPPKeyword::Enum_)Hash::String(pp_command); // don't use EPPKeyword::From(), that throws
 				switch (kw)
 				{
 				default:
 				case EPPKeyword::Invalid:
-					throw Exception(EResult::UnknownPreprocessorCommand, m_buf.loc(), fmt("%s (hash: %d) is an unknown preprocessor command", id.c_str(), kw));
+					throw Exception(EResult::UnknownPreprocessorCommand, m_buf.loc(), fmt("%s (hash: %d) is an unknown preprocessor command", pp_command.c_str(), kw));
 				case EPPKeyword::Pragma:
 				case EPPKeyword::Line:
 				case EPPKeyword::Warning:
@@ -275,14 +275,14 @@ namespace pr
 				case EPPKeyword::Ifdef:
 					{
 						Eat::LineSpace(m_buf);
-						if (!pr::str::ExtractIdentifier(id, m_buf)) throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid identifier");
+						string id; if (!pr::str::ExtractIdentifier(id, m_buf)) throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid identifier");
 						if (m_macros && m_macros->Find(Hash::String(id)) != 0) { m_if_stack.push(true); Eat::Line(m_buf, true); }
 						else                                                   { m_if_stack.push(false); SkipPreprocessorBlock(); }
 					}break;
 				case EPPKeyword::Ifndef:
 					{
 						Eat::LineSpace(m_buf);
-						if (!pr::str::ExtractIdentifier(id, m_buf)) throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid identifier");
+						string id; if (!pr::str::ExtractIdentifier(id, m_buf)) throw Exception(EResult::InvalidIdentifier, m_buf.loc(), "invalid identifier");
 						if (m_macros && m_macros->Find(Hash::String(id)) == 0) { m_if_stack.push(true); Eat::Line(m_buf, true); }
 						else                                                   { m_if_stack.push(false); SkipPreprocessorBlock(); }
 					}break;
@@ -353,7 +353,7 @@ namespace pr
 					}break;
 				case EPPKeyword::Embedded:
 					{
-						char lang[16];
+						char lang[16] = {};
 						if (*m_buf == '(') ++m_buf; else throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "expected the form: #embedded(lang) ... #end");
 						if (!pr::str::ExtractIdentifier(lang, m_buf)) throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "expected the form: #embedded(lang) ... #end");
 						if (*m_buf == ')') ++m_buf; else throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "expected the form: #embedded(lang) ... #end");
@@ -404,8 +404,10 @@ namespace pr
 				{
 					if (!pr::str::IsIdentifier(*buf, true)) { ++buf; continue; }
 
-					// See if this is a macro identifier
 					size_t begin = src.m_idx;
+
+					// See if this is a macro identifier
+					id.clear();
 					pr::str::ExtractIdentifier(id, buf);
 					PPMacro const* macro = m_macros ? m_macros->Find(Hash::String(id)) : 0;
 					if (!macro) continue;
@@ -458,9 +460,9 @@ namespace pr
 							Eat::LineSpace(m_buf);
 							bool wrapped = *m_buf == '(';
 							if (wrapped) ++m_buf;
-							if (!pr::str::ExtractIdentifier(id, m_buf)) throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "expected an identifier");
+							string name; if (!pr::str::ExtractIdentifier(name, m_buf)) throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "expected an identifier");
 							if (wrapped && *m_buf == ')') ++m_buf; else throw Exception(EResult::InvalidPreprocessorDirective, m_buf.loc(), "unmatched ')'");
-							expr.push_back((m_macros && m_macros->Find(Hash::String(id)) != 0) ? '1' : '0');
+							expr.push_back((m_macros && m_macros->Find(Hash::String(name)) != 0) ? '1' : '0');
 						}
 
 						// Otherwise substitute the macro
