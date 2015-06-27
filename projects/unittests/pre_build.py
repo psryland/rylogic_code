@@ -47,10 +47,8 @@ try:
 	# generate a file that includes all headers
 	with open(tmpfile, mode='w') as outf:
 		outf.write(
-			"#ifndef PR_UNITTESTS_UNITTESTS_H\n"
-			"#define PR_UNITTESTS_UNITTESTS_H\n"
-			"//\n"
 			"// This is a generated file\n"
+			"#pragma once\n"
 			"//\n"
 			)
 		for sd in srcdirs:
@@ -59,11 +57,6 @@ try:
 				if os.path.splitext(file)[1] != ".h": continue
 				if any([True for excl in exclude if file.find(excl) != -1]): continue;
 				outf.write("#include \""+file[file.rfind("pr/"):]+"\"\n")
-				
-		outf.write(
-			"\n"
-			"#endif\n"
-			)
 
 	# swap the tmp file with the file if difference
 	if Tools.DiffContent(outfile, tmpfile):

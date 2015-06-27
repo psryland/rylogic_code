@@ -243,12 +243,12 @@ namespace pr
 // If this is giving an error like "int return type assumed" and PRUnitTest is
 // not defined, it means you haven't included the header containing the tests in
 // unittests.cpp
-#define PRUnitTest(testname)/*
-	*/template <typename T> void unittest_##testname();                     /* The unit test function forward declaration
-	*/inline void unittest_add_##testname() { unittest_##testname<void>(); }/* A function for adding a unit test item
-	*/static bool s_unittest_##testname =                                   /* A static bool, that when constructed, causes a test item to be added for the test
-	*/	pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_add_##testname));\
-	template <typename T> void unittest_##testname()
+// 's_unittest_testname' is a static bool, that when constructed, causes the test item to be added to the collection of tests
+// 'func' is a template to that forward declarations are not necessary
+#define PRUnitTest(testname)\
+	struct unittest_##testname { template <typename T> static void func(); };\
+	static bool s_unittest_##testname = pr::unittests::AddTest(pr::unittests::UnitTestItem(#testname, unittest_##testname::func<void>));\
+	template <typename T> void unittest_##testname::func()
 
 #define PR_FAIL(msg)\
 	pr::unittests::Fail(msg, __FILE__, __LINE__)

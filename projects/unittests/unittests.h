@@ -1,7 +1,5 @@
-#ifndef PR_UNITTESTS_UNITTESTS_H
-#define PR_UNITTESTS_UNITTESTS_H
-//
 // This is a generated file
+#pragma once
 //
 #include "pr/app/forward.h"
 #include "pr/app/gimble.h"
@@ -345,5 +343,3 @@
 #include "pr/threads/wait_state.h"
 #include "pr/view3d/prmaths.h"
 #include "pr/view3d/view3d.h"
-
-#endif
