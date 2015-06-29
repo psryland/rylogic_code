@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2007
 //**********************************
 #pragma once
-#ifndef PR_EXCEPTION_H
-#define PR_EXCEPTION_H
 
 #include <exception>
 #include <string>
@@ -38,5 +36,3 @@ namespace pr
 	//       throw; // Preserves original exception type
 	//   }
 }
-
-#endif

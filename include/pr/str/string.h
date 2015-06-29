@@ -126,8 +126,14 @@ namespace pr
 		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
 
 		// return the length of a string
-		template <typename tarr>  size_t length(tarr const& right) const  { return right.size(); }
-		template <typename tchar> size_t length(tchar const* right) const { return traits.length(right); }
+		template <typename tarr, typename = tarr::value_type>  size_t length(tarr const& right) const
+		{
+			return right.size();
+		}
+		template <typename tchar> size_t length(tchar const* right) const
+		{
+			return traits.length(right);
+		}
 
 		// reverse a range of elements
 		void reverse(Type *first, Type* last) { for (; first != last && first != --last; ++first) std::swap(*first, *last); }
@@ -179,20 +185,20 @@ namespace pr
 
 		// construct empty collection
 		string()
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 		}
 
 		// construct with custom allocator
 		explicit string(Allocator const& allocator)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(allocator)
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(allocator)
 		{
 			m_ptr[0] = 0;
 			m_allocator = allocator;
@@ -200,10 +206,10 @@ namespace pr
 
 		// construct from count * ch
 		explicit string(size_type count, value_type ch)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 			assign(count, ch);
@@ -211,10 +217,10 @@ namespace pr
 
 		// construct from [ptr, <null>)
 		string(const_pointer ptr)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 			assign(ptr);
@@ -222,10 +228,10 @@ namespace pr
 
 		// copy construct (explicit copy constructor needed to prevent auto generated one even tho there's a template one that would work)
 		string(string const& right)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 			assign(right);
@@ -233,10 +239,10 @@ namespace pr
 
 		// copy construct from any pr::string type
 		template <int L, bool F, class A> string(string<Type,L,F,A> const& right)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(right.m_allocator)
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(right.m_allocator)
 		{
 			m_ptr[0];
 			assign(right);
@@ -244,10 +250,10 @@ namespace pr
 
 		// construct from [first, last), with allocator
 		template <class iter> string(iter first, iter last, Allocator const& allocator = Allocator())
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(allocator)
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(allocator)
 		{
 			m_ptr[0] = 0;
 
@@ -260,12 +266,11 @@ namespace pr
 		}
 
 		// construct from another string-like object
-		// 2nd parameter used to prevent overload issues with container(count)
-		template <typename tarr> string(tarr const& right, typename tarr::size_type = 0, Allocator const& allocator = Allocator())
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(allocator)
+		template <typename tarr> string(tarr const& right, Allocator const& allocator = Allocator())
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(allocator)
 		{
 			m_ptr[0] = 0;
 			assign(right);
@@ -273,10 +278,10 @@ namespace pr
 
 		// construct from a literal string
 		template <int Len> string(Type const (&right)[Len])
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 			assign(right);
@@ -285,19 +290,19 @@ namespace pr
 		// move construct
 		#if _MSC_VER >= 1600
 		string(string&& right) PR_NOEXCEPT
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(right.m_allocator)
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(right.m_allocator)
 		{
 			m_ptr[0] = 0;
 			assign(std::forward<string>(right));
 		}
 		template <int L, bool F, class A> string(string<Type,L,F,A>&& right) PR_NOEXCEPT
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator(right.m_allocator)
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator(right.m_allocator)
 		{
 			m_ptr[0] = 0;
 			assign(std::forward< string<Type,L,F,A> >(right));
@@ -306,10 +311,10 @@ namespace pr
 
 		// construct from right [rofs, rofs + count)
 		template <typename tarr> string(tarr const& right, size_type rofs, size_type count)
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(1)
-		,m_allocator()
+			:m_ptr(local_ptr())
+			,m_capacity(LocalLength)
+			,m_count(1)
+			,m_allocator()
 		{
 			m_ptr[0] = 0;
 			assign(right, rofs, count);
@@ -847,7 +852,7 @@ namespace pr
 		}
 
 		// compare [ofs, ofs + n0) with right [rofs, rofs + count)
-		template <typename tstr> int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
+		template <typename tstr, typename = tstr::value_type> int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
 		{
 			assert(rofs <= right.size());
 			if (right.size() - rofs < count) count = right.size() - rofs;
@@ -855,13 +860,13 @@ namespace pr
 		}
 
 		// compare [0, size()) with right
-		template <typename tstr> int compare(tstr const& right) const
+		template <typename tstr, typename = tstr::value_type> int compare(tstr const& right) const
 		{
 			return compare(0, size(), right, 0, npos);
 		}
 
 		// compare [ofs, ofs + n0) with right
-		template <typename tstr> int compare(size_type ofs, size_type n0, tstr const& right) const
+		template <typename tstr, typename = tstr::value_type> int compare(size_type ofs, size_type n0, tstr const& right) const
 		{
 			return compare(ofs, n0, right, 0, npos);
 		}

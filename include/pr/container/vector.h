@@ -164,6 +164,7 @@ namespace pr
 			TypeSizeInBytes  = sizeof(Type),
 			TypeIsPod        = std::is_pod<Type>::value,
 			TypeAlignment    = std::alignment_of<Type>::value,
+			TypeCopyable     = std::is_copy_constructible<Type>::value,
 			LocalLength      = LocalCount,
 			LocalSizeInBytes = LocalCount * TypeSizeInBytes,
 		};

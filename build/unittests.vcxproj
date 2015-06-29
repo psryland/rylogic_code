@@ -289,7 +289,15 @@
     <ClInclude Include="..\include\pr\network\tcpip.h" />
     <ClInclude Include="..\include\pr\network\web_get.h" />
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
+    <ClInclude Include="..\include\pr\script2\buf8.h" />
     <ClInclude Include="..\include\pr\script2\char_stream.h" />
+    <ClInclude Include="..\include\pr\script2\fail_policy.h" />
+    <ClInclude Include="..\include\pr\script2\keyword.h" />
+    <ClInclude Include="..\include\pr\script2\preprocessor.h" />
+    <ClInclude Include="..\include\pr\script2\location.h" />
+    <ClInclude Include="..\include\pr\script2\reader.h" />
+    <ClInclude Include="..\include\pr\script2\script_core.h" />
+    <ClInclude Include="..\include\pr\script2\token.h" />
     <ClInclude Include="..\include\pr\script\newline_strip.h" />
     <ClInclude Include="..\include\pr\storage\csv.h" />
     <ClInclude Include="..\include\pr\storage\settings.h" />
