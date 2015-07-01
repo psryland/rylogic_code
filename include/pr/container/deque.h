@@ -73,6 +73,7 @@ namespace pr
 					free_all();
 				}
 
+				// The number of in-use blocks
 				size_type count() const
 				{
 					return size_type(m_last - m_first);
@@ -378,7 +379,8 @@ namespace pr
 		template <class T, std::size_t B, class A> friend class deque;
 
 		// type specific traits
-		template <bool pod> struct base_traits
+		template <bool pod> struct base_traits;
+		template <> struct base_traits<false>
 		{
 			// destruct the range [first,last)
 			static void destruct(iterator first, size_type count)
@@ -440,8 +442,8 @@ namespace pr
 		};
 
 		BlockPtrMap m_map; // The array of block pointers
-		size_type m_first; // The offset from 'm_map.m_ptr' to the first element
-		size_type m_last;  // The offset from 'm_map.m_ptr' to one passed the last element
+		size_type m_first; // Element index of the first element == The offset from 'm_map.m_ptr' to the first element
+		size_type m_last;  // Element index of the last+1 element == The offset from 'm_map.m_ptr' to one passed the last element
 
 	public:
 		// The memory allocator
@@ -767,7 +769,7 @@ namespace pr
 		{	
 			assert(!empty() && "pop_front() on empty deque");
 			auto block = m_map[m_first];
-			auto idx = m_first;
+			auto idx = m_first % CountPerBlock;
 			allocator().destroy(block + idx);
 			++m_first;
 			if (m_first == m_last) m_first = m_last = 0;
