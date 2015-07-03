@@ -6,6 +6,7 @@
 
 #include <malloc.h>
 #include <new>
+#include <type_traits>
 #include <cassert>
 
 namespace pr
@@ -22,7 +23,7 @@ namespace pr
 		typedef ptrdiff_t difference_type;
 		enum
 		{
-			value_alignment = std::alignment_of<T>::value
+			value_alignment = std::alignment_of<T>::value,
 		};
 
 		// constructors
@@ -37,23 +38,63 @@ namespace pr
 		pointer       allocate  (size_type n, void const* =0)     { return static_cast<T*>(_aligned_malloc(n * sizeof(T), value_alignment)); }
 		void          deallocate(pointer p, size_type)            { _aligned_free(p); }
 		size_type     max_size  () const throw()                  { return std::numeric_limits<size_type>::max() / sizeof(T); }
-		void          construct (pointer p)                       { ::new ((void*)p) T(); }
-		void          construct (pointer p, const_reference val)  { ::new ((void*)p) T(val); }
+
+		// pod traits for 'T'
+		template <bool is_pod> struct base_traits;
+		template <> struct base_traits<true>
+		{
+			static void construct(pointer p)                      { *p = T(); }
+			static void construct(pointer p, const_reference val) { *p = val; }
+			template <class U> static void destroy(U* p)
+			{
+				#ifndef NDEBUG
+				::memset(p, 0xdd, sizeof(U));
+				#endif
+			}
+		};
+		template <> struct base_traits<false>
+		{
+			static void construct(pointer p)                      { ::new ((void*)p) T(); }
+			static void construct(pointer p, const_reference val) { ::new ((void*)p) T(val); }
+			template <class U> static void destroy(U* p)
+			{
+				if (p) p->~U();
+				#ifndef NDEBUG
+				::memset(p, 0xdd, sizeof(U));
+				#endif
+			}
+		};
+		struct traits :base_traits<std::is_pod<T>::value> {};
+
+		void construct(pointer p)
+		{
+			traits::construct(p);
+		}
+		void construct(pointer p, const_reference val)
+		{
+			traits::construct(p, val);
+		}
 		template <class U, class... Args> void construct(U* p, Args&&... args)
 		{
 			::new ((void*)p) T(std::forward<Args>(args)...);
 		}
 		template <class U> void destroy(U* p)
 		{
-			if (p) p->~U();
-			#ifndef NDEBUG
-			::memset(p, 0xdd, sizeof(U));
-			#endif
+			traits::destroy(p);
 		}
 
 		// helpers
-		T*   New()        { pointer p = allocator(1); construct(p); return p; }
-		void Delete(T* p) { destroy(p); deallocate(p, 1); }
+		T* New()
+		{
+			auto p = allocator(1);
+			construct(p);
+			return p;
+		}
+		void Delete(T* p)
+		{
+			destroy(p);
+			deallocate(p, 1);
+		}
 	};
 	template <typename T, typename U> inline bool operator == (aligned_alloc<T> const&, aligned_alloc<U> const&) { return true; }
 	template <typename T, typename U> inline bool operator != (aligned_alloc<T> const&, aligned_alloc<U> const&) { return false; }

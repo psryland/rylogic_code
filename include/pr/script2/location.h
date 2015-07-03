@@ -14,9 +14,9 @@ namespace pr
 		// The location within a stream of characters
 		// By default, Loc is an empty object that passes characters straight through
 		// Derived versions of 'Loc' record file, line, and column position
-		struct Loc
+		struct Location
 		{
-			virtual ~Loc()
+			virtual ~Location()
 			{}
 
 			// Advance the location by interpreting 'ch'
@@ -29,15 +29,21 @@ namespace pr
 				return char(inc(wchar_t(ch)));
 			}
 
+			// Output the stream name (usually file name)
+			virtual std::wstring StreamName() const { return L"[source in memory]"; }
+
+			// Output the line number
+			virtual size_t Line() const { return 0; }
+
+			// Output the column number
+			virtual size_t Col() const { return 0; }
+
 			// Output the location as a string
-			virtual std::string str() const
-			{
-				return "[no location available]";
-			}
+			std::wstring ToString() const { return StreamName().append(Fmt(L"(%d:%d)", Line(), Col())); }
 		};
 
 		// The location within a stream of characters
-		struct TextLoc :Loc
+		struct TextLoc :Location
 		{
 			size_t m_line;
 			size_t m_col;
@@ -47,6 +53,11 @@ namespace pr
 				:m_line()
 				,m_col()
 				,m_tab_size(4)
+			{}
+			TextLoc(Location const& loc, int tab_size = 4)
+				:m_line(loc.Line())
+				,m_col(loc.Col())
+				,m_tab_size(tab_size)
 			{}
 			TextLoc(size_t line, size_t col, int tab_size = 4)
 				:m_line(line)
@@ -73,11 +84,11 @@ namespace pr
 				return ch;
 			}
 
-			// Output the location as a string
-			std::string str() const override
-			{
-				return pr::Fmt("%d:%d", m_line+1, m_col+1);
-			}
+			// Output the line number
+			size_t Line() const override { return m_line + 1; }
+
+			// Output the column number
+			size_t Col() const override { return m_col + 1; }
 		};
 		inline bool operator == (TextLoc const& lhs, TextLoc const& rhs)
 		{
@@ -103,16 +114,21 @@ namespace pr
 				:TextLoc()
 				,m_file()
 			{}
+			FileLoc(Location const& loc, int tab_size = 4)
+				:TextLoc(loc, tab_size)
+				,m_file(loc.StreamName())
+			{}
+			FileLoc(TextLoc const& loc)
+				:TextLoc(loc)
+				,m_file(loc.StreamName())
+			{}
 			FileLoc(string file, size_t line, size_t col, int tab_size = 4)
 				:TextLoc(line, col, tab_size)
 				,m_file(file)
 			{}
 
-			// Output the location as a string
-			std::string str() const override
-			{
-				return pr::Narrow(m_file).append("(").append(TextLoc::str()).append(")");
-			}
+			// Output the stream name (usually file name)
+			std::wstring StreamName() const override { return m_file; }
 		};
 		inline bool operator == (FileLoc const& lhs, FileLoc const& rhs)
 		{

@@ -291,8 +291,12 @@
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\include\pr\script2\buf8.h" />
     <ClInclude Include="..\include\pr\script2\char_stream.h" />
+    <ClInclude Include="..\include\pr\script2\filter.h" />
     <ClInclude Include="..\include\pr\script2\fail_policy.h" />
+    <ClInclude Include="..\include\pr\script2\forward.h" />
+    <ClInclude Include="..\include\pr\script2\includes.h" />
     <ClInclude Include="..\include\pr\script2\keyword.h" />
+    <ClInclude Include="..\include\pr\script2\macros.h" />
     <ClInclude Include="..\include\pr\script2\preprocessor.h" />
     <ClInclude Include="..\include\pr\script2\location.h" />
     <ClInclude Include="..\include\pr\script2\reader.h" />

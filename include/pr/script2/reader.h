@@ -28,7 +28,7 @@ namespace pr
 			bool m_ignore_kw_case;
 
 			// Advance 'm_src' to the next non-delimiter
-			void EatWhiteSpace()
+			void EatDelimiters()
 			{
 				for (; *pr::str::FindChar(m_delim, *m_src) != 0; ++m_src) {}
 			}
@@ -41,7 +41,7 @@ namespace pr
 				,m_ignore_kw_case(ignore_kw_case)
 			{}
 			Reader(Reader&& rhs)
-				:m_src(rhs.m_src)
+				:m_src(std::move(rhs.m_src))
 				,m_delim(rhs.m_delim)
 				,m_ignore_kw_case(rhs.m_ignore_kw_case)
 			{}
@@ -74,12 +74,12 @@ namespace pr
 			// Returns true if the next non-whitespace character is the start/end of a section
 			bool IsSectionStart()
 			{
-				EatWhiteSpace();
+				EatDelimiters();
 				return *m_src == L'{';
 			}
 			bool IsSectionEnd()
 			{
-				EatWhiteSpace();
+				EatDelimiters();
 				return *m_src == L'}';
 			}
 

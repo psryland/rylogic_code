@@ -10,11 +10,7 @@
 #include <math.h>
 #include <exception>
 #include <errno.h>
-
-#ifndef PR_ASSERT
-#   define PR_ASSERT_STR_DEFINED
-#   define PR_ASSERT(grp, exp, str)
-#endif
+#include <cassert>
 
 namespace pr
 {
@@ -158,6 +154,24 @@ namespace pr
 			}
 		}
 
+		template <typename Char> struct traits_base;
+		template <> struct traits_base<char>
+		{
+			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
+			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
+			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
+			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
+			static int                strnicmp(char const* lhs, char const* rhs, int count) { return ::_strnicmp(lhs, rhs, count); }
+		};
+		template <> struct traits_base<wchar_t>
+		{
+			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
+			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
+			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
+			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
+			static int                strnicmp(wchar_t const* lhs, wchar_t const* rhs, int count) { return ::_wcsnicmp(lhs, rhs, count); }
+		};
+
 		// An integral or floating point value
 		struct Val
 		{
@@ -180,13 +194,15 @@ namespace pr
 			Val& operator = (bool                 v) { m_ll = v; m_fp = false; return *this; }
 
 			// Read a value (greedily) from 'expr'
-			bool read(char const*& expr)
+			template <typename Char> bool read(Char const*& expr)
 			{
+				using traits = traits_base<Char>;
+
 				// Read as a floating point number
-				char* endf; errno = 0; double db = ::strtod(expr, &endf);
+				Char* endf; errno = 0; double db = traits::strtod(expr, &endf);
 
 				// Read as a 32-bit int
-				char* endi; errno = 0; long long ll = ::strtol(expr, &endi, 0);
+				Char* endi; errno = 0; long long ll = traits::strtol(expr, &endi, 0);
 
 				// If more chars are read as a float, then assume a float
 				if (endi == expr && endf == expr) return false;
@@ -200,12 +216,12 @@ namespace pr
 				if (usign)
 				{
 					errno = 0;
-					if (!llong)                    ll = ::strtoul(expr, 0, 0);
-					if ( llong || errno == ERANGE) ll = ::_strtoui64(expr, 0, 0);
+					if (!llong)                    ll = traits::strtoul(expr, nullptr, 0);
+					if ( llong || errno == ERANGE) ll = traits::strtoui64(expr, nullptr, 0);
 				}
 				else
 				{
-					if ( llong || errno == ERANGE) ll = ::_strtoi64(expr, 0, 0);
+					if ( llong || errno == ERANGE) ll = traits::strtoi64(expr, nullptr, 0);
 				}
 				expr += (endi - expr);
 				*this = ll;
@@ -224,13 +240,38 @@ namespace pr
 		// If the token is a value then 'expr' is advanced past the value
 		// if it's an operator it isn't. This is so that operator precedense works
 		// 'follows_value' should be true if the preceeding expression evaluates to a value
-		inline ETok Token(char const*& expr, Val& val, bool follows_value)
+		template <typename Char> ETok Token(Char const*& expr, Val& val, bool follows_value)
 		{
+			using traits = traits_base<Char>;
+			auto cmp = traits::strnicmp;
+			auto str = traits::str;
+
+	template<typename C>
+const C * ChooseCW(const char * c, const wchar_t * w);
+
+template<>
+const char * ChooseCW<char>(const char * c, const wchar_t * w)
+{
+    return c;
+}
+
+template<>
+const wchar_t * ChooseCW<wchar_t>(const char * c, const wchar_t * w)
+{
+    return w;
+}
+
+#define CW(C, STR) ChooseCW<C>(STR, L##STR)
+
+insert(value_type(CW(C, "in1"), CW(C, "out1")));
+
+
+
 			// Skip any leading whitespace
-			while (*expr && isspace(*expr)) { ++expr; }
+			while (*expr && std::isspace(*expr)) { ++expr; }
 
 			// Look for an operator
-			switch (tolower(*expr))
+			switch (std::tolower(*expr))
 			{
 			default: break;
 			// Convert Add/Sub to unary plus/minus by looking at the previous expression
@@ -248,91 +289,91 @@ namespace pr
 			case '?': return ETok::If;
 			case ':': return ETok::Else;
 			case '<':
-				if      (_strnicmp(expr, "<<"    ,2) == 0) return ETok::LeftShift;
-				else if (_strnicmp(expr, "<="    ,2) == 0) return ETok::LogLTEql;
+				if      (cmp(expr, str("<<")    ,2) == 0) return ETok::LeftShift;
+				else if (cmp(expr, str("<=")    ,2) == 0) return ETok::LogLTEql;
 				else return ETok::LogLT;
 			case '>':
-				if      (_strnicmp(expr, ">>"    ,2) == 0) return ETok::RightShift;
-				else if (_strnicmp(expr, ">="    ,2) == 0) return ETok::LogGTEql;
+				if      (cmp(expr, str(">>")    ,2) == 0) return ETok::RightShift;
+				else if (cmp(expr, str(">=")    ,2) == 0) return ETok::LogGTEql;
 				else return ETok::LogGT;
 			case '|':
-				if      (_strnicmp(expr, "||"    ,2) == 0) return ETok::LogOR;
+				if      (cmp(expr, str("||")    ,2) == 0) return ETok::LogOR;
 				else return ETok::BitOR;
 			case '&':
-				if      (_strnicmp(expr, "&&"    ,2) == 0) return ETok::LogAND;
+				if      (cmp(expr, str("&&")    ,2) == 0) return ETok::LogAND;
 				else return ETok::BitAND;
 			case '=':
-				if      (_strnicmp(expr, "=="    ,2) == 0) return ETok::LogEql;
+				if      (cmp(expr, str("==")    ,2) == 0) return ETok::LogEql;
 				else break;
 			case '!':
-				if      (_strnicmp(expr, "!="    ,2) == 0) return ETok::LogNEql;
+				if      (cmp(expr, str("!=")    ,2) == 0) return ETok::LogNEql;
 				else return ETok::Not;
 			case 'a':
-				if      (_strnicmp(expr, "abs"   ,3) == 0) return ETok::Abs;
-				else if (_strnicmp(expr, "asin"  ,4) == 0) return ETok::ASin;
-				else if (_strnicmp(expr, "acos"  ,4) == 0) return ETok::ACos;
-				else if (_strnicmp(expr, "atan2" ,5) == 0) return ETok::ATan2;
-				else if (_strnicmp(expr, "atan"  ,4) == 0) return ETok::ATan;
+				if      (cmp(expr, str("abs")   ,3) == 0) return ETok::Abs;
+				else if (cmp(expr, str("asin")  ,4) == 0) return ETok::ASin;
+				else if (cmp(expr, str("acos")  ,4) == 0) return ETok::ACos;
+				else if (cmp(expr, str("atan2") ,5) == 0) return ETok::ATan2;
+				else if (cmp(expr, str("atan")  ,4) == 0) return ETok::ATan;
 				else break;
 			case 'c':
-				if      (_strnicmp(expr, "clamp" ,5) == 0) return ETok::Clamp;
-				else if (_strnicmp(expr, "ceil"  ,4) == 0) return ETok::Ceil;
-				else if (_strnicmp(expr, "cosh"  ,4) == 0) return ETok::CosH;
-				else if (_strnicmp(expr, "cos"   ,3) == 0) return ETok::Cos;
+				if      (cmp(expr, str("clamp") ,5) == 0) return ETok::Clamp;
+				else if (cmp(expr, str("ceil")  ,4) == 0) return ETok::Ceil;
+				else if (cmp(expr, str("cosh")  ,4) == 0) return ETok::CosH;
+				else if (cmp(expr, str("cos")   ,3) == 0) return ETok::Cos;
 				else break;
 			case 'd':
-				if      (_strnicmp(expr, "deg"   ,3) == 0) return ETok::Deg;
+				if      (cmp(expr, str("deg")   ,3) == 0) return ETok::Deg;
 				else break;
 			case 'e':
-				if      (_strnicmp(expr, "exp"   ,3) == 0) return ETok::Exp;
+				if      (cmp(expr, str("exp")   ,3) == 0) return ETok::Exp;
 				else break;
 			case 'f':
-				if      (_strnicmp(expr, "floor" ,5) == 0) return ETok::Floor;
-				else if (_strnicmp(expr, "fmod"  ,3) == 0) return ETok::Fmod;
-				else if (_strnicmp(expr, "false" ,5) == 0) { expr += 5; val = 0.0; return ETok::Value; }
+				if      (cmp(expr, str("floor") ,5) == 0) return ETok::Floor;
+				else if (cmp(expr, str("fmod")  ,3) == 0) return ETok::Fmod;
+				else if (cmp(expr, str("false") ,5) == 0) { expr += 5; val = 0.0; return ETok::Value; }
 				else break;
 			case 'l':
-				if      (_strnicmp(expr, "log10" ,5) == 0) return ETok::Log10;
-				else if (_strnicmp(expr, "log"   ,3) == 0) return ETok::Log;
-				else if (_strnicmp(expr, "len2"  ,4) == 0) return ETok::Len2;
-				else if (_strnicmp(expr, "len3"  ,4) == 0) return ETok::Len3;
-				else if (_strnicmp(expr, "len4"  ,4) == 0) return ETok::Len4;
+				if      (cmp(expr, str("log10") ,5) == 0) return ETok::Log10;
+				else if (cmp(expr, str("log")   ,3) == 0) return ETok::Log;
+				else if (cmp(expr, str("len2")  ,4) == 0) return ETok::Len2;
+				else if (cmp(expr, str("len3")  ,4) == 0) return ETok::Len3;
+				else if (cmp(expr, str("len4")  ,4) == 0) return ETok::Len4;
 				else break;
 			case 'm':
-				if      (_strnicmp(expr, "min"   ,3) == 0) return ETok::Min;
-				else if (_strnicmp(expr, "max"   ,3) == 0) return ETok::Max;
+				if      (cmp(expr, str("min")   ,3) == 0) return ETok::Min;
+				else if (cmp(expr, str("max")   ,3) == 0) return ETok::Max;
 				else break;
 			case 'p':
-				if      (_strnicmp(expr, "pow"   ,3) == 0) return ETok::Pow;
-				else if (_strnicmp(expr, "phi"   ,3) == 0) { expr += 3; val = 1.618033988749894848204586834; return ETok::Value; }
-				else if (_strnicmp(expr, "pi"    ,2) == 0) { expr += 2; val = 3.1415926535897932384626433832795; return ETok::Value; }
+				if      (cmp(expr, str("pow")   ,3) == 0) return ETok::Pow;
+				else if (cmp(expr, str("phi")   ,3) == 0) { expr += 3; val = 1.618033988749894848204586834; return ETok::Value; }
+				else if (cmp(expr, str("pi")    ,2) == 0) { expr += 2; val = 3.1415926535897932384626433832795; return ETok::Value; }
 				else break;
 			case 'r':
-				if      (_strnicmp(expr, "round" ,5) == 0) return ETok::Round;
-				else if (_strnicmp(expr, "rad"   ,3) == 0) return ETok::Rad;
+				if      (cmp(expr, str("round") ,5) == 0) return ETok::Round;
+				else if (cmp(expr, str("rad")   ,3) == 0) return ETok::Rad;
 				else break;
 			case 's':
-				if      (_strnicmp(expr, "sinh"  ,4) == 0) return ETok::SinH;
-				else if (_strnicmp(expr, "sin"   ,3) == 0) return ETok::Sin;
-				else if (_strnicmp(expr, "sqrt"  ,4) == 0) return ETok::Sqrt;
-				else if (_strnicmp(expr, "sqr"   ,3) == 0) return ETok::Sqr;
+				if      (cmp(expr, str("sinh")  ,4) == 0) return ETok::SinH;
+				else if (cmp(expr, str("sin")   ,3) == 0) return ETok::Sin;
+				else if (cmp(expr, str("sqrt")  ,4) == 0) return ETok::Sqrt;
+				else if (cmp(expr, str("sqr")   ,3) == 0) return ETok::Sqr;
 				else break;
 			case 't':
-				if      (_strnicmp(expr, "tanh"  ,4) == 0) return ETok::TanH;
-				else if (_strnicmp(expr, "tan"   ,3) == 0) return ETok::Tan;
-				else if (_strnicmp(expr, "tau"   ,3) == 0) { expr += 3; val = 6.283185307179586476925286766559; return ETok::Value; }
-				else if (_strnicmp(expr, "true"  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
+				if      (cmp(expr, str("tanh")  ,4) == 0) return ETok::TanH;
+				else if (cmp(expr, str("tan")   ,3) == 0) return ETok::Tan;
+				else if (cmp(expr, str("tau")   ,3) == 0) { expr += 3; val = 6.283185307179586476925286766559; return ETok::Value; }
+				else if (cmp(expr, str("true")  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
 				else break;
 			}
 
 			// If it's not an operator, try extracting an operand
-			return  val.read(expr) ? ETok::Value : ETok::None;
+			return val.read(expr) ? ETok::Value : ETok::None;
 		}
 
 		// Evaluate an expression.
 		// Called recursively for each operation within an expression.
 		// 'parent_op' is used to determine precedence order.
-		inline bool Eval(char const*& expr, Val* result, int rmax, int& ridx, ETok parent_op, bool l2r = true)
+		template <typename Char> bool Eval(Char const*& expr, Val* result, int rmax, int& ridx, ETok parent_op, bool l2r = true)
 		{
 			if (ridx >= rmax)
 				throw std::exception("too many results");
@@ -627,7 +668,7 @@ namespace pr
 	}
 
 	// Evaluate a floating point expression
-	template <typename ResType> inline ResType Evaluate(char const* expr)
+	template <typename ResType, typename Char> inline ResType Evaluate(Char const* expr)
 	{
 		impl::Val result; int ridx = 0;
 		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
@@ -635,7 +676,7 @@ namespace pr
 	}
 
 	// Evaluate an integral expression
-	template <typename ResType> inline ResType EvaluateI(char const* expr)
+	template <typename ResType, typename Char> inline ResType EvaluateI(Char const* expr)
 	{
 		impl::Val result; int ridx = 0;
 		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
@@ -643,15 +684,15 @@ namespace pr
 	}
 
 	// Helper overloads
-	inline bool Evaluate (char const* expr, double&             out) { try {out = Evaluate <double             >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool Evaluate (char const* expr, float&              out) { try {out = Evaluate <float              >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, unsigned long long& out) { try {out = EvaluateI<unsigned long long >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, unsigned long&      out) { try {out = EvaluateI<unsigned long      >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, unsigned int&       out) { try {out = EvaluateI<unsigned int       >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, long long&          out) { try {out = EvaluateI<long long          >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, long&               out) { try {out = EvaluateI<long               >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, int&                out) { try {out = EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
-	inline bool EvaluateI(char const* expr, bool&               out) { try {out=!!EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool Evaluate (Char const* expr, double&             out) { try {out = Evaluate <double             >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool Evaluate (Char const* expr, float&              out) { try {out = Evaluate <float              >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned long long& out) { try {out = EvaluateI<unsigned long long >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned long&      out) { try {out = EvaluateI<unsigned long      >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, unsigned int&       out) { try {out = EvaluateI<unsigned int       >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, long long&          out) { try {out = EvaluateI<long long          >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, long&               out) { try {out = EvaluateI<long               >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, int&                out) { try {out = EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
+	template <typename Char> inline bool EvaluateI(Char const* expr, bool&               out) { try {out=!!EvaluateI<int                >(expr); return true;} catch (std::exception const&) {return false;} }
 }
 
 #if PR_UNITTESTS

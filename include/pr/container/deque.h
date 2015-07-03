@@ -800,12 +800,12 @@ namespace pr
 			if (ofs <= size() / 2)
 			{
 				push_front(val);
-				std::rotate(begin(), begin() + 1, begin() + 1 + ofs);
+				if (ofs != 0) std::rotate(begin(), begin() + 1, begin() + 1 + ofs);
 			}
 			else // closer to back, push to back then copy
 			{
 				push_back(val);
-				std::rotate(begin() + ofs, end() - 1, end());
+				if (ofs != size()-1) std::rotate(begin() + ofs, end() - 1, end());
 			}
 			return begin() + ofs;
 		}

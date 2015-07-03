@@ -13,6 +13,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 #include <type_traits>
 #include <locale>
 #include <cstring>
@@ -78,6 +79,7 @@ namespace pr
 			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
 			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
 			static size_t strlen(char const* str) { return ::strlen(str); }
+			static size_t strnlen(char const* str, size_t max_count) { return ::strnlen(str, max_count); }
 		};
 		template <> struct char_traits<char&      > :char_traits<char> {};
 		template <> struct char_traits<char const > :char_traits<char> {};
@@ -89,6 +91,7 @@ namespace pr
 			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
 			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
 			static size_t strlen(wchar_t const* str) { return ::wcslen(str); }
+			static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
 		};
 		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};

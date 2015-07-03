@@ -993,6 +993,18 @@
     <ClInclude Include="..\include\pr\script2\preprocessor.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\script2\macros.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\includes.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\filter.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\forward.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

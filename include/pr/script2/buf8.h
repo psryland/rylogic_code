@@ -17,147 +17,203 @@ namespace pr
 {
 	namespace script2
 	{
-		// A "shift register" of 8 characters
-		struct alignas(16) Buf8
+		// Generic character shift register
+		template <typename Derived, typename TStore, typename Char> struct Buf
 		{
-			static int const Front = 0, Back = 7, Capacity = 8;
-			union { __m128i m_ui; wchar_t m_ch[Capacity]; };
-			static_assert(sizeof(__m128i) == sizeof(wchar_t[Capacity]), "");
+			using value_type = Char;
 
-			Buf8()
-				:m_ui()
-			{}
-			template <typename Ptr> Buf8(Ptr const& src) :Buf8()
+			// Constants
+			enum
 			{
-				Load(src);
+				Capacity = sizeof(TStore) / sizeof(Char),
+				Front    = 0,
+				Back     = Capacity - 1,
+			};
+
+			// Shift register storage
+			union { Char m_ch[Capacity]; TStore m_ui; }; Char const m_term; // Used to ensure 'm_ch' is null terminated
+			static_assert(sizeof(TStore) == sizeof(Char[Capacity]), "");
+
+			// Char traits
+			template <typename Ch> struct base_traits;
+			template <> struct base_traits<char>
+			{
+				static size_t strlen(char const* str)                    { return ::strlen(str); }
+				static size_t strnlen(char const* str, size_t max_count) { return ::strnlen(str, max_count); }
+			};
+			template <> struct base_traits<wchar_t>
+			{
+				static size_t strlen(wchar_t const* str)                    { return ::wcslen(str); }
+				static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
+			};
+			struct traits :base_traits<Char> {};
+
+			Buf()
+				:m_ui()
+				,m_term()
+			{}
+			Buf(Buf&& rhs)
+				:m_ui(rhs.m_ui)
+				,m_term()
+			{}
+			Buf(Buf const& rhs)
+				:m_ui(rhs.m_ui)
+				,m_term()
+			{}
+			Buf& operator =(Buf&& rhs)
+			{
+				if (this != &rhs)
+					std::swap(m_ui, rhs.m_ui);
+				return *this;
 			}
-			template <typename Ptr> Buf8(Ptr& src) :Buf8()
+			Buf& operator =(Buf const& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_ui = rhs.m_ui;
+				}
+				return *this;
+			}
+			template <typename Ptr> explicit Buf(Ptr& src) :Buf()
 			{
 				Load(src);
 			}
 
 			// Load the buffer from a source
-			//  If 'src' has less than 8 characters then 0s are shifted into the buffer
-			template <typename Ptr> void Load(Ptr const& src)
-			{
-				auto s = src;
-				Load(s);
-			}
+			//  If 'src' has less than 2 characters then 0s are shifted into the buffer
 			template <typename Ptr> void Load(Ptr& src)
 			{
-				auto n = Capacity;
+				int n = Capacity;
 				for (; *src && n--; ++src) shift(*src);
-				for (; n-- > 0;) shift(wchar_t());
+				for (; n-- > 0;) shift(Char());
+			}
+			template <typename Ptr> void Load(Ptr const* src)
+			{
+				int n = Capacity;
+				for (; *src && n--; ++src) shift(*src);
+				for (; n-- > 0;) shift(Char());
 			}
 
 			// Reset the buffer
 			void clear()
 			{
-				m_ui = _mm_setzero_si128();
+				m_ui = TStore();
 			}
 
 			// Shift a character into the buffer
-			void shift(wchar_t wide_char)
+			void shift(Char ch)
 			{
-				m_ui = _mm_srli_si128(m_ui, 2);
-				m_ch[Back] = wide_char;
+				m_ui = Derived::right_shift(m_ui);
+				m_ch[Back] = ch;
 			}
 
 			// Access elements in the buffer
-			wchar_t front() const
+			Char front() const
 			{
 				return m_ch[Front];
 			}
-			wchar_t back() const
+			Char back() const
 			{
 				return m_ch[Back];
 			}
 
 			// Array access into the buffer
-			wchar_t operator [](int i) const
+			Char operator [](size_t i) const
 			{
 				assert(i < Capacity);
 				return m_ch[i];
 			}
-			wchar_t& operator [](int i)
+			Char& operator [](size_t i)
 			{
 				assert(i < Capacity);
 				return m_ch[i];
 			}
 
-			// String access
-			wchar_t const* c_str() const
+			// String access (std::string-like interface)
+			Char const* c_str() const
 			{
-				assert(m_ch[Back] == 0 && "string not terminated");
 				return m_ch;
+			}
+			size_t size() const
+			{
+				return traits::strnlen(m_ch, Capacity);
 			}
 
 			// This returns true if 'buf' *contains* 'this', i.e. 'this' is a substring of 'buf' starting at m_ch[0].
 			// Note: buf1.match(buf2) != buf2.match(buf1) generally
-			bool match(Buf8 const& buf) const
+			bool match(Buf const& buf) const
 			{
 				// return m_ui != 0 && (m_ui & buf.m_ui) == m_ui;
 				if (!front()) return false;
-				return _mm_movemask_epi8(_mm_cmpeq_epi16(_mm_and_si128(m_ui, buf.m_ui), m_ui)) == 0xFFFF;
+				return Derived::lhs_bits_set(m_ui, buf.m_ui);
+			}
+
+			// Equality operator
+			bool operator == (Buf const& rhs)
+			{
+				return Derived::equal(m_ui, rhs.m_ui);
+			}
+			bool operator != (Buf const& rhs)
+			{
+				return !Derived::equal(m_ui, rhs.m_ui);
+			}
+
+			// Default implemenation
+			static TStore right_shift(TStore const& ui)
+			{
+				return ui >> 8 * sizeof(Char);
+			}
+			static bool lhs_bits_set(TStore const& lhs, TStore const& rhs)
+			{
+				return (lhs & rhs) == lhs;
+			}
+			static bool equal(TStore const& lhs, TStore const& rhs)
+			{
+				return lhs == rhs;
 			}
 		};
-		inline bool operator == (Buf8 const& lhs, Buf8 const& rhs)
+
+		// A "shift register" of 2 wide characters
+		struct BufW2 :Buf<BufW2, unsigned int, wchar_t>
 		{
-			return _mm_movemask_epi8(_mm_cmpeq_epi16(lhs.m_ui, rhs.m_ui)) == 0xFFFF;
-		}
-		inline bool operator != (Buf8 const& lhs, Buf8 const& rhs)
+			using base = Buf<BufW2, unsigned int, wchar_t>;
+			BufW2() :base() {}
+			BufW2(BufW2&& rhs) :base(std::move<base&>(rhs)) {}
+			template <typename Ptr> explicit BufW2(Ptr const& src) :Buf(src) {}
+			template <typename Ptr> explicit BufW2(Ptr& src) :Buf(src) {}
+		};
+
+		// A "shift register" of 4 wide characters
+		struct BufW4 :Buf<BufW4, unsigned long long, wchar_t>
 		{
-			return !(lhs == rhs);
-		}
+			using base = Buf<BufW4, unsigned long long, wchar_t>;
+			BufW4() :base() {}
+			BufW4(BufW4&& rhs) :base(std::move<base&>(rhs)) {}
+			template <typename Ptr> explicit BufW4(Ptr const& src) :Buf(src) {}
+			template <typename Ptr> explicit BufW4(Ptr& src) :Buf(src) {}
+		};
 
-
-		// Extends Buf8 to contain the character source
-		template <typename Ptr> struct alignas(16) Buf8Src :private Buf8
+		// A "shift register" of 8 wide characters
+		struct alignas(16) BufW8 :Buf<BufW8, __m128i, wchar_t>
 		{
-			Ptr* m_ptr;
-			bool m_clean_up;
+			using base = Buf<BufW8, __m128i, wchar_t>;
+			BufW8() :base() {}
+			BufW8(BufW8&& rhs) :base(std::move<base&>(rhs)) {}
+			template <typename Ptr> explicit BufW8(Ptr const& src) :Buf(src) {}
+			template <typename Ptr> explicit BufW8(Ptr& src) :Buf(src) {}
 
-			Buf8Src()
-				:Buf8()
-				,m_ptr()
-				,m_clean_up()
-			{}
-			Buf8Src(Ptr* src, bool clean_up)
-				:Buf8(src)
-				,m_ptr(src)
-				,m_clean_up(clean_up)
-			{}
-			Buf8Src(Buf8Src&& rhs)
-				:Buf8(rhs)
-				,m_ptr(rhs.m_ptr)
-				,m_clean_up(rhs.m_clean_up)
+			// Default implemenation
+			static __m128i right_shift(__m128i const& ui)
 			{
-				m_rhs.m_ptr = nullptr;
-				m_rhs.m_clean_up = false;
+				return _mm_srli_si128(ui, sizeof(wchar_t));
 			}
-			Buf8Src(Buf8Src const&) = delete;
-			Buf8Src& operator =(Buf8Src const&) = delete;
-			~Buf8Src()
+			static bool lhs_bits_set(__m128i const& lhs, __m128i const& rhs)
 			{
-				if (m_clean_up)
-					delete src;
+				return _mm_movemask_epi8(_mm_cmpeq_epi16(_mm_and_si128(lhs, rhs), lhs)) == 0xFFFF;
 			}
-
-			// Pointer interface
-			wchar_t operator*() const
+			static bool equal(__m128i const& lhs, __m128i const& rhs)
 			{
-				return front();
-			}
-			Buf8Src& operator ++()
-			{
-				shift(*m_ptr);
-				m_ptr += *m_ptr != 0;
-				return *this;
-			}
-			Buf8Src& operator +=(int n)
-			{
-				for (;n--;) ++*this;
-				return *this;
+				return _mm_movemask_epi8(_mm_cmpeq_epi16(lhs, rhs)) == 0xFFFF;
 			}
 		};
 	}
@@ -175,11 +231,33 @@ namespace pr
 			using namespace pr::str;
 			using namespace pr::script2;
 
-			wchar_t const src[] = L"0123456";
-			PR_CHECK(Equal(Buf8(src).c_str(), src), true);
-			PR_CHECK(Buf8(L"Paul"       ).match(Buf8(L"PaulWasHere")), true);
-			PR_CHECK(Buf8(L"PaulWasHere").match(Buf8(L"Paul"       )), false);
-			PR_CHECK(Buf8(L"ABC") == Buf8(L"ABC"), true);
+			{// BufW2
+				wchar_t const src[] = L"0123456789";
+				BufW2 buf(src);
+				PR_CHECK(buf[0], L'0');
+				PR_CHECK(buf[1], L'1');
+			}
+			{// BufW4
+				wchar_t* src = L"0123456789";
+				BufW4 buf(src);
+				PR_CHECK(*src, L'4');
+				PR_CHECK(buf[0], L'0');
+				PR_CHECK(buf[1], L'1');
+				PR_CHECK(buf[2], L'2');
+				PR_CHECK(buf[3], L'3');
+				buf.shift(*src++);
+				PR_CHECK(buf[0], L'1');
+				PR_CHECK(buf[1], L'2');
+				PR_CHECK(buf[2], L'3');
+				PR_CHECK(buf[3], L'4');
+			}
+			{// BufW8
+				wchar_t const src[] = L"0123456";
+				PR_CHECK(Equal(BufW8(src).c_str(), src), true);
+				PR_CHECK(BufW8(L"Paul"       ).match(BufW8(L"PaulWasHere")), true);
+				PR_CHECK(BufW8(L"PaulWasHere").match(BufW8(L"Paul"       )), false);
+				PR_CHECK(BufW8(L"ABC") == BufW8(L"ABC"), true);
+			}
 		}
 	}
 }

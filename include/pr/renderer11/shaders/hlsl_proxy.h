@@ -176,5 +176,10 @@ namespace pr
 				,m_range(light.m_range, light.m_falloff, light.m_inner_cos_angle, light.m_outer_cos_angle)
 			{}
 		};
+
+		#undef uniform
+		#undef row_major
+		#undef line
+		#undef inout
 	}
 }
