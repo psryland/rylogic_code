@@ -1005,6 +1005,12 @@
     <ClInclude Include="..\include\pr\script2\forward.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\script2\embedded.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\embedded_lua.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

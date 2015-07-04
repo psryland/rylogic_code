@@ -291,6 +291,8 @@
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h" />
     <ClInclude Include="..\include\pr\script2\buf8.h" />
     <ClInclude Include="..\include\pr\script2\char_stream.h" />
+    <ClInclude Include="..\include\pr\script2\embedded.h" />
+    <ClInclude Include="..\include\pr\script2\embedded_lua.h" />
     <ClInclude Include="..\include\pr\script2\filter.h" />
     <ClInclude Include="..\include\pr\script2\fail_policy.h" />
     <ClInclude Include="..\include\pr\script2\forward.h" />

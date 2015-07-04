@@ -10,6 +10,7 @@
 #include "pr/script2/filter.h"
 #include "pr/script2/macros.h"
 #include "pr/script2/includes.h"
+#include "pr/script2/embedded.h"
 
 namespace pr
 {
@@ -19,9 +20,10 @@ namespace pr
 		// This is a super-set of a C/C++ preprocessor.
 		template
 		<
-			typename TMacroDB = MacroDB<>,
-			typename TIncludeHandler = IncludeHandler<>,
-			typename FailPolicy = ThrowOnFailure
+			typename FailPolicy = ThrowOnFailure,
+			typename TMacroDB = MacroDB<Macro<>, FailPolicy>,
+			typename TIncludeHandler = IncludeHandler<FailPolicy>,
+			typename TEmbeddedCodeHandler = NoEmbeddedCode<FailPolicy>
 		>
 		struct Preprocessor :Src
 		{
@@ -78,6 +80,8 @@ namespace pr
 			// The database of macro definitions
 			using MacroDB = TMacroDB;
 			using Macro = typename MacroDB::Macro;
+			using MacroParams = typename Macro::Params;
+			using MacroAncester = typename Macro::Ancestor;
 			MacroDB m_macros;
 
 			// A stack recording the 'inclusion' state of nested #if/#endif blocks
@@ -86,7 +90,11 @@ namespace pr
 
 			// Include handler
 			using IncludeHandler = TIncludeHandler;
-			TIncludeHandler m_includes;
+			IncludeHandler m_includes;
+
+			// Embedded code handler
+			using EmbeddedCodeHandler = TEmbeddedCodeHandler;
+			EmbeddedCodeHandler m_embedded;
 
 			// Debugging helpers for the watch window
 			SrcConstPtr m_dbg_src;
@@ -100,6 +108,7 @@ namespace pr
 				,m_macros()
 				,m_if_stack()
 				,m_includes()
+				,m_embedded()
 				,m_dbg_buf()
 				,m_dbg_src()
 			{}
@@ -110,6 +119,7 @@ namespace pr
 				,m_macros(std::move(rhs.m_macros))
 				,m_if_stack(std::move(rhs.m_if_stack))
 				,m_includes(std::move(rhs.m_includes))
+				,m_embedded(std::move(rhs.m_embedded))
 				,m_dbg_buf(rhs.m_dbg_buf)
 				,m_dbg_src(rhs.m_dbg_src)
 			{}
@@ -205,14 +215,22 @@ namespace pr
 			// Advance by 'n' characters, popping from the input stack as needed
 			void next(int n = 1)
 			{
-				for (; m_src && n--;)
+				for (;m_src;)
 				{
-					// Pop a character from the source
-					++*m_src;
-
 					// If the source has expired, pop from the stack until we find the next non-expired source
-					for (; m_src && **m_src == 0;)
-						 Pop();
+					if (**m_src == 0)
+					{
+						Pop();
+						continue;
+					}
+
+					// Pop a character from the source
+					if (n--)
+					{
+						++*m_src;
+						continue;
+					}
+					break;
 				}
 				assert(m_src == nullptr || **m_src != 0 && "Should never return an end of stream from here");
 			}
@@ -312,8 +330,7 @@ namespace pr
 								if (src.match(L"eval", true))
 								{
 									EatLineSpace(0, 0);
-									auto eval_src = std::make_unique<Buffer<pr::string<wchar_t>>>();
-									auto& expr = eval_src->m_buf;
+									pr::string<wchar_t> expr;
 
 									// Extract text between '{' and '}'
 									if (*src == '{') ++src; else return FailPolicy::Fail(EResult::ExpressionSyntaxError, loc_beg, "Expected the form: #eval{expression}");
@@ -326,7 +343,7 @@ namespace pr
 									if (*src == '}') ++src; else return FailPolicy::Fail(EResult::ExpressionSyntaxError, loc_beg, "No matching '}' found following #eval");
 
 									// Expand any macros in the expression
-									ExpandMacros(expr, typename Macro::Ancestor(nullptr, nullptr), loc_beg);
+									RecursiveExpandMacros(expr, MacroAncester(nullptr, nullptr), loc_beg);
 
 									// Replace any nested #eval{exp} with (exp)
 									pr::str::Replace(expr, L"#eval", L"" );
@@ -342,6 +359,7 @@ namespace pr
 									expr = (static_cast<int64>(result) == result) ? pr::FmtS(L"%lld", static_cast<int64>(result)) : pr::FmtS(L"%f", result);
 
 									// Push the eval source onto the input stack
+									auto eval_src = std::make_unique<Buffer<>>(ESrcType::Eval, std::begin(expr), std::end(expr));
 									Push(eval_src.get(), true);
 									eval_src.release();
 									continue;
@@ -350,6 +368,38 @@ namespace pr
 								#pragma region Embedded
 								if (src.match(L"embedded", true))
 								{
+									// Read the embedded language used
+									pr::string<wchar_t> lang;
+									if (*src == L'(') ++src; else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+									if (BufferIdentifier()) lang = src.str(), src.clear(); else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+									if (*src == L')') ++src; else return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, loc_beg, "Expected the form: #embedded(lang) ... #end");
+
+									// Do not include the whitespace or blank line that follows #embedded(lang)
+									EatLineSpace(0,0);
+									if (pr::str::IsNewLine(*src)) ++src;
+
+									// Record the source location for the start of the code
+									auto code_beg = src.Loc();
+
+									// Buffer the code section up to (but not including) the #end
+									if (!BufferTo(L"#end", false))
+										return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "Embedded code section '#embedded(lang)' does not have a closing '#end' marker");
+
+									// 'code' will contain the result of executing the code, which we want to treat like an expanded macro
+									auto code = src.str();
+									pr::string<wchar_t> result;
+
+									// Expand any macros in the buffered text
+									RecursiveExpandMacros(code, MacroAncester(nullptr, nullptr), loc_beg);
+
+									// Get the code handler to transform the code into a result
+									// Note, the code handler is expected to work or throw
+									m_embedded.Execute(lang, code, code_beg, result);
+
+									// Push the code result as a source
+									auto code_src = std::make_unique<Buffer<>>(ESrcType::EmbeddedCode, std::begin(result), std::end(result));
+									Push(code_src.get(), true);
+									code_src.release();
 									continue;
 								}
 								#pragma endregion
@@ -367,7 +417,7 @@ namespace pr
 								if (src.match(L"ifndef", true))
 								{
 									EatLineSpace(0, 0);
-									BufferIdentifier();
+									if (!BufferIdentifier()) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 									if (m_macros.Find(Macro::Hash(src)) == 0) { m_if_stack.push(true); EatLine(0, 1); }
 									else                                      { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
 									continue;
@@ -377,7 +427,7 @@ namespace pr
 								if (src.match(L"ifdef", true))
 								{
 									EatLineSpace(0, 0);
-									BufferIdentifier();
+									if (!BufferIdentifier()) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected");
 									if (m_macros.Find(Macro::Hash(src)) != 0) { m_if_stack.push(true); EatLine(0, 1); }
 									else                                      { m_if_stack.push(false); SkipPreprocessorBlock(loc_beg); }
 									continue;
@@ -410,7 +460,7 @@ namespace pr
 									m_includes.AddSearchPath(inc_path);
 
 									// Clear the buffered string and eat the rest of the line
-									src.pop(i);
+									src.pop_front(i);
 									EatLine(0, 0);
 									continue;
 								}
@@ -456,6 +506,14 @@ namespace pr
 								#pragma region Lit
 								if (src.match(L"lit", true))
 								{
+									// Do not include the whitespace or blank line that follows #lit
+									EatLineSpace(0,0);
+									if (pr::str::IsNewLine(*src)) ++src;
+
+									// Buffer a literal section up to (but not including) the #end
+									if (!BufferTo(L"#end", false))
+										return FailPolicy::Fail(EResult::UnmatchedPreprocessorDirective, loc_beg, "Literal section '#lit' does not have a closing '#end' marker");
+
 									continue;
 								}
 								#pragma endregion
@@ -507,6 +565,40 @@ namespace pr
 							return FailPolicy::Fail(EResult::UnknownPreprocessorCommand, Loc(), pr::Narrow(msg));
 						}
 						#pragma endregion
+					default:
+						#pragma region Expand Macros
+						// Look for possible macro identifiers in the source (not within expanded macros)
+						if (src.Type() != ESrcType::Macro && pr::str::IsIdentifier(*src, true))
+						{
+							// Buffer the identifier
+							BufferIdentifier();
+
+							// See if the identifier matches any macro definitions
+							auto macro = m_macros.Find(Macro::Hash(src));
+							if (macro)
+							{
+								// This is a macro, so remove the macro identifier from the buffer
+								src.clear();
+
+								// If the macro requires parameters see if we can read them from the source
+								MacroParams params;
+								if (macro->ReadParams<false>(src, params, src.Loc()))
+								{
+									// Create a buffered string source for the expanded macro
+									// and get the macro to generate it's expanded version.
+									pr::string<wchar_t> exp;
+									macro->Expand(exp, params);
+									RecursiveExpandMacros(exp, MacroAncester(macro, nullptr), src.Loc());
+
+									// Push the expanded macro as a source
+									auto macro_src = std::make_unique<Buffer<>>(ESrcType::Macro, std::begin(exp), std::end(exp));
+									Push(macro_src.get(), true);
+									macro_src.release();
+								}
+							}
+						}
+						break;
+						#pragma endregion
 					}
 
 					// If we get here, then 'src[0]' is a valid output character
@@ -515,25 +607,22 @@ namespace pr
 			}
 
 			// Recursively expand the expression in 'exp' with macro substitutions
-			void ExpandMacros(pr::string<wchar_t>& exp, typename Macro::Ancestor const& parent, Location const& loc)
+			void RecursiveExpandMacros(pr::string<wchar_t>& exp, MacroAncester const& parent, Location const& loc)
 			{
-				pr::string<wchar_t> ident;
-				typename Macro::Params params;
+				pr::string<wchar_t> subexp;
+				MacroParams params;
 
-				// Scan through 'src' looking for macro identifiers
-				for (size_t i = 0, iend = exp.size(); i != iend; iend = exp.size())
+				// Scan through 'exp' looking for macro identifiers
+				for (size_t i = 0, iend = exp.size(); i != iend;)
 				{
 					if (!pr::str::IsIdentifier(exp[i], true)) { ++i; continue; }
 
-					auto beg = i;
-
 					// Found the start of an identifier, see if it's a macro identifier
-					ident.assign(1, exp[i]);
-					for (++i; i != iend && pr::str::IsIdentifier(exp[i], false); ++i)
-						ident.push_back(exp[i]);
+					auto beg = i;
+					for (++i; i != iend && pr::str::IsIdentifier(exp[i], false); ++i) {}
 
 					// Find the macro?
-					auto macro = m_macros.Find(Macro::Hash(ident));
+					auto macro = m_macros.Find(Macro::Hash(std::begin(exp) + beg, std::begin(exp) + i));
 					if (!macro) continue;
 
 					// Check whether this macro is an ancestor
@@ -542,19 +631,21 @@ namespace pr
 
 					// Check the correct parameters have been given
 					params.clear();
-					if (i == iend || !macro->ReadParams<false>(&exp[i], params, loc))
+					auto ptr = exp.c_str() + i;
+					if (i == iend || !macro->ReadParams<false>(ptr, params, loc))
 						continue;
 
 					// Recursively expand the macro into a temporary buffer
-					ident.resize(0); // reuse
-					macro->Expand(ident, params);
-					ExpandMacros(ident, typename Macro::Ancestor(macro, &parent), loc);
+					subexp.resize(0); // reuse
+					macro->Expand(subexp, params);
+					RecursiveExpandMacros(subexp, MacroAncester(macro, &parent), loc);
 
 					// Substitute the expanded macro into 'src'
 					auto len = i - beg;
 					exp.erase (beg, len);
-					exp.insert(beg, ident);
-					i = beg + ident.size();
+					exp.insert(beg, subexp);
+					i = beg + subexp.size();
+					iend = exp.size();
 				}
 			}
 
@@ -576,7 +667,8 @@ namespace pr
 					}
 
 					// Read the macro or keyword identifier
-					BufferIdentifier();
+					if (!BufferIdentifier())
+						return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected"), false;
 
 					// If the identifier is the keyword 'defined' then it should be followed
 					// by an identifier optionally enclosed within '(' and ')'
@@ -589,7 +681,7 @@ namespace pr
 						if (wrapped) ++src;
 
 						// Read the identifier within the defined() expression
-						BufferIdentifier(EResult::InvalidPreprocessorDirective);
+						if (!BufferIdentifier()) return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), "An identifier was expected"), false;
 						auto hash = Macro::Hash(src);
 						src.clear();
 
@@ -610,16 +702,16 @@ namespace pr
 							return FailPolicy::Fail(EResult::InvalidPreprocessorDirective, src.Loc(), pr::FmtS("Identifier '%s' is not defined", pr::Narrow(exp).c_str())), false;
 
 						// Read macro parameters if it has them
-						typename Macro::Params params;
+						MacroParams params;
 						if (!macro->ReadParams<false>(src, params, src.Loc()))
-							return FailPolicy::Fail(EResult::ParameterCountMismatch, src.loc(), pr::FmtS("Missing parameters for macro %s. Expected %d", pr::Narrow(exp).c_str(), macro->m_params.size())), false;
+							return FailPolicy::Fail(EResult::ParameterCountMismatch, src.Loc(), pr::FmtS("Missing parameters for macro %s. Expected %d", pr::Narrow(exp).c_str(), macro->m_params.size())), false;
 
 						// Expand the macro with the given parameters
 						exp.resize(0);
 						macro->Expand(exp, params);
 
 						// Recursively expand macros within 'exp'.
-						ExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
+						RecursiveExpandMacros(exp, Macro::Ancestor(macro, nullptr), src.Loc());
 
 						// Add the fully expanded macro to the expression
 						expr.append(exp);
@@ -642,7 +734,7 @@ namespace pr
 					if (*src != L'#')  { ++src; continue; }
 
 					++src;
-					EatLineSpace();
+					EatLineSpace(0,0);
 					nest += int(src.match(L"ifndef") || src.match(L"ifdef") || src.match(L"if"));
 					nest -= int(src.match(L"endif") || (nest == 1 && (src.match(L"elif") || src.match(L"else"))));
 					if (nest == 0)
@@ -659,11 +751,12 @@ namespace pr
 			}
 
 			// Buffer an identifier from the source stream into 'src'.
-			void BufferIdentifier(EResult fail_result = EResult::InvalidIdentifier)
+			bool BufferIdentifier()
 			{
 				auto& src = *m_src;
-				if  (  pr::str::IsIdentifier(*src.stream(), true )) src.buffer() else return FailPolicy::Fail(fail_result, src.Loc(), "An identifier was expected");
+				if  (  pr::str::IsIdentifier(*src.stream(), true )) src.buffer(); else return false;
 				for (; pr::str::IsIdentifier(*src.stream(), false); src.buffer()) {}
+				return true;
 			}
 
 			// Buffer up to the next '\n' from the source stream into 'src'
@@ -671,6 +764,16 @@ namespace pr
 			{
 				auto& src = *m_src;
 				for (; !pr::str::IsNewLine(*src.stream()); src.buffer()) {}
+			}
+
+			// Buffer up to 'end'. If 'include_end' is false, 'end' is removed from the buffer once read
+			template <size_t N> bool BufferTo(wchar_t const (&end)[N], bool include_end)
+			{
+				auto& src = *m_src;
+				for (int i = 0, j = 0; *src.stream() && i != N; j = int(*src.stream() == end[i]), i = i*j + j, src.buffer()) {}
+				if (*src.stream() == 0) return false;
+				if (!include_end) src.pop_back(N);
+				return true;
 			}
 
 			// Call 'next()' until 'pred' returns false
@@ -748,12 +851,12 @@ namespace pr
 					;
 
 				Preprocessor<> pp(str_in);
-				for (;*pp; ++pp, ++str_out)
+				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
 					PR_CHECK(*pp, *str_out);
 				}
-				PR_CHECK(*str_out, 0);
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
 			}
 			{// simple macros
 				char const* str_in =
@@ -772,24 +875,14 @@ namespace pr
 					;
 
 				Preprocessor<> pp(str_in);
-				for (;*str_out; ++pp, ++str_out)
+				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
 					PR_CHECK(*pp, *str_out);
 				}
-				PR_CHECK(*pp, 0);
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
 			}
-		}
-#pragma region
-#if 0
-		PRUnitTest(pr_script_preprocessor)
-		{
-			using namespace pr;
-			using namespace pr::script;
-
-			
-
-			{// Multi-line proprocessor
+			{// Multi-line preprocessor
 				char const* str_in =
 					"#define ml\\\n"
 					"  MULTI\\\n"
@@ -798,12 +891,13 @@ namespace pr
 				char const* str_out =
 					"MULTILINE";
 
-				PtrSrc src(str_in);
-				PPMacroDB macros;
-				Preprocessor pp(src, &macros, 0, 0);
-				for (;*str_out; ++pp, ++str_out)
+				Preprocessor<> pp(str_in);
+				for (;*pp && *str_out; ++pp, ++str_out)
+				{
+					if (*pp == *str_out) continue;
 					PR_CHECK(*pp, *str_out);
-				PR_CHECK(*pp, 0);
+				}
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
 			}
 			{// simple macro functions
 				char const* str_in =
@@ -814,12 +908,14 @@ namespace pr
 				char const* str_out =
 					"(1)+((2,3)) xx 01 _0x\n"
 					;
-				PtrSrc src(str_in);
-				PPMacroDB macros;
-				Preprocessor pp(src, &macros, 0, 0);
-				for (;*str_out; ++pp, ++str_out)
+
+				Preprocessor<> pp(str_in);
+				for (;*pp && *str_out; ++pp, ++str_out)
+				{
+					if (*pp == *str_out) continue;
 					PR_CHECK(*pp, *str_out);
-				PR_CHECK(*pp, 0);
+				}
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
 			}
 			{// recursive macros
 				char const* str_in =
@@ -831,13 +927,27 @@ namespace pr
 				char const* str_out =
 					"A(1) B(1) C(1)\n"
 					;
-				PtrSrc src(str_in);
-				PPMacroDB macros;
-				Preprocessor pp(src, &macros, 0, 0);
-				for (;*str_out; ++pp, ++str_out)
+
+				Preprocessor<> pp(str_in);
+				for (;*pp && *str_out; ++pp, ++str_out)
+				{
+					if (*pp == *str_out) continue;
 					PR_CHECK(*pp, *str_out);
-				PR_CHECK(*pp, 0);
+				}
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
 			}
+
+		}
+#pragma region
+#if 0
+		PRUnitTest(pr_script_preprocessor)
+		{
+			using namespace pr;
+			using namespace pr::script;
+
+			
+
+
 			{// #eval
 				char const* str_in =
 					"#eval{1+#eval{1+1}}\n"

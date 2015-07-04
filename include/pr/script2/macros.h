@@ -50,6 +50,13 @@ namespace pr
 			FileLoc   m_loc;       // The source location of where the macro was defined
 
 			// Return the hashed version of a macro name
+			template <typename Iter> static HashValue Hash(Iter first, Iter last)
+			{
+				static std::hash<wchar_t> hash;
+				auto r = ~HashValue();
+				for (; first != last; ++first) r ^= hash(*first);
+				return r;
+			}
 			template <typename Cont> static HashValue Hash(Cont const& name)
 			{
 				static std::hash<wchar_t> hash;
@@ -144,10 +151,7 @@ namespace pr
 					{
 						param.resize(0);
 						if (!pr::str::ExtractIdentifier(param, buf))
-						{
-							FailPolicy::Fail(EResult::InvalidIdentifier, loc, "invalid macro identifier");
-							return false;
-						}
+							return FailPolicy::Fail(EResult::InvalidIdentifier, loc, "invalid macro identifier"), false;
 					}
 
 					// Read parameters being passed to the macro
@@ -155,11 +159,7 @@ namespace pr
 					{
 						for (int nest = 0; (*buf != L',' && *buf != L')') || nest; ++buf)
 						{
-							if (*buf == 0)
-							{
-								FailPolicy::Fail(EResult::UnexpectedEndOfFile, loc, "macro parameter list incomplete");
-								return false;
-							}
+							if (*buf == 0) return FailPolicy::Fail(EResult::UnexpectedEndOfFile, loc, "macro parameter list incomplete"), false;
 							param.push_back(*buf);
 							nest += *buf == L'(';
 							nest -= *buf == L')';
@@ -180,10 +180,7 @@ namespace pr
 
 				// Check enough parameters have been given
 				if (!Identifiers && m_params.size() != params.size())
-				{
-					FailPolicy::Fail(EResult::ParameterCountMismatch, loc, "incorrect number of macro parameters");
-					return false;
-				}
+					return FailPolicy::Fail(EResult::ParameterCountMismatch, loc, "incorrect number of macro parameters"), false;
 
 				return true;
 				#pragma warning(pop)

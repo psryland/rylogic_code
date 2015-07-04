@@ -23,7 +23,7 @@ namespace pr
 			}
 
 			// Open an include file as a source
-			std::unique_ptr<Src*> Open(pr::string<wchar_t> filepath, Location const& loc, bool search_paths_only)
+			std::unique_ptr<Src> Open(pr::string<wchar_t> filepath, Location const& loc, bool search_paths_only)
 			{
 				(void)filepath,loc,search_paths_only;
 				return nullptr;

@@ -315,6 +315,8 @@
 #include "pr/script/tokeniser.h"
 #include "pr/script2/buf8.h"
 #include "pr/script2/char_stream.h"
+#include "pr/script2/embedded.h"
+#include "pr/script2/embedded_lua.h"
 #include "pr/script2/fail_policy.h"
 #include "pr/script2/filter.h"
 #include "pr/script2/forward.h"

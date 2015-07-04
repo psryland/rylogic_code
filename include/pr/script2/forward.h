@@ -127,6 +127,7 @@ namespace pr
 			x(ExpressionSyntaxError           ,)\
 			x(EmbeddedCodeNotSupported        ,)\
 			x(EmbeddedCodeSyntaxError         ,)\
+			x(EmbeddedCodeExecutionFailed     ,)\
 			x(TokenNotFound                   ,)\
 			x(UnknownKeyword                  ,)\
 			x(UnknownToken                    ,)\
@@ -213,6 +214,8 @@ namespace pr
 			Range,
 			Buffered,
 			File,
+			Eval,
+			EmbeddedCode,
 			Macro,
 			Preprocessor,
 		};

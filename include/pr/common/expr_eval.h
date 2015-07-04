@@ -3,8 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2008
 //*************************************************************
 
-#ifndef PR_EXPR_EVAL_H
-#define PR_EXPR_EVAL_H
+#pragma once
 
 #include <string.h>
 #include <math.h>
@@ -14,7 +13,7 @@
 
 namespace pr
 {
-	namespace impl
+	namespace eval_impl
 	{
 		// Expression tokens
 		enum class ETok
@@ -157,19 +156,23 @@ namespace pr
 		template <typename Char> struct traits_base;
 		template <> struct traits_base<char>
 		{
+			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
 			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
 			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
+			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
 			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
-			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
 			static int                strnicmp(char const* lhs, char const* rhs, int count) { return ::_strnicmp(lhs, rhs, count); }
+			static char const*        str(char const* str, wchar_t const*)                  { return str; }
 		};
 		template <> struct traits_base<wchar_t>
 		{
+			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
 			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
+			static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
 			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
 			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
-			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
 			static int                strnicmp(wchar_t const* lhs, wchar_t const* rhs, int count) { return ::_wcsnicmp(lhs, rhs, count); }
+			static wchar_t const*     str(char const*, wchar_t const* str)                        { return str; }
 		};
 
 		// An integral or floating point value
@@ -244,34 +247,14 @@ namespace pr
 		{
 			using traits = traits_base<Char>;
 			auto cmp = traits::strnicmp;
-			auto str = traits::str;
-
-	template<typename C>
-const C * ChooseCW(const char * c, const wchar_t * w);
-
-template<>
-const char * ChooseCW<char>(const char * c, const wchar_t * w)
-{
-    return c;
-}
-
-template<>
-const wchar_t * ChooseCW<wchar_t>(const char * c, const wchar_t * w)
-{
-    return w;
-}
-
-#define CW(C, STR) ChooseCW<C>(STR, L##STR)
-
-insert(value_type(CW(C, "in1"), CW(C, "out1")));
-
-
+			#define str(s) traits::str(s, L##s)
+			static std::locale s_locale(""); // A static instance of the locale, because this thing takes ages to construct
 
 			// Skip any leading whitespace
-			while (*expr && std::isspace(*expr)) { ++expr; }
+			while (*expr && std::isspace(*expr, s_locale)) { ++expr; }
 
 			// Look for an operator
-			switch (std::tolower(*expr))
+			switch (std::tolower(*expr, s_locale))
 			{
 			default: break;
 			// Convert Add/Sub to unary plus/minus by looking at the previous expression
@@ -365,6 +348,7 @@ insert(value_type(CW(C, "in1"), CW(C, "out1")));
 				else if (cmp(expr, str("true")  ,4) == 0) { expr += 4; val = 1.0; return ETok::Value; }
 				else break;
 			}
+			#undef str
 
 			// If it's not an operator, try extracting an operand
 			return val.read(expr) ? ETok::Value : ETok::None;
@@ -670,16 +654,18 @@ insert(value_type(CW(C, "in1"), CW(C, "out1")));
 	// Evaluate a floating point expression
 	template <typename ResType, typename Char> inline ResType Evaluate(Char const* expr)
 	{
-		impl::Val result; int ridx = 0;
-		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
+		using namespace eval_impl;
+		Val result; int ridx = 0;
+		Eval(expr, &result, 1, ridx, ETok::None);
 		return static_cast<ResType>(result.db());
 	}
 
 	// Evaluate an integral expression
 	template <typename ResType, typename Char> inline ResType EvaluateI(Char const* expr)
 	{
-		impl::Val result; int ridx = 0;
-		impl::Eval(expr, &result, 1, ridx, impl::ETok::None);
+		using namespace eval_impl;
+		Val result; int ridx = 0;
+		Eval(expr, &result, 1, ridx, ETok::None);
 		return static_cast<ResType>(result.ll());
 	}
 
@@ -715,12 +701,12 @@ namespace pr
 
 		#define EXPR(exp) Expr(#exp, (exp))
 
-		bool Val(char const* expr, double     result) { pr::impl::Val val; return val.read(expr) && result == val.db(); }
-		bool Val(char const* expr, long long  result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, int        result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::uint   result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::ulong  result) { pr::impl::Val val; return val.read(expr) && result == val.ll(); }
-		bool Val(char const* expr, pr::uint64 result) { pr::impl::Val val; return val.read(expr) && result == (pr::uint64)val.ll(); }
+		bool Val(char const* expr, double     result) { pr::eval_impl::Val val; return val.read(expr) && result == val.db(); }
+		bool Val(char const* expr, long long  result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, int        result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::uint   result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::ulong  result) { pr::eval_impl::Val val; return val.read(expr) && result == val.ll(); }
+		bool Val(char const* expr, pr::uint64 result) { pr::eval_impl::Val val; return val.read(expr) && result == (pr::uint64)val.ll(); }
 
 		#define VAL(exp) Val(#exp, (exp))
 
@@ -833,11 +819,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#ifdef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT_STR_DEFINED
-#   undef PR_ASSERT
-#endif
-
 #endif

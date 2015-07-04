@@ -106,16 +106,22 @@ namespace pr
 			Src* m_src;         // The character stream that feeds 'm_buf'
 			NullSrc m_null;     // Used when 'm_src' == nullptr;
 
-			Buffer()
-				:Src(ESrcType::Null)
-				,m_buf()
-				,m_src(&m_null)
-				,m_null()
-			{}
 			Buffer(Src& src)
 				:Src(src.Type())
 				,m_buf()
 				,m_src(&src)
+				,m_null()
+			{}
+			template <typename Iter> Buffer(ESrcType type)
+				:Src(type)
+				,m_buf()
+				,m_src(&m_null)
+				,m_null()
+			{}
+			template <typename Iter> Buffer(ESrcType type, Iter first, Iter last)
+				:Src(type)
+				,m_buf(first, last)
+				,m_src(&m_null)
 				,m_null()
 			{}
 			Buffer(Buffer&& rhs)
@@ -152,7 +158,7 @@ namespace pr
 			}
 			Buffer& operator ++() override
 			{
-				if (!empty()) pop();
+				if (!empty()) pop_front();
 				else ++*m_src;
 				return *this;
 			}
@@ -221,14 +227,26 @@ namespace pr
 			// Push a character onto the front of the buffer (making it the next character read)
 			void push_front(value_type ch)
 			{
-				m_buf.insert(std::begin(m_buf), ch);
+				m_buf.push_front(ch);
 			}
 
 			// Pop n characters from the front of the buffer
-			void pop(size_t n = 1)
+			void pop_front()
+			{
+				m_buf.pop_front();
+			}
+			void pop_front(size_t n)
 			{
 				auto first = std::begin(m_buf);
 				m_buf.erase(first, first + n);
+			}
+
+			// Pop n characters from the back of the buffer
+			void pop_back(size_t n = 1)
+			{
+				auto first = std::begin(m_buf);
+				auto count = m_buf.size();
+				m_buf.erase(first + count - n, first + count);
 			}
 
 			// Buffer the next 'n' characters from the source stream
@@ -301,18 +319,18 @@ namespace pr
 				size_t i = 0;
 
 				// If the buffer contains data already, test that first
-				for (auto buf_count = size_buf(); str[i] && i < buf_count && str[i] == m_buf[i]; ++i) {}
+				for (auto buf_count = size(); str[i] && i < buf_count && str[i] == m_buf[i]; ++i) {}
 
 				// Buffer extra matching characters if needed
-				for (; str[i] && str[i] == *stream(); buffer(), ++i) {}
+				for (; *stream() && *stream() == str[i]; buffer(), ++i) {}
 
 				// Return match success/fail
-				return i == count ? count : 0;
+				return str[i] == 0 ? int(i) : 0;
 			}
-			template <typename Str> bool match(Str const& str, bool adv_if_match)
+			template <typename Str> int match(Str const& str, bool adv_if_match)
 			{
 				auto r = match(str);
-				if (r && adv_if_match) pop(r);
+				if (r && adv_if_match) pop_front(r);
 				return r;
 			}
 		};
@@ -352,10 +370,10 @@ namespace pr
 				PtrW<> ptr(str);
 				Buffer<> buf(ptr);
 
-				PR_CHECK(buf.match(L"0123"), true);
-				PR_CHECK(buf.match(L"012345678910"), false);
+				PR_CHECK(buf.match(L"0123") != 0, true);
+				PR_CHECK(buf.match(L"012345678910") != 0, false);
 				buf += 5;
-				PR_CHECK(buf.match(L"567"), true);
+				PR_CHECK(buf.match(L"567") != 0, true);
 			}
 		}
 	}
