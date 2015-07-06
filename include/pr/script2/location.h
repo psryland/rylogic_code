@@ -30,7 +30,7 @@ namespace pr
 			}
 
 			// Output the stream name (usually file name)
-			virtual std::wstring StreamName() const { return L"[source in memory]"; }
+			virtual pr::string<wchar_t> StreamName() const { return L"[source in memory]"; }
 
 			// Output the line number
 			virtual size_t Line() const { return 0; }
@@ -39,7 +39,7 @@ namespace pr
 			virtual size_t Col() const { return 0; }
 
 			// Output the location as a string
-			std::wstring ToString() const { return StreamName().append(Fmt(L"(%d:%d)", Line(), Col())); }
+			pr::string<wchar_t> ToString() const { return StreamName().append(Fmt(L"(%d:%d)", Line(), Col())); }
 		};
 
 		// The location within a stream of characters
@@ -128,7 +128,7 @@ namespace pr
 			{}
 
 			// Output the stream name (usually file name)
-			std::wstring StreamName() const override { return m_file; }
+			pr::string<wchar_t> StreamName() const override { return m_file; }
 		};
 		inline bool operator == (FileLoc const& lhs, FileLoc const& rhs)
 		{

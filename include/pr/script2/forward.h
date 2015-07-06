@@ -9,6 +9,8 @@
 #include <deque>
 #include <unordered_map>
 #include <type_traits>
+#include <locale>
+#include <codecvt>
 #include <cassert>
 #include "pr/common/exception.h"
 #include "pr/common/fmt.h"
@@ -118,6 +120,7 @@ namespace pr
 			x(InvalidMacroDefinition          ,)\
 			x(MacroNotDefined                 ,)\
 			x(MacroAlreadyDefined             ,)\
+			x(IncludesNotSupported            ,)\
 			x(InvalidInclude                  ,)\
 			x(MissingInclude                  ,)\
 			x(InvalidPreprocessorDirective    ,)\

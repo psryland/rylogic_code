@@ -189,6 +189,18 @@ namespace pr
 		}
 		#pragma endregion
 
+		#pragma region c_str
+		// Return a char const* for any string type
+		template <typename Str, typename Char = Str::value_type> inline Char const* c_str(Str const& str)
+		{
+			return str.c_str();
+		}
+		template <typename Char> inline Char const* c_str(Char const* str)
+		{
+			return str;
+		}
+		#pragma endregion
+
 		#pragma region Empty
 		// Return true if 'str' is an empty string
 		template <typename Str, typename Char = Str::value_type> inline bool Empty(Str const& str)
@@ -797,6 +809,21 @@ namespace pr
 			using namespace pr;
 			using namespace pr::str;
 
+			{// Str
+				char const*     aptr   = "full";
+				char            aarr[] = "";
+				std::string     astr   = "";
+				wchar_t const*  wptr   = L"";
+				wchar_t         warr[] = L"full";
+				std::wstring    wstr   = L"full";
+
+				PR_CHECK(c_str(aptr), aptr);
+				PR_CHECK(c_str(aarr), &aarr[0]);
+				PR_CHECK(c_str(astr), astr.c_str());
+				PR_CHECK(c_str(wptr), wptr);
+				PR_CHECK(c_str(warr), &warr[0]);
+				PR_CHECK(c_str(wstr), wstr.c_str());
+			}
 			{// Empty
 				char const*     aptr   = "full";
 				char            aarr[] = "";

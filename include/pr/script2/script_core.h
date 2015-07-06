@@ -7,6 +7,7 @@
 
 #include "pr/script2/forward.h"
 #include "pr/script2/location.h"
+#include "pr/script2/buf8.h"
 
 namespace pr
 {
@@ -96,17 +97,124 @@ namespace pr
 		template <typename TLoc = TextLoc> using PtrA = Ptr<char const*, TLoc>;
 		template <typename TLoc = TextLoc> using PtrW = Ptr<wchar_t const*, TLoc>;
 
+		// A file char source
+		template <typename TLoc = FileLoc> struct FileSrc :Src
+		{
+			enum class EEncoding { ascii, utf8, utf16, utf16_be, auto_detect };
+			using FGet = wchar_t (*)(std::ifstream&);
+
+			mutable std::wifstream m_file; // The file stream source
+			BufW4 m_buf;                   // Use a small shift buffer to make debugging easier
+			TLoc m_loc;                    // The location within the file (note, TLoc could be Location* to reference an external location object)
+			EEncoding m_enc;               // The detected file encoding
+			FGet m_fget;                   // The file read function to use based on the file encoding
+
+			template <typename String> explicit FileSrc(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
+				:Src(ESrcType::File)
+				,m_file()
+				,m_buf()
+				,m_loc(loc)
+				,m_fget()
+				,m_enc(enc)
+			{
+				auto fpath = pr::str::c_str(filepath);
+
+				// Determine file encoding, look for the BOM in the first 3 bytes
+				if (m_enc == EEncoding::auto_detect)
+				{
+					unsigned char bom[3];
+					std::ifstream file(fpath, std::ios::binary);
+					auto read = file.good() ? file.read(reinterpret_cast<char*>(&bom[0]), sizeof(bom)).gcount() : 0;
+					if      (read >= 3 && bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF) { m_enc = EEncoding::utf8;     ofs += 3; }
+					else if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)                   { m_enc = EEncoding::utf16_be; ofs += 2; }
+					else if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)                   { m_enc = EEncoding::utf16;    ofs += 2; }
+					else m_enc = EEncoding::utf8; // If no valid bomb is found, assume UTF-8 as that is a superset of ASCII
+				}
+
+				// Open the input file stream
+				m_file.open(fpath, std::ios::binary);
+				if (!m_file.good())
+					throw std::exception(pr::FmtS("Failed to open file %s", Narrow(filepath).c_str()));
+
+				// "Imbue" the file stream so that character codes get converted
+				static std::locale global_locale;
+				switch (m_enc)
+				{
+				default: throw std::exception("Unsupport file encoding");
+				case EEncoding::ascii:
+					{
+						break;
+					}
+				case EEncoding::utf8:
+					{
+						static std::locale utf8_locale(global_locale, new std::codecvt_utf8<wchar_t>);
+						m_file.imbue(utf8_locale);
+						break;
+					}
+				case EEncoding::utf16:
+					{
+						static std::locale utf16_locale(global_locale, new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>);
+						m_file.imbue(utf16_locale);
+						break;
+					}
+				case EEncoding::utf16_be:
+					{
+						static std::locale utf16_locale(global_locale, new std::codecvt_utf16<wchar_t>);
+						m_file.imbue(utf16_locale);
+						break;
+					}
+				}
+
+				// Seek to the position to start reading from (may include the skip over the BOM)
+				m_file.seekg(ofs);
+
+				// Load the shift register
+				for (int n = BufW4::Capacity; n--;)
+				{
+					auto ch = m_file.get();
+					m_buf.shift(m_file.good() ? ch : 0);
+				}
+			}
+
+			// Debugging helper interface
+			bool IsOpen() const
+			{
+				return m_file.is_open();
+			}
+			SrcConstPtr DbgPtr() const override
+			{
+				return &m_buf.m_ch[0];
+			}
+			TLoc const& Loc() const override
+			{
+				return m_loc;
+			}
+
+			// Pointer-like interface
+			wchar_t operator * () const override
+			{
+				return m_buf.front();
+			}
+			FileSrc& operator ++() override
+			{
+				m_loc.inc(m_buf.front());
+				auto ch = m_file.get();
+				m_buf.shift(m_file.good() ? ch : 0);
+				return *this;
+			}
+		};
+
 		// Src buffer. Provides random access within a buffered range.
-		template <typename TBuf = pr::deque<wchar_t>> struct Buffer :Src
+		template <typename TBuf = pr::deque<wchar_t>, typename TSrc = Src> struct Buffer :Src
 		{
 			using value_type = typename TBuf::value_type;
 			using buffer_type = TBuf;
 
 			mutable TBuf m_buf; // The buffered stream data read from 'm_src'
-			Src* m_src;         // The character stream that feeds 'm_buf'
+			TSrc* m_src;         // The character stream that feeds 'm_buf'
 			NullSrc m_null;     // Used when 'm_src' == nullptr;
 
-			Buffer(Src& src)
+			Buffer(TSrc& src)
 				:Src(src.Type())
 				,m_buf()
 				,m_src(&src)
@@ -337,7 +445,6 @@ namespace pr
 	}
 }
 
-
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
@@ -375,6 +482,50 @@ namespace pr
 				buf += 5;
 				PR_CHECK(buf.match(L"567") != 0, true);
 			}
+			char const* script_utf = "script_utf.txt";
+			{// UTF8 big endian File source
+				// UTF-16be data (if host system is little-endian)
+				unsigned char data[] = {0xef, 0xbb, 0xbf, 0xe4, 0xbd, 0xa0, 0xe5, 0xa5, 0xbd}; // ni hao (chinesse)
+				wchar_t str[] = {0x4f60, 0x597d};
+
+				{// Create the file
+					std::ofstream fout(script_utf);
+					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
+				}
+
+				FileSrc<> file(script_utf);
+				PR_CHECK(*file, str[0]); ++file;
+				PR_CHECK(*file, str[1]); ++file;
+			}
+			{// UTF 16 little endian File source
+				// UTF-16le data (if host system is little-endian)
+				unsigned short data[] = {0xfeff, 0x4f60, 0x597d}; // ni hao (chinesse)
+				wchar_t str[] = {0x4f60, 0x597d};
+
+				{// Create the file
+					std::ofstream fout(script_utf);
+					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
+				}
+
+				FileSrc<> file(script_utf);
+				PR_CHECK(*file, str[0]); ++file;
+				PR_CHECK(*file, str[1]); ++file;
+			}
+			{// UTF 16 big endian File source
+				// UTF-16be data (if host system is little-endian)
+				unsigned short data[] = {0xfffe, 0x604f, 0x7d59}; // ni hao (chinesse)
+				wchar_t str[] = {0x4f60, 0x597d};
+
+				{// Create the file
+					std::ofstream fout(script_utf);
+					fout.write(reinterpret_cast<char const*>(&data[0]), sizeof(data));
+				}
+
+				FileSrc<> file(script_utf);
+				PR_CHECK(*file, str[0]); ++file;
+				PR_CHECK(*file, str[1]); ++file;
+			}
+			pr::filesys::EraseFile(script_utf);
 		}
 	}
 }

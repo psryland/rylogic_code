@@ -99,12 +99,18 @@ namespace pr
 #endif
 #endif
 
+		// Convert string types to char*
+		template <typename String, typename = String::value_type> inline typename String::const_pointer c_str(String const& s)
+		{
+			return s.c_str();
+		}
+		template <typename Char> inline typename Char const* c_str(Char const* s)
+		{
+			return s;
+		}
+
 		namespace impl
 		{
-			inline char    const* c_str(char    const* s) { return s; }
-			inline wchar_t const* c_str(wchar_t const* s) { return s; }
-			template <typename String> inline typename String::const_pointer c_str(String const& s) { return s.c_str(); }
-
 			// Unicode handling
 			inline int access(char    const* filename, int access_mode) { return ::_access (filename, access_mode); }
 			inline int access(wchar_t const* filename, int access_mode) { return ::_waccess(filename, access_mode); }
@@ -121,11 +127,17 @@ namespace pr
 			inline int rmdir(char    const* dirname) { return ::_rmdir (dirname); }
 			inline int rmdir(wchar_t const* dirname) { return ::_wrmdir(dirname); }
 
+			inline char*    getdcwd(int drive, char* buf, size_t buf_size)    { return ::_getdcwd(drive, buf, int(buf_size)); }
+			inline wchar_t* getdcwd(int drive, wchar_t* buf, size_t buf_size) { return ::_wgetdcwd(drive, buf, int(buf_size)); }
+
 			inline char*    fullpath(char*    abs_path, char    const* rel_path, size_t max_length) { return ::_fullpath (abs_path, rel_path, max_length); }
 			inline wchar_t* fullpath(wchar_t* abs_path, wchar_t const* rel_path, size_t max_length) { return ::_wfullpath(abs_path, rel_path, max_length); }
 
 			inline int stat64(char const* filepath, struct __stat64* info)    { return _stat64(filepath, info); }
 			inline int stat64(wchar_t const* filepath, struct __stat64* info) { return _wstat64(filepath, info); }
+
+			inline size_t module_name(char* buffer, size_t buf_count) { return ::GetModuleFileNameA(nullptr, buffer, DWORD(buf_count)); }
+			inline size_t module_name(wchar_t* buffer, size_t buf_count) { return ::GetModuleFileNameW(nullptr, buffer, DWORD(buf_count)); }
 		}
 
 		// Return true if 'ch' is a directory marker
@@ -480,13 +492,13 @@ namespace pr
 		// Delete a file
 		template <typename String> inline bool EraseFile(String const& filepath)
 		{
-			return impl::remove(filepath.c_str()) == 0;
+			return impl::remove(c_str(filepath)) == 0;
 		}
 
 		// Delete an empty directory
 		template <typename String> inline bool EraseDir(String const& path)
 		{
-			return impl::rmdir(path.c_str()) == 0;
+			return impl::rmdir(c_str(path)) == 0;
 		}
 
 		// Delete a file or empty directory
@@ -498,14 +510,14 @@ namespace pr
 		// Rename a file
 		template <typename String> inline bool RenameFile(String const& old_filepath, String const& new_filepath)
 		{
-			return impl::rename(old_filepath.c_str(), new_filepath.c_str()) == 0;
+			return impl::rename(c_str(old_filepath), c_str(new_filepath)) == 0;
 		}
 
 		// Copy a file
 		template <typename String> inline bool CpyFile(String const& src_filepath, String const& dst_filepath)
 		{
-			std::ifstream src (src_filepath.c_str(), std::ios::binary);
-			std::ofstream dest(dst_filepath.c_str(), std::ios::binary);
+			std::ifstream src (c_str(src_filepath), std::ios::binary);
+			std::ofstream dest(c_str(dst_filepath), std::ios::binary);
 			if (!src.is_open() || !dest.is_open()) return false;
 			dest << src.rdbuf();
 			return true;
@@ -520,8 +532,8 @@ namespace pr
 			if (e0 != e1) return false;
 			if (!e0) return true;
 
-			std::ifstream f0(lhs.c_str(), std::ios::binary);
-			std::ifstream f1(rhs.c_str(), std::ios::binary);
+			std::ifstream f0(c_str(lhs), std::ios::binary);
+			std::ifstream f1(c_str(rhs), std::ios::binary);
 
 			auto s0 = f0.seekg(0, std::ifstream::end).tellg();
 			auto s1 = f1.seekg(0, std::ifstream::end).tellg();
@@ -546,14 +558,14 @@ namespace pr
 		template <typename String> inline bool RepFile(String const& src, String const& dst)
 		{
 			if (!FileExists(dst)) return RenameFile(src, dst);
-			return ::ReplaceFileA(dst.c_str(), src.c_str(), 0, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, 0, 0) != 0;
+			return ::ReplaceFileA(c_str(dst), c_str(src), 0, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, 0, 0) != 0;
 		}
 
 		// Return the length of a file, without opening it
 		template <typename String> inline __int64 FileLength(String const& filepath)
 		{
 			struct __stat64 info;
-			if (impl::stat64(impl::c_str(filepath), &info) != 0) return 0;
+			if (impl::stat64(c_str(filepath), &info) != 0) return 0;
 			return info.st_size;
 		}
 
@@ -587,7 +599,7 @@ namespace pr
 		template <typename String> inline unsigned int GetAttribs(String const& str)
 		{
 			struct __stat64 info;
-			if (impl::stat64(impl::c_str(str), &info) != 0)
+			if (impl::stat64(c_str(str), &info) != 0)
 				return 0;
 
 			// Interpret the stats
@@ -617,7 +629,7 @@ namespace pr
 		}
 		template <typename String> inline FileTime GetFileTimeStats(String const& str)
 		{
-			return FileTimeStats(str.c_str());
+			return FileTimeStats(c_str(str));
 		}
 
 		// Return true if 'filepath' is a file that exists
@@ -645,15 +657,15 @@ namespace pr
 				if (impl::mkdir(dir.substr(0, n).c_str()) < 0 && errno != EEXIST)
 					return false;
 			}
-			return impl::mkdir(dir.c_str()) == 0 || errno == EEXIST;
+			return impl::mkdir(c_str(dir)) == 0 || errno == EEXIST;
 		}
 
 		// Check the access on a file
 		template <typename String> inline Access GetAccess(String const& str)
 		{
 			int acc = 0;
-			if (impl::access(str.c_str(), Read ) == 0) acc |= Read;
-			if (impl::access(str.c_str(), Write) == 0) acc |= Write;
+			if (impl::access(c_str(str), Read ) == 0) acc |= Read;
+			if (impl::access(c_str(str), Write) == 0) acc |= Write;
 			return static_cast<Access>(acc);
 		}
 
@@ -663,7 +675,7 @@ namespace pr
 			int mode = 0;
 			if (state & Read ) mode |= _S_IREAD;
 			if (state & Write) mode |= _S_IWRITE;
-			return _chmod(str.c_str(), mode) == 0;
+			return _chmod(c_str(str), mode) == 0;
 		}
 
 		// Make a unique filename. Template should have the form: "FilenameXXXXXX". X's are replaced. Note, no extension
@@ -674,10 +686,10 @@ namespace pr
 		}
 
 		// Return the current directory
-		template <typename String> inline String CurrentDirectory()
+		template <typename String, typename Char = String::value_type> inline String CurrentDirectory()
 		{
-			char buf[_MAX_PATH];
-			String path = _getdcwd(_getdrive(), buf, _MAX_PATH);
+			Char buf[_MAX_PATH];
+			String path = impl::getdcwd(_getdrive(), buf, _countof(buf));
 			return Standardise(path);
 		}
 
@@ -720,7 +732,7 @@ namespace pr
 		{
 			typedef String::value_type Char;
 			Char buf[_MAX_PATH];
-			String path(const_cast<Char const*>(impl::fullpath(buf, str.c_str(), _MAX_PATH)));
+			String path(const_cast<Char const*>(impl::fullpath(buf, c_str(str), _MAX_PATH)));
 			return Standardise<String>(path);
 		}
 
@@ -732,8 +744,8 @@ namespace pr
 
 			// Find where the paths differ, recording the last common directory marker
 			size_t i, d = String::npos;
-			char const* fpath = full_path.c_str();
-			char const* rpath = relative_to.c_str();
+			char const* fpath = c_str(full_path);
+			char const* rpath = c_str(relative_to);
 			for (i = 0; EqualPathChar(fpath[i], rpath[i]); ++i)
 			{
 				if (DirMark(full_path[i]))
@@ -761,10 +773,10 @@ namespace pr
 		}
 
 		// Return the name of the currently running executable
-		template <typename String> inline String ExePath()
+		template <typename String, typename Char = String::value_type> inline String ExePath()
 		{
-			char temp[MAX_PATH];
-			DWORD len = GetModuleFileNameA(0, temp, MAX_PATH);
+			Char temp[MAX_PATH];
+			auto len = impl::module_name(temp, _countof(temp));
 			temp[len] = 0;
 			return temp;
 		}
@@ -789,7 +801,7 @@ namespace pr
 					return path;
 
 				if (searched_paths)
-					searched_paths->append(GetDirectory(path)).append("\n");
+					searched_paths->append(GetDirectory(path)).append(1, '\n');
 			}
 
 			// Check the working directory
@@ -800,7 +812,7 @@ namespace pr
 					return path;
 
 				if (searched_paths)
-					searched_paths->append(GetDirectory(path)).append("\n");
+					searched_paths->append(GetDirectory(path)).append(1, '\n');
 			}
 
 			// Search the search paths
@@ -811,7 +823,7 @@ namespace pr
 					return path;
 
 				if (searched_paths)
-					searched_paths->append(GetDirectory(path)).append("\n");
+					searched_paths->append(GetDirectory(path)).append(1, '\n');
 			}
 
 			// Return an empty string for unresolved

@@ -16,17 +16,15 @@ namespace pr
 	{
 		// Wraps BufWN<> and a reference to a character source and location.
 		// This allows other code to use a Src as a pointer with automatic location and buffering support
-		template <typename BufN, typename TLoc> struct BufSrc :Src
+		template <typename BufN, typename TSrc = Src> struct BufSrc :Src
 		{
-			Src* m_src; // The source character stream (used to feed TBuf)
-			BufN m_reg; // The character "shift register"
-			TLoc m_loc; // The file location corresponding to m_reg[0]
+			TSrc* m_src; // The source character stream (used to feed TBuf)
+			BufN  m_reg; // The character "shift register"
 
-			BufSrc(Src& src, TLoc loc = TLoc())
+			BufSrc(TSrc& src)
 				:Src(src.Type())
 				,m_src(&src)
 				,m_reg(src) // note, this will advance 'src'
-				,m_loc(loc)
 			{}
 
 			// Debugging helper interface
@@ -34,9 +32,9 @@ namespace pr
 			{
 				return m_reg.m_ch;
 			}
-			TLoc const& Loc() const override
+			Location const& Loc() const override
 			{
-				return m_loc;
+				return m_src->Loc();
 			}
 
 			// Pointer interface
@@ -46,7 +44,6 @@ namespace pr
 			}
 			BufSrc& operator ++() override
 			{
-				m_loc.inc(**this);
 				m_reg.shift(**m_src);
 				if (**m_src) ++*m_src;
 				return *this;
@@ -66,12 +63,20 @@ namespace pr
 		// Base class for a 'Src' filter. Simple pass through filter.
 		// Filters are different to actual sources because they only contain
 		// a reference to the underlying source. This means they are copy constructable.
-		template <typename BufWN = BufW2, typename TLoc = FileLoc> struct Filter :Src
+		template <typename BufWN = BufW2, typename TSrc = Src> struct Filter :Src
 		{
-			using BufN = BufSrc<BufWN, TLoc>;
+			using BufN = BufSrc<BufWN, TSrc>;
+			struct StringLit
+			{
+				wchar_t end;
+				bool escaped;
+				StringLit() :end() ,escaped() {}
+				operator bool() const { return end != 0; }
+			};
+
 			BufN m_reg; // N-character shift register for fast short string buffering
 
-			Filter(Src& src)
+			Filter(TSrc& src)
 				:Src(src.Type())
 				,m_reg(src)
 			{
@@ -83,7 +88,7 @@ namespace pr
 			{
 				return m_reg.DbgPtr();
 			}
-			TLoc const& Loc() const override
+			Location const& Loc() const override
 			{
 				return m_reg.Loc();
 			}
@@ -115,13 +120,31 @@ namespace pr
 				auto& src = m_reg;
 				src += n;
 			}
+
+			// Handles string/character literals in 'src'
+			static bool in_string_literal(Src& src, StringLit& lit)
+			{
+				// If we're currently within a literal string or character then
+				// just return characters until the literal ends
+				if (lit)
+				{
+					if (*src == lit.end && !lit.escaped) lit.end = 0;
+					else lit.escaped = *src == L'\\';
+				}
+				else if (*src == L'\"' || *src == L'\'')
+				{
+					lit.end = *src;
+				}
+				return lit;
+			}
 		};
 
 		// Removes line continuation sequences in a character stream
-		template <typename TLoc = FileLoc> struct StripLineContinuations :Filter<BufW2,TLoc>
+		template <typename TSrc = Src> struct StripLineContinuations :Filter<BufW4,TSrc>
 		{
-			using base = Filter<BufW2,TLoc>;
-			StripLineContinuations(Src& src)
+			using base = Filter<BufW4,TSrc>;
+
+			StripLineContinuations(TSrc& src)
 				:base(src)
 			{
 				seek(0);
@@ -131,21 +154,24 @@ namespace pr
 			void seek(int n) override
 			{
 				auto& src = m_reg;
-				for (src += n; src[0] == L'\\' && src[1] == L'\n'; src += 2) {}
+				for (src += n;;)
+				{
+					if (src[0] == L'\\' && src[1] == L'\n')                    { src += 2; continue; }
+					if (src[0] == L'\\' && src[1] == L'\r' && src[2] == L'\n') { src += 3; continue; }
+					break;
+				}
 			}
 		};
 
 		// Removes C++ style comments from a character stream
-		template <typename FailPolicy = ThrowOnFailure, typename TLoc = FileLoc> struct StripComments :Filter<BufW2, TLoc>
+		template <typename FailPolicy = ThrowOnFailure, typename TSrc = Src> struct StripComments :Filter<BufW2, TSrc>
 		{
-			using base = Filter<BufW2,TLoc>;
-			wchar_t m_literal;
-			bool m_escaped;
+			using base = Filter<BufW2,TSrc>;
+			StringLit m_literal;
 			
-			StripComments(Src& src)
+			StripComments(TSrc& src)
 				:base(src)
 				,m_literal()
-				,m_escaped()
 			{
 				seek(0);
 			}
@@ -158,19 +184,8 @@ namespace pr
 				{
 					// If we're currently within a literal string or character then
 					// just return characters until the literal ends
-					if (m_literal != 0)
-					{
-						if (*src == m_literal && !m_escaped) m_literal = 0;
-						else m_escaped = *src == L'\\';
-					}
-					else if (*src == L'\"' || *src == L'\'')
-					{
-						m_literal = *src;
-					}
-					if (m_literal)
-					{
+					if (in_string_literal(src, m_literal))
 						break;
-					}
 
 					// Otherwise remove comments
 					if (*src == L'/')
@@ -196,22 +211,20 @@ namespace pr
 		};
 
 		// Removes newlines from a character stream
-		template <typename FailPolicy = ThrowOnFailure, typename TLoc = FileLoc> struct StripNewLines :Filter<BufW2, TLoc>
+		template <typename FailPolicy = ThrowOnFailure, typename TSrc = Src> struct StripNewLines :Filter<BufW2, TSrc>
 		{
-			using base = Filter<BufW2,TLoc>;
+			using base = Filter<BufW2,TSrc>;
 			Buffer<> m_lines;
 			size_t m_lines_max;
 			size_t m_lines_min;
-			wchar_t m_literal;
-			bool m_escaped;
+			StringLit m_literal;
 
-			StripNewLines(Src& src, size_t lines_max = 1, size_t lines_min = 0)
+			StripNewLines(TSrc& src, size_t lines_max = 1, size_t lines_min = 0)
 				:base(src)
 				,m_lines(m_reg)
 				,m_lines_max(lines_max)
 				,m_lines_min(std::min(lines_min, lines_max))
 				,m_literal()
-				,m_escaped()
 			{
 				seek(0);
 			}
@@ -239,19 +252,8 @@ namespace pr
 
 					// If we're currently within a literal string or character then
 					// just return characters until the literal ends
-					if (m_literal != 0)
-					{
-						if (*src == m_literal && !m_escaped) m_literal = 0;
-						else m_escaped = *src == L'\\';
-					}
-					else if (*src == L'\"' || *src == L'\'')
-					{
-						m_literal = *src;
-					}
-					if (m_literal)
-					{
+					if (in_string_literal(src, m_literal))
 						break;
-					}
 
 					// Transform new lines
 					if (*src == L'\n')

@@ -132,7 +132,7 @@ namespace pr
 		}
 		template <typename tchar> size_t length(tchar const* right) const
 		{
-			return traits.length(right);
+			return traits::length(right);
 		}
 
 		// reverse a range of elements
