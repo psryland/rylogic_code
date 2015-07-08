@@ -91,8 +91,7 @@ namespace pr
 			static wchar_t const* find(wchar_t const* first, size_type count, value_type ch)              { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
 		};
 		struct traits :char_traits<Type>
-		{
-		};
+		{};
 
 	private:
 		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
@@ -567,7 +566,7 @@ namespace pr
 		{
 			// assigning from a substring
 			if (inside(ptr))
-				return assign(*this, ptr - m_ptr, count);
+				return assign(*this, size_type(ptr - m_ptr), count);
 
 			// copy the string
 			ensure_space(count + 1, true);
@@ -631,6 +630,7 @@ namespace pr
 		// assign right [rofs, rofs + count)
 		template <typename tarr> string& assign(tarr const& right, size_type rofs, size_type count)
 		{
+			//static_assert(std::is_assignable<value_type, decltype(right[0])>::value, "Char type mismatch");
 			assert(rofs <= length(right));
 
 			size_type num = length(right) - rofs;
@@ -656,12 +656,12 @@ namespace pr
 			return assign(right, 0, npos);
 		}
 
-		// assign right
-		template <typename tchar, int Len> string& assign(tchar const (&right)[Len])
-		{
-			// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
-			return assign(&right[0], 0, Len);
-		}
+		//// assign right
+		//template <typename tchar, int Len> string& assign(tchar const (&right)[Len])
+		//{
+		//	// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
+		//	return assign(&right[0], 0, Len);
+		//}
 
 		// insert count * ch at ofs
 		string& insert(size_type ofs, size_type count, value_type ch)

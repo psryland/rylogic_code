@@ -184,12 +184,12 @@ namespace pr
 	}
 
 	// String helpers
-	inline char const* ToString(script::EResult    enum_) { return enum_.ToString(); }
-	inline char const* ToString(script::EToken     enum_) { return enum_.ToString(); }
-	inline char const* ToString(script::EPPKeyword enum_) { return enum_.ToString(); }
-	inline char const* ToString(script::EKeyword   enum_) { return enum_.ToString(); }
-	inline char const* ToString(script::ESymbol    enum_) { return enum_.ToString(); }
-	inline char const* ToString(script::EConstant  enum_) { return enum_.ToString(); }
+	inline char const* ToString(script::EResult    enum_) { return enum_.ToStringA(); }
+	inline char const* ToString(script::EToken     enum_) { return enum_.ToStringA(); }
+	inline char const* ToString(script::EPPKeyword enum_) { return enum_.ToStringA(); }
+	inline char const* ToString(script::EKeyword   enum_) { return enum_.ToStringA(); }
+	inline char const* ToString(script::ESymbol    enum_) { return enum_.ToStringA(); }
+	inline char const* ToString(script::EConstant  enum_) { return enum_.ToStringA(); }
 }
 
 #if PR_UNITTESTS

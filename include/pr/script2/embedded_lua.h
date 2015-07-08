@@ -35,8 +35,8 @@ namespace pr
 				int base = lua_gettop(m_lua);
 
 				// Convert the lua code to a compiled chunk
-				pr::string<char> error_msg;
-				if (pr::lua::PushLuaChunk(m_lua, code, error_msg) != pr::lua::EResult::Success)
+				std::string error_msg;
+				if (pr::lua::PushLuaChunk(m_lua, Narrow(code), error_msg) != pr::lua::EResult::Success)
 					return FailPolicy::Fail(EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
 
 				// Execute the chunk

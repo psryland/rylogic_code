@@ -13,16 +13,6 @@ namespace pr
 {
 	namespace script2
 	{
-		// Helper for a generic character pointer
-		union SrcConstPtr
-		{
-			wchar_t const* wptr;
-			char    const* aptr;
-			SrcConstPtr() :wptr() {}
-			SrcConstPtr(wchar_t const* p) :wptr(p) {}
-			SrcConstPtr(char const* p) :aptr(p) {}
-		};
-
 		// Interface to a stream of wchar_t's, essentually a pointer-like interface
 		struct Src
 		{
@@ -442,6 +432,110 @@ namespace pr
 				return r;
 			}
 		};
+
+		#pragma region Global Functions
+
+		// Return the hash of a single character
+		inline HashValue hashfunc(wchar_t ch, HashValue r = ~HashValue())
+		{
+			static std::hash<wchar_t> s_hash;
+			return r * 137 ^ HashValue(s_hash(ch));
+		}
+
+		// Return the hash value for a string
+		inline HashValue Hash(wchar_t const* name)
+		{
+			auto r = ~HashValue();
+			for (; *name; ++name) r = hashfunc(*name, r);
+			return r;
+		}
+		inline HashValue HashLwr(wchar_t const* name)
+		{
+			auto r = ~HashValue();
+			for (; *name; ++name) r = hashfunc(towlower(*name), r);
+			return r;
+		}
+		template <typename Iter> inline HashValue Hash(Iter first, Iter last)
+		{
+			auto r = ~HashValue();
+			for (; first != last; ++first) r = hashfunc(*first, r);
+			return r;
+		}
+		template <typename String> inline HashValue Hash(String const& name)
+		{
+			return Hash(std::begin(name), std::end(name));
+		}
+
+		// Buffer an identifier into 'src'.
+		template <typename TBuf> inline bool BufferIdentifier(TBuf& src)
+		{
+			if  (  pr::str::IsIdentifier(*src.stream(), true )) src.buffer(); else return false;
+			for (; pr::str::IsIdentifier(*src.stream(), false); src.buffer()) {}
+			return true;
+		}
+
+		// Buffer up to the next '\n' into 'src'
+		template <typename TBuf> inline void BufferLine(TBuf& src)
+		{
+			for (; !pr::str::IsNewLine(*src.stream()); src.buffer()) {}
+		}
+
+		// Buffer up to 'end'. If 'include_end' is false, 'end' is removed from the buffer once read
+		template <typename TBuf> inline bool BufferTo(TBuf& src, wchar_t const* end, bool include_end)
+		{
+			int i = 0;
+			for (; end[i]; src.buffer())
+			{
+				auto ch = *src.stream();
+				if      (ch == end[i]) ++i;
+				else if (ch == end[0]) i = 1;
+				else i = 0;
+			}
+			if (end[i] != 0) return false;
+			if (!include_end) src.pop_back(i);
+			return true;
+		}
+
+		// Call '++src' until 'pred' returns false
+		template <typename TSrc, typename Pred> void Eat(TSrc& src, int eat_initial, int eat_final, Pred pred)
+		{
+			for (src += eat_initial; pred(*src); ++src) {}
+			src += eat_final;
+		}
+		template <typename TSrc> inline void EatLineSpace(TSrc& src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, pr::str::IsLineSpace<wchar_t>);
+		}
+		template <typename TSrc> inline void EatWhiteSpace(TSrc& src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, pr::str::IsWhiteSpace<wchar_t>);
+		}
+		template <typename TSrc> inline void EatLine(TSrc& src, int eat_initial, int eat_final)
+		{
+			Eat(src, eat_initial, eat_final, [](wchar_t ch){ return !pr::str::IsNewLine(ch); });
+		}
+		template <typename TSrc> inline bool EatLiteralString(TSrc& src)
+		{
+			if (*src != L'\"' && *src != L'\'')
+				return false;
+
+			auto end = *src;
+			auto escape = false;
+			Eat(src, 1, 0, [&](wchar_t ch)
+			{
+				auto r = ch != end || escape;
+				escape = ch == L'\\';
+				return r;
+			});
+			if (*src == end) ++src; else return false;
+			return true;
+		}
+		template <typename TSrc, typename Char> inline void EatDelimiters(TSrc& src, Char const* delim)
+		{
+			for (; *pr::str::FindChar(delim, *src) != 0; ++src) {}
+		}
+
+		#pragma endregion
 	}
 }
 
@@ -452,7 +546,30 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_script_core)
+		PRUnitTest(pr_script2_checkhashes)
+		{
+			using namespace pr::script2;
+			pr::CheckHashEnum<EKeyword, wchar_t>(
+				[](wchar_t const* name)
+				{
+					return Hash(name);
+				},
+				[](char const* msg)
+				{
+					PR_FAIL(msg);
+				});
+
+			pr::CheckHashEnum<EPPKeyword, wchar_t>(
+				[](wchar_t const* name)
+				{
+					return Hash(name);
+				},
+				[](char const* msg)
+				{
+					PR_FAIL(msg);
+				});
+		}
+		PRUnitTest(pr_script2_core)
 		{
 			using namespace pr::str;
 			using namespace pr::script2;

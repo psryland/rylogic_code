@@ -20,7 +20,6 @@ namespace pr
 		{
 			using string = pr::string<wchar_t>;
 			using Params = pr::vector<string, 5>;
-			using HashValue = size_t;
 
 			// Helper for recursive expansion of macros
 			// A macro will not be expanded if the same macro has already been expanded earlier in the recursion
@@ -48,29 +47,6 @@ namespace pr
 			Params    m_params;    // Parameters for the macro, empty() for no parameter list, [0]="" for empty parameter list 'TAG()'
 			HashValue m_hash;      // The hash of the macro tag
 			FileLoc   m_loc;       // The source location of where the macro was defined
-
-			// Return the hashed version of a macro name
-			template <typename Iter> static HashValue Hash(Iter first, Iter last)
-			{
-				static std::hash<wchar_t> hash;
-				auto r = ~HashValue();
-				for (; first != last; ++first) r ^= hash(*first);
-				return r;
-			}
-			template <typename Cont> static HashValue Hash(Cont const& name)
-			{
-				static std::hash<wchar_t> hash;
-				auto r = ~HashValue();
-				for (wchar_t c : name) r ^= hash(c);
-				return r;
-			}
-			static HashValue Hash(wchar_t const* name)
-			{
-				static std::hash<wchar_t> hash;
-				auto r = ~HashValue();
-				for (;*name;++name) r ^= hash(*name);
-				return r;
-			}
 
 			// Return a macro tag from 'src' (or fail)
 			template <typename Iter> static string ReadTag(Iter& src, Location const& loc)
@@ -258,7 +234,6 @@ namespace pr
 			using Macro = TMacro;
 
 			// The database of macro definitions
-			using HashValue = typename TMacro::HashValue;
 			using DB = std::unordered_map<HashValue, TMacro>;
 			DB m_db;
 

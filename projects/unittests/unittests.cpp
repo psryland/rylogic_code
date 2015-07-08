@@ -21,10 +21,13 @@ namespace pr
 #include <algorithm>
 #include "pr/common/unittests.h"
 //#include "unittests/unittests.h" // all tests
+#include "pr/macros/enum.h"
 #include "pr/script2/script_core.h"
 #include "pr/script2/buf8.h"
 #include "pr/script2/filter.h"
 #include "pr/script2/preprocessor.h"
+#include "pr/script2/tokeniser.h"
+#include "pr/script2/reader.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about

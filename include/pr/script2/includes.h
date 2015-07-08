@@ -28,7 +28,7 @@ namespace pr
 			virtual ~IncludeHandler() {}
 
 			// Add a path to the include search paths
-			virtual void AddSearchPath(string path, size_t index = ~0U) = 0;
+			virtual void AddSearchPath(string path, size_t index = ~size_t()) = 0;
 
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
@@ -46,6 +46,12 @@ namespace pr
 		template <typename FailPolicy = ThrowOnFailure>
 		struct NoIncludes :IncludeHandler<FailPolicy>
 		{
+			// Add a path to the include search paths
+			void AddSearchPath(string path, size_t index = ~size_t()) override
+			{
+				(void)path,index;
+			}
+
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
@@ -98,7 +104,7 @@ namespace pr
 			}
 
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~0U) override
+			void AddSearchPath(string path, size_t index = ~size_t()) override
 			{
 				// Remove 'path' if already in the 'm_paths' collection
 				auto end = std::remove_if(std::begin(m_paths), std::end(m_paths), [&](string const& s) { return pr::str::EqualI(s, path); });
@@ -169,7 +175,7 @@ namespace pr
 			std::unordered_map<string, std::wstring> m_strings;
 
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~0U) override
+			void AddSearchPath(string path, size_t index = ~size_t()) override
 			{
 				(void)path,index;
 			}
@@ -216,7 +222,7 @@ namespace pr
 			}
 
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~0U) override
+			void AddSearchPath(string path, size_t index = ~size_t()) override
 			{
 				(void)path,index;
 			}

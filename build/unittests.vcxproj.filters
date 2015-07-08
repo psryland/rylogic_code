@@ -951,9 +951,6 @@
     <ClInclude Include="..\include\pr\common\pe_file.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\char_stream.h">
-      <Filter>pr\script2</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\str\string_core.h">
       <Filter>pr\str</Filter>
     </ClInclude>
@@ -984,9 +981,6 @@
     <ClInclude Include="..\include\pr\script2\token.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\keyword.h">
-      <Filter>pr\script2</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script2\location.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
@@ -1009,6 +1003,9 @@
       <Filter>pr\script2</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script2\embedded_lua.h">
+      <Filter>pr\script2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script2\tokeniser.h">
       <Filter>pr\script2</Filter>
     </ClInclude>
   </ItemGroup>

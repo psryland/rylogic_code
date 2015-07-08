@@ -29,6 +29,8 @@ namespace pr
 {
 	namespace script2
 	{
+		using HashValue = int;
+
 		#pragma region Enumerations
 
 		#pragma region Tokens
@@ -46,38 +48,38 @@ namespace pr
 		#pragma region C keywords
 		#define PR_ENUM(x)\
 			x(Invalid  ,""         ,= 0xffffffff)\
-			x(Auto     ,"auto"     ,= 0x112746E9)\
-			x(Double   ,"double"   ,= 0x1840D9CE)\
-			x(Int      ,"int"      ,= 0x164A43DD)\
-			x(Struct   ,"struct"   ,= 0x0F408D2A)\
-			x(Break    ,"break"    ,= 0x1AC013EC)\
-			x(Else     ,"else"     ,= 0x1D237859)\
-			x(Long     ,"long"     ,= 0x14EF7164)\
-			x(Switch   ,"switch"   ,= 0x13C0233F)\
-			x(Case     ,"case"     ,= 0x18EA7F00)\
-			x(Enum     ,"enum"     ,= 0x113F6121)\
-			x(Register ,"register" ,= 0x1A14AAE9)\
-			x(Typedef  ,"typedef"  ,= 0x1B494818)\
-			x(Char     ,"char"     ,= 0x1E5760F8)\
-			x(Extern   ,"extern"   ,= 0x16497B3B)\
-			x(Return   ,"return"   ,= 0x0A01F36E)\
-			x(Union    ,"union"    ,= 0x1E57F369)\
-			x(Const    ,"const"    ,= 0x036F03E1)\
-			x(Float    ,"float"    ,= 0x176B5BE3)\
-			x(Short    ,"short"    ,= 0x1EDC8C0F)\
-			x(Unsigned ,"unsigned" ,= 0x186A2B87)\
-			x(Continue ,"continue" ,= 0x1E46A876)\
-			x(For      ,"for"      ,= 0x0E37A24A)\
-			x(Signed   ,"signed"   ,= 0x00BF0C54)\
-			x(Void     ,"void"     ,= 0x1A9B029D)\
-			x(Default  ,"default"  ,= 0x1C8CDD40)\
-			x(Goto     ,"goto"     ,= 0x04D53061)\
-			x(Sizeof   ,"sizeof"   ,= 0x1429164B)\
-			x(Volatile ,"volatile" ,= 0x18AFC4C2)\
-			x(Do       ,"do"       ,= 0x1D8B5FEF)\
-			x(If       ,"if"       ,= 0x1DFA87FC)\
-			x(Static   ,"static"   ,= 0x16150CE7)\
-			x(While    ,"while"    ,= 0x0B4669DC)
+			x(Auto     ,"auto"     ,= 0x21b616f0)\
+			x(Double   ,"double"   ,= 0xb572894a)\
+			x(Int      ,"int"      ,= 0xf4771206)\
+			x(Struct   ,"struct"   ,= 0x25040de0)\
+			x(Break    ,"break"    ,= 0xc3d29d82)\
+			x(Else     ,"else"     ,= 0xdfcb6468)\
+			x(Long     ,"long"     ,= 0x1544fe25)\
+			x(Switch   ,"switch"   ,= 0x9893195)\
+			x(Case     ,"case"     ,= 0x4a7c751b)\
+			x(Enum     ,"enum"     ,= 0xa49a8a94)\
+			x(Register ,"register" ,= 0x87f3e726)\
+			x(Typedef  ,"typedef"  ,= 0x6be3d212)\
+			x(Char     ,"char"     ,= 0xfccf20b7)\
+			x(Extern   ,"extern"   ,= 0x94447857)\
+			x(Return   ,"return"   ,= 0xe5511245)\
+			x(Union    ,"union"    ,= 0xe2af7b0e)\
+			x(Const    ,"const"    ,= 0x5a686410)\
+			x(Float    ,"float"    ,= 0x86ed7e65)\
+			x(Short    ,"short"    ,= 0x690dea7f)\
+			x(Unsigned ,"unsigned" ,= 0xd1a5b19e)\
+			x(Continue ,"continue" ,= 0x37b892be)\
+			x(For      ,"for"      ,= 0x6c00786)\
+			x(Signed   ,"signed"   ,= 0xab373275)\
+			x(Void     ,"void"     ,= 0xf545fcd3)\
+			x(Default  ,"default"  ,= 0x27ab006e)\
+			x(Goto     ,"goto"     ,= 0xae8e15fc)\
+			x(Sizeof   ,"sizeof"   ,= 0xd9bf6823)\
+			x(Volatile ,"volatile" ,= 0x69d6188f)\
+			x(Do       ,"do"       ,= 0xc003cebc)\
+			x(If       ,"if"       ,= 0xe0f53580)\
+			x(Static   ,"static"   ,= 0xcd88d6df)\
+			x(While    ,"while"    ,= 0xe63f6e2a)
 		PR_DEFINE_ENUM3(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -85,25 +87,25 @@ namespace pr
 		#pragma region Preprocessor keywords
 		#define PR_ENUM(x)\
 			x(Invalid      ,""             ,= 0xffffffff)\
-			x(Include      ,"include"      ,= 0x0A5F3FCE)\
-			x(IncludePath  ,"include_path" ,= 0x1789F136)\
-			x(Define       ,"define"       ,= 0x0D22697A)\
-			x(Undef        ,"undef"        ,= 0x1450E770)\
-			x(Defifndef    ,"defifndef"    ,= 0x1169dadd)\
-			x(If           ,"if"           ,= 0x1DFA87FC)\
-			x(Ifdef        ,"ifdef"        ,= 0x11FAC604)\
-			x(Ifndef       ,"ifndef"       ,= 0x1FB3E42D)\
-			x(Elif         ,"elif"         ,= 0x02414BD3)\
-			x(Else         ,"else"         ,= 0x1D237859)\
-			x(Endif        ,"endif"        ,= 0x15632E04)\
-			x(Pragma       ,"pragma"       ,= 0x1EC9D08D)\
-			x(Line         ,"line"         ,= 0x10D28008)\
-			x(Error        ,"error"        ,= 0x0158FC8D)\
-			x(Warning      ,"warning"      ,= 0x051535CD)\
-			x(Defined      ,"defined"      ,= 0x019B9520)\
-			x(Eval         ,"eval"         ,= 0x1531EC3D)\
-			x(Lit          ,"lit"          ,= 0x15DF8629)\
-			x(Embedded     ,"embedded"     ,= 0x0E5B2CFA)
+			x(Include      ,"include"      ,= 0xdd4bbe11)\
+			x(IncludePath  ,"include_path" ,= 0xd1a75ca1)\
+			x(Define       ,"define"       ,= 0x1d8988c2)\
+			x(Undef        ,"undef"        ,= 0x588f8a99)\
+			x(Defifndef    ,"defifndef"    ,= 0x9b9ddb8c)\
+			x(If           ,"if"           ,= 0xe0f53580)\
+			x(Ifdef        ,"ifdef"        ,= 0xad2966dd)\
+			x(Ifndef       ,"ifndef"       ,= 0x80d54379)\
+			x(Elif         ,"elif"         ,= 0xf89ba339)\
+			x(Else         ,"else"         ,= 0xdfcb6468)\
+			x(Endif        ,"endif"        ,= 0xc610b415)\
+			x(Pragma       ,"pragma"       ,= 0x943a2877)\
+			x(Line         ,"line"         ,= 0xff066c61)\
+			x(Error        ,"error"        ,= 0xf325c97d)\
+			x(Warning      ,"warning"      ,= 0x869371af)\
+			x(Defined      ,"defined"      ,= 0x7337d7bc)\
+			x(Eval         ,"eval"         ,= 0xa4d87301)\
+			x(Lit          ,"lit"          ,= 0xfcf70a8c)\
+			x(Embedded     ,"embedded"     ,= 0x9bd1cba1)
 		PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -225,25 +227,16 @@ namespace pr
 		#pragma endregion
 
 		#pragma endregion
-	}
-}
 
-#if PR_UNITTESTS
-#include "pr/common/unittests.h"
-#include "pr/str/string_core.h"
-namespace pr
-{
-	namespace unittests
-	{
-		PRUnitTest(pr_script2_forward)
+		// Helper for a generic character pointer
+		union SrcConstPtr
 		{
-			using namespace pr::script2;
+			wchar_t const* wptr;
+			char    const* aptr;
+			SrcConstPtr() :wptr() {}
+			SrcConstPtr(wchar_t const* p) :wptr(p) {}
+			SrcConstPtr(char const* p) :aptr(p) {}
+		};
 
-			//auto hash   = [](char const* str){ return pr::hash::HashC(str); };
-			//auto onfail = [](char const* msg){ PR_FAIL(msg); };
-			//pr::CheckHashEnum<EKeyword>  (hash, onfail);
-			//pr::CheckHashEnum<EPPKeyword>(hash, onfail);
-		}
 	}
 }
-#endif
