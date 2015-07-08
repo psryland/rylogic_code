@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import os, sys, imp, re, subprocess, shutil
 sys.path.append(os.path.splitdrive(os.path.realpath(__file__))[0] + r"\script")

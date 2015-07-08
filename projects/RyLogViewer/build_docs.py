@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import os, sys, imp, re
 sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # This script is setup to build projects in the RyLogViewer.sln file
