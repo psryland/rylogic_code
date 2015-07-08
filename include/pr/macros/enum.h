@@ -351,7 +351,7 @@ namespace pr
 		using BaseType = typename std::underlying_type<TEnum::Enum_>::type;
 
 		bool result = true;
-		std::stringstream ss;
+		std::string s;
 		for (int i = 0; i != TEnum::NumberOf; ++i)
 		{
 			// Get the enum member name, and take its hash
@@ -362,11 +362,13 @@ namespace pr
 			// The hash of the member name should equal its value
 			if (hash != value)
 			{
-				ss << std::endl << TEnum::EnumName() << "::" << TEnum::MemberName<char>(i) << " hash value should be 0x" << std::hex << hash;
+				char buf[256] = {};
+				_snprintf(buf, _countof(buf), "\n%s::%s hash value should be 0x%8.8X", TEnum::EnumName(), TEnum::MemberName<char>(i), hash);
+				s.append(buf);
 				result = false;
 			}
 		}
-		if (!result) on_fail(ss.str().c_str());
+		if (!result) on_fail(s.c_str());
 		return result;
 	}
 	template <typename TEnum, typename Char, typename THashFunc> inline bool CheckHashEnum(THashFunc hash_func)

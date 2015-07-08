@@ -851,8 +851,8 @@ namespace pr
 		{
 			auto hasher  = [](char const* s) { return pr::hash::HashLwr(s); };
 			auto on_fail = [](char const* m) { PR_FAIL(m); };
-			pr::CheckHashEnum<pr::ldr::EKeyword  >(hasher, on_fail);
-			pr::CheckHashEnum<pr::ldr::ELdrObject>(hasher, on_fail);
+			pr::CheckHashEnum<pr::ldr::EKeyword  , char>(hasher, on_fail);
+			pr::CheckHashEnum<pr::ldr::ELdrObject, char>(hasher, on_fail);
 		}
 	}
 }

@@ -71,7 +71,7 @@ namespace pr
 		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.ExtractIntS(t.m_aarrggbb, 16); }
 		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.ExtractCStringS(t); }
 
-		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Write(TEnum t)                             { return TEnum::ToString(t); }
+		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Write(TEnum t)                             { return TEnum::ToStringA(t); }
 		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, bool>::type        Read(pr::script::Reader& reader, TEnum& t) { return reader.ExtractEnumS(t); }
 	}
 

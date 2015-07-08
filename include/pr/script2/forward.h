@@ -48,38 +48,38 @@ namespace pr
 		#pragma region C keywords
 		#define PR_ENUM(x)\
 			x(Invalid  ,""         ,= 0xffffffff)\
-			x(Auto     ,"auto"     ,= 0x21b616f0)\
-			x(Double   ,"double"   ,= 0xb572894a)\
-			x(Int      ,"int"      ,= 0xf4771206)\
-			x(Struct   ,"struct"   ,= 0x25040de0)\
-			x(Break    ,"break"    ,= 0xc3d29d82)\
-			x(Else     ,"else"     ,= 0xdfcb6468)\
-			x(Long     ,"long"     ,= 0x1544fe25)\
-			x(Switch   ,"switch"   ,= 0x9893195)\
-			x(Case     ,"case"     ,= 0x4a7c751b)\
-			x(Enum     ,"enum"     ,= 0xa49a8a94)\
-			x(Register ,"register" ,= 0x87f3e726)\
-			x(Typedef  ,"typedef"  ,= 0x6be3d212)\
-			x(Char     ,"char"     ,= 0xfccf20b7)\
-			x(Extern   ,"extern"   ,= 0x94447857)\
-			x(Return   ,"return"   ,= 0xe5511245)\
-			x(Union    ,"union"    ,= 0xe2af7b0e)\
-			x(Const    ,"const"    ,= 0x5a686410)\
-			x(Float    ,"float"    ,= 0x86ed7e65)\
-			x(Short    ,"short"    ,= 0x690dea7f)\
-			x(Unsigned ,"unsigned" ,= 0xd1a5b19e)\
-			x(Continue ,"continue" ,= 0x37b892be)\
-			x(For      ,"for"      ,= 0x6c00786)\
-			x(Signed   ,"signed"   ,= 0xab373275)\
-			x(Void     ,"void"     ,= 0xf545fcd3)\
-			x(Default  ,"default"  ,= 0x27ab006e)\
-			x(Goto     ,"goto"     ,= 0xae8e15fc)\
-			x(Sizeof   ,"sizeof"   ,= 0xd9bf6823)\
-			x(Volatile ,"volatile" ,= 0x69d6188f)\
-			x(Do       ,"do"       ,= 0xc003cebc)\
-			x(If       ,"if"       ,= 0xe0f53580)\
-			x(Static   ,"static"   ,= 0xcd88d6df)\
-			x(While    ,"while"    ,= 0xe63f6e2a)
+			x(Auto     ,"auto"     ,= 0x187C3F6C)\
+			x(Double   ,"double"   ,= 0x8FFA9612)\
+			x(Int      ,"int"      ,= 0x5CE21D70)\
+			x(Struct   ,"struct"   ,= 0xA98D0AFE)\
+			x(Break    ,"break"    ,= 0xFDDA6A72)\
+			x(Else     ,"else"     ,= 0x5A7F7A9E)\
+			x(Long     ,"long"     ,= 0x241D4609)\
+			x(Switch   ,"switch"   ,= 0x3776015F)\
+			x(Case     ,"case"     ,= 0x0F909A23)\
+			x(Enum     ,"enum"     ,= 0x795FE4E6)\
+			x(Register ,"register" ,= 0xD2E90C52)\
+			x(Typedef  ,"typedef"  ,= 0x5C019616)\
+			x(Char     ,"char"     ,= 0x10C1DF07)\
+			x(Extern   ,"extern"   ,= 0xEC53F561)\
+			x(Return   ,"return"   ,= 0x5FBA9DDD)\
+			x(Union    ,"union"    ,= 0xBD3984B6)\
+			x(Const    ,"const"    ,= 0xAF749E3A)\
+			x(Float    ,"float"    ,= 0x906E736B)\
+			x(Short    ,"short"    ,= 0x0E57FE17)\
+			x(Unsigned ,"unsigned" ,= 0xD0208C58)\
+			x(Continue ,"continue" ,= 0x29BDDE56)\
+			x(For      ,"for"      ,= 0xB8CCEE6A)\
+			x(Signed   ,"signed"   ,= 0x0AF75B8B)\
+			x(Void     ,"void"     ,= 0xB2D22281)\
+			x(Default  ,"default"  ,= 0x96B0DEA8)\
+			x(Goto     ,"goto"     ,= 0xC278F5C4)\
+			x(Sizeof   ,"sizeof"   ,= 0x7693BDE7)\
+			x(Volatile ,"volatile" ,= 0xB225EF47)\
+			x(Do       ,"do"       ,= 0x6E06602A)\
+			x(If       ,"if"       ,= 0x64F9860C)\
+			x(Static   ,"static"   ,= 0x3D26EFB5)\
+			x(While    ,"while"    ,= 0x8D56B330)
 		PR_DEFINE_ENUM3(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -87,25 +87,25 @@ namespace pr
 		#pragma region Preprocessor keywords
 		#define PR_ENUM(x)\
 			x(Invalid      ,""             ,= 0xffffffff)\
-			x(Include      ,"include"      ,= 0xdd4bbe11)\
-			x(IncludePath  ,"include_path" ,= 0xd1a75ca1)\
-			x(Define       ,"define"       ,= 0x1d8988c2)\
-			x(Undef        ,"undef"        ,= 0x588f8a99)\
-			x(Defifndef    ,"defifndef"    ,= 0x9b9ddb8c)\
-			x(If           ,"if"           ,= 0xe0f53580)\
-			x(Ifdef        ,"ifdef"        ,= 0xad2966dd)\
-			x(Ifndef       ,"ifndef"       ,= 0x80d54379)\
-			x(Elif         ,"elif"         ,= 0xf89ba339)\
-			x(Else         ,"else"         ,= 0xdfcb6468)\
-			x(Endif        ,"endif"        ,= 0xc610b415)\
-			x(Pragma       ,"pragma"       ,= 0x943a2877)\
-			x(Line         ,"line"         ,= 0xff066c61)\
-			x(Error        ,"error"        ,= 0xf325c97d)\
-			x(Warning      ,"warning"      ,= 0x869371af)\
-			x(Defined      ,"defined"      ,= 0x7337d7bc)\
-			x(Eval         ,"eval"         ,= 0xa4d87301)\
-			x(Lit          ,"lit"          ,= 0xfcf70a8c)\
-			x(Embedded     ,"embedded"     ,= 0x9bd1cba1)
+			x(Include      ,"include"      ,= 0x1D27DEED)\
+			x(IncludePath  ,"include_path" ,= 0xB541601D)\
+			x(Define       ,"define"       ,= 0x3E7EDBEC)\
+			x(Undef        ,"undef"        ,= 0xA6236687)\
+			x(Defifndef    ,"defifndef"    ,= 0x48F0434C)\
+			x(If           ,"if"           ,= 0x64F9860C)\
+			x(Ifdef        ,"ifdef"        ,= 0x17E02913)\
+			x(Ifndef       ,"ifndef"       ,= 0xB1F1232D)\
+			x(Elif         ,"elif"         ,= 0x7970A0E1)\
+			x(Else         ,"else"         ,= 0x5A7F7A9E)\
+			x(Endif        ,"endif"        ,= 0x8774DC3B)\
+			x(Pragma       ,"pragma"       ,= 0x7BE590B7)\
+			x(Line         ,"line"         ,= 0x8A9A6F5D)\
+			x(Error        ,"error"        ,= 0x221BB06F)\
+			x(Warning      ,"warning"      ,= 0xBDC00819)\
+			x(Defined      ,"defined"      ,= 0xE9B39718)\
+			x(Eval         ,"eval"         ,= 0xAE926225)\
+			x(Lit          ,"lit"          ,= 0x14C22A9C)\
+			x(Embedded     ,"embedded"     ,= 0x82A3D0E5)
 		PR_DEFINE_ENUM3(EPPKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -240,3 +240,21 @@ namespace pr
 
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

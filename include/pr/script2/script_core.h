@@ -438,8 +438,10 @@ namespace pr
 		// Return the hash of a single character
 		inline HashValue hashfunc(wchar_t ch, HashValue r = ~HashValue())
 		{
-			static std::hash<wchar_t> s_hash;
-			return r * 137 ^ HashValue(s_hash(ch));
+			unsigned int const prime = 16777619U;
+			r ^= HashValue(ch);
+			r *= prime;
+			return r;
 		}
 
 		// Return the hash value for a string

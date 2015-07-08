@@ -299,7 +299,7 @@ namespace pr
 				auto obj_uidata = GetUIData(object);
 				if (obj_uidata->m_list_item == INVALID_LIST_ITEM) return;
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Name      ,object.m_name.c_str());
-				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::LdrType   ,ELdrObject::ToString(object.m_type));
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::LdrType   ,ELdrObject::ToStringA(object.m_type));
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Colour    ,pr::FmtS("%8.8X", object.m_colour.m_aarrggbb));
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Visible   ,object.m_visible ? "Visible"   : "Hidden");
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Wireframe ,object.m_wireframe ? "Wireframe" : "Solid");
@@ -641,7 +641,7 @@ namespace pr
 				m_status.SetParts(PR_COUNTOF(status_panes), status_panes);
 
 				for (int i = 0; i != EColumn::NumberOf; ++i)
-					m_list.AddColumn(EColumn::MemberName(i), i);
+					m_list.AddColumn(EColumn::MemberName<char>(i), i);
 
 				m_btn_expand_all.SetWindowText("+");
 				m_btn_collapse_all.SetWindowText("-");

@@ -56,8 +56,10 @@ namespace pr
 		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
 
 		// Check the hash values are correct
-		PR_EXPAND(PR_DBG, static bool s_eldrobject_kws_checked = pr::CheckHashEnum<ELdrObject>([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
-		PR_EXPAND(PR_DBG, static bool s_ekeyword_kws_checked   = pr::CheckHashEnum<EKeyword  >([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
+		#if PR_DBG
+		static bool s_eldrobject_kws_checked = pr::CheckHashEnum<ELdrObject, char>([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); });
+		static bool s_ekeyword_kws_checked   = pr::CheckHashEnum<EKeyword  , char>([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); });
+		#endif
 
 		// LdrObject Creation functions *********************************************
 
@@ -102,7 +104,7 @@ namespace pr
 		{
 			ObjectAttributes attr;
 			attr.m_type = model_type;
-			attr.m_name = ELdrObject::ToString(model_type);
+			attr.m_name = ELdrObject::ToStringA(model_type);
 			
 			// Read the next tokens
 			string32 tok0, tok1; auto count = 0;
@@ -1766,7 +1768,7 @@ namespace pr
 				if (info.m_format == EModelFileFormat::Unknown)
 				{
 					string512 msg = pr::Fmt("Mesh file '%s' is not supported.\nSupported Formats: ", m_filepath.c_str());
-					for (auto f : EModelFileFormat::MemberNames()) msg.append(f).append(" ");
+					for (auto f : EModelFileFormat::MemberNames<char>()) msg.append(f).append(" ");
 					p.m_reader.ReportError(msg.c_str());
 					return;
 				}
@@ -2045,7 +2047,7 @@ namespace pr
 							return true;
 
 						last_update = now;
-						char const* type = obj ? ELdrObject::ToString(obj->m_type) : "";
+						char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
 						std::string name = obj ? obj->m_name : "";
 						return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
 					});
@@ -2913,7 +2915,7 @@ out <<
 		// Return the declaration name of this object
 		string32 LdrObject::TypeAndName() const
 		{
-			return string32(ELdrObject::ToString(m_type)) + " " + m_name;
+			return string32(ELdrObject::ToStringA(m_type)) + " " + m_name;
 		}
 
 		// Recursively add this object and its children to a viewport

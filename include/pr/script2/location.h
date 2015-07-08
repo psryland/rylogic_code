@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "pr/script2/script_core.h"
+#include "pr/script2/forward.h"
 
 namespace pr
 {
@@ -167,8 +167,8 @@ namespace pr
 			for (auto s = str; *s; ++s)
 				loc.inc(*s);
 
-			PR_CHECK(loc.m_line, 2);
-			PR_CHECK(loc.m_col, 5);
+			PR_CHECK(loc.m_line, 2U);
+			PR_CHECK(loc.m_col, 5U);
 		}
 	}
 }

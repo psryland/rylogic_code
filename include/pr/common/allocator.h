@@ -49,6 +49,8 @@ namespace pr
 			{
 				#ifndef NDEBUG
 				::memset(p, 0xdd, sizeof(U));
+				#else
+				(void)p;
 				#endif
 			}
 		};

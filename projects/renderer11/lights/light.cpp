@@ -114,7 +114,10 @@ namespace pr
 				reader.AddSource(src);
 
 				// Check the hash values are correct
-				PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>([&](char const* s) { return reader.HashKeyword(s); }));
+				#if PR_DBG_RDR
+				static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,char>(
+					[&](char const* s) { return reader.HashKeyword(s); });
+				#endif
 
 				ELightKW kw;
 				while (reader.NextKeywordH(kw))

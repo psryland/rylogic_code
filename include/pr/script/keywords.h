@@ -205,8 +205,8 @@ namespace pr
 
 			auto hash   = [](char const* str){ return pr::hash::HashC(str); };
 			auto onfail = [](char const* msg){ PR_FAIL(msg); };
-			pr::CheckHashEnum<script::EKeyword>  (hash, onfail);
-			pr::CheckHashEnum<script::EPPKeyword>(hash, onfail);
+			pr::CheckHashEnum<script::EKeyword  , char>(hash, onfail);
+			pr::CheckHashEnum<script::EPPKeyword, char>(hash, onfail);
 		}
 	}
 }

@@ -5,8 +5,6 @@
 // A version of std::string with configurable local caching
 // Note: this file is made to match pr::vector as much as possible
 #pragma once
-#ifndef PR_STD_STRING_H
-#define PR_STD_STRING_H
 
 // <type_traits> was introduced in sp1
 #if defined(_MSC_FULL_VER) && _MSC_FULL_VER < 150030729
@@ -20,6 +18,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <type_traits>
+#include <utility>
 #include <cassert>
 
 #ifndef PR_NOEXCEPT
@@ -93,6 +92,11 @@ namespace pr
 		struct traits :char_traits<Type>
 		{};
 
+		template <typename Ty>   using valid_char_t = typename std::enable_if<std::is_same<Type, typename std::remove_reference<Ty>::type>::value>::type;
+		template <typename tarr> using valid_arr_t = valid_char_t<decltype(std::declval<tarr>()[0])>;
+		template <typename tptr> using valid_ptr_t = valid_char_t<decltype(std::declval<tptr>()[0])>;
+		template <typename tstr, typename = decltype(std::declval<tstr>().size())> using valid_str_t = valid_arr_t<tstr>;
+
 	private:
 		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
@@ -125,7 +129,7 @@ namespace pr
 		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
 
 		// return the length of a string
-		template <typename tarr, typename = tarr::value_type>  size_t length(tarr const& right) const
+		template <typename tstr, typename = valid_str_t<tstr>>  size_t length(tstr const& right) const
 		{
 			return right.size();
 		}
@@ -204,7 +208,7 @@ namespace pr
 		}
 
 		// construct from count * ch
-		explicit string(size_type count, value_type ch)
+		string(size_type count, value_type ch)
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -237,7 +241,8 @@ namespace pr
 		}
 
 		// copy construct from any pr::string type
-		template <int L, bool F, class A> string(string<Type,L,F,A> const& right)
+		template <int L, bool F, class A>
+		string(string<Type,L,F,A> const& right)
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -248,7 +253,8 @@ namespace pr
 		}
 
 		// construct from [first, last), with allocator
-		template <class iter> string(iter first, iter last, Allocator const& allocator = Allocator())
+		template <class iter, typename = valid_ptr_t<iter>>
+		string(iter first, iter last, Allocator const& allocator = Allocator())
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -265,7 +271,8 @@ namespace pr
 		}
 
 		// construct from another string-like object
-		template <typename tarr> string(tarr const& right, Allocator const& allocator = Allocator())
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string(tarr const& right, Allocator const& allocator = Allocator())
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -275,19 +282,7 @@ namespace pr
 			assign(right);
 		}
 
-		// construct from a literal string
-		template <int Len> string(Type const (&right)[Len])
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(1)
-			,m_allocator()
-		{
-			m_ptr[0] = 0;
-			assign(right);
-		}
-
 		// move construct
-		#if _MSC_VER >= 1600
 		string(string&& right) PR_NOEXCEPT
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
@@ -297,7 +292,8 @@ namespace pr
 			m_ptr[0] = 0;
 			assign(std::forward<string>(right));
 		}
-		template <int L, bool F, class A> string(string<Type,L,F,A>&& right) PR_NOEXCEPT
+		template <int L, bool F, class A>
+		string(string<Type,L,F,A>&& right) PR_NOEXCEPT
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -306,10 +302,10 @@ namespace pr
 			m_ptr[0] = 0;
 			assign(std::forward< string<Type,L,F,A> >(right));
 		}
-		#endif
 
 		// construct from right [rofs, rofs + count)
-		template <typename tarr> string(tarr const& right, size_type rofs, size_type count)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string(tarr const& right, size_type rofs, size_type count)
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
 			,m_count(1)
@@ -477,14 +473,16 @@ namespace pr
 		}
 
 		// assign right from any pr::string<Type,...>
-		template <int L,bool F,typename A> string& operator = (string<Type,L,F,A> const& right)
+		template <int L,bool F,typename A>
+		string& operator = (string<Type,L,F,A> const& right)
 		{
 			assign(right);
 			return *this;
 		}
 
 		// assign right
-		template <typename tchar, int Len> string& operator = (tchar const (&right)[Len])
+		template <typename tchar, int Len, typename = valid_char_t<tchar>>
+		string& operator = (tchar const (&right)[Len])
 		{
 			// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
 			assign(right);
@@ -492,15 +490,14 @@ namespace pr
 		}
 
 		// assign right
-		template <typename tarr> string& operator = (tarr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& operator = (tarr const& right)
 		{
 			assign(right);
 			return *this;
 		}
 
 		// move right
-		#if _MSC_VER >= 1600
-		// explicit move right
 		string& operator = (string&& right) PR_NOEXCEPT
 		{
 			assign(std::forward<string>(right));
@@ -508,12 +505,12 @@ namespace pr
 		}
 
 		// move right from any pr::string<>
-		template <int L,bool F,typename A> string& operator =(string<Type,L,F,A>&& rhs) PR_NOEXCEPT
+		template <int L,bool F,typename A>
+		string& operator =(string<Type,L,F,A>&& rhs) PR_NOEXCEPT
 		{
 			assign(std::move(rhs));
 			return *this;
 		}
-		#endif
 
 		// assign [ptr, <null>)
 		string& operator = (const_pointer ptr)
@@ -528,7 +525,8 @@ namespace pr
 		}
 
 		// append right
-		template <typename tstr> string& operator += (tstr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& operator += (tarr const& right)
 		{
 			return append(right);
 		}
@@ -556,7 +554,8 @@ namespace pr
 		}
 
 		// assign [first, last), iterators
-		template <typename iter> string& assign(iter first, iter last)
+		template <typename iter, typename = valid_ptr_t<iter>>
+		string& assign(iter first, iter last)
 		{
 			return replace(begin(), end(), first, last);
 		}
@@ -588,9 +587,9 @@ namespace pr
 			return replace(begin(), end(), first, last);
 		}
 
-		#if _MSC_VER >= 1600
 		// assign by moving right
-		template <int L,bool F,typename A> string& assign(string<Type,L,F,A>&& right) PR_NOEXCEPT
+		template <int L,bool F,typename A>
+		string& assign(string<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
 			// Same object, do nothing
 			if (isthis(right)) {}
@@ -625,12 +624,11 @@ namespace pr
 			}
 			return *this;
 		}
-		#endif
 
 		// assign right [rofs, rofs + count)
-		template <typename tarr> string& assign(tarr const& right, size_type rofs, size_type count)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& assign(tarr const& right, size_type rofs, size_type count)
 		{
-			//static_assert(std::is_assignable<value_type, decltype(right[0])>::value, "Char type mismatch");
 			assert(rofs <= length(right));
 
 			size_type num = length(right) - rofs;
@@ -651,7 +649,8 @@ namespace pr
 		}
 
 		// assign right
-		template <typename tarr> string& assign(tarr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& assign(tarr const& right)
 		{
 			return assign(right, 0, npos);
 		}
@@ -660,7 +659,8 @@ namespace pr
 		//template <typename tchar, int Len> string& assign(tchar const (&right)[Len])
 		//{
 		//	// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
-		//	return assign(&right[0], 0, Len);
+		//	// Don't use 'Len' as the string length, right may be null terminated before 'Len'
+		//	return assign(&right[0]);
 		//}
 
 		// insert count * ch at ofs
@@ -676,13 +676,15 @@ namespace pr
 		}
 
 		// insert right at ofs
-		template <typename tstr> string& insert(size_type ofs, tstr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& insert(size_type ofs, tarr const& right)
 		{
 			return insert(ofs, right, 0, npos);
 		}
 
 		// insert right [rofs, rofs + count) at ofs
-		template <typename tstr> string& insert(size_type ofs, tstr const& right, size_type rofs, size_type count)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& insert(size_type ofs, tarr const& right, size_type rofs, size_type count)
 		{
 			assert(size() >= ofs && right.size() >= rofs); // ofs or rofs off end
 			size_type num = right.size() - rofs;
@@ -725,11 +727,11 @@ namespace pr
 			return *this;
 		}
 
-		// insert right at ofs
-		template <int Len> string& insert(size_type ofs, Type const (&right)[Len])
-		{
-			return insert(ofs, &right[0], Len);
-		}
+		//// insert right at ofs
+		//template <int Len> string& insert(size_type ofs, Type const (&right)[Len])
+		//{
+		//	return insert(ofs, &right[0], Len);
+		//}
 
 		// insert ch at iter
 		iterator insert(const_iterator iter, value_type ch)
@@ -773,7 +775,8 @@ namespace pr
 		}
 
 		// append right [rofs, rofs + count)
-		template <typename tstr> string& append(tstr const& right, size_type rofs, size_type count)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& append(tarr const& right, size_type rofs, size_type count)
 		{
 			assert(rofs <= right.size());
 
@@ -788,7 +791,8 @@ namespace pr
 		}
 
 		// append right
-		template <typename tstr> string& append(tstr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& append(tarr const& right)
 		{
 			return append(right, 0, npos);
 		}
@@ -827,7 +831,8 @@ namespace pr
 		}
 
 		// append [first, last), input iterators
-		template <typename iter> string& append(iter first, iter last)
+		template <typename iter, typename = valid_ptr_t<iter>>
+		string& append(iter first, iter last)
 		{
 			difference_type count = std::distance(first, last);
 			ensure_space(m_count + count, true);
@@ -837,11 +842,11 @@ namespace pr
 			return *this;
 		}
 
-		// append right
-		template <int Len> string& append(Type const (&right)[Len])
-		{
-			return append(&right[0], Len);
-		}
+		//// append right
+		//template <int Len> string& append(Type const (&right)[Len])
+		//{
+		//	return append(&right[0], Len);
+		//}
 
 		// compare [ofs, ofs + n0) with [ptr, ptr + count)
 		int compare(size_type ofs, size_type n0, const_pointer ptr, size_type count) const
@@ -852,7 +857,8 @@ namespace pr
 		}
 
 		// compare [ofs, ofs + n0) with right [rofs, rofs + count)
-		template <typename tstr, typename = tstr::value_type> int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
 		{
 			assert(rofs <= right.size());
 			if (right.size() - rofs < count) count = right.size() - rofs;
@@ -860,13 +866,15 @@ namespace pr
 		}
 
 		// compare [0, size()) with right
-		template <typename tstr, typename = tstr::value_type> int compare(tstr const& right) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		int compare(tstr const& right) const
 		{
 			return compare(0, size(), right, 0, npos);
 		}
 
 		// compare [ofs, ofs + n0) with right
-		template <typename tstr, typename = tstr::value_type> int compare(size_type ofs, size_type n0, tstr const& right) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		int compare(size_type ofs, size_type n0, tstr const& right) const
 		{
 			return compare(ofs, n0, right, 0, npos);
 		}
@@ -884,13 +892,15 @@ namespace pr
 		}
 
 		// replace [ofs, ofs + n0) with right
-		template <typename tstr> string& replace(size_type ofs, size_type n0, tstr const& right)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& replace(size_type ofs, size_type n0, tarr const& right)
 		{
 			return replace(ofs, n0, right, 0, npos);
 		}
 
 		// replace [ofs, ofs + n0) with right [rofs, rofs + count)
-		template <typename tstr> string& replace(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count)
+		template <typename tstr, typename = valid_str_t<tstr>>
+		string& replace(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count)
 		{
 			assert(ofs < size() && rofs <= right.size());
 			if (size()       - ofs  < n0   ) n0    = size()       - ofs;  // trim n0 to size
@@ -987,7 +997,8 @@ namespace pr
 		}
 
 		// replace [first, last) with right
-		template <typename tstr> string& replace(const_iterator first, const_iterator last, tstr const& right)
+		template <typename tstr, typename = valid_str_t<tstr>>
+		string& replace(const_iterator first, const_iterator last, tstr const& right)
 		{
 			return replace(first - begin(), last - first, right);
 		}
@@ -1011,7 +1022,8 @@ namespace pr
 		}
 
 		// replace [first, last) with [first2, last2)
-		template <typename iter> string& replace(const_iterator first, const_iterator last, iter first2, iter last2)
+		template <typename iter, typename = valid_ptr_t<iter>>
+		string& replace(const_iterator first, const_iterator last, iter first2, iter last2)
 		{
 			return replace(first, last, string(first2, last2));
 		}
@@ -1043,23 +1055,31 @@ namespace pr
 			return npos; // no match
 		}
 
-		// look for right beginnng at or after ofs
-		// CAREFUL! this method is a bit dangerous because literal strings have a length 1 character
-		// longer than you'd expect. This method has been setup for the common case like this:
-		//    find("Me") searches for {'M','e'}
-		// If you do this:
-		//    char me[] = {'M','e','\0'};      find(me); <=== the last '\0' character will not be matched.
-		//    char me[] = {'M','e','\0','\0'}; find(me); <=== the last '\0' character will not be matched but the first '\0' will.
-		// These are equivalent
-		//    char me[] = {'M','e'};  find(me) == find("Me");
-		template <int Len> size_type find(Type const (&right)[Len], size_type ofs = 0) const
+		// lock for [ptr,null) beginning at or after ofs
+		size_type find(const_pointer ptr, size_type ofs = 0) const
 		{
-			// Note: Len will include the null terminator for literal strings
-			return find(&right[0], ofs, Len - (right[Len-1] == 0));
+			assert(ptr != nullptr);
+			return find(ptr, ofs, traits::length(ptr));
 		}
 
+		//// look for right beginnng at or after ofs
+		//// CAREFUL! this method is a bit dangerous because literal strings have a length 1 character
+		//// longer than you'd expect. This method has been setup for the common case like this:
+		////    find("Me") searches for {'M','e'}
+		//// If you do this:
+		////    char me[] = {'M','e','\0'};      find(me); <=== the last '\0' character will not be matched.
+		////    char me[] = {'M','e','\0','\0'}; find(me); <=== the last '\0' character will not be matched but the first '\0' will.
+		//// These are equivalent
+		////    char me[] = {'M','e'};  find(me) == find("Me");
+		//template <int Len> size_type find(Type const (&right)[Len], size_type ofs = 0) const
+		//{
+		//	// Note: Len will include the null terminator for literal strings
+		//	return find(&right[0], ofs, Len - (right[Len-1] == 0));
+		//}
+
 		// look for right beginnng at or after ofs
-		template <typename tstr> size_type find(tstr const& right, size_type ofs = 0) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type find(tstr const& right, size_type ofs = 0) const
 		{
 			return find(right.c_str(), ofs, right.size());
 		}
@@ -1085,7 +1105,8 @@ namespace pr
 		}
 
 		// look for right beginning before ofs
-		template <typename tstr> size_type rfind(tstr const& right, size_type ofs = npos) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type rfind(tstr const& right, size_type ofs = npos) const
 		{
 			return rfind(right.c_str(), ofs, right.size());
 		}
@@ -1103,7 +1124,8 @@ namespace pr
 		}
 
 		// look for one of right at or after ofs
-		template <typename tstr>size_type find_first_of(tstr const& right, size_type ofs = 0) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type find_first_of(tstr const& right, size_type ofs = 0) const
 		{
 			return find_first_of(right.c_str(), ofs, right.size());
 		}
@@ -1135,7 +1157,8 @@ namespace pr
 		}
 
 		// look for one of right before ofs
-		template <typename tstr> size_type find_last_of(tstr const& right, size_type ofs = npos) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type find_last_of(tstr const& right, size_type ofs = npos) const
 		{
 			return find_last_of(right.c_str(), ofs, right.size());
 		}
@@ -1167,7 +1190,8 @@ namespace pr
 		}
 
 		// look for none of right at or after ofs
-		template <typename tstr> size_type find_first_not_of(tstr const& right, size_type ofs = 0) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type find_first_not_of(tstr const& right, size_type ofs = 0) const
 		{
 			return find_first_not_of(right.c_str(), ofs, right.size());
 		}
@@ -1199,7 +1223,8 @@ namespace pr
 		}
 
 		// look for none of right before ofs
-		template <typename tstr> size_type find_last_not_of(tstr const& right, size_type ofs = npos) const
+		template <typename tstr, typename = valid_str_t<tstr>>
+		size_type find_last_not_of(tstr const& right, size_type ofs = npos) const
 		{
 			return find_last_not_of(right.c_str(), ofs, right.size());
 		}
@@ -1313,7 +1338,6 @@ namespace pr
 		res += rhs;
 		return res;
 	}
-	#if _MSC_VER >= 1600
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
 	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0>&& lhs, string<T,L1,F1,A1>&& rhs)
 	{
@@ -1329,7 +1353,6 @@ namespace pr
 	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T const* rhs) { return std::move(lhs.append(rhs)); }
 	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (T lhs, string<T,L,F,A>&& rhs)        { return std::move(rhs.insert(0, 1, lhs)); }
 	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T rhs)        { return std::move(lhs.append(1, rhs)); }
-	#endif
 
 	// equality operators
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator == (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return lhs.compare(rhs) == 0; }
@@ -1412,6 +1435,11 @@ namespace std
 		}
 	};
 }
+
+#ifdef PR_NOEXCEPT_DEFINED
+#   undef PR_NOEXCEPT_DEFINED
+#   undef PR_NOEXCEPT
+#endif
 
 #if PR_UNITTESTS
 #include <string>
@@ -1562,11 +1590,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
-#ifdef PR_NOEXCEPT_DEFINED
-#   undef PR_NOEXCEPT_DEFINED
-#   undef PR_NOEXCEPT
-#endif
-
 #endif
