@@ -104,7 +104,7 @@ namespace pr
 				,m_recv_newline(recv_newline)
 				,m_send_newline(send_newline)
 				,m_readonly(readonly)
-				,m_input_buffer_size(~0U)
+				,m_input_buffer_size(~size_t())
 			{}
 		};
 

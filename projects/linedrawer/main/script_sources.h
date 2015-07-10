@@ -6,7 +6,7 @@
 
 #include "linedrawer/main/forward.h"
 #include "pr/filesys/filewatch.h"
-#include "pr/script/script_forward.h"
+#include "pr/script/forward.h"
 #include "linedrawer/main/lua_source.h"
 #include "linedrawer/main/ldrevent.h"
 

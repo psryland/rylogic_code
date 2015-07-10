@@ -15,7 +15,7 @@ try:
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	dir      = sys.argv[1]
+	dir      = sys.argv[1] if len(sys.argv) > 1 else UserVars.root + "\\projects\\unittests"
 	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
 	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
 	outfile  = dir + "\\unittests.h"
@@ -39,6 +39,7 @@ try:
 		"pr/physics/",
 		"pr/sound/",
 		"pr/storage/xfile",
+		"pr/script_old/",
 		"pr/terrain/",
 		"pr/collision/todo/",
 		"pr/collision/builder/",

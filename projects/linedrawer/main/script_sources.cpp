@@ -59,7 +59,12 @@ namespace ldr
 		{
 			ParseResult out(m_store);
 			std::size_t bcount = m_store.size();
-			ParseString(m_rdr, str.c_str(), out, false, pr::ldr::DefaultContext, nullptr, nullptr, &m_lua_src);
+
+			
+			pr::script::Reader reader;
+			pr::script::PtrA<> src(str.c_str());
+			reader.EmbeddedCode.Handler.push_back(&m_lua_src);
+			Parse(m_rdr, reader, out, false, pr::ldr::DefaultContext);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
 			pr::events::Send(Event_Refresh());
@@ -100,23 +105,6 @@ namespace ldr
 			std::size_t bcount = m_store.size();
 			ParseResult out(m_store);
 
-			// An include handler that records all of the files opened
-			// so that we can detect changes in those files
-			struct LdrIncludes :FileIncludes
-			{
-				StrCont m_paths;
-				std::unique_ptr<Src> Open(pr::script::string const& include, Loc const& loc, bool search_paths_only) override
-				{
-					auto src = FileIncludes::Open(include, loc, search_paths_only);
-					if (src)
-					{
-						auto fsrc = static_cast<FileSrc*>(src.get());
-						m_paths.push_back(fsrc->m_file_loc.m_file);
-					}
-					return src;
-				}
-			} includes;
-
 			// Add the file based on it's file type
 			std::string extn = pr::filesys::GetExtension(m_files.back());
 			if (pr::str::EqualI(extn, "lua"))
@@ -125,18 +113,20 @@ namespace ldr
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
-				BufferedSrc src(pr::Fmt("*Model {\"%s\"}", filepath));
+				auto str = pr::Fmt("*Model {\"%s\"}", filepath);
+				Buffer<> src(ESrcType::Buffered, std::begin(str), std::end(str));
+
 				Reader reader(src);
-				reader.IncludeHandler(&includes);
+				reader.Includes.FileOpened += [&](string const& fpath){ m_paths.push_back(fpath); };
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 			else // assume ldr script file
 			{
-				FileSrc src(m_files.back().c_str());
+				FileSrc<> src(m_files.back().c_str());
 				Reader reader(src);
-				reader.IncludeHandler(&includes);
-				reader.CodeHandler(&m_lua_src);
-				reader.IgnoreMissingIncludes(m_settings.m_IgnoreMissingIncludes);
+				reader.Includes.FileOpened += [&](string const& fpath){ m_paths.push_back(fpath); };
+				reader.Includes.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+				reader.EmbeddedCode.Handler.push_back(&m_lua_src);
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 

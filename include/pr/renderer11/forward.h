@@ -91,8 +91,8 @@ namespace pr
 		typedef pr::uint8  byte;
 		typedef uintptr_t  RdrId;
 		typedef pr::uint16 SortKeyId;
-		static RdrId const AutoId = ~0U; // A special value for automatically generating an Id
-		static RdrId const InvalidId = 0U;
+		static RdrId const AutoId = ~RdrId(); // A special value for automatically generating an Id
+		static RdrId const InvalidId = RdrId();
 
 		typedef pr::string<char, 32>     string32;
 		typedef pr::string<char, 512>    string512;

@@ -109,14 +109,13 @@ namespace pr
 				Light light;
 
 				// Parse the settings
-				pr::script::Reader reader;
-				pr::script::PtrSrc src(settings);
-				reader.AddSource(src);
+				pr::script::PtrA<> src(settings);
+				pr::script::Reader reader(src);
 
 				// Check the hash values are correct
 				#if PR_DBG_RDR
-				static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,char>(
-					[&](char const* s) { return reader.HashKeyword(s); });
+				static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>(
+					[&](wchar_t const* s) { return reader.HashKeyword(s); });
 				#endif
 
 				ELightKW kw;
@@ -124,19 +123,19 @@ namespace pr
 				{
 					switch (kw)
 					{
-					case ELightKW::Pos:  reader.ExtractVector3S(light.m_position, 1.0f); break;
-					case ELightKW::Dir:  reader.ExtractVector3S(light.m_direction, 0.0f); break;
-					case ELightKW::Type: reader.ExtractEnumS(light.m_type); break;
-					case ELightKW::Amb:  reader.ExtractIntS(light.m_ambient.m_aarrggbb, 16); break;
-					case ELightKW::Diff: reader.ExtractIntS(light.m_diffuse.m_aarrggbb, 16); break;
-					case ELightKW::Spec: reader.ExtractIntS(light.m_specular.m_aarrggbb, 16); break;
-					case ELightKW::SPwr: reader.ExtractRealS(light.m_specular_power); break;
-					case ELightKW::InCA: reader.ExtractRealS(light.m_inner_cos_angle); break;
-					case ELightKW::OtCA: reader.ExtractRealS(light.m_outer_cos_angle); break;
-					case ELightKW::Rng:  reader.ExtractRealS(light.m_range); break;
-					case ELightKW::FOff: reader.ExtractRealS(light.m_falloff); break;
-					case ELightKW::Shdw: reader.ExtractRealS(light.m_cast_shadow); break;
-					case ELightKW::On:   reader.ExtractBoolS(light.m_on); break;
+					case ELightKW::Pos:  reader.Vector3S(light.m_position, 1.0f); break;
+					case ELightKW::Dir:  reader.Vector3S(light.m_direction, 0.0f); break;
+					case ELightKW::Type: reader.EnumS(light.m_type); break;
+					case ELightKW::Amb:  reader.IntS(light.m_ambient.m_aarrggbb, 16); break;
+					case ELightKW::Diff: reader.IntS(light.m_diffuse.m_aarrggbb, 16); break;
+					case ELightKW::Spec: reader.IntS(light.m_specular.m_aarrggbb, 16); break;
+					case ELightKW::SPwr: reader.RealS(light.m_specular_power); break;
+					case ELightKW::InCA: reader.RealS(light.m_inner_cos_angle); break;
+					case ELightKW::OtCA: reader.RealS(light.m_outer_cos_angle); break;
+					case ELightKW::Rng:  reader.RealS(light.m_range); break;
+					case ELightKW::FOff: reader.RealS(light.m_falloff); break;
+					case ELightKW::Shdw: reader.RealS(light.m_cast_shadow); break;
+					case ELightKW::On:   reader.BoolS(light.m_on); break;
 					}
 				}
 				*this = light;

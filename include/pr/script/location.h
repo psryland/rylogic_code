@@ -5,11 +5,11 @@
 
 #pragma once
 
-#include "pr/script2/forward.h"
+#include "pr/script/forward.h"
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
 		// The location within a stream of characters
 		// By default, Loc is an empty object that passes characters straight through
@@ -30,7 +30,7 @@ namespace pr
 			}
 
 			// Output the stream name (usually file name)
-			virtual pr::string<wchar_t> StreamName() const { return L"[source in memory]"; }
+			virtual string StreamName() const { return L"[source in memory]"; }
 
 			// Output the line number
 			virtual size_t Line() const { return 0; }
@@ -39,7 +39,7 @@ namespace pr
 			virtual size_t Col() const { return 0; }
 
 			// Output the location as a string
-			pr::string<wchar_t> ToString() const { return StreamName().append(Fmt(L"(%d:%d)", Line(), Col())); }
+			string ToString() const { return StreamName().append(Fmt(L"(%d:%d)", Line(), Col())); }
 		};
 
 		// The location within a stream of characters
@@ -107,7 +107,6 @@ namespace pr
 		// A file location
 		struct FileLoc :TextLoc
 		{
-			using string = pr::string<wchar_t, _MAX_PATH>;
 			string m_file;
 
 			FileLoc()
@@ -128,12 +127,11 @@ namespace pr
 			{}
 
 			// Output the stream name (usually file name)
-			pr::string<wchar_t> StreamName() const override { return m_file; }
+			string StreamName() const override { return m_file; }
 		};
 		inline bool operator == (FileLoc const& lhs, FileLoc const& rhs)
 		{
 			return lhs.m_file == rhs.m_file && static_cast<TextLoc const&>(lhs) == static_cast<TextLoc const&>(rhs);
-				
 		}
 		inline bool operator != (FileLoc const& lhs, FileLoc const& rhs)
 		{
@@ -156,7 +154,7 @@ namespace pr
 	{
 		PRUnitTest(pr_script_location)
 		{
-			using namespace pr::script2;
+			using namespace pr::script;
 
 			char const* str =
 				"123\n"

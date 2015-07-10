@@ -23,9 +23,6 @@
     <Filter Include="pr\maths">
       <UniqueIdentifier>{454fdf8d-10ed-483d-9a12-eb4b7de1de16}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\script">
-      <UniqueIdentifier>{055b786b-45c7-4f05-8fa8-b814b71d0a9b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pr\lua">
       <UniqueIdentifier>{628b13d8-6de8-4a0a-817a-00189ee50909}</UniqueIdentifier>
     </Filter>
@@ -77,7 +74,7 @@
     <Filter Include="pr\collision">
       <UniqueIdentifier>{00177e26-fdc4-451b-84d3-d212e96c0a56}</UniqueIdentifier>
     </Filter>
-    <Filter Include="pr\script2">
+    <Filter Include="pr\script">
       <UniqueIdentifier>{3e862334-5c56-46b2-8db6-4612bfd5b3ad}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -177,9 +174,6 @@
     <ClInclude Include="..\include\pr\common\chain.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\char_stream.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\clipboard.h">
       <Filter>pr\common</Filter>
     </ClInclude>
@@ -191,9 +185,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\command_line.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\comment_strip.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\compress.h">
       <Filter>pr\maths</Filter>
@@ -251,12 +242,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\discretepidcontroller.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\embedded_code.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\embedded_lua.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\macros\enum.h">
       <Filter>pr\macros</Filter>
@@ -362,9 +347,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\maths\ivector2.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\includes.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\grid_ctrl.h">
       <Filter>pr\gui</Filter>
@@ -486,9 +468,6 @@
     <ClInclude Include="..\include\pr\common\ireport.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\keywords.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\largeint.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
@@ -549,9 +528,6 @@
     <ClInclude Include="..\include\pr\threads\name_thread.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\newline_strip.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\macros\no_copy.h">
       <Filter>pr\macros</Filter>
     </ClInclude>
@@ -594,17 +570,8 @@
     <ClInclude Include="..\include\pr\maths\polynomial.h">
       <Filter>pr\maths</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\pp_macro_db.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\pp_macro.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\maths\pr_to_ode.h">
       <Filter>pr\maths</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\preprocessor.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\projects\unittests\pp_output.h">
       <Filter>src</Filter>
@@ -635,9 +602,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\renderer11\textures\projected_texture.h">
       <Filter>pr\renderer11\textures</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\reader.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\progress_dlg.h">
       <Filter>pr\gui</Filter>
@@ -695,15 +659,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\common\range.h">
       <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\script_forward.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\script.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\script_core.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\container\stack.h">
       <Filter>pr\container</Filter>
@@ -774,17 +729,8 @@
     <ClInclude Include="..\include\pr\container\tri_table.h">
       <Filter>pr\container</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\stream_stack.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\network\tcpip.h">
       <Filter>pr\network</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\token.h">
-      <Filter>pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\tokeniser.h">
-      <Filter>pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\unittests.h">
       <Filter>pr\common</Filter>
@@ -966,47 +912,47 @@
     <ClInclude Include="..\include\pr\str\string_util.h">
       <Filter>pr\str</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\reader.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\reader.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\script_core.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\script_core.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\buf8.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\buf8.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\fail_policy.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\fail_policy.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\token.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\token.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\location.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\location.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\preprocessor.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\preprocessor.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\macros.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\macros.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\includes.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\includes.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\filter.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\filter.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\forward.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\forward.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\embedded.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\embedded.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\embedded_lua.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\embedded_lua.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script2\tokeniser.h">
-      <Filter>pr\script2</Filter>
+    <ClInclude Include="..\include\pr\script\tokeniser.h">
+      <Filter>pr\script</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

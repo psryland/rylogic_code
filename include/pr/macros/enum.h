@@ -363,7 +363,7 @@ namespace pr
 			if (hash != value)
 			{
 				char buf[256] = {};
-				_snprintf(buf, _countof(buf), "\n%s::%s hash value should be 0x%8.8X", TEnum::EnumName(), TEnum::MemberName<char>(i), hash);
+				_snprintf(buf, _countof(buf), "\n%s::%s hash value should be 0x%08X", TEnum::EnumName(), TEnum::MemberName<char>(i), hash);
 				s.append(buf);
 				result = false;
 			}

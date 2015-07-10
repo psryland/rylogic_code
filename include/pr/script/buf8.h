@@ -15,7 +15,7 @@
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
 		// Generic character shift register
 		template <typename Derived, typename TStore, typename Char> struct Buf
@@ -229,7 +229,7 @@ namespace pr
 		PRUnitTest(pr_script2_buf8)
 		{
 			using namespace pr::str;
-			using namespace pr::script2;
+			using namespace pr::script;
 
 			{// BufW2
 				wchar_t const src[] = L"0123456789";

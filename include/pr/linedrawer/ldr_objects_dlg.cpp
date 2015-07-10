@@ -163,7 +163,7 @@ namespace pr
 			}
 			void Settings(std::string settings) override
 			{
-				pr::script::PtrSrc src(settings.c_str());
+				pr::script::PtrA<> src(settings.c_str());
 				pr::script::Reader reader(src);
 
 				// Parse the settings
@@ -172,16 +172,16 @@ namespace pr
 					if (pr::str::EqualI(kw, "WindowPos"))
 					{
 						CRect wrect;
-						reader.ExtractInt(wrect.left   ,10);
-						reader.ExtractInt(wrect.top    ,10);
-						reader.ExtractInt(wrect.right  ,10);
-						reader.ExtractInt(wrect.bottom ,10);
+						reader.Int(wrect.left   ,10);
+						reader.Int(wrect.top    ,10);
+						reader.Int(wrect.right  ,10);
+						reader.Int(wrect.bottom ,10);
 						MoveWindow(&wrect);
 						continue;
 					}
 					if (pr::str::EqualI(kw, "SplitterPos"))
 					{
-						int pos; reader.ExtractInt(pos, 10);
+						int pos; reader.Int(pos, 10);
 						m_split.SetSplitterPosPct(pos);
 						continue;
 					}

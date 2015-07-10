@@ -21,7 +21,7 @@
 		<AlternativeType Name="pr::deque&lt;*,*&gt;" />
 		<AlternativeType Name="pr::deque&lt;*&gt;" />
 		<DisplayString Condition="m_last == m_first">[{m_last - m_first}] empty</DisplayString>
-		<DisplayString Condition="m_last != m_first">[{m_last - m_first}] {m_map.m_ptrs[m_map.m_first] + (m_first%CountPerBlock)} ... </DisplayString>   
+		<DisplayString Condition="m_last != m_first">[{m_last - m_first}] {m_map.m_ptrs[m_map.m_first + m_first/CountPerBlock] + (m_first%CountPerBlock)} ... </DisplayString>   
 		<Expand>
 			<Item Name="[count]">m_last - m_first</Item>
 			<IndexListItems>

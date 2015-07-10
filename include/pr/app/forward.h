@@ -61,7 +61,7 @@
 #include "pr/gui/recent_files.h"
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/gui/windows_com.h"
-#include "pr/script/script_forward.h"
+#include "pr/script/forward.h"
 #include "pr/renderer11/renderer.h"
 
 namespace pr

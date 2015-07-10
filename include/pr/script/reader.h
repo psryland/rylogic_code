@@ -1,189 +1,114 @@
 //**********************************
-// Script Reader
-//  Copyright (c) Rylogic Ltd 2007
+// Script
+//  Copyright (c) Rylogic Ltd 2015
 //**********************************
-// Usage Notes:
-// - Programmatically Resolved Symbols:
-//   Implement using the IPPMacroDB interface. The default implementation
-//   'PPMacroDB' has a 'm_resolver' pointer setup for this already.
-// - Embedded Lua Code:
-//   Use an 'EmbeddedLua' char stream
 
 #pragma once
 
 #include "pr/maths/maths.h"
-#include "pr/script/script.h"
+#include "pr/script/forward.h"
+#include "pr/script/script_core.h"
+#include "pr/script/preprocessor.h"
+#include "pr/script/fail_policy.h"
 
 namespace pr
 {
 	namespace script
 	{
-		// Error handling interface - includes default implementation
-		// Clients can either implement the 'IErrorHandler_Error' method or just the
-		// 'ScriptReader_ShowMessage' method to output the standard formatted error message.
-		// e.g.
-		//   struct ErrorHandler :pr::script::IErrorHandler
-		//   {
-		//       void ShowMessage(char const* str) { ::MessageBoxA(::GetFocus(), str, "Script Error", MB_OK); }
-		//   };
-		struct IErrorHandler
-		{
-			virtual ~IErrorHandler() {}
-			virtual void IErrorHandler_ShowMessage(char const*) {}
-			virtual void IErrorHandler_Error(pr::script::EResult result, char const* error_msg, pr::script::Loc const& loc)
-			{
-				// Report a basic error message.
-				// To implement script history, users should use a history char stream and include that in reported messages.
-				IErrorHandler_ShowMessage(pr::script::ErrMsg(result, error_msg, loc).c_str());
-				throw pr::script::Exception(result, loc, error_msg);
-			}
-		};
-
-		// pr script reader
-		struct Reader
+		// ReaderBase - Reads pr script from a stream of wchar_t's
+		// Not a template so that 'ReaderBase' can be a common base class
+		struct ReaderBase
 		{
 		private:
-			// Notes:
-			//  - Comment strip is used after the preprocessor because comment stripping has to
-			//    ignore literal strings/characters but #if/#endif blocks are allowed to contain
-			//    any old text including unclosed literal strings/characters.
-			PPMacroDB       m_dft_macros;
-			FileIncludes    m_dft_includes;
-			IErrorHandler   m_dft_errors;
-			Preprocessor    m_pp;
-			CommentStrip    m_strip;
-			Src&            m_src;
-			IErrorHandler*  m_error_handler;
-			char const*     m_delim;
-			bool            m_case_sensitive_keywords;
-
-			// Notes:
-			// - There is no default embedded code handler because typically you'd want to share
-			//   the code handling object across many instances of the script reader
-
-			Reader(Reader const&); // no copying
-			Reader& operator=(Reader const&);
-			void EatWhiteSpace() { for (; *pr::str::FindChar(m_delim, *m_src) != 0; ++m_src) {} }
+			Src* m_pp;
+			wchar_t const* m_delim;
+			bool m_case_sensitive;
 
 		public:
-			Reader(bool case_sensitive_keywords = false)
-				:m_dft_macros()
-				,m_dft_includes()
-				,m_dft_errors()
-				,m_pp(&m_dft_macros, &m_dft_includes, 0)
-				,m_strip(m_pp)
-				,m_src(m_strip)
-				,m_error_handler(&m_dft_errors)
-				,m_delim(" \t\r\n\v,;")
-				,m_case_sensitive_keywords(case_sensitive_keywords)
+			ReaderBase(Src& pp, bool case_sensitive)
+				:m_pp(&pp)
+				,m_delim(L" \t\r\n\v,;")
+				,m_case_sensitive(case_sensitive)
 			{}
-			Reader(Src& src, bool case_sensitive_keywords = false) :Reader(case_sensitive_keywords)
+			virtual ~ReaderBase()
+			{}
+
+			// Get/Set delimiter characters
+			wchar_t const* Delimiters() const
 			{
-				AddSource(src);
+				return m_delim;
 			}
-			Reader(Src* src, bool delete_on_pop, bool case_sensitive_keywords = false) :Reader(case_sensitive_keywords)
+			void Delimiters(wchar_t const* delim)
 			{
-				AddSource(src, delete_on_pop);
+				m_delim = delim;
 			}
 
-			// Interface pointers
-			// Set these for non-default handling of macros, includes, embedded code, or error reporting
-			IPPMacroDB*    MacroHandler() const                 { return m_pp.m_macros; }
-			void           MacroHandler(IPPMacroDB* handler)    { m_pp.m_macros = handler ? handler : &m_dft_macros; }
-			IIncludes*     IncludeHandler() const               { return m_pp.m_includes; }
-			void           IncludeHandler(IIncludes* handler)   { m_pp.m_includes = handler ? handler : &m_dft_includes; }
-			IEmbeddedCode* CodeHandler()                        { return m_pp.m_embedded; }
-			void           CodeHandler(IEmbeddedCode* handler)  { m_pp.m_embedded = handler; }
-			IErrorHandler* ErrorHandler() const                 { return m_error_handler; }
-			void           ErrorHandler(IErrorHandler* handler) { m_error_handler = handler ? handler : &m_dft_errors; }
-
-			// User delimiter characters
-			char const*& Delimiters() { return m_delim; }
-
-			// Push a source onto the input stack
-			// Note: specific overloads that add strings or files are not included
-			// as these require allocation. The client should create and control
-			// instances of sources derived from 'Src'
-			void AddSource(Src* src, bool delete_on_pop)
-			{
-				m_pp.push(src, delete_on_pop);
-			}
-			void AddSource(Src& src)
-			{
-				AddSource(&src, false);
-			}
-
-			// Get/Set whether keywords are case sensitive
-			// If false (default), then all keywords are returned as lower case
-			bool CaseSensitiveKeywords() const
-			{
-				return m_case_sensitive_keywords;
-			}
-			void CaseSensitiveKeywords(bool case_sensitive)
-			{
-				m_case_sensitive_keywords = case_sensitive;
-			}
-
-			// Get/Set whether unresolved include files are ignored
-			bool IgnoreMissingIncludes() const      { return m_pp.m_ignore_missing_includes; }
-			void IgnoreMissingIncludes(bool ignore) { m_pp.m_ignore_missing_includes = ignore; }
-
-			// Return the hash of a keyword
-			static pr::hash::HashValue HashKeyword(char const* keyword, bool case_sensitive_keywords)
-			{
-				pr::hash::HashValue kw = case_sensitive_keywords ? pr::hash::HashC(keyword) : pr::hash::HashLwr(keyword);
-				return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
-			}
+			// Get/Set case sensitive keywords on/off
+			bool CaseSensitive() const { return m_case_sensitive; }
+			void CaseSensitive(bool cs) { m_case_sensitive = cs; }
 
 			// Return the hash of a keyword using the current reader settings
-			pr::hash::HashValue HashKeyword(char const* keyword) const
+			static HashValue HashKeyword(wchar_t const* keyword, bool case_sensitive)
 			{
-				return HashKeyword(keyword, m_case_sensitive_keywords);
+				auto kw = case_sensitive ? Hash(keyword) : HashLwr(keyword);
+				return kw;
+				//return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
+			}
+			HashValue HashKeyword(wchar_t const* keyword) const
+			{
+				return HashKeyword(keyword, m_case_sensitive);
 			}
 
 			// Return true if the end of the source has been reached
 			bool IsSourceEnd()
 			{
-				EatWhiteSpace();
-				return *m_src == 0;
+				auto& src = *m_pp;
+				EatWhiteSpace(src, 0, 0);
+				return *src == 0;
 			}
 
 			// Return true if the next token is a keyword
 			bool IsKeyword()
 			{
-				EatWhiteSpace();
-				return *m_src == '*';
+				auto& src = *m_pp;
+				EatWhiteSpace(src, 0, 0);
+				return *src == '*';
 			}
 
-			// Return true if the next non-whitespace character is the start/end of a section
+			// Returns true if the next non-whitespace character is the start/end of a section
 			bool IsSectionStart()
 			{
-				EatWhiteSpace();
-				return *m_src == '{';
+				auto& src = *m_pp;
+				EatDelimiters(src, m_delim);
+				return *src == L'{';
 			}
 			bool IsSectionEnd()
 			{
-				EatWhiteSpace();
-				return *m_src == '}';
+				auto& src = *m_pp;
+				EatDelimiters(src, m_delim);
+				return *src == L'}';
 			}
 
 			// Move to the start/end of a section and then one past it
 			bool SectionStart()
 			{
-				if (IsSectionStart()) { ++m_src; return true; }
-				return ReportError(EResult::TokenNotFound, "expected '{'");
+				auto& src = *m_pp;
+				if (IsSectionStart()) { ++src; return true; }
+				return ReportError(EResult::TokenNotFound, src.Loc(), "expected '{'");
 			}
 			bool SectionEnd()
 			{
-				if (IsSectionEnd()) { ++m_src; return true; }
-				return ReportError(EResult::TokenNotFound, "expected '}'");
+				auto& src = *m_pp;
+				if (IsSectionEnd()) { ++src; return true; }
+				return ReportError(EResult::TokenNotFound, src.Loc(), "expected '}'");
 			}
 
 			// Move to the start of the next line
 			bool NewLine()
 			{
-				Eat::Line(m_src, false);
-				if (pr::str::IsNewLine(*m_src)) ++m_src; else return false;
+				auto& src = *m_pp;
+				EatLine(src, 0, 0);
+				if (pr::str::IsNewLine(*src)) ++src; else return false;
 				return true;
 			}
 
@@ -192,12 +117,13 @@ namespace pr
 			// or the end of the current section or end of the input stream if not found
 			bool FindSectionStart()
 			{
-				for (;*m_src && *m_src != '{' && *m_src != '}';)
+				auto& src = *m_pp;
+				for (;*src && *src != L'{' && *src != L'}';)
 				{
-					if (*m_src == '\"') { Eat::LiteralString(m_src); continue; }
-					else ++m_src;
+					if (*src == L'\"') { EatLiteralString(src); continue; }
+					else ++src;
 				}
-				return *m_src == '{';
+				return *src == L'{';
 			}
 
 			// Advance the source to the end of the current section
@@ -205,15 +131,16 @@ namespace pr
 			// or the end of the input stream (if called from file scope).
 			bool FindSectionEnd()
 			{
-				for (int nest = IsSectionStart() ? 0 : 1; *m_src;)
+				auto& src = *m_pp;
+				for (int nest = IsSectionStart() ? 0 : 1; *src;)
 				{
-					if (*m_src == '\"') { Eat::LiteralString(m_src); continue; }
-					nest += int(*m_src == '{');
-					nest -= int(*m_src == '}');
+					if (*src == L'\"') { EatLiteralString(src); continue; }
+					nest += int(*src == L'{');
+					nest -= int(*src == L'}');
 					if (nest == 0) break;
-					++m_src;
+					++src;
 				}
-				return *m_src == '}';
+				return *src == L'}';
 			}
 
 			// Scans forward until a keyword identifier is found within the current scope.
@@ -222,16 +149,17 @@ namespace pr
 			// Returns true if a keyword is found, false otherwise.
 			template <typename StrType> bool NextKeywordS(StrType& kw)
 			{
-				for (;*m_src && *m_src != '}' && *m_src != '*';)
+				auto& src = *m_pp;
+				for (;*src && *src != L'}' && *src != L'*';)
 				{
-					if (*m_src == '\"') { Eat::LiteralString(m_src); continue; }
-					if (*m_src == '{')  { m_src += FindSectionEnd(); continue; }
-					++m_src;
+					if (*src == L'\"') { EatLiteralString(src); continue; }
+					if (*src == L'{')  { src += FindSectionEnd(); continue; }
+					++src;
 				}
-				if (*m_src == '*') ++m_src; else return false;
+				if (*src == L'*') ++src; else return false;
 				pr::str::Resize(kw, 0);
-				if (!pr::str::ExtractIdentifier(kw, m_src, m_delim)) return false;
-				if (!m_case_sensitive_keywords) pr::str::LowerCase(kw);
+				if (!pr::str::ExtractIdentifier(kw, src, m_delim)) return false;
+				if (!m_case_sensitive) pr::str::LowerCase(kw);
 				return true;
 			}
 
@@ -245,320 +173,369 @@ namespace pr
 			}
 
 			// As above an error is reported if the next token is not a keyword
-			pr::hash::HashValue NextKeywordH()
+			HashValue NextKeywordH()
 			{
-				pr::hash::HashValue kw = 0;
-				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, "keyword expected");
+				auto& src = *m_pp;
+				HashValue kw = 0;
+				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, src.Loc(), "keyword expected");
 				return kw;
 			}
-
-			// As above an error is reported if the next token is not a keyword
 			template <typename Enum> Enum NextKeywordH()
 			{
-				return static_cast<Enum>(NextKeywordH());
+				return Enum(NextKeywordH());
 			}
 
 			// Scans forward until a keyword matching 'named_kw' is found within the current scope.
 			// Returns false if the named keyword is not found, true if it is
-			bool FindNextKeyword(char const* named_kw)
+			bool FindNextKeyword(wchar_t const* named_kw)
 			{
-				pr::hash::HashValue kw_hashed, named_kw_hashed = HashKeyword(named_kw);
-				for (;NextKeywordH(kw_hashed) && kw_hashed != named_kw_hashed;) {}
+				auto kw_hashed = HashValue();
+				auto named_kw_hashed = HashKeyword(named_kw);
+				for (; NextKeywordH(kw_hashed) && kw_hashed != named_kw_hashed; ) {}
 				return named_kw_hashed == kw_hashed;
 			}
 
 			// Extract a token from the source.
 			// A token is a contiguous block of non-separater characters
-			template <typename StrType> bool ExtractToken(StrType& token)
+			template <typename StrType> bool Token(StrType& token)
 			{
+				auto& src = *m_pp;
 				pr::str::Resize(token, 0);
-				if (pr::str::ExtractToken(token, m_src, m_delim)) return true;
+				if (pr::str::ExtractToken(token, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
 			}
-			template <typename StrType> bool ExtractTokenS(StrType& token)
+			template <typename StrType> bool TokenS(StrType& token)
 			{
-				return SectionStart() && ExtractToken(token) && SectionEnd();
-			}
-			template <typename StrType> bool ExtractToken(StrType& token, char const* delim)
-			{
-				std::string sep = m_delim; sep += delim;
-				pr::str::Resize(token, 0);
-				if (pr::str::ExtractToken(token, m_src, sep.c_str())) return true;
-				return ReportError(EResult::TokenNotFound, "token expected");
-			}
-			template <typename StrType> bool ExtractTokenS(StrType& token, char const* delim)
-			{
-				return SectionStart() && ExtractToken(token, delim) && SectionEnd();
+				return SectionStart() && Token(token) && SectionEnd();
 			}
 
-			// Extract an identifier from the source.
-			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
-			template <typename StrType> bool ExtractIdentifier(StrType& word)
+			// Extract a token using additional delimiters
+			template <typename StrType> bool Token(StrType& token, char const* delim)
 			{
+				auto& src = *m_pp;
+				pr::str::Resize(token, 0);
+				if (pr::str::ExtractToken(token, src, std::string(m_delim).append(delim).c_str())) return true;
+				return ReportError(EResult::TokenNotFound, "token expected");
+			}
+			template <typename StrType> bool TokenS(StrType& token, char const* delim)
+			{
+				return SectionStart() && Token(token, delim) && SectionEnd();
+			}
+
+			// Read an identifier from the source.
+			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
+			template <typename StrType> bool Identifier(StrType& word)
+			{
+				auto& src = *m_pp;
 				pr::str::Resize(word, 0);
-				if (pr::str::ExtractIdentifier(word, m_src, m_delim)) return true;
+				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
-			template <typename StrType> bool ExtractIdentifierS(StrType& word)
+			template <typename StrType> bool IdentifierS(StrType& word)
 			{
-				return SectionStart() && ExtractIdentifier(word) && SectionEnd();
+				return SectionStart() && Identifier(word) && SectionEnd();
 			}
 
 			// Extract identifiers from the source separated by 'sep'
-			template <typename StrType> bool ExtractIdentifiers(char, StrType& word)
+			template <typename StrType> bool Identifiers(char sep, StrType& word)
 			{
+				(void)sep;
+				auto& src = *m_pp;
 				pr::str::Resize(word, 0);
-				if (pr::str::ExtractIdentifier(word, m_src, m_delim)) return true;
+				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
-			template <typename StrType, typename... StrTypes> bool ExtractIdentifiers(char sep, StrType& word, StrTypes&&... words)
+			template <typename StrType, typename... StrTypes> bool Identifiers(char sep, StrType& word, StrTypes&&... words)
 			{
+				auto& src = *m_pp;
 				pr::str::Resize(word, 0);
-				if (!pr::str::ExtractIdentifier(word, m_src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
-				if (*m_src == sep) ++m_src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
-				return ExtractIdentifiers(sep, std::forward<StrTypes>(words)...);
+				if (!pr::str::ExtractIdentifier(word, src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
+				if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
+				return Identifiers(sep, std::forward<StrTypes>(words)...);
 			}
-			template <typename StrType, typename... StrTypes> bool ExtractIdentifiersS(char sep, StrType& word, StrTypes&&... words)
+			template <typename StrType, typename... StrTypes> bool IdentifiersS(char sep, StrType& word, StrTypes&&... words)
 			{
-				return SectionStart() && ExtractIdentifiers(sep,word,std::forward<StrTypes>(words)...) && SectionEnd();
+				return SectionStart() && Identifiers(sep,word,std::forward<StrTypes>(words)...) && SectionEnd();
 			}
 
 			// Extract a string from the source.
 			// A string is a sequence of characters between quotes.
-			template <typename StrType> bool ExtractString(StrType& string)
+			template <typename StrType> bool String(StrType& string)
 			{
+				auto& src = *m_pp;
 				pr::str::Resize(string, 0);
-				if (pr::str::ExtractString(string, m_src, 0, m_delim)) return true;
+				if (pr::str::ExtractString(string, src, 0, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
 			}
-			template <typename StrType> bool ExtractStringS(StrType& string)
+			template <typename StrType> bool StringS(StrType& string)
 			{
-				return SectionStart() && ExtractString(string) && SectionEnd();
+				return SectionStart() && String(string) && SectionEnd();
 			}
 
 			// Extract a C-style string from the source.
-			template <typename StrType> bool ExtractCString(StrType& cstring)
+			template <typename StrType> bool CString(StrType& cstring)
 			{
+				auto& src = *m_pp;
 				pr::str::Resize(cstring, 0);
-				if (pr::str::ExtractString(cstring, m_src, '\\', m_delim)) return true;
+				if (pr::str::ExtractString(cstring, src, '\\', m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "cstring expected");
 			}
-			template <typename StrType> bool ExtractCStringS(StrType& cstring)
+			template <typename StrType> bool CStringS(StrType& cstring)
 			{
-				return SectionStart() && ExtractCString(cstring) && SectionEnd();
+				return SectionStart() && CString(cstring) && SectionEnd();
 			}
 
 			// Extract a bool from the source.
-			template <typename Bool> bool ExtractBool(Bool& bool_)
+			template <typename TBool> bool Bool(TBool& bool_)
 			{
-				if (pr::str::ExtractBool(bool_, m_src, m_delim)) return true;
+				auto& src = *m_pp;
+				if (pr::str::ExtractBool(bool_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "bool expected");
 			}
-			template <typename Bool> bool ExtractBoolS(Bool& bool_)
+			template <typename TBool> bool BoolS(TBool& bool_)
 			{
-				return SectionStart() && ExtractBool(bool_) && SectionEnd();
+				return SectionStart() && Bool(bool_) && SectionEnd();
+			}
+			template <typename TBool> bool Bool(TBool* bools, std::size_t num_bools)
+			{
+				while (num_bools--) if (!Bool(*bools++)) return false;
+				return true;
+			}
+			template <typename TBool> bool BoolS(TBool* bools, std::size_t num_bools)
+			{
+				return SectionStart() && Bool(bools, num_bools) && SectionEnd();
 			}
 
 			// Extract an integral type from the source.
-			template <typename Int> bool ExtractInt(Int& int_, int radix)
+			template <typename TInt> bool Int(TInt& int_, int radix)
 			{
-				if (pr::str::ExtractInt(int_, radix, m_src, m_delim)) return true;
+				auto& src = *m_pp;
+				if (pr::str::ExtractInt(int_, radix, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "integral expected");
 			}
-			template <typename Int> bool ExtractIntS(Int& int_, int radix)
+			template <typename TInt> bool IntS(TInt& int_, int radix)
 			{
-				return SectionStart() && ExtractInt(int_, radix) && SectionEnd();
+				return SectionStart() && Int(int_, radix) && SectionEnd();
 			}
-
-			// Extract an enum value from the source.
-			template <typename Enum> bool ExtractEnumValue(Enum& enum_)
+			template <typename TInt> bool Int(TInt* ints, std::size_t num_ints, int radix)
 			{
-				if (pr::str::ExtractEnumValue(enum_, m_src, m_delim)) return true;
-				return ReportError(EResult::TokenNotFound, "enum integral value expected");
+				while (num_ints--) if (!Int(*ints++, radix)) return false;
+				return true;
 			}
-			template <typename Enum> bool ExtractEnumValueS(Enum& enum_)
+			template <typename TInt> bool IntS(TInt* ints, std::size_t num_ints, int radix)
 			{
-				return SectionStart() && ExtractEnum(enum_) && SectionEnd();
-			}
-
-			// Extract an enum identifier from the source.
-			template <typename Enum> bool ExtractEnum(Enum& enum_)
-			{
-				if (pr::str::ExtractEnum(enum_, m_src, m_delim)) return true;
-				return ReportError(EResult::TokenNotFound, "enum member string name expected");
-			}
-			template <typename Enum> bool ExtractEnumS(Enum& enum_)
-			{
-				return SectionStart() && ExtractEnum(enum_) && SectionEnd();
+				return SectionStart() && Int(ints, num_ints, radix) && SectionEnd();
 			}
 
 			// Extract a real from the source.
-			template <typename Real> bool ExtractReal(Real& real_)
+			template <typename TReal> bool Real(TReal& real_)
 			{
-				if (pr::str::ExtractReal(real_, m_src, m_delim)) return true;
+				auto& src = *m_pp;
+				if (pr::str::ExtractReal(real_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "real expected");
 			}
-			template <typename Real> bool ExtractRealS(Real& real_)
+			template <typename TReal> bool RealS(TReal& real_)
 			{
-				return SectionStart() && ExtractReal(real_) && SectionEnd();
+				return SectionStart() && Real(real_) && SectionEnd();
 			}
-
-			// Extract an array of bools from the source.
-			template <typename Bool> bool ExtractBoolArray(Bool* bools, std::size_t num_bools)
+			template <typename TReal> bool Real(TReal* reals, std::size_t num_reals)
 			{
-				while (num_bools--) if (!ExtractBool(*bools++)) return false;
+				while (num_reals--) if (!Real(*reals++)) return false;
 				return true;
 			}
-			template <typename Bool> bool ExtractBoolArrayS(Bool* bools, std::size_t num_bools)
+			template <typename TReal> bool RealS(TReal* reals, std::size_t num_reals)
 			{
-				return SectionStart() && ExtractBoolArray(bools, num_bools) && SectionEnd();
+				return SectionStart() && Real(reals, num_reals) && SectionEnd();
 			}
 
-			// Extract an array of integral types from the source.
-			template <typename Int> bool ExtractIntArray(Int* ints, std::size_t num_ints, int radix)
+			// Extract an enum value from the source.
+			template <typename TEnum> bool EnumValue(TEnum& enum_)
 			{
-				while (num_ints--) if (!ExtractInt(*ints++, radix)) return false;
-				return true;
+				auto& src = *m_pp;
+				if (pr::str::ExtractEnumValue(enum_, src, m_delim)) return true;
+				return ReportError(EResult::TokenNotFound, "enum integral value expected");
 			}
-			template <typename Int> bool ExtractIntArrayS(Int* ints, std::size_t num_ints, int radix)
+			template <typename TEnum> bool EnumValueS(TEnum& enum_)
 			{
-				return SectionStart() && ExtractIntArray(ints, num_ints, radix) && SectionEnd();
+				return SectionStart() && EnumValue(enum_) && SectionEnd();
 			}
 
-			// Extract an array of reals from the source.
-			template <typename Real> bool ExtractRealArray(Real* reals, std::size_t num_reals)
+			// Extract an enum identifier from the source.
+			template <typename TEnum> bool Enum(TEnum& enum_)
 			{
-				while (num_reals--) if (!ExtractReal(*reals++)) return false;
-				return true;
+				auto& src = *m_pp;
+				if (pr::str::ExtractEnum(enum_, src, m_delim)) return true;
+				return ReportError(EResult::TokenNotFound, "enum member string name expected");
 			}
-			template <typename Real> bool ExtractRealArrayS(Real* reals, std::size_t num_reals)
+			template <typename TEnum> bool EnumS(TEnum& enum_)
 			{
-				return SectionStart() && ExtractRealArray(reals, num_reals) && SectionEnd();
+				return SectionStart() && Enum(enum_) && SectionEnd();
 			}
 
 			// Extract a vector from the source
-			bool ExtractVector2(pr::v2& vector)
+			bool Vector2(pr::v2& vector)
 			{
-				return ExtractReal(vector.x) && ExtractReal(vector.y);
+				return Real(vector.x) && Real(vector.y);
 			}
-			bool ExtractVector2S(pr::v2& vector)
+			bool Vector2S(pr::v2& vector)
 			{
-				return SectionStart() && ExtractVector2(vector) && SectionEnd();
+				return SectionStart() && Vector2(vector) && SectionEnd();
 			}
 
 			// Extract a vector from the source
-			bool ExtractVector3(pr::v4& vector, float w)
+			bool Vector3(pr::v4& vector, float w)
 			{
 				vector.w = w;
-				return ExtractReal(vector.x) && ExtractReal(vector.y) && ExtractReal(vector.z);
+				return Real(vector.x) && Real(vector.y) && Real(vector.z);
 			}
-			bool ExtractVector3S(pr::v4& vector, float w)
+			bool Vector3S(pr::v4& vector, float w)
 			{
-				return SectionStart() && ExtractVector3(vector, w) && SectionEnd();
+				return SectionStart() && Vector3(vector, w) && SectionEnd();
 			}
 
 			// Extract a vector from the source
-			bool ExtractVector4(pr::v4& vector)
+			bool Vector4(pr::v4& vector)
 			{
-				return ExtractReal(vector.x) && ExtractReal(vector.y) && ExtractReal(vector.z) && ExtractReal(vector.w);
+				return Real(vector.x) && Real(vector.y) && Real(vector.z) && Real(vector.w);
 			}
-			bool ExtractVector4S(pr::v4& vector)
+			bool Vector4S(pr::v4& vector)
 			{
-				return SectionStart() && ExtractVector4(vector) && SectionEnd();
+				return SectionStart() && Vector4(vector) && SectionEnd();
 			}
 
 			// Extract a quaternion from the source
-			bool ExtractQuaternion(pr::Quat& quaternion)
+			bool Quaternion(pr::Quat& quaternion)
 			{
-				return ExtractReal(quaternion.x) && ExtractReal(quaternion.y) && ExtractReal(quaternion.z) && ExtractReal(quaternion.w);
+				return Real(quaternion.x) && Real(quaternion.y) && Real(quaternion.z) && Real(quaternion.w);
 			}
-			bool ExtractQuaternionS(pr::Quat& quaternion)
+			bool QuaternionS(pr::Quat& quaternion)
 			{
-				return SectionStart() && ExtractQuaternion(quaternion) && SectionEnd();
+				return SectionStart() && Quaternion(quaternion) && SectionEnd();
 			}
 
 			// Extract a 3x3 matrix from the source
-			bool ExtractMatrix3x3(pr::m3x4& transform)
+			bool Matrix3x3(pr::m3x4& transform)
 			{
-				return ExtractVector3(transform.x,0.0f) && ExtractVector3(transform.y,0.0f) && ExtractVector3(transform.z,0.0f);
+				return Vector3(transform.x,0.0f) && Vector3(transform.y,0.0f) && Vector3(transform.z,0.0f);
 			}
-			bool ExtractMatrix3x3S(pr::m3x4& transform)
+			bool Matrix3x3S(pr::m3x4& transform)
 			{
-				return SectionStart() && ExtractMatrix3x3(transform) && SectionEnd();
+				return SectionStart() && Matrix3x3(transform) && SectionEnd();
 			}
 
 			// Extract a 4x4 matrix from the source
-			bool ExtractMatrix4x4(pr::m4x4& transform)
+			bool Matrix4x4(pr::m4x4& transform)
 			{
-				return ExtractVector4(transform.x) && ExtractVector4(transform.y) && ExtractVector4(transform.z) && ExtractVector4(transform.w);
+				return Vector4(transform.x) && Vector4(transform.y) && Vector4(transform.z) && Vector4(transform.w);
 			}
-			bool ExtractMatrix4x4S(pr::m4x4& transform)
+			bool Matrix4x4S(pr::m4x4& transform)
 			{
-				return SectionStart() && ExtractMatrix4x4(transform) && SectionEnd();
+				return SectionStart() && Matrix4x4(transform) && SectionEnd();
 			}
 
 			// Extract a byte array
-			bool ExtractData(void* data, std::size_t length)
+			bool Data(void* data, std::size_t length)
 			{
-				return ExtractIntArray(static_cast<unsigned char*>(data), length, 16);
+				return Int(static_cast<unsigned char*>(data), length, 16);
 			}
-			bool ExtractDataS(void* data, std::size_t length)
+			bool DataS(void* data, std::size_t length)
 			{
-				return SectionStart() && ExtractData(data, length) && SectionEnd();
+				return SectionStart() && Data(data, length) && SectionEnd();
 			}
 
 			// Extract a complete section as a preprocessed string.
-			// Note: To embed arbitrary text in a script use #lit/#end and then
-			// ExtractSection rather than ExtractLiteralSection.
-			// Assumes an stl-like string interface, use 'pr::str::fixed_buffer' if necessary
-			template <typename String> bool ExtractSection(String& str, bool include_braces)
+			// Note: To embed arbitrary text in a script use #lit/#end and then Section()
+			template <typename String> bool Section(String& str, bool include_braces)
 			{
 				// Do not str.resize(0) here, that's the callers decision
-				if (IsSectionStart()) ++m_src; else return ReportError(EResult::TokenNotFound, "expected '{'");
-				if (include_braces) str.push_back('{');
-				for (int nest = 1; *m_src; ++m_src)
+				auto& src = *m_pp;
+				StringLit lit;
+				if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, "expected '{'");
+				if (include_braces) pr::str::Append(str, L'{');
+				for (int nest = 1; *src; ++src)
 				{
-					// While the preprocessor has characters buffered we shouldn't be testing for '}'.
-					// The buffered characters will be those within a literal string, literal char, or #lit/#end section.
-					if (m_pp.input_buffered()) { str.push_back(*m_src); continue; }
-					nest += int(*m_src == '{');
-					nest -= int(*m_src == '}');
+					// If we're in a string/character literal, then ignore any '{''}' characters
+					if (lit.inc(*src)) { pr::str::Append(str, *src); continue; }
+					nest += int(*src == '{');
+					nest -= int(*src == '}');
 					if (nest == 0) break;
-					str.push_back(*m_src);
+					pr::str::Append(str, *src);
 				}
-				if (include_braces) str.push_back('}');
-				if (IsSectionEnd()) ++m_src; else return ReportError(EResult::TokenNotFound, "expected '}'");
+				if (include_braces) pr::str::Append(str, '}');
+				if (IsSectionEnd()) ++src; else return ReportError(EResult::TokenNotFound, "expected '}'");
 				return true;
 			}
 
 			// Allow extension methods. e.g:
-			// template <> bool pr::script::Reader::Extract<MyType>(MyType& my_type)
-			// { return ExtractInt(my_type.int, 10); // etc }
+			// template <> bool pr::script::Reader::Extract<MyType>(MyType& my_type) { return Int(my_type.int, 10); // etc }
 			template <typename Type> bool Extract(Type& type);
 			template <typename Type> bool ExtractS(Type& type)
 			{
 				return SectionStart() && ExtractS(type) && SectionEnd();
 			}
 
-			// Allow users to report errors via the internal error handler
-			bool ReportError(EResult result)
+			// Allow subclasses report errors
+			virtual bool ReportError(EResult result, Location const& loc, char const* msg)
 			{
-				if (m_error_handler) m_error_handler->IErrorHandler_Error(result, pr::ToString(result), m_src.loc());
-				return false;
+				return ThrowOnFailure::Fail(result, loc, msg), false;
 			}
 			bool ReportError(EResult result, char const* msg)
 			{
-				if (m_error_handler) m_error_handler->IErrorHandler_Error(result, msg, m_src.loc());
-				return false;
+				auto& src = *m_pp;
+				return ReportError(result, src.Loc(), msg);
 			}
-			bool ReportError(char const* msg)
+			bool ReportError(EResult result)
 			{
-				if (m_error_handler) m_error_handler->IErrorHandler_Error(EResult::Failed, msg, m_src.loc());
-				return false;
+				return ReportError(result, result.ToStringA());
 			}
+		};
+
+		// The default reader
+		// To specialise the reader for other types of preprocesser, subclass ReaderBase like this
+		struct Reader :Preprocessor<> ,ReaderBase
+		{
+			using Preprocessor = Preprocessor<>;
+
+			#pragma warning(push)
+			#pragma warning(disable:4355) // 'this' : used in base member initializer list
+			explicit Reader(bool case_sensitive = true)
+				:Preprocessor()
+				,ReaderBase(*this, case_sensitive)
+			{}
+			explicit Reader(Src& src, bool case_sensitive = true)
+				:Reader(case_sensitive)
+			{
+				Push(src);
+			}
+			explicit Reader(Src* src, bool delete_on_pop, bool case_sensitive = true)
+				:Reader(case_sensitive)
+			{
+				Push(src, delete_on_pop);
+			}
+			explicit Reader(char const* ptr, bool case_sensitive = true)
+				:Reader(case_sensitive)
+			{
+				auto src = std::make_unique<PtrA<>>(ptr);
+				Push(src.get(), true);
+				src.release();
+			}
+			explicit Reader(wchar_t const* ptr, bool case_sensitive = true)
+				:Reader(case_sensitive)
+			{
+				auto src = std::make_unique<PtrW<>>(ptr);
+				Push(src.get(), true);
+				src.release();
+			}
+			#pragma warning(pop)
+
+			Reader(Reader&& rhs) = delete;
+			Reader(Reader const& rhs) = delete;
+			Reader& operator =(Reader&& rhs) = delete;
+			Reader& operator =(Reader const& rhs) = delete;
 		};
 	}
 }
+
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
@@ -566,8 +543,10 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script_reader)
+		PRUnitTest(pr_script2_reader)
 		{
+			using namespace pr::script;
+
 			char const* src =
 				"#define NUM 23\n"
 				"*Identifier ident\n"
@@ -593,7 +572,7 @@ namespace pr
 				"*LastThing";
 
 			char kw[50];
-			pr::hash::HashValue hashed_kw = 0;
+			HashValue hashed_kw = 0;
 			std::string str;
 			bool bval = false, barray[4];
 			int ival = 0, iarray[4];
@@ -605,65 +584,62 @@ namespace pr
 			pr::m4x4 mat4;
 
 			{// basic extract methods
-				pr::script::Loc    loc;
-				pr::script::PtrSrc ptr(src, &loc);
-				pr::script::Reader reader(ptr, true);
-
-				PR_CHECK(reader.CaseSensitiveKeywords()     ,true);
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
-				PR_CHECK(reader.ExtractIdentifier(str)      ,true); PR_CHECK(str             , "ident"                       );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "String"                      );
-				PR_CHECK(reader.ExtractString(str)          ,true); PR_CHECK(str             , "simple string"               );
-				PR_CHECK(reader.NextKeywordH(hashed_kw)     ,true); PR_CHECK(hashed_kw       , reader.HashKeyword("CString") );
-				PR_CHECK(reader.ExtractCString(str)         ,true); PR_CHECK(str             , "C:\\Path\\Filename.txt"      );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Bool"                        );
-				PR_CHECK(reader.ExtractBool(bval)           ,true); PR_CHECK(bval            , true                          );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Intg"                        );
-				PR_CHECK(reader.ExtractInt(ival, 10)        ,true); PR_CHECK(ival            , -23                           );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Intg16"                      );
-				PR_CHECK(reader.ExtractInt(uival, 16)       ,true); PR_CHECK(uival           , 0xABCDEF00                    );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Real"                        );
-				PR_CHECK(reader.ExtractReal(fval)           ,true); PR_CHECK(fval            , -2.3e+3                       );
-				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "BoolArray"                   );
-				PR_CHECK(reader.ExtractBoolArray(barray, 4) ,true);
+				Reader reader(src, true);
+				PR_CHECK(reader.CaseSensitive()         ,true);
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Identifier"                  );
+				PR_CHECK(reader.Identifier(str)         ,true); PR_CHECK(str             , "ident"                       );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "String"                      );
+				PR_CHECK(reader.String(str)             ,true); PR_CHECK(str             , "simple string"               );
+				PR_CHECK(reader.NextKeywordH(hashed_kw) ,true); PR_CHECK(hashed_kw       , reader.HashKeyword(L"CString"));
+				PR_CHECK(reader.CString(str)            ,true); PR_CHECK(str             , "C:\\Path\\Filename.txt"      );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Bool"                        );
+				PR_CHECK(reader.Bool(bval)              ,true); PR_CHECK(bval            , true                          );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Intg"                        );
+				PR_CHECK(reader.Int(ival, 10)           ,true); PR_CHECK(ival            , -23                           );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Intg16"                      );
+				PR_CHECK(reader.Int(uival, 16)          ,true); PR_CHECK(uival           , 0xABCDEF00                    );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "Real"                        );
+				PR_CHECK(reader.Real(fval)              ,true); PR_CHECK(fval            , -2.3e+3                       );
+				PR_CHECK(reader.NextKeywordS(kw)        ,true); PR_CHECK(std::string(kw) , "BoolArray"                   );
+				PR_CHECK(reader.Bool(barray, 4)         ,true);
 				PR_CHECK(barray[0], true );
 				PR_CHECK(barray[1], false);
 				PR_CHECK(barray[2], true );
 				PR_CHECK(barray[3], false);
-				PR_CHECK(reader.NextKeywordS(kw), true);             PR_CHECK(std::string(kw) , "IntArray");
-				PR_CHECK(reader.ExtractIntArray(iarray, 4, 10), true);
+				PR_CHECK(reader.NextKeywordS(kw)   ,true); PR_CHECK(std::string(kw) , "IntArray");
+				PR_CHECK(reader.Int(iarray, 4, 10) ,true);
 				PR_CHECK(iarray[0], -3);
 				PR_CHECK(iarray[1], +2);
 				PR_CHECK(iarray[2], +1);
 				PR_CHECK(iarray[3], -0);
-				PR_CHECK(reader.NextKeywordS(kw), true);             PR_CHECK(std::string(kw) , "RealArray");
-				PR_CHECK(reader.ExtractRealArray(farray, 4), true);
+				PR_CHECK(reader.NextKeywordS(kw) ,true); PR_CHECK(std::string(kw) , "RealArray");
+				PR_CHECK(reader.Real(farray, 4)  ,true);
 				PR_CHECK(farray[0], 2.3f    );
 				PR_CHECK(farray[1], -1.0e-1f);
 				PR_CHECK(farray[2], +2.0f   );
 				PR_CHECK(farray[3], -0.2f   );
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Vector3");
-				PR_CHECK(reader.ExtractVector3(vec,-1.0f) , true); PR_CHECK(pr::FEql4(vec, pr::v4::make(1.0f, 2.0f, 3.0f,-1.0f)), true);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Vector4");
-				PR_CHECK(reader.ExtractVector4(vec)       , true); PR_CHECK(pr::FEql4(vec, pr::v4::make(4.0f, 3.0f, 2.0f, 1.0f)), true);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Quaternion");
-				PR_CHECK(reader.ExtractQuaternion(quat)   , true); PR_CHECK(pr::FEql4(quat, pr::Quat::make(0.0f, -1.0f, -2.0f, -3.0f)), true);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M3x3");
-				PR_CHECK(reader.ExtractMatrix3x3(mat3)    , true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "M4x4");
-				PR_CHECK(reader.ExtractMatrix4x4(mat4)    , true); PR_CHECK(pr::FEql(mat4, pr::m4x4Identity), true);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Data");
-				PR_CHECK(reader.ExtractData(kw, 16)       , true); PR_CHECK(std::string(kw) , "ABCDEFGHIJKLMNO");
-				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
-				PR_CHECK(reader.ExtractSection(str, false), true); PR_CHECK(str, "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
-				PR_CHECK(reader.FindNextKeyword("Section"), true); str.resize(0);
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "Token");
-				PR_CHECK(reader.ExtractToken(str)         , true); PR_CHECK(str, "123token");
-				PR_CHECK(reader.NextKeywordS(kw)          , true); PR_CHECK(std::string(kw) , "LastThing");
-				PR_CHECK(!reader.IsKeyword()              , true);
-				PR_CHECK(!reader.IsSectionStart()         , true);
-				PR_CHECK(!reader.IsSectionEnd()           , true);
-				PR_CHECK(reader.IsSourceEnd()             , true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector3");
+				PR_CHECK(reader.Vector3(vec,-1.0f)          ,true); PR_CHECK(pr::FEql4(vec, pr::v4::make(1.0f, 2.0f, 3.0f,-1.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Vector4");
+				PR_CHECK(reader.Vector4(vec)                ,true); PR_CHECK(pr::FEql4(vec, pr::v4::make(4.0f, 3.0f, 2.0f, 1.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Quaternion");
+				PR_CHECK(reader.Quaternion(quat)            ,true); PR_CHECK(pr::FEql4(quat, pr::Quat::make(0.0f, -1.0f, -2.0f, -3.0f)), true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M3x3");
+				PR_CHECK(reader.Matrix3x3(mat3)             ,true); PR_CHECK(pr::FEql(mat3, pr::m3x4Identity), true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "M4x4");
+				PR_CHECK(reader.Matrix4x4(mat4)             ,true); PR_CHECK(pr::FEql(mat4, pr::m4x4Identity), true);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Data");
+				PR_CHECK(reader.Data(kw, 16)                ,true); PR_CHECK(std::string(kw) , "ABCDEFGHIJKLMNO");
+				PR_CHECK(reader.FindNextKeyword(L"Section") ,true); str.resize(0);
+				PR_CHECK(reader.Section(str, false)         ,true); PR_CHECK(str, "*SubSection { *Data \n 23 \"With a }\\\"string\\\"{ in it\" }");
+				PR_CHECK(reader.FindNextKeyword(L"Section") ,true); str.resize(0);
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "Token");
+				PR_CHECK(reader.Token(str)                  ,true); PR_CHECK(str, "123token");
+				PR_CHECK(reader.NextKeywordS(kw)            ,true); PR_CHECK(std::string(kw) , "LastThing");
+				PR_CHECK(!reader.IsKeyword()                ,true);
+				PR_CHECK(!reader.IsSectionStart()           ,true);
+				PR_CHECK(!reader.IsSectionEnd()             ,true);
+				PR_CHECK(reader.IsSourceEnd()               ,true);
 			}
 			{
 				char const* src =
@@ -671,15 +647,12 @@ namespace pr
 					"a.b.c\n"
 					"A.B.C.D\n"
 					;
-
-				pr::script::Loc    loc;
-				pr::script::PtrSrc ptr(src, &loc);
-				pr::script::Reader reader(ptr, true);
-
 				std::string s0,s1,s2,s3;
-				reader.ExtractIdentifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
-				reader.ExtractIdentifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
-				reader.ExtractIdentifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
+
+				Reader reader(src);
+				reader.Identifiers('.',s0,s1);        PR_CHECK(s0 == "A" && s1 == "B", true);
+				reader.Identifiers('.',s0,s1,s2);     PR_CHECK(s0 == "a" && s1 == "b" && s2 == "c", true);
+				reader.Identifiers('.',s0,s1,s2,s3);  PR_CHECK(s0 == "A" && s1 == "B" && s2 == "C" && s3 == "D", true);
 			}
 		}
 	}

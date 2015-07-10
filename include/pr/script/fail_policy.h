@@ -5,12 +5,12 @@
 
 #pragma once
 
-#include "pr/script2/forward.h"
-#include "pr/script2/location.h"
+#include "pr/script/forward.h"
+#include "pr/script/location.h"
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
 		// Script exception
 		struct Exception :pr::Exception<EResult>

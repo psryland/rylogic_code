@@ -5,15 +5,51 @@
 
 #pragma once
 
-#include "pr/script2/forward.h"
-#include "pr/script2/buf8.h"
-#include "pr/script2/fail_policy.h"
-#include "pr/script2/script_core.h"
+#include "pr/script/forward.h"
+#include "pr/script/buf8.h"
+#include "pr/script/fail_policy.h"
+#include "pr/script/script_core.h"
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
+		// String/Character literal helper
+		struct StringLit
+		{
+			wchar_t end;
+			bool escaped;
+
+			StringLit()
+				:end()
+				,escaped()
+			{}
+
+			// Boolean test for within a string/character literal
+			operator bool() const
+			{
+				return end != 0;
+			}
+
+			// Processes the current character in 'src'.
+			// Returns true if currently within a string/character literal
+			bool inc(wchar_t ch)
+			{
+				// If we're currently within a literal string or character then
+				// just return characters until the literal ends
+				if (*this)
+				{
+					if (ch == end && !escaped) end = 0;
+					else escaped = ch == L'\\';
+				}
+				else if (ch == L'\"' || ch == L'\'')
+				{
+					end = ch;
+				}
+				return *this;
+			}
+		};
+
 		// Wraps BufWN<> and a reference to a character source and location.
 		// This allows other code to use a Src as a pointer with automatic location and buffering support
 		template <typename BufN, typename TSrc = Src> struct BufSrc :Src
@@ -66,14 +102,6 @@ namespace pr
 		template <typename BufWN = BufW2, typename TSrc = Src> struct Filter :Src
 		{
 			using BufN = BufSrc<BufWN, TSrc>;
-			struct StringLit
-			{
-				wchar_t end;
-				bool escaped;
-				StringLit() :end() ,escaped() {}
-				operator bool() const { return end != 0; }
-			};
-
 			BufN m_reg; // N-character shift register for fast short string buffering
 
 			Filter(TSrc& src)
@@ -119,23 +147,6 @@ namespace pr
 			{
 				auto& src = m_reg;
 				src += n;
-			}
-
-			// Handles string/character literals in 'src'
-			static bool in_string_literal(Src& src, StringLit& lit)
-			{
-				// If we're currently within a literal string or character then
-				// just return characters until the literal ends
-				if (lit)
-				{
-					if (*src == lit.end && !lit.escaped) lit.end = 0;
-					else lit.escaped = *src == L'\\';
-				}
-				else if (*src == L'\"' || *src == L'\'')
-				{
-					lit.end = *src;
-				}
-				return lit;
 			}
 		};
 
@@ -184,7 +195,7 @@ namespace pr
 				{
 					// If we're currently within a literal string or character then
 					// just return characters until the literal ends
-					if (in_string_literal(src, m_literal))
+					if (m_literal.inc(*src))
 						break;
 
 					// Otherwise remove comments
@@ -218,6 +229,7 @@ namespace pr
 			size_t m_lines_max;
 			size_t m_lines_min;
 			StringLit m_literal;
+			EmitCount m_emit;
 
 			StripNewLines(TSrc& src, size_t lines_max = 1, size_t lines_min = 0)
 				:base(src)
@@ -225,6 +237,7 @@ namespace pr
 				,m_lines_max(lines_max)
 				,m_lines_min(std::min(lines_min, lines_max))
 				,m_literal()
+				,m_emit()
 			{
 				seek(0);
 			}
@@ -244,45 +257,37 @@ namespace pr
 				// If the number of lines is greater than 'm_lines_max' delete lines back to 'm_lines_max'
 				// Blank lines are replaced with a single new line character
 				auto& src = m_lines;
-				for (src += n; ;)
+				for (src += n, m_emit -= n; m_emit == 0;)
 				{
-					// Buffered data is data to be output
-					if (!src.empty())
-						break;
-
 					// If we're currently within a literal string or character then
 					// just return characters until the literal ends
-					if (in_string_literal(src, m_literal))
+					if (m_literal.inc(*src))
 						break;
 
 					// Transform new lines
 					if (*src == L'\n')
 					{
 						// Buffer lines up to the max line count or until the next non-whitespace
-						size_t line_count = 0;
-						for (; pr::str::IsWhiteSpace(*src.stream()); )
+						for (size_t i = m_emit; pr::str::IsWhiteSpace(src[i]); )
 						{
-							if (*src.stream() == L'\n')
+							if (src[i] == L'\n')
 							{
 								// Fill the buffer with '\n' up to the max line count
-								if (line_count < m_lines_max)
-									src[line_count++] = L'\n';
+								if (m_emit < m_lines_max)
+									src[m_emit++] = L'\n';
 
 								// Erase the remaining blank line
-								if (line_count < src.size())
-									src.erase(line_count);
-
-								// Advance the underlying stream
-								++src.stream();
+								src.erase(m_emit, (i+1) - m_emit);
+								i = m_emit;
 							}
 							else
 							{
-								src.buffer();
+								++i;
 							}
 						}
 
 						// If below the minimum, insert lines
-						for (; line_count < m_lines_min; ++line_count)
+						for (; m_emit < m_lines_min; ++m_emit)
 						{
 							src.push_front(L'\n');
 						}
@@ -309,7 +314,7 @@ namespace pr
 		PRUnitTest(pr_script2_filter)
 		{
 			using namespace pr::str;
-			using namespace pr::script2;
+			using namespace pr::script;
 
 			{// StripLineContinuations
 				char const* str_in = "Li\

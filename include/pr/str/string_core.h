@@ -78,8 +78,23 @@ namespace pr
 		{
 			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
 			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
-			static size_t strlen(char const* str) { return ::strlen(str); }
-			static size_t strnlen(char const* str, size_t max_count) { return ::strnlen(str, max_count); }
+
+			static size_t             strlen(char const* str)                               { return ::strlen(str); }
+			static size_t             strnlen(char const* str, size_t max_count)            { return ::strnlen(str, max_count); }
+			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
+			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
+			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
+			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
+			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
+			static int                strnicmp(char const* lhs, char const* rhs, int count) { return ::_strnicmp(lhs, rhs, count); }
+			static char const*        str(char const* str, wchar_t const*)                  { return str; }
+			
+			static void        fill(char* ptr, size_t count, char ch)                        { ::memset(ptr, ch, count); }
+			static void        copy(char* dst, char const* src, size_t count)                { ::memcpy(dst, src, count); }
+			static void        move(char* dst, char const* src, size_t count)                { ::memmove(dst, src, count); }
+			static int         compare(char const* first1, char const* first2, size_t count) { return ::strncmp(first1, first2, count); }
+			static bool        eq(char lhs, char rhs)                                        { return lhs == rhs; }
+			static char const* find(char const* first, size_t count, char ch)                { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
 		};
 		template <> struct char_traits<char&      > :char_traits<char> {};
 		template <> struct char_traits<char const > :char_traits<char> {};
@@ -90,37 +105,56 @@ namespace pr
 		{
 			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
 			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
-			static size_t strlen(wchar_t const* str) { return ::wcslen(str); }
-			static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
+
+			static size_t             strlen(wchar_t const* str)                                  { return ::wcslen(str); }
+			static size_t             strnlen(wchar_t const* str, size_t max_count)               { return ::wcsnlen(str, max_count); }
+			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
+			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
+			static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
+			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
+			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
+			static int                strnicmp(wchar_t const* lhs, wchar_t const* rhs, int count) { return ::_wcsnicmp(lhs, rhs, count); }
+			static wchar_t const*     str(char const*, wchar_t const* str)                        { return str; }
+
+			static void           fill(wchar_t* ptr, size_t count, wchar_t ch)                        { for (;count-- != 0; ++ptr) *ptr = ch; }
+			static void           copy(wchar_t* dst, wchar_t const* src, size_t count)                { ::memcpy(dst, src, count * sizeof(wchar_t)); }
+			static void           move(wchar_t* dst, wchar_t const* src, size_t count)                { ::memmove(dst, src, count * sizeof(wchar_t)); }
+			static int            compare(wchar_t const* first1, wchar_t const* first2, size_t count) { return ::wcsncmp(first1, first2, count); }
+			static bool           eq(wchar_t lhs, wchar_t rhs)                                        { return lhs == rhs; }
+			static wchar_t const* find(wchar_t const* first, size_t count, wchar_t ch)                { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
 		};
 		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const&> :char_traits<wchar_t const> {};
+
+		// Use this define to declare a string literal in a function templated on 'tchar'
+		#define PR_STRLITERAL(tchar,s)  char_traits<tchar>::str(s, L##s)
+
 		#pragma endregion
 
 		#pragma region String Traits
-		template <typename Str> struct traits
+		template <typename Str> struct traits :char_traits<typename Str::value_type>
 		{
 			using citer      = typename Str::const_iterator;
 			using miter      = typename Str::iterator;
 			using iter       = typename Str::iterator;
 			using value_type = typename Str::value_type;
 		};
-		template <typename Str> struct traits<Str const>
+		template <typename Str> struct traits<Str const> :char_traits<typename Str::value_type>
 		{
 			using citer      = typename Str::const_iterator;
 			using miter      = typename Str::iterator;
 			using iter       = typename Str::const_iterator;
 			using value_type = typename Str::value_type;
 		};
-		template <typename Char> struct traits<Char const*>
+		template <typename Char> struct traits<Char const*> :char_traits<Char>
 		{
 			using citer      = Char const*;
 			using miter      = Char*;
 			using iter       = Char const*;
 			using value_type = Char const;
 		};
-		template <typename Char> struct traits<Char*>
+		template <typename Char> struct traits<Char*> :char_traits<Char>
 		{
 			using citer      = Char const*;
 			using miter      = Char*;
@@ -135,6 +169,18 @@ namespace pr
 		{};
 		template <typename Char, size_t Len> struct traits<Char[Len]> :traits<Char*>
 		{};
+
+		//template <typename tchar> using valid_char_t = typename std::enable_if<std::is_same<Type, typename std::remove_reference<tchar>::type>::value>::type;
+		//template <typename tarr> using valid_arr_t = valid_char_t<decltype(std::declval<tarr>()[0])>;
+		//template <typename tptr> using valid_ptr_t = valid_char_t<decltype(std::declval<tptr>()[0])>;
+		//template <typename tstr, typename = decltype(std::declval<tstr>().size())> using valid_str_t = valid_arr_t<tstr>;
+
+		// Get the character type from a pointer or iterator
+		template <typename Iter, typename Char = std::remove_reference_t<decltype(*std::declval<Iter>())>>
+		using char_type_t = Char;
+
+		// Checks that 'tstr' is an std::string-like type
+		template <typename tstr, typename = decltype(std::declval<tstr>().size())> using valid_str_t = void;
 		#pragma endregion
 
 		#pragma region Standard Library Functions
@@ -497,7 +543,7 @@ namespace pr
 		}
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindFirst(Str& str, Pred pred)
 		{
-			return FindFirst(str, 0, ~0U, pred);
+			return FindFirst(str, 0, ~size_t(), pred);
 		}
 
 		// Return an iterator to the last position that satisfies 'pred'
@@ -517,7 +563,7 @@ namespace pr
 		}
 		template <typename Str, typename Pred, typename Iter = traits<Str>::iter> inline Iter FindLast(Str& str, Pred pred)
 		{
-			return FindLast(str, 0, ~0U, pred);
+			return FindLast(str, 0, ~size_t(), pred);
 		}
 
 		// Find the first occurance of one of the chars in 'delim'
@@ -1133,15 +1179,15 @@ namespace pr
 				Assign(wstr, 2, 2, asrc, asrc+3); PR_CHECK(Equal(wstr, "stst"), true);
 				Assign(wstr, 2, 2, wsrc, wsrc+3); PR_CHECK(Equal(wstr, "stst"), true);
 
-				Assign(astr, 2, ~0U, asrc, asrc+5); PR_CHECK(Equal(astr, "ststrin"), true);
-				Assign(astr, 2, ~0U, wsrc, wsrc+5); PR_CHECK(Equal(astr, "ststrin"), true);
-				Assign(wstr, 2, ~0U, asrc, asrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
-				Assign(wstr, 2, ~0U, wsrc, wsrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
+				Assign(astr, 2, ~size_t(), asrc, asrc+5); PR_CHECK(Equal(astr, "ststrin"), true);
+				Assign(astr, 2, ~size_t(), wsrc, wsrc+5); PR_CHECK(Equal(astr, "ststrin"), true);
+				Assign(wstr, 2, ~size_t(), asrc, asrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
+				Assign(wstr, 2, ~size_t(), wsrc, wsrc+5); PR_CHECK(Equal(wstr, "ststrin"), true);
 
-				Assign(astr, 2, ~0U, "ab"); PR_CHECK(Equal(astr, "stab"), true);
-				Assign(astr, 2, ~0U, "ab"); PR_CHECK(Equal(astr, "stab"), true);
-				Assign(wstr, 2, ~0U, "ab"); PR_CHECK(Equal(wstr, "stab"), true);
-				Assign(wstr, 2, ~0U, "ab"); PR_CHECK(Equal(wstr, "stab"), true);
+				Assign(astr, 2, ~size_t(), "ab"); PR_CHECK(Equal(astr, "stab"), true);
+				Assign(astr, 2, ~size_t(), "ab"); PR_CHECK(Equal(astr, "stab"), true);
+				Assign(wstr, 2, ~size_t(), "ab"); PR_CHECK(Equal(wstr, "stab"), true);
+				Assign(wstr, 2, ~size_t(), "ab"); PR_CHECK(Equal(wstr, "stab"), true);
 
 				Assign(astr, "done"); PR_CHECK(Equal(astr, "done"), true);
 				Assign(astr, "done"); PR_CHECK(Equal(astr, "done"), true);

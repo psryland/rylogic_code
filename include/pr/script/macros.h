@@ -5,20 +5,19 @@
 
 #pragma once
 
-#include "pr/script2/forward.h"
-#include "pr/script2/script_core.h"
-#include "pr/script2/location.h"
-#include "pr/script2/fail_policy.h"
+#include "pr/script/forward.h"
+#include "pr/script/script_core.h"
+#include "pr/script/location.h"
+#include "pr/script/fail_policy.h"
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
 		// A preprocessor macro definition
 		template <typename FailPolicy = ThrowOnFailure>
 		struct Macro
 		{
-			using string = pr::string<wchar_t>;
 			using Params = pr::vector<string, 5>;
 
 			// Helper for recursive expansion of macros
@@ -243,8 +242,25 @@ namespace pr
 			MacroDB(MacroDB&& rhs)
 				:m_db(std::move(rhs.m_db))
 			{}
-			MacroDB(MacroDB const&) = delete;
-			MacroDB& operator =(MacroDB const&) = delete;
+			MacroDB(MacroDB const& rhs)
+				:m_db(rhs.m_db)
+			{}
+			MacroDB& operator =(MacroDB&& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_db = std::move(rhs.m_db);
+				}
+				return *this;
+			}
+			MacroDB& operator =(MacroDB const& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_db = rhs.m_db;
+				}
+				return *this;
+			}
 			virtual ~MacroDB()
 			{}
 

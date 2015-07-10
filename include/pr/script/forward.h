@@ -27,9 +27,10 @@
 
 namespace pr
 {
-	namespace script2
+	namespace script
 	{
 		using HashValue = int;
+		using string = pr::string<wchar_t>;
 
 		#pragma region Enumerations
 

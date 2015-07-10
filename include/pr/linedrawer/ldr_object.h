@@ -596,41 +596,29 @@ namespace pr
 		// Parse ldr script from a text file
 		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
 		inline void ParseFile(
-			pr::Renderer& rdr,                                         // The renderer to create models for
-			char const* filename,                                      // The file containing the ldr script
-			ParseResult& out,                                          // The results of parsing the script
-			bool async = true,                                         // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
-			pr::script::IIncludes* include_handler = nullptr,          // The include resolver
-			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
-			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // lua code handler to use instead of the default
+			pr::Renderer& rdr,                     // The renderer to create models for
+			char const* filename,                  // The file containing the ldr script
+			ParseResult& out,                      // The results of parsing the script
+			bool async = true,                     // True if parsing should be done in a background thread
+			ContextId context_id = DefaultContext) // The context id to assign to each created object
 		{
-			pr::script::FileSrc src(filename);
+			pr::script::FileSrc<> src(filename);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler(include_handler);
-			reader.ErrorHandler(script_error_handler);
-			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 
 		// Parse ldr script from a string
 		// 'include_paths' is a comma/semicolon separated list of include "paths" to use to resolve #include directives (or nullptr)
+		template <typename Char>
 		inline void ParseString(
-			pr::Renderer& rdr,                                         // The reader to create models for
-			char const* ldr_script,                                    // The literal string containing the script
-			ParseResult& out,                                          // The results of parsing the script
-			bool async = true,                                         // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
-			pr::script::IIncludes* include_handler = nullptr,          // Include paths (or nullptr) used to make #include mean something for strings
-			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
-			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // Lua code handler to use instead of the default
+			pr::Renderer& rdr,                     // The reader to create models for
+			Char const* ldr_script,                // The literal string containing the script
+			ParseResult& out,                      // The results of parsing the script
+			bool async = true,                     // True if parsing should be done in a background thread
+			ContextId context_id = DefaultContext) // The context id to assign to each created object
 		{
-			pr::script::Loc loc("ldr_string", 0, 0);
-			pr::script::PtrSrc src(ldr_script, &loc);
+			pr::script::Ptr<Char> src(ldr_script);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler(include_handler);
-			reader.ErrorHandler(script_error_handler);
-			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 
@@ -698,21 +686,21 @@ namespace pr
 				case EKeyword::M4x4:
 					{
 						m4x4 o2w = m4x4Identity;
-						reader.ExtractMatrix4x4S(o2w);
+						reader.Matrix4x4S(o2w);
 						p2w = o2w * p2w;
 						break;
 					}
 				case EKeyword::M3x3:
 					{
 						m4x4 m = m4x4Identity;
-						reader.ExtractMatrix3x3S(m.rot);
+						reader.Matrix3x3S(m.rot);
 						p2w = m * p2w;
 						break;
 					}
 				case EKeyword::Pos:
 					{
 						m4x4 m = m4x4Identity;
-						reader.ExtractVector3S(m.pos, 1.0f);
+						reader.Vector3S(m.pos, 1.0f);
 						p2w = m * p2w;
 						break;
 					}
@@ -721,8 +709,8 @@ namespace pr
 						int axis_id;
 						pr::v4 direction;
 						reader.SectionStart();
-						reader.ExtractInt(axis_id, 10);
-						reader.ExtractVector3(direction, 0.0f);
+						reader.Int(axis_id, 10);
+						reader.Vector3(direction, 0.0f);
 						reader.SectionEnd();
 
 						v4 axis = AxisId(axis_id);
@@ -738,7 +726,7 @@ namespace pr
 				case EKeyword::Quat:
 					{
 						pr::Quat quat;
-						reader.ExtractVector4S(quat.xyzw);
+						reader.Vector4S(quat.xyzw);
 						p2w = Rotation4x4(quat, v4Origin) * p2w;
 						break;
 					}
@@ -747,8 +735,8 @@ namespace pr
 						float radius;
 						pr::v4 centre;
 						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
+						reader.Vector3(centre, 1.0f);
+						reader.Real(radius);
 						reader.SectionEnd();
 						p2w = pr::Random4x4(centre, radius) * p2w;
 						break;
@@ -758,8 +746,8 @@ namespace pr
 						float radius;
 						pr::v4 centre;
 						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
+						reader.Vector3(centre, 1.0f);
+						reader.Real(radius);
 						reader.SectionEnd();
 						p2w = Translation4x4(Random3(centre, radius, 1.0f)) * p2w;
 						break;
@@ -774,7 +762,7 @@ namespace pr
 				case EKeyword::Euler:
 					{
 						pr::v4 angles;
-						reader.ExtractVector3S(angles, 0.0f);
+						reader.Vector3S(angles, 0.0f);
 						p2w = Rotation4x4(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
 						break;
 					}
@@ -782,13 +770,13 @@ namespace pr
 					{
 						pr::v4 scale;
 						reader.SectionStart();
-						reader.ExtractReal(scale.x);
+						reader.Real(scale.x);
 						if (reader.IsSectionEnd())
 							scale.z = scale.y = scale.x;
 						else
 						{
-							reader.ExtractReal(scale.y);
-							reader.ExtractReal(scale.z);
+							reader.Real(scale.y);
+							reader.Real(scale.z);
 						}
 						reader.SectionEnd();
 						p2w = Scale4x4(scale.x, scale.y, scale.z, v4Origin) * p2w;

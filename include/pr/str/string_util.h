@@ -200,7 +200,8 @@ namespace pr
 
 		// Replace instances of 'what' with 'with' in-place
 		// Returns the number of instances of 'what' that where replaced
-		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type> size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
+		template <typename Str1, typename Str2, typename Str3, typename Char1 = traits<Str1>::value_type>
+		size_t Replace(Str1& str, Str2 const& what, Str3 const& with)
 		{
 			if (Empty(str))
 				return 0;
@@ -248,7 +249,8 @@ namespace pr
 			}
 			return count;
 		}
-		template <typename Str1, typename Str2, typename Str3> size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
+		template <typename Str1, typename Str2, typename Str3>
+		size_t Replace(Str1 const& src, Str1& dst, Str2 const& what, Str3 const& with)
 		{
 			Assign(dst, BeginC(src), EndC(src));
 			return Replace(dst, what, with);
@@ -266,10 +268,11 @@ namespace pr
 		//}
 
 		// Convert a normal string into a C-style string
-		// This is the std::string -esk version. char* version not implemented yet...
-		template <typename Str2, typename Str1, typename = Str2::value_type> inline Str2 StringToCString(Str1 const& src)
+		template <typename Str1>
+		inline Str1 StringToCString(Str1 const& src)
 		{
-			Str2 dst;
+			// This instance means 'Str2' has to be a std::string-like string
+			Str1 dst;
 			if (Empty(src)) return src;
 			for (auto const* s = &src[0]; *s; ++s)
 			{
@@ -294,9 +297,11 @@ namespace pr
 
 		// Convert a C-style string into a normal string
 		// This is the std::string -esk version. char* version not implemented yet...
-		template <typename Str2, typename Str1, typename Char = Str2::value_type> inline Str2 CStringToString(Str1 const& src)
+		template <typename Str1, typename Char = traits<Str1>::value_type>
+		inline Str1 CStringToString(Str1 const& src)
 		{
-			Str2 dst;
+			// This instance means 'Str2' has to be a std::string-like string
+			Str1 dst;
 			if (Empty(src)) return dst;
 			auto len = 0;
 			for (auto const* s = &src[0]; *s; ++s)
@@ -323,17 +328,17 @@ namespace pr
 					case '3':
 						{
 							// ascii character in octal
-							wchar_t oct[9] = {};
-							for (int i = 0; i != 8 && IsOctDigit(*s); ++i, ++s) oct[i] = wchar_t(*s);
-							Append(dst, len++, Char(::wcstoul(oct, nullptr, 8)));
+							Char oct[9] = {};
+							for (int i = 0; i != 8 && IsOctDigit(*s); ++i, ++s) oct[i] = Char(*s);
+							Append(dst, len++, Char(char_traits<Char>::strtoul(oct, nullptr, 8)));
 							break;
 						}
 					case 'x':
 						{
 							// ascii or unicode character in hex
-							wchar_t hex[9] = {};
-							for (int i = 0; i != 8 && IsHexDigit(*s); ++i, ++s) hex[i] = wchar_t(*s);
-							Append(dst, len++, Char(::wcstoul(hex, nullptr, 16)));
+							Char hex[9] = {};
+							for (int i = 0; i != 8 && IsHexDigit(*s); ++i, ++s) hex[i] = Char(*s);
+							Append(dst, len++, Char(char_traits<Char>::strtoul(hex, nullptr, 16)));
 							break;
 						}
 					}
@@ -349,7 +354,8 @@ namespace pr
 		// Look for 'identifier' within the range [ofs, ofs+count) of 'src'.
 		// Returns the index of it's position or ofs+count if not found.
 		// Identifier will be a complete identifier based on the character class IsIdentifier()
-		template <typename Str1, typename Str2> inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
+		template <typename Str1, typename Str2>
+		inline size_t FindIdentifier(Str1 const& src, Str2 const& identifier, size_t ofs, size_t count)
 		{
 			auto begin  = BeginC(src);
 			auto iter   = begin + ofs;
@@ -579,7 +585,7 @@ namespace pr
 				char const res[] = "Not a \\\"Cstring\\\". \\a \\b \\f \\n \\r \\t \\v \\\\ \\? \\\' ";
 				
 				auto cstr1 = StringToCString<std::string>(str);
-				auto str1  = CStringToString<std::wstring>(cstr1);
+				auto str1  = CStringToString(cstr1);
 				PR_CHECK(Equal(cstr1, res), true);
 				PR_CHECK(Equal(str1, str), true);
 			}

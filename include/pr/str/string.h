@@ -92,7 +92,7 @@ namespace pr
 		struct traits :char_traits<Type>
 		{};
 
-		template <typename Ty>   using valid_char_t = typename std::enable_if<std::is_same<Type, typename std::remove_reference<Ty>::type>::value>::type;
+		template <typename tchar> using valid_char_t = typename std::enable_if<std::is_same<Type, typename std::remove_reference<tchar>::type>::value>::type;
 		template <typename tarr> using valid_arr_t = valid_char_t<decltype(std::declval<tarr>()[0])>;
 		template <typename tptr> using valid_ptr_t = valid_char_t<decltype(std::declval<tptr>()[0])>;
 		template <typename tstr, typename = decltype(std::declval<tstr>().size())> using valid_str_t = valid_arr_t<tstr>;
@@ -663,6 +663,80 @@ namespace pr
 		//	return assign(&right[0]);
 		//}
 
+		// append right [rofs, rofs + count)
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& append(tarr const& right, size_type rofs, size_type count)
+		{
+			assert(rofs <= right.size());
+
+			size_type num = right.size() - rofs;
+			if (num < count) count = num;
+
+			ensure_space(m_count + count, true);
+			traits::copy(m_ptr + size(), right.c_str() + rofs, count);
+			m_count += count;
+			m_ptr[size()] = 0;
+			return *this;
+		}
+
+		// append right
+		template <typename tarr, typename = valid_arr_t<tarr>>
+		string& append(tarr const& right)
+		{
+			return append(right, 0, npos);
+		}
+
+		// append [ptr, ptr + count)
+		string& append(const_pointer ptr, size_type count)
+		{
+			if (inside(ptr)) return append(*this, ptr - m_ptr, count); // substring
+			ensure_space(m_count + count, true);
+			traits::copy(m_ptr + size(), ptr, count);
+			m_count += count;
+			m_ptr[size()] = 0;
+			return *this;
+		}
+
+		// append [ptr, <null>)
+		string& append(const_pointer ptr)
+		{
+			return append(ptr, traits::length(ptr));
+		}
+
+		// append count * ch
+		string& append(size_type count, value_type ch)
+		{
+			ensure_space(m_count + count, true);
+			traits::fill(m_ptr + size(), count, ch);
+			m_count += count;
+			m_ptr[size()] = 0;
+			return *this;
+		}
+
+		// append [first, last), const pointers
+		string& append(const_pointer first, const_pointer last)
+		{
+			return append(first, last - first);
+		}
+
+		// append [first, last), input iterators
+		template <typename iter, typename = valid_ptr_t<iter>>
+		string& append(iter first, iter last)
+		{
+			difference_type count = std::distance(first, last);
+			ensure_space(m_count + count, true);
+			for (Type* s = m_ptr + size(); first != last; ++first, ++s) *s = *first;
+			m_count += count;
+			m_ptr[size()] = 0;
+			return *this;
+		}
+
+		//// append right
+		//template <int Len> string& append(Type const (&right)[Len])
+		//{
+		//	return append(&right[0], Len);
+		//}
+
 		// insert count * ch at ofs
 		string& insert(size_type ofs, size_type count, value_type ch)
 		{
@@ -773,80 +847,6 @@ namespace pr
 			erase(count, last - first);
 			return begin() + count;
 		}
-
-		// append right [rofs, rofs + count)
-		template <typename tarr, typename = valid_arr_t<tarr>>
-		string& append(tarr const& right, size_type rofs, size_type count)
-		{
-			assert(rofs <= right.size());
-
-			size_type num = right.size() - rofs;
-			if (num < count) count = num;
-
-			ensure_space(m_count + count, true);
-			traits::copy(m_ptr + size(), right.c_str() + rofs, count);
-			m_count += count;
-			m_ptr[size()] = 0;
-			return *this;
-		}
-
-		// append right
-		template <typename tarr, typename = valid_arr_t<tarr>>
-		string& append(tarr const& right)
-		{
-			return append(right, 0, npos);
-		}
-
-		// append [ptr, ptr + count)
-		string& append(const_pointer ptr, size_type count)
-		{
-			if (inside(ptr)) return append(*this, ptr - m_ptr, count); // substring
-			ensure_space(m_count + count, true);
-			traits::copy(m_ptr + size(), ptr, count);
-			m_count += count;
-			m_ptr[size()] = 0;
-			return *this;
-		}
-
-		// append [ptr, <null>)
-		string& append(const_pointer ptr)
-		{
-			return append(ptr, traits::length(ptr));
-		}
-
-		// append count * ch
-		string& append(size_type count, value_type ch)
-		{
-			ensure_space(m_count + count, true);
-			traits::fill(m_ptr + size(), count, ch);
-			m_count += count;
-			m_ptr[size()] = 0;
-			return *this;
-		}
-
-		// append [first, last), const pointers
-		string& append(const_pointer first, const_pointer last)
-		{
-			return append(first, last - first);
-		}
-
-		// append [first, last), input iterators
-		template <typename iter, typename = valid_ptr_t<iter>>
-		string& append(iter first, iter last)
-		{
-			difference_type count = std::distance(first, last);
-			ensure_space(m_count + count, true);
-			for (Type* s = m_ptr + size(); first != last; ++first, ++s) *s = *first;
-			m_count += count;
-			m_ptr[size()] = 0;
-			return *this;
-		}
-
-		//// append right
-		//template <int Len> string& append(Type const (&right)[Len])
-		//{
-		//	return append(&right[0], Len);
-		//}
 
 		// compare [ofs, ofs + n0) with [ptr, ptr + count)
 		int compare(size_type ofs, size_type n0, const_pointer ptr, size_type count) const
@@ -1292,6 +1292,24 @@ namespace pr
 		}
 	}
 
+	// Overloads of pr::Narrow() and pr::Widen
+	template <int L, bool F> inline string<char,L,F> Narrow(string<char,L,F> const& from)
+	{
+		return from;
+	}
+	template <int L, bool F> inline string<char,L,F> Narrow(string<wchar_t,L,F> const& from)
+	{
+		return impl::narrow<string<char,L,F>>(from.c_str(), from.size());
+	}
+	template <int L, bool F> inline string<wchar_t,L,F> Widen(string<wchar_t,L,F> const& from)
+	{
+		return from;
+	}
+	template <int L, bool F> inline string<wchar_t,L,F> Widen(string<char,L,F> const& from)
+	{
+		return impl::widen<string<wchar_t,L,F>>(from.c_str(), from.size());
+	}
+
 	// string concatenation
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
 	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs)
@@ -1454,6 +1472,7 @@ namespace pr
 			char const*    src = "abcdefghij";
 			wchar_t const* wsrc = L"abcdefghij";
 			std::string s0 = "std::string";
+			std::wstring w0 = L"std::wstring";
 
 			pr::string<> str0;              PR_CHECK(str0.empty(), true);
 			pr::string<> str1 = "Test1";    PR_CHECK(str1, "Test1");
@@ -1468,6 +1487,9 @@ namespace pr
 
 			pr::string<wchar_t> wstr0 = wsrc;
 			PR_CHECK(wstr0.compare(wsrc), 0);
+
+			pr::string<wchar_t> wstr1 = w0;
+			PR_CHECK(wstr1.compare(w0), 0);
 
 			str0.assign(10, 'A');                               PR_CHECK(str0, "AAAAAAAAAA");
 			str1.assign(s0);                                    PR_CHECK(str1, "std::string");

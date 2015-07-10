@@ -24,7 +24,7 @@
 #include "LexerModule.h"
 
 #include "pr/linedrawer/ldr_object.h"
-#include "pr/script/keywords.h"
+#include "pr/script/forward.h"
 
 #ifdef SCI_NAMESPACE
 using namespace Scintilla;

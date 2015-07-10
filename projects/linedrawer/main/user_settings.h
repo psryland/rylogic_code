@@ -16,7 +16,7 @@ namespace pr
 	{
 		// Export/Import function overloads - overload as necessary
 		inline std::string Write(pr::rdr::Light const& t)                         { return t.Settings(); }
-		inline bool        Read(pr::script::Reader& reader, pr::rdr::Light& t)    { std::string s; bool res = reader.ExtractSection(s, false); t.Settings(s.c_str()); return res; }
+		inline bool        Read(pr::script::Reader& reader, pr::rdr::Light& t)    { std::string s; bool res = reader.Section(s, false); t.Settings(s.c_str()); return res; }
 	}
 }
 

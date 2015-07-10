@@ -44,34 +44,32 @@ namespace pr
 
 		// Advance 'src' to the next delimiter character
 		// Returns false if *src == 0
-		template <typename Ptr> inline bool AdvanceToDelim(Ptr& src, char const* delim)
+		template <typename Ptr, typename Char = char_type_t<Ptr>> inline bool AdvanceToDelim(Ptr& src, Char const* delim)
 		{
 			// Advance while *src does not point to a delimiter
-			using Char = decltype(*src);
 			return Advance(src, [=](Char ch){ return *FindChar(delim, ch) == 0; });
 		}
 
 		// Advance 'src' to the next non-delimiter character
 		// Returns false if *src == 0
-		template <typename Ptr> inline bool AdvanceToNonDelim(Ptr& src, char const* delim)
+		template <typename Ptr, typename Char = char_type_t<Ptr>> inline bool AdvanceToNonDelim(Ptr& src, Char const* delim)
 		{
 			// Advance while *src points to a delimiter
-			using Char = decltype(*src);
 			return Advance(src, [=](Char ch){ return *FindChar(delim, ch) != 0; });
 		}
 		#pragma endregion
 
 		#pragma region Extract Line
 		// Extract a contiguous block of characters upto (and possibly including) a new line character
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractLine(Str& line, Ptr& src, bool inc_cr, char const* newline = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractLine(Str& line, Ptr& src, bool inc_cr, Char const* newline = nullptr)
 		{
-			if (newline == nullptr) newline = "\n";
+			if (newline == nullptr) newline = PR_STRLITERAL(Char,"\n");
 			auto len = Length(line);
 			for (;*src && *FindChar(newline, *src) == 0; Append(line, len++, *src), ++src) {}
 			if (*src && inc_cr) { Append(line, len++, *src); ++src; }
 			return true;
 		}
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractLineC(Str& line, Ptr src, bool inc_cr, char const* newline = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractLineC(Str& line, Ptr src, bool inc_cr, Char const* newline = nullptr)
 		{
 			return ExtractLine(line, src, inc_cr, newline);
 		}
@@ -79,7 +77,7 @@ namespace pr
 
 		#pragma region Extract Token
 		// Extract a contiguous block of non-delimiter characters from 'src'
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractToken(Str& token, Ptr& src, char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractToken(Str& token, Ptr& src, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
 
@@ -92,7 +90,7 @@ namespace pr
 			for (Append(token, len++, *src), ++src; *src && *FindChar(delim, *src) == 0; Append(token, len++, *src), ++src) {}
 			return true;
 		}
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractTokenC(Str& token, Ptr src, char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractTokenC(Str& token, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractToken(token, src, delim);
 		}
@@ -100,7 +98,7 @@ namespace pr
 
 		#pragma region Extract Identifier
 		// Extract a contiguous block of identifier characers from 'src' incrementing 'src'
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractIdentifier(Str& id, Ptr& src, char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIdentifier(Str& id, Ptr& src, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
 
@@ -117,7 +115,7 @@ namespace pr
 			for (Append(id, len++, *src), ++src; *src && IsIdentifier(*src, false); Append(id, len++, *src), ++src) {}
 			return true;
 		}
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractIdentifierC(Str& id, Ptr src, char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIdentifierC(Str& id, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractIdentifier(id, src, delim);
 		}
@@ -126,7 +124,7 @@ namespace pr
 		#pragma region Extract String
 		// Extract a quoted (") string
 		// if 'escape' is not 0, it is treated as the escape character
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractString(Str& str, Ptr& src, char escape = 0, char const* delim = nullptr, Char quote = Char('"'))
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, char escape = 0, Char const* delim = nullptr, Char quote = Char('"'))
 		{
 			delim = Delim(delim);
 
@@ -198,7 +196,7 @@ namespace pr
 			if (*src == quote) ++src; else return false;
 			return true;
 		}
-		template <typename Str, typename Ptr, typename Char = traits<Str>::value_type> inline bool ExtractStringC(Str& str, Ptr src, char escape = 0, char const* delim = nullptr)
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractStringC(Str& str, Ptr src, char escape = 0, Char const* delim = nullptr)
 		{
 			return ExtractString(str, src, escape, delim);
 		}
@@ -211,7 +209,7 @@ namespace pr
 		// The first character that does not fit this form stops the scan.
 		// '0','1' must be followed by a non-identifier character
 		// 'true', 'false' can have any case
-		template <typename Bool, typename Ptr> inline bool ExtractBool(Bool& bool_, Ptr& src, char const* delim = nullptr)
+		template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractBool(Bool& bool_, Ptr& src, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
 
@@ -220,7 +218,6 @@ namespace pr
 				return false;
 
 			// Convert a char to a lower case wchar_t
-			using Char = decltype(*src);
 			auto lwr = [](Char ch){ return char_traits<wchar_t>::lwr(wchar_t(ch)); };
 
 			// Extract the boolean
@@ -233,9 +230,18 @@ namespace pr
 			case L'f': bool_ = static_cast<Bool>(false); return lwr(*++src) == L'a' && lwr(*++src) == L'l' && lwr(*++src) == L's' && lwr(*++src) == L'e' && !IsIdentifier(*++src, false);
 			}
 		}
-		template <typename Bool, typename Ptr> inline bool ExtractBoolC(Bool& bool_, Ptr src, char const* delim = nullptr)
+		template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractBoolC(Bool& bool_, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractBool(bool_, src, delim);
+		}
+		template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractBoolArray(Bool* bool_, size_t count, Ptr& src, Char const* delim = nullptr)
+		{
+			while (count--) if (!ExtractBool(*bool_++, src, delim)) return false;
+			return true;
+		}
+		template <typename Bool, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractBoolArrayC(Bool* bool_, size_t count, Ptr src, Char const* delim = nullptr)
+		{
+			return ExtractBoolArray(bool_, count, src, delim);
 		}
 		#pragma endregion
 
@@ -251,7 +257,7 @@ namespace pr
 		// the string is interpreted as a hexadecimal integer. If the first character is '1' through '9', the string is interpreted
 		// as a decimal integer. The letters 'a' through 'z' (or 'A' through 'Z') are assigned the values 10 through 35; only letters
 		// whose assigned values are less than 'radix' are permitted.
-		template <typename Int, typename Ptr> inline bool ExtractInt(Int& intg, int radix, Ptr& src, char const* delim = nullptr)
+		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractInt(Int& intg, int radix, Ptr& src, Char const* delim = nullptr)
 		{
 			errno = 0;
 			delim = Delim(delim);
@@ -331,9 +337,18 @@ namespace pr
 			// Check all of the string was used in the conversion and there wasn't an overflow
 			return end - &str[0] == i && errno != ERANGE;
 		}
-		template <typename Int, typename Ptr> inline bool ExtractIntC(Int& intg, int radix, Ptr src, char const* delim = nullptr)
+		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIntC(Int& intg, int radix, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractInt(intg, radix, src, delim);
+		}
+		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIntArray(Int* intg, size_t count, int radix, Ptr& src, Char const* delim = nullptr)
+		{
+			while (count--) if (!ExtractInt(*intg++, radix, src, delim)) return false;
+			return true;
+		}
+		template <typename Int, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractIntArrayC(Int* intg, size_t count, int radix, Ptr src, Char const* delim = nullptr)
+		{
+			return ExtractIntArray(intg, count, radix, src, delim); 
 		}
 		#pragma endregion
 
@@ -345,7 +360,7 @@ namespace pr
 		// If no digits appear before the '.' character, at least one must appear after the '.' character.
 		// The decimal digits can be followed by an exponent, which consists of an introductory letter (d, D, e, or E) and an optionally signed integer.
 		// If neither an exponent part nor a '.' character appears, a '.' character is assumed to follow the last digit in the string.
-		template <typename Real, typename Ptr> bool ExtractReal(Real& real, Ptr& src, char const* delim = 0)
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractReal(Real& real, Ptr& src, Char const* delim = nullptr)
 		{
 			errno = 0;
 			delim = Delim(delim);
@@ -423,76 +438,46 @@ namespace pr
 			// Check all of the string was used in the conversion and there wasn't an overflow
 			return end - &str[0] == i && errno != ERANGE;
 		}
-		template <typename Real, typename Ptr> inline bool ExtractRealC(Real& real, Ptr src, char const* delim = nullptr)
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractRealC(Real& real, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractReal(real, src, delim);
+		}
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractRealArray(Real* real, size_t count, Ptr& src, Char const* delim = nullptr)
+		{
+			while (count--) if (!ExtractReal(*real++, src, delim)) return false;
+			return true;
+		}
+		template <typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractRealArrayC(Real* real, size_t count, Ptr src, Char const* delim = nullptr)
+		{
+			return ExtractRealArray(real, count, src, delim);
 		}
 		#pragma endregion
 
 		#pragma region Extract Enum
 		// This is basically a convenience wrapper around ExtractInt
-		template <typename Enum, typename Ptr> inline bool ExtractEnumValue(Enum& enum_, int radix, Ptr& src, char const* delim = nullptr)
+		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValue(Enum& enum_, int radix, Ptr& src, Char const* delim = nullptr)
 		{
 			std::underlying_type<Enum>::type val;
 			if (!ExtractInt(val, radix, src, delim)) return false;
 			enum_ = static_cast<Enum>(val);
 			return true;
 		}
-		template <typename Enum, typename Ptr> inline bool ExtractEnumValueC(Enum& enum_, int radix, Ptr src, char const* delim = nullptr)
+		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumValueC(Enum& enum_, int radix, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractEnum(enum_, radix, src, delim);
 		}
 
 		// Extracts an enum by its string name. For use with 'PR_ENUM' defined enums
-		template <typename Enum, typename Ptr> inline bool ExtractEnum(Enum& enum_, Ptr& src, char const* delim = nullptr)
+		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnum(Enum& enum_, Ptr& src, Char const* delim = nullptr)
 		{
 			decltype(*src) val[512] = {};
 			if (!ExtractIdentifier(val, src, delim)) return false;
 			enum_ = Enum::Parse(val);
 			return true;
 		}
-		template <typename Enum, typename Ptr> bool ExtractEnumC(Enum& enum_, Ptr src, char const* delim = nullptr)
+		template <typename Enum, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractEnumC(Enum& enum_, Ptr src, Char const* delim = nullptr)
 		{
 			return ExtractEnum(enum_, src, delim);
-		}
-		#pragma endregion
-
-		#pragma region Extract Bool Array
-		// Extract an array of bools from 'src'
-		template <typename Bool, typename Ptr> inline bool ExtractBoolArray(Bool* bool_, size_t count, Ptr& src, char const* delim = nullptr)
-		{
-			while (count--) if (!ExtractBool(*bool_++, src, delim)) return false;
-			return true;
-		}
-		template <typename Bool, typename Ptr> inline bool ExtractBoolArrayC(Bool* bool_, size_t count, Ptr src, char const* delim = nullptr)
-		{
-			return ExtractBoolArray(bool_, count, src, delim);
-		}
-		#pragma endregion
-
-		#pragma region Extract Int Array
-		// Extract an array of integral numbers from 'src'
-		template <typename Int, typename Ptr> inline bool ExtractIntArray(Int* intg, size_t count, int radix, Ptr& src, char const* delim = nullptr)
-		{
-			while (count--) if (!ExtractInt(*intg++, radix, src, delim)) return false;
-			return true;
-		}
-		template <typename Int, typename Ptr> inline bool ExtractIntArrayC(Int* intg, size_t count, int radix, Ptr src, char const* delim = nullptr)
-		{
-			return ExtractIntArray(intg, count, radix, src, delim); 
-		}
-		#pragma endregion
-
-		#pragma region Extract Real Array
-		// Extract an array of real numbers from 'src'
-		template <typename Real, typename Ptr> inline bool ExtractRealArray(Real* real, size_t count, Ptr& src, char const* delim = nullptr)
-		{
-			while (count--) if (!ExtractReal(*real++, src, delim)) return false;
-			return true;
-		}
-		template <typename Real, typename Ptr> inline bool ExtractRealArrayC(Real* real, size_t count, Ptr src, char const* delim = nullptr)
-		{
-			return ExtractRealArray(real, count, src, delim);
 		}
 		#pragma endregion
 
@@ -508,7 +493,7 @@ namespace pr
 		//  'llong' indicates whether the number was a long long (if false is returned check errno = ERANGE)
 		//  'ivalue','fvalue' will contain the corresponding value and the
 		//    other value will be unchanged (this allows unions to work)
-		template <typename Int, typename Real, typename Ptr> bool ExtractNumber(Int& ivalue, Real& fvalue, bool& fp, Ptr& src, bool* unsignd = nullptr, bool* llong = nullptr, char const* delim = nullptr)
+		template <typename Int, typename Real, typename Ptr, typename Char = char_type_t<Ptr>> bool ExtractNumber(Int& ivalue, Real& fvalue, bool& fp, Ptr& src, bool* unsignd = nullptr, bool* llong = nullptr, Char const* delim = nullptr)
 		{
 			errno = 0;
 			delim = Delim(delim);
@@ -660,7 +645,7 @@ namespace pr
 			// Check all of the string was used in the conversion and there wasn't an overflow
 			return end - &str[0] == i && errno != ERANGE;
 		}
-		template <typename Int, typename Real, typename Ptr> inline bool ExtractNumberC(Int& ivalue, Real& fvalue, bool& fp, Ptr src, bool* unsignd = nullptr, bool* llong = nullptr, char const* delim = nullptr)
+		template <typename Int, typename Real, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractNumberC(Int& ivalue, Real& fvalue, bool& fp, Ptr src, bool* unsignd = nullptr, bool* llong = nullptr, Char const* delim = nullptr)
 		{
 			return ExtractNumber(ivalue, fvalue, fp, src, unsignd, llong, delim);
 		}
@@ -713,19 +698,19 @@ namespace pr
 
 				s = src;
 				PR_CHECK(ExtractToken(aarr, s) && Equal(aarr, "token1") && *s == L' ', true);
-				PR_CHECK(ExtractTokenC(aarr, ++s, " \n:") && Equal(aarr, "token1token2") && *s == L't', true);
+				PR_CHECK(ExtractTokenC(aarr, ++s, L" \n:") && Equal(aarr, "token1token2") && *s == L't', true);
 
 				s = src;
 				PR_CHECK(ExtractToken(warr, s) && Equal(warr, "token1") && *s == L' ', true);
-				PR_CHECK(ExtractTokenC(warr, ++s, " \n:") && Equal(warr, "token1token2") && *s == L't', true);
+				PR_CHECK(ExtractTokenC(warr, ++s, L" \n:") && Equal(warr, "token1token2") && *s == L't', true);
 
 				s = src;
 				PR_CHECK(ExtractToken(astr, s) && Equal(astr, "token1") && *s == L' ', true);
-				PR_CHECK(ExtractTokenC(astr, ++s, " \n:") && Equal(astr, "token1token2") && *s == L't', true);
+				PR_CHECK(ExtractTokenC(astr, ++s, L" \n:") && Equal(astr, "token1token2") && *s == L't', true);
 
 				s = src;
 				PR_CHECK(ExtractToken(wstr, s) && Equal(wstr, "token1") && *s == L' ', true);
-				PR_CHECK(ExtractTokenC(wstr, ++s, " \n:") && Equal(wstr, "token1token2") && *s == L't', true);
+				PR_CHECK(ExtractTokenC(wstr, ++s, L" \n:") && Equal(wstr, "token1token2") && *s == L't', true);
 			}
 			{// Identifier
 				using namespace pr::str;
