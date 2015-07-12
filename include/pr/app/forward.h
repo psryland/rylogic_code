@@ -57,7 +57,7 @@
 #include "pr/camera/camera.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/misc.h"
-#include "pr/gui/menu_helper.h"
+#include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/gui/windows_com.h"

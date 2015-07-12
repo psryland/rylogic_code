@@ -30,16 +30,16 @@ namespace pr
 		};
 		
 		// C Tokeniser
-		template <typename FailPolicy = ThrowOnFailure, typename TSrc = Src>
+		template <typename FailPolicy = ThrowOnFailure>
 		struct Tokeniser :TokenSrc
 		{
-			using Buffer = Buffer<pr::deque<wchar_t>, TSrc>;
+			using Buffer = Buffer<pr::deque<wchar_t>>;
 
 			Buffer    m_buf;  // The character stream to read from
 			EmitCount m_emit; // The read position in 'm_buf'
 			Token     m_tok;  // The token last read from the stream
 
-			Tokeniser(TSrc& src)
+			Tokeniser(Src& src)
 				:m_buf(src)
 				,m_emit()
 				,m_tok()

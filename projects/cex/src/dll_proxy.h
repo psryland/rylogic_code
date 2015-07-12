@@ -109,7 +109,7 @@ namespace cex
 			}
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
-		void ValidatedInput() override
+		void ValidateInput() override
 		{
 			if (m_ifile.empty())
 			{

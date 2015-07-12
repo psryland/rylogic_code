@@ -72,29 +72,39 @@ namespace pr
 	namespace str
 	{
 		#pragma region Char Traits
-		// char traits
+		// char traits - Did you know about std::char_traits<>... 
 		template <typename TChar> struct char_traits;
 		template <> struct char_traits<char>
 		{
+			static char const* str(char const* str, wchar_t const*) { return str; }
+
 			static char lwr(char ch) { return static_cast<char>(::tolower(ch)); }
 			static char upr(char ch) { return static_cast<char>(::toupper(ch)); }
 
-			static size_t             strlen(char const* str)                               { return ::strlen(str); }
-			static size_t             strnlen(char const* str, size_t max_count)            { return ::strnlen(str, max_count); }
+			static size_t strlen(char const* str)                               { return ::strlen(str); }
+			static size_t strnlen(char const* str, size_t max_count)            { return ::strnlen(str, max_count); }
+
+			static int strcmp(char const* lhs, char const* rhs)                     { return ::strcmp(lhs, rhs); }
+			static int strncmp(char const* lhs, char const* rhs, size_t max_count)  { return ::strncmp(lhs, rhs, max_count); }
+			static int strnicmp(char const* lhs, char const* rhs, size_t max_count) { return ::_strnicmp(lhs, rhs, max_count); }
+
 			static double             strtod(char const* str, char** end)                   { return ::strtod(str, end); }
 			static long               strtol(char const* str, char** end, int radix)        { return ::strtol(str, end, radix); }
 			static unsigned long      strtoul(char const* str, char** end, int radix)       { return ::strtoul(str, end, radix); }
 			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
 			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
-			static int                strnicmp(char const* lhs, char const* rhs, int count) { return ::_strnicmp(lhs, rhs, count); }
-			static char const*        str(char const* str, wchar_t const*)                  { return str; }
-			
-			static void        fill(char* ptr, size_t count, char ch)                        { ::memset(ptr, ch, count); }
-			static void        copy(char* dst, char const* src, size_t count)                { ::memcpy(dst, src, count); }
-			static void        move(char* dst, char const* src, size_t count)                { ::memmove(dst, src, count); }
-			static int         compare(char const* first1, char const* first2, size_t count) { return ::strncmp(first1, first2, count); }
-			static bool        eq(char lhs, char rhs)                                        { return lhs == rhs; }
-			static char const* find(char const* first, size_t count, char ch)                { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
+
+			static bool eq(char lhs, char rhs)                         { return lhs == rhs; }
+			static void fill(char* ptr, size_t count, char ch)         { ::memset(ptr, ch, count); }
+			static void copy(char* dst, char const* src, size_t count) { ::memcpy(dst, src, count); }
+			static void move(char* dst, char const* src, size_t count) { ::memmove(dst, src, count); }
+
+			static char const* find(char const* first, size_t count, char ch)
+			{
+				for (; 0 < count; --count, ++first)
+					if (eq(*first, ch)) return first;
+				return nullptr;
+			}
 		};
 		template <> struct char_traits<char&      > :char_traits<char> {};
 		template <> struct char_traits<char const > :char_traits<char> {};
@@ -103,25 +113,35 @@ namespace pr
 		// wchar_t traits
 		template <> struct char_traits<wchar_t>
 		{
+			static wchar_t const* str(char const*, wchar_t const* str) { return str; }
+
 			static wchar_t lwr(wchar_t ch) { return static_cast<wchar_t>(towlower(ch)); }
 			static wchar_t upr(wchar_t ch) { return static_cast<wchar_t>(towupper(ch)); }
 
-			static size_t             strlen(wchar_t const* str)                                  { return ::wcslen(str); }
-			static size_t             strnlen(wchar_t const* str, size_t max_count)               { return ::wcsnlen(str, max_count); }
+			static size_t strlen(wchar_t const* str)                    { return ::wcslen(str); }
+			static size_t strnlen(wchar_t const* str, size_t max_count) { return ::wcsnlen(str, max_count); }
+
+			static int strcmp(wchar_t const* lhs, wchar_t const* rhs)                     { return ::wcscmp(lhs, rhs); }
+			static int strncmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count)  { return ::wcsncmp(lhs, rhs, max_count); }
+			static int strnicmp(wchar_t const* lhs, wchar_t const* rhs, size_t max_count) { return ::_wcsnicmp(lhs, rhs, max_count); }
+
 			static double             strtod(wchar_t const* str, wchar_t** end)                   { return ::wcstod(str, end); }
 			static long               strtol(wchar_t const* str, wchar_t** end, int radix)        { return ::wcstol(str, end, radix); }
 			static long long          strtoi64(wchar_t const* str, wchar_t** end, int radix)      { return ::_wcstoi64(str, end, radix); }
 			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
 			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
-			static int                strnicmp(wchar_t const* lhs, wchar_t const* rhs, int count) { return ::_wcsnicmp(lhs, rhs, count); }
-			static wchar_t const*     str(char const*, wchar_t const* str)                        { return str; }
+			
+			static bool eq(wchar_t lhs, wchar_t rhs)                         { return lhs == rhs; }
+			static void fill(wchar_t* ptr, size_t count, wchar_t ch)         { for (;count--;) *ptr++ = ch; }
+			static void copy(wchar_t* dst, wchar_t const* src, size_t count) { ::memcpy(dst, src, count * sizeof(wchar_t)); }
+			static void move(wchar_t* dst, wchar_t const* src, size_t count) { ::memmove(dst, src, count * sizeof(wchar_t)); }
 
-			static void           fill(wchar_t* ptr, size_t count, wchar_t ch)                        { for (;count-- != 0; ++ptr) *ptr = ch; }
-			static void           copy(wchar_t* dst, wchar_t const* src, size_t count)                { ::memcpy(dst, src, count * sizeof(wchar_t)); }
-			static void           move(wchar_t* dst, wchar_t const* src, size_t count)                { ::memmove(dst, src, count * sizeof(wchar_t)); }
-			static int            compare(wchar_t const* first1, wchar_t const* first2, size_t count) { return ::wcsncmp(first1, first2, count); }
-			static bool           eq(wchar_t lhs, wchar_t rhs)                                        { return lhs == rhs; }
-			static wchar_t const* find(wchar_t const* first, size_t count, wchar_t ch)                { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
+			static wchar_t const* find(wchar_t const* first, size_t count, wchar_t ch)
+			{
+				for (; 0 < count; --count, ++first)
+					if (eq(*first, ch)) return first;
+				return nullptr;
+			}
 		};
 		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};

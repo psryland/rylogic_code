@@ -181,7 +181,7 @@
     <ClInclude Include="..\include\pr\gui\gdiplus.h" />
     <ClInclude Include="..\include\pr\gui\graph_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\grid_ctrl.h" />
-    <ClInclude Include="..\include\pr\gui\menu_helper.h" />
+    <ClInclude Include="..\include\pr\gui\menu_list.h" />
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
     <ClInclude Include="..\include\pr\gui\mfc_helper.h" />
     <ClInclude Include="..\include\pr\gui\misc.h" />

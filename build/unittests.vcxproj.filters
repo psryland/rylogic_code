@@ -498,9 +498,6 @@
     <ClInclude Include="..\include\pr\gui\mfc_helper.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\menu_helper.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\meta\min_max.h">
       <Filter>pr\meta</Filter>
     </ClInclude>
@@ -953,6 +950,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\script\tokeniser.h">
       <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\menu_list.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

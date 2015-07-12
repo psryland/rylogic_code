@@ -57,6 +57,9 @@
     <ClInclude Include="..\projects\cex\src\dll_proxy.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\projects\cex\src\new_lines.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\cex\src\data_header_gen.cpp">

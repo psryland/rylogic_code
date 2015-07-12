@@ -21,51 +21,51 @@ namespace pr
 	namespace script
 	{
 		// A base class and interface for an include handler
-		template <typename FailPolicy = ThrowOnFailure>
-		struct IncludeHandler
+		struct IIncludeHandler
 		{
-			virtual ~IncludeHandler() {}
+			virtual ~IIncludeHandler() {}
 
 			// Add a path to the include search paths
 			virtual void AddSearchPath(string path, size_t index = ~size_t()) = 0;
+
+			// Resolve an include into a full path
+			virtual string ResolveInclude(string const& include, bool search_paths_only = false, Location const& loc = Location()) = 0;
 
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
 			virtual std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) = 0;
 
-			// Returns an input stream corresponding to 'include'
-			// 'mode' indicates if the stream is text or binary
-			// 'loc' is the current position in the source (used to open streams relative to the current file)
-			virtual std::unique_ptr<std::wistream> OpenStream(string const& include, bool binary = false, Location const& loc = Location()) = 0;
+			// Open 'include' as an ascii stream
+			virtual std::unique_ptr<std::istream> OpenStreamA(string const& include, bool search_paths_only = false, bool binary = false, Location const& loc = Location()) = 0;
 		};
 
 		#pragma region No Includes
 		// An include handler that doesn't handle any includes.
 		template <typename FailPolicy = ThrowOnFailure>
-		struct NoIncludes :IncludeHandler<FailPolicy>
+		struct NoIncludes :IIncludeHandler
 		{
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~size_t()) override
+			void AddSearchPath(string, size_t = ~size_t()) override
+			{}
+
+			// Resolve an include into a full path
+			string ResolveInclude(string const&, bool = false, Location const& loc = Location()) override
 			{
-				(void)path,index;
+				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported"), string();
 			}
 
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
-			std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
+			std::unique_ptr<Src> Open(string const&, bool = false, Location const& loc = Location()) override
 			{
-				(void)include,loc,search_paths_only;
 				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported"), nullptr;
 			}
 
-			// Returns an input stream corresponding to 'include'
-			// 'mode' indicates if the stream is text or binary
-			// 'loc' is the current position in the source (used to open streams relative to the current file)
-			std::unique_ptr<std::wistream> OpenStream(string const& include, bool binary = false, Location const& loc = Location()) override
+			// Open 'include' as an ascii stream
+			std::unique_ptr<std::istream> OpenStreamA(string const&, bool = false, bool = false, Location const& loc = Location()) override
 			{
-				(void)include,binary,loc;
 				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported"), nullptr;
 			}
 		};
@@ -74,7 +74,7 @@ namespace pr
 		#pragma region File Includes
 		// A file include handler
 		template <typename FailPolicy = ThrowOnFailure>
-		struct FileIncludes :IncludeHandler<FailPolicy>
+		struct FileIncludes :IIncludeHandler
 		{
 			pr::vector<string> m_paths;
 			bool m_ignore_missing_includes;
@@ -111,10 +111,8 @@ namespace pr
 				m_paths.insert(std::begin(m_paths) + std::min(m_paths.size(), index), path);
 			}
 
-			// Returns a 'Src' corresponding to the string "include".
-			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
-			// 'loc' is where in the current source the include comes from.
-			std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
+			// Resolve an include into a full path
+			string ResolveInclude(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
 			{
 				string searched_paths;
 
@@ -129,40 +127,42 @@ namespace pr
 				// Resolve the filepath
 				auto filepath = pr::filesys::ResolvePath(include, m_paths, current_dir, false, &searched_paths);
 				if (!filepath.empty())
-				{
-					FileOpened.Raise(filepath);
-					return std::make_unique<FileSrc<>>(filepath.c_str());
-				}
+					return filepath;
 
 				// Ignore if missing includes flagged
 				if (m_ignore_missing_includes)
-					return nullptr;
+					return string();
 
 				// If you hit this, check that the script source is a file source, string sources don't have a relative directory.
 				auto filename = pr::filesys::GetFilename(include);
-				auto msg = pr::FmtS("Failed to open '%s'\n\nFile not found in search paths:\n%s", Narrow(filename).c_str(), Narrow(searched_paths).c_str());
-				throw Exception(EResult::MissingInclude, loc, msg);
+				auto msg = pr::FmtS("Failed to resolve include '%s'\n\nFile not found in search paths:\n%s", Narrow(filename).c_str(), Narrow(searched_paths).c_str());
+				return FailPolicy::Fail(EResult::MissingInclude, loc, msg), string();
 			}
 
-			// 'mode' indicates if the stream is text or binary
-			// 'loc' is the current position in the source (used to open streams relative to the current file)
-			std::unique_ptr<std::wistream> OpenStream(string const& include, bool binary = false, Location const& loc = Location()) override
+			// Returns a 'Src' corresponding to the string "include".
+			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
+			// 'loc' is where in the current source the include comes from.
+			std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
 			{
-				string searched_paths;
+				auto fullpath = ResolveInclude(include, search_paths_only, loc);
+				if (!fullpath.empty())
+				{
+					FileOpened.Raise(fullpath);
+					return std::make_unique<FileSrc<>>(fullpath.c_str());
+				}
+				return nullptr;
+			}
 
-				// Find the local directory name from 'loc'
-				auto local_path = pr::filesys::GetDirectory(loc.StreamName());
-				auto current_dir = !local_path.empty() ? &local_path : nullptr;
-				
-				// Resolve the filepath
-				auto filepath = pr::filesys::ResolvePath(include, m_paths, current_dir, false, &searched_paths);
-				if (!filepath.empty())
-					return std::make_unique<std::wifstream>(filepath.c_str(), binary ? std::wistream::binary : 0);
-
-				// Check that the script source is a file source, String sources don't have a relative directory
-				auto filename = pr::filesys::GetFilename(include);
-				auto msg = pr::FmtS("Failed to open '%s'\n\nFile not found in search paths:\n%s", Narrow(filename).c_str(), Narrow(searched_paths).c_str());
-				throw Exception(EResult::MissingInclude, loc, msg);
+			// Open 'include' as an ascii stream
+			std::unique_ptr<std::istream> OpenStreamA(string const& include, bool search_paths_only = false, bool binary = false, Location const& loc = Location()) override
+			{
+				auto fullpath = ResolveInclude(include, search_paths_only, loc);
+				if (!fullpath.empty())
+				{
+					FileOpened.Raise(fullpath);
+					return std::make_unique<std::ifstream>(fullpath.c_str(), binary ? std::istream::binary : 0);
+				}
+				return nullptr;
 			}
 
 			// Raised whenever a file is opened
@@ -173,36 +173,40 @@ namespace pr
 		#pragma region String includes
 		// A stirng include handler
 		template <typename FailPolicy = ThrowOnFailure>
-		struct StrIncludes :IncludeHandler<FailPolicy>
+		struct StrIncludes :IIncludeHandler
 		{
 			// A map of include names to strings
-			// Have to use std::wstring because std::wistringstream expects it
-			std::unordered_map<string, std::wstring> m_strings;
+			// Have to use std::string because std::istringstream expects it
+			std::unordered_map<string, std::string> m_strings;
 
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~size_t()) override
-			{
-				(void)path,index;
-			}
+			void AddSearchPath(string, size_t = ~size_t()) override
+			{}
 
+			// Resolve an include into a full path
+			string ResolveInclude(string const& include, bool = false, Location const& = Location()) override
+			{
+				return include;
+			}
+			
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
 			std::unique_ptr<Src> Open(string const& include, bool = false, Location const& loc = Location()) override
 			{
 				auto i = m_strings.find(include);
-				if (i != std::end(m_strings)) return std::make_unique<PtrW<>>(i->second.c_str());
-				throw Exception(EResult::MissingInclude, loc, pr::FmtS("Failed to open %s", Narrow(include).c_str()));
+				if (i != std::end(m_strings)) return std::make_unique<PtrA<>>(i->second.c_str());
+				return FailPolicy::Fail(EResult::MissingInclude, loc, pr::FmtS("Failed to open %s", Narrow(include).c_str())), nullptr;
 			}
 
 			// Returns an input stream corresponding to 'include'
 			// 'mode' indicates if the stream is text or binary
 			// 'loc' is the current position in the source (used to open streams relative to the current file)
-			std::unique_ptr<std::wistream> OpenStream(string const& include, bool = false, Location const& loc = Location()) override
+			std::unique_ptr<std::istream> OpenStreamA(string const& include, bool = false, bool = false, Location const& loc = Location()) override
 			{
 				auto i = m_strings.find(include);
-				if (i != std::end(m_strings)) return std::make_unique<wistringstream>(i->second);
-				throw Exception(EResult::MissingInclude, loc, pr::FmtS("Failed to open %s", Narrow(include).c_str()));
+				if (i != std::end(m_strings)) return std::make_unique<istringstream>(i->second);
+				return FailPolicy::Fail(EResult::MissingInclude, loc, pr::FmtS("Failed to open %s", Narrow(include).c_str())), nullptr;
 			}
 		};
 		#pragma endregion
@@ -210,7 +214,7 @@ namespace pr
 		#pragma region Resource Includes
 		// An include handler that reads from an embedded resource
 		template <typename FailPolicy = ThrowOnFailure>
-		struct ResIncludes :IncludeHandler<FailPolicy>
+		struct ResIncludes :IIncludeHandler
 		{
 			HMODULE m_module;
 
@@ -219,17 +223,21 @@ namespace pr
 			{}
 
 			// Convert 'name' into a resouce string id
-			std::wstring ResId(string const& name) const
+			string ResId(string const& name) const
 			{
-				auto id = pr::To<std::wstring>(name);
+				auto id = name;
 				pr::str::Replace(id, L".", L"_");
 				return pr::str::UpperCase(id);
 			}
 
 			// Add a path to the include search paths
-			void AddSearchPath(string path, size_t index = ~size_t()) override
+			void AddSearchPath(string, size_t = ~size_t()) override
+			{}
+
+			// Resolve an include into a full path
+			string ResolveInclude(string const& include, bool = false, Location const& = Location()) override
 			{
-				(void)path,index;
+				return ResId(include);
 			}
 
 			// Returns a 'Src' corresponding to the string "include".
@@ -238,15 +246,15 @@ namespace pr
 			// 'loc' is where in the current source the include comes from.
 			std::unique_ptr<Src> Open(string const& include, bool = false, Location const& = Location()) override
 			{
-				auto id = ResId(include);
+				auto id = ResolveInclude(include);
 				auto res = pr::resource::Read<char>(id.c_str(), L"TEXT", m_module);
-				return std::make_unique<PtrA>(res.m_data);
+				return std::make_unique<PtrA<>>(res.m_data);
 			}
 
 			// Returns an input stream corresponding to 'include'
 			// 'mode' indicates if the stream is text or binary
 			// 'loc' is the current position in the source (used to open streams relative to the current file)
-			std::unique_ptr<std::istream> OpenStream(string const& include, bool binary = false, Location const& = Location()) override
+			std::unique_ptr<std::istream> OpenStreamA(string const& include, bool = false, bool binary = false, Location const& = Location()) override
 			{
 				auto id = ResId(include);
 				wchar_t const* type = binary ? L"BINARY" : L"TEXT";

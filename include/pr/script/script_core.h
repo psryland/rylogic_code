@@ -91,23 +91,34 @@ namespace pr
 		template <typename TLoc = FileLoc> struct FileSrc :Src
 		{
 			enum class EEncoding { ascii, utf8, utf16, utf16_be, auto_detect };
-			using FGet = wchar_t (*)(std::ifstream&);
 
 			mutable std::wifstream m_file; // The file stream source
 			BufW4 m_buf;                   // Use a small shift buffer to make debugging easier
 			TLoc m_loc;                    // The location within the file (note, TLoc could be Location* to reference an external location object)
 			EEncoding m_enc;               // The detected file encoding
-			FGet m_fget;                   // The file read function to use based on the file encoding
 
-			template <typename String> explicit FileSrc(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
+			FileSrc()
 				:Src(ESrcType::File)
 				,m_file()
 				,m_buf()
-				,m_loc(loc)
-				,m_fget()
-				,m_enc(enc)
+				,m_loc()
+				,m_enc()
+			{}
+			template <typename String> explicit FileSrc(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
+				:FileSrc()
 			{
+				if (!pr::str::Empty(filepath))
+					Open(filepath, ofs, enc, loc);
+			}
+
+			// Open a file as a stream source
+			template <typename String> void Open(String const& filepath, size_t ofs = 0, EEncoding enc = EEncoding::auto_detect, TLoc loc = TLoc())
+			{
+				Close();
+
 				auto fpath = pr::str::c_str(filepath);
+				m_enc = enc;
+				m_loc = loc;
 
 				// Determine file encoding, look for the BOM in the first 3 bytes
 				if (m_enc == EEncoding::auto_detect)
@@ -166,6 +177,15 @@ namespace pr
 				}
 			}
 
+			// Close the file stream
+			void Close()
+			{
+				m_file.close();
+				m_buf.clear();
+				m_loc = TLoc();
+				m_enc = EEncoding::auto_detect;
+			}
+
 			// Debugging helper interface
 			bool IsOpen() const
 			{
@@ -212,27 +232,26 @@ namespace pr
 		// Src buffer. Provides random access within a buffered range.
 		// Handy debugging tip: call buffer_all(); on the buffers to preload them will all the data
 		// It makes them easier to read in the watch windows.
-		template <typename TBuf = pr::deque<wchar_t>, typename TSrc = Src> struct Buffer :Src
+		template <typename TBuf = pr::deque<wchar_t>> struct Buffer :Src
 		{
 			using value_type = typename TBuf::value_type;
 			using buffer_type = TBuf;
 
 			mutable TBuf m_buf;       // The buffered stream data read from 'm_src'
-			TSrc* m_src;              // The character stream that feeds 'm_buf'
+			Src* m_src;              // The character stream that feeds 'm_buf'
 			NullSrc m_null;           // Used when 'm_src' == nullptr;
 
-			explicit Buffer(TSrc& src)
-				:Src(src.Type())
-				,m_buf()
-				,m_src(&src)
-				,m_null()
-			{}
-			explicit Buffer(ESrcType type)
+			Buffer(ESrcType type = ESrcType::Buffered)
 				:Src(type)
 				,m_buf()
 				,m_src(&m_null)
 				,m_null()
 			{}
+			explicit Buffer(Src& src)
+				:Buffer()
+			{
+				Source(src);
+			}
 			template <typename Iter> Buffer(ESrcType type, Iter first, Iter last)
 				:Src(type)
 				,m_buf(first, last)
@@ -259,6 +278,13 @@ namespace pr
 				,m_src(rhs.m_src)
 				,m_null()
 			{}
+
+			// Set the source. Note, doesn't reset any buffered data
+			void Source(Src& src)
+			{
+				m_type = src.Type();
+				m_src = &src;
+			}
 
 			// Debugging helper interface
 			Location const& Loc() const override

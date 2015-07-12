@@ -39,14 +39,14 @@ namespace ldr
 			IDC_STATUSBAR_MAIN = 200,
 		};
 
-		pr::gui::StatusBar     m_status;               // The status bar
+		pr::gui::StatusBar        m_status;               // The status bar
 		pr::gui::RecentFiles      m_recent_files;         // The recent files
 		pr::gui::MenuList         m_saved_views;          // A list of camera snapshots
 		pr::ldr::ObjectManagerDlg m_store_ui;             // GUI window for manipulating ldr object properties
 		pr::ldr::ScriptEditorDlg  m_editor_ui;            // An editor for ldr script
 		pr::ldr::MeasureDlg       m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::AngleDlg         m_angle_tool_ui;        // The UI for the angle measuring tool
-		HMENU                     m_menu;                 // The main menu handle (needed for restoring after fullscreen mode switch)
+		pr::gui::Menu             m_menu;                 // The main menu handle (needed for restoring after fullscreen mode switch)
 		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool                      m_suspend_render;       // True to prevent rendering
 		StatusPri                 m_status_pri;           // Status priority buffer
@@ -57,8 +57,6 @@ namespace ldr
 		~MainGUI();
 
 	private:
-		typedef std::list<std::string> StrList;
-
 		// 30Hz step function
 		void Step30Hz(double elapsed_seconds);
 
@@ -109,8 +107,8 @@ namespace ldr
 		void OnWindowShowAboutBox();
 
 		void CloseApp(int exit_code);
-		void FileNew(char const* filepath);
-		void FileOpen(char const* filepath, bool additive);
+		void FileNew(wchar_t const* filepath);
+		void FileOpen(wchar_t const* filepath, bool additive);
 		void OpenTextEditor(StrList const& files);
 		pr::v2 ToNormSS(pr::v2 const& pt_ss);
 		void MouseStatusUpdate(pr::v2 const& mouse_location);

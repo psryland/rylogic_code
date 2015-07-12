@@ -25,11 +25,11 @@ namespace ldr
 		CButton       m_check_ignore_missing_includes;
 
 	public:
-		std::string   m_text_editor_cmd;
-		float         m_focus_point_scale;
-		bool          m_reset_camera_on_load;
-		bool          m_msgbox_error_msgs;
-		bool          m_ignore_missing_includes;
+		std::string  m_text_editor_cmd;
+		float        m_focus_point_scale;
+		bool         m_reset_camera_on_load;
+		bool         m_msgbox_error_msgs;
+		bool         m_ignore_missing_includes;
 
 		enum { IDD = IDD_TAB_GENERAL };
 		BEGIN_MSG_MAP(COptionsGeneralTab)
@@ -51,8 +51,8 @@ namespace ldr
 		BEGIN_DDX_MAP(COptionsGeneralTab)
 			if (nCtlID == (UINT)-1 || nCtlID == IDC_EDIT_TEXT_EDITOR_CMD)
 			{
-				if (bSaveAndValidate) m_text_editor_cmd = pr::GetCtrlText(m_edit_text_editor_cmd);
-				else                  m_edit_text_editor_cmd.SetWindowText(m_text_editor_cmd.c_str());
+				if (bSaveAndValidate) m_text_editor_cmd = pr::GetCtrlText<char>(m_edit_text_editor_cmd);
+				else                  ::SetWindowTextA(m_edit_text_editor_cmd, m_text_editor_cmd.c_str());
 			}
 			if (nCtlID == (UINT)-1 || nCtlID == IDC_SLIDER_FOCUS_POINT_SCALE)
 			{
@@ -78,7 +78,7 @@ namespace ldr
 
 		COptionsGeneralTab(UserSettings const& settings)
 		{
-			m_text_editor_cmd         = settings.m_TextEditorCmd;
+			m_text_editor_cmd         = pr::Narrow(settings.m_TextEditorCmd);
 			m_focus_point_scale       = settings.m_FocusPointScale;
 			m_reset_camera_on_load    = settings.m_ResetCameraOnLoad;
 			m_msgbox_error_msgs       = settings.m_ErrorOutputMsgBox;
@@ -303,7 +303,7 @@ namespace ldr
 		// Return the settings
 		void GetSettings(UserSettings& settings) const
 		{
-			settings.m_TextEditorCmd         = m_tab_general.m_text_editor_cmd;
+			settings.m_TextEditorCmd         = pr::Widen(m_tab_general.m_text_editor_cmd);
 			settings.m_ResetCameraOnLoad     = m_tab_general.m_reset_camera_on_load;
 			settings.m_FocusPointScale       = m_tab_general.m_focus_point_scale;
 			settings.m_ErrorOutputMsgBox     = m_tab_general.m_msgbox_error_msgs;

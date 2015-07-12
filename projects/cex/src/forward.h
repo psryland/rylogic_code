@@ -42,6 +42,8 @@
 #include "pr/str/to_string.h"
 #include "pr/filesys/filesys.h"
 #include "pr/filesys/fileex.h"
+#include "pr/script/script_core.h"
+#include "pr/script/filter.h"
 #include "pr/storage/xml.h"
 #include "pr/threads/process.h"
 

@@ -21,7 +21,7 @@ namespace ldr
 		LuaSource();
 
 		// Add a lua source file
-		void Add(char const* filepath);
+		void Add(wchar_t const* filepath);
 
 		// Return a string containing demo ldr lua script
 		std::string CreateDemoLuaSource() const;

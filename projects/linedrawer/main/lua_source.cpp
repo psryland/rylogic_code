@@ -36,9 +36,9 @@ namespace ldr
 		//pr::lua::Register(m_lua, "ldr.GetNumObjects"    ,lua::ldrGetNumObjects);
 	}
 
-	void LuaSource::Add(char const* filepath)
+	void LuaSource::Add(wchar_t const* filepath)
 	{
-		filepath;
+		(void)filepath;
 		//m_lua.DoFile(filepath);
 	}
 
@@ -65,7 +65,8 @@ namespace ldr
 		// If there's something still on the stack, copy it to result
 		if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))
 		{
-			result.assign(lua_tostring(m_lua, -1));
+			auto r = pr::Widen(lua_tostring(m_lua, -1));
+			result = r;
 			lua_pop(m_lua, 1);
 		}
 

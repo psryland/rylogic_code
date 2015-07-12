@@ -33,6 +33,12 @@ namespace pr
 			virtual ~ReaderBase()
 			{}
 
+			// Access the include handler
+			virtual IIncludeHandler& Includes() const = 0;
+
+			// Access the embedded code handler
+			virtual IEmbeddedCode& EmbeddedCode() const = 0;
+
 			// Get/Set delimiter characters
 			wchar_t const* Delimiters() const
 			{
@@ -210,14 +216,14 @@ namespace pr
 			}
 
 			// Extract a token using additional delimiters
-			template <typename StrType> bool Token(StrType& token, char const* delim)
+			template <typename StrType> bool Token(StrType& token, wchar_t const* delim)
 			{
 				auto& src = *m_pp;
 				pr::str::Resize(token, 0);
-				if (pr::str::ExtractToken(token, src, std::string(m_delim).append(delim).c_str())) return true;
+				if (pr::str::ExtractToken(token, src, std::wstring(m_delim).append(delim).c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
 			}
-			template <typename StrType> bool TokenS(StrType& token, char const* delim)
+			template <typename StrType> bool TokenS(StrType& token, wchar_t const* delim)
 			{
 				return SectionStart() && Token(token, delim) && SectionEnd();
 			}
@@ -490,49 +496,62 @@ namespace pr
 			}
 		};
 
-		// The default reader
-		// To specialise the reader for other types of preprocesser, subclass ReaderBase like this
-		struct Reader :Preprocessor<> ,ReaderBase
+		// A reader with customisable include handler and embedded code handler
+		template <typename Inc = FileIncludes<>, typename Emb = EmbeddedCode<>>
+		struct ReaderT :Preprocessor<ThrowOnFailure, Inc, Emb> ,ReaderBase
 		{
-			using Preprocessor = Preprocessor<>;
+			using Preprocessor = Preprocessor<ThrowOnFailure, Inc, Emb>;
+			Preprocessor& pp() { return *static_cast<Preprocessor*>(this); }
 
-			#pragma warning(push)
-			#pragma warning(disable:4355) // 'this' : used in base member initializer list
-			explicit Reader(bool case_sensitive = true)
+			explicit ReaderT(bool case_sensitive = true)
 				:Preprocessor()
-				,ReaderBase(*this, case_sensitive)
+				,ReaderBase(pp(), case_sensitive)
 			{}
-			explicit Reader(Src& src, bool case_sensitive = true)
+			explicit ReaderT(Src& src, bool case_sensitive = true)
 				:Reader(case_sensitive)
 			{
 				Push(src);
 			}
-			explicit Reader(Src* src, bool delete_on_pop, bool case_sensitive = true)
+			explicit ReaderT(Src* src, bool delete_on_pop, bool case_sensitive = true)
 				:Reader(case_sensitive)
 			{
 				Push(src, delete_on_pop);
 			}
-			explicit Reader(char const* ptr, bool case_sensitive = true)
+			explicit ReaderT(char const* ptr, bool case_sensitive = true)
 				:Reader(case_sensitive)
 			{
 				auto src = std::make_unique<PtrA<>>(ptr);
 				Push(src.get(), true);
 				src.release();
 			}
-			explicit Reader(wchar_t const* ptr, bool case_sensitive = true)
+			explicit ReaderT(wchar_t const* ptr, bool case_sensitive = true)
 				:Reader(case_sensitive)
 			{
 				auto src = std::make_unique<PtrW<>>(ptr);
 				Push(src.get(), true);
 				src.release();
 			}
-			#pragma warning(pop)
 
-			Reader(Reader&& rhs) = delete;
-			Reader(Reader const& rhs) = delete;
-			Reader& operator =(Reader&& rhs) = delete;
-			Reader& operator =(Reader const& rhs) = delete;
+			ReaderT(ReaderT&& rhs) = delete;
+			ReaderT(ReaderT const& rhs) = delete;
+			ReaderT& operator =(ReaderT&& rhs) = delete;
+			ReaderT& operator =(ReaderT const& rhs) = delete;
+
+			// Access the include handler
+			Inc& Includes() const override
+			{
+				return Preprocessor::Includes;
+			}
+
+			// Access the embedded code handler
+			Emb& EmbeddedCode() const override
+			{
+				return Preprocessor::EmbeddedCode;
+			}
 		};
+
+		// The default reader
+		using Reader = ReaderT<>;
 	}
 }
 

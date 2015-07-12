@@ -22,7 +22,6 @@ namespace pr
 		<
 			typename FailPolicy = ThrowOnFailure,
 			typename TIncludeHandler = FileIncludes<FailPolicy>,
-			typename TMacroDB = MacroDB<Macro<>, FailPolicy>,
 			typename TEmbeddedCodeHandler = EmbeddedCode<FailPolicy>
 		>
 		struct Preprocessor :Src
@@ -33,9 +32,9 @@ namespace pr
 			struct PPSource :Src
 			{
 				using LnCnt   = StripLineContinuations<Src>;
-				using CmtStrp = StripComments<FailPolicy, LnCnt>;
+				using CmtStrp = StripComments<FailPolicy>;
 				using BufType = pr::deque<wchar_t>;
-				using OutSrc  = Buffer<BufType, CmtStrp>;
+				using OutSrc  = Buffer<BufType>;
 				using Emit    = EmitCount;
 
 				Src*    m_in;
@@ -68,11 +67,11 @@ namespace pr
 					,m_out (std::move(rhs.m_out))
 					,m_emit(std::move(rhs.m_emit))
 				{
-					m_slc.m_reg.m_src = m_in;
-					m_sc.m_reg.m_src  = &m_slc;
-					m_out.m_src       = &m_sc;
-					rhs.m_in          = nullptr;
-					rhs.m_del         = false;
+					m_slc.m_src = m_in;
+					m_sc.m_src  = &m_slc;
+					m_out.m_src = &m_sc;
+					rhs.m_in    = nullptr;
+					rhs.m_del   = false;
 				}
 				PPSource(PPSource const&) = delete;
 				PPSource& operator =(PPSource&& rhs)
@@ -85,9 +84,9 @@ namespace pr
 						std::swap(m_sc  , rhs.m_sc);
 						std::swap(m_out , rhs.m_out);
 						std::swap(m_emit, rhs.m_emit);
-						m_slc.m_reg.m_src = m_in;
-						m_sc.m_reg.m_src  = &m_slc;
-						m_out.m_src       = &m_sc;
+						m_slc.m_src = m_in;
+						m_sc.m_src  = &m_slc;
+						m_out.m_src = &m_sc;
 					}
 					return *this;
 				}
@@ -149,13 +148,13 @@ namespace pr
 				template <typename Str> int match_emit(Str const& str, bool emit_if_match = true)
 				{
 					auto r = m_out.match(str);
-					if (emit_if_match && m_emit < r) m_emit = r;
+					if (emit_if_match && int(m_emit) < r) m_emit = r;
 					return r;
 				}
 				template <typename Char> int match_emit(Char const* str, bool emit_if_match = true)
 				{
 					auto r = m_out.match(str);
-					if (emit_if_match && m_emit < r) m_emit = r;
+					if (emit_if_match && int(m_emit) < r) m_emit = r;
 					return r;
 				}
 				template <typename Str> int match_adv(Str const& str, bool adv_if_match = true)
@@ -171,7 +170,7 @@ namespace pr
 			std::vector<PPSource> m_stack;
 
 			// The database of macro definitions
-			using MacroDB = TMacroDB;
+			using MacroDB = MacroDB<Macro<FailPolicy>, FailPolicy>;
 			using Macro = typename MacroDB::Macro;
 			using MacroParams = typename Macro::Params;
 			using MacroAncester = typename Macro::Ancestor;
@@ -494,7 +493,8 @@ namespace pr
 
 									// Get the code handler to transform the code into a result
 									// Note, the code handler is expected to work or throw
-									m_embedded.Execute(lang, code, code_beg, result);
+									if (!m_embedded.IEmbeddedCode_Execute(lang, code, code_beg, result))
+										return FailPolicy::Fail(EResult::EmbeddedCodeNotSupported, loc_beg, "No support for embedded code available");
 
 									// Push the code result as a source
 									auto code_src = std::make_unique<Buffer<>>(ESrcType::EmbeddedCode, std::begin(result), std::end(result));
@@ -1088,7 +1088,7 @@ namespace pr
 					;
 
 				Preprocessor<ThrowOnFailure, StrIncludes<>> pp;
-				pp.Includes.m_strings[L"inc"] = L"included ONE";
+				pp.Includes.m_strings[L"inc"] = "included ONE";
 				pp.Push(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
@@ -1121,7 +1121,7 @@ namespace pr
 					"hello world\n"
 					;
 
-				Preprocessor<ThrowOnFailure, StrIncludes<>, MacroDB<>, EmbeddedLua<>> pp(str_in);
+				Preprocessor<ThrowOnFailure, StrIncludes<>, EmbeddedLua<>> pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;
@@ -1140,6 +1140,28 @@ namespace pr
 
 				Buffer<> buf(ESrcType::Buffered, str_in);
 				Preprocessor<> pp(&buf, false);
+				for (;*pp && *str_out; ++pp, ++str_out)
+				{
+					if (*pp == *str_out) continue;
+					PR_CHECK(*pp, *str_out);
+				}
+				PR_CHECK(*str_out == 0 && *pp == 0, true);
+			}
+			{// X Macros
+				char const* str_in =
+					"#define LINE(x) x = #x\n"
+					"#define DEFINE(values) values(LINE)\n"
+					"#define Thing(x)\\\n"
+					"	x(One)\\\n"
+					"	x(Two)\\\n"
+					"	x(Three)\n"
+					"DEFINE(Thing)\n"
+					"#undef Thing\n"
+					;
+				char const* str_out =
+					"One = \"One\"	Two = \"Two\"	Three = \"Three\"\n"
+					;
+				Preprocessor<> pp(str_in);
 				for (;*pp && *str_out; ++pp, ++str_out)
 				{
 					if (*pp == *str_out) continue;

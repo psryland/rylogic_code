@@ -84,13 +84,13 @@ namespace pr
 			template <typename Ptr> void Load(Ptr& src)
 			{
 				int n = Capacity;
-				for (; *src && n--; ++src) shift(*src);
+				for (; *src != 0 && n--; ++src) shift(*src);
 				for (; n-- > 0;) shift(Char());
 			}
 			template <typename Ptr> void Load(Ptr const* src)
 			{
 				int n = Capacity;
-				for (; *src && n--; ++src) shift(*src);
+				for (; *src != 0 && n--; ++src) shift(*src);
 				for (; n-- > 0;) shift(Char());
 			}
 
@@ -115,6 +115,14 @@ namespace pr
 			Char back() const
 			{
 				return m_ch[Back];
+			}
+
+			// Allow dereference to mean the front of the buffer
+			// Note, no operator++() however since we don't know
+			// the source that feeds this buffer
+			Char operator *() const
+			{
+				return front();
 			}
 
 			// Array access into the buffer

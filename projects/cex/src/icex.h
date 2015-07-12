@@ -52,7 +52,7 @@ namespace cex
 		}
 
 		// Called after command line parsing, allows derived types to set default params
-		virtual void ValidatedInput()
+		virtual void ValidateInput()
 		{}
 
 		// Show the console for this process

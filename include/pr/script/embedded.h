@@ -31,20 +31,18 @@ namespace pr
 		// An embedded code handler that doesn't handle any code.
 		// Serves as the default for Preprocessor and as an interface definition.
 		template <typename FailPolicy = ThrowOnFailure>
-		struct EmbeddedCode
+		struct EmbeddedCode :IEmbeddedCode
 		{
 			std::vector<IEmbeddedCode*> Handler;
 
-			// Execute the given 'code' from the language 'lang'
-			// 'loc' is the location of the start of the code within the source
-			// 'result' should return the result of executing the code
-			void Execute(string const& lang, string const& code, Location const& loc, string& result)
+			// Forwards the code to all handlers, returning after the first that reports 'handled'.
+			bool IEmbeddedCode_Execute(string const& lang, string const& code, Location const& loc, string& result) override
 			{
 				for (auto& handler : Handler)
 					if (handler->IEmbeddedCode_Execute(lang, code, loc, result))
-						return;
+						return true;
 
-				FailPolicy::Fail(EResult::EmbeddedCodeNotSupported, loc, "No support for embedded code available");
+				return false;
 			}
 		};
 	}

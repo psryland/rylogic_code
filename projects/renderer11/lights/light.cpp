@@ -63,21 +63,26 @@ namespace pr
 		}
 
 		#define PR_ENUM(x)\
-			x(Pos  ,= 0x13930DAF)\
-			x(Dir  ,= 0x1618B31F)\
-			x(Type ,= 0x19DA494A)\
-			x(Amb  ,= 0x1558CC98)\
-			x(Diff ,= 0x06868516)\
-			x(Spec ,= 0x1EEC863F)\
-			x(SPwr ,= 0x1C563FB0)\
-			x(InCA ,= 0x027932CE)\
-			x(OtCA ,= 0x178B4446)\
-			x(Rng  ,= 0x11F022C5)\
-			x(FOff ,= 0x1C689A1D)\
-			x(Shdw ,= 0x17CA424A)\
-			x(On   ,= 0x1E67B806)
+			x(Pos  ,= 0x69FCCEDF)\
+			x(Dir  ,= 0x8BFA9FFE)\
+			x(Type ,= 0x0CBF8747)\
+			x(Amb  ,= 0xDBF6A735)\
+			x(Diff ,= 0xF3BAD914)\
+			x(Spec ,= 0x2DE5D728)\
+			x(SPwr ,= 0x0EC31419)\
+			x(InCA ,= 0x30DDD5AC)\
+			x(OtCA ,= 0xA89FF1D4)\
+			x(Rng  ,= 0xAA7451F4)\
+			x(FOff ,= 0xF6B8D1F8)\
+			x(Shdw ,= 0xAAAEB4D5)\
+			x(On   ,= 0x8CEABA7A)
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
+
+		// Check the hash values are correct
+		#if PR_DBG_RDR
+		static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>([&](wchar_t const* s) { return pr::script::Reader::HashKeyword(s, false); });
+		#endif
 
 		// Get/Set light settings
 		std::string Light::Settings() const
@@ -110,13 +115,7 @@ namespace pr
 
 				// Parse the settings
 				pr::script::PtrA<> src(settings);
-				pr::script::Reader reader(src);
-
-				// Check the hash values are correct
-				#if PR_DBG_RDR
-				static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>(
-					[&](wchar_t const* s) { return reader.HashKeyword(s); });
-				#endif
+				pr::script::Reader reader(src, false);
 
 				ELightKW kw;
 				while (reader.NextKeywordH(kw))

@@ -50,18 +50,33 @@ namespace pr
 			}
 		};
 
-		// Wraps BufWN<> and a reference to a character source and location.
-		// This allows other code to use a Src as a pointer with automatic location and buffering support
-		template <typename BufN, typename TSrc = Src> struct BufSrc :Src
+		// Base class for a 'Src' filter. Simple pass through filter.
+		// Filters are different to actual sources because they only contain
+		// a reference to the underlying source. This means they are copy constructable.
+		template <typename BufWN = BufW2> struct Filter :Src
 		{
-			TSrc* m_src; // The source character stream (used to feed TBuf)
-			BufN  m_reg; // The character "shift register"
+			Src* m_src; // The source character stream (used to feed TBuf)
+			BufWN m_reg; // The character "shift register"
 
-			BufSrc(TSrc& src)
-				:Src(src.Type())
-				,m_src(&src)
-				,m_reg(src) // note, this will advance 'src'
+			Filter()
+				:Src(ESrcType::Unknown)
+				,m_src()
+				,m_reg()
 			{}
+			Filter(Src& src)
+				:Filter()
+			{
+				Source(src);
+			}
+
+			// Set the input source
+			void Source(Src& src)
+			{
+				m_type = src.Type();
+				m_src = &src;
+				m_reg.Load(*m_src);
+				seek(0);
+			}
 
 			// Debugging helper interface
 			SrcConstPtr DbgPtr() const override
@@ -73,15 +88,14 @@ namespace pr
 				return m_src->Loc();
 			}
 
-			// Pointer interface
-			wchar_t operator*() const override
+			// Pointer-like interface
+			wchar_t operator *() const override
 			{
 				return m_reg.front();
 			}
-			BufSrc& operator ++() override
+			Filter& operator ++() override
 			{
-				m_reg.shift(**m_src);
-				if (**m_src) ++*m_src;
+				seek(1);
 				return *this;
 			}
 
@@ -94,68 +108,30 @@ namespace pr
 			{
 				return m_reg[i];
 			}
-		};
 
-		// Base class for a 'Src' filter. Simple pass through filter.
-		// Filters are different to actual sources because they only contain
-		// a reference to the underlying source. This means they are copy constructable.
-		template <typename BufWN = BufW2, typename TSrc = Src> struct Filter :Src
-		{
-			using BufN = BufSrc<BufWN, TSrc>;
-			BufN m_reg; // N-character shift register for fast short string buffering
-
-			Filter(TSrc& src)
-				:Src(src.Type())
-				,m_reg(src)
+			// Advance the buffer
+			virtual void next(int n)
 			{
-				seek(0);
-			}
-
-			// Debugging helper interface
-			SrcConstPtr DbgPtr() const override
-			{
-				return m_reg.DbgPtr();
-			}
-			Location const& Loc() const override
-			{
-				return m_reg.Loc();
-			}
-
-			// Pointer-like interface
-			wchar_t operator *() const override
-			{
-				return *m_reg;
-			}
-			Filter& operator ++() override
-			{
-				seek(1);
-				return *this;
-			}
-
-			// Array access to the buffered data. Buffer size grows to accomodate 'i'
-			wchar_t operator[](size_t i) const
-			{
-				return m_reg[i];
-			}
-			wchar_t& operator [](size_t i)
-			{
-				return m_reg[i];
+				for (;n--;)
+				{
+					m_reg.shift(**m_src);
+					if (**m_src) ++*m_src;
+				}
 			}
 
 			// Seek to the next valid character to output
 			virtual void seek(int n)
 			{
-				auto& src = m_reg;
-				src += n;
+				next(n);
 			}
 		};
 
 		// Removes line continuation sequences in a character stream
-		template <typename TSrc = Src> struct StripLineContinuations :Filter<BufW4,TSrc>
+		template <typename FailPolicy = ThrowOnFailure> struct StripLineContinuations :Filter<BufW4>
 		{
-			using base = Filter<BufW4,TSrc>;
+			using base = Filter<BufW4>;
 
-			StripLineContinuations(TSrc& src)
+			StripLineContinuations(Src& src)
 				:base(src)
 			{
 				seek(0);
@@ -165,22 +141,22 @@ namespace pr
 			void seek(int n) override
 			{
 				auto& src = m_reg;
-				for (src += n;;)
+				for (next(n);;)
 				{
-					if (src[0] == L'\\' && src[1] == L'\n')                    { src += 2; continue; }
-					if (src[0] == L'\\' && src[1] == L'\r' && src[2] == L'\n') { src += 3; continue; }
+					if (src[0] == L'\\' && src[1] == L'\n')                    { next(2); continue; }
+					if (src[0] == L'\\' && src[1] == L'\r' && src[2] == L'\n') { next(3); continue; }
 					break;
 				}
 			}
 		};
 
 		// Removes C++ style comments from a character stream
-		template <typename FailPolicy = ThrowOnFailure, typename TSrc = Src> struct StripComments :Filter<BufW2, TSrc>
+		template <typename FailPolicy = ThrowOnFailure> struct StripComments :Filter<BufW2>
 		{
-			using base = Filter<BufW2,TSrc>;
+			using base = Filter<BufW2>;
 			StringLit m_literal;
 			
-			StripComments(TSrc& src)
+			StripComments(Src& src)
 				:base(src)
 				,m_literal()
 			{
@@ -191,7 +167,7 @@ namespace pr
 			void seek(int n) override
 			{
 				auto& src = m_reg;
-				for (src += n;;)
+				for (next(n);;)
 				{
 					// If we're currently within a literal string or character then
 					// just return characters until the literal ends
@@ -203,14 +179,14 @@ namespace pr
 					{
 						if (src[1] == L'/')
 						{
-							for (src += 2; *src != L'\n' && *src; ++src) {}
+							for (next(2); *src != L'\n' && *src; next(1)) {}
 							continue; // Don't eat the new line
 						}
 						if (src[1] == L'*')
 						{
-							auto beg = src.Loc();
-							for (src += 2; src[0] != L'*' && src[1] != L'/' && *src; ++src) {}
-							if (*src) src += 2; else return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), pr::Fmt("Unmatched block comment at:\n%s", Narrow(beg.ToString()).c_str()));
+							auto loc_beg = m_src->Loc();
+							for (next(2); src[0] != L'*' && src[1] != L'/' && *src; next(1)) {}
+							if (*src) next(2); else return FailPolicy::Fail(EResult::SyntaxError, loc_beg, "Unmatched block comment");
 							continue;
 						}
 					}
@@ -222,24 +198,45 @@ namespace pr
 		};
 
 		// Removes newlines from a character stream
-		template <typename FailPolicy = ThrowOnFailure, typename TSrc = Src> struct StripNewLines :Filter<BufW2, TSrc>
+		template <typename FailPolicy = ThrowOnFailure> struct StripNewLines :Filter<BufW2>
 		{
-			using base = Filter<BufW2,TSrc>;
+			using base = Filter<BufW2>;
+
 			Buffer<> m_lines;
 			size_t m_lines_max;
 			size_t m_lines_min;
 			StringLit m_literal;
 			EmitCount m_emit;
 
-			StripNewLines(TSrc& src, size_t lines_max = 1, size_t lines_min = 0)
-				:base(src)
-				,m_lines(m_reg)
-				,m_lines_max(lines_max)
-				,m_lines_min(std::min(lines_min, lines_max))
+			StripNewLines()
+				:base()
+				,m_lines()
+				,m_lines_max()
+				,m_lines_min()
 				,m_literal()
 				,m_emit()
+			{}
+			StripNewLines(Src& src, size_t lines_min = 0, size_t lines_max = 1)
+				:StripNewLines()
 			{
+				SetLimits(lines_min, lines_max);
+				Source(src);
+			}
+
+			// Set the input source
+			void Source(Src& src)
+			{
+				m_type = src.Type();
+				m_src = &src; 
+				m_lines.Source(*m_src); // not using m_reg
 				seek(0);
+			}
+
+			// Set the min/max line count
+			void SetLimits(size_t lines_min = 0, size_t lines_max = 1)
+			{
+				m_lines_max = lines_max;
+				m_lines_min = std::min(lines_min, lines_max);
 			}
 
 			// Pointer-like interface
@@ -247,7 +244,13 @@ namespace pr
 			{
 				return *m_lines;
 			}
-			
+
+			// Advance the buffer
+			void next(int n) override
+			{
+				m_lines += n;
+			}
+
 			// Seek to the next valid character to output
 			void seek(int n) override
 			{
@@ -426,7 +429,7 @@ namespace pr
 						"string \"     abc  ";
 
 					PtrA<> src(str_in);
-					StripNewLines<> strip(src, 0);
+					StripNewLines<> strip(src, 0, 0);
 					for (; *strip; ++strip, ++str_out)
 					{
 						if (*strip == *str_out) continue;

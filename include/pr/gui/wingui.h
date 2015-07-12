@@ -275,6 +275,41 @@ namespace pr
 
 		#pragma endregion
 
+		#pragma region Win32
+		// Template specialised versions of the win32 api functions
+		template <typename Char> struct Win32;
+		template <> struct Win32<char>
+		{
+			static int WindowText(HWND hwnd, LPSTR lpString, int nMaxCount)
+			{
+				return ::GetWindowTextA(hwnd, lpString, nMaxCount);
+			}
+			static int WindowTextLength(HWND hwnd)
+			{
+				return ::GetWindowTextLengthA(hwnd);
+			}
+			static int MenuString(HMENU hMenu, UINT uIDItem, LPSTR lpString, int cchMax, UINT flags)
+			{
+				return ::GetMenuStringA(hMenu, uIDItem, lpString, cchMax, flags);
+			}
+		};
+		template <> struct Win32<wchar_t>
+		{
+			static int WindowText(HWND hwnd, LPWSTR lpString, int nMaxCount)
+			{
+				return ::GetWindowTextW(hwnd, lpString, nMaxCount);
+			}
+			static int WindowTextLength(HWND hwnd)
+			{
+				return ::GetWindowTextLengthW(hwnd);
+			}
+			static int MenuString(HMENU hMenu, UINT uIDItem, LPWSTR lpString, int cchMax, UINT flags)
+			{
+				return ::GetMenuStringW(hMenu, uIDItem, lpString, cchMax, flags);
+			}
+		};
+		#pragma endregion
+
 		#pragma region Support structures
 
 		// String
@@ -2039,12 +2074,12 @@ namespace pr
 
 			// Get/Set the menu. Set returns the previous menu.
 			// If replacing a menu, remember to call DestroyMenu on the previous one
-			HMENU Menu() const
+			pr::gui::Menu Menu() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return ::GetMenu(m_hwnd);
+				return pr::gui::Menu(::GetMenu(m_hwnd), false);
 			}
-			HMENU Menu(HMENU menu)
+			pr::gui::Menu Menu(pr::gui::Menu menu)
 			{
 				assert(::IsWindow(m_hwnd));
 				auto prev = Menu();

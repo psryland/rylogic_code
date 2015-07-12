@@ -59,8 +59,8 @@ namespace pr
 		inline string Write(pr::v2 const& t)       { return pr::FmtS(L"%f %f", t.x, t.y); }
 		inline string Write(pr::v4 const& t)       { return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w); }
 		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.m_aarrggbb); }
-		inline string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString(Widen(t))); }
-		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotesC(pr::str::StringToCString(Widen(t))); }
+		inline string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
+		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
 		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
 		inline string Write(TEnum t) { return TEnum::ToStringW(t); }
 
@@ -97,25 +97,53 @@ namespace pr
 		{}
 
 		// Load settings from file
-		bool Load() { return Load(m_filepath); }
+		bool Load()
+		{
+			return Load(m_filepath);
+		}
 		bool Load(std::string file)
 		{
 			m_filepath = file;
+			if (!pr::filesys::FileExists(m_filepath))
+			{
+				pr::events::Send(Evt(pr::FmtS("User settings file '%s' not found", m_filepath.c_str()), Evt::Warning));
+				return false;
+			}
+
+			// Read the settings into a buffer
 			std::string settings;
-			if (!pr::filesys::FileExists(m_filepath)) { pr::events::Send(Evt(pr::FmtS("User settings file '%s' not found", m_filepath.c_str()), Evt::Warning)); return false; }
-			if (!pr::FileToBuffer(m_filepath.c_str(), settings)) { pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error)); return false; }
+			if (!pr::FileToBuffer(m_filepath.c_str(), settings))
+			{
+				pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
 			return Import(settings);
 		}
 
 		// Save settings to file
-		bool Save() { return Save(m_filepath); }
+		bool Save()
+		{
+			return Save(m_filepath);
+		}
 		bool Save(std::string file)
 		{
-			std::string settings = Export();
 			m_filepath = file;
-			std::string dir = pr::filesys::GetDirectory(m_filepath);
-			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir)) { pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error)); return false; }
-			if (!pr::BufferToFile(settings, m_filepath.c_str())) { pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error)); return false; }
+
+			auto dir = pr::filesys::GetDirectory(m_filepath);
+			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir))
+			{
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
+			auto settings = Export();
+			if (!pr::BufferToFile(settings, m_filepath.c_str()))
+			{
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
 			m_crc = Crc(settings);
 			return true;
 		}
@@ -137,7 +165,8 @@ namespace pr
 		bool Import(std::string const& settings)
 		{
 			// Create a default reader from the import string
-			pr::script::Reader reader(settings.c_str());
+			pr::script::PtrA<> src(settings.c_str());
+			pr::script::Reader reader(src);
 			return Import(reader);
 		}
 
@@ -155,7 +184,7 @@ namespace pr
 					auto setting = TSettings::ByIndex(i);
 					auto name    = TSettings::NameW(setting);
 					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue>(setting))
-						invalid_hashcodes += pr::FmtS("\n%-48s hash value should be 0x%08X", TSettings::NameA(setting), hash);
+						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", TSettings::NameA(setting), hash);
 				}
 				if (!invalid_hashcodes.empty())
 				{

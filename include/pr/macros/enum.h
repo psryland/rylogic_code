@@ -351,7 +351,7 @@ namespace pr
 		using BaseType = typename std::underlying_type<TEnum::Enum_>::type;
 
 		bool result = true;
-		std::string s;
+		std::string s = "\n";
 		for (int i = 0; i != TEnum::NumberOf; ++i)
 		{
 			// Get the enum member name, and take its hash
@@ -363,19 +363,24 @@ namespace pr
 			if (hash != value)
 			{
 				char buf[256] = {};
-				_snprintf(buf, _countof(buf), "\n%s::%s hash value should be 0x%08X", TEnum::EnumName(), TEnum::MemberName<char>(i), hash);
+				_snprintf(buf, _countof(buf), "%s::%s hash value should be 0x%08X\n", TEnum::EnumName(), TEnum::MemberName<char>(i), hash);
 				s.append(buf);
 				result = false;
 			}
 		}
-		if (!result) on_fail(s.c_str());
+		if (!result)
+		{
+			on_fail(s.c_str());
+		}
 		return result;
 	}
 	template <typename TEnum, typename Char, typename THashFunc> inline bool CheckHashEnum(THashFunc hash_func)
 	{
 		return CheckHashEnum<TEnum, Char>(hash_func, [](char const* msg)
 			{
+				OutputDebugStringA(msg);
 				std::cerr << msg;
+				assert(false && "enum hash values are incorrect");
 				throw std::exception(msg);
 			});
 	}

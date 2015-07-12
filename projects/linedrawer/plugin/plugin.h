@@ -46,9 +46,21 @@ namespace ldr
 		// Step the plugin forward by 'elapsed_s'
 		void Poll(double elapsed_s) const;
 
+		// Create one or more objects described by 'reader'
+		// The last object created is returned. (hmm, could return a range of objects...)
+		pr::ldr::LdrObject* Plugin::RegisterObject(pr::script::Reader& reader, pr::ldr::ContextId ctx_id, bool async);
+
 		// Create one or more objects described by 'object_description'
 		// The last object created is returned. (hmm, could return a range of objects...)
-		pr::ldr::LdrObject* RegisterObject(char const* object_description, char const* include_paths, pr::ldr::ContextId ctx_id, bool async);
+		template <typename Char> pr::ldr::LdrObject* RegisterObject(Char const* object_description, wchar_t const* include_paths, pr::ldr::ContextId ctx_id, bool async)
+		{
+			using namespace pr::script;
+			Reader reader;
+			Ptr<Char const*> src(object_description);
+			reader.Includes().SearchPaths(include_paths);
+			reader.Push(src);
+			return RegisterObject(reader, ctx_id, async);
+		}
 
 		// Remove 'object' from the store
 		void UnregisterObject(pr::ldr::LdrObject* object);
