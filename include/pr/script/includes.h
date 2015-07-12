@@ -273,7 +273,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_includes)
+		PRUnitTest(pr_script_includes)
 		{
 			using namespace pr::str;
 			using namespace pr::script;

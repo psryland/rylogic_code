@@ -854,7 +854,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_input_stack)
+		PRUnitTest(pr_script_input_stack)
 		{
 			using namespace pr::str;
 			using namespace pr::script;
@@ -875,7 +875,7 @@ namespace pr
 			PR_CHECK(Equal(str1, L"ab123cd"), true);
 			PR_CHECK(*pp, 0);
 		}
-		PRUnitTest(pr_script2_preprocessor)
+		PRUnitTest(pr_script_preprocessor)
 		{
 			using namespace pr::script;
 

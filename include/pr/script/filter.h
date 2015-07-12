@@ -314,7 +314,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_filter)
+		PRUnitTest(pr_script_filter)
 		{
 			using namespace pr::str;
 			using namespace pr::script;

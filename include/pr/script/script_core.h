@@ -633,7 +633,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_checkhashes)
+		PRUnitTest(pr_script_checkhashes)
 		{
 			using namespace pr::script;
 			pr::CheckHashEnum<EKeyword, wchar_t>(
@@ -656,7 +656,7 @@ namespace pr
 					PR_FAIL(msg);
 				});
 		}
-		PRUnitTest(pr_script2_core)
+		PRUnitTest(pr_script_core)
 		{
 			using namespace pr::str;
 			using namespace pr::script;

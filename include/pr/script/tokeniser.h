@@ -311,7 +311,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_tokeniser)
+		PRUnitTest(pr_script_tokeniser)
 		{
 			using namespace pr;
 			using namespace pr::script;

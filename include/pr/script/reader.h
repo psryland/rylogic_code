@@ -562,7 +562,7 @@ namespace pr
 {
 	namespace unittests
 	{
-		PRUnitTest(pr_script2_reader)
+		PRUnitTest(pr_script_reader)
 		{
 			using namespace pr::script;
 
