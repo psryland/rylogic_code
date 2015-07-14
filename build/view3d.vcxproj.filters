@@ -90,9 +90,6 @@
     <ClInclude Include="..\include\pr\script\reader.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\view3d\stdafx.h">
-      <Filter>src</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\view3d\view3d.h">
       <Filter>src</Filter>
     </ClInclude>
@@ -145,9 +142,6 @@
     </ClCompile>
     <ClCompile Include="..\include\pr\lua\lua_lib.c">
       <Filter>src\pr\lua</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\view3d\stdafx.cpp">
-      <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="..\projects\view3d\view3d.cpp">
       <Filter>src</Filter>

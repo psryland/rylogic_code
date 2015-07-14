@@ -45,6 +45,7 @@ namespace view3d
 			RECT rect; ::GetClientRect(hwnd, &rect);
 			return pr::rdr::WndSettings(hwnd, true, gdi_compat, pr::To<pr::iv2>(rect));
 		}
+		Window* this_() { return this; }
 
 		Window(pr::Renderer& rdr, HWND hwnd, bool gdi_compat, View3D_ReportErrorCB error_cb, void* ctx)
 			:m_error_cb({pr::StaticCallBack(error_cb, ctx)})
@@ -66,8 +67,8 @@ namespace view3d
 			,m_origin_point_visible(false)
 			,m_editor_ui()
 			,m_obj_cont_ui()
-			,m_measure_tool_ui(ReadPoint, this, m_rdr, hwnd)
-			,m_angle_tool_ui(ReadPoint, this, m_rdr, hwnd)
+			,m_measure_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
+			,m_angle_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
 			,m_editors()
 			,m_settings()
 		{
