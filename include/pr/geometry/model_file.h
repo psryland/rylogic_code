@@ -28,13 +28,24 @@ namespace pr
 		};
 		
 		// Determine properties of a model file format from the filepath
-		inline ModelFileInfo GetModelFileInfo(char const* filepath)
+		template <typename Char> inline ModelFileInfo GetModelFileInfo(Char const* filepath)
 		{
 			ModelFileInfo info = {};
 
+			struct L {
+				static void splitpath(char const* fullpath, char* drive, size_t drive_size, char* dir, size_t dir_size, char* fname, size_t fname_size, char* extn, size_t extn_size)
+				{
+					::_splitpath_s(fullpath, drive, drive_size, dir, dir_size, fname, fname_size, extn, extn_size);
+				}
+				static void splitpath(wchar_t const* fullpath, wchar_t* drive, size_t drive_size, wchar_t* dir, size_t dir_size, wchar_t* fname, size_t fname_size, wchar_t* extn, size_t extn_size)
+				{
+					::_wsplitpath_s(fullpath, drive, drive_size, dir, dir_size, fname, fname_size, extn, extn_size);
+				}
+			};
+
 			// Read the file extension
-			char extn[_MAX_EXT] = {}, *ext = &extn[0];
-			_splitpath(filepath, nullptr, nullptr, nullptr, extn);
+			Char extn[_MAX_EXT] = {}, *ext = &extn[0];
+			L::splitpath(filepath, nullptr, 0, nullptr, 0, nullptr, 0, extn, _countof(extn));
 			while (*ext != 0 && *ext == '.') ++ext;
 
 			if (!EModelFileFormat::TryParse(info.m_format, ext, false))

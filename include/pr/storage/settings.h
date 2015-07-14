@@ -12,8 +12,6 @@
 // PR_DEFINE_SETTINGS(MySettings, PR_SETTING);
 // #undef PR_SETTING
 
-#ifndef PR_STORAGE_SETTINGS_H
-#define PR_STORAGE_SETTINGS_H
 #pragma once
 
 #include <string>
@@ -25,6 +23,7 @@
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
+#include "pr/str/string.h"
 
 namespace pr
 {
@@ -49,30 +48,35 @@ namespace pr
 			Evt(std::string msg, ELevel level) :m_msg(msg) ,m_level(level) {}
 		};
 
-		// Export function helper overloads
-		inline char const* Write(bool t)                { return t ? "true" : "false"; }
-		inline char const* Write(float t)               { return pr::FmtS("%g", t); }
-		inline char const* Write(int t)                 { return pr::FmtS("%d", t); }
-		inline char const* Write(unsigned int t)        { return pr::FmtS("%u", t); }
-		inline char const* Write(unsigned __int64 t)    { return pr::FmtS("%u", t); }
-		inline char const* Write(pr::v2 const& t)       { return pr::FmtS("%f %f", t.x, t.y); }
-		inline char const* Write(pr::v4 const& t)       { return pr::FmtS("%f %f %f %f", t.x, t.y, t.z, t.w); }
-		inline char const* Write(pr::Colour32 t)        { return pr::FmtS("%08X", t.m_aarrggbb); }
-		inline std::string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString<std::string>(t)); }
+		using string = pr::string<wchar_t>;
+
+		// Export function overloads
+		inline string Write(bool t)                { return t ? L"true" : L"false"; }
+		inline string Write(float t)               { return pr::FmtS(L"%g", t); }
+		inline string Write(int t)                 { return pr::FmtS(L"%d", t); }
+		inline string Write(unsigned int t)        { return pr::FmtS(L"%u", t); }
+		inline string Write(unsigned __int64 t)    { return pr::FmtS(L"%u", t); }
+		inline string Write(pr::v2 const& t)       { return pr::FmtS(L"%f %f", t.x, t.y); }
+		inline string Write(pr::v4 const& t)       { return pr::FmtS(L"%f %f %f %f", t.x, t.y, t.z, t.w); }
+		inline string Write(pr::Colour32 t)        { return pr::FmtS(L"%08X", t.m_aarrggbb); }
+		inline string Write(std::string const& t)  { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
+		inline string Write(std::wstring const& t) { return pr::filesys::AddQuotesC(pr::str::StringToCString(string(Widen(t)))); }
+		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
+		inline string Write(TEnum t) { return TEnum::ToStringW(t); }
 
 		// Import function helper overloads
-		inline bool Read(pr::script::Reader& reader, bool& t)             { return reader.ExtractBoolS(t); }
-		inline bool Read(pr::script::Reader& reader, float& t)            { return reader.ExtractRealS(t); }
-		inline bool Read(pr::script::Reader& reader, int& t)              { return reader.ExtractIntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, unsigned int& t)     { return reader.ExtractIntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, unsigned __int64& t) { return reader.ExtractIntS(t, 10); }
-		inline bool Read(pr::script::Reader& reader, pr::v2& t)           { return reader.ExtractVector2S(t); }
-		inline bool Read(pr::script::Reader& reader, pr::v4& t)           { return reader.ExtractVector4S(t); }
-		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.ExtractIntS(t.m_aarrggbb, 16); }
-		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.ExtractCStringS(t); }
-
-		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, char const*>::type Write(TEnum t)                             { return TEnum::ToString(t); }
-		template <typename TEnum> inline typename std::enable_if<pr::is_enum<TEnum>::value, bool>::type        Read(pr::script::Reader& reader, TEnum& t) { return reader.ExtractEnumS(t); }
+		inline bool Read(pr::script::Reader& reader, bool& t)             { return reader.BoolS(t); }
+		inline bool Read(pr::script::Reader& reader, float& t)            { return reader.RealS(t); }
+		inline bool Read(pr::script::Reader& reader, int& t)              { return reader.IntS(t, 10); }
+		inline bool Read(pr::script::Reader& reader, unsigned int& t)     { return reader.IntS(t, 10); }
+		inline bool Read(pr::script::Reader& reader, unsigned __int64& t) { return reader.IntS(t, 10); }
+		inline bool Read(pr::script::Reader& reader, pr::v2& t)           { return reader.Vector2S(t); }
+		inline bool Read(pr::script::Reader& reader, pr::v4& t)           { return reader.Vector4S(t); }
+		inline bool Read(pr::script::Reader& reader, pr::Colour32& t)     { return reader.IntS(t.m_aarrggbb, 16); }
+		inline bool Read(pr::script::Reader& reader, std::string& t)      { return reader.CStringS(t); }
+		inline bool Read(pr::script::Reader& reader, std::wstring& t)     { return reader.CStringS(t); }
+		template <typename TEnum, typename = std::enable_if_t<pr::is_enum<TEnum>::value>>
+		inline bool Read(pr::script::Reader& reader, TEnum& t) { return reader.EnumS(t); }
 	}
 
 	// A base class for settings types
@@ -93,25 +97,53 @@ namespace pr
 		{}
 
 		// Load settings from file
-		bool Load() { return Load(m_filepath); }
+		bool Load()
+		{
+			return Load(m_filepath);
+		}
 		bool Load(std::string file)
 		{
 			m_filepath = file;
+			if (!pr::filesys::FileExists(m_filepath))
+			{
+				pr::events::Send(Evt(pr::FmtS("User settings file '%s' not found", m_filepath.c_str()), Evt::Warning));
+				return false;
+			}
+
+			// Read the settings into a buffer
 			std::string settings;
-			if (!pr::filesys::FileExists(m_filepath)) { pr::events::Send(Evt(pr::FmtS("User settings file '%s' not found", m_filepath.c_str()), Evt::Warning)); return false; }
-			if (!pr::FileToBuffer(m_filepath.c_str(), settings)) { pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error)); return false; }
+			if (!pr::FileToBuffer(m_filepath.c_str(), settings))
+			{
+				pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
 			return Import(settings);
 		}
 
 		// Save settings to file
-		bool Save() { return Save(m_filepath); }
+		bool Save()
+		{
+			return Save(m_filepath);
+		}
 		bool Save(std::string file)
 		{
-			std::string settings = Export();
 			m_filepath = file;
-			std::string dir = pr::filesys::GetDirectory(m_filepath);
-			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir)) { pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error)); return false; }
-			if (!pr::BufferToFile(settings, m_filepath.c_str())) { pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error)); return false; }
+
+			auto dir = pr::filesys::GetDirectory(m_filepath);
+			if (!pr::filesys::DirectoryExists(dir) && !pr::filesys::CreateDir(dir))
+			{
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
+			auto settings = Export();
+			if (!pr::BufferToFile(settings, m_filepath.c_str()))
+			{
+				pr::events::Send(Evt(pr::FmtS("Failed to save user settings file '%s'",m_filepath.c_str()), Evt::Error));
+				return false;
+			}
+
 			m_crc = Crc(settings);
 			return true;
 		}
@@ -133,9 +165,8 @@ namespace pr
 		bool Import(std::string const& settings)
 		{
 			// Create a default reader from the import string
-			pr::script::Reader reader;
-			pr::script::PtrSrc src(settings.c_str());
-			reader.AddSource(src);
+			pr::script::PtrA<> src(settings.c_str());
+			pr::script::Reader reader(src);
 			return Import(reader);
 		}
 
@@ -149,13 +180,17 @@ namespace pr
 				std::string invalid_hashcodes;
 				for (int i = 0; i != TSettings::NumberOf; ++i)
 				{
-					pr::hash::HashValue hash;
+					pr::script::HashValue hash;
 					auto setting = TSettings::ByIndex(i);
-					auto name    = TSettings::Name(setting);
+					auto name    = TSettings::NameW(setting);
 					if ((hash = reader.HashKeyword(name)) != static_cast<pr::hash::HashValue>(setting))
-						invalid_hashcodes += pr::FmtS("\n%-48s hash value should be 0x%08X", name, hash);
+						invalid_hashcodes += pr::FmtS("%-48s hash value should be 0x%08X\n", TSettings::NameA(setting), hash);
 				}
-				PR_ASSERT(PR_DBG, invalid_hashcodes.empty(), invalid_hashcodes.c_str());
+				if (!invalid_hashcodes.empty())
+				{
+					OutputDebugStringA(invalid_hashcodes.c_str());
+					PR_ASSERT(PR_DBG, false, "Settings hash codes are incorrect");
+				}
 				#endif
 
 				// Read the settings
@@ -188,7 +223,8 @@ namespace pr
 #define PR_SETTINGS_INSTANTIATE(type, name, default_value, hashvalue, description)   type m_##name;
 #define PR_SETTINGS_CONSTRUCT(type, name, default_value, hashvalue, description)     ,m_##name(default_value)
 #define PR_SETTINGS_ENUM(type, name, default_value, hashvalue, description)          name = hashvalue,
-#define PR_SETTINGS_ENUM_TOSTRING(type, name, default_value, hashvalue, description) case name: return #name;
+#define PR_SETTINGS_ENUM_TOSTRINGA(type, name, default_value, hashvalue, description) case name: return #name;
+#define PR_SETTINGS_ENUM_TOSTRINGW(type, name, default_value, hashvalue, description) case name: return L#name;
 #define PR_SETTINGS_ENUM_FIELDS(type, name, default_value, hashvalue, description)   name,
 #define PR_SETTINGS_COUNT(type, name, default_value, hashvalue, description)         +1
 #define PR_SETTINGS_READ(type, name, default_value, hashvalue, description)          case name: return pr::settings::Read(reader, m_##name);
@@ -215,12 +251,20 @@ namespace pr
 		enum { NumberOf = 0 x(PR_SETTINGS_COUNT) };\
 \
 		/* Enum to string*/\
-		static char const* Name(Enum_ setting)\
+		static char const* NameA(Enum_ setting)\
 		{\
 			switch (setting)\
 			{\
 			default: return pr::FmtS("Unknown setting. Hash value = %d", setting);\
-			x(PR_SETTINGS_ENUM_TOSTRING)\
+			x(PR_SETTINGS_ENUM_TOSTRINGA)\
+			};\
+		}\
+		static wchar_t const* NameW(Enum_ setting)\
+		{\
+			switch (setting)\
+			{\
+			default: return pr::FmtS(L"Unknown setting. Hash value = %d", setting);\
+			x(PR_SETTINGS_ENUM_TOSTRINGW)\
 			};\
 		}\
 \
@@ -240,7 +284,7 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", Name(setting))); return false;\
+			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); return false;\
 			x(PR_SETTINGS_READ)\
 			}\
 		}\
@@ -250,7 +294,7 @@ namespace pr
 		{\
 			switch (setting)\
 			{\
-			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", Name(setting))); break;\
+			default: PR_INFO(PR_DBG, pr::FmtS("Unknown user setting '"#settings_name"::%s' ignored", NameA(setting))); break;\
 			x(PR_SETTINGS_WRITE)\
 			}\
 		}\
@@ -274,14 +318,14 @@ namespace pr
 
 			//x(type, name, default_value, hashvalue, description)
 			#define PR_SETTING(x)\
-				x(int          , count    , 2                     , 0x153E841B, "")\
-				x(float        , scale    , 3.14f                 , 0x1837069D, "")\
-				x(unsigned int , mask     , 0xABCU                , 0x061897B0, "")\
-				x(pr::Colour32 , colour   , pr::Colour32Green     , 0x08B2C176, "the colour")\
-				x(pr::v2       , area     , pr::v2::make(1,2)     , 0x1A1C8937, "")\
-				x(pr::v4       , position , pr::v4::make(1,2,3,1) , 0x06302A63, "")\
-				x(std::string  , name     , "hello settings"      , 0x0C08C4A4, "")\
-				x(TestEnum     , emun     , TestEnum::Two         , 0x079F037D, "")
+				x(int          , count    , 2                     , 0xC0A20C46, "")\
+				x(float        , scale    , 3.14f                 , 0x8FB215FF, "")\
+				x(unsigned int , mask     , 0xABCU                , 0x5CD68DFB, "")\
+				x(pr::Colour32 , colour   , pr::Colour32Green     , 0x0C32CB6F, "the colour")\
+				x(pr::v2       , area     , pr::v2::make(1,2)     , 0x1C6B5612, "")\
+				x(pr::v4       , position , pr::v4::make(1,2,3,1) , 0x6B614A7C, "")\
+				x(std::string  , name     , "hello settings"      , 0xC30D43FC, "")\
+				x(TestEnum     , emun     , TestEnum::Two         , 0xBC21407E, "")
 			PR_DEFINE_SETTINGS(Settings, PR_SETTING);
 			#undef PR_SETTING
 		}
@@ -344,6 +388,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

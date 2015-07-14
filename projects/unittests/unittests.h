@@ -1,7 +1,5 @@
-#ifndef PR_UNITTESTS_UNITTESTS_H
-#define PR_UNITTESTS_UNITTESTS_H
-//
 // This is a generated file
+#pragma once
 //
 #include "pr/app/forward.h"
 #include "pr/app/gimble.h"
@@ -298,21 +296,18 @@
 #include "pr/renderer11/util/stock_resources.h"
 #include "pr/renderer11/util/util.h"
 #include "pr/renderer11/util/wrappers.h"
-#include "pr/script/char_stream.h"
-#include "pr/script/comment_strip.h"
-#include "pr/script/embedded_code.h"
+#include "pr/script/buf8.h"
+#include "pr/script/embedded.h"
 #include "pr/script/embedded_lua.h"
+#include "pr/script/fail_policy.h"
+#include "pr/script/filter.h"
+#include "pr/script/forward.h"
 #include "pr/script/includes.h"
-#include "pr/script/keywords.h"
-#include "pr/script/newline_strip.h"
-#include "pr/script/pp_macro.h"
-#include "pr/script/pp_macro_db.h"
+#include "pr/script/location.h"
+#include "pr/script/macros.h"
 #include "pr/script/preprocessor.h"
 #include "pr/script/reader.h"
-#include "pr/script/script.h"
 #include "pr/script/script_core.h"
-#include "pr/script/script_forward.h"
-#include "pr/script/stream_stack.h"
 #include "pr/script/token.h"
 #include "pr/script/tokeniser.h"
 #include "pr/storage/csv.h"
@@ -330,13 +325,11 @@
 #include "pr/storage/zip/xzip.h"
 #include "pr/storage/zip/zip.h"
 #include "pr/storage/zip/zipassertenable.h"
-#include "pr/str/prstdstring.h"
-#include "pr/str/prstring.h"
-#include "pr/str/prstringcore.h"
-#include "pr/str/prstringextract.h"
-#include "pr/str/prstringstream.h"
-#include "pr/str/prstringutility.h"
-#include "pr/str/tostring.h"
+#include "pr/str/extract.h"
+#include "pr/str/string.h"
+#include "pr/str/string_core.h"
+#include "pr/str/string_util.h"
+#include "pr/str/to_string.h"
 #include "pr/threads/concurrent_queue.h"
 #include "pr/threads/name_thread.h"
 #include "pr/threads/pause_thread.h"
@@ -346,5 +339,3 @@
 #include "pr/threads/wait_state.h"
 #include "pr/view3d/prmaths.h"
 #include "pr/view3d/view3d.h"
-
-#endif

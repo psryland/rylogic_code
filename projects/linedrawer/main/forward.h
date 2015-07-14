@@ -46,21 +46,20 @@
 #include "pr/common/colour.h"
 #include "pr/common/scope.h"
 #include "pr/maths/maths.h"
-#include "pr/str/prstring.h"
 #include "pr/filesys/fileex.h"
 #include "pr/filesys/filesys.h"
 #include "pr/camera/camera.h"
 #include "pr/camera/camera_dlg.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/messagemap_dbg.h"
-#include "pr/gui/menu_helper.h"
+#include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/gui/scintilla.h"
 #include "pr/gui/windows_com.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
-#include "pr/script/script_forward.h"
+#include "pr/script/forward.h"
 #include "pr/linedrawer/ldr_object.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 #include "pr/linedrawer/ldr_tools.h"
@@ -138,6 +137,7 @@ namespace ldr
 	typedef std::istream istream;
 	typedef std::ostream ostream;
 	typedef std::stringstream sstream;
+	typedef std::list<pr::string<wchar_t>> StrList;
 
 	struct MainGUI;
 	struct Main;

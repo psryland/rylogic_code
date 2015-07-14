@@ -134,6 +134,7 @@
     <ClInclude Include="..\projects\cex\src\icex.h" />
     <ClInclude Include="..\projects\cex\src\lower.h" />
     <ClInclude Include="..\projects\cex\src\msg_box.h" />
+    <ClInclude Include="..\projects\cex\src\new_lines.h" />
     <ClInclude Include="..\projects\cex\src\open_vs.h" />
     <ClInclude Include="..\projects\cex\src\p3d.h" />
     <ClInclude Include="..\projects\cex\src\shell_file_op.h" />

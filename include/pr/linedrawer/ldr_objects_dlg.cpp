@@ -21,7 +21,7 @@
 #include "pr/macros/enum.h"
 #include "pr/macros/count_of.h"
 #include "pr/common/keystate.h"
-#include "pr/str/prstring.h"
+//#include "pr/str/prstring.h"
 #include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
 
@@ -163,7 +163,7 @@ namespace pr
 			}
 			void Settings(std::string settings) override
 			{
-				pr::script::PtrSrc src(settings.c_str());
+				pr::script::PtrA<> src(settings.c_str());
 				pr::script::Reader reader(src);
 
 				// Parse the settings
@@ -172,16 +172,16 @@ namespace pr
 					if (pr::str::EqualI(kw, "WindowPos"))
 					{
 						CRect wrect;
-						reader.ExtractInt(wrect.left   ,10);
-						reader.ExtractInt(wrect.top    ,10);
-						reader.ExtractInt(wrect.right  ,10);
-						reader.ExtractInt(wrect.bottom ,10);
+						reader.Int(wrect.left   ,10);
+						reader.Int(wrect.top    ,10);
+						reader.Int(wrect.right  ,10);
+						reader.Int(wrect.bottom ,10);
 						MoveWindow(&wrect);
 						continue;
 					}
 					if (pr::str::EqualI(kw, "SplitterPos"))
 					{
-						int pos; reader.ExtractInt(pos, 10);
+						int pos; reader.Int(pos, 10);
 						m_split.SetSplitterPosPct(pos);
 						continue;
 					}
@@ -299,7 +299,7 @@ namespace pr
 				auto obj_uidata = GetUIData(object);
 				if (obj_uidata->m_list_item == INVALID_LIST_ITEM) return;
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Name      ,object.m_name.c_str());
-				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::LdrType   ,ELdrObject::ToString(object.m_type));
+				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::LdrType   ,ELdrObject::ToStringA(object.m_type));
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Colour    ,pr::FmtS("%8.8X", object.m_colour.m_aarrggbb));
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Visible   ,object.m_visible ? "Visible"   : "Hidden");
 				m_list.SetItemText(obj_uidata->m_list_item ,EColumn::Wireframe ,object.m_wireframe ? "Wireframe" : "Solid");
@@ -641,7 +641,7 @@ namespace pr
 				m_status.SetParts(PR_COUNTOF(status_panes), status_panes);
 
 				for (int i = 0; i != EColumn::NumberOf; ++i)
-					m_list.AddColumn(EColumn::MemberName(i), i);
+					m_list.AddColumn(EColumn::MemberName<char>(i), i);
 
 				m_btn_expand_all.SetWindowText("+");
 				m_btn_collapse_all.SetWindowText("-");
@@ -733,7 +733,7 @@ namespace pr
 				for (int i = m_list.GetNextItem(-1, LVNI_ALL); i != -1; i = m_list.GetNextItem(i, LVNI_ALL))
 				{
 					int count = m_list.GetItemText(i, EColumn::Name, buf, 256);
-					bool match = pr::str::FindStrNoCase(&buf[0], &buf[count], filter) != &buf[count];
+					bool match = pr::str::FindStrI(&buf[0], &buf[count], filter) != &buf[count];
 					m_list.SetItemState(i, int(match)*LVIS_SELECTED, LVIS_SELECTED);
 				}
 				return S_OK;

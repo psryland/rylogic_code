@@ -139,10 +139,10 @@ __declspec(dllexport) BOOL WINAPI _CorDllMainStub(HANDLE hModule, DWORD dwReason
 {
 	DLLMAIN proc;
 
-	auto hMod = GetModuleHandle(_T("mscoree"));
+	auto hMod = GetModuleHandleW(L"mscoree");
 	if (hMod)
 	{
-		proc = (DLLMAIN)GetProcAddress(hMod, _T("_CorDllMain"));
+		proc = (DLLMAIN)GetProcAddress(hMod, "_CorDllMain");
 	}
 	else
 	{

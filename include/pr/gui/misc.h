@@ -17,6 +17,7 @@
 #include "pr/container/byte_data.h"
 #include "pr/filesys/fileex.h"
 #include "pr/maths/maths.h"
+#include "pr/gui/wingui.h"
 
 namespace pr
 {
@@ -58,13 +59,23 @@ namespace pr
 	}
 
 	// Return the string in an edit control as a std::string
-	template <typename Ctrl> inline std::string GetCtrlText(Ctrl const& ctrl)
+	template <typename Char, typename Ctrl> inline std::basic_string<Char> GetCtrlText(Ctrl const& ctrl)
 	{
-		std::string str;
-		str.resize(::GetWindowTextLengthA(ctrl) + 1);
-		if (!str.empty()) ::GetWindowTextA(ctrl, &str[0], (int)str.size());
+		using Win32 = pr::gui::Win32<Char>;
+
+		std::basic_string<Char> str;
+		str.resize(Win32::WindowTextLength(ctrl) + 1);
+		if (!str.empty()) Win32::WindowText(ctrl, &str[0], (int)str.size());
 		while (!str.empty() && *(--str.end()) == 0) str.resize(str.size() - 1);
 		return str;
+	}
+	template <typename Ctrl> inline std::string GetCtrlTextA(Ctrl const& ctrl)
+	{
+		return GetCtrlText<char,Ctrl>(ctrl);
+	}
+	template <typename Ctrl> inline std::wstring GetCtrlTextW(Ctrl const& ctrl)
+	{
+		return GetCtrlText<wchar_t,Ctrl>(ctrl);
 	}
 
 	// Convert a client space point to a normalised point
@@ -144,6 +155,44 @@ namespace pr
 		//if (m_wnds != null && !m_wnds.Contains(hWnd)) return false;	// Not a control we're hoverscrolling
 		::SendMessage(hwnd, pMsg->message, pMsg->wParam, pMsg->lParam);
 		return TRUE;
+	}
+
+	// Return a sub menu by address
+	// Use: auto menu = menu.SubMenuByName("&File,&Recent Files");
+	// Returns Menu() if the sub menu isn't found
+	template <typename Char> HMENU SubMenuByName(HMENU root, Char const* address)
+	{
+		assert(root != nullptr);
+		for (auto addr = address; *addr != 0;)
+		{
+			// Find ',' in 'address'
+			auto end = addr;
+			for (; *end != 0 && *end != ','; ++end) {}
+			if (end == addr)
+				break;
+
+			// Look for the first part of the address in the items of 'root'
+			for (int i = 0, iend = ::GetMenuItemCount(root); i != iend; ++i)
+			{
+				// Get the menu item name and length
+				// Check the item name matches the first part of the address
+				Char item_name[256] = {};
+				auto item_name_len = pr::gui::Win32<Char>::MenuString(root, UINT(i), item_name, _countof(item_name), MF_BYPOSITION);
+				if (item_name_len != end - addr || std::char_traits<Char>::compare(addr, item_name, item_name_len) != 0)
+					continue;
+
+				// If this is the last part of the address, then return the submenu
+				// Note, if the menu is not a submenu then you'll get 0, turn it into a popup menu before here
+				auto sub_menu = ::GetSubMenu(root, i);
+				if (*end == 0 || sub_menu == 0)
+					return sub_menu;
+
+				root = sub_menu;
+				addr = end + 1;
+				break;
+			}
+		}
+		return nullptr;
 	}
 
 	// Helper object for scoped selecting of objects into an HDC

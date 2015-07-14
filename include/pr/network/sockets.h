@@ -557,7 +557,7 @@ namespace pr
 				,m_listen_socket(INVALID_SOCKET)
 				,m_listen_port()
 				,m_max_connections()
-				,m_max_packet_size(~0U)
+				,m_max_packet_size(~size_t())
 				,m_run_server(false)
 				,m_mutex()
 				,m_cv_run_server()
@@ -746,7 +746,7 @@ namespace pr
 				:m_winsock(winsock)
 				,m_socket(INVALID_SOCKET)
 				,m_port()
-				,m_max_packet_size(~0U)
+				,m_max_packet_size(~size_t())
 			{}
 			~ClientSocket()
 			{

@@ -61,8 +61,8 @@ namespace ldr
 		m_status.Visible(true);
 
 		// Initialise the menu lists
-		m_recent_files.Attach(pr::gui::GetMenuByName(Menu(), TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES ,0xffffffff ,this);
-		m_saved_views .Attach(pr::gui::GetMenuByName(Menu(), TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
+		m_recent_files.Attach(pr::SubMenuByName(m_menu, TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES ,0xffffffff ,this);
+		m_saved_views .Attach(pr::SubMenuByName(m_menu, TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
 
 		// Initialise the object manager
 		m_store_ui.Create(*this);
@@ -194,7 +194,7 @@ namespace ldr
 
 		// Load the files
 		for (auto const& path : drop.m_filepaths)
-			m_main->m_sources.AddFile(Narrow(path).c_str());
+			m_main->m_sources.AddFile(path.c_str());
 	}
 
 	// Handle switching to/from full screen
@@ -393,7 +393,7 @@ namespace ldr
 		{
 			WTL::CFileDialog fd(FALSE,0,0,0,FileOpenFilter,*this);
 			if (fd.DoModal() != IDOK) return;
-			FileNew(fd.m_szFileName);
+			FileNew(pr::Widen(fd.m_szFileName).c_str());
 		}
 		catch (std::exception const& e)
 		{
@@ -406,7 +406,7 @@ namespace ldr
 	{
 		WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,*this);
 		if (fd.DoModal() != IDOK) return;
-		FileOpen(fd.m_szFileName, additive);
+		FileOpen(pr::Widen(fd.m_szFileName).c_str(), additive);
 	}
 
 	// Reset the view to all, selected, or visible objects
@@ -476,7 +476,7 @@ namespace ldr
 			if (dlg.DoModal() != IDOK) return;
 
 			auto id = m_main->m_nav.SaveView();
-			m_saved_views.Add(dlg.m_body.c_str(), (void*)id, false, true);
+			m_saved_views.Add(pr::Widen(dlg.m_body).c_str(), (void*)id, false, true);
 		}
 	}
 
@@ -706,14 +706,16 @@ namespace ldr
 	}
 
 	// Create a new file
-	void MainGUI::FileNew(char const* filepath)
+	void MainGUI::FileNew(wchar_t const* filepath)
 	{
 		try
 		{
 			CloseHandle(pr::FileOpen(filepath, pr::EFileOpen::Writing));
 
 			FileOpen(filepath, false);
-			StrList list; list.push_back(filepath);
+
+			StrList list;
+			list.push_back(filepath);
 			OpenTextEditor(list);
 		}
 		catch (std::exception const& e)
@@ -723,7 +725,7 @@ namespace ldr
 	}
 
 	// Add a file to the file sources
-	void MainGUI::FileOpen(char const* filepath, bool additive)
+	void MainGUI::FileOpen(wchar_t const* filepath, bool additive)
 	{
 		try
 		{
@@ -760,19 +762,24 @@ namespace ldr
 		try
 		{
 			// If no path to a text editor is provided, ignore the command
-			std::string cmd = m_main->m_settings.m_TextEditorCmd;
+			auto cmd = m_main->m_settings.m_TextEditorCmd;
 			if (cmd.empty())
 				throw std::exception("Text editor not provided. Check options");
 
 			// Build the command line string
 			for (auto& file : files)
-				cmd += " \"" + file + "\"";
+				cmd.append(L" \"").append(file).append(L"\"");
+
+			PROCESS_INFORMATION proc_info;
+			auto close_handles = pr::CreateScope([]{}, [&]
+			{
+				CloseHandle(proc_info.hThread);
+				CloseHandle(proc_info.hProcess);
+			});
 
 			// Launch the text editor in a new process
-			STARTUPINFO suinfo = {sizeof(STARTUPINFO)};
-			PROCESS_INFORMATION proc_info;
-			auto close_handles = pr::CreateScope([]{}, [&]{ CloseHandle(proc_info.hThread); CloseHandle(proc_info.hProcess); });
-			if (CreateProcessA(0, &cmd[0], 0, 0, FALSE, NORMAL_PRIORITY_CLASS, 0, 0, &suinfo, &proc_info) == FALSE)
+			STARTUPINFOW suinfo = {sizeof(STARTUPINFOW)};
+			if (CreateProcessW(nullptr, &cmd[0], 0, 0, FALSE, NORMAL_PRIORITY_CLASS, 0, 0, &suinfo, &proc_info) == FALSE)
 				throw std::exception(pr::FmtS("Failed to start text editor: '%s'", cmd.c_str()));
 		}
 		catch (std::exception const& e)

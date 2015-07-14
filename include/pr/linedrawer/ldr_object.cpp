@@ -55,24 +55,20 @@ namespace pr
 		inline CCont& Color() { g_cache.m_color.resize(0); return g_cache.m_color; }
 		inline TCont& Texts() { g_cache.m_texts.resize(0); return g_cache.m_texts; }
 
-		// Check the hash values are correct
-		PR_EXPAND(PR_DBG, static bool s_eldrobject_kws_checked = pr::CheckHashEnum<ELdrObject>([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
-		PR_EXPAND(PR_DBG, static bool s_ekeyword_kws_checked   = pr::CheckHashEnum<EKeyword  >([&](char const* s) { return pr::script::Reader::HashKeyword(s, false); }));
-
 		// LdrObject Creation functions *********************************************
 
 		// Helper object for passing parameters between parsing functions
 		struct ParseParams
 		{
 			pr::Renderer&  m_rdr;
-			Reader&        m_reader;
+			ReaderBase&    m_reader;
 			ObjectCont&    m_objects;
 			ModelCont&     m_models;
 			ContextId      m_context_id;
 			HashValue      m_keyword;
 			LdrObject*     m_parent;
 
-			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
+			ParseParams(pr::Renderer& rdr, ReaderBase& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
 				:m_rdr(rdr)
 				,m_reader(reader)
 				,m_objects(objects)
@@ -98,30 +94,31 @@ namespace pr
 		bool ParseLdrObject(ParseParams& p);
 
 		// Read the name, colour, and instance flag for an object
-		ObjectAttributes ParseAttributes(pr::script::Reader& reader, ELdrObject model_type)
+		ObjectAttributes ParseAttributes(pr::script::ReaderBase& reader, ELdrObject model_type)
 		{
 			ObjectAttributes attr;
 			attr.m_type = model_type;
-			attr.m_name = ELdrObject::ToString(model_type);
+			attr.m_name = ELdrObject::ToStringA(model_type);
 			
 			// Read the next tokens
-			string32 tok0, tok1; auto count = 0;
-			if (!reader.IsSectionStart()) { reader.ExtractToken(tok0, "{}"); ++count; }
-			if (!reader.IsSectionStart()) { reader.ExtractToken(tok1, "{}"); ++count; }
-			if (!reader.IsSectionStart()) { reader.ExtractBool(attr.m_instance); }
+			wstring32 tok0, tok1; auto count = 0;
+			if (!reader.IsSectionStart()) { reader.Token(tok0, L"{}"); ++count; }
+			if (!reader.IsSectionStart()) { reader.Token(tok1, L"{}"); ++count; }
+			if (!reader.IsSectionStart()) { reader.Bool(attr.m_instance); }
 
 			// If not all tokens are given, allow the name and/or colour to be optional
 			uint32 aarrggbb;
-			auto ExtractColour = [](string32 const& tok, uint32& col)
+			auto ExtractColour = [](wstring32 const& tok, uint32& col)
 			{
-				char const* end;
-				col = ::strtoul(tok.c_str(), (char**)&end, 16);
+				wchar_t const* end;
+				col = ::wcstoul(tok.c_str(), (wchar_t**)&end, 16);
 				return std::size_t(end - tok.c_str()) == tok.size();
 			};
 
 			// If the second token is a valid colour, assume the first is the name
 			if (count == 2 && ExtractColour(tok1, aarrggbb))
 			{
+				attr.m_name.clear();
 				if (!pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
 				attr.m_colour = aarrggbb;
 			}
@@ -133,6 +130,7 @@ namespace pr
 			// Otherwise, make no assumptions
 			else
 			{
+				attr.m_name.clear();
 				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
 				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.m_aarrggbb))              reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
 			}
@@ -140,7 +138,7 @@ namespace pr
 		}
 
 		// Parse a camera description
-		void ParseCamera(pr::script::Reader& reader, ParseResult& out)
+		void ParseCamera(pr::script::ReaderBase& reader, ParseResult& out)
 		{
 			reader.SectionStart();
 			for (EKeyword kw; reader.NextKeywordH(kw);)
@@ -163,7 +161,7 @@ namespace pr
 				case EKeyword::LookAt:
 					{
 						pr::v4 lookat;
-						reader.ExtractVector3S(lookat, 1.0f);
+						reader.Vector3S(lookat, 1.0f);
 						pr::m4x4 c2w = out.m_cam.CameraToWorld();
 						out.m_cam.LookAt(c2w.pos, lookat, c2w.y);
 						out.m_cam_fields |= ParseResult::ECamField::C2W;
@@ -173,7 +171,7 @@ namespace pr
 				case EKeyword::Align:
 					{
 						pr::v4 align;
-						reader.ExtractVector3S(align, 0.0f);
+						reader.Vector3S(align, 0.0f);
 						out.m_cam.SetAlign(align);
 						out.m_cam_fields |= ParseResult::ECamField::Align;
 						break;
@@ -181,7 +179,7 @@ namespace pr
 				case EKeyword::Aspect:
 					{
 						float aspect;
-						reader.ExtractRealS(aspect);
+						reader.RealS(aspect);
 						out.m_cam.Aspect(aspect);
 						out.m_cam_fields |= ParseResult::ECamField::Align;
 						break;
@@ -189,7 +187,7 @@ namespace pr
 				case EKeyword::FovX:
 					{
 						float fovX;
-						reader.ExtractRealS(fovX);
+						reader.RealS(fovX);
 						out.m_cam.FovX(fovX);
 						out.m_cam_fields |= ParseResult::ECamField::FovY;
 						break;
@@ -197,7 +195,7 @@ namespace pr
 				case EKeyword::FovY:
 					{
 						float fovY;
-						reader.ExtractRealS(fovY);
+						reader.RealS(fovY);
 						out.m_cam.FovY(fovY);
 						out.m_cam_fields |= ParseResult::ECamField::FovY;
 						break;
@@ -205,7 +203,7 @@ namespace pr
 				case EKeyword::Fov:
 					{
 						float fov[2];
-						reader.ExtractRealArrayS(fov, 2);
+						reader.RealS(fov, 2);
 						out.m_cam.Fov(fov[0], fov[1]);
 						out.m_cam_fields |= ParseResult::ECamField::Aspect;
 						out.m_cam_fields |= ParseResult::ECamField::FovY;
@@ -213,13 +211,13 @@ namespace pr
 					}
 				case EKeyword::Near:
 					{
-						reader.ExtractReal(out.m_cam.m_near);
+						reader.Real(out.m_cam.m_near);
 						out.m_cam_fields |= ParseResult::ECamField::Near;
 						break;
 					}
 				case EKeyword::Far:
 					{
-						reader.ExtractReal(out.m_cam.m_far);
+						reader.Real(out.m_cam.m_far);
 						out.m_cam_fields |= ParseResult::ECamField::Far;
 						break;
 					}
@@ -241,7 +239,7 @@ namespace pr
 		}
 
 		// Parse a simple animation description
-		void ParseAnimation(pr::script::Reader& reader, Animation& anim)
+		void ParseAnimation(pr::script::ReaderBase& reader, Animation& anim)
 		{
 			reader.SectionStart();
 			for (EKeyword kw; reader.NextKeywordH(kw);)
@@ -256,7 +254,7 @@ namespace pr
 				case EKeyword::Style:
 					{
 						char style[50];
-						reader.ExtractIdentifier(style);
+						reader.Identifier(style);
 						if      (pr::str::EqualI(style, "NoAnimation"   )) anim.m_style = EAnimStyle::NoAnimation;
 						else if (pr::str::EqualI(style, "PlayOnce"      )) anim.m_style = EAnimStyle::PlayOnce;
 						else if (pr::str::EqualI(style, "PlayReverse"   )) anim.m_style = EAnimStyle::PlayReverse;
@@ -266,17 +264,17 @@ namespace pr
 					}
 				case EKeyword::Period:
 					{
-						reader.ExtractReal(anim.m_period);
+						reader.Real(anim.m_period);
 						break;
 					}
 				case EKeyword::Velocity:
 					{
-						reader.ExtractVector3(anim.m_velocity, 0.0f);
+						reader.Vector3(anim.m_velocity, 0.0f);
 						break;
 					}
 				case EKeyword::AngVelocity:
 					{
-						reader.ExtractVector3(anim.m_ang_velocity, 0.0f);
+						reader.Vector3(anim.m_ang_velocity, 0.0f);
 						break;
 					}
 				}
@@ -285,9 +283,9 @@ namespace pr
 		}
 
 		// Parse a step block for an object
-		void ParseStep(pr::script::Reader& reader, LdrObjectStepData& step)
+		void ParseStep(pr::script::ReaderBase& reader, LdrObjectStepData& step)
 		{
-			reader.ExtractSection(step.m_code, false);
+			reader.Section(step.m_code, false);
 		}
 
 		// Parse keywords that can appear in any section
@@ -304,12 +302,12 @@ namespace pr
 				}
 			case EKeyword::Colour:
 				{
-					p.m_reader.ExtractIntS(obj->m_base_colour.m_aarrggbb, 16);
+					p.m_reader.IntS(obj->m_base_colour.m_aarrggbb, 16);
 					return true;
 				}
 			case EKeyword::ColourMask:
 				{
-					p.m_reader.ExtractIntS(obj->m_colour_mask, 16);
+					p.m_reader.IntS(obj->m_colour_mask, 16);
 					return true;
 				}
 			case EKeyword::RandColour:
@@ -370,8 +368,8 @@ namespace pr
 					{
 						char word[20];
 						p.m_reader.SectionStart();
-						p.m_reader.ExtractIdentifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
-						p.m_reader.ExtractIdentifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+						p.m_reader.Identifier(word); sam.AddressU = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
+						p.m_reader.Identifier(word); sam.AddressV = (D3D11_TEXTURE_ADDRESS_MODE)ETexAddrMode::Parse(word, false);
 						p.m_reader.SectionEnd();
 						break;
 					}
@@ -379,7 +377,7 @@ namespace pr
 					{
 						char word[20];
 						p.m_reader.SectionStart();
-						p.m_reader.ExtractIdentifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
+						p.m_reader.Identifier(word); sam.Filter = (D3D11_FILTER)EFilter::Parse(word, false);
 						p.m_reader.SectionEnd();
 						break;
 					}
@@ -387,7 +385,7 @@ namespace pr
 				}
 				else
 				{
-					p.m_reader.ExtractString(tex_filepath);
+					p.m_reader.String(tex_filepath);
 				}
 			}
 			p.m_reader.SectionEnd();
@@ -414,7 +412,7 @@ namespace pr
 		{
 			std::string filepath;
 			p.m_reader.SectionStart();
-			p.m_reader.ExtractString(filepath);
+			p.m_reader.String(filepath);
 			if (!filepath.empty())
 			{
 				(void)vid;
@@ -495,22 +493,22 @@ namespace pr
 				case EKeyword::Range:
 					{
 						p.m_reader.SectionStart();
-						p.m_reader.ExtractReal(m_light.m_range);
-						p.m_reader.ExtractReal(m_light.m_falloff);
+						p.m_reader.Real(m_light.m_range);
+						p.m_reader.Real(m_light.m_falloff);
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Specular:
 					{
 						p.m_reader.SectionStart();
-						p.m_reader.ExtractInt(m_light.m_specular.m_aarrggbb, 16);
-						p.m_reader.ExtractReal(m_light.m_specular_power);
+						p.m_reader.Int(m_light.m_specular.m_aarrggbb, 16);
+						p.m_reader.Real(m_light.m_specular_power);
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::CastShadow:
 					{
-						p.m_reader.ExtractRealS(m_light.m_cast_shadow);
+						p.m_reader.RealS(m_light.m_cast_shadow);
 						return true;
 					}
 				}
@@ -551,14 +549,14 @@ namespace pr
 				default: return IObjectCreator::ParseKeyword(p, kw);
 				case EKeyword::Coloured: m_per_line_colour = true; return true;
 				case EKeyword::Smooth: m_smooth = true; return true;
-				case EKeyword::Width: p.m_reader.ExtractRealS(m_line_width); return true;
+				case EKeyword::Width: p.m_reader.RealS(m_line_width); return true;
 				case EKeyword::Param:
 					{
 						float t[2];
-						p.m_reader.ExtractRealArrayS(t, 2);
+						p.m_reader.RealS(t, 2);
 						if (m_point.size() < 2)
 						{
-							p.m_reader.ReportError("No preceeding line to apply parametric values to");
+							p.m_reader.ReportError(pr::script::EResult::Failed, "No preceeding line to apply parametric values to");
 							return true;
 						}
 						auto& p0 = m_point[m_point.size() - 2];
@@ -578,7 +576,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError(FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
+					p.m_reader.ReportError(pr::script::EResult::Failed, pr::FmtS("Line object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -622,7 +620,7 @@ namespace pr
 				{
 				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
 				case EKeyword::Solid:  m_solid = true; return true;
-				case EKeyword::Facets: p.m_reader.ExtractIntS(m_facets, 10); return true;
+				case EKeyword::Facets: p.m_reader.IntS(m_facets, 10); return true;
 				}
 			}
 		};
@@ -649,7 +647,7 @@ namespace pr
 				// Validate
 				if (m_point.empty() || (m_point.size() % 4) != 0)
 				{
-					p.m_reader.ReportError("Object description incomplete");
+					p.m_reader.ReportError(pr::script::EResult::Failed, "Object description incomplete");
 					return;
 				}
 
@@ -686,9 +684,9 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Layers:  p.m_reader.ExtractInt(m_layers, 10); return true;
-				case EKeyword::Wedges:  p.m_reader.ExtractInt(m_wedges, 10); return true;
-				case EKeyword::Scale:   p.m_reader.ExtractVector2(m_scale); return true;
+				case EKeyword::Layers:  p.m_reader.Int(m_layers, 10); return true;
+				case EKeyword::Wedges:  p.m_reader.Int(m_wedges, 10); return true;
+				case EKeyword::Scale:   p.m_reader.Vector2(m_scale); return true;
 				}
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -725,28 +723,28 @@ namespace pr
 				case EKeyword::Verts:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(v, 1.0f); m_verts.push_back(v); }
+						for (pr::v4 v; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector3(v, 1.0f); m_verts.push_back(v); }
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Normals:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector3(n, 0.0f); m_normals.push_back(n); }
+						for (pr::v4 n; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector3(n, 0.0f); m_normals.push_back(n); }
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::Colours:
 					{
 						p.m_reader.SectionStart();
-						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractInt(c.m_aarrggbb, 16); m_colours.push_back(c); }
+						for (pr::Colour32 c; !p.m_reader.IsSectionEnd();) { p.m_reader.Int(c.m_aarrggbb, 16); m_colours.push_back(c); }
 						p.m_reader.SectionEnd();
 						return true;
 					}
 				case EKeyword::TexCoords:
 					{
 						p.m_reader.SectionStart();
-						for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.ExtractVector2(t); m_texs.push_back(t); }
+						for (pr::v2 t; !p.m_reader.IsSectionEnd();) { p.m_reader.Vector2(t); m_texs.push_back(t); }
 						p.m_reader.SectionEnd();
 						return true;
 					}
@@ -755,7 +753,7 @@ namespace pr
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[2]; !p.m_reader.IsSectionEnd();)
 						{
-							p.m_reader.ExtractIntArray(idx, 2, 10);
+							p.m_reader.Int(idx, 2, 10);
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 						}
@@ -768,7 +766,7 @@ namespace pr
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[3]; !p.m_reader.IsSectionEnd();)
 						{
-							p.m_reader.ExtractIntArray(idx, 3, 10);
+							p.m_reader.Int(idx, 3, 10);
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 							m_indices.push_back(idx[2]);
@@ -782,7 +780,7 @@ namespace pr
 						p.m_reader.SectionStart();
 						for (pr::uint16 idx[4]; !p.m_reader.IsSectionEnd();)
 						{
-							p.m_reader.ExtractIntArray(idx, 4, 10);
+							p.m_reader.Int(idx, 4, 10);
 							m_indices.push_back(idx[0]);
 							m_indices.push_back(idx[1]);
 							m_indices.push_back(idx[2]);
@@ -802,7 +800,7 @@ namespace pr
 					}
 				case EKeyword::GenerateNormals:
 					{
-						p.m_reader.ExtractRealS(m_gen_normals);
+						p.m_reader.RealS(m_gen_normals);
 						m_gen_normals = pr::DegreesToRadians(m_gen_normals);
 						return true;
 					}
@@ -815,7 +813,7 @@ namespace pr
 				// Validate
 				if (m_indices.empty() || m_verts.empty())
 				{
-					p.m_reader.ReportError("Mesh object description incomplete");
+					p.m_reader.ReportError(pr::script::EResult::Failed, "Mesh object description incomplete");
 					return;
 				}
 
@@ -873,14 +871,14 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 p0, p1;
-				p.m_reader.ExtractVector3(p0, 1.0f);
-				p.m_reader.ExtractVector3(p1, 1.0f);
+				p.m_reader.Vector3(p0, 1.0f);
+				p.m_reader.Vector3(p1, 1.0f);
 				m_point.push_back(p0);
 				m_point.push_back(p1);
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.m_aarrggbb, 16);
 					m_colour.push_back(col);
 					m_colour.push_back(col);
 				}
@@ -894,14 +892,14 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 p0, p1;
-				p.m_reader.ExtractVector3(p0, 1.0f);
-				p.m_reader.ExtractVector3(p1, 0.0f);
+				p.m_reader.Vector3(p0, 1.0f);
+				p.m_reader.Vector3(p1, 0.0f);
 				m_point.push_back(p0);
 				m_point.push_back(p0 + p1);
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.m_aarrggbb, 16);
 					m_colour.push_back(col);
 					m_colour.push_back(col);
 				}
@@ -915,13 +913,13 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt;
-				p.m_reader.ExtractVector3(pt, 1.0f);
+				p.m_reader.Vector3(pt, 1.0f);
 				m_point.push_back(pt);
 				
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.m_aarrggbb, 16);
 					m_colour.push_back(col);
 				}
 			}
@@ -934,9 +932,9 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 dim;
-				p.m_reader.ExtractReal(dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.ExtractReal(dim.y);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.ExtractReal(dim.z);
+				p.m_reader.Real(dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.y = dim.x; else p.m_reader.Real(dim.y);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) dim.z = dim.y; else p.m_reader.Real(dim.z);
 				dim *= 0.5f;
 
 				m_point.push_back(pr::v4::make(-dim.x, -dim.y, -dim.z, 1.0f));
@@ -961,9 +959,9 @@ namespace pr
 			{
 				int axis_id;
 				pr::v2 dim, div;
-				p.m_reader.ExtractInt(axis_id, 10);
-				p.m_reader.ExtractVector2(dim);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) div = dim; else p.m_reader.ExtractVector2(div);
+				p.m_reader.Int(axis_id, 10);
+				p.m_reader.Vector2(dim);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) div = dim; else p.m_reader.Vector2(div);
 
 				pr::v2 step = dim / div;
 				for (float i = -dim.x / 2; i <= dim.x / 2; i += step.x)
@@ -986,10 +984,10 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::Spline spline;
-				p.m_reader.ExtractVector3(spline.x, 1.0f);
-				p.m_reader.ExtractVector3(spline.y, 1.0f);
-				p.m_reader.ExtractVector3(spline.z, 1.0f);
-				p.m_reader.ExtractVector3(spline.w, 1.0f);
+				p.m_reader.Vector3(spline.x, 1.0f);
+				p.m_reader.Vector3(spline.y, 1.0f);
+				p.m_reader.Vector3(spline.z, 1.0f);
+				p.m_reader.Vector3(spline.w, 1.0f);
 
 				// Generate points for the spline
 				pr::vector<pr::v4, 30, true> raster;
@@ -999,7 +997,7 @@ namespace pr
 				if (m_per_line_colour)
 				{
 					pr::Colour32 col;
-					p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+					p.m_reader.Int(col.m_aarrggbb, 16);
 					for (size_t i = 0, iend = raster.size(); i != iend; ++i)
 						m_colour.push_back(col);
 				}
@@ -1019,7 +1017,7 @@ namespace pr
 				if (m_type == EArrowType::Invalid)
 				{
 					string32 ty;
-					p.m_reader.ExtractIdentifier(ty);
+					p.m_reader.Identifier(ty);
 					if      (pr::str::EqualNI(ty, "Line"   )) m_type = EArrowType::Line;
 					else if (pr::str::EqualNI(ty, "Fwd"    )) m_type = EArrowType::Fwd;
 					else if (pr::str::EqualNI(ty, "Back"   )) m_type = EArrowType::Back;
@@ -1029,13 +1027,13 @@ namespace pr
 				else
 				{
 					pr::v4 pt;
-					p.m_reader.ExtractVector3(pt, 1.0f);
+					p.m_reader.Vector3(pt, 1.0f);
 					m_point.push_back(pt);
 
 					if (m_per_line_colour)
 					{
 						pr::Colour32 col;
-						p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+						p.m_reader.Int(col.m_aarrggbb, 16);
 						m_colour.push_back(col);
 					}
 				}
@@ -1047,7 +1045,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError(FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
+					p.m_reader.ReportError(pr::script::EResult::Failed, FmtS("Arrow object '%s' description incomplete", obj->TypeAndName().c_str()));
 					return;
 				}
 
@@ -1160,7 +1158,7 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::m4x4 basis;
-				p.m_reader.ExtractMatrix3x3(cast_m3x4(basis));
+				p.m_reader.Matrix3x3(cast_m3x4(basis));
 
 				pr::v4       pts[] = { pr::v4Origin, basis.x.w1(), pr::v4Origin, basis.y.w1(), pr::v4Origin, basis.z.w1() };
 				pr::Colour32 col[] = { pr::Colour32Red, pr::Colour32Red, pr::Colour32Green, pr::Colour32Green, pr::Colour32Blue, pr::Colour32Blue };
@@ -1189,7 +1187,7 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				float scale;
-				p.m_reader.ExtractReal(scale);
+				p.m_reader.Real(scale);
 				for (auto& pt : m_point)
 					pt.xyz *= scale;
 			}
@@ -1204,9 +1202,9 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(m_dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1236,14 +1234,14 @@ namespace pr
 				switch (kw)
 				{
 				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
-				case EKeyword::Scale: p.m_reader.ExtractVector2(m_dim.xy); return true;
+				case EKeyword::Scale: p.m_reader.Vector2(m_dim.xy); return true;
 				}
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractVector2(m_ang);
-				p.m_reader.ExtractVector2(m_rad);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Vector2(m_ang);
+				p.m_reader.Vector2(m_rad);
 
 				if (m_ang.x == m_ang.y) m_ang.y += 360.0f;
 				m_ang.x = pr::DegreesToRadians(m_ang.x);
@@ -1277,15 +1275,15 @@ namespace pr
 				switch (kw)
 				{
 				default: return IObjectCreatorShape2d::ParseKeyword(p, kw);
-				case EKeyword::CornerRadius: p.m_reader.ExtractRealS(m_corner_radius); return true;
-				case EKeyword::Facets:       p.m_reader.ExtractIntS(m_facets, 10); m_facets *= 4; return true;
+				case EKeyword::CornerRadius: p.m_reader.RealS(m_corner_radius); return true;
+				case EKeyword::Facets:       p.m_reader.IntS(m_facets, 10); m_facets *= 4; return true;
 				}
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(m_dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 				m_dim *= 0.5f;
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -1311,9 +1309,9 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt[3]; pr::Colour32 col[3];
-				p.m_reader.ExtractVector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[0].m_aarrggbb, 16));
-				p.m_reader.ExtractVector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[1].m_aarrggbb, 16));
-				p.m_reader.ExtractVector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[2].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].m_aarrggbb, 16));
 				m_point.push_back(pt[0]);
 				m_point.push_back(pt[1]);
 				m_point.push_back(pt[2]);
@@ -1334,10 +1332,10 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pt[4]; pr::Colour32 col[4];
-				p.m_reader.ExtractVector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[0].m_aarrggbb, 16));
-				p.m_reader.ExtractVector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[1].m_aarrggbb, 16));
-				p.m_reader.ExtractVector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[2].m_aarrggbb, 16));
-				p.m_reader.ExtractVector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.ExtractInt(col[3].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[0], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[0].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[1], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[1].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[2], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[2].m_aarrggbb, 16));
+				p.m_reader.Vector3(pt[3], 1.0f) && (!m_per_vert_colour || p.m_reader.Int(col[3].m_aarrggbb, 16));
 				m_point.push_back(pt[0]);
 				m_point.push_back(pt[1]);
 				m_point.push_back(pt[2]);
@@ -1358,10 +1356,10 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 pnt, fwd; float w, h;
-				p.m_reader.ExtractVector3(pnt, 1.0f);
-				p.m_reader.ExtractVector3(fwd, 0.0f);
-				p.m_reader.ExtractReal(w);
-				p.m_reader.ExtractReal(h);
+				p.m_reader.Vector3(pnt, 1.0f);
+				p.m_reader.Vector3(fwd, 0.0f);
+				p.m_reader.Real(w);
+				p.m_reader.Real(h);
 
 				fwd = pr::Normalise3(fwd);
 				pr::v4 up = pr::Perpendicular(fwd);
@@ -1395,22 +1393,22 @@ namespace pr
 			{
 				switch (m_parm_index){
 				case 0: // Axis id
-					p.m_reader.ExtractInt(m_axis_id.value, 10);
+					p.m_reader.Int(m_axis_id.value, 10);
 					++m_parm_index;
 					break;
 				case 1: // Width
-					p.m_reader.ExtractReal(m_width);
+					p.m_reader.Real(m_width);
 					++m_parm_index;
 					break;
 				case 2: // Points
 					pr::v4 pt;
-					p.m_reader.ExtractVector3(pt, 1.0f);
+					p.m_reader.Vector3(pt, 1.0f);
 					m_point.push_back(pt);
 
 					if (m_per_vert_colour)
 					{
 						pr::Colour32 col;
-						p.m_reader.ExtractInt(col.m_aarrggbb, 16);
+						p.m_reader.Int(col.m_aarrggbb, 16);
 						m_colour.push_back(col);
 					}
 					break;
@@ -1423,7 +1421,7 @@ namespace pr
 				// Validate
 				if (m_point.size() < 2)
 				{
-					p.m_reader.ReportError("Object description incomplete");
+					p.m_reader.ReportError(pr::script::EResult::Failed, "Object description incomplete");
 					return;
 				}
 
@@ -1453,9 +1451,9 @@ namespace pr
 			ObjectCreator() :m_dim() {}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractReal(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.ExtractReal(m_dim.z);
+				p.m_reader.Real(m_dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
 				m_dim *= 0.5f;
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
@@ -1477,17 +1475,17 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Up: p.m_reader.ExtractVector3S(m_up, 0.0f); return true;
+				case EKeyword::Up: p.m_reader.Vector3S(m_up, 0.0f); return true;
 				}
 			}
 			void Parse(ParseParams& p) override
 			{
 				float w = 0.1f, h = 0.1f;
 				pr::v4 s0, s1;
-				p.m_reader.ExtractVector3(s0, 1.0f);
-				p.m_reader.ExtractVector3(s1, 1.0f);
-				p.m_reader.ExtractReal(w);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) h = w; else p.m_reader.ExtractReal(h);
+				p.m_reader.Vector3(s0, 1.0f);
+				p.m_reader.Vector3(s1, 1.0f);
+				p.m_reader.Real(w);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) h = w; else p.m_reader.Real(h);
 				m_dim.set(w, h, pr::Length3(s1 - s0), 0.0f);
 				m_dim *= 0.5f;
 				m_b2w = pr::OriFromDir(s1 - s0, 2, m_up, (s1 + s0) * 0.5f);
@@ -1509,7 +1507,7 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				pr::v4 v;
-				p.m_reader.ExtractVector3(v, 1.0f);
+				p.m_reader.Vector3(v, 1.0f);
 				if (m_dim == pr::v4Zero)
 					m_dim = v.w0();
 				else
@@ -1520,7 +1518,7 @@ namespace pr
 				// Validate
 				if (m_dim == pr::v4Zero || m_location.size() == 0)
 				{
-					p.m_reader.ReportError("Box list object description incomplete");
+					p.m_reader.ReportError(pr::script::EResult::Failed, "Box list object description incomplete");
 					return;
 				}
 
@@ -1543,16 +1541,16 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreatorCuboid::ParseKeyword(p, kw);
-				case EKeyword::ViewPlaneZ: p.m_reader.ExtractRealS(m_view_plane); return true;
+				case EKeyword::ViewPlaneZ: p.m_reader.RealS(m_view_plane); return true;
 				}
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(m_width);
-				p.m_reader.ExtractReal(m_height);
-				p.m_reader.ExtractReal(m_near);
-				p.m_reader.ExtractReal(m_far);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(m_width);
+				p.m_reader.Real(m_height);
+				p.m_reader.Real(m_near);
+				p.m_reader.Real(m_far);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1592,11 +1590,11 @@ namespace pr
 			ObjectCreator() :m_fovY(pr::maths::tau_by_8), m_aspect(1.0f), m_near(0.0f), m_far(1.0f), m_axis_id(3) {}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(m_fovY);
-				p.m_reader.ExtractReal(m_aspect);
-				p.m_reader.ExtractReal(m_near);
-				p.m_reader.ExtractReal(m_far);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(m_fovY);
+				p.m_reader.Real(m_aspect);
+				p.m_reader.Real(m_near);
+				p.m_reader.Real(m_far);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1638,14 +1636,14 @@ namespace pr
 			{
 				switch (kw) {
 				default: return IObjectCreatorTexture::ParseKeyword(p, kw);
-				case EKeyword::Divisions: p.m_reader.ExtractInt(m_divisions, 10); return true;
+				case EKeyword::Divisions: p.m_reader.Int(m_divisions, 10); return true;
 				}
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractReal(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.ExtractReal(m_dim.z);
+				p.m_reader.Real(m_dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.z = m_dim.y; else p.m_reader.Real(m_dim.z);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1659,10 +1657,10 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(m_dim.z);
-				p.m_reader.ExtractReal(m_dim.x);
-				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.ExtractReal(m_dim.y);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(m_dim.z);
+				p.m_reader.Real(m_dim.x);
+				if (p.m_reader.IsKeyword() || p.m_reader.IsSectionEnd()) m_dim.y = m_dim.x; else p.m_reader.Real(m_dim.y);
 			}
 		};
 
@@ -1672,10 +1670,10 @@ namespace pr
 			void Parse(ParseParams& p) override
 			{
 				float h0, h1, a;
-				p.m_reader.ExtractInt(m_axis_id.value, 10);
-				p.m_reader.ExtractReal(h0);
-				p.m_reader.ExtractReal(h1);
-				p.m_reader.ExtractReal(a);
+				p.m_reader.Int(m_axis_id.value, 10);
+				p.m_reader.Real(h0);
+				p.m_reader.Real(h1);
+				p.m_reader.Real(a);
 
 				m_dim.z = h1 - h0;
 				m_dim.x = h0 * pr::Tan(a);
@@ -1723,7 +1721,7 @@ namespace pr
 		// ELdrObject::Model
 		template <> struct ObjectCreator<ELdrObject::Model> :IObjectCreator
 		{
-			string512 m_filepath;
+			wstring256 m_filepath;
 			m4x4 m_bake;
 			float m_gen_normals;
 
@@ -1734,7 +1732,7 @@ namespace pr
 				default: return IObjectCreator::ParseKeyword(p, kw);
 				case EKeyword::GenerateNormals:
 					{
-						p.m_reader.ExtractRealS(m_gen_normals);
+						p.m_reader.RealS(m_gen_normals);
 						m_gen_normals = pr::DegreesToRadians(m_gen_normals);
 						return true;
 					}
@@ -1747,7 +1745,7 @@ namespace pr
 			}
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractString(m_filepath);
+				p.m_reader.String(m_filepath);
 			}
 			void CreateModel(ParseParams& p, LdrObjectPtr obj) override
 			{
@@ -1757,25 +1755,25 @@ namespace pr
 				// Validate
 				if (m_filepath.empty())
 				{
-					p.m_reader.ReportError("Model filepath not given");
+					p.m_reader.ReportError(pr::script::EResult::Failed, "Model filepath not given");
 					return;
 				}
 
 				// Determine the format from the file extension
-				ModelFileInfo info = GetModelFileInfo(m_filepath.c_str());
+				auto info = GetModelFileInfo(m_filepath.c_str());
 				if (info.m_format == EModelFileFormat::Unknown)
 				{
-					string512 msg = pr::Fmt("Mesh file '%s' is not supported.\nSupported Formats: ", m_filepath.c_str());
-					for (auto f : EModelFileFormat::MemberNames()) msg.append(f).append(" ");
-					p.m_reader.ReportError(msg.c_str());
+					string512 msg = pr::FmtS("Mesh file '%s' is not supported.\nSupported Formats: ", Narrow(m_filepath).c_str());
+					for (auto f : EModelFileFormat::MemberNames<char>()) msg.append(f).append(" ");
+					p.m_reader.ReportError(pr::script::EResult::Failed, msg.c_str());
 					return;
 				}
 
 				// Ask the include handler to turn the filepath into a stream
-				auto src = p.m_reader.IncludeHandler()->OpenStream(m_filepath, info.m_is_binary);
+				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, false, info.m_is_binary);
 				if (!src || !*src)
 				{
-					p.m_reader.ReportError(pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
+					p.m_reader.ReportError(pr::script::EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
 					return;
 				}
 
@@ -1794,7 +1792,7 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractVector3(m_light.m_direction, 0.0f);
+				p.m_reader.Vector3(m_light.m_direction, 0.0f);
 			}
 		};
 
@@ -1803,7 +1801,7 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractVector3(m_light.m_position, 1.0f);
+				p.m_reader.Vector3(m_light.m_position, 1.0f);
 			}
 		};
 
@@ -1812,10 +1810,10 @@ namespace pr
 		{
 			void Parse(ParseParams& p) override
 			{
-				p.m_reader.ExtractVector3(m_light.m_position, 1.0f);
-				p.m_reader.ExtractVector3(m_light.m_direction, 0.0f);
-				p.m_reader.ExtractReal(m_light.m_inner_cos_angle); // actually in degress atm
-				p.m_reader.ExtractReal(m_light.m_outer_cos_angle); // actually in degress atm
+				p.m_reader.Vector3(m_light.m_position, 1.0f);
+				p.m_reader.Vector3(m_light.m_direction, 0.0f);
+				p.m_reader.Real(m_light.m_inner_cos_angle); // actually in degress atm
+				p.m_reader.Real(m_light.m_outer_cos_angle); // actually in degress atm
 			}
 		};
 
@@ -1970,7 +1968,7 @@ namespace pr
 
 		// Reads all ldr objects from a script returning 'result'
 		template <typename AddCB>
-		void ParseLdrObjects(pr::Renderer& rdr, pr::script::Reader& reader, ContextId context_id, ParseResult& result, AddCB add_cb)
+		void ParseLdrObjects(pr::Renderer& rdr, pr::script::ReaderBase& reader, ContextId context_id, ParseResult& result, AddCB add_cb)
 		{
 			// Your application needs to have called CoInitialise() before here
 			bool cancel = false;
@@ -2027,7 +2025,7 @@ namespace pr
 
 		// Parse the ldr script in 'reader' adding the results to 'out'
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, ContextId context_id)
+		void Parse(pr::Renderer& rdr, pr::script::ReaderBase& reader, ParseResult& out, bool async, ContextId context_id)
 		{
 			// Does the work of parsing objects and adds them to 'models'
 			// 'total' is the total number of objects added
@@ -2045,7 +2043,7 @@ namespace pr
 							return true;
 
 						last_update = now;
-						char const* type = obj ? ELdrObject::ToString(obj->m_type) : "";
+						char const* type = obj ? ELdrObject::ToStringA(obj->m_type) : "";
 						std::string name = obj ? obj->m_name : "";
 						return dlg->Progress(-1.0f, pr::FmtS(L"Parsing scene...\r\nObject count: %d\r\n%s %s", out.m_objects.size(), type, name.c_str()));
 					});
@@ -2114,10 +2112,8 @@ namespace pr
 		void Update(pr::Renderer& rdr, LdrObjectPtr object, char const* desc, EUpdateObject flags)
 		{
 			// Parse 'desc' for the new model
-			pr::script::Loc loc("UpdateObject", 0, 0);
-			pr::script::PtrSrc src(desc, &loc);
-			pr::script::Reader reader;
-			reader.AddSource(src);
+			pr::script::PtrA<> src(desc);
+			pr::script::Reader reader(src);
 
 			ParseResult result;
 			ParseLdrObjects(rdr, reader, object->m_context_id, result, [&](LdrObjectPtr rhs)
@@ -2913,7 +2909,7 @@ out <<
 		// Return the declaration name of this object
 		string32 LdrObject::TypeAndName() const
 		{
-			return string32(ELdrObject::ToString(m_type)) + " " + m_name;
+			return string32(ELdrObject::ToStringA(m_type)) + " " + m_name;
 		}
 
 		// Recursively add this object and its children to a viewport

@@ -65,16 +65,13 @@ namespace ldr
 			m_pi_step(elapsed_s);
 	}
 
-	// Create one or more objects described by 'object_description'
+	// Create one or more objects described by 'reader'
 	// The last object created is returned. (hmm, could return a range of objects...)
-	pr::ldr::LdrObject* Plugin::RegisterObject(char const* object_description, char const* include_paths, pr::ldr::ContextId ctx_id, bool async)
+	pr::ldr::LdrObject* Plugin::RegisterObject(pr::script::Reader& reader, pr::ldr::ContextId ctx_id, bool async)
 	{
 		size_t initial = m_store.size();
-
-		pr::script::FileIncludes finc(include_paths);
-
 		pr::ldr::ParseResult out(m_store);
-		pr::ldr::ParseString(m_ldr->m_rdr, object_description, out, async, ctx_id, &finc);
+		pr::ldr::Parse(m_ldr->m_rdr, reader, out, async, ctx_id);
 		
 		if (initial == m_store.size()) return nullptr;
 		pr::events::Send(Event_StoreChanged(m_store, m_store.size() - initial, out, Event_StoreChanged::EReason::NewData));

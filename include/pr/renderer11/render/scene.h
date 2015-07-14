@@ -67,7 +67,7 @@ namespace pr
 			{
 				auto rs = FindRStep<TRStep>();
 				if (rs != nullptr) return *rs;
-				PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ERenderStep::ToString(TRStep::Id)).c_str());
+				PR_ASSERT(PR_DBG_RDR, false, Fmt("RenderStep %s is not part of this scene", ERenderStep::ToStringA(TRStep::Id)).c_str());
 				throw std::exception("Render step not part of this scene");
 			}
 

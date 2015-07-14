@@ -160,7 +160,7 @@ LRESULT CMainDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&)
 	
 	m_ctrl_pol_freq_unit.Attach(GetDlgItem(IDC_COMBO_TIME));
 	for (int i = 0; i != EFreq::NumberOf; ++i)
-		m_ctrl_pol_freq_unit.AddString(EFreq::ToWString((EFreq)i));
+		m_ctrl_pol_freq_unit.AddString(EFreq::ToStringW((EFreq)i));
 	m_ctrl_pol_freq_unit.SetCurSel(m_user_data.m_pol_freq_unit);
 	
 	m_active = FALSE;

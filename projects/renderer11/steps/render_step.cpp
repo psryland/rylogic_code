@@ -101,7 +101,7 @@ namespace pr
 
 			{
 				PR_EXPAND(PR_DBG_RDR, auto dbg = pr::CreateScope(
-					[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToWString(GetId())); },
+					[&]{ ss.m_dbg->BeginEvent(ERenderStep::ToStringW(GetId())); },
 					[&]{ ss.m_dbg->EndEvent(); }));
 
 				// Commit before the start of a render step to ensure changes

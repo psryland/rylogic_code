@@ -55,15 +55,15 @@ namespace pr
 			static value_type const MaxShaderId   = 1U << ShaderIdBits ;
 			static value_type const MaxSortGroups = 1U << SortGroupBits;
 
-			static value_type const TextureIdOfs  = 0U;
-			static value_type const ShaderIdOfs   = 0U + TextureIdBits;
-			static value_type const AlphaOfs      = 0U + TextureIdBits + ShaderIdBits;
-			static value_type const SortGroupOfs  = 0U + TextureIdBits + ShaderIdBits + AlphaBits;
+			static value_type const TextureIdOfs  = value_type();
+			static value_type const ShaderIdOfs   = value_type() + TextureIdBits;
+			static value_type const AlphaOfs      = value_type() + TextureIdBits + ShaderIdBits;
+			static value_type const SortGroupOfs  = value_type() + TextureIdBits + ShaderIdBits + AlphaBits;
 
-			static value_type const TextureIdMask = (~0U >> (Bits - TextureIdBits)) << TextureIdOfs;
-			static value_type const ShaderIdMask  = (~0U >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
-			static value_type const AlphaMask     = (~0U >> (Bits - AlphaBits    )) << AlphaOfs    ;
-			static value_type const SortGroupMask = (~0U >> (Bits - SortGroupBits)) << SortGroupOfs;
+			static value_type const TextureIdMask = (~value_type() >> (Bits - TextureIdBits)) << TextureIdOfs;
+			static value_type const ShaderIdMask  = (~value_type() >> (Bits - ShaderIdBits )) << ShaderIdOfs ;
+			static value_type const AlphaMask     = (~value_type() >> (Bits - AlphaBits    )) << AlphaOfs    ;
+			static value_type const SortGroupMask = (~value_type() >> (Bits - SortGroupBits)) << SortGroupOfs;
 
 			value_type m_value;
 

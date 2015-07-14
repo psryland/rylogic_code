@@ -15,16 +15,18 @@ namespace ldr
 {
 	class PluginManager
 	{
-		typedef std::vector<Plugin*> PluginCont;
-		PluginCont  m_plugins;
-		Main* m_ldr;
-		pr::uint64  m_last_poll;
+		using PluginCont = std::vector<Plugin*>;
 
-		PluginManager(PluginManager const&);
-		void operator =(PluginManager const&);
+		PluginCont m_plugins;
+		Main*      m_ldr;
+		pr::uint64 m_last_poll;
+
 	public:
-		explicit PluginManager(Main* ldr);
+
 		~PluginManager();
+		explicit PluginManager(Main* ldr);
+		PluginManager(PluginManager const&) = delete;
+		void operator =(PluginManager const&) = delete;
 
 		// Poll stepable plugins
 		void Poll(double elapsed_s);

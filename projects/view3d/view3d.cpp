@@ -194,23 +194,22 @@ VIEW3D_API void __stdcall View3D_SetSettings(View3DWindow window, char const* se
 		if (!window) throw std::exception("window is null");
 
 		// Parse the settings
-		pr::script::Reader reader;
-		pr::script::PtrSrc src(settings);
-		reader.AddSource(src);
+		pr::script::PtrA<> src(settings);
+		pr::script::Reader reader(src);
 
 		for (pr::script::string kw; reader.NextKeywordS(kw);)
 		{
 			if (pr::str::EqualI(kw, "SceneSettings"))
 			{
 				pr::string<> desc;
-				reader.ExtractSection(desc, false);
+				reader.Section(desc, false);
 				//window->m_obj_cont_ui.Settings(desc.c_str());
 				continue;
 			}
 			if (pr::str::EqualI(kw, "Light"))
 			{
 				pr::string<> desc;
-				reader.ExtractSection(desc, false);
+				reader.Section(desc, false);
 				window->m_light.Settings(desc.c_str());
 				continue;
 			}
@@ -848,10 +847,14 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 	{
 		DllLockGuard;
 
-		pr::script::FileIncludes inc(include_paths);
+		pr::script::FileSrc<> src(ldr_filepath);
+		pr::script::Reader reader;
+		reader.Includes().SearchPaths(pr::Widen(include_paths));
+		reader.EmbeddedCode().Handler.push_back(&Dll().m_lua);
+		reader.Push(src);
 
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseFile(Dll().m_rdr, ldr_filepath, out, async != 0, context_id, &inc, nullptr, &Dll().m_lua);
+		pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
 		return int(out.m_objects.size());
 	}
@@ -868,23 +871,30 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 // 'module' - if non-zero causes includes to be resolved from the resources in that module
 VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module)
 {
+	using namespace pr::script;
+
 	try
 	{
 		DllLockGuard;
 
-		// Choose an include resolver based on the given parameters
-		pr::script::IIncludes* inc = nullptr;
-		pr::script::FileIncludes finc(include_paths);
-		pr::script::ResIncludes rinc(module);
-		if      (module != 0) inc = &rinc;
-		else if (include_paths != nullptr) inc = &finc;
-
 		// Parse the description
 		pr::ldr::ParseResult out;
 		if (file)
-			pr::ldr::ParseFile(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
-		else
-			pr::ldr::ParseString(Dll().m_rdr, ldr_script, out, async != 0, context_id, inc, nullptr, &Dll().m_lua);
+		{
+			FileSrc<> src(ldr_script);
+			ReaderT<FileIncludes<>, EmbeddedLua<>> reader(false);
+			reader.Includes().SearchPaths(pr::Widen(include_paths));
+			reader.Push(src);
+			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
+		}
+		else // string
+		{
+			PtrA<> src(ldr_script);
+			ReaderT<ResIncludes<>, EmbeddedLua<>> reader(false);
+			reader.Includes().m_module = module;
+			reader.Push(src);
+			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
+		}
 
 		// Return the first object
 		Dll().m_obj_cont.insert(std::end(Dll().m_obj_cont), std::begin(out.m_objects), std::end(out.m_objects));
@@ -2032,8 +2042,14 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		if (!window) throw std::exception("window is null");
 
 		DllLockGuard;
+		
+		auto scene = pr::ldr::CreateDemoScene();
+		pr::script::PtrA<> src(scene.c_str());
+		pr::script::Reader reader(src, false);
+		reader.EmbeddedCode().Handler.push_back(&Dll().m_lua);
+
 		pr::ldr::ParseResult out;
-		pr::ldr::ParseString(Dll().m_rdr, pr::ldr::CreateDemoScene().c_str(), out, true, pr::ldr::DefaultContext, nullptr, nullptr, &Dll().m_lua);
+		pr::ldr::Parse(Dll().m_rdr, reader, out, true, pr::ldr::DefaultContext);
 		for (auto& obj : out.m_objects)
 			View3D_AddObject(window, obj.m_ptr);
 	}
@@ -2076,7 +2092,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 {
 	try
 	{
-		pr::script::PtrSrc src(ldr_script);
+		pr::script::PtrA<> src(ldr_script);
 		pr::script::Reader reader(src);
 		return view3d::To<View3DM4x4>(pr::ldr::ParseLdrTransform(reader));
 	}

@@ -1528,7 +1528,7 @@ namespace pr
 		// Convert a windows message to a string
 		inline char const* WMtoString(UINT uMsg)
 		{
-			return EWinMsg::IsValue(uMsg) ? EWinMsg(uMsg).ToString() : "";
+			return EWinMsg::IsValue(uMsg) ? EWinMsg(uMsg).ToStringA() : "";
 		}
 
 		// Convert a VK_* define into a string

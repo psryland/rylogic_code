@@ -16,7 +16,7 @@
 #include "pr/common/user_data.h"
 #include "pr/container/vector.h"
 #include "pr/maths/maths.h"
-#include "pr/str/prstdstring.h"
+#include "pr/str/string.h"
 #include "pr/script/reader.h"
 #include "pr/renderer11/instance.h"
 
@@ -35,115 +35,115 @@ namespace pr
 
 		#pragma region Ldr object types
 		#define PR_ENUM(x)\
-			x(Unknown          ,= 0x062170b2)\
-			x(Line             ,= 0x10d28008)\
-			x(LineD            ,= 0x07512a2a)\
-			x(LineStrip        ,= 0x0702D776)\
-			x(LineBox          ,= 0x11d1a8c4)\
-			x(Grid             ,= 0x08D503AF)\
-			x(Spline           ,= 0x1f45c36e)\
-			x(Arrow            ,= 0x0A85DC58)\
-			x(Circle           ,= 0x015ed657)\
-			x(Pie              ,= 0x1198851C)\
-			x(Rect             ,= 0x12E8C1AD)\
-			x(Matrix3x3        ,= 0x1bd46252)\
-			x(CoordFrame       ,= 0x0b1d370b)\
-			x(Triangle         ,= 0x118ad8f6)\
-			x(Quad             ,= 0x083b7f24)\
-			x(Plane            ,= 0x0ed56051)\
-			x(Ribbon           ,= 0x098B72FB)\
-			x(Box              ,= 0x11b87d89)\
-			x(BoxLine          ,= 0x11d4daa7)\
-			x(BoxList          ,= 0x1481a6af)\
-			x(FrustumWH        ,= 0x02f1f573)\
-			x(FrustumFA        ,= 0x14adfea2)\
-			x(Sphere           ,= 0x010cf039)\
-			x(CylinderHR       ,= 0x0f3d4e07)\
-			x(ConeHA           ,= 0x1f093110)\
-			x(Mesh             ,= 0x07fb0d2b)\
-			x(ConvexHull       ,= 0x0a93b3d5)\
-			x(Model            ,= 0x0BD70B84)\
-			x(Group            ,= 0x1c1c3d90)\
-			x(Instance         ,= 0x061978f8)\
-			x(DirectionalLight ,= 0x1744E3AC)\
-			x(PointLight       ,= 0x01058AFF)\
-			x(SpotLight        ,= 0x0C406795)\
-			x(Custom           ,= 0x1a1023c5)
+			x(Unknown          ,= 0x11D1AD67)\
+			x(Line             ,= 0x8A9A6F5D)\
+			x(LineD            ,= 0x6A1D16BB)\
+			x(LineStrip        ,= 0x8C952CA9)\
+			x(LineBox          ,= 0xA1D53DBA)\
+			x(Grid             ,= 0xCF074F93)\
+			x(Spline           ,= 0x4CEC857E)\
+			x(Arrow            ,= 0x0CBAF67C)\
+			x(Circle           ,= 0x2ED06DC7)\
+			x(Pie              ,= 0x840307FB)\
+			x(Rect             ,= 0xF0C8A301)\
+			x(Matrix3x3        ,= 0x5D67CFF6)\
+			x(CoordFrame       ,= 0x189B0F81)\
+			x(Triangle         ,= 0x4E18A8E3)\
+			x(Quad             ,= 0x40CADC80)\
+			x(Plane            ,= 0x3A982C87)\
+			x(Ribbon           ,= 0x0A4A6CB7)\
+			x(Box              ,= 0x5B1A1960)\
+			x(BoxLine          ,= 0x14A58F1A)\
+			x(BoxList          ,= 0xFF7192A8)\
+			x(FrustumWH        ,= 0x8E413710)\
+			x(FrustumFA        ,= 0x9B6C2C8E)\
+			x(Sphere           ,= 0xA618F4AA)\
+			x(CylinderHR       ,= 0x5761F5DF)\
+			x(ConeHA           ,= 0x9D8FB673)\
+			x(Mesh             ,= 0x914CF852)\
+			x(ConvexHull       ,= 0x491E3B7B)\
+			x(Model            ,= 0x066EEB3C)\
+			x(Group            ,= 0x3C0312A6)\
+			x(Instance         ,= 0xA971AABC)\
+			x(DirectionalLight ,= 0x049B75FF)\
+			x(PointLight       ,= 0xFB23D171)\
+			x(SpotLight        ,= 0xEC0B9241)\
+			x(Custom           ,= 0x92C4AFAC)
 		PR_DEFINE_ENUM2(ELdrObject, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
 
 		#pragma region Ldr script keywords
 		#define PR_ENUM(x)\
-			x(O2W                ,= 0x1d20a7ba)\
-			x(M4x4               ,= 0x1788ecfa)\
-			x(M3x3               ,= 0x0aef28f5)\
-			x(Pos                ,= 0x13930daf)\
-			x(Up                 ,= 0x1e72eb5a)\
-			x(Direction          ,= 0x0fca4076)\
-			x(Quat               ,= 0x1de5b1fd)\
-			x(Rand4x4            ,= 0x02becb08)\
-			x(RandPos            ,= 0x0456bf23)\
-			x(RandOri            ,= 0x185629c3)\
-			x(Euler              ,= 0x150894fc)\
-			x(Scale              ,= 0x1837069d)\
-			x(Transpose          ,= 0x12fafef6)\
-			x(Inverse            ,= 0x01ca4f54)\
-			x(Normalise          ,= 0x01693558)\
-			x(Orthonormalise     ,= 0x1c2a9e41)\
-			x(Colour             ,= 0x08b2c176)\
-			x(Solid              ,= 0x0B6477F6)\
-			x(Facets             ,= 0x1C8FE1ED)\
-			x(CornerRadius       ,= 0x1C7A230A)\
-			x(RandColour         ,= 0x0cdef959)\
-			x(ColourMask         ,= 0x05dc4ca1)\
-			x(Animation          ,= 0x004c5336)\
-			x(Style              ,= 0x0c0c447d)\
-			x(Period             ,= 0x166be380)\
-			x(Velocity           ,= 0x13c33323)\
-			x(AngVelocity        ,= 0x1572a9b4)\
-			x(Axis               ,= 0x05a50e20)\
-			x(Hidden             ,= 0x16ade487)\
-			x(Wireframe          ,= 0x067b0d73)\
-			x(Delimiters         ,= 0x084f5b30)\
-			x(Clear              ,= 0x045518bd)\
-			x(Camera             ,= 0x19028d2f)\
-			x(LookAt             ,= 0x1B6B2D38)\
-			x(Align              ,= 0x0E12A77C)\
-			x(Aspect             ,= 0x1003E8FA)\
-			x(FovX               ,= 0x19374FBB)\
-			x(FovY               ,= 0x136802CE)\
-			x(Fov                ,= 0x1AF2491D)\
-			x(Near               ,= 0x1E14CA9C)\
-			x(Far                ,= 0x05214BAB)\
-			x(AbsoluteClipPlanes ,= 0x026E4C7B)\
-			x(Orthographic       ,= 0x1EA1DC13)\
-			x(Lock               ,= 0x0a040f55)\
-			x(Coloured           ,= 0x078194a5)\
-			x(Width              ,= 0x190A34C3)\
-			x(Smooth             ,= 0x0EF3B8A6)\
-			x(Param              ,= 0x090da184)\
-			x(Texture            ,= 0x126f7a1b)\
-			x(Video              ,= 0x1121909f)\
-			x(Divisions          ,= 0x1a7f5e28)\
-			x(Layers             ,= 0x0ea88b62)\
-			x(Wedges             ,= 0x0e4a1c99)\
-			x(ViewPlaneZ         ,= 0x053FC43C)\
-			x(Verts              ,= 0x1b15f488)\
-			x(Normals            ,= 0x061bcc50)\
-			x(Colours            ,= 0x1e9214e3)\
-			x(TexCoords          ,= 0x096ec538)\
-			x(Lines              ,= 0x18abd83b)\
-			x(Faces              ,= 0x14903115)\
-			x(Tetra              ,= 0x092750d0)\
-			x(GenerateNormals    ,= 0x1c991230)\
-			x(BakeTransform      ,= 0x08648294)\
-			x(Step               ,= 0x0ad1d27d)\
-			x(Addr               ,= 0x0a215e87)\
-			x(Filter             ,= 0x183f6f0c)\
-			x(Range              ,= 0x0529B2DD)\
-			x(Specular           ,= 0x15DF6A5F)\
-			x(CastShadow         ,= 0x10C1337D)
+			x(O2W                ,= 0xD19FD403)\
+			x(M4x4               ,= 0x63B99A6A)\
+			x(M3x3               ,= 0x9C585402)\
+			x(Pos                ,= 0x69FCCEDF)\
+			x(Up                 ,= 0x8ADBACCA)\
+			x(Direction          ,= 0x9EED3AF8)\
+			x(Quat               ,= 0x50CAF5B0)\
+			x(Rand4x4            ,= 0xA0EBAB08)\
+			x(RandPos            ,= 0x7B04543A)\
+			x(RandOri            ,= 0x11FAF99C)\
+			x(Euler              ,= 0x7535694C)\
+			x(Scale              ,= 0x8FB215FF)\
+			x(Transpose          ,= 0x378A52F2)\
+			x(Inverse            ,= 0x3319D509)\
+			x(Normalise          ,= 0xC217A4DF)\
+			x(Orthonormalise     ,= 0xA4F80FAF)\
+			x(Colour             ,= 0x0C32CB6F)\
+			x(Solid              ,= 0xA1CB05CA)\
+			x(Facets             ,= 0x67EA2D0F)\
+			x(CornerRadius       ,= 0x37853594)\
+			x(RandColour         ,= 0x19CF8704)\
+			x(ColourMask         ,= 0x1C458BCB)\
+			x(Animation          ,= 0xD6A332B7)\
+			x(Style              ,= 0x543F0AA0)\
+			x(Period             ,= 0xDA30C5CE)\
+			x(Velocity           ,= 0xA758C8D8)\
+			x(AngVelocity        ,= 0x0B71C716)\
+			x(Axis               ,= 0xAC6E5BAA)\
+			x(Hidden             ,= 0xF9043C0F)\
+			x(Wireframe          ,= 0xFB4BD3C3)\
+			x(Delimiters         ,= 0x47722F15)\
+			x(Clear              ,= 0x22FEC570)\
+			x(Camera             ,= 0xDF0BDCD0)\
+			x(LookAt             ,= 0xE7ADE2F1)\
+			x(Align              ,= 0xC0243C84)\
+			x(Aspect             ,= 0x4D61E74B)\
+			x(FovX               ,= 0x0491D892)\
+			x(FovY               ,= 0x0591DA25)\
+			x(Fov                ,= 0xB4CCE81E)\
+			x(Near               ,= 0x74616F61)\
+			x(Far                ,= 0xB8DBF8F4)\
+			x(AbsoluteClipPlanes ,= 0x6DDFDFBF)\
+			x(Orthographic       ,= 0xCE585A2D)\
+			x(Lock               ,= 0x08014378)\
+			x(Coloured           ,= 0x63AC372E)\
+			x(Width              ,= 0xD71AF451)\
+			x(Smooth             ,= 0x1FE1082D)\
+			x(Param              ,= 0xFE1F478C)\
+			x(Texture            ,= 0x8085453E)\
+			x(Video              ,= 0xB56087A2)\
+			x(Divisions          ,= 0xD3B6B8A9)\
+			x(Layers             ,= 0x2660A179)\
+			x(Wedges             ,= 0x513C557A)\
+			x(ViewPlaneZ         ,= 0xCEA11392)\
+			x(Verts              ,= 0x3D923EE5)\
+			x(Normals            ,= 0x919EF841)\
+			x(Colours            ,= 0x4FF5BD14)\
+			x(TexCoords          ,= 0xEDC4BA8A)\
+			x(Lines              ,= 0x5F1D056A)\
+			x(Faces              ,= 0xB1E5491F)\
+			x(Tetra              ,= 0xA59C3E8D)\
+			x(GenerateNormals    ,= 0x0F28F5C8)\
+			x(BakeTransform      ,= 0x4A574C82)\
+			x(Step               ,= 0x769C2FAD)\
+			x(Addr               ,= 0x8C9D2A58)\
+			x(Filter             ,= 0xDEC6CAD9)\
+			x(Range              ,= 0x713C8894)\
+			x(Specular           ,= 0x81057AC6)\
+			x(CastShadow         ,= 0x27866224)
 		PR_DEFINE_ENUM2(EKeyword, PR_ENUM);
 		#undef PR_ENUM
 		#pragma endregion
@@ -587,7 +587,7 @@ namespace pr
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
 		void Parse(
 			pr::Renderer& rdr,                    // The renderer to create models for
-			pr::script::Reader& reader,           // The source of the script
+			pr::script::ReaderBase& reader,       // The source of the script
 			ParseResult& out,                     // The results of parsing the script
 			bool async = true,                    // True if parsing should be done in a background thread
 			ContextId context_id = DefaultContext // The context id to assign to each created object
@@ -596,41 +596,29 @@ namespace pr
 		// Parse ldr script from a text file
 		// 'include_paths' is a comma/semicolon separated list of include paths to use to resolve #include directives (or nullptr)
 		inline void ParseFile(
-			pr::Renderer& rdr,                                         // The renderer to create models for
-			char const* filename,                                      // The file containing the ldr script
-			ParseResult& out,                                          // The results of parsing the script
-			bool async = true,                                         // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
-			pr::script::IIncludes* include_handler = nullptr,          // The include resolver
-			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
-			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // lua code handler to use instead of the default
+			pr::Renderer& rdr,                     // The renderer to create models for
+			char const* filename,                  // The file containing the ldr script
+			ParseResult& out,                      // The results of parsing the script
+			bool async = true,                     // True if parsing should be done in a background thread
+			ContextId context_id = DefaultContext) // The context id to assign to each created object
 		{
-			pr::script::FileSrc src(filename);
+			pr::script::FileSrc<> src(filename);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler(include_handler);
-			reader.ErrorHandler(script_error_handler);
-			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 
 		// Parse ldr script from a string
 		// 'include_paths' is a comma/semicolon separated list of include "paths" to use to resolve #include directives (or nullptr)
+		template <typename Char>
 		inline void ParseString(
-			pr::Renderer& rdr,                                         // The reader to create models for
-			char const* ldr_script,                                    // The literal string containing the script
-			ParseResult& out,                                          // The results of parsing the script
-			bool async = true,                                         // True if parsing should be done in a background thread
-			ContextId context_id = DefaultContext,                     // The context id to assign to each created object
-			pr::script::IIncludes* include_handler = nullptr,          // Include paths (or nullptr) used to make #include mean something for strings
-			pr::script::IErrorHandler* script_error_handler = nullptr, // Script error handler to use instead of the default
-			pr::script::IEmbeddedCode* lua_code_handler = nullptr)     // Lua code handler to use instead of the default
+			pr::Renderer& rdr,                     // The reader to create models for
+			Char const* ldr_script,                // The literal string containing the script
+			ParseResult& out,                      // The results of parsing the script
+			bool async = true,                     // True if parsing should be done in a background thread
+			ContextId context_id = DefaultContext) // The context id to assign to each created object
 		{
-			pr::script::Loc loc("ldr_string", 0, 0);
-			pr::script::PtrSrc src(ldr_script, &loc);
+			pr::script::Ptr<Char const*> src(ldr_script);
 			pr::script::Reader reader(src);
-			reader.IncludeHandler(include_handler);
-			reader.ErrorHandler(script_error_handler);
-			reader.CodeHandler(lua_code_handler);
 			Parse(rdr, reader, out, async, context_id);
 		}
 
@@ -680,7 +668,7 @@ namespace pr
 		// as we use for ldr object '*o2w' transform descriptions.
 		// This function is inline so that external code can use the Ldr
 		// transform syntax without dependence on renderer functions
-		inline pr::m4x4& ParseLdrTransform(pr::script::Reader& reader, pr::m4x4& o2w)
+		inline pr::m4x4& ParseLdrTransform(pr::script::ReaderBase& reader, pr::m4x4& o2w)
 		{
 			assert(pr::IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it premultiplies the transform with the one read from the script");
 			pr::m4x4 p2w = pr::m4x4Identity;
@@ -698,21 +686,21 @@ namespace pr
 				case EKeyword::M4x4:
 					{
 						m4x4 o2w = m4x4Identity;
-						reader.ExtractMatrix4x4S(o2w);
+						reader.Matrix4x4S(o2w);
 						p2w = o2w * p2w;
 						break;
 					}
 				case EKeyword::M3x3:
 					{
 						m4x4 m = m4x4Identity;
-						reader.ExtractMatrix3x3S(m.rot);
+						reader.Matrix3x3S(m.rot);
 						p2w = m * p2w;
 						break;
 					}
 				case EKeyword::Pos:
 					{
 						m4x4 m = m4x4Identity;
-						reader.ExtractVector3S(m.pos, 1.0f);
+						reader.Vector3S(m.pos, 1.0f);
 						p2w = m * p2w;
 						break;
 					}
@@ -721,8 +709,8 @@ namespace pr
 						int axis_id;
 						pr::v4 direction;
 						reader.SectionStart();
-						reader.ExtractInt(axis_id, 10);
-						reader.ExtractVector3(direction, 0.0f);
+						reader.Int(axis_id, 10);
+						reader.Vector3(direction, 0.0f);
 						reader.SectionEnd();
 
 						v4 axis = AxisId(axis_id);
@@ -738,7 +726,7 @@ namespace pr
 				case EKeyword::Quat:
 					{
 						pr::Quat quat;
-						reader.ExtractVector4S(quat.xyzw);
+						reader.Vector4S(quat.xyzw);
 						p2w = Rotation4x4(quat, v4Origin) * p2w;
 						break;
 					}
@@ -747,8 +735,8 @@ namespace pr
 						float radius;
 						pr::v4 centre;
 						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
+						reader.Vector3(centre, 1.0f);
+						reader.Real(radius);
 						reader.SectionEnd();
 						p2w = pr::Random4x4(centre, radius) * p2w;
 						break;
@@ -758,8 +746,8 @@ namespace pr
 						float radius;
 						pr::v4 centre;
 						reader.SectionStart();
-						reader.ExtractVector3(centre, 1.0f);
-						reader.ExtractReal(radius);
+						reader.Vector3(centre, 1.0f);
+						reader.Real(radius);
 						reader.SectionEnd();
 						p2w = Translation4x4(Random3(centre, radius, 1.0f)) * p2w;
 						break;
@@ -774,7 +762,7 @@ namespace pr
 				case EKeyword::Euler:
 					{
 						pr::v4 angles;
-						reader.ExtractVector3S(angles, 0.0f);
+						reader.Vector3S(angles, 0.0f);
 						p2w = Rotation4x4(pr::DegreesToRadians(angles.x), pr::DegreesToRadians(angles.y), pr::DegreesToRadians(angles.z), pr::v4Origin) * p2w;
 						break;
 					}
@@ -782,13 +770,13 @@ namespace pr
 					{
 						pr::v4 scale;
 						reader.SectionStart();
-						reader.ExtractReal(scale.x);
+						reader.Real(scale.x);
 						if (reader.IsSectionEnd())
 							scale.z = scale.y = scale.x;
 						else
 						{
-							reader.ExtractReal(scale.y);
-							reader.ExtractReal(scale.z);
+							reader.Real(scale.y);
+							reader.Real(scale.z);
 						}
 						reader.SectionEnd();
 						p2w = Scale4x4(scale.x, scale.y, scale.z, v4Origin) * p2w;
@@ -829,7 +817,7 @@ namespace pr
 		// Parse the source data in 'reader' using the same syntax
 		// as we use for ldr object '*o2w' transform descriptions.
 		// The source should begin with '{' and end with '}', i.e. *o2w { ... } with the *o2w already read
-		inline pr::m4x4 ParseLdrTransform(pr::script::Reader& reader)
+		inline pr::m4x4 ParseLdrTransform(pr::script::ReaderBase& reader)
 		{
 			pr::m4x4 o2w = pr::m4x4Identity;
 			ParseLdrTransform(reader, o2w);
@@ -849,10 +837,11 @@ namespace pr
 	{
 		PRUnitTest(pr_linedrawer_ldr_object)
 		{
-			auto hasher  = [](char const* s) { return pr::hash::HashLwr(s); };
+			// Check the hash values are correct
+			auto hasher  = [](wchar_t const* s) { return pr::script::ReaderBase::HashKeyword(s, false); };
 			auto on_fail = [](char const* m) { PR_FAIL(m); };
-			pr::CheckHashEnum<pr::ldr::EKeyword  >(hasher, on_fail);
-			pr::CheckHashEnum<pr::ldr::ELdrObject>(hasher, on_fail);
+			pr::CheckHashEnum<pr::ldr::EKeyword  , wchar_t>(hasher, on_fail);
+			pr::CheckHashEnum<pr::ldr::ELdrObject, wchar_t>(hasher, on_fail);
 		}
 	}
 }

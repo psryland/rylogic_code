@@ -23,7 +23,7 @@ extern "C"
 #include <string>
 #include "pr/common/assert.h"
 #include "pr/common/fmt.h"
-#include "pr/str/prstring.h"
+#include "pr/str/string_util.h"
 
 #ifndef PR_DBG_LUA
 #define PR_DBG_LUA PR_DBG
@@ -459,6 +459,8 @@ namespace pr
 		//	EResult::Failed - lua returned a result that the documentation doesn't mention
 		template <typename String> inline EResult::Type PushLuaChunk(lua_State* lua_state, String const& input, String& syntax_error_msg)
 		{
+			static_assert(sizeof(String::value_type) == sizeof(char), "Lua only supports ascii");
+
 			// Load the string into the lua stack as a function
 			// I.e. inserts the user string between "function foo() user_string end"
 			int result = luaL_loadbuffer(lua_state, input.c_str(), input.size(), "");

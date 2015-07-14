@@ -1,13 +1,15 @@
 //**********************************
-// Script tokeniser
-//  Copyright (c) Rylogic Ltd 2011
+// Script
+//  Copyright (c) Rylogic Ltd 2015
 //**********************************
-#ifndef PR_SCRIPT_TOKENISER_H
-#define PR_SCRIPT_TOKENISER_H
-	
-#include "pr/script/script_core.h"
+
+#pragma once
+
+#include "pr/script/forward.h"
+#include "pr/script/fail_policy.h"
 #include "pr/script/token.h"
-	
+#include "pr/script/script_core.h"
+
 namespace pr
 {
 	namespace script
@@ -18,63 +20,94 @@ namespace pr
 			virtual ~TokenSrc() {}
 			
 			// Pointer-like interface
-			Token const& operator * () const     { return const_cast<TokenSrc*>(this)->peek(); }
-			TokenSrc&    operator ++()           { if (**this) next(); return *this; }
-			TokenSrc&    operator +=(int count)  { while (count--) ++(*this); return *this; }
-			
-		protected:
-			virtual void         next() = 0;
-			virtual Token const& peek() = 0;
+			virtual Token const& operator * () const = 0;
+			virtual TokenSrc& operator ++() = 0;
+			TokenSrc& operator += (int n)
+			{
+				for (;n--;) ++*this;
+				return *this;
+			}
 		};
 		
 		// C Tokeniser
+		template <typename FailPolicy = ThrowOnFailure>
 		struct Tokeniser :TokenSrc
 		{
-			Buffer<> m_buf;                       // The character stream to read from
-			Token    m_tok;                       // The token last read from the stream
-			bool     m_cached;                    // True when 'm_tok' represents the next token
-			
+			using Buffer = Buffer<pr::deque<wchar_t>>;
+
+			Buffer    m_buf;  // The character stream to read from
+			EmitCount m_emit; // The read position in 'm_buf'
+			Token     m_tok;  // The token last read from the stream
+
 			Tokeniser(Src& src)
-			:m_buf(src)
-			,m_tok()
-			,m_cached(false)
-			{}
-			
-		protected:
-			void next() { m_cached = false; }
-			Token const& peek()
+				:m_buf(src)
+				,m_emit()
+				,m_tok()
 			{
-				if (m_cached) return m_tok;
-				
-				// line space does not generate tokens
-				Eat::LineSpace(m_buf);
-				switch (*m_buf)
+				seek();
+			}
+			Tokeniser(Tokeniser&& rhs)
+				:TokenSrc(std::move(rhs))
+				,m_buf(std::move(rhs.m_buf))
+				,m_emit(std::move(rhs.m_emit))
+				,m_tok(std::move(rhs.m_tok))
+			{}
+			Tokeniser(Tokeniser const& rhs)
+				:TokenSrc(rhs)
+				,m_buf(rhs.m_buf)
+				,m_emit(rhs.m_emit)
+				,m_tok(rhs.m_tok)
+			{}
+
+			// Pointer-like interface
+			Token const& operator * () const override
+			{
+				return m_tok;
+			}
+			TokenSrc& operator ++() override
+			{
+				seek();
+				return *this;
+			}
+
+			// Advance to the next token to output
+			void seek()
+			{
+				auto& src = m_buf;
+				auto& emit = m_emit;
+
+				// Line space does not generate tokens
+				EatLineSpace(src, 0, 0);
+				switch (*src)
 				{
 				default:
-					throw Exception(EResult::SyntaxError, m_buf.loc(), "tokeniser failed to understand code starting here");
+					return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Tokeniser failed to understand code starting here");
+
 				case 0:
-					m_tok = Token(EToken::EndOfStream, "");
+					m_tok = Token(EToken::EndOfStream);
 					break;
+
 				case '\n':
-					m_tok = Token(ESymbol::NewLine, m_buf.loc().m_line+1); // save the index of the line following this '\n'
-					++m_buf;
+					m_tok = Token(ESymbol::NewLine, src.Loc().Line()); // save the index of the line following this '\n'
+					++src;
 					break;
+
+				case '_':
 				case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i':
 				case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r':
 				case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
 				case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I':
 				case 'J': case 'K':           case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R':
 				case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
-				case '_':
 					// extract an identifier that might be a keyword
 					tokeniser_extract_identitier:
-					{ 
-						string id;
-						pr::str::ExtractIdentifier(id, m_buf);
-						pr::hash::HashValue hash = Hash::String(id);
+					{
+						// Read the identifier
+						BufferIdentifier(src, emit);
+						auto hash = Hash(src, 0, emit);
 						switch (hash)
 						{
-						default:                 m_tok = Token(EToken::Identifier, id, hash); break;
+						default:                 m_tok = Token(EToken::Identifier, src.str(0, emit), hash); break;
 						case EKeyword::Auto:     m_tok = Token(EKeyword::Auto     ); break;
 						case EKeyword::Double:   m_tok = Token(EKeyword::Double   ); break;
 						case EKeyword::Int:      m_tok = Token(EKeyword::Int      ); break;
@@ -108,148 +141,166 @@ namespace pr
 						case EKeyword::Static:   m_tok = Token(EKeyword::Static   ); break;
 						case EKeyword::While:    m_tok = Token(EKeyword::While    ); break;
 						}
-					}break;
-					
+						src.pop_front(emit);
+						emit = 0;
+						break;
+					}
+				case 'L':
+					// might be a char literal, string literal, or an identifier
+					{
+						if (src[1] == '\'' || src[1] == '\"') goto tokeniser_extract_str_literal;
+						goto tokeniser_extract_identitier;
+					}
+
 				case '0': case '1': case '2': case '3': case '4':
 				case '5': case '6': case '7': case '8': case '9':
 					// Extract a numeric constant
 					tokeniser_extract_constant:
 					{
 						int64 ivalue; double fvalue; bool fp;
-						if (!pr::str::ExtractNumber(ivalue, fvalue, fp, m_buf))
-							throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid numeric constant");
+						if (!pr::str::ExtractNumber(ivalue, fvalue, fp, src))
+							return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
+
 						m_tok = Token(fp ? EConstant::FloatingPoint : EConstant::Integral, fvalue, ivalue);
-					}break;
-					
+						break;
+					}
+
 				case '\'':
 				case '\"':
 					// Extract a literal c-string (possibly prefixed with 'L')
 					tokeniser_extract_str_literal:
 					{
-						bool wide = (*m_buf == 'L');
-						if (wide) ++m_buf;
-						bool is_char = (*m_buf == '\'');
+						auto is_wide = *src == 'L' ? ++src,true : false;
+						auto is_char = *src == '\'';
+
 						m_tok = Token(EConstant::Integral, 0.0, 0);
-						if (wide) { if (!pr::str::ExtractCString(m_tok.m_wvalue, m_buf)) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid wide literal constant"); }
-						else      { if (!pr::str::ExtractCString(m_tok.m_avalue, m_buf)) throw Exception(EResult::SyntaxError, m_buf.loc(), "invalid literal constant"); }
-						if (is_char) m_tok.m_ivalue   = wide ? m_tok.m_wvalue[0]         : m_tok.m_avalue[0]; // char literals are actually integral constants
-						else         m_tok.m_constant = wide ? EConstant::WStringLiteral : EConstant::StringLiteral;
-					}break;
-					
-				case 'L': // might be a char literal, string literal, or an identifier
-					m_buf.buffer(2);
-					if (m_buf[1] == '\'' || m_buf[1] == '\"') goto tokeniser_extract_str_literal;
-					goto tokeniser_extract_identitier;
-					
+						if (is_wide) { if (!pr::str::ExtractString(m_tok.m_wvalue, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid wide literal constant"); }
+						else         { if (!pr::str::ExtractString(m_tok.m_avalue, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid literal constant"); }
+						if (is_char) m_tok.m_ivalue   = is_wide ? m_tok.m_wvalue[0]         : m_tok.m_avalue[0]; // char literals are actually integral constants
+						else         m_tok.m_constant = is_wide ? EConstant::WStringLiteral : EConstant::StringLiteral;
+						break;
+					}
+
 				case '.':
-					m_buf.buffer(3);
-					if (m_buf[1] == '.' && m_buf[2] == '.') { m_tok = Token(ESymbol::Ellipsis); m_buf += 3; break; }
-					if (pr::str::IsDigit(m_buf[1])) goto tokeniser_extract_constant; // '.' can be the start of a number
-					m_tok = Token(ESymbol::Dot); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '.' && src[2] == '.') { m_tok = Token(ESymbol::Ellipsis); src += 3; break; }
+						if (pr::str::IsDigit(src[1])) goto tokeniser_extract_constant; // '.' can be the start of a number
+						m_tok = Token(ESymbol::Dot); ++src;
+						break;
+					}
+
 				case '<':
-					m_buf.buffer(3);
-					if (m_buf[1] == '<' && m_buf[2] == '=') { m_tok = Token(ESymbol::ShiftLAssign); m_buf += 3; break; }
-					if (m_buf[1] == '<') { m_tok = Token(ESymbol::ShiftL); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::LessEql); m_buf += 2; break; }
-					m_tok = Token(ESymbol::LessThan); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '<' && src[2] == '=') { m_tok = Token(ESymbol::ShiftLAssign); src += 3; break; }
+						if (src[1] == '<') { m_tok = Token(ESymbol::ShiftL); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::LessEql); src += 2; break; }
+						m_tok = Token(ESymbol::LessThan); ++src;
+						break;
+					}
+
 				case '>':
-					m_buf.buffer(3);
-					if (m_buf[1] == '>' && m_buf[2] == '=') { m_tok = Token(ESymbol::ShiftRAssign); m_buf += 3; break; }
-					if (m_buf[1] == '>') { m_tok = Token(ESymbol::ShiftR); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::GtrEql); m_buf += 2; break; }
-					m_tok = Token(ESymbol::GtrThan); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '>' && src[2] == '=') { m_tok = Token(ESymbol::ShiftRAssign); src += 3; break; }
+						if (src[1] == '>') { m_tok = Token(ESymbol::ShiftR); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::GtrEql); src += 2; break; }
+						m_tok = Token(ESymbol::GtrThan); ++src;
+						break;
+					}
+
 				case '&':
-					m_buf.buffer(2);
-					if (m_buf[1] == '&') { m_tok = Token(ESymbol::LogicalAnd); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::BitAndAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::AddressOf); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '&') { m_tok = Token(ESymbol::LogicalAnd); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::BitAndAssign); src += 2; break; }
+						m_tok = Token(ESymbol::AddressOf); ++src;
+						break;
+					}
+
 				case '|':
-					m_buf.buffer(2);
-					if (m_buf[1] == '|') { m_tok = Token(ESymbol::LogicalOr); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::BitOrAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::BitOr); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '|') { m_tok = Token(ESymbol::LogicalOr); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::BitOrAssign); src += 2; break; }
+						m_tok = Token(ESymbol::BitOr); ++src;
+						break;
+					}
+
 				case '^':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::BitXorAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::BitXor); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::BitXorAssign); src += 2; break; }
+						m_tok = Token(ESymbol::BitXor); ++src;
+						break;
+					}
+
 				case '!':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::NotEqual); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Not); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::NotEqual); src += 2; break; }
+						m_tok = Token(ESymbol::Not); ++src;
+						break;
+					}
+
 				case '=':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::Equal); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Assign); ++m_buf;
-					break;
-				
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::Equal); src += 2; break; }
+						m_tok = Token(ESymbol::Assign); ++src;
+						break;
+					}
+
 				case '+':
-					m_buf.buffer(2);
-					if (m_buf[1] == '+') { m_tok = Token(ESymbol::Increment); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::AddAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Plus); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '+') { m_tok = Token(ESymbol::Increment); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::AddAssign); src += 2; break; }
+						m_tok = Token(ESymbol::Plus); ++src;
+						break;
+					}
+
 				case '-':
-					m_buf.buffer(2);
-					if (m_buf[1] == '-') { m_tok = Token(ESymbol::Decrement); m_buf += 2; break; }
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::SubAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Minus); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '-') { m_tok = Token(ESymbol::Decrement); src += 2; break; }
+						if (src[1] == '=') { m_tok = Token(ESymbol::SubAssign); src += 2; break; }
+						m_tok = Token(ESymbol::Minus); ++src;
+						break;
+					}
+
 				case '*':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::MulAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Ptr); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::MulAssign); src += 2; break; }
+						m_tok = Token(ESymbol::Ptr); ++src;
+						break;
+					}
+
 				case '%':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::ModAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Modulus); ++m_buf;
-					break;
-					
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::ModAssign); src += 2; break; }
+						m_tok = Token(ESymbol::Modulus); ++src;
+						break;
+					}
+
 				case '/':
-					m_buf.buffer(2);
-					if (m_buf[1] == '=') { m_tok = Token(ESymbol::DivAssign); m_buf += 2; break; }
-					m_tok = Token(ESymbol::Divide); ++m_buf;
-					break;
-					
-				case '(': m_tok = Token(ESymbol::ParenthOpen  ); ++m_buf; break;
-				case ')': m_tok = Token(ESymbol::ParenthClose ); ++m_buf; break;
-				case '[': m_tok = Token(ESymbol::BracketOpen  ); ++m_buf; break;
-				case ']': m_tok = Token(ESymbol::BracketClose ); ++m_buf; break;
-				case '{': m_tok = Token(ESymbol::BraceOpen    ); ++m_buf; break;
-				case '}': m_tok = Token(ESymbol::BraceClose   ); ++m_buf; break;
-				case ',': m_tok = Token(ESymbol::Comma        ); ++m_buf; break;
-				case ';': m_tok = Token(ESymbol::SemiColon    ); ++m_buf; break;
-				case ':': m_tok = Token(ESymbol::Colon        ); ++m_buf; break;
-				case '?': m_tok = Token(ESymbol::Conditional  ); ++m_buf; break;
-				case '~': m_tok = Token(ESymbol::Complement   ); ++m_buf; break;
-				case '#': m_tok = Token(ESymbol::Hash         ); ++m_buf; break;
-				case '$': m_tok = Token(ESymbol::Dollar       ); ++m_buf; break;
-				case '@': m_tok = Token(ESymbol::At           ); ++m_buf; break;
+					{
+						if (src[1] == '=') { m_tok = Token(ESymbol::DivAssign); src += 2; break; }
+						m_tok = Token(ESymbol::Divide); ++src;
+						break;
+					}
+
+				case '(': m_tok = Token(ESymbol::ParenthOpen  ); ++src; break;
+				case ')': m_tok = Token(ESymbol::ParenthClose ); ++src; break;
+				case '[': m_tok = Token(ESymbol::BracketOpen  ); ++src; break;
+				case ']': m_tok = Token(ESymbol::BracketClose ); ++src; break;
+				case '{': m_tok = Token(ESymbol::BraceOpen    ); ++src; break;
+				case '}': m_tok = Token(ESymbol::BraceClose   ); ++src; break;
+				case ',': m_tok = Token(ESymbol::Comma        ); ++src; break;
+				case ';': m_tok = Token(ESymbol::SemiColon    ); ++src; break;
+				case ':': m_tok = Token(ESymbol::Colon        ); ++src; break;
+				case '?': m_tok = Token(ESymbol::Conditional  ); ++src; break;
+				case '~': m_tok = Token(ESymbol::Complement   ); ++src; break;
+				case '#': m_tok = Token(ESymbol::Hash         ); ++src; break;
+				case '$': m_tok = Token(ESymbol::Dollar       ); ++src; break;
+				case '@': m_tok = Token(ESymbol::At           ); ++src; break;
 				}
-				m_cached = true;
-				return m_tok;
+
+				// Clear the buffer now that we have the token
+				src.pop_front(emit);
+				emit = 0;
 			}
-			
-		private: // no copying
-			Tokeniser(Tokeniser const&);
-			Tokeniser& operator=(Tokeniser const&);
 		};
 	}
 }
@@ -272,8 +323,9 @@ namespace pr
 				" \n = ; ~ ! * & + - / % < > | ^ , ? { } [ ] ( ) . : # $ @ ++ -- << >> <= "
 				">= == != && || <<= >>= &= |= ^= += -= *= /= %= ..."
 				;
-			PtrSrc src(str_in);
-			Tokeniser tkr(src);
+
+			PtrA<> src(str_in);
+			Tokeniser<> tkr(src);
 			PR_CHECK(*tkr == EKeyword::Auto     , true); ++tkr;
 			PR_CHECK(*tkr == EKeyword::Double   , true); ++tkr;
 			PR_CHECK(*tkr == EKeyword::Int      , true); ++tkr;
@@ -361,7 +413,5 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif
 

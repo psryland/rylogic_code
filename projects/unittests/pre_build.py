@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 #
 # Generate a header file that includes all
@@ -15,7 +15,7 @@ try:
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	dir      = sys.argv[1]
+	dir      = sys.argv[1] if len(sys.argv) > 1 else UserVars.root + "\\projects\\unittests"
 	platform = sys.argv[2] if len(sys.argv) > 2 else "any"
 	config   = sys.argv[3] if len(sys.argv) > 3 else "release"
 	outfile  = dir + "\\unittests.h"
@@ -39,6 +39,7 @@ try:
 		"pr/physics/",
 		"pr/sound/",
 		"pr/storage/xfile",
+		"pr/script_old/",
 		"pr/terrain/",
 		"pr/collision/todo/",
 		"pr/collision/builder/",
@@ -47,10 +48,8 @@ try:
 	# generate a file that includes all headers
 	with open(tmpfile, mode='w') as outf:
 		outf.write(
-			"#ifndef PR_UNITTESTS_UNITTESTS_H\n"
-			"#define PR_UNITTESTS_UNITTESTS_H\n"
-			"//\n"
 			"// This is a generated file\n"
+			"#pragma once\n"
 			"//\n"
 			)
 		for sd in srcdirs:
@@ -59,11 +58,6 @@ try:
 				if os.path.splitext(file)[1] != ".h": continue
 				if any([True for excl in exclude if file.find(excl) != -1]): continue;
 				outf.write("#include \""+file[file.rfind("pr/"):]+"\"\n")
-				
-		outf.write(
-			"\n"
-			"#endif\n"
-			)
 
 	# swap the tmp file with the file if difference
 	if Tools.DiffContent(outfile, tmpfile):

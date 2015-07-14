@@ -10,8 +10,8 @@
 #include "pr/common/fmt.h"
 #include "pr/common/assert.h"
 #include "pr/common/colour.h"
-#include "pr/str/tostring.h"
-#include "pr/str/prstdstring.h"
+#include "pr/str/to_string.h"
+#include "pr/str/string.h"
 #include "pr/maths/maths.h"
 #include "pr/maths/conversion.h"
 

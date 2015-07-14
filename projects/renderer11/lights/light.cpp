@@ -63,21 +63,26 @@ namespace pr
 		}
 
 		#define PR_ENUM(x)\
-			x(Pos  ,= 0x13930DAF)\
-			x(Dir  ,= 0x1618B31F)\
-			x(Type ,= 0x19DA494A)\
-			x(Amb  ,= 0x1558CC98)\
-			x(Diff ,= 0x06868516)\
-			x(Spec ,= 0x1EEC863F)\
-			x(SPwr ,= 0x1C563FB0)\
-			x(InCA ,= 0x027932CE)\
-			x(OtCA ,= 0x178B4446)\
-			x(Rng  ,= 0x11F022C5)\
-			x(FOff ,= 0x1C689A1D)\
-			x(Shdw ,= 0x17CA424A)\
-			x(On   ,= 0x1E67B806)
+			x(Pos  ,= 0x69FCCEDF)\
+			x(Dir  ,= 0x8BFA9FFE)\
+			x(Type ,= 0x0CBF8747)\
+			x(Amb  ,= 0xDBF6A735)\
+			x(Diff ,= 0xF3BAD914)\
+			x(Spec ,= 0x2DE5D728)\
+			x(SPwr ,= 0x0EC31419)\
+			x(InCA ,= 0x30DDD5AC)\
+			x(OtCA ,= 0xA89FF1D4)\
+			x(Rng  ,= 0xAA7451F4)\
+			x(FOff ,= 0xF6B8D1F8)\
+			x(Shdw ,= 0xAAAEB4D5)\
+			x(On   ,= 0x8CEABA7A)
 		PR_DEFINE_ENUM2(ELightKW, PR_ENUM);
 		#undef PR_ENUM
+
+		// Check the hash values are correct
+		#if PR_DBG_RDR
+		static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>([&](wchar_t const* s) { return pr::script::Reader::HashKeyword(s, false); });
+		#endif
 
 		// Get/Set light settings
 		std::string Light::Settings() const
@@ -109,31 +114,27 @@ namespace pr
 				Light light;
 
 				// Parse the settings
-				pr::script::Reader reader;
-				pr::script::PtrSrc src(settings);
-				reader.AddSource(src);
-
-				// Check the hash values are correct
-				PR_EXPAND(PR_DBG_RDR, static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW>([&](char const* s) { return reader.HashKeyword(s); }));
+				pr::script::PtrA<> src(settings);
+				pr::script::Reader reader(src, false);
 
 				ELightKW kw;
 				while (reader.NextKeywordH(kw))
 				{
 					switch (kw)
 					{
-					case ELightKW::Pos:  reader.ExtractVector3S(light.m_position, 1.0f); break;
-					case ELightKW::Dir:  reader.ExtractVector3S(light.m_direction, 0.0f); break;
-					case ELightKW::Type: reader.ExtractEnumS(light.m_type); break;
-					case ELightKW::Amb:  reader.ExtractIntS(light.m_ambient.m_aarrggbb, 16); break;
-					case ELightKW::Diff: reader.ExtractIntS(light.m_diffuse.m_aarrggbb, 16); break;
-					case ELightKW::Spec: reader.ExtractIntS(light.m_specular.m_aarrggbb, 16); break;
-					case ELightKW::SPwr: reader.ExtractRealS(light.m_specular_power); break;
-					case ELightKW::InCA: reader.ExtractRealS(light.m_inner_cos_angle); break;
-					case ELightKW::OtCA: reader.ExtractRealS(light.m_outer_cos_angle); break;
-					case ELightKW::Rng:  reader.ExtractRealS(light.m_range); break;
-					case ELightKW::FOff: reader.ExtractRealS(light.m_falloff); break;
-					case ELightKW::Shdw: reader.ExtractRealS(light.m_cast_shadow); break;
-					case ELightKW::On:   reader.ExtractBoolS(light.m_on); break;
+					case ELightKW::Pos:  reader.Vector3S(light.m_position, 1.0f); break;
+					case ELightKW::Dir:  reader.Vector3S(light.m_direction, 0.0f); break;
+					case ELightKW::Type: reader.EnumS(light.m_type); break;
+					case ELightKW::Amb:  reader.IntS(light.m_ambient.m_aarrggbb, 16); break;
+					case ELightKW::Diff: reader.IntS(light.m_diffuse.m_aarrggbb, 16); break;
+					case ELightKW::Spec: reader.IntS(light.m_specular.m_aarrggbb, 16); break;
+					case ELightKW::SPwr: reader.RealS(light.m_specular_power); break;
+					case ELightKW::InCA: reader.RealS(light.m_inner_cos_angle); break;
+					case ELightKW::OtCA: reader.RealS(light.m_outer_cos_angle); break;
+					case ELightKW::Rng:  reader.RealS(light.m_range); break;
+					case ELightKW::FOff: reader.RealS(light.m_falloff); break;
+					case ELightKW::Shdw: reader.RealS(light.m_cast_shadow); break;
+					case ELightKW::On:   reader.BoolS(light.m_on); break;
 					}
 				}
 				*this = light;

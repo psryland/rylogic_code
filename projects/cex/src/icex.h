@@ -8,7 +8,7 @@
 #include <iostream>
 #include <string>
 #include "pr/common/command_line.h"
-#include "pr/str/prstring.h"
+//#include "pr/str/prstring.h"
 
 namespace cex
 {
@@ -52,7 +52,7 @@ namespace cex
 		}
 
 		// Called after command line parsing, allows derived types to set default params
-		virtual void ValidatedInput()
+		virtual void ValidateInput()
 		{}
 
 		// Show the console for this process

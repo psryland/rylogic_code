@@ -16,7 +16,7 @@
 // Plugin functions implementation *****************************************************************
 
 // Add objects to the store associated with a particular context id
-LDR_EXPORT ldrapi::ObjectHandle ldrRegisterObject(ldrapi::PluginHandle handle, char const* object_description, char const* include_paths, pr::ldr::ContextId ctx_id, bool async)
+LDR_EXPORT ldrapi::ObjectHandle ldrRegisterObject(ldrapi::PluginHandle handle, char const* object_description, wchar_t const* include_paths, pr::ldr::ContextId ctx_id, bool async)
 {
 	if (!handle) return 0;
 	try { return handle->RegisterObject(object_description, include_paths, ctx_id, async); }

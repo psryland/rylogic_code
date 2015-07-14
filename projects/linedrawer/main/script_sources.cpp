@@ -59,7 +59,13 @@ namespace ldr
 		{
 			ParseResult out(m_store);
 			std::size_t bcount = m_store.size();
-			ParseString(m_rdr, str.c_str(), out, false, pr::ldr::DefaultContext, nullptr, nullptr, &m_lua_src);
+
+			pr::script::PtrA<> src(str.c_str());
+			pr::script::Reader reader(false);
+			reader.EmbeddedCode().Handler.push_back(&m_lua_src);
+			reader.Push(src);
+
+			Parse(m_rdr, reader, out, false, pr::ldr::DefaultContext);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
 			pr::events::Send(Event_Refresh());
@@ -77,73 +83,59 @@ namespace ldr
 	}
 
 	// Add a file source
-	void ScriptSources::AddFile(char const* filepath)
+	void ScriptSources::AddFile(wchar_t const* filepath)
 	{
 		AddFile(filepath, Event_StoreChanged::EReason::NewData);
 	}
 
 	// Internal add file
-	void ScriptSources::AddFile(char const* filepath, Event_StoreChanged::EReason reason)
+	void ScriptSources::AddFile(wchar_t const* filepath, Event_StoreChanged::EReason reason)
 	{
 		// Ensure the same file is not added twice
 		Remove(filepath);
 
 		// Add the filepath to the source files collection
-		m_files.push_back(pr::filesys::StandardiseC<std::string>(filepath));
-
-		// All objects added as a result of this file will have this context id
-		int context_id = pr::hash::HashC(m_files.back().c_str());
+		m_files.push_back(pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath));
+		auto& file = m_files.back();
 
 		try
 		{
-			typedef std::vector<std::string> StrCont;
-			std::size_t bcount = m_store.size();
 			ParseResult out(m_store);
+			auto bcount = m_store.size();
 
-			// An include handler that records all of the files opened
-			// so that we can detect changes in those files
-			struct LdrIncludes :FileIncludes
+			// All objects added as a result of this file will have this context id
+			int context_id = pr::hash::HashC(file.c_str());
+
+			// Add file watchers for the file and everything it included
+			m_watcher.Add(filepath, this, context_id, &file[0]);
+			auto watch = [&](pr::script::string const& fpath)
 			{
-				StrCont m_paths;
-				std::unique_ptr<Src> Open(pr::script::string const& include, Loc const& loc, bool search_paths_only) override
-				{
-					auto src = FileIncludes::Open(include, loc, search_paths_only);
-					if (src)
-					{
-						auto fsrc = static_cast<FileSrc*>(src.get());
-						m_paths.push_back(fsrc->m_file_loc.m_file);
-					}
-					return src;
-				}
-			} includes;
+				m_watcher.Add(fpath.c_str(), this, context_id, &file[0]);
+			};
 
 			// Add the file based on it's file type
-			std::string extn = pr::filesys::GetExtension(m_files.back());
+			auto extn = pr::filesys::GetExtension(file);
 			if (pr::str::EqualI(extn, "lua"))
 			{
 				m_lua_src.Add(filepath);
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
-				BufferedSrc src(pr::Fmt("*Model {\"%s\"}", filepath));
+				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", filepath));
 				Reader reader(src);
-				reader.IncludeHandler(&includes);
+				reader.Includes().FileOpened += watch;
+				reader.Includes().m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 			else // assume ldr script file
 			{
-				FileSrc src(m_files.back().c_str());
+				FileSrc<> src(file.c_str());
 				Reader reader(src);
-				reader.IncludeHandler(&includes);
-				reader.CodeHandler(&m_lua_src);
-				reader.IgnoreMissingIncludes(m_settings.m_IgnoreMissingIncludes);
+				reader.Includes().FileOpened += watch;
+				reader.Includes().m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+				reader.EmbeddedCode().Handler.push_back(&m_lua_src);
 				Parse(m_rdr, reader, out, true, context_id);
 			}
-
-			// Add file watchers for the file and everything it included
-			m_watcher.Add(filepath, this, context_id, &m_files.back()[0]);
-			for (auto path : includes.m_paths)
-				m_watcher.Add(path.c_str(), this, context_id, &m_files.back()[0]);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, reason));
 			pr::events::Send(Event_Refresh());
@@ -169,10 +161,10 @@ namespace ldr
 	}
 
 	// Remove a file source
-	void ScriptSources::Remove(char const* filepath)
+	void ScriptSources::Remove(wchar_t const* filepath)
 	{
 		// Delete all objects belonging to this file
-		std::string fpath = pr::filesys::StandardiseC<std::string>(filepath);
+		auto fpath = pr::filesys::StandardiseC<pr::string<wchar_t>>(filepath);
 		int context_id = pr::hash::HashC(fpath.c_str());
 		pr::ldr::Remove(m_store, &context_id, 1, 0, 0);
 
@@ -192,12 +184,12 @@ namespace ldr
 
 	// 'filepath' is the name of the changed file
 	// 'handled' should be set to false if the file should be reported as changed the next time 'CheckForChangedFiles' is called (true by default)
-	void ScriptSources::FileWatch_OnFileChanged(char const*, void* user_data, bool&)
+	void ScriptSources::FileWatch_OnFileChanged(wchar_t const*, void* user_data, bool&)
 	{
 		// Get the filepath of the root file and add it as though it is a new file.
 		// The changed file may have been included from other files.
 		// We want to reload from the root of the file hierarchy
-		std::string filepath = static_cast<char const*>(user_data);
-		AddFile(filepath.c_str());
+		auto filepath = static_cast<wchar_t const*>(user_data);
+		AddFile(filepath);
 	}
 }

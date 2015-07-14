@@ -99,7 +99,7 @@ namespace pr
 						if (c.m_id == id)
 							return c;
 					
-					std::stringstream ss; ss << "Child chunk " << id.ToString() << " not a member of chunk " << EChunkId::ToString(m_id);
+					std::stringstream ss; ss << "Child chunk " << id.ToStringA() << " not a member of chunk " << EChunkId::ToStringA(m_id);
 					throw std::exception(ss.str().c_str());
 				}
 				ChunkIndex const& find(std::initializer_list<EChunkId> chunk_id) const

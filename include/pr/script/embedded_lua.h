@@ -1,11 +1,13 @@
 //**********************************
-// Script charactor source
-//  Copyright (c) Rylogic Ltd 2007
+// Script
+//  Copyright (c) Rylogic Ltd 2015
 //**********************************
-#ifndef PR_SCRIPT_EMBEDDED_LUA_H
-#define PR_SCRIPT_EMBEDDED_LUA_H
 
-#include "pr/script/embedded_code.h"
+#pragma once
+
+#include "pr/script/forward.h"
+#include "pr/script/location.h"
+#include "pr/script/fail_policy.h"
 #include "pr/lua/lua.h"
 // Requires lua.lib
 
@@ -13,48 +15,55 @@ namespace pr
 {
 	namespace script
 	{
-		// Interface for parsing lua code and converting it to ldr script
+		// An embedded code handler that supports lua code
+		// Serves as the default for Preprocessor and as an interface definition.
+		template <typename FailPolicy = ThrowOnFailure>
 		struct EmbeddedLua :IEmbeddedCode
 		{
 			pr::lua::Lua m_lua;
-			
-			EmbeddedLua() {}
-			bool IEmbeddedCode_Execute(char const* code_id, pr::script::string const& code, pr::script::Loc const& loc, pr::script::string& result)
+
+			// A handler function for executing embedded code
+			// 'lang' is a string identifying the language of the embedded code.
+			// 'code' is the code source
+			// 'loc' is the file location of the embedded source
+			// 'result' is the output of the code after execution, converted to a string
+			// Return true, if the code was executed successfully, false if not handled.
+			// If the code can be handled but has errors, throw 'Exception's.
+			bool IEmbeddedCode_Execute(string const& lang, string const& code, Location const& loc, string& result) override
 			{
 				// We only handle lua code
-				if (!pr::str::Equal(code_id, "lua"))
+				if (lang != L"lua")
 					return false;
-				
+
 				// Record the number of items on the stack
 				int base = lua_gettop(m_lua);
-			
+
 				// Convert the lua code to a compiled chunk
-				string error_msg;
-				if (pr::lua::PushLuaChunk(m_lua, code, error_msg) != pr::lua::EResult::Success)
-					throw Exception(EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str());
-				
+				pr::string<> error_msg;
+				if (pr::lua::PushLuaChunk(m_lua, Narrow(code), error_msg) != pr::lua::EResult::Success)
+					return FailPolicy::Fail(EResult::EmbeddedCodeSyntaxError, loc, error_msg.c_str()), false;
+
 				// Execute the chunk
 				if (!pr::lua::CallLuaChunk(m_lua, 0, false))
-					return false;
-				
+					return FailPolicy::Fail(EResult::EmbeddedCodeExecutionFailed, loc, "Error while attempting to execute lua code"), false;
+
 				// If there's something still on the stack, copy it to result
 				if (lua_gettop(m_lua) != base && !lua_isnil(m_lua, -1))
 				{
-					result = lua_tostring(m_lua, -1);
+					result = Widen(lua_tostring(m_lua, -1));
 					lua_pop(m_lua, 1);
 				}
-				
+
 				// Ensure the stack does not grow
 				if (lua_gettop(m_lua) != base)
 				{
-					PR_ASSERT(PR_DBG, false, "lua stack height not constant");
+					assert(false && "lua stack height not constant");
 					lua_settop(m_lua, base);
 				}
-				
+
+				// Report 'handled'
 				return true;
 			}
 		};
 	}
 }
-
-#endif

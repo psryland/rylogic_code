@@ -1,4 +1,3 @@
-
 #include "cex/src/forward.h"
 #include "cex/src/icex.h"
 #include "cex/src/dir_path.h"
@@ -14,6 +13,7 @@
 #include "cex/src/data_header_gen.h"
 #include "cex/src/p3d.h"
 #include "cex/src/dll_proxy.h"
+#include "cex/src/new_lines.h"
 //#include "cex/src/NEW_COMMAND.h"
 
 namespace cex
@@ -55,6 +55,7 @@ namespace cex
 				"    -hdata    : Convert a file to C/C++ header file data\n"
 				"    -p3d      : P3d model file format converter\n"
 				"    -dllproxy : Generate a proxy dll\n"
+				"    -newlines : Add or remove newlines from a text file\n"
 				// NEW_COMMAND - add a help string
 				"\n"
 				"  Type Cex -command -help for help on a particular command\n"
@@ -67,9 +68,9 @@ namespace cex
 			// Get the name of this executable
 			char exepath_[1024]; GetModuleFileNameA(0, exepath_, sizeof(exepath_));
 			std::string exepath = exepath_;
-			std::string path = pr::str::LowerCase(pr::filesys::GetDirectory(exepath));
-			std::string name = pr::str::LowerCase(pr::filesys::GetFiletitle(exepath));
-			std::string extn = pr::str::LowerCase(pr::filesys::GetExtension(exepath));
+			std::string path = pr::str::LowerCaseC(pr::filesys::GetDirectory(exepath));
+			std::string name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
+			std::string extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
 
 			// Look for an xml file with the same name as this program in the local directory
 			std::string config = path + "\\" + name + ".xml";
@@ -102,7 +103,7 @@ namespace cex
 					return -1;
 				}
 				if (m_command)
-					m_command->ValidatedInput();
+					m_command->ValidateInput();
 			}
 			catch (std::exception const& ex)
 			{
@@ -142,6 +143,7 @@ namespace cex
 				if (pr::str::EqualI(option, "-hdata"    )) { m_command = std::make_unique<cex::HData    >(); break; }
 				if (pr::str::EqualI(option, "-p3d"      )) { m_command = std::make_unique<cex::P3d      >(); break; }
 				if (pr::str::EqualI(option, "-dllproxy" )) { m_command = std::make_unique<cex::DllProxy >(); break; }
+				if (pr::str::EqualI(option, "-newlines" )) { m_command = std::make_unique<cex::NewLines >(); break; }
 				// NEW_COMMAND - handle the command
 				return ICex::CmdLineOption(option, arg, arg_end);
 			}

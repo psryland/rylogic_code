@@ -16,7 +16,7 @@
 #include <string>
 #include <windows.h>
 #include "pr/filesys/filesys.h"
-#include "pr/gui/menu_helper.h"
+#include "pr/gui/menu_list.h"
 
 namespace pr
 {
@@ -35,12 +35,13 @@ namespace pr
 			using MenuList::Import;
 			using MenuList::ProcessWindowMessage;
 			
-			void Add(char const* file, bool update_menu)
+			template <typename Char> void Add(Char const* file, bool update_menu)
 			{
-				std::string fpath = pr::filesys::StandardiseC<std::string>(file);
+				auto fpath = pr::Widen(file);
+				fpath = pr::filesys::StandardiseC(fpath);
 				MenuList::Add(fpath.c_str(), 0, false, update_menu);
 			}
-			void Add(char const* file)
+			template <typename Char> void Add(Char const* file)
 			{
 				Add(file, true);
 			}
