@@ -42,21 +42,27 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 // Application window
 struct Main :Form<Main>
 {
-	Label m_lbl;
-	Button m_btn1;
-	Button m_btn2;
-	Button m_btn3;
-	Button m_btn4;
-	Modeless m_modeless;
+	Label      m_lbl;
+	Button     m_btn1;
+	Button     m_btn2;
+	Button     m_btn3;
+	Button     m_btn4;
+	TabControl m_tc;
+	Panel      m_tab1;
+	Panel      m_tab2;
+	Modeless   m_modeless;
 
-	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4 };
-	Main(                                                                                         )
-		:Form<Main>(L"Pauls Window", ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl (L"hello world"  , 10, 10, 100, 16, -1, m_hwnd, this)
-		,m_btn1(L"click me!"    , 200, 130, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
-		,m_btn2(L"show modeless", 10, 130, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn3(L"context menu" , 120, 130, 80, 20, IDC_BTN3, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn4(L"progress"     , 10, 30, 80, 20, IDC_BTN4, m_hwnd, this)
+	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+	Main()
+		:Form<Main>(L"Pauls Window", ApplicationMainWindow, 200, 200, 800, 600)
+		,m_lbl     (L"hello world"  , 10, 10, 60, 16, IDC_UNUSED, m_hwnd, this)
+		,m_btn1    (L"click me!"    , -10, -10, 80, 20, IDC_BTN1, m_hwnd, this, EAnchor::Right|EAnchor::Bottom)
+		,m_btn2    (L"show modeless", 10, -10, 80, 20, IDC_BTN2, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn3    (L"context menu" , Left|RightOf|IDC_BTN2, -10, 80, 20, IDC_BTN3, m_hwnd, this, EAnchor::Left|EAnchor::Bottom)
+		,m_btn4    (L"progress"     , 10, 30, 80, 20, IDC_BTN4, m_hwnd, this)
+		,m_tc      (L"tabctrl"      , 150, 10, 120, FillM(10,50), IDC_TAB, m_hwnd, this, EAnchor::Left|EAnchor::Top|EAnchor::Bottom)
+		,m_tab1    (L"tab1"         , 0, 0, 10, 10, IDC_TAB1, m_hwnd, &m_tc, EAnchor::Left|EAnchor::Right|EAnchor::Top|EAnchor::Bottom)
+		,m_tab2    (L"tab2"         , 0, 0, 10, 10, IDC_TAB2, m_hwnd, &m_tc, EAnchor::Left|EAnchor::Right|EAnchor::Top|EAnchor::Bottom)
 		,m_modeless()
 	{
 		m_btn1.Click += [&](Button&,EmptyArgs const&)
@@ -241,6 +247,9 @@ struct Main :Form<Main>
 				ProgressDlg progress(L"Busy work", L"workin...", task);
 				progress.ShowDialog(*this);
 			};
+
+		m_tc.Insert(L"Tab1", m_tab1);
+		m_tc.Insert(L"Tab2", m_tab2);
 	}
 };
 

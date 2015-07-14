@@ -335,7 +335,7 @@ namespace pr
 			}
 			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
 			{
-				return Control::WndClassInfo<GraphCtrl<Elem>>(hinst);
+				return MakeWndClassInfo<GraphCtrl<Elem>>(hinst);
 			}
 
 		protected:

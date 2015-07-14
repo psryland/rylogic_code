@@ -321,6 +321,7 @@ namespace pr
 			Point() :POINT() {}
 			Point(long x_, long y_) { x = x_; y = y_; }
 			explicit Point(SIZE sz) { x = sz.cx; y = sz.cy; }
+			long operator[](int axis) const { return axis == 0 ? x : y; }
 		};
 
 		// Size
@@ -330,6 +331,7 @@ namespace pr
 			Size(long sx, long sy) { cx = sx; cy = sy; }
 			explicit Size(POINT pt) { cx = pt.x; cy = pt.y; }
 			operator Rect() const;
+			long operator[](int axis) const { return axis == 0 ? cx : cy; }
 		};
 
 		// Rect
@@ -346,8 +348,11 @@ namespace pr
 			void height(long h)                           { bottom = top + h; }
 			Size size() const                             { return Size{width(), height()}; }
 			void size(Size sz)                            { right = left + sz.cx; bottom = top + sz.cy; }
+			int  size(int axis) const                     { return axis == 0 ? width() : height(); }
 			Point centre() const                          { return Point((left + right) / 2, (top + bottom) / 2); }
 			void centre(Point pt)                         { long w = width(), h = height(); left = pt.x-w/2; right = left+w; top = pt.y-h/2; bottom = top+h; }
+			Point const& topleft() const                  { return *reinterpret_cast<Point const*>(&left); }
+			Point const& bottomright() const              { return *reinterpret_cast<Point const*>(&right); }
 			Point& topleft()                              { return *reinterpret_cast<Point*>(&left); }
 			Point& bottomright()                          { return *reinterpret_cast<Point*>(&right); }
 
@@ -422,6 +427,10 @@ namespace pr
 				ptMinTrackSize.y = ::GetSystemMetrics(SM_CYMINTRACK);
 				ptMaxTrackSize.x = ::GetSystemMetrics(SM_CXMAXTRACK);
 				ptMaxTrackSize.y = ::GetSystemMetrics(SM_CYMAXTRACK);
+			}
+			Rect Bounds() const
+			{
+				return Rect(0, 0, ptMaxSize.x, ptMaxSize.y);
 			}
 		};
 		inline MinMaxInfo::EMask operator | (MinMaxInfo::EMask lhs, MinMaxInfo::EMask rhs) { return MinMaxInfo::EMask(int(lhs) | int(rhs)); }
@@ -1081,10 +1090,53 @@ namespace pr
 		// Base class for all windows/controls
 		struct Control
 		{
-			using Controls = std::vector<Control*>;
-			static int const IDC_UNUSED = -1;
-		
+			#pragma region Auto Size
+			// Used as a size (w,h) value, means expand w,h to match parent
+			// Lower 30 bits are the l,r or t,b margins to fill with.
+			static int const Fill = int(0x80000000);
+			static int FillM(int left_or_top, int right_or_bottom)
+			{
+				assert(left_or_top < (1 << 15) && right_or_bottom < (1 << 15));
+				return Fill | (left_or_top << 15) | (right_or_bottom << 0);
+			}
+			static Size FillM(int fill)
+			{
+				return (fill & Fill) ? Size((fill >> 15) & 0x7fff, (fill >> 0) & 0x7fff) : Size();
+			}
+			#pragma endregion
+
+			#pragma region Auto Position
+			// The mask for auto positioning control bits
+			static int const AutoPosMask = 0xFF000000;
+
+			// The mask for the control id
+			static int const IdMask = 0x00FFFFFF;
+
+			// The X,Y coord of the control being positioned
+			static int const Left    = 0x81000000;
+			static int const Right   = 0x82000000;
+			static int const CentreH = 0x83000000;
+			static int const Top     = Left      ;
+			static int const Bottom  = Right     ;
+			static int const CentreV = CentreH   ;
+
+			// The X coord of the reference control to align to
+			static int const LeftOf    = 0x84000000;
+			static int const RightOf   = 0x88000000;
+			static int const CentreHOf = 0x8C000000;
+			static int const TopOf     = LeftOf    ;
+			static int const BottomOf  = RightOf   ;
+			static int const CentreVOf = CentreHOf ;
+
+			// Use: e.g. Left|LeftOf|id,
+			// read: left edge of this control, aligned to the left of control with id 'id'
+			#pragma endregion
+
+			// Special id for controls that don't need an id
+			static int const IDC_UNUSED = IdMask;
+
 		protected:
+			using Controls = std::vector<Control*>;
 			HWND               m_hwnd;         // Window handle for the control
 			int                m_id;           // Dialog control id, used to detect windows messages for this control
 			char const*        m_name;         // Debugging name for the control
@@ -1155,10 +1207,14 @@ namespace pr
 						auto a = ATOM(::GetClassInfoExW(hinst, WndType::WndClassName(), &wc));
 						if (a != 0) return a;
 
-						// Allow 'Derived' to override the WndClassInfo. If the WndProc is not
-						// null, assume that Derived has it's own special WndProc.
+						// Allow 'Derived' to override the WndClassInfo by calling the static method through 'WndType'.
+						// Derived should implement this: static WNDCLASSEXW WndClassInfo(HINSTANCE hinst);
 						wc = WndType::WndClassInfo(hinst);
+
+						// If the WndProc is not null, assume that Derived has it's own special WndProc.
 						wc.lpfnWndProc = wc.lpfnWndProc ? wc.lpfnWndProc : &InitWndProc;
+
+						// Register the window class
 						a = ATOM(::RegisterClassExW(&wc));
 						if (a != 0) return a;
 
@@ -1168,9 +1224,9 @@ namespace pr
 				return atom;
 			}
 
-			// Helper methods that allow derived types to implement their WndClassInfo() and
+			// Convenience method that allows derived types to create their WndClassInfo() and
 			// WndClassName() functions by instantiating these methods templated with their type
-			template <typename WndType> static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
+			template <typename WndType> static WNDCLASSEXW MakeWndClassInfo(HINSTANCE hinst)
 			{
 				// This is a default implementation of WndClassInfo that gets parameters
 				// from static functions on 'WndType'. Types that derive from Control
@@ -1190,23 +1246,15 @@ namespace pr
 				wc.lpfnWndProc   = nullptr; // Leave as null to use the thunk
 				return wc;
 			}
-			static wchar_t const* DefaultWndClassName()
+
+			// These methods are provided so that windows that inherit from control
+			// can implement their WndClassInfo(), and WndClassName() functions using defaults
+			static wchar_t const* WndClassName()
 			{
 				// Auto name, derived can overload this function
 				static thread_local wchar_t name[64];
 				_swprintf_c(name, _countof(name), L"wingui::%p", &name[0]);
 				return name;
-			}
-
-			// These methods are provided so that windows that inherit from control
-			// can implement their WndClassInfo(), and WndClassName() functions using defaults
-			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
-			{
-				return WndClassInfo<Control>(hinst);
-			}
-			static wchar_t const* WndClassName()
-			{
-				return DefaultWndClassName();
 			}
 			static HICON WndIcon(HINSTANCE hinst, bool large)
 			{
@@ -1528,6 +1576,61 @@ namespace pr
 				return false;
 			}
 
+			// Handle auto position/size
+			void AutoSizePosition(int& x, int& y, int& w, int& h)
+			{
+				// Get the parent control bounds (in parent space)
+				auto parent_rect = m_parent
+					? m_parent->ClientRect()
+					: MinMaxInfo().Bounds();
+
+				// Return the sibling control with id 'id'
+				auto ctrl = [this](int id) -> Control*
+					{
+						if (id == 0) return nullptr;
+						for (auto c : m_parent->m_child) if (c->m_id == id) return c;
+						return nullptr;
+					};
+
+				// Return the rect for the control with id 'id'
+				auto rect = [&](int id) -> Rect
+					{
+						assert((id == 0 || ctrl(id) != nullptr) && "Sibling control not found");
+						return id == 0 ? parent_rect : ctrl(id)->ClientRect(*m_parent);
+					};
+
+				// Set the width/height and x/y position
+				auto auto_size = [=](int& X, int& W, int i)
+				{
+					auto margin = Size();
+					if (W & Fill)
+					{
+						margin = FillM(W);
+						W = parent_rect.size(i) - margin.cx - margin.cy;
+					}
+					if (X & AutoPosMask)
+					{
+						// Get the ref point on the parent. Note, order is important here
+						// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
+						// Otherwise, the top 8 bits are the auto position bits and the lower 24
+						// are the id of the control to position relative to.
+						int ref = 0;
+						if      ((X & 0xF0000000) != 0x80000000) { ref = parent_rect.bottomright()[i]; }
+						else if ((X & CentreHOf ) == CentreHOf ) { ref = rect(X & IdMask).centre()[i]; }
+						else if ((X & LeftOf    ) == LeftOf    ) { ref = rect(X & IdMask).topleft()[i]; }
+						else if ((X & RightOf   ) == RightOf   ) { ref = rect(X & IdMask).bottomright()[i]; }
+						
+						// Position the control relative to 'ref'
+						if      ((X & 0xF0000000) != 0x80000000) { X = ref - W + X; }
+						else if ((X & CentreH   ) == CentreH   ) { X = ref - W/2 + margin.cx; }
+						else if ((X & Left      ) == Left      ) { X = ref - 0   + margin.cx; }
+						else if ((X & Right     ) == Right     ) { X = ref - W   + margin.cx; }
+					}
+				};
+				auto_size(x, w, 0);
+				auto_size(y, h, 1);
+			}
+
 			// Record the position of the control within the parent
 			void RecordPosOffset()
 			{
@@ -1593,7 +1696,7 @@ namespace pr
 			struct Internal {};
 			Control(Internal, int id, Control* parent, char const* name, EAnchor anchor)
 				:m_hwnd()
-				,m_id(id)
+				,m_id(id & IdMask)
 				,m_name(name)
 				,m_parent()
 				,m_child()
@@ -1611,6 +1714,7 @@ namespace pr
 				,m_wnd_proc_nest()
 				,m_thread_id(std::this_thread::get_id())
 			{
+				assert(id == m_id && "Id value too large");
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
 				Parent(parent);
 			}
@@ -1650,8 +1754,9 @@ namespace pr
 			// Use this constructor to create a new instance of a window
 			// 'hwndparent' is the hwnd of the top level window
 			// 'parent' is the control that contains this control (not necessarily the same as hwndparent, e.g. a group control)
+			// Negative values for 'x,y' mean relative to the right,bottom of the parent
 			Control(wchar_t const* wndclass_name ,wchar_t const* text
-				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,HWND hwndparent = 0
 				,Control* parent = nullptr
@@ -1684,8 +1789,9 @@ namespace pr
 			operator HWND() const { return m_hwnd; }
 
 			// Create the HWND for the control
+			// Negative values for 'x,y' mean relative to the right,bottom of the parent
 			void Create(wchar_t const* wndclass_name, wchar_t const* text
-				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
 				,HWND hwndparent = 0
 				,HMENU menu = nullptr
@@ -1694,12 +1800,15 @@ namespace pr
 				// Don't call this when using the first constructor
 				assert(m_hwnd == 0 && "Window handle already exists");
 
+				// Handle auto position/size
+				AutoSizePosition(x,y,w,h);
+
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, 0);
 				if (!init_param) init_param = &init;
-				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
+				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, ::abs(x), ::abs(y), w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
 				Throw(m_hwnd != 0, "CreateWindowEx failed");
 
 				RecordPosOffset();
@@ -1964,7 +2073,7 @@ namespace pr
 			// with the areas of docked child controls removed. If 'relative_to' != this,
 			// then the returned rect is in the client-space coordinates of the window.
 			// If 'relative_to' == nullptr, then the rect is in screen space
-			Rect ClientRect(HWND relative_to, bool exclude_docked_children) const
+			Rect ClientRect(HWND relative_to, bool exclude_docked_children = true) const
 			{
 				auto rect = ClientRect();
 				
@@ -1991,6 +2100,7 @@ namespace pr
 			}
 
 			// Get/Set the window rect
+			// .. I think this should really be called ScreenRect()... i.e. it's the screen position of a window
 			Rect WindowRect() const
 			{
 				assert(::IsWindow(m_hwnd));
@@ -2034,6 +2144,16 @@ namespace pr
 					parent->Invalidate(false, &r);
 				}
 				Invalidate(false);
+			}
+
+			// Move the control to a new location, keeping it's current size
+			// If a top-level control, then 'r' is in screen space
+			// if 'repaint' is true, then system sends the WM_PAINT message to the window procedure immediately
+			// after moving the window (that is, the MoveWindow function calls the UpdateWindow function).
+			// If 'repaint' is false, then this function will invalidate the parent at the old and new location.
+			void MoveWindow(int x, int y, bool repaint = false)
+			{
+				MoveWindow(ClientRect().Offset(x, y), repaint);
 			}
 
 			// Return the dimensions of the non-client area for the window
@@ -2335,6 +2455,7 @@ namespace pr
 			// is to override ProcessWindowMessage and decode/handle the window messages you actually
 			// need. Notice, WM_CREATE is typically not needed, the constructor of your derived type
 			// is where OnCreate() code should go.
+			using form_t = Form<Derived>;
 
 		protected:
 			template <typename D> friend struct Form;
@@ -2347,6 +2468,12 @@ namespace pr
 			int         m_exit_code;        // The code to return when the form closes
 			bool        m_dialog_behaviour; // True if the form is a modal or modeless dialog (determines whether IsDialogMessage() is called)
 			bool        m_modal;            // True if this is a dialog being displayed modally
+
+			// Default win class info
+			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
+			{
+				return MakeWndClassInfo<form_t>(hinst);
+			}
 
 			// Window proc. Derived forms should not override WndProc.
 			// All messages are passed to 'ProcessWindowMessage' so use that.
@@ -3216,6 +3343,35 @@ namespace pr
 			}
 
 		};
+		struct Panel :Control
+		{
+			enum { DefW = 80, DefH = 80 };
+			enum { DefaultStyle = DefaultControlStyle | WS_BORDER };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static wchar_t const* WndClassName() { return L"pr::gui::Panel"; }
+			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
+			{
+				return MakeWndClassInfo<Panel>(hinst);
+			}
+
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			Panel(wchar_t const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(MakeIntAtomW(RegisterWndClass<Panel>()), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+			{}
+			Panel(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+				:Control(id, parent, name, anchor)
+			{}
+
+		};
 		struct GroupBox :Control
 		{
 			enum { DefW = 80, DefH = 80 };
@@ -3394,6 +3550,357 @@ namespace pr
 				return (BOOL)::SendMessageW(m_hwnd, SB_SETICON, nPane, (LPARAM)hIcon);
 			}
 			#endif
+		};
+		struct TabControl :Control
+		{
+			enum { DefW = 80, DefH = 80 };
+			enum { DefaultStyle = DefaultControlStyle };
+			enum { DefaultStyleEx = DefaultControlStyleEx };
+			static wchar_t const* WndClassName() { return L"SysTabControl32"; }
+
+			struct Item :TCITEMW
+			{
+				Item() :TCITEMW() {}
+				Item(wchar_t const* label, int image = -1, LPARAM param = 0) :TCITEMW()
+				{
+					mask    = TCIF_TEXT | (image != -1 ? TCIF_IMAGE : 0) | (param != 0 ? TCIF_PARAM : 0);
+					pszText = const_cast<wchar_t*>(label);
+					iImage  = image;
+					lParam  = param;
+				}
+			};
+			struct TabEventArgs :EmptyArgs
+			{
+				Control* m_tab;
+				int m_tab_index;
+				TabEventArgs(Control* tab, int tab_index) :EmptyArgs() ,m_tab(tab) ,m_tab_index(tab_index) {}
+			};
+
+			std::vector<Control*> m_tabs; // The tab pages. Owned externally
+			int m_border_size;
+			int m_top_pad;
+
+			// Note, if you want events from this control is must have an id != IDC_UNUSED
+			TabControl(wchar_t const* text
+				,int x, int y, int w = DefW, int h = DefH
+				,int id = IDC_UNUSED
+				,HWND hwndparent = 0
+				,Control* parent = nullptr
+				,EAnchor anchor = EAnchor::Left|EAnchor::Top
+				,DWORD style = DefaultStyle
+				,DWORD ex_style = DefaultStyleEx
+				,char const* name = nullptr
+				,void* init_param = nullptr)
+				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				,m_tabs()
+				,m_border_size(3)
+				,m_top_pad(5)
+			{}
+			TabControl(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
+				:Control(id, parent, name, anchor)
+				,m_tabs()
+				,m_border_size(3)
+				,m_top_pad(5)
+			{}
+
+			// The number of tabs added
+			int TabCount() const
+			{
+				return int(m_tabs.size());
+			}
+
+			// Get a tab by index
+			Control& Tab(int index) const
+			{
+				ValidateTabIndex(index);
+				return *m_tabs[index];
+			}
+
+			// The active tab
+			Control* ActiveTab() const
+			{
+				auto active_tab_index = SelectedIndex();
+				return active_tab_index != -1 ? m_tabs[active_tab_index] : nullptr;
+			}
+
+			// Get/Set the active tab by index.
+			int SelectedIndex() const
+			{
+				return int(::SendMessageW(m_hwnd, TCM_GETCURSEL, 0, 0));
+			}
+			void SelectedIndex(int tab_index)
+			{
+				auto active_tab_index = SelectedIndex();
+				if (tab_index == active_tab_index)
+					return;
+
+				ValidateTabIndex(tab_index);
+				if (active_tab_index != -1)
+				{
+					// Disable the old tab
+					auto& old = *m_tabs[active_tab_index];
+					if (::IsWindow(old))
+					{
+						old.Enabled(false);
+						old.Visible(false);
+					}
+				}
+
+				active_tab_index = tab_index;
+				::SendMessageW(m_hwnd, TCM_SETCURSEL, active_tab_index, 0);
+
+				if (active_tab_index != -1)
+				{
+					auto& neu = *m_tabs[active_tab_index];
+
+					// Enable the new tab
+					neu.Enabled(true);
+					neu.Visible(true);
+					neu.Focus();
+					neu.Invalidate(true);
+				}
+			}
+
+			// Add a tab to the tab control.
+			// label - The label to appear on the tab control.
+			// tab - The child control to use as the view for the tab.
+			// active - true to make the tab active, false to just add the tab.
+			// image - The index into the image list for the image to display by the tab label.
+			// param - The param value to associate with the tab.
+			// Returns the zero based index of the new tab, -1 on failure
+			int Insert(wchar_t const* label, Control& tab, int index = -1, bool active = true, int image = -1, LPARAM param = 0)
+			{
+				// Make sure it's a real window
+				assert(::IsWindow(tab));
+
+				// The window must have the WS_CHILD style bit set and the WS_VISIBLE style bit not set.
+				tab.Style((tab.Style() | WS_CHILD) & ~WS_VISIBLE);
+
+				// Hide the view window
+				tab.Enabled(false);
+				tab.Visible(false);
+
+				// Add the tab to the tab control
+				Item item(label, image, param);
+		
+				// Insert the item at the end of the tab control
+				index = index != -1 ? index : TabCount();
+				index = int(::SendMessageW(m_hwnd, TCM_INSERTITEMW, WPARAM(index), LPARAM(&item)));
+				Throw(index != -1, pr::FmtS("Failed to add tab %s", Narrow(label).c_str()));
+
+				// Add the tab
+				m_tabs.push_back(&tab);
+
+				// Set the position for the window
+				tab.MoveWindow(CalcViewRect());
+		
+				// Select the tab that is being added, if desired
+				auto last = TabCount() - 1;
+				if (active || last == 0)
+					SelectedIndex(last);
+
+				OnTabAdded(TabEventArgs(&tab, index));
+				return index;
+			}
+
+			// Remove a tab by index.
+			// tab_index - The index of the tab to remove.
+			// Returns the removed tab.
+			Control* Remove(int tab_index)
+			{
+				ValidateTabIndex(tab_index);
+
+				// Save the window handle that is being removed
+				auto tab = m_tabs[tab_index];
+
+				// Notify subclasses that a tab was removed
+				OnTabRemoved(TabEventArgs(tab, tab_index));
+
+				// Adjust the active tab index if deleting a tab before it
+				auto new_tab_count = TabCount() - 1;
+				auto active_tab_index = SelectedIndex();
+				if (active_tab_index >= new_tab_count)
+					active_tab_index = new_tab_count - 1;
+
+				// Remove the item from the view list
+				Throw(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, pr::FmtS("Failed to delete tab %d", tab_index));
+				m_tabs.erase(std::begin(m_tabs) + tab_index);
+
+				// Adjust the active tab index if deleting a tab before it
+				SelectedIndex(active_tab_index);
+
+				return tab;
+			}
+
+			// Remove all the tabs from the tab control.
+			void RemoveAllTabs()
+			{
+				// Delete tabs in reverse order to preserve indices
+				for (auto i = TabCount(); i-- != 0;)
+					Remove(i);
+			}
+
+			// Return tab info for a tab by index
+			Item TabInfo(int tab_index, int mask = TCIF_TEXT|TCIF_IMAGE|TCIF_PARAM, wchar_t* buf = nullptr, int buf_count = 0) const
+			{
+				ValidateTabIndex(tab_index);
+
+				Item info;
+				info.mask = mask;
+				info.pszText = buf;
+				info.cchTextMax = buf_count;
+				Throw(::SendMessage(m_hwnd, TCM_GETITEMW, tab_index, LPARAM(&info)) != 0, pr::FmtS("Failed to read item info for tab %d", tab_index));
+				return info;
+			}
+
+			// Return the label of the specified tab.
+			std::wstring TabText(int tab_index) const
+			{
+				// If the TCIF_TEXT flag is set in the mask member of the TCITEM structure, the control may change the pszText
+				// member of the structure to point to the new text instead of filling the buffer with the requested text.
+				// The control may set the pszText member to NULL to indicate that no text is associated with the item.
+				wchar_t buf[128] = {};
+				auto info = TabInfo(tab_index, TCIF_TEXT, buf, _countof(buf));
+				return info.pszText != nullptr ? info.pszText : L"";
+			}
+
+			// Return the image index for a tab by index
+			int TabImage(int tab_index) const
+			{
+				return TabInfo(tab_index, TCIF_IMAGE).iImage;
+			}
+
+			// Return the param for a tab by index
+			LPARAM TabParam(int tab_index) const
+			{
+				return TabInfo(tab_index, TCIF_PARAM).lParam;
+			}
+
+			// Update the position of all the contained views.
+			void UpdateViews()
+			{
+				auto rect = CalcViewRect();
+				for (auto tab : m_tabs)
+					tab->MoveWindow(rect);
+			}
+
+			// Events
+			EventHandler<TabControl&, TabEventArgs const&> TabAdded;
+			EventHandler<TabControl&, TabEventArgs const&> TabRemoved;
+
+			// Handlers
+			virtual void OnTabAdded(TabEventArgs const& args)
+			{
+				TabAdded(*this, args);
+			}
+			virtual void OnTabRemoved(TabEventArgs const& args)
+			{
+				TabRemoved(*this, args);
+			}
+
+			#if 0
+			// This method modifies the window styles of the CWindow object.
+			// Styles to be added or removed can be combined by using the bitwise OR (|) operator.
+			// dwRemove - Specifies the window styles to be removed during style modification.
+			// dwAdd - Specifies the window styles to be added during style modification.
+			// nFlags - Window-positioning flags. For a list of possible values, see the
+			// SetWindowPos function in the Win32 SDK.
+			// If nFlags is nonzero, ModifyStyle calls the Win32 function SetWindowPos,
+			// and redraws the window by combining nFlags with the following four flags:
+			//  SWP_NOSIZE   Retains the current size.
+			//  SWP_NOMOVE   Retains the current position.
+			//  SWP_NOZORDER   Retains the current Z order.
+			//  SWP_NOACTIVATE   Does not activate the window.
+			//  To modify a window's extended styles, call ModifyStyleEx.
+			// Returns TRUE if the window styles are modified; otherwise, FALSE.
+			BOOL ModifyTabStyle(DWORD dwRemove, DWORD dwAdd, UINT nFlags)
+			{
+				// Modify the style
+				BOOL r = ModifyStyle(dwRemove, dwAdd, nFlags);
+				UpdateViews();     // Update all the views in case the window positions changes
+				SetTabFont(dwAdd); // Set the font in case the tab position changed
+				return r;
+			}
+			#endif
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				switch (message)
+				{
+				case WM_WINDOWPOSCHANGED:
+					{
+						UpdateViews();
+						break;
+					}
+				case WM_NOTIFY:
+					{
+						auto hdr = (NMHDR*)lparam;
+						if (hdr->code == TCN_SELCHANGE)
+							SelectedIndex(SelectedIndex());
+						break;
+					}
+				}
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+
+		protected:
+
+			// Throw if 'tab_index' is invalid
+			void ValidateTabIndex(int tab_index) const
+			{
+				Throw(tab_index >= 0 && tab_index < TabCount(), pr::FmtS("Tab index (%d) out of range", tab_index));
+			}
+
+			// Calculate the client rect for contained views.
+			Rect CalcViewRect() const
+			{
+				auto rect = ClientRect();
+				rect.right  -= 1;
+				rect.bottom -= 1;
+				if (rect.height() <= 0 || rect.width() <= 0)
+					return Rect();
+
+				// Calculate the Height (or Width) of the tab cause it could be Multiline
+				Rect tab_rect;
+				Throw(::SendMessageW(m_hwnd, TCM_GETITEMRECT, 0, LPARAM(&tab_rect)) != 0, "Failed to read the size of the 0th tab");
+				auto row_count   = (int)(::SendMessageW(m_hwnd, TCM_GETROWCOUNT, 0, 0));
+				auto edge_width  = (tab_rect.width()  * row_count) + m_top_pad;
+				auto edge_height = (tab_rect.height() * row_count) + m_top_pad;
+
+				// Set the size based on the style
+				auto style = Style();
+				if ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) // Bottom
+				{
+					rect.top    += m_border_size;
+					rect.left   += m_border_size;
+					rect.right  -= m_border_size;
+					rect.bottom -= edge_height;
+				}
+				else if ((style & TCS_RIGHT) && (style & TCS_VERTICAL)) // Right
+				{
+					rect.top    += m_border_size;
+					rect.left   += m_border_size;
+					rect.right  -= edge_width;
+					rect.bottom -= m_border_size;
+				}
+				else if (style & TCS_VERTICAL) // Left
+				{
+					rect.top    += m_border_size;
+					rect.left   += edge_width;
+					rect.right  -= m_border_size;
+					rect.bottom -= m_border_size;
+				}
+				else // Top
+				{
+					rect.top    += edge_height;
+					rect.left   += m_border_size;
+					rect.right  -= m_border_size;
+					rect.bottom -= m_border_size;
+				}
+
+				return rect;
+			}
 		};
 		#pragma endregion
 	}
