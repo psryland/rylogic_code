@@ -259,7 +259,7 @@ namespace pr
 						if (col.m_brdr.GetValue() != GdiColor().GetValue())
 						{
 							GdiPen pen_brdr(col.m_brdr);
-							auto border = To<GdiRect>(rect.Inflate(0,0,-1,-1));
+							auto border = To<GdiRect>(rect.Adjust(0,0,-1,-1));
 							gfx.DrawRectangle(&pen_brdr, border);
 						}
 					}
@@ -268,7 +268,7 @@ namespace pr
 				{
 					auto col = style.Col(item_state);
 					GdiPen pen(col.m_text);
-					auto border = To<GdiRect>(rect.Inflate(0,0,-1,-1));
+					auto border = To<GdiRect>(rect.Adjust(0,0,-1,-1));
 					gfx.DrawRectangle(&pen, border);
 				}
 				static void Bitmap(GdiGraphics& gfx, Rect const& rect, BitmapPtr const& bm, ContextMenuStyle const& style)
@@ -462,7 +462,7 @@ namespace pr
 						style.m_margin_left + m_rect_text.width() + 2*style.m_text_margin,
 						rect.top + (rect.height() - r.height()) / 2);
 					
-					m_edit.MoveWindow(Rect(pt, r.size()));
+					m_edit.ParentRect(Rect(pt, r.size()));
 					m_edit.Enabled(!ItemState(EMenuItemState::Disabled));
 				}
 			};
@@ -660,7 +660,7 @@ namespace pr
 						// Client area is the contained item size plus margins
 						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
 						auto bounds = AdjRect(client).Offset(pt.x, pt.y);
-						WindowRect(bounds, true, WindowPos::EFlags::NoActivate|WindowPos::EFlags::NoZorder);
+						ScreenRect(bounds, true);
 
 						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events
 						m_dialog_behaviour = false;

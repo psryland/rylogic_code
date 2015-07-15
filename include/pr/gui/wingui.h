@@ -351,10 +351,12 @@ namespace pr
 			int  size(int axis) const                     { return axis == 0 ? width() : height(); }
 			Point centre() const                          { return Point((left + right) / 2, (top + bottom) / 2); }
 			void centre(Point pt)                         { long w = width(), h = height(); left = pt.x-w/2; right = left+w; top = pt.y-h/2; bottom = top+h; }
-			Point const& topleft() const                  { return *reinterpret_cast<Point const*>(&left); }
-			Point const& bottomright() const              { return *reinterpret_cast<Point const*>(&right); }
-			Point& topleft()                              { return *reinterpret_cast<Point*>(&left); }
-			Point& bottomright()                          { return *reinterpret_cast<Point*>(&right); }
+			Point const* points() const                   { return reinterpret_cast<Point const*>(&left); }
+			Point const& topleft() const                  { return points()[0]; }
+			Point const& bottomright() const              { return points()[1]; }
+			Point* points()                               { return reinterpret_cast<Point*>(&left); }
+			Point& topleft()                              { return points()[0]; }
+			Point& bottomright()                          { return points()[1]; }
 
 			// This functions return false if the result is a zero rect (that's why I'm not using Throw())
 			// The returned rect is the the bounding box of the geometric operation (note how that effects subtract)
@@ -366,7 +368,7 @@ namespace pr
 			}
 			Rect Offset(int dx, int dy) const                       { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
 			Rect Inflate(int dx, int dy) const                      { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
-			Rect Inflate(int dl, int dt, int dr, int db) const      { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
+			Rect Adjust(int dl, int dt, int dr, int db) const       { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
 			Rect Intersect(Rect const& rhs) const                   { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
 			Rect Union(Rect const& rhs) const                       { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
 			Rect Subtract(Rect const& rhs) const                    { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
@@ -441,6 +443,7 @@ namespace pr
 		{
 			enum EFlags
 			{
+				None           = 0,
 				NoSize         = SWP_NOSIZE        ,
 				NoMove         = SWP_NOMOVE        ,
 				NoZorder       = SWP_NOZORDER      ,
@@ -1145,6 +1148,7 @@ namespace pr
 			EAnchor            m_anchor;       // How the control resizes with it's parent
 			EDock              m_dock;         // Dock style for the control
 			Rect               m_pos_offset;   // Distances from this control to the edges of the parent client area
+			bool               m_pos_ofs_save; // Enable/Disables the saving of the position offset when the control is moved
 			MinMaxInfo         m_min_max_info; // Minimum/Maximum window size/position
 			COLORREF           m_colour_fore;  // Foreground colour
 			COLORREF           m_colour_back;  // Background colour
@@ -1596,7 +1600,7 @@ namespace pr
 				auto rect = [&](int id) -> Rect
 					{
 						assert((id == 0 || ctrl(id) != nullptr) && "Sibling control not found");
-						return id == 0 ? parent_rect : ctrl(id)->ClientRect(*m_parent);
+						return id == 0 ? parent_rect : ctrl(id)->RectRelativeTo(*m_parent);
 					};
 
 				// Set the width/height and x/y position
@@ -1637,9 +1641,9 @@ namespace pr
 				// Store distances so that this control's position equals
 				// parent.left + m_pos_offset.left, parent.right + m_pos_offset.right, etc..
 				// (i.e. right and bottom offsets are typically negative)
-				if (!m_parent || !m_hwnd) return;
-				auto r = WindowRect();
-				auto p = m_parent->WindowRect();
+				if (!m_parent || !m_hwnd || !m_pos_ofs_save) return;
+				auto p = m_parent->ScreenRect();
+				auto r = ScreenRect();
 				m_pos_offset = Rect(r.left - p.left, r.top - p.top, r.right - p.right, r.bottom - p.bottom);
 			}
 
@@ -1647,8 +1651,8 @@ namespace pr
 			void ResizeToParent(bool repaint = true)
 			{
 				if (!m_parent || !m_hwnd) return;
-				auto r = WindowRect();
-				auto p = m_parent->WindowRect();
+				auto p = m_parent->ScreenRect();
+				auto r = ScreenRect();
 				auto w = r.width(); auto h = r.height();
 				if (m_dock == EDock::None)
 				{
@@ -1689,8 +1693,8 @@ namespace pr
 					case EDock::Right:  r.top = p.top; r.bottom = p.bottom; r.right = p.right; r.left = r.right - w; break;
 					}
 				}
-			
-				WindowRect(r, repaint);
+				RAII<bool> no_save_ofs(m_pos_ofs_save, false);
+				ScreenRect(r, repaint);
 			}
 
 			struct Internal {};
@@ -1703,6 +1707,7 @@ namespace pr
 				,m_anchor(anchor)
 				,m_dock(EDock::None)
 				,m_pos_offset()
+				,m_pos_ofs_save(true)
 				,m_min_max_info()
 				,m_colour_fore(CLR_INVALID)
 				,m_colour_back(CLR_INVALID)
@@ -1758,7 +1763,6 @@ namespace pr
 			Control(wchar_t const* wndclass_name ,wchar_t const* text
 				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
@@ -1767,6 +1771,7 @@ namespace pr
 				,void* init_param = nullptr)
 				:Control(Internal(), id, parent, name, anchor)
 			{
+				auto hwndparent = parent ? HWND(*parent) : HWND(nullptr);
 				Create(wndclass_name, text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
 			}
 
@@ -1777,19 +1782,37 @@ namespace pr
 			Control(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(Internal(), id, parent, name, anchor)
 			{
-				// You can call 'Create' once the parent has an HWND, or if the parent
-				// is based on a resource and 'id' is not IDC_UNUSED, then it will automatically
-				// be created and attached to the control from the resource
+				// You can call 'Create' once the parent has an HWND. Or, if the parent
+				// is based on a resource and 'id' is not IDC_UNUSED, then it will
+				// automatically be created and attached to the control from the resource.
 			}
 			virtual ~Control()
 			{
+				// Orphan child controls
+				for (; !m_child.empty(); )
+					m_child.front()->Parent(nullptr);
+
+				// Detach from our parent
 				Parent(nullptr);
+
+				// Destroy the window
+				if (::IsWindow(m_hwnd))
+					::DestroyWindow(m_hwnd);
 			}
 
+			// Implicit conversion to HWND
 			operator HWND() const { return m_hwnd; }
 
-			// Create the HWND for the control
-			// Negative values for 'x,y' mean relative to the right,bottom of the parent
+			// Create the HWND for the control using Ctrl::WndClassName()
+			template <typename Ctrl> void Create(wchar_t const* text
+				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
+				,HWND hwndparent = 0
+				,HMENU menu = nullptr
+				,void* init_param = nullptr)
+			{
+				Create(Ctrl::WndClassName(), text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
+			}
 			void Create(wchar_t const* wndclass_name, wchar_t const* text
 				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,DWORD style = DefaultControlStyle ,DWORD ex_style = DefaultControlStyleEx
@@ -1797,7 +1820,7 @@ namespace pr
 				,HMENU menu = nullptr
 				,void* init_param = nullptr)
 			{
-				// Don't call this when using the first constructor
+				// Don't call this after using the first constructor
 				assert(m_hwnd == 0 && "Window handle already exists");
 
 				// Handle auto position/size
@@ -1808,7 +1831,7 @@ namespace pr
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, 0);
 				if (!init_param) init_param = &init;
-				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, ::abs(x), ::abs(y), w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
+				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
 				Throw(m_hwnd != 0, "CreateWindowEx failed");
 
 				RecordPosOffset();
@@ -1844,6 +1867,21 @@ namespace pr
 			Control* Parent() const { return m_parent; }
 			void Parent(Control* parent)
 			{
+				// Check we're not parenting to ourself or a child
+				#ifndef NDEBUG
+				if (parent != nullptr)
+				{
+					std::vector<Control*> stack;
+					for (stack.push_back(this); !stack.empty();)
+					{
+						auto x = stack.back(); stack.pop_back();
+						assert(parent != x && "Cannot parent to a child");
+						for (auto c : x->m_child)
+							stack.push_back(c);
+					}
+				}
+				#endif
+
 				if (m_parent != parent)
 				{
 					if (m_parent != nullptr) // Remove from existing parent
@@ -1851,7 +1889,16 @@ namespace pr
 						auto& c = m_parent->m_child;
 						c.erase(std::remove(c.begin(), c.end(), this), c.end());
 					}
+
 					m_parent = parent;
+					if (::IsWindow(m_hwnd))
+					{
+						auto hwndparent = m_parent ? HWND(*m_parent) : HWND(nullptr);
+						if (hwndparent == nullptr) Style((Style() | WS_POPUP) & ~WS_CHILD);
+						Throw(::SetParent(m_hwnd, hwndparent) != nullptr, "SetParent failed");
+						if (hwndparent != nullptr) Style((Style() | WS_CHILD) & ~WS_POPUP);
+					}
+
 					if (m_parent != nullptr) // Add to new parent
 					{
 						m_parent->m_child.push_back(this);
@@ -2040,14 +2087,14 @@ namespace pr
 
 			// Returns a copy of 'rect' increased by the non-client areas of the window
 			// Remember, ClientRect is [inclusive,inclusive] (if 'rect' is the client rect)
-			Rect AdjRect(Rect const& rect) const
+			Rect AdjRect(Rect const& rect = Rect()) const
 			{
 				auto r = rect;
 				Throw(::AdjustWindowRectEx(&r, DWORD(Style()), BOOL(::GetMenu(m_hwnd) != nullptr), DWORD(StyleEx())), "AdjustWindowRectEx failed.");
 				return r;
 			}
 
-			// Get/Set the client rect for the window
+			// Get the client rect for the window in this controls client space.
 			// Note: Menus are part of the non-client area, you don't need to offset
 			// the client rect for the menu.
 			Rect ClientRect() const
@@ -2057,23 +2104,87 @@ namespace pr
 				Throw(::GetClientRect(m_hwnd, &rect), "GetClientRect failed.");
 				return rect;
 			}
-			void ClientRect(Rect const& r, bool repaint = false)
+
+			// Get/Set the control bounds in screen space
+			Rect ScreenRect() const
 			{
 				assert(::IsWindow(m_hwnd));
-				auto rect = AdjRect(r);
-				auto wnd = WindowRect();
-				rect.left += wnd.left;
-				rect.right += wnd.left;
-				rect.top += wnd.top;
-				rect.bottom += wnd.top;
-				WindowRect(rect, repaint);
+				Rect r;
+				Throw(::GetWindowRect(m_hwnd, &r), "GetWindowRect failed.");
+				return r;
+			}
+			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder|WindowPos::EFlags::NoActivate)
+			{
+				assert(::IsWindow(m_hwnd));
+				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
+
+				// SetWindowPos takes client space coordinates
+				auto hwndparent = ::GetParent(m_hwnd);
+				::MapWindowPoints(nullptr, hwndparent, r.points(), 2);
+
+				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
+				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), flags), "SetWindowPos failed");
+				RecordPosOffset();
 			}
 
-			// Get the client rect optionally relative to another window and optionally
+			// Get/Set the bounds of this control within it's Control* parent (note: not necessarily the hwndparent)
+			Rect ParentRect() const
+			{
+				// If the control has no parent, then the screen is the parent
+				auto parent = Parent();
+				if (parent == nullptr)
+					return ScreenRect();
+
+				// Return the bounds of this control relative to 'parent'
+				auto psr = parent->ScreenRect();
+				auto csr = ScreenRect();
+				csr.left   -= psr.left;
+				csr.top    -= psr.top;
+				csr.right  -= psr.left;
+				csr.bottom -= psr.top;
+				return csr;
+			}
+			void ParentRect(Rect r, bool repaint = false, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder|WindowPos::EFlags::NoActivate)
+			{
+				auto parent = Parent();
+				if (parent != nullptr)
+				{
+					// Invalidate the previous and new rect on the parent
+					if (!repaint)
+					{
+						auto inv = r.Union(ParentRect());
+						parent->Invalidate(false, &inv);
+					}
+
+					// Convert 'r' to a screen rect
+					auto psr = parent->ScreenRect();
+					auto adj = parent->AdjRect();
+					r.left   += psr.left - adj.left;
+					r.top    += psr.top  - adj.top;
+					r.right  += psr.left - adj.left;
+					r.bottom += psr.top  - adj.top;
+				}
+				ScreenRect(r, repaint, prev, flags);
+				RecordPosOffset();
+				Invalidate();
+			}
+
+			// Get/Set the position of this control within it's Control* parent
+			Point ParentPos() const
+			{
+				return ParentRect().topleft();
+			}
+			void ParentPos(int x, int y, bool repaint = false)
+			{
+				auto r = ParentRect();
+				ParentRect(r.Offset(x - r.left, y - r.top), repaint);
+			}
+
+			// Get the bounds of this control relative to another window and optionally
 			// with the areas of docked child controls removed. If 'relative_to' != this,
-			// then the returned rect is in the client-space coordinates of the window.
+			// then the returned rect is in the client-space coordinates of the 'relative_to' window.
 			// If 'relative_to' == nullptr, then the rect is in screen space
-			Rect ClientRect(HWND relative_to, bool exclude_docked_children = true) const
+			Rect RectRelativeTo(HWND relative_to, bool exclude_docked_children = true) const
 			{
 				auto rect = ClientRect();
 				
@@ -2084,7 +2195,7 @@ namespace pr
 					{
 						if (child->m_dock == EDock::None) continue;
 						if (!child->Visible()) continue;
-						rect = rect.Subtract(child->ClientRect(*this, false));
+						rect = rect.Subtract(child->RectRelativeTo(*this, false));
 					}
 				}
 
@@ -2097,63 +2208,6 @@ namespace pr
 				}
 
 				return rect;
-			}
-
-			// Get/Set the window rect
-			// .. I think this should really be called ScreenRect()... i.e. it's the screen position of a window
-			Rect WindowRect() const
-			{
-				assert(::IsWindow(m_hwnd));
-				Rect r;
-				Throw(::GetWindowRect(m_hwnd, &r), "GetWindowRect failed.");
-				return r;
-			}
-			void WindowRect(Rect r, bool repaint = true, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder|WindowPos::EFlags::NoActivate)
-			{
-				assert(::IsWindow(m_hwnd));
-
-				// For a top level window, SetWindowPos positions the window relative to the screen.
-				// For child windows, SetWindowPos positions the window relative to the parent client area
-				auto top = TopLevelControl();
-				if (top != this)
-				{
-					::ScreenToClient(top->m_hwnd, &r.topleft());
-					::ScreenToClient(top->m_hwnd, &r.bottomright());
-				}
-				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
-				Throw(::SetWindowPos(m_hwnd,::GetWindow(m_hwnd, GW_HWNDPREV),r.left,r.top,r.width(),r.height(),flags), "SetWindowPos failed");
-			}
-
-			// Move the control to a new location/size in client space
-			// If a top-level control, then 'r' is in screen space
-			// if 'repaint' is true, then system sends the WM_PAINT message to the window procedure immediately
-			// after moving the window (that is, the MoveWindow function calls the UpdateWindow function).
-			// If 'repaint' is false, then this function will invalidate the parent at the old and new location.
-			void MoveWindow(Rect r, bool repaint = false)
-			{
-				auto parent = Parent();
-				if (!repaint && parent)
-				{
-					auto old_r = ClientRect();
-					parent->Invalidate(false, &old_r);
-				}
-				::MoveWindow(m_hwnd, r.left, r.top, r.width(), r.height(), repaint);
-				RecordPosOffset();
-				if (!repaint && parent)
-				{
-					parent->Invalidate(false, &r);
-				}
-				Invalidate(false);
-			}
-
-			// Move the control to a new location, keeping it's current size
-			// If a top-level control, then 'r' is in screen space
-			// if 'repaint' is true, then system sends the WM_PAINT message to the window procedure immediately
-			// after moving the window (that is, the MoveWindow function calls the UpdateWindow function).
-			// If 'repaint' is false, then this function will invalidate the parent at the old and new location.
-			void MoveWindow(int x, int y, bool repaint = false)
-			{
-				MoveWindow(ClientRect().Offset(x, y), repaint);
 			}
 
 			// Return the dimensions of the non-client area for the window
@@ -2273,7 +2327,7 @@ namespace pr
 					::MapWindowPoints(centre_hwnd, p, (POINT*)&centre, 2);
 				}
 
-				auto r = WindowRect();
+				auto r = ScreenRect();
 
 				// Find this control's upper left based on centre
 				auto l = (centre.left + centre.right - r.width()) / 2;
@@ -2761,9 +2815,12 @@ namespace pr
 			{
 				if (m_hwnd == nullptr) return false;
 				m_exit_code = exit_code;
-				return (m_modal
+				Parent(nullptr);
+				auto r = m_modal
 					? ::EndDialog(m_hwnd, INT_PTR(m_exit_code))
-					: ::DestroyWindow(m_hwnd)) != 0;
+					: ::DestroyWindow(m_hwnd);
+				m_hwnd = nullptr;
+				return r != 0;
 			}
 			virtual bool Close(EDialogResult dialog_result)
 			{
@@ -2784,14 +2841,13 @@ namespace pr
 			Label(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			Label(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -2835,14 +2891,13 @@ namespace pr
 			Button(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			Button(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -2885,14 +2940,13 @@ namespace pr
 			CheckBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			CheckBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -2955,14 +3009,13 @@ namespace pr
 			TextBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			TextBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -2976,7 +3029,7 @@ namespace pr
 				,HMENU menu = nullptr
 				,void* init_param = nullptr)
 			{
-				Control::Create(WndClassName(), text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
+				Control::Create<TextBox>(text, x, y, w, h, style, ex_style, hwndparent, menu, init_param);
 			}
 
 			// The number of characters in the text
@@ -3083,14 +3136,13 @@ namespace pr
 			ComboBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			ComboBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -3199,14 +3251,13 @@ namespace pr
 
 			ProgressBar(int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), L"", x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, nullptr, init_param)
+				:Control(WndClassName(), L"", x, y, w, h, id, parent, anchor, style, ex_style, name, nullptr, init_param)
 			{}
 			ProgressBar(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -3358,14 +3409,13 @@ namespace pr
 			Panel(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(MakeIntAtomW(RegisterWndClass<Panel>()), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(MakeIntAtomW(RegisterWndClass<Panel>()), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			Panel(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -3383,14 +3433,13 @@ namespace pr
 			GroupBox(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 			{}
 			GroupBox(int id = IDC_UNUSED, Control* parent = nullptr, char const* name = nullptr, EAnchor anchor = EAnchor::Left|EAnchor::Top)
 				:Control(id, parent, name, anchor)
@@ -3572,8 +3621,25 @@ namespace pr
 			struct TabEventArgs :EmptyArgs
 			{
 				Control* m_tab;
-				int m_tab_index;
+				int      m_tab_index;
 				TabEventArgs(Control* tab, int tab_index) :EmptyArgs() ,m_tab(tab) ,m_tab_index(tab_index) {}
+			};
+			struct TabSwitchEventArgs :CancelEventArgs
+			{
+				// True if 'm_tab' is being switched to (cancel ignored in this case)
+				// False if 'm_tab' is being switched away from (cancel will stop the switch)
+				bool m_activating;
+
+				// The tab being left/entered
+				Control* m_tab;
+				int      m_tab_index;
+
+				TabSwitchEventArgs(bool activating, Control* tab, int tab_index)
+					:CancelEventArgs(false)
+					,m_activating(activating)
+					,m_tab(tab)
+					,m_tab_index(tab_index)
+				{}
 			};
 
 			std::vector<Control*> m_tabs; // The tab pages. Owned externally
@@ -3584,14 +3650,13 @@ namespace pr
 			TabControl(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name, HMENU(id), init_param)
+				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
 				,m_tabs()
 				,m_border_size(3)
 				,m_top_pad(5)
@@ -3631,34 +3696,9 @@ namespace pr
 			void SelectedIndex(int tab_index)
 			{
 				auto active_tab_index = SelectedIndex();
-				if (tab_index == active_tab_index)
-					return;
-
-				ValidateTabIndex(tab_index);
-				if (active_tab_index != -1)
-				{
-					// Disable the old tab
-					auto& old = *m_tabs[active_tab_index];
-					if (::IsWindow(old))
-					{
-						old.Enabled(false);
-						old.Visible(false);
-					}
-				}
-
-				active_tab_index = tab_index;
-				::SendMessageW(m_hwnd, TCM_SETCURSEL, active_tab_index, 0);
-
-				if (active_tab_index != -1)
-				{
-					auto& neu = *m_tabs[active_tab_index];
-
-					// Enable the new tab
-					neu.Enabled(true);
-					neu.Visible(true);
-					neu.Focus();
-					neu.Invalidate(true);
-				}
+				if (tab_index == active_tab_index) return;
+				SwitchTab(active_tab_index, tab_index, true);
+				Invalidate();
 			}
 
 			// Add a tab to the tab control.
@@ -3690,9 +3730,11 @@ namespace pr
 
 				// Add the tab
 				m_tabs.push_back(&tab);
+				tab.Parent(this);
+				::SetParent(tab, m_hwnd);
 
 				// Set the position for the window
-				tab.MoveWindow(CalcViewRect());
+				tab.ParentRect(CalcViewRect(), true, m_hwnd, WindowPos::EFlags::NoActivate);
 		
 				// Select the tab that is being added, if desired
 				auto last = TabCount() - 1;
@@ -3725,6 +3767,7 @@ namespace pr
 				// Remove the item from the view list
 				Throw(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, pr::FmtS("Failed to delete tab %d", tab_index));
 				m_tabs.erase(std::begin(m_tabs) + tab_index);
+				tab->Parent(nullptr);
 
 				// Adjust the active tab index if deleting a tab before it
 				SelectedIndex(active_tab_index);
@@ -3781,12 +3824,13 @@ namespace pr
 			{
 				auto rect = CalcViewRect();
 				for (auto tab : m_tabs)
-					tab->MoveWindow(rect);
+					tab->ScreenRect(rect, true, nullptr, WindowPos::EFlags::NoZorder);
 			}
 
 			// Events
 			EventHandler<TabControl&, TabEventArgs const&> TabAdded;
 			EventHandler<TabControl&, TabEventArgs const&> TabRemoved;
+			EventHandler<TabControl&, TabSwitchEventArgs const&> TabSwitch;
 
 			// Handlers
 			virtual void OnTabAdded(TabEventArgs const& args)
@@ -3797,31 +3841,10 @@ namespace pr
 			{
 				TabRemoved(*this, args);
 			}
-
-			#if 0
-			// This method modifies the window styles of the CWindow object.
-			// Styles to be added or removed can be combined by using the bitwise OR (|) operator.
-			// dwRemove - Specifies the window styles to be removed during style modification.
-			// dwAdd - Specifies the window styles to be added during style modification.
-			// nFlags - Window-positioning flags. For a list of possible values, see the
-			// SetWindowPos function in the Win32 SDK.
-			// If nFlags is nonzero, ModifyStyle calls the Win32 function SetWindowPos,
-			// and redraws the window by combining nFlags with the following four flags:
-			//  SWP_NOSIZE   Retains the current size.
-			//  SWP_NOMOVE   Retains the current position.
-			//  SWP_NOZORDER   Retains the current Z order.
-			//  SWP_NOACTIVATE   Does not activate the window.
-			//  To modify a window's extended styles, call ModifyStyleEx.
-			// Returns TRUE if the window styles are modified; otherwise, FALSE.
-			BOOL ModifyTabStyle(DWORD dwRemove, DWORD dwAdd, UINT nFlags)
+			virtual void OnTabSwitch(TabSwitchEventArgs& args)
 			{
-				// Modify the style
-				BOOL r = ModifyStyle(dwRemove, dwAdd, nFlags);
-				UpdateViews();     // Update all the views in case the window positions changes
-				SetTabFont(dwAdd); // Set the font in case the tab position changed
-				return r;
+				TabSwitch(*this, args);
 			}
-			#endif
 
 			// Message map function
 			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
@@ -3836,8 +3859,26 @@ namespace pr
 				case WM_NOTIFY:
 					{
 						auto hdr = (NMHDR*)lparam;
-						if (hdr->code == TCN_SELCHANGE)
-							SelectedIndex(SelectedIndex());
+						switch (hdr->code)
+						{
+						case TCN_SELCHANGING:
+							{
+								auto tab_index = SelectedIndex();
+								auto args = TabSwitchEventArgs(false, m_tabs[tab_index], tab_index);
+								OnTabSwitch(args);
+								if (args.m_cancel) return TRUE;
+								SwitchTab(tab_index, -1, false);
+								break;
+							}
+						case TCN_SELCHANGE:
+							{
+								auto tab_index = SelectedIndex();
+								auto args = TabSwitchEventArgs(true, m_tabs[tab_index], tab_index);
+								SwitchTab(-1, tab_index, false);
+								OnTabSwitch(args);
+								break;
+							}
+						}
 						break;
 					}
 				}
@@ -3855,51 +3896,77 @@ namespace pr
 			// Calculate the client rect for contained views.
 			Rect CalcViewRect() const
 			{
-				auto rect = ClientRect();
-				rect.right  -= 1;
-				rect.bottom -= 1;
-				if (rect.height() <= 0 || rect.width() <= 0)
-					return Rect();
+				auto sr = ScreenRect();
 
-				// Calculate the Height (or Width) of the tab cause it could be Multiline
-				Rect tab_rect;
-				Throw(::SendMessageW(m_hwnd, TCM_GETITEMRECT, 0, LPARAM(&tab_rect)) != 0, "Failed to read the size of the 0th tab");
-				auto row_count   = (int)(::SendMessageW(m_hwnd, TCM_GETROWCOUNT, 0, 0));
-				auto edge_width  = (tab_rect.width()  * row_count) + m_top_pad;
-				auto edge_height = (tab_rect.height() * row_count) + m_top_pad;
+				//auto rect = ClientRect();
+				//rect.right  -= 1;
+				//rect.bottom -= 1;
+				//// Calculate the Height (or Width) of the tab cause it could be Multiline
+				//Rect tab_rect;
+				//Throw(::SendMessageW(m_hwnd, TCM_GETITEMRECT, 0, LPARAM(&tab_rect)) != 0, "Failed to read the size of the 0th tab");
+				//auto row_count   = (int)(::SendMessageW(m_hwnd, TCM_GETROWCOUNT, 0, 0));
+				//auto edge_width  = (tab_rect.width()  * row_count) + m_top_pad;
+				//auto edge_height = (tab_rect.height() * row_count) + m_top_pad;
 
 				// Set the size based on the style
+				// All the same at the mo, need to test each style...
 				auto style = Style();
 				if ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) // Bottom
 				{
-					rect.top    += m_border_size;
-					rect.left   += m_border_size;
-					rect.right  -= m_border_size;
-					rect.bottom -= edge_height;
+					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
 				}
 				else if ((style & TCS_RIGHT) && (style & TCS_VERTICAL)) // Right
 				{
-					rect.top    += m_border_size;
-					rect.left   += m_border_size;
-					rect.right  -= edge_width;
-					rect.bottom -= m_border_size;
+					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
 				}
 				else if (style & TCS_VERTICAL) // Left
 				{
-					rect.top    += m_border_size;
-					rect.left   += edge_width;
-					rect.right  -= m_border_size;
-					rect.bottom -= m_border_size;
+					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
 				}
 				else // Top
 				{
-					rect.top    += edge_height;
-					rect.left   += m_border_size;
-					rect.right  -= m_border_size;
-					rect.bottom -= m_border_size;
+					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
 				}
 
-				return rect;
+				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&sr));
+				return sr.height() > 0 && sr.width() > 0 ? sr : Rect();
+			}
+
+			// Switch from tab 'old' to tab 'neu'
+			void SwitchTab(int old, int neu, bool setcursel)
+			{
+				// Disable the old tab
+				if (old != -1)
+				{
+					ValidateTabIndex(old);
+					auto& old_tab = *m_tabs[old];
+					if (::IsWindow(old_tab))
+					{
+						old_tab.Enabled(false);
+						old_tab.Visible(false);
+						old_tab.Invalidate();
+					}
+				}
+
+				// Enable the new tab
+				if (neu != -1)
+				{
+					ValidateTabIndex(neu);
+					auto& neu_tab = *m_tabs[neu];
+					if (::IsWindow(neu_tab))
+					{
+						neu_tab.Enabled(true);
+						neu_tab.Visible(true);
+						neu_tab.Focus();
+						neu_tab.Invalidate();
+					}
+				}
+
+				// Set the new tab index
+				if (setcursel)
+				{
+					::SendMessageW(m_hwnd, TCM_SETCURSEL, neu, 0);
+				}
 			}
 		};
 		#pragma endregion

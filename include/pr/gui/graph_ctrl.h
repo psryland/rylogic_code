@@ -433,13 +433,12 @@ namespace pr
 
 			GraphCtrl(int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
-				,HWND hwndparent = 0
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP
 				,DWORD ex_style = 0
 				,char const* name = nullptr)
-				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, hwndparent, parent, anchor, style, ex_style, name)
+				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, parent, anchor, style, ex_style, name)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()
@@ -805,7 +804,7 @@ namespace pr
 			// Note: The returned transform has no scale because lines and points would also be scaled turning them into elipses or caligraphy etc
 			void ClientToGraphSpace(Rect const& plot_area, Matrix& c2g, Point& scale) const
 			{
-				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
+				auto plot = plot_area.Offset(1,1).Adjust(0, 0, -1, -1);
 				scale = Point(plot.width()/m_xaxis.span(), plot.height()/m_yaxis.span());
 				if (!pr::IsFinite(scale.x)) scale.x = scale.x >= 0 ? pr::maths::float_max : -pr::maths::float_max;
 				if (!pr::IsFinite(scale.y)) scale.y = scale.y >= 0 ? pr::maths::float_max : -pr::maths::float_max;
@@ -886,7 +885,7 @@ namespace pr
 					// synchronously and blt'ing the last snapshot into the plot area
 					RenderGraphFrame(gfx, area, m_plot_area);
 
-					gfx.SetClip(pr::To<Gdiplus::Rect>(m_plot_area.Offset(1,1).Inflate(0, 0, -1,-1)));
+					gfx.SetClip(pr::To<Gdiplus::Rect>(m_plot_area.Offset(1,1).Adjust(0, 0, -1,-1)));
 					gfx.SetSmoothingMode(Gdiplus::SmoothingModeHighQuality);
 					{
 						std::lock_guard<std::mutex> lock(m_mutex_snap);
@@ -1096,7 +1095,7 @@ namespace pr
 				case RdrOptions::EBorder::Single:
 					{
 						Pen pen_border(static_cast<ARGB>(Color::Black), 0.0f);
-						gfx.DrawRectangle(&pen_border, pr::To<Gdiplus::Rect>(area.Inflate(0, 0, -1,-1)));
+						gfx.DrawRectangle(&pen_border, pr::To<Gdiplus::Rect>(area.Adjust(0, 0, -1, -1)));
 						break;
 					}
 				}
@@ -1130,7 +1129,7 @@ namespace pr
 			// Render the series data into the graph (within 'area')
 			void RenderData(Graphics& gfx, Rect const& plot_area)
 			{
-				auto plot = plot_area.Offset(1,1).Inflate(0, 0, -1,-1);
+				auto plot = plot_area.Offset(1,1).Adjust(0, 0, -1, -1);
 				gfx.SetClip(pr::To<Gdiplus::Rect>(plot));
 
 				RenderPlotBkgd(gfx, plot_area);

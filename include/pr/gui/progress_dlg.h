@@ -112,25 +112,25 @@ namespace pr
 								return rect;
 							};
 
-						auto client = ClientRect().Inflate(bdr,bdr,-bdr,-bdr);
+						auto client = ClientRect().Adjust(bdr,bdr,-bdr,-bdr);
 						Rect r;
 						r = client;
 						r.top += bdr;
 						r.left += bdr;
 						r.right -= bdr;
 						r.bottom -= (btn_h + sp);
-						m_lbl_desc.MoveWindow(Clamp(r));
+						m_lbl_desc.ParentRect(Clamp(r));
 
 						r = client;
 						r.bottom -= bp;
 						r.top = r.bottom - prog_h;
 						r.right -= btn_w + sp;
-						m_bar.MoveWindow(Clamp(r));
+						m_bar.ParentRect(Clamp(r));
 
 						r = client;
 						r.top = r.bottom - btn_h;
 						r.left = r.right - btn_w;
-						m_btn.MoveWindow(Clamp(r));
+						m_btn.ParentRect(Clamp(r));
 
 						::UpdateWindow(m_hwnd);
 						break;
@@ -143,7 +143,7 @@ namespace pr
 
 						// The window is initially created "hidden" (actually zero sized)
 						// On the first call to update, make the window the correct size and style
-						auto rect = WindowRect();
+						auto rect = ScreenRect();
 						if (rect.width() * rect.height() == 0)
 						{
 							::SetWindowLongPtr(m_hwnd, GWL_STYLE, WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_SYSMENU|WS_VISIBLE);
