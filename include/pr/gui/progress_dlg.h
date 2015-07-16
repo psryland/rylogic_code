@@ -225,6 +225,8 @@ namespace pr
 
 		public:
 
+			using Form<ProgressDlg>::WndBackground;
+			
 			// 'func' should have 'ProgressDlg*' as the first parameter
 			template <typename Func, typename... Args>
 			ProgressDlg(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)

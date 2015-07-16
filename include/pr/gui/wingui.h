@@ -1138,8 +1138,66 @@ namespace pr
 			// Special id for controls that don't need an id
 			static int const IDC_UNUSED = IdMask;
 
+			// These methods are provided so that windows that inherit from control
+			// can implement their WndClassInfo(), and WndClassName() functions using defaults
+			static wchar_t const* WndClassName()
+			{
+				// Auto name, derived can overload this function
+				static thread_local wchar_t name[64];
+				_swprintf_c(name, _countof(name), L"wingui::%p", &name[0]);
+				return name;
+			}
+			static HICON WndIcon(HINSTANCE hinst, bool large)
+			{
+				//::LoadIcon(hinst, MAKEINTRESOURCE(IDI_ICON));
+				//::LoadIcon(hinst, MAKEINTRESOURCE(IDI_SMALL));
+				(void)hinst,large;
+				return nullptr;
+			}
+			static HCURSOR WndCursor(HINSTANCE hinst)
+			{
+				(void)hinst;
+				auto cur = ::LoadCursor(nullptr, IDC_ARROW); // Load arrow from the system, not this exe image
+				Throw(cur != nullptr, "Failed to load default arrow cursor");
+				return cur;
+			}
+			static HBRUSH WndBackground()
+			{
+				// Returning null forces handling of WM_ERASEBKGND
+				return ::GetSysColorBrush(COLOR_3DFACE);
+			}
+			static wchar_t const* WndMenu()
+			{
+				// Typically you might return: MAKEINTRESOURCE(IDM_MENU);
+				return nullptr; 
+			}
+
+			// Convenience method that allows derived types to create their WndClassInfo() and
+			// WndClassName() functions by instantiating these methods templated with their type
+			template <typename WndType> static WNDCLASSEXW MakeWndClassInfo(HINSTANCE hinst)
+			{
+				// This is a default implementation of WndClassInfo that gets parameters
+				// from static functions on 'WndType'. Types that derive from Control
+				// will pick up the defaults below unless explicitly defined in the derived type
+				WNDCLASSEXW wc;
+				wc.cbSize        = sizeof(WNDCLASSEXW);
+				wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+				wc.cbClsExtra    = 0;
+				wc.cbWndExtra    = 0;
+				wc.hInstance     = hinst;
+				wc.hIcon         = WndType::WndIcon(hinst, true);
+				wc.hIconSm       = WndType::WndIcon(hinst, false);
+				wc.hCursor       = WndType::WndCursor(hinst);
+				wc.hbrBackground = WndType::WndBackground();
+				wc.lpszMenuName  = WndType::WndMenu();
+				wc.lpszClassName = WndType::WndClassName();
+				wc.lpfnWndProc   = nullptr; // Leave as null to use the thunk
+				return wc;
+			}
+
 		protected:
 			using Controls = std::vector<Control*>;
+
 			HWND               m_hwnd;         // Window handle for the control
 			int                m_id;           // Dialog control id, used to detect windows messages for this control
 			char const*        m_name;         // Debugging name for the control
@@ -1157,43 +1215,7 @@ namespace pr
 			bool               m_allow_drop;   // Allow drag/drop operations on the control
 			ATL::CStdCallThunk m_thunk;        // WndProc thunk, turns a __stdcall into a __thiscall
 			WNDPROC            m_oldproc;      // The window class default wndproc function
-			int                m_wnd_proc_nest; // Tracks how often WndProc has been called recursively
 			std::thread::id    m_thread_id;    // The thread that this control was created on
-
-			struct InitParam
-			{
-				Control* m_this;
-				LPARAM m_lparam;
-				InitParam(Control* this_, LPARAM lparam) :m_this(this_) ,m_lparam(lparam) {}
-			};
-			static LRESULT __stdcall InitWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
-			{
-				if (message == WM_NCCREATE)
-				{
-					// Only 'Form' derived windows will have this function as the window proc,
-					// so we can replace the wndproc with DefWindowProc before calling 'HookWndProc'
-					// This prevents an infinite recursion when me->DefWndProc is called.
-					::SetWindowLongPtr(hwnd, GWLP_WNDPROC, LONG_PTR(&::DefWindowProc));
-					auto init = reinterpret_cast<InitParam*>(reinterpret_cast<CREATESTRUCT*>(lparam)->lpCreateParams);
-					init->m_this->Attach(hwnd);
-					return init->m_this->WndProc(message, wparam, lparam);
-				}
-				return ::DefWindowProc(hwnd, message, wparam, lparam);
-			}
-			static LRESULT __stdcall InitDlgProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
-			{
-				if (message == WM_INITDIALOG)
-				{
-					// Only 'Form' derived windows will have this function as the window proc,
-					// so we can replace the wndproc with DefWindowProc before calling 'HookWndProc'
-					// This prevents an infinite recursion when me->DefWndProc is called.
-					::SetWindowLongPtr(hwnd, GWLP_WNDPROC, LONG_PTR(&::DefWindowProc));
-					auto init = reinterpret_cast<InitParam*>(lparam);
-					init->m_this->Attach(hwnd);
-					return init->m_this->WndProc(message, wparam, init->m_lparam);
-				}
-				return ::DefWindowProc(hwnd, message, wparam, lparam);
-			}
 
 			// A window class is a template from which window instances are created. The WNDCLASS contains a static function
 			// for the WndProc. We need a way to set the WndProc of a newly created window to the Control::StaticWndProc which
@@ -1228,120 +1250,80 @@ namespace pr
 				return atom;
 			}
 
-			// Convenience method that allows derived types to create their WndClassInfo() and
-			// WndClassName() functions by instantiating these methods templated with their type
-			template <typename WndType> static WNDCLASSEXW MakeWndClassInfo(HINSTANCE hinst)
+			struct InitParam
 			{
-				// This is a default implementation of WndClassInfo that gets parameters
-				// from static functions on 'WndType'. Types that derive from Control
-				// will pick up the defaults below unless explicitly defined in the derived type
-				WNDCLASSEXW wc;
-				wc.cbSize        = sizeof(WNDCLASSEXW);
-				wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
-				wc.cbClsExtra    = 0;
-				wc.cbWndExtra    = 0;
-				wc.hInstance     = hinst;
-				wc.hIcon         = WndType::WndIcon(hinst, true);
-				wc.hIconSm       = WndType::WndIcon(hinst, false);
-				wc.hCursor       = WndType::WndCursor(hinst);
-				wc.hbrBackground = WndType::WndBackground();
-				wc.lpszMenuName  = WndType::WndMenu();
-				wc.lpszClassName = WndType::WndClassName();
-				wc.lpfnWndProc   = nullptr; // Leave as null to use the thunk
-				return wc;
-			}
+				Control* m_this;
+				LPARAM m_lparam;
+				InitParam(Control* this_, LPARAM lparam) :m_this(this_) ,m_lparam(lparam) {}
+			};
 
-			// These methods are provided so that windows that inherit from control
-			// can implement their WndClassInfo(), and WndClassName() functions using defaults
-			static wchar_t const* WndClassName()
+			// The initial wndproc function used in window classes and dialogs.
+			// This function using the InitParam data to initialise the thunk for the window instance.
+			static LRESULT __stdcall InitWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				// Auto name, derived can overload this function
-				static thread_local wchar_t name[64];
-				_swprintf_c(name, _countof(name), L"wingui::%p", &name[0]);
-				return name;
-			}
-			static HICON WndIcon(HINSTANCE hinst, bool large)
-			{
-				//::LoadIcon(hinst, MAKEINTRESOURCE(IDI_ICON));
-				//::LoadIcon(hinst, MAKEINTRESOURCE(IDI_SMALL));
-				(void)hinst,large;
-				return nullptr;
-			}
-			static HCURSOR WndCursor(HINSTANCE hinst)
-			{
-				(void)hinst;
-				auto cur = ::LoadCursor(nullptr, IDC_ARROW); // Load arrow from the system, not this exe image
-				Throw(cur != nullptr, "Failed to load default arrow cursor");
-				return cur;
-			}
-			static HBRUSH WndBackground()
-			{
-				// Returning null forces handling of WM_ERASEBKGND
-				return reinterpret_cast<HBRUSH>(COLOR_3DFACE+1);
-			}
-			static wchar_t const* WndMenu()
-			{
-				// Typically you might return: MAKEINTRESOURCE(IDM_MENU);
-				return nullptr; 
-			}
-
-			// A reference implementation alternative to m_thunk objects
-			#define PR_HWND_MAP 0
-			#if PR_HWND_MAP
-			typedef std::unordered_map<HWND, Control*> HwndMap;
-			static HwndMap& Hwnd() { static HwndMap map; return map; }
-			#endif
-
-			// Hook or unhook the window proc for this control
-			void HookWndProc(bool hook)
-			{
-				#if PR_HWND_MAP
-				if (hook)
+				WndProcDebug(hwnd, message, wparam, lparam);
+				if (message == WM_NCCREATE)
 				{
-					Hwnd()[m_hwnd] = this;
-					m_oldproc = (WNDPROC)::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(StaticWndProc));
+					auto init = reinterpret_cast<InitParam*>(reinterpret_cast<CREATESTRUCT*>(lparam)->lpCreateParams);
+
+					assert((WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC) == &InitWndProc);
+					::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, LONG_PTR(init->m_this->m_thunk.GetCodeAddress()));
+					init->m_this->m_oldproc = &::DefWindowProcW;
+
+					init->m_this->Attach(hwnd);
+					return init->m_this->WndProc(message, wparam, lparam);
 				}
-				else
+				if (message == WM_INITDIALOG)
 				{
-					Hwnd().erase(m_hwnd);
-					::SetWindowLongPtr(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc)), m_oldproc = nullptr;
+					auto init = reinterpret_cast<InitParam*>(lparam);
+
+					assert((WNDPROC)::GetWindowLongPtrW(hwnd, DWLP_DLGPROC) == &InitWndProc);
+					::SetWindowLongPtrW(hwnd, DWLP_DLGPROC, LONG_PTR(init->m_this->m_thunk.GetCodeAddress()));
+					init->m_this->m_oldproc = &::DefDlgProcW;
+
+					init->m_this->Attach(hwnd);
+					return init->m_this->WndProc(message, wparam, lparam);
 				}
-				#else
-				if (hook && !m_oldproc)
-					m_oldproc = (WNDPROC)::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_thunk.GetCodeAddress()));
-				else if (!hook && m_oldproc)
-					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc)), m_oldproc = nullptr;
-				#endif
+				return ::DefWindowProcW(hwnd, message, wparam, lparam);
 			}
 			static LRESULT __stdcall StaticWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				#if PR_HWND_MAP
-				return Hwnd()[hwnd]->WndProc(message, wparam, lparam);
-				#else
 				// 'm_thunk' causes 'hwnd' to actually be the pointer to the control rather than the hwnd
 				return reinterpret_cast<Control*>(hwnd)->WndProc(message, wparam, lparam);
-				#endif
 			}
 			LRESULT DefWndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				return m_oldproc != nullptr
-					? ::CallWindowProcW(m_oldproc, m_hwnd, message, wparam, lparam)
-					: ::DefWindowProcW(m_hwnd, message, wparam, lparam);
+				if (m_oldproc == &::DefDlgProcW) return FALSE;
+				if (m_oldproc != nullptr) return ::CallWindowProcW(m_oldproc, m_hwnd, message, wparam, lparam);
+				return ::DefWindowProcW(m_hwnd, message, wparam, lparam);
+			}
+			void UnhookWndProc()
+			{
+				auto wndproc = (WNDPROC)::GetWindowLongPtrW(m_hwnd, GWLP_WNDPROC);
+				auto dlgproc = (DLGPROC)::GetWindowLongPtrW(m_hwnd, DWLP_DLGPROC);
+
+				if (m_oldproc == &::DefWindowProcW)
+					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc));
+				if (m_oldproc == &::DefDlgProcW)
+					::SetWindowLongPtrW(m_hwnd, DWLP_DLGPROC, LONG_PTR(0));
+
+				m_oldproc = nullptr;
 			}
 
 			// Handy debugging method for displaying WM_MESSAGES
-			void WndProcDebug(UINT message, WPARAM wparam, LPARAM lparam)
+			static void WndProcDebug(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, char const* name = nullptr)
 			{
-				#if 0
-				RAII<int> nest(m_wnd_proc_nest, m_wnd_proc_nest+1);
-				if (/*m_name && strcmp(m_name,"ctx-menu") == 0 && message == WM_KEYDOWN*/true)
+				#if 1
+				static int wnd_proc_nest = 0; // Tracks how often WndProc has been called recursively
+				RAII<int> nest(wnd_proc_nest, wnd_proc_nest+1);
+				if (/*m_name && strcmp(m_name,"about") == 0 && message == WM_CTLCOLORDLG*/true)
 				{
 					static int msg_idx = 0; ++msg_idx;
-					auto m = pr::gui::DebugMessage(m_hwnd, message, wparam, lparam);
+					auto m = pr::gui::DebugMessage(hwnd, message, wparam, lparam);
 					if (*m)
 					{
-						for (int i = 1; i != m_wnd_proc_nest; ++i) OutputDebugStringA("\t");
-						OutputDebugStringA(pr::FmtS("%5d|%s|%s\n", msg_idx, m_name, m));
+						for (int i = 1; i != wnd_proc_nest; ++i) OutputDebugStringA("\t");
+						OutputDebugStringA(pr::FmtS("%5d|%s|%s\n", msg_idx, name, m));
 					}
 					if (msg_idx == 0) _CrtDbgBreak();
 				}
@@ -1356,12 +1338,12 @@ namespace pr
 			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				//WndProcDebug(message, wparam, lparam);
+				//WndProcDebug(m_hwnd, message, wparam, lparam, m_name);
 				switch (message)
 				{
 				case WM_DESTROY:
 					{
-						HookWndProc(false);
+						UnhookWndProc();
 						m_hwnd = nullptr;
 						break;
 					}
@@ -1650,7 +1632,7 @@ namespace pr
 			// Adjust the size of this control relative to it's parent
 			void ResizeToParent(bool repaint = true)
 			{
-				if (!m_parent || !m_hwnd) return;
+				if (!m_parent || !m_hwnd || !m_parent->m_hwnd) return;
 				auto p = m_parent->ScreenRect();
 				auto r = ScreenRect();
 				auto w = r.width(); auto h = r.height();
@@ -1716,7 +1698,6 @@ namespace pr
 				,m_allow_drop(false)
 				,m_thunk()
 				,m_oldproc()
-				,m_wnd_proc_nest()
 				,m_thread_id(std::this_thread::get_id())
 			{
 				assert(id == m_id && "Id value too large");
@@ -1829,9 +1810,8 @@ namespace pr
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
 				//     or a valid menu handle otherwise it is the id of the control being created.
-				InitParam init(this, 0);
-				if (!init_param) init_param = &init;
-				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), init_param);
+				InitParam init(this, LPARAM(init_param));
+				m_hwnd = ::CreateWindowExW(ex_style, wndclass_name, text, style, x, y, w, h, hwndparent, menu, GetModuleHandle(nullptr), &init);
 				Throw(m_hwnd != 0, "CreateWindowEx failed");
 
 				RecordPosOffset();
@@ -1850,12 +1830,11 @@ namespace pr
 				assert(m_hwnd == nullptr);
 				m_hwnd = hwnd;
 				RecordPosOffset();
-				HookWndProc(true);
 			}
 			void Detach()
 			{
 				if (m_hwnd == nullptr) return;
-				HookWndProc(false);
+				UnhookWndProc();
 				m_hwnd = nullptr;
 			}
 
@@ -2509,6 +2488,10 @@ namespace pr
 			// is to override ProcessWindowMessage and decode/handle the window messages you actually
 			// need. Notice, WM_CREATE is typically not needed, the constructor of your derived type
 			// is where OnCreate() code should go.
+			// Re WndProc from MSDN:
+			//  "You should use the dialog box procedure only if you use the dialog box wndclass for the dialog box.
+			//   This is the default class and is used when no explicit wndclass is specified in the dialog box template"
+
 			using form_t = Form<Derived>;
 
 		protected:
@@ -2533,13 +2516,14 @@ namespace pr
 			// All messages are passed to 'ProcessWindowMessage' so use that.
 			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override final
 			{
-				//WndProcDebug(message, wparam, lparam);
+				//WndProcDebug(m_hwnd, message, wparam, lparam, m_name);
 				LRESULT result = S_OK;
 
 				// Check if this message is a dialog message
 				auto msg = MSG{m_hwnd, message, wparam, lparam, ::GetMessageTime(), ::GetMessagePos()};
 				if (m_dialog_behaviour)
 				{
+					//WndProcDebug(m_hwnd, message, wparam, lparam, m_name);
 					RAII<bool> prevent_recursion(m_dialog_behaviour, false);
 					if (::IsDialogMessageW(m_hwnd, &msg))
 						return S_OK;
@@ -2593,8 +2577,13 @@ namespace pr
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						if (m_app_main_window)
 							::PostQuitMessage(m_exit_code);
-						HookWndProc(false);
+						UnhookWndProc();
 						m_hwnd = nullptr;
+						return true;
+					}
+				case WM_CTLCOLORDLG:
+					{
+						result = LRESULT(Derived::WndBackground());
 						return true;
 					}
 				case WM_COMMAND:
@@ -2657,7 +2646,7 @@ namespace pr
 				,char const* name = nullptr
 				,LPARAM init_param = 0)
 				:Control(IDC_UNUSED, nullptr, name)
-				,m_hinst(::GetModuleHandle(nullptr))
+				,m_hinst(::GetModuleHandleW(nullptr))
 				,m_app_main_window(parent == ApplicationMainWindow)
 				,m_template()
 				,m_menu_id(menu_id)
@@ -2687,7 +2676,7 @@ namespace pr
 			//  - hwnd is not created until Show() or ShowDialog() are called
 			Form(int idd, char const* name = nullptr)
 				:Control(idd, nullptr, name)
-				,m_hinst(::GetModuleHandle(nullptr))
+				,m_hinst(::GetModuleHandleW(nullptr))
 				,m_app_main_window(false)
 				,m_template()
 				,m_menu_id(IDC_UNUSED)
@@ -2702,7 +2691,7 @@ namespace pr
 			//  - if 'modal' is true then the window handle is not created until Show() or ShowDialog() is called
 			Form(DlgTemplate const& templ, char const* name = nullptr)
 				:Control(IDC_UNUSED, nullptr, name)
-				,m_hinst(::GetModuleHandle(nullptr))
+				,m_hinst(::GetModuleHandleW(nullptr))
 				,m_app_main_window(false)
 				,m_template(templ)
 				,m_menu_id(IDC_UNUSED)
@@ -2742,13 +2731,13 @@ namespace pr
 					// If a template is given, create the window from the template
 					if (m_template.valid())
 					{
-						m_hwnd = ::CreateDialogIndirectParam(m_hinst, m_template, parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
+						m_hwnd = ::CreateDialogIndirectParamW(m_hinst, m_template, parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
 						Throw(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
 					}
 					else
 					{
 						assert(m_id != IDC_UNUSED && "Modeless dialog without a resource id");
-						m_hwnd = ::CreateDialogParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam));
+						m_hwnd = ::CreateDialogParamW(m_hinst, MAKEINTRESOURCEW(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
 						Throw(m_hwnd != nullptr, "CreateDialogParam failed");
 					}
 				}
@@ -2764,13 +2753,13 @@ namespace pr
 				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
 				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
-				auto parenthwnd = parent ? (HWND)*parent : (HWND)nullptr;
+				auto parenthwnd = parent ? HWND(*parent) : HWND(nullptr);
 
 				Show(show, parenthwnd, init_param);
 			}
 			void Show(int show = SW_SHOW)
 			{
-				Show(show, (HWND)nullptr);
+				Show(show, HWND(nullptr));
 			}
 
 			// Display the form modally
@@ -2781,18 +2770,17 @@ namespace pr
 				// Modal dialogs should not have their window handle created yet, the
 				// DialogBox() functions create the window and the message loop
 				assert(m_hwnd == nullptr);
-
 				InitParam lparam(this, init_param);
 
 				// If a template is given, create the window from the template
 				if (m_template.valid())
 				{
-					return EDialogResult(::DialogBoxIndirectParam(m_hinst, m_template, parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
+					return EDialogResult(::DialogBoxIndirectParamW(m_hinst, m_template, parent, (DLGPROC)&InitWndProc, LPARAM(&lparam)));
 				}
 				else
 				{
 					assert(m_id != IDC_UNUSED && "Modal dialog without a resource id");
-					return EDialogResult(::DialogBoxParam(m_hinst, MAKEINTRESOURCE(m_id), parent, (DLGPROC)&InitDlgProc, LPARAM(&lparam)));
+					return EDialogResult(::DialogBoxParamW(m_hinst, MAKEINTRESOURCEW(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam)));
 				}
 			}
 			EDialogResult ShowDialog(Control* parent = nullptr, LPARAM init_param = 0)
@@ -2801,7 +2789,7 @@ namespace pr
 				// 'm_app_main_window' can only be set to true. A main window can't become not the main window
 				m_app_main_window |= parent == ApplicationMainWindow;
 				parent = !m_app_main_window ? parent : nullptr;
-				auto parenthwnd = parent ? (HWND)*parent : (HWND)nullptr;
+				auto parenthwnd = parent ? HWND(*parent) : HWND(nullptr);
 
 				return ShowDialog(parenthwnd, init_param);
 			}
@@ -2865,7 +2853,10 @@ namespace pr
 							return true;
 
 						auto hdc = (HDC)wparam;
-						if (m_colour_fore != CLR_INVALID) ::SetTextColor(hdc, m_colour_fore);
+						if (m_colour_fore != CLR_INVALID)
+						{
+							::SetTextColor(hdc, m_colour_fore);
+						}
 						if (m_colour_back != CLR_INVALID)
 						{
 							::SetBkColor(hdc, m_colour_back);

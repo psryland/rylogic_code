@@ -5,6 +5,17 @@
 #pragma once
 
 #include "linedrawer/main/forward.h"
+
+namespace ldr
+{
+	// A UI for setting options
+	struct OptionsUI :pr::gui::Form<OptionsUI>
+	{
+	};
+}
+
+
+#include "linedrawer/main/forward.h"
 #include "linedrawer/main/user_settings.h"
 #include "linedrawer/utility/misc.h"
 #include "linedrawer/resources/linedrawer.res.h"
