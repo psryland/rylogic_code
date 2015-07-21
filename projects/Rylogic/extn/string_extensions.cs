@@ -17,7 +17,7 @@ namespace pr.extn
 	public static class StringExtensions
 	{
 		/// <summary>Treats this string as a format string</summary>
-		[System.Diagnostics.DebuggerStepThrough] public static string Fmt(this string fmt, params object[] args)
+		[DebuggerStepThrough] public static string Fmt(this string fmt, params object[] args)
 		{
 			return string.Format(fmt, args);
 		}
@@ -99,19 +99,23 @@ namespace pr.extn
 			return new string(str.ToCharArray().Where(x => !pred(x)).ToArray());
 		}
 
-		/// <summary>Enumerate over the lines in this string (returned lines do not include new line characters)</summary>
-		public static IEnumerable<string> Lines(this string str, StringSplitOptions opts = StringSplitOptions.None)
+		/// <summary>
+		/// Split the string into substrings at places where 'pred' returns >= 0.
+		/// int Pred(IString s, int idx) - "returns the length of the separater that starts at 's[idx]'".
+		/// So < 0 means not a separater</summary>
+		public static IEnumerable<IString> Split(this string str, Func<IString, int,int> pred)
 		{
-			int s = 0, e = 0;
-			do
+			return IString.From(str).Split(pred);
+		}
+
+		/// <summary>Enumerate over the lines in this string (returned lines do not include new line characters)</summary>
+		public static IEnumerable<IString> Lines(this string str, StringSplitOptions opts = StringSplitOptions.None)
+		{
+			foreach (var subs in IString.From(str).Split((s,i) => s[i] == '\n' ? 1 : -1))
 			{
-				for (;e != str.Length && str[e] != '\n'; ++e) {}
-				if (e-s > 1 || opts != StringSplitOptions.RemoveEmptyEntries)
-					yield return str.Substring(s, e-s);
-				s = e + 1;
-				++e;
+				if (subs.Length > 1 || opts != StringSplitOptions.RemoveEmptyEntries)
+				yield return subs;
 			}
-			while (s != str.Length);
 		}
 
 		/// <summary>Word wraps the given text to fit within the specified width.</summary>
@@ -343,8 +347,243 @@ namespace pr.extn
   //}
 	}
 
-	/*
-	 * public static class HaackFormatter
+	/// <summary>Helper string building functions</summary>
+	public static class Str
+	{
+		/// <summary>A helper for gluing strings together</summary>
+		[DebuggerStepThrough] public static string Build(params object[] parts)
+		{
+			return Build(CachedSB, parts);
+		}
+
+		/// <summary>A helper for gluing strings together</summary>
+		[DebuggerStepThrough] public static string Build(StringBuilder sb, params object[] parts)
+		{
+			sb.Length = 0;
+			Append(sb, parts);
+			return sb.ToString();
+		}
+
+		/// <summary>Append object.ToString()s to 'sb'</summary>
+		[DebuggerStepThrough] public static void Append(StringBuilder sb, params object[] parts)
+		{
+			// Do not change this to automatically add white space,
+			parts.ForEach(p => sb.Append(p));
+		}
+
+		/// <summary>A thread local string builder, cached for better memory performance</summary>
+		public static StringBuilder CachedSB { get { return m_cached_sb ?? (m_cached_sb = new StringBuilder()); } }
+		[ThreadStatic] private static StringBuilder m_cached_sb; // no initialised for thread statics
+	}
+
+	/// <summary>An interface for string-like objects (typically StringBuilder or System.String)</summary>
+	public abstract class IString :IEnumerable<char>
+	{
+		protected readonly int m_ofs, m_length;
+		protected IString() :this(0, 0) {}
+		protected IString(int ofs, int length)
+		{
+			m_ofs = ofs;
+			m_length = length;
+		}
+
+		public abstract int Length       { get; }
+		public abstract char this[int i] { get; }
+		public abstract IString Substring(int ofs, int length);
+
+		/// <summary>
+		/// Split the string into substrings at places where 'pred' returns >= 0.
+		/// int Pred(IString s, int idx) - "returns the length of the separater that starts at 's[idx]'".
+		/// So < 0 means not a separater</summary>
+		public IEnumerable<IString> Split(Func<IString, int,int> pred)
+		{
+			if (Length == 0) yield break;
+			for (int s = 0, e, end = Length;;)
+			{
+				int sep_len = 0;
+				for (e = s; e != end && (sep_len = pred(this,e)) < 0; ++e) {}
+				yield return Substring(s, e - s);
+				if (e == end) break;
+				s = e + sep_len;
+			}
+		}
+		public IEnumerable<IString> Split(params char[] sep)
+		{
+			return Split((s,i) => sep.Contains(s[i]) ? 1 : -1);
+		}
+
+		/// <summary>Trim chars from the front/back of the string</summary>
+		public IString Trim(params char[] ch)
+		{
+			int s = 0, e = m_length;
+			for (; s != m_length && ch.Contains(this[s]); ++s) {}
+			for (; e-- > s && ch.Contains(this[e]); ) {}
+			return Substring(s, e);
+		}
+
+		IEnumerator<char> IEnumerable<char>.GetEnumerator()
+		{
+			for (int i = 0, iend = i + m_length; i != iend; ++i)
+				yield return this[i];
+		}
+		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+		{
+			return this.As<IEnumerable<char>>().GetEnumerator();
+		}
+
+		public static implicit operator string(IString s)        { return s.ToString(); }
+		public static implicit operator IString(string s)        { return new StringProxy(s); }
+		public static implicit operator IString(StringBuilder s) { return new StringBuilderProxy(s); }
+		public static implicit operator IString(char[] s)        { return new CharArrayProxy(s); }
+
+		public static IString From(string s        , int ofs = 0, int length = int.MaxValue) { return new StringProxy(s, ofs, length); }
+		public static IString From(StringBuilder s , int ofs = 0, int length = int.MaxValue) { return new StringBuilderProxy(s, ofs, length); }
+		public static IString From(char[] s        , int ofs = 0, int length = int.MaxValue) { return new CharArrayProxy(s, ofs, length); }
+
+		private class StringProxy :IString
+		{
+			private readonly string m_str;
+			public StringProxy(string s, int ofs = 0, int length = int.MaxValue)
+				:base(ofs, Math.Min(s.Length, length))
+			{
+				m_str = s;
+			}
+			public override int Length
+			{
+				get { return m_length; }
+			}
+			public override char this[int i]
+			{
+				get { return m_str[m_ofs + i]; }
+			}
+			public override IString Substring(int ofs, int length)
+			{
+				return new StringProxy(m_str, m_ofs + ofs, length);
+			}
+			public override string ToString()
+			{
+				return m_str.Substring(m_ofs, m_length);
+			}
+		}
+		private class StringBuilderProxy :IString
+		{
+			private readonly StringBuilder m_str;
+			public StringBuilderProxy(StringBuilder s, int ofs = 0, int length = int.MaxValue)
+				:base(ofs, Math.Min(s.Length, length))
+			{
+				m_str = s;
+			}
+			public override int Length
+			{
+				get { return m_str.Length; }
+			}
+			public override char this[int i]
+			{
+				get { return m_str[m_ofs + i]; }
+			}
+			public override IString Substring(int ofs, int length)
+			{
+				return new StringBuilderProxy(m_str, m_ofs + ofs, length);
+			}
+			public override string ToString()
+			{
+				return m_str.ToString(m_ofs, m_length);
+			}
+		}
+		private class CharArrayProxy :IString
+		{
+			private readonly char[] m_str;
+			public CharArrayProxy(char[] s, int ofs = 0, int length = int.MaxValue)
+				:base(ofs, Math.Min(s.Length, length))
+			{
+				m_str = s;
+			}
+			public override int Length
+			{
+				get { return m_str.Length; }
+			}
+			public override char this[int i]
+			{
+				get { return m_str[m_ofs + i]; }
+			}
+			public override IString Substring(int ofs, int length)
+			{
+				return new CharArrayProxy(m_str, m_ofs + ofs, length);
+			}
+			public override string ToString()
+			{
+				return new string(m_str, m_ofs, m_length);
+			}
+		}
+	}
+}
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using extn;
+
+	[TestFixture] public class TestStringExtns
+	{
+		[Test] public void StringWordWrap()
+		{
+			//                    "123456789ABCDE"
+			const string text   = "   A long string that\nis\r\nto be word wrapped";
+			const string result = "   A long\n"+
+									"string that\n"+
+									"is to be word\n"+
+									"wrapped";
+			string r = text.WordWrap(14);
+			Assert.AreEqual(result, r);
+		}
+		[Test] public void TestAppendLines()
+		{
+			const string s = "\n\n\rLine \n Line\n\r";
+			var str = s.LineList(s,s);
+			Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
+		}
+		[Test] public void Substring()
+		{
+			const string s1 = "aa {one} bb {two}";
+			const string s2 = "aa {} bb {two}";
+			const string s3 = "Begin dasd End";
+			const string s4 = "first:second";
+			const string s5 = "<32> regex </32>";
+
+			Assert.AreEqual("one", s1.Substring("{","}"));
+			Assert.AreEqual("", s2.Substring("{","}"));
+			Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
+			Assert.AreEqual("first", s4.Substring(null,":"));
+			Assert.AreEqual("second", s4.Substring(":", null));
+			Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
+			Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
+			Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
+		}
+		[Test] public void Levenshtein()
+		{
+			var str1 = "Paul Rulz";
+			var str2 = "Paul Was Here";
+			var d = str1.LevenshteinDistance(str2);
+			Assert.AreEqual(d, 8);
+		}
+		[Test] public void StringProxy()
+		{
+			Func<IString, int, char> func = (s,i) => s[i];
+
+			var s0 = "Hello World";
+			var s1 = new StringBuilder("Hello World");
+			var s2 = "Hello World".ToCharArray();
+
+			Assert.AreEqual(func(s0, 6), 'W');
+			Assert.AreEqual(func(s1, 6), 'W');
+			Assert.AreEqual(func(s2, 6), 'W');
+		}
+	}
+}
+#endif
+
+/*
+ * public static class HaackFormatter
 {
 }
 And the code for the supporting classes
@@ -439,60 +678,6 @@ foreach(var kv in parameters)
 return sb.ToString();
 }
 	 */
-}
-
-#if PR_UNITTESTS
-namespace pr.unittests
-{
-	using extn;
-
-	[TestFixture] public class TestStringExtns
-	{
-		[Test] public void StringWordWrap()
-		{
-			//                    "123456789ABCDE"
-			const string text   = "   A long string that\nis\r\nto be word wrapped";
-			const string result = "   A long\n"+
-									"string that\n"+
-									"is to be word\n"+
-									"wrapped";
-			string r = text.WordWrap(14);
-			Assert.AreEqual(result, r);
-		}
-		[Test] public void TestAppendLines()
-		{
-			const string s = "\n\n\rLine \n Line\n\r";
-			var str = s.LineList(s,s);
-			Assert.AreEqual("\n\n\rLine \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine+"Line \n Line"+Environment.NewLine, str);
-		}
-		[Test] public void Substring()
-		{
-			const string s1 = "aa {one} bb {two}";
-			const string s2 = "aa {} bb {two}";
-			const string s3 = "Begin dasd End";
-			const string s4 = "first:second";
-			const string s5 = "<32> regex </32>";
-
-			Assert.AreEqual("one", s1.Substring("{","}"));
-			Assert.AreEqual("", s2.Substring("{","}"));
-			Assert.AreEqual("dasd", s3.Substring("Begin "," End"));
-			Assert.AreEqual("first", s4.Substring(null,":"));
-			Assert.AreEqual("second", s4.Substring(":", null));
-			Assert.AreEqual("regex", s5.SubstringRegex(@"<\d+>\s", @"\s</\d+>"));
-			Assert.AreEqual("regex </32>", s5.SubstringRegex(@"<\d+>\s", null));
-			Assert.AreEqual("<32> regex", s5.SubstringRegex(null, @"\s</\d+>"));
-		}
-		[Test] public void Levenshtein()
-		{
-			var str1 = "Paul Rulz";
-			var str2 = "Paul Was Here";
-			var d = str1.LevenshteinDistance(str2);
-			Assert.AreEqual(d, 8);
-		}
-	}
-}
-#endif
-
 	//    /// <summary>Scanf style string parsing</summary>
 	//    public static int Scanf(this string str, string format, params object[] args)
 	//    {

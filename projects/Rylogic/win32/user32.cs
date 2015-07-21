@@ -20,6 +20,7 @@ namespace pr.win32
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]      public static extern IntPtr CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                           public static extern bool   DestroyWindow(IntPtr hwnd);
 		[DllImport("user32.dll")]                                                    public static extern short  GetAsyncKeyState(Keys vKey);
+		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]      public static extern bool   GetCaretPos(ref POINT point);
 		[DllImport("user32.dll")]                                                    public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
 		[DllImport("user32.dll")]                                                    public static extern int    GetDoubleClickTime();
 		[DllImport("user32.dll")]                                                    public static extern HWND   GetFocus();
@@ -29,6 +30,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern bool   GetScrollInfo(HWND hwnd, int BarType, ref SCROLLINFO lpsi);
 		[DllImport("user32.dll")]                                                    public static extern int    GetScrollPos(HWND hWnd, int nBar);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr GetSystemMenu(HWND hwnd, bool bRevert);
+		[DllImport("user32.dll")]                                                    public static extern bool   GetUpdateRect(HWND hwnd, out Win32.RECT rect, bool erase);
 		[DllImport("user32.dll", SetLastError=true)]                                 public static extern uint   GetWindowLong(HWND hWnd, int nIndex);
 		[DllImport("user32.dll")]                                                    public static extern bool   GetWindowRect(HWND hwnd, out RECT rect);
 		[DllImport("user32.dll", SetLastError = true)]                               public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
@@ -46,8 +48,9 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern bool   MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
 		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool   PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		[DllImport("user32.dll", EntryPoint="PostThreadMessage")]                    public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
-		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
-		[DllImport("user32.dll", EntryPoint="SendMessage")]                          public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
+		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);
 		[DllImport("user32.dll")]                                                    public static extern HWND   SetFocus(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern bool   SetForegroundWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                    public static extern IntPtr SetParent(HWND hWndChild, HWND hWndNewParent);
@@ -56,6 +59,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern int    SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, int dwThreadId);
 		[DllImport("user32.dll")]                                                    public static extern int    SetWindowLong(HWND hWnd, int nIndex, uint dwNewLong);
 		[DllImport("user32.dll")]                                                    public static extern bool   SetWindowPos(HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+		[DllImport("user32.dll")]                                                    public static extern int    ShowCaret(IntPtr hwnd);
 		[DllImport("user32.dll")]                                                    public static extern bool   ShowWindow(IntPtr hWnd, int nCmdShow);
 		[DllImport("user32.dll")]                                                    public static extern bool   ShowWindowAsync(HWND hwnd, int nCmdShow);
 		[DllImport("user32.dll")]                                                    public static extern int    ToAscii(int uVirtKey, int uScanCode, byte[] lpbKeyState, byte[] lpwTransKey, int fuState);

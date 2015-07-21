@@ -66,6 +66,21 @@ namespace pr.gfx
 			return brush;
 		}
 
+		/// <summary>Converts a bitmap strip into an array of bitmaps</summary>
+		public static Bitmap[] LoadStrip(Bitmap strip, int count)
+		{
+			if ((strip.Width % count) != 0)
+				throw new Exception("Bitmap strip width must divide evenly by the number of images in the strip");
+
+			var w = strip.Width / count;
+			var h = strip.Height;
+			var bm = new Bitmap[count];
+			for (int i = 0; i != count; ++i)
+				bm[i] = strip.Clone(new Rectangle(i * w, 0, w, h), strip.PixelFormat);
+
+			return bm;
+		}
+
 		public static void RectangleDropShadow(Graphics gfx, Rectangle rc, Color shadow_colour, int depth, int max_opacity)
 		{
 			// Generate a circle with dark centre and light outside

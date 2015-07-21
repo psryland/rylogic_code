@@ -794,6 +794,13 @@ namespace pr.extn
 		{
 			RemoveNodes(parent, e => e.Name == elem_name);
 		}
+
+		/// <summary>Returns the value of the attribute called 'name' for this element, or 'def' if the element does not have the attribute</summary>
+		public static string AttrValue(this XElement elem, XName name, string def = null)
+		{
+			var attr = elem.Attribute(name);
+			return attr != null ? attr.Value : def;
+		}
 	}
 
 	/// <summary>Xml Diff/Patch</summary>

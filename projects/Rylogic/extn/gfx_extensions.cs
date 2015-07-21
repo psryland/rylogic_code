@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using pr.gfx;
@@ -12,6 +13,12 @@ namespace pr.extn
 		public static Scope<GraphicsContainer> StateScope(this Graphics gfx)
 		{
 			return Scope<GraphicsContainer>.Create(gfx.BeginContainer, gfx.EndContainer);
+		}
+
+		/// <summary>Get the HDC associated with this graphics object. Releases in dispose</summary>
+		public static Scope<IntPtr> GetHdcScope(this Graphics gfx)
+		{
+			return Scope<IntPtr>.Create(gfx.GetHdc, gfx.ReleaseHdc);
 		}
 
 		/// <summary>Useful overload of DrawImage</summary>

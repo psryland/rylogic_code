@@ -235,6 +235,7 @@
     <Compile Include="gui\find_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="gui\layout.cs" />
     <Compile Include="gui\help_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -567,6 +568,17 @@
     <None Include="resources\green_left.png" />
     <None Include="resources\green_right.png" />
     <Content Include="run_tests.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="tom">
+      <Guid>{8CC497C9-A1DF-11CE-8098-00AA0047BE5D}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </COMReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="..\..\build\props\python_script.targets" />

@@ -220,5 +220,22 @@ namespace pr.extn
 		{
 			return HSV.FromColor(src);
 		}
+
+		/// <summary>Duplicate this font with the changes given</summary>
+		public static Font Dup(this Font prototype, FontStyle style)
+		{
+			return new Font(prototype, style);
+		}
+
+		/// <summary>Duplicate this font with the changes given</summary>
+		public static Font Dup(this Font prototype, FontFamily family = null, float? em_size = null, FontStyle? style = null, GraphicsUnit? unit = null)
+		{
+			return new Font(
+				family ?? prototype.FontFamily,
+				em_size ?? prototype.Size,
+				style ?? prototype.Style,
+				unit ?? prototype.Unit
+				);
+		}
 	}
 }

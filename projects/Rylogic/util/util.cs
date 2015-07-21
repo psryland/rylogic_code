@@ -73,6 +73,23 @@ namespace pr.util
 			junk.ForEach(d => d.Dispose());
 		}
 
+		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
+		[DebuggerStepThrough] public static T Dispose<T>(T doomed) where T:class, IDisposable
+		{
+			// Not as safe as the ref overload
+			if (doomed != null) doomed.Dispose();
+			return null;
+		}
+
+		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
+		[DebuggerStepThrough] public static List<T> DisposeAll<T>(List<T> doomed) where T:IDisposable
+		{
+			// Not as safe as the versions above
+			doomed.ForEach(x => x.Dispose());
+			doomed.Clear();
+			return null;
+		}
+
 		/// <summary>
 		/// State test for design mode.
 		/// Note: Use the Component extension method for a more reliable test</summary>
@@ -114,8 +131,8 @@ namespace pr.util
 		public static float  ParseOrDefault(string val, float  def) { float  o; return float .TryParse(val, out o) ? o : def; }
 		public static double ParseOrDefault(string val, double def) { double o; return double.TryParse(val, out o) ? o : def; }
 
-		/// <summary>Attempts to robustly convert 'value' into type 'T' using reflection and a load of special cases</summary>
-		public static object ConvertTo(object value, Type result_type)
+		/// <summary>Attempts to robustly convert 'value' into type 'result_type' using reflection and a load of special cases</summary>
+		public static object ConvertTo(object value, Type result_type, bool ignore_case = false)
 		{
 			var is_nullable = Nullable.GetUnderlyingType(result_type) != null;
 			var root_type   = Nullable.GetUnderlyingType(result_type) ?? result_type;
@@ -138,7 +155,7 @@ namespace pr.util
 			{
 				// Parse string
 				if (value is string)
-					return Enum.Parse(root_type, (string)value);
+					return Enum.Parse(root_type, (string)value, ignore_case);
 
 				// Convert from integral type
 				if (new[]{typeof(SByte), typeof(Int16), typeof(Int32), typeof(Int64), typeof(Byte), typeof(UInt16), typeof(UInt32), typeof(UInt64), typeof(String)}.Contains(value_type))
@@ -164,10 +181,10 @@ namespace pr.util
 		}
 		
 		/// <summary>Attempts to robustly convert 'value' into type 'T' using reflection and a load of special cases</summary>
-		public static T ConvertTo<T>(object value)
+		public static T ConvertTo<T>(object value, bool ignore_case = false)
 		{
 			if (value is T) return (T)value;
-			return (T)ConvertTo(value, typeof(T));
+			return (T)ConvertTo(value, typeof(T), ignore_case);
 		}
 
 		/// <summary>Helper for allocating an array of default constructed classes</summary>
@@ -184,6 +201,12 @@ namespace pr.util
 			T[] arr = new T[count];
 			for (int i = 0; i != count; ++i) arr[i] = construct(i);
 			return arr;
+		}
+
+		/// <summary>Like int.Parse() but for arrays</summary>
+		public static int[] ParseInts(string str, params char[] sep)
+		{
+			return str.Split(sep).Select(x => int.Parse(x)).ToArray();
 		}
 
 		/// <summary>Helper for allocating a dictionary preloaded with data</summary>
@@ -372,11 +395,17 @@ namespace pr.util
 				return src.ReadToEnd();
 		}
 
+		/// <summary>The directory that this application exe is in</summary>
+		public static string AppDirectory
+		{
+			get { return PathEx.Directory(Application.ExecutablePath); }
+		}
+
 		/// <summary>Returns the full path to a file or directory relative to the app executable</summary>
 		public static string ResolveAppPath(string relative_path = "")
 		{
-			var dir = Path.GetDirectoryName(Application.ExecutablePath) ?? string.Empty;
-			var path = Path.Combine(dir, relative_path);
+			var dir = PathEx.Directory(Application.ExecutablePath);
+			var path = PathEx.CombinePath(dir, relative_path);
 			return path;
 		}
 

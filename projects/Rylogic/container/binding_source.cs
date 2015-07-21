@@ -21,6 +21,14 @@ namespace pr.container
 			m_impl_previous_position = -1;
 		}
 
+		/// <summary>Get/Set whether the underlying list can be sorted by through this binding</summary>
+		[Browsable(false)]
+		public virtual bool AllowSort { get; set; }
+		public override bool SupportsSorting
+		{
+			get { return base.SupportsSorting && AllowSort; }
+		}
+
 		/// <summary>Set the current position</summary>
 		public new int Position
 		{
@@ -68,10 +76,16 @@ namespace pr.container
 				// Unhook
 				var bl = base.DataSource as BindingListEx<TItem>;
 				if (bl != null)
+				{
 					bl.ListChanging -= RaiseListChanging;
+					bl.ItemChanged  -= RaiseItemChanged;
+				}
 				var bs = base.DataSource as BindingSource<TItem>;
 				if (bs != null)
+				{
 					bs.ListChanging -= RaiseListChanging;
+					bs.ItemChanged  -= RaiseItemChanged;
+				}
 
 				// Set new data source
 				// Note: this can cause a first chance exception in some controls
@@ -83,10 +97,16 @@ namespace pr.container
 				// Hookup
 				bl = base.DataSource as BindingListEx<TItem>;
 				if (bl != null)
+				{
 					bl.ListChanging += RaiseListChanging;
+					bl.ItemChanged  += RaiseItemChanged;
+				}
 				bs = base.DataSource as BindingSource<TItem>;
 				if (bs != null)
+				{
 					bs.ListChanging += RaiseListChanging;
+					bs.ItemChanged  += RaiseItemChanged;
+				}
 
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
 			}
@@ -94,12 +114,19 @@ namespace pr.container
 
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
-		private void RaiseListChanging(object sender = null, ListChgEventArgs<TItem> args = null)
+		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
 			// I don't know why, but signing this up directly, as in:
 			// bl.ListChanging += ListChanging.Raise;
 			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
+		}
+
+		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
+		public event EventHandler<ItemChgEventArgs<TItem>> ItemChanged;
+		private void RaiseItemChanged(object sender, ItemChgEventArgs<TItem> args)
+		{
+			ItemChanged.Raise(sender, args);
 		}
 
 		/// <summary>Raised after the current list position changes (includes the previous poition)</summary>

@@ -340,7 +340,7 @@ namespace pr.extn
 				grid_width -= grid.RowHeadersWidth;
 
 			// Adjust for the vertical scroll bar being visible
-			if ((grid.GetScrollBarVisibility() & ScrollBars.Vertical) != 0)
+			if ((grid.ScrollBarVisibility() & ScrollBars.Vertical) != 0)
 				grid_width -= SystemInformation.VerticalScrollBarWidth;
 
 			var widths      = columns.Select(x => x.Visible ? grid_width * x.FillWeight : 0).ToArray();

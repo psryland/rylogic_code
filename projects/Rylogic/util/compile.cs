@@ -38,7 +38,7 @@ namespace pr.util
 		{
 			// Scan the file for Reference Assembles
 			var assemblies = new List<string>();
-			foreach (var line in source.Lines().Select(x => x.Trim(' ','\t','\r')))
+			foreach (var line in source.Lines().Select(x => (string)x.Trim(' ','\t','\r')))
 			{
 				if (!line.HasValue()) continue;
 				if (!line.StartsWith("//")) break;
@@ -116,31 +116,32 @@ namespace pr.unittests
 	{
 		[Test] public void Test0()
 		{
-			var rylogic_dll = Assembly.GetExecutingAssembly().Location;;
+			var rylogic_dll = PathEx.FileName(Assembly.GetExecutingAssembly().Location);
 
 			var source = @"
 			//Assembly: System.dll
+			//Assembly: System.Drawing.dll
 			//Assembly: System.Windows.Forms.dll
-			//Assembly: "+rylogic_dll+@"
 
+			using System;
+			using System.Drawing;
 			using System.Windows.Forms;
-			using pr.maths;
 
 			namespace Foo
 			{
 				public class Main
 				{
-					public m3x4 SayHello()
+					public Point SayHello()
 					{
 						//MessageBox.Show(""Boo!"");
-						return m3x4.Identity;
+						return new Point(1,2);
 					}
 				}
 			}";
 
 			var ass = RuntimeAssembly.FromString("Foo.Main", source);
-			var r = ass.Invoke<pr.maths.m3x4>("SayHello");
-			Assert.AreEqual(r, pr.maths.m3x4.Identity);
+			var r = ass.Invoke<System.Drawing.Point>("SayHello");
+			Assert.AreEqual(r, new System.Drawing.Point(1,2));
 		}
 	}
 }

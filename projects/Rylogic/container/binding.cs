@@ -13,7 +13,17 @@ namespace pr.container
 	/// <summary>
 	/// Represents a connection between a property on a data source object and
 	/// a collection of objects with properties that should be updated with the
-	/// value whenever it changes</summary>
+	/// value whenever it changes.<para/>
+	/// For example:<para/>
+	///   public class Person { public string Name {get; set;} }<para/>
+	///   var name_binding = new Binding<Person, string>(null, x => x.Name);<para/>
+	///   name_binding.Add(person_name_textbox, x => x.Text);<para/>
+	///   <para/>
+	///   name_binding.DataSource = new Person("Joe");<para/>
+	///   Assert.Equal(person_name_textbox.Text, "Joe");<para/>
+	///   <para/>
+	///   See unit tests for more detailed example
+	/// </summary>
 	public class Binding<TSrc, TValue> where TSrc:class
 	{
 		/// <summary>The collection of objects attached to this binding</summary>
@@ -101,17 +111,40 @@ namespace pr.container
 		/// <summary>Enumerate the collection of objects attached to this binding</summary>
 		public IEnumerable<object> BoundObjects { get { return m_bound.Select(x => x.Target); } }
 
-		/// <summary>Connect 'obj.property_name' to the binding value</summary>
-		public void Add(object obj, string property_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
+		/// <summary>Connect 'obj.property_or_method_name' to the binding value</summary>
+		public void Add(object obj, string property_or_method_name, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{
-			var prop = obj.GetType().GetProperty(property_name, flags);
-			if (prop == null)
-				throw new Exception("Property '{0}' not found on object type {1}".Fmt(property_name, obj.GetType().Name));
-			if (!prop.PropertyType.IsAssignableFrom(typeof(TValue)))
-				throw new Exception("Property type mismatch. Binding source type {0} is not assignable to a property with type {1}.".Fmt(typeof(TValue).Name, prop.PropertyType.Name));
+			var ty = obj.GetType();
 
-			var set = prop.GetSetMethod();
-			m_bound.Add(new Link(obj, set));
+			// Look for a property with the name 'property_or_method_name'
+			var prop = ty.GetProperty(property_or_method_name, flags);
+			if (prop != null)
+			{
+				// Property type must match the bound value type
+				if (!prop.PropertyType.IsAssignableFrom(typeof(TValue)))
+					throw new Exception("Property type mismatch. Binding source type {0} is not assignable to a property with type {1}.".Fmt(typeof(TValue).Name, prop.PropertyType.Name));
+
+				// Add the binding
+				var set = prop.GetSetMethod();
+				m_bound.Add(new Link(obj, set));
+				return;
+			}
+
+			// Look for a method with the name 'property_or_method_name'
+			var meth = ty.GetMethod(property_or_method_name, flags);
+			if (meth != null)
+			{
+				// Method must take a single parameter that is the property
+				var parms = meth.GetParameters();
+				if (parms.Length != 1 || !parms[0].ParameterType.IsAssignableFrom(typeof(TValue)))
+					throw new Exception("Method signiture mismatch. The bound method must take a single parameter of type {0}.".Fmt(typeof(TValue).Name));
+
+				// Add the binding
+				m_bound.Add(new Link(obj, meth));
+				return;
+			}
+
+			throw new Exception("Property or Method '{0}' not found on object type {1}".Fmt(property_or_method_name, ty.Name));
 		}
 		public void Add<U,Ret>(U obj, Expression<Func<U,Ret>> expression, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{

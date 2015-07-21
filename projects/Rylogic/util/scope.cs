@@ -6,12 +6,17 @@ namespace pr.util
 	public class Scope :IDisposable
 	{
 		private readonly Action m_on_exit;
+
+		/// <summary>Construct the scope object</summary>
 		public static Scope Create(Action set, Action restore)
 		{
 			return new Scope(set, restore);
 		}
-		public Scope(Action on_enter, Action on_exit)
+
+		/// <summary>Use 'Create'</summary>
+		private Scope(Action on_enter, Action on_exit)
 		{
+			// Note: important to save 'on_exit' before calling 'on_enter' in case it throws
 			m_on_exit = on_exit;
 			if (on_enter != null)
 				on_enter();
@@ -31,11 +36,17 @@ namespace pr.util
 		/// <summary>The state object created on construction</summary>
 		public TState State { get; private set; }
 
+		/// <summary>Allow implicit conversion to the stored state type</summary>
+		public static implicit operator TState(Scope<TState> s) { return s.State; }
+
+		/// <summary>Construct the scope object</summary>
 		public static Scope<TState> Create(Func<TState> set, Action<TState> restore)
 		{
 			return new Scope<TState>(set, restore);
 		}
-		public Scope(Func<TState> on_enter, Action<TState> on_exit)
+
+		/// <summary>Use 'Create'</summary>
+		private Scope(Func<TState> on_enter, Action<TState> on_exit)
 		{
 			m_on_exit = on_exit;
 			if (on_enter != null)

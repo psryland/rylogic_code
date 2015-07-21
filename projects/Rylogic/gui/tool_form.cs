@@ -79,7 +79,7 @@ namespace pr.gui
 		/// <summary>True if the 'Pin' state should be used</summary>
 		public bool PinWindow
 		{
-			get { return m_pin_window; }
+			get { return m_pin_window && PinTarget != null; }
 			set
 			{
 				m_pin_window = value;
@@ -355,7 +355,12 @@ namespace pr.gui
 		/// <summary>Snap to the parent window</summary>
 		private bool Snap()
 		{
-			if (Owner == null) { m_snapped = false; return false; }
+			if (Owner == null || PinTarget == null)
+			{
+				m_snapped = false;
+				return false;
+			}
+
 			var frame = TargetFrame;
 			int snap_dist = m_snapped ? 2 : 5;
 			

@@ -10,6 +10,13 @@ namespace pr.extn
 {
 	public static class ToolStripExtensions
 	{
+		/// <summary>Add and return an item to this collection</summary>
+		public static T Add2<T>(this ToolStripItemCollection items, T item) where T:ToolStripItem
+		{
+			items.Add(item);
+			return item;
+		}
+
 		/// <summary>Exports location data for this tool strip container</summary>
 		public static ToolStripLocations SaveLocations(this ToolStripContainer cont)
 		{
@@ -151,6 +158,8 @@ namespace pr.extn
 			{
 				var tag_data = new StatusTagData();
 				status.Click += tag_data.HandleStatusClick;
+				status.MouseEnter += tag_data.HandleMouseEnter;
+				status.MouseLeave += tag_data.HandleMouseLeave;
 				status.Tag = tag_data;
 			}
 			else if (!(status.Tag is StatusTagData))
@@ -176,10 +185,6 @@ namespace pr.extn
 			// If a click handler has been provided, subscribe
 			data.m_on_click = on_click;
 		}
-		public static void SetStatusMessage(this ToolStripStatusLabel status, string msg, bool bold, Color fr_color, Color bk_color)
-		{
-			status.SetStatusMessage(msg, null, null, bold, fr_color, bk_color, TimeSpan.FromSeconds(2), null);
-		}
 
 		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
 		private class StatusTagData
@@ -188,8 +193,18 @@ namespace pr.extn
 			public EventHandler m_on_click;
 			public void HandleStatusClick(object sender, EventArgs args)
 			{
-				// Forward to the user handler
-				m_on_click.Raise(sender, args);
+				m_on_click.Raise(sender, args); // Forward to the user handler
+			}
+			public void HandleMouseEnter(object sender, EventArgs args)
+			{
+				var lbl = sender.As<ToolStripStatusLabel>();
+				var is_link = m_on_click != null;
+				if (is_link) lbl.Owner.Cursor = Cursors.Hand;
+			}
+			public void HandleMouseLeave(object sender, EventArgs args)
+			{
+				var lbl = sender.As<ToolStripStatusLabel>();
+				lbl.Owner.Cursor = Cursors.Default;
 			}
 		}
 	}

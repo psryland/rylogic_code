@@ -1682,8 +1682,8 @@ namespace pr.gfx
 				// resize the child control upon resize of the parent HWND.
 				case Win32.WM_SIZE:
 					{
-						int width  = (int)Win32.GetLoword(lParam.ToInt32());
-						int height = (int)Win32.GetHiword(lParam.ToInt32());
+						int width  = (int)Win32.LoWord(lParam.ToInt32());
+						int height = (int)Win32.HiWord(lParam.ToInt32());
 						Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, width, height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
 						handled = true;
 						break;
@@ -1692,9 +1692,9 @@ namespace pr.gfx
 				// Watch for edit notifications
 				case Win32.WM_COMMAND:
 					{
-						var notif = Win32.GetHiword(wParam.ToInt32());
-						var id    = Win32.GetLoword(wParam.ToInt32());
-						if (notif == Win32.EditCtrl.EN_CHANGE && id == m_ctrl_id)
+						var notif = Win32.HiWord(wParam.ToInt32());
+						var id    = Win32.LoWord(wParam.ToInt32());
+						if (notif == Win32.EN_CHANGE && id == m_ctrl_id)
 							TextChanged.Raise(this);
 						break;
 					}

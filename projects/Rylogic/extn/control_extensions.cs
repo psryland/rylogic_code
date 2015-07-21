@@ -116,6 +116,13 @@ namespace pr.extn
 			return ctrl.Invoke(action);
 		}
 
+		/// <summary>Add to the controls collection and return the control for method chaining</summary>
+		public static T Add2<T>(this Control.ControlCollection collection, T ctrl) where T:Control
+		{
+			collection.Add(ctrl);
+			return ctrl;
+		}
+
 		/// <summary>Return 'Tag' for this control as type 'T'. Creates a new T if Tag is currently null</summary>
 		public static T TagAs<T>(this Control ctrl) where T:new()
 		{
@@ -212,6 +219,24 @@ namespace pr.extn
 					});
 		}
 
+		/// <summary>Block scrolling events</summary>
+		public static Scope SuspendScroll(this Control ctrl)
+		{
+			var scroll_pos = new Win32.POINT();
+			var event_mask = 0;
+ 			return Scope.Create(
+				() =>
+					{
+						Win32.SendMessage(ctrl.Handle, Win32.EM_GETSCROLLPOS, (IntPtr)0, ref scroll_pos);
+						event_mask = Win32.SendMessage(ctrl.Handle, Win32.EM_GETEVENTMASK, 0, 0);
+					},
+				() =>
+					{
+						Win32.SendMessage(ctrl.Handle, Win32.EM_SETSCROLLPOS, (IntPtr)0, ref scroll_pos);
+						Win32.SendMessage(ctrl.Handle, Win32.EM_SETEVENTMASK, 0, event_mask);
+					});
+		}
+
 		/// <summary>Recursively calls 'GetChildAtPoint' until the control with no children at that point is found</summary>
 		public static Control GetChildAtScreenPointRec(this Control ctrl, Point screen_pt)
 		{
@@ -278,13 +303,39 @@ namespace pr.extn
 		}
 
 		/// <summary>Return the ScrollBars value that represents the current visibility of the scroll bars</summary>
-		public static ScrollBars GetScrollBarVisibility(this Control ctrl)
+		public static ScrollBars ScrollBarVisibility(this Control ctrl)
 		{
 			var sty = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_STYLE);
 			var vis = ScrollBars.None;
 			if ((sty & Win32.WS_HSCROLL) != 0) vis |= ScrollBars.Horizontal;
 			if ((sty & Win32.WS_VSCROLL) != 0) vis |= ScrollBars.Vertical;
 			return vis;
+		}
+		public static bool ScrollBarHVisible(this Control ctrl)
+		{
+			return ctrl.ScrollBarVisibility().HasFlag(System.Windows.Forms.ScrollBars.Horizontal);
+		}
+		public static bool ScrollBarVVisible(this Control ctrl)
+		{
+			return ctrl.ScrollBarVisibility().HasFlag(System.Windows.Forms.ScrollBars.Vertical);
+		}
+
+		/// <summary>Return a form that wraps 'ctrl'</summary>
+		public static T FormWrap<T>(this Control ctrl, Point? loc = null, Size? sz = null) where T:Form, new()
+		{
+			var f = new T();
+			if (loc.HasValue)
+			{
+				f.Location = loc.Value;
+				f.StartPosition = FormStartPosition.Manual;
+			}
+			if (sz.HasValue)
+			{
+				f.Size = sz.Value;
+			}
+			ctrl.Dock = DockStyle.Fill;
+			f.Controls.Add(ctrl);
+			return f;
 		}
 	}
 

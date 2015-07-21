@@ -93,7 +93,7 @@ namespace pr.unittests
 							catch (Exception ex)
 							{
 								if (ex is TargetInvocationException) ex = ex.InnerException;
-								outp.WriteLine("\r\nTest {0} Failed\r\n{1}".Fmt(test.Name, ex.MessageFull()));
+								outp.WriteLine("\r\nTest {0} Failed\r\n{1}\r\n{2}".Fmt(test.Name, ex.MessageFull(), ex.StackTrace));
 								outp.Flush();
 								++failed;
 							}

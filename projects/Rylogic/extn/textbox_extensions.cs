@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using pr.common;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.extn
 {
@@ -58,6 +59,14 @@ namespace pr.extn
 			var idx = cb.SelectionStart;
 			cb.SelectedText = text;
 			cb.SelectionStart = idx + text.Length;
+		}
+
+		/// <summary>Show or hide the caret for this textbase. Returns true if sucessful. Successful Show/Hide calls must be matched</summary>
+		public static bool ShowCaret(this TextBoxBase tb, bool show)
+		{
+			return show
+				? Win32.ShowCaret(tb.Handle) != 0
+				: Win32.HideCaret(tb.Handle) != 0;
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>

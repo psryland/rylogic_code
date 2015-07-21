@@ -10,7 +10,7 @@ using pr.extn;
 using pr.maths;
 using pr.util;
 
-namespace pr.gui
+namespace pr.gui_old
 {
 	/// <summary>
 	/// VT terminal emulation control
@@ -21,7 +21,7 @@ namespace pr.gui
 	///   Send the user input to the remote device/system
 	///   Receive data from the remote device/system
 	///   Use 'Output()' to display the terminal output in the control</summary>
-	public class VT100 :RichTextBox ,ISupportInitialize
+	public class VT100 :pr.gui.RichTextBox ,ISupportInitialize
 	{
 		/// <summary>The state of the terminal</summary>
 		private class State
@@ -885,77 +885,80 @@ namespace pr.gui
 	}
 
 	/// <summary>Settings for the VT100 terminal</summary>
-	[TypeConverter(typeof(VT100Settings))]
-	public class VT100Settings :GenericTypeConverter<VT100Settings>
+	[TypeConverter(typeof(VT100Settings.TyConv))]
+	public class VT100Settings :SettingsSet<VT100Settings>
 	{
 		public enum ENewLineMode { CR, LF, CR_LF, }
 
 		/// <summary>True if local characters are written into the control</summary>
-		public bool LocalEcho {get;set;}
+		public bool LocalEcho
+		{
+			get { return get(x => x.LocalEcho); }
+			set { set(x => x.LocalEcho, value); }
+		}
 
 		/// <summary>The tab width</summary>
-		public int TabSize {get;set;}
+		public int TabSize
+		{
+			get { return get(x => x.TabSize); }
+			set { set(x => x.TabSize, value); }
+		}
 
 		/// <summary>The width of the terminal in characters</summary>
-		public int TerminalWidth {get;set;}
+		public int TerminalWidth
+		{
+			get { return get(x => x.TerminalWidth); }
+			set { set(x => x.TerminalWidth, value); }
+		}
 
 		/// <summary>Describes the format of received new lines</summary>
-		public ENewLineMode NewlineRecv {get;set;}
+		public ENewLineMode NewlineRecv
+		{
+			get { return get(x => x.NewlineRecv); }
+			set { set(x => x.NewlineRecv, value); }
+		}
 
 		/// <summary>Describes the format of sent new lines</summary>
-		public ENewLineMode NewlineSend {get;set;}
+		public ENewLineMode NewlineSend
+		{
+			get { return get(x => x.NewlineSend); }
+			set { set(x => x.NewlineSend, value); }
+		}
 
 		/// <summary>The back colour for the control</summary>
-		public Color BackColour {get;set;}
+		public Color BackColour
+		{
+			get { return get(x => x.BackColour); }
+			set { set(x => x.BackColour, value); }
+		}
 
 		/// <summary>The fore colour for the control</summary>
-		public Color ForeColour {get;set;}
+		public Color ForeColour
+		{
+			get { return get(x => x.ForeColour); }
+			set { set(x => x.ForeColour, value); }
+		}
 
 		/// <summary>Output hex data rather than parsing terminal data</summary>
-		public bool HexOutput {get;set;}
+		public bool HexOutput
+		{
+			get { return get(x => x.HexOutput); }
+			set { set(x => x.HexOutput, value); }
+		}
 
 		public VT100Settings()
 		{
-			LocalEcho = true;
-			TabSize = 8;
+			LocalEcho     = true;
+			TabSize       = 8;
 			TerminalWidth = 100;
-			NewlineRecv = ENewLineMode.LF;
-			NewlineSend = ENewLineMode.CR;
-			BackColour = Color.White;
-			ForeColour = Color.Black;
-			HexOutput = false;
+			NewlineRecv   = ENewLineMode.LF;
+			NewlineSend   = ENewLineMode.CR;
+			BackColour    = Color.White;
+			ForeColour    = Color.Black;
+			HexOutput     = false;
 		}
 
-		public XElement ToXml(XElement node)
-		{
-			node.Add
-			(
-				LocalEcho     .ToXml("local_echo"    , false),
-				TabSize       .ToXml("tab_size"      , false),
-				TerminalWidth .ToXml("terminal_width", false),
-				NewlineRecv   .ToXml("newline_recv"  , false),
-				NewlineSend   .ToXml("newline_send"  , false),
-				BackColour    .ToXml("back_colour"   , false),
-				ForeColour    .ToXml("fore_colour"   , false)
-			);
-			return node;
-		}
-		public void FromXml(XElement node)
-		{
-			foreach (var n in node.Elements())
-			{
-				switch (n.Name.LocalName)
-				{
-				default: break;
-				case "local_echo":     LocalEcho     = n.As<bool>(); break;
-				case "tab_size":       TabSize       = n.As<int>(); break;
-				case "terminal_width": TerminalWidth = n.As<int>(); break;
-				case "newline_recv":   NewlineRecv   = n.As<ENewLineMode>(); break;
-				case "newline_send":   NewlineSend   = n.As<ENewLineMode>(); break;
-				case "back_colour":    BackColour    = n.As<Color>(); break;
-				case "fore_colour":    ForeColour    = n.As<Color>(); break;
-				}
-			}
-		}
+		/// <summary>Type converter for displaying in a property grid</summary>
+		private class TyConv :GenericTypeConverter<VT100Settings> {}
 	}
 }

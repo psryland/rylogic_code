@@ -1,12 +1,210 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows.Forms;
+using System.Windows.Forms.Integration;
+using System.Windows.Interop;
+using pr.common;
+using pr.extn;
+using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
-	public class Scintilla
+	public class Scintilla :ElementHost
 	{
+		/// <summary>The scintilla direct function for non-message-based control</summary>
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		private delegate int DirectFunction(IntPtr ptr, int code, int wparam, int lparam);
+
+		private Ctrl m_ctrl;
+		private DirectFunction m_func;
+		private IntPtr m_ptr;
+
+		static Scintilla()
+		{
+	//		try { LoadDll(); }
+	//		catch (Exception) {}
+		}
+		public Scintilla()
+		{
+			Child = m_ctrl = new Ctrl(this);
+			m_func = MarshalEx.PtrToDelegate<DirectFunction>((IntPtr)Win32.SendMessage(m_ctrl.Handle, SCI_GETDIRECTFUNCTION, 0, 0));
+			m_ptr  = (IntPtr)Win32.SendMessage(m_ctrl.Handle, SCI_GETDIRECTPOINTER, 0, 0);
+		}
+
+		/// <summary>Call the direct function</summary>
+		protected int Cmd(int code, int wparam, int lparam)
+		{
+			return m_func(m_ptr, code, wparam, lparam);
+		}
+
+		/// <summary>Clear all text from the control</summary>
+		public void ClearAll()
+		{
+			Cmd(SCI_CLEARALL, 0, 0);
+		}
+
+		/// <summary>Gets the length of the text in the control</summary>
+		public int TextLength
+		{
+			get { return m_text != null ? m_text.Length : Cmd(SCI_GETTEXTLENGTH, 0, 0); }
+		}
+
+		/// <summary>Gets or sets the current text</summary>
+		public new string Text
+		{
+			get { return m_text != null ? m_text : GetText(); }
+			set { SetText(value); }
+		}
+		private string m_text;
+
+		/// <summary>Read the text out of the control</summary>
+		private string GetText()
+		{
+			var len = TextLength;
+			using (var bytes = MarshalEx.AllocHGlobal(len + 1))
+			{
+				var num = Cmd(SCI_GETTEXT, len + 1, (int)bytes.State);
+				return Marshal.PtrToStringAnsi(bytes.State, num);
+			}
+		}
+
+		/// <summary>Set the text in the control</summary>
+		private void SetText(string text)
+		{
+			if (!text.HasValue())
+				ClearAll();
+			else
+			{
+				using (var str = MarshalEx.AllocAnsiString(text))
+					Cmd(SCI_SETTEXT, 0, (int)str.State);
+			}
+
+			TextChanged.Raise(this);
+		}
+
+		/// <summary>Raised when text in the control is changed</summary>
+		public new event EventHandler TextChanged;
+
+		/// <summary>The wndproc of the hosted control</summary>
+		protected virtual void WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+		{}
+			
+		#region Control
+		private class Ctrl :HwndHost ,IKeyboardInputSink
+		{
+			// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
+			private Scintilla m_this;
+			private IntPtr m_wrap;
+			private IntPtr m_ctrl;
+			private uint m_ctrl_id;
+
+			/// <summary>
+			/// 'hwndparent' is the hwnd of the ElementHost that will contain this HwndHost
+			/// 'ctrl_id' sets the id of the control</summary>
+			public Ctrl(Scintilla this_, ushort ctrl_id = 0)
+			{
+				m_this = this_;
+				m_ctrl_id = (uint)ctrl_id;
+
+				// Create the control at construction time so that the text content can be set before the control is displayed.
+				m_wrap = Win32.CreateWindowEx(0, "static", "", Win32.WS_CHILD, 0, 0, 190, 190, m_this.Handle, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+				if (m_wrap == IntPtr.Zero)
+					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
+
+				m_ctrl = Win32.CreateWindowEx(0, "Scintilla", "", Win32.WS_CHILD|Win32.WS_VISIBLE|Win32.WS_HSCROLL|Win32.WS_VSCROLL, 0, 0, 190, 190, m_wrap, (IntPtr)m_ctrl_id, IntPtr.Zero, IntPtr.Zero);
+				if (m_ctrl == IntPtr.Zero)
+					throw new Exception("Failed to create editor control. Error (0x{0:8X}) : {1}".Fmt(Win32.GetLastError(), Win32.GetLastErrorString()));
+			}
+			public new IntPtr Handle { get { return m_ctrl; } }
+
+			protected override HandleRef BuildWindowCore(HandleRef parent)
+			{
+				Win32.SetParent(m_wrap, parent.Handle);
+				return new HandleRef(this, m_wrap);
+			}
+			protected override void DestroyWindowCore(HandleRef hwnd)
+			{
+				Win32.DestroyWindow(hwnd.Handle);
+			}
+			protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+			{
+				m_this.WndProc(hwnd, msg, wparam, lparam, ref handled);
+				if (!handled)
+				{
+					switch ((uint)msg)
+					{
+					// Since this is the WindowProc of the parent HWND, we need do extra work in order to 
+					// resize the child control upon resize of the parent HWND.
+					case Win32.WM_SIZE:
+						{
+							int width  = (int)Win32.LoWord(lparam.ToInt32());
+							int height = (int)Win32.HiWord(lparam.ToInt32());
+							Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, width, height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
+							handled = true;
+							break;
+						}
+
+					// Watch for edit notifications
+					case Win32.WM_COMMAND:
+						{
+							var notif = Win32.HiWord(wparam.ToInt32());
+							var id    = Win32.LoWord(wparam.ToInt32());
+							if (notif == Win32.EN_CHANGE && id == m_ctrl_id)
+								m_this.TextChanged.Raise(this);
+							break;
+						}
+
+					case Win32.WM_DESTROY:
+						{
+							// Copy the control text before WM_DESTROY
+							m_this.m_text = m_this.Text;
+							break;
+						}
+					}
+				}
+				return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
+			}
+
+			#region IKeyboardInputSink
+			bool IKeyboardInputSink.TranslateAccelerator(ref MSG msg, System.Windows.Input.ModifierKeys modifiers)
+			{
+				bool handled = false;
+				m_this.WndProc(msg.hwnd, msg.message, msg.wParam, msg.lParam, ref handled);
+				if (!handled)
+				{
+					if (msg.message == Win32.WM_KEYDOWN)
+					{
+						if (Win32.GetFocus() == m_ctrl)
+						{
+							// We want tabs, arrow keys, and return/enter when the control is focused
+							if (msg.wParam == (IntPtr)Win32.VK_TAB ||
+								msg.wParam == (IntPtr)Win32.VK_UP ||
+								msg.wParam == (IntPtr)Win32.VK_DOWN ||
+								msg.wParam == (IntPtr)Win32.VK_LEFT ||
+								msg.wParam == (IntPtr)Win32.VK_RIGHT ||
+								msg.wParam == (IntPtr)Win32.VK_RETURN)
+							{
+								Win32.SendMessage(m_ctrl, (uint)msg.message, msg.wParam, msg.lParam);
+								handled = true;
+							}
+						}
+					}
+				}
+				return handled;
+			}
+			bool IKeyboardInputSink.TabInto(System.Windows.Input.TraversalRequest request)
+			{
+				Win32.SetFocus(m_ctrl);
+				return true;
+			}
+			#endregion
+		}
+		#endregion
+
 		#region Message Ids
 		public const int INVALID_POSITION                              = -1;
 		public const int SCI_START                                     =  2000;
@@ -976,6 +1174,20 @@ namespace pr.gui
 		public const int SCN_HOTSPOTRELEASECLICK                       =  2027;
 		public const int SCN_FOCUSIN                                   =  2028;
 		public const int SCN_FOCUSOUT                                  =  2029;
+		#endregion
+
+		#region Scintilla Dll
+		public const string Dll = "scintilla";
+
+		public static bool ScintillaAvailable { get { return m_module != IntPtr.Zero; } }
+		private static IntPtr m_module = IntPtr.Zero;
+
+		/// <summary>Load the scintilla dll</summary>
+		public static void LoadDll(string dir = @".\lib\$(platform)")
+		{
+			if (m_module != IntPtr.Zero) return; // Already loaded
+			m_module = Win32.LoadDll(Dll+".dll", dir);
+		}
 		#endregion
 	}
 }

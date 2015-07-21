@@ -80,7 +80,7 @@ namespace pr.gui
 	}
 
 	/// <summary>Base class for custom grid cells</summary>
-	public class DataGridViewCustomCellBase :DataGridViewCell
+	public class DataGridViewCustomCellBase<TEditor> :DataGridViewCell where TEditor:DataGridViewCellEditBase
 	{
 		// From MSDN: http://msdn.microsoft.com/en-us/library/aa730881(v=vs.80).aspx
 		// Key methods to override:
@@ -137,8 +137,23 @@ namespace pr.gui
 		private const byte Flags_IgnoreNextMouseClick = 1 << 0;
 		private byte m_flags;
 
-		// BeginEdit is triggered on the second click of the current cell.
-		// Not from a double click.
+		// Start/stop editing
+		public override void InitializeEditingControl(int rowIndex, object initialFormattedValue, DataGridViewCellStyle dataGridViewCellStyle)
+		{
+			System.Diagnostics.Debug.Assert(ReferenceEquals(this, DataGridView[ColumnIndex, rowIndex]), ""); // 'this' cell is the template cell?, not the cell being edited
+			base.InitializeEditingControl(rowIndex, initialFormattedValue, dataGridViewCellStyle);
+			var ctrl = DataGridView.EditingControl as TEditor;
+			if (ctrl != null)
+				SetInitialValue(ctrl, initialFormattedValue);
+		}
+
+		/// <summary>Set the initial state of the editing control</summary>
+		protected virtual void SetInitialValue(TEditor ctrl, object formatted_value)
+		{
+			ctrl.Value = formatted_value;
+		}
+
+		// BeginEdit is triggered on the second click of the current cell. Not from a double click.
 		protected override void OnEnter(int rowIndex, bool throughMouseClick)
 		{
 			base.OnEnter(rowIndex, throughMouseClick);
@@ -169,6 +184,156 @@ namespace pr.gui
 			}
 		}
 	}
+
+	#region Rich Text Box Cell/Column
+
+	/// <summary>A user control for editing rich text box cells</summary>
+	public class RichTextBoxEditor :DataGridViewCellEditBase
+	{
+		public RichTextBoxEditor()
+		{
+			InitializeComponent();
+
+			m_rtb.TextChanged += NotifyValueChanged;
+		}
+
+		/// <summary>Access the RTB control</summary>
+		public RichTextBox RichTextBox { get { return m_rtb; } }
+		private RichTextBox m_rtb;
+
+		/// <summary>Get/Set the current editor value</summary>
+		public override object Value
+		{
+			get { return m_rtb.Rtf; }
+			set { m_rtb.Rtf = (string)value; }
+		}
+
+		// Overrides
+		public override void PrepareEditingControlForEdit(bool select_all)
+		{
+			m_rtb.Focus();
+			if (select_all)
+				m_rtb.SelectAll();
+		}
+		public override bool EditingControlWantsInputKey(Keys key_data, bool wants_input_key)
+		{
+			var key_code = (Keys)(key_data & Keys.KeyCode);
+			if (key_code == Keys.Return) return true;
+			return base.EditingControlWantsInputKey(key_data, wants_input_key);
+		}
+		protected override bool ProcessKeyPreview(ref Message m)
+		{
+			//if (m.Msg == Win32.WM_KEYDOWN)
+			//{}
+			return base.ProcessKeyPreview(ref m);
+		}
+		protected override bool ProcessDialogKey(Keys key_data)
+		{
+			//var key_code = (Keys)(key_data & Keys.KeyCode);
+			//if (key_code == Keys.Tab)
+			//{}
+			return base.ProcessDialogKey(key_data);
+		}
+		private void InitializeComponent()
+		{
+			this.m_rtb = new RichTextBox();
+			this.SuspendLayout();
+			// 
+			// m_rtb
+			// 
+			this.m_rtb.Dock = DockStyle.Fill;
+			this.m_rtb.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_rtb.Location = new System.Drawing.Point(0, 0);
+			this.m_rtb.Margin = new System.Windows.Forms.Padding(0);
+			this.m_rtb.AcceptsTab = false;
+			this.m_rtb.Multiline = true;
+			this.m_rtb.Name = "m_rtb";
+			this.m_rtb.Size = new System.Drawing.Size(150, 14);
+			this.m_rtb.TabIndex = 0;
+			// 
+			// RichTextBoxEditor
+			// 
+			this.BackColor = System.Drawing.SystemColors.ControlDarkDark;
+			this.Controls.Add(this.m_rtb);
+			this.Margin = new System.Windows.Forms.Padding(0);
+			this.Name = "RichTextBoxEditor";
+			this.Size = new System.Drawing.Size(150, 30);
+			this.ResumeLayout(false);
+			this.PerformLayout();
+		}
+	}
+
+	/// <summary>Column type for value pairs</summary>
+	public class DataGridViewRichTextBoxColumn :DataGridViewCustomColumnBase<DataGridViewRichTextBoxCell>
+	{
+		public DataGridViewRichTextBoxColumn()
+			:base(new DataGridViewRichTextBoxCell())
+		{}
+	}
+
+	/// <summary>DataGridView cell for displaying pairs of values</summary>
+	public class DataGridViewRichTextBoxCell :DataGridViewCustomCellBase<RichTextBoxEditor>
+	{
+		public override Type   EditType           { get { return typeof(RichTextBoxEditor); } }
+		public override Type   ValueType          { get { return typeof(string); } }
+		public override Type   FormattedValueType { get { return typeof(string); } }
+		public override object DefaultNewRowValue { get { return string.Empty; } }
+
+		/// <summary>Set the initial state of the editing control</summary>
+		protected override void SetInitialValue(RichTextBoxEditor ctrl, object formatted_value)
+		{
+			try
+			{
+				ctrl.RichTextBox.Rtf = (string)formatted_value;
+			}
+			catch (ArgumentException)
+			{
+				ctrl.Text = (string)formatted_value;
+			}
+		}
+
+		public override bool KeyEntersEditMode(KeyEventArgs e)
+		{
+			return e.KeyCode == Keys.Return || base.KeyEntersEditMode(e);
+		}
+		protected override Rectangle GetContentBounds(Graphics graphics, DataGridViewCellStyle cellStyle, int rowIndex)
+		{
+			var rtf = DataGridView.Rows[rowIndex].DataBoundItem.As<string>();
+			try   { Rtb.Rtf  = rtf; }
+			catch { Rtb.Text = rtf; }
+			return new Rectangle(Point.Empty, Rtb.PreferredSize);
+			
+			//return base.GetContentBounds(graphics, cellStyle, rowIndex);
+		}
+		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
+		{
+			base.Paint(gfx, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
+
+			try   { Rtb.Rtf  = (string)formatted_value; }
+			catch { Rtb.Text = (string)formatted_value; }
+			Rtb.BackColor = Selected ? cell_style.SelectionBackColor : cell_style.BackColor;
+			Rtb.ForeColor = Selected ? cell_style.SelectionForeColor : cell_style.ForeColor;
+			var img = RichTextBox.Print(Rtb, cell_bounds.Width, cell_bounds.Height);
+			if (img != null)
+				gfx.DrawImage(img, cell_bounds.Left, cell_bounds.Top);
+			//var text = (string)value;
+			//var col = OwningColumn.As<DataGridViewRichTextBoxColumn>();
+
+			//using (var bsh = new SolidBrush(Selected ? cell_style.SelectionBackColor : cell_style.BackColor))
+			//	gfx.FillRectangle(bsh, cell_bounds);
+			//PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
+			//using (var bsh = new SolidBrush(Selected ? col.ValueColour0.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour0))
+			//	gfx.DrawString(pair.Item1.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 1);
+			//using (var bsh = new SolidBrush(Selected ? col.ValueColour1.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour1))
+			//	gfx.DrawString(pair.Item2.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 15);
+		}
+
+		/// <summary>Instance used for rendering</summary>
+		private static RichTextBox Rtb { get { return m_rtb ?? (m_rtb = new RichTextBox()); } }
+		private static RichTextBox m_rtb;
+	}
+
+	#endregion
 
 	#region Value Pair Cell/Column
 
@@ -384,7 +549,7 @@ namespace pr.gui
 	}
 
 	/// <summary>DataGridView cell for displaying pairs of values</summary>
-	public class DataGridViewValuePairCell<T0,T1> :DataGridViewCustomCellBase
+	public class DataGridViewValuePairCell<T0,T1> :DataGridViewCustomCellBase<ValuePairEditCtrl<T0,T1>>
 	{
 		public override Type   EditType           { get { return typeof(ValuePairEditCtrl<T0,T1>); } }
 		public override Type   ValueType          { get { return typeof(Tuple<T0,T1>); } }
@@ -573,7 +738,7 @@ namespace pr.gui
 	}
 
 	/// <summary>A data grid view cell containing a track bar</summary>
-	public class DataGridViewTrackBarCell :DataGridViewCustomCellBase
+	public class DataGridViewTrackBarCell :DataGridViewCustomCellBase<DataGridViewTrackBarEditCtrl>
 	{
 		public override Type   EditType           { get { return typeof(DataGridViewTrackBarEditCtrl); } }
 		public override Type   FormattedValueType { get { return typeof(int); } }
@@ -634,14 +799,11 @@ namespace pr.gui
 		public int MinValue { get { return GetMinValueInternal(RowIndex); } }
 		public int MaxValue { get { return GetMaxValueInternal(RowIndex); } }
 
-		public override void InitializeEditingControl(int row_index, object initial_formatted_value, DataGridViewCellStyle data_grid_view_cell_style)
+		/// <summary>Set the initial state of the editing control</summary>
+		protected override void SetInitialValue(DataGridViewTrackBarEditCtrl ctrl, object formatted_value)
 		{
-			// 'this' cell is the template cell, not the cell being edited
-			base.InitializeEditingControl(row_index, initial_formatted_value, data_grid_view_cell_style);
 			var col = OwningColumn.As<DataGridViewTrackBarColumn>();
-			var ctrl = DataGridView.EditingControl as DataGridViewTrackBarEditCtrl;
-			if (ctrl != null)
-				ctrl.Init((int)initial_formatted_value, MinValue, MaxValue, col.LiveUpdate ? this : null);
+			ctrl.Init((int)formatted_value, MinValue, MaxValue, col.LiveUpdate ? this : null);
 		}
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{

@@ -14,9 +14,13 @@ namespace pr.extn
 		public static string MessageFull(this Exception e)
 		{
 			var sb = new StringBuilder();
-			do { sb.AppendLine(e.Message); }
+			do
+			{
+				var skip = (e is System.Reflection.TargetInvocationException && e.InnerException != null);
+				if (!skip) sb.AppendLine(e.Message);
+			}
 			while ((e = e.InnerException) != null);
-			return sb.ToString();;
+			return sb.ToString();
 		}
 	}
 }

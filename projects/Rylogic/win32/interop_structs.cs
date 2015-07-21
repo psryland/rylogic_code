@@ -6,6 +6,8 @@ using System.Text;
 
 namespace pr.win32
 {
+	using HWND     = System.IntPtr;
+	using UINT     = System.UInt32;
 	using DWORD    = System.UInt32;
 	using COLORREF = System.UInt32;
 
@@ -19,12 +21,13 @@ namespace pr.win32
 			public int right;
 			public int bottom;
 
-			public int Width()                                  { return right - left; }
-			public int Height()                                 { return bottom - top; }
-			public static RECT FromRectangle(Rectangle rect)    { return new RECT{left=rect.Left, top=rect.Top, right=rect.Right, bottom=rect.Bottom}; }
-			public Rectangle   ToRectangle()                    { return new Rectangle(left, top, Width(), Height()); }
-			public static RECT FromSize(Size size)              { return new RECT{left=0, top=0, right=size.Width, bottom=size.Height}; }
-			public Size        ToSize()                         { return new Size(right - left, bottom - top); }
+			public int Width()                                      { return right - left; }
+			public int Height()                                     { return bottom - top; }
+			public static RECT FromRectangle(Rectangle rect)        { return new RECT{left=rect.Left, top=rect.Top, right=rect.Right, bottom=rect.Bottom}; }
+			public Rectangle   ToRectangle()                        { return new Rectangle(left, top, Width(), Height()); }
+			public static RECT FromSize(Size size)                  { return new RECT{left=0, top=0, right=size.Width, bottom=size.Height}; }
+			public Size        ToSize()                             { return new Size(right - left, bottom - top); }
+			public static RECT FromLTRB(int l, int r, int t, int b) { return new RECT{left=l, top=t, right=r, bottom=b}; }
 		};
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -32,8 +35,18 @@ namespace pr.win32
 		{
 			public int X;
 			public int Y;
-			public static POINT FromPoint(Point pt)             { return new POINT{X=pt.X, Y=pt.Y}; }
-			public Point ToPoint()                              { return new Point(X, Y); }
+			public static POINT FromPoint(Point pt)         { return new POINT{X=pt.X, Y=pt.Y}; }
+			public Point ToPoint()                          { return new Point(X, Y); }
+			public static implicit operator Point(POINT pt) { return pt.ToPoint(); }
+		}
+
+		/// <summary>Notification message (WM_NOTIFY) header</summary>
+		[StructLayout(LayoutKind.Sequential)]
+		public struct NMHDR
+		{
+			public HWND hwndFrom;
+			public UINT idFrom;
+			public UINT code; // NM_code
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -58,6 +71,18 @@ namespace pr.win32
 			public POINT ptMaxPosition;
 			public POINT ptMinTrackSize;
 			public POINT ptMaxTrackSize;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WINDOWPOS
+		{
+			public HWND hwnd;
+			public HWND hwndInsertAfter;
+			public int  x;
+			public int  y;
+			public int  cx;
+			public int  cy;
+			public UINT flags;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
@@ -167,6 +192,54 @@ namespace pr.win32
 		{
 			public int iLow;
 			public int iHigh;
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 4)]
+		public struct CHARRANGE
+		{
+			/// <summary>First character of range (0 for start of doc)</summary>
+			public int min;
+
+			/// <summary>Last character of range (-1 for end of doc)</summary>
+			public int max;
+
+			public CHARRANGE(int mn, int mx) { min = mn; max = mx; }
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto, Pack = 4)]
+		public struct FORMATRANGE
+		{
+			/// <summary>DC to draw on</summary>
+			public IntPtr hdc;
+
+			/// <summary>Target DC for determining text formatting</summary>
+			public IntPtr hdcTarget;
+
+			/// <summary>Region of the DC to draw to (in twips)</summary>
+			public RECT rc;
+
+			/// <summary>Region of the whole DC (page size) (in twips)</summary>
+			public RECT rcPage;
+
+			/// <summary>Range of text to draw (see earlier declaration)</summary>
+			public CHARRANGE char_range;
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 4)]
+		public struct TEXTRANGE
+		{
+			/// <summary>The range of text to retrieve</summary>
+			public CHARRANGE char_range;
+
+			/// <summary>The buffer to receive the text</summary>
+			[MarshalAs(UnmanagedType.LPWStr)]
+			public string text; // Allocated by caller, zero terminated by RichEdit
+
+			public TEXTRANGE(int min, int max)
+			{
+				char_range = new CHARRANGE(min, max);
+				text = new string('\0', max - min);
+			}
 		}
 	}
 }

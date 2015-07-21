@@ -6,14 +6,19 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.util;
 
 namespace pr.win32
 {
@@ -37,218 +42,285 @@ namespace pr.win32
 		#region Windows header constants
 
 		#region Windows Messages
-		public const uint WM_NULL                         = 0x0000;
-		public const uint WM_CREATE                       = 0x0001;
-		public const uint WM_DESTROY                      = 0x0002;
-		public const uint WM_MOVE                         = 0x0003;
-		public const uint WM_SIZE                         = 0x0005;
-		public const uint WM_ACTIVATE                     = 0x0006;
-		public const uint WM_SETFOCUS                     = 0x0007;
-		public const uint WM_KILLFOCUS                    = 0x0008;
-		public const uint WM_ENABLE                       = 0x000A;
-		public const uint WM_SETREDRAW                    = 0x000B;
-		public const uint WM_SETTEXT                      = 0x000C;
-		public const uint WM_GETTEXT                      = 0x000D;
-		public const uint WM_GETTEXTLENGTH                = 0x000E;
-		public const uint WM_PAINT                        = 0x000F;
-		public const uint WM_CLOSE                        = 0x0010;
-		public const uint WM_QUERYENDSESSION              = 0x0011;
-		public const uint WM_QUERYOPEN                    = 0x0013;
-		public const uint WM_ENDSESSION                   = 0x0016;
-		public const uint WM_QUIT                         = 0x0012;
-		public const uint WM_ERASEBKGND                   = 0x0014;
-		public const uint WM_SYSCOLORCHANGE               = 0x0015;
-		public const uint WM_SHOWWINDOW                   = 0x0018;
-		public const uint WM_WININICHANGE                 = 0x001A;
-		public const uint WM_SETTINGCHANGE                = WM_WININICHANGE;
-		public const uint WM_DEVMODECHANGE                = 0x001B;
-		public const uint WM_ACTIVATEAPP                  = 0x001C;
-		public const uint WM_FONTCHANGE                   = 0x001D;
-		public const uint WM_TIMECHANGE                   = 0x001E;
-		public const uint WM_CANCELMODE                   = 0x001F;
-		public const uint WM_SETCURSOR                    = 0x0020;
-		public const uint WM_MOUSEACTIVATE                = 0x0021;
-		public const uint WM_CHILDACTIVATE                = 0x0022;
-		public const uint WM_QUEUESYNC                    = 0x0023;
-		public const uint WM_GETMINMAXINFO                = 0x0024;
-		public const uint WM_PAINTICON                    = 0x0026;
-		public const uint WM_ICONERASEBKGND               = 0x0027;
-		public const uint WM_NEXTDLGCTL                   = 0x0028;
-		public const uint WM_SPOOLERSTATUS                = 0x002A;
-		public const uint WM_DRAWITEM                     = 0x002B;
-		public const uint WM_MEASUREITEM                  = 0x002C;
-		public const uint WM_DELETEITEM                   = 0x002D;
-		public const uint WM_VKEYTOITEM                   = 0x002E;
-		public const uint WM_CHARTOITEM                   = 0x002F;
-		public const uint WM_SETFONT                      = 0x0030;
-		public const uint WM_GETFONT                      = 0x0031;
-		public const uint WM_SETHOTKEY                    = 0x0032;
-		public const uint WM_GETHOTKEY                    = 0x0033;
-		public const uint WM_QUERYDRAGICON                = 0x0037;
-		public const uint WM_COMPAREITEM                  = 0x0039;
-		public const uint WM_GETOBJECT                    = 0x003D;
-		public const uint WM_COMPACTING                   = 0x0041;
-		public const uint WM_COMMNOTIFY                   = 0x0044;  /* no longer suported */
-		public const uint WM_WINDOWPOSCHANGING            = 0x0046;
-		public const uint WM_WINDOWPOSCHANGED             = 0x0047;
-		public const uint WM_POWER                        = 0x0048;
-		public const uint WM_COPYDATA                     = 0x004A;
-		public const uint WM_CANCELJOURNAL                = 0x004B;
-		public const uint WM_NOTIFY                       = 0x004E;
-		public const uint WM_INPUTLANGCHANGEREQUEST       = 0x0050;
-		public const uint WM_INPUTLANGCHANGE              = 0x0051;
-		public const uint WM_TCARD                        = 0x0052;
-		public const uint WM_HELP                         = 0x0053;
-		public const uint WM_USERCHANGED                  = 0x0054;
-		public const uint WM_NOTIFYFORMAT                 = 0x0055;
-		public const uint WM_CONTEXTMENU                  = 0x007B;
-		public const uint WM_STYLECHANGING                = 0x007C;
-		public const uint WM_STYLECHANGED                 = 0x007D;
-		public const uint WM_DISPLAYCHANGE                = 0x007E;
-		public const uint WM_GETICON                      = 0x007F;
-		public const uint WM_SETICON                      = 0x0080;
-		public const uint WM_NCCREATE                     = 0x0081;
-		public const uint WM_NCDESTROY                    = 0x0082;
-		public const uint WM_NCCALCSIZE                   = 0x0083;
-		public const uint WM_NCHITTEST                    = 0x0084;
-		public const uint WM_NCPAINT                      = 0x0085;
-		public const uint WM_NCACTIVATE                   = 0x0086;
-		public const uint WM_GETDLGCODE                   = 0x0087;
-		public const uint WM_SYNCPAINT                    = 0x0088;
-		public const uint WM_NCMOUSEMOVE                  = 0x00A0;
-		public const uint WM_NCLBUTTONDOWN                = 0x00A1;
-		public const uint WM_NCLBUTTONUP                  = 0x00A2;
-		public const uint WM_NCLBUTTONDBLCLK              = 0x00A3;
-		public const uint WM_NCRBUTTONDOWN                = 0x00A4;
-		public const uint WM_NCRBUTTONUP                  = 0x00A5;
-		public const uint WM_NCRBUTTONDBLCLK              = 0x00A6;
-		public const uint WM_NCMBUTTONDOWN                = 0x00A7;
-		public const uint WM_NCMBUTTONUP                  = 0x00A8;
-		public const uint WM_NCMBUTTONDBLCLK              = 0x00A9;
-		public const uint WM_NCXBUTTONDOWN                = 0x00AB;
-		public const uint WM_NCXBUTTONUP                  = 0x00AC;
-		public const uint WM_NCXBUTTONDBLCLK              = 0x00AD;
-		public const uint WM_INPUT_DEVICE_CHANGE          = 0x00FE;
-		public const uint WM_INPUT                        = 0x00FF;
-		public const uint WM_KEYDOWN                      = 0x0100;
-		public const uint WM_KEYUP                        = 0x0101;
-		public const uint WM_CHAR                         = 0x0102;
-		public const uint WM_DEADCHAR                     = 0x0103;
-		public const uint WM_SYSKEYDOWN                   = 0x0104;
-		public const uint WM_SYSKEYUP                     = 0x0105;
-		public const uint WM_SYSCHAR                      = 0x0106;
-		public const uint WM_SYSDEADCHAR                  = 0x0107;
-		public const uint WM_UNICHAR                      = 0x0109;
-		public const uint WM_INITDIALOG                   = 0x0110;
-		public const uint WM_COMMAND                      = 0x0111;
-		public const uint WM_SYSCOMMAND                   = 0x0112;
-		public const uint WM_TIMER                        = 0x0113;
-		public const uint WM_HSCROLL                      = 0x0114;
-		public const uint WM_VSCROLL                      = 0x0115;
-		public const uint WM_INITMENU                     = 0x0116;
-		public const uint WM_INITMENUPOPUP                = 0x0117;
-		public const uint WM_MENUSELECT                   = 0x011F;
-		public const uint WM_MENUCHAR                     = 0x0120;
-		public const uint WM_ENTERIDLE                    = 0x0121;
-		public const uint WM_MENURBUTTONUP                = 0x0122;
-		public const uint WM_MENUDRAG                     = 0x0123;
-		public const uint WM_MENUGETOBJECT                = 0x0124;
-		public const uint WM_UNINITMENUPOPUP              = 0x0125;
-		public const uint WM_MENUCOMMAND                  = 0x0126;
-		public const uint WM_CHANGEUISTATE                = 0x0127;
-		public const uint WM_UPDATEUISTATE                = 0x0128;
-		public const uint WM_QUERYUISTATE                 = 0x0129;
-		public const uint WM_MOUSEMOVE                    = 0x0200;
-		public const uint WM_LBUTTONDOWN                  = 0x0201;
-		public const uint WM_LBUTTONUP                    = 0x0202;
-		public const uint WM_LBUTTONDBLCLK                = 0x0203;
-		public const uint WM_RBUTTONDOWN                  = 0x0204;
-		public const uint WM_RBUTTONUP                    = 0x0205;
-		public const uint WM_RBUTTONDBLCLK                = 0x0206;
-		public const uint WM_MBUTTONDOWN                  = 0x0207;
-		public const uint WM_MBUTTONUP                    = 0x0208;
-		public const uint WM_MBUTTONDBLCLK                = 0x0209;
-		public const uint WM_MOUSEWHEEL                   = 0x020A;
-		public const uint WM_XBUTTONDOWN                  = 0x020B;
-		public const uint WM_XBUTTONUP                    = 0x020C;
-		public const uint WM_XBUTTONDBLCLK                = 0x020D;
-		public const uint WM_MOUSEHWHEEL                  = 0x020E;
-		public const uint WM_PARENTNOTIFY                 = 0x0210;
-		public const uint WM_ENTERMENULOOP                = 0x0211;
-		public const uint WM_EXITMENULOOP                 = 0x0212;
-		public const uint WM_NEXTMENU                     = 0x0213;
-		public const uint WM_SIZING                       = 0x0214;
-		public const uint WM_CAPTURECHANGED               = 0x0215;
-		public const uint WM_MOVING                       = 0x0216;
-		public const uint WM_DEVICECHANGE                 = 0x0219;
-		public const uint WM_MDICREATE                    = 0x0220;
-		public const uint WM_MDIDESTROY                   = 0x0221;
-		public const uint WM_MDIACTIVATE                  = 0x0222;
-		public const uint WM_MDIRESTORE                   = 0x0223;
-		public const uint WM_MDINEXT                      = 0x0224;
-		public const uint WM_MDIMAXIMIZE                  = 0x0225;
-		public const uint WM_MDITILE                      = 0x0226;
-		public const uint WM_MDICASCADE                   = 0x0227;
-		public const uint WM_MDIICONARRANGE               = 0x0228;
-		public const uint WM_MDIGETACTIVE                 = 0x0229;
-		public const uint WM_MDISETMENU                   = 0x0230;
-		public const uint WM_ENTERSIZEMOVE                = 0x0231;
-		public const uint WM_EXITSIZEMOVE                 = 0x0232;
-		public const uint WM_DROPFILES                    = 0x0233;
-		public const uint WM_MDIREFRESHMENU               = 0x0234;
-		public const uint WM_IME_SETCONTEXT               = 0x0281;
-		public const uint WM_IME_NOTIFY                   = 0x0282;
-		public const uint WM_IME_CONTROL                  = 0x0283;
-		public const uint WM_IME_COMPOSITIONFULL          = 0x0284;
-		public const uint WM_IME_SELECT                   = 0x0285;
-		public const uint WM_IME_CHAR                     = 0x0286;
-		public const uint WM_IME_REQUEST                  = 0x0288;
-		public const uint WM_IME_KEYDOWN                  = 0x0290;
-		public const uint WM_IME_KEYUP                    = 0x0291;
-		public const uint WM_MOUSEHOVER                   = 0x02A1;
-		public const uint WM_MOUSELEAVE                   = 0x02A3;
-		public const uint WM_NCMOUSEHOVER                 = 0x02A0;
-		public const uint WM_NCMOUSELEAVE                 = 0x02A2;
-		public const uint WM_WTSSESSION_CHANGE            = 0x02B1;
-		public const uint WM_TABLET_FIRST                 = 0x02c0;
-		public const uint WM_TABLET_LAST                  = 0x02df;
-		public const uint WM_CUT                          = 0x0300;
-		public const uint WM_COPY                         = 0x0301;
-		public const uint WM_PASTE                        = 0x0302;
-		public const uint WM_CLEAR                        = 0x0303;
-		public const uint WM_UNDO                         = 0x0304;
-		public const uint WM_RENDERFORMAT                 = 0x0305;
-		public const uint WM_RENDERALLFORMATS             = 0x0306;
-		public const uint WM_DESTROYCLIPBOARD             = 0x0307;
-		public const uint WM_DRAWCLIPBOARD                = 0x0308;
-		public const uint WM_PAINTCLIPBOARD               = 0x0309;
-		public const uint WM_VSCROLLCLIPBOARD             = 0x030A;
-		public const uint WM_SIZECLIPBOARD                = 0x030B;
-		public const uint WM_ASKCBFORMATNAME              = 0x030C;
-		public const uint WM_CHANGECBCHAIN                = 0x030D;
-		public const uint WM_HSCROLLCLIPBOARD             = 0x030E;
-		public const uint WM_QUERYNEWPALETTE              = 0x030F;
-		public const uint WM_PALETTEISCHANGING            = 0x0310;
-		public const uint WM_PALETTECHANGED               = 0x0311;
-		public const uint WM_HOTKEY                       = 0x0312;
-		public const uint WM_PRINT                        = 0x0317;
-		public const uint WM_PRINTCLIENT                  = 0x0318;
-		public const uint WM_APPCOMMAND                   = 0x0319;
-		public const uint WM_THEMECHANGED                 = 0x031A;
-		public const uint WM_CLIPBOARDUPDATE              = 0x031D;
-		public const uint WM_DWMCOMPOSITIONCHANGED        = 0x031E;
-		public const uint WM_DWMNCRENDERINGCHANGED        = 0x031F;
-		public const uint WM_DWMCOLORIZATIONCOLORCHANGED  = 0x0320;
-		public const uint WM_DWMWINDOWMAXIMIZEDCHANGE     = 0x0321;
-		public const uint WM_GETTITLEBARINFOEX            = 0x033F;
-		public const uint WM_HANDHELDFIRST                = 0x0358;
-		public const uint WM_HANDHELDLAST                 = 0x035F;
-		public const uint WM_AFXFIRST                     = 0x0360;
-		public const uint WM_AFXLAST                      = 0x037F;
-		public const uint WM_PENWINFIRST                  = 0x0380;
-		public const uint WM_PENWINLAST                   = 0x038F;
-		public const uint WM_APP                          = 0x8000;
-		public const uint WM_USER                         = 0x0400;
+		public const int WM_NULL                         = 0x0000;
+		public const int WM_CREATE                       = 0x0001;
+		public const int WM_DESTROY                      = 0x0002;
+		public const int WM_MOVE                         = 0x0003;
+		public const int WM_SIZE                         = 0x0005;
+		public const int WM_ACTIVATE                     = 0x0006;
+		public const int WM_SETFOCUS                     = 0x0007;
+		public const int WM_KILLFOCUS                    = 0x0008;
+		public const int WM_ENABLE                       = 0x000A;
+		public const int WM_SETREDRAW                    = 0x000B;
+		public const int WM_SETTEXT                      = 0x000C;
+		public const int WM_GETTEXT                      = 0x000D;
+		public const int WM_GETTEXTLENGTH                = 0x000E;
+		public const int WM_PAINT                        = 0x000F;
+		public const int WM_CLOSE                        = 0x0010;
+		public const int WM_QUERYENDSESSION              = 0x0011;
+		public const int WM_QUERYOPEN                    = 0x0013;
+		public const int WM_ENDSESSION                   = 0x0016;
+		public const int WM_QUIT                         = 0x0012;
+		public const int WM_ERASEBKGND                   = 0x0014;
+		public const int WM_SYSCOLORCHANGE               = 0x0015;
+		public const int WM_SHOWWINDOW                   = 0x0018;
+		public const int WM_WININICHANGE                 = 0x001A;
+		public const int WM_SETTINGCHANGE                = WM_WININICHANGE;
+		public const int WM_DEVMODECHANGE                = 0x001B;
+		public const int WM_ACTIVATEAPP                  = 0x001C;
+		public const int WM_FONTCHANGE                   = 0x001D;
+		public const int WM_TIMECHANGE                   = 0x001E;
+		public const int WM_CANCELMODE                   = 0x001F;
+		public const int WM_SETCURSOR                    = 0x0020;
+		public const int WM_MOUSEACTIVATE                = 0x0021;
+		public const int WM_CHILDACTIVATE                = 0x0022;
+		public const int WM_QUEUESYNC                    = 0x0023;
+		public const int WM_GETMINMAXINFO                = 0x0024;
+		public const int WM_PAINTICON                    = 0x0026;
+		public const int WM_ICONERASEBKGND               = 0x0027;
+		public const int WM_NEXTDLGCTL                   = 0x0028;
+		public const int WM_SPOOLERSTATUS                = 0x002A;
+		public const int WM_DRAWITEM                     = 0x002B;
+		public const int WM_MEASUREITEM                  = 0x002C;
+		public const int WM_DELETEITEM                   = 0x002D;
+		public const int WM_VKEYTOITEM                   = 0x002E;
+		public const int WM_CHARTOITEM                   = 0x002F;
+		public const int WM_SETFONT                      = 0x0030;
+		public const int WM_GETFONT                      = 0x0031;
+		public const int WM_SETHOTKEY                    = 0x0032;
+		public const int WM_GETHOTKEY                    = 0x0033;
+		public const int WM_QUERYDRAGICON                = 0x0037;
+		public const int WM_COMPAREITEM                  = 0x0039;
+		public const int WM_GETOBJECT                    = 0x003D;
+		public const int WM_COMPACTING                   = 0x0041;
+		public const int WM_COMMNOTIFY                   = 0x0044;  /* no longer suported */
+		public const int WM_WINDOWPOSCHANGING            = 0x0046;
+		public const int WM_WINDOWPOSCHANGED             = 0x0047;
+		public const int WM_POWER                        = 0x0048;
+		public const int WM_COPYDATA                     = 0x004A;
+		public const int WM_CANCELJOURNAL                = 0x004B;
+		public const int WM_NOTIFY                       = 0x004E;
+		public const int WM_INPUTLANGCHANGEREQUEST       = 0x0050;
+		public const int WM_INPUTLANGCHANGE              = 0x0051;
+		public const int WM_TCARD                        = 0x0052;
+		public const int WM_HELP                         = 0x0053;
+		public const int WM_USERCHANGED                  = 0x0054;
+		public const int WM_NOTIFYFORMAT                 = 0x0055;
+		public const int WM_CONTEXTMENU                  = 0x007B;
+		public const int WM_STYLECHANGING                = 0x007C;
+		public const int WM_STYLECHANGED                 = 0x007D;
+		public const int WM_DISPLAYCHANGE                = 0x007E;
+		public const int WM_GETICON                      = 0x007F;
+		public const int WM_SETICON                      = 0x0080;
+		public const int WM_NCCREATE                     = 0x0081;
+		public const int WM_NCDESTROY                    = 0x0082;
+		public const int WM_NCCALCSIZE                   = 0x0083;
+		public const int WM_NCHITTEST                    = 0x0084;
+		public const int WM_NCPAINT                      = 0x0085;
+		public const int WM_NCACTIVATE                   = 0x0086;
+		public const int WM_GETDLGCODE                   = 0x0087;
+		public const int WM_SYNCPAINT                    = 0x0088;
+		public const int WM_NCMOUSEMOVE                  = 0x00A0;
+		public const int WM_NCLBUTTONDOWN                = 0x00A1;
+		public const int WM_NCLBUTTONUP                  = 0x00A2;
+		public const int WM_NCLBUTTONDBLCLK              = 0x00A3;
+		public const int WM_NCRBUTTONDOWN                = 0x00A4;
+		public const int WM_NCRBUTTONUP                  = 0x00A5;
+		public const int WM_NCRBUTTONDBLCLK              = 0x00A6;
+		public const int WM_NCMBUTTONDOWN                = 0x00A7;
+		public const int WM_NCMBUTTONUP                  = 0x00A8;
+		public const int WM_NCMBUTTONDBLCLK              = 0x00A9;
+		public const int WM_NCXBUTTONDOWN                = 0x00AB;
+		public const int WM_NCXBUTTONUP                  = 0x00AC;
+		public const int WM_NCXBUTTONDBLCLK              = 0x00AD;
+		public const int WM_INPUT_DEVICE_CHANGE          = 0x00FE;
+		public const int WM_INPUT                        = 0x00FF;
+		public const int WM_KEYDOWN                      = 0x0100;
+		public const int WM_KEYUP                        = 0x0101;
+		public const int WM_CHAR                         = 0x0102;
+		public const int WM_DEADCHAR                     = 0x0103;
+		public const int WM_SYSKEYDOWN                   = 0x0104;
+		public const int WM_SYSKEYUP                     = 0x0105;
+		public const int WM_SYSCHAR                      = 0x0106;
+		public const int WM_SYSDEADCHAR                  = 0x0107;
+		public const int WM_UNICHAR                      = 0x0109;
+		public const int WM_INITDIALOG                   = 0x0110;
+		public const int WM_COMMAND                      = 0x0111;
+		public const int WM_SYSCOMMAND                   = 0x0112;
+		public const int WM_TIMER                        = 0x0113;
+		public const int WM_HSCROLL                      = 0x0114;
+		public const int WM_VSCROLL                      = 0x0115;
+		public const int WM_INITMENU                     = 0x0116;
+		public const int WM_INITMENUPOPUP                = 0x0117;
+		public const int WM_MENUSELECT                   = 0x011F;
+		public const int WM_MENUCHAR                     = 0x0120;
+		public const int WM_ENTERIDLE                    = 0x0121;
+		public const int WM_MENURBUTTONUP                = 0x0122;
+		public const int WM_MENUDRAG                     = 0x0123;
+		public const int WM_MENUGETOBJECT                = 0x0124;
+		public const int WM_UNINITMENUPOPUP              = 0x0125;
+		public const int WM_MENUCOMMAND                  = 0x0126;
+		public const int WM_CHANGEUISTATE                = 0x0127;
+		public const int WM_UPDATEUISTATE                = 0x0128;
+		public const int WM_QUERYUISTATE                 = 0x0129;
+		public const int WM_MOUSEMOVE                    = 0x0200;
+		public const int WM_LBUTTONDOWN                  = 0x0201;
+		public const int WM_LBUTTONUP                    = 0x0202;
+		public const int WM_LBUTTONDBLCLK                = 0x0203;
+		public const int WM_RBUTTONDOWN                  = 0x0204;
+		public const int WM_RBUTTONUP                    = 0x0205;
+		public const int WM_RBUTTONDBLCLK                = 0x0206;
+		public const int WM_MBUTTONDOWN                  = 0x0207;
+		public const int WM_MBUTTONUP                    = 0x0208;
+		public const int WM_MBUTTONDBLCLK                = 0x0209;
+		public const int WM_MOUSEWHEEL                   = 0x020A;
+		public const int WM_XBUTTONDOWN                  = 0x020B;
+		public const int WM_XBUTTONUP                    = 0x020C;
+		public const int WM_XBUTTONDBLCLK                = 0x020D;
+		public const int WM_MOUSEHWHEEL                  = 0x020E;
+		public const int WM_PARENTNOTIFY                 = 0x0210;
+		public const int WM_ENTERMENULOOP                = 0x0211;
+		public const int WM_EXITMENULOOP                 = 0x0212;
+		public const int WM_NEXTMENU                     = 0x0213;
+		public const int WM_SIZING                       = 0x0214;
+		public const int WM_CAPTURECHANGED               = 0x0215;
+		public const int WM_MOVING                       = 0x0216;
+		public const int WM_DEVICECHANGE                 = 0x0219;
+		public const int WM_MDICREATE                    = 0x0220;
+		public const int WM_MDIDESTROY                   = 0x0221;
+		public const int WM_MDIACTIVATE                  = 0x0222;
+		public const int WM_MDIRESTORE                   = 0x0223;
+		public const int WM_MDINEXT                      = 0x0224;
+		public const int WM_MDIMAXIMIZE                  = 0x0225;
+		public const int WM_MDITILE                      = 0x0226;
+		public const int WM_MDICASCADE                   = 0x0227;
+		public const int WM_MDIICONARRANGE               = 0x0228;
+		public const int WM_MDIGETACTIVE                 = 0x0229;
+		public const int WM_MDISETMENU                   = 0x0230;
+		public const int WM_ENTERSIZEMOVE                = 0x0231;
+		public const int WM_EXITSIZEMOVE                 = 0x0232;
+		public const int WM_DROPFILES                    = 0x0233;
+		public const int WM_MDIREFRESHMENU               = 0x0234;
+		public const int WM_IME_SETCONTEXT               = 0x0281;
+		public const int WM_IME_NOTIFY                   = 0x0282;
+		public const int WM_IME_CONTROL                  = 0x0283;
+		public const int WM_IME_COMPOSITIONFULL          = 0x0284;
+		public const int WM_IME_SELECT                   = 0x0285;
+		public const int WM_IME_CHAR                     = 0x0286;
+		public const int WM_IME_REQUEST                  = 0x0288;
+		public const int WM_IME_KEYDOWN                  = 0x0290;
+		public const int WM_IME_KEYUP                    = 0x0291;
+		public const int WM_MOUSEHOVER                   = 0x02A1;
+		public const int WM_MOUSELEAVE                   = 0x02A3;
+		public const int WM_NCMOUSEHOVER                 = 0x02A0;
+		public const int WM_NCMOUSELEAVE                 = 0x02A2;
+		public const int WM_WTSSESSION_CHANGE            = 0x02B1;
+		public const int WM_TABLET_FIRST                 = 0x02c0;
+		public const int WM_TABLET_LAST                  = 0x02df;
+		public const int WM_CUT                          = 0x0300;
+		public const int WM_COPY                         = 0x0301;
+		public const int WM_PASTE                        = 0x0302;
+		public const int WM_CLEAR                        = 0x0303;
+		public const int WM_UNDO                         = 0x0304;
+		public const int WM_RENDERFORMAT                 = 0x0305;
+		public const int WM_RENDERALLFORMATS             = 0x0306;
+		public const int WM_DESTROYCLIPBOARD             = 0x0307;
+		public const int WM_DRAWCLIPBOARD                = 0x0308;
+		public const int WM_PAINTCLIPBOARD               = 0x0309;
+		public const int WM_VSCROLLCLIPBOARD             = 0x030A;
+		public const int WM_SIZECLIPBOARD                = 0x030B;
+		public const int WM_ASKCBFORMATNAME              = 0x030C;
+		public const int WM_CHANGECBCHAIN                = 0x030D;
+		public const int WM_HSCROLLCLIPBOARD             = 0x030E;
+		public const int WM_QUERYNEWPALETTE              = 0x030F;
+		public const int WM_PALETTEISCHANGING            = 0x0310;
+		public const int WM_PALETTECHANGED               = 0x0311;
+		public const int WM_HOTKEY                       = 0x0312;
+		public const int WM_PRINT                        = 0x0317;
+		public const int WM_PRINTCLIENT                  = 0x0318;
+		public const int WM_APPCOMMAND                   = 0x0319;
+		public const int WM_THEMECHANGED                 = 0x031A;
+		public const int WM_CLIPBOARDUPDATE              = 0x031D;
+		public const int WM_DWMCOMPOSITIONCHANGED        = 0x031E;
+		public const int WM_DWMNCRENDERINGCHANGED        = 0x031F;
+		public const int WM_DWMCOLORIZATIONCOLORCHANGED  = 0x0320;
+		public const int WM_DWMWINDOWMAXIMIZEDCHANGE     = 0x0321;
+		public const int WM_GETTITLEBARINFOEX            = 0x033F;
+		public const int WM_HANDHELDFIRST                = 0x0358;
+		public const int WM_HANDHELDLAST                 = 0x035F;
+		public const int WM_AFXFIRST                     = 0x0360;
+		public const int WM_AFXLAST                      = 0x037F;
+		public const int WM_PENWINFIRST                  = 0x0380;
+		public const int WM_PENWINLAST                   = 0x038F;
+		public const int WM_APP                          = 0x8000;
+		public const int WM_USER                         = 0x0400;
+
+		/// <summary>Convert a message constant to a string</summary>
+		public static string MsgIdToString(int msg_id)
+		{
+			string name;
+			if (!m_wm_name.TryGetValue(msg_id, out name))
+			{
+				var fi = typeof(Win32).GetFields(BindingFlags.Public|BindingFlags.Static)
+					.Where(x => x.IsLiteral)
+					.Where(x => x.Name.StartsWith("WM_") || x.Name.StartsWith("EM_"))
+					.FirstOrDefault(x =>
+						{
+							var val = x.GetValue(null);
+							if (val is uint) return (uint)val == (uint)msg_id;
+							if (val is int)  return (int)val == msg_id;
+							return false;
+						});
+
+				name = fi != null ? fi.Name : string.Empty;
+				m_wm_name.Add(msg_id, name);
+			}
+			return name;
+		}
+		private static Dictionary<int, string> m_wm_name = new Dictionary<int,string>();
+		#endregion
+
+		#region WM_NOTIFY codes
+		public const uint NM_FIRST   = unchecked(0U -    0U);       // generic to all controls
+		public const uint NM_LAST    = unchecked(0U -   99U);
+		public const uint LVN_FIRST  = unchecked(0U -  100U);       // listview
+		public const uint LVN_LAST   = unchecked(0U -  199U);
+		public const uint HDN_FIRST  = unchecked(0U -  300U);       // header
+		public const uint HDN_LAST   = unchecked(0U -  399U);
+		public const uint TVN_FIRST  = unchecked(0U -  400U);       // treeview
+		public const uint TVN_LAST   = unchecked(0U -  499U);
+		public const uint TTN_FIRST  = unchecked(0U -  520U);       // tooltips
+		public const uint TTN_LAST   = unchecked(0U -  549U);
+		public const uint TCN_FIRST  = unchecked(0U -  550U);       // tab control
+		public const uint TCN_LAST   = unchecked(0U -  580U);
+		public const uint CDN_FIRST  = unchecked(0U -  601U);       // common dialog (new)
+		public const uint CDN_LAST   = unchecked(0U -  699U);
+		public const uint TBN_FIRST  = unchecked(0U -  700U);       // toolbar
+		public const uint TBN_LAST   = unchecked(0U -  720U);
+		public const uint UDN_FIRST  = unchecked(0U -  721U);        // updown
+		public const uint UDN_LAST   = unchecked(0U -  729U);
+		public const uint DTN_FIRST  = unchecked(0U -  740U);       // datetimepick
+		public const uint DTN_LAST   = unchecked(0U -  745U);       // DTN_FIRST - 5
+		public const uint MCN_FIRST  = unchecked(0U -  746U);       // monthcal
+		public const uint MCN_LAST   = unchecked(0U -  752U);       // MCN_FIRST - 6
+		public const uint DTN_FIRST2 = unchecked(0U -  753U);       // datetimepick2
+		public const uint DTN_LAST2  = unchecked(0U -  799U);
+		public const uint CBEN_FIRST = unchecked(0U -  800U);       // combo box ex
+		public const uint CBEN_LAST  = unchecked(0U -  830U);
+		public const uint RBN_FIRST  = unchecked(0U -  831U);       // rebar
+		public const uint RBN_LAST   = unchecked(0U -  859U);
+		public const uint IPN_FIRST  = unchecked(0U -  860U);       // internet address
+		public const uint IPN_LAST   = unchecked(0U -  879U);       // internet address
+		public const uint SBN_FIRST  = unchecked(0U -  880U);       // status bar
+		public const uint SBN_LAST   = unchecked(0U -  899U);
+		public const uint PGN_FIRST  = unchecked(0U -  900U);       // Pager Control
+		public const uint PGN_LAST   = unchecked(0U -  950U);
+		public const uint WMN_FIRST  = unchecked(0U - 1000U);
+		public const uint WMN_LAST   = unchecked(0U - 1200U);
+		public const uint BCN_FIRST  = unchecked(0U - 1250U);
+		public const uint BCN_LAST   = unchecked(0U - 1350U);
+		public const uint TRBN_FIRST = unchecked(0U - 1501U);       // trackbar
+		public const uint TRBN_LAST  = unchecked(0U - 1519U);
 		#endregion
 
 		#region WM_SYSCOMMAND values
@@ -308,6 +380,12 @@ namespace pr.win32
 		public const int SW_SHOWDEFAULT                   = 10;
 		public const int SW_FORCEMINIMIZE                 = 11;
 		public const int SW_MAX                           = 11;
+
+		// WM_SHOWWINDOW message constants
+		public const int SW_PARENTCLOSING    = 1;
+		public const int SW_OTHERZOOM        = 2;
+		public const int SW_PARENTOPENING    = 3;
+		public const int SW_OTHERUNZOOM      = 4;
 		#endregion
 
 		#region Set Window Position SWP_
@@ -558,171 +636,196 @@ namespace pr.win32
 		#endregion
 
 		#region Edit Control
-		public static class EditCtrl
-		{
-			// Edit Control Styles
-			public const int ES_LEFT        = 0x0000;
-			public const int ES_CENTER      = 0x0001;
-			public const int ES_RIGHT       = 0x0002;
-			public const int ES_MULTILINE   = 0x0004;
-			public const int ES_UPPERCASE   = 0x0008;
-			public const int ES_LOWERCASE   = 0x0010;
-			public const int ES_PASSWORD    = 0x0020;
-			public const int ES_AUTOVSCROLL = 0x0040;
-			public const int ES_AUTOHSCROLL = 0x0080;
-			public const int ES_NOHIDESEL   = 0x0100;
-			public const int ES_OEMCONVERT  = 0x0400;
-			public const int ES_READONLY    = 0x0800;
-			public const int ES_WANTRETURN  = 0x1000;
-			public const int ES_NUMBER      = 0x2000;
+		// Edit Control Styles
+		public const int ES_LEFT        = 0x0000;
+		public const int ES_CENTER      = 0x0001;
+		public const int ES_RIGHT       = 0x0002;
+		public const int ES_MULTILINE   = 0x0004;
+		public const int ES_UPPERCASE   = 0x0008;
+		public const int ES_LOWERCASE   = 0x0010;
+		public const int ES_PASSWORD    = 0x0020;
+		public const int ES_AUTOVSCROLL = 0x0040;
+		public const int ES_AUTOHSCROLL = 0x0080;
+		public const int ES_NOHIDESEL   = 0x0100;
+		public const int ES_OEMCONVERT  = 0x0400;
+		public const int ES_READONLY    = 0x0800;
+		public const int ES_WANTRETURN  = 0x1000;
+		public const int ES_NUMBER      = 0x2000;
 
-			// Edit Control Notification Codes
-			public const int EN_SETFOCUS     = 0x0100;
-			public const int EN_KILLFOCUS    = 0x0200;
-			public const int EN_CHANGE       = 0x0300;
-			public const int EN_UPDATE       = 0x0400;
-			public const int EN_ERRSPACE     = 0x0500;
-			public const int EN_MAXTEXT      = 0x0501;
-			public const int EN_HSCROLL      = 0x0601;
-			public const int EN_VSCROLL      = 0x0602;
-			public const int EN_ALIGN_LTR_EC = 0x0700;
-			public const int EN_ALIGN_RTL_EC = 0x0701;
+		// Edit Control Notification Codes
+		public const int EN_SETFOCUS     = 0x0100;
+		public const int EN_KILLFOCUS    = 0x0200;
+		public const int EN_CHANGE       = 0x0300;
+		public const int EN_UPDATE       = 0x0400;
+		public const int EN_ERRSPACE     = 0x0500;
+		public const int EN_MAXTEXT      = 0x0501;
+		public const int EN_HSCROLL      = 0x0601;
+		public const int EN_VSCROLL      = 0x0602;
+		public const int EN_ALIGN_LTR_EC = 0x0700;
+		public const int EN_ALIGN_RTL_EC = 0x0701;
 
-			// Edit control EM_SETMARGIN parameters
-			public const int EC_LEFTMARGIN  = 0x0001;
-			public const int EC_RIGHTMARGIN = 0x0002;
-			public const int EC_USEFONTINFO = 0xffff;
+		// Edit control EM_SETMARGIN parameters
+		public const int EC_LEFTMARGIN  = 0x0001;
+		public const int EC_RIGHTMARGIN = 0x0002;
+		public const int EC_USEFONTINFO = 0xffff;
 
-			// Edit Control Messages
-			public const int EM_GETSEL               = 0x00B0;
-			public const int EM_SETSEL               = 0x00B1;
-			public const int EM_GETRECT              = 0x00B2;
-			public const int EM_SETRECT              = 0x00B3;
-			public const int EM_SETRECTNP            = 0x00B4;
-			public const int EM_SCROLL               = 0x00B5;
-			public const int EM_LINESCROLL           = 0x00B6;
-			public const int EM_SCROLLCARET          = 0x00B7;
-			public const int EM_GETMODIFY            = 0x00B8;
-			public const int EM_SETMODIFY            = 0x00B9;
-			public const int EM_GETLINECOUNT         = 0x00BA;
-			public const int EM_LINEINDEX            = 0x00BB;
-			public const int EM_SETHANDLE            = 0x00BC;
-			public const int EM_GETHANDLE            = 0x00BD;
-			public const int EM_GETTHUMB             = 0x00BE;
-			public const int EM_LINELENGTH           = 0x00C1;
-			public const int EM_REPLACESEL           = 0x00C2;
-			public const int EM_GETLINE              = 0x00C4;
-			public const int EM_LIMITTEXT            = 0x00C5;
-			public const int EM_CANUNDO              = 0x00C6;
-			public const int EM_UNDO                 = 0x00C7;
-			public const int EM_FMTLINES             = 0x00C8;
-			public const int EM_LINEFROMCHAR         = 0x00C9;
-			public const int EM_SETTABSTOPS          = 0x00CB;
-			public const int EM_SETPASSWORDCHAR      = 0x00CC;
-			public const int EM_EMPTYUNDOBUFFER      = 0x00CD;
-			public const int EM_GETFIRSTVISIBLELINE  = 0x00CE;
-			public const int EM_SETREADONLY          = 0x00CF;
-			public const int EM_SETWORDBREAKPROC     = 0x00D0;
-			public const int EM_GETWORDBREAKPROC     = 0x00D1;
-			public const int EM_GETPASSWORDCHAR      = 0x00D2;
-			public const int EM_SETMARGINS           = 0x00D3;
-			public const int EM_GETMARGINS           = 0x00D4;
-			public const int EM_SETLIMITTEXT         = EM_LIMITTEXT;//;win40 Name change 
-			public const int EM_GETLIMITTEXT         = 0x00D5;
-			public const int EM_POSFROMCHAR          = 0x00D6;
-			public const int EM_CHARFROMPOS          = 0x00D7;
-			public const int EM_SETIMESTATUS         = 0x00D8;
-			public const int EM_GETIMESTATUS         = 0x00D9;
+		// Edit Control Messages
+		public const int EM_GETSEL               = 0x00B0;
+		public const int EM_SETSEL               = 0x00B1;
+		public const int EM_GETRECT              = 0x00B2;
+		public const int EM_SETRECT              = 0x00B3;
+		public const int EM_SETRECTNP            = 0x00B4;
+		public const int EM_SCROLL               = 0x00B5;
+		public const int EM_LINESCROLL           = 0x00B6;
+		public const int EM_SCROLLCARET          = 0x00B7;
+		public const int EM_GETMODIFY            = 0x00B8;
+		public const int EM_SETMODIFY            = 0x00B9;
+		public const int EM_GETLINECOUNT         = 0x00BA;
+		public const int EM_LINEINDEX            = 0x00BB;
+		public const int EM_SETHANDLE            = 0x00BC;
+		public const int EM_GETHANDLE            = 0x00BD;
+		public const int EM_GETTHUMB             = 0x00BE;
+		public const int EM_LINELENGTH           = 0x00C1;
+		public const int EM_REPLACESEL           = 0x00C2;
+		public const int EM_GETLINE              = 0x00C4;
+		public const int EM_LIMITTEXT            = 0x00C5;
+		public const int EM_CANUNDO              = 0x00C6;
+		public const int EM_UNDO                 = 0x00C7;
+		public const int EM_FMTLINES             = 0x00C8;
+		public const int EM_LINEFROMCHAR         = 0x00C9;
+		public const int EM_SETTABSTOPS          = 0x00CB;
+		public const int EM_SETPASSWORDCHAR      = 0x00CC;
+		public const int EM_EMPTYUNDOBUFFER      = 0x00CD;
+		public const int EM_GETFIRSTVISIBLELINE  = 0x00CE;
+		public const int EM_SETREADONLY          = 0x00CF;
+		public const int EM_SETWORDBREAKPROC     = 0x00D0;
+		public const int EM_GETWORDBREAKPROC     = 0x00D1;
+		public const int EM_GETPASSWORDCHAR      = 0x00D2;
+		public const int EM_SETMARGINS           = 0x00D3;
+		public const int EM_GETMARGINS           = 0x00D4;
+		public const int EM_SETLIMITTEXT         = EM_LIMITTEXT;//;win40 Name change 
+		public const int EM_GETLIMITTEXT         = 0x00D5;
+		public const int EM_POSFROMCHAR          = 0x00D6;
+		public const int EM_CHARFROMPOS          = 0x00D7;
+		public const int EM_SETIMESTATUS         = 0x00D8;
+		public const int EM_GETIMESTATUS         = 0x00D9;
+		public const int EM_FORMATRANGE          = (int)WM_USER + 57;
 
-			// EDITWORDBREAKPROC code values
-			public const int WB_LEFT        = 0;
-			public const int WB_RIGHT       = 1;
-			public const int WB_ISDELIMITER = 2;
-		}
+		// EDITWORDBREAKPROC code values
+		public const int WB_LEFT        = 0;
+		public const int WB_RIGHT       = 1;
+		public const int WB_ISDELIMITER = 2;
 		#endregion
 
 		#region Rich Edit Control
-		public static class RichEditCtrl
-		{
-			public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
-			public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
-			public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
-			public const uint EM_SCROLLCARET                  = (WM_USER + 49);
-			public const uint EM_CANPASTE                     = (WM_USER + 50);
-			public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
-			public const uint EM_EXGETSEL                     = (WM_USER + 52);
-			public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
-			public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
-			public const uint EM_EXSETSEL                     = (WM_USER + 55);
-			public const uint EM_FINDTEXT                     = (WM_USER + 56);
-			public const uint EM_FORMATRANGE                  = (WM_USER + 57);
-			public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
-			public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
-			public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
-			public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
-			public const uint EM_GETSELTEXT                   = (WM_USER + 62);
-			public const uint EM_HIDESELECTION                = (WM_USER + 63);
-			public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
-			public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
-			public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
-			public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
-			public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
-			public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
-			public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
-			public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
-			public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
-			public const uint EM_STREAMIN                     = (WM_USER + 73);
-			public const uint EM_STREAMOUT                    = (WM_USER + 74);
-			public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
-			public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
-			public const uint EM_SETOPTIONS                   = (WM_USER + 77);
-			public const uint EM_GETOPTIONS                   = (WM_USER + 78);
-			public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
-			public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
-			public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
+		//public const uint EM_GETLIMITTEXT                 = (WM_USER + 37);
+		//public const uint EM_POSFROMCHAR                  = (WM_USER + 38);
+		//public const uint EM_CHARFROMPOS                  = (WM_USER + 39);
+		//public const uint EM_SCROLLCARET                  = (WM_USER + 49);
+		public const uint EM_CANPASTE                     = (WM_USER + 50);
+		public const uint EM_DISPLAYBAND                  = (WM_USER + 51);
+		public const uint EM_EXGETSEL                     = (WM_USER + 52);
+		public const uint EM_EXLIMITTEXT                  = (WM_USER + 53);
+		public const uint EM_EXLINEFROMCHAR               = (WM_USER + 54);
+		public const uint EM_EXSETSEL                     = (WM_USER + 55);
+		public const uint EM_FINDTEXT                     = (WM_USER + 56);
+		//public const uint EM_FORMATRANGE                  = (WM_USER + 57);
+		public const uint EM_GETCHARFORMAT                = (WM_USER + 58);
+		public const uint EM_GETEVENTMASK                 = (WM_USER + 59);
+		public const uint EM_GETOLEINTERFACE              = (WM_USER + 60);
+		public const uint EM_GETPARAFORMAT                = (WM_USER + 61);
+		public const uint EM_GETSELTEXT                   = (WM_USER + 62);
+		public const uint EM_HIDESELECTION                = (WM_USER + 63);
+		public const uint EM_PASTESPECIAL                 = (WM_USER + 64);
+		public const uint EM_REQUESTRESIZE                = (WM_USER + 65);
+		public const uint EM_SELECTIONTYPE                = (WM_USER + 66);
+		public const uint EM_SETBKGNDCOLOR                = (WM_USER + 67);
+		public const uint EM_SETCHARFORMAT                = (WM_USER + 68);
+		public const uint EM_SETEVENTMASK                 = (WM_USER + 69);
+		public const uint EM_SETOLECALLBACK               = (WM_USER + 70);
+		public const uint EM_SETPARAFORMAT                = (WM_USER + 71);
+		public const uint EM_SETTARGETDEVICE              = (WM_USER + 72);
+		public const uint EM_STREAMIN                     = (WM_USER + 73);
+		public const uint EM_STREAMOUT                    = (WM_USER + 74);
+		public const uint EM_GETTEXTRANGE                 = (WM_USER + 75);
+		public const uint EM_FINDWORDBREAK                = (WM_USER + 76);
+		public const uint EM_SETOPTIONS                   = (WM_USER + 77);
+		public const uint EM_GETOPTIONS                   = (WM_USER + 78);
+		public const uint EM_FINDTEXTEX                   = (WM_USER + 79);
+		public const uint EM_GETWORDBREAKPROCEX           = (WM_USER + 80);
+		public const uint EM_SETWORDBREAKPROCEX           = (WM_USER + 81);
 
-			// RichEdit 2.0 messages
-			public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
-			public const uint EM_REDO                         = (WM_USER + 84);
-			public const uint EM_CANREDO                      = (WM_USER + 85);
-			public const uint EM_GETUNDONAME                  = (WM_USER + 86);
-			public const uint EM_GETREDONAME                  = (WM_USER + 87);
-			public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
-			public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
-			public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
-		}
+		// RichEdit 2.0 messages
+		public const uint EM_SETUNDOLIMIT                 = (WM_USER + 82);
+		public const uint EM_REDO                         = (WM_USER + 84);
+		public const uint EM_CANREDO                      = (WM_USER + 85);
+		public const uint EM_GETUNDONAME                  = (WM_USER + 86);
+		public const uint EM_GETREDONAME                  = (WM_USER + 87);
+		public const uint EM_STOPGROUPTYPING              = (WM_USER + 88);
+		public const uint EM_SETTEXTMODE                  = (WM_USER + 89);
+		public const uint EM_GETTEXTMODE                  = (WM_USER + 90);
+
+		public const uint EM_GETSCROLLPOS                 = (WM_USER + 221);
+		public const uint EM_SETSCROLLPOS                 = (WM_USER + 222);
 		#endregion
 
 		#region Progress Bar
-		public static class ProgressBar
-		{
-			public const uint PBS_SMOOTH              = 0x01;
-			public const uint PBS_VERTICAL            = 0x04;
-			public const uint PBS_MARQUEE             = 0x08;
-			public const uint PBS_SMOOTHREVERSE       = 0x10;
+		public const uint PBS_SMOOTH              = 0x01;
+		public const uint PBS_VERTICAL            = 0x04;
+		public const uint PBS_MARQUEE             = 0x08;
+		public const uint PBS_SMOOTHREVERSE       = 0x10;
 
-			public const uint PBM_SETRANGE            = (WM_USER+1);
-			public const uint PBM_SETPOS              = (WM_USER+2);
-			public const uint PBM_DELTAPOS            = (WM_USER+3);
-			public const uint PBM_SETSTEP             = (WM_USER+4);
-			public const uint PBM_STEPIT              = (WM_USER+5);
-			public const uint PBM_SETRANGE32          = (WM_USER+6);  // lParam = high, wParam = low
+		public const uint PBM_SETRANGE            = (WM_USER+1);
+		public const uint PBM_SETPOS              = (WM_USER+2);
+		public const uint PBM_DELTAPOS            = (WM_USER+3);
+		public const uint PBM_SETSTEP             = (WM_USER+4);
+		public const uint PBM_STEPIT              = (WM_USER+5);
+		public const uint PBM_SETRANGE32          = (WM_USER+6);  // lParam = high, wParam = low
 
-			public const uint PBM_GETRANGE            = (WM_USER+7);    // wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
-			public const uint PBM_GETPOS              = (WM_USER+8);
-			public const uint PBM_SETBARCOLOR         = (WM_USER+9);    // lParam = bar color
-			public const uint PBM_SETMARQUEE          = (WM_USER+10);
-			public const uint PBM_GETSTEP             = (WM_USER+13);
-			public const uint PBM_GETBKCOLOR          = (WM_USER+14);
-			public const uint PBM_GETBARCOLOR         = (WM_USER+15);
-			public const uint PBM_SETSTATE            = (WM_USER+16); // wParam = PBST_[State] (NORMAL, ERROR, PAUSED)
-			public const uint PBM_GETSTATE            = (WM_USER+17);
-			public const uint PBM_SETBKCOLOR          = CCM_SETBKCOLOR; // lParam = bkColor
+		public const uint PBM_GETRANGE            = (WM_USER+7);    // wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
+		public const uint PBM_GETPOS              = (WM_USER+8);
+		public const uint PBM_SETBARCOLOR         = (WM_USER+9);    // lParam = bar color
+		public const uint PBM_SETMARQUEE          = (WM_USER+10);
+		public const uint PBM_GETSTEP             = (WM_USER+13);
+		public const uint PBM_GETBKCOLOR          = (WM_USER+14);
+		public const uint PBM_GETBARCOLOR         = (WM_USER+15);
+		public const uint PBM_SETSTATE            = (WM_USER+16); // wParam = PBST_[State] (NORMAL, ERROR, PAUSED)
+		public const uint PBM_GETSTATE            = (WM_USER+17);
+		public const uint PBM_SETBKCOLOR          = CCM_SETBKCOLOR; // lParam = bkColor
 
-			public const int PBST_NORMAL = 0x0001;
-			public const int PBST_ERROR  = 0x0002;
-			public const int PBST_PAUSED = 0x0003;
-		}
+		public const int PBST_NORMAL = 0x0001;
+		public const int PBST_ERROR  = 0x0002;
+		public const int PBST_PAUSED = 0x0003;
+		#endregion
+
+		#region ListView Control
+		public const uint LVN_ITEMCHANGING    = (LVN_FIRST-0 );
+		public const uint LVN_ITEMCHANGED     = (LVN_FIRST-1 );
+		public const uint LVN_INSERTITEM      = (LVN_FIRST-2 );
+		public const uint LVN_DELETEITEM      = (LVN_FIRST-3 );
+		public const uint LVN_DELETEALLITEMS  = (LVN_FIRST-4 );
+		public const uint LVN_BEGINLABELEDITA = (LVN_FIRST-5 );
+		public const uint LVN_BEGINLABELEDITW = (LVN_FIRST-75);
+		public const uint LVN_ENDLABELEDITA   = (LVN_FIRST-6 );
+		public const uint LVN_ENDLABELEDITW   = (LVN_FIRST-76);
+		public const uint LVN_COLUMNCLICK     = (LVN_FIRST-8 );
+		public const uint LVN_BEGINDRAG       = (LVN_FIRST-9 );
+		public const uint LVN_BEGINRDRAG      = (LVN_FIRST-11);
+		public const uint LVN_ODCACHEHINT     = (LVN_FIRST-13);
+		public const uint LVN_ODFINDITEMA     = (LVN_FIRST-52);
+		public const uint LVN_ODFINDITEMW     = (LVN_FIRST-79);
+		public const uint LVN_ITEMACTIVATE    = (LVN_FIRST-14);
+		public const uint LVN_ODSTATECHANGED  = (LVN_FIRST-15);
+		public const uint LVN_HOTTRACK        = (LVN_FIRST-21);
+		public const uint LVN_GETDISPINFOA    = (LVN_FIRST-50);
+		public const uint LVN_GETDISPINFOW    = (LVN_FIRST-77);
+		public const uint LVN_SETDISPINFOA    = (LVN_FIRST-51);
+		public const uint LVN_SETDISPINFOW    = (LVN_FIRST-78);
+		public const uint LVN_BEGINLABELEDIT  = LVN_BEGINLABELEDITW;
+		public const uint LVN_ENDLABELEDIT    = LVN_ENDLABELEDITW;
+		public const uint LVN_GETDISPINFO     = LVN_GETDISPINFOW;
+		public const uint LVN_SETDISPINFO     = LVN_SETDISPINFOW;
+		public const uint LVN_ODFINDITEM      = LVN_ODFINDITEMW;
 		#endregion
 
 		#region Window Styles WS_
@@ -890,7 +993,7 @@ namespace pr.win32
 
 		#endregion
 
-		/// <summary>Helper method for loading a dll from a platform specific path</summary>
+		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
 		public static IntPtr LoadDll(string dllname, string dir = @".\lib\$(platform)")
 		{
 			Func<string,IntPtr> TryLoad = path =>
@@ -919,15 +1022,31 @@ namespace pr.win32
 		}
 
 		/// <summary>Returns the upper 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
-		public static uint GetHiword(int dword)
+		public static uint HiWord(uint dword)
 		{
-			return ((uint)dword >> 16 & 0xFFFF);
+			return (dword >> 16) & 0xFFFF;
+		}
+		public static int HiWord(int dword)
+		{
+			return (int)HiWord((uint)dword);
+		}
+		public static int HiWord(IntPtr dword)
+		{
+			return (int)HiWord((uint)dword);
 		}
 
 		/// <summary>Returns the lower 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
-		public static uint GetLoword(int dword)
+		public static uint LoWord(uint dword)
 		{
-			return ((uint)dword & 0xFFFF);
+			return dword & 0xFFFF;
+		}
+		public static int LoWord(int dword)
+		{
+			return (int)LoWord((uint)dword);
+		}
+		public static int LoWord(IntPtr dword)
+		{
+			return (int)LoWord((uint)dword);
 		}
 
 		/// <summary>Test the async state of a key</summary>
@@ -966,6 +1085,26 @@ namespace pr.win32
 			return CharFromVKey((Keys)System.Windows.Input.KeyInterop.VirtualKeyFromKey(vkey));
 		}
 
+		/// <summary>Convert the LParam from WM_KEYDOWN, WM_KEYUP, WM_CHAR to usable data</summary>
+		public struct KeyState
+		{
+			public uint Repeats;
+			public bool Alt;
+			public int  Transition; // 0(b00) = low-low, 1(b01) = low-hi, 2(b10) = hi-low, 3(b11) = hi-hi
+			public KeyState(uint lparam)
+			{
+				Repeats    = (lparam & 0xffffU);
+				Alt        = (lparam & (1U << 29)) != 0;
+				Transition = ((lparam & (1U << 30)) != 0 ? 2 : 0) | ((lparam & (1U << 31)) == 0 ? 1 : 0);
+			}
+			public KeyState(int lparam)
+				:this((uint)lparam)
+			{}
+			public KeyState(IntPtr lparam)
+				:this((uint)lparam)
+			{}
+		}
+
 		/// <summary>Pack a Point into an LPARAM</summary>
 		public static IntPtr PointToLParam(Point pt)
 		{
@@ -1000,5 +1139,191 @@ namespace pr.win32
 		}
 
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
+
+		/// <summary>Output a trace of wndproc messages to the debug output window</summary>
+		/// <param name="m"></param>
+		[SuppressMessage("Microsoft.Performance", "CA1801:ReviewUnusedParameters", MessageId = "m")]
+		public static void WndProcDebug(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, string name)
+		{
+			#if true
+			using (Scope.Create(() => ++m_wnd_proc_nest, () => --m_wnd_proc_nest))
+			{
+				if (msg < Win32.WM_USER)
+				{
+					++m_msg_idx;
+					var msg_str = DebugMessage(hwnd, msg, wparam, lparam);
+					if (msg_str.HasValue())
+					{
+						for (int i = 1; i != m_wnd_proc_nest; ++i) Debug.Write("\t");
+						Debug.WriteLine("{0:d5}|{1}|{2}".Fmt(m_msg_idx, name, msg_str));
+					}
+					if (m_msg_idx == 0)
+						Debugger.Break();
+				}
+			}
+			#endif
+		}
+		public static void WndProcDebug(ref Message m, string name)
+		{
+			WndProcDebug(m.HWnd, m.Msg, m.WParam, m.LParam, name);
+		}
+		private static int m_wnd_proc_nest = 0; // Tracks how often WndProc has been called recursively
+		private static int m_msg_idx = 0;
+
+		/// <summary>Convert a wndproc message to a string</summary>
+		public static string DebugMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam) { return DebugMessage(hwnd, msg, (int)wparam, (int)lparam); }
+		public static string DebugMessage(IntPtr hwnd, int msg, int wparam, int lparam)
+		{
+			var wparam_lo = LoWord(wparam);
+			var wparam_hi = HiWord(wparam);
+			var lparam_lo = LoWord(lparam);
+			var lparam_hi = HiWord(lparam);
+
+			var hdr = "{0}(0x{1:X4}):".Fmt(MsgIdToString(msg), msg);
+			var wnd = " hwnd: 0x{0:X8}".Fmt(hwnd);
+			var wp  = "wparam: {0:X8}({1:X4},{2:X4})".Fmt(wparam, wparam_hi, wparam_lo);
+			var lp  = "lparam: {0:X8}({1:X4},{2:X4})".Fmt(lparam, lparam_hi, lparam_lo);
+
+			switch (msg)
+			{
+			default:
+				return "{0} {1} {2} {3}".Fmt(hdr ,wnd ,wp ,lp);
+			case WM_KEYDOWN:
+			case WM_KEYUP:
+			case WM_CHAR:
+				return "{0} '{1}'({2})  repeats:{3}  state:{4}  transition:{5}{6}"
+					.Fmt(hdr
+					,msg == WM_CHAR ? new string((char)wparam,1) : Enum<Keys>.ToString(wparam)
+					,wparam
+					,(lparam&0xffff)
+					,(lparam & (1 << 29)) != 0 ? "ALT " : string.Empty
+					,(lparam & (1 << 30)) != 0 ? "1" : "0"
+					,(lparam & (1 << 31)) != 0 ? "0" : "1");
+			case WM_LBUTTONDOWN:
+				return "{0} button state = {1}{2}{3}{4}{5}{6}{7}  x,y=({8},{9})"
+					.Fmt(hdr
+					,((wparam&MK_CONTROL ) != 0 ?"|Ctrl" :"")
+					,((wparam&MK_LBUTTON ) != 0 ?"|LBtn" :"")
+					,((wparam&MK_MBUTTON ) != 0 ?"|MBtn" :"")
+					,((wparam&MK_RBUTTON ) != 0 ?"|RBtn" :"")
+					,((wparam&MK_SHIFT   ) != 0 ?"|Shift":"")
+					,((wparam&MK_XBUTTON1) != 0 ?"|XBtn1":"")
+					,((wparam&MK_XBUTTON2) != 0 ?"|XBtn2":"")
+					,lparam_lo ,lparam_hi);
+			case WM_ACTIVATEAPP:
+				return "{0} {1} Other Thread: {2}".Fmt(hdr ,(wparam!=0?"ACTIVE":"INACTIVE") ,lparam);
+			case WM_ACTIVATE:
+				return "{0} {1} Other Window: {2}".Fmt(hdr ,(LoWord(wparam)==WA_ACTIVE?"ACTIVE":LoWord(wparam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE") ,lparam);
+			case WM_NCACTIVATE:
+				return "{0} {1} {2}".Fmt(hdr ,(wparam!=0?"ACTIVE":"INACTIVE") ,lp);
+			case WM_MOUSEACTIVATE:
+				return "{0} top level parent window = {1}  {2}".Fmt(hdr ,wparam ,lp);
+			case WM_SHOWWINDOW:
+				return "{0} {1} {2}"
+					.Fmt(hdr
+					,(wparam!=0?"VISIBLE":"HIDDEN")
+					,(lparam==SW_OTHERUNZOOM?"OtherUnzoom":
+					  lparam==SW_PARENTCLOSING?"ParentClosing":
+					  lparam==SW_OTHERZOOM?"OtherZoom":
+					  lparam==SW_PARENTOPENING?"ParentOpening":
+					  "ShowWindow called"));
+			case WM_WINDOWPOSCHANGING:
+			case WM_WINDOWPOSCHANGED:
+				{
+					var wpos = MarshalEx.PtrToStructure<WINDOWPOS>((IntPtr)lparam);
+					return "{0} x,y=({1},{2}) size=({3},{4}) after={5} flags={6}{7}{8}{9}{10}{11}{12}{13}{14}{15}{16}{17}{18}"
+						.Fmt(hdr
+						,wpos.x ,wpos.y
+						,wpos.cx ,wpos.cy
+						,wpos.hwndInsertAfter
+						,(wpos.flags&SWP_DRAWFRAME     )!=0 ?"|SWP_DRAWFRAME"     :""
+						,(wpos.flags&SWP_FRAMECHANGED  )!=0 ?"|SWP_FRAMECHANGED"  :""
+						,(wpos.flags&SWP_HIDEWINDOW    )!=0 ?"|SWP_HIDEWINDOW"    :""
+						,(wpos.flags&SWP_NOACTIVATE    )!=0 ?"|SWP_NOACTIVATE"    :""
+						,(wpos.flags&SWP_NOCOPYBITS    )!=0 ?"|SWP_NOCOPYBITS"    :""
+						,(wpos.flags&SWP_NOMOVE        )!=0 ?"|SWP_NOMOVE"        :""
+						,(wpos.flags&SWP_NOOWNERZORDER )!=0 ?"|SWP_NOOWNERZORDER" :""
+						,(wpos.flags&SWP_NOREDRAW      )!=0 ?"|SWP_NOREDRAW"      :""
+						,(wpos.flags&SWP_NOREPOSITION  )!=0 ?"|SWP_NOREPOSITION"  :""
+						,(wpos.flags&SWP_NOSENDCHANGING)!=0 ?"|SWP_NOSENDCHANGING":""
+						,(wpos.flags&SWP_NOSIZE        )!=0 ?"|SWP_NOSIZE"        :""
+						,(wpos.flags&SWP_NOZORDER      )!=0 ?"|SWP_NOZORDER"      :""
+						,(wpos.flags&SWP_SHOWWINDOW    )!=0 ?"|SWP_SHOWWINDOW"    :"");
+				}
+			case WM_KILLFOCUS:
+				return "{0} Focused Window: {1}".Fmt(hdr ,wparam);
+			case WM_NOTIFY:
+				{
+					var notify_type = "unknown";
+					var nmhdr = MarshalEx.PtrToStructure<NMHDR>((IntPtr)lparam);
+					if      (NM_LAST   <= nmhdr.code) notify_type = "NM";
+					else if (LVN_LAST  <= nmhdr.code) notify_type = "LVN";
+					else if (HDN_LAST  <= nmhdr.code) notify_type = "HDN";
+					else if (TVN_LAST  <= nmhdr.code) notify_type = "TVN";
+					else if (TTN_LAST  <= nmhdr.code) notify_type = "TTN";
+					else if (TCN_LAST  <= nmhdr.code) notify_type = "TCN";
+					else if (CDN_LAST  <= nmhdr.code) notify_type = "CDN";
+					else if (TBN_LAST  <= nmhdr.code) notify_type = "TBN";
+					else if (UDN_LAST  <= nmhdr.code) notify_type = "UDN";
+					else if (DTN_LAST  <= nmhdr.code) notify_type = "DTN";
+					else if (MCN_LAST  <= nmhdr.code) notify_type = "MCN";
+					else if (DTN_LAST2 <= nmhdr.code) notify_type = "DTN";
+					else if (CBEN_LAST <= nmhdr.code) notify_type = "CBEN";
+					else if (RBN_LAST  <= nmhdr.code) notify_type = "RBN";
+					else if (IPN_LAST  <= nmhdr.code) notify_type = "IPN";
+					else if (SBN_LAST  <= nmhdr.code) notify_type = "SBN";
+					else if (PGN_LAST  <= nmhdr.code) notify_type = "PGN";
+					else if (WMN_LAST  <= nmhdr.code) notify_type = "WMN";
+					else if (BCN_LAST  <= nmhdr.code) notify_type = "BCN";
+					else if (TRBN_LAST <= nmhdr.code) notify_type = "TRBN";
+
+					// Ignore
+					if (nmhdr.code == LVN_HOTTRACK)
+						return "";
+
+					return "{0} SourceCtrlId = {1}  from_hWnd: {2}  from_id: {3}  code: {4}:{5}"
+						.Fmt(hdr
+						,wparam
+						,nmhdr.hwndFrom
+						,nmhdr.idFrom
+						,nmhdr.code
+						,notify_type);
+				}
+			case WM_SYSKEYDOWN:
+				return "{0} vk_key = {1} ({2})  Repeats: {3}  lParam: {4}"
+					.Fmt(hdr
+					,wparam ,Enum<Keys>.ToString((int)wparam)
+					,lparam_lo
+					,lparam);
+			case WM_PAINT:
+				//{
+				//	RECT r;
+				//	::GetUpdateRect(hWnd, &r, FALSE);
+				//	return "{0} update=({1},{2}) size=({3},{4})  HDC: {5}{6}"
+				//		.Fmt(hdr
+				//		,r.left ,r.top ,r.right - r.left ,r.bottom - r.top
+				//		,wParam
+				//		,newline);
+				//}
+			case WM_NCHITTEST:
+			case WM_SETCURSOR:
+			case WM_NCMOUSEMOVE:
+			case WM_NCMOUSELEAVE:
+			case WM_MOUSEMOVE:
+			case WM_GETICON:
+			//case EWinMsg::wm_UAHDRAWMENUITEM:
+			//case EWinMsg::wm_UAHDRAWMENU:
+			//case EWinMsg::wm_UAHINITMENU:
+			//case EWinMsg::wm_DWMCOLORIZATIONCOLORCHANGED:
+			//case EWinMsg::wm_UAHMEASUREMENUITEM:
+			//case WM_CTLCOLORDLG:
+			//case WM_AFXLAST:
+			//case WM_ENTERIDLE:
+			//case WM_ERASEBKGND:
+			//case WM_PAINT:
+			case WM_NULL:
+				return "";//ignore
+			}
+		}
 	}
 }

@@ -150,7 +150,7 @@ namespace pr.ldr
 		public Scope Group(string name) { return Group(name, v4.Origin); }
 		public Scope Group(string name, v4 position)
 		{
-			return new Scope(
+			return Scope.Create(
 				() => Append("*Group ",name," {\n"),
 				() => Append(Ldr.Position(position),"}\n")
 				);
