@@ -75,6 +75,9 @@
     <Compile Include="src\ldr_editor_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\rich_text_box_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\subclassed_controls_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -187,7 +190,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>

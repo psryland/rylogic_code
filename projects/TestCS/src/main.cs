@@ -21,6 +21,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_dgv;
 		private ToolStripMenuItem m_menu_tests_helpui;
 		private ToolStripMenuItem m_menu_subclassed_controls;
+		private ToolStripMenuItem m_menu_tests_rtb;
 		private ToolStripMenuItem m_menu_graph_control;
 
 		public FormTestApp()
@@ -87,6 +88,11 @@ namespace TestCS
 					new CheckedListBoxUI().Show(this);
 				};
 
+			m_menu_tests_rtb.Click += (s,a) =>
+				{
+					new RichTextBoxUI().Show(this);
+				};
+
 			m_menu_tests_view3d.Click += (s,a) =>
 				{
 					new FormView3d().Show(this);
@@ -146,6 +152,7 @@ namespace TestCS
 			this.m_menu_tree_grid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_rtb = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -189,7 +196,8 @@ namespace TestCS
             this.m_menu_toolstrip_positions,
             this.m_menu_tree_grid,
             this.m_menu_tests_view3d,
-            this.m_menu_tests_view3d_editor});
+            this.m_menu_tests_view3d_editor,
+            this.m_menu_tests_rtb});
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(46, 20);
 			this.m_menu_tests.Text = "&Tests";
@@ -271,6 +279,12 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor.Name = "m_menu_tests_view3d_editor";
 			this.m_menu_tests_view3d_editor.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_view3d_editor.Text = "&View3d Editor";
+			// 
+			// m_menu_tests_rtb
+			// 
+			this.m_menu_tests_rtb.Name = "m_menu_tests_rtb";
+			this.m_menu_tests_rtb.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_rtb.Text = "&Rich Text Box";
 			// 
 			// FormTestApp
 			// 
