@@ -221,7 +221,7 @@ namespace pr
 					m_resizing = false;
 
 					// Find the new client area
-					auto area = ClientRect(*this, true);
+					auto area = ClientRect();//ClientRect(*this, true);
 					if (m_main && area.width() > 0 && area.height() > 0)
 					{
 						m_main->Resize(pr::To<IRect>(area));

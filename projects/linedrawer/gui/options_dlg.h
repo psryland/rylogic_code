@@ -8,10 +8,10 @@
 
 namespace ldr
 {
-	// A UI for setting options
-	struct OptionsUI :pr::gui::Form<OptionsUI>
-	{
-	};
+	//// A UI for setting options
+	//struct OptionsUI :pr::gui::Form<OptionsUI>
+	//{
+	//};
 }
 
 

@@ -1299,8 +1299,8 @@ namespace pr
 			}
 			void UnhookWndProc()
 			{
-				auto wndproc = (WNDPROC)::GetWindowLongPtrW(m_hwnd, GWLP_WNDPROC);
-				auto dlgproc = (DLGPROC)::GetWindowLongPtrW(m_hwnd, DWLP_DLGPROC);
+				//auto wndproc = (WNDPROC)::GetWindowLongPtrW(m_hwnd, GWLP_WNDPROC);
+				//auto dlgproc = (DLGPROC)::GetWindowLongPtrW(m_hwnd, DWLP_DLGPROC);
 
 				if (m_oldproc == &::DefWindowProcW)
 					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc));
@@ -2803,7 +2803,12 @@ namespace pr
 			{
 				if (m_hwnd == nullptr) return false;
 				m_exit_code = exit_code;
+
+				// 
 				Parent(nullptr);
+				for (auto& c : m_child)
+					c->Detach();
+
 				auto r = m_modal
 					? ::EndDialog(m_hwnd, INT_PTR(m_exit_code))
 					: ::DestroyWindow(m_hwnd);
