@@ -1731,6 +1731,7 @@ namespace pr
 			auto hwnd = pr::FmtX<struct b, 128, char>(" hwnd: %p", hWnd);
 			auto fmt  = pr::FmtX<struct X, 1024, char>;
 
+			// Note: there is a C# version of this, copy to/from there is possible
 			switch (uMsg)
 			{
 			default:
