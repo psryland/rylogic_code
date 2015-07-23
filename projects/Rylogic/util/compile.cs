@@ -38,12 +38,12 @@ namespace pr.util
 		{
 			// Scan the file for Reference Assembles
 			var assemblies = new List<string>();
-			foreach (var line in source.Lines().Select(x => (string)x.Trim(' ','\t','\r')))
+			foreach (var line in source.Lines().Select(x => (string)x.Trim(' ','\t','\r','\n')))
 			{
 				if (!line.HasValue()) continue;
 				if (!line.StartsWith("//")) break;
 				if (!line.StartsWith("//Assembly:")) continue;
-				var ass = line.Substring(11).Trim(' ','\t','\r');
+				var ass = line.Substring(11).Trim(' ','\t','\r','\n');
 				if (ass.HasValue()) assemblies.Add(ass);
 			}
 

@@ -155,7 +155,8 @@ namespace pr.gui
 			if (accept != null)
 				accept.Click += (s,a) =>
 					{
-						DialogResult = AcceptButton.DialogResult;
+						if (s.As<Button>().DialogResult == DialogResult.None) return;
+						DialogResult = s.As<Button>().DialogResult;
 						Close();
 					};
 
@@ -164,7 +165,8 @@ namespace pr.gui
 			if (cancel != null)
 				cancel.Click += (s,a) =>
 					{
-						DialogResult = CancelButton.DialogResult;
+						if (s.As<Button>().DialogResult == DialogResult.None) return;
+						DialogResult = s.As<Button>().DialogResult;
 						Close();
 					};
 

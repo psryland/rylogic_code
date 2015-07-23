@@ -45,6 +45,14 @@ namespace pr.extn
 			return str.Substring(sidx, eidx - sidx);
 		}
 
+		/// <summary>Use regex to extract multiple strings from this string. (Doesn't include Group(0))</summary>
+		public static string[] SubstringRegex(this string str, string pattern, RegexOptions options = RegexOptions.None)
+		{
+			var m = Regex.Match(str, pattern, options);
+			if (!m.Success) return new string[0];
+			return m.Groups.Cast<Group>().Skip(1).Select(x => x.Value).ToArray();;
+		}
+
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
 		public static string SubstringRegex(this string str, string start_pattern, string end_pattern, RegexOptions options = RegexOptions.None)
 		{
@@ -417,8 +425,8 @@ namespace pr.extn
 		{
 			int s = 0, e = m_length;
 			for (; s != m_length && ch.Contains(this[s]); ++s) {}
-			for (; e-- > s && ch.Contains(this[e]); ) {}
-			return Substring(s, e);
+			for (; e != s && ch.Contains(this[e-1]); --e) {}
+			return Substring(s, e - s);
 		}
 
 		IEnumerator<char> IEnumerable<char>.GetEnumerator()

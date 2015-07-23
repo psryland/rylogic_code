@@ -40,6 +40,11 @@ namespace pr.common
 		public static Cmp<T> From(Func<T,T,bool> c) { return (Cmp<T>)c; }
 		public static Cmp<T> From(Comparer<T>    c) { return (Cmp<T>)c; }
 	}
+	public static class Cmp
+	{
+		// This doesn't work, because 'T' is unknown in a lambda function
+		public static Cmp<T> From<T>(Func<T,T,bool> c) { return Cmp<T>.From(c); }
+	}
 
 	/// <summary>
 	/// A generic IEqualityComparer implementation that is implicitly convertable

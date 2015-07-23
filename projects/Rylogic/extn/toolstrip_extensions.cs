@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using pr.common;
 using pr.util;
 
 namespace pr.extn
@@ -207,6 +209,184 @@ namespace pr.extn
 				lbl.Owner.Cursor = Cursors.Default;
 			}
 		}
+
+		/// <summary>
+		/// Merge the contents of 'rhs' into this menu.
+		/// Menus with the same *Name* (not Text) become one menu. Otherwise uses MergeIndex to define the order.
+		/// 'choose_rhs' causes the rhs to replace the lhs when items are considered equal</summary>
+		public static void Merge(this ToolStrip lhs, ToolStrip rhs, bool choose_rhs, bool permanent = false)
+		{
+			// Record the layout of 'cont' and 'rhs' if not seen before
+			if (!permanent)
+			{
+				if (!m_ts_layout.ContainsKey(lhs))
+					m_ts_layout.Add(lhs, new ToolStripLayout(lhs));
+				if (!m_ts_layout.ContainsKey(rhs))
+					m_ts_layout.Add(rhs, new ToolStripLayout(rhs));
+			}
+			DoMerge(lhs, lhs.Items, rhs, rhs.Items, choose_rhs);
+		}
+		public static void Merge(this ToolStripDropDownItem lhs, ToolStripDropDownItem rhs, bool choose_rhs, bool permanent = false)
+		{
+			// Record the layout of 'cont' and 'rhs' if not seen before
+			if (!permanent)
+			{
+				if (!m_ts_layout.ContainsKey(lhs))
+					m_ts_layout.Add(lhs, new ToolStripLayout(lhs));
+				if (!m_ts_layout.ContainsKey(rhs))
+					m_ts_layout.Add(rhs, new ToolStripLayout(rhs));
+			}
+			DoMerge(lhs.Owner, lhs.DropDownItems, rhs.Owner, rhs.DropDownItems, choose_rhs);
+		}
+
+		/// <summary>Restore this menu, removing it from any other menus it might be merged into</summary>
+		public static void UnMerge(this ToolStrip strip)
+		{
+			ToolStripLayout layout;
+			if (m_ts_layout.TryGetValue(strip, out layout))
+			{
+				layout.Rebuild();
+				m_ts_layout.Remove(strip);
+			}
+		}
+		public static void UnMerge(this ToolStripDropDownItem cont)
+		{
+			ToolStripLayout layout;
+			if (m_ts_layout.TryGetValue(cont, out layout))
+			{
+				layout.Rebuild();
+				m_ts_layout.Remove(cont);
+			}
+		}
+
+		/// <summary>Keeps a record of dropdown menu layouts</summary>
+		private static Dictionary<object, ToolStripLayout> m_ts_layout = new Dictionary<object,ToolStripLayout>();
+
+		/// <summary>Records the layout of a toolstrip</summary>
+		internal class ToolStripLayout
+		{
+			public object m_item;
+			public List<ToolStripLayout> m_children;
+
+			public ToolStripLayout(ToolStrip strip)
+			{
+				m_item = strip;
+				m_children = strip.Items.Cast<ToolStripItem>().Select(x => new ToolStripLayout(x)).ToList();
+			}
+			public ToolStripLayout(ToolStripItem item)
+			{
+				m_item = item;
+				m_children = item is ToolStripDropDownItem
+					? item.As<ToolStripDropDownItem>().DropDownItems.Cast<ToolStripItem>().Select(x => new ToolStripLayout(x)).ToList()
+					: new List<ToolStripLayout>();
+			}
+			public override string ToString()
+			{
+				return m_item is ToolStrip
+					? m_item.As<ToolStrip>().Name
+					: "{0} idx:{1}".Fmt(m_item.As<ToolStripItem>().Text, m_item.As<ToolStripItem>().MergeIndex);
+			}
+			/// <summary>Rebuilds 'm_item' to the stored layout</summary>
+			public void Rebuild()
+			{
+				Rebuild(this);
+			}
+			private static void Rebuild(ToolStripLayout item)
+			{
+				item.m_children.ForEach(Rebuild);
+				var dd = item.m_item as ToolStripDropDownItem;
+				if (dd != null)
+				{
+					dd.DropDownItems.Clear();
+					item.m_children.ForEach(c => dd.DropDownItems.Add(c.m_item.As<ToolStripItem>()));
+				}
+				var ts = item.m_item as ToolStrip;
+				if (ts != null)
+				{
+					ts.Items.Clear();
+					item.m_children.ForEach(c => ts.Items.Add(c.m_item.As<ToolStripItem>()));
+				}
+			}
+		}
+
+		/// <summary>
+		/// Merge item collections into 'lhs'
+		/// When two items are considered equal, 'choose_rhs' causes the item from 'rhs' to
+		/// replace the item in 'lhs'. Otherwise the item from 'lhs' is used</summary>
+		private static void DoMerge(object lhs_owner, ToolStripItemCollection lhs, object rhs_owner, ToolStripItemCollection rhs, bool choose_rhs)
+		{
+			if (ReferenceEquals(lhs_owner, rhs_owner))
+				throw new Exception("Merge menus failed. Cannot merge menu items belonging to the same menu");
+			if (lhs.Cast<ToolStripItem>().Any(x => x.Owner != lhs_owner))
+				throw new Exception("Merge menus failed. All items in the collection must belong to {0}".Fmt(lhs_owner.ToString()));
+			if (rhs.Cast<ToolStripItem>().Any(x => x.Owner != rhs_owner))
+				throw new Exception("Merge menus failed. All items in the collection must belong to {0}".Fmt(rhs_owner.ToString()));
+
+			// Sort the items in lhs by MergeIndex
+			for (bool sorted = false; !sorted;)
+			{
+				sorted = true;
+				for (int i = 1; i < lhs.Count; ++i)
+				{
+					if ((uint)lhs[i].MergeIndex >= (uint)lhs[i-1].MergeIndex) continue;
+					lhs.Insert(i-1, lhs[i]);
+					sorted = false;
+					--i;
+				}
+			}
+
+			// Build a list of all items
+			var order = lhs.Cast<ToolStripItem>().Concat(rhs.Cast<ToolStripItem>()).ToList();
+			var tomerge = new List<ToolStripItem>();
+
+			// Merge any items with the same name
+			foreach (var grp in order.GroupBy(x => x.Name))
+			{
+				// Find one in the group that belongs to 'lhs'
+				var l = grp.FirstOrDefault(x => x.Owner == lhs_owner);
+				if (l == null)
+				{
+					// All belong to 'rhs' stick them in the list for merging later
+					tomerge.AddRange(grp);
+					continue;
+				}
+
+				// Merge the rest in the group that belong to 'rhs' with 'l'
+				foreach (var r in grp.Where(x => x.Owner == rhs_owner))
+				{
+					var ldd = l as ToolStripDropDownItem;
+					var rdd = r as ToolStripDropDownItem;
+					if ((ldd != null) != (rdd != null))
+						throw new Exception("Menu merge failed. Cannot merge items {0} and {1} because both are not drop down items".Fmt(l.Text, r.Text));
+
+					// Merge rhs into lhs and choose lhs
+					if (!choose_rhs)
+					{
+						if (ldd != null && rdd != null)
+							DoMerge(ldd.DropDown, ldd.DropDownItems, rdd.DropDown, rdd.DropDownItems, false);
+					}
+
+					// Otherwise merge lhs into rhs and choose rhs
+					else
+					{
+						if (ldd != null && rdd != null)
+							DoMerge(rdd.DropDown, rdd.DropDownItems, ldd.DropDown, ldd.DropDownItems, false);
+
+						var idx = lhs.IndexOf(l);
+						lhs.RemoveAt(idx);
+						lhs.Insert(idx, r);
+					}
+				}
+			}
+
+			// Merge the remaining items by MergeIndex
+			foreach (var r in tomerge.Where(x => x.Owner == rhs_owner).OrderByDescending(x => (uint)x.MergeIndex))
+			{
+				var idx = (uint)(r.MergeIndex != -1 ? r.MergeIndex : lhs.Count);
+				var ins = 0; for (; ins != lhs.Count && (uint)lhs[ins].MergeIndex < idx; ++ins) {}
+				lhs.Insert(ins, r);
+			}
+		}
 	}
 
 	/// <summary>Used to persist control locations and sizes in xml</summary>
@@ -283,3 +463,54 @@ namespace pr.extn
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using extn;
+
+	[TestFixture] public class TestTSExtns
+	{
+		[Test] public void MergeMenus()
+		{
+			var m0 = new MenuStrip{Name = "m0", Text = "m0"};
+			{
+				var i0 = m0.Items.Add2(new ToolStripMenuItem{Name = "i0", Text = "i0", MergeIndex = 10});
+				var i1 = m0.Items.Add2(new ToolStripMenuItem{Name = "i1", Text = "i1", MergeIndex = 20});
+				var i2 = m0.Items.Add2(new ToolStripMenuItem{Name = "i2", Text = "i2", MergeIndex = 30});
+				var i10 = i1.DropDownItems.Add2(new ToolStripMenuItem{Name = "i10", Text = "i10", MergeIndex = 10});
+				var i12 = i1.DropDownItems.Add2(new ToolStripMenuItem{Name = "i12", Text = "i12", MergeIndex = 20});
+			}
+			var m1 = new MenuStrip{Name = "m1", Text = "m1"};
+			{
+				var i1 = m1.Items.Add2(new ToolStripMenuItem{Name = "i1", Text = "i1", MergeIndex = 15});
+				var i3 = m1.Items.Add2(new ToolStripMenuItem{Name = "i3", Text = "i3", MergeIndex = 35});
+				var i10 = i1.DropDownItems.Add2(new ToolStripMenuItem{Name = "i10", Text = "i10", MergeIndex = 15});
+				var i11 = i1.DropDownItems.Add2(new ToolStripMenuItem{Name = "i11", Text = "i11", MergeIndex = 15});
+			}
+
+			m0.Merge(m1, false);
+			Assert.True(m0.Text == "m0");
+			Assert.True(m0.Items.Count == 4);
+			Assert.True(m0.Items[0].Text == "i0");
+			Assert.True(m0.Items[1].Text == "i1");
+			Assert.True(m0.Items[2].Text == "i2");
+			Assert.True(m0.Items[3].Text == "i3");
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems.Count == 3);
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[0].Text == "i10");
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[1].Text == "i11");
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[2].Text == "i12");
+
+			m0.UnMerge();
+			Assert.True(m0.Text == "m0");
+			Assert.True(m0.Items.Count == 3);
+			Assert.True(m0.Items[0].Text == "i0");
+			Assert.True(m0.Items[1].Text == "i1");
+			Assert.True(m0.Items[2].Text == "i2");
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems.Count == 2);
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[0].Text == "i10");
+			Assert.True(m0.Items[1].As<ToolStripMenuItem>().DropDownItems[1].Text == "i12");
+		}
+	}
+}
+#endif

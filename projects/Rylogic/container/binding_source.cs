@@ -120,6 +120,11 @@ namespace pr.container
 			// bl.ListChanging += ListChanging.Raise;
 			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
+
+			// If we're about to delete the current item, invalidate the previous position
+			// since the 'OnPositionChanged','OnPositionChanging' events occur after the delete.
+			if (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position)
+				m_impl_previous_position = -1;
 		}
 
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
@@ -129,12 +134,15 @@ namespace pr.container
 			ItemChanged.Raise(sender, args);
 		}
 
-		/// <summary>Raised after the current list position changes (includes the previous poition)</summary>
+		/// <summary>Raised after the current list position changes (includes the previous position)</summary>
 		public event EventHandler<PositionChgEventArgs> PositionChanging;
 
 		/// <summary>Position changed handler</summary>
 		protected override void OnPositionChanged(EventArgs e)
 		{
+			// Note: PositionChanging with OldIndex = -1, and NewIndex = -1 happens when the current
+			// position is deleted. Since this event occurs after the delete 'm_impl_previous_position'
+			// has been set to -1.
 			PositionChanging.Raise(this, new PositionChgEventArgs(m_impl_previous_position, Position));
 			m_impl_previous_position = Position;
 			base.OnPositionChanged(e);
