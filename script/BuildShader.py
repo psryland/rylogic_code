@@ -125,14 +125,11 @@ try:
 				out_filepath_h   = outdir + "\\" + shdr_name + ".h"
 				out_filepath_cso = outdir + "\\" + shdr_name + ".cso"
 
-				# Compare the produced files with any existing ones, don't replace the files if they are identical.
-				# This prevents VS rebuilding all the time.
-				if Tools.DiffContent(filepath_h, out_filepath_h,trace=trace):
-					Tools.Copy(filepath_h, out_filepath_h)
-					if os.path.exists(filepath_cso):
-						Tools.Copy(filepath_cso, out_filepath_cso)
-				elif trace:
-					print("Content unchanged")
+				# Create the .built file, so that VS's custom build tool can check for it's existence to determine when a build is needed
+				with open(outdir + "\\" + fname + ".built", "w") as f: pass
+				Tools.Copy(filepath_h, out_filepath_h)
+				if os.path.exists(filepath_cso):
+					Tools.Copy(filepath_cso, out_filepath_cso)
 
 				# Delete temporary output
 				if os.path.exists(filepath_h):   os.remove(filepath_h)
