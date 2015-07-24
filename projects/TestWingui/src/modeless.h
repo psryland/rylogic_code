@@ -9,8 +9,9 @@ struct Modeless :Form<Modeless>
 
 	Modeless()
 		:Form<Modeless>(IDD_DLG, "modeless")
-		,m_btn_ok(IDOK, this, "ok_btn", EAnchor::Bottom|EAnchor::Right)
+		,m_btn_ok(IDOK, this, EAnchor::BottomRight, "ok_btn")
 	{
+		HideOnClose(true);
 		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
 	}
 };

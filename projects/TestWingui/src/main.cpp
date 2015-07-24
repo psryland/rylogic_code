@@ -5,6 +5,7 @@
 #include "pr/gui/wingui.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/gui/context_menu.h"
+#include "pr/gui/scintilla_ctrl.h"
 
 //#define USE_ATL
 #ifdef USE_ATL
@@ -42,12 +43,6 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 // Application window
 struct Main :Form<Main>
 {
-	Label      m_lbl;
-	Button     m_btn1;
-	Button     m_btn2;
-	Button     m_btn3;
-	Button     m_btn4;
-
 	struct Tab
 	{
 		Panel m_panel;
@@ -57,12 +52,19 @@ struct Main :Form<Main>
 			,m_lbl  (msg, 10, 10, 60, 16, IDC_UNUSED, &m_panel)
 		{}
 	};
-	Tab        m_tab1;
-	Tab        m_tab2;
-	TabControl m_tc;
-	Modeless   m_modeless;
 
-	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+	Label         m_lbl;
+	Button        m_btn1;
+	Button        m_btn2;
+	Button        m_btn3;
+	Button        m_btn4;
+	ScintillaCtrl m_scint;
+	Tab           m_tab1;
+	Tab           m_tab2;
+	TabControl    m_tc;
+	Modeless      m_modeless;
+
+	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
 	Main()
 		:Form<Main>(L"Pauls Window", ApplicationMainWindow, 200, 200, 800, 600)
 		,m_lbl     (L"hello world"  , 10, 10, 60, 16, IDC_UNUSED, this)
@@ -70,6 +72,7 @@ struct Main :Form<Main>
 		,m_btn2    (L"show modeless", 10, -10, 80, 20, IDC_BTN2, this, EAnchor::Left|EAnchor::Bottom)
 		,m_btn3    (L"context menu" , Left|RightOf|IDC_BTN2, -10, 80, 20, IDC_BTN3, this, EAnchor::Left|EAnchor::Bottom)
 		,m_btn4    (L"progress"     , 10, 30, 80, 20, IDC_BTN4, this)
+		,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
 		,m_tab1    (L"hi from tab1", IDC_TAB1, this)
 		,m_tab2    (L"hi from tab2", IDC_TAB2, this)
 		,m_tc      (L"tabctrl"      , 150, 10, 500, 500, IDC_TAB, this, EAnchor::Left|EAnchor::Right|EAnchor::Top|EAnchor::Bottom, DefaultControlStyle, 0UL, "TC")
@@ -258,8 +261,12 @@ struct Main :Form<Main>
 				progress.ShowDialog(*this);
 			};
 
+		m_tc.Insert(L"Tab0", m_scint);
 		m_tc.Insert(L"Tab1", m_tab1.m_panel);
 		m_tc.Insert(L"Tab2", m_tab2.m_panel);
+		m_tc.SelectedIndex(0);
+
+		m_scint.InitDefaults();
 	}
 };
 

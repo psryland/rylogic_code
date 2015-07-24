@@ -7,73 +7,85 @@
 #include <type_traits>
 
 #ifdef __cplusplus
-	template <typename T, bool = std::is_enum<T>::value> struct is_flags_enum;
-	template <typename T> struct is_flags_enum<T, true> :std::false_type {};
 
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator ~ (TEnum lhs)
+	// True (true_type) if 'T' has '_bitwise_operations_allowed' as a static member
+	template <typename T> struct has_bitwise_operations_allowed
+	{
+	private:
+		template <typename U> static std::true_type  check(decltype(U::_bitwise_operations_allowed)*);
+		template <typename>   static std::false_type check(...);
+	public:
+		using type = decltype(check<T>(0));
+		static bool const value = type::value;
+	};
+	template <typename T> struct support_bitwise_operators :has_bitwise_operations_allowed<T>::type {};
+	template <typename T, typename = std::enable_if_t<support_bitwise_operators<T>::value>> struct bitwise_operators_enabled;
+
+	// Define the operators
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator ~ (TEnum lhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(~static_cast<ut>(lhs));
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator | (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) | ut(rhs));
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator & (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) & ut(rhs));
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator ^ (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator ^ (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) ^ ut(rhs));
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs | rhs);
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs & rhs);
 	}
-	template <typename TEnum, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum& operator ^= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator ^= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs ^ rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator << (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator << (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) << rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum operator >> (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator >> (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) >> rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum& operator <<= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator <<= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs << rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline TEnum& operator >>= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator >>= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs >> rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline bool operator == (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return ut(lhs) == ut(rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline bool operator == (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (T lhs, TEnum rhs)
 	{
 		return rhs == lhs;
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline bool operator != (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (TEnum lhs, T rhs)
 	{
 		return !(lhs == rhs);
 	}
-	template <typename TEnum, typename T, typename std::enable_if<is_flags_enum<TEnum>::value>::type* = nullptr> inline bool operator != (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (T lhs, TEnum rhs)
 	{
 		return rhs != lhs;
 	}
@@ -95,38 +107,42 @@ namespace pr
 				One   = 1,
 				Two   = 2,
 			};
+			static_assert(support_bitwise_operators<NotFlags>::value == false, "");
+			
 			enum class Flags
 			{
 				One   = 1 << 0,
 				Two   = 1 << 1,
+				_bitwise_operations_allowed,
 			};
-			template <> struct is_flags_enum<Flags> :std::true_type {};
+			static_assert(support_bitwise_operators<Flags>::value == true, "");
 		}
 
 		PRUnitTest(pr_macros_flags_enum)
 		{
 			using namespace pr::unittests::flag_enum;
+			{
+				typedef Flags Enum;
+				//typedef NotFlags Enum; // Uncomment to test not-compiling-ness
 
-			typedef Flags Enum;
-			//typedef NotFlags Enum; // Uncomment to test not-compiling-ness
+				Enum a =  Enum::One | Enum::Two;
+				Enum b =  Enum::One & Enum::Two;
+				Enum c =  Enum::One ^ Enum::Two;
+				Enum f = ~Enum::One;
 
-			Enum a =  Enum::One | Enum::Two;
-			Enum b =  Enum::One & Enum::Two;
-			Enum c =  Enum::One ^ Enum::Two;
-			Enum f = ~Enum::One;
+				PR_CHECK((int)a, 3);
+				PR_CHECK((int)b, 0);
+				PR_CHECK((int)c, 3);
+				PR_CHECK((int)f, -2);
 
-			PR_CHECK((int)a, 3);
-			PR_CHECK((int)b, 0);
-			PR_CHECK((int)c, 3);
-			PR_CHECK((int)f, -2);
+				a |= Enum::Two;
+				b &= Enum::Two;
+				c ^= Enum::Two;
 
-			a |= Enum::Two;
-			b &= Enum::Two;
-			c ^= Enum::Two;
-
-			PR_CHECK((int)a, 3);
-			PR_CHECK((int)b, 0);
-			PR_CHECK((int)c, 1);
+				PR_CHECK((int)a, 3);
+				PR_CHECK((int)b, 0);
+				PR_CHECK((int)c, 1);
+			}
 		}
 	}
 }

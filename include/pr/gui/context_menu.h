@@ -415,7 +415,7 @@ namespace pr
 
 				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:Label(menu, text, id, state, style, bm)
-					,m_edit(IDC_UNUSED, &menu, nullptr, EAnchor::None) // positioned manually
+					,m_edit(IDC_UNUSED, &menu, EAnchor::None) // positioned manually
 					,m_rect_value()
 					,m_value(value)
 					,m_value_font()
@@ -487,7 +487,7 @@ namespace pr
 			{
 				// Show the context menu as a modal dialog because the menu closes when this function returns
 				if (!m_items.empty())
-					Form<ContextMenu>::ShowDialog(parent, MakeLParam(x, y));
+					Form<ContextMenu>::ShowDialog(parent, (void*)MakeLParam(x, y));
 			}
 
 			// Result of a high test on the menu

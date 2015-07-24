@@ -20,10 +20,8 @@ try:
 	#config    = "Debug"
 
 	# Copy the support dlls for both platforms
-	#if not os.path.exists(targetdir): os.makedirs(targetdir)
-	a = UserVars.root+"\\lib\\"+platform+"\\"+config+"\\view3d.dll"
-	b = targetdir
-	Tools.Copy(a , b, only_if_modified=True)
+	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\view3d.dll", targetdir, only_if_modified=True)
+	Tools.Copy(UserVars.root+"\\lib\\"+platform+"\\"+config+"\\scintilla.dll", targetdir, only_if_modified=True)
 	
 except Exception as ex:
 	Tools.OnError("ERROR: " + str(ex))
