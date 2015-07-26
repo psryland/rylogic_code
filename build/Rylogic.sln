@@ -64,8 +64,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "script", "script", "{35F273
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RyLogViewer.Extensions", "..\projects\RyLogViewer\RyLogViewer.Extensions.csproj", "{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "view3d", "view3d.vcxproj", "{363D015B-B545-4623-A5CE-61245C9BF1F8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
@@ -86,6 +84,9 @@ EndProject
 Project("{002A2DE9-8BB6-484D-9802-7E4AD4084715}") = "prd", "prd.visualdproj", "{6007370B-6DE7-4F0A-BFC1-FD17127AF9E9}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestWingui", "TestWingui.vcxproj", "{87A78A7C-5B8D-4816-ABB2-CCEB41214529}"
+	ProjectSection(ProjectDependencies) = postProject
+		{599D9118-2445-476A-9877-060417FE5FA5} = {599D9118-2445-476A-9877-060417FE5FA5}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DockPanel", "..\sdk\dockpanelsuite\DockPanel.csproj", "{C75532C4-765B-418E-B09B-46D36B2ABDB1}"
 EndProject
@@ -94,6 +95,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Visualisers", "..\projects\Visualisers\Visualisers.csproj", "{F21CF373-7B6B-41B5-91F3-870A3D83334B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mergebin", "mergebin.vcxproj", "{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -239,14 +242,6 @@ Global
 		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x64.Build.0 = Release|Any CPU
 		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x86.ActiveCfg = Release|Any CPU
 		{8AA5340A-5C36-4C9D-A6A4-B035AABD3547}.Release|x86.Build.0 = Release|Any CPU
-		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x64.ActiveCfg = Debug|x64
-		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x64.Build.0 = Debug|x64
-		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x86.ActiveCfg = Debug|Win32
-		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x86.Build.0 = Debug|Win32
-		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.ActiveCfg = Release|x64
-		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.Build.0 = Release|x64
-		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.ActiveCfg = Release|Win32
-		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.Build.0 = Release|Win32
 		{363D015B-B545-4623-A5CE-61245C9BF1F8}.Debug|x64.ActiveCfg = Debug|x64
 		{363D015B-B545-4623-A5CE-61245C9BF1F8}.Debug|x64.Build.0 = Debug|x64
 		{363D015B-B545-4623-A5CE-61245C9BF1F8}.Debug|x86.ActiveCfg = Debug|Win32
@@ -335,6 +330,14 @@ Global
 		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x64.Build.0 = Release|x64
 		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x86.ActiveCfg = Release|Win32
 		{F9D4C5F6-85FE-4E1A-BCB5-70FB8772FAFB}.Release|x86.Build.0 = Release|Win32
+		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x64.ActiveCfg = Debug|x64
+		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x64.Build.0 = Debug|x64
+		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x86.ActiveCfg = Debug|Win32
+		{599D9118-2445-476A-9877-060417FE5FA5}.Debug|x86.Build.0 = Debug|Win32
+		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.ActiveCfg = Release|x64
+		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x64.Build.0 = Release|x64
+		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.ActiveCfg = Release|Win32
+		{599D9118-2445-476A-9877-060417FE5FA5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
