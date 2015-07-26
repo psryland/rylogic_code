@@ -57,7 +57,7 @@ try:
 				file = file.lower().replace("\\","/")
 				if os.path.splitext(file)[1] != ".h": continue
 				if any([True for excl in exclude if file.find(excl) != -1]): continue;
-				outf.write("#include \""+file[file.rfind("pr/"):]+"\"\n")
+				outf.write("#include \""+os.path.relpath(file, sd)+"\"\n")
 
 	# swap the tmp file with the file if difference
 	if Tools.DiffContent(outfile, tmpfile):

@@ -21,6 +21,7 @@ namespace pr
 #include <algorithm>
 #include "pr/common/unittests.h"
 #include "unittests/unittests.h" // all tests
+//#include "pr/common/flags_enum.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about
