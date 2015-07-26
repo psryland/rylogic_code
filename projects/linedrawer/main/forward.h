@@ -55,7 +55,7 @@
 #include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"
 #include "pr/gui/progress_dlg.h"
-#include "pr/gui/scintilla.h"
+#include "pr/gui/scintilla_ctrl.h"
 #include "pr/gui/windows_com.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"

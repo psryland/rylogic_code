@@ -53,14 +53,14 @@ namespace ldr
 	}
 
 	// Add a string source
-	void ScriptSources::AddString(std::string const& str)
+	void ScriptSources::AddString(std::wstring const& str)
 	{
 		try
 		{
 			ParseResult out(m_store);
 			std::size_t bcount = m_store.size();
 
-			pr::script::PtrA<> src(str.c_str());
+			pr::script::PtrW<> src(str.c_str());
 			pr::script::Reader reader(false);
 			reader.EmbeddedCode().Handler.push_back(&m_lua_src);
 			reader.Push(src);

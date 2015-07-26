@@ -51,7 +51,7 @@
 #include "pr/meta/alignment_of.h"
 #include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
-#include "pr/gui/scintilla.h"
+#include "pr/gui/scintilla_ctrl.h"
 #include "pr/renderer11/renderer.h"
 #include "pr/renderer11/lights/light_dlg.h"
 #include "pr/linedrawer/ldr_object.h"

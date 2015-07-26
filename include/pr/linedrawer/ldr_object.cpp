@@ -2205,10 +2205,10 @@ namespace pr
 		}
 
 		// Generate a scene that demos the supported object types and modifers.
-		std::string CreateDemoScene()
+		std::wstring CreateDemoScene()
 		{
-			std::stringstream out; out <<
-R"(//********************************************
+			return
+LR"(//********************************************
 // LineDrawer demo scene
 //  Copyright (c) Rylogic Ltd 2009
 //********************************************
@@ -2351,9 +2351,7 @@ R"(//********************************************
 		}
 	}
 }
-)";
-			out <<
-				R"(
+
 // ************************************************************************************
 // Camera
 // ************************************************************************************
@@ -2376,7 +2374,7 @@ R"(//********************************************
 	//*AbsoluteClipPlanes     // Optional. Clip planes are a fixed distance, not relative to the focus point distance
 	//*Orthographic           // Optional. Use an orthographic projection rather than perspective
 }
-
+)"LR"(
 // ************************************************************************************
 // Lights
 // ************************************************************************************
@@ -2411,9 +2409,7 @@ R"(//********************************************
 	//*CastShadow {10}       // Optional. {range} Shadows are cast from this light source out to range
 	*o2w{*pos{5 5 5}}         // Position and orientation (directional lights shine down -z)
 }
-)";
-out <<
-	R"(
+
 // ************************************************************************************
 // Objects
 // ************************************************************************************
@@ -2555,7 +2551,7 @@ out <<
 	*o2w{*randpos{0 0 0 2}}
 	*Texture {"#checker"}              // Optional texture
 }
-
+)"LR"(
 // A quad given by 4 corner points
 *Quad quad FFFFFFFF
 {
@@ -2760,7 +2756,7 @@ out <<
 	}
 	*RandColour *o2w{*RandPos{0 0 -1 2}}
 }
-
+)"LR"(
 // Model from a 3d model file.
 // Supported formats: *.3ds
 //*Model model_from_file FFFFFFFF
@@ -2805,9 +2801,7 @@ out <<
 	*o2w {*pos {10 0 0}}
 	#embedded(lua) return make_boxes() #end
 }
-)";
-			out <<
-				R"(
+
 // ************************************************************************************
 // Ldr script syntax and features:
 // ************************************************************************************
@@ -2836,7 +2830,6 @@ out <<
 //			--lua code
 //		#end
 )";
-			return out.str();
 		}
 
 		// LdrObject ***********************************

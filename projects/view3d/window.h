@@ -130,13 +130,13 @@ namespace view3d
 		// Close any window handles
 		void Close()
 		{
-			m_editor_ui      .Close();
+			//m_editor_ui      .Close();
 			m_obj_cont_ui    .Close();
 			m_measure_tool_ui.Close();
 			m_angle_tool_ui  .Close();
-			for (auto& e : m_editors) e->Close();
+			//for (auto& e : m_editors) e->Close();
 
-			m_editor_ui      .Detach();
+			//m_editor_ui      .Detach();
 			m_obj_cont_ui    .Detach();
 			m_measure_tool_ui.Detach();
 			m_angle_tool_ui  .Detach();

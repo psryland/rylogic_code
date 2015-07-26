@@ -42,7 +42,7 @@ namespace ldr
 		void Reload();
 
 		// Add a string source
-		void AddString(std::string const& str);
+		void AddString(std::wstring const& str);
 
 		// Add a file source
 		void AddFile(wchar_t const* filepath);

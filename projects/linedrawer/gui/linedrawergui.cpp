@@ -39,7 +39,6 @@ namespace ldr
 		,m_editor_ui()
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
-		,m_menu(Menu())
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
 		,m_status_pri()
@@ -71,7 +70,7 @@ namespace ldr
 		// Initialise the script editor
 		m_editor_ui.Create(*this);
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
-		m_editor_ui.Render = [&](std::string&& script)
+		m_editor_ui.Render = [&](std::wstring&& script)
 			{
 				try
 				{

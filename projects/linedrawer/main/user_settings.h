@@ -37,7 +37,7 @@ namespace ldr
 		x(size_t                  ,MaxRecentFiles         ,10                             ,0xBE9EE923        ,"The maximum length of the recent files history")\
 		x(size_t                  ,MaxSavedViews          ,10                             ,0xAE3BCC78        ,"The maximum number of saved camera views")\
 		x(std::wstring            ,RecentFiles            ,L""                            ,0x0E4E516B        ,"The recent files list")\
-		x(std::string             ,NewObjectString        ,""                             ,0xE2EE73FD        ,"The string last entered in the new object window")\
+		x(std::wstring            ,NewObjectString        ,L""                            ,0xE2EE73FD        ,"The string last entered in the new object window")\
 		x(std::string             ,ObjectManagerSettings  ,""                             ,0xE98CDECE        ,"Settings data for the object manager")\
 		x(bool                    ,ShowOrigin             ,false                          ,0x8F719534        ,"Set to true to show the point (0,0,0)")\
 		x(bool                    ,ShowAxis               ,false                          ,0x5C782037        ,"Set to true to show a reference X,Y,Z axis set")\

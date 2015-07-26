@@ -8,227 +8,178 @@
 #include <fstream>
 #include <cassert>
 
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atlwin.h>
-#include <atldlgs.h>
-#include <atlframe.h>
-#include <atlcrack.h>
-
 #include "pr/common/min_max_fix.h"
-#include "pr/gui/scintilla.h"
+#include "pr/gui/wingui.h"
+#include "pr/gui/scintilla_ctrl.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
+
+using namespace pr::gui;
 
 namespace pr
 {
 	namespace ldr
 	{
-		// TODO: Make this CWindowImpl<> derived
-		class ScriptEditorDlgImpl
-			:public CIndirectDialogImpl<ScriptEditorDlgImpl>
-			,public CDialogResize<ScriptEditorDlgImpl>
-			,public IScriptEditorDlg
+		struct ScriptEditorDlgImpl
+			:Form<ScriptEditorDlgImpl>
+			,IScriptEditorDlg
 		{
-			typedef CIndirectDialogImpl<ScriptEditorDlgImpl> base;
-
-			WTL::InitScintilla m_init_scintilla;
-			WTL::ScintillaCtrl m_edit;
-			WTL::CAccelerator m_accel;
-			WTL::CMenu m_menu;
-			RenderCB& Render;
-
-			TCHAR const* LdrFileFilter() const
-			{
-				static TCHAR const filter[] = TEXT("Ldr Script (*.ldr)\0*.ldr\0All Files (*.*)\0*.*\0\0");
-				return filter;
-			}
-
-			ScriptEditorDlgImpl(ScriptEditorDlgImpl const&);
-			ScriptEditorDlgImpl& operator=(ScriptEditorDlgImpl const&);
-
-		public:
-
-			ScriptEditorDlgImpl(RenderCB& render_cb)
-				:m_init_scintilla()
-				,m_edit()
-				,m_accel()
-				,m_menu()
-				,Render(render_cb)
-			{}
-			~ScriptEditorDlgImpl()
-			{
-				assert(!IsWindow() && "DestroyWindow() must be called before destruction");
-			}
-			
-			operator HWND() override
-			{
-				return m_hWnd;
-			}
-
-			// Create the non-modal dialog
-			HWND Create(HWND parent = 0) override
-			{
-				auto hwnd = base::Create(parent);
-				if (hwnd == 0) throw std::exception("Failed to create script editor window");
-				return hwnd;
-			}
-
-			// Close and destroy the dialog window
-			void Close() override
-			{
-				if (!IsWindow()) return;
-				DestroyWindow();
-			}
-
-			// Detach from the window handles
-			void Detach() override
-			{
-				m_edit.Detach();
-				m_accel.Detach();
-				m_menu.Detach();
-				Render = nullptr;
-				base::Detach();
-			}
-
-			// Show the window as a non-modal window
-			void Show(HWND parent = 0) override
-			{
-				if (!IsWindow()) Create(parent);
-				Visible(true);
-			}
-
-			// Show the window as a modal dialog
-			INT_PTR ShowDialog(HWND parent = 0) override
-			{
-				return DoModal(parent);
-			}
-
-			// Get/Set the visibility of the window
-			bool Visible() const
-			{
-				return IsWindowVisible() != 0;
-			}
-			void Visible(bool show)
-			{
-				ShowWindow(show ? SW_SHOW : SW_HIDE);
-				if (show) SetWindowPos(HWND_TOP,0,0,0,0,SWP_NOMOVE|SWP_NOSIZE);
-			}
-
-			// Get/Set the text in the dialog
-			std::string Text() const
-			{
-				return m_edit.Text();
-			}
-			void Text(char const* text)
-			{
-				m_edit.Text(text);
-				m_edit.Invalidate();
-			}
-
-			// Handler methods
-			BOOL OnInitDialog(CWindow, LPARAM)
-			{
-				// Create the menu
-				CMenu menu_file; menu_file.CreatePopupMenu();
-				menu_file.AppendMenuA(MF_STRING, ID_LOAD, "&Load");
-				menu_file.AppendMenuA(MF_STRING, ID_SAVE, "&Save");
-				menu_file.AppendMenuA(MF_SEPARATOR);
-				menu_file.AppendMenuA(MF_STRING, ID_CLOSE, "&Close");
-
-				m_menu.CreateMenu();
-				m_menu.AppendMenuA(MF_POPUP, menu_file, "&File");
-				SetMenu(m_menu);
-
-				//// Create the keyboard accelerators
-				//ACCEL table[] =
-				//{
-				//	{FCONTROL, 'Z', ID_UNDO},
-				//	{FCONTROL, 'Y', ID_REDO},
-				//	{FCONTROL, 'X', ID_CUT},
-				//	{FCONTROL, 'C', ID_COPY},
-				//	{FCONTROL, 'V', ID_PASTE},
-				//};
-				//m_accel.CreateAcceleratorTableA(table, PR_COUNTOF(table));
-
-				// Initialise the edit control
-				m_edit.Attach(GetDlgItem(IDC_TEXT));
-				m_edit.InitLdrStyle();
-				m_edit.SetSel(-1, 0);
-				m_edit.SetFocus();
-
-				DlgResize_Init(true, false);
-				return TRUE;
-			}
-			void OnCloseDialog(UINT, int, CWindow)
-			{
-				Visible(false);
-			}
-			void OnPaint(CDCHandle dc)
-			{
-				GetDlgItem(IDC_BTN_RENDER).ShowWindow(Render ? SW_SHOW : SW_HIDE);
-				SetMsgHandled(FALSE);
-			}
-			void OnRender(UINT, int, CWindow)
-			{
-				if (Render)
-					Render(Text());
-			}
-			void OnLoad(UINT, int, CWindow)
-			{
-				WTL::CFileDialog fd(TRUE,"ldr",0,6UL,LdrFileFilter(),m_hWnd);
-				if (fd.DoModal() != IDOK) return;
-			
-				std::ifstream infile(fd.m_szFileName);
-				if (!infile) MessageBox("Failed to open file", "Load Failed", MB_OK|MB_ICONERROR);
-				else m_edit.Load(infile);
-			}
-			void OnSave(UINT, int, CWindow)
-			{
-				WTL::CFileDialog fd(FALSE,"ldr",0,6UL,LdrFileFilter(),m_hWnd);
-				if (fd.DoModal() != IDOK) return;
-			
-				std::ofstream outfile(fd.m_szFileName);
-				if (!outfile) MessageBox("Failed to open file for writing", "Save Failed", MB_OK|MB_ICONERROR);
-				else m_edit.Save(outfile);
-			}
-
+			typedef Form<ScriptEditorDlgImpl> base;
 			enum
 			{
 				IDC_TEXT = 1000, IDC_BTN_RENDER, IDC_BTN_CLOSE,
 				ID_LOAD, ID_SAVE, ID_CLOSE,
 				ID_UNDO, ID_REDO, ID_CUT, ID_COPY, ID_PASTE,
 			};
-		
-			BEGIN_DIALOG_EX(0, 0, 430, 380, 0)
-				DIALOG_STYLE(DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU) //|WS_VISIBLE
-				DIALOG_CAPTION("Script Editor")
-				DIALOG_FONT(8, TEXT("MS Shell Dlg"))
-			END_DIALOG()
-			BEGIN_CONTROLS_MAP()
-				CONTROL_CONTROL(_T(""), IDC_TEXT, ScintillaCtrl::GetWndClassName(), WS_HSCROLL|WS_VSCROLL, 5, 5, 418, 338, WS_EX_STATICEDGE)//NOT WS_BORDER|
-				CONTROL_DEFPUSHBUTTON(_T("&Render"), IDC_BTN_RENDER, 320, 348, 50, 14, 0, WS_EX_LEFT)
-				CONTROL_PUSHBUTTON(_T("&Close"), IDC_BTN_CLOSE, 375, 348, 50, 14, 0, WS_EX_LEFT)
-			END_CONTROLS_MAP()
-			BEGIN_DLGRESIZE_MAP(ScriptEditorDlgImpl)
-				DLGRESIZE_CONTROL(IDC_TEXT, DLSZ_SIZE_X|DLSZ_SIZE_Y|DLSZ_REPAINT)
-				DLGRESIZE_CONTROL(IDC_BTN_RENDER, DLSZ_MOVE_X|DLSZ_MOVE_Y|DLSZ_REPAINT)
-				DLGRESIZE_CONTROL(IDC_BTN_CLOSE, DLSZ_MOVE_X|DLSZ_MOVE_Y|DLSZ_REPAINT)
-			END_DLGRESIZE_MAP()
-			BEGIN_MSG_MAP(ScriptEditorDlgImpl)
-				MSG_WM_INITDIALOG(OnInitDialog)
-				MSG_WM_PAINT(OnPaint)
-				COMMAND_ID_HANDLER_EX(IDC_BTN_RENDER , OnRender)
-				COMMAND_ID_HANDLER_EX(IDC_BTN_CLOSE  , OnCloseDialog)
-				COMMAND_ID_HANDLER_EX(ID_LOAD        , OnLoad)
-				COMMAND_ID_HANDLER_EX(ID_SAVE        , OnSave)
-				COMMAND_ID_HANDLER_EX(ID_CLOSE       , OnCloseDialog)
-				COMMAND_ID_HANDLER_EX(IDCANCEL       , OnCloseDialog)
-				CHAIN_MSG_MAP(CDialogResize<ScriptEditorDlgImpl>)
-			END_MSG_MAP()
+
+			ScintillaCtrl m_edit;
+			Button m_btn_render;
+			Button m_btn_close;
+			MenuStrip m_menu;
+			RenderCB& Render;
+			//WTL::CAccelerator m_accel;
+
+			static DWORD const Style   = DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU; // Not WS_VISIBLE
+			static DWORD const StyleEx = DefaultStyleEx;
+
+			// Construct the dialog template for this dialog
+			static DlgTemplate Templ()
+			{
+				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, Style, StyleEx);
+				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
+				templ.Add(IDC_BTN_RENDER, Button::WndClassName(), L"&Render", 320, 348, 50, 14, Button::DefaultStyleDefBtn, Button::DefaultStyleEx);
+				templ.Add(IDC_BTN_CLOSE, Button::WndClassName(), L"&Close", 375, 348, 50, 14, Button::DefaultStyle, Button::DefaultStyleEx);
+				return std::move(templ);
+			}
+
+			ScriptEditorDlgImpl(RenderCB& render_cb)
+				:base(Templ(), "Ldr Script Editor")
+				,m_edit(IDC_TEXT, this, EAnchor::All, "m_edit")
+				,m_btn_render(IDC_BTN_RENDER, this, EAnchor::BottomRight, "m_btn_render")
+				,m_btn_close(IDC_BTN_CLOSE, this, EAnchor::BottomRight, "m_btn_close")
+				//,m_accel()
+				,m_menu()
+				,Render(render_cb)
+			{}
+
+			// Message handler
+			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				switch (message)
+				{
+				case WM_INITDIALOG:
+					{
+						// Create the menu
+						auto menu_file = MenuStrip(true);
+						menu_file.Insert(L"&Load", ID_LOAD);
+						menu_file.Insert(L"&Save", ID_SAVE);
+						menu_file.Insert(MenuStrip::Separator);
+						menu_file.Insert(L"&Close", ID_CLOSE);
+						m_menu.Insert(menu_file, L"&File");
+						Menu(m_menu);
+
+						//// Create the keyboard accelerators
+						//ACCEL table[] =
+						//{
+						//	{FCONTROL, 'Z', ID_UNDO},
+						//	{FCONTROL, 'Y', ID_REDO},
+						//	{FCONTROL, 'X', ID_CUT},
+						//	{FCONTROL, 'C', ID_COPY},
+						//	{FCONTROL, 'V', ID_PASTE},
+						//};
+						//m_accel.CreateAcceleratorTableA(table, PR_COUNTOF(table));
+
+						// Initialise the edit control
+						m_edit.InitLdrStyle();
+						m_edit.SetSel(-1, 0);
+						m_edit.Focus(true);
+
+						// Hook up button handlers
+						m_btn_render.Click += [&](Button&, EmptyArgs const&)
+							{
+								if (Render)
+									Render(pr::Widen(m_edit.Text()));
+							};
+						break;
+					}
+				case WM_COMMAND:
+					{
+						auto id = LoWord(wparam);
+						switch (id)
+						{
+						case IDCANCEL:
+							{
+								base::Close(EDialogResult::Cancel);
+								return true;
+							}
+						case ID_LOAD:
+							{
+								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"},{L"All Files",L"*.*"}};
+								auto filename = OpenFileUI(m_hwnd, FileUIOptions(L"ldr", _countof(filters), &filters[0]));
+								if (!filename.empty())
+								{
+									std::ifstream infile(filename[0]);
+									if (!infile) MessageBoxW(m_hwnd, L"Failed to open file", L"Load Failed", MB_OK|MB_ICONERROR);
+									else m_edit.Load(infile);
+								}
+								return true;
+							}
+						case ID_SAVE:
+							{
+								COMDLG_FILTERSPEC filters[] = {{L"Ldr Script (*.ldr)",L"*.ldr"},{L"All Files",L"*.*"}};
+								auto filename = SaveFileUI(m_hwnd, FileUIOptions(L"ldr", _countof(filters), &filters[0]));
+								if (!filename.empty())
+								{
+									std::ofstream outfile(filename);
+									if (!outfile) MessageBoxW(m_hwnd, L"Failed to open file for writing", L"Save Failed", MB_OK|MB_ICONERROR);
+									else m_edit.Save(outfile);
+								}
+								return true;
+							}
+						}
+						break;
+					}
+				case WM_PAINT:
+					{
+						m_btn_render.Visible(Render != nullptr);
+						break;
+					}
+				}
+				return base::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+			}
+
+			// Create the non-modal window
+			HWND Create(HWND parent = nullptr) override
+			{
+				base::Create(parent);
+				return m_hwnd;
+			}
+
+			// Show the window as a non-modal window
+			void Show(HWND parent) override
+			{
+				base::Show(SW_SHOW, parent);
+			}
+
+			// Show the window as a modal dialog
+			INT_PTR ShowDialog(HWND parent) override
+			{
+				return INT_PTR(base::ShowDialog(parent));
+			}
+
+			// Implicit HWND conversion
+			operator HWND() override { return base::operator HWND(); }
+
+			// Get/Set the visibility of the window
+			bool Visible() const override    { return base::Visible(); }
+			void Visible(bool show) override { base::Visible(show); }
+
+			// Get/Set the text in the dialog
+			std::wstring Text() const override      { return pr::Widen(m_edit.Text()); }
+			void Text(wchar_t const* text) override { m_edit.Text(pr::Narrow(text).c_str()); }
 		};
 
 		ScriptEditorDlg::ScriptEditorDlg()
-			:m_dlg(std::make_unique<ScriptEditorDlgImpl>(Render))
+			:m_dlg(new ScriptEditorDlgImpl(Render))
 		{}
 	}
 }

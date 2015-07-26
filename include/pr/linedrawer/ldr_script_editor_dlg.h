@@ -16,6 +16,9 @@ namespace pr
 		struct IScriptEditorDlg
 		{
 			virtual ~IScriptEditorDlg() {}
+			IScriptEditorDlg() {}
+			IScriptEditorDlg(IScriptEditorDlg const&) = delete;
+			IScriptEditorDlg& operator=(IScriptEditorDlg const&) = delete;
 
 			// Implicitly convertable to HWND
 			virtual operator HWND() = 0;
@@ -23,9 +26,9 @@ namespace pr
 			// Create the non-modal window
 			virtual HWND Create(HWND parent = 0) = 0;
 
-			// Close and destroy the dialog window
-			virtual void Close() = 0;
-			virtual void Detach() = 0;
+			//// Close and destroy the dialog window
+			//virtual void Close() = 0;
+			//virtual void Detach() = 0;
 
 			// Show the window as a non-modal window
 			virtual void Show(HWND parent = 0) = 0;
@@ -38,11 +41,11 @@ namespace pr
 			virtual void Visible(bool show) = 0;
 
 			// Get/Set the text in the dialog
-			virtual std::string Text() const = 0;
-			virtual void Text(char const* text) = 0;
+			virtual std::wstring Text() const = 0;
+			virtual void Text(wchar_t const* text) = 0;
 
 			// Callback function for rendering the script
-			typedef std::function<void(std::string&& script)> RenderCB;
+			typedef std::function<void(std::wstring&& script)> RenderCB;
 		};
 
 		// A gui for editing ldr script
@@ -51,10 +54,8 @@ namespace pr
 			// pImpl pattern to hide atl includes
 			std::unique_ptr<IScriptEditorDlg> m_dlg;
 
-			ScriptEditorDlg(ScriptEditorDlg const&);
-			ScriptEditorDlg& operator=(ScriptEditorDlg const&);
-
 		public:
+
 			ScriptEditorDlg();
 
 			// Implicitly convertable to HWND
@@ -69,15 +70,15 @@ namespace pr
 				return m_dlg->Create(parent);
 			}
 
-			// Close and destroy the dialog window
-			void Close() override
-			{
-				m_dlg->Close();
-			}
-			void Detach() override
-			{
-				m_dlg->Detach();
-			}
+			//// Close and destroy the dialog window
+			//void Close() override
+			//{
+			//	m_dlg->Close();
+			//}
+			//void Detach() override
+			//{
+			//	m_dlg->Detach();
+			//}
 
 			// Show the window as a non-modal window
 			void Show(HWND parent = 0) override
@@ -102,11 +103,11 @@ namespace pr
 			}
 
 			// Get/Set the text in the dialog
-			std::string Text() const override
+			std::wstring Text() const override
 			{
 				return m_dlg->Text();
 			}
-			void Text(char const* text) override
+			void Text(wchar_t const* text) override
 			{
 				m_dlg->Text(text);
 			}

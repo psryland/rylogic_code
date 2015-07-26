@@ -825,7 +825,7 @@ namespace pr
 		}
 
 		// Generate a scene that demos the supported object types and modifers.
-		std::string CreateDemoScene();
+		std::wstring CreateDemoScene();
 	}
 }
 

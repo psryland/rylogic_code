@@ -20,7 +20,6 @@ namespace view3d
 		WindowCont                m_wnd_cont;         // The created windows
 		pr::ldr::ObjectCont       m_obj_cont;         // The created ldr objects
 		pr::ldr::GizmoCont        m_giz_cont;         // The created ldr gizmos
-		WTL::InitScintilla        m_init_scintilla;
 		pr::script::EmbeddedLua<> m_lua;
 		std::recursive_mutex      m_mutex;
 
@@ -32,7 +31,6 @@ namespace view3d
 			,m_wnd_cont()
 			,m_obj_cont()
 			,m_giz_cont()
-			,m_init_scintilla()
 			,m_lua()
 			,m_mutex()
 		{

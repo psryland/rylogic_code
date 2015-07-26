@@ -2064,7 +2064,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		DllLockGuard;
 		
 		auto scene = pr::ldr::CreateDemoScene();
-		pr::script::PtrA<> src(scene.c_str());
+		pr::script::PtrW<> src(scene.c_str());
 		pr::script::Reader reader(src, false);
 		reader.EmbeddedCode().Handler.push_back(&Dll().m_lua);
 
@@ -2148,10 +2148,8 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 
 		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorDlg*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
 		if (!edt) throw std::exception("No back reference pointer found for this window");
-
 		::SetWindowLongPtrA(hwnd, GWLP_USERDATA, 0);
-		edt->Close();
-		edt->Detach();
+		// edt going out of scope should delete it
 	}
 	CatchAndReport(View3D_LdrEditorDestroy, ,);
 }
@@ -2163,7 +2161,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorCtrlInit(HWND scintilla_control, BOOL 
 	{
 		if (!scintilla_control) throw std::exception("scintilla control handle is null");
 
-		WTL::ScintillaCtrl s;
+		pr::gui::ScintillaCtrl s;
 		s.Attach(scintilla_control);
 		s.InitLdrStyle(dark != 0);
 		s.Detach();
