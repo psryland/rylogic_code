@@ -240,7 +240,14 @@ namespace RyLogViewer
 		/// <summary>True if the activation code is valid</summary>
 		public bool Valid
 		{
-			get { return pr.common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key); }
+			get
+			{
+				#if DEBUG
+				return true;
+				#else
+				return pr.common.ActivationCode.Validate(UserDetails, m_activation_code, Resources.public_key);
+				#endif
+			}
 		}
 
 		/// <summary>Output the licence details to a licence file</summary>
