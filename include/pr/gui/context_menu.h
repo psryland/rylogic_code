@@ -430,7 +430,7 @@ namespace pr
 				void CreateHostedControls() override
 				{
 					HWND parent = *static_cast<ContextMenu*>(m_menu);
-					m_edit.Create(m_value.c_str(), 0, 0, 50, 18, TBox::DefaultStyle, TBox::DefaultStyleEx, parent);
+					m_edit.Create(m_value.c_str(), parent, 0, 0, 50, 18);
 				}
 				Size MeasureItem(GdiGraphics& gfx) override
 				{
@@ -483,11 +483,11 @@ namespace pr
 			}
 
 			// Show the context menu
-			void Show(Control* parent, int x, int y)
+			void Show(ParentRef parent, int x, int y)
 			{
 				// Show the context menu as a modal dialog because the menu closes when this function returns
-				if (!m_items.empty())
-					Form<ContextMenu>::ShowDialog(parent, (void*)MakeLParam(x, y));
+				if (m_items.empty()) return;
+				Form<ContextMenu>::ShowDialog(parent, (void*)MakeLParam(x, y));
 			}
 
 			// Result of a high test on the menu
@@ -640,15 +640,15 @@ namespace pr
 			}
 
 			// Message map function
-			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
-				//OutputDebugStringA(DebugMessage(parent_hwnd, message, wparam, lparam));
+				OutputDebugStringA(DebugMessage(hwnd, message, wparam, lparam));
 				switch (message)
 				{
 				case WM_INITDIALOG:
 					#pragma region 
 					{
-						// Allow child menu items to create hosted controls
+						// Allow child menu items to create hosted controls now that we have an hwnd
 						for (auto& item : m_items)
 							item->CreateHostedControls();
 
@@ -661,6 +661,7 @@ namespace pr
 						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
 						auto bounds = AdjRect(client).Offset(pt.x, pt.y);
 						ScreenRect(bounds, true);
+						//ParentRect(Rect(0, 0, client.width(), client.height()), true);
 
 						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events
 						m_dialog_behaviour = false;
@@ -691,24 +692,33 @@ namespace pr
 						m_mouse_hook = SetWindowsHookExW(WH_MOUSE, static_cast<HOOKPROC>(MouseHook), 0, thread_id);
 						Throw(m_mouse_hook != nullptr, "Failed to install mouse hook procedure");
 
-						break;
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_DESTROY:
 					#pragma region 
 					{
-						// Remove the mouse hook
-						auto thread_id = GetCurrentThreadId();
-						UnhookWindowsHookEx(m_mouse_hook);
-						ThreadHookMap().erase(thread_id);
+						if (m_hwnd == hwnd)
+						{
+							// Remove the mouse hook
+							auto thread_id = GetCurrentThreadId();
+							UnhookWindowsHookEx(m_mouse_hook);
+							ThreadHookMap().erase(thread_id);
+
+							// Turn dialog behaviour back on so destruction occurs properly
+							m_dialog_behaviour = true;
+						}
 						break;
 					}
 					#pragma endregion
 				case WM_NCACTIVATE:
 					#pragma region 
 					{
-						if (wparam == 0)
-							Close(EDialogResult::Cancel);
+						if (m_hwnd == hwnd)
+						{
+							if (wparam == 0)
+								Close(EDialogResult::Cancel);
+						}
 						break;
 					}
 					#pragma endregion
@@ -718,7 +728,7 @@ namespace pr
 						PaintStruct ps(m_hwnd);
 						GdiGraphics gfx(ps.hdc);
 						DrawItem(gfx, Rect());
-						break;
+						return false;
 					}
 					#pragma endregion
 				case WM_MOUSEMOVE:
@@ -818,7 +828,9 @@ namespace pr
 					}
 					#pragma endregion
 				}
-				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+
+				// Messages that get here will be forwarded to child controls as well
+				return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 			}
 
 			// Measure the size of the context menu

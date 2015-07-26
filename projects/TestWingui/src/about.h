@@ -9,7 +9,7 @@ struct About :Form<About>
 
 	About()
 		:Form<About>(IDD_ABOUTBOX, "about")
-		,m_btn_ok(IDOK, this, EAnchor::Bottom, "btn_ok")
+		,m_btn_ok(IDOK, this, EAnchor::BottomRight, "btn_ok")
 	{
 		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
 	}

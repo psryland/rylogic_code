@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atlwin.h>
 #include <commctrl.h>
 #include "pr/common/fmt.h"
 #include "pr/macros/enum.h"
@@ -1520,16 +1521,51 @@ namespace pr
 		//x(wm_OCM_PARENTNOTIFY               ,"OCM_PARENTNOTIFY"                  , = 0x2210)\
 		//x(wm_WM_APP                         ,"WM_APP"                            , = 0x8000)\
 		//x(wm_WM_RASDIALEVENT                ,"WM_RASDIALEVENT"                   , = 0xcccd)
-		#pragma endregion
 
 		PR_DEFINE_ENUM3(EWinMsg, PR_ENUM);
 		#undef PR_ENUM
+		#pragma endregion
+
+		#pragma region SysCommands
+		#define PR_ENUM(x)\
+		x(sc_CLOSE        , "SC_CLOSE"        , = SC_CLOSE        )\
+		x(sc_CONTEXTHELP  , "SC_CONTEXTHELP"  , = SC_CONTEXTHELP  )\
+		x(sc_DEFAULT      , "SC_DEFAULT"      , = SC_DEFAULT      )\
+		x(sc_HOTKEY       , "SC_HOTKEY"       , = SC_HOTKEY       )\
+		x(sc_HSCROLL      , "SC_HSCROLL"      , = SC_HSCROLL      )\
+		x(scF_ISSECURE    , "SCF_ISSECURE"    , = SCF_ISSECURE    )\
+		x(sc_KEYMENU      , "SC_KEYMENU"      , = SC_KEYMENU      )\
+		x(sc_MAXIMIZE     , "SC_MAXIMIZE"     , = SC_MAXIMIZE     )\
+		x(sc_MINIMIZE     , "SC_MINIMIZE"     , = SC_MINIMIZE     )\
+		x(sc_MONITORPOWER , "SC_MONITORPOWER" , = SC_MONITORPOWER )\
+		x(sc_MOUSEMENU    , "SC_MOUSEMENU"    , = SC_MOUSEMENU    )\
+		x(sc_MOVE         , "SC_MOVE"         , = SC_MOVE         )\
+		x(sc_NEXTWINDOW   , "SC_NEXTWINDOW"   , = SC_NEXTWINDOW   )\
+		x(sc_PREVWINDOW   , "SC_PREVWINDOW"   , = SC_PREVWINDOW   )\
+		x(sc_RESTORE      , "SC_RESTORE"      , = SC_RESTORE      )\
+		x(sc_SCREENSAVE   , "SC_SCREENSAVE"   , = SC_SCREENSAVE   )\
+		x(sc_SIZE         , "SC_SIZE"         , = SC_SIZE         )\
+		x(sc_TASKLIST     , "SC_TASKLIST"     , = SC_TASKLIST     )\
+		x(sc_VSCROLL      , "SC_VSCROLL"      , = SC_VSCROLL      )
+
+		PR_DEFINE_ENUM3(ESysCmd, PR_ENUM);
+		#undef PR_ENUM
+		#pragma endregion
 
 		// Convert a windows message to a string
 		inline char const* WMtoString(UINT uMsg)
 		{
 			return EWinMsg::IsValue(uMsg) ? EWinMsg(uMsg).ToStringA() : "";
 		}
+
+		// Return the Window Text for a window
+		inline char const* WndText(HWND hwnd)
+		{
+			static char wndtext[64] = {};
+			wndtext[::DefWindowProcA(hwnd, WM_GETTEXT, _countof(wndtext) - 1, LPARAM(&wndtext[0]))] = 0;
+			if (wndtext[0] == 0) sprintf(wndtext, "%p", hwnd);
+			return wndtext;
+		};
 
 		// Convert a VK_* define into a string
 		inline char const* VKtoString(int vk)
@@ -1719,82 +1755,111 @@ namespace pr
 		}
 
 		// Output info about a windows message
-		inline char const* DebugMessage(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, char const* newline = "\r\n")
+		inline char const* DebugMessage(HWND hwnd, UINT uMsg, WPARAM wparam, LPARAM lparam, char const* newline = "")
 		{
-			INT wParamLo = LOWORD(wParam);
-			INT wParamHi = HIWORD(wParam);
-			INT lParamLo = LOWORD(lParam);
-			INT lParamHi = HIWORD(lParam);
+			INT wParamLo = LOWORD(wparam);
+			INT wParamHi = HIWORD(wparam);
+			INT lParamLo = LOWORD(lparam);
+			INT lParamHi = HIWORD(lparam);
 
-			auto msg  = WMtoString(uMsg);
-			auto hdr  = pr::FmtX<struct a, 128, char>("%s(0x%04x):", msg, uMsg);
-			auto hwnd = pr::FmtX<struct b, 128, char>(" hwnd: %p", hWnd);
-			auto fmt  = pr::FmtX<struct X, 1024, char>;
+			auto msg = WMtoString(uMsg);
+			auto hdr = pr::FmtX<struct a, 128, char>("%s(0x%04x):", msg, uMsg);
+			auto wnd = pr::FmtX<struct b, 128, char>(" hwnd=(%s)", WndText(hwnd));
+			auto fmt = pr::FmtX<struct X, 1024, char>;
 
 			// Note: there is a C# version of this, copy to/from there is possible
 			switch (uMsg)
 			{
 			default:
-				return fmt("%s %s wParam: %x(%x,%x)  lParam: %x(%x,%x)%s"
-					,hdr ,hwnd
-					,wParam ,wParamHi ,wParamLo
-					,lParam ,lParamHi ,lParamLo
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s %s wparam: %x(%x,%x)  lparam: %x(%x,%x)%s"
+						,hdr ,wnd
+						,wparam ,wParamHi ,wParamLo
+						,lparam ,lParamHi ,lParamLo
+						,newline);
+				}
+				#pragma endregion
 			case WM_LBUTTONDOWN:
-				return fmt("%s button state = %s%s%s%s%s%s%s  x,y=(%d,%d)%s"
-					,hdr
-					,(wParam&MK_CONTROL?"|Ctrl":"")
-					,(wParam&MK_LBUTTON?"|LBtn":"")
-					,(wParam&MK_MBUTTON?"|MBtn":"")
-					,(wParam&MK_RBUTTON?"|RBtn":"")
-					,(wParam&MK_SHIFT?"|Shift":"")
-					,(wParam&MK_XBUTTON1?"|XBtn1":"")
-					,(wParam&MK_XBUTTON2?"|XBtn2":"")
-					,lParamLo ,lParamHi
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s button state = %s%s%s%s%s%s%s  x,y=(%d,%d)%s"
+						,hdr
+						,(wparam&MK_CONTROL?"|Ctrl":"")
+						,(wparam&MK_LBUTTON?"|LBtn":"")
+						,(wparam&MK_MBUTTON?"|MBtn":"")
+						,(wparam&MK_RBUTTON?"|RBtn":"")
+						,(wparam&MK_SHIFT?"|Shift":"")
+						,(wparam&MK_XBUTTON1?"|XBtn1":"")
+						,(wparam&MK_XBUTTON2?"|XBtn2":"")
+						,lParamLo ,lParamHi
+						,newline);
+				}
+				#pragma endregion
 			case WM_ACTIVATEAPP:
-				return fmt("%s %s Other Thread: %p%s"
-					,hdr
-					,(wParam?"ACTIVE":"INACTIVE")
-					,lParam 
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s %s Other Thread: %p%s"
+						,hdr
+						,(wparam?"ACTIVE":"INACTIVE")
+						,lparam 
+						,newline);
+				}
+				#pragma endregion
 			case WM_ACTIVATE:
-				return fmt("%s %s Other Window: %p%s"
-					,hdr
-					,(LOWORD(wParam)==WA_ACTIVE?"ACTIVE":LOWORD(wParam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE")
-					,lParam 
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s %s Other Window=(%s)%s"
+						,hdr
+						,(LOWORD(wparam)==WA_ACTIVE?"ACTIVE":LOWORD(wparam)==WA_INACTIVE?"INACTIVE":"Click ACTIVE")
+						,WndText((HWND)lparam)
+						,newline);
+				}
+				#pragma endregion
 			case WM_NCACTIVATE:
-				return fmt("%s %s lParam:%x(%x,%x)%s"
-					,hdr
-					,(wParam?"ACTIVE":"INACTIVE")
-					,lParam ,lParamHi ,lParamLo
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s %s lparam:%x(%x,%x)%s"
+						,hdr
+						,(wparam?"ACTIVE":"INACTIVE")
+						,lparam ,lParamHi ,lParamLo
+						,newline);
+				}
+				#pragma endregion
 			case WM_MOUSEACTIVATE:
-				return fmt("%s top level parent window = %p  lParam: %x(%x,%x)%s"
-					,hdr
-					,wParam
-					,lParam ,lParamHi ,lParamLo
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s top-level parent window=(%s)  lparam: %x(%x,%x)%s"
+						,hdr
+						,WndText((HWND)wparam)
+						,lparam ,lParamHi ,lParamLo
+						,newline);
+				}
+				#pragma endregion
 			case WM_SHOWWINDOW:
-				return fmt("%s %s %s%s"
-					,hdr
-					,(wParam?"VISIBLE":"HIDDEN")
-					,(lParam==SW_OTHERUNZOOM?"OtherUnzoom":
-					  lParam==SW_PARENTCLOSING?"ParentClosing":
-					  lParam==SW_OTHERZOOM?"OtherZoom":
-					  lParam==SW_PARENTOPENING?"ParentOpening":
-					  "ShowWindow called")
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s %s %s%s"
+						,hdr
+						,(wparam?"VISIBLE":"HIDDEN")
+						,(lparam==SW_OTHERUNZOOM?"OtherUnzoom":
+						  lparam==SW_PARENTCLOSING?"ParentClosing":
+						  lparam==SW_OTHERZOOM?"OtherZoom":
+						  lparam==SW_PARENTOPENING?"ParentOpening":
+						  "ShowWindow called")
+						,newline);
+				}
+				#pragma endregion
 			case WM_WINDOWPOSCHANGING:
 			case WM_WINDOWPOSCHANGED:
+				#pragma region Message
 				{
-					auto& wp = *reinterpret_cast<WINDOWPOS*>(lParam);
-					return fmt("%s x,y=(%d,%d) size=(%d,%d) after=%p flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
+					auto& wp = *reinterpret_cast<WINDOWPOS*>(lparam);
+					return fmt("%s x,y=(%d,%d) size=(%d,%d) after=(%s) flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
 						,hdr
 						,wp.x ,wp.y
 						,wp.cx ,wp.cy
-						,wp.hwndInsertAfter
+						,WndText(wp.hwndInsertAfter)
 						,(wp.flags&SWP_DRAWFRAME     ?"|SWP_DRAWFRAME"     :"")
 						,(wp.flags&SWP_FRAMECHANGED  ?"|SWP_FRAMECHANGED"  :"")
 						,(wp.flags&SWP_HIDEWINDOW    ?"|SWP_HIDEWINDOW"    :"")
@@ -1810,15 +1875,43 @@ namespace pr
 						,(wp.flags&SWP_SHOWWINDOW    ?"|SWP_SHOWWINDOW"    :"")
 						,newline);
 				}
+				#pragma endregion
+			case WM_GETMINMAXINFO:
+				#pragma region Message
+				{
+					auto mm = *reinterpret_cast<MINMAXINFO*>(lparam);
+					return fmt("%s max size=(%d,%d)  max pos=(%d,%d)  min track=(%d,%d)  max track=(%d,%d)%s"
+						,hdr
+						,mm.ptMaxSize.x ,mm.ptMaxSize.y
+						,mm.ptMaxPosition.x ,mm.ptMaxPosition.y
+						,mm.ptMinTrackSize.x ,mm.ptMinTrackSize.y
+						,mm.ptMaxTrackSize.x ,mm.ptMaxTrackSize.y
+						,newline);
+				}
+				#pragma endregion
 			case WM_KILLFOCUS:
-				return fmt("%s Focused Window: %p%s"
-					,hdr
-					,wParam
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s Focused Window=(%s)%s"
+						,hdr
+						,WndText((HWND)wparam)
+						,newline);
+				}
+				#pragma endregion
+			case WM_CAPTURECHANGED:
+				#pragma region Message
+				{
+					return fmt("%s new owner=(%s)%s"
+						,hdr
+						,WndText((HWND)lparam)
+						,newline);
+				}
+				#pragma endregion
 			case WM_NOTIFY:
+				#pragma region Message
 				{
 					char const* notify_type = "unknown";
-					NMHDR* nmhdr = (NMHDR*)lParam;
+					NMHDR* nmhdr = (NMHDR*)lparam;
 					if      (NM_LAST   <= nmhdr->code) notify_type = "NM";
 					else if (LVN_LAST  <= nmhdr->code) notify_type = "LVN";
 					else if (HDN_LAST  <= nmhdr->code) notify_type = "HDN";
@@ -1856,32 +1949,50 @@ namespace pr
 					if (nmhdr->code == LVN_HOTTRACK)
 						return "";
 
-					return fmt("%s SourceCtrlId = %d  from_hWnd: %p  from_id: %d  code: %d:%s%s"
+					return fmt("%s SourceCtrlId=(%d)  from_hWnd=(%s)  from_id=(%d)  code=(%d:%s)%s"
 						,hdr
-						,wParam
-						,nmhdr->hwndFrom
+						,wparam
+						,WndText(nmhdr->hwndFrom)
 						,nmhdr->idFrom
 						,nmhdr->code
 						,notify_type
 						,newline);
 				}
+				#pragma endregion
 			case WM_SYSKEYDOWN:
-				return fmt("%s vk_key = %d (%s)  Repeats: %d  lParam: %d%s"
-					,hdr
-					,wParam ,VKtoString((int)wParam)
-					,lParamLo
-					,lParam
-					,newline);
+				#pragma region Message
+				{
+					return fmt("%s vk_key=(%d:%s)  Repeats=(%d)  lparam: %d%s"
+						,hdr
+						,wparam ,VKtoString((int)wparam)
+						,lParamLo
+						,lparam
+						,newline);
+				}
+				#pragma endregion
+			case WM_SYSCOMMAND:
+				#pragma region Message
+				{
+					return fmt("%s cmd=(%s) pos=(%d,%d)%s"
+						,hdr
+						,ESysCmd(wparam&0xFFF0).ToStringA()
+						,GET_X_LPARAM(lparam) ,GET_Y_LPARAM(lparam)
+						,newline);
+				}
+				#pragma endregion
 			case WM_PAINT:
+				#pragma region Message
 				{
 					RECT r;
-					::GetUpdateRect(hWnd, &r, FALSE);
+					::GetUpdateRect(hwnd, &r, FALSE);
 					return fmt("%s update=(%d,%d) size=(%d,%d)  HDC: %p%s"
 						,hdr
 						,r.left ,r.top ,r.right - r.left ,r.bottom - r.top
-						,wParam
+						,wparam
 						,newline);
 				}
+				#pragma endregion
+			case WM_ENTERIDLE:
 			case WM_NCHITTEST:
 			case WM_SETCURSOR:
 			case WM_NCMOUSEMOVE:

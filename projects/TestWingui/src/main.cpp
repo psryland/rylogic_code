@@ -1,7 +1,7 @@
-#include "forward.h"
-#include "about.h"
-#include "modeless.h"
-//#include "graph.h"
+#include "testwingui/src/forward.h"
+#include "testwingui/src/about.h"
+#include "testwingui/src/modeless.h"
+#include "testwingui/src/graph.h"
 #include "pr/gui/wingui.h"
 #include "pr/gui/progress_dlg.h"
 #include "pr/gui/context_menu.h"
@@ -58,30 +58,45 @@ struct Main :Form<Main>
 	Button        m_btn2;
 	Button        m_btn3;
 	Button        m_btn4;
-	ScintillaCtrl m_scint;
+	//ScintillaCtrl m_scint;
 	Tab           m_tab1;
 	Tab           m_tab2;
 	TabControl    m_tc;
 	Modeless      m_modeless;
 
-	enum { IDC_BTN1 = 100, IDC_BTN2, IDC_BTN3, IDC_BTN4, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+	enum { ID_FILE, ID_FILE_EXIT };
+	enum { IDC_PROGRESS = 100, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
 	Main()
-		:Form<Main>(L"Pauls Window", ApplicationMainWindow, 200, 200, 800, 600)
+		:Form<Main>(L"Pauls Window", ApplicationMainWindow, 200, 200, 800, 600, DefaultStyle, DefaultStyleEx, nullptr, "main")
 		,m_lbl     (L"hello world"  , 10, 10, 60, 16, IDC_UNUSED, this)
-		,m_btn1    (L"click me!"    , -10, -10, 80, 20, IDC_BTN1, this, EAnchor::Right|EAnchor::Bottom)
-		,m_btn2    (L"show modeless", 10, -10, 80, 20, IDC_BTN2, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn3    (L"context menu" , Left|RightOf|IDC_BTN2, -10, 80, 20, IDC_BTN3, this, EAnchor::Left|EAnchor::Bottom)
-		,m_btn4    (L"progress"     , 10, 30, 80, 20, IDC_BTN4, this)
-		,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
+		,m_btn1    (L"progress"     , 10, 30, 80, 20, IDC_PROGRESS, this)
+		,m_btn2    (L"show modeless", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
+		,m_btn3    (L"context menu" , 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
+		,m_btn4    (L"click me!"    , -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
+	//	,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
 		,m_tab1    (L"hi from tab1", IDC_TAB1, this)
 		,m_tab2    (L"hi from tab2", IDC_TAB2, this)
-		,m_tc      (L"tabctrl"      , 150, 10, 500, 500, IDC_TAB, this, EAnchor::Left|EAnchor::Right|EAnchor::Top|EAnchor::Bottom, DefaultControlStyle, 0UL, "TC")
-		,m_modeless()
+		,m_tc      (L"tabctrl"      , 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL, "TC")
+		,m_modeless(this)
 	{
+		MenuStrip file_menu(true);
+		file_menu.Insert(L"E&xit", IDCLOSE);
+		m_menu = MenuStrip(false);
+		m_menu.Insert(file_menu, L"&File");
+
 		m_btn1.Click += [&](Button&,EmptyArgs const&)
 			{
-				About about;
-				about.ShowDialog(this);
+				auto task = [](ProgressDlg* dlg)
+				{
+					for (int i = 0, iend = 50; dlg->Progress(i*1.f/iend) && i != iend; ++i)
+					{
+						Sleep(100);
+					}
+					if (dlg->Progress(1.0f))
+						Sleep(1000);
+				};
+				ProgressDlg progress(L"Busy work", L"workin...", task);
+				progress.ShowDialog(*this);
 			};
 		m_btn2.Click += [&](Button&,EmptyArgs const&)
 			{
@@ -114,6 +129,7 @@ struct Main :Form<Main>
 					
 					//ContextMenu submenu(&menu, _T("Sub Menu"));
 					//ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
+					pt = PointToClient(pt);
 					menu.Show(this, pt.x, pt.y);
 				}
 				//ECmd cmd = (ECmd)LOWORD(res);
@@ -248,25 +264,16 @@ struct Main :Form<Main>
 			};
 		m_btn4.Click += [&](Button&,EmptyArgs const&)
 			{
-				auto task = [](ProgressDlg* dlg)
-				{
-					for (int i = 0, iend = 50; dlg->Progress(i*1.f/iend) && i != iend; ++i)
-					{
-						Sleep(100);
-					}
-					if (dlg->Progress(1.0f))
-						Sleep(1000);
-				};
-				ProgressDlg progress(L"Busy work", L"workin...", task);
-				progress.ShowDialog(*this);
+				About about;
+				about.ShowDialog(this);
 			};
 
-		m_tc.Insert(L"Tab0", m_scint);
+	//	m_tc.Insert(L"Tab0", m_scint);
 		m_tc.Insert(L"Tab1", m_tab1.m_panel);
 		m_tc.Insert(L"Tab2", m_tab2.m_panel);
 		m_tc.SelectedIndex(0);
 
-		m_scint.InitDefaults();
+	//	m_scint.InitDefaults();
 	}
 };
 
@@ -287,7 +294,7 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 		Main main;
 		main.Show();
-		MessageLoop loop(hInstance, IDC_WIN32PROJECT1);
+		MessageLoop loop(hInstance, IDC_ACCEL);
 		return loop.Run();
 	}
 	catch (std::exception const& ex)
