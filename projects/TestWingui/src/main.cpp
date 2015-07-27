@@ -58,7 +58,7 @@ struct Main :Form<Main>
 	Button        m_btn2;
 	Button        m_btn3;
 	Button        m_btn4;
-	//ScintillaCtrl m_scint;
+	ScintillaCtrl m_scint;
 	Tab           m_tab1;
 	Tab           m_tab2;
 	TabControl    m_tc;
@@ -73,7 +73,7 @@ struct Main :Form<Main>
 		,m_btn2    (L"show modeless", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
 		,m_btn3    (L"context menu" , 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
 		,m_btn4    (L"click me!"    , -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
-	//	,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
+		,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
 		,m_tab1    (L"hi from tab1", IDC_TAB1, this)
 		,m_tab2    (L"hi from tab2", IDC_TAB2, this)
 		,m_tc      (L"tabctrl"      , 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL, "TC")
@@ -268,12 +268,13 @@ struct Main :Form<Main>
 				about.ShowDialog(this);
 			};
 
-	//	m_tc.Insert(L"Tab0", m_scint);
+		m_tc.Insert(L"Tab0", m_scint);
 		m_tc.Insert(L"Tab1", m_tab1.m_panel);
 		m_tc.Insert(L"Tab2", m_tab2.m_panel);
 		m_tc.SelectedIndex(0);
 
-	//	m_scint.InitDefaults();
+		m_scint.InitDefaults();
+		m_scint.InitLdrStyle();
 	}
 };
 
@@ -294,7 +295,9 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 		Main main;
 		main.Show();
-		MessageLoop loop(hInstance, IDC_ACCEL);
+
+		MessageLoop loop;
+		loop.AddMessageFilter(main);
 		return loop.Run();
 	}
 	catch (std::exception const& ex)

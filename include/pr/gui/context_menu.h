@@ -642,7 +642,6 @@ namespace pr
 			// Message map function
 			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
-				OutputDebugStringA(DebugMessage(hwnd, message, wparam, lparam));
 				switch (message)
 				{
 				case WM_INITDIALOG:
@@ -660,8 +659,7 @@ namespace pr
 						// Client area is the contained item size plus margins
 						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
 						auto bounds = AdjRect(client).Offset(pt.x, pt.y);
-						ScreenRect(bounds, true);
-						//ParentRect(Rect(0, 0, client.width(), client.height()), true);
+						ParentRect(bounds, true);
 
 						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events
 						m_dialog_behaviour = false;

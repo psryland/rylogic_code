@@ -57,7 +57,7 @@ namespace pr
 				,int menu_id = IDC_UNUSED
 				,int accel_id = IDC_UNUSED
 				,char const* name = nullptr
-				,LPARAM init_param = 0)
+				,void* init_param = nullptr)
 				:base(title, pr::gui::ApplicationMainWindow, x, y, w, h, style, ex_style, menu_id, name, init_param)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
 				,m_msg_loop(m_hinst, accel_id)

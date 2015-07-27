@@ -78,6 +78,33 @@ namespace pr
 				return TRet(res);
 			}
 
+			// Message map function
+			// Return true to halt message processing, false to allow other controls to process the message
+			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				(void)hwnd,message,wparam,lparam,result;
+				//WndProcDebug(hwnd, message, wparam, lparam, "Scint");
+				switch (message)
+				{
+				case WM_NOTIFY:
+					{
+						// Handle notifications from the control
+						auto hdr = reinterpret_cast<NMHDR*>(lparam);
+						if (hdr->hwndFrom == m_hwnd)
+						{
+							//auto nf = reinterpret_cast<SCNotification*>(lparam);
+							//switch (hdr->code)
+							//{
+							//}
+							return true;
+						}
+						break;
+					}
+				}
+
+				return false;
+			}
+
 			// Initialise styles with reasonable defaults
 			void InitDefaults()
 			{

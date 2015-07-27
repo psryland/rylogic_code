@@ -145,7 +145,7 @@ namespace ldr
 	MainGUI::~MainGUI()
 	{
 		m_store_ui.Close();
-		m_editor_ui.Close();
+		//m_editor_ui.Close();
 		m_measure_tool_ui.Close();
 		m_angle_tool_ui.Close();
 	}
@@ -699,7 +699,7 @@ namespace ldr
 	{
 		m_angle_tool_ui.Close();
 		m_measure_tool_ui.Close();
-		m_editor_ui.Close();
+		//m_editor_ui.Close();
 		m_store_ui.Close();
 		Close(exit_code);
 	}

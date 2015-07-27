@@ -883,37 +883,6 @@ namespace pr
 			}
 		};
 
-		// Basic message loop
-		struct MessageLoop
-		{
-			HACCEL m_accel;
-
-			MessageLoop(HACCEL accel = nullptr)
-				:m_accel(accel)
-			{}
-			MessageLoop(HINSTANCE hinst, int accel_id)
-				:MessageLoop(::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_id)))
-			{}
-			virtual ~MessageLoop()
-			{}
-			virtual int Run()
-			{
-				MSG msg;
-				for (int result; (result = ::GetMessage(&msg, NULL, 0, 0)) != 0; )
-				{
-					// GetMessage actually returns negative values for errors
-					Throw(result > 0, "GetMessage failed");
-
-					// This is not a typical message loop, we don't call 'TranslateMessage' or
-					// 'IsDialogMessage' in the main loop because we want each window to have
-					// the option of not translating the message, or of calling 'IsDialogMessage' first.
-					if (m_accel && ::TranslateAccelerator(msg.hwnd, m_accel, &msg)) continue;
-					::DispatchMessage(&msg);
-				}
-				return (int)msg.wParam;
-			}
-		};
-
 		// Helper for changing the state of a variable, restoring it on destruction
 		template <typename T> struct RAII
 		{
@@ -1109,6 +1078,122 @@ namespace pr
 		} const ApplicationMainWindow;
 		#pragma endregion
 
+		#pragma region MessageLoop
+
+		// An interface for types that need to handle messages from the message
+		// loop before TranslateMessage is called. Typically these are dialog windows
+		// or windows with keyboard accelerators that need to call 'IsDialogMessage'
+		// or 'TranslateAccelerator'
+		struct IMessageFilter
+		{
+			// Implementors should return true to halt processing of the message.
+			// Typically, if you're just observing messages as they go past, return false.
+			// If you're a dialog return the result of IsDialogMessage()
+			// If you're a window with accelerators, return the result of TranslateAccelerator()
+			virtual bool TranslateMessage(MSG&)
+			{
+				return false;
+			}
+
+		protected:
+
+			virtual ~IMessageFilter()
+			{
+				Remove();
+			}
+			IMessageFilter()
+				:m_next()
+				,m_prev()
+			{
+				m_next = this;
+				m_prev = this;
+			}
+			IMessageFilter(IMessageFilter const&) = delete;
+			IMessageFilter& operator =(IMessageFilter const&) = delete;
+
+		private:
+
+			// Simple double linked listed of message filterers
+			friend struct MessageLoop;
+			IMessageFilter* m_next;
+			IMessageFilter* m_prev;
+
+			// Inserts 'filter' before this filter (i.e. at the end of the chain)
+			void Append(IMessageFilter& filter)
+			{
+				filter.Remove();
+				filter.m_next = this;
+				filter.m_prev = m_prev;
+				filter.m_next->m_prev = &filter;
+				filter.m_prev->m_next = &filter;
+			}
+
+			// Removes this filter from the chain
+			void Remove()
+			{
+				if (m_next) m_next->m_prev = m_prev;
+				if (m_prev) m_prev->m_next = m_next;
+				m_next = this;
+				m_prev = this;
+			}
+		};
+
+		// Basic message loop
+		struct MessageLoop :IMessageFilter
+		{
+			virtual int Run()
+			{
+				MSG msg;
+				for (int result; (result = ::GetMessage(&msg, NULL, 0, 0)) != 0; )
+				{
+					Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
+
+					// Pass the message to each filter. The last filter is this message loop which always handles the message.
+					for (auto filter = m_next;
+						!filter->TranslateMessage(msg);
+						filter = filter->m_next)
+					{}
+				}
+				return (int)msg.wParam;
+			}
+
+			// Add an instance that needs to handle messages before TranslateMessage is called
+			void AddMessageFilter(IMessageFilter& filter)
+			{
+				Append(filter);
+			}
+
+		protected:
+
+			// The message loop is always the last filter in the chain
+			bool TranslateMessage(MSG& msg) override
+			{
+				::TranslateMessage(&msg);
+				::DispatchMessage(&msg);
+				return true;
+			}
+		};
+
+		#pragma endregion
+
+		#pragma region CreateParams
+		
+		// Data used to create forms
+		struct CreateParams
+		{
+			bool         m_main_wnd;
+			HINSTANCE    m_hinst;
+			DWORD        m_style;
+			DWORD        m_style_ex;
+			int          m_accel_id;
+			MenuStrip    m_menu;
+			MessageLoop* m_msg_loop;
+			char const*  m_name;
+			void*        m_init_param;
+		};
+
+		#pragma endregion
+
 		#pragma region Dialog Template
 		// A structure for defining a dialog template
 		struct DlgTemplate
@@ -1297,18 +1382,26 @@ namespace pr
 		struct Control
 		{
 			#pragma region Auto Size
+			// The mask for auto sizing control bits
+			static int const AutoSizeMask = 0xF0000000;
+
 			// Used as a size (w,h) value, means expand w,h to match parent
-			// Lower 30 bits are the l,r or t,b margins to fill with.
-			static int const Fill = int(0x80000000);
-			static int const Auto = int(0x80000001);
+			// Lower 28 bits are the l,r or t,b margins to fill with.
+			static int const UseDefault = int(CW_USEDEFAULT); // 0x80000000
+			static int const Fill       = int(0x90000000);
+			static int const Auto       = int(0xA0000000);
+
+			// Fill with margins
 			static int FillM(int left_or_top, int right_or_bottom)
 			{
-				assert(left_or_top < (1 << 15) && right_or_bottom < (1 << 15));
-				return Fill | (left_or_top << 15) | (right_or_bottom << 0);
+				assert(left_or_top < (1 << 14) && right_or_bottom < (1 << 14));
+				return Fill | (left_or_top << 14) | (right_or_bottom << 0);
 			}
+
+			// Return the size of the margins to use when filling
 			static Size FillM(int fill)
 			{
-				return (fill & Fill) ? Size((fill >> 15) & 0x7fff, (fill >> 0) & 0x7fff) : Size();
+				return (fill & AutoSizeMask) == Fill ? Size((fill >> 14) & 0x3fff, (fill >> 0) & 0x3fff) : Size();
 			}
 			#pragma endregion
 
@@ -1471,6 +1564,7 @@ namespace pr
 				operator Control*() const              { return m_ctrl; }
 				operator bool() const = delete; // Don't allow implicit bool because its ambiguous
 
+				bool operator == (nullptr_t) const                              { return m_hwnd == nullptr; }
 				bool operator == (ApplicationMainWindowHandle const& rhs) const { return m_hwnd == rhs; }
 			};
 
@@ -1834,6 +1928,7 @@ namespace pr
 				auto ctrl = [this](int id) -> Control*
 					{
 						if (id == 0) return nullptr;
+						assert(m_parent != nullptr);
 						for (auto c : m_parent->m_child) if (c->m_id == id) return c;
 						return nullptr;
 					};
@@ -1849,7 +1944,7 @@ namespace pr
 				auto auto_size = [=](int& X, int& W, int i)
 				{
 					auto margin = Size();
-					if (W & Fill)
+					if ((W & AutoSizeMask) == Fill)
 					{
 						margin = FillM(W);
 						W = parent_rect.size(i) - margin.cx - margin.cy;
@@ -1940,7 +2035,7 @@ namespace pr
 			}
 
 			struct Internal {};
-			Control(Internal, int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
+			Control(Internal, int id = IDC_UNUSED, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
 				:m_hwnd()
 				,m_id(id & IdMask)
 				,m_name(name)
@@ -1963,7 +2058,6 @@ namespace pr
 			{
 				assert(id == m_id && "Id value too large");
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
-				Parent(parent);
 			}
 
 			// Create the hwnd for this control. Derived types should call this
@@ -1975,10 +2069,11 @@ namespace pr
 				,void* init_param = nullptr)
 			{
 				// Don't call this after using the first constructor
-				assert(m_hwnd == 0 && "Window handle already exists");
+				assert(m_hwnd == nullptr && "Window handle already exists");
 
 				// Check you aren't mixing use of the Dialog Constructor for the form and Frame Constructor for the child controls
-				assert((m_parent == nullptr || ::IsWindow(m_parent->m_hwnd)) && "Child controls can only be created after the parent has been created");
+				assert((parent == nullptr || ::IsWindow(parent)) && "Child controls can only be created after the parent has been created");
+				Parent(parent);
 
 				// Handle auto position/size
 				AutoSizePosition(x,y,w,h);
@@ -2045,7 +2140,7 @@ namespace pr
 				,char const* name = nullptr
 				,MenuStrip menu = MenuStrip()
 				,void* init_param = nullptr)
-				:Control(Internal(), id, parent, anchor, name)
+				:Control(Internal(), id, anchor, name)
 			{
 				Create(wndclass_name, text, x, y, w, h, style, style_ex, parent, menu, init_param);
 			}
@@ -2055,11 +2150,13 @@ namespace pr
 			// or when you need to create the control at a later time after a parent window has been created.
 			// Set 'id' != -1 to have the control automatically attach to a dialog resouce control during WM_INITDIALOG
 			Control(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(Internal(), id, parent, anchor, name)
+				:Control(Internal(), id, anchor, name)
 			{
 				// You can call 'Create' once the parent has an HWND. Or, if the parent
 				// is based on a resource and 'id' is not IDC_UNUSED, then it will
-				// automatically be created and attached to the control from the resource.
+				// automatically be created and attached to the control from the resource
+				// due to setting the parent here.
+				Parent(parent);
 			}
 
 			// Allow construction from existing handle
@@ -2072,6 +2169,9 @@ namespace pr
 
 			virtual ~Control()
 			{
+				if (m_handle_only)
+					return;
+
 				// Orphan child controls
 				for (; !m_child.empty(); )
 					m_child.front()->Parent(nullptr);
@@ -2081,7 +2181,7 @@ namespace pr
 
 				// Destroy the window
 				if (::IsWindow(m_hwnd))
-					m_handle_only ? Detach() : ::DestroyWindow(m_hwnd);
+					::DestroyWindow(m_hwnd);
 			}
 
 			// Implicit conversion to HWND
@@ -2113,27 +2213,40 @@ namespace pr
 			#pragma region Accessors
 
 			// Get/Set the parent of this control.
-			// Note this parent is not necessarily the same parent as ::GetParent()
-			// Controls such as GroupBox, Splitter, etc are parents of child controls
-			Control* Parent() const { return m_parent; }
-			void Parent(Control* parent)
+			ParentRef Parent() const
+			{
+				return m_parent;
+			}
+			virtual void Parent(ParentRef parent)
 			{
 				// Check we're not parenting to ourself or a child
 				#ifndef NDEBUG
-				if (parent != nullptr)
+				if (parent.m_ctrl != nullptr)
 				{
 					std::vector<Control*> stack;
 					for (stack.push_back(this); !stack.empty();)
 					{
 						auto x = stack.back(); stack.pop_back();
-						assert(parent != x && "Cannot parent to a child");
+						assert(parent.m_ctrl != x && "Cannot parent to a child");
 						for (auto c : x->m_child)
 							stack.push_back(c);
 					}
 				}
 				#endif
 
-				if (m_parent != parent)
+				// Change the owner or ancestor window
+				if (::IsWindow(m_hwnd))
+				{
+					Throw(::SetParent(m_hwnd, parent.m_hwnd) != nullptr, "SetParent failed");
+
+					// Supposed to send WM_CHANGEDUISTATE after changing the parent of a window
+					auto hwnd = parent.m_hwnd ? parent.m_hwnd : m_hwnd;
+					auto uis = SendMessageW(hwnd, WM_QUERYUISTATE, 0, 0);
+					SendMessageW(hwnd, WM_CHANGEUISTATE, WPARAM(MakeWord(uis, UIS_INITIALIZE)), 0);
+				}
+
+				// Change the window that this control is dependent on
+				if (m_parent != parent.m_ctrl)
 				{
 					if (m_parent != nullptr) // Remove from existing parent
 					{
@@ -2141,14 +2254,7 @@ namespace pr
 						c.erase(std::remove(c.begin(), c.end(), this), c.end());
 					}
 
-					m_parent = parent;
-					if (::IsWindow(m_hwnd))
-					{
-						auto hwndparent = m_parent ? HWND(*m_parent) : HWND(nullptr);
-						if (hwndparent == nullptr) Style((Style() | WS_POPUP) & ~WS_CHILD);
-						Throw(::SetParent(m_hwnd, hwndparent) != nullptr, "SetParent failed");
-						if (hwndparent != nullptr) Style((Style() | WS_CHILD) & ~WS_POPUP);
-					}
+					m_parent = parent.m_ctrl;
 
 					if (m_parent != nullptr) // Add to new parent
 					{
@@ -2367,8 +2473,11 @@ namespace pr
 				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
 
 				// SetWindowPos takes client space coordinates
-				auto parent = ::GetParent(m_hwnd);
-				::MapWindowPoints(nullptr, parent, r.points(), 2);
+				if (Style() & WS_CHILD)
+				{
+					auto hwndparent = ::GetParent(m_hwnd);
+					::MapWindowPoints(nullptr, hwndparent, r.points(), 2);
+				}
 
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
 				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), flags), "SetWindowPos failed");
@@ -2415,6 +2524,7 @@ namespace pr
 					r.right  += psr.left - adj.left;
 					r.bottom += psr.top  - adj.top;
 				}
+
 				ScreenRect(r, repaint, prev, flags);
 				RecordPosOffset();
 				Invalidate();
@@ -2752,7 +2862,7 @@ namespace pr
 
 		#pragma region Form
 		// Base class for an application or dialog window
-		template <typename Derived> struct Form :Control
+		template <typename Derived> struct Form :Control ,IMessageFilter
 		{
 			// Notes:
 			// Neither Form or Control define a load of OnXYZ handlers. This is because it adds a
@@ -2774,6 +2884,7 @@ namespace pr
 			bool        m_app_main_window;  // True if this is the main application window
 			DlgTemplate m_template;         // The indirect dialog template (if given)
 			MenuStrip   m_menu;             // The main menu
+			HACCEL      m_accel;            // Keyboard accelerators for this window
 			int         m_exit_code;        // The code to return when the form closes
 			bool        m_dialog_behaviour; // True if the form is a modal or modeless dialog (determines whether IsDialogMessage() is called)
 			bool        m_modal;            // True if this is a dialog being displayed modally
@@ -2785,40 +2896,29 @@ namespace pr
 				return MakeWndClassInfo<form_t>(hinst);
 			}
 
+			// Support dialog behaviour and keyboard accelerators
+			bool TranslateMessage(MSG& msg) override
+			{
+				return
+					(m_accel && TranslateAcceleratorW(m_hwnd, m_accel, &msg)) ||
+					(m_dialog_behaviour && IsDialogMessageW(m_hwnd, &msg));
+			}
+
 			// Window proc. Derived forms should not override WndProc.
 			// All messages are passed to 'ProcessWindowMessage' so use that.
 			LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam) override final
 			{
 				#if PR_WNDPROCDEBUG
 				RAII<int> nest(wnd_proc_nest(), wnd_proc_nest()+1);
+				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s FormWndProc: ", m_name));
 				#endif
 
 				LRESULT result = S_OK;
-				WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s FormWndProc: ", m_name));
-
-				// Check if this message is a dialog message
-				auto msg = MSG{m_hwnd, message, wparam, lparam, ::GetMessageTime(), ::GetMessagePos()};
-
-				// Don't use IsDialogMessage... Use the DialogBehaviour() method that implements the keyboard
-				// interface described here: https://msdn.microsoft.com/en-us/library/windows/desktop/ms644995(v=vs.85).aspx#keyboard_iface
-				// Note:
-				//  "The system automatically provides the keyboard interface for all modal dialog boxes. It does not provide the
-				//   interface for modeless dialog boxes unless the application calls the IsDialogMessage function to filter messages in
-				//   its main message loop. This means that the application must pass the message to IsDialogMessage immediately after
-				//   retrieving the message from the message queue. The function processes the messages if it is for the dialog box and
-				//   returns a nonzero value to indicate that the message has been processed and must not be passed to the TranslateMessage
-				//   or DispatchMessage function."
-				// Since calling IsDialogMessage from the message loop is a pain in the arse, don't use it, use the DialogBehaviour()
-				// protected method instead.
-
-				// 'TranslateMessage' doesn't change 'msg' it only adds WM_CHAR,etc
-				// messages to the message queue for WK_KEYDOWN,etc events
-				::TranslateMessage(&msg);
 
 				// Forward the message to the message map function
 				// which will forward the message to nested controls
 				// If the message map doesn't handle the message,
-				// pass it to the WndProc for this control/form.
+				// pass it to the WndProc for this form.
 				if (!ProcessWindowMessage(m_hwnd, message, wparam, lparam, result))
 					result = Control::WndProc(message, wparam, lparam);
 				
@@ -2839,14 +2939,6 @@ namespace pr
 				// to explicitly forward some message types, call ForwardToChildren only when you want different
 				// behaviour to the Control default implementation but still want child controls to process the message
 				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name));
-				if (m_dialog_behaviour)
-				{
-					// Returns +1 if the message was handled and true should be returned.
-					// Returns  0 if the message was handled and false should be returned.
-					// Returns -1 if the message was not handled.
-					auto r = DialogBehaviour(hwnd, message, wparam, lparam, result);
-					if (r >= 0) return r != 0;
-				}
 				switch (message)
 				{
 				case WM_INITDIALOG:
@@ -2859,6 +2951,7 @@ namespace pr
 				case WM_CLOSE:
 					{
 						Close();
+						if (m_hide_on_close) return true;
 						break;
 					}
 				case WM_DESTROY:
@@ -2900,7 +2993,7 @@ namespace pr
 				case WM_EXITSIZEMOVE:
 				case WM_WINDOWPOSCHANGED:
 				case WM_WINDOWPOSCHANGING:
-				//default: // uncomment this to quick test if forwarding all messages "fixes it"
+				default: // uncomment this to quick test if forwarding all messages "fixes it"
 					{
 						// Messages that get here will be forwarded to child controls as well
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
@@ -2930,28 +3023,6 @@ namespace pr
 				// }
 			}
 
-			// Implements the dialog box keyboard interface. Intended for use by modeless dialogs
-			// and frame windows (modal dialogs do this automatically)
-			//  ALT+mnemonic - Moves the input focus to the first control (having the WS_TABSTOP style) after the static control containing the specified mnemonic.
-			//  DOWN         - Moves the input focus to the next control in the group.
-			//  ENTER        - Sends a WM_COMMAND message to the dialog box procedure. The wParam parameter is set to IDOK or control identifier of the default push button.
-			//  ESC          - Sends a WM_COMMAND message to the dialog box procedure. The wParam parameter is set to IDCANCEL.
-			//  LEFT         - Moves the input focus to the previous control in the group.
-			//  mnemonic     - Moves the input focus to the first control (having the WS_TABSTOP style) after the static control containing the specified mnemonic.
-			//  RIGHT        - Moves the input focus to the next control in the group.
-			//  SHIFT+TAB    - Moves the input focus to the previous control that has the WS_TABSTOP style.
-			//  TAB          - Moves the input focus to the next control that has the WS_TABSTOP style.
-			//  UP           - Moves the input focus to the previous control in the group.
-			// Returns +1 if the message was handled and true should be returned.
-			// Returns  0 if the message was handled and false should be returned.
-			// Returns -1 if the message was not handled.
-			virtual int DialogBehaviour(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
-			{
-				// todo
-				(void)hwnd,message,wparam,lparam,result;
-				return -1;
-			}
-
 			// Making this method protected since we know the WndClassName()
 			void Create(wchar_t const* wndclass, wchar_t const* text, int x, int y, int w, int h, DWORD style, DWORD style_ex, ParentRef parent, MenuStrip menu, void* init_param) override
 			{
@@ -2960,12 +3031,15 @@ namespace pr
 			}
 
 			// Common constructor
+			// Only pass the hwnd for 'parent' since the Control() constructor call to Parent()
+			// will not call our overload (since we aren't constructed yet)
 			Form(Internal, bool dlg, int id, ParentRef parent, DlgTemplate const& templ, MenuStrip menu, char const* name, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
-				:Control(id, parent, EAnchor::TopLeft, name)
+				:Control(id, parent.m_hwnd, EAnchor::TopLeft, name)
 				,m_hinst(hinst)
 				,m_app_main_window(parent == ApplicationMainWindow)
 				,m_template(templ)
 				,m_menu(menu)
+				,m_accel()
 				,m_exit_code()
 				,m_dialog_behaviour(dlg)
 				,m_modal(false)
@@ -3149,6 +3223,15 @@ namespace pr
 			// Get/Set whether the window closes or just hides when closed
 			bool HideOnClose() const { return m_hide_on_close; }
 			void HideOnClose(bool enable) { m_hide_on_close = enable; }
+
+			// Set the parent of this form
+			void Parent(ParentRef parent) override
+			{
+				// Note: only passing the parent hwnd to Control() because we don't want this
+				// form to be considered a dependent control of 'parent'. i.e. it's not a WS_CHILD
+				parent.m_ctrl = nullptr;
+				Control::Parent(parent);
+			}
 		};
 		#pragma endregion
 
@@ -4056,7 +4139,6 @@ namespace pr
 				// Add the tab
 				m_tabs.push_back(&tab);
 				tab.Parent(this);
-				::SetParent(tab, m_hwnd);
 
 				// Set the position for the window
 				tab.ParentRect(CalcViewRect(), true, m_hwnd, WindowPos::EFlags::NoActivate);
@@ -4183,26 +4265,30 @@ namespace pr
 					}
 				case WM_NOTIFY:
 					{
-						auto hdr = (NMHDR*)lparam;
-						switch (hdr->code)
+						auto hdr = reinterpret_cast<NMHDR*>(lparam);
+						if (hdr->hwndFrom == m_hwnd)
 						{
-						case TCN_SELCHANGING:
+							switch (hdr->code)
 							{
-								auto tab_index = SelectedIndex();
-								auto args = TabSwitchEventArgs(false, m_tabs[tab_index], tab_index);
-								OnTabSwitch(args);
-								if (args.m_cancel) return TRUE;
-								SwitchTab(tab_index, -1, false);
-								break;
+							case TCN_SELCHANGING:
+								{
+									auto tab_index = SelectedIndex();
+									auto args = TabSwitchEventArgs(false, m_tabs[tab_index], tab_index);
+									OnTabSwitch(args);
+									if (args.m_cancel) return TRUE;
+									SwitchTab(tab_index, -1, false);
+									break;
+								}
+							case TCN_SELCHANGE:
+								{
+									auto tab_index = SelectedIndex();
+									auto args = TabSwitchEventArgs(true, m_tabs[tab_index], tab_index);
+									SwitchTab(-1, tab_index, false);
+									OnTabSwitch(args);
+									break;
+								}
 							}
-						case TCN_SELCHANGE:
-							{
-								auto tab_index = SelectedIndex();
-								auto args = TabSwitchEventArgs(true, m_tabs[tab_index], tab_index);
-								SwitchTab(-1, tab_index, false);
-								OnTabSwitch(args);
-								break;
-							}
+							return true;
 						}
 						break;
 					}
