@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- http://code.msdn.microsoft.com/Writing-type-visualizers-2eae77a2 -->
+<!-- Debugging: [HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger] "EnableNatvisDiagnostics"=dword:00000001 -->
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
 	<!-- Containers -->
@@ -210,4 +211,39 @@
 		<DisplayString>name:{m_name} hwnd:{m_hwnd}</DisplayString>
 	</Type>
 
+	<!-- Script -->
+	<Type Name="pr::script::Buffer&lt;*&gt;">
+		<DisplayString Condition="m_buf.m_first == m_buf.m_last">{*m_src}</DisplayString>
+		<DisplayString>[{m_buf}]{*m_src}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Buf&lt;*,*,*&gt;">
+		<DisplayString>{m_ch}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Preprocessor&lt;*,*,*,*&gt;">
+		<DisplayString Condition="m_dbg_buf->m_first == m_dbg_buf->m_last">{m_dbg_src.wptr}</DisplayString>
+		<DisplayString>[{*m_dbg_buf}]{m_dbg_src.wptr}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Macro&lt;*&gt;">
+		<DisplayString>{m_tag}={m_expansion}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Token">
+		<DisplayString Condition="m_type.value == pr::script::EToken::Invalid">Invalid</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::EndOfStream">End Of Stream</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Identifier">Identifier {m_svalue}</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Keyword">Keyword {m_keyword.value}</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Symbol">Symbol {m_symbol.value}</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Constant &amp;&amp; m_constant.value == pr::script::EConstant::Integral">Constant {m_ivalue}</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Constant &amp;&amp; m_constant.value == pr::script::EConstant::FloatingPoint">Constant {m_fvalue}</DisplayString>
+		<DisplayString Condition="m_type.value == pr::script::EToken::Constant">Constant {m_svalue}</DisplayString>
+		<DisplayString>{m_type}</DisplayString>
+	</Type>
+	<Type Name="pr::script::Location">
+		<DisplayString>Pos:{m_pos}</DisplayString>
+	</Type>
+	<Type Name="pr::script::TextLoc">
+		<DisplayString>Text({m_line},{m_col}) Pos:{m_pos}</DisplayString>
+	</Type>
+	<Type Name="pr::script::FileLoc">
+		<DisplayString>{m_file}({m_line},{m_col}) Pos:{m_pos}</DisplayString>
+	</Type>
 </AutoVisualizer>
