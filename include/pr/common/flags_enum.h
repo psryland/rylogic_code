@@ -2,7 +2,7 @@
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
-// Add '_bitwise_operations_allowed' to your enum for bitwise operators
+// Add '_bitwise_operators_allowed' to your enum for bitwise operators
 
 #pragma once
 
@@ -10,11 +10,11 @@
 
 #ifdef __cplusplus
 
-	// True (true_type) if 'T' has '_bitwise_operations_allowed' as a static member
+	// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
 	template <typename T> struct has_bitwise_operations_allowed
 	{
 	private:
-		template <typename U> static std::true_type  check(decltype(U::_bitwise_operations_allowed)*);
+		template <typename U> static std::true_type  check(decltype(U::_bitwise_operators_allowed)*);
 		template <typename>   static std::false_type check(...);
 	public:
 		using type = decltype(check<T>(0));
@@ -115,7 +115,7 @@ namespace pr
 			{
 				One   = 1 << 0,
 				Two   = 1 << 1,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			static_assert(support_bitwise_operators<Flags>::value == true, "");
 		}

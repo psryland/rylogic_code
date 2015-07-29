@@ -767,14 +767,14 @@ namespace pr
 		// insert [ptr, ptr + count) at ofs
 		string& insert(size_type ofs, Type const* ptr)
 		{
-			return insert(ofs, ptr, traits::length(ptr));
+			return insert(ofs, ptr, traits::strlen(ptr));
 		}
 
 		// insert [ptr, ptr + count) at ofs
 		string& insert(size_type ofs, Type const* ptr, size_type count)
 		{
 			assert(ofs < m_count && "offset off the end of this string");
-			assert(count <= traits::length(ptr) && "'count' is longer than the null terminated string 'ptr'");
+			assert(count <= traits::strlen(ptr) && "'count' is longer than the null terminated string 'ptr'");
 			assert(npos - size() > count && "result too long");
 
 			if (count == 0)

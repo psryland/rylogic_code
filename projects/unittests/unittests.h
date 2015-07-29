@@ -5,7 +5,6 @@
 #include "pr\app\gimble.h"
 #include "pr\app\main.h"
 #include "pr\app\main_gui.h"
-#include "pr\app\sim_message_loop.h"
 #include "pr\app\skybox.h"
 #include "pr\camera\camctrl_dinput_wasd.h"
 #include "pr\camera\camera.h"
@@ -339,5 +338,3 @@
 #include "pr\view3d\prmaths.h"
 #include "pr\view3d\view3d.h"
 #include "pr\win32\win32.h"
-#include "scintilla\scilexer.h"
-#include "scintilla\scintilla.h"

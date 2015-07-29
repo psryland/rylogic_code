@@ -73,11 +73,11 @@ namespace pr
 		static int const IDC_UNUSED = 0x00FFFFFF;
 
 		#pragma region Enumerations
-		// True (true_type) if 'T' has '_bitwise_operations_allowed' as a static member
+		// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
 		template <typename T> struct has_bitwise_operations_allowed
 		{
 		private:
-			template <typename U> static std::true_type  check(decltype(U::_bitwise_operations_allowed)*);
+			template <typename U> static std::true_type  check(decltype(U::_bitwise_operators_allowed)*);
 			template <typename>   static std::false_type check(...);
 		public:
 			using type = decltype(check<T>(0));
@@ -105,7 +105,7 @@ namespace pr
 			NativeFontCtrl  = ICC_NATIVEFNTCTL_CLASS , // native font control
 			StandardClasses = ICC_STANDARD_CLASSES   ,
 			LinkClass       = ICC_LINK_CLASS         ,
-			_bitwise_operations_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Autosize anchors
@@ -121,7 +121,7 @@ namespace pr
 			TopRight    = Right|Top,
 			BottomLeft  = Left|Bottom,
 			BottomRight = Right|Bottom,
-			_bitwise_operations_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Window docking
@@ -165,7 +165,7 @@ namespace pr
 			LAlt   = 1 << 4,
 			RAlt   = 1 << 5,
 			Alt    = LAlt | RAlt,
-			_bitwise_operations_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -180,7 +180,7 @@ namespace pr
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
 			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
-			_bitwise_operations_allowed,
+			_bitwise_operators_allowed,
 		};
 
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
@@ -461,7 +461,7 @@ namespace pr
 				MaxPosition  = 1 << 1,
 				MinTrackSize = 1 << 2,
 				MaxTrackSize = 1 << 3,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			EMask m_mask;
 			
@@ -505,7 +505,7 @@ namespace pr
 				NoReposition   = SWP_NOREPOSITION  ,
 				DeferErase     = SWP_DEFERERASE    ,
 				AsyncWindowpos = SWP_ASYNCWINDOWPOS,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			WindowPos() :WINDOWPOS() {}
 			WindowPos(int x_, int y_, int cx_, int cy_, EFlags flags_) :WINDOWPOS()
@@ -642,7 +642,7 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EFType :UINT
 			{
@@ -656,7 +656,7 @@ namespace pr
 				RightOrder   = MFT_RIGHTORDER,
 				Separator    = MFT_SEPARATOR,
 				String       = MFT_STRING,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EState :UINT
 			{
@@ -668,7 +668,7 @@ namespace pr
 				Disabled = MFS_DISABLED,
 				Hilite   = MFS_HILITE,
 				Unhilite = MFS_UNHILITE,
-				_bitwise_operations_allowed,
+				_bitwise_operators_allowed,
 			};
 			enum class EStockBmp :INT_PTR
 			{

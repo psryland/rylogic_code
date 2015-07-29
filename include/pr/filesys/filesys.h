@@ -39,7 +39,7 @@ namespace pr
 			WriteAccess = 1 << 4,
 			ReadAccess  = 1 << 5,
 			ExecAccess  = 1 << 6,
-			_bitwise_operations_allowed,
+			_bitwise_operators_allowed,
 		};
 		enum class Access
 		{
