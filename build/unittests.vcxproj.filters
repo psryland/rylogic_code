@@ -77,6 +77,9 @@
     <Filter Include="pr\script">
       <UniqueIdentifier>{3e862334-5c56-46b2-8db6-4612bfd5b3ad}</UniqueIdentifier>
     </Filter>
+    <Filter Include="pr\win32">
+      <UniqueIdentifier>{b6668ec9-a6d0-42ad-a1a4-ea4e939ba9e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\unittests\unittests.cpp">
@@ -236,9 +239,6 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\container\deque.h">
       <Filter>pr\container</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\directorytree.h">
-      <Filter>pr\filesys</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\discretepidcontroller.h">
       <Filter>pr\common</Filter>
@@ -953,6 +953,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\menu_list.h">
       <Filter>pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\script\script.h">
+      <Filter>pr\script</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\filesys\directory_tree.h">
+      <Filter>pr\filesys</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\win32\win32.h">
+      <Filter>pr\win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

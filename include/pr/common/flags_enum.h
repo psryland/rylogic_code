@@ -2,6 +2,8 @@
 // Flags Enum
 //  Copyright (c) Rylogic Ltd 2014
 //******************************************************************************
+// Add '_bitwise_operations_allowed' to your enum for bitwise operators
+
 #pragma once
 
 #include <type_traits>

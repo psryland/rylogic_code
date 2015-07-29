@@ -27,8 +27,6 @@ namespace pr
 // in the build.
 
 #pragma once
-#ifndef PR_COMMON_UNITTESTS_H
-#define PR_COMMON_UNITTESTS_H
 
 #include <memory>
 #include <iostream>
@@ -160,6 +158,14 @@ namespace pr
 				std::use_facet<std::ctype<wchar_t>>(locale()).narrow(from, from + len, '_', &buffer[0]);
 				return std::string(&buffer[0], &buffer[len]);
 			}
+			inline std::string Narrow(std::string const& from)
+			{
+				return from;
+			}
+			inline std::string Narrow(std::wstring const& from)
+			{
+				return Narrow(from.c_str(), from.size());
+			}
 			inline std::wstring Widen(wchar_t const* from, std::size_t len = 0)
 			{
 				if (len == 0) len = wcslen(from);
@@ -172,11 +178,19 @@ namespace pr
 				std::use_facet<std::ctype<wchar_t>>(locale()).widen(from, from + len, &buffer[0]);
 				return std::wstring(&buffer[0], &buffer[len]);
 			}
-
-			// Stream wide strings into narrow streams
-			inline std::basic_ostream<char>& operator << (std::basic_ostream<char>& ostrm, std::basic_string<wchar_t> const& str)
+			inline std::wstring Widen(std::string const& from)
 			{
-				return ostrm << impl::Narrow(str.c_str(), str.size());
+				return Widen(from.c_str(), from.size());
+			}
+			inline std::wstring Widen(std::wstring const& from)
+			{
+				return from;
+			}
+
+			// Stream std::string into a wide stream
+			inline std::basic_ostream<wchar_t>& operator <<(std::basic_ostream<wchar_t>& stream, std::string const& s)
+			{
+				return stream << Widen(s);
 			}
 		}
 
@@ -199,8 +213,8 @@ namespace pr
 		inline void Fail(char const* msg, char const* file, int line)
 		{
 			++TestCount();
-			std::stringstream ss; ss << file << "(" << line << "): " << msg;
-			throw std::exception(ss.str().c_str());
+			std::wstringstream ss; ss << file << "(" << line << "): " << msg;
+			throw std::exception(impl::Narrow(ss.str()).c_str());
 		}
 		template <typename T, typename U> inline void Check(T const& result, U const& expected, char const* expr, char const* file, int line)
 		{
@@ -208,8 +222,8 @@ namespace pr
 
 			++TestCount();
 			if (UTEqual(result, expected)) return;
-			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << "'";
-			throw std::exception(ss.str().c_str());
+			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << "'";
+			throw std::exception(impl::Narrow(ss.str()).c_str());
 		}
 		template <typename T> inline void Close(T const& result, T const& expected, T tol, char const* expr, char const* file, int line)
 		{
@@ -218,8 +232,8 @@ namespace pr
 			++TestCount();
 			T diff = expected - result;
 			if (-tol < diff && diff < tol) return;
-			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << " ±" << tol << "'";
-			throw std::exception(ss.str().c_str());
+			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' was '" << result << "', expected '" << expected << " ±" << tol << "'";
+			throw std::exception(impl::Narrow(ss.str()).c_str());
 		}
 		template <typename TExcept, typename Func> inline void Throws(Func func, char const* expr, char const* file, int line)
 		{
@@ -232,10 +246,10 @@ namespace pr
 			catch (TExcept) { threw = true; threw_expected = true; }
 			catch (...)     { threw = true; }
 			if (threw_expected) return;
-			std::stringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
+			std::wstringstream ss; ss << file << "(" << line << "): '" << expr << "' " << (threw
 				? "threw an exception of an unexpected type"
 				: "didn't throw when it was expected to");
-			throw std::exception(ss.str().c_str());
+			throw std::exception(impl::Narrow(ss.str()).c_str());
 		}
 	}
 }
@@ -261,5 +275,3 @@ namespace pr
 
 #define PR_THROWS(func, what)\
 	pr::unittests::Throws<what>(func, #func, __FILE__, __LINE__)
-
-#endif

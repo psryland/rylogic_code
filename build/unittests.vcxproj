@@ -146,7 +146,7 @@
     <ClInclude Include="..\include\pr\crypt\md5.h" />
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\include\pr\filesys\autofile.h" />
-    <ClInclude Include="..\include\pr\filesys\directorytree.h" />
+    <ClInclude Include="..\include\pr\filesys\directory_tree.h" />
     <ClInclude Include="..\include\pr\filesys\file.h" />
     <ClInclude Include="..\include\pr\filesys\fileex.h" />
     <ClInclude Include="..\include\pr\filesys\filesys.h" />
@@ -300,6 +300,7 @@
     <ClInclude Include="..\include\pr\script\preprocessor.h" />
     <ClInclude Include="..\include\pr\script\location.h" />
     <ClInclude Include="..\include\pr\script\reader.h" />
+    <ClInclude Include="..\include\pr\script\script.h" />
     <ClInclude Include="..\include\pr\script\script_core.h" />
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
@@ -319,6 +320,7 @@
     <ClInclude Include="..\include\pr\threads\process.h" />
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h" />
     <ClInclude Include="..\include\pr\threads\wait_state.h" />
+    <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\projects\unittests\pp_output.h" />
     <ClInclude Include="..\include\pr\lua\lua.h" />
     <ClInclude Include="..\projects\unittests\unittests.h" />

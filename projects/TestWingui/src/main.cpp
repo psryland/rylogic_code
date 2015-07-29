@@ -287,6 +287,8 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 	try
 	{
+		(void)hInstance;
+
 		#ifdef USE_ATL
 		//WtlMain wtl;
 		//wtl.Create(nullptr);
