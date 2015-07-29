@@ -124,16 +124,25 @@ namespace pr
 		#pragma region Extract String
 		// Extract a quoted (") string
 		// if 'escape' is not 0, it is treated as the escape character
-		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, char escape = 0, Char const* delim = nullptr, Char quote = Char('"'))
+		// if 'quote' is not nullptr, it is treated as the accepted quote characters
+		template <typename Str, typename Ptr, typename Char = char_type_t<Ptr>> inline bool ExtractString(Str& str, Ptr& src, char escape = 0, Char const* quotes = nullptr, Char const* delim = nullptr)
 		{
 			delim = Delim(delim);
+
+			// Set the accepted quote characters
+			if (quotes == nullptr)
+			{
+				static Char const default_quotes[] = {'\"', '\'', 0};
+				quotes = default_quotes;
+			}
 
 			// Find the first non-delimiter
 			if (!AdvanceToNonDelim(src, delim))
 				return false;
 
-			// If the next character is not ", then this isn't a string
-			if (*src == quote) ++src; else return false;
+			// If the next character is not an acceptable quote, then this isn't a string
+			auto quote = *src;
+			if (FindChar(quotes, quote) != 0) ++src; else return false;
 
 			// Copy the string
 			auto len = Length(str);
