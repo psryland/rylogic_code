@@ -36,7 +36,7 @@ obj2012/
 bin/
 bin_stable/
 */Setup/Express/*
-*/__pycache__/*
+__pycache__/*
 .svn/
 .metadata/
 .nuget/

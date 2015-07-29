@@ -64,9 +64,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile />
     <Link />
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk\scintilla\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
+    <ClCompile />
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
@@ -74,9 +72,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />
     <Link />
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk\scintilla\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
+    <ClCompile />
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
@@ -84,9 +80,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile />
     <Link />
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk\scintilla\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
+    <ClCompile />
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
@@ -94,9 +88,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile />
     <Link />
-    <ClCompile>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk\scintilla\include;..\sdk\sqlite\include;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-    </ClCompile>
+    <ClCompile />
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
@@ -116,12 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\projects\TestWingui\src\graph.h" />
-    <ClCompile Include="..\projects\TestWingui\src\main.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\projects;..\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\projects;..\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\projects;..\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\projects;..\include</AdditionalIncludeDirectories>
-    </ClCompile>
+    <ClCompile Include="..\projects\TestWingui\src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\TestWingui\post_build.py" />
