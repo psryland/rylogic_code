@@ -774,9 +774,6 @@
     <ClInclude Include="..\include\pr\common\user_data.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\windowfunctions.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\common\windows_com.h">
       <Filter>pr\common</Filter>
     </ClInclude>

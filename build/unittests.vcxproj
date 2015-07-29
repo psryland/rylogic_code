@@ -128,7 +128,6 @@
     <ClInclude Include="..\include\pr\common\tstring.h" />
     <ClInclude Include="..\include\pr\common\unittests.h" />
     <ClInclude Include="..\include\pr\common\user_data.h" />
-    <ClInclude Include="..\include\pr\common\windowfunctions.h" />
     <ClInclude Include="..\include\pr\common\windows_com.h" />
     <ClInclude Include="..\include\pr\container\deque.h" />
     <ClInclude Include="..\include\pr\container\vector.h" />
