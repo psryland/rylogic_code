@@ -5,8 +5,8 @@
 // A wingui control for scintilla
 #pragma once
 
-#include <scintilla/scintilla.h>
-#include <scintilla/scilexer.h>
+#include "scintilla/include/scintilla.h"
+#include "scintilla/include/scilexer.h"
 #include "pr/gui/wingui.h"
 #include "pr/str/string_core.h"
 

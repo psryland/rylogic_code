@@ -1,0 +1,281 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{599D9118-2445-476A-9877-060417FE5FA5}</ProjectGuid>
+    <RootNamespace>scintilla</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="..\..\build\props\dll.x86.debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="..\..\build\props\dll.x64.debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="..\..\build\props\dll.x86.release.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="..\..\build\props\dll.x64.release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile />
+    <Link />
+    <ClCompile>
+      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent />
+    <Lib>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Lib>
+    <PreBuildEvent>
+      <Command>cd $(ProjectDir)scripts
+$(ProjectDir)scripts\LexGen.py
+$(ProjectDir)scripts\HFacer.py
+</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile />
+    <Link />
+    <ClCompile>
+      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent />
+    <Lib>
+      <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
+    </Lib>
+    <PreBuildEvent>
+      <Command>cd $(ProjectDir)scripts
+$(ProjectDir)scripts\LexGen.py
+$(ProjectDir)scripts\HFacer.py
+</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile />
+    <Link />
+    <ClCompile>
+      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>cd $(ProjectDir)scripts
+$(ProjectDir)scripts\LexGen.py
+$(ProjectDir)scripts\HFacer.py
+</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+    <Lib>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Lib>
+    <Link>
+      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile />
+    <Link />
+    <ClCompile>
+      <PreprocessorDefinitions>SCI_NAMESPACE;SCI_LEXER;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalIncludeDirectories>..\..\sdk;..\..\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>cd $(ProjectDir)scripts
+$(ProjectDir)scripts\LexGen.py
+$(ProjectDir)scripts\HFacer.py
+</Command>
+    </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>..\..\script\DeployLib.py $(TargetPath) $(PlatformTarget) $(Configuration)</Command>
+    </PostBuildEvent>
+    <Link>
+      <AdditionalDependencies>imm32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="src\lexers\LexCPP.cxx" />
+    <ClCompile Include="src\lexers\LexLdr.cxx" />
+    <ClCompile Include="src\AutoComplete.cxx" />
+    <ClCompile Include="src\CallTip.cxx" />
+    <ClCompile Include="src\CaseConvert.cxx" />
+    <ClCompile Include="src\CaseFolder.cxx" />
+    <ClCompile Include="src\Catalogue.cxx" />
+    <ClCompile Include="src\CellBuffer.cxx" />
+    <ClCompile Include="src\CharClassify.cxx" />
+    <ClCompile Include="src\ContractionState.cxx" />
+    <ClCompile Include="src\Decoration.cxx" />
+    <ClCompile Include="src\Document.cxx" />
+    <ClCompile Include="src\Editor.cxx" />
+    <ClCompile Include="src\ExternalLexer.cxx" />
+    <ClCompile Include="src\Indicator.cxx" />
+    <ClCompile Include="src\KeyMap.cxx" />
+    <ClCompile Include="src\LineMarker.cxx" />
+    <ClCompile Include="src\PerLine.cxx" />
+    <ClCompile Include="src\PositionCache.cxx" />
+    <ClCompile Include="src\RESearch.cxx" />
+    <ClCompile Include="src\RunStyles.cxx" />
+    <ClCompile Include="src\ScintillaBase.cxx" />
+    <ClCompile Include="src\Selection.cxx" />
+    <ClCompile Include="src\Style.cxx" />
+    <ClCompile Include="src\UniConversion.cxx" />
+    <ClCompile Include="src\ViewStyle.cxx" />
+    <ClCompile Include="src\XPM.cxx" />
+    <ClCompile Include="src\lexlib\Accessor.cxx" />
+    <ClCompile Include="src\lexlib\CharacterCategory.cxx" />
+    <ClCompile Include="src\lexlib\CharacterSet.cxx" />
+    <ClCompile Include="src\lexlib\LexerBase.cxx" />
+    <ClCompile Include="src\lexlib\LexerModule.cxx" />
+    <ClCompile Include="src\lexlib\LexerNoExceptions.cxx" />
+    <ClCompile Include="src\lexlib\LexerSimple.cxx" />
+    <ClCompile Include="src\lexlib\PropSetSimple.cxx" />
+    <ClCompile Include="src\lexlib\StyleContext.cxx" />
+    <ClCompile Include="src\lexlib\WordList.cxx" />
+    <ClCompile Include="src\win32\CheckD2D.cxx" />
+    <ClCompile Include="src\win32\PlatWin.cxx" />
+    <ClCompile Include="src\win32\ScintillaWin.cxx" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\scintilla\Scintilla.h" />
+    <ClInclude Include="include\scintilla\SciLexer.h" />
+    <ClInclude Include="include\scintilla\ILexer.h" />
+    <ClInclude Include="include\scintilla\Platform.h" />
+    <ClInclude Include="include\scintilla\ScintillaWidget.h" />
+    <ClInclude Include="src\AutoComplete.h" />
+    <ClInclude Include="src\CallTip.h" />
+    <ClInclude Include="src\CaseConvert.h" />
+    <ClInclude Include="src\CaseFolder.h" />
+    <ClInclude Include="src\Catalogue.h" />
+    <ClInclude Include="src\CellBuffer.h" />
+    <ClInclude Include="src\CharClassify.h" />
+    <ClInclude Include="src\ContractionState.h" />
+    <ClInclude Include="src\Decoration.h" />
+    <ClInclude Include="src\Document.h" />
+    <ClInclude Include="src\Editor.h" />
+    <ClInclude Include="src\ExternalLexer.h" />
+    <ClInclude Include="src\FontQuality.h" />
+    <ClInclude Include="src\Indicator.h" />
+    <ClInclude Include="src\KeyMap.h" />
+    <ClInclude Include="src\LineMarker.h" />
+    <ClInclude Include="src\Partitioning.h" />
+    <ClInclude Include="src\PerLine.h" />
+    <ClInclude Include="src\PositionCache.h" />
+    <ClInclude Include="src\RESearch.h" />
+    <ClInclude Include="src\RunStyles.h" />
+    <ClInclude Include="src\ScintillaBase.h" />
+    <ClInclude Include="src\Selection.h" />
+    <ClInclude Include="src\SplitVector.h" />
+    <ClInclude Include="src\Style.h" />
+    <ClInclude Include="src\UnicodeFromUTF8.h" />
+    <ClInclude Include="src\UniConversion.h" />
+    <ClInclude Include="src\ViewStyle.h" />
+    <ClInclude Include="src\XPM.h" />
+    <ClInclude Include="src\lexlib\Accessor.h" />
+    <ClInclude Include="src\lexlib\CharacterCategory.h" />
+    <ClInclude Include="src\lexlib\CharacterSet.h" />
+    <ClInclude Include="src\lexlib\LexAccessor.h" />
+    <ClInclude Include="src\lexlib\LexerBase.h" />
+    <ClInclude Include="src\lexlib\LexerModule.h" />
+    <ClInclude Include="src\lexlib\LexerNoExceptions.h" />
+    <ClInclude Include="src\lexlib\LexerSimple.h" />
+    <ClInclude Include="src\lexlib\OptionSet.h" />
+    <ClInclude Include="src\lexlib\PropSetSimple.h" />
+    <ClInclude Include="src\lexlib\SparseState.h" />
+    <ClInclude Include="src\lexlib\StringCopy.h" />
+    <ClInclude Include="src\lexlib\StyleContext.h" />
+    <ClInclude Include="src\lexlib\SubStyles.h" />
+    <ClInclude Include="src\lexlib\WordList.h" />
+    <ClInclude Include="src\win32\PlatWin.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\win32\ScintRes.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="scripts\Face.py" />
+    <None Include="scripts\FileGenerator.py" />
+    <None Include="scripts\GenerateCaseConvert.py" />
+    <None Include="scripts\GenerateCharacterCategory.py" />
+    <None Include="scripts\HFacer.py" />
+    <None Include="scripts\LexGen.py" />
+    <None Include="scripts\ScintillaData.py" />
+    <None Include="include\scintilla\Scintilla.iface" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="src\lexers\_ReadMe.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

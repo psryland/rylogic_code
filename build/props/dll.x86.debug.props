@@ -19,7 +19,7 @@
     <ClCompile>
       <DisableSpecificWarnings>4351;4355</DisableSpecificWarnings>
       <PreprocessorDefinitions>_DEBUG;_CRT_SECURE_NO_WARNINGS;_SCL_SECURE_NO_WARNINGS;NOMINMAX;WIN32_LEAN_AND_MEAN;_WIN32_WINNT=0x0600</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk\wtl\v9.0\include;..\sdk\sqlite;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\projects;..\include;..\sdk;..\sdk\wtl\v9.0\include;..\sdk\sqlite;..\sdk\lua\lua\src;..\sdk\lua;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <ProgramDataBaseFileName>$(TargetDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
