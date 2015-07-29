@@ -55,10 +55,11 @@ namespace ldr
 		template <typename Char> pr::ldr::LdrObject* RegisterObject(Char const* object_description, wchar_t const* include_paths, pr::ldr::ContextId ctx_id, bool async)
 		{
 			using namespace pr::script;
-			Reader reader;
+
 			Ptr<Char const*> src(object_description);
-			reader.Includes().SearchPaths(include_paths);
-			reader.Push(src);
+			FileIncludes<> inc(include_paths);
+			Reader reader(src, false, &inc);
+
 			return RegisterObject(reader, ctx_id, async);
 		}
 

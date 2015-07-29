@@ -44,7 +44,7 @@ namespace ldr
 
 	// Execute a string containing lua code.
 	// The code is expected to leave a string on the lua stack
-	bool LuaSource::IEmbeddedCode_Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::Location const& loc, pr::script::string& result)
+	bool LuaSource::Execute(pr::script::string const& lang, pr::script::string const& code, pr::script::Location const& loc, pr::script::string& result)
 	{
 		// We only handle lua code
 		if (!pr::str::Equal(lang, "lua"))

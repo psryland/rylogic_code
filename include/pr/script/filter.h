@@ -185,7 +185,7 @@ namespace pr
 						if (src[1] == L'*')
 						{
 							auto loc_beg = m_src->Loc();
-							for (next(2); src[0] != L'*' && src[1] != L'/' && *src; next(1)) {}
+							for (next(2); *src && !(src[0] == L'*' && src[1] == L'/'); next(1)) {}
 							if (*src) next(2); else return FailPolicy::Fail(EResult::SyntaxError, loc_beg, "Unmatched block comment");
 							continue;
 						}
@@ -336,7 +336,7 @@ namespace pr
 			{// StripComments
 				char const* str_in = 
 					"123// comment         \n"
-					"456/* block */789     \n"
+					"456/* blo/ck */789\n"
 					"// many               \n"
 					"// lines              \n"
 					"// \"string\"         \n"
@@ -351,7 +351,7 @@ namespace pr
 					" comment\n";
 				char const* str_out = 
 					"123\n"
-					"456789     \n"
+					"456789\n"
 					"\n"
 					"\n"
 					"\n"

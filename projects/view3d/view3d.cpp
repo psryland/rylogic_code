@@ -863,15 +863,14 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 // Returns the number of objects added.
 VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async, char const* include_paths)
 {
+	using namespace pr::script;
 	try
 	{
 		DllLockGuard;
 
-		pr::script::FileSrc<> src(ldr_filepath);
-		pr::script::Reader reader;
-		reader.Includes().SearchPaths(pr::Widen(include_paths));
-		reader.EmbeddedCode().Handler.push_back(&Dll().m_lua);
-		reader.Push(src);
+		FileSrc<> src(ldr_filepath);
+		FileIncludes<> inc(pr::Widen(include_paths));
+		Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
 
 		pr::ldr::ParseResult out;
 		pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
@@ -892,7 +891,6 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module)
 {
 	using namespace pr::script;
-
 	try
 	{
 		DllLockGuard;
@@ -902,17 +900,17 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 		if (file)
 		{
 			FileSrc<> src(ldr_script);
-			ReaderT<FileIncludes<>, EmbeddedLua<>> reader(false);
-			reader.Includes().SearchPaths(pr::Widen(include_paths));
-			reader.Push(src);
+			FileIncludes<> inc(pr::Widen(include_paths));
+			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
+
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		}
 		else // string
 		{
 			PtrA<> src(ldr_script);
-			ReaderT<ResIncludes<>, EmbeddedLua<>> reader(false);
-			reader.Includes().m_module = module;
-			reader.Push(src);
+			ResIncludes<> inc(module);
+			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
+
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		}
 
@@ -2065,8 +2063,7 @@ VIEW3D_API void __stdcall View3D_CreateDemoScene(View3DWindow window)
 		
 		auto scene = pr::ldr::CreateDemoScene();
 		pr::script::PtrW<> src(scene.c_str());
-		pr::script::Reader reader(src, false);
-		reader.EmbeddedCode().Handler.push_back(&Dll().m_lua);
+		pr::script::Reader reader(src, false, nullptr, nullptr, &Dll().m_lua);
 
 		pr::ldr::ParseResult out;
 		pr::ldr::Parse(Dll().m_rdr, reader, out, true, pr::ldr::DefaultContext);

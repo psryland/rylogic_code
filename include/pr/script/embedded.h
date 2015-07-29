@@ -25,7 +25,7 @@ namespace pr
 			// 'result' is the output of the code after execution, converted to a string
 			// Return true, if the code was executed successfully, false if not handled.
 			// If the code can be handled but has errors, throw 'Exception's.
-			virtual bool IEmbeddedCode_Execute(string const& lang, string const& code, Location const& loc, string& result) = 0;
+			virtual bool Execute(string const& lang, string const& code, Location const& loc, string& result) = 0;
 		};
 
 		// An embedded code handler that doesn't handle any code.
@@ -36,10 +36,10 @@ namespace pr
 			std::vector<IEmbeddedCode*> Handler;
 
 			// Forwards the code to all handlers, returning after the first that reports 'handled'.
-			bool IEmbeddedCode_Execute(string const& lang, string const& code, Location const& loc, string& result) override
+			bool Execute(string const& lang, string const& code, Location const& loc, string& result) override
 			{
 				for (auto& handler : Handler)
-					if (handler->IEmbeddedCode_Execute(lang, code, loc, result))
+					if (handler->Execute(lang, code, loc, result))
 						return true;
 
 				return false;

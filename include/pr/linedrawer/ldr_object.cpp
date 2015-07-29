@@ -61,14 +61,14 @@ namespace pr
 		struct ParseParams
 		{
 			pr::Renderer&  m_rdr;
-			ReaderBase&    m_reader;
+			Reader&        m_reader;
 			ObjectCont&    m_objects;
 			ModelCont&     m_models;
 			ContextId      m_context_id;
 			HashValue      m_keyword;
 			LdrObject*     m_parent;
 
-			ParseParams(pr::Renderer& rdr, ReaderBase& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
+			ParseParams(pr::Renderer& rdr, Reader& reader, ObjectCont& objects, ModelCont& models, ContextId context_id, HashValue keyword, LdrObject* parent)
 				:m_rdr(rdr)
 				,m_reader(reader)
 				,m_objects(objects)
@@ -94,7 +94,7 @@ namespace pr
 		bool ParseLdrObject(ParseParams& p);
 
 		// Read the name, colour, and instance flag for an object
-		ObjectAttributes ParseAttributes(pr::script::ReaderBase& reader, ELdrObject model_type)
+		ObjectAttributes ParseAttributes(pr::script::Reader& reader, ELdrObject model_type)
 		{
 			ObjectAttributes attr;
 			attr.m_type = model_type;
@@ -138,7 +138,7 @@ namespace pr
 		}
 
 		// Parse a camera description
-		void ParseCamera(pr::script::ReaderBase& reader, ParseResult& out)
+		void ParseCamera(pr::script::Reader& reader, ParseResult& out)
 		{
 			reader.SectionStart();
 			for (EKeyword kw; reader.NextKeywordH(kw);)
@@ -239,7 +239,7 @@ namespace pr
 		}
 
 		// Parse a simple animation description
-		void ParseAnimation(pr::script::ReaderBase& reader, Animation& anim)
+		void ParseAnimation(pr::script::Reader& reader, Animation& anim)
 		{
 			reader.SectionStart();
 			for (EKeyword kw; reader.NextKeywordH(kw);)
@@ -283,7 +283,7 @@ namespace pr
 		}
 
 		// Parse a step block for an object
-		void ParseStep(pr::script::ReaderBase& reader, LdrObjectStepData& step)
+		void ParseStep(pr::script::Reader& reader, LdrObjectStepData& step)
 		{
 			reader.Section(step.m_code, false);
 		}
@@ -1968,7 +1968,7 @@ namespace pr
 
 		// Reads all ldr objects from a script returning 'result'
 		template <typename AddCB>
-		void ParseLdrObjects(pr::Renderer& rdr, pr::script::ReaderBase& reader, ContextId context_id, ParseResult& result, AddCB add_cb)
+		void ParseLdrObjects(pr::Renderer& rdr, pr::script::Reader& reader, ContextId context_id, ParseResult& result, AddCB add_cb)
 		{
 			// Your application needs to have called CoInitialise() before here
 			bool cancel = false;
@@ -2025,7 +2025,7 @@ namespace pr
 
 		// Parse the ldr script in 'reader' adding the results to 'out'
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
-		void Parse(pr::Renderer& rdr, pr::script::ReaderBase& reader, ParseResult& out, bool async, ContextId context_id)
+		void Parse(pr::Renderer& rdr, pr::script::Reader& reader, ParseResult& out, bool async, ContextId context_id)
 		{
 			// Does the work of parsing objects and adds them to 'models'
 			// 'total' is the total number of objects added

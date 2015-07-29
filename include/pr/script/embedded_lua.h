@@ -29,7 +29,7 @@ namespace pr
 			// 'result' is the output of the code after execution, converted to a string
 			// Return true, if the code was executed successfully, false if not handled.
 			// If the code can be handled but has errors, throw 'Exception's.
-			bool IEmbeddedCode_Execute(string const& lang, string const& code, Location const& loc, string& result) override
+			bool Execute(string const& lang, string const& code, Location const& loc, string& result) override
 			{
 				// We only handle lua code
 				if (lang != L"lua")

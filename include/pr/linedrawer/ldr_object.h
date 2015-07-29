@@ -587,7 +587,7 @@ namespace pr
 		// If 'async' is true, a progress dialog is displayed and parsing is done in a background thread.
 		void Parse(
 			pr::Renderer& rdr,                    // The renderer to create models for
-			pr::script::ReaderBase& reader,       // The source of the script
+			pr::script::Reader& reader,           // The source of the script
 			ParseResult& out,                     // The results of parsing the script
 			bool async = true,                    // True if parsing should be done in a background thread
 			ContextId context_id = DefaultContext // The context id to assign to each created object
@@ -668,7 +668,7 @@ namespace pr
 		// as we use for ldr object '*o2w' transform descriptions.
 		// This function is inline so that external code can use the Ldr
 		// transform syntax without dependence on renderer functions
-		inline pr::m4x4& ParseLdrTransform(pr::script::ReaderBase& reader, pr::m4x4& o2w)
+		inline pr::m4x4& ParseLdrTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 		{
 			assert(pr::IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it premultiplies the transform with the one read from the script");
 			pr::m4x4 p2w = pr::m4x4Identity;
@@ -817,7 +817,7 @@ namespace pr
 		// Parse the source data in 'reader' using the same syntax
 		// as we use for ldr object '*o2w' transform descriptions.
 		// The source should begin with '{' and end with '}', i.e. *o2w { ... } with the *o2w already read
-		inline pr::m4x4 ParseLdrTransform(pr::script::ReaderBase& reader)
+		inline pr::m4x4 ParseLdrTransform(pr::script::Reader& reader)
 		{
 			pr::m4x4 o2w = pr::m4x4Identity;
 			ParseLdrTransform(reader, o2w);
@@ -838,7 +838,7 @@ namespace pr
 		PRUnitTest(pr_linedrawer_ldr_object)
 		{
 			// Check the hash values are correct
-			auto hasher  = [](wchar_t const* s) { return pr::script::ReaderBase::HashKeyword(s, false); };
+			auto hasher  = [](wchar_t const* s) { return pr::script::Reader::HashKeyword(s, false); };
 			auto on_fail = [](char const* m) { PR_FAIL(m); };
 			pr::CheckHashEnum<pr::ldr::EKeyword  , wchar_t>(hasher, on_fail);
 			pr::CheckHashEnum<pr::ldr::ELdrObject, wchar_t>(hasher, on_fail);

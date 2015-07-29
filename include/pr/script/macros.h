@@ -15,7 +15,6 @@ namespace pr
 	namespace script
 	{
 		// A preprocessor macro definition
-		template <typename FailPolicy = ThrowOnFailure>
 		struct Macro
 		{
 			using Params = pr::vector<string, 5>;
@@ -48,7 +47,8 @@ namespace pr
 			FileLoc   m_loc;       // The source location of where the macro was defined
 
 			// Return a macro tag from 'src' (or fail)
-			template <typename Iter> static string ReadTag(Iter& src, Location const& loc)
+			template <typename Iter, typename FailPolicy = ThrowOnFailure>
+			static string ReadTag(Iter& src, Location const& loc)
 			{
 				string tag;
 				if (!pr::str::ExtractIdentifier(tag, src))
@@ -97,7 +97,8 @@ namespace pr
 			// of parameters where given, false if the macro takes parameters but none were given
 			// Basically, 'false' means, don't treat this macro as matching because no params were given
 			// If false is returned the buffer will contain anything read during this method.
-			template <bool Identifiers, typename TBuf> bool ReadParams(TBuf& buf, Params& params, Location const& loc) const
+			template <bool Identifiers, typename TBuf, typename FailPolicy = ThrowOnFailure>
+			bool ReadParams(TBuf& buf, Params& params, Location const& loc) const
 			{
 				#pragma warning(push)
 				#pragma warning(disable:4127) // constant conditional
@@ -212,80 +213,69 @@ namespace pr
 				}
 			}
 		};
-		template <typename T> inline bool operator == (Macro<T> const& lhs, Macro<T> const& rhs)
+		inline bool operator == (Macro const& lhs, Macro const& rhs)
 		{
 			return
 				lhs.m_hash == rhs.m_hash &&
 				lhs.m_params.size() == rhs.m_params.size() &&
 				lhs.m_expansion == rhs.m_expansion;
 		}
-		template <typename T> inline bool operator != (Macro<T> const& lhs, Macro<T> const& rhs)
+		inline bool operator != (Macro const& lhs, Macro const& rhs)
 		{
 			return !(lhs == rhs);
 		}
 
-		// A collection of preprocessor macros
-		// Note: to programmatically define macros, subclass this type and extend the 'Find' method.
-		template <typename TMacro = Macro<>, typename FailPolicy = ThrowOnFailure>
-		struct MacroDB
+		// Interfase/Base class for the preprocessor macro handler
+		struct IMacroHandler
 		{
-			// The macro type stored in this object
-			using Macro = TMacro;
-
-			// The database of macro definitions
-			using DB = std::unordered_map<HashValue, TMacro>;
-			DB m_db;
-
-			MacroDB()
-				:m_db()
-			{}
-			MacroDB(MacroDB&& rhs)
-				:m_db(std::move(rhs.m_db))
-			{}
-			MacroDB(MacroDB const& rhs)
-				:m_db(rhs.m_db)
-			{}
-			MacroDB& operator =(MacroDB&& rhs)
-			{
-				if (this != &rhs)
-				{
-					m_db = std::move(rhs.m_db);
-				}
-				return *this;
-			}
-			MacroDB& operator =(MacroDB const& rhs)
-			{
-				if (this != &rhs)
-				{
-					m_db = rhs.m_db;
-				}
-				return *this;
-			}
-			virtual ~MacroDB()
-			{}
+			virtual ~IMacroHandler() {}
 
 			// Add a macro expansion to the db.
-			// Throw EResult::MacroAlreadyDefined if the definition is already defined
-			void Add(Macro const& macro)
+			// Throw EResult::MacroAlreadyDefined if the definition is already defined and different to 'macro'
+			virtual void Add(Macro const& macro) = 0;
+
+			// Remove a macro (by hashed name)
+			virtual void Remove(HashValue hash) = 0;
+
+			// Find a macro expansion for a given macro identifier (hashed)
+			// Returns nullptr if no macro is found.
+			virtual Macro const* Find(HashValue hash) const = 0;
+		};
+
+		// A collection of preprocessor macros
+		// Note: to programmatically define macros, subclass this type and extend the 'Find' method.
+		template <typename FailPolicy = ThrowOnFailure>
+		struct MacroDB :IMacroHandler
+		{
+			// The database of macro definitions
+			using DB = std::unordered_map<HashValue, Macro>;
+			DB m_db;
+
+			// Add a macro expansion to the db.
+			// Throw EResult::MacroAlreadyDefined if the definition is already defined and different to 'macro'
+			void Add(Macro const& macro) override
 			{
 				auto i = m_db.find(macro.m_hash);
 				if (i != std::end(m_db))
+				{
+					if (i->second == macro) return; // Already defined, but the same definition... allowed
 					return FailPolicy::Fail(EResult::MacroAlreadyDefined, macro.m_loc, "macro already defined");
+				}
 
 				m_db.insert(i, DB::value_type(macro.m_hash, macro));
 			}
-			
+
 			// Remove a macro (by hashed name)
-			void Remove(HashValue hash)
+			void Remove(HashValue hash) override
 			{
 				auto i = m_db.find(hash);
 				if (i != std::end(m_db))
 					m_db.erase(i);
 			}
-			
+
 			// Find a macro expansion for a given macro identifier (hashed)
 			// Returns nullptr if no macro is found.
-			Macro const* Find(HashValue hash) const
+			Macro const* Find(HashValue hash) const override
 			{
 				auto i = m_db.find(hash);
 				return i != std::end(m_db) ? &i->second : nullptr;

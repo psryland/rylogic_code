@@ -61,10 +61,7 @@ namespace ldr
 			std::size_t bcount = m_store.size();
 
 			pr::script::PtrW<> src(str.c_str());
-			pr::script::Reader reader(false);
-			reader.EmbeddedCode().Handler.push_back(&m_lua_src);
-			reader.Push(src);
-
+			pr::script::Reader reader(src, false, nullptr, nullptr, &m_lua_src);
 			Parse(m_rdr, reader, out, false, pr::ldr::DefaultContext);
 
 			pr::events::Send(Event_StoreChanged(m_store, m_store.size() - bcount, out, Event_StoreChanged::EReason::NewData));
@@ -121,19 +118,24 @@ namespace ldr
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
+				FileIncludes<> inc;
+				inc.FileOpened += watch;
+				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+
 				Buffer<> src(ESrcType::Buffered, pr::FmtS("*Model {\"%s\"}", filepath));
-				Reader reader(src);
-				reader.Includes().FileOpened += watch;
-				reader.Includes().m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+				Reader reader(src, false, &inc, nullptr, &m_lua_src);
+
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 			else // assume ldr script file
 			{
+				FileIncludes<> inc;
+				inc.FileOpened += watch;
+				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
+
 				FileSrc<> src(file.c_str());
-				Reader reader(src);
-				reader.Includes().FileOpened += watch;
-				reader.Includes().m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
-				reader.EmbeddedCode().Handler.push_back(&m_lua_src);
+				Reader reader(src, false, &inc, nullptr, &m_lua_src);
+
 				Parse(m_rdr, reader, out, true, context_id);
 			}
 

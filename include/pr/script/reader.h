@@ -15,29 +15,53 @@ namespace pr
 {
 	namespace script
 	{
-		// ReaderBase - Reads pr script from a stream of wchar_t's
-		// Not a template so that 'ReaderBase' can be a common base class
-		struct ReaderBase
+		struct Reader
 		{
 		private:
-			Src* m_pp;
+			Preprocessor<> m_pp;
 			wchar_t const* m_delim;
 			bool m_case_sensitive;
 
 		public:
-			ReaderBase(Src& pp, bool case_sensitive)
-				:m_pp(&pp)
+			Reader(bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+				:m_pp(inc, mac, emb)
 				,m_delim(L" \t\r\n\v,;")
 				,m_case_sensitive(case_sensitive)
 			{}
-			virtual ~ReaderBase()
+			Reader(Src& src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+				:m_pp(src, inc, mac, emb)
+				,m_delim(L" \t\r\n\v,;")
+				,m_case_sensitive(case_sensitive)
+			{}
+			Reader(Src* src, bool delete_on_pop, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+				:m_pp(src, delete_on_pop, inc, mac, emb)
+				,m_delim(L" \t\r\n\v,;")
+				,m_case_sensitive(case_sensitive)
+			{}
+			template <typename Char, typename = pr::str::enable_if_char_t<Char>>
+			Reader(Char const* src, bool case_sensitive = true, IIncludeHandler* inc = nullptr, IMacroHandler* mac = nullptr, IEmbeddedCode* emb = nullptr)
+				:m_pp(src, inc, mac, emb)
+				,m_delim(L" \t\r\n\v,;")
+				,m_case_sensitive(case_sensitive)
 			{}
 
 			// Access the include handler
-			virtual IIncludeHandler& Includes() const = 0;
+			IIncludeHandler& Includes() const
+			{
+				return *m_pp.Includes;
+			}
+
+			// Access the macro handler
+			IMacroHandler& Macros() const
+			{
+				return *m_pp.Macros;
+			}
 
 			// Access the embedded code handler
-			virtual IEmbeddedCode& EmbeddedCode() const = 0;
+			IEmbeddedCode& EmbeddedCode() const
+			{
+				return *m_pp.EmbeddedCode;
+			}
 
 			// Get/Set delimiter characters
 			wchar_t const* Delimiters() const
@@ -68,7 +92,7 @@ namespace pr
 			// Return true if the end of the source has been reached
 			bool IsSourceEnd()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				EatWhiteSpace(src, 0, 0);
 				return *src == 0;
 			}
@@ -76,7 +100,7 @@ namespace pr
 			// Return true if the next token is a keyword
 			bool IsKeyword()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				EatWhiteSpace(src, 0, 0);
 				return *src == '*';
 			}
@@ -84,13 +108,13 @@ namespace pr
 			// Returns true if the next non-whitespace character is the start/end of a section
 			bool IsSectionStart()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				EatDelimiters(src, m_delim);
 				return *src == L'{';
 			}
 			bool IsSectionEnd()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				EatDelimiters(src, m_delim);
 				return *src == L'}';
 			}
@@ -98,13 +122,13 @@ namespace pr
 			// Move to the start/end of a section and then one past it
 			bool SectionStart()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (IsSectionStart()) { ++src; return true; }
 				return ReportError(EResult::TokenNotFound, src.Loc(), "expected '{'");
 			}
 			bool SectionEnd()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (IsSectionEnd()) { ++src; return true; }
 				return ReportError(EResult::TokenNotFound, src.Loc(), "expected '}'");
 			}
@@ -112,7 +136,7 @@ namespace pr
 			// Move to the start of the next line
 			bool NewLine()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				EatLine(src, 0, 0);
 				if (pr::str::IsNewLine(*src)) ++src; else return false;
 				return true;
@@ -123,7 +147,7 @@ namespace pr
 			// or the end of the current section or end of the input stream if not found
 			bool FindSectionStart()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				for (;*src && *src != L'{' && *src != L'}';)
 				{
 					if (*src == L'\"') { EatLiteralString(src); continue; }
@@ -137,7 +161,7 @@ namespace pr
 			// or the end of the input stream (if called from file scope).
 			bool FindSectionEnd()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				for (int nest = IsSectionStart() ? 0 : 1; *src;)
 				{
 					if (*src == L'\"') { EatLiteralString(src); continue; }
@@ -155,7 +179,7 @@ namespace pr
 			// Returns true if a keyword is found, false otherwise.
 			template <typename StrType> bool NextKeywordS(StrType& kw)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				for (;*src && *src != L'}' && *src != L'*';)
 				{
 					if (*src == L'\"') { EatLiteralString(src); continue; }
@@ -181,7 +205,7 @@ namespace pr
 			// As above an error is reported if the next token is not a keyword
 			HashValue NextKeywordH()
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				HashValue kw = 0;
 				if (!NextKeywordH(kw)) ReportError(EResult::TokenNotFound, src.Loc(), "keyword expected");
 				return kw;
@@ -205,7 +229,7 @@ namespace pr
 			// A token is a contiguous block of non-separater characters
 			template <typename StrType> bool Token(StrType& token)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(token, 0);
 				if (pr::str::ExtractToken(token, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
@@ -218,7 +242,7 @@ namespace pr
 			// Extract a token using additional delimiters
 			template <typename StrType> bool Token(StrType& token, wchar_t const* delim)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(token, 0);
 				if (pr::str::ExtractToken(token, src, std::wstring(m_delim).append(delim).c_str())) return true;
 				return ReportError(EResult::TokenNotFound, "token expected");
@@ -232,7 +256,7 @@ namespace pr
 			// An identifier is one of (A-Z,a-z,'_') followed by (A-Z,a-z,'_',0-9) in a contiguous block
 			template <typename StrType> bool Identifier(StrType& word)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(word, 0);
 				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
@@ -246,14 +270,14 @@ namespace pr
 			template <typename StrType> bool Identifiers(char sep, StrType& word)
 			{
 				(void)sep;
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(word, 0);
 				if (pr::str::ExtractIdentifier(word, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "identifier expected");
 			}
 			template <typename StrType, typename... StrTypes> bool Identifiers(char sep, StrType& word, StrTypes&&... words)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(word, 0);
 				if (!pr::str::ExtractIdentifier(word, src, m_delim)) return ReportError(EResult::TokenNotFound, "identifier expected");
 				if (*src == sep) ++src; else return ReportError(EResult::TokenNotFound, "identifier separator expected");
@@ -268,7 +292,7 @@ namespace pr
 			// A string is a sequence of characters between quotes.
 			template <typename StrType> bool String(StrType& string)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(string, 0);
 				if (pr::str::ExtractString(string, src, 0, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "string expected");
@@ -281,7 +305,7 @@ namespace pr
 			// Extract a C-style string from the source.
 			template <typename StrType> bool CString(StrType& cstring)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				pr::str::Resize(cstring, 0);
 				if (pr::str::ExtractString(cstring, src, '\\', m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "cstring expected");
@@ -294,7 +318,7 @@ namespace pr
 			// Extract a bool from the source.
 			template <typename TBool> bool Bool(TBool& bool_)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (pr::str::ExtractBool(bool_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "bool expected");
 			}
@@ -315,7 +339,7 @@ namespace pr
 			// Extract an integral type from the source.
 			template <typename TInt> bool Int(TInt& int_, int radix)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (pr::str::ExtractInt(int_, radix, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "integral expected");
 			}
@@ -336,7 +360,7 @@ namespace pr
 			// Extract a real from the source.
 			template <typename TReal> bool Real(TReal& real_)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (pr::str::ExtractReal(real_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "real expected");
 			}
@@ -357,7 +381,7 @@ namespace pr
 			// Extract an enum value from the source.
 			template <typename TEnum> bool EnumValue(TEnum& enum_)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (pr::str::ExtractEnumValue(enum_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "enum integral value expected");
 			}
@@ -369,7 +393,7 @@ namespace pr
 			// Extract an enum identifier from the source.
 			template <typename TEnum> bool Enum(TEnum& enum_)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				if (pr::str::ExtractEnum(enum_, src, m_delim)) return true;
 				return ReportError(EResult::TokenNotFound, "enum member string name expected");
 			}
@@ -454,7 +478,7 @@ namespace pr
 			template <typename String> bool Section(String& str, bool include_braces)
 			{
 				// Do not str.resize(0) here, that's the callers decision
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				StringLit lit;
 				if (IsSectionStart()) ++src; else return ReportError(EResult::TokenNotFound, "expected '{'");
 				if (include_braces) pr::str::Append(str, L'{');
@@ -487,7 +511,7 @@ namespace pr
 			}
 			bool ReportError(EResult result, char const* msg)
 			{
-				auto& src = *m_pp;
+				auto& src = m_pp;
 				return ReportError(result, src.Loc(), msg);
 			}
 			bool ReportError(EResult result)
@@ -495,63 +519,6 @@ namespace pr
 				return ReportError(result, result.ToStringA());
 			}
 		};
-
-		// A reader with customisable include handler and embedded code handler
-		template <typename Inc = FileIncludes<>, typename Emb = EmbeddedCode<>>
-		struct ReaderT :Preprocessor<ThrowOnFailure, Inc, Emb> ,ReaderBase
-		{
-			using Preprocessor = Preprocessor<ThrowOnFailure, Inc, Emb>;
-			Preprocessor& pp() { return *static_cast<Preprocessor*>(this); }
-
-			explicit ReaderT(bool case_sensitive = true)
-				:Preprocessor()
-				,ReaderBase(pp(), case_sensitive)
-			{}
-			explicit ReaderT(Src& src, bool case_sensitive = true)
-				:Reader(case_sensitive)
-			{
-				Push(src);
-			}
-			explicit ReaderT(Src* src, bool delete_on_pop, bool case_sensitive = true)
-				:Reader(case_sensitive)
-			{
-				Push(src, delete_on_pop);
-			}
-			explicit ReaderT(char const* ptr, bool case_sensitive = true)
-				:Reader(case_sensitive)
-			{
-				auto src = std::make_unique<PtrA<>>(ptr);
-				Push(src.get(), true);
-				src.release();
-			}
-			explicit ReaderT(wchar_t const* ptr, bool case_sensitive = true)
-				:Reader(case_sensitive)
-			{
-				auto src = std::make_unique<PtrW<>>(ptr);
-				Push(src.get(), true);
-				src.release();
-			}
-
-			ReaderT(ReaderT&& rhs) = delete;
-			ReaderT(ReaderT const& rhs) = delete;
-			ReaderT& operator =(ReaderT&& rhs) = delete;
-			ReaderT& operator =(ReaderT const& rhs) = delete;
-
-			// Access the include handler
-			Inc& Includes() const override
-			{
-				return Preprocessor::Includes;
-			}
-
-			// Access the embedded code handler
-			Emb& EmbeddedCode() const override
-			{
-				return Preprocessor::EmbeddedCode;
-			}
-		};
-
-		// The default reader
-		using Reader = ReaderT<>;
 	}
 }
 

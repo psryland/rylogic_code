@@ -57,10 +57,10 @@ namespace pr
 			TPtr m_ptr; // The pointer-like data source
 			TLoc m_loc;
 
-			Ptr(TPtr ptr, ESrcType src_type = ESrcType::Pointer)
+			Ptr(TPtr ptr, TLoc loc = TLoc(), ESrcType src_type = ESrcType::Pointer)
 				:Src(src_type)
 				,m_ptr(ptr)
-				,m_loc()
+				,m_loc(loc)
 			{}
 
 			// Debugging helper interface
@@ -80,12 +80,76 @@ namespace pr
 			}
 			Ptr& operator ++() override
 			{
-				if (*m_ptr) ++m_ptr;
+				if (*m_ptr == 0) return *this;
+				m_loc.inc(*m_ptr);
+				++m_ptr;
 				return *this;
 			}
 		};
 		template <typename TLoc = TextLoc> using PtrA = Ptr<char const*, TLoc>;
 		template <typename TLoc = TextLoc> using PtrW = Ptr<wchar_t const*, TLoc>;
+
+		// A pointer range char source
+		template <typename TPtr, typename TLoc = TextLoc> struct PtrRange :Src
+		{
+			TPtr m_ptr;
+			TPtr m_beg, m_end;
+			TLoc m_loc;
+
+			PtrRange(TPtr beg, TPtr end, TLoc loc = TLoc(), ESrcType src_type = ESrcType::Range)
+				:Src(src_type)
+				,m_ptr(beg)
+				,m_beg(beg)
+				,m_end(end)
+				,m_loc(loc)
+			{}
+
+			// Debugging helper interface
+			SrcConstPtr DbgPtr() const override
+			{
+				return &*m_ptr;
+			}
+			TextLoc const& Loc() const override
+			{
+				return m_loc;
+			}
+
+			// Pointer-like interface
+			wchar_t operator * () const override
+			{
+				return m_ptr != m_end ? wchar_t(*m_ptr) : wchar_t();
+			}
+			PtrRange& operator ++() override
+			{
+				if (m_ptr == m_end) return *this;
+				m_loc.inc(*m_ptr);
+				++m_ptr;
+				return *this;
+			}
+
+			// Reset to the start of the range
+			void reset(size_t ofs = 0, TLoc loc = TLoc())
+			{
+				m_ptr = m_beg + ofs;
+				m_loc = loc;
+			}
+
+			// Iterator range
+			TPtr begin() const
+			{
+				return m_beg;
+			}
+			TPtr end() const
+			{
+				return m_end;
+			}
+
+			// Return a sub range of this range
+			PtrRange Subrange(size_t ofs, size_t count, TLoc loc = TLoc()) const
+			{
+				return PtrRange(m_beg + ofs, m_beg + ofs + count, loc);
+			}
+		};
 
 		// A file char source
 		template <typename TLoc = FileLoc> struct FileSrc :Src
@@ -586,7 +650,7 @@ namespace pr
 		// Call '++src' until 'pred' returns false
 		template <typename TSrc, typename Pred> void Eat(TSrc& src, int eat_initial, int eat_final, Pred pred)
 		{
-			for (src += eat_initial; pred(*src); ++src) {}
+			for (src += eat_initial; *src && pred(*src); ++src) {}
 			src += eat_final;
 		}
 		template <typename TSrc> inline void EatLineSpace(TSrc& src, int eat_initial, int eat_final)
@@ -603,23 +667,39 @@ namespace pr
 		}
 		template <typename TSrc> inline bool EatLiteralString(TSrc& src)
 		{
-			if (*src != L'\"' && *src != L'\'')
-				return false;
-
-			auto end = *src;
+			assert(*src == '\"' || *src == L'\''); // don't call this unless 'src' is pointing at a literal string
+			auto match = *src;
 			auto escape = false;
 			Eat(src, 1, 0, [&](wchar_t ch)
 			{
-				auto r = ch != end || escape;
+				auto end = ch == match && !escape;
 				escape = ch == L'\\';
-				return r;
+				return !end;
 			});
-			if (*src == end) ++src; else return false;
+			if (*src == match) ++src; else return false;
 			return true;
 		}
 		template <typename TSrc, typename Char> inline void EatDelimiters(TSrc& src, Char const* delim)
 		{
 			for (; *pr::str::FindChar(delim, *src) != 0; ++src) {}
+		}
+		template <typename TSrc> inline void EatLineComment(TSrc& src)
+		{
+			assert(*src == '/'); // don't call this unless 'src' is pointing at a line comment
+			Eat(src, 2, 0, [&](wchar_t ch){ return ch != '\n'; });
+		}
+		template <typename TSrc> inline bool EatBlockComment(TSrc& src)
+		{
+			assert(*src == '/'); // don't call this unless 'src' is pointing at a block comment
+			auto star = false;
+			Eat(src, 2, 0, [&](wchar_t ch)
+			{
+				auto end = star && ch == '/';
+				star = ch == '*';
+				return !end;
+			});
+			if (*src == '/') ++src; else return false;
+			return true;
 		}
 
 		#pragma endregion

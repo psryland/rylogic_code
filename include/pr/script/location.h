@@ -16,12 +16,14 @@ namespace pr
 		// Derived versions of 'Loc' record file, line, and column position
 		struct Location
 		{
-			virtual ~Location()
-			{}
+			size_t m_pos;
+			virtual ~Location() {}
+			Location() :m_pos(0) {}
 
 			// Advance the location by interpreting 'ch'
 			virtual wchar_t inc(wchar_t ch)
 			{
+				++m_pos;
 				return ch;
 			}
 			char inc(char ch)
@@ -31,6 +33,9 @@ namespace pr
 
 			// Output the stream name (usually file name)
 			virtual string StreamName() const { return L"[source in memory]"; }
+
+			// OUtput the character index
+			virtual size_t Pos() const { return m_pos; }
 
 			// Output the line number
 			virtual size_t Line() const { return 0; }
@@ -45,6 +50,9 @@ namespace pr
 		// The location within a stream of characters
 		struct TextLoc :Location
 		{
+			// By default, 1 tab = 1 column. This allows for tabs = multiple columns tho
+			static int const DefTabSize = 1;
+
 			size_t m_line;
 			size_t m_col;
 			int m_tab_size;
@@ -52,14 +60,14 @@ namespace pr
 			TextLoc()
 				:m_line()
 				,m_col()
-				,m_tab_size(4)
+				,m_tab_size(DefTabSize)
 			{}
-			TextLoc(Location const& loc, int tab_size = 4)
+			TextLoc(Location const& loc, int tab_size = DefTabSize)
 				:m_line(loc.Line())
 				,m_col(loc.Col())
 				,m_tab_size(tab_size)
 			{}
-			TextLoc(size_t line, size_t col, int tab_size = 4)
+			TextLoc(size_t line, size_t col, int tab_size = DefTabSize)
 				:m_line(line)
 				,m_col(col)
 				,m_tab_size(tab_size)
@@ -68,6 +76,7 @@ namespace pr
 			// Advance the location by interpreting 'ch'
 			wchar_t inc(wchar_t ch) override
 			{
+				Location::inc(ch);
 				if (ch == L'\n')
 				{
 					++m_line;
@@ -113,7 +122,7 @@ namespace pr
 				:TextLoc()
 				,m_file()
 			{}
-			FileLoc(Location const& loc, int tab_size = 4)
+			FileLoc(Location const& loc, int tab_size = DefTabSize)
 				:TextLoc(loc, tab_size)
 				,m_file(loc.StreamName())
 			{}
@@ -121,7 +130,7 @@ namespace pr
 				:TextLoc(loc)
 				,m_file(loc.StreamName())
 			{}
-			FileLoc(string file, size_t line, size_t col, int tab_size = 4)
+			FileLoc(string file, size_t line, size_t col, int tab_size = DefTabSize)
 				:TextLoc(line, col, tab_size)
 				,m_file(file)
 			{}
@@ -161,7 +170,7 @@ namespace pr
 				"abc\n"
 				"\tx";
 
-			TextLoc loc;
+			TextLoc loc(0,0,4);
 			for (auto s = str; *s; ++s)
 				loc.inc(*s);
 

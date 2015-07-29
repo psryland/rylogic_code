@@ -157,7 +157,7 @@ namespace pr
 					// Extract a numeric constant
 					tokeniser_extract_constant:
 					{
-						int64 ivalue; double fvalue; bool fp;
+						long long ivalue; double fvalue; bool fp;
 						if (!pr::str::ExtractNumber(ivalue, fvalue, fp, src))
 							return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid numeric constant");
 
@@ -172,12 +172,12 @@ namespace pr
 					{
 						auto is_wide = *src == 'L' ? ++src,true : false;
 						auto is_char = *src == '\'';
-
-						m_tok = Token(EConstant::Integral, 0.0, 0);
-						if (is_wide) { if (!pr::str::ExtractString(m_tok.m_wvalue, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid wide literal constant"); }
-						else         { if (!pr::str::ExtractString(m_tok.m_avalue, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid literal constant"); }
-						if (is_char) m_tok.m_ivalue   = is_wide ? m_tok.m_wvalue[0]         : m_tok.m_avalue[0]; // char literals are actually integral constants
-						else         m_tok.m_constant = is_wide ? EConstant::WStringLiteral : EConstant::StringLiteral;
+						
+						string str;
+						if (!pr::str::ExtractString(str, src, '\\')) return FailPolicy::Fail(EResult::SyntaxError, src.Loc(), "Invalid literal constant");
+						if      (is_char) m_tok = Token(EConstant::Integral, Token::int64(str[0])); // char literals are actually integral constants
+						else if (is_wide) m_tok = Token(EConstant::WStringLiteral, str);
+						else              m_tok = Token(EConstant::StringLiteral, str);
 						break;
 					}
 
