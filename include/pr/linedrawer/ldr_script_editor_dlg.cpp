@@ -44,10 +44,11 @@ namespace pr
 			// Construct the dialog template for this dialog
 			static DlgTemplate Templ()
 			{
+				int const menu_height = 10;//::GetSystemMetrics(SM_CYMENU);
 				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, Style, StyleEx);
-				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
-				templ.Add(IDC_BTN_RENDER, Button::WndClassName(), L"&Render", 320, 348, 50, 14, Button::DefaultStyleDefBtn, Button::DefaultStyleEx);
-				templ.Add(IDC_BTN_CLOSE, Button::WndClassName(), L"&Close", 375, 348, 50, 14, Button::DefaultStyle, Button::DefaultStyleEx);
+				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5 + menu_height, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
+				templ.Add(IDC_BTN_RENDER, Button::WndClassName(), L"&Render", 320, 348 + menu_height, 50, 14, Button::DefaultStyleDefBtn, Button::DefaultStyleEx);
+				templ.Add(IDC_BTN_CLOSE, Button::WndClassName(), L"&Close", 375, 348 + menu_height, 50, 14, Button::DefaultStyle, Button::DefaultStyleEx);
 				return std::move(templ);
 			}
 
@@ -57,7 +58,7 @@ namespace pr
 				,m_btn_render(IDC_BTN_RENDER, this, EAnchor::BottomRight, "m_btn_render")
 				,m_btn_close(IDC_BTN_CLOSE, this, EAnchor::BottomRight, "m_btn_close")
 				//,m_accel()
-				,m_menu()
+				,m_menu(false)
 				,Render(render_cb)
 			{}
 
@@ -67,7 +68,11 @@ namespace pr
 				switch (message)
 				{
 				case WM_INITDIALOG:
+					#pragma region
 					{
+						// Attach all the child controls
+						base::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+
 						// Create the menu
 						auto menu_file = MenuStrip(true);
 						menu_file.Insert(L"&Load", ID_LOAD);
@@ -96,12 +101,16 @@ namespace pr
 						// Hook up button handlers
 						m_btn_render.Click += [&](Button&, EmptyArgs const&)
 							{
-								if (Render)
-									Render(pr::Widen(m_edit.Text()));
+								if (!Render) return;
+								auto text = m_edit.Text();
+								Render(pr::Widen(text));
 							};
-						break;
+
+						return false;
 					}
+					#pragma endregion
 				case WM_COMMAND:
+					#pragma region
 					{
 						auto id = LoWord(wparam);
 						switch (id)
@@ -138,11 +147,14 @@ namespace pr
 						}
 						break;
 					}
+					#pragma endregion
 				case WM_PAINT:
+					#pragma region
 					{
 						m_btn_render.Visible(Render != nullptr);
 						break;
 					}
+					#pragma endregion
 				}
 				return base::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 			}
@@ -152,6 +164,16 @@ namespace pr
 			{
 				base::Create(parent);
 				return m_hwnd;
+			}
+
+			// Hide the window instead of closing
+			bool HideOnClose() const override
+			{
+				return base::HideOnClose();
+			}
+			void HideOnClose(bool enable) override
+			{
+				base::HideOnClose(enable);
 			}
 
 			// Show the window as a non-modal window

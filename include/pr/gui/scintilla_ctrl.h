@@ -53,23 +53,14 @@ namespace pr
 				,char const* name = nullptr
 				,void* init_param = nullptr)
 				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
-				,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
-				,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
+				//not needed, WM_CREATE initialises this ,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
+				//not needed, WM_CREATE initialises this ,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
 			{}
 			ScintillaCtrl(int id = IDC_UNUSED, Control* parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
 				:Control(id, parent, anchor, name)
+				,m_snd()
+				,m_ptr()
 			{}
-
-			// Get the direct access function for the control when the hwnd is available
-			void Attach(HWND hwnd) override
-			{
-				Control::Attach(hwnd);
-				if (m_snd == nullptr)
-				{
-					m_snd = SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0));
-					m_ptr = sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0));
-				}
-			}
 
 			// Helper function for calling the direct function and returned the result as 'TRet'
 			template <typename TRet, typename WP, typename LP> TRet SndMsg(uint msg, WP wparam, LP lparam) const
@@ -78,11 +69,25 @@ namespace pr
 				return TRet(res);
 			}
 
+			void Attach(HWND hwnd) override
+			{
+				Control::Attach(hwnd);
+
+				// Get the direct access function for the control when the hwnd is available
+				m_snd = SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0));
+				m_ptr = sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0));
+			}
+			void Detach() override
+			{
+				m_snd = nullptr;
+				m_ptr = 0;
+				Control::Detach();
+			}
+
 			// Message map function
 			// Return true to halt message processing, false to allow other controls to process the message
 			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
-				(void)hwnd,message,wparam,lparam,result;
 				//WndProcDebug(hwnd, message, wparam, lparam, "Scint");
 				switch (message)
 				{
@@ -101,8 +106,7 @@ namespace pr
 						break;
 					}
 				}
-
-				return false;
+				return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 			}
 
 			// Initialise styles with reasonable defaults

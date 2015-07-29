@@ -678,9 +678,6 @@
     <ClInclude Include="..\include\pr\gui\scaled_dc.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\scintilla.h">
-      <Filter>pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\storage\settings.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
@@ -959,6 +956,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\win32\win32.h">
       <Filter>pr\win32</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

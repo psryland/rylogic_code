@@ -26,7 +26,9 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR
 		{
 			DWORD last_error = GetLastError();
 			HRESULT res = HRESULT_FROM_WIN32(last_error);
-			std::string ex_msg(ex.what()); ex_msg.substr(0, ex_msg.find_last_not_of(" \t\r\n")).swap(ex_msg);
+
+			std::string ex_msg(ex.what());
+			ex_msg.substr(0, ex_msg.find_last_not_of(" \t\r\n") + 1).swap(ex_msg);
 			err_msg = pr::Fmt("Application shutdown due to unhandled error:\r\nError Message: '%s'", ex_msg.c_str());
 			if (res != S_OK) err_msg += pr::Fmt("\r\nLast Error Code: %X - %s", res, pr::HrMsg(res).c_str());
 			nRet = -1;

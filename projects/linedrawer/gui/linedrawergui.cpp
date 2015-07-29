@@ -69,6 +69,7 @@ namespace ldr
 
 		// Initialise the script editor
 		m_editor_ui.Create(*this);
+		m_editor_ui.HideOnClose(true);
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
 		m_editor_ui.Render = [&](std::wstring&& script)
 			{

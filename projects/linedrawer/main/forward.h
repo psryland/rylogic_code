@@ -30,7 +30,6 @@
 #include "pr/app/forward.h"
 #include "pr/app/main.h"
 #include "pr/app/main_gui.h"
-#include "pr/app/sim_message_loop.h"
 
 // pr
 #include "pr/macros/count_of.h"
@@ -51,6 +50,7 @@
 #include "pr/camera/camera.h"
 #include "pr/camera/camera_dlg.h"
 #include "pr/gui/wingui.h"
+#include "pr/gui/sim_message_loop.h"
 #include "pr/gui/messagemap_dbg.h"
 #include "pr/gui/menu_list.h"
 #include "pr/gui/recent_files.h"

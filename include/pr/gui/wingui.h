@@ -1094,82 +1094,55 @@ namespace pr
 			{
 				return false;
 			}
-
-		protected:
-
-			virtual ~IMessageFilter()
-			{
-				Remove();
-			}
-			IMessageFilter()
-				:m_next()
-				,m_prev()
-			{
-				m_next = this;
-				m_prev = this;
-			}
-			IMessageFilter(IMessageFilter const&) = delete;
-			IMessageFilter& operator =(IMessageFilter const&) = delete;
-
-		private:
-
-			// Simple double linked listed of message filterers
-			friend struct MessageLoop;
-			IMessageFilter* m_next;
-			IMessageFilter* m_prev;
-
-			// Inserts 'filter' before this filter (i.e. at the end of the chain)
-			void Append(IMessageFilter& filter)
-			{
-				filter.Remove();
-				filter.m_next = this;
-				filter.m_prev = m_prev;
-				filter.m_next->m_prev = &filter;
-				filter.m_prev->m_next = &filter;
-			}
-
-			// Removes this filter from the chain
-			void Remove()
-			{
-				if (m_next) m_next->m_prev = m_prev;
-				if (m_prev) m_prev->m_next = m_next;
-				m_next = this;
-				m_prev = this;
-			}
 		};
 
-		// Basic message loop
+		// Base class and basic implementation of a message loop
 		struct MessageLoop :IMessageFilter
 		{
+			// The collection of message filters filtering msgs in this loop
+			std::vector<IMessageFilter*> m_filters;
+
+			virtual ~MessageLoop() {}
+			MessageLoop() :m_filters()
+			{
+				m_filters.push_back(this);
+			}
+
+			// Subclasses should replace this method
 			virtual int Run()
 			{
 				MSG msg;
-				for (int result; (result = ::GetMessage(&msg, NULL, 0, 0)) != 0; )
+				for (int result; (result = ::GetMessageW(&msg, NULL, 0, 0)) != 0; )
 				{
 					Throw(result > 0, "GetMessage failed"); // GetMessage returns negative values for errors
 
 					// Pass the message to each filter. The last filter is this message loop which always handles the message.
-					for (auto filter = m_next;
-						!filter->TranslateMessage(msg);
-						filter = filter->m_next)
-					{}
+					for (auto filter : m_filters)
+						if (filter->TranslateMessage(msg))
+							break;
 				}
 				return (int)msg.wParam;
 			}
 
 			// Add an instance that needs to handle messages before TranslateMessage is called
-			void AddMessageFilter(IMessageFilter& filter)
+			virtual void AddMessageFilter(IMessageFilter& filter)
 			{
-				Append(filter);
+				m_filters.insert(--std::end(m_filters), &filter);
 			}
 
-		protected:
+			// Remove a message filter from the chain of filters for this message loop
+			virtual void RemoveMessageFilter(IMessageFilter& filter)
+			{
+				m_filters.erase(std::remove(std::begin(m_filters), std::end(m_filters), &filter), std::end(m_filters));
+			}
+
+		private:
 
 			// The message loop is always the last filter in the chain
 			bool TranslateMessage(MSG& msg) override
 			{
 				::TranslateMessage(&msg);
-				::DispatchMessage(&msg);
+				::DispatchMessageW(&msg);
 				return true;
 			}
 		};
@@ -1677,17 +1650,22 @@ namespace pr
 				switch (message)
 				{
 				case WM_DESTROY:
+					#pragma region
 					{
 						UnhookWndProc();
 						m_hwnd = nullptr;
 						break;
 					}
+					#pragma endregion
 				case WM_ACTIVATE:
+					#pragma region
 					{
 						UpdateWindow(*this);
 						break;
 					}
+					#pragma endregion
 				case WM_ERASEBKGND:
+					#pragma region
 					{
 						// Allow subclasses to prevent erase background
 						if (OnEraseBkGnd(EmptyArgs()))
@@ -1706,7 +1684,9 @@ namespace pr
 						}
 						break;
 					}
+					#pragma endregion
 				case WM_PAINT:
+					#pragma region
 					{
 						// Notes:
 						//  Only create a pr::gui::PaintStruct if you intend to do the painting yourself,
@@ -1723,15 +1703,19 @@ namespace pr
 
 						break;
 					}
+					#pragma endregion
 				case WM_WINDOWPOSCHANGING:
 				case WM_WINDOWPOSCHANGED:
+					#pragma region
 					{
 						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
 						auto before = message == WM_WINDOWPOSCHANGING;
 						OnWindowPosChange(SizeEventArgs(wp, before));
 						break;
 					}
+					#pragma endregion
 				case WM_GETMINMAXINFO:
+					#pragma region
 					{
 						auto& a = *reinterpret_cast<MinMaxInfo*>(lparam);
 						auto& b = m_min_max_info;
@@ -1741,8 +1725,10 @@ namespace pr
 						if ((b.m_mask & MinMaxInfo::EMask::MaxTrackSize) != 0) a.ptMaxTrackSize = b.ptMaxTrackSize; else b.ptMaxTrackSize = a.ptMaxTrackSize;
 						break;
 					}
+					#pragma endregion
 				case WM_KEYDOWN:
 				case WM_KEYUP:
+					#pragma region
 					{
 						auto vk_key = UINT(wparam);
 						auto repeats = UINT(lparam & 0xFFFF);
@@ -1751,6 +1737,7 @@ namespace pr
 							return true;
 						break;
 					}
+					#pragma endregion
 				case WM_LBUTTONDOWN:
 				case WM_RBUTTONDOWN:
 				case WM_MBUTTONDOWN:
@@ -1759,6 +1746,7 @@ namespace pr
 				case WM_RBUTTONUP:
 				case WM_MBUTTONUP:
 				case WM_XBUTTONUP:
+					#pragma region
 					{
 						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
@@ -1785,7 +1773,9 @@ namespace pr
 						if (handled) return true;
 						break;
 					}
+					#pragma endregion
 				case WM_MOUSEWHEEL:
+					#pragma region
 					{
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
@@ -1794,13 +1784,16 @@ namespace pr
 							return true;
 						break;
 					}
+					#pragma endregion
 				case WM_MOUSEMOVE:
+					#pragma region
 					{
 						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						OnMouseMove(MouseEventArgs(keystate, false, pt, keystate));
 						break;
 					}
+					#pragma endregion
 				}
 				return DefWndProc(message, wparam, lparam);
 			}
@@ -1825,23 +1818,30 @@ namespace pr
 				switch (message)
 				{
 				default:
+					#pragma region
 					{
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
+					#pragma endregion
 				case WM_INITDIALOG:
+					#pragma region
 					{
 						if (m_id != IDC_UNUSED) Attach(::GetDlgItem(hwnd, m_id));
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
+					#pragma endregion
 				case WM_DESTROY:
+					#pragma region
 					{
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						if (hwnd != m_hwnd) ::DestroyWindow(m_hwnd); // Parent window is being destroy, destroy this window to
 						break;
 					}
+					#pragma endregion
 				case WM_WINDOWPOSCHANGED:
+					#pragma region
 					{
 						// WM_WINDOWPOSCHANGED sent to the parent causes this window to resize.
 						// The act of resizing causes WM_WINDOWPOSCHANGED to be sent to our WndProc which
@@ -1850,13 +1850,17 @@ namespace pr
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
+					#pragma endregion
 				case WM_TIMER:
+					#pragma region
 					{
 						auto event_id = UINT_PTR(wparam);
 						OnTimer(TimerEventArgs(event_id));
 						break;
 					}
+					#pragma endregion
 				case WM_DROPFILES:
+					#pragma region
 					{
 						if (m_allow_drop)
 						{
@@ -1875,7 +1879,9 @@ namespace pr
 						}
 						break;
 					}
+					#pragma endregion
 				case WM_MOUSEWHEEL:
+					#pragma region
 					{
 						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse button/move messages
 						// which are sent to the control with focus
@@ -1888,6 +1894,7 @@ namespace pr
 							return true;
 						break;
 					}
+					#pragma endregion
 				}
 
 				return false;
@@ -2945,6 +2952,9 @@ namespace pr
 					{
 						// The default Control handler for WM_INITDIALOG calls 'Attach' which
 						// Forms don't need because we call Attach in InitWndProc.
+						// Note: typically subclassed forms will call base::ProcessWindowMessage()
+						// before doing whatever they need to do in WM_INITDIALOG. This is so that
+						// child controls get attached.
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						return false;
 					}
@@ -3104,15 +3114,33 @@ namespace pr
 				,MenuStrip menu = MenuStrip() ,void* init_param = nullptr)
 			{
 				assert(m_hwnd == nullptr); // Don't call this after using the 'Frame Window Constructor'
+
+				// Get the parent hwnd
+				// Note: don't call Parent(parent). Parent forms forward messages to child controls
+				// we shouldn't have parent forms forwarding messages to other forms.
 				parent = !m_app_main_window ? parent : nullptr;
 
-				// Ensure the class is registered
-				auto atom = RegisterWndClass<Form<Derived>>(m_hinst);
-
-				// Create an instance of the window class
 				InitParam lparam(this, init_param);
-				Control::Create(MakeIntAtomW(atom), title, x, y, w, h, style, style_ex, parent, menu, &lparam);
-				Throw(m_hwnd != 0, "CreateWindowEx failed");
+
+				// If this form has a dialog template, then create the window as a modeless dialog
+				if (m_template.valid())
+				{
+					m_hwnd = ::CreateDialogIndirectParamW(m_hinst, m_template, parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
+					Throw(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
+				}
+				else if (m_id != IDC_UNUSED) // Create from a resource id
+				{
+					m_hwnd = ::CreateDialogParamW(m_hinst, MAKEINTRESOURCEW(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
+					Throw(m_hwnd != nullptr, "CreateDialogParam failed");
+				}
+				else // Otherwise create as a normal window
+				{
+					// Ensure the class is registered
+					auto atom = RegisterWndClass<Form<Derived>>(m_hinst);
+
+					// Create an instance of the window class
+					Control::Create(MakeIntAtomW(atom), title, x, y, w, h, style, style_ex, parent, menu, &lparam);
+				}
 			}
 
 			// Display the form non-modally
@@ -3143,9 +3171,12 @@ namespace pr
 						m_hwnd = ::CreateDialogIndirectParamW(m_hinst, m_template, parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
 						Throw(m_hwnd != nullptr, "CreateDialogIndirectParam failed");
 					}
+					else if (m_id == IDC_UNUSED)
+					{
+						Throw(false, "Windows without a dialog template or dialog resource id must be created using Create() before being shown");
+					}
 					else
 					{
-						assert(m_id != IDC_UNUSED && "Modeless dialog without a resource id or template");
 						m_hwnd = ::CreateDialogParamW(m_hinst, MAKEINTRESOURCEW(m_id), parent, (DLGPROC)&InitWndProc, LPARAM(&lparam));
 						Throw(m_hwnd != nullptr, "CreateDialogParam failed");
 					}

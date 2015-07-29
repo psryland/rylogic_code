@@ -13,7 +13,7 @@
 namespace ldr
 {
 	struct MainGUI
-		:pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::SimMsgLoop>
+		:pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::gui::SimMsgLoop>
 		,pr::cmdline::IOptionReceiver<>
 		,pr::gui::RecentFiles::IHandler
 		,pr::events::IRecv<ldr::Event_Info>
@@ -32,7 +32,7 @@ namespace ldr
 		,pr::events::IRecv<pr::settings::Evt<UserSettings>>
 		,pr::AlignTo<16>
 	{
-		typedef pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::SimMsgLoop> base;
+		using base = pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::gui::SimMsgLoop>;
 
 		enum
 		{
@@ -46,7 +46,6 @@ namespace ldr
 		pr::ldr::ScriptEditorDlg  m_editor_ui;            // An editor for ldr script
 		pr::ldr::MeasureDlg       m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::AngleDlg         m_angle_tool_ui;        // The UI for the angle measuring tool
-		pr::gui::MenuStrip        m_menu;                 // The main menu handle (needed for restoring after fullscreen mode switch)
 		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
 		bool                      m_suspend_render;       // True to prevent rendering
 		StatusPri                 m_status_pri;           // Status priority buffer

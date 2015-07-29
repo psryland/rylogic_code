@@ -16,7 +16,7 @@ namespace pr
 		struct IScriptEditorDlg
 		{
 			virtual ~IScriptEditorDlg() {}
-			IScriptEditorDlg() {}
+			IScriptEditorDlg() = default;
 			IScriptEditorDlg(IScriptEditorDlg const&) = delete;
 			IScriptEditorDlg& operator=(IScriptEditorDlg const&) = delete;
 
@@ -25,6 +25,10 @@ namespace pr
 
 			// Create the non-modal window
 			virtual HWND Create(HWND parent = 0) = 0;
+
+			// Hide the window instead of closing
+			virtual bool HideOnClose() const = 0;
+			virtual void HideOnClose(bool enable) = 0;
 
 			//// Close and destroy the dialog window
 			//virtual void Close() = 0;
@@ -68,6 +72,16 @@ namespace pr
 			HWND Create(HWND parent) override
 			{
 				return m_dlg->Create(parent);
+			}
+
+			// Hide the window instead of closing
+			bool HideOnClose() const override
+			{
+				return m_dlg->HideOnClose();
+			}
+			void HideOnClose(bool enable) override
+			{
+				m_dlg->HideOnClose(enable);
 			}
 
 			//// Close and destroy the dialog window

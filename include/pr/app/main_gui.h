@@ -31,12 +31,11 @@ namespace pr
 			:pr::gui::Form<DerivedGUI>
 			,IAppMainGui
 		{
-			typedef pr::gui::Form<DerivedGUI> base;
+			using base = pr::gui::Form<DerivedGUI>;
 
 			pr::Logger            m_log;                       // App log
 			MessageLoop           m_msg_loop;                  // The message pump
 			std::unique_ptr<Main> m_main;                      // The app logic object
-			DWORD                 m_my_thread_id;              // The thread this gui object was created on
 			bool                  m_resizing;                  // True during a resize of the main window
 			bool                  m_nav_enabled;               // True while a mouse button is down during default mouse navigation
 			bool                  m_fullscreen_toggle_enabled; // Allow Alt+Enter to toggle between full screen and windowed
@@ -53,16 +52,15 @@ namespace pr
 				,int x = CW_USEDEFAULT ,int y = CW_USEDEFAULT
 				,int w = CW_USEDEFAULT ,int h = CW_USEDEFAULT
 				,DWORD style = DefaultFormStyle
-				,DWORD ex_style = DefaultFormStyleEx
-				,int menu_id = IDC_UNUSED
+				,DWORD style_ex = DefaultFormStyleEx
+				,pr::gui::MenuStrip menu = pr::gui::MenuStrip()
 				,int accel_id = IDC_UNUSED
 				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:base(title, pr::gui::ApplicationMainWindow, x, y, w, h, style, ex_style, menu_id, name, init_param)
+				:base(title, pr::gui::ApplicationMainWindow, x, y, w, h, style, style_ex, menu, name, init_param)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
 				,m_msg_loop(m_hinst, accel_id)
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
-				,m_my_thread_id(GetCurrentThreadId())
 				,m_resizing(false)
 				,m_nav_enabled(false)
 				,m_fullscreen_toggle_enabled(true)
@@ -81,8 +79,6 @@ namespace pr
 			}
 			virtual ~MainGUI()
 			{
-				PR_ASSERT(PR_DBG, GetCurrentThreadId() == m_my_thread_id, "Cross-thread destruction of Main GUI");
-
 				m_main = nullptr;
 
 				//// It's too late to call DestroyWindow here, because that posts a WM_DESTROY

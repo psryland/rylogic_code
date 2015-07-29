@@ -202,9 +202,6 @@
     <ClInclude Include="..\include\pr\camera\camera_dlg.h">
       <Filter>camera</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\linedrawer\main\script_sources.h">
       <Filter>main</Filter>
     </ClInclude>
@@ -226,6 +223,9 @@
     <ClInclude Include="..\projects\linedrawer\main\navigation.h">
       <Filter>main</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
+      <Filter>gui</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="..\projects\linedrawer\resources\linedrawer.rc">
@@ -238,5 +238,6 @@
       <Filter>resources</Filter>
     </None>
     <None Include="..\projects\linedrawer\deploy.py" />
+    <None Include="..\projects\linedrawer\post_build.py" />
   </ItemGroup>
 </Project>

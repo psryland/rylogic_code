@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
 import sys, os, shutil, re
-sys.path.append(os.path.realpath(os.path.dirname(__file__) + "\\..\\..\\script"))
+sys.path.append(re.sub(r"(.:[\\/]).*", r"\1script", os.path.abspath(__file__))) # add the \script path
 import Rylogic as Tools
 import UserVars
 
@@ -35,6 +35,7 @@ try:
 	# Deploy
 	files = [
 		"linedrawer.exe",
+		"scintilla.dll",
 		]
 	Tools.DeployToBin("linedrawer", files, platforms, "release", CopyForArch=True)
 

@@ -94,6 +94,9 @@
     </Link>
     <ResourceCompile />
     <ProjectReference />
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\linedrawer\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -111,6 +114,9 @@
     <ProjectReference />
     <ProjectReference />
     <ResourceCompile />
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\linedrawer\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -127,6 +133,9 @@
     <ResourceCompile />
     <ProjectReference />
     <ProjectReference />
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\linedrawer\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -144,6 +153,9 @@
     <ProjectReference />
     <ResourceCompile />
     <ProjectReference />
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\linedrawer\post_build.py $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\include\pr\app\entry_point.cpp">
@@ -230,10 +242,10 @@
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camera_dlg.h" />
     <ClInclude Include="..\include\pr\gui\messagemap_dbg.h" />
+    <ClInclude Include="..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h" />
@@ -276,6 +288,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\linedrawer\deploy.py" />
+    <None Include="..\projects\linedrawer\post_build.py" />
     <None Include="..\projects\linedrawer\resources\linedrawer.ico" />
     <None Include="..\projects\linedrawer\ThingsToGetRight.txt" />
   </ItemGroup>

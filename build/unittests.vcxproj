@@ -189,7 +189,7 @@
     <ClInclude Include="..\include\pr\gui\richedit.h" />
     <ClInclude Include="..\include\pr\gui\round_button_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\scaled_dc.h" />
-    <ClInclude Include="..\include\pr\gui\scintilla.h" />
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\vt100.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h" />
