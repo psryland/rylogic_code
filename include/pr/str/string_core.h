@@ -72,6 +72,12 @@ namespace pr
 	namespace str
 	{
 		#pragma region Char Traits
+		// Is 'T' a char or wchar_t
+		template <typename T> struct is_char :std::false_type {};
+		template <> struct is_char<char> :std::true_type {};
+		template <> struct is_char<wchar_t> :std::true_type {};
+		template <typename T> using enable_if_char_t = typename std::enable_if<is_char<T>::value>::type;
+
 		// char traits - Did you know about std::char_traits<>... 
 		template <typename TChar> struct char_traits;
 		template <> struct char_traits<char>
@@ -94,11 +100,11 @@ namespace pr
 			static long long          strtoi64(char const* str, char** end, int radix)      { return ::_strtoi64(str, end, radix); }
 			static unsigned long long strtoui64(char const* str, char** end, int radix)     { return ::_strtoui64(str, end, radix); }
 
-			static bool eq(char lhs, char rhs)                         { return lhs == rhs; }
-			static void fill(char* ptr, size_t count, char ch)         { ::memset(ptr, ch, count); }
-			static void copy(char* dst, char const* src, size_t count) { ::memcpy(dst, src, count); }
-			static void move(char* dst, char const* src, size_t count) { ::memmove(dst, src, count); }
-
+			static bool eq(char lhs, char rhs)                                       { return lhs == rhs; }
+			static void fill(char* ptr, size_t count, char ch)                       { ::memset(ptr, ch, count); }
+			static void copy(char* dst, char const* src, size_t count)               { ::memcpy(dst, src, count); }
+			static void move(char* dst, char const* src, size_t count)               { ::memmove(dst, src, count); }
+			static int compare(char const* first1, char const* first2, size_t count) { return ::strncmp(first1, first2, count); }
 			static char const* find(char const* first, size_t count, char ch)
 			{
 				for (; 0 < count; --count, ++first)
@@ -131,11 +137,11 @@ namespace pr
 			static unsigned long      strtoul(wchar_t const* str, wchar_t** end, int radix)       { return ::wcstoul(str, end, radix); }
 			static unsigned long long strtoui64(wchar_t const* str, wchar_t** end, int radix)     { return ::_wcstoui64(str, end, radix); }
 			
-			static bool eq(wchar_t lhs, wchar_t rhs)                         { return lhs == rhs; }
-			static void fill(wchar_t* ptr, size_t count, wchar_t ch)         { for (;count--;) *ptr++ = ch; }
-			static void copy(wchar_t* dst, wchar_t const* src, size_t count) { ::memcpy(dst, src, count * sizeof(wchar_t)); }
-			static void move(wchar_t* dst, wchar_t const* src, size_t count) { ::memmove(dst, src, count * sizeof(wchar_t)); }
-
+			static bool eq(wchar_t lhs, wchar_t rhs)                                       { return lhs == rhs; }
+			static void fill(wchar_t* ptr, size_t count, wchar_t ch)                       { for (;count--;) *ptr++ = ch; }
+			static void copy(wchar_t* dst, wchar_t const* src, size_t count)               { ::memcpy(dst, src, count * sizeof(wchar_t)); }
+			static void move(wchar_t* dst, wchar_t const* src, size_t count)               { ::memmove(dst, src, count * sizeof(wchar_t)); }
+			static int compare(wchar_t const* first1, wchar_t const* first2, size_t count) { return ::wcsncmp(first1, first2, count); }
 			static wchar_t const* find(wchar_t const* first, size_t count, wchar_t ch)
 			{
 				for (; 0 < count; --count, ++first)
@@ -159,6 +165,10 @@ namespace pr
 			using miter      = typename Str::iterator;
 			using iter       = typename Str::iterator;
 			using value_type = typename Str::value_type;
+
+			static value_type const* c_str(Str const& str) { return str.c_str(); }
+			static bool empty(Str const& str)              { return str.empty(); }
+			static size_t size(Str const& str)             { return str.size(); }
 		};
 		template <typename Str> struct traits<Str const> :char_traits<typename Str::value_type>
 		{
@@ -166,6 +176,10 @@ namespace pr
 			using miter      = typename Str::iterator;
 			using iter       = typename Str::const_iterator;
 			using value_type = typename Str::value_type;
+
+			static value_type const* c_str(Str const& str) { return str.c_str(); }
+			static bool empty(Str const& str)              { return str.empty(); }
+			static size_t size(Str const& str)             { return str.size(); }
 		};
 		template <typename Char> struct traits<Char const*> :char_traits<Char>
 		{
@@ -173,6 +187,10 @@ namespace pr
 			using miter      = Char*;
 			using iter       = Char const*;
 			using value_type = Char const;
+
+			static value_type const* c_str(Char const* str) { return str; }
+			static bool empty(Char const* str)              { return *str == 0; }
+			static size_t size(Char const* str)             { return strlen(str); }
 		};
 		template <typename Char> struct traits<Char*> :char_traits<Char>
 		{
@@ -180,6 +198,10 @@ namespace pr
 			using miter      = Char*;
 			using iter       = Char*;
 			using value_type = Char;
+
+			static value_type const* c_str(Char const* str) { return str; }
+			static bool empty(Char const* str)              { return *str == 0; }
+			static size_t size(Char const* str)             { return strlen(str); }
 		};
 		template <typename Char> struct traits<Char const* const> :traits<Char const*>
 		{};

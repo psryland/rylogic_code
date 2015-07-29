@@ -21,30 +21,27 @@
 #pragma warning(pop)
 #include <ctime>
 #include <string>
-#include <fstream>
 #include <algorithm>
 #include <cassert>
+#include <windows.h>
 
 namespace pr
 {
 	namespace filesys
 	{
-		namespace EAttrib
+		enum class EAttrib
 		{
-			enum Type
-			{
-				Invalid     = 0,
-				Device      = 1 << 0,
-				File        = 1 << 1,
-				Directory   = 1 << 2,
-				Pipe        = 1 << 3,
-				WriteAccess = 1 << 4,
-				ReadAccess  = 1 << 5,
-				ExecAccess  = 1 << 6,
-			};
-		}
-
-		enum Access
+			None        = 0,
+			Device      = 1 << 0,
+			File        = 1 << 1,
+			Directory   = 1 << 2,
+			Pipe        = 1 << 3,
+			WriteAccess = 1 << 4,
+			ReadAccess  = 1 << 5,
+			ExecAccess  = 1 << 6,
+			_bitwise_operations_allowed,
+		};
+		enum class Access
 		{
 			Exists    = 0,
 			Write     = 2,
@@ -54,7 +51,6 @@ namespace pr
 
 		// Unix Time = seconds since midnight January 1, 1970 UTC
 		// FILETIME = 100-nanosecond intervals since January 1, 1601 UTC
-
 		// File timestamp data for a file.
 		// Note: these timestamps are in UTC unix time
 		struct FileTime
@@ -112,8 +108,8 @@ namespace pr
 		namespace impl
 		{
 			// Unicode handling
-			inline int access(char    const* filename, int access_mode) { return ::_access (filename, access_mode); }
-			inline int access(wchar_t const* filename, int access_mode) { return ::_waccess(filename, access_mode); }
+			inline int access(char    const* filename, Access access_mode) { return ::_access (filename, int(access_mode)); }
+			inline int access(wchar_t const* filename, Access access_mode) { return ::_waccess(filename, int(access_mode)); }
 
 			inline int rename(char    const* oldname, char    const* newname) { return ::rename  (oldname, newname); }
 			inline int rename(wchar_t const* oldname, wchar_t const* newname) { return ::_wrename(oldname, newname); }
@@ -138,6 +134,9 @@ namespace pr
 
 			inline size_t module_name(char* buffer, size_t buf_count) { return ::GetModuleFileNameA(nullptr, buffer, DWORD(buf_count)); }
 			inline size_t module_name(wchar_t* buffer, size_t buf_count) { return ::GetModuleFileNameW(nullptr, buffer, DWORD(buf_count)); }
+
+			inline bool replace(char const* replacee, char const* replacer) { return ::ReplaceFileA(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0; }
+			inline bool replace(wchar_t const* replacee, wchar_t const* replacer) { return ::ReplaceFileW(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0; }
 		}
 
 		// Return true if 'ch' is a directory marker
@@ -153,17 +152,15 @@ namespace pr
 		}
 
 		// Return true if 'path' contains a drive, i.e. is a full path
-		template <typename String> inline bool IsFullPath(String const& path)
+		template <typename String, typename Char = String::value_type> inline bool IsFullPath(String const& path)
 		{
-			typedef String::value_type Char;
 			Char const colon[] = {Char(':')}; // no null, because 'find' is templated on array len, and so tries to match the string ":\0" (i.e. length 2)
 			return path.find(colon) != String::npos;
 		}
 
 		// Add quotes to the str if it doesn't already have them
-		template <typename String> inline String& AddQuotes(String& str)
+		template <typename String, typename Char = String::value_type> inline String& AddQuotes(String& str)
 		{
-			typedef String::value_type Char;
 			if (str.size() > 1 && str[0] == Char('"') && str[str.size()-1] == Char('"')) return str;
 			str.insert(str.begin(), Char('"'));
 			str.insert(str.end  (), Char('"'));
@@ -176,9 +173,8 @@ namespace pr
 		}
 
 		// Remove quotes from 'str' if it has them
-		template <typename String> inline String& RemoveQuotes(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RemoveQuotes(String& str)
 		{
-			typedef String::value_type Char;
 			if (str.size() < 2 || str[0] != Char('"') || str[str.size()-1] != Char('"')) return str;
 			str = str.substr(1, str.size()-2);
 			return str;
@@ -190,9 +186,8 @@ namespace pr
 		}
 
 		// Remove the leading back slash from 'str' if it exists
-		template <typename String> inline String& RemoveLeadingBackSlash(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RemoveLeadingBackSlash(String& str)
 		{
-			typedef String::value_type Char;
 			if (!str.empty() && (str[0] == Char('\\') || str[0] == Char('/'))) str.erase(0,1);
 			return str;
 		}
@@ -203,9 +198,8 @@ namespace pr
 		}
 
 		// Remove the last back slash from 'str' if it exists
-		template <typename String> inline String& RemoveLastBackSlash(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RemoveLastBackSlash(String& str)
 		{
-			typedef String::value_type Char;
 			if (!str.empty() && (str[str.size()-1] == Char('\\') || str[str.size()-1] == Char('/'))) str.erase(str.size()-1, 1);
 			return str;
 		}
@@ -216,9 +210,8 @@ namespace pr
 		}
 
 		// Convert 'C:\path0\.\path1\../path2\file.ext' into 'C:\path0\path2\file.ext'
-		template <typename String> inline String& Canonicalise(String& str)
+		template <typename String, typename Char = String::value_type> inline String& Canonicalise(String& str)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			size_t d0 = 0, d1, d2, d3;
@@ -251,14 +244,13 @@ namespace pr
 		}
 
 		// Convert a path name into a standard format of "c:\dir\dir\filename.ext" i.e. back slashes, and lower case
-		template <typename String> inline String& Standardise(String& str)
+		template <typename String, typename Char = String::value_type> inline String& Standardise(String& str)
 		{
-			typedef String::value_type Char;
 			RemoveQuotes(str);
 			RemoveLastBackSlash(str);
 			Canonicalise(str);
 			for (String::iterator i = str.begin(), iend = str.end(); i != iend; ++i) {*i = static_cast<String::value_type>(tolower(*i));}
-			std::replace  (str.begin(), str.end(), Char('/'), Char('\\'));
+			std::replace(str.begin(), str.end(), Char('/'), Char('\\'));
 			return str;
 		}
 		template <typename String> inline String StandardiseC(String const& str)
@@ -268,9 +260,8 @@ namespace pr
 		}
 
 		// Get the drive letter from a full path description.
-		template <typename String> inline String GetDrive(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetDrive(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const colon[] = {Char(':'),0};
 
 			size_t pos = str.find(colon);
@@ -279,9 +270,8 @@ namespace pr
 		}
 
 		// Get the path from a full path description
-		template <typename String> inline String GetPath(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetPath(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 			size_t p, first = 0, last = str.size();
 
@@ -299,9 +289,8 @@ namespace pr
 		}
 
 		// Get the directory including drive letter from a full path description
-		template <typename String> inline String GetDirectory(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetDirectory(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
@@ -311,9 +300,8 @@ namespace pr
 		}
 
 		// Get the extension from a full path description (does not include the '.')
-		template <typename String> inline String GetExtension(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetExtension(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const dot[] = {Char('.'),0};
 
 			size_t p = str.find_last_of(dot);
@@ -332,9 +320,8 @@ namespace pr
 		}
 
 		// Get the filename including extension from a full path description
-		template <typename String> inline String GetFilename(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetFilename(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
@@ -344,9 +331,8 @@ namespace pr
 		}
 
 		// Get the file title from a full path description
-		template <typename String> inline String GetFiletitle(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetFiletitle(String const& str)
 		{
-			typedef String::value_type Char;
 			Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
 			size_t p, first = 0, last = str.size();
@@ -363,9 +349,8 @@ namespace pr
 		}
 
 		// Remove the drive from 'str'
-		template <typename String> inline String& RmvDrive(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvDrive(String& str)
 		{
-			typedef String::value_type Char;
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
 			size_t p = str.find(colon);
@@ -375,9 +360,8 @@ namespace pr
 		}
 
 		// Remove the path from 'str'
-		template <typename String> inline String& RmvPath(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvPath(String& str)
 		{
-			typedef String::value_type Char;
 			Char const colon[] = {Char(':'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
 			size_t p, first = 0, last = str.size();
@@ -396,9 +380,8 @@ namespace pr
 		}
 
 		// Remove the directory from 'str'
-		template <typename String> inline String& RmvDirectory(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvDirectory(String& str)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
@@ -409,9 +392,8 @@ namespace pr
 		}
 
 		// Remove the extension from 'str'
-		template <typename String> inline String& RmvExtension(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvExtension(String& str)
 		{
-			typedef String::value_type Char;
 			Char const dot[] = {Char('.'),0};
 
 			size_t p = str.find_last_of(dot);
@@ -421,9 +403,8 @@ namespace pr
 		}
 
 		// Remove the filename from 'str'
-		template <typename String> inline String& RmvFilename(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvFilename(String& str)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			// Find the end of the path
@@ -434,9 +415,8 @@ namespace pr
 		}
 
 		// Remove the file title from 'str'
-		template <typename String> inline String& RmvFiletitle(String& str)
+		template <typename String, typename Char = String::value_type> inline String& RmvFiletitle(String& str)
 		{
-			typedef String::value_type Char;
 			Char const dot[] = {Char('.'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
 
 			size_t p, first = 0, last = str.size();
@@ -454,18 +434,16 @@ namespace pr
 		}
 
 		// Make a pathname out of bits
-		template <typename String> inline String Make(String const& directory, String const& filename)
+		template <typename String, typename Char = String::value_type> inline String Make(String const& directory, String const& filename)
 		{
-			typedef String::value_type Char;
 			String pathname;
 			pathname  = RemoveLastBackSlashC(directory);
 			pathname += Char('/');
 			pathname += filename;
 			return Standardise(pathname);
 		}
-		template <typename String> inline String Make(String const& directory, String const& filetitle, String const& extension)
+		template <typename String, typename Char = String::value_type> inline String Make(String const& directory, String const& filetitle, String const& extension)
 		{
-			typedef String::value_type Char;
 			String pathname;
 			pathname  = RemoveLastBackSlashC(directory);
 			pathname += Char('/');
@@ -474,9 +452,8 @@ namespace pr
 			pathname += extension;
 			return Standardise(pathname);
 		}
-		template <typename String> inline String Make(String const& drive, String const& path, String const& filetitle, String const& extension)
+		template <typename String, typename Char = String::value_type> inline String Make(String const& drive, String const& path, String const& filetitle, String const& extension)
 		{
-			typedef String::value_type Char;
 			String pathname;
 			pathname  = GetDrive(drive);
 			pathname += Char(':');
@@ -558,7 +535,7 @@ namespace pr
 		template <typename String> inline bool RepFile(String const& src, String const& dst)
 		{
 			if (!FileExists(dst)) return RenameFile(src, dst);
-			return ::ReplaceFileA(c_str(dst), c_str(src), 0, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, 0, 0) != 0;
+			return impl::replace(c_str(dst), c_str(src));
 		}
 
 		// Return the length of a file, without opening it
@@ -596,14 +573,14 @@ namespace pr
 		}
 
 		// Return a bitwise combination of Attribs for 'str'
-		template <typename String> inline unsigned int GetAttribs(String const& str)
+		template <typename String> inline EAttrib GetAttribs(String const& str)
 		{
 			struct __stat64 info;
 			if (impl::stat64(c_str(str), &info) != 0)
-				return 0;
+				return EAttrib::None;
 
 			// Interpret the stats
-			unsigned int attribs = 0;
+			auto attribs = EAttrib::None;
 			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) != 0 ) attribs |= EAttrib::Device;
 			if ((info.st_mode & _S_IFREG ) != 0 && (info.st_mode & _S_IFCHR) == 0 ) attribs |= EAttrib::File;
 			if ( info.st_mode & _S_IFDIR ) attribs |= EAttrib::Directory;
@@ -635,19 +612,18 @@ namespace pr
 		// Return true if 'filepath' is a file that exists
 		template <typename String> inline bool FileExists(String const& filepath)
 		{
-			return impl::access(&filepath[0], Exists) == 0;
+			return impl::access(&filepath[0], Access::Exists) == 0;
 		}
 
 		// Return true if 'directory' exists
 		template <typename String> inline bool DirectoryExists(String const& directory)
 		{
-			return impl::access(&directory[0], Exists) == 0;
+			return impl::access(&directory[0], Access::Exists) == 0;
 		}
 
 		// Recursively create 'directory'
-		template <typename String> inline bool CreateDir(String const& directory)
+		template <typename String, typename Char = String::value_type> inline bool CreateDir(String const& directory)
 		{
-			typedef String::value_type Char;
 			Char const dir_marks[] = {Char('\\'),Char('/'),0};
 
 			String dir = CanonicaliseC(directory);
@@ -694,9 +670,8 @@ namespace pr
 		}
 
 		// Replaces the extension of 'path' with 'new_extn'
-		template <typename String> inline String ChangeExtn(String const& path, String const& new_extn)
+		template <typename String, typename Char = String::value_type> inline String ChangeExtn(String const& path, String const& new_extn)
 		{
-			typedef String::value_type Char;
 			String s = path;
 			RmvExtension(s);
 			s += Char('.');
@@ -705,9 +680,8 @@ namespace pr
 		}
 
 		// Insert 'prefix' before, and 'postfix' after the file title in 'path', without modifying the extension
-		template <typename String> inline String ChangeFilename(String const& path, String const& prefix, String const& postfix)
+		template <typename String, typename Char = String::value_type> inline String ChangeFilename(String const& path, String const& prefix, String const& postfix)
 		{
-			typedef String::value_type Char;
 			String s = path;
 			RmvFilename(s);
 			s += Char('\\');
@@ -720,32 +694,31 @@ namespace pr
 		}
 
 		// Combine two path fragments into a combined path
-		template <typename String> inline String CombinePath(String const& lhs, String const& rhs)
+		template <typename String, typename Char = String::value_type> inline String CombinePath(String const& lhs, String const& rhs)
 		{
-			typedef String::value_type Char;
 			if (IsFullPath(rhs)) return rhs;
 			return CanonicaliseC(RemoveLastBackSlashC(lhs) + Char('\\') + RemoveLeadingBackSlashC(rhs));
 		}
 
 		// Convert a relative path into a full path
-		template <typename String> inline String GetFullPath(String const& str)
+		template <typename String, typename Char = String::value_type> inline String GetFullPath(String const& str)
 		{
-			typedef String::value_type Char;
 			Char buf[_MAX_PATH];
 			String path(const_cast<Char const*>(impl::fullpath(buf, c_str(str), _MAX_PATH)));
 			return Standardise<String>(path);
 		}
 
 		// Make 'full_path' relative to 'relative_to'.  e.g.  C:/path1/path2/file relative to C:/path1/path3/ = ../path2/file
-		template <typename String> inline String GetRelativePath(String const& full_path, String const& relative_to)
+		template <typename String, typename Char = String::value_type> inline String GetRelativePath(String const& full_path, String const& relative_to)
 		{
-			typedef String::value_type Char;
-			Char const colon[] = {Char(':'),0}, prev_dir[] = {Char('.'),Char('.'),Char('/'),0}, dir_marks[] = {Char('\\'),Char('/'),0};
+			Char const colon[]     = {':',0};
+			Char const prev_dir[]  = {'.','.','/',0};
+			Char const dir_marks[] = {'\\','/',0};
 
 			// Find where the paths differ, recording the last common directory marker
 			size_t i, d = String::npos;
-			char const* fpath = c_str(full_path);
-			char const* rpath = c_str(relative_to);
+			auto fpath = c_str(full_path);
+			auto rpath = c_str(relative_to);
 			for (i = 0; EqualPathChar(fpath[i], rpath[i]); ++i)
 			{
 				if (DirMark(full_path[i]))
@@ -762,7 +735,7 @@ namespace pr
 				return full_path;
 
 			// Otherwise, assuming they match before the first path
-			String path = full_path.substr(d + 1);
+			auto path = full_path.substr(d + 1);
 			do
 			{
 				d = relative_to.find_first_of(dir_marks, d + 1);
@@ -834,19 +807,22 @@ namespace pr
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
+#include "pr/common/flags_enum.h"
 namespace pr
 {
 	namespace unittests
 	{
 		PRUnitTest(pr_filesys_filesys)
 		{
+			using namespace pr::filesys;
+
 			{//Quotes
 				std::string no_quotes = "path\\path\\file.extn";
 				std::string has_quotes = "\"path\\path\\file.extn\"";
 				std::string p = no_quotes;
-				pr::filesys::RemoveQuotes(p); PR_CHECK(no_quotes , p);
-				pr::filesys::AddQuotes(p);    PR_CHECK(has_quotes, p);
-				pr::filesys::AddQuotes(p);    PR_CHECK(has_quotes, p);
+				RemoveQuotes(p); PR_CHECK(no_quotes , p);
+				AddQuotes(p);    PR_CHECK(has_quotes, p);
+				AddQuotes(p);    PR_CHECK(has_quotes, p);
 			}
 			{//Slashes
 				std::string has_slashes1 = "\\path\\path\\";
@@ -854,199 +830,199 @@ namespace pr
 				std::string no_slashes1 = "path\\path";
 				std::string no_slashes2 = "path/path";
 
-				pr::filesys::RemoveLeadingBackSlash(has_slashes1);
-				pr::filesys::RemoveLastBackSlash(has_slashes1);
+				RemoveLeadingBackSlash(has_slashes1);
+				RemoveLastBackSlash(has_slashes1);
 				PR_CHECK(no_slashes1, has_slashes1);
 
-				pr::filesys::RemoveLeadingBackSlash(has_slashes2);
-				pr::filesys::RemoveLastBackSlash(has_slashes2);
+				RemoveLeadingBackSlash(has_slashes2);
+				RemoveLastBackSlash(has_slashes2);
 				PR_CHECK(no_slashes2, has_slashes2);
 			}
 			{//Canonicalise
 				std::string p0 = "C:\\path/.././path\\path\\path\\../../../file.ext";
 				std::string P0 = "C:\\file.ext";
-				pr::filesys::Canonicalise(p0);
+				Canonicalise(p0);
 				PR_CHECK(P0, p0);
 
 				std::string p1 = ".././path\\path\\path\\../../../file.ext";
 				std::string P1 = "..\\file.ext";
-				pr::filesys::Canonicalise(p1);
+				Canonicalise(p1);
 				PR_CHECK(P1, p1);
 			}
 			{//Standardise
 				std::string p0 = "c:\\path/.././Path\\PATH\\path\\../../../PaTH\\File.EXT";
 				std::string P0 = "c:\\path\\file.ext";
-				pr::filesys::Standardise(p0);
+				Standardise(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//Make
-				std::string p0 = pr::filesys::Make<std::string>("c:\\", "/./path0/path1/path2\\../", "./path3/file", "extn");
+				std::string p0 = Make<std::string>("c:\\", "/./path0/path1/path2\\../", "./path3/file", "extn");
 				std::string P0 = "c:\\path0\\path1\\path3\\file.extn";
 				PR_CHECK(P0, p0);
 
-				std::string p1 = pr::filesys::Make<std::string>("c:\\./path0/path1/path2\\../", "./path3/file", "extn");
+				std::string p1 = Make<std::string>("c:\\./path0/path1/path2\\../", "./path3/file", "extn");
 				std::string P1 = "c:\\path0\\path1\\path3\\file.extn";
 				PR_CHECK(P1, p1);
 
-				std::string p2 = pr::filesys::Make<std::string>("c:\\./path0/path1/path2\\..", "./path3/file.extn");
+				std::string p2 = Make<std::string>("c:\\./path0/path1/path2\\..", "./path3/file.extn");
 				std::string P2 = "c:\\path0\\path1\\path3\\file.extn";
 				PR_CHECK(P2, p2);
 			}
 			{//GetDrive
-				std::string p0 = pr::filesys::GetDrive<std::string>("drive:/path");
+				std::string p0 = GetDrive<std::string>("drive:/path");
 				std::string P0 = "drive";
 				PR_CHECK(P0, p0);
 			}
 			{//GetPath
-				std::string p0 = pr::filesys::GetPath<std::string>("drive:/path0/path1/file.ext");
+				std::string p0 = GetPath<std::string>("drive:/path0/path1/file.ext");
 				std::string P0 = "path0/path1";
 				PR_CHECK(P0, p0);
 			}
 			{//GetDirectory
-				std::string p0 = pr::filesys::GetDirectory<std::string>("drive:/path0/path1/file.ext");
+				std::string p0 = GetDirectory<std::string>("drive:/path0/path1/file.ext");
 				std::string P0 = "drive:/path0/path1";
 				PR_CHECK(P0, p0);
 			}
 			{//GetExtension
-				std::string p0 = pr::filesys::GetExtension<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string p0 = GetExtension<std::string>("drive:/pa.th0/path1/file.stuff.extn");
 				std::string P0 = "extn";
 				PR_CHECK(P0, p0);
 			}
 			{//GetFilename
-				std::string p0 = pr::filesys::GetFilename<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string p0 = GetFilename<std::string>("drive:/pa.th0/path1/file.stuff.extn");
 				std::string P0 = "file.stuff.extn";
 				PR_CHECK(P0, p0);
 			}
 			{//GetFiletitle
-				std::string p0 = pr::filesys::GetFiletitle<std::string>("drive:/pa.th0/path1/file.stuff.extn");
+				std::string p0 = GetFiletitle<std::string>("drive:/pa.th0/path1/file.stuff.extn");
 				std::string P0 = "file.stuff";
 				PR_CHECK(P0, p0);
 			}
 			{//RmvDrive
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "pa.th0/path1/file.stuff.extn";
-				p0 = pr::filesys::RmvDrive(p0);
+				p0 = RmvDrive(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//RmvPath
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "drive:/file.stuff.extn";
-				p0 = pr::filesys::RmvPath(p0);
+				p0 = RmvPath(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//RmvDirectory
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "file.stuff.extn";
-				p0 = pr::filesys::RmvDirectory(p0);
+				p0 = RmvDirectory(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//RmvExtension
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "drive:/pa.th0/path1/file.stuff";
-				p0 = pr::filesys::RmvExtension(p0);
+				p0 = RmvExtension(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//RmvFilename
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "drive:/pa.th0/path1";
-				p0 = pr::filesys::RmvFilename(p0);
+				p0 = RmvFilename(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//RmvFiletitle
 				std::string p0 = "drive:/pa.th0/path1/file.stuff.extn";
 				std::string P0 = "drive:/pa.th0/path1/.extn";
-				p0 = pr::filesys::RmvFiletitle(p0);
+				p0 = RmvFiletitle(p0);
 				PR_CHECK(P0, p0);
 			}
 			{//Files
-				std::string dir = pr::filesys::CurrentDirectory<std::string>();
-				PR_CHECK(pr::filesys::DirectoryExists(dir), true);
+				std::string dir = CurrentDirectory<std::string>();
+				PR_CHECK(DirectoryExists(dir), true);
 
-				std::string fn = pr::filesys::MakeUniqueFilename<std::string>("test_fileXXXXXX");
-				PR_CHECK(pr::filesys::FileExists(fn), false);
+				std::string fn = MakeUniqueFilename<std::string>("test_fileXXXXXX");
+				PR_CHECK(FileExists(fn), false);
 
-				std::string path = pr::filesys::Make(dir, fn);
+				std::string path = Make(dir, fn);
 
 				std::ofstream f(path.c_str());
 				f << "Hello World";
 				f.close();
 
-				PR_CHECK(pr::filesys::FileExists(path), true);
-				std::string fn2 = pr::filesys::MakeUniqueFilename<std::string>("test_fileXXXXXX");
-				std::string path2 = pr::filesys::GetFullPath(fn2);
+				PR_CHECK(FileExists(path), true);
+				std::string fn2 = MakeUniqueFilename<std::string>("test_fileXXXXXX");
+				std::string path2 = GetFullPath(fn2);
 
-				pr::filesys::RenameFile(path, path2);
-				PR_CHECK(pr::filesys::FileExists(path2), true);
-				PR_CHECK(pr::filesys::FileExists(path), false);
+				RenameFile(path, path2);
+				PR_CHECK(FileExists(path2), true);
+				PR_CHECK(FileExists(path), false);
 
-				pr::filesys::CpyFile(path2, path);
-				PR_CHECK(pr::filesys::FileExists(path2), true);
-				PR_CHECK(pr::filesys::FileExists(path), true);
+				CpyFile(path2, path);
+				PR_CHECK(FileExists(path2), true);
+				PR_CHECK(FileExists(path), true);
 
-				pr::filesys::EraseFile(path2);
-				PR_CHECK(pr::filesys::FileExists(path2), false);
-				PR_CHECK(pr::filesys::FileExists(path), true);
+				EraseFile(path2);
+				PR_CHECK(FileExists(path2), false);
+				PR_CHECK(FileExists(path), true);
 
-				__int64 size = pr::filesys::FileLength(path);
+				__int64 size = FileLength(path);
 				PR_CHECK(size, 11);
 
-				unsigned int attr = pr::filesys::GetAttribs(path);
-				unsigned int flags = pr::filesys::EAttrib::File|pr::filesys::EAttrib::WriteAccess|pr::filesys::EAttrib::ReadAccess;
-				PR_CHECK(attr, flags);
+				auto attr = GetAttribs(path);
+				auto flags = EAttrib::File|EAttrib::WriteAccess|EAttrib::ReadAccess;
+				PR_CHECK(attr == flags, true);
 
-				attr = pr::filesys::GetAttribs(dir);
-				flags = pr::filesys::EAttrib::Directory|pr::filesys::EAttrib::WriteAccess|pr::filesys::EAttrib::ReadAccess|pr::filesys::EAttrib::ExecAccess;
-				PR_CHECK(attr, flags);
+				attr = GetAttribs(dir);
+				flags = EAttrib::Directory|EAttrib::WriteAccess|EAttrib::ReadAccess|EAttrib::ExecAccess;
+				PR_CHECK(attr == flags, true);
 
-				std::string drive = pr::filesys::GetDrive(path);
-				unsigned __int64 disk_free = pr::filesys::GetDiskFree(drive[0]);
-				unsigned __int64 disk_size = pr::filesys::GetDiskSize(drive[0]);
+				std::string drive = GetDrive(path);
+				unsigned __int64 disk_free = GetDiskFree(drive[0]);
+				unsigned __int64 disk_size = GetDiskSize(drive[0]);
 				PR_CHECK(disk_size > disk_free, true);
 
-				pr::filesys::EraseFile(path);
-				PR_CHECK(pr::filesys::FileExists(path), false);
+				EraseFile(path);
+				PR_CHECK(FileExists(path), false);
 			}
 			{//DirectoryOps
 				{
 					std::string p0 = "C:/path0/../";
 					std::string p1 = "./path4/path5";
 					std::string P  = "C:\\path4\\path5";
-					std::string R  = pr::filesys::CombinePath(p0, p1);
+					std::string R  = CombinePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 				{
 					std::string p0 = "C:/path0/path1/path2/path3/file.extn";
 					std::string p1 = "C:/path0/path4/path5";
 					std::string P  = "../../path1/path2/path3/file.extn";
-					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					std::string R  = GetRelativePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 				{
 					std::string p0 = "/path1/path2/file.extn";
 					std::string p1 = "/path1/path3/path4";
 					std::string P  = "../../path2/file.extn";
-					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					std::string R  = GetRelativePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 				{
 					std::string p0 = "/path1/file.extn";
 					std::string p1 = "/path1";
 					std::string P  = "file.extn";
-					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					std::string R  = GetRelativePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 				{
 					std::string p0 = "path1/file.extn";
 					std::string p1 = "path2";
 					std::string P  = "../path1/file.extn";
-					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					std::string R  = GetRelativePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 				{
 					std::string p0 = "c:/path1/file.extn";
 					std::string p1 = "d:/path2";
 					std::string P  = "c:/path1/file.extn";
-					std::string R  = pr::filesys::GetRelativePath(p0, p1);
+					std::string R  = GetRelativePath(p0, p1);
 					PR_CHECK(P, R);
 				}
 			}

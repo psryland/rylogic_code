@@ -10,25 +10,24 @@
 //  <or>
 //  int exit_code = proc.Stop();
 
-#ifndef PR_PROCESS_H
-#define PR_PROCESS_H
+#pragma once
 
 #include <string>
 #include <windows.h>
-#include "pr/common/assert.h"
-//#include "pr/str/prstring.h"
+#include <cassert>
+#include "pr/str/string_util.h"
 
 namespace pr
 {
 	class Process
 	{
-		STARTUPINFO         m_startup_info;
+		STARTUPINFOW        m_startup_info;
 		PROCESS_INFORMATION m_process_info;
 
 		// Reset things so that a process can be started
 		void Reset()
 		{
-			m_startup_info = STARTUPINFO();
+			m_startup_info = STARTUPINFOW();
 			m_startup_info.cb = sizeof(m_startup_info);
 			m_process_info = PROCESS_INFORMATION();
 			m_process_info.hProcess = INVALID_HANDLE_VALUE;
@@ -40,25 +39,25 @@ namespace pr
 		~Process() { Stop(); }
 
 		// Start the process
-		bool Start(char const* exe_path, char const* args, char const* startdir)
+		bool Start(wchar_t const* exe_path, wchar_t const* args, wchar_t const* startdir)
 		{
 			if (m_process_info.hProcess != INVALID_HANDLE_VALUE) Stop();
-			std::string cmdline = pr::str::Quotes<std::string>(exe_path, true); cmdline.append(" ").append(args);
-			return CreateProcess(exe_path, &cmdline[0], 0, 0, TRUE, 0, 0, startdir, &m_startup_info, &m_process_info) == TRUE;
+			auto cmdline = pr::str::Quotes<std::wstring>(exe_path, true).append(L" ").append(args);
+			return CreateProcessW(exe_path, &cmdline[0], 0, 0, TRUE, 0, 0, startdir, &m_startup_info, &m_process_info) == TRUE;
 		}
-		bool Start(char const* exe_path, char const* args)
+		bool Start(wchar_t const* exe_path, wchar_t const* args)
 		{
-			return Start(exe_path, args, 0);
+			return Start(exe_path, args, nullptr);
 		}
-		bool Start(char const* exe_path)
+		bool Start(wchar_t const* exe_path)
 		{
-			return Start(exe_path, 0);
+			return Start(exe_path, nullptr);
 		}
 
 		// Shutdown the process
 		int Stop()
 		{
-			PostThreadMessage(m_process_info.dwThreadId, WM_QUIT, 0, 0);
+			PostThreadMessageW(m_process_info.dwThreadId, WM_QUIT, 0, 0);
 			int exit_code = BlockTillExit();
 			if (m_process_info.hProcess != INVALID_HANDLE_VALUE) CloseHandle(m_process_info.hProcess);
 			if (m_process_info.hThread  != INVALID_HANDLE_VALUE) CloseHandle(m_process_info.hThread);
@@ -79,10 +78,8 @@ namespace pr
 		// Returns true if the process is running
 		bool IsActive() const
 		{
-			PR_ASSERT(PR_DBG,(m_process_info.hProcess == INVALID_HANDLE_VALUE) == (m_process_info.hThread == INVALID_HANDLE_VALUE), "");
+			assert((m_process_info.hProcess == INVALID_HANDLE_VALUE) == (m_process_info.hThread == INVALID_HANDLE_VALUE));
 			return m_process_info.hProcess != INVALID_HANDLE_VALUE;
 		}
 	};
 }
-
-#endif

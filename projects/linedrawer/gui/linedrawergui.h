@@ -14,7 +14,7 @@ namespace ldr
 {
 	struct MainGUI
 		:pr::app::MainGUI<ldr::MainGUI, ldr::Main, pr::SimMsgLoop>
-		,pr::cmdline::IOptionReceiver
+		,pr::cmdline::IOptionReceiver<>
 		,pr::gui::RecentFiles::IHandler
 		,pr::events::IRecv<ldr::Event_Info>
 		,pr::events::IRecv<ldr::Event_Warn>
@@ -136,6 +136,6 @@ namespace ldr
 		void OnEvent(pr::settings::Evt<UserSettings> const&) override;
 
 		// Command line
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end);
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end);
 	};
 }

@@ -121,6 +121,7 @@ namespace pr
 			template <> float             as() const { return static_cast<float>(_wtof(m_value.c_str())); }
 			template <> double            as() const { return _wtof(m_value.c_str()); }
 			template <> std::string       as() const { return std::string(m_value.begin(), m_value.end()); }
+			template <> std::wstring      as() const { return m_value; }
 
 			NodeVec::const_iterator begin() const { return m_child.begin(); }
 			NodeVec::const_iterator end() const   { return m_child.end(); }

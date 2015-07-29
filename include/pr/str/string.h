@@ -21,6 +21,8 @@
 #include <utility>
 #include <cassert>
 
+#include "pr/str/string_core.h"
+
 #ifndef PR_NOEXCEPT
 #   define PR_NOEXCEPT_DEFINED
 #   if _MSC_VER >= 1900
@@ -67,30 +69,10 @@ namespace pr
 		// End of string index position
 		static const size_type npos = static_cast<size_type>(-1);
 
+		#pragma region Traits
+
 		// type specific traits
-		template <typename Type> struct char_traits;
-		template <> struct char_traits<char>
-		{
-			static size_type   length(char const* ptr)                                              { return ::strlen(ptr); }
-			static void        fill(char* ptr, size_type count, value_type ch)                      { ::memset(ptr, ch, count); }
-			static void        copy(char* dst, char const* src, size_type count)                    { ::memcpy(dst, src, count); }
-			static void        move(char* dst, char const* src, size_type count)                    { ::memmove(dst, src, count); }
-			static int         compare(char const* first1, char const* first2, size_type count)     { return ::strncmp(first1, first2, count); }
-			static bool        eq(value_type lhs, value_type rhs)                                   { return lhs == rhs; }
-			static char const* find(char const* first, size_type count, value_type ch)              { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
-		};
-		template <> struct char_traits<wchar_t>
-		{
-			static size_type      length(wchar_t const* ptr)                                              { return ::wcslen(ptr); }
-			static void           fill(wchar_t* ptr, size_type count, value_type ch)                      { for (;count-- != 0; ++ptr) *ptr = ch; }
-			static void           copy(wchar_t* dst, wchar_t const* src, size_type count)                 { ::memcpy(dst, src, count * sizeof(wchar_t)); }
-			static void           move(wchar_t* dst, wchar_t const* src, size_type count)                 { ::memmove(dst, src, count * sizeof(wchar_t)); }
-			static int            compare(wchar_t const* first1, wchar_t const* first2, size_type count)  { return ::wcsncmp(first1, first2, count); }
-			static bool           eq(value_type lhs, value_type rhs)                                      { return lhs == rhs; }
-			static wchar_t const* find(wchar_t const* first, size_type count, value_type ch)              { for (; 0 < count; --count, ++first) { if (eq(*first, ch)) return first; } return 0; }
-		};
-		struct traits :char_traits<Type>
-		{};
+		struct traits :pr::str::char_traits<Type> {};
 
 		// true if 'tchar' is the same as 'Type', ignoring references
 		template <typename tchar> using same_char_t = std::is_same<Type, std::remove_cv_t<std::remove_reference_t<tchar>>>;
@@ -111,6 +93,8 @@ namespace pr
 		// enable_if 'tstr' has std::string-like semantics and an element type of 'Type'
 		template <typename tstr, typename = decltype(std::declval<tstr>().size())> using enable_if_valid_str_t = enable_if_valid_arr_t<tstr>;
 
+		#pragma endregion
+
 	private:
 		typedef typename std::aligned_storage<sizeof(Type), std::alignment_of<Type>::value>::type TLocalStore;
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
@@ -124,9 +108,9 @@ namespace pr
 
 		// Access to the allocator object (independant over whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
+		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return  m_allocator; }
 		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
-		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return m_allocator; }
+		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return  m_allocator; }
 		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType&      >::type alloc(A)       { return *m_allocator; }
 
 		// return true if 'ptr' points with the current container
@@ -141,16 +125,6 @@ namespace pr
 
 		// return true if 'arr' is actually this object
 		template <typename tarr> bool isthis(tarr const& arr) const { return static_cast<void const*>(this) == static_cast<void const*>(&arr); }
-
-		// return the length of a string
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>  size_t length(tstr const& right) const
-		{
-			return right.size();
-		}
-		template <typename tchar> size_t length(tchar const* right) const
-		{
-			return traits::length(right);
-		}
 
 		// reverse a range of elements
 		void reverse(Type *first, Type* last) { for (; first != last && first != --last; ++first) std::swap(*first, *last); }
@@ -585,7 +559,7 @@ namespace pr
 		// assign [ptr, <null>)
 		string& assign(const_pointer ptr)
 		{
-			return assign(ptr, traits::length(ptr));
+			return assign(ptr, traits::strlen(ptr));
 		}
 
 		// assign [first, last), const pointers
@@ -605,9 +579,9 @@ namespace pr
 		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
 		string& assign(tarr const& right, size_type rofs, size_type count)
 		{
-			assert(rofs <= length(right));
+			assert(rofs <= str::traits<tarr>::size(right));
 
-			size_type num = length(right) - rofs;
+			size_type num = str::traits<tarr>::size(right) - rofs;
 			if (count > num) count = num;
 			if (isthis(right)) // subrange
 			{
@@ -681,15 +655,17 @@ namespace pr
 		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
 		string& append(tarr const& right, size_type rofs, size_type count)
 		{
-			assert(rofs <= right.size());
+			assert(rofs <= str::traits<tarr>::size(right));
 
-			size_type num = right.size() - rofs;
+			size_type num = str::traits<tarr>::size(right) - rofs;
 			if (num < count) count = num;
-
-			ensure_space(m_count + count, true);
-			traits::copy(m_ptr + size(), right.c_str() + rofs, count);
-			m_count += count;
-			m_ptr[size()] = 0;
+			if (count != 0)
+			{
+				ensure_space(m_count + count, true);
+				traits::copy(m_ptr + size(), &right[0] + rofs, count);
+				m_count += count;
+				m_ptr[size()] = 0;
+			}
 			return *this;
 		}
 
@@ -714,7 +690,7 @@ namespace pr
 		// append [ptr, <null>)
 		string& append(const_pointer ptr)
 		{
-			return append(ptr, traits::length(ptr));
+			return append(ptr, traits::strlen(ptr));
 		}
 
 		// append count * ch
@@ -896,13 +872,13 @@ namespace pr
 		// compare [0, size()) with [ptr, <null>)
 		int compare(const_pointer ptr) const
 		{
-			return compare(0, size(), ptr, traits::length(ptr));
+			return compare(0, size(), ptr, traits::strlen(ptr));
 		}
 
 		// compare [ofs, ofs + n0) with [ptr, <null>)
 		int compare(size_type ofs, size_type n0, const_pointer ptr) const
 		{
-			return compare(ofs, n0, ptr, traits::length(ptr));
+			return compare(ofs, n0, ptr, traits::strlen(ptr));
 		}
 
 		// replace [ofs, ofs + n0) with right
@@ -984,7 +960,7 @@ namespace pr
 		string& replace(size_type ofs, size_type n0, const_pointer ptr)
 		{
 			assert(ptr != nullptr);
-			return replace(ofs, n0, ptr, traits::length(ptr));
+			return replace(ofs, n0, ptr, traits::strlen(ptr));
 		}
 
 		// replace [ofs, ofs + n0) with count * ch
@@ -1073,7 +1049,7 @@ namespace pr
 		size_type find(const_pointer ptr, size_type ofs = 0) const
 		{
 			assert(ptr != nullptr);
-			return find(ptr, ofs, traits::length(ptr));
+			return find(ptr, ofs, traits::strlen(ptr));
 		}
 
 		//// look for right beginnng at or after ofs
@@ -1161,7 +1137,7 @@ namespace pr
 		// look for one of [ptr, <null>) at or after ofs
 		size_type find_first_of(const_pointer ptr, size_type ofs = 0) const
 		{
-			return find_first_of(ptr, ofs, traits::length(ptr));
+			return find_first_of(ptr, ofs, traits::strlen(ptr));
 		}
 
 		// look for ch at or after ofs
@@ -1194,7 +1170,7 @@ namespace pr
 		// look for one of [ptr, <null>) before ofs
 		size_type find_last_of(const_pointer ptr, size_type ofs = npos) const
 		{
-			return find_last_of(ptr, ofs, traits::length(ptr));
+			return find_last_of(ptr, ofs, traits::strlen(ptr));
 		}
 
 		// look for ch before ofs
@@ -1227,7 +1203,7 @@ namespace pr
 		// look for one of [ptr, <null>) at or after ofs
 		size_type find_first_not_of(const_pointer ptr, size_type ofs = 0) const
 		{
-			return find_first_not_of(ptr, ofs, traits::length(ptr));
+			return find_first_not_of(ptr, ofs, traits::strlen(ptr));
 		}
 
 		// look for non ch at or after ofs
@@ -1260,7 +1236,7 @@ namespace pr
 		// look for none of [ptr, <null>) before ofs
 		size_type find_last_not_of(const_pointer ptr, size_type ofs = npos) const
 		{
-			return find_last_not_of(ptr, ofs, traits::length(ptr));
+			return find_last_not_of(ptr, ofs, traits::strlen(ptr));
 		}
 
 		// look for non ch before ofs
@@ -1275,11 +1251,25 @@ namespace pr
 			return string(*this, ofs, count);
 		}
 
-		// allow cast to std::string/std::wstring
-		operator std::basic_string<Type>() const
+		// allow implicit cast to std::string/std::wstring
+		operator std::basic_string<Type, std::char_traits<Type>, std::allocator<Type>>() const
 		{
-			return std::basic_string<Type>(begin(), end());
+			return std::basic_string<Type, std::char_traits<Type>, std::allocator<Type>>(begin(), end());
 		}
+
+		// equality operators
+		bool operator == (type const& right) const { return compare(right) == 0; }
+		bool operator != (type const& right) const { return compare(right) != 0; }
+		bool operator <  (type const& right) const { return compare(right) <  0; }
+		bool operator <= (type const& right) const { return compare(right) <= 0; }
+		bool operator >= (type const& right) const { return compare(right) >= 0; }
+		bool operator >  (type const& right) const { return compare(right) >  0; }
+		template <typename tstr> bool operator == (tstr const& right) const { return compare(right) == 0; }
+		template <typename tstr> bool operator != (tstr const& right) const { return compare(right) != 0; }
+		template <typename tstr> bool operator <  (tstr const& right) const { return compare(right) <  0; }
+		template <typename tstr> bool operator <= (tstr const& right) const { return compare(right) <= 0; }
+		template <typename tstr> bool operator >= (tstr const& right) const { return compare(right) >= 0; }
+		template <typename tstr> bool operator >  (tstr const& right) const { return compare(right) >  0; }
 	};
 
 	namespace impl
@@ -1324,11 +1314,21 @@ namespace pr
 		return impl::widen<string<wchar_t>>(from.c_str(), from.size());
 	}
 
+	// equality operators
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator == (tstr const& lhs, string<T,L,F,A> const& rhs) { return rhs == lhs; }
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator != (tstr const& lhs, string<T,L,F,A> const& rhs) { return rhs != lhs; }
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator <  (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs >= lhs); }
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator <= (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs >  lhs); }
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator >= (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs <  lhs); }
+	template <typename tstr, typename T, int L, bool F, typename A> inline bool operator >  (tstr const& lhs, string<T,L,F,A> const& rhs) { return !(rhs <= lhs); }
+
 	// string concatenation
 	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
 	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs)
 	{
-		string<T,L0,F0,A0> res;
+		using tstr = string<T,L,F,A>;
+
+		tstr res;
 		res.reserve(lhs.size() + rhs.size());
 		res += lhs;
 		res += rhs;
@@ -1337,8 +1337,10 @@ namespace pr
 	template <typename T, int L, bool F, typename A>
 	inline string<T,L,F,A> operator + (T const* lhs, string<T,L,F,A> const& rhs)
 	{
-		string<T,L,F,A> res;
-		res.reserve(string<T,L,F,A>::traits::length(lhs) + rhs.size());
+		using tstr = string<T,L,F,A>;
+
+		tstr res;
+		res.reserve(tstr::traits::strlen(lhs) + rhs.size());
 		res += lhs;
 		res += rhs;
 		return res;
@@ -1346,8 +1348,10 @@ namespace pr
 	template <typename T, int L, bool F, typename A>
 	inline string<T,L,F,A> operator + (string<T,L,F,A> const& lhs, T const* rhs)
 	{
-		string<T,L,F,A> res;
-		res.reserve(lhs.size() + string<T,L,F,A>::traits::length(rhs));
+		using tstr = string<T,L,F,A>;
+
+		tstr res;
+		res.reserve(lhs.size() + tstr::traits::strlen(rhs));
 		res += lhs;
 		res += rhs;
 		return res;
@@ -1355,7 +1359,9 @@ namespace pr
 	template <typename T, int L, bool F, typename A>
 	inline string<T,L,F,A> operator + (T lhs, string<T,L,F,A> const& rhs)
 	{
-		string<T,L,F,A> res;
+		using tstr = string<T,L,F,A>;
+
+		tstr res;
 		res.reserve(1 + rhs.size());
 		res += lhs;
 		res += rhs;
@@ -1364,7 +1370,9 @@ namespace pr
 	template <typename T, int L, bool F, typename A>
 	inline string<T,L,F,A> operator + (string<T,L,F,A> const& lhs, T rhs)
 	{
-		string<T,L,F,A> res;
+		using tstr = string<T,L,F,A>;
+
+		tstr res;
 		res.reserve(lhs.size() + 1);
 		res += lhs;
 		res += rhs;
@@ -1379,32 +1387,36 @@ namespace pr
 		else
 			return std::move(rhs.insert(0, lhs));
 	}
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1>&& rhs) { return std::move(rhs.insert(0, lhs)); }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0>&& lhs, string<T,L1,F1,A1> const& rhs) { return std::move(lhs.append(rhs)); }
-	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (T const* lhs, string<T,L,F,A>&& rhs) { return std::move(rhs.insert(0, lhs)); }
-	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T const* rhs) { return std::move(lhs.append(rhs)); }
-	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (T lhs, string<T,L,F,A>&& rhs)        { return std::move(rhs.insert(0, 1, lhs)); }
-	template <typename T, int L, bool F, typename A> inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T rhs)        { return std::move(lhs.append(1, rhs)); }
-
-	// equality operators
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator == (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return lhs.compare(rhs) == 0; }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator != (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return !(lhs == rhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator == (T const* lhs, string<T,L,F,A> const& rhs)                     { return rhs.compare(lhs) == 0; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator != (T const* lhs, string<T,L,F,A> const& rhs)                     { return !(lhs == rhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator == (string<T,L,F,A> const& lhs, T const* rhs)                     { return lhs.compare(rhs) == 0; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator != (string<T,L,F,A> const& lhs, T const* rhs)                     { return !(lhs == rhs); }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator <  (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return lhs.compare(rhs) <  0; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator <  (T const* lhs, string<T,L,F,A> const& rhs)                     { return rhs.compare(lhs) >  0; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator <  (string<T,L,F,A> const& lhs, T const* rhs)                     { return lhs.compare(rhs) <  0; }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator >  (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return rhs < lhs; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator >  (T const* lhs, string<T,L,F,A> const& rhs)                     { return rhs < lhs; }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator >  (string<T,L,F,A> const& lhs, T const* rhs)                     { return rhs < lhs; }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator <= (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return !(rhs < lhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator <= (T const* lhs, string<T,L,F,A> const& rhs)                     { return !(rhs < lhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator <= (string<T,L,F,A> const& lhs, T const* rhs)                     { return !(rhs < lhs); }
-	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1> inline bool operator >= (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1> const& rhs) { return !(lhs < rhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator >= (T const* lhs, string<T,L,F,A> const& rhs)                     { return !(lhs < rhs); }
-	template <typename T, int L, bool F, typename A>                                  inline bool operator >= (string<T,L,F,A> const& lhs, T const* rhs)                     { return !(lhs < rhs); }
+	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
+	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0> const& lhs, string<T,L1,F1,A1>&& rhs)
+	{
+		return std::move(rhs.insert(0, lhs));
+	}
+	template <typename T, int L0, bool F0, typename A0, int L1, bool F1, typename A1>
+	inline string<T,L0,F0,A0> operator + (string<T,L0,F0,A0>&& lhs, string<T,L1,F1,A1> const& rhs)
+	{
+		return std::move(lhs.append(rhs));
+	}
+	template <typename T, int L, bool F, typename A>
+	inline string<T,L,F,A> operator + (T const* lhs, string<T,L,F,A>&& rhs)
+	{
+		return std::move(rhs.insert(0, lhs));
+	}
+	template <typename T, int L, bool F, typename A>
+	inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T const* rhs)
+	{
+		return std::move(lhs.append(rhs));
+	}
+	template <typename T, int L, bool F, typename A>
+	inline string<T,L,F,A> operator + (T lhs, string<T,L,F,A>&& rhs)
+	{
+		return std::move(rhs.insert(0, 1, lhs));
+	}
+	template <typename T, int L, bool F, typename A>
+	inline string<T,L,F,A> operator + (string<T,L,F,A>&& lhs, T rhs)
+	{
+		return std::move(lhs.append(1, rhs));
+	}
 
 	// streaming operators
 	template <typename T, int L, bool F, typename A> inline std::basic_ostream<T>& operator << (std::basic_ostream<T>& ostrm, string<T,L,F,A> const& str)
@@ -1504,6 +1516,13 @@ namespace pr
 
 			pr::string<wchar_t> wstr1 = w0;
 			PR_CHECK(wstr1.compare(w0), 0);
+
+			pr::string<wchar_t> wstr2 = L"C++ string";
+			std::wstring        w2    = L"C++ string";
+			PR_CHECK(wstr2 == w2, true);
+			wstr2 = L"pr C++ string";
+			w2    = L"std C++ string";
+			PR_CHECK(wstr2 != w2, true);
 
 			str0.assign(10, 'A');                               PR_CHECK(str0, "AAAAAAAAAA");
 			str1.assign(s0);                                    PR_CHECK(str1, "std::string");

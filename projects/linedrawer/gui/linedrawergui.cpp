@@ -1000,7 +1000,7 @@ namespace ldr
 	}
 
 	// Parse command line options
-	bool MainGUI::CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	bool MainGUI::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 	{
 		// Syntax: LineDrawer -plugin "c:\myplugin.dll" arg1 arg2
 		if (pr::str::EqualI(option, "-plugin") && arg != arg_end)
