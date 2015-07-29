@@ -169,10 +169,10 @@ namespace pr
 		static int To(std::string const& from, int radix)        { return int(::strtol(from.c_str(), nullptr, radix)); }
 		static int To(std::wstring const& from, int radix)       { return int(::wcstol(from.c_str(), nullptr, radix)); }
 
-		static int To(char const* from, char const** end, int radix)            { return int(::strtol(from, end, radix)); }
-		static int To(wchar_t const* from, wchar_t const** end, int radix)      { return int(::wcstol(from, end, radix)); }
-		static int To(std::string const& from, char const** end, int radix)     { return int(::strtol(from.c_str(), end, radix)); }
-		static int To(std::wstring const& from, wchar_t const** end, int radix) { return int(::wcstol(from.c_str(), end, radix)); }
+		static int To(char const* from, char** end, int radix)            { return int(::strtol(from, end, radix)); }
+		static int To(wchar_t const* from, wchar_t** end, int radix)      { return int(::wcstol(from, end, radix)); }
+		static int To(std::string const& from, char** end, int radix)     { return int(::strtol(from.c_str(), end, radix)); }
+		static int To(std::wstring const& from, wchar_t** end, int radix) { return int(::wcstol(from.c_str(), end, radix)); }
 	};
 
 	// To<uint>
@@ -183,10 +183,10 @@ namespace pr
 		static unsigned int To(std::string const& from, int radix)  { return unsigned int(::strtoul(from.c_str(), nullptr, radix)); }
 		static unsigned int To(std::wstring const& from, int radix) { return unsigned int(::wcstoul(from.c_str(), nullptr, radix)); }
 
-		static unsigned int To(char const* from, char const** end, int radix)            { return unsigned int(::strtoul(from, end, radix)); }
-		static unsigned int To(wchar_t const* from, wchar_t const** end, int radix)      { return unsigned int(::wcstoul(from, end, radix)); }
-		static unsigned int To(std::string const& from, char const** end, int radix)     { return unsigned int(::strtoul(from.c_str(), end, radix)); }
-		static unsigned int To(std::wstring const& from, wchar_t const** end, int radix) { return unsigned int(::wcstoul(from.c_str(), end, radix)); }
+		static unsigned int To(char const* from, char** end, int radix)            { return unsigned int(::strtoul(from, end, radix)); }
+		static unsigned int To(wchar_t const* from, wchar_t** end, int radix)      { return unsigned int(::wcstoul(from, end, radix)); }
+		static unsigned int To(std::string const& from, char** end, int radix)     { return unsigned int(::strtoul(from.c_str(), end, radix)); }
+		static unsigned int To(std::wstring const& from, wchar_t** end, int radix) { return unsigned int(::wcstoul(from.c_str(), end, radix)); }
 	};
 
 	// To<long long>
@@ -197,10 +197,10 @@ namespace pr
 		static long long To(std::string const& from, int radix)        { return ::strtoll(from.c_str(), nullptr, radix); }
 		static long long To(std::wstring const& from, int radix)       { return ::wcstoll(from.c_str(), nullptr, radix); }
 
-		static long long To(char const* from, char const** end, int radix)            { return ::strtoll(from, end, radix); }
-		static long long To(wchar_t const* from, wchar_t const** end, int radix)      { return ::wcstoll(from, end, radix); }
-		static long long To(std::string const& from, char const** end, int radix)     { return ::strtoll(from.c_str(), end, radix); }
-		static long long To(std::wstring const& from, wchar_t const** end, int radix) { return ::wcstoll(from.c_str(), end, radix); }
+		static long long To(char const* from, char** end, int radix)            { return ::strtoll(from, end, radix); }
+		static long long To(wchar_t const* from, wchar_t** end, int radix)      { return ::wcstoll(from, end, radix); }
+		static long long To(std::string const& from, char** end, int radix)     { return ::strtoll(from.c_str(), end, radix); }
+		static long long To(std::wstring const& from, wchar_t** end, int radix) { return ::wcstoll(from.c_str(), end, radix); }
 	};
 
 	// To<unsigned long long>
@@ -211,10 +211,10 @@ namespace pr
 		static unsigned long long To(std::string const& from, int radix)  { return ::strtoull(from.c_str(), nullptr, radix); }
 		static unsigned long long To(std::wstring const& from, int radix) { return ::wcstoull(from.c_str(), nullptr, radix); }
 
-		static unsigned long long To(char const* from, char const** end, int radix)            { return ::strtoull(from, end, radix); }
-		static unsigned long long To(wchar_t const* from, wchar_t const** end, int radix)      { return ::wcstoull(from, end, radix); }
-		static unsigned long long To(std::string const& from, char const** end, int radix)     { return ::strtoull(from.c_str(), end, radix); }
-		static unsigned long long To(std::wstring const& from, wchar_t const** end, int radix) { return ::wcstoull(from.c_str(), end, radix); }
+		static unsigned long long To(char const* from, char** end, int radix)            { return ::strtoull(from, end, radix); }
+		static unsigned long long To(wchar_t const* from, wchar_t** end, int radix)      { return ::wcstoull(from, end, radix); }
+		static unsigned long long To(std::string const& from, char** end, int radix)     { return ::strtoull(from.c_str(), end, radix); }
+		static unsigned long long To(std::wstring const& from, wchar_t** end, int radix) { return ::wcstoull(from.c_str(), end, radix); }
 	};
 }
 
