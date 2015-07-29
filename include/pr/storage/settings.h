@@ -19,7 +19,7 @@
 #include "pr/common/fmt.h"
 #include "pr/common/events.h"
 #include "pr/common/colour.h"
-#include "pr/filesys/fileex.h"
+#include "pr/filesys/file.h"
 #include "pr/filesys/filesys.h"
 #include "pr/maths/maths.h"
 #include "pr/script/reader.h"
@@ -112,7 +112,7 @@ namespace pr
 
 			// Read the settings into a buffer
 			std::string settings;
-			if (!pr::FileToBuffer(m_filepath.c_str(), settings))
+			if (!pr::FileToBuffer(m_filepath, settings))
 			{
 				pr::events::Send(Evt(pr::FmtS("User settings file '%s' could not be read", m_filepath.c_str()), Evt::Error));
 				return false;

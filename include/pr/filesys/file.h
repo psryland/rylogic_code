@@ -1,117 +1,111 @@
-//***********************************************************************//
-//                     A class to wrap FILE*                             //
-//	Original version:                                                    //
-//		P. Ryland, 2003                                                  //
-//                                                                       //
-//***********************************************************************//
-//
-// 'PRFile' is intended to be a substitute for FILE*. The file is closed
-// when it goes out of scope and can be used whereever FILE* is used (e.g. fgets)
-//
-// Example usage:
-//			File myfile("test.txt", "r");
-//			if( !myfile.IsOpen() ) return;
-//
-//			while( !feof(myfile) )
-//			{
-//				fgets(str, NUM, myfile);
-//			}
+//***********************************
+//  File
+//  Copyright (c) Rylogic Ltd 2003
+//***********************************
+// This header uses standard libraries only
 
 #pragma once
-#ifndef PR_FILE_H
-#define PR_FILE_H
 
 #include <stdio.h>
+#include <fstream>
+#include <locale>
+#include <codecvt>
 
 namespace pr
 {
-	// Scoped file pointer wrapper
+	// Scoped C-style file pointer wrapper
 	struct FilePtr
 	{
 		FILE* m_fp;
-		FilePtr(FILE* fp) :m_fp(fp)		{}
-		~FilePtr()						{ if (m_fp) fclose(m_fp); } 
-		operator FILE*&()				{ return m_fp; }
-		operator FILE* const&() const	{ return m_fp; }
+
+		FilePtr(FILE* fp) :m_fp(fp)   {}
+		~FilePtr()                    { if (m_fp) fclose(m_fp); } 
+		operator FILE*&()             { return m_fp; }
+		operator FILE* const&() const { return m_fp; }
 	};
 
-	//class File
-	//{
-	//public:
-	//	enum SeekFrom { Beginning = SEEK_SET, Current = SEEK_CUR, End = SEEK_END };
-	//	File() : m_fp(0) {}
-	//	File(const char* filename, const char* mode) : m_fp(0)		{ Open(filename, mode); }
-	//	File(FILE* fp) : m_fp(fp)									{} // Adopt a file
-	//	~File()														{ if( m_fp ) fclose(m_fp); }
-	//	
-	//	// State methods
-	//	bool IsOpen() const									{ return m_fp != 0; }
-	//	bool IsEndOfFile() const							{ return feof(m_fp) != 0; }
+	// How to interpret the data in a file when reading it
+	enum class EFileData
+	{
+		Binary,   // binary data, read all bytes as is
+		Text,     // A text encoding, attempts to auto detect
+		Utf8,     // UTF-8 text
+		Utf16,    // UTF-16 text
+		Utf16_be, // UTF-16 Big Endian text
+	};
 
-	//	// Utility methods
-	//	bool Open(const char* filename, const char* mode)	{ Close(); fopen_s(&m_fp, filename, mode); return m_fp != 0; }
-	//	void Close()										{ if( m_fp ) fclose(m_fp); m_fp = 0; }
-	//	std::size_t Length();
-	//	std::size_t Read(void* buffer, std::size_t byte_count);
-	//	std::size_t ReadLine(void* buffer, std::size_t byte_count);
-	//	std::size_t Write(const void* buffer, std::size_t byte_count);
-	//	void Print(const char* str);
-	//	std::size_t GetFilePosition() const					{ return static_cast<std::size_t>(ftell(m_fp)); }
-	//	void Seek(SeekFrom seek_origin, std::size_t offset)	{ fseek(m_fp, static_cast<long>(offset), seek_origin); }
-	//	void Flush()										{ fflush(m_fp); }
+	// Read the contents of a file into 'buf'
+	template <typename Buf, typename String> inline bool FileToBuffer(String const& filepath, Buf& buf, size_t ofs = 0, size_t len = ~size_t())
+	{
+		// Open the file stream
+		std::ifstream file(filepath, std::ios::binary|std::ios::ate);
+		if (!file.good())
+			return false;
 
-	//	// FILE* interface
-	//	operator FILE*()									{ return m_fp; }
-	//	operator const FILE*() const						{ return m_fp; }
-	//	FILE* operator ->()									{ return m_fp; }
-	//	const FILE* operator ->() const						{ return m_fp; }
+		// Determine the file size in bytes
+		auto size = std::min(size_t(file.tellg()) - ofs, len);
+		file.seekg(ofs, std::ios::beg);
 
-	//private:
-	//	FILE* m_fp;
-	//};
+		// Read the file contents into the buffer and return it
+		if (size != 0)
+		{
+			using Elem = std::remove_reference_t<decltype(buf[0])>;
+			auto size_in_elems = (size + sizeof(Elem) - 1) / sizeof(Elem);
 
-	////*****************************************************************************
-	//// Implementation
-	////*****
-	//// Length()
-	//inline std::size_t File::Length()
-	//{
-	//	long pos = ftell(m_fp);
-	//	long length = 0;
-	//	if( fseek(m_fp, 0L, SEEK_END) == 0 ) length = ftell(m_fp);
-	//	fseek(m_fp, pos, SEEK_SET);
-	//	return length;
-	//}
+			auto initial = buf.size();
+			buf.resize(initial + size_in_elems);
+			file.read(reinterpret_cast<char*>(&buf[initial]), size);
+		}
+		return true;
+	}
+	template <typename Buf, typename String> inline Buf FileToBuffer(String const& filepath, size_t ofs = 0, size_t len = ~size_t())
+	{
+		Buf buf;
+		if (!FileToBuffer(filepath, buf, ofs, len)) throw std::exception("Failed to read file");
+		return std::move(buf);
+	}
+	
+	// Write a buffer to a file.
+	// 'ofs' and 'len' are in units of bytes
+	template <typename String> inline bool BufferToFile(void const* buf, size_t ofs, size_t len, String const& filepath, bool append = false)
+	{
+		// Open the output file stream
+		std::ofstream file(filepath, std::ios::binary|(append ? std::ios::app : 0));
+		if (!file.good())
+			return false;
 
-	////*****
-	//// Read()
-	//inline std::size_t File::Read(void* buffer, std::size_t byte_count)
-	//{
-	//	return static_cast<std::size_t>(fread(buffer, sizeof(char), byte_count, m_fp));
-	//}
+		// Write the data to the file
+		file.write(static_cast<char const*>(buf) + ofs, len);
+		return true;
+	}
 
-	////*****
-	//// Returns the number of characters read including '\n'
-	//inline std::size_t File::ReadLine(void* buffer, std::size_t byte_count)
-	//{
-	//	long s = ftell(m_fp);
-	//	if( fgets(static_cast<char*>(buffer), (int)byte_count, m_fp) == 0 ) return 0;
-	//	return static_cast<std::size_t>(ftell(m_fp) - s);
-	//}
+	// Write a buffer to a file
+	// 'ofs' and 'len' are in units of 'Elem'
+	template <typename Buf, typename String, typename Elem = Buf::value_type>
+	inline bool BufferToFile(Buf const& buf, size_t ofs, size_t len, String const& filepath, bool append = false)
+	{
+		return buf.empty()
+			? BufferToFile(nullptr, 0U, 0U, filepath, append)
+			: BufferToFile(&buf[0], ofs * sizeof(Elem), len * sizeof(Elem), filepath, append);
+	}
 
-	////*****
-	//// Write()
-	//inline std::size_t File::Write(const void* buffer, std::size_t byte_count)
-	//{
-	//	return static_cast<std::size_t>(fwrite(buffer, sizeof(char), byte_count, m_fp));
-	//}
+	// Write a buffer to a file
+	template <typename Buf, typename String, typename Elem = Buf::value_type>
+	inline bool BufferToFile(Buf const& buf, String const& filepath, bool append = false)
+	{
+		return BufferToFile(buf, 0, buf.size(), filepath, append);
+	}
+}
 
-	////*****
-	//// Print()
-	//inline void File::Print(const char* str)
-	//{
-	//	fprintf(m_fp, "%s", str);
-	//}
-} // namespace pr
-
-#endif//PR_FILE_H
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_filesys_file)
+		{
+		}
+	}
+}
+#endif

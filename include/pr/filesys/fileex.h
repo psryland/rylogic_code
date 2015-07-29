@@ -231,51 +231,51 @@ namespace pr
 	inline FILETIME LastAccessTime(HANDLE handle)       { FILETIME access_time;   GetFileTime(handle, 0, &access_time, 0);   return access_time;   }
 	inline FILETIME LastModifiedTime(HANDLE handle)     { FILETIME modified_time; GetFileTime(handle, 0, 0, &modified_time); return modified_time; }
 	
-	// Fill a buffer with the contents of a file
-	// Note: the buffer could be a std::string
-	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing)
-	{
-		Handle h = FileOpen(filename, GENERIC_READ, sharing, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-		if (h == INVALID_HANDLE_VALUE)
-			return false;
-		
-		auto file_size = GetFileSize(h, 0);
-		auto buf_size = buffer.size();
-		buffer.resize(buf_size + file_size);
-		return FileRead(h, &buffer[buf_size], file_size);
-	}
-	template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer)
-	{
-		return FileToBuffer(filename, buffer, FILE_SHARE_READ|FILE_SHARE_WRITE);
-	}
-	template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename, DWORD sharing)
-	{
-		tbuf result;
-		if (!FileToBuffer(filename, result, sharing)) result.clear();
-		return result;
-	}
-	template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename)
-	{
-		return FileToBuffer(filename, FILE_SHARE_READ|FILE_SHARE_WRITE);
-	}
+	//// Fill a buffer with the contents of a file
+	//// Note: the buffer could be a std::string
+	//template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer, DWORD sharing)
+	//{
+	//	Handle h = FileOpen(filename, GENERIC_READ, sharing, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	//	if (h == INVALID_HANDLE_VALUE)
+	//		return false;
+	//	
+	//	auto file_size = GetFileSize(h, 0);
+	//	auto buf_size = buffer.size();
+	//	buffer.resize(buf_size + file_size);
+	//	return FileRead(h, &buffer[buf_size], file_size);
+	//}
+	//template <typename tchar, typename tbuf> inline bool FileToBuffer(tchar const* filename, tbuf& buffer)
+	//{
+	//	return FileToBuffer(filename, buffer, FILE_SHARE_READ|FILE_SHARE_WRITE);
+	//}
+	//template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename, DWORD sharing)
+	//{
+	//	tbuf result;
+	//	if (!FileToBuffer(filename, result, sharing)) result.clear();
+	//	return result;
+	//}
+	//template <typename tchar, typename tbuf> inline tbuf FileToBuffer(tchar const* filename)
+	//{
+	//	return FileToBuffer(filename, FILE_SHARE_READ|FILE_SHARE_WRITE);
+	//}
 
-	// Write a file with 'buffer' as the contents
-	// Note: 'buffer' may be a string
-	template <typename tchar> inline bool BufferToFile(void const* buffer, DWORD size, tchar const* filename, bool append)
-	{
-		Handle h = FileOpen(filename, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
-		return FileWrite(h, buffer, size);
-	}
-	template <typename tchar> inline bool BufferToFile(void const* buffer, DWORD size, tchar const* filename)
-	{
-		return BufferToFile(buffer, size, filename, false);
-	}
-	template <typename tchar, typename tbuf> inline bool BufferToFile(tbuf const& buffer, tchar const* filename, bool append)
-	{
-		return BufferToFile(&buffer[0], DWORD(buffer.size()), filename, append);
-	}
-	template <typename tchar, typename tbuf> inline bool BufferToFile(tbuf const& buffer, tchar const* filename)
-	{
-		return BufferToFile(buffer, filename, false);
-	}
+	//// Write a file with 'buffer' as the contents
+	//// Note: 'buffer' may be a string
+	//template <typename tchar> inline bool BufferToFile(void const* buffer, DWORD size, tchar const* filename, bool append)
+	//{
+	//	Handle h = FileOpen(filename, GENERIC_WRITE, FILE_SHARE_READ, 0, append ? OPEN_ALWAYS : CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+	//	return FileWrite(h, buffer, size);
+	//}
+	//template <typename tchar> inline bool BufferToFile(void const* buffer, DWORD size, tchar const* filename)
+	//{
+	//	return BufferToFile(buffer, size, filename, false);
+	//}
+	//template <typename tchar, typename tbuf> inline bool BufferToFile(tbuf const& buffer, tchar const* filename, bool append)
+	//{
+	//	return BufferToFile(&buffer[0], DWORD(buffer.size()), filename, append);
+	//}
+	//template <typename tchar, typename tbuf> inline bool BufferToFile(tbuf const& buffer, tchar const* filename)
+	//{
+	//	return BufferToFile(buffer, filename, false);
+	//}
 }
