@@ -46,6 +46,7 @@
 #include "pr/script/filter.h"
 #include "pr/storage/xml.h"
 #include "pr/threads/process.h"
+#include "pr/win32/win32.h"
 
 namespace cex
 {

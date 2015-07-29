@@ -18,12 +18,12 @@ namespace cex
 				"";
 		}
 
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
 
-		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineData(TArgIter& arg, TArgIter arg_end) override
 		{
 			return ICex::CmdLineData(arg, arg_end);
 		}

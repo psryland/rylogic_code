@@ -63,23 +63,22 @@ namespace cex
 		}
 
 		// Main program run
-		int Run(std::string args)
+		int Run(std::wstring args)
 		{
 			// Get the name of this executable
-			char exepath_[1024]; GetModuleFileNameA(0, exepath_, sizeof(exepath_));
-			std::string exepath = exepath_;
-			std::string path = pr::str::LowerCaseC(pr::filesys::GetDirectory(exepath));
-			std::string name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
-			std::string extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
+			auto exepath = pr::Win32<wchar_t>::ModuleFileName(nullptr);
+			auto path = pr::str::LowerCaseC(pr::filesys::GetDirectory(exepath));
+			auto name = pr::str::LowerCaseC(pr::filesys::GetFiletitle(exepath));
+			auto extn = pr::str::LowerCaseC(pr::filesys::GetExtension(exepath));
 
 			// Look for an xml file with the same name as this program in the local directory
-			std::string config = path + "\\" + name + ".xml";
+			auto config = path + L"\\" + name + L".xml";
 			if (pr::filesys::FileExists(config))
 				return RunFromXml(config, args);
 
 			// If the name of the exe is not 'cex', assume an implicit -exename as the first command line argument
-			if (name != "cex")
-				args.insert(0, pr::FmtS("-%s", name.c_str()));
+			if (name != L"cex")
+				args.insert(0, pr::FmtS(L"-%s", name.c_str()));
 
 			//NEW_COMMAND - Test the new command
 			//if (!args.empty()) printf("warning: debugging overriding arguments");
@@ -92,7 +91,7 @@ namespace cex
 			// Parse the command line, show help if invalid
 			try
 			{
-				if (!pr::EnumCommandLine(args.c_str(), *this))
+				if (!pr::EnumCommandLine(pr::Narrow(args).c_str(), *this))
 				{
 					ShowConsole();
 
@@ -122,7 +121,7 @@ namespace cex
 		}
 
 		// Read the option passed to Cex
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg ,pr::cmdline::TArgIter arg_end) override
+		bool CmdLineOption(std::string const& option, TArgIter& arg ,TArgIter arg_end) override
 		{
 			for (;;)
 			{
@@ -155,7 +154,7 @@ namespace cex
 		}
 
 		// Forward arg to the command
-		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineData(TArgIter& arg, TArgIter arg_end) override
 		{
 			for (;;)
 			{
@@ -166,24 +165,24 @@ namespace cex
 		}
 
 		// Read 'config' and execute
-		int RunFromXml(std::string config, std::string args)
+		int RunFromXml(std::wstring config, std::wstring args)
 		{
 			// Load the xml file
 			pr::xml::Node root;
 			try { pr::xml::Load(config.c_str(), root); }
 			catch (std::exception const& ex)
 			{
-				std::cout << "Failed to load " << config << std::endl << ex.what() << std::endl;
+				std::wcout << "Failed to load " << config << std::endl << ex.what() << std::endl;
 				return -1;
 			}
 
 			// Read elements from the xml file
-			std::string process, startdir;
+			std::wstring process, startdir;
 			for (auto& child : root.m_child)
 			{
-				if      (child == L"process" ) process  = child.as<std::string>();
-				else if (child == L"startdir") startdir = child.as<std::string>();
-				else if (child == L"arg"     ) args.append(args.empty() ? "" : " ").append(child.as<std::string>());
+				if      (child == L"process" ) process  = child.as<std::wstring>();
+				else if (child == L"startdir") startdir = child.as<std::wstring>();
+				else if (child == L"arg"     ) args.append(args.empty() ? L"" : L" ").append(child.as<std::wstring>());
 			}
 
 			// If a process name was given, execute it, take that virus scanner :)
@@ -200,7 +199,7 @@ namespace cex
 }
 
 // Run as a windows program so that the console window is not shown
-int __stdcall WinMain(HINSTANCE,HINSTANCE,LPSTR lpCmdLine,int)
+int __stdcall wWinMain(HINSTANCE,HINSTANCE,LPWSTR lpCmdLine,int)
 {
 	try
 	{
@@ -215,10 +214,10 @@ int __stdcall WinMain(HINSTANCE,HINSTANCE,LPSTR lpCmdLine,int)
 	}
 }
 
-int main(int argc, char* argv[])
+int wmain(int argc, wchar_t* argv[])
 {
 	cex::Main m;
-	std::string args;
-	for (int i = 1; i < argc; ++i) args.append(argv[i]).append(" ");
+	std::wstring args;
+	for (int i = 1; i < argc; ++i) args.append(argv[i]).append(L" ");
 	return m.Run(args);
 }

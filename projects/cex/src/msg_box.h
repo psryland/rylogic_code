@@ -27,7 +27,7 @@ namespace cex
 				" Syntax: Cex -msgbox -title \"title text\" -body \"body text\" -style style_id\n";
 		}
 
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
 			if (pr::str::EqualI(option, "-msgbox")) { return true; }
 			if (pr::str::EqualI(option, "-title") && arg != arg_end) { m_title = *arg++; return true; }

@@ -319,7 +319,7 @@ LRESULT CMainDlg::OnBnClickedCheckActivate(WORD, WORD, HWND, BOOL&)
 }
 
 // Handle command line arguments
-bool CMainDlg::CmdLineOption(std::string const& option, pr::cmdline::TArgIter&, pr::cmdline::TArgIter)
+bool CMainDlg::CmdLineOption(std::string const& option, TArgIter&, TArgIter)
 {
 	if (pr::str::EqualI(option, "-activate"))
 	{

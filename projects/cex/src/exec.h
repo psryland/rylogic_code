@@ -10,9 +10,9 @@ namespace cex
 {
 	struct Exec :ICex
 	{
-		std::string m_process;
-		std::string m_args;
-		std::string m_startdir;
+		std::wstring m_process;
+		std::wstring m_args;
+		std::wstring m_startdir;
 		bool m_async;
 
 		Exec()
@@ -37,12 +37,12 @@ namespace cex
 				"     By default this is the current directory\n";
 		}
 
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
-			if (pr::str::EqualI(option, "-exec"    ) && arg != arg_end) { m_args.append(!m_args.empty() ? " " : "").append(*arg++); return true; }
-			if (pr::str::EqualI(option, "-p"       ) && arg != arg_end) { m_process = *arg++; return true; }
+			if (pr::str::EqualI(option, "-exec"    ) && arg != arg_end) { m_args.append(!m_args.empty() ? L" " : L"").append(pr::Widen(*arg++)); return true; }
+			if (pr::str::EqualI(option, "-p"       ) && arg != arg_end) { m_process = pr::Widen(*arg++); return true; }
 			if (pr::str::EqualI(option, "-async"   ))                   { m_async = true; return true; }
-			if (pr::str::EqualI(option, "-startdir") && arg != arg_end) { m_startdir = *arg++; return true; }
+			if (pr::str::EqualI(option, "-startdir") && arg != arg_end) { m_startdir = pr::Widen(*arg++); return true; }
 			return ICex::CmdLineOption(option, arg, arg_end);
 		}
 

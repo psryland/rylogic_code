@@ -15,7 +15,7 @@ namespace cex
 
 		OpenVS();
 		void ShowHelp() const override;
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override;
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override;
 		int Run() override;
 	};
 }

@@ -9,7 +9,7 @@ class CMainDlg
 	,public CWinDataExchange<CMainDlg>
 	,public CMessageFilter
 	,public CIdleHandler
-	,public pr::cmdline::IOptionReceiver
+	,public pr::cmdline::IOptionReceiver<>
 {
 	CEdit               m_ctrl_window_title;
 	CEdit               m_ctrl_control_type;
@@ -83,7 +83,7 @@ public:
 	END_DDX_MAP()
 
 private:
-	bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end);
+	bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end);
 	void CloseApp(int exit_code);
 	void Activate(bool on);
 	void UpdateUI();

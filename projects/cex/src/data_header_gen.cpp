@@ -27,7 +27,7 @@ namespace cex
 			"  -v   : verbose output\n";
 	}
 
-	bool HData::CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	bool HData::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 	{
 		if (pr::str::EqualI(option, "-f") && arg != arg_end) { m_src = *arg++; return true; }
 		if (pr::str::EqualI(option, "-o") && arg != arg_end) { m_dst = *arg++; return true; }
@@ -36,7 +36,7 @@ namespace cex
 		return ICex::CmdLineOption(option, arg, arg_end);
 	}
 
-	bool HData::CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	bool HData::CmdLineData(TArgIter& arg, TArgIter arg_end)
 	{
 		return ICex::CmdLineData(arg, arg_end);
 	}

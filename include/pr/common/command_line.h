@@ -7,8 +7,8 @@
 //	{
 //		std::string m_input_filename;
 //		std::string m_output_filename;
-//		bool CmdLineData(pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) { ++arg; return true; }
-//		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+//		bool CmdLineData(TArgIter& arg, TArgIter arg_end) { ++arg; return true; }
+//		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 //		{
 //			if      (pr::str::EqualI(option, "-I") && arg != arg_end) { m_input_filename  = *arg++; return true; }
 //			else if (pr::str::EqualI(option, "-O") && arg != arg_end) { m_output_filename = *arg++; return true; }
@@ -35,16 +35,22 @@ namespace pr
 {
 	namespace cmdline
 	{
-		typedef std::vector<std::string> TArgs;
-		typedef TArgs::const_iterator TArgIter;
-
 		// Helper to test if 'str' is of the form '-xyz'
-		inline bool IsOption(std::string const& str) { return str.size() >= 2 && str[0] == '-'; }
+		template <typename Char> inline bool IsOption(std::basic_string<Char> const& str)
+		{
+			return str.size() >= 2 && str[0] == '-';
+		}
 
 		// Interface for receiving command line options
 		// Return true for more options
-		struct IOptionReceiver
+		template <typename Char = char> struct IOptionReceiver
 		{
+			using OptionString = std::basic_string<Char>;
+			using TArgs        = std::vector<OptionString>;
+			using TArgIter     = typename TArgs::const_iterator;
+
+			virtual ~IOptionReceiver() {}
+
 			// Called for anything not preceded by '-'.
 			// The caller should advance 'arg' for each argument read.
 			// Return true to continue parsing, false to abort parsing, or
@@ -59,19 +65,20 @@ namespace pr
 			// The caller should advance 'arg' for each argument read.
 			// Return true to continue parsing, false to abort parsing, or
 			// set arg = arg_end to end parsing and have true returned.
-			virtual bool CmdLineOption(std::string const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
+			virtual bool CmdLineOption(OptionString const& /*option*/, TArgIter& /*arg*/, TArgIter /*arg_end*/) { return true; }
 		};
 	}
 	
 	// Parse a range of command line arguments
 	// Returns true if all command line parameters were parsed
-	inline bool EnumCommandLine(pr::cmdline::TArgIter arg, pr::cmdline::TArgIter arg_end, pr::cmdline::IOptionReceiver& receiver)
+	template <typename Char = char, typename TArgIter = cmdline::IOptionReceiver<Char>::TArgIter>
+	inline bool EnumCommandLine(TArgIter arg, TArgIter arg_end, cmdline::IOptionReceiver<Char>& receiver)
 	{
 		for (;arg != arg_end;)
 		{
-			if (pr::cmdline::IsOption(*arg))
+			if (cmdline::IsOption(*arg))
 			{
-				pr::cmdline::TArgIter option = arg++;
+				auto option = arg++;
 				if (!receiver.CmdLineOption(*option, arg, arg_end))
 					return false;
 			}
@@ -86,22 +93,25 @@ namespace pr
 	
 	// Parse console program style command line arguments
 	// Returns true if all command line parameters were parsed
-	inline bool EnumCommandLine(int argc, char* argv[], pr::cmdline::IOptionReceiver& receiver)
+	template <typename Char = char>
+	inline bool EnumCommandLine(int argc, Char* argv[], cmdline::IOptionReceiver<Char>& receiver)
 	{
 		// Note: ignoring the argv[0] parameter to make both versions of 'EnumCommandLine'
 		// consistent. Programs that want the executable name should use:
 		//  char exepath[1024]; GetModuleFileName(0, exepath, sizeof(exepath));
-		pr::cmdline::TArgs args;
+		typename cmdline::IOptionReceiver<Char>::TArgs args;
 		for (int i = 1; i < argc; ++i) { args.push_back(argv[i]); }
 		return argc == 0 || EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 	
 	// Parse windows program style command line arguments
 	// Returns true if all command line parameters were parsed
-	inline bool EnumCommandLine(char const* cmd_line, pr::cmdline::IOptionReceiver& receiver)
+	template <typename Char = char>
+	inline bool EnumCommandLine(Char const* cmd_line, cmdline::IOptionReceiver<Char>& receiver)
 	{
-		pr::cmdline::TArgs args;
-		pr::str::Tokenise(cmd_line, args, " \t\r\n\v");
+		typename cmdline::IOptionReceiver<Char>::TArgs args;
+		Char const delim[] = {' ','\t','\r','\n','\v',0};
+		pr::str::Tokenise(cmd_line, args, delim);
 		return args.empty() || EnumCommandLine(args.begin(), args.end(), receiver);
 	}
 }

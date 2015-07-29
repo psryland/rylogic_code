@@ -29,7 +29,7 @@ namespace cex
 			" Syntax: Cex -openvs \"filename\":line_number\n";
 	}
 
-	bool OpenVS::CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	bool OpenVS::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 	{
 		if (pr::str::EqualI(option, "-openvs"))
 		{

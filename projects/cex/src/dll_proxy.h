@@ -66,7 +66,7 @@ namespace cex
 				"  -compile    : attempt to compile the proxy dll using Cl.exe and Link.exe\n (default:false)"
 				"\n";
 		}
-		bool CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end) override
+		bool CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end) override
 		{
 			if (pr::str::EqualI(option, "-dllproxy"))
 			{

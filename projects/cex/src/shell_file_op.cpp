@@ -64,7 +64,7 @@ R"(Shell File Operation : Perform a file operation using the windows explorer sh
 )";
 	}
 
-	bool ShFileOp::CmdLineOption(std::string const& option, pr::cmdline::TArgIter& arg, pr::cmdline::TArgIter arg_end)
+	bool ShFileOp::CmdLineOption(std::string const& option, TArgIter& arg, TArgIter arg_end)
 	{
 		struct Read
 		{
