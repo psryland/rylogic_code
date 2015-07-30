@@ -31,7 +31,7 @@ namespace pr
 			m_undo();
 		}
 		Scope(Scope&& rhs)
-			:m_doit(rhs.doit)
+			:m_doit(rhs.m_doit)
 			,m_undo(rhs.m_undo)
 			,m_do_undo(true)
 		{
@@ -46,7 +46,7 @@ namespace pr
 	// Create a scope object from two lambda functions
 	template <typename Doit, typename Undo> auto CreateScope(Doit doit, Undo undo) -> Scope<Doit,Undo>
 	{
-		return Scope<Doit,Undo>(doit,undo);
+		return std::move(Scope<Doit,Undo>(doit,undo));
 	}
 
 	// A scope object with state
