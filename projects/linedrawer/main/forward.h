@@ -67,6 +67,7 @@
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
 #include "pr/network/web_get.h"
 #include "pr/storage/xml.h"
+#include "pr/win32/win32.h"
 
 #define LDR_EXPORTS 1
 #include "pr/linedrawer/ldr_plugin_interface.h"

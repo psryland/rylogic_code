@@ -20,8 +20,8 @@ namespace pr
 */
 #include <algorithm>
 #include "pr/common/unittests.h"
-#include "unittests/unittests.h" // all tests
-//#include "pr/filesys/file.h"
+//#include "unittests/unittests.h" // all tests
+#include "pr/win32/win32.h"
 
 // For faster build times, comment out the 'all headers' include
 // and just include the header you care about

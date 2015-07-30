@@ -187,7 +187,7 @@ namespace pr
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
 		enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
-		enum { DefaultFormStyleEx = WS_EX_OVERLAPPEDWINDOW | WS_EX_APPWINDOW };
+		enum { DefaultFormStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE };
 
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
 		enum { DefaultDialogStyle = DefaultFormStyle };
@@ -2886,6 +2886,7 @@ namespace pr
 		protected:
 			template <typename D> friend struct Form;
 			friend struct Control;
+			enum { IDC_PINWINDOW = 1337 };
 
 			HINSTANCE   m_hinst;            // Module instance
 			bool        m_app_main_window;  // True if this is the main application window
@@ -2896,6 +2897,7 @@ namespace pr
 			bool        m_dialog_behaviour; // True if the form is a modal or modeless dialog (determines whether IsDialogMessage() is called)
 			bool        m_modal;            // True if this is a dialog being displayed modally
 			bool        m_hide_on_close;    // True if the window should just hide when closed
+			bool        m_pin_window;       // True if this window is pinned to its parent
 
 			// Default win class info
 			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
@@ -2956,6 +2958,13 @@ namespace pr
 						// before doing whatever they need to do in WM_INITDIALOG. This is so that
 						// child controls get attached.
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+
+						auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
+						if (sysmenu)
+						{
+							::InsertMenuW(sysmenu, 5, MF_BYPOSITION|MF_SEPARATOR, 0, 0);
+							::InsertMenuW(sysmenu, 6, MF_BYPOSITION|MF_STRING, IDC_PINWINDOW, L"Pin Window");
+						}
 						return false;
 					}
 				case WM_CLOSE:
@@ -2992,6 +3001,16 @@ namespace pr
 							return true;
 						else
 							return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+					}
+				case WM_SYSCOMMAND:
+					{
+						auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
+						if (id == IDC_PINWINDOW)
+						{
+							PinWindow(!PinWindow());
+							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
+							return true;
+						}
 					}
 				case WM_DROPFILES:
 				case WM_NOTIFY:
@@ -3054,6 +3073,7 @@ namespace pr
 				,m_dialog_behaviour(dlg)
 				,m_modal(false)
 				,m_hide_on_close(false)
+				,m_pin_window(false)
 			{}
 
 		public:
@@ -3254,6 +3274,16 @@ namespace pr
 			// Get/Set whether the window closes or just hides when closed
 			bool HideOnClose() const { return m_hide_on_close; }
 			void HideOnClose(bool enable) { m_hide_on_close = enable; }
+
+			// Get/Set whether the window is pinned to it's parent
+			bool PinWindow() const { return m_pin_window; }
+			void PinWindow(bool pin)
+			{
+				if (m_parent == nullptr)
+					return;
+
+				m_pin_window = pin;
+			}
 
 			// Set the parent of this form
 			void Parent(ParentRef parent) override

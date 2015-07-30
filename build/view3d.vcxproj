@@ -163,7 +163,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h" />
-    <ClInclude Include="..\include\pr\gui\scintilla.h" />
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
@@ -190,6 +190,7 @@
     <ClInclude Include="..\include\pr\script\token.h" />
     <ClInclude Include="..\include\pr\script\tokeniser.h" />
     <ClInclude Include="..\include\pr\view3d\prmaths.h" />
+    <ClInclude Include="..\include\pr\win32\win32.h" />
     <ClInclude Include="..\projects\view3d\context.h" />
     <ClInclude Include="..\projects\view3d\forward.h" />
     <ClInclude Include="..\include\pr\view3d\view3d.h" />

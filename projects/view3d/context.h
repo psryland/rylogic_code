@@ -11,7 +11,7 @@ namespace view3d
 	// Global data for this dll
 	struct Context :pr::AlignTo<16>
 	{
-		typedef std::set<View3DContext> InitSet;
+		using InitSet = std::set<View3DContext>;
 
 		InitSet                   m_inits;            // A unique id assigned to each Initialise call
 		ErrorCBStack              m_error_cb;         // A stack of error callback functions
@@ -34,6 +34,7 @@ namespace view3d
 			,m_lua()
 			,m_mutex()
 		{
+			pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll", L".\\lib\\$(platform)");
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 			AtlInitCommonControls(ICC_WIN95_CLASSES); // add flags to support other controls
 		}

@@ -12,6 +12,7 @@
 #include "pr/gui/wingui.h"
 #include "pr/gui/scintilla_ctrl.h"
 #include "pr/linedrawer/ldr_script_editor_dlg.h"
+#include "pr/win32/win32.h"
 
 using namespace pr::gui;
 
@@ -44,6 +45,7 @@ namespace pr
 			// Construct the dialog template for this dialog
 			static DlgTemplate Templ()
 			{
+				pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 				int const menu_height = 10;//::GetSystemMetrics(SM_CYMENU);
 				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, Style, StyleEx);
 				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5 + menu_height, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
@@ -104,6 +106,10 @@ namespace pr
 								if (!Render) return;
 								auto text = m_edit.Text();
 								Render(pr::Widen(text));
+							};
+						m_btn_close.Click += [&](Button&, EmptyArgs const&)
+							{
+								Close(EDialogResult::Close);
 							};
 
 						return false;

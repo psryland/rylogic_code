@@ -25,6 +25,9 @@
     <Filter Include="src\pr\gui">
       <UniqueIdentifier>{5a5d25db-8b40-43ab-b93e-6590684aa9b8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\pr\win32">
+      <UniqueIdentifier>{3283cba4-3b91-4635-a737-050334dd9891}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h">
@@ -117,11 +120,14 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h">
       <Filter>src\pr\linedrawer</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\scintilla.h">
-      <Filter>src\pr\gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
       <Filter>src\pr\linedrawer</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
+      <Filter>src\pr\gui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\win32\win32.h">
+      <Filter>src\pr\win32</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

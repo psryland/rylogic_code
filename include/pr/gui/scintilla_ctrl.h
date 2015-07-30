@@ -19,12 +19,7 @@ namespace pr
 			enum { DefW = 50, DefH = 50 };
 			static DWORD const DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP;
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx | WS_EX_STATICEDGE; // NOT WS_BORDER|
-			static wchar_t const* WndClassName()
-			{
-				// Access the Scintilla direct function to ensure the library is loaded
-				if (::LoadLibraryW(L"scintilla") == 0) throw std::exception("Scintilla dll failed to load");
-				return L"Scintilla";
-			}
+			static wchar_t const* WndClassName() { return L"Scintilla"; }
 
 			#pragma region Helpers
 			struct TxtRng :Sci_TextRange

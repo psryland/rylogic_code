@@ -23,7 +23,6 @@
 #include <string>
 #include <algorithm>
 #include <cassert>
-#include <windows.h>
 
 namespace pr
 {
@@ -131,12 +130,6 @@ namespace pr
 
 			inline int stat64(char const* filepath, struct __stat64* info)    { return _stat64(filepath, info); }
 			inline int stat64(wchar_t const* filepath, struct __stat64* info) { return _wstat64(filepath, info); }
-
-			inline size_t module_name(char* buffer, size_t buf_count) { return ::GetModuleFileNameA(nullptr, buffer, DWORD(buf_count)); }
-			inline size_t module_name(wchar_t* buffer, size_t buf_count) { return ::GetModuleFileNameW(nullptr, buffer, DWORD(buf_count)); }
-
-			inline bool replace(char const* replacee, char const* replacer) { return ::ReplaceFileA(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0; }
-			inline bool replace(wchar_t const* replacee, wchar_t const* replacer) { return ::ReplaceFileW(replacee, replacer, nullptr, REPLACEFILE_WRITE_THROUGH|REPLACEFILE_IGNORE_MERGE_ERRORS, nullptr, nullptr) != 0; }
 		}
 
 		// Return true if 'ch' is a directory marker
@@ -534,8 +527,8 @@ namespace pr
 		// Move 'src' to 'dst' replacing 'dst' if it already exists
 		template <typename String> inline bool RepFile(String const& src, String const& dst)
 		{
-			if (!FileExists(dst)) return RenameFile(src, dst);
-			return impl::replace(c_str(dst), c_str(src));
+			if (FileExists(dst)) EraseFile(dst);
+			return RenameFile(src, dst);
 		}
 
 		// Return the length of a file, without opening it
@@ -680,7 +673,7 @@ namespace pr
 		}
 
 		// Insert 'prefix' before, and 'postfix' after the file title in 'path', without modifying the extension
-		template <typename String, typename Char = String::value_type> inline String ChangeFilename(String const& path, String const& prefix, String const& postfix)
+		template <typename String, typename Char = String::value_type> inline String ChangeFilename(String const& path, decltype(path) prefix, decltype(path) postfix)
 		{
 			String s = path;
 			RmvFilename(s);
@@ -694,10 +687,14 @@ namespace pr
 		}
 
 		// Combine two path fragments into a combined path
-		template <typename String, typename Char = String::value_type> inline String CombinePath(String const& lhs, String const& rhs)
+		template <typename String> inline String CombinePath(String const& lhs, decltype(lhs) rhs)
 		{
 			if (IsFullPath(rhs)) return rhs;
-			return CanonicaliseC(RemoveLastBackSlashC(lhs) + Char('\\') + RemoveLeadingBackSlashC(rhs));
+			return CanonicaliseC(RemoveLastBackSlashC(lhs).append(1,'\\').append(RemoveLeadingBackSlashC(rhs)));
+		}
+		template <typename String, typename... Parts> inline String CombinePath(String const& lhs, decltype(lhs) rhs, Parts&&... rest)
+		{
+			return CombinePath(CombinePath(lhs, rhs), rest...);
 		}
 
 		// Convert a relative path into a full path
@@ -743,15 +740,6 @@ namespace pr
 			}
 			while (d != String::npos);
 			return path;
-		}
-
-		// Return the name of the currently running executable
-		template <typename String, typename Char = String::value_type> inline String ExePath()
-		{
-			Char temp[MAX_PATH];
-			auto len = impl::module_name(temp, _countof(temp));
-			temp[len] = 0;
-			return temp;
 		}
 
 		// Attempt to resolve a partial filepath given a list of directories to search
@@ -806,6 +794,7 @@ namespace pr
 }
 
 #if PR_UNITTESTS
+#include <fstream>
 #include "pr/common/unittests.h"
 #include "pr/common/flags_enum.h"
 namespace pr

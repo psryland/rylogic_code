@@ -20,6 +20,9 @@
 #include <cstdarg>
 #include <cassert>
 
+// Use this define to declare a string literal in a function templated on 'tchar'
+#define PR_STRLITERAL(tchar,s)  pr::str::char_traits<tchar>::str(s, L##s)
+
 namespace pr
 {
 	#pragma region Locale
@@ -152,9 +155,6 @@ namespace pr
 		template <> struct char_traits<wchar_t&      > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const > :char_traits<wchar_t> {};
 		template <> struct char_traits<wchar_t const&> :char_traits<wchar_t const> {};
-
-		// Use this define to declare a string literal in a function templated on 'tchar'
-		#define PR_STRLITERAL(tchar,s)  char_traits<tchar>::str(s, L##s)
 
 		#pragma endregion
 
