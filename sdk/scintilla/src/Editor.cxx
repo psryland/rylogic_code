@@ -7328,7 +7328,7 @@ int Editor::WrapCount(int line) {
 	}
 }
 
-void Editor::AddStyledText(char *buffer, int appendLength) {
+void Editor::AddStyledText(char *buffer, int appendLength, bool moveSelection) {
 	// The buffer consists of alternating character bytes and style bytes
 	int textLength = appendLength / 2;
 	std::string text(textLength, '\0');
@@ -7342,7 +7342,8 @@ void Editor::AddStyledText(char *buffer, int appendLength) {
 	}
 	pdoc->StartStyling(CurrentPosition(), static_cast<unsigned char>(0xff));
 	pdoc->SetStyles(textLength, text.c_str());
-	SetEmptySelection(sel.MainCaret() + lengthInserted);
+	if (moveSelection)
+		SetEmptySelection(sel.MainCaret() + lengthInserted);
 }
 
 static bool ValidMargin(uptr_t wParam) {
@@ -7822,9 +7823,10 @@ sptr_t Editor::WndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) {
 			return 0;
 		}
 
+	case SCI_APPENDSTYLEDTEXT:
 	case SCI_ADDSTYLEDTEXT:
 		if (lParam)
-			AddStyledText(CharPtrFromSPtr(lParam), static_cast<int>(wParam));
+			AddStyledText(CharPtrFromSPtr(lParam), static_cast<int>(wParam), iMessage == SCI_ADDSTYLEDTEXT);
 		return 0;
 
 	case SCI_INSERTTEXT: {

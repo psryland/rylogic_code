@@ -41,7 +41,7 @@ namespace pr
 			ScintillaCtrl(wchar_t const* text
 				,int x, int y, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
-				,Control* parent = nullptr
+				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
@@ -51,7 +51,7 @@ namespace pr
 				//not needed, WM_CREATE initialises this ,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
 				//not needed, WM_CREATE initialises this ,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
 			{}
-			ScintillaCtrl(int id = IDC_UNUSED, Control* parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
+			ScintillaCtrl(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
 				:Control(id, parent, anchor, name)
 				,m_snd()
 				,m_ptr()

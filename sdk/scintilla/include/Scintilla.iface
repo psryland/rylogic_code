@@ -1291,6 +1291,11 @@ get bool GetVScrollBar=2281(,)
 # Append a string to the end of the document without changing the selection.
 fun void AppendText=2282(int length, string text)
 
+# Append styled text (an array of cells) to the end of the document without
+# changing the selection. Same as AppendText. 'length' is the size of the array
+# in bytes, i.e. 2x the length of the text.
+fun void AppendStyledText=2294(int length, cells c)
+
 # Is drawing done in two phases with backgrounds drawn before faoregrounds?
 get bool GetTwoPhaseDraw=2283(,)
 

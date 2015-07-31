@@ -1749,7 +1749,7 @@ namespace pr.gfx
 				var len = TextLength;
 				using (var bytes = MarshalEx.AllocHGlobal(len + 1))
 				{
-					var num = Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXT, (IntPtr)(len + 1), bytes.State);
+					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes.State);
 					return Marshal.PtrToStringAnsi(bytes.State, num);
 				}
 			}
@@ -1762,7 +1762,7 @@ namespace pr.gfx
 				else
 				{
 					using (var str = MarshalEx.AllocAnsiString(text))
-						Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_SETTEXT, IntPtr.Zero, str.State);
+						Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_SETTEXT, IntPtr.Zero, str.State);
 				}
 
 				TextChanged.Raise(this);
@@ -1771,13 +1771,13 @@ namespace pr.gfx
 			/// <summary>Clear all text from the control</summary>
 			public void ClearAll()
 			{
-				Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_CLEARALL, IntPtr.Zero, IntPtr.Zero);
+				Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_CLEARALL, IntPtr.Zero, IntPtr.Zero);
 			}
 
 			/// <summary>Gets the length of the text in the control</summary>
 			public int TextLength
 			{
-				get { return m_text != null ? m_text.Length : Win32.SendMessage(m_ctrl, pr.gui.Scintilla.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
+				get { return m_text != null ? m_text.Length : Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXTLENGTH, IntPtr.Zero, IntPtr.Zero); }
 			}
 
 			/// <summary>Gets or sets the current text</summary>

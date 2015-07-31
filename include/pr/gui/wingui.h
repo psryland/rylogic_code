@@ -1527,9 +1527,9 @@ namespace pr
 				Control* m_ctrl;
 				HWND     m_hwnd;
 
-				ParentRef(nullptr_t)                          :m_ctrl()       ,m_hwnd()                      {}
-				ParentRef(HWND hwnd)                          :m_ctrl()       ,m_hwnd(hwnd)                  {}
-				ParentRef(Control* parent)                    :m_ctrl(parent) ,m_hwnd(*parent)               {}
+				ParentRef(nullptr_t)                          :m_ctrl()       ,m_hwnd() {}
+				ParentRef(HWND hwnd)                          :m_ctrl()       ,m_hwnd(hwnd) {}
+				ParentRef(Control* parent)                    :m_ctrl(parent) ,m_hwnd(parent ? HWND(*parent) : HWND(nullptr)) {}
 				ParentRef(ApplicationMainWindowHandle const&) :m_ctrl()       ,m_hwnd(ApplicationMainWindow) {}
 
 				// Choose 'm_ctrl' for implicit bool because 
@@ -2066,6 +2066,8 @@ namespace pr
 				assert(id == m_id && "Id value too large");
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
 			}
+			Control(Control&&) = delete;
+			Control(Control const&) = delete;
 
 			// Create the hwnd for this control. Derived types should call this
 			virtual void Create(wchar_t const* wndclass_name, wchar_t const* text

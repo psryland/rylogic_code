@@ -98,6 +98,9 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\sdk\scintilla\include\Scintilla.cs">
+      <Link>gui\Scintilla.cs</Link>
+    </Compile>
     <Compile Include="attrib\assoc_attr.cs" />
     <Compile Include="attrib\desc_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
@@ -248,7 +251,7 @@
     <Compile Include="gui\rich_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="gui\scintilla.cs" />
+    <Compile Include="gui\scintilla_ctrl.cs" />
     <Compile Include="gui\select_directories_ui.cs">
       <SubType>Form</SubType>
     </Compile>

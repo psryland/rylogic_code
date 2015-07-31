@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
@@ -15,6 +17,8 @@ using pr.win32;
 
 namespace pr.gui
 {
+	using Timer = System.Windows.Forms.Timer;
+
 	/// <summary>
 	/// VT terminal emulation
 	/// see: http://ascii-table.com/ansi-escape-sequences.php
@@ -25,6 +29,8 @@ namespace pr.gui
 		[TypeConverter(typeof(Settings.TyConv))]
 		public class Settings :SettingsSet<Settings>
 		{
+			// Note: some of the values in here are cached for performance
+
 			/// <summary>True if input characters should be echoed into the screen buffer</summary>
 			public bool LocalEcho
 			{
@@ -35,23 +41,26 @@ namespace pr.gui
 			/// <summary>Get/Set the width of the terminal in columns</summary>
 			public int TerminalWidth
 			{
-				get { return get(x => x.TerminalWidth); }
-				set { set(x => x.TerminalWidth, value); }
+				get { return (m_cached_terminal_width ?? (m_cached_terminal_width = get(x => x.TerminalWidth))).Value; }
+				set { set(x => x.TerminalWidth, m_cached_terminal_width = value); }
 			}
+			private int? m_cached_terminal_width;
 
 			/// <summary>Get/Set the height of the terminal in lines</summary>
 			public int TerminalHeight
 			{
-				get { return get(x => x.TerminalHeight); }
-				set { set(x => x.TerminalHeight, value); }
+				get { return (m_cached_terminal_height ?? (m_cached_terminal_height = get(x => x.TerminalHeight))).Value; }
+				set { set(x => x.TerminalHeight, m_cached_terminal_height = value); }
 			}
+			private int? m_cached_terminal_height;
 
 			/// <summary>Get/Set the tab size in characters</summary>
 			public int TabSize
 			{
-				get { return get(x => x.TabSize); }
-				set { set(x => x.TabSize, value); }
+				get { return (m_cached_tab_size ?? (m_cached_tab_size = get(x => x.TabSize))).Value; }
+				set { set(x => x.TabSize, m_cached_tab_size = value); }
 			}
+			private int? m_cached_tab_size;
 
 			/// <summary>Get/Set the newline mode for received newlines</summary>
 			public ENewLineMode NewlineRecv
@@ -213,6 +222,14 @@ namespace pr.gui
 			{
 				return m_col == rhs.m_col && m_sty == rhs.m_sty;
 			}
+			public override bool Equals(object obj)
+			{
+				return obj is Style && Equal((Style)obj);
+			}
+			public override int GetHashCode()
+			{
+				return m_col.GetHashCode() * 137 ^ m_sty.GetHashCode();
+			}
 			public override string ToString()
 			{
 				return "col: {0} sty: {1}".Fmt(m_col, m_sty);
@@ -254,6 +271,7 @@ namespace pr.gui
 				set
 				{
 					if (i >= size) resize(i + 1, ' ', m_styl.LastOrDefault());
+					Debug.Assert(value.m_char != 0);
 					m_line[i] = value.m_char;
 					m_styl[i] = value.m_styl;
 				}
@@ -285,6 +303,7 @@ namespace pr.gui
 			/// <summary>Set the line size</summary>
 			public void resize(int newsize, char fill, Style style)
 			{
+				Debug.Assert(fill != 0);
 				m_line.Resize(newsize, fill);
 				m_styl.Resize(newsize, () => style);
 			}
@@ -302,12 +321,11 @@ namespace pr.gui
 			public void write(int col, string str, int ofs, int count, Style style)
 			{
 				if (size < col + count)
-				{
-					m_line.Resize(col + count, ' ');
-					m_styl.Resize(col + count, () => new Style());
-				}
+					resize(col + count, ' ', new Style());
+
 				for (; count-- != 0; ++ofs, ++col)
 				{
+					Debug.Assert(str[ofs] != 0 && str[ofs] != '\n'); // don't write nulls or newlines into buffer lines
 					m_line[col] = str[ofs];
 					m_styl[col] = style;
 				}
@@ -487,11 +505,24 @@ namespace pr.gui
 			/// Parses the text for vt100 control sequences.</summary>
 			public void Output(string text)
 			{
-				if (Settings.HexOutput)
-					OutputHex(text);
-				else
-					ParseOutput(text);
+				// Guard against multiple threads calling this method
+				if (m_output_thread == null) m_output_thread = Thread.CurrentThread.ManagedThreadId;
+				if (m_output_thread != null && m_output_thread.Value != Thread.CurrentThread.ManagedThreadId)
+					throw new Exception("Cross thread call to VT100.Buffer.Output");
+
+				if (m_parsing)
+					throw new Exception("Re-entrant call to 'Output'");
+
+				using (Scope.Create(() => m_parsing = true, () => m_parsing = false))
+				{
+					if (Settings.HexOutput)
+						OutputHex(text);
+					else
+						ParseOutput(text);
+				}
 			}
+			private int? m_output_thread;
+			private bool m_parsing;
 
 			/// <summary>Clear the entire buffer</summary>
 			public void Clear()
@@ -571,7 +602,7 @@ namespace pr.gui
 				}
 				if (i != 0) { Write(hex.Append(' ', 3*(16-i)).Append(" | ").Append(str).Append('\n').ToString()); }
 			}
-	
+
 			/// <summary>Parse the vt100 console text in 'text'</summary>
 			private void ParseOutput(string text)
 			{
@@ -603,7 +634,7 @@ namespace pr.gui
 						if (c == '\b') m_out.pos = MoveCaret(m_out.pos, -1, 0);
 						if (c == '\r') m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 0);
 						if (c == '\n') m_out.pos = MoveCaret(m_out.pos, 0, 1);
-						if (c == '\t') m_out.pos = MoveCaret(m_out.pos, Settings.TabSize - (m_out.pos.X % Settings.TabSize), 0);
+						if (c == '\t') Write(new string(' ', Settings.TabSize - (m_out.pos.X % Settings.TabSize)));
 						++e;
 						s = e;
 					}
@@ -834,7 +865,7 @@ namespace pr.gui
 						case 'm':
 							#region Esc[#m - Text mode
 							{
-								var modes = Params(5, m_seq, 2, -1);
+								var modes = Params(1, m_seq, 2, -1);
 								foreach (var m in modes)
 								{
 									switch (m)
@@ -855,6 +886,15 @@ namespace pr.gui
 									case 4: //Esc[4m Turn underline mode on SGR4
 										m_out.style.Underline = true;
 										break;
+									case 5: //Esc[5m Turn blinking mode on SGR5
+										m_out.style.Blink = true;
+										break;
+									case 7: //Esc[7m Turn reverse video on SGR7
+										m_out.style.RevserseVideo = true;
+										break;
+									case 8: //Esc[8m Turn invisible text mode on SGR8
+										m_out.style.Concealed = true;
+										break;
 
 									case 30: m_out.style.ForeColour = (byte)(0x8 | HBGR.Black  ); break; // forecolour
 									case 31: m_out.style.ForeColour = (byte)(0x8 | HBGR.Red    ); break;
@@ -873,10 +913,6 @@ namespace pr.gui
 									case 45: m_out.style.BackColour = (byte)(0x8 | HBGR.Magenta); break;
 									case 46: m_out.style.BackColour = (byte)(0x8 | HBGR.Cyan   ); break;
 									case 47: m_out.style.BackColour = (byte)(0x8 | HBGR.White  ); break;
-
-									//Esc[5m	Turn blinking mode on	SGR5
-									//Esc[7m	Turn reverse video on	SGR7
-									//Esc[8m	Turn invisible text mode on	SGR8
 									}
 								}
 								break;
@@ -1105,12 +1141,17 @@ namespace pr.gui
 				m_parms.Clear();
 				for (int e, s = beg;;)
 				{
+					// Find the end of the next parameter
 					for (e = s; e != end && param_string[e] != ';'; ++e) {}
-					int value; m_parms.Add(int.TryParse(param_string.ToString(s, e - s), out value) ? value : 0);
+
+					// Add the parameter
+					int value;
+					m_parms.Add(int.TryParse(param_string.ToString(s, e - s), out value) ? value : 0);
+
 					if (e == end) break;
 					s = e + 1;
 				}
-				for (;m_parms.Count != N;)
+				for (;m_parms.Count < N;)
 				{
 					m_parms.Add(0);
 				}
@@ -1127,7 +1168,7 @@ namespace pr.gui
 					m_lines.RemoveRange(0, y - Settings.TerminalHeight + 1);
 				}
 
-				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth - 1), Maths.Clamp(y, 0, Settings.TerminalHeight - 1));
+				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth), Maths.Clamp(y, 0, Settings.TerminalHeight));
 				return loc;
 			}
 
@@ -1143,12 +1184,13 @@ namespace pr.gui
 			/// 'str' should not contain any non-printable characters (including \n,\r). These are removed by ParseOutput</summary>
 			private void Write(string str, int ofs = 0, int count = int.MaxValue)
 			{
-				Debug.Assert(m_out.pos.X >= 0 && m_out.pos.X < Settings.TerminalWidth, "Caret outside screen buffer");
-				Debug.Assert(m_out.pos.Y >= 0 && m_out.pos.Y < Settings.TerminalHeight, "Caret outside screen buffer");
+				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
+				if (m_out.pos.Y < 0 || m_out.pos.Y > Settings.TerminalHeight) throw new Exception("Caret outside screen buffer");
 				if (count == 0) return;
 
 				// Limit 'count' to the size of the terminal and the maximum string length
 				count = Math.Min(count, str.Length - ofs);
+				var clipped = count > Settings.TerminalWidth - m_out.pos.X;
 				count = Math.Min(count, Settings.TerminalWidth - m_out.pos.X);
 
 				// Get the line and ensure it's large enough
@@ -1158,6 +1200,8 @@ namespace pr.gui
 
 				// Write the string
 				line.write(m_out.pos.X, str, ofs, count, m_out.style);
+				if (clipped)
+					line.write(Settings.TerminalWidth - 1, new string('~',1), 0, 1, m_out.style);
 
 				// Notify whenever the buffer is changed
 				OnBufferChanged(new BufferChangedEventArgs(m_out.pos, count));
@@ -1181,7 +1225,8 @@ namespace pr.gui
 			{
 				get
 				{
-					return "[0m"
+					// note: expects a tab size of 8
+					return "[2J[0m"
 						+"[31m===============================\n"
 						+"[30m     terminal test string      \n"
 						+"[31m===============================\n"
@@ -1214,6 +1259,443 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>A control that displays the VT100 buffer</summary>
+		public class Display :ScintillaCtrl
+		{
+			/// <summary>Helper for sending text to scintilla</summary>
+			private class CellBuf
+			{
+				private Sci.Cell[] m_text; // Buffer used to pass the text to scintilla
+				private int m_len;     // The number of valid chars in 'm_text'
+
+				public CellBuf()
+				{
+					m_text = new Sci.Cell[1024];
+					m_len = 0;
+				}
+				public void Reset()
+				{
+					m_len = 0;
+				}
+				public int SizeInBytes
+				{
+					get { return m_len * R<Sci.Cell>.SizeOf; }
+				}
+				public void Add(byte ch, byte st)
+				{
+					if (m_len == m_text.Length)
+						Array.Resize(ref m_text, m_text.Length * 3/2);
+
+					m_text[m_len] = new Sci.Cell(ch, st);
+					++m_len;
+				}
+				public void Pop(int n)
+				{
+					m_len -= Math.Min(n, m_len);
+				}
+				public Scope<GCHandle> Pin()
+				{
+					return GCHandleEx.Alloc(m_text, GCHandleType.Pinned);
+				}
+			}
+
+			private HoverScroll m_hs;
+			private EventBatcher m_eb;
+			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
+			private CellBuf m_cells;
+
+			public Display()
+			{
+				m_hs = new HoverScroll(Handle);
+				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(10)){TriggerOnFirst = true};
+				m_sty = new Dictionary<Style,byte>();
+				m_cells = new CellBuf();
+
+				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
+				BlinkTimer.Tick += SignalRefresh;
+
+				AutoScrollToBottom = true;
+				Cmd(Sci.SCI_USEPOPUP, 0, 0);
+			}
+			protected override void Dispose(bool disposing)
+			{
+				Util.Dispose(ref m_hs);
+				Util.Dispose(ref m_eb);
+				base.Dispose(disposing);
+			}
+
+			/// <summary>Get/Set the underlying VT100 buffer</summary>
+			[Browsable(false)]
+			public Buffer Buffer
+			{
+				get { return m_buffer; }
+				set
+				{
+					if (m_buffer == value) return;
+					if (m_buffer != null)
+					{
+						m_buffer.BufferChanged -= SignalRefresh;
+					}
+					m_buffer = value;
+					if (m_buffer != null)
+					{
+						m_buffer.BufferChanged += SignalRefresh;
+					}
+					SignalRefresh();
+				}
+			}
+			private Buffer m_buffer;
+
+			/// <summary>Timer that causes refreshes once a seconds</summary>
+			[Browsable(false)]
+			public Timer BlinkTimer { get; private set; }
+
+			/// <summary>True if the display automatically scrolls to the bottom</summary>
+			[Browsable(false)]
+			public bool AutoScrollToBottom { get; set; }
+
+			/// <summary>Request an update of the display</summary>
+			public void SignalRefresh(object sender = null, EventArgs args = null)
+			{
+				m_eb.Signal();
+			}
+
+			/// <summary>Clear the buffer and the display</summary>
+			public void Clear()
+			{
+				if (Buffer != null)
+					Buffer.Clear();
+
+				ClearAll();
+			}
+
+			/// <summary>Refresh the control with text from the vt100 buffer</summary>
+			private void UpdateText()
+			{
+				var buf = Buffer;
+
+				// No buffer = empty display
+				if (buf == null)
+				{
+					ClearAll();
+					return;
+				}
+
+				using (this.SuspendRedraw(true))
+				using (this.SuspendScroll())
+				//using (this.SelectionScope())
+				//using (this.SuspendUndo())
+				{
+					ClearAll();
+
+					// Add the buffered data to 'm_cells'
+					foreach (var line in buf.Lines)
+					{
+						byte sty = 0;
+						foreach (var span in line.Spans)
+						{
+							var str = Encoding.UTF8.GetBytes(span.m_str);
+							sty = SciStyle(span.m_sty);
+							foreach (var c in str)
+								m_cells.Add(c, sty);
+						}
+						m_cells.Add(0x0a, sty);
+					}
+					m_cells.Pop(1);
+
+					// Pass the buffer of cells to scintilla
+					using (var cells = m_cells.Pin())
+						Cmd(Sci.SCI_APPENDSTYLEDTEXT, m_cells.SizeInBytes, cells.State.AddrOfPinnedObject());
+
+					// Reset, ready for next time
+					m_cells.Reset();
+
+					//var buftext = string.Join("\n", buf.Lines);
+					//var utf8 = Encoding.UTF8.GetBytes(buftext);
+					//using (var h = GCHandleEx.Alloc(utf8, GCHandleType.Pinned))
+					//	Cmd(SCI_APPENDTEXT, utf8.Length, h.State.AddrOfPinnedObject());
+				}
+
+				// Auto scroll to the bottom
+				if (AutoScrollToBottom)
+				{
+					//Select(TextLength, 0);
+					//FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
+				}
+
+				#if false
+				// Update the displayed lines of text from the buffer
+				using (this.SuspendRedraw(true))
+				//using (this.SuspendScroll())
+				using (this.SelectionScope())
+				using (this.SuspendUndo())
+				{
+					// Ensure the number of lines in the Buffer matches the number of lines in the control
+					LineCount = Buffer.LineCount;
+
+					// Update only the lines that are visible
+					var beg = FirstVisibleLineIndex;
+					var end = Math.Min(beg + VisibleLineCount, Buffer.LineCount);
+					var blinking_text = false;
+					for (int i = beg; i != end; ++i)
+					{
+						var line_in  = Buffer.Lines[i];
+						var line_out = Line[i];
+
+						int j = 0; Style? prev_style = null;
+						foreach (var span in line_in.Spans)
+						{
+							var str = span.m_str;
+							var sty = span.m_sty;
+							blinking_text |= sty.Blink;
+							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
+								str = new string(' ', span.m_str.Length);
+
+							// Only update the control text if actually changed
+							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
+								line_out.Replace(j, span.m_str);
+
+							// Apply the style to the text
+							if (prev_style == null || !sty.Equal(prev_style.Value))
+							{
+								prev_style = sty;
+								using (this.SelectionScope())
+								{
+									// Select the text just written
+									line_out.Select(j, span.m_str.Length);
+
+									// Set the colour and font
+									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
+									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
+
+									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
+									if (SelectionFont.Style != font_style)
+										SelectionFont = SelectionFont.Dup(style:font_style);
+								}
+							}
+
+							// Advance down the line
+							j += span.m_str.Length;
+						}
+						line_out.Length = j;
+					}
+					// Don't need to add user input text because we
+					// only draw what the server has sent to us.
+
+					// Enable the blink timer if blinking text was displayed
+					m_blink_timer.Enabled = blinking_text;
+				}
+
+				//// Refresh the display
+				//Invalidate(ClientRectangle);
+				#endif
+			}
+
+			/// <summary>Return the scintilla style index for the given vt100 style</summary>
+			private byte SciStyle(Style sty)
+			{
+				byte idx;
+				if (!m_sty.TryGetValue(sty, out idx))
+				{
+					idx = (byte)Math.Min(m_sty.Count, 255);
+
+					var forecol = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
+					var backcol = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
+					var fontname = Encoding.UTF8.GetBytes("consolas");
+					using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
+					{
+						Cmd(Sci.SCI_STYLESETFONT, idx, fonth.State.AddrOfPinnedObject());
+						Cmd(Sci.SCI_STYLESETFORE, idx, forecol.ToArgb() & 0x00FFFFFF);
+						Cmd(Sci.SCI_STYLESETBACK, idx, backcol.ToArgb() & 0x00FFFFFF);
+						Cmd(Sci.SCI_STYLESETBOLD, idx, sty.Bold ? 1 : 0);
+						Cmd(Sci.SCI_STYLESETUNDERLINE, idx, sty.Underline ? 1 : 0);
+					}
+
+					m_sty[sty] = idx;
+				}
+				return idx;
+			}
+
+			/// <summary>Intercept the WndProc for this control</summary>
+			protected override void CtrlWndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+			{
+				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+				switch (msg)
+				{
+				case Win32.WM_KEYDOWN:
+					#region
+					{
+						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+						var ks = new Win32.KeyState(lparam);
+						if (!ks.Alt)
+						{
+							// By default "handle" all key events
+							handled = true;
+							var vk = (Keys)wparam;
+							switch (vk)
+							{
+							default:
+								char ch;
+								if (Win32.CharFromVKey(vk, out ch))
+									Buffer.AddInput(ch);
+								else
+									Buffer.AddInput(vk);
+								break;
+
+							// Intercept clipboard shortcuts
+							case Keys.Control | Keys.X:
+							case Keys.Control | Keys.C:
+								//Copy();
+								break;
+							case Keys.Control | Keys.V:
+								Buffer.Paste();
+								break;
+							}
+						}
+						break;
+					}
+					#endregion
+				case Win32.WM_RBUTTONDOWN:
+					#region
+					{
+						var pt = Win32.LParamToPoint(lparam);
+						ContextMenu().Show(this, pt);
+						break;
+					}
+					#endregion
+				case Win32.WM_NOTIFY:
+					#region
+					{
+						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+						var nh = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
+					//	Debug.WriteLine("SciNotify: {0}".Fmt(IdToString((int)nh.code)));
+
+						switch (nh.code)
+						{
+						case Sci.SCN_CHARADDED:
+							{
+								break;
+							}
+						}
+						break;
+					}
+					#endregion
+				}
+
+				base.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
+			}
+
+				/// <summary>A context menu for the vt100 terminal</summary>
+			public new ContextMenuStrip ContextMenu()
+			{
+				var menu = new ContextMenuStrip();
+				var settings = Buffer.Settings;
+
+				{
+					var item = menu.Items.Add2(new ToolStripMenuItem("Clear", null));
+					item.Click += (s,e) => Clear();
+				}
+				menu.Items.Add(new ToolStripSeparator());
+				{
+					var item = menu.Items.Add2(new ToolStripMenuItem("Copy", null));
+					item.Click += (s,e) => Copy();
+				}
+				{
+					var item = menu.Items.Add2(new ToolStripMenuItem("Paste", null));
+					item.Click += (s,e)=> Buffer.Paste();
+				}
+				menu.Items.Add(new ToolStripSeparator());
+				{
+					var options = menu.Items.Add2(new ToolStripMenuItem("Terminal Options", null));
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Local Echo"){Checked = settings.LocalEcho, CheckOnClick = true});
+						item.Click += (s,e) => settings.LocalEcho = item.Checked;
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Terminal Width"));
+						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TerminalWidth.ToString()});
+						edit.KeyDown += (s,e) =>
+							{
+								if (e.KeyCode != Keys.Return) return;
+								menu.Close();
+							};
+						edit.Validating += (s,e) =>
+							{
+								int w;
+								e.Cancel = !int.TryParse(edit.Text, out w);
+							};
+						edit.Validated += (s,e) =>
+						{
+							settings.TerminalWidth = int.Parse(edit.Text);
+						};
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Tab Size"));
+						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TabSize.ToString()});
+						edit.KeyDown += (s,e) =>
+							{
+								if (e.KeyCode != Keys.Return) return;
+								menu.Close();
+							};
+						edit.Validating += (s,e) =>
+							{
+								int sz;
+								e.Cancel = !int.TryParse(edit.Text, out sz);
+							};
+						edit.Validated += (s,e) =>
+							{
+								settings.TabSize = int.Parse(edit.Text);
+							};
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Recv"));
+						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
+						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
+						edit.SelectedIndex = (int)settings.NewlineRecv;
+						edit.SelectedIndexChanged += (s,e) =>
+							{
+								settings.NewlineRecv = (ENewLineMode)edit.SelectedIndex;
+							};
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Send"));
+						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
+						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
+						edit.SelectedIndex = (int)settings.NewlineSend;
+						edit.SelectedIndexChanged += (s,e) =>
+							{
+								settings.NewlineSend = (ENewLineMode)edit.SelectedIndex;
+							};
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Background Colour"));
+						var btn  = item   .DropDownItems.Add2(new ToolStripButton("   "){BackColor = settings.BackColor, AutoToolTip = false});
+						btn.Click += (s,e) =>
+							{
+								using (var cd = new ColorDialog())
+								{
+									if (cd.ShowDialog() != DialogResult.OK) return;
+									settings.BackColor = cd.Color;
+									menu.Close();
+								}
+							};
+					}
+					{
+						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Hex Output"){Checked = settings.HexOutput, CheckOnClick = true});
+						item.Click += (s,e) =>
+							{
+								settings.HexOutput = item.Checked;
+							};
+					}
+					menu.Items.Add(options);
+				}
+				return menu;
+			}
+		}
+
+		#if false
+
+
 		/// <summary>Interface for things that can display the VT100 buffer</summary>
 		private interface IDisplay
 		{
@@ -1222,6 +1704,10 @@ namespace pr.gui
 			void Clear();
 			void Copy();
 		}
+
+		/// <summary>Use RTB implementation by default </summary>
+		public class Display :DisplaySci
+		{}
 
 		/// <summary>Functionality for controls that display the VT100.Buffer</summary>
 		private class DisplayCore :IDisposable
@@ -1452,6 +1938,182 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>A display (based on a Scintilla control)</summary>
+		public class DisplaySci :Scintilla ,IDisplay
+		{
+			private DisplayCore m_dc;
+			
+			public DisplaySci()
+			{
+				m_dc = new DisplayCore(this);
+			}
+			protected override void Dispose(bool disposing)
+			{
+				Util.Dispose(ref m_dc);
+				base.Dispose(disposing);
+			}
+
+			/// <summary>Get/Set the underlying VT100 buffer</summary>
+			[Browsable(false)]
+			public Buffer Buffer
+			{
+				get { return m_dc.Buffer; }
+				set { m_dc.Buffer = value; }
+			}
+
+			public void Clear()
+			{
+				ClearAll();
+			}
+			public void Copy()
+			{}
+
+			/// <summary>Refresh the control with text from the vt100 buffer</summary>
+			public void UpdateText()
+			{
+				Buffer buf = m_dc.Buffer;
+
+				// No buffer = empty display
+				if (buf == null)
+				{
+					Clear();
+					return;
+				}
+
+				//using (this.SuspendRedraw(true))
+				//using (this.SuspendScroll())
+				//using (this.SelectionScope())
+				//using (this.SuspendUndo())
+				{
+				//	ClearAll();
+					//foreach (var line in buf.Lines)
+					//{
+					//	//Select(TextLength, 0);
+					//	//SelectedText = line.m_line.ToString() + "\r\n";
+					//	Text = string.Join("\n", buf.Lines);
+					//}
+
+					var buftext = string.Join("\n", buf.Lines);
+					var utf8 = Encoding.UTF8.GetBytes(buftext);
+					using (var h = GCHandleEx.Alloc(utf8, GCHandleType.Pinned))
+						Cmd(SCI_APPENDTEXT, utf8.Length, h.State.AddrOfPinnedObject());
+
+					//var text = new cell[utf8.Length];
+					//for (int i = 0; i != text.Length; ++i)
+					//{
+					//	text[i].chr = utf8[i];
+					//	text[i].sty = 0;
+					//}
+
+					//using (var h = GCHandleEx.Alloc(text, GCHandleType.Pinned))
+					//	Cmd(SCI_ADDSTYLEDTEXT, text.Length, h.State.AddrOfPinnedObject());
+				}
+
+				#if false
+				// Update the displayed lines of text from the buffer
+				using (this.SuspendRedraw(true))
+				//using (this.SuspendScroll())
+				using (this.SelectionScope())
+				using (this.SuspendUndo())
+				{
+					// Ensure the number of lines in the Buffer matches the number of lines in the control
+					LineCount = Buffer.LineCount;
+
+					// Update only the lines that are visible
+					var beg = FirstVisibleLineIndex;
+					var end = Math.Min(beg + VisibleLineCount, Buffer.LineCount);
+					var blinking_text = false;
+					for (int i = beg; i != end; ++i)
+					{
+						var line_in  = Buffer.Lines[i];
+						var line_out = Line[i];
+
+						int j = 0; Style? prev_style = null;
+						foreach (var span in line_in.Spans)
+						{
+							var str = span.m_str;
+							var sty = span.m_sty;
+							blinking_text |= sty.Blink;
+							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
+								str = new string(' ', span.m_str.Length);
+
+							// Only update the control text if actually changed
+							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
+								line_out.Replace(j, span.m_str);
+
+							// Apply the style to the text
+							if (prev_style == null || !sty.Equal(prev_style.Value))
+							{
+								prev_style = sty;
+								using (this.SelectionScope())
+								{
+									// Select the text just written
+									line_out.Select(j, span.m_str.Length);
+
+									// Set the colour and font
+									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
+									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
+
+									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
+									if (SelectionFont.Style != font_style)
+										SelectionFont = SelectionFont.Dup(style:font_style);
+								}
+							}
+
+							// Advance down the line
+							j += span.m_str.Length;
+						}
+						line_out.Length = j;
+					}
+					// Don't need to add user input text because we
+					// only draw what the server has sent to us.
+
+					// Enable the blink timer if blinking text was displayed
+					m_blink_timer.Enabled = blinking_text;
+				}
+
+				// Auto scroll to the bottom
+				if (AutoScrollToBottom)
+				{
+					Select(TextLength, 0);
+					FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
+				}
+
+				//// Refresh the display
+				//Invalidate(ClientRectangle);
+				#endif
+			}
+
+			/// <summary>Intercept the WndProc for this control</summary>
+			protected override void WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+			{
+				if (m_dc != null && Buffer != null)
+					m_dc.ProcessWndMsg(hwnd, msg, wparam, lparam, ref handled);
+
+				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+				switch (msg)
+				{
+				case Win32.WM_NOTIFY:
+					{
+						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+						var nh = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
+						Debug.WriteLine("SciNotify: {0}".Fmt(IdToString((int)nh.code)));
+
+						switch (nh.code)
+						{
+						case SCN_CHARADDED:
+							{
+								break;
+							}
+						}
+						break;
+					}
+				}
+
+				base.WndProc(hwnd, msg, wparam, lparam, ref handled);
+			}
+		}
+
 		/// <summary>A display (based on RichEditControl)</summary>
 		public class DisplayRTB :RichTextBox ,IDisplay
 		{
@@ -1580,166 +2242,6 @@ namespace pr.gui
 				if (!handled) base.WndProc(ref m);
 			}
 		}
-
-		/// <summary>A display (based on a Scintilla control)</summary>
-		public class DisplaySci :Scintilla ,IDisplay
-		{
-			private DisplayCore m_dc;
-			
-			public DisplaySci()
-			{
-				m_dc = new DisplayCore(this);
-			}
-			protected override void Dispose(bool disposing)
-			{
-				Util.Dispose(ref m_dc);
-				base.Dispose(disposing);
-			}
-
-			/// <summary>Get/Set the underlying VT100 buffer</summary>
-			[Browsable(false)]
-			public Buffer Buffer
-			{
-				get { return m_dc.Buffer; }
-				set { m_dc.Buffer = value; }
-			}
-
-			public void Clear()
-			{
-				ClearAll();
-			}
-			public void Copy()
-			{}
-
-			/// <summary>Refresh the control with text from the vt100 buffer</summary>
-			public void UpdateText()
-			{
-				Buffer buf = m_dc.Buffer;
-
-				// No buffer = empty display
-				if (buf == null)
-				{
-					Clear();
-					return;
-				}
-
-				using (this.SuspendRedraw(true))
-				using (this.SuspendScroll())
-				//using (this.SelectionScope())
-				//using (this.SuspendUndo())
-				{
-					ClearAll();
-					foreach (var line in buf.Lines)
-					{
-						//Select(TextLength, 0);
-						//SelectedText = line.m_line.ToString() + "\r\n";
-						Text = string.Join("\n", buf.Lines);
-					}
-				}
-
-				#if false
-				// Update the displayed lines of text from the buffer
-				using (this.SuspendRedraw(true))
-				//using (this.SuspendScroll())
-				using (this.SelectionScope())
-				using (this.SuspendUndo())
-				{
-					// Ensure the number of lines in the Buffer matches the number of lines in the control
-					LineCount = Buffer.LineCount;
-
-					// Update only the lines that are visible
-					var beg = FirstVisibleLineIndex;
-					var end = Math.Min(beg + VisibleLineCount, Buffer.LineCount);
-					var blinking_text = false;
-					for (int i = beg; i != end; ++i)
-					{
-						var line_in  = Buffer.Lines[i];
-						var line_out = Line[i];
-
-						int j = 0; Style? prev_style = null;
-						foreach (var span in line_in.Spans)
-						{
-							var str = span.m_str;
-							var sty = span.m_sty;
-							blinking_text |= sty.Blink;
-							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
-								str = new string(' ', span.m_str.Length);
-
-							// Only update the control text if actually changed
-							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
-								line_out.Replace(j, span.m_str);
-
-							// Apply the style to the text
-							if (prev_style == null || !sty.Equal(prev_style.Value))
-							{
-								prev_style = sty;
-								using (this.SelectionScope())
-								{
-									// Select the text just written
-									line_out.Select(j, span.m_str.Length);
-
-									// Set the colour and font
-									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
-									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
-
-									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
-									if (SelectionFont.Style != font_style)
-										SelectionFont = SelectionFont.Dup(style:font_style);
-								}
-							}
-
-							// Advance down the line
-							j += span.m_str.Length;
-						}
-						line_out.Length = j;
-					}
-					// Don't need to add user input text because we
-					// only draw what the server has sent to us.
-
-					// Enable the blink timer if blinking text was displayed
-					m_blink_timer.Enabled = blinking_text;
-				}
-
-				// Auto scroll to the bottom
-				if (AutoScrollToBottom)
-				{
-					Select(TextLength, 0);
-					FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
-				}
-
-				//// Refresh the display
-				//Invalidate(ClientRectangle);
-				#endif
-			}
-
-			/// <summary>Intercept the WndProc for this control</summary>
-			protected override void WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-			{
-				if (m_dc != null) m_dc.ProcessWndMsg(hwnd, msg, wparam, lparam, ref handled);
-				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-				//switch (msg)
-				//{
-				//case Win32.WM_NOTIFY:
-				//	{
-				//		//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-				//		var nh = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
-				//		switch (nh.code)
-				//		{
-				//		case SCN_CHARADDED:
-				//			{
-				//				break;
-				//			}
-				//		}
-				//		break;
-				//	}
-				//}
-
-				base.WndProc(hwnd, msg, wparam, lparam, ref handled);
-			}
-		}
-
-		/// <summary>Use RTB implementation by default </summary>
-		public class Display :DisplayRTB
-		{}
+		#endif
 	}
 }

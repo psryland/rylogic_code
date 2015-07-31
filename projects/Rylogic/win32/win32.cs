@@ -1011,12 +1011,12 @@ namespace pr.win32
 			// Search the local directory first
 			var dllpath = searched.Add2(Path.GetFullPath(dllname));
 			if (PathEx.FileExists(dllpath))
-				TryLoad(dllpath);
+				return TryLoad(dllpath);
 
 			// Try the 'dir' folder. Load the appropriate dll for the platform
 			dllpath = searched.Add2(Path.GetFullPath(Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), dllname)));
 			if (PathEx.FileExists(dllpath))
-				TryLoad(dllpath);
+				return TryLoad(dllpath);
 
 			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
 		}
@@ -1058,31 +1058,30 @@ namespace pr.win32
 		/// <summary>Detect a key press using its async state</summary>
 		public static bool KeyPress(Keys vkey)
 		{
-			if   (!KeyDown(vkey)) return false;
+			if (!KeyDown(vkey)) return false;
 			while (KeyDown(vkey)) Thread.Sleep(10);
 			return true;
 		}
 
-		/// <summary>Convert a 'Keys' key value to a unicode char</summary>
-		public static char CharFromVKey(Keys vkey)
+		/// <summary>
+		/// Convert a 'Keys' key value to a unicode char using the keyboard state of the last message.
+		/// This can be called from WM_KEYDOWN to provide the actual character, instead of waiting for WM_CHAR
+		/// Returns true if 'vkey' can be converted and 'ch' is valid, false if not</summary>
+		public static bool CharFromVKey(Keys vkey, out char ch)
 		{
-			char ch = ' ';
+			ch = '\0';
 			var keyboardState = new byte[256];
 			GetKeyboardState(keyboardState);
 
 			var scan_code = MapVirtualKey((uint)vkey, MAPVK_VK_TO_VSC);
 			var sb = new StringBuilder(2);
 			var r = ToUnicode((uint)vkey, scan_code, keyboardState, sb, sb.Capacity, 0);
-			switch (r)
-			{
-			default: ch = sb[0]; break;
-			case 0: case -1: break;
-			}
-			return ch;
+			if (r == 1) ch = sb[0];
+			return r == 1;
 		}
-		public static char CharFromVKey(System.Windows.Input.Key vkey)
+		public static bool CharFromVKey(System.Windows.Input.Key vkey, out char ch)
 		{
-			return CharFromVKey((Keys)System.Windows.Input.KeyInterop.VirtualKeyFromKey(vkey));
+			return CharFromVKey((Keys)System.Windows.Input.KeyInterop.VirtualKeyFromKey(vkey), out ch);
 		}
 
 		/// <summary>Convert the LParam from WM_KEYDOWN, WM_KEYUP, WM_CHAR to usable data</summary>

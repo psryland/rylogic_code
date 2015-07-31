@@ -61,15 +61,19 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</OutDir>
+    <IntDir>..\..\obj\$(PlatformToolset)\$(ProjectName)\$(PlatformTarget)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile />
@@ -216,11 +220,11 @@ $(ProjectDir)scripts\HFacer.py
     <ClCompile Include="src\win32\ScintillaWin.cxx" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\scintilla\Scintilla.h" />
-    <ClInclude Include="include\scintilla\SciLexer.h" />
-    <ClInclude Include="include\scintilla\ILexer.h" />
-    <ClInclude Include="include\scintilla\Platform.h" />
-    <ClInclude Include="include\scintilla\ScintillaWidget.h" />
+    <ClInclude Include="include\ILexer.h" />
+    <ClInclude Include="include\Platform.h" />
+    <ClInclude Include="include\SciLexer.h" />
+    <ClInclude Include="include\Scintilla.h" />
+    <ClInclude Include="include\ScintillaWidget.h" />
     <ClInclude Include="src\AutoComplete.h" />
     <ClInclude Include="src\CallTip.h" />
     <ClInclude Include="src\CaseConvert.h" />
@@ -271,6 +275,8 @@ $(ProjectDir)scripts\HFacer.py
     <ResourceCompile Include="src\win32\ScintRes.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="include\Scintilla.cs" />
+    <None Include="include\Scintilla.iface" />
     <None Include="scripts\Face.py" />
     <None Include="scripts\FileGenerator.py" />
     <None Include="scripts\GenerateCaseConvert.py" />
@@ -278,7 +284,6 @@ $(ProjectDir)scripts\HFacer.py
     <None Include="scripts\HFacer.py" />
     <None Include="scripts\LexGen.py" />
     <None Include="scripts\ScintillaData.py" />
-    <None Include="include\scintilla\Scintilla.iface" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="src\lexers\_ReadMe.txt" />

@@ -45,7 +45,9 @@ namespace pr
 			// Construct the dialog template for this dialog
 			static DlgTemplate Templ()
 			{
-				pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
+				// Ensure the scintilla control is registered
+				pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll", L".\\lib\\$(platform)");
+
 				int const menu_height = 10;//::GetSystemMetrics(SM_CYMENU);
 				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, Style, StyleEx);
 				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5 + menu_height, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);

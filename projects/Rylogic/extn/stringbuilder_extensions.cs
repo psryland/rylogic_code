@@ -33,7 +33,7 @@ namespace pr.extn
 		/// <summary>Resize the string builder to 'newsize', padding with 'fill' as needed</summary>
 		public static StringBuilder Resize(this StringBuilder sb, int newsize, char fill = '\0')
 		{
-			if (sb.Length <= newsize)
+			if (sb.Length > newsize)
 				sb.Length = newsize;
 			else
 				sb.Append(fill, newsize - sb.Length);

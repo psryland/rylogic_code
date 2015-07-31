@@ -34,7 +34,6 @@ namespace view3d
 			,m_lua()
 			,m_mutex()
 		{
-			pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll", L".\\lib\\$(platform)");
 			PR_ASSERT(PR_DBG, pr::meta::is_aligned_to<16>(this), "dll data not aligned");
 			AtlInitCommonControls(ICC_WIN95_CLASSES); // add flags to support other controls
 		}

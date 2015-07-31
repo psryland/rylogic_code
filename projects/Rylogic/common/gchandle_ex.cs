@@ -9,13 +9,21 @@ namespace pr.common
 		/// <summary>RAII scope for an allocated GC handle</summary>
 		public static Scope<GCHandle> Alloc(object obj)
 		{
-			return Scope<GCHandle>.Create(() => GCHandle.Alloc(obj), h => h.Free());
+			return Alloc(obj, GCHandleType.Normal);
 		}
 
 		/// <summary>RAII scope for an allocated GC handle</summary>
 		public static Scope<GCHandle> Alloc(object obj, GCHandleType type)
 		{
-			return Scope<GCHandle>.Create(() => GCHandle.Alloc(obj,type), h => h.Free());
+			return Scope<GCHandle>.Create(
+				() =>
+				{
+					return GCHandle.Alloc(obj, type);
+				},
+				h =>
+				{
+					if (h.IsAllocated) h.Free();
+				});
 		}
 	}
 }

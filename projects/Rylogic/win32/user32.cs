@@ -64,6 +64,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern bool   ShowWindowAsync(HWND hwnd, int nCmdShow);
 		[DllImport("user32.dll")]                                                    public static extern int    ToAscii(int uVirtKey, int uScanCode, byte[] lpbKeyState, byte[] lpwTransKey, int fuState);
 		[DllImport("user32.dll")]                                                    public static extern int    ToUnicode(uint wVirtKey, uint wScanCode, byte[] lpKeyState, [Out, MarshalAs(UnmanagedType.LPWStr, SizeParamIndex=4)] StringBuilder pwszBuff, int cchBuff, uint wFlags);
+		[DllImport("user32.dll")]                                                    public static extern bool   TranslateMessage(ref Message lpMsg);
 		[DllImport("user32.dll")]                                                    public static extern int    UnhookWindowsHookEx(int idHook);
 		[DllImport("user32.dll")]                                                    public static extern HWND   WindowFromPoint(POINT Point);
 	}
