@@ -45,7 +45,7 @@ namespace pr.extn
 
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "As<T>: Insufficient data. Expected {0}, got {1}".Fmt(Marshal.SizeOf(typeof(T)), arr.Length));
 			using (var handle = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
-				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
+				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
 		}
 
 		/// <summary>Return the checksum of this array of bytes</summary>

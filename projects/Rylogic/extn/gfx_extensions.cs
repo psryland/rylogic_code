@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using pr.common;
 using pr.gfx;
 using pr.util;
 
@@ -9,16 +10,25 @@ namespace pr.extn
 {
 	public static class GfxExtensions
 	{
-		/// <summary>Save the transform and clip state in an RAII object</summary>
-		public static Scope<GraphicsContainer> StateScope(this Graphics gfx)
+		public class GfxContainerScope :Scope
 		{
-			return Scope<GraphicsContainer>.Create(gfx.BeginContainer, gfx.EndContainer);
+			public GraphicsContainer GfxContainer;
+		}
+
+		/// <summary>Save the transform and clip state in an RAII object</summary>
+		public static GfxContainerScope StateScope(this Graphics gfx)
+		{
+			return Scope.Create<GfxContainerScope>(
+				s => s.GfxContainer = gfx.BeginContainer(),
+				s => gfx.EndContainer(s.GfxContainer));
 		}
 
 		/// <summary>Get the HDC associated with this graphics object. Releases in dispose</summary>
-		public static Scope<IntPtr> GetHdcScope(this Graphics gfx)
+		public static IntPtrScope GetHdcScope(this Graphics gfx)
 		{
-			return Scope<IntPtr>.Create(gfx.GetHdc, gfx.ReleaseHdc);
+			return Scope.Create<IntPtrScope>(
+				s => s.Ptr = gfx.GetHdc(),
+				s => gfx.ReleaseHdc(s.Ptr));
 		}
 
 		/// <summary>Useful overload of DrawImage</summary>

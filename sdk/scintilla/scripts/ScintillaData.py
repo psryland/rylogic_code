@@ -179,7 +179,7 @@ class ScintillaData:
             self.myModified = monthModified + " " + self.yearModified
 
         # Find all the lexer source code files
-        lexFilePaths = glob.glob(scintillaRoot + "lexers/Lex*.cxx")
+        lexFilePaths = glob.glob(scintillaRoot + "src/lexers/Lex*.cxx")
         SortListInsensitive(lexFilePaths)
         self.lexFiles = [os.path.basename(f)[:-4] for f in lexFilePaths]
         self.lexerModules = []

@@ -130,6 +130,7 @@
     <Compile Include="container\csv_data.cs">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="container\deque.cs" />
     <Compile Include="container\dict_chg.cs" />
     <Compile Include="container\kdtree.cs" />
     <Compile Include="container\list_chg.cs" />

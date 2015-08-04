@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
 using System.Windows.Interop;
@@ -20,7 +21,6 @@ namespace pr.gui
 	/// <summary>A scintilla winforms/WPF control</summary>
 	public class ScintillaCtrl :ElementHost
 	{
-		private Ctrl m_ctrl;
 		private Sci.DirectFunction m_func;
 		private IntPtr m_ptr;
 
@@ -29,33 +29,34 @@ namespace pr.gui
 			try { LoadDll(); }
 			catch (Exception) {}
 		}
-		public ScintillaCtrl()
+		public ScintillaCtrl(ushort ctrl_id = 517)
 		{
-			Child = m_ctrl = new Ctrl(this);
-			m_func = MarshalEx.PtrToDelegate<Sci.DirectFunction>((IntPtr)Win32.SendMessage(m_ctrl.Handle, Sci.SCI_GETDIRECTFUNCTION, 0, 0));
-			m_ptr  = (IntPtr)Win32.SendMessage(m_ctrl.Handle, Sci.SCI_GETDIRECTPOINTER, 0, 0);
+			Child = HostedCtrl = new Ctrl(this, ctrl_id);
+			m_func = MarshalEx.PtrToDelegate<Sci.DirectFunction>((IntPtr)Win32.SendMessage(HostedCtrl.Handle, Sci.SCI_GETDIRECTFUNCTION, 0, 0));
+			m_ptr  = (IntPtr)Win32.SendMessage(HostedCtrl.Handle, Sci.SCI_GETDIRECTPOINTER, 0, 0);
 
 			Cmd(Sci.SCI_SETCODEPAGE, Sci.SC_CP_UTF8, 0);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref m_ctrl);
+			HostedCtrl = Util.Dispose(HostedCtrl);
 			m_func = null;
 			m_ptr = IntPtr.Zero;
 
 			base.Dispose(disposing);
 		}
 
-		/// <summary>Call the direct function</summary>
-		protected int Cmd(int code, int wparam, int lparam)
-		{
-			return m_func(m_ptr, code, (IntPtr)wparam, (IntPtr)lparam);
-		}
-		protected int Cmd(int code, int wparam, IntPtr lparam)
-		{
-			return m_func(m_ptr, code, (IntPtr)wparam, lparam);
-		}
+		/// <summary>The scintilla control</summary>
+		public Ctrl HostedCtrl { get; private set; }
 
+		/// <summary>Call the direct function</summary>
+		protected int Cmd(int code, IntPtr wparam, IntPtr lparam) { return m_func(m_ptr, code, wparam, lparam); }
+		protected int Cmd(int code, int wparam, IntPtr lparam)    { return m_func(m_ptr, code, (IntPtr)wparam, lparam); }
+		protected int Cmd(int code, int wparam, int lparam)       { return m_func(m_ptr, code, (IntPtr)wparam, (IntPtr)lparam); }
+		protected int Cmd(int code, int wparam)                   { return m_func(m_ptr, code, (IntPtr)wparam, IntPtr.Zero); }
+		protected int Cmd(int code)                               { return m_func(m_ptr, code, IntPtr.Zero, IntPtr.Zero); }
+
+		#region Text
 		/// <summary>Clear all text from the control</summary>
 		public void ClearAll()
 		{
@@ -83,7 +84,7 @@ namespace pr.gui
 			var bytes = new byte[len];
 			using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
 			{
-				var num = Cmd(Sci.SCI_GETTEXT, len + 1, h.State.AddrOfPinnedObject());
+				var num = Cmd(Sci.SCI_GETTEXT, len + 1, h.Handle.AddrOfPinnedObject());
 				return Encoding.UTF8.GetString(bytes, 0, num);
 			}
 		}
@@ -98,7 +99,7 @@ namespace pr.gui
 				// Convert the string to utf-8
 				var bytes = Encoding.UTF8.GetBytes(text);
 				using (var h = GCHandleEx.Alloc(bytes, GCHandleType.Pinned))
-					Cmd(Sci.SCI_SETTEXT, 0, h.State.AddrOfPinnedObject());
+					Cmd(Sci.SCI_SETTEXT, 0, h.Handle.AddrOfPinnedObject());
 			}
 
 			TextChanged.Raise(this);
@@ -106,16 +107,81 @@ namespace pr.gui
 
 		/// <summary>Raised when text in the control is changed</summary>
 		public new event EventHandler TextChanged;
+		#endregion
+
+		#region Selection
+		/// <summary>Records a selection</summary>
+		public struct Selection
+		{
+			public int m_current;
+			public int m_anchor;
+			public Selection(int current, int anchor)
+			{
+				m_current = current;
+				m_anchor  = anchor;
+			}
+			public static Selection Save(ScintillaCtrl ctrl)
+			{
+				return new Selection(
+					ctrl.Cmd(Sci.SCI_GETCURRENTPOS),
+					ctrl.Cmd(Sci.SCI_GETANCHOR));
+			}
+			public static void Restore(ScintillaCtrl ctrl, Selection sel)
+			{
+				ctrl.Cmd(Sci.SCI_SETCURRENTPOS, sel.m_current);
+				ctrl.Cmd(Sci.SCI_SETANCHOR, sel.m_anchor);
+			}
+		}
+
+		/// <summary>RAII scope for a selection</summary>
+		public SelectionScp SelectionScope()
+		{
+			return Scope.Create<SelectionScp>(
+				s => s.Sel = Selection.Save(this),
+				s => Selection.Restore(this, s.Sel));
+		}
+		public class SelectionScp :Scope
+		{
+			public Selection Sel;
+		}
+
+		/// <summary>Raised whenever the selection changes</summary>
+		public event EventHandler SelectionChanged;
+		protected virtual void OnSelectionChanged()
+		{
+			SelectionChanged.Raise(this);
+		}
+		#endregion
+
+		#region Scrolling
+		/// <summary>Returns an RAII object that preserves (where possible) the currently visible line</summary>
+		public ScrollScp ScrollScope()
+		{
+			return Scope.Create<ScrollScp>(
+				s => s.m_first_visible = Cmd(Sci.SCI_GETFIRSTVISIBLELINE),
+				s => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, s.m_first_visible));
+		}
+		public class ScrollScp :Scope
+		{
+			public int m_first_visible;
+		}
+		#endregion
 
 		#region Clipboard
+		/// <summary>Cut the current selection to the clipboard</summary>
+		public virtual void Cut()
+		{
+			Cmd(Sci.SCI_CUT, 0, 0);
+		}
+
 		/// <summary>Copy the current selection to the clipboard</summary>
-		public void Copy()
+		public virtual void Copy()
 		{
 			Cmd(Sci.SCI_COPY, 0, 0);
 		}
 
 		/// <summary>Paste the clipboard contents over the current selection</summary>
-		public void Paste()
+		public virtual void Paste()
 		{
 			Cmd(Sci.SCI_PASTE, 0, 0);
 		}
@@ -130,17 +196,28 @@ namespace pr.gui
 			case Win32.WM_KEYDOWN:
 				#region
 				{
+					var vk = (Keys)wparam;
+
 					// We want tabs, arrow keys, and return/enter when the control is focused
-					if (wparam == (IntPtr)Win32.VK_TAB ||
+					if (!handled && (
+						wparam == (IntPtr)Win32.VK_TAB ||
 						wparam == (IntPtr)Win32.VK_UP ||
 						wparam == (IntPtr)Win32.VK_DOWN ||
 						wparam == (IntPtr)Win32.VK_LEFT ||
-						wparam == (IntPtr)Win32.VK_RIGHT ||
-						wparam == (IntPtr)Win32.VK_RETURN)
+						wparam == (IntPtr)Win32.VK_RIGHT))
 					{
-						Win32.SendMessage(m_ctrl.Handle, (uint)msg, wparam, lparam);
+						Win32.SendMessage(HostedCtrl.Handle, (uint)msg, wparam, lparam);
 						handled = true;
 					}
+					OnKeyDown(new KeyEventArgs(vk));
+					break;
+				}
+				#endregion
+			case Win32.WM_KEYUP:
+				#region
+				{
+					var vk = (Keys)wparam;
+					OnKeyUp(new KeyEventArgs(vk));
 					break;
 				}
 				#endregion
@@ -149,7 +226,7 @@ namespace pr.gui
 				{// Watch for edit notifications
 					var notif = Win32.HiWord(wparam.ToInt32());
 					var id    = Win32.LoWord(wparam.ToInt32());
-					if (notif == Win32.EN_CHANGE && id == m_ctrl.Id)
+					if (notif == Win32.EN_CHANGE && id == HostedCtrl.Id)
 						TextChanged.Raise(this);
 					break;
 				}
@@ -162,11 +239,46 @@ namespace pr.gui
 					break;
 				}
 				#endregion
+			case Win32.WM_NOTIFY:
+				#region
+				{
+					//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
+					var nmhdr = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
+					if (nmhdr.idFrom == HostedCtrl.Id)
+					{
+						var notif = MarshalEx.PtrToStructure<Sci.SCNotification>(lparam);
+						switch (notif.nmhdr.code)
+						{
+						case Sci.SCN_UPDATEUI:
+							#region
+							{
+								switch (notif.updated)
+								{
+								case Sci.SC_UPDATE_SELECTION:
+									#region
+									{
+										OnSelectionChanged();
+										break;
+									}
+									#endregion
+								}
+								break;
+							}
+							#endregion
+						}
+					}
+					else
+					{
+						var i = nmhdr.code;
+					}
+					break;
+				}
+				#endregion
 			}
 		}
 
-		#region Control
-		private class Ctrl :HwndHost ,IKeyboardInputSink
+		#region Hosted Scintilla Control
+		public class Ctrl :HwndHost ,System.Windows.Forms.IWin32Window
 		{
 			// See: http://blogs.msdn.com/b/ivo_manolov/archive/2007/10/07/5354351.aspx
 			private ScintillaCtrl m_this;
@@ -193,6 +305,7 @@ namespace pr.gui
 
 			/// <summary>The window handle of the scintilla control</summary>
 			public new IntPtr Handle { get { return m_ctrl; } }
+			IntPtr System.Windows.Forms.IWin32Window.Handle { get { return m_ctrl; } }
 
 			/// <summary>The control id of the scintilla control</summary>
 			public int Id { get; private set; }
@@ -212,26 +325,9 @@ namespace pr.gui
 				// i.e. After the control has handled WM_CHAR, etc...
 				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "scintilla");
 				m_this.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
-				if (!handled)
-				{
-					switch ((uint)msg)
-					{
-					// Since this is the WindowProc of the parent HWND, we need do extra work in order to 
-					// resize the child control upon resize of the parent HWND.
-					case Win32.WM_WINDOWPOSCHANGED:
-						{
-							var pos = MarshalEx.PtrToStructure<Win32.WINDOWPOS>(lparam);
-							Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, pos.cx, pos.cy, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
-							handled = true;
-							break;
-						}
-					}
-				}
 				return base.WndProc(hwnd, msg, wparam, lparam, ref handled);
 			}
-
-			#region IKeyboardInputSink
-			bool IKeyboardInputSink.TranslateAccelerator(ref MSG msg, System.Windows.Input.ModifierKeys modifiers)
+			protected override bool TranslateAcceleratorCore(ref MSG msg, System.Windows.Input.ModifierKeys modifiers)
 			{
 				// This is only called for WM_KEYDOWN or WM_SYSKEYDOWN messages.
 				// Normally Tab, arrows, and, return are used for dialog navigation,
@@ -243,12 +339,16 @@ namespace pr.gui
 				m_this.CtrlWndProc(msg.hwnd, msg.message, msg.wParam, msg.lParam, ref handled);
 				return handled || base.TranslateAcceleratorCore(ref msg, modifiers);
 			}
-			bool IKeyboardInputSink.TabInto(System.Windows.Input.TraversalRequest request)
+			protected override bool TabIntoCore(System.Windows.Input.TraversalRequest request)
 			{
 				Win32.SetFocus(m_ctrl);
-				return true;
+				return false;
 			}
-			#endregion
+			protected override void OnWindowPositionChanged(Rect rect)
+			{
+				Win32.SetWindowPos(m_ctrl, IntPtr.Zero, 0, 0, (int)rect.Width, (int)rect.Height, (uint)(Win32.SWP_NOACTIVATE | Win32.SWP_NOMOVE | Win32.SWP_NOZORDER));
+				base.OnWindowPositionChanged(rect);
+			}
 		}
 		#endregion
 

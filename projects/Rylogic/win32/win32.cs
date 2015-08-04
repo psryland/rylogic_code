@@ -201,6 +201,24 @@ namespace pr.win32
 		public const int WM_EXITSIZEMOVE                 = 0x0232;
 		public const int WM_DROPFILES                    = 0x0233;
 		public const int WM_MDIREFRESHMENU               = 0x0234;
+		public const int WM_POINTERDEVICECHANGE          = 0x0238;
+		public const int WM_POINTERDEVICEINRANGE         = 0x0239;
+		public const int WM_POINTERDEVICEOUTOFRANGE      = 0x023A;
+		public const int WM_TOUCH                        = 0x0240;
+		public const int WM_NCPOINTERUPDATE              = 0x0241;
+		public const int WM_NCPOINTERDOWN                = 0x0242;
+		public const int WM_NCPOINTERUP                  = 0x0243;
+		public const int WM_POINTERUPDATE                = 0x0245;
+		public const int WM_POINTERDOWN                  = 0x0246;
+		public const int WM_POINTERUP                    = 0x0247;
+		public const int WM_POINTERENTER                 = 0x0249;
+		public const int WM_POINTERLEAVE                 = 0x024A;
+		public const int WM_POINTERACTIVATE              = 0x024B;
+		public const int WM_POINTERCAPTURECHANGED        = 0x024C;
+		public const int WM_TOUCHHITTESTING              = 0x024D;
+		public const int WM_POINTERWHEEL                 = 0x024E;
+		public const int WM_POINTERHWHEEL                = 0x024F;
+		public const int DM_POINTERHITTEST               = 0x0250;
 		public const int WM_IME_SETCONTEXT               = 0x0281;
 		public const int WM_IME_NOTIFY                   = 0x0282;
 		public const int WM_IME_CONTROL                  = 0x0283;
@@ -389,21 +407,36 @@ namespace pr.win32
 		#endregion
 
 		#region Set Window Position SWP_
-		public const int SWP_NOSIZE                       = 0x0001;
-		public const int SWP_NOMOVE                       = 0x0002;
-		public const int SWP_NOZORDER                     = 0x0004;
-		public const int SWP_NOREDRAW                     = 0x0008;
-		public const int SWP_NOACTIVATE                   = 0x0010;
-		public const int SWP_FRAMECHANGED                 = 0x0020;
-		public const int SWP_SHOWWINDOW                   = 0x0040;
-		public const int SWP_HIDEWINDOW                   = 0x0080;
-		public const int SWP_NOCOPYBITS                   = 0x0100;
-		public const int SWP_NOOWNERZORDER                = 0x0200;
-		public const int SWP_NOSENDCHANGING               = 0x0400;
-		public const int SWP_DRAWFRAME                    = SWP_FRAMECHANGED;
-		public const int SWP_NOREPOSITION                 = SWP_NOOWNERZORDER;
-		public const int SWP_DEFERERASE                   = 0x2000;
-		public const int SWP_ASYNCWINDOWPOS               = 0x4000;
+		public const int SWP_NOSIZE         = 0x0001;
+		public const int SWP_NOMOVE         = 0x0002;
+		public const int SWP_NOZORDER       = 0x0004;
+		public const int SWP_NOREDRAW       = 0x0008;
+		public const int SWP_NOACTIVATE     = 0x0010;
+		public const int SWP_FRAMECHANGED   = 0x0020;
+		public const int SWP_SHOWWINDOW     = 0x0040;
+		public const int SWP_HIDEWINDOW     = 0x0080;
+		public const int SWP_NOCOPYBITS     = 0x0100;
+		public const int SWP_NOOWNERZORDER  = 0x0200;
+		public const int SWP_NOSENDCHANGING = 0x0400;
+		public const int SWP_DRAWFRAME      = SWP_FRAMECHANGED;
+		public const int SWP_NOREPOSITION   = SWP_NOOWNERZORDER;
+		public const int SWP_DEFERERASE     = 0x2000;
+		public const int SWP_ASYNCWINDOWPOS = 0x4000;
+		#endregion
+
+		#region Redraw Window RDW_
+		public const int RDW_INVALIDATE      = 0x0001;
+		public const int RDW_INTERNALPAINT   = 0x0002;
+		public const int RDW_ERASE           = 0x0004;
+		public const int RDW_VALIDATE        = 0x0008;
+		public const int RDW_NOINTERNALPAINT = 0x0010;
+		public const int RDW_NOERASE         = 0x0020;
+		public const int RDW_NOCHILDREN      = 0x0040;
+		public const int RDW_ALLCHILDREN     = 0x0080;
+		public const int RDW_UPDATENOW       = 0x0100;
+		public const int RDW_ERASENOW        = 0x0200;
+		public const int RDW_FRAME           = 0x0400;
+		public const int RDW_NOFRAME         = 0x0800;
 		#endregion
 
 		#region HWND constants HWND_
@@ -1115,7 +1148,11 @@ namespace pr.win32
 		{
 			return new Point(lparam.ToInt32() & 0xffff, lparam.ToInt32() >> 16);
 		}
-
+		public static Point LParamToPoint(int lparam)
+		{
+			return LParamToPoint((IntPtr)lparam);
+		}
+		
 		// Return the window under a screen space point
 		public static HWND WindowFromPoint(Point pt)
 		{
@@ -1287,6 +1324,25 @@ namespace pr.win32
 						,nmhdr.idFrom
 						,nmhdr.code
 						,notify_type);
+				}
+			case WM_PARENTNOTIFY:
+				{
+					string details;
+					switch (LoWord(wparam))
+					{
+					default:             details = "Unexpected event. {0}".Fmt(HiWord(wparam)); break;
+					case WM_CREATE:      details = "Child Id:{0} hwnd:{1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
+					case WM_DESTROY:     details = "Child Id:{0} hwnd:{1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
+					case WM_LBUTTONDOWN: details = "LButton {0}".Fmt(LParamToPoint(lparam)); break;
+					case WM_MBUTTONDOWN: details = "MButton {0}".Fmt(LParamToPoint(lparam)); break;
+					case WM_RBUTTONDOWN: details = "RButton {0}".Fmt(LParamToPoint(lparam)); break;
+					case WM_XBUTTONDOWN: details = "XButton btn:{0} {1}".Fmt(HiWord(wparam), LParamToPoint(lparam)); break;
+					case WM_POINTERDOWN: details = "Pointer Down ptr:{0}".Fmt(HiWord(wparam)); break;
+					}
+					return "{0} evt: {1} {2}"
+						.Fmt(hdr
+						,MsgIdToString((int)LoWord(wparam))
+						,details);
 				}
 			case WM_SYSKEYDOWN:
 				return "{0} vk_key = {1} ({2})  Repeats: {3}  lParam: {4}"

@@ -29,7 +29,7 @@ namespace pr.gui
 		[TypeConverter(typeof(Settings.TyConv))]
 		public class Settings :SettingsSet<Settings>
 		{
-			// Note: some of the values in here are cached for performance
+			// Some values are cached for performance
 
 			/// <summary>True if input characters should be echoed into the screen buffer</summary>
 			public bool LocalEcho
@@ -76,13 +76,6 @@ namespace pr.gui
 				set { set(x => x.NewlineSend, value); }
 			}
 
-			/// <summary>The back colour for the terminal display</summary>
-			public Color BackColor
-			{
-				get { return get(x => x.BackColor); }
-				set { set(x => x.BackColor, value); }
-			}
-
 			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
 			public bool HexOutput
 			{
@@ -92,14 +85,23 @@ namespace pr.gui
 
 			public Settings()
 			{
-				LocalEcho      = true;
+				LocalEcho      = false;
 				TabSize        = 4;
-				TerminalWidth  = 80;
+				TerminalWidth  = 120;
 				TerminalHeight = 256;
 				NewlineRecv    = ENewLineMode.LF;
 				NewlineSend    = ENewLineMode.CR;
-				BackColor      = SystemColors.Window;
 				HexOutput      = false;
+			}
+
+			public override void FromXml(XElement node)
+			{
+				base.FromXml(node);
+
+				// Reset cached values after loading
+				m_cached_tab_size = null;
+				m_cached_terminal_width = null;
+				m_cached_terminal_height = null;
 			}
 
 			/// <summary>Type converter for displaying in a property grid</summary>
@@ -270,7 +272,7 @@ namespace pr.gui
 				get { return new Char(m_line[i], m_styl[i]); }
 				set
 				{
-					if (i >= size) resize(i + 1, ' ', m_styl.LastOrDefault());
+					if (i >= Size) Resize(i + 1, ' ', m_styl.LastOrDefault());
 					Debug.Assert(value.m_char != 0);
 					m_line[i] = value.m_char;
 					m_styl[i] = value.m_styl;
@@ -282,8 +284,8 @@ namespace pr.gui
 			{
 				get
 				{
-					if (size == 0) yield break;
-					for (int s = 0, e = 0, end = size;;)
+					if (Size == 0) yield break;
+					for (int s = 0, e = 0, end = Size;;)
 					{
 						var sty = m_styl[s];
 						for (e = s+1; e != end && m_styl[e].Equal(sty); ++e) {}
@@ -295,13 +297,13 @@ namespace pr.gui
 			}
 
 			/// <summary>Length of the line</summary>
-			public int size
+			public int Size
 			{
 				get { return m_line.Length; }
 			}
 
 			/// <summary>Set the line size</summary>
-			public void resize(int newsize, char fill, Style style)
+			public void Resize(int newsize, char fill, Style style)
 			{
 				Debug.Assert(fill != 0);
 				m_line.Resize(newsize, fill);
@@ -309,19 +311,19 @@ namespace pr.gui
 			}
 
 			// Erase a range within the line
-			public void erase(int ofs, int count)
+			public void Erase(int ofs, int count)
 			{
-				if (ofs >= size) return;
-				var len = Math.Min(count, size - ofs);
+				if (ofs >= Size) return;
+				var len = Math.Min(count, Size - ofs);
 				m_line.Remove(ofs, len);
 				m_styl.RemoveRange(ofs, len);
 			}
-			
+
 			/// <summary>Write 'str[ofs->ofs+count]' into/over the line from 'col'</summary>
-			public void write(int col, string str, int ofs, int count, Style style)
+			public void Write(int col, string str, int ofs, int count, Style style)
 			{
-				if (size < col + count)
-					resize(col + count, ' ', new Style());
+				if (Size < col + count)
+					Resize(col + count, ' ', style);
 
 				for (; count-- != 0; ++ofs, ++col)
 				{
@@ -332,9 +334,9 @@ namespace pr.gui
 			}
 
 			/// <summary>Return a subsection of this line starting from 'ofs'</summary>
-			public string substr(int ofs)
+			public string Substr(int ofs)
 			{
-				return ofs < size ? m_line.ToString(ofs, size - ofs) : string.Empty;
+				return ofs < Size ? m_line.ToString(ofs, Size - ofs) : string.Empty;
 			}
 
 			public override string ToString()
@@ -421,9 +423,9 @@ namespace pr.gui
 			private State m_out;
 			private State m_saved;
 
-			public Buffer()
+			public Buffer(Settings settings)
 			{
-				Settings = new Settings();
+				Settings = settings ?? new Settings();
 				m_input  = new UserInput(8192);
 				m_seq    = new StringBuilder();
 				m_lines  = new List<Line>();
@@ -456,7 +458,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add a single character to the user input buffer.</summary>
-			public void AddInput(char c)
+			public void AddInput(char c, bool notify = true)
 			{
 				if (c == '\n')
 				{
@@ -471,12 +473,21 @@ namespace pr.gui
 				{
 					m_input.Add(c);
 				}
+
+				// Notify that input data was added
+				if (notify)
+					OnInputAdded();
 			}
 
 			/// <summary>Add a string to the user input buffer.</summary>
-			public void AddInput(string text)
+			public void AddInput(string text, bool notify = true)
 			{
-				text.ForEach(AddInput);
+				foreach (var c in text)
+					AddInput(c, false);
+
+				// Notify that input data was added
+				if (notify)
+					OnInputAdded();
 			}
 
 			/// <summary>Add a control character to the user input buffer. Returns true if the key was used</summary>
@@ -498,6 +509,13 @@ namespace pr.gui
 				case Keys.Return: AddInput('\n');  return true;
 				case Keys.Tab:    AddInput('\t');  return true;
 				}
+			}
+
+			/// <summary>Raised when the user input buffer has data added</summary>
+			public event EventHandler InputAdded;
+			protected virtual void OnInputAdded()
+			{
+				InputAdded.Raise(this);
 			}
 
 			/// <summary>
@@ -549,7 +567,7 @@ namespace pr.gui
 				{
 					if (j == m_lines.Count) yield break;
 					var line = LineAt(j);
-					yield return line.substr(x);
+					yield return line.Substr(x);
 				}
 			}
 
@@ -579,6 +597,27 @@ namespace pr.gui
 				BufferChanged.Raise(this, args);
 			}
 
+			/// <summary>Raised just before and just after buffer lines are dropped due to reaching the maximum Y-size</summary>
+			public event EventHandler<OverflowEventArgs> Overflow;
+			public class OverflowEventArgs :EventArgs
+			{
+				public OverflowEventArgs(bool before, Range dropped)
+				{
+					Before = before;
+					Dropped = dropped;
+				}
+
+				/// <summary>True if the event is just before lines are dropped, false if just after</summary>
+				public bool Before { get; private set; }
+
+				/// <summary>The index range of lines that are dropped</summary>
+				public Range Dropped { get; private set; }
+			}
+			protected virtual void OnOverflow(OverflowEventArgs args)
+			{
+				Overflow.Raise(this, args);
+			}
+
 			/// <summary>Return the line at 'y', allocating if needed</summary>
 			private Line LineAt(int y)
 			{
@@ -598,9 +637,20 @@ namespace pr.gui
 					char c = char.IsControl((char)b) ? '.' : (char)b;
 					hex.AppendFormat("{0:x2} ", b);
 					str.Append(c);
-					if (++i == 16)  { Write(hex.Append(" | ").Append(str).Append('\n').ToString()); hex.Length = 0; str.Length = 0; i = 0; }
+					if (++i == 16) 
+					{
+						Write(hex.Append(" | ").Append(str).ToString());
+						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
+						hex.Length = 0;
+						str.Length = 0;
+						i = 0;
+					}
 				}
-				if (i != 0) { Write(hex.Append(' ', 3*(16-i)).Append(" | ").Append(str).Append('\n').ToString()); }
+				if (i != 0)
+				{
+					Write(hex.Append(' ', 3*(16-i)).Append(" | ").Append(str).ToString());
+					m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
+				}
 			}
 
 			/// <summary>Parse the vt100 console text in 'text'</summary>
@@ -631,7 +681,7 @@ namespace pr.gui
 					else if (char.IsControl(c))
 					{
 						Write(text, s, e - s);
-						if (c == '\b') m_out.pos = MoveCaret(m_out.pos, -1, 0);
+						if (c == '\b') BackSpace();
 						if (c == '\r') m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 0);
 						if (c == '\n') m_out.pos = MoveCaret(m_out.pos, 0, 1);
 						if (c == '\t') Write(new string(' ', Settings.TabSize - (m_out.pos.X % Settings.TabSize)));
@@ -784,7 +834,7 @@ namespace pr.gui
 									if (m_out.pos.Y < m_lines.Count)
 									{
 										m_lines.Resize(m_out.pos.Y + 1, () => new Line());
-										LineAt(m_out.pos.Y).resize(m_out.pos.X, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(m_out.pos.X, '\0', m_out.style);
 									}
 									break;
 								case 1:
@@ -793,7 +843,7 @@ namespace pr.gui
 										var num = Math.Min(m_lines.Count, m_out.pos.Y);
 										m_lines.RemoveRange(0, num);
 										if (m_lines.Count != 0)
-											LineAt(0).erase(0, m_out.pos.X);
+											LineAt(0).Erase(0, m_out.pos.X);
 									}
 									break;
 								case 2:
@@ -816,21 +866,21 @@ namespace pr.gui
 									//Esc[0K Clear line from cursor right EL0
 									if (m_out.pos.Y < m_lines.Count)
 									{
-										LineAt(m_out.pos.Y).resize(m_out.pos.X, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(m_out.pos.X, '\0', m_out.style);
 									}
 									break;
 								case 1:
 									//Esc[1K Clear line from cursor left EL1
 									if (m_out.pos.Y < m_lines.Count)
 									{
-										LineAt(m_out.pos.Y).erase(0, m_out.pos.X);
+										LineAt(m_out.pos.Y).Erase(0, m_out.pos.X);
 									}
 									break;
 								case 2:
 									//Esc[2K Clear entire line EL2
 									if (m_out.pos.Y < m_lines.Count)
 									{
-										LineAt(m_out.pos.Y).resize(0, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(0, '\0', m_out.style);
 									}
 									break;
 								}
@@ -1163,9 +1213,19 @@ namespace pr.gui
 			private Point MoveCaret(int x, int y)
 			{
 				// Roll the buffer when y >= terminal height
-				if (y >= Settings.TerminalHeight)
+				var half = Settings.TerminalHeight / 2;
+				if (y >= Settings.TerminalHeight + half)
 				{
-					m_lines.RemoveRange(0, y - Settings.TerminalHeight + 1);
+					var count = half;
+					OnOverflow(new OverflowEventArgs(true, new Range(0, 0 + count)));
+
+					// Remove the lines and adjust anything that stores a line number
+					m_lines.RemoveRange(0, count);
+					y -= count;
+					m_out.pos.Y -= count;
+					m_saved.pos.Y -= count;
+
+					OnOverflow(new OverflowEventArgs(false, new Range(0, 0 + count)));
 				}
 
 				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth), Maths.Clamp(y, 0, Settings.TerminalHeight));
@@ -1195,17 +1255,34 @@ namespace pr.gui
 
 				// Get the line and ensure it's large enough
 				var line = LineAt(m_out.pos.Y);
-				if (line.size < m_out.pos.X + count)
-					line.resize(m_out.pos.X + count, ' ', m_out.style);
+				if (line.Size < m_out.pos.X + count)
+					line.Resize(m_out.pos.X + count, ' ', m_out.style);
 
 				// Write the string
-				line.write(m_out.pos.X, str, ofs, count, m_out.style);
+				line.Write(m_out.pos.X, str, ofs, count, m_out.style);
 				if (clipped)
-					line.write(Settings.TerminalWidth - 1, new string('~',1), 0, 1, m_out.style);
+					line.Write(Settings.TerminalWidth - 1, new string('~',1), 0, 1, m_out.style);
 
 				// Notify whenever the buffer is changed
 				OnBufferChanged(new BufferChangedEventArgs(m_out.pos, count));
 				m_out.pos = MoveCaret(m_out.pos, count, 0);
+			}
+
+			/// <summary>Process a backspace character</summary>
+			private void BackSpace()
+			{
+				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
+				if (m_out.pos.Y < 0 || m_out.pos.Y > Settings.TerminalHeight) throw new Exception("Caret outside screen buffer");
+				if (m_out.pos.X == 0) return;
+
+				m_out.pos = MoveCaret(m_out.pos, -1, 0);
+
+				// Get the line
+				var line = LineAt(m_out.pos.Y);
+				line.Erase(m_out.pos.X, 1);
+
+				// Notify whenever the buffer is changed
+				OnBufferChanged(new BufferChangedEventArgs(m_out.pos, line.Size - m_out.pos.X));
 			}
 
 			/// <summary>Determines the terminal screen area used by 'str'</summary>
@@ -1293,7 +1370,7 @@ namespace pr.gui
 				{
 					m_len -= Math.Min(n, m_len);
 				}
-				public Scope<GCHandle> Pin()
+				public GCHandleScope Pin()
 				{
 					return GCHandleEx.Alloc(m_text, GCHandleType.Pinned);
 				}
@@ -1303,25 +1380,39 @@ namespace pr.gui
 			private EventBatcher m_eb;
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
 			private CellBuf m_cells;
+			private ContextMenuStrip m_cmenu;
 
 			public Display()
 			{
-				m_hs = new HoverScroll(Handle);
+				m_hs = new HoverScroll(HostedCtrl.Handle);
 				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(10)){TriggerOnFirst = true};
 				m_sty = new Dictionary<Style,byte>();
 				m_cells = new CellBuf();
+				m_cmenu = new CMenu(this);
 
 				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
 				BlinkTimer.Tick += SignalRefresh;
 
 				AutoScrollToBottom = true;
+
+				// Use our own context menu
 				Cmd(Sci.SCI_USEPOPUP, 0, 0);
+
+				// Allow scrolling up to one page past the last line
+				Cmd(Sci.SCI_SETENDATLASTLINE, 0, 0);
 			}
 			protected override void Dispose(bool disposing)
 			{
 				Util.Dispose(ref m_hs);
 				Util.Dispose(ref m_eb);
 				base.Dispose(disposing);
+			}
+
+			/// <summary>Return the vt100 settings</summary>
+			[Browsable(false)]
+			public Settings Settings
+			{
+				get { return Buffer != null ? Buffer.Settings : null; }
 			}
 
 			/// <summary>Get/Set the underlying VT100 buffer</summary>
@@ -1334,12 +1425,15 @@ namespace pr.gui
 					if (m_buffer == value) return;
 					if (m_buffer != null)
 					{
+						m_buffer.Overflow -= HandleBufferOverflow;
 						m_buffer.BufferChanged -= SignalRefresh;
 					}
 					m_buffer = value;
 					if (m_buffer != null)
 					{
+						m_buffer.Overflow += HandleBufferOverflow;
 						m_buffer.BufferChanged += SignalRefresh;
+						m_cmenu = new CMenu(this);
 					}
 					SignalRefresh();
 				}
@@ -1352,7 +1446,12 @@ namespace pr.gui
 
 			/// <summary>True if the display automatically scrolls to the bottom</summary>
 			[Browsable(false)]
-			public bool AutoScrollToBottom { get; set; }
+			public bool AutoScrollToBottom
+			{
+				get { return m_auto_scroll_to_bottom; }
+				set { m_auto_scroll_to_bottom = value; }
+			}
+			private bool m_auto_scroll_to_bottom;
 
 			/// <summary>Request an update of the display</summary>
 			public void SignalRefresh(object sender = null, EventArgs args = null)
@@ -1369,6 +1468,22 @@ namespace pr.gui
 				ClearAll();
 			}
 
+			#region Clipboard
+			public override void Cut()
+			{
+				base.Copy(); // Cut isn't supported for terminals
+			}
+			public override void Copy()
+			{
+				base.Copy();
+			}
+			public override void Paste()
+			{
+				if (Buffer != null) Buffer.Paste();
+				else base.Paste();
+			}
+			#endregion
+
 			/// <summary>Refresh the control with text from the vt100 buffer</summary>
 			private void UpdateText()
 			{
@@ -1381,10 +1496,9 @@ namespace pr.gui
 					return;
 				}
 
-				using (this.SuspendRedraw(true))
-				using (this.SuspendScroll())
-				//using (this.SelectionScope())
-				//using (this.SuspendUndo())
+				using (HostedCtrl.SuspendRedraw(true))
+				using (ScrollScope())
+				using (SelectionScope())
 				{
 					ClearAll();
 
@@ -1405,90 +1519,24 @@ namespace pr.gui
 
 					// Pass the buffer of cells to scintilla
 					using (var cells = m_cells.Pin())
-						Cmd(Sci.SCI_APPENDSTYLEDTEXT, m_cells.SizeInBytes, cells.State.AddrOfPinnedObject());
+						Cmd(Sci.SCI_APPENDSTYLEDTEXT, m_cells.SizeInBytes, cells.Handle.AddrOfPinnedObject());
 
 					// Reset, ready for next time
 					m_cells.Reset();
-
-					//var buftext = string.Join("\n", buf.Lines);
-					//var utf8 = Encoding.UTF8.GetBytes(buftext);
-					//using (var h = GCHandleEx.Alloc(utf8, GCHandleType.Pinned))
-					//	Cmd(SCI_APPENDTEXT, utf8.Length, h.State.AddrOfPinnedObject());
 				}
 
-				// Auto scroll to the bottom
+				// Auto scroll to the bottom if told to and the last line is off the bottom 
 				if (AutoScrollToBottom)
 				{
-					//Select(TextLength, 0);
-					//FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
+					// Move the caret to the end
+					Cmd(Sci.SCI_SETEMPTYSELECTION, Cmd(Sci.SCI_GETTEXTLENGTH));
+
+					// Only scroll if the last line isn't visible
+					var last_line_index = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETTEXTLENGTH));
+					var last_vis_line = Cmd(Sci.SCI_GETFIRSTVISIBLELINE) + Cmd(Sci.SCI_LINESONSCREEN);
+					if (last_line_index >= last_vis_line)
+						Cmd(Sci.SCI_SCROLLCARET);
 				}
-
-				#if false
-				// Update the displayed lines of text from the buffer
-				using (this.SuspendRedraw(true))
-				//using (this.SuspendScroll())
-				using (this.SelectionScope())
-				using (this.SuspendUndo())
-				{
-					// Ensure the number of lines in the Buffer matches the number of lines in the control
-					LineCount = Buffer.LineCount;
-
-					// Update only the lines that are visible
-					var beg = FirstVisibleLineIndex;
-					var end = Math.Min(beg + VisibleLineCount, Buffer.LineCount);
-					var blinking_text = false;
-					for (int i = beg; i != end; ++i)
-					{
-						var line_in  = Buffer.Lines[i];
-						var line_out = Line[i];
-
-						int j = 0; Style? prev_style = null;
-						foreach (var span in line_in.Spans)
-						{
-							var str = span.m_str;
-							var sty = span.m_sty;
-							blinking_text |= sty.Blink;
-							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
-								str = new string(' ', span.m_str.Length);
-
-							// Only update the control text if actually changed
-							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
-								line_out.Replace(j, span.m_str);
-
-							// Apply the style to the text
-							if (prev_style == null || !sty.Equal(prev_style.Value))
-							{
-								prev_style = sty;
-								using (this.SelectionScope())
-								{
-									// Select the text just written
-									line_out.Select(j, span.m_str.Length);
-
-									// Set the colour and font
-									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
-									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
-
-									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
-									if (SelectionFont.Style != font_style)
-										SelectionFont = SelectionFont.Dup(style:font_style);
-								}
-							}
-
-							// Advance down the line
-							j += span.m_str.Length;
-						}
-						line_out.Length = j;
-					}
-					// Don't need to add user input text because we
-					// only draw what the server has sent to us.
-
-					// Enable the blink timer if blinking text was displayed
-					m_blink_timer.Enabled = blinking_text;
-				}
-
-				//// Refresh the display
-				//Invalidate(ClientRectangle);
-				#endif
 			}
 
 			/// <summary>Return the scintilla style index for the given vt100 style</summary>
@@ -1504,7 +1552,7 @@ namespace pr.gui
 					var fontname = Encoding.UTF8.GetBytes("consolas");
 					using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
 					{
-						Cmd(Sci.SCI_STYLESETFONT, idx, fonth.State.AddrOfPinnedObject());
+						Cmd(Sci.SCI_STYLESETFONT, idx, fonth.Handle.AddrOfPinnedObject());
 						Cmd(Sci.SCI_STYLESETFORE, idx, forecol.ToArgb() & 0x00FFFFFF);
 						Cmd(Sci.SCI_STYLESETBACK, idx, backcol.ToArgb() & 0x00FFFFFF);
 						Cmd(Sci.SCI_STYLESETBOLD, idx, sty.Bold ? 1 : 0);
@@ -1527,55 +1575,60 @@ namespace pr.gui
 					{
 						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
 						var ks = new Win32.KeyState(lparam);
-						if (!ks.Alt)
+						if (!ks.Alt && Buffer != null)
 						{
-							// By default "handle" all key events
-							handled = true;
+							// Let the key events through (by default) if local echo is on
+							handled = Buffer.Settings.LocalEcho == false;
+
 							var vk = (Keys)wparam;
+
+							char ch;
+							if (Win32.CharFromVKey(vk, out ch))
+								Buffer.AddInput(ch);
+							else
+								handled &= Buffer.AddInput(vk);
+
 							switch (vk)
 							{
-							default:
-								char ch;
-								if (Win32.CharFromVKey(vk, out ch))
-									Buffer.AddInput(ch);
-								else
-									Buffer.AddInput(vk);
-								break;
-
 							// Intercept clipboard shortcuts
 							case Keys.Control | Keys.X:
+								Cut();
+								break;
 							case Keys.Control | Keys.C:
-								//Copy();
+								Copy();
 								break;
 							case Keys.Control | Keys.V:
 								Buffer.Paste();
+								break;
+
+							// Forward navigation keys to the control
+							case Keys.Tab:
+							case Keys.Up:
+							case Keys.Down:
+							case Keys.Left:
+							case Keys.Right:
+								Win32.SendMessage(HostedCtrl.Handle, (uint)msg, wparam, lparam);
+								handled = true;
 								break;
 							}
 						}
 						break;
 					}
 					#endregion
-				case Win32.WM_RBUTTONDOWN:
-					#region
-					{
-						var pt = Win32.LParamToPoint(lparam);
-						ContextMenu().Show(this, pt);
-						break;
-					}
-					#endregion
-				case Win32.WM_NOTIFY:
+				case Win32.WM_PARENTNOTIFY:
 					#region
 					{
 						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						var nh = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
-					//	Debug.WriteLine("SciNotify: {0}".Fmt(IdToString((int)nh.code)));
-
-						switch (nh.code)
+						switch (Win32.LoWord(wparam))
 						{
-						case Sci.SCN_CHARADDED:
+						case Win32.WM_RBUTTONDOWN:
+							#region
 							{
+								var pt = Win32.LParamToPoint(lparam);
+								ContextMenu.Show(this, pt);
 								break;
 							}
+							#endregion
 						}
 						break;
 					}
@@ -1585,663 +1638,210 @@ namespace pr.gui
 				base.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
 			}
 
-				/// <summary>A context menu for the vt100 terminal</summary>
-			public new ContextMenuStrip ContextMenu()
+			/// <summary>Selection changes</summary>
+			protected override void OnSelectionChanged()
 			{
-				var menu = new ContextMenuStrip();
-				var settings = Buffer.Settings;
-
-				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Clear", null));
-					item.Click += (s,e) => Clear();
-				}
-				menu.Items.Add(new ToolStripSeparator());
-				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Copy", null));
-					item.Click += (s,e) => Copy();
-				}
-				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Paste", null));
-					item.Click += (s,e)=> Buffer.Paste();
-				}
-				menu.Items.Add(new ToolStripSeparator());
-				{
-					var options = menu.Items.Add2(new ToolStripMenuItem("Terminal Options", null));
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Local Echo"){Checked = settings.LocalEcho, CheckOnClick = true});
-						item.Click += (s,e) => settings.LocalEcho = item.Checked;
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Terminal Width"));
-						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TerminalWidth.ToString()});
-						edit.KeyDown += (s,e) =>
-							{
-								if (e.KeyCode != Keys.Return) return;
-								menu.Close();
-							};
-						edit.Validating += (s,e) =>
-							{
-								int w;
-								e.Cancel = !int.TryParse(edit.Text, out w);
-							};
-						edit.Validated += (s,e) =>
-						{
-							settings.TerminalWidth = int.Parse(edit.Text);
-						};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Tab Size"));
-						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TabSize.ToString()});
-						edit.KeyDown += (s,e) =>
-							{
-								if (e.KeyCode != Keys.Return) return;
-								menu.Close();
-							};
-						edit.Validating += (s,e) =>
-							{
-								int sz;
-								e.Cancel = !int.TryParse(edit.Text, out sz);
-							};
-						edit.Validated += (s,e) =>
-							{
-								settings.TabSize = int.Parse(edit.Text);
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Recv"));
-						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
-						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
-						edit.SelectedIndex = (int)settings.NewlineRecv;
-						edit.SelectedIndexChanged += (s,e) =>
-							{
-								settings.NewlineRecv = (ENewLineMode)edit.SelectedIndex;
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Send"));
-						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
-						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
-						edit.SelectedIndex = (int)settings.NewlineSend;
-						edit.SelectedIndexChanged += (s,e) =>
-							{
-								settings.NewlineSend = (ENewLineMode)edit.SelectedIndex;
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Background Colour"));
-						var btn  = item   .DropDownItems.Add2(new ToolStripButton("   "){BackColor = settings.BackColor, AutoToolTip = false});
-						btn.Click += (s,e) =>
-							{
-								using (var cd = new ColorDialog())
-								{
-									if (cd.ShowDialog() != DialogResult.OK) return;
-									settings.BackColor = cd.Color;
-									menu.Close();
-								}
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Hex Output"){Checked = settings.HexOutput, CheckOnClick = true});
-						item.Click += (s,e) =>
-							{
-								settings.HexOutput = item.Checked;
-							};
-					}
-					menu.Items.Add(options);
-				}
-				return menu;
-			}
-		}
-
-		#if false
-
-
-		/// <summary>Interface for things that can display the VT100 buffer</summary>
-		private interface IDisplay
-		{
-			IntPtr Handle { get; }
-			void UpdateText();
-			void Clear();
-			void Copy();
-		}
-
-		/// <summary>Use RTB implementation by default </summary>
-		public class Display :DisplaySci
-		{}
-
-		/// <summary>Functionality for controls that display the VT100.Buffer</summary>
-		private class DisplayCore :IDisposable
-		{
-			private IDisplay m_disp;
-			private HoverScroll m_hs;
-			private EventBatcher m_eb;
-
-			public DisplayCore(IDisplay disp)
-			{
-				m_disp = disp;
-
-				m_hs = new HoverScroll(m_disp.Handle);
-				m_eb = new EventBatcher(m_disp.UpdateText, TimeSpan.FromMilliseconds(10)){TriggerOnFirst = true};
-
-				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
-				BlinkTimer.Tick += SignalRefresh;
-
-				AutoScrollToBottom = true;
-			}
-			public void Dispose()
-			{
-				Util.Dispose(ref m_hs);
-				Util.Dispose(ref m_eb);
+				base.OnSelectionChanged();
+				var pos = Cmd(Sci.SCI_GETCURRENTPOS);
+				var len = Cmd(Sci.SCI_GETTEXTLENGTH);
+				AutoScrollToBottom = pos == len;
 			}
 
-			/// <summary>Timer that causes refreshes once a seconds</summary>
-			public Timer BlinkTimer { get; private set; }
-
-			/// <summary>True if the display automatically scrolls to the bottom</summary>
-			[Browsable(false)]
-			public bool AutoScrollToBottom
-			{ get; set; }
-
-			/// <summary>Get/Set the underlying VT100 buffer</summary>
-			[Browsable(false)]
-			public Buffer Buffer
+			/// <summary>Handle buffer lines being dropped</summary>
+			private void HandleBufferOverflow(object sender, Buffer.OverflowEventArgs args)
 			{
-				get { return m_buffer; }
-				set
+				if (args.Before)
 				{
-					if (m_buffer == value) return;
-					if (m_buffer != null)
-					{
-						m_buffer.BufferChanged -= SignalRefresh;
-					}
-					m_buffer = value;
-					if (m_buffer != null)
-					{
-						m_buffer.BufferChanged += SignalRefresh;
-					}
-					SignalRefresh();
-				}
-			}
-			private Buffer m_buffer;
+					// Calculate the number of bytes dropped.
+					var bytes = 0;
+					for (int i = args.Dropped.Begini; i != args.Dropped.Endi; ++i)
+						bytes += Encoding.UTF8.GetByteCount(Buffer.Lines[i].m_line.ToString());
 
-			/// <summary>Request an update of the display</summary>
-			public void SignalRefresh(object sender = null, EventArgs args = null)
-			{
-				m_eb.Signal();
-			}
+					// Save the selection and adjust it by the number of characters to be dropped
+					// Note: Buffer does not store line endings, but the saved selection does.
+					bytes += args.Dropped.Sizei; // 1 '\n' per line dropped
 
-			/// <summary>Trap user input before it gets to the control</summary>
-			public void ProcessWndMsg(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-			{
-				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-				switch (msg)
-				{
-				case Win32.WM_KEYDOWN:
-					{
-						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						var ks = new Win32.KeyState(lparam);
-						if (!ks.Alt)
-						{
-							// By default "handle" all key events
-							handled = true;
-							var vk = (Keys)wparam;
-							switch (vk)
-							{
-							default:
-								handled = Buffer.AddInput(vk);
-								break;
+					m_sel = Selection.Save(this);
+					m_sel.m_current -= bytes;
+					m_sel.m_anchor -= bytes;
 
-							// Intercept clipboard shortcuts
-							case Keys.Control | Keys.X:
-							case Keys.Control | Keys.C:
-								m_disp.Copy();
-								break;
-							case Keys.Control | Keys.V:
-								Buffer.Paste();
-								break;
-							}
-						}
-						break;
-					}
-				case Win32.WM_CHAR:
+					// If not auto scrolling, scroll up to move with the buffer text
+					if (!AutoScrollToBottom)
 					{
-						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						var ks = new Win32.KeyState(lparam);
-						if (!ks.Alt)
-						{
-							// By default "handle" all key events
-							handled = true;
-							var ch = (char)wparam;
-							switch (ch)
-							{
-							default:
-								Buffer.AddInput(ch);
-								break;
-							}
-						}
-						break;
-					}
-				case Win32.WM_RBUTTONDOWN:
-					{
-						var pt = Win32.LParamToPoint(lparam);
-						ContextMenu().Show(m_disp as Control, pt);
-						break;
+						var vis = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+						vis = Math.Max(0, vis - args.Dropped.Sizei);
+						Cmd(Sci.SCI_SETFIRSTVISIBLELINE, vis);
 					}
 				}
+				else
+				{
+					Selection.Restore(this, m_sel);
+				}
 			}
+			private Selection m_sel;
 
 			/// <summary>A context menu for the vt100 terminal</summary>
-			public ContextMenuStrip ContextMenu()
+			public new ContextMenuStrip ContextMenu
 			{
-				var menu = new ContextMenuStrip();
-				var settings = Buffer.Settings;
+				get { return m_cmenu; }
+			}
 
+			/// <summary>The context menu for this vt100 display</summary>
+			private class CMenu :ContextMenuStrip
+			{
+				private Display m_disp;
+				public CMenu(Display disp)
 				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Clear", null));
-					item.Click += (s,e) => m_disp.Clear();
-				}
-				menu.Items.Add(new ToolStripSeparator());
-				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Copy", null));
-					item.Click += (s,e) => m_disp.Copy();
-				}
-				{
-					var item = menu.Items.Add2(new ToolStripMenuItem("Paste", null));
-					item.Click += (s,e)=> Buffer.Paste();
-				}
-				menu.Items.Add(new ToolStripSeparator());
-				{
-					var options = menu.Items.Add2(new ToolStripMenuItem("Terminal Options", null));
+					m_disp = disp;
+					using (this.SuspendLayout(false))
 					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Local Echo"){Checked = settings.LocalEcho, CheckOnClick = true});
-						item.Click += (s,e) => settings.LocalEcho = item.Checked;
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Terminal Width"));
-						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TerminalWidth.ToString()});
-						edit.KeyDown += (s,e) =>
-							{
-								if (e.KeyCode != Keys.Return) return;
-								menu.Close();
-							};
-						edit.Validating += (s,e) =>
-							{
-								int w;
-								e.Cancel = !int.TryParse(edit.Text, out w);
-							};
-						edit.Validated += (s,e) =>
+						#region Clear
 						{
-							settings.TerminalWidth = int.Parse(edit.Text);
-						};
+							var item = Items.Add2(new ToolStripMenuItem("Clear", null));
+							item.Click += (s,e) => m_disp.Clear();
+						}
+						#endregion
+						Items.Add(new ToolStripSeparator());
+						#region Copy
+						{
+							var item = Items.Add2(new ToolStripMenuItem("Copy", null));
+							item.Click += (s,e) => m_disp.Copy();
+						}
+						#endregion
+						#region Paste
+						{
+							var item = Items.Add2(new ToolStripMenuItem("Paste", null));
+							item.Click += (s,e)=> m_disp.Paste();
+						}
+						#endregion
+						if (m_disp.Settings != null)
+						{
+							Items.Add(new ToolStripSeparator());
+							var options = Items.Add2(new ToolStripMenuItem("Terminal Options", null));
+
+							#region Local Echo
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Local Echo"){CheckOnClick = true});
+								options.DropDown.Opening += (s,a) =>
+									{
+										item.Checked = m_disp.Settings.LocalEcho;
+									};
+								item.Click += (s,a) =>
+									{
+										m_disp.Settings.LocalEcho = item.Checked;
+									};
+							}
+							#endregion
+							#region Terminal Width
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Terminal Width"));
+								var edit = item.DropDownItems.Add2(new ToolStripTextBox());
+								item.DropDown.Opening += (s,a) =>
+									{
+										edit.Text = m_disp.Settings.TerminalWidth.ToString();
+									};
+								item.DropDown.Closing += (s,a) =>
+									{
+										int w;
+										if (!(a.Cancel = !int.TryParse(edit.Text, out w)))
+											m_disp.Settings.TerminalWidth = w;
+									};
+								edit.KeyDown += (s,e) =>
+									{
+										if (e.KeyCode != Keys.Return) return;
+										item.DropDown.Close();
+									};
+							}
+							#endregion
+							#region Terminal Height
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Terminal Height"));
+								var edit = item.DropDownItems.Add2(new ToolStripTextBox());
+								item.DropDown.Opening += (s,a) =>
+									{
+										edit.Text = m_disp.Settings.TerminalHeight.ToString();
+									};
+								item.DropDown.Closing += (s,e) =>
+									{
+										int h;
+										if (!(e.Cancel = !int.TryParse(edit.Text, out h)))
+											m_disp.Settings.TerminalHeight = h;
+									};
+								edit.KeyDown += (s,e) =>
+									{
+										if (e.KeyCode != Keys.Return) return;
+										item.DropDown.Close();
+									};
+							}
+							#endregion
+							#region Tab Size
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Tab Size"));
+								var edit = item.DropDownItems.Add2(new ToolStripTextBox());
+								item.DropDown.Opening += (s,a) =>
+									{
+										edit.Text = m_disp.Settings.TabSize.ToString();
+									};
+								item.DropDown.Closing += (s,e) =>
+									{
+										int sz;
+										if (!(e.Cancel = !int.TryParse(edit.Text, out sz)))
+											m_disp.Settings.TabSize = sz;
+									};
+								edit.KeyDown += (s,e) =>
+									{
+										if (e.KeyCode != Keys.Return) return;
+										Close();
+									};
+							}
+							#endregion
+							#region Newline Recv
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Recv"));
+								var edit = item.DropDownItems.Add2(new ToolStripComboBox());
+								edit.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								item.DropDown.Opening += (s,a) =>
+									{
+										edit.SelectedItem = m_disp.Settings.NewlineRecv;
+									};
+								edit.SelectedIndexChanged += (s,e) =>
+									{
+										m_disp.Settings.NewlineRecv = (ENewLineMode)edit.SelectedIndex;
+									};
+							}
+							#endregion
+							#region Newline Send
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Send"));
+								var edit = item.DropDownItems.Add2(new ToolStripComboBox());
+								edit.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								item.DropDown.Opening += (s,a) =>
+									{
+										edit.SelectedItem = m_disp.Settings.NewlineSend;
+									};
+								edit.SelectedIndexChanged += (s,e) =>
+									{
+										m_disp.Settings.NewlineSend = (ENewLineMode)edit.SelectedIndex;
+									};
+							}
+							#endregion
+							#region Hex Output
+							{
+								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Hex Output"){CheckOnClick = true});
+								options.DropDown.Opening += (s,a) =>
+									{
+										item.Checked = m_disp.Settings.HexOutput;
+									};
+								item.Click += (s,e) =>
+									{
+										m_disp.Settings.HexOutput = item.Checked;
+									};
+							}
+							#endregion
+						}
 					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Tab Size"));
-						var edit = item   .DropDownItems.Add2(new ToolStripTextBox{Text = settings.TabSize.ToString()});
-						edit.KeyDown += (s,e) =>
-							{
-								if (e.KeyCode != Keys.Return) return;
-								menu.Close();
-							};
-						edit.Validating += (s,e) =>
-							{
-								int sz;
-								e.Cancel = !int.TryParse(edit.Text, out sz);
-							};
-						edit.Validated += (s,e) =>
-							{
-								settings.TabSize = int.Parse(edit.Text);
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Recv"));
-						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
-						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
-						edit.SelectedIndex = (int)settings.NewlineRecv;
-						edit.SelectedIndexChanged += (s,e) =>
-							{
-								settings.NewlineRecv = (ENewLineMode)edit.SelectedIndex;
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Send"));
-						var edit = item   .DropDownItems.Add2(new ToolStripComboBox());
-						edit.Items.AddRange(Enum<ENewLineMode>.Names.ToArray());
-						edit.SelectedIndex = (int)settings.NewlineSend;
-						edit.SelectedIndexChanged += (s,e) =>
-							{
-								settings.NewlineSend = (ENewLineMode)edit.SelectedIndex;
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Background Colour"));
-						var btn  = item   .DropDownItems.Add2(new ToolStripButton("   "){BackColor = settings.BackColor, AutoToolTip = false});
-						btn.Click += (s,e) =>
-							{
-								using (var cd = new ColorDialog())
-								{
-									if (cd.ShowDialog() != DialogResult.OK) return;
-									settings.BackColor = cd.Color;
-									menu.Close();
-								}
-							};
-					}
-					{
-						var item = options.DropDownItems.Add2(new ToolStripMenuItem("Hex Output"){Checked = settings.HexOutput, CheckOnClick = true});
-						item.Click += (s,e) =>
-							{
-								settings.HexOutput = item.Checked;
-							};
-					}
-					menu.Items.Add(options);
 				}
-				return menu;
 			}
 		}
-
-		/// <summary>A display (based on a Scintilla control)</summary>
-		public class DisplaySci :Scintilla ,IDisplay
-		{
-			private DisplayCore m_dc;
-			
-			public DisplaySci()
-			{
-				m_dc = new DisplayCore(this);
-			}
-			protected override void Dispose(bool disposing)
-			{
-				Util.Dispose(ref m_dc);
-				base.Dispose(disposing);
-			}
-
-			/// <summary>Get/Set the underlying VT100 buffer</summary>
-			[Browsable(false)]
-			public Buffer Buffer
-			{
-				get { return m_dc.Buffer; }
-				set { m_dc.Buffer = value; }
-			}
-
-			public void Clear()
-			{
-				ClearAll();
-			}
-			public void Copy()
-			{}
-
-			/// <summary>Refresh the control with text from the vt100 buffer</summary>
-			public void UpdateText()
-			{
-				Buffer buf = m_dc.Buffer;
-
-				// No buffer = empty display
-				if (buf == null)
-				{
-					Clear();
-					return;
-				}
-
-				//using (this.SuspendRedraw(true))
-				//using (this.SuspendScroll())
-				//using (this.SelectionScope())
-				//using (this.SuspendUndo())
-				{
-				//	ClearAll();
-					//foreach (var line in buf.Lines)
-					//{
-					//	//Select(TextLength, 0);
-					//	//SelectedText = line.m_line.ToString() + "\r\n";
-					//	Text = string.Join("\n", buf.Lines);
-					//}
-
-					var buftext = string.Join("\n", buf.Lines);
-					var utf8 = Encoding.UTF8.GetBytes(buftext);
-					using (var h = GCHandleEx.Alloc(utf8, GCHandleType.Pinned))
-						Cmd(SCI_APPENDTEXT, utf8.Length, h.State.AddrOfPinnedObject());
-
-					//var text = new cell[utf8.Length];
-					//for (int i = 0; i != text.Length; ++i)
-					//{
-					//	text[i].chr = utf8[i];
-					//	text[i].sty = 0;
-					//}
-
-					//using (var h = GCHandleEx.Alloc(text, GCHandleType.Pinned))
-					//	Cmd(SCI_ADDSTYLEDTEXT, text.Length, h.State.AddrOfPinnedObject());
-				}
-
-				#if false
-				// Update the displayed lines of text from the buffer
-				using (this.SuspendRedraw(true))
-				//using (this.SuspendScroll())
-				using (this.SelectionScope())
-				using (this.SuspendUndo())
-				{
-					// Ensure the number of lines in the Buffer matches the number of lines in the control
-					LineCount = Buffer.LineCount;
-
-					// Update only the lines that are visible
-					var beg = FirstVisibleLineIndex;
-					var end = Math.Min(beg + VisibleLineCount, Buffer.LineCount);
-					var blinking_text = false;
-					for (int i = beg; i != end; ++i)
-					{
-						var line_in  = Buffer.Lines[i];
-						var line_out = Line[i];
-
-						int j = 0; Style? prev_style = null;
-						foreach (var span in line_in.Spans)
-						{
-							var str = span.m_str;
-							var sty = span.m_sty;
-							blinking_text |= sty.Blink;
-							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
-								str = new string(' ', span.m_str.Length);
-
-							// Only update the control text if actually changed
-							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
-								line_out.Replace(j, span.m_str);
-
-							// Apply the style to the text
-							if (prev_style == null || !sty.Equal(prev_style.Value))
-							{
-								prev_style = sty;
-								using (this.SelectionScope())
-								{
-									// Select the text just written
-									line_out.Select(j, span.m_str.Length);
-
-									// Set the colour and font
-									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
-									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
-
-									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
-									if (SelectionFont.Style != font_style)
-										SelectionFont = SelectionFont.Dup(style:font_style);
-								}
-							}
-
-							// Advance down the line
-							j += span.m_str.Length;
-						}
-						line_out.Length = j;
-					}
-					// Don't need to add user input text because we
-					// only draw what the server has sent to us.
-
-					// Enable the blink timer if blinking text was displayed
-					m_blink_timer.Enabled = blinking_text;
-				}
-
-				// Auto scroll to the bottom
-				if (AutoScrollToBottom)
-				{
-					Select(TextLength, 0);
-					FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
-				}
-
-				//// Refresh the display
-				//Invalidate(ClientRectangle);
-				#endif
-			}
-
-			/// <summary>Intercept the WndProc for this control</summary>
-			protected override void WndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
-			{
-				if (m_dc != null && Buffer != null)
-					m_dc.ProcessWndMsg(hwnd, msg, wparam, lparam, ref handled);
-
-				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-				switch (msg)
-				{
-				case Win32.WM_NOTIFY:
-					{
-						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						var nh = MarshalEx.PtrToStructure<Win32.NMHDR>(lparam);
-						Debug.WriteLine("SciNotify: {0}".Fmt(IdToString((int)nh.code)));
-
-						switch (nh.code)
-						{
-						case SCN_CHARADDED:
-							{
-								break;
-							}
-						}
-						break;
-					}
-				}
-
-				base.WndProc(hwnd, msg, wparam, lparam, ref handled);
-			}
-		}
-
-		/// <summary>A display (based on RichEditControl)</summary>
-		public class DisplayRTB :RichTextBox ,IDisplay
-		{
-			private DisplayCore m_dc;
-			
-			public DisplayRTB()
-			{
-				m_dc = new DisplayCore(this);
-
-				WordWrap = false;
-				HideSelection = false;
-				Font = new Font(FontFamily.GenericMonospace, Font.Size, FontStyle.Regular);
-			}
-			protected override void Dispose(bool disposing)
-			{
-				Util.Dispose(ref m_dc);
-				base.Dispose(disposing);
-			}
-
-			/// <summary>Get/Set the underlying VT100 buffer</summary>
-			[Browsable(false)]
-			public Buffer Buffer
-			{
-				get { return m_dc.Buffer; }
-				set { m_dc.Buffer = value; }
-			}
-
-			/// <summary>True if the display automatically scrolls to the bottom</summary>
-			[Browsable(false)]
-			public bool AutoScrollToBottom
-			{
-				get { return m_dc.AutoScrollToBottom; }
-				set { m_dc.AutoScrollToBottom = value; }
-			}
-
-			/// <summary>Refresh the control with text from the vt100 buffer</summary>
-			public void UpdateText()
-			{
-				Buffer buf = m_dc.Buffer;
-
-				// No buffer = empty display
-				if (buf == null)
-				{
-					Clear();
-					return;
-				}
-
-				// Update the displayed lines of text from the buffer
-				using (this.SuspendRedraw(true))
-				using (this.SuspendScroll())
-				using (this.SelectionScope())
-				using (this.SuspendUndo())
-				{
-					// Ensure the number of lines in the Buffer matches the number of lines in the control
-					LineCount = buf.LineCount;
-
-					// Update only the lines that are visible
-					var beg = FirstVisibleLineIndex;
-					var end = Math.Min(beg + VisibleLineCount, buf.LineCount);
-					var blinking_text = false;
-					for (int i = beg; i != end; ++i)
-					{
-						var line_in  = buf.Lines[i];
-						var line_out = Line[i];
-
-						int j = 0; Style? prev_style = null;
-						foreach (var span in line_in.Spans)
-						{
-							var str = span.m_str;
-							var sty = span.m_sty;
-							blinking_text |= sty.Blink;
-							if (sty.Concealed || (sty.Blink && (Environment.TickCount/1000)%2 == 0))
-								str = new string(' ', span.m_str.Length);
-
-							// Only update the control text if actually changed
-							if (string.CompareOrdinal(str, 0, line_out.Text, j, str.Length) != 0)
-								line_out.Replace(j, span.m_str);
-
-							// Apply the style to the text
-							if (prev_style == null || !sty.Equal(prev_style.Value))
-							{
-								prev_style = sty;
-								using (this.SelectionScope())
-								{
-									// Select the text just written
-									line_out.Select(j, span.m_str.Length);
-
-									// Set the colour and font
-									SelectionColor      = HBGR.ToColor(!sty.RevserseVideo ? sty.ForeColour : sty.BackColour);
-									SelectionBackColor  = HBGR.ToColor(!sty.RevserseVideo ? sty.BackColour : sty.ForeColour);
-
-									var font_style = FontStyle.Regular | (sty.Bold ? FontStyle.Bold : 0) | (sty.Underline ? FontStyle.Underline : 0);
-									if (SelectionFont.Style != font_style)
-										SelectionFont = SelectionFont.Dup(style:font_style);
-								}
-							}
-
-							// Advance down the line
-							j += span.m_str.Length;
-						}
-						line_out.Length = j;
-					}
-					// Don't need to add user input text because we
-					// only draw what the server has sent to us.
-
-					// Enable the blink timer if blinking text was displayed
-					m_dc.BlinkTimer.Enabled = blinking_text;
-				}
-
-				// Auto scroll to the bottom
-				if (AutoScrollToBottom)
-				{
-					Select(TextLength, 0);
-					FirstVisibleLineIndex = LineCount - VisibleLineCount + 4;
-				}
-
-				// Refresh the display
-				Invalidate();
-			}
-
-			/// <summary>Intercept the WndProc for this control</summary>
-			protected override void WndProc(ref Message m)
-			{
-				var handled = false;
-				if (m_dc != null) m_dc.ProcessWndMsg(m.HWnd, m.Msg, m.WParam, m.LParam, ref handled);
-				if (!handled) base.WndProc(ref m);
-			}
-		}
-		#endif
 	}
 }

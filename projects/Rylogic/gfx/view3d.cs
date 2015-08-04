@@ -586,12 +586,13 @@ namespace pr.gfx
 			}
 
 			/// <summary>Add an error callback. returned object pops the error callback when disposed</summary>
-			public Scope<ReportErrorCB> PushErrorCB(ReportErrorCB error_cb)
+			public Scope PushErrorCB(ReportErrorCB error_cb)
 			{
-				return Scope<ReportErrorCB>.Create(
-					() => { View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero); return error_cb; },
-					cb => { View3D_PopErrorCB(m_wnd, cb); });
+				return Scope.Create<ReportErrorCBScope>(
+					s => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
+					s => View3D_PopErrorCB(m_wnd, error_cb));
 			}
+			private class ReportErrorCBScope :Scope {}
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;
@@ -1749,8 +1750,8 @@ namespace pr.gfx
 				var len = TextLength;
 				using (var bytes = MarshalEx.AllocHGlobal(len + 1))
 				{
-					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes.State);
-					return Marshal.PtrToStringAnsi(bytes.State, num);
+					var num = Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_GETTEXT, (IntPtr)(len + 1), bytes);
+					return Marshal.PtrToStringAnsi(bytes, num);
 				}
 			}
 
@@ -1762,7 +1763,7 @@ namespace pr.gfx
 				else
 				{
 					using (var str = MarshalEx.AllocAnsiString(text))
-						Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_SETTEXT, IntPtr.Zero, str.State);
+						Win32.SendMessage(m_ctrl, pr.gui.Sci.SCI_SETTEXT, IntPtr.Zero, str);
 				}
 
 				TextChanged.Raise(this);

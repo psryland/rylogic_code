@@ -7,6 +7,7 @@ using System.Windows.Forms;
 namespace pr.win32
 {
 	using HWND = System.IntPtr;
+	using HRGN = System.IntPtr;
 
 	public static partial class Win32
 	{
@@ -48,6 +49,8 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                    public static extern bool   MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
 		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]    public static extern bool   PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		[DllImport("user32.dll", EntryPoint="PostThreadMessage")]                    public static extern int    PostThreadMessage(int idThread, uint msg, int wParam, int lParam);
+		[DllImport("user32.dll")]                                                    public static extern bool   RedrawWindow(HWND hWnd, ref RECT lprcUpdate, HRGN hrgnUpdate, uint flags);
+		[DllImport("user32.dll")]                                                    public static extern bool   RedrawWindow(HWND hWnd, IntPtr lprcUpdate, HRGN hrgnUpdate, uint flags);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]       public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);

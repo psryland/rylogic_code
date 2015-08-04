@@ -1,29 +1,39 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 using pr.util;
 
 namespace pr.common
 {
+	public class GCHandleScope :Scope
+	{
+		public GCHandle Handle;
+		public GCHandleScope(object obj, GCHandleType type)
+		{
+			Init(() =>
+				{
+					Handle = GCHandle.Alloc(obj, type);
+				},
+				() =>
+				{
+					if (Handle.IsAllocated)
+						Handle.Free();
+				});
+		}
+	}
+
 	/// <summary>Extra methods for GCHandle</summary>
 	public static class GCHandleEx
 	{
 		/// <summary>RAII scope for an allocated GC handle</summary>
-		public static Scope<GCHandle> Alloc(object obj)
+		public static GCHandleScope Alloc(object obj)
 		{
 			return Alloc(obj, GCHandleType.Normal);
 		}
 
 		/// <summary>RAII scope for an allocated GC handle</summary>
-		public static Scope<GCHandle> Alloc(object obj, GCHandleType type)
+		public static GCHandleScope Alloc(object obj, GCHandleType type)
 		{
-			return Scope<GCHandle>.Create(
-				() =>
-				{
-					return GCHandle.Alloc(obj, type);
-				},
-				h =>
-				{
-					if (h.IsAllocated) h.Free();
-				});
+			return new GCHandleScope(obj, type);
 		}
 	}
 }

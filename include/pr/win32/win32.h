@@ -297,7 +297,7 @@ namespace pr
 
 			// Try the local directory
 			dllpath = CombinePath(exe_dir, dllname);
-			if (FileExists(dllname))
+			if (FileExists(dllpath))
 			{
 				module = ::LoadLibraryW(dllname.c_str());
 				if (module != nullptr)

@@ -1042,18 +1042,18 @@ namespace Scintilla
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		struct Rectangle
+		public struct Rectangle
 		{
-			int left;
-			int top;
-			int right;
-			int bottom;
+			public int left;
+			public int top;
+			public int right;
+			public int bottom;
 		}
 
 		/* This structure is used in printing and requires some of the graphics types
 		 * from Platform.h.  Not needed by most client code. */
 		[StructLayout(LayoutKind.Sequential)]
-		struct RangeToFormat
+		public struct RangeToFormat
 		{
 			public SurfaceID hdc;
 			public SurfaceID hdcTarget;
@@ -1063,7 +1063,7 @@ namespace Scintilla
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		struct NotifyHeader
+		public struct NotifyHeader
 		{
 			// Compatible with Windows NMHDR.
 			// hwndFrom is really an environment specific window handle or pointer
@@ -1074,40 +1074,45 @@ namespace Scintilla
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		struct SCNotification
+		public struct SCNotification
 		{
 			public NotifyHeader nmhdr;
+
+			// SCN_STYLENEEDED, SCN_DOUBLECLICK, SCN_MODIFIED, SCN_MARGINCLICK,
+			// SCN_NEEDSHOWN, SCN_DWELLSTART, SCN_DWELLEND, SCN_CALLTIPCLICK,
+			// SCN_HOTSPOTCLICK, SCN_HOTSPOTDOUBLECLICK, SCN_HOTSPOTRELEASECLICK,
+			// SCN_INDICATORCLICK, SCN_INDICATORRELEASE,
+			// SCN_USERLISTSELECTION, SCN_AUTOCSELECTION
 			public int position;
-			/* SCN_STYLENEEDED, SCN_DOUBLECLICK, SCN_MODIFIED, SCN_MARGINCLICK, */
-			/* SCN_NEEDSHOWN, SCN_DWELLSTART, SCN_DWELLEND, SCN_CALLTIPCLICK, */
-			/* SCN_HOTSPOTCLICK, SCN_HOTSPOTDOUBLECLICK, SCN_HOTSPOTRELEASECLICK, */
-			/* SCN_INDICATORCLICK, SCN_INDICATORRELEASE, */
-			/* SCN_USERLISTSELECTION, SCN_AUTOCSELECTION */
 
-			public int ch;		/* SCN_CHARADDED, SCN_KEY */
+			// SCN_CHARADDED, SCN_KEY
+			public int ch;
+
+			// SCN_KEY, SCN_DOUBLECLICK, SCN_HOTSPOTCLICK, SCN_HOTSPOTDOUBLECLICK,
+			// SCN_HOTSPOTRELEASECLICK, SCN_INDICATORCLICK, SCN_INDICATORRELEASE,
 			public int modifiers;
-			/* SCN_KEY, SCN_DOUBLECLICK, SCN_HOTSPOTCLICK, SCN_HOTSPOTDOUBLECLICK, */
-			/* SCN_HOTSPOTRELEASECLICK, SCN_INDICATORCLICK, SCN_INDICATORRELEASE, */
 
-			public int modificationType;	/* SCN_MODIFIED */
-			[MarshalAs(UnmanagedType.LPStr)] public string text;
-			/* SCN_MODIFIED, SCN_USERLISTSELECTION, SCN_AUTOCSELECTION, SCN_URIDROPPED */
+			// SCN_MODIFIED
+			public int modificationType;
 
-			public int length;		/* SCN_MODIFIED */
-			public int linesAdded;	/* SCN_MODIFIED */
-			public int message;	/* SCN_MACRORECORD */
-			public int wParam;	/* SCN_MACRORECORD */
-			public int lParam;	/* SCN_MACRORECORD */
-			public int line;		/* SCN_MODIFIED */
-			public int foldLevelNow;	/* SCN_MODIFIED */
-			public int foldLevelPrev;	/* SCN_MODIFIED */
-			public int margin;		/* SCN_MARGINCLICK */
-			public int listType;	/* SCN_USERLISTSELECTION */
-			public int x;			/* SCN_DWELLSTART, SCN_DWELLEND */
-			public int y;		/* SCN_DWELLSTART, SCN_DWELLEND */
-			public int token;		/* SCN_MODIFIED with SC_MOD_CONTAINER */
-			public int annotationLinesAdded;	/* SCN_MODIFIED with SC_MOD_CHANGEANNOTATION */
-			public int updated;	/* SCN_UPDATEUI */
+			// SCN_MODIFIED, SCN_USERLISTSELECTION, SCN_AUTOCSELECTION, SCN_URIDROPPED
+			public IntPtr text;
+
+			public int length;               // SCN_MODIFIED
+			public int linesAdded;           // SCN_MODIFIED
+			public int message;              // SCN_MACRORECORD
+			public int wParam;               // SCN_MACRORECORD
+			public int lParam;               // SCN_MACRORECORD
+			public int line;                 // SCN_MODIFIED
+			public int foldLevelNow;         // SCN_MODIFIED
+			public int foldLevelPrev;        // SCN_MODIFIED
+			public int margin;               // SCN_MARGINCLICK
+			public int listType;             // SCN_USERLISTSELECTION
+			public int x;                    // SCN_DWELLSTART, SCN_DWELLEND
+			public int y;                    // SCN_DWELLSTART, SCN_DWELLEND
+			public int token;                // SCN_MODIFIED with SC_MOD_CONTAINER
+			public int annotationLinesAdded; // SCN_MODIFIED with SC_MOD_CHANGEANNOTATION
+			public int updated;              // SCN_UPDATEUI
 		}
 	}
 }

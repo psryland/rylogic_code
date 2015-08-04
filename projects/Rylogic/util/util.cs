@@ -251,8 +251,8 @@ namespace pr.util
 			var arr = new byte[size];
 			using (var ptr = MarshalEx.AllocHGlobal(size))
 			{
-				Marshal.StructureToPtr(structure, ptr.State, true);
-				Marshal.Copy(ptr.State, arr, 0, size);
+				Marshal.StructureToPtr(structure, ptr, true);
+				Marshal.Copy(ptr, arr, 0, size);
 				return arr;
 			}
 		}
@@ -270,8 +270,8 @@ namespace pr.util
 			var sz = Marshal.SizeOf(typeof(T));
 			using (var ptr = MarshalEx.AllocHGlobal(sz))
 			{
-				Marshal.Copy(arr, offset, ptr.State, sz);
-				return (T)Marshal.PtrToStructure(ptr.State, typeof(T));
+				Marshal.Copy(arr, offset, ptr, sz);
+				return (T)Marshal.PtrToStructure(ptr, typeof(T));
 			}
 		}
 
@@ -280,7 +280,7 @@ namespace pr.util
 		{
 			Debug.Assert(arr.Length >= Marshal.SizeOf(typeof(T)), "FromBytes<T>: Insufficient data");
 			using (var handle = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
-				return (T)Marshal.PtrToStructure(handle.State.AddrOfPinnedObject(), typeof(T));
+				return (T)Marshal.PtrToStructure(handle.Handle.AddrOfPinnedObject(), typeof(T));
 		}
 
 		/// <summary>Convert a byte array to a hex string. e.g A3 FF 12 4D etc</summary>

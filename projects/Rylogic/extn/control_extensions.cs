@@ -208,19 +208,20 @@ namespace pr.extn
 		}
 
 		/// <summary>Block redrawing of the control</summary>
-		public static Scope SuspendRedraw(this Control ctrl, bool refresh_on_resume)
+		public static Scope SuspendRedraw(this IWin32Window ctrl, bool refresh_on_resume)
 		{
 			return Scope.Create(
 				() => Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 0, 0),
 				() =>
 					{
 						Win32.SendMessage(ctrl.Handle, Win32.WM_SETREDRAW, 1, 0);
-						if (refresh_on_resume) ctrl.Refresh();
+						if (refresh_on_resume)
+							Win32.RedrawWindow(ctrl.Handle, IntPtr.Zero, IntPtr.Zero, (uint)(Win32.RDW_ERASE | Win32.RDW_FRAME | Win32.RDW_INVALIDATE | Win32.RDW_ALLCHILDREN));
 					});
 		}
 
 		/// <summary>Block scrolling events</summary>
-		public static Scope SuspendScroll(this Control ctrl)
+		public static Scope SuspendScroll(this IWin32Window ctrl)
 		{
 			var scroll_pos = new Win32.POINT();
 			var event_mask = 0;

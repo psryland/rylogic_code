@@ -133,13 +133,13 @@ namespace pr
 
 					// Check for messages and pump any received
 					::MsgWaitForMultipleObjects(0, 0, TRUE, timeout, QS_ALLPOSTMESSAGE|QS_ALLINPUT|QS_ALLEVENTS);
-					for (;::PeekMessage(&m_msg, 0, 0, 0, PM_REMOVE);)
+					for (;::PeekMessageW(&m_msg, 0, 0, 0, PM_REMOVE);)
 					{
 						if (m_msg.message == WM_QUIT) return int(m_msg.wParam);
 						if (!PreTranslateMessage(&m_msg))
 						{
 							::TranslateMessage(&m_msg);
-							::DispatchMessage(&m_msg);
+							::DispatchMessageW(&m_msg);
 						}
 					}
 				}
