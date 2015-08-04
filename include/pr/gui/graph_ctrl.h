@@ -431,14 +431,14 @@ namespace pr
 			// This should be used to synchronise source data changes with rendering.
 			std::mutex MutexRendering;
 
-			GraphCtrl(int x = CW_USEDEFAULT, int y = CW_USEDEFAULT, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+			GraphCtrl(char const* name = nullptr
+				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,Control* parent = nullptr
-				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP
-				,DWORD ex_style = 0
-				,char const* name = nullptr)
-				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), nullptr, x, y, w, h, id, parent, anchor, style, ex_style, name)
+				,EAnchor anchor = EAnchor::TopLeft
+				,DWORD style = DefaultControlStyle
+				,DWORD ex_style = DefaultControlStyleEx)
+				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()

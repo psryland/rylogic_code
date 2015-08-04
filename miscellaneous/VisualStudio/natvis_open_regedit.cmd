@@ -1,1 +1,0 @@
-P:\tools\regjump.exe "HKEY_CURRENT_USER\Software\Microsoft\VisualStudio\12.0_Config\Debugger"

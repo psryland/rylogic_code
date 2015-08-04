@@ -14,6 +14,8 @@ namespace pr
 {
 	namespace gui
 	{
+		// Remember to call pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
+		// before creating an instance of this control
 		struct ScintillaCtrl :Control
 		{
 			enum { DefW = 50, DefH = 50 };
@@ -38,21 +40,20 @@ namespace pr
 			mutable sptr_t m_ptr;
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			ScintillaCtrl(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+			ScintillaCtrl(char const* name
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD ex_style = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, ex_style, name, HMENU(id), init_param)
-				//not needed, WM_CREATE initialises this ,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
-				//not needed, WM_CREATE initialises this ,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
+				:Control(WndClassName(), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style, HMENU(id), init_param)
+				,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
+				,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
 			{}
-			ScintillaCtrl(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			ScintillaCtrl(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 				,m_snd()
 				,m_ptr()
 			{}

@@ -10,9 +10,9 @@ struct Modeless :Form<Modeless>
 
 	enum { IDC_LBL };
 	Modeless(ParentRef parent)
-		:Form<Modeless>(L"Modeless", parent, 0, 0, CW_USEDEFAULT, CW_USEDEFAULT, DefaultStyle, DefaultStyleEx, IDC_MENU, "modeless")
-		,m_lbl(L"I am a modeless dialog", 10, 10, Auto, Auto, IDC_LBL, this, EAnchor::TopLeft, Label::DefaultStyle, Label::DefaultStyleEx, "modeless-label")
-		,m_btn_ok(IDOK, this, EAnchor::BottomRight, "ok_btn")
+		:Form<Modeless>(L"Modeless", "modeless", parent, 0, 0, CW_USEDEFAULT, CW_USEDEFAULT, DefaultStyle, DefaultStyleEx, IDC_MENU)
+		,m_lbl(L"I am a modeless dialog", "modeless-label", 10, 10, Auto, Auto, IDC_LBL, this, EAnchor::TopLeft, Label::DefaultStyle, Label::DefaultStyleEx)
+		,m_btn_ok(L"OK", "btn_ok", -10, -10, Auto, Auto, IDOK, this, EAnchor::BottomRight)
 	{
 		HideOnClose(true);
 		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };

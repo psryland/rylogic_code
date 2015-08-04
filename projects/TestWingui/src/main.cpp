@@ -6,6 +6,7 @@
 #include "pr/gui/progress_dlg.h"
 #include "pr/gui/context_menu.h"
 #include "pr/gui/scintilla_ctrl.h"
+#include "pr/win32/win32.h"
 
 //#define USE_ATL
 #ifdef USE_ATL
@@ -48,8 +49,8 @@ struct Main :Form<Main>
 		Panel m_panel;
 		Label m_lbl;
 		Tab(wchar_t const* msg, int id, Control* parent)
-			:m_panel(L"panel", 0, 0, 10, 10, id, parent, EAnchor::Left|EAnchor::Right|EAnchor::Top|EAnchor::Bottom)
-			,m_lbl  (msg, 10, 10, 60, 16, IDC_UNUSED, &m_panel)
+			:m_panel(L"panel", "tab-panel", 0, 0, 10, 10, id, parent, EAnchor::All)
+			,m_lbl  (msg, "tab-lbl", 10, 10, 60, 16, IDC_UNUSED, &m_panel)
 		{}
 	};
 
@@ -67,16 +68,16 @@ struct Main :Form<Main>
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
 	Main()
-		:Form<Main>(L"Pauls Window", ApplicationMainWindow, 200, 200, 800, 600, DefaultStyle, DefaultStyleEx, nullptr, "main")
-		,m_lbl     (L"hello world"  , 10, 10, 60, 16, IDC_UNUSED, this)
-		,m_btn1    (L"progress"     , 10, 30, 80, 20, IDC_PROGRESS, this)
-		,m_btn2    (L"show modeless", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
-		,m_btn3    (L"context menu" , 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
-		,m_btn4    (L"click me!"    , -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
-		,m_scint   (L"Hello Scintilla", 0, 0, 100, 100, IDC_SCINT, this)
+		:Form<Main>(L"Pauls Window", "main", ApplicationMainWindow, 200, 200, 800, 600, DefaultStyle, DefaultStyleEx, nullptr)
+		,m_lbl     (L"hello world", "m_lbl", 10, 10, 60, 16, IDC_UNUSED, this)
+		,m_btn1    (L"progress", "m_btn1", 10, 30, 80, 20, IDC_PROGRESS, this)
+		,m_btn2    (L"show modeless", "m_btn2", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
+		,m_btn3    (L"context menu", "m_btn3", 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
+		,m_btn4    (L"click me!", "m_btn4", -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
+		,m_scint   ("m_scint", 0, 0, 100, 100, IDC_SCINT, this)
 		,m_tab1    (L"hi from tab1", IDC_TAB1, this)
 		,m_tab2    (L"hi from tab2", IDC_TAB2, this)
-		,m_tc      (L"tabctrl"      , 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL, "TC")
+		,m_tc      (L"tabctrl", "m_tc", 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL)
 		,m_modeless(this)
 	{
 		MenuStrip file_menu(true);
@@ -294,6 +295,8 @@ int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 		//wtl.Create(nullptr);
 		//wtl.ShowWindow(SW_SHOW);
 		#endif
+
+		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
 		Main main;
 		main.Show();

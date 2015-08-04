@@ -13,9 +13,9 @@ struct GraphUI :Form<GraphUI>
 
 	enum { IDC_BTN1 = 100, IDC_BTN2 };
 	GraphUI()
-		:Form<GraphUI>(L"Pauls Window", ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl(L"hello world", 80, 20, 100, 16, -1, this)
-		,m_graph(10, 40, 280, 80, -1, this, EAnchor::All)
+		:Form<GraphUI>(L"Pauls Window", "GraphUI", ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
+		,m_lbl(L"hello world", "m_lbl", 80, 20, 100, 16, -1, this)
+		,m_graph("m_graph", 10, 40, 280, 80, -1, this, EAnchor::All)
 		,m_series0(L"Sin")
 		,m_series1(L"Cos")
 	{

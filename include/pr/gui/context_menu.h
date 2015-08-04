@@ -415,7 +415,7 @@ namespace pr
 
 				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:Label(menu, text, id, state, style, bm)
-					,m_edit(IDC_UNUSED, &menu, EAnchor::None) // positioned manually
+					,m_edit(IDC_UNUSED, "cmenu-edit", &menu, EAnchor::None) // positioned manually
 					,m_rect_value()
 					,m_value(value)
 					,m_value_font()

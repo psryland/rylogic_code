@@ -1549,8 +1549,7 @@ namespace pr
 				InitParam(Control* this_, void* lparam) :m_this(this_) ,m_lparam(lparam) {}
 			};
 
-			// The initial wndproc function used in window classes and dialogs.
-			// This function using the InitParam data to initialise the thunk for the window instance.
+			// The initial wndproc function used in forms, dialogs, and custom controls.
 			static LRESULT __stdcall InitWndProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam)
 			{
 				//WndProcDebug(hwnd, message, wparam, lparam);
@@ -1558,10 +1557,9 @@ namespace pr
 				{
 					auto init = reinterpret_cast<InitParam*>(reinterpret_cast<CREATESTRUCT*>(lparam)->lpCreateParams);
 
+					// Set the wndproc to the default before replacing it with the thunk in Attach()
 					assert((WNDPROC)::GetWindowLongPtrW(hwnd, GWLP_WNDPROC) == &InitWndProc);
-					::SetWindowLongPtrW(hwnd, GWLP_WNDPROC, LONG_PTR(init->m_this->m_thunk.GetCodeAddress()));
-					init->m_this->m_oldproc = &::DefWindowProcW;
-
+					::SetWindowLongPtrW(hwnd, GWL_WNDPROC, LONG_PTR(&::DefWindowProcW));
 					init->m_this->Attach(hwnd);
 					return init->m_this->WndProc(message, wparam, lparam);
 				}
@@ -1569,10 +1567,13 @@ namespace pr
 				{
 					auto init = reinterpret_cast<InitParam*>(lparam);
 
+					// The DWLP_DLGPROC is the user wndproc supplied in CreateDialog.
+					// GWLP_WNDPROC is an internal dialog wndproc (user32::_DefDlgProc != DefDlgProc)
+					// 'user32::_DefDlgProc' calls the user DLGPROC which, on returning FALSE, then
+					// handles the message internally (DefWindowProc is never called)
+					// Restore 'DWLP_DLGPROC' to the default (nullptr) before replacing it with the thunk
 					assert((WNDPROC)::GetWindowLongPtrW(hwnd, DWLP_DLGPROC) == &InitWndProc);
-					::SetWindowLongPtrW(hwnd, DWLP_DLGPROC, LONG_PTR(init->m_this->m_thunk.GetCodeAddress()));
-					init->m_this->m_oldproc = &::DefDlgProcW;
-
+					::SetWindowLongPtrW(hwnd, DWLP_DLGPROC, LONG_PTR(&::DefDlgProcW));
 					init->m_this->Attach(hwnd);
 					return init->m_this->WndProc(message, wparam, LPARAM(init->m_lparam));
 				}
@@ -1590,15 +1591,6 @@ namespace pr
 				if (m_oldproc == &::DefDlgProcW) return FALSE;
 				if (m_oldproc != nullptr) return ::CallWindowProcW(m_oldproc, m_hwnd, message, wparam, lparam);
 				return ::DefWindowProcW(m_hwnd, message, wparam, lparam);
-			}
-			void UnhookWndProc()
-			{
-				if (m_oldproc == &::DefWindowProcW)
-					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc));
-				if (m_oldproc == &::DefDlgProcW)
-					::SetWindowLongPtrW(m_hwnd, DWLP_DLGPROC, LONG_PTR(0));
-
-				m_oldproc = nullptr;
 			}
 
 			// Handy debugging method for displaying WM_MESSAGES
@@ -1626,7 +1618,7 @@ namespace pr
 					auto m = pr::gui::DebugMessage(hwnd, message, wparam, lparam);
 					if (*m)
 					{
-						for (int i = 1; i != wnd_proc_nest(); ++i) out("\t");
+						for (int i = 1; i < wnd_proc_nest(); ++i) out("\t");
 						out(pr::FmtX<struct X, 256, char>("%5d|%s|%s\n", msg_idx, name, m));
 					}
 					if (msg_idx == 0) _CrtDbgBreak();
@@ -1649,11 +1641,16 @@ namespace pr
 				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s WndProc: ",m_name));
 				switch (message)
 				{
+				case WM_CREATE:
+					#pragma region
+					{
+						break;
+					}
+					#pragma endregion
 				case WM_DESTROY:
 					#pragma region
 					{
-						UnhookWndProc();
-						m_hwnd = nullptr;
+						Detach();
 						break;
 					}
 					#pragma endregion
@@ -1827,7 +1824,11 @@ namespace pr
 				case WM_INITDIALOG:
 					#pragma region
 					{
-						if (m_id != IDC_UNUSED) Attach(::GetDlgItem(hwnd, m_id));
+						if (m_id != IDC_UNUSED)
+						{
+							Attach(::GetDlgItem(hwnd, m_id));
+							RecordPosOffset();
+						}
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						break;
 					}
@@ -2042,7 +2043,7 @@ namespace pr
 			}
 
 			struct Internal {};
-			Control(Internal, int id = IDC_UNUSED, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
+			Control(Internal, int id = IDC_UNUSED, char const* name = nullptr, EAnchor anchor = EAnchor::TopLeft)
 				:m_hwnd()
 				,m_id(id & IdMask)
 				,m_name(name)
@@ -2091,8 +2092,14 @@ namespace pr
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, init_param);
-				m_hwnd = ::CreateWindowExW(style_ex, wndclass_name, text, style, x, y, w, h, parent, menu, GetModuleHandleW(nullptr), &init);
-				Throw(m_hwnd != 0, "CreateWindowEx failed");
+				auto hwnd = ::CreateWindowExW(style_ex, wndclass_name, text, style, x, y, w, h, parent, menu, GetModuleHandleW(nullptr), &init);
+				Throw(hwnd != nullptr, "CreateWindowEx failed");
+
+				// If we're creating a control whose window class we don't control (i.e. a third party control),
+				// then Attach won't have been called. In this case, we want to subclass the window and install
+				// our wndproc.
+				if (m_hwnd == nullptr)
+					Attach(hwnd);
 
 				RecordPosOffset();
 				Font(HFONT(GetStockObject(DEFAULT_GUI_FONT)));
@@ -2140,16 +2147,17 @@ namespace pr
 			// 'hwndparent' is the hwnd of the top level window
 			// 'parent' is the control that contains this control (not necessarily the same as hwndparent, e.g. a group control)
 			// Negative values for 'x,y' mean relative to the right,bottom of the parent
-			Control(wchar_t const* wndclass_name ,wchar_t const* text
+			Control(wchar_t const* wndclass_name
+				,char const* name = nullptr
+				,wchar_t const* text = L""
 				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultControlStyle ,DWORD style_ex = DefaultControlStyleEx
-				,char const* name = nullptr
 				,MenuStrip menu = MenuStrip()
 				,void* init_param = nullptr)
-				:Control(Internal(), id, anchor, name)
+				:Control(Internal(), id, name, anchor)
 			{
 				Create(wndclass_name, text, x, y, w, h, style, style_ex, parent, menu, init_param);
 			}
@@ -2158,9 +2166,13 @@ namespace pr
 			// Use this constructor when you intend to Attach this instance to an existing hwnd,
 			// or when you need to create the control at a later time after a parent window has been created.
 			// Set 'id' != -1 to have the control automatically attach to a dialog resouce control during WM_INITDIALOG
-			Control(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(Internal(), id, anchor, name)
+			// 'top_level_control' means this control is actually a form
+			Control(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, bool top_level_control = false)
+				:Control(Internal(), id, name, anchor)
 			{
+				// If you get this, you are probably using the wrong constructor for this control.
+				assert((top_level_control || parent == nullptr || parent.m_hwnd == nullptr) && "Creating a delayed creation control as a child of a window that is already created.");
+
 				// You can call 'Create' once the parent has an HWND. Or, if the parent
 				// is based on a resource and 'id' is not IDC_UNUSED, then it will
 				// automatically be created and attached to the control from the resource
@@ -2208,14 +2220,38 @@ namespace pr
 			}
 
 			// Attach/Detach this control wrapper to/form the associated window handle
+			// WARNING: Attach is not called in subclasses when Create is called from
+			// the Control constructor.
 			virtual void Attach(HWND hwnd)
 			{
 				assert(m_hwnd == nullptr && hwnd != nullptr);
 				m_hwnd = hwnd;
-				RecordPosOffset();
+
+				// If the wndproc for this control is not our thunk, hook it
+				auto wndproc = (WNDPROC)::GetWindowLongPtrW(m_hwnd, GWLP_WNDPROC);
+				auto dlgproc = (DLGPROC)::GetWindowLongPtrW(m_hwnd, DWLP_DLGPROC);
+				if (wndproc != m_thunk.GetCodeAddress() && dlgproc != m_thunk.GetCodeAddress())
+				{
+					if (dlgproc == nullptr)
+						m_oldproc = (WNDPROC)::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_thunk.GetCodeAddress()));
+					else
+						m_oldproc = (WNDPROC)::SetWindowLongPtrW(m_hwnd, DWLP_DLGPROC, LONG_PTR(m_thunk.GetCodeAddress()));
+				}
 			}
 			virtual void Detach()
 			{
+				if (m_hwnd == nullptr)
+					return;
+
+				// Restore the original wndproc
+				auto wndproc = (WNDPROC)::GetWindowLongPtrW(m_hwnd, GWLP_WNDPROC);
+				auto dlgproc = (DLGPROC)::GetWindowLongPtrW(m_hwnd, DWLP_DLGPROC);
+				if (wndproc == m_thunk.GetCodeAddress())
+					::SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, LONG_PTR(m_oldproc));
+				else if (dlgproc == m_thunk.GetCodeAddress())
+					::SetWindowLongPtrW(m_hwnd, DWLP_DLGPROC, LONG_PTR(0));
+
+				m_oldproc = nullptr;
 				m_hwnd = nullptr;
 			}
 
@@ -2949,10 +2985,12 @@ namespace pr
 				// By default we don't forward messages to child controls. Use Control::ProcessWindowMessage()
 				// to explicitly forward some message types, call ForwardToChildren only when you want different
 				// behaviour to the Control default implementation but still want child controls to process the message
+
 				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name));
 				switch (message)
 				{
 				case WM_INITDIALOG:
+					#pragma region
 					{
 						// The default Control handler for WM_INITDIALOG calls 'Attach' which
 						// Forms don't need because we call Attach in InitWndProc.
@@ -2969,13 +3007,17 @@ namespace pr
 						}
 						return false;
 					}
+					#pragma endregion
 				case WM_CLOSE:
+					#pragma region
 					{
 						Close();
 						if (m_hide_on_close) return true;
 						break;
 					}
+					#pragma endregion
 				case WM_DESTROY:
+					#pragma region
 					{
 						// Let children know the parent is destroying
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
@@ -2988,12 +3030,16 @@ namespace pr
 						// unhooking the thunk and nulling the 'm_hwnd'
 						return false;
 					}
+					#pragma endregion
 				case WM_CTLCOLORDLG:
+					#pragma region
 					{
 						result = LRESULT(Derived::WndBackground());
 						return true;
 					}
+					#pragma endregion
 				case WM_COMMAND:
+					#pragma region
 					{
 						// Handle commands from the main menu
 						auto id        = UINT(LoWord(wparam)); // The menu_item id or accelerator id
@@ -3004,7 +3050,9 @@ namespace pr
 						else
 							return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
+					#pragma endregion
 				case WM_SYSCOMMAND:
+					#pragma region
 					{
 						auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
 						if (id == IDC_PINWINDOW)
@@ -3014,6 +3062,7 @@ namespace pr
 							return true;
 						}
 					}
+					#pragma endregion
 				case WM_DROPFILES:
 				case WM_NOTIFY:
 				case WM_MOUSEWHEEL:
@@ -3024,11 +3073,13 @@ namespace pr
 				case WM_EXITSIZEMOVE:
 				case WM_WINDOWPOSCHANGED:
 				case WM_WINDOWPOSCHANGING:
-				default: // uncomment this to quick test if forwarding all messages "fixes it"
+				//default: // uncomment this to quick test if forwarding all messages "fixes it"
+					#pragma region
 					{
 						// Messages that get here will be forwarded to child controls as well
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
+					#pragma endregion
 				}
 
 				// By default, don't forward messages. If something's not working,
@@ -3064,8 +3115,8 @@ namespace pr
 			// Common constructor
 			// Only pass the hwnd for 'parent' since the Control() constructor call to Parent()
 			// will not call our overload (since we aren't constructed yet)
-			Form(Internal, bool dlg, int id, ParentRef parent, DlgTemplate const& templ, MenuStrip menu, char const* name, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
-				:Control(id, parent.m_hwnd, EAnchor::TopLeft, name)
+			Form(Internal, bool dlg, int id, char const* name, ParentRef parent, DlgTemplate const& templ, MenuStrip menu, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
+				:Control(id, name, parent != ApplicationMainWindow ? parent.m_hwnd : nullptr, EAnchor::TopLeft, true)
 				,m_hinst(hinst)
 				,m_app_main_window(parent == ApplicationMainWindow)
 				,m_template(templ)
@@ -3091,15 +3142,15 @@ namespace pr
 			//  - if x == CW_USEDEFAULT in CreateWindowEx then the system positions the window, (ignoring y). Only valid for overlapped windows, if used for popup windows will be treated as zero
 			//  - if w == CW_USEDEFAULT in CreateWindowEx then the system chooses the width and height. Only valid for overlapped windows, if used for popup windows will be treated as zero
 			Form(wchar_t const* title
+				,char const* name = nullptr
 				,ParentRef parent = nullptr
 				,int x = CW_USEDEFAULT, int y = CW_USEDEFAULT
 				,int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
 				,MenuStrip menu = MenuStrip()
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Form(Internal(), false, IDC_UNUSED, parent, DlgTemplate(), menu, name)
+				:Form(Internal(), false, IDC_UNUSED, name, parent, DlgTemplate(), menu)
 			{
 				// Note: the virtual functions called as a result of CreateWindowEx will
 				// not call the derived class' overrides because at this point the derived
@@ -3111,14 +3162,14 @@ namespace pr
 			// Use this constructor to create a window from a dialog resource description
 			//  - hwnd is not created until Create(), Show(), or ShowDialog() are called
 			Form(int id, char const* name = nullptr)
-				:Form(Internal(), true, id, nullptr, DlgTemplate(), IDC_UNUSED, name)
+				:Form(Internal(), true, id, name, nullptr, DlgTemplate(), IDC_UNUSED)
 			{}
 
 			// Indirect Dialog Constructor
 			// Use this constructor to create a window from a dialog template
 			//  - hwnd is not created until Create(), Show(), or ShowDialog() are called
 			Form(DlgTemplate const& templ, char const* name = nullptr)
-				:Form(Internal(), true, IDC_UNUSED, nullptr, templ, IDC_UNUSED, name)
+				:Form(Internal(), true, IDC_UNUSED, name, nullptr, templ, IDC_UNUSED)
 			{}
 
 			// Close on destruction
@@ -3308,18 +3359,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Label(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = "lbl"
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			Label(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			Label(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Message map function
@@ -3361,18 +3412,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Button(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = "btn"
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			Button(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			Button(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Events
@@ -3410,18 +3461,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			CheckBox(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = "chk"
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			CheckBox(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			CheckBox(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Get/Set the checked state
@@ -3479,18 +3530,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			TextBox(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = nullptr
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			TextBox(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			TextBox(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Create the HWND for the control
@@ -3605,18 +3656,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			ComboBox(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = nullptr
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			ComboBox(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			ComboBox(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Get the number of items in the combo box
@@ -3720,18 +3771,18 @@ namespace pr
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx;
 			static wchar_t const* WndClassName() { return L"msctls_progress32"; }
 
-			ProgressBar(int x, int y, int w = DefW, int h = DefH
+			ProgressBar(char const* name
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), L"", x, y, w, h, id, parent, anchor, style, style_ex, name, nullptr, init_param)
+				:Control(WndClassName(), name, L"", x, y, w, h, id, parent, anchor, style, style_ex, nullptr, init_param)
 			{}
-			ProgressBar(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			ProgressBar(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 			// Get/Set the progress bar position
@@ -3863,7 +3914,6 @@ namespace pr
 				}*/
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
-
 		};
 		struct Panel :Control
 		{
@@ -3878,18 +3928,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			Panel(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = nullptr
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(MakeIntAtomW(RegisterWndClass<Panel>()), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(MakeIntAtomW(RegisterWndClass<Panel>()), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			Panel(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			Panel(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 
 		};
@@ -3902,18 +3952,18 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			GroupBox(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = nullptr
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 			{}
-			GroupBox(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			GroupBox(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 			{}
 		};
 		struct RichTextBox :TextBox
@@ -3921,8 +3971,8 @@ namespace pr
 			static wchar_t const* WndClassName() { return ::LoadLibraryW(L"msftedit.dll") ? L"RICHEDIT50W" : L"RICHEDIT20W"; }
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			RichTextBox(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:TextBox(id, parent, anchor, name)
+			RichTextBox(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:TextBox(id, name, parent, anchor)
 			{}
 		};
 		struct StatusBar :Control
@@ -3931,8 +3981,8 @@ namespace pr
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx;
 			static wchar_t const* WndClassName() { return STATUSCLASSNAMEW; }
 
-			StatusBar(ParentRef parent, int id, wchar_t const* text, char const* name = nullptr, DWORD style = DefaultStyle)
-				:Control(id, parent, EAnchor::Left|EAnchor::Bottom|EAnchor::Right, name)
+			StatusBar(int id, char const* name = nullptr, ParentRef parent = nullptr, wchar_t const* text = L"", DWORD style = DefaultStyle)
+				:Control(id, name, parent, EAnchor::Left|EAnchor::Bottom|EAnchor::Right)
 			{
 				Attach(::CreateStatusWindowW(style, text, parent, id));
 				Throw(IsWindow(m_hwnd), "Failed to create the status bar");
@@ -4119,21 +4169,21 @@ namespace pr
 
 			// Note, if you want events from this control is must have an id != IDC_UNUSED
 			TabControl(wchar_t const* text
-				,int x, int y, int w = DefW, int h = DefH
+				,char const* name = nullptr
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,ParentRef parent = nullptr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultStyle
 				,DWORD style_ex = DefaultStyleEx
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:Control(WndClassName(), text, x, y, w, h, id, parent, anchor, style, style_ex, name, HMENU(id), init_param)
+				:Control(WndClassName(), name, text, x, y, w, h, id, parent, anchor, style, style_ex, HMENU(id), init_param)
 				,m_tabs()
 				,m_border_size(3)
 				,m_top_pad(5)
 			{}
-			TabControl(int id = IDC_UNUSED, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, char const* name = nullptr)
-				:Control(id, parent, anchor, name)
+			TabControl(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
+				:Control(id, name, parent, anchor)
 				,m_tabs()
 				,m_border_size(3)
 				,m_top_pad(5)
