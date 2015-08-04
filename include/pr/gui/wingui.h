@@ -186,7 +186,7 @@ namespace pr
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
-		enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
+		enum { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP };
 		enum { DefaultFormStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE };
 
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
@@ -1171,9 +1171,9 @@ namespace pr
 		// A structure for defining a dialog template
 		struct DlgTemplate
 		{
-			static DWORD const DefaultStyle     = DefaultDialogStyle;
-			static DWORD const DefaultStyleEx   = DefaultDialogStyleEx;
-			static DWORD const DefaultItemStyle = DefaultControlStyle;
+			static DWORD const DefaultStyle     = DWORD(DefaultDialogStyle);
+			static DWORD const DefaultStyleEx   = DWORD(DefaultDialogStyleEx);
+			static DWORD const DefaultItemStyle = DWORD(DefaultControlStyle);
 
 			std::vector<byte> m_mem;
 
@@ -1479,6 +1479,7 @@ namespace pr
 			COLORREF           m_colour_fore;  // Foreground colour
 			COLORREF           m_colour_back;  // Background colour
 			LONG               m_down_at[4];   // Button down timestamp
+			bool               m_top_level;    // True if this control is a top level control (typically a form)
 			bool               m_dbl_buffer;   // True if the control is double buffered
 			bool               m_allow_drop;   // Allow drag/drop operations on the control
 			bool               m_handle_only;  // True if this object does not own 'm_hwnd'
@@ -1925,19 +1926,19 @@ namespace pr
 			}
 
 			// Handle auto position/size
-			void AutoSizePosition(int& x, int& y, int& w, int& h)
+			static void AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h)
 			{
 				// Get the parent control bounds (in parent space)
-				auto parent_rect = m_parent
-					? m_parent->ClientRect()
+				auto parent_rect = parent
+					? parent->ClientRect()
 					: MinMaxInfo().Bounds();
 
 				// Return the sibling control with id 'id'
-				auto ctrl = [this](int id) -> Control*
+				auto ctrl = [=](int id) -> Control*
 					{
 						if (id == 0) return nullptr;
-						assert(m_parent != nullptr);
-						for (auto c : m_parent->m_child) if (c->m_id == id) return c;
+						assert(parent != nullptr);
+						for (auto c : parent->m_child) if (c->m_id == id) return c;
 						return nullptr;
 					};
 
@@ -1945,7 +1946,7 @@ namespace pr
 				auto rect = [&](int id) -> Rect
 					{
 						assert((id == 0 || ctrl(id) != nullptr) && "Sibling control not found");
-						return id == 0 ? parent_rect : ctrl(id)->RectRelativeTo(*m_parent);
+						return id == 0 ? parent_rect : ctrl(id)->RectRelativeTo(*parent);
 					};
 
 				// Set the width/height and x/y position
@@ -1993,7 +1994,7 @@ namespace pr
 			}
 
 			// Adjust the size of this control relative to it's parent
-			void ResizeToParent(bool repaint = true)
+			virtual void ResizeToParent(bool repaint = true)
 			{
 				if (!m_parent || !m_hwnd || !m_parent->m_hwnd) return;
 				auto p = m_parent->ScreenRect();
@@ -2043,7 +2044,7 @@ namespace pr
 			}
 
 			struct Internal {};
-			Control(Internal, int id = IDC_UNUSED, char const* name = nullptr, EAnchor anchor = EAnchor::TopLeft)
+			Control(Internal, int id, char const* name, EAnchor anchor, bool top_level)
 				:m_hwnd()
 				,m_id(id & IdMask)
 				,m_name(name)
@@ -2057,6 +2058,7 @@ namespace pr
 				,m_colour_fore(CLR_INVALID)
 				,m_colour_back(CLR_INVALID)
 				,m_down_at()
+				,m_top_level(top_level)
 				,m_dbl_buffer(false)
 				,m_allow_drop(false)
 				,m_handle_only(false)
@@ -2083,10 +2085,9 @@ namespace pr
 
 				// Check you aren't mixing use of the Dialog Constructor for the form and Frame Constructor for the child controls
 				assert((parent == nullptr || ::IsWindow(parent)) && "Child controls can only be created after the parent has been created");
-				Parent(parent);
 
 				// Handle auto position/size
-				AutoSizePosition(x,y,w,h);
+				AutoSizePosition(parent.m_ctrl,x,y,w,h);
 
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
@@ -2101,6 +2102,7 @@ namespace pr
 				if (m_hwnd == nullptr)
 					Attach(hwnd);
 
+				Parent(parent);
 				RecordPosOffset();
 				Font(HFONT(GetStockObject(DEFAULT_GUI_FONT)));
 
@@ -2156,8 +2158,9 @@ namespace pr
 				,EAnchor anchor = EAnchor::Left|EAnchor::Top
 				,DWORD style = DefaultControlStyle ,DWORD style_ex = DefaultControlStyleEx
 				,MenuStrip menu = MenuStrip()
-				,void* init_param = nullptr)
-				:Control(Internal(), id, name, anchor)
+				,void* init_param = nullptr
+				,bool top_level = false)
+				:Control(Internal(), id, name, anchor, top_level)
 			{
 				Create(wndclass_name, text, x, y, w, h, style, style_ex, parent, menu, init_param);
 			}
@@ -2167,11 +2170,11 @@ namespace pr
 			// or when you need to create the control at a later time after a parent window has been created.
 			// Set 'id' != -1 to have the control automatically attach to a dialog resouce control during WM_INITDIALOG
 			// 'top_level_control' means this control is actually a form
-			Control(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, bool top_level_control = false)
-				:Control(Internal(), id, name, anchor)
+			Control(int id = IDC_UNUSED, char const* name = nullptr, ParentRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft, bool top_level = false)
+				:Control(Internal(), id, name, anchor, top_level)
 			{
 				// If you get this, you are probably using the wrong constructor for this control.
-				assert((top_level_control || parent == nullptr || parent.m_hwnd == nullptr) && "Creating a delayed creation control as a child of a window that is already created.");
+				assert((top_level || parent == nullptr || parent.m_hwnd == nullptr) && "Creating a delayed creation control as a child of a window that is already created.");
 
 				// You can call 'Create' once the parent has an HWND. Or, if the parent
 				// is based on a resource and 'id' is not IDC_UNUSED, then it will
@@ -2182,7 +2185,7 @@ namespace pr
 
 			// Allow construction from existing handle
 			Control(HWND hwnd)
-				:Control(Internal())
+				:Control(Internal(), ::GetDlgCtrlID(hwnd), nullptr, EAnchor::None, ::GetAncestor(hwnd, GA_ROOT) == hwnd)
 			{
 				m_handle_only = true;
 				m_hwnd = hwnd;
@@ -2279,9 +2282,10 @@ namespace pr
 				}
 				#endif
 
-				// Change the owner or ancestor window
-				if (::IsWindow(m_hwnd))
+				// Change the ancestor window (only if this is a child control)
+				if (::IsWindow(m_hwnd) && !m_top_level)
 				{
+					// Set the owner or ancestor. (Owner if this is a top level window, otherwise ancestor)
 					Throw(::SetParent(m_hwnd, parent.m_hwnd) != nullptr, "SetParent failed");
 
 					// Supposed to send WM_CHANGEDUISTATE after changing the parent of a window
@@ -2311,9 +2315,8 @@ namespace pr
 			// Get the top level control. This is typically the window containing this control
 			Control const* TopLevelControl() const
 			{
-				if (m_parent == nullptr) return this;
-				auto p = m_parent;
-				for (;p->m_parent != nullptr; p = p->m_parent) {}
+				auto p = this;
+				for (;!p->m_top_level && p->m_parent != nullptr; p = p->m_parent) {}
 				return p;
 			}
 
@@ -2924,7 +2927,7 @@ namespace pr
 		protected:
 			template <typename D> friend struct Form;
 			friend struct Control;
-			enum { IDC_PINWINDOW = 1337 };
+			enum { IDC_PINWINDOW_OPT = 0x4e50, IDC_PINWINDOW_SEP };
 
 			HINSTANCE   m_hinst;            // Module instance
 			bool        m_app_main_window;  // True if this is the main application window
@@ -2984,7 +2987,17 @@ namespace pr
 				// For Forms, this method is effectively the WndProc for the form.
 				// By default we don't forward messages to child controls. Use Control::ProcessWindowMessage()
 				// to explicitly forward some message types, call ForwardToChildren only when you want different
-				// behaviour to the Control default implementation but still want child controls to process the message
+				// behaviour to the Control default implementation but still want child controls to process the message.
+
+				// Forms can be parented to other forms
+				if (hwnd != m_hwnd)
+				{
+					// todo: Special handling for form->form messages
+					if (message == WM_WINDOWPOSCHANGED && PinWindow())
+						ResizeToParent();
+
+					return false;
+				}
 
 				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name));
 				switch (message)
@@ -2998,14 +3011,7 @@ namespace pr
 						// before doing whatever they need to do in WM_INITDIALOG. This is so that
 						// child controls get attached.
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-
-						auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
-						if (sysmenu)
-						{
-							::InsertMenuW(sysmenu, 5, MF_BYPOSITION|MF_SEPARATOR, 0, 0);
-							::InsertMenuW(sysmenu, 6, MF_BYPOSITION|MF_STRING, IDC_PINWINDOW, L"Pin Window");
-						}
-						return false;
+						break;
 					}
 					#pragma endregion
 				case WM_CLOSE:
@@ -3055,12 +3061,19 @@ namespace pr
 					#pragma region
 					{
 						auto id = UINT(LoWord(wparam)); // The menu_item id or accelerator id
-						if (id == IDC_PINWINDOW)
+						if (id == IDC_PINWINDOW_OPT)
 						{
 							PinWindow(!PinWindow());
-							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
+							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
 							return true;
 						}
+					}
+					#pragma endregion
+				case WM_WINDOWPOSCHANGED:
+					#pragma region
+					{
+						if (PinWindow()) RecordPosOffset();
+						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_DROPFILES:
@@ -3071,7 +3084,6 @@ namespace pr
 				case WM_TIMER:
 				case WM_ENTERSIZEMOVE:
 				case WM_EXITSIZEMOVE:
-				case WM_WINDOWPOSCHANGED:
 				case WM_WINDOWPOSCHANGING:
 				//default: // uncomment this to quick test if forwarding all messages "fixes it"
 					#pragma region
@@ -3081,9 +3093,6 @@ namespace pr
 					}
 					#pragma endregion
 				}
-
-				// By default, don't forward messages. If something's not working,
-				// it's probably because there's a message that should be forwarded.
 				return false;
 			}
 
@@ -3105,6 +3114,13 @@ namespace pr
 				// }
 			}
 
+			// Adjust the size of this control relative to it's parent
+			void ResizeToParent(bool repaint = true) override
+			{
+				if (!PinWindow()) return;
+				Control::ResizeToParent(repaint);
+			}
+
 			// Making this method protected since we know the WndClassName()
 			void Create(wchar_t const* wndclass, wchar_t const* text, int x, int y, int w, int h, DWORD style, DWORD style_ex, ParentRef parent, MenuStrip menu, void* init_param) override
 			{
@@ -3116,7 +3132,7 @@ namespace pr
 			// Only pass the hwnd for 'parent' since the Control() constructor call to Parent()
 			// will not call our overload (since we aren't constructed yet)
 			Form(Internal, bool dlg, int id, char const* name, ParentRef parent, DlgTemplate const& templ, MenuStrip menu, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
-				:Control(id, name, parent != ApplicationMainWindow ? parent.m_hwnd : nullptr, EAnchor::TopLeft, true)
+				:Control(id, name, parent != ApplicationMainWindow ? parent : nullptr, EAnchor::TopLeft, true)
 				,m_hinst(hinst)
 				,m_app_main_window(parent == ApplicationMainWindow)
 				,m_template(templ)
@@ -3131,8 +3147,8 @@ namespace pr
 
 		public:
 			enum { DefW = 800, DefH = 600 };
-			static DWORD const DefaultStyle   = DefaultFormStyle;
-			static DWORD const DefaultStyleEx = DefaultFormStyleEx;
+			static DWORD const DefaultStyle   = DWORD(DefaultFormStyle);
+			static DWORD const DefaultStyleEx = DWORD(DefaultFormStyleEx);
 
 			// Frame Window Constructor
 			// Use this constructor to create frame windows (i.e. windows not based on a dialog resource)
@@ -3332,19 +3348,35 @@ namespace pr
 			bool PinWindow() const { return m_pin_window; }
 			void PinWindow(bool pin)
 			{
-				if (m_parent == nullptr)
-					return;
-
 				m_pin_window = pin;
+				if (pin) RecordPosOffset();
 			}
 
 			// Set the parent of this form
 			void Parent(ParentRef parent) override
 			{
-				// Note: only passing the parent hwnd to Control() because we don't want this
-				// form to be considered a dependent control of 'parent'. i.e. it's not a WS_CHILD
-				parent.m_ctrl = nullptr;
+				if (m_parent != nullptr)
+				{
+					auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
+					if (sysmenu)
+					{
+						::RemoveMenu(sysmenu, IDC_PINWINDOW_SEP, MF_BYCOMMAND|MF_SEPARATOR);
+						::RemoveMenu(sysmenu, IDC_PINWINDOW_OPT, MF_BYCOMMAND|MF_STRING);
+					}
+				}
+
 				Control::Parent(parent);
+
+				if (m_parent != nullptr)
+				{
+					auto sysmenu = ::GetSystemMenu(m_hwnd, FALSE);
+					if (sysmenu)
+					{
+						auto idx = ::GetMenuItemCount(sysmenu) - 2;
+						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_SEPARATOR, IDC_PINWINDOW_SEP, 0), "InsertMenu failed");
+						Throw(::InsertMenuW(sysmenu, idx++, MF_BYPOSITION|MF_STRING, IDC_PINWINDOW_OPT, L"Pin Window"), "InsertMenu failed");
+					}
+				}
 			}
 		};
 		#pragma endregion
