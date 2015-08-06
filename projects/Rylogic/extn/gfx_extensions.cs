@@ -10,25 +10,20 @@ namespace pr.extn
 {
 	public static class GfxExtensions
 	{
-		public class GfxContainerScope :Scope
-		{
-			public GraphicsContainer GfxContainer;
-		}
-
 		/// <summary>Save the transform and clip state in an RAII object</summary>
-		public static GfxContainerScope StateScope(this Graphics gfx)
+		public static Scope<GraphicsContainer> StateScope(this Graphics gfx)
 		{
-			return Scope.Create<GfxContainerScope>(
-				s => s.GfxContainer = gfx.BeginContainer(),
-				s => gfx.EndContainer(s.GfxContainer));
+			return Scope.Create(
+				() => gfx.BeginContainer(),
+				ctr => gfx.EndContainer(ctr));
 		}
 
 		/// <summary>Get the HDC associated with this graphics object. Releases in dispose</summary>
-		public static IntPtrScope GetHdcScope(this Graphics gfx)
+		public static Scope<IntPtr> GetHdcScope(this Graphics gfx)
 		{
-			return Scope.Create<IntPtrScope>(
-				s => s.Ptr = gfx.GetHdc(),
-				s => gfx.ReleaseHdc(s.Ptr));
+			return Scope.Create(
+				() => gfx.GetHdc(),
+				ptr => gfx.ReleaseHdc(ptr));
 		}
 
 		/// <summary>Useful overload of DrawImage</summary>

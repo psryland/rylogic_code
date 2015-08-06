@@ -20,10 +20,10 @@ namespace pr
 {
 	namespace gui
 	{
-		class ProgressDlg :Form<ProgressDlg>
+		class ProgressDlg : private Form
 		{
-			typedef Form<ProgressDlg> base;
-			typedef std::unique_lock<std::mutex> Lock;
+			using base = Form;
+			using Lock = std::unique_lock<std::mutex>;
 			struct State
 			{
 				std::wstring  m_title;  // The title bar text
@@ -225,8 +225,6 @@ namespace pr
 
 		public:
 
-			using Form<ProgressDlg>::WndBackground;
-			
 			// 'func' should have 'ProgressDlg*' as the first parameter
 			template <typename Func, typename... Args>
 			ProgressDlg(wchar_t const* title, wchar_t const* desc, Func&& func, Args&&... args)

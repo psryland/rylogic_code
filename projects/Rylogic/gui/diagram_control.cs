@@ -4428,7 +4428,7 @@ namespace pr.gui
 		/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
 		private void UpdateElementZOrder(bool temporary)
 		{
-			using (Scope.Create<FlagScope>(s => s.Flag = DiagramChangedPending, s => DiagramChangedPending = !temporary || s.Flag))
+			using (Scope.Create(() => DiagramChangedPending, dcp => DiagramChangedPending = !temporary || dcp))
 			{
 				LowestZ = 0f;
 				HighestZ = 0f;

@@ -20,17 +20,9 @@ namespace pr
 {
 	namespace ldr
 	{
-		struct ScriptEditorDlgImpl
-			:Form<ScriptEditorDlgImpl>
-			,IScriptEditorDlg
+		struct ScriptEditorDlgImpl :Form ,IScriptEditorDlg
 		{
-			typedef Form<ScriptEditorDlgImpl> base;
-			enum
-			{
-				IDC_TEXT = 1000, IDC_BTN_RENDER, IDC_BTN_CLOSE,
-				ID_LOAD, ID_SAVE, ID_CLOSE,
-				ID_UNDO, ID_REDO, ID_CUT, ID_COPY, ID_PASTE,
-			};
+			using base = Form;
 
 			ScintillaCtrl m_edit;
 			Button m_btn_render;
@@ -39,8 +31,14 @@ namespace pr
 			RenderCB& Render;
 			//WTL::CAccelerator m_accel;
 
-			static DWORD const Style   = DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU; // Not WS_VISIBLE
-			static DWORD const StyleEx = DefaultStyleEx;
+			enum :DWORD { DefaultStyle   = DefaultFormStyle & ~WS_VISIBLE }; //DS_CENTER|WS_CAPTION|WS_POPUP|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX|WS_SYSMENU }; // Not WS_VISIBLE
+			enum :DWORD { DefaultStyleEx = DefaultFormStyleEx };
+			enum
+			{
+				IDC_TEXT = 1000, IDC_BTN_RENDER, IDC_BTN_CLOSE,
+				ID_LOAD, ID_SAVE, ID_CLOSE,
+				ID_UNDO, ID_REDO, ID_CUT, ID_COPY, ID_PASTE,
+			};
 
 			// Construct the dialog template for this dialog
 			static DlgTemplate Templ()
@@ -49,7 +47,7 @@ namespace pr
 				pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll", L".\\lib\\$(platform)");
 
 				int const menu_height = 10;//::GetSystemMetrics(SM_CYMENU);
-				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, Style, StyleEx);
+				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, DefaultStyle, DefaultStyleEx);
 				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5 + menu_height, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
 				templ.Add(IDC_BTN_RENDER, Button::WndClassName(), L"&Render", 320, 348 + menu_height, 50, 14, Button::DefaultStyleDefBtn, Button::DefaultStyleEx);
 				templ.Add(IDC_BTN_CLOSE, Button::WndClassName(), L"&Close", 375, 348 + menu_height, 50, 14, Button::DefaultStyle, Button::DefaultStyleEx);
@@ -58,9 +56,9 @@ namespace pr
 
 			ScriptEditorDlgImpl(RenderCB& render_cb)
 				:base(Templ(), "Ldr Script Editor")
-				,m_edit(IDC_TEXT, this, EAnchor::All, "m_edit")
-				,m_btn_render(IDC_BTN_RENDER, this, EAnchor::BottomRight, "m_btn_render")
-				,m_btn_close(IDC_BTN_CLOSE, this, EAnchor::BottomRight, "m_btn_close")
+				,m_edit(IDC_TEXT, "m_edit", this, EAnchor::All)
+				,m_btn_render(IDC_BTN_RENDER, "m_btn_render", this, EAnchor::BottomRight)
+				,m_btn_close(IDC_BTN_CLOSE, "m_btn_close", this, EAnchor::BottomRight)
 				//,m_accel()
 				,m_menu(false)
 				,Render(render_cb)
@@ -170,7 +168,8 @@ namespace pr
 			// Create the non-modal window
 			HWND Create(HWND parent = nullptr) override
 			{
-				base::Create(parent);
+				auto p = WndRef::Lookup(parent);
+				base::Create(p);
 				return m_hwnd;
 			}
 

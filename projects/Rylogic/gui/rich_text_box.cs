@@ -466,7 +466,7 @@ namespace pr.gui
 						throw new Exception("RichTextBox.OleInterface - EM_GETOLEINTERFACE failed.");
 
 					// Read the returned pointer.
-					using (var pRichEdit = Scope.Create<IntPtrScope>(s => s.Ptr = Marshal.ReadIntPtr(ptr), s => Marshal.Release(s.Ptr)))
+					using (var pRichEdit = Scope.Create(() => Marshal.ReadIntPtr(ptr), p => Marshal.Release(p)))
 					{
 						if (pRichEdit == IntPtr.Zero)
 							throw new Exception("RichTextBox.OleInterface - failed to get the pointer.");

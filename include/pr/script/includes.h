@@ -269,6 +269,7 @@ namespace pr
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
 #include "pr/str/string_core.h"
+#include "pr/win32/win32.h"
 namespace pr
 {
 	namespace unittests
@@ -287,7 +288,7 @@ namespace pr
 			}
 			{
 				FileIncludes<> inc;
-				inc.AddSearchPath(pr::filesys::GetDirectory(pr::filesys::ExePath<string>()));
+				inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
 				inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
 
 				auto src_ptr = inc.Open(script_include);

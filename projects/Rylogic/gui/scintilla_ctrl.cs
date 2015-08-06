@@ -134,15 +134,11 @@ namespace pr.gui
 		}
 
 		/// <summary>RAII scope for a selection</summary>
-		public SelectionScp SelectionScope()
+		public Scope<Selection> SelectionScope()
 		{
-			return Scope.Create<SelectionScp>(
-				s => s.Sel = Selection.Save(this),
-				s => Selection.Restore(this, s.Sel));
-		}
-		public class SelectionScp :Scope
-		{
-			public Selection Sel;
+			return Scope.Create(
+				() => Selection.Save(this),
+				sel => Selection.Restore(this, sel));
 		}
 
 		/// <summary>Raised whenever the selection changes</summary>
@@ -155,15 +151,11 @@ namespace pr.gui
 
 		#region Scrolling
 		/// <summary>Returns an RAII object that preserves (where possible) the currently visible line</summary>
-		public ScrollScp ScrollScope()
+		public Scope<int> ScrollScope()
 		{
-			return Scope.Create<ScrollScp>(
-				s => s.m_first_visible = Cmd(Sci.SCI_GETFIRSTVISIBLELINE),
-				s => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, s.m_first_visible));
-		}
-		public class ScrollScp :Scope
-		{
-			public int m_first_visible;
+			return Scope.Create(
+				() => Cmd(Sci.SCI_GETFIRSTVISIBLELINE),
+				fv => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, fv));
 		}
 		#endregion
 

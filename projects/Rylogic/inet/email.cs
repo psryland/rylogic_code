@@ -52,7 +52,7 @@ namespace pr.inet
 				// Fill the recipient buffer
 				if (m_recipients.Count != 0)
 				{
-					var ptr = recip_buf.Ptr;
+					var ptr = recip_buf.Value;
 					var size = Marshal.SizeOf(typeof(MAPI32.RecipDesc));
 					foreach (var r in m_recipients)
 					{
@@ -64,7 +64,7 @@ namespace pr.inet
 				// Fill the attachments buffer
 				if (Attachments.Count != 0)
 				{
-					var ptr = attach_buf.Ptr;
+					var ptr = attach_buf.Value;
 					var size = Marshal.SizeOf(typeof(MAPI32.FileDesc));
 					foreach (var a in Attachments)
 					{
@@ -83,9 +83,9 @@ namespace pr.inet
 				msg.subject    = Subject ?? "";
 				msg.noteText   = Body ?? "";
 				msg.recipCount = m_recipients.Count;
-				msg.recips     = recip_buf.Ptr;
+				msg.recips     = recip_buf.Value;
 				msg.fileCount  = Attachments.Count;
-				msg.files      = attach_buf.Ptr;
+				msg.files      = attach_buf.Value;
 				var res = MAPI32.SendMail(IntPtr.Zero, IntPtr.Zero, msg, (int)how, 0);
 				if (res > 1) throw new Exception("MAPI32.SendMail failed. Result: " + MAPI32.ErrorString(res));
 			}

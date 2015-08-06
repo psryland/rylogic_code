@@ -209,9 +209,9 @@ namespace pr
 		// Context menu
 		// Note: this class requires GdiPlus, remember to instantiate an instance
 		// of 'pr::GdiPlus' somewhere so that the gdi+ dll is loaded
-		struct ContextMenu :Form<ContextMenu> ,ContextMenuItem
+		struct ContextMenu :Form ,ContextMenuItem
 		{
-			using BForm = Form<ContextMenu>;
+			using BForm = Form;
 			using BMenu = ContextMenuItem;
 
 			#pragma region Draw Helpers
@@ -483,11 +483,11 @@ namespace pr
 			}
 
 			// Show the context menu
-			void Show(ParentRef parent, int x, int y)
+			void Show(WndRef parent, int x, int y)
 			{
 				// Show the context menu as a modal dialog because the menu closes when this function returns
 				if (m_items.empty()) return;
-				Form<ContextMenu>::ShowDialog(parent, (void*)MakeLParam(x, y));
+				Form::ShowDialog(parent, (void*)MakeLParam(x, y));
 			}
 
 			// Result of a high test on the menu
@@ -627,7 +627,7 @@ namespace pr
 			HHOOK m_mouse_hook;
 
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form<ContextMenu>(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0), "ctx-menu")
+				:Form(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0), "ctx-menu")
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()

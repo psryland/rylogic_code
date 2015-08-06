@@ -42,7 +42,7 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 #endif
 
 // Application window
-struct Main :Form<Main>
+struct Main :Form
 {
 	struct Tab
 	{
@@ -67,17 +67,18 @@ struct Main :Form<Main>
 
 	enum { ID_FILE, ID_FILE_EXIT };
 	enum { IDC_PROGRESS = 100, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+
 	Main()
-		:Form<Main>(L"Pauls Window", "main", ApplicationMainWindow, 200, 200, 800, 600, DefaultStyle, DefaultStyleEx, nullptr)
-		,m_lbl     (L"hello world", "m_lbl", 10, 10, 60, 16, IDC_UNUSED, this)
-		,m_btn1    (L"progress", "m_btn1", 10, 30, 80, 20, IDC_PROGRESS, this)
-		,m_btn2    (L"show modeless", "m_btn2", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
-		,m_btn3    (L"context menu", "m_btn3", 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
-		,m_btn4    (L"click me!", "m_btn4", -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
-		,m_scint   ("m_scint", 0, 0, 100, 100, IDC_SCINT, this)
-		,m_tab1    (L"hi from tab1", IDC_TAB1, this)
-		,m_tab2    (L"hi from tab2", IDC_TAB2, this)
-		,m_tc      (L"tabctrl", "m_tc", 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL)
+		:Form   (RegisterWndClass<Main>(), L"Pauls Window", "main", ApplicationMainWindow, 200, 200, 800, 600, DefaultFormStyle, DefaultFormStyleEx, nullptr)
+		,m_lbl  (L"hello world", "m_lbl", 10, 10, 60, 16, IDC_UNUSED, this)
+		,m_btn1 (L"progress", "m_btn1", 10, 30, 80, 20, IDC_PROGRESS, this)
+		,m_btn2 (L"show modeless", "m_btn2", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
+		,m_btn3 (L"context menu", "m_btn3", 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
+		,m_btn4 (L"click me!", "m_btn4", -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
+		,m_scint("m_scint", 0, 0, 100, 100, IDC_SCINT, this)
+		,m_tab1 (L"hi from tab1", IDC_TAB1, this)
+		,m_tab2 (L"hi from tab2", IDC_TAB2, this)
+		,m_tc   (L"tabctrl", "m_tc", 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL)
 		,m_modeless(this)
 	{
 		MenuStrip file_menu(true);

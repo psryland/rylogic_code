@@ -49,6 +49,7 @@ namespace pr
 		template <typename Elem = GraphDatum, typename real = double>
 		struct GraphCtrl :Control
 		{
+			using MyType     = GraphCtrl<Elem, real>;
 			using Graphics   = Gdiplus::Graphics;
 			using Color      = Gdiplus::Color;
 			using PointF     = Gdiplus::PointF;
@@ -329,14 +330,7 @@ namespace pr
 			using AxisRange        = typename Axis::Range;
 			using SeriesRdrOptions = typename Series::RdrOptions;
 
-			static wchar_t const* WndClassName()
-			{
-				return L"PRGRAPHCTRL";
-			}
-			static WNDCLASSEXW WndClassInfo(HINSTANCE hinst)
-			{
-				return MakeWndClassInfo<GraphCtrl<Elem>>(hinst);
-			}
+			static wchar_t const* WndClassName() { return L"PRGRAPHCTRL"; }
 
 		protected:
 			struct Snapshot
@@ -432,13 +426,13 @@ namespace pr
 			std::mutex MutexRendering;
 
 			GraphCtrl(char const* name = nullptr
-				,int x = 0, int y = 0, int w = CW_USEDEFAULT, int h = CW_USEDEFAULT
+				,int x = 0, int y = 0, int w = DefW, int h = DefH
 				,int id = IDC_UNUSED
 				,Control* parent = nullptr
 				,EAnchor anchor = EAnchor::TopLeft
 				,DWORD style = DefaultControlStyle
 				,DWORD ex_style = DefaultControlStyleEx)
-				:Control(MakeIntAtomW(RegisterWndClass<GraphCtrl<Elem>>()), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style)
+				:Control(RegisterWndClass<GraphCtrl>().IntAtom(), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()

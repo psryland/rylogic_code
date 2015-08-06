@@ -337,9 +337,6 @@
     <Compile Include="gui\view_video_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="gui\vt100_ui.cs">
-      <SubType>Component</SubType>
-    </Compile>
     <Compile Include="gui\html_text_box.cs">
       <SubType>Component</SubType>
     </Compile>

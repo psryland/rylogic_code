@@ -15,11 +15,11 @@ namespace pr.util
 			return s;
 		}
 
-		/// <summary>Construct a subclassed scope. Handy for allocated memory, etc</summary>
-		public static TScope Create<TScope>(Action<TScope> on_enter, Action<TScope> on_exit) where TScope:Scope, new()
+		/// <summary>Create a scope around a value</summary>
+		public static Scope<T> Create<T>(Func<T> on_enter, Action<T> on_exit)
 		{
-			var s = new TScope();
-			s.Init(() => on_enter(s), () => on_exit(s));
+			var s = new Scope<T>();
+			s.Init(() => s.Value = on_enter(), () => on_exit(s.Value));
 			return s;
 		}
 
@@ -33,8 +33,7 @@ namespace pr.util
 		}
 
 		/// <summary>Allow subclasses to inherit without having to forward the on_enter/on_exit constructor</summary>
-		protected Scope()
-		{}
+		protected Scope() {}
 		
 		/// <summary>Use 'Create'</summary>
 		protected Scope(Action on_enter, Action on_exit)
@@ -48,22 +47,13 @@ namespace pr.util
 		}
 	}
 
-	/// <summary>Scope for an IntPtr</summary>
-	public class IntPtrScope :Scope
+	/// <summary>Scope for a generic type 'T'</summary>
+	public class Scope<T> :Scope
 	{
-		public IntPtr Ptr;
-	
-		/// <summary>Allow implicit conversion to IntPtr</summary>
-		public static implicit operator IntPtr(IntPtrScope s) { return s.Ptr; }
-	}
-
-	/// <summary>Scope for flags</summary>
-	public class FlagScope :Scope
-	{
-		public bool Flag;
+		public T Value;
 
 		/// <summary>Allow implicit conversion to IntPtr</summary>
-		public static implicit operator bool(FlagScope s) { return s.Flag; }
+		public static implicit operator T(Scope<T> x) { return x.Value; }
 	}
 }
 
@@ -83,18 +73,11 @@ namespace pr.unittests
 				Assert.True(flag[0] == true);
 			Assert.True(flag[0] == false);
 		}
-
-		internal class MyScope :Scope
+		[Test] public void TestScope_WrappedValue()
 		{
-			public int[] handle;
-		}
-		[Test] public void TestScope_Subclassed()
-		{
-			// Pretend 'handle' is some CoTask memory or something. Scope.Create<MyScope> can used
-			// to pass out a specialised Scope with convenient fields.
-			using (var myscope = Scope.Create<MyScope>(s => s.handle = new []{42}, s => s.handle = null))
+			using (var s = Scope.Create(() => (IntPtr)0x0123beef, p => p = IntPtr.Zero))
 			{
-				Assert.True(myscope.handle[0] == 42);
+				Assert.True(s.Value == (IntPtr)0x0123beef);
 			}
 		}
 	}

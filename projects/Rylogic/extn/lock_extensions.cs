@@ -9,22 +9,19 @@ namespace pr.extn
 {
 	public static class LockExtensions
 	{
-		private class SpinLockScope :Scope
-		{
-			public bool m_got_lock;
-		}
-
 		/// <summary>Acquires the lock and safely releases on dispose</summary>
 		public static Scope Lock(this SpinLock sl)
 		{
-			return Scope.Create<SpinLockScope>(
-				s =>
+			return Scope.Create(
+				() =>
 				{
-					sl.Enter(ref s.m_got_lock);
+					bool got_lock = false;
+					sl.Enter(ref got_lock);
+					return got_lock;
 				},
-				s =>
+				gl =>
 				{
-					if (s.m_got_lock)
+					if (gl)
 						sl.Exit();
 				});
 		}

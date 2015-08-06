@@ -588,11 +588,10 @@ namespace pr.gfx
 			/// <summary>Add an error callback. returned object pops the error callback when disposed</summary>
 			public Scope PushErrorCB(ReportErrorCB error_cb)
 			{
-				return Scope.Create<ReportErrorCBScope>(
-					s => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
-					s => View3D_PopErrorCB(m_wnd, error_cb));
+				return Scope.Create(
+					() => View3D_PushErrorCB(m_wnd, error_cb, IntPtr.Zero),
+					() => View3D_PopErrorCB(m_wnd, error_cb));
 			}
-			private class ReportErrorCBScope :Scope {}
 
 			/// <summary>Event notifying whenever rendering settings have changed</summary>
 			public event EventHandler OnSettingsChanged;

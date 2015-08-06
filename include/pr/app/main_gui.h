@@ -27,11 +27,9 @@ namespace pr
 			typename Main,
 			typename MessageLoop = pr::gui::MessageLoop // Alternatives are: SimMsgLoop
 		>
-		struct MainGUI
-			:pr::gui::Form<DerivedGUI>
-			,IAppMainGui
+		struct MainGUI :pr::gui::Form ,IAppMainGui
 		{
-			using base = pr::gui::Form<DerivedGUI>;
+			using base = pr::gui::Form;
 
 			pr::Logger            m_log;                       // App log
 			MessageLoop           m_msg_loop;                  // The message pump
@@ -48,16 +46,17 @@ namespace pr
 			// Create the main application window.
 			// This class is subclassed from pr::gui::Form which actually does the 'CreateWindowEx' call in
 			// it's constructor. This means the HWND is valid after the base class has been constructed.
+			// If your window uses common controls, remember to call InitCtrls() before this constructor
 			MainGUI(wchar_t const* title
-				,int x = CW_USEDEFAULT ,int y = CW_USEDEFAULT
-				,int w = CW_USEDEFAULT ,int h = CW_USEDEFAULT
+				,char const* name = nullptr
+				,int x = 0 ,int y = 0
+				,int w = DefW ,int h = DefH
 				,DWORD style = DefaultFormStyle
 				,DWORD style_ex = DefaultFormStyleEx
 				,pr::gui::MenuStrip menu = pr::gui::MenuStrip()
 				,int accel_id = IDC_UNUSED
-				,char const* name = nullptr
 				,void* init_param = nullptr)
-				:base(title, pr::gui::ApplicationMainWindow, x, y, w, h, style, style_ex, menu, name, init_param)
+				:base(RegisterWndClass<DerivedGUI>(), title, name, pr::gui::ApplicationMainWindow, x, y, w, h, style, style_ex, menu, init_param)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
 				,m_msg_loop(m_hinst, accel_id)
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
@@ -68,9 +67,6 @@ namespace pr
 				,m_down_at()
 				,m_exit_code()
 			{
-				// Initialise common controls support
-				pr::gui::InitCtrls(IccClasses());
-
 				// Note: derived classes may need to set up a method for rendering,
 				// By default, rendering occurs in OnPaint(), however if a SimMsgLoop
 				// is used, the derived class will need to register a step context that
@@ -90,30 +86,6 @@ namespace pr
 				//PR_INFO_EXP(PR_DBG, m_main == 0, "Destructing MainGUI before DestroyWindow has been called");
 				//if (IsWindow())
 				//	DestroyWindow();
-			}
-
-			// Return the common control classes to support
-			virtual pr::gui::ECommonControl IccClasses() const
-			{
-				using namespace pr::gui;
-				return
-					ECommonControl::ListViewClasses | // listview, header
-					ECommonControl::TreeViewClasses | // treeview, tooltips
-					ECommonControl::BarClasses      | // toolbar, statusbar, trackbar, tooltips
-					ECommonControl::TabClasses      | // tab, tooltips
-					ECommonControl::UpDown          | // updown
-					ECommonControl::Progress        | // progress
-					ECommonControl::Hotkey          | // hotkey
-					ECommonControl::Animate         | // animate
-					ECommonControl::Win95Classes    | //
-					ECommonControl::DateClasses     | // month picker, date picker, time picker, updown
-					ECommonControl::ComboEx         | // comboex
-					ECommonControl::Rebar           | // rebar (coolbar) control
-					ECommonControl::Internet        | //
-					ECommonControl::PageScroller    | // page scroller
-					ECommonControl::NativeFontCtrl  | // native font control
-					ECommonControl::StandardClasses |
-					ECommonControl::LinkClass       ;
 			}
 
 			// Pump messages

@@ -31,8 +31,8 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
-		:base(AppTitleW(), CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR, "ldr_main")
-		,m_status(this, IDC_STATUSBAR_MAIN, L"Ready", "status bar")
+		:base(AppTitleW(), "ldr_main", 0, 0, 800, 600, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR)
+		,m_status(IDC_STATUSBAR_MAIN, "status bar", this, L"Ready")
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui()
@@ -43,12 +43,10 @@ namespace ldr
 		,m_suspend_render(false)
 		,m_status_pri()
 	{
+		CenterWindow();
+
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
-
-		// Note, 'm_main' can be null if the SimMsgLoop runs these contexts after the
-		// window has been destroyed, but before the message loop has been shutdown.
-		// This shouldn't really happen and needs investigating
 
 		// Set icons
 		Icon((HICON)::LoadImage(m_hinst, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,true);
@@ -85,6 +83,9 @@ namespace ldr
 					pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\n%s", e.what())));
 				}
 			};
+		auto editor_ctrl = WndRef::Lookup(m_editor_ui);
+		editor_ctrl->PositionWindow(Right|LeftOf, Top|TopOf, 200, 600);
+		dynamic_cast<Form*>(editor_ctrl.m_ctrl)->PinWindow(true);
 
 		// Initialise the recent files list and saved views
 		m_recent_files.MaxLength(m_main->m_settings.m_MaxRecentFiles);
@@ -104,6 +105,10 @@ namespace ldr
 		// Set the window minimum size
 		m_min_max_info.ptMinTrackSize.x = 320;
 		m_min_max_info.ptMinTrackSize.y = 200;
+
+		// Note, 'm_main' can be null if the SimMsgLoop runs these contexts after the
+		// window has been destroyed, but before the message loop has been shutdown.
+		// This shouldn't really happen and needs investigating
 
 		// Create a step context for rendering
 		enum { force_render = false };
