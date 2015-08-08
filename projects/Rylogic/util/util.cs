@@ -16,6 +16,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
 using System.Xml;
@@ -848,6 +849,31 @@ namespace pr.util
 			return look_in
 				.Select(x => PathEx.CombinePath(x, relative_path))
 				.FirstOrDefault(PathEx.DirExists);
+		}
+
+		/// <summary>Returns a string showing the match results of 'pattern' used on 'str'</summary>
+		public static string RegexTest(string str, string pattern, RegexOptions opts = RegexOptions.None)
+		{
+			var sb = new StringBuilder();
+
+			try
+			{
+				int midx = 0;
+				foreach (var m in Regex.Matches(str, pattern, opts).Cast<Match>())
+				{
+					sb.AppendLine("Match: {0}".Fmt(midx++));
+					int gidx = 0;
+					foreach (var g in m.Groups.Cast<Group>())
+						sb.Append("\t Group {0}: ".Fmt(gidx++)).Append(g.Value).AppendLine();
+					sb.AppendLine();
+				}
+			}
+			catch (Exception ex)
+			{
+				sb.Append(ex.MessageFull());
+			}
+
+			return sb.ToString();
 		}
 	}
 

@@ -1213,10 +1213,9 @@ namespace pr.gui
 			private Point MoveCaret(int x, int y)
 			{
 				// Roll the buffer when y >= terminal height
-				var half = Settings.TerminalHeight / 2;
-				if (y >= Settings.TerminalHeight + half)
+				if (y >= Settings.TerminalHeight * 3 / 2)
 				{
-					var count = half;
+					var count = y - Settings.TerminalHeight + 1;
 					OnOverflow(new OverflowEventArgs(true, new Range(0, 0 + count)));
 
 					// Remove the lines and adjust anything that stores a line number
@@ -1228,7 +1227,7 @@ namespace pr.gui
 					OnOverflow(new OverflowEventArgs(false, new Range(0, 0 + count)));
 				}
 
-				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth), Maths.Clamp(y, 0, Settings.TerminalHeight));
+				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth), y);
 				return loc;
 			}
 
@@ -1245,7 +1244,7 @@ namespace pr.gui
 			private void Write(string str, int ofs = 0, int count = int.MaxValue)
 			{
 				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
-				if (m_out.pos.Y < 0 || m_out.pos.Y > Settings.TerminalHeight) throw new Exception("Caret outside screen buffer");
+				if (m_out.pos.Y < 0) throw new Exception("Caret outside screen buffer");
 				if (count == 0) return;
 
 				// Limit 'count' to the size of the terminal and the maximum string length
@@ -1272,7 +1271,7 @@ namespace pr.gui
 			private void BackSpace()
 			{
 				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
-				if (m_out.pos.Y < 0 || m_out.pos.Y > Settings.TerminalHeight) throw new Exception("Caret outside screen buffer");
+				if (m_out.pos.Y < 0) throw new Exception("Caret outside screen buffer");
 				if (m_out.pos.X == 0) return;
 
 				m_out.pos = MoveCaret(m_out.pos, -1, 0);
@@ -1380,7 +1379,6 @@ namespace pr.gui
 			private EventBatcher m_eb;
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
 			private CellBuf m_cells;
-			private ContextMenuStrip m_cmenu;
 
 			public Display()
 			{
@@ -1388,8 +1386,8 @@ namespace pr.gui
 				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(10)){TriggerOnFirst = true};
 				m_sty = new Dictionary<Style,byte>();
 				m_cells = new CellBuf();
-				m_cmenu = new CMenu(this);
-
+				ContextMenuStrip = new CMenu(this);
+				
 				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
 				BlinkTimer.Tick += SignalRefresh;
 
@@ -1403,6 +1401,7 @@ namespace pr.gui
 			}
 			protected override void Dispose(bool disposing)
 			{
+				Buffer = null;
 				Util.Dispose(ref m_hs);
 				Util.Dispose(ref m_eb);
 				base.Dispose(disposing);
@@ -1427,13 +1426,14 @@ namespace pr.gui
 					{
 						m_buffer.Overflow -= HandleBufferOverflow;
 						m_buffer.BufferChanged -= SignalRefresh;
+						ContextMenuStrip = null;
 					}
 					m_buffer = value;
 					if (m_buffer != null)
 					{
 						m_buffer.Overflow += HandleBufferOverflow;
 						m_buffer.BufferChanged += SignalRefresh;
-						m_cmenu = new CMenu(this);
+						ContextMenuStrip = new CMenu(this);
 					}
 					SignalRefresh();
 				}
@@ -1615,24 +1615,6 @@ namespace pr.gui
 						break;
 					}
 					#endregion
-				case Win32.WM_PARENTNOTIFY:
-					#region
-					{
-						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						switch (Win32.LoWord(wparam))
-						{
-						case Win32.WM_RBUTTONDOWN:
-							#region
-							{
-								var pt = Win32.LParamToPoint(lparam);
-								ContextMenu.Show(this, pt);
-								break;
-							}
-							#endregion
-						}
-						break;
-					}
-					#endregion
 				}
 
 				base.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
@@ -1665,13 +1647,10 @@ namespace pr.gui
 					m_sel.m_current -= bytes;
 					m_sel.m_anchor -= bytes;
 
-					// If not auto scrolling, scroll up to move with the buffer text
-					if (!AutoScrollToBottom)
-					{
-						var vis = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
-						vis = Math.Max(0, vis - args.Dropped.Sizei);
-						Cmd(Sci.SCI_SETFIRSTVISIBLELINE, vis);
-					}
+					// Scroll up to move with the buffer text
+					var vis = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+					vis = Math.Max(0, vis - args.Dropped.Sizei);
+					Cmd(Sci.SCI_SETFIRSTVISIBLELINE, vis);
 				}
 				else
 				{
@@ -1679,12 +1658,6 @@ namespace pr.gui
 				}
 			}
 			private Selection m_sel;
-
-			/// <summary>A context menu for the vt100 terminal</summary>
-			public new ContextMenuStrip ContextMenu
-			{
-				get { return m_cmenu; }
-			}
 
 			/// <summary>The context menu for this vt100 display</summary>
 			private class CMenu :ContextMenuStrip
@@ -1798,30 +1771,30 @@ namespace pr.gui
 							#region Newline Recv
 							{
 								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Recv"));
-								var edit = item.DropDownItems.Add2(new ToolStripComboBox());
-								edit.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								var cb = new ComboBox(); cb.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								var edit = item.DropDownItems.Add2(new ToolStripControlHost(cb));
 								item.DropDown.Opening += (s,a) =>
 									{
-										edit.SelectedItem = m_disp.Settings.NewlineRecv;
+										cb.SelectedItem = m_disp.Settings.NewlineRecv;
 									};
-								edit.SelectedIndexChanged += (s,e) =>
+								cb.SelectedIndexChanged += (s,e) =>
 									{
-										m_disp.Settings.NewlineRecv = (ENewLineMode)edit.SelectedIndex;
+										m_disp.Settings.NewlineRecv = (ENewLineMode)cb.SelectedItem;
 									};
 							}
 							#endregion
 							#region Newline Send
 							{
 								var item = options.DropDownItems.Add2(new ToolStripMenuItem("Newline Send"));
-								var edit = item.DropDownItems.Add2(new ToolStripComboBox());
-								edit.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								var cb = new ComboBox(); cb.Items.AddRange(Enum<ENewLineMode>.Values.Cast<object>().ToArray());
+								var edit = item.DropDownItems.Add2(new ToolStripControlHost(cb));
 								item.DropDown.Opening += (s,a) =>
 									{
-										edit.SelectedItem = m_disp.Settings.NewlineSend;
+										cb.SelectedItem = m_disp.Settings.NewlineSend;
 									};
-								edit.SelectedIndexChanged += (s,e) =>
+								cb.SelectedIndexChanged += (s,e) =>
 									{
-										m_disp.Settings.NewlineSend = (ENewLineMode)edit.SelectedIndex;
+										m_disp.Settings.NewlineSend = (ENewLineMode)cb.SelectedItem;
 									};
 							}
 							#endregion

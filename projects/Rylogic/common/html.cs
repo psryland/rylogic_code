@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using pr.extn;
 
 namespace pr.common
@@ -22,7 +23,7 @@ namespace pr.common
 		#region Body
 		public class Body :Html
 		{
-			public Body() :base("body")
+			public Body(string class_ = null) :base("body", class_)
 			{}
 		}
 		#endregion
@@ -69,10 +70,17 @@ namespace pr.common
 			}
 			
 			/// <summary>Create a Style instance by parsing html text</summary>
-			public static Style Parse(string css)
+			public Style Parse(string css)
 			{
 				// Expects [<style>] names { key:value; ... } [</style>]
-				throw new NotImplementedException(); // should add these parse functions to all types
+				foreach (var m in Regex.Matches(css, @"\s*(.*?)\s*{(.*?)}", RegexOptions.Singleline).Cast<Match>())
+				{
+					var def = new Def(m.Groups[1].Value);
+					foreach (var kv in Regex.Matches(m.Groups[2].Value, @"\s*(.+?)\s*:\s*(.*?);").Cast<Match>())
+						def.Add(kv.Groups[1].Value, kv.Groups[2].Value);
+					Add(def);
+				}
+				return this;
 			}
 
 			/// <summary>The style definitions defined in this style</summary>
@@ -154,7 +162,8 @@ namespace pr.common
 		#region Div
 		public class Div :Html
 		{
-			public Div() :base("div") {}
+			public Div(string class_ = null) :base("div", class_)
+			{}
 			protected override void ValidParent(Html parent)
 			{
 				if (parent is Body) return;
@@ -170,7 +179,7 @@ namespace pr.common
 			{
 				public class Hdr :Html
 				{
-					public Hdr() :base("th") { NewLine = string.Empty; }
+					public Hdr(string class_ = null) :base("th", class_) { NewLine = string.Empty; }
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
@@ -179,7 +188,7 @@ namespace pr.common
 				}
 				public class Data :Html
 				{
-					public Data() :base("td") { NewLine = string.Empty; }
+					public Data(string class_ = null) :base("td", class_) { NewLine = string.Empty; }
 					protected override void ValidParent(Html parent)
 					{
 						if (parent is Row) return;
@@ -187,14 +196,14 @@ namespace pr.common
 					}
 				}
 
-				public Row() :base("tr") {}
+				public Row(string class_ = null) :base("tr", class_) {}
 				protected override void ValidParent(Html parent)
 				{
 					if (parent is Table) return;
 					throw new Exception("{0} elements can not be parented to {1} elements".Fmt(GetType().Name, parent.GetType().Name));
 				}
 			}
-			public Table() :base("table") {}
+			public Table(string class_ = null) :base("table", class_) {}
 			protected override void ValidParent(Html parent)
 			{
 				if (parent is Body) return;
@@ -251,13 +260,16 @@ namespace pr.common
 		/// <summary>The child objects of this element</summary>
 		private List<Html> m_elems;
 
-		public Html(string tag = "html")
+		public Html(string tag = "html", string class_ = null, string id = null)
 		{
 			m_parent   = null;
 			m_elems    = new List<Html>();
 			Tag        = tag;
 			Attr       = new Attribs();
 			NewLine    = Environment.NewLine;
+
+			if (class_ != null) Attr.Add("class",class_);
+			if (id     != null) Attr.Add("id",id);
 		}
 
 		/// <summary>The html tag for this element</summary>
@@ -310,6 +322,13 @@ namespace pr.common
 			elem.m_parent = this;
 			m_elems.Add(elem);
 			elem.OnAdd();
+			return this;
+		}
+
+		/// <summary>Add a collection of html elements. Returns this for method chaining</summary>
+		public Html Add<T>(IEnumerable<T> elems) where T:Html
+		{
+			foreach (var e in elems) Add(e);
 			return this;
 		}
 
