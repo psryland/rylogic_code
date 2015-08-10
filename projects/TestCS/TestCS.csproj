@@ -98,6 +98,9 @@
     <Compile Include="src\toolform_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\web_browser_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <EmbeddedResource Include="src\checkedlistbox_ui.resx">
       <DependentUpon>checkedlistbox_ui.cs</DependentUpon>
     </EmbeddedResource>
@@ -149,6 +152,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\view3d_ui.resx">
       <DependentUpon>view3d_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\web_browser_ui.resx">
+      <DependentUpon>web_browser_ui.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

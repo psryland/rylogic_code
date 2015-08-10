@@ -9,6 +9,8 @@ using pr.win32;
 
 namespace pr.gui
 {
+	using BrowserCtrl = pr.gui.WebBrowser;
+
 	public class HelpUI :ToolForm
 	{
 		/// <summary>Create a help dialog from plain text, rtf, or html</summary>
@@ -20,35 +22,27 @@ namespace pr.gui
 		/// <summary>Show a modal help dialog from plain text, rtf, or html</summary>
 		public static DialogResult ShowDialog(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight)
 		{
-			var ui = new HelpUI(parent, type, title, content, ofs, size, pin, true);
-			return ui.ShowDialog(parent);
+			using (var ui = new HelpUI(parent, type, title, content, ofs, size, pin, true))
+				return ui.ShowDialog(parent);
 		}
 
-		/// <summary>Contains m_text</summary>
+		#region UI Elements
 		private Panel m_panel;
-
-		/// <summary>The control that displays the content</summary>
-		private Control m_text;
-
-		/// <summary>Link url</summary>
-		private Uri m_url;
-		private readonly Uri m_about_blank = new Uri("about:blank");
-
-		/// <summary>Status label used during navigation</summary>
 		private Label m_lbl_status;
-
 		private Button m_btn_forward;
 		private Button m_btn_back;
 		private Button m_btn_ok;
+		#endregion
 
-		private HelpUI(Control parent, EContent type, string title, string content, Point? ofs, Size? size, EPin pin, bool modal)
+		public HelpUI(Control parent, EContent type, string title, string content, Point? ofs = null, Size? size = null, EPin pin = EPin.TopRight, bool modal = false)
 			:base(parent, pin, ofs ?? Point.Empty, size ?? Size.Empty, modal)
 		{
 			InitializeComponent();
 			Type = type;
 			Text = title;
 			Content = content;
-			m_btn_back.Enabled = false;
+
+			m_btn_back   .Enabled = false;
 			m_btn_forward.Enabled = false;
 			SetStatusText(null);
 
@@ -56,47 +50,54 @@ namespace pr.gui
 			{
 			default: throw new Exception("Unknown content type");
 			case EContent.Text:
-				var txt = new TextBox
 				{
-					Dock        = DockStyle.Fill,
-					BorderStyle = BorderStyle.None,
-					Multiline   = true,
-					ScrollBars  = ScrollBars.Both,
-					ReadOnly    = true,
-				};
-				txt.Text = Content;
-				m_text = txt;
-				break;
+					var txt = new TextBox
+					{
+						Dock        = DockStyle.Fill,
+						BorderStyle = BorderStyle.None,
+						Multiline   = true,
+						ScrollBars  = ScrollBars.Both,
+						ReadOnly    = true,
+					};
+					txt.Text = Content;
+					TextCtrl = txt;
+					break;
+				}
 			case EContent.Rtf:
-				var rtb = new RichTextBox
 				{
-					Dock = DockStyle.Fill,
-					BorderStyle = BorderStyle.None,
-					DetectUrls = true,
-					ReadOnly = true,
-				};
-				rtb.Rtf = Content;
-				rtb.LinkClicked += OnLinkClicked;
-				m_text = rtb;
-				break;
+					var rtb = new RichTextBox
+					{
+						Dock = DockStyle.Fill,
+						BorderStyle = BorderStyle.None,
+						DetectUrls = true,
+						ReadOnly = true,
+					};
+					rtb.Rtf = Content;
+					rtb.LinkClicked += OnLinkClicked;
+					TextCtrl = rtb;
+					break;
+				}
 			case EContent.Html:
-				var web = new WebBrowser{Dock = DockStyle.Fill, AllowNavigation = true};
-				web.StatusTextChanged   += (s,a) => SetStatusText(web.StatusText != "Done" ? web.StatusText : string.Empty);
-				web.CanGoForwardChanged += (s,a) => m_btn_forward.Enabled = web.CanGoForward;
-				web.CanGoBackChanged    += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
-				web.Navigated           += (s,a) => m_btn_back.Enabled    = !m_url.AbsoluteUri.Equals(m_about_blank.AbsoluteUri);
-				web.Navigating          += (s,a) => OnLinkClicked(s, new LinkClickedEventArgs(a.Url.AbsoluteUri));
-				web.PreviewKeyDown      += (s,a) => { if (a.KeyCode == Keys.F5) a.IsInputKey = true; };// Blocks Refresh which causes rendered html to vanish
-				m_text = web;
-				ShowNavigationButtons = true;
-				break;
+				{
+					var web = new BrowserCtrl{Dock = DockStyle.Fill, AllowNavigation = true};
+					web.CanGoForwardChanged += (s,a) => m_btn_forward.Enabled = web.CanGoForward;
+					web.CanGoBackChanged    += (s,a) => m_btn_back   .Enabled = web.CanGoBack;
+					web.ResolveContent      += (s,a) => OnResolveContent(a);
+					//web.PreviewKeyDown      += (s,a) => { if (a.KeyCode == Keys.F5) a.IsInputKey = true; };// Blocks Refresh which causes rendered html to vanish
+					web.StatusTextChanged   += (s,a) => SetStatusText(web.StatusText != "Done" ? web.StatusText : string.Empty);
+					TextCtrl = web;
+					ShowNavigationButtons = true;
+					break;
+				}
 			}
-			m_text.BackColor = SystemColors.Window;
-			m_panel.Controls.Add(m_text);
+			TextCtrl.BackColor = SystemColors.Window;
+			m_panel.Controls.Add(TextCtrl);
 
-			m_btn_ok.Click += Close;
+			m_btn_ok     .Click += Close;
 			m_btn_forward.Click += OnForward;
-			m_btn_back.Click += OnBack;
+			m_btn_back   .Click += OnBack;
+
+			RenderContent();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -106,14 +107,17 @@ namespace pr.gui
 		protected override void OnShown(EventArgs e)
 		{
 			base.OnShown(e);
-			ResetView();
+			RenderContent();
 		}
 
 		/// <summary>The type of text content to display</summary>
 		public EContent Type { get; private set; }
 		public enum EContent { Text, Rtf, Html }
 
-		/// <summary>The text to display in the window</summary>
+		/// <summary>The control that displays the content</summary>
+		public Control TextCtrl { get; private set; }
+
+		/// <summary>The text,rtf,html to display in the window</summary>
 		public string Content { get; set; }
 
 		/// <summary>Show/Hide the navigation buttons</summary>
@@ -123,33 +127,15 @@ namespace pr.gui
 			set { m_btn_forward.Visible = m_btn_back.Visible = value; }
 		}
 
-		/// <summary>Use the old RichEdit control rather than RICHEDIT50W</summary>
-		public void UseRichEdit2()
+		/// <summary>Update the control with the current content</summary>
+		public void RenderContent()
 		{
-			m_panel.Controls.Clear();
-			m_text = new System.Windows.Forms.RichTextBox
-				{
-					Dock = DockStyle.Fill,
-					BorderStyle = BorderStyle.None,
-					DetectUrls = true,
-					ReadOnly = true,
-				};
-			m_panel.Controls.Add(m_text);
-			ResetView();
-		}
-
-		/// <summary>Restores the help UI to the Html view</summary>
-		public virtual void ResetView()
-		{
-			m_btn_back.Enabled = false;
-			m_url = m_about_blank;
-
 			switch (Type)
 			{
 			default: throw new Exception("Unknown content type");
 			case EContent.Text:
 				{
-					var txt = m_text.As<TextBox>();
+					var txt = TextCtrl.As<TextBox>();
 					txt.Text = Content;
 					txt.Select(0,0);
 					Win32.HideCaret(txt.Handle);
@@ -157,7 +143,7 @@ namespace pr.gui
 				}
 			case EContent.Rtf:
 				{
-					var rtf = m_text.As<System.Windows.Forms.RichTextBox>();
+					var rtf = TextCtrl.As<System.Windows.Forms.RichTextBox>();
 					rtf.Rtf = Content;
 					rtf.Select(0,0);
 					Win32.HideCaret(rtf.Handle);
@@ -165,8 +151,80 @@ namespace pr.gui
 				}
 			case EContent.Html:
 				{
-					var web = m_text.As<WebBrowser>();
-					web.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(Content));
+					var web = TextCtrl.As<WebBrowser>();
+					web.Reload();
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handle a link click in the displayed text (only applies to RTF)</summary>
+		public event EventHandler<LinkClickedEventArgs> LinkClicked;
+		protected virtual void OnLinkClicked(object sender, LinkClickedEventArgs args)
+		{
+			LinkClicked.Raise(sender, args);
+		}
+
+		/// <summary>Resolve a link into content (only applies to html)</summary>
+		public event EventHandler<BrowserCtrl.ResolveContentEventArgs> ResolveContentEvent;
+		protected virtual void OnResolveContent(BrowserCtrl.ResolveContentEventArgs args)
+		{
+			ResolveContentEvent.Raise(this, args);
+			if (args.Url == BrowserCtrl.AboutBlankUrl && args.Content == null)
+				args.Content = Content;
+		}
+
+		/// <summary>Default handling for the back button click</summary>
+		protected virtual void OnBack(object sender, EventArgs args)
+		{
+			// Default implementation just resets back to the current content
+			// for text,rtf views. Html views support navigation by default
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				{
+					RenderContent();
+					break;
+				}
+			case EContent.Rtf:
+				{
+					RenderContent();
+					break;
+				}
+			case EContent.Html:
+				{
+					var web = TextCtrl.As<BrowserCtrl>();
+					if (!web.GoBack())
+						RenderContent();
+					break;
+				}
+			}
+		}
+
+		/// <summary>Handles the forward button click</summary>
+		protected virtual void OnForward(object sender, EventArgs args)
+		{
+			// Default implementation just resets back to the current content
+			// for text,rtf views. Html views support navigation by default
+			switch (Type)
+			{
+			default: throw new Exception("Unknown content type");
+			case EContent.Text:
+				{
+					RenderContent();
+					break;
+				}
+			case EContent.Rtf:
+				{
+					RenderContent();
+					break;
+				}
+			case EContent.Html:
+				{
+					var web = TextCtrl.As<BrowserCtrl>();
+					if (!web.GoForward())
+						RenderContent();
 					break;
 				}
 			}
@@ -179,65 +237,19 @@ namespace pr.gui
 			m_lbl_status.Visible = m_lbl_status.Text.HasValue();
 		}
 
-		/// <summary>Handles the back button click</summary>
-		protected virtual void OnBack(object sender, EventArgs args)
+		/// <summary>Use the old RichEdit control rather than RICHEDIT50W</summary>
+		public void UseRichEdit2()
 		{
-			switch (Type)
-			{
-			default: throw new Exception("Unknown content type");
-			case EContent.Text:
+			m_panel.Controls.Clear();
+			TextCtrl = new System.Windows.Forms.RichTextBox
 				{
-					ResetView();
-					break;
-				}
-			case EContent.Rtf:
-				{
-					ResetView();
-					break;
-				}
-			case EContent.Html:
-				{
-					var web = m_text.As<WebBrowser>();
-					if (!web.GoBack())
-						ResetView();
-					break;
-				}
-			}
-		}
-
-		/// <summary>Handles the forward button click</summary>
-		protected virtual void OnForward(object sender, EventArgs args)
-		{
-			switch (Type)
-			{
-			default: throw new Exception("Unknown content type");
-			case EContent.Text:
-				{
-					ResetView();
-					break;
-				}
-			case EContent.Rtf:
-				{
-					ResetView();
-					break;
-				}
-			case EContent.Html:
-				{
-					var web = m_text.As<WebBrowser>();
-					if (!web.GoForward())
-						ResetView();
-					break;
-				}
-			}
-		}
-
-		/// <summary>Handle a link click in RTF text</summary>
-		public event LinkClickedEventHandler LinkClicked;
-		protected virtual void OnLinkClicked(object sender, LinkClickedEventArgs args)
-		{
-			m_url = new Uri(args.LinkText);
-			if (LinkClicked == null) return;
-			LinkClicked(sender, args);
+					Dock = DockStyle.Fill,
+					BorderStyle = BorderStyle.None,
+					DetectUrls = true,
+					ReadOnly = true,
+				};
+			m_panel.Controls.Add(TextCtrl);
+			RenderContent();
 		}
 
 		#region Windows Form Designer generated code

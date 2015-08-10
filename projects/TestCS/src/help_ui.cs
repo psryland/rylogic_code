@@ -13,9 +13,9 @@ using pr.util;
 
 namespace TestCS
 {
-	public class TestHelpUI :Form
+	public class HelpUI :Form
 	{
-		public TestHelpUI()
+		public HelpUI()
 		{
 			InitializeComponent();
 
@@ -32,7 +32,7 @@ namespace TestCS
 		private void PlainText(object sender, EventArgs e)
 		{
 			var content = "This is a Plain text dialog";
-			HelpUI.ShowDialog(this, HelpUI.EContent.Text, "Plain Text Help", content);
+			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Text, "Plain Text Help", content);
 		}
 		private void RichText(object sender, EventArgs e)
 		{
@@ -50,7 +50,7 @@ namespace TestCS
 			rtf.Append("More Rtf text");
 
 			var content = rtf.ToString();
-			HelpUI.ShowDialog(this, HelpUI.EContent.Rtf, "RTF Help", content);
+			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Rtf, "RTF Help", content);
 		}
 		private void HtmlText(object sender, EventArgs e)
 		{
@@ -60,7 +60,7 @@ namespace TestCS
 				<p>paragraph paragraph paragraph</p>
 				<a href='http://www.google.com'>Link to Google</a>
 			</html>";
-			HelpUI.ShowDialog(this, HelpUI.EContent.Html, "Html Help", content);
+			pr.gui.HelpUI.ShowDialog(this, pr.gui.HelpUI.EContent.Html, "Html Help", content);
 		}
 
 		private Button m_btn_plaintext;

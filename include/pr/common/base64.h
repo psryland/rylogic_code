@@ -3,8 +3,7 @@
 //  Copyright (c) March 2008 Paul Ryland
 //******************************************
 
-#ifndef PR_COMMON_BASE64_H
-#define PR_COMMON_BASE64_H
+#pragma once
 
 // Implements the Base64 Content-Transfer-Encoding standard described in RFC1113 (http://www.faqs.org/rfcs/rfc1113.html).
 //
@@ -195,6 +194,4 @@ namespace pr
 		}
 	}
 }
-#endif
-
 #endif

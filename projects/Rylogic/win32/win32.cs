@@ -1207,6 +1207,7 @@ namespace pr.win32
 		private static int m_msg_idx = 0;
 
 		/// <summary>Convert a wndproc message to a string</summary>
+		public static string DebugMessage(ref Message msg) { return DebugMessage(msg.HWnd, msg.Msg, msg.WParam, msg.LParam); }
 		public static string DebugMessage(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam) { return DebugMessage(hwnd, msg, (int)wparam, (int)lparam); }
 		public static string DebugMessage(IntPtr hwnd, int msg, int wparam, int lparam)
 		{

@@ -259,7 +259,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Remove the range of elements from [startIndex, list.Count)</summary>
-		public static List<T> RemoveToEnd<T>(this List<T> list, int startIndex)
+		public static IList<T> RemoveToEnd<T>(this IList<T> list, int startIndex)
 		{
 			var diff = list.Count - startIndex;
 			if (diff > 0) list.RemoveRange(startIndex, diff);

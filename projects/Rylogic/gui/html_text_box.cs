@@ -12,8 +12,10 @@ using pr.extn;
 
 namespace pr.gui
 {
+	using BrowserCtrl = System.Windows.Forms.WebBrowser;
+
 	/// <summary>A control that makes a webbrowser behaviour as much like a text (or RTB) as possible</summary>
-	public class HtmlTextBox :WebBrowser
+	public class HtmlTextBox :BrowserCtrl
 	{
 		#region IE Version
 		

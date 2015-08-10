@@ -22,11 +22,16 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_helpui;
 		private ToolStripMenuItem m_menu_subclassed_controls;
 		private ToolStripMenuItem m_menu_tests_rtb;
+		private ToolStripMenuItem m_menu_tests_web_browser;
 		private ToolStripMenuItem m_menu_graph_control;
 
 		public FormTestApp()
 		{
 			InitializeComponent();
+			Shown += (s,a) =>
+				{
+					Location = new Point(2100,150);
+				};
 
 			m_menu_file_exit.Click += (s,a) =>
 				{
@@ -40,7 +45,7 @@ namespace TestCS
 
 			m_menu_tests_helpui.Click += (s,a) =>
 				{
-					new TestHelpUI().Show(this);
+					new HelpUI().Show(this);
 				};
 
 			m_menu_hint_balloon.Click += (s,a) =>
@@ -103,9 +108,9 @@ namespace TestCS
 					new LdrEditorUI().Show(this);
 				};
 
-			Shown += (s,a) =>
+			m_menu_tests_web_browser.Click += (s,a) =>
 				{
-					Location = new Point(2100,50);
+					new WebBrowserUI().Show(this);
 				};
 		}
 
@@ -153,6 +158,7 @@ namespace TestCS
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_rtb = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -191,15 +197,16 @@ namespace TestCS
             this.m_menu_graph_control,
             this.m_menu_tests_helpui,
             this.m_menu_hint_balloon,
+            this.m_menu_tests_rtb,
             this.m_menu_subclassed_controls,
             this.m_menu_tool_form,
             this.m_menu_toolstrip_positions,
             this.m_menu_tree_grid,
             this.m_menu_tests_view3d,
             this.m_menu_tests_view3d_editor,
-            this.m_menu_tests_rtb});
+            this.m_menu_tests_web_browser});
 			this.m_menu_tests.Name = "m_menu_tests";
-			this.m_menu_tests.Size = new System.Drawing.Size(46, 20);
+			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
 			this.m_menu_tests.Text = "&Tests";
 			// 
 			// m_menu_checked_listbox
@@ -285,6 +292,12 @@ namespace TestCS
 			this.m_menu_tests_rtb.Name = "m_menu_tests_rtb";
 			this.m_menu_tests_rtb.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_rtb.Text = "&Rich Text Box";
+			// 
+			// m_menu_tests_web_browser
+			// 
+			this.m_menu_tests_web_browser.Name = "m_menu_tests_web_browser";
+			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
 			// FormTestApp
 			// 

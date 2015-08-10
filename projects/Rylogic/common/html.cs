@@ -27,6 +27,16 @@ namespace pr.common
 			{}
 		}
 		#endregion
+		#region Base
+		public class Base :Html
+		{
+			public Base(string href = null, string target = null) :base("base")
+			{
+				if (href != null) Attr["href"] = href;
+				if (target != null) Attr["target"] = target;
+			}
+		}
+		#endregion
 		#region Style
 		public class Style :Html
 		{

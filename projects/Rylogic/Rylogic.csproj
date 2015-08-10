@@ -340,6 +340,9 @@
     <Compile Include="gui\html_text_box.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="gui\web_browser.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\zoom_scroll.cs">
       <SubType>Component</SubType>
     </Compile>
