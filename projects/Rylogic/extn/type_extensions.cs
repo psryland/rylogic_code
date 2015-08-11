@@ -138,6 +138,26 @@ namespace pr.extn
 			return type.FindMethodsWithAttribute(typeof(T), flags);
 		}
 	}
+
+	/// <summary>'bool' type extensions</summary>
+	public static class bool_
+	{
+		public static bool? TryParse(string val)
+		{
+			bool o;
+			return bool.TryParse(val, out o) ? (bool?)o : null;
+		}
+	}
+
+	/// <summary>'int' type extensions</summary>
+	public static class int_
+	{
+		public static int? TryParse(string val)
+		{
+			int o;
+			return int.TryParse(val, out o) ? (int?)o : null;
+		}
+	}
 }
 
 #if PR_UNITTESTS
@@ -230,6 +250,14 @@ namespace pr.unittests
 
 			var ty1 = TypeExtensions.Resolve("pr.util.CRC32");
 			Assert.AreEqual(typeof(util.CRC32), ty1);
+		}
+		[Test] public void IntExtn()
+		{
+			var x0 = int_.TryParse("1234");
+			Assert.AreEqual(x0, 1234);
+
+			var x1 = int_.TryParse("abc");
+			Assert.AreEqual(x1, null);
 		}
 	}
 }

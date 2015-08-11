@@ -1,0 +1,22 @@
+Implement pr::script in C#
+
+Make Scintilla+Ldr support a dll
+
+Implement a XElement-like tree reader/writer for pr-script
+
+Make a regex tester for C++ std::regex
+
+Implement Fmt() as a variadic template
+
+Fix non-pod types in pr::vector<>
+Fix crash in Diagram Control
+
+convert linedrawer all to wingui
+
+VS Extension - Align
+ - stop at comment lines
+ - Levistein distance rows (or maybe just use row 'form's)
+
+Add outline code only to VS Extension
+
+collect windowsfunctions.h into a better logical place

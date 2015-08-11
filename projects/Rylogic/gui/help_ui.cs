@@ -26,6 +26,9 @@ namespace pr.gui
 				return ui.ShowDialog(parent);
 		}
 
+		/// <summary>A special url used to mean 'the current help content'</summary>
+		private static readonly Uri HelpUrl = new Uri("about:help");
+
 		#region UI Elements
 		private Panel m_panel;
 		private Label m_lbl_status;
@@ -82,9 +85,9 @@ namespace pr.gui
 					var web = new BrowserCtrl{Dock = DockStyle.Fill, AllowNavigation = true};
 					web.CanGoForwardChanged += (s,a) => m_btn_forward.Enabled = web.CanGoForward;
 					web.CanGoBackChanged    += (s,a) => m_btn_back   .Enabled = web.CanGoBack;
-					web.ResolveContent      += (s,a) => OnResolveContent(a);
-					//web.PreviewKeyDown      += (s,a) => { if (a.KeyCode == Keys.F5) a.IsInputKey = true; };// Blocks Refresh which causes rendered html to vanish
+					web.ResolveContent      += (s,a) => ResolveContent(a);
 					web.StatusTextChanged   += (s,a) => SetStatusText(web.StatusText != "Done" ? web.StatusText : string.Empty);
+					web.UrlHistory.Add(new BrowserCtrl.Visit(HelpUrl));
 					TextCtrl = web;
 					ShowNavigationButtons = true;
 					break;
@@ -96,8 +99,6 @@ namespace pr.gui
 			m_btn_ok     .Click += Close;
 			m_btn_forward.Click += OnForward;
 			m_btn_back   .Click += OnBack;
-
-			RenderContent();
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -158,6 +159,20 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Resolve 'args.Url' into content for the web control</summary>
+		private void ResolveContent(BrowserCtrl.ResolveContentEventArgs args)
+		{
+			if (args.Url == HelpUrl)
+			{
+				args.Content = Content;
+			}
+			else
+			{
+				OnResolveContent(args);
+				Content = args.Content;
+			}
+		}
+
 		/// <summary>Handle a link click in the displayed text (only applies to RTF)</summary>
 		public event EventHandler<LinkClickedEventArgs> LinkClicked;
 		protected virtual void OnLinkClicked(object sender, LinkClickedEventArgs args)
@@ -170,8 +185,6 @@ namespace pr.gui
 		protected virtual void OnResolveContent(BrowserCtrl.ResolveContentEventArgs args)
 		{
 			ResolveContentEvent.Raise(this, args);
-			if (args.Url == BrowserCtrl.AboutBlankUrl && args.Content == null)
-				args.Content = Content;
 		}
 
 		/// <summary>Default handling for the back button click</summary>

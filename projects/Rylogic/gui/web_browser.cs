@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using pr.container;
@@ -23,13 +24,8 @@ namespace pr.gui
 		/// <summary>The web browser used to do the rendering</summary>
 		private System.Windows.Forms.WebBrowser m_wb;
 
-		/// <summary>The index of the url in the history that is to be shown</summary>
-		private int m_url_index;
-
 		public WebBrowser()
 		{
-			m_url_index = -1;
-
 			m_wb = new System.Windows.Forms.WebBrowser{Dock = DockStyle.Fill};
 			Controls.Add(m_wb);
 
@@ -66,6 +62,7 @@ namespace pr.gui
 		public class Visit
 		{
 			public Visit(Uri url = null, string content = null) { Url = url; Content = content; }
+			public Visit(string url = null, string content = null) :this(new Uri(url), content) {}
 			public Uri Url { get; set; }
 			public string Content { get; set; }
 			public override string ToString() { return Url.ToString(); }
@@ -84,10 +81,7 @@ namespace pr.gui
 		{
 			// Clear the forward history
 			if (erase_forward && UrlHistory.Position >= 0)
-			{
 				m_url_history.RemoveToEnd(UrlHistory.Position);
-				m_url_index = UrlHistory.Count - 1;
-			}
 
 			// Navigate to the given url
 			m_wb.Navigate(to);
@@ -96,8 +90,9 @@ namespace pr.gui
 		/// <summary>Reload the current visit</summary>
 		public void Reload()
 		{
+			// If there's no url history, load 'blank'
 			if (UrlHistory.Current == null)
-				Navigate(AboutBlankUrl);
+				Navigate(AboutBlankUrl, true);
 			else
 				Navigate(UrlHistory.Current.Url, true);
 		}
@@ -117,8 +112,8 @@ namespace pr.gui
 		public virtual bool GoBack()
 		{
 			if (!CanGoBack) return false;
-			m_url_index = UrlHistory.Position - 2;
-			Navigate(UrlHistory[UrlHistory.Position - 1].Url, false);
+			UrlHistory.Position -= 2;
+			Navigate(UrlHistory[UrlHistory.Position + 1].Url, false); // Don't use GoForward because it's virtual
 			return true;
 		}
 
@@ -126,7 +121,6 @@ namespace pr.gui
 		public virtual bool GoForward()
 		{
 			if (!CanGoForward) return false;
-			m_url_index = UrlHistory.Position;
 			Navigate(UrlHistory[UrlHistory.Position + 1].Url, false);
 			return true;
 		}
@@ -160,43 +154,50 @@ namespace pr.gui
 		/// <summary>Handle navigation events</summary>
 		private void HandleNavigating(object sender, WebBrowserNavigatingEventArgs args)
 		{
-			// Each navigation advances the url index. Internal redirects pre-decrement this.
-			if (++m_url_index == UrlHistory.Position)
-				return;
-
-			// Add the selected url to the history
-			if (m_url_index >= UrlHistory.Count)
+			// Ignore recursive calls (and navigation events that happen after
+			// this method returns but are due to the assignment of DocumentStream)
+			if (m_rdr_content || args.Url == AboutBlankUrl) return;
+			using (Scope.Create(() => m_rdr_content = true, () => m_rdr_content = false))
 			{
-				if (m_url_index > UrlHistory.Count)
-					throw new Exception("url index should be in the range [0,history.Count]");
+				var idx = UrlHistory.Position + 1;
 
-				// Resolve the Url to content
-				var a = new ResolveContentEventArgs(args.Url);
-				OnResolveContent(a);
-				UrlHistory.Add(new Visit(a.Url, a.Content));
-			}
-			else if (args.Url != UrlHistory[m_url_index].Url)
-			{
-				// Resolve the Url to content
-				var a = new ResolveContentEventArgs(args.Url);
-				OnResolveContent(a);
+				// Add the selected url to the history
+				if (idx == UrlHistory.Count)
+				{
+					// Resolve the Url to content
+					var a = new ResolveContentEventArgs(args.Url);
+					OnResolveContent(a);
 
-				// Remove the future history and set the current visit
-				m_url_history.RemoveToEnd(m_url_index + 1);
-				UrlHistory[m_url_index].Url = a.Url;
-				UrlHistory[m_url_index].Content = a.Content;
+					// Add to the history
+					UrlHistory.Add(new Visit(a.Url, a.Content));
+				}
+				else if (args.Url != UrlHistory[idx].Url)
+				{
+					// Resolve the Url to content
+					var a = new ResolveContentEventArgs(args.Url);
+					OnResolveContent(a);
+
+					// Set the current visit and remove the future history
+					UrlHistory[idx] = new Visit(a.Url, a.Content);
+					m_url_history.RemoveToEnd(idx + 1);
+				}
+	
+				UrlHistory.Position = idx;
+
+				// Display the content
+				var content = UrlHistory.Current.Content;
+				if (content != null)
+				{
+					// Setting DocumentStream is considered a navigation (to about:blank)
+					// This may or may not result in a recursive call to this method
+					m_wb.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
+					args.Cancel = true;
+				}
 			}
 
-			// Display the content
-			UrlHistory.Position = m_url_index;
-			var content = UrlHistory.Current.Content;
-			if (content != null)
-			{
-				--m_url_index;
-				m_wb.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-				args.Cancel = true;
-			}
+			System.Diagnostics.Debug.WriteLine("{0} : {1}".Fmt(UrlHistory.Position, string.Join("->", UrlHistory.Select(x => x.Url.ToString()))));
 		}
+		private bool m_rdr_content;
 
 		/// <summary>Raised to resolve the content for a given url</summary>
 		public event EventHandler<ResolveContentEventArgs> ResolveContent;

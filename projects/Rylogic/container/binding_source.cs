@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Reflection;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
@@ -12,6 +13,7 @@ namespace pr.container
 	public class BindingSource<TItem> :BindingSource ,IEnumerable<TItem>
 	{
 		private int m_impl_previous_position;
+		private FieldInfo m_impl_listposition;
 
 		public BindingSource() :base() { Init(); }
 		public BindingSource(IContainer container) :base(container) { Init(); }
@@ -19,6 +21,7 @@ namespace pr.container
 		private void Init()
 		{
 			m_impl_previous_position = -1;
+			m_impl_listposition = typeof(CurrencyManager).GetField("listposition", BindingFlags.NonPublic|BindingFlags.Instance);
 		}
 
 		/// <summary>Get/Set whether the underlying list can be sorted by through this binding</summary>
@@ -29,25 +32,44 @@ namespace pr.container
 			get { return base.SupportsSorting && AllowSort; }
 		}
 
-		/// <summary>Set the current position</summary>
+		/// <summary>Set the current position (-1 means no current item)</summary>
 		public new int Position
 		{
-			// An overload just for debugging
 			get { return base.Position; }
-			set { base.Position = value; }
+			set
+			{
+				// Allow setting the position to -1, meaning no current
+				if (value == -1 && Position != -1)
+				{
+					m_impl_listposition.SetValue(CurrencyManager, -1);
+					OnPositionChanged(EventArgs.Empty);
+				}
+				else if (value != -1 && Position == -1 && Count != 0)
+				{
+					m_impl_listposition.SetValue(CurrencyManager, -2);
+					base.Position = value;
+				}
+				else
+				{
+					base.Position = value;
+				}
+			}
 		}
 
 		/// <summary>The current item</summary>
 		public new TItem Current
 		{
-			get { return (TItem)base.Current; }
+			get
+			{
+				return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem);
+			}
 			set
 			{
 				var idx = List.IndexOf(value);
 				if ((idx < 0 || idx >= List.Count) && !Equals(value, default(TItem)))
 					throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
 
-				CurrencyManager.Position = idx;
+				Position = idx;
 			}
 		}
 

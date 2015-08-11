@@ -11,6 +11,8 @@ using pr.util;
 
 namespace RyLogViewer
 {
+	using WebBrowser = System.Windows.Forms.WebBrowser;
+
 	public sealed class FirstRunTutorial :ToolForm
 	{
 		public enum ETutPage

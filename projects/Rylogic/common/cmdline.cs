@@ -4,6 +4,14 @@ namespace pr.common
 {
 	public static class CmdLine
 	{
+		/// <summary>The result of parsing a command line</summary>
+		public enum Result
+		{
+			Success,
+			Interrupted,
+			Failed,
+		}
+
 		/// <summary>Receives command line options</summary>
 		public interface IReceiver
 		{
@@ -28,11 +36,10 @@ namespace pr.common
 			bool OptionsValid();
 		}
 
-		public enum Result
+		/// <summary>Returns true if 'arg' is prefixed by '-'</summary>
+		public static bool IsOption(string arg)
 		{
-			Success,
-			Interrupted,
-			Failed,
+			return arg.Length >= 2 && arg[0] == '-';
 		}
 
 		/// <summary>Enumerate the provided command line options. Returns true of all command line parameters were parsed</summary>
@@ -41,11 +48,9 @@ namespace pr.common
 			var result = Result.Success;
 			try
 			{
-				Func<string,bool> is_option = a => a.Length >= 2 && a[0] == '-';
-
 				for (int i = 0, iend = args.Length; i != iend;)
 				{
-					if (is_option(args[i]))
+					if (IsOption(args[i]))
 					{
 						var option = args[i++];
 						if (!cr.CmdLineOption(option.ToLowerInvariant(), args, ref i))
