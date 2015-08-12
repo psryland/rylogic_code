@@ -136,46 +136,33 @@ namespace pr
 		};
 
 		// Convert a bluetooth device name to a bluetooth address by performing inquiry with remote name requests.
-		inline bool DeviceNameToBluetoothAddr(wchar_t const* name, SOCKADDR_BTH& addr, int inquiry_delay_s = 15)
+		// Note: this method can fail (return false) because remote name requests arrive after a device inquiry has completed.
+		// Without a window to receive IN_RANGE notifications, we don't have a direct mechanism to determine when remote name
+		// requests have completed.
+		// Use the LUP_FLUSHCACHE flag to cause the lookup service to do a fresh lookup instead of pulling the information from device cache.
+		inline bool DeviceNameToBluetoothAddr(wchar_t const* name, SOCKADDR_BTH& addr, int flags_ = 0)
 		{
 			addr = SOCKADDR_BTH{};
 
-			// Search for the device with the correct name
-			for (int i = 0, max_attempts = 3; i < max_attempts; ++i)
+			// WSALookupService is used for both service search and device inquiry
+			ULONG flags =
+				LUP_CONTAINERS  | // LUP_CONTAINERS is the flag which signals that we're doing a device inquiry.
+				LUP_RETURN_NAME | // Friendly device name (if available) will be returned in lpszServiceInstanceName
+				LUP_RETURN_ALL  | 
+				LUP_RETURN_ADDR | // BTH_ADDR will be returned in lpcsaBuffer member of WSAQUERYSET;
+				flags_;
+
+			// Lookup services
+			BluetoothServices svc(flags);
+			for (;svc.next(name);)
 			{
-				// WSALookupService is used for both service search and device inquiry
-				ULONG flags =
-					LUP_CONTAINERS  | // LUP_CONTAINERS is the flag which signals that we're doing a device inquiry.
-					LUP_RETURN_NAME | // Friendly device name (if available) will be returned in lpszServiceInstanceName
-					LUP_RETURN_ALL | 
-					LUP_RETURN_ADDR;  // BTH_ADDR will be returned in lpcsaBuffer member of WSAQUERYSET;
-
-				// On the first attempt, inquire device from cache
-				if (i != 0)
-				{
-					// Flush the device cache for all inquiries, except for the first inquiry
-					// By setting LUP_FLUSHCACHE flag, we're asking the lookup service to do
-					// a fresh lookup instead of pulling the information from device cache.
-					flags |= LUP_FLUSHCACHE;
-				}
-
-				// Lookup services
-				BluetoothServices svc(flags);
-				for (;svc.next(name);)
-				{
-					// Found a remote bluetooth device with matching name.
-					// Get the address of the device and exit the lookup.
-					auto const& qs = svc.query_set();
-					addr = *reinterpret_cast<SOCKADDR_BTH*>(qs.lpcsaBuffer->RemoteAddr.lpSockaddr);
-					return true;
-				}
-
-				// Pause for some time before all the inquiries after the first inquiry
-				// Remote Name requests will arrive after device inquiry has completed.
-				// Without a window to receive IN_RANGE notifications, we don't have a
-				// direct mechanism to determine when remote name requests have completed.
-				Sleep(inquiry_delay_s * 1000);
+				// Found a remote bluetooth device with matching name.
+				// Get the address of the device and exit the lookup.
+				auto const& qs = svc.query_set();
+				addr = *reinterpret_cast<SOCKADDR_BTH*>(qs.lpcsaBuffer->RemoteAddr.lpSockaddr);
+				return true;
 			}
+
 			return false;
 		}
 

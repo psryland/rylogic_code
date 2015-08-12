@@ -1582,11 +1582,14 @@ namespace pr.gui
 
 							var vk = (Keys)wparam;
 
-							char ch;
-							if (Win32.CharFromVKey(vk, out ch))
-								Buffer.AddInput(ch);
-							else
-								handled &= Buffer.AddInput(vk);
+							// Try to add the raw key code first. If not handled, try to convert
+							// it to a character and add it again.
+							if (!Buffer.AddInput(vk))
+							{
+								char ch;
+								if (Win32.CharFromVKey(vk, out ch))
+									Buffer.AddInput(ch);
+							}
 
 							switch (vk)
 							{

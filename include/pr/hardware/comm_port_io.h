@@ -97,6 +97,17 @@ namespace pr
 		// Return true if the io connection is currently open
 		bool IsOpen() const { return m_handle != INVALID_HANDLE_VALUE; }
 
+		// Returns true if serial port number 'port_number' is available for use
+		bool PortAvailable(int port_number) const
+		{
+			wchar_t port_name[] = L"\\\\.\\COM\0\0\0\0\0";
+			_itow_s(port_number, &port_name[7], 5, 10);
+			auto handle = ::CreateFileW(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+			auto available = handle != INVALID_HANDLE_VALUE;
+			::CloseHandle(handle);
+			return available;
+		}
+
 		// Open the serial io connection
 		void Open(int port_number) { Open(port_number, 0, 0); }
 		void Open(int port_number, size_t ibuf_size, size_t obuf_size)
