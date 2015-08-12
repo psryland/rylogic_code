@@ -60,7 +60,7 @@ namespace pr
 				,m_btn_render(IDC_BTN_RENDER, "m_btn_render", this, EAnchor::BottomRight)
 				,m_btn_close(IDC_BTN_CLOSE, "m_btn_close", this, EAnchor::BottomRight)
 				//,m_accel()
-				,m_menu(false)
+				,m_menu(MenuStrip::Strip)
 				,Render(render_cb)
 			{}
 
@@ -76,7 +76,7 @@ namespace pr
 						base::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 
 						// Create the menu
-						auto menu_file = MenuStrip(true);
+						auto menu_file = MenuStrip(MenuStrip::Popup);
 						menu_file.Insert(L"&Load", ID_LOAD);
 						menu_file.Insert(L"&Save", ID_SAVE);
 						menu_file.Insert(MenuStrip::Separator);

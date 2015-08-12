@@ -83,7 +83,7 @@ struct Main :Form
 	{
 		MenuStrip file_menu(true);
 		file_menu.Insert(L"E&xit", IDCLOSE);
-		m_menu = MenuStrip(false);
+		m_menu = MenuStrip(MenuStrip::Strip);
 		m_menu.Insert(file_menu, L"&File");
 
 		m_btn1.Click += [&](Button&,EmptyArgs const&)

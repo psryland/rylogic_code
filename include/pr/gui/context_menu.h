@@ -626,8 +626,28 @@ namespace pr
 			static HookMap& ThreadHookMap() { static HookMap s_thread_hook_map; return s_thread_hook_map; }
 			HHOOK m_mouse_hook;
 
+			// Subclass the dialog window class for the context menu
+			WndClassEx const& RegWndClass()
+			{
+				static WndClassEx wc = [=]
+					{
+						static wchar_t const* class_name = L"pr::gui::cmenu";
+						WndClassEx wc(class_name);
+						if (wc.m_atom != 0)
+							return std::move(wc);
+
+						// Subclass the dialog window class
+						::GetClassInfoExW(wc.hInstance, (LPCWSTR)WC_DIALOG, &wc);
+						wc.style |= CS_DROPSHADOW;
+						wc.lpszClassName = class_name;
+						return std::move(wc.Register());
+					}();
+
+				return wc;
+			}
+
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0), "ctx-menu")
+				:Form(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0, IDC_UNUSED, RegWndClass().lpszClassName), "ctx-menu")
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()

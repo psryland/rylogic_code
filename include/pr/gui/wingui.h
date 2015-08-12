@@ -188,93 +188,15 @@ namespace pr
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
-		enum :DWORD { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_POPUP };
+		enum :DWORD { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
 		enum :DWORD { DefaultFormStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE };
 
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
-		enum :DWORD { DefaultDialogStyle = DefaultFormStyle };
+		enum :DWORD { DefaultDialogStyle = (DefaultFormStyle & ~WS_OVERLAPPEDWINDOW) | WS_POPUP };
 		enum :DWORD { DefaultDialogStyleEx = DefaultFormStyleEx };
 
 		enum :DWORD { DefaultControlStyle = WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
 		enum :DWORD { DefaultControlStyleEx = 0 };
-
-		#pragma endregion
-
-		#pragma region Support Functions
-
-		// Cast with overflow check
-		template <typename TTo, typename TFrom> TTo cast(TFrom from)
-		{
-			assert(static_cast<TFrom>(static_cast<TTo>(from)) == from && "overflow or underflow in cast");
-			return static_cast<TTo>(from);
-		}
-
-		// Convert to byte pointer
-		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
-		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
-
-		// Enum bitwise operators
-		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) | ut(rhs));
-		}
-		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
-		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) & ut(rhs));
-		}
-	
-		// Append bytes
-		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
-		{
-			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
-		}
-
-		// Convert an error code into an error message
-		inline std::string ErrorMessage(HRESULT result)
-		{
-			char msg[16384];
-			DWORD length(_countof(msg));
-			if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
-				sprintf_s(msg, "Unknown error code: 0x%80X", result);
-			return msg;
-		}
-
-		// Test an hresult and throw on error
-		inline void Throw(HRESULT result, std::string message)
-		{
-			if (SUCCEEDED(result)) return;
-			throw std::exception(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
-		}
-		inline void Throw(BOOL result, std::string message)
-		{
-			if (result != 0) return;
-			auto hr = HRESULT(GetLastError());
-			Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
-		}
-
-		// Initialise common controls (makes them look modern)
-		// Must be called before creating any controls
-		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
-		{
-			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
-			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
-		}
-
-		// Replace macros from windowsx.h
-		inline WORD MakeWord(DWORD_PTR lo, DWORD_PTR hi) { return WORD((lo &   0xff) | ((hi &   0xff) <<  8)); }
-		inline LONG MakeLong(DWORD_PTR lo, DWORD_PTR hi) { return LONG((lo & 0xffff) | ((hi & 0xffff) << 16)); }
-		inline WORD HiWord(DWORD_PTR l) { return WORD((l >> 16) & 0xffff); }
-		inline BYTE HiByte(DWORD_PTR w) { return BYTE((w >>  8) &   0xff); }
-		inline WORD LoWord(DWORD_PTR l) { return WORD(l & 0xffff); }
-		inline BYTE LoByte(DWORD_PTR w) { return BYTE(w &   0xff); }
-		inline int GetXLParam(LPARAM lparam) { return int(short(LoWord(lparam))); } // GET_X_LPARAM
-		inline int GetYLParam(LPARAM lparam) { return int(short(HiWord(lparam))); } // GET_Y_LPARAM
-		inline LPARAM MakeLParam(int x, int y) { return LPARAM(short(x) | short(y) << 16); }
-
-		// Replace the MAKEINTATOM macro
-		inline wchar_t const* MakeIntAtomW(ATOM atom) { return reinterpret_cast<wchar_t const*>(ULONG_PTR(WORD(atom))); } // MAKEINTATOM
 
 		#pragma endregion
 
@@ -358,6 +280,97 @@ namespace pr
 				return ::GetMenuStringW(hMenu, uIDItem, lpString, cchMax, flags);
 			}
 		};
+		#pragma endregion
+
+		#pragma region Support Functions
+
+		// Cast with overflow check
+		template <typename TTo, typename TFrom> TTo cast(TFrom from)
+		{
+			assert(static_cast<TFrom>(static_cast<TTo>(from)) == from && "overflow or underflow in cast");
+			return static_cast<TTo>(from);
+		}
+
+		// Convert to byte pointer
+		template <typename T> byte const* bptr(T const* t) { return reinterpret_cast<byte const*>(t); }
+		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
+
+		// Enum bitwise operators
+		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+		{
+			using ut = typename std::underlying_type<TEnum>::type;
+			return TEnum(ut(lhs) | ut(rhs));
+		}
+		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+		{
+			using ut = typename std::underlying_type<TEnum>::type;
+			return TEnum(ut(lhs) & ut(rhs));
+		}
+	
+		// Append bytes
+		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
+		{
+			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
+		}
+
+		// Convert an error code into an error message
+		inline std::string ErrorMessage(HRESULT result)
+		{
+			char msg[16384];
+			DWORD length(_countof(msg));
+			if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
+				sprintf_s(msg, "Unknown error code: 0x%80X", result);
+			return msg;
+		}
+
+		// Test an hresult and throw on error
+		inline void Throw(HRESULT result, std::string message)
+		{
+			if (SUCCEEDED(result)) return;
+			throw std::exception(message.append("\n").append(ErrorMessage(GetLastError())).c_str());
+		}
+		inline void Throw(BOOL result, std::string message)
+		{
+			if (result != 0) return;
+			auto hr = HRESULT(GetLastError());
+			Throw(SUCCEEDED(hr) ? E_FAIL : hr, message);
+		}
+
+		// Initialise common controls (makes them look modern)
+		// Must be called before creating any controls
+		inline void InitCtrls(ECommonControl classes = ECommonControl::StandardClasses)
+		{
+			auto iccx = INITCOMMONCONTROLSEX{sizeof(INITCOMMONCONTROLSEX), DWORD(classes)};
+			Throw(::InitCommonControlsEx(&iccx), "Common control initialisation failed");
+		}
+
+		// Replace macros from windowsx.h
+		inline WORD MakeWord(DWORD_PTR lo, DWORD_PTR hi) { return WORD((lo &   0xff) | ((hi &   0xff) <<  8)); }
+		inline LONG MakeLong(DWORD_PTR lo, DWORD_PTR hi) { return LONG((lo & 0xffff) | ((hi & 0xffff) << 16)); }
+		inline WORD HiWord(DWORD_PTR l) { return WORD((l >> 16) & 0xffff); }
+		inline BYTE HiByte(DWORD_PTR w) { return BYTE((w >>  8) &   0xff); }
+		inline WORD LoWord(DWORD_PTR l) { return WORD(l & 0xffff); }
+		inline BYTE LoByte(DWORD_PTR w) { return BYTE(w &   0xff); }
+		inline int GetXLParam(LPARAM lparam) { return int(short(LoWord(lparam))); } // GET_X_LPARAM
+		inline int GetYLParam(LPARAM lparam) { return int(short(HiWord(lparam))); } // GET_Y_LPARAM
+		inline LPARAM MakeLParam(int x, int y) { return LPARAM(short(x) | short(y) << 16); }
+
+		// Replace the MAKEINTATOM macro
+		inline wchar_t const* MakeIntAtomW(ATOM atom) { return reinterpret_cast<wchar_t const*>(ULONG_PTR(WORD(atom))); } // MAKEINTATOM
+
+		// Return the window class name that 'hwnd' is an instance of
+		inline std::wstring WndClassName(HWND hwnd)
+		{
+			assert(::IsWindow(hwnd));
+
+			std::wstring cn(64, 0);
+			for (int len = 0; len == 0;)
+			{
+				len = ::GetClassNameW(hwnd, &cn[0], int(cn.size()));
+				cn.resize(len == 0 ? cn.size() * 2 : len);
+			}
+			return cn;
+		}
 		#pragma endregion
 
 		#pragma region Support structures
@@ -614,16 +627,76 @@ namespace pr
 		};
 
 		// Brush
+		// Note: ownership is lost with copying
+		// Controls/Forms don't own menus. Menu ownership is a convenience for callers
+		// to automatically destroy menus, almost all other use should be with non-owned menus.
+		// Note: implicit conversion constructors are delibrate
 		struct Brush
 		{
 			HBRUSH m_obj;
 			bool m_owned;
-			Brush() :m_obj() ,m_owned() {}
-			Brush(HBRUSH obj, bool owned = true) :m_obj(obj) ,m_owned(owned) {}
-			Brush(COLORREF col) :m_obj(CreateSolidBrush(col)), m_owned(true) { Throw(m_obj != 0, "Failed to create HBRUSH"); }
-			Brush(Brush&& rhs) { std::swap(m_obj, rhs.m_obj); std::swap(m_owned, rhs.m_owned); }
-			~Brush() { if (m_owned) DeleteObject(m_obj); }
-			operator HBRUSH() const { return m_obj; }
+
+			~Brush()
+			{
+				if (m_owned)
+					::DeleteObject(m_obj);
+			}
+			Brush()
+				:m_obj(nullptr)
+				,m_owned(false)
+			{}
+			Brush(HBRUSH obj, bool owned = false)
+				:m_obj(obj)
+				,m_owned(owned)
+			{}
+			Brush(COLORREF col)
+				:m_obj(CreateSolidBrush(col)),
+				m_owned(true)
+			{
+				Throw(m_obj != 0, "Failed to create HBRUSH");
+			}
+			Brush(Brush&& rhs)
+				:m_obj(rhs.m_obj)
+				,m_owned(rhs.m_owned)
+			{
+				rhs.m_owned = false;
+			}
+			Brush(Brush const& rhs)
+				:m_obj(rhs.m_obj)
+				,m_owned(false)
+			{}
+			Brush& operator =(Brush&& rhs)
+			{
+				if (this != &rhs)
+				{
+					std::swap(m_obj, rhs.m_obj);
+					std::swap(m_owned, rhs.m_owned);
+				}
+				return *this;
+			}
+			Brush& operator =(Brush const& rhs)
+			{
+				if (this != &rhs)
+				{
+					m_obj = rhs.m_obj;
+					m_owned = false;
+				}
+				return *this;
+			}
+			operator HBRUSH() const
+			{
+				return m_obj;
+			}
+			operator COLORREF() const
+			{
+				return colour();
+			}
+			COLORREF colour() const
+			{
+				LOGBRUSH lb;
+				::GetObjectW(m_obj, sizeof(lb), &lb);
+				return lb.lbColor;
+			}
 		};
 
 		// Paint
@@ -718,6 +791,7 @@ namespace pr
 		};
 		struct MenuStrip
 		{
+			enum EType { Strip, Popup };
 			enum ESeparator { Separator };
 			using EMask  = MenuItemInfo::EMask;
 			using EFType = MenuItemInfo::EFType;
@@ -729,16 +803,21 @@ namespace pr
 			// Note: ownership is lost with copying
 			// Controls/Forms don't own menus. Menu ownership is a convenience for callers
 			// to automatically destroy menus, almost all other use should be with non-owned menus.
+			// Note: implicit conversion constructors are delibrate
 			virtual ~MenuStrip()
 			{
 				DestroyMenu();
 			}
-			MenuStrip(HMENU menu = nullptr, bool owned = false)
+			MenuStrip()
+				:m_menu(nullptr)
+				,m_owned(false)
+			{}
+			explicit MenuStrip(EType type)
+				:MenuStrip(type == EType::Strip ? ::CreateMenu() : type == EType::Popup ? ::CreatePopupMenu() : nullptr, true)
+			{}
+			MenuStrip(HMENU menu, bool owned = false)
 				:m_menu(menu)
 				,m_owned(owned)
-			{}
-			MenuStrip(bool popup)
-				:MenuStrip(popup ? ::CreatePopupMenu() : ::CreateMenu(), true)
 			{}
 			MenuStrip(int menu_id, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
 				:MenuStrip(menu_id != IDC_UNUSED ? ::LoadMenuW(hinst, MAKEINTRESOURCEW(menu_id)) : nullptr, false)
@@ -907,13 +986,18 @@ namespace pr
 				,m_hinst(hinst)
 				,m_atom(0)
 				,m_unreg(false)
-			{}
+			{
+				cbSize = sizeof(WNDCLASSEXW);
+			}
 			WndClassEx(wchar_t const* class_name, HINSTANCE hinst =  GetModuleHandleW(nullptr))
 				:WndClassEx()
 			{
 				if (class_name == nullptr) return;
 				m_atom = ATOM(::GetClassInfoExW(hinst, class_name, this));
 			}
+			explicit WndClassEx(HWND hwnd)
+				:WndClassEx(WndClassName(hwnd).c_str())
+			{}
 			WndClassEx(WndClassEx&& rhs)
 				:WNDCLASSEXW(rhs)
 				,m_hinst(rhs.m_hinst)
@@ -1261,11 +1345,16 @@ namespace pr
 			std::vector<byte> m_mem;
 
 			DlgTemplate() {}
-			DlgTemplate(wchar_t const* caption
-				,int x = 0, int y = 0, int w = DefW, int h = DefH
-				,DWORD style = DefaultDialogStyle, DWORD style_ex = DefaultDialogStyleEx
-				,wchar_t const* font_name = L"MS Shell Dlg", WORD font_size = 8
-				,int menu_id = -1, char const* class_name = nullptr)
+			DlgTemplate(wchar_t const* caption)
+				:DlgTemplate(caption, 0, 0, DefW, DefH, DefaultDialogStyle, DefaultDialogStyleEx)
+			{}
+			DlgTemplate(wchar_t const* caption, int x, int y, int w, int h, DWORD style, DWORD style_ex)
+				:DlgTemplate(caption, x, y, w, h, style, style_ex, L"MS Shell Dlg", 8, IDC_UNUSED, nullptr)
+			{}
+			DlgTemplate(wchar_t const* caption, int x, int y, int w, int h, DWORD style, DWORD style_ex, int menu_id, wchar_t const* class_name)
+				:DlgTemplate(caption, x, y, w, h, style, style_ex, L"MS Shell Dlg", 8, menu_id, class_name)
+			{}
+			DlgTemplate(wchar_t const* caption, int x, int y, int w, int h, DWORD style, DWORD style_ex, wchar_t const* font_name, WORD font_size, int menu_id, wchar_t const* class_name)
 			{
 				// In a standard template for a dialog box, the DLGTEMPLATE structure is always immediately followed
 				// by three variable-length arrays that specify the menu, class, and title for the dialog box.
@@ -1289,7 +1378,7 @@ namespace pr
 				// If the first element is 0xFFFF, the array has one additional element that specifies the ordinal value of a menu
 				// resource in an executable file. If the first element has any other value, the system treats the array as a
 				// null-terminated Unicode string that specifies the name of a menu resource in an executable file.
-				AddWord(menu_id != -1 ? WORD(MAKEINTRESOURCE(menu_id)) : 0);
+				AddWord(menu_id != IDC_UNUSED ? WORD(MAKEINTRESOURCE(menu_id)) : 0);
 
 				// Following the menu array is a class array that identifies the window class of the control. If the first element
 				// of the array is 0x0000, the system uses the predefined dialog box class for the dialog box and the array has no
@@ -1441,20 +1530,18 @@ namespace pr
 			// Used as a size (w,h) value, means expand w,h to match parent
 			// Lower 28 bits are the l,r or t,b margins to fill with.
 			// Note: CW_USEDEFAULT == 0x80000000
-			static UINT const Fill       = 0x90000000;
-			static UINT const Auto       = 0xA0000000;
+			static UINT const Fill = 0x90000000;
+			//static UINT const Auto = 0xA0000000; // too hard...
 
 			// Fill with margins
-			static int FillM(UINT left_or_top, UINT right_or_bottom)
+			static int fill(UINT left_or_top, UINT right_or_bottom)
 			{
 				assert(left_or_top < (1 << 14) && right_or_bottom < (1 << 14));
 				return Fill | (left_or_top << 14) | (right_or_bottom << 0);
 			}
-
-			// Return the size of the margins to use when filling
-			static Size FillM(UINT fill)
+			static int fill(UINT margin)
 			{
-				return (fill & AutoSizeMask) == Fill ? Size((fill >> 14) & 0x3fff, (fill >> 0) & 0x3fff) : Size();
+				return fill(margin, margin);
 			}
 			#pragma endregion
 
@@ -1471,20 +1558,21 @@ namespace pr
 
 			// The X,Y coord of the control being positioned
 			// Note: CW_USEDEFAULT == 0x80000000
-			static UINT const Left    = 0x81000000;
-			static UINT const Right   = 0x82000000;
-			static UINT const CentreH = 0x83000000;
-			static UINT const Top     = Left      ;
-			static UINT const Bottom  = Right     ;
-			static UINT const CentreV = CentreH   ;
+			static UINT const Left   = 0x81000000;
+			static UINT const Right  = 0x82000000;
+			static UINT const Centre = 0x83000000;
+			static UINT const Top    = Left      ;
+			static UINT const Bottom = Right     ;
 
 			// The X coord of the reference control to align to
-			static UINT const LeftOf    = 0x84000000;
-			static UINT const RightOf   = 0x88000000;
-			static UINT const CentreHOf = 0x8C000000;
-			static UINT const TopOf     = LeftOf    ;
-			static UINT const BottomOf  = RightOf   ;
-			static UINT const CentreVOf = CentreHOf ;
+			static UINT const LeftOf   = 0x84000000;
+			static UINT const RightOf  = 0x88000000;
+			static UINT const CentreOf = 0x8C000000;
+			static UINT const TopOf    = LeftOf    ;
+			static UINT const BottomOf = RightOf   ;
+
+			// Use these for 
+			static UINT const CentreP = Centre|CentreOf;
 			#pragma endregion
 
 			#pragma region WndRef
@@ -1533,8 +1621,8 @@ namespace pr
 			Rect                m_pos_offset;   // Distances from this control to the edges of the parent client area
 			bool                m_pos_ofs_save; // Enable/Disables the saving of the position offset when the control is moved
 			MinMaxInfo          m_min_max_info; // Minimum/Maximum window size/position
-			COLORREF            m_colour_fore;  // Foreground colour
-			COLORREF            m_colour_back;  // Background colour
+			Brush               m_colour_fore;  // Foreground colour
+			Brush               m_colour_back;  // Background colour
 			LONG                m_down_at[4];   // Button down timestamp
 			bool                m_top_level;    // True if this control is a top level control (typically a form)
 			bool                m_dbl_buffer;   // True if the control is double buffered
@@ -1548,7 +1636,7 @@ namespace pr
 			#pragma region Window Class
 			// Register the window class for 'WndType'
 			// Custom window types need to call this before using Create() or WndClassInfo()
-			template <typename WndType> static WndClassEx& RegisterWndClass(HINSTANCE hinst =  GetModuleHandleW(nullptr))
+			template <typename WndType> static WndClassEx const& RegisterWndClass(HINSTANCE hinst =  GetModuleHandleW(nullptr))
 			{
 				// Register on initialisation
 				static WndClassEx wc = [=]
@@ -1565,7 +1653,7 @@ namespace pr
 
 						// Register the window class
 						wc.cbSize        = sizeof(WNDCLASSEXW);
-						wc.style         = CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+						wc.style         = WndType::WndClassStyle();
 						wc.cbClsExtra    = 0;
 						wc.cbWndExtra    = 0;
 						wc.hInstance     = hinst;
@@ -1587,6 +1675,10 @@ namespace pr
 			{
 				// Returning null causes a name to be automatically generated
 				return nullptr;
+			}
+			static int WndClassStyle()
+			{
+				return CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
 			}
 			static HICON WndIcon(HINSTANCE hinst, bool large)
 			{
@@ -1751,13 +1843,20 @@ namespace pr
 						if (OnEraseBkGnd(EmptyArgs()))
 							return S_FALSE;
 
-						// If the background colour has been set, fill the client area with it
-						if (m_colour_back != CLR_INVALID)
+						auto hdc = (HDC)wparam;
+						if (m_colour_fore != nullptr)
 						{
+							::SetTextColor(hdc, m_colour_fore);
+						}
+						if (m_colour_back != nullptr)
+						{
+							// If the background colour has been set, fill the client area with it
 							// Use a trick. By using the ETO_OPAQUE flag in the call to ExtTextOut, and supplying a
 							// zero-length string to display, you can quickly and easily fill a rectangular
 							// area using the current background colour.
-							auto hdc = (HDC)wparam;
+							::SetBkColor(hdc, m_colour_back);
+							::SetDCBrushColor(hdc, m_colour_back);
+
 							auto rect = ClientRect();
 							::ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &rect, L"", 0, 0);
 							return S_FALSE;
@@ -1943,6 +2042,35 @@ namespace pr
 						break;
 					}
 					#pragma endregion
+				case WM_CTLCOLORSTATIC:
+				case WM_CTLCOLORBTN:
+				case WM_CTLCOLOREDIT:
+				case WM_CTLCOLORLISTBOX:
+				case WM_CTLCOLORSCROLLBAR:
+					#pragma region
+					{
+						if (HWND(lparam) == m_hwnd)
+						{
+							auto hdc = HDC(wparam);
+							if (m_colour_fore != nullptr)
+							{
+								::SetTextColor(hdc, m_colour_fore);
+							}
+							if (m_colour_back != nullptr)
+							{
+								::SetBkColor(hdc, m_colour_back);
+								::SetDCBrushColor(hdc, m_colour_back);
+								result =  LRESULT(static_cast<HBRUSH>(m_colour_back));
+								return true;
+							}
+							return false;
+						}
+						else if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+							return true;
+						else
+							break;
+					}
+					#pragma endregion
 				case WM_DROPFILES:
 					#pragma region
 					{
@@ -2031,13 +2159,22 @@ namespace pr
 						return id == 0 ? parent_rect : ctrl(id)->RectRelativeTo(*parent);
 					};
 
+				// Return the size of the margins to use when filling
+				auto fill_size = [](UINT fill) -> Size
+					{
+						return (fill & AutoSizeMask) == Fill
+							? Size((fill >> 14) & 0x3fff, (fill >> 0) & 0x3fff)
+							: Size();
+					};
+
 				// Set the width/height and x/y position
 				auto auto_size = [=](int& X, int& W, int i)
 				{
 					auto margin = Size();
 					if ((W & AutoSizeMask) == Fill)
 					{
-						margin = FillM(W);
+						margin = fill_size(W);
+						X = margin.cx;
 						W = parent_rect.size(i) - margin.cx - margin.cy;
 					}
 					if (X & AutoPosMask)
@@ -2048,13 +2185,13 @@ namespace pr
 						// are the id of the control to position relative to.
 						int ref = 0;
 						if      ((X & 0xF0000000) != 0x80000000) { ref = parent_rect.bottomright()[i]; }
-						else if ((X & CentreHOf ) == CentreHOf ) { ref = rect(X & IdMask).centre()[i]; }
+						else if ((X & CentreOf  ) == CentreOf  ) { ref = rect(X & IdMask).centre()[i]; }
 						else if ((X & LeftOf    ) == LeftOf    ) { ref = rect(X & IdMask).topleft()[i]; }
 						else if ((X & RightOf   ) == RightOf   ) { ref = rect(X & IdMask).bottomright()[i]; }
 						
 						// Position the control relative to 'ref'
 						if      ((X & 0xF0000000) != 0x80000000) { X = ref - W + X; }
-						else if ((X & CentreH   ) == CentreH   ) { X = ref - W/2 + margin.cx; }
+						else if ((X & Centre    ) == Centre    ) { X = ref - W/2 + margin.cx; }
 						else if ((X & Left      ) == Left      ) { X = ref - 0   + margin.cx; }
 						else if ((X & Right     ) == Right     ) { X = ref - W   + margin.cx; }
 					}
@@ -2137,8 +2274,8 @@ namespace pr
 				,m_pos_offset()
 				,m_pos_ofs_save(true)
 				,m_min_max_info()
-				,m_colour_fore(CLR_INVALID)
-				,m_colour_back(CLR_INVALID)
+				,m_colour_fore()//CLR_INVALID)
+				,m_colour_back()//CLR_INVALID)
 				,m_down_at()
 				,m_top_level(top_level)
 				,m_dbl_buffer(false)
@@ -2171,6 +2308,13 @@ namespace pr
 
 				// Handle auto position/size
 				AutoSizePosition(parent.m_ctrl,x,y,w,h);
+
+				// If this control is a popup or overlapped window, then we need x,y,w,h to be in screen coords
+				if ((style & WS_CHILD) == 0 && parent.m_ctrl != nullptr)
+				{
+					auto r = parent->ScreenRect();
+					x += r.left; y += r.top;
+				}
 
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
@@ -2549,15 +2693,24 @@ namespace pr
 			// Get/Set the control's background colour
 			COLORREF BackColor() const
 			{
-				assert(::IsWindow(m_hwnd));
-				DC dc(::GetDC(m_hwnd));
-				return ::GetBkColor(dc);
+				if (m_colour_back != nullptr)
+					return m_colour_back;
+				else
+					return CLR_INVALID;
+
+				//assert(::IsWindow(m_hwnd));
+				//DC dc(::GetDC(m_hwnd));
+				//return ::GetBkColor(dc);
 			}
 			COLORREF BackColor(COLORREF col)
 			{
-				assert(::IsWindow(m_hwnd));
-				DC dc(::GetDC(m_hwnd));
-				return ::SetBkColor(dc, m_colour_back = col);
+				return m_colour_back = col != CLR_INVALID
+					? std::move(Brush(col))
+					: std::move(Brush());
+
+				//assert(::IsWindow(m_hwnd));
+				//DC dc(::GetDC(m_hwnd));
+				//return ::SetBkColor(dc, m_colour_back);
 			}
 
 			// Get/Set the control's foreground colour
@@ -2572,6 +2725,25 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				m_colour_fore = col;
 				Invalidate();
+			}
+
+			// Return the position of this control in parent space
+			Point loc() const
+			{
+				return ParentRect().topleft();
+			}
+			Size size() const
+			{
+				auto r = ParentRect();
+				return Size(r.width(), r.height());
+			}
+			int width() const
+			{
+				return ParentRect().width();
+			}
+			int height() const
+			{
+				return ParentRect().height();
 			}
 
 			// Returns a copy of 'rect' increased by the non-client areas of the window
@@ -2747,7 +2919,7 @@ namespace pr
 			MenuStrip Menu() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return MenuStrip(::GetMenu(m_hwnd));
+				return MenuStrip(::GetMenu(m_hwnd), false);
 			}
 			MenuStrip Menu(MenuStrip menu)
 			{
@@ -3061,7 +3233,7 @@ namespace pr
 			//  - use 'parent == ApplicationMainWindow' to cause the app to exit when this window is closed
 			//  - first parameter is for derived forms to register their wndclass
 			//  - If your window uses common controls, remember to call InitCtrls() before any controls are created.
-			Form(WndClassEx& wci
+			Form(WndClassEx const& wci
 				,wchar_t const* title
 				,char const* name = nullptr
 				,WndRef parent = nullptr
@@ -3409,6 +3581,11 @@ namespace pr
 				case WM_ENTERSIZEMOVE:
 				case WM_EXITSIZEMOVE:
 				case WM_WINDOWPOSCHANGING:
+				case WM_CTLCOLORSTATIC:
+				case WM_CTLCOLORBTN:
+				case WM_CTLCOLOREDIT:
+				case WM_CTLCOLORLISTBOX:
+				case WM_CTLCOLORSCROLLBAR:
 				//default: // uncomment this to quick test if forwarding all messages "fixes it"
 					#pragma region
 					{
@@ -3450,7 +3627,7 @@ namespace pr
 		#pragma region Controls
 		struct Label :Control
 		{
-			enum { DefW = 20, DefH = 23 };
+			enum { DefW = 80, DefH = 23 };
 			enum :DWORD { DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 
@@ -3475,29 +3652,29 @@ namespace pr
 			// Message map function
 			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
-				switch (message)
-				{
-				case WM_CTLCOLORSTATIC:
-					if (m_id == ::GetDlgCtrlID((HWND)lparam))
-					{
-						if (Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result))
-							return true;
+				//switch (message)
+				//{
+				//case WM_CTLCOLORSTATIC:
+				//	if (m_id == ::GetDlgCtrlID((HWND)lparam))
+				//	{
+				//		if (Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result))
+				//			return true;
 
-						auto hdc = (HDC)wparam;
-						if (m_colour_fore != CLR_INVALID)
-						{
-							::SetTextColor(hdc, m_colour_fore);
-						}
-						if (m_colour_back != CLR_INVALID)
-						{
-							::SetBkColor(hdc, m_colour_back);
-							::SetDCBrushColor(hdc, m_colour_back);
-							result = LRESULT(::GetStockObject(DC_BRUSH));
-							return true;
-						}
-					}
-					break;
-				}
+				//		auto hdc = (HDC)wparam;
+				//		if (m_colour_fore != CLR_INVALID)
+				//		{
+				//			::SetTextColor(hdc, m_colour_fore);
+				//		}
+				//		if (m_colour_back != CLR_INVALID)
+				//		{
+				//			::SetBkColor(hdc, m_colour_back);
+				//			::SetDCBrushColor(hdc, m_colour_back);
+				//			result = LRESULT(::GetStockObject(DC_BRUSH));
+				//			return true;
+				//		}
+				//	}
+				//	break;
+				//}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 		};

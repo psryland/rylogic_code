@@ -39,6 +39,7 @@ namespace ldr
 		,m_editor_ui()
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
+		,m_options_ui(this, m_main->m_settings)
 		,m_mouse_status_updates(true)
 		,m_suspend_render(false)
 		,m_status_pri()
@@ -643,10 +644,13 @@ namespace ldr
 	// Display the options dialog
 	void MainGUI::OnShowOptions()
 	{
+		m_options_ui.Show(SW_SHOW, this);
+#if 0
 		COptionsDlg dlg(m_main->m_settings, *this);
 		if (dlg.DoModal() != IDOK) return;
 		dlg.GetSettings(m_main->m_settings);
 		m_main->RenderNeeded();
+#endif
 	}
 
 	// Display the plugin manager dialog

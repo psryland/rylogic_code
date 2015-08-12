@@ -8,10 +8,53 @@
 
 namespace ldr
 {
-	//// A UI for setting options
-	//struct OptionsUI :pr::gui::Form<OptionsUI>
-	//{
-	//};
+	// A UI for setting options
+	struct OptionsUI :Form
+	{
+		enum { IDC_TABCTRL = 100, IDC_TAB_GENERAL, IDC_TAB_NAVIGATION };
+
+		#pragma region Tabs
+		struct General :Panel
+		{
+			Label m_lbl_text_editor;
+
+			General(Control* parent)
+				:Panel(nullptr, "tab-general", 0, 0, 10, 10, IDC_TAB_GENERAL, parent, EAnchor::All, DefaultStyle|WS_BORDER)
+				,m_lbl_text_editor(L"Text Editor: ", "lbl-text-editor", 0, 40, Label::DefW, Label::DefH, IDC_UNUSED, this)
+			{
+				m_lbl_text_editor.BackColor(0xFF0000);
+			}
+		};
+		struct Navigation :Panel
+		{
+			Navigation(Control* parent)
+				:Panel(nullptr, "tab-navigation", 0, 0, 10, 10, IDC_TAB_NAVIGATION, parent, EAnchor::All, DefaultStyle|WS_BORDER)
+			{}
+		};
+		#pragma endregion
+
+		TabControl m_tc;
+		General    m_tab_general;
+		Navigation m_tab_navigation;
+		UserSettings* m_settings;
+
+		OptionsUI(Control* main_ui, UserSettings& settings)
+			:Form(RegisterWndClass<Form>(), L"Options", "options", main_ui, CentreP, CentreP, 480, 360)
+			,m_tc(L"tabctrl", "m_tc", 0, 0, fill(10), fill(10), IDC_TABCTRL, this, EAnchor::All, DefaultControlStyle, 0UL)
+			,m_tab_general(&m_tc)
+			,m_tab_navigation(&m_tc)
+			,m_settings(&settings)
+		{
+			// Set icons
+			Icon((HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,true);
+			Icon((HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,false);
+			PinWindow(true);
+
+			m_tc.Insert(L"General", m_tab_general);
+			m_tc.Insert(L"Navigation", m_tab_navigation);
+			m_tc.SelectedIndex(0);
+		}
+	};
 }
 
 

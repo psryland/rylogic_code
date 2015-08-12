@@ -65,7 +65,7 @@ namespace pr
 			// A dialog layout description used for this indirect dialog
 			DlgTemplate Template(wchar_t const* title, wchar_t const* desc) const
 			{
-				DlgTemplate templ(title, 0, 0, 240, 100, DWORD(DefaultFormStyle), DWORD(DefaultFormStyleEx));
+				DlgTemplate templ(title, 0, 0, 240, 100, DefaultFormStyle, DefaultFormStyleEx);
 				templ.Add(IDC_TEXT_DESC   , Label::WndClassName()      , desc      , 0, 0, 0, 0);
 				templ.Add(IDC_PROGRESS_BAR, ProgressBar::WndClassName(), nullptr   , 0, 0, 0, 0);
 				templ.Add(IDCANCEL        , Button::WndClassName()     , L"Cancel" , 0, 0, 0, 0, Button::DefaultStyle|BS_DEFPUSHBUTTON);
