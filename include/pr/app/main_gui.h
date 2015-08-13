@@ -42,23 +42,19 @@ namespace pr
 			int                   m_exit_code;                 // Exit code
 
 			//static HBRUSH WndBackground() { return nullptr; }
+			struct Params :pr::gui::FormParams
+			{
+				Params() { wndclass(RegisterWndClass<DerivedGUI>()).main_wnd(true); }
+			};
 
 			// Create the main application window.
 			// This class is subclassed from pr::gui::Form which actually does the 'CreateWindowEx' call in
 			// it's constructor. This means the HWND is valid after the base class has been constructed.
 			// If your window uses common controls, remember to call InitCtrls() before this constructor
-			MainGUI(wchar_t const* title
-				,char const* name = nullptr
-				,int x = 0 ,int y = 0
-				,int w = DefW ,int h = DefH
-				,DWORD style = DefaultFormStyle
-				,DWORD style_ex = DefaultFormStyleEx
-				,pr::gui::MenuStrip menu = pr::gui::MenuStrip()
-				,int accel_id = IDC_UNUSED
-				,void* init_param = nullptr)
-				:base(RegisterWndClass<DerivedGUI>(), title, name, pr::gui::ApplicationMainWindow, x, y, w, h, style, style_ex, menu, init_param)
+			MainGUI(pr::gui::Params const& p = Params())
+				:base(p)
 				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
-				,m_msg_loop(m_hinst, accel_id)
+				,m_msg_loop()
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
 				,m_resizing(false)
 				,m_nav_enabled(false)

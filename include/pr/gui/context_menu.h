@@ -415,7 +415,7 @@ namespace pr
 
 				TextBox(ContextMenu& menu, wchar_t const* text = L"<menu item>", wchar_t const* value = L"", int id = 0, EMenuItemState state = EMenuItemState::Normal, StylePtr style = nullptr, BitmapPtr bm = nullptr)
 					:Label(menu, text, id, state, style, bm)
-					,m_edit(IDC_UNUSED, "cmenu-edit", &menu, EAnchor::None) // positioned manually
+					,m_edit(TBox::Params().name("cmenu-edit").parent(&menu).anchor(EAnchor::None)) // positioned manually
 					,m_rect_value()
 					,m_value(value)
 					,m_value_font()
@@ -430,7 +430,7 @@ namespace pr
 				void CreateHostedControls() override
 				{
 					HWND parent = *static_cast<ContextMenu*>(m_menu);
-					m_edit.Create(m_value.c_str(), parent, 0, 0, 50, 18);
+					m_edit.Create(TBox::Params().text(m_value.c_str()).parent(parent).wh(50, 18));
 				}
 				Size MeasureItem(GdiGraphics& gfx) override
 				{
@@ -627,7 +627,7 @@ namespace pr
 			HHOOK m_mouse_hook;
 
 			// Subclass the dialog window class for the context menu
-			WndClassEx const& RegWndClass()
+			static WndClassEx const& RegWndClass()
 			{
 				static WndClassEx wc = [=]
 					{
@@ -645,9 +645,14 @@ namespace pr
 
 				return wc;
 			}
+			static DlgTemplate const& Templ()
+			{
+				static DlgTemplate cmenu_templ(DlgParams().wndclass(RegWndClass()).name("ctx-menu").style(WS_POPUP|WS_BORDER).style_ex(0));
+				return cmenu_templ;
+			}
 
 			ContextMenu(ContextMenu* menu, TCHAR const* text, EMenuItemState state, StylePtr style, BitmapPtr bm)
-				:Form(DlgTemplate(L"", 0, 0, 1, 1, WS_POPUP|WS_BORDER, /*WS_EX_NOACTIVATE|*//*WS_EX_TOPMOST*/0, IDC_UNUSED, RegWndClass().lpszClassName), "ctx-menu")
+				:Form(DlgParams().templ(Templ()))
 				,ContextMenuItem(-1, menu, state, style, bm)
 				,m_submenu_name(Widen(text))
 				,m_items()

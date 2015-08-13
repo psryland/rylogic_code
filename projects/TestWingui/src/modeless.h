@@ -10,11 +10,28 @@ struct Modeless :Form
 
 	enum { IDC_LBL };
 	Modeless(WndRef parent)
-		:Form(RegisterWndClass<Modeless>(), L"Modeless", "modeless", parent, 0, 0, DefW, DefH, DefaultFormStyle, DefaultFormStyleEx, IDC_MENU)
-		,m_lbl(L"I am a modeless dialog", "modeless-label", 10, 10, Auto, Auto, IDC_LBL, this, EAnchor::TopLeft, Label::DefaultStyle, Label::DefaultStyleEx)
-		,m_btn_ok(L"OK", "btn_ok", -10, -10, Auto, Auto, IDOK, this, EAnchor::BottomRight)
+		:Form(ModelessParams().name("modeless").title(L"Modeless").parent(parent).menu_id(IDC_MENU).wndclass(RegisterWndClass<Modeless>()))
+		,m_lbl(Label::Params().name("modeless-label").text(L"I am a modeless dialog").xy(10,10).id(IDC_LBL).parent(this).anchor(EAnchor::TopLeft))
+		,m_btn_ok(Button::Params().name("btn_ok").text(L"OK").xy(-10,-10).id(IDOK).parent(this).anchor(EAnchor::BottomRight))
 	{
 		HideOnClose(true);
 		m_btn_ok.Click += [&](Button&, EmptyArgs const&){ Close(); };
 	}
+
+	// Default main menu handler
+	// 'menu_item_id' - the menu item id or accelerator id
+	// 'event_source' - 0 = menu, 1 = accelerator, 2 = control-defined notification code
+	// 'ctrl_hwnd' - the control that sent the notification. Only valid when src == 2
+	// Typically you'll only need 'menu_item_id' unless your accelerator ids
+	// overlap your menu ids, in which case you'll need to check 'event_source'
+	bool HandleMenu(UINT item_id, UINT, HWND) override
+	{
+		// Example implementation
+		switch (item_id)
+		{
+		default: return false;
+		case IDM_EXIT: Close(); return true;
+		}
+	}
+
 };

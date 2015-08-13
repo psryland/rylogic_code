@@ -31,8 +31,8 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
-		:base(AppTitleW(), "ldr_main", 0, 0, 800, 600, DefaultFormStyle, DefaultFormStyleEx, IDR_MENU_MAIN, IDR_ACCELERATOR)
-		,m_status(IDC_STATUSBAR_MAIN, "status bar", this, L"Ready")
+		:base(Params().name("ldr_main").title(AppTitleW()).menu_id(IDR_MENU_MAIN).accel_id(IDR_ACCELERATOR))
+		,m_status(StatusBar::Params().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui()
@@ -116,7 +116,7 @@ namespace ldr
 		m_msg_loop.AddStepContext("rdr main loop", [this](double)
 		{
 			if (m_main && !m_suspend_render)
-			m_main->DoRender(force_render);
+				m_main->DoRender(force_render);
 		}, 60.0f, false);
 
 		// Add a step context for 30Hz stepping
@@ -160,6 +160,10 @@ namespace ldr
 	// Message map function
 	bool MainGUI::ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 	{
+		//// Remove contexts from the msg loop on shutdown
+		//if (message == WM_DESTROY)
+		//	m_msg_loop.RemoveStepContext("rdr main loop");
+
 		return
 			m_recent_files.ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
 			m_saved_views .ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
@@ -644,7 +648,7 @@ namespace ldr
 	// Display the options dialog
 	void MainGUI::OnShowOptions()
 	{
-		m_options_ui.Show(SW_SHOW, this);
+		m_options_ui.Show(SW_SHOW);
 #if 0
 		COptionsDlg dlg(m_main->m_settings, *this);
 		if (dlg.DoModal() != IDOK) return;

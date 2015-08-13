@@ -41,25 +41,29 @@ namespace pr
 			};
 
 			// Construct the dialog template for this dialog
-			static DlgTemplate Templ()
+			static DlgTemplate const& Templ()
 			{
 				// Ensure the scintilla control is registered
 				pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll", L".\\lib\\$(platform)");
 
 				int const menu_height = 10;//::GetSystemMetrics(SM_CYMENU);
-				DlgTemplate templ(L"Script Editor", CW_USEDEFAULT, CW_USEDEFAULT, 430, 380, DefaultStyle, DefaultStyleEx);
-				templ.Add(IDC_TEXT, ScintillaCtrl::WndClassName(), L"", 5, 5 + menu_height, 418, 338, ScintillaCtrl::DefaultStyle, ScintillaCtrl::DefaultStyleEx);
-				templ.Add(IDC_BTN_RENDER, Button::WndClassName(), L"&Render", 320, 348 + menu_height, 50, 14, Button::DefaultStyleDefBtn, Button::DefaultStyleEx);
-				templ.Add(IDC_BTN_CLOSE, Button::WndClassName(), L"&Close", 375, 348 + menu_height, 50, 14, Button::DefaultStyle, Button::DefaultStyleEx);
-				return std::move(templ);
+				static auto templ = DlgTemplate(DlgParams().title(L"Script Editor").wh(430,380))
+					.Add(ScintillaCtrl::Params().id(IDC_TEXT)      .wndclass(ScintillaCtrl::WndClassName()).xy(5  ,  5 + menu_height).wh(418,338))
+					.Add(Button::Params()       .id(IDC_BTN_RENDER).wndclass(Button::WndClassName())       .xy(320,348 + menu_height).wh(50,14).text(L"&Render"))
+					.Add(Button::Params()       .id(IDC_BTN_CLOSE) .wndclass(Button::WndClassName())       .xy(375,348 + menu_height).wh(50,14).text(L"&Close") );
+
+				return templ;
 			}
+			struct Params :DlgParams
+			{
+				Params() { templ(Templ()).name("ldr-script-editor").hide_on_close(true); }
+			};
 
 			ScriptEditorDlgImpl(RenderCB& render_cb)
-				:base(Templ(), "Ldr Script Editor")
-				,m_edit(IDC_TEXT, "m_edit", this, EAnchor::All)
-				,m_btn_render(IDC_BTN_RENDER, "m_btn_render", this, EAnchor::BottomRight)
-				,m_btn_close(IDC_BTN_CLOSE, "m_btn_close", this, EAnchor::BottomRight)
-				//,m_accel()
+				:base(Params())
+				,m_edit(ScintillaCtrl::Params().id(IDC_TEXT).name("m_edit").parent(this).anchor(EAnchor::All))
+				,m_btn_render(Button::Params().id(IDC_BTN_RENDER).name("m_btn_render").parent(this).anchor(EAnchor::BottomRight))
+				,m_btn_close(Button::Params().id(IDC_BTN_CLOSE).name("m_btn_close").parent(this).anchor(EAnchor::BottomRight))
 				,m_menu(MenuStrip::Strip)
 				,Render(render_cb)
 			{}
@@ -169,7 +173,7 @@ namespace pr
 			HWND Create(HWND parent = nullptr) override
 			{
 				auto p = WndRef::Lookup(parent);
-				base::Create(p);
+				base::Create(Params().parent(p));
 				return m_hwnd;
 			}
 
@@ -186,7 +190,8 @@ namespace pr
 			// Show the window as a non-modal window
 			void Show(HWND parent) override
 			{
-				base::Show(SW_SHOW, parent);
+				Parent(WndRef::Lookup(parent));
+				base::Show(SW_SHOW);
 			}
 
 			// Show the window as a modal dialog

@@ -49,62 +49,69 @@ struct Main :Form
 		Panel m_panel;
 		Label m_lbl;
 		Tab(wchar_t const* msg, int id, Control* parent)
-			:m_panel(L"panel", "tab-panel", 0, 0, 10, 10, id, parent, EAnchor::All)
-			,m_lbl  (msg, "tab-lbl", 10, 10, 60, 16, IDC_UNUSED, &m_panel)
+			:m_panel(Panel::Params().id(id).parent(parent).anchor(EAnchor::All))//L"panel", "tab-panel", 0, 0, 10, 10, id, parent, EAnchor::All)
+			,m_lbl  (Label::Params().text(msg).xy(10,10).wh(60,16).parent(&m_panel))//, "tab-lbl", 10, 10, 60, 16, IDC_UNUSED, &m_panel)
 		{}
 	};
 
 	Label         m_lbl;
-	Button        m_btn1;
-	Button        m_btn2;
-	Button        m_btn3;
-	Button        m_btn4;
+	Button        m_btn_progress;
+	Button        m_btn_nm_prog;
+	Button        m_btn_modeless;
+	Button        m_btn_cmenu;
+	Button        m_btn_about;
 	ScintillaCtrl m_scint;
 	Tab           m_tab1;
 	Tab           m_tab2;
 	TabControl    m_tc;
 	Modeless      m_modeless;
+	ProgressDlg   m_nm_progress;
 
 	enum { ID_FILE, ID_FILE_EXIT };
-	enum { IDC_PROGRESS = 100, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
 
-	Main()
-		:Form   (RegisterWndClass<Main>(), L"Pauls Window", "main", ApplicationMainWindow, 200, 200, 800, 600, DefaultFormStyle, DefaultFormStyleEx, nullptr)
-		,m_lbl  (L"hello world", "m_lbl", 10, 10, 60, 16, IDC_UNUSED, this)
-		,m_btn1 (L"progress", "m_btn1", 10, 30, 80, 20, IDC_PROGRESS, this)
-		,m_btn2 (L"show modeless", "m_btn2", 10, Top|BottomOf|IDC_PROGRESS, 80, 20, IDC_MODELESS, this, EAnchor::TopLeft)
-		,m_btn3 (L"context menu", "m_btn3", 10, Top|BottomOf|IDC_MODELESS, 80, 20, IDC_CONTEXTMENU, this, EAnchor::TopLeft)
-		,m_btn4 (L"click me!", "m_btn4", -10, -10, 80, 20, IDC_ABOUT, this, EAnchor::BottomRight)
-		,m_scint("m_scint", 0, 0, 100, 100, IDC_SCINT, this)
-		,m_tab1 (L"hi from tab1", IDC_TAB1, this)
-		,m_tab2 (L"hi from tab2", IDC_TAB2, this)
-		,m_tc   (L"tabctrl", "m_tc", 120, 10, 500, 500, IDC_TAB, this, EAnchor::All, DefaultControlStyle, 0UL)
-		,m_modeless(this)
+	Main               ()
+		:Form          (FormParams()           .name("main")          .title(L"Pauls Window")     .xy(200,200)                        .wh(800,600).wndclass(RegisterWndClass<Main>()).main_wnd(true))
+		,m_lbl         (Label::Params()        .name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      .parent(this))
+		,m_btn_progress(Button::Params()       .name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   .parent(this))
+		,m_btn_nm_prog (Button::Params()       .name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS).parent(this))
+		,m_btn_modeless(Button::Params()       .name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   .parent(this).anchor(EAnchor::TopLeft))
+		,m_btn_cmenu   (Button::Params()       .name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU).parent(this).anchor(EAnchor::TopLeft))
+		,m_btn_about   (Button::Params()       .name("m_btn_about")   .text(L"click me!")         .xy(-10,-10)                        .wh(100,20) .id(IDC_ABOUT)      .parent(this).anchor(EAnchor::BottomRight)) 
+		,m_scint       (ScintillaCtrl::Params().name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      .parent(this))
+		,m_tab1        (L"hi from tab1", IDC_TAB1, this)
+		,m_tab2        (L"hi from tab2", IDC_TAB2, this)
+		,m_tc          (TabControl::Params().name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).parent(this).anchor(EAnchor::All).style_ex(0UL))
+		,m_modeless    (this)
+		,m_nm_progress ()
 	{
-		MenuStrip file_menu(true);
+		MenuStrip file_menu(MenuStrip::Popup);
 		file_menu.Insert(L"E&xit", IDCLOSE);
 		m_menu = MenuStrip(MenuStrip::Strip);
 		m_menu.Insert(file_menu, L"&File");
 
-		m_btn1.Click += [&](Button&,EmptyArgs const&)
+		m_nm_progress.Create(ProgressDlg::Params().parent(this).hide_on_close(true));
+		auto busy_work = [](ProgressDlg* dlg)
 			{
-				auto task = [](ProgressDlg* dlg)
-				{
-					for (int i = 0, iend = 50; dlg->Progress(i*1.f/iend) && i != iend; ++i)
-					{
-						Sleep(100);
-					}
-					if (dlg->Progress(1.0f))
-						Sleep(1000);
-				};
-				ProgressDlg progress(L"Busy work", L"workin...", task);
-				progress.ShowDialog(*this);
+				for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
+					Sleep(100);
+				if (dlg->Progress(1.0f))
+					Sleep(1000);
 			};
-		m_btn2.Click += [&](Button&,EmptyArgs const&)
+		m_btn_progress.Click += [&](Button&,EmptyArgs const&)
+			{
+				ProgressDlg progress(L"Busy work", L"workin...", busy_work);
+				progress.ShowDialog(this);
+			};
+		m_btn_nm_prog.Click += [&](Button&,EmptyArgs const&)
+			{
+				m_nm_progress.Show(L"Busy work", L"workin hard or hardly workin?", busy_work);
+			};
+		m_btn_modeless.Click += [&](Button&,EmptyArgs const&)
 			{
 				m_modeless.Show();
 			};
-		m_btn3.Click += [&](Button&,EmptyArgs const&)
+		m_btn_cmenu.Click += [&](Button&,EmptyArgs const&)
 			{
 				enum class ECmd { Label, Label2, TextBox };
 
@@ -264,7 +271,7 @@ struct Main :Form
 				////}
 				#endif
 			};
-		m_btn4.Click += [&](Button&,EmptyArgs const&)
+		m_btn_about.Click += [&](Button&,EmptyArgs const&)
 			{
 				About about;
 				about.ShowDialog(this);

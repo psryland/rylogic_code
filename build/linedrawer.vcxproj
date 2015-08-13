@@ -264,7 +264,6 @@
     <ClInclude Include="..\projects\linedrawer\main\navigation.h" />
     <ClInclude Include="..\projects\linedrawer\main\stdafx.h" />
     <ClInclude Include="..\projects\linedrawer\gui\about_dlg.h" />
-    <ClInclude Include="..\include\pr\gui\menu_helper.h" />
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h" />
     <ClInclude Include="..\projects\linedrawer\main\user_settings.h" />
     <ClInclude Include="..\projects\linedrawer\plugin\plugin_manager_dlg.h" />

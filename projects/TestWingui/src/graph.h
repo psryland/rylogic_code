@@ -6,16 +6,18 @@
 // Application window
 struct GraphUI :Form
 {
+	using GraphCtrl = GraphCtrl<>;
+
 	Label m_lbl;
-	GraphCtrl<> m_graph;
-	GraphCtrl<>::Series m_series0;
-	GraphCtrl<>::Series m_series1;
+	GraphCtrl m_graph;
+	GraphCtrl::Series m_series0;
+	GraphCtrl::Series m_series1;
 
 	enum { IDC_BTN1 = 100, IDC_BTN2 };
 	GraphUI()
-		:Form(RegisterWndClass<GraphUI>(), L"Pauls Awesome Graph Window", "GraphUI", ApplicationMainWindow, CW_USEDEFAULT, CW_USEDEFAULT, 320, 200)
-		,m_lbl(L"hello world", "m_lbl", 80, 20, 100, 16, -1, this)
-		,m_graph("m_graph", 10, 40, 280, 80, -1, this, EAnchor::All)
+		:Form(FormParams().name("GraphUI").title(L"Pauls Awesome Graph Window").main_wnd(true).wh(320,200).wndclass(RegisterWndClass<GraphUI>()))
+		,m_lbl(Label::Params().name("m_lbl").text(L"hello world").xy(80,20).wh(100,16).parent(this))
+		,m_graph(GraphCtrl::Params().name("m_graph").xy(10,40).wh(280,80).parent(this).anchor(EAnchor::All))
 		,m_series0(L"Sin")
 		,m_series1(L"Cos")
 	{
@@ -28,7 +30,7 @@ struct GraphUI :Form
 		m_graph.m_series.push_back(&m_series0);
 		m_graph.m_series.push_back(&m_series1);
 
-		m_graph.m_opts.Border = GraphCtrl<>::RdrOptions::EBorder::Single;
+		m_graph.m_opts.Border = GraphCtrl::RdrOptions::EBorder::Single;
 		m_graph.FindDefaultRange();
 		m_graph.ResetToDefaultRange();
 	}

@@ -22,6 +22,13 @@ namespace pr
 			static DWORD const DefaultStyle   = (DefaultControlStyle | WS_GROUP | SS_LEFT) & ~WS_TABSTOP;
 			static DWORD const DefaultStyleEx = DefaultControlStyleEx | WS_EX_STATICEDGE; // NOT WS_BORDER|
 			static wchar_t const* WndClassName() { return L"Scintilla"; }
+			struct Params :CtrlParams
+			{
+				Params() :CtrlParams()
+				{
+					wndclass(WndClassName()).name("scint").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx);
+				}
+			};
 
 			#pragma region Helpers
 			struct TxtRng :Sci_TextRange
@@ -39,23 +46,10 @@ namespace pr
 			SciFnDirect m_snd;
 			mutable sptr_t m_ptr;
 
-			// Note, if you want events from this control is must have an id != IDC_UNUSED
-			ScintillaCtrl(char const* name
-				,int x = 0, int y = 0, int w = DefW, int h = DefH
-				,int id = IDC_UNUSED
-				,WndRef parent = nullptr
-				,EAnchor anchor = EAnchor::Left|EAnchor::Top
-				,DWORD style = DefaultStyle
-				,DWORD ex_style = DefaultStyleEx
-				,void* init_param = nullptr)
-				:Control(WndClassName(), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style, HMENU(id), init_param)
-				,m_snd(SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)))
-				,m_ptr(sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0)))
-			{}
-			ScintillaCtrl(int id = IDC_UNUSED, char const* name = nullptr, WndRef parent = nullptr, EAnchor anchor = EAnchor::TopLeft)
-				:Control(id, name, parent, anchor)
-				,m_snd()
-				,m_ptr()
+			ScintillaCtrl(pr::gui::Params const& p = Params())
+				:Control(p)
+				,m_snd(m_hwnd != nullptr ? SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)) : nullptr)
+				,m_ptr(m_hwnd != nullptr ? sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0)) : 0)
 			{}
 
 			// Helper function for calling the direct function and returned the result as 'TRet'
@@ -71,7 +65,7 @@ namespace pr
 
 				// Get the direct access function for the control when the hwnd is available
 				m_snd = SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0));
-				m_ptr = sptr_t(::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER, 0, 0));
+				m_ptr = sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0));
 			}
 			void Detach() override
 			{

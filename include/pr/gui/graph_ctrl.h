@@ -331,6 +331,10 @@ namespace pr
 			using SeriesRdrOptions = typename Series::RdrOptions;
 
 			static wchar_t const* WndClassName() { return L"PRGRAPHCTRL"; }
+			struct Params :CtrlParams
+			{
+				Params() { wndclass(RegisterWndClass<GraphCtrl>()); }
+			};
 
 		protected:
 			struct Snapshot
@@ -425,14 +429,8 @@ namespace pr
 			// This should be used to synchronise source data changes with rendering.
 			std::mutex MutexRendering;
 
-			GraphCtrl(char const* name = nullptr
-				,int x = 0, int y = 0, int w = DefW, int h = DefH
-				,int id = IDC_UNUSED
-				,Control* parent = nullptr
-				,EAnchor anchor = EAnchor::TopLeft
-				,DWORD style = DefaultControlStyle
-				,DWORD ex_style = DefaultControlStyleEx)
-				:Control(RegisterWndClass<GraphCtrl>().IntAtom(), name, nullptr, x, y, w, h, id, parent, anchor, style, ex_style)
+			GraphCtrl(pr::gui::Params const& p)
+				:Control(p)
 				,m_gdiplus()
 				,m_rdr_thread()
 				,m_rdr_cancel()

@@ -113,15 +113,10 @@ namespace pr
 				static bool Order(Context const* lhs, Context const* rhs) { return lhs->next_step_time() < rhs->next_step_time(); }
 			};
 			pr::vector<Context*> m_contexts;
-			HACCEL m_accel;
 
 		public:
-			SimMsgLoop(HACCEL accel = nullptr)
+			SimMsgLoop()
 				:m_contexts()
-				,m_accel(accel)
-			{}
-			SimMsgLoop(HINSTANCE hinst, int accel_id)
-				:SimMsgLoop(::LoadAccelerators(hinst, MAKEINTRESOURCE(accel_id)))
 			{}
 			virtual ~SimMsgLoop()
 			{
@@ -145,6 +140,13 @@ namespace pr
 			{
 				m_contexts.push_back(new Context(name, step, frames_per_second, fixed_step_rate));
 				std::sort(std::begin(m_contexts), std::end(m_contexts), Context::Order);
+			}
+
+			// Remove a step context by name
+			void RemoveStepContext(char const* name)
+			{
+				auto new_end = std::remove_if(std::begin(m_contexts), std::end(m_contexts), [=](Context* ctx){ return ctx->m_name == name; });
+				m_contexts.erase(new_end, std::end(m_contexts));
 			}
 
 			// Runs the message loop until WM_QUIT
@@ -182,12 +184,8 @@ namespace pr
 					if (msg.message == WM_QUIT)
 						break;
 
-					// No contexts...
-					if (m_contexts.empty())
-						continue;
-
 					// Process all contexts until the front one is no longer due for stepping
-					for(;;)
+					for (;!m_contexts.empty();)
 					{
 						auto& ctx    = *m_contexts.front();
 						auto now     = clock.now();

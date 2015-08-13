@@ -11,24 +11,31 @@ namespace ldr
 	// A UI for setting options
 	struct OptionsUI :Form
 	{
-		enum { IDC_TABCTRL = 100, IDC_TAB_GENERAL, IDC_TAB_NAVIGATION };
+		enum
+		{
+			ID_TABCTRL = 100,
+			ID_TAB_GENERAL, ID_LBL_TEXTEDITOR, ID_TB_TEXTEDITOR, ID_GRP_FOCUS_POINT,
+			ID_TAB_NAVIGATION,
+		};
 
 		#pragma region Tabs
 		struct General :Panel
 		{
-			Label m_lbl_text_editor;
+			Label    m_lbl_text_editor;
+			TextBox  m_tb_text_editor;
+			GroupBox m_grp_focus;
 
 			General(Control* parent)
-				:Panel(nullptr, "tab-general", 0, 0, 10, 10, IDC_TAB_GENERAL, parent, EAnchor::All, DefaultStyle|WS_BORDER)
-				,m_lbl_text_editor(L"Text Editor: ", "lbl-text-editor", 0, 40, Label::DefW, Label::DefH, IDC_UNUSED, this)
-			{
-				m_lbl_text_editor.BackColor(0xFF0000);
-			}
+				:Panel(Panel::Params().name("tab-general").id(ID_TAB_GENERAL).wh(fill(10),fill(10)).parent(parent).anchor(EAnchor::All))
+				,m_lbl_text_editor(Label::Params().name("lbl-text-editor").id(ID_LBL_TEXTEDITOR).text(L"Text Editor: ").xy(10,10).parent(this))
+				,m_tb_text_editor(TextBox::Params().name("tb-text-editor").id(ID_TB_TEXTEDITOR).xy(0,Top|BottomOf|ID_LBL_TEXTEDITOR).wh(fill(20), TextBox::DefH).parent(this).anchor(EAnchor::LeftTopRight))
+				,m_grp_focus(GroupBox::Params().name("grp-focus-point").id(ID_GRP_FOCUS_POINT).xy(10, Top|BottomOf|ID_TB_TEXTEDITOR).wh(fill(20), DefH).text(L"Focus Point").parent(this))
+			{}
 		};
 		struct Navigation :Panel
 		{
 			Navigation(Control* parent)
-				:Panel(nullptr, "tab-navigation", 0, 0, 10, 10, IDC_TAB_NAVIGATION, parent, EAnchor::All, DefaultStyle|WS_BORDER)
+				:Panel(Panel::Params().name("tab-navigation").id(ID_TAB_NAVIGATION).wh(fill(10),fill(10)).parent(parent).anchor(EAnchor::All))
 			{}
 		};
 		#pragma endregion
@@ -39,8 +46,8 @@ namespace ldr
 		UserSettings* m_settings;
 
 		OptionsUI(Control* main_ui, UserSettings& settings)
-			:Form(RegisterWndClass<Form>(), L"Options", "options", main_ui, CentreP, CentreP, 480, 360)
-			,m_tc(L"tabctrl", "m_tc", 0, 0, fill(10), fill(10), IDC_TABCTRL, this, EAnchor::All, DefaultControlStyle, 0UL)
+			:Form(FormParams().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).wndclass(RegisterWndClass<Form>()).hide_on_close(true))
+			,m_tc(TabControl::Params().name("m_tc").text(L"tabctrl").wh(fill(10),fill(10)).id(ID_TABCTRL).parent(this).anchor(EAnchor::All))//, DefaultControlStyle, 0UL)
 			,m_tab_general(&m_tc)
 			,m_tab_navigation(&m_tc)
 			,m_settings(&settings)

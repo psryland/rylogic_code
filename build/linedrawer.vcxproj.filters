@@ -106,9 +106,6 @@
     <ClInclude Include="..\projects\linedrawer\gui\about_dlg.h">
       <Filter>gui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\gui\menu_helper.h">
-      <Filter>gui</Filter>
-    </ClInclude>
     <ClInclude Include="..\projects\linedrawer\gui\options_dlg.h">
       <Filter>gui</Filter>
     </ClInclude>
@@ -224,7 +221,7 @@
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
-      <Filter>gui</Filter>
+      <Filter>app</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
