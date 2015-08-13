@@ -2113,7 +2113,7 @@ namespace pr
 		{
 			// Parse 'desc' for the new model
 			pr::script::PtrA<> src(desc);
-			pr::script::Reader reader(src);
+			pr::script::Reader reader(src, false);
 
 			ParseResult result;
 			ParseLdrObjects(rdr, reader, object->m_context_id, result, [&](LdrObjectPtr rhs)

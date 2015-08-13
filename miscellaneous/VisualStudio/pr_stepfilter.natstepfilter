@@ -3,10 +3,11 @@
 	<!-- Common -->
 	<Function><Name>pr::Array.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>pr::string.*</Name><Action>NoStepInto</Action></Function>
-	<Function><Name>pr::RefPtr&lt;.*</Name><Action>NoStepInto</Action></Function>
+	<Function><Name>pr::RefPtr.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>D3DPtr&lt;.*&gt;</Name><Action>NoStepInto</Action></Function>
 
 	<!-- Wingui -->
+	<Function><Name>pr::gui::Params.*</Name><Action>NoStepInto</Action></Function>
 	<Function><Name>pr::gui::MenuStrip.*</Name><Action>NoStepInto</Action></Function>
 	
 	<!--<Function><Name>std::.*</Name><Action>NoStepInto</Action></Function>-->

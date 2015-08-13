@@ -8,6 +8,7 @@
 		<AlternativeType Name="pr::vector&lt;*,*,*&gt;" />
 		<AlternativeType Name="pr::vector&lt;*,*&gt;" />
 		<AlternativeType Name="pr::vector&lt;*&gt;" />
+		<DisplayString Condition="m_count == 0">empty</DisplayString>
 		<DisplayString>[{m_count}] {m_ptr}</DisplayString>
 		<Expand>
 			<Item Name="[count]">m_count</Item>

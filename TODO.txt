@@ -1,3 +1,8 @@
+convert linedrawer all to wingui
+ldr_object_dlg
+measure tool
+angle tool
+
 Implement pr::script in C#
 
 Make Scintilla+Ldr support a dll
@@ -11,7 +16,6 @@ Implement Fmt() as a variadic template
 Fix non-pod types in pr::vector<>
 Fix crash in Diagram Control
 
-convert linedrawer all to wingui
 
 VS Extension - Align
  - stop at comment lines
