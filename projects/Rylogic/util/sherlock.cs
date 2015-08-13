@@ -13,10 +13,13 @@ namespace pr.util
 		/// <summary>Reflects 'thing' for all event handlers and outputs a summary of the handlers signed up</summary>
 		public static List<string> CheckEvents(object thing)
 		{
-			Type type = thing.GetType();
-			List<string> output = new List<string>();
+			var type = thing.GetType();
 			var sb = new StringBuilder();
+			var output = new List<string>();
 			var signed_up = new List<string>();
+
+			// Prop info for the 'FullName' property on MethodBase
+			var fullname_info = typeof(MethodBase).GetProperty("FullName", BindingFlags.NonPublic|BindingFlags.Instance);
 
 			// Events are field members of 'thing'
 			var fields = type.AllFields(BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).ToList();
@@ -35,7 +38,6 @@ namespace pr.util
 					var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
 
 					// Get the full names of the methods signed up, so we can look for potential duplicates
-					var fullname_info = typeof(MethodBase).GetProperty("FullName", BindingFlags.NonPublic|BindingFlags.Instance);
 					signed_up.AddRange(delegates.Select(x => (string)fullname_info.GetValue(x.Method, null)).OrderBy(x => x));
 				}
 
@@ -46,6 +48,33 @@ namespace pr.util
 				sb.Clear();
 			}
 			return output;
+		}
+
+		/// <summary>Checks event 'owner.evt' for any handlers containing references to 'referenced'</summary>
+		public static bool CheckForReferences(object owner, string evt, object referenced)
+		{
+			var type = owner.GetType();
+
+			// Find the event on 'owner' with the name 'evt'
+			var fi_evt = type.GetField(evt, BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic);
+			if (fi_evt == null || fi_evt.FieldType.BaseType != typeof(MulticastDelegate))
+				throw new Exception("Object {0} has no event called {1}".Fmt(type.Name, evt));
+
+			// Get the instance of the multicast delegate from 'owner'
+			var multicast_delegate = (MulticastDelegate)fi_evt.GetValue(owner);
+			if (multicast_delegate != null)
+			{
+				// Get the mcd's invocation list
+				var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
+
+				// Get the delegates subscribed to the event
+				var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
+
+				// Look for any delegates with references to 'referenced'
+				if (delegates.Any(x => ReferenceEquals(x.Target, referenced)))
+					return true;
+			}
+			return false;
 		}
 	}
 }
@@ -113,6 +142,27 @@ namespace pr.unittests
 			Assert.AreEqual(expected.Count, report.Count);
 			for (int i = 0; i != expected.Count; ++i)
 				Assert.AreEqual(expected[i], report[i]);
+		}
+		[Test] public void FindRefs()
+		{
+			var thing1 = new Thing();
+			var thing2 = new Thing();
+
+			thing1.PublicEvent += thing1.Handler;
+
+			Assert.True (Sherlock.CheckForReferences(thing1, "PublicEvent"       , thing1));
+			Assert.True (Sherlock.CheckForReferences(thing1, "PrivateEvent"      , thing1));
+			Assert.True (Sherlock.CheckForReferences(thing1, "PrivateCustomEvent", thing1));
+
+			Assert.False(Sherlock.CheckForReferences(thing1, "PublicEvent"       , thing2));
+			Assert.False(Sherlock.CheckForReferences(thing1, "PrivateEvent"      , thing2));
+			Assert.False(Sherlock.CheckForReferences(thing1, "PrivateCustomEvent", thing2));
+
+			thing1.PublicEvent -= thing1.Handler;
+
+			Assert.False(Sherlock.CheckForReferences(thing1, "PublicEvent"       , thing1));
+			Assert.True (Sherlock.CheckForReferences(thing1, "PrivateEvent"      , thing1));
+			Assert.True (Sherlock.CheckForReferences(thing1, "PrivateCustomEvent", thing1));
 		}
 	}
 }
