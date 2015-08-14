@@ -57,6 +57,15 @@ namespace pr
 			throw std::exception(pr::FmtS("%s. 0x%08X - %s", msg, last_error, error_desc.c_str()));
 		}
 
+		// Helper for creating a port name from a port number
+		struct port_name
+		{
+			wchar_t m_name[32];
+			port_name(int port_number)      { _snwprintf_s(m_name,_countof(m_name), L"\\\\.\\COM%d", port_number); }
+			operator wchar_t const*() const { return m_name; }
+			wchar_t const* com() const      { return &m_name[4]; }
+		};
+
 	public:
 
 		CommPortIO()
@@ -98,11 +107,9 @@ namespace pr
 		bool IsOpen() const { return m_handle != INVALID_HANDLE_VALUE; }
 
 		// Returns true if serial port number 'port_number' is available for use
-		bool PortAvailable(int port_number) const
+		static bool PortAvailable(int port_number, int access = GENERIC_READ|GENERIC_WRITE)
 		{
-			wchar_t port_name[] = L"\\\\.\\COM\0\0\0\0\0";
-			_itow_s(port_number, &port_name[7], 5, 10);
-			auto handle = ::CreateFileW(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+			auto handle = ::CreateFileW(port_name(port_number), access, 0, 0, OPEN_EXISTING, 0, 0);
 			auto available = handle != INVALID_HANDLE_VALUE;
 			::CloseHandle(handle);
 			return available;
@@ -121,13 +128,12 @@ namespace pr
 			try
 			{
 				// Open for overlapped I/O
-				wchar_t port_name[] = L"\\\\.\\COM\0\0\0\0\0";
-				_itow_s(port_number, &port_name[7], 5, 10);
-				m_handle = ::CreateFileW(port_name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH, 0);
+				port_name name(port_number);
+				m_handle = ::CreateFileW(name, GENERIC_READ|GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED|FILE_FLAG_NO_BUFFERING|FILE_FLAG_WRITE_THROUGH, 0);
 				Throw(m_handle != INVALID_HANDLE_VALUE, pr::FmtS("Could not open 'COM%d'", port_number));
 
 				// Create a manual reset event for the overlapped i/o calls
-				m_io_complete = ::CreateEvent(0, TRUE, FALSE, 0);
+				m_io_complete = ::CreateEventW(0, TRUE, FALSE, 0);
 				Throw(m_io_complete != 0, "Failed to create async i/o event");
 
 				// Setup buffering
@@ -143,7 +149,7 @@ namespace pr
 
 				// Try to setup the device with default settings
 				COMMCONFIG config = {sizeof(COMMCONFIG)};
-				if (::GetDefaultCommConfigW(port_name + 4, &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG))
+				if (::GetDefaultCommConfigW(name.com(), &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG))
 				{
 					// 'GetDefaultCommConfigW' can fail for bluetooth ports and some virtual ports
 					// ('http://stackoverflow.com/questions/6850965/how-come-getdefaultcommconfig-doesnt-work-with-bluetooth-spp-devices')

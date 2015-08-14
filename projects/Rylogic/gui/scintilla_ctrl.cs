@@ -150,6 +150,14 @@ namespace pr.gui
 		#endregion
 
 		#region Scrolling
+
+		/// <summary>Raised whenever a horizontal or vertical scrolling event occurs</summary>
+		public event EventHandler<ScrollEventArgs> Scroll;
+		protected virtual void OnScroll(ScrollEventArgs args)
+		{
+			Scroll.Raise(this, args);
+		}
+
 		/// <summary>Returns an RAII object that preserves (where possible) the currently visible line</summary>
 		public Scope<int> ScrollScope()
 		{
@@ -157,6 +165,18 @@ namespace pr.gui
 				() => Cmd(Sci.SCI_GETFIRSTVISIBLELINE),
 				fv => Cmd(Sci.SCI_SETFIRSTVISIBLELINE, fv));
 		}
+
+		/// <summary>Gets the range of visible lines</summary>
+		public Range VisibleLineIndexRange
+		{
+			get
+			{
+				var s = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
+				var c = Cmd(Sci.SCI_LINESONSCREEN);
+				return new Range(s, s + c);
+			}
+		}
+
 		#endregion
 
 		#region Clipboard
@@ -250,6 +270,15 @@ namespace pr.gui
 									#region
 									{
 										OnSelectionChanged();
+										break;
+									}
+									#endregion
+								case Sci.SC_UPDATE_H_SCROLL:
+								case Sci.SC_UPDATE_V_SCROLL:
+									#region
+									{
+										var ori = notif.nmhdr.code == Sci.SC_UPDATE_H_SCROLL ? ScrollOrientation.HorizontalScroll : ScrollOrientation.VerticalScroll;
+										OnScroll(new ScrollEventArgs(ScrollEventType.ThumbPosition, 0, ori));
 										break;
 									}
 									#endregion

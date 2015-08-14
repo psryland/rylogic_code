@@ -65,16 +65,18 @@ namespace pr.gui
 			/// <summary>Get/Set the newline mode for received newlines</summary>
 			public ENewLineMode NewlineRecv
 			{
-				get { return get(x => x.NewlineRecv); }
-				set { set(x => x.NewlineRecv, value); }
+				get { return (m_cached_newline_recv ?? (m_cached_newline_recv = get(x => x.NewlineRecv))).Value; }
+				set { set(x => x.NewlineRecv, m_cached_newline_recv = value); }
 			}
+			private ENewLineMode? m_cached_newline_recv;
 
 			/// <summary>Get/Set the newline mode for sent newlines</summary>
 			public ENewLineMode NewlineSend
 			{
-				get { return get(x => x.NewlineSend); }
-				set { set(x => x.NewlineSend, value); }
+				get { return (m_cached_newline_send ?? (m_cached_newline_send = get(x => x.NewlineSend))).Value; }
+				set { set(x => x.NewlineSend, m_cached_newline_send = value); }
 			}
+			private ENewLineMode? m_cached_newline_send;
 
 			/// <summary>Get/Set the received data being written has hex data into the buffer</summary>
 			public bool HexOutput
@@ -102,6 +104,8 @@ namespace pr.gui
 				m_cached_tab_size = null;
 				m_cached_terminal_width = null;
 				m_cached_terminal_height = null;
+				m_cached_newline_recv = null;
+				m_cached_newline_send = null;
 			}
 
 			/// <summary>Type converter for displaying in a property grid</summary>
@@ -671,7 +675,7 @@ namespace pr.gui
 					else if (
 						(c == '\n' && Settings.NewlineRecv == ENewLineMode.LF) ||
 						(c == '\r' && Settings.NewlineRecv == ENewLineMode.CR) ||
-						(e+1 != eend && text[e] == '\r' && text[e+1] == '\n' && Settings.NewlineRecv == ENewLineMode.CR_LF))
+						(c == '\r' && e+1 != eend && text[e+1] == '\n' && Settings.NewlineRecv == ENewLineMode.CR_LF))
 					{
 						Write(text, s, e - s);
 						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
@@ -1392,12 +1396,11 @@ namespace pr.gui
 				BlinkTimer.Tick += SignalRefresh;
 
 				AutoScrollToBottom = true;
+				ScrollToBottomOnInput = true;
+				EndAtLastLine = true;
 
 				// Use our own context menu
 				Cmd(Sci.SCI_USEPOPUP, 0, 0);
-
-				// Allow scrolling up to one page past the last line
-				Cmd(Sci.SCI_SETENDATLASTLINE, 0, 0);
 			}
 			protected override void Dispose(bool disposing)
 			{
@@ -1446,12 +1449,19 @@ namespace pr.gui
 
 			/// <summary>True if the display automatically scrolls to the bottom</summary>
 			[Browsable(false)]
-			public bool AutoScrollToBottom
+			public bool AutoScrollToBottom { get; set; }
+
+			/// <summary>True if adding input causes the display to automatically scroll to the bottom</summary>
+			[Browsable(false)]
+			public bool ScrollToBottomOnInput { get; set; }
+
+			/// <summary>Allow/Disallow scrolling up to one page past the last line</summary>
+			[Browsable(false)]
+			public bool EndAtLastLine
 			{
-				get { return m_auto_scroll_to_bottom; }
-				set { m_auto_scroll_to_bottom = value; }
+				get { return Cmd(Sci.SCI_GETENDATLASTLINE) != 0; }
+				set { Cmd(Sci.SCI_SETENDATLASTLINE, value ? 1 : 0); }
 			}
-			private bool m_auto_scroll_to_bottom;
 
 			/// <summary>Request an update of the display</summary>
 			public void SignalRefresh(object sender = null, EventArgs args = null)
@@ -1466,6 +1476,39 @@ namespace pr.gui
 					Buffer.Clear();
 
 				ClearAll();
+			}
+
+			/// <summary>Adds text to the input buffer</summary>
+			protected virtual void AddToBuffer(Keys vk)
+			{
+				// If input triggers auto scroll
+				if (ScrollToBottomOnInput)
+				{
+					AutoScrollToBottom = true;
+					ScrollToBottom();
+				}
+
+				// Try to add the raw key code first. If not handled,
+				// try to convert it to a character and add it again.
+				if (!Buffer.AddInput(vk))
+				{
+					char ch;
+					if (Win32.CharFromVKey(vk, out ch))
+						Buffer.AddInput(ch);
+				}
+			}
+
+			/// <summary>Scroll the last line into view</summary>
+			public void ScrollToBottom()
+			{
+				// Move the caret to the end
+				Cmd(Sci.SCI_SETEMPTYSELECTION, Cmd(Sci.SCI_GETTEXTLENGTH));
+
+				// Only scroll if the last line isn't visible
+				var last_line_index = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETTEXTLENGTH));
+				var last_vis_line = Cmd(Sci.SCI_GETFIRSTVISIBLELINE) + Cmd(Sci.SCI_LINESONSCREEN);
+				if (last_line_index >= last_vis_line)
+					Cmd(Sci.SCI_SCROLLCARET);
 			}
 
 			#region Clipboard
@@ -1527,16 +1570,7 @@ namespace pr.gui
 
 				// Auto scroll to the bottom if told to and the last line is off the bottom 
 				if (AutoScrollToBottom)
-				{
-					// Move the caret to the end
-					Cmd(Sci.SCI_SETEMPTYSELECTION, Cmd(Sci.SCI_GETTEXTLENGTH));
-
-					// Only scroll if the last line isn't visible
-					var last_line_index = Cmd(Sci.SCI_LINEFROMPOSITION, Cmd(Sci.SCI_GETTEXTLENGTH));
-					var last_vis_line = Cmd(Sci.SCI_GETFIRSTVISIBLELINE) + Cmd(Sci.SCI_LINESONSCREEN);
-					if (last_line_index >= last_vis_line)
-						Cmd(Sci.SCI_SCROLLCARET);
-				}
+					ScrollToBottom();
 			}
 
 			/// <summary>Return the scintilla style index for the given vt100 style</summary>
@@ -1564,6 +1598,12 @@ namespace pr.gui
 				return idx;
 			}
 
+			/// <summary>Returns true if 'vk' is a navigation key</summary>
+			private static bool IsNavKey(Keys vk)
+			{
+				return vk == Keys.Up || vk == Keys.Down || vk == Keys.Left || vk == Keys.Right;
+			}
+
 			/// <summary>Intercept the WndProc for this control</summary>
 			protected override void CtrlWndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
 			{
@@ -1577,23 +1617,25 @@ namespace pr.gui
 						var ks = new Win32.KeyState(lparam);
 						if (!ks.Alt && Buffer != null)
 						{
-							// Let the key events through (by default) if local echo is on
-							handled = Buffer.Settings.LocalEcho == false;
-
 							var vk = (Keys)wparam;
 
-							// Try to add the raw key code first. If not handled, try to convert
-							// it to a character and add it again.
-							if (!Buffer.AddInput(vk))
-							{
-								char ch;
-								if (Win32.CharFromVKey(vk, out ch))
-									Buffer.AddInput(ch);
-							}
-
+							// Let the key events through (by default) if local echo is on
+							handled = Buffer.Settings.LocalEcho == false;
 							switch (vk)
 							{
-							// Intercept clipboard shortcuts
+							default:
+								// Add the keypress to the buffer input
+								AddToBuffer(vk);
+
+								// Forward navigation keys to the control
+								if (IsNavKey(vk))
+								{
+									Win32.SendMessage(HostedCtrl.Handle, (uint)msg, wparam, lparam);
+									handled = true;
+								}
+								break;
+
+							// Clipboard shortcuts
 							case Keys.Control | Keys.X:
 								Cut();
 								break;
@@ -1602,16 +1644,6 @@ namespace pr.gui
 								break;
 							case Keys.Control | Keys.V:
 								Buffer.Paste();
-								break;
-
-							// Forward navigation keys to the control
-							case Keys.Tab:
-							case Keys.Up:
-							case Keys.Down:
-							case Keys.Left:
-							case Keys.Right:
-								Win32.SendMessage(HostedCtrl.Handle, (uint)msg, wparam, lparam);
-								handled = true;
 								break;
 							}
 						}
@@ -1623,13 +1655,15 @@ namespace pr.gui
 				base.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
 			}
 
-			/// <summary>Selection changes</summary>
-			protected override void OnSelectionChanged()
+			/// <summary>Scroll event</summary>
+			protected override void OnScroll(ScrollEventArgs args)
 			{
-				base.OnSelectionChanged();
-				var pos = Cmd(Sci.SCI_GETCURRENTPOS);
-				var len = Cmd(Sci.SCI_GETTEXTLENGTH);
-				AutoScrollToBottom = pos == len;
+				base.OnScroll(args);
+
+				// Turn on auto scroll if the last line is visible
+				var vis = VisibleLineIndexRange;
+				var last = Cmd(Sci.SCI_GETLINECOUNT) - 1;
+				AutoScrollToBottom = vis.Contains(last);
 			}
 
 			/// <summary>Handle buffer lines being dropped</summary>

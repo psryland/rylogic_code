@@ -63,7 +63,14 @@ namespace pr.util
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
 			var junk = doomed; doomed = null;
-			junk.ForEach(d => d.Dispose());
+
+			// Pop each item from the collection and dispose it
+			for (; junk.Count != 0; )
+			{
+				var j = junk.Last();
+				junk.RemoveAt(junk.Count - 1);
+				Dispose(ref j);
+			}
 		}
 		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingListEx<T> doomed) where T:class, IDisposable
 		{
@@ -71,7 +78,14 @@ namespace pr.util
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
 			var junk = doomed; doomed = null;
-			junk.ForEach(d => d.Dispose());
+
+			// Pop each item from the collection and dispose it
+			for (; junk.Count != 0; )
+			{
+				var j = junk.Last();
+				junk.RemoveAt(junk.Count - 1);
+				Dispose(ref j);
+			}
 		}
 
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>

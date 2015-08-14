@@ -112,6 +112,7 @@ namespace pr.gui
 		public virtual bool GoBack()
 		{
 			if (!CanGoBack) return false;
+			m_fwd_or_back = true;
 			UrlHistory.Position -= 2;
 			Navigate(UrlHistory[UrlHistory.Position + 1].Url, false); // Don't use GoForward because it's virtual
 			return true;
@@ -121,6 +122,7 @@ namespace pr.gui
 		public virtual bool GoForward()
 		{
 			if (!CanGoForward) return false;
+			m_fwd_or_back = true;
 			Navigate(UrlHistory[UrlHistory.Position + 1].Url, false);
 			return true;
 		}
@@ -171,7 +173,7 @@ namespace pr.gui
 					// Add to the history
 					UrlHistory.Add(new Visit(a.Url, a.Content));
 				}
-				else if (args.Url != UrlHistory[idx].Url)
+				else if (!m_fwd_or_back || args.Url != UrlHistory[idx].Url)
 				{
 					// Resolve the Url to content
 					var a = new ResolveContentEventArgs(args.Url);
@@ -193,11 +195,13 @@ namespace pr.gui
 					m_wb.DocumentStream = new MemoryStream(Encoding.UTF8.GetBytes(content));
 					args.Cancel = true;
 				}
+				m_fwd_or_back = false;
 			}
 
 			System.Diagnostics.Debug.WriteLine("{0} : {1}".Fmt(UrlHistory.Position, string.Join("->", UrlHistory.Select(x => x.Url.ToString()))));
 		}
 		private bool m_rdr_content;
+		private bool m_fwd_or_back;
 
 		/// <summary>Raised to resolve the content for a given url</summary>
 		public event EventHandler<ResolveContentEventArgs> ResolveContent;
