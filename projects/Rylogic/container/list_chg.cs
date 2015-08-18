@@ -37,12 +37,6 @@ namespace pr.container
 
 		/// <summary>Raised just after the list is reordered</summary>
 		Reordered,
-
-		/// <summary>Raised just before the list is cleared</summary>
-		PreClear,
-
-		/// <summary>Raised just after the list is cleared</summary>
-		Clear,
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>

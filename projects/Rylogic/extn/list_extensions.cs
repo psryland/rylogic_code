@@ -172,18 +172,18 @@ namespace pr.extn
 		//	list[idx] = replacer;
 		//}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
-		public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
-		{
-			int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
-			return i != count ? i : -1;
-		}
+		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
+		//public static int IndexOf<T>(this IList list, Func<T,bool> pred, int start_index, int count)
+		//{
+		//	int i; for (i = start_index; i != count && !pred((T)list[i]); ++i) {}
+		//	return i != count ? i : -1;
+		//}
 
-		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
-		public static int IndexOf<T>(this IList list, Func<T,bool> pred)
-		{
-			return list.IndexOf(pred, 0, list.Count);
-		}
+		///// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
+		//public static int IndexOf<T>(this IList list, Func<T,bool> pred)
+		//{
+		//	return list.IndexOf(pred, 0, list.Count);
+		//}
 
 		/// <summary>Return the index of the occurrence of an element that causes 'pred' to return true (or -1)</summary>
 		public static int IndexOf<T>(this IList<T> list, Func<T,bool> pred, int start_index, int count)

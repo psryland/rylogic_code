@@ -3208,10 +3208,10 @@ namespace pr
 			// Position this window relative to it's parent
 			// AutoSizePosition values can be used, e.g. Left|LeftOf|<sibbling_ctrl_id>
 			// Use SWP_ flags to ignore position or size changes
-			void PositionWindow(int x, int y, int w, int h, DWORD flags = 0)
+			void PositionWindow(int x, int y, int w, int h, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder | WindowPos::EFlags::NoActivate)
 			{
 				AutoSizePosition(m_parent, x, y, w, h);
-				::SetWindowPos(m_hwnd, nullptr, x, y, w, h, flags | SWP_NOZORDER | SWP_NOACTIVATE);
+				ScreenRect(Rect(x, y, x + w, y + h), false, nullptr, flags);
 			}
 
 			// Return the mouse location at the time of the last message

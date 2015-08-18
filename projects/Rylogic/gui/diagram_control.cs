@@ -4126,7 +4126,7 @@ namespace pr.gui
 					args.Item.Selected = false;
 					break;
 				}
-			case ListChg.PreClear:
+			case ListChg.PreReset:
 				{
 					using (Selected.SuspendEvents(false))
 					{

@@ -10,7 +10,7 @@ using pr.util;
 namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
-	public class BindingSource<TItem> :BindingSource ,IEnumerable<TItem>
+	public class BindingSource<TItem> :BindingSource ,IEnumerable<TItem> ,IList<TItem>
 	{
 		private int m_impl_previous_position;
 		private FieldInfo m_impl_listposition;
@@ -238,34 +238,33 @@ namespace pr.container
 				yield return (TItem)item;
 		}
 
-		// Don't implement this, because it makes it ambiguous with IList
 		#region IList<TItem>
-		//int IList<TItem>.IndexOf(TItem item)
-		//{
-		//	return IndexOf(item);
-		//}
-		//void IList<TItem>.Insert(int index, TItem item)
-		//{
-		//	Insert(index, item);
-		//}
-		//void ICollection<TItem>.Add(TItem item)
-		//{
-		//	Add(item);
-		//}
-		//bool ICollection<TItem>.Contains(TItem item)
-		//{
-		//	return Contains(item);
-		//}
-		//void ICollection<TItem>.CopyTo(TItem[] arr, int index)
-		//{
-		//	CopyTo(arr, index);
-		//}
-		//bool ICollection<TItem>.Remove(TItem item)
-		//{
-		//	if (!Contains(item)) return false;
-		//	Remove(item);
-		//	return true;
-		//}
+		int IList<TItem>.IndexOf(TItem item)
+		{
+			return IndexOf(item);
+		}
+		void IList<TItem>.Insert(int index, TItem item)
+		{
+			Insert(index, item);
+		}
+		void ICollection<TItem>.Add(TItem item)
+		{
+			Add(item);
+		}
+		bool ICollection<TItem>.Contains(TItem item)
+		{
+			return Contains(item);
+		}
+		void ICollection<TItem>.CopyTo(TItem[] arr, int index)
+		{
+			CopyTo(arr, index);
+		}
+		bool ICollection<TItem>.Remove(TItem item)
+		{
+			if (!Contains(item)) return false;
+			Remove(item);
+			return true;
+		}
 		#endregion
 
 		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
@@ -349,11 +348,6 @@ namespace pr.unittests
 			    Assert.True(Contains(bl_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
 			    Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded, ListChg.ItemPreRemove, ListChg.ItemRemoved));
 				clear();
-				
-				bl.Clear();
-			    Assert.True(Contains(bl_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-			    Assert.True(Contains(bs_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-				clear();
 
 				bl.Add(1);
 				bl.Add(2);
@@ -404,11 +398,6 @@ namespace pr.unittests
 			    Assert.True(Contains(bs_evts, ListChg.ItemPreAdd, ListChg.ItemAdded));
 				clear();
 
-				bs.Clear();
-			    Assert.True(Contains(bl_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-			    Assert.True(Contains(bs_evts, ListChg.PreClear, ListChg.PreReset, ListChg.Reset, ListChg.Clear));
-				clear();
-					
 				bs.Add(1);
 				bs.Add(2);
 				bs.Add(3);

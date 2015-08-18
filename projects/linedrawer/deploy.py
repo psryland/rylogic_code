@@ -37,7 +37,7 @@ try:
 		"linedrawer.exe",
 		"scintilla.dll",
 		]
-	Tools.DeployToBin("linedrawer", files, platforms, "release", CopyForArch=True)
+	Tools.DeployToBin("linedrawer", files, platforms, "release", CopyForArch=False)
 
 	Tools.OnSuccess()
 

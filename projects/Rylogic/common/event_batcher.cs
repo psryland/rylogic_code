@@ -96,10 +96,14 @@ namespace pr.common
 		/// to the Dispatcher provided in the constructor of the event batcher</summary>
 		public void Signal(object sender = null, EventArgs args = null)
 		{
+			// Silently handle Signal calls on this object after it's shutdown
+			// They can be coming from any threat.
+			if (Action == null || m_shutdown)
+				return;
+
 			// If immediate mode is enabled, call Action now
 			if (Immediate)
 			{
-				if (Action == null || m_shutdown) return;
 				m_dispatcher.Invoke(Action);
 				return;
 			}
@@ -110,12 +114,20 @@ namespace pr.common
 			{
 				if (TriggerOnFirst)
 				{
-					if (Action == null || m_shutdown) return;
-					m_dispatcher.BeginInvoke(Action);
+					// Call the action on the first signal
+					// Using BeginInvoke because we don't want to block the calling thread.
+					m_dispatcher.BeginInvoke(() =>
+					{
+						if (Action == null || m_shutdown) return;
+						Action();
+					});
 				}
-				
+
+				// Add a delayed call to Action. In the meantime, repeat calls will just increment 'm_count'
 				m_dispatcher.BeginInvokeDelayed(() =>
 					{
+						// After the delay period, see how many more times we've been signalled.
+						// If still only once, don't call Action again
 						var count = Interlocked.Exchange(ref m_count, 0);
 
 						// If there's still an outstanding signal count, raise the action

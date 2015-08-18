@@ -54,15 +54,18 @@ namespace pr.util
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			var junk = doomed; doomed = null;
+			var junk = doomed;
+			doomed = null;
+
 			junk.Dispose();
 		}
-		[DebuggerStepThrough] public static void DisposeAll<T>(ref List<T> doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static void DisposeAll<TList,T>(ref TList doomed) where TList:IList<T> where T:class, IDisposable
 		{
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			var junk = doomed; doomed = null;
+			var junk = doomed;
+			doomed = default(TList);
 
 			// Pop each item from the collection and dispose it
 			for (; junk.Count != 0; )
@@ -72,20 +75,10 @@ namespace pr.util
 				Dispose(ref j);
 			}
 		}
-		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingListEx<T> doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingSource<T> doomed) where T:class, IDisposable
 		{
-			// Set 'doomed' to null before disposing to catch accidental
-			// use of 'doomed' in a partially disposed state
-			if (doomed == null) return;
-			var junk = doomed; doomed = null;
-
-			// Pop each item from the collection and dispose it
-			for (; junk.Count != 0; )
-			{
-				var j = junk.Last();
-				junk.RemoveAt(junk.Count - 1);
-				Dispose(ref j);
-			}
+			var doomed_ = (IList<T>)doomed;
+			DisposeAll<IList<T>,T>(ref doomed_);
 		}
 
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
@@ -95,21 +88,18 @@ namespace pr.util
 			Dispose(ref doomed);
 			return doomed;
 		}
-
-		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
-		[DebuggerStepThrough] public static List<T> DisposeAll<T>(List<T> doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static TList DisposeAll<TList,T>(TList doomed) where TList :IList<T> where T:class, IDisposable
 		{
 			// Not as safe as the versions above
-			DisposeAll(ref doomed);
+			DisposeAll<TList,T>(ref doomed);
 			return doomed;
 		}
-
-		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
-		[DebuggerStepThrough] public static BindingListEx<T> DisposeAll<T>(BindingListEx<T> doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static BindingSource<T> DisposeAll<T>(this BindingSource<T> doomed) where T:class, IDisposable
 		{
 			// Not as safe as the versions above
-			DisposeAll(ref doomed);
-			return doomed;
+			var doomed_ = (IList<T>)doomed;
+			DisposeAll<IList<T>, T>(ref doomed_);
+			return (BindingSource<T>)doomed_;
 		}
 
 		/// <summary>

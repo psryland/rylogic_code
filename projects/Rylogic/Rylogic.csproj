@@ -36,10 +36,11 @@
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <PropertyGroup>
-    <AssemblyOriginatorKeyFile>Rylogic Limited Key File.pfx</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationIcon>SmilingGekko140x110.ico</ApplicationIcon>
@@ -325,9 +326,7 @@
     <Compile Include="gui\tool_form.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="gui\tree_grid_view.cs">
-      <SubType>Component</SubType>
-    </Compile>
+    <Compile Include="gui\tree_grid_view.cs" />
     <Compile Include="gui\view3d_control.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -514,9 +513,6 @@
       <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="SmilingGekko140x110.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Rylogic Limited Key File.pfx" />
   </ItemGroup>
   <ItemGroup>
     <PyScript Include="resources\regex_quick_ref.htm">

@@ -3,6 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2010
 //***************************************************
 
+using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
 using pr.container;
@@ -12,6 +14,18 @@ namespace pr.extn
 {
 	public static class BindingSourceExtensions
 	{
+		/// <summary>Add a range of items to the source</summary>
+		public static void AddRange(this BindingSource bs, IEnumerable items)
+		{
+			foreach (var item in items)
+				bs.Add(item);
+		}
+		public static void AddRange<T>(this BindingSource<T> bs, IEnumerable<T> items)
+		{
+			foreach (var item in items)
+				bs.Add(item);
+		}
+
 		/// <summary>Returns the 'current' item in the binding source or null (rather than throwing an exception)</summary>
 		public static object CurrentOrDefault(this BindingSource bs)
 		{

@@ -2,11 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.Serialization;
-using System.Text;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -83,13 +79,6 @@ namespace pr.container
 		{
 			if (RaiseListChangedEvents)
 			{
-				var args = new ListChgEventArgs<T>(ListChg.PreClear, -1, default(T));
-				ListChanging.Raise(this, args);
-				if (args.Cancel)
-					return;
-			}
-			if (RaiseListChangedEvents)
-			{
 				var args = new ListChgEventArgs<T>(ListChg.PreReset, -1, default(T));
 				ListChanging.Raise(this, args);
 				if (args.Cancel)
@@ -99,9 +88,6 @@ namespace pr.container
 			// Reset event is raised from attached handler
 			base.ClearItems();
 			IsSorted = true;
-	
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Clear, -1, default(T)));
 		}
 
 		/// <summary>Inserts the specified item in the list at the specified index.</summary>
@@ -324,7 +310,6 @@ namespace pr.container
 #if PR_UNITTESTS
 namespace pr.unittests
 {
-	using System.Collections.Generic;
 	using System.Linq;
 	using container;
 

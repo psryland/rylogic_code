@@ -60,6 +60,19 @@ namespace pr.extn
 			return source.Where(x => !exclude.Contains(x, comparer));
 		}
 
+		/// <summary>Return the index of the first occurance of pred(x) == true or -1</summary>
+		public static int IndexOf<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> pred)
+		{
+			var idx = -1;
+			foreach (var x in source)
+			{
+				++idx;
+				if (pred(x))
+					return idx;
+			}
+			return -1;
+		}
+
 		/// <summary>Returns the indices of 'element' within this collection</summary>
 		public static IEnumerable<int> IndicesOf<TSource>(this IEnumerable<TSource> source, TSource element, Eql<TSource> comparer = null)
 		{
