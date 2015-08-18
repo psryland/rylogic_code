@@ -819,7 +819,7 @@ namespace pr
 			// Same object, do nothing
 			if (isthis(right)) {}
 
-			// Using different allocators and right.m_capacity is greater than the local count
+			// Using different allocators and right.m_capacity is greater than the local count, copy right
 			else if (!(allocator() == right.allocator()) && right.capacity() > LocalLength) { _Assign(right); }
 
 			// Same allocator or less than local count, steal from right
@@ -829,7 +829,7 @@ namespace pr
 				resize(0);
 				if (!local())
 				{
-					alloc.deallocate(m_ptr, m_capacity);
+					allocator().deallocate(m_ptr, m_capacity);
 					m_ptr = local_ptr();
 					m_capacity = LocalLength;
 				}
@@ -968,8 +968,7 @@ namespace pr
 				~Type()
 				{
 					DestrCall();
-					if (ptr.m_ptr != &g_single)
-						throw std::exception("destructing an invalid Type");
+					PR_CHECK(ptr.m_ptr == &g_single, true); // destructing an invalid Type
 					val = 0xcccccccc;
 				}
 			};

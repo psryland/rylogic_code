@@ -515,7 +515,7 @@ namespace RyLogViewer
 
 			// Use the IP address as a regex expression, allowing any character to delim the numbers
 			var pattern = m_bs_device_list.Current.ToString().Substring(null, ":");
-			var idx = m_combo_output_file.Items.IndexOf<string>(x => Regex.IsMatch(x, pattern));
+			var idx = m_combo_output_file.Items.Cast<string>().IndexOf(x => Regex.IsMatch(x, pattern));
 			if (idx != -1)
 				m_combo_output_file.SelectedIndex = idx;
 		}

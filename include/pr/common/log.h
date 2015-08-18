@@ -277,8 +277,10 @@ namespace pr
 			Logger(Logger const& rhs, log::string context_name)
 				:m_context_name(context_name)
 				,m_context(rhs.m_context)
-				,Enabled(rhs.Enabled)
-			{}
+				,Enabled()
+			{
+				Enabled = rhs.Enabled.load();
+			}
 
 			// On/Off switch for logging
 			std::atomic_bool Enabled;

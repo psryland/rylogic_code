@@ -88,7 +88,7 @@ namespace pr
 		//  d is in [1, last_day_of_month(y, m)]
 		//  y is "approximately" in     [numeric_limits<Int>::min()/366, numeric_limits<Int>::max()/366]
 		//  Exact range of validity is: [civil_from_days(numeric_limits<Int>::min()), civil_from_days(numeric_limits<Int>::max()-719468)]
-		template <class Int> constexpr Int days_from_civil(Int y, int m, int d) noexcept
+		template <class Int> Int days_from_civil(Int y, int m, int d) noexcept
 		{
 			static_assert(std::numeric_limits<int>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
 			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
@@ -102,7 +102,7 @@ namespace pr
 
 		// Returns year/month/day triple in civil calendar
 		//  z is number of days since 1970-01-01 and is in the range: [numeric_limits<Int>::min(), numeric_limits<Int>::max()-719468].
-		template <class Int> constexpr std::tuple<Int, int, int> civil_from_days(Int z) noexcept
+		template <class Int> std::tuple<Int, int, int> civil_from_days(Int z) noexcept
 		{
 			static_assert(std::numeric_limits<int>::digits >= 18, "This algorithm has not been ported to a 16 bit unsigned integer");
 			static_assert(std::numeric_limits<Int>::digits >= 20, "This algorithm has not been ported to a 16 bit signed integer");
@@ -127,18 +127,18 @@ namespace pr
 		// Preconditions: m is in [1, 12]
 		// Returns: The number of days in the month m of common year
 		// The result is always in the range [28, 31].
-		constexpr inline int last_day_of_month_common_year(int m) noexcept
+		inline int last_day_of_month_common_year(int m) noexcept
 		{
-			constexpr unsigned char a[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+			static int const a[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 			return a[m-1];
 		}
 
 		// Preconditions: m is in [1, 12]
 		// Returns: The number of days in the month m of leap year
 		// The result is always in the range [29, 31].
-		constexpr inline int last_day_of_month_leap_year(int m) noexcept
+		inline int last_day_of_month_leap_year(int m) noexcept
 		{
-			constexpr unsigned char a[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+			static int const a[]{31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 			return a[m-1];
 		}
 
@@ -162,8 +162,7 @@ namespace pr
 		// The result is always in the range [0, 6].
 		constexpr inline int weekday_difference(int x, int y) noexcept
 		{
-			x -= y;
-			return x <= 6 ? x : x + 7;
+			return (x - y) <= 6 ? (x - y) : (x - y) + 7;
 		}
 
 		// Returns: The weekday following wd

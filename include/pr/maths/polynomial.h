@@ -103,8 +103,8 @@ namespace pr
 						real_s2 = Cubert(Abs(real_s2));
 						if( real_s2 < 0.0f ) real_s2 = -real_s2;
 					}
-					Roots r = {1, real_s1 + real_s2 - a2 / 3.0f};
-					return r;
+					Roots rr = {1, real_s1 + real_s2 - a2 / 3.0f};
+					return rr;
 				}
 
 				temp = Abs(temp);

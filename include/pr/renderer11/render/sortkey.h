@@ -77,7 +77,7 @@ namespace pr
 			}
 			void Group(ESortGroup group)
 			{
-				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < MaxSortGroups, "sort group out of range");
+				PR_ASSERT(PR_DBG_RDR, group >= 0 && (uint32)group < MaxSortGroups, "sort group out of range");
 				m_value &= ~SortGroupMask;
 				m_value |= (group << SortGroupOfs) & SortGroupMask;
 			}
@@ -145,7 +145,7 @@ namespace pr
 			}
 			SKOverride& Group(ESortGroup group)
 			{
-				PR_ASSERT(PR_DBG_RDR, group >= 0 && group < SortKey::MaxSortGroups, "sort group out of range");
+				PR_ASSERT(PR_DBG_RDR, group >= 0 && (uint32)group < SortKey::MaxSortGroups, "sort group out of range");
 				m_mask |= SortKey::SortGroupMask;
 				m_key  |= (group << SortKey::SortGroupOfs) & SortKey::SortGroupMask;
 				return *this;

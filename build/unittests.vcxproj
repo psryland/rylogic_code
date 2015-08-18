@@ -195,6 +195,7 @@
     <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h" />
     <ClInclude Include="..\include\pr\hardware\comm_port_io.h" />
     <ClInclude Include="..\include\pr\hardware\cpuinfo.h" />
+    <ClInclude Include="..\include\pr\hardware\find_bt_device.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper_c.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_object.h" />
@@ -333,6 +334,7 @@
     <ProjectGuid>{64F62186-4F86-4CD6-AE3A-3C0E311BB2A6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>unittests</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -396,6 +398,7 @@
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -419,6 +422,7 @@
       <PreprocessorDefinitions>PR_UNITTESTS=1;PR_MATHS_USE_INTRINSICS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -441,6 +445,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;PR_MATHS_USE_DIRECTMATH=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -463,6 +468,7 @@
       </PrecompiledHeader>
       <PreprocessorDefinitions>PR_UNITTESTS=1;_WIN32_WINNT=0x0600;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>false</SDLCheck>
+      <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

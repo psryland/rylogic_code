@@ -137,6 +137,7 @@
 #include "pr\geometry\volume.h"
 #include "pr\hardware\comm_port_io.h"
 #include "pr\hardware\cpuinfo.h"
+#include "pr\hardware\find_bt_device.h"
 #include "pr\input\dinput.h"
 #include "pr\linedrawer\ldr_gizmo.h"
 #include "pr\linedrawer\ldr_helper.h"

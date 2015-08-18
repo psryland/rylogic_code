@@ -685,9 +685,9 @@ namespace pr
 					}
 				case EKeyword::M4x4:
 					{
-						m4x4 o2w = m4x4Identity;
-						reader.Matrix4x4S(o2w);
-						p2w = o2w * p2w;
+						m4x4 o2w_ = m4x4Identity;
+						reader.Matrix4x4S(o2w_);
+						p2w = o2w_ * p2w;
 						break;
 					}
 				case EKeyword::M3x3:

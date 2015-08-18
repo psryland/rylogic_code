@@ -1131,8 +1131,7 @@ namespace pr
 				~Type()
 				{
 					--ObjectCount();
-					if (ptr.m_ptr != &g_single)
-						throw std::exception("destructing an invalid Type");
+					PR_CHECK(ptr.m_ptr == &g_single, true); // destructing an invalid Type
 					val = 0xcccccccc;
 				}
 			};

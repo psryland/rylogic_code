@@ -960,6 +960,9 @@
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\pr\hardware\find_bt_device.h">
+      <Filter>pr\hardware</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\unittests\pre_build.py" />

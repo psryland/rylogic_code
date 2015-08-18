@@ -143,7 +143,7 @@ namespace pr
 		using EventHandlerId = unsigned long long;
 		inline EventHandlerId GenerateEventHandlerId()
 		{
-			static auto s_id = std::atomic_uint{};
+			static std::atomic_uint s_id = {};
 			auto id = s_id.load();
 			for (;!s_id.compare_exchange_weak(id, id + 1);) {}
 			return id + 1;

@@ -144,7 +144,7 @@ namespace las
 
 	// MainGUI ****************************************************
 	MainGUI::MainGUI(LPTSTR lpstrCmdLine, int nCmdShow)
-		:pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>(AppTitle())
+		:pr::app::MainGUI<MainGUI, Main, pr::gui::SimMsgLoop>(Params().title(AppTitle()))
 	{
 		(void)lpstrCmdLine,nCmdShow;
 		m_msg_loop.AddStepContext("render", [this](double)  { m_main->DoRender(true); }, 60.0f, false);

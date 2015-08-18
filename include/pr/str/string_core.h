@@ -336,7 +336,7 @@ namespace pr
 		}
 		template <typename Char> inline Char const* BeginC(Char const* str)
 		{
-			return Begin<Char const>(str);
+			return Begin(str);
 		}
 
 		// Return a pointer to the end of the string
@@ -354,7 +354,7 @@ namespace pr
 		}
 		template <typename Char> inline Char const* EndC(Char const* str)
 		{
-			return End<Char const>(str);
+			return End(str);
 		}
 
 		// Return a pointer to the 'N'th character or the end of the string, whichever is less
@@ -372,7 +372,7 @@ namespace pr
 		}
 		template <typename Char> inline Char const* EndC(Char const* str, size_t N)
 		{
-			return End<Char const>(str, N);
+			return End(str, N);
 		}
 		#pragma endregion
 

@@ -289,7 +289,7 @@ namespace pr
 		#pragma region Support Functions
 
 		// Cast with overflow check
-		template <typename TTo, typename TFrom> TTo cast(TFrom from)
+		template <typename TTo, typename TFrom> inline TTo cast(TFrom from)
 		{
 			assert(static_cast<TFrom>(static_cast<TTo>(from)) == from && "overflow or underflow in cast");
 			return static_cast<TTo>(from);
@@ -1082,7 +1082,7 @@ namespace pr
 		using EventHandlerId = unsigned long long;
 		inline EventHandlerId GenerateEventHandlerId()
 		{
-			static auto s_id = std::atomic_uint{};
+			static std::atomic_uint s_id = {};
 			auto id = s_id.load();
 			for (;!s_id.compare_exchange_weak(id, id + 1);) {}
 			return id + 1;
@@ -2468,9 +2468,9 @@ namespace pr
 				auto_size(x, w, 0);
 				auto_size(y, h, 1);
 			}
+			friend void pr::gui::AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h);
 
 		private:
-			friend void pr::gui::AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h);
 
 			// Mouse single click detection.
 			// Returns true on mouse up with within the click threshold
@@ -2559,19 +2559,20 @@ namespace pr
 
 			virtual ~Control()
 			{
-				if (m_handle_only)
-					return;
+				if (!m_handle_only)
+				{
+					// Orphan child controls
+					for (; !m_child.empty(); )
+						m_child.front()->Parent(nullptr);
 
-				// Orphan child controls
-				for (; !m_child.empty(); )
-					m_child.front()->Parent(nullptr);
+					// Detach from our parent
+					Parent(nullptr);
 
-				// Detach from our parent
-				Parent(nullptr);
-
-				// Destroy the window
-				if (::IsWindow(m_hwnd))
-					::DestroyWindow(m_hwnd);
+					// Destroy the window
+					if (::IsWindow(m_hwnd))
+						::DestroyWindow(m_hwnd);
+				}
+				assert((m_hwnd = (HWND)0xdddddddd) != 0);// mark as destructed
 			}
 
 			Control(Control&&) = delete;
@@ -2620,7 +2621,7 @@ namespace pr
 				// Determine the value to pass at the HMENU parameter in CreateWindowEx
 				// For popup and overlapped windows this should be a valid menu handle or null
 				// Otherwise, it should be the id of the control being created
-				auto menu = (p.m_style & WS_CHILD) ? HMENU(p.m_id) : p.menu();
+				auto menu = (p.m_style & WS_CHILD) ? HMENU() + p.m_id : p.menu();
 
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
