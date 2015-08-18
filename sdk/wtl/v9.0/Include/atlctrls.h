@@ -1725,7 +1725,7 @@ public:
 	BOOL HasSelection() const
 	{
 		const T* pT = static_cast<const T*>(this);
-		int nMin, nMax;
+		int nMin = 0, nMax = 0;
 		::SendMessage(pT->m_hWnd, EM_GETSEL, (WPARAM)&nMin, (LPARAM)&nMax);
 		return (nMin != nMax);
 	}
@@ -1811,13 +1811,12 @@ public:
 #ifndef _WIN32_WCE
 	int GetScrollLimit() const
 	{
-		int nMin = 0, nMax = 0;
-		::GetScrollRange(m_hWnd, SB_CTL, &nMin, &nMax);
-		SCROLLINFO info = { sizeof(SCROLLINFO), SIF_PAGE };
-		if(::GetScrollInfo(m_hWnd, SB_CTL, &info))
-			nMax -= ((info.nPage - 1) > 0) ? (info.nPage - 1) : 0;
+		SCROLLINFO info = { sizeof(SCROLLINFO), SIF_RANGE | SIF_PAGE };
+		::GetScrollInfo(m_hWnd, SB_CTL, &info);
+		if(info.nPage > 1)
+			info.nMax -= info.nPage - 1;
 
-		return nMax;
+		return info.nMax;
 	}
 
 #if (WINVER >= 0x0500)
@@ -1886,8 +1885,6 @@ public:
 
 	void Attach(HIMAGELIST hImageList)
 	{
-		ATLASSERT(m_hImageList == NULL);
-		ATLASSERT(hImageList != NULL);
 		if(t_bManaged && (m_hImageList != NULL) && (m_hImageList != hImageList))
 			ImageList_Destroy(m_hImageList);
 		m_hImageList = hImageList;
@@ -4544,6 +4541,9 @@ public:
 #if (_WIN32_IE >= 0x0600)
 	HTREEITEM GetNextSelectedItem() const
 	{
+#ifndef TVGN_NEXTSELECTED
+		const WORD TVGN_NEXTSELECTED = 0x000B;
+#endif
 		ATLASSERT(::IsWindow(m_hWnd));
 		return (HTREEITEM)::SendMessage(m_hWnd, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, 0L);
 	}
@@ -4913,6 +4913,9 @@ public:
 #if (_WIN32_IE >= 0x0600)
 	CTreeItemT<TBase> GetNextSelectedItem() const
 	{
+#ifndef TVGN_NEXTSELECTED
+		const WORD TVGN_NEXTSELECTED = 0x000B;
+#endif
 		ATLASSERT(::IsWindow(m_hWnd));
 		HTREEITEM hTreeItem = (HTREEITEM)::SendMessage(m_hWnd, TVM_GETNEXTITEM, TVGN_NEXTSELECTED, 0L);
 		return CTreeItemT<TBase>(hTreeItem, (CTreeViewCtrlExT<TBase>*)this);
@@ -8687,12 +8690,18 @@ public:
 #if (_WIN32_IE >= 0x0600)
 	DWORD GetExtendedStyle() const
 	{
+#ifndef RB_GETEXTENDEDSTYLE
+	const UINT RB_GETEXTENDEDSTYLE = WM_USER + 42;
+#endif
 		ATLASSERT(::IsWindow(m_hWnd));
 		return (DWORD)::SendMessage(m_hWnd, RB_GETEXTENDEDSTYLE, 0, 0L);
 	}
 
 	DWORD SetExtendedStyle(DWORD dwStyle, DWORD dwMask)
 	{
+#ifndef RB_SETEXTENDEDSTYLE
+		const UINT RB_SETEXTENDEDSTYLE = WM_USER + 41;
+#endif
 		ATLASSERT(::IsWindow(m_hWnd));
 		return (DWORD)::SendMessage(m_hWnd, RB_SETEXTENDEDSTYLE, dwMask, dwStyle);
 	}
@@ -8822,7 +8831,7 @@ public:
 		int nBandCount = GetBandCount();
 		for(int i =0; i < nBandCount; i++)
 		{
-			REBARBANDINFO rbbi = { RunTimeHelper::SizeOf_REBARBANDINFO() };
+			REBARBANDINFO rbbi = { (UINT)RunTimeHelper::SizeOf_REBARBANDINFO() };
 			rbbi.fMask = RBBIM_STYLE;
 			BOOL bRet = GetBandInfo(i, &rbbi);
 			ATLASSERT(bRet);

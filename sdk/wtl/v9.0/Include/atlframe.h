@@ -129,8 +129,12 @@ public:
 				{
 					if(m_uCommonResourceID != 0)   // use it if not zero
 					{
-						m_wc.hIcon = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR);
-						m_wc.hIconSm = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 16, 16, LR_DEFAULTCOLOR);
+						m_wc.hIcon = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), 
+							MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 
+							::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
+						m_wc.hIconSm = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), 
+							MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 
+							::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
 					}
 					m_atom = ::RegisterClassEx(&m_wc);
 				}
@@ -209,7 +213,9 @@ public:
 				if (m_atom == 0)
 				{
 					if(m_uCommonResourceID != 0)   // use it if not zero
-						m_wc.hIcon = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 32, 32, LR_DEFAULTCOLOR);
+						m_wc.hIcon = (HICON)::LoadImage(ModuleHelper::GetResourceInstance(), 
+							MAKEINTRESOURCE(m_uCommonResourceID), IMAGE_ICON, 
+							::GetSystemMetrics(SM_CXICON), ::GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
 					m_atom = ::RegisterClass(&m_wc);
 				}
 			}
@@ -606,7 +612,7 @@ public:
 		int nBtnCount = (int)::SendMessage(hWndBand, TB_BUTTONCOUNT, 0, 0L);
 
 		// Set band info structure
-		REBARBANDINFO rbBand = { RunTimeHelper::SizeOf_REBARBANDINFO() };
+		REBARBANDINFO rbBand = { (UINT)RunTimeHelper::SizeOf_REBARBANDINFO() };
 #if (_WIN32_IE >= 0x0400)
 		rbBand.fMask = RBBIM_CHILD | RBBIM_CHILDSIZE | RBBIM_STYLE | RBBIM_ID | RBBIM_SIZE | RBBIM_IDEALSIZE;
 #else
@@ -697,7 +703,7 @@ public:
 
 		for(int i = 0; i < nCount; i++)
 		{
-			REBARBANDINFO rbBand = { RunTimeHelper::SizeOf_REBARBANDINFO() };
+			REBARBANDINFO rbBand = { (UINT)RunTimeHelper::SizeOf_REBARBANDINFO() };
 			rbBand.fMask = RBBIM_SIZE;
 			BOOL bRet = (BOOL)::SendMessage(m_hWndToolBar, RB_GETBANDINFO, i, (LPARAM)&rbBand);
 			ATLASSERT(bRet);
@@ -987,7 +993,7 @@ public:
 	bool PrepareChevronMenu(_ChevronMenuInfo& cmi)
 	{
 		// get rebar and toolbar
-		REBARBANDINFO rbbi = { RunTimeHelper::SizeOf_REBARBANDINFO() };
+		REBARBANDINFO rbbi = { (UINT)RunTimeHelper::SizeOf_REBARBANDINFO() };
 		rbbi.fMask = RBBIM_CHILD;
 		BOOL bRet = (BOOL)::SendMessage(cmi.lpnm->hdr.hwndFrom, RB_GETBANDINFO, cmi.lpnm->uBand, (LPARAM)&rbbi);
 		ATLASSERT(bRet);
@@ -1048,13 +1054,13 @@ public:
 					// get button's text
 					const int cchBuff = 200;
 					TCHAR szBuff[cchBuff] = { 0 };
-					LPTSTR lpstrText = szBuff;
+					LPCTSTR lpstrText = szBuff;
 					TBBUTTONINFO tbbi = { 0 };
 					tbbi.cbSize = sizeof(TBBUTTONINFO);
 					tbbi.dwMask = TBIF_TEXT;
 					tbbi.pszText = szBuff;
 					tbbi.cchText = cchBuff;
-					if(wnd.SendMessage(TB_GETBUTTONINFO, tbb.idCommand, (LPARAM)&tbbi) == -1 || lstrlen(szBuff) == 0)
+					if((wnd.SendMessage(TB_GETBUTTONINFO, tbb.idCommand, (LPARAM)&tbbi) == -1) || (szBuff[0] == 0))
 					{
 						// no text for this button, try a resource string
 						lpstrText = _T("");
@@ -3069,7 +3075,7 @@ public:
 	bool UIAddToolBar(HWND hWndToolBar)
 	{
 		ATLASSERT(::IsWindow(hWndToolBar));
-		TBBUTTONINFO tbbi = {sizeof TBBUTTONINFO, TBIF_COMMAND | TBIF_STYLE | TBIF_BYINDEX};
+		TBBUTTONINFO tbbi = { sizeof(TBBUTTONINFO), TBIF_COMMAND | TBIF_STYLE | TBIF_BYINDEX };
 
 		// Add toolbar buttons
 		for (int uItem = 0; ::SendMessage(hWndToolBar, TB_GETBUTTONINFO, uItem, (LPARAM)&tbbi) != -1; uItem++)

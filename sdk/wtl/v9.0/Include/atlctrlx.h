@@ -1141,7 +1141,7 @@ public:
 		bool bRet = true;
 		if(IsNotifyButton())
 		{
-			NMHDR nmhdr = { m_hWnd, GetDlgCtrlID(), NM_CLICK };
+			NMHDR nmhdr = { m_hWnd, (UINT_PTR)GetDlgCtrlID(), NM_CLICK };
 			::SendMessage(GetParent(), WM_NOTIFY, GetDlgCtrlID(), (LPARAM)&nmhdr);
 		}
 		else if(IsCommandButton())
@@ -2297,6 +2297,10 @@ public:
 #define PANECNT_VERTICAL	0x00000002
 #define PANECNT_FLATBORDER	0x00000004
 #define PANECNT_NOBORDER	0x00000008
+#define PANECNT_DIVIDER         0x00000010
+#define PANECNT_GRADIENT        0x00000020
+
+// Note: PANECNT_GRADIENT doesn't work with _ATL_NO_MSIMG
 
 template <class T, class TBase = ATL::CWindow, class TWinTraits = ATL::CControlWinTraits>
 class ATL_NO_VTABLE CPaneContainerImpl : public ATL::CWindowImpl< T, TBase, TWinTraits >, public CCustomDraw< T >
@@ -2383,6 +2387,13 @@ public:
 			{
 				bUpdate = true;
 			}
+
+#if (!defined(_WIN32_WCE) && !defined(_ATL_NO_MSIMG)) || (_WIN32_WCE >= 420)
+			if((dwPrevStyle & PANECNT_GRADIENT) != (m_dwExtendedStyle & PANECNT_GRADIENT))   // change background
+			{
+				bUpdate = true;
+			}
+#endif // (!defined(_WIN32_WCE) && !defined(_ATL_NO_MSIMG)) || (_WIN32_WCE >= 420)
 
 			if(bUpdate)
 				pT->UpdateLayout();
@@ -2576,9 +2587,12 @@ public:
 		return 0;
 	}
 
-	LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
+	LRESULT OnEraseBackground(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
 	{
-		return 1;   // no background needed
+		T* pT = static_cast<T*>(this);
+		pT->DrawPaneTitleBackground((HDC)wParam);
+
+		return 1;
 	}
 
 	LRESULT OnPaint(UINT /*uMsg*/, WPARAM wParam, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -2648,18 +2662,8 @@ public:
 		return CDRF_NOTIFYITEMDRAW;   // we need per-item notifications
 	}
 
-	DWORD OnItemPrePaint(int /*idCtrl*/, LPNMCUSTOMDRAW lpNMCustomDraw)
+	DWORD OnItemPrePaint(int /*idCtrl*/, LPNMCUSTOMDRAW /*lpNMCustomDraw*/)
 	{
-		CDCHandle dc = lpNMCustomDraw->hdc;
-#if (_WIN32_IE >= 0x0400)
-		RECT& rc = lpNMCustomDraw->rc;
-#else // !(_WIN32_IE >= 0x0400)
-		RECT rc = { 0 };
-		m_tb.GetItemRect(0, &rc);
-#endif // !(_WIN32_IE >= 0x0400)
-
-		dc.FillRect(&rc, COLOR_3DFACE);
-
 		return CDRF_NOTIFYPOSTPAINT;
 	}
 
@@ -2786,9 +2790,9 @@ public:
 			m_tb.SetButtonSize(m_cxImageTB + m_cxyBtnAddTB, m_cyImageTB + m_cxyBtnAddTB);
 
 			if(IsVertical())
-				m_tb.SetWindowPos(NULL, m_cxyBorder + m_cxyBtnOffset, m_cxyBorder + m_cxyBtnOffset, m_cxImageTB + m_cxyBtnAddTB, m_cyImageTB + m_cxyBtnAddTB, SWP_NOZORDER | SWP_NOACTIVATE);
+				m_tb.SetWindowPos(NULL, m_cxyBorder + m_cxyBtnOffset, m_cxyBorder + m_cxyBtnOffset, m_cxImageTB + m_cxyBtnAddTB, m_cyImageTB + m_cxyBtnAddTB + 1, SWP_NOZORDER | SWP_NOACTIVATE);
 			else
-				m_tb.SetWindowPos(NULL, 0, 0, m_cxImageTB + m_cxyBtnAddTB, m_cyImageTB + m_cxyBtnAddTB, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
+				m_tb.SetWindowPos(NULL, 0, 0, m_cxImageTB + m_cxyBtnAddTB, m_cyImageTB + m_cxyBtnAddTB + 1, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
 		}
 	}
 
@@ -2808,12 +2812,12 @@ public:
 		font.GetLogFont(lf);
 		if(IsVertical())
 		{
-			m_cxyHeader = m_cxImageTB + m_cxyBtnAddTB + m_cxyBorder;
+			m_cxyHeader = m_cxImageTB + m_cxyBtnAddTB + m_cxyBorder + 1;
 		}
 		else
 		{
 			int cyFont = abs(lf.lfHeight) + m_cxyBorder + 2 * m_cxyTextOffset;
-			int cyBtn = m_cyImageTB + m_cxyBtnAddTB + m_cxyBorder + 2 * m_cxyBtnOffset;
+			int cyBtn = m_cyImageTB + m_cxyBtnAddTB + m_cxyBorder + 2 * m_cxyBtnOffset + 1;
 			m_cxyHeader = __max(cyFont, cyBtn);
 		}
 	}
@@ -2853,7 +2857,12 @@ public:
 				uBorder |= BF_FLAT;
 			dc.DrawEdge(&rect, EDGE_ETCHED, uBorder);
 		}
-		dc.FillRect(&rect, COLOR_3DFACE);
+
+		if((m_dwExtendedStyle & PANECNT_DIVIDER) != 0)
+		{
+			uBorder = BF_FLAT | BF_ADJUST | (IsVertical() ? BF_RIGHT : BF_BOTTOM);
+			dc.DrawEdge(&rect, BDR_SUNKENOUTER, uBorder);
+		}
 
 		// draw title text
 		dc.SetTextColor(::GetSysColor(COLOR_WINDOWTEXT));
@@ -2891,6 +2900,23 @@ public:
 		}
 
 		dc.SelectFont(hFontOld);
+	}
+
+	void DrawPaneTitleBackground(CDCHandle dc)
+	{
+		RECT rect = { 0 };
+		GetClientRect(&rect);
+		if(IsVertical())
+			rect.right = m_cxyHeader;
+		else
+			rect.bottom = m_cxyHeader;
+
+#if (!defined(_WIN32_WCE) && !defined(_ATL_NO_MSIMG)) || (_WIN32_WCE >= 420)
+		if((m_dwExtendedStyle & PANECNT_GRADIENT) != 0)
+			dc.GradientFillRect(rect, ::GetSysColor(COLOR_WINDOW), ::GetSysColor(COLOR_3DFACE), IsVertical());
+		else
+#endif // (!defined(_WIN32_WCE) && !defined(_ATL_NO_MSIMG)) || (_WIN32_WCE >= 420)
+			dc.FillRect(&rect, COLOR_3DFACE);
 	}
 
 	// called only if pane is empty
@@ -3356,7 +3382,7 @@ public:
 	{
 		T* pT = static_cast<T*>(this);
 		int nID = pT->GetDlgCtrlID();
-		NMSORTLISTVIEW nm = { { pT->m_hWnd, nID, SLVN_SORTCHANGED }, iNewSortCol, iOldSortCol };
+		NMSORTLISTVIEW nm = { { pT->m_hWnd, (UINT_PTR)nID, SLVN_SORTCHANGED }, iNewSortCol, iOldSortCol };
 		::SendMessage(pT->GetParent(), WM_NOTIFY, (WPARAM)nID, (LPARAM)&nm);
 	}
 
@@ -4840,9 +4866,10 @@ public:
 	int CalcTabHeight()
 	{
 		int nCount = m_tab.GetItemCount();
+		TCHAR szText[] = _T("NS");
 		TCITEMEXTRA tcix = { 0 };
 		tcix.tciheader.mask = TCIF_TEXT;
-		tcix.tciheader.pszText = _T("NS");
+		tcix.tciheader.pszText = szText;
 		int nIndex = m_tab.InsertItem(nCount, tcix);
 
 		RECT rect = { 0, 0, 1000, 1000 };

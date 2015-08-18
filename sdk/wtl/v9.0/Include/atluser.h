@@ -1152,12 +1152,12 @@ public:
 	}
 
 #ifndef _WIN32_WCE
-	bool LoadEx(ATL::_U_STRINGorID Type, ATL::_U_STRINGorID ID, WORD wLanguage)
+	bool LoadEx(ATL::_U_STRINGorID ID, ATL::_U_STRINGorID Type, WORD wLanguage)
 	{
 		ATLASSERT(m_hResource == NULL);
 		ATLASSERT(m_hGlobal == NULL);
 
-		m_hResource = ::FindResourceEx(ModuleHelper::GetResourceInstance(), ID.m_lpstr, Type.m_lpstr, wLanguage);
+		m_hResource = ::FindResourceEx(ModuleHelper::GetResourceInstance(), Type.m_lpstr, ID.m_lpstr, wLanguage);
 		if(m_hResource == NULL)
 			return false;
 
@@ -1315,7 +1315,7 @@ inline HBITMAP AtlLoadSysBitmapImage(WORD wBitmapID, UINT fuLoad = LR_DEFAULTCOL
 inline HCURSOR AtlLoadSysCursorImage(ATL::_U_STRINGorID cursor, UINT fuLoad = LR_DEFAULTCOLOR | LR_DEFAULTSIZE, int cxDesired = 0, int cyDesired = 0)
 {
 #ifdef _DEBUG
-	WORD wID = (WORD)cursor.m_lpstr;
+	WORD wID = (WORD)((UINT_PTR)cursor.m_lpstr);
 	ATLASSERT((wID >= 32512 && wID <= 32516) || (wID >= 32640 && wID <= 32648) || (wID == 32650) || (wID == 32651));
 	ATLASSERT((fuLoad & LR_LOADFROMFILE) == 0);   // this one doesn't load from a file
 #endif // _DEBUG
@@ -1325,7 +1325,7 @@ inline HCURSOR AtlLoadSysCursorImage(ATL::_U_STRINGorID cursor, UINT fuLoad = LR
 inline HICON AtlLoadSysIconImage(ATL::_U_STRINGorID icon, UINT fuLoad = LR_DEFAULTCOLOR | LR_DEFAULTSIZE, int cxDesired = 0, int cyDesired = 0)
 {
 #ifdef _DEBUG
-	WORD wID = (WORD)icon.m_lpstr;
+	WORD wID = (WORD)((UINT_PTR)icon.m_lpstr);
 	ATLASSERT(wID >= 32512 && wID <= 32517);
 	ATLASSERT((fuLoad & LR_LOADFROMFILE) == 0);   // this one doesn't load from a file
 #endif // _DEBUG

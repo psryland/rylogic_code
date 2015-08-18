@@ -3159,7 +3159,7 @@ public:
 		return out;
 	}
 
-	RECT MapDialogPixels(RECT input) const
+	RECT MapDialogPixels(const RECT& input) const
 	{
 		RECT out = { MapDialogPixelsX(input.left), MapDialogPixelsY(input.top), MapDialogPixelsX(input.right), MapDialogPixelsY(input.bottom) };
 		return out;
@@ -3187,7 +3187,7 @@ public:
 		return out;
 	}
 
-	RECT MapDialogUnits(RECT input) const
+	RECT MapDialogUnits(const RECT& input) const
 	{
 		RECT out = { MapDialogUnitsX(input.left), MapDialogUnitsY(input.top), MapDialogUnitsX(input.right), MapDialogUnitsY(input.bottom) };
 		return out;
@@ -3281,7 +3281,7 @@ public:
 		m_cAllocated = 0;
 	}
 
-	void Create(bool bDlgEx, LPCTSTR lpszCaption, RECT rc, DWORD dwStyle = 0, DWORD dwExStyle = 0,
+	void Create(bool bDlgEx, LPCTSTR lpszCaption, const RECT& rc, DWORD dwStyle = 0, DWORD dwExStyle = 0,
 	            LPCTSTR lpstrFontName = NULL, WORD wFontSize = 0, WORD wWeight = 0, BYTE bItalic = 0, BYTE bCharset = 0, DWORD dwHelpID = 0,
 	            ATL::_U_STRINGorID ClassName = 0U, ATL::_U_STRINGorID Menu = 0U)
 	{
@@ -3370,7 +3370,7 @@ public:
 		}
 	}
 
-	void AddControl(ATL::_U_STRINGorID ClassName, WORD wId, RECT rc, DWORD dwStyle, DWORD dwExStyle,
+	void AddControl(ATL::_U_STRINGorID ClassName, WORD wId, const RECT& rc, DWORD dwStyle, DWORD dwExStyle,
 	                ATL::_U_STRINGorID Text, const WORD* pCreationData = NULL, WORD nCreationData = 0, DWORD dwHelpID = 0)
 	{
 		AddControl(ClassName.m_lpstr, wId, (short) rc.left, (short) rc.top, (short) (rc.right - rc.left), (short) (rc.bottom - rc.top), dwStyle, dwExStyle,
