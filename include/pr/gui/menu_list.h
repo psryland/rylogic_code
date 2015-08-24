@@ -22,9 +22,8 @@ namespace pr
 		//  Export/Import a string containing the items
 		//  Add "CHAIN_MSG_MAP_MEMBER(m_menu_list)" to the message map for the GUI class
 		//  Inherit MenuList::IHandler in the GUI class
-		class MenuList
+		struct MenuList
 		{
-		public:
 			struct Item
 			{
 				std::wstring m_name; // The string name of the menu item
@@ -59,7 +58,10 @@ namespace pr
 
 		public:
 
-			MenuList(HMENU menu = 0, UINT base_id = 0, size_t max_length = ~size_t(), IHandler* handler = nullptr)
+			MenuList()
+				:MenuList(nullptr, 0, ~size_t(), nullptr)
+			{}
+			MenuList(HMENU menu, UINT base_id, size_t max_length, IHandler* handler)
 				:m_menu_items()
 				,m_menu(menu)
 				,m_base_id(base_id)

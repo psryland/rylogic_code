@@ -9,8 +9,7 @@
 //	Add "CHAIN_MSG_MAP_MEMBER(m_recent_files)" to the message map for the GUI class
 //	Inherit pr::RecentFiles::IHandler  in the GUI class
 //
-#ifndef PR_GUI_RECENT_FILES_H
-#define PR_GUI_RECENT_FILES_H
+#pragma once
 
 #include <list>
 #include <string>
@@ -22,19 +21,12 @@ namespace pr
 {
 	namespace gui
 	{
-		class RecentFiles :public MenuList
+		struct RecentFiles :MenuList
 		{
-		public:
-			typedef MenuList::IHandler IHandler;
-			
-			using MenuList::Attach;
-			using MenuList::Items;
-			using MenuList::Clear;
-			using MenuList::UpdateMenu;
-			using MenuList::Export;
-			using MenuList::Import;
-			using MenuList::ProcessWindowMessage;
-			
+			RecentFiles()
+				:MenuList()
+			{}
+
 			template <typename Char> void Add(Char const* file, bool update_menu)
 			{
 				auto fpath = pr::Widen(file);
@@ -48,40 +40,3 @@ namespace pr
 		};
 	}
 }
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

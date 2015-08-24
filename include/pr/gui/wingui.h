@@ -387,9 +387,17 @@ namespace pr
 			RAII& operator =(RAII const&) = delete;
 		};
 
-		// Handle auto position/size
-		void AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h);
+		template <typename THandle> struct IdOrHandle
+		{
+			THandle m_handle;
+			int     m_id;
 
+			IdOrHandle() :m_handle() ,m_id(ID_UNUSED) {}
+			IdOrHandle(THandle handle) :m_handle(handle) ,m_id(ID_UNUSED) {}
+			IdOrHandle(int id) :m_handle() ,m_id(id) {}
+			bool operator == (nullptr_t) const { return m_handle == nullptr && m_id == ID_UNUSED; }
+			bool operator != (nullptr_t) const { return !(*this == nullptr); }
+		};
 		#pragma endregion
 
 		#pragma region Win32 Structure Wrappers
@@ -726,195 +734,6 @@ namespace pr
 			~PaintStruct()                       { Throw(::EndPaint(m_hwnd, this), "EndPaint failed"); }
 		};
 
-		// Menu
-		struct MenuItemInfo :MENUITEMINFOW
-		{
-			enum class EMask :UINT
-			{
-				None       = 0,
-				Bitmap     = MIIM_BITMAP,
-				CheckMarks = MIIM_CHECKMARKS,
-				Data       = MIIM_DATA,
-				FType      = MIIM_FTYPE,
-				ID         = MIIM_ID,
-				State      = MIIM_STATE,
-				String     = MIIM_STRING,
-				Submenu    = MIIM_SUBMENU,
-				Type       = MIIM_TYPE,
-				_bitwise_operators_allowed,
-			};
-			enum class EFType :UINT
-			{
-				None         = 0,
-				Bitmap       = MFT_BITMAP,
-				MenuBarBreak = MFT_MENUBARBREAK,
-				MenuBreak    = MFT_MENUBREAK,
-				OwnerDraw    = MFT_OWNERDRAW,
-				RadioCheck   = MFT_RADIOCHECK,
-				RightJustify = MFT_RIGHTJUSTIFY,
-				RightOrder   = MFT_RIGHTORDER,
-				Separator    = MFT_SEPARATOR,
-				String       = MFT_STRING,
-				_bitwise_operators_allowed,
-			};
-			enum class EState :UINT
-			{
-				Default  = MFS_DEFAULT,
-				Grayed   = MFS_GRAYED,
-				Checked  = MFS_CHECKED,
-				Uncheced = MFS_UNCHECKED,
-				Enabled  = MFS_ENABLED,
-				Disabled = MFS_DISABLED,
-				Hilite   = MFS_HILITE,
-				Unhilite = MFS_UNHILITE,
-				_bitwise_operators_allowed,
-			};
-			enum class EStockBmp :INT_PTR
-			{
-				Callback        = (INT_PTR)HBMMENU_CALLBACK       ,
-				System          = (INT_PTR)HBMMENU_SYSTEM         ,
-				MBar_Restore    = (INT_PTR)HBMMENU_MBAR_RESTORE   ,
-				MBar_Minimize   = (INT_PTR)HBMMENU_MBAR_MINIMIZE  ,
-				MBar_Close      = (INT_PTR)HBMMENU_MBAR_CLOSE     ,
-				MBar_Close_D    = (INT_PTR)HBMMENU_MBAR_CLOSE_D   ,
-				MBar_Minimize_D = (INT_PTR)HBMMENU_MBAR_MINIMIZE_D,
-				PopUp_Close     = (INT_PTR)HBMMENU_POPUP_CLOSE    ,
-				PopUp_Restore   = (INT_PTR)HBMMENU_POPUP_RESTORE  ,
-				PopUp_Maximize  = (INT_PTR)HBMMENU_POPUP_MAXIMIZE ,
-				PopUp_Minimize  = (INT_PTR)HBMMENU_POPUP_MINIMIZE ,
-			};
-
-			MenuItemInfo()
-				:MENUITEMINFOW()
-			{
-				cbSize = sizeof(MENUITEMINFOW);
-			}
-			MenuItemInfo(EMask mask, EFType type, wchar_t const* data_type = nullptr, size_t data_count = 0, UINT id = 0, EState state = EState::Default, HMENU submenu = nullptr, HBITMAP bmp = nullptr, HBITMAP checked = nullptr, HBITMAP unchecked = nullptr, void* data = nullptr)
-				:MenuItemInfo()
-			{
-				fMask         = UINT(mask);
-				fType         = UINT(type);        // used if MIIM_TYPE (4.0) or MIIM_FTYPE (>4.0)
-				fState        = UINT(state);       // used if MIIM_STATE
-				wID           = id;                // used if MIIM_ID
-				hSubMenu      = submenu;           // used if MIIM_SUBMENU
-				hbmpChecked   = checked;           // used if MIIM_CHECKMARKS
-				hbmpUnchecked = unchecked;         // used if MIIM_CHECKMARKS
-				dwItemData    = ULONG_PTR(data);   // used if MIIM_DATA
-				dwTypeData    = LPWSTR(data_type); // used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
-				cch           = UINT(data_count);  // used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
-				hbmpItem      = bmp;               // used if MIIM_BITMAP
-			}
-			MenuItemInfo(MENUITEMINFOW const& mii)
-				:MENUITEMINFOW(mii)
-			{}
-		};
-		struct MenuStrip
-		{
-			enum EType { Strip, Popup };
-			enum ESeparator { Separator };
-			using EMask  = MenuItemInfo::EMask;
-			using EFType = MenuItemInfo::EFType;
-			using EState = MenuItemInfo::EState;
-
-			HMENU m_menu;
-			bool m_owned;
-
-			// Note: ownership is lost with copying.
-			// Controls/Forms don't own menus. Menu ownership is a convenience for callers
-			// to automatically destroy menus, almost all other use should be with non-owned menus.
-			// Note: implicit conversion constructors are delibrate
-			virtual ~MenuStrip()
-			{
-				DestroyMenu();
-			}
-			MenuStrip()
-				:m_menu(nullptr)
-				,m_owned(false)
-			{}
-			explicit MenuStrip(EType type)
-				:MenuStrip(type == EType::Strip ? ::CreateMenu() : type == EType::Popup ? ::CreatePopupMenu() : nullptr, true)
-			{}
-			MenuStrip(HMENU menu, bool owned = false)
-				:m_menu(menu)
-				,m_owned(owned)
-			{}
-			MenuStrip(int menu_id, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
-				:MenuStrip(menu_id != ID_UNUSED ? ::LoadMenuW(hinst, MAKEINTRESOURCEW(menu_id)) : nullptr, false)
-			{}
-			MenuStrip(MenuStrip&& rhs)
-				:MenuStrip()
-			{
-				std::swap(m_menu, rhs.m_menu);
-				std::swap(m_owned, rhs.m_owned);
-			}
-			MenuStrip(MenuStrip const& rhs)
-				:MenuStrip(rhs.m_menu, false)
-			{}
-			MenuStrip& operator =(MenuStrip&& rhs)
-			{
-				if (this != &rhs)
-				{
-					std::swap(m_menu, rhs.m_menu);
-					std::swap(m_owned, rhs.m_owned);
-				}
-				return *this;
-			}
-			MenuStrip& operator =(MenuStrip const& rhs)
-			{
-				if (this != &rhs)
-				{
-					DestroyMenu();
-					m_menu = rhs.m_menu;
-					m_owned = false;
-				}
-				return *this;
-			}
-
-			// Destroy this menu (if owned)
-			void DestroyMenu()
-			{
-				if (m_owned && m_menu)
-					::DestroyMenu(m_menu);
-
-				m_menu = nullptr;
-				m_owned = false;
-			}
-
-			// Implicit conversion to HMENU
-			operator HMENU() const
-			{
-				return m_menu;
-			}
-
-			// Returns the number of menu items in this menu
-			size_t Count() const
-			{
-				assert(m_menu != nullptr);
-				return size_t(::GetMenuItemCount(m_menu));
-			}
-
-			// Insert a menu item at index position 'idx'. Use 'idx == -1' to mean append to the end
-			void Insert(MenuItemInfo const& info, int idx = -1)
-			{
-				assert(m_menu != nullptr);
-				auto i = (idx == -1) ? DWORD(Count()) : DWORD(idx);
-				Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
-			}
-			void Insert(wchar_t const* text, UINT id, MenuItemInfo::EState state = MenuItemInfo::EState::Default, int idx = -1)
-			{
-				Insert(MenuItemInfo(EMask::String, EFType::None, text, wcslen(text), id, state), idx);
-			}
-			void Insert(ESeparator, int idx = -1)
-			{
-				Insert(MenuItemInfo(EMask::FType, EFType::Separator), idx);
-			}
-			void Insert(MenuStrip& submenu, wchar_t const* text, int idx = -1)
-			{
-				Insert(MenuItemInfo(EMask::String|EMask::Submenu, EFType::None, text, wcslen(text), 0U, EState::Default, submenu), idx);
-				submenu.m_owned = false;
-			}
-		};
-
 		// TrackMouseEvent
 		struct TrackMouseEvent :TRACKMOUSEEVENT
 		{
@@ -1074,6 +893,255 @@ namespace pr
 			}
 		};
 
+		#pragma endregion
+
+		#pragma region Menu
+		struct MenuItem :MENUITEMINFOW
+		{
+			#pragma region Enums
+			enum ESeparator { Separator };
+			enum class EType :UINT
+			{
+				None         = 0,
+				Bitmap       = MFT_BITMAP,
+				MenuBarBreak = MFT_MENUBARBREAK,
+				MenuBreak    = MFT_MENUBREAK,
+				OwnerDraw    = MFT_OWNERDRAW,
+				RadioCheck   = MFT_RADIOCHECK,
+				RightJustify = MFT_RIGHTJUSTIFY,
+				RightOrder   = MFT_RIGHTORDER,
+				Separator    = MFT_SEPARATOR,
+				String       = MFT_STRING,
+				_bitwise_operators_allowed,
+			};
+			enum class EMask :UINT
+			{
+				None       = 0,
+				Bitmap     = MIIM_BITMAP,
+				CheckMarks = MIIM_CHECKMARKS,
+				Data       = MIIM_DATA,
+				FType      = MIIM_FTYPE,
+				Id         = MIIM_ID,
+				State      = MIIM_STATE,
+				String     = MIIM_STRING,
+				Submenu    = MIIM_SUBMENU,
+				Type       = MIIM_TYPE,
+				_bitwise_operators_allowed,
+			};
+			enum class EState :UINT
+			{
+				Default  = MFS_DEFAULT,
+				Grayed   = MFS_GRAYED,
+				Checked  = MFS_CHECKED,
+				Uncheced = MFS_UNCHECKED,
+				Enabled  = MFS_ENABLED,
+				Disabled = MFS_DISABLED,
+				Hilite   = MFS_HILITE,
+				Unhilite = MFS_UNHILITE,
+				_bitwise_operators_allowed,
+			};
+			enum class EStockBmp :INT_PTR
+			{
+				Callback        = (INT_PTR)HBMMENU_CALLBACK       ,
+				System          = (INT_PTR)HBMMENU_SYSTEM         ,
+				MBar_Restore    = (INT_PTR)HBMMENU_MBAR_RESTORE   ,
+				MBar_Minimize   = (INT_PTR)HBMMENU_MBAR_MINIMIZE  ,
+				MBar_Close      = (INT_PTR)HBMMENU_MBAR_CLOSE     ,
+				MBar_Close_D    = (INT_PTR)HBMMENU_MBAR_CLOSE_D   ,
+				MBar_Minimize_D = (INT_PTR)HBMMENU_MBAR_MINIMIZE_D,
+				PopUp_Close     = (INT_PTR)HBMMENU_POPUP_CLOSE    ,
+				PopUp_Restore   = (INT_PTR)HBMMENU_POPUP_RESTORE  ,
+				PopUp_Maximize  = (INT_PTR)HBMMENU_POPUP_MAXIMIZE ,
+				PopUp_Minimize  = (INT_PTR)HBMMENU_POPUP_MINIMIZE ,
+			};
+			#pragma endregion
+
+			MenuItem() :MENUITEMINFOW() { cbSize = sizeof(MENUITEMINFOW); }
+			MenuItem(ESeparator)
+				:MenuItem(EType::Separator, EMask::FType)
+			{}
+			MenuItem(wchar_t const* text, int id)
+				:MenuItem(text, id, MenuItem::EState::Default)
+			{}
+			MenuItem(wchar_t const* text_, int id_, MenuItem::EState state_)
+				:MenuItem()
+			{
+				text(text_).id(id_).state(state_);
+			}
+			MenuItem(EType type, EMask mask
+				,LPWSTR type_data = nullptr, size_t type_data_size = 0
+				,int id = 0 ,EState state = EState::Default
+				,HMENU submenu = nullptr
+				,HBITMAP bmp = nullptr ,HBITMAP checked = nullptr ,HBITMAP unchecked = nullptr
+				,void* data = nullptr)
+				:MenuItem()
+			{
+				fMask         = UINT(mask);           // Flags the fields that contain valid data
+				fType         = UINT(type);           // used if MIIM_TYPE (4.0) or MIIM_FTYPE (>4.0)
+				fState        = UINT(state);          // used if MIIM_STATE
+				dwTypeData    = LPWSTR(type_data);    // used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
+				cch           = UINT(type_data_size); // used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
+				wID           = id;                   // used if MIIM_ID
+				hSubMenu      = submenu;              // used if MIIM_SUBMENU
+				hbmpChecked   = checked;              // used if MIIM_CHECKMARKS
+				hbmpUnchecked = unchecked;            // used if MIIM_CHECKMARKS
+				dwItemData    = ULONG_PTR(data);      // used if MIIM_DATA
+				hbmpItem      = bmp;                  // used if MIIM_BITMAP
+			}
+			MenuItem(MENUITEMINFOW const& mii)
+				:MENUITEMINFOW(mii)
+			{}
+
+			MenuItem& type(EType ty)                       { fMask |= (UINT)EMask::FType; fType |= (UINT)ty; return *this; }
+			MenuItem& text(wchar_t const* t)               { fMask |= (UINT)EMask::String; dwTypeData = (LPWSTR)t; return type(EType::String); }
+			MenuItem& id(int id_)                          { fMask |= (UINT)EMask::Id; wID = (UINT)id_; return *this; }
+			MenuItem& state(EState s)                      { fMask |= (UINT)EMask::State; fState = (UINT)s; return *this; }
+			MenuItem& bitmap(HBITMAP bm)                   { fMask |= (UINT)EMask::Bitmap; hbmpItem = bm; return *this; }
+			MenuItem& chkmarks(HBITMAP chk, HBITMAP unchk) { fMask |= (UINT)EMask::CheckMarks; hbmpChecked = chk; hbmpUnchecked = unchk; return *this; }
+			MenuItem& item_data(void const* data)          { fMask |= (UINT)EMask::Data; dwItemData = (ULONG_PTR)data; return *this; }
+			MenuItem& submenu(HMENU m, wchar_t const* n)   { fMask |= (UINT)EMask::Submenu; hSubMenu = m; return text(n); }
+
+			// Out parameters are used by GetMenuItemInfo()
+			MenuItem& text_out(wchar_t* buf, size_t sz) { fMask |= (UINT)EMask::Type;  dwTypeData = buf; cch = (UINT)sz; return *this; }
+			MenuItem& item_data_out(void* data)         { fMask |= (UINT)EMask::Data;  dwItemData = (ULONG_PTR)data; return *this; }
+		};
+		struct Menu
+		{
+			enum EKind { Strip, Popup };
+			using EType = MenuItem::EType;
+			using EMask = MenuItem::EMask;
+			using EState = MenuItem::EState;
+			using ItemList = std::initializer_list<MenuItem>;
+
+			HMENU m_menu;
+			bool m_owned;
+
+			// Note: ownership is lost with copying.
+			// Controls/Forms don't own menus. Menu ownership is a convenience for callers
+			// to automatically destroy menus, almost all other use should be with non-owned menus.
+			// Note: implicit conversion constructors are delibrate
+			~Menu()
+			{
+				DestroyMenu();
+			}
+			Menu()
+				:m_menu(nullptr)
+				,m_owned(false)
+			{}
+			Menu(HMENU menu, bool owned = false)
+				:m_menu(menu)
+				,m_owned(owned)
+			{}
+			Menu(int menu_id, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
+				:Menu(menu_id != ID_UNUSED ? ::LoadMenuW(hinst, MAKEINTRESOURCEW(menu_id)) : nullptr, false)
+			{}
+			Menu(Menu&& rhs)
+				:Menu()
+			{
+				std::swap(m_menu, rhs.m_menu);
+				std::swap(m_owned, rhs.m_owned);
+			}
+			Menu(Menu const& rhs)
+				:Menu(rhs.m_menu, false)
+			{}
+			Menu& operator =(Menu&& rhs)
+			{
+				if (this != &rhs)
+				{
+					std::swap(m_menu, rhs.m_menu);
+					std::swap(m_owned, rhs.m_owned);
+				}
+				return *this;
+			}
+			Menu& operator =(Menu const& rhs)
+			{
+				if (this != &rhs)
+				{
+					DestroyMenu();
+					m_menu = rhs.m_menu;
+					m_owned = false;
+				}
+				return *this;
+			}
+
+			// Construct a menu from a type and a comma separated list of items
+			// Allows syntax: Menu(Menu::Strip, {{L"&File",ID_UNUSED}, {L"&Help", ID_HELP}});
+			Menu(EKind type, ItemList const& items, bool owned = false)
+				:Menu(type == Strip ? ::CreateMenu() : type == Popup ? ::CreatePopupMenu() : nullptr, owned)
+			{
+				for (auto& item : items)
+					Insert(item);
+			}
+
+			// Destroy this menu (if owned)
+			void DestroyMenu()
+			{
+				if (m_owned && m_menu)
+					::DestroyMenu(m_menu);
+
+				m_menu = nullptr;
+				m_owned = false;
+			}
+
+			// Implicit conversion to HMENU
+			operator HMENU() const
+			{
+				return m_menu;
+			}
+
+			// Returns the number of menu items in this menu
+			size_t Count() const
+			{
+				assert(m_menu != nullptr);
+				return size_t(::GetMenuItemCount(m_menu));
+			}
+
+			// Returns the index of a child menu item with the given text
+			int IndexByName(wchar_t const* text) const
+			{
+				// Look for an existing menu called 'text'
+				int index = 0;
+				wchar_t item[256] = {};
+				for (int i = 0, iend = ::GetMenuItemCount(m_menu); i != iend; ++i, ++index)
+				{
+					// Get the text name of the menu item
+					auto len = ::GetMenuStringW(m_menu, UINT(i), item, _countof(item), MF_BYPOSITION);
+					if (std::char_traits<wchar_t>::compare(text, item, len) != 0) continue;
+					break;
+				}
+				return index;
+			}
+
+			// Insert a menu item at index position 'idx'. Use 'idx == -1' to mean append to the end
+			void Insert(MenuItem const& info, int idx = -1)
+			{
+				assert(m_menu != nullptr);
+				auto i = (idx == -1) ? DWORD(Count()) : DWORD(idx);
+				Throw(::InsertMenuW(m_menu, i, MF_BYPOSITION, info.wID, info.dwTypeData), "InsertMenu failed");
+				//Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
+			}
+			//void Insert(MenuItem::ESeparator, int idx = -1)
+			//{
+			//	Insert(MenuItem(EType::Separator, EMask::FType), idx);
+			//}
+			//void Insert(wchar_t const* text, int id, MenuItem::EState state = MenuItem::EState::Default, int idx = -1)
+			//{
+			//	Insert(MenuItem(text, id, state), idx);
+			//}
+			//void Insert(Menu& submenu_, wchar_t const* text, int id = ID_UNUSED, int idx = -1)
+			//{
+			//	Insert(MenuItem().submenu(submenu_, text).id(id), idx);
+			//	submenu_.m_owned = false;
+			//}
+
+			// Set a popup menu by name. If it exists already, then it is replaced, otherwise insert
+			void Set(wchar_t const* text, Menu& submenu)
+			{
+				auto index = IndexByName(text);
+				auto info = MenuItem().submenu(submenu, text);
+				Throw(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
+			}
+		};
 		#pragma endregion
 
 		#pragma region EventHandler
@@ -1360,17 +1428,145 @@ namespace pr
 		};
 		#pragma endregion
 
+		#pragma region Auto size position
+		// Use: e.g. Left|LeftOf|id,
+		// Read: left edge of this control, aligned to the left of control with id 'id'
+		namespace auto_size_position
+		{
+			// The mask for auto positioning control bits
+			static UINT const AutoPosMask = 0xFF000000;
+
+			// The mask for auto sizing control bits
+			static UINT const AutoSizeMask = 0xF0000000;
+
+			// Used as a size value, means expand w,h to match parent
+			// Lower 28 bits are the l,r or t,b margins to fill with.
+			// Note: CW_USEDEFAULT == 0x80000000
+			static UINT const Fill = 0x90000000;
+			//static UINT const Auto = 0xA0000000; // too hard...
+
+			// The mask for the control id
+			static UINT const IdMask = 0x00FFFFFF;
+			static_assert((ID_UNUSED & IdMask) == ID_UNUSED, "");
+
+			// The X,Y coord of the control being positioned
+			// Note: CW_USEDEFAULT == 0x80000000
+			static UINT const Left = 0x81000000;
+			static UINT const Right = 0x82000000;
+			static UINT const Centre = 0x83000000;
+
+			// The X coord of the reference control to align to
+			static UINT const LeftOf = 0x84000000;
+			static UINT const RightOf = 0x88000000;
+			static UINT const CentreOf = 0x8C000000;
+			static UINT const CentreP = Centre | CentreOf;
+
+			// Fill with margins
+			inline int fill(UINT left_or_top, UINT right_or_bottom)
+			{
+				assert(left_or_top < (1 << 14) && right_or_bottom < (1 << 14));
+				return Fill | (left_or_top << 14) | (right_or_bottom << 0);
+			}
+			inline int fill(UINT margin)
+			{
+				return fill(margin, margin);
+			}
+
+			// Handle auto position/size
+			// Adjusts x,y,w,h to be positioned and sized related to 'rel'
+			// 'rel' is a proxy that provides the dimensions of the parent and sibling controls
+			template <typename RelTo> void CalcPosSize(int& x, int& y, int& w, int& h, RelTo const& relto)
+			{
+				// Set the width/height and x/y position
+				auto auto_size = [=](int& X, int& W, int i)
+				{
+					auto margin = Size();
+					if ((W & AutoSizeMask) == Fill)
+					{
+						// Get the parent control bounds (in parent space)
+						auto parent_rect = relto(0);
+
+						// Return the size of the margins to use when filling
+						margin = (W & AutoSizeMask) == Fill ? Size((W >> 14) & 0x3fff, (W >> 0) & 0x3fff) : Size();
+						X = margin.cx;
+						W = parent_rect.size(i) - margin.cx - margin.cy;
+					}
+					if (X & AutoPosMask)
+					{
+						// Get the parent control bounds (in parent space)
+						auto parent_rect = relto(0);
+
+						// Get the ref point on the parent. Note, order is important here
+						// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
+						// Otherwise, the top 8 bits are the auto position bits and the lower 24
+						// are the id of the control to position relative to.
+						int ref = 0;
+						if ((X & 0xF0000000) != 0x80000000)  { ref = parent_rect.bottomright()[i]; }
+						else if ((X & CentreOf) == CentreOf) { ref = relto(X & IdMask).centre()[i]; }
+						else if ((X & LeftOf  ) == LeftOf  ) { ref = relto(X & IdMask).topleft()[i]; }
+						else if ((X & RightOf ) == RightOf ) { ref = relto(X & IdMask).bottomright()[i]; }
+
+						// Position the control relative to 'ref'
+						if ((X & 0xF0000000) != 0x80000000) { X = ref - W + X; }
+						else if ((X & Centre) == Centre) { X = ref - W / 2 + margin.cx; }
+						else if ((X & Left  ) == Left  ) { X = ref - 0 + margin.cx; }
+						else if ((X & Right ) == Right ) { X = ref - W + margin.cx; }
+					}
+				};
+
+				// Auto size in each dimension
+				auto_size(x, w, 0);
+				auto_size(y, h, 1);
+			}
+		}
+		#pragma endregion
+
 		#pragma region Dialog Template
 		// A structure for defining a dialog template
 		struct DlgTemplate
 		{
 			enum { DefW = 640, DefH = 480 };
-			std::vector<byte> m_mem;
 
-			DlgTemplate() {}
+			#pragma region Auto Size Position
+			static UINT const AutoPosMask = auto_size_position::AutoPosMask;
+			static UINT const AutoSizeMask = auto_size_position::AutoSizeMask;
+			static UINT const Fill = auto_size_position::Fill;
+
+			// The point on this control to position
+			static UINT const Left = auto_size_position::Left;
+			static UINT const Right = auto_size_position::Right;
+			static UINT const Centre = auto_size_position::Centre;
+			static UINT const Top = Left;
+			static UINT const Bottom = Right;
+
+			// The point of the referenced control to align to
+			static UINT const LeftOf = auto_size_position::LeftOf;
+			static UINT const RightOf = auto_size_position::RightOf;
+			static UINT const CentreOf = auto_size_position::CentreOf;
+			static UINT const TopOf = LeftOf;
+			static UINT const BottomOf = RightOf;
+
+			static UINT const CentreP = Centre | CentreOf;
+
+			// Fill with margins
+			static int fill(UINT left_or_top, UINT right_or_bottom) { return auto_size_position::fill(left_or_top, right_or_bottom); }
+			static int fill(UINT margin) { return fill(margin, margin); }
+			#pragma endregion
+
+			std::vector<byte> m_mem;
+			std::vector<size_t> m_item_base;
+			bool m_has_menu; // Flag to indicate the dialog will have a menu. Used for auto size/position
+
+			DlgTemplate()
+				:m_mem()
+				,m_item_base()
+			{}
 
 			template <typename TParams = pr::gui::Params>
 			DlgTemplate(TParams const& p)
+				:m_mem()
+				,m_item_base()
+				,m_has_menu(p.m_menu != nullptr)  // m_menu just has to be non-null
 			{
 				// In a standard template for a dialog box, the DLGTEMPLATE structure is always immediately followed
 				// by three variable-length arrays that specify the menu, class, and title for the dialog box.
@@ -1387,7 +1583,13 @@ namespace pr
 				auto style_ex = p.m_style_ex;
 
 				// Auto size to the parent
-				AutoSizePosition(p.m_parent, x, y, w, h);
+				auto relto = [&](int id) -> Rect
+					{
+						if (p.m_parent == nullptr) return MinMaxInfo().Bounds();
+						if (id != 0) throw std::exception("DlgTemplate can only be positioned related to the screen or owner window");
+						return p.m_parent->ClientRect();
+					};
+				auto_size_position::CalcPosSize(x, y, w, h, relto);
 
 				// If 'style' includes DS_SETFONT then windows expects the header to be followed by
 				// font data consisting of a 16-bit font size, and unicode font name string
@@ -1405,7 +1607,7 @@ namespace pr
 				// If the first element is 0xFFFF, the array has one additional element that specifies the ordinal value of a menu
 				// resource in an executable file. If the first element has any other value, the system treats the array as a
 				// null-terminated Unicode string that specifies the name of a menu resource in an executable file.
-				AddWord(p.m_menu_id != ID_UNUSED ? WORD(MAKEINTRESOURCEW(p.m_menu_id)) : 0);
+				AddWord(p.m_menu.m_id != ID_UNUSED ? WORD(MAKEINTRESOURCEW(p.m_menu.m_id)) : 0);
 
 				// Following the menu array is a class array that identifies the window class of the control. If the first element
 				// of the array is 0x0000, the system uses the predefined dialog box class for the dialog box and the array has no
@@ -1454,9 +1656,16 @@ namespace pr
 				return &hdr();
 			}
 
+			// Returns the dialog item by index
+			DLGITEMTEMPLATE const& item(size_t idx) const
+			{
+				if (idx >= m_item_base.size()) throw std::exception("Dialog template item index out of range");
+				return *reinterpret_cast<DLGITEMTEMPLATE const*>(&m_mem[m_item_base[idx]]);
+			}
+
 			// Add a control to the template
 			template <typename TParams = pr::gui::Params>
-			DlgTemplate Add(TParams const& p, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
+			DlgTemplate& Add(TParams const& p, WORD creation_data_size_in_bytes = 0, void* creation_data = nullptr)
 			{
 				// In a standard template for a dialog box, the DLGITEMTEMPLATE structure is always immediately followed by three
 				// variable-length arrays specifying the class, title, and creation data for the control. Each array consists of
@@ -1474,12 +1683,32 @@ namespace pr
 				// Add the dialog item to the header count
 				hdr().cdit++;
 
-				// Add a description of the item
+				// Auto size/position
 				auto x = p.m_x;
 				auto y = p.m_y;
 				auto w = p.m_w;
 				auto h = p.m_h;
-				AutoSizePosition(p.m_parent, x, y, w, h);
+				auto relto = [this](int id) -> Rect
+				{
+					if (id == 0)
+					{
+						auto& h = hdr();
+						auto adj = Rect();
+						Throw(::AdjustWindowRectEx(&adj, h.style, BOOL(m_has_menu), h.dwExtendedStyle), "AdjustWindowRectEx failed.");
+						return Rect(h.x - adj.left, h.y - adj.top, h.x + h.cx - adj.right, h.y + h.cy - adj.bottom);
+					}
+					for (int i = 0; i != hdr().cdit; ++i)
+					{
+						auto& itm = this->item(size_t(i));
+						if (itm.id != id) continue;
+						return Rect(itm.x, itm.y, itm.x + itm.cx, itm.y + itm.cy);
+					}
+					throw std::exception("Sibling control not found");
+				};
+				auto_size_position::CalcPosSize(x, y, w, h, relto);
+
+				// Add a description of the item
+				m_item_base.push_back(m_mem.size());
 				auto item = DLGITEMTEMPLATE{p.m_style, p.m_style_ex, cast<short>(x), cast<short>(y), cast<short>(w), cast<short>(h), cast<WORD>(p.m_id)};
 				append(m_mem, &item, sizeof(item));
 
@@ -1572,10 +1801,10 @@ namespace pr
 			EDock              m_dock;
 			DWORD              m_style;
 			DWORD              m_style_ex;
-			HMENU              m_menu;
-			int                m_menu_id;
-			HACCEL             m_accel;
-			int                m_accel_id;
+			IdOrHandle<HMENU>  m_menu;
+			IdOrHandle<HACCEL> m_accel;
+			IdOrHandle<HICON>  m_icon_bg;
+			IdOrHandle<HICON>  m_icon_sm;
 			COLORREF           m_color_fore;
 			COLORREF           m_color_back;
 			bool               m_top_level;      // True for non-mdi forms, false for WS_CHILD controls
@@ -1595,7 +1824,7 @@ namespace pr
 			Params(ECreate create, int w, int h, DWORD style, DWORD style_ex, bool top_level, bool dlg_behaviour)
 				:m_name         ()
 				,m_create       (create)
-				,m_wcn           ()
+				,m_wcn          ()
 				,m_wci          ()
 				,m_text         ()
 				,m_x            (0)
@@ -1609,9 +1838,9 @@ namespace pr
 				,m_style        (style)
 				,m_style_ex     (style_ex)
 				,m_menu         ()
-				,m_menu_id      (ID_UNUSED)
 				,m_accel        ()
-				,m_accel_id     (ID_UNUSED)
+				,m_icon_bg      ()
+				,m_icon_sm      ()
 				,m_color_fore   (CLR_INVALID)
 				,m_color_back   (CLR_INVALID)
 				,m_top_level    (top_level)
@@ -1629,40 +1858,42 @@ namespace pr
 				,m_padding      ()
 			{}
 
-			Params& name         (char const* n)              { m_name          = n;                return *this; }
-			Params& create       (ECreate c)                  { m_create        = c;                return *this; }
-			Params& wndclass     (wchar_t const* wcn)         { m_wcn           = wcn;              return *this; }
-			Params& wndclass     (WndClassEx const& wci)      { m_wci           = &wci;             return *this; }
-			Params& text         (wchar_t const* t)           { m_text          = t;                return *this; }
-			Params& title        (wchar_t const* t)           { m_text          = t;                return *this; }
-			Params& xy           (int x, int y)               { m_x             = x; m_y = y;       return *this; }
-			Params& wh           (int w, int h)               { m_w             = w; m_h = h;       return *this; }
-			Params& id           (int id_)                    { m_id            = id_;              return *this; }
-			Params& parent       (WndRef p)                   { m_parent        = p;                return *this; }
-			Params& anchor       (EAnchor a)                  { m_anchor        = a;                return *this; }
-			Params& dock         (EDock d)                    { m_dock          = d;                return *this; }
-			Params& style        (DWORD s)                    { m_style         = s;                return *this; }
-			Params& style_ex     (DWORD s)                    { m_style_ex      = s;                return *this; }
-			Params& menu         (HMENU m)                    { m_menu          = m;                return *this; }
-			Params& menu_id      (int m)                      { m_menu_id       = m;                return *this; }
-			Params& accel        (HACCEL a)                   { m_accel         = a;                return *this; }
-			Params& accel_id     (int a)                      { m_accel_id      = a;                return *this; }
-			Params& fr_col       (COLORREF c)                 { m_color_fore    = c;                return *this; }
-			Params& bk_col       (COLORREF c)                 { m_color_back    = c;                return *this; }
-			Params& top_level    (bool tl)                    { m_top_level     = tl;               return *this; }
-			Params& mdi_child    (bool mdi)                   { m_top_level     = !mdi;             return *this; }
-			Params& main_wnd     (bool mw)                    { m_main_wnd      = mw;               return *this; }
-			Params& dlg          (bool d)                     { m_dlg_behaviour = d;                return *this; }
-			Params& hide_on_close(bool h)                     { m_hide_on_close = h;                return *this; }
-			Params& pin_window   (bool p)                     { m_pin_window    = p;                return *this; }
-			Params& hinst        (HINSTANCE i)                { m_hinst         = i;                return *this; }
-			Params& init_param   (void* ip)                   { m_init_param    = ip;               return *this; }
-			Params& msg_loop     (MessageLoop* ml)            { m_msg_loop      = ml;               return *this; }
-			Params& templ        (DlgTemplate const& t)       { m_templ = t.valid() ? &t : nullptr; return *this; }
-			Params& font_name    (wchar_t const* fn)          { m_font_name     = fn;               return *this; }
-			Params& font_size    (WORD fs)                    { m_font_size     = fs;               return *this; }
-			Params& margin       (int l, int t, int r, int b) { m_margin        = Rect(l,t,r,b);    return *this; }
-			Params& padding      (int l, int t, int r, int b) { m_padding       = Rect(l,t,r,b);    return *this; }
+			Params& name         (char const* n)               { m_name          = n;                   return *this; }
+			Params& create       (ECreate c)                   { m_create        = c;                   return *this; }
+			Params& wndclass     (wchar_t const* wcn)          { m_wcn           = wcn;                 return *this; }
+			Params& wndclass     (WndClassEx const& wci)       { m_wci           = &wci;                return *this; }
+			Params& text         (wchar_t const* t)            { m_text          = t;                   return *this; }
+			Params& title        (wchar_t const* t)            { m_text          = t;                   return *this; }
+			Params& xy           (int x, int y)                { m_x             = x; m_y = y;          return *this; }
+			Params& wh           (int w, int h)                { m_w             = w; m_h = h;          return *this; }
+			Params& id           (int id_)                     { m_id            = id_;                 return *this; }
+			Params& parent       (WndRef p)                    { m_parent        = p;                   return *this; }
+			Params& anchor       (EAnchor a)                   { m_anchor        = a;                   return *this; }
+			Params& dock         (EDock d)                     { m_dock          = d;                   return *this; }
+			Params& style        (DWORD s)                     { m_style         = s;                   return *this; }
+			Params& style_ex     (DWORD s)                     { m_style_ex      = s;                   return *this; }
+			Params& menu         (Menu::ItemList const& items) { m_menu.m_handle = Menu(Menu::Strip, items); return *this; }
+			Params& menu         (IdOrHandle<HMENU> m)         { m_menu          = m;                   return *this; }
+			Params& accel        (IdOrHandle<HACCEL> a)        { m_accel         = a;                   return *this; }
+			Params& icon         (IdOrHandle<HICON> i)         { m_icon_sm = m_icon_bg = i;             return *this; }
+			Params& icon_bg      (IdOrHandle<HICON> i)         { m_icon_bg       = i;                   return *this; }
+			Params& icon_sm      (IdOrHandle<HICON> i)         { m_icon_sm       = i;                   return *this; }
+			Params& fr_col       (COLORREF c)                  { m_color_fore    = c;                   return *this; }
+			Params& bk_col       (COLORREF c)                  { m_color_back    = c;                   return *this; }
+			Params& top_level    (bool tl)                     { m_top_level     = tl;                  return *this; }
+			Params& mdi_child    (bool mdi)                    { m_top_level     = !mdi;                return *this; }
+			Params& main_wnd     (bool mw)                     { m_main_wnd      = mw;                  return *this; }
+			Params& dlg          (bool d)                      { m_dlg_behaviour = d;                   return *this; }
+			Params& hide_on_close(bool h)                      { m_hide_on_close = h;                   return *this; }
+			Params& pin_window   (bool p)                      { m_pin_window    = p;                   return *this; }
+			Params& hinst        (HINSTANCE i)                 { m_hinst         = i;                   return *this; }
+			Params& init_param   (void* ip)                    { m_init_param    = ip;                  return *this; }
+			Params& msg_loop     (MessageLoop* ml)             { m_msg_loop      = ml;                  return *this; }
+			Params& templ        (DlgTemplate const& t)        { m_templ = t.valid() ? &t : nullptr;    return *this; }
+			Params& font_name    (wchar_t const* fn)           { m_font_name     = fn;                  return *this; }
+			Params& font_size    (WORD fs)                     { m_font_size     = fs;                  return *this; }
+			Params& margin       (int l, int t, int r, int b)  { m_margin        = Rect(l,t,r,b);       return *this; }
+			Params& padding      (int l, int t, int r, int b)  { m_padding       = Rect(l,t,r,b);       return *this; }
 
 			// True if the options say "create"
 			bool create() const
@@ -1674,16 +1905,32 @@ namespace pr
 			HMENU menu() const
 			{
 				return
-					m_menu    != nullptr   ? m_menu :
-					m_menu_id != ID_UNUSED ? ::LoadMenuW(m_hinst, MAKEINTRESOURCEW(m_menu_id)) : nullptr;
+					m_menu.m_handle != nullptr ? m_menu.m_handle :
+					m_menu.m_id != ID_UNUSED ? ::LoadMenuW(m_hinst, MAKEINTRESOURCEW(m_menu.m_id)) : nullptr;
 			}
 
 			// Get the accelerators from 'm_accel' or 'm_accel_id', whichever is valid
 			HACCEL accel() const
 			{
 				return
-					m_accel != nullptr ? m_accel :
-					m_accel_id != ID_UNUSED ? ::LoadAcceleratorsW(m_hinst, MAKEINTRESOURCEW(m_accel_id)) : nullptr;
+					m_accel.m_handle != nullptr ? m_accel.m_handle :
+					m_accel.m_id != ID_UNUSED ? ::LoadAcceleratorsW(m_hinst, MAKEINTRESOURCEW(m_accel.m_id)) : nullptr;
+			}
+
+			// Get the icon
+			HICON icon_bg() const
+			{
+				auto sz = ::GetSystemMetrics(SM_CXICON);
+				return
+					m_icon_bg.m_handle != nullptr ? m_icon_bg.m_handle :
+					m_icon_bg.m_id != ID_UNUSED ? (HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(m_icon_bg.m_id), IMAGE_ICON, sz, sz, LR_DEFAULTCOLOR) : nullptr;
+			}
+			HICON icon_sm() const
+			{
+				auto sz = ::GetSystemMetrics(SM_CXSMICON);
+				return
+					m_icon_sm.m_handle != nullptr ? m_icon_sm.m_handle :
+					m_icon_sm.m_id != ID_UNUSED ? (HICON)::LoadImageW(m_hinst, MAKEINTRESOURCEW(m_icon_sm.m_id), IMAGE_ICON, sz, sz, LR_DEFAULTCOLOR) : nullptr;
 			}
 
 			// Return the fore colour brush
@@ -1760,56 +2007,31 @@ namespace pr
 		// Base class for all windows/controls
 		struct Control
 		{
-			#pragma region Auto Size
-			// The mask for auto sizing control bits
-			static UINT const AutoSizeMask = 0xF0000000;
+			#pragma region Auto Size Position
+			static UINT const AutoPosMask  = auto_size_position::AutoPosMask;
+			static UINT const AutoSizeMask = auto_size_position::AutoSizeMask;
+			static UINT const Fill         = auto_size_position::Fill;
 
-			// Used as a size (w,h) value, means expand w,h to match parent
-			// Lower 28 bits are the l,r or t,b margins to fill with.
-			// Note: CW_USEDEFAULT == 0x80000000
-			static UINT const Fill = 0x90000000;
-			//static UINT const Auto = 0xA0000000; // too hard...
+			// The point on this control to position
+			static UINT const Left   = auto_size_position::Left;
+			static UINT const Right  = auto_size_position::Right;
+			static UINT const Centre = auto_size_position::Centre;
+			static UINT const Top    = Left;
+			static UINT const Bottom = Right;
+
+			// The point of the referenced control to align to
+			static UINT const LeftOf   = auto_size_position::LeftOf;
+			static UINT const RightOf  = auto_size_position::RightOf;
+			static UINT const CentreOf = auto_size_position::CentreOf;
+			static UINT const TopOf    = LeftOf;
+			static UINT const BottomOf = RightOf;
+
+			static UINT const CentreP = Centre | CentreOf;
+			static UINT const IdMask = auto_size_position::IdMask;
 
 			// Fill with margins
-			static int fill(UINT left_or_top, UINT right_or_bottom)
-			{
-				assert(left_or_top < (1 << 14) && right_or_bottom < (1 << 14));
-				return Fill | (left_or_top << 14) | (right_or_bottom << 0);
-			}
-			static int fill(UINT margin)
-			{
-				return fill(margin, margin);
-			}
-			#pragma endregion
-
-			#pragma region Auto Position
-			// Use: e.g. Left|LeftOf|id,
-			// Read: left edge of this control, aligned to the left of control with id 'id'
-
-			// The mask for auto positioning control bits
-			static UINT const AutoPosMask = 0xFF000000;
-
-			// The mask for the control id
-			static UINT const IdMask = 0x00FFFFFF;
-			static_assert((ID_UNUSED & IdMask) == ID_UNUSED, "");
-
-			// The X,Y coord of the control being positioned
-			// Note: CW_USEDEFAULT == 0x80000000
-			static UINT const Left   = 0x81000000;
-			static UINT const Right  = 0x82000000;
-			static UINT const Centre = 0x83000000;
-			static UINT const Top    = Left      ;
-			static UINT const Bottom = Right     ;
-
-			// The X coord of the reference control to align to
-			static UINT const LeftOf   = 0x84000000;
-			static UINT const RightOf  = 0x88000000;
-			static UINT const CentreOf = 0x8C000000;
-			static UINT const TopOf    = LeftOf    ;
-			static UINT const BottomOf = RightOf   ;
-
-			// Use these for 
-			static UINT const CentreP = Centre|CentreOf;
+			static int fill(UINT left_or_top, UINT right_or_bottom) { return auto_size_position::fill(left_or_top, right_or_bottom); }
+			static int fill(UINT margin)                            { return fill(margin, margin); }
 			#pragma endregion
 
 		protected:
@@ -1833,7 +2055,6 @@ namespace pr
 			LONG                m_down_at[4];   // Button down timestamp
 			bool                m_top_level;    // True if this control is a top level control (typically a form)
 			bool                m_dbl_buffer;   // True if the control is double buffered
-			bool                m_allow_drop;   // Allow drag/drop operations on the control
 			bool                m_handle_only;  // True if this object does not own 'm_hwnd'
 			WndClassEx          m_wci;          // The window class info for this control
 			ATL::CStdCallThunk  m_thunk;        // WndProc thunk, turns a __stdcall into a __thiscall
@@ -2281,21 +2502,18 @@ namespace pr
 				case WM_DROPFILES:
 					#pragma region
 					{
-						if (m_allow_drop)
-						{
-							auto drop_info = HDROP(wparam);
-							DropFilesEventArgs drop(drop_info);
+						auto drop_info = HDROP(wparam);
+						DropFilesEventArgs drop(drop_info);
 							
-							int i = 0;
-							drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
-							for (auto& path : drop.m_filepaths)
-							{
-								path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
-								Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
-								++i;
-							}
-							OnDropFiles(drop);
+						int i = 0;
+						drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
+						for (auto& path : drop.m_filepaths)
+						{
+							path.resize(::DragQueryFileW(drop_info, i, 0, 0) + 1, 0);
+							Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
+							++i;
 						}
+						OnDropFiles(drop);
 						break;
 					}
 					#pragma endregion
@@ -2405,70 +2623,22 @@ namespace pr
 			}
 
 			// Handle auto position/size
-			static void AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h)
+			void AutoSizePosition(int& x, int& y, int& w, int& h, Control* parent)
 			{
-				// Get the parent control bounds (in parent space)
-				auto parent_rect = parent
-					? parent->ClientRect()
-					: MinMaxInfo().Bounds();
-
-				// Return the sibling control with id 'id'
-				auto ctrl = [=](int id) -> Control*
+				auto relto = [&](int id) -> Rect
 					{
-						if (id == 0) return nullptr;
-						assert(parent != nullptr);
-						for (auto c : parent->m_child) if (c->m_id == id) return c;
-						return nullptr;
+						assert((id == 0 || parent != nullptr) && "Sibling control id given without a parent");
+						if (parent == nullptr) return MinMaxInfo().Bounds();
+						if (id == 0)           return parent->ClientRect();
+						for (auto c : parent->m_child)
+						{
+							if (c->m_id != id) continue;
+							return c->RectRelativeTo(*parent);
+						}
+						throw std::exception("Sibling control not found");
 					};
-
-				// Return the rect for the control with id 'id'
-				auto rect = [&](int id) -> Rect
-					{
-						assert((id == 0 || ctrl(id) != nullptr) && "Sibling control not found");
-						return id == 0 ? parent_rect : ctrl(id)->RectRelativeTo(*parent);
-					};
-
-				// Return the size of the margins to use when filling
-				auto margin_size = [](UINT fill) -> Size
-					{
-						return (fill & AutoSizeMask) == Fill
-							? Size((fill >> 14) & 0x3fff, (fill >> 0) & 0x3fff)
-							: Size();
-					};
-
-				// Set the width/height and x/y position
-				auto auto_size = [=](int& X, int& W, int i)
-				{
-					auto margin = Size();
-					if ((W & AutoSizeMask) == Fill)
-					{
-						margin = margin_size(W);
-						X = margin.cx;
-						W = parent_rect.size(i) - margin.cx - margin.cy;
-					}
-					if (X & AutoPosMask)
-					{
-						// Get the ref point on the parent. Note, order is important here
-						// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
-						// Otherwise, the top 8 bits are the auto position bits and the lower 24
-						// are the id of the control to position relative to.
-						int ref = 0;
-						if      ((X & 0xF0000000) != 0x80000000) { ref = parent_rect.bottomright()[i]; }
-						else if ((X & CentreOf  ) == CentreOf  ) { ref = rect(X & IdMask).centre()[i]; }
-						else if ((X & LeftOf    ) == LeftOf    ) { ref = rect(X & IdMask).topleft()[i]; }
-						else if ((X & RightOf   ) == RightOf   ) { ref = rect(X & IdMask).bottomright()[i]; }
-						
-						// Position the control relative to 'ref'
-						if      ((X & 0xF0000000) != 0x80000000) { X = ref - W + X; }
-						else if ((X & Centre    ) == Centre    ) { X = ref - W/2 + margin.cx; }
-						else if ((X & Left      ) == Left      ) { X = ref - 0   + margin.cx; }
-						else if ((X & Right     ) == Right     ) { X = ref - W   + margin.cx; }
-					}
-				};
-				auto_size(x, w, 0);
-				auto_size(y, h, 1);
+				auto_size_position::CalcPosSize(x, y, w, h, relto);
 			}
-			friend void pr::gui::AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h);
 
 		private:
 
@@ -2519,7 +2689,6 @@ namespace pr
 				,m_down_at()
 				,m_top_level(p.m_top_level)
 				,m_dbl_buffer(false)
-				,m_allow_drop(false)
 				,m_handle_only(false)
 				,m_wci(p.wci())
 				,m_thunk()
@@ -2608,7 +2777,7 @@ namespace pr
 				auto h = p.m_h;
 
 				// Handle auto position/size
-				AutoSizePosition(p.m_parent.m_ctrl, x, y, w, h);
+				AutoSizePosition(x, y, w, h, p.m_parent);
 
 				// If this control is a popup or overlapped window, then we need x,y,w,h to be in screen coords
 				if ((p.m_style & WS_CHILD) == 0 && p.m_parent.m_ctrl != nullptr)
@@ -2621,7 +2790,7 @@ namespace pr
 				// Determine the value to pass at the HMENU parameter in CreateWindowEx
 				// For popup and overlapped windows this should be a valid menu handle or null
 				// Otherwise, it should be the id of the control being created
-				auto menu = (p.m_style & WS_CHILD) ? HMENU() + p.m_id : p.menu();
+				auto menu = (p.m_style & WS_CHILD) ? (HMENU)p.m_id : p.menu();
 
 				// CreateWindowEx failure reasons:
 				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
@@ -2640,6 +2809,11 @@ namespace pr
 				RecordPosOffset();
 				Font(HFONT(GetStockObject(DEFAULT_GUI_FONT)));
 
+				// Set the window icon
+				HICON icon;
+				if ((icon = p.icon_bg()) != nullptr) Icon(icon, true);
+				if ((icon = p.icon_sm()) != nullptr) Icon(icon, false);
+				
 				if (p.m_style & WS_VISIBLE)
 				{
 					ShowWindow(m_hwnd, SW_SHOW);
@@ -2838,12 +3012,11 @@ namespace pr
 			// Get/Set Drag/Drop allowed
 			bool AllowDrop() const
 			{
-				return m_allow_drop;
+				return (StyleEx() & WS_EX_ACCEPTFILES) != 0;
 			}
 			void AllowDrop(bool allow)
 			{
-				m_allow_drop = allow;
-				::DragAcceptFiles(*this, m_allow_drop);
+				::DragAcceptFiles(*this, allow);
 			}
 
 			// Set focus to this control, returning the handle of the previous window with focus
@@ -3109,12 +3282,12 @@ namespace pr
 
 			// Get/Set the menu. Set returns the previous menu.
 			// If replacing a menu, remember to call DestroyMenu on the previous one
-			MenuStrip Menu() const
+			Menu MenuStrip() const
 			{
 				assert(::IsWindow(m_hwnd));
-				return MenuStrip(::GetMenu(m_hwnd), false);
+				return Menu(::GetMenu(m_hwnd), false);
 			}
-			MenuStrip Menu(MenuStrip menu)
+			Menu MenuStrip(Menu menu)
 			{
 				assert(::IsWindow(m_hwnd));
 				auto prev = Menu();
@@ -3123,15 +3296,15 @@ namespace pr
 			}
 
 			// Get/Set the control's icon
-			HICON Icon(bool big_icon = true) const
+			HICON Icon(bool big_icon) const
 			{
 				assert(::IsWindow(m_hwnd));
-				return HICON(::SendMessageW(m_hwnd, WM_GETICON, WPARAM(big_icon), 0));
+				return HICON(::SendMessageW(m_hwnd, WM_GETICON, big_icon ? ICON_BIG : ICON_SMALL, 0));
 			}
-			HICON Icon(HICON icon, bool big_icon = true)
+			HICON Icon(HICON icon, bool big_icon)
 			{
 				assert(::IsWindow(m_hwnd));
-				return HICON(::SendMessageW(m_hwnd, WM_SETICON, WPARAM(big_icon), LPARAM(icon)));
+				return HICON(::SendMessageW(m_hwnd, WM_SETICON, big_icon ? ICON_BIG : ICON_SMALL, LPARAM(icon)));
 			}
 
 			// Set redraw mode on or off
@@ -3210,7 +3383,7 @@ namespace pr
 			// Use SWP_ flags to ignore position or size changes
 			void PositionWindow(int x, int y, int w, int h, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder | WindowPos::EFlags::NoActivate)
 			{
-				AutoSizePosition(m_parent, x, y, w, h);
+				AutoSizePosition( x, y, w, h, m_parent);
 				ScreenRect(Rect(x, y, x + w, y + h), false, nullptr, flags);
 			}
 
@@ -3389,7 +3562,7 @@ namespace pr
 
 			HINSTANCE   m_hinst;            // Module instance
 			bool        m_app_main_window;  // True if this is the main application window
-			MenuStrip   m_menu;             // The main menu
+			Menu   m_menu;             // The main menu
 			HACCEL      m_accel;            // Keyboard accelerators for this window
 			DlgTemplate m_templ;            // A dialog template for this form (if given)
 			int         m_exit_code;        // The code to return when the form closes
@@ -4884,7 +5057,7 @@ namespace pr
 
 			// CoCreate the File Open Dialog object.
 			CComPtr<IFileDialog> fd;
-			Throw(::CoCreateInstance(type, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&fd.p)), "CoCreateInstance failed. Ensure CoInitialize has been called");
+			Throw(fd.CoCreateInstance(type), "CoCreateInstance failed. Ensure CoInitialize has been called");
 
 			// Hook up the event handler.
 			struct EvtHook
@@ -4943,15 +5116,27 @@ namespace pr
 
 					// Obtain the results once the user clicks the 'Open' button. The result is an IShellItem object.
 					CComPtr<IShellItemArray> items;
-					Throw(fod->GetResults(&items.p), "Failed to retrieve the array of results from the file open dialog result");
-
-					DWORD count;
-					Throw(items->GetCount(&count), "Failed to read the number of results from the file open dialog result");
-					for (DWORD i = 0; i != count; ++i)
+					Throw(fod->GetResults(&items), "Failed to retrieve the array of results from the file open dialog result");
+					if (items != nullptr)
+					{
+						DWORD count;
+						Throw(items->GetCount(&count), "Failed to read the number of results from the file open dialog result");
+						for (DWORD i = 0; i != count; ++i)
+						{
+							CComPtr<IShellItem> item;
+							Throw(items->GetItemAt(i, &item), pr::FmtS("Failed to read result %d from the file open dialog results", i));
+						
+							wchar_t* fpath;
+							Throw(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
+							results.emplace_back(fpath);
+							CoTaskMemFree(fpath);
+						}
+					}
+					else
 					{
 						CComPtr<IShellItem> item;
-						Throw(items->GetItemAt(i, &item.p), pr::FmtS("Failed to read result %d from the file open dialog results", i));
-						
+						Throw(fod->GetResult(&item), "Failed to read result from the file open dialog results");
+
 						wchar_t* fpath;
 						Throw(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");
 						results.emplace_back(fpath);
@@ -4984,11 +5169,6 @@ namespace pr
 		#pragma endregion
 
 		#pragma region Misc
-		// Handle auto position/size
-		inline void AutoSizePosition(Control* parent, int& x, int& y, int& w, int& h)
-		{
-			Control::AutoSizePosition(parent, x, y, w, h);
-		}
 		#pragma endregion
 	}
 }
