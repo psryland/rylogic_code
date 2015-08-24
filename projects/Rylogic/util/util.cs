@@ -97,9 +97,7 @@ namespace pr.util
 		[DebuggerStepThrough] public static BindingSource<T> DisposeAll<T>(this BindingSource<T> doomed) where T:class, IDisposable
 		{
 			// Not as safe as the versions above
-			var doomed_ = (IList<T>)doomed;
-			DisposeAll<IList<T>, T>(ref doomed_);
-			return (BindingSource<T>)doomed_;
+			return (BindingSource<T>)DisposeAll<IList<T>, T>(doomed);
 		}
 
 		/// <summary>

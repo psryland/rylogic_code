@@ -178,11 +178,17 @@ namespace pr.extn
 			return new StringBuilder(text).AppendLineList(line).ToString();
 		}
 
-		/// <summary>Return the string as a byte buffer</summary>
+		/// <summary>Return the string as a byte buffer without encoding</summary>
 		public static byte[] ToBytes(this string str)
 		{
 			var raw = new byte[str.Length * sizeof(char)];
 			Buffer.BlockCopy(str.ToCharArray(), 0, raw, 0, raw.Length);
+			return raw;
+		}
+		public static byte[] ToBytes(this string str, int ofs, int count)
+		{
+			var raw = new byte[str.Length * sizeof(char)];
+			Buffer.BlockCopy(str.ToCharArray(ofs, count), 0, raw, 0, raw.Length);
 			return raw;
 		}
 

@@ -427,6 +427,7 @@
     <Compile Include="win32\gdi32.cs" />
     <Compile Include="win32\interop_structs.cs" />
     <Compile Include="win32\kernel32.cs" />
+    <Compile Include="win32\msvcrt.cs" />
     <Compile Include="win32\ole32.cs" />
     <Compile Include="win32\rstrtmgr.cs" />
     <Compile Include="win32\shell32.cs" />

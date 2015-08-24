@@ -23,6 +23,12 @@ namespace pr.extn
 		{
 			return (T[])arr.Clone();
 		}
+		public static T[] Dup<T>(this T[] arr, int ofs, int count)
+		{
+			var result = new T[count];
+			Array.Copy(arr, ofs, result, 0, count);
+			return result;
+		}
 
 		/// <summary>Returns the index of 'what' in the array</summary>
 		public static int IndexOf<T>(this T[] arr, T what)

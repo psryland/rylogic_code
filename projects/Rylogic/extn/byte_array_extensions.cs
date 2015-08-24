@@ -60,6 +60,26 @@ namespace pr.extn
 			var alg = System.Security.Cryptography.MD5.Create();
 			return alg.ComputeHash(arr);
 		}
+
+		/// <summary>Set bytes in the array to 'value' using native memset</summary>
+		public static byte[] Memset(this byte[] arr, byte value)
+		{
+			return arr.Memset(value, 0, arr.Length);
+		}
+		public static byte[] Memset(this byte[] arr, byte value, int ofs, int count)
+		{
+			using (var ptr = GCHandleEx.Alloc(arr, GCHandleType.Pinned))
+				pr.win32.Win32.memset(ptr.Handle.AddrOfPinnedObject() + ofs, value, count);
+			return arr;
+		}
+
+		/// <summary>Convert this byte array into a string, without trying to encode. (Opposite of string.ToBytes())</summary>
+		public static string ToStringWithoutEncoding(this byte[] arr)
+		{
+			var chars = new char[arr.Length / sizeof(char)];
+			Buffer.BlockCopy(arr, 0, chars, 0, arr.Length);
+			return new string(chars);
+		}
 	}
 }
 

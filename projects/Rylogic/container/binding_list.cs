@@ -39,6 +39,7 @@ namespace pr.container
 		}
 		private void Init()
 		{
+			PerItemClear = false;
 			IsSorted = false;
 			SupportsSorting = false;
 			SortDirection = ListSortDirection.Ascending;
@@ -68,6 +69,9 @@ namespace pr.container
 			}
 		}
 
+		/// <summary>Get/Set whether calling Clear() results in events for each item or just PreReset/Reset</summary>
+		public bool PerItemClear { get; set; }
+
 		/// <summary>Raised whenever items are added or about to be removed from the list</summary>
 		public event EventHandler<ListChgEventArgs<T>> ListChanging;
 
@@ -85,8 +89,15 @@ namespace pr.container
 					return;
 			}
 
-			// Reset event is raised from attached handler
+			// Remove items one at a time so that events are generated for each
+			if (PerItemClear)
+				for (;Count != 0;) RemoveAt(Count - 1);
+
+			// Call ClearItems even if 'PerItemClear' is true so that the ListChg.Reset event is raised
+			// Reset event is raised from ListChanged handler
 			base.ClearItems();
+
+			// Zero items, sorted..
 			IsSorted = true;
 		}
 

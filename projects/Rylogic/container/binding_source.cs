@@ -32,6 +32,19 @@ namespace pr.container
 			get { return base.SupportsSorting && AllowSort; }
 		}
 
+		/// <summary>Get/Set whether the Clear() method results in individual events for each item or just the PreReset/Reset events</summary>
+		[Browsable(false)]
+		public virtual bool PerItemClear
+		{
+			get { return DataSource is BindingListEx<TItem> && DataSource.As<BindingListEx<TItem>>().PerItemClear; }
+			set
+			{
+				var bl = DataSource as BindingListEx<TItem>;
+				if (bl == null) throw new Exception("PerItemClear only works for BindingListEx<> data sources");
+				bl.PerItemClear = value;
+			}
+		}
+
 		/// <summary>Set the current position (-1 means no current item)</summary>
 		public new int Position
 		{
@@ -426,14 +439,41 @@ namespace pr.unittests
 					,ListChg.PreReset     ,ListChg.Reset
 					));
 				clear();
+
+				bs.PerItemClear = true;
+				bs.Clear();
+				Assert.True(Contains(bl_evts
+					,ListChg.PreReset
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.Reset
+					));
+				Assert.True(Contains(bs_evts
+					,ListChg.PreReset
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.ItemPreRemove    ,ListChg.ItemRemoved
+					,ListChg.Reset
+					));
+				clear();
 			}
 		}
 		[Test] public void BindingSourceCurrency()
 		{
+			var positions = new List<int>();
+
 			var bl = new BindingListEx<int>();
 			bl.AddRange(new[]{1,2,3,4,5});
 
-			var positions = new List<int>();
 			var bs = new BindingSource<int>{DataSource = bl};
 			bs.PositionChanging += (s,a) =>
 				{
@@ -448,8 +488,12 @@ namespace pr.unittests
 			bs.CurrencyManager.Position = 4;
 			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4}));
 
+			bs.Current = default(int);
+			Assert.True(bs.Position == -1);
+			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1}));
+
 			bs.DataSource = null;
-			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1,-1,-1}));
+			Assert.True(positions.SequenceEqual(new[]{0,3,3,1,1,4,4,-1}));
 		}
 		[Test] public void BindingSourceEnumeration()
 		{

@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -350,35 +351,62 @@ namespace pr.gui
 		}
 
 		/// <summary>Buffer for user input. Separated into a class so Buffers user input and tracks the input caret location</summary>
-		public interface IUserInputBuffer
+		public class UserInput
 		{
 			// Note: all this needs to do is buffer key presses, those characters/keys
 			// are sent to the server which will reply causing changes to the buffer.
 			// User input should never be rendered directly into the display
-
-			/// <summary>Add a character to the buffer</summary>
-			void Add(char ch);
-
-			/// <summary>Return the contents of the buffer, optionally resetting it</summary>
-			string Get(bool reset = true);
-		}
-		private class UserInput :IUserInputBuffer
-		{
-			private readonly StringBuilder m_buf;
+			private byte[] m_buf;
+			private int m_len;
 
 			public UserInput(int capacity = 8192)
 			{
-				m_buf = capacity != int.MaxValue ? new StringBuilder(capacity) : new StringBuilder();
+				m_buf = new byte[capacity != int.MaxValue ? capacity : 0];
+				m_len = 0;
 			}
+
+			/// <summary>Append bytes to the user input</summary>
+			public void Add(byte[] bytes, int ofs, int count)
+			{
+				EnsureSpace(m_len + count);
+				Array.Copy(bytes, ofs, m_buf, m_len, count);
+				m_len += count;
+			}
+
+			/// <summary>Add a character to the buffer</summary>
 			public void Add(char ch)
 			{
-				m_buf.Append(ch);
+				var bytes = Encoding.UTF8.GetBytes(new string(ch, 1));
+				Add(bytes, 0, bytes.Length);
 			}
-			public string Get(bool reset)
+
+			/// <summary>Add another buffer to this</summary>
+			public void Add(UserInput rhs)
 			{
-				var ret = m_buf.ToString();
-				if (reset) m_buf.Length = 0;
+				Add(rhs.m_buf, 0, rhs.m_len);
+			}
+
+			/// <summary>Add a stream of bytes to the input</summary>
+			public void Add(Stream s)
+			{
+				var buf = new byte[1024];
+				for (int read; (read = s.Read(buf, 0, buf.Length)) != 0;)
+					Add(buf, 0, read);
+			}
+
+			/// <summary>Return the contents of the buffer, optionally resetting it</summary>
+			public byte[] Get(bool reset)
+			{
+				var ret = m_buf.Dup(0, m_len);
+				if (reset) m_len = 0;
 				return ret;
+			}
+
+			/// <summary>Ensure 'm_buf' can hold 'size' bytes</summary>
+			private void EnsureSpace(int size)
+			{
+				if (size <= m_buf.Length) return;
+				Array.Resize(ref m_buf, m_buf.Length * 3 / 2);
 			}
 		}
 
@@ -411,9 +439,6 @@ namespace pr.gui
 				}
 			}
 
-			/// <summary>User input buffer</summary>
-			private IUserInputBuffer m_input;
-
 			/// <summary>The current control sequence</summary>
 			public readonly StringBuilder m_seq;
 
@@ -429,12 +454,13 @@ namespace pr.gui
 
 			public Buffer(Settings settings)
 			{
-				Settings = settings ?? new Settings();
-				m_input  = new UserInput(8192);
-				m_seq    = new StringBuilder();
-				m_lines  = new List<Line>();
-				m_state  = State.Default;
-				m_out    = State.Default;
+				Settings  = settings ?? new Settings();
+				UserInput = new UserInput(8192);
+				m_seq     = new StringBuilder();
+				m_lines   = new List<Line>();
+				m_state   = State.Default;
+				m_out     = State.Default;
+				ValidateRect();
 			}
 
 			/// <summary>Terminal settings</summary>
@@ -449,17 +475,11 @@ namespace pr.gui
 			/// <summary>The current position of the output caret</summary>
 			public Point CaretPos { get { return m_out.pos; } }
 
+			/// <summary>The buffer region that has changed since ValidateRect() was last called</summary>
+			public Rectangle InvalidRect { get; private set; }
+
 			/// <summary>User input buffer</summary>
-			public IUserInputBuffer UserInput
-			{
-				get { return m_input; }
-				set
-				{
-					if (m_input == value) return;
-					if (m_input != null) m_input.Get(true).ForEach(value.Add);
-					m_input = value;
-				}
-			}
+			public UserInput UserInput { get; private set; }
 
 			/// <summary>Add a single character to the user input buffer.</summary>
 			public void AddInput(char c, bool notify = true)
@@ -468,14 +488,14 @@ namespace pr.gui
 				{
 					switch (Settings.NewlineSend)
 					{
-					case ENewLineMode.LF:    m_input.Add('\n'); break;
-					case ENewLineMode.CR:    m_input.Add('\r'); break;
-					case ENewLineMode.CR_LF: "\r\n".ForEach(m_input.Add); break;
+					case ENewLineMode.LF:    UserInput.Add('\n'); break;
+					case ENewLineMode.CR:    UserInput.Add('\r'); break;
+					case ENewLineMode.CR_LF: "\r\n".ForEach(UserInput.Add); break;
 					}
 				}
 				else
 				{
-					m_input.Add(c);
+					UserInput.Add(c);
 				}
 
 				// Notify that input data was added
@@ -549,6 +569,9 @@ namespace pr.gui
 			/// <summary>Clear the entire buffer</summary>
 			public void Clear()
 			{
+				// Invalidate the whole buffer
+				InvalidateRect(new Rectangle(Point.Empty, new Size(Settings.TerminalWidth, LineCount)));
+
 				m_lines.Clear();
 				m_out.pos = MoveCaret(0,0);
 				OnBufferChanged(new BufferChangedEventArgs(Point.Empty, new Size(Settings.TerminalWidth, Settings.TerminalHeight)));
@@ -622,6 +645,58 @@ namespace pr.gui
 				Overflow.Raise(this, args);
 			}
 
+			/// <summary>Reset the invalidation rectangle</summary>
+			public void ValidateRect()
+			{
+				InvalidRect = Rectangle.Empty;
+			}
+
+			/// <summary>Add a rectangular region of the buffer to the invalidated area</summary>
+			public void InvalidateRect(Rectangle rect)
+			{
+				if (rect.X < 0 || rect.Y < 0) throw new Exception("Invalidation area is outside the buffer");
+				InvalidRect = InvalidRect.IsEmpty ? rect : Rectangle.Union(InvalidRect, rect);
+			}
+
+			/// <summary>Start or stop capturing to a file</summary>
+			public void CaptureToFile(string filepath, bool capture_all_data)
+			{
+				m_capture_file = new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite|FileShare.Delete);
+				m_capture_all_data = capture_all_data;
+			}
+			public void CaptureToFileEnd()
+			{
+				Util.Dispose(ref m_capture_file);
+			}
+			private void Capture(string str, int ofs, int count, bool all_data)
+			{
+				if (!CapturingToFile) return;
+				if (m_capture_all_data != all_data) return;
+
+				var bytes = m_capture_all_data
+					? str.ToBytes(ofs, count)
+					: Encoding.UTF8.GetBytes(str.ToCharArray(ofs, Math.Min(count, str.Length - ofs)));
+
+				m_capture_file.Write(bytes, 0, bytes.Length);
+				m_capture_file.Flush();
+			}
+			private FileStream m_capture_file;
+			private bool m_capture_all_data;
+
+			/// <summary>True if capturing to file is currently enabled</summary>
+			public bool CapturingToFile
+			{
+				get { return m_capture_file != null; }
+			}
+
+			/// <summary>Send the contents of a file to the terminal</summary>
+			public void SendFile(string filepath, bool binary_mode)
+			{
+				using (var fs = new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+					UserInput.Add(fs);
+				OnInputAdded();
+			}
+
 			/// <summary>Return the line at 'y', allocating if needed</summary>
 			private Line LineAt(int y)
 			{
@@ -660,6 +735,7 @@ namespace pr.gui
 			/// <summary>Parse the vt100 console text in 'text'</summary>
 			private void ParseOutput(string text)
 			{
+				Capture(text, 0, text.Length, true);
 				int s = 0, e = 0, eend = text.Length;
 				for (;e != eend;)
 				{
@@ -678,6 +754,7 @@ namespace pr.gui
 						(c == '\r' && e+1 != eend && text[e+1] == '\n' && Settings.NewlineRecv == ENewLineMode.CR_LF))
 					{
 						Write(text, s, e - s);
+						Capture("\n", 0, 1, false);
 						m_out.pos = MoveCaret(m_out.pos, -m_out.pos.X, 1);
 						e += Settings.NewlineRecv == ENewLineMode.CR_LF ? 2 : 1;
 						s = e;
@@ -1213,13 +1290,16 @@ namespace pr.gui
 			}
 			private static List<int> m_parms = new List<int>(); // Cached to reduce allocations
 			
-			/// <summary>Move the cursor to an absolute position</summary>
+			/// <summary>Move the caret to an absolute position</summary>
 			private Point MoveCaret(int x, int y)
 			{
+				// Allow the buffer to grow to %150 so that we're not rolling on every line
+				var ymax = Settings.TerminalHeight * 3 / 2;
+
 				// Roll the buffer when y >= terminal height
-				if (y >= Settings.TerminalHeight * 3 / 2)
+				if (y >= ymax)
 				{
-					var count = y - Settings.TerminalHeight + 1;
+					var count = Math.Min(y - Settings.TerminalHeight + 1, LineCount);
 					OnOverflow(new OverflowEventArgs(true, new Range(0, 0 + count)));
 
 					// Remove the lines and adjust anything that stores a line number
@@ -1228,14 +1308,31 @@ namespace pr.gui
 					m_out.pos.Y -= count;
 					m_saved.pos.Y -= count;
 
+					// Overflow does not invalidate the entire buffer.
+					// This is handled by removing the first 'count' lines from the
+					// control without any other text needing to change. This means
+					// the last 'count' do not need invalidating because they should've
+					// moved to the correct position by deleting the starting lines.
+					// However, we need to move the invalidation rectangle up with the
+					// rest of the text.
+					InvalidRect = new Rectangle(
+						InvalidRect.X    ,                      Math.Max(0, InvalidRect.Y - count),
+						InvalidRect.Width, InvalidRect.Height + Math.Min(0, InvalidRect.Y - count));
+
 					OnOverflow(new OverflowEventArgs(false, new Range(0, 0 + count)));
 				}
 
-				var loc = new Point(Maths.Clamp(x, 0, Settings.TerminalWidth), y);
+				if (x >= 0 && x < Settings.TerminalWidth && y >= 0 && y < ymax)
+					InvalidateRect(new Rectangle(x, y, 1, 1));
+
+				// Don't clamp x, the vt100 doesn't know what our buffer size is
+				// so we need to maintain a virtual space that might be outside our buffer
+				//x = Maths.Clamp(x, 0, Settings.TerminalWidth);
+				var loc = new Point(x, y);
 				return loc;
 			}
 
-			/// <summary>Move the cursor by a relative offset</summary>
+			/// <summary>Move the caret by a relative offset</summary>
 			private Point MoveCaret(Point loc, int dx, int dy)
 			{
 				return MoveCaret(loc.X + dx, loc.Y + dy);
@@ -1247,9 +1344,23 @@ namespace pr.gui
 			/// 'str' should not contain any non-printable characters (including \n,\r). These are removed by ParseOutput</summary>
 			private void Write(string str, int ofs = 0, int count = int.MaxValue)
 			{
-				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
-				if (m_out.pos.Y < 0) throw new Exception("Caret outside screen buffer");
+				// Add received text to the capture file, if capturing
+				Capture(str, ofs, count, false);
+
+				// Just ignore caret positions outside the buffer. This can happen because
+				// the vt100 commands can move the caret but is unaware of the buffer size.
+				if (m_out.pos.Y < 0) return;
+
+				// If m_out.pos.X < 0 pretent Min(-m_out.pos.X, count) characters were written
+				if (m_out.pos.X < 0)
+				{
+					var dx = Math.Min(-m_out.pos.X, count);
+					m_out.pos.X += dx;
+					count -= dx;
+					ofs += dx;
+				}
 				if (count == 0) return;
+				Debug.Assert(m_out.pos.X >= 0);
 
 				// Limit 'count' to the size of the terminal and the maximum string length
 				count = Math.Min(count, str.Length - ofs);
@@ -1260,6 +1371,9 @@ namespace pr.gui
 				var line = LineAt(m_out.pos.Y);
 				if (line.Size < m_out.pos.X + count)
 					line.Resize(m_out.pos.X + count, ' ', m_out.style);
+
+				// Add to the invalidrect
+				InvalidateRect(new Rectangle(m_out.pos, new Size(count, 1)));
 
 				// Write the string
 				line.Write(m_out.pos.X, str, ofs, count, m_out.style);
@@ -1274,18 +1388,24 @@ namespace pr.gui
 			/// <summary>Process a backspace character</summary>
 			private void BackSpace()
 			{
-				if (m_out.pos.X < 0 || m_out.pos.X > Settings.TerminalWidth) throw new Exception("Caret outside screen buffer");
-				if (m_out.pos.Y < 0) throw new Exception("Caret outside screen buffer");
-				if (m_out.pos.X == 0) return;
-
+				Capture("\b", 0, 1, false);
 				m_out.pos = MoveCaret(m_out.pos, -1, 0);
+				var x = Math.Max(m_out.pos.X, 0);
+				var y = m_out.pos.Y;
+
+				// Just ignore caret positions outside the buffer. This can happen because
+				// the vt100 commands can move the caret but is unaware of the buffer size.
+				if (y < 0) return;
+
+				// Invalidate the rest of the line
+				InvalidateRect(new Rectangle(0, y, Settings.TerminalWidth - x, 1));
 
 				// Get the line
-				var line = LineAt(m_out.pos.Y);
-				line.Erase(m_out.pos.X, 1);
+				var line = LineAt(y);
+				line.Erase(x, 1);
 
 				// Notify whenever the buffer is changed
-				OnBufferChanged(new BufferChangedEventArgs(m_out.pos, line.Size - m_out.pos.X));
+				OnBufferChanged(new BufferChangedEventArgs(new Point(x,y), line.Size - x));
 			}
 
 			/// <summary>Determines the terminal screen area used by 'str'</summary>
@@ -1379,6 +1499,8 @@ namespace pr.gui
 				}
 			}
 
+			private static readonly string FileFilters = Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
+
 			private HoverScroll m_hs;
 			private EventBatcher m_eb;
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
@@ -1427,6 +1549,7 @@ namespace pr.gui
 					if (m_buffer == value) return;
 					if (m_buffer != null)
 					{
+						m_buffer.CaptureToFileEnd();
 						m_buffer.Overflow -= HandleBufferOverflow;
 						m_buffer.BufferChanged -= SignalRefresh;
 						ContextMenuStrip = null;
@@ -1527,6 +1650,48 @@ namespace pr.gui
 			}
 			#endregion
 
+			/// <summary>Start or stop capturing to a file</summary>
+			public void CaptureToFile(bool start)
+			{
+				if (Buffer == null) return;
+				if (start)
+				{
+					using (var dlg = new ChooseCaptureFile())
+					{
+						if (dlg.ShowDialog(this) != DialogResult.OK) return;
+						try
+						{
+							Buffer.CaptureToFile(dlg.Filepath, dlg.CaptureAllData);
+						}
+						catch (Exception ex)
+						{
+							MessageBox.Show(this, "Capture to file could not start\r\n{0}".Fmt(ex.Message), "Capture To File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+						}
+					}
+				}
+				else
+				{
+					Buffer.CaptureToFileEnd();
+				}
+			}
+
+			/// <summary>True if capturing to file is currently enabled</summary>
+			public bool CapturingToFile
+			{
+				get { return Buffer != null && Buffer.CapturingToFile; }
+			}
+
+			/// <summary>Send a file to the terminal</summary>
+			public void SendFile(bool binary_mode)
+			{
+				if (Buffer == null) return;
+				using (var dlg = new OpenFileDialog { Title = "Choose the file to send", Filter = FileFilters })
+				{
+					if (dlg.ShowDialog(this) != DialogResult.OK) return;
+					Buffer.SendFile(dlg.FileName, binary_mode);
+				}
+			}
+
 			/// <summary>Refresh the control with text from the vt100 buffer</summary>
 			private void UpdateText()
 			{
@@ -1539,15 +1704,32 @@ namespace pr.gui
 					return;
 				}
 
+				// Get the buffer region that has changed
+				var region = buf.InvalidRect;
+				buf.ValidateRect();
+				if (region.IsEmpty)
+					return;
+
 				using (HostedCtrl.SuspendRedraw(true))
 				using (ScrollScope())
-				using (SelectionScope())
 				{
-					ClearAll();
-
-					// Add the buffered data to 'm_cells'
-					foreach (var line in buf.Lines)
+					// Grow the text in the control to the required number of lines (if necessary)
+					var line_count = Cmd(Sci.SCI_GETLINECOUNT);
+					if (line_count < region.Bottom)
 					{
+						var pad = new byte[region.Bottom - line_count].Memset(0x0a);
+						using (var p = GCHandleEx.Alloc(pad, GCHandleType.Pinned))
+							Cmd(Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
+					}
+
+					// Update the text in the control from the invalid buffer region
+					for (int i = region.Top, iend = region.Bottom; i != iend; ++i)
+					{
+						// Update whole lines, to hard to bother with x ranges
+						// Note, the invalid region can be outside the buffer when the buffer gets cleared
+						if (i >= buf.LineCount) break;
+						var line = buf.Lines[i];
+
 						byte sty = 0;
 						foreach (var span in line.Spans)
 						{
@@ -1558,11 +1740,24 @@ namespace pr.gui
 						}
 						m_cells.Add(0x0a, sty);
 					}
-					m_cells.Pop(1);
 
-					// Pass the buffer of cells to scintilla
+					// Remove the last newline and append a null terminator
+					// so that 'InsertStyledText' can determine the length
+					m_cells.Pop(1);
+					m_cells.Add(0, 0);
+
+					// Determine the character range to be updated
+					var beg = Cmd(Sci.SCI_POSITIONFROMLINE, region.Top);
+					var end = Cmd(Sci.SCI_POSITIONFROMLINE, region.Bottom);
+					if (beg < 0) beg = 0;
+					if (end < 0) end = TextLength;
+
+					// Overwrite the visible lines with the buffer of cells
 					using (var cells = m_cells.Pin())
-						Cmd(Sci.SCI_APPENDSTYLEDTEXT, m_cells.SizeInBytes, cells.Handle.AddrOfPinnedObject());
+					{
+						Cmd(Sci.SCI_DELETERANGE, beg, end - beg);
+						Cmd(Sci.SCI_INSERTSTYLEDTEXT, beg, cells.Handle.AddrOfPinnedObject());
+					}
 
 					// Reset, ready for next time
 					m_cells.Reset();
@@ -1672,17 +1867,18 @@ namespace pr.gui
 				if (args.Before)
 				{
 					// Calculate the number of bytes dropped.
+					// Note: Buffer does not store line endings, but the saved selection does.
 					var bytes = 0;
 					for (int i = args.Dropped.Begini; i != args.Dropped.Endi; ++i)
-						bytes += Encoding.UTF8.GetByteCount(Buffer.Lines[i].m_line.ToString());
+						bytes += Encoding.UTF8.GetByteCount(Buffer.Lines[i].m_line.ToString()) + 1; // +1 '\n' per line
 
 					// Save the selection and adjust it by the number of characters to be dropped
-					// Note: Buffer does not store line endings, but the saved selection does.
-					bytes += args.Dropped.Sizei; // 1 '\n' per line dropped
-
 					m_sel = Selection.Save(this);
 					m_sel.m_current -= bytes;
-					m_sel.m_anchor -= bytes;
+					m_sel.m_anchor  -= bytes;
+
+					// Remove the scrolled text from the control
+					Cmd(Sci.SCI_DELETERANGE, 0, bytes);
 
 					// Scroll up to move with the buffer text
 					var vis = Cmd(Sci.SCI_GETFIRSTVISIBLELINE);
@@ -1722,6 +1918,34 @@ namespace pr.gui
 						{
 							var item = Items.Add2(new ToolStripMenuItem("Paste", null));
 							item.Click += (s,e)=> m_disp.Paste();
+						}
+						#endregion
+						Items.Add(new ToolStripSeparator());
+						#region Capture To File
+						{
+							var item = Items.Add2(new ToolStripMenuItem("Capture To File", null));
+							Opening += (s,a) =>
+								{
+									item.Enabled = m_disp.Buffer != null;
+									item.Checked = m_disp.CapturingToFile;
+								};
+							item.Click += (s,e) =>
+								{
+									m_disp.CaptureToFile(!m_disp.CapturingToFile);
+								};
+						}
+						#endregion
+						#region Send File
+						{
+							var item = Items.Add2(new ToolStripMenuItem("Send File", null));
+							Opening += (s,a) =>
+								{
+									item.Enabled = m_disp.Buffer != null;
+								};
+							item.Click += (s,e) =>
+								{
+									m_disp.SendFile(true);
+								};
 						}
 						#endregion
 						if (m_disp.Settings != null)
@@ -1851,6 +2075,140 @@ namespace pr.gui
 						}
 					}
 				}
+			}
+
+			/// <summary>Dialog for selecting the capture file</summary>
+			private class ChooseCaptureFile :Form
+			{
+				#region UI Elements
+				private TextBox m_tb_filepath;
+				private Button m_btn_browse;
+				private CheckBox m_chk_capture_all;
+				private Button m_btn_ok;
+				private Button m_btn_cancel;
+				#endregion
+
+				public ChooseCaptureFile()
+				{
+					InitializeComponent();
+					StartPosition = FormStartPosition.CenterParent;
+
+					m_btn_browse.Click += (s,a) =>
+						{
+							using (var dlg = new SaveFileDialog{Title = "Capture file path", FileName = Filepath, Filter = FileFilters })
+							{
+								if (dlg.ShowDialog(this) != DialogResult.OK) return;
+								DialogResult = DialogResult.None;
+								Filepath = dlg.FileName;
+							}
+						};
+				}
+				protected override void Dispose(bool disposing)
+				{
+					Util.Dispose(ref components);
+					base.Dispose(disposing);
+				}
+
+				/// <summary>The selected filepath</summary>
+				public string Filepath
+				{
+					get { return m_tb_filepath.Text; }
+					set { m_tb_filepath.Text = value; }
+				}
+
+				/// <summary>Get/Set whether all data is captured</summary>
+				public bool CaptureAllData
+				{
+					get { return m_chk_capture_all.Checked; }
+					set { m_chk_capture_all.Checked = value; }
+				}
+
+				/// <summary>
+				/// Required method for Designer support - do not modify
+				/// the contents of this method with the code editor.</summary>
+				private void InitializeComponent()
+				{
+					this.m_tb_filepath = new System.Windows.Forms.TextBox();
+					this.m_btn_browse = new System.Windows.Forms.Button();
+					this.m_chk_capture_all = new System.Windows.Forms.CheckBox();
+					this.m_btn_ok = new System.Windows.Forms.Button();
+					this.m_btn_cancel = new System.Windows.Forms.Button();
+					this.SuspendLayout();
+					// 
+					// m_tb_filepath
+					// 
+					this.m_tb_filepath.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left)
+					| System.Windows.Forms.AnchorStyles.Right)));
+					this.m_tb_filepath.Location = new System.Drawing.Point(12, 12);
+					this.m_tb_filepath.Name = "m_tb_filepath";
+					this.m_tb_filepath.Size = new System.Drawing.Size(203, 20);
+					this.m_tb_filepath.TabIndex = 0;
+					// 
+					// m_btn_browse
+					// 
+					this.m_btn_browse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+					this.m_btn_browse.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+					this.m_btn_browse.Location = new System.Drawing.Point(221, 10);
+					this.m_btn_browse.Name = "m_btn_browse";
+					this.m_btn_browse.Size = new System.Drawing.Size(51, 23);
+					this.m_btn_browse.TabIndex = 1;
+					this.m_btn_browse.Text = ". . .";
+					this.m_btn_browse.UseVisualStyleBackColor = true;
+					// 
+					// m_chk_capture_all
+					// 
+					this.m_chk_capture_all.AutoSize = true;
+					this.m_chk_capture_all.Location = new System.Drawing.Point(24, 38);
+					this.m_chk_capture_all.Name = "m_chk_capture_all";
+					this.m_chk_capture_all.Size = new System.Drawing.Size(251, 17);
+					this.m_chk_capture_all.TabIndex = 2;
+					this.m_chk_capture_all.Text = "Capture all data (including vt100 escape codes)";
+					this.m_chk_capture_all.UseVisualStyleBackColor = true;
+					// 
+					// m_btn_ok
+					// 
+					this.m_btn_ok.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+					this.m_btn_ok.DialogResult = System.Windows.Forms.DialogResult.OK;
+					this.m_btn_ok.Location = new System.Drawing.Point(113, 63);
+					this.m_btn_ok.Name = "m_btn_ok";
+					this.m_btn_ok.Size = new System.Drawing.Size(75, 23);
+					this.m_btn_ok.TabIndex = 3;
+					this.m_btn_ok.Text = "OK";
+					this.m_btn_ok.UseVisualStyleBackColor = true;
+					// 
+					// m_btn_cancel
+					// 
+					this.m_btn_cancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+					this.m_btn_cancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+					this.m_btn_cancel.Location = new System.Drawing.Point(197, 63);
+					this.m_btn_cancel.Name = "m_btn_cancel";
+					this.m_btn_cancel.Size = new System.Drawing.Size(75, 23);
+					this.m_btn_cancel.TabIndex = 4;
+					this.m_btn_cancel.Text = "Cancel";
+					this.m_btn_cancel.UseVisualStyleBackColor = true;
+					// 
+					// Form1
+					// 
+					this.AcceptButton = this.m_btn_ok;
+					this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+					this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+					this.CancelButton = this.m_btn_cancel;
+					this.ClientSize = new System.Drawing.Size(284, 93);
+					this.Controls.Add(this.m_btn_cancel);
+					this.Controls.Add(this.m_btn_ok);
+					this.Controls.Add(this.m_chk_capture_all);
+					this.Controls.Add(this.m_btn_browse);
+					this.Controls.Add(this.m_tb_filepath);
+					this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.SizableToolWindow;
+					this.MaximumSize = new System.Drawing.Size(1000, 132);
+					this.MinimumSize = new System.Drawing.Size(300, 132);
+					this.Name = "Form1";
+					this.Text = "Select a capture file";
+					this.ResumeLayout(false);
+					this.PerformLayout();
+
+				}
+				private IContainer components = null;
 			}
 		}
 	}

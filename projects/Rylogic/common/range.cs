@@ -64,6 +64,14 @@ namespace pr.common
 					yield return i;
 			}
 		}
+		public IEnumerable<int> Enumeratei
+		{
+			get
+			{
+				for (var i = Begini; i != Endi; ++i)
+					yield return i;
+			}
+		}
 
 		/// <summary>Returns true if 'value' is within the range [Begin,End) (i.e. end exclusive)</summary>
 		[Pure] public bool Contains(long value)
