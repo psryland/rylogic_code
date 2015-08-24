@@ -85,7 +85,7 @@ struct Main :Form
 		,m_modeless    (this)
 		,m_nm_progress ()
 	{
-		MenuStrip file_menu(MenuStrip::Popup);
+		Menu file_menu(MenuStrip::Popup);
 		file_menu.Insert(L"E&xit", IDCLOSE);
 		m_menu = MenuStrip(MenuStrip::Strip);
 		m_menu.Insert(file_menu, L"&File");

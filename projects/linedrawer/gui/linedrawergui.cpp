@@ -31,12 +31,12 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
-		:base(Params().name("ldr_main").title(AppTitleW()).menu_id(IDR_MENU_MAIN).accel_id(IDR_ACCELERATOR))
+		:base(Params().name("ldr_main").title(AppTitleW()).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN))
 		,m_status(StatusBar::Params().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui()
-		,m_editor_ui()
+		,m_editor_ui(*this)
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_options_ui(this, m_main->m_settings)
@@ -48,10 +48,6 @@ namespace ldr
 
 		// Parse the command line
 		pr::EnumCommandLine(cmdline, *this);
-
-		// Set icons
-		Icon((HICON)::LoadImage(m_hinst, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXICON),   ::GetSystemMetrics(SM_CYICON),   LR_DEFAULTCOLOR) ,true);
-		Icon((HICON)::LoadImage(m_hinst, MAKEINTRESOURCE(IDI_ICON_MAIN), IMAGE_ICON, ::GetSystemMetrics(SM_CXSMICON), ::GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR) ,false);
 
 		// Status bar
 		int status_panes[] = {-1};
@@ -67,10 +63,8 @@ namespace ldr
 		m_store_ui.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
 
 		// Initialise the script editor
-		m_editor_ui.Create(*this);
-		m_editor_ui.HideOnClose(true);
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
-		m_editor_ui.Render = [&](std::wstring&& script)
+		m_editor_ui.Render([&](std::wstring&& script)
 			{
 				try
 				{
@@ -83,10 +77,7 @@ namespace ldr
 				{
 					pr::events::Send(Event_Error(pr::FmtS("Script error found while parsing source.\n%s", e.what())));
 				}
-			};
-		auto editor_ctrl = WndRef::Lookup(m_editor_ui);
-		editor_ctrl->PositionWindow(Right|LeftOf, Top|TopOf, 200, 600);
-		dynamic_cast<Form*>(editor_ctrl.m_ctrl)->PinWindow(true);
+			});
 
 		// Initialise the recent files list and saved views
 		m_recent_files.MaxLength(m_main->m_settings.m_MaxRecentFiles);
@@ -414,9 +405,12 @@ namespace ldr
 	// Open a line drawer script file and optionally add it to the current scene
 	void MainGUI::OnFileOpen(bool additive)
 	{
-		WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,*this);
-		if (fd.DoModal() != IDOK) return;
-		FileOpen(pr::Widen(fd.m_szFileName).c_str(), additive);
+		auto files = OpenFileUI(nullptr);
+		if (files.empty()) return;
+		FileOpen(files[0].c_str(), additive);
+		//WTL::CFileDialog fd(TRUE,0,0,0,FileOpenFilter,*this);
+		//if (fd.DoModal() != IDOK) return;
+		//FileOpen(pr::Widen(fd.m_szFileName).c_str(), additive);
 	}
 
 	// Reset the view to all, selected, or visible objects

@@ -65,7 +65,7 @@ namespace view3d
 			,m_origin_point_size(0.05f)
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
-			,m_editor_ui()
+			,m_editor_ui(hwnd)
 			,m_obj_cont_ui()
 			,m_measure_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
 			,m_angle_tool_ui(ReadPoint, this_(), m_rdr, hwnd)

@@ -2126,13 +2126,12 @@ VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
 		// effectively a handle for the allocated window.
 		// Do nothing other than create the window here, callers can
 		// then restyle, move, show/hide, etc the window as they want.
-		auto edt = std::make_unique<pr::ldr::ScriptEditorDlg>();
-		auto hwnd = edt->Create(parent);
-
+		auto editor = std::make_unique<pr::ldr::ScriptEditorDlg>(parent);
+		HWND hwnd = *editor;
 		::SetLastError(0);
-		auto prev = ::SetWindowLongPtrA(hwnd, GWLP_USERDATA, LONG_PTR(edt.get()));
+		auto prev = ::SetWindowLongPtrA(hwnd, GWLP_USERDATA, LONG_PTR(editor.get()));
 		if (prev != 0 || ::GetLastError() != 0) throw std::exception("Error while creating editor window");
-		edt.release();
+		editor.release();
 		return hwnd;
 	}
 	CatchAndReport(View3D_LdrEditorCreate, , 0);
