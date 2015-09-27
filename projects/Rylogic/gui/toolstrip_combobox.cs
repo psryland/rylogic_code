@@ -1,35 +1,79 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using pr.common;
+using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace pr.gui
 {
-	/// <summary>A replacement for ToolStripComboBox that preserves the text selection across focus lost/gained</summary>
-	public class ToolStripComboBox :System.Windows.Forms.ToolStripComboBox
+	/// <summary>
+	/// A replacement for ToolStripComboBox that preserves the text selection across focus lost/gained
+	/// and also doesn't throw a first chance exception when then the combo box data source is set to null</summary>
+	public class ToolStripComboBox :System.Windows.Forms.ToolStripControlHost
 	{
-		/// <summary>Used to preserve the selection while the control doesn't have focus</summary>
-		private Range m_selection;
-
 		public ToolStripComboBox() :this(string.Empty) {}
-		public ToolStripComboBox(string name) :base(name)
+		public ToolStripComboBox(string name) :base(new pr.gui.ComboBox(), name)
 		{
-			m_selection = new Range(0,0);
+			ComboBox.TextChanged += (s,a) => OnTextChanged(a);
+			ComboBox.TextUpdate += (s,a) => OnTextUpdate(a);
+		}
+
+		/// <summary>The hosted combobox</summary>
+		public ComboBox ComboBox
+		{
+			get { return (ComboBox)Control; }
+		}
+
+		/// <summary>The items displayed in the combo box</summary>
+		public ComboBox.ObjectCollection Items
+		{
+			get { return ComboBox.Items; }
+		}
+
+		/// <summary>Get/Set the selected item</summary>
+		public int SelectedIndex
+		{
+			get { return ComboBox.SelectedIndex; }
+			set { ComboBox.SelectedIndex = value; }
+		}
+
+		/// <summary>Raised when the selected index changes</summary>
+		public event EventHandler SelectedIndexChanged
+		{
+			add { ComboBox.SelectedIndexChanged += value; }
+			remove { ComboBox.SelectedIndexChanged -= value; }
+		}
+
+		/// <summary>The selected item</summary>
+		public object SelectedItem
+		{
+			get { return ComboBox.SelectedItem; }
+			set { ComboBox.SelectedItem = value; }
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
-		public new string SelectedText
+		public string SelectedText
 		{
-			get { return base.SelectedText; }
+			get { return ComboBox.SelectedText; }
 			set
 			{
 				//System.Diagnostics.Trace.Write("SelectedText: ");
 				RestoreSelection();
-				base.SelectedText = value;
+				ComboBox.SelectedText = value;
 			}
+		}
+
+		/// <summary>Gets/Sets the style of the combo box</summary>
+		public ComboBoxStyle DropDownStyle
+		{
+			get { return ComboBox.DropDownStyle; }
+			set { ComboBox.DropDownStyle = value; }
+		}
+
+		/// <summary>Get/Set the appearance of the combo box</summary>
+		public FlatStyle FlatStyle
+		{
+			get { return ComboBox.FlatStyle; }
+			set { ComboBox.FlatStyle = value; }
 		}
 
 		/// <summary>Restore the selection on focus gained</summary>
@@ -42,9 +86,9 @@ namespace pr.gui
 		}
 
 		/// <summary>Update the selection whenever the text changes</summary>
-		protected override void OnTextUpdate(EventArgs e)
+		protected virtual void OnTextUpdate(EventArgs e)
 		{
-			base.OnTextUpdate(e);
+			//base.OnTextUpdate(e);
 			//System.Diagnostics.Trace.Write("OnTextUpdate: ");
 			SaveSelection();
 		}
@@ -77,12 +121,8 @@ namespace pr.gui
 		private void RestoreSelection()
 		{
 			// Only allow selection setting for editable combo box styles
-			if (DropDownStyle != System.Windows.Forms.ComboBoxStyle.DropDownList)
-			{
-				// Note, this order is important, also base.Select() uses the wrong order
-				base.SelectionLength = m_selection.Sizei;
-				base.SelectionStart  = m_selection.Begini;
-			}
+			if (ComboBox.DropDownStyle != System.Windows.Forms.ComboBoxStyle.DropDownList)
+				Util.Dispose(ref m_selection_scope);
 			//System.Diagnostics.Trace.WriteLine("Selection Restored: [{0},{1}] -> [{2},{3}]".Fmt(m_selection.Begini, m_selection.Sizei, SelectionStart, SelectionLength));
 		}
 
@@ -90,13 +130,15 @@ namespace pr.gui
 		private void SaveSelection()
 		{
 			// Only allow selection setting for editable combo box styles
-			if (DropDownStyle != System.Windows.Forms.ComboBoxStyle.DropDownList)
+			if (ComboBox.DropDownStyle != System.Windows.Forms.ComboBoxStyle.DropDownList)
 			{
-				int ss = base.SelectionStart;
-				int sl = base.SelectionLength;
-				m_selection = new Range(ss,ss+sl);
+				Util.Dispose(ref m_selection_scope);
+				m_selection_scope = ComboBox.SelectionScope();
 				//System.Diagnostics.Trace.WriteLine("Selection Saved: [{0},{1}]\n\t{2}".Fmt(m_selection.Begini, m_selection.Sizei, string.Join("\n\t", new StackTrace().GetFrames().Take(5).Select(x => x.GetMethod()))));
 			}
 		}
+
+		/// <summary>Used to preserve the selection while the control doesn't have focus</summary>
+		private Scope m_selection_scope;
 	}
 }

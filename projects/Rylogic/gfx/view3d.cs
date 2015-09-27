@@ -1801,43 +1801,18 @@ namespace pr.gfx
 		//      View3d.LoadDll(@".\libs\$(platform)");
 		//  }
 
+		private const string Dll = "view3d";
+
 		/// <summary>True if the view3d dll has been loaded</summary>
 		public static bool ModuleLoaded { get { return m_module != IntPtr.Zero; } }
 		private static IntPtr m_module = IntPtr.Zero;
 
-		private const string Dll = "view3d";
-
 		/// <summary>Helper method for loading the view3d.dll from a platform specific path</summary>
 		public static void LoadDll(string dir = @".\lib\$(platform)")
 		{
-			if (m_module != IntPtr.Zero)
-				return; // Already loaded
-
-			var dllname = Dll+".dll";
-			var dllpath = dllname;
-
-			// Try the lib folder. Load the appropriate dll for the platform
-			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
-			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
-			dllpath = Path.Combine(dir, dllname);
-			if (PathEx.FileExists(dllpath))
-			{
-				m_module = LoadLibrary(dllpath);
-				if (m_module != IntPtr.Zero)
-					return;
-			}
-
-			// Try the local directory
-			if (PathEx.FileExists(dllpath))
-			{
-				m_module = LoadLibrary(dllpath);
-				if (m_module != IntPtr.Zero)
-					return;
-			}
-
-			throw new DllNotFoundException("Failed to load dependency '{0}'".Fmt(dllname));
+			if (ModuleLoaded) return;
+			m_module = Win32.LoadDll(Dll+".dll", dir);
 		}
-		[DllImport("Kernel32.dll")] private static extern IntPtr LoadLibrary(string path);
 
 		// Initialise / shutdown the dll
 		[DllImport(Dll)] private static extern HContext          View3D_Initialise             (ReportErrorCB initialise_error_cb, IntPtr ctx);

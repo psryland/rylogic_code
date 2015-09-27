@@ -77,6 +77,12 @@ namespace pr.extn
 			return sub.Substring(0, eidx);
 		}
 
+		/// <summary>Replace the line endings in this string with the given characters</summary>
+		public static string LineEnding(this string str, string ending = "\r\n")
+		{
+			return Regex.Replace(str, @"\r\n?|\n", ending);
+		}
+
 		/// <summary>Returns a string containing this character repeated 'count' times</summary>
 		public static string Repeat(this char ch, int count)
 		{

@@ -285,33 +285,18 @@ namespace pr.container
 		}
 
 		/// <summary>RAII object for suspending list events</summary>
-		public Scope SuspendEvents(bool reset_bindings_on_resume = false)
+		public Scope<bool> SuspendEvents(bool reset_bindings_on_resume = false)
 		{
 			return Scope.Create(
 				() =>
 				{
 					RaiseListChangedEvents = false;
+					return reset_bindings_on_resume;
 				},
-				() =>
+				do_reset =>
 				{
 					RaiseListChangedEvents = true;
-					if (reset_bindings_on_resume)
-						ResetBindings();
-				});
-		}
-
-		/// <summary>RAII object for suspending list events</summary>
-		public Scope SuspendEvents(Func<bool> reset_bindings_on_resume)
-		{
-			return Scope.Create(
-				() =>
-				{
-					RaiseListChangedEvents = false;
-				},
-				() =>
-				{
-					RaiseListChangedEvents = true;
-					if (reset_bindings_on_resume())
+					if (do_reset)
 						ResetBindings();
 				});
 		}

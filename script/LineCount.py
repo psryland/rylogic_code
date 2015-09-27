@@ -10,9 +10,11 @@ try:
 	Tools.AssertVersion(1)
 
 	dirs = [
-		r"R:\software\STM32",
-		r"R:\software\PC",
-#		r"R:\software\ARM7",
+		#r"R:\software\PC\RexConfig",
+		#r"R:\software\STM32",
+		#r"R:\software\ARM7",
+		r"R:\software\SDK\pr",
+		#r"R:\software\SDK\pr\projects\Rylogic",
 		]
 
 	excludes = [
@@ -26,13 +28,13 @@ try:
 		]
 		
 	extns = [
+		".cs",
 		".c",
 		".cpp",
 		".h",
 		".hpp",
 		# ".hlsl",
 		# ".hlsli",
-		".cs",
 		]
 	
 	line_count = 0;

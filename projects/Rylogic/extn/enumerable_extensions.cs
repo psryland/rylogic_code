@@ -4,15 +4,23 @@
 //***************************************************
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using pr.common;
+using pr.util;
 
 namespace pr.extn
 {
 	/// <summary>Extensions for IEnumerable</summary>
 	public static class EnumerableExtensions
 	{
+		/// <summary>Cast a collection to statically convertable type</summary>
+		public static IEnumerable<TResult> ConvertTo<TResult>(this IEnumerable source)
+		{
+			return source.Cast<object>().Select(x => Util.ConvertTo<TResult>(x));
+		}
+
 		/// <summary>Convert the collection into a hash set</summary>
 		public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source)
 		{
@@ -237,8 +245,24 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Zip two or more collections together by cycling through 'this', then each of the given collections</summary>
+		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, params IEnumerable<TSource>[] others)
+		{
+			var iters = new[] { source.GetIterator() }.Concat(others.Select(x => x.GetIterator()));
+			for (bool all_done = false; !all_done; )
+			{
+				all_done = true;
+				foreach (var iter in iters)
+				{
+					if (iter.AtEnd) continue;
+					yield return iter.Current;
+					all_done &= !iter.MoveNext();
+				}
+			}
+		}
+
 		/// <summary>Zip two collections together in order defined by 'comparer'</summary>
-		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Cmp<TSource> comparer = null)
+		public static IEnumerable<TSource> Zip<TSource>(this IEnumerable<TSource> source, IEnumerable<TSource> other, Cmp<TSource> comparer)
 		{
 			comparer = comparer ?? Cmp<TSource>.Default;
 
@@ -359,6 +383,12 @@ namespace pr.unittests
 			// Notice how the built in one doesn't actually work...
 			var wrong = i0.Except(i1, cmp).ToArray();
 			Assert.False(wrong.SequenceEqual(new[]{1,3,5,7,9}));
+		}
+		[Test] public void ConvertTo()
+		{
+			var i0 = new int[]{1,2,3,4,5,6,7};
+			var res = i0.ConvertTo<byte>().ToArray();
+			Assert.True(res.SequenceEqual(new byte[]{1,2,3,4,5,6,7}));
 		}
 	}
 }

@@ -19,6 +19,30 @@ namespace pr.extn
 			return item;
 		}
 
+		/// <summary>Add and return an menu item to this collection in order defined by 'cmp'</summary>
+		public static T AddOrdered<T>(this ToolStripItemCollection items, T item, Comparer<ToolStripMenuItem> cmp) where T:ToolStripMenuItem
+		{
+			var idx = 0;
+			for (idx = 0; idx != items.Count; ++idx)
+			{
+				var mi = items[idx] as ToolStripMenuItem;
+				if (mi != null && cmp.Compare(mi, item) > 0)
+					break;
+			}
+
+			items.Insert(idx, item);
+			return item;
+		}
+
+		/// <summary>Add and return a menu item in alphabetical order</summary>
+		public static T AddOrdered<T>(this ToolStripItemCollection items, T item) where T:ToolStripMenuItem
+		{
+			return items.AddOrdered(item, AlphabeticalOrder);
+		}
+
+		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
+		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
+
 		/// <summary>Exports location data for this tool strip container</summary>
 		public static ToolStripLocations SaveLocations(this ToolStripContainer cont)
 		{
@@ -127,26 +151,41 @@ namespace pr.extn
 			return parent.RectangleToScreen(item.Bounds);
 		}
 
-		/// <summary>Set a status label with text plus optional colours, detail tooltip, callback click handler, display time</summary>
+		/// <summary>
+		/// Set a status label with text plus optional colours, detail tooltip, callback click handler, display time.
+		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
 		public static void SetStatusMessage(this ToolStripStatusLabel status,
-			string msg = null, string detail = null, string idle = null,
-			bool bold = false, Color? fr_color = null, Color? bk_color = null,
-			TimeSpan? display_time_ms = null, EventHandler on_click = null)
+			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0)
 		{
 			if (status == null)
 				return;
 
-			status.Visible = msg.HasValue();
+			// Ensure the status has tag data
+			if (status.Tag == null)
+				new StatusTagData(status);
+			else if (!(status.Tag is StatusTagData))
+				throw new Exception("Tag property already used for non-status data");
+
+			// Get the status data
+			var data = status.Tag.As<StatusTagData>();
+
+			// Ignore the status if it has lower priority than the current
+			if (msg.HasValue() && priority < data.m_priority) return;
+			data.m_priority = priority;
 
 			// Set the text
-			status.Text = msg ?? string.Empty;
+			status.Text = msg ?? data.m_idle_msg;
 
 			// Set the tool tip to the detailed message
-			status.ToolTipText = detail ?? string.Empty;
+			status.ToolTipText = tt ?? string.Empty;
 
 			// Set colours
 			status.ForeColor = fr_color ?? SystemColors.ControlText;
 			status.BackColor = bk_color ?? SystemColors.Control;
+
+			// Hide the status label if it has no value
+			status.Visible = msg.HasValue();
 
 			// Choose the font to use
 			var font_style = FontStyle.Regular;
@@ -155,32 +194,20 @@ namespace pr.extn
 			if (status.Font.Style != font_style)
 				status.Font = new Font(status.Font, font_style);
 
-			// Ensure the status has tag data
-			if (status.Tag == null)
-			{
-				var tag_data = new StatusTagData();
-				status.Click += tag_data.HandleStatusClick;
-				status.MouseEnter += tag_data.HandleMouseEnter;
-				status.MouseLeave += tag_data.HandleMouseLeave;
-				status.Tag = tag_data;
-			}
-			else if (!(status.Tag is StatusTagData))
-				throw new Exception("Tag property already used for non-status data");
-
-			var data = status.Tag.As<StatusTagData>();
-
 			// If the status message has a timer, dispose it
+			// If the status has a display time, set a timer
 			Util.Dispose(ref data.m_timer);
-			if (display_time_ms != null)
+			if (display_time != null)
 			{
-				// If the status has a display time, set a timer
-				data.m_timer = new Timer{Enabled = true, Interval = (int)display_time_ms.Value.TotalMilliseconds};
+				data.m_timer = new Timer{Enabled = true, Interval = (int)display_time.Value.TotalMilliseconds};
 				data.m_timer.Tick += (s,a) =>
 					{
 						// When the timer fires, if we're still associated with
-						// the status message, null out the text and remove our self
+						// the status message, null out the text and remove ourself
 						if (!ReferenceEquals(s, data.m_timer)) return;
-						status.SetStatusMessage(idle);
+						data.m_priority = 0;
+						status.SetStatusMessage(data.m_idle_msg);
+						Util.Dispose(ref data.m_timer);
 					};
 			}
 
@@ -188,11 +215,47 @@ namespace pr.extn
 			data.m_on_click = on_click;
 		}
 
+		/// <summary>Set the message to display when the status label has no status to display</summary>
+		public static void SetStatusIdleMessage(this ToolStripStatusLabel status, string msg)
+		{
+			if (status == null)
+				return;
+
+			// Ensure the status has tag data
+			if (status.Tag == null)
+				new StatusTagData(status);
+			else if (!(status.Tag is StatusTagData))
+				throw new Exception("Tag property already used for non-status data");
+
+			var data = status.Tag.As<StatusTagData>();
+			data.m_idle_msg = msg;
+		}
+
 		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
 		private class StatusTagData
 		{
+			public string m_idle_msg;
+			public int m_priority;
 			public Timer m_timer;
 			public EventHandler m_on_click;
+
+			public StatusTagData(ToolStripStatusLabel lbl)
+			{
+				m_idle_msg = string.Empty;
+				m_priority = 0;
+				m_timer    = null;
+				m_on_click = null;
+
+				if (lbl.Tag is StatusTagData)
+					throw new Exception("Status label already has status data");
+				if (lbl.Tag != null)
+					throw new Exception("Status label Tag property already used for non-status data");
+
+				lbl.Click += HandleStatusClick;
+				lbl.MouseEnter += HandleMouseEnter;
+				lbl.MouseLeave += HandleMouseLeave;
+				lbl.Tag = this;
+			}
 			public void HandleStatusClick(object sender, EventArgs args)
 			{
 				m_on_click.Raise(sender, args); // Forward to the user handler
@@ -322,69 +385,89 @@ namespace pr.extn
 			if (rhs.Cast<ToolStripItem>().Any(x => x.Owner != rhs_owner))
 				throw new Exception("Merge menus failed. All items in the collection must belong to {0}".Fmt(rhs_owner.ToString()));
 
+			// Replace the -1 merge indices by their index position
+			// In 'lhs', set the merge index of all items (including separators) because
+			// we want to preserve the 'lhs' menu as much as possible
+			// In 'rhs', don't set the merge index for separators because we use the default
+			// index to indicate that the separator should be ignored for merging
+			for (int i = 0; i != lhs.Count; ++i)
+				if (lhs[i].MergeIndex == -1)
+					lhs[i].MergeIndex = i;
+			for (int i = 0; i != rhs.Count; ++i)
+				if (rhs[i].MergeIndex == -1 && !(rhs[i] is ToolStripSeparator))
+					rhs[i].MergeIndex = i;
+
 			// Sort the items in lhs by MergeIndex
 			for (bool sorted = false; !sorted;)
 			{
 				sorted = true;
 				for (int i = 1; i < lhs.Count; ++i)
 				{
-					if ((uint)lhs[i].MergeIndex >= (uint)lhs[i-1].MergeIndex) continue;
+					if (lhs[i].MergeIndex >= lhs[i-1].MergeIndex) continue;
 					lhs.Insert(i-1, lhs[i]);
 					sorted = false;
 					--i;
 				}
 			}
 
-			// Build a list of all items
-			var order = lhs.Cast<ToolStripItem>().Concat(rhs.Cast<ToolStripItem>()).ToList();
-			var tomerge = new List<ToolStripItem>();
-
-			// Merge any items with the same name
-			foreach (var grp in order.GroupBy(x => x.Name))
+			// For each item in 'rhs' look for a match in 'lhs'. If found, merge the item.
+			// If not found, insert the item based on MergeIndex.
+			var dst = lhs.Cast<ToolStripItem>().ToList();
+			var src = rhs.Cast<ToolStripItem>().ToList();
+			foreach (var r in src)
 			{
-				// Find one in the group that belongs to 'lhs'
-				var l = grp.FirstOrDefault(x => x.Owner == lhs_owner);
-				if (l == null)
-				{
-					// All belong to 'rhs' stick them in the list for merging later
-					tomerge.AddRange(grp);
+				// Ignore separators without a name or merge index
+				var sep = r as ToolStripSeparator;
+				if (sep != null && !sep.Name.HasValue() && sep.MergeIndex == -1)
 					continue;
-				}
 
-				// Merge the rest in the group that belong to 'rhs' with 'l'
-				foreach (var r in grp.Where(x => x.Owner == rhs_owner))
+				// Look for a match in 'lhs'
+				var l = r.Name.HasValue()
+					? dst.FirstOrDefault(x => x.Name == r.Name)
+					: dst.FirstOrDefault(x => x.Text == r.Text);
+
+				// Merge 'l' and 'r'
+				if (l != null)
 				{
 					var ldd = l as ToolStripDropDownItem;
 					var rdd = r as ToolStripDropDownItem;
-					if ((ldd != null) != (rdd != null))
-						throw new Exception("Menu merge failed. Cannot merge items {0} and {1} because both are not drop down items".Fmt(l.Text, r.Text));
 
-					// Merge rhs into lhs and choose lhs
+					// If one menu replaces the other, remove all items from the replacee
+					if (l.MergeAction == MergeAction.Replace)
+						rdd.DropDownItems.Clear();
+					if (r.MergeAction == MergeAction.Replace)
+						ldd.DropDownItems.Clear();
+
+					// Merge 'r' into 'l', then keep 'l'
 					if (!choose_rhs)
 					{
-						if (ldd != null && rdd != null)
+						if (ldd != null && rdd != null && rdd.DropDownItems.Count != 0)
 							DoMerge(ldd.DropDown, ldd.DropDownItems, rdd.DropDown, rdd.DropDownItems, false);
 					}
-
-					// Otherwise merge lhs into rhs and choose rhs
+					// Otherwise, merge 'l' into 'r', then keep 'r'
 					else
 					{
-						if (ldd != null && rdd != null)
+						if (ldd != null && rdd != null && ldd.DropDownItems.Count != 0)
 							DoMerge(rdd.DropDown, rdd.DropDownItems, ldd.DropDown, ldd.DropDownItems, false);
 
-						var idx = lhs.IndexOf(l);
+						// If 'rhs' has more than one item with the same name, it's possible that the first
+						// occurrence was merged and replace the item in 'lhs'. The second item needs to replace
+						// the first item in lhs. We can't use lhs.IndexOf() because 'l' may no longer be in 'lhs'.
+						var idx = l.Name.HasValue()
+							? lhs.Cast<ToolStripItem>().IndexOf(x => x.Name == r.Name)
+							: lhs.Cast<ToolStripItem>().IndexOf(x => x.Text == r.Text);
 						lhs.RemoveAt(idx);
 						lhs.Insert(idx, r);
 					}
 				}
-			}
 
-			// Merge the remaining items by MergeIndex
-			foreach (var r in tomerge.Where(x => x.Owner == rhs_owner).OrderByDescending(x => (uint)x.MergeIndex))
-			{
-				var idx = (uint)(r.MergeIndex != -1 ? r.MergeIndex : lhs.Count);
-				var ins = 0; for (; ins != lhs.Count && (uint)lhs[ins].MergeIndex < idx; ++ins) {}
-				lhs.Insert(ins, r);
+				// No match found, merge using MergeIndex
+				else
+				{
+					var idx = (r.MergeIndex != -1 ? r.MergeIndex : lhs.Count);
+					int ins; for (ins = 0; ins != lhs.Count && lhs[ins].MergeIndex < idx; ++ins) {}
+					lhs.Insert(ins, r);
+				}
 			}
 		}
 	}

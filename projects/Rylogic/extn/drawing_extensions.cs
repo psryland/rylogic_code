@@ -208,6 +208,12 @@ namespace pr.extn
 				(int)Maths.Clamp(src.B * (1f - frac) + dst.B * frac, 0f, 255f));
 		}
 
+		/// <summary>Convert this colour to ABGR</summary>
+		public static int ToAbgr(this Color col)
+		{
+			return unchecked((int)(((uint)col.A << 24) | ((uint)col.B << 16) | ((uint)col.G << 8) | ((uint)col.R << 0)));
+		}
+
 		/// <summary>Convert this colour to it's associated grayscale value</summary>
 		public static Color ToGrayScale(this Color col)
 		{

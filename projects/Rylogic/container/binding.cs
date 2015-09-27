@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using pr.extn;
 using pr.util;
 
@@ -22,8 +21,11 @@ namespace pr.container
 	///   name_binding.DataSource = new Person("Joe");<para/>
 	///   Assert.Equal(person_name_textbox.Text, "Joe");<para/>
 	///   <para/>
-	///   See unit tests for more detailed example
-	/// </summary>
+	///   See unit tests for more detailed examples</para>
+	/// </para>
+	///  NOTE: Does *not* automatically detected changes in the source data unless the source
+	///  implements 'INotifyPropertyChanged' and raises the 'PropertyChanged' event when the bound
+	///  value is changed.</summary>
 	public class Binding<TSrc, TValue> where TSrc:class
 	{
 		/// <summary>The collection of objects attached to this binding</summary>
@@ -169,7 +171,15 @@ namespace pr.container
 			{
 				m_bound.ForEach(x => x.Set(DefaultValue));
 			}
+			ValueChanged.Raise(this, EventArgs.Empty);
 		}
+
+		/// <summary>
+		/// Raised when 'ResetBindings' is called on this binding.
+		/// If the bound object implements INotifyPropertyChanged and raises PropertyChanged events
+		/// then this event will be raised automatically when the bound value changes.
+		/// Note: 'sender' == this binding, not 'DataSource'</summary>
+		public event EventHandler ValueChanged;
 	}
 }
 

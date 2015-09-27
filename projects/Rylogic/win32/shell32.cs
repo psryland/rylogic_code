@@ -640,6 +640,8 @@ namespace pr.win32
 			return (IShellItem)item;
 		}
 
+		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern void DragAcceptFiles(IntPtr hwnd, bool accept);
+		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] public static extern uint DragQueryFile(IntPtr hDrop, uint iFile, [Out] StringBuilder lpszFile, uint cch);
 		[DllImport("shell32.dll", CharSet = CharSet.Unicode)] private static extern int SHCreateItemFromParsingName([MarshalAs(UnmanagedType.LPWStr)] string pszPath, IntPtr pbc, ref Guid riid, [MarshalAs(UnmanagedType.Interface)] out object ppv);
 	}
 }

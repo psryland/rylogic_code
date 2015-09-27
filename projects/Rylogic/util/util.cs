@@ -78,26 +78,33 @@ namespace pr.util
 		[DebuggerStepThrough] public static void DisposeAll<T>(ref BindingSource<T> doomed) where T:class, IDisposable
 		{
 			var doomed_ = (IList<T>)doomed;
+			doomed = null;
 			DisposeAll<IList<T>,T>(ref doomed_);
 		}
 
 		/// <summary>Dispose and return null for one-line disposing, e.g. thing = Util.Dispose(thing);</summary>
 		[DebuggerStepThrough] public static T Dispose<T>(T doomed) where T:class, IDisposable
 		{
-			// Not as safe as the ref overload
 			Dispose(ref doomed);
 			return doomed;
 		}
 		[DebuggerStepThrough] public static TList DisposeAll<TList,T>(TList doomed) where TList :IList<T> where T:class, IDisposable
 		{
-			// Not as safe as the versions above
 			DisposeAll<TList,T>(ref doomed);
 			return doomed;
 		}
 		[DebuggerStepThrough] public static BindingSource<T> DisposeAll<T>(this BindingSource<T> doomed) where T:class, IDisposable
 		{
-			// Not as safe as the versions above
 			return (BindingSource<T>)DisposeAll<IList<T>, T>(doomed);
+		}
+		[DebuggerStepThrough] public static BindingListEx<T> DisposeAll<T>(this BindingListEx<T> doomed) where T:class, IDisposable
+		{
+			return (BindingListEx<T>)DisposeAll<IList<T>, T>(doomed);
+		}
+		[DebuggerStepThrough] public static void DisposeAll<T>(this IEnumerable<T> doomed) where T:class, IDisposable
+		{
+			foreach (var d in doomed)
+				d.Dispose();
 		}
 
 		/// <summary>

@@ -19,16 +19,20 @@ namespace pr.gui
 		private Panel m_panel;
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
+		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = 7f)
 		{
 			using (var dlg = new MsgBox(owner, message, title, btns, icon, dflt_btn))
+			{
+				dlg.Reflow = reflow;
+				dlg.ReflowAspectRatio = reflow_aspect;
 				return dlg.ShowDialog(owner);
+			}
 		}
 
 		/// <summary>Display a modal message box</summary>
-		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1)
+		public static DialogResult Show(string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = 7f)
 		{
-			return Show(null, message,title, btns, icon, dflt_btn);
+			return Show(null, message,title, btns, icon, dflt_btn, reflow, reflow_aspect);
 		}
 
 		public MsgBox()                                                                          :this(null, string.Empty, string.Empty, MessageBoxButtons.OK, MessageBoxIcon.None, MessageBoxDefaultButton.Button1) {}
@@ -43,13 +47,24 @@ namespace pr.gui
 			InitializeComponent();
 			StartPosition = FormStartPosition.CenterParent;
 			Title = title;
-			Message = Regex.Replace(message, @"(?<!\r)\n", "\r\n"); // Replace instances of \n with \r\n (if not already \r\n)
+			Message = message.LineEnding("\r\n");
 			Reflow = true;
 			ReflowAspectRatio = 7f;
 
-			Owner = owner as Form;
-			ShowIcon = Owner != null && Owner.Icon != null;
-			if (Owner != null) Icon = Owner.Icon;
+			Owner = owner != null ? owner.TopLevelControl as Form : (Form)null;
+			if (Owner != null)
+			{
+				Icon = Owner.Icon;
+				ShowIcon = Owner.ShowIcon &&
+					Owner.Icon != null &&
+					Owner.FormBorderStyle != FormBorderStyle.FixedToolWindow &&
+					Owner.FormBorderStyle != FormBorderStyle.SizableToolWindow;
+			}
+			else
+			{
+				Icon = null;
+				ShowIcon = false;
+			}
 
 			m_message.LinkClicked += (s,a) =>
 				{
@@ -152,21 +167,32 @@ namespace pr.gui
 
 			Shown += (s,a) =>
 				{
+					UpdateLayout();
 					if (StartPosition == FormStartPosition.CenterParent)
 						CenterToParent();
 				};
-
-			UpdateLayout();
 		}
 
 		/// <summary>The message box title</summary>
-		public string Title { get { return Text; } set { Text = value; } }
+		public string Title
+		{
+			get { return Text; }
+			set { Text = value; }
+		}
 
 		/// <summary>The message body</summary>
-		public string Message { get { return m_message.Text; } set { m_message.Text = value; } }
+		public string Message
+		{
+			get { return m_message.Text; }
+			set { m_message.Text = value; }
+		}
 
 		/// <summary>The message body in RTF</summary>
-		public string MessageRtf { get { return m_message.Rtf; } set { m_message.Rtf = value; } }
+		public string MessageRtf
+		{
+			get { return m_message.Rtf; }
+			set { m_message.Rtf = value; }
+		}
 
 		/// <summary>The image to display next to the message body</summary>
 		public Image Image
@@ -176,22 +202,47 @@ namespace pr.gui
 		}
 
 		/// <summary>Allow access to the icon image control</summary>
-		public PictureBox ImageCtrl { get { return m_image; } }
+		public PictureBox ImageCtrl
+		{
+			get { return m_image; }
+		}
 
 		/// <summary>Set to true to have the dialog automatically line wrap text. False to honour message new lines</summary>
-		public bool Reflow { get; set; }
+		public bool Reflow
+		{
+			get { return m_reflow; }
+			set { m_reflow = value; }
+		}
+		private bool m_reflow;
 
 		/// <summary>The ratio of width to height used to decide where to wrap text</summary>
-		public float ReflowAspectRatio { get; set; }
+		public float ReflowAspectRatio
+		{
+			get { return m_reflow_aspect; }
+			set { m_reflow_aspect = value; }
+		}
+		private float m_reflow_aspect;
 
 		/// <summary>Get/Set the text on the positive button</summary>
-		public string PositiveBtnText { get { return m_btn_positive.Text; } set { m_btn_positive.Text = value; } }
+		public string PositiveBtnText
+		{
+			get { return m_btn_positive.Text; }
+			set { m_btn_positive.Text = value; }
+		}
 
 		/// <summary>Get/Set the text on the neutral button</summary>
-		public string NeutralBtnText { get { return m_btn_neutral.Text; } set { m_btn_neutral.Text = value; } }
+		public string NeutralBtnText
+		{
+			get { return m_btn_neutral.Text; }
+			set { m_btn_neutral.Text = value; }
+		}
 
 		/// <summary>Get/Set the text on the negative button</summary>
-		public string NegativeBtnText { get { return m_btn_negative.Text; } set { m_btn_negative.Text = value; } }
+		public string NegativeBtnText
+		{
+			get { return m_btn_negative.Text; }
+			set { m_btn_negative.Text = value; }
+		}
 
 		/// <summary>Sets an appropriate size for the message box and lays out the controls</summary>
 		public void UpdateLayout()
@@ -201,7 +252,7 @@ namespace pr.gui
 			const int button_margin_v = 12;
 			var btn_size = m_btn_positive.Size;
 			var btns = new[]{m_btn_negative, m_btn_neutral, m_btn_positive};
-			var num_btns = btns.Count(b => b.Text != string.Empty);
+			var num_btns = btns.Count(b => b.Text.HasValue());
 
 			// Find the screen area to bound the message text
 			var screen_area = (Owner != null ? Screen.FromControl(Owner) : Screen.PrimaryScreen).WorkingArea;
@@ -266,7 +317,7 @@ namespace pr.gui
 			// Layout buttons
 			foreach (var btn in btns)
 			{
-				var show_btn = btn.Text != string.Empty;
+				var show_btn = btn.Text.HasValue();
 				btn.Visible = show_btn;
 				if (!show_btn) continue; // Don't use btn.Visible because it's not true until the dialog is displayed
 

@@ -220,12 +220,11 @@ namespace pr.gui
 				else ++idx;
 
 				// Find the range of paths to remove
-				var paths_removed = false;
-				using (Paths.SuspendEvents(() => paths_removed))
+				using (var raise = Paths.SuspendEvents(false))
 				{
 					var count = Paths.Skip(idx).Count(x => x.Name.StartsWith(path.Name));
 					Paths.RemoveRange(idx, count);
-					paths_removed = count != 0;
+					raise.Value = count != 0;
 				}
 			}
 

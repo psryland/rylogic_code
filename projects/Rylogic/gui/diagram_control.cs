@@ -97,13 +97,13 @@ namespace pr.gui
 			/// <summary>Get the entity type for this element</summary>
 			public abstract Entity Entity { get; }
 
-			/// <summary>Non-null when the element has been added to a diagram</summary>
-			public virtual DiagramControl Diagram
+			/// <summary>Non-null when the element has been added to a diagram. Not virtual, override 'SetDiagramInternal' instead</summary>
+			public DiagramControl Diagram
 			{
 				get { return m_diag; }
 				set { SetDiagramInternal(value, true); }
 			}
-			internal virtual void SetDiagramInternal(DiagramControl diag, bool mod_elements_collection)
+			internal virtual void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
 			{
 				// There are two ways of adding an element to a diagram; adding to the
 				// diagrams Elements collection, or assigning this property. To handle
@@ -119,7 +119,7 @@ namespace pr.gui
 				if (m_diag != null)
 				{
 					m_diag.m_dirty.Remove(this);
-					if (mod_elements_collection)
+					if (add_to_elements)
 						m_diag.Elements.Remove(this);
 				}
 
@@ -129,7 +129,7 @@ namespace pr.gui
 				// Attach to the new diagram
 				if (m_diag != null)
 				{
-					if (mod_elements_collection)
+					if (add_to_elements)
 						m_diag.Elements.Add(this);
 				}
 
@@ -562,6 +562,16 @@ namespace pr.gui
 
 			/// <summary>Get the entity type for this element</summary>
 			public override Entity Entity { get { return Entity.Node; } }
+
+			/// <summary>Change the diagram that this element is associated with</summary>
+			internal override void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
+			{
+				// Detach from objects owned by the current diagram
+				if (diag != Diagram)
+					Style = new NodeStyle(Guid.Empty);
+
+				base.SetDiagramInternal(diag, add_to_elements);
+			}
 
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
@@ -1343,6 +1353,16 @@ namespace pr.gui
 
 			/// <summary>Get the entity type for this element</summary>
 			public override Entity Entity { get { return Entity.Connector; } }
+
+			/// <summary>Change the diagram that this element is associated with</summary>
+			internal override void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
+			{
+				// Detach from objects owned by the current diagram
+				if (diag != Diagram)
+					Style = new ConnectorStyle(Guid.Empty);
+
+				base.SetDiagramInternal(diag, add_to_elements);
+			}
 
 			/// <summary>Export to xml</summary>
 			public override XElement ToXml(XElement node)
@@ -3699,7 +3719,7 @@ namespace pr.gui
 				Elements.Clear();
 		}
 
-		/// <summary>Diagram objects</summary>
+		/// <summary>All diagram objects</summary>
 		public BindingListEx<Element> Elements { get; private set; }
 
 		/// <summary>The set of selected diagram elements</summary>

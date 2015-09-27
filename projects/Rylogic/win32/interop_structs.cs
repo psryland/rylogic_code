@@ -2,15 +2,14 @@
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Text;
+using HWND     = System.IntPtr;
+using UINT     = System.UInt32;
+using WORD     = System.UInt16;
+using DWORD    = System.UInt32;
+using COLORREF = System.UInt32;
 
 namespace pr.win32
 {
-	using HWND     = System.IntPtr;
-	using UINT     = System.UInt32;
-	using DWORD    = System.UInt32;
-	using COLORREF = System.UInt32;
-
 	public static partial class Win32
 	{
 		[StructLayout(LayoutKind.Sequential)]
@@ -83,6 +82,19 @@ namespace pr.win32
 			public int  cx;
 			public int  cy;
 			public UINT flags;
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
+		public struct SYSTEMTIME
+		{
+			public WORD wYear;
+			public WORD wMonth;
+			public WORD wDayOfWeek;
+			public WORD wDay;
+			public WORD wHour;
+			public WORD wMinute;
+			public WORD wSecond;
+			public WORD wMilliseconds;
 		}
 
 		[StructLayout(LayoutKind.Sequential)]

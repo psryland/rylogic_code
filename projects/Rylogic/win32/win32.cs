@@ -5,16 +5,14 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Windows.Input;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -163,6 +161,14 @@ namespace pr.win32
 		public const int WM_CHANGEUISTATE                = 0x0127;
 		public const int WM_UPDATEUISTATE                = 0x0128;
 		public const int WM_QUERYUISTATE                 = 0x0129;
+		public const int WM_CTLCOLORMSGBOX               = 0x0132;
+		public const int WM_CTLCOLOREDIT                 = 0x0133;
+		public const int WM_CTLCOLORLISTBOX              = 0x0134;
+		public const int WM_CTLCOLORBTN                  = 0x0135;
+		public const int WM_CTLCOLORDLG                  = 0x0136;
+		public const int WM_CTLCOLORSCROLLBAR            = 0x0137;
+		public const int WM_CTLCOLORSTATIC               = 0x0138;
+		public const int MN_GETHMENU                     = 0x01E1;
 		public const int WM_MOUSEMOVE                    = 0x0200;
 		public const int WM_LBUTTONDOWN                  = 0x0201;
 		public const int WM_LBUTTONUP                    = 0x0202;
@@ -270,6 +276,7 @@ namespace pr.win32
 		public const int WM_AFXLAST                      = 0x037F;
 		public const int WM_PENWINFIRST                  = 0x0380;
 		public const int WM_PENWINLAST                   = 0x038F;
+		public const int WM_REFLECT                      = 0x2000;
 		public const int WM_APP                          = 0x8000;
 		public const int WM_USER                         = 0x0400;
 
@@ -634,13 +641,18 @@ namespace pr.win32
 
 		#endregion
 
-		#region GWL_
-		public const int  GWL_WNDPROC                     = -4;
-		public const int  GWL_HINSTANCE                   = -6;
-		public const int  GWL_ID                          = -12;
-		public const int  GWL_STYLE                       = -16;
-		public const int  GWL_EXSTYLE                     = -20;
-		public const int  GWL_USERDATA                    = -21;
+		#region GWL_, GWLP_
+		public const int GWL_WNDPROC   = -4;
+		public const int GWL_HINSTANCE = -6;
+		public const int GWL_ID        = -12;
+		public const int GWL_STYLE     = -16;
+		public const int GWL_EXSTYLE   = -20;
+		public const int GWL_USERDATA  = -21;
+		public const int GWLP_WNDPROC    = -4;
+		public const int GWLP_HINSTANCE  = -6;
+		public const int GWLP_HWNDPARENT = -8;
+		public const int GWLP_USERDATA   = -21;
+		public const int GWLP_ID         = -12;
 		#endregion
 
 		#region TM_
@@ -1058,15 +1070,30 @@ namespace pr.win32
 
 			var searched = new List<string>();
 
-			// Search the local directory first
-			var dllpath = searched.Add2(Path.GetFullPath(dllname));
-			if (PathEx.FileExists(dllpath))
-				return TryLoad(dllpath);
-
-			// Try the 'dir' folder. Load the appropriate dll for the platform
-			dllpath = searched.Add2(Path.GetFullPath(Path.Combine(dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86"), dllname)));
-			if (PathEx.FileExists(dllpath))
-				return TryLoad(dllpath);
+			// Substitute the platform and config
+			dir = dir.Replace("$(platform)", Environment.Is64BitProcess ? "x64" : "x86");
+			dir = dir.Replace("$(config)", Util.IsDebug ? "debug" : "release");
+			
+			{// Try the working directory
+				var working_dir = Path.GetFullPath(dir);
+				var dll_path = searched.Add2(PathEx.CombinePath(working_dir, dllname));
+				if (PathEx.FileExists(dll_path))
+					return TryLoad(dll_path);
+			}
+			{// Try the exe directory
+				var exe_path = Assembly.GetEntryAssembly().Location;
+				var exe_dir = PathEx.Directory(exe_path);
+				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dir, dllname));
+				if (PathEx.FileExists(dll_path))
+					return TryLoad(dll_path);
+			}
+			{// Try the local directory
+				var exe_path = Assembly.GetEntryAssembly().Location;
+				var exe_dir = PathEx.Directory(exe_path);
+				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dllname));
+				if (PathEx.FileExists(dll_path))
+					return TryLoad(dll_path);
+			}
 
 			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
 		}
@@ -1099,17 +1126,37 @@ namespace pr.win32
 			return (int)LoWord((uint)dword);
 		}
 
+        // System.Windows.Forms.EKeys is the same as the win32 VK_ macros
+
+		/// <summary>Convert WParam to EKeys</summary>
+		public static Keys ToVKey(IntPtr wparam)
+		{
+			return (Keys)wparam;
+		}
+
+		/// <summary>Convert System.Windows.Input.Key to the 'Keys' enum</summary>
+		public static Keys ToVKey(Key key)
+		{
+			return (Keys)KeyInterop.VirtualKeyFromKey(key);
+		}
+
 		/// <summary>Test the async state of a key</summary>
-		public static bool KeyDown(Keys vkey)
+		public static bool KeyDownAsync(Keys vkey)
 		{
 			return (GetAsyncKeyState(vkey) & 0x8000) != 0;
 		}
 
-		/// <summary>Detect a key press using its async state</summary>
-		public static bool KeyPress(Keys vkey)
+		/// <summary>Test for key down using the key state for current message</summary>
+		public static bool KeyDown(Keys vkey)
 		{
-			if (!KeyDown(vkey)) return false;
-			while (KeyDown(vkey)) Thread.Sleep(10);
+			return (GetKeyState(vkey) & 0x8000) != 0;
+		}
+
+		/// <summary>Detect a key press using its async state</summary>
+		public static bool KeyPressAsync(Keys vkey)
+		{
+			if (!KeyDownAsync(vkey)) return false;
+			while (KeyDownAsync(vkey)) Thread.Sleep(10);
 			return true;
 		}
 
@@ -1129,9 +1176,9 @@ namespace pr.win32
 			if (r == 1) ch = sb[0];
 			return r == 1;
 		}
-		public static bool CharFromVKey(System.Windows.Input.Key vkey, out char ch)
+		public static bool CharFromVKey(Key key, out char ch)
 		{
-			return CharFromVKey((Keys)System.Windows.Input.KeyInterop.VirtualKeyFromKey(vkey), out ch);
+			return CharFromVKey(ToVKey(key), out ch);
 		}
 
 		/// <summary>Convert the LParam from WM_KEYDOWN, WM_KEYUP, WM_CHAR to usable data</summary>
@@ -1194,8 +1241,6 @@ namespace pr.win32
 		public delegate int HookProc(int nCode, int wParam, IntPtr lParam);
 
 		/// <summary>Output a trace of wndproc messages to the debug output window</summary>
-		/// <param name="m"></param>
-		[SuppressMessage("Microsoft.Performance", "CA1801:ReviewUnusedParameters", MessageId = "m")]
 		public static void WndProcDebug(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, string name)
 		{
 			#if true

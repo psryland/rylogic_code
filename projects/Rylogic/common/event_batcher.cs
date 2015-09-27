@@ -4,7 +4,6 @@
 //***************************************************
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Windows.Threading;
 using pr.extn;

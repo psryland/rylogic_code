@@ -112,9 +112,9 @@ namespace pr
 				auto params = BLUETOOTH_SELECT_DEVICE_PARAMS{sizeof(BLUETOOTH_SELECT_DEVICE_PARAMS)};
 				params.fShowRemembered = TRUE;
 				params.fShowUnknown = TRUE;
+				params.fShowAuthenticated = TRUE;
 				return params;
 			}
-
 			BluetoothDeviceUI(BLUETOOTH_SELECT_DEVICE_PARAMS params = DefaultParams())
 				:m_params(params)
 				,m_valid(false)
@@ -122,11 +122,11 @@ namespace pr
 			~BluetoothDeviceUI()
 			{
 				if (!m_valid) return;
-				BluetoothSelectDevicesFree(&m_params);
+				::BluetoothSelectDevicesFree(&m_params);
 			}
 			int ShowDialog()
 			{
-				m_valid = BluetoothSelectDevices(&m_params) != 0;
+				m_valid = ::BluetoothSelectDevices(&m_params) != 0;
 				return m_valid ? IDOK : IDCANCEL;
 			}
 			BluetoothDeviceInfo device() const

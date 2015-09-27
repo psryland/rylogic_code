@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using Timer = System.Windows.Forms.Timer;
 
 namespace pr.util
@@ -62,8 +61,8 @@ namespace pr.util
 			}
 		}
 		private readonly List<WatchedFile> m_files;
-		private readonly Timer             m_timer;
 		private readonly List<WatchedFile> m_changed_files; // Recycle the changed files collection
+		private readonly Timer m_timer;
 		private bool m_in_check_for_changes;
 		
 		/// <summary>
@@ -74,13 +73,16 @@ namespace pr.util
 
 		public FileWatch()
 		{
-			m_files = new List<WatchedFile>();
-			m_timer = new Timer{Interval = 1000, Enabled = false};
-			m_timer.Tick += CheckForChangedFiles;
-			m_changed_files = new List<WatchedFile>();
+			m_files          = new List<WatchedFile>();
+			m_timer          = new Timer{Interval = 1000, Enabled = false};
+			m_timer.Tick    += CheckForChangedFiles;
+			m_changed_files  = new List<WatchedFile>();
 		}
-		public FileWatch(FileChangedHandler on_changed, params string[] files) :this(on_changed, 0, null, files) {}
-		public FileWatch(FileChangedHandler on_changed, int id, object ctx, params string[] files) :this()
+		public FileWatch(FileChangedHandler on_changed, params string[] files)
+			:this(on_changed, 0, null, files)
+		{}
+		public FileWatch(FileChangedHandler on_changed, int id, object ctx, params string[] files)
+			:this()
 		{
 			foreach (string file in files)
 				m_files.Add(new WatchedFile(file, on_changed, id, ctx));
@@ -157,7 +159,7 @@ namespace pr.util
 			{
 				m_in_check_for_changes = true;
 				m_changed_files.Clear();
-				foreach (WatchedFile f in m_files)
+				foreach (var f in m_files)
 				{
 					f.m_info.Refresh();
 					
@@ -174,7 +176,7 @@ namespace pr.util
 				}
 
 				// Report each changed file
-				foreach (WatchedFile f in m_changed_files)
+				foreach (var f in m_changed_files)
 				{
 					if (f.m_onchange(f.m_filepath, f.m_ctx))
 					{

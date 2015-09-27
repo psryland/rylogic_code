@@ -59,8 +59,12 @@ namespace pr.container
 				}
 				else if (value != -1 && Position == -1 && Count != 0)
 				{
-					m_impl_listposition.SetValue(CurrencyManager, -2);
+					// Setting 'listposition' to 0 then setting 'Position' generates a single PositionChanged event
+					// when value != 0. However, when value == 0 there is no event. If I set 'listposition' to -2, an
+					// extra event gets generated (-1->0, 0->value). I'm opting to manual raise the event for the value == 0 case
+					m_impl_listposition.SetValue(CurrencyManager, 0);
 					base.Position = value;
+					if (value == 0) OnPositionChanged(EventArgs.Empty);
 				}
 				else
 				{
@@ -72,10 +76,7 @@ namespace pr.container
 		/// <summary>The current item</summary>
 		public new TItem Current
 		{
-			get
-			{
-				return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem);
-			}
+			get { return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem); }
 			set
 			{
 				var idx = List.IndexOf(value);
@@ -156,10 +157,9 @@ namespace pr.container
 			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
 
-			// If we're about to delete the current item, invalidate the previous position
-			// since the 'OnPositionChanged','OnPositionChanging' events occur after the delete.
-			if (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position)
-				m_impl_previous_position = -1;
+			// If we're about to delete the current item, set Position to -1
+			if (args.ChangeType == ListChg.PreReset || (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position))
+				Position = -1;
 		}
 
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
@@ -175,9 +175,6 @@ namespace pr.container
 		/// <summary>Position changed handler</summary>
 		protected override void OnPositionChanged(EventArgs e)
 		{
-			// Note: PositionChanging with OldIndex = -1, and NewIndex = -1 happens when the current
-			// position is deleted. Since this event occurs after the delete 'm_impl_previous_position'
-			// has been set to -1.
 			PositionChanging.Raise(this, new PositionChgEventArgs(m_impl_previous_position, Position));
 			m_impl_previous_position = Position;
 			base.OnPositionChanged(e);
@@ -526,6 +523,41 @@ namespace pr.unittests
 
 			Assert.True(bl_evts.Count != 0);
 			Assert.True(bl_evts.SequenceEqual(bs_evts));
+		}
+		[Test] public void BindingSourceDeletingCurrent()
+		{
+			var positions = new List<int>();
+
+			var bl = new BindingListEx<int>();
+			bl.AddRange(new[]{1,2,3,4,5});
+
+			var current = -1;
+			var bs = new BindingSource<int>{DataSource = bl};
+			bs.PositionChanging += (s,a) =>
+			{
+				positions.Add(a.OldIndex);
+				positions.Add(a.NewIndex);
+				current = bs.Current;
+			};
+
+			bs.Position = 2;
+			Assert.True(current == 3);
+
+			bl.RemoveAt(2);
+			Assert.True(bs.Position == -1);
+			Assert.True(current == 0); // default(int)
+
+			bs.Position = 2;
+			Assert.True(current == 4);
+
+			bl.RemoveAt(2);
+			Assert.True(bs.Position == -1);
+			Assert.True(current == 0); // default(int)
+
+			bs.Position = 0;
+			Assert.True(current == 1);
+
+			Assert.True(positions.SequenceEqual(new[]{0,2,2,-1,-1,2,2,-1,-1,0}));
 		}
 	}
 }

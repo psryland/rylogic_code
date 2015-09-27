@@ -711,10 +711,10 @@ namespace pr.extn
 					bs.Position = hit_idx;
 
 				// Invalidate the hit rows to ensure repainting
-				grid.InvalidateRow(data.Idx0);
-				grid.InvalidateRow(data.Idx1);
-				grid.InvalidateRow(idx0);
-				grid.InvalidateRow(idx1);
+				if (data.Idx0 >= 0 && data.Idx0 < grid.RowCount) grid.InvalidateRow(data.Idx0);
+				if (data.Idx1 >= 0 && data.Idx1 < grid.RowCount) grid.InvalidateRow(data.Idx1);
+				if (idx0 >= 0 && idx0 < grid.RowCount)           grid.InvalidateRow(idx0);
+				if (idx1 >= 0 && idx1 < grid.RowCount)           grid.InvalidateRow(idx1);
 			}
 			return true;
 		}

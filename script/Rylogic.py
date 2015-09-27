@@ -287,7 +287,7 @@ def Expand(template_filepath, output_filepath, regex_pattern, subst_func):
 # Modify a file using regex
 # Capture groups are defined like: (?P<name>.*)
 # and accessed like: m.group("name")
-def UpdateFile(filepath, regex, repl, all=False):
+def UpdateFileByLine(filepath:str, regex:str, repl:str, all=False):
 	pat = re.compile(regex)
 	with open(filepath+".tmp", mode='w') as outf:
 		with open(filepath, mode='r') as inf:
@@ -302,6 +302,14 @@ def UpdateFile(filepath, regex, repl, all=False):
 	os.unlink(filepath)
 	os.rename(filepath+".tmp", filepath)
 
+# Modify a whole file using regex.
+def UpdateFile(filepath:str, regex:str, repl:str, regex_flags=re.DOTALL):
+	with open(filepath) as f: s = f.read()
+	s = re.sub(regex, repl, s, 0, regex_flags)
+	with open(filepath+".tmp", mode="w") as f: f.write(s)
+	os.unlink(filepath)
+	os.rename(filepath+".tmp", filepath)
+	
 # Tests if this script is being run with admin rights, if not restarts the script elevated
 def RunAsAdmin(expected_return_code=0, working_dir=".\\", show_arguments=False):
 	try:

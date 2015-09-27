@@ -41,7 +41,7 @@ try:
 
 	# Update the manifest file
 	print("Updating version...")
-	Tools.UpdateFile(manifest, vers_patn, vers_sub)
+	Tools.UpdateFileByLine(manifest, vers_patn, vers_sub)
 
 	#Invoke MSBuild
 	print("Building...")

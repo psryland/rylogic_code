@@ -33,6 +33,9 @@ namespace pr.gui
 			/// <summary>Change the description and re-layout (if ForceLayout is null). Null means don't change</summary>
 			public string Description { get; set; }
 
+			/// <summary>The font to use for the description text. Null means don't change</summary>
+			public Font DescFont { get; set; }
+
 			/// <summary>Force recalculation of the form layout (or not). Null means layout if needed</summary>
 			public bool? ForceLayout { get; set; }
 
@@ -236,6 +239,9 @@ namespace pr.gui
 					DoLayout();
 			}
 
+			if (us.DescFont != null)
+				m_description.Font = us.DescFont;
+
 			if (us.Icon != null)
 				Icon = us.Icon;
 
@@ -271,6 +277,7 @@ namespace pr.gui
 				bounds = Rectangle.Union(bounds, c.Bounds);
 
 			// Set the dialog size
+			var current_size = ClientSize;
 			var preferred_size = bounds.Size + new Size(space, space);
 			switch (AutoSizeMode)
 			{
@@ -283,6 +290,11 @@ namespace pr.gui
 					Math.Max(preferred_size.Height, ClientSize.Height));
 				break;
 			}
+
+			// Reposition the form to preserve the centre position
+			Location = new Point(
+				Location.X + (current_size.Width  - ClientSize.Width )/2,
+				Location.Y + (current_size.Height - ClientSize.Height)/2);
 
 			m_progress.Width = ClientSize.Width - 2*space;
 			m_button.Location = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);

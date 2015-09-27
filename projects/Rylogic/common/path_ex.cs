@@ -163,6 +163,19 @@ namespace pr.common
 		}
 		public enum Case { Unchanged, Lower, Upper };
 
+		/// <summary>Compare two strings as filepaths</summary>
+		public static int Compare(string lhs, string rhs)
+		{
+			if (!lhs.HasValue() && !rhs.HasValue()) return 0; // Both null/empty paths
+			if (!lhs.HasValue()) return +1; // Rhs is non-null => greater than lhs
+			if (!rhs.HasValue()) return -1; // Lhs is non-null => less than rhs
+
+			return string.Compare(
+				Path.GetFullPath(lhs).ToLowerInvariant().TrimEnd(Path.PathSeparator, Path.AltDirectorySeparatorChar),
+				Path.GetFullPath(rhs).ToLowerInvariant().TrimEnd(Path.PathSeparator, Path.AltDirectorySeparatorChar),
+				StringComparison.InvariantCultureIgnoreCase);
+		}
+
 		/// <summary>Remove the invalid chars from a potential filename</summary>
 		public static string SanitiseFileName(string name, string additional_invalid_chars, string replace_with)
 		{
@@ -381,7 +394,7 @@ namespace pr.common
 		}
 
 		/// <summary>Delete a directory and all contained files/subdirectories. Returns true if successful</summary>
-		public static bool DelTree(string root, bool even_if_not_empty, Control parent)
+		public static bool DelTree(string root, EDelTreeOpts opts, Control parent)
 		{
 			for (;;)
 			{
@@ -391,10 +404,10 @@ namespace pr.common
 					var files = System.IO.Directory.GetFiles(root, "*", SearchOption.AllDirectories);
 					if (files.Length != 0)
 					{
-						if (!even_if_not_empty)
+						if (!opts.HasFlag(EDelTreeOpts.FilesOnly) && !opts.HasFlag(EDelTreeOpts.EvenIfNotEmpty))
 							throw new IOException("Cannot delete {0}, directory still contains {1} files".Fmt(root, files.Length));
 
-						// Check for processes holding locks to the files
+						// Check for processes holding locks on the files
 						for (;;)
 						{
 							// Find the lock holding processes/services
@@ -409,10 +422,17 @@ namespace pr.common
 							if (r == DialogResult.Ignore)
 								break;
 						}
-					}
 
-					// Delete the contained files
-					files.ForEach(File.Delete);
+						// Delete the contained files
+						if (opts.HasFlag(EDelTreeOpts.FilesOnly) || opts.HasFlag(EDelTreeOpts.EvenIfNotEmpty))
+						{
+							foreach (var file in files)
+							{
+								if (FileExists(file))
+									File.Delete(file);
+							}
+						}
+					}
 
 					// Try to delete the root directory. This can fail because the file system
 					// doesn't necessarily update as soon as the files are deleted. Try to delete,
@@ -421,7 +441,20 @@ namespace pr.common
 					{
 						try
 						{
-							System.IO.Directory.Delete(root, true);
+							if (opts.HasFlag(EDelTreeOpts.DeleteRoot))
+							{
+								System.IO.Directory.Delete(root, true);
+							}
+							else
+							{
+								// Delete the contained directories
+								var dirs = System.IO.Directory.GetDirectories(root, "*", SearchOption.TopDirectoryOnly);
+								foreach (var dir in dirs)
+								{
+									if (DirExists(dir))
+										System.IO.Directory.Delete(dir, true);
+								}
+							}
 							return true;
 						}
 						catch (IOException)
@@ -441,6 +474,19 @@ namespace pr.common
 						return true;
 				}
 			}
+		}
+		[Flags] public enum EDelTreeOpts
+		{
+			None = 0,
+
+			/// <summary>Delete the 'root' folder if set, otherwise just delete the contents of the root folder</summary>
+			DeleteRoot = 1 << 0,
+
+			/// <summary>Perform the delete even if there are files/directories in the root folder, otherwise throw if not empty</summary>
+			EvenIfNotEmpty = 1 << 1,
+
+			/// <summary>Delete only the files from the directory tree</summary>
+			FilesOnly = 1 << 2,
 		}
 	}
 }

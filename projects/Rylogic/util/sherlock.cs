@@ -50,8 +50,8 @@ namespace pr.util
 			return output;
 		}
 
-		/// <summary>Checks event 'owner.evt' for any handlers containing references to 'referenced'</summary>
-		public static bool CheckForReferences(object owner, string evt, object referenced)
+		/// <summary>Counts the number of references to 'referenced' in the handlers for event 'owner.evt'</summary>
+		public static int CountReferences(object owner, string evt, object referenced)
 		{
 			var type = owner.GetType();
 
@@ -71,11 +71,17 @@ namespace pr.util
 				// Get the delegates subscribed to the event
 				var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
 
-				// Look for any delegates with references to 'referenced'
-				if (delegates.Any(x => ReferenceEquals(x.Target, referenced)))
-					return true;
+				// Count the number of delegates with references to 'referenced'
+				var count = delegates.Count(x => ReferenceEquals(x.Target, referenced));
+				return count;
 			}
-			return false;
+			return 0;
+		}
+
+		/// <summary>Checks event 'owner.evt' for any handlers containing references to 'referenced'</summary>
+		public static bool CheckForReferences(object owner, string evt, object referenced)
+		{
+			return CountReferences(owner, evt, referenced) != 0;
 		}
 	}
 }

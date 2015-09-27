@@ -12,7 +12,6 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using pr.common;
 using pr.extn;
-using pr.maths;
 using pr.util;
 using pr.win32;
 
@@ -1462,43 +1461,6 @@ namespace pr.gui
 		/// <summary>A control that displays the VT100 buffer</summary>
 		public class Display :ScintillaCtrl
 		{
-			/// <summary>Helper for sending text to scintilla</summary>
-			private class CellBuf
-			{
-				private Sci.Cell[] m_text; // Buffer used to pass the text to scintilla
-				private int m_len;     // The number of valid chars in 'm_text'
-
-				public CellBuf()
-				{
-					m_text = new Sci.Cell[1024];
-					m_len = 0;
-				}
-				public void Reset()
-				{
-					m_len = 0;
-				}
-				public int SizeInBytes
-				{
-					get { return m_len * R<Sci.Cell>.SizeOf; }
-				}
-				public void Add(byte ch, byte st)
-				{
-					if (m_len == m_text.Length)
-						Array.Resize(ref m_text, m_text.Length * 3/2);
-
-					m_text[m_len] = new Sci.Cell(ch, st);
-					++m_len;
-				}
-				public void Pop(int n)
-				{
-					m_len -= Math.Min(n, m_len);
-				}
-				public GCHandleScope Pin()
-				{
-					return GCHandleEx.Alloc(m_text, GCHandleType.Pinned);
-				}
-			}
-
 			private static readonly string FileFilters = Util.FileDialogFilter("Text Files","*.txt","Log Files","*.log","All Files","*.*");
 
 			private HoverScroll m_hs;
@@ -1508,8 +1470,8 @@ namespace pr.gui
 
 			public Display()
 			{
-				m_hs = new HoverScroll(HostedCtrl.Handle);
-				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(10)){TriggerOnFirst = true};
+				m_hs = new HoverScroll(Handle);
+				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(1)){TriggerOnFirst = true};
 				m_sty = new Dictionary<Style,byte>();
 				m_cells = new CellBuf();
 				ContextMenuStrip = new CMenu(this);
@@ -1517,6 +1479,7 @@ namespace pr.gui
 				BlinkTimer = new Timer{Interval = 1000, Enabled = false};
 				BlinkTimer.Tick += SignalRefresh;
 
+				AllowDrop = true;
 				AutoScrollToBottom = true;
 				ScrollToBottomOnInput = true;
 				EndAtLastLine = true;
@@ -1551,14 +1514,14 @@ namespace pr.gui
 					{
 						m_buffer.CaptureToFileEnd();
 						m_buffer.Overflow -= HandleBufferOverflow;
-						m_buffer.BufferChanged -= SignalRefresh;
+						m_buffer.BufferChanged -= UpdateText;//SignalRefresh;
 						ContextMenuStrip = null;
 					}
 					m_buffer = value;
 					if (m_buffer != null)
 					{
 						m_buffer.Overflow += HandleBufferOverflow;
-						m_buffer.BufferChanged += SignalRefresh;
+						m_buffer.BufferChanged += UpdateText;//SignalRefresh;
 						ContextMenuStrip = new CMenu(this);
 					}
 					SignalRefresh();
@@ -1601,6 +1564,18 @@ namespace pr.gui
 				ClearAll();
 			}
 
+			/// <summary>Copy the current selection</summary>
+			public void Copy()
+			{
+				Cmd(Sci.SCI_COPY);
+			}
+
+			/// <summary>Paste the clipboard into the input buffer</summary>
+			public void Paste()
+			{
+				Buffer.Paste();
+			}
+
 			/// <summary>Adds text to the input buffer</summary>
 			protected virtual void AddToBuffer(Keys vk)
 			{
@@ -1633,22 +1608,6 @@ namespace pr.gui
 				if (last_line_index >= last_vis_line)
 					Cmd(Sci.SCI_SCROLLCARET);
 			}
-
-			#region Clipboard
-			public override void Cut()
-			{
-				base.Copy(); // Cut isn't supported for terminals
-			}
-			public override void Copy()
-			{
-				base.Copy();
-			}
-			public override void Paste()
-			{
-				if (Buffer != null) Buffer.Paste();
-				else base.Paste();
-			}
-			#endregion
 
 			/// <summary>Start or stop capturing to a file</summary>
 			public void CaptureToFile(bool start)
@@ -1693,7 +1652,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Refresh the control with text from the vt100 buffer</summary>
-			private void UpdateText()
+			private void UpdateText(object sender = null, EventArgs args = null)
 			{
 				var buf = Buffer;
 
@@ -1710,14 +1669,13 @@ namespace pr.gui
 				if (region.IsEmpty)
 					return;
 
-				using (HostedCtrl.SuspendRedraw(true))
+				using (this.SuspendRedraw(true))
 				using (ScrollScope())
 				{
 					// Grow the text in the control to the required number of lines (if necessary)
-					var line_count = Cmd(Sci.SCI_GETLINECOUNT);
-					if (line_count < region.Bottom)
+					if (Cmd(Sci.SCI_GETLINECOUNT) < region.Bottom)
 					{
-						var pad = new byte[region.Bottom - line_count].Memset(0x0a);
+						var pad = new byte[region.Bottom - Cmd(Sci.SCI_GETLINECOUNT)].Memset(0x0a);
 						using (var p = GCHandleEx.Alloc(pad, GCHandleType.Pinned))
 							Cmd(Sci.SCI_APPENDTEXT, pad.Length, p.Handle.AddrOfPinnedObject());
 					}
@@ -1741,9 +1699,9 @@ namespace pr.gui
 						m_cells.Add(0x0a, sty);
 					}
 
-					// Remove the last newline and append a null terminator
-					// so that 'InsertStyledText' can determine the length
-					m_cells.Pop(1);
+					// Remove the last newline if the last line updated is also the last line in the buffer,
+					// and append a null terminator so that 'InsertStyledText' can determine the length.
+					if (buf.LineCount == region.Bottom) m_cells.Pop(1);
 					m_cells.Add(0, 0);
 
 					// Determine the character range to be updated
@@ -1753,14 +1711,14 @@ namespace pr.gui
 					if (end < 0) end = TextLength;
 
 					// Overwrite the visible lines with the buffer of cells
-					using (var cells = m_cells.Pin())
+					using (var c = m_cells.Pin())
 					{
 						Cmd(Sci.SCI_DELETERANGE, beg, end - beg);
-						Cmd(Sci.SCI_INSERTSTYLEDTEXT, beg, cells.Handle.AddrOfPinnedObject());
+						Cmd(Sci.SCI_INSERTSTYLEDTEXT, beg, c.Pointer);
 					}
 
 					// Reset, ready for next time
-					m_cells.Reset();
+					m_cells.Length = 0;
 				}
 
 				// Auto scroll to the bottom if told to and the last line is off the bottom 
@@ -1782,8 +1740,8 @@ namespace pr.gui
 					using (var fonth = GCHandleEx.Alloc(fontname, GCHandleType.Pinned))
 					{
 						Cmd(Sci.SCI_STYLESETFONT, idx, fonth.Handle.AddrOfPinnedObject());
-						Cmd(Sci.SCI_STYLESETFORE, idx, forecol.ToArgb() & 0x00FFFFFF);
-						Cmd(Sci.SCI_STYLESETBACK, idx, backcol.ToArgb() & 0x00FFFFFF);
+						Cmd(Sci.SCI_STYLESETFORE, idx, forecol.ToAbgr() & 0x00FFFFFF);
+						Cmd(Sci.SCI_STYLESETBACK, idx, backcol.ToAbgr() & 0x00FFFFFF);
 						Cmd(Sci.SCI_STYLESETBOLD, idx, sty.Bold ? 1 : 0);
 						Cmd(Sci.SCI_STYLESETUNDERLINE, idx, sty.Underline ? 1 : 0);
 					}
@@ -1793,61 +1751,74 @@ namespace pr.gui
 				return idx;
 			}
 
-			/// <summary>Returns true if 'vk' is a navigation key</summary>
-			private static bool IsNavKey(Keys vk)
-			{
-				return vk == Keys.Up || vk == Keys.Down || vk == Keys.Left || vk == Keys.Right;
-			}
-
 			/// <summary>Intercept the WndProc for this control</summary>
-			protected override void CtrlWndProc(IntPtr hwnd, int msg, IntPtr wparam, IntPtr lparam, ref bool handled)
+			protected override void WndProc(ref Message m)
 			{
 				//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-				switch (msg)
+				switch (m.Msg)
 				{
 				case Win32.WM_KEYDOWN:
 					#region
 					{
-						//Win32.WndProcDebug(hwnd, msg, wparam, lparam, "vt100");
-						var ks = new Win32.KeyState(lparam);
+						var ks = new Win32.KeyState(m.LParam);
 						if (!ks.Alt && Buffer != null)
 						{
-							var vk = (Keys)wparam;
+							var vk = Win32.ToVKey(m.WParam);
 
-							// Let the key events through (by default) if local echo is on
-							handled = Buffer.Settings.LocalEcho == false;
-							switch (vk)
+							// Forward navigation keys to the control
+							if (vk == Keys.Up || vk == Keys.Down || vk == Keys.Left || vk == Keys.Right)
 							{
-							default:
-								// Add the keypress to the buffer input
-								AddToBuffer(vk);
-
-								// Forward navigation keys to the control
-								if (IsNavKey(vk))
-								{
-									Win32.SendMessage(HostedCtrl.Handle, (uint)msg, wparam, lparam);
-									handled = true;
-								}
-								break;
-
-							// Clipboard shortcuts
-							case Keys.Control | Keys.X:
-								Cut();
-								break;
-							case Keys.Control | Keys.C:
-								Copy();
-								break;
-							case Keys.Control | Keys.V:
-								Buffer.Paste();
-								break;
+								Cmd(m.Msg, m.WParam, m.LParam);
+								return;
 							}
+
+							// Handle clipboard shortcuts
+							if (Win32.KeyDown(Keys.ControlKey))
+							{
+								if (vk == Keys.C) { Copy(); return; }
+								if (vk == Keys.V) { Paste(); return; }
+								return; // Disable all other shortcuts
+							}
+
+							// Add the keypress to the buffer input
+							AddToBuffer(vk);
+
+							// Let the key events through if local echo is on
+							if (Buffer.Settings.LocalEcho)
+								break;
+
+							// Block key events from getting to the ctrl
+							return;
 						}
 						break;
 					}
 					#endregion
+				case Win32.WM_CHAR:
+					#region
+					{
+						return;
+					}
+				#endregion
+				case Win32.WM_DROPFILES:
+					#region
+					{
+						var drop_info = m.WParam;
+						var count = Win32.DragQueryFile(drop_info, 0xFFFFFFFFU, null, 0);
+						var files = new List<string>();
+						for (int i = 0; i != count; ++i)
+						{
+							var sb = new StringBuilder((int)Win32.DragQueryFile(drop_info, (uint)i, null, 0) + 1);
+							if (Win32.DragQueryFile(drop_info, (uint)i, sb, (uint)sb.Capacity) == 0)
+								throw new Exception("Failed to query file name from dropped files");
+							files.Add(sb.ToString());
+							sb.Clear();
+						}
+						HandleDropFiles(files);
+						return;
+					}
+					#endregion
 				}
-
-				base.CtrlWndProc(hwnd, msg, wparam, lparam, ref handled);
+				base.WndProc(ref m);
 			}
 
 			/// <summary>Scroll event</summary>
@@ -1859,6 +1830,14 @@ namespace pr.gui
 				var vis = VisibleLineIndexRange;
 				var last = Cmd(Sci.SCI_GETLINECOUNT) - 1;
 				AutoScrollToBottom = vis.Contains(last);
+			}
+
+			/// <summary>Drag drop event</summary>
+			protected virtual void HandleDropFiles(IEnumerable<string> files)
+			{
+				if (Buffer == null) return;
+				foreach (var file in files)
+					Buffer.SendFile(file, true);
 			}
 
 			/// <summary>Handle buffer lines being dropped</summary>

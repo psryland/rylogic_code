@@ -6,7 +6,7 @@
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{1735C773-5477-45E6-9CBF-5F2B6DC707EF}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>pr</RootNamespace>
     <AssemblyName>Rylogic</AssemblyName>
@@ -79,7 +79,6 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework">
       <RequiredTargetFramework>3.0</RequiredTargetFramework>
@@ -89,7 +88,6 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Drawing" />
-    <Reference Include="System.Net" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
@@ -106,6 +104,7 @@
     <Compile Include="attrib\desc_attr.cs" />
     <Compile Include="attrib\units_attr.cs" />
     <Compile Include="common\base32.cs" />
+    <Compile Include="common\bluetooth.cs" />
     <Compile Include="common\html.cs" />
     <Compile Include="common\iterator.cs" />
     <Compile Include="common\sequence.cs" />

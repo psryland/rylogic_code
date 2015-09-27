@@ -78,6 +78,9 @@
     <Compile Include="src\rich_text_box_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\scintilla_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\subclassed_controls_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -138,6 +141,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="src\scintilla_ui.resx">
+      <DependentUpon>scintilla_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="src\subclassed_controls_ui.resx">
       <DependentUpon>subclassed_controls_ui.cs</DependentUpon>
     </EmbeddedResource>
@@ -179,16 +185,32 @@
     <None Include="Resources\pencil.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\..\lib\x64\debug\scintilla.dll">
+      <Link>lib\x64\debug\scintilla.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\lib\x64\debug\view3d.dll">
       <Link>lib\x64\debug\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\lib\x64\release\scintilla.dll">
+      <Link>lib\x64\release\scintilla.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\lib\x64\release\view3d.dll">
       <Link>lib\x64\release\view3d.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\lib\x86\debug\scintilla.dll">
+      <Link>lib\x86\debug\scintilla.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\lib\x86\debug\view3d.dll">
       <Link>lib\x86\debug\view3d.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\lib\x86\release\scintilla.dll">
+      <Link>lib\x86\release\scintilla.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\lib\x86\release\view3d.dll">

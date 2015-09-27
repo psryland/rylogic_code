@@ -10,6 +10,7 @@ using System.Drawing.Design;
 using System.Linq;
 using System.Windows.Forms;
 using System.Windows.Forms.Design;
+using pr.attrib;
 using pr.extn;
 using pr.util;
 
@@ -26,7 +27,38 @@ namespace pr.gui
 		public FlagCheckedListBox()
 		{
 			m_pending_itemcheck_events = new List<ItemCheckEventArgs>();
-			InitializeComponent();
+		}
+
+		/// <summary>Gets the current bit value corresponding to all checked items</summary>
+		public int Bitmask
+		{
+			get
+			{
+				int mask = 0;
+				for (int i = 0; i != Items.Count; ++i)
+				{
+					// Allow indeterminate to used as disabled
+					if (GetItemCheckState(i) != CheckState.Checked) continue;
+					mask |= Items[i].As<FlagCheckedListBoxItem>().Value;
+				}
+				return mask;
+			}
+		}
+
+		/// <summary>Get/Set an enum value that implicitly creates the members of the checklist</summary>
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+		public Enum EnumValue
+		{
+			get { return (Enum)Enum.ToObject(m_enum_type, Bitmask); }
+			set
+			{
+				if (Equals(m_enum_value,value) && Equals(m_enum_type,value.GetType())) return;
+				Items.Clear();
+				m_enum_value = value; // Store the current enum value
+				m_enum_type = value.GetType(); // Store enum type
+				FillEnumMembers(); // Add items for enum members
+				UpdateCheckedItems((int)Convert.ChangeType(m_enum_value, typeof(int))); // Check/uncheck items depending on enum value
+			}
 		}
 
 		/// <summary>
@@ -34,7 +66,7 @@ namespace pr.gui
 		/// The bitmask can contain more than one set bit.</summary>
 		public FlagCheckedListBoxItem Add(int value, string description)
 		{
-			return Add(new FlagCheckedListBoxItem(value, description));
+			return Add(new FlagCheckedListBoxItem(this, value, description));
 		}
 		public FlagCheckedListBoxItem Add(FlagCheckedListBoxItem item)
 		{
@@ -45,6 +77,9 @@ namespace pr.gui
 		/// <summary>Handle items in the list being checked or unchecked</summary>
 		protected override void OnItemCheck(ItemCheckEventArgs e)
 		{
+			var item = Items[e.Index].As<FlagCheckedListBoxItem>();
+			e.NewValue = item.Enabled ? e.NewValue : CheckState.Indeterminate;
+
 			// While 'UpdateCheckedItems' is in progress, we need to buffer the
 			// 'ItemCheck' events and only raise them once all items have been changed.
 			// This is because clients that handle ItemCheck will want to read the 
@@ -52,7 +87,13 @@ namespace pr.gui
 			if (m_is_updating_check_states)
 				m_pending_itemcheck_events.Add(e);
 			else
-				UpdateCheckedItems(Items[e.Index].As<FlagCheckedListBoxItem>(), e.NewValue);
+				UpdateCheckedItems(item, e.NewValue);
+		}
+
+		/// <summary>Get the first flag item where 'item.Value & mask' == mask</summary>
+		public FlagCheckedListBoxItem GetItem(int mask)
+		{
+			return Items.OfType<FlagCheckedListBoxItem>().FirstOrDefault(x => (x.Value & mask) == mask);
 		}
 
 		/// <summary>
@@ -78,16 +119,23 @@ namespace pr.gui
 			{
 				for (int i = 0; i != Items.Count; ++i)
 				{
+					// Note: Indeterminate state only works when CheckOnClick is false
 					var item = (FlagCheckedListBoxItem)Items[i];
-					if (item.Value == 0)
+					if (!item.Enabled)
 					{
-						SetItemChecked(i, bitmask == 0);
+						// If the item is disabled, show it's state as indeterminate
+						SetItemCheckState(i, CheckState.Indeterminate);
+					}
+					else if (item.Value == 0)
+					{
+						// If the item value is zero, check when the bitmask is zero
+						SetItemCheckState(i, bitmask == 0 ? CheckState.Checked : CheckState.Unchecked);
 					}
 					else
 					{
 						// If the bit for the current item is on in the bit value, check it
 						var check = (item.Value & bitmask) == item.Value;
-						SetItemChecked(i, check);
+						SetItemCheckState(i, check ? CheckState.Checked : CheckState.Unchecked);
 					}
 				}
 			}
@@ -100,45 +148,15 @@ namespace pr.gui
 			Invalidate();
 		}
 
-		/// <summary>Gets the current bit value corresponding to all checked items</summary>
-		public int Bitmask
-		{
-			get
-			{
-				int mask = 0;
-				for (int i = 0; i != Items.Count; ++i)
-				{
-					if (!GetItemChecked(i)) continue;
-					mask |= Items[i].As<FlagCheckedListBoxItem>().Value;
-				}
-				return mask;
-			}
-		}
-
 		/// <summary>Adds items to the check list box based on the members of the enum</summary>
 		private void FillEnumMembers()
 		{
-			foreach (var name in Enum.GetNames(m_enum_type))
+			foreach (var val in Enum.GetValues(m_enum_type))
 			{
-				object val = Enum.Parse(m_enum_type, name);
-				int intVal = (int)Convert.ChangeType(val, typeof(int));
-				Add(intVal, name);
-			}
-		}
-
-		/// <summary>Set an enum value that implicitly creates the members of the checklist</summary>
-		[DesignerSerializationVisibilityAttribute(DesignerSerializationVisibility.Hidden)]
-		public Enum EnumValue
-		{
-			get { return (Enum)Enum.ToObject(m_enum_type, Bitmask); }
-			set
-			{
-				if (Equals(m_enum_value,value) && Equals(m_enum_type,value.GetType())) return;
-				Items.Clear();
-				m_enum_value = value; // Store the current enum value
-				m_enum_type = value.GetType(); // Store enum type
-				FillEnumMembers(); // Add items for enum members
-				UpdateCheckedItems((int)Convert.ChangeType(m_enum_value, typeof(int))); // Check/uncheck items depending on enum value
+				var name = Enum.GetName(m_enum_type, val);
+				var desc = DescAttr.Desc(m_enum_type, name);
+				int bits = (int)Convert.ChangeType(val, typeof(int));
+				Add(bits, desc ?? name);
 			}
 		}
 
@@ -152,44 +170,115 @@ namespace pr.gui
 				DrawItem(this, e);
 		}
 
-		#region Component Designer generated code
-
-		private Container components = null;
-
-		protected override void Dispose(bool disposing)
+		/// <summary>Raised whenever the mouse moves over an item in the list</summary>
+		public event EventHandler<HoveredItemEventArgs> HoveredItemChanged;
+		protected virtual void OnHoveredItemChanged(HoveredItemEventArgs args)
 		{
-			if (disposing)
+			HoveredItemChanged.Raise(this, args);
+		}
+		public class HoveredItemEventArgs :EventArgs
+		{
+			public HoveredItemEventArgs(FlagCheckedListBoxItem item)
 			{
-				if (components != null)
-					components.Dispose();
+				Item = item;
 			}
-			base.Dispose(disposing);
+
+			/// <summary>The Item under the mouse</summary>
+			public FlagCheckedListBoxItem Item { get; private set; }
 		}
 
-		private void InitializeComponent()
+		/// <summary>Use mouse move to update the hovered item</summary>
+		protected override void OnMouseMove(MouseEventArgs e)
 		{
-			//
-			// FlaggedCheckedListBox
-			//
-			this.CheckOnClick = true;
+			base.OnMouseMove(e);
+			var hovered_item = HoveredItem();
+			if (m_last_hovered_item != hovered_item)
+			{
+				m_last_hovered_item = hovered_item;
+				OnHoveredItemChanged(new HoveredItemEventArgs(hovered_item));
+			}
 		}
-		#endregion
+
+		/// <summary>Returns the item currently under the mouse</summary>
+		private FlagCheckedListBoxItem HoveredItem()
+		{
+			var pos = PointToClient(MousePosition);
+			int idx = IndexFromPoint(pos);
+			return idx != -1 ? Items[idx] as FlagCheckedListBoxItem : null;
+		}
+		private FlagCheckedListBoxItem m_last_hovered_item;
 	}
 
 	/// <summary>Represents an item in the check list box</summary>
 	public class FlagCheckedListBoxItem
 	{
-		public int Value { get; set; }
-		public string Caption { get; set; }
+		internal FlagCheckedListBoxItem(FlagCheckedListBox owner, int value, string caption, bool enabled = true)
+		{
+			Owner   = owner; 
+			Value   = value;
+			Caption = caption;
+			Enabled = enabled;
+		}
 
-		public FlagCheckedListBoxItem(int v, string c) { Value = v; Caption = c; }
-		public override string ToString() { return Caption; }
+		public FlagCheckedListBox Owner { get; private set; }
+
+		/// <summary>The bitmask value of this flag</summary>
+		public int Value
+		{
+			get { return m_value; }
+			set
+			{
+				if (m_value == value) return;
+				m_value = value;
+				Owner.Invalidate();
+			}
+		}
+		private int m_value;
+
+		/// <summary>The string name corresponding to the flag</summary>
+		public string Caption
+		{
+			get { return m_caption; }
+			set
+			{
+				if (m_caption == value) return;
+				m_caption = value;
+				Owner.Invalidate();
+			}
+		}
+		private string m_caption;
+
+		/// <summary>True if the flag can be set or cleared via the UI</summary>
+		public bool Enabled
+		{
+			get { return m_enabled; }
+			set
+			{
+				if (m_enabled == value) return;
+				m_enabled = value;
+				var idx = Owner.Items.IndexOf(this);
+				if (idx != -1) Owner.SetItemCheckState(idx, CheckState.Indeterminate);
+				Owner.Invalidate();
+			}
+		}
+		private bool m_enabled;
 
 		/// <summary>True if the value corresponds to a single bit being set</summary>
-		public bool IsFlag { get { return (Value & (Value - 1)) == 0; } }
+		public bool IsFlag
+		{
+			get { return (Value & (Value - 1)) == 0; }
+		}
 
 		// Returns true if this value is a member of the composite bit value
-		public bool IsMemberFlag(FlagCheckedListBoxItem composite) { return IsFlag && (Value & composite.Value) == Value; }
+		public bool IsMemberFlag(FlagCheckedListBoxItem composite)
+		{
+			return IsFlag && (Value & composite.Value) == Value;
+		}
+
+		public override string ToString()
+		{
+			return Caption;
+		}
 	}
 
 	/// <summary>UITypeEditor for flag enums</summary>

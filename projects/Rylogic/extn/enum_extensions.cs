@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Windows.Forms;
 using pr.attrib;
 using pr.util;
 
@@ -342,6 +343,57 @@ namespace pr.extn
 		}
 		private static Func<T,T,T> m_impl_or;
 
+		/// <summary>Returns a collection of items that can be used to assigned to the DataSource of binding controls</summary>
+		public static IEnumerable<Item> Items
+		{
+			get
+			{
+				var names  = Names.ToArray();
+				var values = Values.ToArray();
+				return Enumerable.Range(0,Count).Select(i => new Item(names[i], values[i]));
+			}
+		}
+		public class Item
+		{
+			public Item(string name, T value)
+			{
+				Name = name;
+				Value = value;
+				Desc = value.Desc();
+			}
+
+			/// <summary>The name of the enum member</summary>
+			public string Name { get; private set; }
+
+			/// <summary>The value of the enum member</summary>
+			public T Value { get; private set; }
+
+			/// <summary>The associated description string of the enum member</summary>
+			public string Desc { get; private set; }
+
+			public override string ToString() { return Desc ?? Name; }
+			public static implicit operator T(Item item) { return item.Value; }
+		}
+
+		/// <summary>An event handler that converts the enum value into a string description</summary>
+		public static void FormatValue(object sender, ListControlConvertEventArgs args)
+		{
+			// Use the description attribute if available
+			var desc = ((T)args.ListItem).Desc();
+			if (desc != null)
+			{
+				args.Value = desc;
+				return;
+			}
+
+			// Otherwise pretty up the string name
+			else
+			{
+				desc = StrTxfm.Apply(args.ListItem.ToString(), StrTxfm.ECapitalise.UpperCase, StrTxfm.ECapitalise.LowerCase, StrTxfm.ESeparate.Add, " ");
+				args.Value = desc;
+			}
+		}
+
 		static Enum()
 		{
 			var type = typeof(T);
@@ -467,6 +519,13 @@ namespace pr.unittests
 		{
 			var all = Enum<FlagsEnum>.All;
 			Assert.AreEqual(FlagsEnum.A|FlagsEnum.B|FlagsEnum.C, all);
+		}
+		[Test] public void TestItems()
+		{
+			var items = Enum<SparceEnum>.Items.ToArray();
+			Assert.True(items[0] == SparceEnum.One);
+			Assert.True(items[1] == SparceEnum.Four);
+			Assert.True(items[2] == SparceEnum.Ten);
 		}
 	}
 }

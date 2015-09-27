@@ -12,7 +12,9 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
+using System.Text;
 using System.Windows.Forms;
+using System.Xml;
 using System.Xml.Linq;
 using pr.attrib;
 using pr.common;
@@ -649,6 +651,24 @@ namespace pr.extn
 		}
 
 		/// <summary>
+		/// Return this element as an instance of 'type'.
+		/// Use 'ToObject' if the type should be inferred from the node attributes
+		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.
+		/// E.g:<para\>
+		///  val = node.Element("val").As(typeof(int)) <para\>
+		///  val = node.Element("val").As(typeof(int), default_val) <para\></summary>
+		public static object As(this XElement elem, Type type, Func<Type,object> factory = null)
+		{
+			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
+			return AsMap.Convert(elem, type, factory);
+		}
+		public static object As(this XElement elem, Type type, object optional_default, Func<Type,object> factory = null)
+		{
+			if (elem == null) return optional_default;
+			return As(elem, type, factory);
+		}
+
+		/// <summary>
 		/// Return this element as an instance of 'T'.
 		/// Use 'ToObject' if the type should be inferred from the node attributes
 		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.
@@ -657,21 +677,11 @@ namespace pr.extn
 		///  val = node.Element("val").As&lt;int&gt;(default_val) <para\></summary>
 		public static T As<T>(this XElement elem, Func<Type,object> factory = null)
 		{
-			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
-			return (T)AsMap.Convert(elem, typeof(T), factory);
+			return (T)As(elem, typeof(T), factory);
 		}
-
-		/// <summary>
-		/// Return this element as an instance of 'T'.<para/>
-		/// Use 'ToObject' if the type should be inferred from the node attributes<para/>
-		/// 'factory' can be used to create new instances of 'T' if doesn't have a default constructor.<para/>
-		/// E.g:<para/>
-		///  val = node.Element("val").As&lt;int&gt;(); <para/>
-		///  val = node.Element("val").As&lt;int&gt;(default_val); <para/></summary>
 		public static T As<T>(this XElement elem, T optional_default, Func<Type,object> factory = null)
 		{
-			if (elem == null) return optional_default;
-			return As<T>(elem, factory);
+			return (T)As(elem, typeof(T), optional_default, factory);
 		}
 
 		/// <summary>Read all elements with name 'elem_name' into 'list' constructing them using 'factory' and optionally overwriting duplicates.</summary>
@@ -753,7 +763,7 @@ namespace pr.extn
 			return child;
 		}
 
-		/// <summary>Returns all child elements from the combined path of child element tags</summary>
+		/// <summary>Returns all child elements from the combined path of child element tags. I.e. a full tree search</summary>
 		public static IEnumerable<XElement> Elements(this XElement node, params XName[] name)
 		{
 			return Elements(node, name, 0);
@@ -828,8 +838,9 @@ namespace pr.extn
 		/// <summary>Operation element attributes</summary>
 		private static class Attr
 		{
+			public const string Idx = "idx";
+			public const string NodeType = "node_type";
 			public const string Name = "name";
-			public const string Match = "match";
 		}
 
 		/// <summary>An operation for patching an XElement tree</summary>
@@ -837,20 +848,58 @@ namespace pr.extn
 		{
 			public Op(XElement elem)
 			{
-				OpType = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
-				Name   = (string)elem.Attribute(Attr.Name) ?? string.Empty;
-				Match  = (int?)elem.Attribute(Attr.Match) ?? 0;
-				Value  = !elem.IsEmpty ? elem.Value : null; // Note: Value==null means <element/>, Value=="" means <element></element>
+				OpType   = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
+				NodeType = Enum<XmlNodeType>.Parse((string)elem.Attribute(Attr.NodeType) ?? "element", ignore_case: true);
+				Name     = (string)elem.Attribute(Attr.Name) ?? string.Empty;
+				Index    = (int?)elem.Attribute(Attr.Idx) ?? 0;
+				Value    = (OpType == EOpType.Value || OpType == EOpType.Attr) && !elem.IsEmpty ? elem.Value : null; // Note: IsEmpty means <element/> => Value==null, Value=="" means <element></element>
+				FullName = MakeFullName(elem).ToString();
+			}
+
+			/// <summary>Generates a full name for this op</summary>
+			private StringBuilder MakeFullName(XElement elem, StringBuilder sb = null)
+			{
+				// If not the root element, call recursively, then build the name as the stack unwinds
+				sb = sb ?? new StringBuilder();
+				if (elem.Parent != null)
+				{
+					MakeFullName(elem.Parent, sb);
+
+					// Append this nodes name to CachedSB
+					var op = Enum<EOpType>.Parse(elem.Name.LocalName, ignore_case:true);
+					if (op == EOpType.Change || op == EOpType.Insert || op == EOpType.Remove)
+					{
+						var name = (string)elem.Attribute(Attr.Name);
+						if (name != null)
+						{
+							if (sb.Length != 1) Str.Append(sb, "/");
+							Str.Append(sb, name);
+						}
+					}
+				}
+				else
+				{
+					sb.Length = 0;
+					Str.Append(sb, "/");
+				}
+
+				return sb;
 			}
 
 			/// <summary>The operation type</summary>
 			public EOpType OpType { get; private set; }
 
 			/// <summary>The index of the child element that the operation applies to</summary>
-			public int Match { get; private set; }
+			public int Index { get; private set; }
+
+			/// <summary>The node type associated with the op</summary>
+			public XmlNodeType NodeType { get; private set; }
 
 			/// <summary>The name of the affected node</summary>
 			public string Name { get; private set; }
+
+			/// <summary>The full name from the root to the current node</summary>
+			public string FullName { get; private set; }
 
 			/// <summary>The value text associated with the op</summary>
 			public string Value { get; private set; }
@@ -858,13 +907,13 @@ namespace pr.extn
 			/// <summary>Locate the child element that this op applies to</summary>
 			public XNode FindChild(XContainer tree)
 			{
-				return Match < tree.ChildCount() ? tree.ChildByIndex(Match) : null;
+				return Index < tree.ChildCount() ? tree.ChildByIndex(Index) : null;
 			}
 
 			/// <summary>Debugging string</summary>
 			public override string ToString()
 			{
-				return "OpType: {0}  Idx: {1}  Name: {2}  Value: {3}".Fmt(OpType, Match, Name, Value);
+				return "OpType: {0}  Idx: {1}  Name: {2}  Value: {3}".Fmt(OpType, Index, Name, Value);
 			}
 		}
 
@@ -945,7 +994,7 @@ namespace pr.extn
 							// If the change operation contains child operations then add it to 'diff'
 							if (op.HasElements)
 							{
-								op.SetAttributeValue(Attr.Match, output_node_index);
+								op.SetAttributeValue(Attr.Idx, output_node_index);
 								op.SetAttributeValue(Attr.Name, ni.Name);
 								diff.Add2(op);
 							}
@@ -965,7 +1014,7 @@ namespace pr.extn
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), new XCData(nj.Value)));
-							op.SetAttributeValue(Attr.Match, output_node_index);
+							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
 						j.MoveNext();
@@ -981,7 +1030,7 @@ namespace pr.extn
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
-							op.SetAttributeValue(Attr.Match, output_node_index);
+							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
 						j.MoveNext();
@@ -997,7 +1046,7 @@ namespace pr.extn
 						if (ni.Value != nj.Value)
 						{
 							var op = diff.Add2(new XElement(EOpType.Value.Desc(), nj.Value));
-							op.SetAttributeValue(Attr.Match, output_node_index);
+							op.SetAttributeValue(Attr.Idx, output_node_index);
 						}
 						i.MoveNext();
 						j.MoveNext();
@@ -1035,7 +1084,7 @@ namespace pr.extn
 						// If the change operation contains child operations then add it to 'diff'
 						if (op.HasElements)
 						{
-							op.SetAttributeValue(Attr.Match, output_node_index);
+							op.SetAttributeValue(Attr.Idx, output_node_index);
 							diff.Add2(op);
 						}
 
@@ -1049,7 +1098,7 @@ namespace pr.extn
 
 				// At this point, i is not a node that can be changed to j. We need to either add nodes from j
 				// or remove nodes from i until i points to a node that can be changed into j. We want to minimise
-				// the number of nodes added/remove. Find the nearest resync point
+				// the number of nodes added/removed. Find the nearest resync point
 				var resync = Seq.FindNearestMatch<XNode>(i.Enumerate(), j.Enumerate(), (l,r) =>
 					{
 						// Not changeable if different types
@@ -1080,7 +1129,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Apply the changes described in 'diff' to this element tree</summary>
-		public static void Patch(this XContainer tree, XContainer diff)
+		public static XElement Patch(this XContainer tree, XContainer diff)
 		{
 			// Each child element in 'diff' describes an operation to perform on 'tree'
 			foreach (var op_elem in diff.Elements())
@@ -1093,9 +1142,10 @@ namespace pr.extn
 					{
 						// If 'tree' contains no 'XText' node
 						var child = op.FindChild(tree);
-						if      (child == null)     tree.Insert(op.Match, new XText(op.Value));
+						if      (child == null)     tree.Insert(op.Index, new XText(op.Value));
 						else if (child is XText   ) child.As<XText   >().Value = op.Value;
 						else if (child is XElement) child.As<XElement>().Value = op.Value;
+						else if (child is XComment) child.As<XComment>().Value = op.Value;
 						else throw new Exception("Cannot change value on node type {0}".Fmt(child.NodeType));
 						break;
 					}
@@ -1114,10 +1164,26 @@ namespace pr.extn
 				case EOpType.Insert:
 					{
 						// Insert a new node, and apply any child operations to it
-						if (op.Match < 0 || op.Match > tree.ChildCount())
-							throw new Exception("Insert node at invalid index position. Given: {0}  Valid range: [0,{1}]".Fmt(op.Match, tree.ChildCount()));
-						var node = tree.Insert(op.Match, new XElement(op.Name)).As<XContainer>();
-						node.Patch(op_elem);
+						if (op.Index < 0 || op.Index > tree.ChildCount())
+							throw new Exception("Insert node at invalid index position. Given: {0}  Valid range: [0,{1}]".Fmt(op.Index, tree.ChildCount()));
+
+						switch (op.NodeType)
+						{
+						default:
+							throw new NotSupportedException("XmlDiff insert node type {0} has not been implemented".Fmt(op.NodeType));
+						case XmlNodeType.Element:
+							{
+								var node = tree.Insert(op.Index, new XElement(op.Name)).As<XContainer>();
+								node.Patch(op_elem);
+								break;
+							}
+						case XmlNodeType.Comment:
+							{
+								var value = op_elem.Element(EOpType.Value.Desc()).As<string>();
+								var node = tree.Insert(op.Index, new XComment(value));
+								break;
+							}
+						}
 						break;
 					}
 
@@ -1128,6 +1194,7 @@ namespace pr.extn
 						var child = op.FindChild(tree).As<XContainer>();
 						if (op.Name.HasValue() && child is XElement && child.As<XElement>().Name != op.Name)
 							throw new Exception("Name mis-match for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
+
 						child.Patch(op_elem);
 						break;
 					}
@@ -1141,13 +1208,69 @@ namespace pr.extn
 					}
 				}
 			}
+			return tree as XElement;
+		}
+
+		/// <summary>Convert an xtree of differences into a string report.</summary>
+		public static string Report(XContainer diff)
+		{
+			var sb = new StringBuilder();
+			Report(diff, sb);
+			return sb.ToString();
+		}
+		public static void Report(XContainer diff, StringBuilder sb)
+		{
+			// Note, this can't be changed to report the operations that would be applied to some 'tree'
+			// because the order of operations requires nodes to be added/remove which would modify 'tree'
+			foreach (var op_elem in diff.Elements())
+			{
+				var op = new Op(op_elem);
+				switch (op.OpType)
+				{
+				// Replace the Value for the element
+				case EOpType.Value:
+					{
+						Str.Append(sb,"'",op.FullName,"': value changed to '",op.Value,"'\n");
+						break;
+					}
+
+				// 'Remove' the child node
+				case EOpType.Remove:
+					{
+						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," removed\n");
+						break;
+					}
+
+				// 'Insert' an element at the given index position
+				case EOpType.Insert:
+					{
+						Str.Append(sb,"'",op.FullName,"': ",op.NodeType," inserted\n");
+						break;
+					}
+
+				// 'Change' is a group of operations to apply to a child node
+				case EOpType.Change:
+					{
+						Report(op_elem, sb);
+						break;
+					}
+
+				// Add, Replace, or Remove an attribute
+				case EOpType.Attr:
+					{
+						// SetAttributeValue 
+						Str.Append(sb,"'",op.FullName,"': Attribute '",op.Name,"' value changed to '",op.Value,"'\n");
+						break;
+					}
+				}
+			}
 		}
 
 		/// <summary>Return a remove operation xml element</summary>
 		private static XElement RemoveOp(XNode node, ref int output_node_index)
 		{
 			var op = new XElement(EOpType.Remove.Desc());
-			op.SetAttributeValue(Attr.Match, output_node_index);
+			op.SetAttributeValue(Attr.Idx, output_node_index);
 			if (node is XElement) // Name the removed element, for sanity checking
 				op.SetAttributeValue(Attr.Name, node.As<XElement>().Name);
 
@@ -1162,13 +1285,14 @@ namespace pr.extn
 			if (node is XText)
 			{
 				var op = new XElement(EOpType.Value.Desc(), node.As<XText>().Value);
-				op.SetAttributeValue(Attr.Match, output_node_index++);
+				op.SetAttributeValue(Attr.Idx, output_node_index++);
 				return op;
 			}
 			if (node is XElement)
 			{
 				var op = new XElement(EOpType.Insert.Desc());
-				op.SetAttributeValue(Attr.Match, output_node_index++);
+				op.SetAttributeValue(Attr.Idx, output_node_index++);
+				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Element);
 				op.SetAttributeValue(Attr.Name, node.As<XElement>().Name);
 
 				// Add the attributes from 'node'
@@ -1179,6 +1303,14 @@ namespace pr.extn
 				if (node.As<XElement>().Nodes().Any())
 					new XElement("dummy").Diff(node.As<XElement>(), op);
 
+				return op;
+			}
+			if (node is XComment)
+			{
+				var op = new XElement(EOpType.Insert.Desc());
+				op.SetAttributeValue(Attr.Idx, output_node_index++);
+				op.SetAttributeValue(Attr.NodeType, XmlNodeType.Comment);
+				op.Add2(new XElement(EOpType.Value.Desc(), node.As<XComment>().Value));
 				return op;
 			}
 			throw new NotImplementedException();
@@ -1612,6 +1744,7 @@ namespace pr.unittests
 		<blue />
 	</changed1>
 	<added2>hamburger</added2>
+	<!-- A comment -->
 	<unchanged0 ty=""flat"">
 		<red>RED</red>
 		<blue />
@@ -1622,38 +1755,41 @@ namespace pr.unittests
 				#region patch xml
 @"<?xml version=""1.0"" encoding=""utf-8""?>
 <root>
-  <value match=""0"">
+	<value idx='0'>
 	text0
 	</value>
-  <change match=""2"" name=""two"">
-    <remove match=""0"" name=""has_child"" />
-  </change>
-  <insert match=""3"" name=""added"">
-    <attr name=""ty"">string</attr>
-    <insert match=""0"" name=""red"" />
-    <insert match=""1"" name=""blue"">
-      <value match=""0"">BLUE</value>
-    </insert>
-  </insert>
-  <insert match=""4"" name=""added1"">
-    <attr name=""ty"">fish</attr>
-    <insert match=""0"" name=""green"">
-      <value match=""0"">GREEN</value>
-    </insert>
-  </insert>
-  <change match=""5"" name=""changed0"">
-    <insert match=""0"" name=""red"" />
-    <remove match=""2"" name=""red"" />
-  </change>
-  <change match=""6"" name=""changed1"">
-    <attr name=""old"" />
-    <attr name=""new"">fred</attr>
-    <attr name=""ty"">boat</attr>
-  </change>
-  <insert match=""7"" name=""added2"">
-    <value match=""0"">hamburger</value>
-  </insert>
-  <remove match=""9"" name=""removed"" />
+	<change idx='2' name='two'>
+		<remove idx='0' name='has_child' />
+	</change>
+	<insert idx='3' node_type='Element' name='added'>
+		<attr name='ty'>string</attr>
+		<insert idx='0' node_type='Element' name='red' />
+		<insert idx='1' node_type='Element' name='blue'>
+			<value idx='0'>BLUE</value>
+		</insert>
+	</insert>
+	<insert idx='4' node_type='Element' name='added1'>
+		<attr name='ty'>fish</attr>
+		<insert idx='0' node_type='Element' name='green'>
+			<value idx='0'>GREEN</value>
+		</insert>
+	</insert>
+	<change idx='5' name='changed0'>
+		<insert idx='0' node_type='Element' name='red' />
+		<remove idx='2' name='red' />
+	</change>
+	<change idx='6' name='changed1'>
+		<attr name='old' />
+		<attr name='new'>fred</attr>
+		<attr name='ty'>boat</attr>
+	</change>
+	<insert idx='7' node_type='Element' name='added2'>
+		<value idx='0'>hamburger</value>
+	</insert>
+	<insert idx='8' node_type='Comment'>
+		<value> A comment </value>
+	</insert>
+	<remove idx='10' name='removed' />
 </root>";
 				#endregion
 
@@ -1664,6 +1800,8 @@ namespace pr.unittests
 			// Find how xml0 is different from xml1
 			var patch = xml0.Diff(xml1);
 			Assert.True(XDocument.DeepEquals(patch, xmlp));
+
+			var report = XmlDiff.Report(patch);
 
 			// Patch xml0 so that it becomes the same as xml1
 			xml0.Patch(xmlp);
