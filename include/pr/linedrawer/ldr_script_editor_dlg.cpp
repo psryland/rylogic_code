@@ -49,13 +49,13 @@ namespace pr
 			ScriptEditorDlgImpl(HWND parent, RenderCB render_cb)
 				:Form(Params(parent))
 				,ScriptEditorDlg(Internal())
-				,m_edit(ScintillaCtrl::Params().load_dll().id(IDC_TEXT).name("m_edit").wh(fill(8), fill(8,46)).parent(this).anchor(EAnchor::All))
+				,m_edit(ScintillaCtrl::Params().load_dll().id(IDC_TEXT).name("m_edit").wh(Fill,Fill).margin(8,8,8,46).parent(this).anchor(EAnchor::All))
 				,m_btn_render(Button::Params().id(IDC_BTN_RENDER).name("m_btn_render").xy(12, -12).text(L"&Render (F5)").parent(this).anchor(EAnchor::BottomLeft))
 				,m_btn_close(Button::Params().id(IDC_BTN_CLOSE).name("m_btn_close").xy(-12, -12).text(L"&Close").parent(this).anchor(EAnchor::BottomRight))
 				,m_render(render_cb)
 			{
 				// Setup the menu
-				auto menu_file = Menu(Menu::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {MenuItem::Separator}, {L"&Close", IDCANCEL}}, false);
+				auto menu_file = Menu(Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {MenuItem::Separator}, {L"&Close", IDCANCEL}}, false);
 				MenuStrip().Set(L"&File", menu_file);
 
 				// Initialise the edit control

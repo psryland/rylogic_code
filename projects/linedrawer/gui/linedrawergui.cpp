@@ -31,11 +31,12 @@ namespace ldr
 	}
 
 	MainGUI::MainGUI(LPTSTR cmdline, int showwnd)
-		:base(Params().name("ldr_main").title(AppTitleW()).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN))
+		:base(Params().name("ldr_main").title(AppTitleW()).xy(Centre|CentreOf,Centre|CentreOf).menu(IDR_MENU_MAIN).accel(IDR_ACCELERATOR).icon(IDI_ICON_MAIN))
 		,m_status(StatusBar::Params().name("status bar").id(IDC_STATUSBAR_MAIN).parent(this).text(L"Ready"))
 		,m_recent_files()
 		,m_saved_views()
-		,m_store_ui()
+		,m_store_ui(*this)
+		,m_store_ui_old()
 		,m_editor_ui(*this)
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
@@ -59,8 +60,8 @@ namespace ldr
 		m_saved_views .Attach(pr::SubMenuByName(m_menu, TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
 
 		// Initialise the object manager
-		m_store_ui.Create(*this);
-		m_store_ui.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
+		m_store_ui_old.Create(*this);
+		m_store_ui_old.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
 
 		// Initialise the script editor
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
@@ -495,6 +496,8 @@ namespace ldr
 	// Display the object manager UI
 	void MainGUI::OnShowObjectManagerUI()
 	{
+		m_store_ui2.Visible(true);
+
 		m_store_ui.Show(*this);
 		m_store_ui.Populate(m_main->m_store);
 	}

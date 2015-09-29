@@ -95,7 +95,7 @@ namespace pr
 		result = HRESULT_FROM_WIN32(result);
 
 		// else ask windows
-		char msg[16384];
+		char msg[8192];
 		DWORD length(sizeof(msg));
 		if (FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
 		{

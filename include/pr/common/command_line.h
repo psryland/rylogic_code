@@ -51,6 +51,9 @@ namespace pr
 
 			virtual ~IOptionReceiver() {}
 
+			// Helper to test if 'str' is of the form '-xyz'
+			bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
+
 			// Called for anything not preceded by '-'.
 			// The caller should advance 'arg' for each argument read.
 			// Return true to continue parsing, false to abort parsing, or

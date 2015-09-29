@@ -26,16 +26,16 @@ namespace ldr
 			GroupBox m_grp_focus;
 
 			General(Control* parent)
-				:Panel(Panel::Params().name("tab-general").id(ID_TAB_GENERAL).wh(fill(10),fill(10)).parent(parent).anchor(EAnchor::All))
+				:Panel(Panel::Params().name("tab-general").id(ID_TAB_GENERAL).wh(Fill,Fill).margin(10).parent(parent).anchor(EAnchor::All))
 				,m_lbl_text_editor(Label::Params().name("lbl-text-editor").id(ID_LBL_TEXTEDITOR).text(L"Text Editor: ").xy(10,10).parent(this))
-				,m_tb_text_editor(TextBox::Params().name("tb-text-editor").id(ID_TB_TEXTEDITOR).xy(0,Top|BottomOf|ID_LBL_TEXTEDITOR).wh(fill(20), TextBox::DefH).parent(this).anchor(EAnchor::LeftTopRight))
-				,m_grp_focus(GroupBox::Params().name("grp-focus-point").id(ID_GRP_FOCUS_POINT).xy(10, Top|BottomOf|ID_TB_TEXTEDITOR).wh(fill(20), DefH).text(L"Focus Point").parent(this))
+				,m_tb_text_editor(TextBox::Params().name("tb-text-editor").id(ID_TB_TEXTEDITOR).xy(0,Top|BottomOf|ID_LBL_TEXTEDITOR).wh(Fill, TextBox::DefH).margin(20).parent(this).anchor(EAnchor::LeftTopRight))
+				,m_grp_focus(GroupBox::Params().name("grp-focus-point").id(ID_GRP_FOCUS_POINT).xy(10, Top|BottomOf|ID_TB_TEXTEDITOR).wh(Fill, Panel::DefH).margin(20).parent(this).text(L"Focus Point"))
 			{}
 		};
 		struct Navigation :Panel
 		{
 			Navigation(Control* parent)
-				:Panel(Panel::Params().name("tab-navigation").id(ID_TAB_NAVIGATION).wh(fill(10),fill(10)).parent(parent).anchor(EAnchor::All))
+				:Panel(Panel::Params().name("tab-navigation").id(ID_TAB_NAVIGATION).wh(Fill,Fill).margin(10).parent(parent).anchor(EAnchor::All))
 			{}
 		};
 		#pragma endregion
@@ -47,7 +47,7 @@ namespace ldr
 
 		OptionsUI(Control* main_ui, UserSettings& settings)
 			:Form(FormParams().name("options").title(L"Options").parent(main_ui).xy(CentreP,CentreP).wh(480,360).wndclass(RegisterWndClass<Form>()).hide_on_close(true))
-			,m_tc(TabControl::Params().name("m_tc").text(L"tabctrl").wh(fill(10),fill(10)).id(ID_TABCTRL).parent(this).anchor(EAnchor::All))//, DefaultControlStyle, 0UL)
+			,m_tc(TabControl::Params().name("m_tc").text(L"tabctrl").wh(Fill,Fill).id(ID_TABCTRL).margin(10).parent(this).anchor(EAnchor::All))//, DefaultControlStyle, 0UL)
 			,m_tab_general(&m_tc)
 			,m_tab_navigation(&m_tc)
 			,m_settings(&settings)

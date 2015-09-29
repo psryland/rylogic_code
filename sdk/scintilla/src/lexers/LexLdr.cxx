@@ -31,7 +31,7 @@ using namespace Scintilla;
 #endif
 
 typedef unsigned int uint;
-enum class EWordList
+static enum class EWordList
 {
 	Keywords,
 	Preprocessor,

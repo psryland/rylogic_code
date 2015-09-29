@@ -209,8 +209,7 @@
 
 	<!-- WinGui -->
 	<Type Name="pr::gui::Control">
-		<DisplayString Condition="*m_name != 0">{m_name} id:{m_id} hwnd:{m_hwnd}</DisplayString>
-		<DisplayString>id:{m_id} hwnd:{m_hwnd}</DisplayString>
+		<DisplayString>{m_name} id:{m_id} hwnd:{m_hwnd}</DisplayString>
 	</Type>
 	<Type Name="pr::gui::Form&lt;*&gt;">
 		<DisplayString Condition="*m_name != 0">{m_name} id:{m_id} hwnd:{m_hwnd}</DisplayString>

@@ -82,9 +82,9 @@ namespace pr
 		// Return the last error received
 		DWORD LastError(std::string* error_desc = nullptr) const
 		{
-			auto last_error = ::GetLastError();
+			m_last_error = ::GetLastError();
 			if (error_desc) *error_desc = pr::HrMsg(m_last_error);
-			return m_last_error = last_error;
+			return m_last_error;
 		}
 
 		// Configure the port
@@ -156,7 +156,27 @@ namespace pr
 					// Try to set defaults but if we can't, just hope for the best.
 					Throw(::SetCommConfig(m_handle, &config, config.dwSize), "Failed to set default comm port configuration");
 				}
+
+				// Apply the port settings
 				ApplyConfig();
+
+				// Check the properties of the comm port and warn if we're trying to exceed them
+				COMMPROP prop;
+				Throw(::GetCommProperties(m_handle, &prop), "GetCommProperties failed");
+				if (m_settings.m_baud > prop.dwMaxBaud)
+					OutputDebugStringA(FmtS("Requested baud rate %d exceeds the maximum of %d for this comm port", m_settings.m_baud, prop.dwMaxBaud));
+
+				// Check that the configured state of the port matches what we asked for
+				DCB dcb;
+				Throw(::GetCommState(m_handle, &dcb), "GetCommState failed");
+				if (dcb.BaudRate != m_settings.m_baud)
+					OutputDebugStringA(FmtS("Baud rate of %d being used instead of the requested baud rate: %d", dcb.BaudRate, m_settings.m_baud));
+				if (dcb.ByteSize != m_settings.m_data_bits)
+					OutputDebugStringA(FmtS("Byte size of %d being used instead of the requested byte size: %d", dcb.ByteSize, m_settings.m_data_bits));
+				if (dcb.Parity != m_settings.m_parity)
+					OutputDebugStringA(FmtS("Parity of %d being used instead of the requested parity: %d", dcb.Parity, m_settings.m_parity));
+				if (dcb.StopBits != m_settings.m_stop_bits)
+					OutputDebugStringA(FmtS("Stop bits of %d being used instead of the requested stop bits: %d", dcb.StopBits, m_settings.m_stop_bits));
 			}
 			catch (...)
 			{
@@ -219,14 +239,24 @@ namespace pr
 			if (!::WriteFile(m_handle, data, DWORD(size), 0, &ovrlap) && GetLastError() != ERROR_IO_PENDING)
 				return false;
 
-			switch (::WaitForSingleObject(ovrlap.hEvent, timeout))
+			Flush();
+
+			// Wait for the write to complete
+			auto r = ::WaitForSingleObject(ovrlap.hEvent, timeout);
+			switch (r)
 			{
 			default:
+				throw std::exception(FmtS("Unknown return code (%d) during Serial port Write command", r));
+			case WAIT_OBJECT_0:
+				return ::GetOverlappedResult(m_handle, &ovrlap, (DWORD*)&bytes_sent, FALSE) != 0;
 			case WAIT_TIMEOUT:
 				::CancelIo(m_handle); // Cancel the I/O operation
 				return false;
-			case WAIT_OBJECT_0:
-				return ::GetOverlappedResult(m_handle, &ovrlap, (DWORD*)&bytes_sent, FALSE) != 0;
+			case WAIT_ABANDONED:
+				return false; // Connection dropped
+			case WAIT_FAILED:
+				auto err = ::GetLastError();
+				throw std::exception(FmtS("Serial port Write command failed with error code %X", err));
 			}
 		}
 

@@ -44,13 +44,13 @@ struct WtlMain :WTL::CFrameWindowImpl<WtlMain>
 // Application window
 struct Main :Form
 {
-	struct Tab
+	struct Tab :Panel
 	{
-		Panel m_panel;
 		Label m_lbl;
+		Tab(){}
 		Tab(wchar_t const* msg, int id, Control* parent)
-			:m_panel(Panel::Params().id(id).parent(parent).anchor(EAnchor::All))//L"panel", "tab-panel", 0, 0, 10, 10, id, parent, EAnchor::All)
-			,m_lbl  (Label::Params().text(msg).xy(10,10).wh(60,16).parent(&m_panel))//, "tab-lbl", 10, 10, 60, 16, IDC_UNUSED, &m_panel)
+			:Panel(Panel::Params().id(id).parent(parent).dock(EDock::Fill).style(Panel::DefaultStyle | WS_BORDER))
+			,m_lbl(Label::Params().text(msg).xy(10,10).wh(60,16).parent(this))
 		{}
 	};
 
@@ -59,37 +59,54 @@ struct Main :Form
 	Button        m_btn_nm_prog;
 	Button        m_btn_modeless;
 	Button        m_btn_cmenu;
+	Button        m_btn;
 	Button        m_btn_about;
 	ScintillaCtrl m_scint;
 	Tab           m_tab1;
 	Tab           m_tab2;
+	Splitter      m_split;
+	Tab           m_split_l;
+	Tab           m_split_r;
 	TabControl    m_tc;
 	Modeless      m_modeless;
 	ProgressDlg   m_nm_progress;
 
 	enum { ID_FILE, ID_FILE_EXIT };
-	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2 };
+	enum { IDC_PROGRESS = 100, IDC_NM_PROGRESS, IDC_MODELESS, IDC_CONTEXTMENU, IDC_POSTEST, IDC_ABOUT, IDC_SCINT, IDC_TAB, IDC_TAB1, IDC_TAB2, IDC_SPLITL, IDC_SPLITR };
 
-	Main               ()
-		:Form          (FormParams()           .name("main")          .title(L"Pauls Window")     .xy(200,200)                        .wh(800,600).wndclass(RegisterWndClass<Main>()).main_wnd(true))
+	struct Params :FormParams
+	{
+		Params()
+		{
+			wndclass(RegisterWndClass<Main>())
+			.name("main")
+			.title(L"Pauls Window")
+			.xy(0,0)
+			.wh(800,600)
+			.menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}})
+			.main_wnd(true);
+		}
+	};
+
+	Main()
+		:Form          (Params())
 		,m_lbl         (Label::Params()        .name("m_lbl")         .text(L"hello world")       .xy(10,10)                          .wh(60,16)                      .parent(this))
 		,m_btn_progress(Button::Params()       .name("m_btn_progress").text(L"progress")          .xy(10,30)                          .wh(100,20) .id(IDC_PROGRESS)   .parent(this))
 		,m_btn_nm_prog (Button::Params()       .name("m_btn_nm_prog") .text(L"non-modal progress").xy(10,Top|BottomOf|IDC_PROGRESS)   .wh(100,20) .id(IDC_NM_PROGRESS).parent(this))
-		,m_btn_modeless(Button::Params()       .name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   .parent(this).anchor(EAnchor::TopLeft))
-		,m_btn_cmenu   (Button::Params()       .name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU).parent(this).anchor(EAnchor::TopLeft))
+		,m_btn_modeless(Button::Params()       .name("m_btn_modeless").text(L"show modeless")     .xy(10,Top|BottomOf|IDC_NM_PROGRESS).wh(100,20) .id(IDC_MODELESS)   .parent(this))
+		,m_btn_cmenu   (Button::Params()       .name("m_btn_cmenu")   .text(L"context menu")      .xy(10,Top|BottomOf|IDC_MODELESS)   .wh(100,20) .id(IDC_CONTEXTMENU).parent(this))
+		,m_btn         (Button::Params()       .name("btn")           .text(L"BOOBS")             .xy(10,Top|BottomOf|IDC_CONTEXTMENU).wh(100,20) .id(IDC_POSTEST)    .parent(this))
 		,m_btn_about   (Button::Params()       .name("m_btn_about")   .text(L"click me!")         .xy(-10,-10)                        .wh(100,20) .id(IDC_ABOUT)      .parent(this).anchor(EAnchor::BottomRight)) 
 		,m_scint       (ScintillaCtrl::Params().name("m_scint")                                   .xy(0,0)                            .wh(100,100).id(IDC_SCINT)      .parent(this))
 		,m_tab1        (L"hi from tab1", IDC_TAB1, this)
 		,m_tab2        (L"hi from tab2", IDC_TAB2, this)
-		,m_tc          (TabControl::Params().name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).parent(this).anchor(EAnchor::All).style_ex(0UL))
+		,m_split       (Splitter::Params().vertical().name("split").parent(this))
+		,m_split_l     (L"Left panel" , IDC_SPLITL, &m_split.Pane0)
+		,m_split_r     (L"Right panel", IDC_SPLITR, &m_split.Pane1)
+		,m_tc          (TabControl::Params().name("m_tc").text(L"tabctrl").xy(120,10).wh(500,500).id(IDC_TAB).parent(this).anchor(EAnchor::All).style_ex(0UL).padding(0))
 		,m_modeless    (this)
 		,m_nm_progress ()
 	{
-		Menu file_menu(MenuStrip::Popup);
-		file_menu.Insert(L"E&xit", IDCLOSE);
-		m_menu = MenuStrip(MenuStrip::Strip);
-		m_menu.Insert(file_menu, L"&File");
-
 		m_nm_progress.Create(ProgressDlg::Params().parent(this).hide_on_close(true));
 		auto busy_work = [](ProgressDlg* dlg)
 			{
@@ -141,153 +158,38 @@ struct Main :Form
 					pt = PointToClient(pt);
 					menu.Show(this, pt.x, pt.y);
 				}
-				//ECmd cmd = (ECmd)LOWORD(res);
-				//int  idx = (int)HIWORD(res);
-				
-				#if 0
-				//menu.AddItem(std::make_shared<ContextMenu::Label>(L"&Reset Zoom", MAKEWPARAM(ECmd::ResetZoom, idx_all)));
-				//if (!m_series.empty())
-				//{
-				//	std::vector<std::wstring> plot_types;
-				//	plot_types.push_back(L"Point");
-				//	plot_types.push_back(L"Line");
-				//	plot_types.push_back(L"Bar");
-
-				//	int vis = 0, invis = 0;
-				//	for (auto& series : m_series)
-				//		(series->m_opts.Visible ? vis : invis) = 1;
-
-				//	// All series options
-				//	auto& series_all = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"Series: All"));
-				//	series_all.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible", MAKEWPARAM(ECmd::Visible, idx_all), vis + invis));
-
-				//	// Specific series options
-				//	int idx_series = -1;
-				//	for (auto s : m_series)
-				//	{
-				//		auto& series = *s;
-				//		++idx_series;
-
-				//		// Create a sub menu for this series
-				//		StylePtr style(new ContextMenuStyle());
-				//		style->m_col_text = series.m_opts.color();
-				//		auto& series_m = menu.AddItem<ContextMenu>(std::make_shared<ContextMenu>(series.m_name.c_str(), 0, series.m_opts.Visible, style));
-
-				//		// Visibility
-				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Visible"     ,MAKEWPARAM(ECmd::Visible          ,idx_series), series.m_opts.Visible));
-				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"Series &Data" ,MAKEWPARAM(ECmd::VisibleData      ,idx_series), series.m_opts.DrawData));
-				//		series_m.AddItem(std::make_shared<ContextMenu::Label>(L"&Error Bars"  ,MAKEWPARAM(ECmd::VisibleErrorBars ,idx_series), series.m_opts.DrawErrorBars));
-
-				//		// Plot Type
-				//		series_m.AddItem(std::make_shared<ContextMenu::Combo>(L"&Plot Type"   ,&plot_types, MAKEWPARAM(ECmd::PlotType ,idx_series)));
-
-				//		{// Appearance menu
-				//			auto& appearance = series_m.AddItem<ContextMenu>(std::make_shared<ContextMenu>(L"&Appearance"));
-				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Point ||
-				//				series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
-				//			{
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Size:", L"9", MAKEWPARAM(ECmd::PointSize, idx_series)));
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Point Colour:", L"9", MAKEWPARAM(ECmd::PointColour, idx_series)));
-				//			}
-				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Line)
-				//			{
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Width:", L"9", MAKEWPARAM(ECmd::LineWidth, idx_series)));
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Line Colour:", L"9", MAKEWPARAM(ECmd::LineColour, idx_series)));
-				//			}
-				//			if (series.m_opts.PlotType == Series::RdrOptions::EPlotType::Bar)
-				//			{
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Width:", L"9", MAKEWPARAM(ECmd::BarWidth, idx_series)));
-				//				appearance.AddItem(std::make_shared<ContextMenu::Edit>(L"Bar Colour:", L"9", MAKEWPARAM(ECmd::BarColour, idx_series)));
-				//			}
-				//		}
-				//	}
-				//}
-				//
-				//int res = menu.Show(m_hwnd, int(point.x), int(point.y));
-				//ECmd cmd = (ECmd)LOWORD(res);
-				//int  idx = (int)HIWORD(res);
-				//switch (cmd)
-				//{
-				//default: break;
-				//case ECmd::ShowValues:
-				//	m_tt.ShowWindow(m_tt.IsWindowVisible() ? SW_HIDE : SW_SHOW);
-				//	break;
-				//case ECmd::ResetZoom:
-				//	ResetToDefaultRange();
-				//	Dirty(true);
-				//	break;
-				//case ECmd::Visible:
-				//	if (idx == idx_all)
-				//	{
-				//		for (SeriesCont::iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i)
-				//		{
-				//		}
-				//	}
-				//	break;
-				//}
-				//
-				////ContextMenu::Label show_values(L"&Show Values", ECmd_ShowValues, 0, m_tt.IsWindowVisible());
-				////menu.AddItem(show_values);
-				////
-				////ContextMenu::Label reset_zoom(L"&Reset Zoom", ECmd_ResetZoom);
-				////menu.AddItem(reset_zoom);
-				////
-				////Series::Menu series_all(L"Series: &All");
-				////ContextMenu::Label all_visible(L"&Visible", ECmd_All_Visible);
-				////series_all.AddItem(all_visible);
-				////if (!m_series.empty()) menu.AddItem(series_all);
-				////int invis = 0, vis = 0;
-				////for (SeriesCont::const_iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i) (*i)->m_opts.m_visible ? vis : invis) = 1;
-				////all_visible.m_check_state = vis + invis;
-				////
-				////
-				////struct Menu :pr::gui::ContextMenu
-				////{
-				////	pr::gui::ContextMenuStyle m_style;
-				////	pr::gui::ContextMenu::Label m_vis;
-				////	
-				////	Menu()
-				////	:pr::gui::ContextMenu(L"", &m_style)
-				////	,m_vis(L"&Visible", ECmd_Series)
-				////	{}
-				////};
-				////
-				////
-				////for (SeriesCont::iterator i = m_series.begin(), iend = m_series.end(); i != iend; ++i)
-				////{
-				////	Series& series = **i;
-				////	series.m_menu_style
-				////	(*i)->m_opts.m_visible ? vis : invis) = 1;
-				////
-				////	
-				////	series.AppendMenu(menu);
-
-				////		series.m_menu.m_label.m_text      = series.m_name;
-				////		series.m_menu.m_style.m_col_text  = series.m_opts.color();
-				////		series.m_menu.m_vis.m_check_state = series.m_opts.m_visible;
-				////		series.m_menu.AddItem(series.m_menu.m_vis);
-				////		menu.AddItem(series.m_menu);
-				////	}
-				////}
-				#endif
 			};
+		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 		m_btn_about.Click += [&](Button&,EmptyArgs const&)
 			{
 				About about;
 				about.ShowDialog(this);
 			};
 
-		m_tc.Insert(L"Tab0", m_scint);
-		m_tc.Insert(L"Tab1", m_tab1.m_panel);
-		m_tc.Insert(L"Tab2", m_tab2.m_panel);
+		m_tc.Insert(L"Tab0", m_split);
+		m_tc.Insert(L"Tab1", m_tab1);
+		m_tc.Insert(L"Tab2", m_scint);
+		m_tc.Insert(L"Tab3", m_tab2);
 		m_tc.SelectedIndex(0);
 
 		m_scint.InitDefaults();
 		m_scint.InitLdrStyle();
 	}
+
+	void RunBoobs(Button&, EmptyArgs const&)
+	{
+		auto sr = ScreenRect();
+		auto ar = AdjRect();
+		auto cr = ClientRect().Shifted(-ar.left, -ar.top);
+
+		auto tsr = m_tc.ScreenRect();
+		auto tcr = m_tc.ClientRect();
+		auto tpr = m_tc.ParentRect();
+		m_tc.ParentRect(tpr);
+	}
 };
 
-int __stdcall _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
+int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
 	pr::InitCom com;
 	pr::GdiPlus gdi;

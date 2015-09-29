@@ -50,6 +50,9 @@ namespace Scintilla
 		public const int SCI_ADDTEXT = unchecked((int)2001);
 		public const int SCI_ADDSTYLEDTEXT = unchecked((int)2002);
 		public const int SCI_INSERTTEXT = unchecked((int)2003);
+		public const int SCI_APPENDTEXT = unchecked((int)2282);
+		public const int SCI_APPENDSTYLEDTEXT = unchecked((int)2294);
+		public const int SCI_INSERTSTYLEDTEXT = unchecked((int)2295);
 		public const int SCI_CHANGEINSERTION = unchecked((int)2672);
 		public const int SCI_CLEARALL = unchecked((int)2004);
 		public const int SCI_DELETERANGE = unchecked((int)2645);
@@ -514,8 +517,6 @@ namespace Scintilla
 		public const int SCI_TEXTHEIGHT = unchecked((int)2279);
 		public const int SCI_SETVSCROLLBAR = unchecked((int)2280);
 		public const int SCI_GETVSCROLLBAR = unchecked((int)2281);
-		public const int SCI_APPENDTEXT = unchecked((int)2282);
-		public const int SCI_APPENDSTYLEDTEXT = unchecked((int)2294);
 		public const int SCI_GETTWOPHASEDRAW = unchecked((int)2283);
 		public const int SCI_SETTWOPHASEDRAW = unchecked((int)2284);
 		public const int SC_EFF_QUALITY_MASK = unchecked((int)0xF);

@@ -40,17 +40,18 @@ namespace ldr
 			IDC_STATUSBAR_MAIN = 200,
 		};
 
-		pr::gui::StatusBar        m_status;               // The status bar
-		pr::gui::RecentFiles      m_recent_files;         // The recent files
-		pr::gui::MenuList         m_saved_views;          // A list of camera snapshots
-		pr::ldr::ObjectManagerDlg m_store_ui;             // GUI window for manipulating ldr object properties
-		pr::ldr::ScriptEditorDlg  m_editor_ui;            // An editor for ldr script
-		pr::ldr::MeasureDlg       m_measure_tool_ui;      // The UI for the measuring tool
-		pr::ldr::AngleDlg         m_angle_tool_ui;        // The UI for the angle measuring tool
-		ldr::OptionsUI            m_options_ui;           // The UI for setting LineDrawer settings
-		bool                      m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
-		bool                      m_suspend_render;       // True to prevent rendering
-		StatusPri                 m_status_pri;           // Status priority buffer
+		pr::gui::StatusBar          m_status;               // The status bar
+		pr::gui::RecentFiles        m_recent_files;         // The recent files
+		pr::gui::MenuList           m_saved_views;          // A list of camera snapshots
+		pr::ldr::LdrObjectManagerUI m_store_ui;             // UI for managing ldr objects in the scene
+		pr::ldr::ObjectManagerDlg   m_store_ui_old;         // GUI window for manipulating ldr object properties
+		pr::ldr::ScriptEditorDlg    m_editor_ui;            // An editor for ldr script
+		pr::ldr::MeasureDlg         m_measure_tool_ui;      // The UI for the measuring tool
+		pr::ldr::AngleDlg           m_angle_tool_ui;        // The UI for the angle measuring tool
+		ldr::OptionsUI              m_options_ui;           // The UI for setting LineDrawer settings
+		bool                        m_mouse_status_updates; // Whether to show mouse position in the status bar (todo: more general system for this)
+		bool                        m_suspend_render;       // True to prevent rendering
+		StatusPri                   m_status_pri;           // Status priority buffer
 
 		static char const* AppName() { return ldr::AppTitleA(); }
 

@@ -19,6 +19,72 @@
 
 namespace pr
 {
+	// Helper for enumerating bt radios
+	struct FindBTRadios
+	{
+	private:
+		HANDLE m_radio;
+		HBLUETOOTH_RADIO_FIND m_find;
+		bool m_more;
+	
+	public:
+		FindBTRadios()
+			:m_radio()
+			,m_find()
+			,m_more(true)
+		{
+			// Find the first radio
+			auto parms = BLUETOOTH_FIND_RADIO_PARAMS{ sizeof(BLUETOOTH_FIND_RADIO_PARAMS) };
+			m_find = ::BluetoothFindFirstRadio(&parms, &m_radio);
+			if (m_find == nullptr)
+			{
+				auto err = ::GetLastError();
+				switch (err) {
+				default: throw std::exception("Error while enumerating bluetooth radio devices");
+				case ERROR_NO_MORE_ITEMS:
+					m_more = false;
+					break;
+				}
+			}
+		}
+		~FindBTRadios()
+		{
+			if (m_find != nullptr)
+				::BluetoothFindRadioClose(m_find);
+		}
+
+		// True once enumeration is complete
+		bool done() const
+		{
+			return !m_more;
+		}
+
+		// The handle of the current radio device being enumerated
+		HANDLE radio() const
+		{
+			return m_radio;
+		}
+
+		// Move to the next device
+		void next()
+		{
+			for (;!done();)
+			{
+				if (!::BluetoothFindNextRadio(m_find, &m_radio))
+				{
+					auto err = ::GetLastError();
+					switch (err) {
+					default: throw std::exception("Error while enumerating bluetooth radio devices");
+					case ERROR_NO_MORE_ITEMS:
+						m_more = false;
+						break;
+					}
+				}
+			}
+		}
+	};
+
+	// Helper for enumerating bt devices
 	struct FindBTDevices :BLUETOOTH_DEVICE_INFO_STRUCT
 	{
 		struct Params :BLUETOOTH_DEVICE_SEARCH_PARAMS
@@ -40,72 +106,43 @@ namespace pr
 			}
 		};
 
+	private:
 		Params m_search_params;
-		HBLUETOOTH_RADIO_FIND m_find_radio;
-		HBLUETOOTH_DEVICE_FIND m_find_device;
-		HANDLE m_radio;
-		bool m_more_radios;
-		bool m_more_devices;
+		HBLUETOOTH_DEVICE_FIND m_find;
+		bool m_more;
 
+	public:
 		FindBTDevices(Params const& p = Params())
 			:BLUETOOTH_DEVICE_INFO_STRUCT()
 			,m_search_params(p)
-			,m_find_radio()
-			,m_find_device()
-			,m_more_radios(true)
-			,m_more_devices(true)
+			,m_find()
+			,m_more(true)
 		{
 			dwSize = sizeof(BLUETOOTH_DEVICE_INFO_STRUCT);
 
-			// Find the first radio
-			auto find_radio_params = BLUETOOTH_FIND_RADIO_PARAMS{ sizeof(BLUETOOTH_FIND_RADIO_PARAMS) };
-			m_find_radio = ::BluetoothFindFirstRadio(&find_radio_params, &m_radio);
-			if (m_find_radio == nullptr)
+			// Find the first device on this radio
+			m_find = ::BluetoothFindFirstDevice(&m_search_params, this);
+			if (m_find == nullptr)
 			{
 				auto err = ::GetLastError();
 				switch (err) {
-				default: throw std::exception("Error while enumerating bluetooth radio devices");
+				default: throw std::exception("Failed to enumerate devices on bluetooth radio");
 				case ERROR_NO_MORE_ITEMS:
-					m_more_radios = false;
-					m_more_devices = false;
+					m_more = false;
 					break;
-				}
-			}
-
-			// Find the first device on this radio
-			if (m_more_devices)
-			{
-				m_find_device = ::BluetoothFindFirstDevice(&m_search_params, this);
-				if (m_find_device == nullptr)
-				{
-					auto err = ::GetLastError();
-					switch (err) {
-					default: throw std::exception("Failed to enumerate devices on bluetooth radio");
-					case ERROR_NO_MORE_ITEMS:
-						m_more_devices = false;
-						break;
-					}
 				}
 			}
 		}
 		~FindBTDevices()
 		{
-			if (m_find_device != nullptr)
-				::BluetoothFindDeviceClose(m_find_device);
-			if (m_find_radio != nullptr)
-				::BluetoothFindRadioClose(m_find_radio);
+			if (m_find != nullptr)
+				::BluetoothFindDeviceClose(m_find);
 		}
 
 		// True once enumeration is complete
 		bool done() const
 		{
-			return !(m_more_devices || m_more_radios);
-		}
-
-		// The handle of the current radio device being enumerated
-		HANDLE radio() const
-		{
-			return m_radio;
+			return !m_more;
 		}
 
 		// Move to the next device
@@ -113,42 +150,18 @@ namespace pr
 		{
 			for (;!done();)
 			{
-				// If there are no more devices on the current radio, look for the next radio
-				if (!m_more_devices)
+				if (!::BluetoothFindNextDevice(m_find, this))
 				{
-					if (!::BluetoothFindNextRadio(m_find_radio, &m_radio))
-					{
-						auto err = ::GetLastError();
-						switch (err) {
-						default: throw std::exception("Error while enumerating bluetooth radio devices");
-						case ERROR_NO_MORE_ITEMS:
-							m_more_radios = false;
-							break;
-						}
-					}
-					else
-					{
-						m_more_devices = true;
-					}
-				}
-				
-				// Look for the next device
-				if (m_more_devices)
-				{
-					if (!::BluetoothFindNextDevice(m_find_device, this))
-					{
-						auto err = ::GetLastError();
-						switch (err) {
-						default: throw std::exception("Failed to enumerate devices on bluetooth radio");
-						case ERROR_NO_MORE_ITEMS:
-							m_more_devices = false;
-							break;
-						}
+					auto err = ::GetLastError();
+					switch (err) {
+					default: throw std::exception("Failed to enumerate devices on bluetooth radio");
+					case ERROR_NO_MORE_ITEMS:
+						m_more = false;
+						break;
 					}
 				}
 			}
 		}
-
 	};
 }
 

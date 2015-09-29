@@ -57,6 +57,7 @@ namespace pr
 	namespace gui
 	{
 		static_assert(_WIN32_WINNT >= 0x0500, "Minimum windows version is 0x0500");
+		using namespace std::placeholders;
 
 		// Forwards
 		struct DlgTemplate;
@@ -68,6 +69,11 @@ namespace pr
 
 		// A user windows message the returns the Control* associated with a given hwnd
 		static int const WM_GETCTRLPTR = WM_USER + 0x6569;
+
+		// Tree/List constants
+		using HLISTITEM = int; // A typedef for symmetry with TreeView
+		static HTREEITEM const INVALID_TREE_ITEM =  0;
+		static HLISTITEM const INVALID_LIST_ITEM = -1;
 
 		#pragma region Enumerations
 		// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
@@ -206,6 +212,12 @@ namespace pr
 			Auto
 		};
 
+		// Flags for Control Rect methods
+		enum class ERectFlags
+		{
+			ExcludeDockedChildren = 1 << 0,
+			_bitwise_operators_allowed,
+		};
 		#pragma endregion
 
 		#pragma region Unicode conversion
@@ -300,15 +312,21 @@ namespace pr
 		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
 
 		// Enum bitwise operators
-		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (TEnum lhs, UT rhs)
 		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) | ut(rhs));
+			return UT(lhs) == rhs;
 		}
-		template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (TEnum lhs, UT rhs)
 		{
-			using ut = typename std::underlying_type<TEnum>::type;
-			return TEnum(ut(lhs) & ut(rhs));
+			return UT(lhs) != rhs;
+		}
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+		{
+			return TEnum(UT(lhs) | UT(rhs));
+		}
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+		{
+			return TEnum(UT(lhs) & UT(rhs));
 		}
 	
 		// Append bytes
@@ -320,7 +338,7 @@ namespace pr
 		// Convert an error code into an error message
 		inline std::string ErrorMessage(HRESULT result)
 		{
-			char msg[16384];
+			char msg[8192];
 			DWORD length(_countof(msg));
 			if (!FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS, NULL, result, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), msg, length, NULL))
 				sprintf_s(msg, "Unknown error code: 0x%80X", result);
@@ -415,6 +433,7 @@ namespace pr
 			Point() :POINT() {}
 			Point(long x_, long y_) { x = x_; y = y_; }
 			explicit Point(SIZE sz) { x = sz.cx; y = sz.cy; }
+			explicit Point(LPARAM lparam) :Point(GetXLParam(lparam), GetYLParam(lparam)) {}
 			long operator[](int axis) const { return axis == 0 ? x : y; }
 		};
 
@@ -436,6 +455,7 @@ namespace pr
 			Rect(POINT const& pt, SIZE const& sz) :RECT() { left = pt.x; top = pt.y; right = pt.x + sz.cx; bottom = pt.y + sz.cy; }
 			Rect(int l, int t, int r, int b)              { left = l; top = t; right = r; bottom = b; }
 			explicit Rect(Size s)                         { left = top = 0; right = s.cx; bottom = s.cy; }
+			bool empty() const                            { return left == right && top == bottom; }
 			long width() const                            { return right - left; }
 			void width(long w)                            { right = left + w; }
 			long height() const                           { return bottom - top; }
@@ -460,12 +480,55 @@ namespace pr
 					? pt.x >= left && pt.x <= right && pt.y >= top && pt.y <= bottom
 					: pt.x >= left && pt.x <  right && pt.y >= top && pt.y <  bottom;
 			}
-			Rect Offset(int dx, int dy) const                       { auto r = *this; ::OffsetRect(&r, dx, dy); return r; }
-			Rect Inflate(int dx, int dy) const                      { auto r = *this; ::InflateRect(&r, dx, dy); return r; }
-			Rect Adjust(int dl, int dt, int dr, int db) const       { auto r = *this; r.left += dl; r.top += dt; r.right += dr; r.bottom += db; return r; }
-			Rect Intersect(Rect const& rhs) const                   { auto r = *this; ::IntersectRect(&r, this, &rhs); return r; }
-			Rect Union(Rect const& rhs) const                       { auto r = *this; ::UnionRect(&r, this, &rhs); return r; }
-			Rect Subtract(Rect const& rhs) const                    { auto r = *this; ::SubtractRect(&r, this, &rhs); return r; }
+			Rect Shifted(int dx, int dy) const
+			{
+				auto r = *this;
+				::OffsetRect(&r, dx, dy);
+				return r;
+			}
+			Rect Inflate(int dx, int dy) const
+			{
+				auto r = *this;
+				::InflateRect(&r, dx, dy);
+				return r;
+			}
+			Rect Adjust(int dl, int dt, int dr, int db) const
+			{
+				auto r = *this;
+				r.left += dl;
+				r.top += dt;
+				r.right += dr;
+				r.bottom += db;
+				return r;
+			}
+			Rect Adjust(Rect const& adj) const
+			{
+				auto r = *this;
+				r.left += adj.left;
+				r.top += adj.top;
+				r.right += adj.right;
+				r.bottom += adj.bottom;
+				return r;
+			}
+			Rect Intersect(Rect const& rhs) const
+			{
+				auto r = *this;
+				::IntersectRect(&r, this, &rhs);
+				return r;
+			}
+			Rect Union(Rect const& rhs) const
+			{
+				auto r = *this;
+				if (*this != rhs) // UnionRect has a bug if these are equal, (returns [0x0])
+					::UnionRect(&r, this, &rhs);
+				return r;
+			}
+			Rect Subtract(Rect const& rhs) const
+			{
+				auto r = *this;
+				::SubtractRect(&r, this, &rhs);
+				return r;
+			}
 			Rect NormalizeRect() const
 			{
 				auto r = *this;
@@ -474,7 +537,10 @@ namespace pr
 				return r;
 			}
 
-			operator Size() const { return size(); }
+			Rect operator +() const { return Rect(+left, +top, +right, +bottom); }
+			Rect operator -() const { return Rect(-left, -top, -right, -bottom); }
+			bool operator == (Rect const& rhs) const { return left == rhs.left && top == rhs.top && right == rhs.right && bottom == rhs.bottom; }
+			bool operator != (Rect const& rhs) const { return !(*this == rhs); }
 		};
 
 		inline Point operator + (Point p, Size s) { return Point(p.x + s.cx, p.y + s.cy); }
@@ -534,7 +600,7 @@ namespace pr
 		// Window position information
 		struct WindowPos :WINDOWPOS
 		{
-			enum EFlags
+			enum EFlags :UINT
 			{
 				None           = 0,
 				NoSize         = SWP_NOSIZE        ,
@@ -554,9 +620,15 @@ namespace pr
 				AsyncWindowpos = SWP_ASYNCWINDOWPOS,
 				_bitwise_operators_allowed,
 			};
-			WindowPos() :WINDOWPOS() {}
-			WindowPos(int x_, int y_, int cx_, int cy_, EFlags flags_) :WINDOWPOS()
+			WindowPos(HWND hwnd_ = nullptr)
+				:WindowPos(hwnd_, 0, 0, 0, 0, EFlags::NoMove|EFlags::NoSize|EFlags::NoZorder)
+			{}
+			WindowPos(HWND hwnd_, Rect const& rect, EFlags flags_ = EFlags::NoZorder)
+				:WindowPos(hwnd_, rect.left, rect.top, rect.width(), rect.height(), flags_)
+			{}
+			WindowPos(HWND hwnd_, int x_, int y_, int cx_, int cy_, EFlags flags_ = EFlags::NoZorder) :WINDOWPOS()
 			{
+				hwnd = hwnd_;
 				x = x_;
 				y = y_;
 				cx = cx_;
@@ -619,6 +691,12 @@ namespace pr
 			HWND m_hwnd;
 			ClientDC(HWND hwnd) :DC(::GetDC(hwnd), false) ,m_hwnd(hwnd) {}
 			~ClientDC() { ::ReleaseDC(m_hwnd, m_hdc); }
+		};
+		struct WindowDC :DC
+		{
+			HWND m_hwnd;
+			WindowDC(HWND hwnd) :DC(::GetWindowDC(hwnd), false) ,m_hwnd(hwnd) {}
+			~WindowDC() { ::ReleaseDC(m_hwnd, m_hdc); }
 		};
 
 		// Font
@@ -723,6 +801,17 @@ namespace pr
 				LOGBRUSH lb;
 				::GetObjectW(m_obj, sizeof(lb), &lb);
 				return lb.lbColor;
+			}
+
+			static Brush Halftone()
+			{
+				// Create a 'gray' pattern
+				WORD pat[8] = {0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa};
+				auto bm_gray = CreateBitmap(8, 8, 1, 1, &pat);
+				Throw(bm_gray != nullptr, "Failed to create halftone brush");
+				auto bsh = ::CreatePatternBrush(bm_gray);
+				::DeleteObject(bm_gray);
+				return std::move(Brush(bsh, true));
 			}
 		};
 
@@ -900,20 +989,6 @@ namespace pr
 		{
 			#pragma region Enums
 			enum ESeparator { Separator };
-			enum class EType :UINT
-			{
-				None         = 0,
-				Bitmap       = MFT_BITMAP,
-				MenuBarBreak = MFT_MENUBARBREAK,
-				MenuBreak    = MFT_MENUBREAK,
-				OwnerDraw    = MFT_OWNERDRAW,
-				RadioCheck   = MFT_RADIOCHECK,
-				RightJustify = MFT_RIGHTJUSTIFY,
-				RightOrder   = MFT_RIGHTORDER,
-				Separator    = MFT_SEPARATOR,
-				String       = MFT_STRING,
-				_bitwise_operators_allowed,
-			};
 			enum class EMask :UINT
 			{
 				None       = 0,
@@ -926,6 +1001,20 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
+				_bitwise_operators_allowed,
+			};
+			enum class EType :UINT
+			{
+				None         = 0,
+				Bitmap       = MFT_BITMAP,
+				MenuBarBreak = MFT_MENUBARBREAK,
+				MenuBreak    = MFT_MENUBREAK,
+				OwnerDraw    = MFT_OWNERDRAW,
+				RadioCheck   = MFT_RADIOCHECK,
+				RightJustify = MFT_RIGHTJUSTIFY,
+				RightOrder   = MFT_RIGHTORDER,
+				Separator    = MFT_SEPARATOR,
+				String       = MFT_STRING,
 				_bitwise_operators_allowed,
 			};
 			enum class EState :UINT
@@ -956,24 +1045,28 @@ namespace pr
 			};
 			#pragma endregion
 
-			MenuItem() :MENUITEMINFOW() { cbSize = sizeof(MENUITEMINFOW); }
+			MenuItem()
+				:MENUITEMINFOW()
+			{
+				cbSize = sizeof(MENUITEMINFOW);
+			}
 			MenuItem(ESeparator)
-				:MenuItem(EType::Separator, EMask::FType)
+				:MenuItem(EMask::FType, EType::Separator)
 			{}
 			MenuItem(wchar_t const* text, int id)
-				:MenuItem(text, id, MenuItem::EState::Default)
+				:MenuItem(text, id, MenuItem::EState::Enabled)
 			{}
 			MenuItem(wchar_t const* text_, int id_, MenuItem::EState state_)
 				:MenuItem()
 			{
 				text(text_).id(id_).state(state_);
 			}
-			MenuItem(EType type, EMask mask
-				,LPWSTR type_data = nullptr, size_t type_data_size = 0
-				,int id = 0 ,EState state = EState::Default
-				,HMENU submenu = nullptr
-				,HBITMAP bmp = nullptr ,HBITMAP checked = nullptr ,HBITMAP unchecked = nullptr
-				,void* data = nullptr)
+			MenuItem(wchar_t const* text_, HMENU submenu_)
+				:MenuItem()
+			{
+				text(text_).id(ID_UNUSED).submenu(submenu_);
+			}
+			MenuItem(EMask mask, EType type, LPWSTR type_data = nullptr, size_t type_data_size = 0, int id = 0 ,EState state = EState::Default, HMENU submenu = nullptr, HBITMAP bmp = nullptr ,HBITMAP checked = nullptr ,HBITMAP unchecked = nullptr ,void* data = nullptr)
 				:MenuItem()
 			{
 				fMask         = UINT(mask);           // Flags the fields that contain valid data
@@ -993,13 +1086,13 @@ namespace pr
 			{}
 
 			MenuItem& type(EType ty)                       { fMask |= (UINT)EMask::FType; fType |= (UINT)ty; return *this; }
-			MenuItem& text(wchar_t const* t)               { fMask |= (UINT)EMask::String; dwTypeData = (LPWSTR)t; return type(EType::String); }
+			MenuItem& text(wchar_t const* t)               { fMask |= (UINT)EMask::String; dwTypeData = (LPWSTR)t; cch = (UINT)wcslen(t); return *this; }
 			MenuItem& id(int id_)                          { fMask |= (UINT)EMask::Id; wID = (UINT)id_; return *this; }
 			MenuItem& state(EState s)                      { fMask |= (UINT)EMask::State; fState = (UINT)s; return *this; }
 			MenuItem& bitmap(HBITMAP bm)                   { fMask |= (UINT)EMask::Bitmap; hbmpItem = bm; return *this; }
 			MenuItem& chkmarks(HBITMAP chk, HBITMAP unchk) { fMask |= (UINT)EMask::CheckMarks; hbmpChecked = chk; hbmpUnchecked = unchk; return *this; }
 			MenuItem& item_data(void const* data)          { fMask |= (UINT)EMask::Data; dwItemData = (ULONG_PTR)data; return *this; }
-			MenuItem& submenu(HMENU m, wchar_t const* n)   { fMask |= (UINT)EMask::Submenu; hSubMenu = m; return text(n); }
+			MenuItem& submenu(HMENU m)                     { fMask |= (UINT)EMask::Submenu; hSubMenu = m; return *this; }
 
 			// Out parameters are used by GetMenuItemInfo()
 			MenuItem& text_out(wchar_t* buf, size_t sz) { fMask |= (UINT)EMask::Type;  dwTypeData = buf; cch = (UINT)sz; return *this; }
@@ -1007,7 +1100,7 @@ namespace pr
 		};
 		struct Menu
 		{
-			enum EKind { Strip, Popup };
+			enum class EKind { Strip, Popup };
 			using EType = MenuItem::EType;
 			using EMask = MenuItem::EMask;
 			using EState = MenuItem::EState;
@@ -1018,11 +1111,12 @@ namespace pr
 
 			// Note: ownership is lost with copying.
 			// Controls/Forms don't own menus. Menu ownership is a convenience for callers
-			// to automatically destroy menus, almost all other use should be with non-owned menus.
+			// to automatically destroy menus, almost all other uses should be with non-owned menus.
 			// Note: implicit conversion constructors are delibrate
 			~Menu()
 			{
-				DestroyMenu();
+				if (m_owned)
+					DestroyMenu();
 			}
 			Menu()
 				:m_menu(nullptr)
@@ -1035,6 +1129,15 @@ namespace pr
 			Menu(int menu_id, HINSTANCE hinst = ::GetModuleHandleW(nullptr))
 				:Menu(menu_id != ID_UNUSED ? ::LoadMenuW(hinst, MAKEINTRESOURCEW(menu_id)) : nullptr, false)
 			{}
+			Menu(EKind type, ItemList const& items = ItemList(), bool owned = false)
+				:Menu(type == EKind::Strip ? ::CreateMenu() : type == EKind::Popup ? ::CreatePopupMenu() : nullptr, owned)
+			{
+				// Construct a menu from a type and a comma separated list of items
+				// Allows syntax: Menu(Menu::Strip, {{L"&File",ID_UNUSED}, {L"&Help", ID_HELP}});
+				for (auto& item : items)
+					Insert(item);
+			}
+
 			Menu(Menu&& rhs)
 				:Menu()
 			{
@@ -1062,15 +1165,6 @@ namespace pr
 					m_owned = false;
 				}
 				return *this;
-			}
-
-			// Construct a menu from a type and a comma separated list of items
-			// Allows syntax: Menu(Menu::Strip, {{L"&File",ID_UNUSED}, {L"&Help", ID_HELP}});
-			Menu(EKind type, ItemList const& items, bool owned = false)
-				:Menu(type == Strip ? ::CreateMenu() : type == Popup ? ::CreatePopupMenu() : nullptr, owned)
-			{
-				for (auto& item : items)
-					Insert(item);
 			}
 
 			// Destroy this menu (if owned)
@@ -1117,28 +1211,15 @@ namespace pr
 			{
 				assert(m_menu != nullptr);
 				auto i = (idx == -1) ? DWORD(Count()) : DWORD(idx);
-				Throw(::InsertMenuW(m_menu, i, MF_BYPOSITION, info.wID, info.dwTypeData), "InsertMenu failed");
-				//Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
+				//Throw(::InsertMenuW(m_menu, i, MF_BYPOSITION, info.wID, info.dwTypeData), "InsertMenu failed");
+				Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
 			}
-			//void Insert(MenuItem::ESeparator, int idx = -1)
-			//{
-			//	Insert(MenuItem(EType::Separator, EMask::FType), idx);
-			//}
-			//void Insert(wchar_t const* text, int id, MenuItem::EState state = MenuItem::EState::Default, int idx = -1)
-			//{
-			//	Insert(MenuItem(text, id, state), idx);
-			//}
-			//void Insert(Menu& submenu_, wchar_t const* text, int id = ID_UNUSED, int idx = -1)
-			//{
-			//	Insert(MenuItem().submenu(submenu_, text).id(id), idx);
-			//	submenu_.m_owned = false;
-			//}
 
 			// Set a popup menu by name. If it exists already, then it is replaced, otherwise insert
 			void Set(wchar_t const* text, Menu& submenu)
 			{
 				auto index = IndexByName(text);
-				auto info = MenuItem().submenu(submenu, text);
+				auto info = MenuItem().text(text).submenu(submenu);
 				Throw(::SetMenuItemInfoW(m_menu, index, TRUE, &info), "Set menu item failed");
 			}
 		};
@@ -1215,7 +1296,7 @@ namespace pr
 		// Event args for mouse button events
 		struct MouseEventArgs :EmptyArgs
 		{
-			Point     m_point;    // The screen location of the mouse at the button event
+			Point     m_point;    // The location of the mouse at the button event (in client space)
 			EMouseKey m_button;   // The button that triggered the event
 			EMouseKey m_keystate; // The state of all mouse buttons and control keys
 			bool      m_down;     // True if the button was a down event, false if an up event
@@ -1261,8 +1342,12 @@ namespace pr
 		};
 
 		// EventHandler<>
+		// Use:
+		//   btn.Click += [&](Button&,EmptyArgs const) {...}
+		//   btn.Click += std::bind(&MyDlg::HandleBtn, this, _1, _2);
 		template <typename Sender, typename Args> struct EventHandler
-		{ // TODO: This isn't threadsafe
+		{
+			// Note: This isn't threadsafe
 			using Delegate = std::function<void(Sender,Args)>;
 			struct Func
 			{
@@ -1440,7 +1525,6 @@ namespace pr
 			static UINT const AutoSizeMask = 0xF0000000;
 
 			// Used as a size value, means expand w,h to match parent
-			// Lower 28 bits are the l,r or t,b margins to fill with.
 			// Note: CW_USEDEFAULT == 0x80000000
 			static UINT const Fill = 0x90000000;
 			//static UINT const Auto = 0xA0000000; // too hard...
@@ -1461,62 +1545,89 @@ namespace pr
 			static UINT const CentreOf = 0x8C000000;
 			static UINT const CentreP = Centre | CentreOf;
 
-			// Fill with margins
-			inline int fill(UINT left_or_top, UINT right_or_bottom)
-			{
-				assert(left_or_top < (1 << 14) && right_or_bottom < (1 << 14));
-				return Fill | (left_or_top << 14) | (right_or_bottom << 0);
-			}
-			inline int fill(UINT margin)
-			{
-				return fill(margin, margin);
-			}
-
 			// Handle auto position/size
-			// Adjusts x,y,w,h to be positioned and sized related to 'rel'
-			// 'rel' is a proxy that provides the dimensions of the parent and sibling controls
-			template <typename RelTo> void CalcPosSize(int& x, int& y, int& w, int& h, RelTo const& relto)
+			// Adjusts x,y,w,h to be positioned and sized related to 'relto'
+			// 'relto' is a proxy that provides the dimensions of the parent client area and sibling controls parent space rects.
+			// All aligning is done after margins have been added. 'relto' should return bounds that include margins.
+			template <typename RelTo> void CalcPosSize(int& x, int& y, int& w, int& h, Rect const& margin, RelTo const& relto)
 			{
 				// Set the width/height and x/y position
-				auto auto_size = [=](int& X, int& W, int i)
+				// 'X' is the x position, 'W' is the width, 'L' is the left margin, 'R' is the right margin
+				// 'i' is 0 for the X-axis, 1 for th Y-axis (i.e. Y, height positioning)
+				auto auto_size = [=](int& X, int& W, int L, int R, int i)
 				{
-					auto margin = Size();
-					if ((W & AutoSizeMask) == Fill)
+					auto fill = (W & AutoSizeMask) == Fill;
+					if (fill)
 					{
-						// Get the parent control bounds (in parent space)
-						auto parent_rect = relto(0);
-
-						// Return the size of the margins to use when filling
-						margin = (W & AutoSizeMask) == Fill ? Size((W >> 14) & 0x3fff, (W >> 0) & 0x3fff) : Size();
-						X = margin.cx;
-						W = parent_rect.size(i) - margin.cx - margin.cy;
+						// Get the parent control client area (in parent space, including padding)
+						W = relto(0).size(i) - (L+R);
 					}
 					if (X & AutoPosMask)
 					{
-						// Get the parent control bounds (in parent space)
-						auto parent_rect = relto(0);
-
 						// Get the ref point on the parent. Note, order is important here
 						// If the top 4 bits are not '0b1000' then 'X' is just a negative number.
 						// Otherwise, the top 8 bits are the auto position bits and the lower 24
 						// are the id of the control to position relative to.
 						int ref = 0;
-						if ((X & 0xF0000000) != 0x80000000)  { ref = parent_rect.bottomright()[i]; }
-						else if ((X & CentreOf) == CentreOf) { ref = relto(X & IdMask).centre()[i]; }
-						else if ((X & LeftOf  ) == LeftOf  ) { ref = relto(X & IdMask).topleft()[i]; }
-						else if ((X & RightOf ) == RightOf ) { ref = relto(X & IdMask).bottomright()[i]; }
+						if ((X & 0xF0000000) != 0x80000000)
+						{
+							// X is a negative number. Position relative to the BR
+							auto b = relto(0);
+							ref = b.bottomright()[i];
+						}
+						else if ((X & CentreOf) == CentreOf)
+						{
+							// Position relative to the centre of 'b' (including margin)
+							auto b = relto(X & IdMask);
+							ref = b.centre()[i];
+						}
+						else if ((X & LeftOf) == LeftOf)
+						{
+							// Position relative to the left edge of 'b' (including margin)
+							auto b = relto(X & IdMask);
+							ref = b.topleft()[i];
+						}
+						else if ((X & RightOf) == RightOf)
+						{
+							// Position relative to the right edge of 'b' (including margin)
+							auto b = relto(X & IdMask);
+							ref = b.bottomright()[i];
+						}
 
-						// Position the control relative to 'ref'
-						if ((X & 0xF0000000) != 0x80000000) { X = ref - W + X; }
-						else if ((X & Centre) == Centre) { X = ref - W / 2 + margin.cx; }
-						else if ((X & Left  ) == Left  ) { X = ref - 0 + margin.cx; }
-						else if ((X & Right ) == Right ) { X = ref - W + margin.cx; }
+						// Position the control relative to 'ref' including margin
+						if ((X & 0xF0000000) != 0x80000000)
+						{
+							// Position relative to the BR (X is negative)
+							X = ref - (W+L+R) + (X+1) + L;
+						}
+						else if ((X & Left) == Left)
+						{
+							// If 'fill', fill from X to the right edge
+							X = ref + L;
+							if (fill) W -= ref;
+						}
+						else if ((X & Centre) == Centre)
+						{
+							// If 'fill', fill to left/right edges (ignore X)
+							if (fill) X = L;
+							else X = ref - (W+L+R)/2 + L;
+						}
+						else if ((X & Right ) == Right)
+						{
+							// If 'fill', fill to the left edge
+							if (fill) { X = L; W = ref - (L+R); }
+							else X = ref - (W+L+R) + L;
+						}
+					}
+					else
+					{
+						X = L;
 					}
 				};
 
 				// Auto size in each dimension
-				auto_size(x, w, 0);
-				auto_size(y, h, 1);
+				auto_size(x, w, -margin.left, margin.right, 0);
+				auto_size(y, h, -margin.top, margin.bottom, 1);
 			}
 		}
 		#pragma endregion
@@ -1547,10 +1658,6 @@ namespace pr
 			static UINT const BottomOf = RightOf;
 
 			static UINT const CentreP = Centre | CentreOf;
-
-			// Fill with margins
-			static int fill(UINT left_or_top, UINT right_or_bottom) { return auto_size_position::fill(left_or_top, right_or_bottom); }
-			static int fill(UINT margin) { return fill(margin, margin); }
 			#pragma endregion
 
 			std::vector<byte> m_mem;
@@ -1583,13 +1690,12 @@ namespace pr
 				auto style_ex = p.m_style_ex;
 
 				// Auto size to the parent
-				auto relto = [&](int id) -> Rect
+				auto_size_position::CalcPosSize(x, y, w, h, Rect(), [&](int id) -> Rect
 					{
 						if (p.m_parent == nullptr) return MinMaxInfo().Bounds();
 						if (id != 0) throw std::exception("DlgTemplate can only be positioned related to the screen or owner window");
 						return p.m_parent->ClientRect();
-					};
-				auto_size_position::CalcPosSize(x, y, w, h, relto);
+					});
 
 				// If 'style' includes DS_SETFONT then windows expects the header to be followed by
 				// font data consisting of a 16-bit font size, and unicode font name string
@@ -1688,7 +1794,7 @@ namespace pr
 				auto y = p.m_y;
 				auto w = p.m_w;
 				auto h = p.m_h;
-				auto relto = [this](int id) -> Rect
+				auto_size_position::CalcPosSize(x, y, w, h, p.m_margin, [this](int id) -> Rect
 				{
 					if (id == 0)
 					{
@@ -1701,11 +1807,14 @@ namespace pr
 					{
 						auto& itm = this->item(size_t(i));
 						if (itm.id != id) continue;
+
+						// this should include the item margin, but it's not available here.
+						// This class needs to be changed so that it stores the added items and only
+						// generates the memory layout when the template is needed.
 						return Rect(itm.x, itm.y, itm.x + itm.cx, itm.y + itm.cy);
 					}
 					throw std::exception("Sibling control not found");
-				};
-				auto_size_position::CalcPosSize(x, y, w, h, relto);
+				});
 
 				// Add a description of the item
 				m_item_base.push_back(m_mem.size());
@@ -1818,8 +1927,8 @@ namespace pr
 			DlgTemplate const* m_templ;
 			wchar_t const*     m_font_name;
 			WORD               m_font_size;
-			Rect               m_margin;
-			Rect               m_padding;
+			Rect               m_margin;     // Stored as an addition to the bounding rect (i.e. -ve l,t)
+			Rect               m_padding;    // Stored as an addition to the bounding rect (i.e. -ve l,t)
 
 			Params(ECreate create, int w, int h, DWORD style, DWORD style_ex, bool top_level, bool dlg_behaviour)
 				:m_name         ()
@@ -1854,7 +1963,7 @@ namespace pr
 				,m_templ        ()
 				,m_font_name    (L"MS Shell Dlg")
 				,m_font_size    (8)
-				,m_margin       ()
+				,m_margin       (-2, -2, 2, 2)
 				,m_padding      ()
 			{}
 
@@ -1872,7 +1981,7 @@ namespace pr
 			Params& dock         (EDock d)                     { m_dock          = d;                   return *this; }
 			Params& style        (DWORD s)                     { m_style         = s;                   return *this; }
 			Params& style_ex     (DWORD s)                     { m_style_ex      = s;                   return *this; }
-			Params& menu         (Menu::ItemList const& items) { m_menu.m_handle = Menu(Menu::Strip, items); return *this; }
+			Params& menu         (Menu::ItemList const& items) { m_menu.m_handle = Menu(Menu::EKind::Strip, items); return *this; }
 			Params& menu         (IdOrHandle<HMENU> m)         { m_menu          = m;                   return *this; }
 			Params& accel        (IdOrHandle<HACCEL> a)        { m_accel         = a;                   return *this; }
 			Params& icon         (IdOrHandle<HICON> i)         { m_icon_sm = m_icon_bg = i;             return *this; }
@@ -1892,8 +2001,19 @@ namespace pr
 			Params& templ        (DlgTemplate const& t)        { m_templ = t.valid() ? &t : nullptr;    return *this; }
 			Params& font_name    (wchar_t const* fn)           { m_font_name     = fn;                  return *this; }
 			Params& font_size    (WORD fs)                     { m_font_size     = fs;                  return *this; }
-			Params& margin       (int l, int t, int r, int b)  { m_margin        = Rect(l,t,r,b);       return *this; }
-			Params& padding      (int l, int t, int r, int b)  { m_padding       = Rect(l,t,r,b);       return *this; }
+			Params& margin       (int m)                       { m_margin        = Rect(-m,-m,m,m);     return *this; }
+			Params& margin       (int lr, int tb)              { m_margin        = Rect(-lr,-tb,lr,tb); return *this; }
+			Params& margin       (int l, int t, int r, int b)  { m_margin        = Rect(-l,-t,r,b);     return *this; }
+			Params& padding      (int p)                       { m_padding       = Rect(p,p,-p,-p);     return *this; }
+			Params& padding      (int lr, int tb)              { m_padding       = Rect(lr,tb,-lr,-tb); return *this; }
+			Params& padding      (int l, int t, int r, int b)  { m_padding       = Rect(l,t,-r,-b);     return *this; }
+			Params& border       ()                            { m_style         |= WS_BORDER;          return *this; }
+
+			// Return the debugging name
+			char const* name() const
+			{
+				return m_name ? m_name : "";
+			}
 
 			// True if the options say "create"
 			bool create() const
@@ -2007,6 +2127,11 @@ namespace pr
 		// Base class for all windows/controls
 		struct Control
 		{
+			// These are here to import the types within Control
+			using EAnchor  = pr::gui::EAnchor;
+			using EDock    = pr::gui::EDock;
+			using Controls = std::vector<Control*>;
+
 			#pragma region Auto Size Position
 			static UINT const AutoPosMask  = auto_size_position::AutoPosMask;
 			static UINT const AutoSizeMask = auto_size_position::AutoSizeMask;
@@ -2028,25 +2153,19 @@ namespace pr
 
 			static UINT const CentreP = Centre | CentreOf;
 			static UINT const IdMask = auto_size_position::IdMask;
-
-			// Fill with margins
-			static int fill(UINT left_or_top, UINT right_or_bottom) { return auto_size_position::fill(left_or_top, right_or_bottom); }
-			static int fill(UINT margin)                            { return fill(margin, margin); }
 			#pragma endregion
 
 		protected:
-			// These are here to import the types within Control
-			using EAnchor = pr::gui::EAnchor;
-			using EDock   = pr::gui::EDock;
-			using Controls = std::vector<Control*>;
 
 			HWND                m_hwnd;         // Window handle for the control
 			int                 m_id;           // Dialog control id, used to detect windows messages for this control
-			char const*         m_name;         // Debugging name for the control
+			std::string         m_name;         // Debugging name for the control
 			Control*            m_parent;       // The parent that contains this control
 			Controls            m_child;        // The controls nested with this control
 			EAnchor             m_anchor;       // How the control resizes with it's parent
 			EDock               m_dock;         // Dock style for the control
+			Rect                m_margin;       // The control margin
+			Rect                m_padding;      // The control padding
 			Rect                m_pos_offset;   // Distances from this control to the edges of the parent client area
 			bool                m_pos_ofs_save; // Enable/Disables the saving of the position offset when the control is moved
 			MinMaxInfo          m_min_max_info; // Minimum/Maximum window size/position
@@ -2198,8 +2317,8 @@ namespace pr
 			{
 				if (true /*&& name != nullptr && strncmp(name,"about",5) == 0 && message == WM_CTLCOLORDLG*/)
 				{
-					//auto out = [](char const* s) { OutputDebugStringA(s); };
-					auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
+					auto out = [](char const* s) { OutputDebugStringA(s); };
+					//auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
 
 					// Tracing, allows messages to be turned on/off for a short period of time
 					static bool trace = true;
@@ -2235,7 +2354,7 @@ namespace pr
 			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s WndProc: ",m_name));
+				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s WndProc: ",m_name.c_str()));
 				switch (message)
 				{
 				case WM_GETCTRLPTR:
@@ -2355,7 +2474,7 @@ namespace pr
 				case WM_XBUTTONUP:
 					#pragma region
 					{
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						Point pt(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey());
 						auto down =
 							message == WM_LBUTTONDOWN ||
@@ -2385,7 +2504,7 @@ namespace pr
 					#pragma region
 					{
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
 							return true;
@@ -2395,7 +2514,7 @@ namespace pr
 				case WM_MOUSEMOVE:
 					#pragma region
 					{
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						OnMouseMove(MouseEventArgs(keystate, false, pt, keystate));
 						break;
@@ -2421,7 +2540,7 @@ namespace pr
 				//   - WndProc cannot be subclassed, this method *is* the WndProc for the Form.
 				//   - Forms can be parented to other forms, remember to check 'm_hwnd == hwnd'
 				//     to detect messages for the form as opposed to messages for parent forms.
-				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s ProcWinMsg: ",m_name));
+				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s ProcWinMsg: ",m_name.c_str()));
 				switch (message)
 				{
 				default:
@@ -2525,7 +2644,7 @@ namespace pr
 						
 						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
-						auto pt = Point(GetXLParam(lparam), GetYLParam(lparam));
+						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
 							return true;
@@ -2538,24 +2657,43 @@ namespace pr
 			}
 
 			// Forward a window message to child controls
-			bool ForwardToChildren(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
+			bool ForwardToChildren(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result, bool exclude_owned_windows = true)
 			{
 				// Should we be forwarding all messages to all child controls all the time?
 				// Answer: yes, because all child controls need to know about the parent window
 				// resizing, closing, etc. Also, container controls don't know what the requirements
 				// of their contained controls are.
+				size_t const LocalBufCount = 256;
 				auto child_count = m_child.size();
-				if (child_count != 0)
+				if (child_count == 0)
+				{}
+				else if (child_count < LocalBufCount)
 				{
 					// Make a copy of the child control pointers since ProcessWindowMessage
 					// can cause child controls to be added or removed.
-					auto children = static_cast<Control**>(alloca(sizeof(Control*) * child_count));
+					Control* children[LocalBufCount];
 					memcpy(children, &m_child[0], sizeof(Control*) * child_count);
 
 					// Forward the message to each child
 					for (size_t i = 0; i != child_count; ++i)
+					{
+						if (exclude_owned_windows && children[i]->m_top_level) continue;
 						if (children[i]->ProcessWindowMessage(hwnd, message, wparam, lparam, result))
 							return true;
+					}
+				}
+				else
+				{
+					// Make a copy
+					auto children = m_child;
+
+					// Forward the message to each child
+					for (size_t i = 0; i != child_count; ++i)
+					{
+						if (exclude_owned_windows && children[i]->m_top_level) continue;
+						if (children[i]->ProcessWindowMessage(hwnd, message, wparam, lparam, result))
+							return true;
+					}
 				}
 				return false;
 			}
@@ -2567,43 +2705,44 @@ namespace pr
 				// parent.left + m_pos_offset.left, parent.right + m_pos_offset.right, etc..
 				// (i.e. right and bottom offsets are typically negative)
 				if (!m_parent || !m_hwnd || !m_pos_ofs_save) return;
-				auto p = m_parent->ScreenRect();
-				auto r = ScreenRect();
-				m_pos_offset = Rect(r.left - p.left, r.top - p.top, r.right - p.right, r.bottom - p.bottom);
+				auto p = m_parent->ClientRect();
+				auto c = ParentRect().Adjust(m_margin);
+				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
 			}
 
 			// Adjust the size of this control relative to it's parent
 			virtual void ResizeToParent(bool repaint = true)
 			{
-				if (!m_parent || !m_hwnd || !m_parent->m_hwnd) return;
-				auto p = m_parent->ScreenRect();
-				auto r = ScreenRect();
-				auto w = r.width(); auto h = r.height();
+				if (!m_hwnd || m_top_level || !m_parent || !m_parent->m_hwnd || !Visible()) return;
+				auto p = m_parent->ClientRect();
+				auto c = ParentRect().Adjust(m_margin);
+				auto w = c.width();
+				auto h = c.height();
 				if (m_dock == EDock::None)
 				{
 					if (int(m_anchor & EAnchor::Left) != 0)
 					{
-						r.left = p.left + m_pos_offset.left;
+						c.left = p.left + m_pos_offset.left;
 						if (int(m_anchor & EAnchor::Right ) == 0)
-							r.right = r.left + w;
+							c.right = c.left + w;
 					}
 					if (int(m_anchor & EAnchor::Top) != 0)
 					{
-						r.top = p.top + m_pos_offset.top;
+						c.top = p.top + m_pos_offset.top;
 						if (int(m_anchor & EAnchor::Bottom) == 0)
-							r.bottom = r.top + h;
+							c.bottom = c.top + h;
 					}
-					if (int(m_anchor & EAnchor::Right ) != 0)
+					if (int(m_anchor & EAnchor::Right) != 0)
 					{
-						r.right = p.right + m_pos_offset.right;
+						c.right = p.right + m_pos_offset.right;
 						if (int(m_anchor & EAnchor::Left) == 0)
-							r.left = r.right - w;
+							c.left = c.right - w;
 					}
 					if (int(m_anchor & EAnchor::Bottom) != 0)
 					{
-						r.bottom = p.bottom + m_pos_offset.bottom;
+						c.bottom = p.bottom + m_pos_offset.bottom;
 						if (int(m_anchor & EAnchor::Top) == 0)
-							r.top = r.bottom - h;
+							c.top = c.bottom - h;
 					}
 				}
 				else
@@ -2611,33 +2750,35 @@ namespace pr
 					switch (m_dock)
 					{
 					default: throw std::exception("Unknown dock style");
-					case EDock::Fill:   r = p; break;
-					case EDock::Top:    r.left = p.left; r.right = p.right; r.top = 0;           r.bottom = p.top + h; break;
-					case EDock::Bottom: r.left = p.left; r.right = p.right; r.bottom = p.bottom; r.top = r.bottom - h; break;
-					case EDock::Left:   r.top = p.top; r.bottom = p.bottom; r.left = 0;        r.right = r.left + w; break;
-					case EDock::Right:  r.top = p.top; r.bottom = p.bottom; r.right = p.right; r.left = r.right - w; break;
+					case EDock::Fill:   c = p; break;
+					case EDock::Top:    c.left = p.left; c.right  = p.right;  c.top    = 0;        c.bottom = p.top    + h; break;
+					case EDock::Bottom: c.left = p.left; c.right  = p.right;  c.bottom = p.bottom; c.top    = c.bottom - h; break;
+					case EDock::Left:   c.top  = p.top;  c.bottom = p.bottom; c.left   = 0;        c.right  = c.left   + w; break;
+					case EDock::Right:  c.top  = p.top;  c.bottom = p.bottom; c.right  = p.right;  c.left   = c.right  - w; break;
 					}
 				}
 				RAII<bool> no_save_ofs(m_pos_ofs_save, false);
-				ScreenRect(r, repaint);
+				ParentRect(c.Adjust(-m_margin), repaint);
 			}
 
 			// Handle auto position/size
 			void AutoSizePosition(int& x, int& y, int& w, int& h, Control* parent)
 			{
-				auto relto = [&](int id) -> Rect
+				using namespace auto_size_position;
+				CalcPosSize(x, y, w, h, m_margin, [&](int id) -> Rect
 					{
 						assert((id == 0 || parent != nullptr) && "Sibling control id given without a parent");
 						if (parent == nullptr) return MinMaxInfo().Bounds();
-						if (id == 0)           return parent->ClientRect();
+						if (id == 0) return parent->ClientRect(ERectFlags::ExcludeDockedChildren); // Includes padding in the parent
+
+						// Find the child 'id' and return it's parent space rect including margins
 						for (auto c : parent->m_child)
 						{
 							if (c->m_id != id) continue;
-							return c->RectRelativeTo(*parent);
+							return c->ParentRect().Adjust(c->Margin());
 						}
 						throw std::exception("Sibling control not found");
-					};
-				auto_size_position::CalcPosSize(x, y, w, h, relto);
+					});
 			}
 
 		private:
@@ -2675,12 +2816,14 @@ namespace pr
 			// Create the control
 			Control(pr::gui::Params const& p = CtrlParams())
 				:m_hwnd()
-				,m_id(p.m_id & IdMask)
-				,m_name(p.m_name)
+				,m_id(p.m_id)
+				,m_name(p.name())
 				,m_parent()
 				,m_child()
 				,m_anchor(p.m_anchor)
 				,m_dock(p.m_dock)
+				,m_margin(p.m_margin)
+				,m_padding(p.m_padding)
 				,m_pos_offset()
 				,m_pos_ofs_save(true)
 				,m_min_max_info()
@@ -2695,7 +2838,6 @@ namespace pr
 				,m_oldproc()
 				,m_thread_id(std::this_thread::get_id())
 			{
-				assert(p.m_id == m_id && "Id value too large");
 				m_thunk.Init(DWORD_PTR(StaticWndProc), this);
 
 				// Create the control if told to, or if the parent exists and not explicitly told not to
@@ -2761,10 +2903,15 @@ namespace pr
 				// Save creation properties, we need to set these, even tho they're
 				// set in the constructor, because 'p' might be newer than what was
 				// used when the control was constructed.
-				m_id          = p.m_id & IdMask;
-				m_name        = p.m_name;
+				// Don't do p.m_id & IdMask. Controls created by windows use the window
+				// handle as the id. IdMask is only needed to AutoPosSize which the caller
+				// controls.
+				m_id          = p.m_id;
+				m_name        = p.name();
 				m_anchor      = p.m_anchor;
 				m_dock        = p.m_dock;
+				m_margin      = p.m_margin;
+				m_padding     = p.m_padding;
 				m_colour_fore = p.fore_color();
 				m_colour_back = p.back_color();
 				m_top_level   = p.m_top_level;
@@ -2818,6 +2965,7 @@ namespace pr
 				{
 					ShowWindow(m_hwnd, SW_SHOW);
 					UpdateWindow(m_hwnd);
+					DrawMenuBar(m_hwnd);
 				}
 			}
 
@@ -2908,6 +3056,24 @@ namespace pr
 						m_parent->m_child.push_back(this);
 					}
 				}
+			}
+
+			// Get the number of child controls
+			size_t ChildCount() const
+			{
+				return m_child.size();
+			}
+
+			// Get a child control
+			WndRef Child(int i) const
+			{
+				return m_child[i];
+			}
+
+			// Get the collection of child controls
+			Controls const& Children() const
+			{
+				return m_child;
 			}
 
 			// Get the top level control. This is typically the window containing this control
@@ -3006,6 +3172,31 @@ namespace pr
 			void Dock(EDock dock)
 			{
 				m_dock = dock;
+				ResizeToParent(false);
+				Invalidate();
+			}
+
+			// Get/set the padding for the control
+			Rect Padding() const
+			{
+				return m_padding;
+			}
+			void Padding(Rect padding)
+			{
+				m_padding = padding;
+				ResizeToParent(false);
+				Invalidate();
+			}
+
+			// Get/set the margin for the control
+			Rect Margin() const
+			{
+				return m_margin;
+			}
+			void Margin(Rect margin)
+			{
+				m_margin = margin;
+				ResizeToParent(false);
 				Invalidate();
 			}
 
@@ -3093,7 +3284,7 @@ namespace pr
 				Invalidate();
 			}
 
-			// Return the position of this control in parent space
+			// Return the position of this control in parent client space
 			Point loc() const
 			{
 				return ParentRect().topleft();
@@ -3121,18 +3312,33 @@ namespace pr
 				return r;
 			}
 
-			// Get the client rect for the window in this controls client space.
+			// Get the client rect [TL,BR) for the window in this controls client space.
 			// Note: Menus are part of the non-client area, you don't need to offset
 			// the client rect for the menu.
-			Rect ClientRect() const
+			virtual Rect ClientRect() const
 			{
 				assert(::IsWindow(m_hwnd));
 				Rect rect;
 				Throw(::GetClientRect(m_hwnd, &rect), "GetClientRect failed.");
+				rect = rect.Adjust(m_padding);
 				return rect;
 			}
+			Rect ClientRect(ERectFlags flags) const
+			{
+				auto r = ClientRect();
+				if ((flags & ERectFlags::ExcludeDockedChildren) != 0)
+				{
+					for (auto& child : m_child)
+					{
+						if (child->m_dock == EDock::None) continue;
+						if (!child->Visible()) continue;
+						r = r.Subtract(child->ParentRect());
+					}
+				}
+				return r;
+			}
 
-			// Get/Set the control bounds in screen space
+			// Get/Set the control bounds [TL,BR) in screen space
 			Rect ScreenRect() const
 			{
 				assert(::IsWindow(m_hwnd));
@@ -3140,7 +3346,7 @@ namespace pr
 				Throw(::GetWindowRect(m_hwnd, &r), "GetWindowRect failed.");
 				return r;
 			}
-			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder|WindowPos::EFlags::NoActivate)
+			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::NoZorder)
 			{
 				assert(::IsWindow(m_hwnd));
 				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
@@ -3157,53 +3363,42 @@ namespace pr
 				RecordPosOffset();
 			}
 
-			// Get/Set the bounds of this control within it's parent
+			// Get/Set the bounds [TL,BR) of this control within it's parent client space
 			Rect ParentRect() const
 			{
+				assert(::IsWindow(m_hwnd));
+
 				// If the control has no parent, then the screen is the parent
 				auto hwndparent = ::GetParent(m_hwnd);
 				if (hwndparent == nullptr)
 					return ScreenRect();
 
 				// Return the bounds of this control relative to 'parent'
-				Control parent(hwndparent);
-				auto psr = parent.ScreenRect();
-				auto csr = ScreenRect();
-				csr.left   -= psr.left;
-				csr.top    -= psr.top;
-				csr.right  -= psr.left;
-				csr.bottom -= psr.top;
-				return csr;
+				auto rect = ScreenRect(); // Not using ClientRect() because we don't want this control's padding included
+				::MapWindowPoints(nullptr, hwndparent, rect.points(), 2);
+				return rect;
 			}
-			void ParentRect(Rect r, bool repaint = false, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder|WindowPos::EFlags::NoActivate)
+			void ParentRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::NoZorder)
 			{
+				assert(::IsWindow(m_hwnd));
+				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
+
+				// Invalidate the previous and new rect on the parent
 				auto hwndparent = ::GetParent(m_hwnd);
 				if (hwndparent != nullptr)
 				{
-					Control parent(hwndparent);
-
-					// Invalidate the previous and new rect on the parent
-					if (!repaint)
-					{
-						auto inv = r.Union(ParentRect());
-						parent.Invalidate(false, &inv);
-					}
-
-					// Convert 'r' to a screen rect
-					auto psr = parent.ScreenRect();
-					auto adj = parent.AdjRect();
-					r.left   += psr.left - adj.left;
-					r.top    += psr.top  - adj.top;
-					r.right  += psr.left - adj.left;
-					r.bottom += psr.top  - adj.top;
+					auto pr = ParentRect();
+					auto inv = r.Union(pr);
+					::InvalidateRect(hwndparent, &inv, FALSE);
 				}
 
-				ScreenRect(r, repaint, prev, flags);
+				// SetWindowPos takes client space coordinates
+				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
+				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), flags), "SetWindowPos failed");
 				RecordPosOffset();
-				Invalidate();
 			}
 
-			// Get/Set the position of this control within it's Control* parent
+			// Get/Set the position of this control within the parent's client space
 			Point ParentPos() const
 			{
 				return ParentRect().topleft();
@@ -3211,47 +3406,7 @@ namespace pr
 			void ParentPos(int x, int y, bool repaint = false)
 			{
 				auto r = ParentRect();
-				ParentRect(r.Offset(x - r.left, y - r.top), repaint);
-			}
-
-			// Get the bounds of this control relative to another window and optionally
-			// with the areas of docked child controls removed. If 'relative_to' != this,
-			// then the returned rect is in the client-space coordinates of the 'relative_to' window.
-			// If 'relative_to' == nullptr, then the rect is in screen space
-			Rect RectRelativeTo(HWND relative_to, bool exclude_docked_children = true) const
-			{
-				auto rect = ClientRect();
-				
-				// Exclude the area used by docked child controls
-				if (exclude_docked_children)
-				{
-					for (auto& child : m_child)
-					{
-						if (child->m_dock == EDock::None) continue;
-						if (!child->Visible()) continue;
-						rect = rect.Subtract(child->RectRelativeTo(*this, false));
-					}
-				}
-
-				// Convert the rect to screen space
-				if (relative_to != m_hwnd)
-				{
-					Point pt;
-					::MapWindowPoints(m_hwnd, relative_to, &pt, 1);
-					rect = rect.Offset(pt.x, pt.y);
-				}
-
-				return rect;
-			}
-
-			// Return the dimensions of the non-client area for the window
-			// WindowRect() - NonClientArea() = ClientRect()
-			// Note: Menus are part of the non-client area. pt(0,0) is the top left
-			// just below the menu. Status bars aren't though.
-			Rect NonClientAreas() const
-			{
-				// Pass a zero rect to AdjustWindowRectEx to get the non-client dimensions
-				return AdjRect(Rect());
+				ParentRect(r.Shifted(x - r.left, y - r.top), repaint);
 			}
 
 			// Convert a screen space point to client window space
@@ -3293,6 +3448,10 @@ namespace pr
 				auto prev = Menu();
 				Throw(::SetMenu(m_hwnd, menu) != 0, "Failed to set menu");
 				return prev;
+			}
+			Menu MenuStrip(Menu::EKind kind, Menu::ItemList const& items)
+			{
+				return MenuStrip(Menu(kind, items));
 			}
 
 			// Get/Set the control's icon
@@ -3562,7 +3721,7 @@ namespace pr
 
 			HINSTANCE   m_hinst;            // Module instance
 			bool        m_app_main_window;  // True if this is the main application window
-			Menu   m_menu;             // The main menu
+			Menu        m_menu;             // The main menu
 			HACCEL      m_accel;            // Keyboard accelerators for this window
 			DlgTemplate m_templ;            // A dialog template for this form (if given)
 			int         m_exit_code;        // The code to return when the form closes
@@ -3781,7 +3940,7 @@ namespace pr
 			{
 				#if PR_WNDPROCDEBUG
 				RAII<int> nest(wnd_proc_nest(), wnd_proc_nest()+1);
-				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s FormWndProc: ", m_name));
+				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s FormWndProc: ", m_name.c_str()));
 				#endif
 
 				LRESULT result = S_OK;
@@ -3822,7 +3981,7 @@ namespace pr
 					return false;
 				}
 
-				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name));
+				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name.c_str()));
 				switch (message)
 				{
 				case WM_INITDIALOG:
@@ -3872,12 +4031,14 @@ namespace pr
 				case WM_COMMAND:
 					#pragma region
 					{
-						// Handle commands from the main menu
 						auto id        = UINT(LoWord(wparam)); // The menu_item id or accelerator id
 						auto src       = UINT(HiWord(wparam)); // 0 = menu, 1 = accelerator, 2 = control-defined notification code
-						auto ctrl_hwnd = HWND(lparam);         // Only valid when src == 2
-						if (HandleMenu(id, src, ctrl_hwnd))
-							return true;
+						auto ctrl_hwnd = HWND(lparam);         // Only valid if sent from a control (i.e. not sent from a menu or accelerator)
+
+						// This is a menu or accelerator command if the control hwnd is 0
+						// Otherwise forward to child controls
+						if (ctrl_hwnd == nullptr)
+							return HandleMenu(id, src, ctrl_hwnd);
 						else
 							return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
@@ -3915,7 +4076,7 @@ namespace pr
 				case WM_CTLCOLOREDIT:
 				case WM_CTLCOLORLISTBOX:
 				case WM_CTLCOLORSCROLLBAR:
-				//default: // uncomment this to quick test if forwarding all messages "fixes it"
+				default: // uncomment this to quick test if forwarding all messages "fixes it"
 					#pragma region
 					{
 						// Messages that get here will be forwarded to child controls as well
@@ -3935,13 +4096,19 @@ namespace pr
 			virtual bool HandleMenu(UINT item_id, UINT event_source, HWND ctrl_hwnd)
 			{
 				(void)item_id,event_source,ctrl_hwnd;
+				switch (item_id)
+				{
+				case IDCLOSE:
+					Close(EDialogResult::Close);
+					return true;
+				case IDCANCEL:
+					Close(EDialogResult::Cancel);
+					return true;
+				case IDOK:
+					Close(EDialogResult::Ok);
+					return true;
+				}
 				return false;
-				// Example implementation
-				// switch (item_id)
-				// {
-				// default: return false;
-				// case ID_FILE_EXIT: Close(); return true;
-				// }
 			}
 
 			// Adjust the size of this control relative to it's parent
@@ -4028,11 +4195,15 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
-					if (LoWord(wparam) != m_id) break;
-					switch (HiWord(wparam))
 					{
-					case BN_CLICKED:
-						OnClick();
+						// If the command came from this button
+						auto ctrl_hwnd = HWND(lparam);
+						if (ctrl_hwnd == m_hwnd)
+						{
+							switch (HiWord(wparam)) {
+							case BN_CLICKED: OnClick(); return true;
+							}
+						}
 						break;
 					}
 				}
@@ -4088,12 +4259,19 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
-					if (LoWord(wparam) != m_id) break;
-					switch (HiWord(wparam))
 					{
-					case BN_CLICKED:
-						OnClick();
-						if (Style() & BS_AUTOCHECKBOX) OnCheckedChanged();
+						// If the command came from this button
+						auto ctrl_hwnd = HWND(lparam);
+						if (ctrl_hwnd == m_hwnd)
+						{
+							switch (HiWord(wparam))
+							{
+							case BN_CLICKED:
+								OnClick();
+								if (Style() & BS_AUTOCHECKBOX) OnCheckedChanged();
+								return true;
+							}
+						}
 						break;
 					}
 				}
@@ -4198,9 +4376,13 @@ namespace pr
 				{
 				case WM_COMMAND:
 					{
-						if (LoWord(wparam) != m_id) break;
-						switch (HiWord(wparam)) {
-						case EN_CHANGE: OnTextChanged(); break;
+						// If the command came from this button
+						auto ctrl_hwnd = HWND(lparam);
+						if (ctrl_hwnd == m_hwnd)
+						{
+							switch (HiWord(wparam)) {
+							case EN_CHANGE: OnTextChanged(); return true;
+							}
 						}
 						break;
 					}
@@ -4307,13 +4489,254 @@ namespace pr
 				switch (message)
 				{
 				case WM_COMMAND:
-					if (LoWord(wparam) != m_id) break;
-					switch (HiWord(wparam))
 					{
-					case CBN_DROPDOWN: result = OnDropDown(); return true;
-					case CBN_SELCHANGE: result = OnSelectedIndexChanged(); return true;
+						// If the command came from this button
+						auto ctrl_hwnd = HWND(lparam);
+						if (ctrl_hwnd == m_hwnd)
+						{
+							switch (HiWord(wparam)) {
+							case CBN_DROPDOWN: result = OnDropDown(); return true;
+							case CBN_SELCHANGE: result = OnSelectedIndexChanged(); return true;
+							}
+						}
+						break;
 					}
 				}
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+		};
+		struct ListView :Control
+		{
+			enum { DefW = 80, DefH = 80 };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle|LVS_EDITLABELS };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx|LVS_EX_HEADERDRAGDROP};//|LVS_EX_FULLROWSELECT|LVS_EX_TWOCLICKACTIVATE|LVS_EX_FLATSB|LVS_EX_AUTOSIZECOLUMNS };
+			static wchar_t const* WndClassName() { return L"SysListView32"; }
+
+			// Modes for the list view
+			enum class EViewType
+			{
+				Icon   = LVS_ICON,
+				SmIcon = LVS_SMALLICON,
+				List   = LVS_LIST,
+				Report = LVS_REPORT,
+			};
+
+			// List Item
+			struct ItemInfo :LVITEMW
+			{
+				ItemInfo(wchar_t const* text_ = L"") :LVITEMW() { text(text_); }
+				ItemInfo(HLISTITEM item, int mask_ = 0) :LVITEMW() { iItem = item; mask = mask_; }
+				ItemInfo& subitem(int i)               { iSubItem = i; return *this; }
+				ItemInfo& text(wchar_t const* text_)   { mask |= LVIF_TEXT; pszText = const_cast<wchar_t*>(text_); return *this; }
+				ItemInfo& image(int img_idx)           { mask |= LVIF_IMAGE; iImage = img_idx; return *this; }
+				ItemInfo& state(int state_, int mask_) { mask |= LVIF_STATE; LVITEMW::state = state_; stateMask = mask_; return *this; }
+				ItemInfo& user(void* ctx)              { mask |= LVIF_PARAM; lParam = LPARAM(ctx); return *this; }
+			};
+
+			// Details view column
+			struct ColumnInfo :LVCOLUMNW
+			{
+				ColumnInfo(wchar_t const* text_ = L"", int fmt = LVCFMT_LEFT) :LVCOLUMNW() { text(text_).format(fmt); }
+				ColumnInfo& text(wchar_t const* text)  { mask |= LVCF_TEXT; pszText = const_cast<wchar_t *>(text); return *this; }
+				ColumnInfo& width(int w)               { mask |= LVCF_WIDTH; cx = w; return *this; }
+				ColumnInfo& format(int lvcfmt)         { mask |= LVCF_FMT; fmt = lvcfmt; return *this; }
+				ColumnInfo& subitem(int i)             { mask |= LVCF_SUBITEM; iSubItem = i; return *this; }
+				ColumnInfo& image(int img_idx)         { mask |= LVCF_IMAGE; iImage = img_idx; return *this; }
+				ColumnInfo& min_width(int w)           { mask |= LVCF_MINWIDTH; cxMin = w; return *this; }
+				ColumnInfo& def_width(int w)           { mask |= LVCF_DEFAULTWIDTH; cxDefault = w; return *this; }
+				ColumnInfo& ideal_width(int w)         { mask |= LVCF_IDEALWIDTH; cxIdeal = w; return *this; }
+			};
+
+			struct Params :CtrlParams
+			{
+				Params() { mode(EViewType::Report).wndclass(WndClassName()).name("listview").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
+				Params& mode(EViewType mode) { m_style = (m_style & ~LVS_TYPEMASK) | (DWORD(mode) & LVS_TYPEMASK); return *this; }
+			};
+
+			ListView(pr::gui::Params const& p = Params())
+				:Control(p)
+			{}
+
+			// Get/Set view type.
+			EViewType ViewType() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return EViewType(Style() & LVS_TYPEMASK);
+			}
+			void ViewType(EViewType vt)
+			{
+				assert(::IsWindow(m_hwnd));
+				Style((Style() & ~LVS_TYPEMASK) | (DWORD(vt) & LVS_TYPEMASK));
+			}
+
+			// Remove all items
+			void Clear()
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_DELETEALLITEMS, 0, 0L), "Delete all list items failed");
+			}
+
+			// Get the number of elements in the list
+			size_t Count() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (size_t)::SendMessageW(m_hwnd, LVM_GETITEMCOUNT, 0, 0L);
+			}
+
+			// Get the number of selected list items
+			size_t SelectedCount() const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (size_t)::SendMessageW(m_hwnd, LVM_GETSELECTEDCOUNT, 0, 0L);
+			}
+
+			// Returns the next item with state matching 'flags' (e.g. LVNI_SELECTED) or -1
+			HLISTITEM NextItem(int flags, HLISTITEM item = -1) const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (int)::SendMessageW(m_hwnd, LVM_GETNEXTITEM, item, MakeLParam(flags, 0));
+			}
+
+			// Add a row to the list
+			HLISTITEM InsertItem(int idx, ItemInfo const& info)
+			{
+				assert(::IsWindow(m_hwnd));
+				return (HLISTITEM)::SendMessageW(m_hwnd, LVM_INSERTITEMW, 0, (LPARAM)&info);
+			}
+
+			// Get/Set an item. Construct 'info' with the item handle and mask for the data you want to get/set
+			ItemInfo Item(ItemInfo info) const
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_GETITEMW, 0, (LPARAM)&info), "Get list item failed");
+				return info;
+			}
+			void Item(ItemInfo info)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMW, 0, (LPARAM)&info), "Set list item failed");
+			}
+
+			// Get/Set user data on the item
+			template <typename T> T* UserData(HLISTITEM item) const
+			{
+				assert(item != INVALID_LIST_ITEM);
+				return reinterpret_cast<T*>(Item(ItemInfo(item, LVIF_PARAM)).lParam);
+			}
+			void UserData(HLISTITEM item, void* ctx)
+			{
+				Item(ItemInfo(item).user(ctx));
+			}
+
+			#pragma region Columns
+			// Get the number of columns in the list
+			size_t ColumnCount() const
+			{
+				assert(::IsWindow(m_hwnd));
+				auto hdr = (HWND)::SendMessageW(m_hwnd, LVM_GETHEADER, 0, 0L);
+				return (size_t)::SendMessageW(hdr, HDM_GETITEMCOUNT, 0, 0L);
+			}
+
+			// Insert a column into the list
+			void InsertColumn(int idx, ColumnInfo const& column)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw(::SendMessageW(m_hwnd, LVM_INSERTCOLUMNW, idx, (LPARAM)&column) != -1, "Insert column failed.");
+			}
+
+			// Get/Set the width of a column
+			int ColumnWidth(int col) const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (int)::SendMessageW(m_hwnd, LVM_GETCOLUMNWIDTH, col, 0L);
+			}
+			void ColumnWidth(int col, int width) // use 'LVSCW_AUTOSIZE'
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETCOLUMNWIDTH, col, MakeLParam(width, 0)), "Set list column width failed");
+			}
+			#pragma endregion
+		};
+		struct TreeView :Control
+		{
+			enum { DefW = 80, DefH = 80 };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle|TVS_EDITLABELS };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx};//|TVS_EX_AUTOHSCROLL|TVS_EX_FADEINOUTEXPANDOS};
+			static wchar_t const* WndClassName() { return L"SysTreeView32"; }
+			struct Params :CtrlParams
+			{
+				Params() { wndclass(WndClassName()).name("treeview").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
+			};
+
+			// Tree item
+			struct ItemInfo :TVITEMEXW
+			{
+				ItemInfo(wchar_t const* text_ = L"") :TVITEMEXW() { text(text_); }
+				ItemInfo(HTREEITEM item, int mask_ = 0) :TVITEMEXW() { hItem = item; mask = mask_; }
+				ItemInfo& text(wchar_t const* text_)   { mask |= TVIF_TEXT; pszText = const_cast<wchar_t*>(text_); return *this; }
+				ItemInfo& image(int img_idx)           { mask |= TVIF_IMAGE; iImage = img_idx; return *this; }
+				ItemInfo& image_sel(int img_idx)       { mask |= TVIF_SELECTEDIMAGE; iSelectedImage = img_idx; return *this; }
+				ItemInfo& state(int state_, int mask_) { mask |= TVIF_STATE; TVITEMEXW::state = state_; stateMask = mask_; return *this; }
+				ItemInfo& user(void* ctx)              { mask |= TVIF_PARAM; lParam = LPARAM(ctx); return *this; }
+			};
+
+			TreeView(pr::gui::Params const& p = Params())
+				:Control(p)
+			{}
+
+			// Remove all items
+			void Clear()
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, TVM_DELETEITEM, 0, (LPARAM)TVI_ROOT), "Delete all tree items failed");
+			}
+
+			// Insert an item into the tree
+			HTREEITEM InsertItem(ItemInfo const& info, HTREEITEM parent, HTREEITEM insert_after)
+			{
+				assert(::IsWindow(m_hwnd));
+				auto ins = TVINSERTSTRUCTW{};
+				ins.hParent = parent;
+				ins.hInsertAfter = insert_after;
+				ins.itemex = info;
+				return (HTREEITEM)::SendMessageW(m_hwnd, TVM_INSERTITEM, 0, (LPARAM)&info);
+			}
+
+			// Get/Set an item. Construct 'info' with the item handle and mask for the data you want to get/set
+			ItemInfo Item(ItemInfo info) const
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, TVM_GETITEMW, 0, (LPARAM)&info), "Get tree item failed");
+				return info;
+			}
+			void Item(ItemInfo info)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, TVM_SETITEMW, 0, (LPARAM)&info), "Set tree item failed");
+			}
+
+			// Get/Set user data on the item
+			template <typename T> T* UserData(HTREEITEM item) const
+			{
+				assert(item != INVALID_TREE_ITEM);
+				return reinterpret_cast<T*>(Item(ItemInfo(item, TVIF_PARAM)).lParam);
+			}
+			void UserData(HTREEITEM item, void* ctx)
+			{
+				Item(ItemInfo(item).user(ctx));
+			}
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				//switch (message)
+				//{
+				//case WM_WINDOWPOSCHANGED:
+				//	{
+				//		OutputDebugStringA(FmtS("Tree %s resize\n", m_name.c_str()));
+				//		break;
+				//	}
+				//}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 		};
@@ -4470,7 +4893,7 @@ namespace pr
 			static wchar_t const* WndClassName() { return L"pr::gui::Panel"; }
 			struct Params :CtrlParams
 			{
-				Params() { wndclass(RegisterWndClass<Panel>()).name("btn").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
+				Params() { wndclass(RegisterWndClass<Panel>()).name("panel").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
 			};
 
 			Panel(pr::gui::Params const& p = Params())
@@ -4670,31 +5093,44 @@ namespace pr
 					lParam  = param;
 				}
 			};
+			struct TabEventArgs :EmptyArgs
+			{
+				Control* m_tab;
+				int      m_tab_index;
+				TabEventArgs(Control* tab, int tab_index) :EmptyArgs() ,m_tab(tab) ,m_tab_index(tab_index) {}
+			};
+			struct TabSwitchEventArgs :CancelEventArgs
+			{
+				// True if 'm_tab' is being switched to (cancel ignored in this case)
+				// False if 'm_tab' is being switched away from (cancel will stop the switch)
+				bool m_activating;
+
+				// The tab being left/entered
+				Control* m_tab;
+				int      m_tab_index;
+
+				TabSwitchEventArgs(bool activating, Control* tab, int tab_index)
+					:CancelEventArgs(false)
+					,m_activating(activating)
+					,m_tab(tab)
+					,m_tab_index(tab_index)
+				{}
+			};
 
 			enum { DefW = 80, DefH = 80 };
-			enum :DWORD { DefaultStyle   = DefaultControlStyle };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle }; // TCS_VERTICAL | TCS_RIGHT | TCS_BOTTOM
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTabControl32"; }
 			struct Params :CtrlParams
 			{
-				int m_border_size;
-				int m_top_pad;
-
-				Params() :CtrlParams() ,m_border_size(3) ,m_top_pad(5)
-				{
-					wndclass(WndClassName()).name("tabctrl").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx);
-				}
+				Params() { wndclass(WndClassName()).name("tabctrl").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
 			};
 
 			std::vector<Control*> m_tabs; // The tab pages. Owned externally
-			int m_border_size;
-			int m_top_pad;
 
 			TabControl(pr::gui::Params const& p = Params())
 				:Control(p)
 				,m_tabs()
-				,m_border_size(static_cast<Params const&>(p).m_border_size)
-				,m_top_pad(static_cast<Params const&>(p).m_top_pad)
 			{}
 
 			// The number of tabs added
@@ -4751,7 +5187,10 @@ namespace pr
 
 				// Add the tab to the tab control
 				Item item(label, image, param);
-		
+
+				// Save the index of the currently selected
+				auto sel = SelectedIndex();
+
 				// Insert the item at the end of the tab control
 				index = index != -1 ? index : TabCount();
 				index = int(::SendMessageW(m_hwnd, TCM_INSERTITEMW, WPARAM(index), LPARAM(&item)));
@@ -4760,14 +5199,10 @@ namespace pr
 				// Add the tab
 				m_tabs.push_back(&tab);
 				tab.Parent(this);
-
-				// Set the position for the window
-				tab.ParentRect(CalcViewRect(), true, m_hwnd, WindowPos::EFlags::NoActivate);
 		
 				// Select the tab that is being added, if desired
-				auto last = TabCount() - 1;
-				if (active || last == 0)
-					SelectedIndex(last);
+				if (active)
+					SwitchTab(sel, index, true);
 
 				OnTabAdded(TabEventArgs(&tab, index));
 				return index;
@@ -4847,37 +5282,13 @@ namespace pr
 				return TabInfo(tab_index, TCIF_PARAM).lParam;
 			}
 
-			// Update the position of all the contained views.
-			void UpdateViews()
+			// Update the position of all the contained windows.
+			void UpdateLayout(bool repaint = true)
 			{
-				auto rect = CalcViewRect();
+				auto rect = ClientRect();
 				for (auto tab : m_tabs)
-					tab->ScreenRect(rect, true, nullptr, WindowPos::EFlags::NoZorder);
+					tab->ParentRect(rect.Adjust(-tab->Margin()), repaint, nullptr, WindowPos::EFlags::NoZorder);
 			}
-
-			struct TabEventArgs :EmptyArgs
-			{
-				Control* m_tab;
-				int      m_tab_index;
-				TabEventArgs(Control* tab, int tab_index) :EmptyArgs() ,m_tab(tab) ,m_tab_index(tab_index) {}
-			};
-			struct TabSwitchEventArgs :CancelEventArgs
-			{
-				// True if 'm_tab' is being switched to (cancel ignored in this case)
-				// False if 'm_tab' is being switched away from (cancel will stop the switch)
-				bool m_activating;
-
-				// The tab being left/entered
-				Control* m_tab;
-				int      m_tab_index;
-
-				TabSwitchEventArgs(bool activating, Control* tab, int tab_index)
-					:CancelEventArgs(false)
-					,m_activating(activating)
-					,m_tab(tab)
-					,m_tab_index(tab_index)
-				{}
-			};
 
 			// Events
 			EventHandler<TabControl&, TabEventArgs const&> TabAdded;
@@ -4905,7 +5316,7 @@ namespace pr
 				{
 				case WM_WINDOWPOSCHANGED:
 					{
-						UpdateViews();
+						UpdateLayout(true);
 						break;
 					}
 				case WM_NOTIFY:
@@ -4941,51 +5352,28 @@ namespace pr
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 
+			// The client rect for a tab control, excludes the tabs
+			Rect ClientRect() const override
+			{
+				auto cr = Control::ClientRect();
+				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&cr));
+
+				// TC has built in padding, we want to remove that and use our own padding
+				// There is also a 2px 3D border
+				auto style = Style();
+				if      ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +1); // Bottom
+				else if ((style & TCS_RIGHT ) &&  (style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +4); // Right
+				else if (                         (style & TCS_VERTICAL)) cr = cr.Adjust(-2, -4, +4, +4); // Left
+				else                                                      cr = cr.Adjust(-3, -1, +1, +2); // Top
+				return cr;
+			}
+
 		protected:
 
 			// Throw if 'tab_index' is invalid
 			void ValidateTabIndex(int tab_index) const
 			{
 				Throw(tab_index >= 0 && tab_index < TabCount(), pr::FmtS("Tab index (%d) out of range", tab_index));
-			}
-
-			// Calculate the client rect for contained views.
-			Rect CalcViewRect() const
-			{
-				auto sr = ScreenRect();
-
-				//auto rect = ClientRect();
-				//rect.right  -= 1;
-				//rect.bottom -= 1;
-				//// Calculate the Height (or Width) of the tab cause it could be Multiline
-				//Rect tab_rect;
-				//Throw(::SendMessageW(m_hwnd, TCM_GETITEMRECT, 0, LPARAM(&tab_rect)) != 0, "Failed to read the size of the 0th tab");
-				//auto row_count   = (int)(::SendMessageW(m_hwnd, TCM_GETROWCOUNT, 0, 0));
-				//auto edge_width  = (tab_rect.width()  * row_count) + m_top_pad;
-				//auto edge_height = (tab_rect.height() * row_count) + m_top_pad;
-
-				// Set the size based on the style
-				// All the same at the mo, need to test each style...
-				auto style = Style();
-				if ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) // Bottom
-				{
-					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
-				}
-				else if ((style & TCS_RIGHT) && (style & TCS_VERTICAL)) // Right
-				{
-					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
-				}
-				else if (style & TCS_VERTICAL) // Left
-				{
-					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
-				}
-				else // Top
-				{
-					sr = sr.Adjust(m_border_size - 4, m_border_size - 2, 2 - m_border_size, 3 - m_border_size);
-				}
-
-				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&sr));
-				return sr.height() > 0 && sr.width() > 0 ? sr : Rect();
 			}
 
 			// Switch from tab 'old' to tab 'neu'
@@ -5022,6 +5410,264 @@ namespace pr
 				if (setcursel)
 				{
 					::SendMessageW(m_hwnd, TCM_SETCURSEL, neu, 0);
+				}
+			}
+		};
+		struct Splitter :Control
+		{
+			enum { DefW = 80, DefH = 80 };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
+			static wchar_t const* WndClassName() { return L"pr::gui::Splitter"; }
+			struct Params :CtrlParams
+			{
+				int m_bar_width;
+				float m_bar_pos;
+				int m_min_pane_size;
+				bool m_vertical;
+				bool m_full_drag;
+				
+				Params() :CtrlParams() ,m_bar_width(4) ,m_bar_pos(0.5f) ,m_min_pane_size(20) ,m_vertical(false) ,m_full_drag()
+				{
+					::SystemParametersInfoW(SPI_GETDRAGFULLWINDOWS, 0, &m_full_drag, 0);
+					wndclass(RegisterWndClass<Splitter>()).name("split").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx);
+				}
+				Params& width(int w)          { m_bar_width = w; return *this; }
+				Params& pos(float p)          { m_bar_pos = std::min(1.0f, std::max(0.0f, p)); return *this; }
+				Params& min_pane_width(int w) { m_min_pane_size = w; return *this; }
+				Params& vertical()            { m_vertical = true; return *this; }
+				Params& horizontal()          { m_vertical = false; return *this; }
+				Params& full_drag(bool fd)    { m_full_drag = fd; return *this; }
+			};
+
+			Panel Pane0;
+			Panel Pane1;
+			bool m_vertical;
+			bool m_full_drag;
+			int m_bar_width;
+			float m_bar_pos;
+			int m_min_pane_size;
+			HCURSOR m_cursor;
+
+			Splitter(pr::gui::Params const& p = Params())
+				:Control(p)
+				,Pane0(Panel::Params().parent(this).name(FmtS("%s-L",p.name())).anchor(EAnchor::None).bk_col(::GetSysColor(COLOR_APPWORKSPACE)))
+				,Pane1(Panel::Params().parent(this).name(FmtS("%s-R",p.name())).anchor(EAnchor::None).bk_col(::GetSysColor(COLOR_APPWORKSPACE)))
+				,m_vertical(static_cast<Params const&>(p).m_vertical)
+				,m_full_drag(static_cast<Params const&>(p).m_full_drag)
+				,m_bar_width(static_cast<Params const&>(p).m_bar_width)
+				,m_bar_pos(static_cast<Params const&>(p).m_bar_pos)
+				,m_min_pane_size(static_cast<Params const&>(p).m_min_pane_size)
+				,m_cursor(::LoadCursor(nullptr, m_vertical ? IDC_SIZEWE : IDC_SIZENS))
+			{
+				if (IsWindow(*this))
+					UpdateLayout();
+			}
+
+			// Get/Set the bar position as a fraction
+			float BarPos() const
+			{
+				return m_bar_pos;
+			}
+			void BarPos(float pos, bool update = true)
+			{
+				auto w = m_vertical ? ClientRect().width() : ClientRect().height();
+				if (w > 0)
+				{
+					auto f = 2*w > m_min_pane_size ? m_min_pane_size / (float)w : 0.5f;
+					m_bar_pos = std::min(1.0f - f, std::max(0.0f + f, pos));
+					if (update)
+						UpdateLayout();
+				}
+			}
+
+			// Update the layout of child windows
+			void UpdateLayout(bool repaint = true)
+			{
+				auto bar_pos = BarPos();
+				Pane0.Visible(bar_pos != 0.0f);
+				Pane1.Visible(bar_pos != 1.0f);
+
+				if (Pane0.Visible())
+					Pane0.ParentRect(PaneRect(0), repaint);
+				if (Pane1.Visible())
+					Pane1.ParentRect(PaneRect(1), repaint);
+
+				auto bar_rect = BarRect();
+				Invalidate(false, &bar_rect);
+
+				LRESULT result;
+				WindowPos pos;
+				ForwardToChildren(*TopLevelControl(), WM_WINDOWPOSCHANGED, 0, LPARAM(&pos), result);
+			}
+
+			// Message map function
+			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				switch (message)
+				{
+				case WM_WINDOWPOSCHANGED:
+					{
+						// Don't need to forward WM_WINDOWPOSCHANGED to the child panes
+						// because 'UpdateLayout' does that manually.
+						ResizeToParent();
+						UpdateLayout(true);
+						return false;
+					}
+				}
+				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+			}
+
+		protected:
+
+			// Return the rect for the bar in client space
+			Rect BarRect() const
+			{
+				auto client = ClientRect();
+
+				if (BarPos() == 0.0f)
+					return m_vertical
+						? Rect(client.left, client.top, client.left, client.bottom)
+						: Rect(client.left, client.top, client.right, client.top);
+
+				if (BarPos() == 1.0f)
+					return m_vertical
+						? Rect(client.right, client.top, client.right, client.bottom)
+						: Rect(client.left, client.bottom, client.right, client.bottom);
+
+				auto hw = m_bar_width * 0.5f;
+				return m_vertical
+					? Rect(client.left + int(client.width() * BarPos() - hw), client.top, client.left +  int(client.width() * BarPos() + hw), client.bottom)
+					: Rect(client.left, client.top + int(client.height() * BarPos() - hw), client.right, client.top + int(client.height() * BarPos() + hw));
+			}
+
+			// Return the rect for a pane in client space
+			Rect PaneRect(int idx) const
+			{
+				auto client = ClientRect();
+				auto bar = BarRect();
+				switch (idx)
+				{
+				default:
+					assert(false);
+					return Rect();
+				case 0:
+					return m_vertical
+						? Rect(client.left, client.top, bar.left, client.bottom)
+						: Rect(client.left, client.top, client.right, bar.top);
+				case 1:
+					return m_vertical
+						? Rect(bar.right, client.top, client.right, client.bottom)
+						: Rect(client.left, bar.bottom, client.right, client.bottom);
+				}
+			}
+
+			// Draw the ghost bar. Note, drawing twice 'undraws' the ghost bar
+			void DrawGhostBar()
+			{
+				auto rect = BarRect();
+				if (!rect.empty())
+				{
+					// convert client to window coordinates
+					auto wndrect = ScreenRect();
+					::MapWindowPoints(nullptr, m_hwnd, (LPPOINT)&wndrect, 2);
+					::OffsetRect(&rect, -wndrect.left, -wndrect.top);
+
+					// invert the brush pattern (looks just like frame window sizing)
+					WindowDC dc(m_hwnd);
+					auto brush = Brush::Halftone();
+
+					// Paint the ghost bar
+					auto old = ::SelectObject(dc, brush);
+					::PatBlt(dc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, PATINVERT);
+					::SelectObject(dc, old);
+				}
+			}
+
+			// Handle the Paint event. Return true, to prevent anything else handling the event
+			bool OnPaint(PaintEventArgs const& args) override
+			{
+				Control::OnPaint(args);
+
+				PaintStruct p(m_hwnd);
+				auto hdc = args.m_alternate_hdc != nullptr ? args.m_alternate_hdc : p.hdc;
+
+				// Draw the splitter bar
+				if (BarPos() != 0.0f && BarPos() != 1.0f)
+				{
+					auto rect = BarRect();
+					::FillRect(hdc, &rect, ::GetSysColorBrush(COLOR_3DFACE));
+				}
+				return true;
+			}
+
+			// Handle mouse button down/up events. Return true, to prevent anything else handling the event
+			bool OnMouseButton(MouseEventArgs const& args) override
+			{
+				Control::OnMouseButton(args);
+				if (args.m_down)
+				{
+					auto pt = args.m_point;
+					auto bar_rect = BarRect();
+					if (::GetCapture() != m_hwnd && bar_rect.Contains(pt))
+					{
+						::SetCapture(m_hwnd);
+						::SetCursor(m_cursor);
+
+						if (m_full_drag)
+						{}
+						else
+							DrawGhostBar();
+					}
+					else if (::GetCapture() == m_hwnd && !bar_rect.Contains(pt))
+					{
+						// If we have capture but are not over the splitter, this is
+						// the case where we alt-tab during a splitter bar drag.
+						::ReleaseCapture();
+					}
+				}
+				else
+				{
+					if (::GetCapture() == m_hwnd)
+						::ReleaseCapture();
+				}
+				return false;
+			}
+
+			// Handle mouse move events
+			void OnMouseMove(MouseEventArgs const& args) override
+			{
+				Control::OnMouseMove(args);
+
+				auto pt = args.m_point;
+				auto bar_rect = BarRect();
+				if (::GetCapture() == m_hwnd)
+				{
+					auto client = ClientRect();
+					auto pos = m_vertical
+						? float(pt.x - client.left) / client.width()
+						: float(pt.y - client.top ) / client.height();
+
+					if (pos != BarPos())
+					{
+						if (m_full_drag)
+						{
+							BarPos(pos);
+							Invalidate();
+							::UpdateWindow(m_hwnd);
+						}
+						else
+						{
+							DrawGhostBar();
+							BarPos(pos);
+							DrawGhostBar();
+						}
+					}
+				}
+				else // Not dragging, just hovering
+				{
+					if (bar_rect.Contains(pt))
+						::SetCursor(m_cursor);
 				}
 			}
 		};

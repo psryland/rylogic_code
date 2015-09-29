@@ -7328,22 +7328,59 @@ int Editor::WrapCount(int line) {
 	}
 }
 
-void Editor::AddStyledText(char *buffer, int appendLength, bool moveSelection) {
-	// The buffer consists of alternating character bytes and style bytes
-	int textLength = appendLength / 2;
-	std::string text(textLength, '\0');
-	int i;
-	for (i = 0; i < textLength; i++) {
-		text[i] = buffer[i*2];
+int Editor::InsertText(char* buffer, int position, int length, bool styled) {
+	// Add text at 'position'. If 'styled' is true, the buffer consists of alternating character bytes and style bytes
+	// Use 'length' == -1 to determine the length by null termination.
+	// Returns the number of characters inserted
+	int lengthInserted = 0;
+	if (styled)
+	{
+		enum { BufSize = 16384 };
+		struct cell { char chr, sty; };
+		char text[BufSize];
+		char styl[BufSize];
+
+		auto buf = (cell*)buffer;
+		auto pos = position;
+		if (length >= 0) length /= 2;
+		for (int count = BufSize; count == BufSize; pos += count) // stop when we don't fill the local buffer
+		{
+			count = 0;
+			if (length >= 0)
+			{
+				auto max_count = std::min<int>(length - lengthInserted, BufSize);
+				for (count = 0; count != max_count; ++count, ++buf)
+				{
+					text[count] = buf->chr;
+					styl[count] = buf->sty;
+				}
+			}
+			else
+			{
+				for (count = 0; buf->chr != 0 && count != BufSize; ++count, ++buf)
+				{
+					text[count] = buf->chr;
+					styl[count] = buf->sty;
+				}
+			}
+
+			lengthInserted += pdoc->InsertString(pos, text, count);
+			pdoc->StartStyling(pos, ~char());
+			pdoc->SetStyles(count, styl);
+		}
 	}
-	const int lengthInserted = pdoc->InsertString(CurrentPosition(), text.c_str(), textLength);
-	for (i = 0; i < textLength; i++) {
-		text[i] = buffer[i*2+1];
+	else
+	{
+		// Find the string length
+		if (length < 0)
+		{
+			auto end = buffer;
+			for (; *end != 0; ++end) {}
+			length = int(end - buffer);
+		}
+		lengthInserted = pdoc->InsertString(position, buffer, length);
 	}
-	pdoc->StartStyling(CurrentPosition(), static_cast<unsigned char>(0xff));
-	pdoc->SetStyles(textLength, text.c_str());
-	if (moveSelection)
-		SetEmptySelection(sel.MainCaret() + lengthInserted);
+	return lengthInserted;
 }
 
 static bool ValidMargin(uptr_t wParam) {
@@ -7814,43 +7851,41 @@ sptr_t Editor::WndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) {
 
 		// Control specific mesages
 
-	case SCI_ADDTEXT: {
-			if (lParam == 0)
-				return 0;
-			const int lengthInserted = pdoc->InsertString(
-				CurrentPosition(), CharPtrFromSPtr(lParam), static_cast<int>(wParam));
-			SetEmptySelection(sel.MainCaret() + lengthInserted);
+	case SCI_ADDTEXT:
+	case SCI_ADDSTYLEDTEXT: {
+			// Add text at the current position, moving the selection
+			if (lParam == 0) return 0;
+			auto len = static_cast<int>(wParam);
+			auto count = InsertText(CharPtrFromSPtr(lParam), CurrentPosition(), len, iMessage == SCI_ADDSTYLEDTEXT);
+			SetEmptySelection(CurrentPosition() + count);
 			return 0;
 		}
 
-	case SCI_APPENDSTYLEDTEXT:
-	case SCI_ADDSTYLEDTEXT:
-		if (lParam)
-			AddStyledText(CharPtrFromSPtr(lParam), static_cast<int>(wParam), iMessage == SCI_ADDSTYLEDTEXT);
-		return 0;
+	case SCI_APPENDTEXT:
+	case SCI_APPENDSTYLEDTEXT: {
+			// Add text to the end of the document, without changing the selection
+			if (lParam == 0) return 0;
+			auto len = static_cast<int>(wParam);
+			InsertText(CharPtrFromSPtr(lParam), pdoc->Length(), len, iMessage == SCI_APPENDSTYLEDTEXT);
+			return 0;
+		}
 
-	case SCI_INSERTTEXT: {
-			if (lParam == 0)
-				return 0;
-			int insertPos = static_cast<int>(wParam);
-			if (static_cast<int>(wParam) == -1)
-				insertPos = CurrentPosition();
-			int newCurrent = CurrentPosition();
-			char *sz = CharPtrFromSPtr(lParam);
-			const int lengthInserted = pdoc->InsertString(insertPos, sz, istrlen(sz));
-			if (newCurrent > insertPos)
-				newCurrent += lengthInserted;
-			SetEmptySelection(newCurrent);
+	case SCI_INSERTTEXT:
+	case SCI_INSERTSTYLEDTEXT: {
+			// Add text at the given location within the document, preserving the selection
+			if (lParam == 0) return 0;
+			auto curr = sel.MainCaret();
+			auto anch = sel.MainAnchor();
+			auto index = static_cast<int>(wParam);
+			if (index == -1) index = curr;
+			auto count = InsertText(CharPtrFromSPtr(lParam), index, -1, iMessage == SCI_INSERTSTYLEDTEXT);
+			sel.SetSelection(SelectionRange(curr + (curr>index?count:0), anch + (anch>index?count:0)));
 			return 0;
 		}
 
 	case SCI_CHANGEINSERTION:
 		PLATFORM_ASSERT(lParam);
 		pdoc->ChangeInsertion(CharPtrFromSPtr(lParam), static_cast<int>(wParam));
-		return 0;
-
-	case SCI_APPENDTEXT:
-		pdoc->InsertString(pdoc->Length(), CharPtrFromSPtr(lParam), static_cast<int>(wParam));
 		return 0;
 
 	case SCI_CLEARALL:

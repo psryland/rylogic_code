@@ -84,13 +84,37 @@ namespace pr
 		// Note: the '__int64's here are not the same as the timestamps in 'FileTime'
 		// those values are in unix time. Use 'UnixTimetoI64()'
 #ifdef _FILETIME_
-		inline __int64    FTtoI64(FILETIME ft)          { __int64  n  = __int64(ft.dwHighDateTime) << 32 | __int64(ft.dwLowDateTime); return n; }
-		inline FILETIME   I64toFT(__int64 n)            { FILETIME ft; ft.dwHighDateTime = DWORD((n>>32)&0xFFFFFFFFULL); ft.dwLowDateTime = DWORD(n&0xFFFFFFFFULL); return ft; }
+		inline __int64 FTtoI64(FILETIME ft)
+		{
+			__int64  n  = __int64(ft.dwHighDateTime) << 32 | __int64(ft.dwLowDateTime);
+			return n;
+		}
+		inline FILETIME I64toFT(__int64 n)
+		{
+			FILETIME ft = {DWORD(n&0xFFFFFFFFULL), DWORD((n>>32)&0xFFFFFFFFULL)};
+			return ft;
+		}
 #ifdef _WINBASE_
-		inline SYSTEMTIME FTtoST(FILETIME const& ft)    { SYSTEMTIME st; ::FileTimeToSystemTime(&ft, &st); return st; }
-		inline FILETIME   STtoFT(SYSTEMTIME const& st)  { FILETIME   ft; ::SystemTimeToFileTime(&st, &ft); return ft; }
-		inline __int64    STtoI64(SYSTEMTIME const& st) { return FTtoI64(STtoFT(st)); }
-		inline SYSTEMTIME I64toST(__int64 n)            { return FTtoST(I64toFT(n)); }
+		inline SYSTEMTIME FTtoST(FILETIME const& ft)
+		{
+			SYSTEMTIME st = {};
+			if (!::FileTimeToSystemTime(&ft, &st)) throw std::exception("FileTimeToSystemTime failed");
+			return st;
+		}
+		inline FILETIME STtoFT(SYSTEMTIME const& st)
+		{
+			FILETIME ft = {};
+			if (!::SystemTimeToFileTime(&st, &ft)) throw std::exception("SystemTimeToFileTime failed");
+			return ft;
+		}
+		inline __int64 STtoI64(SYSTEMTIME const& st)
+		{
+			return FTtoI64(STtoFT(st));
+		}
+		inline SYSTEMTIME I64toST(__int64 n)
+		{
+			return FTtoST(I64toFT(n));
+		}
 #endif
 #endif
 

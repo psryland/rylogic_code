@@ -231,9 +231,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\projects\linedrawer\ThingsToGetRight.txt" />
-    <None Include="..\projects\linedrawer\resources\linedrawer.ico">
-      <Filter>resources</Filter>
-    </None>
     <None Include="..\projects\linedrawer\deploy.py" />
     <None Include="..\projects\linedrawer\post_build.py" />
   </ItemGroup>

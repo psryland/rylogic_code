@@ -161,33 +161,39 @@ namespace pr
 		static pr_string To(std::wstring const& from)            { return from; }
 	};
 
-	// To<int>
-	template <typename TFrom> struct Convert<int,TFrom>
+	// To<Intg>
+	template <typename TTo, typename TFrom> struct ConvertIntg
 	{
-		static int To(char const* from, int radix)               { return int(::strtol(from, nullptr, radix)); }
-		static int To(wchar_t const* from, int radix)            { return int(::wcstol(from, nullptr, radix)); }
-		static int To(std::string const& from, int radix)        { return int(::strtol(from.c_str(), nullptr, radix)); }
-		static int To(std::wstring const& from, int radix)       { return int(::wcstol(from.c_str(), nullptr, radix)); }
+		static TTo To(char const* from, int radix)               { return static_cast<TTo>(::strtol(from, nullptr, radix) & ~TTo()); }
+		static TTo To(wchar_t const* from, int radix)            { return static_cast<TTo>(::wcstol(from, nullptr, radix) & ~TTo()); }
+		static TTo To(std::string const& from, int radix)        { return static_cast<TTo>(::strtol(from.c_str(), nullptr, radix) & ~TTo()); }
+		static TTo To(std::wstring const& from, int radix)       { return static_cast<TTo>(::wcstol(from.c_str(), nullptr, radix) & ~TTo()); }
 
-		static int To(char const* from, char** end, int radix)            { return int(::strtol(from, end, radix)); }
-		static int To(wchar_t const* from, wchar_t** end, int radix)      { return int(::wcstol(from, end, radix)); }
-		static int To(std::string const& from, char** end, int radix)     { return int(::strtol(from.c_str(), end, radix)); }
-		static int To(std::wstring const& from, wchar_t** end, int radix) { return int(::wcstol(from.c_str(), end, radix)); }
+		static TTo To(char const* from, char** end, int radix)            { return static_cast<unsigned short>(::strtol(from, end, radix) & ~TTo()); }
+		static TTo To(wchar_t const* from, wchar_t** end, int radix)      { return static_cast<unsigned short>(::wcstol(from, end, radix) & ~TTo()); }
+		static TTo To(std::string const& from, char** end, int radix)     { return static_cast<unsigned short>(::strtol(from.c_str(), end, radix) & ~TTo()); }
+		static TTo To(std::wstring const& from, wchar_t** end, int radix) { return static_cast<unsigned short>(::wcstol(from.c_str(), end, radix) & ~TTo()); }
 	};
+	template <typename TFrom> struct Convert<char ,TFrom> :ConvertIntg<char , TFrom> {};
+	template <typename TFrom> struct Convert<short,TFrom> :ConvertIntg<short, TFrom> {};
+	template <typename TFrom> struct Convert<int  ,TFrom> :ConvertIntg<int  , TFrom> {};
 
-	// To<uint>
-	template <typename TFrom> struct Convert<unsigned int,TFrom>
+	// To<UIntg>
+	template <typename TTo, typename TFrom> struct ConvertUIntg
 	{
-		static unsigned int To(char const* from, int radix)         { return unsigned int(::strtoul(from, nullptr, radix)); }
-		static unsigned int To(wchar_t const* from, int radix)      { return unsigned int(::wcstoul(from, nullptr, radix)); }
-		static unsigned int To(std::string const& from, int radix)  { return unsigned int(::strtoul(from.c_str(), nullptr, radix)); }
-		static unsigned int To(std::wstring const& from, int radix) { return unsigned int(::wcstoul(from.c_str(), nullptr, radix)); }
+		static TTo To(char const* from, int radix)               { return static_cast<TTo>(::strtoul(from, nullptr, radix) & ~TTo()); }
+		static TTo To(wchar_t const* from, int radix)            { return static_cast<TTo>(::wcstoul(from, nullptr, radix) & ~TTo()); }
+		static TTo To(std::string const& from, int radix)        { return static_cast<TTo>(::strtoul(from.c_str(), nullptr, radix) & ~TTo()); }
+		static TTo To(std::wstring const& from, int radix)       { return static_cast<TTo>(::wcstoul(from.c_str(), nullptr, radix) & ~TTo()); }
 
-		static unsigned int To(char const* from, char** end, int radix)            { return unsigned int(::strtoul(from, end, radix)); }
-		static unsigned int To(wchar_t const* from, wchar_t** end, int radix)      { return unsigned int(::wcstoul(from, end, radix)); }
-		static unsigned int To(std::string const& from, char** end, int radix)     { return unsigned int(::strtoul(from.c_str(), end, radix)); }
-		static unsigned int To(std::wstring const& from, wchar_t** end, int radix) { return unsigned int(::wcstoul(from.c_str(), end, radix)); }
+		static TTo To(char const* from, char** end, int radix)            { return static_cast<unsigned short>(::strtoul(from, end, radix) & ~TTo()); }
+		static TTo To(wchar_t const* from, wchar_t** end, int radix)      { return static_cast<unsigned short>(::wcstoul(from, end, radix) & ~TTo()); }
+		static TTo To(std::string const& from, char** end, int radix)     { return static_cast<unsigned short>(::strtoul(from.c_str(), end, radix) & ~TTo()); }
+		static TTo To(std::wstring const& from, wchar_t** end, int radix) { return static_cast<unsigned short>(::wcstoul(from.c_str(), end, radix) & ~TTo()); }
 	};
+	template <typename TFrom> struct Convert<unsigned char ,TFrom> :ConvertUIntg<unsigned char , TFrom> {};
+	template <typename TFrom> struct Convert<unsigned short,TFrom> :ConvertUIntg<unsigned short, TFrom> {};
+	template <typename TFrom> struct Convert<unsigned int  ,TFrom> :ConvertUIntg<unsigned int  , TFrom> {};
 
 	// To<long long>
 	template <typename TFrom> struct Convert<long long, TFrom>
@@ -243,6 +249,9 @@ namespace pr
 			PR_CHECK(pr::To<std::string>(cstr), cstr);
 			PR_CHECK(pr::To<std::string>(wstr), cstr);
 			PR_CHECK(pr::To<std::string>(pstr), cstr);
+
+			PR_CHECK(pr::To<unsigned short>("12345",16), (unsigned short)0x2345);
+			PR_CHECK(pr::To<char>(L"1",10), (char)1);
 
 			PR_CHECK(pr::To<int>("1234",10), 1234);
 			PR_CHECK(pr::To<int>(L"1234",10), 1234);

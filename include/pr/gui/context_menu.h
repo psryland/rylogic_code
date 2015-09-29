@@ -683,7 +683,7 @@ namespace pr
 
 						// Client area is the contained item size plus margins
 						auto client = Rect(Point(), m_size + Size(2*MenuMargin, 2*MenuMargin));
-						auto bounds = AdjRect(client).Offset(pt.x, pt.y);
+						auto bounds = AdjRect(client).Shifted(pt.x, pt.y);
 						ParentRect(bounds, true);
 
 						// Turn off dialog behaviour so that we get WM_MOUSEMOVE events

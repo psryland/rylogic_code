@@ -364,9 +364,7 @@ protected:	// ScintillaBase subclass needs access to much of Editor
 	PRectangle RectangleFromRange(Range r);
 	void InvalidateRange(int start, int end);
 
-	bool UserVirtualSpace() const {
-		return ((virtualSpaceOptions & SCVS_USERACCESSIBLE) != 0);
-	}
+	bool UserVirtualSpace() const { return ((virtualSpaceOptions & SCVS_USERACCESSIBLE) != 0); }
 	int CurrentPosition() const;
 	bool SelectionEmpty() const;
 	SelectionPosition SelectionStart();
@@ -628,7 +626,8 @@ protected:	// ScintillaBase subclass needs access to much of Editor
 	int CodePage() const;
 	virtual bool ValidCodePage(int /* codePage */) const { return true; }
 	int WrapCount(int line);
-	void AddStyledText(char *buffer, int appendLength, bool moveSelection);
+	
+	int InsertText(char* buffer, int position, int length, bool styled);
 
 	virtual sptr_t DefWndProc(unsigned int iMessage, uptr_t wParam, sptr_t lParam) = 0;
 	void StyleSetMessage(unsigned int iMessage, uptr_t wParam, sptr_t lParam);

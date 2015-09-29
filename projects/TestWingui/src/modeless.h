@@ -10,7 +10,7 @@ struct Modeless :Form
 
 	enum { IDC_LBL };
 	Modeless(WndRef parent)
-		:Form(ModelessParams().name("modeless").title(L"Modeless").parent(parent).menu_id(IDC_MENU).wndclass(RegisterWndClass<Modeless>()))
+		:Form(ModelessParams().name("modeless").title(L"Modeless").parent(parent).menu(IDC_MENU).xy(0,0).wh(400,400).wndclass(RegisterWndClass<Modeless>()))
 		,m_lbl(Label::Params().name("modeless-label").text(L"I am a modeless dialog").xy(10,10).id(IDC_LBL).parent(this).anchor(EAnchor::TopLeft))
 		,m_btn_ok(Button::Params().name("btn_ok").text(L"OK").xy(-10,-10).id(IDOK).parent(this).anchor(EAnchor::BottomRight))
 	{
@@ -33,5 +33,4 @@ struct Modeless :Form
 		case IDM_EXIT: Close(); return true;
 		}
 	}
-
 };

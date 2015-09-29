@@ -15,6 +15,66 @@ namespace pr
 {
 	namespace ldr
 	{
+		// User interface for managing LdrObjects
+		// LdrObject is completely unaware that this class exists.
+		// Note: this object does not add references to LdrObjects
+		struct LdrObjectManagerUI
+		{
+			virtual ~LdrObjectManagerUI() {}
+			LdrObjectManagerUI(HWND parent);
+			LdrObjectManagerUI(LdrObjectManagerUI const&) = delete;
+			LdrObjectManagerUI& operator=(LdrObjectManagerUI const&) = delete;
+
+			// Implicit conversion to HWND
+			virtual operator HWND() const { return m_ui->operator HWND(); }
+
+			// Get/Set settings for the object manager window
+			virtual std::string Settings() const { return m_ui->Settings(); }
+			virtual void Settings(std::string settings) { m_ui->Settings(settings); }
+
+			// Display the object manager window
+			virtual void Show(HWND parent = nullptr) { m_ui->Show(parent); }
+
+			// Begin repopulating the dlg
+			virtual void BeginPopulate() { m_ui->BeginPopulate(); }
+			
+			// Add a root level object recursively to the dlg
+			virtual void Add(LdrObject* obj) { m_ui->Add(obj); }
+
+			// Finished populating the dlg
+			virtual void EndPopulate() { m_ui->EndPopulate(); }
+
+			// Return the number of selected objects
+			virtual size_t SelectedCount() const { return m_ui->SelectedCount(); }
+
+			// Enumerate the selected items
+			// 'iter' is an 'in/out' parameter, initialise it to -1 for the first call
+			// Returns 'nullptr' after the last selected item
+			virtual LdrObject const* EnumSelected(int& iter) const { return m_ui->EnumSelected(iter); }
+
+			// Position the window relative to the owner window
+			virtual void PositionWindow(int x, int y, int w, int h) { return m_ui->PositionWindow(x,y,w,h); }
+
+			// Get/Set the visibility of the window
+			virtual bool Visible() const { return m_ui->Visible(); }
+			virtual void Visible(bool show) { m_ui->Visible(show); }
+
+			// Hide the window instead of closing
+			virtual bool HideOnClose() const { return m_ui->HideOnClose(); }
+			virtual void HideOnClose(bool enable) { m_ui->HideOnClose(enable); }
+
+		protected:
+
+			// pImpl pattern to hide window implementation
+			std::unique_ptr<LdrObjectManagerUI> m_ui;
+
+			struct Internal {};
+			LdrObjectManagerUI(Internal const&) {}
+		};
+
+
+
+
 		// Object Manager Interface
 		struct IObjectManagerDlg
 		{
@@ -183,6 +243,5 @@ namespace pr
 		};
 
 		#pragma endregion
-
 	}
 }

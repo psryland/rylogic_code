@@ -50,6 +50,9 @@ typedef sptr_t (*SciFnDirect)(sptr_t ptr, unsigned int iMessage, uptr_t wParam, 
 #define SCI_ADDTEXT 2001
 #define SCI_ADDSTYLEDTEXT 2002
 #define SCI_INSERTTEXT 2003
+#define SCI_APPENDTEXT 2282
+#define SCI_APPENDSTYLEDTEXT 2294
+#define SCI_INSERTSTYLEDTEXT 2295
 #define SCI_CHANGEINSERTION 2672
 #define SCI_CLEARALL 2004
 #define SCI_DELETERANGE 2645
@@ -514,8 +517,6 @@ typedef sptr_t (*SciFnDirect)(sptr_t ptr, unsigned int iMessage, uptr_t wParam, 
 #define SCI_TEXTHEIGHT 2279
 #define SCI_SETVSCROLLBAR 2280
 #define SCI_GETVSCROLLBAR 2281
-#define SCI_APPENDTEXT 2282
-#define SCI_APPENDSTYLEDTEXT 2294
 #define SCI_GETTWOPHASEDRAW 2283
 #define SCI_SETTWOPHASEDRAW 2284
 #define SC_EFF_QUALITY_MASK 0xF

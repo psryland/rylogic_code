@@ -354,7 +354,7 @@ namespace pr
 	// Construct a shear matrix
 	inline m3x4 Shear3x3(float sxy, float sxz, float syx, float syz, float szx, float szy)
 	{
-		m3x4 mat;
+		m3x4 mat = {};
 		mat.x.set(1.0f, sxy, sxz, 0.0f);
 		mat.y.set(syx, 1.0f, syz, 0.0f);
 		mat.z.set(szx, szy, 1.0f, 0.0f);
@@ -445,7 +445,7 @@ namespace pr
 	{
 		float r = Sqr(from.x) + Sqr(from.y);
 		float d = Sqrt(r);
-		m3x4 mat;
+		m3x4 mat = {};
 		if (FEql(d, 0.0f))
 		{
 			mat = m3x4Identity;	// Create an identity transform or a 180 degree rotation

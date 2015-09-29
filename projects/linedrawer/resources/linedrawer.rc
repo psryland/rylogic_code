@@ -258,4 +258,4 @@ IDR_ACCELERATOR ACCELERATORS
 //
 // Icon resources
 //
-IDI_ICON_MAIN      ICON           "LineDrawer.ico"
+IDI_ICON_MAIN      ICON           "icon.ico"

@@ -98,6 +98,19 @@ fun void AddStyledText=2002(int length, cells c)
 # Insert string at a position.
 fun void InsertText=2003(position pos, string text)
 
+# Append a string to the end of the document without changing the selection.
+fun void AppendText=2282(int length, string text)
+
+# Append styled text (an array of cells) to the end of the document without
+# changing the selection. Same as AppendText. 'length' is the size of the array
+# in bytes, i.e. 2x the length of the text.
+fun void AppendStyledText=2294(int length, cells c)
+
+# Insert styled text (an array of cells) at 'pos' in the document without
+# changing the selection. The array of cells must be null terminated (i.e.
+# contain two 0-bytes as the terminator)
+fun void InsertStyledText=2295(int pos, cells c)
+
 # Change the text that is being inserted in response to SC_MOD_INSERTCHECK
 fun void ChangeInsertion=2672(int length, string text)
 
@@ -1287,14 +1300,6 @@ set void SetVScrollBar=2280(bool show,)
 
 # Is the vertical scroll bar visible?
 get bool GetVScrollBar=2281(,)
-
-# Append a string to the end of the document without changing the selection.
-fun void AppendText=2282(int length, string text)
-
-# Append styled text (an array of cells) to the end of the document without
-# changing the selection. Same as AppendText. 'length' is the size of the array
-# in bytes, i.e. 2x the length of the text.
-fun void AppendStyledText=2294(int length, cells c)
 
 # Is drawing done in two phases with backgrounds drawn before faoregrounds?
 get bool GetTwoPhaseDraw=2283(,)

@@ -3,35 +3,16 @@
 //  Copyright (c) Rylogic Ltd 2009
 //***************************************************************************************************
 
-#include <cassert>
-#include <string>
-#include <sstream>
-
-#include <atlbase.h>
-#include <atlapp.h>
-#include <atlwin.h>
-#include <atldlgs.h>
-#include <atlframe.h>
-#include <atlctrls.h>
-#include <atlsplit.h>
-#include <atlmisc.h>
-#include <atlcrack.h>
-
-#include "pr/common/min_max_fix.h"
-#include "pr/macros/enum.h"
-#include "pr/macros/count_of.h"
-#include "pr/common/keystate.h"
-//#include "pr/str/prstring.h"
-#include "pr/script/reader.h"
 #include "pr/linedrawer/ldr_objects_dlg.h"
+#include "pr/macros/enum.h"
+#include "pr/gui/wingui.h"
+
+using namespace pr::gui;
 
 namespace pr
 {
 	namespace ldr
 	{
-		static HTREEITEM const INVALID_TREE_ITEM =  0;
-		static int const       INVALID_LIST_ITEM = -1;
-
 		#define PR_ENUM(x)\
 			x(Off   )\
 			x(On    )\
@@ -50,6 +31,427 @@ namespace pr
 		PR_DEFINE_ENUM1(EColumn, PR_ENUM);
 		#undef PR_ENUM
 
+		// UI data for an ldr object
+		struct UIData
+		{
+			HTREEITEM m_tree_item;
+			int       m_list_item;
+			UIData()
+				:m_tree_item(INVALID_TREE_ITEM)
+				,m_list_item(INVALID_LIST_ITEM)
+			{}
+
+			// Return the uidata for an object
+			static UIData* get(LdrObject& obj) { return &obj.m_user_data.get<UIData>(); }
+			static UIData* get(LdrObject* obj) { return obj ? get(*obj) : nullptr; }
+		};
+
+		struct LdrObjectManagerUIImpl :Form ,LdrObjectManagerUI
+		{
+			enum
+			{
+				ID_BTN_EXPAND = 100, ID_BTN_COLLAPSE, ID_BTN_FILTER, ID_TB_FILTER
+			};
+			static Params Params(HWND parent)
+			{
+				return FormParams().wndclass(RegisterWndClass<LdrObjectManagerUIImpl>())
+					.name("ldr-object-manager").title(L"Scene Object Manager").wh(430, 380)
+					.icon_bg((HICON)::SendMessageW(parent, WM_GETICON, ICON_BIG, 0))
+					.icon_sm((HICON)::SendMessageW(parent, WM_GETICON, ICON_SMALL, 0))
+					.parent(WndRef::Lookup(parent))
+					.hide_on_close(true).pin_window(true);
+			};
+
+			Button    m_btn_expand;
+			Button    m_btn_collapse;
+			Button    m_btn_filter;
+			TextBox   m_tb_filter;
+			StatusBar m_status;
+			Splitter  m_split;
+			TreeView  m_tree;
+			ListView  m_list;
+
+			LdrObjectManagerUIImpl(HWND parent)
+				:Form(Params(parent))
+				,LdrObjectManagerUI(Internal())
+				,m_status(StatusBar::Params().name("status").parent(this).xy(0,-1).wh(Fill,StatusBar::DefH).dock(EDock::Bottom))
+				,m_btn_expand(Button::Params().name("btn-expand").id(ID_BTN_EXPAND).parent(this).xy(0,0).wh(20,20).text(L"+").margin(2).anchor(EAnchor::TopLeft))
+				,m_btn_collapse(Button::Params().name("btn-collapse").id(ID_BTN_COLLAPSE).parent(this).xy(Left|RightOf|ID_BTN_EXPAND, 0).wh(20,20).text(L"-").margin(2).anchor(EAnchor::TopLeft))
+				,m_btn_filter(Button::Params().name("btn-filter").id(ID_BTN_FILTER).parent(this).xy(-1,0).wh(60,20).text(L"Filter").margin(2).anchor(EAnchor::TopRight))
+				,m_tb_filter(TextBox::Params().name("tb-filter").id(ID_TB_FILTER).parent(this).xy(0,0).wh(Fill, 18).margin(50,3,64,3).anchor(EAnchor::LeftTopRight))
+				,m_split(Splitter::Params().vertical().name("split").parent(this).xy(0,Top|BottomOf|ID_TB_FILTER).wh(Fill,Fill).margin(3).anchor(EAnchor::All))
+				,m_tree(TreeView::Params().name("tree").parent(&m_split.Pane0).margin(0).border().dock(EDock::Fill))
+				,m_list(ListView::Params().mode(ListView::EViewType::Report).name("list").parent(&m_split.Pane1).margin(0).border().dock(EDock::Fill))
+			{
+				for (int i = 0; i != EColumn::NumberOf; ++i)
+					m_list.InsertColumn(i, ListView::ColumnInfo(EColumn::MemberName<wchar_t>(i)).width(100));
+			}
+
+			// Get/Set settings for the object manager window
+			std::string Settings() const override
+			{
+				auto wr = ScreenRect();
+
+				std::stringstream out;
+				out << "*WindowPos {"<<wr.left<<" "<<wr.top<<" "<<wr.right<<" "<<wr.bottom<<"}\n"
+					<< "*SplitterPos {"<<m_split.BarPos()<<"}\n";
+				return out.str();
+			}
+			void Settings(std::string settings) override
+			{
+				using namespace pr::script;
+				PtrA<> src(settings.c_str());
+				Reader reader(src);
+
+				// Parse the settings
+				for (pr::script::string kw; reader.NextKeywordS(kw);)
+				{
+					if (pr::str::EqualI(kw, "WindowPos"))
+					{
+						auto wr = pr::gui::Rect{};
+						reader.SectionStart();
+						reader.Int(wr.left   ,10);
+						reader.Int(wr.top    ,10);
+						reader.Int(wr.right  ,10);
+						reader.Int(wr.bottom ,10);
+						reader.SectionEnd();
+						ScreenRect(wr);
+						continue;
+					}
+					if (pr::str::EqualI(kw, "SplitterPos"))
+					{
+						float pos;
+						reader.RealS(pos);
+						m_split.BarPos(pos);
+						continue;
+					}
+				}
+			}
+
+			// Return the LdrObject associated with a tree item or list item
+			LdrObject const& GetLdrObject(HTREEITEM item) const { return *m_tree.UserData<LdrObject>(item); }
+			LdrObject&       GetLdrObject(HTREEITEM item)       { return *m_tree.UserData<LdrObject>(item); }
+			LdrObject const& GetLdrObject(HLISTITEM item) const { return *m_list.UserData<LdrObject>(item); }
+			LdrObject&       GetLdrObject(HLISTITEM item)       { return *m_list.UserData<LdrObject>(item); }
+
+			// Begin repopulating the dlg
+			void BeginPopulate()
+			{
+				// Reset the controls
+				m_tree.Clear();
+				m_list.Clear();
+			}
+
+			// Finished populating the dlg
+			void EndPopulate()
+			{
+				for (int i = 0; i != EColumn::NumberOf; ++i)
+					m_list.ColumnWidth(i, LVSCW_AUTOSIZE);
+			}
+
+			// Add a root level object recursively to the dlg
+			void Add(LdrObject* obj)
+			{
+				Add(obj, nullptr);
+			}
+
+			// Recursively add 'obj' and its children to the tree and list control
+			void Add(LdrObject* obj, LdrObject* prev, bool last_call = true)
+			{
+				assert(obj != nullptr && "Attempting to add a null object to the UI");
+				assert((!obj->m_parent || UIData::get(*obj->m_parent)->m_tree_item != INVALID_TREE_ITEM) && "Parent is not in the tree");
+
+				// Ignore models that aren't instanced
+				if (!obj->m_instanced)
+					return;
+
+				// Ensure the object has UI data
+				obj->m_user_data.get<UIData>(this) = UIData();
+
+				// Get UI data for the related objects
+				prev = prev ? prev : PrevSibbling(obj);
+				auto obj_uidata    = UIData::get(obj);
+				auto prev_uidata   = UIData::get(prev);
+				auto parent_uidata = UIData::get(obj->m_parent);
+
+				auto obj_name = Widen(obj->m_name);
+
+				// Add the item to the tree
+				obj_uidata->m_tree_item = m_tree.InsertItem(
+					TreeView::ItemInfo(obj_name.c_str()),
+					obj->m_parent ? parent_uidata->m_tree_item : TVI_ROOT,
+					prev          ? prev_uidata->m_tree_item   : TVI_LAST);
+
+				// Save a back reference pointer to this object in the tree
+				if (obj_uidata->m_tree_item != INVALID_TREE_ITEM)
+					m_tree.UserData(obj_uidata->m_tree_item, obj);
+				else {} // todo: Report errors, without spamming the user...
+
+				// If 'obj' is a top level object, then add it to the list
+				if (obj->m_parent == nullptr)
+				{
+					obj_uidata->m_list_item = m_list.InsertItem(m_list.Count(), obj_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
+					// todo: Report errors, without spamming the user...
+				}
+				// Otherwise, if 'prev' is visible in the list then display 'obj' in the list as well
+				else if (prev && prev_uidata->m_list_item != INVALID_LIST_ITEM)
+				{
+					obj_uidata->m_list_item = m_list.InsertItem(prev_uidata->m_list_item + 1, obj_name.c_str());
+					if (obj_uidata->m_list_item == INVALID_LIST_ITEM) {}
+					// todo: Report errors, without spamming the user...
+				}
+				// Otherwise, leave out of the list
+				else
+				{
+					obj_uidata->m_list_item = INVALID_LIST_ITEM;
+				}
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
+				{
+					// Save a pointer to this object in the list
+					m_list.UserData(obj_uidata->m_list_item, obj);
+
+					// Set the other columns in the list
+					UpdateListItem(*obj, false);
+				}
+
+				// Add the children
+				LdrObject* p = nullptr;
+				for (auto child : obj->m_child)
+				{
+					Add(child.m_ptr, p, false);
+					p = child.m_ptr;
+				}
+
+				// On leaving the last recusive call, fix up the references
+				if (last_call)
+					FixListCtrlReferences(obj_uidata->m_list_item);
+			}
+
+			// Update the displayed properties in the list
+			void UpdateListItem(LdrObject& object, bool recursive)
+			{
+				auto obj_uidata = UIData::get(object);
+				if (obj_uidata->m_list_item == INVALID_LIST_ITEM) return;
+
+				auto info = ListView::ItemInfo(obj_uidata->m_list_item);
+				m_list.Item(info.subitem(EColumn::Name     ).text(Widen(object.m_name).c_str()));
+				m_list.Item(info.subitem(EColumn::LdrType  ).text(ELdrObject::ToStringW(object.m_type)));
+				m_list.Item(info.subitem(EColumn::Colour   ).text(pr::FmtS(L"%8.8X", object.m_colour.m_aarrggbb)));
+				m_list.Item(info.subitem(EColumn::Visible  ).text(object.m_visible ? L"Visible" : L"Hidden"));
+				m_list.Item(info.subitem(EColumn::Wireframe).text(object.m_wireframe ? L"Wireframe" : L"Solid"));
+				m_list.Item(info.subitem(EColumn::Volume   ).text(pr::FmtS(L"%3.3f", Volume(object.BBoxMS(false)))));
+				m_list.Item(info.subitem(EColumn::CtxtId   ).text(pr::FmtS(L"%d", object.m_context_id)));
+
+				if (!recursive) return;
+				for (auto& child : object.m_child)
+					UpdateListItem(*child.m_ptr, recursive);
+			}
+
+			// For each object in the list from 'start_index' to the end, set the list index
+			// in the object uidata. The list control uses contiguous memory so we have to do
+			// this whenever objects are inserted/deleted from the list
+			void FixListCtrlReferences(int start_index)
+			{
+				// 'start_index'==-1 means all list items
+				if (start_index < 0) start_index = 0;
+				for (int i = start_index, iend = m_list.Count(); i < iend; ++i)
+					UIData::get(GetLdrObject(i))->m_list_item = i;
+			}
+
+			// Return the sibbling immediately before 'obj' in 'obj->m_parent' (or nullptr)
+			static LdrObject* PrevSibbling(LdrObject* obj)
+			{
+				assert(obj != nullptr);
+
+				// No parent, then 'obj' isn't a child
+				if (!obj->m_parent)
+					return nullptr;
+
+				// Search the children for the object prior to 'obj'
+				auto& children = obj->m_parent->m_child;
+				for (auto i = std::begin(children), iend = std::end(children); i != iend; ++i)
+				{
+					if (i->m_ptr != obj) continue;
+					if (i == std::begin(children)) break;
+					return (*(--i)).m_ptr;
+				}
+				return nullptr;
+			}
+
+			// Return the number of selected objects
+			size_t SelectedCount() const override
+			{
+				return m_list.SelectedCount();
+			}
+
+			// Enumerate the selected items
+			LdrObject const* EnumSelected(int& iter) const override
+			{
+				iter = m_list.NextItem(LVNI_SELECTED, iter);
+				if (iter == -1) return nullptr;
+				return &GetLdrObject(iter);
+			}
+
+			// Remove selection from the tree and list controls
+			void SelectNone()
+			{
+				for (auto i = m_list.NextItem(LVNI_SELECTED); i != -1; i = m_list.NextItem(LVNI_SELECTED ,i))
+					m_list.Item(ListView::ItemInfo(i).state(0, LVIS_SELECTED));
+			}
+
+			// Select an ldr object
+			void SelectLdrObject(LdrObject& object, bool make_visible)
+			{
+				auto obj_uidata = UIData::get(object);
+
+				// Select in the tree
+				m_tree.SetItemState(obj_uidata->m_tree_item, TVIS_SELECTED, TVIS_SELECTED);
+				if (make_visible) m_tree.EnsureVisible(obj_uidata->m_tree_item);
+
+				// Select in the list and make visible
+				if (obj_uidata->m_list_item != INVALID_LIST_ITEM)
+				{
+					m_list.SetItemState(obj_uidata->m_list_item, LVIS_SELECTED, LVIS_SELECTED);
+					if (make_visible) m_list.EnsureVisible(obj_uidata->m_list_item, FALSE);
+				}
+
+				// Flag the selection data as invalid
+				m_selection_changed = true;
+				pr::events::Send(Evt_LdrObjectSelectionChanged(this));
+			}
+
+			// Invert the selection from the tree and list controls
+			void InvSelection()
+			{
+				for (int i = m_list.GetNextItem(-1, LVNI_ALL); i != -1; i = m_list.GetNextItem(i, LVNI_ALL))
+					m_list.SetItemState(i, ~m_list.GetItemState(i, LVIS_SELECTED), LVIS_SELECTED);
+			}
+
+			// Set the visibility of the currently selected objects
+			void SetVisibilty(ETriState state, bool include_children)
+			{
+				for (int i = m_list.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list.GetNextItem(i, LVNI_SELECTED))
+				{
+					LdrObject& object = GetLdrObject(i);
+					object.Visible(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_visible, include_children ? "" : nullptr);
+					UpdateListItem(object, include_children);
+				}
+				pr::events::Send(Evt_Refresh(this));
+			}
+
+			// Set wireframe for the currently selected objects
+			void SetWireframe(ETriState state, bool include_children)
+			{
+				for (int i = m_list.GetNextItem(-1, LVNI_SELECTED); i != -1; i = m_list.GetNextItem(i, LVNI_SELECTED))
+				{
+					LdrObject& object = GetLdrObject(i);
+					object.Wireframe(state == ETriState::Off ? false : state == ETriState::On ? true : !object.m_wireframe, include_children ? "" : nullptr);
+					UpdateListItem(object, include_children);
+				}
+				pr::events::Send(Evt_Refresh(this));
+			}
+
+			// Get/Set the visibility of the window
+			bool Visible() const override    { return Form::Visible(); }
+			void Visible(bool show) override { Form::Visible(show); }
+
+			// Hide the window instead of closing
+			bool HideOnClose() const override { return Form::HideOnClose(); }
+			void HideOnClose(bool enable) override { Form::HideOnClose(enable); }
+
+			// Handle a key press in either the list or tree view controls
+			bool OnKey(KeyEventArgs const& args) override
+			{
+				if (!args.m_down) return;
+				switch (tolower(args.m_vk_key))
+				{
+				case VK_ESCAPE:
+					{
+						Close();
+						break;
+					}
+				case 'a':
+					{
+						if (KeyDown(VK_CONTROL))
+						{
+							SelectNone();
+							InvSelection();
+						}
+						//else OnBnClickedButtonToggleAlpha();
+						break;
+					}
+				case 'w':
+					{
+						SetWireframe(ETriState::Toggle, !pr::KeyDown(VK_SHIFT));
+						break;
+					}
+				case ' ':
+					{
+						SetVisibilty(ETriState::Toggle, !pr::KeyDown(VK_SHIFT));
+						break;
+					}
+				case VK_DELETE:
+					{
+						//pr::events::Send(LdrObjMgr_DeleteObjectRequest());
+						break;
+					}
+				case VK_F6:
+					{
+						m_tb_filter.SetFocus();
+						m_tb_filter.SetSelAll();
+						break;
+					}
+				}
+			}
+		};
+
+		LdrObjectManagerUI::LdrObjectManagerUI(HWND parent)
+			:m_ui(new LdrObjectManagerUIImpl(parent))
+		{}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <cassert>
+#include <string>
+#include <sstream>
+
+#include <atlbase.h>
+#include <atlapp.h>
+#include <atlwin.h>
+#include <atldlgs.h>
+#include <atlframe.h>
+#include <atlctrls.h>
+#include <atlsplit.h>
+#include <atlmisc.h>
+#include <atlcrack.h>
+
+#include "pr/common/min_max_fix.h"
+#include "pr/macros/enum.h"
+#include "pr/macros/count_of.h"
+#include "pr/common/keystate.h"
+#include "pr/script/reader.h"
+#include "pr/linedrawer/ldr_objects_dlg.h"
+
+namespace pr
+{
+	namespace ldr
+	{
 		struct ObjectManagerDlgImpl
 			:public CIndirectDialogImpl<ObjectManagerDlgImpl>
 			,public CDialogResize<ObjectManagerDlgImpl>

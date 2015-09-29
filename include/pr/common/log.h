@@ -25,6 +25,7 @@
 #include <mutex>
 #include <thread>
 #include <cassert>
+#include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/common/datetime.h"
 #include "pr/threads/concurrent_queue.h"
@@ -49,18 +50,26 @@ namespace pr
 			Warn,
 			Error,
 		};
-		template <typename Strm> inline Strm& operator << (Strm& s, ELevel level)
+	}
+
+	// To<char const*>
+	template <> struct Convert<char const*, log::ELevel>
+	{
+		static char const* To(log::ELevel lvl)
 		{
-			switch (level)
+			switch (lvl)
 			{
-			default: return s;
-			case ELevel::Debug           : s << "Debug" ; return s;
-			case ELevel::Info            : s << "Info"  ; return s;
-			case ELevel::Warn            : s << "Warn"  ; return s;
-			case ELevel::Error           : s << "Error" ; return s;
+			default: return FmtS("%d", (int)lvl);
+			case log::ELevel::Debug: return "Debug";
+			case log::ELevel::Info : return "Info" ;
+			case log::ELevel::Warn : return "Warn" ;
+			case log::ELevel::Error: return "Error";
 			}
 		}
+	};
 
+	namespace log
+	{
 		// String
 		typedef pr::string<char> string;
 
@@ -128,7 +137,8 @@ namespace pr
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
 				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim = " "; }
 				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim = " "; }
-				std::cout << delim << FmtS("%8s",ev.m_context.c_str()) << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
+				std::cout << s;
 			}
 		};
 
@@ -142,10 +152,12 @@ namespace pr
 			void operator ()(Event const& ev)
 			{
 				char const* delim = "";
+				m_outf->seekp(std::ios::end, 0); // In case the file contents have been deleted externally
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
 				if (!ev.m_file.empty()) { *m_outf << ev.m_file;                delim = " "; }
 				if (ev.m_line != -1)    { *m_outf << "(" << ev.m_line << "):"; delim = " "; }
-				*m_outf << delim << FmtS("%8s",ev.m_context.c_str()) << "|" << ev.m_level << "|" << pr::To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff") << "|" << ev.m_msg << std::endl;
+				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
+				*m_outf << s;
 			}
 		};
 	}
@@ -325,7 +337,7 @@ namespace pr
 				Logger log("test", [&](pr::log::Event const& ev)
 				{
 					std::stringstream s;
-					s << ev.m_level << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
 				});
 				log.Write(ELevel::Debug, "event 1");
@@ -337,7 +349,7 @@ namespace pr
 				Logger log1("log1", [&](pr::log::Event const& ev)
 				{
 					std::stringstream s;
-					s << ev.m_level << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
+					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
 				});
 				Logger log2(log1, "log2");
