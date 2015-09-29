@@ -2025,7 +2025,7 @@ namespace RyLogViewer
 		/// <summary>Create a message that displays for a period then disappears. Use null or "" to hide the status</summary>
 		public void SetTransientStatusMessage(string text, Color frcol, Color bkcol, TimeSpan display_time_ms)
 		{
-			m_status_message_trans.SetStatusMessage(text, null, null, false, frcol, bkcol, display_time_ms);
+			m_status_message_trans.SetStatusMessage(msg:text, fr_color:frcol, bk_color:bkcol, display_time:display_time_ms);
 			//m_status_message_trans.Text = text ?? string.Empty;
 			//m_status_message_trans.Visible = text.HasValue();
 			//m_status_message_trans.ForeColor = frcol;
@@ -2063,7 +2063,7 @@ namespace RyLogViewer
 		/// <summary>Create a status message that displays until cleared. Use null or "" to hide the status</summary>
 		public void SetStaticStatusMessage(string text, Color frcol, Color bkcol)
 		{
-			m_status_message_fixed.SetStatusMessage(text, null, Resources.Idle, false, frcol, bkcol);
+			m_status_message_fixed.SetStatusMessage(msg:text, fr_color:frcol, bk_color:bkcol);
 			//m_status_message_fixed.Text = text ?? string.Empty;
 			//m_status_message_fixed.Visible = text.HasValue();
 			//m_status_message_fixed.ForeColor = frcol;

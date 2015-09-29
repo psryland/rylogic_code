@@ -71,7 +71,7 @@ namespace TestCS
 			m_giz.Attach(m_obj0);
 			m_giz.Moved += (s,a) =>
 				{
-					m_status.SetStatusMessage("Gizmo", display_time_ms:TimeSpan.FromSeconds(2));
+					m_status.SetStatusMessage(msg:"Gizmo", display_time:TimeSpan.FromSeconds(2));
 				};
 			m_view3d.Window.AddGizmo(m_giz);
 
