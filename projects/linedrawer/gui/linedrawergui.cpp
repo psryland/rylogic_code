@@ -22,6 +22,9 @@ std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, in
 namespace ldr
 {
 	TCHAR FileOpenFilter[] = TEXT("Ldr Script (*.ldr)\0*.ldr\0Lua Script (*.lua)\0*.lua\0DirectX Files (*.x)\0*.x\0All Files (*.*)\0*.*\0\0");
+	char const* StepRdrMainLoop = "rdr main loop";
+	char const* StepWatchFiles = "watch_files";
+	char const* StepPlugin = "plugin step";
 
 	// Callback function for reading a point in world space
 	// Used by the tool UIs to measure distances and angles
@@ -36,7 +39,6 @@ namespace ldr
 		,m_recent_files()
 		,m_saved_views()
 		,m_store_ui(*this)
-		,m_store_ui_old()
 		,m_editor_ui(*this)
 		,m_measure_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
 		,m_angle_tool_ui(ReadPoint, &m_main->m_cam, m_main->m_rdr, *this)
@@ -58,10 +60,6 @@ namespace ldr
 		// Initialise the menu lists
 		m_recent_files.Attach(pr::SubMenuByName(m_menu, TEXT("&File,&Recent Files"))      ,ID_FILE_RECENTFILES ,0xffffffff ,this);
 		m_saved_views .Attach(pr::SubMenuByName(m_menu, TEXT("&Navigation,&Saved Views")) ,ID_NAV_SAVEDVIEWS   ,0xffffffff ,this);
-
-		// Initialise the object manager
-		m_store_ui_old.Create(*this);
-		m_store_ui_old.Settings(m_main->m_settings.m_ObjectManagerSettings.c_str());
 
 		// Initialise the script editor
 		m_editor_ui.Text(m_main->m_settings.m_NewObjectString.c_str());
@@ -105,20 +103,20 @@ namespace ldr
 
 		// Create a step context for rendering
 		enum { force_render = false };
-		m_msg_loop.AddStepContext("rdr main loop", [this](double)
+		m_msg_loop.AddStepContext(StepRdrMainLoop, [this](double)
 		{
 			if (m_main && !m_suspend_render)
 				m_main->DoRender(force_render);
 		}, 60.0f, false);
 
 		// Add a step context for 30Hz stepping
-		m_msg_loop.AddStepContext("plugin step", [this](double s)
+		m_msg_loop.AddStepContext(StepPlugin, [this](double s)
 		{
 			Step30Hz(s);
 		}, 30.0f, true);
 
 		// Add a step context for polling file state
-		m_msg_loop.AddStepContext("watch_files", [this](double)
+		m_msg_loop.AddStepContext(StepWatchFiles, [this](double)
 		{
 			// If file watching is turned on, look for changed files
 			if (m_main->m_settings.m_WatchForChangedFiles)
@@ -143,7 +141,7 @@ namespace ldr
 	}
 	MainGUI::~MainGUI()
 	{
-		m_store_ui.Close();
+		//m_store_ui.Close();
 		//m_editor_ui.Close();
 		m_measure_tool_ui.Close();
 		m_angle_tool_ui.Close();
@@ -160,6 +158,16 @@ namespace ldr
 			m_recent_files.ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
 			m_saved_views .ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result) ||
 			base::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+	}
+
+	// Close this form
+	bool MainGUI::Close(int exit_code)
+	{
+		// Remove the step contexts before destroying windows
+		m_msg_loop.RemoveStepContext(StepRdrMainLoop);
+		m_msg_loop.RemoveStepContext(StepPlugin);
+		m_msg_loop.RemoveStepContext(StepWatchFiles);
+		return base::Close(exit_code);
 	}
 
 	// Handler timer messages
@@ -496,9 +504,7 @@ namespace ldr
 	// Display the object manager UI
 	void MainGUI::OnShowObjectManagerUI()
 	{
-		m_store_ui2.Visible(true);
-
-		m_store_ui.Show(*this);
+		m_store_ui.Visible(true);
 		m_store_ui.Populate(m_main->m_store);
 	}
 
@@ -711,7 +717,7 @@ namespace ldr
 		m_angle_tool_ui.Close();
 		m_measure_tool_ui.Close();
 		//m_editor_ui.Close();
-		m_store_ui.Close();
+		//m_store_ui.Close();
 		Close(exit_code);
 	}
 

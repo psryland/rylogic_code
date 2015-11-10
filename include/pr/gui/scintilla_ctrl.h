@@ -48,14 +48,20 @@ namespace pr
 			};
 			#pragma endregion
 
+		private:
+
 			using uint = unsigned int;
 			SciFnDirect m_snd;
 			mutable sptr_t m_ptr;
+			bool m_auto_indent;
+
+		public:
 
 			ScintillaCtrl(pr::gui::Params const& p = Params())
 				:Control(p)
 				,m_snd(m_hwnd != nullptr ? SciFnDirect(::SendMessageW(m_hwnd, SCI_GETDIRECTFUNCTION, 0, 0)) : nullptr)
 				,m_ptr(m_hwnd != nullptr ? sptr_t     (::SendMessageW(m_hwnd, SCI_GETDIRECTPOINTER , 0, 0)) : 0)
+				,m_auto_indent(false)
 			{}
 
 			// Helper function for calling the direct function and returned the result as 'TRet'
@@ -88,31 +94,6 @@ namespace pr
 				m_snd = nullptr;
 				m_ptr = 0;
 				Control::Detach();
-			}
-
-			// Message map function
-			// Return true to halt message processing, false to allow other controls to process the message
-			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
-			{
-				//WndProcDebug(hwnd, message, wparam, lparam, "Scint");
-				switch (message)
-				{
-				case WM_NOTIFY:
-					{
-						// Handle notifications from the control
-						auto hdr = reinterpret_cast<NMHDR*>(lparam);
-						if (hdr->hwndFrom == m_hwnd)
-						{
-							//auto nf = reinterpret_cast<SCNotification*>(lparam);
-							//switch (hdr->code)
-							//{
-							//}
-							return true;
-						}
-						break;
-					}
-				}
-				return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 			}
 
 			// Initialise styles with reasonable defaults
@@ -190,6 +171,7 @@ namespace pr
 				ClearDocumentStyle();
 				StyleBits(7);
 				IndentationGuides(true);
+				AutoIndent(true);
 				TabWidth(4);
 				Indent(4);
 				CaretFore(dark ? 0xffffff : 0x000000);
@@ -327,6 +309,58 @@ namespace pr
 				return Cmd<size_t>(SCI_GETLENGTH, 0, 0L); // Same as SCI_GETTEXTLENGTH
 			}
 
+			// Message map function
+			// Return true to halt message processing, false to allow other controls to process the message
+			bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			{
+				//WndProcDebug(hwnd, message, wparam, lparam, "Scint");
+				switch (message)
+				{
+				case WM_NOTIFY:
+					{
+						// Handle notifications from the control
+						auto hdr = reinterpret_cast<NMHDR*>(lparam);
+						if (hdr->hwndFrom == m_hwnd)
+						{
+							auto nf = reinterpret_cast<SCNotification*>(lparam);
+							return HandleSCNotification(hdr->code, nf);
+						}
+						break;
+					}
+				}
+				return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+			}
+
+			// Respond to notifications from the control
+			virtual bool HandleSCNotification(int notification_code, SCNotification const* nf)
+			{
+				switch (notification_code)
+				{
+				case SCN_CHARADDED:
+					{
+						#pragma region Auto Indent
+						if (AutoIndent())
+						{
+							auto lem = Cmd<int>(SCI_GETEOLMODE);
+							auto lend =
+								(lem == SC_EOL_CR && nf->ch == '\r') ||
+								(lem == SC_EOL_LF && nf->ch == '\n') ||
+								(lem == SC_EOL_CRLF && nf->ch == '\n');
+							if (lend)
+							{
+								auto line = Cmd<int>(SCI_LINEFROMPOSITION, Cmd<int>(SCI_GETCURRENTPOS));
+								auto indent = line > 0 ? Cmd<int>(SCI_GETLINEINDENTATION, line - 1) : 0;
+								Cmd<void>(SCI_SETLINEINDENTATION, line, indent);
+								Cmd<void>(SCI_GOTOPOS, Cmd<int>(SCI_GETLINEENDPOSITION, line));
+							}
+						}
+						#pragma endregion
+						break;
+					}
+				}
+				return false;
+			}
+
 			#pragma region Text
 			void ClearAll          ()                                         { return Cmd<void>(SCI_CLEARALL, 0, 0L); }
 			void ClearDocumentStyle()                                         { return Cmd<void>(SCI_CLEARDOCUMENTSTYLE, 0, 0L); }
@@ -418,6 +452,12 @@ namespace pr
 			// Insert/Overwrite
 			bool GetOvertype() const        { return Cmd<int >(SCI_GETOVERTYPE, 0, 0L) != 0; }
 			void SetOvertype(bool overtype) { return Cmd<void>(SCI_SETOVERTYPE, overtype, 0L); }
+			#pragma endregion
+
+			#pragma region Indenting
+			// Get/Set auto indent mode on/off
+			bool AutoIndent() const { return m_auto_indent; }
+			void AutoIndent(bool enable) { m_auto_indent = enable; }
 			#pragma endregion
 
 			#pragma region Cut, Copy And Paste

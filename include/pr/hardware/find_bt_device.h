@@ -1,6 +1,6 @@
 //**************************************************************
 // FindBTDevices
-//  (c)opyright Rylogic Limited 2015
+//  Copyright (c) Rylogic Limited 2015
 //**************************************************************
 // Scoped wrapper around the BluetoothFindFirstRadio/BluetoothFindNextRadio  API
 // Usage:
@@ -19,7 +19,7 @@
 
 namespace pr
 {
-	// Helper for enumerating bt radios
+	// Helper for enumerating BT radios
 	struct FindBTRadios
 	{
 	private:
@@ -76,6 +76,7 @@ namespace pr
 					switch (err) {
 					default: throw std::exception("Error while enumerating bluetooth radio devices");
 					case ERROR_NO_MORE_ITEMS:
+					case RPC_S_SERVER_UNAVAILABLE:
 						m_more = false;
 						break;
 					}
@@ -84,7 +85,7 @@ namespace pr
 		}
 	};
 
-	// Helper for enumerating bt devices
+	// Helper for enumerating BT devices
 	struct FindBTDevices :BLUETOOTH_DEVICE_INFO_STRUCT
 	{
 		struct Params :BLUETOOTH_DEVICE_SEARCH_PARAMS
@@ -128,6 +129,7 @@ namespace pr
 				switch (err) {
 				default: throw std::exception("Failed to enumerate devices on bluetooth radio");
 				case ERROR_NO_MORE_ITEMS:
+				case RPC_S_SERVER_UNAVAILABLE:
 					m_more = false;
 					break;
 				}

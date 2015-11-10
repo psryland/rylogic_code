@@ -130,7 +130,7 @@ namespace pr
 			// Otherwise, make no assumptions
 			else
 			{
-				attr.m_name.clear();
+				if (count >= 1) attr.m_name.clear();
 				if (count >= 1 && !pr::str::ExtractIdentifierC(attr.m_name, std::begin(tok0))) reader.ReportError(pr::script::EResult::TokenNotFound, "object name is invalid");
 				if (count >= 2 && !ExtractColour(tok1, attr.m_colour.m_aarrggbb))              reader.ReportError(pr::script::EResult::TokenNotFound, "object colour is invalid");
 			}

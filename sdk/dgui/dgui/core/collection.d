@@ -12,7 +12,7 @@ class Collection(T)
 {
 	private T[] _t;
 
-	public final int add(T t)
+	public final ulong add(T t)
 	{
 		this._t ~= t;
 		return this._t.length - 1;
@@ -28,7 +28,7 @@ class Collection(T)
 		return this._t;
 	}
 
-	@property public final int length()
+	@property public final ulong length()
 	{
 		return this._t.length;
 	}

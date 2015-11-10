@@ -3,8 +3,7 @@
 //  Copyright (c) Oct 2003 Paul Ryland
 //******************************************
 
-#ifndef PR_BYTE_DATA_H
-#define PR_BYTE_DATA_H
+#pragma once
 
 #include <malloc.h>
 #include <vector>
@@ -12,7 +11,9 @@
 namespace pr
 {
 	// Handy typedef of a vector of bytes
-	typedef std::vector<unsigned char> ByteCont;
+	using ByteCont = std::vector<unsigned char>;
+
+	// Append data to a byte container
 	template <typename T> inline ByteCont& AppendData(ByteCont& data, const T& object)
 	{
 		data.insert(data.end(), reinterpret_cast<const unsigned char*>(&object), reinterpret_cast<const unsigned char*>(&object + 1));
@@ -42,36 +43,58 @@ namespace pr
 	// constructors/destructors/etc to be called on types you add to this container.
 	template <std::size_t Alignment> struct ByteData
 	{
+		using value_type = unsigned char;
+
 		void*       m_ptr;
 		std::size_t m_size;
 		std::size_t m_capacity;
 
 		ByteData()
-		:m_ptr(0)
-		,m_size(0)
-		,m_capacity(0)
+			:m_ptr(0)
+			,m_size(0)
+			,m_capacity(0)
 		{}
-
-		ByteData(ByteData const& copy)
-		:m_ptr(0)
-		,m_size(0)
-		,m_capacity(0)
+		ByteData(ByteData&& rhs)
+			:m_ptr(rhs.m_ptr)
+			,m_size(rhs.m_size)
+			,m_capacity(rhs.m_capacity)
 		{
-			grow(copy.m_capacity);
-			memcpy(m_ptr, copy.m_ptr, copy.m_size);
-			m_size = copy.m_size;
+			rhs.m_ptr = nullptr;
+			rhs.m_size = 0;
+			rhs.m_capacity = 0;
 		}
-
+		ByteData(ByteData const& rhs)
+			:m_ptr(0)
+			,m_size(0)
+			,m_capacity(0)
+		{
+			grow(rhs.m_capacity);
+			memcpy(m_ptr, rhs.m_ptr, rhs.m_size);
+			m_size = rhs.m_size;
+		}
 		~ByteData()
 		{
 			grow(0);
 		}
 
-		ByteData operator = (ByteData const& copy)
+		ByteData& operator = (ByteData&& rhs)
 		{
-			grow(copy.m_capacity);
-			memcpy(m_ptr, copy.m_ptr, copy.m_size);
-			m_size = copy.m_size;
+			if (this != &rhs)
+			{
+				std::swap(m_ptr, rhs.m_ptr);
+				std::swap(m_size, rhs.m_size);
+				std::swap(m_capacity, rhs.m_capacity);
+			}
+			return *this;
+		}
+		ByteData& operator = (ByteData const& rhs)
+		{
+			if (this != &rhs)
+			{
+				grow(rhs.m_capacity);
+				memcpy(m_ptr, rhs.m_ptr, rhs.m_size);
+				m_size = rhs.m_size;
+			}
 			return *this;
 		}
 
@@ -104,9 +127,16 @@ namespace pr
 		}
 		void resize(std::size_t new_size)
 		{
-			if( m_capacity < new_size )
+			if (m_capacity < new_size)
 				grow(new_size * 3 / 2);
 			m_size = new_size;
+		}
+		void resize(std::size_t new_size, unsigned char fill)
+		{
+			auto old_size = m_size;
+			resize(new_size);
+			if (old_size < new_size)
+				memset(begin() + old_size, fill, new_size - old_size);
 		}
 
 		// Add 'type' to the end of the container
@@ -229,6 +259,10 @@ namespace pr
 			return at(index);
 		}
 
+		// A pointer to the data
+		unsigned char const* data() const { return begin(); }
+		unsigned char*       data()       { return begin(); }
+
 	private:
 		void grow(std::size_t capacity)
 		{
@@ -254,5 +288,3 @@ namespace pr
 		}
 	};
 }
-
-#endif

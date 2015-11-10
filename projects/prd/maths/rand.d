@@ -11,8 +11,8 @@ class MersenneTwister
 		UPPER_MASK = 0x80000000UL, // most significant w-r bits
 		LOWER_MASK = 0x7fffffffUL, // least significant r bits
 	};
-	private uint mt[N] = void;             // the array for the state vector
-	private int  mti   = N + 1;            // mti == N+1 means mt[N] is not initialized
+	private uint[N] mt  = void;  // the array for the state vector
+	private int     mti = N + 1; // mti == N+1 means mt[N] is not initialized
 	
 	// Singleton instance
 	private static MersenneTwister m_singleton = null;

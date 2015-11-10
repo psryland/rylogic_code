@@ -2,8 +2,8 @@
 // Win32 API 
 //  Copyright (c) Rylogic Ltd 2014
 //*****************************************************************************************
-// A collection of structs that wrap the win32 api and expose an
-// interface similar to C# .NET winforms. Inspired by ATL\WTL.
+// A collection of structs that wrap the win32 API and expose an
+// interface similar to C# .NET win forms. Inspired by ATL\WTL.
 // Specs:
 //   - As fast as ATL\WTL. Uses ATL thunks for WNDPROC
 //   - Doesn't use macros. Much easier to debug/read
@@ -50,7 +50,7 @@
 #endif
 
 #pragma warning(push)
-#pragma warning(disable: 4351) // new behavior: elements of array will be default initialized
+#pragma warning(disable: 4351) // new behaviour: elements of array will be default initialized
 
 namespace pr
 {
@@ -114,7 +114,7 @@ namespace pr
 			_bitwise_operators_allowed,
 		};
 
-		// Autosize anchors
+		// Auto size anchors
 		enum class EAnchor
 		{
 			None            = 0,
@@ -158,6 +158,36 @@ namespace pr
 			TryAgain = IDTRYAGAIN,
 			Continue = IDCONTINUE,
 			Timeout  = IDTIMEOUT,
+		};
+
+		// Window start position
+		enum class EStartPosition
+		{
+			Default,
+			CentreParent,
+			Manual,
+		};
+
+		// Set window position flags
+		enum class EWindowPos :UINT
+		{
+			None           = 0,
+			NoSize         = SWP_NOSIZE        ,
+			NoMove         = SWP_NOMOVE        ,
+			NoZorder       = SWP_NOZORDER      ,
+			NoRedraw       = SWP_NOREDRAW      ,
+			NoActivate     = SWP_NOACTIVATE    ,
+			FrameChanged   = SWP_FRAMECHANGED  ,
+			ShowWindow     = SWP_SHOWWINDOW    ,
+			HideWindow     = SWP_HIDEWINDOW    ,
+			NoCopyBits     = SWP_NOCOPYBITS    ,
+			NoOwnerZOrder  = SWP_NOOWNERZORDER ,
+			NoSendChanging = SWP_NOSENDCHANGING,
+			DrawFrame      = SWP_DRAWFRAME     ,
+			NoReposition   = SWP_NOREPOSITION  ,
+			DeferErase     = SWP_DEFERERASE    ,
+			AsyncWindowpos = SWP_ASYNCWINDOWPOS,
+			_bitwise_operators_allowed,
 		};
 
 		// Control key state
@@ -600,40 +630,24 @@ namespace pr
 		// Window position information
 		struct WindowPos :WINDOWPOS
 		{
-			enum EFlags :UINT
-			{
-				None           = 0,
-				NoSize         = SWP_NOSIZE        ,
-				NoMove         = SWP_NOMOVE        ,
-				NoZorder       = SWP_NOZORDER      ,
-				NoRedraw       = SWP_NOREDRAW      ,
-				NoActivate     = SWP_NOACTIVATE    ,
-				FrameChanged   = SWP_FRAMECHANGED  ,
-				ShowWindow     = SWP_SHOWWINDOW    ,
-				HideWindow     = SWP_HIDEWINDOW    ,
-				NoCopyBits     = SWP_NOCOPYBITS    ,
-				NoOwnerZOrder  = SWP_NOOWNERZORDER ,
-				NoSendChanging = SWP_NOSENDCHANGING,
-				DrawFrame      = SWP_DRAWFRAME     ,
-				NoReposition   = SWP_NOREPOSITION  ,
-				DeferErase     = SWP_DEFERERASE    ,
-				AsyncWindowpos = SWP_ASYNCWINDOWPOS,
-				_bitwise_operators_allowed,
-			};
 			WindowPos(HWND hwnd_ = nullptr)
-				:WindowPos(hwnd_, 0, 0, 0, 0, EFlags::NoMove|EFlags::NoSize|EFlags::NoZorder)
+				:WindowPos(hwnd_, 0, 0, 0, 0, EWindowPos::NoMove|EWindowPos::NoSize|EWindowPos::NoZorder)
 			{}
-			WindowPos(HWND hwnd_, Rect const& rect, EFlags flags_ = EFlags::NoZorder)
+			WindowPos(HWND hwnd_, Rect const& rect, EWindowPos flags_ = EWindowPos::NoZorder)
 				:WindowPos(hwnd_, rect.left, rect.top, rect.width(), rect.height(), flags_)
 			{}
-			WindowPos(HWND hwnd_, int x_, int y_, int cx_, int cy_, EFlags flags_ = EFlags::NoZorder) :WINDOWPOS()
+			WindowPos(HWND hwnd_, int x_, int y_, int cx_, int cy_, EWindowPos flags_ = EWindowPos::NoZorder) :WINDOWPOS()
 			{
 				hwnd = hwnd_;
 				x = x_;
 				y = y_;
 				cx = cx_;
 				cy = cy_;
-				flags = flags_;
+				flags = (UINT)flags_;
+			}
+			Rect Bounds() const
+			{
+				return Rect(x, y, x + cx, y + cy);
 			}
 		};
 
@@ -665,16 +679,18 @@ namespace pr
 		struct MemDC :DC
 		{
 			HDC m_hdc_orig;
+			Rect m_rect;
 			HBITMAP m_bmp;
 			HBITMAP m_bmp_old;
-			Rect m_rect;
+			bool m_owns_bmp;
 
-			MemDC(HDC hdc, Rect const& rect)
+			MemDC(HDC hdc, Rect const& rect, HBITMAP bmp)
 				:DC(::CreateCompatibleDC(hdc), true)
 				,m_hdc_orig(hdc)
-				,m_bmp(::CreateCompatibleBitmap(m_hdc_orig, rect.width(), rect.height()))
-				,m_bmp_old(HBITMAP(::SelectObject(m_hdc, m_bmp)))
 				,m_rect(rect)
+				,m_bmp(bmp ? bmp : ::CreateCompatibleBitmap(hdc, rect.width(), rect.height()))
+				,m_bmp_old(HBITMAP(::SelectObject(m_hdc, m_bmp)))
+				,m_owns_bmp(bmp == nullptr)
 			{
 				assert(m_bmp != nullptr);
 				::SetViewportOrgEx(m_hdc, -m_rect.left, -m_rect.top, nullptr);
@@ -683,7 +699,7 @@ namespace pr
 			{
 				::BitBlt(m_hdc_orig, m_rect.left, m_rect.top, m_rect.width(), m_rect.height(), m_hdc, m_rect.left, m_rect.top, SRCCOPY);
 				::SelectObject(m_hdc, m_bmp_old);
-				::DeleteObject(m_bmp);
+				if (m_owns_bmp) ::DeleteObject(m_bmp);
 			}
 		};
 		struct ClientDC :DC
@@ -1237,11 +1253,11 @@ namespace pr
 			return id + 1;
 		}
 
-		// Placeholder for events that take no arguments. (Makes the templating consistent)
+		// Place-holder for events that take no arguments. (Makes the templating consistent)
 		struct EmptyArgs
 		{};
 
-		// Event args used in cancellable operations
+		// Event args used in cancel-able operations
 		struct CancelEventArgs :EmptyArgs
 		{
 			bool m_cancel;
@@ -1253,14 +1269,22 @@ namespace pr
 		// Event args for paint events
 		struct PaintEventArgs :EmptyArgs
 		{
-			Rect m_update_rect;   // The area needing updating
-			bool m_dopaint;       // True if there is a non-zero update rectangle
+			HWND m_hwnd;          // The window being painted
 			HDC  m_alternate_hdc; // If non-null, then paint onto this device context
-			PaintEventArgs(HWND hwnd, bool erase, HDC alternate_hdc)
-				:m_update_rect()
-				,m_dopaint(::GetUpdateRect(hwnd, &m_update_rect, erase) != 0)
+			PaintEventArgs(HWND hwnd, HDC alternate_hdc)
+				:m_hwnd(hwnd)
 				,m_alternate_hdc(alternate_hdc)
 			{}
+
+			// Returns the area the needs painting
+			// Using 'erase' == true, causes a WM_ERASEBKGND message to be sent.
+			// It's probably better to just fill the area in your paint handler instead
+			Rect UpdateRect(BOOL erase = false) const
+			{
+				Rect rect;
+				return ::GetUpdateRect(m_hwnd, &rect, erase) != 0
+					? rect : Rect();
+			}
 		};
 
 		// Event args for window sizing events
@@ -1275,6 +1299,17 @@ namespace pr
 				,m_point(pos.x, pos.y)
 				,m_size(pos.cx, pos.cy)
 				,m_before(before)
+			{}
+		};
+
+		// Event args for shown events
+		struct ShownEventArgs :EmptyArgs
+		{
+			bool m_shown;
+			int m_reason;
+			ShownEventArgs(bool shown, int reason)
+				:m_shown(shown)
+				,m_reason(reason)
 			{}
 		};
 
@@ -1347,7 +1382,7 @@ namespace pr
 		//   btn.Click += std::bind(&MyDlg::HandleBtn, this, _1, _2);
 		template <typename Sender, typename Args> struct EventHandler
 		{
-			// Note: This isn't threadsafe
+			// Note: This isn't thread safe
 			using Delegate = std::function<void(Sender,Args)>;
 			struct Func
 			{
@@ -1621,7 +1656,7 @@ namespace pr
 					}
 					else
 					{
-						X = L;
+						X += L;
 					}
 				};
 
@@ -1916,6 +1951,7 @@ namespace pr
 			IdOrHandle<HICON>  m_icon_sm;
 			COLORREF           m_color_fore;
 			COLORREF           m_color_back;
+			EStartPosition     m_start_pos;
 			bool               m_top_level;      // True for non-mdi forms, false for WS_CHILD controls
 			bool               m_main_wnd;       // Main application window, closing it exits the application
 			bool               m_dlg_behaviour;
@@ -1952,6 +1988,7 @@ namespace pr
 				,m_icon_sm      ()
 				,m_color_fore   (CLR_INVALID)
 				,m_color_back   (CLR_INVALID)
+				,m_start_pos    (EStartPosition::Default)
 				,m_top_level    (top_level)
 				,m_main_wnd     (false)
 				,m_dlg_behaviour(dlg_behaviour)
@@ -1989,6 +2026,7 @@ namespace pr
 			Params& icon_sm      (IdOrHandle<HICON> i)         { m_icon_sm       = i;                   return *this; }
 			Params& fr_col       (COLORREF c)                  { m_color_fore    = c;                   return *this; }
 			Params& bk_col       (COLORREF c)                  { m_color_back    = c;                   return *this; }
+			Params& start_pos    (EStartPosition pos)          { m_start_pos     = pos;                 return *this; }
 			Params& top_level    (bool tl)                     { m_top_level     = tl;                  return *this; }
 			Params& mdi_child    (bool mdi)                    { m_top_level     = !mdi;                return *this; }
 			Params& main_wnd     (bool mw)                     { m_main_wnd      = mw;                  return *this; }
@@ -2173,8 +2211,8 @@ namespace pr
 			Brush               m_colour_back;  // Background colour
 			LONG                m_down_at[4];   // Button down timestamp
 			bool                m_top_level;    // True if this control is a top level control (typically a form)
-			bool                m_dbl_buffer;   // True if the control is double buffered
 			bool                m_handle_only;  // True if this object does not own 'm_hwnd'
+			HBITMAP             m_dbl_buffer;   // Non-null if the control is double buffered
 			WndClassEx          m_wci;          // The window class info for this control
 			ATL::CStdCallThunk  m_thunk;        // WndProc thunk, turns a __stdcall into a __thiscall
 			WNDPROC             m_oldproc;      // The window class default wndproc function
@@ -2225,7 +2263,8 @@ namespace pr
 			}
 			static int WndClassStyle()
 			{
-				return CS_HREDRAW | CS_VREDRAW | CS_DBLCLKS;
+				// Don't include CS_HREDRAW and CS_VREDRAW, these just add unnecessary redraws
+				return CS_DBLCLKS;
 			}
 			static HICON WndIcon(HINSTANCE hinst, bool large)
 			{
@@ -2244,6 +2283,9 @@ namespace pr
 			static HBRUSH WndBackground()
 			{
 				// Returning null forces handling of WM_ERASEBKGND
+				// Don't return null by default, subclasses can return S_FALSE
+				// from WM_ERASEBKGND to not erase the background. Most controls
+				// use the background brush.
 				return ::GetSysColorBrush(COLOR_3DFACE);
 			}
 			static wchar_t const* WndMenu()
@@ -2317,8 +2359,8 @@ namespace pr
 			{
 				if (true /*&& name != nullptr && strncmp(name,"about",5) == 0 && message == WM_CTLCOLORDLG*/)
 				{
-					auto out = [](char const* s) { OutputDebugStringA(s); };
-					//auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
+					//auto out = [](char const* s) { OutputDebugStringA(s); };
+					auto out = [](char const* s) { std::ofstream("P:\\dump\\wingui.log", std::ofstream::app).write(s,strlen(s)); };
 
 					// Tracing, allows messages to be turned on/off for a short period of time
 					static bool trace = true;
@@ -2386,26 +2428,29 @@ namespace pr
 				case WM_ERASEBKGND:
 					#pragma region
 					{
-						// Allow subclasses to prevent erase background
+						// Allow subclasses to handle erase background (which might be to do nothing except return true)
 						if (OnEraseBkGnd(EmptyArgs()))
 							return S_FALSE;
 
-						auto hdc = (HDC)wparam;
-						if (m_colour_fore != nullptr)
-						{
-							::SetTextColor(hdc, m_colour_fore);
-						}
+						// If double buffering is enabled, don't do anything in WM_ERASEBKGND
+						if (DoubleBuffered())
+							return S_FALSE;
+
+						// If the background colour has been set, fill the client area with it
 						if (m_colour_back != nullptr)
 						{
-							// If the background colour has been set, fill the client area with it
-							// Use a trick. By using the ETO_OPAQUE flag in the call to ExtTextOut, and supplying a
-							// zero-length string to display, you can quickly and easily fill a rectangular
-							// area using the current background colour.
-							::SetBkColor(hdc, m_colour_back);
-							::SetDCBrushColor(hdc, m_colour_back);
+							auto hdc = (HDC)wparam;
+							auto rect = Rect{};
+							if (GetUpdateRect(m_hwnd, &rect, FALSE))
+								::FillRect(hdc, &rect, m_colour_back);
 
-							auto rect = ClientRect();
-							::ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &rect, L"", 0, 0);
+							//// Use a trick. By using the ETO_OPAQUE flag in the call to ExtTextOut, and supplying a
+							//// zero-length string to display, you can quickly and easily fill a rectangular
+							//// area using the current background colour.
+							//auto rect = ClientRect();
+							//::SetBkColor(hdc, m_colour_back);
+							//::SetDCBrushColor(hdc, m_colour_back);
+							//::ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &rect, L"", 0, 0);
 							return S_FALSE;
 						}
 						break;
@@ -2420,13 +2465,59 @@ namespace pr
 						//  The update rect in the paint args is the area needing painting.
 						//  Typical behaviour is to create a PaintStruct, however you can not do this and
 						//  use this sequence instead:
-						//    ::GetUpdateRect(*this, &r, TRUE); <- sends the WM_ERASEBKGND if needed
+						//    ::GetUpdateRect(*this, &r, FALSE); <- (TRUE sends the WM_ERASEBKGND if needed)
 						//    Draw(); <- do your drawing
 						//    Validate(&r); <- tell windows the update rect has been updated,
 						//  Non-client window parts are drawn in DefWndProc
-						if (OnPaint(PaintEventArgs(m_hwnd, true, HDC(wparam))))
-							return S_OK;
 
+						// The alternative DC to draw into
+						auto alt_dc = HDC(wparam);
+
+						// If double buffering is enabled and we're not drawing to
+						// an alternate device (e.g. printer), draw into the double buffer.
+						if (DoubleBuffered() && alt_dc == nullptr)
+						{
+							auto dc = ClientDC(m_hwnd);
+							auto client_rect = ClientRect();
+							MemDC mem(dc, client_rect, m_dbl_buffer);
+
+							// Fill with the window background colour
+							auto bsh =
+								m_colour_back ? (HBRUSH)m_colour_back :
+								m_wci.hbrBackground ? m_wci.hbrBackground :
+								::GetSysColorBrush(DC_BRUSH);
+							::FillRect(mem.m_hdc, &mem.m_rect, bsh);
+
+							// Render the window into the memory DC
+							if (!OnPaint(PaintEventArgs(m_hwnd, mem.m_hdc)))
+								DefWndProc(WM_PRINTCLIENT, (WPARAM)mem.m_hdc, LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
+
+							// Bitblt to the screen
+							Throw(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
+							return S_OK;
+				//if (m_dbl_buffer) // This can't be right...
+				//{
+					//if (args.m_alternate_hdc != 0) // If wparam != 0 then is should be an existing HDC
+				//	{
+						//MemDC mem(args.m_alternate_hdc, ClientRect());
+				//		DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
+				//	}
+				//	else
+				//	{
+				//		PaintStruct p(m_hwnd);
+						//MemDC mem(p.hdc, p.rcPaint);
+				//		::FillRect(mem.m_hdc, &mem.m_rect, ::GetSysColorBrush(DC_BRUSH));
+				//		DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
+				//	}
+				//	return true;
+				//}
+
+						}
+						else
+						{
+							if (OnPaint(PaintEventArgs(m_hwnd, alt_dc)))
+								return S_OK;
+						}
 						break;
 					}
 					#pragma endregion
@@ -2436,7 +2527,21 @@ namespace pr
 					{
 						auto& wp = *reinterpret_cast<WindowPos*>(lparam);
 						auto before = message == WM_WINDOWPOSCHANGING;
+						
+						// Recreate the double buffer bitmap at the new size
+						if (!before && DoubleBuffered())
+							DoubleBuffered(true);
+
 						OnWindowPosChange(SizeEventArgs(wp, before));
+						break;
+					}
+					#pragma endregion
+				case WM_SHOWWINDOW:
+					#pragma region
+					{
+						auto shown = wparam != 0;
+						auto reason = (int)lparam;
+						OnShown(ShownEventArgs(shown, reason));
 						break;
 					}
 					#pragma endregion
@@ -2531,62 +2636,92 @@ namespace pr
 			// Return true to halt message processing, false to allow other controls to process the message
 			virtual bool ProcessWindowMessage(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result)
 			{
-				// Default handling of parent window messages for all controls
-				// Subclassed controls should override this method.
+				// Default handling of parent window messages for all controls (including forms)
+				// Sub-classed controls should override this method.
 				// For Controls:
 				//   - This method is called for every message received by the top-level window.
 				//   - When you're handling messages, think "is this a message the window receives or the control receives"
 				// For Forms:
-				//   - WndProc cannot be subclassed, this method *is* the WndProc for the Form.
+				//   - WndProc cannot be sub-classed, this method *is* the WndProc for the Form.
 				//   - Forms can be parented to other forms, remember to check 'm_hwnd == hwnd'
 				//     to detect messages for the form as opposed to messages for parent forms.
+
+				// Remember:
+				//   - This control is not necessarily a child control, it can be the Form using
+				//     the default implementation, or an owned form.
+
 				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s ProcWinMsg: ",m_name.c_str()));
 				switch (message)
 				{
-				default:
-					#pragma region
-					{
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						break;
-					}
-					#pragma endregion
 				case WM_INITDIALOG:
 					#pragma region
 					{
+						// When the parent dialog is initialising, attach this control to the dialog item
 						if (m_id != ID_UNUSED)
 						{
 							Attach(::GetDlgItem(hwnd, m_id));
 							RecordPosOffset();
 						}
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						break;
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_DESTROY:
 					#pragma region
 					{
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						if (hwnd != m_hwnd) ::DestroyWindow(m_hwnd); // Parent window is being destroy, destroy this window to
-						break;
+						// Notify children of the WM_DESTROY before destroying this window so that destruction
+						// occurs from leaves to root of the control tree
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+							return true;
+
+						// Parent window is being destroy, destroy this window to
+						if (hwnd != m_hwnd)
+							::DestroyWindow(m_hwnd);
+
+						// Allow WM_DESTROY to be passed to the parent window's WndProc
+						return false;
 					}
 					#pragma endregion
-				case WM_WINDOWPOSCHANGED:
+				case WM_WINDOWPOSCHANGING:
 					#pragma region
 					{
-						// WM_WINDOWPOSCHANGED sent to the parent causes this window to resize.
-						// The act of resizing causes WM_WINDOWPOSCHANGED to be sent to our WndProc which
-						// then calls OnWindowPosChange()
-						ResizeToParent();
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						break;
+						// The parent window is about to resize.
+						// Resizing this window will cause WM_WINDOWPOSCHANGING/ED to be sent to this
+						// window's WndProc which then calls OnWindowPosChange.
+						auto& new_size = *(WindowPos*)lparam;
+
+						// If the parent window is actually resizing (don't care about anything else)
+						if (m_parent != nullptr && (new_size.flags & SWP_NOSIZE) == 0)
+						{
+							// Get the new size of the parent's client area.
+							Rect rect;
+							if (new_size.hwnd == m_parent->m_hwnd)
+							{
+								// If the window being resized is our immediate parent, then compare
+								// the current parent bounds to the new size to figure out how
+								// the client area will be changed.
+								auto b = m_parent->ParentRect();
+								auto c = m_parent->ClientRect();
+								rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
+							}
+							else
+							{
+								// If our parent is not the window being resized, we can assume our
+								// parent already has the correct new size
+								rect = m_parent->ClientRect();
+							}
+							ResizeToParent(rect);
+						}
+
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_TIMER:
 					#pragma region
 					{
+						// Timer event, forwarded to all child controls
 						auto event_id = UINT_PTR(wparam);
 						OnTimer(TimerEventArgs(event_id));
-						break;
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_CTLCOLORSTATIC:
@@ -2596,13 +2731,18 @@ namespace pr
 				case WM_CTLCOLORSCROLLBAR:
 					#pragma region
 					{
+						// This is a request to set the foreground and background colour in the DC
+						// for the specified control. If this is that control then set the fore and
+						// back colours in the given DC.
 						if (HWND(lparam) == m_hwnd)
 						{
-							auto hdc = HDC(wparam);
+							auto hdc = HDC(wparam); // The DC to set colours in
+
+							// If we have a fore colour, set it, otherwise leave it as the default
 							if (m_colour_fore != nullptr)
-							{
 								::SetTextColor(hdc, m_colour_fore);
-							}
+
+							// If we have a background colour, set it and return the background brush
 							if (m_colour_back != nullptr)
 							{
 								::SetBkColor(hdc, m_colour_back);
@@ -2610,20 +2750,23 @@ namespace pr
 								result =  LRESULT(static_cast<HBRUSH>(m_colour_back));
 								return true;
 							}
+
+							// If we don't have a background brush, let the WndProc handle it
 							return false;
 						}
-						else if (ForwardToChildren(hwnd, message, wparam, lparam, result))
-							return true;
-						else
-							break;
+
+						// Not for this control, forward to children
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_DROPFILES:
 					#pragma region
 					{
+						// Files dropped onto this control
 						auto drop_info = HDROP(wparam);
 						DropFilesEventArgs drop(drop_info);
-							
+
+						// Read the file paths of the dropped files
 						int i = 0;
 						drop.m_filepaths.resize(::DragQueryFileW(drop_info, 0xFFFFFFFF, nullptr, 0));
 						for (auto& path : drop.m_filepaths)
@@ -2632,28 +2775,40 @@ namespace pr
 							Throw(::DragQueryFileW(drop_info, i, &path[0], UINT(path.size())) != 0, "Failed to query file name from dropped files");
 							++i;
 						}
+
+						// Call the handler
 						OnDropFiles(drop);
-						break;
+						return true;
 					}
 					#pragma endregion
 				case WM_MOUSEWHEEL:
 					#pragma region
 					{
-						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse button/move messages
-						// which are sent to the control with focus
-						
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+						// WM_MOUSEWHEEL is only sent to the focused window, unlike mouse
+						// button/move messages which are sent to the control with focus.
+
+						// Forward to the leaf controls first
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+							return true;
+
 						auto delta = GET_WHEEL_DELTA_WPARAM(wparam);
 						auto pt = Point(lparam);
 						auto keystate = EMouseKey(GET_KEYSTATE_WPARAM(wparam)) | (::GetKeyState(VK_MENU) < 0 ? EMouseKey::Alt : EMouseKey()); 
 						if (OnMouseWheel(MouseWheelArgs(delta, pt, keystate)))
 							return true;
-						break;
+
+						// Pass to WndProc, I don't think it does anything, but doesn't hurt either
+						return false;
+					}
+					#pragma endregion
+				default:
+					#pragma region
+					{
+						// By default, forward the parent window message to the children of this control
+						return ForwardToChildren(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				}
-
-				return false;
 			}
 
 			// Forward a window message to child controls
@@ -2710,11 +2865,19 @@ namespace pr
 				m_pos_offset = Rect(c.left - p.left, c.top - p.top, c.right - p.right, c.bottom - p.bottom);
 			}
 
-			// Adjust the size of this control relative to it's parent
-			virtual void ResizeToParent(bool repaint = true)
+			// Adjust the size of this control relative to 'parent_client'
+			// 'parent_client' is the available client area on the parent in parent client coordinates
+			// (typically 0,0 -> w,h. But not always, e.g. TabControl has the tabs in client space).
+			// 'parent_client' may be the client area that the parent *will* have soon.
+			virtual void ResizeToParent(Rect const& parent_client, bool repaint = false)
 			{
-				if (!m_hwnd || m_top_level || !m_parent || !m_parent->m_hwnd || !Visible()) return;
-				auto p = m_parent->ClientRect();
+				// Resize even if not visible so that the control has the correct size on becoming visible
+				// Top level controls (i.e forms) will only call this if they are pinned.
+				if (!m_hwnd || !m_parent || !m_parent->m_hwnd)
+					return;
+
+				// Get the available area and this control's area relative to it (including margin).
+				auto p = parent_client;
 				auto c = ParentRect().Adjust(m_margin);
 				auto w = c.width();
 				auto h = c.height();
@@ -2723,7 +2886,7 @@ namespace pr
 					if (int(m_anchor & EAnchor::Left) != 0)
 					{
 						c.left = p.left + m_pos_offset.left;
-						if (int(m_anchor & EAnchor::Right ) == 0)
+						if (int(m_anchor & EAnchor::Right) == 0)
 							c.right = c.left + w;
 					}
 					if (int(m_anchor & EAnchor::Top) != 0)
@@ -2759,6 +2922,11 @@ namespace pr
 				}
 				RAII<bool> no_save_ofs(m_pos_ofs_save, false);
 				ParentRect(c.Adjust(-m_margin), repaint);
+			}
+			void ResizeToParent(bool repaint = false)
+			{
+				if (!m_parent) return;
+				ResizeToParent(m_parent->ClientRect(), repaint);
 			}
 
 			// Handle auto position/size
@@ -2831,8 +2999,8 @@ namespace pr
 				,m_colour_back(p.back_color())
 				,m_down_at()
 				,m_top_level(p.m_top_level)
-				,m_dbl_buffer(false)
 				,m_handle_only(false)
+				,m_dbl_buffer(nullptr)
 				,m_wci(p.wci())
 				,m_thunk()
 				,m_oldproc()
@@ -2872,6 +3040,8 @@ namespace pr
 			{
 				if (!m_handle_only)
 				{
+					DoubleBuffered(false);
+
 					// Orphan child controls
 					for (; !m_child.empty(); )
 						m_child.front()->Parent(nullptr);
@@ -2926,7 +3096,7 @@ namespace pr
 				// Handle auto position/size
 				AutoSizePosition(x, y, w, h, p.m_parent);
 
-				// If this control is a popup or overlapped window, then we need x,y,w,h to be in screen coords
+				// If this control is a pop-up or overlapped window, then we need x,y,w,h to be in screen coords
 				if ((p.m_style & WS_CHILD) == 0 && p.m_parent.m_ctrl != nullptr)
 				{
 					auto r = p.m_parent->ScreenRect();
@@ -2935,12 +3105,12 @@ namespace pr
 				}
 
 				// Determine the value to pass at the HMENU parameter in CreateWindowEx
-				// For popup and overlapped windows this should be a valid menu handle or null
+				// For pop-up and overlapped windows this should be a valid menu handle or null
 				// Otherwise, it should be the id of the control being created
 				auto menu = (p.m_style & WS_CHILD) ? (HMENU)p.m_id : p.menu();
 
 				// CreateWindowEx failure reasons:
-				//  invalid menu handle - if the window style is overlapped or popup, then 'menu' must be null
+				//  invalid menu handle - if the window style is overlapped or pop-up, then 'menu' must be null
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, p.m_init_param);
 				auto hwnd = ::CreateWindowExW(p.m_style_ex, p.atom(), p.m_text, p.m_style, x, y, w, h, p.m_parent, menu, p.m_hinst, &init);
@@ -3244,8 +3414,22 @@ namespace pr
 			}
 
 			// Get/Set double buffering for the control
-			bool DoubleBuffered() const { return m_dbl_buffer; }
-			void DoubleBuffered(bool dbl_buffer) { m_dbl_buffer = dbl_buffer; }
+			bool DoubleBuffered() const { return m_dbl_buffer != nullptr; }
+			void DoubleBuffered(bool dbl_buffer)
+			{
+				assert(!m_handle_only && "Cannot double buffer handle-only instances");
+				if (m_dbl_buffer != nullptr)
+				{
+					::DeleteObject(m_dbl_buffer);
+					m_dbl_buffer = nullptr;
+				}
+				if (dbl_buffer)
+				{
+					ClientDC dc(m_hwnd);
+					auto r = ClientRect();
+					m_dbl_buffer = ::CreateCompatibleBitmap(dc, r.width(), r.height());
+				}
+			}
 
 			// Get/Set the control's background colour
 			COLORREF BackColor() const
@@ -3346,10 +3530,10 @@ namespace pr
 				Throw(::GetWindowRect(m_hwnd, &r), "GetWindowRect failed.");
 				return r;
 			}
-			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::NoZorder)
+			void ScreenRect(Rect r, bool repaint = true, HWND prev = nullptr, EWindowPos flags = EWindowPos::NoZorder)
 			{
 				assert(::IsWindow(m_hwnd));
-				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
+				if (!repaint) flags = flags | EWindowPos::NoRedraw;
 
 				// SetWindowPos takes client space coordinates
 				if (Style() & WS_CHILD)
@@ -3359,11 +3543,12 @@ namespace pr
 				}
 
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
-				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), flags), "SetWindowPos failed");
+				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
 			}
 
-			// Get/Set the bounds [TL,BR) of this control within it's parent client space
+			// Get/Set the bounds [TL,BR) of this control within it's parent client space.
+			// Only applies to WS_CHILD windows, owned windows are still positioned relative to the screen
 			Rect ParentRect() const
 			{
 				assert(::IsWindow(m_hwnd));
@@ -3378,10 +3563,10 @@ namespace pr
 				::MapWindowPoints(nullptr, hwndparent, rect.points(), 2);
 				return rect;
 			}
-			void ParentRect(Rect r, bool repaint = true, HWND prev = nullptr, WindowPos::EFlags flags = WindowPos::NoZorder)
+			void ParentRect(Rect r, bool repaint = true, HWND prev = nullptr, EWindowPos flags = EWindowPos::NoZorder)
 			{
 				assert(::IsWindow(m_hwnd));
-				if (!repaint) flags = flags | WindowPos::EFlags::NoRedraw;
+				if (!repaint) flags = flags | EWindowPos::NoRedraw;
 
 				// Invalidate the previous and new rect on the parent
 				auto hwndparent = ::GetParent(m_hwnd);
@@ -3394,7 +3579,7 @@ namespace pr
 
 				// SetWindowPos takes client space coordinates
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
-				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), flags), "SetWindowPos failed");
+				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
 			}
 
@@ -3479,7 +3664,7 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				assert(m_hwnd != centre_hwnd && "'centre_hwnd' is the window to centre relative to. It shouldn't be this window");
 
-				// Determine the owning window to center against
+				// Determine the owning window to centre against
 				auto style = Style();
 				if (centre_hwnd == nullptr)
 					centre_hwnd = (style & WS_CHILD) ? ::GetParent(m_hwnd) : ::GetWindow(m_hwnd, GW_OWNER);
@@ -3489,7 +3674,7 @@ namespace pr
 				// Get the coordinates of the window relative to 'centre_hwnd'
 				if (!(style & WS_CHILD))
 				{
-					// Don't center against invisible or minimized windows
+					// Don't centre against invisible or minimized windows
 					if (centre_hwnd != nullptr)
 					{
 						auto parent_state = ::GetWindowLong(centre_hwnd, GWL_STYLE);
@@ -3497,7 +3682,7 @@ namespace pr
 							centre_hwnd = nullptr;
 					}
 
-					// Center within screen coordinates
+					// Centre within screen coordinates
 					HMONITOR monitor = ::MonitorFromWindow(centre_hwnd ? centre_hwnd : m_hwnd, MONITOR_DEFAULTTONEAREST);
 					Throw(monitor != nullptr, "Failed to determine the monitor containing the centre on window");
 
@@ -3509,7 +3694,7 @@ namespace pr
 				}
 				else
 				{
-					// center within parent client coordinates
+					// centre within parent client coordinates
 					auto p = ::GetParent(m_hwnd);
 
 					assert(::IsWindow(p));
@@ -3540,10 +3725,26 @@ namespace pr
 			// Position this window relative to it's parent
 			// AutoSizePosition values can be used, e.g. Left|LeftOf|<sibbling_ctrl_id>
 			// Use SWP_ flags to ignore position or size changes
-			void PositionWindow(int x, int y, int w, int h, WindowPos::EFlags flags = WindowPos::EFlags::NoZorder | WindowPos::EFlags::NoActivate)
+			void PositionWindow(int x, int y, int w, int h, EWindowPos flags = EWindowPos::NoZorder | EWindowPos::NoActivate)
 			{
+				if ((flags & EWindowPos::NoMove) != 0)
+				{
+					auto r = ParentRect();
+					x = r.left;
+					y = r.top;
+				}
+				if ((flags & EWindowPos::NoSize) != 0)
+				{
+					auto r = ParentRect();
+					w = r.width();
+					h = r.height();
+				}
 				AutoSizePosition( x, y, w, h, m_parent);
-				ScreenRect(Rect(x, y, x + w, y + h), false, nullptr, flags);
+				ParentRect(Rect(x, y, x + w, y + h), false, nullptr, flags);
+			}
+			void PositionWindow(int x, int y)
+			{
+				PositionWindow(x, y, 0, 0, EWindowPos::NoSize | EWindowPos::NoZorder | EWindowPos::NoActivate);
 			}
 
 			// Return the mouse location at the time of the last message
@@ -3583,6 +3784,9 @@ namespace pr
 			// Window position changing or changed
 			EventHandler<Control&, SizeEventArgs const&> WindowPosChange;
 
+			// Window shown or hidden
+			EventHandler<Control&, ShownEventArgs const&> Shown;
+
 			// Key down/up
 			EventHandler<Control&, KeyEventArgs const&> Key;
 
@@ -3614,28 +3818,16 @@ namespace pr
 				WindowPosChange(*this, args);
 			}
 
+			// Handle window shown or hidden
+			virtual void OnShown(ShownEventArgs const& args)
+			{
+				Shown(*this, args);
+			}
+
 			// Handle the Paint event. Return true, to prevent anything else handling the event
 			virtual bool OnPaint(PaintEventArgs const& args)
 			{
 				Paint(*this, args);
-
-				if (m_dbl_buffer) // This can't be right...
-				{
-					if (args.m_alternate_hdc != 0) // If wparam != 0 then is should be an existing HDC
-					{
-						MemDC mem(args.m_alternate_hdc, ClientRect());
-						DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
-					}
-					else
-					{
-						PaintStruct p(m_hwnd);
-						MemDC mem(p.hdc, p.rcPaint);
-						::FillRect(mem.m_hdc, &mem.m_rect, ::GetSysColorBrush(DC_BRUSH));
-						DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
-					}
-					return true;
-				}
-
 				return false;
 			}
 
@@ -3709,7 +3901,7 @@ namespace pr
 		protected:
 			// Notes:
 			// Neither Form or Control define a load of OnXYZ handlers. This is because it adds a
-			// load of potentially unneeded entries to the vtbl. The expected way to use this class
+			// load of potentially unneeded entries to the 'vtbl'. The expected way to use this class
 			// is to override ProcessWindowMessage and decode/handle the window messages you actually
 			// need. Notice, WM_CREATE is typically not needed, the constructor of your derived type
 			// is where OnCreate() code should go.
@@ -3719,16 +3911,17 @@ namespace pr
 
 			enum { IDC_PINWINDOW_OPT = 0x4e50, IDC_PINWINDOW_SEP };
 
-			HINSTANCE   m_hinst;            // Module instance
-			bool        m_app_main_window;  // True if this is the main application window
-			Menu        m_menu;             // The main menu
-			HACCEL      m_accel;            // Keyboard accelerators for this window
-			DlgTemplate m_templ;            // A dialog template for this form (if given)
-			int         m_exit_code;        // The code to return when the form closes
-			bool        m_dialog_behaviour; // True if IsDialogMessage() is called in the message loop
-			bool        m_hide_on_close;    // True if the window should just hide when closed
-			bool        m_pin_window;       // True if this window is pinned to its parent
-			bool        m_modal;            // True if this is a dialog being displayed modally
+			HINSTANCE      m_hinst;            // Module instance
+			bool           m_app_main_window;  // True if this is the main application window
+			Menu           m_menu;             // The main menu
+			HACCEL         m_accel;            // Keyboard accelerators for this window
+			DlgTemplate    m_templ;            // A dialog template for this form (if given)
+			EStartPosition m_start_pos;        // How to position the form when first shown
+			int            m_exit_code;        // The code to return when the form closes
+			bool           m_dialog_behaviour; // True if IsDialogMessage() is called in the message loop
+			bool           m_hide_on_close;    // True if the window should just hide when closed
+			bool           m_pin_window;       // True if this window is pinned to its parent
+			bool           m_modal;            // True if this is a dialog being displayed modally
 
 		public:
 
@@ -3749,6 +3942,7 @@ namespace pr
 				,m_menu(p.menu())
 				,m_accel(p.accel())
 				,m_templ(p.templ())
+				,m_start_pos(p.m_start_pos)
 				,m_exit_code()
 				,m_dialog_behaviour(p.m_dlg_behaviour)
 				,m_hide_on_close(p.m_hide_on_close)
@@ -3781,6 +3975,7 @@ namespace pr
 				m_menu              = p.menu();
 				m_accel             = p.accel();
 				m_templ             = p.templ();
+				m_start_pos         = p.m_start_pos;
 				m_dialog_behaviour  = p.m_dlg_behaviour;
 				m_hide_on_close     = p.m_hide_on_close;
 				m_pin_window        = p.m_pin_window;
@@ -3970,16 +4165,17 @@ namespace pr
 				// By default we don't forward messages to child controls. Use Control::ProcessWindowMessage()
 				// to explicitly forward some message types, call ForwardToChildren only when you want different
 				// behaviour to the Control default implementation but still want child controls to process the message.
-
 				// Forms can be parented to other forms
-				if (hwnd != m_hwnd)
-				{
-					// todo: Special handling for form->form messages
-					if (message == WM_WINDOWPOSCHANGED && PinWindow())
-						ResizeToParent();
-
-					return false;
-				}
+				// Any message not handled here or in Control::ProcessWindowMessage() is passed to Control::WndProc
+				// I.e the logic goes:
+				//  <new message> arrives
+				//    Form::ProcessWindowMessage() - form processes it which may mean passing it to 
+				//    Control::ProcessWindowMessage() - the base class (Control)
+				//      - each message may be passed to child controls using ForwardToChildren(), this is
+				//      what Control::ProcessWindowMessage() does by default.
+				//  otherwise:
+				//     Control::WndProc() - otherwise the WndProc for the window handles it (in the base class)
+				//  Some events in Control::WndProc() have handler virtual functions
 
 				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name.c_str()));
 				switch (message)
@@ -3987,42 +4183,79 @@ namespace pr
 				case WM_INITDIALOG:
 					#pragma region
 					{
-						// The default Control handler for WM_INITDIALOG calls 'Attach' which
-						// Forms don't need because we call Attach in InitWndProc.
-						// Note: typically subclassed forms will call base::ProcessWindowMessage()
+						// The default Control::ProcessWindowMessage() handler for WM_INITDIALOG calls
+						// 'Attach' which Forms don't need because we call Attach in InitWndProc.
+						// Note: typically sub-classed forms will call base::ProcessWindowMessage()
 						// before doing whatever they need to do in WM_INITDIALOG. This is so that
 						// child controls get attached.
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
-						break;
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+							return true;
+
+						// Return false so that WM_INITDIALOG is passed to the WndProc
+						return false;
 					}
 					#pragma endregion
 				case WM_CLOSE:
 					#pragma region
 					{
+						// Close the form in response to the WM_CLOSE request
 						Close();
-						if (m_hide_on_close) return true;
-						break;
+
+						// If this is a hide-on-close form, return true so that the WM_CLOSE message isn't
+						// passed to the WndProc which would then send WM_DESTROY.
+						return m_hide_on_close;
 					}
 					#pragma endregion
 				case WM_DESTROY:
 					#pragma region
 					{
 						// Let children know the parent is destroying
-						if (ForwardToChildren(hwnd, message, wparam, lparam, result)) return true;
+						if (ForwardToChildren(hwnd, message, wparam, lparam, result))
+							return true;
 
 						// If we're the main app, post WM_QUIT
 						if (m_app_main_window)
 							::PostQuitMessage(m_exit_code);
 
-						// Fall through to the Control::WndProc which handles WM_DESTROY,
-						// unhooking the thunk and nulling the 'm_hwnd'
+						// Return false so that WM_DESTROY is passed to the WndProc which
+						// while unhook the thunk and null the 'm_hwnd'
+						return false;
+					}
+					#pragma endregion
+				case WM_SHOWWINDOW:
+					#pragma region
+					{
+						// WM_SHOWWINDOW is sent to notify that the window was shown or hidden.
+						auto shown = wparam != 0;
+						auto reason = lparam;
+						if (shown && reason == 0) // Due to ShowWindow
+						{
+							switch (m_start_pos)
+							{
+							case EStartPosition::Default:
+								{
+									auto pt = m_parent != nullptr ? m_parent->loc() : Point();
+									PositionWindow(pt.x + 50, pt.y + 50);
+									break;
+								}
+							case EStartPosition::CentreParent:
+								{
+									auto parent = m_parent != nullptr ? (HWND)*m_parent : (HWND)nullptr;
+									CenterWindow(parent);
+									break;
+								}
+							}
+							m_start_pos = EStartPosition::Manual;
+						}
+
+						// Pass WM_SHOWWINDOW to the WndProc
 						return false;
 					}
 					#pragma endregion
 				case WM_CTLCOLORDLG:
 					#pragma region
 					{
-						// Our background brush is only valid if we have valid wnd class info
+						// Our background brush is only valid if we have valid wndclass info
 						// otherwise, let the default handle it.
 						result = LRESULT(m_wci.hbrBackground);
 						return m_wci.m_atom != 0;
@@ -4036,11 +4269,11 @@ namespace pr
 						auto ctrl_hwnd = HWND(lparam);         // Only valid if sent from a control (i.e. not sent from a menu or accelerator)
 
 						// This is a menu or accelerator command if the control hwnd is 0
-						// Otherwise forward to child controls
 						if (ctrl_hwnd == nullptr)
 							return HandleMenu(id, src, ctrl_hwnd);
-						else
-							return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
+
+						// Otherwise forward to child controls
+						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
 				case WM_SYSCOMMAND:
@@ -4053,12 +4286,20 @@ namespace pr
 							::CheckMenuItem(::GetSystemMenu(m_hwnd, FALSE), IDC_PINWINDOW_OPT, MF_BYCOMMAND|(PinWindow()? MF_CHECKED : MF_UNCHECKED));
 							return true;
 						}
+
+						// Pass the WM_SYSCOMMAND to the WndProc
+						return false;
 					}
 					#pragma endregion
 				case WM_WINDOWPOSCHANGED:
 					#pragma region
 					{
-						if (PinWindow()) RecordPosOffset();
+						// If we're a pinned window, record our offset from our target
+						if (PinWindow())
+							RecordPosOffset();
+
+						// Resize child controls and child windows (if pinned)
+						RAII<bool> unpin(m_pin_window, false);
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
@@ -4076,15 +4317,20 @@ namespace pr
 				case WM_CTLCOLOREDIT:
 				case WM_CTLCOLORLISTBOX:
 				case WM_CTLCOLORSCROLLBAR:
-				default: // uncomment this to quick test if forwarding all messages "fixes it"
 					#pragma region
 					{
 						// Messages that get here will be forwarded to child controls as well
 						return Control::ProcessWindowMessage(hwnd, message, wparam, lparam, result);
 					}
 					#pragma endregion
+				default:
+					#pragma region
+					{
+						// By default, messages aren't forwarded to child controls
+						return false;
+					}
+					#pragma endregion
 				}
-				return false;
 			}
 
 			// Default main menu handler
@@ -4112,11 +4358,44 @@ namespace pr
 			}
 
 			// Adjust the size of this control relative to it's parent
-			void ResizeToParent(bool repaint = true) override
+			void ResizeToParent(Rect const& parent_client, bool repaint = false) override
 			{
 				if (!PinWindow()) return;
-				Control::ResizeToParent(repaint);
+				Control::ResizeToParent(parent_client, repaint);
 			}
+
+			#pragma region Handlers
+
+			// Handle the Paint event. Return true, to prevent anything else handling the event
+			bool OnPaint(PaintEventArgs const& args) override
+			{
+				// Do the painting for the form (which is just
+				// fill the update region with the background colour)
+				if (m_colour_back != nullptr || m_wci.hbrBackground != nullptr)
+				{
+					PaintStruct ps(args.m_hwnd);
+					auto dc = args.m_alternate_hdc ? args.m_alternate_hdc : ps.hdc;
+					if (m_colour_back != nullptr)
+						::FillRect(dc, &ps.rcPaint, m_colour_back);
+					else
+						::FillRect(dc, &ps.rcPaint, m_wci.hbrBackground);
+				}
+
+				// Let the base class raise the event
+				Control::OnPaint(args);
+
+				// We've done the painting so we're done
+				return true;
+			}
+
+			// Handle the Erase background event. Return true, to prevent anything else handling the event
+			bool OnEraseBkGnd(EmptyArgs const& args) override
+			{
+				EraseBkGnd(*this, args);
+				return true;
+			}
+
+			#pragma endregion
 		};
 		#pragma endregion
 
@@ -4331,6 +4610,7 @@ namespace pr
 				return int(::SendMessageW(m_hwnd, EM_EXLINEFROMCHAR, 0, LPARAM(char_index)));
 			}
 
+			// Get/Set the range of selected text
 			RangeI Selection() const
 			{
 				assert(::IsWindow(m_hwnd));
@@ -4344,10 +4624,14 @@ namespace pr
 				::SendMessageW(m_hwnd, EM_SETSEL, range.beg, range.end);
 				if (scroll_to_caret) ScrollToCaret();
 			}
-			void SelectAll()
+
+			// Select all text in the control
+			void SelectAll(bool scroll_to_caret = true)
 			{
-				Selection(RangeI(0, -1));
+				Selection(RangeI(0, -1), scroll_to_caret);
 			}
+
+			// Scroll to the caret position
 			void ScrollToCaret()
 			{
 				assert(::IsWindow(m_hwnd));
@@ -4448,14 +4732,14 @@ namespace pr
 				return Item(SelectedIndex());
 			}
 
-			// Remove all items from the combo dropdown list
+			// Remove all items from the combo drop down list
 			void ResetContent()
 			{
 				assert(::IsWindow(m_hwnd));
 				::SendMessageW(m_hwnd, CB_RESETCONTENT, 0, 0L);
 			}
 
-			// Add a string to the combo box dropdown list
+			// Add a string to the combo box drop down list
 			int AddItem(wchar_t const* item)
 			{
 				assert(::IsWindow(m_hwnd));
@@ -4508,8 +4792,8 @@ namespace pr
 		struct ListView :Control
 		{
 			enum { DefW = 80, DefH = 80 };
-			enum :DWORD { DefaultStyle   = DefaultControlStyle|LVS_EDITLABELS };
-			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx|LVS_EX_HEADERDRAGDROP};//|LVS_EX_FULLROWSELECT|LVS_EX_TWOCLICKACTIVATE|LVS_EX_FLATSB|LVS_EX_AUTOSIZECOLUMNS };
+			enum :DWORD { DefaultStyle   = DefaultControlStyle | LVS_ALIGNLEFT | LVS_SHOWSELALWAYS | LVS_EDITLABELS | LVS_NOLABELWRAP | LVS_REPORT };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx | LVS_EX_HEADERDRAGDROP | LVS_EX_FULLROWSELECT };//| LVS_EX_TWOCLICKACTIVATE | LVS_EX_FLATSB | LVS_EX_AUTOSIZECOLUMNS };
 			static wchar_t const* WndClassName() { return L"SysListView32"; }
 
 			// Modes for the list view
@@ -4526,6 +4810,7 @@ namespace pr
 			{
 				ItemInfo(wchar_t const* text_ = L"") :LVITEMW() { text(text_); }
 				ItemInfo(HLISTITEM item, int mask_ = 0) :LVITEMW() { iItem = item; mask = mask_; }
+				ItemInfo& index(int i)                 { iItem = i; return *this; }
 				ItemInfo& subitem(int i)               { iSubItem = i; return *this; }
 				ItemInfo& text(wchar_t const* text_)   { mask |= LVIF_TEXT; pszText = const_cast<wchar_t*>(text_); return *this; }
 				ItemInfo& image(int img_idx)           { mask |= LVIF_IMAGE; iImage = img_idx; return *this; }
@@ -4555,7 +4840,9 @@ namespace pr
 
 			ListView(pr::gui::Params const& p = Params())
 				:Control(p)
-			{}
+			{
+				DoubleBuffered(true);
+			}
 
 			// Get/Set view type.
 			EViewType ViewType() const
@@ -4577,7 +4864,7 @@ namespace pr
 			}
 
 			// Get the number of elements in the list
-			size_t Count() const
+			size_t ItemCount() const
 			{
 				assert(::IsWindow(m_hwnd));
 				return (size_t)::SendMessageW(m_hwnd, LVM_GETITEMCOUNT, 0, 0L);
@@ -4598,10 +4885,17 @@ namespace pr
 			}
 
 			// Add a row to the list
-			HLISTITEM InsertItem(int idx, ItemInfo const& info)
+			HLISTITEM InsertItem(ItemInfo const& info)
 			{
 				assert(::IsWindow(m_hwnd));
 				return (HLISTITEM)::SendMessageW(m_hwnd, LVM_INSERTITEMW, 0, (LPARAM)&info);
+			}
+
+			// Remove an item from the list
+			bool DeleteItem(HLISTITEM item)
+			{
+				assert(::IsWindow(m_hwnd));
+				return ::SendMessageW(m_hwnd, LVM_DELETEITEM, item, 0L) != 0;
 			}
 
 			// Get/Set an item. Construct 'info' with the item handle and mask for the data you want to get/set
@@ -4615,6 +4909,26 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMW, 0, (LPARAM)&info), "Set list item failed");
+			}
+
+			// Get/Set the state of an item
+			UINT ItemState(HLISTITEM item, UINT state_mask) const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (UINT)::SendMessageW(m_hwnd, LVM_GETITEMSTATE, (WPARAM)item, (LPARAM)state_mask) & state_mask;
+			}
+			void ItemState(HLISTITEM item, int state, int state_mask)
+			{
+				assert(::IsWindow(m_hwnd));
+				auto info = ItemInfo(item).state(state, state_mask);
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_SETITEMSTATE, item, (LPARAM)&info), "Set list item state failed");
+			}
+
+			// Scroll an item into view
+			void EnsureVisible(HLISTITEM item, bool partial_ok)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, LVM_ENSUREVISIBLE, (WPARAM)item, MakeLParam(partial_ok, 0)), "Ensure list item is visible failed");
 			}
 
 			// Get/Set user data on the item
@@ -4660,12 +4974,41 @@ namespace pr
 		struct TreeView :Control
 		{
 			enum { DefW = 80, DefH = 80 };
-			enum :DWORD { DefaultStyle   = DefaultControlStyle|TVS_EDITLABELS };
-			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx};//|TVS_EX_AUTOHSCROLL|TVS_EX_FADEINOUTEXPANDOS};
+			enum :DWORD { DefaultStyle   = DefaultControlStyle | TVS_EDITLABELS | TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | TVS_FULLROWSELECT | TVS_NOSCROLL };
+			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
 			static wchar_t const* WndClassName() { return L"SysTreeView32"; }
 			struct Params :CtrlParams
 			{
 				Params() { wndclass(WndClassName()).name("treeview").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
+			};
+
+			// Next item codes
+			enum EItem
+			{
+				Root         = TVGN_ROOT,
+				Next         = TVGN_NEXT,
+				Prev         = TVGN_PREVIOUS,
+				Parent       = TVGN_PARENT,
+				Child        = TVGN_CHILD,
+				FirstVisible = TVGN_FIRSTVISIBLE,
+				NextVisible  = TVGN_NEXTVISIBLE,
+				PrevVisible  = TVGN_PREVIOUSVISIBLE,
+				LastVisible  = TVGN_LASTVISIBLE,
+				NextSelected = 0x000B, //TVGN_NEXTSELECTED,
+				DropHilite   = TVGN_DROPHILITE,
+				Caret        = TVGN_CARET,
+			};
+
+			// Expand or collapse codes
+			enum EExpand
+			{
+				Collapse = TVE_COLLAPSE,
+				Expand = TVE_EXPAND,
+				Toggle = TVE_TOGGLE,
+
+				// Flags that can be combined with above
+				ExpandPartial = TVE_EXPANDPARTIAL,
+				CollapseReset = TVE_COLLAPSERESET,
 			};
 
 			// Tree item
@@ -4691,6 +5034,14 @@ namespace pr
 				Throw((BOOL)::SendMessageW(m_hwnd, TVM_DELETEITEM, 0, (LPARAM)TVI_ROOT), "Delete all tree items failed");
 			}
 
+			// Return the root, next sibling, previous sibling, child, parent, etc item relative to 'item'
+			// 'item' can be null for Root, and FirstXYZ codes.
+			HTREEITEM NextItem(EItem code, HTREEITEM item = nullptr) const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (HTREEITEM)::SendMessageW(m_hwnd, TVM_GETNEXTITEM, (WPARAM)code, (LPARAM)item);
+			}
+
 			// Insert an item into the tree
 			HTREEITEM InsertItem(ItemInfo const& info, HTREEITEM parent, HTREEITEM insert_after)
 			{
@@ -4699,7 +5050,14 @@ namespace pr
 				ins.hParent = parent;
 				ins.hInsertAfter = insert_after;
 				ins.itemex = info;
-				return (HTREEITEM)::SendMessageW(m_hwnd, TVM_INSERTITEM, 0, (LPARAM)&info);
+				return (HTREEITEM)::SendMessageW(m_hwnd, TVM_INSERTITEMW, 0, (LPARAM)&ins);
+			}
+
+			// Delete an item and it's children from the tree
+			bool DeleteItem(HTREEITEM item)
+			{
+				assert(::IsWindow(m_hwnd));
+				return ::SendMessageW(m_hwnd, TVM_DELETEITEM, 0, (LPARAM)item) != 0;
 			}
 
 			// Get/Set an item. Construct 'info' with the item handle and mask for the data you want to get/set
@@ -4715,6 +5073,24 @@ namespace pr
 				Throw((BOOL)::SendMessageW(m_hwnd, TVM_SETITEMW, 0, (LPARAM)&info), "Set tree item failed");
 			}
 
+			// Get/Set the state of an item
+			UINT ItemState(HTREEITEM item, UINT state_mask) const
+			{
+				assert(::IsWindow(m_hwnd));
+				return (UINT)::SendMessageW(m_hwnd, TVM_GETITEMSTATE, (WPARAM)item, (LPARAM)state_mask) & state_mask;
+			}
+			void ItemState(HTREEITEM item, int state, int state_mask)
+			{
+				Item(ItemInfo(item).state(state, state_mask));
+			}
+
+			// Scroll an item into view
+			void EnsureVisible(HTREEITEM item)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, TVM_ENSUREVISIBLE, 0, (LPARAM)item), "Ensure tree item is visible failed");
+			}
+
 			// Get/Set user data on the item
 			template <typename T> T* UserData(HTREEITEM item) const
 			{
@@ -4724,6 +5100,13 @@ namespace pr
 			void UserData(HTREEITEM item, void* ctx)
 			{
 				Item(ItemInfo(item).user(ctx));
+			}
+
+			// Expand or collapse a node in the tree
+			void ExpandItem(HTREEITEM item, EExpand code)
+			{
+				assert(::IsWindow(m_hwnd));
+				Throw((BOOL)::SendMessageW(m_hwnd, TVM_EXPAND, code, (LPARAM)item), "Expand tree node failed");
 			}
 
 			// Message map function
@@ -5199,7 +5582,10 @@ namespace pr
 				// Add the tab
 				m_tabs.push_back(&tab);
 				tab.Parent(this);
-		
+
+				// Resize it appropriately
+				LayoutTab(tab, ClientRect());
+
 				// Select the tab that is being added, if desired
 				if (active)
 					SwitchTab(sel, index, true);
@@ -5283,11 +5669,15 @@ namespace pr
 			}
 
 			// Update the position of all the contained windows.
-			void UpdateLayout(bool repaint = true)
+			// 'client_rect' is the client area of this tab control (or what it will be soon)
+			void UpdateLayout(Rect const& client_rect, bool repaint = false)
 			{
-				auto rect = ClientRect();
 				for (auto tab : m_tabs)
-					tab->ParentRect(rect.Adjust(-tab->Margin()), repaint, nullptr, WindowPos::EFlags::NoZorder);
+					LayoutTab(*tab, client_rect, repaint);
+			}
+			void UpdateLayout(bool repaint = false)
+			{
+				UpdateLayout(ClientRect(), repaint);
 			}
 
 			// Events
@@ -5309,17 +5699,31 @@ namespace pr
 				TabSwitch(*this, args);
 			}
 
+			// The client rect for a tab control, excludes the tabs
+			Rect ClientRect() const override
+			{
+				auto cr = Control::ClientRect();
+				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&cr));
+
+				// TC has built in padding, we want to remove that and use our own padding
+				// There is also a 2px 3D border
+				auto style = Style();
+				if      ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +1); // Bottom
+				else if ((style & TCS_RIGHT ) &&  (style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +4); // Right
+				else if (                         (style & TCS_VERTICAL)) cr = cr.Adjust(-2, -4, +4, +4); // Left
+				else                                                      cr = cr.Adjust(-3, -1, +1, +2); // Top
+				return cr;
+			}
+
+		protected:
+
 			// Message map function
 			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
 			{
 				switch (message)
 				{
-				case WM_WINDOWPOSCHANGED:
-					{
-						UpdateLayout(true);
-						break;
-					}
 				case WM_NOTIFY:
+					#pragma region
 					{
 						auto hdr = reinterpret_cast<NMHDR*>(lparam);
 						if (hdr->hwndFrom == m_hwnd)
@@ -5348,27 +5752,16 @@ namespace pr
 						}
 						break;
 					}
+					#pragma endregion
 				}
 				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
 			}
 
-			// The client rect for a tab control, excludes the tabs
-			Rect ClientRect() const override
+			// Resize a tab to fit this control
+			void LayoutTab(Control& tab, Rect const& client_rect, bool repaint = false)
 			{
-				auto cr = Control::ClientRect();
-				::SendMessageW(m_hwnd, TCM_ADJUSTRECT, FALSE, LPARAM(&cr));
-
-				// TC has built in padding, we want to remove that and use our own padding
-				// There is also a 2px 3D border
-				auto style = Style();
-				if      ((style & TCS_BOTTOM) && !(style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +1); // Bottom
-				else if ((style & TCS_RIGHT ) &&  (style & TCS_VERTICAL)) cr = cr.Adjust(-4, -4, +2, +4); // Right
-				else if (                         (style & TCS_VERTICAL)) cr = cr.Adjust(-2, -4, +4, +4); // Left
-				else                                                      cr = cr.Adjust(-3, -1, +1, +2); // Top
-				return cr;
+				tab.ParentRect(client_rect.Adjust(-tab.Margin()), repaint, nullptr, EWindowPos::NoZorder);
 			}
-
-		protected:
 
 			// Throw if 'tab_index' is invalid
 			void ValidateTabIndex(int tab_index) const
@@ -5411,6 +5804,21 @@ namespace pr
 				{
 					::SendMessageW(m_hwnd, TCM_SETCURSEL, neu, 0);
 				}
+			}
+
+			// Handle window size changing starting or stopping
+			void OnWindowPosChange(SizeEventArgs const& args) override
+			{
+				if (args.m_before)
+				{
+					// This control is about to resize, resize the child windows to the new size
+					auto& new_size = args.m_pos;
+					auto b = ParentRect();
+					auto c = ClientRect();
+					auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
+					UpdateLayout(rect);
+				}
+				Control::OnWindowPosChange(args);
 			}
 		};
 		struct Splitter :Control
@@ -5469,62 +5877,46 @@ namespace pr
 			{
 				return m_bar_pos;
 			}
-			void BarPos(float pos, bool update = true)
+			void BarPos(float pos, bool repaint = false)
 			{
+				// Get the available client size based on orientation
 				auto w = m_vertical ? ClientRect().width() : ClientRect().height();
 				if (w > 0)
 				{
 					auto f = 2*w > m_min_pane_size ? m_min_pane_size / (float)w : 0.5f;
 					m_bar_pos = std::min(1.0f - f, std::max(0.0f + f, pos));
-					if (update)
-						UpdateLayout();
+					UpdateLayout(repaint);
 				}
 			}
 
 			// Update the layout of child windows
-			void UpdateLayout(bool repaint = true)
+			// 'client_rect' is the client area of this control (or what it will be soon)
+			void UpdateLayout(Rect const& client_rect, bool repaint = false)
 			{
 				auto bar_pos = BarPos();
 				Pane0.Visible(bar_pos != 0.0f);
 				Pane1.Visible(bar_pos != 1.0f);
 
-				if (Pane0.Visible())
-					Pane0.ParentRect(PaneRect(0), repaint);
-				if (Pane1.Visible())
-					Pane1.ParentRect(PaneRect(1), repaint);
-
+				// Invalidate the current area of the splitter bar
 				auto bar_rect = BarRect();
 				Invalidate(false, &bar_rect);
 
-				LRESULT result;
-				WindowPos pos;
-				ForwardToChildren(*TopLevelControl(), WM_WINDOWPOSCHANGED, 0, LPARAM(&pos), result);
+				// Update the size of the child panes
+				if (Pane0.Visible())
+					Pane0.ParentRect(PaneRect(0, client_rect), repaint);
+				if (Pane1.Visible())
+					Pane1.ParentRect(PaneRect(1, client_rect), repaint);
 			}
-
-			// Message map function
-			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
+			void UpdateLayout(bool repaint = false)
 			{
-				switch (message)
-				{
-				case WM_WINDOWPOSCHANGED:
-					{
-						// Don't need to forward WM_WINDOWPOSCHANGED to the child panes
-						// because 'UpdateLayout' does that manually.
-						ResizeToParent();
-						UpdateLayout(true);
-						return false;
-					}
-				}
-				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
+				UpdateLayout(ClientRect(), repaint);
 			}
 
 		protected:
 
 			// Return the rect for the bar in client space
-			Rect BarRect() const
+			Rect BarRect(Rect client) const
 			{
-				auto client = ClientRect();
-
 				if (BarPos() == 0.0f)
 					return m_vertical
 						? Rect(client.left, client.top, client.left, client.bottom)
@@ -5540,12 +5932,15 @@ namespace pr
 					? Rect(client.left + int(client.width() * BarPos() - hw), client.top, client.left +  int(client.width() * BarPos() + hw), client.bottom)
 					: Rect(client.left, client.top + int(client.height() * BarPos() - hw), client.right, client.top + int(client.height() * BarPos() + hw));
 			}
+			Rect BarRect() const
+			{
+				return BarRect(ClientRect());
+			}
 
 			// Return the rect for a pane in client space
-			Rect PaneRect(int idx) const
+			Rect PaneRect(int idx, Rect client) const
 			{
-				auto client = ClientRect();
-				auto bar = BarRect();
+				auto bar = BarRect(client);
 				switch (idx)
 				{
 				default:
@@ -5560,6 +5955,10 @@ namespace pr
 						? Rect(bar.right, client.top, client.right, client.bottom)
 						: Rect(client.left, bar.bottom, client.right, client.bottom);
 				}
+			}
+			Rect PaneRect(int idx) const
+			{
+				return PaneRect(idx, ClientRect());
 			}
 
 			// Draw the ghost bar. Note, drawing twice 'undraws' the ghost bar
@@ -5582,6 +5981,21 @@ namespace pr
 					::PatBlt(dc, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, PATINVERT);
 					::SelectObject(dc, old);
 				}
+			}
+
+			// Handle window size changing starting or stopping
+			void OnWindowPosChange(SizeEventArgs const& args) override
+			{
+				if (args.m_before)
+				{
+					// This control is about to resize, resize the child windows to the new size
+					auto& new_size = args.m_pos;
+					auto b = ParentRect();
+					auto c = ClientRect();
+					auto rect = Rect(c.left, c.top, c.right + (new_size.cx - b.width()), c.bottom + (new_size.cy - b.height()));
+					UpdateLayout(rect);
+				}
+				Control::OnWindowPosChange(args);
 			}
 
 			// Handle the Paint event. Return true, to prevent anything else handling the event
@@ -5652,9 +6066,7 @@ namespace pr
 					{
 						if (m_full_drag)
 						{
-							BarPos(pos);
-							Invalidate();
-							::UpdateWindow(m_hwnd);
+							BarPos(pos, true);
 						}
 						else
 						{

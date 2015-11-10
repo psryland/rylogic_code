@@ -13,30 +13,30 @@ namespace view3d
 		//,pr::events::IRecv<pr::ldr::Evt_LdrMeasureUpdate>
 		//,pr::events::IRecv<pr::ldr::Evt_LdrAngleDlgUpdate>
 	{
-		ErrorCBStack              m_error_cb;                 // Stack of error callback functions for the dll
-		HWND                      m_hwnd;                     // The associated window handle
-		pr::Renderer&             m_rdr;                      // Reference to the renderer
-		pr::rdr::Window           m_wnd;                      // The window being drawn on
-		pr::rdr::Scene            m_scene;                    // Scene manager
-		view3d::ObjectCont        m_objects;                  // References to objects to draw
-		view3d::GizmoCont         m_gizmos;                   // References to gizmos to draw
-		pr::Camera                m_camera;                   // Camera control
-		pr::rdr::Light            m_light;                    // Light source for the set
-		bool                      m_light_is_camera_relative; // Whether the light is attached to the camera or not
-		EView3DFillMode           m_fill_mode;                // Fill mode
-		pr::Colour32              m_background_colour;        // The background colour for this drawset
-		view3d::Instance          m_focus_point;
-		view3d::Instance          m_origin_point;
-		float                     m_focus_point_size;         // The base size of the focus point object
-		float                     m_origin_point_size;        // The base size of the origin instance
-		bool                      m_focus_point_visible;      // True if we should draw the focus point
-		bool                      m_origin_point_visible;     // True if we should draw the origin point
-		pr::ldr::ScriptEditorDlg  m_editor_ui;                // Object manager for objects added to this window
-		pr::ldr::ObjectManagerDlg m_obj_cont_ui;              // Object manager for objects added to this window
-		pr::ldr::MeasureDlg       m_measure_tool_ui;
-		pr::ldr::AngleDlg         m_angle_tool_ui;
-		EditorCont                m_editors;                  // User created editors
-		std::string               m_settings;                 // Allows a char const* to be returned
+		ErrorCBStack                m_error_cb;                 // Stack of error callback functions for the dll
+		HWND                        m_hwnd;                     // The associated window handle
+		pr::Renderer&               m_rdr;                      // Reference to the renderer
+		pr::rdr::Window             m_wnd;                      // The window being drawn on
+		pr::rdr::Scene              m_scene;                    // Scene manager
+		view3d::ObjectCont          m_objects;                  // References to objects to draw
+		view3d::GizmoCont           m_gizmos;                   // References to gizmos to draw
+		pr::Camera                  m_camera;                   // Camera control
+		pr::rdr::Light              m_light;                    // Light source for the set
+		bool                        m_light_is_camera_relative; // Whether the light is attached to the camera or not
+		EView3DFillMode             m_fill_mode;                // Fill mode
+		pr::Colour32                m_background_colour;        // The background colour for this drawset
+		view3d::Instance            m_focus_point;
+		view3d::Instance            m_origin_point;
+		float                       m_focus_point_size;         // The base size of the focus point object
+		float                       m_origin_point_size;        // The base size of the origin instance
+		bool                        m_focus_point_visible;      // True if we should draw the focus point
+		bool                        m_origin_point_visible;     // True if we should draw the origin point
+		pr::ldr::ScriptEditorDlg    m_editor_ui;                // Object manager for objects added to this window
+		pr::ldr::LdrObjectManagerUI m_obj_cont_ui;              // Object manager for objects added to this window
+		pr::ldr::MeasureDlg         m_measure_tool_ui;
+		pr::ldr::AngleDlg           m_angle_tool_ui;
+		EditorCont                  m_editors;                  // User created editors
+		std::string                 m_settings;                 // Allows a char const* to be returned
 
 		// Default window construction settings
 		static pr::rdr::WndSettings Settings(HWND hwnd, bool gdi_compat)
@@ -66,7 +66,7 @@ namespace view3d
 			,m_focus_point_visible(false)
 			,m_origin_point_visible(false)
 			,m_editor_ui(hwnd)
-			,m_obj_cont_ui()
+			,m_obj_cont_ui(hwnd)
 			,m_measure_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
 			,m_angle_tool_ui(ReadPoint, this_(), m_rdr, hwnd)
 			,m_editors()
@@ -131,13 +131,13 @@ namespace view3d
 		void Close()
 		{
 			//m_editor_ui      .Close();
-			m_obj_cont_ui    .Close();
+			//m_obj_cont_ui    .Close();
 			m_measure_tool_ui.Close();
 			m_angle_tool_ui  .Close();
 			//for (auto& e : m_editors) e->Close();
 
 			//m_editor_ui      .Detach();
-			m_obj_cont_ui    .Detach();
+			//m_obj_cont_ui    .Detach();
 			m_measure_tool_ui.Detach();
 			m_angle_tool_ui  .Detach();
 

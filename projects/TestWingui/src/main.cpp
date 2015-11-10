@@ -166,14 +166,20 @@ struct Main :Form
 				about.ShowDialog(this);
 			};
 
-		m_tc.Insert(L"Tab0", m_split);
-		m_tc.Insert(L"Tab1", m_tab1);
-		m_tc.Insert(L"Tab2", m_scint);
-		m_tc.Insert(L"Tab3", m_tab2);
-		m_tc.SelectedIndex(0);
+		if ((HWND)m_tc != nullptr)
+		{
+			m_tc.Insert(L"Tab0", m_split);
+			m_tc.Insert(L"Tab1", m_tab1);
+			m_tc.Insert(L"Tab2", m_scint);
+			m_tc.Insert(L"Tab3", m_tab2);
+			m_tc.SelectedIndex(0);
+		}
 
-		m_scint.InitDefaults();
-		m_scint.InitLdrStyle();
+		if ((HWND)m_scint != nullptr)
+		{
+			m_scint.InitDefaults();
+			m_scint.InitLdrStyle();
+		}
 	}
 
 	void RunBoobs(Button&, EmptyArgs const&)

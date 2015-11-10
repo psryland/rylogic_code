@@ -44,7 +44,6 @@ namespace ldr
 		pr::gui::RecentFiles        m_recent_files;         // The recent files
 		pr::gui::MenuList           m_saved_views;          // A list of camera snapshots
 		pr::ldr::LdrObjectManagerUI m_store_ui;             // UI for managing ldr objects in the scene
-		pr::ldr::ObjectManagerDlg   m_store_ui_old;         // GUI window for manipulating ldr object properties
 		pr::ldr::ScriptEditorDlg    m_editor_ui;            // An editor for ldr script
 		pr::ldr::MeasureDlg         m_measure_tool_ui;      // The UI for the measuring tool
 		pr::ldr::AngleDlg           m_angle_tool_ui;        // The UI for the angle measuring tool
@@ -64,6 +63,9 @@ namespace ldr
 
 		// Message map function
 		bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override;
+
+		// Close this form
+		bool Close(int exit_code = 0) override;
 
 		bool OnPaint(PaintEventArgs const& args) override;
 		void OnDropFiles(DropFilesEventArgs const& drop) override;
