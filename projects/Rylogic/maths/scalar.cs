@@ -4,7 +4,9 @@
 //***************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace pr.maths
 {
@@ -42,6 +44,8 @@ namespace pr.maths
 		public static int       SignI(int x)                                    { return SignI(x >= 0.0f); }
 		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
 		public static float     SignF(float x)                                  { return SignF(x >= 0.0f); }
+		public static double    SignD(bool positive)                            { return positive ? 1.0 : -1.0; }
+		public static double    SignD(double x)                                 { return SignD(x >= 0.0); }
 		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
 		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
 		public static double    Abs(double d)                                   { return Math.Abs(d); }
@@ -117,6 +121,23 @@ namespace pr.maths
 			var denom = 2 * a * b;
 			var cos_angle = Clamp(denom != 0 ? numer / denom : 1, -1, 1);
 			return Math.Acos(cos_angle);
+		}
+
+		/// <summary>Convert a series of floating point values into a series of integers, preserving the remainders such that the sum of integers is within 1.0 of the sum of the floats</summary>
+		public static IEnumerable<int> TruncWithRemainder(IEnumerable<double> floats)
+		{
+			var remainder = 0.0;
+			foreach (var value in floats)
+			{
+				var fval = value + remainder;
+				var ival = (int)(fval + SignD(fval) * 0.5);
+				remainder = fval - ival;
+				yield return ival;
+			}
+		}
+		public static IEnumerable<int> TruncWithRemainder(IEnumerable<float> floats)
+		{
+			return TruncWithRemainder(floats.Select(x => (double)x));
 		}
 	}
 }

@@ -144,7 +144,7 @@ namespace pr.unittests
 		}
 	}
 
-	/// <summary>Exceptions thrown by unittest failures</summary>
+	/// <summary>Exceptions thrown by unit test failures</summary>
 	public class UnitTestException :System.Exception
 	{
 		public UnitTestException() :base() {}
@@ -200,7 +200,7 @@ namespace pr.unittests
 		public static void AreEqual(object lhs, object rhs)
 		{
 			if (Equals(lhs, rhs)) return;
-			throw new UnitTestException(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}".Fmt(lhs.ToString(), rhs.ToString()));
+			throw new UnitTestException(VSLink + "values are not equal\r\n  lhs: {0}\r\n  rhs: {1}".Fmt((lhs ?? "null").ToString(), (rhs ?? "null").ToString()));
 		}
 
 		/// <summary>Tests value equality</summary>

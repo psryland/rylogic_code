@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.Serialization;
 using pr.common;
 using pr.extn;
@@ -20,22 +21,17 @@ namespace pr.container
 		{
 			Init();
 		}
-		public BindingListEx(IEnumerable<T> collection) :base()
+		public BindingListEx(IEnumerable<T> collection) :base(collection.ToList())
 		{
-			collection.ForEach(x => Add(x));
 			Init();
 		}
-		public BindingListEx(int initial_count, Func<int,T> gen)
+		public BindingListEx(int initial_count, Func<int,T> gen) :base(Enumerable.Range(0, initial_count).Select(i => gen(i)).ToList())
 		{
 			Init();
-			for (int i = 0; initial_count-- != 0;)
-				Add(gen(i++));
 		}
-		public BindingListEx(int initial_count, T value = default(T))
+		public BindingListEx(int initial_count, T value = default(T)) :base(Enumerable.Repeat(value, initial_count).ToList())
 		{
 			Init();
-			for (;initial_count-- != 0;)
-				Add(value);
 		}
 		private void Init()
 		{
@@ -45,7 +41,7 @@ namespace pr.container
 			SortDirection = ListSortDirection.Ascending;
 			SortComparer = Comparer.DefaultInvariant;
 
-			// ResetBindings and ResetItem aren't overridable.
+			// ResetBindings and ResetItem aren't override-able.
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
 			ListChanged += (s,a) =>

@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
@@ -186,6 +180,7 @@ namespace TestCS
 			public string Name     { get; set; }
 			public int Value       { get; set; }
 			public EOptions Option { get; set; }
+			public float FValue    { get; set; }
 
 			public Record() { }
 			public Record(string name, int val, EOptions opt)
@@ -193,6 +188,7 @@ namespace TestCS
 				Name   = name;
 				Value  = val;
 				Option = opt;
+				FValue = val * 6.28f;
 			}
 		}
 
@@ -223,12 +219,23 @@ namespace TestCS
 				});
 			m_grid.Columns.Add(new DataGridViewComboBoxColumn
 				{
-					Name = "Value",
+					Name = "Option",
 					DataPropertyName = R<Record>.Name(x => x.Option),
 					FlatStyle = System.Windows.Forms.FlatStyle.Flat,
 					DataSource = Enum<EOptions>.Values,
 				});
+			m_grid.Columns.Add(new DataGridViewTextBoxColumn
+				{
+					Name = "FValue",
+					DataPropertyName = R<Record>.Name(x => x.FValue),
+				});
 			m_grid.DataSource = m_bs;
+
+			// Automatic column sizing
+			m_grid.SizeChanged += DataGridViewExtensions.FitToDisplayWidth;
+			m_grid.ColumnWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
+			m_grid.RowHeadersWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
+
 		}
 		protected override void Dispose(bool disposing)
 		{

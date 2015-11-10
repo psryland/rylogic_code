@@ -12,20 +12,19 @@ namespace pr.extn
 	/// <summary>Extensions for strings</summary>
 	public static class StreamExtensions
 	{
-		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst'. Returns the number of bytes copied</summary>
-		public static long CopyTo(this Stream src, long count, Stream dst)
+		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst' using the given buffer. Returns the number of bytes copied</summary>
+		public static long CopyTo(this Stream src, long count, Stream dst, byte[] buffer)
 		{
-			return src.CopyTo(count, dst, 4096);
-		}
-
-		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst' using the given buffer size. Returns the number of bytes copied</summary>
-		public static long CopyTo(this Stream src, long count, Stream dst, int buffer_size)
-		{
-			byte[] buffer = new byte[buffer_size];
 			long copied = 0;
 			for (int n; (n = src.Read(buffer, 0, (int)Math.Min(count - copied, buffer.Length))) != 0; copied += n)
 				dst.Write(buffer, 0, n);
 			return copied;
+		}
+
+		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst'. Returns the number of bytes copied</summary>
+		public static long CopyTo(this Stream src, long count, Stream dst)
+		{
+			return src.CopyTo(count, dst, new byte[4096]);
 		}
 
 		/// <summary>Fill 'buffer' from the stream, throwing if not enough data is available</summary>

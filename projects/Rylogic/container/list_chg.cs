@@ -39,24 +39,6 @@ namespace pr.container
 	/// <summary>Args for the event raised whenever the list is changed</summary>
 	public class ListChgEventArgs<T> :EventArgs
 	{
-		/// <summary>The change this event represents</summary>
-		public ListChg ChangeType { get; private set; }
-
-		/// <summary>
-		/// The index of the item in the list, or where it will be in the list.
-		/// Writable to allow PreAdd to change the index, note however that when
-		/// events are suspended PreAdd will not be called.</summary>
-		public int Index { get; set; }
-
-		/// <summary>
-		/// The item added/removed.
-		/// Writable to allow PreAdd to change the item, note however that when
-		/// events are suspended PreAdd will not be called.</summary>
-		public T Item { get; set; }
-
-		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
-		public bool Cancel { get; set; }
-
 		[DebuggerStepThrough] public ListChgEventArgs(ListChg chg, int index, T item)
 		{
 			ChangeType = chg;
@@ -64,9 +46,27 @@ namespace pr.container
 			Item       = item;
 			Cancel     = false;
 		}
+
+		/// <summary>The change this event represents</summary>
+		public ListChg ChangeType { get; private set; }
+
+		/// <summary>
+		/// The index of the item in the list, or where it will be in the list.
+		/// Writeable to allow PreAdd to change the index, note however that when
+		/// events are suspended PreAdd will not be called.</summary>
+		public int Index { get; set; }
+
+		/// <summary>
+		/// The item added/removed.
+		/// Writeable to allow PreAdd to change the item, note however that when
+		/// events are suspended PreAdd will not be called.</summary>
+		public T Item { get; set; }
+
+		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
+		public bool Cancel { get; set; }
 	}
 
-	/// <summary>Args for the event raised whenever an item in the list is changed</summary>
+	/// <summary>Event args for the event raised whenever an item in the list is changed</summary>
 	public class ItemChgEventArgs<T> :EventArgs
 	{
 		/// <summary>Index position of the item that was changed</summary>

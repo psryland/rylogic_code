@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -19,7 +18,9 @@ namespace pr.attrib
 	/// <summary>
 	/// An attribute for adding a string to a field, property, or enum value.
 	/// Basically the same as the SystemComponentModel.DescriptionAttribute except
-	/// that DescriptionAttribute is only allowed on methods.</summary>
+	/// that DescriptionAttribute is only allowed on methods.
+	/// *WARNING* If used on enums containing members with the same value, the description
+	/// is not guaranteed to match the member it is associated with.</summary>
 	[AttributeUsage(AttributeTargets.Enum|AttributeTargets.Property|AttributeTargets.Field)]
 	public sealed class DescAttribute :Attribute
 	{
@@ -28,20 +29,29 @@ namespace pr.attrib
 		public string Str { get { return m_str; } }
 	}
 
-	/// <summary>Accessor class for DescAttribute</summary>
+	/// <summary>Access class for DescAttribute</summary>
 	public static class DescAttr
 	{
-		/// <summary>Return the associated description attribute for an enum value</summary>
-		public static string Desc<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		/// <summary>Get the DescAttribute or DescriptionAttribute associated with a member</summary>
+		public static Attribute Get(MemberInfo mi)
 		{
-			return (string)m_str_cache.Get(Key(enum_), e =>
+			if (mi == null) return null;
+			var d0 = Attribute.GetCustomAttribute(mi, typeof(DescAttribute), false) as DescAttribute;
+			if (d0 != null) return d0;
+			var d1 = Attribute.GetCustomAttribute(mi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
+			if (d1 != null) return d1;
+			return null; // Return null to distinguish between Desc("") and no DescAttribute
+		}
+
+		/// <summary>Return the description for a property or field</summary>
+		public static string Desc(Type ty, MemberInfo mi)
+		{
+			if (mi == null) return null; // Return null to distinguish between Desc("") and no DescAttribute
+			return (string)m_str_cache.Get(Key(ty, mi.Name), k =>
 				{
-					var fi = enum_.GetType().GetField(enum_.ToStringFast());
-					if (fi == null) return string.Empty;
-					var d0 = Attribute.GetCustomAttribute(fi, typeof(DescAttribute), false) as DescAttribute;
-					if (d0 != null) return d0.Str;
-					var d1 = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-					if (d1 != null) return d1.Description;
+					var attr = Get(mi);
+					if (attr is DescAttribute) return ((DescAttribute)attr).Str;
+					if (attr is DescriptionAttribute) return ((DescriptionAttribute)attr).Description;
 					return null; // Return null to distinguish between Desc("") and no DescAttribute
 				});
 		}
@@ -49,28 +59,10 @@ namespace pr.attrib
 		/// <summary>Return the associated description attribute for a property or field</summary>
 		public static string Desc(Type ty, string member_name)
 		{
-			return (string)m_str_cache.Get(Key(ty,member_name), k =>
-				{
-					var pi = ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-					if (pi != null)
-					{
-						var d0 = Attribute.GetCustomAttribute(pi, typeof(DescAttribute), false) as DescAttribute;
-						if (d0 != null) return d0.Str;
-						var d1 = Attribute.GetCustomAttribute(pi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-						if (d1 != null) return d1.Description;
-						return null; // Return null to distinguish between Desc("") and no DescAttribute
-					}
-					var fi = ty.GetField(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
-					if (fi != null)
-					{
-						var d0 = Attribute.GetCustomAttribute(fi, typeof(DescAttribute), false) as DescAttribute;
-						if (d0 != null) return d0.Str;
-						var d1 = Attribute.GetCustomAttribute(fi, typeof(DescriptionAttribute), false) as DescriptionAttribute;
-						if (d1 != null) return d1.Description;
-						return null; // Return null to distinguish between Desc("") and no DescAttribute
-					}
-					return string.Empty;
-				});
+			var mi =
+				(MemberInfo)ty.GetProperty(member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic) ??
+				(MemberInfo)ty.GetField   (member_name, BindingFlags.Instance|BindingFlags.Static|BindingFlags.Public|BindingFlags.NonPublic);
+			return Desc(ty, mi);
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
@@ -83,6 +75,12 @@ namespace pr.attrib
 		public static string Desc<T,Ret>(this T obj, Expression<Func<T,Ret>> expression)
 		{
 			return Desc(obj.GetType(), R<T>.Name(expression));
+		}
+
+		/// <summary>Return the associated description attribute for an enum value</summary>
+		public static string Desc<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		{
+			return Desc(enum_.GetType(), enum_.ToStringFast());
 		}
 
 		/// <summary>Return an array of the description strings associated with an enum type</summary>
@@ -160,65 +158,70 @@ namespace pr.unittests
 	using System.ComponentModel;
 	using attrib;
 
-	[TestFixture] public class TestDescAttr
+	[TestFixture]
+	public class TestDescAttr
+	{
+		private enum EType
 		{
-			private enum EType
+			[Desc("Value 0")]
+			Value0,
+
+			[Description("Value 1")]
+			Value1,
+
+			// no attributes
+			Value2,
+
+			[Desc("Third")]
+			Value3,
+		}
+		private class C
+		{
+			[Description("Field Desc")]
+			public readonly int m_field;
+
+			[Desc("Prop Desc")]
+			public int Prop { get; private set; }
+
+			public string NoAttr { get; private set; }
+
+			public C()
 			{
-				[Desc("Value 0")]
-				Value0,
-
-				[System.ComponentModel.Description("Value 1")]
-				Value1,
-
-				// no attributes
-				Value2,
-
-				[Desc("Third")]
-				Value3,
+				Prop    = 1;
+				m_field = 2;
+				NoAttr  = "Blah";
 			}
-			private class C
-			{
-				[System.ComponentModel.Description("Field Desc")]
-				public readonly int m_field;
-
-				[Desc("Prop Desc")]
-				public int Prop { get; private set; }
-
-				public string NoAttr { get; private set; }
-
-				public C()
-				{
-					Prop    = 1;
-					m_field = 2;
-					NoAttr  = "Blah";
-				}
-			}
-		[Test] public void DescAttr1()
-			{
-				const EType e = EType.Value0;
-				Assert.AreEqual("Value 0"    ,e.Desc());
-				Assert.AreEqual("Value 1"    ,EType.Value1.Desc());
-				Assert.AreEqual(string.Empty ,((EType)100).Desc());
-			Assert.True(Enum<EType>.Desc.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
-			}
-		[Test] public void DescAttr2()
-			{
-				var c = new C();
-				Assert.AreEqual("Field Desc" ,c.Desc(x => x.m_field));
-				Assert.AreEqual("Field Desc" ,R<C>.Desc(x => x.m_field));
-				Assert.AreEqual("Prop Desc"  ,R<C>.Desc(x => x.Prop));
-				Assert.AreEqual(null ,c.Desc(x => x.NoAttr));
-				Assert.AreEqual(null ,R<C>.Desc(x => x.NoAttr));
-			}
-		[Test] public void DescAttr3()
-			{
-				var strs = typeof(EType).AllDesc();
-			Assert.True(strs.SequenceEqual(new[]{"Value 0", "Value 1", "Third"}));
-			}
-		[Test] public void DescAttr4()
-			{
-				var strs = typeof(C).AllDesc();
-			Assert.True(strs.SequenceEqual(new[]{"Prop Desc","Field Desc"}));
+		}
+		[Test]
+		public void DescAttr1()
+		{
+			const EType e = EType.Value0;
+			Assert.AreEqual("Value 0",e.Desc());
+			Assert.AreEqual("Value 1",EType.Value1.Desc());
+			Assert.AreEqual(null,((EType)100).Desc());
+			Assert.True(Enum<EType>.Desc.SequenceEqual(new[] { "Value 0","Value 1","Third" }));
+		}
+		[Test]
+		public void DescAttr2()
+		{
+			var c = new C();
+			Assert.AreEqual("Field Desc",c.Desc(x => x.m_field));
+			Assert.AreEqual("Field Desc",R<C>.Desc(x => x.m_field));
+			Assert.AreEqual("Prop Desc",R<C>.Desc(x => x.Prop));
+			Assert.AreEqual(null,c.Desc(x => x.NoAttr));
+			Assert.AreEqual(null,R<C>.Desc(x => x.NoAttr));
+		}
+		[Test]
+		public void DescAttr3()
+		{
+			var strs = typeof(EType).AllDesc();
+			Assert.True(strs.SequenceEqual(new[] { "Value 0","Value 1","Third" }));
+		}
+		[Test]
+		public void DescAttr4()
+		{
+			var strs = typeof(C).AllDesc();
+			Assert.True(strs.SequenceEqual(new[] { "Prop Desc","Field Desc" }));
 		}
 	}
 }

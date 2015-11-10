@@ -26,7 +26,7 @@ namespace pr.common
 {
 	public static class PathEx
 	{
-		/// <summary>True if 'filepath' is a valid filepath</summary>
+		/// <summary>True if 'filepath' is a valid filepath. The file doesn't have to exist</summary>
 		public static bool IsValidFilepath(string filepath, bool require_rooted)
 		{
 			try
@@ -46,7 +46,7 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>True if 'filepath' is a valid filepath</summary>
+		/// <summary>True if 'filepath' is a valid filepath. The directory doesn't have to exist</summary>
 		public static bool IsValidDirectory(string dir, bool require_rooted)
 		{
 			try
@@ -150,11 +150,11 @@ namespace pr.common
 				if (string.IsNullOrEmpty(paths[i])) continue;
 				path = Path.Combine(path, (paths[i][0] == '/' || paths[i][0] == '\\') ? paths[i].Substring(1) : paths[i]);
 			}
-			return Cannonicalise(path);
+			return Canonicalise(path);
 		}
 
 		/// <summary>Remove '..' or '.' directories from a path and swap all '/' to '\'</summary>
-		public static string Cannonicalise(string path, Case change_case = Case.Unchanged)
+		public static string Canonicalise(string path, Case change_case = Case.Unchanged)
 		{
 			if (change_case == Case.Lower) path = path.ToLowerInvariant();
 			if (change_case == Case.Upper) path = path.ToUpperInvariant();
@@ -199,7 +199,7 @@ namespace pr.common
 			return path;
 		}
 
-		/// <summary>Hueristic test to see if a file contains text data or binary data</summary>
+		/// <summary>Heuristic test to see if a file contains text data or binary data</summary>
 		public static bool IsProbableTextFile(string path)
 		{
 			var buf = new byte[1024];
@@ -211,6 +211,145 @@ namespace pr.common
 					is_text &= buf[i] != 0 && buf[i+1] != 0;
 				
 				return is_text;
+			}
+		}
+
+		/// <summary>Compare the contents of two files, returning true if their contents are different</summary>
+		public static bool DiffContent(string lhs, string rhs, Action<string> trace = null)
+		{
+			// Missing files are considered different
+			var sfound = FileExists(lhs);
+			var dfound = FileExists(rhs);
+			if (!sfound)
+			{
+				if (trace != null) trace("Content different, '{0}' not found".Fmt(lhs));
+				return true;
+			}
+			if (!dfound)
+			{
+				if (trace != null) trace("Content different, '{0}' not found".Fmt(rhs));
+				return true;
+			}
+
+			// Check for differing file lengths
+			var infoL = new FileInfo(lhs);
+			var infoR = new FileInfo(rhs);
+			if (infoL.Length != infoR.Length)
+			{
+				if (trace != null) trace("Content different, '{0}' and '{1}' have different sizes".Fmt(lhs, rhs));
+				return true;
+			}
+
+			// Compare contents
+			var bufL = new byte[4096];
+			var bufR = new byte[4096];
+			using (var fileL = new FileStream(lhs, FileMode.Open, FileAccess.Read, FileShare.Read))
+			using (var fileR = new FileStream(rhs, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				for (;;)
+				{
+					var readL = fileL.Read(bufL, 0, bufL.Length);
+					var readR = fileR.Read(bufR, 0, bufR.Length);
+					if (readL == 0 && readR == 0) break;
+					if (readL != readR)
+					{
+						if (trace != null)
+						{
+							trace("Content different, '{0}' and '{1}' have different content".Fmt(lhs, rhs));
+							for (var i = 0; i != Math.Min(readL, readR); ++i)
+							{
+								if (bufL[i] == bufR[i]) continue;
+								trace("diff at byte {0}: {1} != {2}".Fmt(i, bufL[i], bufR[i]));
+								break;
+							}
+						}
+						return true;
+					}
+				}
+			}
+			if (trace != null) trace("'{0}' and '{1}' are identical".Fmt(lhs,rhs));
+			return false;
+		}
+
+		/// <summary>
+		/// Smart copy from 'src' to 'dst'. Loosely like xcopy.
+		/// 'src' can be a single file, a comma separated list of files, or a directory<para/>
+		/// 'dst' can be a 
+		/// if 'src' is a directory, </summary>
+		public static void Copy(string src, string dst, bool overwrite = false, bool only_if_modified = false, bool ignore_non_existing = false, Action<string> feedback = null, bool show_unchanged = false)
+		{
+			var src_is_dir = IsDirectory(src);
+			var dst_is_dir = IsDirectory(dst) || dst.EndsWith("/") || dst.EndsWith("\\") || src_is_dir;
+
+			// Find the names of the source files to copy
+			string[] files = null;
+			if (src_is_dir)
+				files = EnumFileSystem(src, SearchOption.AllDirectories).Select(x => x.FullPath).ToArray();
+			else if (FileExists(src))
+				files = new [] { src };
+			else if (src.Contains('*') || src.Contains('?'))
+				files = EnumFileSystem(src, SearchOption.AllDirectories, new Pattern(EPattern.Wildcard, src).RegexString).Select(x => x.FullPath).ToArray();
+			else if (!ignore_non_existing)
+				throw new FileNotFoundException("ERROR: {0} does not exist".Fmt(src));
+
+			// If the 'src' represents multiple files, 'dst' must be a directory
+			if (src_is_dir || files.Length > 1)
+			{
+				// if 'dst' doesn't exist, assume it's a directory
+				if (!DirExists(dst))
+					dst_is_dir = true;
+
+				// or if it does exist, check that it is actually a directory
+				else if (!dst_is_dir)
+					throw new FileNotFoundException("ERROR: {0} is not a valid directory".Fmt(dst));
+			}
+
+			// Ensure that 'dstdir' exists. (Canonicalise fixes the case where 'dst' is a drive, e.g. 'C:\')
+			var dstdir = Canonicalise((dst_is_dir ? dst : Directory(dst)).TrimEnd('/','\\'));
+			if (!DirExists(dstdir))
+				System.IO.Directory.CreateDirectory(dstdir);
+
+			// Copy the file(s) to 'dst'
+			foreach (var srcfile in files)
+			{
+				// If 'dst' is a directory, use the same filename from 'srcfile'
+				var dstfile = string.Empty;
+				if (dst_is_dir)
+				{
+					var spath = src_is_dir ? RelativePath(srcfile, src) : FileName(srcfile);
+					dstfile = CombinePath(dstdir, spath);
+				}
+				else
+				{
+					dstfile = dst;
+				}
+
+				// If 'srcfile' is a directory, ensure the directory exists at the destination
+				if (IsDirectory(srcfile))
+				{
+					if (!dst_is_dir)
+						throw new Exception("ERROR: {0} is not a directory".Fmt(dst));
+
+					// Create the directory at the destination
+					if (!DirExists(dstfile)) System.IO.Directory.CreateDirectory(dstfile);
+					if (feedback != null) feedback(srcfile + " --> " + dstfile);
+				}
+				else
+				{
+					// Copy if modified or always based on the flag
+					if (only_if_modified && !DiffContent(srcfile, dstfile))
+					{
+						if (feedback != null && show_unchanged) feedback(srcfile + " --> unchanged");
+						continue;
+					}
+
+					// Ensure the directory path exists
+					var d = Directory(dstfile);
+					var f = FileName(dstfile);
+					if (!DirExists(d)) System.IO.Directory.CreateDirectory(d);
+					if (feedback != null) feedback(srcfile + " --> " + dstfile);
+					File.Copy(srcfile, dstfile, overwrite);
+				}
 			}
 		}
 

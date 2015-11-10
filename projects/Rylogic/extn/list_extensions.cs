@@ -55,6 +55,12 @@ namespace pr.extn
 			else if (list.Count < newsize) for (int i = list.Count; i != newsize; ++i) list.Add(factory());
 		}
 
+		/// <summary>True if 'index' >= 0 && 'index' < list.Count</summary>
+		public static bool Within<T>(this IList<T> list, int index)
+		{
+			return index >= 0 && index < list.Count;
+		}
+
 		/// <summary>Add and return the item added to this list</summary>
 		public static U Add2<T,U>(this IList<T> list, U item) where U:T
 		{
@@ -112,6 +118,13 @@ namespace pr.extn
 			foreach (var i in items)
 				list.Add(i);
 			return list;
+		}
+
+		/// <summary>Reset the list with the given items. Equivalent to Clear() followed by AddRange()</summary>
+		public static IList<T> Assign<T>(this IList<T> list, IEnumerable<T> items)
+		{
+			list.Clear();
+			return list.AddRange(items);
 		}
 
 		/// <summary>Swap elements in the list</summary>

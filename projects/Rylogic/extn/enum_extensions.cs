@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using pr.attrib;
@@ -276,22 +277,84 @@ namespace pr.extn
 			return (i >= 0 && i < arr.Length) ? arr[i] : arr[0];
 		}
 
-		/// <summary>Returns all enum field names as a collection</summary>
+		/// <summary>
+		/// Returns all enum field names as a collection.
+		/// Note: Names are returned in value order, not declaration order</summary>
 		public static IEnumerable<string> Names
 		{
 			get { return Enum.GetNames(typeof(T)); }
 		}
 
-		/// <summary>Returns all values of the enum as a collection</summary>
+		/// <summary>
+		/// Returns all values of the enum as a collection.
+		/// Note: duplicate values are returned, but the member name will be the first name with that value.
+		/// Note: Values are returned in value order, not declaration order</summary>
 		public static IEnumerable<T> Values
 		{
 			get { return Enum.GetValues(typeof(T)).Cast<T>(); }
 		}
 
-		/// <summary>Returns the number of names or values in the enumeration</summary>
+		/// <summary>
+		/// Returns all Name,Value pairs of the enum as a collection.
+		/// 'Items.ToList()' can be assigned to the DataSource of binding controls.
+		/// Items are returned in declaration order</summary>
+		public static IEnumerable<Item> Items
+		{
+			get
+			{
+				var fields = typeof(T).GetFields(BindingFlags.Public|BindingFlags.Static);
+				return fields.Select(x => new Item(x));
+			}
+		}
+		public class Item
+		{
+			private FieldInfo m_fi;
+
+			internal Item(FieldInfo fi)
+			{
+				m_fi = fi;
+				Name = fi.Name;
+				Value = (T)fi.GetValue(null);
+			}
+
+			/// <summary>The name of the enum member</summary>
+			public string Name { get; private set; }
+
+			/// <summary>The value of the enum member</summary>
+			public T Value { get; private set; }
+
+			/// <summary>The associated description string of the enum member</summary>
+			public string Desc
+			{
+				get { return DescAttr.Desc(typeof(T), m_fi); }
+			}
+
+			/// <summary>The associated AssocAttribute of the enum member</summary>
+			public TAssoc Assoc<TAssoc>(string name)
+			{
+				return AssocAttr.Assoc<TAssoc>(m_fi, name);
+			}
+
+			public override string ToString() { return Desc ?? Name; }
+			public static implicit operator T(Item item) { return item.Value; }
+		}
+
+		/// <summary>Returns a list of strings DescAttributes attributed to the enum type</summary>
+		public static IEnumerable<string> Desc
+		{
+			get { return typeof(T).AllDesc(); }
+		}
+
+		/// <summary>Returns the objects of type 'TAssoc' associated with each enum member using the AssocAttribute</summary>
+		public static IEnumerable<TAssoc> Assoc<TAssoc>(string name)
+		{
+			return Items.Select(x => x.Assoc<TAssoc>(name));
+		}
+
+		/// <summary>Returns the number of members in the enumeration</summary>
 		public static int Count
 		{
-			get { return Enum.GetValues(typeof(T)).Length; }
+			get { return typeof(T).GetFields(BindingFlags.Public|BindingFlags.Static).Count(); }
 		}
 
 		/// <summary>Return the result of OR'ing all enum values together</summary>
@@ -311,16 +374,7 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Returns a list of strings DescAttributes attributed to the enum type</summary>
-		public static IEnumerable<string> Desc
-		{
-			get
-			{
-				foreach (var s in typeof(T).AllDesc())
-					yield return s;
-			}
-		}
-
+		/// <summary>Bitwise OR two enum values together</summary>
 		private static T BitwiseOr(T a, T b)
 		{
 			if (m_impl_or == null)
@@ -343,39 +397,7 @@ namespace pr.extn
 		}
 		private static Func<T,T,T> m_impl_or;
 
-		/// <summary>Returns a collection of items that can be used to assigned to the DataSource of binding controls</summary>
-		public static IEnumerable<Item> Items
-		{
-			get
-			{
-				var names  = Names.ToArray();
-				var values = Values.ToArray();
-				return Enumerable.Range(0,Count).Select(i => new Item(names[i], values[i]));
-			}
-		}
-		public class Item
-		{
-			public Item(string name, T value)
-			{
-				Name = name;
-				Value = value;
-				Desc = value.Desc();
-			}
-
-			/// <summary>The name of the enum member</summary>
-			public string Name { get; private set; }
-
-			/// <summary>The value of the enum member</summary>
-			public T Value { get; private set; }
-
-			/// <summary>The associated description string of the enum member</summary>
-			public string Desc { get; private set; }
-
-			public override string ToString() { return Desc ?? Name; }
-			public static implicit operator T(Item item) { return item.Value; }
-		}
-
-		/// <summary>An event handler that converts the enum value into a string description</summary>
+		/// <summary>An event handler that converts the enum value into a string description. Attach to the 'Format' event</summary>
 		public static void FormatValue(object sender, ListControlConvertEventArgs args)
 		{
 			// Use the description attribute if available
@@ -463,6 +485,15 @@ namespace pr.unittests
 			Four = 4,
 			Ten = 10,
 		}
+		public enum EnumWithDuplicates
+		{
+			One  = 1,
+			Won  = 1,
+			Juan = 1,
+			Two  = 2,
+			To   = 2,
+			Too  = 2,
+		}
 		[Flags] public enum FlagsEnum
 		{
 			A = 1 << 0,
@@ -526,6 +557,17 @@ namespace pr.unittests
 			Assert.True(items[0] == SparceEnum.One);
 			Assert.True(items[1] == SparceEnum.Four);
 			Assert.True(items[2] == SparceEnum.Ten);
+
+			var items2 = Enum<EnumWithDuplicates>.Items.ToArray();
+			Assert.True(items2[0] == EnumWithDuplicates.One );
+			Assert.True(items2[1] == EnumWithDuplicates.Won );
+			Assert.True(items2[2] == EnumWithDuplicates.Juan);
+			Assert.True(items2[3] == EnumWithDuplicates.Two );
+			Assert.True(items2[4] == EnumWithDuplicates.To  );
+			Assert.True(items2[5] == EnumWithDuplicates.Too );
+
+			var cb = new ComboBox();
+			cb.DataSource = Enum<EnumWithDuplicates>.Items.ToList();
 		}
 	}
 }

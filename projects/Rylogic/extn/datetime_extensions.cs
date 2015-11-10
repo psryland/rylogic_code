@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Windows.Forms;
 
 namespace pr.extn
@@ -86,6 +87,22 @@ namespace pr.extn
 			var max = dtp.MaxDate.ToLocalTime();
 			var val = dtp.Value.ToLocalTime();
 			dtp.Set(val, min, max);
+		}
+	}
+	
+	public static class DateTime_
+	{
+		/// <summary>Parse 'val' as a date time using 'format'</summary>
+		public static DateTime Parse(string val, string format, DateTimeStyles style = DateTimeStyles.AllowWhiteSpaces|DateTimeStyles.AssumeUniversal)
+		{
+			return DateTime.ParseExact(val, format, null, style);
+		}
+
+		/// <summary>Try to parse 'val' as a date time using 'format', returns null on parse failure</summary>
+		public static DateTime? TryParse(string val, string format, DateTimeStyles style = DateTimeStyles.AllowWhiteSpaces|DateTimeStyles.AssumeUniversal)
+		{
+			DateTime result;
+			return DateTime.TryParseExact(val, format, null, style, out result) ? (DateTime?)result : null;
 		}
 	}
 }

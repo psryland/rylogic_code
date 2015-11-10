@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace pr.common
 {
@@ -81,6 +82,30 @@ namespace pr.common
 				result = Result.Failed;
 			}
 			return result;
+		}
+
+		/// <summary>Converts a single command line string in to a collection of arguments (obeying quoted items)</summary>
+		public static IEnumerable<string> Tokenise(string cmd_line)
+		{
+			for (int i = 0, iend = cmd_line.Length; i != iend; ++i)
+			{
+				if (cmd_line[i] == '"') // Extract whole strings
+				{
+					int j = i;
+					for (++j; j != iend && cmd_line[j] != '"'; ++j) {}
+					yield return cmd_line.Substring(i + 1, j - i - 1);
+					if (j == iend) yield break;
+					i = j;
+				}
+				else if (!char.IsWhiteSpace(cmd_line[i]))
+				{
+					int j = i;
+					for (++j; j != iend && !char.IsWhiteSpace(cmd_line[j]); ++j) {}
+					yield return cmd_line.Substring(i + 1, j - i - 1);
+					if (j == iend) yield break;
+					i = j;
+				}
+			}
 		}
 	}
 }

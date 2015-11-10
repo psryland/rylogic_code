@@ -157,6 +157,29 @@ namespace pr.extn
 			int o;
 			return int.TryParse(val, out o) ? (int?)o : null;
 		}
+
+		/// <summary>Parse an array of integer values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of integer values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed integers</returns>
+		public static int[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(int.Parse).ToArray();
+		}
+	}
+
+	public static class double_
+	{
+		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of floating point values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed floating point values</returns>
+		public static double[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(double.Parse).ToArray();
+		}
 	}
 }
 
@@ -258,6 +281,9 @@ namespace pr.unittests
 
 			var x1 = int_.TryParse("abc");
 			Assert.AreEqual(x1, null);
+
+			var x2 = int_.ParseArray("1  2,3\t\t\t4");
+			Assert.True(x2.SequenceEqual(new[]{1,2,3,4}));
 		}
 	}
 }

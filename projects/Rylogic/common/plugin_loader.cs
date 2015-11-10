@@ -47,33 +47,33 @@ namespace pr.common
 			int i = 0, imax = filepaths.Count;
 			foreach (var dll in filepaths)
 			{
-				try
-				{
-					if (progress_cb != null)
-						progress_cb(dll, (i + 1f) / imax);
+				if (progress_cb != null)
+					progress_cb(dll, (i + 1f) / imax);
 
-					var ass = Assembly.LoadFile(dll);
-					foreach (var type in ass.GetExportedTypes())
+				var ass = Assembly.LoadFile(dll);
+				foreach (var type in ass.GetExportedTypes())
+				{
+					var attr = type.FindAttribute<PluginAttribute>(false);
+					if (attr == null || attr.Interface != typeof(TInterface))
+						continue;
+
+					// Create all plugins on the dispatcher thread
+					var lib = dll;
+					var ty = type;
+					dispatcher.Invoke(() =>
 					{
-						var attr = type.FindAttribute<PluginAttribute>(false);
-						if (attr == null || attr.Interface != typeof(TInterface))
-							continue;
-
-						// Create all plugins on the dispatcher thread
-						var lib = dll;
-						var ty = type;
-						dispatcher.Invoke(() =>
-							{
-								// An exception here means the constructor for the type being created has thrown.
-								Plugins.Add((TInterface)Activator.CreateInstance(ty, args));
-								Log.Debug(this, "   Found implementation: {0} from {1}".Fmt(ty.Name, lib));
-							});
-					}
-				}
-				catch (Exception ex)
-				{
-					Failures.Add(new Tuple<string, Exception>(dll, ex));
-					Log.Debug(this, "   Error: {0}".Fmt(ex.Message));
+						try
+						{
+							// An exception here means the constructor for the type being created has thrown.
+							Plugins.Add((TInterface)Activator.CreateInstance(ty, args));
+							Log.Debug(this, "   Found implementation: {0} from {1}".Fmt(ty.Name, lib));
+						}
+						catch (Exception ex)
+						{
+							Failures.Add(new Tuple<string, Exception>(dll, ex));
+							Log.Debug(this, "   Error: {0}".Fmt(ex.Message));
+						}
+					});
 				}
 			}
 		}

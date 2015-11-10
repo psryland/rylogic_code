@@ -99,6 +99,13 @@ namespace pr.extn
 			cont.RemoveByKey(new[]{key}, recursive);
 		}
 
+		/// <summary>Remove the tool strip item from it's owner</summary>
+		public static void Remove(this ToolStripItem item)
+		{
+			if (item.Owner == null) return;
+			item.Owner.Items.Remove(item);
+		}
+
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
 		public static void SetText(this ToolStripComboBox cb, string text)
 		{
@@ -438,12 +445,22 @@ namespace pr.extn
 					if (r.MergeAction == MergeAction.Replace)
 						ldd.DropDownItems.Clear();
 
+					// If one menu is marked with remove, then neither menu is added
+					if (l.MergeAction == MergeAction.Remove || r.MergeAction == MergeAction.Remove)
+					{
+						var idx = l.Name.HasValue()
+							? lhs.Cast<ToolStripItem>().IndexOf(x => x.Name == r.Name)
+							: lhs.Cast<ToolStripItem>().IndexOf(x => x.Text == r.Text);
+						if (idx != -1) lhs.RemoveAt(idx);
+					}
+
 					// Merge 'r' into 'l', then keep 'l'
-					if (!choose_rhs)
+					else if (!choose_rhs)
 					{
 						if (ldd != null && rdd != null && rdd.DropDownItems.Count != 0)
 							DoMerge(ldd.DropDown, ldd.DropDownItems, rdd.DropDown, rdd.DropDownItems, false);
 					}
+
 					// Otherwise, merge 'l' into 'r', then keep 'r'
 					else
 					{

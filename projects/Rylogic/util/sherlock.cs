@@ -31,7 +31,7 @@ namespace pr.util
 				var multicast_delegate = (MulticastDelegate)mcd_info.GetValue(thing);
 				if (multicast_delegate != null)
 				{
-					// Get the mcd's invocation list
+					// Get the multicast delegate's invocation list
 					var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
 
 					// Get the delegates subscribed to the event
@@ -50,8 +50,8 @@ namespace pr.util
 			return output;
 		}
 
-		/// <summary>Counts the number of references to 'referenced' in the handlers for event 'owner.evt'</summary>
-		public static int CountReferences(object owner, string evt, object referenced)
+		/// <summary>Enumerates the handlers attached to the event 'owner.evt'</summary>
+		public static IEnumerable<Delegate> EnumHandlers(object owner, string evt)
 		{
 			var type = owner.GetType();
 
@@ -65,17 +65,29 @@ namespace pr.util
 			var multicast_delegate = (MulticastDelegate)fi_evt.GetValue(owner);
 			if (multicast_delegate != null)
 			{
-				// Get the mcd's invocation list
+				// Get the multicast delegate's invocation list
 				var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
 
 				// Get the delegates subscribed to the event
 				var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
 
-				// Count the number of delegates with references to 'referenced'
-				var count = delegates.Count(x => ReferenceEquals(x.Target, referenced));
-				return count;
+				// Enum the attached handlers
+				foreach (var del in delegates)
+					yield return del;
 			}
-			return 0;
+			yield break;
+		}
+
+		/// <summary>Returns the count of the number of handlers attached to the event 'owner.evt'</summary>
+		public static int CountHandlers(object owner, string evt)
+		{
+			return EnumHandlers(owner,evt).Count();
+		}
+
+		/// <summary>Counts the number of references to 'referenced' in the handlers for event 'owner.evt'</summary>
+		public static int CountReferences(object owner, string evt, object referenced)
+		{
+			return EnumHandlers(owner,evt).Count(x => ReferenceEquals(x.Target, referenced));
 		}
 
 		/// <summary>Checks event 'owner.evt' for any handlers containing references to 'referenced'</summary>

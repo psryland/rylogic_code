@@ -14,7 +14,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_hintballoon;
 		private ToolStripMenuItem m_menu_tests_toolform;
 		private ToolStripMenuItem m_menu_tests_treegrid;
-		private ToolStripMenuItem m_menu_tests_checkedlistbox;
+		private ToolStripMenuItem m_menu_tests_checked_listbox;
 		private ToolStripMenuItem m_menu_tests_diagramcontrol;
 		private ToolStripMenuItem m_menu_tests_toolstrip_positions;
 		private ToolStripMenuItem m_menu_tests_view3d_editor;
@@ -24,6 +24,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_rtb;
 		private ToolStripMenuItem m_menu_tests_web_browser;
 		private ToolStripMenuItem m_menu_tests_scintilla;
+		private ToolStripMenuItem m_menu_tests_checked_groupbox;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		public FormTestApp()
@@ -31,12 +32,22 @@ namespace TestCS
 			InitializeComponent();
 			Shown += (s,a) =>
 				{
-					Location = new Point(2100,150);
+					Location = new Point(150,150);
 				};
 
 			m_menu_file_exit.Click += (s,a) =>
 				{
 					Close();
+				};
+
+			m_menu_tests_checked_groupbox.Click += (s,a) =>
+				{
+					new CheckedGroupBoxUI().Show(this);
+				};
+
+			m_menu_tests_checked_listbox.Click += (s,a) =>
+				{
+					new CheckedListBoxUI().Show(this);
 				};
 
 			m_menu_tests_colourwheel.Click += (s,a) =>
@@ -94,11 +105,6 @@ namespace TestCS
 					new TreeGridUI().Show(this);
 				};
 
-			m_menu_tests_checkedlistbox.Click += (s,a) =>
-				{
-					new CheckedListBoxUI().Show(this);
-				};
-
 			m_menu_tests_rtb.Click += (s,a) =>
 				{
 					new RichTextBoxUI().Show(this);
@@ -150,7 +156,7 @@ namespace TestCS
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_checkedlistbox = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_colourwheel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_dgv = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_diagramcontrol = new System.Windows.Forms.ToolStripMenuItem();
@@ -166,6 +172,7 @@ namespace TestCS
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -197,7 +204,8 @@ namespace TestCS
 			// m_menu_tests
 			// 
 			this.m_menu_tests.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.m_menu_tests_checkedlistbox,
+            this.m_menu_tests_checked_groupbox,
+            this.m_menu_tests_checked_listbox,
             this.m_menu_tests_colourwheel,
             this.m_menu_tests_dgv,
             this.m_menu_tests_diagramcontrol,
@@ -219,9 +227,9 @@ namespace TestCS
 			// 
 			// m_menu_tests_checkedlistbox
 			// 
-			this.m_menu_tests_checkedlistbox.Name = "m_menu_tests_checkedlistbox";
-			this.m_menu_tests_checkedlistbox.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_checkedlistbox.Text = "CheckedListBox";
+			this.m_menu_tests_checked_listbox.Name = "m_menu_tests_checkedlistbox";
+			this.m_menu_tests_checked_listbox.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_checked_listbox.Text = "CheckedListBox";
 			// 
 			// m_menu_tests_colourwheel
 			// 
@@ -312,6 +320,12 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Name = "m_menu_tests_web_browser";
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
+			// 
+			// m_menu_tests_checked_groupbox
+			// 
+			this.m_menu_tests_checked_groupbox.Name = "m_menu_tests_checked_groupbox";
+			this.m_menu_tests_checked_groupbox.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_checked_groupbox.Text = "&CheckedGroupBox";
 			// 
 			// FormTestApp
 			// 

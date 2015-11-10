@@ -230,6 +230,9 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\checked_groupbox.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\combo_box.cs">
       <SubType>Component</SubType>
     </Compile>

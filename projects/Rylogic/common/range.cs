@@ -34,6 +34,9 @@ namespace pr.common
 		/// <summary>An invalid range. Used as an initialiser when finding a bounding range</summary>
 		public static readonly Range Invalid = new Range{Begin = long.MaxValue, End = long.MinValue};
 
+		/// <summary>Create a range from a Start and Length</summary>
+		public static Range FromStartLength(long start, long length) { return new Range(start, start + length); }
+
 		/// <summary>Construct from a range</summary>
 		public Range(long begin, long end) { Begin = begin; End = end; }
 

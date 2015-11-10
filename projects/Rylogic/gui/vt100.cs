@@ -1350,7 +1350,7 @@ namespace pr.gui
 				// the vt100 commands can move the caret but is unaware of the buffer size.
 				if (m_out.pos.Y < 0) return;
 
-				// If m_out.pos.X < 0 pretent Min(-m_out.pos.X, count) characters were written
+				// If m_out.pos.X < 0, pretend Min(-m_out.pos.X, count) characters were written
 				if (m_out.pos.X < 0)
 				{
 					var dx = Math.Min(-m_out.pos.X, count);
@@ -1358,8 +1358,18 @@ namespace pr.gui
 					count -= dx;
 					ofs += dx;
 				}
-				if (count == 0) return;
-				Debug.Assert(m_out.pos.X >= 0);
+
+				// If m_out.pos.X >= Settings.TerminalWidth, pretend all characters were written
+				if (m_out.pos.X >= Settings.TerminalWidth)
+				{
+					m_out.pos.X += count;
+					count = 0;
+				}
+
+				if (count == 0)
+					return;
+
+				Debug.Assert(m_out.pos.X >= 0 && m_out.pos.X < Settings.TerminalWidth, "Output position out of range");
 
 				// Limit 'count' to the size of the terminal and the maximum string length
 				count = Math.Min(count, str.Length - ofs);
@@ -1486,6 +1496,9 @@ namespace pr.gui
 
 				// Use our own context menu
 				Cmd(Sci.SCI_USEPOPUP, 0, 0);
+
+				// Turn off undo history
+				Cmd(Sci.SCI_SETUNDOCOLLECTION, 0);
 			}
 			protected override void Dispose(bool disposing)
 			{

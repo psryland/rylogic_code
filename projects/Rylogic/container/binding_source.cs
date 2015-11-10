@@ -52,7 +52,8 @@ namespace pr.container
 			set
 			{
 				// Allow setting the position to -1, meaning no current
-				if (value == -1 && Position != -1)
+				if (value == base.Position) {}
+				else if (value == -1 && Position != -1)
 				{
 					m_impl_listposition.SetValue(CurrencyManager, -1);
 					OnPositionChanged(EventArgs.Empty);
@@ -125,7 +126,7 @@ namespace pr.container
 
 				// Set new data source
 				// Note: this can cause a first chance exception in some controls
-				// that are bound to this source (e.g. ListBox, ComboBox, etc).
+				// that are bound to this source (e.g. ListBox, ComboBox, etc.).
 				// They are handled internally, just continue.
 				base.DataSource = null;
 				base.DataSource = value;
@@ -157,9 +158,17 @@ namespace pr.container
 			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
 
-			// If we're about to delete the current item, set Position to -1
-			if (args.ChangeType == ListChg.PreReset || (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position))
+			// If we're about to remove all items, set Position to -1
+			if (args.ChangeType == ListChg.PreReset)
 				Position = -1;
+
+			// If we're about to delete the current item, set Position to the next/prev item or -1 if there are no more
+			if (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position)
+			{
+				if      (args.Index < Count - 1) Position = args.Index + 1;
+				else if (args.Index > 0)         Position = args.Index - 1;
+				else                             Position = -1;
+			}
 		}
 
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
@@ -175,8 +184,12 @@ namespace pr.container
 		/// <summary>Position changed handler</summary>
 		protected override void OnPositionChanged(EventArgs e)
 		{
-			PositionChanging.Raise(this, new PositionChgEventArgs(m_impl_previous_position, Position));
+			// Set the previous position before calling the event
+			// because it may recursively cause another position change.
+			var prev_position = m_impl_previous_position;
 			m_impl_previous_position = Position;
+
+			PositionChanging.Raise(this, new PositionChgEventArgs(prev_position, Position));
 			base.OnPositionChanged(e);
 		}
 
@@ -544,20 +557,24 @@ namespace pr.unittests
 			Assert.True(current == 3);
 
 			bl.RemoveAt(2);
-			Assert.True(bs.Position == -1);
-			Assert.True(current == 0); // default(int)
+			Assert.True(bs.Position == 2);
+			Assert.True(current == 4);
 
 			bs.Position = 2;
 			Assert.True(current == 4);
 
 			bl.RemoveAt(2);
-			Assert.True(bs.Position == -1);
-			Assert.True(current == 0); // default(int)
+			Assert.True(bs.Position == 2);
+			Assert.True(current == 5);
+
+			bl.RemoveAt(2);
+			Assert.True(bs.Position == 1);
+			Assert.True(current == 2);
 
 			bs.Position = 0;
 			Assert.True(current == 1);
 
-			Assert.True(positions.SequenceEqual(new[]{0,2,2,-1,-1,2,2,-1,-1,0}));
+			Assert.True(positions.SequenceEqual(new[]{0,2,2,3,3,2,2,3,3,2,2,1,1,0}));
 		}
 	}
 }

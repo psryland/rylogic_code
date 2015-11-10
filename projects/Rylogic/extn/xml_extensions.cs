@@ -36,7 +36,7 @@ namespace pr.extn
 	//      +- XText
 	//         +- XCData
 
-	/// <summary>Xml helper methods</summary>
+	/// <summary>XML helper methods</summary>
 	public static class XmlExtensions
 	{
 		private const string TypeAttr = "ty";
@@ -75,8 +75,19 @@ namespace pr.extn
 				this[typeof(float          )] = ToXmlDefault;
 				this[typeof(double         )] = ToXmlDefault;
 				this[typeof(Enum           )] = ToXmlDefault;
-				this[typeof(DateTimeOffset )] = ToXmlDefault;
 				this[typeof(Guid           )] = ToXmlDefault;
+				this[typeof(DateTimeOffset)] = (obj, node) =>
+					{
+						var dto = (DateTimeOffset)obj;
+						node.SetValue(dto.ToString("o"));
+						return node;
+					};
+				this[typeof(DateTime)] = (obj, node) =>
+					{
+						var dt = (DateTime)obj;
+						node.SetValue(dt.ToString("o"));
+						return node;
+					};
 				this[typeof(Color)] = (obj, node) =>
 					{
 						var col = ((Color)obj).ToArgb().ToString("X8");
@@ -164,7 +175,7 @@ namespace pr.extn
 			/// <summary>
 			/// Saves 'obj' into 'node' using the bound ToXml methods.
 			/// 'type_attr' controls whether the 'ty' attribute is added. By default it should
-			/// be added so that xml can be deserialised to 'object'. If this is never needed
+			/// be added so that XML can be de-serialised to 'object'. If this is never needed
 			/// however it can be omitted.</summary>
 			public XElement Convert(object obj, XElement node, bool type_attr)
 			{
@@ -274,7 +285,7 @@ namespace pr.extn
 			return ToMap[type](obj, node);
 		}
 
-		/// <summary>Write this object into an xml node with tag 'elem_name'</summary>
+		/// <summary>Write this object into an XML node with tag 'elem_name'</summary>
 		public static XElement ToXml<T>(this T obj, string elem_name, bool type_attr)
 		{
 			return obj.ToXml(new XElement(elem_name), type_attr);
@@ -372,13 +383,17 @@ namespace pr.extn
 					{
 						return Enum.Parse(type, elem.Value);
 					};
-				this[typeof(DateTimeOffset)] = (elem, type, ctor) =>
-					{
-						return DateTimeOffset.Parse(elem.Value);
-					};
 				this[typeof(Guid)] = (elem, type, ctor) =>
 					{
 						return Guid.Parse(elem.Value);
+					};
+				this[typeof(DateTimeOffset)] = (elem, type, ctor) =>
+					{
+						return DateTimeOffset.ParseExact(elem.Value, "o", null);
+					};
+				this[typeof(DateTime)] = (elem, type, ctor) =>
+					{
+						return DateTime.ParseExact(elem.Value, "o", null);
 					};
 				this[typeof(Color)] = (elem, type, ctor) =>
 					{
@@ -470,13 +485,13 @@ namespace pr.extn
 					{
 						// Only throw if a value is given and we can't determine it's type
 						if (string.IsNullOrEmpty(elem.Value)) return null;
-						throw new Exception("Cannot determine the type for xml element: {0}" + elem);
+						throw new Exception("Cannot determine the type for XML element: {0}" + elem);
 					}
 					try { type = TypeExtensions.Resolve(attr.Value); }
 					catch (Exception ex)
 					{
 						// If you get this error you can use GC.KeepAlive(typeof(TheTypeName)); to force
-						// the assembly to be loaded before you try to load the xml.
+						// the assembly to be loaded before you try to load the XML.
 						throw new Exception(
 							"Failed to resolve type name {0}. No type with this name found in the loaded assemblies.\r\n".Fmt(attr.Value)+
 							"This error indicates that the XML being parsed contains a type that this application does not recognise.\r\n"+
@@ -603,11 +618,11 @@ namespace pr.extn
 				{
 					new_inst = new_inst ?? Activator.CreateInstance;
 
-					// This will always deserialise as a default object ignoring the elements
+					// This will always de-serialise as a default object ignoring the elements
 					if (members.Count == 0 && el.HasElements)
 						throw new Exception("{0} has the DataContract attribute, but no DataMembers.".Fmt(ty.Name));
 
-					// Read nodes from the xml, and populate any members with matching names
+					// Read nodes from the XML, and populate any members with matching names
 					object obj = new_inst(ty);
 					foreach (var e in el.Elements())
 					{
@@ -632,18 +647,18 @@ namespace pr.extn
 			return factory(type);
 		}
 
-		/// <summary>Returns this xml node as an instance of the type implied by it's node attributes</summary>
+		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
 		public static object ToObject(this XElement elem, Func<Type,object> factory = null)
 		{
 			// Passing a factory function to handle any of the types 'elem' might be
 			// can work, but the factory function won't be available further down the
 			// hierarchy and so is of limited use. A better way is to add custom handlers
 			// to the 'AsMap'.
-			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
+			if (elem == null) throw new ArgumentNullException("XML element is null. Key not found?");
 			return AsMap.Convert(elem, typeof(object), factory);
 		}
 
-		/// <summary>Returns this xml node as an instance of the type implied by it's node attributes</summary>
+		/// <summary>Returns this XML node as an instance of the type implied by it's node attributes</summary>
 		public static object ToObject(this XElement elem, object optional_default, Func<Type,object> factory = null)
 		{
 			if (elem == null) return optional_default;
@@ -659,7 +674,7 @@ namespace pr.extn
 		///  val = node.Element("val").As(typeof(int), default_val) <para\></summary>
 		public static object As(this XElement elem, Type type, Func<Type,object> factory = null)
 		{
-			if (elem == null) throw new ArgumentNullException("xml element is null. Key not found?");
+			if (elem == null) throw new ArgumentNullException("XML element is null. Key not found?");
 			return AsMap.Convert(elem, type, factory);
 		}
 		public static object As(this XElement elem, Type type, object optional_default, Func<Type,object> factory = null)
@@ -697,7 +712,7 @@ namespace pr.extn
 		}
 		private static void AsList<T>(XElement parent, IList<T> list, string elem_name, Func<XElement,T> conv, Func<T,T,bool> is_duplicate)
 		{
-			if (parent == null) throw new ArgumentNullException("xml element is null. Key not found?");
+			if (parent == null) throw new ArgumentNullException("XML element is null. Key not found?");
 
 			var count = 0;
 			foreach (var e in parent.Elements(elem_name))
@@ -718,9 +733,15 @@ namespace pr.extn
 		#endregion
 
 		/// <summary>Returns the number of child nodes in this node</summary>
-		public static int ChildCount(this XContainer parent)
+		public static int ChildCount(this XContainer node)
 		{
-			return parent.Nodes().Count();
+			return node.Nodes().Count();
+		}
+
+		/// <summary>Returns the number of child nodes of type 'T' in this node</summary>
+		public static int ChildCount<T>(this XContainer node) where T :XNode
+		{
+			return node.Nodes().OfType<T>().Count();
 		}
 
 		/// <summary>
@@ -755,7 +776,7 @@ namespace pr.extn
 		{
 			var child_count = parent.ChildCount();
 			if (index < 0 || index > child_count)
-				throw new Exception("Xml insert node. Index {0} out of range [0,{1}]".Fmt(index, child_count));
+				throw new Exception("XML insert node. Index {0} out of range [0,{1}]".Fmt(index, child_count));
 
 			if      (index == 0)           parent.AddFirst(child);
 			else if (index == child_count) parent.LastNode.AddAfterSelf(child);
@@ -767,6 +788,10 @@ namespace pr.extn
 		public static IEnumerable<XElement> Elements(this XElement node, params XName[] name)
 		{
 			return Elements(node, name, 0);
+		}
+		public static IEnumerable<XElement> Elements(this XElement node, params string[] name)
+		{
+			return Elements(node, name.Select(x => (XName)x).ToArray(), 0);
 		}
 		private static IEnumerable<XElement> Elements(XElement node, XName[] name, int index)
 		{
@@ -783,13 +808,13 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Return the i'th child of this node</summary>
+		/// <summary>Return the 'i'th' child of this node</summary>
 		public static XNode ChildByIndex(this XContainer node, int index)
 		{
 			return node.Nodes().Skip(index).First();
 		}
 
-		/// <summary>Remove child nodes for which pred(child) returns true</summary>
+		/// <summary>Remove child nodes for which 'pred(child)' returns true</summary>
 		public static void RemoveNodes(this XContainer parent, Func<XElement, bool> pred)
 		{
 			foreach (var elem in parent.Elements().ToList())
@@ -811,12 +836,65 @@ namespace pr.extn
 			var attr = elem.Attribute(name);
 			return attr != null ? attr.Value : def;
 		}
+
+		/// <summary>Enumerates the leaf XNodes of 'node'. (Depth-first). (Use LeafElements() if you just want elements)</summary>
+		public static IEnumerable<XNode> LeafNodes(this XContainer node)
+		{
+			// See the object inheritance hierarchy at the top of this file
+			// only XDocument and XElement subclass XContainer. Anything that
+			// isn't a container is a leaf node
+			if (node.ChildCount<XContainer>() == 0)
+			{
+				yield return node;
+			}
+			else
+			{
+				foreach (var child in node.Nodes())
+				{
+					// Not a container => a leaf node
+					var container = child as XContainer;
+					if (container == null)
+					{
+						yield return child;
+					}
+					else
+					{
+						foreach (var leaf in LeafNodes(container))
+							yield return leaf;
+					}
+				}
+			}
+		}
+
+		/// <summary>Enumerates the leaf XElements of 'node' (Depth-first). (Use LeafNodes() for all leaf nodes)</summary>
+		public static IEnumerable<XElement> LeafElements(this XContainer node)
+		{
+			return node.LeafNodes().OfType<XElement>();
+		}
 	}
 
-	/// <summary>Xml Diff/Patch</summary>
+	/// <summary>XML Diff/Patch</summary>
 	public static class XmlDiff
 	{
-		/// <summary>The operations that the generate diff xml can contain</summary>
+		/// <summary>Modes that control the type of patch created</summary>
+		public enum Mode
+		{
+			/// <summary>
+			/// The difference created represents the operations needed to transform the
+			/// LHS into the RHS. i.e. p = lhs.Diff(rhs, Mode.Transform) => lhs.Patch(p) == rhs<para/>
+			/// If 'lhs' contains nodes that aren't in 'rhs', these nodes will be removed<para/>
+			/// If 'rhs' contains nodes that aren't in 'lhs', these nodes will be added</summary>
+			Transform,
+
+			/// <summary>
+			/// The difference created represents the operations needed to add nodes from
+			/// RHS to LHS. i.e. p = lhs.Diff(rhs, Mode.Merge) => lhs.Patch(p) == UNION(lhs,rhs)<para/>
+			/// If 'lhs' contains nodes that aren't in 'rhs', these nodes will remain unchanged<para/>
+			/// If 'rhs' contains nodes that aren't in 'lhs', these nodes will be added</summary>
+			Merge,
+		}
+
+		/// <summary>The operations that the generate diff XML can contain</summary>
 		private enum EOpType
 		{
 			/// <summary>Replace the value text of an element</summary>
@@ -926,16 +1004,16 @@ namespace pr.extn
 		/// <summary>
 		/// Generate a tree of operations that describe how this tree can be transformed into 'rhs'.<para/>
 		/// If: patch = this.Diff(that), then this.Patch(patch) == that</summary>
-		public static XElement Diff(this XContainer lhs, XContainer rhs)
+		public static XElement Diff(this XContainer lhs, XContainer rhs, Mode mode = Mode.Transform)
 		{
-			return Diff(lhs, rhs, new XElement("root"));
+			return Diff(lhs, rhs, new XElement("root"), mode);
 		}
-		private static XElement Diff(this XContainer lhs, XContainer rhs, XElement diff)
+		private static XElement Diff(this XContainer lhs, XContainer rhs, XElement diff, Mode mode)
 		{
 			// We are recording the operations to perform on 'lhs' that
 			// will turn it into 'rhs'. This function should not modify
-			// 'lhs' or 'rhs'. It should probably be using the Zhang and
-			// Shasha minimum tree edit distance algorithm, but it's not..
+			// 'lhs' or 'rhs'. It should probably be using the 'Zhang and Shasha'
+			// minimum tree edit distance algorithm, but it's not..
 
 			var output_node_index = 0;
 
@@ -944,22 +1022,51 @@ namespace pr.extn
 			var j = rhs.Nodes().GetIterator<XNode>();
 			for (; !i.AtEnd || !j.AtEnd;)
 			{
-				// If i still has elements but j does not, then we need to remove the remaining i elements
+				// If i still has elements but j does not
 				#region !i.AtEnd && j.AtEnd
 				if (!i.AtEnd && j.AtEnd)
 				{
 					for (; !i.AtEnd; i.MoveNext())
-						diff.Add2(RemoveOp(i.Current, ref output_node_index));
+					{
+						switch (mode)
+						{
+						default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+						case Mode.Transform:
+							{
+								// Remove the remaining i elements
+								diff.Add2(RemoveOp(i.Current, ref output_node_index));
+								break;
+							}
+						case Mode.Merge:
+							{
+								// Leave the remaining i elements in 'lhs'
+								++output_node_index;
+								break;
+							}
+						}
+					}
 					continue;
 				}
 				#endregion
 
-				// If j still has elements but i does not, then we need to add the remaining j elements
+				// If j still has elements but i does not
 				#region i.AtEnd && !j.AtEnd
 				if (i.AtEnd && !j.AtEnd)
 				{
 					for (; !j.AtEnd; j.MoveNext())
-						diff.Add2(InsertOp(j.Current, ref output_node_index));
+					{
+						switch (mode)
+						{
+						default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+						case Mode.Transform:
+						case Mode.Merge:
+							{
+								// Add the remaining j elements
+								diff.Add2(InsertOp(j.Current, ref output_node_index, mode));
+								break;
+							}
+						}
+					}
 					continue;
 				}
 				#endregion
@@ -984,12 +1091,12 @@ namespace pr.extn
 							var cmp_kvpair = Eql<XAttribute>.From((l,r) => l.Name == r.Name && l.Value == r.Value);
 							var ai = ni.Attributes().ExceptBy(nj.Attributes(), cmp_names ).OrderBy(x => x.Name.LocalName).ToArray();
 							var aj = nj.Attributes().ExceptBy(ni.Attributes(), cmp_kvpair).OrderBy(x => x.Name.LocalName).ToArray();
-							ai.ForEach(a => op.Add2(AttrOp(a.Name, null)));    // Remove the attributes that aren't in nj
-							aj.ForEach(a => op.Add2(AttrOp(a.Name, a.Value))); // Add/Replace the attributes that are in nj
+							ai.ForEach(a => op.Add2(AttrOp(a.Name, null)));    // Remove the attributes that aren't in 'nj'
+							aj.ForEach(a => op.Add2(AttrOp(a.Name, a.Value))); // Add/Replace the attributes that are in 'nj'
 
 							// Recursively find the differences in the child trees.
 							if (ni.Nodes().Any() || nj.Nodes().Any())
-								ni.Diff(nj, op);
+								ni.Diff(nj, op, mode);
 
 							// If the change operation contains child operations then add it to 'diff'
 							if (op.HasElements)
@@ -1007,7 +1114,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XCData
-					if (i.Current is XCData)
+					else if (i.Current is XCData)
 					{
 						var ni = i.Current.As<XCData>();
 						var nj = j.Current.As<XCData>();
@@ -1023,7 +1130,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XText
-					if (i.Current is XText)
+					else if (i.Current is XText)
 					{
 						var ni = i.Current.As<XText>();
 						var nj = j.Current.As<XText>();
@@ -1039,7 +1146,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XComment
-					if (i.Current is XComment)
+					else if (i.Current is XComment)
 					{
 						var ni = i.Current.As<XComment>();
 						var nj = j.Current.As<XComment>();
@@ -1055,7 +1162,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XDocumentType
-					if (i.Current is XDocumentType)
+					else if (i.Current is XDocumentType)
 					{
 						var ni = i.Current.As<XDocumentType>();
 						var nj = j.Current.As<XDocumentType>();
@@ -1063,7 +1170,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XProcessingInstruction
-					if (i.Current is XProcessingInstruction)
+					else if (i.Current is XProcessingInstruction)
 					{
 						var ni = i.Current.As<XProcessingInstruction>();
 						var nj = j.Current.As<XProcessingInstruction>();
@@ -1071,7 +1178,7 @@ namespace pr.extn
 					}
 					#endregion
 					#region XDocument
-					if (i.Current is XDocument)
+					else if (i.Current is XDocument)
 					{
 						var ni = i.Current.As<XDocument>();
 						var nj = j.Current.As<XDocument>();
@@ -1079,7 +1186,7 @@ namespace pr.extn
 						// Recursively find the differences in the child trees.
 						var op = new XElement(EOpType.Change.Desc());
 						if (ni.Nodes().Any() || nj.Nodes().Any())
-							ni.Diff(nj, op);
+							ni.Diff(nj, op, mode);
 
 						// If the change operation contains child operations then add it to 'diff'
 						if (op.HasElements)
@@ -1098,7 +1205,7 @@ namespace pr.extn
 
 				// At this point, i is not a node that can be changed to j. We need to either add nodes from j
 				// or remove nodes from i until i points to a node that can be changed into j. We want to minimise
-				// the number of nodes added/removed. Find the nearest resync point
+				// the number of nodes added/removed. Find the nearest re-sync point
 				var resync = Seq.FindNearestMatch<XNode>(i.Enumerate(), j.Enumerate(), (l,r) =>
 					{
 						// Not changeable if different types
@@ -1112,17 +1219,43 @@ namespace pr.extn
 						// Same type => changeable
 						return true;
 					})
-					// If no resync point could be found, then the remaining nodes in i
+					// If no re-sync point could be found, then the remaining nodes in i
 					// should be removed and the remaining nodes in j should be added
 					?? Tuple.Create(int.MaxValue, int.MaxValue);
 
-				// Remove nodes up to the sync point
+				// Remove or skip nodes in 'i' up to the sync point
 				for (var c = resync.Item1; !i.AtEnd && c-- != 0; i.MoveNext())
-					diff.Add2(RemoveOp(i.Current, ref output_node_index));
+				{
+					switch (mode)
+					{
+					default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+					case Mode.Transform:
+						{
+							diff.Add2(RemoveOp(i.Current, ref output_node_index));
+							break;
+						}
+					case Mode.Merge:
+						{
+							++output_node_index;
+							break;
+						}
+					}
+				}
 
 				// Insert nodes up to the sync point
 				for (var c = resync.Item2; !j.AtEnd && c-- != 0; j.MoveNext())
-					diff.Add2(InsertOp(j.Current, ref output_node_index));
+				{
+					switch (mode)
+					{
+					default: throw new System.Exception("Unknown XmlDiff mode: {0}".Fmt(mode));
+					case Mode.Transform:
+					case Mode.Merge:
+						{
+							diff.Add2(InsertOp(j.Current, ref output_node_index, mode));
+							break;
+						}
+					}
+				}
 			}
 
 			return diff;
@@ -1155,7 +1288,7 @@ namespace pr.extn
 					{
 						var child = op.FindChild(tree);
 						if (op.Name.HasValue() && child is XElement && child.As<XElement>().Name != op.Name)
-							throw new Exception("Name mis-match for remove operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
+							throw new Exception("Name mismatch for remove operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
 						child.Remove();
 						break;
 					}
@@ -1193,7 +1326,7 @@ namespace pr.extn
 						// Find the child node
 						var child = op.FindChild(tree).As<XContainer>();
 						if (op.Name.HasValue() && child is XElement && child.As<XElement>().Name != op.Name)
-							throw new Exception("Name mis-match for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
+							throw new Exception("Name mismatch for change operation. Expected: {0}  Actual: {1}".Fmt(op.Name, child.As<XElement>().Name));
 
 						child.Patch(op_elem);
 						break;
@@ -1211,7 +1344,7 @@ namespace pr.extn
 			return tree as XElement;
 		}
 
-		/// <summary>Convert an xtree of differences into a string report.</summary>
+		/// <summary>Convert an XTree of differences into a string report.</summary>
 		public static string Report(XContainer diff)
 		{
 			var sb = new StringBuilder();
@@ -1266,7 +1399,7 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Return a remove operation xml element</summary>
+		/// <summary>Return a remove operation XML element</summary>
 		private static XElement RemoveOp(XNode node, ref int output_node_index)
 		{
 			var op = new XElement(EOpType.Remove.Desc());
@@ -1280,7 +1413,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Return an insert operation</summary>
-		private static XElement InsertOp(XNode node, ref int output_node_index)
+		private static XElement InsertOp(XNode node, ref int output_node_index, Mode mode)
 		{
 			if (node is XText)
 			{
@@ -1301,7 +1434,7 @@ namespace pr.extn
 
 				// Recursively add operations for the children of j.Current
 				if (node.As<XElement>().Nodes().Any())
-					new XElement("dummy").Diff(node.As<XElement>(), op);
+					new XElement("dummy").Diff(node.As<XElement>(), op, mode);
 
 				return op;
 			}
@@ -1439,9 +1572,16 @@ namespace pr.unittests
 		}
 		[Test] public void ToXml4()
 		{
-			var node = DateTimeOffset.MinValue.ToXml("min_time", true);
-			var dto = node.As<DateTimeOffset>();
-			Assert.AreEqual(DateTimeOffset.MinValue, dto);
+			{
+				var dto0 = DateTimeOffset.MinValue;
+				var dto1 = dto0.ToXml("min_time", true).As<DateTimeOffset>();
+				Assert.AreEqual(dto0, dto1);
+			}
+			{
+				var dto0 = new DateTimeOffset(2015,11,02, 14, 04, 23, 456, TimeSpan.Zero);
+				var dto1 = dto0.ToXml("today", true).As<DateTimeOffset>();
+				Assert.AreEqual(dto0, dto1);
+			}
 		}
 		[Test] public void ToXml5()
 		{
@@ -1678,7 +1818,42 @@ namespace pr.unittests
 			var cnt = xml.Root.Elements("one","red").Count();
 			Assert.AreEqual(cnt, 4);
 		}
-		[Test] public void XmlDiffPatch()
+		[Test] public void XmlEnumerateLeaves()
+		{
+			const string src =
+			#region
+@"<root>
+	0
+	<branch>
+		<branch>
+			<leaf>1</leaf>
+		</branch>
+		<branch>
+			<!-- comment -->
+			<leaf>2</leaf>
+		</branch>
+	</branch>
+	<branch>
+		<leaf>3</leaf>
+		<branch>
+			<branch>
+				<leaf>4</leaf>
+			</branch>
+		</branch>
+	</branch>
+	<leaf>5</leaf>
+</root>";
+			#endregion
+
+			var xml = XDocument.Parse(src).Root;
+
+			var leaf_nodes = xml.LeafNodes().Select(x => x.GetType().Name).ToList();
+			Assert.True(leaf_nodes.SequenceEqual(new[]{"XText","XElement","XComment","XElement","XElement","XElement","XElement"}));
+
+			var leaf_elems = xml.LeafElements().Select(x => x.Value).ToList();
+			Assert.True(leaf_elems.SequenceEqual(new[]{"1","2","3","4","5"}));
+		}
+		[Test] public void XmlDiffPatch0()
 		{
 			const string xml0_src =
 				#region xml0
@@ -1806,6 +1981,92 @@ namespace pr.unittests
 			// Patch xml0 so that it becomes the same as xml1
 			xml0.Patch(xmlp);
 			Assert.True(XDocument.DeepEquals(xml0, xml1));
+		}
+		[Test] public void XmlDiffPatch1()
+		{
+			const string xml0_src =
+				#region xml0
+@"<?xml version=""1.0"" encoding=""utf-8""?>
+<root>
+	text1
+	<one>0</one>
+	<two>
+		<has_child/>
+	</two>
+	<three>
+		<blue />
+		<red />
+	</three>
+</root>";
+			#endregion
+			const string xml1_src =
+				#region xml1
+@"<?xml version=""1.0"" encoding=""utf-8""?>
+<root>
+	<one>1</one>
+	<two>
+		<child>c</child>
+	</two>
+	<four ty='string'>
+		four
+	</four>
+</root>";
+				#endregion
+			const string xml_patch =
+				#region patch xml
+@"<?xml version=""1.0"" encoding=""utf-8""?>
+<root>
+  <change idx='1' name='one'>
+    <value idx='0'>1</value>
+  </change>
+  <change idx='2' name='two'>
+    <insert idx='1' node_type='Element' name='child'>
+      <value idx='0'>c</value>
+    </insert>
+  </change>
+  <insert idx='4' node_type='Element' name='four'>
+    <attr name='ty'>string</attr>
+    <value idx='0'>
+		four
+	</value>
+  </insert>
+</root>";
+			#endregion
+			const string xml_result = 
+				#region result
+@"<?xml version=""1.0"" encoding=""utf-8""?>
+<root>
+	text1
+	<one>1</one>
+	<two>
+		<has_child/>
+		<child>c</child>
+	</two>
+	<three>
+		<blue />
+		<red />
+	</three>
+	<four ty=""string"">
+		four
+	</four>
+</root>";
+			#endregion
+
+			var xml0 = XDocument.Parse(xml0_src).Root;
+			var xml1 = XDocument.Parse(xml1_src).Root;
+			var xmlp = XDocument.Parse(xml_patch).Root;
+			var xmlr = XDocument.Parse(xml_result).Root;
+
+			// Find how xml0 is different from xml1
+			var patch = xml0.Diff(xml1, XmlDiff.Mode.Merge);
+			Assert.True(XDocument.DeepEquals(patch, xmlp));
+
+			var report = XmlDiff.Report(patch);
+
+			// Patch xml0 so that it becomes the same as xml1
+			xml0.Patch(xmlp);
+			Assert.True(XDocument.DeepEquals(xml0, xmlr));
+
 		}
 	}
 }

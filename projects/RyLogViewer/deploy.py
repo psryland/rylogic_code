@@ -51,8 +51,8 @@ try:
 	print("Building...")
 	projects = [
 		"RyLogViewer",
-		"RyLogViewer.Extensions",
-		"RyLogViewer.ExamplePlugin",
+		#"RyLogViewer.Extensions",
+		#"RyLogViewer.ExamplePlugin",
 		]
 	platforms = [
 		"Any CPU",

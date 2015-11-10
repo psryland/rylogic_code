@@ -814,6 +814,47 @@ namespace pr.win32
 		public const uint EM_SETSCROLLPOS                 = (WM_USER + 222);
 		#endregion
 
+		#region ComboBox Messages
+		public const uint CB_GETEDITSEL            = 0x0140;
+		public const uint CB_LIMITTEXT             = 0x0141;
+		public const uint CB_SETEDITSEL            = 0x0142;
+		public const uint CB_ADDSTRING             = 0x0143;
+		public const uint CB_DELETESTRING          = 0x0144;
+		public const uint CB_DIR                   = 0x0145;
+		public const uint CB_GETCOUNT              = 0x0146;
+		public const uint CB_GETCURSEL             = 0x0147;
+		public const uint CB_GETLBTEXT             = 0x0148;
+		public const uint CB_GETLBTEXTLEN          = 0x0149;
+		public const uint CB_INSERTSTRING          = 0x014a;
+		public const uint CB_RESETCONTENT          = 0x014b;
+		public const uint CB_FINDSTRING            = 0x014c;
+		public const uint CB_SELECTSTRING          = 0x014d;
+		public const uint CB_SETCURSEL             = 0x014e;
+		public const uint CB_SHOWDROPDOWN          = 0x014f;
+		public const uint CB_GETITEMDATA           = 0x0150;
+		public const uint CB_SETITEMDATA           = 0x0151;
+		public const uint CB_GETDROPPEDCONTROLRECT = 0x0152;
+		public const uint CB_SETITEMHEIGHT         = 0x0153;
+		public const uint CB_GETITEMHEIGHT         = 0x0154;
+		public const uint CB_SETEXTENDEDUI         = 0x0155;
+		public const uint CB_GETEXTENDEDUI         = 0x0156;
+		public const uint CB_GETDROPPEDSTATE       = 0x0157;
+		public const uint CB_FINDSTRINGEXACT       = 0x0158;
+		public const uint CB_SETLOCALE             = 0x0159;
+		public const uint CB_GETLOCALE             = 0x015a;
+		public const uint CB_GETTOPINDEX           = 0x015b;
+		public const uint CB_SETTOPINDEX           = 0x015c;
+		public const uint CB_GETHORIZONTALEXTENT   = 0x015d;
+		public const uint CB_SETHORIZONTALEXTENT   = 0x015e;
+		public const uint CB_GETDROPPEDWIDTH       = 0x015f;
+		public const uint CB_SETDROPPEDWIDTH       = 0x0160;
+		public const uint CB_INITSTORAGE           = 0x0161;
+		public const uint CB_MSGMAX_OLD            = 0x0162;
+		public const uint CB_MULTIPLEADDSTRING     = 0x0163;
+		public const uint CB_GETCOMBOBOXINFO       = 0x0164;
+		public const uint CB_MSGMAX                = 0x0165;
+		#endregion
+		
 		#region Progress Bar
 		public const uint PBS_SMOOTH              = 0x01;
 		public const uint PBS_VERTICAL            = 0x04;
@@ -1179,6 +1220,12 @@ namespace pr.win32
 		public static bool CharFromVKey(Key key, out char ch)
 		{
 			return CharFromVKey(ToVKey(key), out ch);
+		}
+
+		/// <summary>True if this key is an array key</summary>
+		public static bool IsArrowKey(this Keys vk)
+		{
+			return vk == Keys.Left || vk == Keys.Right || vk == Keys.Up || vk == Keys.Down;
 		}
 
 		/// <summary>Convert the LParam from WM_KEYDOWN, WM_KEYUP, WM_CHAR to usable data</summary>

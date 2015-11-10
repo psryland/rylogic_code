@@ -10,7 +10,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -33,7 +32,7 @@ using System.Windows.Threading;
 // Notes:
 // Trace/Debugging:
 //  Define SQLITE_TRACE to trace query object creation and destruction.
-//  This will help if you get an exception on shutdown saying there are
+//  This will help if you get an exception on shut down saying there are
 //  still open statements that haven't been finalised.
 //
 // Decimals:
@@ -1057,6 +1056,12 @@ namespace pr.common
 				get { return m_cache.Count; }
 			}
 
+			/// <summary>Enumerate the queries in the cache</summary>
+			public IEnumerable<Query> CachedItems
+			{
+				get { return m_cache.CachedItems.Cast<Query>(); }
+			}
+
 			/// <summary>Get/Set an upper limit on the number of cached items</summary>
 			public int Capacity
 			{
@@ -1076,13 +1081,13 @@ namespace pr.common
 				return m_cache.IsCached(key);
 			}
 
-			/// <summary>Preload the cache with an item</summary>
+			/// <summary>Pre-load the cache with an item</summary>
 			public void Add(string key, Query item)
 			{
 				m_cache.Add(key, item);
 			}
 
-			/// <summary>Preload the cache with a range of items.</summary>
+			/// <summary>Pre-load the cache with a range of items.</summary>
 			public void Add(IEnumerable<string> keys, IEnumerable<Query> items)
 			{
 				m_cache.Add(keys, items);
@@ -1242,7 +1247,7 @@ namespace pr.common
 				m_this_handle.Free();
 			}
 
-			/// <summary>The filepath of the database file opened</summary>
+			/// <summary>The filepath of the database file</summary>
 			public string Filepath { get; private set; }
 
 			/// <summary>Returns the db handle after asserting it's validity</summary>
@@ -1327,8 +1332,12 @@ namespace pr.common
 				Trace.WriteLine(ETrace.Handles, string.Format("Closing database connection{0}", m_db.IsClosed ? " (already closed)" : ""));
 				if (m_db.IsClosed) return;
 
-				// Release cached objects
-				foreach (var x in m_caches) x.Value.Capacity = 0;
+				// Release the object cache
+				foreach (var x in m_caches)
+					x.Value.Capacity = 0;
+
+				// Release the query cache
+				Debug.Assert(m_query_cache.CachedItems.All(x => pr.util.Sherlock.CountHandlers(x, "Closing") == 0));
 				m_query_cache.Capacity = 0;
 
 				// Release the db handle
@@ -1542,7 +1551,7 @@ namespace pr.common
 				return new Transaction(db, db.Dispose);
 			}
 
-			/// <summary>General sql querysummary>
+			/// <summary>General sql query</summary>
 			public Query Query(string sql, int first_idx = 1, IEnumerable<object> parms = null)
 			{
 				return QueryCache.GetQuery(sql, first_idx, parms);
@@ -1701,6 +1710,7 @@ namespace pr.common
 
 			public Table(Type type, Database db)
 			{
+				db.AssertCorrectThread();
 				if (db.Handle.IsInvalid) throw new ArgumentNullException("db", "Invalid database handle");
 				m_meta = TableMetaData.GetMetaData(type);
 				m_db   = db;
@@ -2582,6 +2592,7 @@ namespace pr.common
 
 			public Query(Database db, sqlite3_stmt stmt)
 			{
+				db.AssertCorrectThread();
 				if (stmt.IsInvalid) throw new ArgumentNullException("stmt", "Invalid sqlite prepared statement handle");
 				m_db = db;
 				m_stmt = stmt;
@@ -3644,6 +3655,8 @@ namespace pr.common
 			/// <summary>Typically created using the Database.NewTransaction() method</summary>
 			public Transaction(Database db, Action on_dispose)
 			{
+				db.AssertCorrectThread();
+
 				m_db = db;
 				m_disposed = on_dispose;
 				m_completed = false;
@@ -3739,7 +3752,7 @@ namespace pr.common
 				m_module = pr.win32.Win32.LoadDll(Dll+".dll", dir);
 			}
 
-			/// <summary>Based class for wrappers of native sqlite handles</summary>
+			/// <summary>Base class for wrappers of native sqlite handles</summary>
 			private abstract class SQLiteHandle :SafeHandle
 			{
 				/// <summary>Ensure sqlite handles are created and released from the same thread</summary>
@@ -3752,7 +3765,7 @@ namespace pr.common
 				/// <summary>Default constructor contains an owned, but invalid handle</summary>
 				protected SQLiteHandle() :this(IntPtr.Zero, true) {}
 
-				/// <summary>Internal constructor used to create safehandles that optionally own the handle</summary>
+				/// <summary>Internal constructor used to create safe handles that optionally own the handle</summary>
 				protected SQLiteHandle(IntPtr initial_ptr, bool owns_handle) :base(IntPtr.Zero, owns_handle)
 				{
 					m_thread_id = Thread.CurrentThread.ManagedThreadId;
@@ -3769,10 +3782,28 @@ namespace pr.common
 				{
 					if (Thread.CurrentThread.ManagedThreadId != m_thread_id)
 					{
+						// This typically happens when the garbage collector cleans up the handles.
+						// The garbage collector should never see these, so the bug is you've created
+						// a query somewhere that hasn't been disposed.
+						// Note: the garbage collector calls dispose in no particular order, so it's
+						// possible you have a Database instance still live and this exception is being
+						// thrown for an instance in the cache of that instance.
+
 						#if SQLITE_HANDLES
-						throw new Exception(string.Format(
-							"Sqlite handle released from a different thread to the one it was created on\r\n{0}"
-							,m_stack_at_creation != null ? m_stack_at_creation.ToString() : string.Empty));
+						// Create a stack dump of where this handle was allocated
+						var msg = "Sqlite handle released from a different thread to the one it was created on\r\n";
+						if (m_stack_at_creation != null) msg += m_stack_at_creation.ToString();
+
+						// Add the stack dump of where the owning db handle was created
+						// If this is the garbage collector thread, it's possible the owner has been disposed already
+						var stmt = this as NativeSqlite3StmtHandle;
+						if (stmt != null)
+						{
+							try { msg += "Owning DB handle was created:\r\n" + (stmt.m_db.m_stack_at_creation != null ? stmt.m_db.m_stack_at_creation.ToString() : string.Empty); }
+							catch (Exception ex) { msg += "Owning DB handle creation stack not available\r\n" + ex.Message; }
+						}
+
+						throw new Exception(msg);
 						#else
 						throw new Exception("Sqlite handle released from a different thread to the one it was created on");
 						#endif
@@ -3800,7 +3831,7 @@ namespace pr.common
 			private class NativeSqlite3Handle :SQLiteHandle, sqlite3
 			{
 				public NativeSqlite3Handle() {}
-				public NativeSqlite3Handle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
+				public NativeSqlite3Handle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {} // Called through reflection during interop
 				protected override Result Release()
 				{
 					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3 handle ({0})", handle));
@@ -3811,8 +3842,12 @@ namespace pr.common
 			/// <summary>A wrapper for unmanaged sqlite prepared statement handles</summary>
 			private class NativeSqlite3StmtHandle :SQLiteHandle, sqlite3_stmt
 			{
+				#if SQLITE_HANDLES
+				public NativeSqlite3Handle m_db; // The owner db handle
+				#endif
+
 				public NativeSqlite3StmtHandle() {}
-				public NativeSqlite3StmtHandle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {}
+				public NativeSqlite3StmtHandle(IntPtr handle, bool owns_handle) :base(handle, owns_handle) {} // Called through reflection during interop
 				protected override Result Release()
 				{
 					Trace.WriteLine(ETrace.Handles, string.Format("Releasing sqlite3_stmt handle ({0})", handle));
@@ -3908,7 +3943,7 @@ namespace pr.common
 			public static sqlite3 Open(string filepath, OpenFlags flags)
 			{
 				if ((flags & OpenFlags.FullMutex) != 0 && !ThreadSafe)
-					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multithreading cannot be used");
+					throw Exception.New(Result.Misuse, "sqlite3 dll compiled with SQLITE_THREADSAFE=0, multi threading cannot be used");
 
 				NativeSqlite3Handle db;
 				var res = sqlite3_open_v2(filepath, out db, (int)flags, IntPtr.Zero);
@@ -3940,6 +3975,9 @@ namespace pr.common
 					Log.Debug(null, msg);
 					throw Exception.New(res, msg, err);
 				}
+				#if SQLITE_HANDLES
+				stmt.m_db = (NativeSqlite3Handle)db;
+				#endif
 				return stmt;
 			}
 			[DllImport(Dll, EntryPoint = "sqlite3_prepare_v2", CallingConvention=CallingConvention.Cdecl)]

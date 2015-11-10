@@ -5,8 +5,6 @@
 
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using System.Linq.Expressions;
 using pr.extn;
 using pr.util;
@@ -14,6 +12,7 @@ using pr.util;
 namespace pr.attrib
 {
 	// Usage:
+	// <code>
 	//	enum EType
 	//	{
 	//		[Units("°C", 1)] Value0,
@@ -28,6 +27,7 @@ namespace pr.attrib
 	//			double scale = Units.Scale(typeof(Test).GetField("m_speed_mm_p_s"));
 	//		}
 	//	}
+	// </code>
 	//
 	// EType.Value0.Label(true);
 	// EType.Value0.Scale();
@@ -37,17 +37,38 @@ namespace pr.attrib
 	[AttributeUsage(AttributeTargets.Enum|AttributeTargets.Property|AttributeTargets.Field)]
 	public sealed class UnitsAttribute :Attribute
 	{
-		// 'scale' is the factor to multiply the associated value
-		// by to get it's value in units of 'units'
-		public UnitsAttribute(string units)                                     { Label = units; Scale = 1.0;   DecimalPlaces = 0; }
-		public UnitsAttribute(string units, double scale)                       { Label = units; Scale = scale; DecimalPlaces = 0; }
-		public UnitsAttribute(string units, double scale, int decimal_places)   { Label = units; Scale = scale; DecimalPlaces = decimal_places; }
-		public string Label                                                     { get; private set; }
-		public string LabelInBrackets                                           { get { return Label.HasValue() ? " ("+Label+")" : string.Empty; } }
-		public double Scale                                                     { get; private set; }
-		public int    DecimalPlaces                                             { get; private set; }
-	}
+		/// <summary>Associates information about units with a value</summary>
+		/// <param name="units">The string representation of the unit</param>
+		public UnitsAttribute(string units) :this(units, 1.0) {}
 
+		/// <summary>Associates information about units with a value</summary>
+		/// <param name="units">The string representation of the unit</param>
+		/// <param name="scale">The factor to multiply the associated value by to get it's value in units of 'units'</param>
+		public UnitsAttribute(string units, double scale) :this(units, scale, 0) {}
+
+		/// <summary>Associates information about units with a value</summary>
+		/// <param name="units">The string representation of the unit</param>
+		/// <param name="scale">The factor to multiply the associated value by to get it's value in units of 'units'</param>
+		/// <param name="decimal_places">The precision to use when displaying the value</param>
+		public UnitsAttribute(string units, double scale, int decimal_places)
+		{
+			Label = units;
+			Scale = scale;
+			DecimalPlaces = decimal_places;
+		}
+
+		/// <summary>The string name of the units</summary>
+		public string Label { get; private set; }
+
+		/// <summary>The string name of the units (in brackets)</summary>
+		public string LabelInBrackets { get { return Label.HasValue() ? " ("+Label+")" : string.Empty; } }
+
+		/// <summary>The factor to multiple the value by to get it's value in 'units'</summary>
+		public double Scale { get; set; }
+
+		/// <summary>The precision to use when displaying the value</summary>
+		public int DecimalPlaces { get; set; }
+	}
 	public static class UnitsAttr
 	{
 		/// <summary>Return the UnitsAttribute for an enum value</summary>
@@ -59,7 +80,7 @@ namespace pr.attrib
 
 		/// <summary>Returns the unit label associated with an enum value</summary>
 		[DebuggerStepThrough]
-		public static string Label<TEnum>(this TEnum enum_, bool in_brackets = false) where TEnum :struct ,IConvertible
+		public static string UnitLabel<TEnum>(this TEnum enum_, bool in_brackets = false) where TEnum :struct ,IConvertible
 		{
 			var attr = GetAttr(enum_);
 			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
@@ -68,7 +89,7 @@ namespace pr.attrib
 
 		/// <summary>Returns the unit scale associated with an enum value</summary>
 		[DebuggerStepThrough]
-		public static double Scale<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		public static double UnitScale<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
 		{
 			var attr = GetAttr(enum_);
 			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
@@ -77,56 +98,49 @@ namespace pr.attrib
 
 		/// <summary>Returns the unit decimal places associated with an enum value</summary>
 		[DebuggerStepThrough]
-		public static int DecimalPlaces<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
+		public static int UnitDP<TEnum>(this TEnum enum_) where TEnum :struct ,IConvertible
 		{
 			var attr = GetAttr(enum_);
 			if (attr == null) throw new Exception("Member does not have the UnitsAttribute");
 			return attr.DecimalPlaces;
 		}
 	}
-
 	public static class Units<T>
 	{
 		/// <summary>Returns the unit label associated with a member</summary>
-		[DebuggerStepThrough]
-		public static string Label<Ret>(Expression<Func<T,Ret>> expression, bool in_brackets = false)
+		[DebuggerStepThrough] public static string UnitLabel<Ret>(Expression<Func<T,Ret>> expression, bool in_brackets = false)
 		{
 			var attr = R<T>.Units(expression);
 			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
 		/// <summary>Returns the unit label associated with a member</summary>
-		[DebuggerStepThrough]
-		public static string Label(Expression<Action<T>> expression, bool in_brackets = false)
+		[DebuggerStepThrough] public static string UnitLabel(Expression<Action<T>> expression, bool in_brackets = false)
 		{
 			var attr = R<T>.Units(expression);
 			return in_brackets ? attr.LabelInBrackets : attr.Label;
 		}
 
 		/// <summary>Returns the unit scale associated with a member</summary>
-		[DebuggerStepThrough]
-		public static double Scale<Ret>(Expression<Func<T,Ret>> expression)
+		[DebuggerStepThrough] public static double UnitScale<Ret>(Expression<Func<T,Ret>> expression)
 		{
 			return R<T>.Units(expression).Scale;
 		}
 
 		/// <summary>Returns the unit scale associated with a member</summary>
-		[DebuggerStepThrough]
-		public static double Scale(Expression<Action<T>> expression)
+		[DebuggerStepThrough] public static double UnitScale(Expression<Action<T>> expression)
 		{
 			return R<T>.Units(expression).Scale;
 		}
 
 		/// <summary>Returns the unit decimal places associated with a member</summary>
-		[DebuggerStepThrough]
-		public static int DecimalPlaces<Ret>(Expression<Func<T,Ret>> expression)
+		[DebuggerStepThrough] public static int UnitDP<Ret>(Expression<Func<T,Ret>> expression)
 		{
 			return R<T>.Units(expression).DecimalPlaces;
 		}
 
 		/// <summary>Returns the unit decimal places associated with a member</summary>
-		[DebuggerStepThrough]
-		public static int DecimalPlaces(Expression<Action<T>> expression)
+		[DebuggerStepThrough] public static int UnitDP(Expression<Action<T>> expression)
 		{
 			return R<T>.Units(expression).DecimalPlaces;
 		}
@@ -148,14 +162,14 @@ namespace pr.unittests
 
 		[Test] public void Units()
 		{
-			Assert.AreEqual("m", Units<Whatsit>.Label(x => x.Distance));
-			Assert.AreEqual("m/s", Units<Whatsit>.Label(x => x.Speed));
+			Assert.AreEqual("m", Units<Whatsit>.UnitLabel(x => x.Distance));
+			Assert.AreEqual("m/s", Units<Whatsit>.UnitLabel(x => x.Speed));
 				
-			Assert.AreEqual(1.0, Units<Whatsit>.Scale(x => x.Distance));
-			Assert.AreEqual(0.001, Units<Whatsit>.Scale(x => x.Speed));
+			Assert.AreEqual(1.0, Units<Whatsit>.UnitScale(x => x.Distance));
+			Assert.AreEqual(0.001, Units<Whatsit>.UnitScale(x => x.Speed));
 
-			Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Distance));
-			Assert.AreEqual(0, Units<Whatsit>.DecimalPlaces(x => x.Speed));
+			Assert.AreEqual(0, Units<Whatsit>.UnitDP(x => x.Distance));
+			Assert.AreEqual(0, Units<Whatsit>.UnitDP(x => x.Speed));
 		}
 	}
 }

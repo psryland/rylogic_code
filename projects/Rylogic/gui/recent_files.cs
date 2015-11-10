@@ -18,7 +18,7 @@ namespace pr.gui
 	// e.g.
 	//	private readonly Settings m_app_settings;
 	//	private readonly RecentFiles m_recent_files;
-	// Constructer:
+	// Constructor:
 	//	m_recent_files = new RecentFiles(m_menu_file_recent, delegate (string file) { LoadFile(file); });
 	//	m_recent_files.Import(m_app_settings.RecentFiles);
 	// FileOpen/Save/SaveAs:
@@ -59,7 +59,7 @@ namespace pr.gui
 			m_on_click = on_click;
 		}
 
-		/// <summary>Returns true if the given filepath is in the recents list</summary>
+		/// <summary>Returns true if the given filepath is in the recent files list</summary>
 		public bool IsInRecents(string file)
 		{
 			return Files.IndexOf(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0) != -1;
@@ -72,7 +72,7 @@ namespace pr.gui
 			if (m_menu != null) m_menu.DropDownItems.Clear();
 		}
 
-		/// <summary>Remove a filepath from the recents list</summary>
+		/// <summary>Remove a filepath from the recent files list</summary>
 		public void Remove(string file, bool update_menu)
 		{
 			m_files.RemoveIf(f => String.Compare(f, file, StringComparison.OrdinalIgnoreCase) == 0);

@@ -51,7 +51,10 @@
     <Reference Include="WindowsFormsIntegration" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="src\checkedlistbox_ui.cs">
+    <Compile Include="src\checked_listbox_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="src\checked_groupbox_ui.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="src\colour_wheel_ui.cs">
@@ -104,8 +107,11 @@
     <Compile Include="src\web_browser_ui.cs">
       <SubType>Form</SubType>
     </Compile>
-    <EmbeddedResource Include="src\checkedlistbox_ui.resx">
-      <DependentUpon>checkedlistbox_ui.cs</DependentUpon>
+    <EmbeddedResource Include="src\checked_groupbox_ui.resx">
+      <DependentUpon>checked_groupbox_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\checked_listbox_ui.resx">
+      <DependentUpon>checked_listbox_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\colour_wheel_ui.resx">
       <DependentUpon>colour_wheel_ui.cs</DependentUpon>

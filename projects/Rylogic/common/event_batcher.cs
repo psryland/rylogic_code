@@ -78,7 +78,7 @@ namespace pr.common
 		public Dispatcher Dispatcher { get { return m_dispatcher; } }
 		private readonly Dispatcher m_dispatcher;
 
-		/// <summary>Toogle switch for batching on/off</summary>
+		/// <summary>Toggle switch for batching on/off</summary>
 		public bool Immediate
 		{
 			get { return m_immediate || AllImmediate; }
@@ -86,7 +86,7 @@ namespace pr.common
 		}
 		private bool m_immediate;
 
-		/// <summary>Global switch to make all event batchers immediate or not (use for debugging)</summary>
+		/// <summary>Global switch to make all event batcher's immediate or not (use for debugging)</summary>
 		public static bool AllImmediate { get; set; }
 
 		/// <summary>

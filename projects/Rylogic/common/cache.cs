@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using pr.util;
 
@@ -103,6 +104,21 @@ namespace pr.common
 			m_stats    = new CacheStats();
 		}
 
+		/// <summary>Calls Dispose() on all cached items</summary>
+		public void Dispose()
+		{
+			if (typeof(IDisposable).IsAssignableFrom(typeof(TItem)))
+			{
+				foreach (var e in m_cache)
+				{
+					var doomed = e.Item as IDisposable;
+					if (doomed != null) doomed.Dispose();
+				}
+			}
+			m_cache.Clear();
+			m_lookup.Clear();
+		}
+
 		/// <summary>Get/Set the behaviour of the Get method</summary>
 		public CacheMode Mode { get; set; }
 
@@ -111,6 +127,12 @@ namespace pr.common
 
 		/// <summary>The number of items in the cache</summary>
 		public int Count { get { return m_cache.Count; } }
+
+		/// <summary>Enumerate over the items in the cache</summary>
+		public IEnumerable<TItem> CachedItems
+		{
+			get { return m_cache.Select(x => x.Item); }
+		}
 
 		/// <summary>Get/Set an upper limit on the number of cached items</summary>
 		public int Capacity
@@ -134,7 +156,7 @@ namespace pr.common
 		/// <summary>Returns true if an object with a key matching 'key' is currently in the cache</summary>
 		public bool IsCached(TKey key) { return m_lookup.ContainsKey(key); }
 
-		/// <summary>Preload the cache with an item</summary>
+		/// <summary>Pre-load the cache with an item</summary>
 		public void Add(TKey key, TItem item)
 		{
 			if (Capacity == 0)
@@ -149,7 +171,7 @@ namespace pr.common
 			}
 		}
 
-		/// <summary>Preload the cache with a range of items.</summary>
+		/// <summary>Pre-load the cache with a range of items.</summary>
 		public void Add(IEnumerable<TKey> keys, IEnumerable<TItem> items)
 		{
 			if (Capacity == 0)
@@ -309,21 +331,6 @@ namespace pr.common
 				var disposable = node.Value.Item as IDisposable;
 				if (disposable != null) disposable.Dispose();
 			}
-		}
-
-		/// <summary>Calls Dispose() on all cached items</summary>
-		public void Dispose()
-		{
-			if (typeof(IDisposable).IsAssignableFrom(typeof(TItem)))
-			{
-				foreach (var e in m_cache)
-				{
-					var doomed = e.Item as IDisposable;
-					if (doomed != null) doomed.Dispose();
-				}
-			}
-			m_cache.Clear();
-			m_lookup.Clear();
 		}
 
 		/// <summary>Create a synchronisation lock</summary>

@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+﻿using System.Drawing;
 using System.Windows.Forms;
 using pr.common;
-using pr.maths;
 using pr.util;
 using pr.win32;
 
@@ -14,35 +9,19 @@ namespace pr.extn
 	public static class TextBoxExtensions
 	{
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
-		public static Scope SelectionScope(this TextBoxBase edit)
+		public static Scope<Range> SelectionScope(this TextBoxBase edit)
 		{
-			int start = 0, length = 0;
 			return Scope.Create(
-				() =>
-				{
-					start  = edit.SelectionStart;
-					length = edit.SelectionLength;
-				},
-				() =>
-				{
-					edit.Select(start, length);
-				});
+				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
+				rn => edit.Select(rn.Begini, rn.Sizei));
 		}
 
 		/// <summary>Returns a disposable object that preserves the current selection</summary>
-		public static Scope SelectionScope(this ComboBox edit)
+		public static Scope<Range> SelectionScope(this ComboBox edit)
 		{
-			int start = 0, length = 0;
 			return Scope.Create(
-				() =>
-				{
-					start  = edit.SelectionStart;
-					length = edit.SelectionLength;
-				},
-				() =>
-				{
-					edit.Select(start, length);
-				});
+				() => Range.FromStartLength(edit.SelectionStart, edit.SelectionLength),
+				pt => edit.Select(pt.Begini, pt.Sizei));
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
@@ -61,7 +40,7 @@ namespace pr.extn
 			cb.SelectionStart = idx + text.Length;
 		}
 
-		/// <summary>Show or hide the caret for this textbase. Returns true if sucessful. Successful Show/Hide calls must be matched</summary>
+		/// <summary>Show or hide the caret for this text box. Returns true if successful. Successful Show/Hide calls must be matched</summary>
 		public static bool ShowCaret(this TextBoxBase tb, bool show)
 		{
 			return show
@@ -70,7 +49,7 @@ namespace pr.extn
 		}
 
 		/// <summary>A smarter set text that does sensible things with the caret position</summary>
-		public static void AddTextPreservingSelection(this TextBoxBase tb, string text)
+		public static void AppendText(this TextBoxBase tb, string text)
 		{
 			var carot_at_end = tb.SelectionStart == tb.TextLength && tb.SelectionLength == 0;
 			if (carot_at_end)
@@ -107,7 +86,7 @@ namespace pr.extn
 			cb.Select(selection.Begini, selection.Sizei);
 		}
 
-		/// <summary>Set the textbox into a state indicating error or success.</summary>
+		/// <summary>Set the text box into a state indicating error or success.</summary>
 		public static void HintState(this TextBoxBase tb, bool success
 			,Color? success_col = null ,Color? error_col = null
 			,ToolTip tt = null ,string success_tt = null ,string error_tt = null)
