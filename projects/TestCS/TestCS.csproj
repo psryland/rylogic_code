@@ -189,10 +189,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\dockpanel\DockPanel.csproj">
-      <Project>{c75532c4-765b-418e-b09b-46d36b2abdb1}</Project>
-      <Name>DockPanel</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Rylogic\Rylogic.csproj">
       <Project>{1735c773-5477-45e6-9cbf-5f2b6dc707ef}</Project>
       <Name>Rylogic</Name>

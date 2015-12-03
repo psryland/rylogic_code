@@ -96,7 +96,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "mergebin", "mergebin.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "scintilla", "..\sdk\scintilla\scintilla.vcxproj", "{599D9118-2445-476A-9877-060417FE5FA5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DockPanel", "..\projects\dockpanel\DockPanel.csproj", "{C75532C4-765B-418E-B09B-46D36B2ABDB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DockPanel", "..\sdk\dockpanelsuite\DockPanel.csproj", "{C75532C4-765B-418E-B09B-46D36B2ABDB1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

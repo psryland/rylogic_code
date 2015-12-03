@@ -8,8 +8,8 @@ using System.Text;
 using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
-using pr.gui.dockpanel;
 using pr.util;
+using WeifenLuo.WinFormsUI.Docking;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace Csex
@@ -209,7 +209,7 @@ namespace Csex
 			// 
 			this.m_dock.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dock.Mode = DockPanelMode.DockingSdi;
+			this.m_dock.DocumentStyle = DocumentStyle.DockingSdi;
 			this.m_dock.Location = new System.Drawing.Point(0, 0);
 			this.m_dock.Margin = new System.Windows.Forms.Padding(0);
 			this.m_dock.Name = "m_dock";
