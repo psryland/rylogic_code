@@ -168,7 +168,7 @@ namespace pr.gui
 				{
 					if (m_value == value) return;
 					m_value = value;
-					PropertyChanged.Raise(this, new PropertyChangedEventArgs(R<Elem>.Name(x => x.Value)));
+					PropertyChanged.Raise(this, new PropertyChangedEventArgs(nameof(Value)));
 				}
 			}
 			private object m_value;

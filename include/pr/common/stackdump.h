@@ -15,28 +15,27 @@
 //   void SomeHelperTraceFunc()
 //   {
 //       // 1 = skip this function, and output the next 5 on the stack
-//       pr::StackDump(1, 5, [](std::string const& filepath, int line)
+//       pr::DumpStack([](std::string const& sym, std::string const& filepath, int line)
 //       {
 //          printf(..);
-//       }
+//       }, 1, 5);
 //   }
 
 #pragma once
-
-#if _WIN32_WINNT <= 0x0500
-#error "_WIN32_WINNT version 0x0600 or greater required"
-#endif
 
 #include <malloc.h>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <functional>
 #include <mutex>
 
 #include <windows.h>
 
-// <dbghelp.h> has conflicts with <imagehlp.h>, so it cannot be #include'd
+static_assert(_WIN32_WINNT >= _WIN32_WINNT_VISTA, "_WIN32_WINNT version 0x0600 or greater required");
+
+// <dbghelp.h> has conflicts with <imagehlp.h>, so it cannot be included
 // <imagehlp.h> contains everything we would need from <dbghelp.h> anyway
 #include <imagehlp.h>
 #include <tlhelp32.h>
@@ -80,41 +79,42 @@ namespace pr
 			HANDLE m_handle;
 
 			ScopedFile(HANDLE handle) :m_handle(handle) {}
+			ScopedFile(ScopedFile const&) = delete;
+			ScopedFile& operator=(ScopedFile const&) = delete;
 			~ScopedFile() { CloseHandle(m_handle); }
-
-		private:
-			ScopedFile(ScopedFile const&);
-			ScopedFile& operator=(ScopedFile const&);
 		};
 
 		// A global mutex to sync access to 'GetCallSource()'
 		class StackdumpLock
 		{
-			static std::recursive_mutex& cs() { static std::recursive_mutex s_cs; return s_cs; }
 			std::lock_guard<std::recursive_mutex> m_lock;
-
-			StackdumpLock(StackdumpLock const&);
-			StackdumpLock& operator=(StackdumpLock const&);
+			static std::recursive_mutex& cs() { static std::recursive_mutex s_cs; return s_cs; }
 
 		public:
+
 			StackdumpLock() :m_lock(cs()) {}
+			StackdumpLock(StackdumpLock const&) = delete;
+			StackdumpLock& operator=(StackdumpLock const&) = delete;
 		};
 
 		// Wraps and initialises a SYMBOL_INFO object
 		struct SymInfo :SYMBOL_INFO
 		{
-			char sym_name[1024];
-			SymInfo() :SYMBOL_INFO() ,sym_name()
+			wchar_t sym_name[1024];
+			SymInfo()
+				:SYMBOL_INFO()
+				,sym_name()
 			{
 				SizeOfStruct = sizeof(SYMBOL_INFO);
-				MaxNameLen = sizeof(sym_name);
+				MaxNameLen = _countof(sym_name);
 			}
 		};
 
 		// Wraps and initialises a IMAGEHLP_LINE64 object
 		struct Line64 :IMAGEHLP_LINE64
 		{
-			Line64() :IMAGEHLP_LINE64()
+			Line64()
+				:IMAGEHLP_LINE64()
 			{
 				SizeOfStruct = sizeof(IMAGEHLP_LINE64);
 			}
@@ -124,159 +124,82 @@ namespace pr
 
 		// This is a class that represents a DLL that has been Loaded into memory
 		// Loads and unloads the named DLL into memory
-		// If the DLL is not successfully Loaded, module() will return 0.
+		// If the DLL is not successfully Loaded, 'm_module' will be nullptr.
 		struct DllBase
 		{
-		protected:
-
 			HMODULE m_module;
 
-			// Returns the address of the specified procedure, or 0 if not found.
-			void* ProcAddress(const char* proc_name) { return ::GetProcAddress(m_module, proc_name); }
-
-			explicit DllBase(const char* name)
-				:m_module(LoadLibraryA(name))
+			explicit DllBase(wchar_t const* name)
+				:m_module(LoadLibraryW(name))
 			{}
 			~DllBase()
 			{
 				if (m_module == 0) return;
 				FreeLibrary(m_module);
 			}
-			HMODULE module() const
+
+			// Returns the address of the specified procedure, or 0 if not found.
+			void* ProcAddress(const char* proc_name)
 			{
-				return m_module;
+				return ::GetProcAddress(m_module, proc_name);
 			}
 		};
 
-		// This class represents kernel32.dll and the toolhelp functions from it
-		struct ToolHelp_Dll: public DllBase
+		// This class represents kernel32.dll and the tool help functions from it
+		struct ToolHelp_Dll :DllBase
 		{
 			typedef HANDLE(__stdcall* CreateToolhelp32Snapshot_type)(DWORD , DWORD);
 			typedef BOOL  (__stdcall* Module32First_type           )(HANDLE, LPMODULEENTRY32);
 			typedef BOOL  (__stdcall* Module32Next_type            )(HANDLE, LPMODULEENTRY32);
 
 			CreateToolhelp32Snapshot_type CreateToolhelp32Snapshot;
-			Module32First_type            Module32First;
-			Module32Next_type             Module32Next;
+			Module32First_type            FirstModule32;
+			Module32Next_type             NextModule32;
 
 			ToolHelp_Dll()
-				:DllBase("kernel32.dll")
+				:DllBase(L"kernel32.dll")
 				,CreateToolhelp32Snapshot((CreateToolhelp32Snapshot_type) ProcAddress("CreateToolhelp32Snapshot"))
-				,Module32First           ((Module32First_type           ) ProcAddress("Module32First"))
-				,Module32Next            ((Module32Next_type            ) ProcAddress("Module32Next"))
+				,FirstModule32           ((Module32First_type           ) ProcAddress("Module32First"))
+				,NextModule32            ((Module32Next_type            ) ProcAddress("Module32Next"))
 			{}
-
+			ToolHelp_Dll(ToolHelp_Dll const&) = delete;
+			ToolHelp_Dll& operator=(ToolHelp_Dll const&) = delete;
+	
 			// Returns true if all required functions were found
-			bool Loaded() const { return CreateToolhelp32Snapshot && Module32First && Module32Next; }
-
-		private:
-			ToolHelp_Dll(const ToolHelp_Dll&);
-			ToolHelp_Dll& operator=(const ToolHelp_Dll&);
+			bool Loaded() const
+			{
+				return CreateToolhelp32Snapshot != nullptr && FirstModule32 != nullptr && NextModule32 != nullptr;
+			}
 		};
 
 		// This class represents psapi.dll and the functions that we use from it
-		struct PSAPI_Dll: public DllBase
+		struct PSAPI_Dll :DllBase
 		{
 			typedef BOOL (__stdcall* EnumProcessModules_type  )(HANDLE, HMODULE*, DWORD, LPDWORD);
 			typedef BOOL (__stdcall* GetModuleInformation_type)(HANDLE, HMODULE, LPMODULEINFO, DWORD);
 
-			EnumProcessModules_type   EnumProcessModules;
-			GetModuleInformation_type GetModuleInformation;
+			EnumProcessModules_type   EnumProcModules;
+			GetModuleInformation_type GetModuleInfo;
 
 			PSAPI_Dll()
-				:DllBase("psapi.dll")
-				,EnumProcessModules  ((EnumProcessModules_type  ) ProcAddress("EnumProcessModules"))
-				,GetModuleInformation((GetModuleInformation_type) ProcAddress("GetModuleInformation"))
+				:DllBase(L"psapi.dll")
+				,EnumProcModules((EnumProcessModules_type  ) ProcAddress("EnumProcessModules"))
+				,GetModuleInfo  ((GetModuleInformation_type) ProcAddress("GetModuleInformation"))
 			{}
+			PSAPI_Dll(PSAPI_Dll const&) = delete;
+			PSAPI_Dll& operator=(PSAPI_Dll const&) = delete;
 
 			// Returns true if all required functions were found
-			bool Loaded() const { return EnumProcessModules && GetModuleInformation; }
-
-		private:
-			PSAPI_Dll(const PSAPI_Dll&);
-			PSAPI_Dll& operator=(const PSAPI_Dll&);
+			bool Loaded() const
+			{
+				return EnumProcModules != nullptr && GetModuleInfo != nullptr;
+			}
 		};
 
-		// This class represents dbghelp.dll and the functions that we use from it
-		// It also keeps track of the dll's initialized state and will call Cleanup
-		//  if necessary before it unloads
-		class DbgHelp_Dll: public DllBase
+		// This class represents dbghelp.dll and the functions that we use from it.
+		// It also keeps track of the dll's initialized state and will call Clean up if necessary before it unloads
+		struct DbgHelp_Dll :DllBase
 		{
-			bool m_loaded; // This is true if the DLL was found, loaded, all required functions found, and initalized without error
-
-			// Helper function for getting the full path and file name for a module. Returns std::string() on error
-			static std::string GetModuleFilename(const HMODULE module)
-			{
-				char result[_MAX_PATH+1];
-				if (!GetModuleFileNameA(module, result, _MAX_PATH+1)) result[0] = 0;
-				return result;
-			}
-
-			// Load all the modules in this Process, using the PSAPI
-			void LoadModules(PSAPI_Dll const& psapi)
-			{
-				DWORD bytes_needed;
-				psapi.EnumProcessModules(GetCurrentProcess(), (HMODULE*) &bytes_needed, 0, &bytes_needed);
-				SetLastError(0);
-
-				HMODULE* modules = reinterpret_cast<HMODULE*>(_alloca(bytes_needed));
-				if (!psapi.EnumProcessModules(GetCurrentProcess(), modules, bytes_needed, &bytes_needed))
-					return;
-
-				typedef HMODULE* HMODULEptr;
-				for (HMODULEptr i = modules, end = modules + bytes_needed / sizeof(HMODULE); i != end;)
-				{
-					HMODULE module = *i++;
-					MODULEINFO info;
-					if (psapi.GetModuleInformation(GetCurrentProcess(), module, &info, sizeof(info)))
-						SymLoadModule64(Process(), 0, const_cast<char*>(GetModuleFilename(module).c_str()), 0, reinterpret_cast<DWORD64>(info.lpBaseOfDll), info.SizeOfImage);
-				}
-			}
-
-			// Load all the modules in this Process, using the ToolHelp API
-			void LoadModules(ToolHelp_Dll const& toolhelp)
-			{
-				const HANDLE snapshot = toolhelp.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
-				if (snapshot == INVALID_HANDLE_VALUE) return;
-
-				ScopedFile snapshot_guard(snapshot);
-				MODULEENTRY32 module = {};
-				module.dwSize = sizeof(module);
-				for (BOOL ok = toolhelp.Module32First(snapshot, &module); ok; ok = toolhelp.Module32Next(snapshot, &module))
-				{
-					std::string exe_path = module.szExePath;
-					std::string mod_name = module.szModule;
-					SymLoadModule64(Process(), 0, (PSTR)exe_path.c_str(), (PSTR)mod_name.c_str(), reinterpret_cast<DWORD64>(module.modBaseAddr), module.modBaseSize);
-				}
-			}
-
-			// This function will try anything to enumerate and load all of this Process' modules
-			void LoadModules()
-			{
-				// Try the ToolHelp API first
-				const ToolHelp_Dll toolhelp;
-				if (toolhelp.Loaded()) { LoadModules(toolhelp); return; }
-
-				// Try PSAPI if ToolHelp isn't present
-				const PSAPI_Dll psapi;
-				if (psapi.Loaded()) { LoadModules(psapi); return; }
-
-				// One of the two above should work.  The only possible case where they wouldn't is
-				//  if an NT user deleted psapi.dll...
-			}
-
-			// Retrieves the current search path, or std::string() on error
-			std::string GetSearchPath()
-			{
-				char result[_MAX_PATH+1];
-				if (!SymGetSearchPath(Process(), result, _MAX_PATH+1)) result[0] = 0;
-				return result;
-			}
-
-			DbgHelp_Dll(DbgHelp_Dll const&); // no copying
-			DbgHelp_Dll& operator=(DbgHelp_Dll const&);
-
-		public:
 			typedef BOOL   (WINAPI* SymInitialize_type         )(HANDLE, PSTR, BOOL);
 			typedef BOOL   (WINAPI* SymCleanup_type            )(HANDLE);
 			typedef DWORD  (WINAPI* SymSetOptions_type         )(DWORD);
@@ -287,6 +210,9 @@ namespace pr
 			typedef BOOL   (WINAPI* SymGetLineFromAddr_type    )(HANDLE, DWORD64, PDWORD, PIMAGEHLP_LINE64);
 			typedef BOOL   (WINAPI* SymGetSearchPath_type      )(HANDLE, PSTR, DWORD);
 			typedef BOOL   (WINAPI* SymFromAddr_type           )(HANDLE, DWORD64, PDWORD64, PSYMBOL_INFO);
+
+			// This is true if the DLL was found, loaded, all required functions found, and initialised without error
+			bool m_loaded;
 
 			// The following are functions that we absolutely required in order to do stack traces
 			SymInitialize_type          SymInitialize;
@@ -303,18 +229,8 @@ namespace pr
 			SymGetSearchPath_type   SymGetSearchPath;
 			SymFromAddr_type        SymFromAddr;
 
-			// Singleton accessor
-			static DbgHelp_Dll& get() { static DbgHelp_Dll me; return me; }
-
-			// The value used to initialize dbghelp.dll. We always use the Process id here, so it will work on 95/98/Me
-			static HANDLE Process()
-			{
-				DWORD id = GetCurrentProcessId();
-				return reinterpret_cast<const HANDLE&>(id);
-			}
-
 			DbgHelp_Dll()
-				:DllBase("dbghelp.dll")
+				:DllBase(L"dbghelp.dll")
 				,m_loaded(false)
 				,SymInitialize            ((SymInitialize_type         ) ProcAddress("SymInitialize"           ))
 				,SymCleanup               ((SymCleanup_type            ) ProcAddress("SymCleanup"              ))
@@ -328,20 +244,115 @@ namespace pr
 				,SymFromAddr              ((SymFromAddr_type           ) ProcAddress("SymFromAddr"             ))
 			{
 				// If any critical functions (or the DLL itself) are missing, give up
-				if (!SymInitialize || !SymCleanup || !SymSetOptions || !SymFunctionTableAccess64 ||
-					!SymGetModuleBase64 || !StackWalk64 || !SymLoadModule64 ||
-					!SymGetLineFromAddr64 || !SymGetSearchPath || !SymFromAddr)
-					throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymInitialize            == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymCleanup               == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymSetOptions            == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymFunctionTableAccess64 == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymGetModuleBase64       == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (StackWalk64              == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymLoadModule64          == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymGetLineFromAddr64     == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymGetSearchPath         == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
+				if (SymFromAddr              == nullptr) throw std::exception("failed to load dbghelp.dll for stack dump");
 
 				SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME);
-				if (!SymInitialize(Process(), 0, FALSE)) // Initialize dbghelp
+				if (!SymInitialize(Process(), 0, FALSE)) // Initialise 'dbghelp'
 					throw std::exception("failed to initialise dbghelp.dll for stack dump");
 
 				LoadModules();   // Enumerate and load all Process modules
 			}
+			DbgHelp_Dll(DbgHelp_Dll const&) = delete;
+			DbgHelp_Dll& operator=(DbgHelp_Dll const&) = delete;
 			~DbgHelp_Dll()
 			{
 				SymCleanup(Process());
+			}
+
+			// Singleton accessor
+			static DbgHelp_Dll& get() { static DbgHelp_Dll me; return me; }
+
+			// The value used to initialize dbghelp.dll. We always use the Process id here, so it will work on 95/98/Me
+			static HANDLE Process()
+			{
+				DWORD id = GetCurrentProcessId();
+				return reinterpret_cast<const HANDLE&>(id);
+			}
+
+			// Helper function for getting the full path and file name for a module. Returns std::string() on error
+			static std::string GetModuleFilename(HMODULE module)
+			{
+				char result[_MAX_PATH+1];
+				if (!GetModuleFileNameA(module, result, _countof(result))) result[0] = 0;
+				return result;
+			}
+
+			// Load all the modules in this Process, using the PSAPI
+			void LoadModules(PSAPI_Dll const& psapi)
+			{
+				DWORD bytes_needed;
+				psapi.EnumProcModules(GetCurrentProcess(), (HMODULE*) &bytes_needed, 0, &bytes_needed);
+				SetLastError(0);
+
+				auto modules = reinterpret_cast<HMODULE*>(_alloca(bytes_needed));
+				if (!psapi.EnumProcModules(GetCurrentProcess(), modules, bytes_needed, &bytes_needed))
+					return;
+
+				for (auto i = modules, end = modules + bytes_needed / sizeof(HMODULE); i != end;)
+				{
+					auto module = *i++;
+
+					MODULEINFO info;
+					if (psapi.GetModuleInfo(GetCurrentProcess(), module, &info, sizeof(info)))
+						SymLoadModule64(Process(), 0, const_cast<char*>(GetModuleFilename(module).c_str()), 0, reinterpret_cast<DWORD64>(info.lpBaseOfDll), info.SizeOfImage);
+				}
+			}
+
+			// Load all the modules in this Process, using the ToolHelp API
+			void LoadModules(ToolHelp_Dll const& toolhelp)
+			{
+				const HANDLE snapshot = toolhelp.CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
+				if (snapshot == INVALID_HANDLE_VALUE) return;
+
+				ScopedFile snapshot_guard(snapshot);
+				tagMODULEENTRY32 module = {};
+				module.dwSize = sizeof(module);
+				for (BOOL ok = toolhelp.FirstModule32(snapshot, &module); ok; ok = toolhelp.NextModule32(snapshot, &module))
+				{
+					auto exe_path = module.szExePath;
+					auto mod_name = module.szModule;
+					SymLoadModule64(Process(), 0, exe_path, mod_name, reinterpret_cast<DWORD64>(module.modBaseAddr), module.modBaseSize);
+				}
+			}
+
+			// This function will try anything to enumerate and load all of this Process' modules
+			void LoadModules()
+			{
+				// Try the ToolHelp API first
+				const ToolHelp_Dll toolhelp;
+				if (toolhelp.Loaded())
+				{
+					LoadModules(toolhelp);
+					return;
+				}
+
+				// Try PSAPI if ToolHelp isn't present
+				const PSAPI_Dll psapi;
+				if (psapi.Loaded())
+				{
+					LoadModules(psapi);
+					return;
+				}
+
+				// One of the two above should work.  The only possible case where they wouldn't is
+				//  if an NT user deleted psapi.dll...
+			}
+
+			// Retrieves the current search path, or std::string() on error
+			std::string GetSearchPath()
+			{
+				char result[_MAX_PATH+1];
+				if (!SymGetSearchPath(Process(), result, _MAX_PATH+1)) result[0] = 0;
+				return result;
 			}
 		};
 
@@ -401,7 +412,7 @@ namespace pr
 	// 'skip' is the number of initial stack frames to not call 'func' for
 	// 'count' is the number of stack frames to call 'func' for before stopping
 	// 'TOut(std::string sym, std::string file, int line)
-	template <typename TOut> void StackDump(TOut out, size_t count = 256, size_t skip = 0)
+	template <typename TOut> void DumpStack(TOut out, size_t skip = 0, size_t count = 256)
 	{
 		size_t const max_frames = 256;
 		CallAddress frames[max_frames];
@@ -496,11 +507,21 @@ namespace pr
 	{
 		return impl::StackDumpImpl<>::GetCallSource(reinterpret_cast<CallAddress const&>(address));
 	}
+
+	// Return the stack dump as a string
+	inline std::string DumpStack(size_t skip = 1, size_t count = 256)
+	{
+		std::stringstream out;
+		pr::DumpStack([&](std::string const& sym, std::string const& file, int line)
+		{
+			out << file << "(" << line << "): " << sym << std::endl;
+		}, skip, count);
+		return out.str();
+	}
 }
 
 #if PR_UNITTESTS
 #include "pr/common/unittests.h"
-#include <sstream>
 
 namespace pr
 {
@@ -510,7 +531,7 @@ namespace pr
 		{
 			template <typename TOut> static __declspec(noinline) void Func1(TOut out) { Func2(out); }
 			template <typename TOut> static __declspec(noinline) void Func2(TOut out) { Func3(out); }
-			template <typename TOut> static __declspec(noinline) void Func3(TOut out) { StackDump(out); }
+			template <typename TOut> static __declspec(noinline) void Func3(TOut out) { DumpStack(out); }
 		};
 
 		PRUnitTest(pr_common_stackdump)

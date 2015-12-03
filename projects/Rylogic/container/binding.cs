@@ -107,6 +107,12 @@ namespace pr.container
 		/// <summary>The value to use when 'DataSource' is null</summary>
 		public TValue DefaultValue { get; set; }
 
+		/// <summary>Get the current value from the 'DataSource' or null if not yet bound</summary>
+		public TValue Value
+		{
+			get { return (m_get != null && DataSource != null) ? (TValue)m_get.Invoke(DataSource, null) : DefaultValue; }
+		}
+
 		/// <summary>The binding flags used to find the property on the data source</summary>
 		public BindingFlags Flags { get; set; }
 
@@ -128,7 +134,11 @@ namespace pr.container
 
 				// Add the binding
 				var set = prop.GetSetMethod();
-				m_bound.Add(new Link(obj, set));
+				var bind = new Link(obj, set);
+				m_bound.Add(bind);
+
+				// Apply the current value to the newly bound object
+				bind.Set(Value);
 				return;
 			}
 
@@ -139,10 +149,14 @@ namespace pr.container
 				// Method must take a single parameter that is the property
 				var parms = meth.GetParameters();
 				if (parms.Length != 1 || !parms[0].ParameterType.IsAssignableFrom(typeof(TValue)))
-					throw new Exception("Method signiture mismatch. The bound method must take a single parameter of type {0}.".Fmt(typeof(TValue).Name));
+					throw new Exception("Method signature mismatch. The bound method must take a single parameter of type {0}.".Fmt(typeof(TValue).Name));
 
 				// Add the binding
-				m_bound.Add(new Link(obj, meth));
+				var bind = new Link(obj, meth);
+				m_bound.Add(bind);
+
+				// Apply the current value to the newly bound object
+				bind.Set(Value);
 				return;
 			}
 
@@ -162,15 +176,8 @@ namespace pr.container
 		/// <summary>Push a change in the binding value out to the bound objects</summary>
 		public void ResetBindings(object sender = null, EventArgs args = null)
 		{
-			if (m_get != null && DataSource != null)
-			{
-				var value = m_get.Invoke(DataSource, null);
-				m_bound.ForEach(x => x.Set(value));
-			}
-			else
-			{
-				m_bound.ForEach(x => x.Set(DefaultValue));
-			}
+			var value = Value;
+			m_bound.ForEach(x => x.Set(value));
 			ValueChanged.Raise(this, EventArgs.Empty);
 		}
 
@@ -202,7 +209,7 @@ namespace pr.unittests
 					if (m_value == value) return;
 					m_value = value;
 					if (PropertyChanged != null)
-						PropertyChanged(this, new PropertyChangedEventArgs(R<Thing>.Name(x=>x.Value)));
+						PropertyChanged(this, new PropertyChangedEventArgs(nameof(Value)));
 				}
 			}
 			private string m_value;
@@ -218,9 +225,9 @@ namespace pr.unittests
 			var cb = new ComboBox();
 
 			// Create a binding to "Value" on an object
-			var binding = new Binding<Thing, string>(null, x => x.Value);
+			var binding = new Binding<Thing, string>(null, nameof(Thing.Value));
 			
-			// Connect the tb and cb to the binding
+			// Connect the text box and combo box to the binding
 			binding.Add(tb, x => x.Text);
 			binding.Add(cb, x => x.Text);
 

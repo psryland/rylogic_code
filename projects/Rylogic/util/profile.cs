@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using pr.extn;
+using pr.maths;
 
 namespace pr.util
 {
@@ -508,7 +510,7 @@ namespace pr.util
 			/// <summary>The number of frames in this sample</summary>
 			public int Frames;
 
-			/// <summary>The average length of a frame in milli seconds</summary>
+			/// <summary>The average length of a frame in milliseconds</summary>
 			public double FrameTimeMS { get { return Data.Count != 0 ? Data[0].AvrSelfInclChildTimeMS : 0; } }
 
 			/// <summary>The length of history to keep</summary>
@@ -631,6 +633,70 @@ namespace pr.util
 			}
 		}
 
+		/// <summary>A class for measuring the frequency of calls</summary>
+		public class CallFreq
+		{
+			private Stopwatch m_sw;
+			private long m_count;
+
+			public CallFreq(string name, Action<CallFreq> output_cb = null)
+			{
+				m_sw = Stopwatch.StartNew();
+				m_count = -1;
+				Name = name;
+				OutputFreqMS = 1000;
+
+				// Set the callback to call when it's time to output
+				OutputCB = output_cb ?? new Action<CallFreq>(s =>
+				{
+					Debug.WriteLine("{0}: {1}hz {2}s".Fmt(s.Name, s.Freq, s.Period));
+				});
+			}
+
+			/// <summary>A name for this call frequency object</summary>
+			public string Name { get; set; }
+
+			/// <summary>The average frequency of calls to 'Mark' (in calls per second)</summary>
+			public double Freq
+			{
+				get
+				{
+					var elapsed = m_sw.ElapsedMilliseconds * 0.001;
+					return elapsed > 0 ? m_count / elapsed : 0.0;
+				}
+			}
+
+			/// <summary>The average period between calls (in seconds per call)</summary>
+			public double Period
+			{
+				get
+				{
+					var elapsed = m_sw.ElapsedMilliseconds * 0.001;
+					return m_count > 0 ? elapsed / m_count : 0.0;
+				}
+			}
+
+			/// <summary>A callback function that outputs the call frequency info</summary>
+			public Action<CallFreq> OutputCB { get; set; }
+
+			/// <summary>How often to write the output</summary>
+			public int OutputFreqMS { get; set; }
+
+			/// <summary>Call at the code location to test the call frequency</summary>
+			public void Mark()
+			{
+				// Trigger output when the OutputFreqMS period elapses or on the first call
+				if (m_count == -1 || m_sw.ElapsedMilliseconds > OutputFreqMS)
+				{
+					if (m_count > 0) OutputCB(this);
+					m_sw.Restart();
+					m_count = -1; // Leave m_count at -1 so the first mark is not counted
+				}
+
+				// Record the call
+				++m_count;
+			}
+		}
 		#region Helper methods
 
 		private static int Compare(int lhs, int rhs)       { return (lhs < rhs) ? -1 : (lhs > rhs) ? 1 : 0; }

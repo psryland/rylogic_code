@@ -13,7 +13,7 @@ namespace RyLogViewer
 	{
 		private readonly BindingSource m_find_history;
 
-		/// <summary>Setup the app's find search support</summary>
+		/// <summary>Set up the app's find search support</summary>
 		private void SetupFind()
 		{
 			// When the find events are fired on m_find_ui, trigger find next/prev
@@ -34,7 +34,7 @@ namespace RyLogViewer
 			}
 
 			// Display the find window
-			m_find_ui.Display();
+			m_find_ui.Show();
 		}
 
 		/// <summary>Update the current find pattern to the text from row 'row_index'</summary>
@@ -60,7 +60,7 @@ namespace RyLogViewer
 
 			var pattern = new Pattern(m_find_ui.Pattern);
 
-			// Remove any patterns with the same expr as 'pattern'
+			// Remove any patterns with the same expression as 'pattern'
 			m_find_history.RemoveIf<Pattern>(x => string.CompareOrdinal(x.Expr, pattern.Expr) == 0);
 			m_find_history.Insert(0, pattern);
 			m_find_history.Position = 0;

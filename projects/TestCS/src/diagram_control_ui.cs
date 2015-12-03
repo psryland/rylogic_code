@@ -8,6 +8,7 @@ using pr.gfx;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace TestCS
 {
@@ -217,7 +218,7 @@ namespace TestCS
 			this.m_menu_tools_loadmmapdiag = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_load_options = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tools_allowediting = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_toolstripcont = new System.Windows.Forms.ToolStripContainer();
+			this.m_toolstripcont = new ToolStripContainer();
 			this.m_diag = new pr.gui.DiagramControl();
 			this.statusStrip1.SuspendLayout();
 			this.menuStrip1.SuspendLayout();

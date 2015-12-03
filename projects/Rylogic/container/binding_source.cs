@@ -137,15 +137,38 @@ namespace pr.container
 				{
 					bl.ListChanging += RaiseListChanging;
 					bl.ItemChanged  += RaiseItemChanged;
+                    RaiseListChangedEvents = bl.RaiseListChangedEvents;
 				}
 				bs = base.DataSource as BindingSource<TItem>;
 				if (bs != null)
 				{
 					bs.ListChanging += RaiseListChanging;
 					bs.ItemChanged  += RaiseItemChanged;
+                    RaiseListChangedEvents = bs.RaiseListChangedEvents;
 				}
 
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+			}
+		}
+
+		/// <summary>Block ListChanged/ListChanging events from being raised</summary>
+		public new bool RaiseListChangedEvents
+		{
+			get
+			{
+				var bl = base.DataSource as BindingListEx<TItem>;
+				if (bl != null) return bl.RaiseListChangedEvents;
+				var bs = base.DataSource as BindingSource<TItem>;
+				if (bs != null) return bs.RaiseListChangedEvents;
+				return base.RaiseListChangedEvents;
+			}
+			set
+			{
+				var bl = base.DataSource as BindingListEx<TItem>;
+				if (bl != null) bl.RaiseListChangedEvents = value;
+				var bs = base.DataSource as BindingSource<TItem>;
+				if (bs != null) bs.RaiseListChangedEvents = value;
+				base.RaiseListChangedEvents = value;
 			}
 		}
 

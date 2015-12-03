@@ -23,7 +23,8 @@ namespace TestCS
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new FormTestApp());
-		}
+//			Application.Run(new FormTestApp());
+			Application.Run(new DockPanelUI());
+	}
 	}
 }

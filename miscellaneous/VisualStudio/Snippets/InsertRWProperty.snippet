@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?> 
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/CodeSnippet">
+	<CodeSnippet Format="1.0.0">
+
+		<!-- The header contains information describing the snippet. -->
+		<Header>
+
+			<!-- The Title of the snippet, this will be shown in the snippets manager. -->
+			<Title>Insert RW Property</Title>
+
+			<!-- The description of the snippet. -->
+			<Description>Inserts an read write property that protects against self assignment.</Description>
+
+			<!-- The author of the snippet. -->
+			<Author>Paul Ryland</Author>
+
+			<!-- The set of characters that must be keyed in to insert the snippet. -->
+			<Shortcut>prprop</Shortcut>
+
+			<!-- A URL for more help. -->
+			<HelpUrl></HelpUrl>
+
+			<!-- The set of snippet types we're dealing with - either Expansion or -->
+			<SnippetTypes>
+				<SnippetType>Expansion</SnippetType>
+			</SnippetTypes>          
+
+		</Header>
+
+		<!-- Now we have the snippet itself. -->
+		<Snippet>
+
+			<!-- Create any declarations that we use in the snippet. -->
+			<Declarations>
+				<Literal>
+					<ID>PropType</ID>
+					<ToolTip>Enter the property type</ToolTip>
+					<Default>PropertyType</Default>
+				</Literal>
+				<Literal>
+					<ID>PropName</ID>
+					<ToolTip>Enter the property name</ToolTip>
+					<Default>PropertyName</Default>
+				</Literal>
+				<Literal>
+					<ID>ImplType</ID>
+					<ToolTip>Enter the name for the backing field</ToolTip>
+					<Default>field_name</Default>
+				</Literal>
+			</Declarations>			
+
+			<!-- Sepecify the code language and the actual snippet content. -->
+			<Code Language="CSharp" Kind="any">
+				<![CDATA[
+				/// <summary></summary>
+				public $PropType$ $PropName$
+				{
+					get { return m_impl_$ImplType$; }
+					private set
+					{
+						if (m_impl_$ImplType$ == value) return;
+						if (m_impl_$ImplType$ != null)
+						{
+						}
+						m_impl_$ImplType$ = value;
+						if (m_impl_$ImplType$ != null)
+						{
+						}
+					}
+				}
+				private $PropType$ m_impl_$ImplType$;
+                ]]>
+			</Code>
+		</Snippet>
+	</CodeSnippet>
+</CodeSnippets>

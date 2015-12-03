@@ -32,7 +32,7 @@ namespace pr.util
 				if (multicast_delegate != null)
 				{
 					// Get the multicast delegate's invocation list
-					var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
+					var invocation_list = multicast_delegate.GetType().GetMethod(nameof(MulticastDelegate.GetInvocationList));
 
 					// Get the delegates subscribed to the event
 					var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);
@@ -66,7 +66,7 @@ namespace pr.util
 			if (multicast_delegate != null)
 			{
 				// Get the multicast delegate's invocation list
-				var invocation_list = multicast_delegate.GetType().GetMethod(R<MulticastDelegate>.Name(x => x.GetInvocationList()));
+				var invocation_list = multicast_delegate.GetType().GetMethod(nameof(MulticastDelegate.GetInvocationList));
 
 				// Get the delegates subscribed to the event
 				var delegates = (Delegate[])invocation_list.Invoke(multicast_delegate,null);

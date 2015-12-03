@@ -1,7 +1,9 @@
 <!--
  Enables 'PyScript' as a build action.
  In the properties for a file, select PyScript for the build action.
- Set 'Custom Tool' to the name of the script to run
+ 'PyScript.Fullpath' is the name of the file that the custom build is operating on.
+  It is passed as the first argument to the script
+ Set 'Custom Tool' (i.e. PyScript.Generator) to the name of the script to run
  Set 'Custom Tool Namespace' to any addition arguments you want to pass to the script
 -->
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -28,6 +30,12 @@
 		<!-- Error if py.exe isn't available -->
 		<Error Condition="!Exists('$(PythonExe)')" Text="'$(PythonExe)' not found. Please install Python 3."/>
 		
+		<!-- Error if the script file isn't available -->
+		<Error Condition="!Exists('$(Script)')" Text="'$(Script)' not found."/>
+
+		<!-- Error if the target file isn't available -->
+		<Error Condition="!Exists('$(File)')" Text="'$(File)' not found."/>
+
 		<!-- Execute the python script on the file -->
 		<Exec
 			Command="%22$(PythonExe)%22 %22$(Script)%22 %22$(File)%22 $(Args)"

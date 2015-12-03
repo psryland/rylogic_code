@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -43,6 +42,54 @@ namespace pr.extn
 		/// <summary>ToolStripMenuItem comparer for alphabetical order</summary>
 		public static readonly Cmp<ToolStripMenuItem> AlphabeticalOrder = Cmp<ToolStripMenuItem>.From((l,r) => string.Compare(l.Text, r.Text, true));
 
+		/// <summary>
+		/// Restores the tool strip locations in this container and assigns handlers so that
+		/// the tool strip locations are saved whenever a tool strip moves, is added, or removed</summary>
+		public static void AutoPersistLocations(this ToolStripContainer cont, ToolStripLocations locations, Action<ToolStripLocations> save)
+		{
+			// Save the layout for 'tsc'
+			Action<ToolStripContainer> persist_locations = tsc =>
+			{
+				if (tsc == null || !tsc.Visible) return;
+				save.Raise(tsc.SaveLocations());
+			};
+
+			// A handler for saving the TSC layout after a tool strip has had it's location changed programmatically
+			EventHandler persist_after_location_changed = (s,a) =>
+			{
+				var strip = (ToolStrip)s;
+				var tsc = (ToolStripContainer)strip?.Parent?.Parent;
+				if (strip.IsCurrentlyDragging) return; // Don't persist locations during drag operations (the drag handler does that)
+				persist_locations(tsc);
+			};
+
+			// Restore the locations from persistence data
+			cont.LoadLocations(locations);
+
+			// Attach a handler to each child tool strip to save the tool bar locations whenever they move
+			foreach (var ts in cont.ToolStrips())
+			{
+				ts.LocationChanged += persist_after_location_changed;
+				ts.EndDrag += persist_after_location_changed;
+			}
+
+			// Attach a handler to watch for tool strips added or removed
+			cont.ControlAdded += (s,a) =>
+			{
+				var ts = a.Control as ToolStrip;
+				ts.LocationChanged += persist_after_location_changed;
+				ts.EndDrag += persist_after_location_changed;
+				persist_locations(s as ToolStripContainer);
+			};
+			cont.ControlRemoved += (s,a) =>
+			{
+				var ts = a.Control as ToolStrip;
+				ts.LocationChanged -= persist_after_location_changed;
+				ts.EndDrag -= persist_after_location_changed;
+				persist_locations(s as ToolStripContainer);
+			};
+		}
+
 		/// <summary>Exports location data for this tool strip container</summary>
 		public static ToolStripLocations SaveLocations(this ToolStripContainer cont)
 		{
@@ -74,7 +121,7 @@ namespace pr.extn
 				yield return ts;
 		}
 
-		/// <summary>Returns all contained toolbar items within the Top,Left,Right,Bottom panels</summary>
+		/// <summary>Returns all contained tool bar items within the Top,Left,Right,Bottom panels</summary>
 		public static IEnumerable<ToolStripItem> ToolStripItems(this ToolStripContainer cont)
 		{
 			foreach (var ts in cont.ToolStrips())
@@ -159,11 +206,144 @@ namespace pr.extn
 		}
 
 		/// <summary>
+		/// Set a label with text plus optional colours, detail tooltip, callback click handler, display time.
+		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
+		public static void SetStatusMessage(this Label status,
+			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
+		{
+			SetStatusMessageInternal(new StatusControl_Label(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
+		}
+
+		/// <summary>
 		/// Set a status label with text plus optional colours, detail tooltip, callback click handler, display time.
 		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
 		public static void SetStatusMessage(this ToolStripStatusLabel status,
 			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
-			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0)
+			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
+		{
+			SetStatusMessageInternal(new StatusControl_ToolStripStatusLabel(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
+		}
+
+		/// <summary>Set the message to display when the status label has no status to display</summary>
+		public static void SetStatusMessageIdle(this Label status, string msg = null, Color? fr_color = null, Color? bk_color = null)
+		{
+			SetStatusMessageIdleInternal(new StatusControl_Label(status), msg, fr_color, bk_color);
+		}
+
+		/// <summary>Set the message to display when the status label has no status to display</summary>
+		public static void SetStatusMessageIdle(this ToolStripStatusLabel status, string msg = null, Color? fr_color = null, Color? bk_color = null)
+		{
+			SetStatusMessageIdleInternal(new StatusControl_ToolStripStatusLabel(status), msg, fr_color, bk_color);
+		}
+
+		/// <summary>The interface required for a control to behave as a status label</summary>
+		public interface IStatusControl
+		{
+			object Tag { get; set; }
+			string Text { get; set; }
+			string ToolTipText { set; }
+			Color ForeColor { set; }
+			Color BackColor { set; }
+			bool Visible { set; }
+			Font Font { get; set; }
+			Cursor Cursor { set; }
+			event EventHandler Click;
+			event EventHandler MouseEnter;
+			event EventHandler MouseLeave;
+		}
+		private class StatusControl_Label :IStatusControl
+		{
+			private Label m_lbl;
+			public StatusControl_Label(Label lbl) { m_lbl = lbl; }
+
+			public object Tag                    { get { return m_lbl.Tag; } set { m_lbl.Tag = value; } }
+			public string Text                   { get { return m_lbl.Text; } set { m_lbl.Text = value; } }
+			public string ToolTipText            { set { var data = (StatusTagData)m_lbl.Tag; m_lbl.ToolTip(data.m_tt, value); } }
+			public Color  BackColor              { set { m_lbl.BackColor = value; } }
+			public Color  ForeColor              { set { m_lbl.ForeColor = value; } }
+			public bool   Visible                { set { m_lbl.Visible = value; } }
+			public Font   Font                   { get { return m_lbl.Font; } set { m_lbl.Font = value; } }
+			public Cursor Cursor                 { set { m_lbl.Cursor = value; } }
+			public event EventHandler Click      { add { m_lbl.Click += value; }      remove { m_lbl.Click -= value; } }
+			public event EventHandler MouseEnter { add { m_lbl.MouseEnter += value; } remove { m_lbl.MouseEnter -= value; } }
+			public event EventHandler MouseLeave { add { m_lbl.MouseLeave += value; } remove { m_lbl.MouseLeave -= value; } }
+		}
+		private class StatusControl_ToolStripStatusLabel :IStatusControl
+		{
+			private ToolStripStatusLabel m_lbl;
+			public StatusControl_ToolStripStatusLabel(ToolStripStatusLabel lbl) { m_lbl = lbl; }
+
+			public object Tag                    { get { return m_lbl.Tag; } set { m_lbl.Tag = value; } }
+			public string Text                   { get { return m_lbl.Text; } set { m_lbl.Text = value; } }
+			public string ToolTipText            { set { var data = (StatusTagData)m_lbl.Tag; m_lbl.ToolTip(data.m_tt, value); } }
+			public Color  BackColor              { set { m_lbl.BackColor = value; } }
+			public Color  ForeColor              { set { m_lbl.ForeColor = value; } }
+			public bool   Visible                { set { m_lbl.Visible = value; } }
+			public Font   Font                   { get { return m_lbl.Font; } set { m_lbl.Font = value; } }
+			public Cursor Cursor                 { set { m_lbl.Owner.Cursor = value; } }
+			public event EventHandler Click      { add { m_lbl.Click += value; }      remove { m_lbl.Click -= value; } }
+			public event EventHandler MouseEnter { add { m_lbl.MouseEnter += value; } remove { m_lbl.MouseEnter -= value; } }
+			public event EventHandler MouseLeave { add { m_lbl.MouseLeave += value; } remove { m_lbl.MouseLeave -= value; } }
+		}
+
+		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
+		private class StatusTagData
+		{
+			private IStatusControl m_lbl;
+			public string m_idle_msg;
+			public Color m_idle_bk_colour;
+			public Color m_idle_fr_colour;
+			public int m_priority;
+			public Timer m_timer;
+			public ToolTip m_tt;
+			public EventHandler m_on_click;
+
+			public StatusTagData(IStatusControl lbl)
+			{
+				m_lbl            = lbl;
+				m_idle_msg       = string.Empty;
+				m_idle_fr_colour = SystemColors.ControlText;
+				m_idle_bk_colour = SystemColors.Control;
+				m_priority       = 0;
+				m_timer          = null;
+				m_tt             = new ToolTip();
+				m_on_click       = null;
+
+				if (m_lbl.Tag is StatusTagData)
+					throw new Exception("Status label already has status data");
+				if (m_lbl.Tag != null)
+					throw new Exception("Status label Tag property already used for non-status data");
+
+				m_lbl.Click += HandleStatusClick;
+				m_lbl.MouseEnter += HandleMouseEnter;
+				m_lbl.MouseLeave += HandleMouseLeave;
+				m_lbl.Tag = this;
+			}
+			public void HandleStatusClick(object sender, EventArgs args)
+			{
+				m_on_click.Raise(sender, args); // Forward to the user handler
+			}
+			public void HandleMouseEnter(object sender, EventArgs args)
+			{
+				var is_link = m_on_click != null;
+				if (is_link)
+					m_lbl.Cursor = Cursors.Hand;
+			}
+			public void HandleMouseLeave(object sender, EventArgs args)
+			{
+				var is_link = m_on_click != null;
+				if (is_link)
+					m_lbl.Cursor = Cursors.Default;
+			}
+		}
+
+		/// <summary>
+		/// Set the text of a control plus optional colours, detail tooltip, callback click handler, display time.
+		/// Calling SetStatusMessage() with no msg resets the priority to the given value (default 0).</summary>
+		private static void SetStatusMessageInternal(IStatusControl status,
+			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
+			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
 		{
 			if (status == null)
 				return;
@@ -175,7 +355,7 @@ namespace pr.extn
 				throw new Exception("Tag property already used for non-status data");
 
 			// Get the status data
-			var data = status.Tag.As<StatusTagData>();
+			var data = (StatusTagData)status.Tag;
 
 			// Ignore the status if it has lower priority than the current
 			if (msg.HasValue() && priority < data.m_priority) return;
@@ -188,11 +368,11 @@ namespace pr.extn
 			status.ToolTipText = tt ?? string.Empty;
 
 			// Set colours
-			status.ForeColor = fr_color ?? SystemColors.ControlText;
-			status.BackColor = bk_color ?? SystemColors.Control;
+			status.ForeColor = fr_color ?? data.m_idle_fr_colour;
+			status.BackColor = bk_color ?? data.m_idle_bk_colour;
 
-			// Hide the status label if it has no value
-			status.Visible = msg.HasValue();
+			// Hide the status control if it has no value
+			status.Visible = !auto_hide || status.Text.HasValue();
 
 			// Choose the font to use
 			var font_style = FontStyle.Regular;
@@ -213,7 +393,7 @@ namespace pr.extn
 						// the status message, null out the text and remove ourself
 						if (!ReferenceEquals(s, data.m_timer)) return;
 						data.m_priority = 0;
-						status.SetStatusMessage(data.m_idle_msg);
+						SetStatusMessageInternal(status, msg:data.m_idle_msg);
 						Util.Dispose(ref data.m_timer);
 					};
 			}
@@ -223,7 +403,7 @@ namespace pr.extn
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
-		public static void SetStatusIdleMessage(this ToolStripStatusLabel status, string msg)
+		private static void SetStatusMessageIdleInternal(IStatusControl status, string msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
 			if (status == null)
 				return;
@@ -235,49 +415,9 @@ namespace pr.extn
 				throw new Exception("Tag property already used for non-status data");
 
 			var data = status.Tag.As<StatusTagData>();
-			data.m_idle_msg = msg;
-		}
-
-		/// <summary>Data added to the 'Tag' of a status label when used by the SetStatus function</summary>
-		private class StatusTagData
-		{
-			public string m_idle_msg;
-			public int m_priority;
-			public Timer m_timer;
-			public EventHandler m_on_click;
-
-			public StatusTagData(ToolStripStatusLabel lbl)
-			{
-				m_idle_msg = string.Empty;
-				m_priority = 0;
-				m_timer    = null;
-				m_on_click = null;
-
-				if (lbl.Tag is StatusTagData)
-					throw new Exception("Status label already has status data");
-				if (lbl.Tag != null)
-					throw new Exception("Status label Tag property already used for non-status data");
-
-				lbl.Click += HandleStatusClick;
-				lbl.MouseEnter += HandleMouseEnter;
-				lbl.MouseLeave += HandleMouseLeave;
-				lbl.Tag = this;
-			}
-			public void HandleStatusClick(object sender, EventArgs args)
-			{
-				m_on_click.Raise(sender, args); // Forward to the user handler
-			}
-			public void HandleMouseEnter(object sender, EventArgs args)
-			{
-				var lbl = sender.As<ToolStripStatusLabel>();
-				var is_link = m_on_click != null;
-				if (is_link) lbl.Owner.Cursor = Cursors.Hand;
-			}
-			public void HandleMouseLeave(object sender, EventArgs args)
-			{
-				var lbl = sender.As<ToolStripStatusLabel>();
-				lbl.Owner.Cursor = Cursors.Default;
-			}
+			if (msg      != null) data.m_idle_msg = msg;
+			if (fr_color != null) data.m_idle_fr_colour = fr_color.Value;
+			if (bk_color != null) data.m_idle_bk_colour = bk_color.Value;
 		}
 
 		/// <summary>
@@ -329,10 +469,10 @@ namespace pr.extn
 			}
 		}
 
-		/// <summary>Keeps a record of dropdown menu layouts</summary>
+		/// <summary>Keeps a record of drop-down menu layouts</summary>
 		private static Dictionary<object, ToolStripLayout> m_ts_layout = new Dictionary<object,ToolStripLayout>();
 
-		/// <summary>Records the layout of a toolstrip</summary>
+		/// <summary>Records the layout of a tool-strip</summary>
 		internal class ToolStripLayout
 		{
 			public object m_item;
@@ -439,7 +579,7 @@ namespace pr.extn
 					var ldd = l as ToolStripDropDownItem;
 					var rdd = r as ToolStripDropDownItem;
 
-					// If one menu replaces the other, remove all items from the replacee
+					// If one menu replaces the other, remove all items from the 'replacee'
 					if (l.MergeAction == MergeAction.Replace)
 						rdd.DropDownItems.Clear();
 					if (r.MergeAction == MergeAction.Replace)
@@ -489,7 +629,7 @@ namespace pr.extn
 		}
 	}
 
-	/// <summary>Used to persist control locations and sizes in xml</summary>
+	/// <summary>Used to persist control locations and sizes in XML</summary>
 	public class ToolStripLocations
 	{
 		private static class Tag
@@ -546,14 +686,17 @@ namespace pr.extn
 			m_right     = new ControlLocations(cont.RightToolStripPanel );
 			m_bottom    = new ControlLocations(cont.BottomToolStripPanel);
 		}
-		public void Apply(ToolStripContainer cont, bool layout_on_resume = true)
+		public void Apply(ToolStripContainer cont)
 		{
 			// If these locations are for a different container, don't apply.
 			if (m_name != cont.Name)
 			{
-				System.Diagnostics.Debug.WriteLine("ToolStripContainer locations ignored due to name mismatch.\nToolStripContainer Name {0} != Layout Data Name {1}".Fmt(cont.Name, m_name));
+				System.Diagnostics.Debug.WriteLine("ToolStripContainer locations ignored due to name mismatch - ToolStripContainer Name {0} != Layout Data Name {1}".Fmt(cont.Name, m_name));
 				return;
 			}
+
+			// ToolStripContainer need to perform a layout before setting the location of child controls
+			cont.PerformLayout();
 
 			// Apply the layout to each panel
 			m_top   .Apply(cont.TopToolStripPanel   );

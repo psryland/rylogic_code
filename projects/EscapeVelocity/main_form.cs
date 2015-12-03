@@ -35,7 +35,7 @@ namespace EscapeVelocity
 
 		private void SetupHome()
 		{
-			m_text_time_till_nova.DataBindings.Add(R<TextBox>.Name(x => x.Text), m_inst.World, R<WorldState>.Name(x => x.TimeTillNova), false, DataSourceUpdateMode.OnPropertyChanged);
+			m_text_time_till_nova.DataBindings.Add(nameof(TextBox.Text), m_inst.World, nameof(WorldState.TimeTillNova), false, DataSourceUpdateMode.OnPropertyChanged);
 		}
 		private void SetupChemLab()
 		{
@@ -45,19 +45,19 @@ namespace EscapeVelocity
 			m_grid_elements.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "A#",
-					DataPropertyName=R<IElementKnown>.Name(x=>x.AtomicNumber),
+					DataPropertyName=nameof(IElementKnown.AtomicNumber),
 					FillWeight = 1,
 				});
 			m_grid_elements.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Name",
-					DataPropertyName=R<IElementKnown>.Name(x=>x.Fullname),
+					DataPropertyName=nameof(IElementKnown.Fullname),
 					FillWeight = 6,
 				});
 			m_grid_elements.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Understood",
-					DataPropertyName = R<IElementKnown>.Name(x => x.PercentUnderstood),
+					DataPropertyName = nameof(IElementKnown.PercentUnderstood),
 					FillWeight = 2,
 				});
 			m_grid_elements.SelectionChanged += (s,a) =>
@@ -73,7 +73,7 @@ namespace EscapeVelocity
 			m_grid_related_mats.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Name",
-					DataPropertyName = R<IKnownCompound>.Name(x => x.Fullname),
+					DataPropertyName = nameof(IKnownCompound.Fullname),
 					FillWeight = 6,
 				});
 			m_grid_related_mats.SelectionChanged += (s,a) =>

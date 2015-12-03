@@ -90,6 +90,13 @@ namespace pr.extn
 		}
 		private static PropertyInfo m_impl_DesignModeProp;
 
+		/// <summary>Set control style on this control</summary>
+		public static void SetStyle(this Control ctrl, ControlStyles style, bool state)
+		{
+			var mi = ctrl.GetType().GetMethod("SetStyle", BindingFlags.Instance|BindingFlags.NonPublic);
+			mi.Invoke(ctrl, new object[]{style, state});
+		}
+
 		/// <summary>Wrapper of begin invoke that takes a lambda</summary>
 		public static IAsyncResult BeginInvoke(this Form form, Action action)
 		{
@@ -321,6 +328,12 @@ namespace pr.extn
 			return ctrl.ScrollBarVisibility().HasFlag(System.Windows.Forms.ScrollBars.Vertical);
 		}
 
+		/// <summary>Centre this control to its parent</summary>
+		public static void CentreToParent(this Control ctrl)
+		{
+			Win32.CenterWindow(ctrl.Handle);
+		}
+
 		/// <summary>Return a form that wraps 'ctrl'</summary>
 		public static T FormWrap<T>(this Control ctrl, Point? loc = null, Size? sz = null) where T:Form, new()
 		{
@@ -338,9 +351,19 @@ namespace pr.extn
 			f.Controls.Add(ctrl);
 			return f;
 		}
+
+		/// <summary>Returns the name of this control and all parents in the hierarchy</summary>
+		public static string HierarchyName(this Control ctrl)
+		{
+			var ancestors = new List<string>();
+			for (var p = ctrl; p != null; p = p.Parent)
+				ancestors.Add("{0}({1})".Fmt(p.Name, p.GetType().Name));
+			ancestors.Reverse();
+			return string.Join("->", ancestors);
+		}
 	}
 
-	/// <summary>Used to persist control locations and sizes in xml</summary>
+	/// <summary>Used to persist control locations and sizes in XML</summary>
 	public class ControlLocations
 	{
 		// Produces this:
@@ -416,7 +439,7 @@ namespace pr.extn
 				return;
 			}
 
-			using (ctrl.SuspendLayout(layout_on_resume))
+			//using (ctrl.SuspendLayout(layout_on_resume))
 				ApplyInternal(ctrl, 0);
 		}
 
@@ -444,25 +467,25 @@ namespace pr.extn
 		// Recursively position 'ctrl' and it's children
 		private void ApplyInternal(Control ctrl, int level)
 		{
+			// ToolStripPanels need to perform a layout before setting the location of child controls
+			if (ctrl is ToolStripContainer || ctrl is ToolStripPanel)
+				ctrl.PerformLayout();
+
 			// Position the control
 			ctrl.Location = m_location;
-			if (ctrl.Dock == DockStyle.None && ctrl.Location != m_location)
-				System.Diagnostics.Debug.WriteLine("Setting control {0} location failed".Fmt(ctrl.Name));
+			if (ctrl.Dock == DockStyle.None && ctrl.Location != m_location && !(ctrl is MenuStrip && ctrl.AutoSize))
+				System.Diagnostics.Debug.WriteLine("ControlLayout: Control {0} location is {1} instead of {2}".Fmt(ctrl.Name, ctrl.Location, m_location));
 
 			// Set the control size
 			ctrl.Size = m_size;
 			if (!ctrl.AutoSize && ctrl.Size != m_size)
-				System.Diagnostics.Debug.WriteLine("Setting control {0} size failed".Fmt(ctrl.Name));
+				System.Diagnostics.Debug.WriteLine("ControlLayout: Control {0} size is {1} instead of {2}".Fmt(ctrl.Name, ctrl.Size, m_size));
 
 			// Set the bounds of the child controls
 			for (var i = 0; i != ctrl.Controls.Count; ++i)
 			{
 				var child = ctrl.Controls[i];
 				var name = UniqueName(child, level + 1, i);
-
-				// No idea why this helps, but it does...
-				if (ctrl is ToolStripPanel)
-					child.Dock = DockStyle.Right;
 
 				ControlLocations s;
 				if (m_children.TryGetValue(name, out s))

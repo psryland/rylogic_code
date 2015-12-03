@@ -53,11 +53,29 @@ namespace pr.extn
 			return Scope.Create(
 				() =>
 					{
+						var r = bs.RaiseListChangedEvents;
 						bs.RaiseListChangedEvents = false;
+						return r;
 					},
+				r =>
+					{
+						bs.RaiseListChangedEvents = r;
+						if (reset_bindings_on_resume)
+							bs.ResetBindings(false);
+					});
+		}
+		public static Scope SuspendEvents<T>(this BindingSource<T> bs, bool reset_bindings_on_resume)
+		{
+			return Scope.Create(
 				() =>
 					{
-						bs.RaiseListChangedEvents = true;
+						var r = bs.RaiseListChangedEvents;
+						bs.RaiseListChangedEvents = false;
+						return r;
+					},
+				r =>
+					{
+						bs.RaiseListChangedEvents = r;
 						if (reset_bindings_on_resume)
 							bs.ResetBindings(false);
 					});

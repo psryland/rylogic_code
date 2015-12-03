@@ -32,7 +32,7 @@ namespace pr.gui
 		/// <summary>The types of elements that can be on a diagram</summary>
 		public enum Entity { Node, Connector, Label, }
 
-		/// <summary>Says "I have a guid"</summary>
+		/// <summary>Says "I have a GUID"</summary>
 		private interface IHasId
 		{
 			Guid Id { get; }
@@ -433,7 +433,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Base class for a rectangular resizable element</summary>
+		/// <summary>Base class for a rectangular resizeable element</summary>
 		public abstract class ResizeableElement :Element
 		{
 			/// <summary>Base node constructor</summary>
@@ -450,7 +450,7 @@ namespace pr.gui
 				m_impl_size = node.Element(XmlField.Size).As<v2>();
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -804,7 +804,7 @@ namespace pr.gui
 
 		/// <summary>
 		/// An invisible 'node-like' object used for detaching/attaching connectors.
-		/// Public so that subclassed controls can detect and exclude it</summary>
+		/// Public so that sub-classed controls can detect and exclude it</summary>
 		public class NodeProxy :Node
 		{
 			private readonly AnchorPoint m_anchor_point;
@@ -3635,7 +3635,7 @@ namespace pr.gui
 		private View3d                      m_view3d;           // Renderer
 		private View3d.Window               m_window;           // A view3d window for this control instance
 		private EventBatcher                m_eb_update_diag;   // Event batcher for updating the diagram graphics
-		private HoverScroll                 m_hoverscroll;      // Hoverscroll
+		private HoverScroll                 m_hoverscroll;      // Hover-scroll
 		private View3d.CameraControls       m_camera;           // The virtual window over the diagram
 		private Tools                       m_tools;            // Tools
 		private StyleCache<NodeStyle>       m_node_styles;      // The collection of node styles
@@ -3655,7 +3655,7 @@ namespace pr.gui
 			m_node_styles         = new StyleCache<NodeStyle>();
 			m_connector_styles    = new StyleCache<ConnectorStyle>();
 			m_mouse_op            = new MouseOps();
-			m_toolstrip_edit      = new ToolStrip(){Visible = false, Dock = DockStyle.Right};
+			m_toolstrip_edit      = new ToolStrip{Name = "m_diagram_edit_tools", Visible = false, Dock = DockStyle.Right};
 			m_dirty               = new HashSet<Element>();
 			DiagramChangedPending = false;
 

@@ -41,7 +41,7 @@ namespace RyLogViewer
 
 			m_grid.AllowDrop = true;
 			m_grid.AutoGenerateColumns = false;
-			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = R<FileInfo>.Name(x => x.FullName)});
+			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = nameof(FileInfo.FullName)});
 			m_grid.DataSource = m_bs_filepaths;
 			m_grid.MouseDown += DataGridViewExtensions.DragDrop_DragRow;
 			m_dragdrop.Attach(m_grid);

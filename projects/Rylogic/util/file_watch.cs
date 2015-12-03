@@ -59,6 +59,11 @@ namespace pr.util
 				m_exists0  = m_info.Exists;
 				m_exists1  = m_exists0;
 			}
+
+			public override string ToString()
+			{
+				return "Watching: " + m_filepath;
+			}
 		}
 		private readonly List<WatchedFile> m_files;
 		private readonly List<WatchedFile> m_changed_files; // Recycle the changed files collection

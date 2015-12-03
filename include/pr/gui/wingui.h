@@ -670,6 +670,8 @@ namespace pr
 		// Device context
 		struct DC
 		{
+			// Never cache a DC. If you have an expensive initialisation of a DC
+			// use a ClassDC (CS_CLASSDC) or PrivateDC (CS_OWNDC) instead.
 			HDC  m_hdc;
 			bool m_owned;
 			DC(HDC hdc, bool owned = false) :m_hdc(hdc) ,m_owned(owned) {}
@@ -704,12 +706,16 @@ namespace pr
 		};
 		struct ClientDC :DC
 		{
+			// A ClientDC is restricted to the client area of the window
+			// The DC returned by PaintStruct is just a ClientDC with the
+			// clipping region set to the update region.
 			HWND m_hwnd;
 			ClientDC(HWND hwnd) :DC(::GetDC(hwnd), false) ,m_hwnd(hwnd) {}
 			~ClientDC() { ::ReleaseDC(m_hwnd, m_hdc); }
 		};
 		struct WindowDC :DC
 		{
+			// A WindowDC can access both client and non-client areas of a window
 			HWND m_hwnd;
 			WindowDC(HWND hwnd) :DC(::GetWindowDC(hwnd), false) ,m_hwnd(hwnd) {}
 			~WindowDC() { ::ReleaseDC(m_hwnd, m_hdc); }
@@ -2453,6 +2459,7 @@ namespace pr
 							//::ExtTextOutW(hdc, 0, 0, ETO_OPAQUE, &rect, L"", 0, 0);
 							return S_FALSE;
 						}
+
 						break;
 					}
 					#pragma endregion
@@ -2494,24 +2501,10 @@ namespace pr
 
 							// Bitblt to the screen
 							Throw(::BitBlt(dc, 0, 0, client_rect.width(), client_rect.height(), mem.m_hdc, 0, 0, SRCCOPY), "Bitblt failed");
-							return S_OK;
-				//if (m_dbl_buffer) // This can't be right...
-				//{
-					//if (args.m_alternate_hdc != 0) // If wparam != 0 then is should be an existing HDC
-				//	{
-						//MemDC mem(args.m_alternate_hdc, ClientRect());
-				//		DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
-				//	}
-				//	else
-				//	{
-				//		PaintStruct p(m_hwnd);
-						//MemDC mem(p.hdc, p.rcPaint);
-				//		::FillRect(mem.m_hdc, &mem.m_rect, ::GetSysColorBrush(DC_BRUSH));
-				//		DefWndProc(WM_PRINTCLIENT, WPARAM(mem.m_hdc), LPARAM(PRF_CHECKVISIBLE|PRF_NONCLIENT|PRF_CLIENT));
-				//	}
-				//	return true;
-				//}
 
+							// Clear the update rect
+							Validate();
+							return S_OK;
 						}
 						else
 						{
@@ -3835,10 +3828,6 @@ namespace pr
 			virtual bool OnEraseBkGnd(EmptyArgs const& args)
 			{
 				EraseBkGnd(*this, args);
-
-				if (m_dbl_buffer) // Check this...
-					return S_FALSE;
-
 				return false;
 			}
 
@@ -4414,35 +4403,6 @@ namespace pr
 			Label(pr::gui::Params const& p = Params())
 				:Control(p)
 			{}
-
-			// Message map function
-			bool ProcessWindowMessage(HWND parent_hwnd, UINT message, WPARAM wparam, LPARAM lparam, LRESULT& result) override
-			{
-				//switch (message)
-				//{
-				//case WM_CTLCOLORSTATIC:
-				//	if (m_id == ::GetDlgCtrlID((HWND)lparam))
-				//	{
-				//		if (Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result))
-				//			return true;
-
-				//		auto hdc = (HDC)wparam;
-				//		if (m_colour_fore != CLR_INVALID)
-				//		{
-				//			::SetTextColor(hdc, m_colour_fore);
-				//		}
-				//		if (m_colour_back != CLR_INVALID)
-				//		{
-				//			::SetBkColor(hdc, m_colour_back);
-				//			::SetDCBrushColor(hdc, m_colour_back);
-				//			result = LRESULT(::GetStockObject(DC_BRUSH));
-				//			return true;
-				//		}
-				//	}
-				//	break;
-				//}
-				return Control::ProcessWindowMessage(parent_hwnd, message, wparam, lparam, result);
-			}
 		};
 		struct Button :Control
 		{
@@ -5282,6 +5242,27 @@ namespace pr
 			Panel(pr::gui::Params const& p = Params())
 				:Control(p)
 			{}
+
+			// Handle the Paint event. Return true, to prevent anything else handling the event
+			bool OnPaint(PaintEventArgs const& args) override
+			{
+				//auto r = Rect{};
+				//::GetUpdateRect(m_hwnd, &r, FALSE);
+
+				HRGN rgn = ::CreateRectRgn(0,0,0,0);
+				::GetUpdateRgn(m_hwnd, rgn, FALSE);
+
+				auto res = Control::OnPaint(args);
+
+				{
+					ClientDC dc(m_hwnd);
+					Brush b(0x00FFFF);
+					auto cr = ClientRect();
+					::FrameRgn(dc, rgn, b, cr.width(), cr.height());
+				}
+
+				return res;
+			}
 		};
 		struct GroupBox :Control
 		{

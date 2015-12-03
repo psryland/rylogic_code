@@ -25,6 +25,7 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_web_browser;
 		private ToolStripMenuItem m_menu_tests_scintilla;
 		private ToolStripMenuItem m_menu_tests_checked_groupbox;
+		private ToolStripMenuItem m_menu_tests_dock_panel;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		public FormTestApp()
@@ -32,7 +33,8 @@ namespace TestCS
 			InitializeComponent();
 			Shown += (s,a) =>
 				{
-					Location = new Point(150,150);
+					//Location = new Point(150,150);
+					Location = new Point(2150,150);
 				};
 
 			m_menu_file_exit.Click += (s,a) =>
@@ -63,6 +65,11 @@ namespace TestCS
 			m_menu_tests_dgv.Click += (s,a) =>
 				{
 					new DgvUI().Show(this);
+				};
+
+			m_menu_tests_dock_panel.Click += (s,a) =>
+				{
+					new DockPanelUI().Show(this);
 				};
 
 			m_menu_tests_graphcontrol.Click += (s,a) =>
@@ -156,6 +163,7 @@ namespace TestCS
 			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_checked_listbox = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_colourwheel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_dgv = new System.Windows.Forms.ToolStripMenuItem();
@@ -172,7 +180,7 @@ namespace TestCS
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_checked_groupbox = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_dock_panel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -209,6 +217,7 @@ namespace TestCS
             this.m_menu_tests_colourwheel,
             this.m_menu_tests_dgv,
             this.m_menu_tests_diagramcontrol,
+            this.m_menu_tests_dock_panel,
             this.m_menu_tests_graphcontrol,
             this.m_menu_tests_helpui,
             this.m_menu_tests_hintballoon,
@@ -225,9 +234,15 @@ namespace TestCS
 			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
 			this.m_menu_tests.Text = "&Tests";
 			// 
-			// m_menu_tests_checkedlistbox
+			// m_menu_tests_checked_groupbox
 			// 
-			this.m_menu_tests_checked_listbox.Name = "m_menu_tests_checkedlistbox";
+			this.m_menu_tests_checked_groupbox.Name = "m_menu_tests_checked_groupbox";
+			this.m_menu_tests_checked_groupbox.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_checked_groupbox.Text = "&CheckedGroupBox";
+			// 
+			// m_menu_tests_checked_listbox
+			// 
+			this.m_menu_tests_checked_listbox.Name = "m_menu_tests_checked_listbox";
 			this.m_menu_tests_checked_listbox.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_checked_listbox.Text = "CheckedListBox";
 			// 
@@ -321,11 +336,11 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_menu_tests_checked_groupbox
+			// m_menu_tests_dock_panel
 			// 
-			this.m_menu_tests_checked_groupbox.Name = "m_menu_tests_checked_groupbox";
-			this.m_menu_tests_checked_groupbox.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_checked_groupbox.Text = "&CheckedGroupBox";
+			this.m_menu_tests_dock_panel.Name = "m_menu_tests_dock_panel";
+			this.m_menu_tests_dock_panel.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_dock_panel.Text = "&DockPanel";
 			// 
 			// FormTestApp
 			// 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using pr.extn;
@@ -8,74 +9,170 @@ namespace pr.gui
 {
 	public class CheckedGroupBox :GroupBox
 	{
+		public enum EStyle
+		{
+			Basic,
+			CheckBox,
+			RadioBtn,
+		}
+
 		private CheckBox m_chk;
+		private RadioButton m_rdo;
 
 		public CheckedGroupBox()
 		{
-			m_chk = new CheckBox
-			{
-				AutoSize = true,
-				Text = string.Empty,
-				ForeColor = SystemColors.GrayText,
-			};
-			m_chk.CheckedChanged += (s,a) =>
-			{
-				Enabled = m_chk.Checked;
-			};
 			Enabled = false;
+			Style = EStyle.CheckBox;
 		}
 		protected override void Dispose(bool disposing)
 		{
-			Util.Dispose(ref m_chk);
+			Style = EStyle.Basic;
 			base.Dispose(disposing);
 		}
 
+		/// <summary>The style of checked group box</summary>
+		[DefaultValue(EStyle.CheckBox)]
+		public EStyle Style
+		{
+			get { return m_style; }
+			set
+			{
+				if (m_style == value) return;
+				m_style = value;
+
+				Util.Dispose(ref m_chk);
+				Util.Dispose(ref m_rdo);
+
+				switch (m_style)
+				{
+				default: throw new Exception("Unknown checked group box style");
+				case EStyle.Basic:
+					{
+						break;
+					}
+				case EStyle.CheckBox:
+					{
+						m_chk = new CheckBox
+						{
+							AutoSize = true,
+							Text = m_text,
+							ForeColor = SystemColors.GrayText,
+							Checked = false,
+						};
+						m_chk.CheckedChanged += HandleCheckedChanged;
+						break;
+					}
+				case EStyle.RadioBtn:
+					{
+						m_rdo = new RadioButton
+						{
+							AutoSize = true,
+							Text = m_text,
+							ForeColor = SystemColors.GrayText,
+							Checked = false,
+						};
+						m_rdo.CheckedChanged += HandleCheckedChanged;
+						break;
+					}
+				}
+
+				// Reset the text and parent on the new controls
+				Text = m_text;
+				HandleCheckedChanged();
+				HandleParentChanged();
+			}
+		}
+		private EStyle m_style;
+
 		/// <summary>Get/Set the check state for the group box</summary>
+		[DefaultValue(false)]
 		public bool Checked
 		{
-			get { return m_chk.Checked; }
-			set { m_chk.Checked = value; }
+			get
+			{
+				if (m_chk != null) return m_chk.Checked;
+				if (m_rdo != null) return m_rdo.Checked;
+				return true;
+			}
+			set
+			{
+				if (m_chk != null) { m_chk.Checked = value; return; }
+				if (m_rdo != null) { m_rdo.Checked = value; return; }
+			}
 		}
 
 		/// <summary>Get/Set the group check state</summary>
+		[DefaultValue(CheckState.Unchecked)]
 		public CheckState CheckState
 		{
-			get { return m_chk.CheckState; }
-			set { m_chk.CheckState = value; }
+			get
+			{
+				if (m_chk != null) return m_chk.CheckState;
+				if (m_rdo != null) return m_rdo.Checked ? CheckState.Checked : CheckState.Unchecked;
+				return CheckState.Checked;
+			}
+			set
+			{
+				if (m_chk != null) { m_chk.CheckState = value; return; }
+				if (m_rdo != null) { m_rdo.Checked = value == CheckState.Checked; return; }
+			}
 		}
 
 		/// <summary>Raised when the checked state changes</summary>
-		public event EventHandler CheckedChanged
-		{
-			add { m_chk.CheckedChanged += value; }
-			remove { m_chk.CheckedChanged -= value; }
-		}
+		public event EventHandler CheckedChanged;
 
 		/// <summary>Raised when the CheckState changes</summary>
-		public event EventHandler CheckStateChanged
-		{
-			add { m_chk.CheckStateChanged += value; }
-			remove { m_chk.CheckStateChanged -= value; }
-		}
+		public event EventHandler CheckStateChanged;
 
 		/// <summary>Get/Set the group text label</summary>
 		public override string Text
 		{
-			get { return m_chk.Text; }
-			set { base.Text = string.Empty; m_chk.Text = value; }
+			get { return m_text; }
+			set
+			{
+				m_text = value;
+				if (m_chk != null) m_chk.Text = value;
+				if (m_rdo != null) m_rdo.Text = value;
+				base.Text = Style == EStyle.Basic ? value : string.Empty;
+			}
 		}
+		private string m_text;
 
+		protected override void OnLayout(LayoutEventArgs levent)
+		{
+			base.OnLayout(levent);
+			var chk = (ButtonBase)m_chk ?? m_rdo;
+			if (chk != null)
+			{
+				chk.Location = Location.Shifted(3, 0);
+				chk.BringToFront();
+			}
+		}
 		protected override void OnLocationChanged(EventArgs e)
 		{
 			base.OnLocationChanged(e);
-			m_chk.Location = Location.Shifted(3, 0);
-			m_chk.BringToFront();
+			PerformLayout();
 		}
 		protected override void OnParentChanged(EventArgs e)
 		{
 			base.OnParentChanged(e);
-			m_chk.Parent = Parent;
-			m_chk.BringToFront();
+			HandleParentChanged();
+		}
+
+		/// <summary>Called when the check state changes for the group box</summary>
+		private void HandleCheckedChanged(object sender = null, EventArgs args = null)
+		{
+			Enabled = Checked;
+			CheckedChanged.Raise(this);
+			CheckStateChanged.Raise(this);
+		}
+
+		/// <summary>Called when the parent of the group box is changed</summary>
+		private void HandleParentChanged(object sender = null, EventArgs args = null)
+		{
+			var chk = (ButtonBase)m_chk ?? m_rdo;
+			if (chk != null) chk.Parent = Parent;
+			PerformLayout();
 		}
 	}
 }

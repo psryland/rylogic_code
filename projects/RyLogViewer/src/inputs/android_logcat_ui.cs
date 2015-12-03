@@ -101,11 +101,11 @@ namespace RyLogViewer
 			m_grid_filterspec.AutoGenerateColumns = false;
 			m_grid_filterspec.Columns.Add(new DataGridViewTextBoxColumn
 			{
-				DataPropertyName = R<AndroidLogcat.FilterSpec>.Name(x => x.Tag)
+				DataPropertyName = nameof(AndroidLogcat.FilterSpec.Tag)
 			});
 			m_grid_filterspec.Columns.Add(new DataGridViewComboBoxColumn
 			{
-				DataPropertyName = R<AndroidLogcat.FilterSpec>.Name(x=>x.Priority),
+				DataPropertyName = nameof(AndroidLogcat.FilterSpec.Priority),
 				DataSource = Enum.GetValues(typeof(AndroidLogcat.EFilterPriority)),
 				Sorted = false
 			});

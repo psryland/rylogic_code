@@ -66,6 +66,15 @@ namespace pr.gfx
 			return brush;
 		}
 
+		/// <summary>Create a gradient brush that paints a gradient along a vector</summary>
+		public static LinearGradientBrush CreateLinearGradientBrush(Point pt0, Point pt1, Color colour0, Color colour1, WrapMode mode = WrapMode.Clamp)
+		{
+			return new LinearGradientBrush(pt0, pt1, colour0, colour1)
+			{
+				WrapMode = mode,
+			};
+		}
+
 		/// <summary>Converts a bitmap strip into an array of bitmaps</summary>
 		public static Bitmap[] LoadStrip(Bitmap strip, int count)
 		{

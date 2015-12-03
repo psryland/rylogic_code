@@ -26,7 +26,7 @@ namespace pr.gui
 			CentreRight,
 		}
 
-		/// <summary>Handle for the pin popup menu</summary>
+		/// <summary>Handle for the pin pop-up menu</summary>
 		private readonly IntPtr m_sys_menu_handle;
 		private const int m_menucmd_pin_window = 1000;
 
@@ -132,11 +132,15 @@ namespace pr.gui
 		}
 		private Control m_pin_target;
 
-		/// <summary>Display the UI</summary>
-		public void Display()
+		/// <summary>Display the UI (even if already visible)</summary>
+		public new void Show()
+		{
+			Show(Owner);
+		}
+		public new void Show(IWin32Window owner)
 		{
 			UpdateLocation();
-			if (!Visible) Show(Owner);
+			if (!Visible) base.Show(owner);
 			else          Focus();
 		}
 

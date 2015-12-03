@@ -5,35 +5,38 @@ namespace pr.container
 {
 	public enum ListChg
 	{
-		/// <summary>Raised before the entire list is reset</summary>
-		PreReset,
-		
 		/// <summary>Raised after the entire list is reset</summary>
-		Reset,
+		Reset = 1,
+
+		/// <summary>Raised before the entire list is reset</summary>
+		PreReset = Pre | Reset,
+		
+		/// <summary>Raised after a single item is reset</summary>
+		ItemReset = 2,
 
 		/// <summary>Raised before a single item is reset</summary>
-		ItemPreReset,
-
-		/// <summary>Raised after a single item is reset</summary>
-		ItemReset,
-
-		/// <summary>Raised just before an item is added to the list</summary>
-		ItemPreAdd,
+		ItemPreReset = Pre | ItemReset,
 
 		/// <summary>Raised just after an item is added to the list</summary>
-		ItemAdded,
+		ItemAdded = 3,
 
-		/// <summary>Raised just before an item is removed from the list</summary>
-		ItemPreRemove,
+		/// <summary>Raised just before an item is added to the list</summary>
+		ItemPreAdd = Pre | ItemAdded,
 
 		/// <summary>Raised just after an item is removed from the list</summary>
-		ItemRemoved,
+		ItemRemoved = 4,
 
-		/// <summary>Raised just before the list is reordered</summary>
-		PreReordered,
+		/// <summary>Raised just before an item is removed from the list</summary>
+		ItemPreRemove = Pre | ItemRemoved,
 
 		/// <summary>Raised just after the list is reordered</summary>
-		Reordered,
+		Reordered = 5,
+
+		/// <summary>Raised just before the list is reordered</summary>
+		PreReordered = Pre | Reordered,
+
+		/// <summary>Flags the change type as 'pre' the change</summary>
+		Pre = 0x8000,
 	}
 
 	/// <summary>Args for the event raised whenever the list is changed</summary>
@@ -64,6 +67,18 @@ namespace pr.container
 
 		/// <summary>On 'Pre' events, can be used to prevent the change</summary>
 		public bool Cancel { get; set; }
+
+		/// <summary>True if this is the event before the list change</summary>
+		public bool IsPreEvent
+		{
+			get { return ChangeType.HasFlag(ListChg.Pre); }
+		}
+
+		/// <summary>True if this is the event after the list change</summary>
+		public bool IsPostEvent
+		{
+			get { return !ChangeType.HasFlag(ListChg.Pre); }
+		}
 	}
 
 	/// <summary>Event args for the event raised whenever an item in the list is changed</summary>

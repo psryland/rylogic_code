@@ -14,7 +14,7 @@ namespace RyLogViewer
 		/// <summary>The byte range of the bookmarked line</summary>
 		public Range Range { get; set; }
 
-		/// <summary>The text of the bookmarked line (used by reflection in the bookmarks ui)</summary>
+		/// <summary>The text of the bookmarked line (used by reflection in the bookmarks UI)</summary>
 		public string Text { get; set; }
 
 		/// <summary>The begin address of the bookmarked line</summary>
@@ -33,7 +33,7 @@ namespace RyLogViewer
 		private readonly BindingSource         m_bs_bookmarks;
 		private readonly EventBatcher          m_batch_refresh_bkmks;
 
-		/// <summary>Setup the app's bookmark support</summary>
+		/// <summary>Set up the app's bookmark support</summary>
 		private void SetupBookmarks()
 		{
 			m_bs_bookmarks.PositionChanged += (s,a) => SelectBookmark(m_bs_bookmarks.Position);
@@ -46,7 +46,7 @@ namespace RyLogViewer
 		private void ShowBookmarksDialog()
 		{
 			// Display the bookmarks window
-			m_bookmarks_ui.Display();
+			m_bookmarks_ui.Show();
 		}
 
 		/// <summary>Add or remove a bookmark at 'row_index'</summary>

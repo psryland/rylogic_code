@@ -67,7 +67,7 @@ namespace pr.gui
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for regular expressions");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					RegexHelpUI.Display();
+					RegexHelpUI.Show();
 				};
 
 			// Add/Update

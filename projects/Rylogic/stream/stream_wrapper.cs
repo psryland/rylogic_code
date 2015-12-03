@@ -332,7 +332,7 @@ namespace pr.stream
 		}
 		
 		#if !PR_DOTNET35
-		protected override void ObjectInvariant()
+		[Obsolete] protected override void ObjectInvariant()
 		{
 			MethodInfo method = m_stream.GetType().GetMethod("ObjectInvariant", BindingFlags.NonPublic|BindingFlags.ExactBinding);
 			method.Invoke(m_stream, null);

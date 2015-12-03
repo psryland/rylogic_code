@@ -115,6 +115,7 @@ namespace pr.common
 					var err = Marshal.GetLastWin32Error();
 					switch (err) {
 					default: throw new Win32Exception(err, "Failed to enumerate devices");
+					case Win32.ERROR_INVALID_HANDLE: yield break; // Device disabled (among other reasons)
 					case Win32.RPC_S_SERVER_UNAVAILABLE: yield break; // Bluetooth radio turned off
 					case Win32.ERROR_NO_MORE_ITEMS: yield break;
 					}

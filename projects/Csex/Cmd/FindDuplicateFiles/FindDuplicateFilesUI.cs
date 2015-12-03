@@ -6,10 +6,11 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using WeifenLuo.WinFormsUI.Docking;
 using pr.extn;
 using pr.gui;
+using pr.gui.dockpanel;
 using pr.util;
+using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace Csex
 {
@@ -131,32 +132,32 @@ namespace Csex
 		/// </summary>
 		private void InitializeComponent()
 		{
-			WeifenLuo.WinFormsUI.Docking.DockPanelSkin dockPanelSkin1 = new WeifenLuo.WinFormsUI.Docking.DockPanelSkin();
-			WeifenLuo.WinFormsUI.Docking.AutoHideStripSkin autoHideStripSkin1 = new WeifenLuo.WinFormsUI.Docking.AutoHideStripSkin();
-			WeifenLuo.WinFormsUI.Docking.DockPanelGradient dockPanelGradient1 = new WeifenLuo.WinFormsUI.Docking.DockPanelGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient1 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.DockPaneStripSkin dockPaneStripSkin1 = new WeifenLuo.WinFormsUI.Docking.DockPaneStripSkin();
-			WeifenLuo.WinFormsUI.Docking.DockPaneStripGradient dockPaneStripGradient1 = new WeifenLuo.WinFormsUI.Docking.DockPaneStripGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient2 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.DockPanelGradient dockPanelGradient2 = new WeifenLuo.WinFormsUI.Docking.DockPanelGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient3 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.DockPaneStripToolWindowGradient dockPaneStripToolWindowGradient1 = new WeifenLuo.WinFormsUI.Docking.DockPaneStripToolWindowGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient4 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient5 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.DockPanelGradient dockPanelGradient3 = new WeifenLuo.WinFormsUI.Docking.DockPanelGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient6 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			WeifenLuo.WinFormsUI.Docking.TabGradient tabGradient7 = new WeifenLuo.WinFormsUI.Docking.TabGradient();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FindDuplicateFilesUI));
-			this.m_tsc = new System.Windows.Forms.ToolStripContainer();
-			this.m_ss = new System.Windows.Forms.StatusStrip();
-			this.m_status = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dock = new WeifenLuo.WinFormsUI.Docking.DockPanel();
-			this.m_menu = new System.Windows.Forms.MenuStrip();
-			this.m_menu_file = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_search_dirs = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_file_sep0 = new System.Windows.Forms.ToolStripSeparator();
-			this.m_menu_file_exit = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_window = new System.Windows.Forms.ToolStripMenuItem();
+			DockPanelSkin dockPanelSkin1                                     = new DockPanelSkin();
+			AutoHideStripSkin autoHideStripSkin1                             = new AutoHideStripSkin();
+			DockPanelGradient dockPanelGradient1                             = new DockPanelGradient();
+			TabGradient tabGradient1                                         = new TabGradient();
+			DockPaneStripSkin dockPaneStripSkin1                             = new DockPaneStripSkin();
+			DockPaneStripGradient dockPaneStripGradient1                     = new DockPaneStripGradient();
+			TabGradient tabGradient2                                         = new TabGradient();
+			DockPanelGradient dockPanelGradient2                             = new DockPanelGradient();
+			TabGradient tabGradient3                                         = new TabGradient();
+			DockPaneStripToolWindowGradient dockPaneStripToolWindowGradient1 = new DockPaneStripToolWindowGradient();
+			TabGradient tabGradient4                                         = new TabGradient();
+			TabGradient tabGradient5                                         = new TabGradient();
+			DockPanelGradient dockPanelGradient3                             = new DockPanelGradient();
+			TabGradient tabGradient6                                         = new TabGradient();
+			TabGradient tabGradient7                                         = new TabGradient();
+			System.ComponentModel.ComponentResourceManager resources         = new System.ComponentModel.ComponentResourceManager(typeof(FindDuplicateFilesUI));
+			this.m_tsc                                                       = new ToolStripContainer();
+			this.m_ss                                                        = new System.Windows.Forms.StatusStrip();
+			this.m_status                                                    = new System.Windows.Forms.ToolStripStatusLabel();
+			this.m_dock                                                      = new DockPanel();
+			this.m_menu                                                      = new System.Windows.Forms.MenuStrip();
+			this.m_menu_file                                                 = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_search_dirs                                     = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_file_sep0                                            = new System.Windows.Forms.ToolStripSeparator();
+			this.m_menu_file_exit                                            = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_window                                               = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_tsc.BottomToolStripPanel.SuspendLayout();
 			this.m_tsc.ContentPanel.SuspendLayout();
 			this.m_tsc.TopToolStripPanel.SuspendLayout();
@@ -208,7 +209,7 @@ namespace Csex
 			// 
 			this.m_dock.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dock.DocumentStyle = WeifenLuo.WinFormsUI.Docking.DocumentStyle.DockingSdi;
+			this.m_dock.Mode = DockPanelMode.DockingSdi;
 			this.m_dock.Location = new System.Drawing.Point(0, 0);
 			this.m_dock.Margin = new System.Windows.Forms.Padding(0);
 			this.m_dock.Name = "m_dock";

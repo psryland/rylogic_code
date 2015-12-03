@@ -210,24 +210,24 @@ namespace TestCS
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Name",
-					DataPropertyName = R<Record>.Name(x => x.Name),
+					DataPropertyName = nameof(Record.Name),
 				});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "Value",
-					DataPropertyName = R<Record>.Name(x => x.Value),
+					DataPropertyName = nameof(Record.Value),
 				});
 			m_grid.Columns.Add(new DataGridViewComboBoxColumn
 				{
 					Name = "Option",
-					DataPropertyName = R<Record>.Name(x => x.Option),
+					DataPropertyName = nameof(Record.Option),
 					FlatStyle = System.Windows.Forms.FlatStyle.Flat,
 					DataSource = Enum<EOptions>.Values,
 				});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
 				{
 					Name = "FValue",
-					DataPropertyName = R<Record>.Name(x => x.FValue),
+					DataPropertyName = nameof(Record.FValue),
 				});
 			m_grid.DataSource = m_bs;
 

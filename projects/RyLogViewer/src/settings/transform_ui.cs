@@ -71,7 +71,7 @@ namespace RyLogViewer
 			m_btn_regex_help.ToolTip(m_tt, "Displays a quick help guide for the Match field");
 			m_btn_regex_help.Click += (s,a)=>
 				{
-					MatchFieldHelpUI.Display();
+					MatchFieldHelpUI.Show();
 				};
 
 			// Toggle equivalent regex

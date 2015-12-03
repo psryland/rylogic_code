@@ -115,6 +115,23 @@ namespace pr.util
 			get { return LicenseManager.UsageMode == LicenseUsageMode.Designtime; }
 		}
 
+		/// <summary>True if the current thread is the 'main' thread</summary>
+		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
+		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+
+		/// <summary>Asserts or stops the debugger if the caller is not the main thread</summary>
+		[Conditional("DEBUG")] public static void AssertMainThread()
+		{
+			// Don't put the test in the Assert because assert doesn't stop immediately, it pumps the thread
+			// queue in order to display the dialog. Having the 'if' like this allows a breakpoint to be put
+			// on the Debug.Assert() statement.
+			if (!IsMainThread)
+			{
+				if (Debugger.IsAttached) Debugger.Break(); // If debugging, stop all threads immediately
+				Debug.Assert(false, "Not the main thread");
+			}
+		}
+
 		/// <summary>Swap two values</summary>
 		public static void Swap<T>(ref T lhs, ref T rhs)
 		{
@@ -412,7 +429,7 @@ namespace pr.util
 				return src.ReadToEnd();
 		}
 
-		/// <summary>The directory that this application exe is in</summary>
+		/// <summary>The directory that this application executable is in</summary>
 		public static string AppDirectory
 		{
 			get { return PathEx.Directory(Application.ExecutablePath); }
@@ -471,7 +488,7 @@ namespace pr.util
 			return Moved(point, ref_point, SystemInformation.DragSize.Width, SystemInformation.DragSize.Height);
 		}
 
-		/// <summary>Returns true if 'point' is more than than 'dx' or 'dy' from 'ref_point'</summary>
+		/// <summary>Returns true if 'point' is more than 'dx' or 'dy' from 'ref_point'</summary>
 		public static bool Moved(Point point, Point ref_point, int dx, int dy)
 		{
 			return Math.Abs(point.X - ref_point.X) > dx || Math.Abs(point.Y - ref_point.Y) > dy;
@@ -485,7 +502,7 @@ namespace pr.util
 			return true;
 		}
 
-		/// <summary>Excute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
+		/// <summary>Execute a function in a background thread and terminate it if it doesn't finished before 'timeout'</summary>
 		public static TResult RunWithTimeout<TResult>(Func<TResult> proc, int duration)
 		{
 			var r = default(TResult);

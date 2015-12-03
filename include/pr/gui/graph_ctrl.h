@@ -396,9 +396,9 @@ namespace pr
 				}
 			};
 
-			pr::GdiPlus      m_gdiplus;     // Initialises the Gdiplus library
+			pr::GdiPlus      m_gdiplus;     // Initialises the GdiPlus library
 			std::thread      m_rdr_thread;  // A thread used to render
-			std::atomic_bool m_rdr_cancel;  // Cancel renderering flag
+			std::atomic_bool m_rdr_cancel;  // Cancel rendering flag
 			std::mutex       m_mutex_snap;  // A mutex to protect access to the snapshot bitmap
 			Snapshot         m_snap;        // A snapshot of the plot area, used as a temporary copy during drag/zoom operations
 			Snapshot         m_tmp;         // A temporary bitmap used for background thread rendering
@@ -819,7 +819,7 @@ namespace pr
 			// Render the graph in to 'dc'
 			void DoPaint(HDC dc, Rect const& area)
 			{
-				MemDC memdc(dc, area);
+				MemDC memdc(dc, area, nullptr);
 				Graphics gfx(memdc);
 				assert(gfx.GetLastStatus() == Gdiplus::Ok && "GDI+ not initialised");
 
@@ -835,7 +835,7 @@ namespace pr
 							m_rdr_thread.join();
 						m_rdr_cancel = false;
 
-						// Make sure the temporary bitmap and the snapshot bitmp are the correct size
+						// Make sure the temporary bitmap and the snapshot bitmap are the correct size
 						auto plot_size = m_plot_area.size();
 						if (m_tmp.size() != plot_size)
 							m_tmp.m_bm = std::make_shared<Bitmap>(plot_size.cx, plot_size.cy);
@@ -913,7 +913,7 @@ namespace pr
 				}
 			}
 
-			// Returns an area for the plot part of the graph given a bitmap with size 'size'. (i.e. excl titles, axis labels, etc)
+			// Returns an area for the plot part of the graph given a bitmap with size 'size'. (i.e. excluding titles, axis labels, etc)
 			Rect PlotArea(Graphics const& gfx, Rect const& area) const
 			{
 				RectF rect(0.0f, 0.0f, float(area.width()), float(area.height()));
@@ -1093,7 +1093,7 @@ namespace pr
 				}
 			}
 
-			// Render the plot background including gridlines
+			// Render the plot background including grid lines
 			void RenderPlotBkgd(Graphics& gfx, Rect const& plot_area)
 			{
 				SolidBrush bsh_plot(m_opts.PlotBkColour);

@@ -140,12 +140,12 @@ namespace pr.extn
 					{
 						var font = (Font)obj;
 						node.Add(
-							font.FontFamily.Name.ToXml(R<Font>.Name(x => x.FontFamily     ), false),
-							font.Size           .ToXml(R<Font>.Name(x => x.Size           ), false),
-							font.Style          .ToXml(R<Font>.Name(x => x.Style          ), false),
-							font.Unit           .ToXml(R<Font>.Name(x => x.Unit           ), false),
-							font.GdiCharSet     .ToXml(R<Font>.Name(x => x.GdiCharSet     ), false),
-							font.GdiVerticalFont.ToXml(R<Font>.Name(x => x.GdiVerticalFont), false));
+							font.FontFamily.Name.ToXml(nameof(Font.FontFamily     ), false),
+							font.Size           .ToXml(nameof(Font.Size           ), false),
+							font.Style          .ToXml(nameof(Font.Style          ), false),
+							font.Unit           .ToXml(nameof(Font.Unit           ), false),
+							font.GdiCharSet     .ToXml(nameof(Font.GdiCharSet     ), false),
+							font.GdiVerticalFont.ToXml(nameof(Font.GdiVerticalFont), false));
 						return node;
 					};
 				this[typeof(v2)] = (obj, node) =>
@@ -164,10 +164,10 @@ namespace pr.extn
 					{
 						var mat = (m4x4)obj;
 						node.Add(
-							mat.x.ToXml(R<m4x4>.Name(x => x.x), false),
-							mat.y.ToXml(R<m4x4>.Name(x => x.y), false),
-							mat.z.ToXml(R<m4x4>.Name(x => x.z), false),
-							mat.w.ToXml(R<m4x4>.Name(x => x.w), false));
+							mat.x.ToXml(nameof(m4x4.x), false),
+							mat.y.ToXml(nameof(m4x4.y), false),
+							mat.z.ToXml(nameof(m4x4.z), false),
+							mat.w.ToXml(nameof(m4x4.w), false));
 						return node;
 					};
 			}
@@ -436,12 +436,12 @@ namespace pr.extn
 					};
 				this[typeof(Font)] = (elem, type, instance) =>
 					{
-						var font_family       = elem.Element(R<Font>.Name(x => x.FontFamily     )).As<string>();
-						var size              = elem.Element(R<Font>.Name(x => x.Size           )).As<float>();
-						var style             = elem.Element(R<Font>.Name(x => x.Style          )).As<FontStyle>();
-						var unit              = elem.Element(R<Font>.Name(x => x.Unit           )).As<GraphicsUnit>();
-						var gdi_charset       = elem.Element(R<Font>.Name(x => x.GdiCharSet     )).As<byte>();
-						var gdi_vertical_font = elem.Element(R<Font>.Name(x => x.GdiVerticalFont)).As<bool>();
+						var font_family       = elem.Element(nameof(Font.FontFamily     )).As<string>();
+						var size              = elem.Element(nameof(Font.Size           )).As<float>();
+						var style             = elem.Element(nameof(Font.Style          )).As<FontStyle>();
+						var unit              = elem.Element(nameof(Font.Unit           )).As<GraphicsUnit>();
+						var gdi_charset       = elem.Element(nameof(Font.GdiCharSet     )).As<byte>();
+						var gdi_vertical_font = elem.Element(nameof(Font.GdiVerticalFont)).As<bool>();
 						return new Font(font_family, size, style, unit, gdi_charset, gdi_vertical_font);
 					};
 				this[typeof(v2)] = (elem, type, instance) =>
@@ -454,10 +454,10 @@ namespace pr.extn
 					};
 				this[typeof(m4x4)] = (elem, type, instance) =>
 					{
-						var x = elem.Element(R<m4x4>.Name(m => m.x)).As<v4>();
-						var y = elem.Element(R<m4x4>.Name(m => m.y)).As<v4>();
-						var z = elem.Element(R<m4x4>.Name(m => m.z)).As<v4>();
-						var w = elem.Element(R<m4x4>.Name(m => m.w)).As<v4>();
+						var x = elem.Element(nameof(m4x4.x)).As<v4>();
+						var y = elem.Element(nameof(m4x4.y)).As<v4>();
+						var z = elem.Element(nameof(m4x4.z)).As<v4>();
+						var w = elem.Element(nameof(m4x4.w)).As<v4>();
 						return new m4x4(x,y,z,w);
 					};
 			}

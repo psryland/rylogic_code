@@ -29,14 +29,14 @@ namespace Csex
 			m_copies = new BindingSource<Model.FileInfo>();
 
 			m_grid_dups.AutoGenerateColumns = false;
-			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Duplicates", FillWeight=1f, DataPropertyName=R<Model.FileInfo>.Name(x => x.FileName)});
-			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Copies"    , FillWeight=1f, DataPropertyName=R<Model.FileInfo>.Name(x => x.CopyCount)});
-			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Key"       , FillWeight=1f, DataPropertyName=R<Model.FileInfo>.Name(x => x.Key)});
+			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Duplicates", FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.FileName)});
+			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Copies"    , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.CopyCount)});
+			m_grid_dups.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Key"       , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.Key)});
 			m_grid_dups.DataSource = m_dups;
 
 			m_grid_details.AutoGenerateColumns = false;
-			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Location", FillWeight=4f, DataPropertyName=R<Model.FileInfo>.Name(x => x.FullPath)});
-			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="File Size" , FillWeight=1f, DataPropertyName=R<Model.FileInfo>.Name(x => x.FileSize)});
+			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="Location", FillWeight=4f, DataPropertyName=nameof(Model.FileInfo.FullPath)});
+			m_grid_details.Columns.Add(new DataGridViewTextBoxColumn{HeaderText="File Size" , FillWeight=1f, DataPropertyName=nameof(Model.FileInfo.FileSize)});
 			m_grid_details.DataSource = m_copies;
 
 			m_dups.PositionChanged += (s,a) =>

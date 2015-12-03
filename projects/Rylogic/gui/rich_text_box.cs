@@ -7,11 +7,11 @@ using pr.common;
 using pr.extn;
 using pr.util;
 using pr.win32;
-using tom;
+//using tom;
 
 namespace pr.gui
 {
-	/// <summary>Subclass winforms RichTextBox to get RICHEDIT5.0 instead of 2.0!</summary>
+	/// <summary>Subclass WinForms RichTextBox to get RICHEDIT5.0 instead of 2.0!</summary>
 	public class RichTextBox :System.Windows.Forms.RichTextBox
 	{
 		[DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)] private static extern int SendMessage(IntPtr hwnd, uint msg, int wparam, ref Win32.TEXTRANGE lparam);
@@ -32,7 +32,7 @@ namespace pr.gui
 			 }
 		}
 
-		/// <summary>Get text from the richtextbox</summary>
+		/// <summary>Get text from the rich text box</summary>
 		public string GetText(int first = 0, int last = -1)
 		{
 			var range = new Win32.TEXTRANGE(first, last);
@@ -47,8 +47,8 @@ namespace pr.gui
 		{
 			var ole = OleInterface;
 			return Scope.Create(
-				() => ole.TextDocument.Undo(TomConstants.Suspend),
-				() => ole.TextDocument.Undo(TomConstants.Resume));
+				() => ole.TextDocument.Undo(TomConstants.Suspend, IntPtr.Zero),
+				() => ole.TextDocument.Undo(TomConstants.Resume, IntPtr.Zero));
 		}
 
 		/// <summary>Get/Set the number of lines of text in the control</summary>
@@ -188,7 +188,7 @@ namespace pr.gui
 			return Rectangle.FromLTRB(Left, t, Right, b);
 		}
 
-		/// <summary>Accessor proxy for the text data by line</summary>
+		/// <summary>Access proxy for the text data by line</summary>
 		public LinesProxy Line { get { return new LinesProxy(this); } }
 		public struct LinesProxy
 		{
@@ -396,7 +396,7 @@ namespace pr.gui
 		public static int Print(IntPtr rtb_handle, int charFrom, int charTo, PrintPageEventArgs e)
 		{
 			// Convert the unit used by the .NET framework (1/100 inch) 
-			// and the unit used by Win32 API calls (twips 1/1440 inch)
+			// and the unit used by Win32 API calls ('twips' 1/1440 inch)
 			const double anInch = 14.4;
  
 			// Calculate the area to render and print
@@ -429,7 +429,7 @@ namespace pr.gui
 					rcPage     = page_rect,  // Indicate size of page
 				};
 
-				// Get the pointer to the FORMATRANGE structure in non-gc memory
+				// Get the pointer to the FORMATRANGE structure in non-GC memory
 				using (var lparam = MarshalEx.StructureToPtr(fmt_range))
 				{
 					// Send the rendered data for printing, then release and cached info
@@ -536,10 +536,8 @@ namespace pr.gui
 			int SaveCompleted(int iob, IntPtr lpstg);
 			int InPlaceDeactivate();
 			int ContextSensitiveHelp(int fEnterMode);
-			//int GetClipboardData(CHARRANGE FAR * lpchrg, uint reco, IntPtr lplpdataobj);
-			//int ImportDataObject(IntPtr lpdataobj, CLIPFORMAT cf, HGLOBAL hMetaPict);
 		}
-#if false
+
 		[ComImport]
 		[InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 		[Guid("8CC497C0-A1DF-11CE-8098-00AA0047BE5D")]
@@ -572,7 +570,7 @@ namespace pr.gui
 			int Range( /* [in] */ int cp1, /* [in] */ int cp2, /* [retval][out] ITextRange** */ IntPtr ppRange);
 			int RangeFromPoint( /* [in] */ int x, /* [in] */ int y, /* [retval][out] ITextRange** */ IntPtr ppRange);
 		}
-
+#if false
 		[ComImport]
 		[InterfaceType(ComInterfaceType.InterfaceIsDual)]
 		[Guid("8CC497C2-A1DF-11ce-8098-00AA0047BE5D")]

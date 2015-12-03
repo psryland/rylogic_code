@@ -223,25 +223,67 @@ namespace pr.gui
 		}
 		private float m_reflow_aspect;
 
-		/// <summary>Get/Set the text on the positive button</summary>
+		/// <summary>
+		/// Get/Set the text on the positive button.<para/>
+		/// Positive button mapping for MessageBoxButtons:<para/>
+		/// MessageBoxButtons.OK                ---&gt; DialogResult.OK;<para/>
+		/// MessageBoxButtons.OKCancel          ---&gt; DialogResult.OK;<para/>
+		/// MessageBoxButtons.AbortRetryIgnore  ---&gt; DialogResult.Abort;<para/>
+		/// MessageBoxButtons.YesNoCancel       ---&gt; DialogResult.Yes;<para/>
+		/// MessageBoxButtons.YesNo             ---&gt; DialogResult.Yes;<para/>
+		/// MessageBoxButtons.RetryCancel       ---&gt; DialogResult.Retry;<para/></summary>
 		public string PositiveBtnText
 		{
 			get { return m_btn_positive.Text; }
 			set { m_btn_positive.Text = value; }
 		}
 
-		/// <summary>Get/Set the text on the neutral button</summary>
+		/// <summary>
+		/// Get/Set the text on the neutral button.<para/>
+		/// Neutral button mapping for MessageBoxButtons:<para/>
+		/// MessageBoxButtons.OK               ---&gt; not visible<para/>
+		/// MessageBoxButtons.OKCancel         ---&gt; not visible<para/>
+		/// MessageBoxButtons.AbortRetryIgnore ---&gt; DialogResult.Retry;<para/>
+		/// MessageBoxButtons.YesNoCancel      ---&gt; DialogResult.No;<para/>
+		/// MessageBoxButtons.YesNo            ---&gt; DialogResult.No;<para/>
+		/// MessageBoxButtons.RetryCancel      ---&gt; not visible<para/></summary>
 		public string NeutralBtnText
 		{
 			get { return m_btn_neutral.Text; }
 			set { m_btn_neutral.Text = value; }
 		}
 
-		/// <summary>Get/Set the text on the negative button</summary>
+		/// <summary>
+		/// Get/Set the text on the negative button.<para/>
+		/// Negative button mapping for MessageBoxButtons:<para/>
+		/// MessageBoxButtons.OK               ---&gt; not visible<para/>
+		/// MessageBoxButtons.OKCancel         ---&gt; DialogResult.Cancel;<para/>
+		/// MessageBoxButtons.AbortRetryIgnore ---&gt; DialogResult.Ignore;<para/>
+		/// MessageBoxButtons.YesNoCancel      ---&gt; DialogResult.Cancel;<para/>
+		/// MessageBoxButtons.YesNo            ---&gt; not visible<para/>
+		/// MessageBoxButtons.RetryCancel      ---&gt; DialogResult.Cancel;<para/></summary>
 		public string NegativeBtnText
 		{
 			get { return m_btn_negative.Text; }
 			set { m_btn_negative.Text = value; }
+		}
+
+		/// <summary>The result returned when the positive button is clicked, given the MessageBoxButtons value given at construction</summary>
+		public DialogResult PositiveBtnResult
+		{
+			get { return m_btn_positive.DialogResult; }
+		}
+
+		/// <summary>The result returned when the neutral button is clicked, given the MessageBoxButtons value given at construction</summary>
+		public DialogResult NeutralBtnResult
+		{
+			get { return m_btn_neutral.DialogResult; }
+		}
+
+		/// <summary>The result returned when the negative button is clicked, given the MessageBoxButtons value given at construction</summary>
+		public DialogResult NegativeBtnResult
+		{
+			get { return m_btn_negative.DialogResult; }
 		}
 
 		/// <summary>Sets an appropriate size for the message box and lays out the controls</summary>

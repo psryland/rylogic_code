@@ -20,10 +20,11 @@ namespace pr.win32
 			public int right;
 			public int bottom;
 
-			public int Width()                                      { return right - left; }
-			public int Height()                                     { return bottom - top; }
+			public int width                                        { get { return right - left; } }
+			public int height                                       { get { return bottom - top; } }
+
 			public static RECT FromRectangle(Rectangle rect)        { return new RECT{left=rect.Left, top=rect.Top, right=rect.Right, bottom=rect.Bottom}; }
-			public Rectangle   ToRectangle()                        { return new Rectangle(left, top, Width(), Height()); }
+			public Rectangle   ToRectangle()                        { return new Rectangle(left, top, width, height); }
 			public static RECT FromSize(Size size)                  { return new RECT{left=0, top=0, right=size.Width, bottom=size.Height}; }
 			public Size        ToSize()                             { return new Size(right - left, bottom - top); }
 			public static RECT FromLTRB(int l, int r, int t, int b) { return new RECT{left=l, top=t, right=r, bottom=b}; }

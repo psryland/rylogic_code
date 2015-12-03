@@ -60,7 +60,7 @@ namespace RyLogViewer
 
 			// Combo
 			m_combo_sets.ToolTip(m_tt, "Select a pattern set from this list to merge with or replace the existing patterns");
-			m_combo_sets.DisplayMember = R<Set>.Name(x=>x.Name);
+			m_combo_sets.DisplayMember = nameof(Set.Name);
 			m_combo_sets.SelectedIndex = 0;
 			m_combo_sets.SelectedIndexChanged += (s,a)=>
 				{

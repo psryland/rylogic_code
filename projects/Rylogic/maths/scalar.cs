@@ -57,10 +57,6 @@ namespace pr.maths
 		public static double    Cubed(double x)                                 { return x * x * x; }
 		public static float     CubeRoot(float x)                               { return (float)CubeRoot((double)x); }
 		public static double    CubeRoot(double x)                              { return Math.Pow(x, 1.0/3.0); }
-		public static float     Min(float lhs, float rhs)                       { return (lhs < rhs) ? lhs : rhs; }
-		public static float     Max(float lhs, float rhs)                       { return (lhs > rhs) ? lhs : rhs; }
-		public static double    Min(double lhs, double rhs)                     { return (lhs < rhs) ? lhs : rhs; }
-		public static double    Max(double lhs, double rhs)                     { return (lhs > rhs) ? lhs : rhs; }
 		public static char      Clamp(char x, char min, char max)               { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static byte      Clamp(byte x, byte min, byte max)               { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
 		public static short     Clamp(short x, short min, short max)            { Debug.Assert(min <= max); return (x > max) ? max : (x < min) ? min : x; }
@@ -93,6 +89,56 @@ namespace pr.maths
 		public static float     Len2(float x, float y)                          { return Sqrt(Len2Sq(x,y)); }
 		public static float     Len3Sq(float x, float y, float z)               { return Sqr(x) + Sqr(y) + Sqr(z); }
 		public static float     Len3(float x, float y, float z)                 { return Sqrt(Len3Sq(x,y,z)); }
+
+		/// <summary>Minimum value</summary>
+		public static T Min<T>(T lhs, T rhs) where T :struct, IComparable<T>
+		{
+			return lhs.CompareTo(rhs) <= 0 ? lhs : rhs;
+		}
+		public static T Min<T>(T lhs, params T[] rhs) where T :struct, IComparable<T>
+		{
+			foreach (var r in rhs) lhs = Min(lhs, r);
+			return lhs;
+		}
+
+		/// <summary>Maximum value</summary>
+		public static T Max<T>(T lhs, T rhs) where T :struct, IComparable<T>
+		{
+			return lhs.CompareTo(rhs) >= 0 ? lhs : rhs;
+		}
+		public static T Max<T>(T lhs, params T[] rhs) where T :struct, IComparable<T>
+		{
+			foreach (var r in rhs) lhs = Max(lhs, r);
+			return lhs;
+		}
+		//public static float     Min(float lhs, float rhs)                       { return (lhs < rhs) ? lhs : rhs; }
+		//public static float     Max(float lhs, float rhs)                       { return (lhs > rhs) ? lhs : rhs; }
+		//public static float     Min(float lhs, params float[] rhs)              { foreach (var r in rhs) lhs = Min(lhs, r); return lhs; }
+		//public static float     Max(float lhs, params float[] rhs)              { foreach (var r in rhs) lhs = Max(lhs, r); return lhs; }
+		//public static double    Min(double lhs, double rhs)                     { return (lhs < rhs) ? lhs : rhs; }
+		//public static double    Max(double lhs, double rhs)                     { return (lhs > rhs) ? lhs : rhs; }
+		//public static double    Min(double lhs, params double[] rhs)            { foreach (var r in rhs) lhs = Min(lhs, r); return lhs; }
+		//public static double    Max(double lhs, params double[] rhs)            { foreach (var r in rhs) lhs = Max(lhs, r); return lhs; }
+
+		/// <summary>True if 'x' is within the interval '[min-tol,max+tol]'</summary>
+		public static bool Within(int min, int x, int max, int tol = 0)
+		{
+			min -= tol;
+			max += tol;
+			return x >= min && x <= max;
+		}
+		public static bool Within(float min, float x, float max, float tol = 0f)
+		{
+			min -= tol;
+			max += tol;
+			return x >= min && x <= max;
+		}
+		public static bool Within(double min, double x, double max, double tol = 0.0)
+		{
+			min -= tol;
+			max += tol;
+			return x >= min && x <= max;
+		}
 
 		/// <summary>
 		/// Return the greatest common factor between 'a' and 'b'

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Windows.Threading;
 using pr.common;
 using pr.extn;
 using pr.util;
@@ -103,6 +104,20 @@ namespace pr.extn
 			else
 				evt(sender, args);
 			return args;
+		}
+
+		/// <summary>Post a message to the thread queue to fire this event (if not suspended)</summary>
+		[DebuggerStepThrough]
+		public static void QueueRaise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
+		{
+			Dispatcher.CurrentDispatcher.BeginInvoke(() => evt.Raise(sender, args));
+		}
+
+		/// <summary>Post a message to the thread queue to fire this event (if not suspended)</summary>
+		[DebuggerStepThrough]
+		public static void QueueRaise(this EventHandler evt, object sender = null, EventArgs args = null)
+		{
+			Dispatcher.CurrentDispatcher.BeginInvoke(() => evt.Raise(sender, args));
 		}
 
 		/// <summary>
@@ -210,6 +225,51 @@ namespace pr.extn
 
 		#endregion
 
+		#region INotifyPropertyChanging
+
+		/// <summary>Fire the event if not suspended</summary>
+		[DebuggerStepThrough]
+		public static PropertyChangingEventArgs Raise(this PropertyChangingEventHandler evt, object sender = null, PropertyChangingEventArgs args = null)
+		{
+			if (evt == null) return args;
+			if (Impl<PropertyChangingEventHandler>.IsSuspended(evt))
+				Impl<PropertyChangingEventHandler>.Signal(evt);
+			else
+				evt(sender, args);
+			return args;
+		}
+
+		/// <summary>Returns an RAII object for suspending events</summary>
+		public static Scope SuspendScope(this PropertyChangingEventHandler evt, bool raise_if_signalled = false, object sender = null, PropertyChangingEventArgs args = null)
+		{
+			if (evt == null) return Scope.Create(null,null);
+			return Scope.Create(
+				() => Suspend(evt, true),
+				() =>
+				{
+					if (Suspend(evt, false) && raise_if_signalled)
+						evt.Raise(sender, args);
+				});
+		}
+
+		/// <summary>
+		/// Block/Unblock this event from firing when Raise() is called.
+		/// Calls to suspend/resume must be matched.
+		/// Returns true if the event has been 'Raise'd while being suspended.</summary>
+		public static bool Suspend(this PropertyChangingEventHandler evt, bool suspend)
+		{
+			if (evt == null) return false;
+			return Impl<PropertyChangingEventHandler>.Suspend(evt, suspend);
+		}
+
+		/// <summary>Returns true if this event is currently suspended</summary>
+		public static bool IsSuspended(this PropertyChangingEventHandler evt)
+		{
+			return evt != null && Impl<PropertyChangingEventHandler>.IsSuspended(evt);
+		}
+
+		#endregion
+		
 		#region Action
 
 		/// <summary>Fire the event if not suspended</summary>

@@ -66,9 +66,9 @@ namespace pr.attrib
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
-		public static string Desc<T,Ret>(Type type, Expression<Func<T,Ret>> expression)
+		public static string Desc<T>(this T obj, string member_name)
 		{
-			return Desc(type, R<T>.Name(expression));
+			return Desc(obj.GetType(), member_name);
 		}
 
 		/// <summary>The description attribute associated with a property or field</summary>
@@ -205,7 +205,7 @@ namespace pr.unittests
 		public void DescAttr2()
 		{
 			var c = new C();
-			Assert.AreEqual("Field Desc",c.Desc(x => x.m_field));
+			Assert.AreEqual("Field Desc",c.Desc(nameof(C.m_field)));
 			Assert.AreEqual("Field Desc",R<C>.Desc(x => x.m_field));
 			Assert.AreEqual("Prop Desc",R<C>.Desc(x => x.Prop));
 			Assert.AreEqual(null,c.Desc(x => x.NoAttr));

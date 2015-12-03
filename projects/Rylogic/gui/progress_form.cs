@@ -191,7 +191,7 @@ namespace pr.gui
 		/// <summary>An event used to signal the other thread to cancel</summary>
 		public ManualResetEvent CancelSignal { get; private set; }
 
-		/// <summary>Tests whether cancel has been signaled. The background thread tests this to see if it should early out</summary>
+		/// <summary>Tests whether cancel has been signalled. The background thread tests this to see if it should early out</summary>
 		public bool CancelPending { get { return CancelSignal.WaitOne(0); } }
 
 		/// <summary>Controls whether the form closes or just hides</summary>

@@ -1425,7 +1425,7 @@ namespace RyLogViewer
 			try
 			{
 				var tut = new FirstRunTutorial(this);
-				tut.Display();
+				tut.Show();
 			}
 			catch (Exception ex)
 			{

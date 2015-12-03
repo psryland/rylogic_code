@@ -5,8 +5,10 @@
 
 using System;
 using System.Drawing;
+using System.Drawing.Imaging;
 using pr.gfx;
 using pr.maths;
+using pr.util;
 
 namespace pr.extn
 {
@@ -92,7 +94,7 @@ namespace pr.extn
 			return new PointF(r.Left, r.Top + r.Height/2);
 		}
 
-		/// <summary>Returns the center of the rectangle</summary>
+		/// <summary>Returns the centre of the rectangle</summary>
 		public static Point Centre(this Rectangle r)
 		{
 			return new Point(r.X + r.Width/2, r.Y + r.Height/2);
@@ -161,6 +163,14 @@ namespace pr.extn
 		{
 			return new RectangleF(r.X + dx, r.Y + dy, r.Width, r.Height);
 		}
+		public static Rectangle Shifted(this Rectangle r, Point pt)
+		{
+			return r.Shifted(pt.X, pt.Y);
+		}
+		public static RectangleF Shifted(this RectangleF r, PointF pt)
+		{
+			return r.Shifted(pt.X, pt.Y);
+		}
 
 		/// <summary>Returns a rectangle inflated by dx,dy</summary>
 		public static Rectangle Inflated(this Rectangle r, int dx, int dy)
@@ -198,6 +208,32 @@ namespace pr.extn
 				(float)Math.Abs(r.Height));
 		}
 
+		/// <summary>Reduces the size of this rectangle by excluding the area 'x'. The result must be a rectangle or an exception is thrown</summary>
+		public static Rectangle Subtract(this Rectangle r, Rectangle x)
+		{
+			// If 'x' has not area, then subtraction is identity
+			if (x.Size.IsEmpty)
+				return r;
+
+			// If 'x' spans 'r' horizontally
+			if (x.Left <= r.Left && x.Right >= r.Right)
+			{
+				if (x.Top    <= r.Top)    return Rectangle.FromLTRB(r.Left, Math.Min(x.Bottom, r.Bottom), r.Right, r.Bottom);
+				if (x.Bottom >= r.Bottom) return Rectangle.FromLTRB(r.Left, r.Top, r.Right, Math.Max(x.Top, r.Top));
+				throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
+			}
+
+			// If 'x' spans 'r' vertically
+			if (x.Top <= r.Top && x.Bottom >= r.Bottom)
+			{
+				if (x.Left  <= r.Left)  return Rectangle.FromLTRB(Math.Min(x.Right, r.Right), r.Top, r.Right, r.Bottom);
+				if (x.Right >= r.Right) return Rectangle.FromLTRB(r.Left, r.Top, r.Right, Math.Max(x.Left, r.Left));
+				throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
+			}
+
+			throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
+		}
+
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
 		public static Color Lerp(this Color src, Color dst, float frac)
 		{
@@ -214,7 +250,7 @@ namespace pr.extn
 			return unchecked((int)(((uint)col.A << 24) | ((uint)col.B << 16) | ((uint)col.G << 8) | ((uint)col.R << 0)));
 		}
 
-		/// <summary>Convert this colour to it's associated grayscale value</summary>
+		/// <summary>Convert this colour to it's associated grey-scale value</summary>
 		public static Color ToGrayScale(this Color col)
 		{
 			int gray = (int)(0.3f*col.R + 0.59f*col.G + 0.11f*col.B);
@@ -242,6 +278,101 @@ namespace pr.extn
 				style ?? prototype.Style,
 				unit ?? prototype.Unit
 				);
+		}
+
+		/// <summary>Returns a scope object that locks and unlocks the data of a bitmap</summary>
+		public static Scope<BitmapData> LockBitsScope(this Bitmap bm, Rectangle rect, ImageLockMode mode, PixelFormat format)
+		{
+			return Scope<BitmapData>.Create(
+				() => bm.LockBits(rect, mode, format),
+				dat => bm.UnlockBits(dat));
+		}
+	}
+
+	/// <summary>A reference type for a point (convertible to Point)</summary>
+	public class PointRef
+	{
+		public PointRef() { }
+		public PointRef(Point p) :this(p.X, p.Y)
+		{
+		}
+		public PointRef(int x, int y)
+		{
+			X = x;
+			Y = y;
+		}
+
+		public int X { get; set; }
+		public int Y { get; set; }
+
+		/// <summary>Implicit conversion to the Point struct</summary>
+		public static implicit operator Point(PointRef p)
+		{
+			return new Point(p.X, p.Y);
+		}
+	}
+
+	/// <summary>A reference type for a rectangle (convertible to Rectangle)</summary>
+	public class RectangleRef
+	{
+		public RectangleRef() { }
+		public RectangleRef(Point pt, Size sz) :this(pt.X, pt.Y, sz.Width, sz.Height)
+		{
+		}
+		public RectangleRef(Rectangle rect) :this(rect.X, rect.Y, rect.Width, rect.Height)
+		{
+		}
+		public RectangleRef(int x, int y, int width, int height)
+		{
+			X = x;
+			Y = y;
+			Width = width;
+			Height = height;
+		}
+
+		public int X { get; set; }
+		public int Y { get; set; }
+
+		public int Width { get; set; }
+		public int Height { get; set; }
+
+		/// <summary>Get/Set the left edge of the rectangle</summary>
+		public int Left
+		{
+			get { return X; }
+			set { X = value; }
+		}
+
+		/// <summary>Get/Set the top edge of the rectangle</summary>
+		public int Top
+		{
+			get { return Y; }
+			set { Y = value; }
+		}
+
+		/// <summary>Get/Set the right edge of the rectangle</summary>
+		public int Right
+		{
+			get { return X + Width; }
+			set { Width = value - X; }
+		}
+
+		/// <summary>Get/Set the bottom edge of the rectangle</summary>
+		public int Bottom
+		{
+			get { return Y + Height; }
+			set { Height = value - Y; }
+		}
+
+		/// <summary>Implicit conversion to the Rectangle struct</summary>
+		public static implicit operator Rectangle(RectangleRef r)
+		{
+			return new Rectangle(r.X, r.Y, r.Width, r.Height);
+		}
+
+		public override string ToString()
+		{
+			return ((Rectangle)this).ToString();
 		}
 	}
 }

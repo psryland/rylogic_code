@@ -32,7 +32,7 @@ namespace RyLogViewer
 
 			m_btn_help.Click += (s,a)=>
 				{
-					SwizzleHelpUI.Display();
+					SwizzleHelpUI.Show();
 				};
 			m_edit_source.TextChanged += (s,a)=>
 				{
