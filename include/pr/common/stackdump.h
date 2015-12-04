@@ -149,8 +149,8 @@ namespace pr
 		struct ToolHelp_Dll :DllBase
 		{
 			typedef HANDLE(__stdcall* CreateToolhelp32Snapshot_type)(DWORD , DWORD);
-			typedef BOOL  (__stdcall* Module32First_type           )(HANDLE, LPMODULEENTRY32);
-			typedef BOOL  (__stdcall* Module32Next_type            )(HANDLE, LPMODULEENTRY32);
+			typedef BOOL  (__stdcall* Module32First_type           )(HANDLE, tagMODULEENTRY32*);
+			typedef BOOL  (__stdcall* Module32Next_type            )(HANDLE, tagMODULEENTRY32*);
 
 			CreateToolhelp32Snapshot_type CreateToolhelp32Snapshot;
 			Module32First_type            FirstModule32;

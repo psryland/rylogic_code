@@ -7,35 +7,33 @@
 
 import sys, os, subprocess
 import Rylogic as Tools
+import Compile
 import UserVars
 
 try:
 	Tools.AssertVersion(1)
 	Tools.AssertPathsExist([UserVars.root])
 
-	# if 'cl' is not in the path, create a command that runs the vc_env script,
-	# and recursively launches this script. The reason for this is no child
-	# process can set env variables for a parent so we run ourself as a child.
-	try:
-		subprocess.check_output(['cl.exe'], stderr=subprocess.STDOUT)
-	except Exception as ex:
-		print("Loading Visual Studio Environment...")
-		subprocess.call([UserVars.vc_env, '&', os.path.realpath(__file__)] + sys.argv[1:])
-		sys.exit(0)
+	# Ensure environment variables for cl.exe are set up
+	Compile.SetupVCEnvironment()
 
-	vs_version = os.environ['VisualStudioVersion']
+	# Read the source file and output file
 	filepath = sys.argv[1] if len(sys.argv) > 1 else ""
 	outpath  = sys.argv[2] if len(sys.argv) > 2 else ""
-	if filepath == "": Tools.OnError("ERROR: no input file provided")
+
+	if filepath == "":
+		Tools.OnError("ERROR: no input file provided")
+
 	if outpath == "":
 		file,ext = os.path.splitext(filepath)
 		outpath = file + "_pp" + ext
 
+	# Prompt to do the preprocessing
 	input(
 		"Preprocessing:\n"
 		"  Source: " + filepath + "\n"
 		"  Destination: " + outpath + "\n"
-		"  Visual Studio Version: " + vs_version + "\n"
+		"  Visual Studio Version: " + os.environ['VisualStudioVersion'] + "\n"
 		" Press enter to continue")
 
 	trace = False
@@ -87,7 +85,7 @@ try:
 	Tools.Exec([UserVars.root+'\\bin\\textformatter.exe', '-f', outpath, '-newlines', '0', '1'], show_arguments=trace)
 
 	print("Showing output...")
-	Tools.Exec([UserVars.devenv, "/Edit", outpath], expected_return_code=0xffffffff)
+	Tools.Exec([UserVars.vs_dir + "\\Common7\\ide\\devenv.exe", "/Edit", outpath], expected_return_code=0xffffffff)
 	#Tools.Exec([UserVars.textedit, outpath])
 
 	Tools.OnSuccess()

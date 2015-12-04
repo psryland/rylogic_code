@@ -18,8 +18,9 @@ try:
 		"*************************************************************************")
 
 	Tools.AssertVersion(1)
-	Tools.AssertPathsExist([UserVars.root, UserVars.csex, UserVars.msbuild, UserVars.ziptool, UserVars.devenv])
+	Tools.AssertPathsExist([UserVars.root, UserVars.csex, UserVars.msbuild, UserVars.ziptool, UserVars.vs_dir])
 
+	devenv = UserVars.vs_dir + "\\Common7\\ide\\devenv.exe"
 	wwwroot = r"Z:\www\rylogic.co.nz"
 	installer_name = "RyLogViewerSetup.exe"
 	dstdir = UserVars.root + "\\bin"
@@ -86,7 +87,7 @@ try:
 	Tools.Exec([UserVars.ziptool, "a", dstzip, dst])
 
 	#Build the installer
-	Tools.Exec([UserVars.devenv, srcdir+"\\installer\\installer.vdproj", "/Build"])
+	Tools.Exec([devenv, srcdir+"\\installer\\installer.vdproj", "/Build"])
 
 	#Copy the installer to the web site
 	installer = objdir + r"\setup.exe"

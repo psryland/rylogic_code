@@ -282,8 +282,13 @@ namespace pr
 		void Flush()
 		{
 			auto res = ::FlushFileBuffers(m_handle);
-			if (res != 0 || GetLastError() == ERROR_NOT_SUPPORTED) return;
-			Throw(res, "Failed to flush write buffer");
+			if (res == 0)
+			{
+				auto last_error = GetLastError();
+				if (last_error == ERROR_NOT_SUPPORTED) return;
+				if (last_error == ERROR_INVALID_FUNCTION) return;
+				Throw(res, "Failed to flush write buffer");
+			}
 		}
 
 		// Set/Clear the break state

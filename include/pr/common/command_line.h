@@ -38,7 +38,7 @@ namespace pr
 		// Helper to test if 'str' is of the form '-xyz'
 		template <typename Char> inline bool IsOption(std::basic_string<Char> const& str)
 		{
-			return str.size() >= 2 && str[0] == '-';
+			return str.size() >= 2 && (str[0] == '-' || str[0] == '/');
 		}
 
 		// Interface for receiving command line options
@@ -52,7 +52,7 @@ namespace pr
 			virtual ~IOptionReceiver() {}
 
 			// Helper to test if 'str' is of the form '-xyz'
-			bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
+			virtual bool IsOption(OptionString const& str) const { return pr::cmdline::IsOption(str); }
 
 			// Called for anything not preceded by '-'.
 			// The caller should advance 'arg' for each argument read.

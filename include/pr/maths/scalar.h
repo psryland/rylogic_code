@@ -157,6 +157,8 @@ namespace pr
 	inline uint8   Low8  (uint16 const& i)                                           { return reinterpret_cast<uint8 const*>(&i)[1]; }
 	inline uint8&  High8 (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[0]; }
 	inline uint8&  Low8  (uint16& i)                                                 { return reinterpret_cast<uint8*>(&i)[1]; }
+
+	template <typename T> inline float Frac(T min, T x, T max)                       { assert(Abs(max - min) > 0); return float(x - min) / (max - min); }
 	template <typename T> inline T Lerp(T const& src, T const& dest, float frac)     { return static_cast<T>(src + frac * (dest - src)); }
 
 	v2      Slerp(const v2& src, const v2& dest, float frac);
