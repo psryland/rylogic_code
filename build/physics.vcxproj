@@ -122,7 +122,6 @@
     <ClInclude Include="..\include\pr\physics\engine\igravity.h" />
     <ClInclude Include="..\include\pr\physics\engine\settings.h" />
     <ClInclude Include="..\include\pr\physics\material\imaterial.h" />
-    <ClInclude Include="..\projects\physics\material\material.h" />
     <ClInclude Include="..\include\pr\physics\rigidbody\integrate.h" />
     <ClInclude Include="..\include\pr\physics\rigidbody\rigidbody.h" />
     <ClInclude Include="..\include\pr\physics\rigidbody\support.h" />

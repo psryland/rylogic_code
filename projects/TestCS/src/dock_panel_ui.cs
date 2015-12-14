@@ -25,7 +25,7 @@ namespace TestCS
 				Text = text;
 				BackgroundImage = SystemIcons.Error.ToBitmap();
 				BackgroundImageLayout = ImageLayout.Stretch;
-				DockControl = new DockControl(this, text) {TabIcon = SystemIcons.Exclamation };
+				DockControl = new DockControl(this, text) {TabIcon = SystemIcons.Exclamation.ToBitmap()};
 			}
 
 			/// <summary>Implements docking functionality</summary>
@@ -43,43 +43,51 @@ namespace TestCS
 			StartPosition = FormStartPosition.Manual;
 			Location = new Point(2150,150);
 
-			m_dock.ActiveContentChanged += (s,a) => Debug.WriteLine("ActiveContentChanged: {0} -> {1}".Fmt(a.ContentOld?.DockControl.PersistName, a.ContentNew?.DockControl.PersistName));
-			m_dock.ActivePaneChanged += (s,a) => Debug.WriteLine("ActivePaneChanged: {0} -> {1}".Fmt(a.PaneOld?.CaptionText, a.PaneNew?.CaptionText));
-			m_dock.ContentChanged += (s,a) =>
-			{
-				Debug.WriteLine("ContentChanged: {0} {1}".Fmt(a.Change, a.Content.DockControl.PersistName));
-				a.Content.DockControl.DockStateChanged += (ss,aa) =>
-				{
-					Debug.WriteLine("ContentDockStateChanged: {0} changed from {1} -> {2}".Fmt(ss.As<Dockable>().DockControl.PersistName, aa.StateOld, aa.StateNew));
-				};
-			};
-			m_dock.PanesChanged += (s,a) =>
-			{
-				Debug.WriteLine("PanesChanged: {0} {1}".Fmt(a.Change, a.Pane?.CaptionText));
-				if (a.Change == PanesChangedEventArgs.EChg.Added)
-				{
-					a.Pane.ContentChanged += (ss,aa) => Debug.WriteLine("PaneContentChaged: {0} {1}".Fmt(aa.Change, aa.Content?.DockControl.PersistName));
-					a.Pane.ActivatedChanged += (ss,aa) => Debug.WriteLine("PaneActivatedChanged: {0} is {1}".Fmt(ss.As<DockPane>().CaptionText, ss.As<DockPane>().Activated ? "Active" : "Inactive"));
-				}
-			};
+			//m_dock.ActiveContentChanged += (s,a) => Debug.WriteLine("ActiveContentChanged: {0} -> {1}".Fmt(a.ContentOld?.DockControl.PersistName, a.ContentNew?.DockControl.PersistName));
+			//m_dock.ActivePaneChanged += (s,a) => Debug.WriteLine("ActivePaneChanged: {0} -> {1}".Fmt(a.PaneOld?.CaptionText, a.PaneNew?.CaptionText));
+			//m_dock.ContentChanged += (s,a) =>
+			//{
+			//	Debug.WriteLine("ContentChanged: {0} {1}".Fmt(a.Change, a.Content.DockControl.PersistName));
+			//	a.Content.DockControl.DockStateChanged += (ss,aa) =>
+			//	{
+			//		Debug.WriteLine("ContentDockStateChanged: {0} changed from {1} -> {2}".Fmt(ss.As<Dockable>().DockControl.PersistName, aa.StateOld, aa.StateNew));
+			//	};
+			//};
+			//m_dock.PanesChanged += (s,a) =>
+			//{
+			//	Debug.WriteLine("PanesChanged: {0} {1}".Fmt(a.Change, a.Pane?.CaptionText));
+			//	if (a.Change == PanesChangedEventArgs.EChg.Added)
+			//	{
+			//		a.Pane.ContentChanged += (ss,aa) => Debug.WriteLine("PaneContentChaged: {0} {1}".Fmt(aa.Change, aa.Content?.DockControl.PersistName));
+			//		a.Pane.ActivatedChanged += (ss,aa) => Debug.WriteLine("PaneActivatedChanged: {0} is {1}".Fmt(ss.As<DockPane>().CaptionText, ss.As<DockPane>().Activated ? "Active" : "Inactive"));
+			//	}
+			//};
 
-			var d0 = new Dockable("Dockable 0") { BorderStyle = BorderStyle.Fixed3D };
-			var d1 = new Dockable("Dockable 1");
-			var d2 = new Dockable("Dockable 2");
-			var d3 = new Dockable("Dockable 3");
-			var d4 = new Dockable("Dockable 4");
-			var d5 = new Dockable("Dockable 5");
-			var d6 = new Dockable("Dockable 6");
-			var d7 = new Dockable("Dockable 7");
+			var d0 = new Dockable("Dockable 0") { BorderStyle = BorderStyle.FixedSingle };
+			var d1 = new Dockable("Dockable 1") { BorderStyle = BorderStyle.FixedSingle };
+			var d2 = new Dockable("Dockable 2") { BorderStyle = BorderStyle.FixedSingle };
+			var d3 = new Dockable("Dockable 3") { BorderStyle = BorderStyle.FixedSingle };
+			var d4 = new Dockable("Dockable 4") { BorderStyle = BorderStyle.FixedSingle };
+			var d5 = new Dockable("Dockable 5") { BorderStyle = BorderStyle.FixedSingle };
+			var d6 = new Dockable("Dockable 6") { BorderStyle = BorderStyle.FixedSingle };
+			var d7 = new Dockable("Dockable 7") { BorderStyle = BorderStyle.FixedSingle };
+			var d8 = new Dockable("Dockable 8") { BorderStyle = BorderStyle.FixedSingle };
+			var d9 = new Dockable("Dockable 9") { BorderStyle = BorderStyle.FixedSingle };
 
-			m_dock.Add(d0); d0.DockControl.DockState = EDockState.Centre;
-			m_dock.Add(d1);	d1.DockControl.DockState = EDockState.Left;
-			m_dock.Add(d2);	d2.DockControl.DockState = EDockState.Top;
-			m_dock.Add(d3);	d3.DockControl.DockState = EDockState.Right;
-			m_dock.Add(d4);	d4.DockControl.DockState = EDockState.Right;
-			m_dock.Add(d5);	d5.DockControl.DockState = EDockState.Bottom;
-			m_dock.Add(d6);	d6.DockControl.DockState = EDockState.Bottom;
-			m_dock.Add(d7);	d7.DockControl.DockState = EDockState.Centre;
+			m_dock.Add(d0); d0.DockControl.DockSite = EDockSite.Centre;
+			m_dock.Add(d1);	d1.DockControl.DockSite = EDockSite.Left;
+			m_dock.Add(d2);	d2.DockControl.DockSite = EDockSite.Top;
+			m_dock.Add(d3);	d3.DockControl.DockSite = EDockSite.Right;
+			m_dock.Add(d4);	d4.DockControl.DockSite = EDockSite.Right;
+			m_dock.Add(d5);	d5.DockControl.DockSite = EDockSite.Bottom;
+			m_dock.Add(d6);	d6.DockControl.DockSite = EDockSite.Bottom;
+			m_dock.Add(d7);	d7.DockControl.DockSite = EDockSite.Centre;
+			m_dock.Add(d8);	d8.DockControl.DockSite = EDockSite.Top;
+			m_dock.Add(d9, EDockSite.Centre, EDockSite.Left);
+
+			d0.DockControl.DockPane.TabStripCtrl.StripLocation = EDockSite.Left;
+			d2.DockControl.DockPane.TabStripCtrl.StripLocation = EDockSite.Top;
+			d3.DockControl.DockPane.TabStripCtrl.StripLocation = EDockSite.Right;
 		}
 		protected override void Dispose(bool disposing)
 		{

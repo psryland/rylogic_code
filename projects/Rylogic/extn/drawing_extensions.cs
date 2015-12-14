@@ -5,7 +5,9 @@
 
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using pr.gfx;
 using pr.maths;
 using pr.util;
@@ -52,6 +54,16 @@ namespace pr.extn
 		public static RectangleF ToRect(this SizeF s)
 		{
 			return new RectangleF(0f, 0f, s.Width, s.Height);
+		}
+
+		/// <summary>Returns this size with X,Y multiplied by 'scale'</summary>
+		public static Size Scaled(this Size s, float scale)
+		{
+			return new Size((int)(s.Width * scale), (int)(s.Height * scale));
+		}
+		public static SizeF Scaled(this SizeF s, float scale)
+		{
+			return new SizeF(s.Width * scale, s.Height * scale);
 		}
 
 		/// <summary>Returns the top left point of the rectangle</summary>
@@ -144,6 +156,20 @@ namespace pr.extn
 			return new PointF(r.Right, r.Bottom);
 		}
 
+		/// <summary>Returns the signed area of this rectangle. Returns a negative value if Width and/or Height are negative</summary>
+		public static int Area(this Rectangle r)
+		{
+			return Maths.SignI(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+		}
+		public static float Area(this RectangleF r)
+		{
+			return Maths.SignF(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+		}
+		public static int Area(this RectangleRef r)
+		{
+			return Maths.SignI(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+		}
+
 		/// <summary>Returns a point shifted by dx,dy</summary>
 		public static Point Shifted(this Point pt, int dx, int dy)
 		{
@@ -211,27 +237,65 @@ namespace pr.extn
 		/// <summary>Reduces the size of this rectangle by excluding the area 'x'. The result must be a rectangle or an exception is thrown</summary>
 		public static Rectangle Subtract(this Rectangle r, Rectangle x)
 		{
-			// If 'x' has not area, then subtraction is identity
+			// If 'x' has no area, then subtraction is identity
 			if (x.Size.IsEmpty)
 				return r;
+
+			// If the rectangles do not overlap. Right/Bottom is not considered 'in' the rectangle
+			if (r.Left >= x.Right || r.Right <= x.Left || r.Top >= x.Bottom || r.Bottom <= x.Top)
+				return r;
+
+			// If 'x' completely covers 'r' then the result is empty
+			if (x.Left <= r.Left && x.Right >= r.Right && x.Top <= r.Top && x.Bottom >= r.Bottom)
+				return Rectangle.Empty;
 
 			// If 'x' spans 'r' horizontally
 			if (x.Left <= r.Left && x.Right >= r.Right)
 			{
-				if (x.Top    <= r.Top)    return Rectangle.FromLTRB(r.Left, Math.Min(x.Bottom, r.Bottom), r.Right, r.Bottom);
-				if (x.Bottom >= r.Bottom) return Rectangle.FromLTRB(r.Left, r.Top, r.Right, Math.Max(x.Top, r.Top));
+				// If the top edge of 'r' is aligned with the top edge of 'x', or within 'x'
+				// then the top edge of the resulting rectangle is 'x.Bottom'.
+				if (x.Top    <= r.Top)    return Rectangle.FromLTRB(r.Left, x.Bottom, r.Right, r.Bottom);
+				if (x.Bottom >= r.Bottom) return Rectangle.FromLTRB(r.Left, r.Top, r.Right, x.Top);
 				throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
 			}
 
 			// If 'x' spans 'r' vertically
 			if (x.Top <= r.Top && x.Bottom >= r.Bottom)
 			{
-				if (x.Left  <= r.Left)  return Rectangle.FromLTRB(Math.Min(x.Right, r.Right), r.Top, r.Right, r.Bottom);
-				if (x.Right >= r.Right) return Rectangle.FromLTRB(r.Left, r.Top, r.Right, Math.Max(x.Left, r.Left));
+				if (x.Left  <= r.Left)  return Rectangle.FromLTRB(x.Right, r.Top, r.Right, r.Bottom);
+				if (x.Right >= r.Right) return Rectangle.FromLTRB(r.Left, r.Top, x.Left, r.Bottom);
 				throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
 			}
 
 			throw new Exception("The result of subtracting rectangle 'x' does not result in a rectangle");
+		}
+
+		/// <summary>Apply this transform to a single point</summary>
+		public static Point TransformPoint(this Matrix m, Point pt)
+		{
+			var p = new[] {pt};
+			m.TransformPoints(p);
+			return p[0];
+		}
+		public static PointF TransformPoint(this Matrix m, PointF pt)
+		{
+			var p = new[] {pt};
+			m.TransformPoints(p);
+			return p[0];
+		}
+
+		/// <summary>Apply this transform to a rectangle</summary>
+		public static Rectangle TransformRect(this Matrix m, Rectangle rect)
+		{
+			var p = new[] {rect.TopLeft(), rect.BottomRight()};
+			m.TransformPoints(p);
+			return Rectangle.FromLTRB(p[0].X, p[0].Y, p[1].X, p[1].Y);
+		}
+		public static RectangleF TransformRect(this Matrix m, RectangleF rect)
+		{
+			var p = new[] {rect.TopLeft(), rect.BottomRight()};
+			m.TransformPoints(p);
+			return RectangleF.FromLTRB(p[0].X, p[0].Y, p[1].X, p[1].Y);
 		}
 
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
@@ -281,11 +345,46 @@ namespace pr.extn
 		}
 
 		/// <summary>Returns a scope object that locks and unlocks the data of a bitmap</summary>
-		public static Scope<BitmapData> LockBitsScope(this Bitmap bm, Rectangle rect, ImageLockMode mode, PixelFormat format)
+		public static Scope<BitmapData> LockBits(this Bitmap bm, ImageLockMode mode, PixelFormat format, Rectangle? rect = null)
 		{
 			return Scope<BitmapData>.Create(
-				() => bm.LockBits(rect, mode, format),
+				() => bm.LockBits(rect ?? bm.Size.ToRect(), mode, format),
 				dat => bm.UnlockBits(dat));
+		}
+
+		/// <summary>Generate a GraphicsPath from this bitmap by rastering the non-background pixels</summary>
+		public static GraphicsPath ToGraphicsPath(this Bitmap bitmap, Color? bk_colour = null)
+		{
+			var gp = new GraphicsPath();
+
+			// Copy the bitmap to memory
+			int[] px; int sign;
+			using (var bits = bitmap.LockBits(ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb))
+			{
+				const int bytes_per_px = 4;
+				sign = Maths.Sign(bits.Value.Stride);
+				px = new int[Math.Abs(bits.Value.Stride) * bits.Value.Height / bytes_per_px];
+				Marshal.Copy(bits.Value.Scan0, px, 0, px.Length);
+			}
+
+			// Get the transparent colour
+			var bkcol = bk_colour?.ToArgb() ?? px[0];
+
+			// Generates a graphics path by rastering a bitmap into rectangles
+			var y    = sign > 0 ? 0 : bitmap.Height - 1;
+			var yend = sign > 0 ? bitmap.Height : -1;
+			for (; y != yend; y += sign)
+			{
+				// Find the first non-background colour pixel
+				int x0; for (x0 = 0; x0 != bitmap.Width && px[y * bitmap.Height + x0] == bkcol; ++x0) {}
+
+				// Find the last non-background colour pixel
+				int x1; for (x1 = bitmap.Width; x1-- != 0 && px[y * bitmap.Height + x1] == bkcol; ) {}
+
+				// Add a rectangle for the raster line
+				gp.AddRectangle(new Rectangle(x0, y, x1-x0+1, 1));
+			}
+			return gp;
 		}
 	}
 
@@ -309,6 +408,38 @@ namespace pr.extn
 		public static implicit operator Point(PointRef p)
 		{
 			return new Point(p.X, p.Y);
+		}
+
+		public override string ToString()
+		{
+			return ((Point)this).ToString();
+		}
+	}
+
+	/// <summary>A reference type for a size (convertible to Size)</summary>
+	public class SizeRef
+	{
+		public SizeRef() { }
+		public SizeRef(Size s) :this(s.Width, s.Height)
+		{}
+		public SizeRef(int w, int h)
+		{
+			Width = w;
+			Height = h;
+		}
+
+		public int Width { get; set; }
+		public int Height { get; set; }
+
+		/// <summary>Implicit conversion to the Point struct</summary>
+		public static implicit operator Size(SizeRef s)
+		{
+			return new Size(s.Width, s.Height);
+		}
+
+		public override string ToString()
+		{
+			return ((Size)this).ToString();
 		}
 	}
 
@@ -340,14 +471,14 @@ namespace pr.extn
 		public int Left
 		{
 			get { return X; }
-			set { X = value; }
+			set { Width = Right - value; X = value; }
 		}
 
 		/// <summary>Get/Set the top edge of the rectangle</summary>
 		public int Top
 		{
 			get { return Y; }
-			set { Y = value; }
+			set { Height = Bottom - value; Y = value; }
 		}
 
 		/// <summary>Get/Set the right edge of the rectangle</summary>
@@ -362,6 +493,20 @@ namespace pr.extn
 		{
 			get { return Y + Height; }
 			set { Height = value - Y; }
+		}
+
+		/// <summary>The Top/Left of the rectangle</summary>
+		public Point Location
+		{
+			get { return new Point(X, Y); }
+			set { X = value.X; Y = value.Y; }
+		}
+
+		/// <summary>The size of the rectangle</summary>
+		public Size Size
+		{
+			get { return new Size(Width, Height); }
+			set { Width = value.Width; Height = value.Height; }
 		}
 
 		/// <summary>Implicit conversion to the Rectangle struct</summary>

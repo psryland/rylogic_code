@@ -3,8 +3,6 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
-using pr.util;
-using pr.win32;
 
 namespace pr.gui
 {
@@ -20,6 +18,36 @@ namespace pr.gui
 				if (value < 0 || value >= Items.Count) return;
 				base.SelectedIndex = value;
 			}
+		}
+
+		/// <summary>Set the selected item.</summary>
+		public new object SelectedItem
+		{
+			get { return base.SelectedItem; }
+			set
+			{
+				base.SelectedItem = value;
+
+				// For drop down lists, if 'value' isn't in the collection then
+				// then the call to SelectedItem is ignored, silently.
+				if (!Equals(SelectedItem, value))
+					UnknownItemSelected.Raise(this, new UnknownItemSelectedEventArgs(value));
+			}
+		}
+
+		/// <summary>
+		/// Raised whenever an attempt to change the selected item to an unknown item is made.
+		/// I.e. whenever the combo box ignores a call to 'SelectedItem = value'</summary>
+		public event EventHandler<UnknownItemSelectedEventArgs> UnknownItemSelected;
+		public class UnknownItemSelectedEventArgs :EventArgs
+		{
+			public UnknownItemSelectedEventArgs(object unknown_item)
+			{
+				UnknownItem =  unknown_item;
+			}
+
+			/// <summary>The item that was attempted as the selected item</summary>
+			public object UnknownItem { get; private set; }
 		}
 
 		/// <summary>Get/Set the selected text</summary>

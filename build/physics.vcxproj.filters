@@ -187,9 +187,6 @@
     <ClInclude Include="..\include\pr\physics\collision\contact.h">
       <Filter>collision</Filter>
     </ClInclude>
-    <ClInclude Include="..\projects\physics\material\material.h">
-      <Filter>material</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\physics\ray\ray.h">
       <Filter>ray</Filter>
     </ClInclude>

@@ -108,6 +108,9 @@
     <Compile Include="src\toolform_ui.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="src\vt100_ui.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="src\web_browser_ui.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -171,6 +174,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="src\view3d_ui.resx">
       <DependentUpon>view3d_ui.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="src\vt100_ui.resx">
+      <DependentUpon>vt100_ui.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="src\web_browser_ui.resx">
       <DependentUpon>web_browser_ui.cs</DependentUpon>

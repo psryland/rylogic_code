@@ -31,6 +31,8 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr AttachThreadInput(IntPtr idAttach, IntPtr idAttachTo, int fAttach);
 		[DllImport("user32.dll")]                                                                             public static extern int    CallNextHookEx(int idHook, int nCode, int wParam, IntPtr lParam);
 		[DllImport("user32.dll", EntryPoint="CheckMenuItem")]                                                 public static extern int    CheckMenuItem(IntPtr hMenu,int uIDCheckItem, int uCheck);
+		[DllImport("user32.dll")]                                                                             public static extern HWND   ChildWindowFromPointEx(HWND parent, POINT point, int flags);
+		[DllImport("User32.dll")]                                                                             public static extern bool   ClientToScreen(HWND hwnd, ref POINT pt);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr CreatePopupMenu();
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
@@ -71,6 +73,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern bool   RedrawWindow(HWND hWnd, ref RECT lprcUpdate, HRGN hrgnUpdate, uint flags);
 		[DllImport("user32.dll")]                                                                             public static extern bool   RedrawWindow(HWND hWnd, IntPtr lprcUpdate, HRGN hrgnUpdate, uint flags);
 		[DllImport("User32.dll")]                                                                             public static extern bool   ReleaseDC(HWND hWnd, IntPtr hDC);
+		[DllImport("User32.dll")]                                                                             public static extern bool   ScreenToClient(HWND hwnd, ref POINT pt);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, int wparam, int lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, IntPtr lparam);
 		[DllImport("user32.dll", EntryPoint="SendMessage", SetLastError=true)]                                public static extern int    SendMessage(HWND hwnd, uint msg, IntPtr wparam, ref POINT lparam);

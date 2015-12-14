@@ -72,9 +72,6 @@
     <ClInclude Include="..\projects\lost_at_sea\src\world\terrain.h">
       <Filter>src\world</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h">
-      <Filter>src\app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\app\skybox.h">
       <Filter>src\app</Filter>
     </ClInclude>
@@ -85,9 +82,6 @@
       <Filter>src\app</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\app\main_gui.h">
-      <Filter>src\app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\app\wingui.h">
       <Filter>src\app</Filter>
     </ClInclude>
   </ItemGroup>

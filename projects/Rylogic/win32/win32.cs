@@ -1126,6 +1126,13 @@ namespace pr.win32
 		}
 		#endregion
 
+		#region Child Window From Point
+		public const int CWP_ALL             = 0x0000; // Does not skip any child windows
+		public const int CWP_SKIPINVISIBLE   = 0x0001; // Skips invisible child windows
+		public const int CWP_SKIPDISABLED    = 0x0002; // Skips disabled child windows
+		public const int CWP_SKIPTRANSPARENT = 0x0004; // Skips transparent child windows
+		#endregion
+
 		#endregion
 
 		/// <summary>Helper method for loading a dll from a platform specific path. 'dllname' should include the extn</summary>
@@ -1296,10 +1303,16 @@ namespace pr.win32
 			return LParamToPoint((IntPtr)lparam);
 		}
 		
-		// Return the window under a screen space point
+		/// <summary>Return the window under a screen space point</summary>
 		public static HWND WindowFromPoint(Point pt)
 		{
 			return WindowFromPoint(POINT.FromPoint(pt));
+		}
+
+		/// <summary>Return the control under the screen space point</summary>
+		public static HWND ChildWindowFromPoint(HWND parent, Point pt, int cwp_flags)
+		{
+			return ChildWindowFromPointEx(parent, POINT.FromPoint(pt), cwp_flags);
 		}
 
 		/// <summary>Centre a window to it's parent</summary>

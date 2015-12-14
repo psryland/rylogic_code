@@ -16,9 +16,6 @@
     <Filter Include="src\pr\linedrawer">
       <UniqueIdentifier>{1b49296e-e138-4c8a-8ebc-02bfe9d7d4e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\pr\lighting">
-      <UniqueIdentifier>{242341bf-7d1d-4ea8-b833-86a984170102}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\pr\camera">
       <UniqueIdentifier>{6ab12c5d-3166-4900-9228-2fc545650411}</UniqueIdentifier>
     </Filter>
@@ -33,22 +30,10 @@
     <ClInclude Include="..\include\pr\camera\camera.h">
       <Filter>src\pr\camera</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\char_stream.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\comment_strip.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\embedded_code.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\embedded_lua.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\includes.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\keywords.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h">
@@ -66,17 +51,8 @@
     <ClInclude Include="..\include\pr\linedrawer\ldr_tools.h">
       <Filter>src\pr\linedrawer</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\renderer\lighting\lighting_dlg.h">
-      <Filter>src\pr\lighting</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\lua\lua.h">
       <Filter>src\pr\lua</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\pp_macro.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\pp_macro_db.h">
-      <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\preprocessor.h">
       <Filter>src\pr\script</Filter>
@@ -105,20 +81,11 @@
     <ClInclude Include="..\include\pr\script\script_core.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\script\script_forward.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\script\tokeniser.h">
       <Filter>src\pr\script</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\script\token.h">
       <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\script\stream_stack.h">
-      <Filter>src\pr\script</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\linedrawer\ldr_editor_ctrl.h">
-      <Filter>src\pr\linedrawer</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h">
       <Filter>src\pr\linedrawer</Filter>

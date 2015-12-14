@@ -137,14 +137,14 @@ namespace pr.container
 				{
 					bl.ListChanging += RaiseListChanging;
 					bl.ItemChanged  += RaiseItemChanged;
-                    RaiseListChangedEvents = bl.RaiseListChangedEvents;
+					RaiseListChangedEvents = bl.RaiseListChangedEvents;
 				}
 				bs = base.DataSource as BindingSource<TItem>;
 				if (bs != null)
 				{
 					bs.ListChanging += RaiseListChanging;
 					bs.ItemChanged  += RaiseItemChanged;
-                    RaiseListChangedEvents = bs.RaiseListChangedEvents;
+					RaiseListChangedEvents = bs.RaiseListChangedEvents;
 				}
 
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));

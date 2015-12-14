@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using System.Windows.Threading;
+using pr.extn;
 using pr.maths;
 using pr.util;
 
@@ -87,12 +88,12 @@ namespace pr.gui
 			if (icon != null) Icon = icon;
 
 			AutoSizeMode        = AutoSizeMode.GrowOnly;
-			ClientSize          = new Size(136, 20);
-			StartPosition       = FormStartPosition.CenterParent;
-			FormBorderStyle     = FormBorderStyle.FixedDialog;
 			AutoScaleDimensions = new SizeF(6F, 13F);
 			AutoScaleMode       = AutoScaleMode.Font;
+			StartPosition       = FormStartPosition.CenterParent;
+			FormBorderStyle     = FormBorderStyle.FixedDialog;
 			DialogResult        = DialogResult.OK;
+			ClientSize          = new Size(136, 20);
 			HideOnClose         = false;
 
 			Controls.Add(m_description);
@@ -110,37 +111,41 @@ namespace pr.gui
 			// Start the task
 			var dispatcher = Dispatcher.CurrentDispatcher;
 			m_thread = new Thread(new ThreadStart(() =>
+			{
+				try
 				{
-					try
-					{
-						func(this, arg, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
-						dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
-					}
-					catch (OperationCanceledException)
-					{
-						CancelSignal.Set();
-					}
-					catch (AggregateException ex)
-					{
-						m_error = ex.InnerExceptions.FirstOrDefault(e => !(e is OperationCanceledException));
-						if (m_error == null) CancelSignal.Set();
-					}
-					catch (Exception ex)
-					{
-						m_error = ex;
-					}
-					Done.Set();
-					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{CloseDialog = true});
-				}))
+					func(this, arg, us => dispatcher.BeginInvoke(new Progress(UpdateProgress), us.Clone()));
+					dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{FractionComplete = 1f});
+				}
+				catch (OperationCanceledException)
 				{
-					Name = "ProgressForm",
-					Priority = priority,
-					IsBackground = true,
-				};
+					CancelSignal.Set();
+				}
+				catch (AggregateException ex)
+				{
+					m_error = ex.InnerExceptions.FirstOrDefault(e => !(e is OperationCanceledException));
+					if (m_error == null) CancelSignal.Set();
+				}
+				catch (Exception ex)
+				{
+					m_error = ex;
+				}
+				Done.Set();
+				dispatcher.BeginInvoke(new Progress(UpdateProgress), new UserState{CloseDialog = true});
+			}))
+			{
+				Name = "ProgressForm",
+				Priority = priority,
+				IsBackground = true,
+			};
 			m_thread.Start();
 		}
 		protected override void Dispose(bool disposing)
 		{
+			// Not all worker threads will be testing for 'CancelPending'. A lock-up here means
+			// the dialog is being destroyed while the worker thread is still running. The worker
+			// thread either needs to test for CancelPending, or the dialog should not be close-able
+			// until the background thread is finished.
 			if (m_thread != null) m_thread.Join();
 			base.Dispose(disposing);
 		}
@@ -149,32 +154,40 @@ namespace pr.gui
 			DoLayout();
 			base.OnShown(e);
 		}
-		protected override void OnVisibleChanged(EventArgs e)
+		protected override void OnLayout(LayoutEventArgs levent)
 		{
-			base.OnVisibleChanged(e);
-			if (Visible && StartPosition == FormStartPosition.CenterParent)
-				CenterToParent();
-		}
-		protected override void OnSizeChanged(EventArgs e)
-		{
-			DoLayout();
-			base.OnSizeChanged(e);
+			using (this.SuspendLayout(false))
+				DoLayout();
+
+			base.OnLayout(levent);
 		}
 		protected override void OnFormClosing(FormClosingEventArgs e)
 		{
 			if (CancelSignal != null)
+			{
+				// Save the result based on whether cancel was selected
 				DialogResult = CancelSignal.WaitOne(0)
 					? DialogResult.Cancel
 					: DialogResult.OK;
+			}
 
 			base.OnFormClosing(e);
 
+			// If the form is hide on close and the user is closing, then just
+			// hide the UI. The background thread is not automatically cancelled.
 			if (HideOnClose && e.CloseReason == CloseReason.UserClosing)
 			{
 				Hide();
 				e.Cancel = true;
 				if (Owner != null)
 					Owner.Focus();
+			}
+			// If the form will be disposed and there is a Cancel event, automatically
+			// signal Cancel as a convenience. Worker threads that don't test for
+			// 'CancelPending' will have to prevent the form from closing until finished.
+			else if (CancelSignal != null)
+			{
+				CancelSignal.Set();
 			}
 		}
 
@@ -226,6 +239,8 @@ namespace pr.gui
 		/// <summary>Update the state of the progress form</summary>
 		public void UpdateProgress(UserState us)
 		{
+			var do_layout = us.ForceLayout != null && us.ForceLayout.Value;
+
 			if (us.FractionComplete != null)
 				m_progress.Value = (int)Maths.Lerp(m_progress.Minimum, m_progress.Maximum, Maths.Clamp(us.FractionComplete.Value,0f,1f));
 
@@ -235,8 +250,7 @@ namespace pr.gui
 			if (us.Description != null)
 			{
 				m_description.Text = us.Description;
-				if (us.ForceLayout == null)
-					DoLayout();
+				do_layout |= true;
 			}
 
 			if (us.DescFont != null)
@@ -251,7 +265,7 @@ namespace pr.gui
 			if (us.ProgressBarStyle != null)
 				m_progress.Style = us.ProgressBarStyle.Value;
 
-			if (us.ForceLayout != null && us.ForceLayout.Value)
+			if (do_layout)
 				DoLayout();
 
 			if (us.CloseDialog)
@@ -262,7 +276,6 @@ namespace pr.gui
 		private void DoLayout()
 		{
 			const int space = 10;
-			SuspendLayout();
 
 			// Determine the vertical and left positions
 			m_description.Location = new Point(space, space);
@@ -277,7 +290,6 @@ namespace pr.gui
 				bounds = Rectangle.Union(bounds, c.Bounds);
 
 			// Set the dialog size
-			var current_size = ClientSize;
 			var preferred_size = bounds.Size + new Size(space, space);
 			switch (AutoSizeMode)
 			{
@@ -291,16 +303,8 @@ namespace pr.gui
 				break;
 			}
 
-			// Reposition the form to preserve the centre position
-			Location = new Point(
-				Location.X + (current_size.Width  - ClientSize.Width )/2,
-				Location.Y + (current_size.Height - ClientSize.Height)/2);
-
 			m_progress.Width = ClientSize.Width - 2*space;
 			m_button.Location = new Point(m_progress.Right - m_button.Width, m_progress.Bottom + space);
-
-			ResumeLayout(false);
-			PerformLayout();
 		}
 	}
 }

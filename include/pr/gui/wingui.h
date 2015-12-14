@@ -4018,7 +4018,7 @@ namespace pr
 			{
 				// Modal dialogs should not have their window handle created yet, the
 				// DialogBox() functions create the window and the message loop
-				assert(m_hwnd == nullptr && "Window already created, cannot be displayed modally");
+				assert(m_hwnd == nullptr && "Window already created, cannot be displayed modally. Did you forget to use ECreate::Defer or DlgParams?");
 
 				// Showing the window modally
 				m_modal = true;

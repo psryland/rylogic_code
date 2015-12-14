@@ -165,9 +165,7 @@
     <ClInclude Include="..\include\pr\app\forward.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\app\skybox.h" />
-    <ClInclude Include="..\include\pr\app\wingui.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\camera\camctrl_dinput_wasd.h" />
     <ClInclude Include="..\include\pr\input\dinput.h" />

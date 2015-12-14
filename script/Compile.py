@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*- 
-
+#
 # Compile and execute cpp files
 # Specify command line options using special comments: //@
 # e.g.
@@ -11,7 +11,9 @@
 #    {
 #         std::cout << "Hello World" << std::endl;
 #    }
-
+#
+# Use /c to compile only, no link
+#
 import sys, os, re, time, shlex
 import Rylogic as Tools
 import UserVars
@@ -204,8 +206,13 @@ def CompileToExe(filepath:str, outdir="",
 	# Compile 
 	Tools.Exec([cl] + args + [filepath])
 
+	# If the /c switch is given, then no exe is produced
+	if "/c" in args:
+		return ""
+	
 	# Return the name of the executable
-	return outdir + "\\" + fname + ".exe"
+	exe = outdir + "\\" + fname + ".exe"
+	return exe
 
 # Compile and execute
 if __name__ == "__main__":
@@ -225,9 +232,10 @@ if __name__ == "__main__":
 		exepath = CompileToExe(src_file, out_dir)
 
 		# Run the executable
-		print("Executing: " + exepath)
-		proc = Tools.Spawn([exepath])
-		proc.wait()
+		if len(exepath) != 0:
+			print("Executing: " + exepath)
+			proc = Tools.Spawn([exepath])
+			proc.wait()
 
 	except Exception as ex:
 		Tools.OnException(ex)

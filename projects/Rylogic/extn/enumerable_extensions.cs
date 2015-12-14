@@ -15,7 +15,7 @@ namespace pr.extn
 	/// <summary>Extensions for IEnumerable</summary>
 	public static class EnumerableExtensions
 	{
-		/// <summary>Cast a collection to statically convertable type</summary>
+		/// <summary>Cast a collection to statically convertible type</summary>
 		public static IEnumerable<TResult> ConvertTo<TResult>(this IEnumerable source)
 		{
 			return source.Cast<object>().Select(x => Util.ConvertTo<TResult>(x));
@@ -42,13 +42,13 @@ namespace pr.extn
 			return initial;
 		}
 
-		/// <summary>Compare subranges within arrays for value equality</summary>
+		/// <summary>Compare sub-ranges within arrays for value equality</summary>
 		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int len)
 		{
 			return SequenceEqual(lhs,rhs,0,0,len);
 		}
 
-		/// <summary>Compare subranges within arrays for value equality</summary>
+		/// <summary>Compare sub-ranges within arrays for value equality</summary>
 		public static bool SequenceEqual<TSource>(this IEnumerable<TSource> lhs, IEnumerable<TSource> rhs, int ofs0, int ofs1, int len)
 		{
 			return Enumerable.SequenceEqual(lhs.Skip(ofs0).Take(len), rhs.Skip(ofs1).Take(len));
@@ -68,7 +68,7 @@ namespace pr.extn
 			return source.Where(x => !exclude.Contains(x, comparer));
 		}
 
-		/// <summary>Return the index of the first occurance of pred(x) == true or -1</summary>
+		/// <summary>Return the index of the first occurrence of 'pred(x) == true' or -1</summary>
 		public static int IndexOf<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> pred)
 		{
 			var idx = -1;

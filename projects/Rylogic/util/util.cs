@@ -54,6 +54,8 @@ namespace pr.util
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
+			Debug.Assert(!IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+
 			var junk = doomed;
 			doomed = null;
 
@@ -103,8 +105,14 @@ namespace pr.util
 		}
 		[DebuggerStepThrough] public static void DisposeAll<T>(this IEnumerable<T> doomed) where T:class, IDisposable
 		{
-			foreach (var d in doomed)
-				d.Dispose();
+			foreach (var d in doomed.Where(x => x != null))
+				Dispose(d);
+		}
+		[DebuggerStepThrough] public static void DisposeAll<T>(ref T[] doomed) where T:class, IDisposable
+		{
+			if (doomed == null) return;
+			DisposeAll(doomed.Cast<T>());
+			doomed = null;
 		}
 
 		/// <summary>
@@ -118,6 +126,9 @@ namespace pr.util
 		/// <summary>True if the current thread is the 'main' thread</summary>
 		public static bool IsMainThread { get { return Thread.CurrentThread.ManagedThreadId == m_main_thread_id; } }
 		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
+
+		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
+		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.Name == "GC Finalizer Thread"; } }
 
 		/// <summary>Asserts or stops the debugger if the caller is not the main thread</summary>
 		[Conditional("DEBUG")] public static void AssertMainThread()

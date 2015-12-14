@@ -129,9 +129,6 @@
     <ClInclude Include="..\include\pr\common\assert.h">
       <Filter>pr\common</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\common\atl.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\gui\atlgdix.h">
       <Filter>pr\gui</Filter>
     </ClInclude>
@@ -681,9 +678,6 @@
     <ClInclude Include="..\include\pr\storage\settings.h">
       <Filter>pr\storage</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h">
-      <Filter>pr\app</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\threads\sim_message_pump.h">
       <Filter>pr\threads</Filter>
     </ClInclude>
@@ -769,9 +763,6 @@
       <Filter>pr\gui</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\common\user_data.h">
-      <Filter>pr\common</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pr\common\windows_com.h">
       <Filter>pr\common</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pr\gui\vt100.h">
@@ -951,9 +942,6 @@
     <ClInclude Include="..\include\pr\script\script.h">
       <Filter>pr\script</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\filesys\directory_tree.h">
-      <Filter>pr\filesys</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\win32\win32.h">
       <Filter>pr\win32</Filter>
     </ClInclude>
@@ -962,6 +950,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pr\hardware\find_bt_device.h">
       <Filter>pr\hardware</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pr\gui\sim_message_loop.h">
+      <Filter>pr\gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

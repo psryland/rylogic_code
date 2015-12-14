@@ -246,39 +246,45 @@ namespace pr.extn
 		}
 
 		/// <summary>Recursively calls 'GetChildAtPoint' until the control with no children at that point is found</summary>
-		public static Control GetChildAtScreenPointRec(this Control ctrl, Point screen_pt)
+		public static Control GetChildAtScreenPointRec(this Control ctrl, Point screen_pt, GetChildAtPointSkip flags)
 		{
 			Control parent = null;
 			for (var child = ctrl; child != null;)
 			{
 				parent = child;
-				child = parent.GetChildAtPoint(parent.PointToClient(screen_pt));
+				child = parent.GetChildAtPoint(parent.PointToClient(screen_pt), flags);
 			}
 			return parent;
 		}
 
 		/// <summary>Recursively calls 'GetChildAtPoint' until the control with no children at that point is found</summary>
-		public static Control GetChildAtPointRec(this Control ctrl, Point pt)
+		public static Control GetChildAtPointRec(this Control ctrl, Point pt, GetChildAtPointSkip flags)
 		{
-			return GetChildAtScreenPointRec(ctrl, ctrl.PointToScreen(pt));
+			return GetChildAtScreenPointRec(ctrl, ctrl.PointToScreen(pt), flags);
 		}
 
-		/// <summary>Returns the coordinates of the control's form-relative location.</summary>
-		public static Rectangle FormRelativeCoordinates(this Control control)
+		/// <summary>Returns true if 'ClickThru' mode is enabled for this control</summary>
+		public static bool ClickThru(this Control ctrl)
 		{
-			var form = (Form)control.TopLevelControl;
-			if (form == null) throw new NullReferenceException("Control does not have a top level control (Form)");
-			return control == form ? form.ClientRectangle : form.RectangleToClient(control.Parent.RectangleToScreen(control.Bounds));
+			var style = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
+			return (style & Win32.WS_EX_TRANSPARENT) != 0;
 		}
 
-		/// <summary>Set click through mode for this window</summary>
-		public static void ClickThruEnable(this Control control, bool enabled)
+		/// <summary>Enable/Disable 'ClickThru' mode</summary>
+		public static void ClickThru(this Control ctrl, bool enabled)
 		{
-			uint style = Win32.GetWindowLong(control.Handle, Win32.GWL_EXSTYLE);
-			style = enabled
-				? Bit.SetBits(style, Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT, true)
-				: Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false);
-			Win32.SetWindowLong(control.Handle, Win32.GWL_EXSTYLE, style);
+			var style = Win32.GetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE);
+			Win32.SetWindowLong(ctrl.Handle, Win32.GWL_EXSTYLE, enabled
+				? Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, true)
+				: Bit.SetBits(style, Win32.WS_EX_TRANSPARENT, false));
+		}
+
+		/// <summary>Temporarily enabled/disable 'ClickThru' mode</summary>
+		public static Scope ClickThruScope(this Control ctrl, bool enabled)
+		{
+			return Scope.Create(
+				() => { var on = ctrl.ClickThru(); ctrl.ClickThru(enabled); return on; },
+				on => { ctrl.ClickThru(on); });
 		}
 
 		/// <summary>Return a bitmap of this control</summary>

@@ -50,7 +50,7 @@ namespace pr.extn
 		{
 			var m = Regex.Match(str, pattern, options);
 			if (!m.Success) return new string[0];
-			return m.Groups.Cast<Group>().Skip(1).Select(x => x.Value).ToArray();;
+			return m.Groups.Cast<Group>().Skip(1).Select(x => x.Value).ToArray();
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>

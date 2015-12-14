@@ -41,11 +41,11 @@ namespace pr.maths
 		public static bool      FEql(double lhs, double rhs, double tol)        { return Math.Abs(lhs - rhs) < tol; }
 		public static bool      FEql(double lhs, double rhs)                    { return FEql(lhs, rhs, TinyD); }
 		public static int       SignI(bool positive)                            { return positive ? 1 : -1; }
-		public static int       SignI(int x)                                    { return SignI(x >= 0.0f); }
 		public static float     SignF(bool positive)                            { return positive ? 1f : -1f; }
-		public static float     SignF(float x)                                  { return SignF(x >= 0.0f); }
 		public static double    SignD(bool positive)                            { return positive ? 1.0 : -1.0; }
-		public static double    SignD(double x)                                 { return SignD(x >= 0.0); }
+		public static int       Sign(int x)                                     { return SignI(x >= 0.0f); }
+		public static float     Sign(float x)                                   { return SignF(x >= 0.0f); }
+		public static double    Sign(double x)                                  { return SignD(x >= 0.0); }
 		public static int       OneIfZero(int x)                                { return x != 0 ? x : 1; }
 		public static float     OneIfZero(float x)                              { return x != 0f ? x : 1f; }
 		public static double    Abs(double d)                                   { return Math.Abs(d); }
@@ -74,6 +74,7 @@ namespace pr.maths
 		public static double    RadiansToDegrees(double radians)                { return radians * _360ByTau; }
 		public static void      Swap(ref int lhs, ref int rhs)                  { int tmp = lhs; lhs = rhs; rhs = tmp; }
 		public static void      Swap(ref float lhs, ref float rhs)              { float tmp = lhs; lhs = rhs; rhs = tmp; }
+		public static int       Lerp(int lhs, int rhs, float frac)              { return (int)Math.Round(Lerp((float)lhs, (float)rhs, frac), 0); }
 		public static float     Lerp(float lhs, float rhs, float frac)          { return lhs * (1f - frac) + rhs * (frac); }
 		public static double    Lerp(double lhs, double rhs, double frac)       { return lhs * (1.0 - frac) + rhs * (frac); }
 		public static float     Frac(int min, int x, int max)                   { Debug.Assert(max != min); return (float)(x - min) / (max - min); }
@@ -176,7 +177,7 @@ namespace pr.maths
 			foreach (var value in floats)
 			{
 				var fval = value + remainder;
-				var ival = (int)(fval + SignD(fval) * 0.5);
+				var ival = (int)(fval + Sign(fval) * 0.5);
 				remainder = fval - ival;
 				yield return ival;
 			}

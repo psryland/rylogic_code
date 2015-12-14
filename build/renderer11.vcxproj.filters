@@ -155,9 +155,6 @@
     <ClInclude Include="..\include\pr\geometry\mesh.h">
       <Filter>geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\mesh_tools.h">
-      <Filter>geometry</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pr\geometry\utility.h">
       <Filter>geometry</Filter>
     </ClInclude>
@@ -252,7 +249,6 @@
     <ClInclude Include="..\include\pr\geometry\3ds.h">
       <Filter>geometry</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pr\geometry\file.h" />
     <ClInclude Include="..\include\pr\geometry\model_file.h">
       <Filter>geometry</Filter>
     </ClInclude>

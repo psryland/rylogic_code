@@ -230,7 +230,7 @@ namespace pr.maths
 			ans.y = v4.Cross3(ans.z, ans.x);
 
 			// Permute the column vectors so +Z becomes 'axis'
-			return Maths.SignF(axis) * PermuteRotation(ans, Math.Abs(axis) - 1);
+			return Maths.Sign(axis) * PermuteRotation(ans, Math.Abs(axis) - 1);
 		}
 		public static m3x4 OriFromDir(v4 direction, AxisId axis)
 		{

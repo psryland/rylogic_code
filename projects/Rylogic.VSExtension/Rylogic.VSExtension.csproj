@@ -225,7 +225,7 @@
     <None Include="Resources\green_up.png" />
     <Content Include="deploy.py" />
     <Content Include="licence.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInVSIX>true</IncludeInVSIX>
     </Content>
     <None Include="Resources\exchange.png" />

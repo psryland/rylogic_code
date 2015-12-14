@@ -22,7 +22,7 @@ arch = "x64"
 root = "P:"
 
 # MSBuild path. Used by build scripts
-msbuild_dir = r"C:\Program Files (x86)\MSBuild\12.0"
+msbuild_dir = r"C:\Program Files (x86)\MSBuild\14.0"
 msbuild = msbuild_dir + r"\Bin\MSBuild.exe"
 
 # MSBuild root build script path.

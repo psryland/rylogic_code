@@ -42,7 +42,6 @@
     <ClInclude Include="..\include\pr\app\gimble.h" />
     <ClInclude Include="..\include\pr\app\main.h" />
     <ClInclude Include="..\include\pr\app\main_gui.h" />
-    <ClInclude Include="..\include\pr\app\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\app\skybox.h" />
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\collision\col_box_vs_box.h" />
@@ -61,7 +60,6 @@
     <ClInclude Include="..\include\pr\common\allocator.h" />
     <ClInclude Include="..\include\pr\common\archiver.h" />
     <ClInclude Include="..\include\pr\common\assert.h" />
-    <ClInclude Include="..\include\pr\common\atl.h" />
     <ClInclude Include="..\include\pr\common\base64.h" />
     <ClInclude Include="..\include\pr\common\cast.h" />
     <ClInclude Include="..\include\pr\common\chain.h" />
@@ -128,7 +126,6 @@
     <ClInclude Include="..\include\pr\common\tstring.h" />
     <ClInclude Include="..\include\pr\common\unittests.h" />
     <ClInclude Include="..\include\pr\common\user_data.h" />
-    <ClInclude Include="..\include\pr\common\windows_com.h" />
     <ClInclude Include="..\include\pr\container\deque.h" />
     <ClInclude Include="..\include\pr\container\vector.h" />
     <ClInclude Include="..\include\pr\container\bit_array.h" />
@@ -145,7 +142,6 @@
     <ClInclude Include="..\include\pr\crypt\md5.h" />
     <ClInclude Include="..\include\pr\crypt\rijndael.h" />
     <ClInclude Include="..\include\pr\filesys\autofile.h" />
-    <ClInclude Include="..\include\pr\filesys\directory_tree.h" />
     <ClInclude Include="..\include\pr\filesys\file.h" />
     <ClInclude Include="..\include\pr\filesys\fileex.h" />
     <ClInclude Include="..\include\pr\filesys\filesys.h" />
@@ -190,6 +186,7 @@
     <ClInclude Include="..\include\pr\gui\round_button_ctrl.h" />
     <ClInclude Include="..\include\pr\gui\scaled_dc.h" />
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\include\pr\gui\sim_message_loop.h" />
     <ClInclude Include="..\include\pr\gui\vt100.h" />
     <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\gui\wtl_tab_view_ctrl.h" />
@@ -380,16 +377,20 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <CustomBuildAfterTargets>PostBuildEvent</CustomBuildAfterTargets>
+    <CustomBuildAfterTargets>
+    </CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -405,15 +406,21 @@
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Message>Running unit tests</Message>
-      <Outputs>nofile</Outputs>
+      <Message>
+      </Message>
+      <Outputs>
+      </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
       <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -432,12 +439,18 @@
       <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
     <CustomBuildStep>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Message>Running unit tests</Message>
-      <Outputs>nofile</Outputs>
+      <Message>
+      </Message>
+      <Outputs>
+      </Outputs>
     </CustomBuildStep>
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -452,15 +465,21 @@
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Message>Running unit tests</Message>
-      <Outputs>nofile</Outputs>
+      <Message>
+      </Message>
+      <Outputs>
+      </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
       <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -475,15 +494,21 @@
     </Link>
     <PostBuildEvent />
     <CustomBuildStep>
-      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+      <Command>
+      </Command>
     </CustomBuildStep>
     <CustomBuildStep>
-      <Message>Running unit tests</Message>
-      <Outputs>nofile</Outputs>
+      <Message>
+      </Message>
+      <Outputs>
+      </Outputs>
     </CustomBuildStep>
     <PreBuildEvent>
       <Command>$(ProjectDir)..\projects\unittests\pre_build.py $(ProjectDir)..\projects\unittests $(PlatformTarget) $(Configuration)</Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>$(ProjectDir)..\projects\unittests\run_tests.py $(TargetPath)</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

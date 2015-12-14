@@ -164,7 +164,7 @@ namespace pr.gui
 				public const byte revs    = 1 << 3;
 				public const byte conceal = 1 << 4;
 			}
-			private byte m_col; // Fore/back colour (highbright,blue,green,red)
+			private byte m_col; // Fore/back colour (high-bright,blue,green,red)
 			private byte m_sty; // bold, underline, etc...
 			private bool get(byte b)          { return (m_sty & b) != 0; }
 			private void set(byte b, bool on) { if (on) m_sty |= b; else m_sty &= (byte)~b; }
@@ -309,9 +309,14 @@ namespace pr.gui
 			/// <summary>Set the line size</summary>
 			public void Resize(int newsize, char fill, Style style)
 			{
-				Debug.Assert(fill != 0);
+				Debug.Assert(fill != 0, "Don't fill with the null character because that creates a mismatch match between the line length and the string length");
 				m_line.Resize(newsize, fill);
 				m_styl.Resize(newsize, () => style);
+			}
+			public void Resize(int newsize)
+			{
+				Debug.Assert(newsize <= Size, "This overload should only be used to reduce the line length");
+				Resize(newsize, ' ', Style.Default);
 			}
 
 			// Erase a range within the line
@@ -866,6 +871,16 @@ namespace pr.gui
 							}
 							#endregion
 
+						case 'G':
+							#region Esc[#G - Move to column # 
+							{
+								// Esc[#G Move the cursor to column '#' (not standard vt100 protocol)
+								var n = Params(1, m_seq, 2, -1);
+								m_out.pos = MoveCaret(n[0], m_out.pos.Y);
+								break;
+							}
+							#endregion
+
 						case 'H':
 							#region Esc[line;columnH - Move cursor to screen location
 							{
@@ -914,7 +929,7 @@ namespace pr.gui
 									if (m_out.pos.Y < m_lines.Count)
 									{
 										m_lines.Resize(m_out.pos.Y + 1, () => new Line());
-										LineAt(m_out.pos.Y).Resize(m_out.pos.X, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(m_out.pos.X);
 									}
 									break;
 								case 1:
@@ -946,7 +961,7 @@ namespace pr.gui
 									//Esc[0K Clear line from cursor right EL0
 									if (m_out.pos.Y < m_lines.Count)
 									{
-										LineAt(m_out.pos.Y).Resize(m_out.pos.X, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(m_out.pos.X);
 									}
 									break;
 								case 1:
@@ -960,7 +975,7 @@ namespace pr.gui
 									//Esc[2K Clear entire line EL2
 									if (m_out.pos.Y < m_lines.Count)
 									{
-										LineAt(m_out.pos.Y).Resize(0, '\0', m_out.style);
+										LineAt(m_out.pos.Y).Resize(0);
 									}
 									break;
 								}
@@ -1381,7 +1396,7 @@ namespace pr.gui
 				if (line.Size < m_out.pos.X + count)
 					line.Resize(m_out.pos.X + count, ' ', m_out.style);
 
-				// Add to the invalidrect
+				// Add to the invalid rect
 				InvalidateRect(new Rectangle(m_out.pos, new Size(count, 1)));
 
 				// Write the string
@@ -1430,7 +1445,7 @@ namespace pr.gui
 			}
 
 			/// <summary>A string to display in the console demonstrating/testing features</summary>
-			public string TestConsoleString0
+			public static string TestConsoleString0
 			{
 				get
 				{
@@ -1453,7 +1468,7 @@ namespace pr.gui
 						+"\t\t7";
 				}
 			}
-			public string TestConsoleString1
+			public static string TestConsoleString1
 			{
 				get
 				{
@@ -1478,7 +1493,7 @@ namespace pr.gui
 			private Dictionary<Style, byte> m_sty; // map from vt100 style to scintilla style index
 			private CellBuf m_cells;
 
-			public Display()
+			public Display(Buffer buf)
 			{
 				m_hs = new HoverScroll(Handle);
 				m_eb = new EventBatcher(UpdateText, TimeSpan.FromMilliseconds(1)){TriggerOnFirst = true};
@@ -1499,6 +1514,8 @@ namespace pr.gui
 
 				// Turn off undo history
 				Cmd(Sci.SCI_SETUNDOCOLLECTION, 0);
+
+				Buffer = buf;
 			}
 			protected override void Dispose(bool disposing)
 			{
@@ -1527,14 +1544,14 @@ namespace pr.gui
 					{
 						m_buffer.CaptureToFileEnd();
 						m_buffer.Overflow -= HandleBufferOverflow;
-						m_buffer.BufferChanged -= UpdateText;//SignalRefresh;
+						m_buffer.BufferChanged -= UpdateText;
 						ContextMenuStrip = null;
 					}
 					m_buffer = value;
 					if (m_buffer != null)
 					{
 						m_buffer.Overflow += HandleBufferOverflow;
-						m_buffer.BufferChanged += UpdateText;//SignalRefresh;
+						m_buffer.BufferChanged += UpdateText;
 						ContextMenuStrip = new CMenu(this);
 					}
 					SignalRefresh();

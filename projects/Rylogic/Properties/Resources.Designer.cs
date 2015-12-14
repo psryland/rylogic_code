@@ -143,9 +143,59 @@ namespace pr {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap dock_site_bottom {
+            get {
+                object obj = ResourceManager.GetObject("dock_site_bottom", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap dock_site_cross {
             get {
                 object obj = ResourceManager.GetObject("dock_site_cross", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap dock_site_cross_sm {
+            get {
+                object obj = ResourceManager.GetObject("dock_site_cross_sm", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap dock_site_left {
+            get {
+                object obj = ResourceManager.GetObject("dock_site_left", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap dock_site_right {
+            get {
+                object obj = ResourceManager.GetObject("dock_site_right", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap dock_site_top {
+            get {
+                object obj = ResourceManager.GetObject("dock_site_top", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

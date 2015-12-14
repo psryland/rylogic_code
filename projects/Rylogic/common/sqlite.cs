@@ -1112,6 +1112,7 @@ namespace pr.common
 			{
 				var query = (Query)sender;
 				Trace.QueryInUse(query, false);
+				m_db.AssertCorrectThread();
 
 				// Reset the query to release any locks on associated tables
 				query.Reset();

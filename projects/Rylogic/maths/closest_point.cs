@@ -38,9 +38,9 @@ namespace pr.maths
 				// if pt.x/pt.y > rect.sizeX/rect.sizeY then the point
 				// is closer to the Y edge of the rectangle
 				if (Maths.Abs(pt.x * rect.SizeY) > Maths.Abs(pt.y * rect.SizeX))
-					closest = new v2(pt.x, Maths.SignF(pt.y) * rect.SizeY);
+					closest = new v2(pt.x, Maths.Sign(pt.y) * rect.SizeY);
 				else
-					closest = new v2(Maths.SignF(pt.x) * rect.SizeX, pt.y);
+					closest = new v2(Maths.Sign(pt.x) * rect.SizeX, pt.y);
 			}
 			else
 			{

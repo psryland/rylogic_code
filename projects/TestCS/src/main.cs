@@ -26,111 +26,117 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_scintilla;
 		private ToolStripMenuItem m_menu_tests_checked_groupbox;
 		private ToolStripMenuItem m_menu_tests_dock_panel;
+		private ToolStripMenuItem m_menu_tests_vt100;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
 		public FormTestApp()
 		{
 			InitializeComponent();
-			Shown += (s,a) =>
-				{
-					//Location = new Point(150,150);
-					Location = new Point(2150,150);
-				};
+			Shown += (s, a) =>
+			{
+				//Location = new Point(150,150);
+				Location = new Point(2150, 150);
+			};
 
-			m_menu_file_exit.Click += (s,a) =>
-				{
-					Close();
-				};
+			m_menu_file_exit.Click += (s, a) =>
+			{
+				Close();
+			};
 
-			m_menu_tests_checked_groupbox.Click += (s,a) =>
-				{
-					new CheckedGroupBoxUI().Show(this);
-				};
+			m_menu_tests_checked_groupbox.Click += (s, a) =>
+			{
+				new CheckedGroupBoxUI().Show(this);
+			};
 
-			m_menu_tests_checked_listbox.Click += (s,a) =>
-				{
-					new CheckedListBoxUI().Show(this);
-				};
+			m_menu_tests_checked_listbox.Click += (s, a) =>
+			{
+				new CheckedListBoxUI().Show(this);
+			};
 
-			m_menu_tests_colourwheel.Click += (s,a) =>
-				{
-					new FormColourWheel().Show(this);
-				};
+			m_menu_tests_colourwheel.Click += (s, a) =>
+			{
+				new FormColourWheel().Show(this);
+			};
 
-			m_menu_tests_diagramcontrol.Click += (s,a) =>
-				{
-					new DiagramControlUI().Show(this);
-				};
+			m_menu_tests_diagramcontrol.Click += (s, a) =>
+			{
+				new DiagramControlUI().Show(this);
+			};
 
-			m_menu_tests_dgv.Click += (s,a) =>
-				{
-					new DgvUI().Show(this);
-				};
+			m_menu_tests_dgv.Click += (s, a) =>
+			{
+				new DgvUI().Show(this);
+			};
 
-			m_menu_tests_dock_panel.Click += (s,a) =>
-				{
-					new DockPanelUI().Show(this);
-				};
+			m_menu_tests_dock_panel.Click += (s, a) =>
+			{
+				new DockPanelUI().Show(this);
+			};
 
-			m_menu_tests_graphcontrol.Click += (s,a) =>
-				{
-					new GraphControlUI().Show(this);
-				};
+			m_menu_tests_graphcontrol.Click += (s, a) =>
+			{
+				new GraphControlUI().Show(this);
+			};
 
-			m_menu_tests_helpui.Click += (s,a) =>
-				{
-					new HelpUI().Show(this);
-				};
+			m_menu_tests_helpui.Click += (s, a) =>
+			{
+				new HelpUI().Show(this);
+			};
 
-			m_menu_tests_hintballoon.Click += (s,a) =>
-				{
-					new FormHintBalloon().Show(this);
-				};
+			m_menu_tests_hintballoon.Click += (s, a) =>
+			{
+				new FormHintBalloon().Show(this);
+			};
 
-			m_menu_tests_scintilla.Click += (s,a) =>
-				{
-					new ScintillaUI().Show(this);
-				};
+			m_menu_tests_scintilla.Click += (s, a) =>
+			{
+				new ScintillaUI().Show(this);
+			};
 
-			m_menu_tests_subclassed_controls.Click += (s,a) =>
-				{
-					new SubclassedControlsUI().Show(this);
-				};
+			m_menu_tests_subclassed_controls.Click += (s, a) =>
+			{
+				new SubclassedControlsUI().Show(this);
+			};
 
-			m_menu_tests_toolform.Click += (s,a) =>
-				{
-					new ToolFormUI(this).Show(this);
-				};
+			m_menu_tests_toolform.Click += (s, a) =>
+			{
+				new ToolFormUI(this).Show(this);
+			};
 
-			m_menu_tests_toolstrip_positions.Click += (s,a) =>
-				{
-					new ToolStripPositionsUI().Show(this);
-				};
+			m_menu_tests_toolstrip_positions.Click += (s, a) =>
+			{
+				new ToolStripPositionsUI().Show(this);
+			};
 
-			m_menu_tests_treegrid.Click += (s,a) =>
-				{
-					new TreeGridUI().Show(this);
-				};
+			m_menu_tests_treegrid.Click += (s, a) =>
+			{
+				new TreeGridUI().Show(this);
+			};
 
-			m_menu_tests_rtb.Click += (s,a) =>
-				{
-					new RichTextBoxUI().Show(this);
-				};
+			m_menu_tests_rtb.Click += (s, a) =>
+			{
+				new RichTextBoxUI().Show(this);
+			};
 
-			m_menu_tests_view3d.Click += (s,a) =>
-				{
-					new FormView3d().Show(this);
-				};
+			m_menu_tests_view3d.Click += (s, a) =>
+			{
+				new FormView3d().Show(this);
+			};
 
-			m_menu_tests_view3d_editor.Click += (s,a) =>
-				{
-					new LdrEditorUI().Show(this);
-				};
+			m_menu_tests_view3d_editor.Click += (s, a) =>
+			{
+				new LdrEditorUI().Show(this);
+			};
 
-			m_menu_tests_web_browser.Click += (s,a) =>
-				{
-					new WebBrowserUI().Show(this);
-				};
+			m_menu_tests_vt100.Click += (s, a) =>
+			{
+				new VT100UI().Show(this);
+			};
+
+			m_menu_tests_web_browser.Click += (s, a) =>
+			{
+				new WebBrowserUI().Show(this);
+			};
 		}
 
 		#region Windows Form Designer generated code
@@ -168,6 +174,7 @@ namespace TestCS
 			this.m_menu_tests_colourwheel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_dgv = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_diagramcontrol = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_dock_panel = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_graphcontrol = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_helpui = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_hintballoon = new System.Windows.Forms.ToolStripMenuItem();
@@ -180,7 +187,7 @@ namespace TestCS
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_dock_panel = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -229,6 +236,7 @@ namespace TestCS
             this.m_menu_tests_treegrid,
             this.m_menu_tests_view3d,
             this.m_menu_tests_view3d_editor,
+            this.m_menu_tests_vt100,
             this.m_menu_tests_web_browser});
 			this.m_menu_tests.Name = "m_menu_tests";
 			this.m_menu_tests.Size = new System.Drawing.Size(45, 20);
@@ -263,6 +271,12 @@ namespace TestCS
 			this.m_menu_tests_diagramcontrol.Name = "m_menu_tests_diagramcontrol";
 			this.m_menu_tests_diagramcontrol.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_diagramcontrol.Text = "&DiagramControl";
+			// 
+			// m_menu_tests_dock_panel
+			// 
+			this.m_menu_tests_dock_panel.Name = "m_menu_tests_dock_panel";
+			this.m_menu_tests_dock_panel.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_dock_panel.Text = "&DockPanel";
 			// 
 			// m_menu_tests_graphcontrol
 			// 
@@ -336,11 +350,11 @@ namespace TestCS
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_menu_tests_dock_panel
+			// m_menu_tests_vt100
 			// 
-			this.m_menu_tests_dock_panel.Name = "m_menu_tests_dock_panel";
-			this.m_menu_tests_dock_panel.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_dock_panel.Text = "&DockPanel";
+			this.m_menu_tests_vt100.Name = "m_menu_tests_vt100";
+			this.m_menu_tests_vt100.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_vt100.Text = "&VT100";
 			// 
 			// FormTestApp
 			// 

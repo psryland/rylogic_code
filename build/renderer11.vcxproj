@@ -129,11 +129,9 @@
     <ClInclude Include="..\include\pr\geometry\3ds.h" />
     <ClInclude Include="..\include\pr\geometry\box.h" />
     <ClInclude Include="..\include\pr\geometry\cylinder.h" />
-    <ClInclude Include="..\include\pr\geometry\file.h" />
     <ClInclude Include="..\include\pr\geometry\line.h" />
     <ClInclude Include="..\include\pr\geometry\common.h" />
     <ClInclude Include="..\include\pr\geometry\mesh.h" />
-    <ClInclude Include="..\include\pr\geometry\mesh_tools.h" />
     <ClInclude Include="..\include\pr\geometry\model_file.h" />
     <ClInclude Include="..\include\pr\geometry\p3d.h" />
     <ClInclude Include="..\include\pr\geometry\quad.h" />
