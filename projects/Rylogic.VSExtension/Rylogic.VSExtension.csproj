@@ -174,7 +174,8 @@
     <Compile Include="src\Align\AlignPattern.cs" />
     <Compile Include="src\Align\GroupGrid.cs" />
     <Compile Include="src\Align\PatternGrid.cs" />
-    <Compile Include="src\TextViewCreationListener.cs" />
+    <Compile Include="src\BaseCommand.cs" />
+    <Compile Include="src\Outlining\OutlineCodeCommand.cs" />
     <Compile Include="src\Guids.cs" />
     <Compile Include="src\GlobalSuppressions.cs" />
     <Compile Include="src\Rylogic.VSExtensionPackage.cs" />
@@ -249,6 +250,7 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <PropertyGroup>
     <UseCodebase>true</UseCodebase>
   </PropertyGroup>

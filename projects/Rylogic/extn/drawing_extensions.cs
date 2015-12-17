@@ -238,7 +238,7 @@ namespace pr.extn
 		public static Rectangle Subtract(this Rectangle r, Rectangle x)
 		{
 			// If 'x' has no area, then subtraction is identity
-			if (x.Size.IsEmpty)
+			if (x.Area() <= 0)
 				return r;
 
 			// If the rectangles do not overlap. Right/Bottom is not considered 'in' the rectangle

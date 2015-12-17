@@ -88,7 +88,7 @@ namespace pr.util
 		[DebuggerStepThrough] public static T Dispose<T>(T doomed) where T:class, IDisposable
 		{
 			Dispose(ref doomed);
-			return doomed;
+			return null;
 		}
 		[DebuggerStepThrough] public static TList DisposeAll<TList,T>(TList doomed) where TList :IList<T> where T:class, IDisposable
 		{
@@ -108,11 +108,13 @@ namespace pr.util
 			foreach (var d in doomed.Where(x => x != null))
 				Dispose(d);
 		}
-		[DebuggerStepThrough] public static void DisposeAll<T>(ref T[] doomed) where T:class, IDisposable
+		[DebuggerStepThrough] public static T[] DisposeAll<T>(T[] doomed) where T:class, IDisposable
 		{
-			if (doomed == null) return;
-			DisposeAll(doomed.Cast<T>());
-			doomed = null;
+			if (doomed == null) return null;
+			for (int i = 0; i != doomed.Length; ++i)
+				Dispose(ref doomed[i]);
+
+			return null;
 		}
 
 		/// <summary>

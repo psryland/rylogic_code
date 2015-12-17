@@ -6,6 +6,7 @@ namespace Rylogic.VSExtension
 {
     static class PkgCmdIDList
     {
-        public const uint cmdidAlign =        0x100;
+        public const int cmdidAlign = 0x100;
+		public const int cmdidOutlineCodeOnly = 0x101;
     };
 }

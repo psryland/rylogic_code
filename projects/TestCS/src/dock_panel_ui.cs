@@ -29,7 +29,7 @@ namespace TestCS
 			}
 
 			/// <summary>Implements docking functionality</summary>
-			public DockControl DockControl { get; private set; }
+			public DockControl DockControl { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>Human friendly name</summary>
 			public override string ToString() { return Text; }
@@ -108,9 +108,9 @@ namespace TestCS
 			this.m_dock.ActiveContent = null;
 			this.m_dock.ActivePane = null;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dock.Location = new System.Drawing.Point(20, 20);
+			this.m_dock.Location = new System.Drawing.Point(3, 3);
 			this.m_dock.Name = "m_dock";
-			this.m_dock.Size = new System.Drawing.Size(714, 536);
+			this.m_dock.Size = new System.Drawing.Size(748, 570);
 			this.m_dock.TabIndex = 0;
 			// 
 			// DockPanelUI
@@ -118,7 +118,7 @@ namespace TestCS
 			this.ClientSize = new System.Drawing.Size(754, 576);
 			this.Controls.Add(this.m_dock);
 			this.Name = "DockPanelUI";
-			this.Padding = new System.Windows.Forms.Padding(20);
+			this.Padding = new System.Windows.Forms.Padding(3);
 			this.Text = "Dock Container UI";
 			this.ResumeLayout(false);
 

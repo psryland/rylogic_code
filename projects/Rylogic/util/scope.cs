@@ -52,7 +52,7 @@ namespace pr.util
 	{
 		public T Value;
 
-		/// <summary>Allow implicit conversion to IntPtr</summary>
+		/// <summary>Allow implicit conversion to T</summary>
 		public static implicit operator T(Scope<T> x) { return x.Value; }
 	}
 }

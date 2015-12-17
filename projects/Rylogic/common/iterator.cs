@@ -59,7 +59,8 @@ namespace pr.common
 		{
 			if (m_last) throw new ArgumentOutOfRangeException();
 			++m_index;
-			return m_last = !m_enumer.MoveNext();
+			m_last = !m_enumer.MoveNext();
+			return !AtEnd;
 		}
 
 		/// <summary>Reset the iterator to one before the start of the range</summary>

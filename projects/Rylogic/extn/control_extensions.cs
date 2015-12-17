@@ -136,6 +136,12 @@ namespace pr.extn
 			return (T)(ctrl.Tag ?? (ctrl.Tag = new T()));
 		}
 
+		/// <summary>Get the tooltip associated with this control</summary>
+		public static string ToolTip(this Control ctrl, ToolTip tt)
+		{
+			return tt.GetToolTip(ctrl);
+		}
+
 		/// <summary>Set the tooltip for this control</summary>
 		public static void ToolTip(this Control ctrl, ToolTip tt, string caption)
 		{

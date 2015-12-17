@@ -5,7 +5,6 @@ using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.maths;
-using pr.util;
 using pr.win32;
 
 namespace pr.gui
@@ -53,7 +52,7 @@ namespace pr.gui
 			if (size != Size.Empty)
 				Size = size;
 
-			// Setup the pin menu
+			// Set up the pin menu
 			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
 			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
 			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
@@ -133,15 +132,22 @@ namespace pr.gui
 		private Control m_pin_target;
 
 		/// <summary>Display the UI (even if already visible)</summary>
-		public new void Show()
+		public new virtual void Show()
 		{
 			Show(Owner);
 		}
-		public new void Show(IWin32Window owner)
+		public new virtual void Show(IWin32Window owner)
 		{
 			UpdateLocation();
 			if (!Visible) base.Show(owner);
 			else          Focus();
+		}
+
+		/// <summary>Hide the window</summary>
+		public new virtual void Hide()
+		{
+			Owner?.BringToFront();
+			base.Hide();
 		}
 
 		/// <summary>An overload for close used for hooking up to event handlers</summary>
@@ -150,6 +156,7 @@ namespace pr.gui
 			base.Close();
 		}
 
+		/// <summary>Overrides</summary>
 		protected override void OnLoad(EventArgs e)
 		{
 			base.OnLoad(e);

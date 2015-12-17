@@ -26,7 +26,7 @@
 
 	<!--The Commands section is where we the commands, menus and menu groups are defined.
 		This section uses a Guid to identify the package that provides the command defined inside it. -->
-	<Commands package="guidRylogic_VSExtensionPkg">
+	<Commands package="Rylogic_VSExtensionPkg">
 		<!-- Inside this section we have different sub-sections: one for the menus, another
 		for the menu groups, one for the buttons (the actual commands), one for the combos
 		and the last one for the bitmaps used. Each element is identified by a command id that
@@ -46,38 +46,51 @@
 		</Groups>-->
 
 		<!--Buttons section. -->
-		<!--This section defines the elements the user can interact with, like a menu command or a button
-		or combo box in a toolbar. -->
+		<!--This section defines the elements the user can interact with, like a menu command or a button or combo box in a tool bar. -->
 		<Buttons>
 			<Button guid="guidRylogic_VSExtensionCmdSet" id="cmdidAlign" priority="0x0100" type="Button">
 				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_ADVANCED_CMDS"/>
-				<Icon guid="guidImages" id="bmpBtn"/>
+				<Icon guid="guidAlignIcon" id="bmpBtn"/>
 				<Strings>
 					<ToolTipText>Vertically aligns text</ToolTipText>
 					<CommandName>Align</CommandName>
 					<ButtonText>&amp;Align</ButtonText>
 				</Strings>
 			</Button>
+			<Button guid="guidRylogic_VSExtensionCmdSet" id="cmdidOutlineCodeOnly" priority="0x0100" type="Button">
+				<Parent guid="guidStdEditor" id="IDG_VS_EDITOR_OUTLINING_CMDS"/>
+				<Icon guid="guidOutlineCodeIcon" id="bmpBtn"/>
+				<Strings>
+					<ToolTipText>Outline code only, leaving comments visible</ToolTipText>
+					<CommandName>OutlineCode</CommandName>
+					<ButtonText>Outline &amp;Code</ButtonText>
+				</Strings>
+			</Button>
 		</Buttons>
 
 		<!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
 		<Bitmaps>
-			<Bitmap guid="guidImages" href="Resources\exchange.png"/>
+			<Bitmap guid="guidAlignIcon" href="Resources\exchange.png"/>
+			<Bitmap guid="guidOutlineCodeIcon" href="Resources\outline_code.png"/>
 		</Bitmaps>
 	</Commands>
 
 	<Symbols>
 		<!-- This is the package guid. -->
-		<GuidSymbol name="guidRylogic_VSExtensionPkg" value="{1d697591-233a-4a5b-bf85-2fccc769dfe3}"/>
+		<GuidSymbol name="Rylogic_VSExtensionPkg" value="{1d697591-233a-4a5b-bf85-2fccc769dfe3}"/>
 
 		<!-- This is the guid used to group the menu commands together -->
 		<GuidSymbol name="guidRylogic_VSExtensionCmdSet" value="{7154f9e3-6324-4957-8da6-2dfa88ccf58a}">
 			<IDSymbol name="RylogicMenuGroup" value="0x1020"/>
 			<IDSymbol name="cmdidAlign" value="0x0100"/>
+			<IDSymbol name="cmdidOutlineCodeOnly" value="0x0101"/>
 		</GuidSymbol>
 
-		<!-- Menu item bitmap -->
-		<GuidSymbol name="guidImages" value="{1c4ba5d5-cc4a-4b0f-92a7-d35914c34c13}">
+		<!-- Menu item bitmaps -->
+		<GuidSymbol name="guidAlignIcon" value="{1c4ba5d5-cc4a-4b0f-92a7-d35914c34c13}">
+			<IDSymbol name="bmpBtn" value="1"/>
+		</GuidSymbol>
+		<GuidSymbol name="guidOutlineCodeIcon" value="{8ED7330A-DF6E-4517-892E-4FF646F52F0E}">
 			<IDSymbol name="bmpBtn" value="1"/>
 		</GuidSymbol>
 	</Symbols>

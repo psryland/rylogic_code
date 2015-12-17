@@ -221,6 +221,12 @@ namespace pr.extn
 			}
 		}
 
+		/// <summary>Counts the number of items in a sequence up to a maximum of 'max_count'</summary>
+		public static int CountAtMost<TSource>(this IEnumerable<TSource> source, int max_count)
+		{
+			return source.Take(max_count).Count();
+		}
+
 		/// <summary>Counts the number of items in a sequence until 'pred' returns false</summary>
 		public static int CountWhile<TSource>(this IEnumerable<TSource> source, Func<TSource,bool> pred)
 		{
@@ -231,6 +237,13 @@ namespace pr.extn
 				else break;
 			}
 			return count;
+		}
+
+		/// <summary>Concatenate a single element to the end of the sequence</summary>
+		public static IEnumerable<TSource> Concat<TSource>(this IEnumerable<TSource> source, TSource one_more)
+		{
+			foreach (var s in source) yield return s;
+			yield return one_more;
 		}
 
 		/// <summary>Returns this collection as pairs</summary>

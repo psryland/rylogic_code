@@ -55,6 +55,11 @@ try:
 	dstfile = dstdir + "\\Rylogic.VSExtension.vsix"
 	install = input("Install " + dstfile + " (y/n)? ")
 	if install == 'y':
+		try:
+			print("Uninstalling previous versions...")
+			Tools.Exec(["cmd", "/C", UserVars.vs_dir + "\\Common7\\IDE\\VSIXInstaller.exe", "/q", "/a", "/u:Rylogic.VSExtension"])
+		except: pass
+		print("Installing...")
 		Tools.Exec(["cmd", "/C", dstfile])
 
 	Tools.OnSuccess()

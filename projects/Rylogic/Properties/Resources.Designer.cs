@@ -133,6 +133,16 @@ namespace pr {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap dock_menu {
+            get {
+                object obj = ResourceManager.GetObject("dock_menu", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap dock_pinned {
             get {
                 object obj = ResourceManager.GetObject("dock_pinned", resourceCulture);

@@ -37,6 +37,7 @@ namespace pr.win32
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr DefWindowProc(HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
+		[DllImport("user32.dll", CharSet=CharSet.Auto)]                                                       public static extern bool   DestroyIcon(IntPtr hicon);
 		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                                                    public static extern bool   DestroyWindow(IntPtr hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern short  GetAsyncKeyState(Keys vKey);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern bool   GetCaretPos(ref POINT point);
