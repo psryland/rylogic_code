@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Linq;
 using pr.gfx;
 using pr.util;
 
@@ -23,6 +24,22 @@ namespace pr.extn
 			return Scope.Create(
 				() => gfx.GetHdc(),
 				ptr => gfx.ReleaseHdc(ptr));
+		}
+
+		/// <summary>Create a region from a list of x,y pairs defining line segments</summary>
+		public static Region MakeRegion(params int[] xy)
+		{
+			if ((xy.Length % 2) == 1) throw new Exception("Point list must be a list of X,Y pairs");
+			return MakeRegion(xy.InPairs().Select(x => new Point(x.Item1, x.Item2)).ToArray());
+		}
+
+		/// <summary>Create a region from a list of x,y pairs defining line segments</summary>
+		public static Region MakeRegion(params Point[] pts)
+		{
+			if (pts.Length == 0) return new Region(Rectangle.Empty);
+			var types = pts.Select(x => (byte)PathPointType.Line).ToArray();
+			types[0] = (byte)PathPointType.Start;
+			return new Region(new GraphicsPath(pts, types));
 		}
 
 		/// <summary>Useful overload of DrawImage</summary>

@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -19,7 +20,6 @@ using System.Xml.Linq;
 using pr.attrib;
 using pr.common;
 using pr.maths;
-using pr.util;
 
 namespace pr.extn
 {
@@ -146,6 +146,13 @@ namespace pr.extn
 							font.Unit           .ToXml(nameof(Font.Unit           ), false),
 							font.GdiCharSet     .ToXml(nameof(Font.GdiCharSet     ), false),
 							font.GdiVerticalFont.ToXml(nameof(Font.GdiVerticalFont), false));
+						return node;
+					};
+				this[typeof(Blend)] = (obj, node) =>
+					{
+						var blend = (Blend)obj;
+						node.Add2(nameof(Blend.Factors), string.Join(",", blend.Factors), false);
+						node.Add2(nameof(Blend.Positions), string.Join(",", blend.Positions), false);
 						return node;
 					};
 				this[typeof(v2)] = (obj, node) =>
@@ -443,6 +450,16 @@ namespace pr.extn
 						var gdi_charset       = elem.Element(nameof(Font.GdiCharSet     )).As<byte>();
 						var gdi_vertical_font = elem.Element(nameof(Font.GdiVerticalFont)).As<bool>();
 						return new Font(font_family, size, style, unit, gdi_charset, gdi_vertical_font);
+					};
+				this[typeof(Blend)] = (elem, type, instance) =>
+					{
+						var factors   = float_.ParseArray(elem.Element(nameof(Blend.Factors  )).As<string>());
+						var positions = float_.ParseArray(elem.Element(nameof(Blend.Positions)).As<string>());
+						return new Blend(factors.Length)
+						{
+							Factors   = factors,
+							Positions = positions,
+						};
 					};
 				this[typeof(v2)] = (elem, type, instance) =>
 					{

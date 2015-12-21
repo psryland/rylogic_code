@@ -26,7 +26,7 @@ namespace pr.gui
 		}
 
 		/// <summary>Handle for the pin pop-up menu</summary>
-		private readonly IntPtr m_sys_menu_handle;
+		private IntPtr m_sys_menu_handle;
 		private const int m_menucmd_pin_window = 1000;
 
 		/// <summary>
@@ -52,19 +52,40 @@ namespace pr.gui
 			if (size != Size.Empty)
 				Size = size;
 
-			// Set up the pin menu
-			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
-			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
-			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
-
 			// Pin to the target window
 			PinWindow = true;
 			PinTarget = target;
+
+			CreateHandle();
 		}
 		protected override void Dispose(bool disposing)
 		{
 			PinTarget = null;
 			base.Dispose(disposing);
+		}
+
+		/// <summary>Set up the system menu once the window is created</summary>
+		protected override void OnHandleCreated(EventArgs e)
+		{
+			base.OnHandleCreated(e);
+			
+			// Set up the pin menu
+			m_sys_menu_handle = Win32.GetSystemMenu(Handle, false);
+			Win32.InsertMenu(m_sys_menu_handle, 5, Win32.MF_BYPOSITION|Win32.MF_SEPARATOR, 0, string.Empty);
+			Win32.InsertMenu(m_sys_menu_handle, 6, Win32.MF_BYPOSITION|Win32.MF_STRING, m_menucmd_pin_window, "&Pin Window");
+			UpdatePinMenuCheckState();
+		}
+
+		/// <summary>Handle the system menu options</summary>
+		protected override void WndProc(ref Message m)
+		{
+			if (m.Msg == Win32.WM_SYSCOMMAND)
+			{
+				switch (m.WParam.ToInt32()) {
+				case m_menucmd_pin_window: PinWindow = !PinWindow; return;
+				}
+			}
+			base.WndProc(ref m);
 		}
 
 		/// <summary>How this tool window is pinned to the owner</summary>
@@ -83,7 +104,7 @@ namespace pr.gui
 			{
 				m_pin_window = value;
 				RecordOffset();
-				Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|(m_pin_window ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+				UpdatePinMenuCheckState();
 			}
 		}
 		private bool m_pin_window;
@@ -126,6 +147,7 @@ namespace pr.gui
 					m_pin_target.Move   += UpdateLocation;
 					m_pin_target.Resize += UpdateLocation;
 				}
+				UpdatePinMenuCheckState();
 				UpdateLocation();
 			}
 		}
@@ -365,6 +387,12 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>Update the check mark next to the Pin Window menu option</summary>
+		private void UpdatePinMenuCheckState()
+		{
+			Win32.CheckMenuItem(m_sys_menu_handle, m_menucmd_pin_window, Win32.MF_BYCOMMAND|(PinWindow ? Win32.MF_CHECKED : Win32.MF_UNCHECKED));
+		}
+
 		/// <summary>Snap to the parent window</summary>
 		private bool Snap()
 		{
@@ -413,18 +441,5 @@ namespace pr.gui
 			return false;
 		}
 		private bool m_snapped;
-
-		/// <summary>Handle the system menu options</summary>
-		protected override void WndProc(ref Message m)
-		{
-			if (m.Msg == Win32.WM_SYSCOMMAND)
-			{
-				switch (m.WParam.ToInt32())
-				{
-				case m_menucmd_pin_window: PinWindow = !PinWindow; return;
-				}
-			}
-			base.WndProc(ref m);
-		}
 	}
 }

@@ -90,6 +90,7 @@
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
@@ -576,7 +577,6 @@
     <None Include="resources\check_marks.bmp" />
     <None Include="resources\green_left.png" />
     <None Include="resources\green_right.png" />
-    <None Include="resources\dock_site_cross.png" />
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

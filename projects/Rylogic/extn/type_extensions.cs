@@ -169,6 +169,21 @@ namespace pr.extn
 		}
 	}
 
+	/// <summary>'float' type extensions</summary>
+	public static class float_
+	{
+		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>
+		/// <param name="val">The string containing the array of floating point values</param>
+		/// <param name="delim">The set of delimiters. If null, then " ", "\t", "," are used</param>
+		/// <returns>An array of the parsed floating point values</returns>
+		public static float[] ParseArray(string val, string[] delim = null, StringSplitOptions opts = StringSplitOptions.RemoveEmptyEntries)
+		{
+			var strs = val.Split(delim ?? new[]{" ","\t",","}, opts);
+			return strs.Select(float.Parse).ToArray();
+		}
+	}
+
+	/// <summary>'double' type extensions</summary>
 	public static class double_
 	{
 		/// <summary>Parse an array of floating point values separated by delimiters given in 'delim'</summary>

@@ -163,9 +163,9 @@ namespace pr {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
-        public static System.Drawing.Bitmap dock_site_cross {
+        public static System.Drawing.Bitmap dock_site_cross_lg {
             get {
-                object obj = ResourceManager.GetObject("dock_site_cross", resourceCulture);
+                object obj = ResourceManager.GetObject("dock_site_cross_lg", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

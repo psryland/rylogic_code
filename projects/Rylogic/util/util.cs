@@ -914,6 +914,18 @@ namespace pr.util
 
 			return sb.ToString();
 		}
+
+		/// <summary>Move a screen-space rectangle so that it is within the virtual screen</summary>
+		public static Rectangle OnScreen(Rectangle rect)
+		{
+			var r = new RectangleRef(rect);
+			var scn = SystemInformation.VirtualScreen;
+			if (r.Right  > scn.Right ) r.X = scn.Right - rect.Width;
+			if (r.Bottom > scn.Bottom) r.Y = scn.Bottom - rect.Height;
+			if (r.Left   < scn.Left  ) r.X = scn.Left;
+			if (r.Top    < scn.Top   ) r.Y = scn.Top;
+			return r;
+		}
 	}
 
 	/// <summary>Type specific utility methods</summary>
