@@ -172,21 +172,6 @@ namespace pr.gui
 		public IEnumerable<IDockable> AllContent
 		{
 			get { return m_all_content; }
-			//{
-			//	// All content in the main tree for this dock container
-			//	foreach (var c in Root.AllContent)
-			//		yield return c;
-
-			//	// All content in the auto hide panels
-			//	foreach (var ah in AutoHidePanels)
-			//		foreach (var c in ah.Root.AllContent)
-			//			yield return c;
-
-			//	// All content in the floating windows
-			//	foreach (var fw in FloatingWindows)
-			//		foreach (var c in fw.Root.AllContent)
-			//			yield return c;
-			//}
 		}
 		private HashSet<IDockable> m_all_content;
 

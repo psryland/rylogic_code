@@ -103,7 +103,7 @@ namespace pr
 			Config(s);
 		}
 
-		// Return true if the io connection is currently open
+		// Return true if the IO connection is currently open
 		bool IsOpen() const { return m_handle != INVALID_HANDLE_VALUE; }
 
 		// Returns true if serial port number 'port_number' is available for use
@@ -115,7 +115,7 @@ namespace pr
 			return available;
 		}
 
-		// Open the serial io connection
+		// Open the serial IO connection
 		void Open(int port_number) { Open(port_number, 0, 0); }
 		void Open(int port_number, size_t ibuf_size, size_t obuf_size)
 		{
@@ -136,7 +136,7 @@ namespace pr
 				m_io_complete = ::CreateEventW(0, TRUE, FALSE, 0);
 				Throw(m_io_complete != 0, "Failed to create async i/o event");
 
-				// Setup buffering
+				// Set up buffering
 				if (ibuf_size != 0 || obuf_size != 0)
 				{
 					if (ibuf_size < 16) ibuf_size = 16;
@@ -147,7 +147,7 @@ namespace pr
 				// Set non-blocking reads/writes as default
 				SetBlockingReads(false);
 
-				// Try to setup the device with default settings
+				// Try to set up the device with default settings
 				COMMCONFIG config = {sizeof(COMMCONFIG)};
 				if (::GetDefaultCommConfigW(name.com(), &config, &config.dwSize) && config.dwSize == sizeof(COMMCONFIG))
 				{
@@ -185,7 +185,7 @@ namespace pr
 			}
 		}
 
-		// Close the serial io connection
+		// Close the serial IO connection
 		void Close()
 		{
 			if (m_io_complete != 0)
@@ -224,7 +224,7 @@ namespace pr
 			}
 		}
 
-		// Send data over the i/o connection using overlapped io
+		// Send data over the i/o connection using overlapped IO
 		bool Write(void const* data, size_t size, size_t& bytes_sent, DWORD timeout)
 		{
 			bytes_sent = 0;
@@ -238,8 +238,6 @@ namespace pr
 			OVERLAPPED ovrlap = {}; ovrlap.hEvent = m_io_complete;
 			if (!::WriteFile(m_handle, data, DWORD(size), 0, &ovrlap) && GetLastError() != ERROR_IO_PENDING)
 				return false;
-
-			Flush();
 
 			// Wait for the write to complete
 			auto r = ::WaitForSingleObject(ovrlap.hEvent, timeout);
@@ -321,7 +319,7 @@ namespace pr
 			Throw(::SetCommTimeouts(m_handle, &cto), "Failed to set comm port timeouts");
 		}
 
-		// Read buffered data from the io connection.
+		// Read buffered data from the IO connection.
 		// 'buffer' is the buffer to copy data into
 		// 'size' is the length of 'buffer'
 		// 'bytes_read' is the number of bytes read
