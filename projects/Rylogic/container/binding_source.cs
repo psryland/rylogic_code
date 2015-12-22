@@ -6,30 +6,753 @@ using System.Reflection;
 using System.Windows.Forms;
 using pr.extn;
 using pr.util;
+using System.Collections;
+using System.Drawing.Design;
 
 namespace pr.container
 {
 	/// <summary>Type-safe version of BindingSource</summary>
-	public class BindingSource<TItem> :BindingSource ,IEnumerable<TItem> ,IList<TItem>
+	public class BindingSource<TItem> :Component, IEnumerable<TItem>, IList<TItem>, IBindingListView, IBindingList, IList, ICollection, IEnumerable, ITypedList, ICancelAddNew, ISupportInitializeNotification, ISupportInitialize, ICurrencyManagerProvider
 	{
-		private int m_impl_previous_position;
-		private FieldInfo m_impl_listposition;
+		// Notes:
+		// Reset methods invoked on this object do not cause the equivalent
+		// reset method on the underlying object to be called. Calling a 
+		// reset method on the underlying list however does cause the reset
+		// method on the binding source to be called, however, it calls it
+		// on BindingSource, not BindingSource<>. When a BindingListEx is
+		// bound to DataSource its ListChanging events after forwarded on,
+		// These 'new' methods raise the list changing events only when reset
+		// methods are called on this object.
 
-		public BindingSource() :base() { Init(); }
-		public BindingSource(IContainer container) :base(container) { Init(); }
-		public BindingSource(object dataSource, string dataMember) :base(dataSource, dataMember) { Init(); }
-		private void Init()
+		public BindingSource()
 		{
-			m_impl_previous_position = -1;
-			m_impl_listposition = typeof(CurrencyManager).GetField("listposition", BindingFlags.NonPublic|BindingFlags.Instance);
+			m_bs = new BSource(this);
+		}
+		public BindingSource(IContainer container)
+		{
+			m_bs = new BSource(this, container);
+		}
+		public BindingSource(object dataSource, string dataMember)
+		{
+			m_bs = new BSource(this, dataSource, dataMember);
+		}
+		protected override void Dispose(bool disposing)
+		{
+			m_bs.Dispose();
+			base.Dispose(disposing);
+		}
+
+		/// <summary>The BindingSource providing the implementation</summary>
+		private BSource m_bs;
+		private class BSource :BindingSource
+		{
+			private BindingSource<TItem> This;
+			public int m_impl_previous_position;
+			public FieldInfo m_impl_listposition;
+
+			public BSource(BindingSource<TItem> @this) { Init(@this); }
+			public BSource(BindingSource<TItem> @this, IContainer container) :base(container) { Init(@this); }
+			public BSource(BindingSource<TItem> @this, object dataSource, string dataMember) :base(dataSource, dataMember) { Init(@this); }
+			private void Init(BindingSource<TItem> @this)
+			{
+				This = @this; 
+				m_impl_previous_position = -1;
+				m_impl_listposition = typeof(CurrencyManager).GetField("listposition", BindingFlags.NonPublic|BindingFlags.Instance);
+			}
+			public new int Position
+			{
+				get { return base.Position; }
+				set
+				{
+					// Allow setting the position to -1, meaning no current
+					if (value == base.Position)
+					{
+					}
+					else if (value == -1 && Position != -1)
+					{
+						m_impl_listposition.SetValue(base.CurrencyManager, -1);
+						OnPositionChanged(EventArgs.Empty);
+					}
+					else if (value != -1 && Position == -1 && Count != 0)
+					{
+						// Setting 'listposition' to 0 then setting 'Position' generates a single PositionChanged event
+						// when value != 0. However, when value == 0 there is no event. If I set 'listposition' to -2, an
+						// extra event gets generated (-1->0, 0->value). I'm opting to manual raise the event for the value == 0 case
+						m_impl_listposition.SetValue(base.CurrencyManager, 0);
+						base.Position = value;
+						if (value == 0) OnPositionChanged(EventArgs.Empty);
+					}
+					else
+					{
+						base.Position = value;
+					}
+				}
+			}
+			protected override void OnPositionChanged(EventArgs e)
+			{
+				// Set the previous position before calling the event
+				// because it may recursively cause another position change.
+				var prev_position = m_impl_previous_position;
+				m_impl_previous_position = Position;
+
+				// Raise the improved version of PositionChanged
+				This.RaisePositionChanged(this, new PositionChgEventArgs(prev_position, Position));
+				base.OnPositionChanged(e);
+			}
+		}
+
+		/// <summary>Gets/sets the list element at the specified index.</summary>
+		/// <param name="index">The zero-based index of the element to retrieve.</param>
+		/// <returns>The element at the specified index.</returns>
+		/// <exception cref="ArgumentOutOfRangeException">index is less than zero or is equal to or greater than System.Windows.Forms.BindingSource.Count.</exception>
+		[Browsable(false)]
+		public TItem this[int index]
+		{
+			get { return (TItem)m_bs[index]; }
+			set { m_bs[index] = value; }
+		}
+		public TItem this[uint index]
+		{
+			get { return this[(int)index]; }
+			set { this[(int)index] = value; }
+		}
+
+		/// <summary>Gets a value indicating whether items in the underlying list can be edited.</summary>
+		/// <returns>true to indicate list items can be edited; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool AllowEdit
+		{
+			get { return m_bs.AllowEdit; }
+		}
+
+		/// <summary>Gets or sets a value indicating whether the System.Windows.Forms.BindingSource.AddNew method can be used to add items to the list.</summary>
+		/// <returns>true if System.Windows.Forms.BindingSource.AddNew can be used to add items to the list; otherwise, false.</returns>
+		/// <exception cref="InvalidOperationException">This property is set to true when the underlying list represented by the System.Windows.Forms.BindingSource.List property has a fixed size or is read-only.</exception>
+		/// <exception cref="MissingMethodException">The property is set to true and the System.Windows.Forms.BindingSource.AddingNew event is not handled when the underlying list type does not have a default constructor.</exception>
+		public virtual bool AllowNew
+		{
+			get { return m_bs.AllowNew; }
+			set { m_bs.AllowNew = value; }
+		}
+
+		/// <summary>Gets a value indicating whether items can be removed from the underlying list.</summary>
+		/// <returns>true to indicate list items can be removed from the list; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool AllowRemove
+		{
+			get { return m_bs.AllowRemove; }
 		}
 
 		/// <summary>Get/Set whether the underlying list can be sorted by through this binding</summary>
 		[Browsable(false)]
 		public virtual bool AllowSort { get; set; }
-		public override bool SupportsSorting
+
+		/// <summary>Gets the total number of items in the underlying list, taking the current System.Windows.Forms.BindingSource.Filter value into consideration.</summary>
+		/// <returns>The total number of filtered items in the underlying list.</returns>
+		[Browsable(false)]
+		public virtual int Count
 		{
-			get { return base.SupportsSorting && AllowSort; }
+			get { return m_bs.Count; }
+		}
+
+		/// <summary>Gets the currency manager associated with this System.Windows.Forms.BindingSource.</summary>
+		/// <returns>The System.Windows.Forms.CurrencyManager associated with this System.Windows.Forms.BindingSource.</returns>
+		[Browsable(false)]
+		public virtual CurrencyManager CurrencyManager
+		{
+			get { return m_bs.CurrencyManager; }
+		}
+
+		/// <summary>Get/Set the current item in the list.</summary>
+		[Browsable(false)]
+		public TItem Current
+		{
+			get { return Position >= 0 && Position < Count ? (TItem)m_bs.Current : default(TItem); }
+			set
+			{
+				var idx = List.IndexOf(value);
+				if ((idx < 0 || idx >= List.Count) && !Equals(value, default(TItem)))
+					throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
+
+				Position = idx;
+			}
+		}
+
+		/// <summary>Gets or sets the specific list in the data source to which the connector currently binds to.</summary>
+		/// <returns>The name of a list (or row) in the System.Windows.Forms.BindingSource.DataSource. The default is an empty string ("").</returns>
+		[DefaultValue("")]
+		[Editor("System.Windows.Forms.Design.DataMemberListEditor, System.Design, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a", typeof(UITypeEditor))]
+		[RefreshProperties(RefreshProperties.Repaint)]
+		public string DataMember
+		{
+			get { return m_bs.DataMember; }
+			set { m_bs.DataMember = value; }
+		}
+
+		/// <summary>Get/Set the data source that the connector binds to.</summary>
+		[AttributeProvider(typeof(IListSource))]
+		[DefaultValue(null)]
+		[RefreshProperties(RefreshProperties.Repaint)]
+		public object DataSource
+		{
+			get { return m_bs.DataSource; }
+			set
+			{
+				if (value == m_bs.DataSource) return;
+
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
+
+				// Unhook
+				var bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null)
+				{
+					bl.ListChanging -= RaiseListChanging;
+					bl.ItemChanged  -= RaiseItemChanged;
+				}
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null)
+				{
+					bs.ListChanging -= RaiseListChanging;
+					bs.ItemChanged  -= RaiseItemChanged;
+				}
+
+				// Set new data source
+				// Note: this can cause a first chance exception in some controls
+				// that are bound to this source (e.g. ListBox, ComboBox, etc.).
+				// They are handled internally, just continue.
+				m_bs.DataSource = null;
+				m_bs.DataSource = value;
+
+				// Hookup
+				bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null)
+				{
+					bl.ListChanging += RaiseListChanging;
+					bl.ItemChanged  += RaiseItemChanged;
+					RaiseListChangedEvents = bl.RaiseListChangedEvents;
+				}
+				bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null)
+				{
+					bs.ListChanging += RaiseListChanging;
+					bs.ItemChanged  += RaiseItemChanged;
+					RaiseListChangedEvents = bs.RaiseListChangedEvents;
+				}
+
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+			}
+		}
+
+		/// <summary>Gets or sets the expression used to filter which rows are viewed.</summary>
+		/// <returns>A string that specifies how rows are to be filtered. The default is null.</returns>
+		[DefaultValue(null)]
+		public virtual string Filter
+		{
+			get { return m_bs.Filter; }
+			set { m_bs.Filter = value; }
+		}
+
+		/// <summary>Gets a value indicating whether the list binding is suspended.</summary>
+		/// <returns>true to indicate the binding is suspended; otherwise, false.</returns>
+		[Browsable(false)]
+		public bool IsBindingSuspended
+		{
+			get { return m_bs.IsBindingSuspended; }
+		}
+
+		/// <summary>Gets a value indicating whether the underlying list has a fixed size.</summary>
+		/// <returns>true if the underlying list has a fixed size; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool IsFixedSize
+		{
+			get { return m_bs.IsFixedSize; }
+		}
+
+		/// <summary>Gets a value indicating whether the underlying list is read-only.</summary>
+		/// <returns>true if the list is read-only; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool IsReadOnly
+		{
+			get { return m_bs.IsReadOnly; }
+		}
+
+		/// <summary>Gets a value indicating whether the items in the underlying list are sorted.</summary>
+		/// <returns>true if the list is an System.ComponentModel.IBindingList and is sorted; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool IsSorted
+		{
+			get { return m_bs.IsSorted; }
+		}
+
+		/// <summary>Gets a value indicating whether access to the collection is synchronized (thread safe).</summary>
+		/// <returns>true to indicate the list is synchronized; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool IsSynchronized
+		{
+			get { return m_bs.IsSynchronized; }
+		}
+
+		/// <summary>Gets the list that the connector is bound to.</summary>
+		/// <returns>An System.Collections.IList that represents the list, or null if there is no underlying list associated with this System.Windows.Forms.BindingSource.</returns>
+		[Browsable(false)]
+		public IList List
+		{
+			get { return m_bs.List; }
+		}
+
+		/// <summary>Get/Set the current position (-1 means no current item)</summary>
+		[Browsable(false)]
+		[DefaultValue(-1)]
+		public int Position
+		{
+			get { return m_bs.Position; }
+			set { m_bs.Position = value; }
+		}
+
+		/// <summary>Get/Set a value indicating whether ListChanging events should be raised.</summary>
+		[Browsable(false)]
+		[DefaultValue(true)]
+		public bool RaiseListChangedEvents
+		{
+			get
+			{
+				var bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null) return bl.RaiseListChangedEvents;
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) return bs.RaiseListChangedEvents;
+				return m_bs.RaiseListChangedEvents;
+			}
+			set
+			{
+				var bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null) bl.RaiseListChangedEvents = value;
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) bs.RaiseListChangedEvents = value;
+				m_bs.RaiseListChangedEvents = value;
+			}
+		}
+
+		/// <summary>Gets or sets the column names used for sorting, and the sort order for viewing the rows in the data source.</summary>
+		/// <returns>A case-sensitive string containing the column name followed by "ASC" (for ascending) or "DESC" (for descending). The default is null.</returns>
+		[DefaultValue(null)]
+		public string Sort
+		{
+			get { return m_bs.Sort; }
+			set { m_bs.Sort = value; }
+		}
+
+		/// <summary>Gets the collection of sort descriptions applied to the data source.</summary>
+		/// <returns>If the data source is an System.ComponentModel.IBindingListView, a System.ComponentModel.ListSortDescriptionCollection that contains the sort descriptions applied to the list; otherwise, null.</returns>
+		[Browsable(false)]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual ListSortDescriptionCollection SortDescriptions
+		{
+			get { return m_bs.SortDescriptions; }
+		}
+
+		/// <summary>Gets the direction the items in the list are sorted.</summary>
+		/// <returns>One of the System.ComponentModel.ListSortDirection values indicating the direction the list is sorted.</returns>
+		[Browsable(false)]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual ListSortDirection SortDirection
+		{
+			get { return m_bs.SortDirection; }
+		}
+
+		/// <summary>Gets the System.ComponentModel.PropertyDescriptor that is being used for sorting the list.</summary>
+		/// <returns>If the list is an System.ComponentModel.IBindingList, the System.ComponentModel.PropertyDescriptor that is being used for sorting; otherwise, null.</returns>
+		[Browsable(false)]
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual PropertyDescriptor SortProperty
+		{
+			get { return m_bs.SortProperty; }
+		}
+
+		/// <summary>Gets a value indicating whether the data source supports multi-column sorting.</summary>
+		/// <returns>true if the list is an System.ComponentModel.IBindingListView and supports multi-column sorting; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool SupportsAdvancedSorting
+		{
+			get { return m_bs.SupportsAdvancedSorting; }
+		}
+
+		/// <summary>Gets a value indicating whether the data source supports change notification.</summary>
+		/// <returns>true in all cases.</returns>
+		[Browsable(false)]
+		public virtual bool SupportsChangeNotification
+		{
+			get { return m_bs.SupportsChangeNotification; }
+		}
+
+		/// <summary>Gets a value indicating whether the data source supports filtering.</summary>
+		/// <returns>true if the list is an System.ComponentModel.IBindingListView and supports filtering; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool SupportsFiltering
+		{
+			get { return m_bs.SupportsFiltering; }
+		}
+
+		/// <summary>Gets a value indicating whether the data source supports searching with the System.Windows.Forms.BindingSource.Find(System.ComponentModel.PropertyDescriptor,System.Object) method.</summary>
+		/// <returns>true if the list is a System.ComponentModel.IBindingList and supports the searching with the Overload:System.Windows.Forms.BindingSource.Find method; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool SupportsSearching
+		{
+			get { return m_bs.SupportsSearching; }
+		}
+
+		/// <summary>Gets a value indicating whether the data source supports sorting.</summary>
+		/// <returns>true if the data source is an System.ComponentModel.IBindingList and supports sorting; otherwise, false.</returns>
+		[Browsable(false)]
+		public virtual bool SupportsSorting
+		{
+			get { return m_bs.SupportsSorting && AllowSort; }
+		}
+
+		/// <summary>Gets an object that can be used to synchronize access to the underlying list.</summary>
+		/// <returns>An object that can be used to synchronize access to the underlying list.</returns>
+		[Browsable(false)]
+		public virtual object SyncRoot
+		{
+			get { return m_bs.SyncRoot; }
+		}
+
+		/// <summary>Occurs before an item is added to the underlying list.</summary>
+		/// <exception cref="InvalidOperationException">System.ComponentModel.AddingNewEventArgs.NewObject is not the same type as the type contained in the list.</exception>
+		public event AddingNewEventHandler AddingNew
+		{
+			add { m_bs.AddingNew += value; }
+			remove { m_bs.AddingNew -= value; }
+		}
+
+		/// <summary>Occurs when all the clients have been bound to this System.Windows.Forms.BindingSource.</summary>
+		public event BindingCompleteEventHandler BindingComplete
+		{
+			add { m_bs.BindingComplete += value; }
+			remove { m_bs.BindingComplete -= value; }
+		}
+
+		/// <summary>Occurs when the currently bound item changes.</summary>
+		public event EventHandler CurrentChanged
+		{
+			add { m_bs.CurrentChanged += value; }
+			remove { m_bs.CurrentChanged -= value; }
+		}
+
+		/// <summary>Occurs when a property value of the System.Windows.Forms.BindingSource.Current property has changed.</summary>
+		public event EventHandler CurrentItemChanged
+		{
+			add { m_bs.CurrentItemChanged += value; }
+			remove { m_bs.CurrentItemChanged -= value; }
+		}
+
+		/// <summary>Occurs when a currency-related exception is silently handled by the System.Windows.Forms.BindingSource.</summary>
+		public event BindingManagerDataErrorEventHandler DataError
+		{
+			add { m_bs.DataError += value; }
+			remove { m_bs.DataError -= value; }
+		}
+
+		/// <summary>Occurs when the System.Windows.Forms.BindingSource.DataMember property value has changed.</summary>
+		public event EventHandler DataMemberChanged
+		{
+			add { m_bs.DataMemberChanged += value; }
+			remove { m_bs.DataMemberChanged -= value; }
+		}
+
+		/// <summary>Occurs when the System.Windows.Forms.BindingSource.DataSource property value has changed.</summary>
+		public event EventHandler DataSourceChanged
+		{
+			add { m_bs.DataSourceChanged += value; }
+			remove { m_bs.DataSourceChanged -= value; }
+		}
+
+		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
+		private event ListChangedEventHandler ListChanged
+		{
+			add { m_bs.ListChanged += value; }
+			remove { m_bs.ListChanged -= value; }
+		}
+
+		/// <summary>Adds an existing item to the internal list.</summary>
+		/// <param name="value">An System.Object to be added to the internal list.</param>
+		/// <returns>The zero-based index at which value was added to the underlying list represented by the System.Windows.Forms.BindingSource.List property.</returns>
+		/// <exception cref="InvalidOperationException">value differs in type from the existing items in the underlying list.</exception>
+		public virtual int Add(TItem value)
+		{
+			return m_bs.Add(value);
+		}
+
+		/// <summary>Adds a new item to the underlying list.</summary>
+		/// <returns>The System.Object that was created and added to the list.</returns>
+		/// <exception cref="InvalidOperationException">The System.Windows.Forms.BindingSource.AllowNew property is set to false. -or- A public default constructor could not be found for the current item type.</exception>
+		public virtual TItem AddNew()
+		{
+			return (TItem)m_bs.AddNew();
+		}
+
+		/// <summary>Sorts the data source with the specified sort descriptions.</summary>
+		/// <param name="sorts">A System.ComponentModel.ListSortDescriptionCollection containing the sort descriptions to apply to the data source.</param>
+		/// <exception cref="NotSupportedException">The data source is not an System.ComponentModel.IBindingListView.</exception>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual void ApplySort(ListSortDescriptionCollection sorts)
+		{
+			m_bs.ApplySort(sorts);
+		}
+
+		/// <summary>Sorts the data source using the specified property descriptor and sort direction.</summary>
+		/// <param name="property">A System.ComponentModel.PropertyDescriptor that describes the property by which to sort the data source.</param>
+		/// <param name="sort">A System.ComponentModel.ListSortDirection indicating how the list should be sorted.</param>
+		/// <exception cref="NotSupportedException">The data source is not an System.ComponentModel.IBindingList.</exception>
+		[EditorBrowsable(EditorBrowsableState.Never)]
+		public virtual void ApplySort(PropertyDescriptor property, ListSortDirection sort)
+		{
+			m_bs.ApplySort(property, sort);
+		}
+
+		/// <summary>Cancels the current edit operation.</summary>
+		public void CancelEdit()
+		{
+			m_bs.CancelEdit();
+		}
+
+		/// <summary>Removes all elements from the list.</summary>
+		public virtual void Clear()
+		{
+			m_bs.Clear();
+		}
+
+		/// <summary>Determines whether an object is an item in the list.</summary>
+		/// <param name="value">The System.Object to locate in the underlying list represented by the System.Windows.Forms.BindingSource.List property. The value can be null.</param>
+		/// <returns>true if the value parameter is found in the System.Windows.Forms.BindingSource.List; otherwise, false.</returns>
+		public virtual bool Contains(object value)
+		{
+			return m_bs.Contains(value);
+		}
+
+		/// <summary>Copies the contents of the System.Windows.Forms.BindingSource.List to the specified array, starting at the specified index value.</summary>
+		/// <param name="arr">The destination array.</param>
+		/// <param name="index">The index in the destination array at which to start the copy operation.</param>
+		public virtual void CopyTo(Array arr, int index)
+		{
+			m_bs.CopyTo(arr, index);
+		}
+
+		/// <summary>Applies pending changes to the underlying data source.</summary>
+		public void EndEdit()
+		{
+			m_bs.EndEdit();
+		}
+
+		/// <summary>Searches for the index of the item that has the given property descriptor.</summary>
+		/// <param name="prop">The System.ComponentModel.PropertyDescriptor to search for.</param>
+		/// <param name="key">The value of prop to match.</param>
+		/// <returns>The zero-based index of the item that has the given value for System.ComponentModel.PropertyDescriptor.</returns>
+		/// <exception cref="NotSupportedException">The underlying list is not of type System.ComponentModel.IBindingList.</exception>
+		public virtual int Find(PropertyDescriptor prop, object key)
+		{
+			return m_bs.Find(prop, key);
+		}
+
+		/// <summary>Returns the index of the item in the list with the specified property name and value.</summary>
+		/// <param name="propertyName">The name of the property to search for.</param>
+		/// <param name="key">The value of the item with the specified propertyName to find.</param>
+		/// <returns>The zero-based index of the item with the specified property name and value.</returns>
+		/// <exception cref="InvalidOperationException">The underlying list is not a System.ComponentModel.IBindingList with searching functionality implemented.</exception>
+		/// <exception cref="ArgumentException">propertyName does not match a property in the list.</exception>
+		public int Find(string propertyName, object key)
+		{
+			return m_bs.Find(propertyName, key);
+		}
+
+		/// <summary>Retrieves an enumerator for the System.Windows.Forms.BindingSource.List.</summary>
+		/// <returns>An System.Collections.IEnumerator for the System.Windows.Forms.BindingSource.List.</returns>
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return m_bs.GetEnumerator();
+		}
+
+		/// <summary>Enumerate over data source elements</summary>
+		public IEnumerator<TItem> GetEnumerator()
+		{
+			foreach (var item in List)
+				yield return (TItem)item;
+		}
+
+		/// <summary>Retrieves an array of System.ComponentModel.PropertyDescriptor objects representing the bindable properties of the data source list type.</summary>
+		/// <param name="listAccessors">An array of System.ComponentModel.PropertyDescriptor objects to find in the list as bindable.</param>
+		/// <returns>An array of System.ComponentModel.PropertyDescriptor objects that represents the properties on this list type used to bind data.</returns>
+		public virtual PropertyDescriptorCollection GetItemProperties(PropertyDescriptor[] listAccessors)
+		{
+			return m_bs.GetItemProperties(listAccessors);
+		}
+
+		/// <summary>Gets the name of the list supplying data for the binding.</summary>
+		/// <param name="listAccessors">An array of System.ComponentModel.PropertyDescriptor objects to find in the list as bindable.</param>
+		/// <returns>The name of the list supplying the data for binding.</returns>
+		public virtual string GetListName(PropertyDescriptor[] listAccessors)
+		{
+			return m_bs.GetListName(listAccessors);
+		}
+
+		/// <summary>Gets the related currency manager for the specified data member.</summary>
+		/// <param name="dataMember">The name of column or list, within the data source to retrieve the currency manager for.</param>
+		/// <returns>The related System.Windows.Forms.CurrencyManager for the specified data member.</returns>
+		public virtual CurrencyManager GetRelatedCurrencyManager(string dataMember)
+		{
+			return m_bs.GetRelatedCurrencyManager(dataMember);
+		}
+
+		/// <summary>Searches for the specified object and returns the index of the first occurrence within the entire list.</summary>
+		/// <param name="value">The System.Object to locate in the underlying list represented by the System.Windows.Forms.BindingSource.List property. The value can be null.</param>
+		/// <returns>The zero-based index of the first occurrence of the value parameter; otherwise, -1 if value is not in the list.</returns>
+		public virtual int IndexOf(TItem value)
+		{
+			return m_bs.IndexOf(value);
+		}
+
+		/// <summary>Inserts an item into the list at the specified index.</summary>
+		/// <param name="index">The zero-based index at which value should be inserted.</param>
+		/// <param name="value">The System.Object to insert. The value can be null.</param>
+		/// <exception cref="ArgumentOutOfRangeException">index is less than zero or greater than System.Windows.Forms.BindingSource.Count.</exception>
+		/// <exception cref="NotSupportedException">The list is read-only or has a fixed size.</exception>
+		public virtual void Insert(int index, TItem value)
+		{
+			m_bs.Insert(index, value);
+		}
+
+		/// <summary>Moves to the first item in the list.</summary>
+		public void MoveFirst()
+		{
+			m_bs.MoveFirst();
+		}
+
+		/// <summary>Moves to the last item in the list.</summary>
+		public void MoveLast()
+		{
+			m_bs.MoveLast();
+		}
+
+		/// <summary>Moves to the next item in the list.</summary>
+		public void MoveNext()
+		{
+			m_bs.MoveNext();
+		}
+
+		/// <summary>Moves to the previous item in the list.</summary>
+		public void MovePrevious()
+		{
+			m_bs.MovePrevious();
+		}
+
+		/// <summary>Removes the specified item from the list.</summary>
+		/// <param name="value">The item to remove from the underlying list represented by the System.Windows.Forms.BindingSource.List property.</param>
+		/// <exception cref="NotSupportedException">The underlying list has a fixed size or is read-only.</exception>
+		public virtual void Remove(TItem value)
+		{
+			m_bs.Remove(value);
+		}
+
+		/// <summary>Removes the item at the specified index in the list.</summary>
+		/// <param name="index">The zero-based index of the item to remove.</param>
+		/// <exception cref="ArgumentOutOfRangeException">index is less than zero or greater than the value of the System.Windows.Forms.BindingSource.Count property.</exception>
+		/// <exception cref="NotSupportedException">The underlying list represented by the System.Windows.Forms.BindingSource.List property is read-only or has a fixed size.</exception>
+		public virtual void RemoveAt(int index)
+		{
+			m_bs.RemoveAt(index);
+		}
+
+		/// <summary>Removes the current item from the list.</summary>
+		/// <exception cref="InvalidOperationException">The System.Windows.Forms.BindingSource.AllowRemove property is false.-or-System.Windows.Forms.BindingSource.Position is less than zero or greater than System.Windows.Forms.BindingSource.Count.</exception>
+		/// <exception cref="NotSupportedException">The underlying list represented by the System.Windows.Forms.BindingSource.List property is read-only or has a fixed size.</exception>
+		public void RemoveCurrent()
+		{
+			m_bs.RemoveCurrent();
+		}
+
+		/// <summary>Removes the filter associated with the System.Windows.Forms.BindingSource.</summary>
+		/// <exception cref="NotSupportedException">The underlying list does not support filtering.</exception>
+		public virtual void RemoveFilter()
+		{
+			m_bs.RemoveFilter();
+		}
+
+		/// <summary>Removes the sort associated with the System.Windows.Forms.BindingSource.</summary>
+		/// <exception cref="NotSupportedException">The underlying list does not support sorting.</exception>
+		public virtual void RemoveSort()
+		{
+			m_bs.RemoveSort();
+		}
+
+		/// <summary>Reinitializes the System.Windows.Forms.BindingSource.AllowNew property.</summary>
+		[EditorBrowsable(EditorBrowsableState.Advanced)]
+		public virtual void ResetAllowNew()
+		{
+			m_bs.ResetAllowNew();
+		}
+
+		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread all the items in the list and refresh their displayed values.</summary>
+		/// <param name="metadataChanged">true if the data schema has changed; false if only values have changed.</param>
+		public void ResetBindings(bool metadataChanged)
+		{
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
+
+			m_bs.ResetBindings(metadataChanged);
+
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+		}
+
+		/// <summary>Causes a control bound to the System.Windows.Forms.BindingSource to reread the currently selected item and refresh its displayed value.</summary>
+		public void ResetCurrentItem()
+		{
+			var item = Current;
+			var index = Position;
+
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, index, item));
+
+			m_bs.ResetCurrentItem();
+
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, index, item));
+		}
+
+		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
+		/// <param name="itemIndex">The zero-based index of the item that has changed.</param>
+		public void ResetItem(int itemIndex)
+		{
+			var item = this[itemIndex];
+
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, itemIndex, item));
+
+			m_bs.ResetItem(itemIndex);
+
+			if (RaiseListChangedEvents)
+				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
+		}
+
+		/// <summary>Reset bindings for 'item'</summary>
+		public void ResetItem(TItem item)
+		{
+			var idx = List.IndexOf(item);
+			if ((idx < 0 || idx >= List.Count) && !Equals(item, default(TItem)))
+				throw new IndexOutOfRangeException("Cannot reset a value that isn't in this collection");
+
+			ResetItem(idx);
+		}
+		
+		/// <summary>Resumes data binding.</summary>
+		private void ResumeBinding()
+		{
+			m_bs.ResumeBinding();
+		}
+
+		/// <summary>Suspends data binding to prevent changes from updating the bound data source.</summary>
+		private void SuspendBinding()
+		{
+			m_bs.SuspendBinding();
 		}
 
 		/// <summary>Get/Set whether the Clear() method results in individual events for each item or just the PreReset/Reset events</summary>
@@ -45,140 +768,10 @@ namespace pr.container
 			}
 		}
 
-		/// <summary>Set the current position (-1 means no current item)</summary>
-		public new int Position
-		{
-			get { return base.Position; }
-			set
-			{
-				// Allow setting the position to -1, meaning no current
-				if (value == base.Position) {}
-				else if (value == -1 && Position != -1)
-				{
-					m_impl_listposition.SetValue(CurrencyManager, -1);
-					OnPositionChanged(EventArgs.Empty);
-				}
-				else if (value != -1 && Position == -1 && Count != 0)
-				{
-					// Setting 'listposition' to 0 then setting 'Position' generates a single PositionChanged event
-					// when value != 0. However, when value == 0 there is no event. If I set 'listposition' to -2, an
-					// extra event gets generated (-1->0, 0->value). I'm opting to manual raise the event for the value == 0 case
-					m_impl_listposition.SetValue(CurrencyManager, 0);
-					base.Position = value;
-					if (value == 0) OnPositionChanged(EventArgs.Empty);
-				}
-				else
-				{
-					base.Position = value;
-				}
-			}
-		}
-
-		/// <summary>The current item</summary>
-		public new TItem Current
-		{
-			get { return Position >= 0 && Position < Count ? (TItem)base.Current : default(TItem); }
-			set
-			{
-				var idx = List.IndexOf(value);
-				if ((idx < 0 || idx >= List.Count) && !Equals(value, default(TItem)))
-					throw new IndexOutOfRangeException("Cannot set Current to a value that isn't in this collection");
-
-				Position = idx;
-			}
-		}
-
-		/// <summary>Access an item by index</summary>
-		public new TItem this[int index]
-		{
-			get { return (TItem)base[index]; }
-			set { base[index] = value; }
-		}
-		public TItem this[uint index]
-		{
-			get { return this[(int)index]; }
-			set { this[(int)index] = value; }
-		}
-
-		/// <summary>Get/Set the data source</summary>
-		public new object DataSource
-		{
-			get { return base.DataSource; }
-			set
-			{
-				if (value == base.DataSource) return;
-
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
-
-				// Unhook
-				var bl = base.DataSource as BindingListEx<TItem>;
-				if (bl != null)
-				{
-					bl.ListChanging -= RaiseListChanging;
-					bl.ItemChanged  -= RaiseItemChanged;
-				}
-				var bs = base.DataSource as BindingSource<TItem>;
-				if (bs != null)
-				{
-					bs.ListChanging -= RaiseListChanging;
-					bs.ItemChanged  -= RaiseItemChanged;
-				}
-
-				// Set new data source
-				// Note: this can cause a first chance exception in some controls
-				// that are bound to this source (e.g. ListBox, ComboBox, etc.).
-				// They are handled internally, just continue.
-				base.DataSource = null;
-				base.DataSource = value;
-
-				// Hookup
-				bl = base.DataSource as BindingListEx<TItem>;
-				if (bl != null)
-				{
-					bl.ListChanging += RaiseListChanging;
-					bl.ItemChanged  += RaiseItemChanged;
-					RaiseListChangedEvents = bl.RaiseListChangedEvents;
-				}
-				bs = base.DataSource as BindingSource<TItem>;
-				if (bs != null)
-				{
-					bs.ListChanging += RaiseListChanging;
-					bs.ItemChanged  += RaiseItemChanged;
-					RaiseListChangedEvents = bs.RaiseListChangedEvents;
-				}
-
-				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
-			}
-		}
-
-		/// <summary>Block ListChanged/ListChanging events from being raised</summary>
-		public new bool RaiseListChangedEvents
-		{
-			get
-			{
-				var bl = base.DataSource as BindingListEx<TItem>;
-				if (bl != null) return bl.RaiseListChangedEvents;
-				var bs = base.DataSource as BindingSource<TItem>;
-				if (bs != null) return bs.RaiseListChangedEvents;
-				return base.RaiseListChangedEvents;
-			}
-			set
-			{
-				var bl = base.DataSource as BindingListEx<TItem>;
-				if (bl != null) bl.RaiseListChangedEvents = value;
-				var bs = base.DataSource as BindingSource<TItem>;
-				if (bs != null) bs.RaiseListChangedEvents = value;
-				base.RaiseListChangedEvents = value;
-			}
-		}
-
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
 		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
 		{
-			// I don't know why, but signing this up directly, as in:
-			// bl.ListChanging += ListChanging.Raise;
-			// compiles, but doesn't work.
 			ListChanging.Raise(sender, args);
 
 			// If we're about to remove all items, set Position to -1
@@ -186,7 +779,7 @@ namespace pr.container
 				Position = -1;
 
 			// If we're about to delete the current item, set Position to the next/prev item or -1 if there are no more
-			if (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_impl_previous_position)
+			if (args.ChangeType == ListChg.ItemPreRemove && args.Index == m_bs.m_impl_previous_position)
 			{
 				if      (args.Index < Count - 1) Position = args.Index + 1;
 				else if (args.Index > 0)         Position = args.Index - 1;
@@ -202,87 +795,13 @@ namespace pr.container
 		}
 
 		/// <summary>Raised after the current list position changes (includes the previous position)</summary>
-		public event EventHandler<PositionChgEventArgs> PositionChanging;
-
-		/// <summary>Position changed handler</summary>
-		protected override void OnPositionChanged(EventArgs e)
+		public event EventHandler<PositionChgEventArgs> PositionChanged;
+		private void RaisePositionChanged(object sender, PositionChgEventArgs args)
 		{
-			// Set the previous position before calling the event
-			// because it may recursively cause another position change.
-			var prev_position = m_impl_previous_position;
-			m_impl_previous_position = Position;
-
-			PositionChanging.Raise(this, new PositionChgEventArgs(prev_position, Position));
-			base.OnPositionChanged(e);
+			PositionChanged.Raise(this, args);
 		}
 
-		// Note:
-		// Reset methods invoked on this object do not cause the equivalent
-		// reset method on the underlying object to be called. Calling a 
-		// reset method on the underlying list however does cause the reset
-		// method on the binding source to be called, however, it calls it
-		// on BindingSource, not BindingSource<>. When a BindingListEx is
-		// bound to DataSource its ListChanging events after forwarded on,
-		// These 'new' methods raise the list changing events only when reset
-		// methods are called on this object.
-
-		/// <summary>Notify observers of a complete data reset</summary>
-		public new void ResetBindings(bool metadata_changed)
-		{
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
-
-			base.ResetBindings(metadata_changed);
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
-		}
-
-		/// <summary>Causes a control bound to this BindingSource to reread the currently selected item and refresh its displayed value.</summary>
-		public new void ResetCurrentItem()
-		{
-			var item = Current;
-			var index = Position;
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, index, item));
-
-			base.ResetCurrentItem();
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, index, item));
-		}
-
-		/// <summary>Causes a control bound to this BindingSource to reread the item at the specified index, and refresh its displayed value.</summary>
-		public new void ResetItem(int itemIndex)
-		{
-			var item = this[itemIndex];
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemPreReset, itemIndex, item));
-
-			base.ResetItem(itemIndex);
-
-			if (RaiseListChangedEvents)
-				ListChanging.Raise(this, new ListChgEventArgs<TItem>(ListChg.ItemReset, itemIndex, item));
-		}
-
-		/// <summary>Reset bindings for 'item'</summary>
-		public void ResetItem(TItem item)
-		{
-			var idx = List.IndexOf(item);
-			if ((idx < 0 || idx >= List.Count) && !Equals(item, default(TItem)))
-				throw new IndexOutOfRangeException("Cannot reset a value that isn't in this collection");
-
-			ResetItem(idx);
-		}
-
-		/// <summary>Enumerate over data source elements</summary>
-		public new IEnumerator<TItem> GetEnumerator()
-		{
-			foreach (var item in List)
-				yield return (TItem)item;
-		}
+		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
 
 		#region IList<TItem>
 		int IList<TItem>.IndexOf(TItem item)
@@ -313,7 +832,169 @@ namespace pr.container
 		}
 		#endregion
 
-		public override string ToString() { return "{0} Current: {1}".Fmt(Count, Current); }
+		#region IList
+		object IList.this[int index]
+		{
+			get { return this[index]; }
+			set { this[index] = (TItem)value; }
+		}
+		bool IList.IsReadOnly
+		{
+			get { return IsReadOnly; }
+		}
+		bool IList.IsFixedSize
+		{
+			get { return IsFixedSize; }
+		}
+		int IList.Add(object value)
+		{
+			return Add((TItem)value);
+		}
+		bool IList.Contains(object value)
+		{
+			return Contains((TItem)value);
+		}
+		void IList.Clear()
+		{
+			Clear();
+		}
+		int IList.IndexOf(object value)
+		{
+			return IndexOf((TItem)value);
+		}
+		void IList.Insert(int index, object value)
+		{
+			Insert(index, (TItem)value);
+		}
+		void IList.Remove(object value)
+		{
+			Remove((TItem)value);
+		}
+		void IList.RemoveAt(int index)
+		{
+			RemoveAt(index);
+		}
+		#endregion
+
+		#region ICollection
+		void ICollection.CopyTo(Array array, int index)
+		{
+			CopyTo(array, index);
+		}
+		int ICollection.Count
+		{
+			get { return Count; }
+		}
+		object ICollection.SyncRoot
+		{
+			get { return SyncRoot; }
+		}
+		bool ICollection.IsSynchronized
+		{
+			get { return IsSynchronized; }
+		}
+		#endregion
+
+		#region IBindingList
+		object IBindingList.AddNew()
+		{
+			return AddNew();
+		}
+		void IBindingList.AddIndex(PropertyDescriptor property)
+		{
+			((IBindingList)m_bs).AddIndex(property);
+		}
+		void IBindingList.ApplySort(PropertyDescriptor property, ListSortDirection direction)
+		{
+			ApplySort(property, direction);
+		}
+		int IBindingList.Find(PropertyDescriptor property, object key)
+		{
+			return Find(property, key);
+		}
+		void IBindingList.RemoveIndex(PropertyDescriptor property)
+		{
+			((IBindingList)m_bs).RemoveIndex(property);
+		}
+		void IBindingList.RemoveSort()
+		{
+			RemoveSort();
+		}
+		bool IBindingList.AllowNew
+		{
+			get { return AllowNew; }
+		}
+		bool IBindingList.AllowEdit
+		{
+			get { return AllowEdit; }
+		}
+		bool IBindingList.AllowRemove
+		{
+			get { return AllowRemove; }
+		}
+		bool IBindingList.SupportsChangeNotification
+		{
+			get { return SupportsChangeNotification; }
+		}
+		bool IBindingList.SupportsSearching
+		{
+			get { return SupportsSearching; }
+		}
+		bool IBindingList.SupportsSorting
+		{
+			get { return SupportsSorting; }
+		}
+		bool IBindingList.IsSorted
+		{
+			get { return IsSorted; }
+		}
+		PropertyDescriptor IBindingList.SortProperty
+		{
+			get { return SortProperty; }
+		}
+		ListSortDirection IBindingList.SortDirection
+		{
+			get { return SortDirection; }
+		}
+		event ListChangedEventHandler IBindingList.ListChanged
+		{
+			add { ListChanged += value; }
+			remove { ListChanged -= value; }
+		}
+		#endregion
+
+		#region ICancelAddNew
+		void ICancelAddNew.CancelNew(int itemIndex)
+		{
+			((ICancelAddNew)m_bs).CancelNew(itemIndex);
+		}
+		void ICancelAddNew.EndNew(int itemIndex)
+		{
+			((ICancelAddNew)m_bs).EndNew(itemIndex);
+		}
+
+		void ISupportInitialize.BeginInit()
+		{
+			throw new NotImplementedException();
+		}
+
+		void ISupportInitialize.EndInit()
+		{
+			throw new NotImplementedException();
+		}
+		#endregion
+
+		#region ISupportInitializeNotification
+		bool ISupportInitializeNotification.IsInitialized
+		{
+			get { return ((ISupportInitializeNotification)m_bs).IsInitialized; }
+		}
+		event EventHandler ISupportInitializeNotification.Initialized
+		{
+			add { ((ISupportInitializeNotification)m_bs).Initialized += value; }
+			remove { ((ISupportInitializeNotification)m_bs).Initialized -= value; }
+		}
+		#endregion
 	}
 }
 
@@ -508,7 +1189,7 @@ namespace pr.unittests
 			bl.AddRange(new[]{1,2,3,4,5});
 
 			var bs = new BindingSource<int>{DataSource = bl};
-			bs.PositionChanging += (s,a) =>
+			bs.PositionChanged += (s,a) =>
 				{
 					positions.Add(a.OldIndex);
 					positions.Add(a.NewIndex);
@@ -569,7 +1250,7 @@ namespace pr.unittests
 
 			var current = -1;
 			var bs = new BindingSource<int>{DataSource = bl};
-			bs.PositionChanging += (s,a) =>
+			bs.PositionChanged += (s,a) =>
 			{
 				positions.Add(a.OldIndex);
 				positions.Add(a.NewIndex);

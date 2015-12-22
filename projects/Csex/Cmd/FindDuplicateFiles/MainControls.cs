@@ -7,15 +7,17 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using pr.util;
+using pr.gui;
 
 namespace Csex
 {
-	public class MainControls :UserControl
+	public class MainControls :UserControl ,IDockable
 	{
 		private readonly Model m_model;
 		public MainControls(Model model)
 		{
 			InitializeComponent();
+			DockControl = new DockControl(this, "MainControls");
 			m_model = model;
 			
 			m_btn_find_duplicates.Click += (s,a) =>
@@ -25,10 +27,12 @@ namespace Csex
 		}
 		protected override void Dispose(bool disposing)
 		{
+			DockControl.Dispose();
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
+		public DockControl DockControl { get; private set; }
 		private Button m_btn_find_duplicates;
 
 		#region Component Designer generated code

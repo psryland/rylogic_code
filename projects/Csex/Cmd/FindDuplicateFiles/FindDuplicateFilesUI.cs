@@ -9,7 +9,6 @@ using System.Windows.Forms;
 using pr.extn;
 using pr.gui;
 using pr.util;
-using WeifenLuo.WinFormsUI.Docking;
 using ToolStripContainer = pr.gui.ToolStripContainer;
 
 namespace Csex
@@ -48,11 +47,8 @@ namespace Csex
 		/// <summary>Hook up the dock panels</summary>
 		private void SetupDockContent()
 		{
-			var main    = MakeDockable(new MainControls(m_model), "Main", m_dock, m_menu_window);
-			var results = MakeDockable(new DuplicateResults(m_model), "Duplicates", m_dock, m_menu_window);
-
-			results.Show(m_dock, DockState.Document);
-			main.Show(m_dock, DockState.DockLeft);
+			m_dock.Add(new MainControls(m_model), EDockSite.Left);
+			m_dock.Add(new DuplicateResults(m_model), EDockSite.Bottom);
 		}
 
 		/// <summary>Select the directories to look in for duplicate files</summary>
@@ -65,50 +61,50 @@ namespace Csex
 			}
 		}
 
-		/// <summary>Wrap the given control in a dockable form</summary>
-		private static DockContent MakeDockable<TCtrl>(TCtrl ctrl, string title, DockPanel dock, ToolStripMenuItem windows_menu) where TCtrl:Control
-		{
-			var form = new DockContent(ctrl.GetType().ToString())
-			{
-				Icon = null,
-				Text = title,
-				ShowIcon = false,
-				ShowInTaskbar = true,
-				HideOnClose = true,
-				MaximizeBox = true,
-				MinimizeBox = true,
-				ControlBox = true,
-			};
-			ctrl.Dock = DockStyle.Fill;
-			form.Controls.Add(ctrl);
-			//form.DockStateChanged += (s,a) => settings.Save();
+		///// <summary>Wrap the given control in a dockable form</summary>
+		//private static DockContent MakeDockable<TCtrl>(TCtrl ctrl, string title, DockPanel dock, ToolStripMenuItem windows_menu) where TCtrl:Control
+		//{
+		//	var form = new DockContent(ctrl.GetType().ToString())
+		//	{
+		//		Icon = null,
+		//		Text = title,
+		//		ShowIcon = false,
+		//		ShowInTaskbar = true,
+		//		HideOnClose = true,
+		//		MaximizeBox = true,
+		//		MinimizeBox = true,
+		//		ControlBox = true,
+		//	};
+		//	ctrl.Dock = DockStyle.Fill;
+		//	form.Controls.Add(ctrl);
+		//	//form.DockStateChanged += (s,a) => settings.Save();
 
-			if (windows_menu != null)
-			{
-				var menu_entry = new ToolStripMenuItem(form.Text, null, (s,a) =>
-					{
-						// Ensure the window is onscreen
-						if (form.IsFloat)
-						{
-							var area = Screen.GetWorkingArea(((ToolStripMenuItem)s).OwnerItem.Owner);
-							var b = form.FloatPane.Parent.Bounds;
-							var pt = form.FloatPane.Parent.Location;
-							if (b.Right  > area.Right ) pt.X -= b.Right  - area.Right;
-							if (b.Bottom > area.Bottom) pt.Y -= b.Bottom - area.Bottom;
-							if (b.Left   < area.Left  ) pt.X += area.Left - b.Left;
-							if (b.Top    < area.Top   ) pt.Y += area.Top  - b.Top;
-							form.FloatPane.Parent.Location = pt;
-						}
+		//	if (windows_menu != null)
+		//	{
+		//		var menu_entry = new ToolStripMenuItem(form.Text, null, (s,a) =>
+		//			{
+		//				// Ensure the window is onscreen
+		//				if (form.IsFloat)
+		//				{
+		//					var area = Screen.GetWorkingArea(((ToolStripMenuItem)s).OwnerItem.Owner);
+		//					var b = form.FloatPane.Parent.Bounds;
+		//					var pt = form.FloatPane.Parent.Location;
+		//					if (b.Right  > area.Right ) pt.X -= b.Right  - area.Right;
+		//					if (b.Bottom > area.Bottom) pt.Y -= b.Bottom - area.Bottom;
+		//					if (b.Left   < area.Left  ) pt.X += area.Left - b.Left;
+		//					if (b.Top    < area.Top   ) pt.Y += area.Top  - b.Top;
+		//					form.FloatPane.Parent.Location = pt;
+		//				}
 
-						form.Show(dock);
-						form.BringToFront();
-					});
-				windows_menu.DropDownItems.Add(menu_entry);
-				windows_menu.DropDownOpening += (s,a) => menu_entry.Checked = form.IsActivated;
-			}
+		//				form.Show(dock);
+		//				form.BringToFront();
+		//			});
+		//		windows_menu.DropDownItems.Add(menu_entry);
+		//		windows_menu.DropDownOpening += (s,a) => menu_entry.Checked = form.IsActivated;
+		//	}
 
-			return form;
-		}
+		//	return form;
+		//}
 
 		private ToolStripContainer m_tsc;
 		private StatusStrip m_ss;
@@ -118,8 +114,8 @@ namespace Csex
 		private ToolStripSeparator m_menu_file_sep0;
 		private ToolStripMenuItem m_menu_file_exit;
 		private ToolStripStatusLabel m_status;
-		private DockPanel m_dock;
 		private ToolStripMenuItem m_menu_window;
+		private DockContainer m_dock;
 
 		#region Windows Form Designer generated code
 
@@ -132,26 +128,11 @@ namespace Csex
 		/// </summary>
 		private void InitializeComponent()
 		{
-			DockPanelSkin dockPanelSkin1                                     = new DockPanelSkin();
-			AutoHideStripSkin autoHideStripSkin1                             = new AutoHideStripSkin();
-			DockPanelGradient dockPanelGradient1                             = new DockPanelGradient();
-			TabGradient tabGradient1                                         = new TabGradient();
-			DockPaneStripSkin dockPaneStripSkin1                             = new DockPaneStripSkin();
-			DockPaneStripGradient dockPaneStripGradient1                     = new DockPaneStripGradient();
-			TabGradient tabGradient2                                         = new TabGradient();
-			DockPanelGradient dockPanelGradient2                             = new DockPanelGradient();
-			TabGradient tabGradient3                                         = new TabGradient();
-			DockPaneStripToolWindowGradient dockPaneStripToolWindowGradient1 = new DockPaneStripToolWindowGradient();
-			TabGradient tabGradient4                                         = new TabGradient();
-			TabGradient tabGradient5                                         = new TabGradient();
-			DockPanelGradient dockPanelGradient3                             = new DockPanelGradient();
-			TabGradient tabGradient6                                         = new TabGradient();
-			TabGradient tabGradient7                                         = new TabGradient();
 			System.ComponentModel.ComponentResourceManager resources         = new System.ComponentModel.ComponentResourceManager(typeof(FindDuplicateFilesUI));
 			this.m_tsc                                                       = new ToolStripContainer();
 			this.m_ss                                                        = new System.Windows.Forms.StatusStrip();
 			this.m_status                                                    = new System.Windows.Forms.ToolStripStatusLabel();
-			this.m_dock                                                      = new DockPanel();
+			this.m_dock                                                      = new DockContainer();
 			this.m_menu                                                      = new System.Windows.Forms.MenuStrip();
 			this.m_menu_file                                                 = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_file_search_dirs                                     = new System.Windows.Forms.ToolStripMenuItem();
@@ -209,57 +190,10 @@ namespace Csex
 			// 
 			this.m_dock.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.m_dock.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.m_dock.DocumentStyle = DocumentStyle.DockingSdi;
 			this.m_dock.Location = new System.Drawing.Point(0, 0);
 			this.m_dock.Margin = new System.Windows.Forms.Padding(0);
 			this.m_dock.Name = "m_dock";
 			this.m_dock.Size = new System.Drawing.Size(738, 596);
-			dockPanelGradient1.EndColor = System.Drawing.SystemColors.ControlLight;
-			dockPanelGradient1.StartColor = System.Drawing.SystemColors.ControlLight;
-			autoHideStripSkin1.DockStripGradient = dockPanelGradient1;
-			tabGradient1.EndColor = System.Drawing.SystemColors.Control;
-			tabGradient1.StartColor = System.Drawing.SystemColors.Control;
-			tabGradient1.TextColor = System.Drawing.SystemColors.ControlDarkDark;
-			autoHideStripSkin1.TabGradient = tabGradient1;
-			autoHideStripSkin1.TextFont = new System.Drawing.Font("Segoe UI", 9F);
-			dockPanelSkin1.AutoHideStripSkin = autoHideStripSkin1;
-			tabGradient2.EndColor = System.Drawing.SystemColors.ControlLightLight;
-			tabGradient2.StartColor = System.Drawing.SystemColors.ControlLightLight;
-			tabGradient2.TextColor = System.Drawing.SystemColors.ControlText;
-			dockPaneStripGradient1.ActiveTabGradient = tabGradient2;
-			dockPanelGradient2.EndColor = System.Drawing.SystemColors.Control;
-			dockPanelGradient2.StartColor = System.Drawing.SystemColors.Control;
-			dockPaneStripGradient1.DockStripGradient = dockPanelGradient2;
-			tabGradient3.EndColor = System.Drawing.SystemColors.ControlLight;
-			tabGradient3.StartColor = System.Drawing.SystemColors.ControlLight;
-			tabGradient3.TextColor = System.Drawing.SystemColors.ControlText;
-			dockPaneStripGradient1.InactiveTabGradient = tabGradient3;
-			dockPaneStripSkin1.DocumentGradient = dockPaneStripGradient1;
-			dockPaneStripSkin1.TextFont = new System.Drawing.Font("Segoe UI", 9F);
-			tabGradient4.EndColor = System.Drawing.SystemColors.ActiveCaption;
-			tabGradient4.LinearGradientMode = System.Drawing.Drawing2D.LinearGradientMode.Vertical;
-			tabGradient4.StartColor = System.Drawing.SystemColors.GradientActiveCaption;
-			tabGradient4.TextColor = System.Drawing.SystemColors.ActiveCaptionText;
-			dockPaneStripToolWindowGradient1.ActiveCaptionGradient = tabGradient4;
-			tabGradient5.EndColor = System.Drawing.SystemColors.Control;
-			tabGradient5.StartColor = System.Drawing.SystemColors.Control;
-			tabGradient5.TextColor = System.Drawing.SystemColors.ControlText;
-			dockPaneStripToolWindowGradient1.ActiveTabGradient = tabGradient5;
-			dockPanelGradient3.EndColor = System.Drawing.SystemColors.ControlLight;
-			dockPanelGradient3.StartColor = System.Drawing.SystemColors.ControlLight;
-			dockPaneStripToolWindowGradient1.DockStripGradient = dockPanelGradient3;
-			tabGradient6.EndColor = System.Drawing.SystemColors.InactiveCaption;
-			tabGradient6.LinearGradientMode = System.Drawing.Drawing2D.LinearGradientMode.Vertical;
-			tabGradient6.StartColor = System.Drawing.SystemColors.GradientInactiveCaption;
-			tabGradient6.TextColor = System.Drawing.SystemColors.InactiveCaptionText;
-			dockPaneStripToolWindowGradient1.InactiveCaptionGradient = tabGradient6;
-			tabGradient7.EndColor = System.Drawing.Color.Transparent;
-			tabGradient7.StartColor = System.Drawing.Color.Transparent;
-			tabGradient7.TextColor = System.Drawing.SystemColors.ControlDarkDark;
-			dockPaneStripToolWindowGradient1.InactiveTabGradient = tabGradient7;
-			dockPaneStripSkin1.ToolWindowGradient = dockPaneStripToolWindowGradient1;
-			dockPanelSkin1.DockPaneStripSkin = dockPaneStripSkin1;
-			this.m_dock.Skin = dockPanelSkin1;
 			this.m_dock.TabIndex = 0;
 			// 
 			// m_menu

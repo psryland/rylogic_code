@@ -40,7 +40,7 @@ namespace Csex
 				Duplicates = new BindingListEx<FileInfo>();
 			}
 
-			/// <summary>A unique indentifier for this file</summary>
+			/// <summary>A unique identifier for this file</summary>
 			public string Key { get; private set; }
 
 			/// <summary>The number of copies of this file</summary>
@@ -85,7 +85,7 @@ namespace Csex
 		/// <summary>The found duplicates</summary>
 		public BindingListEx<FileInfo> Duplicates { get; private set; }
 
-		/// <summary>Errors encounted when finding duplicates</summary>
+		/// <summary>Errors encountered when finding duplicates</summary>
 		public List<string> Errors { get; private set; }
 
 		/// <summary>Find the duplicates</summary>

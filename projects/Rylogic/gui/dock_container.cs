@@ -369,7 +369,7 @@ namespace pr.gui
 			var save = menu.DropDownItems.Add2(new ToolStripMenuItem("Save Layout"));
 			save.Click += (ss,aa) =>
 			{
-				using (var fd = new SaveFileDialog { Title = "Save layout", Filter = filter, FileName = "Layout.xml", DefaultExt = "xml" })
+				using (var fd = new SaveFileDialog { Title = "Save layout", Filter = filter, FileName = "Layout.xml", DefaultExt = "XML" })
 				{
 					if (fd.ShowDialog(this) != DialogResult.OK) return;
 					try { SaveLayout().Save(fd.FileName); }
@@ -697,6 +697,8 @@ namespace pr.gui
 			{
 				if (dockable == null)
 					throw new ArgumentNullException(nameof(dockable), "Cannot add 'null' content");
+				if (dockable.DockControl == null)
+					throw new ArgumentNullException(nameof(dockable), "'content.DockControl' member cannot be 'null'");
 
 				// If already on a pane, remove first (raising events)
 				dockable.DockControl.DockPane = null;
@@ -1253,7 +1255,7 @@ namespace pr.gui
 		/// A pane groups a set of IDockable items together. Only one IDockable is displayed at a time in the pane,
 		/// but tabs for all dockable items are displayed along the top, bottom, left, or right.</summary>
 		[DebuggerDisplay("{DumpDesc()}")]
-		public class DockPane :Control
+		public class DockPane :ScrollableControl
 		{
 			public DockPane(DockContainer owner)
 			{
@@ -1268,7 +1270,7 @@ namespace pr.gui
 				// Create the collection that manages the content within this pane
 				Content = new BindingSource<IDockable>{DataSource = new BindingListEx<IDockable>{PerItemClear = true}};
 				Content.ListChanging += HandleContentListChanged;
-				Content.PositionChanging += HandleContentPositionChanged;
+				Content.PositionChanged += HandleContentPositionChanged;
 
 				using (this.SuspendLayout(false))
 				{
@@ -1327,7 +1329,9 @@ namespace pr.gui
 					{
 						// Only content that is in this pane can be made active for this pane
 						if (value != null && !Content.Contains(value))
-							throw new Exception("Dockable item '{0}' has not been added to this pane so can not be made the active content.".Fmt(value.DockControl.PersistName));
+							throw new Exception("Dockable item '{0}' has not been added to this pane so can not be made the active content.".Fmt(value.DockControl.TabText));
+						if (value != null && value.DockControl.Owner.Dock != DockStyle.None)
+							throw new Exception("Dockable item '{0}' has its 'Dock' property set to {1}. Dockable items should use DockStyle.None because the dock container manages their size".Fmt(value.DockControl.TabText, value.DockControl.Owner.Dock));
 
 						// Ensure 'value' is the current item in the Content collection
 						Content.Current = value;
@@ -1589,6 +1593,22 @@ namespace pr.gui
 				VisibleContent = Content.Current;
 			}
 
+			/// <summary>Get the side of the dock container to auto-hide to, based on this pane's location in the tree. Returns centre if no side is preferred</summary>
+			internal EDockSite AutoHideSide
+			{
+				get
+				{
+					// Find the highest, non-centre position, ancestor of this pane
+					var side = EDockSite.Centre;
+					for (var c = (Control)this; c != null && c.Parent is Branch; c = c.Parent)
+					{
+						var p = c as DockPane; if (p != null && p.DockSite != EDockSite.Centre) side = p.DockSite;
+						var b = c as Branch;   if (b != null && b.DockSite != EDockSite.Centre) side = b.DockSite;
+					}
+					return side;
+				}
+			}
+
 			/// <summary>Layout the pane</summary>
 			protected override void OnLayout(LayoutEventArgs e)
 			{
@@ -1604,7 +1624,9 @@ namespace pr.gui
 							var bounds = TitleCtrl.CalcBounds(rect);
 							rect = rect.Subtract(bounds);
 							TitleCtrl.Bounds = bounds;
-							TitleCtrl.ButtonAutoHide.Visible = DockSite != EDockSite.Centre || IsAutoHide;
+
+							// Auto hide is hidden if the pane is in the centre dock site
+							TitleCtrl.ButtonAutoHide.Visible = AutoHideSide != EDockSite.Centre || IsAutoHide; // Always visible if the pane in within an auto-hide panel
 						}
 
 						// Position the tab strip
@@ -2454,11 +2476,12 @@ namespace pr.gui
 					if (value)
 					{
 						// If currently docked in the centre, don't allow auto hide
-						if (DockSite == EDockSite.Centre)
-							throw new Exception("Panes docked in the centre position cannot auto hide");
+						var side = DockPane?.AutoHideSide ?? EDockSite.Centre;
+						if (side == EDockSite.Centre)
+							throw new Exception("Cannot auto hide this dockable. It is either not within a pane, or the pane is docked in the centre dock site");
 
 						// Get the auto-hide panel associated with this dock site
-						var ah = DockContainer.GetAutoHidePanel(DockSite);
+						var ah = DockContainer.GetAutoHidePanel(side);
 
 						// Get the dock address associated with this panel
 						var hs = DockAddressFor(ah.Root);
@@ -2567,6 +2590,14 @@ namespace pr.gui
 				node.Add2(XmlTag.Address, string.Join(",", DockAddress), false);
 
 				return node;
+			}
+
+			public override string ToString()
+			{
+				if (TabText.HasValue()) return TabText;
+				if (PersistName.HasValue()) return PersistName;
+				if (Owner.Name.HasValue()) return Owner.Name;
+				return Owner.GetType().Name;
 			}
 		}
 
@@ -3246,7 +3277,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Get the options specific to this tab strip</summary>
-			protected OptionData.TabStripData TabStripOpts { get; private set; }
+			public OptionData.TabStripData TabStripOpts { get; private set; }
 
 			/// <summary>The location of the tab strip within the dock pane, Only L,T,R,B are valid</summary>
 			public EDockSite StripLocation
@@ -3621,12 +3652,12 @@ namespace pr.gui
 				Index = index;
 
 				// Calculate the bounding rectangle that would contain this Tab in tab strip space.
-				var opts = Content.DockControl.DockContainer.Options.TabStrip;
+				var opts = Strip.TabStripOpts;
 				var active = Content == Content.DockControl.DockContainer.ActiveContent;
 				var font = active ? opts.ActiveFont : opts.InactiveFont;
 
 				var sz = gfx.MeasureString(Text, font, max_width, FmtFlags);
-				var w = opts.TabPadding.Left + (Icon != null ? opts.IconSize + opts.IconToTextSpacing : 0) + (int)(sz.Width + 0.5f) + opts.TabPadding.Right;
+				var w = opts.TabPadding.Left + (Icon != null ? opts.IconSize + opts.IconToTextSpacing : 0) + (int)sz.Width + 1 + opts.TabPadding.Right; // +1 so '...' isn't added to tab text due to rounding error
 				var width = Maths.Clamp(w, min_width, max_width);
 				var above = strip.StripLocation == EDockSite.Top || strip.StripLocation == EDockSite.Right;
 				var top = above ? opts.StripPadding.Top : opts.StripPadding.Bottom;
@@ -3671,11 +3702,11 @@ namespace pr.gui
 			/// <summary>Draw the tab</summary>
 			public void Paint(Graphics gfx)
 			{
-				var opts = Content.DockControl.DockContainer.Options.TabStrip;
+				var opts = Strip.TabStripOpts;
 				var active = Content == Content.DockControl.DockContainer.ActiveContent;
 				var cols = active ? opts.ActiveTab : opts.InactiveTab;
 				var font = active ? opts.ActiveFont : opts.InactiveFont;
-				var rect = Bounds;
+				var rect = new RectangleRef(Bounds);
 
 				// Fill the background
 				using (var brush = new LinearGradientBrush(rect, cols.Beg, cols.End, cols.Mode) { Blend=cols.Blend })
@@ -3695,23 +3726,25 @@ namespace pr.gui
 					}
 				}
 
-				var x = rect.X + opts.TabPadding.Left;
+				// Add the tab padded
+				rect.Left  += opts.TabPadding.Left;
+				rect.Right -= opts.TabPadding.Right;
 
 				// Draw the icon
 				if (Icon != null)
 				{
-					var r = new Rectangle(x, (rect.Height - opts.IconSize)/2, opts.IconSize, opts.IconSize);
+					var r = new Rectangle(rect.Left, (rect.Height - opts.IconSize)/2, opts.IconSize, opts.IconSize);
 					if (r.Area() > 0)
 					{
 						gfx.DrawImage(Icon, r);
-						x += r.Width + opts.IconToTextSpacing;
+						rect.Left += r.Width + opts.IconToTextSpacing;
 					}
 				}
 
 				// Draw the text
 				if (Text.HasValue())
 				{
-					var r = new RectangleF(x, (rect.Height - font.Height)/2, rect.Right - opts.TabPadding.Right - x, font.Height);
+					var r = RectangleF.FromLTRB(rect.Left, (rect.Height - font.Height)/2, rect.Right, rect.Bottom);
 					if (r.Area() > 0)
 						using (var bsh = new SolidBrush(cols.Text))
 							gfx.DrawString(Text, font, bsh, r, FmtFlags);

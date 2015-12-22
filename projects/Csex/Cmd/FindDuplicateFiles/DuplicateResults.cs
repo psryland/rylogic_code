@@ -12,7 +12,7 @@ using pr.util;
 
 namespace Csex
 {
-	public class DuplicateResults :UserControl
+	public class DuplicateResults :UserControl ,IDockable
 	{
 		private readonly Model m_model;
 		private SplitContainer m_split;
@@ -20,9 +20,11 @@ namespace Csex
 		private DataGridView m_grid_dups;
 		private readonly BindingSource<Model.FileInfo> m_dups;
 		private readonly BindingSource<Model.FileInfo> m_copies;
+
 		public DuplicateResults(Model model)
 		{
 			InitializeComponent();
+			DockControl = new DockControl(this, "Duplicates");
 			m_model = model;
 
 			m_dups = new BindingSource<Model.FileInfo>{DataSource = m_model.Duplicates};
@@ -49,9 +51,12 @@ namespace Csex
 		}
 		protected override void Dispose(bool disposing)
 		{
+			DockControl.Dispose();
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
+
+		public DockControl DockControl { get; private set; }
 
 		#region Component Designer generated code
 
