@@ -109,7 +109,10 @@ namespace pr.gui
 
 			using (this.SuspendLayout(false))
 			{
+				// Create the root branch and the centre pane
 				Root = new Branch(this, DockSizeData.Quarters);
+				Root.PruneBranches();
+
 				for (var i = 1; i != m_auto_hide.Length; ++i) // skip centre
 				{
 					m_auto_hide[i] = new AutoHidePanel(this, (EDockSite)i);
@@ -134,14 +137,14 @@ namespace pr.gui
 		public OptionData Options { get; private set; }
 
 		/// <summary>Get/Set the globally active content (i.e. owned by this dock container). This will cause the pane that the content is on to also become active.</summary>
-		public IDockable ActiveContent
+		[Browsable(false)] public IDockable ActiveContent
 		{
 			get { return m_active_content.ActiveContent; }
 			set { m_active_content.ActiveContent = value; } // Note: this setter isn't called when the user clicks on some content, ActivePane.set is called.
 		}
 
 		/// <summary>Get/Set the globally active pane (i.e. owned by this dock container). Note, this pane may be within the dock container, a floating window, or an auto hide window</summary>
-		public DockPane ActivePane
+		[Browsable(false)] public DockPane ActivePane
 		{
 			get { return m_active_content.ActivePane; }
 			set { m_active_content.ActivePane = value; }
@@ -174,6 +177,18 @@ namespace pr.gui
 			get { return m_all_content; }
 		}
 		private HashSet<IDockable> m_all_content;
+
+		/// <summary>Return the dock pane at the given dock site or null if the site does not contain a dock pane</summary>
+		public DockPane GetPane(params EDockSite[] location)
+		{
+			return Root.GetChild(location)?.DockPane;
+		}
+
+		/// <summary>Returns a reference to the dock sizes at a given level in the tree. 'location' should point to a branch otherwise null is returned. location.Length == 0 returns the root level sizes</summary>
+		public DockSizeData GetDockSizes(params EDockSite[] location)
+		{
+			return Root.GetDockSizes(location);
+		}
 
 		/// <summary>Save a reference to 'dockable' in this dock container</summary>
 		internal void Remember(IDockable dockable)
@@ -215,31 +230,66 @@ namespace pr.gui
 		Branch ITreeHost.Root { get { return Root; } }
 
 		/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
+		public void Add(IDockable dockable, int index, params EDockSite[] location)
+		{
+			// If no location is given, add the dockable to its default location
+			if (location.Length == 0)
+			{
+				Add(dockable, dockable.DockControl.DefaultDockLocation);
+			}
+			else
+			{
+				Root.Add(dockable, index, location);
+			}
+		}
 		public void Add(IDockable dockable, params EDockSite[] location)
 		{
-			Root.Add(dockable, location);
+			Add(dockable, int.MaxValue, location);
 		}
 
-		/// <summary>Raised whenever the active pane changes in this dock container</summary>
+		/// <summary>Add the dockable to the dock container, auto hide panel, or float window, as described by 'loc'</summary>
+		public void Add(IDockable dockable, DockLocation loc)
+		{
+			if (loc.FloatingWindowId != null)
+			{
+				// If a floating window id is given, locate the floating window and add to that
+				var id = loc.FloatingWindowId.Value;
+				var fw = GetOrAddFloatingWindow(x => x.Id == id);
+				fw.Add(dockable, loc.Index, loc.Address);
+				fw.Id = id;
+			}
+			else if (loc.AutoHide != null)
+			{
+				// If an auto hide site is given, add to the auto hide panel
+				var side = loc.AutoHide.Value;
+				m_auto_hide[(int)side].Root.Add(dockable, loc.Index, loc.Address);
+			}
+			else
+			{
+				// Otherwise, dock to the dock container
+				Root.Add(dockable, loc.Index, loc.Address);
+			}
+		}
+
+		/// <summary>Raised whenever the active pane changes in this dock container or associated floating window or auto hide panel</summary>
 		public event EventHandler<ActivePaneChangedEventArgs> ActivePaneChanged
 		{
 			add    { m_active_content.ActivePaneChanged += value; }
 			remove { m_active_content.ActivePaneChanged -= value; }
 		}
-		private void OnActivePaneChanged(ActivePaneChangedEventArgs args)
-		{
-			m_active_content.OnActivePaneChanged(args);
-		}
 
-		/// <summary>Raised whenever the active content changes in this dock container</summary>
+		/// <summary>Raised whenever the active content changes in this dock container or associated floating window or auto hide panel</summary>
 		public event EventHandler<ActiveContentChangedEventArgs> ActiveContentChanged
 		{
 			add    { m_active_content.ActiveContentChanged += value; }
 			remove { m_active_content.ActiveContentChanged -= value; }
 		}
-		private void OnActiveContentChanged(ActiveContentChangedEventArgs args)
+
+		/// <summary>Raised whenever content is moved within the dock container, floating windows, or auto hide panels</summary>
+		public event EventHandler<DockableMovedEventArgs> DockableMoved;
+		protected virtual void OnDockableMoved(DockableMovedEventArgs args)
 		{
-			m_active_content.OnActiveContentChanged(args);
+			DockableMoved.Raise(this, args);
 		}
 
 		/// <summary>Layout the control</summary>
@@ -291,8 +341,14 @@ namespace pr.gui
 		public IEnumerable<FloatingWindow> FloatingWindows { get { return m_floaters; } }
 		private BindingListEx<FloatingWindow> m_floaters;
 
-		/// <summary>Returns an existing floating window that has a root branch in 'root', or returns a new floating window</summary>
-		private FloatingWindow GetFloatingWindow(Func<FloatingWindow, bool> pred)
+		/// <summary>Return the floating window with Id = 'id'</summary>
+		public FloatingWindow GetFloatingWindow(int id)
+		{
+			return FloatingWindows.FirstOrDefault(x => x.Id == id);
+		}
+
+		/// <summary>Returns an existing floating window that satisfies 'pred', or a new floating window</summary>
+		private FloatingWindow GetOrAddFloatingWindow(Func<FloatingWindow, bool> pred)
 		{
 			foreach (var fw in FloatingWindows)
 			{
@@ -317,9 +373,10 @@ namespace pr.gui
 		public IEnumerable<AutoHidePanel> AutoHidePanels { get { return m_auto_hide.Skip(1); } }
 		private AutoHidePanel[] m_auto_hide;
 
-		/// <summary>Returns an existing floating window that has a root branch in 'root', or returns a new floating window</summary>
-		private AutoHidePanel GetAutoHidePanel(EDockSite site)
+		/// <summary>Returns the auto hide panel corresponding to 'site'</summary>
+		public AutoHidePanel GetAutoHidePanel(EDockSite site)
 		{
+			Debug.Assert(site != EDockSite.Centre);
 			return m_auto_hide[(int)site];
 		}
 
@@ -335,13 +392,11 @@ namespace pr.gui
 					break;
 				}
 			case TreeChangedEventArgs.EAction.Added:
-				{
-					PerformLayout();
-					break;
-				}
 			case TreeChangedEventArgs.EAction.Removed:
 				{
 					PerformLayout();
+					if (obj.Dockable != null)
+						OnDockableMoved(new DockableMovedEventArgs((DockableMovedEventArgs.EAction)obj.Action, obj.Dockable));
 					break;
 				}
 			}
@@ -351,11 +406,11 @@ namespace pr.gui
 		public ToolStripMenuItem WindowsMenu(string menu_name = "Windows")
 		{
 			var menu = new ToolStripMenuItem(menu_name);
+			var sep = new ToolStripSeparator();
 			var filter = Util.FileDialogFilter("Layout Files","*.xml");
 
 			// Load layout from disk
-			var load = menu.DropDownItems.Add2(new ToolStripMenuItem("Load Layout"));
-			load.Click += (ss,aa) =>
+			var load = new ToolStripMenuItem("Load Layout", null, (s,a) =>
 			{
 				using (var fd = new OpenFileDialog { Title = "Load layout", Filter = filter })
 				{
@@ -363,11 +418,10 @@ namespace pr.gui
 					try { LoadLayout(XDocument.Load(fd.FileName).Root); }
 					catch (Exception ex) { MsgBox.Show(this, "Layout could not be loaded\r\n{0}".Fmt(ex.Message), "Load Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 				}
-			};
+			});
 
 			// Save the layout to disk
-			var save = menu.DropDownItems.Add2(new ToolStripMenuItem("Save Layout"));
-			save.Click += (ss,aa) =>
+			var save = new ToolStripMenuItem("Save Layout", null, (s,a) =>
 			{
 				using (var fd = new SaveFileDialog { Title = "Save layout", Filter = filter, FileName = "Layout.xml", DefaultExt = "XML" })
 				{
@@ -375,19 +429,39 @@ namespace pr.gui
 					try { SaveLayout().Save(fd.FileName); }
 					catch (Exception ex) { MsgBox.Show(this, "Layout could not be saved\r\n{0}".Fmt(ex.Message), "Save Layout Failed", MessageBoxButtons.OK, MessageBoxIcon.Error); }
 				}
-			};
+			});
 
-			menu.DropDownItems.Add(new ToolStripSeparator());
+			// Reset to default layout
+			var reset = new ToolStripMenuItem("Reset Layout", null, (s,a) =>
+			{
+				ResetLayout();
+			});
+
+			// Handler that repopulates the menu contents
+			EventHandler repopulate = (s,a) =>
+			{
+				using (menu.DropDown.SuspendLayout(true))
+				{
+					menu.DropDownItems.Clear();
+
+					// Menu item for each content
+					foreach (var content in AllContent.OrderBy(x => x.DockControl.TabText))
+					{
+						var opt = menu.DropDownItems.Add2(new ToolStripMenuItem(content.DockControl.TabText, content.DockControl.TabIcon, (ss,aa) => FindAndShow(content)));
+						opt.Checked = content == ActiveContent;
+					}
+
+					menu.DropDownItems.Add(sep);
+					menu.DropDownItems.Add(load);
+					menu.DropDownItems.Add(save);
+					menu.DropDownItems.Add(reset);
+				}
+			};
 
 			// Repopulate the content items on drop down
-			menu.DropDownOpening += (s,a) =>
-			{
-				// Menu item for each content
-				for (;menu.DropDownItems.Count > 3; menu.DropDownItems.RemoveAt(3)) {}
-				foreach (var content in AllContent.OrderBy(x => x.DockControl.TabText))
-					menu.DropDownItems.Add(content.DockControl.TabText, content.DockControl.TabIcon, (ss,aa) => FindAndShow(content));
-				
-			};
+			menu.DropDownOpening += repopulate;
+
+			repopulate(null,null);
 			return menu;
 		}
 
@@ -569,32 +643,8 @@ namespace pr.gui
 					var name = content_node.Element(XmlTag.Name).As<string>();
 					if (all_content.TryGetValue(name, out content))
 					{
-						var host    = content_node.Element(XmlTag.Host).As<string>().Split(',');
-						var address = content_node.Element(XmlTag.Address).As<string>().Split(',').Select(x => Enum<EDockSite>.Parse(x)).ToArray();
-
-						// Determine where the content was docked
-						switch (host[0])
-						{
-						case nameof(DockContainer):
-							{
-								Root.Add(content, address);
-								break;
-							}
-						case nameof(AutoHidePanel):
-							{
-								var side = Enum<EDockSite>.Parse(host[1]);
-								m_auto_hide[(int)side].Root.Add(content, address);
-								break;
-							}
-						case nameof(FloatingWindow):
-							{
-								var id = int.Parse(host[1]);
-								var fw = GetFloatingWindow(x => x.Id == id);
-								fw.Root.Add(content, address);
-								fw.Id = id;
-								break;
-							}
-						}
+						var loc = new DockLocation(content_node);
+						Add(content, loc);
 					}
 				}
 
@@ -607,7 +657,7 @@ namespace pr.gui
 				foreach (var fw_node in node.Elements(XmlTag.FloatingWindows, XmlTag.FloatingWindow))
 				{
 					var id = fw_node.Element(XmlTag.Id).As<int>();
-					var fw = GetFloatingWindow(x => x.Id == id);
+					var fw = GetOrAddFloatingWindow(x => x.Id == id);
 					if (fw != null)
 						fw.ApplyState(fw_node);
 				}
@@ -617,6 +667,14 @@ namespace pr.gui
 				if (active != null && all_content.TryGetValue(active, out content))
 					ActiveContent = content;
 			}
+		}
+
+		/// <summary>Move all content to it's default dock address</summary>
+		public void ResetLayout()
+		{
+			// Adding each dockable without an address causes it to be moved to its default location
+			foreach (var dockable in AllContent.ToArray())
+				Add(dockable, dockable.DockControl.DefaultDockLocation);
 		}
 
 		/// <summary>Output the tree structure</summary>
@@ -645,7 +703,7 @@ namespace pr.gui
 			DockPane ActivePane { get; set; }
 
 			/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
-			void Add(IDockable dockable, params EDockSite[] location);
+			void Add(IDockable dockable, int index, params EDockSite[] location);
 		}
 
 		/// <summary>
@@ -693,24 +751,30 @@ namespace pr.gui
 			public DockSizeData DockSizes { get; private set; }
 
 			/// <summary>Add a dockable instance to this tree at the position described by 'location'.</summary>
-			public void Add(IDockable dockable, params EDockSite[] location)
+			public void Add(IDockable dockable, int index, params EDockSite[] location)
 			{
 				if (dockable == null)
 					throw new ArgumentNullException(nameof(dockable), "Cannot add 'null' content");
 				if (dockable.DockControl == null)
 					throw new ArgumentNullException(nameof(dockable), "'content.DockControl' member cannot be 'null'");
+				if (location.Length == 0)
+					throw new ArgumentException("A valid tree location is required", nameof(location));
 
-				// If already on a pane, remove first (raising events)
-				dockable.DockControl.DockPane = null;
+				using (DockContainer.SuspendLayout(true))
+				using (this.SuspendLayout(true))
+				{
+					// If already on a pane, remove first (raising events)
+					// Removing panes causes PruneBranches to be called, so this must be called before
+					// DockPane() otherwise the newly added pane/branches will be deleted.
+					dockable.DockControl.DockPane = null;
 
-				// Use the default location if none has been given.
-				var ds = location.Length != 0 ? location[0] : dockable.DockControl.DefaultDockSite;
+					// Find the dock pane for this dock site, growing the tree as necessary
+					var pane = DockPane(location.First(), location.Skip(1));
 
-				// Find the dock pane for this dock site, growing the tree as necessary
-				var pane = DockPane(ds, location.Skip(1));
-
-				// Add the content
-				pane.Content.Add(dockable);
+					// Add the content
+					index = Maths.Clamp(index, 0, pane.Content.Count);
+					pane.Content.Insert(index, dockable);
+				}
 			}
 
 			/// <summary>Remove branches without any content to reduce the size of the tree</summary>
@@ -770,9 +834,9 @@ namespace pr.gui
 			/// <summary>Add branches to the tree until 'rest' is empty.</summary>
 			private Branch GrowBranches(EDockSite ds, IEnumerable<EDockSite> rest, out EDockSite last_ds)
 			{
-				// Note, this means the last 'ds' does not have a branch added.
+				// Note: When rest is empty, the site at 'ds' does not have a branch added.
 				// This is deliberate so that dock addresses (arrays of EDockSite) can be
-				// used to grow the tree to the point where a dock pane should be added
+				// used to grow the tree to the point where a dock pane should be added.
 				if (!rest.Any())
 				{
 					// If we've reached the end of the dock address, but there are still branches
@@ -824,6 +888,32 @@ namespace pr.gui
 			public DockPane DockPane(EDockSite ds)
 			{
 				return DockPane(ds, Enumerable.Empty<EDockSite>());
+			}
+
+			/// <summary>Get the child at 'location' or null if the given location is not a valid location in the tree</summary>
+			public ChildCtrl GetChild(IEnumerable<EDockSite> location)
+			{
+				var b = this;
+				ChildCtrl c = null;
+				foreach (var ds in location)
+				{
+					if (b == null) return null;
+					c = b.Child[ds];
+					b = c.Branch;
+				}
+				return c;
+			}
+
+			/// <summary>Returns a reference to the dock sizes at a given level in the tree</summary>
+			public DockSizeData GetDockSizes(IEnumerable<EDockSite> location)
+			{
+				var b = this;
+				foreach (var ds in location)
+				{
+					if (b == null) return null;
+					b = b.Child[ds].Branch;
+				}
+				return b?.DockSizes;
 			}
 
 			/// <summary>The child controls (dock panes or branches) of this branch</summary>
@@ -1291,7 +1381,7 @@ namespace pr.gui
 			public DockContainer DockContainer { [DebuggerStepThrough] get; private set; }
 
 			/// <summary>The control that hosts the dock pane and branch tree</summary>
-			internal ITreeHost TreeHost { [DebuggerStepThrough] get { return RootBranch.TreeHost; } }
+			internal ITreeHost TreeHost { [DebuggerStepThrough] get { return RootBranch?.TreeHost; } }
 
 			/// <summary>The branch at the top of the tree that contains this pane</summary>
 			internal Branch RootBranch { [DebuggerStepThrough] get { return Branch?.RootBranch; } }
@@ -1363,7 +1453,8 @@ namespace pr.gui
 						// Raise the active content changed event on this pane.
 						OnVisibleContentChanged(new ActiveContentChangedEventArgs(prev, value));
 
-						// Notify the container of this tree that the 
+						// Notify the container of this tree that the active content in this pane was changed
+						// (allowing the globally active content notification to be sent if this is the active pane)
 						Branch.OnTreeChanged(new TreeChangedEventArgs(TreeChangedEventArgs.EAction.ActiveContent, pane:this, dockable:value));
 
 						// Refresh the Pane
@@ -2296,16 +2387,16 @@ namespace pr.gui
 			/// <summary>Create the docking functionality helper.</summary>
 			/// <param name="owner">The control that docking is being provided for</param>
 			/// <param name="persist_name">The name to use for this instance when saving the layout to XML</param>
-			public DockControl(Control owner, string persist_name, EDockSite default_dock_site = EDockSite.Centre)
+			public DockControl(Control owner, string persist_name)
 			{
 				if (!(owner is IDockable))
 					throw new Exception("'owner' must implement IDockable");
 
-				Owner           = owner;
-				PersistName     = persist_name;
-				DefaultDockSite = default_dock_site;
-				TabText         = null;
-				TabIcon         = null;
+				Owner               = owner;
+				PersistName         = persist_name;
+				DefaultDockLocation = new DockLocation();
+				TabText             = null;
+				TabIcon             = null;
 
 				DockAddresses = new Dictionary<Branch, EDockSite[]>();
 			}
@@ -2388,8 +2479,25 @@ namespace pr.gui
 			/// <summary>The name to use for this instance when saving layout to XML</summary>
 			public string PersistName { get; private set; }
 
-			/// <summary>The dock state to use if not otherwise given</summary>
-			public EDockSite DefaultDockSite { get; private set; }
+			/// <summary>The dock location to use if not otherwise given</summary>
+			public DockLocation DefaultDockLocation { get; set; }
+
+			/// <summary>Get the current dock location</summary>
+			public DockLocation CurrentDockLocation
+			{
+				get
+				{
+					var fw = TreeHost as FloatingWindow;
+					if (fw != null)
+						return new DockLocation(DockAddress, ContentIndex, float_window_id:fw.Id);
+
+					var ah = TreeHost as AutoHidePanel;
+					if (ah != null)
+						return new DockLocation(DockAddress, ContentIndex, auto_hide:ah.DockSite);
+
+					return new DockLocation(DockAddress, ContentIndex);
+				}
+			}
 
 			/// <summary>Get/Set the dock site within the branch that contains 'DockPane'</summary>
 			public EDockSite DockSite
@@ -2416,10 +2524,16 @@ namespace pr.gui
 				get { return DockPane != null ? DockPane.DockAddress : new[] {EDockSite.None}; }
 			}
 
+			/// <summary>The index of this dockable within the content of 'DockPane'</summary>
+			public int ContentIndex
+			{
+				get { return DockPane?.Content.IndexOf(Dockable) ?? int.MaxValue; }
+			}
+
 			/// <summary>Get/Set whether this content is in a floating window</summary>
 			public bool IsFloating
 			{
-				get { return DockPane?.RootBranch.TreeHost is FloatingWindow; }
+				get { return TreeHost is FloatingWindow; }
 				set
 				{
 					if (IsFloating == value) return;
@@ -2432,7 +2546,7 @@ namespace pr.gui
 					if (value)
 					{
 						// Get a floating window (preferably one that has hosted this item before)
-						var fw = DockContainer.GetFloatingWindow(x => DockAddresses.ContainsKey(x.Root));
+						var fw = DockContainer.GetOrAddFloatingWindow(x => DockAddresses.ContainsKey(x.Root));
 
 						// Get the dock address associated with this floating window
 						var hs = DockAddressFor(fw.Root);
@@ -2467,7 +2581,7 @@ namespace pr.gui
 			/// <summary>Get/Set whether this content is in an auto-hide panel</summary>
 			public bool IsAutoHide
 			{
-				get { return DockPane?.RootBranch.TreeHost is AutoHidePanel; }
+				get { return TreeHost is AutoHidePanel; }
 				set
 				{
 					if (IsAutoHide == value) return;
@@ -2483,11 +2597,8 @@ namespace pr.gui
 						// Get the auto-hide panel associated with this dock site
 						var ah = DockContainer.GetAutoHidePanel(side);
 
-						// Get the dock address associated with this panel
-						var hs = DockAddressFor(ah.Root);
-
 						// Add this dockable to the auto-hide panel
-						ah.Add(Dockable, hs);
+						ah.Add(Dockable);
 					}
 
 					// Dock this content back in the dock container
@@ -2505,7 +2616,7 @@ namespace pr.gui
 			/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
 			internal EDockSite[] DockAddressFor(Branch root)
 			{
-				return DockAddresses.GetOrAdd(root, x => new []{DefaultDockSite});
+				return DockAddresses.GetOrAdd(root, x => DefaultDockLocation.Address);
 			}
 			private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
 
@@ -2561,37 +2672,28 @@ namespace pr.gui
 			}
 			private ContextMenuStrip m_impl_tab_cmenu;
 
-			/// <summary>Save state to XML</summary>
+			/// <summary>True if this content is the active content within the owning dock container</summary>
+			public bool IsActiveContent
+			{
+				get { return DockContainer?.ActiveContent?.DockControl == this; }
+			}
+
+			/// <summary>True if this content is the active content within its containing dock pane</summary>
+			public bool IsActiveContentInPane
+			{
+				get { return DockPane?.Content.Current?.DockControl == this; }
+			}
+
+			/// <summary>Save to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				// Add the name to identify the content
 				node.Add2(XmlTag.Name, PersistName, false);
-
-				// Add info about the host of this content
-				if (IsFloating)
-				{
-					// If hosted in a floating window, record the window id
-					var fw = (FloatingWindow)DockPane.RootBranch.TreeHost;
-					node.Add2(XmlTag.Host, "{0},{1}".Fmt(nameof(FloatingWindow),fw.Id), false);
-				}
-				else if (IsAutoHide)
-				{
-					// If hosted in an auto hide panel, record the panel id
-					var ah = DockPane?.RootBranch.TreeHost as AutoHidePanel;
-					node.Add2(XmlTag.Host, "{0},{1}".Fmt(nameof(AutoHidePanel), ah.StripLocation), false);
-				}
-				else
-				{
-					// Otherwise record that we're hosted in the main dock container
-					node.Add2(XmlTag.Host, "{0},0".Fmt(nameof(DockContainer)), false);
-				}
-
-				// Add the location of where in the host this content is stored
-				node.Add2(XmlTag.Address, string.Join(",", DockAddress), false);
-
+				CurrentDockLocation.ToXml(node);
 				return node;
 			}
 
+			/// <summary></summary>
 			public override string ToString()
 			{
 				if (TabText.HasValue()) return TabText;
@@ -2835,6 +2937,71 @@ namespace pr.gui
 					node.Add2(nameof(Blend), Blend, false);
 					return node;
 				}
+			}
+		}
+
+		/// <summary>A record of a dock location within the dock container</summary>
+		public class DockLocation
+		{
+			public DockLocation(EDockSite[] address = null, int index = int.MaxValue, EDockSite? auto_hide = null, int? float_window_id = null)
+			{
+				Address          = address ?? new [] {EDockSite.Centre};
+				Index            = index;
+				AutoHide         = auto_hide;
+				FloatingWindowId = float_window_id;
+			}
+			public DockLocation(XElement node)
+			{
+				Address          = node.Element(XmlTag.Address).As<string>().Split(',').Select(x => Enum<EDockSite>.Parse(x)).ToArray();
+				Index            = node.Element(XmlTag.Index).As(int.MaxValue);
+				AutoHide         = node.Element(XmlTag.AutoHide).As((EDockSite?)null);
+				FloatingWindowId = node.Element(XmlTag.FloatingWindow).As((int?)null);
+			}
+
+			/// <summary>The location within the host's tree</summary>
+			public EDockSite[] Address { get; set; }
+
+			/// <summary>The index within the content of the dock pace at 'Address'</summary>
+			public int Index { get; set; }
+
+			/// <summary>The auto hide site (or null if not in an auto site location)</summary>
+			public EDockSite? AutoHide { get; set; }
+
+			/// <summary>The Id of a floating window to dock to (or null if not in a floating window)</summary>
+			public int? FloatingWindowId { get; set; }
+
+			/// <summary>Save to XML</summary>
+			public XElement ToXml(XElement node)
+			{
+				// Add info about the host of this content
+				if (FloatingWindowId != null)
+				{
+					// If hosted in a floating window, record the window id
+					node.Add2(XmlTag.FloatingWindow, FloatingWindowId.Value, false);
+				}
+				else if (AutoHide != null)
+				{
+					// If hosted in an auto hide panel, record the panel id
+					node.Add2(XmlTag.AutoHide, AutoHide.Value, false);
+				}
+				else
+				{
+					// Otherwise we're hosted in the main dock container by default
+				}
+
+				// Add the location of where in the host this content is stored
+				node.Add2(XmlTag.Address, string.Join(",", Address), false);
+				node.Add2(XmlTag.Index, Index, false);
+				return node;
+			}
+
+			/// <summary></summary>
+			public override string ToString()
+			{
+				var addr = string.Join(",", Address);
+				if (FloatingWindowId != null) return "Floating Window {0}: {1} (Index:{2})".Fmt(FloatingWindowId.Value, addr, Index);
+				if (AutoHide != null) return "Auto Hide {0}: {1} (Index:{2})".Fmt(AutoHide.Value, addr, Index);
+				return "Dock Container: {0} (Index:{1})".Fmt(addr, Index);
 			}
 		}
 
@@ -3526,7 +3693,6 @@ namespace pr.gui
 				{
 					// Record the mouse down location
 					m_mouse_down_at = e.Location;
-					Capture = true;
 				}
 
 				// Display a tab specific context menu on right click
@@ -3539,14 +3705,15 @@ namespace pr.gui
 			}
 			protected override void OnMouseMove(MouseEventArgs e)
 			{
-				if (Capture && Util.Distance(e.Location, m_mouse_down_at) > 5)
+				if (m_mouse_down_at != null && Util.Distance(e.Location, m_mouse_down_at.Value) > 5)
 				{
-					Capture = false;
-
 					// Begin dragging the content associated with the tab
-					var content = HitTestContent(m_mouse_down_at);
+					var content = HitTestContent(m_mouse_down_at.Value);
 					if (content != null)
+					{
+						m_mouse_down_at = null;
 						DragBegin(content);
+					}
 				}
 
 				// Check for the mouse hovering over a tab
@@ -3573,17 +3740,16 @@ namespace pr.gui
 			protected override void OnMouseUp(MouseEventArgs e)
 			{
 				// If the mouse is still captured, then treat this as a mouse click instead of a drag
-				if (Capture)
+				if (m_mouse_down_at != null)
 				{
-					Capture = false;
-
 					// Find the tab that was clicked
-					var content = HitTestContent(m_mouse_down_at);
+					var content = HitTestContent(m_mouse_down_at.Value);
 					OnTabClick(new TabClickEventArgs(content, e));
 				}
+				m_mouse_down_at = null;
 				base.OnMouseUp(e);
 			}
-			private Point m_mouse_down_at;
+			private Point? m_mouse_down_at;
 			private IDockable m_hovered_tab;
 
 			/// <summary>Toggle floating when double clicked</summary>
@@ -3653,7 +3819,7 @@ namespace pr.gui
 
 				// Calculate the bounding rectangle that would contain this Tab in tab strip space.
 				var opts = Strip.TabStripOpts;
-				var active = Content == Content.DockControl.DockContainer.ActiveContent;
+				var active = Active;
 				var font = active ? opts.ActiveFont : opts.InactiveFont;
 
 				var sz = gfx.MeasureString(Text, font, max_width, FmtFlags);
@@ -3684,13 +3850,19 @@ namespace pr.gui
 			/// <summary>Text to display on the tab</summary>
 			public string Text
 			{
-				get { return Content?.DockControl.TabText ?? string.Empty; }
+				get { return Content.DockControl.TabText ?? string.Empty; }
 			}
 
 			/// <summary>The icon to display on the tab</summary>
 			public Image Icon
 			{
-				get { return Content?.DockControl.TabIcon; }
+				get { return Content.DockControl.TabIcon; }
+			}
+
+			/// <summary>True if the tab displays using the 'active tab' rendering options</summary>
+			public bool Active
+			{
+				get { return Content.DockControl.IsActiveContentInPane; }
 			}
 
 			/// <summary>Get the text format flags to use when rendering text for this tab</summary>
@@ -3703,7 +3875,7 @@ namespace pr.gui
 			public void Paint(Graphics gfx)
 			{
 				var opts = Strip.TabStripOpts;
-				var active = Content == Content.DockControl.DockContainer.ActiveContent;
+				var active = Active;
 				var cols = active ? opts.ActiveTab : opts.InactiveTab;
 				var font = active ? opts.ActiveFont : opts.InactiveFont;
 				var rect = new RectangleRef(Bounds);
@@ -3887,6 +4059,9 @@ namespace pr.gui
 				// Commit the move on successful close
 				if (DialogResult == DialogResult.OK)
 				{
+					// Preserve the active content
+					var active = DockContainer.ActiveContent;
+
 					// No address means float in a new floating window
 					if (DropAddress.Length == 0)
 					{
@@ -3916,7 +4091,7 @@ namespace pr.gui
 						// Dock the dragged item
 						var dockable = DraggedItem as IDockable;
 						if (dockable != null)
-							DropRootBranch.Add(dockable, DropAddress);
+							DropRootBranch.Add(dockable, DropIndex, DropAddress);
 
 						var dockpane = DraggedItem as DockPane;
 						if (dockpane != null)
@@ -3924,9 +4099,16 @@ namespace pr.gui
 							var target = DropRootBranch.DockPane(DropAddress.First(), DropAddress.Skip(1));
 							using (dockpane.SuspendLayout(true))
 							using (target.SuspendLayout(true))
-								target.Content.AddRange(dockpane.Content.ToArray());
+							{
+								var index = Maths.Clamp(DropIndex, 0, dockpane.Content.Count);
+								foreach (var c in dockpane.Content.Reversed().ToArray())
+									target.Content.Insert(index, c);
+							}
 						}
 					}
+
+					// Restore the active content
+					DockContainer.ActiveContent = active;
 				}
 
 				Capture = false;
@@ -4611,9 +4793,14 @@ namespace pr.gui
 			}
 
 			/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
+			public void Add(IDockable dockable, int index, params EDockSite[] location)
+			{
+				Root.Add(dockable, index, location);
+			}
 			public void Add(IDockable dockable, params EDockSite[] location)
 			{
-				Root.Add(dockable, location);
+				var addr = location.Length != 0 ? location : new[]{EDockSite.Centre};
+				Add(dockable, int.MaxValue, addr);
 			}
 
 			/// <summary>Handler for when panes are added/removed from the tree</summary>
@@ -4778,7 +4965,7 @@ namespace pr.gui
 			{
 				DockContainer = dc;
 				PoppedOut = false;
-				PoppedOutSize = 200;
+				PoppedOutSize = 0.25f;
 
 				using (this.SuspendLayout(false))
 				{
@@ -4874,6 +5061,9 @@ namespace pr.gui
 			}
 			private Splitter m_split;
 
+			/// <summary>The site that this auto hide panel hides to</summary>
+			public EDockSite DockSite { get { return StripLocation; } }
+
 			/// <summary>
 			/// Get/Set the active content on this floating window. This will cause the pane that the content is on to also become active.
 			/// To change the active content in a pane without making the pane active, assign to the pane's ActiveContent property</summary>
@@ -4909,8 +5099,23 @@ namespace pr.gui
 			}
 			private bool m_impl_popped_out;
 
-			/// <summary>The size of the panel part of the auto hide panel when popped out</summary>
-			public int PoppedOutSize
+			/// <summary>The size of the panel part of the auto hide panel when popped out (in pixels).</summary>
+			public int PoppedOutSizePx
+			{
+				get
+				{
+					var sz = DockSite == EDockSite.Left || DockSite == EDockSite.Right ? DockContainer.Width : DockContainer.Height;
+					return (int)(PoppedOutSize >= 1f ? PoppedOutSize : sz * PoppedOutSize);
+				}
+				set
+				{
+					var sz = DockSite == EDockSite.Left || DockSite == EDockSite.Right ? DockContainer.Width : DockContainer.Height;
+					PoppedOutSize = PoppedOutSize >= 1f ? value : (float)value / sz; // Preserve fractional pop out size
+				}
+			}
+
+			/// <summary>The size of the panel part of the auto hide panel when popped out. If >= 1, interpreted as pixels, otherwise as a fraction of the dock container size</summary>
+			public float PoppedOutSize
 			{
 				get { return m_impl_popped_out_size; }
 				set
@@ -4921,12 +5126,16 @@ namespace pr.gui
 						Parent?.PerformLayout();
 				}
 			}
-			private int m_impl_popped_out_size;
+			private float m_impl_popped_out_size;
 
-			/// <summary>Add a dockable instance to this branch at the position described by 'location'.</summary>
-			public void Add(IDockable dockable, params EDockSite[] location)
+			/// <summary>Add a dockable instance to this auto hide panel. 'location' is ignored, all content is added to the centre site within an auto hide panel.</summary>
+			public void Add(IDockable dockable, int index, params EDockSite[] location)
 			{
-				Root.Add(dockable, location);
+				Root.Add(dockable, index, EDockSite.Centre);
+			}
+			public void Add(IDockable dockable)
+			{
+				Add(dockable, int.MaxValue);
 			}
 
 			/// <summary>The size of the tab strip part of this auto hide panel</summary>
@@ -4958,7 +5167,7 @@ namespace pr.gui
 			/// control is 'StripHeight', the panel part of the control draws over other controls.</summary>
 			public override Rectangle CalcBounds(Rectangle display_area)
 			{
-				var size = StripSize + (PoppedOut ? PoppedOutSize : 0);
+				var size = StripSize + (PoppedOut ? PoppedOutSizePx : 0);
 				if (size == 0)
 					return Rectangle.Empty;
 
@@ -4989,9 +5198,13 @@ namespace pr.gui
 						// after the auto hide panels have been laid out.
 						var prect = new RectangleRef(TrimArea(DockContainer.DisplayRectangle));
 
-						// Set the area that the splitter can move within and the size of the displayed Pane
+						// Set the visibility of the child controls.
+						// All content in auto hide panels should be in the centre dock site.
+						// We don't need the pane tab strip because the auto hide tab strip handles selecting content
 						Root.Visible = Split.Visible = PoppedOut;
 						Root.Child[EDockSite.Centre].DockPane.TabStripCtrl.Visible = false;
+
+						// Set the area that the splitter can move within and the size of the displayed Pane
 						if (PoppedOut)
 						{
 							// Note: the area is the area of the dock container, but in Parent space (where Parent is this auto hide panel)
@@ -5065,10 +5278,10 @@ namespace pr.gui
 			private void HandleResized(object sender, EventArgs e)
 			{
 				switch (StripLocation) {
-				case EDockSite.Left:   PoppedOutSize = Math.Max(0, Split.BoundsLT.Width + Split.BarWidth); break;
-				case EDockSite.Right:  PoppedOutSize = Math.Max(0, Split.BoundsRB.Width + Split.BarWidth); break;
-				case EDockSite.Top:    PoppedOutSize = Math.Max(0, Split.BoundsLT.Height + Split.BarWidth); break;
-				case EDockSite.Bottom: PoppedOutSize = Math.Max(0, Split.BoundsRB.Height + Split.BarWidth); break;
+				case EDockSite.Left:   PoppedOutSizePx = Math.Max(0, Split.BoundsLT.Width + Split.BarWidth); break;
+				case EDockSite.Right:  PoppedOutSizePx = Math.Max(0, Split.BoundsRB.Width + Split.BarWidth); break;
+				case EDockSite.Top:    PoppedOutSizePx = Math.Max(0, Split.BoundsLT.Height + Split.BarWidth); break;
+				case EDockSite.Bottom: PoppedOutSizePx = Math.Max(0, Split.BoundsRB.Height + Split.BarWidth); break;
 				}
 			}
 
@@ -5257,6 +5470,7 @@ namespace pr.gui
 			public const string Version = "version";
 			public const string Name = "name";
 			public const string Id = "id";
+			public const string Index = "index";
 			public const string DockPane = "pane";
 			public const string Contents = "contents";
 			public const string Tree = "tree";
@@ -5267,6 +5481,7 @@ namespace pr.gui
 			public const string Host = "host";
 			public const string Location = "location";
 			public const string Address = "address";
+			public const string AutoHide = "auto_hide";
 			public const string FloatingWindow = "floating_window";
 			public const string Bounds = "bounds";
 			public const string Pinned = "pinned";
@@ -5285,9 +5500,32 @@ namespace pr.gui
 		/// <summary>Create the docking functionality helper.</summary>
 		/// <param name="owner">The control that docking is being provided for</param>
 		/// <param name="persist_name">The name to use for this instance when saving the layout to XML</param>
-		public DockControl(Control owner, string persist_name, EDockSite default_dock_site = EDockSite.Centre)
-			:base(owner, persist_name, default_dock_site)
+		public DockControl(Control owner, string persist_name)
+			:base(owner, persist_name)
 		{}
+	}
+
+	/// <summary>A wrapper control that hosts a control and implements IDockable</summary>
+	public class Dockable :Control, IDockable
+	{
+		public Dockable(Control hostee, string persist_name)
+		{
+			SetStyle(ControlStyles.Selectable, false);
+			SetStyle(ControlStyles.ContainerControl, true);
+
+			DockControl = new DockControl(this, persist_name);
+
+			hostee.Dock = DockStyle.Fill;
+			Controls.Add(hostee);
+		}
+		protected override void Dispose(bool disposing)
+		{
+			DockControl = Util.Dispose(DockControl);
+			base.Dispose(disposing);
+		}
+
+		/// <summary>Implements docking functionality</summary>
+		public DockControl DockControl { [DebuggerStepThrough] get; private set; }
 	}
 
 	#region Event Args
@@ -5324,21 +5562,25 @@ namespace pr.gui
 		public DockContainer.DockPane PaneNew { get; private set; }
 	}
 
-	/// <summary>Args for when IDockables are added or removed from a dock container</summary>
-	public class ContentChangedEventArgs :EventArgs
+	/// <summary>Args for when dockables are moved within the dock container</summary>
+	public class DockableMovedEventArgs :EventArgs
 	{
-		public ContentChangedEventArgs(EChg what, IDockable who)
+		public DockableMovedEventArgs(EAction action, IDockable who)
 		{
-			Change = what;
-			Content = who;
+			Action = action;
+			Dockable = who;
 		}
 
-		/// <summary>The type of change that occurred</summary>
-		public EChg Change { get; private set; }
-		public enum EChg { Adding, Added, Removing, Removed }
+		/// <summary>What happened to the dockable</summary>
+		public EAction Action { get; private set; }
+		public enum EAction
+		{
+			Added   = DockContainer.TreeChangedEventArgs.EAction.Added,
+			Removed = DockContainer.TreeChangedEventArgs.EAction.Removed,
+		}
 
-		/// <summary>The content item involved in the change</summary>
-		public IDockable Content { get; private set; }
+		/// <summary>The dockable that is being added or removed</summary>
+		public IDockable Dockable { get; private set; }
 	}
 
 	#endregion

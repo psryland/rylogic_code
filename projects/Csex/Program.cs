@@ -112,15 +112,15 @@ namespace Csex
 			{
 				switch (option.ToLowerInvariant())
 				{
-				case "-gencode":  m_cmd = new GenActivationCode(); break;
-				case "-signfile": m_cmd = new SignFile(); break;
+				case "-gencode":                 m_cmd = new GenActivationCode(); break;
+				case "-signfile":                m_cmd = new SignFile(); break;
 				case "-find_assembly_conflicts": m_cmd = new FindAssemblyConflicts(); break;
-				case "-expand_template": m_cmd = new MarkupExpand(); break;
-				case "-patternui": m_cmd = new PatternUI(); break;
-				case "-find_duplicate_files": m_cmd = new FindDuplicateFiles(); break;
-				case "-showexif": m_cmd = new ShowExif(); break;
-				case "-showtree": m_cmd = new ShowTree(); break;
-				case "-showbase64": m_cmd = new ShowBase64(); break;
+				case "-expand_template":         m_cmd = new MarkupExpand(); break;
+				case "-patternui":               m_cmd = new PatternUI(); break;
+				case "-find_duplicate_files":    m_cmd = new FindDuplicateFiles(); break;
+				case "-showexif":                m_cmd = new ShowExif(); break;
+				case "-showtree":                m_cmd = new ShowTree(); break;
+				case "-showbase64":              m_cmd = new ShowBase64(); break;
 				// NEW_COMMAND - handle the command
 				}
 			}

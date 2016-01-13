@@ -11,7 +11,9 @@ namespace Csex
 		/// <summary>Display help information in the case of an invalid command line</summary>
 		public abstract void ShowHelp(Exception ex = null);
 
-		/// <summary>Handle a command line option.</summary>
+		/// <summary>
+		/// Handle a command line option.
+		/// Handles the /?, -h, and -help commands</summary>
 		public virtual bool CmdLineOption(string option, string[] args, ref int arg)
 		{
 			switch (option)

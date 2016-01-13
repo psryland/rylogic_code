@@ -324,7 +324,7 @@ namespace pr.extn
 			{
 				this[typeof(XElement)] = (elem, type, ctor) =>
 					{
-						return elem;
+						return elem.Elements().FirstOrDefault();
 					};
 				this[typeof(string)] = (elem, type, ctor) =>
 					{

@@ -800,19 +800,19 @@ namespace pr
 				Write<ChunkHeader>(out, index);
 
 				// Texture sub chunks
-				for (auto& index : index.m_chunks)
+				for (auto& idx : index.m_chunks)
 				{
-					switch (index.m_id)
+					switch (idx.m_id)
 					{
 					case EChunkId::TexFilepath:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							WriteCStr(out, tex.m_filepath);
 							break;
 						}
 					case EChunkId::TexTiling:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<u32>(out, tex.m_tiling);
 							break;
 						}
@@ -831,19 +831,19 @@ namespace pr
 
 				// Material sub chunks
 				auto tex = std::begin(mat.m_tex_diffuse);
-				for (auto& index : index.m_chunks)
+				for (auto& idx : index.m_chunks)
 				{
-					switch (index.m_id)
+					switch (idx.m_id)
 					{
 					case EChunkId::DiffuseColour:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<Vec4>(out, {mat.m_diffuse.r, mat.m_diffuse.g, mat.m_diffuse.b, mat.m_diffuse.a});
 							break;
 						}
 					case EChunkId::DiffuseTexture:
 						{
-							WriteTexture(out, index, *tex++);
+							WriteTexture(out, idx, *tex++);
 							break;
 						}
 					}
@@ -857,46 +857,46 @@ namespace pr
 				Write<ChunkHeader>(out, index);
 
 				// Mesh sub chunks
-				for (auto& index : index.m_chunks)
+				for (auto& idx : index.m_chunks)
 				{
-					switch (index.m_id)
+					switch (idx.m_id)
 					{
 					case EChunkId::MeshName:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							WriteCStr(out, mesh.m_name);
 							break;
 						}
 					case EChunkId::MeshBBox:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<BBox>(out, mesh.m_bbox);
 							break;
 						}
 					case EChunkId::MeshVertices:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<u32>(out, checked_cast<u32>(mesh.m_verts.size()));
 							Write<Vert>(out, mesh.m_verts.data(), mesh.m_verts.size());
 							break;
 						}
 					case EChunkId::MeshIndices:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<u32>(out, checked_cast<u32>(mesh.m_idx16.size()));
 							Write<u16>(out, mesh.m_idx16.data(), mesh.m_idx16.size());
 							break;
 						}
 					case EChunkId::MeshIndices32:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<u32>(out, checked_cast<u32>(mesh.m_idx32.size()));
 							Write<u32>(out, mesh.m_idx32.data(), mesh.m_idx32.size());
 							break;
 						}
 					case EChunkId::MeshNuggets:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							Write<u32>(out, checked_cast<u32>(mesh.m_nugget.size()));
 							Write<Nugget>(out, mesh.m_nugget.data(), mesh.m_nugget.size());
 							break;
@@ -909,24 +909,24 @@ namespace pr
 			template <typename TSrc> void WriteScene(TSrc& out, ChunkIndex const& index, Scene const& scene)
 			{
 				Write<ChunkHeader>(out, index);
-				for (auto& index : index.m_chunks)
+				for (auto& idx : index.m_chunks)
 				{
-					switch (index.m_id)
+					switch (idx.m_id)
 					{
 					case EChunkId::Materials:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							auto mat = std::begin(scene.m_materials);
-							for (auto& index : index.m_chunks)
-								WriteMaterial(out, index, *mat++);
+							for (auto& i : idx.m_chunks)
+								WriteMaterial(out, i, *mat++);
 							break;
 						}
 					case EChunkId::Meshes:
 						{
-							Write<ChunkHeader>(out, index);
+							Write<ChunkHeader>(out, idx);
 							auto mesh = std::begin(scene.m_meshes);
-							for (auto& index : index.m_chunks)
-								WriteMesh(out, index, *mesh++);
+							for (auto& i : idx.m_chunks)
+								WriteMesh(out, i, *mesh++);
 							break;
 						}
 					}

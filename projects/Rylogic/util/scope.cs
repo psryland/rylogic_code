@@ -33,7 +33,7 @@ namespace pr.util
 		}
 
 		/// <summary>Allow subclasses to inherit without having to forward the on_enter/on_exit constructor</summary>
-		protected Scope() {}
+		public Scope() {}
 		
 		/// <summary>Use 'Create'</summary>
 		protected Scope(Action on_enter, Action on_exit)

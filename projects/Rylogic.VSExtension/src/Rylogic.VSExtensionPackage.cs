@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 using System.ComponentModel.Design;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
+using System.ComponentModel.Composition;
+using Microsoft.VisualStudio.Text.Outlining;
 
 namespace Rylogic.VSExtension
 {
@@ -47,11 +49,14 @@ namespace Rylogic.VSExtension
 			}
 		}
 
-		/// <summary>Return the VS service of type 'T'</summary>
-		public T GetService<T>()
+		/// <summary>Return the VS service of type 'TService'</summary>
+		public object GetService<TService>()
 		{
-			return (T)GetService(typeof(T));
+			// Note: the return value of 'GetService' is not always cast-able to 'TService'
+			return GetService(typeof(TService));
 		}
+
+		[Import] public IOutliningManagerService OutliningManagerService;
 
 		/// <summary>Return a dialog page</summary>
 		public T GetDialogPage<T>() where T :DialogPage

@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
-using System.Xml.Linq;
+using pr.extn;
 using pr.gui;
 using pr.util;
 
@@ -36,25 +36,18 @@ namespace TestCS
 			StartPosition = FormStartPosition.Manual;
 			Location = new Point(2150,150);
 
-			//m_dock.ActiveContentChanged += (s,a) => Debug.WriteLine("ActiveContentChanged: {0} -> {1}".Fmt(a.ContentOld?.DockControl.PersistName, a.ContentNew?.DockControl.PersistName));
-			//m_dock.ActivePaneChanged += (s,a) => Debug.WriteLine("ActivePaneChanged: {0} -> {1}".Fmt(a.PaneOld?.CaptionText, a.PaneNew?.CaptionText));
-			//m_dock.ContentChanged += (s,a) =>
-			//{
-			//	Debug.WriteLine("ContentChanged: {0} {1}".Fmt(a.Change, a.Content.DockControl.PersistName));
-			//	a.Content.DockControl.DockStateChanged += (ss,aa) =>
-			//	{
-			//		Debug.WriteLine("ContentDockStateChanged: {0} changed from {1} -> {2}".Fmt(ss.As<Dockable>().DockControl.PersistName, aa.StateOld, aa.StateNew));
-			//	};
-			//};
-			//m_dock.PanesChanged += (s,a) =>
-			//{
-			//	Debug.WriteLine("PanesChanged: {0} {1}".Fmt(a.Change, a.Pane?.CaptionText));
-			//	if (a.Change == PanesChangedEventArgs.EChg.Added)
-			//	{
-			//		a.Pane.ContentChanged += (ss,aa) => Debug.WriteLine("PaneContentChaged: {0} {1}".Fmt(aa.Change, aa.Content?.DockControl.PersistName));
-			//		a.Pane.ActivatedChanged += (ss,aa) => Debug.WriteLine("PaneActivatedChanged: {0} is {1}".Fmt(ss.As<DockPane>().CaptionText, ss.As<DockPane>().Activated ? "Active" : "Inactive"));
-			//	}
-			//};
+			m_dock.ActiveContentChanged += (s,a) =>
+			{
+				Debug.WriteLine("ActiveContentChanged: {0} -> {1}".Fmt(a.ContentOld?.DockControl.PersistName, a.ContentNew?.DockControl.PersistName));
+			};
+			m_dock.ActivePaneChanged += (s,a) =>
+			{
+				Debug.WriteLine("ActivePaneChanged: {0} -> {1}".Fmt(a.PaneOld?.CaptionText, a.PaneNew?.CaptionText));
+			};
+			m_dock.DockableMoved += (s,a) =>
+			{
+				Debug.WriteLine("DockableMoved: {0} {1}".Fmt(a.Action, a.Dockable.DockControl.PersistName));
+			};
 
 			var bs = BorderStyle.None;//FixedSingle;
 			var d0 = new Dockable("Dockable 0") { BorderStyle = bs };
