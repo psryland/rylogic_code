@@ -23,7 +23,7 @@ namespace pr
 			ScriptEditorDlg(ScriptEditorDlg const&) = delete;
 			ScriptEditorDlg& operator=(ScriptEditorDlg const&) = delete;
 
-			// Implicitly convertable to HWND
+			// Implicitly convertible to HWND
 			virtual operator HWND() const { return m_dlg->operator HWND(); }
 
 			// Hide the window instead of closing

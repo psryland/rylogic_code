@@ -13,6 +13,7 @@ using System.Linq;
 using System.Windows.Forms;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.extn
 {
@@ -709,44 +710,107 @@ namespace pr.extn
 		}
 
 		/// <summary>Data used for dragging rows around</summary>
-		private class DGV_DragDropData
+		private class DGV_DragDropData :IDisposable
 		{
-			public DataGridViewRow Row { get; private set; }
-			public int GrabX { get; private set; }
-			public int GrabY { get; private set; }
-
-			/// <summary>The rows with the indicator line drawn on them, last update</summary>
-			public int Idx0 { get; set; }
-			public int Idx1 { get; set; }
-
 			public DGV_DragDropData(DataGridViewRow row, int x, int y)
 			{
 				Row = row;
 				GrabX = x;
 				GrabY = y;
-				Idx0 = -1;
-				Idx1 = -1;
+				Indicator = new IndicatorCtrl(row.DataGridView.TopLevelControl as Form);
+			}
+			public void Dispose()
+			{
+				Indicator?.Close();
+				Indicator = null;
+			}
+
+			/// <summary>The row being dragged</summary>
+			public DataGridViewRow Row { get; private set; }
+
+			/// <summary>The pixel location of where the row was grabbed (in DGV space)</summary>
+			public int GrabX { get; private set; }
+			public int GrabY { get; private set; }
+
+			/// <summary>A form used to indicate where the row will be inserted</summary>
+			public IndicatorCtrl Indicator { get; private set; }
+			public class IndicatorCtrl :Form
+			{
+				public IndicatorCtrl(Form owner)
+				{
+					SetStyle(ControlStyles.Selectable, false);
+					FormBorderStyle = FormBorderStyle.None;
+					StartPosition = FormStartPosition.Manual;
+					ShowInTaskbar = false;
+					Size = new Size(10,10);
+					Ofs = new Size(10, 5);
+					Owner = owner;
+					Region = GfxExtensions.MakeRegion(0,0, Ofs.Width,Ofs.Height, 0,Ofs.Height*2);
+					CreateHandle();
+				}
+				protected override CreateParams CreateParams
+				{
+					get
+					{
+						var cp = base.CreateParams;
+						cp.ClassStyle |= Win32.CS_DROPSHADOW;
+						cp.Style &= ~Win32.WS_VISIBLE;
+						cp.ExStyle |= Win32.WS_EX_NOACTIVATE;// | Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT;
+						return cp;
+					}
+				}
+				protected override bool ShowWithoutActivation
+				{
+					get { return true; }
+				}
+				protected override void OnPaint(PaintEventArgs e)
+				{
+					base.OnPaint(e);
+					e.Graphics.FillRectangle(Brushes.DeepSkyBlue, ClientRectangle);
+				}
+				public new Point Location
+				{
+					get { return base.Location + Ofs; }
+					set { base.Location = value - Ofs; }
+				}
+				public Size Ofs { get; private set; }
 			}
 		}
 
 		/// <summary>
 		/// Begin a row drag-drop operation on the grid.
-		/// Attach this method to the MouseDown event on the grid.
-		/// Note: Do not attach to MouseMove as well, DoDragDrop handles mouse move
+		/// Attach this method to the 'MouseDown' event on the grid.
+		/// Note: Do not attach to 'MouseMove' as well, DoDragDrop handles mouse move
 		/// Also, attach 'DragDrop_DoDropMoveRow' to the 'DoDrop' handler and set AllowDrop = true.
 		/// See the 'DragDrop' class for more info</summary>
 		public static void DragDrop_DragRow(object sender, MouseEventArgs e)
 		{
 			var grid = (DataGridView)sender;
 			if (!(grid.DataSource is IList))
-				throw new InvalidOperationException("Drag-drop requires a grid with a data source convertable to an IList");
+				throw new InvalidOperationException("Drag-drop requires a grid with a data source convertible to an IList");
+
+			var row_count = grid.RowCount - (grid.AllowUserToAddRows ? 1 : 0);
 
 			// Drag by grabbing row headers
-			var hit = grid.HitTest(e.X, e.Y);
-			if (hit.Type == DataGridViewHitTestType.RowHeader && hit.RowIndex >= 0 && hit.RowIndex < grid.RowCount)
+			// Only drag if:
+			//  A data row header is hit (i.e. not the 'add' row, or other parts of the grid)
+			//  The resize cursor isn't visible
+			//  No control keys are down
+			var grid_pt = grid.PointToClient(Control.MousePosition);
+			var hit = grid.HitTest(grid_pt.X, grid_pt.Y);
+			if (hit.Type == DataGridViewHitTestType.RowHeader &&
+				hit.RowIndex >= 0 && hit.RowIndex < row_count &&
+				grid.Cursor != Cursors.SizeNS &&
+				Control.ModifierKeys == Keys.None)
 			{
-				var data = new DGV_DragDropData(grid.Rows[hit.RowIndex], e.X, e.Y);
-				grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
+				// The grid.MouseDown event calls CellMouseDown (and others) after the drag/drop operation has
+				// finished. A consequence is the cell that the drag started from gets 'clicked' causing the selection
+				// to change back to that cell. BeginInvoke ensures the drag happens after any selection changes.
+				grid.BeginInvoke(() =>
+				{
+					using (var data = new DGV_DragDropData(grid.Rows[hit.RowIndex], grid_pt.X, grid_pt.Y))
+						grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
+				});
 			}
 		}
 
@@ -758,7 +822,7 @@ namespace pr.extn
 		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{
 			// This method could be hooked up to a pr.util.DragDrop so the
-			// events could come from anything. Only accept dgvs
+			// events could come from anything. Only accept DGVs
 			var grid = sender as DataGridView;
 			if (grid == null || args == null)
 				return false;
@@ -769,17 +833,20 @@ namespace pr.extn
 
 			// Get the drag data
 			var data = (DGV_DragDropData)args.Data.GetData(typeof(DGV_DragDropData));
-			
+			var row_count = grid.RowCount - (grid.AllowUserToAddRows ? 1 : 0);
+
 			// Check the mouse has moved enough to start dragging
-			var pt = grid.PointToClient(new Point(args.X, args.Y)); // Find where the mouse is over the grid
+			var scn_pt = new Point(args.X, args.Y);
+			var pt = grid.PointToClient(scn_pt); // Find where the mouse is over the grid
 			var distsq = Maths.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
 			if (distsq < 25)
 				return false;
 
 			// Set the drop effect
 			var hit = grid.HitTest(pt.X, pt.Y);
-			args.Effect = hit.Type == DataGridViewHitTestType.RowHeader &&
-				((hit.RowIndex >= 0 && hit.RowIndex < data.Row.Index) || (hit.RowIndex > data.Row.Index && hit.RowIndex < grid.RowCount))
+			args.Effect =
+				hit.Type == DataGridViewHitTestType.RowHeader &&
+				hit.RowIndex >= 0 && hit.RowIndex < row_count && hit.RowIndex != data.Row.Index
 				? DragDropEffects.Move : DragDropEffects.None;
 			if (args.Effect != DragDropEffects.Move)
 				return true;
@@ -790,101 +857,51 @@ namespace pr.extn
 
 			// Find the two rows on either side of the line
 			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
-			var idx0 = over_half ? hit_idx : hit_idx - 1;
-			var idx1 = over_half ? hit_idx + 1 : hit_idx;
+			var idx = over_half ? hit_idx + 1 : hit_idx;
 
-			// If this is not the actual drop then keep returning true until the drop happens
+			// If this is not the actual drop then just update the indicator position
 			if (mode != DragDrop.EDrop.Drop)
 			{
-				grid.RowPostPaint -= DragDrop_LinePainter;
-				grid.RowPostPaint += DragDrop_LinePainter;
-
-				// Only invalidate rows when idx0,idx1 change
-				if (idx0 != data.Idx0)
-				{
-					if (grid.WithinRows(data.Idx0)) grid.InvalidateRow(data.Idx0);
-					if (grid.WithinRows(idx0     )) grid.InvalidateRow(idx0);
-					data.Idx0 = idx0;
-				}
-				if (idx1 != data.Idx1)
-				{
-					if (grid.WithinRows(data.Idx1)) grid.InvalidateRow(data.Idx1);
-					if (grid.WithinRows(idx1     )) grid.InvalidateRow(idx1);
-					data.Idx1 = idx1;
-				}
+				// Ensure the indicator is visible
+				data.Indicator.Visible = true;
+				data.Indicator.Location = grid.PointToScreen(new Point(0, hit.RowY + (over_half ? hit_row.Height : 0)));
 
 				// Auto scroll when at the first or last displayed row
-				if (idx0 >= grid.FirstDisplayedScrollingRowIndex + grid.DisplayedRowCount(false) && idx0 < grid.RowCount - 1)
-					grid.FirstDisplayedScrollingRowIndex++;
-				if (idx1 <= grid.FirstDisplayedScrollingRowIndex && idx1 > 0)
+				if (idx <= grid.FirstDisplayedScrollingRowIndex && idx > 0)
 					grid.FirstDisplayedScrollingRowIndex--;
+				if (idx >= grid.FirstDisplayedScrollingRowIndex + grid.DisplayedRowCount(false) && idx < row_count)
+					grid.FirstDisplayedScrollingRowIndex++;
 			}
 
 			// Otherwise, this is the drop
 			else
 			{
-				grid.RowPostPaint -= DragDrop_LinePainter;
-
-				int grab_idx = data.Row.Index;
-				if (over_half) ++hit_idx;
-
-				// Insert 'grab_idx' at 'drop_idx'
-				var list = grid.DataSource as IList;
-				if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
-				if (grab_idx != hit_idx)
+				using (grid.SuspendLayout(false))
 				{
-					if (hit_idx > grab_idx)
-						--hit_idx;
+					var grab_idx = data.Row.Index;
 
-					var tmp = list[grab_idx];
-					list.RemoveAt(grab_idx);
-					list.Insert(hit_idx, tmp);
+					// Insert 'grab_idx' at 'drop_idx'
+					var list = grid.DataSource as IList;
+					if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
+					if (grab_idx != idx)
+					{
+						if (idx > grab_idx)
+							--idx;
+
+						var tmp = list[grab_idx];
+						list.RemoveAt(grab_idx);
+						list.Insert(idx, tmp);
+					}
+
+					// If the list is a binding source, set the current position to the item just moved
+					var cm = grid.DataSource as ICurrencyManagerProvider;
+					if (cm != null)
+						cm.CurrencyManager.Position = idx;
+
+					grid.Invalidate(true);
 				}
-
-				// If the list is a binding source, set the current position to the item just moved
-				var bs = grid.DataSource as BindingSource;
-				if (bs != null)
-					bs.Position = hit_idx;
-
-				// Invalidate the hit rows to ensure repainting
-				if (data.Idx0 >= 0 && data.Idx0 < grid.RowCount) grid.InvalidateRow(data.Idx0);
-				if (data.Idx1 >= 0 && data.Idx1 < grid.RowCount) grid.InvalidateRow(data.Idx1);
-				if (idx0 >= 0 && idx0 < grid.RowCount)           grid.InvalidateRow(idx0);
-				if (idx1 >= 0 && idx1 < grid.RowCount)           grid.InvalidateRow(idx1);
 			}
 			return true;
-		}
-
-		/// <summary>A handler used in DGV drag/drop operations when dragging rows around</summary>
-		private static void DragDrop_LinePainter(object sender, DataGridViewRowPostPaintEventArgs args)
-		{
-			var grid = sender.As<DataGridView>();
-			var pt = grid.PointToClient(Control.MousePosition);
-
-			// Only paint on the rows the mouse is over
-			var hit = grid.HitTest(pt.X, pt.Y);
-			if (hit.Type != DataGridViewHitTestType.RowHeader || hit.RowIndex < 0 || hit.RowIndex >= grid.RowCount)
-				return;
-
-			// The row the mouse is over
-			var hit_idx = hit.RowIndex;
-			var hit_row = grid.Rows[hit_idx];
-
-			// Find the two rows on either side of the line
-			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
-			var idx0 = over_half ? hit_idx : hit_idx - 1;
-			var idx1 = over_half ? hit_idx + 1 : hit_idx;
-
-			// Only need to draw on the row the mouse is over
-			float Y = 0f;
-			if      (args.RowIndex == idx0) Y = args.RowBounds.Bottom - 1f;
-			else if (args.RowIndex == idx1) Y = args.RowBounds.Top    + 1f;
-			else return;
-
-			// Draw a line to show where the drop would go
-			const float line_thickness = 2f;
-			using (var pen = new Pen(Color.DeepSkyBlue, line_thickness))
-				args.Graphics.DrawLine(pen, args.RowBounds.Left, Y, args.RowBounds.Right, Y);
 		}
 
 		/// <summary>Temporarily remove the data source from this grid</summary>

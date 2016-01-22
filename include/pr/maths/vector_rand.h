@@ -106,7 +106,7 @@ namespace pr
 	
 	inline m4x4 Random4x4(Rnd& rnd, float min_value, float max_value)
 	{
-		m4x4 m;
+		m4x4 m = {};
 		m.x.set(rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value));
 		m.y.set(rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value));
 		m.z.set(rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value), rnd.fltr(min_value, max_value));

@@ -52,7 +52,7 @@ namespace pr
 			Window(Renderer& rdr, WndSettings const& settings);
 			~Window();
 
-			// Return the dx device
+			// Return the DX device
 			D3DPtr<ID3D11Device> Device() const;
 
 			// Return the immediate device context
@@ -71,6 +71,9 @@ namespace pr
 
 			// Binds the render target and depth buffer to the OM
 			void RestoreRT();
+
+			// Binds the given render target and depth buffer views to the OM
+			void SetRT(D3DPtr<ID3D11RenderTargetView>& rtv, D3DPtr<ID3D11DepthStencilView>& dsv);
 
 			// Set the viewport to all of the render target
 			void RestoreFullViewport();

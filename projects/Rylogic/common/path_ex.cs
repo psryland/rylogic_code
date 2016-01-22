@@ -112,31 +112,36 @@ namespace pr.common
 		/// <summary>Return the directory part of 'path' (or empty string)</summary>
 		public static string Directory(string path)
 		{
-			return Path.GetDirectoryName(path) ?? string.Empty;
+			try { return Path.GetDirectoryName(path) ?? string.Empty; }
+			catch { return string.Empty; }
 		}
 
 		/// <summary>Return the filename part of 'path' (or empty string)</summary>
 		public static string FileName(string path)
 		{
-			return Path.GetFileName(path) ?? string.Empty;
+			try { return Path.GetFileName(path) ?? string.Empty; }
+			catch { return string.Empty; }
 		}
 
 		/// <summary>Return the file title part of 'path' (or empty string)</summary>
 		public static string FileTitle(string path)
 		{
-			return Path.GetFileNameWithoutExtension(path) ?? string.Empty;
+			try { return Path.GetFileNameWithoutExtension(path) ?? string.Empty; }
+			catch { return string.Empty; }
 		}
 
 		/// <summary>Return the file extension of 'path' (or empty string)</summary>
 		public static string Extn(string path)
 		{
-			return Path.GetExtension(path) ?? string.Empty;
+			try { return Path.GetExtension(path) ?? string.Empty; }
+			catch { return string.Empty; }
 		}
 
 		/// <summary>Returns the drive (i.e. root) of 'path' (or empty string)</summary>
 		public static string Drive(string path)
 		{
-			return Path.GetPathRoot(path) ?? string.Empty;
+			try { return Path.GetPathRoot(path) ?? string.Empty; }
+			catch { return string.Empty; }
 		}
 
 		/// <summary>Return a path consisting of the concatenation of path fragments</summary>

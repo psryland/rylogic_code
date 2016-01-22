@@ -21,6 +21,7 @@ namespace TestCS
 				List.TopIndex = List.Items.Count - 1;
 			}
 
+			#region Overrides
 			protected override void   OnAllowUserToAddRowsChanged(EventArgs e)                                         { Log("OnAllowUserToAddRowsChanged             "); base.OnAllowUserToAddRowsChanged             (e);}
 			protected override void   OnAllowUserToDeleteRowsChanged(EventArgs e)                                      { Log("OnAllowUserToDeleteRowsChanged          "); base.OnAllowUserToDeleteRowsChanged          (e);}
 			protected override void   OnAllowUserToOrderColumnsChanged(EventArgs e)                                    { Log("OnAllowUserToOrderColumnsChanged        "); base.OnAllowUserToOrderColumnsChanged        (e);}
@@ -168,6 +169,7 @@ namespace TestCS
 			protected override void   OnVisibleChanged(EventArgs e)                                                    { Log("OnVisibleChanged                        "); base.OnVisibleChanged                        (e);}
 			protected override void   OnDataError(bool displayErrorDialogIfNoHandler, DataGridViewDataErrorEventArgs e){ Log("OnDataError                             "); base.OnDataError                             (displayErrorDialogIfNoHandler, e);}
 			protected override void   OnRowStateChanged(int rowIndex, DataGridViewRowStateChangedEventArgs e)          { Log("OnRowStateChanged                       "); base.OnRowStateChanged                       (rowIndex, e);}
+			#endregion
 		}
 		private enum EOptions
 		{
@@ -193,16 +195,34 @@ namespace TestCS
 		}
 
 		private BindingSource<Record> m_bs;
+		private DragDrop m_dd;
+		private SplitContainer m_split;
+		private ListBox m_events;
+		private DGV m_grid;
 
 		public DgvUI()
 		{
 			InitializeComponent();
+
+			// Grid data
 			m_bs = new BindingSource<Record>{DataSource = new BindingListEx<Record>()};
 			for (int i = 0; i != 10; ++i)
 				m_bs.Add(new Record("Name"+i, i, (EOptions)(i % 3)));
 
-			m_grid.List = m_events;
+			// Drag drop
+			m_dd = new DragDrop(m_grid);
+			m_dd.DoDrop += DataGridViewExtensions.DragDrop_DoDropMoveRow;
+			m_grid.MouseDown += DataGridViewExtensions.DragDrop_DragRow;
 
+			// log list
+			m_events.ContextMenuStrip = new ContextMenuStrip();
+			m_events.ContextMenuStrip.Items.Add2("Log DGV events", null, (s,a) =>
+			{
+				m_grid.List = m_grid.List == null ? m_events : null;
+				s.As<ToolStripMenuItem>().Checked = m_grid.List != null;
+			});
+
+			m_grid.AllowDrop = true;
 			m_grid.AutoGenerateColumns = false;
 			m_grid.AllowUserToAddRows = true;
 			m_grid.AllowUserToDeleteRows = true;
@@ -235,7 +255,6 @@ namespace TestCS
 			m_grid.SizeChanged += DataGridViewExtensions.FitToDisplayWidth;
 			m_grid.ColumnWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
 			m_grid.RowHeadersWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
-
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -243,9 +262,6 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
-		private SplitContainer m_split;
-		private ListBox m_events;
-		private DGV m_grid;
 
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;

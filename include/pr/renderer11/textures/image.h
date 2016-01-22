@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_TEXTURES_IMAGE_H
-#define PR_RDR_TEXTURES_IMAGE_H
 
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/util.h"
@@ -26,7 +24,7 @@ namespace pr
 			// (dimensions should be m_row_pitch x m_slice_pitch, use pr::rdr::Pitch())
 			static Image make(size_t w, size_t h, void const* pixels = nullptr, DXGI_FORMAT fmt = DXGI_FORMAT_R8G8B8A8_UNORM)
 			{
-				Image img;
+				Image img = {};
 				img.m_dim.set(w, h);
 				img.m_pitch = pr::rdr::Pitch(img.m_dim, fmt);
 				img.m_format = fmt;
@@ -36,5 +34,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

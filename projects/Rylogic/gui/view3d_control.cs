@@ -10,6 +10,7 @@ using pr.extn;
 using pr.gfx;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
@@ -30,6 +31,7 @@ namespace pr.gui
 		public View3dControl(bool gdi_compat)
 		{
 			if (this.IsInDesignMode()) return;
+			SetStyle(ControlStyles.Selectable, false);
 
 			m_impl_view3d = new View3d();
 			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, (ctx,msg) => OnReportError(new ReportErrorEventArgs(msg)));
@@ -374,10 +376,12 @@ namespace pr.gui
 		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (Window == null || this.IsInDesignMode())
-				base.OnPaint(e);
-			else
+			if (Window != null && !this.IsInDesignMode())
+			{
 				Render();
+				Win32.ValidateRect(Handle, IntPtr.Zero);
+			}
+			base.OnPaint(e);
 		}
 
 		/// <summary>Update the size of the control whenever we're added to a new parent</summary>

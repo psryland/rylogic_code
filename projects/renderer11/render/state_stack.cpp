@@ -82,7 +82,10 @@ namespace pr
 				}
 				else
 				{
-					m_dc->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
+					ID3D11Buffer* buffers[] = {nullptr};
+					UINT          strides[] = {0};
+					UINT          offsets[] = {0};
+					m_dc->IASetVertexBuffers(0, 1, buffers, strides, offsets);
 					m_dc->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
 				}
 			}
@@ -171,7 +174,7 @@ namespace pr
 				if (s) s->Setup(m_dc, pending);
 		}
 
-		// Setup textures and samplers
+		// Set up textures and samplers
 		void StateStack::SetupTextures(DeviceState& current, DeviceState& pending, bool force)
 		{
 			// Bind the diffuse texture

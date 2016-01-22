@@ -910,7 +910,7 @@ HRESULT SaveToWICFile( const Image& image, DWORD flags, REFGUID guidContainerFor
     return S_OK;
 }
 
-HRESULT SaveToWICFile( const Image* images, size_t nimages, DWORD flags, REFGUID guidContainerFormat, LPCWSTR szFile )
+HRESULT SaveToWICFile( _In_count_(nimages) const Image* images, _In_ size_t nimages, _In_ DWORD flags, _In_ REFGUID guidContainerFormat, _In_z_ LPCWSTR szFile )
 {
     if ( !szFile || !images || nimages == 0 )
         return E_INVALIDARG;

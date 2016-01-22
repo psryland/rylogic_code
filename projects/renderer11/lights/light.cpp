@@ -81,7 +81,8 @@ namespace pr
 
 		// Check the hash values are correct
 		#if PR_DBG_RDR
-		static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>([&](wchar_t const* s) { return pr::script::Reader::HashKeyword(s, false); });
+		auto hash = [](wchar_t const* s) { return pr::script::Reader::StaticHashKeyword(s, false); };
+		static bool s_light_kws_checked = pr::CheckHashEnum<ELightKW,wchar_t>(hash);
 		#endif
 
 		// Get/Set light settings

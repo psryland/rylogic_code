@@ -126,10 +126,10 @@ namespace RyLogViewer
 				var values = new List<Pair>();
 				bool partial_import = false;
 
-				// Load from csv
-				if (string.CompareOrdinal(extn, "csv") == 0)
+				// Load from CSV
+				if (string.Compare(extn, "csv", true) == 0)
 				{
-					var csv = CSVData.Load(dg.FileName);
+					var csv = CSVData.Load(dg.FileName, ignore_comment_rows:false);
 					foreach (var row in csv.Rows)
 					{
 						partial_import |= row.Count != 0 && row.Count != 2;

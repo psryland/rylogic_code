@@ -103,6 +103,8 @@ namespace view3d
 			m_origin_point.m_model = pr::rdr::ModelGenerator<>::Mesh(m_rdr, pr::rdr::EPrim::LineList, PR_COUNTOF(verts), PR_COUNTOF(lines), verts, lines, PR_COUNTOF(colours80), colours80, 0, 0);
 			m_origin_point.m_i2w   = pr::m4x4Identity;
 		}
+		Window(Window const&) = delete;
+		Window& operator=(Window const&) = delete;
 		~Window()
 		{
 			if (m_error_cb.empty()) throw std::exception("Error callback stack is in consistent. Number of pushes != number of pops");
@@ -175,9 +177,5 @@ namespace view3d
 		{
 			::InvalidateRect(m_hwnd, rect, erase);
 		}
-
-	private:
-		Window(Window const&) = delete;
-		Window& operator=(Window const&) = delete;
 	};
 }

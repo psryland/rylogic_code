@@ -268,7 +268,7 @@ namespace pr
 		{
 			// Chain list heads should not be copied unless empty,
 			// otherwise you'll end up with chains containing more than one head.
-			head() {}
+			head() { __analysis_assume(m_next != nullptr && m_prev != nullptr); }
 			head(head const&) :link<Type, GroupId>() { PR_ASSERT(PR_DBG, false, ""); }
 			head& operator = (head const& rhs)       { PR_ASSERT(PR_DBG, false, ""); return *this; }
 

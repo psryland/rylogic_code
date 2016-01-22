@@ -104,14 +104,20 @@ namespace pr
 				m_dc = dc;
 
 				// Do not wait means the caller expects the map to potentially not to work
-				HRESULT hr = m_dc->Map(res.m_ptr, sub, map_type, flags, this);
-				if ((flags&D3D11_MAP_FLAG_DO_NOT_WAIT) == 0) pr::Throw(hr);
-
-				m_res    = res;
-				m_sub    = sub;
-				m_stride = stride;
-				m_range  = range;
-				return pr::Succeeded(hr);
+				auto hr = m_dc->Map(res.m_ptr, sub, map_type, flags, this);
+				if (Failed(hr))
+				{
+					if (!AllSet(flags,D3D11_MAP_FLAG_DO_NOT_WAIT)) pr::Throw(hr);
+					return false;
+				}
+				else
+				{
+					m_res    = res;
+					m_sub    = sub;
+					m_stride = stride;
+					m_range  = range;
+					return true;
+				}
 			}
 			void Unmap()
 			{

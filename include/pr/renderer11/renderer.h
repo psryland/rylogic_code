@@ -19,8 +19,6 @@
 //  - Try that thing you read about weighted alpha by screen depth
 
 #pragma once
-#ifndef PR_RDR_RENDERER_H
-#define PR_RDR_RENDERER_H
 
 // Forward
 #include "pr/renderer11/forward.h"
@@ -80,4 +78,3 @@
 #include "pr/renderer11/util/event_types.h"
 
 #undef PR_RENDERER_INTERFACE_INCLUDE
-#endif

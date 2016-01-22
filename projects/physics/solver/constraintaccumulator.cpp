@@ -418,48 +418,46 @@ void ConstraintAccumulator::SolveConstraintBlock(ConstraintBlock& pair, bool sho
 
 	// Apply impulses to make the constraints achieve the desired relative velocities
 	static int MaxIterations = 10;
-	for( int i = 0; solve != pair.m_num_constraints && i != MaxIterations; ++i )
+	for (int i = 0; solve != pair.m_num_constraints && i != MaxIterations; ++i)
 	{
 		// Solve the constraint with the greatest error in normal speed
-		Constraint& cons = pair[solve];
+		auto& cons0 = pair[solve];
 
-		bool objA_finite_mass = !shock_propagation || (cons.m_shock_propagation_mask & 1) != 0;
-		bool objB_finite_mass = !shock_propagation || (cons.m_shock_propagation_mask & 2) != 0;
+		bool objA_finite_mass = !shock_propagation || (cons0.m_shock_propagation_mask & 1) != 0;
+		bool objB_finite_mass = !shock_propagation || (cons0.m_shock_propagation_mask & 2) != 0;
 
 		// Find the current relative velocity
-		v4 relative_velocity = pair.m_objB->VelocityAt(cons.m_pointB)
-							 - pair.m_objA->VelocityAt(cons.m_pointA);
+		v4 relative_velocity0 = pair.m_objB->VelocityAt(cons0.m_pointB) - pair.m_objA->VelocityAt(cons0.m_pointA);
 
 		// Calculate the impulse that will provide the desired change in relative velocity
-		cons.m_impulse = cons.m_mass * (cons.m_desired_final_rel_velocity - relative_velocity);
-		PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("impulse", "FFFFFF00", pair.m_objA->Position() + cons.m_pointA, -cons.m_impulse, str));
+		cons0.m_impulse = cons0.m_mass * (cons0.m_desired_final_rel_velocity - relative_velocity0);
+		PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("impulse", "FFFFFF00", pair.m_objA->Position() + cons0.m_pointA, -cons0.m_impulse, str));
 		PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_impulses.pr_script"); str.clear());
 
 		// Apply the impulse to the objects
-		pair.m_objA->ApplyWSImpulse(-cons.m_impulse * objA_finite_mass, cons.m_pointA);
-		pair.m_objB->ApplyWSImpulse( cons.m_impulse * objB_finite_mass, cons.m_pointB);
+		pair.m_objA->ApplyWSImpulse(-cons0.m_impulse * objA_finite_mass, cons0.m_pointA);
+		pair.m_objB->ApplyWSImpulse( cons0.m_impulse * objB_finite_mass, cons0.m_pointB);
 
-		PR_EXPAND(PR_DBG_COLLISION, v4 new_rel_vel = pair.m_objB->VelocityAt(cons.m_pointB) - pair.m_objA->VelocityAt(cons.m_pointA));
-		PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF000080", pair.m_objA->Position() + cons.m_pointA, -new_rel_vel, str));
+		PR_EXPAND(PR_DBG_COLLISION, v4 new_rel_vel = pair.m_objB->VelocityAt(cons0.m_pointB) - pair.m_objA->VelocityAt(cons0.m_pointA));
+		PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF000080", pair.m_objA->Position() + cons0.m_pointA, -new_rel_vel, str));
 		PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_relvelocity.pr_script", true); str.clear());
 
 		// Find the next constraint to solve
 		static float error_tolerance_sq = 0.00001f;
 		float max_error_sq = error_tolerance_sq;
 		uint  next_to_solve = pair.m_num_constraints;
-		for( uint c = 0; c != pair.m_num_constraints; ++c )
+		for (uint c = 0; c != pair.m_num_constraints; ++c)
 		{
 			// Can skip the constraint we've just solved because its error will be zero.
-			if( c == solve )
+			if (c == solve)
 				continue;
 
-			Constraint& cons = pair[c];
-			v4 relative_velocity = pair.m_objB->VelocityAt(cons.m_pointB)
-								 - pair.m_objA->VelocityAt(cons.m_pointA);
-			PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF0000FF", pair.m_objA->Position() + cons.m_pointA, -relative_velocity, str));
+			auto& cons1 = pair[c];
+			v4 relative_velocity1 = pair.m_objB->VelocityAt(cons1.m_pointB) - pair.m_objA->VelocityAt(cons1.m_pointA);
+			PR_EXPAND(PR_DBG_COLLISION, ldr::LineD("rel_vel", "FF0000FF", pair.m_objA->Position() + cons1.m_pointA, -relative_velocity1, str));
 			PR_EXPAND(PR_DBG_COLLISION, StringToFile(str, "C:/DeleteMe/collision_relvelocity.pr_script", true); str.clear());
 
-			float vel_error_sq = Length3Sq(relative_velocity - cons.m_desired_final_rel_velocity);
+			float vel_error_sq = Length3Sq(relative_velocity1 - cons1.m_desired_final_rel_velocity);
 			if( vel_error_sq > max_error_sq )
 			{
 				max_error_sq = vel_error_sq;

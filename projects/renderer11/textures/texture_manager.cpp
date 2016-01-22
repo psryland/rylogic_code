@@ -81,7 +81,8 @@ namespace pr
 		// Throws if creation fails. On success returns a pointer to the created texture.
 		Texture2DPtr TextureManager::CreateTexture2D(RdrId id, SamplerDesc const& sam_desc, wchar_t const* filepath, char const* name)
 		{
-			PR_ASSERT(PR_DBG_RDR, filepath != nullptr, "Filepath must be given");
+			if (filepath == nullptr)
+				throw std::exception("Filepath must be given");
 
 			// Accept stock texture strings: #black, #white, #checker, etc
 			// This is handy for model files that contain string paths for textures.

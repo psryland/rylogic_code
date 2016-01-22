@@ -39,11 +39,18 @@ struct ReentryGuard
 #endif
 };
 
+/*
+This is specific to the VS2013 implementation of std::string/wstring which changed
+in VS2015. Using visualizers now anyway.
+
 // Helper for std::string and std::wstring
 template <typename Str> struct stdstring :Str
 {
+	 Read an std::string/wstring from debuggee memory
 	HRESULT Read(DbgHelper* pHelper, Str& str, size_t ofs)
 	{
+		// Read the std::string/wstring structure.
+		// Internal pointers will still point off into inaccessible memory
 		if (FAILED(pHelper->Read(*this, ofs))) return E_FAIL;
 		if (_Mysize > _Myres) return E_FAIL;
 		if (_Myres == _BUF_SIZE-1) str.append(_Bx._Buf, _Mysize);
@@ -59,13 +66,15 @@ template <typename Str> struct stdstring :Str
 };
 template <> HRESULT DbgHelper::Read(std::string& str, size_t ofs)
 {
-	stdstring<std::string> s; return s.Read(this, str, ofs);
+	stdstring<std::string> s;
+	return s.Read(this, str, ofs);
 }
 template <> HRESULT DbgHelper::Read(std::wstring& str, size_t ofs)
 {
-	stdstring<std::wstring> s; return s.Read(this, str, ofs);
+	stdstring<std::wstring> s;
+	return s.Read(this, str, ofs);
 }
-
+*/
 // Expansions ***********************************************
 
 // Expand a v2
@@ -114,7 +123,9 @@ ADDIN_API HRESULT WINAPI AddIn_i64v4(DWORD, DbgHelper* pHelper, int, BOOL, char 
 	ReentryGuard guard;
 	pr::int64 vec[4];
 	if (FAILED(pHelper->Read(vec))) return E_FAIL;
-	_snprintf(pResult, max, "(%+lld, %+lld, %+lld, %+lld); //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], pr::Len3(vec[0], vec[1], vec[2]), pr::Len4(vec[0], vec[1], vec[2], vec[3]));
+	auto len3 = static_cast<double>(pr::Len3(vec[0], vec[1], vec[2]));
+	auto len4 = static_cast<double>(pr::Len4(vec[0], vec[1], vec[2], vec[3]));
+	_snprintf(pResult, max, "(%+lld, %+lld, %+lld, %+lld); //Len3: %f Len4: %f", vec[0], vec[1], vec[2], vec[3], len3, len4);
 	return S_OK;
 }
 
@@ -201,11 +212,14 @@ ADDIN_API HRESULT WINAPI AddIn_stdvector(DWORD, DbgHelper* pHelper, int, BOOL, c
 // Show the contents of a std::string
 ADDIN_API HRESULT WINAPI AddIn_stdstring(DWORD, DbgHelper* pHelper, int, BOOL, char*pResult, size_t max, DWORD)
 {
-	ReentryGuard guard;
-	std::string str;
-	if (FAILED(pHelper->Read(str))) return E_FAIL;
-	_snprintf(pResult, max, "\"%s\"", str.c_str());
-	return S_OK;
+	(void)pHelper, pResult, max;
+	return E_FAIL;
+	// Not supported in VS2015
+	//ReentryGuard guard;
+	//std::string str;
+	//if (FAILED(pHelper->Read(str))) return E_FAIL;
+	//_snprintf(pResult, max, "\"%s\"", str.c_str());
+	//return S_OK;
 }
 
 // inherit std::basic_ios because basic_ios has a protected empty constructor

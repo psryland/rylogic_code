@@ -46,10 +46,11 @@ namespace pr
 			Button m_btn_close;
 			RenderCB m_render;
 
+			// This code expects the scintilla.dll to be loaded already
 			ScriptEditorDlgImpl(HWND parent, RenderCB render_cb)
 				:Form(Params(parent))
 				,ScriptEditorDlg(Internal())
-				,m_edit(ScintillaCtrl::Params().load_dll().id(IDC_TEXT).name("m_edit").wh(Fill,Fill).margin(8,8,8,46).parent(this).anchor(EAnchor::All))
+				,m_edit(ScintillaCtrl::Params().id(IDC_TEXT).name("m_edit").wh(Fill,Fill).margin(8,8,8,46).parent(this).anchor(EAnchor::All))
 				,m_btn_render(Button::Params().id(IDC_BTN_RENDER).name("m_btn_render").xy(12, -12).text(L"&Render (F5)").parent(this).anchor(EAnchor::BottomLeft))
 				,m_btn_close(Button::Params().id(IDC_BTN_CLOSE).name("m_btn_close").xy(-12, -12).text(L"&Close").parent(this).anchor(EAnchor::BottomRight))
 				,m_render(render_cb)

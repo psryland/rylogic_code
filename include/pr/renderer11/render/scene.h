@@ -46,7 +46,7 @@ namespace pr
 			// Set the render steps to use for rendering the scene
 			void SetRenderSteps(std::vector<ERenderStep>&& rsteps);
 			
-			// Some render step presets
+			// Some render step pre-sets
 			static std::vector<ERenderStep> ForwardRendering() { return {ERenderStep::ForwardRender}; }
 			static std::vector<ERenderStep> DeferredRendering() { return {ERenderStep::GBuffer, ERenderStep::DSLighting}; }
 

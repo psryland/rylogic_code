@@ -78,15 +78,14 @@ namespace pr
 			void CaseSensitive(bool cs) { m_case_sensitive = cs; }
 
 			// Return the hash of a keyword using the current reader settings
-			static HashValue HashKeyword(wchar_t const* keyword, bool case_sensitive)
+			static HashValue StaticHashKeyword(wchar_t const* keyword, bool case_sensitive) // Can't have the same name as 'HashKeyword' because it causes a compiler error
 			{
 				auto kw = case_sensitive ? Hash(keyword) : HashLwr(keyword);
-				return kw;
-				//return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
+				return kw; //return (kw & 0x7fffffff); // mask off msb so that enum's show up in the debugger
 			}
 			HashValue HashKeyword(wchar_t const* keyword) const
 			{
-				return HashKeyword(keyword, m_case_sensitive);
+				return StaticHashKeyword(keyword, m_case_sensitive);
 			}
 
 			// Return true if the end of the source has been reached

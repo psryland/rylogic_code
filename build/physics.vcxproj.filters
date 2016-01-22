@@ -121,12 +121,6 @@
     <ClCompile Include="..\projects\physics\shape\shapetriangle.cpp">
       <Filter>shape</Filter>
     </ClCompile>
-    <ClCompile Include="..\projects\physics\terrain\terraincollision.cpp">
-      <Filter>terrain</Filter>
-    </ClCompile>
-    <ClCompile Include="..\projects\physics\utility\ldrhelper.cpp">
-      <Filter>utility</Filter>
-    </ClCompile>
     <ClCompile Include="..\projects\physics\solver\resolvecollision.cpp">
       <Filter>solver</Filter>
     </ClCompile>

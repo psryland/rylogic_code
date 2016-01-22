@@ -164,6 +164,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\pr\camera\camera.h" />
     <ClInclude Include="..\include\pr\gui\scintilla_ctrl.h" />
+    <ClInclude Include="..\include\pr\gui\wingui.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_gizmo.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_helper.h" />
     <ClInclude Include="..\include\pr\linedrawer\ldr_objects_dlg.h" />

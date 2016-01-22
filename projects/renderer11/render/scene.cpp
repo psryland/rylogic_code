@@ -33,7 +33,7 @@ namespace pr
 			// Set default scene render states
 			m_rsb = RSBlock::SolidCullBack();
 
-			// Use line antialiasing if multisampling is enabled
+			// Use line antialiasing if multi-sampling is enabled
 			if (wnd.m_multisamp.Count != 1)
 				m_rsb.Set(ERS::MultisampleEnable, TRUE);
 		}
@@ -115,8 +115,19 @@ namespace pr
 		// Render the scene
 		void Scene::Render()
 		{
-			// Bind the window render target to the OM
-			m_wnd->RestoreRT();
+			// Don't call 'm_wnd->RestoreRT();' here because
+			// we might be rendering to an off-screen texture.
+			#if PR_DBG_RDR
+			{
+				// Check a render target has been set
+				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or rtv will be null
+				D3DPtr<ID3D11RenderTargetView> rtv;
+				D3DPtr<ID3D11DepthStencilView> dsv;
+				m_wnd->ImmediateDC()->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+				PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
+				PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
+			}
+			#endif
 
 			// Invoke each render step in order
 			StateStack ss(m_wnd->ImmediateDC(), *this);

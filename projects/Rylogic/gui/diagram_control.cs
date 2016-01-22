@@ -3791,6 +3791,7 @@ namespace pr.gui
 			switch (args.KeyCode)
 			{
 			case Keys.Escape:
+				#region Clear Selection
 				{
 					if (AllowSelection)
 					{
@@ -3799,6 +3800,7 @@ namespace pr.gui
 					}
 					break;
 				}
+				#endregion
 			case Keys.Delete:
 				{
 					if (AllowEditing)
@@ -3834,12 +3836,17 @@ namespace pr.gui
 					break;
 				}
 			case Keys.A:
-				if ((args.Modifiers & Keys.Control) != 0)
+				#region Select All
 				{
-					Elements.ForEach(x => x.Selected = true);
-					Refresh();
+					if ((args.Modifiers & Keys.Control) != 0)
+					{
+						foreach (var elem in Elements.ToArray())
+							elem.Selected = true;
+						Refresh();
+					}
+					break;
 				}
-				break;
+				#endregion
 			}
 		}
 

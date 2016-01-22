@@ -81,7 +81,7 @@ namespace pr
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{}
-				ChunkIndex(EChunkId::Enum_ id, u32 data_length, std::initializer_list<ChunkIndex> chunks)
+				ChunkIndex(EChunkId::Enum_ id, size_t data_length, std::initializer_list<ChunkIndex> chunks)
 					:ChunkHeader({id, checked_cast<u32>(sizeof(ChunkHeader) + data_length)})
 					,m_chunks()
 				{
@@ -194,7 +194,7 @@ namespace pr
 				{
 					s = s ? s : "";
 					memset(str, 0, sizeof(str));
-					strncat(str, s, sizeof(str));
+					strncat(str, s, sizeof(str) - 1);
 					return *this;
 				}
 				Str16(char const* s = nullptr)           { *this = s; }

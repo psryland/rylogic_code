@@ -9,11 +9,10 @@ using pr.maths;
 using pr.util;
 using pr.win32;
 using ToolStripContainer = pr.gui.ToolStripContainer;
+using ComboBox = pr.gui.ComboBox;
 
 namespace TestCS
 {
-	using ComboBox = pr.gui.ComboBox;
-
 	public class DiagramControlUI :Form
 	{
 		private DiagramControl m_diag;
@@ -30,7 +29,8 @@ namespace TestCS
 
 		static DiagramControlUI()
 		{
-			View3d.LoadDll(@"\sdk\lib\$(platform)\$(config)\");
+			Sci.LoadDll(@"\lib\$(platform)\$(config)\");
+			View3d.LoadDll(@"\lib\$(platform)\$(config)\");
 		}
 
 		private StatusStrip statusStrip1;

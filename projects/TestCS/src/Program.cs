@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using pr.extn;
-using pr.util;
 
 namespace TestCS
 {
@@ -23,8 +19,8 @@ namespace TestCS
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-//			Application.Run(new FormTestApp());
-			Application.Run(new DockPanelUI());
+			Application.Run(new FormTestApp());
+			//Application.Run(new DgvUI());
 	}
 	}
 }

@@ -184,6 +184,7 @@ extern "C"
 		UINT                       m_colour_key;
 		BOOL                       m_has_alpha;
 		BOOL                       m_gdi_compatible;
+		char const*                m_dbg_name;
 	} View3DTextureOptions;
 
 	typedef struct
@@ -336,6 +337,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_InvalidateRect           (View3DWindow window, RECT const* rect, BOOL erase);
 	VIEW3D_API void                    __stdcall View3D_Render                   (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_Present                  (View3DWindow window);
+	VIEW3D_API void                    __stdcall View3D_RenderTo                 (View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer);
 	VIEW3D_API void                    __stdcall View3D_RenderTargetSize         (View3DWindow window, int& width, int& height);
 	VIEW3D_API void                    __stdcall View3D_SetRenderTargetSize      (View3DWindow window, int width, int height);
 	VIEW3D_API View3DViewport          __stdcall View3D_Viewport                 (View3DWindow window);

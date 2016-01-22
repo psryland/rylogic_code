@@ -42,7 +42,6 @@ struct DbgHelper
 	template <typename Type> HRESULT Read(Type& type, size_t ofs = 0) { return Read(&type, sizeof(type), ofs); }
 	template <>              HRESULT Read(std::string& str, size_t ofs);
 	template <>              HRESULT Read(std::wstring& str, size_t ofs);
-	template <>              HRESULT Read(std::istream& istrm, size_t ofs);
 };
 
 #define ADDIN_API __declspec(dllexport)

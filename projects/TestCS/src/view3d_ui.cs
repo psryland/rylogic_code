@@ -14,11 +14,23 @@ namespace TestCS
 		private View3dControl m_view3d;
 		private View3d.Object m_obj0;
 		private View3d.Object m_obj1;
+		private View3d.Object m_obj2;
 		private View3d.Texture m_tex0;
+		private View3d.Texture m_tex2;
 		private View3d.Gizmo m_giz;
+
+		#region UI Elements
+		private ToolStrip m_ts;
+		private ToolStripButton m_btn_translate;
+		private ToolStripButton m_btn_rotate;
+		private ToolStripButton m_btn_scale;
+		private StatusStrip m_ss;
+		private ToolStripStatusLabel m_status;
+		#endregion
 
 		static FormView3d()
 		{
+			Sci.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
 			View3d.LoadDll(@"..\..\..\..\lib\$(platform)\$(config)\");
 		}
 		public FormView3d()
@@ -32,28 +44,13 @@ namespace TestCS
 			};
 			Controls.Add(m_view3d);
 
+			m_view3d.Camera.ResetView();
+			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
+
 			// Simple create object
 			m_obj0 = new View3d.Object("*Box test FFFFFFFF {1 2 3}", false);
 			m_obj0.O2P = m4x4.Rotation(0.5f, -0.3f, 0.2f, new v4(-0.3f, 1.2f, 0.5f, 1f));
 			m_view3d.Window.AddObject(m_obj0);
-
-			// Create object via callback
-			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20,
-				(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx) =>
-				{
-					new_vcount = 0;
-					new_icount = 0;
-					for (int i = 0; i != 10; ++i)
-					{
-						verts[new_vcount++] = new View3d.Vertex(new v4(i,0,0,1f));
-						verts[new_vcount++] = new View3d.Vertex(new v4(0,0,9-i,1f));
-						indices[new_icount++] = (ushort)(new_vcount - 2);
-						indices[new_icount++] = (ushort)(new_vcount - 1);
-					}
-					prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-					geom_type = View3d.EGeom.Vert;
-				});
-			m_view3d.Window.AddObject(m_obj1);
 
 			// Create a texture and assign it to an object
 			m_tex0 = new View3d.Texture(100,100);
@@ -63,7 +60,41 @@ namespace TestCS
 				tex.Gfx.FillEllipse(Brushes.RoyalBlue, 10,10,80,80);
 				tex.Gfx.DrawString("Paul Rulz", SystemFonts.DefaultFont, Brushes.Black, new PointF(30,40));
 			}
+			m_view3d.Window.RestoreRT();
 			m_obj0.SetTexture(m_tex0);
+
+			// Create object via callback
+			m_obj1 = new View3d.Object("net", 0xFF0000FF, 20, 20, CreateOnlyCB);
+			m_view3d.Window.AddObject(m_obj1);
+
+			// Create an object with a texture from a rendered scene
+			m_obj2 = new View3d.Object("*Box Rt FFFFFFFF {0.7 0.9 0.4}", false);
+			m_obj2.O2P = m4x4.Rotation(-0.5f, 0.4f, 0.6f, new v4(0.5f, -0.2f, -0.3f, 1f));
+			m_view3d.Window.AddObject(m_obj2);
+
+			// Create a texture and use it as a render target
+			m_tex2 = new View3d.Texture(200,200,new View3d.TextureOptions
+			{
+				Format        = View3d.EFormat.DXGI_FORMAT_R8G8B8A8_UNORM,
+				Mips          = 1U,
+				Filter        = View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR,
+				AddrU         = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				AddrV         = View3d.EAddrMode.D3D11_TEXTURE_ADDRESS_CLAMP,
+				BindFlags     = View3d.EBindFlags.D3D11_BIND_SHADER_RESOURCE|View3d.EBindFlags.D3D11_BIND_RENDER_TARGET,
+				MiscFlags     = View3d.EResMiscFlags.NONE,
+				ColourKey     = 0,
+				HasAlpha      = false,
+				GdiCompatible = false,
+				DbgName       = "Test RT",
+			});
+			m_view3d.Paint += (s,a) =>
+			{
+				// Make sure 'm_obj' is not rendered (because it uses the texture we're rendering to)
+				m_view3d.Window.RemoveObject(m_obj2);
+				m_view3d.Window.RenderTo(m_tex2);
+				m_view3d.Window.AddObject(m_obj2);
+			};
+			m_obj2.SetTexture(m_tex2);
 
 			// Create a gizmo for moving objects in the scene
 			// Position it at the origin of m_obj0 and scale by 2
@@ -80,37 +111,38 @@ namespace TestCS
 			m_btn_scale    .Click += (s,a) => m_giz.Mode = View3d.Gizmo.EMode.Scale;
 
 			//m_view3d.View3d.CreateDemoScene();
-			
-			m_view3d.Camera.ResetView();
-			m_view3d.Camera.SetPosition(new v4(10f,10f,5f,1f), v4.Origin, v4.YAxis);
 		}
 		protected override void Dispose(bool disposing)
 		{
 			Util.Dispose(ref m_giz   );
 			Util.Dispose(ref m_tex0  );
+			Util.Dispose(ref m_tex2  );
 			Util.Dispose(ref m_obj0  );
 			Util.Dispose(ref m_obj1  );
+			Util.Dispose(ref m_obj2  );
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
 			base.Dispose(disposing);
 		}
 
-		private ToolStrip m_ts;
-		private ToolStripButton m_btn_translate;
-		private ToolStripButton m_btn_rotate;
-		private ToolStripButton m_btn_scale;
-		private StatusStrip m_ss;
-		private ToolStripStatusLabel m_status;
+		/// <summary>Callback for creating the "net" object</summary>
+		private void CreateOnlyCB(int vcount, int icount, View3d.Vertex[] verts, ushort[] indices, out int new_vcount, out int new_icount, out View3d.EPrim prim_type, out View3d.EGeom geom_type, ref View3d.Material mat, IntPtr ctx)
+		{
+			new_vcount = 0;
+			new_icount = 0;
+			for (int i = 0; i != 10; ++i)
+			{
+				verts[new_vcount++] = new View3d.Vertex(new v4(i,0,0,1f));
+				verts[new_vcount++] = new View3d.Vertex(new v4(0,0,9-i,1f));
+				indices[new_icount++] = (ushort)(new_vcount - 2);
+				indices[new_icount++] = (ushort)(new_vcount - 1);
+			}
+			prim_type = View3d.EPrim.D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+			geom_type = View3d.EGeom.Vert;
+		}
 
 		#region Windows Form Designer generated code
-
-		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
-
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
 		private void InitializeComponent()
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FormView3d));

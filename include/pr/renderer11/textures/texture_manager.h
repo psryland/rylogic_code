@@ -3,10 +3,8 @@
 //  Copyright (c) Rylogic Ltd 2012
 //*********************************************
 #pragma once
-#ifndef PR_RDR_TEXTURES_TEXTURE_MANAGER_H
-#define PR_RDR_TEXTURES_TEXTURE_MANAGER_H
 
-#include <hash_map>
+#include <unordered_map>
 #include "pr/renderer11/forward.h"
 #include "pr/renderer11/util/allocator.h"
 #include "pr/renderer11/util/lookup.h"
@@ -110,5 +108,3 @@ namespace pr
 		};
 	}
 }
-
-#endif

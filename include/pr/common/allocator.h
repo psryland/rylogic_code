@@ -60,7 +60,8 @@ namespace pr
 			static void construct(pointer p, const_reference val) { ::new ((void*)p) T(val); }
 			template <class U> static void destroy(U* p)
 			{
-				if (p) p->~U();
+				if (p == nullptr) return;
+				p->~U();
 				#ifndef NDEBUG
 				::memset(p, 0xdd, sizeof(U));
 				#endif

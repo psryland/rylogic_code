@@ -95,6 +95,8 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern bool   TranslateMessage(ref Message lpMsg);
 		[DllImport("user32.dll")]                                                                             public static extern int    UnhookWindowsHookEx(int idHook);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   WindowFromPoint(POINT Point);
+		[DllImport("user32.dll")]                                                                             public static extern bool   ValidateRect(HWND hwnd, IntPtr lpRect);
+		[DllImport("user32.dll")]                                                                             public static extern bool   ValidateRect(HWND hwnd, ref RECT lpRect);
 
 		// This static method is required because legacy OSes do not support SetWindowLongPtr 
 		public static IntPtr SetWindowLongPtr(HWND hWnd, int nIndex, IntPtr dwNewLong)

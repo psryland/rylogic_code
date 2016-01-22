@@ -349,6 +349,7 @@ namespace pr.gfx
 			public uint ColourKey;
 			public bool HasAlpha;
 			public bool GdiCompatible;
+			public string DbgName;
 
 			public TextureOptions(bool gdi_compatible)
 			{
@@ -362,6 +363,7 @@ namespace pr.gfx
 				ColourKey     = 0;
 				HasAlpha      = false;
 				GdiCompatible = gdi_compatible;
+				DbgName       = string.Empty;
 			}
 		}
 
@@ -818,6 +820,16 @@ namespace pr.gfx
 			public void RestoreRT()
 			{
 				View3D_RestoreMainRT(m_wnd);
+			}
+
+			/// <summary>
+			/// Render the current scene into 'render_target'. If no 'depth_buffer' is given a temporary one will be created.
+			/// Note: Make sure the render target is not used as a texture for an object in the scene to be rendered.
+			/// Either remove that object from the scene, or detach the texture from the object. 'render_target' cannot be
+			/// a source and destination texture at the same time</summary>
+			public void RenderTo(Texture render_target, Texture depth_buffer = null)
+			{
+				View3D_RenderTo(m_wnd, render_target.m_handle, depth_buffer != null ? depth_buffer.m_handle : IntPtr.Zero);
 			}
 
 			/// <summary>Get/Set the size/position of the viewport within the render target</summary>
@@ -1578,7 +1590,7 @@ namespace pr.gfx
 
 				/// <summary>
 				/// Lock 'tex' making 'Gfx' available.
-				/// Note: it 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
+				/// Note: if 'tex' is the render target of a window, you need to call Window.RestoreRT when finished</summary>
 				public Lock(Texture tex)
 				{
 					m_tex = tex.m_handle;
@@ -1911,6 +1923,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_InvalidateRect           (HWindow window, ref Win32.RECT rect, bool erase);
 		[DllImport(Dll)] private static extern void              View3D_Render                   (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_Present                  (HWindow window);
+		[DllImport(Dll)] private static extern void              View3D_RenderTo                 (HWindow window, HTexture render_target, HTexture depth_buffer);
 		[DllImport(Dll)] private static extern void              View3D_RenderTargetSize         (HWindow window, out int width, out int height);
 		[DllImport(Dll)] private static extern void              View3D_SetRenderTargetSize      (HWindow window, int width, int height);
 		[DllImport(Dll)] private static extern Viewport          View3D_Viewport                 (HWindow window);

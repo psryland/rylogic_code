@@ -5,11 +5,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
 using pr.extn;
-using pr.stream;
 
 namespace pr.container
 {
@@ -26,8 +26,8 @@ namespace pr.container
 			public Row Add<T>(T s)                       { base.Add(s.ToString()); return this; }
 			public Row AddRange<T>(IEnumerable<T> range) { range.ForEach(x => Add(x)); return this; }
 
-			/// <summary>Write this row as a line of csv data</summary>
-			public void Save(StreamWriter file, bool quoted = true)
+			/// <summary>Write this row as a line of CSV data</summary>
+			public virtual void Save(StreamWriter file, bool quoted = true)
 			{
 				var first = true;
 				foreach (var e in this)
@@ -58,11 +58,29 @@ namespace pr.container
 				file.Write('\n');
 			}
 		}
+		public class CommentRow :Row
+		{
+			public CommentRow(string comment)
+			{
+				Comment = comment;
+			}
+
+			/// <summary>The comment text</summary>
+			public string Comment { get; private set; }
+
+			/// <summary>Write this row as a line of CSV data</summary>
+			public override void Save(StreamWriter file, bool quoted)
+			{
+				file.Write("# ");
+				file.Write(Comment);
+				file.Write('\n');
+			}
+		}
 
 		private readonly List<Row> m_data = new List<Row>();
 
 		/// <summary>
-		/// If true, out of bounds write cause the csv data to grow in size.
+		/// If true, out of bounds write cause the CSV data to grow in size.
 		/// if false, out of bounds reads/writes cause exceptions</summary>
 		public bool AutoSize { get; set; }
 
@@ -94,6 +112,12 @@ namespace pr.container
 		public void Add(params object[] values)
 		{
 			Add(new Row(values));
+		}
+
+		/// <summary>Add a comment row to the CSV data</summary>
+		public void AddComment(string comment)
+		{
+			m_data.Add(new CommentRow(comment));
 		}
 
 		/// <summary>Reserve memory</summary>
@@ -141,100 +165,131 @@ namespace pr.container
 		}
 
 		/// <summary>
-		/// Read csv rows from a stream.
+		/// Read CSV rows from a stream.
 		/// If 'support_comments' is true, rows that start with a '#' character are treated as comments</summary>
-		public static IEnumerable<Row> Parse(Stream src, bool support_comments = false)
+		public static IEnumerable<Row> Parse(Stream src, bool ignore_comment_rows)
 		{
+			// Parse the CSV stream
+			// Fields can optionally be in quotes.
+			// Quotes are escaped using double quotes.
 			using (var file = new StreamReader(src))
 			{
-				// Fields can optionally be in quotes.
-				// Quotes are escaped using double quotes.
-				var str = new StringBuilder();
-				var row = new Row();
-				var esc = false;
-				var quoted = false;
-				for (int chint; (chint = file.Read()) >= 0; )
+				// Deal with line endings. Converts '\r', '\n', '\r\n' to '\n'
+				Func<int> next = () =>
 				{
-					var ch = (char)chint;
+					var chint = file.Read();
+					if (chint != '\r') return chint;
+					if (file.Peek() == '\n') file.Read();
+					return '\n';
+				};
+
+				// Parse the file char-by-char emitting CSV rows
+				var row = new Row();
+				var str = new StringBuilder(); // Buffer for each element
+				int line = 1, elem = 1;        // Natural indices
+				for (int ch; (ch = next()) >= 0; )
+				{
+					Debug.Assert(str.Length == 0, "Each loop around should be for a new element");
 
 					// If comments are supported, and the row starts with the comment symbol, consume the line
-					if (support_comments && str.Length == 0 && ch == '#')
+					if (ch == '#' && ignore_comment_rows && row.Count == 0)
 					{
-						for (; (chint = file.Read()) >= 0 && (char)chint != '\n'; ) {} // consume the line
+						for (; (ch = next()) >= 0 && ch != '\n'; ) {} // consume the line
+						++line;
+						elem = 1;
 						continue;
 					}
 
-					// If the first character is a '"', this is a quoted item
-					if (str.Length == 0 && ch == '"' && !quoted)
+					// If the element starts with a quote, consume up to the next un-escaped quote
+					if (ch == '"')
 					{
-						quoted = true;
-						continue;
+						// Read literal chars directly from the stream, quoted text is allowed to contain \r\n
+						for (; (ch = file.Read()) >= 0;)
+						{
+							if (ch == '"')
+							{
+								if (file.Peek() == '"') file.Read();
+								else break;
+							}
+							str.Append((char)ch);
+						}
+						if (ch >= 0) ch = next(); // Consume the closing quote
+						else throw new Exception("Quoted CSV element not closed starting at line {0}, element {1}".Fmt(line, elem));
+
+						// Expect the next character to be delimiter or EOF
+						if (ch != ',' && ch != '\n' && ch >= 0)
+							throw new Exception("Unexpected character following quoted CSV element at line {0}, element {1}".Fmt(line, elem));
+					}
+					// Otherwise, if not a row or element delimiter, assume this is an un-quoted element, consume to the next delimiter
+					else if (ch != ',' && ch != '\n')
+					{
+						// Otherwise, assume this is an un-quoted element, consume to the next delimiter
+						str.Append((char)ch);
+						for (; (ch = next()) >= 0 && ch != ',' && ch != '\n';)
+							str.Append((char)ch);
 					}
 
-					// If this is a quoted item, check for escaped '"' characters
-					if (quoted && ch == '"')
-					{
-						if (esc) str.Append(ch);
-						esc = !esc;
-						continue;
-					}
-
-					// If this is an item delimiter
+					// If the next character is an element delimiter, add the element to the row
 					if (ch == ',')
 					{
-						// If not a quoted item, or we've just passed an unescaped '"' character, end the item
-						if (!quoted || esc)
+						row.Add(str.ToString());
+						str.Clear();
+						++elem;
+						continue;
+					}
+
+					// If the next character is a row delimiter or EOF, emit the CSV row
+					if (ch == '\n' || ch < 0)
+					{
+						// If the row is empty, don't add an empty element
+						if (row.Count != 0 || str.Length != 0)
 						{
 							row.Add(str.ToString());
-							str.Length = 0;
-							quoted = false;
-							esc = false;
-							continue;
+							str.Clear();
+							++elem;
 						}
-					}
 
-					// If this is an end of row delimiter
-					if (ch == '\n')
-					{
-						// If not a quoted item, or we've just passed an unescaped '"' character, end the row
-						if (!quoted || esc)
-						{
-							// If there is nothing on the row, leave the row empty
-							if (row.Count != 0 || str.Length != 0)
-								row.Add(str.ToString());
-							str.Length = 0;
-							yield return row;
-							row = new Row();
-							quoted = false;
-							esc = false;
-							continue;
-						}
+						// Emit the row
+						yield return row;
+						row = new Row();
+						++line;
+						elem = 1;
+						continue;
 					}
-
-					str.Append(ch);
 				}
-				if (str.Length != 0) row.Add(str.ToString());
-				if (row.Count != 0) yield return row;
 			}
 		}
 
-		/// <summary>Stream rows from a csv file</summary>
-		public static IEnumerable<Row> Parse(string filepath, bool support_comments = false)
+		/// <summary>
+		/// Stream rows from a CSV file.
+		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
+		public static IEnumerable<Row> Parse(string filepath, bool ignore_comment_rows)
 		{
-			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read), support_comments);
+			return Parse(new FileStream(filepath, FileMode.Open, FileAccess.Read, FileShare.Read), ignore_comment_rows);
 		}
 
-		/// <summary>Load and parse a csv file</summary>
-		public static CSVData Load(string filepath, bool support_comments = false)
+		/// <summary>
+		/// Load and parse a CSV file.
+		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
+		public static CSVData Load(Stream src, bool ignore_comment_rows)
 		{
 			var csv = new CSVData();
-			foreach (var row in Parse(filepath, support_comments))
-				csv.Add(row);
+			csv.Rows.AddRange(Parse(src, ignore_comment_rows));
 			return csv;
 		}
 
 		/// <summary>
-		/// Save a csv file.
+		/// Load and parse a CSV file.
+		/// if 'ignore_comment_rows' is true, rows that start with a '#' character are skipped, otherwise they are considered as CSV rows</summary>
+		public static CSVData Load(string filepath, bool ignore_comment_rows)
+		{
+			var csv = new CSVData();
+			csv.Rows.AddRange(Parse(filepath, ignore_comment_rows));
+			return csv;
+		}
+
+		/// <summary>
+		/// Save a CSV file.
 		/// If 'quoted' is false, elements are written without quotes around them. If the elements contain
 		/// quote characters, commas, or newline characters then the produced CSV will be invalid.</summary>
 		public void Save(string filepath, bool quoted = true)
@@ -256,6 +311,7 @@ namespace pr.unittests
 		[Test] public void CSVRoundTrip()
 		{
 			var csv = new CSVData();
+			csv.AddComment("This is a CSV file comment");
 			csv.Add("One", "Two", "Three", "\"Four\"","\",\r\n\"");
 			csv.Add("1,1", "2\r2", "3\n3", "4\r\n");
 			csv.Add(new CSVData.Row());
@@ -266,7 +322,8 @@ namespace pr.unittests
 
 			try
 			{
-				var load = CSVData.Load(tmp);
+				var load = CSVData.Load(tmp, ignore_comment_rows:true);
+				csv.Rows.RemoveAt(0); // Delete the comment
 
 				Assert.AreEqual(csv.RowCount, load.RowCount);
 				for (var i = 0; i != csv.RowCount; ++i)
@@ -286,6 +343,22 @@ namespace pr.unittests
 			finally
 			{
 				File.Delete(tmp);
+			}
+		}
+		[Test] public void CSVRaw()
+		{
+			var csv_string = Str.Build(
+				"One,Two,Three\n",
+				"\"Quoted\",,\r\n",
+				"# Comment Line\r",
+				"Four,# Not a Comment,\"# Also\r\n# Not,\n# A\r\n# Comment\"");
+			using (var ms = new MemoryStream(Encoding.UTF8.GetBytes(csv_string), false))
+			{
+				var load = CSVData.Load(ms, ignore_comment_rows:true);
+				Assert.AreEqual(load.RowCount, 3);
+				Assert.True(load[0].SequenceEqual(new[]{"One","Two","Three"}));
+				Assert.True(load[1].SequenceEqual(new[]{"Quoted","",""}));
+				Assert.True(load[2].SequenceEqual(new[]{"Four","# Not a Comment","# Also\r\n# Not,\n# A\r\n# Comment"}));
 			}
 		}
 	}

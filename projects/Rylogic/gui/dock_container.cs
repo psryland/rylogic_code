@@ -40,7 +40,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -473,42 +472,42 @@ namespace pr.gui
 
 			// Find the window that contains 'content'
 			var pane = content.DockControl.DockPane;
-			if (pane != null)
+			if (pane == null)
 			{
-				// Make the selected item the visible item on the pane
-				pane.VisibleContent = content;
-
-				// Make it the active item in the dock container
-				var container = pane.TreeHost;
-				if (container != null)
-				{
-					container.ActiveContent = content;
-
-					// If the container is an auto hide panel, make sure it's popped out
-					var ah = container as AutoHidePanel;
-					if (ah != null)
-					{
-						ah.PoppedOut = true;
-					}
-
-					// If the container is a floating window, make sure it's visible and on-screen
-					var fw = container as FloatingWindow;
-					if (fw != null)
-					{
-						fw.Bounds = Util.OnScreen(fw.Bounds);
-						fw.Visible = true;
-						fw.BringToFront();
-						if (fw.WindowState == FormWindowState.Minimized)
-							fw.WindowState = FormWindowState.Normal;
-					}
-				}
-			}
-
-			// Otherwise, restore 'content' to the dock container
-			else
-			{
+				// Restore 'content' to the dock container
 				var address = content.DockControl.DockAddressFor(Root);
 				Add(content, address);
+				pane = content.DockControl.DockPane;
+				if (pane == null)
+					throw new Exception("Cannot show content '{0}'. Could not add it to a visible dock pane".Fmt(content.DockControl.TabText));
+			}
+
+			// Make the selected item the visible item on the pane
+			pane.VisibleContent = content;
+
+			// Make it the active item in the dock container
+			var container = pane.TreeHost;
+			if (container != null)
+			{
+				container.ActiveContent = content;
+
+				// If the container is an auto hide panel, make sure it's popped out
+				var ah = container as AutoHidePanel;
+				if (ah != null)
+				{
+					ah.PoppedOut = true;
+				}
+
+				// If the container is a floating window, make sure it's visible and on-screen
+				var fw = container as FloatingWindow;
+				if (fw != null)
+				{
+					fw.Bounds = Util.OnScreen(fw.Bounds);
+					fw.Visible = true;
+					fw.BringToFront();
+					if (fw.WindowState == FormWindowState.Minimized)
+						fw.WindowState = FormWindowState.Normal;
+				}
 			}
 		}
 
@@ -834,6 +833,8 @@ namespace pr.gui
 			/// <summary>Add branches to the tree until 'rest' is empty.</summary>
 			private Branch GrowBranches(EDockSite ds, IEnumerable<EDockSite> rest, out EDockSite last_ds)
 			{
+				Debug.Assert(!IsDisposed);
+
 				// Note: When rest is empty, the site at 'ds' does not have a branch added.
 				// This is deliberate so that dock addresses (arrays of EDockSite) can be
 				// used to grow the tree to the point where a dock pane should be added.
@@ -2616,7 +2617,31 @@ namespace pr.gui
 			/// <summary>A record of where this pane was located in a dock container, auto hide window, or floating window</summary>
 			internal EDockSite[] DockAddressFor(Branch root)
 			{
-				return DockAddresses.GetOrAdd(root, x => DefaultDockLocation.Address);
+				return DockAddresses.GetOrAdd(root, x =>
+				{
+					// If the default dock location is a floating window, and 'root' is
+					// the root branch of that floating window, then return the default address
+					if (DefaultDockLocation.FloatingWindowId != null)
+					{
+						var fw = DockContainer.GetFloatingWindow(DefaultDockLocation.FloatingWindowId.Value);
+						if (fw != null && fw.Root == root) return DefaultDockLocation.Address;
+					}
+					// If the default dock location is an auto hide window, and 'root' is
+					// the root branch of that auto hide window, then return the default address
+					else if (DefaultDockLocation.AutoHide != null)
+					{
+						var ah = DockContainer.GetAutoHidePanel(DefaultDockLocation.AutoHide.Value);
+						if (ah != null && ah.Root == root) return DefaultDockLocation.Address;
+					}
+					// If the default dock location is the dock container and 'root' is
+					// the root branch of the dock container, then return the default address
+					else if (DockContainer.Root == root)
+					{
+						return DefaultDockLocation.Address;
+					}
+					// Otherwise, default to the centre dock site
+					return new [] { EDockSite.Centre };
+				});
 			}
 			private Dictionary<Branch, EDockSite[]> DockAddresses { get; set; }
 

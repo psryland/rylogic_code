@@ -49,8 +49,10 @@
 #define thread_local_defined
 #endif
 
+// Disable warnings
 #pragma warning(push)
-#pragma warning(disable: 4351) // new behaviour: elements of array will be default initialized
+#pragma warning(disable: 4351) // C4351: new behaviour: elements of array will be default initialized
+#pragma warning(disable: 4355) // C4355: 'this' used in base member initialization
 
 namespace pr
 {

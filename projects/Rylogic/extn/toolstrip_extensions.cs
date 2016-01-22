@@ -17,6 +17,10 @@ namespace pr.extn
 			items.Add(item);
 			return item;
 		}
+		public static ToolStripMenuItem Add2(this ToolStripItemCollection items, string text, Image image, EventHandler on_click)
+		{
+			return Add2(items, new ToolStripMenuItem(text, image, on_click));
+		}
 
 		/// <summary>Add and return an menu item to this collection in order defined by 'cmp'</summary>
 		public static T AddOrdered<T>(this ToolStripItemCollection items, T item, Comparer<ToolStripMenuItem> cmp) where T:ToolStripMenuItem

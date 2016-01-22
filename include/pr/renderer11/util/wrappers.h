@@ -270,7 +270,7 @@ namespace pr
 			}
 		};
 
-		// Rasterizer state description
+		// Rasterer state description
 		struct RasterStateDesc :D3D11_RASTERIZER_DESC
 		{
 			RasterStateDesc(

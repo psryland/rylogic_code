@@ -293,6 +293,7 @@ namespace pr
 				psapi.EnumProcModules(GetCurrentProcess(), (HMODULE*) &bytes_needed, 0, &bytes_needed);
 				SetLastError(0);
 
+#pragma warning(suppress: 6255)
 				auto modules = reinterpret_cast<HMODULE*>(_alloca(bytes_needed));
 				if (!psapi.EnumProcModules(GetCurrentProcess(), modules, bytes_needed, &bytes_needed))
 					return;

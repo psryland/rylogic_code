@@ -22,6 +22,7 @@
     <ProjectGuid>{6EC3B435-2551-48FE-84F4-EDED821A48D0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>renderer11</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

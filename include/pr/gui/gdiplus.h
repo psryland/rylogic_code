@@ -6,11 +6,13 @@
 #pragma once
 #ifndef NOGDI
 
+#pragma warning(disable:4458)
 #include <vector>
 #include <windows.h>
 #include <gdiplus.h>
 #include <objidl.h>
 #include <shlwapi.h>
+#pragma warning(default:4458)
 
 #include "pr/common/to.h"
 

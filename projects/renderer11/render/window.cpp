@@ -17,7 +17,7 @@ namespace pr
 			,m_mode(client_area)
 			,m_multisamp(4, ~UINT())
 			,m_buffer_count(2)
-			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multisampling
+			,m_swap_effect(DXGI_SWAP_EFFECT_DISCARD)// DXGI_SWAP_EFFECT_SEQUENTIAL <- cannot use with multi-sampling
 			,m_swap_chain_flags(DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH|(gdi_compat ? DXGI_SWAP_CHAIN_FLAG_GDI_COMPATIBLE : 0))
 			,m_depth_format(DXGI_FORMAT_D24_UNORM_S8_UINT)
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
@@ -26,22 +26,18 @@ namespace pr
 		{
 			if (gdi_compat)
 			{
-				// Must use B8G8R8A8_UNORM for gdi compatibility
+				// Must use B8G8R8A8_UNORM for GDI compatibility
 				m_mode.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 
-				// Also, multisampling isn't supported
+				// Also, multi-sampling isn't supported
 				m_multisamp = pr::rdr::MultiSamp();
 			}
-
-			// Disable multisampling when debugging as pix can't handle it
-			//PR_EXPAND(PR_DBG_RDR, m_multisamp = pr::rdr::MultiSamp());
-			//#pragma message(PR_LINK "WARNING: ************************************************** MultiSamp disabled")
 		}
 
 		Window::Window(Renderer& rdr, WndSettings const& settings)
 			:m_rdr(&rdr)
 			,m_hwnd(settings.m_hwnd)
-			,m_multisamp(settings.m_multisamp)
+			,m_multisamp(!AllSet(rdr.Settings().m_device_layers, D3D11_CREATE_DEVICE_DEBUG) ? settings.m_multisamp : pr::rdr::MultiSamp()) // Disable multi-sampling if debug is enabled
 			,m_db_format(settings.m_depth_format)
 			,m_swap_chain_flags(settings.m_swap_chain_flags)
 			,m_vsync(settings.m_vsync)
@@ -103,7 +99,7 @@ namespace pr
 			m_swap_chain = nullptr;
 		}
 
-		// Return the dx device
+		// Return the DX device
 		D3DPtr<ID3D11Device> Window::Device() const
 		{
 			return m_rdr->Device();
@@ -141,7 +137,7 @@ namespace pr
 			return m_rdr->m_rs_mgr;
 		}
 
-		// Create a render target from the swapchain
+		// Create a render target from the swap-chain
 		void Window::InitRT()
 		{
 			auto device = m_rdr->Device();
@@ -190,10 +186,16 @@ namespace pr
 			pr::Throw(device->CreateDepthStencilView(depth_stencil.m_ptr, &dsv_desc, &m_main_dsv.m_ptr));
 		}
 
-		// Binds the render target and depth buffer to the OM
+		// Binds the main render target and depth buffer to the OM
 		void Window::RestoreRT()
 		{
 			ImmediateDC()->OMSetRenderTargets(1, &m_main_rtv.m_ptr, m_main_dsv.m_ptr);
+		}
+
+		// Binds the given render target and depth buffer views to the OM
+		void Window::SetRT(D3DPtr<ID3D11RenderTargetView>& rtv, D3DPtr<ID3D11DepthStencilView>& dsv)
+		{
+			ImmediateDC()->OMSetRenderTargets(1, &rtv.m_ptr, dsv.m_ptr);
 		}
 
 		// Set the viewport to all of the render target
@@ -334,7 +336,7 @@ namespace pr
 			pr::events::Send(rdr::Evt_Resize(this, false, area)); // notify before changing the RT (with the old size)
 
 			// Drop the render targets from the immediate context
-			dc->OMSetRenderTargets(0, 0, 0);
+			dc->OMSetRenderTargets(0, nullptr, nullptr);
 			dc->ClearState();
 
 			m_main_tex = nullptr;
@@ -345,10 +347,10 @@ namespace pr
 			// Get the swap chain to resize itself
 			// Pass 0 for width and height, DirectX gets them from the associated window
 			pr::Throw(m_swap_chain->ResizeBuffers(0, checked_cast<UINT>(size.x), checked_cast<UINT>(size.y), DXGI_FORMAT_UNKNOWN, m_swap_chain_flags));
-			//pr::Throw(m_swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, m_settings.m_swap_chain_flags));
 
-			// Setup the render targets again
+			// Set up the render targets again
 			InitRT();
+			RestoreRT();
 
 			// Notify that the resize is done
 			area = RenderTargetSize();

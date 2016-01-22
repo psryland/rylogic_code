@@ -44,7 +44,7 @@ namespace pr
 	// A ptr wrapper to a reference counting object.
 	// 'T' should have methods 'AddRef' and 'Release'
 	// Not the same as std::shared_ptr<> because it assumes
-	// the pointed to object has AddRef()/Release() methods
+	// the pointed-to object has AddRef()/Release() methods
 	template <typename T> struct RefPtr
 	{
 		mutable T* m_ptr;
@@ -57,7 +57,7 @@ namespace pr
 			:m_ptr(nullptr)
 		{}
 
-		// Construct from any pointer convertable to 'T'
+		// Construct from any pointer convertible to 'T'
 		template <typename U> RefPtr(U* t)
 			:m_ptr(t)
 		{
@@ -73,7 +73,7 @@ namespace pr
 				IncRef(m_ptr);
 		}
 
-		// Copy construct from convertable pointer
+		// Copy construct from convertible pointer
 		template <typename U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		RefPtr(RefPtr<U> const& rhs)
 			:m_ptr(static_cast<T*>(rhs.m_ptr))
@@ -89,7 +89,7 @@ namespace pr
 			rhs.m_ptr = nullptr;
 		}
 
-		// Move construct from convertable pointer
+		// Move construct from convertible pointer
 		template<class U, class = typename std::enable_if<std::is_convertible<U*,T*>::value>::type>
 		RefPtr(RefPtr<U>&& rhs)
 			:m_ptr(static_cast<T*>(rhs.m_ptr))
@@ -160,7 +160,7 @@ namespace pr
 			return RefPtr<U>(static_cast<U*>(m_ptr));
 		}
 
-		// Pointer deref
+		// Pointer de-reference
 		T* operator -> () const { return m_ptr; }
 
 		// The current reference count
@@ -186,7 +186,7 @@ namespace pr
 			RefPtrTrace(false, ptr);
 			#endif
 
-			// Before releasing the reference, check that there is at least one reference to release
+			// Before releasing the reference, check that there is at least one reference to release.
 			// This test will probably crash rather than assert, but hey, good enough.
 			// If this fails, check that two or more D3DPtrs haven't been created from the same raw pointer.
 			// e.g.

@@ -54,10 +54,13 @@ namespace pr
 			if (m_clear_bb)
 			{
 				// Get the render target views
-				// Note: if you've called GetDC() you need to call ReleaseDC() and RestoreMainRT() or rtv will be null
+				// Note: if you've called GetDC() you need to call ReleaseDC() and Window.RestoreRT() or rtv will be null
 				D3DPtr<ID3D11RenderTargetView> rtv;
 				D3DPtr<ID3D11DepthStencilView> dsv;
 				dc->OMGetRenderTargets(1, &rtv.m_ptr, &dsv.m_ptr);
+				PR_ASSERT(PR_DBG_RDR, rtv != nullptr, "Render target is null."); // Ensure RestoreRT has been called
+				PR_ASSERT(PR_DBG_RDR, dsv != nullptr, "Depth buffer is null."); // Ensure RestoreRT has been called
+
 				dc->ClearRenderTargetView(rtv.m_ptr, m_scene->m_bkgd_colour);
 				dc->ClearDepthStencilView(dsv.m_ptr, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0U);
 			}
@@ -70,11 +73,11 @@ namespace pr
 			StateStack::SmapFrame smap_frame(ss, smap_rstep);
 
 			// Set the frame constants
-			hlsl::fwd::CBufFrame cb = {};
-			SetViewConstants(m_scene->m_view, cb.m_cam);
-			SetLightingConstants(m_scene->m_global_light, cb.m_global_light);
-			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb.m_shadow);
-			WriteConstants(dc, m_cbuf_frame, cb, EShaderType::VS|EShaderType::PS);
+			hlsl::fwd::CBufFrame cb0 = {};
+			SetViewConstants(m_scene->m_view, cb0.m_cam);
+			SetLightingConstants(m_scene->m_global_light, cb0.m_global_light);
+			SetShadowMapConstants(m_scene->m_view, smap_rstep != nullptr ? 1 : 0, cb0.m_shadow);
+			WriteConstants(dc, m_cbuf_frame, cb0, EShaderType::VS|EShaderType::PS);
 
 			for (auto& dle : m_drawlist)
 			{
@@ -82,12 +85,12 @@ namespace pr
 				ss.Commit();
 
 				// Set the per-nugget constants
-				hlsl::fwd::CBufModel cb = {};
-				SetGeomType(*dle.m_nugget, cb);
-				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
-				SetTint(*dle.m_instance, cb);
-				SetTexDiffuse(*dle.m_nugget, cb);
-				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
+				hlsl::fwd::CBufModel cb1 = {};
+				SetGeomType(*dle.m_nugget, cb1);
+				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
+				SetTint(*dle.m_instance, cb1);
+				SetTexDiffuse(*dle.m_nugget, cb1);
+				WriteConstants(dc, m_cbuf_nugget, cb1, EShaderType::VS|EShaderType::PS);
 
 				// Draw the nugget
 				Nugget const& nugget = *dle.m_nugget;

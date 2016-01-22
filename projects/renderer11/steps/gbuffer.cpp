@@ -169,9 +169,9 @@ namespace pr
 			dc->RSSetViewports(1, &m_scene->m_viewport);
 
 			// Set the frame constants and bind them to the shaders
-			hlsl::ds::CBufCamera cb = {};
-			SetViewConstants(m_scene->m_view, cb.m_cam);
-			WriteConstants(dc, m_cbuf_camera, cb, EShaderType::VS|EShaderType::PS);
+			hlsl::ds::CBufCamera cb0 = {};
+			SetViewConstants(m_scene->m_view, cb0.m_cam);
+			WriteConstants(dc, m_cbuf_camera, cb0, EShaderType::VS|EShaderType::PS);
 
 			// Loop over the elements in the draw list
 			for (auto& dle : m_drawlist)
@@ -180,12 +180,12 @@ namespace pr
 				ss.Commit();
 
 				// Set the per-nugget constants
-				hlsl::ds::CBufModel cb = {};
-				SetGeomType(*dle.m_nugget, cb);
-				SetTxfm(*dle.m_instance, m_scene->m_view, cb);
-				SetTint(*dle.m_instance, cb);
-				SetTexDiffuse(*dle.m_nugget, cb);
-				WriteConstants(dc, m_cbuf_nugget, cb, EShaderType::VS|EShaderType::PS);
+				hlsl::ds::CBufModel cb1 = {};
+				SetGeomType(*dle.m_nugget, cb1);
+				SetTxfm(*dle.m_instance, m_scene->m_view, cb1);
+				SetTint(*dle.m_instance, cb1);
+				SetTexDiffuse(*dle.m_nugget, cb1);
+				WriteConstants(dc, m_cbuf_nugget, cb1, EShaderType::VS|EShaderType::PS);
 
 				// Add the nugget to the device context
 				Nugget const& nugget = *dle.m_nugget;

@@ -1081,7 +1081,7 @@ namespace DirectX
 		if ( !_CalculateMipLevels3D(metadata.width, metadata.height, metadata.depth, levels) )
 			return E_INVALIDARG;
     
-		std::vector<const Image> baseImages;
+		std::vector<Image> baseImages;
 		baseImages.reserve( metadata.depth );
 		for( size_t slice=0; slice < metadata.depth; ++slice )
 		{

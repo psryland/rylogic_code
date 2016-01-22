@@ -66,19 +66,22 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 		{
 			pointA = overlap.m_pointA.m_point;
 			pointB = overlap.m_pointB.m_point;
-		}break;
+			break;
+		}
 	case (EPointType_Point<<2)|EPointType_Edge:
 	case (EPointType_Point<<2)|EPointType_Face:
 		{
 			pointA = overlap.m_pointA.m_point;
 			pointB = overlap.m_pointA.m_point - overlap.m_penetration * overlap.m_axis;
-		}break;
+			break;
+		}
 	case (EPointType_Edge<<2)|EPointType_Point:
 	case (EPointType_Face<<2)|EPointType_Point:
 		{
 			pointA = overlap.m_pointB.m_point + overlap.m_penetration * overlap.m_axis;
 			pointB = overlap.m_pointB.m_point;
-		}break;
+			break;
+		}
 	case (EPointType_Edge<<2)|EPointType_Edge:
 		{
 			// Find the closest point between the two edges and 
@@ -87,7 +90,8 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 			v4 s1 = overlap.m_b2w.pos + overlap.m_tri_verts[overlap.m_pointB.m_dof_info[0]];
 			v4 e1 = overlap.m_b2w.pos + overlap.m_tri_verts[overlap.m_pointB.m_dof_info[1]];
 			ClosestPoint_LineSegmentToLineSegment(s0, e0, s1, e1, pointA, pointB);
-		}break;
+			break;
+		}
 	case (EPointType_Edge<<2)|EPointType_Face:
 		{
 			// Clip the edge to the triangle
@@ -109,13 +113,14 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 			v4 avr = (s + e) / 2.0f;
 			pointA = avr;
 			pointB = avr - overlap.m_penetration * overlap.m_axis;
-		}break;
+			break;
+		}
 	case (EPointType_Face<<2)|EPointType_Edge:
 		{
-			// Clip the edge to the planes of the box that are dof's
+			// Clip the edge to the planes of the box that are DoF's
 			v4 s = overlap.m_b2w.pos + overlap.m_tri_verts[overlap.m_pointB.m_dof_info[0]];
 			v4 e = overlap.m_b2w.pos + overlap.m_tri_verts[overlap.m_pointB.m_dof_info[1]];
-			for( int i = 0; i != 2; ++i )
+			for (int i = 0; i != 2; ++i)
 			{
 				int const& axis = overlap.m_pointA.m_dof_info[i];
 				float const& r  = overlap.m_box.m_radius[axis];
@@ -125,26 +130,27 @@ void GetPointOfContactBoxVsTri(v4& pointA, v4& pointB, Overlap const& overlap)
 			v4 avr = (s + e) / 2.0f;
 			pointA = avr + overlap.m_penetration * overlap.m_axis;
 			pointB = avr;
-		}break;	
+			break;
+		}
 	case (EPointType_Face<<2)|EPointType_Face:
 		{
 			v4 avr = v4Zero;
 			float count = 0;
 
 			// Clip the three edges of the triangle to two slabs
-			for( int i = 0; i != 3; ++i )
+			for (int i = 0; i != 3; ++i)
 			{
 				v4 s = overlap.m_b2w.pos + overlap.m_tri_verts[i];
 				v4 e = overlap.m_b2w.pos + overlap.m_tri_verts[(i+1)%3];
-				int const& axis = overlap.m_pointA.m_dof_info[0];
-				float const& r  = overlap.m_box.m_radius[axis];
-				float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-				if( Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e) )
+				auto axis0 = overlap.m_pointA.m_dof_info[0];
+				auto r0    = overlap.m_box.m_radius[axis0];
+				auto dist0 = Dot3(overlap.m_a2w[axis0], overlap.m_a2w.pos);
+				if (Intersect_LineToSlab(overlap.m_a2w[axis0], dist0 - r0, dist0 + r0, s, e, s, e))
 				{
-					int const& axis = overlap.m_pointA.m_dof_info[1];
-					float const& r  = overlap.m_box.m_radius[axis];
-					float distA = Dot3(overlap.m_a2w[axis], overlap.m_a2w.pos);
-					if( Intersect_LineToSlab(overlap.m_a2w[axis], distA - r, distA + r, s, e, s, e) )
+					auto axis1 = overlap.m_pointA.m_dof_info[1];
+					auto r1    = overlap.m_box.m_radius[axis1];
+					auto dist1 = Dot3(overlap.m_a2w[axis1], overlap.m_a2w.pos);
+					if (Intersect_LineToSlab(overlap.m_a2w[axis1], dist1 - r1, dist1 + r1, s, e, s, e))
 					{
 						avr += s + e;
 						count += 2.0f;

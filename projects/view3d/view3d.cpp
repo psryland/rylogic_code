@@ -294,7 +294,7 @@ VIEW3D_API void __stdcall View3D_RemoveAllObjects(View3DWindow window)
 	CatchAndReport(View3D_RemoveAllObjects, window,);
 }
 
-// Return true if 'object' is amoung 'window's objects
+// Return true if 'object' is among 'window's objects
 VIEW3D_API BOOL __stdcall View3D_HasObject(View3DWindow window, View3DObject object)
 {
 	try
@@ -1274,10 +1274,12 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreate(UINT32 width, UINT32 hei
 		sdesc.AddressV = options.m_addrV;
 		sdesc.Filter = options.m_filter;
 
+		auto name = options.m_dbg_name;
+
 		DllLockGuard;
 		Texture2DPtr t = options.m_gdi_compatible
-			? Dll().m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc)
-			: Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc);
+			? Dll().m_rdr.m_tex_mgr.CreateTextureGdi(AutoId, src, tdesc, sdesc, name)
+			: Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, src, tdesc, sdesc, name);
 
 		t->m_has_alpha = options.m_has_alpha != 0;
 		auto tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
@@ -1298,8 +1300,10 @@ VIEW3D_API View3DTexture __stdcall View3D_TextureCreateFromFile(char const* tex_
 		sdesc.AddressV = options.m_addrV;
 		sdesc.Filter   = options.m_filter;
 
+		auto name = options.m_dbg_name;
+
 		DllLockGuard;
-		Texture2DPtr t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath);
+		Texture2DPtr t = Dll().m_rdr.m_tex_mgr.CreateTexture2D(AutoId, sdesc, tex_filepath, name);
 		auto tex = t.m_ptr; t.m_ptr = nullptr; // rely on the caller for correct reference counting
 		return tex;
 	}
@@ -1565,6 +1569,64 @@ VIEW3D_API void __stdcall View3D_Present(View3DWindow window)
 		window->m_wnd.Present();
 	}
 	CatchAndReport(View3D_Present, window,);
+}
+
+// Render a window into a texture
+// 'render_target' is the texture that is rendered onto
+// 'depth_buffer' is an optional texture that will receive the depth information (can be null)
+VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture render_target, View3DTexture depth_buffer)
+{
+	try
+	{
+		if (window == nullptr) throw std::exception("window is null");
+		if (render_target == nullptr) throw std::exception("Render target texture is null");
+
+		auto& wnd = window->m_wnd;
+		DllLockGuard;
+
+		// Get the description of the render target texture
+		TextureDesc rtdesc;
+		render_target->m_tex->GetDesc(&rtdesc);
+
+		// Get a render target view of the render target texture
+		D3DPtr<ID3D11RenderTargetView> rtv;
+		pr::Throw(wnd.Device()->CreateRenderTargetView(render_target->m_tex.m_ptr, nullptr, &rtv.m_ptr));
+
+		// If no depth buffer is given, create a temporary depth buffer
+		D3DPtr<ID3D11Texture2D> db;
+		if (depth_buffer == nullptr)
+		{
+			TextureDesc dbdesc;
+			dbdesc.Width          = rtdesc.Width;
+			dbdesc.Height         = rtdesc.Height;
+			dbdesc.Format         = wnd.m_db_format;
+			dbdesc.SampleDesc     = rtdesc.SampleDesc;
+			dbdesc.Usage          = D3D11_USAGE_DEFAULT;
+			dbdesc.BindFlags      = D3D11_BIND_DEPTH_STENCIL;
+			dbdesc.CPUAccessFlags = 0;
+			dbdesc.MiscFlags      = 0;
+			pr::Throw(wnd.Device()->CreateTexture2D(&dbdesc, nullptr, &db.m_ptr));
+		}
+		else
+		{
+			db = depth_buffer->m_tex;
+		}
+
+		// Create a depth stencil view of the depth buffer
+		D3DPtr<ID3D11DepthStencilView> dsv = nullptr;
+		pr::Throw(wnd.Device()->CreateDepthStencilView(db.m_ptr, nullptr, &dsv.m_ptr));
+
+		// Set the render target
+		wnd.SetRT(rtv, dsv);
+
+		// Render the scene
+		View3D_Render(window);
+		View3D_Present(window);
+
+		// Restore the main render target
+		wnd.RestoreRT();
+	}
+	CatchAndReport(View3D_RenderTo, window,);
 }
 
 // Get/Set the dimensions of the render target
