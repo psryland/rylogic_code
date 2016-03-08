@@ -109,62 +109,64 @@ struct Main :Form
 	{
 		m_nm_progress.Create(ProgressDlg::Params().parent(this).hide_on_close(true));
 		auto busy_work = [](ProgressDlg* dlg)
-			{
-				for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
-					Sleep(100);
-				if (dlg->Progress(1.0f))
-					Sleep(1000);
-			};
-		m_btn_progress.Click += [&](Button&,EmptyArgs const&)
-			{
-				ProgressDlg progress(L"Busy work", L"workin...", busy_work);
-				progress.ShowDialog(this);
-			};
-		m_btn_nm_prog.Click += [&](Button&,EmptyArgs const&)
-			{
-				m_nm_progress.Show(L"Busy work", L"workin hard or hardly workin?", busy_work);
-			};
-		m_btn_modeless.Click += [&](Button&,EmptyArgs const&)
-			{
-				m_modeless.Show();
-			};
-		m_btn_cmenu.Click += [&](Button&,EmptyArgs const&)
-			{
-				enum class ECmd { Label, Label2, TextBox };
+		{
+			for (int i = 0, iend = 500; dlg->Progress(i*1.f/iend) && i != iend; ++i)
+				Sleep(100);
+			if (dlg->Progress(1.0f))
+				Sleep(1000);
+		};
 
-				auto pt = MousePosition();
-				if (KeyState(VK_SHIFT))
-				{
-					auto m = ::CreatePopupMenu();
-					::AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
-					::TrackPopupMenu(m, ::GetSystemMetrics(SM_MENUDROPALIGNMENT)|TPM_LEFTBUTTON, pt.x, pt.y, 0, *this, nullptr);
-				}
-				else
-				{
-					// Construct the menu
-					ContextMenu menu;
-					ContextMenu::Label     lbl1(menu, L"&Label1", 0);
-					ContextMenu::Separator sep1(menu);
-					ContextMenu::Label     lbl2(menu, L"&Label2", 2);
-					ContextMenu::Label     lbl3(menu, L"&Label3", 3);
-					ContextMenu::Separator sep3(menu);
-					ContextMenu::Label     lbl4(menu, L"&Label4", 5);
-					ContextMenu::TextBox   tb  (menu, L"&Text Box1", L"xox", 6);
-					ContextMenu::Label     lbl5(menu, L"&Label5", 7);
-					ContextMenu::Label     lbl6(menu, L"&Label6", 8);
+		// Assign button handlers
+		m_btn_progress.Click += [&](Button&,EmptyArgs const&)
+		{
+			ProgressDlg progress(L"Busy work", L"workin...", busy_work);
+			progress.ShowDialog(this);
+		};
+		m_btn_nm_prog.Click += [&](Button&,EmptyArgs const&)
+		{
+			m_nm_progress.Show(L"Busy work", L"workin hard or hardly workin?", busy_work);
+		};
+		m_btn_modeless.Click += [&](Button&,EmptyArgs const&)
+		{
+			m_modeless.Show();
+		};
+		m_btn_cmenu.Click += [&](Button&,EmptyArgs const&)
+		{
+			enum class ECmd { Label, Label2, TextBox };
+
+			auto pt = MousePosition();
+			if (KeyState(VK_SHIFT))
+			{
+				auto m = ::CreatePopupMenu();
+				::AppendMenuW(m, MF_SEPARATOR, 0, nullptr);
+				::TrackPopupMenu(m, ::GetSystemMetrics(SM_MENUDROPALIGNMENT)|TPM_LEFTBUTTON, pt.x, pt.y, 0, *this, nullptr);
+			}
+			else
+			{
+				// Construct the menu
+				ContextMenu menu;
+				ContextMenu::Label     lbl1(menu, L"&Label1", 0);
+				ContextMenu::Separator sep1(menu);
+				ContextMenu::Label     lbl2(menu, L"&Label2", 2);
+				ContextMenu::Label     lbl3(menu, L"&Label3", 3);
+				ContextMenu::Separator sep3(menu);
+				ContextMenu::Label     lbl4(menu, L"&Label4", 5);
+				ContextMenu::TextBox   tb  (menu, L"&Text Box1", L"xox", 6);
+				ContextMenu::Label     lbl5(menu, L"&Label5", 7);
+				ContextMenu::Label     lbl6(menu, L"&Label6", 8);
 					
-					//ContextMenu submenu(&menu, _T("Sub Menu"));
-					//ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
-					pt = PointToClient(pt);
-					menu.Show(this, pt.x, pt.y);
-				}
-			};
+				//ContextMenu submenu(&menu, _T("Sub Menu"));
+				//ContextMenu::Label     lbl3(submenu, _T("&Label3"), (int)ECmd::Label);
+				pt = PointToClient(pt);
+				menu.Show(this, pt.x, pt.y);
+			}
+		};
 		m_btn.Click += std::bind(&Main::RunBoobs, this, _1, _2);
 		m_btn_about.Click += [&](Button&,EmptyArgs const&)
-			{
-				About about;
-				about.ShowDialog(this);
-			};
+		{
+			About about;
+			about.ShowDialog(this);
+		};
 
 		if ((HWND)m_tc != nullptr)
 		{
@@ -195,6 +197,20 @@ struct Main :Form
 	}
 };
 
+// Form for testing specific controls
+struct Test :Form
+{
+	enum { IDC_SPLIT = 100, IDC_LEFT, IDC_RITE,};
+	Splitter m_split;
+	Test()
+		:Form(FormParams().wndclass(RegisterWndClass<Test>()).name("test").title(L"Pauls Window").xy(2000,100).wh(800,600).menu({{L"&File", Menu(Menu::EKind::Popup, {MenuItem(L"E&xit", IDCLOSE)})}}).main_wnd(true))
+		,m_split(Splitter::Params().vertical().name("split").parent(this).dock(EDock::Fill))
+	{
+		m_split.Pane0.Style(EStyleOp::Add, WS_BORDER);
+		m_split.Pane1.Style(EStyleOp::Add, WS_BORDER);
+	}
+};
+
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
 	pr::InitCom com;
@@ -214,7 +230,8 @@ int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
 		pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 
-		Main main;
+		Test main;
+		//Main main;
 		main.Show();
 
 		MessageLoop loop;

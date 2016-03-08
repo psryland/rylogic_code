@@ -27,6 +27,21 @@ namespace pr.util
 			Remove     = 2,
 		}
 
+		public enum EPrettyStyle
+		{
+			/// <summary>Words start with capitals followed by lower case and are separated by spaces</summary>
+			Title,
+
+			/// <summary>Words are all upper case, separated with underscore</summary>
+			Macro,
+
+			/// <summary>Words are lower case, separated by underscore</summary>
+			LocalVar,
+
+			/// <summary>Words start with capitals followed by lower case and have no separators</summary>
+			TypeDecl,
+		}
+
 		/// <summary>Transforms a string by the given casing rules</summary>
 		public static string Apply(string str, ECapitalise word_start, ECapitalise word_case, ESeparate word_sep, string sep, string delims = null)
 		{
@@ -77,6 +92,17 @@ namespace pr.util
 				}
 			}
 			return sb.ToString();
+		}
+		public static string Apply(string str, EPrettyStyle style, string delims = null)
+		{
+			switch (style)
+			{
+			default: throw new Exception("Unknown style");
+			case EPrettyStyle.Title:    return Apply(str, ECapitalise.UpperCase, ECapitalise.LowerCase, ESeparate.Add, " ", delims);
+			case EPrettyStyle.Macro:    return Apply(str, ECapitalise.UpperCase, ECapitalise.UpperCase, ESeparate.Add, "_", delims);
+			case EPrettyStyle.LocalVar: return Apply(str, ECapitalise.LowerCase, ECapitalise.LowerCase, ESeparate.Add, "_", delims);
+			case EPrettyStyle.TypeDecl: return Apply(str, ECapitalise.UpperCase, ECapitalise.LowerCase, ESeparate.Remove, "", delims);
+			}
 		}
 	}
 }

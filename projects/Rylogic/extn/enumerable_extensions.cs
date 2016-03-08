@@ -27,6 +27,12 @@ namespace pr.extn
 			return new HashSet<TSource>(source);
 		}
 
+		/// <summary>Convert the collection into a hash set</summary>
+		public static HashSet<TKey> ToHashSet<TSource,TKey>(this IEnumerable<TSource> source, Func<TSource,TKey> selector)
+		{
+			return new HashSet<TKey>(source.Select(selector));
+		}
+
 		/// <summary>Apply 'action' to each item in the collection</summary>
 		public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource> action)
 		{
@@ -66,6 +72,18 @@ namespace pr.extn
 			comparer = comparer ?? Eql<TSource>.Default;
 			var exclude = rhs.ToHashSet();
 			return source.Where(x => !exclude.Contains(x, comparer));
+		}
+
+		/// <summary>Returns elements from this collection that aren't also in 'rhs'. Note: The MS version of this function doesn't work</summary>
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, Eql<TSource> comparer, params TSource[] rhs)
+		{
+			comparer = comparer ?? Eql<TSource>.Default;
+			var exclude = rhs.ToHashSet();
+			return source.Where(x => !exclude.Contains(x, comparer));
+		}
+		public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> source, params TSource[] rhs)
+		{
+			return Except(source, Eql<TSource>.Default, rhs);
 		}
 
 		/// <summary>Return the index of the first occurrence of 'pred(x) == true' or -1</summary>

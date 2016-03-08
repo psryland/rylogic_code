@@ -171,6 +171,7 @@ namespace pr
 		// texture and optionally preserving the current content of the texture
 		void Texture2D::Resize(size_t width, size_t height, bool all_instances, bool preserve)
 		{
+			PR_ASSERT(PR_DBG_RDR, width*height != 0, "Do not resize textures to 0x0");
 			TextureDesc tdesc;
 			m_tex->GetDesc(&tdesc);
 			tdesc.Width = checked_cast<UINT>(width);

@@ -52,6 +52,20 @@ namespace pr.extn
 		{
 			return GetOrAdd(dic, key, k => new TValue());
 		}
+
+		/// <summary>Get the item associated with 'key' or 'default(TValue)' if not in the dictionary</summary>
+		public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey,TValue> dic, TKey key)
+		{
+			TValue value;
+			return dic.TryGetValue(key, out value) ? value : default(TValue);
+		}
+
+		/// <summary>Get the item associated with 'key' or 'default(TValue)' if not in the dictionary</summary>
+		public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey,TValue> dic, TKey key, Func<TKey, TValue> on_default)
+		{
+			TValue value;
+			return dic.TryGetValue(key, out value) ? value : on_default(key);
+		}
 	}
 }
 

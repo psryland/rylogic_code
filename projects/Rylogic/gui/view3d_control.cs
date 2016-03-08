@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using pr.common;
 using pr.extn;
 using pr.gfx;
 using pr.maths;
@@ -27,17 +24,20 @@ namespace pr.gui
 
 	public class View3dControl :UserControl
 	{
-		public View3dControl() :this(false) {}
-		public View3dControl(bool gdi_compat)
+		public View3dControl() :this(false, string.Empty) {}
+		public View3dControl(bool gdi_compat, string dbg_name)
 		{
 			if (this.IsInDesignMode()) return;
 			SetStyle(ControlStyles.Selectable, false);
 
 			m_impl_view3d = new View3d();
-			m_impl_wnd = new View3d.Window(View3d, Handle, gdi_compat, (ctx,msg) => OnReportError(new ReportErrorEventArgs(msg)));
+
+			var opts = new View3d.WindowOptions(gdi_compat, HandleReportError, IntPtr.Zero) { DbgName = dbg_name ?? string.Empty };
+			m_impl_wnd = new View3d.Window(View3d, Handle, opts);
 
 			InitializeComponent();
 
+			Name = dbg_name;
 			ClickTimeMS = 180;
 			MouseNavigation = true;
 			DefaultKeyboardShortcuts = true;
@@ -402,6 +402,10 @@ namespace pr.gui
 		protected virtual void OnReportError(ReportErrorEventArgs e)
 		{
 			ReportError.Raise(this, e);
+		}
+		private void HandleReportError(IntPtr ctx, string msg)
+		{
+			OnReportError(new ReportErrorEventArgs(msg));
 		}
 
 		/// <summary>Render and present the scene</summary>

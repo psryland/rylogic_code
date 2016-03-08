@@ -11,7 +11,7 @@ using pr.util;
 namespace pr.container
 {
 	/// <summary>Extension to BindingList that notifies *before* an item is removed</summary>
-	[DataContract] public class BindingListEx<T> :BindingList<T>
+	[DataContract] public class BindingListEx<T> :BindingList<T> ,IEnumerable<T>
 	{
 		public BindingListEx() :base()
 		{
@@ -45,12 +45,12 @@ namespace pr.container
 			// Attach handlers to ensure we always receive the Reset event.
 			// Calling the 'new' method will cause the Pre events to be raised as well
 			ListChanged += (s,a) =>
-				{
-					if (a.ListChangedType == ListChangedType.Reset)
-						ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
-					if (a.ListChangedType == ListChangedType.ItemChanged)
-						ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
-				};
+			{
+				if (a.ListChangedType == ListChangedType.Reset)
+					ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.Reset, -1, default(T)));
+				if (a.ListChangedType == ListChangedType.ItemChanged)
+					ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemReset, a.NewIndex, this[a.NewIndex]));
+			};
 		}
 
 		/// <summary>Get/Set readonly for this list</summary>
@@ -92,6 +92,7 @@ namespace pr.container
 			// Call ClearItems even if 'PerItemClear' is true so that the ListChg.Reset event is raised
 			// Reset event is raised from ListChanged handler
 			base.ClearItems();
+			m_hash_set?.Clear();
 
 			// Zero items, sorted..
 			IsSorted = true;
@@ -116,6 +117,7 @@ namespace pr.container
 			// that is bound to a combo box or list box. It happens when the list goes to/from empty
 			// and is just shoddiness in the windows controls.
 			base.InsertItem(index, item);
+			m_hash_set?.Add(item);
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
@@ -135,6 +137,7 @@ namespace pr.container
 			}
 
 			base.RemoveItem(index);
+			m_hash_set?.Remove(item);
 			IsSorted = false;
 	
 			if (RaiseListChangedEvents)
@@ -171,6 +174,25 @@ namespace pr.container
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemRemoved, index, old));
 			if (RaiseListChangedEvents)
 				ListChanging.Raise(this, new ListChgEventArgs<T>(ListChg.ItemAdded, index, item));
+		}
+
+		/// <summary>Optimised 'Contains'</summary>
+		public new bool Contains(T item)
+		{
+			return m_hash_set?.Contains(item) ?? base.Contains(item);
+		}
+		public bool UseHashSet
+		{
+			get { return m_hash_set != null; }
+			set { m_hash_set = value ? this.ToHashSet() : null; }
+		}
+		private HashSet<T> m_hash_set;
+
+		/// <summary>Enumerable</summary>
+		IEnumerator<T> IEnumerable<T>.GetEnumerator()
+		{
+			foreach (var item in (IEnumerable)this)
+				yield return (T)item;
 		}
 
 		#region Sorting
@@ -283,17 +305,18 @@ namespace pr.container
 		/// <summary>RAII object for suspending list events</summary>
 		public Scope<bool> SuspendEvents(bool reset_bindings_on_resume = false)
 		{
+			// Returns Scope<bool> rather than Scope so that callers can change the state of 'raise'
+			var initial_raise = RaiseListChangedEvents;
 			return Scope.Create(
 				() =>
 				{
 					RaiseListChangedEvents = false;
 					return reset_bindings_on_resume;
 				},
-				do_reset =>
+				raise =>
 				{
 					RaiseListChangedEvents = true;
-					if (do_reset)
-						ResetBindings();
+					if (raise && initial_raise) ResetBindings();
 				});
 		}
 	}

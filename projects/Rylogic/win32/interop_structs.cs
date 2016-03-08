@@ -254,5 +254,15 @@ namespace pr.win32
 				text = new string('\0', max - min);
 			}
 		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 4)]
+		public struct IconInfo
+		{
+			public bool fIcon;
+			public int xHotspot;
+			public int yHotspot;
+			public IntPtr hbmMask;
+			public IntPtr hbmColor;
+		}
 	}
 }

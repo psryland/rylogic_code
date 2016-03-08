@@ -29,15 +29,12 @@ namespace pr.extn
 		/// <summary>Returns the 'current' item in the binding source or null (rather than throwing an exception)</summary>
 		public static object CurrentOrDefault(this BindingSource bs)
 		{
+			// Use 'Current' for BindingSource<T>
 			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : null;
 		}
 		public static T CurrentOrDefault<T>(this BindingSource bs)
 		{
 			return (T)bs.CurrentOrDefault();
-		}
-		public static T CurrentOrDefault<T>(this BindingSource<T> bs)
-		{
-			return bs.Position >= 0 && bs.Position < bs.Count ? bs.Current : default(T);
 		}
 
 		/// <summary>Temporarily detaches the DataSource from this binding source</summary>

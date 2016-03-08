@@ -1,11 +1,18 @@
 ﻿using System;
-using System.Runtime.InteropServices;
-using System.IO;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
 using pr.common;
+using pr.extn;
 
 namespace pr.inet
 {
+	// Note: there is a standard .NET assembly for this, it's probably better to use that.
+	// Use System.Net.Mail, and System.Net;
+	// see the unit test function below
+
 	/// <summary>Collects info for an email message</summary>
 	public class Email
 	{
@@ -178,11 +185,79 @@ namespace pr.inet
 			}
 		}
 	}
+
+	/// <summary>Send an email etc via SendGrid</summary>
+	public class SendGrid
+	{
+		/// <summary>SendGrid email via HTTP POST</summary>
+		/// <remarks>https://sendgrid.com/docs/API_Reference/Web_API/mail.html</remarks>
+		public class Email
+		{
+			/// <summary>An application specific key generated on the website: https://app.sendgrid.com/settings/api_keys </summary>
+			public string APIKey { get; set; } // e.g. rE4Bg3AZRrOx7i8BrZgypA
+
+			/// <summary>The authentication string created by the website: https://app.sendgrid.com/settings/api_keys when the API key was created</summary>
+			public string AuthString { get; set; } // e.g. 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
+
+			/// <summary>The email address that the email will be sent to</summary>
+			public string ToAddress { get; set; }
+
+			/// <summary>The email address that the email will appear to be sent from</summary>
+			public string FromAddress { get; set; }
+
+			/// <summary>The name associated with the ToAddress (optional)</summary>
+			public string ToAddressName { get; set; }
+
+			/// <summary>The name associated with the FromAddress (optional)</summary>
+			public string FromAddressName { get; set; }
+
+			/// <summary>The email subject</summary>
+			public string Subject { get; set; }
+
+			/// <summary>The email body</summary>
+			public string Body { get; set; }
+
+			/// <summary>Send the email</summary>
+			public HttpWebResponse Send()
+			{
+				try
+				{
+					// HTTP POST web request
+					var req = HttpWebRequest.Create("https://api.sendgrid.com/api/mail.send.json");
+					req.Headers.Add(HttpRequestHeader.Authorization, "Bearer {0}".Fmt(AuthString));
+					req.ContentType = "application/x-www-form-urlencoded";
+					req.Method = "POST";
+
+					// Parameters
+					var data = Str.Build(
+						"api_key="  , APIKey      ?? string.Empty,
+						"&to="      , ToAddress   ?? string.Empty,
+						"&from="    , FromAddress ?? string.Empty,
+						"&subject=" , Subject     ?? string.Empty,
+						"&text="    , Body        ?? string.Empty,
+						"");
+					if (ToAddressName   != null) data += Str.Build("&toname=", ToAddressName);
+					if (FromAddressName != null) data += Str.Build("&fromname=", FromAddressName);
+					var data_bytes = Encoding.UTF8.GetBytes(data);
+					req.GetRequestStream().Write2(data_bytes, 0, data_bytes.Length).Close();
+
+					// Post, get reply
+					return (HttpWebResponse)req.GetResponse();
+				}
+				catch(WebException ex)
+				{
+					return (HttpWebResponse)ex.Response;
+				}
+			}
+		}
+	}
 }
 
 #if PR_UNITTESTS
 namespace pr.unittests
 {
+	using System.Net;
+	using System.Net.Mail;
 	using inet;
 
 	[TestFixture] public class TestEmail
@@ -195,6 +270,32 @@ namespace pr.unittests
 			email.Subject = "NUnit test of Email";
 			email.Body = "It Workz!";
 			email.Send();
+		}
+
+		/// <summary>How to send email the standard way</summary>
+		public void SendEmail2()
+		{
+			var from = new MailAddress("from@gmail.com", "From Name");
+			var to = new MailAddress("to@yahoo.com", "To Name");
+			var smtp = new SmtpClient
+			{
+				Host           = "smtp.gmail.com", // "smtp.sendgrid.net", "smtp.mail.yahoo.com" , "smtp.live.com" (hotmail)
+				Port           = 587,              //  587               ,  587                  , 25
+				Credentials    = new NetworkCredential(from.Address, "from_password"),
+				EnableSsl      = true,
+				DeliveryMethod = SmtpDeliveryMethod.Network,
+				Timeout        = 20000,
+			};
+			var msg = new MailMessage(from, to)
+			{
+				Subject = "Is this email",
+				Body = "Nah...",
+				IsBodyHtml = false,
+			};
+
+			using (smtp)
+			using (msg)
+				smtp.Send(msg);
 		}
 	}
 }

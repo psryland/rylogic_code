@@ -77,106 +77,112 @@ namespace pr.extn
 				this[typeof(Enum           )] = ToXmlDefault;
 				this[typeof(Guid           )] = ToXmlDefault;
 				this[typeof(DateTimeOffset)] = (obj, node) =>
-					{
-						var dto = (DateTimeOffset)obj;
-						node.SetValue(dto.ToString("o"));
-						return node;
-					};
+				{
+					var dto = (DateTimeOffset)obj;
+					node.SetValue(dto.ToString("o"));
+					return node;
+				};
 				this[typeof(DateTime)] = (obj, node) =>
-					{
-						var dt = (DateTime)obj;
-						node.SetValue(dt.ToString("o"));
-						return node;
-					};
+				{
+					var dt = (DateTime)obj;
+					node.SetValue(dt.ToString("o"));
+					return node;
+				};
+				this[typeof(TimeSpan)] = (obj, node) =>
+				{
+					var ts = (TimeSpan)obj;
+					node.SetValue(ts.Ticks);
+					return node;
+				};
 				this[typeof(Color)] = (obj, node) =>
-					{
-						var col = ((Color)obj).ToArgb().ToString("X8");
-						node.SetValue(col);
-						return node;
-					};
+				{
+					var col = ((Color)obj).ToArgb().ToString("X8");
+					node.SetValue(col);
+					return node;
+				};
 				this[typeof(Size)] = (obj, node) =>
-					{
-						var sz = (Size)obj;
-						node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
-						return node;
-					};
+				{
+					var sz = (Size)obj;
+					node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
+					return node;
+				};
 				this[typeof(SizeF)] = (obj, node) =>
-					{
-						var sz = (SizeF)obj;
-						node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
-						return node;
-					};
+				{
+					var sz = (SizeF)obj;
+					node.SetValue("{0} {1}".Fmt(sz.Width, sz.Height));
+					return node;
+				};
 				this[typeof(Point)] = (obj, node) =>
-					{
-						var pt = (Point)obj;
-						node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
-						return node;
-					};
+				{
+					var pt = (Point)obj;
+					node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
+					return node;
+				};
 				this[typeof(PointF)] = (obj, node) =>
-					{
-						var pt = (PointF)obj;
-						node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
-						return node;
-					};
+				{
+					var pt = (PointF)obj;
+					node.SetValue("{0} {1}".Fmt(pt.X, pt.Y));
+					return node;
+				};
 				this[typeof(Rectangle)] = (obj, node) =>
-					{
-						var rc = (Rectangle)obj;
-						node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
-						return node;
-					};
+				{
+					var rc = (Rectangle)obj;
+					node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
+					return node;
+				};
 				this[typeof(RectangleF)] = (obj, node) =>
-					{
-						var rc = (RectangleF)obj;
-						node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
-						return node;
-					};
+				{
+					var rc = (RectangleF)obj;
+					node.SetValue("{0} {1} {2} {3}".Fmt(rc.X, rc.Y, rc.Width, rc.Height));
+					return node;
+				};
 				this[typeof(Padding)] = (obj, node) =>
-					{
-						var p = (Padding)obj;
-						node.SetValue("{0} {1} {2} {3}".Fmt(p.Left, p.Top, p.Right, p.Bottom));
-						return node;
-					};
+				{
+					var p = (Padding)obj;
+					node.SetValue("{0} {1} {2} {3}".Fmt(p.Left, p.Top, p.Right, p.Bottom));
+					return node;
+				};
 				this[typeof(Font)] = (obj, node) =>
-					{
-						var font = (Font)obj;
-						node.Add(
-							font.FontFamily.Name.ToXml(nameof(Font.FontFamily     ), false),
-							font.Size           .ToXml(nameof(Font.Size           ), false),
-							font.Style          .ToXml(nameof(Font.Style          ), false),
-							font.Unit           .ToXml(nameof(Font.Unit           ), false),
-							font.GdiCharSet     .ToXml(nameof(Font.GdiCharSet     ), false),
-							font.GdiVerticalFont.ToXml(nameof(Font.GdiVerticalFont), false));
-						return node;
-					};
+				{
+					var font = (Font)obj;
+					node.Add(
+						font.FontFamily.Name.ToXml(nameof(Font.FontFamily     ), false),
+						font.Size           .ToXml(nameof(Font.Size           ), false),
+						font.Style          .ToXml(nameof(Font.Style          ), false),
+						font.Unit           .ToXml(nameof(Font.Unit           ), false),
+						font.GdiCharSet     .ToXml(nameof(Font.GdiCharSet     ), false),
+						font.GdiVerticalFont.ToXml(nameof(Font.GdiVerticalFont), false));
+					return node;
+				};
 				this[typeof(Blend)] = (obj, node) =>
-					{
-						var blend = (Blend)obj;
-						node.Add2(nameof(Blend.Factors), string.Join(",", blend.Factors), false);
-						node.Add2(nameof(Blend.Positions), string.Join(",", blend.Positions), false);
-						return node;
-					};
+				{
+					var blend = (Blend)obj;
+					node.Add2(nameof(Blend.Factors), string.Join(",", blend.Factors), false);
+					node.Add2(nameof(Blend.Positions), string.Join(",", blend.Positions), false);
+					return node;
+				};
 				this[typeof(v2)] = (obj, node) =>
-					{
-						var vec = (v2)obj;
-						node.SetValue(vec.ToString());
-						return node;
-					};
+				{
+					var vec = (v2)obj;
+					node.SetValue(vec.ToString());
+					return node;
+				};
 				this[typeof(v4)] = (obj, node) =>
-					{
-						var vec = (v4)obj;
-						node.SetValue(vec.ToString4());
-						return node;
-					};
+				{
+					var vec = (v4)obj;
+					node.SetValue(vec.ToString4());
+					return node;
+				};
 				this[typeof(m4x4)] = (obj, node) =>
-					{
-						var mat = (m4x4)obj;
-						node.Add(
-							mat.x.ToXml(nameof(m4x4.x), false),
-							mat.y.ToXml(nameof(m4x4.y), false),
-							mat.z.ToXml(nameof(m4x4.z), false),
-							mat.w.ToXml(nameof(m4x4.w), false));
-						return node;
-					};
+				{
+					var mat = (m4x4)obj;
+					node.Add(
+						mat.x.ToXml(nameof(m4x4.x), false),
+						mat.y.ToXml(nameof(m4x4.y), false),
+						mat.z.ToXml(nameof(m4x4.z), false),
+						mat.w.ToXml(nameof(m4x4.w), false));
+					return node;
+				};
 			}
 
 			/// <summary>
@@ -187,7 +193,10 @@ namespace pr.extn
 			public XElement Convert(object obj, XElement node, bool type_attr)
 			{
 				if (obj == null)
-					return ToXmlDefault(string.Empty, node);
+				{
+					if (!node.IsEmpty) throw new Exception("Null objects should serialise to empty XElements");
+					return node;
+				}
 
 				var type = obj.GetType();
 				type = Nullable.GetUnderlyingType(type) ?? type;
@@ -323,160 +332,164 @@ namespace pr.extn
 			public AsBinding()
 			{
 				this[typeof(XElement)] = (elem, type, ctor) =>
-					{
-						return elem.Elements().FirstOrDefault();
-					};
+				{
+					return elem.Elements().FirstOrDefault();
+				};
 				this[typeof(string)] = (elem, type, ctor) =>
-					{
-						return elem.Value;
-					};
+				{
+					return elem.Value;
+				};
 				this[typeof(bool)] = (elem, type, ctor) =>
-					{
-						return bool.Parse(elem.Value);
-					};
+				{
+					return bool.Parse(elem.Value);
+				};
 				this[typeof(byte)] = (elem, type, ctor) =>
-					{
-						return elem.Value.StartsWith("0x")
-							? byte.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
-							: byte.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return elem.Value.StartsWith("0x")
+						? byte.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
+						: byte.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(sbyte)] = (elem, type, ctor) =>
-					{
-						return sbyte.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return sbyte.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(char)] = (elem, type, ctor) =>
-					{
-						return char.Parse(elem.Value);
-					};
+				{
+					return char.Parse(elem.Value);
+				};
 				this[typeof(short)] = (elem, type, ctor) =>
-					{
-						return short.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return short.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(ushort)] = (elem, type, ctor) =>
-					{
-						return elem.Value.StartsWith("0x")
-							? ushort.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
-							: ushort.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return elem.Value.StartsWith("0x")
+						? ushort.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
+						: ushort.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(int)] = (elem, type, ctor) =>
-					{
-						return int.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return int.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(uint)] = (elem, type, ctor) =>
-					{
-						return elem.Value.StartsWith("0x")
-							? uint.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
-							: uint.Parse(elem.Value);
-					};
+				{
+					return elem.Value.StartsWith("0x")
+						? uint.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
+						: uint.Parse(elem.Value);
+				};
 				this[typeof(long)] = (elem, type, ctor) =>
-					{
-						return long.Parse(elem.Value, NumberStyles.Any);
-					};
+				{
+					return long.Parse(elem.Value, NumberStyles.Any);
+				};
 				this[typeof(ulong)] = (elem, type, ctor) =>
-					{
-						return elem.Value.StartsWith("0x")
-							? ulong.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
-							: ulong.Parse(elem.Value);
-					};
+				{
+					return elem.Value.StartsWith("0x")
+						? ulong.Parse(elem.Value.Substring(2), NumberStyles.HexNumber)
+						: ulong.Parse(elem.Value);
+				};
 				this[typeof(float)] = (elem, type, ctor) =>
-					{
-						return float.Parse(elem.Value);
-					};
+				{
+					return float.Parse(elem.Value);
+				};
 				this[typeof(double)] = (elem, type, ctor) =>
-					{
-						return double.Parse(elem.Value);
-					};
+				{
+					return double.Parse(elem.Value);
+				};
 				this[typeof(Enum)] = (elem, type, ctor) =>
-					{
-						return Enum.Parse(type, elem.Value);
-					};
+				{
+					return Enum.Parse(type, elem.Value);
+				};
 				this[typeof(Guid)] = (elem, type, ctor) =>
-					{
-						return Guid.Parse(elem.Value);
-					};
+				{
+					return Guid.Parse(elem.Value);
+				};
 				this[typeof(DateTimeOffset)] = (elem, type, ctor) =>
-					{
-						return DateTimeOffset.ParseExact(elem.Value, "o", null);
-					};
+				{
+					return DateTimeOffset.ParseExact(elem.Value, "o", null);
+				};
 				this[typeof(DateTime)] = (elem, type, ctor) =>
-					{
-						return DateTime.ParseExact(elem.Value, "o", null);
-					};
+				{
+					return DateTime.ParseExact(elem.Value, "o", null);
+				};
+				this[typeof(TimeSpan)] = (elem, type, ctor) =>
+				{
+					return TimeSpan.FromTicks(long.Parse(elem.Value));
+				};
 				this[typeof(Color)] = (elem, type, ctor) =>
-					{
-						return Color.FromArgb(int.Parse(elem.Value, NumberStyles.HexNumber));
-					};
+				{
+					return Color.FromArgb(int.Parse(elem.Value, NumberStyles.HexNumber));
+				};
 				this[typeof(Size)] = (elem, type, ctor) =>
-					{
-						var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new Size(int.Parse(wh[0]), int.Parse(wh[1]));
-					};
+				{
+					var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new Size(int.Parse(wh[0]), int.Parse(wh[1]));
+				};
 				this[typeof(SizeF)] = (elem, type, ctor) =>
-					{
-						var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new SizeF(float.Parse(wh[0]), float.Parse(wh[1]));
-					};
+				{
+					var wh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new SizeF(float.Parse(wh[0]), float.Parse(wh[1]));
+				};
 				this[typeof(Point)] = (elem, type, ctor) =>
-					{
-						var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new Point(int.Parse(xy[0]), int.Parse(xy[1]));
-					};
+				{
+					var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new Point(int.Parse(xy[0]), int.Parse(xy[1]));
+				};
 				this[typeof(PointF)] = (elem, type, ctor) =>
-					{
-						var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new PointF(float.Parse(xy[0]), float.Parse(xy[1]));
-					};
+				{
+					var xy = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new PointF(float.Parse(xy[0]), float.Parse(xy[1]));
+				};
 				this[typeof(Rectangle)] = (elem, type, ctor) =>
-					{
-						var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new Rectangle(int.Parse(xywh[0]), int.Parse(xywh[1]), int.Parse(xywh[2]), int.Parse(xywh[3]));
-					};
+				{
+					var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new Rectangle(int.Parse(xywh[0]), int.Parse(xywh[1]), int.Parse(xywh[2]), int.Parse(xywh[3]));
+				};
 				this[typeof(RectangleF)] = (elem, type, ctor) =>
-					{
-						var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new RectangleF(float.Parse(xywh[0]), float.Parse(xywh[1]), float.Parse(xywh[2]), float.Parse(xywh[3]));
-					};
+				{
+					var xywh = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new RectangleF(float.Parse(xywh[0]), float.Parse(xywh[1]), float.Parse(xywh[2]), float.Parse(xywh[3]));
+				};
 				this[typeof(Padding)] = (elem, type, ctor) =>
-					{
-						var ltrb = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
-						return new Padding(int.Parse(ltrb[0]), int.Parse(ltrb[1]), int.Parse(ltrb[2]), int.Parse(ltrb[3]));
-					};
+				{
+					var ltrb = elem.As<string>().Split(WhiteSpace, StringSplitOptions.RemoveEmptyEntries);
+					return new Padding(int.Parse(ltrb[0]), int.Parse(ltrb[1]), int.Parse(ltrb[2]), int.Parse(ltrb[3]));
+				};
 				this[typeof(Font)] = (elem, type, instance) =>
-					{
-						var font_family       = elem.Element(nameof(Font.FontFamily     )).As<string>();
-						var size              = elem.Element(nameof(Font.Size           )).As<float>();
-						var style             = elem.Element(nameof(Font.Style          )).As<FontStyle>();
-						var unit              = elem.Element(nameof(Font.Unit           )).As<GraphicsUnit>();
-						var gdi_charset       = elem.Element(nameof(Font.GdiCharSet     )).As<byte>();
-						var gdi_vertical_font = elem.Element(nameof(Font.GdiVerticalFont)).As<bool>();
-						return new Font(font_family, size, style, unit, gdi_charset, gdi_vertical_font);
-					};
+				{
+					var font_family       = elem.Element(nameof(Font.FontFamily     )).As<string>();
+					var size              = elem.Element(nameof(Font.Size           )).As<float>();
+					var style             = elem.Element(nameof(Font.Style          )).As<FontStyle>();
+					var unit              = elem.Element(nameof(Font.Unit           )).As<GraphicsUnit>();
+					var gdi_charset       = elem.Element(nameof(Font.GdiCharSet     )).As<byte>();
+					var gdi_vertical_font = elem.Element(nameof(Font.GdiVerticalFont)).As<bool>();
+					return new Font(font_family, size, style, unit, gdi_charset, gdi_vertical_font);
+				};
 				this[typeof(Blend)] = (elem, type, instance) =>
+				{
+					var factors   = float_.ParseArray(elem.Element(nameof(Blend.Factors  )).As<string>());
+					var positions = float_.ParseArray(elem.Element(nameof(Blend.Positions)).As<string>());
+					return new Blend(factors.Length)
 					{
-						var factors   = float_.ParseArray(elem.Element(nameof(Blend.Factors  )).As<string>());
-						var positions = float_.ParseArray(elem.Element(nameof(Blend.Positions)).As<string>());
-						return new Blend(factors.Length)
-						{
-							Factors   = factors,
-							Positions = positions,
-						};
+						Factors   = factors,
+						Positions = positions,
 					};
+				};
 				this[typeof(v2)] = (elem, type, instance) =>
-					{
-						return v2.Parse(elem.Value);
-					};
+				{
+					return v2.Parse(elem.Value);
+				};
 				this[typeof(v4)] = (elem, type, instance) =>
-					{
-						return v4.Parse4(elem.Value);
-					};
+				{
+					return v4.Parse4(elem.Value);
+				};
 				this[typeof(m4x4)] = (elem, type, instance) =>
-					{
-						var x = elem.Element(nameof(m4x4.x)).As<v4>();
-						var y = elem.Element(nameof(m4x4.y)).As<v4>();
-						var z = elem.Element(nameof(m4x4.z)).As<v4>();
-						var w = elem.Element(nameof(m4x4.w)).As<v4>();
-						return new m4x4(x,y,z,w);
-					};
+				{
+					var x = elem.Element(nameof(m4x4.x)).As<v4>();
+					var y = elem.Element(nameof(m4x4.y)).As<v4>();
+					var z = elem.Element(nameof(m4x4.z)).As<v4>();
+					var w = elem.Element(nameof(m4x4.w)).As<v4>();
+					return new m4x4(x,y,z,w);
+				};
 			}
 
 			/// <summary>
@@ -516,7 +529,10 @@ namespace pr.extn
 					}
 				}
 
-				// Empty elements return null or default instances
+				// 'IsEmpty' elements return null, 'elem.Value == ""' returns default instances.
+				// <thing/> means null, <thing><thing/> means default constructed instance
+				// To serialise to '<thing><thing/>' set the node.Value to string.Empty
+				// e.g. public XElement ToXml(XElement node) { node.Value = string.Empty; return node; }
 				if (!elem.HasElements && !elem.Value.HasValue())
 				{
 					if (type == typeof(string))
@@ -530,7 +546,7 @@ namespace pr.extn
 					}
 					if (type.IsClass || is_nullable) // includes typeof(object)
 					{
-						return null;
+						return !elem.IsEmpty ? factory(type) : null;
 					}
 					return factory(type);
 				}
@@ -749,13 +765,13 @@ namespace pr.extn
 
 		#endregion
 
-		/// <summary>Returns the number of child nodes in this node</summary>
+		/// <summary>Returns the number of child nodes in this node (by counting them linearly)</summary>
 		public static int ChildCount(this XContainer node)
 		{
 			return node.Nodes().Count();
 		}
 
-		/// <summary>Returns the number of child nodes of type 'T' in this node</summary>
+		/// <summary>Returns the number of child nodes of type 'T' in this node (by counting them linearly)</summary>
 		public static int ChildCount<T>(this XContainer node) where T :XNode
 		{
 			return node.Nodes().OfType<T>().Count();

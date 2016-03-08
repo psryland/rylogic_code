@@ -16,18 +16,19 @@ namespace pr
 			HWND             m_hwnd;
 			BOOL             m_windowed;         // Windowed mode or full screen
 			DisplayMode      m_mode;             // Display mode to use (note: must be valid for the adapter, use FindClosestMatchingMode if needed)
-			MultiSamp        m_multisamp;        // Number of samples per pixel (AA/Multisampling)
+			MultiSamp        m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
 			UINT             m_buffer_count;     // Number of buffers in the chain, 1 = front only, 2 = front and back, 3 = triple buffering, etc
 			DXGI_SWAP_EFFECT m_swap_effect;      // How to swap the back buffer to the front buffer
 			UINT             m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 			DXGI_FORMAT      m_depth_format;     // Depth buffer format
-			DXGI_USAGE       m_usage;            // Usage flags for the swapchain buffer
+			DXGI_USAGE       m_usage;            // Usage flags for the swap chain buffer
 			UINT             m_vsync;            // Present SyncInterval value
 			bool             m_allow_alt_enter;  // Allow switching to full screen with alt-enter
+			string32         m_name;             // A debugging name for the window
 
 			// Notes:
-			// - vsync has different meaning for the swap effect modes.
-			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the vsync rate)
+			// - VSync has different meaning for the swap effect modes.
+			//   BitBlt modes: 0 = present immediately, 1,2,3,.. present after the nth vertical blank (has the effect of locking the frame rate to a fixed multiple of the VSync rate)
 			//   Flip modes (Sequential): 0 = drop this frame if there is a new frame waiting, n > 0 = same as bitblt case
 
 			WndSettings(HWND hwnd = 0, bool windowed = true, bool gdi_compat = false, pr::iv2 const& client_area = pr::iv2::make(1024,768));
@@ -39,7 +40,7 @@ namespace pr
 			Renderer*                        m_rdr;              // The owning renderer
 			HWND                             m_hwnd;             // The window handle this window is bound to
 			DXGI_FORMAT                      m_db_format;        // The format of the depth buffer
-			MultiSamp                        m_multisamp;        // Number of samples per pixel (AA/Multisampling)
+			MultiSamp                        m_multisamp;        // Number of samples per pixel (AA/Multi-sampling)
 			UINT                             m_swap_chain_flags; // Options to allow GDI and DX together (see DXGI_SWAP_CHAIN_FLAG)
 			UINT                             m_vsync;            // Present SyncInterval value
 			D3DPtr<IDXGISwapChain>           m_swap_chain;       // The swap chain bound to the window handle
@@ -48,6 +49,8 @@ namespace pr
 			D3DPtr<ID3D11DepthStencilView>   m_main_dsv;         // Depth buffer
 			Texture2DPtr                     m_main_tex;         // The render target as a texture
 			bool                             m_idle;             // True while the window is occluded
+			string32                         m_name;             // A debugging name for the window
+			pr::iv2                          m_area;             // The size of the render target last set (for debugging only)
 
 			Window(Renderer& rdr, WndSettings const& settings);
 			~Window();
@@ -106,7 +109,7 @@ namespace pr
 			//
 			// Drawlist Order:
 			//   opaques
-			//   skybox
+			//   sky box
 			//   alphas
 			//
 			// Observations:

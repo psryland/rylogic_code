@@ -16,6 +16,7 @@
 // Create the GUI window
 std::shared_ptr<pr::app::IAppMainGui> pr::app::CreateGUI(LPTSTR lpstrCmdLine, int nCmdShow)
 {
+	pr::win32::LoadDll<struct Scintilla>(L"scintilla.dll");
 	return pr::app::CreateGUI<::ldr::MainGUI>(lpstrCmdLine, nCmdShow);
 }
 

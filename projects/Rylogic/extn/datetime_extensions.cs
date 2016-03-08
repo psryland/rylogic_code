@@ -105,6 +105,33 @@ namespace pr.extn
 			return DateTime.TryParseExact(val, format, null, style, out result) ? (DateTime?)result : null;
 		}
 	}
+
+	public static class TimeSpanEx
+	{
+		/// <summary>Return the absolute value of a time span</summary>
+		public static TimeSpan Abs(TimeSpan ts)
+		{
+			return ts >= TimeSpan.Zero ? ts : -ts;
+		}
+			
+		/// <summary>Returns the lesser of lhs,rhs or lhs if they are equal</summary>
+		public static TimeSpan Min(TimeSpan lhs, TimeSpan rhs)
+		{
+			return lhs <= rhs ? lhs : rhs;
+		}
+
+		/// <summary>Returns the greater of lhs,rhs or lhs if they are equal</summary>
+		public static TimeSpan Max(TimeSpan lhs, TimeSpan rhs)
+		{
+			return lhs >= rhs ? lhs : rhs;
+		}
+
+		/// <summary>Clamps 'x' to the inclusive range [min,max]</summary>
+		public static TimeSpan Clamp(TimeSpan x, TimeSpan min, TimeSpan max)
+		{
+			return x < min ? min : x > max ? max : x;
+		}
+	}
 }
 
 #if PR_UNITTESTS

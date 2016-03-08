@@ -33,7 +33,7 @@ namespace RyLogViewer
 
 			m_dragdrop = new DragDrop();
 			m_dragdrop.DoDrop += DropFiles;
-			m_dragdrop.DoDrop += DataGridViewExtensions.DragDrop_DoDropMoveRow;
+			m_dragdrop.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
 
 			// Allow file drop on the form
 			AllowDrop = true;
@@ -43,7 +43,7 @@ namespace RyLogViewer
 			m_grid.AutoGenerateColumns = false;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn{HeaderText = "File Path", DataPropertyName = nameof(FileInfo.FullName)});
 			m_grid.DataSource = m_bs_filepaths;
-			m_grid.MouseDown += DataGridViewExtensions.DragDrop_DragRow;
+			m_grid.MouseDown += DataGridViewEx.DragDrop_DragRow;
 			m_dragdrop.Attach(m_grid);
 
 			m_btn_add_files.ToolTip(m_tt, "Browse for files to add");

@@ -73,9 +73,29 @@ namespace pr {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        public static System.Drawing.Bitmap check_accept {
+            get {
+                object obj = ResourceManager.GetObject("check_accept", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         public static System.Drawing.Bitmap check_marks {
             get {
                 object obj = ResourceManager.GetObject("check_marks", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap check_reject {
+            get {
+                object obj = ResourceManager.GetObject("check_reject", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -116,6 +136,36 @@ namespace pr {
         public static System.Drawing.Bitmap connector4 {
             get {
                 object obj = ResourceManager.GetObject("connector4", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap cursor_arrow {
+            get {
+                object obj = ResourceManager.GetObject("cursor_arrow", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap cursor_arrow_minus {
+            get {
+                object obj = ResourceManager.GetObject("cursor_arrow_minus", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        public static System.Drawing.Bitmap cursor_arrow_plus {
+            get {
+                object obj = ResourceManager.GetObject("cursor_arrow_plus", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

@@ -8,9 +8,11 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 using pr.gfx;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.extn
 {
@@ -156,18 +158,44 @@ namespace pr.extn
 			return new PointF(r.Right, r.Bottom);
 		}
 
-		/// <summary>Returns the signed area of this rectangle. Returns a negative value if Width and/or Height are negative</summary>
+		/// <summary>Returns the signed area. Returns a negative value if Width and/or Height are negative</summary>
+		public static int Area(this Size s)
+		{
+			return Maths.SignI(s.Width >= 0 && s.Height >= 0) * Math.Abs(s.Width * s.Height);
+		}
+		public static float Area(this SizeF s)
+		{
+			return Maths.SignF(s.Width >= 0 && s.Height >= 0) * Math.Abs(s.Width * s.Height);
+		}
 		public static int Area(this Rectangle r)
 		{
-			return Maths.SignI(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+			return r.Size.Area();
 		}
 		public static float Area(this RectangleF r)
 		{
-			return Maths.SignF(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+			return r.Size.Area();
 		}
 		public static int Area(this RectangleRef r)
 		{
-			return Maths.SignI(r.Width >= 0 && r.Height >= 0) * Math.Abs(r.Width * r.Height);
+			return r.Size.Area();
+		}
+
+		/// <summary>Returns the aspect ratio (W/H) (returns infinite if height is zero)</summary>
+		public static double Aspect(this Size s)
+		{
+			return (double)s.Width / s.Height;
+		}
+		public static double Aspect(this SizeF s)
+		{
+			return (double)s.Width / s.Height;
+		}
+		public static double Aspect(this Rectangle r)
+		{
+			return r.Size.Aspect();
+		}
+		public static double Aspect(this RectangleF r)
+		{
+			return r.Size.Aspect();
 		}
 
 		/// <summary>Returns a point shifted by dx,dy</summary>
@@ -334,13 +362,13 @@ namespace pr.extn
 		}
 
 		/// <summary>Duplicate this font with the changes given</summary>
-		public static Font Dup(this Font prototype, FontFamily family = null, float? em_size = null, FontStyle? style = null, GraphicsUnit? unit = null)
+		public static Font Dup(this Font prototype, FontFamily family = null, float? em_size = null, float? delta_size = null, FontStyle? style = null, GraphicsUnit? unit = null)
 		{
 			return new Font(
-				family ?? prototype.FontFamily,
-				em_size ?? prototype.Size,
-				style ?? prototype.Style,
-				unit ?? prototype.Unit
+				family  ?? prototype.FontFamily, 
+				em_size ?? ((delta_size ?? 0) + prototype.Size),
+				style   ?? prototype.Style,
+				unit    ?? prototype.Unit
 				);
 		}
 
@@ -385,6 +413,17 @@ namespace pr.extn
 				gp.AddRectangle(new Rectangle(x0, y, x1-x0+1, 1));
 			}
 			return gp;
+		}
+
+		/// <summary>Convert this bitmap to a cursor with hotspot at 'hot_spot'</summary>
+		public static Cursor ToCursor(this Bitmap bm, Point hot_spot)
+		{
+			var tmp = new Win32.IconInfo();
+			Win32.GetIconInfo(bm.GetHicon(), ref tmp);
+			tmp.xHotspot = hot_spot.X;
+			tmp.yHotspot = hot_spot.Y;
+			tmp.fIcon = false;
+			return new Cursor(Win32.CreateIconIndirect(ref tmp));
 		}
 	}
 

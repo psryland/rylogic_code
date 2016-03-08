@@ -8,9 +8,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
+using pr.common;
+using pr.container;
+using pr.gui;
 using pr.maths;
 using pr.util;
 using pr.win32;
@@ -22,8 +27,10 @@ namespace pr.extn
 	/// Use: add for each function you want supported
 	///   e.g.
 	///   m_grid.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
-	///   m_grid.KeyDown += DataGridViewExtensions.Cut;</summary>
-	public static class DataGridViewExtensions
+	///   m_grid.KeyDown += DataGridViewEx.Cut;
+	///   m_grid.ContextMenuStrip.Items.Add("Copy", null, (s,a) => DataGridViewEx.Copy(m_grid, a));
+	/// </summary>
+	public static class DataGridViewEx
 	{
 		/// <summary>Grid select all implementation. (for consistency)</summary>
 		public static void SelectAll(DataGridView grid)
@@ -31,14 +38,26 @@ namespace pr.extn
 			grid.SelectAll();
 		}
 
-		/// <summary>Select all rows. Attach to the KeyDown handler</summary>
-		public static void SelectAll(object sender, KeyEventArgs e)
+		/// <summary>Select all rows. Attach to the KeyDown handler or use as context menu handler</summary>
+		public static void SelectAll(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.A) return;
-			SelectAll(dgv);
-			e.Handled = true;
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(Control.ModifierKeys.HasFlag(Keys.Control) && ke.KeyCode == Keys.A)) return; // not ctrl + A
+			}
+			try
+			{
+				SelectAll(dgv);
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView select all operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Grid copy implementation. Returns true if something was added to the clip board</summary>
@@ -47,17 +66,30 @@ namespace pr.extn
 			var d = grid.GetClipboardContent();
 			if (d == null) return false;
 			Clipboard.SetDataObject(d);
+			var fmts = Clipboard.GetDataObject().GetFormats();
 			return true;
 		}
 
 		/// <summary>Copy selected cells to the clipboard. Attach to the KeyDown handler</summary>
-		public static void Copy(object sender, KeyEventArgs e)
+		public static void Copy(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.C) return;
-			if (!Copy(dgv)) return;
-			e.Handled = true;
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(Control.ModifierKeys.HasFlag(Keys.Control) && ke.KeyCode == Keys.C)) return; // not ctrl + C
+			}
+			try
+			{
+				if (!Copy(dgv)) return;
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView copy operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Grid cut implementation. Returns true if something was cut and added to the clip board</summary>
@@ -75,13 +107,25 @@ namespace pr.extn
 		}
 
 		/// <summary>Cut the selected cells to the clipboard. Cut cells replaced with default values. Attach to the KeyDown handler</summary>
-		public static void Cut(object sender, KeyEventArgs e)
+		public static void Cut(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.X) return;
-			if (!Cut(dgv)) return;
-			e.Handled = true;
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(Control.ModifierKeys.HasFlag(Keys.Control) && ke.KeyCode == Keys.X)) return; // not ctrl + X
+			}
+			try
+			{
+				if (!Cut(dgv)) return;
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView cut operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Grid delete implementation. Deletes selected items from the grid setting cell values to null</summary>
@@ -92,12 +136,25 @@ namespace pr.extn
 		}
 
 		/// <summary>Delete the contents of the selected cells. Attach to the KeyDown handler</summary>
-		public static void Delete(object sender, KeyEventArgs e)
+		public static void Delete(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (e.KeyCode != Keys.Delete) return;
-			Delete(dgv);
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(ke.KeyCode == Keys.Delete)) return; // not the delete key
+			}
+			try
+			{
+				Delete(dgv);
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView delete operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Grid paste implementation that pastes over existing cells within the current size limits of the grid. Must be 1 cell selected only</summary>
@@ -178,13 +235,25 @@ namespace pr.extn
 		}
 
 		/// <summary>Paste over existing cells within the current size limits of the grid. Must be 1 cell selected only. Attach to the KeyDown handler</summary>
-		public static void PasteReplace(object sender, KeyEventArgs e)
+		public static void PasteReplace(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.V) return;
-			if (!PasteReplace(dgv)) return;
-			e.Handled = true;
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(Control.ModifierKeys.HasFlag(Keys.Control) && ke.KeyCode == Keys.V)) return; // not ctrl + V
+			}
+			try
+			{
+				if (!PasteReplace(dgv)) return;
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView paste (replace) operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary</summary>
@@ -226,19 +295,32 @@ namespace pr.extn
 		}
 
 		/// <summary>Paste from the first selected cell over anything in the way. Grow the grid if necessary. Attach to the KeyDown handler</summary>
-		public static void PasteGrow(object sender, KeyEventArgs e)
+		public static void PasteGrow(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
 			var dgv = (DataGridView)sender;
-			if (!e.Control || e.KeyCode != Keys.V) return;
-			if (!PasteGrow(dgv)) return;
-			e.Handled = true;
+
+			var ke = e as KeyEventArgs;
+			if (ke != null)
+			{
+				if (ke.Handled) return; // already handled
+				if (!(Control.ModifierKeys.HasFlag(Keys.Control) && ke.KeyCode == Keys.V)) return; // not ctrl + V
+			}
+			try
+			{
+				if (!PasteGrow(dgv)) return;
+				if (ke != null) ke.Handled = true;
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine("DataGridView paste (grow) operation failed: {0}".Fmt(ex.MessageFull()));
+			}
 		}
 
 		/// <summary>Combined handler for cut, copy, and paste replace functions. Attach to the KeyDown handler</summary>
-		public static void CutCopyPasteReplace(object sender, KeyEventArgs e)
+		public static void CutCopyPasteReplace(object sender, EventArgs e)
 		{
-			if (e.Handled) return; // already handled
+			var ke = e as KeyEventArgs;
+			if (ke != null && ke.Handled) return; // already handled
 			SelectAll   (sender, e);
 			Cut         (sender, e);
 			Copy        (sender, e);
@@ -303,6 +385,20 @@ namespace pr.extn
 			menu.Show(grid, location);
 		}
 
+		/// <summary>Display a context menu for showing/hiding columns in the grid. Attach to MouseDown</summary>
+		public static void ColumnVisibility(object sender, MouseEventArgs args)
+		{
+			var grid = (DataGridView)sender;
+
+			var hit = grid.HitTestEx(args.X, args.Y);
+			if (args.Button == MouseButtons.Right)
+			{
+				// Right mouse on a column header displays a context menu for hiding/showing columns
+				if (hit.Type == DataGridViewHitTestType.ColumnHeader || hit.Type == DataGridViewHitTestType.None)
+					grid.ColumnVisibilityContextMenu(hit.GridPoint);
+			}
+		}
+
 		/// <summary>
 		/// Returns an array of the fill weights for the columns in this grid.
 		/// If 'zero_if_not_visible' is true, then invisible columns return a fill weight of zero
@@ -352,6 +448,12 @@ namespace pr.extn
 			if (grid.ColumnCount == 0)
 				return;
 
+			// Grid column auto sizing only works when the grid isn't trying to resize itself
+			Debug.Assert(grid.AutoSizeColumnsMode == DataGridViewAutoSizeColumnsMode.None);
+			Debug.Assert(
+				grid.Columns[column_index].AutoSizeMode == DataGridViewAutoSizeColumnMode.None ||
+				grid.Columns[column_index].AutoSizeMode == DataGridViewAutoSizeColumnMode.NotSet);
+				
 			// Get the display area width and the column widths
 			var columns         = grid.Columns.Cast<DataGridViewColumn>();
 			var grid_width      = GridDisplayWidth(grid);
@@ -709,14 +811,151 @@ namespace pr.extn
 			return col_index >= 0 && col_index < grid.ColumnCount;
 		}
 
-		/// <summary>Data used for dragging rows around</summary>
-		private class DGV_DragDropData :IDisposable
+		/// <summary>Return this content alignment value adjusted by 'horz' and 'vert'. If non-null, then -1 = Left/Top, 0 = Middle/Centre, +1 = Right/Bottom</summary>
+		public static DataGridViewContentAlignment Shift(this DataGridViewContentAlignment align, int? horz = null, int? vert = null)
 		{
-			public DGV_DragDropData(DataGridViewRow row, int x, int y)
+			// 'align' is a single bit
+			int x = 0, y = 0;
+
+			if (horz != null) x = horz.Value + 1;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.TopLeft  |DataGridViewContentAlignment.MiddleLeft  |DataGridViewContentAlignment.BottomLeft  ))) x = 0;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.TopCenter|DataGridViewContentAlignment.MiddleCenter|DataGridViewContentAlignment.BottomCenter))) x = 1;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.TopRight |DataGridViewContentAlignment.MiddleRight |DataGridViewContentAlignment.BottomRight ))) x = 2;
+
+			if (vert != null) y = vert.Value + 1;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.TopLeft   |DataGridViewContentAlignment.TopCenter   |DataGridViewContentAlignment.TopRight   ))) y = 0;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.MiddleLeft|DataGridViewContentAlignment.MiddleCenter|DataGridViewContentAlignment.MiddleRight))) y = 1;
+			else if (Bit.AnySet((int)align ,(int)(DataGridViewContentAlignment.BottomLeft|DataGridViewContentAlignment.BottomCenter|DataGridViewContentAlignment.BottomRight))) y = 2;
+
+			return (DataGridViewContentAlignment)(1 << (y*3 + x));
+		}
+
+		/// <summary>Temporarily remove the data source from this grid</summary>
+		public static Scope PauseBinding(this DataGridView grid)
+		{
+			var ds = grid.DataSource;
+			return Scope.Create(() => grid.DataSource = null, () => grid.DataSource = ds);
+		}
+
+		#region Hit Test
+
+		/// <summary>Hit test the grid (includes more useful information than the normal hit test). 'pt' is in grid-relative coordinates</summary>
+		public static HitTestInfo HitTestEx(this DataGridView grid, Point pt)
+		{
+			return new HitTestInfo(grid, pt);
+		}
+		public static HitTestInfo HitTestEx(this DataGridView grid, int x, int y)
+		{
+			return new HitTestInfo(grid, new Point(x, y));
+		}
+		public class HitTestInfo
+		{
+			private readonly DataGridView.HitTestInfo m_info;
+			public HitTestInfo(DataGridView grid, Point pt)
+			{
+				Grid   = grid;
+				GridPoint  = pt;
+				m_info = grid.HitTest(pt.X, pt.Y);
+			}
+
+			/// <summary>The grid that was hit tested</summary>
+			public DataGridView Grid { get; private set; }
+
+			/// <summary>The grid relative location of where the hit test was performed</summary>
+			public Point GridPoint { get; private set; }
+
+			/// <summary>The cell relative location of where the hit test was performed</summary>
+			public Point CellPoint { get { return new Point(GridPoint.X - ColumnX, GridPoint.Y - RowY); } }
+
+			/// <summary>What was hit</summary>
+			public DataGridViewHitTestType Type { get { return m_info.Type; } }
+
+			/// <summary>Gets the index of the column that contains the hit test point</summary>
+			public int ColumnIndex { get { return m_info.ColumnIndex; } }
+
+			/// <summary>Gets the index of the row that contains the hit test point</summary>
+			public int RowIndex { get { return m_info.RowIndex; } }
+
+			/// <summary>Gets the x-coordinate of the column 'ColumnIndex'</summary>
+			public int ColumnX { get { return m_info.ColumnX; } }
+
+			/// <summary>Gets the y-coordinate of the row 'RowIndex'</summary>
+			public int RowY { get { return m_info.RowY; } }
+
+			/// <summary>The X,Y grid-relative coordinate of the hit cell</summary>
+			public Point CellPosition { get { return new Point(ColumnX, RowY); } }
+
+			/// <summary>
+			/// Gets the index of the row that is closest to the hit location.
+			/// If the mouse is over the top half of a row, then the row index is returned.
+			/// If the mouse is over the lower half of the row, then the next row index is returned.</summary>
+			public int InsertIndex
+			{
+				get
+				{
+					if (Row == null) return RowIndex;
+					var over_half = GridPoint.Y - RowY > 0.5f * Row.Height;
+					return RowIndex + (over_half ? 1 : 0);
+				}
+			}
+
+			/// <summary>The y-coordinate of the top of the insert row</summary>
+			public int InsertY
+			{
+				get
+				{
+					if (Row == null) return RowY;
+					var over_half = GridPoint.Y - RowY > 0.5f * Row.Height;
+					return RowY + (over_half ? Row.Height : 0);
+				}
+			}
+
+			/// <summary>Get the hit header cell (or null)</summary>
+			public DataGridViewHeaderCell HeaderCell
+			{
+				get { return RowIndex == -1 ? Grid.Columns[ColumnIndex].HeaderCell : null; }
+			}
+
+			/// <summary>Get the hit data cell (or null)</summary>
+			public DataGridViewCell Cell
+			{
+				get
+				{
+					DataGridViewCell cell;
+					return Grid.Within(ColumnIndex, RowIndex, out cell) ? cell : null;
+				}
+			}
+
+			/// <summary>Get the hit Column (or null)</summary>
+			public DataGridViewColumn Column
+			{
+				get { return ColumnIndex >= 0 && ColumnIndex < Grid.ColumnCount ? Grid.Columns[ColumnIndex] : null; }
+			}
+
+			/// <summary>Get the hit row (or null)</summary>
+			public DataGridViewRow Row
+			{
+				get { return RowIndex >= 0 && RowIndex < Grid.RowCount ? Grid.Rows[RowIndex] : null; }
+			}
+
+			/// <summary>Implicit conversion to 'DataGridView.HitTestInfo'</summary>
+			public static implicit operator DataGridView.HitTestInfo(HitTestInfo hit) { return hit.m_info; }
+		}
+
+		#endregion
+
+		#region Drag/Drop
+
+		/// <summary>Data used for dragging rows around</summary>
+		public class DragDropData :IDisposable
+		{
+			public DragDropData(DataGridViewRow row, int x, int y)
 			{
 				Row = row;
 				GrabX = x;
 				GrabY = y;
+				StartRowIndex = row.Index;
+				Dragging = false;
 				Indicator = new IndicatorCtrl(row.DataGridView.TopLevelControl as Form);
 			}
 			public void Dispose()
@@ -725,12 +964,21 @@ namespace pr.extn
 				Indicator = null;
 			}
 
+			/// <summary>The grid that owns 'Row'</summary>
+			public DataGridView DataGridView { get { return Row?.DataGridView; } }
+
 			/// <summary>The row being dragged</summary>
 			public DataGridViewRow Row { get; private set; }
 
 			/// <summary>The pixel location of where the row was grabbed (in DGV space)</summary>
 			public int GrabX { get; private set; }
 			public int GrabY { get; private set; }
+
+			/// <summary>The row index of 'Row' when the drag operation began</summary>
+			public int StartRowIndex { get; private set; }
+
+			/// <summary>True once the mouse has moved enough to be detected as a drag operation</summary>
+			public bool Dragging { get; set; }
 
 			/// <summary>A form used to indicate where the row will be inserted</summary>
 			public IndicatorCtrl Indicator { get; private set; }
@@ -786,9 +1034,6 @@ namespace pr.extn
 		public static void DragDrop_DragRow(object sender, MouseEventArgs e)
 		{
 			var grid = (DataGridView)sender;
-			if (!(grid.DataSource is IList))
-				throw new InvalidOperationException("Drag-drop requires a grid with a data source convertible to an IList");
-
 			var row_count = grid.RowCount - (grid.AllowUserToAddRows ? 1 : 0);
 
 			// Drag by grabbing row headers
@@ -808,7 +1053,7 @@ namespace pr.extn
 				// to change back to that cell. BeginInvoke ensures the drag happens after any selection changes.
 				grid.BeginInvoke(() =>
 				{
-					using (var data = new DGV_DragDropData(grid.Rows[hit.RowIndex], grid_pt.X, grid_pt.Y))
+					using (var data = new DragDropData(grid.Rows[hit.RowIndex], grid_pt.X, grid_pt.Y))
 						grid.DoDragDrop(data, DragDropEffects.Move|DragDropEffects.Copy|DragDropEffects.Link);
 				});
 			}
@@ -821,29 +1066,59 @@ namespace pr.extn
 		/// See the 'DragDrop' class for more info.</summary>
 		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode)
 		{
-			// This method could be hooked up to a pr.util.DragDrop so the
-			// events could come from anything. Only accept DGVs
+			return DragDrop_DoDropMoveRow(sender, args, mode, (grid, grab, hit) =>
+			{
+				// Insert 'grab_idx' at 'drop_idx'
+				var list = grid.DataSource as IList;
+				if (list == null)
+					throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
+
+				var grab_idx = grab.Row.Index;
+				var drop_idx = hit.InsertIndex;
+				if (grab_idx != drop_idx)
+				{
+					// Allow for the index value to change when grap_idx is removed
+					if (drop_idx > grab_idx)
+						--drop_idx;
+
+					var tmp = list[grab_idx];
+					list.RemoveAt(grab_idx);
+					list.Insert(drop_idx, tmp);
+				}
+
+				// If the list is a binding source, set the current position to the item just moved
+				var cm = grid.DataSource as ICurrencyManagerProvider;
+				if (cm != null)
+					cm.CurrencyManager.Position = drop_idx;
+			});
+		}
+		public static bool DragDrop_DoDropMoveRow(object sender, DragEventArgs args, DragDrop.EDrop mode, Action<DataGridView, DragDropData, HitTestInfo> OnDrop)
+		{
+			// Must allow move
+			if (!args.AllowedEffect.HasFlag(DragDropEffects.Move))
+				return false;
+
+			// This method could be hooked up to a pr.util.DragDrop so the events could come from anything.
+			// Only accept a DGV that contains the row in 'data'
 			var grid = sender as DataGridView;
-			if (grid == null || args == null)
+			var data = (DragDropData)args.Data.GetData(typeof(DragDropData));
+			if (grid == null || data == null || !ReferenceEquals(grid, data.DataGridView))
 				return false;
 
-			// Must allow move and contain a row
-			if ((args.AllowedEffect & DragDropEffects.Move) == 0 || !args.Data.GetDataPresent(typeof(DGV_DragDropData)))
-				return false;
-
-			// Get the drag data
-			var data = (DGV_DragDropData)args.Data.GetData(typeof(DGV_DragDropData));
 			var row_count = grid.RowCount - (grid.AllowUserToAddRows ? 1 : 0);
-
-			// Check the mouse has moved enough to start dragging
 			var scn_pt = new Point(args.X, args.Y);
 			var pt = grid.PointToClient(scn_pt); // Find where the mouse is over the grid
-			var distsq = Maths.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
-			if (distsq < 25)
-				return false;
+
+			// Check the mouse has moved enough to start dragging
+			if (!data.Dragging)
+			{
+				var distsq = Maths.Len2Sq(pt.X - data.GrabX, pt.Y - data.GrabY);
+				if (distsq < 25) return false;
+				data.Dragging = true;
+			}
 
 			// Set the drop effect
-			var hit = grid.HitTest(pt.X, pt.Y);
+			var hit = grid.HitTestEx(pt.X, pt.Y);
 			args.Effect =
 				hit.Type == DataGridViewHitTestType.RowHeader &&
 				hit.RowIndex >= 0 && hit.RowIndex < row_count && hit.RowIndex != data.Row.Index
@@ -851,22 +1126,15 @@ namespace pr.extn
 			if (args.Effect != DragDropEffects.Move)
 				return true;
 
-			// The row the mouse is over
-			var hit_idx = hit.RowIndex;
-			var hit_row = grid.Rows[hit_idx];
-
-			// Find the two rows on either side of the line
-			var over_half = pt.Y - hit.RowY > 0.5f * hit_row.Height;
-			var idx = over_half ? hit_idx + 1 : hit_idx;
-
 			// If this is not the actual drop then just update the indicator position
 			if (mode != DragDrop.EDrop.Drop)
 			{
 				// Ensure the indicator is visible
 				data.Indicator.Visible = true;
-				data.Indicator.Location = grid.PointToScreen(new Point(0, hit.RowY + (over_half ? hit_row.Height : 0)));
+				data.Indicator.Location = grid.PointToScreen(new Point(0, hit.InsertY));
 
 				// Auto scroll when at the first or last displayed row
+				var idx = hit.InsertIndex;
 				if (idx <= grid.FirstDisplayedScrollingRowIndex && idx > 0)
 					grid.FirstDisplayedScrollingRowIndex--;
 				if (idx >= grid.FirstDisplayedScrollingRowIndex + grid.DisplayedRowCount(false) && idx < row_count)
@@ -878,25 +1146,8 @@ namespace pr.extn
 			{
 				using (grid.SuspendLayout(false))
 				{
-					var grab_idx = data.Row.Index;
-
-					// Insert 'grab_idx' at 'drop_idx'
-					var list = grid.DataSource as IList;
-					if (list == null) throw new InvalidOperationException("Drag-drop requires a grid with a data source bound to an IList");
-					if (grab_idx != idx)
-					{
-						if (idx > grab_idx)
-							--idx;
-
-						var tmp = list[grab_idx];
-						list.RemoveAt(grab_idx);
-						list.Insert(idx, tmp);
-					}
-
-					// If the list is a binding source, set the current position to the item just moved
-					var cm = grid.DataSource as ICurrencyManagerProvider;
-					if (cm != null)
-						cm.CurrencyManager.Position = idx;
+					// Handle the drop action
+					OnDrop(grid, data, hit);
 
 					grid.Invalidate(true);
 				}
@@ -904,11 +1155,516 @@ namespace pr.extn
 			return true;
 		}
 
-		/// <summary>Temporarily remove the data source from this grid</summary>
-		public static Scope PauseBinding(this DataGridView grid)
+		#endregion
+
+		#region Filter Columns
+
+		/// <summary>Live instances of ColumnFiltersData objects in use by grids</summary>
+		[ThreadStatic] private static Dictionary<DataGridView, ColumnFiltersData> m_column_filters = new Dictionary<DataGridView, ColumnFiltersData>();
+		public class ColumnFiltersData :IMessageFilter ,IDisposable
 		{
-			var ds = grid.DataSource;
-			return Scope.Create(() => grid.DataSource = null, () => grid.DataSource = ds);
+			public ColumnFiltersData(DataGridView dgv)
+			{
+				m_dgv = dgv;
+				m_dgv_state = new Dictionary<string, object>();
+				m_header_cells = new FilterHeaderCell[m_dgv.ColumnCount];
+				m_bs = new RuntimeBindingSource(dgv);
+
+				m_dgv.Disposed += HandleGridDisposed;
+			}
+			public void Dispose()
+			{
+				Enabled = false;
+				m_dgv.Disposed -= HandleGridDisposed;
+				m_header_cells = Util.DisposeAll(m_header_cells);
+			}
+
+			/// <summary>The grid whose data is to be filtered</summary>
+			private DataGridView m_dgv;
+
+			/// <summary>Used to preserve the state of the DGV</summary>
+			private Dictionary<string, object> m_dgv_state;
+
+			/// <summary>The data source that the grid had before filters were used</summary>
+			private object m_original_src;
+
+			/// <summary>The column header cells corresponding to the columns in the associated grid</summary>
+			public FilterHeaderCell[] HeaderCells { get { return m_header_cells; } }
+			private FilterHeaderCell[] m_header_cells;
+
+			/// <summary>The binding source that provides the filtering</summary>
+			private RuntimeBindingSource m_bs;
+			private class RuntimeBindingSource
+			{
+				/// <summary>The bound data properties for the columns</summary>
+				private Dictionary<string,MethodInfo> m_elem_props;
+
+				/// <summary>The method on BindingSource<> for creating views</summary>
+				private MethodInfo m_create_view;
+
+				/// <summary>The binding source instance from which we create filtered views</summary>
+				private object m_bs;
+
+				/// <summary>The filtered view of the binding source</summary>
+				private object m_view;
+
+				public RuntimeBindingSource(DataGridView dgv)
+				{
+					var original_src = dgv.DataSource;
+					var orig_ty = original_src.GetType();
+
+					// Get the element properties for each column
+					var elem_ty = GetElementType(original_src);
+					m_elem_props = new Dictionary<string, MethodInfo>();
+					foreach (var col in dgv.Columns.OfType<DataGridViewColumn>())
+					{
+						// Silently ignores 'DataPropertyName' values that aren't valid properties on the element type
+						if (!col.DataPropertyName.HasValue()) continue;
+						var mi = elem_ty.GetProperty(col.DataPropertyName)?.GetGetMethod();
+						if (mi == null) continue;
+						m_elem_props[col.DataPropertyName] = mi;
+					}
+
+					// Get the binding source type we need to make views from
+					var bs_ty = typeof(BindingSource<>).MakeGenericType(elem_ty);
+
+					// If the original source is a BindingSource<>, use it otherwise create a binding source with 'original_src' as it's data source
+					m_bs = orig_ty == bs_ty ? original_src : Activator.CreateInstance(bs_ty, original_src, (string)null);
+
+					// Get the CreateView method on the binding source
+					m_create_view = bs_ty.GetMethod(nameof(BindingSource<int>.CreateView), new[] { typeof(Func<,>).MakeGenericType(elem_ty, typeof(bool)) });
+				}
+
+				/// <summary>Get the element type from 'original_src'</summary>
+				private Type GetElementType(object original_src)
+				{
+					var src_ty = original_src.GetType();
+
+					// Array/pointer source
+					if (src_ty.HasElementType)
+						return src_ty.GetElementType();
+
+					// An IList<> source
+					var face = src_ty.GetInterfaces().FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IList<>));
+					if (face != null)
+						return face.GetGenericArguments()[0];
+
+					// A non-empty IList source
+					var list = original_src as IList;
+					if (list != null && list.Count != 0)
+						return list[0].GetType();
+
+					// Dunno, but the grid seems to know
+					//if (dgv.RowCount != 0 && dgv.Rows[0].DataBoundItem != null)
+					//	return dgv.Rows[0].DataBoundItem.GetType();
+
+					throw new Exception("Could not determine the element type for the data source type {0}".Fmt(original_src.GetType().Name));
+				}
+
+				/// <summary>Create a view of the data from the binding source using the given filter</summary>
+				public object DataSource(Func<object,bool> filter)
+				{
+					m_view = Util.Dispose((IDisposable)m_view);
+					return m_view = m_create_view.Invoke(m_bs, new object[] { filter });
+				}
+
+				/// <summary>Return the value of property 'prop_name' on 'item' as a string</summary>
+				public string GetValue(object item, string prop_name)
+				{
+					MethodInfo mi;
+					return m_elem_props.TryGetValue(prop_name, out mi) ? mi.Invoke(item, null).ToString() : string.Empty;
+				}
+			}
+
+			/// <summary>Enable/Disable the column filters</summary>
+			public bool Enabled
+			{
+				get { return m_enabled; }
+				set
+				{
+					if (m_enabled == value) return;
+					m_enabled = value;
+					if (m_enabled)
+					{
+						// Save the data source that the grid starts with
+						m_original_src = m_dgv.DataSource;
+
+						// Preserve the current state of the DGV
+						m_dgv_state[nameof(m_dgv.ColumnHeadersHeightSizeMode)]   = m_dgv.ColumnHeadersHeightSizeMode;
+						m_dgv_state[nameof(m_dgv.ColumnHeadersHeight)]           = m_dgv.ColumnHeadersHeight;
+						m_dgv_state[nameof(m_dgv.ColumnHeadersDefaultCellStyle)] = m_dgv.ColumnHeadersDefaultCellStyle;
+
+						// Set the column header height and text alignment
+						m_dgv.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
+						m_dgv.ColumnHeadersHeight += FilterHeaderCell.FieldHeight;
+						m_dgv.ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle(m_dgv.ColumnHeadersDefaultCellStyle)
+						{
+							Alignment = m_dgv.ColumnHeadersDefaultCellStyle.Alignment.Shift(vert:-1), // Align to the top of the cell
+						};
+
+						// Ensure the array of header cells equals the number of columns
+						if (m_header_cells.Length > m_dgv.ColumnCount)
+							Util.DisposeRange(m_header_cells, m_dgv.ColumnCount, m_header_cells.Length - m_dgv.ColumnCount);
+						Array.Resize(ref m_header_cells, m_dgv.ColumnCount);
+
+						// Create header cells for the current columns in the grid
+						foreach (var col in m_dgv.Columns.OfType<DataGridViewColumn>())
+						{
+							m_header_cells[col.Index] = m_header_cells[col.Index] ?? new FilterHeaderCell(col.HeaderCell, OnPatternChanged);
+							col.HeaderCell = m_header_cells[col.Index];
+						}
+
+						// Update the binding source for the grid to the filtered source
+						OnPatternChanged();
+
+						// Start watching for mouse clicks on the filter fields
+						Application.AddMessageFilter(this);
+					}
+					else
+					{
+						// Stop watching for mouse clicks on the search field
+						Application.RemoveMessageFilter(this);
+
+						// Restore the original column header cells
+						foreach (var col in m_dgv.Columns.OfType<DataGridViewColumn>())
+						{
+							var cell = (FilterHeaderCell)col.HeaderCell;
+							col.HeaderCell = cell.OriginalHeaderCell;
+						}
+
+						// Restore the DGV state
+						m_dgv.ColumnHeadersHeight           = (int)m_dgv_state[nameof(m_dgv.ColumnHeadersHeight)];
+						m_dgv.ColumnHeadersHeightSizeMode   = (DataGridViewColumnHeadersHeightSizeMode)m_dgv_state[nameof(m_dgv.ColumnHeadersHeightSizeMode)];
+						m_dgv.ColumnHeadersDefaultCellStyle = (DataGridViewCellStyle)m_dgv_state[nameof(m_dgv.ColumnHeadersDefaultCellStyle)];
+
+						// Restore back to the original data source
+						m_dgv.DataSource = m_original_src;
+					}
+				}
+			}
+			private bool m_enabled;
+
+			/// <summary>
+			/// Pre-filter mouse down messages so we can intercept clicks on the filter field before
+			/// the grid handles them as column clicks</summary>
+			public bool PreFilterMessage(ref Message m)
+			{
+				// Watch for mouse down events for our grid
+				if (m.HWnd == m_dgv.Handle && m.Msg == Win32.WM_LBUTTONDOWN)
+				{
+					// If the mouse down position is within a FilterHeaderCell
+					var pt = Win32.LParamToPoint(m.LParam);
+					var hit = m_dgv.HitTestEx(pt);
+					if (hit.Type == DataGridViewHitTestType.ColumnHeader && hit.HeaderCell is FilterHeaderCell)
+					{
+						// If the mouse down position is within the filter field of the header cell
+						var filter_cell = (FilterHeaderCell)hit.HeaderCell;
+						var bounds = filter_cell.FieldBounds.Shifted(hit.CellPosition);
+						if (bounds.Contains(pt))
+						{
+							// Edit the filter field
+							// BeginInvoke so that Editing starts after the message queue has processed the mouse events
+							m_dgv.BeginInvoke(filter_cell.EditFilter);
+							m_eat_lbuttonup = true;
+							return true;
+						}
+					}
+				}
+				// Consume the mouse up event after an edit filter click
+				if (m.HWnd == m_dgv.Handle && m.Msg == Win32.WM_LBUTTONUP && m_eat_lbuttonup)
+				{
+					m_eat_lbuttonup = false;
+					return true;
+				}
+				return false;
+			}
+			private bool m_eat_lbuttonup;
+
+			/// <summary>Handle the filter string changing in one of the FilterHeaderCells</summary>
+			private void OnPatternChanged(object sender = null, EventArgs args = null)
+			{
+				// If enabled, use the filtered binding source, otherwise use the original source
+				if (Enabled)
+				{
+					try
+					{
+						// Create a view filter function
+						Func<object,bool> filter = item =>
+						{
+							for (var i = 0; i != m_header_cells.Length; ++i)
+							{
+								// If the pattern for this column is not valid, assume no filter
+								var patn = m_header_cells[i]?.Pattern;
+								if (patn == null || !patn.IsValid || !patn.Expr.HasValue()) continue;
+
+								// Read the value from the source
+								var val = m_bs.GetValue(item, m_header_cells[i].OwningColumn.DataPropertyName);
+								var str = val.ToString();
+
+								// Filter out the item if it doesn't match the pattern
+								if (!patn.IsMatch(str))
+									return false;
+							}
+							return true;
+						};
+
+						// Set the view as the data source for the grid
+						m_dgv.DataSource = m_bs.DataSource(filter);
+					}
+					catch (Exception ex)
+					{
+						throw new Exception("Failed to create a binding source view with the given column filters", ex);
+					}
+				}
+				else
+				{
+					m_dgv.DataSource = m_original_src;
+				}
+			}
+
+			/// <summary>When the associated grid is disposed, remove this instance of column filters</summary>
+			private void HandleGridDisposed(object sender, EventArgs e)
+			{
+				m_column_filters.Remove(m_dgv);
+				Dispose();
+			}
+
+			/// <summary>Custom column header cell for showing the filter string text box</summary>
+			public class FilterHeaderCell :DataGridViewColumnHeaderCell
+			{
+				public const int FieldHeight = 18;
+
+				public FilterHeaderCell(DataGridViewColumnHeaderCell header_cell, EventHandler on_pattern_changed = null)
+				{
+					OriginalHeaderCell = header_cell;
+					Pattern = new Pattern(EPattern.Substring, string.Empty);
+					Value = OriginalHeaderCell.Value;
+					EditCtrl = new EditControl();
+
+					ContextMenuStrip = new ContextMenuStrip();
+					ContextMenuStrip.Items.Add2("Substring", null, (s,a) => Pattern.PatnType = EPattern.Substring        );
+					ContextMenuStrip.Items.Add2("Wildcard" , null, (s,a) => Pattern.PatnType = EPattern.Wildcard         );
+					ContextMenuStrip.Items.Add2("Regex"    , null, (s,a) => Pattern.PatnType = EPattern.RegularExpression);
+					ContextMenuStrip.Opening += (s,a) =>
+					{
+						((ToolStripMenuItem)ContextMenuStrip.Items[0]).Checked = Pattern.PatnType == EPattern.Substring        ;
+						((ToolStripMenuItem)ContextMenuStrip.Items[1]).Checked = Pattern.PatnType == EPattern.Wildcard         ;
+						((ToolStripMenuItem)ContextMenuStrip.Items[2]).Checked = Pattern.PatnType == EPattern.RegularExpression;
+					};
+
+					if (on_pattern_changed != null)
+						PatternChanged += on_pattern_changed;
+				}
+				protected override void Dispose(bool disposing)
+				{
+					Pattern = null;
+					EditCtrl.Dispose();
+					base.Dispose(disposing);
+				}
+
+				/// <summary>The column header cell that this cell replaced</summary>
+				public DataGridViewColumnHeaderCell OriginalHeaderCell { get; private set; }
+
+				/// <summary>Returns the cell-relative area of the search field</summary>
+				public Rectangle FieldBounds
+				{
+					get { return new Rectangle(1, Size.Height - FieldHeight - 2, Size.Width - 3, FieldHeight); }
+				}
+
+				/// <summary>The search text for this column</summary>
+				public Pattern Pattern
+				{
+					get { return m_pattern; }
+					set
+					{
+						if (m_pattern == value) return;
+						if (m_pattern != null)
+						{
+							m_pattern.PatternChanged -= HandlePatternChanged;
+						}
+						m_pattern = value;
+						if (m_pattern != null)
+						{
+							m_pattern.PatternChanged += HandlePatternChanged;
+						}
+					}
+				}
+				private Pattern m_pattern;
+
+				/// <summary>Raised when the pattern expression changes</summary>
+				public event EventHandler PatternChanged;
+				private void HandlePatternChanged(object sender, EventArgs args)
+				{
+					PatternChanged.Raise(this);
+					ToolTipText = Pattern.IsValid ? null : Pattern.ValidateExpr().Message;
+				}
+
+				/// <summary>The control used to edit the filter field</summary>
+				private EditControl EditCtrl { get; set; }
+				private class EditControl :ToolForm
+				{
+					public EditControl() :base()
+					{
+						FormBorderStyle = FormBorderStyle.None;
+						StartPosition = FormStartPosition.Manual;
+						ShowInTaskbar = false;
+						HideOnClose = true;
+						MinimumSize = new Size(1,1);
+
+						var tb = Controls.Add2(new TextBox{ Dock = DockStyle.Fill, AcceptsTab = true, AcceptsReturn = true, Multiline = true });
+						tb.KeyDown += HandleKeyDown;
+						tb.LostFocus += Hide;
+					}
+					protected override void Dispose(bool disposing)
+					{
+						Cell = null;
+						base.Dispose(disposing);
+					}
+					protected override CreateParams CreateParams
+					{
+						get
+						{
+							var cp = base.CreateParams;
+							cp.ClassStyle &= ~Win32.CS_DROPSHADOW;
+							return cp;
+						}
+					}
+
+					/// <summary>The text box on the edit control</summary>
+					public TextBox TextBox
+					{
+						get { return (TextBox)Controls[0]; }
+					}
+
+					/// <summary>The cell being edited</summary>
+					public FilterHeaderCell Cell
+					{
+						get { return m_cell; }
+						set
+						{
+							if (m_cell == value) return;
+							if (m_cell != null)
+							{
+								TextBox.TextChanged -= HandleTextChanged;
+								TextBox.Text = string.Empty;
+								PinTarget = null;
+							}
+							m_cell = value;
+							if (m_cell != null)
+							{
+								TextBox.Text = m_cell.Pattern.Expr;
+								TextBox.TextChanged += HandleTextChanged;
+
+								// Position the control over the cell
+								PinTarget = DGV;
+								var cell_bounds = DGV.GetCellDisplayRectangle(m_cell.ColumnIndex, -1, false);
+								Bounds = DGV.RectangleToScreen(m_cell.FieldBounds.Shifted(cell_bounds.TopLeft()));
+							}
+						}
+					}
+					private FilterHeaderCell m_cell;
+
+					/// <summary>The data grid view that 'Cell' belongs to</summary>
+					public DataGridView DGV
+					{
+						get { return Cell.DataGridView; }
+					}
+
+					/// <summary>Show the edit control within 'cell'</summary>
+					public void Show(FilterHeaderCell cell)
+					{
+						Cell = cell;
+						TextBox.Select(TextBox.TextLength, 0);
+						base.Show(DGV);
+					}
+					public override void Hide()
+					{
+						base.Hide();
+						Cell = null;
+					}
+
+					/// <summary>Update the cell pattern when the filter text changes</summary>
+					private void HandleTextChanged(object sender, EventArgs args)
+					{
+						Cell.Pattern.Expr = TextBox.Text;
+						TextBox.BackColor = Cell.Pattern.IsValid ? SystemColors.Window : Color.LightSalmon;
+					}
+
+					/// <summary>Handle keys in the filter field</summary>
+					private void HandleKeyDown(object sender, KeyEventArgs args)
+					{
+						// On Tab, select the next/prev column
+						if (args.KeyCode == Keys.Tab)
+						{
+							var i = Cell.ColumnIndex;
+							var next = i+1 < DGV.ColumnCount ? DGV.Columns[i+1].HeaderCell as FilterHeaderCell : null;
+							var prev = i-1 > -1              ? DGV.Columns[i-1].HeaderCell as FilterHeaderCell : null;
+							if (!args.Shift && next != null) DGV.BeginInvoke(next.EditFilter);
+							if ( args.Shift && prev != null) DGV.BeginInvoke(prev.EditFilter);
+						}
+
+						// Close on these keys
+						if (args.KeyCode == Keys.Enter || args.KeyCode == Keys.Escape || args.KeyCode == Keys.Tab || (args.KeyCode == Keys.F && args.Control))
+						{
+							Hide();
+						}
+					}
+				}
+
+				/// <summary>Edit the value of the filter</summary>
+				public void EditFilter()
+				{
+					DataGridView.EndEdit();
+					EditCtrl.Show(this);
+				}
+
+				/// <summary>Paint the custom cell</summary>
+				protected override void Paint(Graphics graphics, Rectangle clipBounds, Rectangle cell_bounds, int rowIndex, DataGridViewElementStates dataGridViewElementState, object value, object formattedValue, string errorText, DataGridViewCellStyle cellStyle, DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
+				{
+					base.Paint(graphics, clipBounds, cell_bounds, rowIndex, dataGridViewElementState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
+		
+					// Paint the search string text box
+					var font = DataGridView.ColumnHeadersDefaultCellStyle.Font;
+					var bounds = FieldBounds.Shifted(cell_bounds.Left, cell_bounds.Top);
+					graphics.FillRectangle(Pattern.IsValid ? SystemBrushes.Window : Brushes.LightSalmon, bounds);
+					graphics.DrawRectangle(Pens.Black, bounds.Inflated(0,0,-1,-1));
+					graphics.DrawString(Pattern.Expr, font, Brushes.Black, bounds.Shifted(0, Math.Max(0, (bounds.Height - font.Height)/2)));
+				}
+			}
+		}
+
+		/// <summary>
+		/// Get the column filters associated with this grid.
+		/// To remove column filters, just Dispose the returned instance.
+		/// Column filters are automatically disposed when the associated grid is disposed</summary>
+		public static ColumnFiltersData ColumnFilters(this DataGridView grid, bool create_if_necessary = false)
+		{
+			ColumnFiltersData column_filters;
+			if (m_column_filters.TryGetValue(grid, out column_filters)) return column_filters;
+			if (create_if_necessary) return m_column_filters[grid] = new ColumnFiltersData(grid);
+			return null;
+		}
+
+		/// <summary>Toggle column filter fields on/off for a grid. Attach this method to KeyDown</summary>
+		public static void ColumnFilters(object sender, EventArgs args)
+		{
+			var grid = (DataGridView)sender;
+			var ke = args as KeyEventArgs;
+			if (ke == null || (ke.Control && ke.KeyCode == Keys.F))
+			{
+				var cf = grid.ColumnFilters(create_if_necessary:true);
+				cf.Enabled = !cf.Enabled;
+			}
+		}
+
+		#endregion
+
+		#region Virtual Data Source
+
+		/// <summary>An interface for a type that provides data for a grid</summary>
+		public interface IDGVVirtualDataSource
+		{
+			void DGVCellValueNeeded(object sender, DataGridViewCellValueEventArgs args);
 		}
 
 		/// <summary>
@@ -931,15 +1687,11 @@ namespace pr.extn
 			grid.VirtualMode = true;
 			grid.CellValueNeeded += handler;
 		}
+
+		#endregion
 	}
 
-	/// <summary>An interface for a type that provides data for a grid</summary>
-	public interface IDGVVirtualDataSource
-	{
-		void DGVCellValueNeeded(object sender, DataGridViewCellValueEventArgs args);
-	}
-
-	/// <summary>Event args for sorting a DGV using the DataGridViewExtensions</summary>
+	/// <summary>Event args for sorting a DGV using the DataGridViewEx</summary>
 	public class DGVSortEventArgs :EventArgs
 	{
 		public DGVSortEventArgs(int column_index, SortOrder direction)

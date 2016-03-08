@@ -26,6 +26,17 @@ namespace TestCS
 			/// <summary>Human friendly name</summary>
 			public override string ToString() { return Text; }
 		}
+		private class TextDockable :TextBox ,IDockable
+		{
+			public TextDockable(string text)
+			{
+				Multiline = true;
+				DockControl = new DockControl(this, text) {TabText = text, TabIcon = SystemIcons.Question.ToBitmap()};
+			}
+
+			/// <summary>Implements docking functionality</summary>
+			public DockControl DockControl { [DebuggerStepThrough] get; private set; }
+		}
 
 		private MenuStrip m_menu;
 		private DockContainer m_dock;
@@ -60,6 +71,7 @@ namespace TestCS
 			var d7 = new Dockable("Dockable 7") { BorderStyle = bs };
 			var d8 = new Dockable("Dockable 8") { BorderStyle = bs };
 			var d9 = new Dockable("Dockable 9") { BorderStyle = bs };
+			var d10 = new TextDockable("TextDockable 10") { BorderStyle = bs };
 
 			m_dock.Add(d0); d0.DockControl.DockSite = EDockSite.Centre;
 			m_dock.Add(d1);	d1.DockControl.DockSite = EDockSite.Left;
@@ -71,6 +83,7 @@ namespace TestCS
 			m_dock.Add(d7);	d7.DockControl.DockSite = EDockSite.Centre;
 			m_dock.Add(d8);	d8.DockControl.DockSite = EDockSite.Top;
 			m_dock.Add(d9, EDockSite.Centre, EDockSite.Left);
+			m_dock.Add(d10);
 
 			d0.DockControl.DockPane.TabStripCtrl.StripLocation = EDockSite.Left;
 			d2.DockControl.DockPane.TabStripCtrl.StripLocation = EDockSite.Top;

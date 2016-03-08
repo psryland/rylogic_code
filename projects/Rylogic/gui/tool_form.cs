@@ -171,6 +171,10 @@ namespace pr.gui
 			Owner?.BringToFront();
 			base.Hide();
 		}
+		public void Hide(object sender, EventArgs e)
+		{
+			Hide();
+		}
 
 		/// <summary>An overload for close used for hooking up to event handlers</summary>
 		public void Close(object sender, EventArgs e)

@@ -117,6 +117,13 @@ namespace pr.util
 			return null;
 		}
 
+		/// <summary>Dispose a sub-range within a collection</summary>
+		public static void DisposeRange(IList doomed, int start, int count)
+		{
+			for (int i = start; i != count; ++i)
+				doomed[i] = Dispose((IDisposable)doomed[i]);
+		}
+
 		/// <summary>
 		/// State test for design mode.
 		/// Note: Use the Component extension method for a more reliable test</summary>
@@ -410,8 +417,18 @@ namespace pr.util
 			if (ass == null) ass = Assembly.GetExecutingAssembly();
 			return ass.GetName().Version;
 		}
-		public static Version AssemblyVersion(Type type) { return AssemblyVersion(Assembly.GetAssembly(type)); }
-		public static Version AssemblyVersion()          { return AssemblyVersion((Assembly)null); }
+		public static Version AssemblyVersion(Type type)
+		{
+			return AssemblyVersion(Assembly.GetAssembly(type));
+		}
+		public static Version AssemblyVersion()
+		{
+			return AssemblyVersion((Assembly)null);
+		}
+		public static string AppVersion
+		{
+			get { return AssemblyVersion().ToString(); }
+		}
 
 		/// <summary>Returns the timestamp of an assembly. Use 'Assembly.GetCallingAssembly()'</summary>
 		public static DateTime AssemblyTimestamp(Assembly ass)

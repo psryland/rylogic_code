@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing.Design;
+using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using pr.extn;
-using pr.util;
-using System.Collections;
-using System.Drawing.Design;
 
 namespace pr.container
 {
@@ -26,20 +26,25 @@ namespace pr.container
 
 		public BindingSource()
 		{
-			m_bs = new BSource(this);
+			Init(new BSource(this));
 		}
 		public BindingSource(IContainer container)
 		{
-			m_bs = new BSource(this, container);
+			Init(new BSource(this, container));
 		}
 		public BindingSource(object dataSource, string dataMember)
 		{
-			m_bs = new BSource(this, dataSource, dataMember);
+			Init(new BSource(this, dataSource, dataMember));
 		}
 		protected override void Dispose(bool disposing)
 		{
 			m_bs.Dispose();
 			base.Dispose(disposing);
+		}
+		private void Init(BSource bs)
+		{
+			m_bs = bs;
+			AllowNoCurrent = true;
 		}
 
 		/// <summary>The BindingSource providing the implementation</summary>
@@ -68,7 +73,7 @@ namespace pr.container
 					if (value == base.Position)
 					{
 					}
-					else if (value == -1 && Position != -1)
+					else if (value == -1 && Position != -1 && This.AllowNoCurrent)
 					{
 						m_impl_listposition.SetValue(base.CurrencyManager, -1);
 						OnPositionChanged(EventArgs.Empty);
@@ -116,6 +121,11 @@ namespace pr.container
 			get { return this[(int)index]; }
 			set { this[(int)index] = value; }
 		}
+		object IList.this[int index]
+		{
+			get { return this[index]; }
+			set { this[index] = (TItem)value; }
+		}
 
 		/// <summary>Gets a value indicating whether items in the underlying list can be edited.</summary>
 		/// <returns>true to indicate list items can be edited; otherwise, false.</returns>
@@ -146,6 +156,10 @@ namespace pr.container
 		/// <summary>Get/Set whether the underlying list can be sorted by through this binding</summary>
 		[Browsable(false)]
 		public virtual bool AllowSort { get; set; }
+
+		/// <summary>Get/Set whether the Position can be set to -1 when the binding source contains items</summary>
+		[Browsable(false)]
+		public virtual bool AllowNoCurrent { get; set; }
 
 		/// <summary>Gets the total number of items in the underlying list, taking the current System.Windows.Forms.BindingSource.Filter value into consideration.</summary>
 		/// <returns>The total number of filtered items in the underlying list.</returns>
@@ -200,6 +214,15 @@ namespace pr.container
 			{
 				if (value == m_bs.DataSource) return;
 
+				// Validation
+				if (value != null)
+				{
+					// If the value isn't an IList the DataSource will create a
+					// list internally and add 'value' as the first element.
+					if (value is IList<TItem> && !(value is IList))
+						throw new Exception("Binding to an IList<> that isn't also an IList has unexpected results");
+				}
+
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
 
 				// Unhook
@@ -217,11 +240,16 @@ namespace pr.container
 				}
 
 				// Set new data source
+				// Don't set to null because that causes controls with 'DisplayMember' properties to throw exceptions
+				// complaining that the DisplayMember value does not exist in the data source.
+				// Note: if Position == -1 && Count != 0 and this data source is bound to a DGV, it throws an unhandled
+				// exception. You need to ensure Position is within [0,Count) before the grid gains focus.
+				m_bs.DataSource = value ?? new TItem[0];
 				// Note: this can cause a first chance exception in some controls
 				// that are bound to this source (e.g. ListBox, ComboBox, etc.).
 				// They are handled internally, just continue.
-				m_bs.DataSource = null;
-				m_bs.DataSource = value;
+				//m_bs.DataSource = null;
+				//m_bs.DataSource = value;
 
 				// Hookup
 				bl = m_bs.DataSource as BindingListEx<TItem>;
@@ -464,13 +492,6 @@ namespace pr.container
 		{
 			add { m_bs.DataSourceChanged += value; }
 			remove { m_bs.DataSourceChanged -= value; }
-		}
-
-		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
-		private event ListChangedEventHandler ListChanged
-		{
-			add { m_bs.ListChanged += value; }
-			remove { m_bs.ListChanged -= value; }
 		}
 
 		/// <summary>Adds an existing item to the internal list.</summary>
@@ -768,6 +789,13 @@ namespace pr.container
 			}
 		}
 
+		/// <summary>Occurs when the underlying list changes or an item in the list changes.</summary>
+		private event ListChangedEventHandler ListChanged
+		{
+			add { m_bs.ListChanged += value; }
+			remove { m_bs.ListChanged -= value; }
+		}
+
 		/// <summary>Raised *only* if 'DataSource' is a BindingListEx</summary>
 		public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
 		private void RaiseListChanging(object sender, ListChgEventArgs<TItem> args)
@@ -833,11 +861,6 @@ namespace pr.container
 		#endregion
 
 		#region IList
-		object IList.this[int index]
-		{
-			get { return this[index]; }
-			set { this[index] = (TItem)value; }
-		}
 		bool IList.IsReadOnly
 		{
 			get { return IsReadOnly; }
@@ -995,6 +1018,535 @@ namespace pr.container
 			remove { ((ISupportInitializeNotification)m_bs).Initialized -= value; }
 		}
 		#endregion
+
+		/// <summary>Create a new view of this binding source</summary>
+		public BindingSource<TItem> CreateView(Func<TItem,bool> pred)
+		{
+			// Create a view of this binding source
+			var view = new View(this, pred);
+			var bs = new BindingSource<TItem>{DataSource = view};
+
+			// When the underlying source position changes, if it corresponds to an item
+			// in the view, update the Position in the returned view. Note, using view.PositionChanged
+			// rather than view.BindingSource.PositionChanged because 'view.BindingSource' is actually
+			// 'this' and we wouldn't be able to detach this handler.
+			view.PositionChanged += (s,a) =>
+			{
+				// If 'a.NewIndex >= 0', this the current item in the underlying source is also in this view
+				bs.Position = a.NewIndex >= 0 ? a.NewIndex : -1;
+			};
+
+			// When the view position changes, set the position in the underlying binding source
+			bs.PositionChanged += (s,a) =>
+			{
+				view.Position = a.NewIndex;
+			};
+
+			return bs;
+		}
+
+		/// <summary>
+		/// A view of the binding source data that is filtered by a predicate.
+		/// Updates when the underlying binding source changes.
+		/// This class is intended to be the DataSource of another binding source instance</summary>
+		public class View :IDisposable ,IBindingList, IList, ICollection, IEnumerable<TItem>, IEnumerable, ICancelAddNew
+		{
+			public View(BindingSource<TItem> bs, Func<TItem, bool> pred = null)
+			{
+				m_readonly = false;
+				Index = new BindingListEx<int>();
+				Predicate = pred ?? (x => true);
+				BindingSource = bs;
+			}
+			public void Dispose()
+			{
+				BindingSource = null;
+				Predicate = null;
+				Index = null;
+			}
+
+			/// <summary>The indices of the elements visible in this view</summary>
+			public BindingListEx<int> Index
+			{
+				get { return m_bl; }
+				set
+				{
+					if (m_bl == value) return;
+					if (m_bl != null)
+					{
+						m_bl.ListChanging -= HandleViewChanging;
+						m_bl.ListChanged -= HandleViewChanged;
+						m_bc = null;
+					}
+					m_bl = value;
+					if (m_bl != null)
+					{
+						m_bc = new BindingContext();
+						m_bl.ListChanging += HandleViewChanging;
+						m_bl.ListChanged += HandleViewChanged;
+						m_bl.ResetBindings();
+					}
+				}
+			}
+			private BindingListEx<int> m_bl;
+			private BindingContext m_bc;
+
+			/// <summary>The filter function</summary>
+			public Func<TItem,bool> Predicate
+			{
+				get { return m_predicate; }
+				set
+				{
+					if (m_predicate == value) return;
+					m_predicate = value ?? (x => true);
+					UpdateView();
+				}
+			}
+			private Func<TItem,bool> m_predicate;
+
+			/// <summary>The binding source that this is a view of</summary>
+			public BindingSource<TItem> BindingSource
+			{
+				get { return m_bs; }
+				set
+				{
+					if (m_bs == value) return;
+					if (m_bs != null)
+					{
+						m_bs.ListChanging -= HandleSourceChanging;
+						m_bs.PositionChanged -= HandleSourcePositionChanged;
+					}
+					m_bs = value;
+					if (m_bs != null)
+					{
+						m_bs.ListChanging += HandleSourceChanging;
+						m_bs.PositionChanged += HandleSourcePositionChanged;
+					}
+					UpdateView();
+				}
+			}
+			private BindingSource<TItem> m_bs;
+
+			/// <summary>Raised when this view is changing</summary>
+			public event EventHandler<ListChgEventArgs<TItem>> ListChanging;
+			public event ListChangedEventHandler ListChanged;
+
+			/// <summary>The Position in the underlying binding source as an index in this view</summary>
+			/// <returns>Returns a twos-complement value if the underlying source position in not in this view</returns>
+			public int Position
+			{
+				get { return SrcToViewIndex(BindingSource.Position); }
+				set
+				{
+					// If 'value < 0' then ignore the set, we only want to set the position
+					// on the underlying source when it corresponds to an item in this view.
+					if (value < 0) return;
+					BindingSource.Position = Index[value];
+				}
+			}
+
+			/// <summary>Raised when the Position in the underlying binding source changes</summary>
+			public event EventHandler<PositionChgEventArgs> PositionChanged;
+
+			/// <summary>Convert an index in 'BindingSource' into an index in 'Index'.</summary>
+			/// <returns>Returns a twos-complement index if 'src_index' is not an item in this view</returns>
+			public int SrcToViewIndex(int src_index)
+			{
+				if (src_index == -1) return -1;
+				return Index.BinarySearch(i => i.CompareTo(src_index));
+			}
+			public int ViewToSrcIndex(int view_index)
+			{
+				if (view_index == -1) return -1;
+				return Index[view_index];
+			}
+
+			/// <summary>Update the list of items in this view</summary>
+			public void UpdateView()
+			{
+				HandleSourceChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
+			}
+
+			/// <summary>Handle the underlying binding source changing</summary>
+			private void HandleSourceChanging(object sender, ListChgEventArgs<TItem> e)
+			{
+				// No source, no view
+				if (BindingSource == null)
+				{
+					Index.Clear();
+					return;
+				}
+
+				// See if the change to the binding source affects this view
+				switch (e.ChangeType)
+				{
+				case ListChg.Reset:
+				case ListChg.Reordered:
+					{
+						// Populate the Index collection with those that pass the predicate
+						Index.Clear();
+						for (int i = 0; i != BindingSource.Count; ++i)
+						{
+							if (!Predicate(BindingSource[i])) continue;
+							Index.Add(i);
+						}
+						Debug.Assert(SanityCheck());
+						break;
+					}
+				case ListChg.ItemPreRemove:
+					{
+						// Before an item is removed from the source, remove it from the view
+						var idx = SrcToViewIndex(e.Index);
+						if (idx >= 0) Index.RemoveAt(idx);
+						if (idx < 0) idx = ~idx;
+						for (var i = idx; i < Index.Count; ++i) --Index[i];
+						break;
+					}
+				case ListChg.ItemRemoved:
+					{
+						Debug.Assert(SanityCheck());
+						break;
+					}
+				case ListChg.ItemAdded:
+					{
+						// After an item is added, see if it should be added to the view
+						var idx = SrcToViewIndex(e.Index);
+						if (idx < 0) idx = ~idx;
+						if (Predicate(e.Item)) Index.Insert(idx, e.Index);
+						for (var i = idx + 1; i < Index.Count; ++i) ++Index[i];
+						Debug.Assert(SanityCheck());
+						break;
+					}
+				}
+			}
+
+			/// <summary>Report position changed in the underlying binding source</summary>
+			private void HandleSourcePositionChanged(object sender, PositionChgEventArgs e)
+			{
+				// Convert the binding source position into a position in this view
+				var old = SrcToViewIndex(e.OldIndex);
+				var neu = SrcToViewIndex(e.NewIndex);
+				PositionChanged.Raise(this, new PositionChgEventArgs(old, neu));
+			}
+
+			/// <summary>Raise the ListChanging event on this view</summary>
+			private void HandleViewChanging(object sender, ListChgEventArgs<int> e)
+			{
+				// Translate the changing Index collection to a changing item
+				var item = e.Index != -1 ? BindingSource[e.Item] : default(TItem);
+				ListChanging.Raise(this, new ListChgEventArgs<TItem>(e.ChangeType, e.Index, item));
+			}
+
+			/// <summary>Handle the IBindingList changed events</summary>
+			private void HandleViewChanged(object sender, ListChangedEventArgs e)
+			{
+				if (ListChanged == null) return;
+				ListChanged(this, e);
+			}
+
+			#region IEnumerable
+			public IEnumerator<TItem> GetEnumerator()
+			{
+				return Index.Select(i => BindingSource[i]).GetEnumerator();
+			}
+			IEnumerator IEnumerable.GetEnumerator()
+			{
+				return ((IEnumerable<TItem>)this).GetEnumerator();
+			}
+			#endregion
+
+			#region IList
+
+			/// <summary>The number of items in this view</summary>
+			public int Count
+			{
+				get { return Index.Count; }
+			}
+
+			/// <summary>Get/Set whether the view is readonly</summary>
+			public bool IsReadOnly
+			{
+				get { return m_readonly || BindingSource.IsReadOnly; }
+				set { m_readonly = value; }
+			}
+			private bool m_readonly;
+			private void ThrowIfReadOnly()
+			{
+				if (!IsReadOnly) return;
+				throw new Exception("BindingSource View is readonly");
+			}
+
+			/// <summary>True if this view is a fixed size</summary>
+			public bool IsFixedSize
+			{
+				get { return IsReadOnly; }
+			}
+
+			/// <summary>Synchronisation object</summary>
+			public object SyncRoot
+			{
+				get { return BindingSource.SyncRoot; }
+			}
+
+			/// <summary>True if this collection is thread safe</summary>
+			public bool IsSynchronized
+			{
+				get { return false; }
+			}
+
+			/// <summary>Access elements in the view by index</summary>
+			public TItem this[int index]
+			{
+				get { return BindingSource[Index[index]]; }
+				set
+				{
+					ThrowIfReadOnly();
+					BindingSource[Index[index]] = value;
+				}
+			}
+			public TItem this[uint index]
+			{
+				get { return this[(int)index]; }
+				set { this[(int)index] = value; }
+			}
+			object IList.this[int index]
+			{
+				get { return this[index]; }
+				set { this[index] = (TItem)value; }
+			}
+
+			/// <summary>The index of 'item' in this view</summary>
+			public int IndexOf(TItem item)
+			{
+				var i = 0;
+				foreach (var x in this)
+				{
+					if (!Equals(x, item)) ++i;
+					else return i;
+				}
+				return -1;
+			}
+			int IList.IndexOf(object value)
+			{
+				return IndexOf((TItem)value);
+			}
+
+			/// <summary>Insert an item into the underlying binding source. Note, if the item does not pass the predicate it will not appear in this view</summary>
+			public void Insert(int index, TItem item)
+			{
+				ThrowIfReadOnly();
+				BindingSource.Insert(Index[index], item);
+			}
+			void IList.Insert(int index, object value)
+			{
+				Insert(index, (TItem)value);
+			}
+
+			/// <summary>Remove an item from the underlying binding source</summary>
+			public void RemoveAt(int index)
+			{
+				ThrowIfReadOnly();
+				BindingSource.RemoveAt(Index[index]);
+			}
+
+			/// <summary>Remove 'item' from the underlying binding source. Note: 'item' does not have to be in this view</summary>
+			public void Remove(TItem item)
+			{
+				ThrowIfReadOnly();
+				BindingSource.Remove(item);
+			}
+			void IList.Remove(object value)
+			{
+				Remove((TItem)value);
+			}
+
+			/// <summary>Add 'item' to the underlying data source. Note: 'item' won't be added to this view if Predicate(item) is false<</summary>
+			public void Add(TItem item)
+			{
+				ThrowIfReadOnly();
+				BindingSource.Add(item);
+			}
+			int IList.Add(object value)
+			{
+				Add((TItem)value);
+				return Count - 1;
+			}
+
+			/// <summary>Clear the underlying data source.</summary>
+			public void Clear()
+			{
+				ThrowIfReadOnly();
+				BindingSource.Clear();
+			}
+
+			/// <summary>True if 'item' is in this view</summary>
+			public bool Contains(TItem item)
+			{
+				foreach (var x in this)
+				{
+					if (!Equals(x, item)) continue;
+					return true;
+				}
+				return false;
+			}
+			bool IList.Contains(object value)
+			{
+				return Contains((TItem)value);
+			}
+
+			/// <summary>Copy the items in this view to 'array'</summary>
+			public void CopyTo(TItem[] array, int offset)
+			{
+				foreach (var item in this)
+					array[offset++] = item;
+			}
+			void ICollection.CopyTo(Array array, int offset)
+			{
+				foreach (var item in this)
+					array.SetValue(item, offset++);
+			}
+
+			#endregion
+
+			#region IBindingList
+			
+			/// <summary>Get whether new elements can be added via this view</summary>
+			public bool AllowNew
+			{
+				get { return !IsReadOnly && BindingSource.AllowNew; }
+			}
+
+			/// <summary>Get whether elements can be edited via this view</summary>
+			public bool AllowEdit
+			{
+				get { return !IsReadOnly && BindingSource.AllowEdit; }
+			}
+
+			/// <summary>Get whether elements can be removed via this view</summary>
+			public bool AllowRemove
+			{
+				get { return !IsReadOnly && BindingSource.AllowRemove; }
+			}
+
+			/// <summary>Get whether change notification is supported</summary>
+			public bool SupportsChangeNotification
+			{
+				get { return BindingSource.SupportsChangeNotification; }
+			}
+
+			/// <summary>Get whether searching is supported</summary>
+			public bool SupportsSearching
+			{
+				get { return BindingSource.SupportsSearching; }
+			}
+
+			/// <summary>Get whether sorting is supported</summary>
+			public bool SupportsSorting
+			{
+				get { return BindingSource.SupportsSorting; }
+			}
+
+			/// <summary>True if the collection is sorted</summary>
+			public bool IsSorted
+			{
+				get { return BindingSource.IsSorted; }
+			}
+
+			/// <summary>The property to sort on</summary>
+			public PropertyDescriptor SortProperty
+			{
+				get { return BindingSource.SortProperty; }
+			}
+
+			/// <summary>The sort direction</summary>
+			public ListSortDirection SortDirection
+			{
+				get { return BindingSource.SortDirection; }
+			}
+
+			/// <summary>Add a new item to the collection</summary>
+			public object AddNew()
+			{
+				ThrowIfReadOnly();
+				return BindingSource.AddNew();
+			}
+
+			/// <summary>Apply the sort to the underlying collection</summary>
+			public void ApplySort(PropertyDescriptor property, ListSortDirection direction)
+			{
+				BindingSource.ApplySort(property, direction);
+			}
+
+			/// <summary>Remove the sort</summary>
+			public void RemoveSort()
+			{
+				BindingSource.RemoveSort();
+			}
+
+			/// <summary></summary>
+			public int Find(PropertyDescriptor property, object key)
+			{
+				return BindingSource.Find(property, key);
+			}
+
+			/// <summary></summary>
+			void IBindingList.AddIndex(PropertyDescriptor property)
+			{
+				((IBindingList)BindingSource).AddIndex(property);
+			}
+			void IBindingList.RemoveIndex(PropertyDescriptor property)
+			{
+				((IBindingList)BindingSource).RemoveIndex(property);
+			}
+
+			#endregion
+
+			#region IBindingListView
+			public string Filter
+			{
+				get { return BindingSource.Filter; }
+				set { BindingSource.Filter = value; }
+			}
+			public ListSortDescriptionCollection SortDescriptions
+			{
+				get { return BindingSource.SortDescriptions; }
+			}
+			public bool SupportsAdvancedSorting
+			{
+				get { return BindingSource.SupportsAdvancedSorting; }
+			}
+			public bool SupportsFiltering
+			{
+				get { return BindingSource.SupportsFiltering; }
+			}
+			public void ApplySort(ListSortDescriptionCollection sorts)
+			{
+				BindingSource.ApplySort(sorts);
+			}
+			public void RemoveFilter()
+			{
+				BindingSource.RemoveFilter();
+			}
+			#endregion
+
+			#region ICancelAddNew
+			void ICancelAddNew.CancelNew(int itemIndex)
+			{
+				((ICancelAddNew)BindingSource).CancelNew(itemIndex);
+			}
+			void ICancelAddNew.EndNew(int itemIndex)
+			{
+				((ICancelAddNew)BindingSource).EndNew(itemIndex);
+			}
+			#endregion
+
+			/// <summary>Check the view is correct</summary>
+			private bool SanityCheck()
+			{
+				var should_be = BindingSource.Where(Predicate).ToList();
+				return this.SequenceEqual(should_be);
+			}
+		}
 	}
 }
 
@@ -1004,8 +1556,6 @@ namespace pr.unittests
 	using System.Collections.Generic;
 	using System.Linq;
 	using container;
-	using maths;
-	using util;
 
 	[TestFixture] public class TestBindingSource
 	{
@@ -1279,6 +1829,49 @@ namespace pr.unittests
 			Assert.True(current == 1);
 
 			Assert.True(positions.SequenceEqual(new[]{0,2,2,3,3,2,2,3,3,2,2,1,1,0}));
+		}
+		[Test] public void BindingSourceView()
+		{
+			var bl = new BindingListEx<char>();
+			var bs = new BindingSource<char> { DataSource = bl };
+			var bv = bs.CreateView(i => (i % 2) == 0);
+
+			bl.Add('a','b','c','d','e','f','g','h','i','j');
+
+			Assert.True(bl.SequenceEqual(new[]{'a','b','c','d','e','f','g','h','i','j'}));
+			Assert.True(bs.SequenceEqual(new[]{'a','b','c','d','e','f','g','h','i','j'}));
+			Assert.True(bv.SequenceEqual(new[]{'b','d','f','h','j'                    }));
+
+			bs.Remove('e');
+			bs.Remove('f');
+
+			Assert.True(bl.SequenceEqual(new[]{'a','b','c','d','g','h','i','j'}));
+			Assert.True(bs.SequenceEqual(new[]{'a','b','c','d','g','h','i','j'}));
+			Assert.True(bv.SequenceEqual(new[]{'b','d','h','j'                }));
+
+			bv.Remove('a');
+			bv.Remove('b');
+
+			Assert.True(bl.SequenceEqual(new[]{'c','d','g','h','i','j'}));
+			Assert.True(bs.SequenceEqual(new[]{'c','d','g','h','i','j'}));
+			Assert.True(bv.SequenceEqual(new[]{'d','h','j'            }));
+
+			bv.Add('k');
+			bv.Add('l');
+
+			Assert.True(bl.SequenceEqual(new[]{'c','d','g','h','i','j','k','l'}));
+			Assert.True(bs.SequenceEqual(new[]{'c','d','g','h','i','j','k','l'}));
+			Assert.True(bv.SequenceEqual(new[]{'d','h','j','l'                }));
+
+			bs.Position = 2;
+			Assert.True(bv.Position == -1);
+			bs.Position = 3;
+			Assert.True(bv.Position == 1);
+
+			bv.Position = 2;
+			Assert.True(bs.Position == 5);
+			bv.Position = 3;
+			Assert.True(bs.Position == 7);
 		}
 	}
 }

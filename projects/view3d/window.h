@@ -24,7 +24,7 @@ namespace view3d
 		pr::rdr::Light              m_light;                    // Light source for the set
 		bool                        m_light_is_camera_relative; // Whether the light is attached to the camera or not
 		EView3DFillMode             m_fill_mode;                // Fill mode
-		pr::Colour32                m_background_colour;        // The background colour for this drawset
+		pr::Colour32                m_background_colour;        // The background colour for this draw set
 		view3d::Instance            m_focus_point;
 		view3d::Instance            m_origin_point;
 		float                       m_focus_point_size;         // The base size of the focus point object
@@ -39,19 +39,21 @@ namespace view3d
 		std::string                 m_settings;                 // Allows a char const* to be returned
 
 		// Default window construction settings
-		static pr::rdr::WndSettings Settings(HWND hwnd, bool gdi_compat)
+		static pr::rdr::WndSettings Settings(HWND hwnd, View3DWindowOptions const& opts)
 		{
 			if (hwnd == 0) throw pr::Exception<HRESULT>(E_FAIL, "Provided window handle is null");
 			RECT rect; ::GetClientRect(hwnd, &rect);
-			return pr::rdr::WndSettings(hwnd, true, gdi_compat, pr::To<pr::iv2>(rect));
+			auto settings = pr::rdr::WndSettings(hwnd, true, opts.m_gdi_compatible != 0, pr::To<pr::iv2>(rect));
+			settings.m_name = opts.m_dbg_name;
+			return settings;
 		}
 		Window* this_() { return this; }
 
-		Window(pr::Renderer& rdr, HWND hwnd, bool gdi_compat, View3D_ReportErrorCB error_cb, void* ctx)
-			:m_error_cb({pr::StaticCallBack(error_cb, ctx)})
+		Window(pr::Renderer& rdr, HWND hwnd, View3DWindowOptions const& opts)
+			:m_error_cb({pr::StaticCallBack(opts.m_error_cb, opts.m_error_cb_ctx)})
 			,m_hwnd(hwnd)
 			,m_rdr(rdr)
-			,m_wnd(m_rdr, Settings(hwnd, gdi_compat))
+			,m_wnd(m_rdr, Settings(hwnd, opts))
 			,m_scene(m_wnd)
 			,m_objects()
 			,m_camera()
@@ -144,12 +146,12 @@ namespace view3d
 			m_angle_tool_ui  .Detach();
 
 			// Don't destroy 'm_hwnd' because it doesn't belong to us,
-			// we're simply drawing on that window. Signal close by nulling it;
+			// we're simply drawing on that window. Signal close by setting it to null
 			m_hwnd = 0;
 		}
 
-		// 'ctx' should be a Drawset
-		// Return the focus point of the camera in this drawset
+		// 'ctx' should be a Draw set
+		// Return the focus point of the camera in this draw set
 		static pr::v4 __stdcall ReadPoint(void* ctx)
 		{
 			if (ctx == 0) return pr::v4Origin;

@@ -16,6 +16,7 @@ using pr.gfx;
 using pr.ldr;
 using pr.maths;
 using pr.util;
+using pr.win32;
 using EBtnIdx = pr.gfx.View3d.EBtnIdx;
 
 namespace pr.gui
@@ -56,11 +57,11 @@ namespace pr.gui
 		/// <summary>Base class for anything on a diagram</summary>
 		public abstract class Element :IDisposable
 		{
-			protected Element(Guid id, m4x4 position)
+			protected Element(Entity entity, Guid id, m4x4 position)
 			{
-				m_disposing     = false;
-				m_diag          = null;
+				Entity          = entity;
 				Id              = id;
+				m_impl_diag     = null;
 				m_impl_position = position;
 				m_impl_selected = false;
 				m_impl_visible  = true;
@@ -68,10 +69,10 @@ namespace pr.gui
 				EditControl     = null;
 				UserData        = new Dictionary<Guid, object>();
 			}
-			protected Element(XElement node)
+			protected Element(Entity entity, XElement node)
 			{
-				m_disposing = false;
 				Diagram     = null;
+				Entity      = entity;
 				Id          = node.Element(XmlField.Id).As<Guid>();
 				Position    = node.Element(XmlField.Position).As<m4x4>();
 				Selected    = false;
@@ -80,10 +81,15 @@ namespace pr.gui
 				EditControl = null;
 				UserData    = new Dictionary<Guid, object>();
 			}
+			~Element()
+			{
+				Debug.Assert(Disposed, "Don't leave elements for the GC");
+			}
 			public void Dispose()
 			{
-				Dispose(m_disposing = true);
+				Dispose(true); // Mimic the WinForms Control disposing pattern
 			}
+			protected bool Disposed { get; private set; }
 			protected virtual void Dispose(bool disposing)
 			{
 				Diagram = null;
@@ -91,62 +97,75 @@ namespace pr.gui
 				PositionChanged = null;
 				DataChanged = null;
 				SelectedChanged = null;
+				Disposed = true;
 			}
-			private bool m_disposing;
 
 			/// <summary>Get the entity type for this element</summary>
-			public abstract Entity Entity { get; }
+			public Entity Entity { get; private set; }
 
 			/// <summary>Non-null when the element has been added to a diagram. Not virtual, override 'SetDiagramInternal' instead</summary>
 			public DiagramControl Diagram
 			{
-				get { return m_diag; }
-				set { SetDiagramInternal(value, true); }
+				get { return m_impl_diag; }
+				set
+				{
+					// An Element can be added to a diagram by assigning to this property
+					// or by added it to the Elements collection. It can be removed by setting
+					// this property to null, by removing it from the Elements collection, or
+					// by Disposing the element. Note: the diagram does not own the elements, 
+					// elements should only be disposed by the caller.
+					if (m_impl_diag == value) return;
+
+					// Note: don't suspend events on m_diag.Elements.
+					// User code maybe watching for ListChanging events.
+					Debug.Assert(!Disposed);
+
+					// Remove this element from any selected collection on the outgoing diagram
+					Selected = false;
+
+					// Detach from the old diagram
+					if (m_impl_diag != null)
+					{
+						m_impl_diag.m_dirty.Remove(this);
+						m_impl_diag.Elements.Remove(this);
+					}
+
+					// Assign the new diagram
+					SetDiagramCore(value);
+
+					// Attach to the new diagram
+					if (m_impl_diag != null)
+					{
+						// If 'Diagram' is being set from the ListChg.Added handler,
+						// it will already be in the Elements collection. Don't add it twice.
+						if (!m_impl_diag.Elements.Contains(this))
+							m_impl_diag.Elements.Add(this);
+					}
+
+					Debug.Assert(CheckConsistency());
+					Invalidate();
+				}
 			}
-			internal virtual void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
+			private DiagramControl m_impl_diag;
+
+			/// <summary>Add or remove this element from 'diag'</summary>
+			public virtual void SetDiagramCore(DiagramControl diag)
 			{
-				// There are two ways of adding an element to a diagram; adding to the
-				// diagrams Elements collection, or assigning this property. To handle
-				// this we set the diagram property to the new value, then call Add/Remove
-				// on the diagrams elements container. The Add/Remove will be ignored
-				// if the Diagram property already has the correct value
-				if (m_diag == diag) return;
-
-				// Remove this element from any selected collection on the outgoing diagram
-				Selected = false;
-
-				// Detach from the old diagram
-				if (m_diag != null)
-				{
-					m_diag.m_dirty.Remove(this);
-					if (add_to_elements)
-						m_diag.Elements.Remove(this);
-				}
-
-				// Assign the new diagram
-				m_diag = diag;
-
-				// Attach to the new diagram
-				if (m_diag != null)
-				{
-					if (add_to_elements)
-						m_diag.Elements.Add(this);
-				}
-
-				Invalidate();
+				m_impl_diag = diag;
 			}
-			private DiagramControl m_diag;
 
 			/// <summary>Unique id for this element</summary>
 			public Guid Id { get; set; }
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.Id       ,Id       ,false);
 				node.Add2(XmlField.Position ,Position ,false);
 				return node;
 			}
+
+			/// <summary>Import from XML. Used to update the state of this element without having to delete/recreate it</summary>
 			protected virtual void FromXml(XElement node)
 			{
 				Position = node.Element(XmlField.Position).As<m4x4>(Position);
@@ -155,7 +174,7 @@ namespace pr.gui
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
 			internal void Update(XElement node)
 			{
-				// Don't validate the TypeAttribute as users may have subclassed the element
+				// Don't validate the TypeAttribute as users may have sub-classed the element
 				using (SuspendEvents())
 					FromXml(node);
 
@@ -165,9 +184,9 @@ namespace pr.gui
 			/// <summary>Indicate a render is needed. Note: doesn't call Render</summary>
 			public void Invalidate(object sender = null, EventArgs args = null)
 			{
-				if (m_disposing || Diagram == null || Diagram.m_dirty.Contains(this)) return;
+				if (Diagram == null || Diagram.m_dirty.Contains(this)) return;
 				Diagram.m_dirty.Add(this);
-				Invalidated.Raise(this, EventArgs.Empty);
+				Invalidated.Raise(this);
 			}
 
 			/// <summary>Get/Set whether events from this element are suspended or not</summary>
@@ -198,19 +217,39 @@ namespace pr.gui
 			public event EventHandler DataChanged;
 			protected virtual void RaiseDataChanged()
 			{
-				if (Diagram != null) Diagram.DiagramChangedPending = true;
 				DataChanged.Raise(this, EventArgs.Empty);
+				RaiseDiagramChanged();
 			}
 
 			/// <summary>Raised whenever the element is moved</summary>
 			public event EventHandler PositionChanged;
+			protected void RaisePositionChanged()
+			{
+				PositionChanged.Raise(this);
+				RaiseDiagramChanged();
+			}
 
 			/// <summary>Raised whenever the element changes size</summary>
 			public event EventHandler SizeChanged;
-			protected void RaiseSizeChanged() { SizeChanged.Raise(this, EventArgs.Empty); }
+			protected void RaiseSizeChanged()
+			{
+				SizeChanged.Raise(this, EventArgs.Empty);
+				RaiseDiagramChanged();
+			}
 
 			/// <summary>Raised whenever the element is selected or deselected</summary>
 			public event EventHandler SelectedChanged;
+			protected virtual void RaiseSelectedChanged()
+			{
+				SelectedChanged.Raise(this);
+			}
+
+			/// <summary>Signal that the diagram needs laying out</summary>
+			private void RaiseDiagramChanged()
+			{
+				if (Diagram == null) return;
+				Diagram.RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
+			}
 
 			/// <summary>Get/Set the selected state</summary>
 			public virtual bool Selected
@@ -219,19 +258,19 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_selected == value) return;
-					m_impl_selected = value;
-					Invalidate();
-
-					// Update our selected state in the diagram's selected collection
-					// Don't use the event for this as events can be suspended
-					if (m_diag != null)
+					if (m_impl_selected)
 					{
-						if (value) m_diag.Selected.Add(this);
-						else m_diag.Selected.Remove(this);
+						Diagram?.Selected.Remove(this);
+					}
+					m_impl_selected = value;
+					if (m_impl_selected)
+					{
+						Diagram?.Selected.Add(this);
 					}
 
 					// Notify observers about the selection change
-					SelectedChanged.Raise(this, EventArgs.Empty);
+					RaiseSelectedChanged();
+					Invalidate();
 				}
 			}
 			private bool m_impl_selected;
@@ -265,44 +304,42 @@ namespace pr.gui
 			/// <summary>Allow users to bind arbitrary data to the diagram element</summary>
 			public IDictionary<Guid, object> UserData { get; private set; }
 
-			/// <summary>
-			/// Send this element to the bottom of the stack.
-			/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
-			public void SendToBack(bool temporary)
+			/// <summary>Send this element to the bottom of the stack.</summary>
+			public void SendToBack()
 			{
 				// Z order is determined by position in the Elements collection
-				if (m_diag == null) return;
+				if (Diagram == null)
+					return;
 
-				// Save the diagram pointer because removing
-				// this element will remove it from the Diagram
-				var diag = m_diag;
+				// Save the diagram pointer because removing the element will remove
+				// it from the Diagram causing 'Diagram' to become null before Insert is called
+				var diag = Diagram;
 				using (diag.Elements.SuspendEvents())
 				{
 					diag.Elements.Remove(this);
 					diag.Elements.Insert(0, this);
 				}
-				diag.UpdateElementZOrder(temporary);
-				diag.Refresh();
+				diag.UpdateElementZOrder();
+				diag.Invalidate();
 			}
 
-			/// <summary>
-			/// Bring this element to top of the stack.
-			/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
-			public void BringToFront(bool temporary)
+			/// <summary>Bring this element to top of the stack.</summary>
+			public void BringToFront()
 			{
 				// Z order is determined by position in the Elements collection
-				if (m_diag == null) return;
+				if (Diagram == null)
+					return;
 
-				// Save the diagram pointer because removing
-				// this element will remove it from the Diagram
-				var diag = m_diag;
+				// Save the diagram pointer because removing the element will remove
+				// it from the Diagram causing 'Diagram' to become null before Insert is called
+				var diag = Diagram;
 				using (diag.Elements.SuspendEvents())
 				{
 					diag.Elements.Remove(this);
 					diag.Elements.Add(this);
 				}
-				diag.UpdateElementZOrder(temporary);
-				diag.Refresh();
+				diag.UpdateElementZOrder();
+				diag.Invalidate();
 			}
 
 			/// <summary>The element to diagram transform</summary>
@@ -320,14 +357,23 @@ namespace pr.gui
 			public v2 PositionXY
 			{
 				get { return Position.pos.xy; }
-				set { var o2p = Position; Position = new m4x4(o2p.rot, new v4(value, o2p.pos.z, o2p.pos.w)); }
+				set
+				{
+					var o2p = Position;
+					Position = new m4x4(o2p.rot, new v4(value, o2p.pos.z, o2p.pos.w));
+				}
 			}
 
 			/// <summary>Get/Set the z position of the element</summary>
 			public float PositionZ
 			{
 				get { return Position.pos.z; }
-				internal set { var o2p = Position; o2p.pos.z = value; Position = o2p; }
+				set
+				{
+					var o2p = Position;
+					o2p.pos.z = value;
+					Position = o2p;
+				}
 			}
 
 			/// <summary>Position recorded at the time dragging starts</summary>
@@ -337,8 +383,7 @@ namespace pr.gui
 			protected virtual void SetPosition(m4x4 pos)
 			{
 				m_impl_position = pos;
-				if (Diagram != null) Diagram.DiagramChangedPending = true;
-				PositionChanged.Raise(this, EventArgs.Empty);
+				RaisePositionChanged();
 			}
 			private m4x4 m_impl_position;
 
@@ -350,13 +395,22 @@ namespace pr.gui
 			}
 
 			/// <summary>AABB for the element in diagram space</summary>
-			public virtual BRect Bounds { get { return new BRect(PositionXY, v2.Zero); } }
+			public virtual BRect Bounds
+			{
+				get { return new BRect(PositionXY, v2.Zero); }
+			}
 
 			/// <summary>True if this element can be resized</summary>
-			public virtual bool Resizeable { get { return false; } }
+			public virtual bool Resizeable
+			{
+				get { return false; }
+			}
 
 			/// <summary>Perform a hit test on this object. Returns null for no hit. 'point' is in diagram space</summary>
-			public virtual HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam) { return null; }
+			public virtual HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
+			{
+				return null;
+			}
 
 			/// <summary>Handle a click event on this element</summary>
 			internal virtual bool HandleClicked(HitTestResult.Hit hit, View3d.CameraControls cam)
@@ -377,8 +431,8 @@ namespace pr.gui
 
 			/// <summary>
 			/// Return the attachment location and normal nearest to 'pt'.
-			/// Existing is the element already attached to the anchor (can be null)</summary>
-			public virtual AnchorPoint NearestAnchor(v2 pt, bool pt_in_element_space, Element existing)
+			/// 'existing' is the element already attached to the anchor (can be null)</summary>
+			public virtual AnchorPoint NearestAnchor(v2 pt, bool pt_in_element_space, Element existing = null)
 			{
 				var point = new v4(pt, PositionZ, 1f);
 				if (!pt_in_element_space)
@@ -394,18 +448,23 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			public void Refresh()
+			public void UpdateGfx()
 			{
-				if (m_impl_refreshing) return; // Protect against reentrancy
-				using (Scope.Create(() => m_impl_refreshing = true, () => m_impl_refreshing = false))
-					RefreshInternal();
+				if (m_impl_updating_gfx) return; // Protect against reentrancy
+				using (Scope.Create(() => m_impl_updating_gfx = true, () => m_impl_updating_gfx = false))
+					UpdateGfxCore();
 			}
-			protected virtual void RefreshInternal() {}
-			private bool m_impl_refreshing;
+			protected virtual void UpdateGfxCore() {}
+			private bool m_impl_updating_gfx;
 
 			/// <summary>Add the graphics associated with this element to the window</summary>
-			internal void AddToScene(View3d.Window window) { AddToSceneInternal(window); }
-			protected virtual void AddToSceneInternal(View3d.Window window) {}
+			internal void AddToScene(View3d.Window window)
+			{
+				AddToSceneCore(window);
+			}
+			protected virtual void AddToSceneCore(View3d.Window window)
+			{
+			}
 
 			/// <summary>Edit the element contents</summary>
 			public void Edit()
@@ -437,14 +496,14 @@ namespace pr.gui
 		public abstract class ResizeableElement :Element
 		{
 			/// <summary>Base node constructor</summary>
-			protected ResizeableElement(Guid id, uint width, uint height, m4x4 position)
-				:base(id, position)
+			protected ResizeableElement(Entity entity, Guid id, uint width, uint height, m4x4 position)
+				:base(entity, id, position)
 			{
 				m_impl_sizemax = v2.Zero;
 				m_impl_size = new v2(width, height);
 			}
-			protected ResizeableElement(XElement node)
-				:base(node)
+			protected ResizeableElement(Entity entity, XElement node)
+				:base(entity, node)
 			{
 				m_impl_sizemax = node.Element(XmlField.SizeMax).As<v2>();
 				m_impl_size = node.Element(XmlField.Size).As<v2>();
@@ -465,7 +524,7 @@ namespace pr.gui
 				base.FromXml(node);
 			}
 
-			/// <summary>The diagram space width/height of the node</summary>
+			/// <summary>The diagram space width/height of the element</summary>
 			public virtual v2 Size
 			{
 				get { return m_impl_size; }
@@ -511,7 +570,10 @@ namespace pr.gui
 			}
 
 			/// <summary>AABB for the element in diagram space</summary>
-			public override BRect Bounds { get { return new BRect(PositionXY, Size / 2); } }
+			public override BRect Bounds
+			{
+				get { return new BRect(PositionXY, Size / 2); }
+			}
 		}
 
 		#endregion
@@ -530,28 +592,28 @@ namespace pr.gui
 			/// <param name="position">The position of the node on the diagram</param>
 			/// <param name="style">Style properties for the node</param>
 			protected Node(Guid id, uint width, uint height, string text, m4x4 position, NodeStyle style)
-				:base(id, width, height, position)
+				:base(Entity.Node, id, width, height, position)
 			{
 				m_impl_text = text;
-				m_impl_style = style;
+				Style = style;
 
 				Init();
 			}
 			protected Node(XElement node)
-				:base(node)
+				:base(Entity.Node, node)
 			{
 				m_impl_text = node.Element(XmlField.Text).As<string>();
-				m_impl_style = new NodeStyle(node.Element(XmlField.Style).As<Guid>());
+				Style = new NodeStyle(node.Element(XmlField.Style).As<Guid>());
 
-				// Be careful using Style in here, it's only a placeholder
+				// Be careful using Style in here, it's only a place-holder
 				// instance until the element has been added to a diagram.
 				Init();
 			}
 			private void Init()
 			{
+				m_impl_text_fmt = new StringFormat(0);
 				Connectors = new BindingListEx<Connector>();
 				EditControl = DefaultEditControl;
-				Style.StyleChanged += Invalidate;
 			}
 			protected override void Dispose(bool disposing)
 			{
@@ -560,20 +622,18 @@ namespace pr.gui
 				base.Dispose(disposing);
 			}
 
-			/// <summary>Get the entity type for this element</summary>
-			public override Entity Entity { get { return Entity.Node; } }
-
 			/// <summary>Change the diagram that this element is associated with</summary>
-			internal override void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
+			public override void SetDiagramCore(DiagramControl diag)
 			{
-				// Detach from objects owned by the current diagram
-				if (diag != Diagram)
-					Style = new NodeStyle(Guid.Empty);
+				base.SetDiagramCore(diag);
 
-				base.SetDiagramInternal(diag, add_to_elements);
+				// Detach from objects owned by the current diagram
+				// Do this after the diagram has changed because changing the style causes
+				// Invalidate() to be called, which adds this element to the dirty list on the new diagram.
+				Style = new NodeStyle(Guid.Empty);
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -600,18 +660,53 @@ namespace pr.gui
 					if (m_impl_text == value) return;
 					m_impl_text = value;
 
-					Size = Size;
-					Invalidate();
+					if (Style.AutoSize) PerformAutoSize();
 					RaiseDataChanged();
+					Invalidate();
 				}
 			}
 			private string m_impl_text;
+
+			/// <summary>How to layout the text in the node</summary>
+			public StringFormat TextFormat
+			{
+				get { return m_impl_text_fmt; }
+				set
+				{
+					if (m_impl_text_fmt == value) return;
+					m_impl_text_fmt = value;
+
+					if (Style.AutoSize) PerformAutoSize();
+					Invalidate();
+				}
+			}
+			private StringFormat m_impl_text_fmt;
 
 			/// <summary>Get/Set the size of the node</summary>
 			public override v2 Size
 			{
 				get { return base.Size; }
-				set { base.Size = Style.AutoSize ? PreferredSize(SizeMax) : value; }
+				set
+				{
+					// Only change the size if the node is resizeable, but save the value
+					// for when the style changes to non-auto size.
+					m_impl_size = value;
+					if (Resizeable)
+						base.Size = m_impl_size;
+				}
+			}
+			private v2 m_impl_size;
+
+			/// <summary>Resize the node if AutoSize is enabled, otherwise no-op</summary>
+			public void PerformAutoSize()
+			{
+				base.Size = PreferredSize(SizeMax);
+			}
+
+			/// <summary>True if this element can be resized</summary>
+			public override bool Resizeable
+			{
+				get { return !Style.AutoSize; }
 			}
 
 			/// <summary>Return the preferred node size given the current text and upper size bounds</summary>
@@ -624,17 +719,14 @@ namespace pr.gui
 				if (layout.y == 0f) layout.y = float.MaxValue;
 
 				using (var img = new Bitmap(1,1,PixelFormat.Format32bppArgb))
-				using (var gfx = System.Drawing.Graphics.FromImage(img))
+				using (var gfx = Graphics.FromImage(img))
 				{
-					v2 sz = gfx.MeasureString(Text, Style.Font, layout);
+					v2 sz = gfx.MeasureString(Text, Style.Font, layout.ToSizeF(), TextFormat);
 					sz.x += Style.Padding.Left + Style.Padding.Right;
 					sz.y += Style.Padding.Top + Style.Padding.Bottom;
 					return sz;
 				}
 			}
-
-			/// <summary>True if this element can be resized</summary>
-			public override bool Resizeable { get { return !Style.AutoSize; } }
 
 			/// <summary>Style attributes for the node</summary>
 			public NodeStyle Style
@@ -643,14 +735,29 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_style == value) return;
-					if (m_impl_style != null) m_impl_style.StyleChanged -= Invalidate;
+					if (m_impl_style != null)
+					{
+						m_impl_style.StyleChanged -= HandleStyleChanged;
+					}
+					value = value ?? NodeStyle.Default;
 					m_impl_style = Diagram != null ? Diagram.m_node_styles[value] : value;
-					if (m_impl_style != null) m_impl_style.StyleChanged += Invalidate;
-					Invalidate();
+					if (m_impl_style != null)
+					{
+						m_impl_style.StyleChanged += HandleStyleChanged;
+					}
+					HandleStyleChanged();
 				}
 			}
-			IStyle IHasStyle.Style { get { return Style; } }
+			private void HandleStyleChanged(object sender = null, EventArgs args = null)
+			{
+				Size = m_impl_size;
+				Invalidate();
+			}
 			private NodeStyle m_impl_style;
+			IStyle IHasStyle.Style
+			{
+				get { return Style; }
+			}
 
 			/// <summary>Get/Set the selected state</summary>
 			public override bool Selected
@@ -665,24 +772,23 @@ namespace pr.gui
 			}
 
 			/// <summary>Returns the position to draw the text given the current alignment</summary>
-			protected v2 TextLocation(Graphics gfx)
+			protected RectangleF TextLocation(Graphics gfx)
 			{
-				var sz = Size;
-				sz.x -= Style.Padding.Left + Style.Padding.Right;
-				sz.y -= Style.Padding.Top + Style.Padding.Bottom;
-				var tx = new v2(gfx.MeasureString(Text, Style.Font, sz));
+				var pad = Style.Padding;
+				var bnd = Size.ToRectangleF().Inflated(-pad.Left, -pad.Top, -pad.Right, -pad.Bottom);
+				var tx = gfx.MeasureString(Text, Style.Font, bnd.Size, TextFormat);
 				switch (Style.TextAlign)
 				{
 				default: throw new ArgumentException("unknown text alignment");
-				case ContentAlignment.TopLeft     : return new v2(Style.Padding.Left                    , Style.Padding.Top);
-				case ContentAlignment.TopCenter   : return new v2((Size.x - tx.x) * 0.5f                , Style.Padding.Top);
-				case ContentAlignment.TopRight    : return new v2((Size.x - tx.x) - Style.Padding.Right , Style.Padding.Top);
-				case ContentAlignment.MiddleLeft  : return new v2(Style.Padding.Left                    , (Size.y - tx.y) * 0.5f);
-				case ContentAlignment.MiddleCenter: return new v2((Size.x - tx.x) * 0.5f                , (Size.y - tx.y) * 0.5f);
-				case ContentAlignment.MiddleRight : return new v2((Size.x - tx.x) - Style.Padding.Right , (Size.y - tx.y) * 0.5f);
-				case ContentAlignment.BottomLeft  : return new v2(Style.Padding.Left                    , (Size.y - tx.y) - Style.Padding.Bottom);
-				case ContentAlignment.BottomCenter: return new v2((Size.x - tx.x) * 0.5f                , (Size.y - tx.y) - Style.Padding.Bottom);
-				case ContentAlignment.BottomRight : return new v2((Size.x - tx.x) - Style.Padding.Right , (Size.y - tx.y) - Style.Padding.Bottom);
+				case ContentAlignment.TopLeft     : return new RectangleF(bnd.Left                                 , bnd.Top                                   , tx.Width , tx.Height);
+				case ContentAlignment.TopCenter   : return new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f , bnd.Top                                   , tx.Width , tx.Height);
+				case ContentAlignment.TopRight    : return new RectangleF(bnd.Left + (bnd.Width - tx.Width)        , bnd.Top                                   , tx.Width , tx.Height);
+				case ContentAlignment.MiddleLeft  : return new RectangleF(bnd.Left                                 , bnd.Top + (bnd.Height - tx.Height) * 0.5f , tx.Width , tx.Height);
+				case ContentAlignment.MiddleCenter: return new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f , bnd.Top + (bnd.Height - tx.Height) * 0.5f , tx.Width , tx.Height);
+				case ContentAlignment.MiddleRight : return new RectangleF(bnd.Left + (bnd.Width - tx.Width)        , bnd.Top + (bnd.Height - tx.Height) * 0.5f , tx.Width , tx.Height);
+				case ContentAlignment.BottomLeft  : return new RectangleF(bnd.Left                                 , bnd.Top + (bnd.Height - tx.Height)        , tx.Width , tx.Height);
+				case ContentAlignment.BottomCenter: return new RectangleF(bnd.Left + (bnd.Width - tx.Width) * 0.5f , bnd.Top + (bnd.Height - tx.Height)        , tx.Width , tx.Height);
+				case ContentAlignment.BottomRight : return new RectangleF(bnd.Left + (bnd.Width - tx.Width)        , bnd.Top + (bnd.Height - tx.Height)        , tx.Width , tx.Height);
 				}
 			}
 
@@ -798,8 +904,11 @@ namespace pr.gui
 				return base.CheckConsistency();
 			}
 
-			// ToString
-			public override string ToString() { return "Node["+Text.Summary(20)+"]"; }
+			/// <summary></summary>
+			public override string ToString()
+			{
+				return "Node["+Text.Summary(20)+"]";
+			}
 		}
 
 		/// <summary>
@@ -858,11 +967,11 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			protected override void RefreshInternal()
+			protected override void UpdateGfxCore()
 			{}
 
 			/// <summary>Add the graphics associated with this element to the window</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
+			protected override void AddToSceneCore(View3d.Window window)
 			{}
 		}
 
@@ -870,9 +979,6 @@ namespace pr.gui
 		public class BoxNode :Node
 		{
 			private const string LdrName = "node";
-
-			/// <summary>Only one graphics object for a box node</summary>
-			private TexturedShape<QuadShape> m_gfx;
 
 			public BoxNode()
 				:this(Guid.NewGuid())
@@ -896,23 +1002,22 @@ namespace pr.gui
 				:base(id, width, height, text, position, style)
 			{
 				var sz = Style.AutoSize ? PreferredSize(SizeMax) : Size;
-				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), sz);
+				Gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), sz);
 				Size = sz;
 			}
 			public BoxNode(XElement node)
 				:base(node)
 			{
 				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
-				m_gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
+				Gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 			}
 			protected override void Dispose(bool disposing)
 			{
-				if (m_gfx != null) m_gfx.Dispose();
-				m_gfx = null;
+				Gfx = null;
 				base.Dispose(disposing);
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -925,18 +1030,34 @@ namespace pr.gui
 				base.FromXml(node);
 			}
 
+			/// <summary>Only one graphics object for a box node</summary>
+			protected TexturedShape<QuadShape> Gfx
+			{
+				get { return m_impl_gfx; }
+				private set
+				{
+					if (m_impl_gfx == value) return;
+					if (m_impl_gfx != null)
+					{
+						Util.Dispose(ref m_impl_gfx);
+					}
+					m_impl_gfx = value;
+				}
+			}
+			private TexturedShape<QuadShape> m_impl_gfx;
+
 			/// <summary>The radius of the box node corners</summary>
 			public float CornerRadius
 			{
-				get { return m_gfx.Shape.CornerRadius; }
-				set { m_gfx.Shape.CornerRadius = value; Invalidate(); }
+				get { return Gfx.Shape.CornerRadius; }
+				set { Gfx.Shape.CornerRadius = value; Invalidate(); }
 			}
 
 			/// <summary>Set the position of the element</summary>
 			protected override void SetPosition(m4x4 pos)
 			{
 				base.SetPosition(pos);
-				if (m_gfx != null) m_gfx.O2P = pos;
+				if (Gfx != null) Gfx.O2P = pos;
 			}
 
 			/// <summary>Get/Set the size of the node</summary>
@@ -945,12 +1066,13 @@ namespace pr.gui
 				get { return base.Size; }
 				set
 				{
-					// Don't guard for same size here, because base.Size implements auto size
+					// Don't guard for same size here, because base.Size implements auto size.
+					// Also, Size can be assigned during the base class constructor.
 					base.Size = value;
-					if (m_gfx.Size != Size)
+					if (Gfx != null && Gfx.Size != Size)
 					{
-						m_gfx.Size = Size;
-						UpdateTextImage();
+						Gfx.Size = Size;
+						UpdateNodeTexture();
 					}
 				}
 			}
@@ -1032,48 +1154,53 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			protected override void RefreshInternal()
+			protected override void UpdateGfxCore()
 			{
-				m_gfx.O2P = Position;
-				UpdateTextImage();
+				Gfx.O2P = Position;
+				UpdateNodeTexture();
+				base.UpdateGfxCore();
 			}
 
 			/// <summary>Add the graphics associated with this element to the window</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
+			protected override void AddToSceneCore(View3d.Window window)
 			{
-				window.AddObject(m_gfx);
+				window.AddObject(Gfx);
 			}
 
 			/// <summary>Raised whenever data associated with the element changes</summary>
 			protected override void RaiseDataChanged()
 			{
 				base.RaiseDataChanged();
-				UpdateTextImage();
+				UpdateNodeTexture();
 			}
 
-			/// <summary>Update the texture surface</summary>
-			private void UpdateTextImage()
+			/// <summary>Update the texture surface. Default implementation renders the text</summary>
+			protected virtual void UpdateNodeTexture()
 			{
-				using (var tex = m_gfx.LockSurface())
+				using (var tex = Gfx.LockSurface())
 				{
-					var rect = Bounds.ToRectangle();
-					rect = rect.Shifted(-rect.X, -rect.Y).Inflated(-1,-1);
-
-					var fill_colour = Style.Fill;
-					if (Selected) fill_colour = Style.Selected;
-					if (!Enabled) fill_colour = Style.Disabled;
-
-					var text_colour = Style.Text;
-					if (!Enabled) text_colour = Style.TextDisabled;
-
 					tex.Gfx.CompositingMode    = CompositingMode.SourceOver;
 					tex.Gfx.CompositingQuality = CompositingQuality.HighQuality;
 					tex.Gfx.SmoothingMode      = SmoothingMode.AntiAlias;
 
-					tex.Gfx.Clear(fill_colour);
-					using (var bsh = new SolidBrush(text_colour))
-						tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx));
+					FillBackground(tex);
+					DrawText(tex);
 				}
+			}
+			protected void FillBackground(View3d.Texture.Lock tex)
+			{
+				var fill_colour = Style.Fill;
+				if (Selected) fill_colour = Style.Selected;
+				if (!Enabled) fill_colour = Style.Disabled;
+				tex.Gfx.Clear(fill_colour);
+			}
+			protected void DrawText(View3d.Texture.Lock tex)
+			{
+				var text_colour = Style.Text;
+				if (!Enabled) text_colour = Style.TextDisabled;
+				var fmt = new StringFormat(0);
+				using (var bsh = new SolidBrush(text_colour))
+					tex.Gfx.DrawString(Text, Style.Font, bsh, TextLocation(tex.Gfx), TextFormat);
 			}
 		}
 
@@ -1092,24 +1219,18 @@ namespace pr.gui
 				:this(id, m4x4.Identity)
 			{}
 			public Label(Guid id, m4x4 position)
-				:base(id, position)
+				:base(Entity.Label, id, position)
 			{
 				m_anc = new AnchorPoint();
 			}
 			public Label(XElement node)
-				:base(node)
+				:base(Entity.Label, node)
 			{
 				m_anc = new AnchorPoint();
 				Anc = node.Element(XmlField.Anchor).As<AnchorPoint>();
 			}
 
-			/// <summary>Get the entity type for this element</summary>
-			public override Entity Entity
-			{
-				get { return Entity.Label; }
-			}
-
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -1169,11 +1290,11 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			protected override void RefreshInternal()
+			protected override void UpdateGfxCore()
 			{
 				// Ensure the attached element is refreshed first, since our position depends on it
-				if (Elem != null) Elem.Refresh();
-				base.RefreshInternal();
+				if (Elem != null) Elem.UpdateGfx();
+				base.UpdateGfxCore();
 			}
 		}
 
@@ -1208,7 +1329,7 @@ namespace pr.gui
 				base.Dispose(disposing);
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -1239,9 +1360,9 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and object transforms associated with this element</summary>
-			protected override void RefreshInternal()
+			protected override void UpdateGfxCore()
 			{
-				base.RefreshInternal();
+				base.UpdateGfxCore();
 				m_gfx.O2P = Position;
 			}
 
@@ -1257,7 +1378,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add the graphics associated with this element to the window</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
+			protected override void AddToSceneCore(View3d.Window window)
 			{
 				window.AddObject(m_gfx);
 			}
@@ -1304,7 +1425,7 @@ namespace pr.gui
 				:this(id, node0, node1, new ConnectorStyle(Guid.Empty))
 			{}
 			public Connector(Guid id, Node node0, Node node1, ConnectorStyle style)
-				:base(id, m4x4.Translation(AttachCentre(node0, node1), 0f))
+				:base(Entity.Connector, id, m4x4.Translation(AttachCentre(node0, node1), 0f))
 			{
 				m_anc0 = new AnchorPoint();
 				m_anc1 = new AnchorPoint();
@@ -1316,7 +1437,7 @@ namespace pr.gui
 				Init(false);
 			}
 			public Connector(XElement node)
-				:base(node)
+				:base(Entity.Connector, node)
 			{
 				m_anc0          = new AnchorPoint();
 				m_anc1          = new AnchorPoint();
@@ -1335,36 +1456,30 @@ namespace pr.gui
 				m_gfx_fwd = new View3d.Object("*Triangle conn_fwd FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
 				m_gfx_bak = new View3d.Object("*Triangle conn_bak FFFFFFFF {1.5 0 0  -0.5 +1.2 0  -0.5 -1.2 0}", false);
 
-				Style.StyleChanged += Invalidate;
 				Relink(find_previous_anchors);
 			}
 			protected override void Dispose(bool disposing)
 			{
 				DetachNodes();
 				Style = null;
-				if (m_gfx_line != null) m_gfx_line.Dispose();
-				if (m_gfx_fwd  != null) m_gfx_fwd.Dispose();
-				if (m_gfx_bak  != null) m_gfx_bak.Dispose();
-				m_gfx_line = null;
-				m_gfx_fwd  = null;
-				m_gfx_bak  = null;
+				Util.Dispose(ref m_gfx_line);
+				Util.Dispose(ref m_gfx_fwd);
+				Util.Dispose(ref m_gfx_bak);
 				base.Dispose(disposing);
 			}
 
-			/// <summary>Get the entity type for this element</summary>
-			public override Entity Entity { get { return Entity.Connector; } }
-
 			/// <summary>Change the diagram that this element is associated with</summary>
-			internal override void SetDiagramInternal(DiagramControl diag, bool add_to_elements)
+			public override void SetDiagramCore(DiagramControl diag)
 			{
-				// Detach from objects owned by the current diagram
-				if (diag != Diagram)
-					Style = new ConnectorStyle(Guid.Empty);
+				base.SetDiagramCore(diag);
 
-				base.SetDiagramInternal(diag, add_to_elements);
+				// Detach from objects owned by the current diagram
+				// Do this after the diagram has changed because changing the style causes
+				// Invalidate() to be called, which adds this element to the dirty list on the new diagram.
+				Style = new ConnectorStyle(Guid.Empty);
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
@@ -1543,9 +1658,16 @@ namespace pr.gui
 				set
 				{
 					if (m_impl_style == value) return;
-					if (m_impl_style != null) m_impl_style.StyleChanged -= Invalidate;
+					if (m_impl_style != null)
+					{
+						m_impl_style.StyleChanged -= Invalidate;
+					}
+					value = value ?? ConnectorStyle.Default;
 					m_impl_style = Diagram != null ? Diagram.m_connector_styles[value] : value;
-					if (m_impl_style != null) m_impl_style.StyleChanged += Invalidate;
+					if (m_impl_style != null)
+					{
+						m_impl_style.StyleChanged += Invalidate;
+					}
 					Invalidate();
 				}
 			}
@@ -1704,7 +1826,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Update the graphics and transforms for the connector</summary>
-			protected override void RefreshInternal()
+			protected override void UpdateGfxCore()
 			{
 				// Update the transform
 				PositionXY = AttachCentre(Anc0, Anc1);
@@ -1734,7 +1856,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Add the graphics associated with this element to the window</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
+			protected override void AddToSceneCore(View3d.Window window)
 			{
 				// Add the main connector line
 				window.AddObject(m_gfx_line);
@@ -1935,7 +2057,7 @@ namespace pr.gui
 				base.Dispose();
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.Shape, Shape, false);
@@ -1991,8 +2113,11 @@ namespace pr.gui
 		[TypeConverter(typeof(NodeStyle))]
 		public class NodeStyle :GenericTypeConverter<NodeStyle> ,IHasId ,IStyle
 		{
-			public NodeStyle()
-				:this(Guid.NewGuid())
+			public static readonly NodeStyle Default = new NodeStyle(Guid.Empty);
+
+			public NodeStyle() :this(Guid.NewGuid())
+			{}
+			public NodeStyle(NodeStyle rhs) :this(Guid.NewGuid(), rhs)
 			{}
 			public NodeStyle(Guid id)
 			{
@@ -2022,23 +2147,23 @@ namespace pr.gui
 				Font         = node.Element(XmlField.Font        ).As<Font>            (Font        );
 				Padding      = node.Element(XmlField.Padding     ).As<Padding>         (Padding     );
 			}
-			public NodeStyle(NodeStyle rhs)
+			public NodeStyle(Guid id, NodeStyle rhs)
 			{
-				Id                   = Guid.NewGuid()        ;
-				AutoSize             = rhs.AutoSize          ;
-				Border               = rhs.Border            ;
-				Fill                 = rhs.Fill              ;
-				Selected             = rhs.Selected          ;
-				Disabled             = rhs.Disabled          ;
-				Text                 = rhs.Text              ;
-				TextDisabled         = rhs.TextDisabled      ;
-				TextAlign            = rhs.TextAlign         ;
+				Id                   = id;
+				AutoSize             = rhs.AutoSize;
+				Border               = rhs.Border;
+				Fill                 = rhs.Fill;
+				Selected             = rhs.Selected;
+				Disabled             = rhs.Disabled;
+				Text                 = rhs.Text;
+				TextDisabled         = rhs.TextDisabled;
+				TextAlign            = rhs.TextAlign;
 				Font                 = (Font)rhs.Font.Clone();
-				Padding              = rhs.Padding           ;
+				Padding              = rhs.Padding;
 				StyleChangedInternal = rhs.StyleChangedInternal;
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.Id           ,Id           ,false);
@@ -2115,7 +2240,6 @@ namespace pr.gui
 			}
 			private Color m_impl_text_disabled;
 
-
 			/// <summary>The alignment of the text within the node</summary>
 			public ContentAlignment TextAlign
 			{
@@ -2163,8 +2287,11 @@ namespace pr.gui
 		[TypeConverter(typeof(ConnectorStyle))]
 		public class ConnectorStyle :GenericTypeConverter<ConnectorStyle> ,IHasId ,IStyle
 		{
-			public ConnectorStyle()
-				:this(Guid.NewGuid())
+			public static readonly ConnectorStyle Default = new ConnectorStyle(Guid.Empty);
+
+			public ConnectorStyle() :this(Guid.NewGuid())
+			{}
+			public ConnectorStyle(ConnectorStyle rhs) :this(Guid.NewGuid(), rhs)
 			{}
 			public ConnectorStyle(Guid id)
 			{
@@ -2184,9 +2311,9 @@ namespace pr.gui
 				Width    = node.Element(XmlField.Width   ).As<float>(Width   );
 				Smooth   = node.Element(XmlField.Smooth  ).As<bool> (Smooth  );
 			}
-			public ConnectorStyle(ConnectorStyle rhs)
+			public ConnectorStyle(Guid id, ConnectorStyle rhs)
 			{
-				Id                   = Guid.NewGuid();
+				Id                   = id;
 				Line                 = rhs.Line;
 				Selected             = rhs.Selected;
 				Dangling             = rhs.Dangling;
@@ -2195,7 +2322,7 @@ namespace pr.gui
 				StyleChangedInternal = rhs.StyleChangedInternal;
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.Id       ,Id       ,false);
@@ -2382,7 +2509,7 @@ namespace pr.gui
 				Update(null);
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.ElementId ,Elem != null ? Elem.Id : Guid.Empty ,false);
@@ -2579,6 +2706,12 @@ namespace pr.gui
 			/// <summary>Called on mouse up</summary>
 			public abstract void MouseUp(MouseEventArgs e);
 
+			/// <summary>Called on key down</summary>
+			public virtual void OnKeyDown(KeyEventArgs e) { }
+
+			/// <summary>Called on key up</summary>
+			public virtual void OnKeyUp(KeyEventArgs e) { }
+
 			/// <summary>Called when the mouse operation is cancelled</summary>
 			public virtual void NotifyCancelled() {}
 		}
@@ -2603,7 +2736,7 @@ namespace pr.gui
 					elem.DragStartPosition = elem.Position;
 
 				// Prevent events while dragging the elements around
-				m_suspend_scope = m_diag.SuspendEvents(true);
+				m_suspend_scope = m_diag.SuspendDiagramChanged(raise_on_resume:true);
 			}
 			public override void MouseMove(MouseEventArgs e)
 			{
@@ -2634,7 +2767,7 @@ namespace pr.gui
 						Math.Max(1f, selection_area.SizeY),
 						1.0f, new v4(selection_area.Centre, m_diag.HighestZ + 1f,1));
 				}
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2665,7 +2798,8 @@ namespace pr.gui
 				if (m_selection_graphic_added)
 					m_diag.m_window.RemoveObject(m_diag.m_tools.AreaSelect);
 
-				m_diag.Refresh();
+				m_diag.Cursor = Cursors.Default;
+				m_diag.Invalidate();
 			}
 		}
 
@@ -2695,7 +2829,7 @@ namespace pr.gui
 				else
 					m_diag.PositionDiagram(e.Location, m_grab_ds);
 
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 		}
 
@@ -2795,7 +2929,7 @@ namespace pr.gui
 					m_proxy.AnchorNormal = v4.Zero;
 				}
 				m_conn.Invalidate();
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
@@ -2833,7 +2967,7 @@ namespace pr.gui
 					if (Cancelled) Revert();
 					else           Commit();
 				}
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 			public override void NotifyCancelled()
 			{
@@ -2889,8 +3023,7 @@ namespace pr.gui
 			}
 			protected override void Revert()
 			{
-				if (m_conn != null) m_conn.Dispose();
-				m_conn = null;
+				Util.Dispose(ref m_conn);
 			}
 		}
 
@@ -2957,7 +3090,7 @@ namespace pr.gui
 				var vec_ds = m_diag.m_camera.SSVecToWSVec(m_grab_cs, e.Location);
 				var delta = v2.Dot2(vec_ds.xy, m_grabber.Direction);
 
-				// Scale all of the resizable selected elements
+				// Scale all of the resizeable selected elements
 				foreach (var elem in m_resizees)
 				{
 					elem.Elem.PositionXY = elem.InitialPosition + (delta/2)*m_grabber.Direction;
@@ -2966,13 +3099,13 @@ namespace pr.gui
 						Maths.Max(10, elem.InitialSize.y + delta * Math.Abs(m_grabber.Direction.y)));
 				}
 
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 			public override void MouseUp(MouseEventArgs e)
 			{
 				m_diag.Cursor = Cursors.Default;
 				m_resizees.ForEach(x => x.Elem.Resizing = false);
-				m_diag.Refresh();
+				m_diag.Invalidate();
 			}
 		}
 		#endregion
@@ -2982,8 +3115,8 @@ namespace pr.gui
 		public enum EDiagramChangeType
 		{
 			/// <summary>
-			/// Raised after the diagram has had data changed. This event will be raised
-			/// in addition to the more detailed modification events below</summary>
+			/// Raised after elements in the diagram have been moved, resized, or had their content changed.
+			/// This event will be raised in addition to the more detailed modification events below</summary>
 			Edited,
 
 			/// <summary>
@@ -3089,7 +3222,7 @@ namespace pr.gui
 
 		#endregion
 
-		#region Editting
+		#region Editing
 
 		/// <summary>Wraps a hosted control used to edit an element value</summary>
 		public class EditingControl
@@ -3227,7 +3360,20 @@ namespace pr.gui
 		/// <summary>The minimum distance a connector sticks out from a node</summary>
 		private const int MinConnectorLen = 30;
 
-		/// <summary>String constants used in xml export/import</summary>
+		private class Cursors
+		{
+			public static readonly Cursor Default    = System.Windows.Forms.Cursors.Default;
+			public static readonly Cursor SizeWE     = System.Windows.Forms.Cursors.SizeWE;
+			public static readonly Cursor SizeNS     = System.Windows.Forms.Cursors.SizeNS;
+			public static readonly Cursor SizeNESW   = System.Windows.Forms.Cursors.SizeNESW;
+			public static readonly Cursor SizeNWSE   = System.Windows.Forms.Cursors.SizeNWSE;
+			public static readonly Cursor SizeAll    = System.Windows.Forms.Cursors.SizeAll;
+			public static readonly Cursor Arrow      = Resources.cursor_arrow.ToCursor(Point.Empty);
+			public static readonly Cursor ArrowPlus  = Resources.cursor_arrow_plus.ToCursor(Point.Empty);
+			public static readonly Cursor ArrowMinus = Resources.cursor_arrow_minus.ToCursor(Point.Empty);
+		}
+
+		/// <summary>String constants used in XML export/import</summary>
 		private static class XmlField
 		{
 			public const string Root              = "root"               ;
@@ -3291,7 +3437,7 @@ namespace pr.gui
 				TextureScale = texture_scale;
 				sx = Math.Max(1, sx * TextureScale);
 				sy = Math.Max(1, sy * TextureScale);
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public Surface(XElement node)
 			{
@@ -3299,14 +3445,14 @@ namespace pr.gui
 				var sz = node.Element(XmlField.Size).As<v2>();
 				var sx = Math.Max(1, (uint)(sz.x + 0.5f));
 				var sy = Math.Max(1, (uint)(sz.y + 0.5f));
-				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_ANISOTROPIC});
+				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR });// D3D11_FILTER_ANISOTROPIC});
 			}
 			public void Dispose()
 			{
 				Surf = null;
 			}
 
-			/// <summary>Export to xml</summary>
+			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
 				node.Add2(XmlField.TextureScale, TextureScale, false);
@@ -3325,6 +3471,7 @@ namespace pr.gui
 				{
 					var tex_size = (value * TextureScale).ToSize();
 					if (Surf == null || Surf.Size == tex_size) return;
+					if (tex_size == System.Drawing.Size.Empty) tex_size = new Size(1,1);
 					Surf.Size = tex_size;
 				}
 			}
@@ -3494,6 +3641,20 @@ namespace pr.gui
 			}
 		}
 
+		/// <summary>HashSet wrapper for dirty Elements</summary>
+		public class DirtyElements :HashSet<Element>
+		{
+			private readonly DiagramControl m_diag;
+			public DirtyElements(DiagramControl owner)
+			{
+				m_diag = owner;
+			}
+			public new void Add(Element item)
+			{
+				Debug.Assert(item.Diagram == m_diag);
+				base.Add(item);
+			}
+		}
 		#endregion
 
 		#region Options
@@ -3632,37 +3793,34 @@ namespace pr.gui
 		#endregion
 
 		// Members
-		private View3d                      m_view3d;           // Renderer
-		private View3d.Window               m_window;           // A view3d window for this control instance
-		private EventBatcher                m_eb_update_diag;   // Event batcher for updating the diagram graphics
-		private HoverScroll                 m_hoverscroll;      // Hover-scroll
-		private View3d.CameraControls       m_camera;           // The virtual window over the diagram
-		private Tools                       m_tools;            // Tools
-		private StyleCache<NodeStyle>       m_node_styles;      // The collection of node styles
-		private StyleCache<ConnectorStyle>  m_connector_styles; //
-		private MouseOps                    m_mouse_op;         // Per button current mouse operation
-		private ToolStrip                   m_toolstrip_edit;   //
-		private readonly HashSet<Element>   m_dirty;            // Elements that need refreshing
+		private View3d                     m_view3d;           // Renderer
+		private View3d.Window              m_window;           // A view3d window for this control instance
+		private HoverScroll                m_hoverscroll;      // Hover-scroll
+		private View3d.CameraControls      m_camera;           // The virtual window over the diagram
+		private Tools                      m_tools;            // Tools
+		private StyleCache<NodeStyle>      m_node_styles;      // The collection of node styles
+		private StyleCache<ConnectorStyle> m_connector_styles; //
+		private MouseOps                   m_mouse_op;         // Per button current mouse operation
+		private ToolStrip                  m_toolstrip_edit;   //
+		private readonly DirtyElements     m_dirty;            // Elements that need refreshing
 
 		public DiagramControl() :this(new DiagramOptions()) {}
 		public DiagramControl(DiagramOptions options)
 		{
-			Elements              = new BindingListEx<Element>();
-			Selected              = new BindingListEx<Element>();
+			Elements              = new BindingListEx<Element> { PerItemClear = true, UseHashSet = true };
+			Selected              = new BindingListEx<Element> { PerItemClear = true };
 			m_impl_options        = options ?? new DiagramOptions();
-			m_eb_update_diag      = new EventBatcher(UpdateDiagram);
 			m_hoverscroll         = new HoverScroll(Handle);
 			m_node_styles         = new StyleCache<NodeStyle>();
 			m_connector_styles    = new StyleCache<ConnectorStyle>();
 			m_mouse_op            = new MouseOps();
 			m_toolstrip_edit      = new ToolStrip{Name = "m_diagram_edit_tools", Visible = false, Dock = DockStyle.Right};
-			m_dirty               = new HashSet<Element>();
-			DiagramChangedPending = false;
+			m_dirty               = new DirtyElements(this);
 
 			if (this.IsInDesignMode()) return;
 
 			m_view3d = new View3d();
-			m_window = new View3d.Window(m_view3d, Handle, false);
+			m_window = new View3d.Window(m_view3d, Handle, new View3d.WindowOptions(false, null, IntPtr.Zero) { DbgName = "Diagram" });
 			m_tools  = new Tools();
 			m_camera = m_window.Camera;
 			m_camera.SetClipPlanes(0.5f, 1.1f, true);
@@ -3677,6 +3835,7 @@ namespace pr.gui
 			Elements.ListChanging += (s,a) => OnElementListChanging(a);
 			Selected.ListChanging += (s,a) => OnSelectListChanging(a);
 
+			SetCursor();
 			ResetView();
 			DefaultKeyboardShortcuts = true;
 			DefaultMouseControl = true;
@@ -3688,7 +3847,6 @@ namespace pr.gui
 			// We don't own the elements, so don't dispose them
 			ResetDiagram();
 			Util.Dispose(ref m_hoverscroll);
-			Util.Dispose(ref m_eb_update_diag);
 			Util.Dispose(ref m_tools);
 			Util.Dispose(ref m_view3d);
 			Util.Dispose(ref components);
@@ -3697,19 +3855,19 @@ namespace pr.gui
 
 		/// <summary>Raised whenever elements in the diagram have been edited or moved</summary>
 		public event EventHandler<DiagramChangedEventArgs> DiagramChanged;
+		protected virtual void OnDiagramChanged(DiagramChangedEventArgs args)
+		{
+			DiagramChanged.Raise(this, args);
+		}
 		private DiagramChangedEventArgs RaiseDiagramChanged(DiagramChangedEventArgs args)
 		{
-			OnDiagramChanged(args);
+			if (!DiagramChanged.IsSuspended())
+				OnDiagramChanged(args);
 			return args;
 		}
-
-		/// <summary>Event allowing callers to add options to the context menu</summary>
-		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
-
-		/// <summary>Creates an RAII scope for suspending DiagramChanged events</summary>
-		public Scope SuspendEvents(bool raise_on_resume)
+		public Scope SuspendDiagramChanged(bool raise_on_resume = true)
 		{
-			return DiagramChanged.SuspendScope(raise_on_resume, this, new DiagramChangedEventArgs(EDiagramChangeType.Edited));
+			return DiagramChanged.SuspendScope(raise_if_signalled:raise_on_resume, sender:this, args:new DiagramChangedEventArgs(EDiagramChangeType.Edited));
 		}
 
 		/// <summary>Remove all data from the diagram</summary>
@@ -3725,19 +3883,12 @@ namespace pr.gui
 		/// <summary>The set of selected diagram elements</summary>
 		public BindingListEx<Element> Selected { get; private set; }
 
-		/// <summary>True when the diagram has changed but 'DiagramChanged' has not yet been raised</summary>
-		[Browsable(false)]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-		public bool DiagramChangedPending
+		/// <summary>Event allowing callers to add options to the context menu</summary>
+		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
+		protected virtual void OnAddUserMenuOptions(AddUserMenuOptionsEventArgs args)
 		{
-			get { return m_impl_diag_change_pending; }
-			protected set
-			{
-				if (m_impl_diag_change_pending == value) return;
-				m_impl_diag_change_pending = value;
-			}
+			AddUserMenuOptions.Raise(this, args);
 		}
-		private bool m_impl_diag_change_pending;
 
 		/// <summary>Controls for how the diagram is rendered</summary>
 		public DiagramOptions Options
@@ -3746,7 +3897,8 @@ namespace pr.gui
 			set
 			{
 				m_impl_options = value ?? new DiagramOptions();
-				if (!DesignMode) UpdateDiagram(true);
+				InvalidateAllElements();
+				Invalidate();
 			}
 		}
 		private DiagramOptions m_impl_options;
@@ -3776,7 +3928,7 @@ namespace pr.gui
 			result.Hits.Sort((l,r) =>
 				{
 					if (l.Entity != r.Entity) return l.Entity.CompareTo(r.Entity);
-					return l.Element.PositionZ.CompareTo(r.Element.PositionZ);
+					return -l.Element.PositionZ.CompareTo(r.Element.PositionZ);
 				});
 			return result;
 		}
@@ -3796,12 +3948,13 @@ namespace pr.gui
 					if (AllowSelection)
 					{
 						Selected.Clear();
-						Refresh();
+						Invalidate();
 					}
 					break;
 				}
 				#endregion
 			case Keys.Delete:
+				#region Delete Elements
 				{
 					if (AllowEditing)
 					{
@@ -3821,20 +3974,27 @@ namespace pr.gui
 
 								Elements.Remove(elem);
 							}
+							Invalidate();
 						}
 					}
 					break;
 				}
+				#endregion
 			case Keys.F5:
+				#region Redraw Diagram
 				{
-					UpdateDiagram(true);
+					InvalidateAllElements();
+					Invalidate();
 					break;
 				}
+				#endregion
 			case Keys.F7:
+				#region Reset View
 				{
 					ResetView();
 					break;
 				}
+				#endregion
 			case Keys.A:
 				#region Select All
 				{
@@ -3842,7 +4002,7 @@ namespace pr.gui
 					{
 						foreach (var elem in Elements.ToArray())
 							elem.Selected = true;
-						Refresh();
+						Invalidate();
 					}
 					break;
 				}
@@ -3869,10 +4029,16 @@ namespace pr.gui
 		public bool DefaultMouseControl { get; set; }
 
 		/// <summary>Get the default node style</summary>
-		public NodeStyle DefaultNodeStyle { get { return m_node_styles[Guid.Empty]; } }
+		public NodeStyle DefaultNodeStyle
+		{
+			get { return m_node_styles[Guid.Empty]; }
+		}
 
 		/// <summary>Get the default connector style</summary>
-		public ConnectorStyle DefaultConnectorStyle { get { return m_connector_styles[Guid.Empty]; } }
+		public ConnectorStyle DefaultConnectorStyle
+		{
+			get { return m_connector_styles[Guid.Empty]; }
+		}
 
 		/// <summary>True if users are allowed to add/remove/edit nodes on the diagram</summary>
 		[Browsable(false)]
@@ -3949,7 +4115,33 @@ namespace pr.gui
 
 			var delta = e.Delta < -999 ? -999 : e.Delta > 999 ? 999 : e.Delta;
 			if (m_window.Navigate(0, 0, e.Delta / 120f))
-				Refresh();
+				Invalidate();
+		}
+		protected override void OnKeyDown(KeyEventArgs e)
+		{
+			base.OnKeyDown(e);
+			SetCursor();			
+
+			var op = m_mouse_op.Active;
+			if (op != null)
+				op.OnKeyDown(e);
+		}
+		protected override void OnKeyUp(KeyEventArgs e)
+		{
+			base.OnKeyUp(e);
+			SetCursor();
+
+			var op = m_mouse_op.Active;
+			if (op != null)
+				op.OnKeyUp(e);
+		}
+
+		/// <summary>Set the mouse cursor based on key state</summary>
+		private void SetCursor()
+		{
+			if      (ModifierKeys.HasFlag(Keys.Shift))   Cursor = Cursors.ArrowPlus;
+			else if (ModifierKeys.HasFlag(Keys.Control)) Cursor = Cursors.ArrowMinus;
+			else                                         Cursor = Cursors.Default;
 		}
 
 		/// <summary>Create the default navigation mouse operation based on mouse button</summary>
@@ -3961,7 +4153,7 @@ namespace pr.gui
 			case EBtnIdx.Left:
 				{
 					// If elements are selected, see if the mouse has selected one of the resize-grabbers
-					if (AllowEditing && SelectionGraphicsVisible)
+					if (AllowEditing && SelectionResizeable)
 					{
 						var pt_ds = ClientToDiagram(pt_cs);
 						var nearest = m_tools.Resizer.MinBy(x => (x.O2P.pos.xy - pt_ds).Length2Sq);
@@ -4027,7 +4219,7 @@ namespace pr.gui
 				var tar = new v4(bounds.Centre, 0, 1);
 				m_camera.SetPosition(eye, tar, v4.YAxis);
 			}
-			Refresh();
+			Invalidate();
 		}
 
 		/// <summary>Returns a point in diagram space from a point in client space. Use to convert mouse (client-space) locations to diagram coordinates</summary>
@@ -4067,7 +4259,7 @@ namespace pr.gui
 			// Dragging the diagram is the same as shifting the camera in the opposite direction
 			var dst = ClientToDiagram(cs);
 			if (m_window.Navigate(ds.x - dst.x, ds.y - dst.y, 0))
-				Refresh();
+				Invalidate();
 		}
 
 		/// <summary>Move the selected elements by 'delta'</summary>
@@ -4087,50 +4279,25 @@ namespace pr.gui
 		/// <summary>Handle elements added/removed from the elements list</summary>
 		protected virtual void OnElementListChanging(ListChgEventArgs<Element> args)
 		{
+			var elem = args.Item;
+			if (elem != null && (elem.Diagram != null && elem.Diagram != this))
+				throw new ArgumentException("element belongs to another diagram");
+
 			switch (args.ChangeType)
 			{
-			case ListChg.PreReset:
+			case ListChg.Reset:
 				{
-					// This Elements list is about to be cleared, detach all elements from the
-					// diagram. Note, don't dispose, we don't own the elements
-					foreach (var elem in Elements)
-						elem.SetDiagramInternal(null, false);
-
-					// no sanity check here, because the Elements.Clear() is still in progress
-					break;
-				}
-			case ListChg.ItemPreRemove:
-				{
-					var elem = args.Item;
-					if (elem.Diagram != null && elem.Diagram != this) throw new ArgumentException("element belongs to another diagram");
-					elem.SetDiagramInternal(null, false);
-
-					// no sanity check here, because the Elements.Remove() is still in progress
-					break;
-				}
-			case ListChg.ItemPreAdd:
-				{
-					if (Elements.IndexOf(x => x.Id == args.Item.Id) != -1)
-						throw new ArgumentException("Item is already in this diagram");
+					Debug.Assert(CheckConsistency());
 					break;
 				}
 			case ListChg.ItemAdded:
 				{
-					var elem = args.Item;
-					if (elem.Diagram != null && elem.Diagram != this) throw new ArgumentException("element belongs to another diagram");
-					elem.SetDiagramInternal(this, false);
-
-					// Update the diagram
-					m_eb_update_diag.Signal();
-					Debug.Assert(CheckConsistency());
+					elem.Diagram = this;
 					break;
 				}
 			case ListChg.ItemRemoved:
-			case ListChg.Reset:
 				{
-					// Update the diagram
-					m_eb_update_diag.Signal();
-					Debug.Assert(CheckConsistency());
+					elem.Diagram = null;
 					break;
 				}
 			}
@@ -4139,47 +4306,28 @@ namespace pr.gui
 		/// <summary>Handle elements added/removed from the selection list</summary>
 		protected virtual void OnSelectListChanging(ListChgEventArgs<Element> args)
 		{
-			// If we're just about to add the first item to the selection list
-			// or remove the last item, add/remove the selection graphics
+			var elem = args.Item;
+			if (elem != null && (elem.Diagram != null && elem.Diagram != this))
+				throw new ArgumentException("element belongs to another diagram");
+
 			switch (args.ChangeType)
 			{
+			case ListChg.Reset:
+				{
+					Debug.Assert(CheckConsistency());
+					break;
+				}
 			case ListChg.ItemAdded:
 				{
-					args.Item.Selected = true;
+					elem.Selected = true;
 					break;
 				}
 			case ListChg.ItemRemoved:
 				{
-					args.Item.Selected = false;
-					break;
-				}
-			case ListChg.PreReset:
-				{
-					using (Selected.SuspendEvents(false))
-					{
-						foreach (var elem in Selected.ToArray())
-							elem.Selected = false;
-					}
-					break;
-				}
-			case ListChg.Reset:
-				{
-					using (Selected.SuspendEvents(false))
-					{
-						Selected.Clear();
-						Selected.AddRange(Elements.Where(x => x.Selected));
-					}
+					elem.Selected = false;
 					break;
 				}
 			}
-			SelectionGraphicsVisible = Selected.Any(x => x.Resizeable);
-			UpdateEditToolbar();
-		}
-
-		/// <summary>Raises the Diagram changed event. Allows subclasses to set properties in 'args'</summary>
-		protected virtual void OnDiagramChanged(DiagramChangedEventArgs args)
-		{
-			DiagramChanged.Raise(this, args);
 		}
 
 		/// <summary>Deselect all elements</summary>
@@ -4189,7 +4337,7 @@ namespace pr.gui
 		}
 
 		/// <summary>
-		/// Select elements that are wholy within 'rect'. (rect is in diagram space)
+		/// Select elements that are wholly within 'rect'. (rect is in diagram space)
 		/// If no modifier keys are down, elements not in 'rect' are deselected.
 		/// If 'shift' is down, elements within 'rect' are selected in addition to the existing selection
 		/// If 'ctrl' is down, elements within 'rect' are removed from the existing selection.</summary>
@@ -4267,7 +4415,13 @@ namespace pr.gui
 				}
 			}
 
-			Refresh();
+			Invalidate();
+		}
+
+		/// <summary>True if any of the selected elements can be resized by the user</summary>
+		public bool SelectionResizeable
+		{
+			get { return Selected.Any(x => x.Resizeable); }
 		}
 
 		/// <summary>Selects nodes that are connected to already selected nodes</summary>
@@ -4281,7 +4435,7 @@ namespace pr.gui
 			foreach (var conn in node.Connectors)
 				conn.OtherNode(node).Selected = true;
 
-			Refresh();
+			Invalidate();
 		}
 
 		/// <summary>Spread the nodes on the diagram so none are overlapping</summary>
@@ -4305,8 +4459,6 @@ namespace pr.gui
 						conns.ForEach(x => x.Visible = true);
 					}))
 			{
-				UpdateDiagram();
-
 				// Prevent issues with nodes exactly on top of each other
 				var rand = new Rand(); var djitter = 10f;
 				Func<v2> jitter = () => v2.Random2(-djitter, djitter, rand);
@@ -4412,23 +4564,22 @@ namespace pr.gui
 						force[node] = v2.Zero;
 					}
 
-					Refresh();
+					Invalidate();
 
 					if (equilibrium)
 						break;
 				}
 			}
 
-			// Relink all connectors connected to nodes that have moved
+			// Re-link all connectors connected to nodes that have moved
 			foreach (var c in nodes.SelectMany(x => x.Connectors).Distinct())
 				c.Relink(!Options.Node.AutoRelink);
-			UpdateDiagram();
 		}
 
 		/// <summary>Update the links between nodes to pick the nearest anchor points</summary>
 		public void RelinkNodes()
 		{
-			// Relink the connectors from selected nodes or all connectors if nothing is selected
+			// Re-link the connectors from selected nodes or all connectors if nothing is selected
 			var connectors = Selected.Count != 0
 				? Selected.Where(x => x.Entity == Entity.Node).Cast<Node>().SelectMany(x => x.Connectors)
 				: Elements.Where(x => x.Entity == Entity.Connector).Cast<Connector>();
@@ -4441,7 +4592,7 @@ namespace pr.gui
 			foreach (var node in nodes)
 				node.Untangle();
 
-			Refresh();
+			Invalidate();
 		}
 
 		/// <summary>The Z value of the highest element in the diagram</summary>
@@ -4453,89 +4604,26 @@ namespace pr.gui
 		/// <summary>
 		/// Set the Z value for all elements.
 		/// if 'temporary' is true, the change in Z order will not trigger a DiagramChanged event</summary>
-		private void UpdateElementZOrder(bool temporary)
+		private void UpdateElementZOrder()
 		{
-			using (Scope.Create(() => DiagramChangedPending, dcp => DiagramChangedPending = !temporary || dcp))
-			{
-				LowestZ = 0f;
-				HighestZ = 0f;
+			LowestZ = 0f;
+			HighestZ = 0f;
 
-				foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
-					elem.PositionZ = HighestZ += 0.001f;
+			foreach (var elem in Elements.Where(x => x.Entity == Entity.Node))
+				elem.PositionZ = HighestZ += 0.001f;
 
-				foreach (var elem in Elements.Where(x => x.Entity == Entity.Label))
-					elem.PositionZ = HighestZ += 0.001f;
+			foreach (var elem in Elements.Where(x => x.Entity == Entity.Label))
+				elem.PositionZ = HighestZ += 0.001f;
 
-				foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
-					elem.PositionZ = LowestZ -= 0.001f;
-			}
+			foreach (var elem in Elements.Where(x => x.Entity == Entity.Connector))
+				elem.PositionZ = LowestZ -= 0.001f;
 		}
 
-		/// <summary>
-		/// Removes and re-adds all elements to the diagram.
-		/// Should only be used when the elements collection is modifed, otherwise use Refresh()</summary>
-		private void UpdateDiagram(bool invalidate_all)
+		/// <summary>Cause all diagram elements to mark themselves as dirty (requiring repaint)</summary>
+		private void InvalidateAllElements()
 		{
-			m_window.RemoveAllObjects();
-
-			// Invalidate all first (if needed)
-			if (invalidate_all)
-				Elements.ForEach(x => x.Invalidate());
-
-			// Ensure the z order is up to date
-			UpdateElementZOrder(true);
-
-			// Add the elements to the window
 			foreach (var elem in Elements)
-			{
-				if (!elem.Visible) continue;
-				elem.AddToScene(m_window);
-			}
-
-			Refresh();
-		}
-
-		/// <summary>
-		/// Removes and re-adds all elements to the diagram.
-		/// Should only be used when the elements collection is modifed, otherwise use Refresh()</summary>
-		private void UpdateDiagram()
-		{
-			UpdateDiagram(false);
-		}
-
-		/// <summary>True if the selection resize boxes are visible</summary>
-		private bool SelectionGraphicsVisible
-		{
-			get { return m_impl_selection_graphics_visible; }
-			set
-			{
-				if (m_impl_selection_graphics_visible == value) return;
-				m_impl_selection_graphics_visible = value && AllowEditing;
-				
-				if (m_impl_selection_graphics_visible)
-					m_window.AddObjects(m_tools.Resizer);
-				else
-					m_window.RemoveObjects(m_tools.Resizer);
-				
-				UpdateSelectionGraphics();
-			}
-		}
-		private bool m_impl_selection_graphics_visible;
-
-		/// <summary>Update the positions of the selection graphics</summary>
-		private void UpdateSelectionGraphics()
-		{
-			if (!SelectionGraphicsVisible)
-				return;
-
-			var z = HighestZ;
-			var bounds = BRect.Reset;
-			foreach (var elem in Selected.Where(x => x is ResizeableElement && x.Resizeable))
-			{
-				var b = elem.Bounds;
-				if (b.IsValid) bounds.Encompass(b);
-			}
-			m_tools.Resizer.ForEach(x => x.Update(bounds, z));
+				elem.Invalidate();
 		}
 
 		/// <summary>Return the area in diagram space that contains all diagram content</summary>
@@ -4592,184 +4680,308 @@ namespace pr.gui
 			return new Rectangle(x, y, width, height);
 		}
 
-		/// <summary>Update all invalidated objects in the diagram</summary>
-		public override void Refresh()
-		{
-			if (m_in_refresh) return; // Prevent reentrancy
-			using (Scope.Create(() => m_in_refresh = true, () => m_in_refresh = false))
-			{
-				base.Refresh();
-
-				// Record whether we should raise 'DiagramChanged' before refreshing elements
-				// Changes made by refresh should not require the diagram to be saved
-				var diag_change_pending = DiagramChangedPending;
-
-				// Refresh the invalidated elements
-				while (m_dirty.Count != 0)
-				{
-					var elem = m_dirty.First();
-					m_dirty.Remove(elem);
-					elem.Refresh();
-				}
-
-				// Notify observers that the diagram has changed
-				if (diag_change_pending)
-					RaiseDiagramChanged(new DiagramChangedEventArgs(EDiagramChangeType.Edited));
-				DiagramChangedPending = false;
-
-				// Update the selection area
-				UpdateSelectionGraphics();
-
-				m_window.Invalidate();
-			}
-		}
-		private bool m_in_refresh;
-
 		/// <summary>Resize the control</summary>
 		protected override void OnResize(EventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnResize(e); return; }
+			if (m_window == null || this.IsInDesignMode())
+			{
+				base.OnResize(e);
+				return;
+			}
 
 			base.OnResize(e);
 			m_window.RenderTargetSize = new Size(Width,Height);
 		}
 
-		// Absorb this event
+		/// <summary>Control has been invalidated</summary>
+		protected override void OnInvalidated(InvalidateEventArgs e)
+		{
+			if (m_window == null || this.IsInDesignMode())
+			{
+				base.OnInvalidated(e);
+				return;
+			}
+
+			m_window.Invalidate();
+			base.OnInvalidated(e);
+		}
+
+		/// <summary>Clear background</summary>
 		protected override void OnPaintBackground(PaintEventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnPaintBackground(e); return; }
-
-			if (m_window == null)
+			if (m_window == null || this.IsInDesignMode())
+			{
 				base.OnPaintBackground(e);
+				return;
+			}
 		}
 
-		// Paint the control
+		/// <summary>Paint the control</summary>
 		protected override void OnPaint(PaintEventArgs e)
 		{
-			if (this.IsInDesignMode()) { base.OnPaint(e); return; }
-
-			if (m_window == null)
+			if (m_window == null || this.IsInDesignMode())
+			{
 				base.OnPaint(e);
-			else
-				Render();
-		}
+				return;
+			}
 
-		/// <summary>Render and Present the scene</summary>
-		private void Render()
-		{
+			// Prevent updating element graphics raising the data changed event
+			using (SuspendDiagramChanged(raise_on_resume: false))
+			{
+				// Update the invalidated elements
+				while (m_dirty.Count != 0)
+				{
+					var elem = m_dirty.First();
+					Debug.Assert(elem.Diagram == this);
+					m_dirty.Remove(elem);
+					elem.UpdateGfx();
+				}
+
+				// Ensure the z order is up to date
+				UpdateElementZOrder();
+
+				// Update the state of the edit tool bar
+				UpdateEditToolbar();
+			}
+
+			// Clear the scene
+			m_window.RemoveAllObjects();
+
+			// Add the elements to the window
+			foreach (var elem in Elements)
+			{
+				if (!elem.Visible) continue;
+				elem.AddToScene(m_window);
+			}
+
+			// Add selection graphics is something is selected
+			if (AllowEditing && SelectionResizeable)
+			{
+				// Position the resizer tool above the other graphics
+				var z = HighestZ;
+				var bounds = BRect.Reset;
+				foreach (var elem in Selected.OfType<ResizeableElement>().Where(x => x.Resizeable))
+				{
+					var b = elem.Bounds;
+					if (b.IsValid) bounds.Encompass(b);
+				}
+				m_tools.Resizer.ForEach(x => x.Update(bounds, z));
+
+				// Add the resizer tool
+				m_window.AddObjects(m_tools.Resizer);
+			}
+
+			// Render the diagram
 			m_window.Render();
 			m_window.Present();
 		}
 
-		/// <summary>Export the current diagram as xml</summary>
-		public XElement ExportXml(XElement node)
+		[Flags] public enum EExportOptions
+		{
+			/// <summary>Export the nodes</summary>
+			Nodes = 1 << 0,
+
+			/// <summary>Export the connectors</summary>
+			Connectors = 1 << 1,
+
+			/// <summary>Export the labels</summary>
+			Labels = 1 << 2,
+
+			/// <summary>Export all nodes and connectors</summary>
+			AllElements = Nodes | Connectors | Labels,
+
+			/// <summary>Include node styles in the exported XML data</summary>
+			NodeStyles = 1 << 3,
+
+			/// <summary>Include connector styles in the exported XML data</summary>
+			ConnectorStyles = 1 << 4,
+
+			/// <summary>Include all styles in exported XML data</summary>
+			AllStyles = NodeStyles | ConnectorStyles,
+
+			/// <summary>Default XML export options</summary>
+			Default = AllElements | AllStyles,
+		}
+
+		/// <summary>Export the current diagram as XML</summary>
+		public XElement ExportXml(XElement node, EExportOptions opts = EExportOptions.Default)
 		{
 			// Node styles
-			m_node_styles.RemoveUnused(Elements);
-			var ns = m_node_styles.Styles.OrderBy(x => x.Id);
-			node.Add2(XmlField.NodeStyles, ns, false);
+			if (opts.HasFlag(EExportOptions.NodeStyles))
+			{
+				m_node_styles.RemoveUnused(Elements);
+				var ns = m_node_styles.Styles.OrderBy(x => x.Id);
+				node.Add2(XmlField.NodeStyles, ns, false);
+			}
 
 			// Connector styles
-			m_connector_styles.RemoveUnused(Elements);
-			var cs = m_connector_styles.Styles.OrderBy(x => x.Id);
-			node.Add2(XmlField.ConnStyles, cs, false);
+			if (opts.HasFlag(EExportOptions.ConnectorStyles))
+			{
+				m_connector_styles.RemoveUnused(Elements);
+				var cs = m_connector_styles.Styles.OrderBy(x => x.Id);
+				node.Add2(XmlField.ConnStyles, cs, false);
+			}
 
-			// Sort the elements so that the produced xml has a stable order
-			var nodes = Elements.Where(x => x.Entity == Entity.Node && !(x is NodeProxy)).OrderBy(x => x.Id).ToArray();
-			var conns = Elements.Where(x => x.Entity == Entity.Connector).OrderBy(x => x.Id).ToArray();
-			var labls = Elements.Where(x => x.Entity == Entity.Label    ).OrderBy(x => x.Id).ToArray();
-			
+			// Sort the elements so that the produced XML has a stable order
+
 			// Nodes
-			foreach (var elem in nodes)
-				node.Add2(XmlField.Element, elem, true);
+			if (opts.HasFlag(EExportOptions.Nodes))
+			{
+				var nodes = Elements.Where(x => x.Entity == Entity.Node && !(x is NodeProxy)).OrderBy(x => x.Id).ToArray();
+				foreach (var elem in nodes)
+					node.Add2(XmlField.Element, elem, true);
+			}
 
 			// Connectors
-			foreach (var elem in conns)
-				node.Add2(XmlField.Element, elem, true);
+			if (opts.HasFlag(EExportOptions.Connectors))
+			{
+				var conns = Elements.Where(x => x.Entity == Entity.Connector).OrderBy(x => x.Id).ToArray();
+				foreach (var elem in conns)
+					node.Add2(XmlField.Element, elem, true);
+			}
 
 			// Labels
-			foreach (var elem in labls)
-				node.Add2(XmlField.Element, elem, true);
+			if (opts.HasFlag(EExportOptions.Labels))
+			{
+				var labls = Elements.Where(x => x.Entity == Entity.Label).OrderBy(x => x.Id).ToArray();
+				foreach (var elem in labls)
+					node.Add2(XmlField.Element, elem, true);
+			}
 
 			return node;
 		}
-		public XDocument ExportXml()
+		public XDocument ExportXml(EExportOptions opts = EExportOptions.Default)
 		{
 			var xml = new XDocument();
 			var node = xml.Add2(new XElement(XmlField.Root));
-			ExportXml(node);
+			ExportXml(node, opts);
 			return xml;
 		}
 
+		[Flags] public enum EImportOptions
+		{
+			/// <summary>Import nodes</summary>
+			Nodes = 1 << 0,
+
+			/// <summary>Import connectors</summary>
+			Connectors = 1 << 1,
+
+			/// <summary>Import labels</summary>
+			Labels = 1 << 2,
+
+			/// <summary>Import all elements</summary>
+			AllElements = Nodes | Connectors | Labels,
+
+			/// <summary>Import node styles from XML data</summary>
+			NodeStyles = 1 << 3,
+
+			/// <summary>Import connector styles from XML Data</summary>
+			ConnectorStyles = 1 << 4,
+
+			/// <summary>Import all styles from XML data</summary>
+			AllStyles = NodeStyles | ConnectorStyles,
+
+			/// <summary>Default XML import options</summary>
+			Default = AllElements | AllStyles,
+		}
+
 		/// <summary>
-		/// Import the diagram from xml.
+		/// Import the diagram from XML.
 		/// If 'merge' is false, the diagram contents are replaced with the data from 'node'
 		/// If true, the element data is copied from 'node' where Ids match. Unmatched Ids are added.</summary>
-		public void ImportXml(XElement node, bool merge = false)
+		public void ImportXml(XElement node, bool merge = false, EImportOptions opts = EImportOptions.Default)
 		{
 			// Build a map of Guids to elements
 			var map = merge
 				? Elements.ToDictionary(x => x.Id)
 				: new Dictionary<Guid,Element>();
 
+			// If not merging, clear the diagram data
+			if (!merge)
+				ResetDiagram();
+
 			// Add a map function for AnchorPoint that references the elements being imported
-			using (Scope.Create(
+			var xml_anchor_point = Scope.Create(
 				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = (elem, type, ctor) => new AnchorPoint(map, elem),
-				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = null))
-			using (SuspendEvents(false))
+				() => XmlExtensions.AsMap[typeof(AnchorPoint)] = null);
+
+			// Suspend diagram changed events while importing
+			using (xml_anchor_point)
+			using (SuspendDiagramChanged(raise_on_resume:false))
 			{
-				foreach (var n in node.Elements())
+				if (node != null)
 				{
-					switch (n.Name.LocalName)
+					foreach (var n in node.Elements())
 					{
-					case XmlField.NodeStyles:
+						switch (n.Name.LocalName)
 						{
-							var node_styles = n.As<StyleCache<NodeStyle>>() ?? new StyleCache<NodeStyle>();
-							if (!merge) m_node_styles = node_styles;
-							else        m_node_styles.Merge(node_styles);
-							break;
-						}
-					case XmlField.ConnStyles:
-						{
-							var conn_styles = n.As<StyleCache<ConnectorStyle>>() ?? new StyleCache<ConnectorStyle>();
-							if (!merge) m_connector_styles = conn_styles;
-							else        m_connector_styles.Merge(conn_styles);
-							break;
-						}
-					case XmlField.Element:
-						if (!merge)
-						{
-							var elem = (Element)n.ToObject();
-							map.Add(elem.Id, elem);
-						}
-						else
-						{
-							// Read the id of the element and look for it amoung the existing elements
-							var id = n.Element(XmlField.Id).As<Guid>();
-							Element elem = map.TryGetValue(id, out elem) ? elem : null;
-
-							// If not found, add a new element
-							if (elem == null)
+						case XmlField.NodeStyles:
 							{
-								elem = (Element)n.ToObject();
-								map.Add(elem.Id, elem);
-								Elements.Add(elem);
+								if (opts.HasFlag(EImportOptions.NodeStyles))
+								{
+									var node_styles = n.As<StyleCache<NodeStyle>>() ?? new StyleCache<NodeStyle>();
+									if (!merge) m_node_styles = node_styles;
+									else        m_node_styles.Merge(node_styles);
+								}
+								break;
 							}
+						case XmlField.ConnStyles:
+							{
+								if (opts.HasFlag(EImportOptions.ConnectorStyles))
+								{
+									var conn_styles = n.As<StyleCache<ConnectorStyle>>() ?? new StyleCache<ConnectorStyle>();
+									if (!merge) m_connector_styles = conn_styles;
+									else        m_connector_styles.Merge(conn_styles);
+								}
+								break;
+							}
+						case XmlField.Element:
+							{
+								// True if the 'opts' say import the element
+								Func<Element, bool> import = e =>
+									(e is Node      && opts.HasFlag(EImportOptions.Nodes)) ||
+									(e is Connector && opts.HasFlag(EImportOptions.Connectors)) ||
+									(e is Label     && opts.HasFlag(EImportOptions.Labels));
 
-							// If found, update the existing element.
-							else
-								elem.Update(n);
+								// Add the element to the diagram
+								if (!merge)
+								{
+									// Not merging, just add everything
+									var elem = (Element)n.ToObject();
+									if (import(elem))
+									{
+										map.Add(elem.Id, elem);
+										Elements.Add(elem);
+									}
+								}
+								else
+								{
+									// Read the id of the element and look for it among the existing elements
+									var id = n.Element(XmlField.Id).As<Guid>();
+
+									Element elem = map.TryGetValue(id, out elem) ? elem : null;
+									if (elem == null)
+									{
+										// If not found, add a new element
+										elem = (Element)n.ToObject();
+										if (import(elem))
+										{
+											map.Add(elem.Id, elem);
+											Elements.Add(elem);
+										}
+									}
+									else
+									{
+										// If found, update the existing element.
+										if (import(elem))
+											elem.Update(n);
+									}
+								}
+								break;
+							}
 						}
-						break;
 					}
 				}
-			}
-
-			// Add 'elements' to the diagram
-			if (!merge)
-			{
-				ResetDiagram();
-				Elements.AddRange(map.Values);
 			}
 
 			// Remove unused styles
@@ -4778,25 +4990,25 @@ namespace pr.gui
 		}
 
 		/// <summary>
-		/// Import the diagram layout from a string containing xml.
+		/// Import the diagram layout from a string containing XML.
 		/// If 'merge' is false, the diagram contents are replaced with the data from 'node'
 		/// If true, the element data is copied from 'node' where Ids match. Unmatched Ids are added.</summary>
-		public void ImportXml(string layout_xml, bool merge = false)
+		public void ImportXml(string layout_xml, bool merge = false, EImportOptions opts = EImportOptions.Default)
 		{
 			var xml = XDocument.Parse(layout_xml);
-			if (xml.Root == null) throw new InvalidDataException("xml file does not contain any config data");
-			ImportXml(xml.Root, merge);
+			if (xml.Root == null) throw new InvalidDataException("XML file does not contain any config data");
+			ImportXml(xml.Root, merge, opts);
 		}
 
 		/// <summary>
-		/// Import the diagram layout from an xml file.
+		/// Import the diagram layout from an XML file.
 		/// If 'merge' is false, the diagram contents are replaced with the data from 'node'
 		/// If true, the element data is copied from 'node' where Ids match. Unmatched Ids are added.</summary>
-		public void LoadXml(string filepath, bool merge = false)
+		public void LoadXml(string filepath, bool merge = false, EImportOptions opts = EImportOptions.Default)
 		{
 			var xml = XDocument.Load(filepath);
-			if (xml.Root == null) throw new InvalidDataException("xml file does not contain any config data");
-			ImportXml(xml.Root, merge);
+			if (xml.Root == null) throw new InvalidDataException("XML file does not contain any config data");
+			ImportXml(xml.Root, merge, opts);
 		}
 
 		/// <summary>Create and display a context menu</summary>
@@ -4814,102 +5026,100 @@ namespace pr.gui
 					return list.Add2(item);
 				};
 
-			// Note: using lists and AddRange here for performance reasons
-			// Using 'DropDownItems.Add' causes lots of PerformLayout calls
-			var context_menu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
-			context_menu.Closed += (s,a) => Refresh();
-
-			using (this.ChangeCursor(Cursors.WaitCursor))
+			var cmenu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
+			using (cmenu.SuspendLayout(false))
 			{
-				var lvl0 = new List<ToolStripItem>();
-
 				#region Scatter
 				if (AllowEditing)
 				{
-					var scatter = add(lvl0,2,new ToolStripMenuItem("Scatter"){Name="Scatter"});
-					scatter.Click += (s,a) => ScatterNodes();
+					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Scatter") { Name="Scatter" });
+					opt.Click += (s,a) => ScatterNodes();
 				}
 				#endregion
 
-				#region Relink
+				#region Re-link
 				if (AllowEditing)
 				{
-					var relink = add(lvl0,2,new ToolStripMenuItem("Relink"));
-					relink.Click += (s,a) => RelinkNodes();
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Re-link") { Name="Re-link" });
+					opt.Click += (s,a) => RelinkNodes();
 				}
 				#endregion
 
 				#region Bring to Front
 				if (Selected.Count != 0)
 				{
-					var tofront = add(lvl0,2,new ToolStripMenuItem("Bring to Front"){Name="BringToFront"});
-					tofront.Click += (s,a) =>
-						{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Bring to Front") { Name="BringToFront" });
+					opt.Enabled = Selected.Count != 0;
+					opt.Click += (s,a) =>
+					{
+						using (SuspendDiagramChanged(raise_on_resume: true))
 							foreach (var elem in Selected.ToArray())
-								elem.BringToFront(false);
-						};
+								elem.BringToFront();
+					};
 				}
 				#endregion
 
 				#region Send to Back
 				if (Selected.Count != 0)
 				{
-					var toback = add(lvl0,2,new ToolStripMenuItem("Send to Back"){Name="SendToBack"});
-					toback.Click += (s,a) =>
-						{
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Send to Back") { Name="SendToBack" });
+					opt.Enabled = Selected.Count != 0;
+					opt.Click += (s, a) =>
+					{
+						using (SuspendDiagramChanged(raise_on_resume: true))
 							foreach (var elem in Selected.ToArray())
-								elem.SendToBack(false);
-						};
+								elem.SendToBack();
+					};
 				}
 				#endregion
 
 				#region Selection
 				if (AllowSelection && Selected.Count != 0)
 				{
-					var select_connected = add(lvl0,3,new ToolStripMenuItem("Select Connected Nodes"){Name="SelectConnected"});
-					select_connected.Click += (s,a) =>
-						{
-							SelectConnectedNodes();
-						};
+					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Select Connected Nodes") { Name="SelectConnected" });
+					opt.Enabled = Selected.Any(x => x.Entity == Entity.Node);
+					opt.Click += (s, a) => SelectConnectedNodes();
 				}
 				#endregion
 
 				#region Properties
 				if (AllowEditing)
 				{
-					var props = add(lvl0,4,new ToolStripMenuItem(Selected.Count != 0 ? "Properties" : "Default Properties"){Name="Props"});
-					props.Click += (s,a) => EditProperties();
+					if (cmenu.Items.Count != 0) cmenu.Items.Add(new ToolStripSeparator());
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem(Selected.Count != 0 ? "Properties" : "Default Properties") { Name="Props" });
+					opt.Click += (s,a) => EditProperties();
 				}
 				#endregion
 
 				#region Use Default Properties
 				if (AllowEditing && Selected.Count != 0)
 				{
-					var usedef = add(lvl0,4,new ToolStripMenuItem("Use Default Properties"){Name="DefaultProps"});
-					usedef.Click += (s,a) =>
+					var opt = cmenu.Items.Add2(new ToolStripMenuItem("Use Default Properties") { Name="DefaultProps" });
+					opt.Click += (s,a) =>
+					{
+						foreach (var elem in Selected.ToArray())
 						{
-							foreach (var elem in Selected.ToArray())
-							{
-								if (elem.Entity == Entity.Node)
-									elem.As<Node>().Style = m_node_styles[Guid.Empty];
-								if (elem.Entity == Entity.Connector)
-									elem.As<Connector>().Style = m_connector_styles[Guid.Empty];
-							}
-							Refresh();
-						};
+							if (elem.Entity == Entity.Node)
+								elem.As<Node>().Style = m_node_styles[Guid.Empty];
+							if (elem.Entity == Entity.Connector)
+								elem.As<Connector>().Style = m_connector_styles[Guid.Empty];
+						}
+						Invalidate();
+					};
 				}
 				#endregion
-
-				context_menu.Items.AddRange(lvl0.ToArray());
 			}
 
 			// Allow users to add/remove menu options
-			AddUserMenuOptions.Raise(this, new AddUserMenuOptionsEventArgs(context_menu));
+			OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(cmenu));
 
-			context_menu.Show(this, location);
+			cmenu.Closed += (s,a) => Invalidate();
+			cmenu.Show(this, location);
 		}
 
-		/// <summary>Gets the toolstrip containing edit controls for the diagram</summary>
+		/// <summary>Gets the tool strip containing edit controls for the diagram</summary>
 		public ToolStrip EditToolstrip
 		{
 			get { return m_toolstrip_edit; }
@@ -4933,7 +5143,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Setup a toolstrip with tools for editing the diagram</summary>
+		/// <summary>Set up a tool strip with tools for editing the diagram</summary>
 		private void SetupEditToolstrip()
 		{
 			#region Create Edit Toolbar
@@ -5044,13 +5254,13 @@ namespace pr.gui
 			UpdateEditToolbar();
 		}
 
-		/// <summary>Update the state of the edit toolbar as selections change</summary>
+		/// <summary>Update the state of the edit tool bar as selections change</summary>
 		private void UpdateEditToolbar()
 		{
 			if (this.IsInDesignMode())
 				return;
 
-			// Note, visibility of items in the edit toolbar should not be changed
+			// Note, visibility of items in the edit tool-bar should not be changed
 			// as callers may set the visibility to suit their needs
 
 			var btn_node = m_toolstrip_edit.Items[EditTools.Node.Key].As<ToolStripSplitButtonCheckable>();
@@ -5093,8 +5303,7 @@ namespace pr.gui
 			{
 				form.Text = "Properties";
 				props.SelectedObjects = Selected
-					.Where(x => x is IHasStyle)
-					.Cast<IHasStyle>()
+					.OfType<IHasStyle>()
 					.Select(x => x.Style)
 					.ToArray();
 			}
@@ -5114,10 +5323,10 @@ namespace pr.gui
 
 			form.Controls.Add(props);
 			form.FormClosed += (s,a) =>
-				{
-					OptionsChanged.Raise(this, EventArgs.Empty);
-					Refresh();
-				};
+			{
+				OptionsChanged.Raise(this, EventArgs.Empty);
+				Invalidate();
+			};
 			form.Show(this);
 		}
 
@@ -5159,11 +5368,16 @@ namespace pr.gui
 				throw new Exception("Element {0} is in the Elements collection but does not have its Diagram property set correctly".Fmt(elem.ToString()));
 			}
 
+			// All "dirty" elements should belong to this diagram
+			foreach (var elem in m_dirty)
+			{
+				if (elem.Diagram == this) continue;
+				throw new Exception("Element {0} is in the dirty list but is not associated with this diagram".Fmt(elem.ToString()));
+			}
+
 			// The selected collection contains all that is selected and no more
-			var selected0 = elements.Where(x => x.Selected).ToArray();
-			var selected1 = Selected.ToArray();
-			selected0.Sort(ByGuid);
-			selected1.Sort(ByGuid);
+			var selected0 = elements.Where(x => x.Selected).ToArray().Sort(ByGuid);
+			var selected1 = Selected.ToArray().Sort(ByGuid);
 			if (!selected0.SequenceEqual(selected1, ByGuid))
 				throw new Exception("Selected elements collection is inconsistent with the selected state of the elements");
 

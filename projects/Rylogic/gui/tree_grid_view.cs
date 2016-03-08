@@ -13,6 +13,7 @@ using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using pr.extn;
 
 namespace pr.gui
 {
@@ -107,18 +108,16 @@ namespace pr.gui
 		internal bool BeginCollapseNode(TreeGridNode node)
 		{
 			// Raise the collapsing event
-			var  exp = new CollapsingEventArgs(node);
-			if (NodeCollapsing != null) NodeCollapsing(this, exp);
-			if (exp.Cancel) return false;
-			SuspendLayout();
+			var args = new CollapsingEventArgs(node);
+			OnNodeCollapsing(args);
+			if (args.Cancel) return false;
 			return true;
 		}
 
 		/// <summary>Complete changes to the grid after a node collapse.</summary>
 		internal void EndCollapseNode(TreeGridNode node)
 		{
-			ResumeLayout(true);
-			if (NodeCollapsed != null) NodeCollapsed(this, new CollapsedEventArgs(node));
+			OnNodeCollapsed(new CollapsedEventArgs(node));
 		}
 
 		/// <summary>Prepare the grid for a node expansion</summary>
@@ -127,7 +126,6 @@ namespace pr.gui
 			var exp = new ExpandingEventArgs(node);
 			OnNodeExpanding(exp);
 			if (exp.Cancel) return false;
-			SuspendLayout();
 			return true;
 		}
 
@@ -135,64 +133,64 @@ namespace pr.gui
 		internal void EndExpandNode(TreeGridNode node)
 		{
 			OnNodeExpanded(new ExpandedEventArgs(node));
-			ResumeLayout(true);
 		}
 
 		/// <summary>Sort the columns of the grid</summary>
 		public override void Sort(DataGridViewColumn col, ListSortDirection direction)
 		{
 			EndEdit();
-			SuspendLayout();
-			var rows = new List<TreeGridNode>();
-			int col_idx = col.Index;
-			int sign = col.HeaderCell.SortGlyphDirection == SortOrder.Ascending ? -1 : 1;
-			foreach (DataGridViewColumn c in Columns) c.HeaderCell.SortGlyphDirection = SortOrder.None;
-			col.HeaderCell.SortGlyphDirection = sign > 0 ? SortOrder.Ascending : SortOrder.Descending;
-
-			// ReSharper disable PossibleNullReferenceException
-			// ReSharper disable AccessToModifiedClosure
-			Action<TreeGridNode> sort = null;
-			sort = node =>
+			using (this.SuspendLayout(true))
 			{
-				foreach (TreeGridNode n in node.Nodes)
-					if (n.Nodes.Count >= 2)
-						sort(n);
+				var rows = new List<TreeGridNode>();
+				int col_idx = col.Index;
+				int sign = col.HeaderCell.SortGlyphDirection == SortOrder.Ascending ? -1 : 1;
+				foreach (DataGridViewColumn c in Columns) c.HeaderCell.SortGlyphDirection = SortOrder.None;
+				col.HeaderCell.SortGlyphDirection = sign > 0 ? SortOrder.Ascending : SortOrder.Descending;
 
-				rows.Clear();
-				rows.AddRange(node.Nodes);
-				rows.Sort((lhs,rhs)=>
+				// ReSharper disable PossibleNullReferenceException
+				// ReSharper disable AccessToModifiedClosure
+				Action<TreeGridNode> sort = null;
+				sort = node =>
 				{
-					object v0 = col_idx < lhs.Cells.Count ? lhs.Cells[col_idx].Value : null;
-					object v1 = col_idx < rhs.Cells.Count ? rhs.Cells[col_idx].Value : null;
-					int result;
-					if (v0 is IComparable || v1 is IComparable)
-					{
-						result = Comparer.Default.Compare(v0, v1);
-					}
-					else
-					{
-						if      (v0 == null) { result = v1 == null ? 0 : 1; }
-						else if (v1 == null) { result = -1; }
-						else                 { result = Comparer.Default.Compare(v0.ToString(), v1.ToString()); }
-					}
-					if (result == 0)
-					{
-						result = sign > 0 ? lhs.RowIndex - rhs.RowIndex : rhs.RowIndex - lhs.RowIndex;
-					}
-					return sign * result;
-				});
-				node.Nodes.Clear();
-				foreach (TreeGridNode n in rows) node.Nodes.Add(n);
-			};
-			// ReSharper restore AccessToModifiedClosure
-			// ReSharper restore PossibleNullReferenceException
+					foreach (TreeGridNode n in node.Nodes)
+						if (n.Nodes.Count >= 2)
+							sort(n);
 
-			// Sort within node levels
-			sort(m_root);
-			ResumeLayout(true);
+					rows.Clear();
+					rows.AddRange(node.Nodes);
+					rows.Sort((lhs,rhs)=>
+					{
+						object v0 = col_idx < lhs.Cells.Count ? lhs.Cells[col_idx].Value : null;
+						object v1 = col_idx < rhs.Cells.Count ? rhs.Cells[col_idx].Value : null;
+						int result;
+						if (v0 is IComparable || v1 is IComparable)
+						{
+							result = Comparer.Default.Compare(v0, v1);
+						}
+						else
+						{
+							if      (v0 == null) { result = v1 == null ? 0 : 1; }
+							else if (v1 == null) { result = -1; }
+							else                 { result = Comparer.Default.Compare(v0.ToString(), v1.ToString()); }
+						}
+						if (result == 0)
+						{
+							result = sign > 0 ? lhs.RowIndex - rhs.RowIndex : rhs.RowIndex - lhs.RowIndex;
+						}
+						return sign * result;
+					});
+					node.Nodes.Clear();
+					foreach (TreeGridNode n in rows) node.Nodes.Add(n);
+				};
+				// ReSharper restore AccessToModifiedClosure
+				// ReSharper restore PossibleNullReferenceException
+
+				// Sort within node levels
+				sort(m_root);
+			}
 		}
 
-		/// <summary>Handle cell editting via F2</summary>
+		/// <summary>Handle cell editing via F2</summary>
 		protected override void OnKeyDown(KeyEventArgs e)
 		{
 			if (IsCurrentCellInEditMode)
@@ -302,7 +300,7 @@ namespace pr.gui
 			NodeCollapsed(this, e);
 		}
 
-		/// <summary>No support for databinding</summary>
+		/// <summary>No support for data binding</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -312,7 +310,7 @@ namespace pr.gui
 			set { throw new NotSupportedException("The TreeGridView does not support databinding"); }
 		}
 
-		/// <summary>No support for databinding</summary>
+		/// <summary>No support for data binding</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		[EditorBrowsable(EditorBrowsableState.Never)]
@@ -378,7 +376,7 @@ namespace pr.gui
 		private Image                  m_image;                 // The image associated with this node
 		private int                    m_image_index = -1;      // The image index, 'm_image' has a higher precedence
 		private bool                   m_cells_created;         // True once the cells for this node have been created
-		private bool                   m_is_displayed_in_grid;  // True if visible in the grid, unsited means not in the grid, but still in the child collection of 'm_parent'
+		private bool                   m_is_displayed_in_grid;  // True if visible in the grid, false means not in the grid, but still in the child collection of 'm_parent'
 		private bool                   m_is_expanded;           // True when the node is expanded
 		private bool                   m_virtual_nodes;         // Per node level virtual nodes
 
@@ -618,22 +616,25 @@ namespace pr.gui
 		{
 			if (!IsDisplayedInGrid) throw new Exception("Cannot collapse nodes that are not displayed in the grid");
 			if (!m_is_expanded) return true;
-			
+
 			var grid = Grid;
-			if (!grid.BeginCollapseNode(this))
-				return false;
-
-			// Remove all of the children from the grid
-			foreach (var child in Nodes)
+			using (grid.SuspendLayout(true))
 			{
-				if (recursive)
-					child.Collapse(recursive);
-				child.RemoveRowsFromGrid();
-			}
+				if (!grid.BeginCollapseNode(this))
+					return false;
 
-			m_is_expanded = false;
-			grid.EndCollapseNode(this);
-			return true;
+				// Remove all of the children from the grid
+				foreach (var child in Nodes)
+				{
+					if (recursive)
+						child.Collapse(recursive);
+					child.RemoveRowsFromGrid();
+				}
+
+				m_is_expanded = false;
+				grid.EndCollapseNode(this);
+				return true;
+			}
 		}
 
 		/// <summary>Expand the children of this node</summary>
@@ -641,23 +642,26 @@ namespace pr.gui
 		{
 			if (!IsDisplayedInGrid) throw new Exception("Cannot expand nodes that are not displayed in the grid");
 			if (m_is_expanded) return true;
-			
+
 			var grid = Grid;
-			if (!grid.BeginExpandNode(this))
-				return false;
-
-			// Add all children to the grid
-			int row_index = RowIndex + 1;
-			foreach (var child in Nodes)
+			using (grid.SuspendLayout(true))
 			{
-				child.DisplayRowsInGrid(ref row_index);
-				if (recusive)
-					child.Expand(recusive);
-			}
+				if (!grid.BeginExpandNode(this))
+					return false;
 
-			m_is_expanded = true;
-			grid.EndExpandNode(this);
-			return true;
+				// Add all children to the grid
+				int row_index = RowIndex + 1;
+				foreach (var child in Nodes)
+				{
+					child.DisplayRowsInGrid(ref row_index);
+					if (recusive)
+						child.Expand(recusive);
+				}
+
+				m_is_expanded = true;
+				grid.EndExpandNode(this);
+				return true;
+			}
 		}
 
 		/// <summary>Remove this node from the grid.</summary>

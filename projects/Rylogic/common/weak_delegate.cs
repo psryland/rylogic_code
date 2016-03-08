@@ -9,6 +9,16 @@ using System;
 
 namespace pr.common
 {
+	public static class WeakRef
+	{
+		/// <summary>Returns the target of the reference or null</summary>
+		public static T Target<T>(this WeakReference<T> wref) where T : class
+		{
+			T x;
+			return wref.TryGetTarget(out x) ? x : null;
+		}
+	}
+
 	public delegate void UnregisterEventHandler<E>    (EventHandler<E> event_handler) where E: EventArgs;
 	public delegate void UnregisterEventHandler       (EventHandler event_handler);
 	public delegate void UnregisterAction             (Action action);

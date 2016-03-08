@@ -161,8 +161,8 @@ namespace RyLogViewer
 			m_menu_file_close.Click                    += (s,a) => CloseLogFile();
 			m_menu_file_export.Click                   += (s,a) => ShowExportDialog();
 			m_menu_file_exit.Click                     += (s,a) => Close();
-			m_menu_edit_selectall.Click                += (s,a) => DataGridViewExtensions.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
-			m_menu_edit_copy.Click                     += (s,a) => DataGridViewExtensions.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
+			m_menu_edit_selectall.Click                += (s,a) => DataGridViewEx.SelectAll(m_grid, new KeyEventArgs(Keys.Control|Keys.A));
+			m_menu_edit_copy.Click                     += (s,a) => DataGridViewEx.Copy(m_grid, new KeyEventArgs(Keys.Control|Keys.C));
 			m_menu_edit_jumpto.Click                   += (s,a) => JumpTo();
 			m_menu_edit_find.Click                     += (s,a) => ShowFindDialog();
 			m_menu_edit_find_next.Click                += (s,a) => FindNext(false);
@@ -267,8 +267,8 @@ namespace RyLogViewer
 		{
 			m_grid.RowCount                  = 0;
 			m_grid.AutoGenerateColumns       = false;
-			m_grid.KeyDown                  += DataGridViewExtensions.SelectAll;
-			m_grid.KeyDown                  += DataGridViewExtensions.Copy;
+			m_grid.KeyDown                  += DataGridViewEx.SelectAll;
+			m_grid.KeyDown                  += DataGridViewEx.Copy;
 			m_grid.KeyDown                  += GridKeyDown;
 			m_grid.MouseUp                  += (s,a) => GridMouseButton(a, false);
 			m_grid.MouseDown                += (s,a) => GridMouseButton(a, true);
@@ -687,7 +687,7 @@ namespace RyLogViewer
 							// Otherwise, highlight only the matching parts of the line
 						else
 						{
-							using (gfx.StateScope())
+							using (gfx.SaveState())
 							{
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
@@ -765,7 +765,7 @@ namespace RyLogViewer
 						// Otherwise, highlight only the matching parts of the line
 						else
 						{
-							using (gfx.StateScope())
+							using (gfx.SaveState())
 							{
 								// Create a clip region for the highlighted parts of the line
 								gfx.SetClip(Rectangle.Empty, CombineMode.Replace);
@@ -928,8 +928,8 @@ namespace RyLogViewer
 				return;
 
 			// Clipboard operations
-			if (args.ClickedItem == m_cmenu_copy      ) { DataGridViewExtensions.Copy(m_grid);      return; }
-			if (args.ClickedItem == m_cmenu_select_all) { DataGridViewExtensions.SelectAll(m_grid); return; }
+			if (args.ClickedItem == m_cmenu_copy      ) { DataGridViewEx.Copy(m_grid);      return; }
+			if (args.ClickedItem == m_cmenu_select_all) { DataGridViewEx.SelectAll(m_grid); return; }
 			if (args.ClickedItem == m_cmenu_clear_log ) { ClearLogFile(); return; }
 
 			if (args.ClickedItem == m_cmenu_highlight_row) { ShowOptions(SettingsUI.ETab.Highlights); return; }

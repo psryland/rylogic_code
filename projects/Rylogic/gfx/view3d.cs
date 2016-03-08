@@ -368,6 +368,22 @@ namespace pr.gfx
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
+		public struct WindowOptions
+		{
+			public ReportErrorCB ErrorCB;
+			public IntPtr ErrorCBCtx;
+			public bool GdiCompatible;
+			public string DbgName;
+			public WindowOptions(bool gdi_compatible, ReportErrorCB error_cb, IntPtr error_cb_ctx)
+			{
+				ErrorCB       = error_cb;
+				ErrorCBCtx    = error_cb_ctx;
+				GdiCompatible = gdi_compatible;
+				DbgName       = string.Empty;
+			}
+		}
+
+		[StructLayout(LayoutKind.Sequential)]
 		public struct Material
 		{
 			public IntPtr m_diff_tex;
@@ -444,7 +460,7 @@ namespace pr.gfx
 			}
 		}
 
-		/// <summary>The viewport volume in rendertarget space (ie. screen coords, not normalised)</summary>
+		/// <summary>The viewport volume in render target space (i.e. screen coords, not normalised)</summary>
 		[StructLayout(LayoutKind.Sequential)]
 		public struct Viewport
 		{
@@ -455,6 +471,7 @@ namespace pr.gfx
 			public float m_min_depth;
 			public float m_max_depth;
 
+			public Viewport(float x, float y, float w, float h, float min = 0f, float max = 1f) { m_x = x; m_y = y; m_width = w; m_height = h; m_min_depth = min; m_max_depth = max; }
 			public Size ToSize() { return new Size((int)Math.Round(m_width), (int)Math.Round(m_height)); }
 			public SizeF ToSizeF() { return new SizeF(m_width, m_height); }
 			public Rectangle ToRect() { return new Rectangle((int)m_x, (int)m_y, (int)Math.Round(m_width), (int)Math.Round(m_height)); }
@@ -550,24 +567,25 @@ namespace pr.gfx
 			private readonly SettingsChangedCB m_settings_cb; // A local reference to prevent the callback being garbage collected
 			private HWindow m_wnd;
 
-			public Window(View3d view, HWND hwnd, bool gdi_compat, ReportErrorCB error_cb = null)
+			public Window(View3d view, HWND hwnd, WindowOptions opts)
 			{
 				m_view = view;
 
 				// Create a default error callback
-				if (error_cb == null)
-					error_cb = (c,m) => { throw new Exception(m); };
+				if (opts.ErrorCB == null)
+					opts.ErrorCB = (c,m) => { throw new Exception(m); };
+				m_error_cb = opts.ErrorCB;
 
 				// Create the window
-				m_wnd = View3D_CreateWindow(hwnd, gdi_compat, m_error_cb = error_cb, IntPtr.Zero);
+				m_wnd = View3D_CreateWindow(hwnd, ref opts);
 				if (m_wnd == null)
 					throw new Exception("Failed to create View3D window");
 
-				// Setup a callback for when settings are changed
+				// Set up a callback for when settings are changed
 				m_settings_cb = (c,w) => OnSettingsChanged.Raise(this, EventArgs.Empty);
 				View3D_SettingsChanged(m_wnd, m_settings_cb, IntPtr.Zero, true);
 
-				// Setup the light source
+				// Set up the light source
 				SetLightSource(v4.Origin, -v4.ZAxis, true);
 
 				// Display the focus point
@@ -1833,7 +1851,7 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_PopGlobalErrorCB       (ReportErrorCB error_cb);
 
 		// Windows
-		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, bool gdi_compat, ReportErrorCB error_cb, IntPtr ctx);
+		[DllImport(Dll)] private static extern HWindow           View3D_CreateWindow           (HWND hwnd, ref WindowOptions opts);
 		[DllImport(Dll)] private static extern void              View3D_DestroyWindow          (HWindow window);
 		[DllImport(Dll)] private static extern void              View3D_PushErrorCB            (HWindow window, ReportErrorCB error_cb, IntPtr ctx);
 		[DllImport(Dll)] private static extern void              View3D_PopErrorCB             (HWindow window, ReportErrorCB error_cb);

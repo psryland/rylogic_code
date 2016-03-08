@@ -22,9 +22,28 @@ namespace pr.container
 			public Row(IEnumerable<object> values) :base(values.Select(x => x.ToString())) {}
 			public Row(params object[] values) :base(values.Select(x => x.ToString())) {}
 
-			public new Row Add(string s)                 { base.Add(s); return this; }
-			public Row Add<T>(T s)                       { base.Add(s.ToString()); return this; }
-			public Row AddRange<T>(IEnumerable<T> range) { range.ForEach(x => Add(x)); return this; }
+			/// <summary>Add a item to the row</summary>
+			public new Row Add(string s)
+			{
+				base.Add(s);
+				return this;
+			}
+			public Row Add(object s)
+			{
+				return Add(s.ToString());
+			}
+
+			/// <summary>Add multiple items to the row</summary>
+			public Row Add<T>(IEnumerable<T> range)
+			{
+				foreach (var x in range) Add(x);
+				return this;
+			}
+			public Row Add(params object[] values)
+			{
+				foreach (var x in values) Add(x.ToString());
+				return this;
+			}
 
 			/// <summary>Write this row as a line of CSV data</summary>
 			public virtual void Save(StreamWriter file, bool quoted = true)
@@ -97,27 +116,27 @@ namespace pr.container
 		}
 
 		/// <summary>Append a row to the CSV data</summary>
-		public void Add(Row row)
+		public Row Add(Row row)
 		{
-			m_data.Add(row);
+			return m_data.Add2(row);
 		}
 
 		/// <summary>Append a row to the CSV data</summary>
-		public void Add(IEnumerable<object> values)
+		public Row Add(IEnumerable<object> values)
 		{
-			Add(new Row(values));
+			return Add(new Row(values));
 		}
 
 		/// <summary>Append a row to the CSV data</summary>
-		public void Add(params object[] values)
+		public Row Add(params object[] values)
 		{
-			Add(new Row(values));
+			return Add(new Row(values));
 		}
 
 		/// <summary>Add a comment row to the CSV data</summary>
-		public void AddComment(string comment)
+		public CommentRow AddComment(string comment)
 		{
-			m_data.Add(new CommentRow(comment));
+			return m_data.Add2(new CommentRow(comment));
 		}
 
 		/// <summary>Reserve memory</summary>

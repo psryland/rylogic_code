@@ -20,35 +20,66 @@ namespace pr.gui
 		private int m_corner;           // The corner that the tip currently points to
 		private int m_issue;
 
-		public HintBalloon()
+		public HintBalloon(Control pin_to = null, string msg = null, Point? target = null, int show_delay = 500, int duration = 2000, int fade_duration = 500)
 		{
+			InitializeComponent();
+			SetStyle(ControlStyles.Selectable           , false);
+			SetStyle(ControlStyles.AllPaintingInWmPaint , true );
+			SetStyle(ControlStyles.ResizeRedraw         , true );
+			SetStyle(ControlStyles.UserPaint            , true );
+			FormBorderStyle    = FormBorderStyle.None;
+			StartPosition      = FormStartPosition.Manual;
+			ShowInTaskbar      = false;
+			Visible            = false;
 			m_lock             = new object();
 			m_corner           = -1;
 			m_issue            = 0;
-			ShowDelay          = 500;
-			Duration           = 2000;
-			FadeDuration       = 500;
+			ShowDelay          = show_delay;
+			Duration           = duration;
+			FadeDuration       = fade_duration;
 			CornerRadius       = 10;
 			TipBaseWidth       = 20;
 			TipLength          = 20;
 			PreferredTipCorner = ETipCorner.TopLeft;
-			Visible            = false;
-
-			InitializeComponent();
-
-			SetStyle(ControlStyles.AllPaintingInWmPaint         , true);
-			SetStyle(ControlStyles.ResizeRedraw                 , true);
-			SetStyle(ControlStyles.UserPaint                    , true);
+			PinTo              = pin_to;
+			Target             = target ?? pin_to?.ClientRectangle.Centre() ?? Point.Empty;
+			Text               = msg ?? string.Empty;
 
 			m_msg.GotFocus += (s,a) => Win32.HideCaret(m_msg.Handle);
 		}
 		protected override void Dispose(bool disposing)
 		{
-			if (disposing && (components != null))
-			{
-				components.Dispose();
-			}
+			Util.Dispose(ref components);
 			base.Dispose(disposing);
+		}
+		protected override CreateParams CreateParams
+		{
+			get
+			{
+				var cp = base.CreateParams;
+				cp.ClassStyle |= Win32.CS_DROPSHADOW;
+				cp.Style &= ~Win32.WS_VISIBLE;
+				cp.ExStyle |= Win32.WS_EX_NOACTIVATE;// | Win32.WS_EX_LAYERED | Win32.WS_EX_TRANSPARENT;
+				return cp;
+			}
+		}
+		protected override bool ShowWithoutActivation
+		{
+			get { return true; }
+		}
+		protected override void OnPaint(PaintEventArgs e)
+		{
+			base.OnPaint(e);
+
+			// Draw the balloon and outline
+			e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+			e.Graphics.FillRectangle(SystemBrushes.Info, ClientRectangle);
+			e.Graphics.DrawPath(SystemPens.ActiveBorder, m_path);
+		}
+		protected override void OnResize(EventArgs e)
+		{
+			base.OnResize(e);
+			UpdateBalloonLocation();
 		}
 
 		/// <summary>The period to wait before displaying the hint (in milliseconds)</summary>
@@ -67,7 +98,7 @@ namespace pr.gui
 			set { if (m_msg != null) m_msg.Text = value; }
 		}
 
-		/// <summary>The hint text in rtf</summary>
+		/// <summary>The hint text in RTF</summary>
 		public string TextRtf
 		{
 			get { return m_msg != null ? m_msg.Rtf : string.Empty; }
@@ -96,7 +127,11 @@ namespace pr.gui
 		/// <summary>Display the hint balloon</summary>
 		public new void Show()
 		{
-			Show(null, Target);
+			Show(PinTo);
+		}
+		public void Show(Control pin_to)
+		{
+			Show(pin_to, Target, Text);
 		}
 		public void Show(Control pin_to, Point target)
 		{
@@ -324,33 +359,6 @@ namespace pr.gui
 			}
 		}
 
-		protected override CreateParams CreateParams
-		{
-			get
-			{
-				var cp = base.CreateParams;
-				cp.ClassStyle = Win32.CS_DROPSHADOW;
-				return cp;
-			}
-		}
-		protected override bool ShowWithoutActivation
-		{
-			get { return true; }
-		}
-		protected override void OnPaint(PaintEventArgs e)
-		{
-			base.OnPaint(e);
-
-			// Draw the balloon and outline
-			e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-			e.Graphics.FillRectangle(SystemBrushes.Info, ClientRectangle);
-			e.Graphics.DrawPath(SystemPens.ActiveBorder, m_path);
-		}
-		protected override void OnResize(EventArgs e)
-		{
-			base.OnResize(e);
-			UpdateBalloonLocation();
-		}
 		#region Windows Form Designer generated code
 		/// <summary>Required designer variable.</summary>
 		private System.ComponentModel.IContainer components = null;
@@ -418,7 +426,7 @@ namespace pr.unittests
 			//var icon = MessageBoxIcon.Question;
 			//var line = string.Join(" "  , Enumerable.Range(0, 30).Select(x => "123456789"));
 			//var msg = string.Join("\r\n", Enumerable.Range(0, 30).Select(x => line));
-			new HintBalloon().Show(null, new Point(500,500), text);
+			new HintBalloon(target:new Point(500,500), msg:text).Show();
 		}
 	}
 }

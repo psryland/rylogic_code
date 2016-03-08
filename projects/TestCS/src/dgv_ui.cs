@@ -3,7 +3,9 @@ using System.ComponentModel;
 using System.Windows.Forms;
 using pr.container;
 using pr.extn;
+using pr.gui;
 using pr.util;
+using ListBox = pr.gui.ListBox;
 
 namespace TestCS
 {
@@ -183,14 +185,20 @@ namespace TestCS
 			public int Value       { get; set; }
 			public EOptions Option { get; set; }
 			public float FValue    { get; set; }
+			public bool Checked    { get; set; }
 
 			public Record() { }
 			public Record(string name, int val, EOptions opt)
 			{
-				Name   = name;
-				Value  = val;
-				Option = opt;
-				FValue = val * 6.28f;
+				Name    = name;
+				Value   = val;
+				Option  = opt;
+				FValue  = val * 6.28f;
+				Checked = (val % 2) == 1;
+			}
+			public override string ToString()
+			{
+				return "{0} {1} {2} {3} {4}".Fmt(Name, Value, Option, FValue, Checked);
 			}
 		}
 
@@ -211,8 +219,8 @@ namespace TestCS
 
 			// Drag drop
 			m_dd = new DragDrop(m_grid);
-			m_dd.DoDrop += DataGridViewExtensions.DragDrop_DoDropMoveRow;
-			m_grid.MouseDown += DataGridViewExtensions.DragDrop_DragRow;
+			m_dd.DoDrop += DataGridViewEx.DragDrop_DoDropMoveRow;
+			m_grid.MouseDown += DataGridViewEx.DragDrop_DragRow;
 
 			// log list
 			m_events.ContextMenuStrip = new ContextMenuStrip();
@@ -228,33 +236,52 @@ namespace TestCS
 			m_grid.AllowUserToDeleteRows = true;
 			m_grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
-				{
-					Name = "Name",
-					DataPropertyName = nameof(Record.Name),
-				});
+			{
+				Name = "Name",
+				DataPropertyName = nameof(Record.Name),
+			});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
-				{
-					Name = "Value",
-					DataPropertyName = nameof(Record.Value),
-				});
+			{
+				Name = "Value",
+				DataPropertyName = nameof(Record.Value),
+			});
 			m_grid.Columns.Add(new DataGridViewComboBoxColumn
-				{
-					Name = "Option",
-					DataPropertyName = nameof(Record.Option),
-					FlatStyle = System.Windows.Forms.FlatStyle.Flat,
-					DataSource = Enum<EOptions>.Values,
-				});
+			{
+				Name = "Option",
+				DataPropertyName = nameof(Record.Option),
+				FlatStyle = System.Windows.Forms.FlatStyle.Flat,
+				DataSource = Enum<EOptions>.Values,
+			});
 			m_grid.Columns.Add(new DataGridViewTextBoxColumn
-				{
-					Name = "FValue",
-					DataPropertyName = nameof(Record.FValue),
-				});
+			{
+				Name = "FValue",
+				DataPropertyName = nameof(Record.FValue),
+			});
+			m_grid.Columns.Add(new DataGridViewCheckMarkColumn
+			{
+				Name = "CheckMark",
+				DataPropertyName = nameof(Record.Checked),
+			});
+			m_grid.Columns.Add(new DataGridViewTrackBarColumn
+			{
+				Name = "TrackBar",
+				DataPropertyName = nameof(Record.Value),
+				MinValue = 0,
+				MaxValue = 100,
+			});
+
+			// Bind to the data source
+			//m_grid.DataSource = new Record[0];
 			m_grid.DataSource = m_bs;
 
 			// Automatic column sizing
-			m_grid.SizeChanged += DataGridViewExtensions.FitToDisplayWidth;
-			m_grid.ColumnWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
-			m_grid.RowHeadersWidthChanged += DataGridViewExtensions.FitToDisplayWidth;
+			m_grid.SizeChanged += DataGridViewEx.FitToDisplayWidth;
+			m_grid.ColumnWidthChanged += DataGridViewEx.FitToDisplayWidth;
+			m_grid.RowHeadersWidthChanged += DataGridViewEx.FitToDisplayWidth;
+			m_grid.SetGridColumnSizes(DataGridViewEx.EColumnSizeOptions.FitToDisplayWidth);
+
+			// Column filtering
+			m_grid.KeyDown += DataGridViewEx.ColumnFilters;
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -262,45 +289,64 @@ namespace TestCS
 			base.Dispose(disposing);
 		}
 
-
 		#region Windows Form Designer generated code
 		private System.ComponentModel.IContainer components = null;
 		private void InitializeComponent()
 		{
 			this.m_split = new System.Windows.Forms.SplitContainer();
-			this.m_events = new System.Windows.Forms.ListBox();
-			this.m_grid = new DGV();
+			this.m_events = new pr.gui.ListBox();
+			this.m_grid = new TestCS.DgvUI.DGV();
 			((System.ComponentModel.ISupportInitialize)(this.m_split)).BeginInit();
 			this.m_split.Panel1.SuspendLayout();
 			this.m_split.Panel2.SuspendLayout();
 			this.m_split.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.m_grid)).BeginInit();
 			this.SuspendLayout();
+			// 
+			// m_split
+			// 
 			this.m_split.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_split.Location = new System.Drawing.Point(0, 0);
 			this.m_split.Name = "m_split";
+			// 
+			// m_split.Panel1
+			// 
 			this.m_split.Panel1.Controls.Add(this.m_events);
+			// 
+			// m_split.Panel2
+			// 
 			this.m_split.Panel2.Controls.Add(this.m_grid);
-			this.m_split.Size = new System.Drawing.Size(695, 281);
+			this.m_split.Size = new System.Drawing.Size(695, 560);
 			this.m_split.SplitterDistance = 192;
 			this.m_split.TabIndex = 0;
+			// 
+			// m_events
+			// 
+			this.m_events.DisplayProperty = null;
 			this.m_events.Dock = System.Windows.Forms.DockStyle.Fill;
 			this.m_events.FormattingEnabled = true;
 			this.m_events.Location = new System.Drawing.Point(0, 0);
 			this.m_events.Margin = new System.Windows.Forms.Padding(0);
 			this.m_events.Name = "m_events";
-			this.m_events.Size = new System.Drawing.Size(192, 281);
+			this.m_events.Size = new System.Drawing.Size(192, 560);
 			this.m_events.TabIndex = 0;
+			// 
+			// m_grid
+			// 
 			this.m_grid.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 			this.m_grid.Dock = System.Windows.Forms.DockStyle.Fill;
+			this.m_grid.List = null;
 			this.m_grid.Location = new System.Drawing.Point(0, 0);
 			this.m_grid.Margin = new System.Windows.Forms.Padding(0);
-			this.m_grid.Name = "dataGridView1";
-			this.m_grid.Size = new System.Drawing.Size(499, 281);
-			this.m_grid.TabIndex = 0;
+			this.m_grid.Name = "m_grid";
+			this.m_grid.Size = new System.Drawing.Size(499, 560);
+			this.m_grid.TabIndex = 2;
+			// 
+			// DgvUI
+			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(695, 281);
+			this.ClientSize = new System.Drawing.Size(695, 560);
 			this.Controls.Add(this.m_split);
 			this.Name = "DgvUI";
 			this.Text = "DGV Test";

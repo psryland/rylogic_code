@@ -13,11 +13,36 @@ namespace pr.util
 {
 	// A DragDrop proxy object.
 	// Allows the same drag drop handlers to be attached to multiple drop targets
-	// e.g.
-	//   Drop Receiver <--- DragDrop <-+- OnDragEnter
-	//   Drop Receiver <--+            +- OnDragExit
-	//   Drop Receiver <--+
-	// Also unifies the dragdrop handler into a single function for all dd events
+	// Also unifies the drag-drop handler into a single function for all drag drop events
+	//
+	// A typical use of this object is when you have multiple controls on a form that can
+	// all handle dropping of the same data type. Instead of attaching handlers to the
+	// drop events of each control, create one of these objects, 'Attach' each control to it
+	// and assign the drop handlers to this object. Dropping on any of the target controls
+	// will then be handled by the handlers attached to this object.
+	//
+	// This object is also useful when there is only one drop target because it unifies
+	// all of the OnDragXXX methods into a single handler. Create an instance of this object,
+	// attach the target, sign up to the 'DoDrop' handler, and handle DragEnter, DragOver,
+	// DragExit, and DragDrop all with a single method.
+	//
+	// A typical 'DoDrop' handler has this form:
+	//  public static bool HandleDoDrop(object sender, DragEventArgs args, DragDrop.EDrop mode)
+	//  {
+	//  	// 'sender' is the source of the drag/drop operation
+	//  
+	//  	// Test 'args.AllowedEffect' and 'args.Data.GetDataPresent(typeof(XXX))' to ensure the drop is supported.
+	//  	// Return false if not supported.
+	//  
+	//  	// Set the drop effect to indicate what will happen if the item is dropped here
+	//  	// e.g. args.Effect = Ctrl is down ? DragDropEffects.Move : DragDropEffects.Copy;
+	//  
+	//  	// 'mode' == 'DragDrop.EDrop.Drop' when the item is actually dropped
+	//  	if (mode == DragDrop.EDrop.Drop) { }
+	//  
+	//  	// Return true because dropping is allowed/supported by this handler
+	//  	return true;
+	//  }
 
 	/// <summary>Handles multiple drag/drop handlers for a single drop target</summary>
 	public class DragDrop
@@ -39,7 +64,6 @@ namespace pr.util
 		}
 		private readonly List<DropHandler> m_handlers = new List<DropHandler>();
 		private DropHandler m_preferred;
-		private DragEventArgs m_args;
 
 		// Sign these up on the drop target
 		// e.g.
@@ -66,13 +90,14 @@ namespace pr.util
 				Attach(target);
 		}
 
-		/// <summary>Sign up this mux to 'target'</summary>
+		/// <summary>Sign up the drag/drop event handles so that 'target' will be a drop target</summary>
 		public void Attach(object target)
 		{
 			try
 			{
 				var type = target.GetType();
 
+				// Enable 'AllowDrop' on the target
 				var AllowDrop = type.GetProperty("AllowDrop", BindingFlags.Public|BindingFlags.Instance);
 				if (AllowDrop != null)
 					AllowDrop.GetSetMethod().Invoke(target, new object[]{true});
@@ -107,7 +132,7 @@ namespace pr.util
 			}
 		}
 
-		/// <summary>Sign up this mux to 'target'</summary>
+		/// <summary>Detach the drag/drop event handles from 'target' so that it will no longer be a drop target</summary>
 		public void Detach(object target)
 		{
 			var events = target.GetType().GetEvents(BindingFlags.Instance|BindingFlags.Public);
@@ -133,12 +158,12 @@ namespace pr.util
 		private void HandleDragEnter(object sender, DragEventArgs args)
 		{
 			args.Effect = DragDropEffects.None;
+			m_preferred = null;
 
 			foreach (var handler in m_handlers)
 			{
 				if (!handler(sender, args, EDrop.Enter)) continue;
 				m_preferred = handler;
-				m_args = args;
 				return;
 			}
 		}
@@ -169,7 +194,7 @@ namespace pr.util
 		private void HandleDragLeave(object sender, EventArgs args)
 		{
 			if (m_preferred == null) return;
-			m_preferred(sender, m_args, EDrop.Leave);
+			m_preferred(sender, new DragEventArgs(new DataObject(), 0, 0, 0, DragDropEffects.None, DragDropEffects.None), EDrop.Leave);
 		}
 
 		/// <summary>Forwards the OnDragDrop event to the preferred handler</summary>

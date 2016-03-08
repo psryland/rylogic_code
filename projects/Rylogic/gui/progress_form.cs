@@ -47,7 +47,7 @@ namespace pr.gui
 			public UserState Clone() { return (UserState)MemberwiseClone(); }
 		}
 
-		private readonly ProgressBar m_progress;
+		private readonly TextProgressBar m_progress;
 		private readonly Label m_description;
 		private readonly Button m_button;
 		private Thread m_thread;
@@ -56,7 +56,7 @@ namespace pr.gui
 		/// <summary>Create a progress form for external control via the UpdateProgress method</summary>
 		public ProgressForm(string title, string desc, Icon icon, ProgressBarStyle style)
 		{
-			m_progress = new ProgressBar
+			m_progress = new TextProgressBar
 				{
 					Style = style,
 					Anchor = AnchorStyles.Left|AnchorStyles.Right|AnchorStyles.Top

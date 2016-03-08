@@ -55,14 +55,14 @@ namespace pr
 				,m_btn_close(Button::Params().id(IDC_BTN_CLOSE).name("m_btn_close").xy(-12, -12).text(L"&Close").parent(this).anchor(EAnchor::BottomRight))
 				,m_render(render_cb)
 			{
-				// Setup the menu
+				// Set up the menu
 				auto menu_file = Menu(Menu::EKind::Popup, {{L"&Load", ID_LOAD}, {L"&Save", ID_SAVE}, {MenuItem::Separator}, {L"&Close", IDCANCEL}}, false);
 				MenuStrip().Set(L"&File", menu_file);
 
 				// Initialise the edit control
+				// Note: don't grab input focus until the editor is actually visible
 				m_edit.InitLdrStyle();
 				m_edit.SetSel(-1, 0);
-				m_edit.Focus(true);
 				m_edit.Key += [this](Control&, KeyEventArgs const& args)
 					{
 						if (!args.m_down) return;
@@ -170,12 +170,24 @@ namespace pr
 			}
 
 			// Get/Set the visibility of the window
-			bool Visible() const override    { return Form::Visible(); }
-			void Visible(bool show) override { Form::Visible(show); }
+			bool Visible() const override
+			{
+				return Form::Visible();
+			}
+			void Visible(bool show) override
+			{
+				Form::Visible(show);
+			}
 
 			// Get/Set the text in the dialog
-			std::wstring Text() const override      { return pr::Widen(m_edit.Text()); }
-			void Text(wchar_t const* text) override { m_edit.Text(pr::Narrow(text).c_str()); }
+			std::wstring Text() const override
+			{
+				return pr::Widen(m_edit.Text());
+			}
+			void Text(wchar_t const* text) override
+			{
+				m_edit.Text(pr::Narrow(text).c_str());
+			}
 
 			// Get/Set the script render callback function
 			RenderCB Render() const override

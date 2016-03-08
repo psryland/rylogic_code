@@ -54,64 +54,6 @@ namespace pr.common
 			public const string WholeLine  = "wholeline";
 		}
 
-		private EPattern m_patn_type;
-		private string   m_expr;
-		private bool     m_ignore_case;
-		private bool     m_active;
-		private bool     m_invert;
-		private bool     m_whole_line;
-		private Regex    m_compiled_patn;
-
-		/// <summary>True if the pattern is active</summary>
-		public bool Active
-		{
-			get { return m_active; }
-			set { m_active = value; RaisePatternChanged(); }
-		}
-
-		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
-		public EPattern PatnType
-		{
-			get { return m_patn_type; }
-			set { m_patn_type = value; m_compiled_patn = null; RaisePatternChanged(); }
-		}
-
-		/// <summary>The pattern to use when matching</summary>
-		public string Expr
-		{
-			get { return m_expr; }
-			set { m_expr = value; m_compiled_patn = null; RaisePatternChanged(); }
-		}
-
-		/// <summary>True if the pattern should ignore case</summary>
-		public bool IgnoreCase
-		{
-			get { return m_ignore_case; }
-			set { m_ignore_case = value; m_compiled_patn = null; RaisePatternChanged(); }
-		}
-
-		/// <summary>True if the match result should be inverted</summary>
-		public bool Invert
-		{
-			get { return m_invert; }
-			set { m_invert = value; RaisePatternChanged(); }
-		}
-
-		/// <summary>Only match if the whole line matches</summary>
-		public bool WholeLine
-		{
-			get { return m_whole_line; }
-			set { m_whole_line = value; RaisePatternChanged(); }
-		}
-
-		/// <summary>Raised whenever data on this pattern changes</summary>
-		public event EventHandler PatternChanged;
-		private void RaisePatternChanged()
-		{
-			if (PatternChanged == null) return;
-			PatternChanged(this, EventArgs.Empty);
-		}
-
 		public Pattern() :this(EPattern.Substring, string.Empty) {}
 		public Pattern(EPattern patn_type, string expr)
 		{
@@ -141,7 +83,7 @@ namespace pr.common
 			WholeLine   = node.Element(XmlTag.WholeLine ).As<bool>();
 		}
 
-		/// <summary>Export this pattern as xml</summary>
+		/// <summary>Export this pattern as XML</summary>
 		public virtual XElement ToXml(XElement node)
 		{
 			node.Add
@@ -156,6 +98,75 @@ namespace pr.common
 			return node;
 		}
 
+		/// <summary>True if the pattern is a regular expression, false if it's just a substring</summary>
+		public EPattern PatnType
+		{
+			get { return m_patn_type; }
+			set { SetProp(ref m_patn_type, value, invalidate_patn:true); }
+		}
+		private EPattern m_patn_type;
+
+		/// <summary>The pattern to use when matching</summary>
+		public string Expr
+		{
+			get { return m_expr; }
+			set { SetProp(ref m_expr, value, invalidate_patn:true); }
+		}
+		private string m_expr;
+
+		/// <summary>True if the pattern should ignore case</summary>
+		public bool IgnoreCase
+		{
+			get { return m_ignore_case; }
+			set { SetProp(ref m_ignore_case, value, invalidate_patn:true); }
+		}
+		private bool m_ignore_case;
+
+		/// <summary>True if the match result should be inverted</summary>
+		public bool Invert
+		{
+			get { return m_invert; }
+			set { SetProp(ref m_invert, value, invalidate_patn:false); }
+		}
+		private bool m_invert;
+
+		/// <summary>Only match if the whole line matches</summary>
+		public bool WholeLine
+		{
+			get { return m_whole_line; }
+			set { SetProp(ref m_whole_line, value, invalidate_patn:false); }
+		}
+		private bool m_whole_line;
+
+		/// <summary>True if the pattern is active</summary>
+		public bool Active
+		{
+			get { return m_active; }
+			set { SetProp(ref m_active, value, invalidate_patn:false); }
+		}
+		private bool m_active;
+
+		/// <summary>Update a property value</summary>
+		private void SetProp<T>(ref T prop, T value, bool invalidate_patn)
+		{
+			if (Equals(prop, value)) return;
+			prop = value;
+			if (invalidate_patn)
+			{
+				m_compiled_patn = null;
+				m_validation_exception = null;
+			}
+			RaisePatternChanged();
+		}
+
+		/// <summary>Raised whenever data on this pattern changes</summary>
+		public event EventHandler PatternChanged;
+		private void RaisePatternChanged()
+		{
+			if (PatternChanged == null) return;
+			PatternChanged(this, EventArgs.Empty);
+		}
+
 		/// <summary>Returns the match template as a compiled regular expression</summary>
 		protected Regex Regex
 		{
@@ -165,7 +176,7 @@ namespace pr.common
 					return m_compiled_patn;
 
 				// Notes:
-				//  If an expression can't be represented in substr, wildcard form, harden up and use a regex
+				//  If an expression can't be represented in substring, wildcard form, harden up and use a regex
 
 				// Convert the match string into a regular expression string and
 				// replace the capture group tags with regex capture groups
@@ -218,6 +229,7 @@ namespace pr.common
 				return m_compiled_patn = new Regex(expr, opts);
 			}
 		}
+		private Regex m_compiled_patn;
 
 		/// <summary>Allows derived patterns to optionally keep whitespace in Substring/wildcard patterns</summary>
 		protected virtual bool PreserveWhitespace
@@ -240,15 +252,23 @@ namespace pr.common
 		{
 			try
 			{
+				// Already have a validate exception, return it
+				if (m_validation_exception != null)
+					return m_validation_exception;
+
 				// Compiling the Regex will throw if there's something wrong with it. It will never be null
 				if (Regex == null)
-					return new ArgumentException("The regular expression is null");
+					return m_validation_exception = new ArgumentException("The regular expression is null");
 
 				// No prob, bob!
-				return null;
+				return m_validation_exception = null;
 			}
-			catch (Exception ex) { return ex; }
+			catch (Exception ex)
+			{
+				return m_validation_exception = ex;
+			}
 		}
+		private Exception m_validation_exception;
 
 		/// <summary>Returns true if the match expression is valid</summary>
 		public virtual bool IsValid
@@ -389,6 +409,7 @@ namespace pr.common
 			// ReSharper restore NonReadonlyFieldInGetHashCode
 		}
 
+		/// <summary>Expression</summary>
 		public override string ToString()
 		{
 			return Expr;

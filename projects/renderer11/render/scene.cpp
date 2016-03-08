@@ -115,8 +115,9 @@ namespace pr
 		// Render the scene
 		void Scene::Render()
 		{
-			// Don't call 'm_wnd->RestoreRT();' here because
-			// we might be rendering to an off-screen texture.
+			// Don't call 'm_wnd->RestoreRT();' here because we might be rendering to
+			// an off-screen texture. However, if the app contains multiple windows
+			// each window will need to call 'm_wnd->RestoreRT()' before rendering.
 			#if PR_DBG_RDR
 			{
 				// Check a render target has been set

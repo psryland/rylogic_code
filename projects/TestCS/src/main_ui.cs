@@ -1,9 +1,13 @@
+using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
+using pr.extn;
+using pr.gui;
 
 namespace TestCS
 {
-	public class FormTestApp : Form
+	public class MainUI : Form
 	{
 		private MenuStrip m_menu;
 		private ToolStripMenuItem m_menu_file;
@@ -27,9 +31,24 @@ namespace TestCS
 		private ToolStripMenuItem m_menu_tests_checked_groupbox;
 		private ToolStripMenuItem m_menu_tests_dock_panel;
 		private ToolStripMenuItem m_menu_tests_vt100;
+		private ToolStripMenuItem m_menu_tests_message_box;
 		private ToolStripMenuItem m_menu_tests_graphcontrol;
 
-		public FormTestApp()
+		/// <summary>The main entry point for the application.</summary>
+		[STAThread]
+		static void Main()
+		{
+			// Note! Running this in the debugger causes this to be run as a 32bit
+			// process regardless of the selected solution platform
+			Debug.WriteLine("\n    {0} is a {1}bit process\n".Fmt(Application.ExecutablePath, Environment.Is64BitProcess ? "64" : "32"));
+
+			Application.EnableVisualStyles();
+			Application.SetCompatibleTextRenderingDefault(false);
+			//Application.Run(new FormTestApp());
+			Application.Run(new DgvUI());
+		}
+
+		public MainUI()
 		{
 			InitializeComponent();
 			Shown += (s, a) =>
@@ -86,6 +105,18 @@ namespace TestCS
 			m_menu_tests_hintballoon.Click += (s, a) =>
 			{
 				new FormHintBalloon().Show(this);
+			};
+
+			m_menu_tests_message_box.Click += (s,a) =>
+			{
+				using (var dlg = new MsgBox("This is a MsgBox", "Title", MessageBoxButtons.AbortRetryIgnore, MessageBoxIcon.Information))
+				{
+					dlg.Panel.BackColor = SystemColors.ControlLight;
+					dlg.TextBox.BorderStyle = BorderStyle.None;
+					dlg.NeutralBtnText = "";
+					dlg.NeutralBtn.DialogResult = DialogResult.None;
+					dlg.ShowDialog();
+				}
 			};
 
 			m_menu_tests_scintilla.Click += (s, a) =>
@@ -186,8 +217,9 @@ namespace TestCS
 			this.m_menu_tests_treegrid = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_view3d_editor = new System.Windows.Forms.ToolStripMenuItem();
-			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu_tests_vt100 = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_web_browser = new System.Windows.Forms.ToolStripMenuItem();
+			this.m_menu_tests_message_box = new System.Windows.Forms.ToolStripMenuItem();
 			this.m_menu.SuspendLayout();
 			this.SuspendLayout();
 			// 
@@ -228,6 +260,7 @@ namespace TestCS
             this.m_menu_tests_graphcontrol,
             this.m_menu_tests_helpui,
             this.m_menu_tests_hintballoon,
+            this.m_menu_tests_message_box,
             this.m_menu_tests_rtb,
             this.m_menu_tests_scintilla,
             this.m_menu_tests_subclassed_controls,
@@ -344,17 +377,23 @@ namespace TestCS
 			this.m_menu_tests_view3d_editor.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_view3d_editor.Text = "&View3d Editor";
 			// 
+			// m_menu_tests_vt100
+			// 
+			this.m_menu_tests_vt100.Name = "m_menu_tests_vt100";
+			this.m_menu_tests_vt100.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_vt100.Text = "&VT100";
+			// 
 			// m_menu_tests_web_browser
 			// 
 			this.m_menu_tests_web_browser.Name = "m_menu_tests_web_browser";
 			this.m_menu_tests_web_browser.Size = new System.Drawing.Size(180, 22);
 			this.m_menu_tests_web_browser.Text = "&Web Browser";
 			// 
-			// m_menu_tests_vt100
+			// m_menu_tests_message_box
 			// 
-			this.m_menu_tests_vt100.Name = "m_menu_tests_vt100";
-			this.m_menu_tests_vt100.Size = new System.Drawing.Size(180, 22);
-			this.m_menu_tests_vt100.Text = "&VT100";
+			this.m_menu_tests_message_box.Name = "m_menu_tests_message_box";
+			this.m_menu_tests_message_box.Size = new System.Drawing.Size(180, 22);
+			this.m_menu_tests_message_box.Text = "&Message Box";
 			// 
 			// FormTestApp
 			// 

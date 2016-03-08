@@ -17,11 +17,11 @@ using System.Windows.Forms;
 using pr.common;
 using pr.extn;
 using pr.util;
+using pr.maths;
+using HWND = System.IntPtr;
 
 namespace pr.win32
 {
-	using HWND = System.IntPtr;
-
 	/// <summary>Win32 wrapper</summary>
 	[System.Security.SuppressUnmanagedCodeSecurity] // We won't use this maliciously
 	public static partial class Win32
@@ -1339,6 +1339,18 @@ namespace pr.win32
 			if (y + h > scn.Bottom) y = scn.Bottom - h;
  
 			return MoveWindow(hwnd, x, y, w, h, false);
+		}
+
+		/// <summary>Set or clear window styles</summary>
+		public static void SetStyle(HWND hwnd, uint style, bool enabled)
+		{
+			var s = Win32.GetWindowLong(hwnd, Win32.GWL_STYLE);
+			Win32.SetWindowLong(hwnd, Win32.GWL_STYLE, Bit.SetBits(s, style, enabled));
+		}
+		public static void SetStyleEx(HWND hwnd, uint style, bool enabled)
+		{
+			var s = Win32.GetWindowLong(hwnd, Win32.GWL_EXSTYLE);
+			Win32.SetWindowLong(hwnd, Win32.GWL_EXSTYLE, Bit.SetBits(s, style, enabled));
 		}
 
 		/// <summary>Get/Set scroll bar position</summary>

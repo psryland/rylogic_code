@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
@@ -9,6 +10,26 @@ namespace pr.gui
 	/// <summary>Replacement for the forms combo box that doesn't throw a first chance exception when the data source is empty</summary>
 	public class ComboBox :System.Windows.Forms.ComboBox
 	{
+		// Notes:
+		// - When binding a DropDown style combo box, the BS position changes then an
+		//   item is selected from the drop down list. But, as soon as the text is changed,
+		//   the cb.SelectedIndex and cb.SelectedItem become -1/null (the BS position
+		//   is not changed, and no SelectedIndexChanged event raised). Restoring the
+		//   text does not restore cb.SelectedIndex and cb.SelectedItem.
+		// - When the BS position is changed, the CB text is changed before the SelectedIndex
+		//   so TextChanged is raised, then SelectedIndexChanged is raised.
+		//
+		// To use the text field to update the bound item do this:
+		//	m_cb.TextChanged += (s,a) =>
+		//	{
+		//		// The selected item becomes null when the text is changed by the user.
+		//		// Without this test, changing the selection causes the previously selected
+		//		// item to have it's text changed because TextChanged is raised before the
+		//		// binding source position and 'SelectedIndex' are changed.
+		//		if (m_cb.SelectedItem == null)
+		//			m_bs.Current.Name = m_cb.Text;
+		//	};
+
 		/// <summary>The index of the selected item in the drop down list</summary>
 		public override int SelectedIndex
 		{
@@ -119,6 +140,34 @@ namespace pr.gui
 
 		/// <summary>Set to true to have the text selection preserved while the combo doesn't have focus</summary>
 		public bool PreserveSelectionThruFocusChange { get; set; }
+
+		/// <summary>The property of the data bound items to display</summary>
+		public string DisplayProperty
+		{
+			get { return m_impl_disp_prop; }
+			set
+			{
+				if (m_impl_disp_prop == value) return;
+				m_impl_disp_prop = value;
+				m_disp_prop = null;
+			}
+		}
+		private string m_impl_disp_prop;
+		private PropertyInfo m_disp_prop;
+
+		/// <summary>Display using the 'DisplayProperty' if specified</summary>
+		protected override void OnFormat(ListControlConvertEventArgs e)
+		{
+			if (DisplayProperty.HasValue())
+			{
+				m_disp_prop = m_disp_prop ?? e.ListItem.GetType().GetProperty(DisplayProperty, BindingFlags.Public|BindingFlags.Instance);
+				e.Value = m_disp_prop.GetValue(e.ListItem).ToString();
+			}
+			else
+			{
+				base.OnFormat(e);
+			}
+		}
 
 		/// <summary>Restore the selection on focus gained</summary>
 		protected override void OnGotFocus(EventArgs e)

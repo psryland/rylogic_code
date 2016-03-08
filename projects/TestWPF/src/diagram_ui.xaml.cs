@@ -82,7 +82,7 @@ namespace TestWPF
 
 			m_diag.ResetView();
 			
-			node0.BringToFront(false);
+			node0.BringToFront();
 
 			m_menu_file_clear.Click += (s,a) => m_diag.ResetDiagram();
 			m_menu_file_load.Click += (s,a) => m_diag.ImportXml(m_diag_xml, m_diag.Elements.Count != 0);
@@ -144,13 +144,13 @@ namespace TestWPF
 				m_gfx = new View3d.Object();
 				EditControl = null;
 			}
-			protected override void RefreshInternal()
-			{
-				var ldr = new pr.ldr.LdrBuilder();
-				ldr.Append("*Box b FF00FF00 {20}");
-				m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
-				m_gfx.O2P = Position;
-			}
+			//protected override void RefreshInternal()
+			//{
+			//	var ldr = new pr.ldr.LdrBuilder();
+			//	ldr.Append("*Box b FF00FF00 {20}");
+			//	m_gfx.UpdateModel(ldr.ToString(), View3d.EUpdateObject.All ^ View3d.EUpdateObject.Transform);
+			//	m_gfx.O2P = Position;
+			//}
 			public override DiagramControl.HitTestResult.Hit HitTest(v2 point, View3d.CameraControls cam)
 			{
 				if ((PositionXY - point).Length2 > 20)
@@ -161,7 +161,7 @@ namespace TestWPF
 			}
 
 			/// <summary>Add the graphics associated with this element to the drawset</summary>
-			protected override void AddToSceneInternal(View3d.Window window)
+			protected override void AddToSceneCore(View3d.Window window)
 			{
 				window.AddObject(m_gfx);
 			}

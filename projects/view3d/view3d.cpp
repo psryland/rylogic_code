@@ -134,11 +134,11 @@ VIEW3D_API void __stdcall View3D_PopGlobalErrorCB(View3D_ReportErrorCB error_cb)
 
 // Create/Destroy a window
 // 'error_cb' must be a valid function pointer for the lifetime of the window
-VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat, View3D_ReportErrorCB error_cb, void* ctx)
+VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, View3DWindowOptions const& opts)
 {
 	try
 	{
-		auto win = std::unique_ptr<view3d::Window>(new view3d::Window(Dll().m_rdr, hwnd, gdi_compat != 0, error_cb, ctx));
+		auto win = std::unique_ptr<view3d::Window>(new view3d::Window(Dll().m_rdr, hwnd, opts));
 
 		DllLockGuard;
 		Dll().m_wnd_cont.insert(win.get());
@@ -146,12 +146,12 @@ VIEW3D_API View3DWindow __stdcall View3D_CreateWindow(HWND hwnd, BOOL gdi_compat
 	}
 	catch (std::exception const& e)
 	{
-		if (error_cb) error_cb(ctx, pr::FmtS("Failed to create View3D Window.\n%s", e.what()));
+		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS("Failed to create View3D Window.\n%s", e.what()));
 		return nullptr;
 	}
 	catch (...)
 	{
-		if (error_cb) error_cb(ctx, pr::FmtS("Failed to create View3D Window.\nUnknown reason"));
+		if (opts.m_error_cb) opts.m_error_cb(opts.m_error_cb_ctx, pr::FmtS("Failed to create View3D Window.\nUnknown reason"));
 		return nullptr;
 	}
 }
@@ -1468,92 +1468,101 @@ VIEW3D_API void __stdcall View3D_InvalidateRect(View3DWindow window, RECT const*
 	CatchAndReport(View3D_InvalidateRect, window,);
 }
 
+// Render 'wnd' into whatever render target is currently set
+void RenderWindow(view3d::Window& wnd)
+{
+	auto& scene = wnd.m_scene;
+
+	// Reset the drawlist
+	scene.ClearDrawlists();
+
+	// Add objects from the window to the scene
+	for (auto& obj : wnd.m_objects)
+		obj->AddToScene(scene);
+
+	// Add gizmos from the window to the scene
+	for (auto& giz : wnd.m_gizmos)
+		giz->AddToScene(scene);
+
+	// Add the measure tool objects if the window is visible
+	if (wnd.m_measure_tool_ui.IsWindowVisible() && wnd.m_measure_tool_ui.Gfx())
+		wnd.m_measure_tool_ui.Gfx()->AddToScene(scene);
+
+	// Add the angle tool objects if the window is visible
+	if (wnd.m_angle_tool_ui.IsWindowVisible() && wnd.m_angle_tool_ui.Gfx())
+		wnd.m_angle_tool_ui.Gfx()->AddToScene(scene);
+
+	// Position the focus point
+	if (wnd.m_focus_point_visible)
+	{
+		float scale = wnd.m_focus_point_size * wnd.m_camera.FocusDist();
+		wnd.m_focus_point.m_i2w = pr::Scale4x4(scale, wnd.m_camera.FocusPoint());
+		scene.AddInstance(wnd.m_focus_point);
+	}
+	// Scale the origin point
+	if (wnd.m_origin_point_visible)
+	{
+		float scale = wnd.m_origin_point_size * pr::Length3(wnd.m_camera.CameraToWorld().pos);
+		wnd.m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
+		scene.AddInstance(wnd.m_origin_point);
+	}
+
+	// Set the view and projection matrices
+	pr::Camera& cam = wnd.m_camera;
+	scene.SetView(cam);
+	cam.m_moved = false;
+
+	// Set the light source
+	Light& light = scene.m_global_light;
+	light = wnd.m_light;
+	if (wnd.m_light_is_camera_relative)
+	{
+		light.m_direction = wnd.m_camera.CameraToWorld() * wnd.m_light.m_direction;
+		light.m_position  = wnd.m_camera.CameraToWorld() * wnd.m_light.m_position;
+	}
+
+	// Set the background colour
+	scene.m_bkgd_colour = wnd.m_background_colour;
+
+	// Set the global fill mode
+	switch (wnd.m_fill_mode) {
+	case EView3DFillMode::Solid:     scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+	case EView3DFillMode::Wireframe: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
+	case EView3DFillMode::SolidWire: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
+	}
+
+	//
+	// Render the scene
+	scene.Render();
+
+	// Render wire frame over solid for 'SolidWire' mode
+	if (wnd.m_fill_mode == EView3DFillMode::SolidWire)
+	{
+		auto& fr = scene.RStep<ForwardRender>();
+		scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
+		scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
+		fr.m_clear_bb = false;
+
+		scene.Render();
+
+		fr.m_clear_bb = true;
+		scene.m_rsb.Clear(ERS::FillMode);
+		scene.m_bsb.Clear(EBS::BlendEnable, 0);
+	}
+}
+
 // Render a window. Remember to call View3D_Present() after all render calls
 VIEW3D_API void __stdcall View3D_Render(View3DWindow window)
 {
 	try
 	{
 		if (!window) throw std::exception("window is null");
-
 		auto& wnd = *window;
-		auto& scene = wnd.m_scene;
+
 		DllLockGuard;
 
-		// Reset the drawlist
-		scene.ClearDrawlists();
-
-		// Add objects from the window to the scene
-		for (auto& obj : wnd.m_objects)
-			obj->AddToScene(scene);
-
-		// Add gizmos from the window to the scene
-		for (auto& giz : wnd.m_gizmos)
-			giz->AddToScene(scene);
-
-		// Add the measure tool objects if the window is visible
-		if (wnd.m_measure_tool_ui.IsWindowVisible() && wnd.m_measure_tool_ui.Gfx())
-			wnd.m_measure_tool_ui.Gfx()->AddToScene(scene);
-
-		// Add the angle tool objects if the window is visible
-		if (wnd.m_angle_tool_ui.IsWindowVisible() && wnd.m_angle_tool_ui.Gfx())
-			wnd.m_angle_tool_ui.Gfx()->AddToScene(scene);
-
-		// Position the focus point
-		if (wnd.m_focus_point_visible)
-		{
-			float scale = wnd.m_focus_point_size * wnd.m_camera.FocusDist();
-			wnd.m_focus_point.m_i2w = pr::Scale4x4(scale, wnd.m_camera.FocusPoint());
-			scene.AddInstance(wnd.m_focus_point);
-		}
-		// Scale the origin point
-		if (wnd.m_origin_point_visible)
-		{
-			float scale = wnd.m_origin_point_size * pr::Length3(wnd.m_camera.CameraToWorld().pos);
-			wnd.m_origin_point.m_i2w = pr::Scale4x4(scale, pr::v4Origin);
-			scene.AddInstance(wnd.m_origin_point);
-		}
-
-		// Set the view and projection matrices
-		pr::Camera& cam = wnd.m_camera;
-		scene.SetView(cam);
-		cam.m_moved = false;
-
-		// Set the light source
-		Light& light = scene.m_global_light;
-		light = wnd.m_light;
-		if (wnd.m_light_is_camera_relative)
-		{
-			light.m_direction = wnd.m_camera.CameraToWorld() * wnd.m_light.m_direction;
-			light.m_position  = wnd.m_camera.CameraToWorld() * wnd.m_light.m_position;
-		}
-
-		// Set the background colour
-		scene.m_bkgd_colour = wnd.m_background_colour;
-
-		// Set the global fill mode
-		switch (wnd.m_fill_mode) {
-		case EView3DFillMode::Solid:     scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		case EView3DFillMode::Wireframe: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME); break;
-		case EView3DFillMode::SolidWire: scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_SOLID); break;
-		}
-
-		// Render the scene
-		scene.Render();
-
-		// Render wire frame over solid for 'SolidWire' mode
-		if (wnd.m_fill_mode == EView3DFillMode::SolidWire)
-		{
-			auto& fr = scene.RStep<ForwardRender>();
-			scene.m_rsb.Set(ERS::FillMode, D3D11_FILL_WIREFRAME);
-			scene.m_bsb.Set(EBS::BlendEnable, FALSE, 0);
-			fr.m_clear_bb = false;
-
-			scene.Render();
-
-			fr.m_clear_bb = true;
-			scene.m_rsb.Clear(ERS::FillMode);
-			scene.m_bsb.Clear(EBS::BlendEnable, 0);
-		}
+		wnd.m_wnd.RestoreRT();
+		RenderWindow(wnd);
 	}
 	CatchAndReport(View3D_Render, window,);
 }
@@ -1580,8 +1589,8 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 	{
 		if (window == nullptr) throw std::exception("window is null");
 		if (render_target == nullptr) throw std::exception("Render target texture is null");
-
 		auto& wnd = window->m_wnd;
+
 		DllLockGuard;
 
 		// Get the description of the render target texture
@@ -1620,11 +1629,7 @@ VIEW3D_API void __stdcall View3D_RenderTo(View3DWindow window, View3DTexture ren
 		wnd.SetRT(rtv, dsv);
 
 		// Render the scene
-		View3D_Render(window);
-		View3D_Present(window);
-
-		// Restore the main render target
-		wnd.RestoreRT();
+		RenderWindow(*window);
 	}
 	CatchAndReport(View3D_RenderTo, window,);
 }

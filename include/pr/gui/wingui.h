@@ -223,6 +223,14 @@ namespace pr
 			_bitwise_operators_allowed,
 		};
 
+		// Style change operations
+		enum class EStyleOp
+		{
+			Add,
+			Remove,
+			Toggle,
+		};
+
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
@@ -377,7 +385,7 @@ namespace pr
 			return msg;
 		}
 
-		// Test an hresult and throw on error
+		// Test an HRESULT and throw on error
 		inline void Throw(HRESULT result, std::string message)
 		{
 			if (SUCCEEDED(result)) return;
@@ -2018,7 +2026,7 @@ namespace pr
 			Params& wndclass     (WndClassEx const& wci)       { m_wci           = &wci;                return *this; }
 			Params& text         (wchar_t const* t)            { m_text          = t;                   return *this; }
 			Params& title        (wchar_t const* t)            { m_text          = t;                   return *this; }
-			Params& xy           (int x, int y)                { m_x             = x; m_y = y;          return *this; }
+			Params& xy           (int x, int y)                { m_x = x; m_y = y; m_start_pos = EStartPosition::Manual; return *this; }
 			Params& wh           (int w, int h)                { m_w             = w; m_h = h;          return *this; }
 			Params& id           (int id_)                     { m_id            = id_;                 return *this; }
 			Params& parent       (WndRef p)                    { m_parent        = p;                   return *this; }
@@ -2929,19 +2937,19 @@ namespace pr
 			{
 				using namespace auto_size_position;
 				CalcPosSize(x, y, w, h, m_margin, [&](int id) -> Rect
-					{
-						assert((id == 0 || parent != nullptr) && "Sibling control id given without a parent");
-						if (parent == nullptr) return MinMaxInfo().Bounds();
-						if (id == 0) return parent->ClientRect(ERectFlags::ExcludeDockedChildren); // Includes padding in the parent
+				{
+					assert((id == 0 || parent != nullptr) && "Sibling control id given without a parent");
+					if (parent == nullptr) return MinMaxInfo().Bounds();
+					if (id == 0) return parent->ClientRect(ERectFlags::ExcludeDockedChildren); // Includes padding in the parent
 
-						// Find the child 'id' and return it's parent space rect including margins
-						for (auto c : parent->m_child)
-						{
-							if (c->m_id != id) continue;
-							return c->ParentRect().Adjust(c->Margin());
-						}
-						throw std::exception("Sibling control not found");
-					});
+					// Find the child 'id' and return it's parent space rect including margins
+					for (auto c : parent->m_child)
+					{
+						if (c->m_id != id) continue;
+						return c->ParentRect().Adjust(c->Margin());
+					}
+					throw std::exception("Sibling control not found");
+				});
 			}
 
 		private:
@@ -3109,7 +3117,7 @@ namespace pr
 				//     or a valid menu handle otherwise it is the id of the control being created.
 				InitParam init(this, p.m_init_param);
 				auto hwnd = ::CreateWindowExW(p.m_style_ex, p.atom(), p.m_text, p.m_style, x, y, w, h, p.m_parent, menu, p.m_hinst, &init);
-				Throw(hwnd != nullptr, "CreateWindowEx failed");
+				Throw(hwnd != nullptr, FmtS("CreateWindowEx failed for window class '%S', instance '%s'.", p.m_wcn, p.m_name));
 
 				// If we're creating a control whose window class we don't control (i.e. a third party control),
 				// then Attach won't have been called. In this case, we want to subclass the window and install
@@ -3119,6 +3127,7 @@ namespace pr
 
 				Parent(p.m_parent);
 				RecordPosOffset();
+				ResizeToParent();
 				Font(HFONT(GetStockObject(DEFAULT_GUI_FONT)));
 
 				// Set the window icon
@@ -3221,6 +3230,9 @@ namespace pr
 						m_parent->m_child.push_back(this);
 					}
 				}
+
+				// Resize to the parent if Dock/Anchors are used
+				ResizeToParent();
 			}
 
 			// Get the number of child controls
@@ -3260,6 +3272,15 @@ namespace pr
 				assert(::IsWindow(m_hwnd));
 				::SetWindowLongPtrW(m_hwnd, GWL_STYLE, style);
 			}
+			void Style(EStyleOp op, LONG_PTR style)
+			{
+				switch (op) {
+				default: assert(false); break;
+				case EStyleOp::Add:    Style(Style() |  style); break;
+				case EStyleOp::Remove: Style(Style() & ~style); break;
+				case EStyleOp::Toggle: Style(Style() ^  style); break;
+				}
+			}
 
 			// Get/Set the extended window style
 			LONG_PTR StyleEx() const
@@ -3271,6 +3292,15 @@ namespace pr
 			{
 				assert(::IsWindow(m_hwnd));
 				::SetWindowLongPtrW(m_hwnd, GWL_EXSTYLE, style);
+			}
+			void StyleEx(EStyleOp op, LONG_PTR style)
+			{
+				switch (op) {
+				default: assert(false); break;
+				case EStyleOp::Add:    StyleEx(StyleEx() |  style); break;
+				case EStyleOp::Remove: StyleEx(StyleEx() & ~style); break;
+				case EStyleOp::Toggle: StyleEx(StyleEx() ^  style); break;
+				}
 			}
 
 			// Get/Set the text in the combo
@@ -3395,10 +3425,15 @@ namespace pr
 			}
 
 			// Invalidate the control for redraw
-			virtual void Invalidate(bool erase = false, Rect* rect = nullptr)
+			virtual void Invalidate(bool erase = false, Rect* rect = nullptr, bool include_children = false)
 			{
 				assert(::IsWindow(m_hwnd));
 				Throw(::InvalidateRect(m_hwnd, rect, erase), "InvalidateRect failed");
+				if (include_children)
+				{
+					for (auto c : m_child)
+						c->Invalidate(erase, rect, include_children);
+				}
 			}
 
 			// Validate a rectangular area of the control
@@ -3540,6 +3575,7 @@ namespace pr
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
 				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
+				Invalidate();
 			}
 
 			// Get/Set the bounds [TL,BR) of this control within it's parent client space.
@@ -3568,14 +3604,16 @@ namespace pr
 				if (hwndparent != nullptr)
 				{
 					auto pr = ParentRect();
-					auto inv = r.Union(pr);
-					::InvalidateRect(hwndparent, &inv, FALSE);
+					::InvalidateRect(hwndparent, &pr, FALSE);
+					::InvalidateRect(hwndparent, &r, FALSE);
 				}
 
 				// SetWindowPos takes client space coordinates
 				// Use prev = ::GetWindow(m_hwnd, GW_HWNDPREV) for the current z-order
+				// Note: this does not call Invalidate internally (tested using GetUpdateRect)
 				Throw(::SetWindowPos(m_hwnd, prev, r.left, r.top, r.width(), r.height(), (UINT)flags), "SetWindowPos failed");
 				RecordPosOffset();
+				Invalidate();
 			}
 
 			// Get/Set the position of this control within the parent's client space
@@ -3958,7 +3996,9 @@ namespace pr
 			// This function should be called after construction with m_create == ECreate::Defer
 			void Create(pr::gui::Params const& p) override
 			{
+				// Sanity check form parameters
 				assert(m_hwnd == nullptr && "window already created");
+				assert(((p.m_x == 0 && p.m_y == 0) || p.m_start_pos == EStartPosition::Manual) && "Use EStartPosition::Manual when specifying screen X,Y coordinates for a window");
 
 				// Save the creation data
 				m_hinst             = p.m_hinst;
@@ -5245,26 +5285,26 @@ namespace pr
 				:Control(p)
 			{}
 
-			// Handle the Paint event. Return true, to prevent anything else handling the event
-			bool OnPaint(PaintEventArgs const& args) override
-			{
-				//auto r = Rect{};
-				//::GetUpdateRect(m_hwnd, &r, FALSE);
+			//// Handle the Paint event. Return true, to prevent anything else handling the event
+			//bool OnPaint(PaintEventArgs const& args) override
+			//{
+			//	//auto r = Rect{};
+			//	//::GetUpdateRect(m_hwnd, &r, FALSE);
 
-				HRGN rgn = ::CreateRectRgn(0,0,0,0);
-				::GetUpdateRgn(m_hwnd, rgn, FALSE);
+			//	HRGN rgn = ::CreateRectRgn(0,0,0,0);
+			//	::GetUpdateRgn(m_hwnd, rgn, FALSE);
 
-				auto res = Control::OnPaint(args);
+			//	auto res = Control::OnPaint(args);
 
-				{
-					ClientDC dc(m_hwnd);
-					Brush b(0x00FFFF);
-					auto cr = ClientRect();
-					::FrameRgn(dc, rgn, b, cr.width(), cr.height());
-				}
+			//	{
+			//		ClientDC dc(m_hwnd);
+			//		Brush b(0x00FFFF);
+			//		auto cr = ClientRect();
+			//		::FrameRgn(dc, rgn, b, cr.width(), cr.height());
+			//	}
 
-				return res;
-			}
+			//	return res;
+			//}
 		};
 		struct GroupBox :Control
 		{
@@ -5777,7 +5817,6 @@ namespace pr
 					{
 						neu_tab.Enabled(true);
 						neu_tab.Visible(true);
-						neu_tab.Focus();
 						neu_tab.Invalidate();
 					}
 				}
@@ -5886,9 +5925,13 @@ namespace pr
 
 				// Update the size of the child panes
 				if (Pane0.Visible())
+				{
 					Pane0.ParentRect(PaneRect(0, client_rect), repaint);
+				}
 				if (Pane1.Visible())
+				{
 					Pane1.ParentRect(PaneRect(1, client_rect), repaint);
+				}
 			}
 			void UpdateLayout(bool repaint = false)
 			{

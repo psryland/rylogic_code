@@ -45,7 +45,7 @@ namespace pr
 			//  and 'm_id' is changed.
 			// 'perserve' - if true, the content of the current texture is stretch blted to the new texture
 			//  if possible. If not possible, an exception is thrown
-			// 'srvdesc' - if not null, causes the new shader resourve view to be created using this description
+			// 'srvdesc' - if not null, causes the new shader resource view to be created using this description
 			void TexDesc(Image const& src, TextureDesc const& tdesc, bool all_instances, bool preserve, ShaderResViewDesc const* srvdesc = nullptr);
 
 			// Get/Set the description of the current sampler state pointed to by 'm_samp'
@@ -75,7 +75,7 @@ namespace pr
 			};
 			#endif
 
-			// Ref counting cleanup
+			// Ref counting clean up
 			static void RefCountZero(pr::RefCount<Texture2D>* doomed);
 			protected: virtual void Delete();
 		};

@@ -12,6 +12,13 @@ namespace pr.extn
 	/// <summary>Extensions for strings</summary>
 	public static class StreamExtensions
 	{
+		/// <summary>Write to the stream</summary>
+		public static TStream Write2<TStream>(this TStream s, byte[] buffer, int offset, int count) where TStream : Stream
+		{
+			s.Write(buffer, offset, count);
+			return s;
+		}
+
 		/// <summary>Copies a maximum of 'count' bytes from this stream to 'dst' using the given buffer. Returns the number of bytes copied</summary>
 		public static long CopyTo(this Stream src, long count, Stream dst, byte[] buffer)
 		{

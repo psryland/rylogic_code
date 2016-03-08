@@ -75,6 +75,14 @@
     <Compile Include="Cmd\ShowExif.cs" />
     <Compile Include="Cmd\ShowTree.cs" />
     <Compile Include="Cmd\SignFile.cs" />
+    <Compile Include="Cmd\XmlEdit\XmlEdit.cs" />
+    <Compile Include="Cmd\XmlEdit\XmlEditUI.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Cmd\XmlEdit\XmlTable.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Cmd\XmlEdit\XmlTree.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -100,6 +108,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Cmd\FindDuplicateFiles\MainControls.resx">
       <DependentUpon>MainControls.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Cmd\XmlEdit\XmlEditUI.resx">
+      <DependentUpon>XmlEditUI.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

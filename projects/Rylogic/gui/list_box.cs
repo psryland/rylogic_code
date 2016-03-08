@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Reflection;
 using System.Windows.Forms;
+using pr.common;
 using pr.extn;
 
 namespace pr.gui
@@ -10,6 +12,34 @@ namespace pr.gui
 		public ListBox() :base()
 		{
 			m_last_hovered_item = null;
+		}
+
+		/// <summary>The property of the data bound items to display</summary>
+		public string DisplayProperty
+		{
+			get { return m_impl_disp_prop; }
+			set
+			{
+				if (m_impl_disp_prop == value) return;
+				m_impl_disp_prop = value;
+				m_disp_prop = null;
+			}
+		}
+		private string m_impl_disp_prop;
+		private PropertyInfo m_disp_prop;
+
+		/// <summary>Display using the 'DisplayProperty' if specified</summary>
+		protected override void OnFormat(ListControlConvertEventArgs e)
+		{
+			if (DisplayProperty.HasValue())
+			{
+				m_disp_prop = m_disp_prop ?? e.ListItem.GetType().GetProperty(DisplayProperty, BindingFlags.Public|BindingFlags.Instance);
+				e.Value = m_disp_prop.GetValue(e.ListItem).ToString();
+			}
+			else
+			{
+				base.OnFormat(e);
+			}
 		}
 
 		/// <summary>Gets or Sets the zero-based index of the currently selected item. Ignores indices outside the value range</summary>
@@ -24,25 +54,12 @@ namespace pr.gui
 		}
 
 		/// <summary>Raised whenever the mouse moves over an item in the list</summary>
-		public event EventHandler<HoveredItemEventArgs> HoveredItemChanged;
-		protected virtual void OnHoveredItemChanged(HoveredItemEventArgs args)
+		public event EventHandler<ItemEventArgs> HoveredItemChanged;
+		protected virtual void OnHoveredItemChanged(ItemEventArgs args)
 		{
 			HoveredItemChanged.Raise(this, args);
 		}
-		public class HoveredItemEventArgs :EventArgs
-		{
-			public HoveredItemEventArgs(int index, object item)
-			{
-				Index = index;
-				Item = item;
-			}
-
-			/// <summary>The index of the hovered item</summary>
-			public int Index { get; private set; }
-
-			/// <summary>The Item under the mouse</summary>
-			public object Item { get; private set; }
-		}
+		private object m_last_hovered_item;
 
 		/// <summary>Use mouse move to update the hovered item</summary>
 		protected override void OnMouseMove(MouseEventArgs e)
@@ -55,9 +72,34 @@ namespace pr.gui
 			if (m_last_hovered_item != hovered_item)
 			{
 				m_last_hovered_item = hovered_item;
-				OnHoveredItemChanged(new HoveredItemEventArgs(idx, hovered_item));
+				OnHoveredItemChanged(new ItemEventArgs(idx, hovered_item));
 			}
 		}
-		private object m_last_hovered_item;
+
+		/// <summary>Raised when an item is double clicked</summary>
+		public event EventHandler<EventArgs> ItemDoubleClicked;
+		protected override void OnMouseDoubleClick(MouseEventArgs e)
+		{
+			base.OnMouseDoubleClick(e);
+			var idx = IndexFromPoint(e.Location);
+			if (idx >= 0 && idx < Items.Count)
+				ItemDoubleClicked.Raise(this, new ItemEventArgs(idx, Items[idx]));
+		}
+
+		/// <summary>Event args for events that involve an item</summary>
+		public class ItemEventArgs :EventArgs
+		{
+			public ItemEventArgs(int index, object item)
+			{
+				Index = index;
+				Item = item;
+			}
+
+			/// <summary>The index of the hovered item</summary>
+			public int Index { get; private set; }
+
+			/// <summary>The Item under the mouse</summary>
+			public object Item { get; private set; }
+		}
 	}
 }

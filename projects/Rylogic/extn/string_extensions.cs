@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using pr.util;
 
 namespace pr.extn
 {
@@ -33,6 +34,24 @@ namespace pr.extn
 		{
 			Debug.Assert(max_length >= 3);
 			return str.Length < max_length ? str : str.Substring(0, max_length - 3) + "...";
+		}
+
+		/// <summary>Return the first 'max_lines' in this string, with "..." appended if needed</summary>
+		public static string SummaryLines(this string str, int max_lines)
+		{
+			Debug.Assert(max_lines >= 1);
+			var idx = str.IndexOf(c => c == '\n' && --max_lines == 0);
+			return idx == -1 ? str : str.Substring(0, idx) + Environment.NewLine + "...";
+		}
+
+		/// <summary>Transform this string into a "pretty" form</summary>
+		public static string MakePretty(this string str, StrTxfm.ECapitalise word_start, StrTxfm.ECapitalise word_case, StrTxfm.ESeparate word_sep, string sep, string delims = null)
+		{
+			return StrTxfm.Apply(str, word_start, word_case, word_sep, sep, delims);
+		}
+		public static string MakePretty(this string str, StrTxfm.EPrettyStyle style)
+		{
+			return StrTxfm.Apply(str, style);
 		}
 
 		/// <summary>Returns the substring contained between the first occurrence of 'start_pattern' and the following occurrence of 'end_pattern' (not inclusive). Use null to mean start/end of the string</summary>
@@ -269,7 +288,7 @@ namespace pr.extn
 			p2 = (P2)Convert.ChangeType(m.Groups[3].Value, typeof(P2));
 		}
 
-		/// <summary>Parse this string agains 'regex'</summary>
+		/// <summary>Parse this string against 'regex'</summary>
 		public static bool TryParse<P0>(this string str, string regex, out P0 p0)
 		{
 			try { str.Parse(regex, out p0); return true; }

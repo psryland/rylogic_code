@@ -838,7 +838,7 @@ namespace pr
 		PRUnitTest(pr_linedrawer_ldr_object)
 		{
 			// Check the hash values are correct
-			auto hasher  = [](wchar_t const* s) { return pr::script::Reader::HashKeyword(s, false); };
+			auto hasher  = [](wchar_t const* s) { return pr::script::Reader::StaticHashKeyword(s, false); };
 			auto on_fail = [](char const* m) { PR_FAIL(m); };
 			pr::CheckHashEnum<pr::ldr::EKeyword  , wchar_t>(hasher, on_fail);
 			pr::CheckHashEnum<pr::ldr::ELdrObject, wchar_t>(hasher, on_fail);

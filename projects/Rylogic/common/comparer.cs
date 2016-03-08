@@ -10,7 +10,7 @@ using System.Collections.Generic;
 namespace pr.common
 {
 	/// <summary>
-	/// A Comparer implementation that is implicitly convertable
+	/// A Comparer implementation that is implicitly convertible
 	/// from any other comparer or comparison delegate. Implement functions using
 	/// this to allow callers to provide any sort of comparer or delegate</summary>
 	public class Cmp<T> :Comparer<T> ,IEqualityComparer<T>
@@ -24,7 +24,7 @@ namespace pr.common
 
 		public static new Cmp<T> Default { get { return new Cmp<T>(Comparer<T>.Default.Compare); } }
 
-		// Note, it's not possible to make a lambda implicitly convertable because
+		// Note, it's not possible to make a lambda implicitly convertible because
 		// C# requires the lambda to have a type before it resolves overloads and
 		// there is no 'any lambda' type. (object, dynamic don't work)
 		private Cmp(Func<T,T,int> cmp) { m_cmp = cmp; }
@@ -41,13 +41,13 @@ namespace pr.common
 		public static Cmp<T> From(Comparer<T>    c) { return (Cmp<T>)c; }
 	}
 	// This doesn't work, because 'T' is unknown in a lambda function
-	//public static class Cmp
-	//{
-	//	public static Cmp<T> From<T>(Func<T,T,bool> c) { return Cmp<T>.From(c); }
-	//}
+	// public static class Cmp
+	// {
+	//     public static Cmp<T> From<T>(Func<T,T,bool> c) { return Cmp<T>.From(c); }
+	// }
 
 	/// <summary>
-	/// A generic IEqualityComparer implementation that is implicitly convertable
+	/// A generic IEqualityComparer implementation that is implicitly convertible
 	/// from any other BinaryPredicate delegate or equality comparer. Implement
 	/// functions using this to allow callers to provide any sort of comparer or delegate</summary>
 	public class Eql<T> :EqualityComparer<T>
@@ -58,7 +58,10 @@ namespace pr.common
 		public override bool Equals(T lhs, T rhs) { return m_eql(lhs,rhs); }
 		public override  int GetHashCode(T obj) { return obj.GetHashCode(); }
 
-		public static new Eql<T> Default { get { return new Eql<T>((l,r) => l.Equals(r)); } }
+		public static new Eql<T> Default
+		{
+			get { return new Eql<T>(EqualityComparer<T>.Default.Equals); }
+		}
 
 		private Eql(Func<T,T,bool> eql) { m_eql = eql; }
 		public static implicit operator Eql<T>(Func<T,T,bool> c) { return new Eql<T>(c); }

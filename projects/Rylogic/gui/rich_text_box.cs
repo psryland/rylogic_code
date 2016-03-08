@@ -7,7 +7,6 @@ using pr.common;
 using pr.extn;
 using pr.util;
 using pr.win32;
-//using tom;
 
 namespace pr.gui
 {
@@ -27,9 +26,33 @@ namespace pr.gui
 				if (Win32.LoadLibrary("msftedit.dll") != IntPtr.Zero)
 				{
 					cparams.ClassName = "RICHEDIT50W";
+					cparams.ExStyle &= ~Win32.WS_EX_CLIENTEDGE;
+					cparams.ExStyle |=  Win32.WS_EX_STATICEDGE;
 				}
 				return cparams;
 			 }
+		}
+
+		/// <summary>Remap border styles</summary>
+		protected override void OnBorderStyleChanged(EventArgs e)
+		{
+			base.OnBorderStyleChanged(e);
+			switch (BorderStyle)
+			{
+			case System.Windows.Forms.BorderStyle.None:
+				Win32.SetStyleEx(Handle, Win32.WS_EX_STATICEDGE, false);
+				Win32.SetStyleEx(Handle, Win32.WS_EX_CLIENTEDGE, false);
+				break;
+			case System.Windows.Forms.BorderStyle.FixedSingle:
+				Win32.SetStyleEx(Handle, Win32.WS_EX_STATICEDGE, true);
+				Win32.SetStyleEx(Handle, Win32.WS_EX_CLIENTEDGE, false);
+				break;
+			case System.Windows.Forms.BorderStyle.Fixed3D:
+				Win32.SetStyleEx(Handle, Win32.WS_EX_STATICEDGE, false);
+				Win32.SetStyleEx(Handle, Win32.WS_EX_CLIENTEDGE, true);
+				break;
+			}
+			Invalidate();
 		}
 
 		/// <summary>Get text from the rich text box</summary>

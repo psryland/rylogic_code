@@ -126,6 +126,12 @@ namespace pr.extn
 			return (T)ass.GetAttribute(typeof(T), inherit);
 		}
 
+		/// <summary>Returns true if 'type' has an instance of attribute 'T'</summary>
+		public static bool HasAttribute<T>(this Type type, bool inherit = true) where T :Attribute
+		{
+			return type.FindAttribute<T>(inherit) != null;
+		}
+
 		/// <summary>Returns the methods on this type that are decorated with the attribute 'attribute_type'</summary>
 		public static IEnumerable<MethodInfo> FindMethodsWithAttribute(this Type type, Type attribute_type, BindingFlags flags = BindingFlags.Public|BindingFlags.Instance)
 		{

@@ -22,6 +22,13 @@ namespace pr.extn
 			return Add2(items, new ToolStripMenuItem(text, image, on_click));
 		}
 
+		/// <summary>Insert and return an item into this collection</summary>
+		public static T Insert2<T>(this ToolStripItemCollection items, int index, T item) where T:ToolStripItem
+		{
+			items.Insert(index, item);
+			return item;
+		}
+
 		/// <summary>Add and return an menu item to this collection in order defined by 'cmp'</summary>
 		public static T AddOrdered<T>(this ToolStripItemCollection items, T item, Comparer<ToolStripMenuItem> cmp) where T:ToolStripMenuItem
 		{
@@ -216,6 +223,7 @@ namespace pr.extn
 			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
 			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
 		{
+			if (status == null) return;
 			SetStatusMessageInternal(new StatusControl_Label(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
 		}
 
@@ -226,18 +234,21 @@ namespace pr.extn
 			string msg = null, string tt = null, bool bold = false, Color? fr_color = null, Color? bk_color = null,
 			TimeSpan? display_time = null, EventHandler on_click = null, int priority = 0, bool auto_hide = true)
 		{
+			if (status == null) return;
 			SetStatusMessageInternal(new StatusControl_ToolStripStatusLabel(status), msg, tt, bold, fr_color, bk_color, display_time, on_click, priority, auto_hide);
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
 		public static void SetStatusMessageIdle(this Label status, string msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
+			if (status == null) return;
 			SetStatusMessageIdleInternal(new StatusControl_Label(status), msg, fr_color, bk_color);
 		}
 
 		/// <summary>Set the message to display when the status label has no status to display</summary>
 		public static void SetStatusMessageIdle(this ToolStripStatusLabel status, string msg = null, Color? fr_color = null, Color? bk_color = null)
 		{
+			if (status == null) return;
 			SetStatusMessageIdleInternal(new StatusControl_ToolStripStatusLabel(status), msg, fr_color, bk_color);
 		}
 
@@ -259,7 +270,11 @@ namespace pr.extn
 		private class StatusControl_Label :IStatusControl
 		{
 			private Label m_lbl;
-			public StatusControl_Label(Label lbl) { m_lbl = lbl; }
+			public StatusControl_Label(Label lbl)
+			{
+				if (lbl == null) throw new ArgumentNullException(nameof(lbl));
+				m_lbl = lbl;
+			}
 
 			public object Tag                    { get { return m_lbl.Tag; } set { m_lbl.Tag = value; } }
 			public string Text                   { get { return m_lbl.Text; } set { m_lbl.Text = value; } }
@@ -276,7 +291,11 @@ namespace pr.extn
 		private class StatusControl_ToolStripStatusLabel :IStatusControl
 		{
 			private ToolStripStatusLabel m_lbl;
-			public StatusControl_ToolStripStatusLabel(ToolStripStatusLabel lbl) { m_lbl = lbl; }
+			public StatusControl_ToolStripStatusLabel(ToolStripStatusLabel lbl)
+			{
+				if (lbl == null) throw new ArgumentNullException(nameof(lbl));
+				m_lbl = lbl;
+			}
 
 			public object Tag                    { get { return m_lbl.Tag; } set { m_lbl.Tag = value; } }
 			public string Text                   { get { return m_lbl.Text; } set { m_lbl.Text = value; } }

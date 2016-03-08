@@ -33,6 +33,7 @@ namespace pr.win32
 		[DllImport("user32.dll", EntryPoint="CheckMenuItem")]                                                 public static extern int    CheckMenuItem(IntPtr hMenu,int uIDCheckItem, int uCheck);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   ChildWindowFromPointEx(HWND parent, POINT point, int flags);
 		[DllImport("User32.dll")]                                                                             public static extern bool   ClientToScreen(HWND hwnd, ref POINT pt);
+		[DllImport("user32.dll")]                                                                             public static extern IntPtr CreateIconIndirect(ref IconInfo icon);
 		[DllImport("user32.dll")]                                                                             public static extern IntPtr CreatePopupMenu();
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CreateWindowEx(int dwExStyle, string lpClassName, string lpWindowName, int dwStyle, int x, int y, int nWidth, int nHeight, IntPtr hWndParent, IntPtr hMenu, IntPtr hInstance, IntPtr lpParam);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
@@ -46,6 +47,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern int    GetDoubleClickTime();
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetFocus();
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetForegroundWindow();
+		[DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)]                                      public static extern bool   GetIconInfo(IntPtr hIcon, ref IconInfo pIconInfo);
 		[DllImport("user32.dll")]                                                                             public static extern int    GetKeyboardState(byte[] pbKeyState);
 		[DllImport("user32.dll")]                                                                             public static extern short  GetKeyState(Keys vKey);
 		[DllImport("user32.dll")]                                                                             public static extern HWND   GetParent(HWND hwnd);
@@ -67,6 +69,7 @@ namespace pr.win32
 		[DllImport("user32.dll")]                                                                             public static extern bool   IsWindowVisible(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   IsZoomed(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   LockWindowUpdate(HWND hWndLock);
+		[DllImport("user32.dll")]                                                                             public static extern IntPtr LoadCursorFromFile(string lpFileName);
 		[DllImport("user32.dll")]                                                                             public static extern uint   MapVirtualKey(uint uCode, uint uMapType);
 		[DllImport("user32.dll")]                                                                             public static extern bool   MoveWindow(HWND hWnd, int X, int Y, int nWidth, int nHeight, bool repaint);
 		[DllImport("user32.dll", EntryPoint="PeekMessage", CharSet=CharSet.Auto)]                             public static extern bool   PeekMessage(out Message msg, IntPtr hWnd, uint messageFilterMin, uint messageFilterMax, uint flags);
@@ -107,5 +110,8 @@ namespace pr.win32
 		}
 		[DllImport("user32.dll", EntryPoint="SetWindowLong")] private static extern int SetWindowLong32(HWND hWnd, int nIndex, int dwNewLong);
 		[DllImport("user32.dll", EntryPoint="SetWindowLongPtr")] private static extern IntPtr SetWindowLongPtr64(HWND hWnd, int nIndex, IntPtr dwNewLong);
+
+
+		[DllImport("uxtheme.dll")] public static extern int SetWindowTheme(IntPtr hWnd, string appname, string idlist);
 	}
 }

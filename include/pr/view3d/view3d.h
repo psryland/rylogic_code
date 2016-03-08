@@ -42,6 +42,19 @@
 
 extern "C"
 {
+	// Forward declarations
+	struct View3DV2;
+	struct View3DV4;
+	struct View3DM4x4;
+	struct View3DBBox;
+	struct View3DVertex;
+	struct View3DImageInfo;
+	struct View3DTextureOptions;
+	struct View3DWindowOptions;
+	struct View3DUpdateModelKeep;
+	struct View3DMaterial;
+	struct View3DViewport;
+	struct View3DGizmoEvent;
 	typedef unsigned int View3DColour;
 
 	enum class EView3DResult
@@ -115,37 +128,48 @@ extern "C"
 		Scale,
 	};
 
-	typedef struct
+	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
+	typedef void (__stdcall *View3D_RenderCB)(void* ctx);
+	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, char const* msg);
+	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
+	typedef void (__stdcall *View3D_EditObjectCB)(
+		UINT32 vcount,           // The maximum size of 'verts'
+		UINT32 icount,           // The maximum size of 'indices'
+		View3DVertex* verts,     // The vert buffer to be filled
+		UINT16* indices,         // The index buffer to be filled
+		UINT32& new_vcount,      // The number of verts in the updated model
+		UINT32& new_icount,      // The number indices in the updated model
+		EView3DPrim& model_type, // The primitive type of the updated model
+		EView3DGeom& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
+		View3DMaterial& mat,     // The material to use for the updated model
+		void* ctx);              // User context data
+
+	struct View3DV2
 	{
 		float x, y;
-	} View3DV2;
-	
-	typedef struct
+	};
+	struct View3DV4
 	{
 		float x, y, z, w;
-	} View3DV4;
-	
-	typedef struct
+	};
+	struct View3DM4x4
 	{
 		View3DV4 x, y, z, w;
-	} View3DM4x4;
-	
-	typedef struct
+	};
+	struct View3DBBox
 	{
 		View3DV4 centre;
 		View3DV4 radius;
-	} View3DBBox;
-	
-	typedef struct
+	};
+	struct View3DVertex
 	{
 		View3DV4 pos;
 		View3DV4 norm;
 		View3DV2 tex;
 		View3DColour col;
 		UINT32 pad;
-	} View3DVertex;
-	
-	typedef struct
+	};
+	struct View3DImageInfo
 	{
 		UINT32 m_width;
 		UINT32 m_height;
@@ -153,9 +177,8 @@ extern "C"
 		UINT32 m_mips;
 		DXGI_FORMAT m_format;
 		UINT32 m_image_file_format;//D3DXIMAGE_FILEFORMAT
-	} View3DImageInfo;
-
-	typedef struct
+	};
+	struct View3DLight
 	{
 		EView3DLight m_type;
 		BOOL         m_on;
@@ -170,9 +193,8 @@ extern "C"
 		float        m_range;
 		float        m_falloff;
 		float        m_cast_shadow;
-	} View3DLight;
-	
-	typedef struct
+	};
+	struct View3DTextureOptions
 	{
 		DXGI_FORMAT                m_format;
 		UINT                       m_mips;
@@ -185,9 +207,15 @@ extern "C"
 		BOOL                       m_has_alpha;
 		BOOL                       m_gdi_compatible;
 		char const*                m_dbg_name;
-	} View3DTextureOptions;
-
-	typedef struct
+	};
+	struct View3DWindowOptions
+	{
+		View3D_ReportErrorCB m_error_cb;
+		void*                m_error_cb_ctx;
+		BOOL                 m_gdi_compatible;
+		char const*          m_dbg_name;
+	};
+	struct View3DUpdateModelKeep
 	{
 		BOOL m_name;
 		BOOL m_transform;
@@ -200,15 +228,13 @@ extern "C"
 		BOOL m_animation;
 		BOOL m_step_data;
 		BOOL m_user_data;
-	} View3DUpdateModelKeep;
-	
-	typedef struct
+	};
+	struct View3DMaterial
 	{
 		View3DTexture m_diff_tex;
 		View3DTexture m_env_map;
-	} View3DMaterial;
-	
-	typedef struct
+	};
+	struct View3DViewport
 	{
 		float m_x;
 		float m_y;
@@ -216,29 +242,12 @@ extern "C"
 		float m_height;
 		float m_min_depth;
 		float m_max_depth;
-	} View3DViewport;
-
-	typedef struct
+	};
+	struct View3DGizmoEvent
 	{
 		View3DGizmo       m_gizmo;
 		EView3DGizmoEvent m_state;
-	} View3DGizmoEvent;
-
-	typedef void (__stdcall *View3D_SettingsChangedCB)(void* ctx, View3DWindow window);
-	typedef void (__stdcall *View3D_RenderCB)(void* ctx);
-	typedef void (__stdcall *View3D_ReportErrorCB)(void* ctx, char const* msg);
-	typedef void (__stdcall *View3D_GizmoMovedCB)(void* ctx, View3DGizmoEvent const& args);
-	typedef void (__stdcall *View3D_EditObjectCB)(
-		UINT32 vcount,      // The maximum size of 'verts'
-		UINT32 icount,      // The maximum size of 'indices'
-		View3DVertex* verts,     // The vert buffer to be filled
-		UINT16* indices,     // The index buffer to be filled
-		UINT32& new_vcount, // The number of verts in the updated model
-		UINT32& new_icount, // The number indices in the updated model
-		EView3DPrim& model_type, // The primitive type of the updated model
-		EView3DGeom& geom_type,  // The geometry type of the updated model (used to determine the appropriate shader)
-		View3DMaterial& mat,     // The material to use for the updated model
-		void* ctx);              // User context data
+	};
 
 	// Initialise/shutdown the dll
 	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
@@ -247,7 +256,7 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_PopGlobalErrorCB (View3D_ReportErrorCB error_cb);
 
 	// Windows
-	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, BOOL gdi_compat, View3D_ReportErrorCB error_cb, void* ctx);
+	VIEW3D_API View3DWindow            __stdcall View3D_CreateWindow      (HWND hwnd, View3DWindowOptions const& opts);
 	VIEW3D_API void                    __stdcall View3D_DestroyWindow     (View3DWindow window);
 	VIEW3D_API void                    __stdcall View3D_PushErrorCB       (View3DWindow window, View3D_ReportErrorCB error_cb, void* ctx);
 	VIEW3D_API void                    __stdcall View3D_PopErrorCB        (View3DWindow window, View3D_ReportErrorCB error_cb);
@@ -411,6 +420,16 @@ namespace view3d
 	struct Vertex :View3DVertex
 	{
 		void set(View3DV4 p, View3DColour c, View3DV4 n, View3DV2 const& t) { pos = p; col = c; norm = n; tex = t; }
+	};
+	struct WindowOptions :View3DWindowOptions
+	{
+		WindowOptions() :View3DWindowOptions()
+		{
+			m_error_cb       = nullptr;
+			m_error_cb_ctx   = nullptr;
+			m_gdi_compatible = false;
+			m_dbg_name       = "";
+		}
 	};
 	struct TextureOptions :View3DTextureOptions
 	{

@@ -130,6 +130,7 @@
     <Compile Include="common\cache.cs" />
     <Compile Include="container\binding_list.cs" />
     <Compile Include="container\bi_dictionary.cs" />
+    <Compile Include="container\concat_list.cs" />
     <Compile Include="container\csv_data.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -217,7 +218,6 @@
     <Compile Include="common\path_ex.cs" />
     <Compile Include="extn\pointf_extensions.cs" />
     <Compile Include="extn\random_extensions.cs" />
-    <Compile Include="extn\size_extensions.cs" />
     <Compile Include="extn\stream_extensions.cs" />
     <Compile Include="extn\stringbuilder_extensions.cs" />
     <Compile Include="extn\string_extensions.cs" />
@@ -256,6 +256,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\open_folder_ui.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="gui\progress_ctrl.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="gui\rich_text_box.cs">
@@ -517,16 +520,11 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <CustomToolNamespace>pr</CustomToolNamespace>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <EmbeddedResource Include="SmilingGekko140x110.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <PyScript Include="resources\regex_quick_ref.htm">
-      <Generator>..\..\script\HtmlExpand.py</Generator>
-    </PyScript>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
@@ -552,30 +550,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\connector1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\connector2.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\connector3.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\connector4.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="resources\boxes.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="resources\Smiling gekko 140x110 nobkgd.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="resources\licence.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\check_marks.bmp" />
-    <None Include="resources\green_left.png" />
-    <None Include="resources\green_right.png" />
     <Content Include="run_tests.py" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

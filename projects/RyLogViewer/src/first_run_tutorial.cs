@@ -265,7 +265,7 @@ namespace RyLogViewer
 		{
 			// Paint the blue layer
 			highlight_rect.Inflate(2,2);
-			using (gfx.StateScope())
+			using (gfx.SaveState())
 			{
 				gfx.SetClip(highlight_rect, CombineMode.Exclude);
 				using (var b = Gfx.CreateRadialGradientBrush(highlight_rect.Centre(), 500, 500, Color.FromArgb(0xA0, Color.DarkBlue), Color.FromArgb(0x10, Color.LightSkyBlue)))
@@ -297,7 +297,7 @@ namespace RyLogViewer
 			{
 				m_overlay.SnapShotCaptured += (s,a) =>
 					{
-						using (a.Gfx.StateScope())
+						using (a.Gfx.SaveState())
 						{
 							m_main.m_menu_file.ShowDropDown();
 							m_main.m_menu_file_data_sources.ShowDropDown();

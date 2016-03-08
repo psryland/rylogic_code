@@ -68,6 +68,9 @@
     <PostBuildEvent>
       <Command>py.exe $(ProjectDir)..\projects\testwingui\post_build.py $(ProjectDir) $(TargetDir) $(PlatformTarget) $(ConfigurationName)</Command>
     </PostBuildEvent>
+    <ClCompile>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile />

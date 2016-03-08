@@ -23,6 +23,7 @@ namespace pr
 			,m_usage(DXGI_USAGE_RENDER_TARGET_OUTPUT|DXGI_USAGE_SHADER_INPUT)
 			,m_vsync(1)
 			,m_allow_alt_enter(false)
+			,m_name()
 		{
 			if (gdi_compat)
 			{
@@ -47,6 +48,8 @@ namespace pr
 			,m_main_dsv()
 			,m_main_tex()
 			,m_idle(false)
+			,m_name(settings.m_name)
+			,m_area()
 		{
 			auto device = rdr.Device();
 
@@ -353,8 +356,8 @@ namespace pr
 			RestoreRT();
 
 			// Notify that the resize is done
-			area = RenderTargetSize();
-			pr::events::Send(rdr::Evt_Resize(this, true, area)); // notify after changing the RT (with the new size)
+			m_area = RenderTargetSize();
+			pr::events::Send(rdr::Evt_Resize(this, true, m_area)); // notify after changing the RT (with the new size)
 		}
 
 		// Flip the scene to the display

@@ -63,6 +63,12 @@ namespace pr.gui
 		public virtual Cursor EditingPanelCursor { get { return base.Cursor; } }
 	}
 
+	/// <summary>An editor for when not edit control is needed</summary>
+	public class NullCellEditor :DataGridViewCellEditBase
+	{
+		public override object Value { get; set; }
+	}
+
 	/// <summary>Base class for a custom grid column</summary>
 	public class DataGridViewCustomColumnBase<TCell> :DataGridViewColumn where TCell:DataGridViewCell
 	{
@@ -136,6 +142,12 @@ namespace pr.gui
 		// Cell state flags. This behaviour is copied from the TextBoxCell source
 		private const byte Flags_IgnoreNextMouseClick = 1 << 0;
 		private byte m_flags;
+
+		/// <summary>The cell editor type</summary>
+		public override Type EditType
+		{
+			get { return typeof(TEditor) != typeof(NullCellEditor) ? typeof(TEditor) : null; }
+		}
 
 		// Start/stop editing
 		public override void InitializeEditingControl(int rowIndex, object initialFormattedValue, DataGridViewCellStyle dataGridViewCellStyle)
@@ -274,7 +286,6 @@ namespace pr.gui
 	/// <summary>DataGridView cell for displaying pairs of values</summary>
 	public class DataGridViewRichTextBoxCell :DataGridViewCustomCellBase<RichTextBoxEditor>
 	{
-		public override Type   EditType           { get { return typeof(RichTextBoxEditor); } }
 		public override Type   ValueType          { get { return typeof(string); } }
 		public override Type   FormattedValueType { get { return typeof(string); } }
 		public override object DefaultNewRowValue { get { return string.Empty; } }
@@ -551,7 +562,6 @@ namespace pr.gui
 	/// <summary>DataGridView cell for displaying pairs of values</summary>
 	public class DataGridViewValuePairCell<T0,T1> :DataGridViewCustomCellBase<ValuePairEditCtrl<T0,T1>>
 	{
-		public override Type   EditType           { get { return typeof(ValuePairEditCtrl<T0,T1>); } }
 		public override Type   ValueType          { get { return typeof(Tuple<T0,T1>); } }
 		public override Type   FormattedValueType { get { return typeof(Tuple<T0,T1>); } }
 		public override object DefaultNewRowValue { get { return Tuple.Create(default(T0),default(T1)); } }
@@ -573,13 +583,119 @@ namespace pr.gui
 			var pair = (Tuple<T0,T1>)value;
 			var col = OwningColumn.As<DataGridViewValuePairColumn<T0,T1>>();
 
-			using (var bsh = new SolidBrush(Selected ? cell_style.SelectionBackColor : cell_style.BackColor))
-				gfx.FillRectangle(bsh, cell_bounds);
-			PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
-			using (var bsh = new SolidBrush(Selected ? col.ValueColour0.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour0))
-				gfx.DrawString(pair.Item1.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 1);
-			using (var bsh = new SolidBrush(Selected ? col.ValueColour1.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour1))
-				gfx.DrawString(pair.Item2.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 15);
+			// Paint the cell background
+			if (paint_parts.HasFlag(DataGridViewPaintParts.Background))
+			{
+				using (var bsh = new SolidBrush(Selected ? cell_style.SelectionBackColor : cell_style.BackColor))
+					gfx.FillRectangle(bsh, cell_bounds);
+			}
+
+			// Paint the cell border
+			if (paint_parts.HasFlag(DataGridViewPaintParts.Border))
+			{
+				PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
+			}
+
+			// Paint the content
+			if (paint_parts.HasFlag(DataGridViewPaintParts.ContentForeground))
+			{
+				using (var bsh = new SolidBrush(Selected ? col.ValueColour0.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour0))
+					gfx.DrawString(pair.Item1.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 1);
+				using (var bsh = new SolidBrush(Selected ? col.ValueColour1.Lerp(cell_style.SelectionForeColor, 0.8f) : col.ValueColour1))
+					gfx.DrawString(pair.Item2.ToString(), cell_style.Font, bsh, cell_bounds.X, cell_bounds.Y + 15);
+			}
+		}
+	}
+
+	#endregion
+
+	#region Check Mark Cell/Column
+
+	/// <summary>A column of check marks</summary>
+	public class DataGridViewCheckMarkColumn :DataGridViewCustomColumnBase<DataGridViewCheckMarkCell>
+	{
+		public DataGridViewCheckMarkColumn()
+			:base(new DataGridViewCheckMarkCell())
+		{
+			ImageChecked = Resources.check_accept;
+			ImageUnchecked = Resources.check_reject;
+			Alignment = HorizontalAlignment.Center;
+		}
+
+		/// <summary>The image to use when checked</summary>
+		public Image ImageChecked { get; set; }
+
+		/// <summary>The image to use when unchecked</summary>
+		public Image ImageUnchecked { get; set; }
+
+		/// <summary>Alignment of the images within the column</summary>
+		public HorizontalAlignment Alignment { get; set; }
+	}
+
+	/// <summary>DataGridView cell for displaying a check mark</summary>
+	public class DataGridViewCheckMarkCell :DataGridViewCustomCellBase<NullCellEditor>
+	{
+		public override Type   ValueType          { get { return typeof(bool); } }
+		public override Type   FormattedValueType { get { return typeof(bool); } }
+		public override object DefaultNewRowValue { get { return false; } }
+
+		// Start/stop editing
+		public override void InitializeEditingControl(int rowIndex, object initialFormattedValue, DataGridViewCellStyle dataGridViewCellStyle)
+		{}
+		public override bool KeyEntersEditMode(KeyEventArgs e)
+		{
+			return false;
+		}
+		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
+		{
+			var chk = (bool)value;
+			var col = OwningColumn.As<DataGridViewCheckMarkColumn>();
+			var sel = cell_state.HasFlag(DataGridViewElementStates.Selected);
+
+			// Paint the cell background
+			if ((paint_parts.HasFlag(DataGridViewPaintParts.Background         ) && !sel) ||
+				(paint_parts.HasFlag(DataGridViewPaintParts.SelectionBackground) && sel))
+			{
+				using (var bsh = new SolidBrush(sel ? cell_style.SelectionBackColor : cell_style.BackColor))
+					gfx.FillRectangle(bsh, cell_bounds);
+			}
+
+			// Paint the cell border
+			if (paint_parts.HasFlag(DataGridViewPaintParts.Border))
+			{
+				PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
+			}
+
+			// Paint the checked/unchecked image
+			if (paint_parts.HasFlag(DataGridViewPaintParts.ContentForeground))
+			{
+				var img = chk ? col.ImageChecked : col.ImageUnchecked;
+				if (img != null)
+				{
+					int x = 0, y = 0, w = 0, h = 0;
+					if (cell_bounds.Width * img.Height < img.Width * cell_bounds.Height) // width bound
+					{
+						w = Math.Min(cell_bounds.Width, img.Width);
+						h = w * img.Height / img.Width;
+					}
+					else // height bound
+					{
+						h = Math.Min(cell_bounds.Height, img.Height);
+						w = h * img.Width / img.Height;
+					}
+					switch (col.Alignment) {
+					case HorizontalAlignment.Left:   x = cell_bounds.Left;                               y = cell_bounds.Top;                                break;
+					case HorizontalAlignment.Center: x = cell_bounds.Left + (cell_bounds.Width - w) / 2; y = cell_bounds.Top + (cell_bounds.Height - h) / 2; break;
+					case HorizontalAlignment.Right:  x = cell_bounds.Left + (cell_bounds.Width - w);     y = cell_bounds.Top + (cell_bounds.Height - h);   ; break;
+					}
+					gfx.DrawImage(img, x, y, w, h);
+				}
+			}
+		}
+		protected override void OnDoubleClick(DataGridViewCellEventArgs e)
+		{
+			base.OnDoubleClick(e);
+			Value = !(bool)Value;
 		}
 	}
 
@@ -622,7 +738,7 @@ namespace pr.gui
 		private int m_impl_value;
 		private bool m_in_set_position;
 
-		/// <summary>The current trackbar range</summary>
+		/// <summary>The current track bar range</summary>
 		private Range Range { get; set; }
 
 		internal void Init(int value, int min, int max, DataGridViewTrackBarCell cell)
@@ -740,7 +856,6 @@ namespace pr.gui
 	/// <summary>A data grid view cell containing a track bar</summary>
 	public class DataGridViewTrackBarCell :DataGridViewCustomCellBase<DataGridViewTrackBarEditCtrl>
 	{
-		public override Type   EditType           { get { return typeof(DataGridViewTrackBarEditCtrl); } }
 		public override Type   FormattedValueType { get { return typeof(int); } }
 		public override Type   ValueType          { get { return typeof(int); } }
 		public override object DefaultNewRowValue { get { return 0; } }
@@ -807,18 +922,27 @@ namespace pr.gui
 		}
 		protected override void Paint(Graphics gfx, Rectangle clip_bounds, Rectangle cell_bounds, int row_index, DataGridViewElementStates cell_state, object value, object formatted_value, string error_text, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advanced_border_style, DataGridViewPaintParts paint_parts)
 		{
-			paint_parts &= ~DataGridViewPaintParts.ContentForeground;
-			base.Paint(gfx, clip_bounds, cell_bounds, row_index, cell_state, value, formatted_value, error_text, cell_style, advanced_border_style, paint_parts);
+			// Paint the cell background
+			if (paint_parts.HasFlag(DataGridViewPaintParts.Background))
+			{
+				using (var bsh = new SolidBrush(Selected ? cell_style.SelectionBackColor : cell_style.BackColor))
+					gfx.FillRectangle(bsh, cell_bounds);
+			}
 
-			using (var bsh = new SolidBrush(Selected ? cell_style.SelectionBackColor : cell_style.BackColor))
-				gfx.FillRectangle(bsh, cell_bounds);
+			// Paint the cell border
+			if (paint_parts.HasFlag(DataGridViewPaintParts.Border))
+			{
+				PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
+			}
 
-			PaintBorder(gfx, clip_bounds, cell_bounds, cell_style, advanced_border_style);
-
-			var v  = Convert.ToDouble(value);
-			var mn = GetMinValueInternal(row_index);
-			var mx = GetMaxValueInternal(row_index);
-			DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, v, mn, mx);
+			// Paint the cell content
+			if (paint_parts.HasFlag(DataGridViewPaintParts.ContentForeground))
+			{
+				var v  = Convert.ToDouble(value);
+				var mn = GetMinValueInternal(row_index);
+				var mx = GetMaxValueInternal(row_index);
+				DataGridViewTrackBarEditCtrl.PaintTrackBar(gfx, cell_bounds, v, mn, mx);
+			}
 		}
 	}
 
@@ -867,9 +991,6 @@ namespace pr.gui
 	//        c.m_colour = m_colour;
 	//        return c;
 	//    }
-
-	//    /// <summary>The type used to edit this cell</summary>
-	//    public override Type EditType { get { return typeof(DataGridViewColorPicker); } }
 
 	//    //// Start/stop editing
 	//    //public override void InitializeEditingControl(int row_index, object initial_formatted_value, DataGridViewCellStyle style)

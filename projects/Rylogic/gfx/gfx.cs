@@ -5,6 +5,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -24,7 +25,7 @@ namespace pr.gfx
 				(int)(c0.B*(1f - t) + c1.B*t));
 		}
 
-		/// <summary>Return all colors satisfying a predicate</summary>
+		/// <summary>Return all colours satisfying a predicate</summary>
 		public static IEnumerable<Color> GetColors(Func<Color,bool> pred)
 		{
 			foreach (var c in Enum.GetValues(typeof(KnownColor)))
@@ -42,15 +43,19 @@ namespace pr.gfx
 		}
 
 		/// <summary>Create a rounded rectangle path that can be filled or drawn</summary>
-		public static GraphicsPath RoundedRectanglePath(Rectangle rect, float radius)
+		public static GraphicsPath RoundedRectanglePath(RectangleF rect, float radius)
 		{
-			var gp = new GraphicsPath();
 			float d = radius * 2f;
-			gp.AddArc (rect.X                  ,rect.Y                   ,d      ,           d, 180 ,90);
-			gp.AddArc (rect.X + rect.Width - d ,rect.Y                   ,d      ,           d, 270 ,90);
-			gp.AddArc (rect.X + rect.Width - d ,rect.Y + rect.Height - d ,d      ,           d,   0 ,90);
-			gp.AddArc (rect.X                  ,rect.Y + rect.Height - d ,d      ,           d,  90 ,90);
-			gp.AddLine(rect.X                  ,rect.Y + rect.Height - d ,rect.X ,rect.Y + d/2);
+			Debug.Assert(d <= rect.Width && d <= rect.Height);
+
+			var gp = new GraphicsPath();
+
+			gp.AddArc(rect.Left      , rect.Top        , d , d, 180 ,90);
+			gp.AddArc(rect.Right - d , rect.Top        , d , d, 270 ,90);
+			gp.AddArc(rect.Right - d , rect.Bottom - d , d , d,   0 ,90);
+			gp.AddArc(rect.Left      , rect.Bottom - d , d , d,  90 ,90);
+
+			gp.AddLine(rect.Left, rect.Bottom - d/2, rect.Left, rect.Top + d/2);
 			return gp;
 		}
 

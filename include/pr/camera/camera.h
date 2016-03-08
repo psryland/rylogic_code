@@ -266,7 +266,7 @@ namespace pr
 			return 2.0f * pr::ATan(pr::Tan(m_fovY * 0.5f) * m_aspect);
 		}
 
-		// Set the Xaxis field of view
+		// Set the XAxis field of view
 		void FovX(float fovX)
 		{
 			FovY(2.0f * pr::ATan(pr::Tan(fovX * 0.5f) / m_aspect));
@@ -278,7 +278,7 @@ namespace pr
 			return m_fovY;
 		}
 
-		// Set the Yaxis field of view. Fov relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
+		// Set the YAxis field of view. FOV relationship: tan(fovY/2) * aspect_w_by_h = tan(fovX/2);
 		void FovY(float fovY)
 		{
 			PR_ASSERT(PR_DBG, fovY >= 0.0f && pr::IsFinite(fovY), "");

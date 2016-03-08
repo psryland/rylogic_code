@@ -5,18 +5,25 @@ using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using pr.extn;
 using pr.maths;
+using pr.win32;
 
 namespace pr.gui
 {
 	/// <summary>A helper dialog for prompting for a single line of user input</summary>
 	public class MsgBox :Form
 	{
-		private Button m_btn_negative;
-		private Button m_btn_neutral;
-		private Button m_btn_positive;
-		private RichTextBox m_message;
-		private PictureBox m_image;
+		// Notes:
+		//  - To override the behaviour of a button, set its DialogResult to None. This will prevent
+		//    it from closing the message box. You can then hook up whatever handler you like.
+
+		#region UI Elements
 		private Panel m_panel;
+		private PictureBox m_image;
+		private RichTextBox m_message;
+		private Button m_btn_positive;
+		private Button m_btn_neutral;
+		private Button m_btn_negative;
+		#endregion
 
 		/// <summary>Display a modal message box</summary>
 		public static DialogResult Show(Control owner, string message, string title, MessageBoxButtons btns = MessageBoxButtons.OK, MessageBoxIcon icon = MessageBoxIcon.None, MessageBoxDefaultButton dflt_btn = MessageBoxDefaultButton.Button1, bool reflow = true, float reflow_aspect = 7f)
@@ -67,13 +74,13 @@ namespace pr.gui
 			}
 
 			m_message.LinkClicked += (s,a) =>
+			{
+				try { System.Diagnostics.Process.Start("explorer.exe", a.LinkText); }
+				catch (Exception ex)
 				{
-					try { System.Diagnostics.Process.Start("explorer.exe", a.LinkText); }
-					catch (Exception ex)
-					{
-						MsgBox.Show(Owner, "Failed to navigate to link\r\nReason: " + ex.Message, "Link Failed", MessageBoxButtons.OK);
-					}
-				};
+					MsgBox.Show(Owner, "Failed to navigate to link\r\nReason: " + ex.Message, "Link Failed", MessageBoxButtons.OK);
+				}
+			};
 
 			AcceptButton = null;
 			CancelButton = null;
@@ -86,10 +93,11 @@ namespace pr.gui
 			m_btn_negative.DialogResult = DialogResult.None;
 
 			EventHandler on_clicked = (s,a) =>
-				{
-					DialogResult = ((Button)s).DialogResult;
+			{
+				DialogResult = ((Button)s).DialogResult;
+				if (DialogResult != DialogResult.None)
 					Close();
-				};
+			};
 
 			m_btn_positive.Click += on_clicked;
 			m_btn_neutral .Click += on_clicked;
@@ -164,13 +172,18 @@ namespace pr.gui
 			case MessageBoxDefaultButton.Button2: if (m_btn_neutral .Text != string.Empty) AcceptButton = m_btn_neutral ;  break;
 			case MessageBoxDefaultButton.Button3: if (m_btn_negative.Text != string.Empty) AcceptButton = m_btn_negative; break;
 			}
-
-			Shown += (s,a) =>
-				{
-					UpdateLayout();
-					if (StartPosition == FormStartPosition.CenterParent)
-						CenterToParent();
-				};
+		}
+		protected override void OnShown(EventArgs e)
+		{
+			base.OnShown(e);
+			UpdateLayout();
+			if (StartPosition == FormStartPosition.CenterParent)
+			{
+				if (ParentForm != null)
+					CenterToParent();
+				else
+					CenterToScreen();
+			}
 		}
 
 		/// <summary>The message box title</summary>
@@ -194,6 +207,18 @@ namespace pr.gui
 			set { m_message.Rtf = value; }
 		}
 
+		/// <summary>The panel containing the message + icon</summary>
+		public Panel Panel
+		{
+			get { return m_panel; }
+		}
+
+		/// <summary>The control that displays the message text</summary>
+		public RichTextBox TextBox
+		{
+			get { return m_message; }
+		}
+
 		/// <summary>The image to display next to the message body</summary>
 		public Image Image
 		{
@@ -205,6 +230,24 @@ namespace pr.gui
 		public PictureBox ImageCtrl
 		{
 			get { return m_image; }
+		}
+
+		/// <summary>The positive button control</summary>
+		public Button PositiveBtn
+		{
+			get { return m_btn_positive; }
+		}
+
+		/// <summary>The neutral button control</summary>
+		public Button NeutralBtn
+		{
+			get { return m_btn_neutral; }
+		}
+
+		/// <summary>The negative button control</summary>
+		public Button NegativeBtn
+		{
+			get { return m_btn_negative; }
 		}
 
 		/// <summary>Set to true to have the dialog automatically line wrap text. False to honour message new lines</summary>
@@ -289,83 +332,89 @@ namespace pr.gui
 		/// <summary>Sets an appropriate size for the message box and lays out the controls</summary>
 		public void UpdateLayout()
 		{
-			const int text_margin = 27;
-			const int button_margin_h = 10;
-			const int button_margin_v = 12;
-			var btn_size = m_btn_positive.Size;
-			var btns = new[]{m_btn_negative, m_btn_neutral, m_btn_positive};
-			var num_btns = btns.Count(b => b.Text.HasValue());
-
-			// Find the screen area to bound the message text
-			var screen_area = (Owner != null ? Screen.FromControl(Owner) : Screen.PrimaryScreen).WorkingArea;
-			screen_area.Inflate(-screen_area.Width / 8, -screen_area.Height / 8);
-
-			// If the image is visible, reduce the available screen area
-			var image_area = Size.Empty;
-			var show_image = m_image.Image != null;
-			if (show_image) // don't use m_image.Visible because it's not true until the dialog is displayed
+			using (this.SuspendLayout(true))
 			{
-				screen_area.Inflate(-m_image.Width, 0);
-				image_area = m_image.Size;
-			}
+				const int text_margin = 27;
+				const int button_margin = 12;
+				const int btn_sep = 10;
 
-			// Measure the text to be displayed
-			// If it's larger than the screen area, limit the size but enable scroll bars
-			var text_area = m_message.PreferredSize;
-			if (Reflow && text_area.Area() != 0f && text_area.Aspect() > ReflowAspectRatio)
-			{
-				var scale = Math.Sqrt(ReflowAspectRatio / text_area.Aspect());
-				m_message.MaximumSize = new Size((int)(text_area.Width * scale), 0);
-				text_area = m_message.PreferredSize;
-				m_message.MaximumSize = Size.Empty;
-			}
-			text_area.Width  = Math.Min(text_area.Width, screen_area.Width * 7 / 8);
-			text_area.Height = Math.Min(text_area.Height, screen_area.Height * 7 / 8);
+				// Find the screen area to bound the message text
+				var screen_area = (Owner != null ? Screen.FromControl(Owner) : Screen.PrimaryScreen).WorkingArea;
+				screen_area.Inflate(-screen_area.Width / 8, -screen_area.Height / 8);
 
-			// Get the bound area of the content
-			var content_area = new Size(
-				image_area.Width + text_area.Width,
-				Math.Max(image_area.Height, text_area.Height));
+				// If the image is visible, reduce the available screen area
+				var image_area = Size.Empty;
+				var show_image = m_image.Image != null;
+				if (show_image) // don't use m_image.Visible because it's not true until the dialog is displayed
+				{
+					screen_area.Inflate(-m_image.Width, 0);
+					image_area = m_image.Size;
+				}
 
-			// Set the form size
-			MinimumSize = new Size(
-				btn_size.Width/2 + num_btns*button_margin_h + num_btns*btn_size.Width,
-				2*text_margin + 2*button_margin_v + btn_size.Height);
-			ClientSize = new Size(
-				Maths.Clamp(text_margin + content_area.Width + text_margin, MinimumSize.Width, screen_area.Width),
-				Maths.Clamp(text_margin + content_area.Height + text_margin + button_margin_v + btn_size.Height + button_margin_v, MinimumSize.Height, screen_area.Height));
+				// Measure the text to be displayed
+				// If it's larger than the screen area, limit the size but enable scroll bars
+				var text_area = m_message.PreferredSize;
+				if (Reflow && text_area.Area() != 0f && text_area.Aspect() > ReflowAspectRatio)
+				{
+					var scale = Math.Sqrt(ReflowAspectRatio / text_area.Aspect());
+					m_message.MaximumSize = new Size((int)(text_area.Width * scale), 0);
+					text_area = m_message.PreferredSize;
+					m_message.MaximumSize = Size.Empty;
+				}
+				text_area.Width  = Math.Min(text_area.Width, screen_area.Width * 7 / 8);
+				text_area.Height = Math.Min(text_area.Height, screen_area.Height * 7 / 8);
 
-			int x = text_margin, y = text_margin;
+				// Get the bound area of the content
+				var content_area = new Size(
+					image_area.Width + text_area.Width,
+					Math.Max(image_area.Height, text_area.Height));
 
-			// Layout the background panel
-			m_panel.Location = Point.Empty;
-			m_panel.Size = new Size(ClientSize.Width, text_margin + content_area.Height + text_margin);
+				var btns = new[]{m_btn_positive, m_btn_neutral, m_btn_negative};
+				var vis_btns = btns.Where(b => b.Text.HasValue());
+				var num_btns = btns.Count(b => b.Text.HasValue());
+			
+				// Set button sizes
+				var btn_h = vis_btns.Max(b => b.PreferredSize.Height);
+				foreach (var b in vis_btns)
+					b.Size = new Size(Math.Max(b.Width, b.PreferredSize.Width), btn_h);
 
-			// Layout icon
-			m_image.Visible = show_image;
-			if (show_image)
-			{
-				m_image.Location = new Point(x, y);
-				x += m_image.Width;
-			}
+				// Set the form size
+				var nc_size = new Size(Bounds.Width - ClientSize.Width, Bounds.Height - ClientSize.Height);
+				MinimumSize = new Size(
+					nc_size.Width  + button_margin + vis_btns.Sum(b => b.Size.Width) + (num_btns-1)*btn_sep + button_margin,
+					nc_size.Height + text_margin + image_area.Height + text_margin + button_margin + btn_h + button_margin);
+				ClientSize = new Size(
+					Maths.Clamp(text_margin + content_area.Width  + text_margin                                         , MinimumSize.Width - nc_size.Width, screen_area.Width),
+					Maths.Clamp(text_margin + content_area.Height + text_margin + button_margin + btn_h + button_margin , MinimumSize.Height - nc_size.Height, screen_area.Height));
 
-			// Layout the message text
-			m_message.Location = new Point(x, y + (content_area.Height - text_area.Height) / 2);
-			m_message.Size = new Size(Math.Max(text_area.Width, ClientSize.Width - 2*text_margin - image_area.Width), text_area.Height);
+				int x = text_margin, y = text_margin;
 
-			x = ClientSize.Width - button_margin_h - btn_size.Width;
-			y = ClientSize.Height - button_margin_v - btn_size.Height;
+				// Layout the background panel
+				m_panel.Location = Point.Empty;
+				m_panel.Size = new Size(ClientSize.Width, text_margin + content_area.Height + text_margin);
 
-			// Layout buttons
-			foreach (var btn in btns)
-			{
-				var show_btn = btn.Text.HasValue();
-				btn.Visible = show_btn;
-				if (!show_btn) continue; // Don't use btn.Visible because it's not true until the dialog is displayed
+				// Layout icon
+				m_image.Visible = show_image;
+				if (show_image)
+				{
+					m_image.Location = new Point(x, y);
+					x += m_image.Width;
+				}
 
-				btn.Location = new Point(x, y);
-				btn.Size = btn_size;
-				x -= btn_size.Width + button_margin_h;
+				// Layout the message text
+				m_message.Location = new Point(x, y + (content_area.Height - text_area.Height) / 2);
+				m_message.Size = new Size(Math.Max(text_area.Width, ClientSize.Width - 2*text_margin - image_area.Width), text_area.Height);
+
+				// Layout buttons (from right to left)
+				x = ClientSize.Width  - button_margin;
+				y = ClientSize.Height - button_margin - btn_h;
+				foreach (var btn in btns.Reversed())
+				{
+					var show = btn.Text.HasValue();
+					if ((btn.Visible = show) == false) continue;
+					btn.Location = new Point(x - btn.Width, y);
+					x -= btn.Width + btn_sep;
+				}
 			}
 		}
 
@@ -397,15 +446,15 @@ namespace pr.gui
 			this.m_btn_negative = new System.Windows.Forms.Button();
 			this.m_btn_neutral = new System.Windows.Forms.Button();
 			this.m_btn_positive = new System.Windows.Forms.Button();
-			this.m_message = new RichTextBox();
+			this.m_message = new pr.gui.RichTextBox();
 			this.m_image = new System.Windows.Forms.PictureBox();
 			this.m_panel = new System.Windows.Forms.Panel();
 			((System.ComponentModel.ISupportInitialize)(this.m_image)).BeginInit();
 			this.m_panel.SuspendLayout();
 			this.SuspendLayout();
-			//
+			// 
 			// m_btn_negative
-			//
+			// 
 			this.m_btn_negative.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_negative.Location = new System.Drawing.Point(379, 98);
 			this.m_btn_negative.Name = "m_btn_negative";
@@ -413,9 +462,9 @@ namespace pr.gui
 			this.m_btn_negative.TabIndex = 2;
 			this.m_btn_negative.Text = "Negative(3)";
 			this.m_btn_negative.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_neutral
-			//
+			// 
 			this.m_btn_neutral.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_neutral.Location = new System.Drawing.Point(285, 98);
 			this.m_btn_neutral.Name = "m_btn_neutral";
@@ -423,9 +472,9 @@ namespace pr.gui
 			this.m_btn_neutral.TabIndex = 1;
 			this.m_btn_neutral.Text = "Neutral(2)";
 			this.m_btn_neutral.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_btn_positive
-			//
+			// 
 			this.m_btn_positive.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_btn_positive.Location = new System.Drawing.Point(191, 98);
 			this.m_btn_positive.Name = "m_btn_positive";
@@ -433,26 +482,31 @@ namespace pr.gui
 			this.m_btn_positive.TabIndex = 0;
 			this.m_btn_positive.Text = "Positive(1)";
 			this.m_btn_positive.UseVisualStyleBackColor = true;
-			//
+			// 
 			// m_message
-			//
+			// 
 			this.m_message.AcceptsTab = true;
-			this.m_message.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-			| System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			this.m_message.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_message.BackColor = System.Drawing.SystemColors.Window;
 			this.m_message.BorderStyle = System.Windows.Forms.BorderStyle.None;
+			this.m_message.CaretLocation = new System.Drawing.Point(0, 0);
+			this.m_message.CurrentLineIndex = 0;
 			this.m_message.Cursor = System.Windows.Forms.Cursors.Default;
+			this.m_message.FirstVisibleLineIndex = 0;
 			this.m_message.Font = new System.Drawing.Font("Segoe UI", 9F);
+			this.m_message.LineCount = 2;
 			this.m_message.Location = new System.Drawing.Point(84, 30);
+			this.m_message.Margin = new System.Windows.Forms.Padding(0);
 			this.m_message.Name = "m_message";
 			this.m_message.ReadOnly = true;
 			this.m_message.Size = new System.Drawing.Size(368, 36);
 			this.m_message.TabIndex = 3;
 			this.m_message.Text = "The text of the message box\nOn multiple lines";
-			//
+			// 
 			// m_image
-			//
+			// 
 			this.m_image.Location = new System.Drawing.Point(30, 30);
 			this.m_image.Name = "m_image";
 			this.m_image.Padding = new System.Windows.Forms.Padding(0, 0, 10, 0);
@@ -460,12 +514,12 @@ namespace pr.gui
 			this.m_image.SizeMode = System.Windows.Forms.PictureBoxSizeMode.AutoSize;
 			this.m_image.TabIndex = 4;
 			this.m_image.TabStop = false;
-			//
+			// 
 			// m_panel
-			//
-			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-			| System.Windows.Forms.AnchorStyles.Left)
-			| System.Windows.Forms.AnchorStyles.Right)));
+			// 
+			this.m_panel.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
 			this.m_panel.BackColor = System.Drawing.SystemColors.Window;
 			this.m_panel.Controls.Add(this.m_image);
 			this.m_panel.Controls.Add(this.m_message);
@@ -473,9 +527,9 @@ namespace pr.gui
 			this.m_panel.Name = "m_panel";
 			this.m_panel.Size = new System.Drawing.Size(478, 86);
 			this.m_panel.TabIndex = 1;
-			//
+			// 
 			// MsgBox
-			//
+			// 
 			this.ClientSize = new System.Drawing.Size(479, 136);
 			this.Controls.Add(this.m_panel);
 			this.Controls.Add(this.m_btn_positive);
@@ -490,6 +544,7 @@ namespace pr.gui
 			this.m_panel.ResumeLayout(false);
 			this.m_panel.PerformLayout();
 			this.ResumeLayout(false);
+
 		}
 		#endregion
 	}

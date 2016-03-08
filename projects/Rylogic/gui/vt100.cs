@@ -315,7 +315,6 @@ namespace pr.gui
 			}
 			public void Resize(int newsize)
 			{
-				Debug.Assert(newsize <= Size, "This overload should only be used to reduce the line length");
 				Resize(newsize, ' ', Style.Default);
 			}
 
@@ -795,7 +794,7 @@ namespace pr.gui
 				{
 				default:
 					// unknown escape sequence
-					Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+					ReportUnsupportedEscapeSequence(m_seq);
 					break;
 
 				case (char)Keys.Escape: // Double escape characters - reset to new escape sequence
@@ -810,7 +809,7 @@ namespace pr.gui
 						switch (code)
 						{
 						default:
-							Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+							ReportUnsupportedEscapeSequence(m_seq);
 							break;
 
 						case 'A': 
@@ -1109,7 +1108,7 @@ namespace pr.gui
 						switch (code)
 						{
 						default:
-							Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+							ReportUnsupportedEscapeSequence(m_seq);
 							break;
 						//Esc(A	Set United Kingdom G0 character set	setukg0
 						//Esc(B	Set United States G0 character set	setusg0
@@ -1129,7 +1128,7 @@ namespace pr.gui
 						switch (code)
 						{
 						default:
-							Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+							ReportUnsupportedEscapeSequence(m_seq);
 							break;
 						//Esc)A	Set United Kingdom G1 character set	setukg1
 						//Esc)B	Set United States G1 character set	setusg1
@@ -1141,7 +1140,7 @@ namespace pr.gui
 					}
 					#endregion
 
-				case 'O': //EscO... codes ... I think these are actually responce codes...
+				case 'O': //EscO... codes ... I think these are actually response codes...
 					#region Esc0
 					{
 						if (m_seq.Length < 3) return; // Incomplete sequence
@@ -1149,7 +1148,7 @@ namespace pr.gui
 						switch (code)
 						{
 						default:
-							Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+							ReportUnsupportedEscapeSequence(m_seq);
 							break;
 
 						//VT100 Special Key Codes
@@ -1196,7 +1195,7 @@ namespace pr.gui
 						switch (code)
 						{
 						default:
-							Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(m_seq.ToString()));
+							ReportUnsupportedEscapeSequence(m_seq);
 							break;
 
 						//Esc#3	Double-height letters, top half	DECDHL
@@ -1214,19 +1213,19 @@ namespace pr.gui
 				case '>': //Esc> Set numeric keypad mode DECKPNM
 					break;
 
-				case 'A': //EscA Move cursor up one line cursorup
+				case 'A': //EscA Move cursor up one line CURSORUP
 					m_out.pos = MoveCaret(m_out.pos, 0,-1);
 					break;
 
-				case 'B': //EscB Move cursor down one line cursordn
+				case 'B': //EscB Move cursor down one line CURSORDN
 					m_out.pos = MoveCaret(m_out.pos, 0,+1);
 					break;
 
-				case 'C': //EscC Move cursor right one char cursorrt
+				case 'C': //EscC Move cursor right one char CURSORRT
 					m_out.pos = MoveCaret(m_out.pos, +1,0);
 					break;
 
-				case 'D': //EscD Move cursor left one char cursorlf
+				case 'D': //EscD Move cursor left one char CURSORLF
 					m_out.pos = MoveCaret(m_out.pos, -1,0);
 					break;
 
@@ -1358,6 +1357,9 @@ namespace pr.gui
 			/// 'str' should not contain any non-printable characters (including \n,\r). These are removed by ParseOutput</summary>
 			private void Write(string str, int ofs = 0, int count = int.MaxValue)
 			{
+				Debug.Assert(ofs >= 0 && ofs < str.Length && count >= 0);
+				count = Math.Min(count, str.Length - ofs);
+
 				// Add received text to the capture file, if capturing
 				Capture(str, ofs, count, false);
 
@@ -1369,6 +1371,7 @@ namespace pr.gui
 				if (m_out.pos.X < 0)
 				{
 					var dx = Math.Min(-m_out.pos.X, count);
+					Debug.Assert(dx <= count);
 					m_out.pos.X += dx;
 					count -= dx;
 					ofs += dx;
@@ -1390,6 +1393,7 @@ namespace pr.gui
 				count = Math.Min(count, str.Length - ofs);
 				var clipped = count > Settings.TerminalWidth - m_out.pos.X;
 				count = Math.Min(count, Settings.TerminalWidth - m_out.pos.X);
+				Debug.Assert(count >= 0 && count <= str.Length - ofs);
 
 				// Get the line and ensure it's large enough
 				var line = LineAt(m_out.pos.Y);
@@ -1480,6 +1484,14 @@ namespace pr.gui
 						+"8[1A   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t   0\t"
 						+"8";
 				}
+			}
+
+			/// <summary>Handle unsupported escape sequences</summary>
+			public bool ReportUnsupportedEscapeSequences = true;
+			protected virtual void ReportUnsupportedEscapeSequence(StringBuilder seq)
+			{
+				if (ReportUnsupportedEscapeSequences)
+					Debug.WriteLine("Unsupported VT100 escape sequence: {0}".Fmt(seq.ToString()));
 			}
 		}
 
@@ -2222,3 +2234,28 @@ namespace pr.gui
 		}
 	}
 }
+
+#if PR_UNITTESTS
+namespace pr.unittests
+{
+	using gui;
+
+	[TestFixture] public class TestVT100
+	{
+		[Test] public void Robustness()
+		{
+			// Blast the buffer with noise to make sure it can handle any input
+			var settings = new VT100.Settings();
+			var buf = new VT100.Buffer(settings);
+			buf.ReportUnsupportedEscapeSequences = false;
+
+			var rnd = new Random(0);
+			for (int i = 0; i != 10000; ++i)
+			{
+				var noise = rnd.Bytes().Take(rnd.Next(1000)).Select(x => (char)x).ToArray();
+				buf.Output(new string(noise));
+			}
+		}
+	}
+}
+#endif

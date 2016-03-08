@@ -7,7 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using pr.extn;
 using pr.maths;
+using pr.util;
 
 namespace pr.maths
 {
@@ -16,52 +18,79 @@ namespace pr.maths
 	{
 		public enum EState { Clear = 0, Set = 1, Toggle = 2 }
 
-		/// <summary>Create a 32-bit bit mask from 1 &lt;&lt; n</summary>
-		public static UInt32 Bit32(int n) { return 1U << n; }
+		/// <summary>Create a 32-bit mask from 1 &lt;&lt; n</summary>
+		public static uint Bit32(int n) { return 1U << n; }
 
-		/// <summary>Create a 64-bit bit mask from 1 &lt;&lt; n</summary>
-		public static UInt64 Bit64(int n) { return 1UL << n; }
+		/// <summary>Create a 64-bit mask from 1 &lt;&lt; n</summary>
+		public static ulong Bit64(int n) { return 1UL << n; }
 
 		/// <summary>Set/Clear bits in 'value'</summary>
+		public static ulong SetBits(ulong value, ulong mask, bool state)
+		{
+			return state ? value | mask : value & ~mask;
+		}
+		public static long SetBits(long value, long mask, bool state)
+		{
+			return state ? value | mask : value & ~mask;
+		}
 		public static uint SetBits(uint value, uint mask, bool state)
 		{
 			return state ? value | mask : value & ~mask;
 		}
-
-		/// <summary>Set/Clear bits in 'value'</summary>
-		public static UInt64 SetBits(UInt64 value, UInt64 mask, bool state)
-		{
-			return state ? value | mask : value & ~mask;
-		}
-
-		/// <summary>Set/Clear bits in 'value'</summary>
 		public static int SetBits(int value, int mask, bool state)
 		{
 			return state ? value | mask : value & ~mask;
 		}
+		public static T SetBits<T>(T value, T mask, bool state) where T :struct, IConvertible
+		{
+			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
+			return (T)Enum.ToObject(typeof(T), SetBits(value.ToInt32(null), mask.ToInt32(null), state));
+		}
 
 		/// <summary>Returns true if 'value & mask' != 0</summary>
+		public static bool AnySet(ulong value, ulong mask)
+		{
+			return (value & mask) != 0;
+		}
+		public static bool AnySet(long value, long mask)
+		{
+			return (value & mask) != 0;
+		}
 		public static bool AnySet(uint value, uint mask)
 		{
 			return (value & mask) != 0;
 		}
-
-		/// <summary>Returns true if 'value & mask' != 0</summary>
 		public static bool AnySet(int value, int mask)
 		{
 			return (value & mask) != 0;
 		}
+		public static bool AnySet<T>(T value, T mask) where T :struct, IConvertible
+		{
+			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
+			return AnySet(value.ToUInt64(null), mask.ToUInt64(null));
+		}
 
 		/// <summary>Returns true if 'value & mask' == mask</summary>
+		public static bool AllSet(ulong value, ulong mask)
+		{
+			return (value & mask) == mask;
+		}
+		public static bool AllSet(long value, long mask)
+		{
+			return (value & mask) == mask;
+		}
 		public static bool AllSet(uint value, uint mask)
 		{
 			return (value & mask) == mask;
 		}
-
-		/// <summary>Returns true if 'value & mask' == mask</summary>
 		public static bool AllSet(int value, int mask)
 		{
 			return (value & mask) == mask;
+		}
+		public static bool AllSet<T>(T value, T mask) where T :struct, IConvertible
+		{
+			System.Diagnostics.Debug.Assert(typeof(T).HasAttribute<FlagsAttribute>(), "Type {0} is not a flags enum".Fmt(typeof(T).Name));
+			return AnySet(value.ToUInt64(null), mask.ToUInt64(null));
 		}
 
 		/// <summary>Iterate over the index positions of bits in a bit field</summary>
@@ -246,7 +275,7 @@ namespace pr.maths
 			return true;
 		}
 
-		/// <summary>Convert the bitfield 'bits' into a string with at least 'min_digits' characters</summary>
+		/// <summary>Convert the bit field 'bits' into a string with at least 'min_digits' characters</summary>
 		public static string ToString(uint bits, int min_digits)
 		{
 			var i = 0;
@@ -256,7 +285,7 @@ namespace pr.maths
 			return str.ToString();
 		}
 
-		/// <summary>Convert the bitfield 'bits' into a string</summary>
+		/// <summary>Convert the bit field 'bits' into a string</summary>
 		public static string ToString(uint bits)
 		{
 			return ToString(bits, 0);

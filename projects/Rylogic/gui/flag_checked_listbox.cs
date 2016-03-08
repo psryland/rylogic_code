@@ -16,7 +16,7 @@ using pr.util;
 
 namespace pr.gui
 {
-	/// <summary>A Checked list box setup for enum flags</summary>
+	/// <summary>A Checked list box set up for enum flags</summary>
 	public class FlagCheckedListBox :CheckedListBox
 	{
 		private Type m_enum_type;
@@ -45,7 +45,7 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Get/Set an enum value that implicitly creates the members of the checklist</summary>
+		/// <summary>Get/Set an enum value that implicitly creates the members of the check list</summary>
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
 		public Enum EnumValue
 		{
@@ -98,8 +98,8 @@ namespace pr.gui
 
 		/// <summary>
 		/// Updates items in the checked list box
-		/// item = The item that was checked/unchecked (can represent more than 1 bit)
-		/// cs = The check state of that item</summary>
+		/// 'item' = The item that was checked/unchecked (can represent more than 1 bit)
+		/// 'cs' = The check state of that item</summary>
 		protected void UpdateCheckedItems(FlagCheckedListBoxItem item, CheckState cs)
 		{
 			// If the value of the item is 0, uncheck all non-zero items
@@ -109,7 +109,7 @@ namespace pr.gui
 				UpdateCheckedItems(cs == CheckState.Checked ? (Bitmask | item.Value) : (Bitmask & ~item.Value));
 		}
 
-		/// <summary>Checks/Unchecks items depending on the given bit mask</summary>
+		/// <summary>Checks/Un-checks items depending on the given bit mask</summary>
 		protected void UpdateCheckedItems(int bitmask)
 		{
 			// See comments in OnItemCheck

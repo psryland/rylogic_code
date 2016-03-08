@@ -8,8 +8,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using pr.common;
-using pr.util;
 using pr.extn;
 
 namespace pr.extn
@@ -66,6 +66,12 @@ namespace pr.extn
 		{
 			list.Add(item);
 			return item;
+		}
+
+		/// <summary>Add a variable list of items</summary>
+		public static void Add<T,U>(this IList<T> list, params U[] items) where U:T
+		{
+			list.AddRange(items.Cast<T>());
 		}
 
 		/// <summary>
@@ -279,6 +285,18 @@ namespace pr.extn
 			return list;
 		}
 
+		/// <summary>Remove all items in 'set' from this list. (More efficient that removing one at a time if 'set' is a large fraction of this list)</summary>
+		public static void RemoveAll<T>(this IList<T> list, IEnumerable<T> set)
+		{
+			list.RemoveAll(set.ToHashSet());
+		}
+		public static void RemoveAll<T>(this IList<T> list, HashSet<T> set)
+		{
+			for (int i = list.Count; i-- != 0;)
+				if (set.Contains(list[i]))
+					list.RemoveAt(i);
+		}
+
 		/// <summary>
 		/// Binary search using for an element using only a predicate function.
 		/// Returns the index of the element if found or the 2s-complement of the first
@@ -464,8 +482,6 @@ namespace pr.extn
 #if PR_UNITTESTS
 namespace pr.unittests
 {
-	using maths;
-
 	[TestFixture] public class TestListExtns
 		{
 		[Test] public void ListQuickSort()
