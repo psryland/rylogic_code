@@ -130,7 +130,7 @@ namespace pr.common
 			catch { return string.Empty; }
 		}
 
-		/// <summary>Return the file extension of 'path' (or empty string)</summary>
+		/// <summary>Return the file extension of 'path' (or empty string). Includes the '.'</summary>
 		public static string Extn(string path)
 		{
 			try { return Path.GetExtension(path) ?? string.Empty; }

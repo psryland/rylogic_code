@@ -853,8 +853,8 @@ namespace pr.extn
 			private readonly DataGridView.HitTestInfo m_info;
 			public HitTestInfo(DataGridView grid, Point pt)
 			{
-				Grid   = grid;
-				GridPoint  = pt;
+				Grid = grid;
+				GridPoint = pt;
 				m_info = grid.HitTest(pt.X, pt.Y);
 			}
 
