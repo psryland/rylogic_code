@@ -1,9 +1,7 @@
 //************************************
 // LineDrawerHelper
-//  (c)opyright Paul Ryland 2006
+//  Copyright (c) Paul Ryland 2006
 //************************************
-#ifndef PR_LINEDRAWER_ODE_H
-#define PR_LINEDRAWER_ODE_H
 #pragma once
 
 #include <ode/ode.h>
@@ -19,12 +17,14 @@ namespace pr
 		// Each geom object should have it's data pointer set as a pr::variant, with the unsigned int value being the colour
 		template <typename TStr> inline TStr& Geom(TStr& str, dGeomID geom)
 		{
+			using Char = TStr::value_type;
+
 			switch (dGeomGetClass(geom))
 			{
 			default:
 				if (dGeomIsSpace(geom))
 				{
-					GroupStart(str, "submodel", 0);
+					GroupStart(str, PR_STRLITERAL(Char, "submodel"), 0);
 					for (int i = 0, i_end = dSpaceGetNumGeoms((dSpaceID)geom); i != i_end; ++i)
 						Geom(str, dSpaceGetGeom((dSpaceID)geom, i));
 					GroupEnd(str);
@@ -35,7 +35,7 @@ namespace pr
 					float rad = dGeomSphereGetRadius(geom);
 					pr::v4 pos = pr::v4::make(dGeomGetOffsetPosition(geom), 1.0f);
 					pr::variant v = { dGeomGetData(geom) };
-					Sphere(str, "sphere", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad);
+					Sphere(str, PR_STRLITERAL(Char, "sphere"), v.ptr != nullptr ? v.ui : 0xFFFFFFFF, pos, rad);
 				}break;
 			case dBoxClass:
 				{
@@ -43,14 +43,14 @@ namespace pr
 					pr::v4 dim = pr::v4::make(box_size, 0.0f);
 					pr::m4x4 o2p = pr::ode(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Box(str, "box", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim);
+					Box(str, PR_STRLITERAL(Char, "box"), v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, dim);
 				}break;
 			case dCapsuleClass:
 				{
 					float rad, len; dGeomCapsuleGetParams(geom, &rad, &len);
 					pr::m4x4 o2p = pr::ode(dGeomGetOffsetPosition(geom), dGeomGetOffsetRotation(geom));
 					pr::variant v = { dGeomGetData(geom) };
-					Cylinder(str, "caps", v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, 1, len, rad);
+					Cylinder(str, PR_STRLITERAL(Char, "caps"), v.ptr != nullptr ? v.ui : 0xFFFFFFFF, o2p, 1, len, rad);
 					//Capsule("caps", v.ptr == 0 ? 0xFFFF0000 : v.ui, o2p, rad, len, str);
 				}break;
 			}
@@ -58,5 +58,3 @@ namespace pr
 		}
 	}
 }
-
-#endif

@@ -18,7 +18,6 @@ using namespace pr::ph::collision;
 float pr::ph::ProjectBox(m3x4 const& box, v4 const& axis, collision::Point& point)
 {
 	PR_ASSERT(PR_DBG_PHYSICS, FEql(Length3(axis), 1.0f), "");
-	float const FaceToFaceTolerance = 0.01f;
 
 	point.m_type = EPointType_Point;
 	float dist = 0.0f;

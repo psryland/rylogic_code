@@ -281,6 +281,7 @@ namespace TestCS
 			m_grid.SetGridColumnSizes(DataGridViewEx.EColumnSizeOptions.FitToDisplayWidth);
 
 			// Column filtering
+			m_grid.ColumnFilters(true);
 			m_grid.KeyDown += DataGridViewEx.ColumnFilters;
 		}
 		protected override void Dispose(bool disposing)

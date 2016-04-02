@@ -28,6 +28,7 @@
 #include "pr/common/to.h"
 #include "pr/common/fmt.h"
 #include "pr/common/datetime.h"
+#include "pr/str/string_core.h"
 #include "pr/threads/concurrent_queue.h"
 #include "pr/threads/name_thread.h"
 
@@ -52,21 +53,20 @@ namespace pr
 		};
 	}
 
-	// To<char const*>
-	template <> struct Convert<char const*, log::ELevel>
+	// Log level to string
+	template <typename Str, typename = enable_if_raw_str<Str>>
+	inline Str To(log::ELevel lvl)
 	{
-		static char const* To(log::ELevel lvl)
+		using Char = pr::str::traits<Str>::value_type;
+		switch (lvl)
 		{
-			switch (lvl)
-			{
-			default: return FmtS("%d", (int)lvl);
-			case log::ELevel::Debug: return "Debug";
-			case log::ELevel::Info : return "Info" ;
-			case log::ELevel::Warn : return "Warn" ;
-			case log::ELevel::Error: return "Error";
-			}
+		default: return FmtS(PR_STRLITERAL(Char, "%d"), (int)lvl);
+		case log::ELevel::Debug: return PR_STRLITERAL(Char, "Debug");
+		case log::ELevel::Info : return PR_STRLITERAL(Char, "Info" );
+		case log::ELevel::Warn : return PR_STRLITERAL(Char, "Warn" );
+		case log::ELevel::Error: return PR_STRLITERAL(Char, "Error");
 		}
-	};
+	}
 
 	namespace log
 	{
@@ -137,7 +137,9 @@ namespace pr
 				auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(ev.m_timestamp);
 				if (!ev.m_file.empty()) { std::cout << ev.m_file;                delim = " "; }
 				if (ev.m_line != -1)    { std::cout << "(" << ev.m_line << "):"; delim = " "; }
-				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), To<char const*>(ev.m_level), To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff").c_str(), ev.m_msg.c_str());
+				auto lvl = pr::To<char const*>(ev.m_level);
+				auto ts = To<std::string>(ev.m_timestamp, "%h:%mm:%ss:%fff");
+				auto s = FmtS("%s%8s|%s|%s|%s\n", delim, ev.m_context.c_str(), lvl, ts.c_str(), ev.m_msg.c_str());
 				std::cout << s;
 			}
 		};
@@ -227,7 +229,7 @@ namespace pr
 
 			// Thread for consuming log events
 			template <typename OutputCB>
-			static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size)
+			static void LogConsumerThread(Context& ctx, OutputCB log_cb, int const occurrences_batch_size = 0)
 			{
 				using namespace std::chrono;
 				try
@@ -278,7 +280,7 @@ namespace pr
 
 			//void OutputCB(pr::log::Event const& ev);
 			template <typename OutputCB>
-			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size = 0)
+			Logger(log::string context_name, OutputCB log_cb, int occurrences_batch_size)
 				:m_context_name(context_name)
 				,m_context(new Context(log_cb, occurrences_batch_size))
 				,Enabled()
@@ -339,7 +341,7 @@ namespace pr
 					std::stringstream s;
 					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
-				});
+				}, 0);
 				log.Write(ELevel::Debug, "event 1");
 				log.Flush();
 				PR_CHECK(str, "Debug,test: event 1,1\n");
@@ -351,7 +353,7 @@ namespace pr
 					std::stringstream s;
 					s << To<char const*>(ev.m_level) << "," << ev.m_context << ": " << ev.m_msg << ',' << ev.m_occurrences << std::endl;
 					str += s.str();
-				});
+				}, 0);
 				Logger log2(log1, "log2");
 
 				log1.Write(ELevel::Info, "event 1");

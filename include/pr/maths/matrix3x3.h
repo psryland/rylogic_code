@@ -94,7 +94,6 @@ namespace pr
 
 	// Equality operators
 	bool FEql        (m3x4 const& lhs, m3x4 const& rhs, float tol = maths::tiny);
-	bool FEqlZero    (m3x4 const& lhs, float tol = maths::tiny);
 	bool operator == (m3x4 const& lhs, m3x4 const& rhs);
 	bool operator != (m3x4 const& lhs, m3x4 const& rhs);
 	bool operator <  (m3x4 const& lhs, m3x4 const& rhs);
@@ -116,6 +115,7 @@ namespace pr
 	m3x4  Orthonorm(m3x4 const& mat);
 	bool  IsOrthonormal(m3x4 const& mat);
 	void  GetAxisAngle(m3x4 const& mat, v4& axis, float& angle);
+	v4    GetEulerAngles(m3x4 const& mat);
 	m3x4  Rotation3x3 (float pitch, float yaw, float roll);
 	m3x4  Rotation3x3 (const v3& axis, float angle);
 	m3x4  Rotation3x3 (v4 const& axis_norm, float angle);

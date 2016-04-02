@@ -95,7 +95,6 @@ namespace pr
 
 	// Equality operators
 	bool FEql        (m4x4 const& lhs, m4x4 const& rhs, float tol = maths::tiny);
-	bool FEqlZero    (m4x4 const& lhs, float tol = maths::tiny);
 	bool operator == (m4x4 const& lhs, m4x4 const& rhs);
 	bool operator != (m4x4 const& lhs, m4x4 const& rhs);
 	bool operator <  (m4x4 const& lhs, m4x4 const& rhs);

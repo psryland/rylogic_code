@@ -118,7 +118,7 @@ namespace ldr
 			}
 			else if (pr::str::EqualI(extn, "p3d"))
 			{
-				FileIncludes<> inc;
+				Includes<> inc;
 				inc.FileOpened += watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 
@@ -129,7 +129,7 @@ namespace ldr
 			}
 			else // assume ldr script file
 			{
-				FileIncludes<> inc;
+				Includes<> inc;
 				inc.FileOpened += watch;
 				inc.m_ignore_missing_includes = m_settings.m_IgnoreMissingIncludes;
 

@@ -652,7 +652,7 @@ namespace pr
 		void Edit(pr::Renderer& rdr, LdrObjectPtr object, EditObjectCB edit_cb, void* ctx);
 
 		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, char const* desc, EUpdateObject flags = EUpdateObject::All);
+		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags = EUpdateObject::All);
 
 		// Remove all objects from 'objects' that have a context id matching one in 'doomed' and not in 'excluded'
 		// If 'doomed' is 0, all are assumed doomed. If 'excluded' is 0, none are assumed excluded
@@ -662,7 +662,7 @@ namespace pr
 		// Remove 'obj' from 'objects'
 		void Remove(ObjectCont& objects, pr::ldr::LdrObjectPtr obj);
 
-		// Parse an ldr transform description accummulatively
+		// Parse an ldr transform description accumulatively
 		// 'o2w' should be a valid initial transform
 		// Parse the source data in 'reader' using the same syntax
 		// as we use for ldr object '*o2w' transform descriptions.
@@ -670,7 +670,7 @@ namespace pr
 		// transform syntax without dependence on renderer functions
 		inline pr::m4x4& ParseLdrTransform(pr::script::Reader& reader, pr::m4x4& o2w)
 		{
-			assert(pr::IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it premultiplies the transform with the one read from the script");
+			assert(pr::IsFinite(o2w) && "A valid 'o2w' must be passed to this function as it pre-multiplies the transform with the one read from the script");
 			pr::m4x4 p2w = pr::m4x4Identity;
 
 			reader.SectionStart();
@@ -808,7 +808,7 @@ namespace pr
 			}
 			reader.SectionEnd();
 
-			// Premultiply the object to world transform
+			// Pre-multiply the object to world transform
 			o2w = p2w * o2w;
 			PR_INFO_IF(PR_DBG, o2w.w.w != 1.0f, "o2w.w.w != 1.0f - non orthonormal transform");
 			return o2w;
@@ -824,7 +824,7 @@ namespace pr
 			return o2w;
 		}
 
-		// Generate a scene that demos the supported object types and modifers.
+		// Generate a scene that demos the supported object types and modifiers.
 		std::wstring CreateDemoScene();
 	}
 }

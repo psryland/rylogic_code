@@ -146,7 +146,7 @@ namespace pr.gui
 			// the dialog is being destroyed while the worker thread is still running. The worker
 			// thread either needs to test for CancelPending, or the dialog should not be close-able
 			// until the background thread is finished.
-			if (m_thread != null) m_thread.Join();
+			if (m_thread != null && m_thread.IsAlive) m_thread.Join();
 			base.Dispose(disposing);
 		}
 		protected override void OnShown(EventArgs e)

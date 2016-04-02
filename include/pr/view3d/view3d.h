@@ -248,6 +248,13 @@ extern "C"
 		View3DGizmo       m_gizmo;
 		EView3DGizmoEvent m_state;
 	};
+	struct View3DIncludes
+	{
+		wchar_t const* m_include_paths; // A comma or semicolon separated list of search directories
+		HMODULE        m_modules[16];   // An array of binary modules that contain resources. '0' means 'this' module
+		int            m_module_count;  // The number of valid module values in 'm_modules'
+		// (ToDo) A string lookup table
+	};
 
 	// Initialise/shutdown the dll
 	VIEW3D_API View3DContext           __stdcall View3D_Initialise       (View3D_ReportErrorCB initialise_error_cb, void* ctx);
@@ -307,8 +314,8 @@ extern "C"
 	VIEW3D_API void                    __stdcall View3D_ShowLightingDlg          (View3DWindow window);
 
 	// Objects
-	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async, char const* include_paths);
-	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module);
+	VIEW3D_API int                     __stdcall View3D_ObjectsCreateFromFile    (char const* ldr_filepath, int context_id, BOOL async, View3DIncludes const* includes);
+	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreateLdr          (char const* ldr_script, BOOL file, int context_id, BOOL async, View3DIncludes const* includes);
 	VIEW3D_API View3DObject            __stdcall View3D_ObjectCreate             (char const* name, View3DColour colour, int icount, int vcount, View3D_EditObjectCB edit_cb, void* ctx, int context_id);
 	VIEW3D_API void                    __stdcall View3D_ObjectUpdate             (View3DObject object, char const* ldr_script, EView3DUpdateObject flags);
 	VIEW3D_API void                    __stdcall View3D_ObjectEdit               (View3DObject object, View3D_EditObjectCB edit_cb, void* ctx);

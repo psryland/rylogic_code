@@ -1,18 +1,16 @@
 //************************************************************************
-// Crc
+// CRC
 //  Copyright (c) Rylogic Ltd 2009
 //************************************************************************
 #pragma once
-#ifndef PR_CRC_H
-#define PR_CRC_H
 
 namespace pr
 {
 	typedef unsigned int CRC;
 	CRC const InitialCrc = 0xffffffff;
 
-	// 32bit crc
-	inline unsigned int Crc(void const* data, size_t data_size, CRC crc)
+	// 32bit CRC
+	inline unsigned int Crc(void const* data, unsigned long data_size, CRC crc)
 	{
 		unsigned char const* buffer = static_cast<unsigned char const*>(data);
 		while (data_size--)
@@ -25,10 +23,9 @@ namespace pr
 		}
 		return crc;
 	}
-	inline CRC Crc(void const* data, size_t data_size)
+	inline CRC Crc(void const* data, unsigned long data_size)
 	{
 		return Crc(data, data_size, InitialCrc);
 	}
 }
 
-#endif

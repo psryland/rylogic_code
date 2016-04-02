@@ -2,27 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Windows.Interop;
 using System.Windows.Forms;
 using System.Windows.Forms.Integration;
+using System.Windows.Interop;
 using pr.common;
 using pr.extn;
 using pr.maths;
 using pr.util;
 using pr.win32;
+using HContext = System.IntPtr;
+using HGizmo = System.IntPtr;
+using HObject = System.IntPtr;
+using HTexture = System.IntPtr;
+using HWindow = System.IntPtr;
+using HWND = System.IntPtr;
+using HMODULE = System.IntPtr;
 
 namespace pr.gfx
 {
-	using HWND     = System.IntPtr;
-	using HContext = System.IntPtr;
-	using HWindow  = System.IntPtr;
-	using HObject  = System.IntPtr;
-	using HGizmo   = System.IntPtr;
-	using HTexture = System.IntPtr;
-
 	/// <summary>.NET wrapper for View3D.dll</summary>
 	public class View3d :IDisposable
 	{
@@ -478,6 +477,33 @@ namespace pr.gfx
 			public RectangleF ToRectF() { return new RectangleF(m_x, m_y, m_width, m_height); }
 		}
 
+		[StructLayout(LayoutKind.Sequential)]
+		public struct View3DIncludes
+		{
+			/// <summary>A comma or semicolon separated list of search directories</summary>
+			public string m_include_paths;
+
+			/// <summary>An array of binary modules that contain resources</summary>
+			[MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)] public IntPtr[] m_modules;
+			public int m_module_count;
+
+			/// <summary>Create an includes object. Remember module == IntPtr.Zero means "this" module</summary>
+			public View3DIncludes(IEnumerable<string> paths = null, IEnumerable<HMODULE> modules = null)
+			{
+				m_include_paths = paths != null ? string.Join(",", paths) : null;
+				m_modules = new HMODULE[16];
+				m_module_count = 0;
+
+				if (modules != null)
+				{
+					foreach (var m in modules.Take(m_modules.Length))
+						m_modules[m_module_count++] = m;
+				}
+			}
+			public View3DIncludes(HMODULE module, IEnumerable<string> paths = null)
+				:this(paths, new[] { module })
+			{}
+		}
 		#endregion
 
 		public class Exception : System.Exception
@@ -1175,13 +1201,14 @@ namespace pr.gfx
 			public Object(string ldr_script, bool file)
 				:this(ldr_script, file, null)
 			{}
-			public Object(string ldr_script, bool file, string include_paths)
-				:this(ldr_script, file, include_paths, DefaultContextId, false)
+			public Object(string ldr_script, bool file, View3DIncludes? includes)
+				:this(ldr_script, file, DefaultContextId, false, includes)
 			{}
-			public Object(string ldr_script, bool file, string include_paths, int context_id, bool async, IntPtr module = default(IntPtr))
+			public Object(string ldr_script, bool file, int context_id, bool async, View3DIncludes? includes)
 			{
 				m_owned = true;
-				m_handle = View3D_ObjectCreateLdr(ldr_script, file, context_id, async, include_paths, module);
+				var inc = includes ?? new View3DIncludes();
+				m_handle = View3D_ObjectCreateLdr(ldr_script, file, context_id, async, ref inc);
 				if (m_handle == HObject.Zero)
 					throw new Exception("Failed to create object from script\r\n{0}".Fmt(ldr_script.Summary(100)));
 			}
@@ -1215,12 +1242,14 @@ namespace pr.gfx
 			/// Create multiple objects from a source file and associate them with 'context_id'.
 			/// 'include_paths' is a comma separate list of include paths to use to resolve #include directives (or nullptr)
 			/// Note, these objects cannot be accessed other than by context id.
-			/// This method is intended for creating static scenary</summary>
-			public static void CreateFromFile(string ldr_filepath, string include_paths, int context_id, bool async)
+			/// This method is intended for creating static scenery</summary>
+			public static void CreateFromFile(string ldr_filepath, string[] include_paths, int context_id, bool async)
 			{
-				View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async, include_paths);
+				var inc = new View3DIncludes();
+				inc.m_include_paths = string.Join(",", include_paths ?? new string[0]);
+				View3D_ObjectsCreateFromFile(ldr_filepath, context_id, async, ref inc);
 			}
-			public static void CreateFromFile(string ldr_filepath, string include_paths, bool async)
+			public static void CreateFromFile(string ldr_filepath, string[] include_paths, bool async)
 			{
 				CreateFromFile(ldr_filepath, include_paths, DefaultContextId, async);
 			}
@@ -1902,8 +1931,8 @@ namespace pr.gfx
 		[DllImport(Dll)] private static extern void              View3D_ShowLightingDlg          (HWindow window);
 
 		// Objects
-		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async, string include_paths);
-		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, int context_id, bool async, string include_paths, IntPtr module);
+		[DllImport(Dll)] private static extern int               View3D_ObjectsCreateFromFile    (string ldr_filepath, int context_id, bool async, ref View3DIncludes includes);
+		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreateLdr          (string ldr_script, bool file, int context_id, bool async, ref View3DIncludes includes);
 		[DllImport(Dll)] private static extern HObject           View3D_ObjectCreate             (string name, uint colour, int icount, int vcount, EditObjectCB edit_cb, IntPtr ctx, int context_id);
 		[DllImport(Dll)] private static extern void              View3D_ObjectUpdate             (HObject obj, string ldr_script, EUpdateObject flags);
 		[DllImport(Dll)] private static extern void              View3D_ObjectEdit               (HObject obj, EditObjectCB edit_cb, IntPtr ctx);

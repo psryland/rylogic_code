@@ -22,21 +22,6 @@ namespace pr.gui
 	[Docking(DockingBehavior.Ask)]
 	public class TreeGridView :DataGridView
 	{
-		private readonly TreeGridNode  m_root;           // The root of the tree
-		private bool                   m_show_lines;     // Display the tree lines
-
-		/// <summary>Called just before a node is expanded</summary>
-		public event EventHandler<ExpandingEventArgs> NodeExpanding;
-
-		/// <summary>Called after a node is expanded</summary>
-		public event EventHandler<ExpandedEventArgs>  NodeExpanded;
-
-		/// <summary>Called just before a node is collapsed</summary>
-		public event EventHandler<CollapsingEventArgs> NodeCollapsing;
-
-		/// <summary>Called after a node is collapsed</summary>
-		public event EventHandler<CollapsedEventArgs>  NodeCollapsed;
-
 		public TreeGridView()
 		{
 			// Control when edit occurs because edit mode shouldn't start when expanding/collapsing
@@ -52,6 +37,15 @@ namespace pr.gui
 
 			// Causes all rows to be unshared
 			base.Rows.CollectionChanged += (s,e)=>{};
+		}
+
+		/// <summary>The collection of nodes in the grid</summary>
+		[Category("Data")]
+		[Description("The collection of nodes in the grid.")]
+		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
+		public TreeGridNodeCollection Nodes
+		{
+			get { return m_root.Nodes; }
 		}
 
 		/// <summary>Get/Set the number of top level nodes in the grid </summary>
@@ -71,17 +65,6 @@ namespace pr.gui
 			}
 		}
 
-		/// <summary>Show/hide the tree lines</summary>
-		public bool ShowLines
-		{
-			get { return m_show_lines; }
-			set { if (value != m_show_lines) { m_show_lines = value; Invalidate(); } }
-		}
-
-		/// <summary>"Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes</summary>
-		[Description("Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes.")]
-		public bool VirtualNodes { get; set; }
-
 		/// <summary>The grid current node</summary>
 		public TreeGridNode CurrentNode
 		{
@@ -92,17 +75,41 @@ namespace pr.gui
 			get { return base.CurrentRow as TreeGridNode; }
 		}
 
-		/// <summary>The collection of nodes in the grid</summary>
-		[Category("Data")]
-		[Description("The collection of nodes in the grid.")]
-		[DesignerSerializationVisibility(DesignerSerializationVisibility.Content)]
-		public TreeGridNodeCollection Nodes
+		/// <summary>The internal root of the tree. Note: not visible in the tree</summary>
+		public TreeGridNode RootNode { get { return m_root; } }
+		private readonly TreeGridNode  m_root;
+
+		/// <summary>Show/hide the tree lines</summary>
+		public bool ShowLines
 		{
-			get { return m_root.Nodes; }
+			get { return m_show_lines; }
+			set
+			{
+				if (m_show_lines == value) return;
+				m_show_lines = value;
+				Invalidate();
+			}
 		}
+		private bool m_show_lines;
+
+		/// <summary>"Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes</summary>
+		[Description("Causes nodes to always show as expandable. Use the NodeExpanding event to add nodes.")]
+		public bool VirtualNodes { get; set; }
 
 		/// <summary>Get/Set the associated image list</summary>
 		public ImageList ImageList { get; set; }
+
+		/// <summary>Called just before a node is expanded</summary>
+		public event EventHandler<ExpandingEventArgs> NodeExpanding;
+
+		/// <summary>Called after a node is expanded</summary>
+		public event EventHandler<ExpandedEventArgs>  NodeExpanded;
+
+		/// <summary>Called just before a node is collapsed</summary>
+		public event EventHandler<CollapsingEventArgs> NodeCollapsing;
+
+		/// <summary>Called after a node is collapsed</summary>
+		public event EventHandler<CollapsedEventArgs>  NodeCollapsed;
 
 		/// <summary>Prepare the grid for a node collapse.</summary>
 		internal bool BeginCollapseNode(TreeGridNode node)
@@ -147,8 +154,6 @@ namespace pr.gui
 				foreach (DataGridViewColumn c in Columns) c.HeaderCell.SortGlyphDirection = SortOrder.None;
 				col.HeaderCell.SortGlyphDirection = sign > 0 ? SortOrder.Ascending : SortOrder.Descending;
 
-				// ReSharper disable PossibleNullReferenceException
-				// ReSharper disable AccessToModifiedClosure
 				Action<TreeGridNode> sort = null;
 				sort = node =>
 				{
@@ -182,8 +187,6 @@ namespace pr.gui
 					node.Nodes.Clear();
 					foreach (TreeGridNode n in rows) node.Nodes.Add(n);
 				};
-				// ReSharper restore AccessToModifiedClosure
-				// ReSharper restore PossibleNullReferenceException
 
 				// Sort within node levels
 				sort(m_root);
@@ -338,7 +341,6 @@ namespace pr.gui
 			set { throw new NotSupportedException("The TreeGridView does not support virtual mode"); }
 		}
 
-		// ReSharper disable UnusedMember.Local
 		/// <summary>None of the rows/nodes created use the row template, so it is hidden.</summary>
 		[Browsable(false)]
 		[DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
@@ -348,7 +350,6 @@ namespace pr.gui
 			get { return base.RowTemplate; }
 			set { base.RowTemplate = value; }
 		}
-		// ReSharper restore UnusedMember.Local
 		
 		/// <summary>Recursively expand all nodes in the tree</summary>
 		public void ExpandAll()
@@ -614,6 +615,7 @@ namespace pr.gui
 		/// <summary>Collapse the children of this node</summary>
 		public bool Collapse(bool recursive = false)
 		{
+			if (!IsDisplayedInGrid && Parent != null) Parent.Expand();
 			if (!IsDisplayedInGrid) throw new Exception("Cannot collapse nodes that are not displayed in the grid");
 			if (!m_is_expanded) return true;
 
@@ -640,6 +642,7 @@ namespace pr.gui
 		/// <summary>Expand the children of this node</summary>
 		public bool Expand(bool recusive = false)
 		{
+			if (!IsDisplayedInGrid && Parent != null) Parent.Expand();
 			if (!IsDisplayedInGrid) throw new Exception("Cannot expand nodes that are not displayed in the grid");
 			if (m_is_expanded) return true;
 
@@ -716,7 +719,13 @@ namespace pr.gui
 				TreeGridView g = Grid;
 				return g != null && g.ImageList != null && (uint) m_image_index < g.ImageList.Images.Count ? g.ImageList.Images[m_image_index] : null;
 			}
-			set { if (value != m_image) {m_image = value; if (IsDisplayedInGrid) Grid.InvalidateRow(base.Index);} }
+			set
+			{
+				if (m_image == value) return;
+				m_image = value;
+				if (IsDisplayedInGrid)
+					Grid.InvalidateRow(base.Index);
+			}
 		}
 
 		/// <summary>A useful string version of this node</summary>
@@ -892,12 +901,16 @@ namespace pr.gui
 		void ICollection.CopyTo(Array array, int index)       { CopyTo((TreeGridNode[])array, index); }
 		bool ICollection.IsSynchronized                       { get {throw new Exception("The method or operation is not implemented.");} }
 		object ICollection.SyncRoot                           { get {throw new Exception("The method or operation is not implemented.");} }
+
+		public override string ToString()
+		{
+			return "Node Count: {0}".Fmt(Count);
+		}
 	}
 
 	/// <summary>A cell within the tree column of a TreeGridView</summary>
 	public class TreeGridCell :DataGridViewTextBoxCell
 	{
-		// ReSharper disable FieldCanBeMadeReadOnly.Global
 		/// <summary>Data controlling the indenting behaviour of tree cells</summary>
 		public class Indenting
 		{
@@ -918,7 +931,6 @@ namespace pr.gui
 			}
 		}
 		public static Indenting DefaultIndenting = new Indenting();
-		// ReSharper restore FieldCanBeMadeReadOnly.Global
 
 		private Indenting m_indent = DefaultIndenting; // Indenting parameters
 		private bool m_calc_padding;                   // Dirty flag for when the cell padding needs calculating
@@ -945,10 +957,8 @@ namespace pr.gui
 		}
 
 		/// <summary>A customisable method for converting 'Value' to a string</summary>
-		// ReSharper disable FieldCanBeMadeReadOnly.Global
 		public Func<object,string> TextFormatter = DefaultTextFormater;
 		private static readonly Func<object,string> DefaultTextFormater = o => o.ToString();
-		// ReSharper restore FieldCanBeMadeReadOnly.Global
 
 		/// <summary>Get/Set the indenting parameters</summary>
 		public Indenting IndentParams
@@ -981,42 +991,28 @@ namespace pr.gui
 			return x > l && x < r; // Should really test y as well...
 		}
 
-		/// <summary>Set the cell padding based on being at indent level 'level'</summary>
-		private void SetCellPadding(Image image)
-		{
-			int imgw = (image != null ? image.Width  : 0);
-			Style.Padding = new Padding(m_indent.m_margin + m_indent.m_glyph_width + (Level * m_indent.m_width) + imgw + 2, 0, 0, 0);
-			m_calc_padding = false;
-		}
-
 		/// <summary>Paint the tree column cell</summary>
-		protected override void Paint(Graphics graphics, Rectangle clipBounds, Rectangle cellBounds, int rowIndex, DataGridViewElementStates cellState, object value, object formattedValue, string errorText, DataGridViewCellStyle cellStyle, DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
+		protected override void Paint(Graphics graphics, Rectangle clip_bounds, Rectangle cell_bounds, int rowIndex, DataGridViewElementStates cellState, object value, object formattedValue, string errorText, DataGridViewCellStyle cell_style, DataGridViewAdvancedBorderStyle advancedBorderStyle, DataGridViewPaintParts paintParts)
 		{
 			TreeGridNode node = OwningNode;
 			if (node == null) return;
 
+			var img = node.Image;
+			var img_h = img != null ? Math.Min(img.Height, cell_bounds.Height) : 0;
+			var img_w = img != null ? img_h * img.Width / img.Height : 0;
+
 			// Update the cell padding if required
 			if (m_calc_padding)
 			{
-				SetCellPadding(node.Image);
-				cellStyle.Padding = Style.Padding;
+				cell_style.Padding = Style.Padding = new Padding(m_indent.m_margin + m_indent.m_glyph_width + (Level * m_indent.m_width) + img_w + 2, 0, 0, 0);
+				m_calc_padding = false;
 			}
 
-			// Paint the cell normally
-			base.Paint(graphics, clipBounds, cellBounds, rowIndex, cellState, value, formattedValue, errorText, cellStyle, advancedBorderStyle, paintParts);
+			// Paint the cell normally (including background and text)
+			base.Paint(graphics, clip_bounds, cell_bounds, rowIndex, cellState, value, formattedValue, errorText, cell_style, advancedBorderStyle, paintParts);
 
-			// A helper rectangle in which the lines, glyphs, and images are drawn
-			var rect = new Rectangle(cellBounds.X + m_indent.m_margin + Level * m_indent.m_width, cellBounds.Y, m_indent.m_glyph_width, cellBounds.Height - 1);
-
-			// Paint the associated image
-			if (node.Image != null)
-			{
-				var pt = new Point(rect.X + m_indent.m_glyph_width, 2 + cellBounds.Y + (cellBounds.Height - node.Image.Height)/2);
-				GraphicsContainer gc = graphics.BeginContainer();
-				graphics.SetClip(cellBounds);
-				graphics.DrawImageUnscaled(node.Image, pt);
-				graphics.EndContainer(gc);
-			}
+			// The rectangle in which the lines and glyphs are drawn
+			var glyph_rect = new Rectangle(cell_bounds.Left + m_indent.m_margin + (Level * m_indent.m_width), cell_bounds.Top, m_indent.m_glyph_width, cell_bounds.Height - 1);
 
 			// Paint tree lines
 			if (node.Grid.ShowLines)
@@ -1029,20 +1025,20 @@ namespace pr.gui
 					const int ghw = 4;
 
 					// Vertical line
-					int top = cellBounds.Top    + (is_first_sibling && Level == 0 ? cellBounds.Height/2 : 0);
-					int bot = cellBounds.Bottom - (is_last_sibling  ? cellBounds.Height/2 : 0);
-					graphics.DrawLine(line_pen, rect.X + ghw, top, rect.X + ghw, bot);
+					int top = cell_bounds.Top    + (is_first_sibling && Level == 0 ? cell_bounds.Height/2 : 0);
+					int bot = cell_bounds.Bottom - (is_last_sibling  ? cell_bounds.Height/2 : 0);
+					graphics.DrawLine(line_pen, glyph_rect.X + ghw, top, glyph_rect.X + ghw, bot);
 
 					// Horizontal line
-					top = cellBounds.Top + cellBounds.Height/2;
-					graphics.DrawLine(line_pen, rect.X + ghw, top, rect.Right, top);
+					top = cell_bounds.Top + cell_bounds.Height/2;
+					graphics.DrawLine(line_pen, glyph_rect.X + ghw, top, glyph_rect.Right, top);
 
 					// Paint lines of previous levels to the root
-					int x = (rect.X + ghw) - m_indent.m_width;
-					for (TreeGridNode p = node.Parent; !p.IsRoot; p = p.Parent, x -= m_indent.m_width)
+					int x = (glyph_rect.X + ghw) - m_indent.m_width;
+					for (var p = node.Parent; p != null && !p.IsRoot; p = p.Parent, x -= m_indent.m_width)
 					{
 						if (p.HasChildren && !p.IsLastSibling) // paint vertical line
-							graphics.DrawLine(line_pen, x, cellBounds.Top, x, cellBounds.Bottom);
+							graphics.DrawLine(line_pen, x, cell_bounds.Top, x, cell_bounds.Bottom);
 					}
 				}
 			}
@@ -1050,13 +1046,24 @@ namespace pr.gui
 			// Paint node glyphs
 			if (node.HasChildren || node.VirtualNodes)
 			{
-				var glyph = new Rectangle(rect.X, rect.Y + (rect.Height / 2) - 4, 10, 10);
+				var glyph = new Rectangle(glyph_rect.X, glyph_rect.Y + (glyph_rect.Height / 2) - 4, 10, 10);
 				int midx = glyph.Left + glyph.Width / 2, midy = glyph.Top + glyph.Height / 2;
 				graphics.FillRectangle(SystemBrushes.ControlLight, glyph);
 				graphics.DrawRectangle(SystemPens.ControlDarkDark, glyph);
 				graphics.DrawLine(SystemPens.ControlDarkDark, new Point(glyph.Left + 2, midy), new Point(glyph.Right - 2, midy));
 				if (!node.IsExpanded) // make it a '+' if not expanded
 					graphics.DrawLine(SystemPens.ControlDarkDark, new Point(midx, glyph.Top + 2), new Point(midx, glyph.Bottom - 2));
+			}
+
+			// Paint the associated image
+			if (img != null)
+			{
+				using (graphics.SaveState())
+				{
+					var img_rect = new Rectangle(glyph_rect.Right, cell_bounds.Top + (cell_bounds.Height - img_h)/2, img_w, img_h);
+					graphics.SetClip(img_rect);
+					graphics.DrawImage(img, img_rect);
+				}
 			}
 		}
 	}

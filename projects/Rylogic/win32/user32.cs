@@ -39,7 +39,7 @@ namespace pr.win32
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr CallWindowProc(IntPtr lpPrevWndFunc, HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern IntPtr DefWindowProc(HWND hWnd, int Msg, WPARAM wParam, LPARAM lParam);
 		[DllImport("user32.dll", CharSet=CharSet.Auto)]                                                       public static extern bool   DestroyIcon(IntPtr hicon);
-		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                                                    public static extern bool   DestroyWindow(IntPtr hwnd);
+		[DllImport("user32.dll", CharSet=CharSet.Unicode)]                                                    public static extern bool   DestroyWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern short  GetAsyncKeyState(Keys vKey);
 		[DllImport("user32.dll", SetLastError = true, CharSet=CharSet.Unicode)]                               public static extern bool   GetCaretPos(ref POINT point);
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetClientRect(HWND hwnd, out RECT rect);
@@ -59,11 +59,12 @@ namespace pr.win32
 		[DllImport("user32.dll", EntryPoint="GetWindowLongPtrW", CharSet=CharSet.Unicode, SetLastError=true)] public static extern long   GetWindowLongPtr(HWND hWnd, int nIndex); // This is only defined in 64bit builds, otherwise it's a #define to GetWindowLong
 		[DllImport("user32.dll")]                                                                             public static extern bool   GetWindowRect(HWND hwnd, out RECT rect);
 		[DllImport("user32.dll", SetLastError = true)]                                                        public static extern IntPtr GetWindowThreadProcessId(HWND hWnd, ref IntPtr lpdwProcessId);
-		[DllImport("user32.dll")]                                                                             public static extern int    HideCaret(IntPtr hwnd);
+		[DllImport("user32.dll")]                                                                             public static extern int    HideCaret(HWND hwnd);
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]                           public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, int wIDNewItem, string lpNewItem);
 		[DllImport("user32.dll", EntryPoint="InsertMenu", CharSet=CharSet.Unicode)]                           public static extern bool   InsertMenu(IntPtr hMenu, int wPosition, int wFlags, IntPtr wIDNewItem, string lpNewItem);
-		[DllImport("user32.dll")]                                                                             public static extern bool   InvalidateRect(IntPtr hwnd, IntPtr lpRect, bool bErase);
-		[DllImport("user32.dll")]                                                                             public static extern bool   InvalidateRect(IntPtr hwnd, ref Win32.RECT lpRect, bool bErase);
+		[DllImport("user32.dll")]                                                                             public static extern bool   InvalidateRect(HWND hwnd, IntPtr lpRect, bool bErase);
+		[DllImport("user32.dll")]                                                                             public static extern bool   InvalidateRect(HWND hwnd, ref Win32.RECT lpRect, bool bErase);
+		[DllImport("user32.dll")]                                                                             public static extern bool   IsChild(HWND parent, HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   IsIconic(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   IsWindow(HWND hwnd);
 		[DllImport("user32.dll")]                                                                             public static extern bool   IsWindowVisible(HWND hwnd);

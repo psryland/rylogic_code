@@ -20,7 +20,7 @@
 
 namespace pr
 {
-	// RAII object for initialised/shutting down the gdiplus framework
+	// RAII object for initialised/shutting down the GdiPlus framework
 	struct GdiPlus
 	{
 		ULONG_PTR m_token;
@@ -31,34 +31,43 @@ namespace pr
 		~GdiPlus() { Gdiplus::GdiplusShutdown(m_token); }
 	};
 
-	// Conversion
-	template <typename TFrom> struct Convert<Gdiplus::Color, TFrom>
+	namespace convert
 	{
-		static Gdiplus::Color To(COLORREF col) { Gdiplus::Color c; c.SetFromCOLORREF(col); return c; }
-	};
-
-	// To<Gdiplus::Rect>
-	template <typename TFrom> struct Convert<Gdiplus::Rect, TFrom>
-	{
-		static Gdiplus::Rect To(RECT const& r)           { return Gdiplus::Rect(r.left, r.top, r.right - r.left, r.bottom - r.top); }
-		static Gdiplus::Rect To(Gdiplus::RectF const& r) { return Gdiplus::Rect(int(r.X), int(r.Y), int(r.Width), int(r.Height)); }
-	};
-
-	// To<Gdiplus::RectF>
-	template <typename TFrom> struct Convert<Gdiplus::RectF,TFrom>
-	{
-		static Gdiplus::RectF To(RECT const& x) { return Gdiplus::RectF(float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top)); }
-	};
-
-	// To<RECT>
-	template <> struct Convert<RECT, Gdiplus::Rect>
-	{
-		static RECT To(Gdiplus::Rect const& r) { return RECT{r.GetLeft(), r.GetTop(), r.GetRight(), r.GetBottom()}; }
-	};
-	template <> struct Convert<RECT, Gdiplus::RectF>
-	{
-		static RECT To(Gdiplus::RectF const& r) { return RECT{int(r.GetLeft()), int(r.GetTop()), int(r.GetRight()), int(r.GetBottom())}; }
-	};
+		template <typename Str, typename Char = typename Str::value_type>
+		struct GdiToString
+		{
+		};
+		struct ToGdiColor
+		{
+			static Gdiplus::Color To(COLORREF col)
+			{
+				Gdiplus::Color c;
+				c.SetFromCOLORREF(col);
+				return c;
+			}
+		};
+		struct ToGdiRect
+		{
+			static Gdiplus::Rect To(RECT const& r)
+			{
+				return Gdiplus::Rect(r.left, r.top, r.right - r.left, r.bottom - r.top);
+			}
+			static Gdiplus::Rect To(Gdiplus::RectF const& r)
+			{
+				return Gdiplus::Rect(int(r.X), int(r.Y), int(r.Width), int(r.Height));
+			}
+		};
+		struct ToGdiRectF
+		{
+			static Gdiplus::RectF To(RECT const& r)
+			{
+				return Gdiplus::RectF(float(r.left), float(r.top), float(r.right - r.left), float(r.bottom - r.top));
+			}
+		};
+	}
+	template <typename TFrom> struct Convert<Gdiplus::Color, TFrom> :convert::ToGdiColor {};
+	template <typename TFrom> struct Convert<Gdiplus::Rect , TFrom> :convert::ToGdiRect {};
+	template <typename TFrom> struct Convert<Gdiplus::RectF, TFrom> :convert::ToGdiRectF {};
 }
 
 namespace Gdiplus
@@ -102,7 +111,7 @@ namespace Gdiplus
 		}
 	};
 
-	// Helper for saving Gdi Images that infers the codec from the file extension
+	// Helper for saving GDI Images that infers the codec from the file extension
 	inline Status Save(Image const& image, wchar_t const* filepath)
 	{
 		auto extn = PathFindExtensionW(filepath);

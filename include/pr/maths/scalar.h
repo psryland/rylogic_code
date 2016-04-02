@@ -30,8 +30,6 @@ namespace pr
 	template <typename T> inline int   GetZi(T const& x) { return AsInt(GetZ(x)); }
 	template <typename T> inline int   GetWi(T const& x) { return AsInt(GetW(x)); }
 
-	template <typename FromType, typename ToType> inline ToType To(FromType const& from) { return static_cast<ToType const&>(from); }
-
 	inline float   Ceil(float x)                              { return ceilf(x); }
 	inline float   Floor(float x)                             { return floorf(x); }
 	inline float   Sin(float x)                               { return sinf(x); }

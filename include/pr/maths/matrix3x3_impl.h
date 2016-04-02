@@ -256,7 +256,7 @@ namespace pr
 	{
 		assert(IsInvertable(mat) && "Matrix has no inverse");
 		float inv_det = 1.0f / Determinant3(mat);
-		m3x4 tmp;
+		m3x4 tmp = {};
 		tmp.x = Cross3(mat.y, mat.z) * inv_det;
 		tmp.y = Cross3(mat.z, mat.x) * inv_det;
 		tmp.z = Cross3(mat.x, mat.y) * inv_det;
@@ -297,9 +297,20 @@ namespace pr
 
 		angle = pr::ACos(0.5f * (Trace3(mat) - 1.0f));
 		axis = 1000.0f * Kernel(pr::m3x4Identity - mat);
-		if (IsZero3(axis)) { axis = v4XAxis; angle = 0.0f; return; }
+		if (IsZero3(axis))
+		{
+			axis = v4XAxis;
+			angle = 0.0f;
+			return;
+		}
+		
 		axis = Normalise3(axis);
-		if (IsZero3(axis)) { axis = v4XAxis; angle = 0.0f; return; }
+		if (IsZero3(axis))
+		{
+			axis = v4XAxis;
+			angle = 0.0f;
+			return;
+		}
 
 		// Determine the correct sign of the angle
 		v4 vec = CreateNotParallelTo(axis);
@@ -309,7 +320,71 @@ namespace pr
 		if (Dot3(XcXp, axis) < 0.0f) angle = -angle;
 	}
 
-	// Cosntruct a rotation matrix
+	// Return the Euler angles for a rotation matrix.
+	// The order of angles is roll, pitch, yaw because objects usually face along Z and have Y as up.
+	inline v4 GetEulerAngles(m3x4 const& mat)
+	{
+		assert(IsOrthonormal(mat) && "Matrix is not orthonormal");(void)mat;
+		#if 0
+		v4 euler = {};
+
+		// roll, pitch, yaw are applied to a body sequentially, so to undo the rotations
+		// we first "un-rotate" around mat.y, then around mat.x, then around mat.z.
+		// Let X,Y,Z be the world space axes, and x,y,z be the axis of 'mat'.
+		// When roll is applied, x and y move within the XY plane, z is still aligned to Z.
+		// When pitch is applied, y moves out of the XY plane, z moves away from Z, and x stays within the XY plane.
+		// When yaw is applied, z moves again, y remains one rotation out of the XY plane, and x moves out of the XY plane.
+		// To reverse this,
+		// Undo yaw => rotate x back into the XY plane (a rotation about y)
+		// Undo pitch => rotate y back into the XY plane (a rotation about x after removing yaw)
+		// Undo roll => rotate x and y back to X and Y (a rotation about z after removing yaw and pitch)
+
+		auto x_xy_sq = Sqr(mat.x.x) + Sqr(mat.x.y);
+		auto y_xy_sq = Sqr(mat.y.x) + Sqr(mat.y.y);
+
+		euler.x = atan2(Sqrt(1 - y_xy_sq), Sqrt(y_xy_sq)); // un-pitch
+		euler.y = atan2(Sqrt(1 - x_xy_sq), Sqrt(x_xy_sq)); // un-yaw
+		euler.z = atan2(mat.x.y); // un-roll
+
+
+
+
+
+		// yaw   - rotate y or z onto the YZ plane
+		// pitch - if y, rotate y to the Y axis, else if x, rotate z to the Z axis
+		// roll  - get x onto the X axis, or Y onto the Y axis
+
+		// To get yaw, we rotate about the Y axis, so use the axis with the smallest Y value for accuracy
+		if (abs(mat.y.y) < abs(mat.z.y))
+		{
+			// 'y' is least aligned with the Y axis. Rotate Y onto the YZ plane to get yaw
+			euler.x = atan2(mat.y.z, Sqrt(1.0 - Sqr(mat.y.y))); // pitch = rotate y onto the Y axis
+			euler.z = atan2(
+		}
+		else
+		{
+			// 'z' is least aligned with the Y axis
+
+		}
+		// Z aligned with the Y axis
+		if (abs(mat.z.y) > 1.0f - maths::tiny)
+		{
+			euler.x = Sign(mat.z.y) * maths::tau_by_4;
+			euler.y = 0.0f;
+			euler.z = atan2(mat.x.y, mat.x.x);
+		}
+		else
+		{
+			euler.x = asin(m.m10); // pitch
+			euler.y = atan2(mat.z.x, mat.z.z); // yaw
+			euler.z = atan2(-m.m12, m.m11); // roll
+		}
+		#endif
+		throw std::exception("not implemented");
+	}
+
+	// Construct a rotation matrix
+	// Order is roll, pitch, yaw because objects usually face along Z and have Y as up.
 	inline m3x4 Rotation3x3(float pitch, float yaw, float roll)
 	{
 		return m3x4::make(pitch, yaw, roll);

@@ -40,7 +40,7 @@ namespace pr
 	//	'm_count' is the length of the string including the null terminator
 	//	therefore it's value is always >= 1
 	// Note about LocalCount:
-	//	Default local count is choosen to make sizeof(pr::string<>) == 256
+	//	Default local count is chosen to make sizeof(pr::string<>) == 256
 	template <typename Type=char, int LocalCount=244, bool Fixed=false, typename Allocator=std::allocator<Type> >
 	class string
 	{
@@ -75,23 +75,63 @@ namespace pr
 		struct traits :pr::str::char_traits<Type> {};
 
 		// true if 'tchar' is the same as 'Type', ignoring references
-		template <typename tchar> using same_char_t = std::is_same<Type, std::remove_cv_t<std::remove_reference_t<tchar>>>;
+		template <typename tchar> using same_char = std::is_same<typename std::decay<tchar>::type, Type>;
+		template <typename tchar> using enable_if_same_char = typename std::enable_if<same_char<tchar>::value>::type;
+		static_assert(same_char<Type>::value, "");
+		static_assert(!same_char<int>::value, "");
 
-		// enable_if 'tchar' is the same as 'Type'
-		template <typename tchar> using enable_if_valid_char_t = typename std::enable_if<same_char_t<tchar>::value>::type;
+		// true if 'tstr' is a 'pr::string<Type,...>' string
+		template <typename tstr> struct is_pr_str
+		{
+			static tstr const& str();
+			template <int L, bool F, typename A> static std::true_type  check(string<Type, L, F, A> const&);
+			template <int = 0>                   static std::false_type check(...);
+			using type = decltype(check(str()));
+			static bool const value = type::value;
+		};
+		static_assert( is_pr_str<string<Type, 1, true>>::value, "");
+		static_assert(!is_pr_str<std::basic_string<Type>>::value, "");
+		static_assert(!is_pr_str<Type[]>::value, "");
+		static_assert(!is_pr_str<Type*>::value, "");
 
-		// enable_if 'tarr' has array-like semantics and an element type of 'Type'
-		template <typename tarr> struct valid_arr :std::integral_constant<bool, same_char_t<decltype(std::declval<tarr>()[0])>::value> {};
-		template <typename tarr> using valid_arr_t = typename valid_arr<tarr>::type;
-		template <typename tarr> using enable_if_valid_arr_t = typename std::enable_if<valid_arr_t<tarr>::value>::type;
+		// true if 'tstr' is a 'std::basic_string<Type>'
+		template <typename tstr> using is_std_str = typename std::integral_constant<bool, std::is_same<tstr, std::basic_string<Type>>::value>;
+		static_assert( is_std_str<std::basic_string<Type>>::value, "");
+		static_assert(!is_std_str<string<Type, 1, true>>::value, "");
+		static_assert(!is_std_str<Type[]>::value, "");
+		static_assert(!is_std_str<Type*>::value, "");
+		
+		// true if 'tarr' has array-like semantics and an element type of 'Type' but is not a pointer
+		template <typename tarr> using is_char_array = typename std::integral_constant<bool, std::is_same<tarr, typename std::basic_string<Type>>::value || is_pr_str<tarr>::value>;
+		static_assert( is_char_array<std::basic_string<Type>>::value, "");
+		static_assert( is_char_array<string<Type, 1, true>>::value, "");
+		static_assert(!is_char_array<Type[]>::value, "");
+		static_assert(!is_char_array<Type*>::value, "");
+		static_assert(!is_char_array<std::vector<int>>::value, "");
+		static_assert(!is_char_array<int[]>::value, "");
+		static_assert(!is_char_array<int*>::value, "");
 
-		// enable_if 'tptr' has pointer-like semantics and an element type of 'Type'
-		template <typename tptr> struct valid_ptr :std::integral_constant<bool, same_char_t<decltype(*std::declval<tptr>())>::value> {};
-		template <typename tptr> using valid_ptr_t = typename valid_ptr<tptr>::type;
-		template <typename tptr> using enable_if_valid_ptr_t = typename std::enable_if<valid_ptr_t<tptr>::value>::type;
+		// true if 'tptr' is a 'Type' iterator
+		//template <typename tptr> using is_char_pointer = typename std::integral_constant<bool, std::is_same<decltype(*std::declval<tptr>()), Type>::value>;
+		template <typename tptr> struct is_char_pointer
+		{
+			static tptr ptr();
+			static std::true_type  check(Type&);
+			static std::false_type check(...);
 
-		// enable_if 'tstr' has std::string-like semantics and an element type of 'Type'
-		template <typename tstr, typename = decltype(std::declval<tstr>().size())> using enable_if_valid_str_t = enable_if_valid_arr_t<tstr>;
+			using type = decltype(check(*ptr()));
+			static bool const value = type::value;
+		};
+		static_assert( is_char_pointer<Type*>::value, "");
+		static_assert(!is_char_pointer<int*>::value, "");
+		static_assert( is_char_pointer<decltype(std::vector<Type>().begin())>::value, "");
+		static_assert(!is_char_pointer<decltype(std::vector<int>().begin())>::value, "");
+
+		// Enable if 'tarr' is an array-like container of 'Type'
+		template <typename tarr> using enable_if_char_array = std::enable_if<is_char_array<tarr>::value>;
+
+		// Enable if 'tptr' is a pointer or iterator to and contiguous buffer of 'Type'
+		template <typename tptr> using enable_if_char_iter = std::enable_if<is_char_pointer<tptr>::value>;
 
 		#pragma endregion
 
@@ -106,7 +146,7 @@ namespace pr
 		// Any combination of type, local count, fixed, and allocator is a friend
 		template <class T, int L, bool F, class A> friend class string;
 
-		// Access to the allocator object (independant over whether its a pointer or instance)
+		// Access to the allocator object (independent over whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
 		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return  m_allocator; }
 		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
@@ -241,7 +281,7 @@ namespace pr
 		}
 
 		// construct from [first, last), with allocator
-		template <class iter, typename = enable_if_valid_ptr_t<iter>>
+		template <class iter, typename = enable_if_char_iter<iter>>
 		string(iter first, iter last, Allocator const& allocator = Allocator())
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
@@ -259,7 +299,7 @@ namespace pr
 		}
 
 		// construct from another string-like object
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string(tarr const& right, Allocator const& allocator = Allocator())
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
@@ -292,7 +332,7 @@ namespace pr
 		}
 
 		// construct from right [rofs, rofs + count)
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string(tarr const& right, size_type rofs, size_type count)
 			:m_ptr(local_ptr())
 			,m_capacity(LocalLength)
@@ -356,7 +396,7 @@ namespace pr
 			return empty() ? value_type() : *(end() - 1);
 		}
 
-		// return pointer to nonmutable array
+		// return pointer to non-mutable array
 		const_pointer data() const
 		{
 			return m_ptr;
@@ -469,7 +509,7 @@ namespace pr
 		}
 
 		// assign right
-		template <typename tchar, int Len, typename = enable_if_valid_char_t<tchar>>
+		template <typename tchar, int Len, typename = enable_if_same_char<tchar>>
 		string& operator = (tchar const (&right)[Len])
 		{
 			// using 'tchar' instead of Type so that the assign<tarr>(..) overload isn't choosen
@@ -478,7 +518,7 @@ namespace pr
 		}
 
 		// assign right
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& operator = (tarr const& right)
 		{
 			assign(right);
@@ -513,7 +553,7 @@ namespace pr
 		}
 
 		// append right
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& operator += (tarr const& right)
 		{
 			return append(right);
@@ -569,14 +609,14 @@ namespace pr
 		}
 
 		// assign [first, last), iterators
-		template <typename iter, typename = enable_if_valid_ptr_t<iter>>
+		template <typename iter, typename = enable_if_char_iter<iter>>
 		string& assign(iter first, iter last)
 		{
 			return replace(begin(), end(), first, last);
 		}
 
 		// assign right [rofs, rofs + count)
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& assign(tarr const& right, size_type rofs, size_type count)
 		{
 			assert(rofs <= str::traits<tarr>::size(right));
@@ -599,7 +639,7 @@ namespace pr
 		}
 
 		// assign right
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& assign(tarr const& right)
 		{
 			return assign(right, 0, npos);
@@ -652,7 +692,7 @@ namespace pr
 		//}
 
 		// append right [rofs, rofs + count)
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& append(tarr const& right, size_type rofs, size_type count)
 		{
 			assert(rofs <= str::traits<tarr>::size(right));
@@ -670,7 +710,7 @@ namespace pr
 		}
 
 		// append right
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& append(tarr const& right)
 		{
 			return append(right, 0, npos);
@@ -710,7 +750,7 @@ namespace pr
 		}
 
 		// append [first, last), input iterators
-		template <typename iter, typename = enable_if_valid_ptr_t<iter>>
+		template <typename iter, typename = enable_if_char_iter<iter>>
 		string& append(iter first, iter last)
 		{
 			difference_type count = std::distance(first, last);
@@ -740,14 +780,14 @@ namespace pr
 		}
 
 		// insert right at ofs
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& insert(size_type ofs, tarr const& right)
 		{
 			return insert(ofs, right, 0, npos);
 		}
 
 		// insert right [rofs, rofs + count) at ofs
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& insert(size_type ofs, tarr const& right, size_type rofs, size_type count)
 		{
 			assert(size() >= ofs && right.size() >= rofs); // ofs or rofs off end
@@ -847,24 +887,27 @@ namespace pr
 		}
 
 		// compare [ofs, ofs + n0) with right [rofs, rofs + count)
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		int compare(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		int compare(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count) const
 		{
-			assert(rofs <= right.size());
-			if (right.size() - rofs < count) count = right.size() - rofs;
-			return compare(ofs, n0, right.c_str() + rofs, count);
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			assert(rofs <= right_size);
+
+			if (right_size - rofs < count) count = right_size - rofs;
+			return compare(ofs, n0, right_cstr + rofs, count);
 		}
 
 		// compare [0, size()) with right
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		int compare(tstr const& right) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		int compare(tarr const& right) const
 		{
 			return compare(0, size(), right, 0, npos);
 		}
 
 		// compare [ofs, ofs + n0) with right
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		int compare(size_type ofs, size_type n0, tstr const& right) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		int compare(size_type ofs, size_type n0, tarr const& right) const
 		{
 			return compare(ofs, n0, right, 0, npos);
 		}
@@ -882,27 +925,30 @@ namespace pr
 		}
 
 		// replace [ofs, ofs + n0) with right
-		template <typename tarr, typename = enable_if_valid_arr_t<tarr>>
+		template <typename tarr, typename = enable_if_char_array<tarr>>
 		string& replace(size_type ofs, size_type n0, tarr const& right)
 		{
 			return replace(ofs, n0, right, 0, npos);
 		}
 
 		// replace [ofs, ofs + n0) with right [rofs, rofs + count)
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		string& replace(size_type ofs, size_type n0, tstr const& right, size_type rofs, size_type count)
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		string& replace(size_type ofs, size_type n0, tarr const& right, size_type rofs, size_type count)
 		{
-			assert(ofs < size() && rofs <= right.size());
-			if (size()       - ofs  < n0   ) n0    = size()       - ofs;  // trim n0 to size
-			if (right.size() - rofs < count) count = right.size() - rofs; // trim count to size
-			assert(!(npos - count <= size() - n0));                       // result too long
-			size_type rcount  = m_count - n0 - ofs;                       // length of preserved tail (incl null)
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			assert(ofs < size() && rofs <= right_size);
+
+			if (size()     - ofs  < n0   ) n0    = size()       - ofs; // trim n0 to size
+			if (right_size - rofs < count) count = right_size - rofs;  // trim count to size
+			assert(!(npos - count <= size() - n0));                    // result too long
+			size_type rcount  = m_count - n0 - ofs;                    // length of preserved tail (incl null)
 			ensure_space(m_count + count - n0, true);
 
 			if (!isthis(right)) // no overlap, just move down and copy in new stuff
 			{
 				traits::move(m_ptr + ofs + count, m_ptr + ofs + n0, rcount);      // empty hole
-				traits::copy(m_ptr + ofs, right.c_str() + rofs, count);           // fill hole
+				traits::copy(m_ptr + ofs, right_cstr + rofs, count);           // fill hole
 			}
 			else if (count <= n0) // hole doesn't get larger, just copy in substring
 			{
@@ -987,8 +1033,8 @@ namespace pr
 		}
 
 		// replace [first, last) with right
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		string& replace(const_iterator first, const_iterator last, tstr const& right)
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		string& replace(const_iterator first, const_iterator last, tarr const& right)
 		{
 			return replace(first - begin(), last - first, right);
 		}
@@ -1012,7 +1058,7 @@ namespace pr
 		}
 
 		// replace [first, last) with [first2, last2)
-		template <typename iter, typename = enable_if_valid_ptr_t<iter>>
+		template <typename iter, typename = enable_if_char_iter<iter>>
 		string& replace(const_iterator first, const_iterator last, iter first2, iter last2)
 		{
 			return replace(first, last, string(first2, last2));
@@ -1026,7 +1072,7 @@ namespace pr
 			return *this;
 		}
 
-		// look for [ptr, ptr + count) beginnng at or after ofs
+		// look for [ptr, ptr + count) beginning at or after ofs
 		size_type find(const_pointer ptr, size_type ofs, size_type count) const
 		{
 			// null string always matches (if inside string)
@@ -1067,11 +1113,13 @@ namespace pr
 		//	return find(&right[0], ofs, Len - (right[Len-1] == 0));
 		//}
 
-		// look for right beginnng at or after ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type find(tstr const& right, size_type ofs = 0) const
+		// look for right beginning at or after ofs
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type find(tarr const& right, size_type ofs = 0) const
 		{
-			return find(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return find(right_cstr, ofs, right_size);
 		}
 
 		// look for [ptr, ptr + count) beginning before ofs
@@ -1095,10 +1143,12 @@ namespace pr
 		}
 
 		// look for right beginning before ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type rfind(tstr const& right, size_type ofs = npos) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type rfind(tarr const& right, size_type ofs = npos) const
 		{
-			return rfind(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return rfind(right_cstr, ofs, right_size);
 		}
 
 		// look for [ptr, <null>) beginning before ofs
@@ -1114,10 +1164,12 @@ namespace pr
 		}
 
 		// look for one of right at or after ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type find_first_of(tstr const& right, size_type ofs = 0) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type find_first_of(tarr const& right, size_type ofs = 0) const
 		{
-			return find_first_of(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return find_first_of(right_cstr, ofs, right_size);
 		}
 
 		// look for one of [ptr, ptr + count) at or after ofs
@@ -1147,10 +1199,12 @@ namespace pr
 		}
 
 		// look for one of right before ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type find_last_of(tstr const& right, size_type ofs = npos) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type find_last_of(tarr const& right, size_type ofs = npos) const
 		{
-			return find_last_of(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return find_last_of(right_cstr, ofs, right_size);
 		}
 
 		// look for one of [ptr, ptr + count) on or before ofs
@@ -1180,10 +1234,12 @@ namespace pr
 		}
 
 		// look for none of right at or after ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type find_first_not_of(tstr const& right, size_type ofs = 0) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type find_first_not_of(tarr const& right, size_type ofs = 0) const
 		{
-			return find_first_not_of(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return find_first_not_of(right_cstr, ofs, right_size);
 		}
 
 		// look for none of [ptr, ptr + count) at or after ofs
@@ -1213,10 +1269,12 @@ namespace pr
 		}
 
 		// look for none of right before ofs
-		template <typename tstr, typename = enable_if_valid_str_t<tstr>>
-		size_type find_last_not_of(tstr const& right, size_type ofs = npos) const
+		template <typename tarr, typename = enable_if_char_array<tarr>>
+		size_type find_last_not_of(tarr const& right, size_type ofs = npos) const
 		{
-			return find_last_not_of(right.c_str(), ofs, right.size());
+			auto right_size = str::traits<tarr>::size(right);
+			auto right_cstr = str::traits<tarr>::c_str(right);
+			return find_last_not_of(right_cstr, ofs, right_size);
 		}
 
 		// look for none of [ptr, ptr + count) before ofs

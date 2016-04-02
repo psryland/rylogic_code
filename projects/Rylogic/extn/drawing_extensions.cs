@@ -16,7 +16,23 @@ using pr.win32;
 
 namespace pr.extn
 {
-	public static class DrawingExtensions
+	[Flags] public enum EBoxZone
+	{
+		None   = 0,
+		Left   = 1 << 0,
+		Right  = 1 << 1,
+		Top    = 1 << 2,
+		Bottom = 1 << 3,
+		TL     = Left  | Top,
+		TR     = Right | Top,
+		BL     = Left  | Bottom,
+		BR     = Right | Bottom,
+		LR     = Left | Right,
+		TB     = Top  | Bottom,
+		Centre = Left|Top|Right|Bottom,
+	}
+
+	public static class DrawingEx
 	{
 		// There's already a static method 'Union'
 		///// <summary>Replaces this rectangle with the union of itself and 'rect'</summary>
@@ -27,6 +43,36 @@ namespace pr.extn
 		//    r.Width  = Math.Max(r.Right  - r.X, rect.Right  - r.X);
 		//    r.Height = Math.Max(r.Bottom - r.Y, rect.Bottom - r.Y);
 		//}
+
+		/// <summary>Compare 'pt' to 'rect' and return the zone that it is in</summary>
+		public static EBoxZone GetBoxZone(Rectangle rect, Point pt)
+		{
+			// TL | T | TR
+			// ---+---+---
+			//  L | C | R 
+			// ---+---+---
+			// BL | B | BR
+			//
+			// Remember: Use rect.Inflated to shrink a rectangle by the border with before calling this function
+			// 
+			var mask = EBoxZone.None;
+			if (pt.X <  rect.Left  ) mask |= EBoxZone.Left;
+			if (pt.X >= rect.Right ) mask |= EBoxZone.Right;
+			if (pt.Y <  rect.Top   ) mask |= EBoxZone.Top;
+			if (pt.Y >= rect.Bottom) mask |= EBoxZone.Bottom;
+			return mask;
+		}
+
+		/// <summary>Get the standard resize cursor for this box zone value</summary>
+		public static Cursor ToCursor(this EBoxZone bz)
+		{
+			if (bz == EBoxZone.Left || bz == EBoxZone.Right  || bz == EBoxZone.LR) return Cursors.SizeWE;
+			if (bz == EBoxZone.Top  || bz == EBoxZone.Bottom || bz == EBoxZone.TB) return Cursors.SizeNS;
+			if (bz == EBoxZone.TL   || bz == EBoxZone.BR) return Cursors.SizeNWSE;
+			if (bz == EBoxZone.BL   || bz == EBoxZone.TR) return Cursors.SizeNESW;
+			if (bz == EBoxZone.Centre) return Cursors.SizeAll;
+			return Cursors.Default;
+		}
 
 		/// <summary>Convert this point into a size</summary>
 		public static Size ToSize(this Point p)
@@ -226,7 +272,15 @@ namespace pr.extn
 			return r.Shifted(pt.X, pt.Y);
 		}
 
-		/// <summary>Returns a rectangle inflated by dx,dy</summary>
+		/// <summary>Returns a rectangle inflated</summary>
+		public static Rectangle Inflated(this Rectangle r, int d)
+		{
+			return new Rectangle(r.X - d, r.Y - d, r.Width + 2 * d, r.Height + 2 * d);
+		}
+		public static RectangleF Inflated(this RectangleF r, float d)
+		{
+			return new RectangleF(r.X - d, r.Y - d, r.Width + 2 * d, r.Height + 2 * d);
+		}
 		public static Rectangle Inflated(this Rectangle r, int dx, int dy)
 		{
 			return new Rectangle(r.X - dx, r.Y - dy, r.Width + 2 * dx, r.Height + 2 * dy);
@@ -324,6 +378,16 @@ namespace pr.extn
 			var p = new[] {rect.TopLeft(), rect.BottomRight()};
 			m.TransformPoints(p);
 			return RectangleF.FromLTRB(p[0].X, p[0].Y, p[1].X, p[1].Y);
+		}
+
+		/// <summary>lhs - rhs</summary>
+		public static Size Subtract(Point lhs, Point rhs)
+		{
+			return new Size(lhs.X - rhs.X, lhs.Y - rhs.Y);
+		}
+		public static SizeF Subtract(PointF lhs, PointF rhs)
+		{
+			return new SizeF(lhs.X - rhs.X, lhs.Y - rhs.Y);
 		}
 
 		/// <summary>Linearly interpolate from this colour to 'dst' by 'frac'</summary>
@@ -424,6 +488,14 @@ namespace pr.extn
 			tmp.yHotspot = hot_spot.Y;
 			tmp.fIcon = false;
 			return new Cursor(Win32.CreateIconIndirect(ref tmp));
+		}
+
+		/// <summary>Convert this bitmap to an icon</summary>
+		public static Icon ToIcon(this Bitmap bm)
+		{
+			if (bm.Width > 128 || bm.Height > 128) throw new Exception("Icons can only be created from bitmaps up to 128x128 pixels in size");
+			using (var handle = Scope.Create(() => bm.GetHicon(), h => Win32.DestroyIcon(h)))
+				return Icon.FromHandle(handle.Value);
 		}
 	}
 

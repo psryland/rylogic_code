@@ -179,7 +179,7 @@ namespace pr.extn
 			ctrl.ToolTipText = caption;
 		}
 
-		/// <summary>Display the hint balloon.</summary>
+		/// <summary>Display the hint balloon. Note, is difficult to get working, use HintBalloon instead.</summary>
 		public static void ShowHintBalloon(this ToolStripItem item, ToolTip tt, string msg, int duration = 5000)
 		{
 			var parent = item.GetCurrentParent();

@@ -506,7 +506,7 @@ namespace pr
 			// Allow subclasses report errors
 			virtual bool ReportError(EResult result, Location const& loc, char const* msg)
 			{
-				return ThrowOnFailure::Fail(result, loc, msg), false;
+				return ThrowOnFailure::Fail(result, loc, msg, false);
 			}
 			bool ReportError(EResult result, char const* msg)
 			{

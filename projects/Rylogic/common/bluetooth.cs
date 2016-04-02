@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using pr.maths;
 using pr.util;
 using pr.win32;
 
@@ -9,6 +10,9 @@ namespace pr.common
 {
 	public static class Bluetooth
 	{
+		public const int TimeoutQuantumMS = 1280;
+		public const int DefaultTimeoutMS = TimeoutQuantumMS * 2;
+
 		[Flags] public enum EOptions
 		{
 			None                = 0,
@@ -91,12 +95,13 @@ namespace pr.common
 		}
 
 		/// <summary>Enumerable bluetooth devices on the system</summary>
-		public static IEnumerable<Device> Devices(EOptions opts = EOptions.ReturnAll)
+		public static IEnumerable<Device> Devices(EOptions opts = EOptions.ReturnAll, int timeout_ms = DefaultTimeoutMS)
 		{
 			var device_info = BLUETOOTH_DEVICE_INFO.New();
 			var find = IntPtr.Zero;
 
 			var search_params = BLUETOOTH_DEVICE_SEARCH_PARAMS.New();
+			search_params.cTimeoutMultiplier = (byte)Maths.Clamp((timeout_ms + TimeoutQuantumMS - 1) / TimeoutQuantumMS, 0, 48);
 			if (opts.HasFlag(EOptions.ReturnAuthenticated)) search_params.fReturnAuthenticated = true;
 			if (opts.HasFlag(EOptions.ReturnRemembered))    search_params.fReturnRemembered = true;
 			if (opts.HasFlag(EOptions.ReturnUnknown))       search_params.fReturnUnknown = true;

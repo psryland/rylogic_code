@@ -13,9 +13,11 @@ using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using pr.common;
+using pr.container;
 using pr.extn;
 using pr.maths;
 using pr.util;
+using pr.win32;
 
 namespace pr.gui
 {
@@ -247,7 +249,30 @@ namespace pr.gui
 			/// <summary>A label for the series</summary>
 			public string Name { get; set; }
 
-			/// <summary>Options for renderering this series</summary>
+			/// <summary>The colour of this series on the graph</summary>
+			public Color Colour
+			{
+				get
+				{
+					switch (RenderOptions.PlotType) {
+					default: throw new Exception("Unknown plot type");
+					case RdrOptions.EPlotType.Point: return RenderOptions.PointColour;
+					case RdrOptions.EPlotType.Line:  return RenderOptions.LineColour;
+					case RdrOptions.EPlotType.Bar:   return RenderOptions.BarColour;
+					}
+				}
+				set
+				{
+					switch (RenderOptions.PlotType) {
+					default: throw new Exception("Unknown plot type");
+					case RdrOptions.EPlotType.Point: RenderOptions.PointColour = value; break;
+					case RdrOptions.EPlotType.Line:  RenderOptions.LineColour  = value; break;
+					case RdrOptions.EPlotType.Bar:   RenderOptions.BarColour   = value; break;
+					}
+				}
+			}
+
+			/// <summary>Options for rendering this series</summary>
 			public RdrOptions RenderOptions { get; set; }
 
 			/// <summary></summary>
@@ -270,7 +295,7 @@ namespace pr.gui
 			}
 
 			/// <summary>Plot colour generator</summary>
-			public static Color Colour(int i)
+			public static Color GenerateColour(int i)
 			{
 				return m_colours[i % m_colours.Length];
 			}
@@ -510,15 +535,15 @@ namespace pr.gui
 
 		// Constructors
 		public GraphControl()
-			:this(string.Empty, Axis.Range.Default, Axis.Range.Default, new Axis(), new Axis(), new RdrOptions(), new List<Series>())
+			:this(string.Empty, Axis.Range.Default, Axis.Range.Default, new Axis(), new Axis(), new RdrOptions(), new BindingListEx<Series>())
 		{}
 		public GraphControl(GraphControl src)
-			:this(src.Title, src.BaseRangeX, src.BaseRangeY, new Axis(src.XAxis), new Axis(src.YAxis), src.RenderOptions.Clone(), new List<Series>(src.Data))
+			:this(src.Title, src.BaseRangeX, src.BaseRangeY, new Axis(src.XAxis), new Axis(src.YAxis), src.RenderOptions.Clone(), new BindingListEx<Series>(src.Data))
 		{
 			AddOverlayOnRender = src.AddOverlayOnRender;
 			AddOverlayOnPaint = src.AddOverlayOnPaint;
 		}
-		private GraphControl(string title, Axis.Range base_xrange, Axis.Range base_yrange, Axis xaxis, Axis yaxis, RdrOptions rdr_options, List<Series> data)
+		private GraphControl(string title, Axis.Range base_xrange, Axis.Range base_yrange, Axis xaxis, Axis yaxis, RdrOptions rdr_options, BindingListEx<Series> data)
 		{
 			MutexRendering  = new object();
 			m_rdr_thread    = null;
@@ -541,6 +566,7 @@ namespace pr.gui
 			MouseNavigation = true;
 			Dirty           = true;
 			DoubleBuffered  = true;
+			Legend          = new LegendUI(this);
 		}
 		protected override void Dispose(bool disposing)
 		{
@@ -548,6 +574,7 @@ namespace pr.gui
 			if (m_rdr_thread != null)
 				m_rdr_thread.Join();
 
+			Legend = Util.Dispose(Legend);
 			Util.Dispose(ref m_tooltip);
 			base.Dispose(disposing);
 		}
@@ -598,9 +625,9 @@ namespace pr.gui
 		/// <summary>Rendering options for the graph</summary>
 		public RdrOptions RenderOptions { get; private set; }
 
-		/// <summary>The colleciton of series' that make up the graph data</summary>
+		/// <summary>The collection of series' that make up the graph data</summary>
 		[Browsable(false)]
-		public List<Series> Data
+		public BindingListEx<Series> Data
 		{
 			get { return m_impl_data; }
 			set
@@ -610,7 +637,7 @@ namespace pr.gui
 					m_impl_data = value;
 			}
 		}
-		private List<Series> m_impl_data;
+		private BindingListEx<Series> m_impl_data;
 
 		/// <summary>Notes to add to the graph</summary>
 		[Browsable(false)]
@@ -1092,7 +1119,7 @@ namespace pr.gui
 				}
 
 				// Allow clients to draw on the graph
-				AddOverlayOnPaint.Raise(this, new OverlaysEventArgs(gfx));
+				OnAddOverlayOnPaint(new OverlaysEventArgs(gfx));
 
 				// Draw the selection rubber band
 				if (m_selection.Width != 0 && m_selection.Height != 0)
@@ -1423,7 +1450,7 @@ namespace pr.gui
 			gfx.ResetTransform();
 
 			// Allow clients to draw on the graph
-			AddOverlayOnRender.Raise(this, new OverlaysEventArgs(gfx));
+			OnAddOverlayOnRender(new OverlaysEventArgs(gfx));
 
 			gfx.ResetClip();
 		}
@@ -1654,90 +1681,171 @@ namespace pr.gui
 		/// <summary>Create and display a context menu</summary>
 		public void ShowContextMenu(Point location)
 		{
-			// Note: using lists and AddRange here for performance reasons
-			// Using 'DropDownItems.Add' causes lots of PerformLayout calls
-
-			var context_menu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
-			var lvl0 = new List<ToolStripItem>();
-
+			var cmenu = new ContextMenuStrip { Renderer = new ContextMenuRenderer() };
 			using (this.ChangeCursor(Cursors.WaitCursor))
-			using (context_menu.SuspendLayout(false))
+			using (cmenu.SuspendLayout(true))
 			{
-				// Allow users to add menu options
-				AddUserMenuOptions.Raise(this, new AddUserMenuOptionsEventArgs(context_menu));
-
-				#region Show Value
+				#region Tools
 				{
-					var show_value = lvl0.Add2(new ToolStripMenuItem("Show Value"));
-					show_value.Checked = (bool)m_tooltip.Tag;
-					show_value.Click += (s,a) =>
+					var tools_menu = cmenu.Items.Add2(new ToolStripMenuItem("Tools"));
+					#region Show Value
+					{
+						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Show Value"));
+						opt.Checked = (bool)m_tooltip.Tag;
+						opt.Click += (s,a) =>
 						{
 							m_tooltip.Hide(this);
 							if ((bool)m_tooltip.Tag) MouseMove -= OnMouseMoveTooltip;
 							m_tooltip.Tag = !(bool)m_tooltip.Tag;
 							if ((bool)m_tooltip.Tag) MouseMove += OnMouseMoveTooltip;
 						};
+					}
+					#endregion
+					#region Legend
+					{
+						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Legend"));
+						opt.Checked = Legend.Visible;
+						opt.Click += (s,a) =>
+						{
+							Legend.Visible = !Legend.Visible;
+							if (Legend.Visible)
+								Legend.BringToFront();
+						};
+					}
+					#endregion
+					#region Notes
+					{
+						var note_menu = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Notes"));
+						#region Add
+						{
+							var opt = note_menu.DropDownItems.Add2(new ToolStripMenuItem("Add"));
+							opt.Click += (s,e) =>
+							{
+								var form = new Form
+								{
+									Text = "Add Note",
+									FormBorderStyle = FormBorderStyle.SizableToolWindow,
+									StartPosition = FormStartPosition.Manual,
+									Location = PointToScreen(location),
+									Size = new Size(160,100),
+									KeyPreview = true
+								};
+								form.KeyDown += (o,a) =>
+								{
+									if (a.KeyCode == Keys.Enter && (a.Modifiers & Keys.Control) == 0)
+										form.DialogResult = DialogResult.OK;
+								};
+								var tb = new TextBox
+								{
+									Dock = DockStyle.Fill,
+									Multiline = true,
+									AcceptsReturn = false
+								};
+								form.Controls.Add(tb);
+								if (form.ShowDialog(this) != DialogResult.OK || tb.Text.Length == 0) return;
+								Notes.Add(new Note(tb.Text,PointToGraph(location)));
+								Dirty = true;
+							};
+						}
+						#endregion
+						#region Delete
+						{
+							var dist = 100f;
+							Note nearest = null;
+							foreach (var note in Notes)
+							{
+								var sep = GraphToPoint(note.m_loc) - (Size)location;
+								var d = (float)Math.Sqrt(sep.X*sep.X + sep.Y*sep.Y);
+								if (d >= dist) continue;
+								dist = d;
+								nearest = note;
+							}
+							if (nearest != null)
+							{
+								var opt = note_menu.DropDownItems.Add2(new ToolStripMenuItem("Delete '{0}'".Fmt(nearest.m_msg.Summary(12))));
+								opt.Click += (s,e) =>
+								{
+									Notes.Remove(nearest);
+									Dirty = true;
+								};
+							}
+						}
+						#endregion
+					}
+					#endregion
+					#region Export
+					{
+						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Export"));
+						opt.Click += (s,a) =>
+						{
+							ExportCSV();
+						};
+					}
+					#endregion
+					#region Import
+					{
+						var opt = tools_menu.DropDownItems.Add2(new ToolStripMenuItem("Import"));
+						opt.Click += (s,a) =>
+						{
+							ImportCSV(null);
+						};
+					}
+					#endregion
 				}
 				#endregion
-
 				#region Zoom Menu
 				{
-					var zoom_menu = lvl0.Add2(new ToolStripMenuItem("Zoom"));
-					var lvl1 = new List<ToolStripItem>();
-
-					var default_zoom = lvl1.Add2(new ToolStripMenuItem("Default"));
-					default_zoom.Click += (s,a) =>
+					var zoom_menu = cmenu.Items.Add2(new ToolStripMenuItem("Zoom"));
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Default"));
+						opt.Click += (s,a) =>
 						{
 							FindDefaultRange();
 							ResetToDefaultRange();
 							Refresh();
 						};
-
-					var zoom_in = lvl1.Add2(new ToolStripMenuItem("In"));
-					zoom_in.Click += (s,a) =>
+					}
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("In"));
+						opt.Click += (s,a) =>
 						{
 							var point = PointToGraph(m_selection.Location);
 							Zoom *= 0.5;
 							PositionGraph(m_selection.Location,point);
 							Refresh();
 						};
-
-					var zoom_out = lvl1.Add2(new ToolStripMenuItem("Out"));
-					zoom_out.Click += (s,a) =>
+					}
+					{
+						var opt = zoom_menu.DropDownItems.Add2(new ToolStripMenuItem("Out"));
+						opt.Click += (s,a) =>
 						{
 							var point = PointToGraph(m_selection.Location);
 							Zoom *= 2.0;
 							PositionGraph(m_selection.Location,point);
 							Refresh();
 						};
-
-					zoom_menu.DropDownItems.AddRange(lvl1.ToArray());
+					}
 				}
 				#endregion
-
 				#region Series menus
 				if (Data.Count != 0)
 				{
 					#region All Series
 					{
-						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: All"));
-						var lvl1 = new List<ToolStripItem>();
-
+						var menu = cmenu.Items.Add2(new ToolStripMenuItem("Series: All"));
 						#region Visible
 						{
 							var state = Data.Aggregate(0, (x,s) => x | (s.RenderOptions.Visible ? 2 : 1));
-							var option = lvl1.Add2(new ToolStripMenuItem("Visible"));
+							var option = menu.DropDownItems.Add2(new ToolStripMenuItem("Visible"));
 							option.CheckState = state == 2 ? CheckState.Checked : state == 1 ? CheckState.Unchecked : CheckState.Indeterminate;
 							option.Click += (s,a) =>
-								{
-									option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
-									foreach (var x in Data) x.RenderOptions.Visible = option.CheckState == CheckState.Checked;
-									Dirty = true;
-								};
+							{
+								option.CheckState = option.CheckState == CheckState.Checked ? CheckState.Unchecked : CheckState.Checked;
+								foreach (var x in Data) x.RenderOptions.Visible = option.CheckState == CheckState.Checked;
+								Dirty = true;
+							};
 						}
 						#endregion
-
-						series_menu.DropDownItems.AddRange(lvl1.ToArray());
 					}
 					#endregion
 					#region Individual Series
@@ -1745,599 +1853,459 @@ namespace pr.gui
 					{
 						var series = Data[index];
 
-						var series_menu = lvl0.Add2(new ToolStripMenuItem("Series: " + series.Name));
-						var lvl1 = new List<ToolStripItem>();
-
-						if      (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Point) series_menu.ForeColor = series.RenderOptions.PointColour;
-						else if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Line ) series_menu.ForeColor = series.RenderOptions.LineColour;
-						else if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Bar  ) series_menu.ForeColor = series.RenderOptions.BarColour;
-						series_menu.Checked = series.RenderOptions.Visible;
-						series_menu.Tag = index;
-						series_menu.Click += (s,a) =>
-							{
-								series.RenderOptions.Visible = !series.RenderOptions.Visible;
-								series_menu.Checked = series.RenderOptions.Visible;
-								Dirty = true;
-							};
+						// Create a sub menu for each series
+						var menu = cmenu.Items.Add2(new ToolStripMenuItem("Series: " + series.Name));
+						menu.ForeColor = series.Colour;
+						menu.Checked = series.RenderOptions.Visible;
+						menu.Tag = index;
+						menu.Click += (s,a) =>
+						{
+							series.RenderOptions.Visible = !series.RenderOptions.Visible;
+							menu.Checked = series.RenderOptions.Visible;
+							Dirty = true;
+						};
 
 						#region Elements
 						{
-							var elements_menu = lvl1.Add2(new ToolStripMenuItem("Elements"));
-							var lvl2 = new List<ToolStripItem>();
-
+							var elements_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Elements"));
 							#region Draw main data
 							{
-								var option = lvl2.Add2(new ToolStripMenuItem("Series data"));
-								option.Checked = series.RenderOptions.DrawData;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.DrawData = !series.RenderOptions.DrawData;
-										Dirty = true;
-									};
+								var opt = elements_menu.DropDownItems.Add2(new ToolStripMenuItem("Series data"));
+								opt.Checked = series.RenderOptions.DrawData;
+								opt.Click += (s,a) =>
+								{
+									series.RenderOptions.DrawData = !series.RenderOptions.DrawData;
+									Dirty = true;
+								};
 							}
 							#endregion
 							#region Draw error bars
 							{
-								var option = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
-								option.Checked = series.RenderOptions.DrawErrorBars;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.DrawErrorBars = !series.RenderOptions.DrawErrorBars;
-										Dirty = true;
-									};
+								var opt = elements_menu.DropDownItems.Add2(new ToolStripMenuItem("Error Bars"));
+								opt.Checked = series.RenderOptions.DrawErrorBars;
+								opt.Click += (s,a) =>
+								{
+									series.RenderOptions.DrawErrorBars = !series.RenderOptions.DrawErrorBars;
+									Dirty = true;
+								};
 							}
 							#endregion
-
-							elements_menu.DropDownItems.AddRange(lvl2.ToArray());
 						}
 						#endregion
-
 						#region Plot Type Menu
 						{
-							var plot_type_menu = lvl1.Add2(new ToolStripMenuItem("Plot Type"));
+							var plot_type_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Plot Type"));
 							{
-								var option = new ToolStripComboBox();
-								plot_type_menu.DropDownItems.Add(option);
-								option.Items.AddRange(Enum<Series.RdrOptions.EPlotType>.Names.Cast<object>().ToArray());
-								option.SelectedIndex = (int)series.RenderOptions.PlotType;
-								option.SelectedIndexChanged += (s,a) =>
-									{
-										series.RenderOptions.PlotType = (Series.RdrOptions.EPlotType)option.SelectedIndex;
-										Dirty = true;
-									};
-								option.KeyDown += (s,a) =>
-									{
-										if (a.KeyCode == Keys.Return)
-											context_menu.Close();
-									};
+								var opt = plot_type_menu.DropDownItems.Add2(new ToolStripComboBox());
+								opt.Items.AddRange(Enum<Series.RdrOptions.EPlotType>.Names.Cast<object>().ToArray());
+								opt.SelectedIndex = (int)series.RenderOptions.PlotType;
+								opt.SelectedIndexChanged += (s,a) =>
+								{
+									series.RenderOptions.PlotType = (Series.RdrOptions.EPlotType)opt.SelectedIndex;
+									Dirty = true;
+								};
+								opt.KeyDown += (s,a) =>
+								{
+									if (a.KeyCode == Keys.Return)
+										cmenu.Close();
+								};
 							}
 						}
 						#endregion
-
 						#region Appearance Menu
 						{
-							var appearance_menu = lvl1.Add2(new ToolStripMenuItem("Appearance"));
-							var lvl2 = new List<ToolStripItem>();
-
+							var appearance_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Appearance"));
 							#region Points
 							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Point || series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Line)
 							{
-								var point_menu = lvl2.Add2(new ToolStripMenuItem("Points"));
-								var lvl3 = new List<ToolStripItem>();
-
+								var point_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Points"));
 								#region Size
 								{
-									var size_menu = lvl3.Add2(new ToolStripMenuItem("Size"));
+									var size_menu = point_menu.DropDownItems.Add2(new ToolStripMenuItem("Size"));
 									{
-										var option = new ToolStripTextBox{AcceptsReturn = false};
-										size_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.PointSize.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float size;
-												if (!float.TryParse(option.Text,out size)) return;
-												series.RenderOptions.PointSize = size;
-												Dirty = true;
-											};
+										var opt = size_menu.DropDownItems.Add2(new ToolStripTextBox{AcceptsReturn = false});
+										opt.Text = series.RenderOptions.PointSize.ToString("0.00");
+										opt.TextChanged += (s,a) =>
+										{
+											float size;
+											if (!float.TryParse(opt.Text,out size)) return;
+											series.RenderOptions.PointSize = size;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
 								#region Colour
 								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									var colour_menu = point_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.PointColour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.PointColour = cd.Colour;
-												Dirty = true;
-											};
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.PointColour});
+										opt.Click += (s,a) =>
+										{
+											var cd = new ColourUI{InitialColour = opt.BackColor};
+											if (cd.ShowDialog() != DialogResult.OK) return;
+											series.RenderOptions.PointColour = cd.Colour;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
-
-								point_menu.DropDownItems.AddRange(lvl3.ToArray());
 							}
 							#endregion
 							#region Lines
 							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Line)
 							{
-								var line_menu = lvl2.Add2(new ToolStripMenuItem("Lines"));
-								var lvl3 = new List<ToolStripItem>();
-
+								var line_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Lines"));
 								#region Width
 								{
-									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
+									var width_menu = line_menu.DropDownItems.Add2(new ToolStripMenuItem("Width"));
 									{
-										var option = new ToolStripTextBox();
-										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.LineWidth.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float width;
-												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.LineWidth = width;
-												Dirty = true;
-											};
+										var opt = width_menu.DropDownItems.Add2(new ToolStripTextBox());
+										opt.Text = series.RenderOptions.LineWidth.ToString("0.00");
+										opt.TextChanged += (s,a) =>
+										{
+											float width;
+											if (!float.TryParse(opt.Text,out width)) return;
+											series.RenderOptions.LineWidth = width;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
 								#region Colour
 								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									var colour_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.LineColour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.LineColour = cd.Colour;
-												Dirty = true;
-											};
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.LineColour});
+										opt.Click += (s,a) =>
+										{
+											var cd = new ColourUI{InitialColour = opt.BackColor};
+											if (cd.ShowDialog() != DialogResult.OK) return;
+											series.RenderOptions.LineColour = cd.Colour;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
-
-								line_menu.DropDownItems.AddRange(lvl3.ToArray());
 							}
 							#endregion
 							#region Bars
 							if (series.RenderOptions.PlotType == Series.RdrOptions.EPlotType.Bar)
 							{
-								var bar_menu = lvl2.Add2(new ToolStripMenuItem("Bars"));
-								var lvl3 = new List<ToolStripItem>();
-
+								var bar_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Bars"));
 								#region Width
 								{
-									var width_menu = lvl3.Add2(new ToolStripMenuItem("Width"));
+									var width_menu = bar_menu.DropDownItems.Add2(new ToolStripMenuItem("Width"));
 									{
-										var option = new ToolStripTextBox();
-										width_menu.DropDownItems.Add(option);
-										option.Text = series.RenderOptions.BarWidth.ToString("0.00");
-										option.TextChanged += (s,a) =>
-											{
-												float width;
-												if (!float.TryParse(option.Text,out width)) return;
-												series.RenderOptions.BarWidth = width;
-												Dirty = true;
-											};
-										option.KeyDown += (s,a) =>
-											{
-												if (a.KeyCode == Keys.Return)
-													context_menu.Close();
-											};
+										var opt = width_menu.DropDownItems.Add2(new ToolStripTextBox());
+										opt.Text = series.RenderOptions.BarWidth.ToString("0.00");
+										opt.TextChanged += (s,a) =>
+										{
+											float width;
+											if (!float.TryParse(opt.Text,out width)) return;
+											series.RenderOptions.BarWidth = width;
+											Dirty = true;
+										};
+										opt.KeyDown += (s,a) =>
+										{
+											if (a.KeyCode == Keys.Return)
+												cmenu.Close();
+										};
 									}
 								}
 								#endregion
 								#region Bar Colour
 								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									var colour_menu = bar_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.BarColour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.BarColour = cd.Colour;
-												Dirty = true;
-											};
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.BarColour});
+										opt.Click += (s,a) =>
+										{
+											var cd = new ColourUI{InitialColour = opt.BackColor};
+											if (cd.ShowDialog() != DialogResult.OK) return;
+											series.RenderOptions.BarColour = cd.Colour;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
-
-								bar_menu.DropDownItems.AddRange(lvl3.ToArray());
 							}
 							#endregion
 							#region Error Bars
 							if (series.RenderOptions.DrawErrorBars)
 							{
-								var errorbar_menu = lvl2.Add2(new ToolStripMenuItem("Error Bars"));
-								var lvl3 = new List<ToolStripItem>();
-
+								var errorbar_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Error Bars"));
 								#region Colour
 								{
-									var colour_menu = lvl3.Add2(new ToolStripMenuItem("Colour"));
+									var colour_menu = errorbar_menu.DropDownItems.Add2(new ToolStripMenuItem("Colour"));
 									{
-										var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.ErrorBarColour};
-										colour_menu.DropDownItems.Add(option);
-										option.Click += (s,a) =>
-											{
-												var cd = new ColourUI{InitialColour = option.BackColor};
-												if (cd.ShowDialog() != DialogResult.OK) return;
-												series.RenderOptions.ErrorBarColour = cd.Colour;
-												Dirty = true;
-											};
+										var opt = colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.ErrorBarColour});
+										opt.Click += (s,a) =>
+										{
+											var cd = new ColourUI{InitialColour = opt.BackColor};
+											if (cd.ShowDialog() != DialogResult.OK) return;
+											series.RenderOptions.ErrorBarColour = cd.Colour;
+											Dirty = true;
+										};
 									}
 								}
 								#endregion
-
-								errorbar_menu.DropDownItems.AddRange(lvl3.ToArray());
 							}
 							#endregion
-
-							appearance_menu.DropDownItems.AddRange(lvl2.ToArray());
 						}
 						#endregion
-
 						#region Moving Average
 						{
-							var mv_avr_menu = lvl1.Add2(new ToolStripMenuItem("Moving Average"));
+							var mv_avr_menu = menu.DropDownItems.Add2(new ToolStripMenuItem("Moving Average"));
 							#region Draw Moving Average
 							{
-								var option = new ToolStripMenuItem("Draw Moving Average");
-								mv_avr_menu.DropDownItems.Add(option);
-								option.Checked = series.RenderOptions.DrawMovingAvr;
-								option.Click += (s,a) =>
-									{
-										series.RenderOptions.DrawMovingAvr = !series.RenderOptions.DrawMovingAvr;
-										Dirty = true;
-									};
+								var opt = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Draw Moving Average"));
+								opt.Checked = series.RenderOptions.DrawMovingAvr;
+								opt.Click += (s,a) =>
+								{
+									series.RenderOptions.DrawMovingAvr = !series.RenderOptions.DrawMovingAvr;
+									Dirty = true;
+								};
 							}
 							#endregion
 							#region Window Size
 							{
-								var win_size_menu = new ToolStripMenuItem("Window Size");
-								mv_avr_menu.DropDownItems.Add(win_size_menu);
+								var win_size_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Window Size"));
 								{
-									var option = new ToolStripTextBox();
-									win_size_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.MAWindowSize.ToString(CultureInfo.InvariantCulture);
-									option.TextChanged += (s,a) =>
-										{
-											int size;
-											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.MAWindowSize = size;
-											Dirty = true;
-										};
+									var opt = win_size_menu.DropDownItems.Add2(new ToolStripTextBox());
+									opt.Text = series.RenderOptions.MAWindowSize.ToString(CultureInfo.InvariantCulture);
+									opt.TextChanged += (s,a) =>
+									{
+										int size;
+										if (!int.TryParse(opt.Text,out size)) return;
+										series.RenderOptions.MAWindowSize = size;
+										Dirty = true;
+									};
 								}
 							}
 							#endregion
 							#region Line Width
 							{
-								var line_width_menu = new ToolStripMenuItem("Line Width");
-								mv_avr_menu.DropDownItems.Add(line_width_menu);
+								var line_width_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Line Width"));
 								{
-									var option = new ToolStripTextBox();
-									line_width_menu.DropDownItems.Add(option);
-									option.Text = series.RenderOptions.MALineWidth.ToString(CultureInfo.InvariantCulture);
-									option.TextChanged += (s,a) =>
-										{
-											int size;
-											if (!int.TryParse(option.Text,out size)) return;
-											series.RenderOptions.MALineWidth = size;
-											Dirty = true;
-										};
+									var opt = line_width_menu.DropDownItems.Add2(new ToolStripTextBox());
+									opt.Text = series.RenderOptions.MALineWidth.ToString(CultureInfo.InvariantCulture);
+									opt.TextChanged += (s,a) =>
+									{
+										int size;
+										if (!int.TryParse(opt.Text,out size)) return;
+										series.RenderOptions.MALineWidth = size;
+										Dirty = true;
+									};
 								}
 							}
 							#endregion
 							#region Line Colour
 							{
-								var line_colour_menu = new ToolStripMenuItem("Line Colour");
-								mv_avr_menu.DropDownItems.Add(line_colour_menu);
+								var line_colour_menu = mv_avr_menu.DropDownItems.Add2(new ToolStripMenuItem("Line Colour"));
 								{
-									var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.MALineColour};
-									line_colour_menu.DropDownItems.Add(option);
-									option.Click += (s,a) =>
-										{
-											var cd = new ColourUI{InitialColour = option.BackColor};
-											if (cd.ShowDialog() != DialogResult.OK) return;
-											series.RenderOptions.MALineColour = cd.Colour;
-											Dirty = true;
-										};
+									var opt = line_colour_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = series.RenderOptions.MALineColour});
+									opt.Click += (s,a) =>
+									{
+										var cd = new ColourUI{InitialColour = opt.BackColor};
+										if (cd.ShowDialog() != DialogResult.OK) return;
+										series.RenderOptions.MALineColour = cd.Colour;
+										Dirty = true;
+									};
 								}
 							}
 							#endregion
 						}
 						#endregion
-
 						#region Delete Series
 						if (series.AllowDelete)
 						{
-							var delete_menu = lvl1.Add2(new ToolStripMenuItem("Delete"));
-							delete_menu.Click += (s,a) =>
-								{
-									if (MessageBox.Show(this,"Confirm delete?","Delete Series",MessageBoxButtons.YesNo,MessageBoxIcon.Warning) != DialogResult.Yes) return;
-									Data.RemoveAt((int)series_menu.Tag);
-									FindDefaultRange();
-									Dirty = true;
-								};
+							var opt = menu.DropDownItems.Add2(new ToolStripMenuItem("Delete"));
+							opt.Click += (s,a) =>
+							{
+								if (MessageBox.Show(this,"Confirm delete?","Delete Series",MessageBoxButtons.YesNo,MessageBoxIcon.Warning) != DialogResult.Yes) return;
+								Data.RemoveAt((int)menu.Tag);
+								FindDefaultRange();
+								Dirty = true;
+							};
 						}
 						#endregion
-
-						series_menu.DropDownItems.AddRange(lvl1.ToArray());
 					}
 					#endregion
 				}
 				#endregion
-
 				#region Rendering Options
 				{
-					var appearance_menu = lvl0.Add2(new ToolStripMenuItem("Appearance"));
-					var lvl1 = new List<ToolStripItem>();
-
+					var appearance_menu = cmenu.Items.Add2(new ToolStripMenuItem("Appearance"));
 					#region Frame Background Colour
 					{
-						var item = lvl1.Add2(new ToolStripMenuItem("Frame Background Colour"));
+						var fbc_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Frame Background Colour"));
 						{
-							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour};
-							item.DropDownItems.Add(option);
-							option.Click += (s,a) =>
-								{
-									var cd = new ColourUI{InitialColour = option.BackColor};
-									if (cd.ShowDialog() != DialogResult.OK) return;
-									RenderOptions.BkColour = cd.Colour;
-									Dirty = true;
-								};
+							var opt = fbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour});
+							opt.Click += (s,a) =>
+							{
+								var cd = new ColourUI{InitialColour = opt.BackColor};
+								if (cd.ShowDialog() != DialogResult.OK) return;
+								RenderOptions.BkColour = cd.Colour;
+								Dirty = true;
+							};
 						}
 					}
 					#endregion
 					#region Plot Background Colour
 					{
-						var item = lvl1.Add2(new ToolStripMenuItem("Plot Background Colour"));
+						var pbc_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Plot Background Colour"));
 						{
-							var option = new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour};
-							item.DropDownItems.Add(option);
-							option.Click += (s,a) =>
-								{
-									var cd = new ColourUI{InitialColour = option.BackColor};
-									if (cd.ShowDialog() != DialogResult.OK) return;
-									RenderOptions.PlotBkColour = cd.Colour;
-									Dirty = true;
-								};
+							var opt = pbc_menu.DropDownItems.Add2(new NoHighlightToolStripMenuItem("     "){DisplayStyle = ToolStripItemDisplayStyle.Text, BackColor = RenderOptions.BkColour});
+							opt.Click += (s,a) =>
+							{
+								var cd = new ColourUI{InitialColour = opt.BackColor};
+								if (cd.ShowDialog() != DialogResult.OK) return;
+								RenderOptions.PlotBkColour = cd.Colour;
+								Dirty = true;
+							};
 						}
 					}
 					#endregion
 					#region Opacity
 					if (ParentForm != null)
 					{
-						var item = lvl1.Add2(new ToolStripMenuItem("Opacity"));
+						var opacity_menu = appearance_menu.DropDownItems.Add2(new ToolStripMenuItem("Opacity"));
 						{
-							var option = new ToolStripTextBox();
-							item.DropDownItems.Add(option);
-							option.Text = ParentForm.Opacity.ToString("0.00");
-							option.TextChanged += (s,a) =>
-								{
-									double opc;
-									if (ParentForm != null && double.TryParse(option.Text,out opc))
-										ParentForm.Opacity = Math.Max(0.1,Math.Min(1.0,opc));
-								};
+							var opt = opacity_menu.DropDownItems.Add2(new ToolStripTextBox());
+							opt.Text = ParentForm.Opacity.ToString("0.00");
+							opt.TextChanged += (s,a) =>
+							{
+								double opc;
+								if (ParentForm != null && double.TryParse(opt.Text,out opc))
+									ParentForm.Opacity = Math.Max(0.1,Math.Min(1.0,opc));
+							};
 						}
 					}
 					#endregion
-
-					appearance_menu.DropDownItems.AddRange(lvl1.ToArray());
 				}
 				#endregion
-
 				#region Axis Options
 				{
-					var axes_menu = lvl0.Add2(new ToolStripMenuItem("Axes"));
-					var lvl1 = new List<ToolStripItem>();
-
+					var axes_menu = cmenu.Items.Add2(new ToolStripMenuItem("Axes"));
 					#region X Axis
 					{
-						var x_axis_menu = lvl1.Add2(new ToolStripMenuItem("X Axis"));
-						var lvl2 = new List<ToolStripItem>();
-
+						var xaxis_menu = axes_menu.DropDownItems.Add2(new ToolStripMenuItem("X Axis"));
 						#region Min
 						{
-							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
+							var min_menu = xaxis_menu.DropDownItems.Add2(new ToolStripMenuItem("Min"));
 							{
-								var option = new ToolStripTextBox();
-								min_menu.DropDownItems.Add(option);
-								option.Text = XAxis.Min.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										XAxis.Min = v;
-										Dirty = true;
-									};
+								var opt = min_menu.DropDownItems.Add2(new ToolStripTextBox());
+								opt.Text = XAxis.Min.ToString("G5");
+								opt.TextChanged += (s,a) =>
+								{
+									float v;
+									if (!float.TryParse(opt.Text,out v)) return;
+									XAxis.Min = v;
+									Dirty = true;
+								};
 							}
 						}
 						#endregion
 						#region Max
 						{
-							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
+							var max_menu = xaxis_menu.DropDownItems.Add2(new ToolStripMenuItem("Max"));
 							{
-								var option = new ToolStripTextBox();
-								max_menu.DropDownItems.Add(option);
-								option.Text = XAxis.Max.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										XAxis.Max = v;
-										Dirty = true;
-									};
+								var opt = max_menu.DropDownItems.Add2(new ToolStripTextBox());
+								opt.Text = XAxis.Max.ToString("G5");
+								opt.TextChanged += (s,a) =>
+								{
+									float v;
+									if (!float.TryParse(opt.Text,out v)) return;
+									XAxis.Max = v;
+									Dirty = true;
+								};
 							}
 						}
 						#endregion
 						#region Allow Scroll
 						{
-							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = XAxis.AllowScroll });
-							allow_scroll.Click += (s,a) => XAxis.AllowScroll = !XAxis.AllowScroll;
+							var opt = xaxis_menu.DropDownItems.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = XAxis.AllowScroll });
+							opt.Click += (s,a) =>
+							{
+								XAxis.AllowScroll = !XAxis.AllowScroll;
+							};
 						}
 						#endregion
 						#region Allow Zoom
 						{
-							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = XAxis.AllowZoom });
-							allow_zoom.Click += (s,e) => XAxis.AllowZoom = !XAxis.AllowZoom;
+							var opt = xaxis_menu.DropDownItems.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = XAxis.AllowZoom });
+							opt.Click += (s,e) =>
+							{
+								XAxis.AllowZoom = !XAxis.AllowZoom;
+							};
 						}
 						#endregion
-
-						x_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
 					}
 					#endregion
 					#region Y Axis
 					{
-						var y_axis_menu = lvl1.Add2(new ToolStripMenuItem("Y Axis"));
-						var lvl2 = new List<ToolStripItem>();
-
+						var yaxis_menu = axes_menu.DropDownItems.Add2(new ToolStripMenuItem("Y Axis"));
 						#region Min
 						{
-							var min_menu = lvl2.Add2(new ToolStripMenuItem("Min"));
+							var min_menu = yaxis_menu.DropDownItems.Add2(new ToolStripMenuItem("Min"));
 							{
-								var option = new ToolStripTextBox();
-								min_menu.DropDownItems.Add(option);
-								option.Text = YAxis.Min.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										YAxis.Min = v;
-										Dirty = true;
-									};
+								var opt = min_menu.DropDownItems.Add2(new ToolStripTextBox());
+								opt.Text = YAxis.Min.ToString("G5");
+								opt.TextChanged += (s,a) =>
+								{
+									float v;
+									if (!float.TryParse(opt.Text,out v)) return;
+									YAxis.Min = v;
+									Dirty = true;
+								};
 							}
 						}
 						#endregion
 						#region Max
 						{
-							var max_menu = lvl2.Add2(new ToolStripMenuItem("Max"));
+							var max_menu = axes_menu.DropDownItems.Add2(new ToolStripMenuItem("Max"));
 							{
-								var option = new ToolStripTextBox();
-								max_menu.DropDownItems.Add(option);
-								option.Text = YAxis.Max.ToString("G5");
-								option.TextChanged += (s,a) =>
-									{
-										float v;
-										if (!float.TryParse(option.Text,out v)) return;
-										YAxis.Max = v;
-										Dirty = true;
-									};
+								var opt = max_menu.DropDownItems.Add2(new ToolStripTextBox());
+								opt.Text = YAxis.Max.ToString("G5");
+								opt.TextChanged += (s,a) =>
+								{
+									float v;
+									if (!float.TryParse(opt.Text,out v)) return;
+									YAxis.Max = v;
+									Dirty = true;
+								};
 							}
 						}
 						#endregion
 						#region Allow Scroll
 						{
-							var allow_scroll = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = YAxis.AllowScroll });
-							allow_scroll.Click += (s,e) => YAxis.AllowScroll = !YAxis.AllowScroll;
+							var opt = yaxis_menu.DropDownItems.Add2(new ToolStripMenuItem { Text = "Allow Scroll", Checked = YAxis.AllowScroll });
+							opt.Click += (s,e) =>
+							{
+								YAxis.AllowScroll = !YAxis.AllowScroll;
+							};
 						}
 						#endregion
 						#region Allow Zoom
 						{
-							var allow_zoom = lvl2.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = YAxis.AllowZoom });
-							allow_zoom.Click += (s,e) => YAxis.AllowZoom = !YAxis.AllowZoom;
+							var opt = yaxis_menu.DropDownItems.Add2(new ToolStripMenuItem { Text = "Allow Zoom", Checked = YAxis.AllowZoom });
+							opt.Click += (s,e) =>
+							{
+								YAxis.AllowZoom = !YAxis.AllowZoom;
+							};
 						}
 						#endregion
-
-						y_axis_menu.DropDownItems.AddRange(lvl2.ToArray());
 					}
 					#endregion
-
-					axes_menu.DropDownItems.AddRange(lvl1.ToArray());
 				}
 				#endregion
 
-				#region Notes
-				{
-					var note_menu = lvl0.Add2(new ToolStripMenuItem("Notes"));
-					var lvl1 = new List<ToolStripItem>();
-
-					#region Add
-					{
-						var option = lvl1.Add2(new ToolStripMenuItem("Add"));
-						option.Click += (s,e) =>
-							{
-								var form = new Form
-									{
-										Text = "Add Note",
-										FormBorderStyle = FormBorderStyle.SizableToolWindow,
-										StartPosition = FormStartPosition.Manual,
-										Location = PointToScreen(location),
-										Size = new Size(160,100),
-										KeyPreview = true
-									};
-								form.KeyDown += (o,a) =>
-									{
-										if (a.KeyCode == Keys.Enter && (a.Modifiers & Keys.Control) == 0)
-											form.DialogResult = DialogResult.OK;
-									};
-								var tb = new TextBox
-									{
-										Dock = DockStyle.Fill,
-										Multiline = true,
-										AcceptsReturn = false
-									};
-								form.Controls.Add(tb);
-								if (form.ShowDialog(this) != DialogResult.OK || tb.Text.Length == 0) return;
-								Notes.Add(new Note(tb.Text,PointToGraph(location)));
-								Dirty = true;
-							};
-					}
-					#endregion
-					#region Delete
-					{
-						var dist = 100f;
-						Note nearest = null;
-						foreach (var note in Notes)
-						{
-							var sep = GraphToPoint(note.m_loc) - (Size)location;
-							var d = (float)Math.Sqrt(sep.X*sep.X + sep.Y*sep.Y);
-							if (d >= dist) continue;
-							dist = d;
-							nearest = note;
-						}
-						if (nearest != null)
-						{
-							var option = lvl1.Add2(new ToolStripMenuItem("Delete '{0}'".Fmt(nearest.m_msg.Summary(12))));
-							option.Click += (s,e) =>
-								{
-									Notes.Remove(nearest);
-									Dirty = true;
-								};
-						}
-					}
-					#endregion
-
-					note_menu.DropDownItems.AddRange(lvl1.ToArray());
-				}
-				#endregion
-
-				#region Export
-				{
-					var export_menu = lvl0.Add2(new ToolStripMenuItem("Export"));
-					export_menu.Click += (s,a) => ExportCSV();
-				}
-				#endregion
-
-				#region Import
-				{
-					var import_menu = lvl0.Add2(new ToolStripMenuItem("Import"));
-					import_menu.Click += (s,a) => ImportCSV(null);
-				}
-				#endregion
-
-				context_menu.Items.AddRange(lvl0.ToArray());
+				// Allow users to add menu options
+				OnAddUserMenuOptions(new AddUserMenuOptionsEventArgs(cmenu));
 			}
-
-			context_menu.Closed += (s,a) => Refresh();
-			context_menu.Show(this, location);
+			cmenu.Closed += (s,a) => Refresh();
+			cmenu.Show(this, location);
 		}
 
 		/// <summary>Special menu item that doesn't draw highlighted</summary>
@@ -2368,6 +2336,10 @@ namespace pr.gui
 		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
 		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnRender;
+		protected virtual void OnAddOverlayOnRender(OverlaysEventArgs args)
+		{
+			AddOverlayOnRender.Raise(this, args);
+		}
 
 		/// <summary>
 		/// Called each time the cached plot bitmap is drawn to the control to allow clients to add graphics.<para/>
@@ -2375,9 +2347,17 @@ namespace pr.gui
 		/// Rendering is in screen space, use GraphToPoint()/PointToGraph()<para/>
 		/// Use ClientToGraphSpace() to get the transform and scale that allows drawing in graph space</summary>
 		public event EventHandler<OverlaysEventArgs> AddOverlayOnPaint;
+		protected virtual void OnAddOverlayOnPaint(OverlaysEventArgs args)
+		{
+			AddOverlayOnPaint.Raise(this, args);
+		}
 
 		/// <summary>Event allowing callers to add options to the context menu</summary>
 		public event EventHandler<AddUserMenuOptionsEventArgs> AddUserMenuOptions;
+		protected virtual void OnAddUserMenuOptions(AddUserMenuOptionsEventArgs args)
+		{
+			AddUserMenuOptions.Raise(this, args);
+		}
 
 		public class OverlaysEventArgs :EventArgs
 		{
@@ -2627,202 +2607,119 @@ namespace pr.gui
 		}
 
 		#endregion
+
+		#region Legend
+
+		/// <summary>A floating legend window</summary>
+		public ToolForm Legend { get; private set; }
+		public class LegendUI :ToolForm
+		{
+			private readonly GraphControl m_graph;
+			private BorderResizer m_border_resizer;
+			private BindingSource<Series> m_bs;
+			private Grid m_grid;
+
+			public LegendUI(GraphControl graph) :base(graph, EPin.TopRight)
+			{
+				Font = new Font(FontFamily.GenericSansSerif, 6f, FontStyle.Regular, GraphicsUnit.Point);
+				FormBorderStyle = FormBorderStyle.None;
+				ShowInTaskbar = false;
+				ShowIcon = false;
+				AutoFade = true;
+				FadeRange = new RangeF(0.5f, 1.0f);
+				HideOnClose = true;
+				Padding = new Padding(5);
+
+				m_graph = graph;
+				m_bs = new BindingSource<Series> { DataSource = m_graph.Data };
+				m_grid = new Grid { DataSource = m_bs };
+				m_border_resizer = new BorderResizer(this, 5);
+				Controls.Add(m_grid);
+
+				ClientSize = new Size(80, m_grid.ColumnHeadersHeight + 8 * m_grid.RowTemplate.Height);
+			}
+			protected override void Dispose(bool disposing)
+			{
+				Util.Dispose(ref m_border_resizer);
+				base.Dispose(disposing);
+			}
+			protected override CreateParams CreateParams
+			{
+				get
+				{
+					var cp = base.CreateParams;
+					cp.ClassStyle |= Win32.CS_DROPSHADOW;
+					return cp;
+				}
+			}
+
+			private class Grid :DataGridView
+			{
+				public Grid()
+				{
+					Dock = DockStyle.Fill;
+					AllowUserToAddRows = false;
+					AllowUserToOrderColumns = false;
+					AllowUserToResizeRows = false;
+					AutoGenerateColumns = false;
+					BackgroundColor = SystemColors.Window;
+					BorderStyle = BorderStyle.None;
+					CellBorderStyle = DataGridViewCellBorderStyle.None;
+					SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+					AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+					RowHeadersVisible = false;
+					ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+					ColumnHeadersHeight = Font.Height + 8;
+					RowTemplate = new DataGridViewRow
+					{
+						Height = Font.Height + 4,
+					};
+					DefaultCellStyle = new DataGridViewCellStyle
+					{
+						Font = Font,
+					};
+
+					Columns.Add(new DataGridViewTextBoxColumn
+					{
+						HeaderText = "Series",
+						DataPropertyName = nameof(Series.Name),
+						SortMode = DataGridViewColumnSortMode.NotSortable,
+					});
+				}
+				protected override void OnCellFormatting(DataGridViewCellFormattingEventArgs args)
+				{
+					base.OnCellFormatting(args);
+					args.CellStyle.ForeColor = ((IList<Series>)DataSource)[args.RowIndex].Colour;
+					args.CellStyle.SelectionForeColor = args.CellStyle.ForeColor;
+					args.CellStyle.SelectionBackColor = args.CellStyle.BackColor;
+				}
+				protected override void OnCellMouseDown(DataGridViewCellMouseEventArgs e)
+				{
+					if (e.RowIndex == -1)
+					{
+						m_ofs = DrawingEx.Subtract(MousePosition, TopLevelControl.Location);
+						Capture = true;
+					}
+					base.OnCellMouseDown(e);
+				}
+				protected override void OnCellMouseMove(DataGridViewCellMouseEventArgs e)
+				{
+					if (m_ofs != null)
+					{
+						TopLevelControl.Location = MousePosition - m_ofs.Value;
+					}
+					base.OnCellMouseMove(e);
+				}
+				protected override void OnCellMouseUp(DataGridViewCellMouseEventArgs e)
+				{
+					m_ofs = null;
+					Capture = false;
+					base.OnCellMouseUp(e);
+				}
+				private Size? m_ofs;
+			}
+		}
+		
+		#endregion
 	}
 }
-
-/*
-			//try
-			//{
-			//	// If the local bitmap does not exist, or its size is wrong, redraw it
-			//	m_regen_bitmap_needed |= m_bm == null || m_bm.Size != ClientSize;
-			//	if (m_regen_bitmap_needed)
-			//	{
-			//		// When rendering the graph bitmap completes, trigger another refresh of the control
-			//		m_bm = GetGraphBitmap(ClientSize, true, (snd,bm)=>{ m_bm = bm; Refresh(); }, m_bm);
-			//		m_regen_bitmap_needed = false;
-			//	}
-			//	else
-			//	{
-			//		m_snap.m_bm = null;
-			//	}
-
-			//	// Render the graph
-			//	if (m_bm != null)
-			//		e.Graphics.DrawImage(m_bm, 0, 0);
-
-			//	// If a snapshot exists render the captured bitmap
-			//	if (m_snap.m_bm != null)
-			//	{
-			//		var src_rect = new Rectangle(Point.Empty, m_snap.m_bm.Size);
-			//		var dst_rect = GraphRegion(ClientSize).Inflated(-1,-1).Shifted(1,1);
-			//		e.Graphics.SetClip(dst_rect);
-			//		dst_rect.Location = GraphToPoint(new PointF((float)m_snap.m_xrange.m_min, (float)m_snap.m_yrange.m_max));
-			//		dst_rect.Width    = (int)(dst_rect.Width  * m_snap.m_xrange.m_span / m_xaxis.Rng.m_span);
-			//		dst_rect.Height   = (int)(dst_rect.Height * m_snap.m_yrange.m_span / m_yaxis.Rng.m_span);
-
-			//		e.Graphics.DrawImage(m_snap.m_bm, dst_rect, src_rect, GraphicsUnit.Pixel);
-			//		e.Graphics.ResetClip();
-			//	}
-
-			//	// Allow clients to draw in graph space
-			//	if (AddOverlaysOnPaint != null)
-			//	{
-			//		// Get a transform that can be used to draw in unscaled graph space. Can't use a scale transform here
-			//		// though because the lines and points will also be scaled, into ellipses or calligraphy etc.
-			//		var region = GraphRegion(ClientSize);
-			//		e.Graphics.SetClip(region);
-
-			//		var scale_x = (float)(region.Width  / m_xaxis.Span);
-			//		var scale_y = (float)(region.Height / m_yaxis.Span);
-			//		if (float.IsInfinity(scale_x)) { scale_x = scale_x >= 0 ? float.MaxValue : float.MinValue; }
-			//		if (float.IsInfinity(scale_y)) { scale_y = scale_y >= 0 ? float.MaxValue : float.MinValue; }
-
-			//		// Can't use inverted y scale here because the text comes out upside down
-			//		e.Graphics.Transform = new Matrix(1f, 0f, 0f, 1f, (float)(region.Left - m_xaxis.Min * scale_x), (float)(region.Bottom + m_yaxis.Min * scale_y));
-			//		scale_y = -scale_y;
-			//		AddOverlaysOnPaint(this, e.Graphics, scale_x, scale_y);
-			//		e.Graphics.ResetTransform();
-			//		e.Graphics.ResetClip(); // If a selection is in progress, draw the selection box
-			//	}
-
-			//	if (m_selection.Width != 0 && m_selection.Height != 0)
-			//	{
-			//		var pen = new Pen(Color.Black) {DashStyle = DashStyle.Dot};
-			//		var rect = m_selection;
-			//		if( rect.Width  < 0 ) { rect.X += rect.Width;  rect.Width  = -rect.Width;  }
-			//		if( rect.Height < 0 ) { rect.Y += rect.Height; rect.Height = -rect.Height; }
-			//		e.Graphics.DrawRectangle(pen, rect);
-			//	}
-			//}
-			//catch (OverflowException)
-			//{
-			//	// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
-			//	e.Graphics.DrawString("Rendering error within .NET", m_rdr_options.TitleFont, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
-			//}
-
-		/// <summary>Begins rendering of the graph into a bitmap.
-		/// If 'async' is true, then this method returns immediately with a placeholder bitmap
-		/// otherwise the finished bitmap is returned. If 'async' is true then 'render_complete'
-		/// is called (if not null) once the finished bitmap is complete. Note: 'render_complete'
-		/// is always called in the UI thread context</summary>
-		public Bitmap GetGraphBitmap(Size size, bool async, Action<GraphControl, Bitmap> render_complete, Bitmap bm)
-		{
-			Debug.Assert(!size.IsEmpty);
-
-			// Signal the start of a new render. This should cause existing renders to cancel
-			++m_rdr_id;
-			m_rdr_idle.WaitOne(); // Wait for existing threads to exit
-			m_rdr_idle.Reset();
-
-			// Create a bitmap of the correct size
-			if (bm == null || bm.Size != size)
-				bm = new Bitmap(size.Width, size.Height);
-
-			// Set the axis step sizes appropriate for 'size'
-			SetSuitableStepSizes(size);
-
-			if (!async)
-			{
-				// Generate the graph in 'bm' synchronously
-				GenerateGraphBitmap(bm, ()=>{return false;});
-				if (render_complete != null) render_complete(this, bm);
-				m_rdr_idle.Set();
-			}
-			else
-			{
-				// If rendering async, then create a quick placeholder bitmap
-				var gfx = Graphics.FromImage(bm);
-				var region = GraphRegion(size);
-				RenderGraph(gfx, size, region);
-
-				// Add a note to indicate the graph is still rendering
-				const string rdring_msg = "rendering...";
-				var text_size = gfx.MeasureString(rdring_msg, m_rdr_options.TitleFont);
-				Brush brush = new SolidBrush(Color.FromArgb(0x80, Color.Black));
-				var pt = new PointF(region.X + (region.Width - text_size.Width)*0.5f, region.Y + (region.Height - text_size.Height)*0.5f);
-				gfx.DrawString(rdring_msg, m_rdr_options.TitleFont, brush, pt);
-
-				// Spawn a thread to render the graph into 'm_tmp_bm'
-				ThreadPool.QueueUserWorkItem(rdr_id =>
-					{
-						var tmp_bm = new Bitmap(size.Width, size.Height);
-						var cancelled = GenerateGraphBitmap(tmp_bm, ()=>{return m_rdr_id != (int)rdr_id;});
-						if (!cancelled && render_complete != null) BeginInvoke(render_complete, this, tmp_bm);
-						m_rdr_idle.Set();
-					}, m_rdr_id);
-			}
-			return bm;
-		}
-		public Bitmap GetGraphBitmap(Size size) { return GetGraphBitmap(size, false, null, null); }
-
-		/// <summary>Synchronously render the graph into the bitmap 'bm'</summary>
-		private bool GenerateGraphBitmap(Bitmap bm, Func<bool> cancel_pending)
-		{
-			var gfx = Graphics.FromImage(bm);
-			var region = GraphRegion(bm.Size);
-
-			// Get transforms that we can use to draw in unscaled graph space. Can't use a scale transform here
-			// though because the lines and points will also be scaled, into ellipses or calligraphy etc.
-			var scale_x = (float)(region.Width  / m_xaxis.Span);
-			var scale_y = (float)(region.Height / m_yaxis.Span);
-			if (float.IsInfinity(scale_x)) { scale_x = scale_x >= 0 ? float.MaxValue : float.MinValue; }
-			if (float.IsInfinity(scale_y)) { scale_y = scale_y >= 0 ? float.MaxValue : float.MinValue; }
-			var data_xfrm = new Matrix(1f, 0f, 0f, -1f, (float)(region.Left - m_xaxis.Min * scale_x), (float)(region.Bottom + m_yaxis.Min * scale_y));
-			var text_xfrm = new Matrix(1f, 0f, 0f,  1f, (float)(region.Left - m_xaxis.Min * scale_x), (float)(region.Bottom + m_yaxis.Min * scale_y));
-
-			try
-			{
-				// Render the basic graph
-				RenderGraph(gfx, bm.Size, region);
-				gfx.SetClip(region);
-
-				// Render the data onto the graph
-				gfx.Transform = data_xfrm;
-				foreach (var s in m_data)
-				{
-					if (s.RenderOptions.Visible)
-						RenderData(s, gfx, scale_x, scale_y, cancel_pending);
-
-					if (cancel_pending()) break;
-				}
-
-				// Can't use inverted y scale here because the text comes out upside down
-				gfx.Transform = text_xfrm;
-				scale_y = -scale_y;
-
-				// Allow clients to draw in graph space
-				if (AddOverlaysOnRender != null && !cancel_pending())
-					AddOverlaysOnRender(this, gfx, scale_x, scale_y);
-
-				// Add notes to the graph
-				foreach (var note in m_notes)
-				{
-					gfx.DrawString(note.m_msg, m_rdr_options.NoteFont, new SolidBrush(note.m_colour), new PointF(note.m_loc.X*scale_x, note.m_loc.Y*scale_y));
-					if (cancel_pending()) break;
-				}
-
-				gfx.ResetTransform();
-				gfx.ResetClip();
-			}
-			catch (Exception ex)
-			{
-				// There is a problem in the .NET graphics object that can cause these exceptions if the range is extreme
-				gfx.Transform = text_xfrm;
-				gfx.DrawString("Rendering error occured: "+ex.Message, m_rdr_options.TitleFont, new SolidBrush(Color.FromArgb(0x80, Color.Black)), new PointF());
-			}
-			return cancel_pending();
-		} 
-			/// <summary>Returns a suitable step size for the given range of values</summary>
-			public static double SetSuitableStepSize(float max_ticks, double span)
-			{
-				var range = span > 0.0 ? span : 1.0;
-				var step = Math.Pow(10, (int)Math.Log10(range));
-				foreach (var s in new []{50.0, 20.0, 10.0, 5.0, 4.0, 2.0, 1.0, 0.5, 0.25, 0.2, 0.1, 0.05})
-				{
-					if (range * s / step > max_ticks) continue;
-					step /= s;
-					return step;
-				}
-				return step;
-			}
- * */

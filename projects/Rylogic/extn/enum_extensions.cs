@@ -294,6 +294,12 @@ namespace pr.extn
 			get { return Enum.GetValues(typeof(T)).Cast<T>(); }
 		}
 
+		/// <summary>Returns all values of the enum as an object[]</summary>
+		public static object[] ValuesArray
+		{
+			get { return Values.Cast<object>().ToArray(); }
+		}
+
 		/// <summary>
 		/// Returns all Name,Value pairs of the enum as a collection.
 		/// 'Items.ToList()' can be assigned to the DataSource of binding controls.

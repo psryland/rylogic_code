@@ -2108,13 +2108,10 @@ namespace pr
 			pr::events::Send(Evt_LdrObjectChg(object));
 		}
 
-		// Update 'object' with info from 'desc'. 'keep' describes the properties of 'object' to update
-		void Update(pr::Renderer& rdr, LdrObjectPtr object, char const* desc, EUpdateObject flags)
+		// Update 'object' with info from 'reader'. 'keep' describes the properties of 'object' to update
+		void Update(pr::Renderer& rdr, LdrObjectPtr object, pr::script::Reader& reader, EUpdateObject flags)
 		{
-			// Parse 'desc' for the new model
-			pr::script::PtrA<> src(desc);
-			pr::script::Reader reader(src, false);
-
+			// Parse 'readerdesc' for the new model
 			ParseResult result;
 			ParseLdrObjects(rdr, reader, object->m_context_id, result, [&](LdrObjectPtr rhs)
 			{
@@ -2126,7 +2123,7 @@ namespace pr
 				// Note: we can't swap everything then copy back the bits we want to keep
 				// because LdrObject is reference counted and isn't copyable. This is risky
 				// though, if new members are added I'm bound to forget to consider them here :-/
-				// Commented out parts are those delibrately kept
+				// Commented out parts are those deliberately kept
 
 				// RdrInstance
 				if (flags & EUpdateObject::Model)
@@ -2204,7 +2201,7 @@ namespace pr
 			}
 		}
 
-		// Generate a scene that demos the supported object types and modifers.
+		// Generate a scene that demos the supported object types and modifiers.
 		std::wstring CreateDemoScene()
 		{
 			return
@@ -2233,7 +2230,7 @@ LR"(//********************************************
 
 // An example of applying a transform to an object.
 // All objects have an implicit object-to-parent transform that is identity.
-// Successive 'o2w' sections premultiply this transform for the object.
+// Successive 'o2w' sections pre-multiply this transform for the object.
 // Fields within the 'o2w' section are applied in the order they are specified.
 *Box o2w_example FF00FF00
 {

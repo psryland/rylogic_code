@@ -44,6 +44,8 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
+			Util.BreakIf(m_impl_wnd != null && Util.IsGCFinalizerThread);
+			Util.BreakIf(m_impl_view3d != null && Util.IsGCFinalizerThread);
 			Util.Dispose(ref m_impl_wnd);
 			Util.Dispose(ref m_impl_view3d);
 			Util.Dispose(ref components);

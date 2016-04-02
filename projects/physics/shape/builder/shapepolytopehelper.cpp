@@ -151,10 +151,10 @@ ShapePolytope& Serialise(ShapePolytopeHelper& helper
 	// Add the neighbour data
 	for( std::size_t i = 0; i != vert_count; ++i )
 	{
-		ShapePolytopeNbrsEx const& nbrhdr = neighbours[i];
-		PR_ASSERT(PR_DBG_PHYSICS, !nbrhdr.m_nbr.empty(), "All vertices must have neighbours");
-		memcpy(ptr, &nbrhdr.m_nbr[0], nbrhdr.m_nbr.size());
-		ptr += nbrhdr.m_nbr.size()*sizeof(PolyIdx);
+		ShapePolytopeNbrsEx const& nbr = neighbours[i];
+		PR_ASSERT(PR_DBG_PHYSICS, !nbr.m_nbr.empty(), "All vertices must have neighbours");
+		memcpy(ptr, &nbr.m_nbr[0], nbr.m_nbr.size());
+		ptr += nbr.m_nbr.size()*sizeof(PolyIdx);
 	}
 
 	// This is done when the shape is added to the shape builder

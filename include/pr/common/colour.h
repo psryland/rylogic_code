@@ -3,8 +3,6 @@
 //  Copyright (c) Rylogic Ltd 2009
 //*******************************************************************************************
 #pragma once
-#ifndef PR_COMMON_COLOUR_H
-#define PR_COMMON_COLOUR_H
 
 #include <string>
 #include <memory.h>
@@ -169,7 +167,7 @@ namespace pr
 	#undef PR_ENUM
 	#pragma endregion
 
-	// Equivelent to D3DCOLOR
+	// Equivalent to D3DCOLOR
 	struct Colour32
 	{
 		uint32 m_aarrggbb;
@@ -257,7 +255,7 @@ namespace pr
 	inline Colour32 RandomRGB(Rnd& rnd)          { return RandomRGB(rnd, 1.0f); }
 	inline Colour32 RandomRGB()                  { return RandomRGB(rand::Rand()); }
 
-	// Equivalent to pr::v4, XMVECTOR, etc
+	// Equivalent to pr::v4, XMVECTOR, D3DCOLORVALUE, etc
 	struct alignas(16) Colour
 	{
 		#pragma warning(push)
@@ -371,35 +369,79 @@ namespace pr
 	}
 
 	// Conversion *********************************************************************************
-	// To<std::string>
-	template <> struct Convert<std::string, Colour32>
+	namespace convert
 	{
-		static std::string To(Colour32 c) { return pr::To<std::string>(c.m_aarrggbb, 16); }
-	};
-
-	// To<Colour32>
-	template <typename TFrom> struct Convert<Colour32,TFrom>
-	{
-		static Colour32 To(char const* s) { return Colour32::make(strtoul(s, nullptr, 16)); }
-		static Colour32 To(std::string s) { return To(s.c_str()); }
-		static Colour32 To(Colour const& c) { return static_cast<Colour32>(c); }
-	};
-
-	// To<Colour>
-	template <typename TFrom> struct Convert<Colour,TFrom>
-	{
-		static Colour To(char const* s)
+		template <typename Str, typename Char = typename Str::value_type>
+		struct ColourToString
 		{
-			char* end;
-			float r = float(strtod(s,   &end));
-			float g = float(strtod(end, &end));
-			float b = float(strtod(end, &end));
-			float a = float(strtod(end, &end));
-			return Colour::make(r,g,b,a);
-		}
-		static Colour To(std::string s) { return To(s.c_str()); }
-		static Colour To(Colour32 c) { return static_cast<Colour>(c); }
-	};
+			static Str To(Colour32 c)
+			{
+				return pr::To<Str>(c.m_aarrggbb, 16);
+			}
+			static Str To(Colour const& c)
+			{
+				return To(static_cast<Colour32>(c));
+			}
+		};
+		struct ToColour32
+		{
+			template <typename Char> static Colour32 To(Char const* s, Char** end = nullptr)
+			{
+				return Colour32::make(strtoul(s, end, 16));
+			}
+			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour32 To(Str const& s, Char** end = nullptr)
+			{
+				return To(s.c_str(), end);
+			}
+			static Colour32 To(Colour const& c)
+			{
+				return static_cast<Colour32>(c);
+			}
+		};
+		struct ToColour
+		{
+			template <typename Char> static Colour To(Char const* s, Char** end = nullptr)
+			{
+				char* e;
+				auto r = To<float>(s, &e);
+				auto g = To<float>(e, &e);
+				auto b = To<float>(e, &e);
+				auto a = To<float>(e, &e);
+				if (end) *end = e;
+				return Colour::make(r,g,b,a);
+			}
+			template <typename Str, typename Char = Str::value_type, typename = enable_if_str_class<Str>> static Colour To(Str const& s, Char** end = nullptr)
+			{
+				return To(s.c_str(), end);
+			}
+			static Colour To(Colour32 c)
+			{
+				return static_cast<Colour>(c);
+			}
+		};
+		#ifdef D3DCOLORVALUE_DEFINED
+		struct ToD3DCOLORVALUE
+		{
+			static D3DCOLORVALUE To(Colour const& c)
+			{
+				return D3DCOLORVALUE{c.r, c.g, c.b, c.a};
+			}
+			static D3DCOLORVALUE To(Colour32 c)
+			{
+				return To(static_cast<pr::Colour>(c));
+			}
+		};
+		#endif
+	}
+	template <typename Char>                struct Convert<std::basic_string<Char>, Colour32> :convert::ColourToString<std::basic_string<Char>> {};
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Colour32> :convert::ColourToString<pr::string<Char,L,F>> {};
+	template <typename Char>                struct Convert<std::basic_string<Char>, Colour>   :convert::ColourToString<std::basic_string<Char>> {};
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    Colour>   :convert::ColourToString<pr::string<Char,L,F>> {};
+	template <typename TFrom> struct Convert<Colour32     , TFrom> :convert::ToColour32 {};
+	template <typename TFrom> struct Convert<Colour       , TFrom> :convert::ToColour {};
+	#ifdef D3DCOLORVALUE_DEFINED
+	template <typename TFrom> struct Convert<D3DCOLORVALUE, TFrom> :convert::ToD3DCOLORVALUE {};
+	#endif
 
 	// Interpolate<Colour32>
 	template <> struct Interpolate<Colour32>
@@ -424,5 +466,3 @@ namespace pr
 
 #undef PR_SUPPORT_WINGDI
 #undef PR_SUPPORT_DX
-
-#endif

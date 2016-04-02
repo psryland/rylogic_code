@@ -12,6 +12,7 @@
 #include <atlctrls.h>
 #include <atldlgs.h>
 #include <atlcrack.h>
+#include "pr/maths/maths.h"
 #include "pr/camera/camera.h"
 
 namespace pr

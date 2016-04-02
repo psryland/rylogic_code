@@ -57,7 +57,7 @@ namespace ldr
 			using namespace pr::script;
 
 			Ptr<Char const*> src(object_description);
-			FileIncludes<> inc(include_paths);
+			Includes<> inc(include_paths);
 			Reader reader(src, false, &inc);
 
 			return RegisterObject(reader, ctx_id, async);

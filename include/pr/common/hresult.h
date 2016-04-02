@@ -91,7 +91,7 @@ namespace pr
 		}
 		#endif
 
-		// Convert win32 error codes to hresults (leaves HRESULTS unchanged)
+		// Convert win32 error codes to HRESULTS (leaves HRESULTS unchanged)
 		result = HRESULT_FROM_WIN32(result);
 
 		// else ask windows

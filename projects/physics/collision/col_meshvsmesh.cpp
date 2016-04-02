@@ -33,105 +33,107 @@ namespace pr
 			// against all of the cross product combinations. Return true for collision
 			bool CollideBruteForce(Shape const& shapeA, m4x4 const& a2w, Shape const& shapeB, m4x4 const& b2w, v4& normal, bool test_collision_result)
 			{
-				if( shapeA.m_type != EShape_Polytope ) return test_collision_result;
-				if( shapeB.m_type != EShape_Polytope ) return test_collision_result;
+				if (shapeA.m_type != EShape_Polytope) return test_collision_result;
+				if (shapeB.m_type != EShape_Polytope) return test_collision_result;
 
 				ShapePolytope const& polyA = shape_cast<ShapePolytope>(shapeA);
 				ShapePolytope const& polyB = shape_cast<ShapePolytope>(shapeB);
 				m3x4 w2a = InvertFast(cast_m3x4(a2w));
 				m3x4 w2b = InvertFast(cast_m3x4(b2w));
 
-			//	if( a2w.pos == b2w.pos ) return false;
+				//	if( a2w.pos == b2w.pos ) return false;
 
 				float dp, shallowest = -maths::float_max;
-				v4 r, p, q;
-				v4 axis;
 				std::size_t id = 0;
-				for( std::size_t f = 0; f != polyA.m_face_count; ++f )
+				for (std::size_t f = 0; f != polyA.m_face_count; ++f)
 				{
 					// ObjA
-					axis = a2w * Normalise3(Cross3(	polyA.vertex(polyA.face(f).m_index[1]) - polyA.vertex(polyA.face(f).m_index[0]),
-													polyA.vertex(polyA.face(f).m_index[2]) - polyA.vertex(polyA.face(f).m_index[0])));
-					p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
-					q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-					r = Normalise3(q - p);
+					v4 axis = a2w * Normalise3(Cross3(polyA.vertex(polyA.face(f).m_index[1]) - polyA.vertex(polyA.face(f).m_index[0]),
+						polyA.vertex(polyA.face(f).m_index[2]) - polyA.vertex(polyA.face(f).m_index[0])));
+					v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
+					v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
+					v4 r = Normalise3(q - p);
 					dp = Dot3(axis, r);
-					if( dp >= 0.0f )
+					if (dp >= 0.0f)
 						return false; // no collision
-					if( dp > shallowest )
-					{	shallowest = dp; normal = axis; }
+					if (dp > shallowest)
+						shallowest = dp; normal = axis;
+
 					p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
 					q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
 					r = Normalise3(q - p);
 					dp = Dot3(-axis, r);
-					if( dp >= 0.0f )
+					if (dp >= 0.0f)
 						return false; // no collision
-					if( dp > shallowest )
-					{	shallowest = dp; normal = axis; }
+					if (dp > shallowest)
+					{
+						shallowest = dp; normal = axis;
+					}
 				}
 
-				for( std::size_t f = 0; f != polyB.m_face_count; ++f )
-				{	
+				for (std::size_t f = 0; f != polyB.m_face_count; ++f)
+				{
 					// ObjB
-					axis = b2w * Normalise3(Cross3(	polyB.vertex(polyB.face(f).m_index[1]) - polyB.vertex(polyB.face(f).m_index[0]),
-													polyB.vertex(polyB.face(f).m_index[2]) - polyB.vertex(polyB.face(f).m_index[0])));
-					p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
-					q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-					r = Normalise3(q - p);
+					v4 axis = b2w * Normalise3(Cross3(polyB.vertex(polyB.face(f).m_index[1]) - polyB.vertex(polyB.face(f).m_index[0]),
+						polyB.vertex(polyB.face(f).m_index[2]) - polyB.vertex(polyB.face(f).m_index[0])));
+					v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
+					v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
+					v4 r = Normalise3(q - p);
 					dp = Dot3(axis, r);
-					if( dp >= 0.0f )
+					if (dp >= 0.0f)
 						return false; // no collision
-					if( dp > shallowest )
-					{	shallowest = dp; normal = axis; }
+					if (dp > shallowest)
+					{
+						shallowest = dp; normal = axis;
+					}
 					p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
 					q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
 					r = Normalise3(q - p);
 					dp = Dot3(-axis, r);
-					if( dp >= 0.0f )
+					if (dp >= 0.0f)
 						return false; // no collision
-					if( dp > shallowest )
-					{	shallowest = dp; normal = axis; }
+					if (dp > shallowest)
+						shallowest = dp; normal = axis;
 				}
-				for( std::size_t fj = 0; fj != polyB.m_face_count; ++fj )
+				for (std::size_t fj = 0; fj != polyB.m_face_count; ++fj)
 				{
-					for( std::size_t fi = 0; fi != polyA.m_face_count; ++fi )
+					for (std::size_t fi = 0; fi != polyA.m_face_count; ++fi)
 					{
-						for( std::size_t ej = 0; ej != 3; ++ej )
+						for (std::size_t ej = 0; ej != 3; ++ej)
 						{
-							for( std::size_t ei = 0; ei != 3; ++ei )
+							for (std::size_t ei = 0; ei != 3; ++ei)
 							{
-								v4 si    = a2w *  polyA.vertex(polyA.face(fi).m_index[(ei+0)%3]); si;
-								v4 sj    = b2w *  polyB.vertex(polyB.face(fj).m_index[(ej+0)%3]); sj;
-								v4 edgei = a2w * (polyA.vertex(polyA.face(fi).m_index[(ei+1)%3]) - polyA.vertex(polyA.face(fi).m_index[(ei+0)%3]));
-								v4 edgej = b2w * (polyB.vertex(polyB.face(fj).m_index[(ej+1)%3]) - polyB.vertex(polyB.face(fj).m_index[(ej+0)%3]));
+								v4 si = a2w *  polyA.vertex(polyA.face(fi).m_index[(ei + 0) % 3]); si;
+								v4 sj = b2w *  polyB.vertex(polyB.face(fj).m_index[(ej + 0) % 3]); sj;
+								v4 edgei = a2w * (polyA.vertex(polyA.face(fi).m_index[(ei + 1) % 3]) - polyA.vertex(polyA.face(fi).m_index[(ei + 0) % 3]));
+								v4 edgej = b2w * (polyB.vertex(polyB.face(fj).m_index[(ej + 1) % 3]) - polyB.vertex(polyB.face(fj).m_index[(ej + 0) % 3]));
 								v4 axis = Cross3(edgei, edgej);
-								if( !IsZero3(axis) )
+								if (IsZero3(axis)) continue;
+
+								axis = Normalise3(axis);
+								v4 p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
+								v4 q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
+								v4 r = Normalise3(q - p);
+								dp = Dot3(axis, r);
+								if (dp >= 0.0f)
+									return false; // no collision
+								if (dp > shallowest)
 								{
-									axis = Normalise3(axis);
-									p = a2w * SupportVertex(shapeA, w2a *  axis, id, id);
-									q = b2w * SupportVertex(shapeB, w2b * -axis, id, id);
-									r = Normalise3(q - p);
-									dp = Dot3(axis, r);
-									if( dp >= 0.0f )
-										return false; // no collision
-									if( dp > shallowest )
-									{
-										shallowest = dp; normal = axis;
-										PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge0", "FFFF0000", si, si + edgei);)
-										PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge1", "FFFF0000", sj, sj + edgej);)
-									}
-									p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
-									q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
-									r = Normalise3(q - p);
-									dp = Dot3(-axis, r);
-									if( dp >= 0.0f )
-										return false; // no collision
-									if( dp > shallowest )
-									{
-										shallowest = dp; normal = axis;
-										PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge0", "FFFF0000", si, si + edgei);)
-										PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge1", "FF0000FF", sj, sj + edgej);)
-									}
+									shallowest = dp; normal = axis;
+									PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge0", "FFFF0000", si, si + edgei));
+									PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge1", "FFFF0000", sj, sj + edgej));
+								}
+								p = a2w * SupportVertex(shapeA, w2a * -axis, id, id);
+								q = b2w * SupportVertex(shapeB, w2b *  axis, id, id);
+								r = Normalise3(q - p);
+								dp = Dot3(-axis, r);
+								if (dp >= 0.0f)
+									return false; // no collision
+								if (dp > shallowest)
+								{
+									shallowest = dp; normal = axis;
+									PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge0", "FFFF0000", si, si + edgei));
+									PR_EXPAND(PR_DBG_MESH_COLLISION, ldr::Line("Edge1", "FF0000FF", sj, sj + edgej));
 								}
 							}
 						}
@@ -612,8 +614,8 @@ namespace pr
 					// 'ra' and 'rb' are bounds for the line in the XY place
 					int i = 0;
 					v2 ra = v2Zero, rb = v2Zero;
-					while (i != first_new_r && FEql2(ra, v2Zero)) { ra = (M * r[i++]).xy; }
-					while (i != first_new_r && FEql2(rb, v2Zero)) { rb = (M * r[i++]).xy; }
+					for (; i != first_new_r && FEql2(ra, v2Zero);) { ra = (M * r[i++]).xy; }
+					for (; i != first_new_r && FEql2(rb, v2Zero);) { rb = (M * r[i++]).xy; }
 
 					// We need to ensure 'rb' is on the positive side of 'ra'
 					if( Line::Eqn(ra, rb) < 0.0f )
@@ -622,7 +624,7 @@ namespace pr
 					}
 
 					// Project the remaining 'r' into the XY plane
-					for( int i = 2; i != first_new_r + 1; ++i )
+					for( i = 2; i != first_new_r + 1; ++i )
 					{
 						v2 t = (M * r[i]).xy;
 						if( !FEql2(t, v2Zero) )
@@ -639,7 +641,7 @@ namespace pr
 								if( Line::Eqn(rb, t) > 0.0f )
 								{
 									PR_ASSERT(PR_DBG_MESH_COLLISION, !FindHalfPlaneBruteForce(r, r_size, false), "");
-									return false;	// Cannot find a half place, there must be a collision
+									return false;	// Cannot find a half space, there must be a collision
 								}
 								else
 								{

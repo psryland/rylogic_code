@@ -169,7 +169,7 @@ namespace pr
 
 			// Default handlers
 			MacroDB<> m_def_macros;
-			FileIncludes<FailPolicy> m_def_includes;
+			Includes<FailPolicy> m_def_includes;
 			EmbeddedCode<FailPolicy> m_def_embedded;
 
 			// Debugging helpers for the watch window
@@ -1066,7 +1066,7 @@ namespace pr
 					"included 1\n"
 					;
 
-				StrIncludes<> inc; inc.m_strings[L"inc"] = "included ONE";
+				Includes<> inc; inc.AddString(L"inc", "included ONE");
 				PtrA<> src(str_in);
 				Preprocessor<> pp(&src, false, &inc);
 				for (;*pp && *str_out; ++pp, ++str_out)
@@ -1100,7 +1100,7 @@ namespace pr
 					"hello world\n"
 					;
 
-				StrIncludes<> inc;
+				Includes<> inc;
 				EmbeddedLua<> emb;
 				Preprocessor<> pp(str_in, &inc, nullptr, &emb);
 				for (;*pp && *str_out; ++pp, ++str_out)

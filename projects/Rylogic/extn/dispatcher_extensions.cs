@@ -16,6 +16,10 @@ namespace pr.extn
 		{
 			return dis.BeginInvoke(action);
 		}
+		public static DispatcherOperation BeginInvoke(this Dispatcher dis, Action<object> action, object arg)
+		{
+			return dis.BeginInvoke(action, arg);
+		}
 
 		/// <summary>BeginInvokes 'action' after 'delay'</summary>
 		public static void BeginInvokeDelayed(this Dispatcher dis, Action action, TimeSpan delay, DispatcherPriority priority = DispatcherPriority.Normal)

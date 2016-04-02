@@ -9,8 +9,15 @@ namespace pr.gui
 	public class ToolStripComboBox :ToolStripControlHost
 	{
 		public ToolStripComboBox() :this(string.Empty) {}
-		public ToolStripComboBox(string name) :base(new ComboBox(), name)
+		public ToolStripComboBox(string name) :base(new ComboBox { Name = name }, name)
 		{}
+
+		/// <summary>Apply the control name to the combo box as well</summary>
+		public new string Name
+		{
+			get { return base.Name; }
+			set { base.Name = ComboBox.Name = value; }
+		}
 
 		/// <summary>The hosted combo box</summary>
 		public ComboBox ComboBox

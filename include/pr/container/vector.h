@@ -198,7 +198,7 @@ namespace pr
 
 	private:
 		typedef typename pr::impl::vector::aligned_storage<TypeSizeInBytes, TypeAlignment>::type TLocalStore;
-		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage doesn't hvae the correct alignment");
+		static_assert((std::alignment_of<TLocalStore>::value % TypeAlignment) == 0, "Local storage doesn't have the correct alignment");
 
 		TLocalStore m_local[LocalLength]; // Local cache for small arrays
 		Type*       m_ptr;                // Pointer to the array of data
@@ -209,7 +209,7 @@ namespace pr
 		// Any combination of type, local count, fixed, and allocator is a friend
 		template <class T, int L, bool F, class A> friend class vector;
 
-		// Access to the allocator object (independant of whether its a pointer or instance)
+		// Access to the allocator object (independent of whether its a pointer or instance)
 		// (enable_if requires type inference to work, hence the 'A' template parameter)
 		template <typename A> typename std::enable_if<!std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return m_allocator; }
 		template <typename A> typename std::enable_if< std::is_pointer<A>::value, AllocType const&>::type alloc(A) const { return *m_allocator; }
@@ -301,22 +301,23 @@ namespace pr
 
 		// construct from count * Type()
 		explicit vector(size_type count)
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator()
+			:vector()
 		{
 			ensure_space(count, false);
 			traits::fill_constr(alloc(), m_ptr, count, Type());
 			m_count = count;
 		}
 
+		// construct from initialiser list
+		vector(std::initializer_list<Type> list)
+			:vector()
+		{
+			insert(end(), std::begin(list), std::end(list));
+		}
+
 		// construct from count * value, with allocator
 		vector(size_type count, Type const& value, Allocator const& allocator = Allocator())
-		:m_ptr(local_ptr())
-		,m_capacity(LocalLength)
-		,m_count(0)
-		,m_allocator(allocator)
+			:vector(allocator)
 		{
 			ensure_space(count, false);
 			traits::fill_constr(alloc(), m_ptr, count, value);
@@ -325,68 +326,45 @@ namespace pr
 
 		// copy construct (explicit copy constructor needed to prevent auto generated one even tho there's a template one that would work)
 		vector(vector const& right)
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(right.m_allocator)
+			:vector(right.m_allocator)
 		{
 			_Assign(right);
 		}
 
 		// copy construct from any pr::vector type
 		template <int L, bool F, class A> vector(vector<Type,L,F,A> const& right)
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(right.m_allocator)
+			:vector(right.m_allocator)
 		{
 			_Assign(right);
 		}
 
 		// construct from [first, last), with optional allocator
 		template <class iter> vector(iter first, iter last, Allocator const& allocator = Allocator())
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(allocator)
+			:vector(allocator)
 		{
 			insert(end(), first, last);
 		}
 
-		// construct from another array-like object
-		// 2nd parameter used to prevent overload issues with vector(count)
+		// construct from another array-like object. 2nd parameter used to prevent overload issues with vector(count)
 		template <class tarr> vector(tarr const& right, typename tarr::size_type = 0, Allocator const& allocator = Allocator())
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(allocator)
+			:vector(allocator)
 		{
-			#if _MSC_VER >= 1600
 			insert(end(), std::begin(right), std::end(right));
-			#else
-			insert(end(), right.begin(), right.end());
-			#endif
 		}
 
 		// move construct
-		#if _MSC_VER >= 1600
 		vector(vector&& right) PR_NOEXCEPT
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(right.m_allocator)
+			:vector(right.m_allocator)
 		{
 			_Assign(std::forward<vector>(right));
 		}
+
+		// move construct from similar vector
 		template <int L, bool F, class A> vector(vector<Type,L,F,A>&& right) PR_NOEXCEPT
-			:m_ptr(local_ptr())
-			,m_capacity(LocalLength)
-			,m_count(0)
-			,m_allocator(right.m_allocator)
+			:vector(right.m_allocator)
 		{
 			_Assign(std::forward< vector<Type,L,F,A> >(right));
 		}
-		#endif
 
 		// destruct
 		~vector()
@@ -615,8 +593,6 @@ namespace pr
 		}
 
 		// move right
-		#if _MSC_VER >= 1600
-		// explicit move right
 		vector& operator = (vector&& right) PR_NOEXCEPT
 		{
 			_Assign(std::forward<vector>(right));
@@ -629,7 +605,6 @@ namespace pr
 			_Assign(std::forward< vector<Type,L,F,A> >(right));
 			return *this;
 		}
-		#endif
 
 		// assign count * value
 		void assign(size_type count, Type const& value)
@@ -813,7 +788,6 @@ namespace pr
 		}
 
 		// Assign by moving right
-		#if _MSC_VER >= 1600
 		template <int L,bool F,typename A> void _Assign(vector<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
 			// Same object, do nothing
@@ -849,7 +823,6 @@ namespace pr
 				right.m_count    = 0;
 			}
 		}
-		#endif
 
 		// Insert count * value at iter
 		void _Insert(const_iterator pos, size_type count, Type const& value)
@@ -901,7 +874,7 @@ namespace pr
 		}
 
 		// Implicit conversion to a type that can be constructed from begin/end iterators
-		// This allows cast to std::vector<> amoung others.
+		// This allows cast to std::vector<> among others.
 		// Note: converting to a std::vector<> when 'Type' has an alignment greater than the
 		// default alignment causes a compiler error because of std::vector.resize().
 		template <typename ArrayType> operator ArrayType() const
@@ -977,7 +950,7 @@ namespace pr
 			typedef pr::vector<Type, 16, true> Array1;
 		}
 
-		PRUnitTest(pr_common_vector)
+		PRUnitTest(pr_container_vector)
 		{
 			using namespace pr::unittests::vector;
 
@@ -1229,6 +1202,26 @@ namespace pr
 					PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
 				}
 				PR_CHECK(g_object_count, g_start_object_count);
+			}
+			{// Copy
+				pr::vector<int, 4> arr0;
+				{
+					pr::vector<int, 4> arr1 = {0,1,2,3,4,5,6,7,8,9};
+					arr0 = arr1;
+				}
+				PR_CHECK(arr0.size(), 10U);
+				for (int i = 0; i != 10; ++i)
+					PR_CHECK(arr0[i], i);
+			}
+			{// Move
+				pr::vector<int, 4> arr0;
+				{
+					pr::vector<int, 4> arr1 = {0,1,2,3,4,5,6,7,8,9};
+					arr0 = std::move(arr1);
+				}
+				PR_CHECK(arr0.size(), 10U);
+				for (int i = 0; i != 10; ++i)
+					PR_CHECK(arr0[i], i);
 			}
 			{//GlobalConstrDestrCount
 				PR_CHECK(g_object_count, 0);

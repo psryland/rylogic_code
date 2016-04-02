@@ -42,13 +42,13 @@ namespace pr.extn
 			return -1;
 		}
 
-		/// <summary>Compare subranges within arrays for value equality</summary>
+		/// <summary>Compare sub-ranges within arrays for value equality</summary>
 		public static bool SequenceEqual<T>(this T[] lhs, T[] rhs, int len)
 		{
 			return SequenceEqual(lhs,rhs,0,0,len);
 		}
 
-		/// <summary>Compare subranges within arrays for value equality</summary>
+		/// <summary>Compare sub-ranges within arrays for value equality</summary>
 		public static bool SequenceEqual<T>(this T[] lhs, T[] rhs, int ofs0, int ofs1, int len)
 		{
 			for (int i = ofs0, j = ofs1; len-- != 0; ++i, ++j)

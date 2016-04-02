@@ -29,7 +29,7 @@ namespace pr.gui
 			WindowHandles = new List<IntPtr>(wnds);
 			Application.AddMessageFilter(this);
 		}
-		public void Dispose()
+		public virtual void Dispose()
 		{
 			Application.RemoveMessageFilter(this);
 		}
@@ -40,9 +40,7 @@ namespace pr.gui
 				return false;
 
 			// WM_MOUSEWHEEL, find the control at screen position m.LParam
-			Point pos = new Point(m.LParam.ToInt32() & 0xffff, m.LParam.ToInt32() >> 16);
-			IntPtr hWnd = WindowFromPoint(pos);
-
+			var hWnd = WindowFromPoint(Control.MousePosition);
 			if (hWnd == IntPtr.Zero) return false;              // No window...
 			if (hWnd == m.HWnd)	return false;                   // Hovering over the correct control already
 			if (Control.FromHandle(hWnd) == null) return false; // Not over a control

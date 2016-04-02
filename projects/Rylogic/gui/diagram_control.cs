@@ -73,17 +73,13 @@ namespace pr.gui
 			{
 				Diagram     = null;
 				Entity      = entity;
-				Id          = node.Element(XmlField.Id).As<Guid>();
-				Position    = node.Element(XmlField.Position).As<m4x4>();
+				Id          = node.Element(XmlTag.Id).As<Guid>();
+				Position    = node.Element(XmlTag.Position).As<m4x4>();
 				Selected    = false;
 				Visible     = true;
 				Enabled     = true;
 				EditControl = null;
 				UserData    = new Dictionary<Guid, object>();
-			}
-			~Element()
-			{
-				Debug.Assert(Disposed, "Don't leave elements for the GC");
 			}
 			public void Dispose()
 			{
@@ -92,6 +88,7 @@ namespace pr.gui
 			protected bool Disposed { get; private set; }
 			protected virtual void Dispose(bool disposing)
 			{
+				Util.BreakIf(!Disposed && Util.IsGCFinalizerThread);
 				Diagram = null;
 				Invalidated = null;
 				PositionChanged = null;
@@ -160,15 +157,15 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public virtual XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.Id       ,Id       ,false);
-				node.Add2(XmlField.Position ,Position ,false);
+				node.Add2(XmlTag.Id       ,Id       ,false);
+				node.Add2(XmlTag.Position ,Position ,false);
 				return node;
 			}
 
 			/// <summary>Import from XML. Used to update the state of this element without having to delete/recreate it</summary>
 			protected virtual void FromXml(XElement node)
 			{
-				Position = node.Element(XmlField.Position).As<m4x4>(Position);
+				Position = node.Element(XmlTag.Position).As<m4x4>(Position);
 			}
 
 			/// <summary>Replace the contents of this element with data from 'node'</summary>
@@ -505,22 +502,22 @@ namespace pr.gui
 			protected ResizeableElement(Entity entity, XElement node)
 				:base(entity, node)
 			{
-				m_impl_sizemax = node.Element(XmlField.SizeMax).As<v2>();
-				m_impl_size = node.Element(XmlField.Size).As<v2>();
+				m_impl_sizemax = node.Element(XmlTag.SizeMax).As<v2>();
+				m_impl_size = node.Element(XmlTag.Size).As<v2>();
 			}
 
 			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.SizeMax  ,SizeMax  ,false);
-				node.Add2(XmlField.Size     ,Size     ,false);
+				node.Add2(XmlTag.SizeMax  ,SizeMax  ,false);
+				node.Add2(XmlTag.Size     ,Size     ,false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				SizeMax = node.Element(XmlField.SizeMax).As<v2>(SizeMax);
-				Size    = node.Element(XmlField.Size).As<v2>(Size);
+				SizeMax = node.Element(XmlTag.SizeMax).As<v2>(SizeMax);
+				Size    = node.Element(XmlTag.Size).As<v2>(Size);
 				base.FromXml(node);
 			}
 
@@ -602,8 +599,8 @@ namespace pr.gui
 			protected Node(XElement node)
 				:base(Entity.Node, node)
 			{
-				m_impl_text = node.Element(XmlField.Text).As<string>();
-				Style = new NodeStyle(node.Element(XmlField.Style).As<Guid>());
+				m_impl_text = node.Element(XmlTag.Text).As<string>();
+				Style = new NodeStyle(node.Element(XmlTag.Style).As<Guid>());
 
 				// Be careful using Style in here, it's only a place-holder
 				// instance until the element has been added to a diagram.
@@ -637,14 +634,14 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.Text  ,Text     ,false);
-				node.Add2(XmlField.Style ,Style.Id ,false);
+				node.Add2(XmlTag.Text  ,Text     ,false);
+				node.Add2(XmlTag.Style ,Style.Id ,false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				Style = new NodeStyle(node.Element(XmlField.Style).As<Guid>(Style.Id));
-				Text = node.Element(XmlField.Text).As<string>(Text);
+				Style = new NodeStyle(node.Element(XmlTag.Style).As<Guid>(Style.Id));
+				Text = node.Element(XmlTag.Text).As<string>(Text);
 				base.FromXml(node);
 			}
 
@@ -1008,7 +1005,7 @@ namespace pr.gui
 			public BoxNode(XElement node)
 				:base(node)
 			{
-				var corner_radius = node.Element(XmlField.CornerRadius).As<float>();
+				var corner_radius = node.Element(XmlTag.CornerRadius).As<float>();
 				Gfx = new TexturedShape<QuadShape>(new QuadShape(corner_radius), Size);
 			}
 			protected override void Dispose(bool disposing)
@@ -1021,12 +1018,12 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.CornerRadius ,CornerRadius, false);
+				node.Add2(XmlTag.CornerRadius ,CornerRadius, false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				CornerRadius = node.Element(XmlField.CornerRadius).As<float>(CornerRadius);
+				CornerRadius = node.Element(XmlTag.CornerRadius).As<float>(CornerRadius);
 				base.FromXml(node);
 			}
 
@@ -1227,20 +1224,20 @@ namespace pr.gui
 				:base(Entity.Label, node)
 			{
 				m_anc = new AnchorPoint();
-				Anc = node.Element(XmlField.Anchor).As<AnchorPoint>();
+				Anc = node.Element(XmlTag.Anchor).As<AnchorPoint>();
 			}
 
 			/// <summary>Export to XML</summary>
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.Anchor, Anc, false);
+				node.Add2(XmlTag.Anchor, Anc, false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
 				base.FromXml(node);
-				Anc = node.Element(XmlField.Anchor).As<AnchorPoint>(Anc);
+				Anc = node.Element(XmlTag.Anchor).As<AnchorPoint>(Anc);
 			}
 
 			/// <summary>Disable selection for labels</summary>
@@ -1320,7 +1317,7 @@ namespace pr.gui
 			public TexturedLabel(XElement node)
 				:base(node)
 			{
-				m_gfx = node.Element(XmlField.TexturedShape).As<TexturedShape<TShape>>();
+				m_gfx = node.Element(XmlTag.TexturedShape).As<TexturedShape<TShape>>();
 			}
 			protected override void Dispose(bool disposing)
 			{
@@ -1333,7 +1330,7 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.TexturedShape, m_gfx, false);
+				node.Add2(XmlTag.TexturedShape, m_gfx, false);
 				return node;
 			}
 
@@ -1441,11 +1438,11 @@ namespace pr.gui
 			{
 				m_anc0          = new AnchorPoint();
 				m_anc1          = new AnchorPoint();
-				m_centre_offset = node.Element(XmlField.CentreOffset).As<v4>(v4.Zero);
-				Anc0            = node.Element(XmlField.Anchor0).As<AnchorPoint>();
-				Anc1            = node.Element(XmlField.Anchor1).As<AnchorPoint>();
-				Type            = node.Element(XmlField.Type).As<EType>();
-				Style           = new ConnectorStyle(node.Element(XmlField.Style).As<Guid>());
+				m_centre_offset = node.Element(XmlTag.CentreOffset).As<v4>(v4.Zero);
+				Anc0            = node.Element(XmlTag.Anchor0).As<AnchorPoint>();
+				Anc1            = node.Element(XmlTag.Anchor1).As<AnchorPoint>();
+				Type            = node.Element(XmlTag.Type).As<EType>();
+				Style           = new ConnectorStyle(node.Element(XmlTag.Style).As<Guid>());
 
 				Init(true);
 			}
@@ -1483,17 +1480,17 @@ namespace pr.gui
 			public override XElement ToXml(XElement node)
 			{
 				base.ToXml(node);
-				node.Add2(XmlField.Anchor0 ,Anc0    , false);
-				node.Add2(XmlField.Anchor1 ,Anc1    , false);
-				node.Add2(XmlField.Type    ,Type    , false);
-				node.Add2(XmlField.Style   ,Style.Id, false);
+				node.Add2(XmlTag.Anchor0 ,Anc0    , false);
+				node.Add2(XmlTag.Anchor1 ,Anc1    , false);
+				node.Add2(XmlTag.Type    ,Type    , false);
+				node.Add2(XmlTag.Style   ,Style.Id, false);
 				return node;
 			}
 			protected override void FromXml(XElement node)
 			{
-				Style    = new ConnectorStyle(node.Element(XmlField.Style).As<Guid>(Style.Id));
-				Anc0     = node.Element(XmlField.Anchor0).As<AnchorPoint>(Anc0);
-				Anc1     = node.Element(XmlField.Anchor1).As<AnchorPoint>(Anc1);
+				Style    = new ConnectorStyle(node.Element(XmlTag.Style).As<Guid>(Style.Id));
+				Anc0     = node.Element(XmlTag.Anchor0).As<AnchorPoint>(Anc0);
+				Anc1     = node.Element(XmlTag.Anchor1).As<AnchorPoint>(Anc1);
 				base.FromXml(node);
 			}
 
@@ -2005,8 +2002,8 @@ namespace pr.gui
 		public class QuadShape :IShape
 		{
 			public QuadShape(float corner_radius) { CornerRadius = corner_radius; }
-			public QuadShape(XElement node)       { CornerRadius = node.Element(XmlField.CornerRadius).As<float>(); }
-			public XElement ToXml(XElement node)  { node.Add2(XmlField.CornerRadius, CornerRadius, false); return node; }
+			public QuadShape(XElement node)       { CornerRadius = node.Element(XmlTag.CornerRadius).As<float>(); }
+			public XElement ToXml(XElement node)  { node.Add2(XmlTag.CornerRadius, CornerRadius, false); return node; }
 
 			/// <summary>The radius of the quad corners</summary>
 			public float CornerRadius { get; set; }
@@ -2047,8 +2044,8 @@ namespace pr.gui
 			}
 			public TexturedShape(XElement node)
 			{
-				Shape = node.Element(XmlField.Shape).As<TShape>();
-				m_surf = node.Element(XmlField.Surface).As<Surface>();
+				Shape = node.Element(XmlTag.Shape).As<TShape>();
+				m_surf = node.Element(XmlTag.Surface).As<Surface>();
 				UpdateModel();
 			}
 			public override void Dispose()
@@ -2060,8 +2057,8 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.Shape, Shape, false);
-				node.Add2(XmlField.Surface, Surface, false);
+				node.Add2(XmlTag.Shape, Shape, false);
+				node.Add2(XmlTag.Surface, Surface, false);
 				return node;
 			}
 
@@ -2135,17 +2132,17 @@ namespace pr.gui
 			}
 			public NodeStyle(XElement node) :this()
 			{
-				Id           = node.Element(XmlField.Id          ).As<Guid>            (Id          );
-				AutoSize     = node.Element(XmlField.AutoSize    ).As<bool>            (AutoSize    );
-				Border       = node.Element(XmlField.Border      ).As<Color>           (Border      );
-				Fill         = node.Element(XmlField.Fill        ).As<Color>           (Fill        );
-				Selected     = node.Element(XmlField.Selected    ).As<Color>           (Selected    );
-				Disabled     = node.Element(XmlField.Disabled    ).As<Color>           (Disabled    );
-				Text         = node.Element(XmlField.Text        ).As<Color>           (Text        );
-				TextDisabled = node.Element(XmlField.TextDisabled).As<Color>           (TextDisabled);
-				TextAlign    = node.Element(XmlField.Align       ).As<ContentAlignment>(TextAlign   );
-				Font         = node.Element(XmlField.Font        ).As<Font>            (Font        );
-				Padding      = node.Element(XmlField.Padding     ).As<Padding>         (Padding     );
+				Id           = node.Element(XmlTag.Id          ).As<Guid>            (Id          );
+				AutoSize     = node.Element(XmlTag.AutoSize    ).As<bool>            (AutoSize    );
+				Border       = node.Element(XmlTag.Border      ).As<Color>           (Border      );
+				Fill         = node.Element(XmlTag.Fill        ).As<Color>           (Fill        );
+				Selected     = node.Element(XmlTag.Selected    ).As<Color>           (Selected    );
+				Disabled     = node.Element(XmlTag.Disabled    ).As<Color>           (Disabled    );
+				Text         = node.Element(XmlTag.Text        ).As<Color>           (Text        );
+				TextDisabled = node.Element(XmlTag.TextDisabled).As<Color>           (TextDisabled);
+				TextAlign    = node.Element(XmlTag.Align       ).As<ContentAlignment>(TextAlign   );
+				Font         = node.Element(XmlTag.Font        ).As<Font>            (Font        );
+				Padding      = node.Element(XmlTag.Padding     ).As<Padding>         (Padding     );
 			}
 			public NodeStyle(Guid id, NodeStyle rhs)
 			{
@@ -2166,17 +2163,17 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.Id           ,Id           ,false);
-				node.Add2(XmlField.AutoSize     ,AutoSize     ,false);
-				node.Add2(XmlField.Border       ,Border       ,false);
-				node.Add2(XmlField.Fill         ,Fill         ,false);
-				node.Add2(XmlField.Selected     ,Selected     ,false);
-				node.Add2(XmlField.Disabled     ,Disabled     ,false);
-				node.Add2(XmlField.Text         ,Text         ,false);
-				node.Add2(XmlField.TextDisabled ,TextDisabled ,false);
-				node.Add2(XmlField.Font         ,Font         ,false);
-				node.Add2(XmlField.Align        ,TextAlign    ,false);
-				node.Add2(XmlField.Padding      ,Padding      ,false);
+				node.Add2(XmlTag.Id           ,Id           ,false);
+				node.Add2(XmlTag.AutoSize     ,AutoSize     ,false);
+				node.Add2(XmlTag.Border       ,Border       ,false);
+				node.Add2(XmlTag.Fill         ,Fill         ,false);
+				node.Add2(XmlTag.Selected     ,Selected     ,false);
+				node.Add2(XmlTag.Disabled     ,Disabled     ,false);
+				node.Add2(XmlTag.Text         ,Text         ,false);
+				node.Add2(XmlTag.TextDisabled ,TextDisabled ,false);
+				node.Add2(XmlTag.Font         ,Font         ,false);
+				node.Add2(XmlTag.Align        ,TextAlign    ,false);
+				node.Add2(XmlTag.Padding      ,Padding      ,false);
 				return node;
 			}
 
@@ -2304,12 +2301,12 @@ namespace pr.gui
 			}
 			public ConnectorStyle(XElement node) :this()
 			{
-				Id       = node.Element(XmlField.Id      ).As<Guid> (Id      );
-				Line     = node.Element(XmlField.Line    ).As<Color>(Line    );
-				Selected = node.Element(XmlField.Selected).As<Color>(Selected);
-				Dangling = node.Element(XmlField.Dangling).As<Color>(Dangling);
-				Width    = node.Element(XmlField.Width   ).As<float>(Width   );
-				Smooth   = node.Element(XmlField.Smooth  ).As<bool> (Smooth  );
+				Id       = node.Element(XmlTag.Id      ).As<Guid> (Id      );
+				Line     = node.Element(XmlTag.Line    ).As<Color>(Line    );
+				Selected = node.Element(XmlTag.Selected).As<Color>(Selected);
+				Dangling = node.Element(XmlTag.Dangling).As<Color>(Dangling);
+				Width    = node.Element(XmlTag.Width   ).As<float>(Width   );
+				Smooth   = node.Element(XmlTag.Smooth  ).As<bool> (Smooth  );
 			}
 			public ConnectorStyle(Guid id, ConnectorStyle rhs)
 			{
@@ -2325,11 +2322,11 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.Id       ,Id       ,false);
-				node.Add2(XmlField.Line     ,Line     ,false);
-				node.Add2(XmlField.Selected ,Selected ,false);
-				node.Add2(XmlField.Width    ,Width    ,false);
-				node.Add2(XmlField.Smooth   ,Smooth   ,false);
+				node.Add2(XmlTag.Id       ,Id       ,false);
+				node.Add2(XmlTag.Line     ,Line     ,false);
+				node.Add2(XmlTag.Selected ,Selected ,false);
+				node.Add2(XmlTag.Width    ,Width    ,false);
+				node.Add2(XmlTag.Smooth   ,Smooth   ,false);
 				return node;
 			}
 
@@ -2503,17 +2500,17 @@ namespace pr.gui
 			public AnchorPoint(IDictionary<Guid,Element> elements, XElement node)
 				:this()
 			{
-				var id = node.Element(XmlField.ElementId).As<Guid>();
+				var id = node.Element(XmlTag.ElementId).As<Guid>();
 				m_impl_elem = elements.TryGetValue(id, out m_impl_elem) ? m_impl_elem : null;
-				m_impl_location = node.Element(XmlField.Location).As<v4>(v4.Origin);
+				m_impl_location = node.Element(XmlTag.Location).As<v4>(v4.Origin);
 				Update(null);
 			}
 
 			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.ElementId ,Elem != null ? Elem.Id : Guid.Empty ,false);
-				node.Add2(XmlField.Location ,Location ,false);
+				node.Add2(XmlTag.ElementId ,Elem != null ? Elem.Id : Guid.Empty ,false);
+				node.Add2(XmlTag.Location ,Location ,false);
 				return node;
 			}
 
@@ -3360,7 +3357,7 @@ namespace pr.gui
 		/// <summary>The minimum distance a connector sticks out from a node</summary>
 		private const int MinConnectorLen = 30;
 
-		private class Cursors
+		public class Cursors
 		{
 			public static readonly Cursor Default    = System.Windows.Forms.Cursors.Default;
 			public static readonly Cursor SizeWE     = System.Windows.Forms.Cursors.SizeWE;
@@ -3374,7 +3371,7 @@ namespace pr.gui
 		}
 
 		/// <summary>String constants used in XML export/import</summary>
-		private static class XmlField
+		public static class XmlTag
 		{
 			public const string Root              = "root"               ;
 			public const string TypeAttribute     = "ty"                 ;
@@ -3441,8 +3438,8 @@ namespace pr.gui
 			}
 			public Surface(XElement node)
 			{
-				TextureScale = node.Element(XmlField.TextureScale).As<uint>();
-				var sz = node.Element(XmlField.Size).As<v2>();
+				TextureScale = node.Element(XmlTag.TextureScale).As<uint>();
+				var sz = node.Element(XmlTag.Size).As<v2>();
 				var sx = Math.Max(1, (uint)(sz.x + 0.5f));
 				var sy = Math.Max(1, (uint)(sz.y + 0.5f));
 				Surf = new View3d.Texture(sx, sy, new View3d.TextureOptions(true){Filter=View3d.EFilter.D3D11_FILTER_MIN_MAG_MIP_LINEAR });// D3D11_FILTER_ANISOTROPIC});
@@ -3455,8 +3452,8 @@ namespace pr.gui
 			/// <summary>Export to XML</summary>
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.TextureScale, TextureScale, false);
-				node.Add2(XmlField.Size, Size, false);
+				node.Add2(XmlTag.TextureScale, TextureScale, false);
+				node.Add2(XmlTag.Size, Size, false);
 				return node;
 			}
 
@@ -3692,17 +3689,17 @@ namespace pr.gui
 				}
 				internal NodeOptions(XElement node) :this()
 				{
-					AnchorSpacing     = node.Element(XmlField.AnchorSpacing    ).As <float >(AnchorSpacing    );
-					AnchorSharingBias = node.Element(XmlField.AnchorSharingBias).As <float >(AnchorSharingBias);
-					Margin            = node.Element(XmlField.Margin           ).As <float >(Margin           );
-					AutoRelink        = node.Element(XmlField.AutoRelink       ).As <bool  >(AutoRelink       );
+					AnchorSpacing     = node.Element(XmlTag.AnchorSpacing    ).As <float >(AnchorSpacing    );
+					AnchorSharingBias = node.Element(XmlTag.AnchorSharingBias).As <float >(AnchorSharingBias);
+					Margin            = node.Element(XmlTag.Margin           ).As <float >(Margin           );
+					AutoRelink        = node.Element(XmlTag.AutoRelink       ).As <bool  >(AutoRelink       );
 				}
 				internal XElement ToXml(XElement node)
 				{
-					node.Add2(XmlField.AnchorSpacing     , AnchorSpacing     , false);
-					node.Add2(XmlField.AnchorSharingBias , AnchorSharingBias , false);
-					node.Add2(XmlField.Margin            , Margin            , false);
-					node.Add2(XmlField.AutoRelink        , AutoRelink        , false);
+					node.Add2(XmlTag.AnchorSpacing     , AnchorSpacing     , false);
+					node.Add2(XmlTag.AnchorSharingBias , AnchorSharingBias , false);
+					node.Add2(XmlTag.Margin            , Margin            , false);
+					node.Add2(XmlTag.AutoRelink        , AutoRelink        , false);
 					return node;
 				}
 			}
@@ -3736,19 +3733,19 @@ namespace pr.gui
 				}
 				internal ScatterOptions(XElement node) :this()
 				{
-					MaxIterations   = node.Element(XmlField.Iterations     ).As<int>  (MaxIterations  );
-					SpringConstant  = node.Element(XmlField.SpringConstant ).As<float>(SpringConstant );
-					CoulombConstant = node.Element(XmlField.CoulombConstant).As<float>(CoulombConstant);
-					ConnectorScale  = node.Element(XmlField.ConnectorScale ).As<float>(ConnectorScale );
-					Equilibrium     = node.Element(XmlField.Equilibrium    ).As<float>(Equilibrium    );
+					MaxIterations   = node.Element(XmlTag.Iterations     ).As<int>  (MaxIterations  );
+					SpringConstant  = node.Element(XmlTag.SpringConstant ).As<float>(SpringConstant );
+					CoulombConstant = node.Element(XmlTag.CoulombConstant).As<float>(CoulombConstant);
+					ConnectorScale  = node.Element(XmlTag.ConnectorScale ).As<float>(ConnectorScale );
+					Equilibrium     = node.Element(XmlTag.Equilibrium    ).As<float>(Equilibrium    );
 				}
 				internal XElement ToXml(XElement node)
 				{
-					node.Add2(XmlField.Iterations      ,MaxIterations   ,false);
-					node.Add2(XmlField.SpringConstant  ,SpringConstant  ,false);
-					node.Add2(XmlField.CoulombConstant ,CoulombConstant ,false);
-					node.Add2(XmlField.ConnectorScale  ,ConnectorScale  ,false);
-					node.Add2(XmlField.Equilibrium     ,Equilibrium     ,false);
+					node.Add2(XmlTag.Iterations      ,MaxIterations   ,false);
+					node.Add2(XmlTag.SpringConstant  ,SpringConstant  ,false);
+					node.Add2(XmlTag.CoulombConstant ,CoulombConstant ,false);
+					node.Add2(XmlTag.ConnectorScale  ,ConnectorScale  ,false);
+					node.Add2(XmlTag.Equilibrium     ,Equilibrium     ,false);
 					return node;
 				}
 			}
@@ -3773,15 +3770,15 @@ namespace pr.gui
 			}
 			public DiagramOptions(XElement node) :this()
 			{
-				BkColour = node.Element(XmlField.BkColour       ).As<Color>(BkColour);
-				Node     = node.Element(XmlField.NodeSettings   ).As<NodeOptions>(Node);
-				Scatter  = node.Element(XmlField.ScatterSettings).As<ScatterOptions>(Scatter);
+				BkColour = node.Element(XmlTag.BkColour       ).As<Color>(BkColour);
+				Node     = node.Element(XmlTag.NodeSettings   ).As<NodeOptions>(Node);
+				Scatter  = node.Element(XmlTag.ScatterSettings).As<ScatterOptions>(Scatter);
 			}
 			public XElement ToXml(XElement node)
 			{
-				node.Add2(XmlField.BkColour        , BkColour , false);
-				node.Add2(XmlField.NodeSettings    ,Node      ,false );
-				node.Add2(XmlField.ScatterSettings ,Scatter   ,false );
+				node.Add2(XmlTag.BkColour        , BkColour , false);
+				node.Add2(XmlTag.NodeSettings    ,Node      ,false );
+				node.Add2(XmlTag.ScatterSettings ,Scatter   ,false );
 				return node;
 			}
 			public DiagramOptions Clone()
@@ -4811,7 +4808,7 @@ namespace pr.gui
 			{
 				m_node_styles.RemoveUnused(Elements);
 				var ns = m_node_styles.Styles.OrderBy(x => x.Id);
-				node.Add2(XmlField.NodeStyles, ns, false);
+				node.Add2(XmlTag.NodeStyles, ns, false);
 			}
 
 			// Connector styles
@@ -4819,7 +4816,7 @@ namespace pr.gui
 			{
 				m_connector_styles.RemoveUnused(Elements);
 				var cs = m_connector_styles.Styles.OrderBy(x => x.Id);
-				node.Add2(XmlField.ConnStyles, cs, false);
+				node.Add2(XmlTag.ConnStyles, cs, false);
 			}
 
 			// Sort the elements so that the produced XML has a stable order
@@ -4829,7 +4826,7 @@ namespace pr.gui
 			{
 				var nodes = Elements.Where(x => x.Entity == Entity.Node && !(x is NodeProxy)).OrderBy(x => x.Id).ToArray();
 				foreach (var elem in nodes)
-					node.Add2(XmlField.Element, elem, true);
+					node.Add2(XmlTag.Element, elem, true);
 			}
 
 			// Connectors
@@ -4837,7 +4834,7 @@ namespace pr.gui
 			{
 				var conns = Elements.Where(x => x.Entity == Entity.Connector).OrderBy(x => x.Id).ToArray();
 				foreach (var elem in conns)
-					node.Add2(XmlField.Element, elem, true);
+					node.Add2(XmlTag.Element, elem, true);
 			}
 
 			// Labels
@@ -4845,7 +4842,7 @@ namespace pr.gui
 			{
 				var labls = Elements.Where(x => x.Entity == Entity.Label).OrderBy(x => x.Id).ToArray();
 				foreach (var elem in labls)
-					node.Add2(XmlField.Element, elem, true);
+					node.Add2(XmlTag.Element, elem, true);
 			}
 
 			return node;
@@ -4853,7 +4850,7 @@ namespace pr.gui
 		public XDocument ExportXml(EExportOptions opts = EExportOptions.Default)
 		{
 			var xml = new XDocument();
-			var node = xml.Add2(new XElement(XmlField.Root));
+			var node = xml.Add2(new XElement(XmlTag.Root));
 			ExportXml(node, opts);
 			return xml;
 		}
@@ -4915,7 +4912,7 @@ namespace pr.gui
 					{
 						switch (n.Name.LocalName)
 						{
-						case XmlField.NodeStyles:
+						case XmlTag.NodeStyles:
 							{
 								if (opts.HasFlag(EImportOptions.NodeStyles))
 								{
@@ -4925,7 +4922,7 @@ namespace pr.gui
 								}
 								break;
 							}
-						case XmlField.ConnStyles:
+						case XmlTag.ConnStyles:
 							{
 								if (opts.HasFlag(EImportOptions.ConnectorStyles))
 								{
@@ -4935,7 +4932,7 @@ namespace pr.gui
 								}
 								break;
 							}
-						case XmlField.Element:
+						case XmlTag.Element:
 							{
 								// True if the 'opts' say import the element
 								Func<Element, bool> import = e =>
@@ -4957,7 +4954,7 @@ namespace pr.gui
 								else
 								{
 									// Read the id of the element and look for it among the existing elements
-									var id = n.Element(XmlField.Id).As<Guid>();
+									var id = n.Element(XmlTag.Id).As<Guid>();
 
 									Element elem = map.TryGetValue(id, out elem) ? elem : null;
 									if (elem == null)

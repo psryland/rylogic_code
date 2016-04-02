@@ -148,7 +148,7 @@ namespace pr.extn
 			tt.SetToolTip(ctrl, caption);
 		}
 
-		/// <summary>Display a hint balloon.</summary>
+		/// <summary>Display a hint balloon. Note, is difficult to get working, use HintBalloon instead</summary>
 		public static void ShowHintBalloon(this Control ctrl, ToolTip tt, string msg, int duration = 5000, Point? pt = null)
 		{
 			// Only show the tool tip if not currently showing or it's different
@@ -347,21 +347,49 @@ namespace pr.extn
 		}
 
 		/// <summary>Return a form that wraps 'ctrl'</summary>
-		public static T FormWrap<T>(this Control ctrl, Point? loc = null, Size? sz = null) where T:Form, new()
+		public static T FormWrap<T>(this Control ctrl, object[] args = null, string title = null, Icon icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null) where T:Form, new()
 		{
-			var f = new T();
+			var f = (T)Activator.CreateInstance(typeof(T), args);
+			f.ClientSize = ctrl.Bounds.Size;
+			f.ShowIcon = false;
+
+			if (title != null)
+			{
+				f.Text = title;
+			}
+			if (icon != null)
+			{
+				f.Icon = icon;
+				f.ShowIcon = true;
+			}
 			if (loc.HasValue)
 			{
-				f.Location = loc.Value;
 				f.StartPosition = FormStartPosition.Manual;
+				f.Location = loc.Value;
 			}
 			if (sz.HasValue)
 			{
 				f.Size = sz.Value;
 			}
+			if (border.HasValue)
+			{
+				f.FormBorderStyle = border.Value;
+			}
+			if (start_pos.HasValue)
+			{
+				f.StartPosition = start_pos.Value;
+			}
+			if (show_in_taskbar.HasValue)
+			{
+				f.ShowInTaskbar = show_in_taskbar.Value;
+			}
 			ctrl.Dock = DockStyle.Fill;
 			f.Controls.Add(ctrl);
 			return f;
+		}
+		public static Form FormWrap(this Control ctrl, object[] args = null, string title = null, Icon icon = null, Point? loc = null, Size? sz = null, FormBorderStyle? border = null, FormStartPosition? start_pos = null, bool? show_in_taskbar = null)
+		{
+			return ctrl.FormWrap<Form>(args, title, icon, loc, sz, border, start_pos, show_in_taskbar);
 		}
 
 		/// <summary>Returns the name of this control and all parents in the hierarchy</summary>

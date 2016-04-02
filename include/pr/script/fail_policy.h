@@ -25,6 +25,11 @@ namespace pr
 		// When a script error occurs, throws a pr::script::exception
 		struct ThrowOnFailure
 		{
+			template <typename TResult>
+			static TResult Fail(EResult result, Location const& loc, std::string msg, TResult = TResult())
+			{
+				throw Exception(result, loc, msg);
+			}
 			static void Fail(EResult result, Location const& loc, std::string msg)
 			{
 				throw Exception(result, loc, msg);

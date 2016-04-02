@@ -725,7 +725,7 @@ VIEW3D_API View3DV4 __stdcall View3D_WSPointToNSSPoint(View3DWindow window, View
 	CatchAndReport(View3D_WSPointToNSSPoint, window, view3d::To<View3DV4>(pr::v4Zero));
 }
 
-// Return a point and direction in world space corresponding to a normalised sceen space point.
+// Return a point and direction in world space corresponding to a normalised screen space point.
 // The x,y components of 'screen' should be in normalised screen space, i.e. (-1,-1)->(1,1)
 // The z component should be the world space distance from the camera
 VIEW3D_API void __stdcall View3D_NSSPointToWSRay(View3DWindow window, View3DV4 screen, View3DV4& ws_point, View3DV4& ws_direction)
@@ -857,19 +857,37 @@ VIEW3D_API void __stdcall View3D_ShowLightingDlg(View3DWindow window)
 
 // Objects **********************************************************
 
+// Create an include handler that can load from directories or embedded resources
+pr::script::Includes<> GetIncludes(View3DIncludes const* includes)
+{
+	using namespace pr::script;
+
+	Includes<> inc(Includes<>::EType::None);
+	if (includes != nullptr)
+	{
+		if (includes->m_include_paths != nullptr)
+			inc.SearchPaths(pr::script::string(includes->m_include_paths));
+
+		if (includes->m_module_count != 0)
+			inc.ResourceModules(std::initializer_list<HMODULE>(includes->m_modules, includes->m_modules + includes->m_module_count));
+	}
+	return std::move(inc);
+}
+
 // Create objects given in a file.
 // These objects will not have handles but can be added/removed by their context id.
 // 'include_paths' is a comma separated list of include paths to use to resolve #include directives (or nullptr)
 // Returns the number of objects added.
-VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async, char const* include_paths)
+VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, int context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
 	{
 		DllLockGuard;
 
+		// Create a reader to parse the script files
 		FileSrc<> src(ldr_filepath);
-		FileIncludes<> inc(pr::Widen(include_paths));
+		auto inc = GetIncludes(includes);
 		Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
 
 		pr::ldr::ParseResult out;
@@ -886,9 +904,8 @@ VIEW3D_API int __stdcall View3D_ObjectsCreateFromFile(char const* ldr_filepath, 
 // 'file' - TRUE if 'ldr_script' is a filepath, FALSE if 'ldr_script' is a string containing ldr script
 // 'context_id' - the context id to create the LdrObjects with
 // 'async' - if objects should be created by a background thread
-// 'include_paths' - is a comma separated list of include paths to use to resolve #include directives (or nullptr)
-// 'module' - if non-zero causes includes to be resolved from the resources in that module
-VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, char const* include_paths, HMODULE module)
+// 'includes' - information used to resolve include directives in 'ldr_script'
+VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script, BOOL file, int context_id, BOOL async, View3DIncludes const* includes)
 {
 	using namespace pr::script;
 	try
@@ -900,17 +917,15 @@ VIEW3D_API View3DObject __stdcall View3D_ObjectCreateLdr(char const* ldr_script,
 		if (file)
 		{
 			FileSrc<> src(ldr_script);
-			FileIncludes<> inc(pr::Widen(include_paths));
+			auto inc = GetIncludes(includes);
 			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
-
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		}
 		else // string
 		{
 			PtrA<> src(ldr_script);
-			ResIncludes<> inc(module);
+			auto inc = GetIncludes(includes); 
 			Reader reader(src, false, &inc, nullptr, &Dll().m_lua);
-
 			pr::ldr::Parse(Dll().m_rdr, reader, out, async != 0, context_id);
 		}
 
@@ -939,7 +954,7 @@ void __stdcall ObjectEditCB(ModelPtr model, void* ctx, pr::Renderer&)
 	pr::vector<View3DVertex> verts   (vrange.size());
 	pr::vector<pr::uint16>   indices (irange.size());
 
-	// Get default values for the topo, geom, and material
+	// Get default values for the 'topo', 'geom', and 'material'
 	auto model_type = EView3DPrim::Invalid;
 	auto geom_type  = EView3DGeom::Vert;
 	View3DMaterial v3dmat = {0,0};
@@ -1020,7 +1035,10 @@ VIEW3D_API void __stdcall View3D_ObjectUpdate(View3DObject object, char const* l
 		if (!object) throw std::exception("object is null");
 
 		DllLockGuard;
-		pr::ldr::Update(Dll().m_rdr, object, ldr_script, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
+
+		pr::script::PtrA<> src(ldr_script);
+		pr::script::Reader reader(src, false);
+		pr::ldr::Update(Dll().m_rdr, object, reader, static_cast<pr::ldr::EUpdateObject::Enum_>(flags));
 	}
 	CatchAndReport(View3D_ObjectUpdate, ,);
 }
@@ -2155,7 +2173,7 @@ VIEW3D_API void __stdcall View3D_ShowDemoScript(View3DWindow window)
 	CatchAndReport(View3D_ShowDemoScript, window,);
 }
 
-// Display the object manager ui
+// Display the object manager UI
 VIEW3D_API void __stdcall View3D_ShowObjectManager(View3DWindow window, BOOL show)
 {
 	try
@@ -2183,7 +2201,7 @@ VIEW3D_API View3DM4x4 __stdcall View3D_ParseLdrTransform(char const* ldr_script)
 	CatchAndReport(View3D_ParseLdrTransform, , view3d::To<View3DM4x4>(pr::m4x4Identity));
 }
 
-// Create/Destroy a scintilla editor window setup for ldr script editing
+// Create/Destroy a scintilla editor window set up for ldr script editing
 VIEW3D_API HWND __stdcall View3D_LdrEditorCreate(HWND parent)
 {
 	try
@@ -2212,7 +2230,7 @@ VIEW3D_API void __stdcall View3D_LdrEditorDestroy(HWND hwnd)
 		EditorPtr edt(reinterpret_cast<pr::ldr::ScriptEditorDlg*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA)));
 		if (!edt) throw std::exception("No back reference pointer found for this window");
 		::SetWindowLongPtrA(hwnd, GWLP_USERDATA, 0);
-		// edt going out of scope should delete it
+		// 'edt' going out of scope should delete it
 	}
 	CatchAndReport(View3D_LdrEditorDestroy, ,);
 }

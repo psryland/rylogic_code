@@ -40,6 +40,14 @@ namespace pr.extn
 				action(item);
 		}
 
+		/// <summary>Apply 'action' to each item in the collection. Includes an indexing variable</summary>
+		public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource, int> action)
+		{
+			int i = 0;
+			foreach (var item in source)
+				action(item, i++);
+		}
+
 		/// <summary>Apply 'action' to each item in the collection</summary>
 		public static TRet ForEach<TSource,TRet>(this IEnumerable<TSource> source, TRet initial, Func<TSource, TRet, TRet> action)
 		{
@@ -182,6 +190,28 @@ namespace pr.extn
 				}
 				return max;
 			}
+		}
+
+		/// <summary>Returns one of the items that occur most frequently within a sequence</summary>
+		public static Freq<TSource> MaxFrequency<TSource>(this IEnumerable<TSource> source, Cmp<TSource> comparer = null)
+		{
+			comparer = comparer ?? Cmp<TSource>.Default;
+			var dic = new Dictionary<TSource, int>();
+
+			var most_freq = new Freq<TSource>();
+			foreach (var item in source)
+			{
+				var count = dic.GetOrAdd(item) + 1;
+				if (count > most_freq.Frequency) { most_freq.Item = item; most_freq.Frequency = count; }
+				dic[item] = count;
+			}
+			return most_freq;
+		}
+		public class Freq<TSource>
+		{
+			public Freq() { Item = default(TSource); Frequency = 0; }
+			public TSource Item { get; set; }
+			public int Frequency { get; set; }
 		}
 
 		/// <summary>Returns the index of the maximum element based on 'selector', with comparisons of the selector type made by 'comparer'</summary>
@@ -338,6 +368,17 @@ namespace pr.extn
 				yield return Tuple.Create(i0.Current, default(TSource));
 			for (; !i1.AtEnd; i1.MoveNext())
 				yield return Tuple.Create(default(TSource), i1.Current);
+		}
+
+		/// <summary>Return all of the range except the last 'count' items</summary>
+		public static IEnumerable<TSource> TakeAllBut<TSource>(this IEnumerable<TSource> source, int count)
+		{
+			var queue = new Queue<TSource>();
+			foreach (var x in source)
+			{
+				if (queue.Count == count) yield return queue.Dequeue();
+				queue.Enqueue(x);
+			}
 		}
 	}
 }

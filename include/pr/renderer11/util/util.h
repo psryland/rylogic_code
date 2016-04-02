@@ -11,13 +11,6 @@ namespace pr
 {
 	namespace rdr
 	{
-		// To<D3DCOLORVALUE>
-		template <typename TFrom> struct Convert<D3DCOLORVALUE,TFrom>
-		{
-			static D3DCOLORVALUE To(pr::Colour const& c) { D3DCOLORVALUE cv = {c.r, c.g, c.b, c.a}; return cv; }
-			static D3DCOLORVALUE To(pr::Colour32 c)      { return To((pr::Colour)c); }
-		};
-
 		// Returns an incrementing id with each call
 		inline RdrId MonotonicId()
 		{

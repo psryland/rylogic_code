@@ -2,9 +2,9 @@
 // Resource
 //  Copyright (c) Rylogic Ltd 2009
 //**********************************************************************************
-// Access data embedded in an exe file
+// Access data embedded in an EXE file
 //
-// To add resources to an exe, add a '.rc' file to the project (create a text file with
+// To add resources to an EXE, add a '.rc' file to the project (create a text file with
 //  .rc extn, and 'Add existing'. Or use the File->New->Resource->Resource File to have
 //  IDE resource editor work)
 //
@@ -26,6 +26,8 @@
 #pragma once
 
 #include <windows.h>
+#include <pr/common/fmt.h>
+#include <pr/common/hresult.h>
 
 namespace pr
 {
@@ -45,31 +47,56 @@ namespace pr
 
 	namespace resource
 	{
-		// Return const access to an embedded resource
-		// module = 0 means "this exe"
+		// Check for the existence of a resource named 'name'
+		// module = 0 means 'this exe'
 		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
-		// Note: you can use pr::GetCurrentModule() for 'module' in windowsfunctions.h
+		// Note: you can use pr::GetCurrentModule() for 'module'
+		inline bool Find(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
+		{
+			// Get a handle to the resource
+			auto handle = ::FindResourceW(module, name, type);
+			if (handle != nullptr)
+				return true;
+
+			// No handle? Check the error was data not found
+			auto last_error = GetLastError();
+			if (last_error == ERROR_RESOURCE_DATA_NOT_FOUND)
+				return false;
+
+			// Throw for other errors
+			throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
+		}
+
+		// Return const access to an embedded resource
+		// module = 0 means 'this exe'
+		// If you're resource is in a dll, you need to use the HMODULE passed to the DllMain function
+		// Note: you can use pr::GetCurrentModule() for 'module'
 		template <typename Type> Resource<Type> Read(wchar_t const* name, wchar_t const* type, HMODULE module = 0)
 		{
-			HRSRC handle = FindResourceW(module, name, type);
+			// Get a handle to the resource
+			auto handle = ::FindResourceW(module, name, type);
 			if (!handle)
 			{
-				DWORD last_error = GetLastError();
-				throw std::exception("resource not found",last_error);
+				auto last_error = ::GetLastError();
+				throw std::runtime_error(Fmt("Resource '%S' not found. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
 			}
 
-			auto size = SizeofResource(module, handle);
-			HGLOBAL mem = LoadResource(module, handle);
+			// Get the size in bytes of the resource
+			auto size = ::SizeofResource(module, handle);
+
+			// Load the resource into memory
+			// The return type of LoadResource is HGLOBAL for backward compatibility, not because the function returns
+			// a handle to a global memory block. Do not pass this handle to the GlobalLock or GlobalFree function. 
+			auto mem = ::LoadResource(module, handle);
 			if (!mem)
 			{
-				DWORD last_error = GetLastError();
-				throw std::exception("failed to load resource",last_error);
+				auto last_error = GetLastError();
+				throw std::runtime_error(Fmt("Loading resource '%S' failed. (0x%08X) %s", name, last_error, pr::HrMsg(last_error)));
 			}
 
-			// Object a pointer to the resouce.
+			// Get a pointer to the resource.
 			// Valid until the module is unloaded therefore don't need to worry about unlocking (according to MSDN)
-			auto data = static_cast<Type const*>(LockResource(mem));
-
+			auto data = static_cast<Type const*>(::LockResource(mem));
 			return Resource<Type>(data, size / sizeof(Type));
 		}
 	}

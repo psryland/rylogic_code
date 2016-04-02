@@ -200,7 +200,7 @@ namespace pr.gui
 		#endregion
 	}
 
-	/// <summary>A winforms wrapper of the scintilla control</summary>
+	/// <summary>A win forms wrapper of the scintilla control</summary>
 	public class ScintillaCtrl :Control
 	{
 		protected class CellBuf :Sci.CellBuf {}

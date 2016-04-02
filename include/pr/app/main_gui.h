@@ -53,7 +53,7 @@ namespace pr
 			// If your window uses common controls, remember to call InitCtrls() before this constructor
 			MainGUI(pr::gui::Params const& p = Params())
 				:base(p)
-				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())))
+				,m_log(DerivedGUI::AppName(), pr::log::ToFile(FmtS("%s.log", DerivedGUI::AppName())), 0)
 				,m_msg_loop()
 				,m_main(std::make_unique<Main>(*static_cast<DerivedGUI*>(this)))
 				,m_resizing(false)

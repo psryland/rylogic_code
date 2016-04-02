@@ -86,6 +86,7 @@ namespace pr.extn
 		[DebuggerStepThrough]
 		public static TEventArgs Raise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
 		{
+			Debug.Assert(!(sender is EventArgs), "Don't pass the event args as the 'sender' parameter");
 			if (evt == null) return args;
 			if (Impl<EventHandler<TEventArgs>>.IsSuspended(evt))
 				Impl<EventHandler<TEventArgs>>.Signal(evt);
@@ -98,6 +99,7 @@ namespace pr.extn
 		[DebuggerStepThrough]
 		public static EventArgs Raise(this EventHandler evt, object sender = null, EventArgs args = null)
 		{
+			Debug.Assert(!(sender is EventArgs), "Don't pass the event args as the 'sender' parameter");
 			if (evt == null) return args;
 			if (Impl<EventHandler>.IsSuspended(evt))
 				Impl<EventHandler>.Signal(evt);
@@ -110,6 +112,7 @@ namespace pr.extn
 		[DebuggerStepThrough]
 		public static void QueueRaise<TEventArgs>(this EventHandler<TEventArgs> evt, object sender = null, TEventArgs args = null) where TEventArgs :EventArgs
 		{
+			Debug.Assert(!(sender is EventArgs), "Don't pass the event args as the 'sender' parameter");
 			Dispatcher.CurrentDispatcher.BeginInvoke(() => evt.Raise(sender, args));
 		}
 
@@ -117,6 +120,7 @@ namespace pr.extn
 		[DebuggerStepThrough]
 		public static void QueueRaise(this EventHandler evt, object sender = null, EventArgs args = null)
 		{
+			Debug.Assert(!(sender is EventArgs), "Don't pass the event args as the 'sender' parameter");
 			Dispatcher.CurrentDispatcher.BeginInvoke(() => evt.Raise(sender, args));
 		}
 

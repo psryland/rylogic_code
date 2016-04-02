@@ -9,8 +9,8 @@ namespace pr.common
 	{
 		// Notes:
 		//  C# does not support structure alignment (as of 2015)
-		//  If you need to pass an aligned structure to a native api it's
-		//  probably better if the native api can be made to handle unaligned
+		//  If you need to pass an aligned structure to a native API it's
+		//  probably better if the native API can be made to handle unaligned
 		//  data, rather than try to deal with it in C#. Have the native dll
 		//  take unaligned types through the interface and internally convert
 		//  them to aligned types.
@@ -71,7 +71,7 @@ namespace pr.common
 				ptr => Marshal.FreeHGlobal(ptr));
 		}
 
-		/// <summary>Copy a structure into non-gc memory. Freeing on dispose</summary>
+		/// <summary>Copy a structure into non-GC memory. Freeing on dispose</summary>
 		public static Scope<IntPtr> StructureToPtr<TStruct>(TStruct strukt) where TStruct:struct
 		{
 			return Scope.Create(
@@ -85,6 +85,22 @@ namespace pr.common
 					{
 						Marshal.FreeCoTaskMem(ptr);
 					});
+		}
+
+		/// <summary>Copy an array into non-GC memory. Freeing on dispose</summary>
+		public static Scope<IntPtr> ArrayToPtr<T>(T[] arr) where T:struct
+		{
+			var elem_sz = Marshal.SizeOf(typeof(T));
+			var s = AllocHGlobal(elem_sz * arr.Length);
+
+			var ptr = s.Value;
+			foreach (var elem in arr)
+			{
+				Marshal.StructureToPtr(elem, ptr, false);
+				ptr += elem_sz;
+			}
+
+			return s;
 		}
 
 		/// <summary>Convert an IntPtr to a 'TStruct'</summary>

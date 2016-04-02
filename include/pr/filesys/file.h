@@ -154,7 +154,7 @@ namespace pr
 	// 'buf' points to the contiguous block of data to write
 	// 'size' is the length to write (in bytes)
 	// 'filepath' is the name of the file to create
-	// 'file_enc' descibes the encoding to be written to the file.
+	// 'file_enc' describes the encoding to be written to the file.
 	// 'buf_enc' describes the encoding used in 'buf'
 	// 'append' is true if the file should be appended to
 	// 'add_bom' is true if a byte order mask should be written to the file (applies to text encoding only, prefer not for utf-8)

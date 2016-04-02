@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using pr.common;
 using pr.extn;
+using pr.gfx;
 using pr.maths;
 using pr.win32;
 
@@ -256,6 +257,11 @@ namespace pr.gui
 			base.OnMouseLeave(e);
 			HandleAutoFade();
 		}
+		protected override void OnMouseMove(MouseEventArgs e)
+		{
+			base.OnMouseMove(e);
+			HandleAutoFade();
+		}
 		protected override void OnMove(EventArgs e)
 		{
 			// Whenever this window moves, save it's offset from the owner
@@ -308,8 +314,9 @@ namespace pr.gui
 				return;
 			}
 
-			var pt = PointToClient(MousePosition);
-			Opacity = ClientRectangle.Contains(pt) ? FadeRange.End : FadeRange.Begin;
+			var rad = 5;
+			var d = Math.Sqrt(Geometry.DistanceSq(v2.From(PointToClient(MousePosition)), BRect.From(ClientRectangle.Inflated(-rad))));
+			Opacity = Maths.Lerp(FadeRange.End, FadeRange.Begin, Maths.Clamp(d / rad, 0.0, 1.0));
 		}
 
 		/// <summary>Get/Set the owning form</summary>

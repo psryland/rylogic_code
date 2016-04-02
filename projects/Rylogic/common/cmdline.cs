@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Windows.Forms;
+using pr.gui;
 
 namespace pr.common
 {
@@ -70,6 +72,8 @@ namespace pr.common
 						}
 					}
 				}
+
+				// Check that the given command line arguments are self consistent
 				if (!cr.OptionsValid())
 				{
 					result = Result.Failed;
@@ -78,8 +82,12 @@ namespace pr.common
 			}
 			catch (Exception ex)
 			{
-				cr.ShowHelp(ex);
+				// Note: implementations of IReceiver should trap and log exceptions
+				// if they want detailed error information.
 				result = Result.Failed;
+
+				// On failure, display the help info
+				cr.ShowHelp(ex);
 			}
 			return result;
 		}

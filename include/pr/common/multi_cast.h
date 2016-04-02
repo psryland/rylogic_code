@@ -19,7 +19,7 @@ namespace pr
 		TypeCont m_cont;
 		mutable std::mutex m_cs;
 
-		// Access 'A' as a reference (independant of whether its a pointer or instance)
+		// Access 'A' as a reference (independent of whether its a pointer or instance)
 		template <typename A> static typename std::enable_if<!std::is_pointer<A>::value, typename std::remove_pointer<A>::type&>::type get(A& i) { return i; }
 		template <typename A> static typename std::enable_if< std::is_pointer<A>::value, typename std::remove_pointer<A>::type&>::type get(A& i) { return *i; }
 
@@ -55,6 +55,18 @@ namespace pr
 		};
 
 		MultiCast() :m_cont() ,m_cs() {}
+		MultiCast(MultiCast&& rhs)
+			:m_cont(std::move(rhs.m_cont))
+			,m_cs()
+		{}
+		MultiCast& operator=(MultiCast&& rhs)
+		{
+			if (&rhs != this)
+			{
+				std::swap(m_cont, rhs.m_cont);
+			}
+			return *this;
+		}
 		MultiCast(MultiCast const&) = delete;
 		MultiCast& operator=(MultiCast const&) = delete;
 
@@ -100,7 +112,7 @@ namespace pr
 		// Raise the event passing 'args' to the event handler
 		template <typename... Args> void Raise(Args&&... args)
 		{
-			// Reentry issues here. Raising the event may result in handlers being added or removed.
+			// Re-entry issues here. Raising the event may result in handlers being added or removed.
 			// Three options:
 			//  1) Don't allow the event to be modified during 'Raise' (forbids self removing handlers)
 			//  2) Copy 'm_cont' and call all handlers (a handler may cause another handler object to be delete = access violation)

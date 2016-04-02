@@ -412,7 +412,7 @@ namespace pr.common
 		/// <summary>Expression</summary>
 		public override string ToString()
 		{
-			return Expr;
+			return "{0}: {1}".Fmt(PatnType, Expr);
 		}
 	}
 }

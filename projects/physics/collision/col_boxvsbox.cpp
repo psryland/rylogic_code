@@ -138,25 +138,25 @@ namespace pr
 						// Clip each box against the other
 						v4 avr = v4Zero;
 						float count = 0;
-						for( int j = 0; j != 2; ++j )
+						for (int j = 0; j != 2; ++j)
 						{
-							m4x4 const& b2w			= (j==0) ? overlap.m_b2w    : overlap.m_a2w;
-							Point const& pointB		= (j==0) ? overlap.m_pointB : overlap.m_pointA;
-							ShapeBox const& shapeB	= (j==0) ? overlap.m_shapeB : overlap.m_shapeA;
-							for( int i = 0; i != 4; ++i )
+							auto& b2w    = (j == 0) ? overlap.m_b2w : overlap.m_a2w;
+							auto& ptB    = (j == 0) ? overlap.m_pointB : overlap.m_pointA;
+							auto& shapeB = (j == 0) ? overlap.m_shapeB : overlap.m_shapeA;
+							for (int i = 0; i != 4; ++i)
 							{
 								// Implemented in terms of edges of A against boxB but symmetric
 								// so when 'j' == 1 read A as B and B as A
-								v4 s = pts[j][i], e = pts[j][(i+1)%4];
-								int const& axis = pointB.m_dof_info[0];
-								float const& r  = shapeB.m_radius[axis];
-								float distB = Dot3(b2w[axis], b2w.pos);
-								if( Intersect_LineToSlab(b2w[axis], distB - r, distB + r, s, e, s, e) )
+								v4 s = pts[j][i], e = pts[j][(i + 1) % 4];
+								auto& axis0  = ptB.m_dof_info[0];
+								auto& rad0   = shapeB.m_radius[axis0];
+								float distB0 = Dot3(b2w[axis0], b2w.pos);
+								if (Intersect_LineToSlab(b2w[axis0], distB0 - rad0, distB0 + rad0, s, e, s, e))
 								{
-									int const& axis = pointB.m_dof_info[1];
-									float const& r  = shapeB.m_radius[axis];
-									float distB = Dot3(b2w[axis], b2w.pos);
-									if( Intersect_LineToSlab(b2w[axis], distB - r, distB + r, s, e, s, e) )
+									auto& axis1  = ptB.m_dof_info[1];
+									auto& rad1   = shapeB.m_radius[axis1];
+									float distB1 = Dot3(b2w[axis1], b2w.pos);
+									if (Intersect_LineToSlab(b2w[axis1], distB1 - rad1, distB1 + rad1, s, e, s, e))
 									{
 										avr += s + e;
 										count += 2.0f;

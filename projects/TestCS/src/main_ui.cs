@@ -44,8 +44,8 @@ namespace TestCS
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			//Application.Run(new FormTestApp());
-			Application.Run(new DgvUI());
+			Application.Run(new MainUI());
+			//Application.Run(new DgvUI());
 		}
 
 		public MainUI()

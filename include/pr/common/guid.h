@@ -4,20 +4,20 @@
 //*********************************
 
 #pragma once
-#ifndef PR_COMMON_GUID_H
-#define PR_COMMON_GUID_H
 
 #include <windows.h>
 #include <guiddef.h>
 #include <objbase.h>
 #include "pr/common/to.h"
+#include "pr/common/scope.h"
+#include "pr/str/string.h"
 
 // Required lib: rpcrt4.lib
+#pragma comment(lib, "rpcrt4.lib")
 
 namespace pr
 {
 	const GUID GUID_INVALID = { 0x00000000, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	template <typename ToType> inline ToType To(GUID x) { static_assert(false, "No conversion from to this type available"); }
 
 	// Create a new GUID
 	inline GUID GenerateGUID()
@@ -27,25 +27,62 @@ namespace pr
 		return guid;
 	}
 
-	// Convert a GUID into a string
-	template <> inline std::string To<std::string>(GUID guid)
+	namespace convert
 	{
-		RPC_CSTR* str = 0;
-		UuidToStringA(static_cast<UUID*>(&guid), str);
-		std::string guid_str(reinterpret_cast<char const*>(str));
-		RpcStringFreeA(str);
-		return guid_str;
+		template <typename Str, typename Char = typename Str::value_type, bool Wide = is_same<Char,wchar_t>::value>
+		struct GuidToString
+		{
+			template <typename = enable_if<!Wide>> static Str To(GUID const& guid, char = 0)
+			{
+				RPC_CSTR str = nullptr;
+				auto s = CreateScope([&]{ ::UuidToStringA(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeA(&str); });
+				return Str(reinterpret_cast<char const*>(str));
+			}
+			template <typename = enable_if<Wide>> static Str To(GUID const& guid, wchar_t = 0)
+			{
+				RPC_WSTR str = nullptr;
+				auto s = CreateScope([&]{ ::UuidToStringW(static_cast<UUID const*>(&guid), &str); }, [&]{ ::RpcStringFreeW(&str); });
+				return Str(reinterpret_cast<wchar_t const*>(str));
+			}
+		};
+		struct ToGuid
+		{
+			static GUID To(char const* s)
+			{
+				GUID guid;
+				::UuidFromStringA(RPC_CSTR(s), &guid);
+				return guid;
+			}
+			static GUID To(wchar_t const* s)
+			{
+				GUID guid;
+				::UuidFromStringW(RPC_WSTR(s), &guid);
+				return guid;
+			}
+			template <typename Str, typename = enable_if_str_class<Str>> static GUID To(Str const& str)
+			{
+				return To(str.c_str());
+			}
+		};
 	}
-
-	// Convert a GUID into a string
-	template <> inline std::wstring To<std::wstring>(GUID guid)
-	{
-		RPC_WSTR* str = 0;
-		UuidToStringW(static_cast<UUID*>(&guid), str);
-		std::wstring guid_str(reinterpret_cast<wchar_t const*>(str));
-		RpcStringFreeW(str);
-		return guid_str;
-	}
+	template <typename Char>                struct Convert<std::basic_string<Char>, GUID> :convert::GuidToString<std::basic_string<Char>> {};
+	template <typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    GUID> :convert::GuidToString<pr::string<Char,L,F>> {};
+	template <typename TFrom>               struct Convert<GUID, TFrom>                   :convert::ToGuid {};
 }
 
+#if PR_UNITTESTS
+#include "pr/common/unittests.h"
+namespace pr
+{
+	namespace unittests
+	{
+		PRUnitTest(pr_common_guid)
+		{
+			PR_CHECK(pr::To<std::string>(pr::GUID_INVALID), "00000000-0000-0000-0000-000000000000");
+			PR_CHECK(pr::To<std::wstring>(pr::GUID_INVALID), L"00000000-0000-0000-0000-000000000000");
+			PR_CHECK(pr::To<GUID>("00000000-0000-0000-0000-000000000000") == pr::GUID_INVALID, true);
+			PR_CHECK(pr::To<GUID>(L"00000000-0000-0000-0000-000000000000") == pr::GUID_INVALID, true);
+		}
+	}
+}
 #endif

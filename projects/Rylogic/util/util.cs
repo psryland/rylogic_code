@@ -54,7 +54,7 @@ namespace pr.util
 			// Set 'doomed' to null before disposing to catch accidental
 			// use of 'doomed' in a partially disposed state
 			if (doomed == null) return;
-			Debug.Assert(!IsGCFinalizerThread, "Disposing in the GC finalizer thread");
+			BreakIf(IsGCFinalizerThread, "Disposing in the GC finalizer thread");
 
 			var junk = doomed;
 			doomed = null;
@@ -137,7 +137,37 @@ namespace pr.util
 		private static int m_main_thread_id = Thread.CurrentThread.ManagedThreadId;
 
 		/// <summary>True if the current thread has the name 'GC Finalizer Thread'</summary>
-		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.Name == "GC Finalizer Thread"; } }
+		public static bool IsGCFinalizerThread { get { return Thread.CurrentThread.ManagedThreadId == GCThread.ManagedThreadId; } }
+		public static Thread GCThread
+		{
+			get
+			{
+				// I have no idea why this doesn't work the first time
+				while (GCThreadGrabber.m_gc_thread == null)
+				{
+					// Create the thread grabber, then collect it
+					new GCThreadGrabber();
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
+				}
+				return GCThreadGrabber.m_gc_thread;
+			}
+		}
+
+		/// <summary>A helper class that gets created then collected so we can grab details about the GC thread</summary>
+		private class GCThreadGrabber
+		{
+			public static Thread m_gc_thread;
+			~GCThreadGrabber() { m_gc_thread = Thread.CurrentThread; }
+		}
+
+		/// <summary>Stop in the debugger if 'condition' is true. For when assert dialogs cause problems with threading</summary>
+		[Conditional("DEBUG")] public static void BreakIf(bool condition, string msg = null)
+		{
+			if (!condition) return;
+			if (msg != null) Debug.WriteLine(msg);
+			Debugger.Break();
+		}
 
 		/// <summary>Asserts or stops the debugger if the caller is not the main thread</summary>
 		[Conditional("DEBUG")] public static void AssertMainThread()
@@ -368,7 +398,7 @@ namespace pr.util
 			if (Equals(item, null)) throw new NullReferenceException("Null cannot be added to a history list");
 			cmp = cmp ?? ((l,r) => Equals(l,r));
 
-			var list = history.ToList();
+			var list = history?.ToList() ?? new List<T>();
 			list.RemoveIf(i => cmp(i,item));
 			list.Insert(0, item);
 			list.RemoveToEnd(max_history_length);

@@ -12,12 +12,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Windows.Input;
 using System.Windows.Forms;
+using System.Windows.Input;
 using pr.common;
 using pr.extn;
-using pr.util;
 using pr.maths;
+using pr.util;
 using HWND = System.IntPtr;
 
 namespace pr.win32
@@ -1160,25 +1160,37 @@ namespace pr.win32
 				if (PathEx.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
-			{// Try the exe directory
-				var exe_path = Assembly.GetEntryAssembly().Location;
+
+			var ass = Assembly.GetEntryAssembly();
+			
+			// Try the EXE directory
+			if (ass != null)
+			{
+				var exe_path = ass.Location;
 				var exe_dir = PathEx.Directory(exe_path);
 				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dir, dllname));
 				if (PathEx.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
-			{// Try the local directory
-				var exe_path = Assembly.GetEntryAssembly().Location;
+
+			// Try the local directory
+			if (ass != null)
+			{
+				var exe_path = ass.Location;
 				var exe_dir = PathEx.Directory(exe_path);
 				var dll_path = searched.Add2(PathEx.CombinePath(exe_dir, dllname));
 				if (PathEx.FileExists(dll_path))
 					return TryLoad(dll_path);
 			}
 
+			if (Util.IsInDesignMode)
+			{
+			}
+
 			throw new DllNotFoundException("Could not find dependent library '{0}'\r\nLocations searched:\r\n{1}".Fmt(dllname, string.Join("\r\n", searched.ToArray())));
 		}
 
-		/// <summary>Returns the upper 16bits of a 32bit dword such as LPARAM or WPARAM</summary>
+		/// <summary>Returns the upper 16bits of a 32bit DWORD such as LPARAM or WPARAM</summary>
 		public static uint HiWord(uint dword)
 		{
 			return (dword >> 16) & 0xFFFF;

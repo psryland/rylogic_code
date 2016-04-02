@@ -13,15 +13,19 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <functional>
 #include <type_traits>
 #include <locale>
 #include <cstring>
 #include <cstdarg>
+#include <cstdlib>
 #include <cassert>
 
 // Use this define to declare a string literal in a function templated on 'tchar'
+#ifndef PR_STRLITERAL
 #define PR_STRLITERAL(tchar,s)  pr::str::char_traits<tchar>::str(s, L##s)
+#endif
 
 namespace pr
 {
@@ -83,6 +87,8 @@ namespace pr
 
 		// char traits - Did you know about std::char_traits<>... 
 		template <typename TChar> struct char_traits;
+		
+		// char traits
 		template <> struct char_traits<char>
 		{
 			static char const* str(char const* str, wchar_t const*) { return str; }
@@ -186,7 +192,7 @@ namespace pr
 			using citer      = Char const*;
 			using miter      = Char*;
 			using iter       = Char const*;
-			using value_type = Char const;
+			using value_type = Char;
 
 			static value_type const* c_str(Char const* str) { return str; }
 			static bool empty(Char const* str)              { return *str == 0; }
@@ -270,7 +276,7 @@ namespace pr
 
 		#pragma region Defaults
 		// Return a pointer to delimiters, either the ones provided or the default ones
-		template <typename Char> inline Char* Delim(Char* delim = nullptr)
+		template <typename Char> inline Char const* Delim(Char const* delim = nullptr)
 		{
 			static Char const default_delim[] = {Char(' '), Char('\t'), Char('\n'), Char('\r'), 0};
 			return delim ? delim : default_delim;

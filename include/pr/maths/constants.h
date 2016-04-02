@@ -16,6 +16,7 @@ namespace pr
 		// do not have a defined construction order. If you're using
 		// them in other global objects they mightn't be initialised
 		float const tiny       = 1.000000e-4F; // Can't go lower than this cos DX uses less precision
+		float const tiny_sq    = 1.000000e-8F; // Can't go lower than this cos DX uses less precision
 		float const phi        = 1.618034e+0F; // "Golden Ratio"
 		float const tau        = 6.283185e+0F; // circle constant
 		float const inv_tau    = 1.591549e-1F;

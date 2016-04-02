@@ -89,7 +89,7 @@ namespace pr.extn
 		/// <summary>
 		/// Set the text box into a state indicating uninitialised, error, or success.
 		/// For tool tips, use string.Empty to clear the tooltip, otherwise it will be unchanged</summary>
-		public static void HintState(this TextBoxBase tb, EHintState state, ToolTip tt = null 
+		public static void HintState(this Control ctrl, EHintState state, ToolTip tt = null 
 			,Color? success_col = null ,Color? error_col = null ,Color? uninit_col = null
 			,string success_tt = null  ,string error_tt = null  ,string uninit_tt = null)
 		{
@@ -97,23 +97,23 @@ namespace pr.extn
 			{
 			case EHintState.Uninitialised:
 				{
-					tb.BackColor = uninit_col ?? SystemColors.Window;
+					ctrl.BackColor = uninit_col ?? SystemColors.Window;
 					if (tt != null && uninit_tt != null)
-						tb.ToolTip(tt, uninit_tt);
+						ctrl.ToolTip(tt, uninit_tt);
 					break;
 				}
 			case EHintState.Error:
 				{
-					tb.BackColor = error_col ?? Color.LightSalmon;
+					ctrl.BackColor = error_col ?? Color.LightSalmon;
 					if (tt != null && error_tt != null)
-						tb.ToolTip(tt, error_tt ?? string.Empty);
+						ctrl.ToolTip(tt, error_tt ?? string.Empty);
 					break;
 				}
 			case EHintState.Success:
 				{
-					tb.BackColor = success_col ?? Color.LightGreen;
+					ctrl.BackColor = success_col ?? Color.LightGreen;
 					if (tt != null && success_tt != null)
-						tb.ToolTip(tt, success_tt ?? string.Empty);
+						ctrl.ToolTip(tt, success_tt ?? string.Empty);
 					break;
 				}
 			}
@@ -132,7 +132,17 @@ namespace pr.extn
 				EHintState.Error;
 			tb.HintState(state, tt, success_col, error_col, uninit_col, success_tt, error_tt, uninit_tt);
 		}
-		
+		public static void HintState(this ComboBox cb, bool success, ToolTip tt = null 
+			,Color? success_col = null ,Color? error_col = null ,Color? uninit_col = null
+			,string success_tt = null  ,string error_tt = null  ,string uninit_tt = null)
+		{
+			var state = 
+				(success && !cb.Text.HasValue()) ? EHintState.Uninitialised :
+				(success) ? EHintState.Success :
+				EHintState.Error;
+			cb.HintState(state, tt, success_col, error_col, uninit_col, success_tt, error_tt, uninit_tt);
+		}
+
 		/// <summary>States that a text box can be in</summary>
 		public enum EHintState
 		{

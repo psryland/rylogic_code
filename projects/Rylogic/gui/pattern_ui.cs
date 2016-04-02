@@ -14,6 +14,13 @@ namespace pr.gui
 	/// <summary>A user control for editing 'Patterns'</summary>
 	public class PatternUI :PatternUIImpl, IPatternUI
 	{
+		// Notes:
+		// Create an instance of this control.
+		//  - You can use ShowDialog() to show a default pattern editor form
+		//  - Or use FormWrap on the PatternUI to create a form.
+		// Use 'NewPattern()' to create a new pattern or 'EditPattern()' to edit an existing pattern.
+		// Remember to hook up the Commit event to handle saving the pattern, closing the form, etc
+
 		public const string DefaultTestText = "Enter text here to test your pattern";
 		private static readonly Color FieldValid   = Color.LightGreen;
 		private static readonly Color FieldInvalid = Color.Salmon;
@@ -23,26 +30,27 @@ namespace pr.gui
 			Color.Aquamarine, Color.Yellow, Color.Orchid, Color.GreenYellow, Color.PaleGreen, Color.Goldenrod, Color.MediumTurquoise
 		};
 
-		private HelpUI           m_dlg_help;
-		private ImageList        m_image_list;
-		private Button           m_btn_regex_help;
-		private CheckBox         m_check_ignore_case;
-		private CheckBox         m_check_whole_line;
-		private CheckBox         m_check_invert;
-		private Button           m_btn_add;
-		private Label            m_lbl_match;
-		private TextBox          m_edit_match;
-		private RadioButton      m_radio_substring;
-		private RadioButton      m_radio_wildcard;
-		private RadioButton      m_radio_regex;
-		private Panel            m_panel_patntype;
-		private Label            m_lbl_match_type;
-		private SplitContainer   m_split;
-		private DataGridView     m_grid_grps;
-		private Label            m_lbl_groups;
-		private Panel m_panel_flags;
-		private RichTextBox      m_edit_test;
+		private HelpUI         m_dlg_help;
+		private ImageList      m_image_list;
+		private Button         m_btn_regex_help;
+		private CheckBox       m_check_ignore_case;
+		private CheckBox       m_check_whole_line;
+		private CheckBox       m_check_invert;
+		private Button         m_btn_add;
+		private Label          m_lbl_match;
+		private TextBox        m_edit_match;
+		private RadioButton    m_radio_substring;
+		private RadioButton    m_radio_wildcard;
+		private RadioButton    m_radio_regex;
+		private Panel          m_panel_patntype;
+		private Label          m_lbl_match_type;
+		private SplitContainer m_split;
+		private DataGridView   m_grid_grps;
+		private Label          m_lbl_groups;
+		private Panel          m_panel_flags;
+		private RichTextBox    m_edit_test;
 
+		/// <summary>Creates a Pattern edit control.</summary>
 		public PatternUI()
 		{
 			InitializeComponent();
@@ -234,6 +242,23 @@ namespace pr.gui
 			ui.Content = Resources.regex_quick_ref;
 			ui.RenderContent();
 			return ui;
+		}
+
+		/// <summary>
+		/// Show the pattern UI in a dialog.
+		/// If 'patn' is not null, then it is edited in the UI, otherwise a new pattern is created.
+		/// Returns the created/edited pattern</summary>
+		public static Pattern ShowDialog(IWin32Window owner = null, Pattern patn = null)
+		{
+			var p = new PatternUI();
+			using (var f = p.FormWrap<Form>(title:"Edit Pattern", start_pos:FormStartPosition.CenterParent))
+			{
+				patn = patn ?? new Pattern();
+				p.EditPattern(patn);
+				p.Commit += (s,a) => f.Close();
+				f.ShowDialog(owner);
+				return p.Pattern;
+			}
 		}
 
 		/// <summary>Lazy create RegexHelpUI</summary>
@@ -546,6 +571,7 @@ namespace pr.gui
 		Save = 1
 	}
 
+	/// <summary>A pattern editor control</summary>
 	public interface IPatternUI
 	{
 		/// <summary>Return the original before any edits were made</summary>
@@ -592,6 +618,7 @@ namespace pr.gui
 		protected override void UpdateUIInternal() {}
 	}
 
+	/// <summary>Base class for editing objects the implement IPattern</summary>
 	public abstract class PatternUIBase<TPattern> :UserControl ,IPatternUI where TPattern:class, IPattern, new()
 	{
 		protected readonly ToolTip m_tt;
@@ -620,7 +647,7 @@ namespace pr.gui
 		[Browsable(false)] public TPattern Pattern { get { return m_pattern; } }
 		IPattern IPatternUI.Pattern { get { return Pattern; } }
 
-		/// <summary>The original pattern provided to the ui for editing</summary>
+		/// <summary>The original pattern provided to the UI for editing</summary>
 		[Browsable(false)] public TPattern Original { get { return m_original; } }
 		IPattern IPatternUI.Original { get { return Original; } }
 
@@ -643,7 +670,7 @@ namespace pr.gui
 			UpdateUI();
 		}
 
-		/// <summary>True when user activity has changed something in the ui</summary>
+		/// <summary>True when user activity has changed something in the UI</summary>
 		public bool Touched { get; set; }
 
 		/// <summary>True if the pattern contains unsaved changes</summary>
@@ -666,8 +693,7 @@ namespace pr.gui
 		public event EventHandler Commit;
 		protected void RaiseCommitEvent()
 		{
-			if (Commit == null) return;
-			Commit(this, EventArgs.Empty);
+			Commit.Raise(this);
 		}
 
 		/// <summary>Access to the test text field</summary>

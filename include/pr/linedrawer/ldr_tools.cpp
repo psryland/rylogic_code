@@ -138,12 +138,12 @@ namespace pr
 				pr::v4 p0 = m_point0;  p0.x = m_point1.x;
 				pr::v4 p1 = p0;        p1.y = m_point1.y;
 
-				std::string str;
-				GroupStart(str, "Measurement");
-				Line(str, "dist" , 0xFFFFFFFF, m_point0, m_point1);
-				Line(str, "distX", 0xFFFF0000, m_point0, p0);
-				Line(str, "distY", 0xFF00FF00, p0, p1);
-				Line(str, "distZ", 0xFF0000FF, p1, m_point1);
+				std::wstring str;
+				GroupStart(str, L"Measurement");
+				Line(str, L"dist" , 0xFFFFFFFF, m_point0, m_point1);
+				Line(str, L"distX", 0xFFFF0000, m_point0, p0);
+				Line(str, L"distY", 0xFF00FF00, p0, p1);
+				Line(str, L"distZ", 0xFF0000FF, p1, m_point1);
 				GroupEnd(str);
 
 				ParseResult out;
@@ -320,11 +320,11 @@ namespace pr
 			// Create graphics
 			if (m_origin != m_point0 || m_origin != m_point1)
 			{
-				std::string str;
-				GroupStart(str, "AngleDlg");
-				Line(str, "edge0", 0xFFFFFFFF, m_origin, m_point0);
-				Line(str, "edge1", 0xFFFFFF00, m_origin, m_point1);
-				Line(str, "edge2", 0xFF00FF00, m_point0, m_point1);
+				std::wstring str;
+				GroupStart(str, L"AngleDlg");
+				Line(str, L"edge0", 0xFFFFFFFF, m_origin, m_point0);
+				Line(str, L"edge1", 0xFFFFFF00, m_origin, m_point1);
+				Line(str, L"edge2", 0xFF00FF00, m_point0, m_point1);
 				GroupEnd(str);
 
 				ParseResult out;

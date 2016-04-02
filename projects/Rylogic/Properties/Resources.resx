@@ -199,4 +199,10 @@
 	<data name="check_reject" type="System.Resources.ResXFileRef, System.Windows.Forms">
 		<value>..\resources\check_reject.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
 	</data>
+	<data name="folder" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\resources\folder.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
+	<data name="file" type="System.Resources.ResXFileRef, System.Windows.Forms">
+		<value>..\resources\file.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+	</data>
 </root>

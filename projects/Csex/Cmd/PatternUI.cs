@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using pr.extn;
 using pr.gui;
 
 namespace Csex
@@ -36,12 +37,7 @@ namespace Csex
 
 		public override int Run()
 		{
-			using (var f = new Form{Text="Pattern Test", Size = new Size(1024,768), FormBorderStyle = FormBorderStyle.Sizable, StartPosition = FormStartPosition.CenterScreen})
-			{
-				var c = new pr.gui.PatternUI(){Dock = DockStyle.Fill};
-				f.Controls.Add(c);
-				f.ShowDialog();
-			}
+			new pr.gui.PatternUI().FormWrap(title:"Edit Pattern", sz:new Size(1024,768), start_pos:FormStartPosition.CenterScreen).ShowDialog();
 			return 0;
 		}
 	}

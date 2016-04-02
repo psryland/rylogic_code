@@ -155,6 +155,9 @@ namespace pr.gui
 		private string m_impl_disp_prop;
 		private PropertyInfo m_disp_prop;
 
+		/// <summary>True when the text in the combo was last modified by the user (like the TextBox.Modified property)</summary>
+		public bool Modified { get; private set; }
+
 		/// <summary>Display using the 'DisplayProperty' if specified</summary>
 		protected override void OnFormat(ListControlConvertEventArgs e)
 		{
@@ -182,18 +185,18 @@ namespace pr.gui
 		/// <summary>Update the selection whenever the text changes</summary>
 		protected override void OnTextUpdate(EventArgs e)
 		{
+			Modified = true;
 			base.OnTextUpdate(e);
 			if (PreserveSelectionThruFocusChange)
 				SaveSelection();
 		}
 
-		///// <summary>Update the selection whenever the text changes</summary>
-		//protected override void OnTextChanged(EventArgs e)
-		//{
-		//	base.OnTextChanged(e);
-		//	if (PreserveSelectionThruFocusChange)
-		//		SaveSelection();
-		//}
+		/// <summary>Clear the Modified flag after text changed</summary>
+		protected override void OnTextChanged(EventArgs e)
+		{
+			base.OnTextChanged(e);
+			Modified = false;
+		}
 
 		/// <summary>Save the selection after it has been changed by mouse selection</summary>
 		protected override void OnMouseUp(MouseEventArgs e)

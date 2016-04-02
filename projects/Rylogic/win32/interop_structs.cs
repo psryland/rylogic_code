@@ -111,7 +111,7 @@ namespace pr.win32
 
 		// Used by the FindFirstFile or FindNextFile functions.
 		[Serializable, StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto), BestFitMapping(false)]
-		public class WIN32_FIND_DATA
+		public struct WIN32_FIND_DATA
 		{
 			public FileAttributes dwFileAttributes;
 			public uint ftCreationTime_dwLowDateTime;
@@ -263,6 +263,19 @@ namespace pr.win32
 			public int yHotspot;
 			public IntPtr hbmMask;
 			public IntPtr hbmColor;
+		}
+
+		[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Auto, Pack=1)] 
+		public struct SHFILEOPSTRUCT 
+		{
+				public IntPtr hwnd; 
+				[MarshalAs(UnmanagedType.U4)] public int wFunc; 
+				public string pFrom; 
+				public string pTo; 
+				public short fFlags; 
+				[MarshalAs(UnmanagedType.Bool)] public bool fAnyOperationsAborted; 
+				public IntPtr hNameMappings; 
+				public string lpszProgressTitle; 
 		}
 	}
 }

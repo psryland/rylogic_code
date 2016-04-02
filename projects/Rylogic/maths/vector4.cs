@@ -62,8 +62,10 @@ namespace pr.maths
 		public override string ToString()                       { return ToString4(); }
 
 		public float[] ToArray()                                { return new[]{x, y, z, w}; }
-		public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
-		public static implicit operator float[](v4 p)           { return p.ToArray(); }
+
+		// Removed because these get called when converting v4 to an object type. e.g. v4? x = v4.TryParse4("", out v) ? v : null. 
+		//public static implicit operator v4(float[] a)           { return new v4(a[0], a[1], a[2], a[3]); }
+		//public static implicit operator float[](v4 p)           { return p.ToArray(); }
 
 		public v4 w0 { get { return new v4(x, y, z, 0); } }
 		public v4 w1 { get { return new v4(x, y, z, 1); } }
@@ -221,11 +223,6 @@ namespace pr.maths
 			if (values.Length != 4) throw new FormatException("v4.Parse4() string argument does not represent a 4 component vector");
 			return new v4(float.Parse(values[0]), float.Parse(values[1]), float.Parse(values[2]), float.Parse(values[3]));
 		}
-		public static bool TryParse3(string s)
-		{
-			v4 dummy;
-			return TryParse3(s, out dummy, 0f);
-		}
 		public static bool TryParse3(string s, out v4 vec, float w)
 		{
 			vec = Zero;
@@ -234,10 +231,10 @@ namespace pr.maths
 			vec.w = w;
 			return values.Length == 3 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z);
 		}
-		public static bool TryParse4(string s)
+		public static v4? TryParse3(string s, float w)
 		{
-			v4 dummy;
-			return TryParse4(s, out dummy);
+			v4 vec;
+			return TryParse3(s, out vec, w) ? (v4?)vec : null;
 		}
 		public static bool TryParse4(string s, out v4 vec)
 		{
@@ -245,6 +242,11 @@ namespace pr.maths
 			if (s == null) return false;
 			string[] values = s.Split(new char[]{' ',',','\t'},4);
 			return  values.Length == 4 && float.TryParse(values[0], out vec.x) && float.TryParse(values[1], out vec.y) && float.TryParse(values[2], out vec.z) && float.TryParse(values[3], out vec.w);
+		}
+		public static v4? TryParse4(string s)
+		{
+			v4 vec;
+			return TryParse4(s, out vec) ? (v4?)vec : null;
 		}
 	}
 }

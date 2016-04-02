@@ -122,6 +122,9 @@ namespace pr.gui
 		}
 		protected override void Dispose(bool disposing)
 		{
+			if (Options.DisposeContent)
+				Util.DisposeAll(m_all_content.Select(x => x.DockControl.Owner));
+
 			Root = null;
 			m_all_content.Clear();
 			m_floaters = Util.DisposeAll(m_floaters);
@@ -2764,6 +2767,7 @@ namespace pr.gui
 		{
 			public OptionData()
 			{
+				DisposeContent            = true;
 				AllowUserDocking          = true;
 				DoubleClickTitleBarToDock = true;
 				IndicatorPadding          = 15;
@@ -2771,6 +2775,9 @@ namespace pr.gui
 				TabStrip                  = new TabStripData();
 				AutoHideStrip             = new TabStripData();
 			}
+
+			/// <summary>Get/Set whether content in the dock container is disposed along with the container</summary>
+			public bool DisposeContent { get; set; }
 
 			/// <summary>Get/Set whether the user is allowed to drag and drop panes</summary>
 			public bool AllowUserDocking { get; set; }

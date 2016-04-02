@@ -830,6 +830,12 @@ namespace pr.extn
 			return (DataGridViewContentAlignment)(1 << (y*3 + x));
 		}
 
+		/// <summary>Return the bounds of this cell in DGV space</summary>
+		public static Rectangle CellBounds(this DataGridViewCell cell, bool cut_overflow)
+		{
+			return cell.DataGridView.GetCellDisplayRectangle(cell.ColumnIndex, cell.RowIndex, cut_overflow);
+		}
+
 		/// <summary>Temporarily remove the data source from this grid</summary>
 		public static Scope PauseBinding(this DataGridView grid)
 		{
@@ -1169,6 +1175,7 @@ namespace pr.extn
 				m_dgv_state = new Dictionary<string, object>();
 				m_header_cells = new FilterHeaderCell[m_dgv.ColumnCount];
 				m_bs = new RuntimeBindingSource(dgv);
+				ShortcutKey = Keys.F;
 
 				m_dgv.Disposed += HandleGridDisposed;
 			}
@@ -1264,7 +1271,7 @@ namespace pr.extn
 				/// <summary>Create a view of the data from the binding source using the given filter</summary>
 				public object DataSource(Func<object,bool> filter)
 				{
-					m_view = Util.Dispose((IDisposable)m_view);
+					((IDisposable)m_view)?.Dispose();
 					return m_view = m_create_view.Invoke(m_bs, new object[] { filter });
 				}
 
@@ -1310,7 +1317,7 @@ namespace pr.extn
 						// Create header cells for the current columns in the grid
 						foreach (var col in m_dgv.Columns.OfType<DataGridViewColumn>())
 						{
-							m_header_cells[col.Index] = m_header_cells[col.Index] ?? new FilterHeaderCell(col.HeaderCell, OnPatternChanged);
+							m_header_cells[col.Index] = m_header_cells[col.Index] ?? new FilterHeaderCell(this, col.HeaderCell, OnPatternChanged);
 							col.HeaderCell = m_header_cells[col.Index];
 						}
 
@@ -1333,9 +1340,12 @@ namespace pr.extn
 						}
 
 						// Restore the DGV state
-						m_dgv.ColumnHeadersHeight           = (int)m_dgv_state[nameof(m_dgv.ColumnHeadersHeight)];
-						m_dgv.ColumnHeadersHeightSizeMode   = (DataGridViewColumnHeadersHeightSizeMode)m_dgv_state[nameof(m_dgv.ColumnHeadersHeightSizeMode)];
-						m_dgv.ColumnHeadersDefaultCellStyle = (DataGridViewCellStyle)m_dgv_state[nameof(m_dgv.ColumnHeadersDefaultCellStyle)];
+						if (m_dgv.IsHandleCreated)
+						{
+							m_dgv.ColumnHeadersHeight           = (int)m_dgv_state[nameof(m_dgv.ColumnHeadersHeight)];
+							m_dgv.ColumnHeadersHeightSizeMode   = (DataGridViewColumnHeadersHeightSizeMode)m_dgv_state[nameof(m_dgv.ColumnHeadersHeightSizeMode)];
+							m_dgv.ColumnHeadersDefaultCellStyle = (DataGridViewCellStyle)m_dgv_state[nameof(m_dgv.ColumnHeadersDefaultCellStyle)];
+						}
 
 						// Restore back to the original data source
 						m_dgv.DataSource = m_original_src;
@@ -1343,6 +1353,9 @@ namespace pr.extn
 				}
 			}
 			private bool m_enabled;
+
+			/// <summary>The keyboard shortcut that enables/disables filters. Defaults to 'Ctrl+F'</summary>
+			public Keys ShortcutKey { get; set; }
 
 			/// <summary>
 			/// Pre-filter mouse down messages so we can intercept clicks on the filter field before
@@ -1434,17 +1447,19 @@ namespace pr.extn
 			{
 				public const int FieldHeight = 18;
 
-				public FilterHeaderCell(DataGridViewColumnHeaderCell header_cell, EventHandler on_pattern_changed = null)
+				public FilterHeaderCell(ColumnFiltersData cfd, DataGridViewColumnHeaderCell header_cell, EventHandler on_pattern_changed = null)
 				{
 					OriginalHeaderCell = header_cell;
-					Pattern = new Pattern(EPattern.Substring, string.Empty);
+					Pattern = new Pattern(EPattern.Substring, string.Empty) { IgnoreCase = true };
 					Value = OriginalHeaderCell.Value;
-					EditCtrl = new EditControl();
+					EditCtrl = new EditControl(cfd);
 
 					ContextMenuStrip = new ContextMenuStrip();
 					ContextMenuStrip.Items.Add2("Substring", null, (s,a) => Pattern.PatnType = EPattern.Substring        );
 					ContextMenuStrip.Items.Add2("Wildcard" , null, (s,a) => Pattern.PatnType = EPattern.Wildcard         );
 					ContextMenuStrip.Items.Add2("Regex"    , null, (s,a) => Pattern.PatnType = EPattern.RegularExpression);
+					ContextMenuStrip.Items.Add2(new ToolStripSeparator());
+					ContextMenuStrip.Items.Add2("Properties", null, (s,a) => ShowPatternUI());
 					ContextMenuStrip.Opening += (s,a) =>
 					{
 						((ToolStripMenuItem)ContextMenuStrip.Items[0]).Checked = Pattern.PatnType == EPattern.Substring        ;
@@ -1487,29 +1502,34 @@ namespace pr.extn
 						{
 							m_pattern.PatternChanged += HandlePatternChanged;
 						}
+						HandlePatternChanged();
 					}
 				}
 				private Pattern m_pattern;
 
 				/// <summary>Raised when the pattern expression changes</summary>
 				public event EventHandler PatternChanged;
-				private void HandlePatternChanged(object sender, EventArgs args)
+				private void HandlePatternChanged(object sender = null, EventArgs args = null)
 				{
 					PatternChanged.Raise(this);
-					ToolTipText = Pattern.IsValid ? null : Pattern.ValidateExpr().Message;
+					ToolTipText = Pattern != null && !Pattern.IsValid ? Pattern.ValidateExpr().Message : null;
 				}
 
 				/// <summary>The control used to edit the filter field</summary>
 				private EditControl EditCtrl { get; set; }
 				private class EditControl :ToolForm
 				{
-					public EditControl() :base()
+					private readonly ColumnFiltersData m_cfd;
+
+					public EditControl(ColumnFiltersData cfd) :base()
 					{
 						FormBorderStyle = FormBorderStyle.None;
 						StartPosition = FormStartPosition.Manual;
 						ShowInTaskbar = false;
 						HideOnClose = true;
 						MinimumSize = new Size(1,1);
+
+						m_cfd = cfd;
 
 						var tb = Controls.Add2(new TextBox{ Dock = DockStyle.Fill, AcceptsTab = true, AcceptsReturn = true, Multiline = true });
 						tb.KeyDown += HandleKeyDown;
@@ -1557,7 +1577,7 @@ namespace pr.extn
 
 								// Position the control over the cell
 								PinTarget = DGV;
-								var cell_bounds = DGV.GetCellDisplayRectangle(m_cell.ColumnIndex, -1, false);
+								var cell_bounds = m_cell.CellBounds(false);
 								Bounds = DGV.RectangleToScreen(m_cell.FieldBounds.Shifted(cell_bounds.TopLeft()));
 							}
 						}
@@ -1604,7 +1624,7 @@ namespace pr.extn
 						}
 
 						// Close on these keys
-						if (args.KeyCode == Keys.Enter || args.KeyCode == Keys.Escape || args.KeyCode == Keys.Tab || (args.KeyCode == Keys.F && args.Control))
+						if (args.KeyCode == Keys.Enter || args.KeyCode == Keys.Escape || args.KeyCode == Keys.Tab || (args.KeyCode == m_cfd.ShortcutKey && args.Control))
 						{
 							Hide();
 						}
@@ -1616,6 +1636,23 @@ namespace pr.extn
 				{
 					DataGridView.EndEdit();
 					EditCtrl.Show(this);
+				}
+
+				/// <summary>Show a small UI for editing the pattern</summary>
+				public void ShowPatternUI()
+				{
+					var p = new PatternUI { Dock = DockStyle.Fill };
+					using (var f = p.FormWrap(title: "Edit Pattern", loc: DataGridView.PointToScreen(this.CellBounds(false).BottomLeft())))
+					{
+						p.EditPattern(Pattern);
+						p.Commit += (s,a) =>
+						{
+							Pattern = p.Pattern;
+							f.Close();
+							DataGridView.InvalidateCell(this);
+						};
+						f.ShowDialog(DataGridView);
+					}
 				}
 
 				/// <summary>Paint the custom cell</summary>
@@ -1645,16 +1682,27 @@ namespace pr.extn
 			return null;
 		}
 
-		/// <summary>Toggle column filter fields on/off for a grid. Attach this method to KeyDown</summary>
+		/// <summary>Toggle column filter fields on/off for a grid. Attach this method to KeyDown and ensure 'ColumnFilters(create_if_necessary:true)' has been called</summary>
 		public static void ColumnFilters(object sender, EventArgs args)
 		{
 			var grid = (DataGridView)sender;
+
+			// Get the associated column filters
+			var cf = grid.ColumnFilters();
+			if (cf == null)
+				return; // not enabled
+
+			// If this is a KeyDown handler, check for the required shortcut keys
 			var ke = args as KeyEventArgs;
-			if (ke == null || (ke.Control && ke.KeyCode == Keys.F))
+			if (ke != null)
 			{
-				var cf = grid.ColumnFilters(create_if_necessary:true);
-				cf.Enabled = !cf.Enabled;
+				if (ke.Handled) return; // already handled
+				if (!(ke.Control && ke.KeyCode == cf.ShortcutKey)) return; // wrong key shortcut
+				ke.Handled = true;
 			}
+
+			// Toggle column filter fields
+			cf.Enabled = !cf.Enabled;
 		}
 
 		#endregion

@@ -37,8 +37,8 @@
 #include <shlguid.h>
 #include <uxtheme.h>
 
-#include "pr/common/fmt.h"
-#include "pr/gui/messagemap_dbg.h"
+//#include "pr/common/fmt.h"
+//#include "pr/gui/messagemap_dbg.h"
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "uxtheme.lib")
@@ -78,18 +78,15 @@ namespace pr
 		static HLISTITEM const INVALID_LIST_ITEM = -1;
 
 		#pragma region Enumerations
-		// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
-		template <typename T> struct has_bitwise_operations_allowed
+		// True (true_type) if 'T' has '_bitops_allowed' as a static member
+		template <typename T> struct bitops_allowed
 		{
-		private:
-			template <typename U> static std::true_type  check(decltype(U::_bitwise_operators_allowed)*);
+			template <typename U> static std::true_type  check(decltype(U::_bitops_allowed)*);
 			template <typename>   static std::false_type check(...);
-		public:
 			using type = decltype(check<T>(0));
 			static bool const value = type::value;
 		};
-		template <typename T> struct support_bitwise_operators :has_bitwise_operations_allowed<T>::type {};
-		template <typename T, typename = std::enable_if_t<support_bitwise_operators<T>::value>> struct bitwise_operators_enabled;
+		template <typename T> using enable_if_bitops_allowed = typename std::enable_if<bitops_allowed<T>::value>::type;
 
 		// The common control classes
 		enum class ECommonControl
@@ -113,7 +110,7 @@ namespace pr
 			StandardClasses = ICC_STANDARD_CLASSES   ,
 			LinkClass       = ICC_LINK_CLASS         ,
 			All             = ~None,
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 
 		// Auto size anchors
@@ -131,7 +128,7 @@ namespace pr
 			LeftTopRight    = Left|Top|Right,
 			LeftBottomRight = Left|Bottom|Right,
 			All             = Left|Top|Right|Bottom,
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 
 		// Window docking
@@ -189,7 +186,7 @@ namespace pr
 			NoReposition   = SWP_NOREPOSITION  ,
 			DeferErase     = SWP_DEFERERASE    ,
 			AsyncWindowpos = SWP_ASYNCWINDOWPOS,
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 
 		// Control key state
@@ -205,7 +202,7 @@ namespace pr
 			LAlt   = 1 << 4,
 			RAlt   = 1 << 5,
 			Alt    = LAlt | RAlt,
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 
 		// Mouse key state, used in mouse down/up events
@@ -220,7 +217,7 @@ namespace pr
 			XButton1 = MK_XBUTTON1,// 0x0020
 			XButton2 = MK_XBUTTON2,// 0x0040
 			Alt      = 0x0080,     // There is not MK_ define for alt, this is tested using GetKeyState
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 
 		// Style change operations
@@ -234,7 +231,7 @@ namespace pr
 		// Don't add WS_VISIBLE to the default style. Derived forms should choose when to be visible at the end of their constructors
 		// WS_OVERLAPPEDWINDOW = (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
 		// WS_POPUPWINDOW = (WS_POPUP|WS_BORDER|WS_SYSMENU)
-		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for Dx apps
+		// WS_EX_COMPOSITED adds automatic double buffering, which doesn't work for directX apps
 		enum :DWORD { DefaultFormStyle = DS_SETFONT | DS_FIXEDSYS | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS };
 		enum :DWORD { DefaultFormStyleEx = WS_EX_APPWINDOW | WS_EX_WINDOWEDGE };
 
@@ -256,7 +253,7 @@ namespace pr
 		enum class ERectFlags
 		{
 			ExcludeDockedChildren = 1 << 0,
-			_bitwise_operators_allowed,
+			_bitops_allowed,
 		};
 		#pragma endregion
 
@@ -304,7 +301,7 @@ namespace pr
 		inline std::wstring Widen(std::wstring const& from) { return from; }
 		inline std::wstring Widen(std::string const& from)  { return Widen(from.c_str(), from.size()); }
 
-		// Template specialised versions of the win32 api functions
+		// Template specialised versions of the win32 API functions
 		template <typename Char> struct Win32;
 		template <> struct Win32<char>
 		{
@@ -352,19 +349,19 @@ namespace pr
 		template <typename T> byte*       bptr(T*       t) { return reinterpret_cast<byte*      >(t); }
 
 		// Enum bitwise operators
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (TEnum lhs, UT rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline bool operator == (TEnum lhs, UT rhs)
 		{
 			return UT(lhs) == rhs;
 		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (TEnum lhs, UT rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline bool operator != (TEnum lhs, UT rhs)
 		{
 			return UT(lhs) != rhs;
 		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
 		{
 			return TEnum(UT(lhs) | UT(rhs));
 		}
-		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+		template <typename TEnum, typename UT = std::underlying_type<TEnum>::type, typename = enable_if_bitops_allowed<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
 		{
 			return TEnum(UT(lhs) & UT(rhs));
 		}
@@ -373,6 +370,26 @@ namespace pr
 		template <typename TCont> void append(TCont& cont, void const* x, size_t byte_count)
 		{
 			cont.insert(end(cont), bptr(x), bptr(x) + byte_count);
+		}
+
+		// FmtS
+		template <typename TChar> inline TChar const* FmtS(TChar const* format, ...)
+		{
+			static thread_local TChar buf[1024];
+			int const buf_count = _countof(buf);
+
+			struct L {
+			static int Format(char*    dst, size_t max_count, char const*    fmt, va_list arg_list) { return _vsprintf_p(dst, max_count, fmt, arg_list); }
+			static int Format(wchar_t* dst, size_t max_count, wchar_t const* fmt, va_list arg_list) { return _vswprintf_p(dst, max_count, fmt, arg_list); }
+			};
+
+			va_list arg_list;
+			va_start(arg_list, format);
+			auto n = L::Format(buf, buf_count, format, arg_list);
+			buf[n >= 0 ? std::min(buf_count-1, n) : 0] = 0;
+			va_end(arg_list);
+
+			return buf;
 		}
 
 		// Convert an error code into an error message
@@ -513,7 +530,7 @@ namespace pr
 			Point& bottomright()                          { return points()[1]; }
 
 			// This functions return false if the result is a zero rect (that's why I'm not using Throw())
-			// The returned rect is the the bounding box of the geometric operation (note how that effects subtract)
+			// The returned rect is the bounding box of the geometric operation (note how that effects subtract)
 			bool Contains(Point const& pt, bool incl = false) const
 			{
 				return incl
@@ -614,7 +631,7 @@ namespace pr
 				MaxPosition  = 1 << 1,
 				MinTrackSize = 1 << 2,
 				MaxTrackSize = 1 << 3,
-				_bitwise_operators_allowed,
+				_bitops_allowed,
 			};
 			EMask m_mask;
 			
@@ -750,7 +767,7 @@ namespace pr
 				::wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), lpszFaceName, _TRUNCATE);
 
 				// convert nPointSize to logical units based on hDC
-				auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), nPointSize, 720)); // 72 points/inch, 10 decipoints/point
+				auto pt = Point(0, ::MulDiv(::GetDeviceCaps(hdc_, LOGPIXELSY), nPointSize, 720)); // 72 points/inch, 10 'decipoints'/point
 				auto ptOrg = Point{};
 				::DPtoLP(hdc_, &pt, 1);
 				::DPtoLP(hdc_, &ptOrg, 1);
@@ -767,7 +784,7 @@ namespace pr
 		// Note: ownership is lost with copying
 		// Controls/Forms don't own menus. Menu ownership is a convenience for callers
 		// to automatically destroy menus, almost all other use should be with non-owned menus.
-		// Note: implicit conversion constructors are delibrate
+		// Note: implicit conversion constructors are deliberate
 		struct Brush
 		{
 			HBRUSH m_obj;
@@ -840,7 +857,7 @@ namespace pr
 				// Create a 'gray' pattern
 				WORD pat[8] = {0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa, 0x5555, 0xaaaa};
 				auto bm_gray = CreateBitmap(8, 8, 1, 1, &pat);
-				Throw(bm_gray != nullptr, "Failed to create halftone brush");
+				Throw(bm_gray != nullptr, "Failed to create half-tone brush");
 				auto bsh = ::CreatePatternBrush(bm_gray);
 				::DeleteObject(bm_gray);
 				return std::move(Brush(bsh, true));
@@ -933,7 +950,7 @@ namespace pr
 		{
 			HINSTANCE m_hinst;
 			ATOM      m_atom;
-			bool      m_unreg; // True to unregister on destruction
+			bool      m_unreg; // True to un-register on destruction
 
 			// 'm_unreg' is set to false on copying
 			~WndClassEx()
@@ -1033,7 +1050,7 @@ namespace pr
 				String     = MIIM_STRING,
 				Submenu    = MIIM_SUBMENU,
 				Type       = MIIM_TYPE,
-				_bitwise_operators_allowed,
+				_bitops_allowed,
 			};
 			enum class EType :UINT
 			{
@@ -1047,7 +1064,7 @@ namespace pr
 				RightOrder   = MFT_RIGHTORDER,
 				Separator    = MFT_SEPARATOR,
 				String       = MFT_STRING,
-				_bitwise_operators_allowed,
+				_bitops_allowed,
 			};
 			enum class EState :UINT
 			{
@@ -1059,7 +1076,7 @@ namespace pr
 				Disabled = MFS_DISABLED,
 				Hilite   = MFS_HILITE,
 				Unhilite = MFS_UNHILITE,
-				_bitwise_operators_allowed,
+				_bitops_allowed,
 			};
 			enum class EStockBmp :INT_PTR
 			{
@@ -1144,7 +1161,7 @@ namespace pr
 			// Note: ownership is lost with copying.
 			// Controls/Forms don't own menus. Menu ownership is a convenience for callers
 			// to automatically destroy menus, almost all other uses should be with non-owned menus.
-			// Note: implicit conversion constructors are delibrate
+			// Note: implicit conversion constructors are deliberate
 			~Menu()
 			{
 				if (m_owned)
@@ -1247,7 +1264,7 @@ namespace pr
 				Throw(::InsertMenuItemW(m_menu, i, TRUE, &info), "Insert menu item failed");
 			}
 
-			// Set a popup menu by name. If it exists already, then it is replaced, otherwise insert
+			// Set a pop-up menu by name. If it exists already, then it is replaced, otherwise insert
 			void Set(wchar_t const* text, Menu& submenu)
 			{
 				auto index = IndexByName(text);
@@ -1259,7 +1276,7 @@ namespace pr
 
 		#pragma region EventHandler
 
-		// Returns an identifier for uniquely id'ing event handlers
+		// Returns an identifier for uniquely identifying event handlers
 		using EventHandlerId = unsigned long long;
 		inline EventHandlerId GenerateEventHandlerId()
 		{
@@ -1440,7 +1457,7 @@ namespace pr
 			}
 			void operator -= (EventHandlerId handler_id)
 			{
-				// Note, can't use -= (Delegate func) because std::function<> does not allow operator ==
+				// Note, can't use -= (Delegate function) because std::function<> does not allow operator ==
 				auto iter = std::find_if(begin(m_handlers), end(m_handlers), [=](Func const& func){ return func.m_id == handler_id; });
 				if (iter != end(m_handlers)) m_handlers.erase(iter);
 			}
@@ -1460,7 +1477,7 @@ namespace pr
 		// or 'TranslateAccelerator'
 		struct IMessageFilter
 		{
-			// Implementors should return true to halt processing of the message.
+			// Implementers should return true to halt processing of the message.
 			// Typically, if you're just observing messages as they go past, return false.
 			// If you're a dialog return the result of IsDialogMessage()
 			// If you're a window with accelerators, return the result of TranslateAccelerator()
@@ -1473,7 +1490,7 @@ namespace pr
 		// Base class and basic implementation of a message loop
 		struct MessageLoop :IMessageFilter
 		{
-			// The collection of message filters filtering msgs in this loop
+			// The collection of message filters filtering messages in this loop
 			std::vector<IMessageFilter*> m_filters;
 
 			virtual ~MessageLoop() {}
@@ -1598,13 +1615,13 @@ namespace pr
 
 			// Handle auto position/size
 			// Adjusts x,y,w,h to be positioned and sized related to 'relto'
-			// 'relto' is a proxy that provides the dimensions of the parent client area and sibling controls parent space rects.
+			// 'relto' is a proxy that provides the dimensions of the parent client area and sibling controls parent space rect's.
 			// All aligning is done after margins have been added. 'relto' should return bounds that include margins.
 			template <typename RelTo> void CalcPosSize(int& x, int& y, int& w, int& h, Rect const& margin, RelTo const& relto)
 			{
 				// Set the width/height and x/y position
 				// 'X' is the x position, 'W' is the width, 'L' is the left margin, 'R' is the right margin
-				// 'i' is 0 for the X-axis, 1 for th Y-axis (i.e. Y, height positioning)
+				// 'i' is 0 for the X-axis, 1 for the Y-axis (i.e. Y, height positioning)
 				auto auto_size = [=](int& X, int& W, int L, int R, int i)
 				{
 					auto fill = (W & AutoSizeMask) == Fill;
@@ -1749,7 +1766,7 @@ namespace pr
 					});
 
 				// If 'style' includes DS_SETFONT then windows expects the header to be followed by
-				// font data consisting of a 16-bit font size, and unicode font name string
+				// font data consisting of a 16-bit font size, and Unicode font name string
 				if (p.m_font_name != nullptr)
 					style |= DS_SETFONT;
 				else
@@ -1789,7 +1806,7 @@ namespace pr
 				}
 
 				// Following the DLGTEMPLATE header in a standard dialog box template are one or more DLGITEMTEMPLATE structures that
-				// define the dimensions and style of the controls in the dialog box. The cdit member specifies the number of
+				// define the dimensions and style of the controls in the dialog box. The 'cdit' member specifies the number of
 				// DLGITEMTEMPLATE structures in the template. These DLGITEMTEMPLATE structures must be aligned on *DWORD* boundaries.
 			}
 
@@ -1899,7 +1916,7 @@ namespace pr
 				AddString(p.m_text);
 
 				// The creation data array begins at the next WORD boundary after the title array. This creation data can be of any size
-				// and format. If the first word of the creation data array is nonzero, it indicates the size, in bytes, of the creation
+				// and format. If the first word of the creation data array is non-zero, it indicates the size, in bytes, of the creation
 				// data (including the size word). The control's window procedure must be able to interpret the data. When the system
 				// creates the control, it passes a pointer to this data in the lParam parameter of the WM_CREATE message that it sends to the control.
 				creation_data_size_in_bytes += (creation_data_size_in_bytes != 0) * sizeof(creation_data_size_in_bytes); // include the size of 'creation_data_size_in_bytes'
@@ -1979,8 +1996,8 @@ namespace pr
 			DlgTemplate const* m_templ;
 			wchar_t const*     m_font_name;
 			WORD               m_font_size;
-			Rect               m_margin;     // Stored as an addition to the bounding rect (i.e. -ve l,t)
-			Rect               m_padding;    // Stored as an addition to the bounding rect (i.e. -ve l,t)
+			Rect               m_margin;     // Stored as an addition to the bounding rect (i.e. negative l,t)
+			Rect               m_padding;    // Stored as an addition to the bounding rect (i.e. negative l,t)
 
 			Params(ECreate create, int w, int h, DWORD style, DWORD style_ex, bool top_level, bool dlg_behaviour)
 				:m_name         ()
@@ -2292,7 +2309,7 @@ namespace pr
 			static HCURSOR WndCursor(HINSTANCE hinst)
 			{
 				(void)hinst;
-				auto cur = ::LoadCursor(nullptr, IDC_ARROW); // Load arrow from the system, not this exe image
+				auto cur = ::LoadCursor(nullptr, IDC_ARROW); // Load arrow from the system, not this EXE image
 				Throw(cur != nullptr, "Failed to load default arrow cursor");
 				return cur;
 			}
@@ -2369,7 +2386,7 @@ namespace pr
 
 			// Handy debugging method for displaying WM_MESSAGES
 			// Call with 'hwnd' == 0, message = 0/1 to disable/enable trace
-			#define PR_WNDPROCDEBUG 1
+			#define PR_WNDPROCDEBUG 0
 			#if PR_WNDPROCDEBUG
 			static void WndProcDebug(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, char const* name = nullptr)
 			{
@@ -2412,7 +2429,7 @@ namespace pr
 			// WndProc is called by windows, Forms forward messages to their child controls using 'ProcessWindowMessage'
 			virtual LRESULT WndProc(UINT message, WPARAM wparam, LPARAM lparam)
 			{
-				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s WndProc: ",m_name.c_str()));
+				//WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("%s WndProc: ",m_name.c_str()));
 				switch (message)
 				{
 				case WM_GETCTRLPTR:
@@ -2653,7 +2670,7 @@ namespace pr
 				//   - This control is not necessarily a child control, it can be the Form using
 				//     the default implementation, or an owned form.
 
-				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s ProcWinMsg: ",m_name.c_str()));
+				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("%s ProcWinMsg: ",m_name.c_str()));
 				switch (message)
 				{
 				case WM_INITDIALOG:
@@ -4166,7 +4183,7 @@ namespace pr
 			{
 				#if PR_WNDPROCDEBUG
 				RAII<int> nest(wnd_proc_nest(), wnd_proc_nest()+1);
-				//WndProcDebug(m_hwnd, message, wparam, lparam, pr::FmtS("%s FormWndProc: ", m_name.c_str()));
+				//WndProcDebug(m_hwnd, message, wparam, lparam, FmtS("%s FormWndProc: ", m_name.c_str()));
 				#endif
 
 				LRESULT result = S_OK;
@@ -4208,7 +4225,7 @@ namespace pr
 				//     Control::WndProc() - otherwise the WndProc for the window handles it (in the base class)
 				//  Some events in Control::WndProc() have handler virtual functions
 
-				//WndProcDebug(hwnd, message, wparam, lparam, pr::FmtS("%s FormProcWinMsg: ",m_name.c_str()));
+				//WndProcDebug(hwnd, message, wparam, lparam, FmtS("%s FormProcWinMsg: ",m_name.c_str()));
 				switch (message)
 				{
 				case WM_INITDIALOG:
@@ -5311,7 +5328,7 @@ namespace pr
 			enum { DefW = 80, DefH = 80 };
 			enum :DWORD { DefaultStyle   = DefaultControlStyle | BS_GROUPBOX };
 			enum :DWORD { DefaultStyleEx = DefaultControlStyleEx };
-			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, groupbox's use the button window class
+			static wchar_t const* WndClassName() { return L"BUTTON"; } // yes, group-box's use the button window class
 			struct Params :CtrlParams
 			{
 				Params() { wndclass(WndClassName()).name("grp").wh(DefW, DefH).style(DefaultStyle).style_ex(DefaultStyleEx); }
@@ -5600,7 +5617,7 @@ namespace pr
 				// Insert the item at the end of the tab control
 				index = index != -1 ? index : TabCount();
 				index = int(::SendMessageW(m_hwnd, TCM_INSERTITEMW, WPARAM(index), LPARAM(&item)));
-				Throw(index != -1, pr::FmtS("Failed to add tab %s", Narrow(label).c_str()));
+				Throw(index != -1, FmtS("Failed to add tab %s", Narrow(label).c_str()));
 
 				// Add the tab
 				m_tabs.push_back(&tab);
@@ -5637,7 +5654,7 @@ namespace pr
 					active_tab_index = new_tab_count - 1;
 
 				// Remove the item from the view list
-				Throw(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, pr::FmtS("Failed to delete tab %d", tab_index));
+				Throw(::SendMessageW(m_hwnd, TCM_DELETEITEM, tab_index, 0) != 0, FmtS("Failed to delete tab %d", tab_index));
 				m_tabs.erase(std::begin(m_tabs) + tab_index);
 				tab->Parent(nullptr);
 
@@ -5664,7 +5681,7 @@ namespace pr
 				info.mask = mask;
 				info.pszText = buf;
 				info.cchTextMax = buf_count;
-				Throw(::SendMessage(m_hwnd, TCM_GETITEMW, tab_index, LPARAM(&info)) != 0, pr::FmtS("Failed to read item info for tab %d", tab_index));
+				Throw(::SendMessage(m_hwnd, TCM_GETITEMW, tab_index, LPARAM(&info)) != 0, FmtS("Failed to read item info for tab %d", tab_index));
 				return info;
 			}
 
@@ -5789,7 +5806,7 @@ namespace pr
 			// Throw if 'tab_index' is invalid
 			void ValidateTabIndex(int tab_index) const
 			{
-				Throw(tab_index >= 0 && tab_index < TabCount(), pr::FmtS("Tab index (%d) out of range", tab_index));
+				Throw(tab_index >= 0 && tab_index < TabCount(), FmtS("Tab index (%d) out of range", tab_index));
 			}
 
 			// Switch from tab 'old' to tab 'neu'
@@ -6152,12 +6169,12 @@ namespace pr
 				{
 					if (opts.m_handler == nullptr) return;
 					Throw(m_fd->Advise(opts.m_handler, &opts.m_handler_cookie), "Failed to assign file open/save event handler");
-					m_opts = &opts; // use the saved pointer to indicate unadvise is needed
+					m_opts = &opts; // use the saved pointer to indicate 'unadvise' is needed
 				}
 				~EvtHook()
 				{
 					if (m_opts == nullptr) return;
-					Throw(m_fd->Unadvise(m_opts->m_handler_cookie), "Failed to unregister file open/save dialog event handler");
+					Throw(m_fd->Unadvise(m_opts->m_handler_cookie), "Failed to un-register file open/save dialog event handler");
 				}
 			} evt_hook(fd.p, opts);
 
@@ -6208,7 +6225,7 @@ namespace pr
 						for (DWORD i = 0; i != count; ++i)
 						{
 							CComPtr<IShellItem> item;
-							Throw(items->GetItemAt(i, &item), pr::FmtS("Failed to read result %d from the file open dialog results", i));
+							Throw(items->GetItemAt(i, &item), FmtS("Failed to read result %d from the file open dialog results", i));
 						
 							wchar_t* fpath;
 							Throw(item->GetDisplayName(SIGDN_FILESYSPATH, &fpath), "Failed to read the filepath from an open file dialog result");

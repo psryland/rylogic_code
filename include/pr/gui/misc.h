@@ -5,13 +5,8 @@
 #pragma once
 
 #include <string>
-//#include <windows.h>
 #include <atlbase.h>
 #include <atlapp.h>
-//#include <atlwin.h>
-//#include <atlframe.h>
-//#include <atlctrls.h>
-//#include <atldlgs.h>
 #include "pr/common/min_max_fix.h"
 #include "pr/common/assert.h"
 #include "pr/container/byte_data.h"

@@ -13,7 +13,7 @@ namespace pr
 {
 	namespace script
 	{
-		// Interface to a stream of wchar_t's, essentually a pointer-like interface
+		// Interface to a stream of wchar_t's, essentially a pointer-like interface
 		struct Src
 		{
 			virtual ~Src() {}
@@ -52,7 +52,7 @@ namespace pr
 		};
 
 		// Allow any type that implements a pointer to implement 'Src'
-		template <typename TPtr, typename TLoc = TextLoc> struct Ptr :Src
+		template <typename TPtr, bool UTF8 = false, typename TLoc = TextLoc> struct Ptr :Src
 		{
 			TPtr m_ptr; // The pointer-like data source
 			TLoc m_loc;
@@ -76,7 +76,7 @@ namespace pr
 			// Pointer-like interface
 			wchar_t operator * () const override
 			{
-				return wchar_t(*m_ptr);
+				return output_char();
 			}
 			Ptr& operator ++() override
 			{
@@ -85,9 +85,25 @@ namespace pr
 				++m_ptr;
 				return *this;
 			}
+
+		private:
+
+			// Convert a char stream into ASCII or utf8
+			template <typename = std::enable_if<!UTF8>> wchar_t output_char() const
+			{
+				return wchar_t(*m_ptr);
+			}
+			template <typename = std::enable_if<UTF8>> wchar_t output_char(int = 0) const
+			{
+				wchar_t ch;
+				auto state = std::mbstate_t{};
+				std::mbsrtowcs(&ch, &m_ptr, 1, &state);
+				return ch;
+			}
 		};
-		template <typename TLoc = TextLoc> using PtrA = Ptr<char const*, TLoc>;
-		template <typename TLoc = TextLoc> using PtrW = Ptr<wchar_t const*, TLoc>;
+		template <typename TLoc = TextLoc> using PtrA = Ptr<char const*, false, TLoc>;
+		template <typename TLoc = TextLoc> using PtrUTF8 = Ptr<char const*, true, TLoc>;
+		template <typename TLoc = TextLoc> using PtrW = Ptr<wchar_t const*, false, TLoc>;
 
 		// A pointer range char source
 		template <typename TPtr, typename TLoc = TextLoc> struct PtrRange :Src

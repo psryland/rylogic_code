@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows.Forms;
 using pr.extn;
+using pr.util;
 
 namespace pr.container
 {
@@ -153,9 +154,28 @@ namespace pr.container
 			get { return m_bs.AllowRemove; }
 		}
 
-		/// <summary>Get/Set whether the underlying list can be sorted by through this binding</summary>
+		/// <summary>Get/Set whether the underlying list can be sorted through this binding</summary>
 		[Browsable(false)]
-		public virtual bool AllowSort { get; set; }
+		public virtual bool AllowSort
+		{
+			get
+			{
+				var bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null) return bl.AllowSort;
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) return bs.AllowSort;
+				return m_impl_allow_sort;
+			}
+			set
+			{
+				m_impl_allow_sort = value;
+				var bl = m_bs.DataSource as BindingListEx<TItem>;
+				if (bl != null) { bl.AllowSort = value; return; }
+				var bs = m_bs.DataSource as BindingSource<TItem>;
+				if (bs != null) { bs.AllowSort = value; return; }
+			}
+		}
+		private bool m_impl_allow_sort;
 
 		/// <summary>Get/Set whether the Position can be set to -1 when the binding source contains items</summary>
 		[Browsable(false)]
@@ -715,10 +735,16 @@ namespace pr.container
 		/// <param name="metadataChanged">true if the data schema has changed; false if only values have changed.</param>
 		public void ResetBindings(bool metadataChanged)
 		{
+			var idx = m_bs.Position;
+
 			if (RaiseListChangedEvents)
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.PreReset, -1, default(TItem)));
 
 			m_bs.ResetBindings(metadataChanged);
+
+			// Preserve the current position if possible
+			if (idx >= 0 && idx < m_bs.Count)
+				m_bs.Position = idx;
 
 			if (RaiseListChangedEvents)
 				RaiseListChanging(this, new ListChgEventArgs<TItem>(ListChg.Reset, -1, default(TItem)));
@@ -755,12 +781,14 @@ namespace pr.container
 		}
 
 		/// <summary>Reset bindings for 'item'</summary>
-		public void ResetItem(TItem item)
+		public void ResetItem(TItem item, bool ignore_missing = false)
 		{
 			var idx = List.IndexOf(item);
-			if ((idx < 0 || idx >= List.Count) && !Equals(item, default(TItem)))
+			if (idx < 0 || idx >= List.Count)
+			{
+				if (ignore_missing || Equals(item, default(TItem))) return;
 				throw new IndexOutOfRangeException("Cannot reset a value that isn't in this collection");
-
+			}
 			ResetItem(idx);
 		}
 		
@@ -1042,6 +1070,19 @@ namespace pr.container
 				view.Position = a.NewIndex;
 			};
 
+			// Clean up the view if the binding source is disposed
+			bs.Disposed += (s,a) =>
+			{
+				bs.DataSource = Util.Dispose((View)bs.DataSource);
+			};
+
+			// Clean up the binding source if the view gets disposed
+			view.Disposed += (s,a) =>
+			{
+				bs.DataSource = null;
+				bs.Dispose();
+			};
+
 			return bs;
 		}
 
@@ -1060,10 +1101,14 @@ namespace pr.container
 			}
 			public void Dispose()
 			{
+				Disposed.Raise(this);
 				BindingSource = null;
 				Predicate = null;
 				Index = null;
 			}
+
+			/// <summary>Raised just before this view is disposed</summary>
+			public event EventHandler Disposed;
 
 			/// <summary>The indices of the elements visible in this view</summary>
 			public BindingListEx<int> Index
@@ -1115,12 +1160,14 @@ namespace pr.container
 					{
 						m_bs.ListChanging -= HandleSourceChanging;
 						m_bs.PositionChanged -= HandleSourcePositionChanged;
+						m_bs.Disposed -= HandleBindingSourceDisposed;
 					}
 					m_bs = value;
 					if (m_bs != null)
 					{
 						m_bs.ListChanging += HandleSourceChanging;
 						m_bs.PositionChanged += HandleSourcePositionChanged;
+						m_bs.Disposed += HandleBindingSourceDisposed;
 					}
 					UpdateView();
 				}
@@ -1242,6 +1289,12 @@ namespace pr.container
 			{
 				if (ListChanged == null) return;
 				ListChanged(this, e);
+			}
+
+			/// <summary>If the owning binding source is disposed, dispose this view as well</summary>
+			private void HandleBindingSourceDisposed(object sender, EventArgs e)
+			{
+				Dispose();
 			}
 
 			#region IEnumerable

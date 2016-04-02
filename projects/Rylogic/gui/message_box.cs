@@ -179,7 +179,7 @@ namespace pr.gui
 			UpdateLayout();
 			if (StartPosition == FormStartPosition.CenterParent)
 			{
-				if (ParentForm != null)
+				if (Owner != null)
 					CenterToParent();
 				else
 					CenterToScreen();

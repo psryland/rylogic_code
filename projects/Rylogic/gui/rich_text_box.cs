@@ -17,6 +17,12 @@ namespace pr.gui
 		[DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)] private static extern IntPtr SendMessage(IntPtr hWnd, Int32 wMsg, Int32 wParam, ref Point lParam);
 		[DllImport("user32", CharSet = CharSet.Unicode, SetLastError = true)] private static extern IntPtr SendMessage(IntPtr hWnd, Int32 wMsg, Int32 wParam, IntPtr lParam);
 
+		public RichTextBox()
+		{
+			Win32.SetStyleEx(Handle, Win32.WS_EX_STATICEDGE, false);
+			Win32.SetStyleEx(Handle, Win32.WS_EX_CLIENTEDGE, false);
+		}
+
 		/// <summary>Try to load RichEdit5.0 if available</summary>
 		protected override System.Windows.Forms.CreateParams CreateParams
 		{
@@ -26,8 +32,6 @@ namespace pr.gui
 				if (Win32.LoadLibrary("msftedit.dll") != IntPtr.Zero)
 				{
 					cparams.ClassName = "RICHEDIT50W";
-					cparams.ExStyle &= ~Win32.WS_EX_CLIENTEDGE;
-					cparams.ExStyle |=  Win32.WS_EX_STATICEDGE;
 				}
 				return cparams;
 			 }

@@ -233,6 +233,9 @@
     <Compile Include="gfx\exif.cs" />
     <Compile Include="gfx\gfx.cs" />
     <Compile Include="gfx\view3d.cs" />
+    <Compile Include="gui\browse_path_ui.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="gui\checked_groupbox.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -402,6 +405,7 @@
     <Compile Include="stream\link_stream.cs" />
     <Compile Include="common\base64.cs" />
     <Compile Include="undo\text_undo.cs" />
+    <Compile Include="gui\border_resizer.cs" />
     <Compile Include="util\clrdump.cs" />
     <Compile Include="util\compile.cs" />
     <Compile Include="util\crc16.cs" />
@@ -433,6 +437,7 @@
     <Compile Include="undo\undo.cs" />
     <Compile Include="script\template_replacer.cs" />
     <Compile Include="util\unittest.cs" />
+    <Compile Include="util\user_data.cs" />
     <Compile Include="win32\com_guids.cs" />
     <Compile Include="win32\error_codes.cs" />
     <Compile Include="win32\gdi32.cs" />
@@ -482,6 +487,9 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="gui\browse_path_ui.resx">
+      <DependentUpon>browse_path_ui.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="gui\colour_ui.resx">
       <DependentUpon>colour_ui.cs</DependentUpon>
     </EmbeddedResource>

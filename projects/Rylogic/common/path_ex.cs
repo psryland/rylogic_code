@@ -36,9 +36,10 @@ namespace pr.common
 				var fname = Path.GetFileName(filepath) ?? string.Empty;
 				var invalid_chars = Path.GetInvalidFileNameChars();
 				return
-					fname.HasValue() &&
-					IsValidDirectory(dir, require_rooted) &&
-					fname.IndexOfAny(invalid_chars) == -1;
+					fname.HasValue() &&                         // no filename
+					IsValidDirectory(dir, require_rooted) &&    // directory isn't valid
+					fname.IndexOfAny(invalid_chars) == -1 &&    // has invalid chars
+					!DirExists(filepath);                       // already exists as a directory
 			}
 			catch (Exception)
 			{
@@ -53,9 +54,10 @@ namespace pr.common
 			{
 				var invalid_chars = Path.GetInvalidPathChars().Concat(new[]{'*','?'}).ToArray();
 				return
-					dir != null &&
-					(!require_rooted || Path.IsPathRooted(dir)) &&
-					dir.IndexOfAny(invalid_chars) == -1;
+					dir != null &&                                 // null isn't valid
+					(!require_rooted || Path.IsPathRooted(dir)) && // requires root
+					dir.IndexOfAny(invalid_chars) == -1 &&         // has invalid chars
+					!FileExists(dir);                              // already exists as a file
 			}
 			catch (Exception)
 			{
@@ -79,6 +81,12 @@ namespace pr.common
 			catch { return false; }
 		}
 
+		/// <summary>True if 'file_or_directory_path' exists as a file or directory</summary>
+		public static bool PathExists(string file_or_directory_path)
+		{
+			return FileExists(file_or_directory_path) || DirExists(file_or_directory_path);
+		}
+
 		/// <summary>True if 'path' is a file</summary>
 		public static bool IsFile(string path)
 		{
@@ -95,6 +103,14 @@ namespace pr.common
 		public static bool IsEmptyDirectory(string path)
 		{
 			return IsDirectory(path) && !System.IO.Directory.EnumerateFileSystemEntries(path).Any();
+		}
+
+		/// <summary>True if 'path' represents a file or directory equal to or below 'directory'</summary>
+		public static bool IsSubPath(string directory, string path)
+		{
+			var d = Canonicalise(directory, change_case:Case.Lower);
+			var p = Canonicalise(path, change_case:Case.Lower);
+			return p.StartsWith(d);
 		}
 
 		///<summary>Returns 'full_file_path' relative to 'rel_path'</summary>
@@ -363,6 +379,25 @@ namespace pr.common
 		{
 			private readonly Win32.WIN32_FIND_DATA m_find_data;
 
+			public FileData(string dir)
+			{
+				m_find_data = new Win32.WIN32_FIND_DATA();
+				var handle = FindFirstFile(dir, ref m_find_data);
+				if (handle.IsInvalid) throw new FileNotFoundException("Failed to get WIN32_FIND_Data for {0}".Fmt(dir));
+				handle.Close();
+				FullPath = dir;
+			}
+			public FileData(string dir, ref Win32.WIN32_FIND_DATA find_data)
+			{
+				m_find_data = find_data;
+				FullPath = Path.Combine(dir, FileName);
+			}
+			public FileData(FileData rhs)
+			{
+				m_find_data = rhs.m_find_data.ShallowCopy();
+				FullPath    = rhs.FullPath;
+			}
+
 			/// <summary>Full path to the file.</summary>
 			public string FullPath { get; private set; }
 
@@ -395,17 +430,6 @@ namespace pr.common
 			public DateTime LastWriteTimeUtc { get { return  m_find_data.LastWriteTimeUtc; } }
 
 			public override string ToString() { return FullPath; }
-
-			public FileData(string dir, Win32.WIN32_FIND_DATA find_data)
-			{
-				m_find_data = find_data;
-				FullPath = Path.Combine(dir, FileName);
-			}
-			public FileData(FileData rhs)
-			{
-				m_find_data = rhs.m_find_data.ShallowCopy();
-				FullPath    = rhs.FullPath;
-			}
 		}
 
 		/// <remarks>
@@ -448,8 +472,8 @@ namespace pr.common
 				// Use the win32 find files
 				var pattern = Path.Combine(dir, "*");
 				var find_data = new Win32.WIN32_FIND_DATA();
-				var handle = FindFirstFile(pattern, find_data);
-				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, find_data))
+				var handle = FindFirstFile(pattern, ref find_data);
+				for (var more = !handle.IsInvalid; more; more = FindNextFile(handle, ref find_data))
 				{
 					// Exclude files with any of the exclude attributes
 					if ((find_data.Attributes & exclude) != 0)
@@ -458,7 +482,7 @@ namespace pr.common
 					// Filter if provided
 					if (find_data.FileName != "." && find_data.FileName != "..")
 						if (filter == null || filter.IsMatch(find_data.FileName))
-							yield return new FileData(dir, find_data);
+							yield return new FileData(dir, ref find_data);
 
 					// If the found object is a directory, see if we should be recursing
 					if (search_flags == SearchOption.AllDirectories && (find_data.Attributes & FileAttributes.Directory) == FileAttributes.Directory)
@@ -482,10 +506,10 @@ namespace pr.common
 		}
 
 		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-		private static extern SafeFindHandle FindFirstFile(string fileName, [In, Out] Win32.WIN32_FIND_DATA data);
+		private static extern SafeFindHandle FindFirstFile(string fileName, ref Win32.WIN32_FIND_DATA data);
 
 		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-		private static extern bool FindNextFile(SafeFindHandle hndFindFile, [In, Out, MarshalAs(UnmanagedType.LPStruct)] Win32.WIN32_FIND_DATA lpFindFileData);
+		private static extern bool FindNextFile(SafeFindHandle hndFindFile, ref Win32.WIN32_FIND_DATA lpFindFileData);
 
 		[DllImport("kernel32.dll")][ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
 		private static extern bool FindClose(IntPtr handle);
@@ -631,6 +655,32 @@ namespace pr.common
 
 			/// <summary>Delete only the files from the directory tree</summary>
 			FilesOnly = 1 << 2,
+		}
+
+		/// <summary>Copy a file using a Shell file operation</summary>
+		public static bool ShellCopy(string src, string dst, int flags  = Win32.FOF_SIMPLEPROGRESS, string title = "Copying Files...")
+		{
+			var shf = new Win32.SHFILEOPSTRUCT(); 
+			shf.wFunc = Win32.FO_COPY;
+			shf.fFlags = unchecked((short)flags);
+			shf.pFrom = src + "\0\0";// ensure double null termination
+			shf.pTo = dst + "\0\0";// ensure double null termination
+			shf.lpszProgressTitle = title;
+			Win32.SHFileOperation(ref shf);
+			return !shf.fAnyOperationsAborted;
+		}
+
+		/// <summary>Delete a file to the recycle bin. 'flags' should be Win32.FOF_??? flags</summary>
+		public static bool ShellDelete(string filepath, int flags = Win32.FOF_SIMPLEPROGRESS, string title = "Deleting Files...")
+		{
+
+			var shf = new Win32.SHFILEOPSTRUCT(); 
+			shf.wFunc = Win32.FO_DELETE;
+			shf.fFlags = unchecked((short)flags);//((to_recycle_bin ? Win32.FOF_ALLOWUNDO : 0) | (confirm ? Win32.FOF_NOCONFIRMATION : 0)));
+			shf.pFrom = filepath + "\0\0";// ensure double null termination
+			shf.lpszProgressTitle = title;
+			Win32.SHFileOperation(ref shf);
+			return !shf.fAnyOperationsAborted;
 		}
 	}
 }

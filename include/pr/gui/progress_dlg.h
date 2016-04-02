@@ -3,7 +3,7 @@
 //  Copyright (c) Rylogic Ltd 2014
 //***************************************************************************************************
 // Self contained progress dialog and background thread
-// No resource files, etc, needed. See unittests for usage.
+// No resource files, etc, needed. See unit tests for usage.
 
 #pragma once
 
@@ -215,7 +215,7 @@ namespace pr
 				NonBlocking        = 0,
 				BlockTillCancelled = 1 << 0,
 				OptionalCancel     = 1 << 1,
-				_bitwise_operators_allowed
+				_bitops_allowed
 			};
 			struct Params :DlgParams
 			{

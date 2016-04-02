@@ -36,8 +36,8 @@ namespace pr.container
 		private void Init()
 		{
 			PerItemClear = false;
+			AllowSort = true;
 			IsSorted = false;
-			SupportsSorting = false;
 			SortDirection = ListSortDirection.Ascending;
 			SortComparer = Comparer.DefaultInvariant;
 
@@ -64,6 +64,9 @@ namespace pr.container
 					AllowNew = AllowEdit = AllowRemove = !value;
 			}
 		}
+
+		/// <summary>Get/Set whether sorting is allowed on this list</summary>
+		public bool AllowSort { get; set; }
 
 		/// <summary>Get/Set whether calling Clear() results in events for each item or just PreReset/Reset</summary>
 		public bool PerItemClear { get; set; }
@@ -197,6 +200,10 @@ namespace pr.container
 
 		#region Sorting
 
+		/// <summary>True if the list supports sorting; otherwise, false. The default is false.</summary>
+		public bool SupportsSorting { get { return AllowSort && SortComparer != null; } }
+		protected override bool SupportsSortingCore { get { return SupportsSorting; } }
+
 		/// <summary>The comparer used for sorting</summary>
 		public IComparer SortComparer
 		{
@@ -205,14 +212,9 @@ namespace pr.container
 			{
 				if (m_impl_cmp == value) return;
 				m_impl_cmp = value;
-				SupportsSorting = m_impl_cmp != null;
 			}
 		}
 		private IComparer m_impl_cmp;
-
-		/// <summary>True if the list supports sorting; otherwise, false. The default is false.</summary>
-		private bool SupportsSorting { get; set; }
-		protected override bool SupportsSortingCore { get { return SupportsSorting; } }
 
 		/// <summary>Get/Set the direction the list is sorted. The default is ListSortDirection.Ascending.</summary>
 		public ListSortDirection SortDirection { get; set; }

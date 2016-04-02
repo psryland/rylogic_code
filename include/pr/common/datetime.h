@@ -182,52 +182,59 @@ namespace pr
 		}
 	}
 
-	// To<X>
-	template <typename TRep, typename TPeriod>
-	struct Convert<std::string, std::chrono::duration<TRep,TPeriod> >
+	// Duration to formatted string.
+	// Supported format specifiers:
+	//   %Y - years,        %y - years
+	//   %D - days,         %d - days % 365
+	//   %H - hours,        %h - hours % 24
+	//   %M - minutes       %m - minutes % 60
+	//   %S - seconds       %s - seconds % 60
+	//   %F - milliseconds  %f - milliseconds % 1000
+	//   %U - microseconds  %u - microseconds % 1000
+	//   %N - nanoseconds   %n - nanoseconds % 1000
+	// Use repeated format specifiers to indicate minimum characters
+	// e.g. %sss for 23seconds = 023
+	namespace convert
 	{
-		// To formatted string.
-		// Supported format specifiers:
-		//   %Y - years,        %y - years
-		//   %D - days,         %d - days % 365
-		//   %H - hours,        %h - hours % 24
-		//   %M - minutes       %m - minutes % 60
-		//   %S - seconds       %s - seconds % 60
-		//   %F - milliseconds  %f - milliseconds % 1000
-		//   %U - microseconds  %u - microseconds % 1000
-		//   %N - nanoseconds   %n - nanoseconds % 1000
-		// Use repeated format specifiers to indicate minimum characters
-		// e.g. %sss for 23seconds = 023
-		static std::string To(std::chrono::duration<TRep,TPeriod> duration, char const* fmt = "%s")
+		template <typename Str, typename Char = typename Str::value_type>
+		struct DateTimeToString
 		{
-			return pr::FmtF(fmt, [=](char const*& code)
+			template <typename TRep, typename TPeriod>
+			static Str To(std::chrono::duration<TRep,TPeriod> duration, Char const* fmt = nullptr)
+			{
+				fmt = fmt ? fmt : PR_STRLITERAL(Char, "%s");
+				return pr::FmtF(fmt, [=](Char const*& code)
 				{
 					using namespace std::chrono;
+					auto f = PR_STRLITERAL(Char, "%0*d");
 					int dp = 1;
 					for (auto start = code; *(code + 1) == *start; ++code) { ++dp; }
 					switch (*code)
 					{
 					default: throw std::exception("unknown string format code");
-					case 'Y': return pr::Fmt("%0*d", dp, duration_cast<years        >(duration).count()       );
-					case 'y': return pr::Fmt("%0*d", dp, duration_cast<years        >(duration).count()       );
-					case 'D': return pr::Fmt("%0*d", dp, duration_cast<days         >(duration).count()       );
-					case 'd': return pr::Fmt("%0*d", dp, duration_cast<days         >(duration).count() % 365 );
-					case 'H': return pr::Fmt("%0*d", dp, duration_cast<hours        >(duration).count()       );
-					case 'h': return pr::Fmt("%0*d", dp, duration_cast<hours        >(duration).count() % 24  );
-					case 'M': return pr::Fmt("%0*d", dp, duration_cast<minutes      >(duration).count()       );
-					case 'm': return pr::Fmt("%0*d", dp, duration_cast<minutes      >(duration).count() % 60  );
-					case 'S': return pr::Fmt("%0*d", dp, duration_cast<seconds      >(duration).count()       );
-					case 's': return pr::Fmt("%0*d", dp, duration_cast<seconds      >(duration).count() % 60  );
-					case 'F': return pr::Fmt("%0*d", dp, duration_cast<milliseconds >(duration).count()       );
-					case 'f': return pr::Fmt("%0*d", dp, duration_cast<milliseconds >(duration).count() % 1000);
-					case 'U': return pr::Fmt("%0*d", dp, duration_cast<microseconds >(duration).count()       );
-					case 'u': return pr::Fmt("%0*d", dp, duration_cast<microseconds >(duration).count() % 1000);
-					case 'N': return pr::Fmt("%0*d", dp, duration_cast<nanoseconds  >(duration).count()       );
-					case 'n': return pr::Fmt("%0*d", dp, duration_cast<nanoseconds  >(duration).count() % 1000);
+					case 'Y': return pr::Fmt(f, dp, duration_cast<years        >(duration).count()       );
+					case 'y': return pr::Fmt(f, dp, duration_cast<years        >(duration).count()       );
+					case 'D': return pr::Fmt(f, dp, duration_cast<days         >(duration).count()       );
+					case 'd': return pr::Fmt(f, dp, duration_cast<days         >(duration).count() % 365 );
+					case 'H': return pr::Fmt(f, dp, duration_cast<hours        >(duration).count()       );
+					case 'h': return pr::Fmt(f, dp, duration_cast<hours        >(duration).count() % 24  );
+					case 'M': return pr::Fmt(f, dp, duration_cast<minutes      >(duration).count()       );
+					case 'm': return pr::Fmt(f, dp, duration_cast<minutes      >(duration).count() % 60  );
+					case 'S': return pr::Fmt(f, dp, duration_cast<seconds      >(duration).count()       );
+					case 's': return pr::Fmt(f, dp, duration_cast<seconds      >(duration).count() % 60  );
+					case 'F': return pr::Fmt(f, dp, duration_cast<milliseconds >(duration).count()       );
+					case 'f': return pr::Fmt(f, dp, duration_cast<milliseconds >(duration).count() % 1000);
+					case 'U': return pr::Fmt(f, dp, duration_cast<microseconds >(duration).count()       );
+					case 'u': return pr::Fmt(f, dp, duration_cast<microseconds >(duration).count() % 1000);
+					case 'N': return pr::Fmt(f, dp, duration_cast<nanoseconds  >(duration).count()       );
+					case 'n': return pr::Fmt(f, dp, duration_cast<nanoseconds  >(duration).count() % 1000);
 					}
 				});
-		}
-	};
+			}
+		};
+	}
+	template <typename TRep, typename TPeriod, typename Char>                struct Convert<std::basic_string<Char>, std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<std::basic_string<Char>> {};
+	template <typename TRep, typename TPeriod, typename Char, int L, bool F> struct Convert<pr::string<Char,L,F>,    std::chrono::duration<TRep,TPeriod>> :convert::DateTimeToString<pr::string<Char,L,F>> {};
 
 	// Helper wrapper around 'tm'
 	struct DateTimeStruct :tm

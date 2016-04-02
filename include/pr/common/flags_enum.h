@@ -11,86 +11,84 @@
 #ifdef __cplusplus
 
 	// True (true_type) if 'T' has '_bitwise_operators_allowed' as a static member
-	template <typename T> struct has_bitwise_operations_allowed
+	template <typename T> struct has_bitwise_operators_allowed
 	{
-	private:
 		template <typename U> static std::true_type  check(decltype(U::_bitwise_operators_allowed)*);
 		template <typename>   static std::false_type check(...);
-	public:
 		using type = decltype(check<T>(0));
 		static bool const value = type::value;
 	};
-	template <typename T> struct support_bitwise_operators :has_bitwise_operations_allowed<T>::type {};
-	template <typename T, typename = std::enable_if_t<support_bitwise_operators<T>::value>> struct bitwise_operators_enabled;
+	template <typename T> using enable_if_has_bitops = typename std::enable_if<has_bitwise_operators_allowed<T>::value>::type;
 
 	// Define the operators
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator ~ (TEnum lhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator ~ (TEnum lhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(~static_cast<ut>(lhs));
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator | (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) | ut(rhs));
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator & (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) & ut(rhs));
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator ^ (TEnum lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum operator ^ (TEnum lhs, TEnum rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) ^ ut(rhs));
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator |= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs | rhs);
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator &= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs & rhs);
 	}
-	template <typename TEnum, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator ^= (TEnum& lhs, TEnum rhs)
+	template <typename TEnum, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator ^= (TEnum& lhs, TEnum rhs)
 	{
 		return lhs = (lhs ^ rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator << (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum operator << (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) << rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum operator >> (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum operator >> (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return TEnum(ut(lhs) >> rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator <<= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator <<= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs << rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline TEnum& operator >>= (TEnum& lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline TEnum& operator >>= (TEnum& lhs, T rhs)
 	{
 		return lhs = (lhs >> rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator == (TEnum lhs, T rhs)
 	{
 		using ut = typename std::underlying_type<TEnum>::type;
 		return ut(lhs) == ut(rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator == (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator == (T lhs, TEnum rhs)
 	{
 		return rhs == lhs;
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (TEnum lhs, T rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator != (TEnum lhs, T rhs)
 	{
 		return !(lhs == rhs);
 	}
-	template <typename TEnum, typename T, typename = bitwise_operators_enabled<TEnum>> inline bool operator != (T lhs, TEnum rhs)
+	template <typename TEnum, typename T, typename = enable_if_has_bitops<TEnum>> inline bool operator != (T lhs, TEnum rhs)
 	{
 		return rhs != lhs;
 	}
+
 #else
 // C does not require operators
 #endif
@@ -109,7 +107,7 @@ namespace pr
 				One   = 1,
 				Two   = 2,
 			};
-			static_assert(support_bitwise_operators<NotFlags>::value == false, "");
+			static_assert(has_bitwise_operators_allowed<NotFlags>::value == false, "");
 			
 			enum class Flags
 			{
@@ -117,7 +115,7 @@ namespace pr
 				Two   = 1 << 1,
 				_bitwise_operators_allowed,
 			};
-			static_assert(support_bitwise_operators<Flags>::value == true, "");
+			static_assert(has_bitwise_operators_allowed<Flags>::value == true, "");
 		}
 
 		PRUnitTest(pr_macros_flags_enum)
