@@ -173,26 +173,30 @@ namespace pr
 		template <bool pod> struct base_traits;
 		template <> struct base_traits<false>
 		{
-			static void construct    (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.construct(first++, Type()); } }
 			static void destruct     (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.destroy(first++); } }
-			static void copy_constr  (Allocator& alloc, Type* first, Type const* src, size_type count) { for (; count--;) { alloc.construct(first++, *src++); } }
+			static void construct    (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.default_construct(first++); } }
+			static void copy_constr  (Allocator& alloc, Type* first, Type const* src, size_type count) { for (; count--;) { alloc.copy_construct(first++, *src++); } }
+			static void move_constr  (Allocator& alloc, Type* first, Type* src, size_type count)       { for (; count--;) { alloc.move_construct(first++, std::move(*src++)); } }
 			static void copy_assign  (Type* first, Type const* src, size_type count)                   { for (; count--;) { *first++ = *src++; } }
+			static void move_assign  (Type* first, Type* src, size_type count)                         { for (; count--;) { *first++ = std::move(*src++); } }
 			static void move_left    (Type* first, Type const* src, size_type count)                   { assert(first < src); for (; count--;) { *first++ = *src++; } }
 			static void move_right   (Type* first, Type const* src, size_type count)                   { assert(first > src); for (first+=count, src+=count; count--;) { *--first = *--src; } }
 		};
 		template <> struct base_traits<true>
 		{
-			static void construct    (Allocator&, Type*, size_type)                              {}
 			static void destruct     (Allocator&, Type*, size_type)                              {}
+			static void construct    (Allocator&, Type*, size_type)                              {}
 			static void copy_constr  (Allocator&, Type* first, Type const* src, size_type count) { ::memcpy(first, src, sizeof(Type) * count); }
+			static void move_constr  (Allocator&, Type* first, Type* src, size_type count)       { ::memcpy(first, src, sizeof(Type) * count); }
 			static void copy_assign  (Type* first, Type const* src, size_type count)             { ::memcpy(first, src, sizeof(Type) * count); }
+			static void move_assign  (Type* first, Type* src, size_type count)                   { ::memcpy(first, src, sizeof(Type) * count); }
 			static void move_left    (Type* first, Type const* src, size_type count)             { ::memmove(first, src, sizeof(Type) * count); }
 			static void move_right   (Type* first, Type const* src, size_type count)             { ::memmove(first, src, sizeof(Type) * count); }
 		};
 		struct traits :base_traits<TypeIsPod>
 		{
-			static void fill_assign  (                  Type* first, size_type count, Type const& val) { for (; count--;) { *first++ = val; } }
-			static void fill_constr  (Allocator& alloc, Type* first, size_type count, Type const& val) { for (; count--;) { alloc.construct(first++, val); } }
+			static void fill_constr  (Allocator& alloc, Type* first, size_type count, Type const& val) { for (; count--;) { copy_constr(alloc, first++, &val, 1); } }
+			static void fill_assign  (                  Type* first, size_type count, Type const& val) { for (; count--;) { copy_assign(first++, &val, 1); } }
 			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args) { alloc.construct(first, std::forward<Args>(args)...); }
 		};
 
@@ -256,8 +260,8 @@ namespace pr
 				assert(((static_cast<char*>(mem) - (char*)nullptr) % TypeAlignment) == 0 && "allocated array has incorrect alignment");
 				auto new_array = static_cast<Type*>(mem);
 
-				// Copy elements from the old array to the new array
-				traits::copy_constr(alloc(), new_array, m_ptr, m_count);
+				// Move elements from the old array to the new array
+				traits::move_constr(alloc(), new_array, m_ptr, m_count);
 
 				// Destruct the old array
 				traits::destruct(alloc(), m_ptr, m_count);
@@ -717,8 +721,8 @@ namespace pr
 					new_array = alloc().allocate(new_count);
 				}
 
-				// Copy elements from the old array to the new array
-				traits::copy_constr(alloc(), new_array, m_ptr, m_count);
+				// Move elements from the old array to the new array
+				traits::move_constr(alloc(), new_array, m_ptr, m_count);
 
 				// Destruct the old array
 				traits::destruct(alloc(), m_ptr, m_count);
@@ -761,6 +765,9 @@ namespace pr
 		// Assign right of any pr::vector<>
 		template <int L,bool F,typename A> void _Assign(vector<Type,L,F,A> const& right)
 		{
+			// Notes:
+			//  - copying does not copy right.capacity() (same as std::vector)
+
 			if (!isthis(right)) // not this object
 			{
 				if (right.size() == 0) // new sequence empty, erase existing sequence
@@ -790,37 +797,59 @@ namespace pr
 		// Assign by moving right
 		template <int L,bool F,typename A> void _Assign(vector<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
-			// Same object, do nothing
-			if (isthis(right)) {}
+			// Notes:
+			// - moving *does* move right.capacity() (same as std::vector)
 
-			// Using different allocators and right.m_capacity is greater than the local count, copy right
-			else if (!(allocator() == right.allocator()) && right.capacity() > LocalLength) { _Assign(right); }
-
-			// Same allocator or less than local count, steal from right
-			else
+			if (!isthis(right)) // not this object
 			{
-				// Clean up any existing data
-				resize(0);
-				if (!local())
+				// If using different allocators => can't steal
+				// If right is locally buffered => can't steal
+				// If right's capacity is <= our local buffer size, no point in stealing
+				if (!(allocator() == right.allocator()) || right.local() || right.capacity() <= LocalCount)
 				{
-					allocator().deallocate(m_ptr, m_capacity);
-					m_ptr = local_ptr();
-					m_capacity = LocalLength;
-				}
-				if (right.capacity() <= LocalLength)
-				{
-					traits::copy_assign(m_ptr, right.m_ptr, right.size());
+					// Move the elements of right
+					if (right.size() == 0) // new sequence empty, erase existing sequence
+					{
+						clear();
+					}
+					else if (right.size() <= size()) // enough elements, move new and destroy old
+					{
+						traits::move_assign(m_ptr, right.m_ptr, right.size());
+						traits::destruct(alloc(), m_ptr + right.size(), size() - right.size());
+					}
+					else if (right.size() <= capacity()) // enough room, move and move construct new
+					{
+						traits::move_assign(m_ptr, right.m_ptr, size());
+						traits::move_constr(alloc(), m_ptr + size(), right.m_ptr + size(), right.size() - size());
+					}
+					else // not enough room, allocate new array and move construct new
+					{
+						resize(0);
+						ensure_space(right.capacity(), false);
+						traits::move_constr(alloc(), m_ptr, right.m_ptr, right.size());
+					}
 					m_count = right.size();
+					
+					// Resize, don't just set the m_count to 0. The elements of 'right' have had their guts
+					// moved into our container but they still need destructing.
+					right.resize(0);
 				}
-				else // steal the pointer
+				// Right is not locally buffered, and right's buffer exceeds our local buffer size. Steal it.
+				else
 				{
+					// Clean up anything in this container
+					resize(0);
+
+					// Steal from 'right'
 					m_ptr      = right.m_ptr;
 					m_capacity = right.m_capacity;
 					m_count    = right.m_count;
+
+					// Set right to empty. 'right's elements don't need destructing in this case because we're grabbed them
+					right.m_ptr      = right.local_ptr();
+					right.m_capacity = right.LocalLength;
+					right.m_count    = 0;
 				}
-				right.m_ptr      = right.local_ptr();
-				right.m_capacity = right.LocalLength;
-				right.m_count    = 0;
 			}
 		}
 
@@ -908,6 +937,7 @@ namespace pr
 }
 
 #if PR_UNITTESTS
+#include <algorithm>
 #include "pr/common/unittests.h"
 #include "pr/common/refcount.h"
 #include "pr/common/refptr.h"
@@ -919,35 +949,79 @@ namespace pr
 	{
 		namespace vector
 		{
+			typedef unsigned int uint;
+
 			struct Single :pr::RefCount<Single>
 			{
 				static void RefCountZero(RefCount<Single>*) {}
-			} g_single;
+			};
 
-			int g_start_object_count, g_object_count = 0;;
-			inline void ConstrCall() { ++g_object_count; }
-			inline void DestrCall() { --g_object_count; }
+			int& StartObjectCount() { static int start_object_count; return start_object_count; }
+			int& ObjectCount() { static int object_count; return object_count; }
+			Single& Refs() { static Single single; return single; }
 
-			typedef unsigned int uint;
 			struct Type
 			{
 				uint val;
 				pr::RefPtr<Single> ptr;
-				operator uint() const                             { return val; }
 
-				Type()       :val(0) ,ptr(&g_single)              { ConstrCall(); }
-				Type(uint w) :val(w) ,ptr(&g_single)              { ConstrCall(); }
-				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ConstrCall(); }
-				~Type()
+				Type() :val(0) ,ptr(&Refs())                      { ++ObjectCount(); }
+				Type(uint w) :val(w) ,ptr(&Refs())                { ++ObjectCount(); }
+				Type(Type&& rhs) :val(rhs.val) ,ptr(rhs.ptr)      { ++ObjectCount(); }
+				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ++ObjectCount(); }
+				Type& operator = (Type&& rhs)
 				{
-					DestrCall();
-					PR_CHECK(ptr.m_ptr == &g_single, true); // destructing an invalid Type
+					if (this != &rhs)
+					{
+						std::swap(val, rhs.val);
+						std::swap(ptr, rhs.ptr);
+					}
+					return *this;
+				}
+				Type& operator = (Type const& rhs)
+				{
+					if (this != &rhs)
+					{
+						val = rhs.val;
+						ptr = rhs.ptr;
+					}
+					return *this;
+				}
+				virtual ~Type()
+				{
+					--ObjectCount();
+					PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
 					val = 0xcccccccc;
 				}
 			};
+			static_assert(std::is_move_constructible<Type>::value, "");
+			static_assert(std::is_copy_constructible<Type>::value, "");
+			static_assert(std::is_move_assignable<Type>::value, "");
+			static_assert(std::is_copy_assignable<Type>::value, "");
+
+			struct NonCopyable :Type
+			{
+				NonCopyable() :Type() {}
+				NonCopyable(uint w) :Type(w) {}
+				NonCopyable(NonCopyable const&) = delete;
+				NonCopyable(NonCopyable&& rhs) :Type(std::forward<Type&&>(rhs)) {}
+				NonCopyable& operator = (NonCopyable const&) = delete;
+				NonCopyable& operator = (NonCopyable&& rhs)
+				{
+					*static_cast<Type*>(this) = std::move(rhs);
+					return *this;
+				}
+			};
+		//	static_assert( std::is_move_constructible<NonCopyable>::value, "");
+		//	static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
+		//	static_assert( std::is_move_assignable<NonCopyable>::value, "");
+		//	static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+
+			inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
 
 			typedef pr::vector<Type, 8, false> Array0;
 			typedef pr::vector<Type, 16, true> Array1;
+			typedef pr::vector<NonCopyable, 4, false> Array2;
 		}
 
 		PRUnitTest(pr_container_vector)
@@ -958,182 +1032,182 @@ namespace pr
 			ints.resize(16);
 			for (uint i = 0; i != 16; ++i) ints[i] = Type(i);
 
-			g_start_object_count = g_object_count;
+			StartObjectCount() = ObjectCount();
 			{
 				Array0 arr;
 				PR_CHECK(arr.empty(), true);
 				PR_CHECK(arr.size(), 0U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				Array1 arr(15);
 				PR_CHECK(!arr.empty(), true);
 				PR_CHECK(arr.size(), 15U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				Array0 arr(5U, 3);
 				PR_CHECK(arr.size(), 5U);
 				for (size_t i = 0; i != 5; ++i)
-					PR_CHECK(arr[i], 3U);
+					PR_CHECK(arr[i].val, 3U);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				Array0 arr0(5U,3);
 				Array1 arr1(arr0);
 				PR_CHECK(arr1.size(), arr0.size());
 				for (size_t i = 0; i != arr0.size(); ++i)
-					PR_CHECK(arr1[i], arr0[i]);
+					PR_CHECK(arr1[i].val, arr0[i].val);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
-			g_start_object_count = g_object_count;
+			PR_CHECK(ObjectCount(), StartObjectCount());
+			StartObjectCount() = ObjectCount();
 			{
 				std::vector<uint> vec0(4U, 6);
 				Array0 arr1(vec0);
 				PR_CHECK(arr1.size(), vec0.size());
 				for (size_t i = 0; i != vec0.size(); ++i)
-					PR_CHECK(arr1[i], vec0[i]);
+					PR_CHECK(arr1[i].val, vec0[i]);
 			}
-			PR_CHECK(g_object_count, g_start_object_count);
+			PR_CHECK(ObjectCount(), StartObjectCount());
 			{//RefCounting0
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Assign
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0;
 					arr0.assign(3U, 5);
 					PR_CHECK(arr0.size(), 3U);
 					for (size_t i = 0; i != 3; ++i)
-						PR_CHECK(arr0[i], 5U);
+						PR_CHECK(arr0[i].val, 5U);
 
 					Array1 arr1;
 					arr1.assign(&ints[0], &ints[8]);
 					PR_CHECK(arr1.size(), 8U);
 					for (size_t i = 0; i != 8; ++i)
-						PR_CHECK(arr1[i], ints[i]);
+						PR_CHECK(arr1[i].val, ints[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting1
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Clear
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0(ints.begin(), ints.end());
 					arr0.clear();
 					PR_CHECK(arr0.empty(), true);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting2
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Erase
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0(ints.begin(), ints.begin() + 8);
 					Array0::const_iterator b = arr0.begin();
 					arr0.erase(b + 3, b + 5);
 					PR_CHECK(arr0.size(), 6U);
-					for (size_t i = 0; i != 3; ++i) PR_CHECK(arr0[i], ints[i]  );
-					for (size_t i = 3; i != 6; ++i) PR_CHECK(arr0[i], ints[i+2]);
+					for (size_t i = 0; i != 3; ++i) PR_CHECK(arr0[i].val, ints[i]  .val);
+					for (size_t i = 3; i != 6; ++i) PR_CHECK(arr0[i].val, ints[i+2].val);
 				}
-				PR_CHECK(g_object_count,g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array1 arr1(ints.begin(), ints.begin() + 4);
 					arr1.erase(arr1.begin() + 2);
 					PR_CHECK(arr1.size(), 3U);
-					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i], ints[i]  );
-					for (size_t i = 2; i != 3; ++i) PR_CHECK(arr1[i], ints[i+1]);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, ints[i]  .val);
+					for (size_t i = 2; i != 3; ++i) PR_CHECK(arr1[i].val, ints[i+1].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr2(ints.begin(), ints.begin() + 5);
 					arr2.erase_fast(arr2.begin() + 2);
 					PR_CHECK(arr2.size(), 4U);
-					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr2[i], ints[i]);
-					PR_CHECK(arr2[2], ints[4]);
-					for (size_t i = 3; i != 4; ++i) PR_CHECK(arr2[i], ints[i]);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr2[i].val, ints[i].val);
+					PR_CHECK(arr2[2].val, ints[4].val);
+					for (size_t i = 3; i != 4; ++i) PR_CHECK(arr2[i].val, ints[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting3
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Insert
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0;
 					arr0.insert(arr0.end(), 4U, 9);
 					PR_CHECK(arr0.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(arr0[i], 9U);
+						PR_CHECK(arr0[i].val, 9U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array1 arr1(4U, 6);
 					arr1.insert(arr1.begin() + 2, &ints[2], &ints[7]);
 					PR_CHECK(arr1.size(), 9U);
-					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i], 6U);
-					for (size_t i = 2; i != 7; ++i) PR_CHECK(arr1[i], ints[i]);
-					for (size_t i = 7; i != 9; ++i) PR_CHECK(arr1[i], 6U);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(arr1[i].val, 6U);
+					for (size_t i = 2; i != 7; ++i) PR_CHECK(arr1[i].val, ints[i].val);
+					for (size_t i = 7; i != 9; ++i) PR_CHECK(arr1[i].val, 6U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting4
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//PushPop
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr;
 					arr.insert(arr.begin(), &ints[0], &ints[4]);
 					arr.pop_back();
 					PR_CHECK(arr.size(), 3U);
 					for (size_t i = 0; i != 3; ++i)
-						PR_CHECK(arr[i], ints[i]);
+						PR_CHECK(arr[i].val, ints[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array1 arr;
 					arr.reserve(4);
 					for (int i = 0; i != 4; ++i) arr.push_back_fast(i);
 					for (int i = 4; i != 9; ++i) arr.push_back(i);
 					for (size_t i = 0; i != 9; ++i)
-						PR_CHECK(arr[i], ints[i]);
+						PR_CHECK(arr[i].val, ints[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array1 arr;
 					arr.insert(arr.begin(), &ints[0], &ints[4]);
 					arr.resize(3);
 					PR_CHECK(arr.size(), 3U);
 					for (size_t i = 0; i != 3; ++i)
-						PR_CHECK(arr[i], ints[i]);
+						PR_CHECK(arr[i].val, ints[i].val);
 					arr.resize(6);
 					PR_CHECK(arr.size(), 6U);
 					for (size_t i = 0; i != 3; ++i)
-						PR_CHECK(arr[i], ints[i]);
+						PR_CHECK(arr[i].val, ints[i].val);
 					for (size_t i = 3; i != 6; ++i)
-						PR_CHECK(arr[i], 0U);
+						PR_CHECK(arr[i].val, 0U);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting5
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Operators
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0(4U, 1);
 					Array0 arr1(3U, 2);
@@ -1141,10 +1215,10 @@ namespace pr
 					PR_CHECK(arr0.size(), 4U);
 					PR_CHECK(arr1.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(arr1[i], arr0[i]);
+						PR_CHECK(arr1[i].val, arr0[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
-				g_start_object_count = g_object_count;
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0(4U, 1);
 					Array1 arr2;
@@ -1152,7 +1226,7 @@ namespace pr
 					PR_CHECK(arr0.size(), 4U);
 					PR_CHECK(arr2.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(arr2[i], arr0[i]);
+						PR_CHECK(arr2[i].val, arr0[i].val);
 
 					struct L
 					{
@@ -1161,15 +1235,15 @@ namespace pr
 					std::vector<Type> vec0 = L::Conv(arr0);
 					PR_CHECK(vec0.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(vec0[i], arr0[i]);
+						PR_CHECK(vec0[i].val, arr0[i].val);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting6
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Mem
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					Array0 arr0;
 					arr0.reserve(100);
@@ -1181,14 +1255,14 @@ namespace pr
 					arr0.shrink_to_fit();
 					PR_CHECK(arr0.capacity(), (size_t)arr0.LocalLength);
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting
 				ints.clear();
-				PR_CHECK(g_single.m_ref_count, 0);
+				PR_CHECK(Refs().m_ref_count, 0);
 			}
 			{//AlignedTypes
-				g_start_object_count = g_object_count;
+				StartObjectCount() = ObjectCount();
 				{
 					pr::Spline spline = pr::Spline::make(pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f), pr::Random3N(1.0f));
 
@@ -1201,30 +1275,94 @@ namespace pr
 					PR_CHECK(arr0.size(), 5U);
 					PR_CHECK(arr0.capacity(), size_t(arr0.LocalLength));
 				}
-				PR_CHECK(g_object_count, g_start_object_count);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{// Copy
-				pr::vector<int, 4> arr0;
+				StartObjectCount() = ObjectCount();
 				{
-					pr::vector<int, 4> arr1 = {0,1,2,3,4,5,6,7,8,9};
-					arr0 = arr1;
+					Array0 arr0 = {10,20,30};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = arr1;
+					}
+					PR_CHECK(arr0.size(), 10U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
 				}
-				PR_CHECK(arr0.size(), 10U);
-				for (int i = 0; i != 10; ++i)
-					PR_CHECK(arr0[i], i);
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{// Move
-				pr::vector<int, 4> arr0;
+				StartObjectCount() = ObjectCount();
 				{
-					pr::vector<int, 4> arr1 = {0,1,2,3,4,5,6,7,8,9};
-					arr0 = std::move(arr1);
+					// arr0 local, arr1 local
+					Array0 arr0 = {0,10,20,30};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 7U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
 				}
-				PR_CHECK(arr0.size(), 10U);
-				for (int i = 0; i != 10; ++i)
-					PR_CHECK(arr0[i], i);
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
+				{
+					// arr0 !local, arr1 local
+					Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
+					{
+						Array0 arr1 = {0,1,2,3};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 4U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
+				{
+					// arr0 local, arr1 !local
+					Array0 arr0 = {0,10,20,30};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 10U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+				PR_CHECK(ObjectCount(), StartObjectCount());
+				StartObjectCount() = ObjectCount();
+				{
+					// arr0 !local, arr1 !local
+					Array0 arr0 = {0,10,20,30,40,50,60,70,80,90};
+					{
+						Array0 arr1 = {0,1,2,3,4,5,6,7,8,9};
+						arr0 = std::move(arr1);
+					}
+					PR_CHECK(arr0.size(), 10U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+				PR_CHECK(ObjectCount(), StartObjectCount());
+			}
+			{// Non-copyable types
+				StartObjectCount() = ObjectCount();
+				{
+					Array2 arr0;
+					arr0.emplace_back(0);
+					arr0.emplace_back(1);
+					arr0.emplace_back(2);
+					arr0.emplace_back(3);
+					arr0.emplace_back(4);
+
+					PR_CHECK(arr0.size(), 5U);
+					for (uint i = 0; i != arr0.size(); ++i)
+						PR_CHECK(arr0[i].val, i);
+				}
+				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//GlobalConstrDestrCount
-				PR_CHECK(g_object_count, 0);
+				PR_CHECK(ObjectCount(), 0);
 			}
 		}
 	}

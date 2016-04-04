@@ -79,7 +79,7 @@ namespace pr
 					return size_type(m_last - m_first);
 				}
 
-				// Move assign the block ptr array (only valid if allocators are compatibile)
+				// Move assign the block ptr array (only valid if allocators are compatible)
 				template <size_type B> BlockPtrMap& operator = (BlockPtrMap<Type,B,Allocator>&& rhs)
 				{
 					assert(m_alloc_type == rhs.m_alloc_type && "this implementation only supports same allocators");
@@ -187,14 +187,14 @@ namespace pr
 						if (to_add > m_first)
 						{
 							grow_map(to_add + count(), [](Type** mem, size_type new_capacity, BlockPtrMap& map)
-								{
-									// Fill the front with nullptr and the end from the old map
-									auto keep_size = map.m_capacity - map.m_first;
-									auto fill_size = new_capacity - keep_size;
-									::memset(mem, 0, fill_size * sizeof(Type*));
-									::memcpy(mem + fill_size, map.m_ptrs + map.m_first, keep_size * sizeof(Type*));
-									return fill_size;
-								});
+							{
+								// Fill the front with nullptr and the end from the old map
+								auto keep_count = map.m_capacity - map.m_first;
+								auto fill_count = new_capacity - keep_count;
+								::memset(mem, 0, fill_count * sizeof(Type*));
+								::memcpy(mem + fill_count, map.m_ptrs + map.m_first, keep_count * sizeof(Type*));
+								return fill_count;
+							});
 						}
 
 						// Fill with new blocks
@@ -211,20 +211,19 @@ namespace pr
 						if (to_add > m_capacity - m_last)
 						{
 							grow_map(to_add + count(), [](Type** mem, size_type new_capacity, BlockPtrMap& map)
-								{
-									// Fill the front from the old map, and the end with nullptr
-									auto keep_size = map.m_last;
-									auto fill_size = new_capacity - keep_size;
-									::memset(mem + keep_size, 0, fill_size * sizeof(Type*));
-									::memcpy(mem, map.m_ptrs, keep_size * sizeof(Type*));
-									return map.m_first;
-								});
+							{
+								// Fill the front from the old map, and the end with nullptr
+								auto keep_count = map.m_last;
+								auto fill_count = new_capacity - keep_count;
+								::memset(mem + keep_count, 0, fill_count * sizeof(Type*));
+								::memcpy(mem, map.m_ptrs, keep_count * sizeof(Type*));
+								return map.m_first;
+							});
 						}
 
 						// Fill with new blocks
 						for (; to_add-- != 0;)
 							m_ptrs[m_last++] = m_alloc_type.allocate(CountPerBlock);
-
 					}
 					return blk_idx;
 				}
@@ -382,48 +381,29 @@ namespace pr
 		template <bool pod> struct base_traits;
 		template <> struct base_traits<false>
 		{
-			// destruct the range [first,last)
-			static void destruct(iterator first, size_type count)
-			{
-				auto& alloc = first.m_map->m_alloc_type;
-				for (;count--; ++first)
-					alloc.destroy(&*first);
-			}
+			static void destruct     (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.destroy(first++); } }
+			static void construct    (Allocator& alloc, Type* first, size_type count)                  { for (; count--;) { alloc.default_construct(first++); } }
+			static void copy_constr  (Allocator& alloc, Type* first, Type const* src, size_type count) { for (; count--;) { alloc.copy_construct(first++, *src++); } }
+			static void move_constr  (Allocator& alloc, Type* first, Type* src, size_type count)       { for (; count--;) { alloc.move_construct(first++, std::move(*src++)); } }
+			static void copy_assign  (Type* first, Type const* src, size_type count)                   { for (; count--;) { *first++ = *src++; } }
+			static void move_assign  (Type* first, Type* src, size_type count)                         { for (; count--;) { *first++ = std::move(*src++); } }
 		};
 		template <> struct base_traits<true>
 		{
-			//// move [first, last) to [dest, ...), pointers to scalars
-			//static iterator move_backward(const_iterator first, const_iterator last, iterator dest)
-			//{
-
-			//	first.m_idx;
-			//	first.m_map;
-
-			//	auto count = last - first;
-			//	std::memmove(&*dest, &*first, count * sizeof(*first));
-			//	return (dest + count);
-			//}
-
-			//// move [first, last) backwards to [..., dest)
-			//template <class InIter, class OutIter> static OutIter move_backward(InIter first, InIter last, OutIter dest)
-			//{
-			//	auto count = last - first;
-			//	std::memmove(&*dest - count, &*first, count * sizeof(*first));
-			//	return dest - count;
-			//}
-
-			// destruct the range [first,last)
-			static void destruct(iterator first, size_type count)
-			{
-				#ifndef NDEBUG
-				base_traits<false>::destruct(first,count);
-				#else
-				(void)first,count;
-				#endif
-			}
+			static void destruct     (Allocator&, Type*, size_type)                              {}
+			static void construct    (Allocator&, Type*, size_type)                              {}
+			static void copy_constr  (Allocator&, Type* first, Type const* src, size_type count) { ::memcpy(first, src, sizeof(Type) * count); }
+			static void move_constr  (Allocator&, Type* first, Type* src, size_type count)       { ::memcpy(first, src, sizeof(Type) * count); }
+			static void copy_assign  (Type* first, Type const* src, size_type count)             { ::memcpy(first, src, sizeof(Type) * count); }
+			static void move_assign  (Type* first, Type* src, size_type count)                   { ::memcpy(first, src, sizeof(Type) * count); }
 		};
 		struct traits :base_traits<TypeIsPod>
 		{
+			static void destruct_range(Allocator& alloc, iterator first, size_type count)              { for (;count--; ++first) destruct(alloc, &*first, 1); }
+			static void fill_constr(Allocator& alloc, Type* first, size_type count, Type const& val)   { for (; count--;) { copy_constr(alloc, first++, &val, 1); } }
+			static void fill_assign(                  Type* first, size_type count, Type const& val)   { for (; count--;) { copy_assign(first++, &val, 1); } }
+			template <class... Args> static void constr(Allocator& alloc, Type* first, Args&&... args) { alloc.construct(first, std::forward<Args>(args)...); }
+
 			// move [first, last) to [dest, ...)
 			static iterator move(const_iterator first, const_iterator last, iterator dest)
 			{	
@@ -634,7 +614,7 @@ namespace pr
 			return iterator(m_first, m_map);
 		}
 
-		// return iterator for beginning of nonmutable sequence
+		// return iterator for beginning of non-mutable sequence
 		const_iterator begin() const noexcept
 		{
 			return const_iterator(m_first, m_map);
@@ -646,7 +626,7 @@ namespace pr
 			return iterator(m_first + size(), m_map);
 		}
 
-		// return iterator for end of nonmutable sequence
+		// return iterator for end of non-mutable sequence
 		const_iterator end() const noexcept
 		{
 			return const_iterator(m_first + size(), m_map);
@@ -658,7 +638,7 @@ namespace pr
 			return *begin();
 		}
 
-		// return first element of nonmutable sequence
+		// return first element of non-mutable sequence
 		const_reference front() const
 		{
 			return *begin();
@@ -670,7 +650,7 @@ namespace pr
 			return *(end() - 1);
 		}
 
-		// return last element of nonmutable sequence
+		// return last element of non-mutable sequence
 		const_reference back() const
 		{
 			return *(end() - 1);
@@ -720,7 +700,7 @@ namespace pr
 		{
 			auto block = m_map[m_last];
 			auto idx = m_last % CountPerBlock;
-			allocator().construct(block + idx, val);
+			traits::copy_constr(allocator(), block + idx, &val, 1);
 			++m_last;
 		}
 
@@ -729,7 +709,7 @@ namespace pr
 		{
 			auto block = m_map[m_last];
 			auto idx = m_last % CountPerBlock;
-			allocator().construct(block + idx, std::forward<Args>(args)...);
+			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
 			++m_last;
 		}
 
@@ -738,7 +718,7 @@ namespace pr
 		{
 			auto block = m_map[m_first - 1];
 			auto idx = (m_first - 1 + CountPerBlock) % CountPerBlock;
-			allocator().construct(block + idx, val);
+			traits::copy_constr(allocator(), block + idx, &val, 1);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
 		}
@@ -748,7 +728,7 @@ namespace pr
 		{
 			auto block = m_map[m_first - 1];
 			auto idx = (m_first - 1 + CountPerBlock) % CountPerBlock;
-			allocator().construct(block + idx, std::forward<Args>(args)...);
+			traits::constr(allocator(), block + idx, std::forward<Args>(args)...);
 			if (m_first == 0) { m_first += CountPerBlock; m_last += CountPerBlock; }
 			--m_first;
 		}
@@ -759,7 +739,7 @@ namespace pr
 			assert(!empty() && "pop_back() on empty deque");
 			auto block = m_map[m_last - 1];
 			auto idx = (m_last - 1 + CountPerBlock) % CountPerBlock;
-			allocator().destroy(block + idx);
+			traits::destruct(allocator(), block + idx, 1);
 			--m_last; // last can't be 0 unless m_first > m_last
 			if (m_first == m_last) m_first = m_last = 0;
 		}
@@ -770,7 +750,7 @@ namespace pr
 			assert(!empty() && "pop_front() on empty deque");
 			auto block = m_map[m_first];
 			auto idx = m_first % CountPerBlock;
-			allocator().destroy(block + idx);
+			traits::destruct(allocator(), block + idx, 1);
 			++m_first;
 			if (m_first == m_last) m_first = m_last = 0;
 		}
@@ -881,14 +861,14 @@ namespace pr
 			if (b < e) // closer to front, move begin() forward
 			{
 				traits::move_backward(begin(), first, make_iter(last)); // move [begin,first) to [..,last)
-				traits::destruct(begin(), c);
+				traits::destruct_range(allocator(), begin(), c);
 				m_first += c;
 				if (m_first == m_last) m_first = m_last = 0;
 			}
 			else // closer to back, move end() backward
 			{
 				traits::move(last, end(), make_iter(first));
-				traits::destruct(end() - c, c);
+				traits::destruct_range(allocator(), end() - c, c);
 				m_last -= c;
 				if (m_first == m_last) m_first = m_last = 0;
 			}
@@ -1110,34 +1090,79 @@ namespace pr
 	{
 		namespace deque
 		{
+			typedef unsigned int uint;
+
 			struct Single :pr::RefCount<Single>
 			{
 				static void RefCountZero(RefCount<Single>*) {}
-			} g_single;
+			};
 
 			int& StartObjectCount() { static int start_object_count; return start_object_count; }
 			int& ObjectCount() { static int object_count; return object_count; }
+			Single& Refs() { static Single single; return single; }
 
-			typedef unsigned int uint;
 			struct Type
 			{
 				uint val;
 				pr::RefPtr<Single> ptr;
-				operator uint() const                             { return val; }
 
-				Type()       :val(0) ,ptr(&g_single)              { ++ObjectCount(); }
-				Type(uint w) :val(w) ,ptr(&g_single)              { ++ObjectCount(); }
+				Type() :val(0) ,ptr(&Refs())                      { ++ObjectCount(); }
+				Type(uint w) :val(w) ,ptr(&Refs())                { ++ObjectCount(); }
+				Type(Type&& rhs) :val(rhs.val) ,ptr(rhs.ptr)      { ++ObjectCount(); }
 				Type(Type const& rhs) :val(rhs.val) ,ptr(rhs.ptr) { ++ObjectCount(); }
-				~Type()
+				Type& operator = (Type&& rhs)
+				{
+					if (this != &rhs)
+					{
+						std::swap(val, rhs.val);
+						std::swap(ptr, rhs.ptr);
+					}
+					return *this;
+				}
+				Type& operator = (Type const& rhs)
+				{
+					if (this != &rhs)
+					{
+						val = rhs.val;
+						ptr = rhs.ptr;
+					}
+					return *this;
+				}
+				virtual ~Type()
 				{
 					--ObjectCount();
-					PR_CHECK(ptr.m_ptr == &g_single, true); // destructing an invalid Type
+					PR_CHECK(ptr.m_ptr == &Refs(), true); // destructing an invalid Type
 					val = 0xcccccccc;
 				}
 			};
+			static_assert(std::is_move_constructible<Type>::value, "");
+			static_assert(std::is_copy_constructible<Type>::value, "");
+			static_assert(std::is_move_assignable<Type>::value, "");
+			static_assert(std::is_copy_assignable<Type>::value, "");
 
-			typedef pr::deque<Type,  8> Deque0;
+			struct NonCopyable :Type
+			{
+				NonCopyable() :Type() {}
+				NonCopyable(uint w) :Type(w) {}
+				NonCopyable(NonCopyable const&) = delete;
+				NonCopyable(NonCopyable&& rhs) :Type(std::forward<Type&&>(rhs)) {}
+				NonCopyable& operator = (NonCopyable const&) = delete;
+				NonCopyable& operator = (NonCopyable&& rhs)
+				{
+					*static_cast<Type*>(this) = std::move(rhs);
+					return *this;
+				}
+			};
+		//	static_assert( std::is_move_constructible<NonCopyable>::value, "");
+		//	static_assert(!std::is_copy_constructible<NonCopyable>::value, "");
+		//	static_assert( std::is_move_assignable<NonCopyable>::value, "");
+		//	static_assert(!std::is_copy_assignable<NonCopyable>::value, "");
+
+			inline bool operator == (Type const& lhs, Type const& rhs) { return lhs.val == rhs.val; }
+
+			typedef pr::deque<Type, 8> Deque0;
 			typedef pr::deque<Type, 16> Deque1;
+			typedef pr::deque<NonCopyable, 4> Deque2;
 		}
 
 		PRUnitTest(pr_container_deque)
@@ -1189,7 +1214,7 @@ namespace pr
 				Deque0 deq(5U, 3);
 				PR_CHECK(deq.size(), 5U);
 				for (size_t i = 0; i != 5; ++i)
-					PR_CHECK(deq[i], 3U);
+					PR_CHECK(deq[i].val, 3U);
 			}
 			PR_CHECK(ObjectCount(), StartObjectCount());
 			StartObjectCount() = ObjectCount();
@@ -1199,7 +1224,7 @@ namespace pr
 				Deque1 deq1(deq0);
 				PR_CHECK(deq1.size(), deq0.size());
 				for (size_t i = 0; i != deq0.size(); ++i)
-					PR_CHECK(deq1[i], deq0[i]);
+					PR_CHECK(deq1[i].val, deq0[i].val);
 			}
 			PR_CHECK(ObjectCount(), StartObjectCount());
 			StartObjectCount() = ObjectCount();
@@ -1209,7 +1234,7 @@ namespace pr
 				Deque0 deq1(deq0);
 				PR_CHECK(deq1.size(), deq0.size());
 				for (size_t i = 0; i != deq0.size(); ++i)
-					PR_CHECK(deq1[i], deq0[i]);
+					PR_CHECK(deq1[i].val, deq0[i]);
 			}
 			PR_CHECK(ObjectCount(), StartObjectCount());
 			PR_CHECK(ObjectCount(), StartObjectCount());
@@ -1219,10 +1244,10 @@ namespace pr
 				uint r[] = {1,2,3,4};
 				Deque0 deq1(std::begin(r), std::end(r));
 				PR_CHECK(deq1.size(), 4U);
-				PR_CHECK(deq1[0], r[0]);
-				PR_CHECK(deq1[1], r[1]);
-				PR_CHECK(deq1[2], r[2]);
-				PR_CHECK(deq1[3], r[3]);
+				PR_CHECK(deq1[0].val, r[0]);
+				PR_CHECK(deq1[1].val, r[1]);
+				PR_CHECK(deq1[2].val, r[2]);
+				PR_CHECK(deq1[3].val, r[3]);
 			}
 			PR_CHECK(ObjectCount(), StartObjectCount());
 			StartObjectCount() = ObjectCount();
@@ -1233,11 +1258,11 @@ namespace pr
 				PR_CHECK(deq0.size(), 0U);
 				PR_CHECK(deq1.size(), 4U);
 				for (size_t i = 0; i != deq1.size(); ++i)
-					PR_CHECK(deq1[i], 6U);
+					PR_CHECK(deq1[i].val, 6U);
 			}
 			PR_CHECK(ObjectCount(), StartObjectCount());
 			{//RefCounting0
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Assign
 				StartObjectCount() = ObjectCount();
@@ -1248,7 +1273,7 @@ namespace pr
 					deq1 = deq0;
 					PR_CHECK(deq0.size(), deq1.size());
 					for (size_t i = 0; i != deq0.size(); ++i)
-						PR_CHECK(deq1[i], deq0[i]);
+						PR_CHECK(deq1[i].val, deq0[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1259,8 +1284,8 @@ namespace pr
 					deq1 = std::move(deq0);
 					PR_CHECK(deq0.size(), 0U);
 					PR_CHECK(deq1.size(), 4U);
-					for (auto i : deq1)
-						PR_CHECK(i, 5U);
+					for (auto& i : deq1)
+						PR_CHECK(i.val, 5U);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1270,19 +1295,19 @@ namespace pr
 					deq0.assign(3U, 5);
 					PR_CHECK(deq0.size(), 3U);
 					for (size_t i = 0; i != 3; ++i)
-						PR_CHECK(deq0[i], 5U);
+						PR_CHECK(deq0[i].val, 5U);
 
 					// assign range method
 					Deque1 deq1;
 					deq1.assign(&types[0], &types[8]);
 					PR_CHECK(deq1.size(), 8U);
 					for (size_t i = 0; i != 8; ++i)
-						PR_CHECK(deq1[i], types[i]);
+						PR_CHECK(deq1[i].val, types[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting1
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Clear
 				StartObjectCount() = ObjectCount();
@@ -1297,7 +1322,7 @@ namespace pr
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting2
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Erase
 				StartObjectCount() = ObjectCount();
@@ -1307,8 +1332,8 @@ namespace pr
 					auto b = deq0.begin();
 					deq0.erase(b + 3, b + 13);
 					PR_CHECK(deq0.size(), 6U);
-					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], types[i]  );
-					for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], types[i+10]);
+					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i].val, types[i]   .val);
+					for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i].val, types[i+10].val);
 				}
 				PR_CHECK(ObjectCount(),StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1318,7 +1343,7 @@ namespace pr
 					auto b = deq0.begin();
 					deq0.erase(b + 3, b + 13);
 					PR_CHECK(deq0.size(), 6U);
-					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], uints[i]  );
+					for (size_t i = 0; i != 3; ++i) PR_CHECK(deq0[i], uints[i]   );
 					for (size_t i = 3; i != 6; ++i) PR_CHECK(deq0[i], uints[i+10]);
 				}
 				PR_CHECK(ObjectCount(),StartObjectCount());
@@ -1328,13 +1353,13 @@ namespace pr
 					Deque1 deq1(types.begin(), types.begin() + 4);
 					deq1.erase(deq1.begin() + 2);
 					PR_CHECK(deq1.size(), 3U);
-					for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i], types[i]  );
-					for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i], types[i+1]);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, types[i]  .val);
+					for (size_t i = 2; i != 3; ++i) PR_CHECK(deq1[i].val, types[i+1].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting3
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Insert
 				StartObjectCount() = ObjectCount();
@@ -1344,7 +1369,7 @@ namespace pr
 					deq0.insert(deq0.end(), 4U, 9);
 					PR_CHECK(deq0.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(deq0[i], 9U);
+						PR_CHECK(deq0[i].val, 9U);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1353,14 +1378,14 @@ namespace pr
 					Deque1 deq1(4U, 6);
 					deq1.insert(deq1.begin() + 2, &types[2], &types[7]);
 					PR_CHECK(deq1.size(), 9U);
-					for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i], 6U);
-					for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i], types[i]);
-					for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i], 6U);
+					for (size_t i = 0; i != 2; ++i) PR_CHECK(deq1[i].val, 6U);
+					for (size_t i = 2; i != 7; ++i) PR_CHECK(deq1[i].val, types[i].val);
+					for (size_t i = 7; i != 9; ++i) PR_CHECK(deq1[i].val, 6U);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting4
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//PushPop
 				StartObjectCount() = ObjectCount();
@@ -1379,7 +1404,7 @@ namespace pr
 					PR_CHECK(deq.size(), 12U);
 					PR_CHECK(&deq[1], addr);
 					for (size_t i = 0; i != deq.size(); ++i)
-						PR_CHECK(deq[i], types[i]);
+						PR_CHECK(deq[i].val, types[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1399,7 +1424,7 @@ namespace pr
 					PR_CHECK(&deq[0], addr);
 
 					for (size_t i = 0; i != deq.size(); ++i)
-						PR_CHECK(deq[i], types[i]);
+						PR_CHECK(deq[i].val, types[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1418,7 +1443,7 @@ namespace pr
 					PR_CHECK(deq.size(), 12U);
 					PR_CHECK(&deq[3], addr);
 					for (size_t i = 0; i != deq.size(); ++i)
-						PR_CHECK(deq[i], types[i+4]);
+						PR_CHECK(deq[i].val, types[i+4].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1438,7 +1463,7 @@ namespace pr
 					PR_CHECK(&deq[8], addr);
 
 					for (size_t i = 0; i != deq.size(); ++i)
-						PR_CHECK(deq[i], 8 - types[i]);
+						PR_CHECK(deq[i].val, 8 - types[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1450,18 +1475,18 @@ namespace pr
 					deq.resize(7);
 					PR_CHECK(deq.size(), 7U);
 					for (size_t i = 0; i != deq.size(); ++i)
-						PR_CHECK(deq[i], types[i]);
+						PR_CHECK(deq[i].val, types[i].val);
 					deq.resize(12);
 					PR_CHECK(deq.size(), 12U);
 					for (size_t i = 0; i != 7U; ++i)
-						PR_CHECK(deq[i], types[i]);
+						PR_CHECK(deq[i].val, types[i].val);
 					for (size_t i = 7U; i != 12U; ++i)
-						PR_CHECK(deq[i], 0U);
+						PR_CHECK(deq[i].val, 0U);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting5
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Operators
 				StartObjectCount() = ObjectCount();
@@ -1474,7 +1499,7 @@ namespace pr
 					PR_CHECK(deq0.size(), 4U);
 					PR_CHECK(deq1.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(deq1[i], deq0[i]);
+						PR_CHECK(deq1[i].val, deq0[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 				StartObjectCount() = ObjectCount();
@@ -1497,12 +1522,12 @@ namespace pr
 					std::deque<Type> deq1 = L::Conv(deq0);
 					PR_CHECK(deq1.size(), 4U);
 					for (size_t i = 0; i != 4; ++i)
-						PR_CHECK(deq1[i], deq0[i]);
+						PR_CHECK(deq1[i].val, deq0[i].val);
 				}
 				PR_CHECK(ObjectCount(), StartObjectCount());
 			}
 			{//RefCounting6
-				PR_CHECK(g_single.m_ref_count, 16);
+				PR_CHECK(Refs().m_ref_count, 16);
 			}
 			{//Mem
 				StartObjectCount() = ObjectCount();
@@ -1544,7 +1569,7 @@ namespace pr
 			}
 			{//RefCounting
 				types.clear();
-				PR_CHECK(g_single.m_ref_count, 0);
+				PR_CHECK(Refs().m_ref_count, 0);
 			}
 			{//GlobalConstrDestrCount
 				PR_CHECK(ObjectCount(), 0);

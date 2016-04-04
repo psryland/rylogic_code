@@ -623,7 +623,7 @@ namespace pr
 
 			size_type num = str::traits<tarr>::size(right) - rofs;
 			if (count > num) count = num;
-			if (isthis(right)) // subrange
+			if (isthis(right)) // sub-range
 			{
 				erase(size_type(rofs + count));
 				erase(0, rofs);
@@ -649,36 +649,38 @@ namespace pr
 		template <int L,bool F,typename A>
 		string& assign(string<Type,L,F,A>&& right) PR_NOEXCEPT
 		{
-			// Same object, do nothing
-			if (isthis(right)) {}
+			// Notes:
+			// - moving *does* move right.capacity() (same as std::string)
 
-			// Using different allocators and right.m_capacity is greater than the local count
-			else if (!(allocator() == right.allocator()) && right.capacity() > LocalLength) { assign(right); }
-
-			// Same allocator or less than local count, steal from right
-			else
+			if (!isthis(right)) // not this object
 			{
-				if (!local())
+				// If using different allocators => can't steal
+				// If right is locally buffered => can't steal
+				// If right's capacity is <= our local buffer size, no point in stealing
+				if (!(allocator() == right.allocator()) || right.local() || right.capacity() <= LocalCount)
 				{
-					alloc().deallocate(m_ptr, m_capacity);
-					m_ptr = local_ptr();
-					m_capacity = LocalLength;
+					// If this was a vector we'd move the elements of 'right', but since we're
+					// dealing with POD types, copy is the same thing.
+					assign(right); // copy right
+					right.resize(0);
 				}
-				if (right.m_capacity <= LocalLength)
+				// Right is not locally buffered, and right's buffer exceeds our local buffer size. Steal it.
+				else
 				{
-					traits::copy(m_ptr, right.m_ptr, right.m_count);
-					m_count = right.m_count;
-				}
-				else // steal the pointer
-				{
+					// Clean up anything in this container
+					resize(0);
+
+					// Steal from 'right'
 					m_ptr      = right.m_ptr;
 					m_capacity = right.m_capacity;
 					m_count    = right.m_count;
+
+					// Set 'right' to empty
+					right.m_ptr      = right.local_ptr();
+					right.m_capacity = right.LocalLength;
+					right.m_count    = 1;
+					right.m_ptr[0]   = 0;
 				}
-				right.m_ptr      = right.local_ptr();
-				right.m_capacity = right.LocalLength;
-				right.m_count    = 1;
-				right.m_ptr[0]   = 0;
 			}
 			return *this;
 		}
@@ -1687,7 +1689,6 @@ namespace pr
 			str6.replace(4, 20, 3, 'X');                         PR_CHECK(str6, "AbcdXXX");
 
 			// Test move constructor/assignment
-			#if _MSC_VER >= 1600
 			pr::string<> str7 = "my_string";
 			pr::string<> str8 = std::move(str7);
 			PR_CHECK(str7.empty(), true);
@@ -1699,7 +1700,6 @@ namespace pr
 			PR_CHECK(str9.empty(), true);
 			PR_CHECK(str10, "very long string that has been allocated");
 			PR_CHECK(str9.c_str() == str10.c_str(), false);
-			#endif
 		}
 	}
 }

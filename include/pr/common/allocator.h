@@ -33,57 +33,80 @@ namespace pr
 		template <typename U> struct rebind { typedef aligned_alloc<U> other; };
 
 		// std::allocator interface
-		pointer       address   (reference x) const               { return &x; }
-		const_pointer address   (const_reference x) const         { return &x; }
-		pointer       allocate  (size_type n, void const* =0)     { return static_cast<T*>(_aligned_malloc(n * sizeof(T), value_alignment)); }
-		void          deallocate(pointer p, size_type)            { _aligned_free(p); }
-		size_type     max_size  () const throw()                  { return std::numeric_limits<size_type>::max() / sizeof(T); }
+		size_type     max_size  () const throw()       { return std::numeric_limits<size_type>::max() / sizeof(T); }
+		pointer       address(reference x) const       { return &x; }
+		const_pointer address(const_reference x) const { return &x; }
 
-		// pod traits for 'T'
-		template <bool is_pod> struct base_traits;
-		template <> struct base_traits<true>
+		pointer allocate(size_type n, void const* = 0)
 		{
-			static void construct(pointer p)                      { *p = T(); }
-			static void construct(pointer p, const_reference val) { *p = val; }
-			template <class U> static void destroy(U* p)
-			{
-				#ifndef NDEBUG
-				::memset(p, 0xdd, sizeof(U));
-				#else
-				(void)p;
-				#endif
-			}
-		};
-		template <> struct base_traits<false>
+			#ifndef NDEBUG
+			auto ptr = static_cast<T*>(_aligned_malloc_dbg(n * sizeof(T), value_alignment, __FILE__, __LINE__));
+			#else
+			auto ptr = static_cast<T*>(_aligned_malloc(n * sizeof(T), value_alignment));
+			#endif
+			return ptr;
+		}
+		void deallocate(pointer p, size_type)
 		{
-			static void construct(pointer p)                      { ::new ((void*)p) T(); }
-			static void construct(pointer p, const_reference val) { ::new ((void*)p) T(val); }
-			template <class U> static void destroy(U* p)
-			{
-				if (p == nullptr) return;
-				p->~U();
-				#ifndef NDEBUG
-				::memset(p, 0xdd, sizeof(U));
-				#endif
-			}
-		};
-		struct traits :base_traits<std::is_pod<T>::value> {};
+			#ifndef NDEBUG
+			_aligned_free_dbg(p);
+			#else
+			_aligned_free(p);
+			#endif
+		}
 
-		void construct(pointer p)
+		// enable if helpers
+		template <typename U> using enable_if_pod = typename std::enable_if<std::is_pod<U>::value>::type;
+		template <typename U> using enable_if_nonpod = typename std::enable_if<!std::is_pod<U>::value>::type;
+		template <typename U> using enable_if_can_cc = typename std::enable_if<std::is_copy_constructible<U>::value>::type;
+
+		// is_pod
+		template <typename = enable_if_pod<T>> void default_construct(void* p, char = 0)
 		{
-			traits::construct(p);
+			*static_cast<T*>(p) = T();
 		}
-		void construct(pointer p, const_reference val)
+		template <typename = enable_if_pod<T>> void move_construct(void* p, T&& val, char = 0)
 		{
-			traits::construct(p, val);
+			*static_cast<T*>(p) = val;
 		}
-		template <class U, class... Args> void construct(U* p, Args&&... args)
+		template <typename = enable_if_pod<T>> void copy_construct(void* p, T const& val, char = 0)
 		{
-			::new ((void*)p) T(std::forward<Args>(args)...);
+			*static_cast<T*>(p) = val;
 		}
-		template <class U> void destroy(U* p)
+		template <class U, typename = enable_if_pod<U>> void destroy(U* p, char = 0)
 		{
-			traits::destroy(p);
+			if (p == nullptr) return;
+			#ifndef NDEBUG
+			::memset(p, 0xdd, sizeof(U));
+			#endif
+		}
+
+		// !is_pod
+		template <typename = enable_if_nonpod<T>> void default_construct(void* p, int = 0)
+		{
+			::new (p) T();
+		}
+		template <typename = enable_if_nonpod<T>> void move_construct(void* p, T&& val, int = 0)
+		{
+			::new (p) T(std::forward<T&&>(val));
+		}
+		template <typename = enable_if_nonpod<T>, typename = enable_if_can_cc<T>> void copy_construct(void* p, T const& val, int = 0)
+		{
+			::new (p) T(val);
+		}
+		template <class U, typename = enable_if_nonpod<T>> void destroy(U* p, int = 0)
+		{
+			if (p == nullptr) return;
+			p->~U();
+			#ifndef NDEBUG
+			::memset(p, 0xdd, sizeof(U));
+			#endif
+		}
+
+		// forwarding constructor
+		template <typename... Args> void construct(void* p, Args&&... args)
+		{
+			::new (p) T(std::forward<Args>(args)...);
 		}
 
 		// helpers

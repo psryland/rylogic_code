@@ -51,7 +51,7 @@ namespace pr
 		};
 
 		#pragma region General Includes
-		// An include handler that tries to open include files from resources, search paths, string map
+		// An include handler that tries to open include files from resources, search paths, or a string table
 		template <typename FailPolicy = ThrowOnFailure>
 		struct Includes :IIncludeHandler
 		{
@@ -86,7 +86,7 @@ namespace pr
 
 		public:
 
-			Includes(EType types = EType::None)
+			explicit Includes(EType types = EType::None)
 				:m_types(types)
 				,m_paths()
 				,m_modules()
