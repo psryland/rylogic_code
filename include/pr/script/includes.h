@@ -24,6 +24,19 @@ namespace pr
 		// A base class and interface for an include handler
 		struct IIncludeHandler
 		{
+			enum class EFlags
+			{
+				None = 0,
+
+				// True if the included data is binary data
+				Binary = 1 << 0,
+
+				// true for #include "file", false for #include <file>
+				IncludeLocalDir = 1 << 1,
+
+				_bitwise_operators_allowed,
+			};
+
 			bool m_ignore_missing_includes;
 
 			IIncludeHandler()
@@ -39,15 +52,15 @@ namespace pr
 
 			// Resolve an include into a full path
 			// 'search_paths_only' is true when the include is within angle brackets (i.e. #include <file>)
-			virtual string ResolveInclude(string const& include, bool search_paths_only = false, Location const& loc = Location()) = 0;
+			virtual string ResolveInclude(string const& include, EFlags flags, Location const& loc = Location()) = 0;
 
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
-			virtual std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) = 0;
+			virtual std::unique_ptr<Src> Open(string const& include, EFlags flags, Location const& loc = Location()) = 0;
 
 			// Open 'include' as an ASCII stream
-			virtual std::unique_ptr<std::istream> OpenStreamA(string const& include, bool search_paths_only = false, bool binary = false, Location const& loc = Location()) = 0;
+			virtual std::unique_ptr<std::istream> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) = 0;
 		};
 
 		#pragma region General Includes
@@ -98,12 +111,12 @@ namespace pr
 			{
 				SearchPaths(search_paths);
 			}
-			explicit Includes(std::initializer_list<HMODULE> const& modules, EType types = EType::None)
-				: Includes(types)
+			explicit Includes(std::initializer_list<HMODULE> modules, EType types = EType::None)
+				:Includes(types)
 			{
 				ResourceModules(modules);
 			}
-			explicit Includes(string const& search_paths, std::initializer_list<HMODULE> const& modules, EType types = EType::None)
+			explicit Includes(string const& search_paths, std::initializer_list<HMODULE> modules, EType types = EType::None)
 				:Includes(types)
 			{
 				SearchPaths(search_paths);
@@ -144,7 +157,7 @@ namespace pr
 			{
 				return m_modules;
 			}
-			virtual void ResourceModules(std::initializer_list<HMODULE> const& modules)
+			virtual void ResourceModules(std::initializer_list<HMODULE> modules)
 			{
 				m_modules.assign(std::begin(modules), std::end(modules));
 
@@ -209,21 +222,21 @@ namespace pr
 
 			// Resolve an include into a full path
 			// 'search_paths_only' is true when the include is within angle brackets (i.e. #include <file>)
-			string ResolveInclude(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
+			string ResolveInclude(string const& include, EFlags flags, Location const& loc = Location()) override
 			{
 				string result, searched_paths;
 				HMODULE module;
 
 				// Try file includes
-				if (int(m_types & EType::Files) != 0 && ResolveFileInclude(include, search_paths_only, loc, result, searched_paths))
+				if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
 					return result;
 
 				// Try resources
-				if (int(m_types & EType::Resources) != 0 && ResolveResourceInclude(include, result, module))
+				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 					return result;
 
 				// Try the string table
-				if (int(m_types & EType::Strings) != 0 && ResolveStringInclude(include, result))
+				if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
 					return result;
 
 				// Ignore if missing includes flagged
@@ -237,13 +250,13 @@ namespace pr
 			}
 
 			// Resolve an include into a full path
-			bool ResolveFileInclude(string const& include, bool search_paths_only, Location const& loc, string& result, string& searched_paths)
+			bool ResolveFileInclude(string const& include, bool include_local_dir, Location const& loc, string& result, string& searched_paths)
 			{
 				result.resize(0);
 
 				// If we should search the local directory first, find the local directory name from 'loc'
 				string local_dir, *current_dir = nullptr;
-				if (!search_paths_only)
+				if (include_local_dir)
 				{
 					local_dir = pr::filesys::GetDirectory(loc.StreamName());
 					current_dir = !local_dir.empty() ? &local_dir : nullptr;
@@ -260,12 +273,12 @@ namespace pr
 			}
 
 			// Resolve an include from the available modules
-			bool ResolveResourceInclude(string const& include, string& result, HMODULE& module)
+			bool ResolveResourceInclude(string const& include, string& result, bool binary, HMODULE& module)
 			{
 				result = ResId(include);
 				for (auto m : m_modules)
 				{
-					if (!pr::resource::Find(result.c_str(), L"TEXT", m)) continue;
+					if (!pr::resource::Find(result.c_str(), binary ? L"BINARY" : L"TEXT", m)) continue;
 					module = m;
 					return true;
 				}
@@ -282,27 +295,27 @@ namespace pr
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
-			std::unique_ptr<Src> Open(string const& include, bool search_paths_only = false, Location const& loc = Location()) override
+			std::unique_ptr<Src> Open(string const& include, EFlags flags, Location const& loc = Location()) override
 			{
 				string result, searched_paths;
 				HMODULE module;
 
 				// Try file includes
-				if (int(m_types & EType::Files) != 0 && ResolveFileInclude(include, search_paths_only, loc, result, searched_paths))
+				if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
 				{
 					FileOpened.Raise(result);
 					return std::make_unique<FileSrc<>>(result.c_str());
 				}
 
 				// Try resources
-				if (int(m_types & EType::Resources) != 0 && ResolveResourceInclude(include, result, module))
+				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 				{
 					auto res = pr::resource::Read<char>(result.c_str(), L"TEXT", module);
 					return std::make_unique<PtrA<>>(res.m_data);
 				}
 
 				// Try the string table
-				if (int(m_types & EType::Strings) != 0 && ResolveStringInclude(include, result))
+				if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
 				{
 					auto i = m_strtab.find(result);
 					return std::make_unique<PtrA<>>(i->second.c_str());
@@ -315,27 +328,27 @@ namespace pr
 			}
 
 			// Open 'include' as an ASCII stream
-			std::unique_ptr<std::istream> OpenStreamA(string const& include, bool search_paths_only = false, bool binary = false, Location const& loc = Location()) override
+			std::unique_ptr<std::istream> OpenStreamA(string const& include, EFlags flags, Location const& loc = Location()) override
 			{
 				string result, searched_paths;
 				HMODULE module;
 
 				// Try file includes
-				if (int(m_types & EType::Files) != 0 && ResolveFileInclude(include, search_paths_only, loc, result, searched_paths))
+				if (AllSet(m_types, EType::Files) && ResolveFileInclude(include, AllSet(flags, EFlags::IncludeLocalDir), loc, result, searched_paths))
 				{
 					FileOpened.Raise(result);
-					return std::make_unique<std::ifstream>(result.c_str(), binary ? std::istream::binary : 0);
+					return std::make_unique<std::ifstream>(result.c_str(), AllSet(flags, EFlags::Binary) ? std::istream::binary : 0);
 				}
 
 				// Try resources
-				if (int(m_types & EType::Resources) != 0 && ResolveResourceInclude(include, result, module))
+				if (AllSet(m_types, EType::Resources) && ResolveResourceInclude(include, result, AllSet(flags, EFlags::Binary), module))
 				{
-					auto res = pr::resource::Read<char>(result.c_str(), binary ? L"BINARY" : L"TEXT", module);
+					auto res = pr::resource::Read<char>(result.c_str(), AllSet(flags, EFlags::Binary) ? L"BINARY" : L"TEXT", module);
 					return std::make_unique<pr::imemstream>(res.m_data, res.size());
 				}
 
 				// Try the string table
-				if (int(m_types & EType::Strings) != 0 && ResolveStringInclude(include, result))
+				if (AllSet(m_types, EType::Strings) && ResolveStringInclude(include, result))
 				{
 					auto i = m_strtab.find(result);
 					return std::make_unique<std::istringstream>(i->second);
@@ -358,7 +371,7 @@ namespace pr
 		struct NoIncludes :IIncludeHandler
 		{
 			// Resolve an include into a full path
-			string ResolveInclude(string const&, bool = false, Location const& loc = Location()) override
+			string ResolveInclude(string const&, EFlags, Location const& loc = Location()) override
 			{
 				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", string());
 			}
@@ -366,13 +379,13 @@ namespace pr
 			// Returns a 'Src' corresponding to the string "include".
 			// 'search_paths_only' is true for #include <desc> and false for #include "desc".
 			// 'loc' is where in the current source the include comes from.
-			std::unique_ptr<Src> Open(string const&, bool = false, Location const& loc = Location()) override
+			std::unique_ptr<Src> Open(string const&, EFlags, Location const& loc = Location()) override
 			{
 				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", std::unique_ptr<Src>());
 			}
 
 			// Open 'include' as an ASCII stream
-			std::unique_ptr<std::istream> OpenStreamA(string const&, bool = false, bool = false, Location const& loc = Location()) override
+			std::unique_ptr<std::istream> OpenStreamA(string const&, EFlags, Location const& loc = Location()) override
 			{
 				return FailPolicy::Fail(EResult::IncludesNotSupported, loc, "#include is not supported", std::unique_ptr<std::istream>());
 			}
@@ -406,7 +419,7 @@ namespace pr
 				inc.AddSearchPath(pr::filesys::GetDirectory(pr::win32::ExePath<string>()));
 				inc.AddSearchPath(pr::filesys::CurrentDirectory<string>());
 
-				auto src_ptr = inc.Open(script_include);
+				auto src_ptr = inc.Open(script_include, IIncludeHandler::EFlags::None);
 				auto& src = *src_ptr;
 
 				std::wstring r; for (;*src; ++src) r.push_back(*src);

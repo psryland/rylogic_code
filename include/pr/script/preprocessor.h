@@ -557,7 +557,8 @@ namespace pr
 
 									// Open the include
 									auto path = src.str(1, emit - 2); src.pop();
-									auto inc = Includes->Open(path, end == L'>', src.Loc());
+									auto flags = end == L'\"' ? IIncludeHandler::EFlags::IncludeLocalDir : IIncludeHandler::EFlags::None;
+									auto inc = Includes->Open(path, flags, src.Loc());
 									if (inc)
 									{
 										Push(inc.get(), true);

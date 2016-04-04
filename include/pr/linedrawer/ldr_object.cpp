@@ -1770,7 +1770,8 @@ namespace pr
 				}
 
 				// Ask the include handler to turn the filepath into a stream
-				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, false, info.m_is_binary);
+				auto flags = IIncludeHandler::EFlags::IncludeLocalDir | (info.m_is_binary ? IIncludeHandler::EFlags::Binary : IIncludeHandler::EFlags::None);
+				auto src = p.m_reader.Includes().OpenStreamA(m_filepath, flags);
 				if (!src || !*src)
 				{
 					p.m_reader.ReportError(pr::script::EResult::Failed, pr::FmtS("Failed to open file stream '%s'", m_filepath.c_str()));
